@@ -1,5 +1,4 @@
 ; RUN: opt -S -passes=jump-threading < %s | FileCheck %s
-; RUN: opt -S -passes=jump-threading < %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 @a = global i32 0, align 4
 ; Test that the llvm.dbg.value calls in a threaded block are correctly updated to

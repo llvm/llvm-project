@@ -19,7 +19,6 @@
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/APFloat.h"
 
 using namespace mlir;
 
@@ -222,6 +221,11 @@ static LogicalResult convertFmaFOp(math::FmaOp op, PatternRewriter &rewriter) {
 //      if (x > y) then incr = 1 else incr = 0
 //      y = y + incr   <= replace this op with the ceilf op.
 static LogicalResult convertCeilOp(math::CeilOp op, PatternRewriter &rewriter) {
+  // Creating constants assumes the static shaped type.
+  auto shapedType = dyn_cast<ShapedType>(op.getType());
+  if (shapedType && !shapedType.hasStaticShape())
+    return failure();
+
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operand = op.getOperand();
   Type opType = operand.getType();
@@ -641,6 +645,11 @@ static LogicalResult convertRsqrtOp(math::RsqrtOp op,
 
   auto operand = op.getOperand();
   auto operandTy = operand.getType();
+  // Operand type must be shatic shaped type to create const float.
+  auto shapedOperandType = dyn_cast<ShapedType>(operandTy);
+  if (shapedOperandType && !shapedOperandType.hasStaticShape())
+    return failure();
+
   auto eTy = getElementTypeOrSelf(operandTy);
   if (!isa<FloatType>(eTy))
     return failure();

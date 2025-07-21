@@ -310,8 +310,8 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
   const FormatEntity::Entry *disassembly_format = nullptr;
   FormatEntity::Entry format;
   if (exe_ctx.HasTargetScope()) {
-    disassembly_format =
-        exe_ctx.GetTargetRef().GetDebugger().GetDisassemblyFormat();
+    format = exe_ctx.GetTargetRef().GetDebugger().GetDisassemblyFormat();
+    disassembly_format = &format;
   } else {
     FormatEntity::Parse("${addr}: ", format);
     disassembly_format = &format;
@@ -552,28 +552,46 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
 
 bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
                                StackFrame &frame, Stream &strm) {
-  AddressRange range;
+  constexpr const char *plugin_name = nullptr;
+  constexpr const char *flavor = nullptr;
+  constexpr const char *cpu = nullptr;
+  constexpr const char *features = nullptr;
+  constexpr bool mixed_source_and_assembly = false;
+  constexpr uint32_t num_mixed_context_lines = 0;
+  constexpr uint32_t options = 0;
+
   SymbolContext sc(
       frame.GetSymbolContext(eSymbolContextFunction | eSymbolContextSymbol));
   if (sc.function) {
-    range = sc.function->GetAddressRange();
-  } else if (sc.symbol && sc.symbol->ValueIsAddress()) {
+    if (DisassemblerSP disasm_sp = DisassembleRange(
+            arch, plugin_name, flavor, cpu, features, *frame.CalculateTarget(),
+            sc.function->GetAddressRanges())) {
+      disasm_sp->PrintInstructions(debugger, arch, frame,
+                                   mixed_source_and_assembly,
+                                   num_mixed_context_lines, options, strm);
+      return true;
+    }
+    return false;
+  }
+
+  AddressRange range;
+  if (sc.symbol && sc.symbol->ValueIsAddress()) {
     range.GetBaseAddress() = sc.symbol->GetAddressRef();
     range.SetByteSize(sc.symbol->GetByteSize());
   } else {
     range.GetBaseAddress() = frame.GetFrameCodeAddress();
   }
 
-    if (range.GetBaseAddress().IsValid() && range.GetByteSize() == 0)
-      range.SetByteSize(DEFAULT_DISASM_BYTE_SIZE);
+  if (range.GetBaseAddress().IsValid() && range.GetByteSize() == 0)
+    range.SetByteSize(DEFAULT_DISASM_BYTE_SIZE);
 
-    Disassembler::Limit limit = {Disassembler::Limit::Bytes,
-                                 range.GetByteSize()};
-    if (limit.value == 0)
-      limit.value = DEFAULT_DISASM_BYTE_SIZE;
+  Disassembler::Limit limit = {Disassembler::Limit::Bytes, range.GetByteSize()};
+  if (limit.value == 0)
+    limit.value = DEFAULT_DISASM_BYTE_SIZE;
 
-    return Disassemble(debugger, arch, nullptr, nullptr, nullptr, nullptr,
-                       frame, range.GetBaseAddress(), limit, false, 0, 0, strm);
+  return Disassemble(debugger, arch, plugin_name, flavor, cpu, features, frame,
+                     range.GetBaseAddress(), limit, mixed_source_and_assembly,
+                     num_mixed_context_lines, options, strm);
 }
 
 Instruction::Instruction(const Address &address, AddressClass addr_class)
@@ -667,9 +685,11 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
     }
   }
   const size_t opcode_pos = ss.GetSizeOfLastLine();
-  const std::string &opcode_name =
-      show_color ? m_markup_opcode_name : m_opcode_name;
+  std::string &opcode_name = show_color ? m_markup_opcode_name : m_opcode_name;
   const std::string &mnemonics = show_color ? m_markup_mnemonics : m_mnemonics;
+
+  if (opcode_name.empty())
+    opcode_name = "<unknown>";
 
   // The default opcode size of 7 characters is plenty for most architectures
   // but some like arm can pull out the occasional vqrshrun.s16.  We won't get
@@ -1019,8 +1039,8 @@ void InstructionList::Dump(Stream *s, bool show_address, bool show_bytes,
   const FormatEntity::Entry *disassembly_format = nullptr;
   FormatEntity::Entry format;
   if (exe_ctx && exe_ctx->HasTargetScope()) {
-    disassembly_format =
-        exe_ctx->GetTargetRef().GetDebugger().GetDisassemblyFormat();
+    format = exe_ctx->GetTargetRef().GetDebugger().GetDisassemblyFormat();
+    disassembly_format = &format;
   } else {
     FormatEntity::Parse("${addr}: ", format);
     disassembly_format = &format;

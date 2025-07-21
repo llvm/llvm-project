@@ -1736,3 +1736,64 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
+
+define void @f(i1 %c, ptr %p, ptr %q, ptr %r) {
+; CHECK-LABEL: define void @f
+; CHECK-SAME: (i1 [[C:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[R:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[P]], align 8
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i64, ptr [[P]], i64 1
+; CHECK-NEXT:    [[X1:%.*]] = load i64, ptr [[P1]], align 8
+; CHECK-NEXT:    br i1 [[C]], label [[FOO:%.*]], label [[BAR:%.*]]
+; CHECK:       foo:
+; CHECK-NEXT:    [[Y0:%.*]] = load float, ptr [[R]], align 4
+; CHECK-NEXT:    [[Y1:%.*]] = call float @fabsf(float [[Y0]])
+; CHECK-NEXT:    br label [[BAZ:%.*]]
+; CHECK:       bar:
+; CHECK-NEXT:    [[Z0:%.*]] = load float, ptr [[R]], align 4
+; CHECK-NEXT:    [[Z1:%.*]] = call float @fabsf(float [[Z0]])
+; CHECK-NEXT:    br label [[BAZ]]
+; CHECK:       baz:
+; CHECK-NEXT:    store i64 [[X0]], ptr [[Q]], align 8
+; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[Q]], i64 1
+; CHECK-NEXT:    store i64 [[X1]], ptr [[Q1]], align 8
+; CHECK-NEXT:    ret void
+;
+; DEFAULT-LABEL: define void @f
+; DEFAULT-SAME: (i1 [[C:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[R:%.*]]) #[[ATTR1]] {
+; DEFAULT-NEXT:    [[X0:%.*]] = load i64, ptr [[P]], align 8
+; DEFAULT-NEXT:    [[P1:%.*]] = getelementptr i64, ptr [[P]], i64 1
+; DEFAULT-NEXT:    [[X1:%.*]] = load i64, ptr [[P1]], align 8
+; DEFAULT-NEXT:    br i1 [[C]], label [[FOO:%.*]], label [[BAR:%.*]]
+; DEFAULT:       foo:
+; DEFAULT-NEXT:    [[Y0:%.*]] = load float, ptr [[R]], align 4
+; DEFAULT-NEXT:    [[Y1:%.*]] = call float @fabsf(float [[Y0]])
+; DEFAULT-NEXT:    br label [[BAZ:%.*]]
+; DEFAULT:       bar:
+; DEFAULT-NEXT:    [[Z0:%.*]] = load float, ptr [[R]], align 4
+; DEFAULT-NEXT:    [[Z1:%.*]] = call float @fabsf(float [[Z0]])
+; DEFAULT-NEXT:    br label [[BAZ]]
+; DEFAULT:       baz:
+; DEFAULT-NEXT:    store i64 [[X0]], ptr [[Q]], align 8
+; DEFAULT-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[Q]], i64 1
+; DEFAULT-NEXT:    store i64 [[X1]], ptr [[Q1]], align 8
+; DEFAULT-NEXT:    ret void
+;
+  %x0 = load i64, ptr %p
+  %p1 =  getelementptr i64, ptr %p, i64 1
+  %x1 = load i64, ptr %p1
+  br i1 %c, label %foo, label %bar
+foo:
+  %y0 = load float, ptr %r
+  %y1 = call float @fabsf(float %y0)
+  br label %baz
+bar:
+  %z0 = load float, ptr %r
+  %z1 = call float @fabsf(float %z0)
+  br label %baz
+baz:
+  store i64 %x0, ptr %q
+  %q1 =  getelementptr i64, ptr %q, i64 1
+  store i64 %x1, ptr %q1
+
+  ret void
+}

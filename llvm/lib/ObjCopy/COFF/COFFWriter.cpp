@@ -120,8 +120,11 @@ void COFFWriter::layoutSections() {
 
 Expected<size_t> COFFWriter::finalizeStringTable() {
   for (const auto &S : Obj.getSections())
-    if (S.Name.size() > COFF::NameSize)
-      StrTabBuilder.add(S.Name);
+    if (S.Name.size() > COFF::NameSize) {
+      // Put the section name at the start of strtab to ensure its offset is
+      // less than Max7DecimalOffset. Otherwise, lldb/gdb will not read it.
+      StrTabBuilder.add(S.Name, /*Priority=*/UINT8_MAX);
+    }
 
   for (const auto &S : Obj.getSymbols())
     if (S.Name.size() > COFF::NameSize)
@@ -317,7 +320,7 @@ void COFFWriter::writeSections() {
     uint8_t *Ptr = reinterpret_cast<uint8_t *>(Buf->getBufferStart()) +
                    S.Header.PointerToRawData;
     ArrayRef<uint8_t> Contents = S.getContents();
-    std::copy(Contents.begin(), Contents.end(), Ptr);
+    llvm::copy(Contents, Ptr);
 
     // For executable sections, pad the remainder of the raw data size with
     // 0xcc, which is int3 on x86.
@@ -355,7 +358,7 @@ template <class SymbolTy> void COFFWriter::writeSymbolStringTables() {
       // For file symbols, just write the string into the aux symbol slots,
       // assuming that the unwritten parts are initialized to zero in the memory
       // mapped file.
-      std::copy(S.AuxFile.begin(), S.AuxFile.end(), Ptr);
+      llvm::copy(S.AuxFile, Ptr);
       Ptr += S.Sym.NumberOfAuxSymbols * sizeof(SymbolTy);
     } else {
       // For other auxillary symbols, write their opaque payload into one symbol
@@ -364,7 +367,7 @@ template <class SymbolTy> void COFFWriter::writeSymbolStringTables() {
       // entry.
       for (const AuxSymbol &AuxSym : S.AuxData) {
         ArrayRef<uint8_t> Ref = AuxSym.getRef();
-        std::copy(Ref.begin(), Ref.end(), Ptr);
+        llvm::copy(Ref, Ptr);
         Ptr += sizeof(SymbolTy);
       }
     }

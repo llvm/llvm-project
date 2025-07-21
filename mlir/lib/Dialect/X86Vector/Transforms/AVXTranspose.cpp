@@ -17,7 +17,6 @@
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/Dialect/X86Vector/Transforms.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -41,7 +40,8 @@ Value mlir::x86vector::avx2::inline_asm::mm256BlendPsAsm(
   auto asmOp = b.create<LLVM::InlineAsmOp>(
       v1.getType(), /*operands=*/asmVals, /*asm_string=*/asmStr,
       /*constraints=*/asmCstr, /*has_side_effects=*/false,
-      /*is_align_stack=*/false, /*asm_dialect=*/asmDialectAttr,
+      /*is_align_stack=*/false, LLVM::TailCallKind::None,
+      /*asm_dialect=*/asmDialectAttr,
       /*operand_attrs=*/ArrayAttr());
   return asmOp.getResult(0);
 }

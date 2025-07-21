@@ -16,7 +16,6 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 
 #include "mlir/Dialect/CommonFolders.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/Matchers.h"
@@ -326,7 +325,6 @@ void spirv::UMulExtendedOp::getCanonicalizationPatterns(
 
 // The transformation is only applied if one divisor is a multiple of the other.
 
-// TODO(https://github.com/llvm/llvm-project/issues/63174): Add support for vector constants
 struct UModSimplification final : OpRewritePattern<spirv::UModOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -336,19 +334,29 @@ struct UModSimplification final : OpRewritePattern<spirv::UModOp> {
     if (!prevUMod)
       return failure();
 
-    IntegerAttr prevValue;
-    IntegerAttr currValue;
+    TypedAttr prevValue;
+    TypedAttr currValue;
     if (!matchPattern(prevUMod.getOperand(1), m_Constant(&prevValue)) ||
         !matchPattern(umodOp.getOperand(1), m_Constant(&currValue)))
       return failure();
 
-    APInt prevConstValue = prevValue.getValue();
-    APInt currConstValue = currValue.getValue();
+    // Ensure that previous divisor is a multiple of the current divisor. If
+    // not, fail the transformation.
+    bool isApplicable = false;
+    if (auto prevInt = dyn_cast<IntegerAttr>(prevValue)) {
+      auto currInt = cast<IntegerAttr>(currValue);
+      isApplicable = prevInt.getValue().urem(currInt.getValue()) == 0;
+    } else if (auto prevVec = dyn_cast<DenseElementsAttr>(prevValue)) {
+      auto currVec = cast<DenseElementsAttr>(currValue);
+      isApplicable = llvm::all_of(llvm::zip_equal(prevVec.getValues<APInt>(),
+                                                  currVec.getValues<APInt>()),
+                                  [](const auto &pair) {
+                                    auto &[prev, curr] = pair;
+                                    return prev.urem(curr) == 0;
+                                  });
+    }
 
-    // Ensure that one divisor is a multiple of the other. If not, fail the
-    // transformation.
-    if (prevConstValue.urem(currConstValue) != 0 &&
-        currConstValue.urem(prevConstValue) != 0)
+    if (!isApplicable)
       return failure();
 
     // The transformation is safe. Replace the existing UMod operation with a
@@ -476,7 +484,7 @@ OpFoldResult spirv::IMulOp::fold(FoldAdaptor adaptor) {
 OpFoldResult spirv::ISubOp::fold(FoldAdaptor adaptor) {
   // x - x = 0
   if (getOperand1() == getOperand2())
-    return Builder(getContext()).getIntegerAttr(getType(), 0);
+    return Builder(getContext()).getZeroAttr(getType());
 
   // According to the SPIR-V spec:
   //

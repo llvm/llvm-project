@@ -57,8 +57,9 @@ public:
   explicit OpToFuncCallLowering(const LLVMTypeConverter &lowering,
                                 StringRef f32Func, StringRef f64Func,
                                 StringRef f32ApproxFunc, StringRef f16Func,
-                                StringRef i32Func = "")
-      : ConvertOpToLLVMPattern<SourceOp>(lowering), f32Func(f32Func),
+                                StringRef i32Func = "",
+                                PatternBenefit benefit = 1)
+      : ConvertOpToLLVMPattern<SourceOp>(lowering, benefit), f32Func(f32Func),
         f64Func(f64Func), f32ApproxFunc(f32ApproxFunc), f16Func(f16Func),
         i32Func(i32Func) {}
 
@@ -163,7 +164,12 @@ public:
     auto parentFunc = op->getParentOfType<FunctionOpInterface>();
     assert(parentFunc && "expected there to be a parent function");
     OpBuilder b(parentFunc);
-    return b.create<LLVMFuncOp>(op->getLoc(), funcName, funcType);
+
+    // Create a valid global location removing any metadata attached to the
+    // location as debug info metadata inside of a function cannot be used
+    // outside of that function.
+    auto globalloc = op->getLoc()->findInstanceOfOrUnknown<FileLineColLoc>();
+    return b.create<LLVMFuncOp>(globalloc, funcName, funcType);
   }
 
   StringRef getFunctionName(Type type, SourceOp op) const {

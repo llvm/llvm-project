@@ -27,5 +27,5 @@ int main(int argc, char *argv[]) {
   // CHECK: Address 0x{{.*}} is located in stack of thread T0 at offset [[OFFSET:[^ ]*]] in frame
   // CHECK:      {{.*}} in main
   // CHECK:   This frame has
-  // CHECK:     {{\[}}[[OFFSET]], {{.*}}) 'x.i' (line [[@LINE-15]])
+  // CHECK:     {{\[}}[[OFFSET]], {{.*}}) 'x' (line [[@LINE-15]])
 }

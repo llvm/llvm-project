@@ -13,6 +13,7 @@
 #include "CodeGenTypes.h"
 #include "CGCXXABI.h"
 #include "CGCall.h"
+#include "CGDebugInfo.h"
 #include "CGHLSLRuntime.h"
 #include "CGOpenCLRuntime.h"
 #include "CGRecordLayout.h"
@@ -112,6 +113,12 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
   // Check for the boolean vector case.
   if (T->isExtVectorBoolType()) {
     auto *FixedVT = cast<llvm::FixedVectorType>(R);
+
+    if (Context.getLangOpts().HLSL) {
+      llvm::Type *IRElemTy = ConvertTypeForMem(Context.BoolTy);
+      return llvm::FixedVectorType::get(IRElemTy, FixedVT->getNumElements());
+    }
+
     // Pad to at least one byte.
     uint64_t BytePadded = std::max<uint64_t>(FixedVT->getNumElements(), 8);
     return llvm::IntegerType::get(FixedVT->getContext(), BytePadded);
@@ -505,8 +512,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case BuiltinType::Id:
 #define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
   case BuiltinType::Id:
-#define SVE_TYPE(Name, Id, SingletonId)
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
       {
         ASTContext::BuiltinVectorTypeInfo Info =
             Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
@@ -654,7 +660,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::Vector: {
     const auto *VT = cast<VectorType>(Ty);
     // An ext_vector_type of Bool is really a vector of bits.
-    llvm::Type *IRElemTy = VT->isExtVectorBoolType()
+    llvm::Type *IRElemTy = VT->isPackedVectorBoolType(Context)
                                ? llvm::Type::getInt1Ty(getLLVMContext())
                            : VT->getElementType()->isMFloat8Type()
                                ? llvm::Type::getInt8Ty(getLLVMContext())
@@ -719,8 +725,8 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::MemberPointer: {
     auto *MPTy = cast<MemberPointerType>(Ty);
     if (!getCXXABI().isMemberPointerConvertible(MPTy)) {
-      auto *C = MPTy->getClass();
-      auto Insertion = RecordsWithOpaqueMemberPointers.insert({C, nullptr});
+      auto *C = MPTy->getMostRecentCXXRecordDecl()->getTypeForDecl();
+      auto Insertion = RecordsWithOpaqueMemberPointers.try_emplace(C);
       if (Insertion.second)
         Insertion.first->second = llvm::StructType::create(getLLVMContext());
       ResultType = Insertion.first->second;
@@ -758,6 +764,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     break;
   }
   case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
     ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
     break;
   }
@@ -840,12 +847,14 @@ CodeGenTypes::getCGRecordLayout(const RecordDecl *RD) {
 }
 
 bool CodeGenTypes::isPointerZeroInitializable(QualType T) {
-  assert((T->isAnyPointerType() || T->isBlockPointerType()) && "Invalid type");
+  assert((T->isAnyPointerType() || T->isBlockPointerType() ||
+          T->isNullPtrType()) &&
+         "Invalid type");
   return isZeroInitializable(T);
 }
 
 bool CodeGenTypes::isZeroInitializable(QualType T) {
-  if (T->getAs<PointerType>())
+  if (T->getAs<PointerType>() || T->isNullPtrType())
     return Context.getTargetNullPointerValue(T) == 0;
 
   if (const auto *AT = Context.getAsArrayType(T)) {
@@ -867,6 +876,10 @@ bool CodeGenTypes::isZeroInitializable(QualType T) {
   // We have to ask the ABI about member pointers.
   if (const MemberPointerType *MPT = T->getAs<MemberPointerType>())
     return getCXXABI().isZeroInitializable(MPT);
+
+  // HLSL Inline SPIR-V types are non-zero-initializable.
+  if (T->getAs<HLSLInlineSpirvType>())
+    return false;
 
   // Everything else is okay.
   return true;

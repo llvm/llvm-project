@@ -149,6 +149,9 @@ After choosing the module and the name for the check, run the
 ``clang-tidy/add_new_check.py`` script to create the skeleton of the check and
 plug it to :program:`clang-tidy`. It's the recommended way of adding new checks.
 
+By default, the new check will apply only to C++ code. If it should apply under
+different language options, use the ``--language`` script's parameter.
+
 If we want to create a `readability-awesome-function-names`, we would run:
 
 .. code-block:: console
@@ -171,9 +174,7 @@ Let's see in more detail at the check class definition:
 
   #include "../ClangTidyCheck.h"
 
-  namespace clang {
-  namespace tidy {
-  namespace readability {
+  namespace clang::tidy::readability {
 
   ...
   class AwesomeFunctionNamesCheck : public ClangTidyCheck {
@@ -182,11 +183,12 @@ Let's see in more detail at the check class definition:
         : ClangTidyCheck(Name, Context) {}
     void registerMatchers(ast_matchers::MatchFinder *Finder) override;
     void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+    bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+      return LangOpts.CPlusPlus;
+    }
   };
 
-  } // namespace readability
-  } // namespace tidy
-  } // namespace clang
+  } // namespace clang::tidy::readability
 
   ...
 
@@ -230,9 +232,6 @@ If you need to interact with macros or preprocessor directives, you will want to
 override the method ``registerPPCallbacks``.  The ``add_new_check.py`` script
 does not generate an override for this method in the starting point for your
 new check.
-
-If your check applies only under a specific set of language options, be sure
-to override the method ``isLanguageVersionSupported`` to reflect that.
 
 Check development tips
 ----------------------
@@ -657,6 +656,29 @@ directory.  The path to this directory is available in a lit test with the varia
 .. _lit: https://llvm.org/docs/CommandGuide/lit.html
 .. _FileCheck: https://llvm.org/docs/CommandGuide/FileCheck.html
 .. _test/clang-tidy/checkers/google/readability-casting.cpp: https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/test/clang-tidy/checkers/google/readability-casting.cpp
+
+
+Submitting a Pull Request
+-------------------------
+
+Before submitting a pull request, contributors are encouraged to run
+:program:`clang-tidy` and :program:`clang-format` on their changes to ensure
+code quality and catch potential issues. While :program:`clang-tidy` is not
+currently enforced in CI, following this practice helps maintain code
+consistency and prevent common errors.
+
+Here's useful command to check your staged changes:
+
+.. code-block:: console
+
+  $ git diff --staged -U0 | ./clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \
+      -j $(nproc) -path build/ -p1 -only-check-in-db
+  $ git clang-format
+
+Note that some warnings may be false positives or require careful consideration
+before fixing. Use your judgment and feel free to discuss in the pull request
+if you're unsure about a particular warning.
+
 
 Out-of-tree check plugins
 -------------------------

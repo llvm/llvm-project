@@ -95,7 +95,7 @@ TEST(HighlightsTest, All) {
       )cpp",
 
       R"cpp(// Function
-        int [[^foo]](int) {}
+        int [[^foo]](int) { return 0; }
         int main() {
           [[foo]]([[foo]](42));
           auto *X = &[[foo]];
@@ -1091,7 +1091,7 @@ TEST(LocateSymbol, All) {
       )objc",
       R"cpp(
         struct PointerIntPairInfo {
-          static void *getPointer(void *Value);
+          static void *$decl[[getPointer]](void *Value);
         };
 
         template <typename Info = PointerIntPairInfo> struct PointerIntPair {
@@ -2140,7 +2140,7 @@ TEST(FindReferences, WithinAST) {
       )cpp",
 
       R"cpp(// Function
-        int $def[[foo]](int) {}
+        int $def[[foo]](int) { return 0; }
         int main() {
           auto *X = &$(main)[[^foo]];
           $(main)[[foo]](42);
@@ -2160,7 +2160,7 @@ TEST(FindReferences, WithinAST) {
 
       R"cpp(// Method call
         struct Foo { int $decl(Foo)[[foo]](); };
-        int Foo::$def(Foo)[[foo]]() {}
+        int Foo::$def(Foo)[[foo]]() { return 0; }
         int main() {
           Foo f;
           f.$(main)[[^foo]]();
@@ -2258,7 +2258,7 @@ TEST(FindReferences, WithinAST) {
       )cpp",
       R"cpp(// Dependent code
         template <typename T> void $decl[[foo]](T t);
-        template <typename T> void bar(T t) { $(bar)[[foo]](t); } // foo in bar is uninstantiated. 
+        template <typename T> void bar(T t) { $(bar)[[foo]](t); } // foo in bar is uninstantiated.
         void baz(int x) { $(baz)[[f^oo]](x); }
       )cpp",
       R"cpp(
@@ -2303,7 +2303,23 @@ TEST(FindReferences, WithinAST) {
         bool $decl[[operator]]"" _u^dl(unsigned long long value);
         bool x = $(x)[[1_udl]];
       )cpp",
-  };
+      R"cpp(
+        struct S {
+        public:
+          static void $decl(S)[[operator]] delete(void *);
+          static void deleteObject(S *S) {
+            $(S::deleteObject)[[de^lete]] S;
+          }
+        };
+      )cpp",
+      // Array designators
+      R"cpp(
+        const int $def[[F^oo]] = 0;
+        int Bar[] = {
+          [$(Bar)[[F^oo]]...$(Bar)[[Fo^o]] + 1] = 0,
+          [$(Bar)[[^Foo]] + 2] = 1
+        };
+      )cpp"};
   for (const char *Test : Tests)
     checkFindRefs(Test);
 }
@@ -2508,6 +2524,7 @@ TEST(FindReferences, ExplicitSymbols) {
         X $def(test)[[a]];
         $(test)[[a]].operator bool();
         if ($(test)[[a^]]) {} // ignore implicit conversion-operator AST node
+        return 0;
       }
     )cpp",
   };
@@ -2543,7 +2560,7 @@ TEST(FindReferences, UsedSymbolsFromInclude) {
       #define BAR 5
       int bar1();
       int bar2();
-      class Bar {};            
+      class Bar {};
     )cpp");
     TU.AdditionalFiles["system/vector"] = guard(R"cpp(
       namespace std {
@@ -2560,7 +2577,7 @@ TEST(FindReferences, UsedSymbolsFromInclude) {
     std::vector<Matcher<ReferencesResult::Reference>> ExpectedLocations;
     for (const auto &R : T.ranges())
       ExpectedLocations.push_back(AllOf(rangeIs(R), attrsAre(0u)));
-    for (const auto &P : T.points()) 
+    for (const auto &P : T.points())
       EXPECT_THAT(findReferences(AST, P, 0).References,
                   UnorderedElementsAreArray(ExpectedLocations))
           << "Failed for Refs at " << P << "\n"
@@ -2635,6 +2652,7 @@ TEST(FindReferences, NeedsIndexForMacro) {
   Annotations IndexedMain(R"cpp(
     int indexed_main() {
       int a = [[MACRO]](1);
+      return 0;
     }
   )cpp");
 

@@ -274,12 +274,12 @@ public:
             auto loc = embox.getLoc();
             mlir::Type i8Ty = builder.getI8Type();
             mlir::Type i8Ptr = builder.getRefType(i8Ty);
-            // For AArch64, PPC32 and PPC64, the thunk is populated by a call to
+            // For PPC32 and PPC64, the thunk is populated by a call to
             // __trampoline_setup, which is defined in
             // compiler-rt/lib/builtins/trampoline_setup.c and requires the
-            // thunk size greater than 32 bytes.  For RISCV and x86_64, the
-            // thunk setup doesn't go through __trampoline_setup and fits in 32
-            // bytes.
+            // thunk size greater than 32 bytes.  For AArch64, RISCV and x86_64,
+            // the thunk setup doesn't go through __trampoline_setup and fits in
+            // 32 bytes.
             fir::SequenceType::Extent thunkSize = triple.getTrampolineSize();
             mlir::Type buffTy = SequenceType::get({thunkSize}, i8Ty);
             auto buffer = builder.create<AllocaOp>(loc, buffTy);
@@ -348,8 +348,9 @@ public:
             rewriter.setInsertionPoint(coor);
             auto toTy = typeConverter.convertType(ty);
             auto toBaseTy = typeConverter.convertType(baseTy);
-            rewriter.replaceOpWithNewOp<CoordinateOp>(coor, toTy, coor.getRef(),
-                                                      coor.getCoor(), toBaseTy);
+            rewriter.replaceOpWithNewOp<CoordinateOp>(
+                coor, toTy, coor.getRef(), coor.getCoor(), toBaseTy,
+                coor.getFieldIndicesAttr());
             opIsValid = false;
           }
         } else if (auto index = mlir::dyn_cast<FieldIndexOp>(op)) {

@@ -6,9 +6,8 @@ define <vscale x 8 x i8> @mask_sext_not_nxv8i8(<vscale x 8 x i1> %m) {
 ; CHECK-LABEL: mask_sext_not_nxv8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmnot.m v0, v0
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
+; CHECK-NEXT:    vmv.v.i v8, -1
+; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
 ; CHECK-NEXT:    ret
   %not = xor <vscale x 8 x i1> %m, splat (i1 true)
   %ext = sext <vscale x 8 x i1> %not to <vscale x 8 x i8>
@@ -19,9 +18,8 @@ define <vscale x 8 x i8> @mask_zext_not_nxv8i8(<vscale x 8 x i1> %m) {
 ; CHECK-LABEL: mask_zext_not_nxv8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmnot.m v0, v0
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    vmv.v.i v8, 1
+; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
 ; CHECK-NEXT:    ret
   %not = xor <vscale x 8 x i1> %m, splat (i1 true)
   %ext = zext <vscale x 8 x i1> %not to <vscale x 8 x i8>
@@ -32,9 +30,8 @@ define <8 x i8> @mask_sext_not_v8i8(<8 x i1> %m) {
 ; CHECK-LABEL: mask_sext_not_v8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmnot.m v0, v0
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
+; CHECK-NEXT:    vmv.v.i v8, -1
+; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
 ; CHECK-NEXT:    ret
   %not = xor <8 x i1> %m, splat (i1 true)
   %ext = sext <8 x i1> %not to <8 x i8>
@@ -45,9 +42,8 @@ define <8 x i8> @mask_zext_not_v8i8(<8 x i1> %m) {
 ; CHECK-LABEL: mask_zext_not_v8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmnot.m v0, v0
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    vmv.v.i v8, 1
+; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
 ; CHECK-NEXT:    ret
   %not = xor <8 x i1> %m, splat (i1 true)
   %ext = zext <8 x i1> %not to <8 x i8>

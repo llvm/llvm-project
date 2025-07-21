@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/Target/SPIRV/Deserialization.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -121,7 +122,8 @@ class Deserializer {
 public:
   /// Creates a deserializer for the given SPIR-V `binary` module.
   /// The SPIR-V ModuleOp will be created into `context.
-  explicit Deserializer(ArrayRef<uint32_t> binary, MLIRContext *context);
+  explicit Deserializer(ArrayRef<uint32_t> binary, MLIRContext *context,
+                        const DeserializationOptions &options);
 
   /// Deserializes the remembered SPIR-V binary module.
   LogicalResult deserialize();
@@ -188,6 +190,11 @@ private:
   /// Gets the constant's attribute and type associated with the given <id>.
   std::optional<std::pair<Attribute, Type>> getConstant(uint32_t id);
 
+  /// Gets the replicated composite constant's attribute and type associated
+  /// with the given <id>.
+  std::optional<std::pair<Attribute, Type>>
+  getConstantCompositeReplicate(uint32_t id);
+
   /// Gets the info needed to materialize the spec constant operation op
   /// associated with the given <id>.
   std::optional<SpecConstOperationMaterializationInfo>
@@ -218,6 +225,13 @@ private:
     return specConstCompositeMap.lookup(id);
   }
 
+  /// Gets the replicated composite specialization constant with the given
+  /// result <id>.
+  spirv::EXTSpecConstantCompositeReplicateOp
+  getSpecConstantCompositeReplicate(uint32_t id) {
+    return specConstCompositeReplicateMap.lookup(id);
+  }
+
   /// Creates a spirv::SpecConstantOp.
   spirv::SpecConstantOp createSpecConstant(Location loc, uint32_t resultID,
                                            TypedAttr defaultValue);
@@ -245,6 +259,12 @@ private:
     auto attrName = llvm::convertToSnakeFromCamelCase(decorationName);
     return opBuilder.getStringAttr(attrName);
   }
+
+  /// Move a conditional branch into a separate basic block to avoid unnecessary
+  /// sinking of defs that may be required outside a selection region. This
+  /// function also ensures that a single block cannot be a header block of one
+  /// selection construct and the merge block of another.
+  LogicalResult splitConditionalBlocks();
 
   //===--------------------------------------------------------------------===//
   // Type
@@ -283,6 +303,8 @@ private:
 
   LogicalResult processMatrixType(ArrayRef<uint32_t> operands);
 
+  LogicalResult processTensorARMType(ArrayRef<uint32_t> operands);
+
   LogicalResult processTypeForwardPointer(ArrayRef<uint32_t> operands);
 
   //===--------------------------------------------------------------------===//
@@ -303,9 +325,19 @@ private:
   /// `operands`.
   LogicalResult processConstantComposite(ArrayRef<uint32_t> operands);
 
+  /// Processes a SPIR-V OpConstantCompositeReplicateEXT instruction with
+  /// the given `operands`.
+  LogicalResult
+  processConstantCompositeReplicateEXT(ArrayRef<uint32_t> operands);
+
   /// Processes a SPIR-V OpSpecConstantComposite instruction with the given
   /// `operands`.
   LogicalResult processSpecConstantComposite(ArrayRef<uint32_t> operands);
+
+  /// Processes a SPIR-V OpSpecConstantCompositeReplicateEXT instruction with
+  /// the given `operands`.
+  LogicalResult
+  processSpecConstantCompositeReplicateEXT(ArrayRef<uint32_t> operands);
 
   /// Processes a SPIR-V OpSpecConstantOp instruction with the given
   /// `operands`.
@@ -539,11 +571,27 @@ private:
   /// (and type) here. Later when it's used, we materialize the constant.
   DenseMap<uint32_t, std::pair<Attribute, Type>> constantMap;
 
+  // Result <id> to replicated constant attribute and type mapping.
+  ///
+  /// In the SPIR-V binary format, OpConstantCompositeReplicateEXT is placed in
+  /// the module and shared by instructions at module level and in subsequent
+  /// functions. But in the SPIR-V dialect, this is materialized to where
+  /// it's used in the function. So when seeing a
+  /// OpConstantCompositeReplicateEXT in the binary format, we don't immediately
+  /// emit a `spirv.EXT.ConstantCompositeReplicate` op into the module, we keep
+  /// the id of its value and type here. Later when it's used, we materialize
+  /// the `spirv.EXT.ConstantCompositeReplicate`.
+  DenseMap<uint32_t, std::pair<Attribute, Type>> constantCompositeReplicateMap;
+
   // Result <id> to spec constant mapping.
   DenseMap<uint32_t, spirv::SpecConstantOp> specConstMap;
 
   // Result <id> to composite spec constant mapping.
   DenseMap<uint32_t, spirv::SpecConstantCompositeOp> specConstCompositeMap;
+
+  // Result <id> to replicated composite spec constant mapping.
+  DenseMap<uint32_t, spirv::EXTSpecConstantCompositeReplicateOp>
+      specConstCompositeReplicateMap;
 
   /// Result <id> to info needed to materialize an OpSpecConstantOp
   /// mapping.
@@ -615,6 +663,9 @@ private:
 
   /// A list of all structs which have unresolved member types.
   SmallVector<DeferredStructTypeInfo, 0> deferredStructTypesInfos;
+
+  /// Deserialization options.
+  DeserializationOptions options;
 
 #ifndef NDEBUG
   /// A logger used to emit information during the deserialzation process.

@@ -12,16 +12,12 @@
 
 #include "mlir/Dialect/SPIRV/Linking/ModuleCombiner.h"
 
-#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/SymbolTable.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 
 using namespace mlir;
@@ -79,9 +75,8 @@ static llvm::hash_code computeHash(SymbolOpInterface symbolOp) {
         return attr.getName() != SymbolTable::getSymbolAttrName();
       });
 
-  return llvm::hash_combine(
-      symbolOp->getName(),
-      llvm::hash_combine_range(range.begin(), range.end()));
+  return llvm::hash_combine(symbolOp->getName(),
+                            llvm::hash_combine_range(range));
 }
 
 namespace mlir {

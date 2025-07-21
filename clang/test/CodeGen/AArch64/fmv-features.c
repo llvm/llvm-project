@@ -140,7 +140,7 @@ __attribute__((target_version("crc+bti+bti+bti+aes+aes+bf16"))) int fmv(void) { 
 __attribute__((target_version("non_existent_extension"))) int fmv(void);
 
 // CHECK: define dso_local i32 @fmv.default() #[[default:[0-9]+]] {
-__attribute__((target_version("default"))) int fmv(void);
+__attribute__((target_version("default"))) int fmv(void) { return 0; }
 
 int caller() {
   return fmv();

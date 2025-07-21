@@ -451,12 +451,6 @@ def FeatureVirtualization : SubtargetFeature<"virtualization",
                                              "Supports Virtualization extension",
                                              [FeatureHWDivThumb, FeatureHWDivARM]>;
 
-// Special TRAP encoding for NaCl, which looks like a TRAP in Thumb too.
-// See ARMInstrInfo.td for details.
-// True if NaCl TRAP instruction is generated instead of the regular TRAP.
-def FeatureNaClTrap       : SubtargetFeature<"nacl-trap", "UseNaClTrap", "true",
-                                             "NaCl trap">;
-
 // True if the subtarget disallows unaligned memory
 // accesses for some types.  For details, see
 // ARMTargetLowering::allowsMisalignedMemoryAccesses().

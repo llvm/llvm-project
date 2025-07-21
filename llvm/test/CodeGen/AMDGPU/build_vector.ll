@@ -245,7 +245,7 @@ define amdgpu_kernel void @build_vector_v2i16_trunc (ptr addrspace(1) %out, i32 
 ; GFX942-NEXT:    s_endpgm
   %srl = lshr i32 %a, 16
   %trunc = trunc i32 %srl to i16
-  %ins.0 = insertelement <2 x i16> undef, i16 %trunc, i32 0
+  %ins.0 = insertelement <2 x i16> poison, i16 %trunc, i32 0
   %ins.1 = insertelement <2 x i16> %ins.0, i16 5, i32 1
   store <2 x i16> %ins.1, ptr addrspace(1) %out
   ret void

@@ -2,12 +2,6 @@
 ; RUN: opt < %s -passes=msan -S | FileCheck %s
 ;
 ; Suboptimally handled by visitInstruction: llvm.aarch64.neon.
-; - fcvtas, fcvtau
-; - fcvtms, fcvtmu
-; - fcvtns, fcvtnu
-; - fcvtps, fcvtpu
-; - fcvtzs, fcvtzu
-; - fcvtxn
 ; - vcvtfp2fxs, vcvtfp2fxu
 ; - vcvtfxs2fp, vcvtfxu2fp
 ;

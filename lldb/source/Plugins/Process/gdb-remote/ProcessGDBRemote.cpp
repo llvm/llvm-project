@@ -34,6 +34,7 @@
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Host/PseudoTerminal.h"
@@ -92,7 +93,14 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
+#if defined(__APPLE__)
 #define DEBUGSERVER_BASENAME "debugserver"
+#elif defined(_WIN32)
+#define DEBUGSERVER_BASENAME "lldb-server.exe"
+#else
+#define DEBUGSERVER_BASENAME "lldb-server"
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
@@ -168,6 +176,8 @@ public:
     return GetPropertyAtIndexAs<bool>(idx, true);
   }
 };
+
+std::chrono::seconds ResumeTimeout() { return std::chrono::seconds(5); }
 
 } // namespace
 
@@ -1180,10 +1190,16 @@ Status ProcessGDBRemote::WillResume() {
   return Status();
 }
 
-Status ProcessGDBRemote::DoResume() {
+bool ProcessGDBRemote::SupportsReverseDirection() {
+  return m_gdb_comm.GetReverseStepSupported() ||
+         m_gdb_comm.GetReverseContinueSupported();
+}
+
+Status ProcessGDBRemote::DoResume(RunDirection direction) {
   Status error;
   Log *log = GetLog(GDBRLog::Process);
-  LLDB_LOGF(log, "ProcessGDBRemote::Resume()");
+  LLDB_LOGF(log, "ProcessGDBRemote::Resume(%s)",
+            direction == RunDirection::eRunForward ? "" : "reverse");
 
   ListenerSP listener_sp(
       Listener::MakeListener("gdb-remote.resume-packet-sent"));
@@ -1197,12 +1213,24 @@ Status ProcessGDBRemote::DoResume() {
 
     StreamString continue_packet;
     bool continue_packet_error = false;
-    if (m_gdb_comm.HasAnyVContSupport()) {
+    // Number of threads continuing with "c", i.e. continuing without a signal
+    // to deliver.
+    const size_t num_continue_c_tids = m_continue_c_tids.size();
+    // Number of threads continuing with "C", i.e. continuing with a signal to
+    // deliver.
+    const size_t num_continue_C_tids = m_continue_C_tids.size();
+    // Number of threads continuing with "s", i.e. single-stepping.
+    const size_t num_continue_s_tids = m_continue_s_tids.size();
+    // Number of threads continuing with "S", i.e. single-stepping with a signal
+    // to deliver.
+    const size_t num_continue_S_tids = m_continue_S_tids.size();
+    if (direction == RunDirection::eRunForward &&
+        m_gdb_comm.HasAnyVContSupport()) {
       std::string pid_prefix;
       if (m_gdb_comm.GetMultiprocessSupported())
         pid_prefix = llvm::formatv("p{0:x-}.", GetID());
 
-      if (m_continue_c_tids.size() == num_threads ||
+      if (num_continue_c_tids == num_threads ||
           (m_continue_c_tids.empty() && m_continue_C_tids.empty() &&
            m_continue_s_tids.empty() && m_continue_S_tids.empty())) {
         // All threads are continuing
@@ -1265,14 +1293,10 @@ Status ProcessGDBRemote::DoResume() {
     } else
       continue_packet_error = true;
 
-    if (continue_packet_error) {
+    if (direction == RunDirection::eRunForward && continue_packet_error) {
       // Either no vCont support, or we tried to use part of the vCont packet
       // that wasn't supported by the remote GDB server. We need to try and
-      // make a simple packet that can do our continue
-      const size_t num_continue_c_tids = m_continue_c_tids.size();
-      const size_t num_continue_C_tids = m_continue_C_tids.size();
-      const size_t num_continue_s_tids = m_continue_s_tids.size();
-      const size_t num_continue_S_tids = m_continue_S_tids.size();
+      // make a simple packet that can do our continue.
       if (num_continue_c_tids > 0) {
         if (num_continue_c_tids == num_threads) {
           // All threads are resuming...
@@ -1363,9 +1387,59 @@ Status ProcessGDBRemote::DoResume() {
       }
     }
 
+    if (direction == RunDirection::eRunReverse) {
+      if (num_continue_s_tids > 0 || num_continue_S_tids > 0) {
+        if (!m_gdb_comm.GetReverseStepSupported()) {
+          LLDB_LOGF(log, "ProcessGDBRemote::DoResume: target does not "
+                         "support reverse-stepping");
+          return Status::FromErrorString(
+              "target does not support reverse-stepping");
+        }
+
+        if (num_continue_S_tids > 0) {
+          LLDB_LOGF(
+              log,
+              "ProcessGDBRemote::DoResume: Signals not supported in reverse");
+          return Status::FromErrorString(
+              "can't deliver signals while running in reverse");
+        }
+
+        if (num_continue_s_tids > 1) {
+          LLDB_LOGF(log, "ProcessGDBRemote::DoResume: can't step multiple "
+                         "threads in reverse");
+          return Status::FromErrorString(
+              "can't step multiple threads while reverse-stepping");
+        }
+
+        m_gdb_comm.SetCurrentThreadForRun(m_continue_s_tids.front());
+        continue_packet.PutCString("bs");
+      } else {
+        if (!m_gdb_comm.GetReverseContinueSupported()) {
+          LLDB_LOGF(log, "ProcessGDBRemote::DoResume: target does not "
+                         "support reverse-continue");
+          return Status::FromErrorString(
+              "target does not support reverse execution of processes");
+        }
+
+        if (num_continue_C_tids > 0) {
+          LLDB_LOGF(
+              log,
+              "ProcessGDBRemote::DoResume: Signals not supported in reverse");
+          return Status::FromErrorString(
+              "can't deliver signals while running in reverse");
+        }
+
+        // All threads continue whether requested or not ---
+        // we can't change how threads ran in the past.
+        continue_packet.PutCString("bc");
+      }
+
+      continue_packet_error = false;
+    }
+
     if (continue_packet_error) {
-      error =
-          Status::FromErrorString("can't make continue packet for this resume");
+      return Status::FromErrorString(
+          "can't make continue packet for this resume");
     } else {
       EventSP event_sp;
       if (!m_async_thread.IsJoinable()) {
@@ -1380,7 +1454,7 @@ Status ProcessGDBRemote::DoResume() {
           std::make_shared<EventDataBytes>(continue_packet.GetString());
       m_async_broadcaster.BroadcastEvent(eBroadcastBitAsyncContinue, data_sp);
 
-      if (!listener_sp->GetEvent(event_sp, std::chrono::seconds(5))) {
+      if (!listener_sp->GetEvent(event_sp, ResumeTimeout())) {
         error = Status::FromErrorString("Resume timed out.");
         LLDB_LOGF(log, "ProcessGDBRemote::DoResume: Resume timed out.");
       } else if (event_sp->BroadcasterIs(&m_async_broadcaster)) {
@@ -1662,7 +1736,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
   reg_ctx_sp->InvalidateIfNeeded(true);
 
-  auto iter = std::find(m_thread_ids.begin(), m_thread_ids.end(), tid);
+  auto iter = llvm::find(m_thread_ids, tid);
   if (iter != m_thread_ids.end())
     SetThreadPc(thread_sp, iter - m_thread_ids.begin());
 
@@ -1828,6 +1902,10 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithException(
               *thread_sp, description.c_str()));
           handled = true;
+        } else if (reason == "history boundary") {
+          thread_sp->SetStopInfo(StopInfo::CreateStopReasonHistoryBoundary(
+              *thread_sp, description.c_str()));
+          handled = true;
         } else if (reason == "exec") {
           did_exec = true;
           thread_sp->SetStopInfo(
@@ -1986,7 +2064,6 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
   // Stop with signal and thread info
   lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
   uint8_t signo = 0;
-  std::string value;
   std::string thread_name;
   std::string reason;
   std::string description;
@@ -2206,7 +2283,6 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         m_jstopinfo_sp = StructuredData::ParseJSON(json);
       } else if (key.compare("hexname") == 0) {
         StringExtractor name_extractor(value);
-        std::string name;
         // Now convert the HEX bytes into a string value
         name_extractor.GetHexByteString(thread_name);
       } else if (key.compare("name") == 0) {
@@ -2283,6 +2359,8 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         description = std::string(ostr.GetString());
       } else if (key.compare("swbreak") == 0 || key.compare("hwbreak") == 0) {
         reason = "breakpoint";
+      } else if (key.compare("replaylog") == 0) {
+        reason = "history boundary";
       } else if (key.compare("library") == 0) {
         auto error = LoadModules();
         if (error) {
@@ -2499,7 +2577,16 @@ Status ProcessGDBRemote::DoDestroy() {
 
   StopAsyncThread();
   KillDebugserverProcess();
+  RemoveNewThreadBreakpoints();
   return Status();
+}
+
+void ProcessGDBRemote::RemoveNewThreadBreakpoints() {
+  if (m_thread_create_bp_sp) {
+    if (TargetSP target_sp = m_target_wp.lock())
+      target_sp->RemoveBreakpointByID(m_thread_create_bp_sp->GetID());
+    m_thread_create_bp_sp.reset();
+  }
 }
 
 void ProcessGDBRemote::SetLastStopPacket(
@@ -2679,11 +2766,10 @@ Status ProcessGDBRemote::WriteObjectFile(
   Status error;
   // Sort the entries by address because some writes, like those to flash
   // memory, must happen in order of increasing address.
-  std::stable_sort(
-      std::begin(entries), std::end(entries),
-      [](const ObjectFile::LoadableData a, const ObjectFile::LoadableData b) {
-        return a.Dest < b.Dest;
-      });
+  llvm::stable_sort(entries, [](const ObjectFile::LoadableData a,
+                                const ObjectFile::LoadableData b) {
+    return a.Dest < b.Dest;
+  });
   m_allow_flash_writes = true;
   error = Process::WriteObjectFile(entries);
   if (error.Success())
@@ -3369,115 +3455,126 @@ ProcessGDBRemote::EstablishConnectionIfNeeded(const ProcessInfo &process_info) {
   }
   return error;
 }
-#if !defined(_WIN32)
-#define USE_SOCKETPAIR_FOR_LOCAL_CONNECTION 1
-#endif
 
-#ifdef USE_SOCKETPAIR_FOR_LOCAL_CONNECTION
-static bool SetCloexecFlag(int fd) {
-#if defined(FD_CLOEXEC)
-  int flags = ::fcntl(fd, F_GETFD);
-  if (flags == -1)
-    return false;
-  return (::fcntl(fd, F_SETFD, flags | FD_CLOEXEC) == 0);
-#else
-  return false;
-#endif
+static FileSpec GetDebugserverPath(Platform &platform) {
+  Log *log = GetLog(GDBRLog::Process);
+  // If we locate debugserver, keep that located version around
+  static FileSpec g_debugserver_file_spec;
+  FileSpec debugserver_file_spec;
+
+  Environment host_env = Host::GetEnvironment();
+
+  // Always check to see if we have an environment override for the path to the
+  // debugserver to use and use it if we do.
+  std::string env_debugserver_path = host_env.lookup("LLDB_DEBUGSERVER_PATH");
+  if (!env_debugserver_path.empty()) {
+    debugserver_file_spec.SetFile(env_debugserver_path,
+                                  FileSpec::Style::native);
+    LLDB_LOG(log, "gdb-remote stub exe path set from environment variable: {0}",
+             env_debugserver_path);
+  } else
+    debugserver_file_spec = g_debugserver_file_spec;
+  if (FileSystem::Instance().Exists(debugserver_file_spec))
+    return debugserver_file_spec;
+
+  // The debugserver binary is in the LLDB.framework/Resources directory.
+  debugserver_file_spec = HostInfo::GetSupportExeDir();
+  if (debugserver_file_spec) {
+    debugserver_file_spec.AppendPathComponent(DEBUGSERVER_BASENAME);
+    if (FileSystem::Instance().Exists(debugserver_file_spec)) {
+      LLDB_LOG(log, "found gdb-remote stub exe '{0}'", debugserver_file_spec);
+
+      g_debugserver_file_spec = debugserver_file_spec;
+    } else {
+      debugserver_file_spec = platform.LocateExecutable(DEBUGSERVER_BASENAME);
+      if (!debugserver_file_spec) {
+        // Platform::LocateExecutable() wouldn't return a path if it doesn't
+        // exist
+        LLDB_LOG(log, "could not find gdb-remote stub exe '{0}'",
+                 debugserver_file_spec);
+      }
+      // Don't cache the platform specific GDB server binary as it could
+      // change from platform to platform
+      g_debugserver_file_spec.Clear();
+    }
+  }
+  return debugserver_file_spec;
 }
-#endif
 
 Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
     const ProcessInfo &process_info) {
   using namespace std::placeholders; // For _1, _2, etc.
 
-  Status error;
-  if (m_debugserver_pid == LLDB_INVALID_PROCESS_ID) {
-    // If we locate debugserver, keep that located version around
-    static FileSpec g_debugserver_file_spec;
+  if (m_debugserver_pid != LLDB_INVALID_PROCESS_ID)
+    return Status();
 
-    ProcessLaunchInfo debugserver_launch_info;
-    // Make debugserver run in its own session so signals generated by special
-    // terminal key sequences (^C) don't affect debugserver.
-    debugserver_launch_info.SetLaunchInSeparateProcessGroup(true);
+  ProcessLaunchInfo debugserver_launch_info;
+  // Make debugserver run in its own session so signals generated by special
+  // terminal key sequences (^C) don't affect debugserver.
+  debugserver_launch_info.SetLaunchInSeparateProcessGroup(true);
 
-    const std::weak_ptr<ProcessGDBRemote> this_wp =
-        std::static_pointer_cast<ProcessGDBRemote>(shared_from_this());
-    debugserver_launch_info.SetMonitorProcessCallback(
-        std::bind(MonitorDebugserverProcess, this_wp, _1, _2, _3));
-    debugserver_launch_info.SetUserID(process_info.GetUserID());
+  const std::weak_ptr<ProcessGDBRemote> this_wp =
+      std::static_pointer_cast<ProcessGDBRemote>(shared_from_this());
+  debugserver_launch_info.SetMonitorProcessCallback(
+      std::bind(MonitorDebugserverProcess, this_wp, _1, _2, _3));
+  debugserver_launch_info.SetUserID(process_info.GetUserID());
+
+  FileSpec debugserver_path = GetDebugserverPath(*GetTarget().GetPlatform());
 
 #if defined(__APPLE__)
-    // On macOS 11, we need to support x86_64 applications translated to
-    // arm64. We check whether a binary is translated and spawn the correct
-    // debugserver accordingly.
-    int mib[] = { CTL_KERN, KERN_PROC, KERN_PROC_PID,
-                  static_cast<int>(process_info.GetProcessID()) };
-    struct kinfo_proc processInfo;
-    size_t bufsize = sizeof(processInfo);
-    if (sysctl(mib, (unsigned)(sizeof(mib)/sizeof(int)), &processInfo,
-               &bufsize, NULL, 0) == 0 && bufsize > 0) {
-      if (processInfo.kp_proc.p_flag & P_TRANSLATED) {
-        FileSpec rosetta_debugserver("/Library/Apple/usr/libexec/oah/debugserver");
-        debugserver_launch_info.SetExecutableFile(rosetta_debugserver, false);
-      }
+  // On macOS 11, we need to support x86_64 applications translated to
+  // arm64. We check whether a binary is translated and spawn the correct
+  // debugserver accordingly.
+  int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID,
+               static_cast<int>(process_info.GetProcessID())};
+  struct kinfo_proc processInfo;
+  size_t bufsize = sizeof(processInfo);
+  if (sysctl(mib, (unsigned)(sizeof(mib) / sizeof(int)), &processInfo, &bufsize,
+             NULL, 0) == 0 &&
+      bufsize > 0) {
+    if (processInfo.kp_proc.p_flag & P_TRANSLATED) {
+      debugserver_path = FileSpec("/Library/Apple/usr/libexec/oah/debugserver");
     }
+  }
 #endif
+  debugserver_launch_info.SetExecutableFile(debugserver_path,
+                                            /*add_exe_file_as_first_arg=*/true);
 
-    shared_fd_t communication_fd = SharedSocket::kInvalidFD;
-#ifdef USE_SOCKETPAIR_FOR_LOCAL_CONNECTION
-    // Use a socketpair on non-Windows systems for security and performance
-    // reasons.
-    int sockets[2]; /* the pair of socket descriptors */
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) == -1) {
-      error = Status::FromErrno();
-      return error;
-    }
+  llvm::Expected<Socket::Pair> socket_pair = Socket::CreatePair();
+  if (!socket_pair)
+    return Status::FromError(socket_pair.takeError());
 
-    int our_socket = sockets[0];
-    int gdb_socket = sockets[1];
-    auto cleanup_our = llvm::make_scope_exit([&]() { close(our_socket); });
-    auto cleanup_gdb = llvm::make_scope_exit([&]() { close(gdb_socket); });
+  Status error;
+  SharedSocket shared_socket(socket_pair->first.get(), error);
+  if (error.Fail())
+    return error;
 
-    // Don't let any child processes inherit our communication socket
-    SetCloexecFlag(our_socket);
-    communication_fd = gdb_socket;
-#endif
+  error = m_gdb_comm.StartDebugserverProcess(shared_socket.GetSendableFD(),
+                                             debugserver_launch_info, nullptr);
 
-    error = m_gdb_comm.StartDebugserverProcess(
-        nullptr, GetTarget().GetPlatform().get(), debugserver_launch_info,
-        nullptr, nullptr, communication_fd);
+  if (error.Fail()) {
+    Log *log = GetLog(GDBRLog::Process);
 
-    if (error.Success())
-      m_debugserver_pid = debugserver_launch_info.GetProcessID();
-    else
-      m_debugserver_pid = LLDB_INVALID_PROCESS_ID;
+    LLDB_LOGF(log, "failed to start debugserver process: %s",
+              error.AsCString());
+    return error;
+  }
 
-    if (m_debugserver_pid != LLDB_INVALID_PROCESS_ID) {
-#ifdef USE_SOCKETPAIR_FOR_LOCAL_CONNECTION
-      // Our process spawned correctly, we can now set our connection to use
-      // our end of the socket pair
-      cleanup_our.release();
-      m_gdb_comm.SetConnection(
-          std::make_unique<ConnectionFileDescriptor>(our_socket, true));
-#endif
-      StartAsyncThread();
-    }
+  m_debugserver_pid = debugserver_launch_info.GetProcessID();
+  shared_socket.CompleteSending(m_debugserver_pid);
 
-    if (error.Fail()) {
-      Log *log = GetLog(GDBRLog::Process);
+  // Our process spawned correctly, we can now set our connection to use
+  // our end of the socket pair
+  m_gdb_comm.SetConnection(std::make_unique<ConnectionFileDescriptor>(
+      std::move(socket_pair->second)));
+  StartAsyncThread();
 
-      LLDB_LOGF(log, "failed to start debugserver process: %s",
-                error.AsCString());
-      return error;
-    }
-
-    if (m_gdb_comm.IsConnected()) {
-      // Finish the connection process by doing the handshake without
-      // connecting (send NULL URL)
-      error = ConnectToDebugserver("");
-    } else {
-      error = Status::FromErrorString("connection failed");
-    }
+  if (m_gdb_comm.IsConnected()) {
+    // Finish the connection process by doing the handshake without
+    // connecting (send NULL URL)
+    error = ConnectToDebugserver("");
+  } else {
+    error = Status::FromErrorString("connection failed");
   }
   return error;
 }
@@ -5495,8 +5592,7 @@ public:
       if (process) {
         StreamSP output_stream_sp = result.GetImmediateOutputStream();
         if (!output_stream_sp)
-          output_stream_sp =
-              StreamSP(m_interpreter.GetDebugger().GetAsyncOutputStream());
+          output_stream_sp = m_interpreter.GetDebugger().GetAsyncOutputStream();
         result.SetImmediateOutputStream(output_stream_sp);
 
         const uint32_t num_packets =

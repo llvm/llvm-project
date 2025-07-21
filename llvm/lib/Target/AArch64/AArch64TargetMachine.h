@@ -76,6 +76,9 @@ public:
   ScheduleDAGInstrs *
   createPostMachineScheduler(MachineSchedContext *C) const override;
 
+  size_t clearLinkerOptimizationHints(
+      const SmallPtrSetImpl<MachineInstr *> &MIs) const override;
+
 private:
   bool isLittle;
 };

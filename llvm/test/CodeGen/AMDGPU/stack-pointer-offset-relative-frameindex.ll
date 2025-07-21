@@ -148,7 +148,7 @@ if.then4.i:                                       ; preds = %entry
   %add1.i.i = add i32 %add.i.i, 0
   %mul.i.i.i.i = mul i32 %add1.i.i, 1103515245
   %add.i.i.i.i = add i32 %mul.i.i.i.i, 12345
-  store i32 %add.i.i.i.i, ptr addrspace(5) undef, align 16
+  store i32 %add.i.i.i.i, ptr addrspace(5) poison, align 16
   br label %shader_eval_surface.exit
 
 shader_eval_surface.exit:                         ; preds = %entry

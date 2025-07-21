@@ -30,19 +30,21 @@ void ODRHash::AddIdentifierInfo(const IdentifierInfo *II) {
   ID.AddString(II->getName());
 }
 
-void ODRHash::AddDeclarationName(DeclarationName Name, bool TreatAsDecl) {
+void ODRHash::AddDeclarationNameInfo(DeclarationNameInfo NameInfo,
+                                     bool TreatAsDecl) {
   if (TreatAsDecl)
     // Matches the NamedDecl check in AddDecl
     AddBoolean(true);
 
-  AddDeclarationNameImpl(Name);
+  AddDeclarationNameInfoImpl(NameInfo);
 
   if (TreatAsDecl)
     // Matches the ClassTemplateSpecializationDecl check in AddDecl
     AddBoolean(false);
 }
 
-void ODRHash::AddDeclarationNameImpl(DeclarationName Name) {
+void ODRHash::AddDeclarationNameInfoImpl(DeclarationNameInfo NameInfo) {
+  DeclarationName Name = NameInfo.getName();
   // Index all DeclarationName and use index numbers to refer to them.
   auto Result = DeclNameMap.insert(std::make_pair(Name, DeclNameMap.size()));
   ID.AddInteger(Result.first->second);
@@ -85,16 +87,17 @@ void ODRHash::AddDeclarationNameImpl(DeclarationName Name) {
   }
   case DeclarationName::CXXConstructorName:
   case DeclarationName::CXXDestructorName:
-    AddQualType(Name.getCXXNameType());
+  case DeclarationName::CXXConversionFunctionName:
+    if (auto *TSI = NameInfo.getNamedTypeInfo())
+      AddQualType(TSI->getType());
+    else
+      AddQualType(Name.getCXXNameType());
     break;
   case DeclarationName::CXXOperatorName:
     ID.AddInteger(Name.getCXXOverloadedOperator());
     break;
   case DeclarationName::CXXLiteralOperatorName:
     AddIdentifierInfo(Name.getCXXLiteralIdentifier());
-    break;
-  case DeclarationName::CXXConversionFunctionName:
-    AddQualType(Name.getCXXNameType());
     break;
   case DeclarationName::CXXUsingDirective:
     break;
@@ -124,17 +127,23 @@ void ODRHash::AddNestedNameSpecifier(const NestedNameSpecifier *NNS) {
   case NestedNameSpecifier::Namespace:
     AddDecl(NNS->getAsNamespace());
     break;
-  case NestedNameSpecifier::NamespaceAlias:
-    AddDecl(NNS->getAsNamespaceAlias());
-    break;
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
     AddType(NNS->getAsType());
     break;
   case NestedNameSpecifier::Global:
   case NestedNameSpecifier::Super:
     break;
   }
+}
+
+void ODRHash::AddDependentTemplateName(const DependentTemplateStorage &Name) {
+  if (NestedNameSpecifier *NNS = Name.getQualifier())
+    AddNestedNameSpecifier(NNS);
+  if (IdentifierOrOverloadedOperator IO = Name.getName();
+      const IdentifierInfo *II = IO.getIdentifier())
+    AddIdentifierInfo(II);
+  else
+    ID.AddInteger(IO.getOperator());
 }
 
 void ODRHash::AddTemplateName(TemplateName Name) {
@@ -153,10 +162,13 @@ void ODRHash::AddTemplateName(TemplateName Name) {
     AddTemplateName(QTN->getUnderlyingTemplate());
     break;
   }
+  case TemplateName::DependentTemplate: {
+    AddDependentTemplateName(*Name.getAsDependentTemplateName());
+    break;
+  }
   // TODO: Support these cases.
   case TemplateName::OverloadedTemplate:
   case TemplateName::AssumedTemplate:
-  case TemplateName::DependentTemplate:
   case TemplateName::SubstTemplateTemplateParm:
   case TemplateName::SubstTemplateTemplateParmPack:
   case TemplateName::UsingTemplate:
@@ -302,7 +314,10 @@ public:
   }
 
   void VisitNamedDecl(const NamedDecl *D) {
-    Hash.AddDeclarationName(D->getDeclName());
+    if (const auto *FD = dyn_cast<FunctionDecl>(D))
+      Hash.AddDeclarationNameInfo(FD->getNameInfo());
+    else
+      Hash.AddDeclarationName(D->getDeclName());
     Inherited::VisitNamedDecl(D);
   }
 
@@ -816,7 +831,10 @@ void ODRHash::AddDecl(const Decl *D) {
     return;
   }
 
-  AddDeclarationName(ND->getDeclName());
+  if (auto *FD = dyn_cast<FunctionDecl>(D))
+    AddDeclarationNameInfo(FD->getNameInfo());
+  else
+    AddDeclarationName(ND->getDeclName());
 
   // If this was a specialization we should take into account its template
   // arguments. This helps to reduce collisions coming when visiting template
@@ -1005,7 +1023,7 @@ public:
   }
 
   void VisitDecltypeType(const DecltypeType *T) {
-    AddStmt(T->getUnderlyingExpr());
+    Hash.AddStmt(T->getUnderlyingExpr());
     VisitType(T);
   }
 
@@ -1076,7 +1094,7 @@ public:
 
   void VisitMemberPointerType(const MemberPointerType *T) {
     AddQualType(T->getPointeeType());
-    AddType(T->getClass());
+    AddNestedNameSpecifier(T->getQualifier());
     VisitType(T);
   }
 
@@ -1221,8 +1239,7 @@ public:
 
   void VisitDependentTemplateSpecializationType(
       const DependentTemplateSpecializationType *T) {
-    AddIdentifierInfo(T->getIdentifier());
-    AddNestedNameSpecifier(T->getQualifier());
+    Hash.AddDependentTemplateName(T->getDependentTemplateName());
     ID.AddInteger(T->template_arguments().size());
     for (const auto &TA : T->template_arguments()) {
       Hash.AddTemplateArgument(TA);

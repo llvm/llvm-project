@@ -400,7 +400,7 @@ private:
   /// Enqueue \p Reg to be considered for addition to the closure.
   /// Return false if the closure becomes invalid.
   bool visitRegister(Closure &, Register Reg, RegDomain &Domain,
-                     SmallVectorImpl<unsigned> &Worklist);
+                     SmallVectorImpl<Register> &Worklist);
 
   /// Reassign the closure to \p Domain.
   void reassign(const Closure &C, RegDomain Domain) const;
@@ -422,7 +422,7 @@ char X86DomainReassignment::ID = 0;
 
 bool X86DomainReassignment::visitRegister(Closure &C, Register Reg,
                                           RegDomain &Domain,
-                                          SmallVectorImpl<unsigned> &Worklist) {
+                                          SmallVectorImpl<Register> &Worklist) {
   if (!Reg.isVirtual())
     return true;
 
@@ -544,11 +544,11 @@ static bool usedAsAddr(const MachineInstr &MI, Register Reg,
 }
 
 void X86DomainReassignment::buildClosure(Closure &C, Register Reg) {
-  SmallVector<unsigned, 4> Worklist;
+  SmallVector<Register, 4> Worklist;
   RegDomain Domain = NoDomain;
   visitRegister(C, Reg, Domain, Worklist);
   while (!Worklist.empty()) {
-    unsigned CurReg = Worklist.pop_back_val();
+    Register CurReg = Worklist.pop_back_val();
 
     // Register already in this closure.
     if (!C.insertEdge(CurReg))

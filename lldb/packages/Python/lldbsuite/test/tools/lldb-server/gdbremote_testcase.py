@@ -185,6 +185,8 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             ]
 
     def get_next_port(self):
+        if available_ports := self.getPlatformAvailablePorts():
+            return random.choice(available_ports)
         return 12000 + random.randint(0, 7999)
 
     def reset_test_sequence(self):
@@ -682,7 +684,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         self.assertTrue("name" in reg_info)
         self.assertTrue("bitsize" in reg_info)
 
-        if not self.getArchitecture() == "aarch64":
+        if not (self.getArchitecture() == "aarch64" or self.isRISCV()):
             self.assertTrue("offset" in reg_info)
 
         self.assertTrue("encoding" in reg_info)

@@ -74,7 +74,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX908-NEXT:   [[V_MOV_B32_dpp5:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[V_MOV_B32_e32_]], [[V_ADD_F32_e64_4]], 323, 12, 15, 0, implicit $exec
   ; GFX908-NEXT:   [[V_ADD_F32_e64_5:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_ADD_F32_e64_4]], 0, killed [[V_MOV_B32_dpp5]], 0, 0, implicit $mode, implicit $exec
   ; GFX908-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 63
-  ; GFX908-NEXT:   [[V_READLANE_B32_:%[0-9]+]]:sreg_32 = V_READLANE_B32 killed [[V_ADD_F32_e64_5]], killed [[S_MOV_B32_1]]
+  ; GFX908-NEXT:   [[V_READLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READLANE_B32 killed [[V_ADD_F32_e64_5]], killed [[S_MOV_B32_1]]
   ; GFX908-NEXT:   early-clobber %1:sgpr_32 = STRICT_WWM killed [[V_READLANE_B32_]], implicit $exec
   ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 killed [[V_MBCNT_HI_U32_B32_e64_]], [[S_MOV_B32_]], implicit $exec
   ; GFX908-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_64 = SI_IF killed [[V_CMP_EQ_U32_e64_]], %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
@@ -136,7 +136,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX90A_GFX942-NEXT:   [[V_MOV_B32_dpp5:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[V_MOV_B32_e32_]], [[V_ADD_F32_e64_4]], 323, 12, 15, 0, implicit $exec
   ; GFX90A_GFX942-NEXT:   [[V_ADD_F32_e64_5:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_ADD_F32_e64_4]], 0, killed [[V_MOV_B32_dpp5]], 0, 0, implicit $mode, implicit $exec
   ; GFX90A_GFX942-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 63
-  ; GFX90A_GFX942-NEXT:   [[V_READLANE_B32_:%[0-9]+]]:sreg_32 = V_READLANE_B32 killed [[V_ADD_F32_e64_5]], killed [[S_MOV_B32_1]]
+  ; GFX90A_GFX942-NEXT:   [[V_READLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READLANE_B32 killed [[V_ADD_F32_e64_5]], killed [[S_MOV_B32_1]]
   ; GFX90A_GFX942-NEXT:   early-clobber %1:sgpr_32 = STRICT_WWM killed [[V_READLANE_B32_]], implicit $exec
   ; GFX90A_GFX942-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 killed [[V_MBCNT_HI_U32_B32_e64_]], [[S_MOV_B32_]], implicit $exec
   ; GFX90A_GFX942-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_64 = SI_IF killed [[V_CMP_EQ_U32_e64_]], %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec

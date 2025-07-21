@@ -197,11 +197,9 @@ contains
 
 ! CHECK-LABEL: func.func @_QMpoly_tmpPtest_merge_intrinsic(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMpoly_tmpTp1{a:i32}>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.class<!fir.type<_QMpoly_tmpTp1{a:i32}>> {fir.bindc_name = "b"}) {
-! CHECK: %[[FIELD_A:.*]] = fir.field_index a, !fir.type<_QMpoly_tmpTp1{a:i32}>
-! CHECK: %[[COORD_A:.*]] = fir.coordinate_of %[[ARG0]], %[[FIELD_A]] : (!fir.class<!fir.type<_QMpoly_tmpTp1{a:i32}>>, !fir.field) -> !fir.ref<i32>
+! CHECK: %[[COORD_A:.*]] = fir.coordinate_of %[[ARG0]], a : (!fir.class<!fir.type<_QMpoly_tmpTp1{a:i32}>>) -> !fir.ref<i32>
 ! CHECK: %[[LOAD_A1:.*]] = fir.load %[[COORD_A]] : !fir.ref<i32>
-! CHECK: %[[FIELD_A:.*]] = fir.field_index a, !fir.type<_QMpoly_tmpTp1{a:i32}>
-! CHECK: %[[COORD_A:.*]] = fir.coordinate_of %[[ARG1]], %[[FIELD_A]] : (!fir.class<!fir.type<_QMpoly_tmpTp1{a:i32}>>, !fir.field) -> !fir.ref<i32>
+! CHECK: %[[COORD_A:.*]] = fir.coordinate_of %[[ARG1]], a : (!fir.class<!fir.type<_QMpoly_tmpTp1{a:i32}>>) -> !fir.ref<i32>
 ! CHECK: %[[LOAD_A2:.*]] = fir.load %[[COORD_A]] : !fir.ref<i32>
 ! CHECK: %[[CMPI:.*]] = arith.cmpi sgt, %[[LOAD_A1]], %[[LOAD_A2]] : i32
 ! CHECK: %[[SELECT:.*]] = arith.select %[[CMPI]], %[[ARG0]], %[[ARG1]] : !fir.class<!fir.type<_QMpoly_tmpTp1{a:i32}>>

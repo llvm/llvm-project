@@ -41,10 +41,10 @@ struct VerdAux {
 
 struct VerDef {
   unsigned Offset;
-  unsigned Version;
-  unsigned Flags;
-  unsigned Ndx;
-  unsigned Cnt;
+  uint16_t Version;
+  uint16_t Flags;
+  uint16_t Ndx;
+  uint16_t Cnt;
   unsigned Hash;
   std::string Name;
   std::vector<VerdAux> AuxV;
@@ -71,9 +71,9 @@ struct VersionEntry {
   bool IsVerDef;
 };
 
-StringRef getELFRelocationTypeName(uint32_t Machine, uint32_t Type);
-uint32_t getELFRelativeRelocationType(uint32_t Machine);
-StringRef getELFSectionTypeName(uint32_t Machine, uint32_t Type);
+LLVM_ABI StringRef getELFRelocationTypeName(uint32_t Machine, uint32_t Type);
+LLVM_ABI uint32_t getELFRelativeRelocationType(uint32_t Machine);
+LLVM_ABI StringRef getELFSectionTypeName(uint32_t Machine, uint32_t Type);
 
 // Subclasses of ELFFile may need this for template instantiation
 inline std::pair<unsigned char, unsigned char>
@@ -255,6 +255,11 @@ template <class ELFT>
 class ELFFile {
 public:
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
+
+  // Default ctor and copy assignment operator required to instantiate the
+  // template for DLL export.
+  ELFFile(const ELFFile &) = default;
+  ELFFile &operator=(const ELFFile &) = default;
 
   // This is a callback that can be passed to a number of functions.
   // It can be used to ignore non-critical errors (warnings), which is
@@ -926,7 +931,7 @@ Expected<typename ELFT::ShdrRange> ELFFile<ELFT>::sections() const {
   const uintX_t SectionTableOffset = getHeader().e_shoff;
   if (SectionTableOffset == 0) {
     if (!FakeSections.empty())
-      return ArrayRef(FakeSections.data(), FakeSections.size());
+      return ArrayRef(FakeSections);
     return ArrayRef<Elf_Shdr>();
   }
 
@@ -1057,8 +1062,8 @@ ELFFile<ELFT>::getVersionDefinitions(const Elf_Shdr &Sec) const {
 
     VerdAux Aux;
     Aux.Offset = VerdauxBuf - Start;
-    if (Verdaux->vda_name <= StrTabOrErr->size())
-      Aux.Name = std::string(StrTabOrErr->drop_front(Verdaux->vda_name));
+    if (Verdaux->vda_name < StrTabOrErr->size())
+      Aux.Name = std::string(StrTabOrErr->drop_front(Verdaux->vda_name).data());
     else
       Aux.Name = ("<invalid vda_name: " + Twine(Verdaux->vda_name) + ">").str();
     return Aux;

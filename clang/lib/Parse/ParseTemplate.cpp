@@ -20,13 +20,8 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
-#include "clang/Sema/SemaDiagnostic.h"
-#include "llvm/Support/TimeProfiler.h"
 using namespace clang;
 
-/// Re-enter a possible template scope, creating as many template parameter
-/// scopes as necessary.
-/// \return The number of template parameter scopes entered.
 unsigned Parser::ReenterTemplateScopes(MultiParseScope &S, Decl *D) {
   return Actions.ActOnReenterTemplateScope(D, [&] {
     S.Enter(Scope::TemplateParamScope);
@@ -34,8 +29,6 @@ unsigned Parser::ReenterTemplateScopes(MultiParseScope &S, Decl *D) {
   });
 }
 
-/// Parse a template declaration, explicit instantiation, or
-/// explicit specialization.
 Parser::DeclGroupPtrTy
 Parser::ParseDeclarationStartingWithTemplate(DeclaratorContext Context,
                                              SourceLocation &DeclEnd,
@@ -51,30 +44,6 @@ Parser::ParseDeclarationStartingWithTemplate(DeclaratorContext Context,
                                                   AccessSpecifier::AS_none);
 }
 
-/// Parse a template declaration or an explicit specialization.
-///
-/// Template declarations include one or more template parameter lists
-/// and either the function or class template declaration. Explicit
-/// specializations contain one or more 'template < >' prefixes
-/// followed by a (possibly templated) declaration. Since the
-/// syntactic form of both features is nearly identical, we parse all
-/// of the template headers together and let semantic analysis sort
-/// the declarations from the explicit specializations.
-///
-///       template-declaration: [C++ temp]
-///         'export'[opt] 'template' '<' template-parameter-list '>' declaration
-///
-///       template-declaration: [C++2a]
-///         template-head declaration
-///         template-head concept-definition
-///
-///       TODO: requires-clause
-///       template-head: [C++2a]
-///         'template' '<' template-parameter-list '>'
-///             requires-clause[opt]
-///
-///       explicit-specialization: [ C++ temp.expl.spec]
-///         'template' '<' '>' declaration
 Parser::DeclGroupPtrTy Parser::ParseTemplateDeclarationOrSpecialization(
     DeclaratorContext Context, SourceLocation &DeclEnd,
     ParsedAttributes &AccessAttrs, AccessSpecifier AS) {
@@ -179,21 +148,18 @@ Parser::DeclGroupPtrTy Parser::ParseTemplateDeclarationOrSpecialization(
       Context, TemplateInfo, ParsingTemplateParams, DeclEnd, AccessAttrs, AS);
 }
 
-/// Parse a single declaration that declares a template,
-/// template specialization, or explicit instantiation of a template.
-///
-/// \param DeclEnd will receive the source location of the last token
-/// within this declaration.
-///
-/// \param AS the access specifier associated with this
-/// declaration. Will be AS_none for namespace-scope declarations.
-///
-/// \returns the new declaration.
+Parser::DeclGroupPtrTy Parser::ParseTemplateDeclarationOrSpecialization(
+    DeclaratorContext Context, SourceLocation &DeclEnd, AccessSpecifier AS) {
+  ParsedAttributes AccessAttrs(AttrFactory);
+  return ParseTemplateDeclarationOrSpecialization(Context, DeclEnd, AccessAttrs,
+                                                  AS);
+}
+
 Parser::DeclGroupPtrTy Parser::ParseDeclarationAfterTemplate(
     DeclaratorContext Context, ParsedTemplateInfo &TemplateInfo,
     ParsingDeclRAIIObject &DiagsFromTParams, SourceLocation &DeclEnd,
     ParsedAttributes &AccessAttrs, AccessSpecifier AS) {
-  assert(TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate &&
+  assert(TemplateInfo.Kind != ParsedTemplateKind::NonTemplate &&
          "Template information required");
 
   if (Tok.is(tok::kw_static_assert)) {
@@ -243,7 +209,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationAfterTemplate(
         getCurScope(), AS, DS, ParsedAttributesView::none(),
         TemplateInfo.TemplateParams ? *TemplateInfo.TemplateParams
                                     : MultiTemplateParamsArg(),
-        TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation,
+        TemplateInfo.Kind == ParsedTemplateKind::ExplicitInstantiation,
         AnonRecord);
     Actions.ActOnDefinedDeclarationSpecifier(Decl);
     assert(!AnonRecord &&
@@ -256,22 +222,16 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationAfterTemplate(
     Actions.ActOnDefinedDeclarationSpecifier(DS.getRepAsDecl());
 
   // Move the attributes from the prefix into the DS.
-  if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation)
+  if (TemplateInfo.Kind == ParsedTemplateKind::ExplicitInstantiation)
     ProhibitAttributes(DeclAttrs);
 
   return ParseDeclGroup(DS, Context, DeclAttrs, TemplateInfo, &DeclEnd);
 }
 
-/// \brief Parse a single declaration that declares a concept.
-///
-/// \param DeclEnd will receive the source location of the last token
-/// within this declaration.
-///
-/// \returns the new declaration.
 Decl *
 Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
                                SourceLocation &DeclEnd) {
-  assert(TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate &&
+  assert(TemplateInfo.Kind != ParsedTemplateKind::NonTemplate &&
          "Template information required");
   assert(Tok.is(tok::kw_concept) &&
          "ParseConceptDefinition must be called when at a 'concept' keyword");
@@ -336,8 +296,7 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
     return nullptr;
   }
 
-  ExprResult ConstraintExprResult =
-      Actions.CorrectDelayedTyposInExpr(ParseConstraintExpression());
+  ExprResult ConstraintExprResult = ParseConstraintExpression();
   if (ConstraintExprResult.isInvalid()) {
     SkipUntil(tok::semi);
     if (D)
@@ -356,15 +315,6 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
                                               Attrs);
 }
 
-/// ParseTemplateParameters - Parses a template-parameter-list enclosed in
-/// angle brackets. Depth is the depth of this template-parameter-list, which
-/// is the number of template headers directly enclosing this template header.
-/// TemplateParams is the current list of template parameters we're building.
-/// The template parameter we parse will be added to this list. LAngleLoc and
-/// RAngleLoc will receive the positions of the '<' and '>', respectively,
-/// that enclose this template parameter list.
-///
-/// \returns true if an error occurred, false otherwise.
 bool Parser::ParseTemplateParameters(
     MultiParseScope &TemplateScopes, unsigned Depth,
     SmallVectorImpl<NamedDecl *> &TemplateParams, SourceLocation &LAngleLoc,
@@ -399,14 +349,6 @@ bool Parser::ParseTemplateParameters(
   return false;
 }
 
-/// ParseTemplateParameterList - Parse a template parameter list. If
-/// the parsing fails badly (i.e., closing bracket was left out), this
-/// will try to put the token stream in a reasonable position (closing
-/// a statement, etc.) and return false.
-///
-///       template-parameter-list:    [C++ temp]
-///         template-parameter
-///         template-parameter-list ',' template-parameter
 bool
 Parser::ParseTemplateParameterList(const unsigned Depth,
                              SmallVectorImpl<NamedDecl*> &TemplateParams) {
@@ -441,8 +383,6 @@ Parser::ParseTemplateParameterList(const unsigned Depth,
   return true;
 }
 
-/// Determine whether the parser is at the start of a template
-/// type parameter.
 Parser::TPResult Parser::isStartOfTemplateTypeParameter() {
   if (Tok.is(tok::kw_class)) {
     // "class" may be the start of an elaborated-type-specifier or a
@@ -524,26 +464,6 @@ Parser::TPResult Parser::isStartOfTemplateTypeParameter() {
   }
 }
 
-/// ParseTemplateParameter - Parse a template-parameter (C++ [temp.param]).
-///
-///       template-parameter: [C++ temp.param]
-///         type-parameter
-///         parameter-declaration
-///
-///       type-parameter: (See below)
-///         type-parameter-key ...[opt] identifier[opt]
-///         type-parameter-key identifier[opt] = type-id
-/// (C++2a) type-constraint ...[opt] identifier[opt]
-/// (C++2a) type-constraint identifier[opt] = type-id
-///         'template' '<' template-parameter-list '>' type-parameter-key
-///               ...[opt] identifier[opt]
-///         'template' '<' template-parameter-list '>' type-parameter-key
-///               identifier[opt] '=' id-expression
-///
-///       type-parameter-key:
-///         class
-///         typename
-///
 NamedDecl *Parser::ParseTemplateParameter(unsigned Depth, unsigned Position) {
 
   switch (isStartOfTemplateTypeParameter()) {
@@ -601,8 +521,6 @@ NamedDecl *Parser::ParseTemplateParameter(unsigned Depth, unsigned Position) {
   return ParseNonTypeTemplateParameter(Depth, Position);
 }
 
-/// Check whether the current token is a template-id annotation denoting a
-/// type-constraint.
 bool Parser::isTypeConstraintAnnotation() {
   const Token &T = Tok.is(tok::annot_cxxscope) ? NextToken() : Tok;
   if (T.isNot(tok::annot_template_id))
@@ -612,14 +530,6 @@ bool Parser::isTypeConstraintAnnotation() {
   return ExistingAnnot->Kind == TNK_Concept_template;
 }
 
-/// Try parsing a type-constraint at the current location.
-///
-///     type-constraint:
-///       nested-name-specifier[opt] concept-name
-///       nested-name-specifier[opt] concept-name
-///           '<' template-argument-list[opt] '>'[opt]
-///
-/// \returns true if an error occurred, and false otherwise.
 bool Parser::TryAnnotateTypeConstraint() {
   if (!getLangOpts().CPlusPlus20)
     return false;
@@ -678,15 +588,6 @@ bool Parser::TryAnnotateTypeConstraint() {
   return false;
 }
 
-/// ParseTypeParameter - Parse a template type parameter (C++ [temp.param]).
-/// Other kinds of template parameters are parsed in
-/// ParseTemplateTemplateParameter and ParseNonTypeTemplateParameter.
-///
-///       type-parameter:     [C++ temp.param]
-///         'class' ...[opt][C++0x] identifier[opt]
-///         'class' identifier[opt] '=' type-id
-///         'typename' ...[opt][C++0x] identifier[opt]
-///         'typename' identifier[opt] '=' type-id
 NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
   assert((Tok.isOneOf(tok::kw_class, tok::kw_typename) ||
           isTypeConstraintAnnotation()) &&
@@ -783,18 +684,6 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
   return NewDecl;
 }
 
-/// ParseTemplateTemplateParameter - Handle the parsing of template
-/// template parameters.
-///
-///       type-parameter:    [C++ temp.param]
-///         template-head type-parameter-key ...[opt] identifier[opt]
-///         template-head type-parameter-key identifier[opt] = id-expression
-///       type-parameter-key:
-///         'class'
-///         'typename'       [C++1z]
-///       template-head:     [C++2a]
-///         'template' '<' template-parameter-list '>'
-///             requires-clause[opt]
 NamedDecl *Parser::ParseTemplateTemplateParameter(unsigned Depth,
                                                   unsigned Position) {
   assert(Tok.is(tok::kw_template) && "Expected 'template' keyword");
@@ -907,12 +796,6 @@ NamedDecl *Parser::ParseTemplateTemplateParameter(unsigned Depth,
       ParamName, NameLoc, Depth, Position, EqualLoc, DefaultArg);
 }
 
-/// ParseNonTypeTemplateParameter - Handle the parsing of non-type
-/// template parameters (e.g., in "template<int Size> class array;").
-///
-///       template-parameter:
-///         ...
-///         parameter-declaration
 NamedDecl *
 Parser::ParseNonTypeTemplateParameter(unsigned Depth, unsigned Position) {
   // Parse the declaration-specifiers (i.e., the type).
@@ -997,21 +880,6 @@ void Parser::DiagnoseMisplacedEllipsisInDeclarator(SourceLocation EllipsisLoc,
                             AlreadyHasEllipsis, D.hasName());
 }
 
-/// Parses a '>' at the end of a template list.
-///
-/// If this function encounters '>>', '>>>', '>=', or '>>=', it tries
-/// to determine if these tokens were supposed to be a '>' followed by
-/// '>', '>>', '>=', or '>='. It emits an appropriate diagnostic if necessary.
-///
-/// \param RAngleLoc the location of the consumed '>'.
-///
-/// \param ConsumeLastToken if true, the '>' is consumed.
-///
-/// \param ObjCGenericList if true, this is the '>' closing an Objective-C
-/// type parameter or type argument list, rather than a C++ template parameter
-/// or argument list.
-///
-/// \returns true, if current token does not start with '>', false otherwise.
 bool Parser::ParseGreaterThanInTemplateList(SourceLocation LAngleLoc,
                                             SourceLocation &RAngleLoc,
                                             bool ConsumeLastToken,
@@ -1170,17 +1038,6 @@ bool Parser::ParseGreaterThanInTemplateList(SourceLocation LAngleLoc,
   return false;
 }
 
-/// Parses a template-id that after the template name has
-/// already been parsed.
-///
-/// This routine takes care of parsing the enclosed template argument
-/// list ('<' template-parameter-list [opt] '>') and placing the
-/// results into a form that can be transferred to semantic analysis.
-///
-/// \param ConsumeLastToken if true, then we will consume the last
-/// token that forms the template-id. Otherwise, we will leave the
-/// last token in the stream (e.g., so that it can be replaced with an
-/// annotation token).
 bool Parser::ParseTemplateIdAfterTemplateName(bool ConsumeLastToken,
                                               SourceLocation &LAngleLoc,
                                               TemplateArgList &TemplateArgs,
@@ -1215,47 +1072,6 @@ bool Parser::ParseTemplateIdAfterTemplateName(bool ConsumeLastToken,
          Invalid;
 }
 
-/// Replace the tokens that form a simple-template-id with an
-/// annotation token containing the complete template-id.
-///
-/// The first token in the stream must be the name of a template that
-/// is followed by a '<'. This routine will parse the complete
-/// simple-template-id and replace the tokens with a single annotation
-/// token with one of two different kinds: if the template-id names a
-/// type (and \p AllowTypeAnnotation is true), the annotation token is
-/// a type annotation that includes the optional nested-name-specifier
-/// (\p SS). Otherwise, the annotation token is a template-id
-/// annotation that does not include the optional
-/// nested-name-specifier.
-///
-/// \param Template  the declaration of the template named by the first
-/// token (an identifier), as returned from \c Action::isTemplateName().
-///
-/// \param TNK the kind of template that \p Template
-/// refers to, as returned from \c Action::isTemplateName().
-///
-/// \param SS if non-NULL, the nested-name-specifier that precedes
-/// this template name.
-///
-/// \param TemplateKWLoc if valid, specifies that this template-id
-/// annotation was preceded by the 'template' keyword and gives the
-/// location of that keyword. If invalid (the default), then this
-/// template-id was not preceded by a 'template' keyword.
-///
-/// \param AllowTypeAnnotation if true (the default), then a
-/// simple-template-id that refers to a class template, template
-/// template parameter, or other template that produces a type will be
-/// replaced with a type annotation token. Otherwise, the
-/// simple-template-id is always replaced with a template-id
-/// annotation token.
-///
-/// \param TypeConstraint if true, then this is actually a type-constraint,
-/// meaning that the template argument list can be omitted (and the template in
-/// question must be a concept).
-///
-/// If an unrecoverable parse error occurs and no annotation token can be
-/// formed, this function returns true.
-///
 bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
                                      CXXScopeSpec &SS,
                                      SourceLocation TemplateKWLoc,
@@ -1343,21 +1159,6 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
   return false;
 }
 
-/// Replaces a template-id annotation token with a type
-/// annotation token.
-///
-/// If there was a failure when forming the type from the template-id,
-/// a type annotation token will still be created, but will have a
-/// NULL type pointer to signify an error.
-///
-/// \param SS The scope specifier appearing before the template-id, if any.
-///
-/// \param AllowImplicitTypename whether this is a context where T::type
-/// denotes a dependent type.
-/// \param IsClassName Is this template-id appearing in a context where we
-/// know it names a class, such as in an elaborated-type-specifier or
-/// base-specifier? ('typename' and 'template' are unneeded and disallowed
-/// in those contexts.)
 void Parser::AnnotateTemplateIdTokenAsType(
     CXXScopeSpec &SS, ImplicitTypenameContext AllowImplicitTypename,
     bool IsClassName) {
@@ -1398,7 +1199,6 @@ static bool isEndOfTemplateArgument(Token Tok) {
                      tok::greatergreatergreater);
 }
 
-/// Parse a C++ template template argument.
 ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
   if (!Tok.is(tok::identifier) && !Tok.is(tok::coloncolon) &&
       !Tok.is(tok::annot_cxxscope))
@@ -1476,14 +1276,6 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
   return Result;
 }
 
-/// ParseTemplateArgument - Parse a C++ template argument (C++ [temp.names]).
-///
-///       template-argument: [C++ 14.2]
-///         constant-expression
-///         type-id
-///         id-expression
-///         braced-init-list  [C++26, DR]
-///
 ParsedTemplateArgument Parser::ParseTemplateArgument() {
   // C++ [temp.arg]p2:
   //   In a template-argument, an ambiguity between a type-id and an
@@ -1499,7 +1291,7 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
     Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated,
     /*LambdaContextDecl=*/nullptr,
     /*ExprContext=*/Sema::ExpressionEvaluationContextRecord::EK_TemplateArgument);
-  if (isCXXTypeId(TypeIdAsTemplateArgument)) {
+  if (isCXXTypeId(TentativeCXXTypeIdContext::AsTemplateArgument)) {
     TypeResult TypeArg = ParseTypeName(
         /*Range=*/nullptr, DeclaratorContext::TemplateArg);
     return Actions.ActOnTemplateTypeArgument(TypeArg);
@@ -1526,7 +1318,8 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
   if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace))
     ExprArg = ParseBraceInitializer();
   else
-    ExprArg = ParseConstantExpressionInExprEvalContext(MaybeTypeCast);
+    ExprArg = ParseConstantExpressionInExprEvalContext(
+        TypoCorrectionTypeBehavior::AllowBoth);
   if (ExprArg.isInvalid() || !ExprArg.get()) {
     return ParsedTemplateArgument();
   }
@@ -1535,14 +1328,6 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
                                 ExprArg.get(), Loc);
 }
 
-/// ParseTemplateArgumentList - Parse a C++ template-argument-list
-/// (C++ [temp.names]). Returns true if there was an error.
-///
-///       template-argument-list: [C++ 14.2]
-///         template-argument
-///         template-argument-list ',' template-argument
-///
-/// \param Template is only used for code completion, and may be null.
 bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
                                        TemplateTy Template,
                                        SourceLocation OpenLoc) {
@@ -1580,13 +1365,6 @@ bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
   return false;
 }
 
-/// Parse a C++ explicit template instantiation
-/// (C++ [temp.explicit]).
-///
-///       explicit-instantiation:
-///         'extern' [opt] 'template' declaration
-///
-/// Note that the 'extern' is a GNU extension and C++11 feature.
 Parser::DeclGroupPtrTy Parser::ParseExplicitInstantiation(
     DeclaratorContext Context, SourceLocation ExternLoc,
     SourceLocation TemplateLoc, SourceLocation &DeclEnd,
@@ -1614,7 +1392,6 @@ void Parser::LateTemplateParserCallback(void *P, LateParsedTemplate &LPT) {
   ((Parser *)P)->ParseLateTemplatedFuncDef(LPT);
 }
 
-/// Late parse a C++ function template in Microsoft mode.
 void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
   if (!LPT.D)
      return;
@@ -1698,7 +1475,6 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
   }
 }
 
-/// Lex a delayed template function for late parsing.
 void Parser::LexTemplateFunctionForLateParsing(CachedTokens &Toks) {
   tok::TokenKind kind = Tok.getKind();
   if (!ConsumeAndStoreFunctionPrologue(Toks)) {
@@ -1715,10 +1491,6 @@ void Parser::LexTemplateFunctionForLateParsing(CachedTokens &Toks) {
   }
 }
 
-/// We've parsed something that could plausibly be intended to be a template
-/// name (\p LHS) followed by a '<' token, and the following code can't possibly
-/// be an expression. Determine if this is likely to be a template-id and if so,
-/// diagnose it.
 bool Parser::diagnoseUnknownTemplateId(ExprResult LHS, SourceLocation Less) {
   TentativeParsingAction TPA(*this);
   // FIXME: We could look at the token sequence in a lot more detail here.

@@ -63,7 +63,7 @@ while.end:                                        ; preds = %while.cond
   DominatorTree DT(*F);
   LoopInfo LI(DT);
   AssumptionCache AC(*F);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   ScalarEvolution SE(*F, TLI, AC, DT, LI);
 

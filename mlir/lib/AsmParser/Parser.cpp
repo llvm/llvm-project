@@ -435,6 +435,7 @@ ParseResult Parser::parseOptionalKeywordOrString(std::string *result) {
 
 //===----------------------------------------------------------------------===//
 // Resource Parsing
+//===----------------------------------------------------------------------===//
 
 FailureOr<AsmDialectResourceHandle>
 Parser::parseResourceHandle(const OpAsmDialectInterface *dialect,
@@ -478,6 +479,7 @@ Parser::parseResourceHandle(Dialect *dialect) {
 
 //===----------------------------------------------------------------------===//
 // Code Completion
+//===----------------------------------------------------------------------===//
 
 ParseResult Parser::codeCompleteDialectName() {
   state.codeCompleteContext->completeDialectName();
@@ -839,8 +841,8 @@ private:
 };
 } // namespace
 
-MLIR_DECLARE_EXPLICIT_TYPE_ID(OperationParser::DeferredLocInfo *)
-MLIR_DEFINE_EXPLICIT_TYPE_ID(OperationParser::DeferredLocInfo *)
+MLIR_DECLARE_EXPLICIT_SELF_OWNING_TYPE_ID(OperationParser::DeferredLocInfo *)
+MLIR_DEFINE_EXPLICIT_SELF_OWNING_TYPE_ID(OperationParser::DeferredLocInfo *)
 
 OperationParser::OperationParser(ParserState &state, ModuleOp topLevelOp)
     : Parser(state), opBuilder(topLevelOp.getRegion()), topLevelOp(topLevelOp) {
@@ -1196,8 +1198,8 @@ Value OperationParser::createForwardRefPlaceholder(SMLoc loc, Type type) {
   auto name = OperationName("builtin.unrealized_conversion_cast", getContext());
   auto *op = Operation::create(
       getEncodedSourceLocation(loc), name, type, /*operands=*/{},
-      /*attributes=*/std::nullopt, /*properties=*/nullptr, /*successors=*/{},
-      /*numRegions=*/0);
+      /*attributes=*/NamedAttrList(), /*properties=*/nullptr,
+      /*successors=*/{}, /*numRegions=*/0);
   forwardRefPlaceholders[op->getResult(0)] = loc;
   forwardRefOps.insert(op);
   return op->getResult(0);
@@ -2003,6 +2005,11 @@ private:
 
 FailureOr<OperationName> OperationParser::parseCustomOperationName() {
   Token nameTok = getToken();
+  // Accept keywords here as they may be interpreted as a shortened operation
+  // name, e.g., `dialect.keyword` can be spelled as just `keyword` within a
+  // region of an operation from `dialect`.
+  if (nameTok.getKind() != Token::bare_identifier && !nameTok.isKeyword())
+    return emitError("expected bare identifier or keyword");
   StringRef opName = nameTok.getSpelling();
   if (opName.empty())
     return (emitError("empty operation name is invalid"), failure());
@@ -2234,6 +2241,14 @@ ParseResult OperationParser::parseRegionBody(Region &region, SMLoc startLoc,
 
   // Parse the first block directly to allow for it to be unnamed.
   auto owningBlock = std::make_unique<Block>();
+  auto failureCleanup = llvm::make_scope_exit([&] {
+    if (owningBlock) {
+      // If parsing failed, as indicated by the fact that `owningBlock` still
+      // owns the block, drop all forward references from preceding operations
+      // to definitions within the parsed block.
+      owningBlock->dropAllDefinedValueUses();
+    }
+  });
   Block *block = owningBlock.get();
 
   // If this block is not defined in the source file, add a definition for it

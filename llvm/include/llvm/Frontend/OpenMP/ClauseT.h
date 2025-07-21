@@ -701,7 +701,7 @@ template <typename T, typename I, typename E> //
 struct IndirectT {
   using InvokedByFptr = E;
   using WrapperTrait = std::true_type;
-  InvokedByFptr v;
+  OPT(InvokedByFptr) v;
 };
 
 // V5.2: [14.1.2] `init` clause
@@ -1142,6 +1142,11 @@ struct UnifiedSharedMemoryT {
   using EmptyTrait = std::true_type;
 };
 
+template <typename T, typename I, typename E> //
+struct SelfMapsT {
+  using EmptyTrait = std::true_type;
+};
+
 // V5.2: [5.10] `uniform` clause
 template <typename T, typename I, typename E> //
 struct UniformT {
@@ -1245,7 +1250,7 @@ using EmptyClausesT = std::variant<
     ReverseOffloadT<T, I, E>, SeqCstT<T, I, E>, SimdT<T, I, E>,
     ThreadsT<T, I, E>, UnifiedAddressT<T, I, E>, UnifiedSharedMemoryT<T, I, E>,
     UnknownT<T, I, E>, UntiedT<T, I, E>, UseT<T, I, E>, WeakT<T, I, E>,
-    WriteT<T, I, E>, NoOpenmpConstructsT<T, I, E>>;
+    WriteT<T, I, E>, NoOpenmpConstructsT<T, I, E>, SelfMapsT<T, I, E>>;
 
 template <typename T, typename I, typename E>
 using IncompleteClausesT =

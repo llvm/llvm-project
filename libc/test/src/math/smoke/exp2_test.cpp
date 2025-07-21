@@ -8,7 +8,7 @@
 
 #include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/math/exp2.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -18,6 +18,9 @@
 using LlvmLibcExp2Test = LIBC_NAMESPACE::testing::FPTest<double>;
 
 TEST_F(LlvmLibcExp2Test, SpecialNumbers) {
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::exp2(sNaN), FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
+
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::exp2(aNaN));
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::exp2(inf));
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::exp2(neg_inf));

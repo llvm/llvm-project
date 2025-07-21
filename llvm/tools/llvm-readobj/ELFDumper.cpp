@@ -30,6 +30,7 @@
 #include "llvm/BinaryFormat/AMDGPUMetadataVerifier.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MsgPackDocument.h"
+#include "llvm/BinaryFormat/SFrame.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELF.h"
@@ -38,7 +39,9 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/RelocationResolver.h"
+#include "llvm/Object/SFrameParser.h"
 #include "llvm/Object/StackMapParser.h"
+#include "llvm/Support/AArch64AttributeParser.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
@@ -224,6 +227,8 @@ public:
   void printArchSpecificInfo() override;
   void printStackMap() const override;
   void printMemtag() override;
+  void printSectionsAsSFrame(ArrayRef<std::string> Sections) override;
+
   ArrayRef<uint8_t> getMemtagGlobalsSectionContents(uint64_t ExpectedAddr);
 
   // Hash histogram shows statistics of how efficient the hash was for the
@@ -1370,38 +1375,30 @@ getSectionFlagsForTarget(unsigned EOSAbi, unsigned EMachine) {
                                        std::end(ElfSectionFlags));
   switch (EOSAbi) {
   case ELFOSABI_SOLARIS:
-    Ret.insert(Ret.end(), std::begin(ElfSolarisSectionFlags),
-               std::end(ElfSolarisSectionFlags));
+    llvm::append_range(Ret, ElfSolarisSectionFlags);
     break;
   default:
-    Ret.insert(Ret.end(), std::begin(ElfGNUSectionFlags),
-               std::end(ElfGNUSectionFlags));
+    llvm::append_range(Ret, ElfGNUSectionFlags);
     break;
   }
   switch (EMachine) {
   case EM_AARCH64:
-    Ret.insert(Ret.end(), std::begin(ElfAArch64SectionFlags),
-               std::end(ElfAArch64SectionFlags));
+    llvm::append_range(Ret, ElfAArch64SectionFlags);
     break;
   case EM_ARM:
-    Ret.insert(Ret.end(), std::begin(ElfARMSectionFlags),
-               std::end(ElfARMSectionFlags));
+    llvm::append_range(Ret, ElfARMSectionFlags);
     break;
   case EM_HEXAGON:
-    Ret.insert(Ret.end(), std::begin(ElfHexagonSectionFlags),
-               std::end(ElfHexagonSectionFlags));
+    llvm::append_range(Ret, ElfHexagonSectionFlags);
     break;
   case EM_MIPS:
-    Ret.insert(Ret.end(), std::begin(ElfMipsSectionFlags),
-               std::end(ElfMipsSectionFlags));
+    llvm::append_range(Ret, ElfMipsSectionFlags);
     break;
   case EM_X86_64:
-    Ret.insert(Ret.end(), std::begin(ElfX86_64SectionFlags),
-               std::end(ElfX86_64SectionFlags));
+    llvm::append_range(Ret, ElfX86_64SectionFlags);
     break;
   case EM_XCORE:
-    Ret.insert(Ret.end(), std::begin(ElfXCoreSectionFlags),
-               std::end(ElfXCoreSectionFlags));
+    llvm::append_range(Ret, ElfXCoreSectionFlags);
     break;
   default:
     break;
@@ -1497,6 +1494,7 @@ static StringRef segmentTypeToString(unsigned Arch, unsigned Type) {
     LLVM_READOBJ_ENUM_CASE(ELF, PT_GNU_STACK);
     LLVM_READOBJ_ENUM_CASE(ELF, PT_GNU_RELRO);
     LLVM_READOBJ_ENUM_CASE(ELF, PT_GNU_PROPERTY);
+    LLVM_READOBJ_ENUM_CASE(ELF, PT_GNU_SFRAME);
 
     LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_MUTABLE);
     LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_RANDOMIZE);
@@ -1647,6 +1645,7 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1153, "gfx1153"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1200, "gfx1200"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1250, "gfx1250"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic"),                \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic"),            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic"),          \
@@ -2878,6 +2877,12 @@ template <class ELFT> void ELFDumper<ELFT>::printArchSpecificInfo() {
         ELF::SHT_ARM_ATTRIBUTES, std::make_unique<ARMAttributeParser>(&W),
         Obj.isLE() ? llvm::endianness::little : llvm::endianness::big);
     break;
+  case EM_AARCH64:
+    printAttributes(ELF::SHT_AARCH64_ATTRIBUTES,
+                    std::make_unique<AArch64AttributeParser>(&W),
+                    Obj.isLE() ? llvm::endianness::little
+                               : llvm::endianness::big);
+    break;
   case EM_RISCV:
     if (Obj.isLE())
       printAttributes(ELF::SHT_RISCV_ATTRIBUTES,
@@ -3490,20 +3495,13 @@ ELFDumper<ELFT>::getOtherFlagsFromSymbol(const Elf_Ehdr &Header,
     // flag overlap with other ST_MIPS_xxx flags. So consider both
     // cases separately.
     if ((Symbol.st_other & STO_MIPS_MIPS16) == STO_MIPS_MIPS16)
-      SymOtherFlags.insert(SymOtherFlags.end(),
-                           std::begin(ElfMips16SymOtherFlags),
-                           std::end(ElfMips16SymOtherFlags));
+      llvm::append_range(SymOtherFlags, ElfMips16SymOtherFlags);
     else
-      SymOtherFlags.insert(SymOtherFlags.end(),
-                           std::begin(ElfMipsSymOtherFlags),
-                           std::end(ElfMipsSymOtherFlags));
+      llvm::append_range(SymOtherFlags, ElfMipsSymOtherFlags);
   } else if (Header.e_machine == EM_AARCH64) {
-    SymOtherFlags.insert(SymOtherFlags.end(),
-                         std::begin(ElfAArch64SymOtherFlags),
-                         std::end(ElfAArch64SymOtherFlags));
+    llvm::append_range(SymOtherFlags, ElfAArch64SymOtherFlags);
   } else if (Header.e_machine == EM_RISCV) {
-    SymOtherFlags.insert(SymOtherFlags.end(), std::begin(ElfRISCVSymOtherFlags),
-                         std::end(ElfRISCVSymOtherFlags));
+    llvm::append_range(SymOtherFlags, ElfRISCVSymOtherFlags);
   }
   return SymOtherFlags;
 }
@@ -5517,7 +5515,7 @@ template <typename ELFT> static GNUAbiTag getGNUAbiTag(ArrayRef<uint8_t> Desc) {
     return {"", "", /*IsValid=*/false};
 
   static const char *OSNames[] = {
-      "Linux", "Hurd", "Solaris", "FreeBSD", "NetBSD", "Syllable", "NaCl",
+      "Linux", "Hurd", "Solaris", "FreeBSD", "NetBSD", "Syllable",
   };
   StringRef OSName = "Unknown";
   if (Words[0] < std::size(OSNames))
@@ -6433,6 +6431,61 @@ template <typename ELFT> void ELFDumper<ELFT>::printMemtag() {
   }
 
   printMemtag(DynamicEntries, AndroidNoteDesc, GlobalDescriptors);
+}
+
+template <typename ELFT>
+void ELFDumper<ELFT>::printSectionsAsSFrame(ArrayRef<std::string> Sections) {
+  constexpr endianness E = ELFT::Endianness;
+  for (object::SectionRef Section :
+       getSectionRefsByNameOrIndex(ObjF, Sections)) {
+    // Validity of sections names checked in getSectionRefsByNameOrIndex.
+    StringRef SectionName = cantFail(Section.getName());
+
+    DictScope SectionScope(W,
+                           formatv("SFrame section '{0}'", SectionName).str());
+
+    StringRef SectionContent;
+    if (Error Err = Section.getContents().moveInto(SectionContent)) {
+      reportWarning(std::move(Err), FileName);
+      continue;
+    }
+
+    Expected<object::SFrameParser<E>> Parser =
+        object::SFrameParser<E>::create(arrayRefFromStringRef(SectionContent));
+    if (!Parser) {
+      reportWarning(createError("invalid sframe section: " +
+                                toString(Parser.takeError())),
+                    FileName);
+      continue;
+    }
+
+    DictScope HeaderScope(W, "Header");
+
+    const sframe::Preamble<E> &Preamble = Parser->getPreamble();
+    W.printHex("Magic", Preamble.Magic.value());
+    W.printEnum("Version", Preamble.Version.value(), sframe::getVersions());
+    W.printFlags("Flags", Preamble.Flags.value(), sframe::getFlags());
+
+    const sframe::Header<E> &Header = Parser->getHeader();
+    W.printEnum("ABI", Header.ABIArch.value(), sframe::getABIs());
+
+    W.printNumber(("CFA fixed FP offset" +
+                   Twine(Parser->usesFixedFPOffset() ? "" : " (unused)"))
+                      .str(),
+                  Header.CFAFixedFPOffset.value());
+
+    W.printNumber(("CFA fixed RA offset" +
+                   Twine(Parser->usesFixedRAOffset() ? "" : " (unused)"))
+                      .str(),
+                  Header.CFAFixedRAOffset.value());
+
+    W.printNumber("Auxiliary header length", Header.AuxHdrLen.value());
+    W.printNumber("Num FDEs", Header.NumFDEs.value());
+    W.printNumber("Num FREs", Header.NumFREs.value());
+    W.printNumber("FRE subsection length", Header.FRELen.value());
+    W.printNumber("FDE subsection offset", Header.FDEOff.value());
+    W.printNumber("FRE subsection offset", Header.FREOff.value());
+  }
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printELFLinkerOptions() {
@@ -7668,7 +7721,7 @@ void LLVMELFDumper<ELFT>::printVersionDefinitionSection(const Elf_Shdr *Sec) {
     W.printFlags("Flags", D.Flags, ArrayRef(SymVersionFlags));
     W.printNumber("Index", D.Ndx);
     W.printNumber("Hash", D.Hash);
-    W.printString("Name", D.Name.c_str());
+    W.printString("Name", D.Name);
     W.printList(
         "Predecessors", D.AuxV,
         [](raw_ostream &OS, const VerdAux &Aux) { OS << Aux.Name.c_str(); });
@@ -7886,6 +7939,8 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
             DictScope BBED(W);
             W.printNumber("ID", BBE.ID);
             W.printHex("Offset", BBE.Offset);
+            if (!BBE.CallsiteOffsets.empty())
+              W.printList("Callsite Offsets", BBE.CallsiteOffsets);
             W.printHex("Size", BBE.Size);
             W.printBoolean("HasReturn", BBE.hasReturn());
             W.printBoolean("HasTailCall", BBE.hasTailCall());

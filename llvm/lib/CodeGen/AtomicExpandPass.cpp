@@ -65,6 +65,17 @@ class AtomicExpandImpl {
   const DataLayout *DL = nullptr;
 
 private:
+  void handleFailure(Instruction &FailedInst, const Twine &Msg) const {
+    LLVMContext &Ctx = FailedInst.getContext();
+
+    // TODO: Do not use generic error type.
+    Ctx.emitError(&FailedInst, Msg);
+
+    if (!FailedInst.getType()->isVoidTy())
+      FailedInst.replaceAllUsesWith(PoisonValue::get(FailedInst.getType()));
+    FailedInst.eraseFromParent();
+  }
+
   bool bracketInstWithFences(Instruction *I, AtomicOrdering Order);
   IntegerType *getCorrespondingIntegerType(Type *T, const DataLayout &DL);
   LoadInst *convertAtomicLoadToIntegerType(LoadInst *LI);
@@ -324,8 +335,10 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       // failure path. As a result, fence insertion is directly done by
       // expandAtomicCmpXchg in that case.
       FenceOrdering = CASI->getMergedOrdering();
-      CASI->setSuccessOrdering(AtomicOrdering::Monotonic);
-      CASI->setFailureOrdering(AtomicOrdering::Monotonic);
+      auto CASOrdering = TLI->atomicOperationOrderAfterFenceSplit(CASI);
+
+      CASI->setSuccessOrdering(CASOrdering);
+      CASI->setFailureOrdering(CASOrdering);
     }
 
     if (FenceOrdering != AtomicOrdering::Monotonic) {
@@ -929,6 +942,8 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
   case AtomicRMWInst::FSub:
   case AtomicRMWInst::FMin:
   case AtomicRMWInst::FMax:
+  case AtomicRMWInst::FMaximum:
+  case AtomicRMWInst::FMinimum:
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
   case AtomicRMWInst::USubCond:
@@ -1566,12 +1581,12 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 }
 
 bool AtomicExpandImpl::isIdempotentRMW(AtomicRMWInst *RMWI) {
+  // TODO: Add floating point support.
   auto C = dyn_cast<ConstantInt>(RMWI->getValOperand());
   if (!C)
     return false;
 
-  AtomicRMWInst::BinOp Op = RMWI->getOperation();
-  switch (Op) {
+  switch (RMWI->getOperation()) {
   case AtomicRMWInst::Add:
   case AtomicRMWInst::Sub:
   case AtomicRMWInst::Or:
@@ -1579,7 +1594,14 @@ bool AtomicExpandImpl::isIdempotentRMW(AtomicRMWInst *RMWI) {
     return C->isZero();
   case AtomicRMWInst::And:
     return C->isMinusOne();
-  // FIXME: we could also treat Min/Max/UMin/UMax by the INT_MIN/INT_MAX/...
+  case AtomicRMWInst::Min:
+    return C->isMaxValue(true);
+  case AtomicRMWInst::Max:
+    return C->isMinValue(true);
+  case AtomicRMWInst::UMin:
+    return C->isMaxValue(false);
+  case AtomicRMWInst::UMax:
+    return C->isMinValue(false);
   default:
     return false;
   }
@@ -1733,7 +1755,7 @@ void AtomicExpandImpl::expandAtomicLoadToLibcall(LoadInst *I) {
       I, Size, I->getAlign(), I->getPointerOperand(), nullptr, nullptr,
       I->getOrdering(), AtomicOrdering::NotAtomic, Libcalls);
   if (!expanded)
-    report_fatal_error("expandAtomicOpToLibcall shouldn't fail for Load");
+    handleFailure(*I, "unsupported atomic load");
 }
 
 void AtomicExpandImpl::expandAtomicStoreToLibcall(StoreInst *I) {
@@ -1746,7 +1768,7 @@ void AtomicExpandImpl::expandAtomicStoreToLibcall(StoreInst *I) {
       I, Size, I->getAlign(), I->getPointerOperand(), I->getValueOperand(),
       nullptr, I->getOrdering(), AtomicOrdering::NotAtomic, Libcalls);
   if (!expanded)
-    report_fatal_error("expandAtomicOpToLibcall shouldn't fail for Store");
+    handleFailure(*I, "unsupported atomic store");
 }
 
 void AtomicExpandImpl::expandAtomicCASToLibcall(AtomicCmpXchgInst *I) {
@@ -1761,7 +1783,7 @@ void AtomicExpandImpl::expandAtomicCASToLibcall(AtomicCmpXchgInst *I) {
       I->getCompareOperand(), I->getSuccessOrdering(), I->getFailureOrdering(),
       Libcalls);
   if (!expanded)
-    report_fatal_error("expandAtomicOpToLibcall shouldn't fail for CAS");
+    handleFailure(*I, "unsupported cmpxchg");
 }
 
 static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {
@@ -1817,6 +1839,8 @@ static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {
   case AtomicRMWInst::UMin:
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::FMin:
+  case AtomicRMWInst::FMaximum:
+  case AtomicRMWInst::FMinimum:
   case AtomicRMWInst::FAdd:
   case AtomicRMWInst::FSub:
   case AtomicRMWInst::UIncWrap:

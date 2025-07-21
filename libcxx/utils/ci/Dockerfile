@@ -44,12 +44,18 @@
 ARG BASE_IMAGE
 FROM $BASE_IMAGE AS builder-base
 
+# Changing this file causes a rebuild of the image in a GitHub action.
+# However, it does not cause the CI runners to switch to that image
+# automatically, that must be done by updating the SHA in the Github workflow
+# file. The date uses the ISO format YYYY-MM-DD.
+RUN echo "Last forced update executed on 2025-04-28."
+
 # Make sure apt-get doesn't try to prompt for stuff like our time zone, etc.
 ENV DEBIAN_FRONTEND=noninteractive
 
 # populated in the docker-compose file
-ARG GCC_LATEST_VERSION
-ENV GCC_LATEST_VERSION=${GCC_LATEST_VERSION}
+ARG GCC_HEAD_VERSION
+ENV GCC_HEAD_VERSION=${GCC_HEAD_VERSION}
 
 # populated in the docker-compose file
 ARG LLVM_HEAD_VERSION
@@ -147,12 +153,18 @@ RUN <<EOF
   set -e
   sudo git clone https://github.com/compiler-explorer/infra.git /tmp/ce-infra
   (cd /tmp/ce-infra && sudo make ce)
-  sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $GCC_LATEST_VERSION.1.0
-  sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $((GCC_LATEST_VERSION - 1)).1.0
-  sudo ln -s /opt/compiler-explorer/gcc-$GCC_LATEST_VERSION.1.0/bin/gcc /usr/bin/gcc-$GCC_LATEST_VERSION
-  sudo ln -s /opt/compiler-explorer/gcc-$GCC_LATEST_VERSION.1.0/bin/g++ /usr/bin/g++-$GCC_LATEST_VERSION
-  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_LATEST_VERSION - 1)).1.0/bin/gcc /usr/bin/gcc-$((GCC_LATEST_VERSION - 1))
-  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_LATEST_VERSION - 1)).1.0/bin/g++ /usr/bin/g++-$((GCC_LATEST_VERSION - 1))
+  # Current ToT, we do not guarantee any support in our support matrix.
+  sudo /tmp/ce-infra/bin/ce_install --enable nightly install compilers/c++/nightly/gcc trunk
+  sudo ln -s /opt/compiler-explorer/gcc-snapshot/bin/gcc /usr/bin/gcc-$GCC_HEAD_VERSION
+  sudo ln -s /opt/compiler-explorer/gcc-snapshot/bin/g++ /usr/bin/g++-$GCC_HEAD_VERSION
+  # The latest release.
+  sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $((GCC_HEAD_VERSION - 1)).1.0
+  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_HEAD_VERSION - 1)).1.0/bin/gcc /usr/bin/gcc-$((GCC_HEAD_VERSION - 1))
+  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_HEAD_VERSION - 1)).1.0/bin/g++ /usr/bin/g++-$((GCC_HEAD_VERSION - 1))
+  # For CI transitions.
+  sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $((GCC_HEAD_VERSION - 2)).1.0
+  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_HEAD_VERSION - 2)).1.0/bin/gcc /usr/bin/gcc-$((GCC_HEAD_VERSION - 2))
+  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_HEAD_VERSION - 2)).1.0/bin/g++ /usr/bin/g++-$((GCC_HEAD_VERSION - 2))
   sudo rm -rf /tmp/ce-infra
 EOF
 
@@ -172,7 +184,7 @@ FROM ubuntu:jammy AS android-builder-base
 
 ARG ANDROID_CLANG_VERSION
 ARG ANDROID_CLANG_PREBUILTS_COMMIT
-ARG ANDROID_SYSROOT_BID
+ARG ANDROID_SYSROOT_COMMIT
 
 RUN apt-get update && apt-get install -y curl bzip2 git unzip
 
@@ -205,19 +217,18 @@ RUN <<EOF
     ls /opt/android/clang/clang-current/bin/clang
 EOF
 
-# Install an Android sysroot. New AOSP sysroots are available at
-# https://ci.android.com/builds/branches/aosp-main/grid, the "ndk" target. The
-# NDK also makes its sysroot prebuilt available at
-# https://android.googlesource.com/platform/prebuilts/ndk/+/refs/heads/dev/platform/sysroot.
+# Install an Android sysroot. New Android sysroots are available at
+# https://android.googlesource.com/platform/prebuilts/ndk/+/refs/heads/mirror-goog-main-ndk/platform/sysroot.
 
-ENV ANDROID_SYSROOT_BID=$ANDROID_SYSROOT_BID
+ENV ANDROID_SYSROOT_COMMIT=$ANDROID_SYSROOT_COMMIT
 RUN <<EOF
   set -e
-  cd /opt/android
-  curl -L -o ndk_platform.tar.bz2 \
-      https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${ANDROID_SYSROOT_BID}/ndk/attempts/latest/artifacts/ndk_platform.tar.bz2/url
-  tar xf ndk_platform.tar.bz2
-  rm ndk_platform.tar.bz2
+  mkdir -p /opt/android/ndk
+  cd /opt/android/ndk
+  git clone --filter=blob:none https://android.googlesource.com/platform/prebuilts/ndk tmp
+  git -C tmp checkout ${ANDROID_SYSROOT_COMMIT}
+  mv tmp/platform/sysroot .
+  rm -rf tmp
 EOF
 
 # ===----------------------------------------------------------------------===##

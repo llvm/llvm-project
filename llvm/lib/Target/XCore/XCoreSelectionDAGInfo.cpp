@@ -10,10 +10,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "XCoreSelectionDAGInfo.h"
 #include "XCoreTargetMachine.h"
+
+#define GET_SDNODE_DESC
+#include "XCoreGenSDNodeInfo.inc"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "xcore-selectiondag-info"
+
+XCoreSelectionDAGInfo::XCoreSelectionDAGInfo()
+    : SelectionDAGGenTargetInfo(XCoreGenSDNodeInfo) {}
 
 SDValue XCoreSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
@@ -31,14 +39,17 @@ SDValue XCoreSelectionDAGInfo::EmitTargetCodeForMemcpy(
     Entry.Node = Src; Args.push_back(Entry);
     Entry.Node = Size; Args.push_back(Entry);
 
+    const char *MemcpyAlign4Name = TLI.getLibcallName(RTLIB::MEMCPY_ALIGN_4);
+    CallingConv::ID CC = TLI.getLibcallCallingConv(RTLIB::MEMCPY_ALIGN_4);
+
     TargetLowering::CallLoweringInfo CLI(DAG);
     CLI.setDebugLoc(dl)
         .setChain(Chain)
-        .setLibCallee(TLI.getLibcallCallingConv(RTLIB::MEMCPY),
-                      Type::getVoidTy(*DAG.getContext()),
-                      DAG.getExternalSymbol(
-                          "__memcpy_4", TLI.getPointerTy(DAG.getDataLayout())),
-                      std::move(Args))
+        .setLibCallee(
+            CC, Type::getVoidTy(*DAG.getContext()),
+            DAG.getExternalSymbol(MemcpyAlign4Name,
+                                  TLI.getPointerTy(DAG.getDataLayout())),
+            std::move(Args))
         .setDiscardResult();
 
     std::pair<SDValue,SDValue> CallResult = TLI.LowerCallTo(CLI);

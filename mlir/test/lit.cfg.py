@@ -43,6 +43,7 @@ config.suffixes = [
     ".test",
     ".pdll",
     ".c",
+    ".spv",
 ]
 
 # test_source_root: The root path where tests are located.
@@ -55,8 +56,8 @@ config.substitutions.append(("%PATH%", config.environment["PATH"]))
 config.substitutions.append(("%shlibext", config.llvm_shlib_ext))
 config.substitutions.append(("%llvm_src_root", config.llvm_src_root))
 config.substitutions.append(("%mlir_src_root", config.mlir_src_root))
-config.substitutions.append(("%host_cxx", config.host_cxx))
-config.substitutions.append(("%host_cc", config.host_cc))
+config.substitutions.append(("%host_cxx", config.host_cxx.strip()))
+config.substitutions.append(("%host_cc", config.host_cc.strip()))
 
 
 # Searches for a runtime library with the given name and returns the found path.
@@ -298,6 +299,17 @@ if "MLIR_OPT_CHECK_IR_ROUNDTRIP" in os.environ:
     tools.extend(
         [
             ToolSubst("mlir-opt", "mlir-opt --verify-roundtrip", unresolved="fatal"),
+        ]
+    )
+elif "MLIR_GENERATE_PATTERN_CATALOG" in os.environ:
+    tools.extend(
+        [
+            ToolSubst(
+                "mlir-opt",
+                "mlir-opt --debug-only=pattern-logging-listener --mlir-disable-threading",
+                unresolved="fatal",
+            ),
+            ToolSubst("FileCheck", "FileCheck --dump-input=always", unresolved="fatal"),
         ]
     )
 else:

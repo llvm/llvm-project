@@ -45,6 +45,7 @@ enum {
   GFX940 = 9,
   GFX11 = 10,
   GFX12 = 11,
+  GFX1250 = 12,
 };
 }
 
@@ -97,6 +98,8 @@ enum : uint64_t {
   // VINTERP instruction format.
   VINTERP = 1 << 29,
 
+  VOPD3 = 1 << 30,
+
   // High bits - other information.
   VM_CNT = UINT64_C(1) << 32,
   EXP_CNT = UINT64_C(1) << 33,
@@ -106,14 +109,12 @@ enum : uint64_t {
   DisableWQM = UINT64_C(1) << 36,
   Gather4 = UINT64_C(1) << 37,
 
-  // Reserved, must be 0.
-  Reserved0 = UINT64_C(1) << 38,
+  TENSOR_CNT = UINT64_C(1) << 38,
 
   SCALAR_STORE = UINT64_C(1) << 39,
   FIXED_SIZE = UINT64_C(1) << 40,
 
-  // Reserved, must be 0.
-  Reserved1 = UINT64_C(1) << 41,
+  ASYNC_CNT = UINT64_C(1) << 41,
 
   VOP3_OPSEL = UINT64_C(1) << 42,
   maybeAtomic = UINT64_C(1) << 43,
@@ -204,9 +205,6 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_FP64,
   OPERAND_REG_IMM_BF16,
   OPERAND_REG_IMM_FP16,
-  OPERAND_REG_IMM_BF16_DEFERRED,
-  OPERAND_REG_IMM_FP16_DEFERRED,
-  OPERAND_REG_IMM_FP32_DEFERRED,
   OPERAND_REG_IMM_V2BF16,
   OPERAND_REG_IMM_V2FP16,
   OPERAND_REG_IMM_V2INT16,
@@ -224,8 +222,6 @@ enum OperandType : unsigned {
   OPERAND_REG_INLINE_C_V2INT16,
   OPERAND_REG_INLINE_C_V2BF16,
   OPERAND_REG_INLINE_C_V2FP16,
-  OPERAND_REG_INLINE_C_V2INT32,
-  OPERAND_REG_INLINE_C_V2FP32,
 
   // Operand for split barrier inline constant
   OPERAND_INLINE_SPLIT_BARRIER_INT32,
@@ -233,19 +229,12 @@ enum OperandType : unsigned {
   /// Operand with 32-bit immediate that uses the constant bus.
   OPERAND_KIMM32,
   OPERAND_KIMM16,
+  OPERAND_KIMM64,
 
   /// Operands with an AccVGPR register or inline constant
-  OPERAND_REG_INLINE_AC_INT16,
   OPERAND_REG_INLINE_AC_INT32,
-  OPERAND_REG_INLINE_AC_BF16,
-  OPERAND_REG_INLINE_AC_FP16,
   OPERAND_REG_INLINE_AC_FP32,
   OPERAND_REG_INLINE_AC_FP64,
-  OPERAND_REG_INLINE_AC_V2INT16,
-  OPERAND_REG_INLINE_AC_V2BF16,
-  OPERAND_REG_INLINE_AC_V2FP16,
-  OPERAND_REG_INLINE_AC_V2INT32,
-  OPERAND_REG_INLINE_AC_V2FP32,
 
   // Operand for source modifiers for VOP instructions
   OPERAND_INPUT_MODS,
@@ -257,42 +246,33 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_V2FP32,
 
   OPERAND_REG_INLINE_C_FIRST = OPERAND_REG_INLINE_C_INT16,
-  OPERAND_REG_INLINE_C_LAST = OPERAND_REG_INLINE_AC_V2FP32,
+  OPERAND_REG_INLINE_C_LAST = OPERAND_REG_INLINE_AC_FP64,
 
-  OPERAND_REG_INLINE_AC_FIRST = OPERAND_REG_INLINE_AC_INT16,
-  OPERAND_REG_INLINE_AC_LAST = OPERAND_REG_INLINE_AC_V2FP32,
+  OPERAND_REG_INLINE_AC_FIRST = OPERAND_REG_INLINE_AC_INT32,
+  OPERAND_REG_INLINE_AC_LAST = OPERAND_REG_INLINE_AC_FP64,
 
   OPERAND_SRC_FIRST = OPERAND_REG_IMM_INT32,
   OPERAND_SRC_LAST = OPERAND_REG_INLINE_C_LAST,
 
   OPERAND_KIMM_FIRST = OPERAND_KIMM32,
-  OPERAND_KIMM_LAST = OPERAND_KIMM16
+  OPERAND_KIMM_LAST = OPERAND_KIMM64
 
-};
-
-// Should be in sync with the OperandSemantics defined in SIRegisterInfo.td
-enum OperandSemantics : unsigned {
-  INT = 0,
-  FP16 = 1,
-  BF16 = 2,
-  FP32 = 3,
-  FP64 = 4,
 };
 }
 
 // Input operand modifiers bit-masks
 // NEG and SEXT share same bit-mask because they can't be set simultaneously.
 namespace SISrcMods {
-  enum : unsigned {
-   NONE = 0,
-   NEG = 1 << 0,   // Floating-point negate modifier
-   ABS = 1 << 1,   // Floating-point absolute modifier
-   SEXT = 1 << 0,  // Integer sign-extend modifier
-   NEG_HI = ABS,   // Floating-point negate high packed component modifier.
-   OP_SEL_0 = 1 << 2,
-   OP_SEL_1 = 1 << 3,
-   DST_OP_SEL = 1 << 3 // VOP3 dst op_sel (share mask with OP_SEL_1)
-  };
+enum : unsigned {
+  NONE = 0,
+  NEG = 1 << 0,  // Floating-point negate modifier
+  ABS = 1 << 1,  // Floating-point absolute modifier
+  SEXT = 1 << 4, // Integer sign-extend modifier
+  NEG_HI = ABS,  // Floating-point negate high packed component modifier.
+  OP_SEL_0 = 1 << 2,
+  OP_SEL_1 = 1 << 3,
+  DST_OP_SEL = 1 << 3 // VOP3 dst op_sel (share mask with OP_SEL_1)
+};
 }
 
 namespace SIOutMods {
@@ -357,6 +337,7 @@ enum : unsigned {
   INLINE_INTEGER_C_MAX = 208,
   INLINE_FLOATING_C_MIN = 240,
   INLINE_FLOATING_C_MAX = 248,
+  LITERAL64_CONST = 254,
   LITERAL_CONST = 255,
   VGPR_MIN = 256,
   VGPR_MAX = 511,
@@ -396,7 +377,7 @@ enum CPol {
   TH_NT = 1,     // non-temporal
   TH_HT = 2,     // high-temporal
   TH_LU = 3,     // last use
-  TH_RT_WB = 3,  // regular (CU, SE), high-temporal with write-back (MALL)
+  TH_WB = 3,     // regular (CU, SE), high-temporal with write-back (MALL)
   TH_NT_RT = 4,  // non-temporal (CU, SE), regular (MALL)
   TH_RT_NT = 5,  // regular (CU, SE), non-temporal (MALL)
   TH_NT_HT = 6,  // non-temporal (CU, SE), high-temporal (MALL)
@@ -416,6 +397,8 @@ enum CPol {
   SCOPE_SE = 1 << 3,
   SCOPE_DEV = 2 << 3,
   SCOPE_SYS = 3 << 3,
+
+  NV = 1 << 5, // Non-volatile bit
 
   SWZ = 1 << 6, // Swizzle bit
 
@@ -552,6 +535,7 @@ enum Id { // HwRegCode, (6) [5:0]
 
 enum Offset : unsigned { // Offset, (5) [10:6]
   OFFSET_MEM_VIOL = 8,
+  OFFSET_ME_ID = 8, // in HW_ID2
 };
 
 enum ModeRegisterMasks : uint32_t {

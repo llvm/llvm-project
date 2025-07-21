@@ -6,5 +6,5 @@ def getRoot(config):
 
 root = getRoot(config)
 
-if root.host_os not in ["Darwin"]:
+if root.target_os not in ["Darwin"]:
     config.unsupported = True

@@ -1,0 +1,136 @@
+# RUN: yaml2obj %s -o %t
+# RUN: not llvm-jitlink -noexec %t 2>&1 | FileCheck %s
+#
+# Check that ptrauth edges are _not_ lowered for noalloc sections.
+#
+# Ptrauth edges are lowered to signing function instructions, so any ptrauth
+# edge in a noalloc section will introduce signing instructions that operate
+# illegally on linker working memory, rather than executor memory (this will
+# usually lead to a crash, but may silently corrupt memory in in-process JITs).
+#
+# By ignoring these edges during ptrauth lowering we prevent illegal signing
+# instructions from being generated, and the ptrauth edges error out in
+# applyFixup instead.
+#
+
+# CHECK: llvm-jitlink error: {{.*}} unsupported edge kind Pointer64Authenticated
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x80000002
+  filetype:        0x1
+  ncmds:           4
+  sizeofcmds:      440
+  flags:           0x2000
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         312
+    segname:         ''
+    vmaddr:          0
+    vmsize:          16
+    fileoff:         472
+    filesize:        16
+    maxprot:         7
+    initprot:        7
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            8
+        offset:          0x1D8
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         00008052C0035FD6
+      - sectname:        __debug_stuff
+        segname:         __DWARF
+        addr:            0x8
+        size:            8
+        offset:          0x1E0
+        align:           3
+        reloff:          0x1E8
+        nreloc:          1
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '0000000000000080'
+        relocations:
+          - address:         0x0
+            symbolnum:       3
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            11
+            scattered:       false
+            value:           0
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           983040
+    sdk:             0
+    ntools:          0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          496
+    nsyms:           4
+    stroff:          560
+    strsize:         24
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       2
+    iextdefsym:      2
+    nextdefsym:      2
+    iundefsym:       4
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:
+  NameList:
+    - n_strx:          18
+      n_type:          0xE
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          12
+      n_type:          0xE
+      n_sect:          2
+      n_desc:          0
+      n_value:         8
+    - n_strx:          1
+      n_type:          0xF
+      n_sect:          2
+      n_desc:          0
+      n_value:         8
+    - n_strx:          6
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - _foo
+    - _main
+    - ltmp1
+    - ltmp0
+...

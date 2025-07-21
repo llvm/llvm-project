@@ -11,11 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVM.h"
-#include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/SPIRVCommon/AttrToLLVMConverter.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
@@ -23,7 +21,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "spirv-to-llvm-pattern"
@@ -78,10 +75,9 @@ static unsigned getBitWidth(Type type) {
 
 /// Returns the bit width of LLVMType integer or vector.
 static unsigned getLLVMTypeBitWidth(Type type) {
-  return cast<IntegerType>((LLVM::isCompatibleVectorType(type)
-                                ? LLVM::getVectorElementType(type)
-                                : type))
-      .getWidth();
+  if (auto vecTy = dyn_cast<VectorType>(type))
+    type = vecTy.getElementType();
+  return cast<IntegerType>(type).getWidth();
 }
 
 /// Creates `IntegerAttribute` with all bits set for given type
@@ -783,13 +779,15 @@ public:
     auto linkage = storageClass == spirv::StorageClass::Private
                        ? LLVM::Linkage::Private
                        : LLVM::Linkage::External;
+    StringAttr locationAttrName = op.getLocationAttrName();
+    IntegerAttr locationAttr = op.getLocationAttr();
     auto newGlobalOp = rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
         op, dstType, isConstant, linkage, op.getSymName(), Attribute(),
         /*alignment=*/0, storageClassToAddressSpace(clientAPI, storageClass));
 
     // Attach location attribute if applicable
-    if (op.getLocationAttr())
-      newGlobalOp->setAttr(op.getLocationAttrName(), op.getLocationAttr());
+    if (locationAttr)
+      newGlobalOp->setAttr(locationAttrName, locationAttr);
 
     return success();
   }
@@ -840,7 +838,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     if (callOp.getNumResults() == 0) {
       auto newOp = rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-          callOp, std::nullopt, adaptor.getOperands(), callOp->getAttrs());
+          callOp, TypeRange(), adaptor.getOperands(), callOp->getAttrs());
       newOp.getProperties().operandSegmentSizes = {
           static_cast<int32_t>(adaptor.getOperands().size()), 0};
       newOp.getProperties().op_bundle_sizes = rewriter.getDenseI32ArrayAttr({});
@@ -1430,7 +1428,6 @@ public:
         headerBlock->getOperations().front());
     if (!condBrOp)
       return failure();
-    rewriter.eraseBlock(headerBlock);
 
     // Branch from merge block to continue block.
     auto *mergeBlock = op.getMergeBlock();
@@ -1448,6 +1445,7 @@ public:
                                     falseBlock,
                                     condBrOp.getFalseTargetOperands());
 
+    rewriter.eraseBlock(headerBlock);
     rewriter.inlineRegionBefore(op.getBody(), continueBlock);
     rewriter.replaceOp(op, continueBlock->getArguments());
     return success();

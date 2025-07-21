@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
@@ -304,10 +303,10 @@ class TransposeOpLowering : public OpRewritePattern<vector::TransposeOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
-  TransposeOpLowering(vector::VectorTransformsOptions vectorTransformOptions,
+  TransposeOpLowering(vector::VectorTransposeLowering vectorTransposeLowering,
                       MLIRContext *context, PatternBenefit benefit = 1)
       : OpRewritePattern<vector::TransposeOp>(context, benefit),
-        vectorTransformOptions(vectorTransformOptions) {}
+        vectorTransposeLowering(vectorTransposeLowering) {}
 
   LogicalResult matchAndRewrite(vector::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
@@ -324,14 +323,13 @@ public:
     // Set up convenience transposition table.
     ArrayRef<int64_t> transp = op.getPermutation();
 
-    if (isShuffleLike(vectorTransformOptions.vectorTransposeLowering) &&
+    if (isShuffleLike(vectorTransposeLowering) &&
         succeeded(isTranspose2DSlice(op)))
       return rewriter.notifyMatchFailure(
           op, "Options specifies lowering to shuffle");
 
     // Handle a true 2-D matrix transpose differently when requested.
-    if (vectorTransformOptions.vectorTransposeLowering ==
-            vector::VectorTransposeLowering::Flat &&
+    if (vectorTransposeLowering == vector::VectorTransposeLowering::Flat &&
         resType.getRank() == 2 && transp[0] == 1 && transp[1] == 0) {
       Type flattenedType =
           VectorType::get(resType.getNumElements(), resType.getElementType());
@@ -380,7 +378,7 @@ public:
 
 private:
   /// Options to control the vector patterns.
-  vector::VectorTransformsOptions vectorTransformOptions;
+  vector::VectorTransposeLowering vectorTransposeLowering;
 };
 
 /// Rewrites vector.transpose as vector.shape_cast. This pattern is only applied
@@ -454,14 +452,14 @@ public:
   using OpRewritePattern::OpRewritePattern;
 
   TransposeOp2DToShuffleLowering(
-      vector::VectorTransformsOptions vectorTransformOptions,
+      vector::VectorTransposeLowering vectorTransposeLowering,
       MLIRContext *context, PatternBenefit benefit = 1)
       : OpRewritePattern<vector::TransposeOp>(context, benefit),
-        vectorTransformOptions(vectorTransformOptions) {}
+        vectorTransposeLowering(vectorTransposeLowering) {}
 
   LogicalResult matchAndRewrite(vector::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
-    if (!isShuffleLike(vectorTransformOptions.vectorTransposeLowering))
+    if (!isShuffleLike(vectorTransposeLowering))
       return rewriter.notifyMatchFailure(
           op, "not using vector shuffle based lowering");
 
@@ -487,8 +485,7 @@ public:
                                                           op.getVector());
 
     Value res;
-    if (vectorTransformOptions.vectorTransposeLowering ==
-            VectorTransposeLowering::Shuffle16x16 &&
+    if (vectorTransposeLowering == VectorTransposeLowering::Shuffle16x16 &&
         m == 16 && n == 16) {
       reshInput =
           rewriter.create<vector::ShapeCastOp>(loc, reshInputType, reshInput);
@@ -506,15 +503,15 @@ public:
 
 private:
   /// Options to control the vector patterns.
-  vector::VectorTransformsOptions vectorTransformOptions;
+  vector::VectorTransposeLowering vectorTransposeLowering;
 };
 } // namespace
 
 void mlir::vector::populateVectorTransposeLoweringPatterns(
-    RewritePatternSet &patterns, VectorTransformsOptions options,
-    PatternBenefit benefit) {
+    RewritePatternSet &patterns,
+    VectorTransposeLowering vectorTransposeLowering, PatternBenefit benefit) {
   patterns.add<Transpose2DWithUnitDimToShapeCast>(patterns.getContext(),
                                                   benefit);
   patterns.add<TransposeOpLowering, TransposeOp2DToShuffleLowering>(
-      options, patterns.getContext(), benefit);
+      vectorTransposeLowering, patterns.getContext(), benefit);
 }

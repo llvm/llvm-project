@@ -30,7 +30,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
@@ -140,7 +139,7 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
   Consumers.push_back(std::make_unique<PCHGenerator>(
       CI.getPreprocessor(), CI.getModuleCache(), OutputFile, Sysroot, Buffer,
-      FrontendOpts.ModuleFileExtensions,
+      CI.getCodeGenOpts(), FrontendOpts.ModuleFileExtensions,
       CI.getPreprocessorOpts().AllowPCHWithCompilerErrors,
       FrontendOpts.IncludeTimestamps, FrontendOpts.BuildingImplicitModule,
       +CI.getLangOpts().CacheGeneratedPCH));
@@ -200,7 +199,7 @@ GenerateModuleAction::CreateMultiplexConsumer(CompilerInstance &CI,
 
   Consumers.push_back(std::make_unique<PCHGenerator>(
       CI.getPreprocessor(), CI.getModuleCache(), OutputFile, Sysroot, Buffer,
-      CI.getFrontendOpts().ModuleFileExtensions,
+      CI.getCodeGenOpts(), CI.getFrontendOpts().ModuleFileExtensions,
       /*AllowASTWithErrors=*/
       +CI.getFrontendOpts().AllowPCMWithCompilerErrors,
       /*IncludeTimestamps=*/
@@ -263,6 +262,20 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
                                     /*ForceUseTemporary=*/true);
 }
 
+bool GenerateModuleInterfaceAction::PrepareToExecuteAction(
+    CompilerInstance &CI) {
+  for (const auto &FIF : CI.getFrontendOpts().Inputs) {
+    if (const auto InputFormat = FIF.getKind().getFormat();
+        InputFormat != InputKind::Format::Source) {
+      CI.getDiagnostics().Report(
+          diag::err_frontend_action_unsupported_input_format)
+          << "module interface compilation" << FIF.getFile() << InputFormat;
+      return false;
+    }
+  }
+  return GenerateModuleAction::PrepareToExecuteAction(CI);
+}
+
 bool GenerateModuleInterfaceAction::BeginSourceFileAction(
     CompilerInstance &CI) {
   CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleInterface);
@@ -279,13 +292,13 @@ GenerateModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
       !CI.getFrontendOpts().ModuleOutputPath.empty()) {
     Consumers.push_back(std::make_unique<ReducedBMIGenerator>(
         CI.getPreprocessor(), CI.getModuleCache(),
-        CI.getFrontendOpts().ModuleOutputPath,
+        CI.getFrontendOpts().ModuleOutputPath, CI.getCodeGenOpts(),
         +CI.getFrontendOpts().AllowPCMWithCompilerErrors));
   }
 
   Consumers.push_back(std::make_unique<CXX20ModulesGenerator>(
       CI.getPreprocessor(), CI.getModuleCache(),
-      CI.getFrontendOpts().OutputFile,
+      CI.getFrontendOpts().OutputFile, CI.getCodeGenOpts(),
       +CI.getFrontendOpts().AllowPCMWithCompilerErrors));
 
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
@@ -300,9 +313,9 @@ GenerateModuleInterfaceAction::CreateOutputFile(CompilerInstance &CI,
 std::unique_ptr<ASTConsumer>
 GenerateReducedModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
                                                         StringRef InFile) {
-  return std::make_unique<ReducedBMIGenerator>(CI.getPreprocessor(),
-                                               CI.getModuleCache(),
-                                               CI.getFrontendOpts().OutputFile);
+  return std::make_unique<ReducedBMIGenerator>(
+      CI.getPreprocessor(), CI.getModuleCache(),
+      CI.getFrontendOpts().OutputFile, CI.getCodeGenOpts());
 }
 
 bool GenerateHeaderUnitAction::BeginSourceFileAction(CompilerInstance &CI) {
@@ -345,12 +358,13 @@ void VerifyPCHAction::ExecuteAction() {
   const std::string &Sysroot = CI.getHeaderSearchOpts().Sysroot;
   std::unique_ptr<ASTReader> Reader(new ASTReader(
       CI.getPreprocessor(), CI.getModuleCache(), &CI.getASTContext(),
-      CI.getPCHContainerReader(), CI.getFrontendOpts().ModuleFileExtensions,
+      CI.getPCHContainerReader(), CI.getCodeGenOpts(),
+      CI.getFrontendOpts().ModuleFileExtensions,
       Sysroot.empty() ? "" : Sysroot.c_str(),
       DisableValidationForModuleKind::None,
       /*AllowASTWithCompilerErrors*/ false,
       /*AllowConfigurationMismatch*/ true,
-      /*ValidateSystemInputs*/ true));
+      /*ValidateSystemInputs*/ true, /*ForceValidateUserInputs*/ true));
 
   Reader->ReadAST(getCurrentFile(),
                   Preamble ? serialization::MK_Preamble
@@ -630,16 +644,20 @@ namespace {
     bool ReadLanguageOptions(const LangOptions &LangOpts,
                              StringRef ModuleFilename, bool Complain,
                              bool AllowCompatibleDifferences) override {
+      // FIXME: Replace with C++20 `using enum LangOptions::CompatibilityKind`.
+      using CK = LangOptions::CompatibilityKind;
+
       Out.indent(2) << "Language options:\n";
-#define LANGOPT(Name, Bits, Default, Description) \
+#define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
+    if constexpr (CK::Compatibility != CK::Benign)                             \
       DUMP_BOOLEAN(LangOpts.Name, Description);
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
-      Out.indent(4) << Description << ": "                   \
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
+    if constexpr (CK::Compatibility != CK::Benign)                             \
+      Out.indent(4) << Description << ": "                                     \
                     << static_cast<unsigned>(LangOpts.get##Name()) << "\n";
-#define VALUE_LANGOPT(Name, Bits, Default, Description) \
+#define VALUE_LANGOPT(Name, Bits, Default, Compatibility, Description)         \
+    if constexpr (CK::Compatibility != CK::Benign)                             \
       Out.indent(4) << Description << ": " << LangOpts.Name << "\n";
-#define BENIGN_LANGOPT(Name, Bits, Default, Description)
-#define BENIGN_ENUM_LANGOPT(Name, Type, Bits, Default, Description)
 #include "clang/Basic/LangOptions.def"
 
       if (!LangOpts.ModuleFeatures.empty()) {
@@ -671,21 +689,21 @@ namespace {
       return false;
     }
 
-    bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
+    bool ReadDiagnosticOptions(DiagnosticOptions &DiagOpts,
                                StringRef ModuleFilename,
                                bool Complain) override {
       Out.indent(2) << "Diagnostic options:\n";
-#define DIAGOPT(Name, Bits, Default) DUMP_BOOLEAN(DiagOpts->Name, #Name);
-#define ENUM_DIAGOPT(Name, Type, Bits, Default) \
-      Out.indent(4) << #Name << ": " << DiagOpts->get##Name() << "\n";
-#define VALUE_DIAGOPT(Name, Bits, Default) \
-      Out.indent(4) << #Name << ": " << DiagOpts->Name << "\n";
+#define DIAGOPT(Name, Bits, Default) DUMP_BOOLEAN(DiagOpts.Name, #Name);
+#define ENUM_DIAGOPT(Name, Type, Bits, Default)                              \
+    Out.indent(4) << #Name << ": " << DiagOpts.get##Name() << "\n";
+#define VALUE_DIAGOPT(Name, Bits, Default)                                   \
+    Out.indent(4) << #Name << ": " << DiagOpts.Name << "\n";
 #include "clang/Basic/DiagnosticOptions.def"
 
       Out.indent(4) << "Diagnostic flags:\n";
-      for (const std::string &Warning : DiagOpts->Warnings)
+      for (const std::string &Warning : DiagOpts.Warnings)
         Out.indent(6) << "-W" << Warning << "\n";
-      for (const std::string &Remark : DiagOpts->Remarks)
+      for (const std::string &Remark : DiagOpts.Remarks)
         Out.indent(6) << "-R" << Remark << "\n";
 
       return false;
@@ -777,10 +795,11 @@ namespace {
     /// Indicates that the AST file contains particular input file.
     ///
     /// \returns true to continue receiving the next input file, false to stop.
-    bool visitInputFile(StringRef Filename, bool isSystem,
-                        bool isOverridden, bool isExplicitModule) override {
+    bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
+                        bool isSystem, bool isOverridden,
+                        bool isExplicitModule) override {
 
-      Out.indent(2) << "Input file: " << Filename;
+      Out.indent(2) << "Input file: " << FilenameAsRequested;
 
       if (isSystem || isOverridden || isExplicitModule) {
         Out << " [";
@@ -878,7 +897,8 @@ void DumpModuleInfoAction::ExecuteAction() {
 
   Preprocessor &PP = CI.getPreprocessor();
   DumpModuleInfoListener Listener(Out);
-  HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
+  const HeaderSearchOptions &HSOpts =
+      PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
   // The FrontendAction::BeginSourceFile () method loads the AST so that much
   // of the information is already available and modules should have been
@@ -1214,9 +1234,9 @@ void GetDependenciesByModuleNameAction::ExecuteAction() {
   SourceManager &SM = PP.getSourceManager();
   FileID MainFileID = SM.getMainFileID();
   SourceLocation FileStart = SM.getLocForStartOfFile(MainFileID);
-  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
+  SmallVector<IdentifierLoc, 2> Path;
   IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);
-  Path.push_back(std::make_pair(ModuleID, FileStart));
+  Path.emplace_back(FileStart, ModuleID);
   auto ModResult = CI.loadModule(FileStart, Path, Module::Hidden, false);
   PPCallbacks *CB = PP.getPPCallbacks();
   CB->moduleImport(SourceLocation(), Path, ModResult);

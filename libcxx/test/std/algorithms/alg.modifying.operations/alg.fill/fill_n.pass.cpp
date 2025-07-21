@@ -52,126 +52,174 @@ struct Test {
   }
 };
 
-TEST_CONSTEXPR_CXX20 void test_int_array() {
-  {
-    int a[4] = {};
-    assert(std::fill_n(a, UDI(4), static_cast<char>(1)) == a + 4);
-    assert(a[0] == 1 && a[1] == 1 && a[2] == 1 && a[3] == 1);
-  }
-#if TEST_STD_VER >= 11
-  {
-    const std::size_t N = 5;
-    int ib[]            = {0, 0, 0, 0, 0, 0}; // one bigger than N
-
-    auto it = std::fill_n(std::begin(ib), N, 5);
-    assert(it == (std::begin(ib) + N) && std::all_of(std::begin(ib), it, [](int a) { return a == 5; }) &&
-           *it == 0 // don't overwrite the last value in the output array
-    );
-  }
-#endif
-}
-
 struct source {
   TEST_CONSTEXPR source() = default;
   TEST_CONSTEXPR_CXX20 operator int() const { return 1; }
 };
 
-TEST_CONSTEXPR_CXX20 void test_int_array_struct_source() {
-  int a[4] = {};
-  assert(std::fill_n(a, UDI(4), source()) == a + 4);
-  assert(a[0] == 1);
-  assert(a[1] == 1);
-  assert(a[2] == 1);
-  assert(a[3] == 1);
-}
-
-class A {
+class CharWrapper {
   char a_;
 
 public:
-  TEST_CONSTEXPR A() : a_('a') {};
-  TEST_CONSTEXPR explicit A(char a) : a_(a) {}
+  TEST_CONSTEXPR CharWrapper() : a_('a') {};
+  TEST_CONSTEXPR explicit CharWrapper(char a) : a_(a) {}
   TEST_CONSTEXPR operator unsigned char() const { return 'b'; }
 
-  TEST_CONSTEXPR friend bool operator==(const A& x, const A& y) { return x.a_ == y.a_; }
+  TEST_CONSTEXPR friend bool operator==(const CharWrapper& x, const CharWrapper& y) { return x.a_ == y.a_; }
 };
 
-struct B {
-  TEST_CONSTEXPR B() : c(0) {}
-  TEST_CONSTEXPR B(char xc) : c(xc + 1) {}
+struct CharTransformer {
+  TEST_CONSTEXPR CharTransformer() : c(0) {}
+  TEST_CONSTEXPR CharTransformer(char xc) : c(xc + 1) {}
   char c;
 };
 
-struct Storage {
+struct CharUnionStorage {
   union {
     unsigned char a;
     unsigned char b;
   };
 };
 
-// Make sure std::fill_n behaves properly with std::vector<bool> iterators with custom size types.
-// See https://github.com/llvm/llvm-project/pull/122410.
-TEST_CONSTEXPR_CXX20 void test_bititer_with_custom_sized_types() {
-  {
-    using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
-    std::vector<bool, Alloc> in(100, false, Alloc(1));
-    std::vector<bool, Alloc> expected(100, true, Alloc(1));
-    std::fill_n(in.begin(), in.size(), true);
-    assert(in == expected);
+TEST_CONSTEXPR_CXX20 bool test_vector_bool(std::size_t N) {
+  {   // Test cases validating leading/trailing bits unfilled remain unchanged
+    { // Leading bits are not filled
+      std::vector<bool> in(N, false);
+      std::vector<bool> expected(N, true);
+      expected[0] = expected[1] = false;
+      std::fill_n(in.begin() + 2, N - 2, true);
+      assert(in == expected);
+    }
+    { // Trailing bits are not filled
+      std::vector<bool> in(N, false);
+      std::vector<bool> expected(N, true);
+      expected[N - 1] = expected[N - 2] = false;
+      std::fill_n(in.begin(), N - 2, true);
+      assert(in == expected);
+    }
+    { // Leading and trailing bits are not filled
+      std::vector<bool> in(N, false);
+      std::vector<bool> expected(N, true);
+      expected[0] = expected[1] = expected[N - 1] = expected[N - 2] = false;
+      std::fill_n(in.begin() + 2, N - 4, true);
+      assert(in == expected);
+    }
   }
-  {
-    using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
-    std::vector<bool, Alloc> in(200, false, Alloc(1));
-    std::vector<bool, Alloc> expected(200, true, Alloc(1));
-    std::fill_n(in.begin(), in.size(), true);
-    assert(in == expected);
-  }
-  {
-    using Alloc = sized_allocator<bool, std::uint32_t, std::int32_t>;
-    std::vector<bool, Alloc> in(200, false, Alloc(1));
-    std::vector<bool, Alloc> expected(200, true, Alloc(1));
-    std::fill_n(in.begin(), in.size(), true);
-    assert(in == expected);
-  }
-  {
-    using Alloc = sized_allocator<bool, std::uint64_t, std::int64_t>;
-    std::vector<bool, Alloc> in(200, false, Alloc(1));
-    std::vector<bool, Alloc> expected(200, true, Alloc(1));
-    std::fill_n(in.begin(), in.size(), true);
-    assert(in == expected);
-  }
-}
 
-TEST_CONSTEXPR_CXX20 void test_struct_array() {
-  {
-    A a[3];
-    assert(std::fill_n(&a[0], UDI(3), A('a')) == a + 3);
-    assert(a[0] == A('a'));
-    assert(a[1] == A('a'));
-    assert(a[2] == A('a'));
+  {   // Test cases with full or partial bytes filled
+    { // Full bytes filled
+      std::vector<bool> in(N, false);
+      std::vector<bool> expected(N, true);
+      std::fill_n(in.begin(), N, true);
+      assert(in == expected);
+    }
+    { // Partial bytes with offset filled
+      std::vector<bool> in(N, false);
+      std::vector<bool> expected(N, true);
+      std::fill_n(in.begin() + 4, N - 8, true);
+      std::fill_n(expected.begin(), 4, false);
+      std::fill_n(expected.end() - 4, 4, false);
+      assert(in == expected);
+    }
   }
-  {
-    B b[4] = {};
-    assert(std::fill_n(b, UDI(4), static_cast<char>(10)) == b + 4);
-    assert(b[0].c == 11);
-    assert(b[1].c == 11);
-    assert(b[2].c == 11);
-    assert(b[3].c == 11);
-  }
-  {
-    Storage foo[5];
-    std::fill_n(&foo[0], UDI(5), Storage());
-  }
+
+  return true;
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::forward_iterator_list<char*>(), Test<char>());
   types::for_each(types::forward_iterator_list<int*>(), Test<int>());
 
-  test_int_array();
-  test_struct_array();
-  test_int_array_struct_source();
-  test_bititer_with_custom_sized_types();
+  { // Test with int arrays
+    {
+      int a[4] = {};
+      assert(std::fill_n(a, UDI(4), static_cast<char>(1)) == a + 4);
+      assert(a[0] == 1 && a[1] == 1 && a[2] == 1 && a[3] == 1);
+    }
+#if TEST_STD_VER >= 11
+    {
+      const std::size_t N = 5;
+      int ib[]            = {0, 0, 0, 0, 0, 0}; // one bigger than N
+
+      auto it = std::fill_n(std::begin(ib), N, 5);
+      assert(it == (std::begin(ib) + N) && std::all_of(std::begin(ib), it, [](int a) { return a == 5; }) &&
+             *it == 0 // don't overwrite the last value in the output array
+      );
+    }
+#endif
+  }
+
+  { // Test with struct arrays
+    {
+      CharWrapper a[3];
+      assert(std::fill_n(&a[0], UDI(3), CharWrapper('a')) == a + 3);
+      assert(a[0] == CharWrapper('a'));
+      assert(a[1] == CharWrapper('a'));
+      assert(a[2] == CharWrapper('a'));
+    }
+    {
+      CharTransformer b[4] = {};
+      assert(std::fill_n(b, UDI(4), static_cast<char>(10)) == b + 4);
+      assert(b[0].c == 11);
+      assert(b[1].c == 11);
+      assert(b[2].c == 11);
+      assert(b[3].c == 11);
+    }
+    {
+      CharUnionStorage foo[5];
+      std::fill_n(&foo[0], UDI(5), CharUnionStorage());
+    }
+  }
+
+  { // Test with an int array and struct source
+    int a[4] = {};
+    assert(std::fill_n(a, UDI(4), source()) == a + 4);
+    assert(a[0] == 1);
+    assert(a[1] == 1);
+    assert(a[2] == 1);
+    assert(a[3] == 1);
+  }
+
+  { // Test vector<bool>::iterator optimization
+    assert(test_vector_bool(8));
+    assert(test_vector_bool(19));
+    assert(test_vector_bool(32));
+    assert(test_vector_bool(49));
+    assert(test_vector_bool(64));
+    assert(test_vector_bool(199));
+    assert(test_vector_bool(256));
+
+    // Make sure std::fill_n behaves properly with std::vector<bool> iterators with custom size types.
+    // See https://github.com/llvm/llvm-project/pull/122410.
+    {
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(100, false, Alloc(1));
+      std::vector<bool, Alloc> expected(100, true, Alloc(1));
+      std::fill_n(in.begin(), in.size(), true);
+      assert(in == expected);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(200, false, Alloc(1));
+      std::vector<bool, Alloc> expected(200, true, Alloc(1));
+      std::fill_n(in.begin(), in.size(), true);
+      assert(in == expected);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint32_t, std::int32_t>;
+      std::vector<bool, Alloc> in(200, false, Alloc(1));
+      std::vector<bool, Alloc> expected(200, true, Alloc(1));
+      std::fill_n(in.begin(), in.size(), true);
+      assert(in == expected);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint64_t, std::int64_t>;
+      std::vector<bool, Alloc> in(200, false, Alloc(1));
+      std::vector<bool, Alloc> expected(200, true, Alloc(1));
+      std::fill_n(in.begin(), in.size(), true);
+      assert(in == expected);
+    }
+  }
 
   return true;
 }

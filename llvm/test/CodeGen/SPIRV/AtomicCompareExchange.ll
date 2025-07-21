@@ -1,11 +1,12 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-SPIRV-DAG:      %[[#Int:]] = OpTypeInt 32 0
-; CHECK-SPIRV-DAG:  %[[#MemScope_CrossDevice:]] = OpConstant %[[#Int]] 0
-; CHECK-SPIRV-DAG:  %[[#MemSemEqual_SeqCst:]] = OpConstant %[[#Int]] 16
-; CHECK-SPIRV-DAG:  %[[#MemSemUnequal_Acquire:]] = OpConstant %[[#Int]] 2
-; CHECK-SPIRV-DAG:  %[[#Constant_456:]] = OpConstant %[[#Int]] 456
-; CHECK-SPIRV-DAG:  %[[#Constant_128:]] = OpConstant %[[#Int]] 128
+; CHECK-SPIRV-DAG:  %[[#Int:]] = OpTypeInt 32 0
+; CHECK-SPIRV-DAG:  %[[#MemScope_CrossDevice:]] = OpConstantNull %[[#Int]]
+; CHECK-SPIRV-DAG:  %[[#MemSemEqual_SeqCst:]] = OpConstant %[[#Int]] 16{{$}}
+; CHECK-SPIRV-DAG:  %[[#MemSemUnequal_Acquire:]] = OpConstant %[[#Int]] 2{{$}}
+; CHECK-SPIRV-DAG:  %[[#Constant_456:]] = OpConstant %[[#Int]] 456{{$}}
+; CHECK-SPIRV-DAG:  %[[#Constant_128:]] = OpConstant %[[#Int]] 128{{$}}
 ; CHECK-SPIRV-DAG:  %[[#Bool:]] = OpTypeBool
 ; CHECK-SPIRV-DAG:  %[[#Struct:]] = OpTypeStruct %[[#Int]] %[[#Bool]]
 ; CHECK-SPIRV-DAG:  %[[#UndefStruct:]] = OpUndef %[[#Struct]]
