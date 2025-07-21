@@ -7,7 +7,7 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v \
 ; RUN: -debug-only=loop-vectorize -scalable-vectorization=on \
-; RUN: -riscv-v-vector-bits-min=128 -disable-output < %s 2>&1 | FileCheck %s
+; RUN: -disable-output < %s 2>&1 | FileCheck %s
 
 define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocapture noundef readonly %B, i32 noundef signext %n) {
 ; CHECK: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF>=1' {
