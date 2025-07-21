@@ -2351,6 +2351,7 @@ bool AttrsVisitor::IsConflictingAttr(Attr attrName) {
       HaveAttrConflict(attrName, Attr::PASS, Attr::NOPASS) || // C781
       HaveAttrConflict(attrName, Attr::PURE, Attr::IMPURE) ||
       HaveAttrConflict(attrName, Attr::PUBLIC, Attr::PRIVATE) ||
+      HaveAttrConflict(attrName, Attr::EXTERNAL, Attr::INTRINSIC) || // C840
       HaveAttrConflict(attrName, Attr::RECURSIVE, Attr::NON_RECURSIVE);
 }
 bool AttrsVisitor::CheckAndSet(Attr attrName) {
@@ -3311,11 +3312,6 @@ bool ScopeHandler::CheckPossibleBadForwardRef(const Symbol &symbol) {
 void ScopeHandler::MakeExternal(Symbol &symbol) {
   if (!symbol.attrs().test(Attr::EXTERNAL)) {
     SetImplicitAttr(symbol, Attr::EXTERNAL);
-    if (symbol.attrs().test(Attr::INTRINSIC)) { // C840
-      Say(symbol.name(),
-          "Symbol '%s' cannot have both EXTERNAL and INTRINSIC attributes"_err_en_US,
-          symbol.name());
-    }
   }
 }
 
@@ -5606,10 +5602,6 @@ bool DeclarationVisitor::Pre(const parser::ExternalStmt &x) {
         SayWithDecl(
             name, *symbol, "EXTERNAL attribute not allowed on '%s'"_err_en_US);
       }
-    } else if (symbol->attrs().test(Attr::INTRINSIC)) { // C840
-      Say(symbol->name(),
-          "Symbol '%s' cannot have both INTRINSIC and EXTERNAL attributes"_err_en_US,
-          symbol->name());
     }
   }
   return false;
@@ -5637,10 +5629,6 @@ void DeclarationVisitor::DeclareIntrinsic(const parser::Name &name) {
   } else if (!ConvertToProcEntity(symbol, name.source)) {
     SayWithDecl(
         name, symbol, "INTRINSIC attribute not allowed on '%s'"_err_en_US);
-  } else if (symbol.attrs().test(Attr::EXTERNAL)) { // C840
-    Say(symbol.name(),
-        "Symbol '%s' cannot have both EXTERNAL and INTRINSIC attributes"_err_en_US,
-        symbol.name());
   } else {
     if (symbol.GetType()) {
       // These warnings are worded so that they should make sense in either

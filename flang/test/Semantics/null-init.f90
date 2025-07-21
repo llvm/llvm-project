@@ -30,7 +30,6 @@ module m5
 end module
 
 module m6
-  !ERROR: Symbol 'null' cannot have both INTRINSIC and EXTERNAL attributes
   integer, pointer :: p => null()
   external :: null
 end module
