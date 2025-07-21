@@ -1415,6 +1415,7 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
 
   MD->setHwStage(CC, ".wgp_mode", (bool)CurrentProgramInfo.WgpMode);
   MD->setHwStage(CC, ".mem_ordered", (bool)CurrentProgramInfo.MemOrdered);
+  MD->setHwStage(CC, ".forward_progress", (bool)CurrentProgramInfo.FwdProgress);
 
   if (AMDGPU::isCompute(CC)) {
     MD->setHwStage(CC, ".trap_present",
