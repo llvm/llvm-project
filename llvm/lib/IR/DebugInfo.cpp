@@ -88,7 +88,6 @@ findDbgIntrinsics(Value *V,
   if (!V->isUsedByMetadata())
     return;
 
-  LLVMContext &Ctx = V->getContext();
   // TODO: If this value appears multiple times in a DIArgList, we should still
   // only add the owning dbg.value once; use this set to track ArgListUsers.
   // This behaviour can be removed when we can automatically remove duplicates.
