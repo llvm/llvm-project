@@ -2147,27 +2147,22 @@ CommonPointerBase CommonPointerBase::compute(Value *LHS, Value *RHS) {
 }
 
 bool CommonPointerBase::isExpensive() const {
-  bool SeenConst = false;
   unsigned NumGEPs = 0;
-  auto ProcessGEPs = [&SeenConst, &NumGEPs](ArrayRef<GEPOperator *> GEPs) {
+  auto ProcessGEPs = [&NumGEPs](ArrayRef<GEPOperator *> GEPs) {
     bool SeenMultiUse = false;
     for (GEPOperator *GEP : GEPs) {
       // Only count multi-use GEPs, excluding the first one. For the first one,
       // we will directly reuse the offset. For one-use GEPs, their offset will
       // be folded into a multi-use GEP.
       if (!GEP->hasOneUse()) {
-        if (SeenMultiUse) {
-          bool IsConst = GEP->hasAllConstantIndices();
-          SeenConst |= IsConst;
-          NumGEPs += !IsConst;
-        }
+        if (SeenMultiUse)
+          ++NumGEPs;
         SeenMultiUse = true;
       }
     }
   };
   ProcessGEPs(LHSGEPs);
   ProcessGEPs(RHSGEPs);
-  NumGEPs += SeenConst;
   return NumGEPs > 2;
 }
 

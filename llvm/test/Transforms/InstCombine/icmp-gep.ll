@@ -932,21 +932,17 @@ define i1 @gep_multiple_multi_use_below_limit_extra_one_use_gep2(ptr %base, i64 
   ret i1 %cmp
 }
 
-define i1 @gep_multiple_multi_use_below_limit_consts(ptr %base, i64 %idx1, i64 %idx2) {
-; CHECK-LABEL: @gep_multiple_multi_use_below_limit_consts(
+define i1 @gep_multiple_multi_above_below_limit_consts(ptr %base, i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @gep_multiple_multi_above_below_limit_consts(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 16
 ; CHECK-NEXT:    call void @use(ptr [[GEP1]])
-; CHECK-NEXT:    [[GEP4_IDX:%.*]] = shl i64 [[IDX2:%.*]], 2
-; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr i8, ptr [[GEP1]], i64 [[GEP4_IDX]]
-; CHECK-NEXT:    call void @use(ptr [[GEP4]])
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[GEP4]], i64 16
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i32, ptr [[GEP1]], i64 [[IDX1:%.*]]
+; CHECK-NEXT:    call void @use(ptr [[GEP2]])
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[GEP2]], i64 16
 ; CHECK-NEXT:    call void @use(ptr [[GEP3]])
-; CHECK-NEXT:    [[GEP4_IDX1:%.*]] = shl i64 [[IDX3:%.*]], 2
-; CHECK-NEXT:    [[GEP5:%.*]] = getelementptr i8, ptr [[GEP3]], i64 [[GEP4_IDX1]]
-; CHECK-NEXT:    call void @use(ptr [[GEP5]])
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[GEP4_IDX]], 32
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 0, [[GEP4_IDX1]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr i32, ptr [[GEP3]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    call void @use(ptr [[GEP4]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEP4]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep1 = getelementptr i32, ptr %base, i64 4
