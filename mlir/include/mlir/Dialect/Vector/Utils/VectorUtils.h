@@ -118,9 +118,10 @@ inline auto makeVscaleConstantBuilder(PatternRewriter &rewriter, Location loc) {
   Value vscale = nullptr;
   return [loc, vscale, &rewriter](int64_t multiplier) mutable {
     if (!vscale)
-      vscale = rewriter.create<vector::VectorScaleOp>(loc);
-    return rewriter.create<arith::MulIOp>(
-        loc, vscale, rewriter.create<arith::ConstantIndexOp>(loc, multiplier));
+      vscale = vector::VectorScaleOp::create(rewriter, loc);
+    return arith::MulIOp::create(
+        rewriter, loc, vscale,
+        arith::ConstantIndexOp::create(rewriter, loc, multiplier));
   };
 }
 
