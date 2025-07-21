@@ -19,6 +19,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
+  using namespace acoshf_internal;
   using FPBits_t = typename fputil::FPBits<float>;
   FPBits_t xbits(x);
   uint32_t x_u = xbits.uintval();

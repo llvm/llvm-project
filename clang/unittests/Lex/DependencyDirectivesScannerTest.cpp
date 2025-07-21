@@ -640,14 +640,14 @@ TEST(MinimizeSourceToDependencyDirectivesTest, AtImport) {
   EXPECT_STREQ("@import A;\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("@import A\n;", Out));
-  EXPECT_STREQ("@import A;\n", Out.data());
+  EXPECT_STREQ("@import A\n;\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives("@import A.B;\n", Out));
   EXPECT_STREQ("@import A.B;\n", Out.data());
 
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(
-      "@import /*x*/ A /*x*/ . /*x*/ B /*x*/ \n /*x*/ ; /*x*/", Out));
-  EXPECT_STREQ("@import A.B;\n", Out.data());
+      "@import /*x*/ A /*x*/ . /*x*/ B /*x*/ \\n /*x*/ ; /*x*/", Out));
+  EXPECT_STREQ("@import A.B\\n;\n", Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, EmptyIncludesAndImports) {
@@ -1122,16 +1122,23 @@ ort \
     )";
   ASSERT_FALSE(
       minimizeSourceToDependencyDirectives(Source, Out, Tokens, Directives));
-  EXPECT_STREQ("#include \"textual-header.h\"\nexport module m;"
-               "exp\\\nort import:l[[rename]];"
-               "import<<=3;import a b d e d e f e;"
-               "import foo[[no_unique_address]];import foo();"
-               "import f(:sefse);import f(->a=3);"
+
+  EXPECT_STREQ("module;\n"
+               "#include \"textual-header.h\"\n"
+               "export module m;\n"
+               "exp\\\nort import:l[[rename]];\n"
+               "import<<=3;\n"
+               "import a b d e d e f e;\n"
+               "import foo[[no_unique_address]];\n"
+               "import foo();\n"
+               "import f(:sefse);\n"
+               "import f(->a=3);\n"
                "<TokBeforeEOF>\n",
                Out.data());
-  ASSERT_EQ(Directives.size(), 11u);
-  EXPECT_EQ(Directives[0].Kind, pp_include);
-  EXPECT_EQ(Directives[1].Kind, cxx_export_module_decl);
+  ASSERT_EQ(Directives.size(), 12u);
+  EXPECT_EQ(Directives[0].Kind, cxx_module_decl);
+  EXPECT_EQ(Directives[1].Kind, pp_include);
+  EXPECT_EQ(Directives[2].Kind, cxx_export_module_decl);
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, ObjCMethodArgs) {
@@ -1148,6 +1155,19 @@ TEST(MinimizeSourceToDependencyDirectivesTest, ObjCMethodArgs) {
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
   // `module :` and `import :` not followed by an identifier are not treated as
   // directive lines because they can be method argument decls.
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
+}
+
+TEST(MinimizeSourceToDependencyDirectivesTest,
+     CxxModulesImportScopeResolution) {
+  SmallString<16> Out;
+  SmallVector<dependency_directives_scan::Token, 2> Tokens;
+  SmallVector<Directive, 1> Directives;
+
+  StringRef Source = "import::inner xi = {};'\n"
+                     "module::inner yi = {};";
+  ASSERT_FALSE(
+      minimizeSourceToDependencyDirectives(Source, Out, Tokens, Directives));
   EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
 }
 

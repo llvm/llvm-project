@@ -579,7 +579,7 @@ func.func @fma_size1_vector(%a: vector<1xf32>, %b: vector<1xf32>, %c: vector<1xf
 //       CHECK:   %[[VAL:.+]] = spirv.CompositeConstruct %[[A]], %[[A]], %[[A]], %[[A]]
 //       CHECK:   return %[[VAL]]
 func.func @splat(%f : f32) -> vector<4xf32> {
-  %splat = vector.splat %f : vector<4xf32>
+  %splat = vector.broadcast %f : f32 to vector<4xf32>
   return %splat : vector<4xf32>
 }
 
@@ -590,7 +590,7 @@ func.func @splat(%f : f32) -> vector<4xf32> {
 //       CHECK:   %[[VAL:.+]] = builtin.unrealized_conversion_cast %[[A]]
 //       CHECK:   return %[[VAL]]
 func.func @splat_size1_vector(%f : f32) -> vector<1xf32> {
-  %splat = vector.splat %f : vector<1xf32>
+  %splat = vector.broadcast %f : f32 to vector<1xf32>
   return %splat : vector<1xf32>
 }
 
@@ -964,6 +964,22 @@ func.func @reduction_minui(%v : vector<3xi32>, %s: i32) -> i32 {
   %reduce = vector.reduction <minui>, %v, %s : vector<3xi32> into i32
   return %reduce : i32
 }
+
+// -----
+
+module attributes { spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [BFloat16DotProductKHR], [SPV_KHR_bfloat16]>, #spirv.resource_limits<>> } {
+
+// CHECK-LABEL: func @reduction_bf16_addf_mulf
+//  CHECK-SAME:  (%[[ARG0:.+]]: vector<4xbf16>, %[[ARG1:.+]]: vector<4xbf16>)
+//  CHECK:       %[[DOT:.+]] = spirv.Dot %[[ARG0]], %[[ARG1]] : vector<4xbf16> -> bf16
+//  CHECK:       return %[[DOT]] : bf16
+func.func @reduction_bf16_addf_mulf(%arg0: vector<4xbf16>, %arg1: vector<4xbf16>) -> bf16 {
+  %mul = arith.mulf %arg0, %arg1 : vector<4xbf16>
+  %red = vector.reduction <add>, %mul : vector<4xbf16> into bf16
+  return %red : bf16
+}
+
+} // end module
 
 // -----
 

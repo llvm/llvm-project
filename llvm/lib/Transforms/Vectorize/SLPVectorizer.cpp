@@ -206,6 +206,12 @@ static cl::opt<bool> VectorizeNonPowerOf2(
     "slp-vectorize-non-power-of-2", cl::init(false), cl::Hidden,
     cl::desc("Try to vectorize with non-power-of-2 number of elements."));
 
+/// Enables vectorization of copyable elements.
+static cl::opt<bool> VectorizeCopyableElements(
+    "slp-copyable-elements", cl::init(true), cl::Hidden,
+    cl::desc("Try to replace values with the idempotent instructions for "
+             "better vectorization."));
+
 // Limit the number of alias checks. The limit is chosen so that
 // it has no negative effect on the llvm benchmarks.
 static const unsigned AliasedCheckLimit = 10;
@@ -855,6 +861,13 @@ static std::optional<unsigned> getExtractIndex(const Instruction *E) {
   return *EI->idx_begin();
 }
 
+namespace llvm {
+/// Checks if the specified value does not require scheduling. It does not
+/// require scheduling if all operands and all users do not need to be scheduled
+/// in the current basic block.
+static bool doesNotNeedToBeScheduled(Value *V);
+} // namespace llvm
+
 namespace {
 /// \returns true if \p Opcode is allowed as part of the main/alternate
 /// instruction for SLP vectorization.
@@ -957,6 +970,33 @@ class BinOpSameOpcodeHelper {
         return Instruction::Xor;
       llvm_unreachable("Cannot find interchangeable instruction.");
     }
+
+    /// Return true if the instruction can be converted to \p Opcode.
+    bool hasCandidateOpcode(unsigned Opcode) const {
+      MaskType Candidate = Mask & SeenBefore;
+      switch (Opcode) {
+      case Instruction::Shl:
+        return Candidate & ShlBIT;
+      case Instruction::AShr:
+        return Candidate & AShrBIT;
+      case Instruction::Mul:
+        return Candidate & MulBIT;
+      case Instruction::Add:
+        return Candidate & AddBIT;
+      case Instruction::Sub:
+        return Candidate & SubBIT;
+      case Instruction::And:
+        return Candidate & AndBIT;
+      case Instruction::Or:
+        return Candidate & OrBIT;
+      case Instruction::Xor:
+        return Candidate & XorBIT;
+      default:
+        break;
+      }
+      llvm_unreachable("Cannot find interchangeable instruction.");
+    }
+
     SmallVector<Value *> getOperand(const Instruction *To) const {
       unsigned ToOpcode = To->getOpcode();
       unsigned FromOpcode = I->getOpcode();
@@ -1117,6 +1157,10 @@ public:
             AltOp.trySet(OpcodeInMaskForm, InterchangeableMask));
   }
   unsigned getMainOpcode() const { return MainOp.getOpcode(); }
+  /// Checks if the list of potential opcodes includes \p Opcode.
+  bool hasCandidateOpcode(unsigned Opcode) const {
+    return MainOp.hasCandidateOpcode(Opcode);
+  }
   bool hasAltOp() const { return AltOp.I; }
   unsigned getAltOpcode() const {
     return hasAltOp() ? AltOp.getOpcode() : getMainOpcode();
@@ -1152,6 +1196,8 @@ class InstructionsState {
   /// GetVectorCost.
   Instruction *MainOp = nullptr;
   Instruction *AltOp = nullptr;
+  /// Wether the instruction state represents copyable instructions.
+  bool HasCopyables = false;
 
 public:
   Instruction *getMainOp() const {
@@ -1190,9 +1236,11 @@ public:
     if (!I->isBinaryOp())
       return nullptr;
     BinOpSameOpcodeHelper Converter(MainOp);
-    if (Converter.add(I) && Converter.add(MainOp) && !Converter.hasAltOp())
-      return MainOp;
-    return AltOp;
+    if (!Converter.add(I) || !Converter.add(MainOp))
+      return nullptr;
+    if (Converter.hasAltOp() && !isAltShuffle())
+      return nullptr;
+    return Converter.hasAltOp() ? AltOp : MainOp;
   }
 
   /// Checks if main/alt instructions are shift operations.
@@ -1237,9 +1285,63 @@ public:
   explicit operator bool() const { return valid(); }
 
   InstructionsState() = delete;
-  InstructionsState(Instruction *MainOp, Instruction *AltOp)
-      : MainOp(MainOp), AltOp(AltOp) {}
+  InstructionsState(Instruction *MainOp, Instruction *AltOp,
+                    bool HasCopyables = false)
+      : MainOp(MainOp), AltOp(AltOp), HasCopyables(HasCopyables) {}
   static InstructionsState invalid() { return {nullptr, nullptr}; }
+
+  bool isCopyableElement(Value *V) const {
+    assert(valid() && "InstructionsState is invalid.");
+    if (!HasCopyables)
+      return false;
+    if (isAltShuffle() || getOpcode() == Instruction::GetElementPtr)
+      return false;
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I)
+      return !isa<PoisonValue>(V);
+    if (I->getParent() != MainOp->getParent() &&
+        (!isVectorLikeInstWithConstOps(I) ||
+         !isVectorLikeInstWithConstOps(MainOp)))
+      return true;
+    if (I->getOpcode() == MainOp->getOpcode())
+      return false;
+    if (!I->isBinaryOp())
+      return true;
+    BinOpSameOpcodeHelper Converter(MainOp);
+    return !Converter.add(I) || !Converter.add(MainOp) ||
+           Converter.hasAltOp() || !Converter.hasCandidateOpcode(getOpcode());
+  }
+
+  /// Checks if the value is non-schedulable.
+  bool isNonSchedulable(Value *V) const {
+    assert(valid() && "InstructionsState is invalid.");
+    auto *I = dyn_cast<Instruction>(V);
+    if (!HasCopyables)
+      return !I || isa<PHINode>(I) || isVectorLikeInstWithConstOps(I) ||
+             doesNotNeedToBeScheduled(V);
+    // MainOp for copyables always schedulable to correctly identify
+    // non-schedulable copyables.
+    if (isCopyableElement(V)) {
+      auto IsNonSchedulableCopyableElement = [this](Value *V) {
+        auto *I = dyn_cast<Instruction>(V);
+        return !I || isa<PHINode>(I) || I->getParent() != MainOp->getParent() ||
+               (doesNotNeedToBeScheduled(I) &&
+                // If the copyable instructions comes after MainOp
+                // (non-schedulable, but used in the block) - cannot vectorize
+                // it, will possibly generate use before def.
+                (isVectorLikeInstWithConstOps(I) || !MainOp->comesBefore(I)));
+      };
+
+      return IsNonSchedulableCopyableElement(V);
+    }
+    return !I || isa<PHINode>(I) || isVectorLikeInstWithConstOps(I) ||
+           doesNotNeedToBeScheduled(V);
+  }
+
+  bool areInstructionsWithCopyableElements() const {
+    assert(valid() && "InstructionsState is invalid.");
+    return HasCopyables;
+  }
 };
 
 std::pair<Instruction *, SmallVector<Value *>>
@@ -2899,9 +3001,6 @@ public:
       for (OperandDataVec &Ops : OpsVec)
         Ops.resize(NumLanes);
       for (unsigned Lane : seq<unsigned>(NumLanes)) {
-        Value *V = VL[Lane];
-        assert((isa<Instruction>(V) || isa<PoisonValue>(V)) &&
-               "Expected instruction or poison value");
         // Our tree has just 3 nodes: the root and two operands.
         // It is therefore trivial to get the APO. We only need to check the
         // opcode of V and whether the operand at OpIdx is the LHS or RHS
@@ -2912,17 +3011,24 @@ public:
         // Since operand reordering is performed on groups of commutative
         // operations or alternating sequences (e.g., +, -), we can safely tell
         // the inverse operations by checking commutativity.
-        if (isa<PoisonValue>(V)) {
+        auto *I = dyn_cast<Instruction>(VL[Lane]);
+        if (!I && isa<PoisonValue>(VL[Lane])) {
           for (unsigned OpIdx : seq<unsigned>(NumOperands))
             OpsVec[OpIdx][Lane] = {Operands[OpIdx][Lane], true, false};
           continue;
         }
-        auto [SelectedOp, Ops] = convertTo(cast<Instruction>(V), S);
-        // We cannot check commutativity by the converted instruction
-        // (SelectedOp) because isCommutative also examines def-use
-        // relationships.
-        bool IsInverseOperation =
-            !isCommutative(SelectedOp, cast<Instruction>(V));
+        bool IsInverseOperation = false;
+        if (S.isCopyableElement(VL[Lane])) {
+          // The value is a copyable element.
+          IsInverseOperation = !isCommutative(MainOp);
+        } else {
+          assert(I && "Expected instruction");
+          auto [SelectedOp, Ops] = convertTo(I, S);
+          // We cannot check commutativity by the converted instruction
+          // (SelectedOp) because isCommutative also examines def-use
+          // relationships.
+          IsInverseOperation = !isCommutative(SelectedOp, I);
+        }
         for (unsigned OpIdx : seq<unsigned>(ArgSize)) {
           bool APO = (OpIdx == 0) ? false : IsInverseOperation;
           OpsVec[OpIdx][Lane] = {Operands[OpIdx][Lane], APO, false};
@@ -3792,6 +3898,9 @@ private:
     /// reordering of operands during buildTreeRec() and vectorizeTree().
     SmallVector<ValueList, 2> Operands;
 
+    /// Copyable elements of the entry node.
+    SmallPtrSet<const Value *, 4> CopyableElements;
+
     /// MainOp and AltOp are recorded inside. S should be obtained from
     /// newTreeEntry.
     InstructionsState S = InstructionsState::invalid();
@@ -3820,11 +3929,7 @@ private:
     void setInterleave(unsigned Factor) { InterleaveFactor = Factor; }
 
     /// Marks the node as one that does not require scheduling.
-    void setDoesNotNeedToSchedule() {
-      assert(::doesNotNeedToSchedule(Scalars) &&
-             "Expected to not need scheduling");
-      DoesNotNeedToSchedule = true;
-    }
+    void setDoesNotNeedToSchedule() { DoesNotNeedToSchedule = true; }
     /// Returns true if the node is marked as one that does not require
     /// scheduling.
     bool doesNotNeedToSchedule() const { return DoesNotNeedToSchedule; }
@@ -3896,9 +4001,23 @@ private:
 
     bool hasState() const { return S.valid(); }
 
+    /// Add \p V to the list of copyable elements.
+    void addCopyableElement(Value *V) {
+      assert(S.isCopyableElement(V) && "Not a copyable element.");
+      CopyableElements.insert(V);
+    }
+
+    /// Returns true if \p V is a copyable element.
+    bool isCopyableElement(Value *V) const {
+      return CopyableElements.contains(V);
+    }
+
+    /// Returns true if any scalar in the list is a copyable element.
+    bool hasCopyableElements() const { return !CopyableElements.empty(); }
+
     /// When ReuseReorderShuffleIndices is empty it just returns position of \p
     /// V within vector of Scalars. Otherwise, try to remap on its reuse index.
-    int findLaneForValue(Value *V) const {
+    unsigned findLaneForValue(Value *V) const {
       unsigned FoundLane = getVectorFactor();
       for (auto *It = find(Scalars, V), *End = Scalars.end(); It != End;
            std::advance(It, 1)) {
@@ -3968,6 +4087,8 @@ private:
       for (Value *V : Scalars)
         dbgs().indent(2) << *V << "\n";
       dbgs() << "State: ";
+      if (S && hasCopyableElements())
+        dbgs() << "[[Copyable]] ";
       switch (State) {
       case Vectorize:
         if (InterleaveFactor > 0) {
@@ -4145,12 +4266,20 @@ private:
         }
       }
     } else if (!Last->isGather()) {
-      if (doesNotNeedToSchedule(VL))
+      if (isa<PHINode>(S.getMainOp()) ||
+          isVectorLikeInstWithConstOps(S.getMainOp()) ||
+          (!S.areInstructionsWithCopyableElements() &&
+           doesNotNeedToSchedule(VL)) ||
+          all_of(VL, [&](Value *V) { return S.isNonSchedulable(V); }))
         Last->setDoesNotNeedToSchedule();
       SmallPtrSet<Value *, 4> Processed;
       for (Value *V : VL) {
         if (isa<PoisonValue>(V))
           continue;
+        if (S.isCopyableElement(V)) {
+          Last->addCopyableElement(V);
+          continue;
+        }
         auto It = ScalarToTreeEntries.find(V);
         if (It == ScalarToTreeEntries.end()) {
           ScalarToTreeEntries.try_emplace(V).first->getSecond().push_back(Last);
@@ -4162,16 +4291,14 @@ private:
         }
       }
       // Update the scheduler bundle to point to this TreeEntry.
-      assert((!Bundle.getBundle().empty() || isa<PHINode>(S.getMainOp()) ||
-              isVectorLikeInstWithConstOps(S.getMainOp()) ||
-              Last->doesNotNeedToSchedule()) &&
+      assert((!Bundle.getBundle().empty() || Last->doesNotNeedToSchedule()) &&
              "Bundle and VL out of sync");
       if (!Bundle.getBundle().empty()) {
 #if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
         auto *BundleMember = Bundle.getBundle().begin();
         SmallPtrSet<Value *, 4> Processed;
         for (Value *V : VL) {
-          if (doesNotNeedToBeScheduled(V) || !Processed.insert(V).second)
+          if (S.isNonSchedulable(V) || !Processed.insert(V).second)
             continue;
           ++BundleMember;
         }
@@ -4280,7 +4407,8 @@ private:
   /// in general.
   ScalarsVectorizationLegality
   getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
-                                  const EdgeInfo &UserTreeIdx) const;
+                                  const EdgeInfo &UserTreeIdx,
+                                  bool TryCopyableElementsVectorization) const;
 
   /// Checks if the specified list of the instructions/values can be vectorized
   /// and fills required data before actual scheduling of the instructions.
@@ -4344,7 +4472,7 @@ private:
 
   /// This POD struct describes one external user in the vectorized tree.
   struct ExternalUser {
-    ExternalUser(Value *S, llvm::User *U, const TreeEntry &E, int L)
+    ExternalUser(Value *S, llvm::User *U, const TreeEntry &E, unsigned L)
         : Scalar(S), User(U), E(E), Lane(L) {}
 
     /// Which scalar in our function.
@@ -4357,7 +4485,7 @@ private:
     const TreeEntry &E;
 
     /// Which lane does the scalar belong to.
-    int Lane;
+    unsigned Lane;
   };
   using UserList = SmallVector<ExternalUser, 16>;
 
@@ -4996,7 +5124,8 @@ private:
 
     /// Build a bundle from the ScheduleData nodes corresponding to the
     /// scalar instruction for each lane.
-    ScheduleBundle &buildBundle(ArrayRef<Value *> VL);
+    ScheduleBundle &buildBundle(ArrayRef<Value *> VL,
+                                const InstructionsState &S);
 
     /// Checks if a bundle of instructions can be scheduled, i.e. has no
     /// cyclic dependencies. This is only a dry-run, no instructions are
@@ -5540,8 +5669,7 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
       return std::max(Entries[I].front()->getVectorFactor(),
                       Entries[I].back()->getVectorFactor());
     });
-  unsigned NumUndefs =
-      count_if(CurrentOrder, [&](unsigned Idx) { return Idx == NumScalars; });
+  unsigned NumUndefs = count(CurrentOrder, NumScalars);
   if (ShuffledSubMasks.all() || (NumScalars > 2 && NumUndefs >= NumScalars / 2))
     return std::nullopt;
   return std::move(CurrentOrder);
@@ -5809,48 +5937,40 @@ static InstructionCost getExtractWithExtendCost(
   return TTI.getExtractWithExtendCost(Opcode, Dst, VecTy, Index, CostKind);
 }
 
-/// Correctly creates insert_subvector, checking that the index is multiple of
-/// the subvectors length. Otherwise, generates shuffle using \p Generator or
+/// Creates subvector insert. Generates shuffle using \p Generator or
 /// using default shuffle.
 static Value *createInsertVector(
     IRBuilderBase &Builder, Value *Vec, Value *V, unsigned Index,
     function_ref<Value *(Value *, Value *, ArrayRef<int>)> Generator = {}) {
+  if (isa<PoisonValue>(Vec) && isa<PoisonValue>(V))
+    return Vec;
   const unsigned SubVecVF = getNumElements(V->getType());
-  if (Index % SubVecVF == 0) {
-    Vec = Builder.CreateInsertVector(Vec->getType(), Vec, V, Index);
-  } else {
-    // Create shuffle, insertvector requires that index is multiple of
-    // the subvector length.
-    const unsigned VecVF = getNumElements(Vec->getType());
-    SmallVector<int> Mask(VecVF, PoisonMaskElem);
-    std::iota(Mask.begin(), Mask.end(), 0);
-    for (unsigned I : seq<unsigned>(SubVecVF))
-      Mask[I + Index] = I + VecVF;
-    if (Generator) {
-      Vec = Generator(Vec, V, Mask);
-    } else {
-      // 1. Resize V to the size of Vec.
-      SmallVector<int> ResizeMask(VecVF, PoisonMaskElem);
-      std::iota(ResizeMask.begin(), std::next(ResizeMask.begin(), SubVecVF), 0);
-      V = Builder.CreateShuffleVector(V, ResizeMask);
-      Vec = Builder.CreateShuffleVector(Vec, V, Mask);
-    }
+  // Create shuffle, insertvector requires that index is multiple of
+  // the subvector length.
+  const unsigned VecVF = getNumElements(Vec->getType());
+  SmallVector<int> Mask(VecVF, PoisonMaskElem);
+  if (isa<PoisonValue>(Vec)) {
+    auto *Begin = std::next(Mask.begin(), Index);
+    std::iota(Begin, std::next(Begin, SubVecVF), 0);
+    Vec = Builder.CreateShuffleVector(V, Mask);
+    return Vec;
   }
-  return Vec;
+  std::iota(Mask.begin(), Mask.end(), 0);
+  std::iota(std::next(Mask.begin(), Index),
+            std::next(Mask.begin(), Index + SubVecVF), VecVF);
+  if (Generator)
+    return Generator(Vec, V, Mask);
+  // 1. Resize V to the size of Vec.
+  SmallVector<int> ResizeMask(VecVF, PoisonMaskElem);
+  std::iota(ResizeMask.begin(), std::next(ResizeMask.begin(), SubVecVF), 0);
+  V = Builder.CreateShuffleVector(V, ResizeMask);
+  // 2. Insert V into Vec.
+  return Builder.CreateShuffleVector(Vec, V, Mask);
 }
 
-/// Correctly creates extract_subvector, checking that the index is multiple of
-/// the subvectors length. Otherwise, generates shuffle using \p Generator or
-/// using default shuffle.
+/// Generates subvector extract using \p Generator or using default shuffle.
 static Value *createExtractVector(IRBuilderBase &Builder, Value *Vec,
                                   unsigned SubVecVF, unsigned Index) {
-  if (Index % SubVecVF == 0) {
-    VectorType *SubVecTy =
-        getWidenedType(Vec->getType()->getScalarType(), SubVecVF);
-    return Builder.CreateExtractVector(SubVecTy, Vec, Index);
-  }
-  // Create shuffle, extract_subvector requires that index is multiple of
-  // the subvector length.
   SmallVector<int> Mask(SubVecVF, PoisonMaskElem);
   std::iota(Mask.begin(), Mask.end(), Index);
   return Builder.CreateShuffleVector(Vec, Mask);
@@ -7891,7 +8011,7 @@ void BoUpSLP::buildExternalUses(
     // For each lane:
     for (int Lane = 0, LE = Entry->Scalars.size(); Lane != LE; ++Lane) {
       Value *Scalar = Entry->Scalars[Lane];
-      if (!isa<Instruction>(Scalar))
+      if (!isa<Instruction>(Scalar) || Entry->isCopyableElement(Scalar))
         continue;
       // All uses must be replaced already? No need to do it again.
       auto It = ScalarToExtUses.find(Scalar);
@@ -7901,7 +8021,7 @@ void BoUpSLP::buildExternalUses(
       // Check if the scalar is externally used as an extra arg.
       const auto ExtI = ExternallyUsedValues.find(Scalar);
       if (ExtI != ExternallyUsedValues.end()) {
-        int FoundLane = Entry->findLaneForValue(Scalar);
+        unsigned FoundLane = Entry->findLaneForValue(Scalar);
         LLVM_DEBUG(dbgs() << "SLP: Need to extract: Extra arg from lane "
                           << FoundLane << " from " << *Scalar << ".\n");
         ScalarToExtUses.try_emplace(Scalar, ExternalUses.size());
@@ -7949,7 +8069,7 @@ void BoUpSLP::buildExternalUses(
 
         if (U && Scalar->hasNUsesOrMore(UsesLimit))
           U = nullptr;
-        int FoundLane = Entry->findLaneForValue(Scalar);
+        unsigned FoundLane = Entry->findLaneForValue(Scalar);
         LLVM_DEBUG(dbgs() << "SLP: Need to extract:" << *UserInst
                           << " from lane " << FoundLane << " from " << *Scalar
                           << ".\n");
@@ -8631,11 +8751,10 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                                State == LoadsState::CompressVectorize)
                              return false;
                            ConsecutiveNodesSize += VL.size();
-                           unsigned Start = std::distance(Slice.begin(), It);
-                           unsigned Sz = Slice.size() - Start;
+                           size_t Start = std::distance(Slice.begin(), It);
+                           size_t Sz = Slice.size() - Start;
                            return Sz < VL.size() ||
-                                  Slice.slice(std::distance(Slice.begin(), It),
-                                              VL.size()) != VL;
+                                  Slice.slice(Start, VL.size()) != VL;
                          }))
                 continue;
               // Try to build long masked gather loads.
@@ -9060,6 +9179,10 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     // different vectors.
     ValueSet SourceVectors;
     for (Value *V : VL) {
+      if (isa<PoisonValue>(V)) {
+        LLVM_DEBUG(dbgs() << "SLP: Gather of insertelement/poison vector.\n");
+        return TreeEntry::NeedToGather;
+      }
       SourceVectors.insert(cast<Instruction>(V)->getOperand(0));
       assert(getElementIndex(V) != std::nullopt &&
              "Non-constant or undef index?");
@@ -9618,7 +9741,8 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
             PoisonValue::get(UniqueValues.front()->getType()));
         // Check that extended with poisons operations are still valid for
         // vectorization (div/rem are not allowed).
-        if (!getSameOpcode(PaddedUniqueValues, TLI).valid()) {
+        if (!S.areInstructionsWithCopyableElements() &&
+            !getSameOpcode(PaddedUniqueValues, TLI).valid()) {
           LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
           ReuseShuffleIndices.clear();
           return false;
@@ -9767,13 +9891,95 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
 }
 
 namespace {
-/// Class accepts incoming list of values and generates the list of values
-/// for scheduling and list of operands for the new nodes.
+/// Class accepts incoming list of values, checks if it is able to model
+/// "copyable" values as compatible operations, and generates the list of values
+/// for scheduling and list of operands doe the new nodes.
 class InstructionsCompatibilityAnalysis {
   DominatorTree &DT;
   const DataLayout &DL;
   const TargetTransformInfo &TTI;
   const TargetLibraryInfo &TLI;
+  unsigned MainOpcode = 0;
+  Instruction *MainOp = nullptr;
+
+  /// Identifies the best candidate value, which represents main opcode
+  /// operation.
+  /// Currently the best candidate is the Add instruction with the parent
+  /// block with the highest DFS incoming number (block, that dominates other).
+  void findAndSetMainInstruction(ArrayRef<Value *> VL) {
+    BasicBlock *Parent = nullptr;
+    // Checks if the instruction has supported opcode.
+    auto IsSupportedOpcode = [](Instruction *I) {
+      return I && I->getOpcode() == Instruction::Add;
+    };
+    SmallDenseSet<Value *, 8> Operands;
+    for (Value *V : VL) {
+      auto *I = dyn_cast<Instruction>(V);
+      if (!I)
+        continue;
+      if (!DT.isReachableFromEntry(I->getParent()))
+        continue;
+      if (!MainOp) {
+        MainOp = I;
+        Parent = I->getParent();
+        Operands.insert(I->op_begin(), I->op_end());
+        continue;
+      }
+      if (Parent == I->getParent()) {
+        if (!IsSupportedOpcode(MainOp))
+          MainOp = I;
+        if (MainOp->getOpcode() == I->getOpcode() &&
+            doesNotNeedToBeScheduled(MainOp) && !doesNotNeedToBeScheduled(I))
+          MainOp = I;
+        Operands.insert(I->op_begin(), I->op_end());
+        continue;
+      }
+      auto *NodeA = DT.getNode(Parent);
+      auto *NodeB = DT.getNode(I->getParent());
+      assert(NodeA && "Should only process reachable instructions");
+      assert(NodeB && "Should only process reachable instructions");
+      assert((NodeA == NodeB) ==
+                 (NodeA->getDFSNumIn() == NodeB->getDFSNumIn()) &&
+             "Different nodes should have different DFS numbers");
+      if (NodeA->getDFSNumIn() < NodeB->getDFSNumIn()) {
+        MainOp = I;
+        Parent = I->getParent();
+        Operands.clear();
+        Operands.insert(I->op_begin(), I->op_end());
+      }
+    }
+    if (!IsSupportedOpcode(MainOp) || Operands.contains(MainOp)) {
+      MainOp = nullptr;
+      return;
+    }
+    MainOpcode = MainOp->getOpcode();
+  }
+
+  /// Returns the idempotent value for the \p MainOp with the detected \p
+  /// MainOpcode. For Add, returns 0. For Or, it should choose between false and
+  /// the operand itself, since V or V == V.
+  Value *selectBestIdempotentValue() const {
+    assert(MainOpcode == Instruction::Add && "Unsupported opcode");
+    return ConstantExpr::getBinOpIdentity(MainOpcode, MainOp->getType(),
+                                          !MainOp->isCommutative());
+  }
+
+  /// Returns the value and operands for the \p V, considering if it is original
+  /// instruction and its actual operands should be returned, or it is a
+  /// copyable element and its should be represented as idempotent instruction.
+  SmallVector<Value *> getOperands(const InstructionsState &S, Value *V) const {
+    if (isa<PoisonValue>(V))
+      return {V, V};
+    if (!S.isCopyableElement(V))
+      return convertTo(cast<Instruction>(V), S).second;
+    switch (MainOpcode) {
+    case Instruction::Add:
+      return {V, selectBestIdempotentValue()};
+    default:
+      break;
+    }
+    llvm_unreachable("Unsupported opcode");
+  }
 
   /// Builds operands for the original instructions.
   void
@@ -9934,22 +10140,151 @@ public:
                                     const TargetLibraryInfo &TLI)
       : DT(DT), DL(DL), TTI(TTI), TLI(TLI) {}
 
+  InstructionsState
+  buildInstructionsState(ArrayRef<Value *> VL, const BoUpSLP &R,
+                         bool TryCopyableElementsVectorization,
+                         bool WithProfitabilityCheck = false) {
+    InstructionsState S = getSameOpcode(VL, TLI);
+    if (S)
+      return S;
+    if (!VectorizeCopyableElements || !TryCopyableElementsVectorization)
+      return S;
+    findAndSetMainInstruction(VL);
+    if (!MainOp)
+      return InstructionsState::invalid();
+    S = InstructionsState(MainOp, MainOp, /*HasCopyables=*/true);
+    // TODO: Remove this check once support for schulable copyables is landed.
+    if (any_of(VL, [&](Value *V) {
+          return S.isCopyableElement(V) && !S.isNonSchedulable(V);
+        }))
+      return InstructionsState::invalid();
+
+    if (!WithProfitabilityCheck)
+      return S;
+    // Check if it is profitable to vectorize the instruction.
+    SmallVector<BoUpSLP::ValueList> Operands = buildOperands(S, VL);
+    if (VL.size() == 2) {
+      // Check if the operands allow better vectorization.
+      SmallVector<std::pair<Value *, Value *>, 4> Candidates;
+      Candidates.emplace_back(Operands[0][0], Operands[0][1]);
+      Candidates.emplace_back(Operands[1][0], Operands[1][1]);
+      if (isCommutative(MainOp)) {
+        Candidates.emplace_back(Operands[0][0], Operands[1][1]);
+        Candidates.emplace_back(Operands[1][0], Operands[0][1]);
+      }
+      // No good candidates - not profitable.
+      if (!R.findBestRootPair(Candidates,
+                              BoUpSLP::LookAheadHeuristics::ScoreSplat)) {
+        // Deeper analysis for 2 splats/constants.
+        SmallVector<std::pair<Value *, Value *>, 4> Candidates1, Candidates2;
+        Candidates1.emplace_back(Operands[0][0], Operands[0][1]);
+        Candidates2.emplace_back(Operands[1][0], Operands[1][1]);
+        bool Res =
+            R.findBestRootPair(Candidates1) && R.findBestRootPair(Candidates2);
+        if (!Res && isCommutative(MainOp)) {
+          Candidates1.clear();
+          Candidates2.clear();
+          Candidates1.emplace_back(Operands[0][0], Operands[1][1]);
+          Candidates2.emplace_back(Operands[1][0], Operands[0][1]);
+          Res = R.findBestRootPair(Candidates1) &&
+                R.findBestRootPair(Candidates2);
+        }
+        if (!Res)
+          return InstructionsState::invalid();
+      }
+      return S;
+    }
+    assert(Operands.size() == 2 && "Unexpected number of operands!");
+    unsigned CopyableNum =
+        count_if(VL, [&](Value *V) { return S.isCopyableElement(V); });
+    if (CopyableNum < VL.size() / 2)
+      return S;
+    // Check profitability if number of copyables > VL.size() / 2.
+    // 1. Reorder operands for better matching.
+    if (isCommutative(MainOp)) {
+      for (auto &Ops : Operands) {
+        // Make instructions the first operands.
+        if (!isa<Instruction>(Ops.front()) && isa<Instruction>(Ops.back())) {
+          std::swap(Ops.front(), Ops.back());
+          continue;
+        }
+        // Make constants the second operands.
+        if (isa<Constant>(Ops.front())) {
+          std::swap(Ops.front(), Ops.back());
+          continue;
+        }
+      }
+    }
+    // 2. Check, if operands can be vectorized.
+    if (count_if(Operands.back(), IsaPred<Instruction>) > 1)
+      return InstructionsState::invalid();
+    auto CheckOperand = [&](ArrayRef<Value *> Ops) {
+      if (allConstant(Ops) || isSplat(Ops))
+        return true;
+      // Check if it is "almost" splat, i.e. has >= 4 elements and only single
+      // one is different.
+      constexpr unsigned Limit = 4;
+      if (Operands.front().size() >= Limit) {
+        SmallDenseMap<const Value *, unsigned> Counters;
+        for (Value *V : Ops) {
+          if (isa<UndefValue>(V))
+            continue;
+          ++Counters[V];
+        }
+        if (Counters.size() == 2 &&
+            any_of(Counters, [&](const std::pair<const Value *, unsigned> &C) {
+              return C.second == 1;
+            }))
+          return true;
+      }
+      // First operand not a constant or splat? Last attempt - check for
+      // potential vectorization.
+      InstructionsCompatibilityAnalysis Analysis(DT, DL, TTI, TLI);
+      InstructionsState OpS = Analysis.buildInstructionsState(
+          Ops, R, /*TryCopyableElementsVectorization=*/true);
+      if (!OpS)
+        return false;
+      unsigned CopyableNum =
+          count_if(Ops, [&](Value *V) { return OpS.isCopyableElement(V); });
+      return CopyableNum <= VL.size() / 2;
+    };
+    if (!CheckOperand(Operands.front()))
+      return InstructionsState::invalid();
+
+    return S;
+  }
+
   SmallVector<BoUpSLP::ValueList> buildOperands(const InstructionsState &S,
                                                 ArrayRef<Value *> VL) {
     assert(S && "Invalid state!");
     SmallVector<BoUpSLP::ValueList> Operands;
-    buildOriginalOperands(S, VL, Operands);
+    if (S.areInstructionsWithCopyableElements()) {
+      MainOp = S.getMainOp();
+      MainOpcode = S.getOpcode();
+      Operands.assign(MainOp->getNumOperands(),
+                      BoUpSLP::ValueList(VL.size(), nullptr));
+      for (auto [Idx, V] : enumerate(VL)) {
+        SmallVector<Value *> OperandsForValue = getOperands(S, V);
+        for (auto [OperandIdx, Operand] : enumerate(OperandsForValue))
+          Operands[OperandIdx][Idx] = Operand;
+      }
+    } else {
+      buildOriginalOperands(S, VL, Operands);
+    }
     return Operands;
   }
 };
 } // namespace
 
-BoUpSLP::ScalarsVectorizationLegality
-BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
-                                         const EdgeInfo &UserTreeIdx) const {
+BoUpSLP::ScalarsVectorizationLegality BoUpSLP::getScalarsVectorizationLegality(
+    ArrayRef<Value *> VL, unsigned Depth, const EdgeInfo &UserTreeIdx,
+    bool TryCopyableElementsVectorization) const {
   assert((allConstant(VL) || allSameType(VL)) && "Invalid types!");
 
-  InstructionsState S = getSameOpcode(VL, *TLI);
+  InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
+  InstructionsState S = Analysis.buildInstructionsState(
+      VL, *this, TryCopyableElementsVectorization,
+      /*WithProfitabilityCheck=*/true);
 
   // Don't go into catchswitch blocks, which can happen with PHIs.
   // Such blocks can only have PHIs and the catchswitch.  There is no
@@ -10248,9 +10583,9 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     return true;
   };
 
-  ScalarsVectorizationLegality Legality =
-      getScalarsVectorizationLegality(VL, Depth, UserTreeIdx);
-  const InstructionsState &S = Legality.getInstructionsState();
+  ScalarsVectorizationLegality Legality = getScalarsVectorizationLegality(
+      VL, Depth, UserTreeIdx, /*TryCopyableElementsVectorization=*/false);
+  InstructionsState S = Legality.getInstructionsState();
   if (!Legality.isLegal()) {
     if (Legality.trySplitVectorize()) {
       auto [MainOp, AltOp] = getMainAltOpsNoStateVL(VL);
@@ -10258,11 +10593,18 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       if (MainOp && AltOp && TrySplitNode(InstructionsState(MainOp, AltOp)))
         return;
     }
-    if (Legality.tryToFindDuplicates())
-      tryToFindDuplicates(VL, ReuseShuffleIndices, *TTI, *TLI, S, UserTreeIdx);
+    if (!S)
+      Legality = getScalarsVectorizationLegality(
+          VL, Depth, UserTreeIdx, /*TryCopyableElementsVectorization=*/true);
+    if (!Legality.isLegal()) {
+      if (Legality.tryToFindDuplicates())
+        tryToFindDuplicates(VL, ReuseShuffleIndices, *TTI, *TLI, S,
+                            UserTreeIdx);
 
-    newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
-    return;
+      newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
+      return;
+    }
+    S = Legality.getInstructionsState();
   }
 
   // FIXME: investigate if there are profitable cases for VL.size() <= 4.
@@ -11699,6 +12041,7 @@ void BoUpSLP::transformNodes() {
         if (StartIdx + VF > End)
           continue;
         SmallVector<std::pair<unsigned, unsigned>> Slices;
+        bool AllStrided = true;
         for (unsigned Cnt = StartIdx; Cnt + VF <= End; Cnt += VF) {
           ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
           // If any instruction is vectorized already - do not try again.
@@ -11749,6 +12092,9 @@ void BoUpSLP::transformNodes() {
                 SmallVector<Value *> PointerOps;
                 LoadsState Res =
                     canVectorizeLoads(Slice, Slice.front(), Order, PointerOps);
+                AllStrided &= Res == LoadsState::StridedVectorize ||
+                              Res == LoadsState::ScatterVectorize ||
+                              Res == LoadsState::Gather;
                 // Do not vectorize gathers.
                 if (Res == LoadsState::ScatterVectorize ||
                     Res == LoadsState::Gather) {
@@ -11778,6 +12124,11 @@ void BoUpSLP::transformNodes() {
           }
           Slices.emplace_back(Cnt, Slice.size());
         }
+        // Do not try to vectorize if all slides are strided or gathered with
+        // vector factor 2 and there are more than 2 slices. Better to handle
+        // them in gathered loads analysis, may result in better vectorization.
+        if (VF == 2 && AllStrided && Slices.size() > 2)
+          continue;
         auto AddCombinedNode = [&](unsigned Idx, unsigned Cnt, unsigned Sz) {
           E.CombinedEntriesWithIndices.emplace_back(Idx, Cnt);
           if (StartIdx == Cnt)
@@ -13021,7 +13372,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   assert(E->getOpcode() &&
          ((allSameType(VL) && allSameBlock(VL)) ||
           (E->getOpcode() == Instruction::GetElementPtr &&
-           E->getMainOp()->getType()->isPointerTy())) &&
+           E->getMainOp()->getType()->isPointerTy()) ||
+          E->hasCopyableElements()) &&
          "Invalid VL");
   Instruction *VL0 = E->getMainOp();
   unsigned ShuffleOrOp =
@@ -13033,6 +13385,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   SmallBitVector UsedScalars(Sz, false);
   for (unsigned I = 0; I < Sz; ++I) {
     if (isa<Instruction>(UniqueValues[I]) &&
+        !E->isCopyableElement(UniqueValues[I]) &&
         getTreeEntries(UniqueValues[I]).front() == E)
       continue;
     UsedScalars.set(I);
@@ -14564,8 +14917,6 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
   LLVM_DEBUG(dbgs() << "SLP: Calculating cost for tree of size "
                     << VectorizableTree.size() << ".\n");
 
-  unsigned BundleWidth = VectorizableTree[0]->Scalars.size();
-
   SmallPtrSet<Value *, 4> CheckedExtracts;
   for (unsigned I = 0, E = VectorizableTree.size(); I < E; ++I) {
     TreeEntry &TE = *VectorizableTree[I];
@@ -14628,6 +14979,11 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
   }
   SmallDenseSet<std::pair<Value *, Value *>, 8> CheckedScalarUser;
   for (ExternalUser &EU : ExternalUses) {
+    LLVM_DEBUG(dbgs() << "SLP: Computing cost for external use of TreeEntry "
+                      << EU.E.Idx << " in lane " << EU.Lane << "\n");
+    LLVM_DEBUG(dbgs() << "  User:" << *EU.User << "\n");
+    LLVM_DEBUG(dbgs() << "  Use: " << EU.Scalar->getNameOrAsOperand() << "\n");
+
     // Uses by ephemeral values are free (because the ephemeral value will be
     // removed prior to code generation, and so the extraction will be
     // removed as well).
@@ -14735,6 +15091,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
     // for the extract and the added cost of the sign extend if needed.
     InstructionCost ExtraCost = TTI::TCC_Free;
     auto *ScalarTy = EU.Scalar->getType();
+    const unsigned BundleWidth = EU.E.getVectorFactor();
+    assert(EU.Lane < BundleWidth && "Extracted lane out of bounds.");
     auto *VecTy = getWidenedType(ScalarTy, BundleWidth);
     const TreeEntry *Entry = &EU.E;
     auto It = MinBWs.find(Entry);
@@ -14748,10 +15106,14 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
       VecTy = getWidenedType(MinTy, BundleWidth);
       ExtraCost =
           getExtractWithExtendCost(*TTI, Extend, ScalarTy, VecTy, EU.Lane);
+      LLVM_DEBUG(dbgs() << "  ExtractExtend or ExtractSubvec cost: "
+                        << ExtraCost << "\n");
     } else {
       ExtraCost =
           getVectorInstrCost(*TTI, ScalarTy, Instruction::ExtractElement, VecTy,
                              CostKind, EU.Lane, EU.Scalar, ScalarUserAndIdx);
+      LLVM_DEBUG(dbgs() << "  ExtractElement cost for " << *ScalarTy << " from "
+                        << *VecTy << ": " << ExtraCost << "\n");
     }
     // Leave the scalar instructions as is if they are cheaper than extracts.
     if (Entry->Idx != 0 || Entry->getOpcode() == Instruction::GetElementPtr ||
@@ -16063,6 +16425,8 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
       auto *I = dyn_cast<Instruction>(V);
       if (!I)
         continue;
+      if (E->isCopyableElement(I))
+        continue;
       if (FirstInst->getParent() == I->getParent()) {
         if (I->comesBefore(FirstInst))
           FirstInst = I;
@@ -16127,7 +16491,8 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
       return nullptr;
     for (Value *V : E->Scalars) {
       auto *I = dyn_cast<Instruction>(V);
-      if (!I || isa<PHINode>(I) || doesNotNeedToBeScheduled(I))
+      if (!I || isa<PHINode>(I) ||
+          (!E->isCopyableElement(I) && doesNotNeedToBeScheduled(I)))
         continue;
       ArrayRef<ScheduleBundle *> Bundles = It->second->getScheduleBundles(I);
       if (Bundles.empty())
@@ -16146,8 +16511,8 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
                 [](Value *V) {
                   return !isa<GetElementPtrInst>(V) && isa<Instruction>(V);
                 })) ||
-        all_of(E->Scalars, [](Value *V) {
-          return isa<PoisonValue>(V) ||
+        all_of(E->Scalars, [&](Value *V) {
+          return isa<PoisonValue>(V) || E->isCopyableElement(V) ||
                  (!isVectorLikeInstWithConstOps(V) && isUsedOutsideBlock(V));
         }))
       Res = FindLastInst();
@@ -16218,7 +16583,7 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
     // debug location to Front.
     Builder.SetInsertPoint(
         LastInst->getParent(),
-        LastInst->getNextNonDebugInstruction()->getIterator());
+        LastInst->getNextNode()->getIterator());
   }
   Builder.SetCurrentDebugLocation(Front->getDebugLoc());
 }
@@ -16271,8 +16636,8 @@ Value *BoUpSLP::gather(
       assert(SLPReVec && "FixedVectorType is not expected.");
       Vec =
           createInsertVector(Builder, Vec, Scalar, Pos * getNumElements(VecTy));
-      auto *II = dyn_cast<IntrinsicInst>(Vec);
-      if (!II || II->getIntrinsicID() != Intrinsic::vector_insert)
+      auto *II = dyn_cast<Instruction>(Vec);
+      if (!II)
         return Vec;
       InsElt = II;
     } else {
@@ -16292,6 +16657,28 @@ Value *BoUpSLP::gather(
           if (auto *SI = dyn_cast<Instruction>(Scalar))
             UserOp = SI;
         } else {
+          if (V->getType()->isVectorTy()) {
+            if (auto *SV = dyn_cast<ShuffleVectorInst>(InsElt);
+                SV && SV->getOperand(0) != V && SV->getOperand(1) != V) {
+              // Find shufflevector, caused by resize.
+              auto FindOperand = [](Value *Vec, Value *V) -> Instruction * {
+                if (auto *SV = dyn_cast<ShuffleVectorInst>(Vec)) {
+                  if (SV->getOperand(0) == V)
+                    return SV;
+                  if (SV->getOperand(1) == V)
+                    return SV;
+                }
+                return nullptr;
+              };
+              InsElt = nullptr;
+              if (Instruction *User = FindOperand(SV->getOperand(0), V))
+                InsElt = User;
+              else if (Instruction *User = FindOperand(SV->getOperand(1), V))
+                InsElt = User;
+              assert(InsElt &&
+                     "Failed to find shufflevector, caused by resize.");
+            }
+          }
           UserOp = InsElt;
         }
         if (UserOp) {
@@ -16860,10 +17247,18 @@ public:
                                          V, SimplifyQuery(*R.DL));
                                    }));
           unsigned InsertionIndex = Idx * getNumElements(ScalarTy);
+          // Use scalar version of the SCalarType to correctly handle shuffles
+          // for revectorization. The revectorization mode operates by the
+          // vectors, but here we need to operate on the scalars, because the
+          // masks were already transformed for the vector elements and we don't
+          // need doing this transformation again.
+          Type *OrigScalarTy = ScalarTy;
+          ScalarTy = ScalarTy->getScalarType();
           Vec = createInsertVector(
               Builder, Vec, V, InsertionIndex,
               std::bind(&ShuffleInstructionBuilder::createShuffle, this, _1, _2,
                         _3));
+          ScalarTy = OrigScalarTy;
           if (!CommonMask.empty()) {
             std::iota(std::next(CommonMask.begin(), Idx),
                       std::next(CommonMask.begin(), Idx + E->getVectorFactor()),
@@ -18598,6 +18993,7 @@ Value *BoUpSLP::vectorizeTree(
         TE->UserTreeIndex.UserTE->State == TreeEntry::Vectorize &&
         (TE->UserTreeIndex.UserTE->getOpcode() != Instruction::PHI ||
          TE->UserTreeIndex.UserTE->isAltShuffle()) &&
+        !TE->UserTreeIndex.UserTE->hasCopyableElements() &&
         all_of(TE->UserTreeIndex.UserTE->Scalars,
                [](Value *V) { return isUsedOutsideBlock(V); })) {
       Instruction &LastInst =
@@ -18940,7 +19336,7 @@ Value *BoUpSLP::vectorizeTree(
                   Builder.SetInsertPoint(
                       IVec->getParent()->getFirstNonPHIOrDbgOrLifetime());
               } else if (auto *IVec = dyn_cast<Instruction>(Vec)) {
-                Builder.SetInsertPoint(IVec->getNextNonDebugInstruction());
+                Builder.SetInsertPoint(IVec->getNextNode());
               }
               Vec = Builder.CreateIntCast(
                   Vec,
@@ -19140,7 +19536,7 @@ Value *BoUpSLP::vectorizeTree(
       if (auto *EE = dyn_cast<ExtractElementInst>(Scalar);
           EE && IgnoredExtracts.contains(EE))
         continue;
-      if (isa<PoisonValue>(Scalar))
+      if (!isa<Instruction>(Scalar) || Entry->isCopyableElement(Scalar))
         continue;
 #ifndef NDEBUG
       Type *Ty = Scalar->getType();
@@ -19382,11 +19778,14 @@ void BoUpSLP::optimizeGatherSequence() {
 }
 
 BoUpSLP::ScheduleBundle &
-BoUpSLP::BlockScheduling::buildBundle(ArrayRef<Value *> VL) {
+BoUpSLP::BlockScheduling::buildBundle(ArrayRef<Value *> VL,
+                                      const InstructionsState &S) {
   auto &BundlePtr =
       ScheduledBundlesList.emplace_back(std::make_unique<ScheduleBundle>());
   for (Value *V : VL) {
     if (doesNotNeedToBeScheduled(V))
+      continue;
+    if (S.isCopyableElement(V))
       continue;
     ScheduleData *BundleMember = getScheduleData(V);
     assert(BundleMember && "no ScheduleData for bundle member "
@@ -19408,10 +19807,19 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                                             const InstructionsState &S) {
   // No need to schedule PHIs, insertelement, extractelement and extractvalue
   // instructions.
+  bool HasCopyables = S.areInstructionsWithCopyableElements();
   if (isa<PHINode>(S.getMainOp()) ||
-      isVectorLikeInstWithConstOps(S.getMainOp()) || doesNotNeedToSchedule(VL))
+      isVectorLikeInstWithConstOps(S.getMainOp()) ||
+      (!HasCopyables && doesNotNeedToSchedule(VL)) ||
+      all_of(VL, [&](Value *V) { return S.isNonSchedulable(V); }))
     return nullptr;
 
+  // TODO Remove once full support for copyables is landed.
+  assert(all_of(VL,
+                [&](Value *V) {
+                  return !S.isCopyableElement(V) || S.isNonSchedulable(V);
+                }) &&
+         "Copyable elements should not be schedulable");
   // Initialize the instruction bundle.
   Instruction *OldScheduleEnd = ScheduleEnd;
   LLVM_DEBUG(dbgs() << "SLP:  bundle: " << *S.getMainOp() << "\n");
@@ -19457,7 +19865,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
   // Make sure that the scheduling region contains all
   // instructions of the bundle.
   for (Value *V : VL) {
-    if (doesNotNeedToBeScheduled(V))
+    if (doesNotNeedToBeScheduled(V) || S.isCopyableElement(V))
       continue;
     if (!extendSchedulingRegion(V, S)) {
       // If the scheduling region got new instructions at the lower end (or it
@@ -19474,7 +19882,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
 
   bool ReSchedule = false;
   for (Value *V : VL) {
-    if (doesNotNeedToBeScheduled(V))
+    if (doesNotNeedToBeScheduled(V) || S.isCopyableElement(V))
       continue;
     ScheduleData *BundleMember = getScheduleData(V);
     assert(BundleMember &&
@@ -19499,7 +19907,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     ReSchedule = true;
   }
 
-  ScheduleBundle &Bundle = buildBundle(VL);
+  ScheduleBundle &Bundle = buildBundle(VL, S);
   TryScheduleBundleImpl(ReSchedule, Bundle);
   if (!Bundle.isReady()) {
     for (ScheduleData *BD : Bundle.getBundle()) {
@@ -19516,7 +19924,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     }
     ScheduledBundlesList.pop_back();
     for (Value *V : VL) {
-      if (doesNotNeedToBeScheduled(V))
+      if (doesNotNeedToBeScheduled(V) || S.isCopyableElement(V))
         continue;
       ScheduledBundles.find(cast<Instruction>(V))->getSecond().pop_back();
     }
@@ -19918,7 +20326,7 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
         Instruction *PickedInst = BundleMember->getInst();
         if (!Scheduled.insert(PickedInst).second)
           continue;
-        if (PickedInst->getNextNonDebugInstruction() != LastScheduledInst)
+        if (PickedInst->getNextNode() != LastScheduledInst)
           PickedInst->moveAfter(LastScheduledInst->getPrevNode());
         LastScheduledInst = PickedInst;
       }
@@ -19927,7 +20335,7 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
     } else {
       auto *SD = cast<ScheduleData>(Picked);
       Instruction *PickedInst = SD->getInst();
-      if (PickedInst->getNextNonDebugInstruction() != LastScheduledInst)
+      if (PickedInst->getNextNode() != LastScheduledInst)
         PickedInst->moveAfter(LastScheduledInst->getPrevNode());
       LastScheduledInst = PickedInst;
     }
@@ -20145,7 +20553,7 @@ bool BoUpSLP::collectValuesToDemote(
   };
   if (E.isGather() || !Visited.insert(&E).second ||
       any_of(E.Scalars, [&](Value *V) {
-        return !isa<PoisonValue>(V) && all_of(V->users(), [&](User *U) {
+        return !isa<Constant>(V) && all_of(V->users(), [&](User *U) {
           return isa<InsertElementInst>(U) && !isVectorized(U);
         });
       }))
@@ -20611,7 +21019,12 @@ void BoUpSLP::computeMinimumValueSizes() {
       if (!IsKnownPositive)
         ++BitWidth1;
 
-      APInt Mask = DB->getDemandedBits(cast<Instruction>(Root));
+      auto *I = dyn_cast<Instruction>(Root);
+      if (!I) {
+        MaxBitWidth = std::max(BitWidth1, MaxBitWidth);
+        continue;
+      }
+      APInt Mask = DB->getDemandedBits(I);
       unsigned BitWidth2 = Mask.getBitWidth() - Mask.countl_zero();
       MaxBitWidth =
           std::max<unsigned>(std::min(BitWidth1, BitWidth2), MaxBitWidth);
@@ -20940,7 +21353,9 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   for (Value *V : Chain)
     ValOps.insert(cast<StoreInst>(V)->getValueOperand());
   // Operands are not same/alt opcodes or non-power-of-2 uniques - exit.
-  InstructionsState S = getSameOpcode(ValOps.getArrayRef(), *TLI);
+  InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
+  InstructionsState S = Analysis.buildInstructionsState(
+      ValOps.getArrayRef(), R, /*TryCopyableElementsVectorization=*/true);
   if (all_of(ValOps, IsaPred<Instruction>) && ValOps.size() > 1) {
     DenseSet<Value *> Stores(Chain.begin(), Chain.end());
     bool IsAllowedSize =
@@ -21676,58 +22091,6 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   return Changed;
 }
 
-bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
-  if (!I)
-    return false;
-
-  if (!isa<BinaryOperator, CmpInst>(I) || isa<VectorType>(I->getType()))
-    return false;
-
-  Value *P = I->getParent();
-
-  // Vectorize in current basic block only.
-  auto *Op0 = dyn_cast<Instruction>(I->getOperand(0));
-  auto *Op1 = dyn_cast<Instruction>(I->getOperand(1));
-  if (!Op0 || !Op1 || Op0->getParent() != P || Op1->getParent() != P ||
-      R.isDeleted(Op0) || R.isDeleted(Op1))
-    return false;
-
-  // First collect all possible candidates
-  SmallVector<std::pair<Value *, Value *>, 4> Candidates;
-  Candidates.emplace_back(Op0, Op1);
-
-  auto *A = dyn_cast<BinaryOperator>(Op0);
-  auto *B = dyn_cast<BinaryOperator>(Op1);
-  // Try to skip B.
-  if (A && B && B->hasOneUse()) {
-    auto *B0 = dyn_cast<BinaryOperator>(B->getOperand(0));
-    auto *B1 = dyn_cast<BinaryOperator>(B->getOperand(1));
-    if (B0 && B0->getParent() == P && !R.isDeleted(B0))
-      Candidates.emplace_back(A, B0);
-    if (B1 && B1->getParent() == P && !R.isDeleted(B1))
-      Candidates.emplace_back(A, B1);
-  }
-  // Try to skip A.
-  if (B && A && A->hasOneUse()) {
-    auto *A0 = dyn_cast<BinaryOperator>(A->getOperand(0));
-    auto *A1 = dyn_cast<BinaryOperator>(A->getOperand(1));
-    if (A0 && A0->getParent() == P && !R.isDeleted(A0))
-      Candidates.emplace_back(A0, B);
-    if (A1 && A1->getParent() == P && !R.isDeleted(A1))
-      Candidates.emplace_back(A1, B);
-  }
-
-  if (Candidates.size() == 1)
-    return tryToVectorizeList({Op0, Op1}, R);
-
-  // We have multiple options. Try to pick the single best.
-  std::optional<int> BestCandidate = R.findBestRootPair(Candidates);
-  if (!BestCandidate)
-    return false;
-  return tryToVectorizeList(
-      {Candidates[*BestCandidate].first, Candidates[*BestCandidate].second}, R);
-}
-
 namespace {
 
 /// Model horizontal reductions.
@@ -21770,6 +22133,8 @@ class HorizontalReduction {
   /// Checks if the optimization of original scalar identity operations on
   /// matched horizontal reductions is enabled and allowed.
   bool IsSupportedHorRdxIdentityOp = false;
+  /// The minimum number of the reduced values.
+  const unsigned ReductionLimit = VectorizeNonPowerOf2 ? 3 : 4;
   /// Contains vector values for reduction including their scale factor and
   /// signedness.
   SmallVector<std::tuple<Value *, unsigned, bool>> VectorValuesAndScales;
@@ -21788,13 +22153,18 @@ class HorizontalReduction {
   }
 
   /// Checks if instruction is associative and can be vectorized.
-  static bool isVectorizable(RecurKind Kind, Instruction *I) {
+  static bool isVectorizable(RecurKind Kind, Instruction *I,
+                             bool TwoElementReduction = false) {
     if (Kind == RecurKind::None)
       return false;
 
     // Integer ops that map to select instructions or intrinsics are fine.
     if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind) ||
         isBoolLogicOp(I))
+      return true;
+
+    // No need to check for associativity, if 2 reduced values.
+    if (TwoElementReduction)
       return true;
 
     if (Kind == RecurKind::FMax || Kind == RecurKind::FMin) {
@@ -22068,6 +22438,27 @@ private:
 
 public:
   HorizontalReduction() = default;
+  HorizontalReduction(Instruction *I, ArrayRef<Value *> Ops)
+      : ReductionRoot(I), ReductionLimit(2) {
+    RdxKind = HorizontalReduction::getRdxKind(I);
+    ReductionOps.emplace_back().push_back(I);
+    ReducedVals.emplace_back().assign(Ops.begin(), Ops.end());
+    for (Value *V : Ops)
+      ReducedValsToOps[V].push_back(I);
+  }
+
+  bool matchReductionForOperands() const {
+    // Analyze "regular" integer/FP types for reductions - no target-specific
+    // types or pointers.
+    assert(ReductionRoot && "Reduction root is not set!");
+    if (!isVectorizable(RdxKind, cast<Instruction>(ReductionRoot),
+                        all_of(ReducedVals, [](ArrayRef<Value *> Ops) {
+                          return Ops.size() == 2;
+                        })))
+      return false;
+
+    return true;
+  }
 
   /// Try to find a reduction tree.
   bool matchAssociativeReduction(BoUpSLP &R, Instruction *Root,
@@ -22129,7 +22520,7 @@ public:
     // Try to regroup reduced values so that it gets more profitable to try to
     // reduce them. Values are grouped by their value ids, instructions - by
     // instruction op id and/or alternate op id, plus do extra analysis for
-    // loads (grouping them by the distabce between pointers) and cmp
+    // loads (grouping them by the distance between pointers) and cmp
     // instructions (grouping them by the predicate).
     SmallMapVector<
         size_t, SmallMapVector<size_t, SmallMapVector<Value *, unsigned, 2>, 2>,
@@ -22196,10 +22587,9 @@ public:
     for (auto &PossibleReducedVals : PossibleReducedValsVect) {
       auto PossibleRedVals = PossibleReducedVals.second.takeVector();
       SmallVector<SmallVector<Value *>> PossibleRedValsVect;
-      for (auto It = PossibleRedVals.begin(), E = PossibleRedVals.end();
-           It != E; ++It) {
+      for (auto &Slice : PossibleRedVals) {
         PossibleRedValsVect.emplace_back();
-        auto RedValsVect = It->second.takeVector();
+        auto RedValsVect = Slice.second.takeVector();
         stable_sort(RedValsVect, llvm::less_second());
         for (const std::pair<Value *, unsigned> &Data : RedValsVect)
           PossibleRedValsVect.back().append(Data.second, Data.first);
@@ -22235,7 +22625,6 @@ public:
   /// Attempt to vectorize the tree found by matchAssociativeReduction.
   Value *tryToReduce(BoUpSLP &V, const DataLayout &DL, TargetTransformInfo *TTI,
                      const TargetLibraryInfo &TLI, AssumptionCache *AC) {
-    const unsigned ReductionLimit = VectorizeNonPowerOf2 ? 3 : 4;
     constexpr unsigned RegMaxNumber = 4;
     constexpr unsigned RedValsMaxNumber = 128;
     // If there are a sufficient number of reduction values, reduce
@@ -22360,8 +22749,8 @@ public:
       SmallVector<Value *> Candidates;
       Candidates.reserve(2 * OrigReducedVals.size());
       DenseMap<Value *, Value *> TrackedToOrig(2 * OrigReducedVals.size());
-      for (unsigned Cnt = 0, Sz = OrigReducedVals.size(); Cnt < Sz; ++Cnt) {
-        Value *RdxVal = TrackedVals.at(OrigReducedVals[Cnt]);
+      for (Value *ReducedVal : OrigReducedVals) {
+        Value *RdxVal = TrackedVals.at(ReducedVal);
         // Check if the reduction value was not overriden by the extractelement
         // instruction because of the vectorization and exclude it, if it is not
         // compatible with other values.
@@ -22372,7 +22761,7 @@ public:
             (S && !Inst))
           continue;
         Candidates.push_back(RdxVal);
-        TrackedToOrig.try_emplace(RdxVal, OrigReducedVals[Cnt]);
+        TrackedToOrig.try_emplace(RdxVal, ReducedVal);
       }
       bool ShuffledExtracts = false;
       // Try to handle shuffled extractelements.
@@ -22569,8 +22958,10 @@ public:
           continue;
         }
         V.reorderTopToBottom();
-        // No need to reorder the root node at all.
-        V.reorderBottomToTop(/*IgnoreReorder=*/true);
+        // No need to reorder the root node at all for reassociative reduction.
+        V.reorderBottomToTop(/*IgnoreReorder=*/RdxFMF.allowReassoc() ||
+                             VL.front()->getType()->isIntOrIntVectorTy() ||
+                             ReductionLimit > 2);
         // Keep extracted other reduction values, if they are used in the
         // vectorization trees.
         BoUpSLP::ExtraValueToDebugLocsMap LocalExternallyUsedValues(
@@ -23181,8 +23572,11 @@ private:
         case RecurKind::FMulAdd:
         case RecurKind::AnyOf:
         case RecurKind::FindFirstIVSMin:
+        case RecurKind::FindFirstIVUMin:
         case RecurKind::FindLastIVSMax:
         case RecurKind::FindLastIVUMax:
+        case RecurKind::FMaxNum:
+        case RecurKind::FMinNum:
         case RecurKind::FMaximumNum:
         case RecurKind::FMinimumNum:
         case RecurKind::None:
@@ -23317,8 +23711,11 @@ private:
     case RecurKind::FMulAdd:
     case RecurKind::AnyOf:
     case RecurKind::FindFirstIVSMin:
+    case RecurKind::FindFirstIVUMin:
     case RecurKind::FindLastIVSMax:
     case RecurKind::FindLastIVUMax:
+    case RecurKind::FMaxNum:
+    case RecurKind::FMinNum:
     case RecurKind::FMaximumNum:
     case RecurKind::FMinimumNum:
     case RecurKind::None:
@@ -23418,8 +23815,11 @@ private:
     case RecurKind::FMulAdd:
     case RecurKind::AnyOf:
     case RecurKind::FindFirstIVSMin:
+    case RecurKind::FindFirstIVUMin:
     case RecurKind::FindLastIVSMax:
     case RecurKind::FindLastIVUMax:
+    case RecurKind::FMaxNum:
+    case RecurKind::FMinNum:
     case RecurKind::FMaximumNum:
     case RecurKind::FMinimumNum:
     case RecurKind::None:
@@ -23738,6 +24138,104 @@ bool SLPVectorizerPass::vectorizeHorReduction(
               Stack.emplace(I, Level);
   }
   return Res;
+}
+
+bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
+  if (!I)
+    return false;
+
+  if (!isa<BinaryOperator, CmpInst>(I) || isa<VectorType>(I->getType()))
+    return false;
+
+  Value *P = I->getParent();
+
+  // Vectorize in current basic block only.
+  auto *Op0 = dyn_cast<Instruction>(I->getOperand(0));
+  auto *Op1 = dyn_cast<Instruction>(I->getOperand(1));
+  if (!Op0 || !Op1 || Op0->getParent() != P || Op1->getParent() != P ||
+      R.isDeleted(Op0) || R.isDeleted(Op1))
+    return false;
+
+  // First collect all possible candidates
+  SmallVector<std::pair<Value *, Value *>, 4> Candidates;
+  Candidates.emplace_back(Op0, Op1);
+
+  auto *A = dyn_cast<BinaryOperator>(Op0);
+  auto *B = dyn_cast<BinaryOperator>(Op1);
+  // Try to skip B.
+  if (A && B && B->hasOneUse()) {
+    auto *B0 = dyn_cast<BinaryOperator>(B->getOperand(0));
+    auto *B1 = dyn_cast<BinaryOperator>(B->getOperand(1));
+    if (B0 && B0->getParent() == P && !R.isDeleted(B0))
+      Candidates.emplace_back(A, B0);
+    if (B1 && B1->getParent() == P && !R.isDeleted(B1))
+      Candidates.emplace_back(A, B1);
+  }
+  // Try to skip A.
+  if (B && A && A->hasOneUse()) {
+    auto *A0 = dyn_cast<BinaryOperator>(A->getOperand(0));
+    auto *A1 = dyn_cast<BinaryOperator>(A->getOperand(1));
+    if (A0 && A0->getParent() == P && !R.isDeleted(A0))
+      Candidates.emplace_back(A0, B);
+    if (A1 && A1->getParent() == P && !R.isDeleted(A1))
+      Candidates.emplace_back(A1, B);
+  }
+
+  auto TryToReduce = [this, &R, &TTI = *TTI](Instruction *Inst,
+                                             ArrayRef<Value *> Ops) {
+    if (!isReductionCandidate(Inst))
+      return false;
+    Type *Ty = Inst->getType();
+    if (!isValidElementType(Ty) || Ty->isPointerTy())
+      return false;
+    HorizontalReduction HorRdx(Inst, Ops);
+    if (!HorRdx.matchReductionForOperands())
+      return false;
+    // Check the cost of operations.
+    VectorType *VecTy = getWidenedType(Ty, Ops.size());
+    constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+    InstructionCost ScalarCost =
+        TTI.getScalarizationOverhead(
+            VecTy, APInt::getAllOnes(getNumElements(VecTy)), /*Insert=*/false,
+            /*Extract=*/true, CostKind) +
+        TTI.getInstructionCost(Inst, CostKind);
+    InstructionCost RedCost;
+    switch (::getRdxKind(Inst)) {
+    case RecurKind::Add:
+    case RecurKind::Mul:
+    case RecurKind::Or:
+    case RecurKind::And:
+    case RecurKind::Xor:
+    case RecurKind::FAdd:
+    case RecurKind::FMul: {
+      FastMathFlags FMF;
+      if (auto *FPCI = dyn_cast<FPMathOperator>(Inst))
+        FMF = FPCI->getFastMathFlags();
+      RedCost = TTI.getArithmeticReductionCost(Inst->getOpcode(), VecTy, FMF,
+                                               CostKind);
+      break;
+    }
+    default:
+      return false;
+    }
+    if (RedCost >= ScalarCost)
+      return false;
+
+    return HorRdx.tryToReduce(R, *DL, &TTI, *TLI, AC) != nullptr;
+  };
+  if (Candidates.size() == 1)
+    return TryToReduce(I, {Op0, Op1}) || tryToVectorizeList({Op0, Op1}, R);
+
+  // We have multiple options. Try to pick the single best.
+  std::optional<int> BestCandidate = R.findBestRootPair(Candidates);
+  if (!BestCandidate)
+    return false;
+  return (*BestCandidate == 0 &&
+          TryToReduce(I, {Candidates[*BestCandidate].first,
+                          Candidates[*BestCandidate].second})) ||
+         tryToVectorizeList({Candidates[*BestCandidate].first,
+                             Candidates[*BestCandidate].second},
+                            R);
 }
 
 bool SLPVectorizerPass::vectorizeRootInstruction(PHINode *P, Instruction *Root,

@@ -3,7 +3,7 @@ Frame and Thread Format
 
 LLDB has a facility to allow users to define the format of the information that
 generates the descriptions for threads and stack frames. Typically when your
-program stops at a breakpoint you will get two lines that describes why your
+program stops at a breakpoint you will get two lines that describe why your
 thread stopped and where:
 
 ::
@@ -192,7 +192,7 @@ you to desensitize control characters and also emit non-printable characters.
 Desensitizing Characters in the Format String
 ---------------------------------------------
 
-The backslash control character allows your to enter the typical ``\a``,
+The backslash control character allows you to enter the typical ``\a``,
 ``\b``, ``\f``, ``\n``, ``\r``, ``\t``, ``\v``, ``\\``, characters and along
 with the standard octal representation ``\0123`` and hex ``\xAB`` characters.
 This allows you to enter escape characters into your format strings and will
@@ -202,8 +202,8 @@ Scoping
 -------
 
 Many times the information that you might have in your prompt might not be
-available and you won``t want it to print out if it isn``t valid. To take care
-of this you can enclose everything that must resolve into a scope. A scope is
+available and you won't want it to print out if it isn't valid. To take care
+of this you can enclose everything that must resolve into a scope. A scope
 starts with ``{`` and ends with ``}``. For example in order to only display the
 current frame line table entry basename and line number when the information is
 available for the current frame:
@@ -269,7 +269,7 @@ thread information:
     frame #0: 0x0000000100000e85 a.out`main + 4 at test.c:19
     frame #1: 0x0000000100000e40 a.out`start + 52
 
-The frame related variables are:
+The frame-related variables are:
 
 - ``${file.*}``
 - ``${frame.*}``

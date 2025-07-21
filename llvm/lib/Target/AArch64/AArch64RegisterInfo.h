@@ -154,6 +154,8 @@ public:
                         SmallVectorImpl<uint64_t> &Ops) const override;
 
   bool shouldAnalyzePhysregInMachineLoopInfo(MCRegister R) const override;
+
+  virtual bool isIgnoredCVReg(MCRegister LLVMReg) const override;
 };
 
 } // end namespace llvm

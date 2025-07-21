@@ -20,12 +20,8 @@
 define void @different_strides_backward_vectorizable() {
 ; CHECK-LABEL: 'different_strides_backward_vectorizable'
 ; CHECK-NEXT:    inner.body:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 2048 bits
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        BackwardVectorizable:
-; CHECK-NEXT:            %3 = load float, ptr %arrayidx, align 4 ->
-; CHECK-NEXT:            store float %add9, ptr %arrayidx8, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            %5 = load float, ptr %arrayidx8, align 4 ->
 ; CHECK-NEXT:            store float %add9, ptr %arrayidx8, align 4
