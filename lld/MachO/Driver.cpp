@@ -359,7 +359,7 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
   });
 #endif
   auto dt = high_resolution_clock::now() - t0;
-  if (getenv("LLD_MULTI_THREAD_PAGE"))
+  if (Process::GetEnv("LLD_MULTI_THREAD_PAGE"))
     llvm::dbgs() << "multiThreadedPageIn " << totalBytes << "/" << included
                  << "/" << deferred.size() << "/"
                  << duration_cast<milliseconds>(dt).count() / 1000. << "\n";
