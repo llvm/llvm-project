@@ -11,6 +11,7 @@
 
 #include "src/__support/FPUtil/triple_double.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/math/acosh_float_constants.h"
 #include "src/__support/math/exp_constants.h"
 #include "src/__support/number_pair.h"
 
@@ -20,15 +21,9 @@ namespace LIBC_NAMESPACE_DECL {
 // computed and stored as float precision constants.
 extern const float ONE_OVER_F_FLOAT[128];
 
-// Lookup table for (1/f) where f = 1 + n*2^(-7), n = 0..127.
-extern const double ONE_OVER_F[128];
-
 // Lookup table for log(f) = log(1 + n*2^(-7)) where n = 0..127,
 // computed and stored as float precision constants.
 extern const float LOG_F_FLOAT[128];
-
-// Lookup table for log(f) = log(1 + n*2^(-7)) where n = 0..127.
-extern const double LOG_F[128];
 
 // Lookup table for range reduction constants r for logarithms.
 extern const float R[128];
