@@ -74,8 +74,8 @@ def AmdgpuMaskedloadToLoadPass : Pass<"amdgpu-maskedload-to-load"> {
 def AmdgpuFoldSubviewOpsPass : Pass<"amdgpu-fold-subview-ops"> {
   let summary = "Fold subview operations into their parent operations";
   let description = [{
-    This pass identifies `memref.subview` source of `GatherToLDSOp` and
-    attempts to fold the source op, potentially simplifying the overall
+    This pass identifies `memref.subview` sources of `GatherToLDSOp` and
+    attempts to fold the source ops, potentially simplifying the overall
     operation and improving performance.
   }];
   let dependentDialects = [
