@@ -1,3 +1,5 @@
+set_property(DIRECTORY PROPERTY LLDB_TOLERATED_PLUGIN_DEPENDENCIES LanguageRuntime)
+
 add_lldb_library(lldbPluginOperatingSystemSwiftTasks PLUGIN
   OperatingSystemSwiftTasks.cpp
 
