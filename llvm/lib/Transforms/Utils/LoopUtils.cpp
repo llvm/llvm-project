@@ -894,7 +894,7 @@ std::optional<unsigned> llvm::getLoopEstimatedTripCount(
 
   // Return the estimated trip count from metadata unless the metadata is
   // missing or has no value.
-  bool Missing;
+  bool Missing = false; // Initialization is expected to be unused.
   if (auto TC = getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount,
                                             &Missing)) {
     LLVM_DEBUG(dbgs() << "getLoopEstimatedTripCount: "
