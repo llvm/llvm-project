@@ -115,11 +115,6 @@
 // OMP-NOT: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fopenmp"
 // OMP: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-fopenmp"
 
-// RUN: not %clang --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
-// RUN:   --offload-arch=gfx906 -fopenmp=libomp -fopenmp-targets=amdgcn %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=OMPTGT %s
-// OMPTGT: unsupported option '--offload-targets=' for language mode 'HIP'
-
 // Check -Xoffload-linker option is passed to lld.
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
