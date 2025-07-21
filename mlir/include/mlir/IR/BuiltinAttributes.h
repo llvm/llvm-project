@@ -619,8 +619,6 @@ public:
   /// the same total number of elements.
   DenseElementsAttr reshape(ArrayRef<int64_t> newShape);
 
-  DenseElementsAttr reshape(ShapedType newType);
-
   /// Return a new DenseElementsAttr that has the same data as the current
   /// attribute, but with a different shape for a splat type. The new type must
   /// have the same element type.
