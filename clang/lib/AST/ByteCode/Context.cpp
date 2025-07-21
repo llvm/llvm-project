@@ -235,6 +235,43 @@ bool Context::evaluateCharRange(State &Parent, const Expr *SizeExpr,
   return evaluateStringRepr(Parent, SizeExpr, PtrExpr, Result);
 }
 
+bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+    const Descriptor *FieldDesc = Ptr.getFieldDesc();
+    if (!FieldDesc->isPrimitiveArray())
+      return false;
+
+    unsigned N = Ptr.getNumElems();
+    if (Ptr.elemSize() == 1) {
+      Result = strnlen(reinterpret_cast<const char *>(Ptr.getRawAddress()), N);
+      return Result != N;
+    }
+
+    PrimType ElemT = FieldDesc->getPrimType();
+    Result = 0;
+    for (unsigned I = Ptr.getIndex(); I != N; ++I) {
+      INT_TYPE_SWITCH(ElemT, {
+        auto Elem = Ptr.elem<T>(I);
+        if (Elem.isZero())
+          return true;
+        ++Result;
+      });
+    }
+    // We didn't find a 0 byte.
+    return false;
+  });
+
+  if (PtrRes.isInvalid()) {
+    C.cleanup();
+    Stk.clear();
+    return false;
+  }
+  return true;
+}
+
 const LangOptions &Context::getLangOpts() const { return Ctx.getLangOpts(); }
 
 static PrimType integralTypeToPrimTypeS(unsigned BitWidth) {
@@ -269,7 +306,7 @@ static PrimType integralTypeToPrimTypeU(unsigned BitWidth) {
   llvm_unreachable("Unhandled BitWidth");
 }
 
-std::optional<PrimType> Context::classify(QualType T) const {
+OptPrimType Context::classify(QualType T) const {
 
   if (const auto *BT = dyn_cast<BuiltinType>(T.getCanonicalType())) {
     auto Kind = BT->getKind();
@@ -505,7 +542,7 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
   for (const ParmVarDecl *PD : FuncDecl->parameters()) {
-    std::optional<PrimType> T = classify(PD->getType());
+    OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);
     Descriptor *Desc = P->createDescriptor(PD, PT);
     ParamDescriptors.insert({ParamOffset, {PT, Desc}});
@@ -533,7 +570,7 @@ const Function *Context::getOrCreateObjCBlock(const BlockExpr *E) {
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
   for (const ParmVarDecl *PD : BD->parameters()) {
-    std::optional<PrimType> T = classify(PD->getType());
+    OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);
     Descriptor *Desc = P->createDescriptor(PD, PT);
     ParamDescriptors.insert({ParamOffset, {PT, Desc}});
