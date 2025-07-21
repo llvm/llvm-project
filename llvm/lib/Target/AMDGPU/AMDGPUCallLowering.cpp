@@ -385,9 +385,8 @@ bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &B, const Value *Val,
   else if (!lowerReturnVal(B, Val, VRegs, Ret))
     return false;
 
-  if (IsWholeWave) {
+  if (IsWholeWave)
     addOriginalExecToReturn(B.getMF(), Ret);
-  }
 
   // TODO: Handle CalleeSavedRegsViaCopy.
 
