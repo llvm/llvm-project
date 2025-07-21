@@ -68,8 +68,8 @@ void testGenMaxVal(
   mlir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), eleTy);
   mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
-  mlir::Value undef = builder.create<fir::UndefOp>(loc, refSeqTy);
-  mlir::Value mask = builder.create<fir::UndefOp>(loc, seqTy);
+  mlir::Value undef = fir::UndefOp::create(builder, loc, refSeqTy);
+  mlir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
   mlir::Value max = fir::runtime::genMaxval(builder, loc, undef, mask);
   checkCallOp(max.getDefiningOp(), fctName, 3);
 }
@@ -93,8 +93,8 @@ void testGenMinVal(
   mlir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), eleTy);
   mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
-  mlir::Value undef = builder.create<fir::UndefOp>(loc, refSeqTy);
-  mlir::Value mask = builder.create<fir::UndefOp>(loc, seqTy);
+  mlir::Value undef = fir::UndefOp::create(builder, loc, refSeqTy);
+  mlir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
   mlir::Value min = fir::runtime::genMinval(builder, loc, undef, mask);
   checkCallOp(min.getDefiningOp(), fctName, 3);
 }
@@ -135,9 +135,9 @@ void testGenSum(
   mlir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), eleTy);
   mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
-  mlir::Value undef = builder.create<fir::UndefOp>(loc, refSeqTy);
-  mlir::Value mask = builder.create<fir::UndefOp>(loc, seqTy);
-  mlir::Value result = builder.create<fir::UndefOp>(loc, seqTy);
+  mlir::Value undef = fir::UndefOp::create(builder, loc, refSeqTy);
+  mlir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
+  mlir::Value result = fir::UndefOp::create(builder, loc, seqTy);
   mlir::Value sum = fir::runtime::genSum(builder, loc, undef, mask, result);
   if (fir::isa_complex(eleTy))
     checkCallOpFromResultBox(result, fctName, 4);
@@ -167,9 +167,9 @@ void testGenProduct(
   mlir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), eleTy);
   mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
-  mlir::Value undef = builder.create<fir::UndefOp>(loc, refSeqTy);
-  mlir::Value mask = builder.create<fir::UndefOp>(loc, seqTy);
-  mlir::Value result = builder.create<fir::UndefOp>(loc, seqTy);
+  mlir::Value undef = fir::UndefOp::create(builder, loc, refSeqTy);
+  mlir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
+  mlir::Value result = fir::UndefOp::create(builder, loc, seqTy);
   mlir::Value prod =
       fir::runtime::genProduct(builder, loc, undef, mask, result);
   if (fir::isa_complex(eleTy))
@@ -200,10 +200,10 @@ void testGenDotProduct(
   mlir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), eleTy);
   mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
-  mlir::Value a = builder.create<fir::UndefOp>(loc, refSeqTy);
-  mlir::Value b = builder.create<fir::UndefOp>(loc, refSeqTy);
+  mlir::Value a = fir::UndefOp::create(builder, loc, refSeqTy);
+  mlir::Value b = fir::UndefOp::create(builder, loc, refSeqTy);
   mlir::Value result =
-      builder.create<fir::UndefOp>(loc, fir::ReferenceType::get(eleTy));
+      fir::UndefOp::create(builder, loc, fir::ReferenceType::get(eleTy));
   mlir::Value prod = fir::runtime::genDotProduct(builder, loc, a, b, result);
   if (fir::isa_complex(eleTy))
     checkCallOpFromResultBox(result, fctName, 3);
@@ -236,9 +236,9 @@ void checkGenMxxloc(fir::FirOpBuilder &builder, mlir::Type eleTy,
   mlir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), eleTy);
   mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
-  mlir::Value a = builder.create<fir::UndefOp>(loc, refSeqTy);
-  mlir::Value result = builder.create<fir::UndefOp>(loc, seqTy);
-  mlir::Value mask = builder.create<fir::UndefOp>(loc, seqTy);
+  mlir::Value a = fir::UndefOp::create(builder, loc, refSeqTy);
+  mlir::Value result = fir::UndefOp::create(builder, loc, seqTy);
+  mlir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
   mlir::Value kind = builder.createIntegerConstant(loc, i32Ty, 1);
   mlir::Value back = builder.createIntegerConstant(loc, i32Ty, 1);
   genFct(builder, loc, result, a, mask, kind, back);
@@ -308,9 +308,9 @@ void checkGenMxxlocDim(fir::FirOpBuilder &builder,
   mlir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), i32Ty);
   mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
-  mlir::Value a = builder.create<fir::UndefOp>(loc, refSeqTy);
-  mlir::Value result = builder.create<fir::UndefOp>(loc, seqTy);
-  mlir::Value mask = builder.create<fir::UndefOp>(loc, seqTy);
+  mlir::Value a = fir::UndefOp::create(builder, loc, refSeqTy);
+  mlir::Value result = fir::UndefOp::create(builder, loc, seqTy);
+  mlir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
   mlir::Value kind = builder.createIntegerConstant(loc, i32Ty, 1);
   mlir::Value dim = builder.createIntegerConstant(loc, i32Ty, 1);
   mlir::Value back = builder.createIntegerConstant(loc, i32Ty, 1);
@@ -337,9 +337,9 @@ void checkGenMxxvalChar(fir::FirOpBuilder &builder,
   mlir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), i32Ty);
   mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
-  mlir::Value a = builder.create<fir::UndefOp>(loc, refSeqTy);
-  mlir::Value result = builder.create<fir::UndefOp>(loc, seqTy);
-  mlir::Value mask = builder.create<fir::UndefOp>(loc, seqTy);
+  mlir::Value a = fir::UndefOp::create(builder, loc, refSeqTy);
+  mlir::Value result = fir::UndefOp::create(builder, loc, seqTy);
+  mlir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
   genFct(builder, loc, result, a, mask);
   checkCallOpFromResultBox(result, fctName, nbArgs);
 }
@@ -363,9 +363,9 @@ void checkGen4argsDim(fir::FirOpBuilder &builder,
   mlir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), i32Ty);
   mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
-  mlir::Value a = builder.create<fir::UndefOp>(loc, refSeqTy);
-  mlir::Value result = builder.create<fir::UndefOp>(loc, seqTy);
-  mlir::Value mask = builder.create<fir::UndefOp>(loc, seqTy);
+  mlir::Value a = fir::UndefOp::create(builder, loc, refSeqTy);
+  mlir::Value result = fir::UndefOp::create(builder, loc, seqTy);
+  mlir::Value mask = fir::UndefOp::create(builder, loc, seqTy);
   mlir::Value dim = builder.createIntegerConstant(loc, i32Ty, 1);
   genFct(builder, loc, result, a, dim, mask);
   checkCallOpFromResultBox(result, fctName, nbArgs);

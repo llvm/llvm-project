@@ -77,7 +77,7 @@ public:
     mlir::OpBuilder builder(mlirCtx.get());
     builder.setInsertionPointToStart(&mlirModule->getRegion().front());
     // Create a fake op to trip conversion to LLVM.
-    builder.create<test::dummy::FakeOp>(loc);
+    test::dummy::FakeOp::create(builder, loc);
 
     llvmCtx = std::make_unique<llvm::LLVMContext>();
   }
