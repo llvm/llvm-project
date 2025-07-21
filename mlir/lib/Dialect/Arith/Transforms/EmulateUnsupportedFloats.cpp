@@ -118,9 +118,9 @@ void mlir::arith::populateEmulateUnsupportedFloatsLegality(
         return converter.isLegal(op);
       });
   // Manually mark arithmetic-performing vector instructions.
-  target.addDynamicallyLegalOp<
-      vector::ContractionOp, vector::ReductionOp, vector::MultiDimReductionOp,
-      vector::FMAOp, vector::OuterProductOp, vector::MatmulOp, vector::ScanOp>(
+  target.addDynamicallyLegalOp<vector::ContractionOp, vector::ReductionOp,
+                               vector::MultiDimReductionOp, vector::FMAOp,
+                               vector::OuterProductOp, vector::ScanOp>(
       [&](Operation *op) { return converter.isLegal(op); });
   target.addLegalOp<arith::BitcastOp, arith::ExtFOp, arith::TruncFOp,
                     arith::ConstantOp, vector::SplatOp>();
