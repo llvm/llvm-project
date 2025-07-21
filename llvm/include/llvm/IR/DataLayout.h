@@ -429,8 +429,7 @@ public:
   /// representations (hasUnstableRepresentation()) unless the pass knows it is
   /// within a critical section that retains the current representation.
   bool shouldAvoidIntToPtr(unsigned AddrSpace) const {
-    return hasUnstableRepresentation(AddrSpace) ||
-           hasExternalState(AddrSpace);
+    return hasUnstableRepresentation(AddrSpace) || hasExternalState(AddrSpace);
   }
 
   /// Returns whether passes should avoid introducing `ptrtoint` instructions
