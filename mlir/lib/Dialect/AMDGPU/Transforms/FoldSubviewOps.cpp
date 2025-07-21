@@ -43,7 +43,7 @@ struct FoldSubviewIntoGatherToLDSOp : public OpRewritePattern<GatherToLDSOp> {
     auto subviewOp = dyn_cast<memref::SubViewOp>(op.getSrc().getDefiningOp());
     if (!subviewOp)
       return rewriter.notifyMatchFailure(
-          loc, "GatherToLDSOp can only be folded if the source is a SubviewOp");
+          loc, "GatherToLDSOp folding is currently supported only when the source is a SubviewOp. This is one specific pattern, and other scenarios may be added in the future.");
 
     SmallVector<Value> sourceIndices;
     mlir::affine::resolveIndicesIntoOpWithOffsetsAndStrides(
