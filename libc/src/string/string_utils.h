@@ -21,6 +21,8 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
+#include <stdint.h> // uintptr_t
+
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
