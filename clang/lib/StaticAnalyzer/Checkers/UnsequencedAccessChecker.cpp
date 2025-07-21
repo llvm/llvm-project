@@ -25,6 +25,7 @@ using namespace ento;
 
 namespace {
 
+// The bool in AncestorStmt is set to true if we are indeterminately sequenced.
 using AncestorStmt = llvm::PointerIntPair<const Stmt*, 1, bool>;
 using StmtVec = llvm::SmallVector<AncestorStmt>;
 
@@ -78,11 +79,11 @@ class UnsequencedAccessChecker
     static StmtVec getAllASTAncestors(
             const Stmt* CurrentS, const StackFrameContext* CurrentFrame,
             ParentMapContext& ParentMap, const Stmt* HighestS,
-            const StackFrameContext* HighestFrame,
+            const StackFrameContext* HighestFrame, const LangOptions& Opts,
             bool* DidHitHighest = nullptr);
     static int findCommonAncestorIdx(const StmtVec& A, const StmtVec& B);
 
-    static bool hasClosePreUnaryOperatorAncestor(const StmtVec& S);
+    static bool isStmtPreStore(const StmtVec& S);
 
     void checkAgainstSet(const AccessStmtSet* Set, AccessStmt CurrentAccess,
                          const StmtVec& Ancestors, const Stmt* HighestStmt,
@@ -120,13 +121,14 @@ public:
 StmtVec UnsequencedAccessChecker::getAllASTAncestors(
             const Stmt* CurrentS, const StackFrameContext* CurrentFrame,
             ParentMapContext& ParentMap, const Stmt* HighestS,
-            const StackFrameContext* HighestFrame, bool* DidHitHighest) {
+            const StackFrameContext* HighestFrame, const LangOptions& Opts,
+            bool* DidHitHighest) {
 
     assert(CurrentS != nullptr);
     assert(CurrentFrame != nullptr);
 
     StmtVec Ancestors;
-    bool HasChangedStackFrame = false;
+    bool IsIndeterminate = false;
 
     while (true) {
 
@@ -159,16 +161,19 @@ StmtVec UnsequencedAccessChecker::getAllASTAncestors(
 
             ParentS = CurrentFrame->getCallSite();
             CurrentFrame = CurrentFrame->getParent()->getStackFrame();
-            HasChangedStackFrame = true;
+            IsIndeterminate = true;
         }
         assert(ParentS != nullptr);
 
-        Ancestors.emplace_back(CurrentS, HasChangedStackFrame);
+        if ((Opts.C99 || Opts.CPlusPlus17) && isa<CallExpr>(CurrentS))
+            IsIndeterminate = true;
+
+        Ancestors.emplace_back(CurrentS, IsIndeterminate);
 
         CurrentS = ParentS;
     }
 
-    Ancestors.emplace_back(CurrentS, HasChangedStackFrame);
+    Ancestors.emplace_back(CurrentS, IsIndeterminate);
 
     return Ancestors;
 }
@@ -280,7 +285,7 @@ void UnsequencedAccessChecker::checkLocation(
 
     StmtVec Ancestors = getAllASTAncestors(S, C.getStackFrame(), ParentMap,
                                            HighestStmt, HighestFrame,
-                                           &DidHitHighest);
+                                           C.getLangOpts(), &DidHitHighest);
 
     if (!DidHitHighest) {
         std::pair<const Stmt*, const StackFrameContext*> Highest =
@@ -291,7 +296,8 @@ void UnsequencedAccessChecker::checkLocation(
 
         // This could be optimized.
         Ancestors = getAllASTAncestors(S, C.getStackFrame(), ParentMap,
-                                       HighestStmt, HighestFrame);
+                                       HighestStmt, HighestFrame,
+                                       C.getLangOpts());
 
         State = resetState(State);
         State = State->set<HighestUnseqStmt>(HighestStmt)
@@ -379,7 +385,8 @@ void UnsequencedAccessChecker::checkAgainstSet(
 
         StmtVec OtherAncestors =
             getAllASTAncestors(OtherAccess.getStmt(), OtherAccess.getFrame(),
-                               ParentMap, HighestStmt, HighestFrame);
+                               ParentMap, HighestStmt, HighestFrame,
+                               C.getLangOpts());
 
         int CommonIdx = findCommonAncestorIdx(Ancestors, OtherAncestors);
         assert(CommonIdx != -1);
@@ -423,8 +430,8 @@ bool UnsequencedAccessChecker::checkAncestors(
 
     const Stmt* CommonS = AVec[AVec.size() - CommonIdx].getPointer();
 
-    bool IsAInDifferentFrame = AVec[AVec.size() - CommonIdx].getInt();
-    bool IsBInDifferentFrame = BVec[BVec.size() - CommonIdx].getInt();
+    bool IsAIndeterminate = AVec[AVec.size() - CommonIdx].getInt();
+    bool IsBIndeterminate = BVec[BVec.size() - CommonIdx].getInt();
 
     if (const auto* BO = dyn_cast<BinaryOperator>(CommonS)) {
         if (BO->isLogicalOp() || BO->isCommaOp() || BO->isPtrMemOp())
@@ -451,25 +458,25 @@ bool UnsequencedAccessChecker::checkAncestors(
 
             if (Accessed == A.getExpr()->IgnoreParenCasts()) {
 
-                if (IsBInDifferentFrame)
+                if (IsBIndeterminate)
                     return false;
 
                 if (!B.isStore())
                     return false;
 
-                if (Opts.CPlusPlus11 && hasClosePreUnaryOperatorAncestor(BVec))
+                if (Opts.CPlusPlus11 && isStmtPreStore(BVec))
                     return false;
             }
 
             if (Accessed == B.getExpr()->IgnoreParenCasts()) {
 
-                if (IsAInDifferentFrame)
+                if (IsAIndeterminate)
                     return false;
 
                 if (!A.isStore())
                     return false;
 
-                if (Opts.CPlusPlus11 && hasClosePreUnaryOperatorAncestor(AVec))
+                if (Opts.CPlusPlus11 && isStmtPreStore(AVec))
                     return false;
             }
         }
@@ -528,7 +535,7 @@ bool UnsequencedAccessChecker::checkAncestors(
     return false;
 }
 
-bool UnsequencedAccessChecker::hasClosePreUnaryOperatorAncestor(
+bool UnsequencedAccessChecker::isStmtPreStore(
         const StmtVec& Vec) {
 
     int VecSize = Vec.size();
@@ -539,6 +546,9 @@ bool UnsequencedAccessChecker::hasClosePreUnaryOperatorAncestor(
 
         if (const auto* Op = dyn_cast<UnaryOperator>(Vec[I].getPointer()))
             return Op->isPrefix();
+
+        if (const auto* Op = dyn_cast<BinaryOperator>(Vec[I].getPointer()))
+            return Op->isAssignmentOp();
 
         break;
     }

@@ -37,6 +37,8 @@ void shift_tests() {
     // expected-note@-4{{variable is written to here}}
     // expected-warning@-5{{unsequenced modification and access}}
 #endif
+
+    a = a = 1;
 }
 
 void std_tests() {
@@ -75,6 +77,58 @@ void std_tests() {
 
     i = 0;
     r[i] = ++i;
+#ifndef CPP17
+    // expected-warning@-2{{unsequenced write to and read from variable}}
+    // expected-note@-3{{variable is read from here}}
+    // expected-note@-4{{variable is written to here}}
+    // expected-warning@-5{{unsequenced modification and access}}
+#endif
+}
+
+class IntWrapper {
+    int data;
+public:
+    IntWrapper(int d) : data(d) {}
+
+    // Prefix overload
+    IntWrapper operator++() {
+        data += 1;
+        return IntWrapper(data);
+    }
+
+    // Postfix overload
+    IntWrapper operator++(int) {
+        int old_data = data;
+        data += 1;
+        return IntWrapper(old_data);
+    }
+
+    IntWrapper operator+(const IntWrapper& Other) {
+        return IntWrapper(Other.data + data);
+    }
+};
+
+void some_wrapper_func(IntWrapper, IntWrapper);
+
+void object_tests() {
+    IntWrapper A(0);
+
+    IntWrapper I = A + A++;
+
+    some_wrapper_func(A, A++);
+}
+
+typedef int (*some_fun_t)(int);
+
+static int some_fun_impl(int x) {
+    return 0;
+}
+
+void function_tests() {
+    some_fun_t some_funs[2] = {0};
+    some_funs[0] = some_fun_impl;
+    int a = 0;
+    some_funs[a](a++);
 #ifndef CPP17
     // expected-warning@-2{{unsequenced write to and read from variable}}
     // expected-note@-3{{variable is read from here}}
