@@ -620,7 +620,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     // BF16 - VOP1 Actions.
     if (Subtarget->hasBF16TransInsts())
-      setOperationAction(ISD::FDIV, MVT::bf16, Custom);
+      setOperationAction({ISD::FCOS, ISD::FSIN, ISD::FDIV}, MVT::bf16, Custom);
 
     setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::f16, Promote);
     setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::bf16, Promote);
