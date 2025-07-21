@@ -1206,7 +1206,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
 
     LLDBTypeInfoProvider tip(m_runtime, ts);
     lldb::addr_t instance = ::MaskMaybeBridgedPointer(
-        m_runtime.GetProcess(), m_valobj->GetPointerValue());
+        m_runtime.GetProcess(), m_valobj->GetPointerValue().address);
 
     // Try out the instance pointer based super class traversal first, as its
     // usually faster.
@@ -1486,8 +1486,8 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
 
   auto project_indirect_enum =
       [&](uint64_t offset, std::string name) -> llvm::Expected<ValueObjectSP> {
-    lldb::addr_t pointer =
-        ::MaskMaybeBridgedPointer(GetProcess(), valobj.GetPointerValue());
+    lldb::addr_t pointer = ::MaskMaybeBridgedPointer(
+        GetProcess(), valobj.GetPointerValue().address);
     lldb::addr_t payload = pointer + offset;
 
     ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
@@ -1538,8 +1538,7 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
 
   // Prepare to project the enum to get the active case.
   MemoryReaderLocalBufferHolder holder;
-  AddressType address_type;
-  lldb::addr_t addr = valobj.GetAddressOf(false, &address_type);
+  auto [addr, address_type] = valobj.GetAddressOf(false);
   if (addr == LLDB_INVALID_ADDRESS || addr == 0) {
     Value &value = valobj.GetValue();
     switch (value.GetValueType()) {
@@ -1710,7 +1709,7 @@ bool SwiftLanguageRuntime::ForEachSuperClassType(
 
   ExecutionContext exe_ctx(instance.GetExecutionContextRef());
   LLDBTypeInfoProvider tip(*this, ts);
-  lldb::addr_t pointer = instance.GetPointerValue();
+  lldb::addr_t pointer = instance.GetPointerValue().address;
   return reflection_ctx->ForEachSuperClassType(&tip, ts.GetDescriptorFinder(),
                                                pointer, fn);
 }
@@ -2018,8 +2017,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Pack(
   }
   pack_type_or_name.SetCompilerType(*expanded_type);
 
-  AddressType address_type;
-  lldb::addr_t addr = in_value.GetAddressOf(true, &address_type);
+  auto [addr, address_type] = in_value.GetAddressOf(true);
   value_type = Value::GetValueTypeFromAddressType(address_type);
   if (indirect) {
     Status status;
@@ -2075,8 +2073,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
     Address &address, Value::ValueType &value_type,
     llvm::ArrayRef<uint8_t> &local_buffer) {
-  AddressType address_type;
-  lldb::addr_t instance_ptr = in_value.GetPointerValue(&address_type);
+  auto [instance_ptr, address_type] = in_value.GetPointerValue();
   value_type = Value::GetValueTypeFromAddressType(address_type);
 
   if (instance_ptr == LLDB_INVALID_ADDRESS || instance_ptr == 0)
@@ -2283,7 +2280,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Existential(
     existential_address = in_value.GetValue().GetScalar().ULongLong();
     use_local_buffer = true;
   } else {
-    existential_address = in_value.GetAddressOf();
+    existential_address = in_value.GetAddressOf().address;
   }
 
   if (log)
@@ -2405,8 +2402,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_ExistentialMetatype(
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
     Address &address) {
   // Resolve the dynamic type of the metatype.
-  AddressType address_type;
-  lldb::addr_t ptr = in_value.GetPointerValue(&address_type);
+  auto [ptr, address_type] = in_value.GetPointerValue();
   if (ptr == LLDB_INVALID_ADDRESS || ptr == 0)
     return false;
 
@@ -2761,8 +2757,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Value(
       bound_type.GetByteSize(exe_ctx.GetBestExecutionContextScope()));
   if (!size)
     return false;
-  AddressType address_type;
-  lldb::addr_t val_address = in_value.GetAddressOf(true, &address_type);
+  auto [val_address, address_type] = in_value.GetAddressOf(true);
   // If we couldn't find a load address, but the value object has a local
   // buffer, use that.
   if (val_address == LLDB_INVALID_ADDRESS && address_type == eAddressTypeHost) {
@@ -2832,7 +2827,7 @@ Value::ValueType SwiftLanguageRuntime::GetValueType(
         existential_address = in_value.GetValue().GetScalar().ULongLong();
         use_local_buffer = true;
       } else {
-        existential_address = in_value.GetAddressOf();
+        existential_address = in_value.GetAddressOf().address;
       }
 
       MemoryReaderLocalBufferHolder holder;
@@ -3008,7 +3003,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_ClangType(
     std::string type_name =
         (llvm::Twine(swift_class.module) + "." + swift_class.identifier).str();
     dyn_class_type_or_name.SetName(type_name.data());
-    address.SetRawAddress(in_value.GetPointerValue());
+    address.SetRawAddress(in_value.GetPointerValue().address);
   } else {
     swift_class.module = swift::MANGLING_MODULE_OBJC;
     swift_class.identifier = dyn_name;

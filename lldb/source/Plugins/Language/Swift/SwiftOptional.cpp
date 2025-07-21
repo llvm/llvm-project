@@ -86,16 +86,18 @@ ExtractSomeIfAny(ValueObject *optional,
     if (kind == TypeSystemSwift::NonTriviallyManagedReferenceKind::eWeak &&
         runtime->IsObjCInstance(valobj))
       return ValueObjectCast::Create(
-          valobj, valobj.GetPointerValue() ? g_some : g_none, projected_type);
+          valobj, valobj.GetPointerValue().address ? g_some : g_none,
+          projected_type);
 
     // Unowned/strong reference.
     if (kind != TypeSystemSwift::NonTriviallyManagedReferenceKind::eWeak)
       return ValueObjectCast::Create(
-          valobj, valobj.GetPointerValue() ? g_some : g_none, projected_type);
+          valobj, valobj.GetPointerValue().address ? g_some : g_none,
+          projected_type);
 
     Status error;
-    lldb::addr_t ptr =
-        runtime->FixupAddress(valobj.GetPointerValue(), projected_type, error);
+    lldb::addr_t ptr = runtime->FixupAddress(valobj.GetPointerValue().address,
+                                             projected_type, error);
     // Needed for resilience.
     ptr = runtime->MaskMaybeBridgedPointer(ptr);
     auto exe_ctx = valobj.GetExecutionContextRef().Lock(true);
@@ -155,7 +157,7 @@ ExtractSomeIfAny(ValueObject *optional,
     if (!projected_type)
       return {};
     return ValueObjectCast::Create(
-        *optional, optional->GetPointerValue() ? g_some : g_none,
+        *optional, optional->GetPointerValue().address ? g_some : g_none,
         projected_type);
   }
   if (!*projected)
