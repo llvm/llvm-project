@@ -3,20 +3,9 @@
 ; Tests for GitHub issue #97044 - Boolean expression canonicalization
 define i32 @test0_4way_or(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @test0_4way_or(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[Z:%.*]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[NOT]]
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[AND]], [[X:%.*]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[Y]], -1
-; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[X]], [[NOT2]]
-; CHECK-NEXT:    [[AND4:%.*]] = and i32 [[AND3]], [[Z]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND1]], [[AND4]]
-; CHECK-NEXT:    [[AND7_DEMORGAN:%.*]] = or i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[AND9_DEMORGAN:%.*]] = or i32 [[AND7_DEMORGAN]], [[Z]]
-; CHECK-NEXT:    [[AND9:%.*]] = xor i32 [[AND9_DEMORGAN]], -1
-; CHECK-NEXT:    [[OR10:%.*]] = or i32 [[OR]], [[AND9]]
-; CHECK-NEXT:    [[AND11:%.*]] = and i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[AND12:%.*]] = and i32 [[AND11]], [[Z]]
-; CHECK-NEXT:    [[OR13:%.*]] = or i32 [[OR10]], [[AND12]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[OR13:%.*]] = xor i32 [[TMP2]], -1
 ; CHECK-NEXT:    ret i32 [[OR13]]
 ;
   %not = xor i32 %z, -1
@@ -39,11 +28,9 @@ define i32 @test0_4way_or(i32 %x, i32 %y, i32 %z) {
 }
 define i32 @test1_xor_pattern(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @test1_xor_pattern(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[AND4_DEMORGAN:%.*]] = or i32 [[TMP1]], [[Z:%.*]]
-; CHECK-NEXT:    [[AND8:%.*]] = and i32 [[Z]], [[X]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[AND4_DEMORGAN]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = or i32 [[AND8]], [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[TMP2]], -1
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %not = xor i32 %z, -1
@@ -62,10 +49,10 @@ define i32 @test1_xor_pattern(i32 %x, i32 %y, i32 %z) {
 }
 define i32 @test2_nested_xor(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @test2_nested_xor(
-; CHECK-NEXT:    [[NOT7:%.*]] = xor i32 [[Y:%.*]], -1
-; CHECK-NEXT:    [[AND8:%.*]] = and i32 [[Z:%.*]], [[NOT7]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[AND8]]
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], [[Y]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %and = and i32 %x, %y
   %not = xor i32 %x, -1
