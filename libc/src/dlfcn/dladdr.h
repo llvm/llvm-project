@@ -15,6 +15,8 @@ namespace LIBC_NAMESPACE_DECL {
 
 int dladdr(const void *, DL_info *);
 
+int dladdr1(const void *, DL_info *, void **, int);
+
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_DLFCN_DLADDR_H

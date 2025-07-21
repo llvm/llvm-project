@@ -64,3 +64,13 @@ functions:
     arguments:
       - type: const void *
       - type: DL_info *
+  - name: dladdr1
+    standards:
+      - GNUExtensions
+    return_type: int
+    arguments:
+      - type: const void *
+      - type: DL_info *
+      - type: void **
+      - type: int
+
