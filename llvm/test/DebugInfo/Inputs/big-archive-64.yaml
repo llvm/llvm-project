@@ -1,0 +1,26 @@
+--- !XCOFF
+FileHeader:
+  Magic: 0x01F7        # XCOFF64 magic number
+  NumberOfSections: 1
+  TimeStamp: 0
+  SymbolTableOffset: 0
+  NumberOfSymTableEntries: 1
+OptionalHeader:
+  Flags: 0x0
+Sections:
+  - Name: .text
+    Address: 0x0`
+    Size: 1
+    FileOffsetToRawData: 0x100
+    FileOffsetToRelocations: 0
+    FileOffsetToLineNumbers: 0
+    NumberOfRelocations: 0
+    NumberOfLineNumbers: 0
+    Flags: STYP_TEXT
+    SectionData: '00'
+Symbols:
+  - Name: foo
+    Value: 0
+    SectionNumber: 1
+    StorageClass: C_EXT
+    NumberOfAuxEntries: 0

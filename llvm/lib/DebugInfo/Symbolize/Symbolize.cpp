@@ -33,6 +33,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Object/Archive.h"
 #include <cassert>
 #include <cstring>
 
@@ -286,6 +287,7 @@ LLVMSymbolizer::findSymbol(ArrayRef<uint8_t> BuildID, StringRef Symbol,
 
 void LLVMSymbolizer::flush() {
   ObjectForUBPathAndArch.clear();
+  ObjectForArchivePathAndArch.clear();
   LRUBinaries.clear();
   CacheSize = 0;
   BinaryForPath.clear();
@@ -321,7 +323,7 @@ bool checkFileCRC(StringRef Path, uint32_t CRCHash) {
 
 bool getGNUDebuglinkContents(const ObjectFile *Obj, std::string &DebugName,
                              uint32_t &CRCHash) {
-  if (!Obj)
+  if (!Obj || !isa<ObjectFile>(Obj))
     return false;
   for (const SectionRef &Section : Obj->sections()) {
     StringRef Name;
@@ -557,19 +559,101 @@ LLVMSymbolizer::getOrCreateObjectPair(const std::string &Path,
   if (!DbgObj)
     DbgObj = Obj;
   ObjectPair Res = std::make_pair(Obj, DbgObj);
-  std::string DbgObjPath = DbgObj->getFileName().str();
   auto Pair =
       ObjectPairForPathArch.emplace(std::make_pair(Path, ArchName), Res);
-  BinaryForPath.find(DbgObjPath)->second.pushEvictor([this, I = Pair.first]() {
+  std::string DbgObjPath = DbgObj->getFileName().str();
+  auto BinIter = BinaryForPath.find(DbgObjPath);
+  if (BinIter != BinaryForPath.end()) {
+    BinIter->second.pushEvictor([this, I = Pair.first]() {
     ObjectPairForPathArch.erase(I);
-  });
+    });
+  }
   return Res;
+}
+
+Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(StringRef ArchivePath, 
+                                                                    StringRef MemberName, 
+                                                                    const std::string &ArchName) {
+  Binary *Bin = nullptr;
+  auto Pair = BinaryForPath.emplace(ArchivePath.str(), OwningBinary<Binary>());
+  if (!Pair.second) {
+    Bin = Pair.first->second->getBinary();
+    recordAccess(Pair.first->second);
+  } else {
+    Expected<OwningBinary<Binary>> ArchiveOrErr = createBinary(ArchivePath);
+    if (!ArchiveOrErr) {
+      return ArchiveOrErr.takeError();
+    }
+
+    CachedBinary &CachedBin = Pair.first->second;
+    CachedBin = std::move(ArchiveOrErr.get());
+    CachedBin.pushEvictor([this, I = Pair.first]() { BinaryForPath.erase(I); });
+    LRUBinaries.push_back(CachedBin);
+    CacheSize += CachedBin.size();
+    Bin = CachedBin->getBinary();
+  }
+
+  if (!Bin || !isa<object::Archive>(Bin))
+    return errorCodeToError(object_error::invalid_file_type);
+
+  object::Archive *Archive = cast<object::Archive>(Bin);
+  Error Err = Error::success();
+  
+  // On AIX, archives can contain multiple members with same name but different types
+  // We need to check all matches and find one that matches both name and architecture
+  for (auto &Child : Archive->children(Err, /*SkipInternal=*/true)) {
+    Expected<StringRef> NameOrErr = Child.getName();
+    if (!NameOrErr)
+      continue; 
+    if (*NameOrErr == llvm::sys::path::filename(MemberName)) {
+      Expected<std::unique_ptr<object::Binary>> MemberOrErr = Child.getAsBinary();
+      if (!MemberOrErr)
+        continue; 
+      
+      std::unique_ptr<object::Binary> Binary = std::move(*MemberOrErr);
+      if (auto *Obj = dyn_cast<object::ObjectFile>(Binary.get())) {
+#if defined(_AIX)
+        Triple::ArchType ObjArch = Obj->makeTriple().getArch();
+        Triple RequestedTriple;
+        RequestedTriple.setArch(Triple::getArchTypeForLLVMName(ArchName));
+        if (ObjArch != RequestedTriple.getArch())
+          continue;
+#endif
+        ArchiveCacheKey CacheKey{ArchivePath.str(), MemberName.str(), ArchName};
+        auto I = ObjectForArchivePathAndArch.find(CacheKey);
+        if (I != ObjectForArchivePathAndArch.end())
+          return I->second.get();
+
+        auto CachedObj = std::unique_ptr<ObjectFile>(Obj);
+        auto NewEntry = ObjectForArchivePathAndArch.emplace(
+            CacheKey, std::move(CachedObj));
+        Binary.release();
+        BinaryForPath.find(ArchivePath.str())->second.pushEvictor(
+            [this, Iter = NewEntry.first]() { ObjectForArchivePathAndArch.erase(Iter); });
+        return NewEntry.first->second.get();
+      }
+    }
+  }
+  if (Err)
+    return std::move(Err);
+  return errorCodeToError(object_error::arch_not_found);
 }
 
 Expected<ObjectFile *>
 LLVMSymbolizer::getOrCreateObject(const std::string &Path,
                                   const std::string &ArchName) {
-  Binary *Bin;
+  // First check for archive(member) format - more efficient to check closing paren first
+  size_t CloseParen = Path.rfind(')');
+  if (CloseParen != std::string::npos && CloseParen == Path.length() - 1) {
+    size_t OpenParen = Path.rfind('(', CloseParen);
+    if (OpenParen != std::string::npos) {
+      StringRef ArchivePath = StringRef(Path).substr(0, OpenParen);
+      StringRef MemberName = StringRef(Path).substr(OpenParen + 1, CloseParen - OpenParen - 1);
+      return getOrCreateObjectFromArchive(ArchivePath, MemberName, ArchName);
+    }
+  }
+
+  Binary *Bin = nullptr;
   auto Pair = BinaryForPath.emplace(Path, OwningBinary<Binary>());
   if (!Pair.second) {
     Bin = Pair.first->second->getBinary();
@@ -648,7 +732,9 @@ LLVMSymbolizer::getOrCreateModuleInfo(StringRef ModuleName) {
 
   auto I = Modules.find(ModuleName);
   if (I != Modules.end()) {
-    recordAccess(BinaryForPath.find(BinaryName)->second);
+    auto BinIter = BinaryForPath.find(BinaryName);
+    if (BinIter != BinaryForPath.end())
+      recordAccess(BinIter->second);
     return I->second.get();
   }
 
@@ -716,7 +802,9 @@ LLVMSymbolizer::getOrCreateModuleInfo(StringRef ModuleName) {
       createModuleInfo(Objects.first, std::move(Context), ModuleName);
   if (ModuleOrErr) {
     auto I = Modules.find(ModuleName);
-    BinaryForPath.find(BinaryName)->second.pushEvictor([this, I]() {
+    auto BinIter = BinaryForPath.find(BinaryName);
+    if (BinIter != BinaryForPath.end()) 
+      BinIter->second.pushEvictor([this, I]() {
       Modules.erase(I);
     });
   }

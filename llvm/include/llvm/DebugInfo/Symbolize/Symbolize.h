@@ -29,6 +29,12 @@
 #include <utility>
 #include <vector>
 
+#if defined(_AIX)
+#  define SYMBOLIZE_AIX 1
+#else
+#  define SYMBOLIZE_AIX 0
+#endif
+
 namespace llvm {
 namespace object {
 class ELFObjectFileBase;
@@ -202,6 +208,12 @@ private:
   Expected<ObjectFile *> getOrCreateObject(const std::string &Path,
                                            const std::string &ArchName);
 
+  /// Return a pointer to object file at specified path, for a specified
+  /// architecture that is present inside an archive file
+  Expected<ObjectFile *> getOrCreateObjectFromArchive(StringRef ArchivePath,
+                                                      StringRef MemberName,
+                                                      const std::string &ArchName);   
+
   /// Update the LRU cache order when a binary is accessed.
   void recordAccess(CachedBinary &Bin);
 
@@ -226,6 +238,20 @@ private:
   std::map<std::pair<std::string, std::string>, std::unique_ptr<ObjectFile>>
       ObjectForUBPathAndArch;
 
+  struct ArchiveCacheKey {
+    std::string ArchivePath;  // Storage for StringRef
+    std::string MemberName;   // Storage for StringRef
+    std::string ArchName;     // Storage for StringRef
+
+    // Required for map comparison
+    bool operator<(const ArchiveCacheKey &Other) const {
+      return std::tie(ArchivePath, MemberName, ArchName) < 
+             std::tie(Other.ArchivePath, Other.MemberName, Other.ArchName);
+    }
+  };
+
+  std::map<ArchiveCacheKey, std::unique_ptr<ObjectFile>> ObjectForArchivePathAndArch;
+  
   Options Opts;
 
   std::unique_ptr<BuildIDFetcher> BIDFetcher;
