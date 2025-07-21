@@ -801,6 +801,7 @@ attributes #2 = { nocallback nofree nosync nounwind willreturn memory(none) }
 !4 = distinct !{!4, !5}
 !5 = !{!"llvm.loop.mustprogress"}
 ;.
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]]}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]], [[META6:![0-9]+]]}
 ; CHECK: [[META5]] = !{!"llvm.loop.mustprogress"}
+; CHECK: [[META6]] = !{!"llvm.loop.estimated_trip_count"}
 ;.

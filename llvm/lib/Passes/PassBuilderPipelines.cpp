@@ -1240,6 +1240,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     MPM.addPass(AssignGUIDPass());
     if (IsCtxProfUse) {
       MPM.addPass(PGOCtxProfFlatteningPass(/*IsPreThinlink=*/true));
+      MPM.addPass(PGOEstimateTripCountsPass());
       return MPM;
     }
     // Block further inlining in the instrumented ctxprof case. This avoids
@@ -1271,11 +1272,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   if (PGOOpt && (PGOOpt->Action == PGOOptions::IRUse ||
                  PGOOpt->Action == PGOOptions::SampleUse)) {
     MPM.addPass(PGOForceFunctionAttrsPass(PGOOpt->ColdOptType));
-    // TODO: Is this the right place for this pass?  Should we enable it in any
-    // other case, such as when __builtin_expect_with_probability or
-    // __builtin_expect appears in the source code but profiles are not read?
-    MPM.addPass(PGOEstimateTripCountsPass());
   }
+  MPM.addPass(PGOEstimateTripCountsPass());
 
   MPM.addPass(AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/true));
 
