@@ -860,3 +860,41 @@ static_assert(__builtin_elementwise_sub_sat(0U, 1U) == 0U);
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_sub_sat((vector4char){5, 4, 3, 2}, (vector4char){1, 1, 1, 1})) == (LITTLE_END ? 0x01020304 : 0x04030201));
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_sub_sat((vector4uchar){5, 4, 3, 2}, (vector4uchar){1, 1, 1, 1})) == (LITTLE_END ? 0x01020304U : 0x04030201U));
 static_assert(__builtin_bit_cast(unsigned long long, __builtin_elementwise_sub_sat((vector4short){(short)0x8000, (short)0x8001, (short)0x8002, (short)0x8003}, (vector4short){7, 8, 9, 10}) == (LITTLE_END ? 0x8000800080008000 : 0x8000800080008000)));
+
+static_assert(__builtin_elementwise_clz(2) == 30);
+static_assert(__builtin_elementwise_clz(2, 8) == 30);
+static_assert(__builtin_elementwise_clz(0, 8) == 8);
+static_assert(__builtin_elementwise_clz((char)2) == 6);
+static_assert(__builtin_elementwise_clz((short)2) == 14);
+static_assert(__builtin_elementwise_clz((char)1) == 0x7);
+static_assert(__builtin_elementwise_clz((char)4) == 0x5);
+static_assert(__builtin_elementwise_clz((char)127) == 0x1);
+static_assert(__builtin_elementwise_clz((char)128) == 0x0);
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_clz((vector4char){1, 4, 127, (char)128})) == (LITTLE_END ? 0x00010507 : 0x07050100));
+
+constexpr int clz0 = __builtin_elementwise_clz(0);
+// expected-error@-1 {{must be initialized by a constant expression}} \
+// expected-note@-1 {{evaluation of __builtin_elementwise_clz with a zero value is undefined}}
+constexpr vector4char clz1 = __builtin_elementwise_clz((vector4char){1, 0, 3, 4});
+// expected-error@-1 {{must be initialized by a constant expression}} \
+// expected-note@-1 {{evaluation of __builtin_elementwise_clz with a zero value is undefined}}
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_clz((vector4char){1, 0, 127, 0}, (vector4char){9, -1, 9, -2})) == (LITTLE_END ? 0xFE01FF07 : 0x07FF01FE));
+
+static_assert(__builtin_elementwise_ctz(2) == 1);
+static_assert(__builtin_elementwise_ctz(2, 8) == 1);
+static_assert(__builtin_elementwise_ctz(0, 8) == 8);
+static_assert(__builtin_elementwise_ctz((char)2) == 1);
+static_assert(__builtin_elementwise_ctz((short)2) == 1);
+static_assert(__builtin_elementwise_ctz((char)8) == 0x3);
+static_assert(__builtin_elementwise_ctz((char)32) == 0x5);
+static_assert(__builtin_elementwise_ctz((char)127) == 0x0);
+static_assert(__builtin_elementwise_ctz((char)128) == 0x7);
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_ctz((vector4char){8, 32, 127, (char)128})) == (LITTLE_END ? 0x07000503 : 0x03050007));
+
+constexpr int ctz0 = __builtin_elementwise_ctz(0);
+// expected-error@-1 {{must be initialized by a constant expression}} \
+// expected-note@-1 {{evaluation of __builtin_elementwise_ctz with a zero value is undefined}}
+constexpr vector4char ctz1 = __builtin_elementwise_ctz((vector4char){1, 0, 3, 4});
+// expected-error@-1 {{must be initialized by a constant expression}} \
+// expected-note@-1 {{evaluation of __builtin_elementwise_ctz with a zero value is undefined}}
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_ctz((vector4char){8, 0, 127, 0}, (vector4char){9, -1, 9, -2})) == (LITTLE_END ? 0xFE00FF03 : 0x03FF00FE));
