@@ -79,7 +79,7 @@ checkMachineImpl(const object::ELFObjectFile<ELFT> &ELFObj, uint16_t EMachine) {
       if ((Header.e_flags & EF_CUDA_SM) < EF_CUDA_SM35)
         return createError("unsupported NVPTX architecture");
     } else if (Header.e_ident[EI_ABIVERSION] == ELFABIVERSION_CUDA_V2) {
-      if ((Header.e_flags & EF_CUDA_SM) < EF_CUDA_SM100)
+      if ((Header.e_flags & EF_CUDA_SM_MASK) < EF_CUDA_SM100)
         return createError("unsupported NVPTX architecture");
     } else {
       return createError("invalid CUDA ABI version");
