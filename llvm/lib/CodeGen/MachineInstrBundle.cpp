@@ -359,3 +359,26 @@ PhysRegInfo llvm::AnalyzePhysRegInBundle(const MachineInstr &MI, Register Reg,
 
   return PRI;
 }
+
+namespace {
+class FinalizeBundleTest : public MachineFunctionPass {
+public:
+  static char ID;
+
+  FinalizeBundleTest() : MachineFunctionPass(ID) {
+    initializeFinalizeBundleTestPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    // For testing purposes, bundle the entire contents of each basic block
+    // except for terminators.
+    for (MachineBasicBlock &MBB : MF)
+      finalizeBundle(MBB, MBB.instr_begin(), MBB.getFirstInstrTerminator());
+    return true;
+  }
+};
+} // namespace
+
+char FinalizeBundleTest::ID = 0;
+INITIALIZE_PASS(FinalizeBundleTest, "finalizebundle-test",
+                "finalizeBundle test", false, false)
