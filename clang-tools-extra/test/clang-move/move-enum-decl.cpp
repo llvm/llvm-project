@@ -39,6 +39,6 @@
 // RUN: cp %S/Inputs/enum.h  %T/move-enum/enum.h
 // RUN: echo '#include "enum.h"' > %T/move-enum/enum.cpp
 // RUN: clang-move -names="a::C::E3" -new_cc=%T/move-enum/new_test.cpp -new_header=%T/move-enum/new_test.h -old_cc=%T/move-enum/enum.cpp -old_header=%T/move-enum/enum.h %T/move-enum/enum.cpp -- -std=c++11
-// RUN: FileCheck -input-file=%T/move-enum/new_test.h -allow-empty -check-prefix=CHECK-EMPTY %s
+// RUN: FileCheck -input-file=%T/move-enum/new_test.h -allow-empty -check-prefix=CHECK-CLEAN %s
 
-// CHECK-EMPTY: {{^}}{{$}}
+// CHECK-CLEAN: {{^}}{{$}}

@@ -231,9 +231,9 @@
 // CHECK-VERSION-TNO-OSV4: overriding '-miphoneos-version-min=10.1.0.1' option with '-target arm64-apple-ios10.1.0'
 
 // RUN: %clang -target x86_64-apple-macos10.6 -mmacos-version-min=10.6 -c %s -### 2>&1 | \
-// RUN:   FileCheck --check-prefix=CHECK-VERSION-TNO-SAME %s
-// CHECK-VERSION-TNO-SAME-NOT: overriding
-// CHECK-VERSION-TNO-SAME-NOT: argument unused during compilation
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-SAME-TNO %s
+// CHECK-VERSION-SAME-TNO-NOT: overriding
+// CHECK-VERSION-SAME-TNO-NOT: argument unused during compilation
 
 // Target with OS version is not overridden by -m<os>-version-min variables:
 

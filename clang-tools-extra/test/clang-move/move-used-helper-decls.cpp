@@ -298,8 +298,8 @@
 // RUN: clang-move -names="a::Class1, a::Class2, a::Class3, a::Class4, a::Class5, a::Class5, a::Class6, a::Class7, a::Fun1, a::Fun2, b::Fun3" -new_cc=%T/used-helper-decls/new_helper_decls_test.cpp -new_header=%T/used-helper-decls/new_helper_decls_test.h -old_cc=%T/used-helper-decls/helper_decls_test.cpp -old_header=../used-helper-decls/helper_decls_test.h %T/used-helper-decls/helper_decls_test.cpp -- -std=c++11
 // RUN: FileCheck -input-file=%T/used-helper-decls/new_helper_decls_test.h -check-prefix=CHECK-NEW-H %s
 // RUN: FileCheck -input-file=%T/used-helper-decls/new_helper_decls_test.cpp -check-prefix=CHECK-NEW-CPP %s
-// RUN: FileCheck -input-file=%T/used-helper-decls/helper_decls_test.h -allow-empty -check-prefix=CHECK-EMPTY %s
-// RUN: FileCheck -input-file=%T/used-helper-decls/helper_decls_test.cpp -allow-empty -check-prefix=CHECK-EMPTY %s
+// RUN: FileCheck -input-file=%T/used-helper-decls/helper_decls_test.h -allow-empty -check-prefix=CHECK-CLEAN %s
+// RUN: FileCheck -input-file=%T/used-helper-decls/helper_decls_test.cpp -allow-empty -check-prefix=CHECK-CLEAN %s
 
 
 // CHECK-NEW-H: namespace a {
@@ -435,4 +435,4 @@
 // CHECK-NEW-CPP-NEXT: } // namespace
 // CHECK-NEW-CPP-NEXT: } // namespace b
 
-// CHECK-EMPTY: {{^}}{{$}}
+// CHECK-CLEAN: {{^}}{{$}}

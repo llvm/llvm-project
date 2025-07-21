@@ -1,0 +1,12 @@
+# Defining check prefix name ending with directive are forbidden.
+
+foo
+foo2
+
+; FOO: foo
+; FOO-NEXT: foo2
+
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefixes=FOO,FOO-NEXT -input-file %s %s 2>&1 | \
+; RUN:   FileCheck -check-prefix=BAR %s
+
+; BAR: supplied check prefix must not end with directive: '-NEXT', prefix: 'FOO-NEXT'

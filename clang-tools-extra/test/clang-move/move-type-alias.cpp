@@ -47,6 +47,6 @@
 // RUN: cp %S/Inputs/type_alias.h  %T/move-type-alias/type_alias.h
 // RUN: echo '#include "type_alias.h"' > %T/move-type-alias/type_alias.cpp
 // RUN: clang-move -names="C::Int3" -new_cc=%T/move-type-alias/new_test.cpp -new_header=%T/move-type-alias/new_test.h -old_cc=%T/move-type-alias/type_alias.cpp -old_header=%T/move-type-alias/type_alias.h %T/move-type-alias/type_alias.cpp -- -std=c++11
-// RUN: FileCheck -input-file=%T/move-type-alias/new_test.h -allow-empty -check-prefix=CHECK-EMPTY %s
+// RUN: FileCheck -input-file=%T/move-type-alias/new_test.h -allow-empty -check-prefix=CHECK-CLEAN %s
 
-// CHECK-EMPTY: {{^}}{{$}}
+// CHECK-CLEAN: {{^}}{{$}}

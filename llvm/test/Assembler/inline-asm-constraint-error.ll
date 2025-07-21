@@ -7,7 +7,7 @@
 ; RUN: not llvm-as < %t/incorrect-struct-elements.ll 2>&1 | FileCheck %s --check-prefix=CHECK-INCORRECT-STRUCT-ELEMENTS
 ; RUN: not llvm-as < %t/incorrect-arg-num.ll 2>&1 | FileCheck %s --check-prefix=CHECK-INCORRECT-ARG-NUM
 ; RUN: not llvm-as < %t/label-after-clobber.ll 2>&1 | FileCheck %s --check-prefix=CHECK-LABEL-AFTER-CLOBBER
-; RUN: not llvm-as < %t/output-after-label.ll 2>&1 | FileCheck %s --check-prefix=CHECK-OUTPUT-AFTER-LABEL
+; RUN: not llvm-as < %t/output-after-label.ll 2>&1 | FileCheck %s --check-prefix=CHECK-OUTPUT-AFTER-LBL
 
 ;--- parse-fail.ll
 ; CHECK-PARSE-FAIL: failed to parse constraints
@@ -71,7 +71,7 @@ define void @foo() {
 }
 
 ;--- output-after-label.ll
-; CHECK-OUTPUT-AFTER-LABEL: output constraint occurs after input, clobber or label constraint
+; CHECK-OUTPUT-AFTER-LBL: output constraint occurs after input, clobber or label constraint
 define void @foo() {
   %res = callbr i32 asm sideeffect "", "!i,=r,~{flags}"()
   to label %1 [label %2]

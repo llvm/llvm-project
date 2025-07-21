@@ -43,8 +43,10 @@ and from the command line.
  "``:``") one or more prefixes to match. Multiple prefixes are useful for tests
  which might change for different run options, but most lines remain the same.
 
- FileCheck does not permit duplicate prefixes, even if one is a check prefix
- and one is a comment prefix (see :option:`--comment-prefixes` below).
+ FileCheck does not permit:
+
+ * duplicate prefixes, even if one is a check prefix and one is a comment prefix (see :option:`--comment-prefixes` below).
+ * check prefixes ending with directives (i.e. ``--check-prefix=FOO-NEXT``)
 
 .. option:: --check-prefixes prefix1,prefix2,...
 

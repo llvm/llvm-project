@@ -42,9 +42,9 @@
 //
 // RUN: cat %S/Inputs/function_test.h > %T/move-function/function_test.h
 // RUN: cat %S/Inputs/function_test.cpp > %T/move-function/function_test.cpp
-// RUN: clang-move -names="A::f" -new_header=%T/move-function/new_function_test.h -new_cc=%T/move-function/new_function_test.cpp -old_header=../move-function/function_test.h -old_cc=../move-function/function_test.cpp %T/move-function/function_test.cpp -dump_result -- | FileCheck %s -check-prefix=CHECK-EMPTY
+// RUN: clang-move -names="A::f" -new_header=%T/move-function/new_function_test.h -new_cc=%T/move-function/new_function_test.cpp -old_header=../move-function/function_test.h -old_cc=../move-function/function_test.cpp %T/move-function/function_test.cpp -dump_result -- | FileCheck %s -check-prefix=CHECK-CLEAN
 //
-// CHECK-EMPTY: [{{[[:space:]]*}}]
+// CHECK-CLEAN: [{{[[:space:]]*}}]
 //
 // RUN: cat %S/Inputs/function_test.h > %T/move-function/function_test.h
 // RUN: cat %S/Inputs/function_test.cpp > %T/move-function/function_test.cpp
