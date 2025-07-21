@@ -28375,6 +28375,11 @@ TEST_F(FormatTest, BreakAfterAttributes) {
   verifyFormat("[[nodiscard]]\n"
                "Foo& operator-(Foo&);",
                Style);
+
+  Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
+  verifyFormat("[[deprecated]]\n"
+               "void f() = delete;",
+               Style);
 }
 
 TEST_F(FormatTest, InsertNewlineAtEOF) {
