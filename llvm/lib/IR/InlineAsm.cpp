@@ -62,26 +62,19 @@ FunctionType *InlineAsm::getFunctionType() const {
 
 SmallVector<StringRef> InlineAsm::collectAsmInstrs() const {
   StringRef AsmStr(AsmString);
-  // First break the assembly string into lines.
   SmallVector<StringRef> AsmLines;
   AsmStr.split(AsmLines, '\n');
 
   SmallVector<StringRef> AsmInstrs;
   AsmInstrs.reserve(AsmLines.size());
-  for (StringRef &AsmLine : AsmLines) {
-    // First remove the comments. Note it's important to do this before breaking
-    // by ';' since the comment portion may include that character too.
-    AsmLine = AsmLine.split('#').first.split("//").first;
-    if (AsmLine.empty())
+  for (StringRef AsmLine : AsmLines) {
+    // Trim most general comments. We don't handle comment blocks (/* ... */).
+    // We also don't handle '@' (ARM) and ';' (MachO) since they have different
+    // interpretations in different targets and we don't have target info in IR.
+    auto Trimmed = AsmLine.split('#').first.split("//").first.trim();
+    if (Trimmed.empty())
       continue;
-    // Break by ';' to collect separate instructions in a single line.
-    SmallVector<StringRef, 1> CurrentLineAsmInstrs;
-    AsmLine.split(CurrentLineAsmInstrs, ';');
-    for (StringRef S : CurrentLineAsmInstrs) {
-      StringRef Trimmed = S.trim();
-      if (!Trimmed.empty())
-        AsmInstrs.push_back(Trimmed);
-    }
+    AsmInstrs.push_back(Trimmed);
   }
   return AsmInstrs;
 }
