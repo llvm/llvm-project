@@ -1147,7 +1147,7 @@ void SIFrameLowering::emitCSRSpillRestores(
   if (!WWMScratchRegs.empty()) {
     ScratchExecCopy =
         buildScratchExecCopy(LiveUnits, MF, MBB, MBBI, DL,
-                             /*IsProlog=*/ false, /*EnableInactiveLanes=*/ true);
+                             /*IsProlog=*/false, /*EnableInactiveLanes=*/true);
   }
   RestoreWWMRegisters(WWMScratchRegs);
   if (!WWMCalleeSavedRegs.empty()) {
