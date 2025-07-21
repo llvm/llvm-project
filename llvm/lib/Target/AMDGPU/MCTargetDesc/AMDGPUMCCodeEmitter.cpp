@@ -384,6 +384,8 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
   if (((Desc.TSFlags & SIInstrFlags::VOP3P) ||
        Opcode == AMDGPU::V_ACCVGPR_READ_B32_vi ||
        Opcode == AMDGPU::V_ACCVGPR_WRITE_B32_vi) &&
+      // Matrix B format operand reuses op_sel_hi.
+      !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_fmt) &&
       // Matrix B reuse operand reuses op_sel_hi.
       !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_reuse)) {
     Encoding |= getImplicitOpSelHiEncoding(Opcode);
