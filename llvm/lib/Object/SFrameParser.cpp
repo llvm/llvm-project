@@ -41,7 +41,8 @@ static Expected<const T &> getDataSliceAs(ArrayRef<uint8_t> Data,
 }
 
 template <endianness E>
-Expected<SFrameParser<E>> SFrameParser<E>::create(ArrayRef<uint8_t> Contents, uint64_t SectionAddress) {
+Expected<SFrameParser<E>> SFrameParser<E>::create(ArrayRef<uint8_t> Contents,
+                                                  uint64_t SectionAddress) {
   Expected<const sframe::Preamble<E> &> Preamble =
       getDataSliceAs<sframe::Preamble<E>>(Contents, 0);
   if (!Preamble)
@@ -62,13 +63,12 @@ Expected<SFrameParser<E>> SFrameParser<E>::create(ArrayRef<uint8_t> Contents, ui
   return SFrameParser(Contents, SectionAddress, *Header);
 }
 
-
-template<endianness E>
+template <endianness E>
 Expected<ArrayRef<uint8_t>> SFrameParser<E>::getAuxHeader() const {
   return getDataSlice(Data, sizeof(Header), Header.AuxHdrLen);
 }
 
-template<endianness E>
+template <endianness E>
 Expected<ArrayRef<sframe::FuncDescEntry<E>>> SFrameParser<E>::fdes() const {
   Expected<ArrayRef<uint8_t>> Slice = getDataSlice(
       Data, getFDEBegin(), Header.NumFDEs * sizeof(sframe::FuncDescEntry<E>));
@@ -79,8 +79,9 @@ Expected<ArrayRef<sframe::FuncDescEntry<E>>> SFrameParser<E>::fdes() const {
       Header.NumFDEs);
 }
 
-template<endianness E>
-uint64_t SFrameParser<E>::getAbsoluteStartAddress(typename FDERange::iterator FDE) const {
+template <endianness E>
+uint64_t SFrameParser<E>::getAbsoluteStartAddress(
+    typename FDERange::iterator FDE) const {
   uint64_t Result = SectionAddress + FDE->StartAddress;
 
   if ((getPreamble().Flags.value() & sframe::Flags::FDEFuncStartPCRel) ==

@@ -46,10 +46,13 @@ private:
   uint64_t SectionAddress;
   const sframe::Header<E> &Header;
 
-  SFrameParser(ArrayRef<uint8_t> Data, uint64_t SectionAddress, const sframe::Header<E> &Header)
+  SFrameParser(ArrayRef<uint8_t> Data, uint64_t SectionAddress,
+               const sframe::Header<E> &Header)
       : Data(Data), SectionAddress(SectionAddress), Header(Header) {}
 
-  uint64_t getFDEBegin() const { return sizeof(Header) + Header.AuxHdrLen + Header.FDEOff; }
+  uint64_t getFDEBegin() const {
+    return sizeof(Header) + Header.AuxHdrLen + Header.FDEOff;
+  }
 };
 
 extern template class SFrameParser<endianness::big>;
