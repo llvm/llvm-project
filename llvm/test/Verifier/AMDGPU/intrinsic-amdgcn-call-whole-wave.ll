@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 define amdgpu_cs void @indirect(ptr %fn, i32 %x) {
   ; CHECK: Indirect whole wave calls are not allowed

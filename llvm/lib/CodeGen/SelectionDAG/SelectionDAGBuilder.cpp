@@ -8028,7 +8028,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     CLI.CB = &I;
 
     std::pair<SDValue, SDValue> Result =
-        lowerInvokable(CLI, /*EHPadBB*/ nullptr);
+        lowerInvokable(CLI, /*EHPadBB=*/nullptr);
 
     if (Result.first.getNode())
       setValue(&I, Result.first);
