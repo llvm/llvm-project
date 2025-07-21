@@ -48,10 +48,10 @@ struct PromoteShuffleToSwizzlePattern
                                          "offset must be in the range [0, 31]");
 
     Location loc = op.getLoc();
-    Value res = rewriter.create<amdgpu::SwizzleBitModeOp>(
-        loc, op.getResult(0).getType(), op.getValue(), /*andMask=*/31,
+    Value res = amdgpu::SwizzleBitModeOp::create(
+        rewriter, loc, op.getResult(0).getType(), op.getValue(), /*andMask=*/31,
         /*orMask=*/0, /*xorMask=*/offsetValue);
-    Value valid = rewriter.create<arith::ConstantIntOp>(loc, 1, /*width*/ 1);
+    Value valid = arith::ConstantIntOp::create(rewriter, loc, 1, /*width*/ 1);
     rewriter.replaceOp(op, {res, valid});
     return success();
   }

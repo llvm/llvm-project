@@ -40,7 +40,7 @@ template <typename OpTy>
 static void createForAllDimensions(OpBuilder &builder, Location loc,
                                    SmallVectorImpl<Value> &values) {
   for (auto dim : {gpu::Dimension::x, gpu::Dimension::y, gpu::Dimension::z})
-    values.push_back(builder.create<OpTy>(loc, builder.getIndexType(), dim));
+    values.push_back(OpTy::create(builder, loc, builder.getIndexType(), dim));
 }
 
 /// Adds operations generating block/thread ids and grid/block dimensions at the
@@ -195,8 +195,8 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
   }
   FunctionType type =
       FunctionType::get(launchOp.getContext(), kernelOperandTypes, {});
-  auto outlinedFunc = builder.create<gpu::GPUFuncOp>(
-      loc, kernelFnName, type,
+  auto outlinedFunc = gpu::GPUFuncOp::create(
+      builder, loc, kernelFnName, type,
       TypeRange(ValueRange(launchOp.getWorkgroupAttributions())),
       TypeRange(ValueRange(launchOp.getPrivateAttributions())));
   outlinedFunc->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
@@ -247,7 +247,7 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
     if (!terminator)
       continue;
     OpBuilder replacer(terminator);
-    replacer.create<gpu::ReturnOp>(terminator->getLoc());
+    gpu::ReturnOp::create(replacer, terminator->getLoc());
     terminator->erase();
   }
 
@@ -287,9 +287,9 @@ static void convertToLaunchFuncOp(gpu::LaunchOp launchOp,
   Value asyncToken = launchOp.getAsyncToken();
   std::optional<gpu::KernelDim3> clusterSize =
       launchOp.getClusterSizeOperandValues();
-  auto launchFunc = builder.create<gpu::LaunchFuncOp>(
-      launchOp.getLoc(), kernelFunc, launchOp.getGridSizeOperandValues(),
-      launchOp.getBlockSizeOperandValues(),
+  auto launchFunc = gpu::LaunchFuncOp::create(
+      builder, launchOp.getLoc(), kernelFunc,
+      launchOp.getGridSizeOperandValues(), launchOp.getBlockSizeOperandValues(),
       launchOp.getDynamicSharedMemorySize(), operands,
       asyncToken ? asyncToken.getType() : nullptr,
       launchOp.getAsyncDependencies(), clusterSize);
@@ -415,8 +415,8 @@ private:
     // Check if the module already exists in the symbol table
     if (!kernelModule) {
       // If not found, create a new GPU module
-      kernelModule = builder.create<gpu::GPUModuleOp>(kernelFunc.getLoc(),
-                                                      kernelModuleName);
+      kernelModule = gpu::GPUModuleOp::create(builder, kernelFunc.getLoc(),
+                                              kernelModuleName);
     }
 
     // If a valid data layout spec was provided, attach it to the kernel module.

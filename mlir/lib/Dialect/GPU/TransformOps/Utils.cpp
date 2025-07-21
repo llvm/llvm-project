@@ -76,9 +76,10 @@ buildPredicates(RewriterBase &rewriter, Location loc, ArrayRef<Value> activeIds,
     }
     if (activeMappingSize == availableMappingSize)
       continue;
-    Value idx = rewriter.create<arith::ConstantIndexOp>(loc, activeMappingSize);
-    Value pred = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
-                                                activeId, idx);
+    Value idx =
+        arith::ConstantIndexOp::create(rewriter, loc, activeMappingSize);
+    Value pred = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::ult,
+                                       activeId, idx);
     predicateOps.push_back(pred);
   }
   return predicateOps;
@@ -98,11 +99,11 @@ static Value buildLinearId(RewriterBase &rewriter, Location loc,
   bindDims(rewriter.getContext(), tx, ty, tz);
   bindSymbols(rewriter.getContext(), bdx, bdy);
   SmallVector<OpFoldResult> vals{
-      rewriter.create<ThreadOrBlockIdOp>(loc, indexType, Dimension::x)
+      ThreadOrBlockIdOp::create(rewriter, loc, indexType, Dimension::x)
           .getResult(),
-      rewriter.create<ThreadOrBlockIdOp>(loc, indexType, Dimension::y)
+      ThreadOrBlockIdOp::create(rewriter, loc, indexType, Dimension::y)
           .getResult(),
-      rewriter.create<ThreadOrBlockIdOp>(loc, indexType, Dimension::z)
+      ThreadOrBlockIdOp::create(rewriter, loc, indexType, Dimension::z)
           .getResult(),
       originalBasisOfr[0], originalBasisOfr[1]};
   OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
@@ -151,12 +152,12 @@ commonLinearIdBuilderFn(int64_t multiplicity = 1,
     if (mask) {
       scaledLinearId =
           getValueOrCreateConstantIndexOp(rewriter, loc, scaledLinearIdOfr);
-      scaledLinearIdI64 = rewriter.create<arith::IndexCastUIOp>(
-          loc, rewriter.getI64Type(), scaledLinearId);
+      scaledLinearIdI64 = arith::IndexCastUIOp::create(
+          rewriter, loc, rewriter.getI64Type(), scaledLinearId);
       Value logicalLinearIdI64 =
           mask.createLogicalLinearMappingId(rewriter, scaledLinearIdI64);
-      scaledLinearId = rewriter.create<arith::IndexCastUIOp>(
-          loc, rewriter.getIndexType(), logicalLinearIdI64);
+      scaledLinearId = arith::IndexCastUIOp::create(
+          rewriter, loc, rewriter.getIndexType(), logicalLinearIdI64);
       LDBG("------adjusting linearId with mask: " << scaledLinearId);
     }
 
@@ -209,9 +210,9 @@ static GpuIdBuilderFnType common3DIdBuilderFn(int64_t multiplicity = 1) {
                             ArrayRef<int64_t> originalBasis) {
     IndexType indexType = rewriter.getIndexType();
     SmallVector<Value> ids{
-        rewriter.create<ThreadOrBlockIdOp>(loc, indexType, Dimension::x),
-        rewriter.create<ThreadOrBlockIdOp>(loc, indexType, Dimension::y),
-        rewriter.create<ThreadOrBlockIdOp>(loc, indexType, Dimension::z)};
+        ThreadOrBlockIdOp::create(rewriter, loc, indexType, Dimension::x),
+        ThreadOrBlockIdOp::create(rewriter, loc, indexType, Dimension::y),
+        ThreadOrBlockIdOp::create(rewriter, loc, indexType, Dimension::z)};
     // In the 3-D mapping case, scale the first dimension by the multiplicity.
     SmallVector<Value> scaledIds = ids;
     AffineExpr d0 = getAffineDimExpr(0, rewriter.getContext());
@@ -411,7 +412,7 @@ DiagnosedSilenceableFailure createGpuLaunch(
     return diag;
 
   auto createConst = [&](int dim) {
-    return rewriter.create<arith::ConstantIndexOp>(loc, dim);
+    return arith::ConstantIndexOp::create(rewriter, loc, dim);
   };
   OpBuilder::InsertionGuard guard(rewriter);
   Value one = createConst(1);
@@ -421,10 +422,10 @@ DiagnosedSilenceableFailure createGpuLaunch(
   Value blkSizeX = blockDimX.has_value() ? createConst(blockDimX.value()) : one;
   Value blkSizeY = blockDimY.has_value() ? createConst(blockDimY.value()) : one;
   Value blkSizeZ = blockDimZ.has_value() ? createConst(blockDimZ.value()) : one;
-  launchOp = rewriter.create<LaunchOp>(loc, gridSizeX, gridSizeY, gridSizeZ,
-                                       blkSizeX, blkSizeY, blkSizeZ);
+  launchOp = LaunchOp::create(rewriter, loc, gridSizeX, gridSizeY, gridSizeZ,
+                              blkSizeX, blkSizeY, blkSizeZ);
   rewriter.setInsertionPointToEnd(&launchOp.getBody().front());
-  rewriter.create<TerminatorOp>(loc);
+  TerminatorOp::create(rewriter, loc);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -445,8 +446,8 @@ DiagnosedSilenceableFailure alterGpuLaunch(
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPointAfterValue(currentBlockdim.x);
   auto createConstValue = [&](int dim) {
-    return rewriter.create<arith::ConstantIndexOp>(currentBlockdim.x.getLoc(),
-                                                   dim);
+    return arith::ConstantIndexOp::create(rewriter, currentBlockdim.x.getLoc(),
+                                          dim);
   };
 
   if (gridDimX.has_value())

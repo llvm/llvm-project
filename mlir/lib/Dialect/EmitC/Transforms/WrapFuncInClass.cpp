@@ -50,7 +50,7 @@ public:
                                 PatternRewriter &rewriter) const override {
 
     auto className = funcOp.getSymNameAttr().str() + "Class";
-    ClassOp newClassOp = rewriter.create<ClassOp>(funcOp.getLoc(), className);
+    ClassOp newClassOp = ClassOp::create(rewriter, funcOp.getLoc(), className);
 
     SmallVector<std::pair<StringAttr, TypeAttr>> fields;
     rewriter.createBlock(&newClassOp.getBody());
@@ -67,15 +67,15 @@ public:
 
       TypeAttr typeAttr = TypeAttr::get(val.getType());
       fields.push_back({fieldName, typeAttr});
-      rewriter.create<emitc::FieldOp>(funcOp.getLoc(), fieldName, typeAttr,
-                                      argAttr);
+      emitc::FieldOp::create(rewriter, funcOp.getLoc(), fieldName, typeAttr,
+                             argAttr);
     }
 
     rewriter.setInsertionPointToEnd(&newClassOp.getBody().front());
     FunctionType funcType = funcOp.getFunctionType();
     Location loc = funcOp.getLoc();
     FuncOp newFuncOp =
-        rewriter.create<emitc::FuncOp>(loc, ("execute"), funcType);
+        emitc::FuncOp::create(rewriter, loc, ("execute"), funcType);
 
     rewriter.createBlock(&newFuncOp.getBody());
     newFuncOp.getBody().takeBody(funcOp.getBody());
@@ -85,7 +85,7 @@ public:
     newArguments.reserve(fields.size());
     for (auto &[fieldName, attr] : fields) {
       GetFieldOp arg =
-          rewriter.create<emitc::GetFieldOp>(loc, attr.getValue(), fieldName);
+          emitc::GetFieldOp::create(rewriter, loc, attr.getValue(), fieldName);
       newArguments.push_back(arg);
     }
 
