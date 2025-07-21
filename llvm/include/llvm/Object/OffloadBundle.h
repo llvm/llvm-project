@@ -132,6 +132,8 @@ public:
     switch (Type) {
     case FILE_URI:
       return createFileURI(Str);
+  //    if (Expected<std::unique_ptr<OffloadBundleURI>> URIOrErr = createFileURI(Str))
+//	      return URIOrErr.takeError();
       break;
     case MEMORY_URI:
       return createMemoryURI(Str);
