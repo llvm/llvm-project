@@ -12,10 +12,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL___DETAIL___CONFIG_HPP
-#define _LIBSYCL___DETAIL___CONFIG_HPP
+#ifndef _LIBSYCL___DETAIL_IMPL_CONFIG_HPP
+#define _LIBSYCL___DETAIL_IMPL_CONFIG_HPP
 
-#include <sycl/__version.hpp>
+#include <sycl/__detail/version.hpp>
 
 #define _LIBSYCL_BEGIN_UNVERSIONED_NAMESPACE_SYCL namespace sycl {
 #define _LIBSYCL_END_UNVERSIONED_NAMESPACE_SYCL }
@@ -56,4 +56,4 @@
 
 #endif // __SYCL_DEVICE_ONLY__
 
-#endif // _LIBSYCL___DETAIL___CONFIG_HPP
+#endif // _LIBSYCL___DETAIL_IMPL_CONFIG_HPP

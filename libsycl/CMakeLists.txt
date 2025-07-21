@@ -82,32 +82,40 @@ endif()
 #===============================================================================
 
 # Generate headers
-configure_file("${LIBSYCL_SOURCE_DIR}/src/version.hpp.in" "${LIBSYCL_BUILD_INCLUDE_DIR}/sycl/__version.hpp")
+configure_file("${LIBSYCL_SOURCE_DIR}/src/version.hpp.in" "${LIBSYCL_BUILD_INCLUDE_DIR}/sycl/__detail/version.hpp")
 
 # Install generated headers.
 install(FILES
-  "${LIBSYCL_BUILD_INCLUDE_DIR}/sycl/__version.hpp"
-  DESTINATION "${LIBSYCL_INCLUDE_DIR}/sycl"
+  "${LIBSYCL_BUILD_INCLUDE_DIR}/sycl/__detail/version.hpp"
+  DESTINATION "${LIBSYCL_INCLUDE_DIR}/sycl/__detail"
   COMPONENT sycl-headers)
 
 # This is a workaround to detect changes (add or modify) in subtree which
 # are not detected by copy_directory command.
 file(GLOB_RECURSE HEADERS_IN_SYCL_DIR CONFIGURE_DEPENDS "${LIBSYCL_SOURCE_INCLUDE_DIR}/sycl/*")
+file(GLOB_RECURSE HEADERS_IN_CL_DIR CONFIGURE_DEPENDS "${LIBSYCL_SOURCE_INCLUDE_DIR}/CL/*")
 
 string(REPLACE "${LIBSYCL_SOURCE_INCLUDE_DIR}" "${LIBSYCL_BUILD_INCLUDE_DIR}"
   OUT_HEADERS_IN_SYCL_DIR "${HEADERS_IN_SYCL_DIR}")
+string(REPLACE "${LIBSYCL_SOURCE_INCLUDE_DIR}/CL" "${LIBSYCL_BUILD_INCLUDE_DIR}/CL"
+  OUT_HEADERS_IN_CL_DIR "${HEADERS_IN_CL_DIR}")
 
 # Copy SYCL headers from sources to build directory
 add_custom_target(sycl-headers
-  DEPENDS ${OUT_HEADERS_IN_SYCL_DIR})
+  DEPENDS ${OUT_HEADERS_IN_SYCL_DIR}
+          ${OUT_HEADERS_IN_CL_DIR})
 
 add_custom_command(
   OUTPUT  ${OUT_HEADERS_IN_SYCL_DIR}
+          ${OUT_HEADERS_IN_CL_DIR}
   DEPENDS ${HEADERS_IN_SYCL_DIR}
+          ${HEADERS_IN_CL_DIR}
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${LIBSYCL_SOURCE_INCLUDE_DIR}/sycl ${LIBSYCL_BUILD_INCLUDE_DIR}/sycl
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${LIBSYCL_SOURCE_INCLUDE_DIR}/CL ${LIBSYCL_BUILD_INCLUDE_DIR}/CL
   COMMENT "Copying SYCL headers...")
 
 install(DIRECTORY "${LIBSYCL_SOURCE_INCLUDE_DIR}/sycl" DESTINATION ${LIBSYCL_INCLUDE_DIR} COMPONENT sycl-headers)
+install(DIRECTORY "${LIBSYCL_SOURCE_INCLUDE_DIR}/CL" DESTINATION ${LIBSYCL_INCLUDE_DIR} COMPONENT sycl-headers)
 
 set(LIBSYCL_RT_LIBS ${LIBSYCL_SHARED_OUTPUT_NAME})
 

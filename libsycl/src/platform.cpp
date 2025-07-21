@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <sycl/__platform.hpp>
+#include <sycl/__detail/platform.hpp>
 
 #include <stdexcept>
 

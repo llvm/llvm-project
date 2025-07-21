@@ -14,6 +14,6 @@
 #ifndef _LIBSYCL_SYCL_HPP
 #define _LIBSYCL_SYCL_HPP
 
-#include <sycl/platform.hpp>
+#include <sycl/__detail/platform.hpp>
 
 #endif // _LIBSYCL_SYCL_HPP
