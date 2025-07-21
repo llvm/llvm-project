@@ -13,7 +13,7 @@
 
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
-#include "RISCVVConfigAnalysis.h"
+#include "RISCVVectorConfigAnalysis.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
@@ -42,7 +42,7 @@ static unsigned getVLOpNum(const MachineInstr &MI) {
 }
 
 class RISCVInsertVSETVLI : public MachineFunctionPass {
-  RISCVVConfigInfo *VConfig;
+  RISCVVectorConfigInfo *VConfig;
   const RISCVSubtarget *ST;
   const TargetInstrInfo *TII;
   MachineRegisterInfo *MRI;
@@ -65,7 +65,7 @@ public:
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
     AU.addPreserved<LiveStacksWrapperLegacy>();
-    AU.addRequired<RISCVVConfigWrapperPass>();
+    AU.addRequired<RISCVVectorConfigWrapperPass>();
 
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -93,7 +93,7 @@ char &llvm::RISCVInsertVSETVLIID = RISCVInsertVSETVLI::ID;
 
 INITIALIZE_PASS_BEGIN(RISCVInsertVSETVLI, DEBUG_TYPE, RISCV_INSERT_VSETVLI_NAME,
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(RISCVVConfigWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(RISCVVectorConfigWrapperPass)
 INITIALIZE_PASS_END(RISCVInsertVSETVLI, DEBUG_TYPE, RISCV_INSERT_VSETVLI_NAME,
                     false, false)
 
@@ -490,7 +490,7 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
   for (MachineInstr &MI : make_early_inc_range(reverse(MBB))) {
 
     if (!RISCVInstrInfo::isVectorConfigInstr(MI)) {
-      Used.doUnion(RISCVVConfigInfo::getDemanded(MI, ST));
+      Used.doUnion(RISCVVectorConfigInfo::getDemanded(MI, ST));
       if (MI.isCall() || MI.isInlineAsm() ||
           MI.modifiesRegister(RISCV::VL, /*TRI=*/nullptr) ||
           MI.modifiesRegister(RISCV::VTYPE, /*TRI=*/nullptr))
@@ -560,7 +560,7 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
       }
     }
     NextMI = &MI;
-    Used = RISCVVConfigInfo::getDemanded(MI, ST);
+    Used = RISCVVectorConfigInfo::getDemanded(MI, ST);
   }
 
   // Loop over the dead AVL values, and delete them now.  This has
@@ -613,7 +613,7 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
   LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
-  VConfig = &getAnalysis<RISCVVConfigWrapperPass>().getResult();
+  VConfig = &getAnalysis<RISCVVectorConfigWrapperPass>().getResult();
 
   if (!VConfig->haveVectorOp())
     return false;

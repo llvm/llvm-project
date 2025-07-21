@@ -1,5 +1,4 @@
-//===- RISCVVConfigAnalysis --------------------------------------*- C++
-//-*-===//
+//===- RISCVVectorConfigAnalysis ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -520,7 +519,7 @@ struct BlockData {
   BlockData() = default;
 };
 
-class RISCVVConfigInfo {
+class RISCVVectorConfigInfo {
   bool HaveVectorOp = false;
   const RISCVSubtarget *ST;
   // Possibly null!
@@ -547,8 +546,8 @@ public:
   // fields which would be observed.
   bool canMutatePriorConfig(const MachineInstr &PrevMI, const MachineInstr &MI,
                             const DemandedFields &Used) const;
-  RISCVVConfigInfo() {}
-  RISCVVConfigInfo(const RISCVSubtarget *ST, LiveIntervals *LIS)
+  RISCVVectorConfigInfo() {}
+  RISCVVectorConfigInfo(const RISCVSubtarget *ST, LiveIntervals *LIS)
       : ST(ST), LIS(LIS) {}
   const std::vector<BlockData> &getInfo() const { return BlockInfo; }
   std::vector<BlockData> &getInfo() { return BlockInfo; }
@@ -592,27 +591,27 @@ private:
   void forwardVSETVLIAVL(VSETVLIInfo &Info) const;
 };
 
-class RISCVVConfigAnalysis : public AnalysisInfoMixin<RISCVVConfigAnalysis> {
-  friend AnalysisInfoMixin<RISCVVConfigAnalysis>;
+class RISCVVectorConfigAnalysis : public AnalysisInfoMixin<RISCVVectorConfigAnalysis> {
+  friend AnalysisInfoMixin<RISCVVectorConfigAnalysis>;
   static AnalysisKey Key;
 
 public:
-  using Result = RISCVVConfigInfo;
+  using Result = RISCVVectorConfigInfo;
   Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
 };
 
-class RISCVVConfigWrapperPass : public MachineFunctionPass {
-  RISCVVConfigInfo Result;
+class RISCVVectorConfigWrapperPass : public MachineFunctionPass {
+  RISCVVectorConfigInfo Result;
 
 public:
   static char ID;
 
-  RISCVVConfigWrapperPass();
+  RISCVVectorConfigWrapperPass();
 
   void getAnalysisUsage(AnalysisUsage &) const override;
   bool runOnMachineFunction(MachineFunction &) override;
   void releaseMemory() override { Result.clear(); }
-  RISCVVConfigInfo &getResult() { return Result; }
+  RISCVVectorConfigInfo &getResult() { return Result; }
 };
 
 } // end namespace llvm

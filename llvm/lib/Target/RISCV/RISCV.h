@@ -111,7 +111,7 @@ void initializeRISCVO0PreLegalizerCombinerPass(PassRegistry &);
 FunctionPass *createRISCVPreLegalizerCombiner();
 void initializeRISCVPreLegalizerCombinerPass(PassRegistry &);
 
-void initializeRISCVVConfigWrapperPassPass(PassRegistry &);
+void initializeRISCVVectorConfigWrapperPassPass(PassRegistry &);
 
 FunctionPass *createRISCVVLOptimizerPass();
 void initializeRISCVVLOptimizerPass(PassRegistry &);

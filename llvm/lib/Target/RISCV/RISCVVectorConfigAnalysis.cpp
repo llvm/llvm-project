@@ -1,4 +1,4 @@
-//===- RISCVVConfigAnalysis -----------------------------------------------===//
+//===- RISCVVectorConfigAnalysis ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,7 @@
 /// This is the RISC-V analysis of vector unit config.
 //===----------------------------------------------------------------------===//
 
-#include "RISCVVConfigAnalysis.h"
+#include "RISCVVectorConfigAnalysis.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
 
@@ -43,7 +43,7 @@ static VNInfo *getVNInfoFromReg(Register Reg, const MachineInstr &MI,
   return LI.getVNInfoBefore(SI);
 }
 
-bool RISCVVConfigInfo::areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
+bool RISCVVectorConfigInfo::areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
                                            const DemandedFields &Used) {
   switch (Used.SEW) {
   case DemandedFields::SEWNone:
@@ -96,14 +96,14 @@ bool RISCVVConfigInfo::areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
 
 bool VSETVLIInfo::hasCompatibleVTYPE(const DemandedFields &Used,
                                      const VSETVLIInfo &Require) const {
-  return RISCVVConfigInfo::areCompatibleVTYPEs(Require.encodeVTYPE(),
+  return RISCVVectorConfigInfo::areCompatibleVTYPEs(Require.encodeVTYPE(),
                                                encodeVTYPE(), Used);
 }
 
-bool RISCVVConfigInfo::haveVectorOp() { return HaveVectorOp; }
+bool RISCVVectorConfigInfo::haveVectorOp() { return HaveVectorOp; }
 
 /// Return the fields and properties demanded by the provided instruction.
-DemandedFields RISCVVConfigInfo::getDemanded(const MachineInstr &MI,
+DemandedFields RISCVVectorConfigInfo::getDemanded(const MachineInstr &MI,
                                              const RISCVSubtarget *ST) {
   // This function works in coalesceVSETVLI too. We can still use the value of a
   // SEW, VL, or Policy operand even though it might not be the exact value in
@@ -257,7 +257,7 @@ DemandedFields RISCVVConfigInfo::getDemanded(const MachineInstr &MI,
 // Given an incoming state reaching MI, minimally modifies that state so that it
 // is compatible with MI. The resulting state is guaranteed to be semantically
 // legal for MI, but may not be the state requested by MI.
-void RISCVVConfigInfo::transferBefore(VSETVLIInfo &Info,
+void RISCVVectorConfigInfo::transferBefore(VSETVLIInfo &Info,
                                       const MachineInstr &MI) const {
   if (RISCVInstrInfo::isVectorCopy(ST->getRegisterInfo(), MI) &&
       (Info.isUnknown() || !Info.isValid() || Info.hasSEWLMULRatioOnly())) {
@@ -321,7 +321,7 @@ void RISCVVConfigInfo::transferBefore(VSETVLIInfo &Info,
 // Given a state with which we evaluated MI (see transferBefore above for why
 // this might be different that the state MI requested), modify the state to
 // reflect the changes MI might make.
-void RISCVVConfigInfo::transferAfter(VSETVLIInfo &Info,
+void RISCVVectorConfigInfo::transferAfter(VSETVLIInfo &Info,
                                      const MachineInstr &MI) const {
   if (RISCVInstrInfo::isVectorConfigInstr(MI)) {
     Info = getInfoForVSETVLI(MI);
@@ -350,7 +350,7 @@ void RISCVVConfigInfo::transferAfter(VSETVLIInfo &Info,
     Info = VSETVLIInfo::getUnknown();
 }
 
-unsigned RISCVVConfigInfo::computeVLMAX(unsigned VLEN, unsigned SEW,
+unsigned RISCVVectorConfigInfo::computeVLMAX(unsigned VLEN, unsigned SEW,
                                         RISCVVType::VLMUL VLMul) {
   auto [LMul, Fractional] = RISCVVType::decodeVLMUL(VLMul);
   if (Fractional)
@@ -363,7 +363,7 @@ unsigned RISCVVConfigInfo::computeVLMAX(unsigned VLEN, unsigned SEW,
 // If we don't use LMUL or the SEW/LMUL ratio, then adjust LMUL so that we
 // maintain the SEW/LMUL ratio. This allows us to eliminate VL toggles in more
 // places.
-VSETVLIInfo RISCVVConfigInfo::adjustIncoming(const VSETVLIInfo &PrevInfo,
+VSETVLIInfo RISCVVectorConfigInfo::adjustIncoming(const VSETVLIInfo &PrevInfo,
                                              const VSETVLIInfo &NewInfo,
                                              DemandedFields &Demanded) {
   VSETVLIInfo Info = NewInfo;
@@ -379,7 +379,7 @@ VSETVLIInfo RISCVVConfigInfo::adjustIncoming(const VSETVLIInfo &PrevInfo,
   return Info;
 }
 
-bool RISCVVConfigInfo::needVSETVLI(const DemandedFields &Used,
+bool RISCVVectorConfigInfo::needVSETVLI(const DemandedFields &Used,
                                    const VSETVLIInfo &Require,
                                    const VSETVLIInfo &CurInfo) const {
   if (!CurInfo.isValid() || CurInfo.isUnknown() ||
@@ -392,7 +392,7 @@ bool RISCVVConfigInfo::needVSETVLI(const DemandedFields &Used,
   return true;
 }
 
-VSETVLIInfo RISCVVConfigInfo::getInfoForVSETVLI(const MachineInstr &MI) const {
+VSETVLIInfo RISCVVectorConfigInfo::getInfoForVSETVLI(const MachineInstr &MI) const {
   VSETVLIInfo NewInfo;
   if (MI.getOpcode() == RISCV::PseudoVSETIVLI) {
     NewInfo.setAVLImm(MI.getOperand(1).getImm());
@@ -417,7 +417,7 @@ VSETVLIInfo RISCVVConfigInfo::getInfoForVSETVLI(const MachineInstr &MI) const {
   return NewInfo;
 }
 
-bool RISCVVConfigInfo::canMutatePriorConfig(const MachineInstr &PrevMI,
+bool RISCVVectorConfigInfo::canMutatePriorConfig(const MachineInstr &PrevMI,
                                             const MachineInstr &MI,
                                             const DemandedFields &Used) const {
   // If the VL values aren't equal, return false if either a) the former is
@@ -454,7 +454,7 @@ bool RISCVVConfigInfo::canMutatePriorConfig(const MachineInstr &PrevMI,
 }
 
 VSETVLIInfo
-RISCVVConfigInfo::computeInfoForInstr(const MachineInstr &MI) const {
+RISCVVectorConfigInfo::computeInfoForInstr(const MachineInstr &MI) const {
   VSETVLIInfo InstrInfo;
   const uint64_t TSFlags = MI.getDesc().TSFlags;
 
@@ -528,7 +528,7 @@ RISCVVConfigInfo::computeInfoForInstr(const MachineInstr &MI) const {
   return InstrInfo;
 }
 
-bool RISCVVConfigInfo::computeVLVTYPEChanges(const MachineBasicBlock &MBB,
+bool RISCVVectorConfigInfo::computeVLVTYPEChanges(const MachineBasicBlock &MBB,
                                              VSETVLIInfo &Info) const {
   bool HadVectorOp = false;
 
@@ -547,7 +547,7 @@ bool RISCVVConfigInfo::computeVLVTYPEChanges(const MachineBasicBlock &MBB,
   return HadVectorOp;
 }
 
-void RISCVVConfigInfo::forwardVSETVLIAVL(VSETVLIInfo &Info) const {
+void RISCVVectorConfigInfo::forwardVSETVLIAVL(VSETVLIInfo &Info) const {
   if (!Info.hasAVLReg())
     return;
   const MachineInstr *DefMI = Info.getAVLDefMI(LIS);
@@ -559,7 +559,7 @@ void RISCVVConfigInfo::forwardVSETVLIAVL(VSETVLIInfo &Info) const {
   Info.setAVL(DefInstrInfo);
 }
 
-void RISCVVConfigInfo::computeIncomingVLVTYPE(const MachineBasicBlock &MBB) {
+void RISCVVectorConfigInfo::computeIncomingVLVTYPE(const MachineBasicBlock &MBB) {
 
   BlockData &BBInfo = BlockInfo[MBB.getNumber()];
 
@@ -612,7 +612,7 @@ void RISCVVConfigInfo::computeIncomingVLVTYPE(const MachineBasicBlock &MBB) {
       WorkList.push(S);
     }
 }
-void RISCVVConfigInfo::compute(const MachineFunction &MF) {
+void RISCVVectorConfigInfo::compute(const MachineFunction &MF) {
   assert(BlockInfo.empty() && "Expect empty block infos");
   BlockInfo.resize(MF.getNumBlockIDs());
 
@@ -649,26 +649,26 @@ void RISCVVConfigInfo::compute(const MachineFunction &MF) {
   }
 }
 
-void RISCVVConfigInfo::clear() { BlockInfo.clear(); }
+void RISCVVectorConfigInfo::clear() { BlockInfo.clear(); }
 
-char RISCVVConfigWrapperPass::ID = 0;
+char RISCVVectorConfigWrapperPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(RISCVVConfigWrapperPass, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(RISCVVectorConfigWrapperPass, DEBUG_TYPE,
                       "RISC-V Vector Config Analysis", false, true)
-INITIALIZE_PASS_END(RISCVVConfigWrapperPass, DEBUG_TYPE,
+INITIALIZE_PASS_END(RISCVVectorConfigWrapperPass, DEBUG_TYPE,
                     "RISC-V Vector Config Analysis", false, true)
 
-RISCVVConfigWrapperPass::RISCVVConfigWrapperPass() : MachineFunctionPass(ID) {}
+RISCVVectorConfigWrapperPass::RISCVVectorConfigWrapperPass() : MachineFunctionPass(ID) {}
 
-void RISCVVConfigWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
+void RISCVVectorConfigWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool RISCVVConfigWrapperPass::runOnMachineFunction(MachineFunction &MF) {
+bool RISCVVectorConfigWrapperPass::runOnMachineFunction(MachineFunction &MF) {
   auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
   LiveIntervals *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
-  Result = RISCVVConfigInfo(&MF.getSubtarget<RISCVSubtarget>(), LIS);
+  Result = RISCVVectorConfigInfo(&MF.getSubtarget<RISCVSubtarget>(), LIS);
   Result.compute(MF);
   return false;
 }
