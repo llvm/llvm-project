@@ -16,6 +16,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -89,7 +90,22 @@ static FailureOr<MemRefType> getFatRawBufferTypeLike(MemRefType source,
     auto stridedLayout = dyn_cast<StridedLayoutAttr>(layout);
     if (!stridedLayout)
       return failure();
-    mb.setLayout(StridedLayoutAttr::get(ctx, 0, stridedLayout.getStrides()));
+    MemRefLayoutAttrInterface newLayout =
+        StridedLayoutAttr::get(ctx, 0, stridedLayout.getStrides());
+    // Special case: if resetting the offset causes the strided layout to become
+    // the identity layout, then reset to the identity layout.
+    // TODO: this'll get a lot simpler when we have the contiguous layout.
+    SmallVector<int64_t> stridesIfIdentity;
+    if (source.hasStaticShape()) {
+      stridesIfIdentity = computeSuffixProduct(source.getShape());
+    } else if (source.getRank() <= 1) {
+      stridesIfIdentity = SmallVector<int64_t>(source.getRank(), 1);
+    }
+    if (stridesIfIdentity == stridedLayout.getStrides()) {
+      newLayout = AffineMapAttr::get(
+          AffineMap::getMultiDimIdentityMap(source.getRank(), ctx));
+    }
+    mb.setLayout(newLayout);
   }
   return (MemRefType)(mb);
 }
