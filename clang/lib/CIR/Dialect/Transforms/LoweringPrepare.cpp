@@ -85,7 +85,7 @@ static mlir::Value lowerComplexToComplexCast(mlir::MLIRContext &ctx,
 
 void LoweringPreparePass::lowerCastOp(cir::CastOp op) {
   mlir::MLIRContext &ctx = getContext();
-  mlir::Value loweredValue = [&]() -> Value {
+  mlir::Value loweredValue = [&]() -> mlir::Value {
     switch (op.getKind()) {
     case cir::CastKind::float_to_complex:
     case cir::CastKind::int_to_complex:

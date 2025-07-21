@@ -182,14 +182,20 @@ mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
 
   case CK_AtomicToNonAtomic:
   case CK_NonAtomicToAtomic:
-  case CK_UserDefinedConversion:
-    llvm_unreachable("NYI");
+  case CK_UserDefinedConversion: {
+    cgf.cgm.errorNYI("emitCast Atmoic & UserDefinedConversion");
+    return {};
+  }
 
-  case CK_LValueBitCast:
-    llvm_unreachable("NYI");
+  case CK_LValueBitCast: {
+    cgf.cgm.errorNYI("emitCast CK_LValueBitCast");
+    return {};
+  }
 
-  case CK_LValueToRValueBitCast:
-    llvm_unreachable("NYI");
+  case CK_LValueToRValueBitCast: {
+    cgf.cgm.errorNYI("emitCast CK_LValueToRValueBitCast");
+    return {};
+  }
 
   case CK_BitCast:
   case CK_BaseToDerived:
