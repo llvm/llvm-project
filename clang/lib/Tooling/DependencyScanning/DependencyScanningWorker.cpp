@@ -381,10 +381,10 @@ public:
       DependencyScanningService &Service, StringRef WorkingDirectory,
       DependencyConsumer &Consumer, DependencyActionController &Controller,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
-      bool DisableFree, std::optional<StringRef> ModuleName = std::nullopt)
+      std::optional<StringRef> ModuleName = std::nullopt)
       : Service(Service), WorkingDirectory(WorkingDirectory),
         Consumer(Consumer), Controller(Controller), DepFS(std::move(DepFS)),
-        DisableFree(DisableFree), ModuleName(ModuleName) {}
+        ModuleName(ModuleName) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                      IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
@@ -392,8 +392,6 @@ public:
                      DiagnosticConsumer *DiagConsumer) {
     // Make a deep copy of the original Clang invocation.
     CompilerInvocation OriginalInvocation(*Invocation);
-    // Restore the value of DisableFree, which may be modified by Tooling.
-    OriginalInvocation.getFrontendOpts().DisableFree = DisableFree;
     if (any(Service.getOptimizeArgs() & ScanningOptimizations::Macros))
       canonicalizeDefines(OriginalInvocation.getPreprocessorOpts());
 
@@ -430,6 +428,7 @@ public:
       ScanInstance.getHeaderSearchOpts().BuildSessionTimestamp =
           Service.getBuildSessionTimestamp();
 
+    ScanInstance.getFrontendOpts().DisableFree = false;
     ScanInstance.getFrontendOpts().GenerateGlobalModuleIndex = false;
     ScanInstance.getFrontendOpts().UseGlobalModuleIndex = false;
     // This will prevent us compiling individual modules asynchronously since
@@ -580,7 +579,6 @@ private:
   DependencyConsumer &Consumer;
   DependencyActionController &Controller;
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
-  bool DisableFree;
   std::optional<StringRef> ModuleName;
   std::optional<CompilerInstance> ScanInstanceStorage;
   std::shared_ptr<ModuleDepCollector> MDC;
@@ -745,12 +743,8 @@ bool DependencyScanningWorker::scanDependencies(
   auto Diags = CompilerInstance::createDiagnostics(*FS, *DiagOpts, &DC,
                                                    /*ShouldOwnClient=*/false);
 
-  // DisableFree is modified by Tooling for running
-  // in-process; preserve the original value, which is
-  // always true for a driver invocation.
-  bool DisableFree = true;
   DependencyScanningAction Action(Service, WorkingDirectory, Consumer,
-                                  Controller, DepFS, DisableFree, ModuleName);
+                                  Controller, DepFS, ModuleName);
 
   bool Success = false;
   if (CommandLine[1] == "-cc1") {
