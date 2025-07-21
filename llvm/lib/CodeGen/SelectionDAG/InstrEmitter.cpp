@@ -402,7 +402,7 @@ void InstrEmitter::AddOperand(MachineInstrBuilder &MIB, SDValue Op,
     AddRegisterOperand(MIB, Op, IIOpNum, II, VRBaseMap,
                        IsDebug, IsClone, IsCloned);
   } else if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
-    if (C->getAPIntValue().getBitWidth() <= 64) {
+    if (C->getAPIntValue().getSignificantBits() <= 64) {
       MIB.addImm(C->getSExtValue());
     } else {
       MIB.addCImm(
