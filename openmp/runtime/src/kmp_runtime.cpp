@@ -8281,6 +8281,7 @@ void __kmp_cleanup(void) {
     __kmp_free(ptr);
     ptr = next;
   }
+  __kmp_old_threads_list = NULL;
 
 #if KMP_USE_DYNAMIC_LOCK
   __kmp_cleanup_indirect_user_locks();
@@ -8288,7 +8289,7 @@ void __kmp_cleanup(void) {
   __kmp_cleanup_user_locks();
 #endif
 #if OMPD_SUPPORT
-  if (ompd_state) {
+  if (ompd_env_block) {
     __kmp_free(ompd_env_block);
     ompd_env_block = NULL;
     ompd_env_block_size = 0;
@@ -8314,12 +8315,17 @@ void __kmp_cleanup(void) {
   __kmp_nested_proc_bind.bind_types = NULL;
   __kmp_nested_proc_bind.size = 0;
   __kmp_nested_proc_bind.used = 0;
+  __kmp_dflt_team_nth = 0;
+  __kmp_dflt_team_nth_ub = 0;
   if (__kmp_affinity_format) {
     KMP_INTERNAL_FREE(__kmp_affinity_format);
     __kmp_affinity_format = NULL;
   }
 
   __kmp_i18n_catclose();
+
+  if (__kmp_nesting_nth_level)
+    KMP_INTERNAL_FREE(__kmp_nesting_nth_level);
 
 #if KMP_USE_HIER_SCHED
   __kmp_hier_scheds.deallocate();
@@ -8328,6 +8334,9 @@ void __kmp_cleanup(void) {
 #if KMP_STATS_ENABLED
   __kmp_stats_fini();
 #endif
+
+  __kmpc_destroy_allocator(KMP_GTID_SHUTDOWN, __kmp_def_allocator);
+  __kmp_def_allocator = omp_default_mem_alloc;
 
   KA_TRACE(10, ("__kmp_cleanup: exit\n"));
 }
@@ -8724,11 +8733,15 @@ static int __kmp_aux_capture_affinity_field(int gtid, const kmp_info_t *th,
     break;
 #if KMP_AFFINITY_SUPPORTED
   case 'A': {
-    kmp_str_buf_t buf;
-    __kmp_str_buf_init(&buf);
-    __kmp_affinity_str_buf_mask(&buf, th->th.th_affin_mask);
-    rc = __kmp_str_buf_print(field_buffer, format, buf.str);
-    __kmp_str_buf_free(&buf);
+    if (th->th.th_affin_mask) {
+      kmp_str_buf_t buf;
+      __kmp_str_buf_init(&buf);
+      __kmp_affinity_str_buf_mask(&buf, th->th.th_affin_mask);
+      rc = __kmp_str_buf_print(field_buffer, format, buf.str);
+      __kmp_str_buf_free(&buf);
+    } else {
+      rc = __kmp_str_buf_print(field_buffer, "%s", "disabled");
+    }
   } break;
 #endif
   default:
