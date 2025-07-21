@@ -48,6 +48,38 @@ add_header_library(
 )
 
 add_header_library(
+  acosh_float_constants
+  HDRS
+    acosh_float_constants.h
+  DEPENDS
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  acoshf_utils
+  HDRS
+    acoshf_utils.h
+  DEPENDS
+    .acosh_float_constants
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+)
+
+add_header_library(
+  acoshf
+  HDRS
+    acoshf.h
+  DEPENDS
+    .acoshf_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   asin_utils
   HDRS
     asin_utils.h
