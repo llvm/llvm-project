@@ -1620,6 +1620,7 @@ cc_library(
         ":AMDGPUIncGen",
         ":ArithDialect",
         ":BytecodeOpInterface",
+        ":DialectUtils",
         ":GPUDialect",
         ":IR",
         ":InferTypeOpInterface",
