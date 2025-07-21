@@ -4160,6 +4160,10 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return true;
   case AMDGPU::G_AMDGPU_WAVE_ADDRESS:
     return selectWaveAddress(I);
+  case AMDGPU::G_AMDGPU_WHOLE_WAVE_FUNC_RETURN: {
+    I.setDesc(TII.get(AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN));
+    return true;
+  }
   case AMDGPU::G_STACKRESTORE:
     return selectStackRestore(I);
   case AMDGPU::G_PHI:

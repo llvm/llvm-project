@@ -1423,7 +1423,8 @@ constexpr bool isShader(CallingConv::ID CC) {
 
 LLVM_READNONE
 constexpr bool isGraphics(CallingConv::ID CC) {
-  return isShader(CC) || CC == CallingConv::AMDGPU_Gfx;
+  return isShader(CC) || CC == CallingConv::AMDGPU_Gfx ||
+         CC == CallingConv::AMDGPU_Gfx_WholeWave;
 }
 
 LLVM_READNONE

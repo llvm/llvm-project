@@ -5540,6 +5540,10 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_PREFETCH:
     OpdsMapping[0] = getSGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
     break;
+  case AMDGPU::G_AMDGPU_WHOLE_WAVE_FUNC_SETUP:
+  case AMDGPU::G_AMDGPU_WHOLE_WAVE_FUNC_RETURN:
+    OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, 1);
+    break;
   }
 
   return getInstructionMapping(/*ID*/1, /*Cost*/1,
