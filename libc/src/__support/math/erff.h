@@ -132,8 +132,8 @@ static constexpr float erff(float x) {
   uint32_t x_abs = x_u & 0x7fff'ffffU;
 
   if (LIBC_UNLIKELY(x_abs >= 0x4080'0000U)) {
-    const float ONE[2] = {1.0f, -1.0f};
-    const float SMALL[2] = {-0x1.0p-25f, 0x1.0p-25f};
+    constexpr float ONE[2] = {1.0f, -1.0f};
+    constexpr float SMALL[2] = {-0x1.0p-25f, 0x1.0p-25f};
 
     int sign = xbits.is_neg() ? 1 : 0;
 
@@ -170,7 +170,7 @@ static constexpr float erff(float x) {
   double xd = static_cast<double>(x);
   double xsq = xd * xd;
 
-  const uint32_t EIGHT = 3 << FPBits::FRACTION_LEN;
+  constexpr uint32_t EIGHT = 3 << FPBits::FRACTION_LEN;
   int idx = static_cast<int>(FPBits(x_abs + EIGHT).get_val());
 
   double x4 = xsq * xsq;
