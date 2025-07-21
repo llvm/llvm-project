@@ -1,6 +1,5 @@
 #include "mathtest/TypeExtras.hpp"
 
-#ifdef MATHTEST_HAS_FLOAT16
 #include "mathtest/DeviceContext.hpp"
 #include "mathtest/ExhaustiveGenerator.hpp"
 #include "mathtest/GpuMathTest.hpp"
@@ -48,4 +47,3 @@ int main() {
 
   return Passed ? EXIT_SUCCESS : EXIT_FAILURE;
 }
-#endif // MATHTEST_HAS_FLOAT16

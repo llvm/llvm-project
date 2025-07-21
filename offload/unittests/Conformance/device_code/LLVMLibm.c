@@ -3,12 +3,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#ifdef __FLT16_MAX__
-#define HAS_FLOAT16
 typedef _Float16 float16;
-#endif // __FLT16_MAX__
 
-#ifdef HAS_FLOAT16
 __gpu_kernel void hypotf16Kernel(const float16 *X, float16 *Y, float16 *Out,
                                  size_t NumElements) {
   uint32_t Index =
@@ -17,7 +13,6 @@ __gpu_kernel void hypotf16Kernel(const float16 *X, float16 *Y, float16 *Out,
   if (Index < NumElements)
     Out[Index] = hypotf16(X[Index], Y[Index]);
 }
-#endif // HAS_FLOAT16
 
 __gpu_kernel void logfKernel(const float *X, float *Out, size_t NumElements) {
   uint32_t Index =
