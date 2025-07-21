@@ -201,7 +201,7 @@ public:
 
   // Do the actuall rewrite. This member function is shared by both integer and
   // bfloat16 rewrites.
-  Value rewrite(vector::ContractionOp op, PatternRewriter &rewriter);
+  Value lower(vector::ContractionOp op, PatternRewriter &rewriter);
 };
 
 Value VectorContractRewriter::createMMLA(PatternRewriter &rewriter,
@@ -258,8 +258,8 @@ LogicalResult VectorContractRewriter::match(vector::ContractionOp op,
   return success();
 }
 
-Value VectorContractRewriter::rewrite(vector::ContractionOp op,
-                                      PatternRewriter &rewriter) {
+Value VectorContractRewriter::lower(vector::ContractionOp op,
+                                    PatternRewriter &rewriter) {
 
   // Initialize some helper types.
   Type operandEltType = cast<VectorType>(lhs.getType()).getElementType();
@@ -552,7 +552,7 @@ public:
     if (failed(vcr.matchAndInit(op, rewriter)))
       return failure();
 
-    Value result = vcr.rewrite(op, rewriter);
+    Value result = vcr.lower(op, rewriter);
     rewriter.replaceOp(op, result);
 
     return success();
@@ -571,7 +571,7 @@ public:
     if (failed(vcr.matchAndInit(op, rewriter)))
       return failure();
 
-    Value result = vcr.rewrite(op, rewriter);
+    Value result = vcr.lower(op, rewriter);
     rewriter.replaceOp(op, result);
 
     return success();
