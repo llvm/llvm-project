@@ -38,7 +38,7 @@
 # LOAD_THIN_WHOLE: Loaded {{.*}}.obj for <whole-archive>
 
 # RUN: rm %t.lib.obj
-# RUN: lld-link @%t.rsp %t.lib /out:%t.exe 2>&1 | \
+# RUN: lld-link @%t.rsp %t.lib 2>&1 | \
 # RUN:     FileCheck --check-prefix=ERR --allow-empty  %s
 # RUN: env LLD_IN_TEST=1 not lld-link @%t.rsp %t_thin.lib 2>&1 | \
 # RUN:     FileCheck --check-prefix=NOOBJ %s
