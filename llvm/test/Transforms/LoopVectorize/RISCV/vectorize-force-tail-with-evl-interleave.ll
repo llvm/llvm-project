@@ -27,26 +27,38 @@ define void @interleave(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 2
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[TMP10:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; IF-EVL-NEXT:    [[TMP12:%.*]] = mul <vscale x 4 x i64> [[TMP10]], splat (i64 1)
-; IF-EVL-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP12]]
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP8]], i64 0
+; IF-EVL-NEXT:    [[TMP15:%.*]] = add i64 [[TMP8]], 0
+; IF-EVL-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 1
+; IF-EVL-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX]], [[TMP16]]
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[INDEX]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[STEP_ADD:%.*]] = add <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; IF-EVL-NEXT:    [[TMP22:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
+; IF-EVL-NEXT:    [[TMP10:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP22]]
+; IF-EVL-NEXT:    [[VEC_IND:%.*]] = add <vscale x 4 x i64> [[BROADCAST_SPLAT2]], [[TMP10]]
+; IF-EVL-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
+; IF-EVL-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 4
+; IF-EVL-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP12]], i64 0
+; IF-EVL-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
+; IF-EVL-NEXT:    [[TMP13:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
+; IF-EVL-NEXT:    [[TMP14:%.*]] = add <vscale x 4 x i64> [[DOTSPLAT]], [[TMP13]]
+; IF-EVL-NEXT:    [[STEP_ADD:%.*]] = add <vscale x 4 x i64> [[BROADCAST_SPLAT2]], [[TMP14]]
 ; IF-EVL-NEXT:    [[TMP19:%.*]] = icmp ule <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = icmp ule <vscale x 4 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
-; IF-EVL-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [2 x i32], ptr [[B:%.*]], <vscale x 4 x i64> [[VEC_IND]], i32 0
-; IF-EVL-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], <vscale x 4 x i64> [[STEP_ADD]], i32 0
-; IF-EVL-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> [[TMP21]], i32 4, <vscale x 4 x i1> [[TMP19]], <vscale x 4 x i32> poison)
-; IF-EVL-NEXT:    [[WIDE_MASKED_GATHER3:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> [[TMP22]], i32 4, <vscale x 4 x i1> [[TMP20]], <vscale x 4 x i32> poison)
-; IF-EVL-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], <vscale x 4 x i64> [[VEC_IND]], i32 1
-; IF-EVL-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], <vscale x 4 x i64> [[STEP_ADD]], i32 1
-; IF-EVL-NEXT:    [[WIDE_MASKED_GATHER4:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> [[TMP23]], i32 4, <vscale x 4 x i1> [[TMP19]], <vscale x 4 x i32> poison)
-; IF-EVL-NEXT:    [[WIDE_MASKED_GATHER5:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> [[TMP24]], i32 4, <vscale x 4 x i1> [[TMP20]], <vscale x 4 x i32> poison)
+; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [2 x i32], ptr [[B:%.*]], i64 [[INDEX]], i32 0
+; IF-EVL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i64 [[TMP21]], i32 0
+; IF-EVL-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 8 x i1> @llvm.vector.interleave2.nxv8i1(<vscale x 4 x i1> [[TMP19]], <vscale x 4 x i1> [[TMP19]])
+; IF-EVL-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 8 x i32> @llvm.masked.load.nxv8i32.p0(ptr [[TMP17]], i32 4, <vscale x 8 x i1> [[INTERLEAVED_MASK]], <vscale x 8 x i32> poison)
+; IF-EVL-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[WIDE_MASKED_VEC]])
+; IF-EVL-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 0
+; IF-EVL-NEXT:    [[WIDE_MASKED_GATHER4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 1
+; IF-EVL-NEXT:    [[INTERLEAVED_MASK6:%.*]] = call <vscale x 8 x i1> @llvm.vector.interleave2.nxv8i1(<vscale x 4 x i1> [[TMP20]], <vscale x 4 x i1> [[TMP20]])
+; IF-EVL-NEXT:    [[WIDE_MASKED_VEC7:%.*]] = call <vscale x 8 x i32> @llvm.masked.load.nxv8i32.p0(ptr [[TMP18]], i32 4, <vscale x 8 x i1> [[INTERLEAVED_MASK6]], <vscale x 8 x i32> poison)
+; IF-EVL-NEXT:    [[STRIDED_VEC8:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[WIDE_MASKED_VEC7]])
+; IF-EVL-NEXT:    [[WIDE_MASKED_GATHER3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC8]], 0
+; IF-EVL-NEXT:    [[WIDE_MASKED_GATHER5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC8]], 1
 ; IF-EVL-NEXT:    [[TMP25:%.*]] = add nsw <vscale x 4 x i32> [[WIDE_MASKED_GATHER4]], [[WIDE_MASKED_GATHER]]
 ; IF-EVL-NEXT:    [[TMP26:%.*]] = add nsw <vscale x 4 x i32> [[WIDE_MASKED_GATHER5]], [[WIDE_MASKED_GATHER3]]
 ; IF-EVL-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
@@ -57,7 +69,6 @@ define void @interleave(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; IF-EVL-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP25]], ptr [[TMP29]], i32 4, <vscale x 4 x i1> [[TMP19]])
 ; IF-EVL-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP26]], ptr [[TMP32]], i32 4, <vscale x 4 x i1> [[TMP20]])
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP9]]
-; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT2]]
 ; IF-EVL-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; IF-EVL-NEXT:    br i1 [[TMP33]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL:       middle.block:
