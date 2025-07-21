@@ -137,9 +137,25 @@ typedef struct Foo Bap;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: using Bap = struct Foo;
 
+struct Foo typedef Bap2;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using Bap2 =struct Foo ;
+
+Foo typedef Bap3;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using Bap3 =Foo ;
+
 typedef struct Unknown Baq;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: using Baq = struct Unknown;
+
+struct Unknown2 typedef Baw;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using Baw =struct Unknown2 ;
+
+int typedef Bax;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using Bax =int ;
 
 typedef struct Q1 { int a; } S1;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
@@ -147,6 +163,12 @@ typedef struct Q1 { int a; } S1;
 typedef struct { int b; } S2;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: using S2 = struct { int b; };
+struct Q2 { int c; } typedef S3;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using S3 =struct Q2 { int c; } ;
+struct { int d; } typedef S4;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using S4 =struct { int d; } ;
 
 namespace my_space {
   class my_cclass {};

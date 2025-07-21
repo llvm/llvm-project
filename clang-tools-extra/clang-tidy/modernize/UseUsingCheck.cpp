@@ -75,19 +75,27 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   // consecutive TypedefDecl nodes whose SourceRanges overlap. Each range starts
   // at the "typedef" and then continues *across* previous definitions through
   // the end of the current TypedefDecl definition.
+  const Token TokenBeforeName =
+      *Lexer::findPreviousToken(MatchedDecl.getLocation(), SM, LO,
+                                /*IncludeComments=*/false);
   const SourceRange RemovalRange = {
-      Lexer::findPreviousToken(MatchedDecl.getLocation(), SM, LO,
-                               /*IncludeComments=*/true)
-          ->getEndLoc(),
+      TokenBeforeName.getEndLoc(),
       Lexer::getLocForEndOfToken(MatchedDecl.getLocation(), 1, SM, LO)};
   if (NextTypedefStartsANewSequence) {
-    diag(MatchedDecl.getBeginLoc(), UseUsingWarning)
-        << FixItHint::CreateReplacement(
-               {MatchedDecl.getBeginLoc(),
-                Lexer::getLocForEndOfToken(MatchedDecl.getBeginLoc(), 0, SM,
-                                           LO)},
-               ("using " + MatchedDecl.getName() + " =").str())
-        << FixItHint::CreateRemoval(RemovalRange);
+    auto Diag = diag(MatchedDecl.getBeginLoc(), UseUsingWarning)
+                << FixItHint::CreateInsertion(
+                       MatchedDecl.getBeginLoc(),
+                       ("using " + MatchedDecl.getName() + " =").str())
+                << FixItHint::CreateRemoval(RemovalRange);
+
+    Token FirstToken;
+    Lexer::getRawToken(MatchedDecl.getBeginLoc(), FirstToken, SM, LO);
+    if (FirstToken.getRawIdentifier() == "typedef")
+      Diag << FixItHint::CreateRemoval(FirstToken.getLocation());
+
+    if (TokenBeforeName.getRawIdentifier() == "typedef")
+      Diag << FixItHint::CreateRemoval(TokenBeforeName.getLocation());
+
     FirstTypedefName = MatchedDecl.getName();
   } else {
     diag(LastCommaOrSemi, UseUsingWarning)
