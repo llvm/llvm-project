@@ -211,7 +211,7 @@ subroutine dynamic_shape_lower_2(cptr, fpr, shape, lower, n)
 !CHECK: %[[VAL_17:.*]] = fir.load %[[VAL_16]] : !fir.ref<i32>
 !CHECK: %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (i32) -> index
 !CHECK: %[[VAL_19:.*]] = fir.shape_shift %[[VAL_15]], %[[VAL_9]], %[[VAL_18]], %[[VAL_12]] : (index, index, index, index) -> !fir.shapeshift<2>
-!CHECK: %[[VAL_20:.*]] = fir.embox %[[VAL_6]](%[[VAL_19]]) : (!fir.ptr<!fir.array<?x?xf32>>, !fir.shapeshift<2>
+!CHECK: %[[VAL_20:.*]] = fir.embox %[[VAL_6]](%[[VAL_19]]) : (!fir.ptr<!fir.array<?x?xf32>>, !fir.shapeshift<2>)
 !CHECK: fir.store %[[VAL_20]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
   call c_f_pointer(cptr, fptr, shape, lower)
 end subroutine dynamic_shape_lower_2
