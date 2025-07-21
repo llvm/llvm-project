@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=sparc -relocation-model=pic < %s | FileCheck --check-prefix=SPARC %s
 ; RUN: llc -mtriple=sparc64 -relocation-model=pic < %s | FileCheck --check-prefix=SPARC64 %s
 
-;; TODO: Fix the code generation for these functions.
-
 @x = external thread_local global i8
 
 ;; Test that we don't over-allocate stack space when calling __tls_get_addr
