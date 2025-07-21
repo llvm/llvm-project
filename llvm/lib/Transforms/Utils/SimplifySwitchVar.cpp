@@ -20,9 +20,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SimplifySwitchVar.h"
-#include "llvm/IR/Instructions.h"
+#include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
+using namespace PatternMatch;
 
 /// Return the BB, where (most of) the cases meet.
 /// In that BB are phi nodes, that contain the case BBs.
@@ -79,6 +80,62 @@ static SmallVector<PhiCase> collectPhiCases(PHINode &Phi, SwitchInst *Switch) {
   return PhiInputs;
 }
 
+namespace {
+enum SupportedOp {
+  GetElementPtr,
+  IntegerAdd,
+  Unsupported,
+};
+
+struct NewInstParameters {
+  SupportedOp Op;
+  Value *BaseValue;
+  Type *OffsetTy;
+};
+} // namespace
+
+/// Find the common Base Value, Operation type and Index Type of the found phi
+/// incoming values.
+static NewInstParameters findInstParameters(SmallVector<PhiCase> &PhiCases) {
+  auto Op = SupportedOp::Unsupported;
+  DenseMap<Value *, uint64_t> BaseAddressCounts;
+  Type *OffsetTy = nullptr;
+
+  for (auto &Case : PhiCases) {
+    auto *GEP = dyn_cast<GetElementPtrInst>(Case.IncomingValue);
+    bool IsAdd =
+        match(Case.IncomingValue, m_Add(m_Value(), m_AnyIntegralConstant()));
+
+    if (GEP) {
+      Op = SupportedOp::GetElementPtr;
+      BaseAddressCounts[GEP->getPointerOperand()] += 1;
+      OffsetTy = GEP->getOperand(GEP->getNumIndices())->getType();
+      continue;
+    }
+
+    if (IsAdd) {
+      Op = SupportedOp::IntegerAdd;
+      auto *Add = cast<Instruction>(Case.IncomingValue);
+      BaseAddressCounts[Add->getOperand(Add->getNumOperands() - 2)] += 1;
+      OffsetTy = Add->getOperand(Add->getNumOperands() - 1)->getType();
+      continue;
+    }
+
+    BaseAddressCounts[Case.IncomingValue] += 1;
+  }
+
+  unsigned Max = 0;
+  Value *BaseValue;
+  for (auto &Base : BaseAddressCounts) {
+    if (Base.second > Max) {
+      BaseValue = Base.first;
+      Max = Base.second;
+    }
+  }
+
+  return {Op, BaseValue, OffsetTy};
+}
+
 PreservedAnalyses SimplifySwitchVarPass::run(Function &F,
                                              FunctionAnalysisManager &AM) {
   bool Changed = false;
@@ -97,6 +154,10 @@ PreservedAnalyses SimplifySwitchVarPass::run(Function &F,
             }))
           continue;
         SmallVector<PhiCase> PhiCases = collectPhiCases(Phi, Switch);
+
+        auto InstParameters = findInstParameters(PhiCases);
+        if (InstParameters.Op == SupportedOp::Unsupported)
+          continue;
       }
     }
   }
