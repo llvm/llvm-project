@@ -169,7 +169,6 @@ static spirv::ScalarType getIndexType(MLIRContext *ctx,
 // SPIR-V dialect. Keeping it local till the use case arises.
 static std::optional<int64_t>
 getTypeNumBytes(const SPIRVConversionOptions &options, Type type) {
-
   if (isa<spirv::ScalarType>(type)) {
     auto bitWidth = type.getIntOrFloatBitWidth();
     // According to the SPIR-V spec:
@@ -188,8 +187,7 @@ getTypeNumBytes(const SPIRVConversionOptions &options, Type type) {
     auto bitWidth = type.getIntOrFloatBitWidth();
     if (bitWidth == 8)
       return bitWidth / 8;
-    else
-      return std::nullopt;
+    return std::nullopt;
   }
 
   if (auto complexType = dyn_cast<ComplexType>(type)) {
@@ -339,7 +337,7 @@ static Type convert8BitFloatType(const SPIRVConversionOptions &options,
           Float8E4M3FNUZType, Float8E4M3B11FNUZType, Float8E3M4Type,
           Float8E8M0FNUType>(type))
     return IntegerType::get(type.getContext(), type.getWidth());
-  LLVM_DEBUG(llvm::dbgs() << "unsupported 8-bit float type\n");
+  LLVM_DEBUG(llvm::dbgs() << "unsupported 8-bit float type: " << type << "\n");
   return nullptr;
 }
 
@@ -351,7 +349,7 @@ convertShaped8BitFloatType(ShapedType type,
                            const SPIRVConversionOptions &options) {
   if (!options.emulateUnsupportedFloatTypes)
     return type;
-  auto srcElementType = type.getElementType();
+  Type srcElementType = type.getElementType();
   Type convertedElementType = nullptr;
   // F8 types are converted to integer types with the same bit width.
   if (isa<Float8E5M2Type, Float8E4M3Type, Float8E4M3FNType, Float8E5M2FNUZType,
