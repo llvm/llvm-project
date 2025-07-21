@@ -17,6 +17,8 @@ def libc_common_copts():
         "-I" + libc_include_path,
         "-I" + paths.join(libc_include_path, "include"),
         "-DLIBC_NAMESPACE=" + LIBC_NAMESPACE,
+        # For complex floating point literals.
+        "-fext-numeric-literals",
     ]
 
 def libc_release_copts():
