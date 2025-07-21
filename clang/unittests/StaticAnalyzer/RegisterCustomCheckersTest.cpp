@@ -44,7 +44,7 @@ void addCustomChecker(AnalysisASTConsumer &AnalysisConsumer,
                       AnalyzerOptions &AnOpts) {
   AnOpts.CheckersAndPackages = {{"test.CustomChecker", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-    Registry.addMockChecker<CustomChecker>("test.CustomChecker");
+    Registry.addChecker<CustomChecker>("test.CustomChecker", "MockDescription");
   });
 }
 
@@ -73,7 +73,8 @@ void addLocIncDecChecker(AnalysisASTConsumer &AnalysisConsumer,
                          AnalyzerOptions &AnOpts) {
   AnOpts.CheckersAndPackages = {{"test.LocIncDecChecker", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
-    Registry.addMockChecker<CustomChecker>("test.LocIncDecChecker");
+    Registry.addChecker<CustomChecker>("test.LocIncDecChecker",
+                                       "MockDescription");
   });
 }
 

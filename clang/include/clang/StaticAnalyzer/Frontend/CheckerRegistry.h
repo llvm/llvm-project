@@ -129,12 +129,6 @@ public:
                &CheckerRegistry::returnTrue, FullName, Desc, DocsUri, IsHidden);
   }
 
-  /// Add a mock checker to the registry for testing purposes, without
-  /// specifying metadata that is not relevant in simple tests.
-  template <class T> void addMockChecker(StringRef FullName) {
-    addChecker<T>(FullName, "MockCheckerDescription");
-  }
-
   /// Makes the checker with the full name \p fullName depend on the checker
   /// called \p dependency.
   void addDependency(StringRef FullName, StringRef Dependency);

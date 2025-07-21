@@ -19,8 +19,9 @@ struct DependendentChecker : public Checker<check::BeginFunction> {
 
 // Register plugin!
 extern "C" void clang_registerCheckers(CheckerRegistry &Registry) {
-  Registry.addMockChecker<Dependency>("example.Dependency");
-  Registry.addMockChecker<DependendentChecker>("example.DependendentChecker");
+  Registry.addChecker<Dependency>("example.Dependency", "MockDescription");
+  Registry.addChecker<DependendentChecker>("example.DependendentChecker",
+                                           "MockDescription");
 
   Registry.addDependency("example.DependendentChecker", "example.Dependency");
 }

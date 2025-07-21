@@ -141,7 +141,8 @@ class SValTest : public testing::TestWithParam<TestClangConfig> {};
                                 AnalyzerOptions &AnOpts) {                     \
     AnOpts.CheckersAndPackages = {{"test.##NAME##SValColl", true}};            \
     AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {  \
-      Registry.addMockChecker<NAME##SValCollector>("test.##NAME##SValColl");   \
+      Registry.addChecker<NAME##SValCollector>("test.##NAME##SValColl",        \
+                                               "MockDescription");             \
     });                                                                        \
   }                                                                            \
                                                                                \
