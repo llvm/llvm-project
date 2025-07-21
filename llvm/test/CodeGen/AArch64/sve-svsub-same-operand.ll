@@ -16,7 +16,7 @@ declare <vscale x 2 x double> @llvm.aarch64.sve.fsub.u.nxv2f64(<vscale x 2 x i1>
 define <vscale x 4 x i32> @sve_svsub_same_operand(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) {
 ; CHECK-LABEL: sve_svsub_same_operand:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    ret
   %result = call <vscale x 4 x i32> @llvm.aarch64.sve.sub.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %a)
   ret <vscale x 4 x i32> %result
@@ -46,7 +46,7 @@ define <vscale x 4 x float> @sve_svfsub_different_operands(<vscale x 4 x i1> %pg
 define <vscale x 16 x i8> @sve_svsub_same_operand_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a) {
 ; CHECK-LABEL: sve_svsub_same_operand_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    ret
   %result = call <vscale x 16 x i8> @llvm.aarch64.sve.sub.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %a)
   ret <vscale x 16 x i8> %result
@@ -55,7 +55,7 @@ define <vscale x 16 x i8> @sve_svsub_same_operand_i8(<vscale x 16 x i1> %pg, <vs
 define <vscale x 8 x i16> @sve_svsub_same_operand_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a) {
 ; CHECK-LABEL: sve_svsub_same_operand_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    ret
   %result = call <vscale x 8 x i16> @llvm.aarch64.sve.sub.u.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %a)
   ret <vscale x 8 x i16> %result
@@ -64,7 +64,7 @@ define <vscale x 8 x i16> @sve_svsub_same_operand_i16(<vscale x 8 x i1> %pg, <vs
 define <vscale x 2 x i64> @sve_svsub_same_operand_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) {
 ; CHECK-LABEL: sve_svsub_same_operand_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    ret
   %result = call <vscale x 2 x i64> @llvm.aarch64.sve.sub.u.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %a)
   ret <vscale x 2 x i64> %result
@@ -74,7 +74,7 @@ define <vscale x 2 x i64> @sve_svsub_same_operand_i64(<vscale x 2 x i1> %pg, <vs
 define <vscale x 4 x float> @sve_svfsub_same_operand_f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a) {
 ; CHECK-LABEL: sve_svfsub_same_operand_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsubr z0.s, p0/m, z0.s, z0.s
+; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    ret
   %result = call <vscale x 4 x float> @llvm.aarch64.sve.fsub.u.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %a)
   ret <vscale x 4 x float> %result
@@ -83,7 +83,7 @@ define <vscale x 4 x float> @sve_svfsub_same_operand_f32(<vscale x 4 x i1> %pg, 
 define <vscale x 2 x double> @sve_svfsub_same_operand_f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a) {
 ; CHECK-LABEL: sve_svfsub_same_operand_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsubr z0.d, p0/m, z0.d, z0.d
+; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    ret
   %result = call <vscale x 2 x double> @llvm.aarch64.sve.fsub.u.nxv2f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %a)
   ret <vscale x 2 x double> %result

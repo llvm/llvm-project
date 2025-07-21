@@ -22350,12 +22350,24 @@ static SDValue performIntrinsicCombine(SDNode *N,
     return DAG.getNode(AArch64ISD::FMUL_PRED, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_fsub_u:
+    // Detect x - x pattern and generate scalar zero initialization
+    if (N->getOperand(2) == N->getOperand(3)) {
+      SDLoc DL(N);
+      EVT VT = N->getValueType(0);
+      return DAG.getNode(AArch64ISD::SVE_SCALAR_ZERO, DL, VT);
+    }
     return DAG.getNode(AArch64ISD::FSUB_PRED, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_add_u:
     return DAG.getNode(ISD::ADD, SDLoc(N), N->getValueType(0), N->getOperand(2),
                        N->getOperand(3));
   case Intrinsic::aarch64_sve_sub_u:
+    // Detect x - x pattern and generate scalar zero intitialization
+    if (N->getOperand(2) == N->getOperand(3)) {
+      SDLoc DL(N);
+      EVT VT = N->getValueType(0);
+      return DAG.getNode(AArch64ISD::SVE_SCALAR_ZERO, DL, VT);
+    }
     return DAG.getNode(ISD::SUB, SDLoc(N), N->getValueType(0), N->getOperand(2),
                        N->getOperand(3));
   case Intrinsic::aarch64_sve_subr:

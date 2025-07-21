@@ -480,6 +480,7 @@ def SDT_AArch64Rev : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>]>;
 def SDT_AArch64Dup   : SDTypeProfile<1, 1, [SDTCisVec<0>]>;
 def SDT_AArch64DupLane   : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<2>]>;
 def SDT_AArch64Insr  : SDTypeProfile<1, 2, [SDTCisVec<0>]>;
+def SDT_AArch64SVEScalarZero : SDTypeProfile<1, 0, [SDTCisVec<0>]>;
 def SDT_AArch64Zip   : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                           SDTCisSameAs<0, 1>,
                                           SDTCisSameAs<0, 2>]>;
@@ -995,6 +996,9 @@ def AArch64Prefetch        : SDNode<"AArch64ISD::PREFETCH", SDT_AArch64PREFETCH,
 // {s|u}int to FP within a FP register.
 def AArch64sitof: SDNode<"AArch64ISD::SITOF", SDT_AArch64ITOF>;
 def AArch64uitof: SDNode<"AArch64ISD::UITOF", SDT_AArch64ITOF>;
+
+// SVE scalar zero - enables x-x subtraction optimization
+def AArch64sve_scalar_zero: SDNode<"AArch64ISD::SVE_SCALAR_ZERO", SDT_AArch64SVEScalarZero>;
 
 // Produces the full sequence of instructions for getting the thread pointer
 // offset of a variable into X0, using the TLSDesc model.
@@ -8075,6 +8079,15 @@ def : Pat<(nxv2bf16 (splat_vector (bf16 fpimm0))), (SUBREG_TO_REG (i32 0), (MOVI
 def : Pat<(nxv4bf16 (splat_vector (bf16 fpimm0))), (SUBREG_TO_REG (i32 0), (MOVIv2d_ns (i32 0)), zsub)>;
 def : Pat<(nxv8bf16 (splat_vector (bf16 fpimm0))), (SUBREG_TO_REG (i32 0), (MOVIv2d_ns (i32 0)), zsub)>;
 }
+
+// x-x subtraction optimizations using SVE scalar zero node
+def : Pat<(nxv16i8 (AArch64sve_scalar_zero)), (SUBREG_TO_REG (i32 0), (MOVID (i32 0)), dsub)>;
+def : Pat<(nxv8i16 (AArch64sve_scalar_zero)), (SUBREG_TO_REG (i32 0), (MOVID (i32 0)), dsub)>;
+def : Pat<(nxv4i32 (AArch64sve_scalar_zero)), (SUBREG_TO_REG (i32 0), (MOVID (i32 0)), dsub)>;
+def : Pat<(nxv2i64 (AArch64sve_scalar_zero)), (SUBREG_TO_REG (i32 0), (MOVID (i32 0)), dsub)>;
+def : Pat<(nxv8f16 (AArch64sve_scalar_zero)), (SUBREG_TO_REG (i32 0), (MOVID (i32 0)), dsub)>;
+def : Pat<(nxv4f32 (AArch64sve_scalar_zero)), (SUBREG_TO_REG (i32 0), (MOVID (i32 0)), dsub)>;
+def : Pat<(nxv2f64 (AArch64sve_scalar_zero)), (SUBREG_TO_REG (i32 0), (MOVID (i32 0)), dsub)>;
 
 def : Pat<(v2i64 immAllOnesV), (MOVIv2d_ns (i32 255))>;
 def : Pat<(v4i32 immAllOnesV), (MOVIv2d_ns (i32 255))>;
