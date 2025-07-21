@@ -4079,7 +4079,8 @@ struct OmpVariableCategory {
   WRAPPER_CLASS_BOILERPLATE(OmpVariableCategory, Value);
 };
 
-// Extension
+// Extension:
+// https://openmp.llvm.org//openacc/OpenMPExtensions.html#ompx-hold
 //
 // ompx-hold-modifier ->
 //    OMPX_HOLD                                     // since 4.5
