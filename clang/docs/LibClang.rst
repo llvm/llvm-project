@@ -404,3 +404,9 @@ following situations are explicitly unsupported:
   compatible across library versions.
 * For the same reason as above, serializing objects from one version of the
   library and deserializing with a different version is also not supported.
+
+Note: because libclang is a wrapper around the compiler frontend, it is not a
+`security-sensitive component`_ of the LLVM Project. Consider using a sandbox
+or some other mitigation approach if processing untrusted input.
+
+.. _security-sensitive component: https://llvm.org/docs/Security.html#what-is-considered-a-security-issue
