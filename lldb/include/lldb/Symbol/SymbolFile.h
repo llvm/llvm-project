@@ -337,8 +337,10 @@ public:
   ///
   /// \param[in] lookup_name The UID of the function DIE to resolve.
   ///
-  virtual llvm::Error FindAndResolveFunction(SymbolContextList &sc_list,
-                                             llvm::StringRef lookup_name) {
+  virtual llvm::Error
+  FindAndResolveFunction(SymbolContextList &sc_list,
+                         llvm::StringRef lookup_name, lldb::user_id_t spec,
+                         std::optional<uint8_t> structor_variant) {
     return llvm::createStringError("Not implemented");
   }
 

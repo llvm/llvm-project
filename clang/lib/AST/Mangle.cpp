@@ -152,6 +152,13 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
   return shouldMangleCXXName(D);
 }
 
+static void tryEmitDebugStructorVariant(GlobalDecl GD, raw_ostream &Out) {
+  if (llvm::isa<clang::CXXConstructorDecl>(GD.getDecl()))
+    Out << "C" << GD.getCtorType();
+  else if (llvm::isa<clang::CXXDestructorDecl>(GD.getDecl()))
+    Out << "D" << GD.getDtorType();
+}
+
 void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
   const ASTContext &ASTContext = getASTContext();
   const NamedDecl *D = cast<NamedDecl>(GD.getDecl());
@@ -165,6 +172,11 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
     // do not add a "\01" prefix.
     if (!ALA->getIsLiteralLabel() || ALA->getLabel().starts_with("llvm.")) {
       Out << ALA->getLabel();
+
+      // TODO: ideally should have separate attribute for this?
+      if (ASTContext.getLangOpts().DebuggerSupport)
+        tryEmitDebugStructorVariant(GD, Out);
+
       return;
     }
 

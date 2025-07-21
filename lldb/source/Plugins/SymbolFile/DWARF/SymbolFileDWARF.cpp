@@ -76,6 +76,7 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -2471,32 +2472,63 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
   return false;
 }
 
-llvm::Error
-SymbolFileDWARF::FindAndResolveFunction(SymbolContextList &sc_list,
-                                        llvm::StringRef lookup_name) {
+llvm::Error SymbolFileDWARF::FindAndResolveFunction(
+    SymbolContextList &sc_list, llvm::StringRef lookup_name,
+    lldb::user_id_t die_id, std::optional<uint8_t> structor_variant) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  DWARFDIE die = GetDIE(die_id);
+  if (!die.IsValid())
+    return llvm::createStringError("invalid DIE for UID: %" PRIu64, die_id);
 
-  DWARFDIE die;
-  Module::LookupInfo info(ConstString(lookup_name), lldb::eFunctionNameTypeFull,
+  // eFunctionNameTypeFull for mangled name lookup.
+  // eFunctionNameTypeMethod is required for structor lookups (since we look
+  // those up by DW_AT_name).
+  Module::LookupInfo info(ConstString(lookup_name),
+                          lldb::eFunctionNameTypeFull |
+                              lldb::eFunctionNameTypeMethod,
                           lldb::eLanguageTypeUnknown);
 
   m_index->GetFunctions(info, *this, {}, [&](DWARFDIE entry) {
     if (entry.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
       return true;
 
-    // We don't check whether the specification DIE for this function
-    // corresponds to the declaration DIE because the declaration might be in
-    // a type-unit but the definition in the compile-unit (and it's
-    // specifcation would point to the declaration in the compile-unit). We
-    // rely on the mangled name within the module to be enough to find us the
-    // unique definition.
+    // TODO: this specification check doesn't work if declaration DIE was in a
+    // type-unit (we should only encode DIEs from .debug_info).
+    auto spec = entry.GetAttributeValueAsReferenceDIE(DW_AT_specification);
+    if (!spec)
+      return true;
+
+    if (spec != die)
+      return true;
+
+    // We're not picking a specific structor variant DIE, so we're done here.
+    if (!structor_variant) {
+      die = entry;
+      return false;
+    }
+
+    const char *mangled =
+        entry.GetMangledName(/*substitute_name_allowed=*/false);
+    if (!mangled)
+      return true;
+
+    llvm::ItaniumPartialDemangler D;
+    if (D.partialDemangle(mangled))
+      return true;
+
+    if (D.getCtorOrDtorVariant() != structor_variant)
+      return true;
+
     die = entry;
+
     return false;
   });
 
   if (!die.IsValid())
     return llvm::createStringError(
-        llvm::formatv("failed to find definition DIE for '{0}'", lookup_name));
+        llvm::formatv("failed to find definition DIE for [lookup_name={0}] "
+                      "[DIE ID={1:x}] [structor={2}]",
+                      lookup_name, die_id, structor_variant.value_or(-1)));
 
   if (!ResolveFunction(die, false, sc_list))
     return llvm::createStringError("failed to resolve function DIE");

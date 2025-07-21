@@ -112,6 +112,11 @@ struct FunctionCallLabel {
 
   /// Mostly for debuggability.
   lldb::user_id_t m_die_id;
+
+  virtual ~FunctionCallLabel() = default;
+  virtual std::optional<uint8_t> getItaniumStructorVariant() const {
+    return std::nullopt;
+  }
 };
 
 /// LLDB attaches this prefix to mangled names of functions that it get called

@@ -18,6 +18,7 @@
 #include <set>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "clang/AST/ASTContext.h"
@@ -26,6 +27,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/ABI.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1102,7 +1104,15 @@ public:
   llvm::Expected<llvm::SmallVector<llvm::StringRef, 3>>
   splitFunctionCallLabel(llvm::StringRef label) const override;
 
-  llvm::Expected<FunctionCallLabel>
+  struct ClangFunctionCallLabel : public FunctionCallLabel {
+    /// Structor kind according to the Itanium ABI.
+    std::variant<std::monostate, clang::CXXCtorType, clang::CXXDtorType>
+        m_structor_type;
+
+    std::optional<uint8_t> getItaniumStructorVariant() const override;
+  };
+
+  llvm::Expected<std::unique_ptr<FunctionCallLabel>>
   makeFunctionCallLabel(llvm::StringRef label) const override;
 
   static void DumpTypeName(const CompilerType &type);

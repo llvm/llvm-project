@@ -559,7 +559,7 @@ public:
   }
 
   // Decodes the function label into a \c FunctionCallLabel.
-  virtual llvm::Expected<FunctionCallLabel>
+  virtual llvm::Expected<std::unique_ptr<FunctionCallLabel>>
   makeFunctionCallLabel(llvm::StringRef label) const {
     return llvm::createStringError("Not implemented.");
   }

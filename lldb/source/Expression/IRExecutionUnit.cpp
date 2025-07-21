@@ -801,13 +801,13 @@ ResolveFunctionCallLabel(llvm::StringRef name,
   auto ts_sp = *ts_or_err;
 
   auto label_or_err = ts_sp->makeFunctionCallLabel(name);
-  if (!label_or_err)
+  if (!label_or_err || !*label_or_err)
     return llvm::joinErrors(
         llvm::createStringError("failed to create FunctionCallLabel from: %s",
                                 name.data()),
         label_or_err.takeError());
 
-  const auto &label = *label_or_err;
+  const auto &label = **label_or_err;
 
   Module *module = Module::GetAllocatedModuleWithUID(label.m_module_id);
 
@@ -821,8 +821,9 @@ ResolveFunctionCallLabel(llvm::StringRef name,
         llvm::formatv("no SymbolFile found on module {0:x}.", module));
 
   SymbolContextList sc_list;
-  if (auto err =
-          symbol_file->FindAndResolveFunction(sc_list, label.m_lookup_name))
+  if (auto err = symbol_file->FindAndResolveFunction(
+          sc_list, label.m_lookup_name, label.m_die_id,
+          label.getItaniumStructorVariant()))
     return llvm::joinErrors(
         llvm::createStringError("failed to resolve function by UID"),
         std::move(err));

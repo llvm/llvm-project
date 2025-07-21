@@ -250,8 +250,36 @@ static unsigned GetCXXMethodCVQuals(const DWARFDIE &subprogram,
   return cv_quals;
 }
 
+static const char *GetMangledOrStructorName(const DWARFDIE &die) {
+  const char *name = die.GetMangledName(/*substitute_name_allowed*/ false);
+  if (name)
+    return name;
+
+  name = die.GetName();
+  if (!name)
+    return nullptr;
+
+  DWARFDIE parent = die.GetParent();
+  if (!parent.IsStructUnionOrClass())
+    return nullptr;
+
+  const char *parent_name = parent.GetName();
+  if (!parent_name)
+    return nullptr;
+
+  // Constructor.
+  if (::strcmp(parent_name, name) == 0)
+    return name;
+
+  // Destructor.
+  if (name[0] == '~' && ::strcmp(parent_name, name + 1))
+    return name;
+
+  return nullptr;
+}
+
 static std::optional<std::string> MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
-  char const *name = die.GetMangledName(/*substitute_name_allowed*/ false);
+  const char *name = GetMangledOrStructorName(die);
   if (!name)
     return std::nullopt;
 
@@ -267,7 +295,7 @@ static std::optional<std::string> MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
   if (die_id == LLDB_INVALID_UID)
     return std::nullopt;
 
-  return llvm::formatv("{0}:{1}:{2:x}:{3:x}", FunctionCallLabelPrefix, name,
+  return llvm::formatv("{0}:{1}:{2:x}:{3:x}:", FunctionCallLabelPrefix, name,
                        module_id, die_id)
       .str();
 }

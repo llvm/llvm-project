@@ -10,6 +10,7 @@
 
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/ABI.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -9783,8 +9784,40 @@ void TypeSystemClang::LogCreation() const {
              &getASTContext(), getDisplayName());
 }
 
+static llvm::Expected<
+    std::variant<std::monostate, clang::CXXCtorType, clang::CXXDtorType>>
+ParseStructorType(llvm::StringRef label) {
+  if (label.empty())
+    return std::monostate{};
+
+  bool is_ctor = label.consume_front("C");
+  if (!is_ctor && label.starts_with("D"))
+    return llvm::createStringError("invalid structor type prefix in %s",
+                                   label.data());
+
+  uint8_t type;
+  if (label.consumeInteger(0, type))
+    return llvm::createStringError("failed to parse structor type value %s",
+                                   label.data());
+
+  if (is_ctor) {
+    if (type > clang::CXXCtorType::Ctor_DefaultClosure)
+      return llvm::createStringError("C++ constructor type %d out of range",
+                                     type);
+
+    return static_cast<CXXCtorType>(type);
+  }
+
+  if (type > clang::CXXDtorType::Dtor_Deleting)
+    return llvm::createStringError("C++ destructor type %d out of range", type);
+
+  return static_cast<CXXDtorType>(type);
+}
+
+// clang-format off
 // Expected format is:
-// $__lldb_func:<mangled name>:<module id>:<definition/declaration DIE id>
+// $__lldb_func:<mangled name>:<module id>:<definition/declaration DIE id>:[<structor variant>]
+// clang-format on
 llvm::Expected<llvm::SmallVector<llvm::StringRef, 3>>
 TypeSystemClang::splitFunctionCallLabel(llvm::StringRef label) const {
   if (!consumeFunctionCallLabelPrefix(label))
@@ -9794,17 +9827,17 @@ TypeSystemClang::splitFunctionCallLabel(llvm::StringRef label) const {
     return llvm::createStringError(
         "incorrect format: expected ':' as the first character.");
 
-  llvm::SmallVector<llvm::StringRef, 3> components;
+  llvm::SmallVector<llvm::StringRef, 4> components;
   label.split(components, ":");
 
-  if (components.size() != 3)
+  if (components.size() != 4)
     return llvm::createStringError(
         "incorrect format: too many label subcomponents.");
 
   return components;
 }
 
-llvm::Expected<FunctionCallLabel>
+llvm::Expected<std::unique_ptr<FunctionCallLabel>>
 TypeSystemClang::makeFunctionCallLabel(llvm::StringRef label) const {
   auto components_or_err = splitFunctionCallLabel(label);
   if (!components_or_err)
@@ -9816,6 +9849,7 @@ TypeSystemClang::makeFunctionCallLabel(llvm::StringRef label) const {
 
   llvm::StringRef module_label = components[1];
   llvm::StringRef die_label = components[2];
+  llvm::StringRef structor_variant = components[3];
 
   lldb::user_id_t module_id = 0;
   if (module_label.consumeInteger(0, module_id))
@@ -9827,6 +9861,52 @@ TypeSystemClang::makeFunctionCallLabel(llvm::StringRef label) const {
     return llvm::createStringError(
         llvm::formatv("failed to parse DIE ID from '{0}'.", components[2]));
 
-  return FunctionCallLabel{/*.m_lookup_name =*/components[0],
-                           /*.m_module_id =*/module_id, /*.m_die_id =*/die_id};
+  auto structor_type_or_err = ParseStructorType(structor_variant);
+  if (!structor_type_or_err)
+    return llvm::joinErrors(
+        llvm::createStringError(llvm::formatv(
+            "failed to parse structor kind from '{0}'.", components[2])),
+        structor_type_or_err.takeError());
+
+  auto ret = std::make_unique<ClangFunctionCallLabel>();
+  ret->m_lookup_name = components[0];
+  ret->m_module_id = module_id;
+  ret->m_die_id = die_id;
+  ret->m_structor_type = std::move(*structor_type_or_err);
+
+  return ret;
+}
+
+std::optional<uint8_t>
+TypeSystemClang::ClangFunctionCallLabel::getItaniumStructorVariant() const {
+  if (m_structor_type.index() == 0)
+    return std::nullopt;
+
+  if (auto *ctor = std::get_if<clang::CXXCtorType>(&m_structor_type)) {
+    switch (*ctor) {
+    case clang::CXXCtorType::Ctor_Complete:
+      return 1;
+    case clang::CXXCtorType::Ctor_Base:
+      return 2;
+    case clang::CXXCtorType::Ctor_Comdat:
+    case clang::CXXCtorType::Ctor_CopyingClosure:
+    case clang::CXXCtorType::Ctor_DefaultClosure:
+      // No Itanium equivalent
+      return std::nullopt;
+    }
+  } else if (auto *dtor = std::get_if<clang::CXXDtorType>(&m_structor_type)) {
+    switch (*dtor) {
+    case clang::CXXDtorType::Dtor_Deleting:
+      return 0;
+    case clang::CXXDtorType::Dtor_Complete:
+      return 1;
+    case clang::CXXDtorType::Dtor_Base:
+      return 2;
+    case clang::CXXDtorType::Dtor_Comdat:
+      // No Itanium equivalent
+      return std::nullopt;
+    }
+  }
+
+  return std::nullopt;
 }
