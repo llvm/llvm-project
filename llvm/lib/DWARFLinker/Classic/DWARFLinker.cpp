@@ -2403,8 +2403,12 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
             // It is possible that the first StmtAttrIdx/SeqStartIdx point to
             // later entries in LineTableMapping. Therefore we only increment
             // the pointers after we validate they are pointing to the `Next`
-            // entry. e.g. LineTableMapping SeqOff     Row 0x08        9    <-
-            // NextSeqOff/NextRow 0x14       15
+            // entry. e.g.
+            //
+            // LineTableMapping
+            // SeqOff      Row
+            // 0x08         9    <- NextSeqOff/NextRow
+            // 0x14        15
             //
             // StmtAttrs  SeqStartRows
             // 0x14       13    <- StmtAttrIdx/SeqStartIdx
