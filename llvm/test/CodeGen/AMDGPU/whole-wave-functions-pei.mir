@@ -26,8 +26,13 @@ body:             |
     ; CHECK-LABEL: name: save_inactive_lanes_non_csr_vgpr
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
     ; CHECK-NEXT: $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr0, 0
     ; CHECK-NEXT: $exec_lo = S_MOV_B32 -1
     ; CHECK-NEXT: $vgpr0 = V_MOV_B32_e32 14, implicit $exec
     ; CHECK-NEXT: $exec_lo = S_XOR_B32 $sgpr0, -1, implicit-def $scc
@@ -64,8 +69,12 @@ body:             |
     ; CHECK-LABEL: name: save_all_lanes_csr_vgpr
     ; CHECK: liveins: $vgpr40
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
     ; CHECK-NEXT: $sgpr0 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr40, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr40, 0
     ; CHECK-NEXT: $vgpr40 = V_MOV_B32_e32 14, implicit $exec
     ; CHECK-NEXT: $vgpr40 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     ; CHECK-NEXT: $exec_lo = S_MOV_B32 $sgpr0
@@ -101,8 +110,13 @@ body:             |
     ; CHECK-LABEL: name: save_csr_sgpr_to_non_csr_vgpr
     ; CHECK: liveins: $sgpr20, $vgpr191, $vgpr192
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr192
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
     ; CHECK-NEXT: $vcc_lo = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr192, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr192, 0
     ; CHECK-NEXT: $exec_lo = S_MOV_B32 -1
     ; CHECK-NEXT: $vgpr192 = SI_SPILL_S32_TO_VGPR killed $sgpr20, 0, $vgpr192
     ; CHECK-NEXT: $sgpr20 = S_MOV_B32 14, implicit $exec
@@ -144,8 +158,12 @@ body:             |
     ; CHECK-LABEL: name: save_csr_sgpr_to_csr_vgpr
     ; CHECK: liveins: $sgpr20, $vgpr191
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
     ; CHECK-NEXT: $vcc_lo = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr191, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr191, 0
     ; CHECK-NEXT: $vgpr191 = SI_SPILL_S32_TO_VGPR killed $sgpr20, 0, $vgpr191
     ; CHECK-NEXT: $sgpr20 = S_MOV_B32 14, implicit $exec
     ; CHECK-NEXT: $sgpr20 = SI_RESTORE_S32_FROM_VGPR $vgpr191, 0
@@ -193,11 +211,20 @@ body:             |
     ; CHECK-LABEL: name: vgpr_and_sgpr_csr
     ; CHECK: liveins: $sgpr20, $vgpr0, $vgpr1, $vgpr40, $vgpr49
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr49
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
     ; CHECK-NEXT: $vcc_lo = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr0, 0
     ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr49, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr49, 256
     ; CHECK-NEXT: $exec_lo = S_MOV_B32 -1
     ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr40, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr40, 128
     ; CHECK-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr20, 0, $vgpr0
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr40, implicit-def $sgpr20
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr49, implicit-def $sgpr40
@@ -250,11 +277,21 @@ body:             |
     ; CHECK-LABEL: name: split_orig_exec
     ; CHECK: liveins: $sgpr20, $vgpr0, $vgpr1, $vgpr40, $vgpr49
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr49
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr3
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
     ; CHECK-NEXT: $vcc_lo = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr0, 0
     ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr49, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr49, 256
     ; CHECK-NEXT: $exec_lo = S_MOV_B32 -1
     ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr40, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr40, 128
     ; CHECK-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr20, 0, $vgpr0
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr40, implicit-def $sgpr20
     ; CHECK-NEXT: $sgpr3 = COPY $vcc_lo
@@ -300,16 +337,32 @@ body:             |
     ; CHECK-LABEL: name: vgpr_superregs
     ; CHECK: liveins: $vgpr0, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr40, $vgpr41, $vgpr42
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr3
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr4
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr5
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
     ; CHECK-NEXT: $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr0, 0
     ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr2, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr2, 128
     ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr3, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr3, 256
     ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr4, $sgpr32, 12, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.3, addrspace 5)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr4, 384
     ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr5, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.4, addrspace 5)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr5, 512
     ; CHECK-NEXT: $exec_lo = S_MOV_B32 -1
     ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr40, $sgpr32, 20, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.5, addrspace 5)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr40, 640
     ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr41, $sgpr32, 24, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.6, addrspace 5)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr41, 768
     ; CHECK-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr42, $sgpr32, 28, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.7, addrspace 5)
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr42, 896
     ; CHECK-NEXT: $vgpr0 = V_MOV_B32_e32 14, implicit $exec
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr2_vgpr3_vgpr4_vgpr5, implicit-def $vgpr40_vgpr41_vgpr42
     ; CHECK-NEXT: $vgpr40 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 20, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.5, addrspace 5)
@@ -360,6 +413,9 @@ body:             |
     ; CHECK-LABEL: name: dont_restore_used_vgprs
     ; CHECK: liveins: $vgpr0, $vgpr20, $vgpr40
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
     ; CHECK-NEXT: $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; CHECK-NEXT: S_NOP 0, implicit $vgpr0, implicit $vgpr20, implicit $vgpr40
     ; CHECK-NEXT: $exec_lo = S_MOV_B32 $sgpr0
@@ -398,9 +454,16 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr1
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr1
   ; CHECK-NEXT:   $vcc_lo = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $vgpr0, 0
   ; CHECK-NEXT:   SCRATCH_STORE_DWORD_SADDR $vgpr1, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $vgpr1, 128
   ; CHECK-NEXT:   $exec_lo = S_MOV_B32 -1
   ; CHECK-NEXT:   $sgpr1 = S_MOV_B32 $exec_lo
   ; CHECK-NEXT:   V_CMPX_EQ_U32_nosdst_e64 $vgpr0, $vgpr1, implicit-def $exec, implicit $exec

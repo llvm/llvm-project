@@ -19,6 +19,7 @@ define amdgpu_gfx_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
 ; DAGISEL-NEXT:    s_clause 0x1
 ; DAGISEL-NEXT:    scratch_store_b32 off, v0, s32
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; DAGISEL-NEXT:    s_wait_alu 0xfffe
@@ -43,6 +44,7 @@ define amdgpu_gfx_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) {
 ; GISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    scratch_store_b32 off, v0, s32
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; GISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GISEL-NEXT:    s_wait_alu 0xfffe
@@ -67,6 +69,7 @@ define amdgpu_gfx_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL64-NEXT:    s_xor_saveexec_b64 vcc, -1
 ; DAGISEL64-NEXT:    s_clause 0x1
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v0, s32
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; DAGISEL64-NEXT:    s_mov_b64 exec, -1
 ; DAGISEL64-NEXT:    s_wait_alu 0xfffe
@@ -92,6 +95,7 @@ define amdgpu_gfx_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) {
 ; GISEL64-NEXT:    s_xor_saveexec_b64 vcc, -1
 ; GISEL64-NEXT:    s_clause 0x1
 ; GISEL64-NEXT:    scratch_store_b32 off, v0, s32
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; GISEL64-NEXT:    s_mov_b64 exec, -1
 ; GISEL64-NEXT:    s_wait_alu 0xfffe
@@ -124,6 +128,7 @@ define amdgpu_gfx_whole_wave i32 @single_use_of_active(i1 %active, i32 %a, i32 %
 ; DAGISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
 ; DAGISEL-NEXT:    s_clause 0x1
 ; DAGISEL-NEXT:    scratch_store_b32 off, v0, s32
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; DAGISEL-NEXT:    s_wait_alu 0xfffe
@@ -148,6 +153,7 @@ define amdgpu_gfx_whole_wave i32 @single_use_of_active(i1 %active, i32 %a, i32 %
 ; GISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    scratch_store_b32 off, v0, s32
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; GISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GISEL-NEXT:    s_wait_alu 0xfffe
@@ -172,6 +178,7 @@ define amdgpu_gfx_whole_wave i32 @single_use_of_active(i1 %active, i32 %a, i32 %
 ; DAGISEL64-NEXT:    s_xor_saveexec_b64 vcc, -1
 ; DAGISEL64-NEXT:    s_clause 0x1
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v0, s32
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; DAGISEL64-NEXT:    s_mov_b64 exec, -1
 ; DAGISEL64-NEXT:    s_wait_alu 0xfffe
@@ -196,6 +203,7 @@ define amdgpu_gfx_whole_wave i32 @single_use_of_active(i1 %active, i32 %a, i32 %
 ; GISEL64-NEXT:    s_xor_saveexec_b64 vcc, -1
 ; GISEL64-NEXT:    s_clause 0x1
 ; GISEL64-NEXT:    scratch_store_b32 off, v0, s32
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; GISEL64-NEXT:    s_mov_b64 exec, -1
 ; GISEL64-NEXT:    s_wait_alu 0xfffe
@@ -303,15 +311,18 @@ define amdgpu_gfx_whole_wave i32 @csr(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
 ; DAGISEL-NEXT:    s_clause 0x3
 ; DAGISEL-NEXT:    scratch_store_b32 off, v2, s32
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v0, s32 offset:4
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:8
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v49, s32 offset:16
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; DAGISEL-NEXT:    scratch_store_b32 off, v40, s32 offset:12 ; 4-byte Folded Spill
+; DAGISEL-NEXT:    v_writelane_b32 v2, s20, 0
 ; DAGISEL-NEXT:    ;;#ASMSTART
 ; DAGISEL-NEXT:    ; clobber CSR
 ; DAGISEL-NEXT:    ;;#ASMEND
-; DAGISEL-NEXT:    v_writelane_b32 v2, s20, 0
 ; DAGISEL-NEXT:    ;;#ASMSTART
 ; DAGISEL-NEXT:    ; clobber non-CSR
 ; DAGISEL-NEXT:    ;;#ASMEND
@@ -342,15 +353,18 @@ define amdgpu_gfx_whole_wave i32 @csr(i1 %active, i32 %a, i32 %b) {
 ; GISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
 ; GISEL-NEXT:    s_clause 0x3
 ; GISEL-NEXT:    scratch_store_b32 off, v2, s32
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v0, s32 offset:4
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:8
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v49, s32 offset:16
 ; GISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GISEL-NEXT:    scratch_store_b32 off, v40, s32 offset:12 ; 4-byte Folded Spill
+; GISEL-NEXT:    v_writelane_b32 v2, s20, 0
 ; GISEL-NEXT:    ;;#ASMSTART
 ; GISEL-NEXT:    ; clobber CSR
 ; GISEL-NEXT:    ;;#ASMEND
-; GISEL-NEXT:    v_writelane_b32 v2, s20, 0
 ; GISEL-NEXT:    ;;#ASMSTART
 ; GISEL-NEXT:    ; clobber non-CSR
 ; GISEL-NEXT:    ;;#ASMEND
@@ -381,15 +395,18 @@ define amdgpu_gfx_whole_wave i32 @csr(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL64-NEXT:    s_xor_saveexec_b64 vcc, -1
 ; DAGISEL64-NEXT:    s_clause 0x3
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v2, s32
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v0, s32 offset:4
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v1, s32 offset:8
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v49, s32 offset:16
 ; DAGISEL64-NEXT:    s_mov_b64 exec, -1
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v40, s32 offset:12 ; 4-byte Folded Spill
+; DAGISEL64-NEXT:    v_writelane_b32 v2, s20, 0
 ; DAGISEL64-NEXT:    ;;#ASMSTART
 ; DAGISEL64-NEXT:    ; clobber CSR
 ; DAGISEL64-NEXT:    ;;#ASMEND
-; DAGISEL64-NEXT:    v_writelane_b32 v2, s20, 0
 ; DAGISEL64-NEXT:    ;;#ASMSTART
 ; DAGISEL64-NEXT:    ; clobber non-CSR
 ; DAGISEL64-NEXT:    ;;#ASMEND
@@ -421,15 +438,18 @@ define amdgpu_gfx_whole_wave i32 @csr(i1 %active, i32 %a, i32 %b) {
 ; GISEL64-NEXT:    s_xor_saveexec_b64 vcc, -1
 ; GISEL64-NEXT:    s_clause 0x3
 ; GISEL64-NEXT:    scratch_store_b32 off, v2, s32
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v0, s32 offset:4
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v1, s32 offset:8
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v49, s32 offset:16
 ; GISEL64-NEXT:    s_mov_b64 exec, -1
 ; GISEL64-NEXT:    scratch_store_b32 off, v40, s32 offset:12 ; 4-byte Folded Spill
+; GISEL64-NEXT:    v_writelane_b32 v2, s20, 0
 ; GISEL64-NEXT:    ;;#ASMSTART
 ; GISEL64-NEXT:    ; clobber CSR
 ; GISEL64-NEXT:    ;;#ASMEND
-; GISEL64-NEXT:    v_writelane_b32 v2, s20, 0
 ; GISEL64-NEXT:    ;;#ASMSTART
 ; GISEL64-NEXT:    ; clobber non-CSR
 ; GISEL64-NEXT:    ;;#ASMEND
@@ -642,6 +662,7 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
 ; DAGISEL-NEXT:    s_clause 0x1
 ; DAGISEL-NEXT:    scratch_store_b32 off, v0, s32
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; DAGISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -672,6 +693,7 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
 ; GISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    scratch_store_b32 off, v0, s32
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; GISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -702,6 +724,7 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL64-NEXT:    s_xor_saveexec_b64 vcc, -1
 ; DAGISEL64-NEXT:    s_clause 0x1
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v0, s32
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; DAGISEL64-NEXT:    s_mov_b64 exec, -1
 ; DAGISEL64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -732,6 +755,7 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
 ; GISEL64-NEXT:    s_xor_saveexec_b64 vcc, -1
 ; GISEL64-NEXT:    s_clause 0x1
 ; GISEL64-NEXT:    scratch_store_b32 off, v0, s32
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; GISEL64-NEXT:    s_mov_b64 exec, -1
 ; GISEL64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -775,8 +799,11 @@ define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
 ; DAGISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
 ; DAGISEL-NEXT:    s_clause 0x3
 ; DAGISEL-NEXT:    scratch_store_b32 off, v0, s32
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v2, s32 offset:8
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v3, s32 offset:12
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; DAGISEL-NEXT:    s_wait_alu 0xfffe
@@ -805,8 +832,11 @@ define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
 ; GISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
 ; GISEL-NEXT:    s_clause 0x3
 ; GISEL-NEXT:    scratch_store_b32 off, v0, s32
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v2, s32 offset:8
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v3, s32 offset:12
 ; GISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GISEL-NEXT:    s_wait_alu 0xfffe
@@ -835,8 +865,11 @@ define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
 ; DAGISEL64-NEXT:    s_xor_saveexec_b64 vcc, -1
 ; DAGISEL64-NEXT:    s_clause 0x3
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v0, s32
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v2, s32 offset:8
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v3, s32 offset:12
 ; DAGISEL64-NEXT:    s_mov_b64 exec, -1
 ; DAGISEL64-NEXT:    s_wait_alu 0xfffe
@@ -867,8 +900,11 @@ define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
 ; GISEL64-NEXT:    s_xor_saveexec_b64 vcc, -1
 ; GISEL64-NEXT:    s_clause 0x3
 ; GISEL64-NEXT:    scratch_store_b32 off, v0, s32
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v2, s32 offset:8
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v3, s32 offset:12
 ; GISEL64-NEXT:    s_mov_b64 exec, -1
 ; GISEL64-NEXT:    s_wait_alu 0xfffe
@@ -905,10 +941,15 @@ define amdgpu_gfx_whole_wave void @inreg_args(i1 %active, i32 inreg %i32, <4 x i
 ; DAGISEL-NEXT:    s_xor_saveexec_b32 s0, -1
 ; DAGISEL-NEXT:    s_clause 0x5
 ; DAGISEL-NEXT:    scratch_store_b32 off, v0, s32
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v2, s32 offset:8
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v3, s32 offset:12
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v4, s32 offset:16
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v5, s32 offset:20
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; DAGISEL-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v5, s9
@@ -941,10 +982,15 @@ define amdgpu_gfx_whole_wave void @inreg_args(i1 %active, i32 inreg %i32, <4 x i
 ; GISEL-NEXT:    s_xor_saveexec_b32 s34, -1
 ; GISEL-NEXT:    s_clause 0x5
 ; GISEL-NEXT:    scratch_store_b32 off, v0, s32
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v2, s32 offset:8
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v3, s32 offset:12
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v4, s32 offset:16
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v5, s32 offset:20
 ; GISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GISEL-NEXT:    s_mov_b32 s0, s5
@@ -982,10 +1028,15 @@ define amdgpu_gfx_whole_wave void @inreg_args(i1 %active, i32 inreg %i32, <4 x i
 ; DAGISEL64-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; DAGISEL64-NEXT:    s_clause 0x5
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v0, s32
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v2, s32 offset:8
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v3, s32 offset:12
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v4, s32 offset:16
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v5, s32 offset:20
 ; DAGISEL64-NEXT:    s_mov_b64 exec, -1
 ; DAGISEL64-NEXT:    v_mov_b32_e32 v4, s4
@@ -1021,10 +1072,15 @@ define amdgpu_gfx_whole_wave void @inreg_args(i1 %active, i32 inreg %i32, <4 x i
 ; GISEL64-NEXT:    s_xor_saveexec_b64 s[34:35], -1
 ; GISEL64-NEXT:    s_clause 0x5
 ; GISEL64-NEXT:    scratch_store_b32 off, v0, s32
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v2, s32 offset:8
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v3, s32 offset:12
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v4, s32 offset:16
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v5, s32 offset:20
 ; GISEL64-NEXT:    s_mov_b64 exec, -1
 ; GISEL64-NEXT:    s_mov_b32 s0, s5
@@ -1074,170 +1130,308 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; DAGISEL-NEXT:    s_xor_saveexec_b32 s4, -1
 ; DAGISEL-NEXT:    s_clause 0x1f
 ; DAGISEL-NEXT:    scratch_store_b32 off, v0, s33 offset:4
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v1, s33 offset:8
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v2, s33 offset:12
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v3, s33 offset:16
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v4, s33 offset:20
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v5, s33 offset:24
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v6, s33 offset:28
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v7, s33 offset:32
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v8, s33 offset:36
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v9, s33 offset:40
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v10, s33 offset:44
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v11, s33 offset:48
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v12, s33 offset:52
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v13, s33 offset:56
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v14, s33 offset:60
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v15, s33 offset:64
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v16, s33 offset:68
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v17, s33 offset:72
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v18, s33 offset:76
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v19, s33 offset:80
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v20, s33 offset:84
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v21, s33 offset:88
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v22, s33 offset:92
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v23, s33 offset:96
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v24, s33 offset:100
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v25, s33 offset:104
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v26, s33 offset:108
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v27, s33 offset:112
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v28, s33 offset:116
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v29, s33 offset:120
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v30, s33 offset:124
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v31, s33 offset:128
 ; DAGISEL-NEXT:    s_clause 0x1f
 ; DAGISEL-NEXT:    scratch_store_b32 off, v32, s33 offset:132
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v33, s33 offset:136
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v34, s33 offset:140
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v35, s33 offset:144
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v36, s33 offset:148
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v37, s33 offset:152
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v38, s33 offset:156
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v39, s33 offset:160
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v48, s33 offset:164
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v49, s33 offset:168
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v50, s33 offset:172
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v51, s33 offset:176
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v52, s33 offset:180
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v53, s33 offset:184
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v54, s33 offset:188
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v55, s33 offset:192
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v64, s33 offset:196
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v65, s33 offset:200
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v66, s33 offset:204
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v67, s33 offset:208
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v68, s33 offset:212
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v69, s33 offset:216
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v70, s33 offset:220
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v71, s33 offset:224
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v80, s33 offset:228
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v81, s33 offset:232
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v82, s33 offset:236
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v83, s33 offset:240
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v84, s33 offset:244
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v85, s33 offset:248
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v86, s33 offset:252
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v87, s33 offset:256
 ; DAGISEL-NEXT:    s_clause 0x1f
 ; DAGISEL-NEXT:    scratch_store_b32 off, v96, s33 offset:260
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v97, s33 offset:264
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v98, s33 offset:268
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v99, s33 offset:272
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v100, s33 offset:276
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v101, s33 offset:280
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v102, s33 offset:284
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v103, s33 offset:288
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v112, s33 offset:292
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v113, s33 offset:296
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v114, s33 offset:300
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v115, s33 offset:304
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v116, s33 offset:308
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v117, s33 offset:312
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v118, s33 offset:316
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v119, s33 offset:320
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v128, s33 offset:324
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v129, s33 offset:328
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v130, s33 offset:332
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v131, s33 offset:336
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v132, s33 offset:340
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v133, s33 offset:344
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v134, s33 offset:348
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v135, s33 offset:352
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v144, s33 offset:356
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v145, s33 offset:360
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v146, s33 offset:364
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v147, s33 offset:368
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v148, s33 offset:372
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v149, s33 offset:376
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v150, s33 offset:380
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v151, s33 offset:384
 ; DAGISEL-NEXT:    s_clause 0x1f
 ; DAGISEL-NEXT:    scratch_store_b32 off, v160, s33 offset:388
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v161, s33 offset:392
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v162, s33 offset:396
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v163, s33 offset:400
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v164, s33 offset:404
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v165, s33 offset:408
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v166, s33 offset:412
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v167, s33 offset:416
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v176, s33 offset:420
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v177, s33 offset:424
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v178, s33 offset:428
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v179, s33 offset:432
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v180, s33 offset:436
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v181, s33 offset:440
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v182, s33 offset:444
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v183, s33 offset:448
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v192, s33 offset:452
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v193, s33 offset:456
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v194, s33 offset:460
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v195, s33 offset:464
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v196, s33 offset:468
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v197, s33 offset:472
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v198, s33 offset:476
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v199, s33 offset:480
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v208, s33 offset:484
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v209, s33 offset:488
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v210, s33 offset:492
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v211, s33 offset:496
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v212, s33 offset:500
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v213, s33 offset:504
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v214, s33 offset:508
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v215, s33 offset:512
 ; DAGISEL-NEXT:    s_clause 0xf
 ; DAGISEL-NEXT:    scratch_store_b32 off, v224, s33 offset:516
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v225, s33 offset:520
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v226, s33 offset:524
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v227, s33 offset:528
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v228, s33 offset:532
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v229, s33 offset:536
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v230, s33 offset:540
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v231, s33 offset:544
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v240, s33 offset:548
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v241, s33 offset:552
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v242, s33 offset:556
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v243, s33 offset:560
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v244, s33 offset:564
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v245, s33 offset:568
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v246, s33 offset:572
+; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v247, s33 offset:576
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; DAGISEL-NEXT:    scratch_store_b32 off, v40, s33 ; 4-byte Folded Spill
 ; DAGISEL-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL-NEXT:    v_writelane_b32 v40, s0, 3
+; DAGISEL-NEXT:    s_addk_co_i32 s32, 0x250
+; DAGISEL-NEXT:    v_writelane_b32 v40, s4, 0
+; DAGISEL-NEXT:    v_writelane_b32 v40, s30, 1
+; DAGISEL-NEXT:    v_writelane_b32 v40, s31, 2
 ; DAGISEL-NEXT:    v_mov_b32_e32 v2, v0
 ; DAGISEL-NEXT:    v_swap_b32 v0, v1
 ; DAGISEL-NEXT:    s_mov_b32 s1, gfx_callee@abs32@hi
-; DAGISEL-NEXT:    v_writelane_b32 v40, s4, 0
 ; DAGISEL-NEXT:    s_mov_b32 s0, gfx_callee@abs32@lo
-; DAGISEL-NEXT:    s_addk_co_i32 s32, 0x250
-; DAGISEL-NEXT:    v_writelane_b32 v40, s30, 1
-; DAGISEL-NEXT:    v_writelane_b32 v40, s31, 2
 ; DAGISEL-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; DAGISEL-NEXT:    v_readlane_b32 s31, v40, 2
 ; DAGISEL-NEXT:    v_readlane_b32 s30, v40, 1
+; DAGISEL-NEXT:    v_readlane_b32 s31, v40, 2
 ; DAGISEL-NEXT:    v_readlane_b32 s4, v40, 0
 ; DAGISEL-NEXT:    v_readlane_b32 s0, v40, 3
 ; DAGISEL-NEXT:    scratch_load_b32 v40, off, s33 ; 4-byte Folded Reload
@@ -1410,170 +1604,308 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GISEL-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GISEL-NEXT:    s_clause 0x1f
 ; GISEL-NEXT:    scratch_store_b32 off, v0, s33 offset:4
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v1, s33 offset:8
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v2, s33 offset:12
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v3, s33 offset:16
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v4, s33 offset:20
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v5, s33 offset:24
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v6, s33 offset:28
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v7, s33 offset:32
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v8, s33 offset:36
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v9, s33 offset:40
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v10, s33 offset:44
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v11, s33 offset:48
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v12, s33 offset:52
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v13, s33 offset:56
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v14, s33 offset:60
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v15, s33 offset:64
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v16, s33 offset:68
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v17, s33 offset:72
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v18, s33 offset:76
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v19, s33 offset:80
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v20, s33 offset:84
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v21, s33 offset:88
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v22, s33 offset:92
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v23, s33 offset:96
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v24, s33 offset:100
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v25, s33 offset:104
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v26, s33 offset:108
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v27, s33 offset:112
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v28, s33 offset:116
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v29, s33 offset:120
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v30, s33 offset:124
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v31, s33 offset:128
 ; GISEL-NEXT:    s_clause 0x1f
 ; GISEL-NEXT:    scratch_store_b32 off, v32, s33 offset:132
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v33, s33 offset:136
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v34, s33 offset:140
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v35, s33 offset:144
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v36, s33 offset:148
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v37, s33 offset:152
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v38, s33 offset:156
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v39, s33 offset:160
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v48, s33 offset:164
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v49, s33 offset:168
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v50, s33 offset:172
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v51, s33 offset:176
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v52, s33 offset:180
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v53, s33 offset:184
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v54, s33 offset:188
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v55, s33 offset:192
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v64, s33 offset:196
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v65, s33 offset:200
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v66, s33 offset:204
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v67, s33 offset:208
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v68, s33 offset:212
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v69, s33 offset:216
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v70, s33 offset:220
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v71, s33 offset:224
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v80, s33 offset:228
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v81, s33 offset:232
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v82, s33 offset:236
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v83, s33 offset:240
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v84, s33 offset:244
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v85, s33 offset:248
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v86, s33 offset:252
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v87, s33 offset:256
 ; GISEL-NEXT:    s_clause 0x1f
 ; GISEL-NEXT:    scratch_store_b32 off, v96, s33 offset:260
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v97, s33 offset:264
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v98, s33 offset:268
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v99, s33 offset:272
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v100, s33 offset:276
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v101, s33 offset:280
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v102, s33 offset:284
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v103, s33 offset:288
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v112, s33 offset:292
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v113, s33 offset:296
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v114, s33 offset:300
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v115, s33 offset:304
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v116, s33 offset:308
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v117, s33 offset:312
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v118, s33 offset:316
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v119, s33 offset:320
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v128, s33 offset:324
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v129, s33 offset:328
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v130, s33 offset:332
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v131, s33 offset:336
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v132, s33 offset:340
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v133, s33 offset:344
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v134, s33 offset:348
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v135, s33 offset:352
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v144, s33 offset:356
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v145, s33 offset:360
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v146, s33 offset:364
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v147, s33 offset:368
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v148, s33 offset:372
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v149, s33 offset:376
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v150, s33 offset:380
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v151, s33 offset:384
 ; GISEL-NEXT:    s_clause 0x1f
 ; GISEL-NEXT:    scratch_store_b32 off, v160, s33 offset:388
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v161, s33 offset:392
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v162, s33 offset:396
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v163, s33 offset:400
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v164, s33 offset:404
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v165, s33 offset:408
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v166, s33 offset:412
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v167, s33 offset:416
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v176, s33 offset:420
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v177, s33 offset:424
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v178, s33 offset:428
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v179, s33 offset:432
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v180, s33 offset:436
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v181, s33 offset:440
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v182, s33 offset:444
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v183, s33 offset:448
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v192, s33 offset:452
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v193, s33 offset:456
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v194, s33 offset:460
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v195, s33 offset:464
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v196, s33 offset:468
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v197, s33 offset:472
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v198, s33 offset:476
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v199, s33 offset:480
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v208, s33 offset:484
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v209, s33 offset:488
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v210, s33 offset:492
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v211, s33 offset:496
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v212, s33 offset:500
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v213, s33 offset:504
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v214, s33 offset:508
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v215, s33 offset:512
 ; GISEL-NEXT:    s_clause 0xf
 ; GISEL-NEXT:    scratch_store_b32 off, v224, s33 offset:516
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v225, s33 offset:520
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v226, s33 offset:524
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v227, s33 offset:528
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v228, s33 offset:532
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v229, s33 offset:536
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v230, s33 offset:540
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v231, s33 offset:544
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v240, s33 offset:548
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v241, s33 offset:552
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v242, s33 offset:556
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v243, s33 offset:560
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v244, s33 offset:564
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v245, s33 offset:568
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v246, s33 offset:572
+; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v247, s33 offset:576
 ; GISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GISEL-NEXT:    scratch_store_b32 off, v40, s33 ; 4-byte Folded Spill
 ; GISEL-NEXT:    s_wait_alu 0xfffe
 ; GISEL-NEXT:    v_writelane_b32 v40, s0, 3
+; GISEL-NEXT:    s_addk_co_i32 s32, 0x250
+; GISEL-NEXT:    v_writelane_b32 v40, s4, 0
+; GISEL-NEXT:    v_writelane_b32 v40, s30, 1
+; GISEL-NEXT:    v_writelane_b32 v40, s31, 2
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v0
 ; GISEL-NEXT:    v_swap_b32 v0, v1
 ; GISEL-NEXT:    s_mov_b32 s0, gfx_callee@abs32@lo
-; GISEL-NEXT:    v_writelane_b32 v40, s4, 0
 ; GISEL-NEXT:    s_mov_b32 s1, gfx_callee@abs32@hi
-; GISEL-NEXT:    s_addk_co_i32 s32, 0x250
-; GISEL-NEXT:    v_writelane_b32 v40, s30, 1
-; GISEL-NEXT:    v_writelane_b32 v40, s31, 2
 ; GISEL-NEXT:    s_wait_alu 0xfffe
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-NEXT:    v_readlane_b32 s31, v40, 2
 ; GISEL-NEXT:    v_readlane_b32 s30, v40, 1
+; GISEL-NEXT:    v_readlane_b32 s31, v40, 2
 ; GISEL-NEXT:    v_readlane_b32 s4, v40, 0
 ; GISEL-NEXT:    v_readlane_b32 s0, v40, 3
 ; GISEL-NEXT:    scratch_load_b32 v40, off, s33 ; 4-byte Folded Reload
@@ -1746,171 +2078,309 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; DAGISEL64-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; DAGISEL64-NEXT:    s_clause 0x1f
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v0, s33 offset:4
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v1, s33 offset:8
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v2, s33 offset:12
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v3, s33 offset:16
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v4, s33 offset:20
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v5, s33 offset:24
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v6, s33 offset:28
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v7, s33 offset:32
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v8, s33 offset:36
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v9, s33 offset:40
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v10, s33 offset:44
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v11, s33 offset:48
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v12, s33 offset:52
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v13, s33 offset:56
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v14, s33 offset:60
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v15, s33 offset:64
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v16, s33 offset:68
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v17, s33 offset:72
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v18, s33 offset:76
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v19, s33 offset:80
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v20, s33 offset:84
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v21, s33 offset:88
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v22, s33 offset:92
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v23, s33 offset:96
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v24, s33 offset:100
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v25, s33 offset:104
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v26, s33 offset:108
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v27, s33 offset:112
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v28, s33 offset:116
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v29, s33 offset:120
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v30, s33 offset:124
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v31, s33 offset:128
 ; DAGISEL64-NEXT:    s_clause 0x1f
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v32, s33 offset:132
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v33, s33 offset:136
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v34, s33 offset:140
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v35, s33 offset:144
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v36, s33 offset:148
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v37, s33 offset:152
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v38, s33 offset:156
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v39, s33 offset:160
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v48, s33 offset:164
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v49, s33 offset:168
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v50, s33 offset:172
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v51, s33 offset:176
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v52, s33 offset:180
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v53, s33 offset:184
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v54, s33 offset:188
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v55, s33 offset:192
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v64, s33 offset:196
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v65, s33 offset:200
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v66, s33 offset:204
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v67, s33 offset:208
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v68, s33 offset:212
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v69, s33 offset:216
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v70, s33 offset:220
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v71, s33 offset:224
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v80, s33 offset:228
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v81, s33 offset:232
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v82, s33 offset:236
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v83, s33 offset:240
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v84, s33 offset:244
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v85, s33 offset:248
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v86, s33 offset:252
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v87, s33 offset:256
 ; DAGISEL64-NEXT:    s_clause 0x1f
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v96, s33 offset:260
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v97, s33 offset:264
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v98, s33 offset:268
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v99, s33 offset:272
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v100, s33 offset:276
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v101, s33 offset:280
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v102, s33 offset:284
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v103, s33 offset:288
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v112, s33 offset:292
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v113, s33 offset:296
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v114, s33 offset:300
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v115, s33 offset:304
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v116, s33 offset:308
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v117, s33 offset:312
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v118, s33 offset:316
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v119, s33 offset:320
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v128, s33 offset:324
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v129, s33 offset:328
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v130, s33 offset:332
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v131, s33 offset:336
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v132, s33 offset:340
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v133, s33 offset:344
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v134, s33 offset:348
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v135, s33 offset:352
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v144, s33 offset:356
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v145, s33 offset:360
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v146, s33 offset:364
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v147, s33 offset:368
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v148, s33 offset:372
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v149, s33 offset:376
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v150, s33 offset:380
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v151, s33 offset:384
 ; DAGISEL64-NEXT:    s_clause 0x1f
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v160, s33 offset:388
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v161, s33 offset:392
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v162, s33 offset:396
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v163, s33 offset:400
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v164, s33 offset:404
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v165, s33 offset:408
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v166, s33 offset:412
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v167, s33 offset:416
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v176, s33 offset:420
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v177, s33 offset:424
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v178, s33 offset:428
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v179, s33 offset:432
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v180, s33 offset:436
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v181, s33 offset:440
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v182, s33 offset:444
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v183, s33 offset:448
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v192, s33 offset:452
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v193, s33 offset:456
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v194, s33 offset:460
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v195, s33 offset:464
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v196, s33 offset:468
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v197, s33 offset:472
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v198, s33 offset:476
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v199, s33 offset:480
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v208, s33 offset:484
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v209, s33 offset:488
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v210, s33 offset:492
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v211, s33 offset:496
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v212, s33 offset:500
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v213, s33 offset:504
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v214, s33 offset:508
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v215, s33 offset:512
 ; DAGISEL64-NEXT:    s_clause 0xf
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v224, s33 offset:516
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v225, s33 offset:520
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v226, s33 offset:524
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v227, s33 offset:528
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v228, s33 offset:532
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v229, s33 offset:536
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v230, s33 offset:540
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v231, s33 offset:544
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v240, s33 offset:548
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v241, s33 offset:552
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v242, s33 offset:556
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v243, s33 offset:560
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v244, s33 offset:564
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v245, s33 offset:568
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v246, s33 offset:572
+; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v247, s33 offset:576
 ; DAGISEL64-NEXT:    s_mov_b64 exec, -1
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v40, s33 ; 4-byte Folded Spill
 ; DAGISEL64-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL64-NEXT:    v_writelane_b32 v40, s0, 4
-; DAGISEL64-NEXT:    v_mov_b32_e32 v2, v0
-; DAGISEL64-NEXT:    v_swap_b32 v0, v1
-; DAGISEL64-NEXT:    s_mov_b32 s1, gfx_callee@abs32@hi
-; DAGISEL64-NEXT:    v_writelane_b32 v40, s4, 0
-; DAGISEL64-NEXT:    s_mov_b32 s0, gfx_callee@abs32@lo
 ; DAGISEL64-NEXT:    s_addk_co_i32 s32, 0x250
+; DAGISEL64-NEXT:    v_writelane_b32 v40, s4, 0
 ; DAGISEL64-NEXT:    v_writelane_b32 v40, s5, 1
 ; DAGISEL64-NEXT:    v_writelane_b32 v40, s30, 2
 ; DAGISEL64-NEXT:    v_writelane_b32 v40, s31, 3
+; DAGISEL64-NEXT:    v_mov_b32_e32 v2, v0
+; DAGISEL64-NEXT:    v_swap_b32 v0, v1
+; DAGISEL64-NEXT:    s_mov_b32 s1, gfx_callee@abs32@hi
+; DAGISEL64-NEXT:    s_mov_b32 s0, gfx_callee@abs32@lo
 ; DAGISEL64-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL64-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; DAGISEL64-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; DAGISEL64-NEXT:    v_readlane_b32 s31, v40, 3
 ; DAGISEL64-NEXT:    v_readlane_b32 s30, v40, 2
+; DAGISEL64-NEXT:    v_readlane_b32 s31, v40, 3
 ; DAGISEL64-NEXT:    v_readlane_b32 s5, v40, 1
 ; DAGISEL64-NEXT:    v_readlane_b32 s4, v40, 0
 ; DAGISEL64-NEXT:    v_readlane_b32 s0, v40, 4
@@ -2084,171 +2554,309 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GISEL64-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GISEL64-NEXT:    s_clause 0x1f
 ; GISEL64-NEXT:    scratch_store_b32 off, v0, s33 offset:4
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v1, s33 offset:8
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v2, s33 offset:12
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v3, s33 offset:16
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v4, s33 offset:20
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v5, s33 offset:24
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v6, s33 offset:28
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v7, s33 offset:32
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v8, s33 offset:36
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v9, s33 offset:40
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v10, s33 offset:44
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v11, s33 offset:48
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v12, s33 offset:52
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v13, s33 offset:56
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v14, s33 offset:60
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v15, s33 offset:64
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v16, s33 offset:68
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v17, s33 offset:72
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v18, s33 offset:76
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v19, s33 offset:80
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v20, s33 offset:84
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v21, s33 offset:88
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v22, s33 offset:92
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v23, s33 offset:96
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v24, s33 offset:100
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v25, s33 offset:104
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v26, s33 offset:108
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v27, s33 offset:112
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v28, s33 offset:116
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v29, s33 offset:120
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v30, s33 offset:124
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v31, s33 offset:128
 ; GISEL64-NEXT:    s_clause 0x1f
 ; GISEL64-NEXT:    scratch_store_b32 off, v32, s33 offset:132
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v33, s33 offset:136
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v34, s33 offset:140
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v35, s33 offset:144
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v36, s33 offset:148
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v37, s33 offset:152
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v38, s33 offset:156
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v39, s33 offset:160
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v48, s33 offset:164
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v49, s33 offset:168
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v50, s33 offset:172
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v51, s33 offset:176
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v52, s33 offset:180
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v53, s33 offset:184
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v54, s33 offset:188
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v55, s33 offset:192
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v64, s33 offset:196
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v65, s33 offset:200
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v66, s33 offset:204
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v67, s33 offset:208
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v68, s33 offset:212
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v69, s33 offset:216
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v70, s33 offset:220
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v71, s33 offset:224
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v80, s33 offset:228
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v81, s33 offset:232
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v82, s33 offset:236
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v83, s33 offset:240
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v84, s33 offset:244
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v85, s33 offset:248
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v86, s33 offset:252
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v87, s33 offset:256
 ; GISEL64-NEXT:    s_clause 0x1f
 ; GISEL64-NEXT:    scratch_store_b32 off, v96, s33 offset:260
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v97, s33 offset:264
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v98, s33 offset:268
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v99, s33 offset:272
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v100, s33 offset:276
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v101, s33 offset:280
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v102, s33 offset:284
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v103, s33 offset:288
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v112, s33 offset:292
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v113, s33 offset:296
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v114, s33 offset:300
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v115, s33 offset:304
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v116, s33 offset:308
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v117, s33 offset:312
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v118, s33 offset:316
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v119, s33 offset:320
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v128, s33 offset:324
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v129, s33 offset:328
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v130, s33 offset:332
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v131, s33 offset:336
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v132, s33 offset:340
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v133, s33 offset:344
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v134, s33 offset:348
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v135, s33 offset:352
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v144, s33 offset:356
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v145, s33 offset:360
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v146, s33 offset:364
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v147, s33 offset:368
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v148, s33 offset:372
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v149, s33 offset:376
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v150, s33 offset:380
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v151, s33 offset:384
 ; GISEL64-NEXT:    s_clause 0x1f
 ; GISEL64-NEXT:    scratch_store_b32 off, v160, s33 offset:388
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v161, s33 offset:392
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v162, s33 offset:396
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v163, s33 offset:400
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v164, s33 offset:404
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v165, s33 offset:408
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v166, s33 offset:412
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v167, s33 offset:416
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v176, s33 offset:420
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v177, s33 offset:424
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v178, s33 offset:428
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v179, s33 offset:432
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v180, s33 offset:436
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v181, s33 offset:440
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v182, s33 offset:444
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v183, s33 offset:448
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v192, s33 offset:452
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v193, s33 offset:456
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v194, s33 offset:460
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v195, s33 offset:464
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v196, s33 offset:468
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v197, s33 offset:472
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v198, s33 offset:476
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v199, s33 offset:480
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v208, s33 offset:484
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v209, s33 offset:488
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v210, s33 offset:492
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v211, s33 offset:496
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v212, s33 offset:500
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v213, s33 offset:504
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v214, s33 offset:508
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v215, s33 offset:512
 ; GISEL64-NEXT:    s_clause 0xf
 ; GISEL64-NEXT:    scratch_store_b32 off, v224, s33 offset:516
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v225, s33 offset:520
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v226, s33 offset:524
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v227, s33 offset:528
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v228, s33 offset:532
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v229, s33 offset:536
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v230, s33 offset:540
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v231, s33 offset:544
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v240, s33 offset:548
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v241, s33 offset:552
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v242, s33 offset:556
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v243, s33 offset:560
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v244, s33 offset:564
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v245, s33 offset:568
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v246, s33 offset:572
+; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v247, s33 offset:576
 ; GISEL64-NEXT:    s_mov_b64 exec, -1
 ; GISEL64-NEXT:    scratch_store_b32 off, v40, s33 ; 4-byte Folded Spill
 ; GISEL64-NEXT:    s_wait_alu 0xfffe
 ; GISEL64-NEXT:    v_writelane_b32 v40, s0, 4
-; GISEL64-NEXT:    v_mov_b32_e32 v2, v0
-; GISEL64-NEXT:    v_swap_b32 v0, v1
-; GISEL64-NEXT:    s_mov_b32 s0, gfx_callee@abs32@lo
-; GISEL64-NEXT:    v_writelane_b32 v40, s4, 0
-; GISEL64-NEXT:    s_mov_b32 s1, gfx_callee@abs32@hi
 ; GISEL64-NEXT:    s_addk_co_i32 s32, 0x250
+; GISEL64-NEXT:    v_writelane_b32 v40, s4, 0
 ; GISEL64-NEXT:    v_writelane_b32 v40, s5, 1
 ; GISEL64-NEXT:    v_writelane_b32 v40, s30, 2
 ; GISEL64-NEXT:    v_writelane_b32 v40, s31, 3
+; GISEL64-NEXT:    v_mov_b32_e32 v2, v0
+; GISEL64-NEXT:    v_swap_b32 v0, v1
+; GISEL64-NEXT:    s_mov_b32 s0, gfx_callee@abs32@lo
+; GISEL64-NEXT:    s_mov_b32 s1, gfx_callee@abs32@hi
 ; GISEL64-NEXT:    s_wait_alu 0xfffe
 ; GISEL64-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GISEL64-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL64-NEXT:    v_readlane_b32 s31, v40, 3
 ; GISEL64-NEXT:    v_readlane_b32 s30, v40, 2
+; GISEL64-NEXT:    v_readlane_b32 s31, v40, 3
 ; GISEL64-NEXT:    v_readlane_b32 s5, v40, 1
 ; GISEL64-NEXT:    v_readlane_b32 s4, v40, 0
 ; GISEL64-NEXT:    v_readlane_b32 s0, v40, 4
