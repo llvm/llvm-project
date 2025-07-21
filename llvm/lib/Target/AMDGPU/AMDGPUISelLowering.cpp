@@ -4314,7 +4314,6 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
   return DAG.getNode(ISD::BITCAST, SL, VT, Vec);
 }
 
-
 SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
   SDValue RHS = N->getOperand(1);
@@ -4841,8 +4840,8 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
     if (!AMDGPUTargetLowering::allUsesHaveSourceMods(N.getNode()))
       return SDValue();
 
-    return distributeOpThroughSelect(DCI, LHS.getOpcode(), SDLoc(N), Cond, LHS,
-                                     RHS);
+    return distributeOpThroughSelect(DCI, LHS.getOpcode(),
+                                     SDLoc(N), Cond, LHS, RHS);
   }
 
   bool Inv = false;

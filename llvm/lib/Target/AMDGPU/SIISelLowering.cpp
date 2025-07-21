@@ -13388,8 +13388,6 @@ SDValue SITargetLowering::performXorCombine(SDNode *N,
     return XSelect;
   }
   
-
-
   // Make sure to apply the 64-bit constant splitting fold before trying to fold
   // fneg-like xors into 64-bit select.
   if (LHS.getOpcode() == ISD::SELECT && VT == MVT::i32) {
@@ -14435,10 +14433,9 @@ SITargetLowering::performExtractVectorEltCombine(SDNode *N,
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
-  // Try to turn sub-dword accesses of vectors into accesses of the same
-  // 32-bit elements. This exposes more load reduction opportunities by
-  // replacing multiple small extract_vector_elements with a single 32-bit
-  // extract.
+  // Try to turn sub-dword accesses of vectors into accesses of the same 32-bit
+  // elements. This exposes more load reduction opportunities by replacing
+  // multiple small extract_vector_elements with a single 32-bit extract.
   auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1));
   if (isa<MemSDNode>(Vec) && VecEltSize <= 16 && VecEltVT.isByteSized() &&
       VecSize > 32 && VecSize % 32 == 0 && Idx) {
