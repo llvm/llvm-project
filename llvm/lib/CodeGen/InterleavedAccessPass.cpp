@@ -661,7 +661,9 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
   Instruction *StoredBy = dyn_cast<Instruction>(IntII->user_back());
   if (!StoredBy)
     return false;
-  if (!isa<StoreInst, VPIntrinsic>(StoredBy))
+  auto *SI = dyn_cast<StoreInst>(StoredBy);
+  auto *II = dyn_cast<IntrinsicInst>(StoredBy);
+  if (!SI && !II)
     return false;
 
   SmallVector<Value *, 8> InterleaveValues(IntII->args());
@@ -669,20 +671,28 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
   assert(Factor && "unexpected interleave intrinsic");
 
   Value *Mask = nullptr;
-  if (auto *VPStore = dyn_cast<VPIntrinsic>(StoredBy)) {
-    if (VPStore->getIntrinsicID() != Intrinsic::vp_store)
+  if (II) {
+    // Check mask operand. Handle both all-true/false and interleaved mask.
+    Value *WideMask;
+    switch (II->getIntrinsicID()) {
+    default:
       return false;
-
-    Value *WideMask = VPStore->getOperand(2);
+    case Intrinsic::vp_store:
+      WideMask = II->getOperand(2);
+      break;
+    case Intrinsic::masked_store:
+      WideMask = II->getOperand(3);
+      break;
+    }
     Mask = getMask(WideMask, Factor,
                    cast<VectorType>(InterleaveValues[0]->getType()));
     if (!Mask)
       return false;
 
-    LLVM_DEBUG(dbgs() << "IA: Found a vp.store with interleave intrinsic "
-                      << *IntII << " and factor = " << Factor << "\n");
+    LLVM_DEBUG(dbgs() << "IA: Found a vp.store or masked.store with interleave"
+                      << " intrinsic " << *IntII << " and factor = "
+                      << Factor << "\n");
   } else {
-    auto *SI = cast<StoreInst>(StoredBy);
     if (!SI->isSimple())
       return false;
 
