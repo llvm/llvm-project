@@ -7813,7 +7813,7 @@ private:
     // being populated, otherwise add immediately.
     const auto &[AttachPtrAddr, AttachPteeAddr] = getAttachPtrPteeAddrs(
         AttachPtrExpr,
-        /*AttachPteeExpr=*/Components.rbegin()->getAssociatedExpression(),
+        /*AttachPteeExpr=*/Components.begin()->getAssociatedExpression(),
         /*MapBaseDecl=*/BaseDecl, CGF, CurDir);
     if (AttachPtrAddr.isValid() && AttachPteeAddr.isValid()) {
       if (PartialStruct.Base.isValid()) {
