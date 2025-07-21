@@ -5518,8 +5518,7 @@ private:
       } else {
         symbolType = eleTy;
       }
-    }
-    else if (auto ptrType = mlir::dyn_cast<fir::PointerType>(symbolType)) {
+    } else if (auto ptrType = mlir::dyn_cast<fir::PointerType>(symbolType)) {
       symbolType = ptrType.getEleTy();
     }
 
