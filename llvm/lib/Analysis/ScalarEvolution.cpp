@@ -5100,21 +5100,23 @@ static SCEV::NoWrapFlags proveNoWrapViaBTC(const SCEVAddRecExpr *AR,
 
   const Loop *L = AR->getLoop();
   const SCEV *BTC = SE.getBackedgeTakenCount(L);
-  if (isa<SCEVCouldNotCompute>(BTC) ||
-      !match(AR->getStepRecurrence(SE), m_scev_One()))
+  if (isa<SCEVCouldNotCompute>(BTC) || !AR->getStepRecurrence(SE)->isOne())
     return Result;
 
-  auto *WTy = SE.getWiderType(AR->getType(), BTC->getType());
+  Type *WTy = SE.getWiderType(AR->getType(), BTC->getType());
   // If AR's type is wider than BTC, we can zero extend BTC, otherwise bail out.
-  if (WTy != AR->getType())
+  if (WTy != AR->getType() || !WTy->isIntegerTy())
     return Result;
 
+  const SCEV *ExtBTC = SE.getNoopOrZeroExtend(BTC, WTy);
   // AR has a step of 1, it is NUW/NSW if Start + BTC >= Start.
-  auto *Add = SE.getAddExpr(AR->getStart(), SE.getNoopOrZeroExtend(BTC, WTy));
+  const SCEV *Add = SE.getAddExpr(AR->getStart(), ExtBTC);
   if (!AR->hasNoUnsignedWrap() &&
+      SE.willNotOverflow(Instruction::Add, false, AR->getStart(), ExtBTC) &&
       SE.isKnownPredicate(CmpInst::ICMP_UGE, Add, AR->getStart()))
     Result = ScalarEvolution::setFlags(Result, SCEV::FlagNUW);
   if (!AR->hasNoSignedWrap() &&
+      SE.willNotOverflow(Instruction::Add, true, AR->getStart(), ExtBTC) &&
       SE.isKnownPredicate(CmpInst::ICMP_SGE, Add, AR->getStart()))
     Result = ScalarEvolution::setFlags(Result, SCEV::FlagNSW);
 
