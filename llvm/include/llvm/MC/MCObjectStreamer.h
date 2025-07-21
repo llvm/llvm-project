@@ -83,9 +83,11 @@ public:
   // Add a fragment with a variable-size tail and start a new empty fragment.
   void insert(MCFragment *F);
 
-  void addFixup(const MCExpr *Value, MCFixupKind Kind, uint32_t Offset = 0);
   // Add a new fragment to the current section without a variable-size tail.
   void newFragment();
+
+  void appendContents(size_t Num, char Elt);
+  void addFixup(const MCExpr *Value, MCFixupKind Kind);
 
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   virtual void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment &F,
