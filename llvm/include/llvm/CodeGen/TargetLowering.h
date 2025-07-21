@@ -5678,6 +5678,9 @@ public:
   /// only the first Count elements of the vector are used.
   SDValue expandVecReduce(SDNode *Node, SelectionDAG &DAG) const;
 
+  SDValue expandFCanonicalizeWithStrictFmul(SDNode *Node, SDLoc DL,
+                                            SelectionDAG &DAG) const;
+
   /// Expand a VECREDUCE_SEQ_* into an explicit ordered calculation.
   SDValue expandVecReduceSeq(SDNode *Node, SelectionDAG &DAG) const;
 

@@ -3636,16 +3636,17 @@ define <3 x half> @v_maximumnum_v3f16(<3 x half> %x, <3 x half> %y) {
 ; GFX8-SDAG-LABEL: v_maximumnum_v3f16:
 ; GFX8-SDAG:       ; %bb.0:
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v4, v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v5, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v2, v2, v2
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v4, v5, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v3, v3, v3
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v1, v1, v1
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v0, v0, v2
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v3, 1.0, v3
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v1, 1.0, v1
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v1, v1, v3
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v0, v0, v4
+; GFX8-SDAG-NEXT:    v_mov_b32_e32 v3, 0x3c00
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v4, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v3, v0, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v2, 1.0, v2
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v0, 1.0, v0
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v3, v3, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_max_f16_e32 v0, v0, v2
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v0, v0, v3
 ; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-GISEL-LABEL: v_maximumnum_v3f16:
@@ -3926,20 +3927,21 @@ define <4 x half> @v_maximumnum_v4f16(<4 x half> %x, <4 x half> %y) {
 ; GFX8-SDAG-LABEL: v_maximumnum_v4f16:
 ; GFX8-SDAG:       ; %bb.0:
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v4, v3, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v5, v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v4, v5, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v5, v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v6, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v3, v3, v3
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v1, v1, v1
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v2, v2, v2
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v5, v6, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mov_b32_e32 v4, 0x3c00
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v5, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v6, v1, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v3, 1.0, v3
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v1, 1.0, v1
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v1, v1, v3
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v3, v2, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v4, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v2, 1.0, v2
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v0, 1.0, v0
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v5, v6, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v3, v4, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v0, v0, v2
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v0, v0, v5
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v1, v1, v4
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v0, v0, v3
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v1, v1, v5
 ; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-GISEL-LABEL: v_maximumnum_v4f16:
@@ -4260,27 +4262,28 @@ define <6 x half> @v_maximumnum_v6f16(<6 x half> %x, <6 x half> %y) {
 ; GFX8-SDAG-LABEL: v_maximumnum_v6f16:
 ; GFX8-SDAG:       ; %bb.0:
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v6, v5, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v7, v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v6, v7, v6 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v7, v4, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v8, v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-SDAG-NEXT:    v_mov_b32_e32 v6, 0x3c00
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v7, v5, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v8, v2, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v5, 1.0, v5
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v2, 1.0, v2
 ; GFX8-SDAG-NEXT:    v_max_f16_sdwa v7, v8, v7 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v8, v3, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v9, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v5, v5, v5
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v2, v2, v2
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v4, v4, v4
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v1, v1, v1
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v3, v3, v3
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v8, v9, v8 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v2, v2, v5
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v5, v4, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v8, v1, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v4, 1.0, v4
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v1, 1.0, v1
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v1, v1, v4
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v4, v3, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v6, v0, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v3, 1.0, v3
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v0, 1.0, v0
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v5, v8, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v4, v6, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v0, v0, v3
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v0, v0, v8
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v1, v1, v7
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v2, v2, v6
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v0, v0, v4
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v1, v1, v5
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v2, v2, v7
 ; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-GISEL-LABEL: v_maximumnum_v6f16:
@@ -4552,34 +4555,35 @@ define <8 x half> @v_maximumnum_v8f16(<8 x half> %x, <8 x half> %y) {
 ; GFX8-SDAG-LABEL: v_maximumnum_v8f16:
 ; GFX8-SDAG:       ; %bb.0:
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v8, v7, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v9, v3, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v8, v9, v8 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v9, v6, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v10, v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-SDAG-NEXT:    v_mov_b32_e32 v8, 0x3c00
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v9, v7, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v10, v3, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v7, 1.0, v7
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v3, 1.0, v3
 ; GFX8-SDAG-NEXT:    v_max_f16_sdwa v9, v10, v9 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v10, v5, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v11, v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v10, v11, v10 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v11, v4, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v12, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v7, v7, v7
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v3, v3, v3
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v6, v6, v6
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v2, v2, v2
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v5, v5, v5
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v1, v1, v1
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v4, v4, v4
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v11, v12, v11 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v3, v3, v7
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v7, v6, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v10, v2, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v6, 1.0, v6
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v2, 1.0, v2
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v7, v10, v7 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v2, v2, v6
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v6, v5, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v10, v1, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v5, 1.0, v5
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v1, 1.0, v1
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v1, v1, v5
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v5, v4, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v8, v0, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v4, 1.0, v4
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v0, 1.0, v0
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v6, v10, v6 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v5, v8, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v0, v0, v4
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v0, v0, v11
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v1, v1, v10
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v2, v2, v9
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v3, v3, v8
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v0, v0, v5
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v1, v1, v6
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v2, v2, v7
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v3, v3, v9
 ; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-GISEL-LABEL: v_maximumnum_v8f16:
@@ -4964,62 +4968,63 @@ define <16 x half> @v_maximumnum_v16f16(<16 x half> %x, <16 x half> %y) {
 ; GFX8-SDAG-LABEL: v_maximumnum_v16f16:
 ; GFX8-SDAG:       ; %bb.0:
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v16, v15, v15 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v17, v7, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v16, v17, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v17, v14, v14 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v18, v6, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-SDAG-NEXT:    v_mov_b32_e32 v16, 0x3c00
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v17, v15, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v18, v7, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v15, 1.0, v15
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v7, 1.0, v7
 ; GFX8-SDAG-NEXT:    v_max_f16_sdwa v17, v18, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v18, v13, v13 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v19, v5, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v18, v19, v18 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v19, v12, v12 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v20, v4, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v19, v20, v19 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v20, v11, v11 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v21, v3, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v20, v21, v20 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v21, v10, v10 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v22, v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v21, v22, v21 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v22, v9, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v23, v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v22, v23, v22 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v23, v8, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v24, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v15, v15, v15
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v7, v7, v7
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v14, v14, v14
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v6, v6, v6
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v13, v13, v13
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v5, v5, v5
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v12, v12, v12
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v4, v4, v4
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v11, v11, v11
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v3, v3, v3
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v10, v10, v10
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v2, v2, v2
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v9, v9, v9
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v1, v1, v1
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v8, v8, v8
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v23, v24, v23 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v7, v7, v15
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v15, v14, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v18, v6, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v14, 1.0, v14
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v6, 1.0, v6
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v15, v18, v15 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v6, v6, v14
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v14, v13, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v18, v5, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v13, 1.0, v13
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v5, 1.0, v5
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v14, v18, v14 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v5, v5, v13
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v13, v12, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v18, v4, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v12, 1.0, v12
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v4, 1.0, v4
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v13, v18, v13 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v4, v4, v12
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v12, v11, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v18, v3, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v11, 1.0, v11
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v3, 1.0, v3
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v12, v18, v12 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v3, v3, v11
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v11, v10, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v18, v2, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v10, 1.0, v10
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v2, 1.0, v2
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v11, v18, v11 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v2, v2, v10
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v10, v9, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v18, v1, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v9, 1.0, v9
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v1, 1.0, v1
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v1, v1, v9
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v9, v8, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v16, v0, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v8, 1.0, v8
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v0, 1.0, v0
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v10, v18, v10 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v9, v16, v9 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v0, v0, v8
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v0, v0, v23
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v1, v1, v22
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v2, v2, v21
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v3, v3, v20
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v4, v4, v19
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v5, v5, v18
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v6, v6, v17
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v7, v7, v16
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v0, v0, v9
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v1, v1, v10
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v2, v2, v11
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v3, v3, v12
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v4, v4, v13
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v5, v5, v14
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v6, v6, v15
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v7, v7, v17
 ; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-GISEL-LABEL: v_maximumnum_v16f16:
@@ -5820,144 +5825,121 @@ define <32 x half> @v_maximumnum_v32f16(<32 x half> %x, <32 x half> %y) {
 ; GFX8-SDAG-LABEL: v_maximumnum_v32f16:
 ; GFX8-SDAG:       ; %bb.0:
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-SDAG-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:48 ; 4-byte Folded Spill
-; GFX8-SDAG-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:44 ; 4-byte Folded Spill
-; GFX8-SDAG-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:40 ; 4-byte Folded Spill
-; GFX8-SDAG-NEXT:    buffer_store_dword v43, off, s[0:3], s32 offset:36 ; 4-byte Folded Spill
-; GFX8-SDAG-NEXT:    buffer_store_dword v44, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
-; GFX8-SDAG-NEXT:    buffer_store_dword v45, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
-; GFX8-SDAG-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
-; GFX8-SDAG-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
-; GFX8-SDAG-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:16 ; 4-byte Folded Spill
-; GFX8-SDAG-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
-; GFX8-SDAG-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
-; GFX8-SDAG-NEXT:    buffer_store_dword v59, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v38, v27, v27 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v39, v11, v11 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v48, v26, v26 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v49, v10, v10 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v50, v25, v25 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v51, v9, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v40, v22, v22 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v41, v6, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v58, v17, v17 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v59, v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v17, v17, v17
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v1, v1, v1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v52, v24, v24 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v53, v8, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v54, v23, v23 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v55, v7, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v42, v21, v21 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v43, v5, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v44, v20, v20 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v45, v4, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v46, v19, v19 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v47, v3, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v56, v18, v18 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v57, v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v38, v39, v38 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v39, v49, v48 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v48, v51, v50 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v51, v41, v40 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v40, v59, v58 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v1, v1, v17
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v49, v53, v52 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v50, v55, v54 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v52, v43, v42 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v53, v45, v44 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v54, v47, v46 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v55, v57, v56 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v1, v1, v40
-; GFX8-SDAG-NEXT:    buffer_load_dword v59, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; GFX8-SDAG-NEXT:    buffer_load_dword v58, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
-; GFX8-SDAG-NEXT:    buffer_load_dword v57, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
-; GFX8-SDAG-NEXT:    buffer_load_dword v56, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
-; GFX8-SDAG-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
-; GFX8-SDAG-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
-; GFX8-SDAG-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
-; GFX8-SDAG-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
-; GFX8-SDAG-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
-; GFX8-SDAG-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
-; GFX8-SDAG-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:44 ; 4-byte Folded Reload
-; GFX8-SDAG-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:48 ; 4-byte Folded Reload
-; GFX8-SDAG-NEXT:    buffer_load_dword v31, off, s[0:3], s32
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v32, v30, v30 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v33, v14, v14 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v34, v29, v29 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v35, v13, v13 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v36, v28, v28 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v37, v12, v12 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-SDAG-NEXT:    v_mov_b32_e32 v31, 0x3c00
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v32, v30, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v33, v14, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v30, 1.0, v30
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v14, 1.0, v14
 ; GFX8-SDAG-NEXT:    v_max_f16_sdwa v32, v33, v32 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v33, v16, v16 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v34, v35, v34 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v35, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v36, v37, v36 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v37, v15, v15 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v15, v15, v15
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v33, v35, v33 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v30, v30, v30
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v14, v14, v14
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v29, v29, v29
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v13, v13, v13
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v28, v28, v28
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v12, v12, v12
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v27, v27, v27
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v11, v11, v11
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v26, v26, v26
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v10, v10, v10
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v25, v25, v25
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v9, v9, v9
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v24, v24, v24
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v8, v8, v8
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v23, v23, v23
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v7, v7, v7
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v22, v22, v22
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v6, v6, v6
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v21, v21, v21
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v5, v5, v5
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v20, v20, v20
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v4, v4, v4
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v19, v19, v19
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v3, v3, v3
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v18, v18, v18
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v2, v2, v2
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v16, v16, v16
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v14, v14, v30
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v30, v29, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v33, v13, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v29, 1.0, v29
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v13, 1.0, v13
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v30, v33, v30 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v13, v13, v29
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v29, v28, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v33, v12, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v28, 1.0, v28
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v12, 1.0, v12
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v29, v33, v29 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v12, v12, v28
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v28, v27, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v33, v11, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v27, 1.0, v27
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v11, 1.0, v11
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v28, v33, v28 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v11, v11, v27
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v27, v26, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v33, v10, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v26, 1.0, v26
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v10, 1.0, v10
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v27, v33, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v10, v10, v26
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v26, v25, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v33, v9, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v25, 1.0, v25
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v9, 1.0, v9
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v26, v33, v26 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v9, v9, v25
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v25, v24, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v33, v8, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v24, 1.0, v24
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v8, 1.0, v8
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v8, v8, v24
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v7, v7, v23
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v6, v6, v22
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v5, v5, v21
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v4, v4, v20
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v3, v3, v19
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v2, v2, v18
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v0, v0, v16
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v0, v0, v33
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v2, v2, v55
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v3, v3, v54
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v4, v4, v53
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v5, v5, v52
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v6, v6, v51
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v7, v7, v50
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v8, v8, v49
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v9, v9, v48
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v10, v10, v39
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v11, v11, v38
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v12, v12, v36
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v13, v13, v34
+; GFX8-SDAG-NEXT:    buffer_load_dword v24, off, s[0:3], s32
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v25, v33, v25 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v33, v15, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v15, 1.0, v15
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v8, v8, v25
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v9, v9, v26
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v10, v10, v27
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v11, v11, v28
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v12, v12, v29
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v13, v13, v30
 ; GFX8-SDAG-NEXT:    v_or_b32_e32 v14, v14, v32
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v35, v31, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v31, v31, v31
-; GFX8-SDAG-NEXT:    v_max_f16_sdwa v35, v37, v35 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; GFX8-SDAG-NEXT:    v_max_f16_e32 v15, v15, v31
-; GFX8-SDAG-NEXT:    v_or_b32_e32 v15, v15, v35
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v34, v24, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v24, 1.0, v24
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v33, v33, v34 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_max_f16_e32 v15, v15, v24
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v24, v23, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v34, v7, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v23, 1.0, v23
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v7, 1.0, v7
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v24, v34, v24 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_max_f16_e32 v7, v7, v23
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v23, v22, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v34, v6, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v22, 1.0, v22
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v6, 1.0, v6
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v23, v34, v23 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_max_f16_e32 v6, v6, v22
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v22, v21, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v34, v5, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v21, 1.0, v21
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v5, 1.0, v5
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v22, v34, v22 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_max_f16_e32 v5, v5, v21
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v21, v20, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v34, v4, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v20, 1.0, v20
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v4, 1.0, v4
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v21, v34, v21 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_max_f16_e32 v4, v4, v20
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v20, v19, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v34, v3, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v19, 1.0, v19
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v3, 1.0, v3
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v20, v34, v20 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_max_f16_e32 v3, v3, v19
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v19, v18, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v34, v2, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v18, 1.0, v18
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v2, 1.0, v2
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v19, v34, v19 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_max_f16_e32 v2, v2, v18
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v18, v17, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v34, v1, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v17, 1.0, v17
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v1, 1.0, v1
+; GFX8-SDAG-NEXT:    v_max_f16_e32 v1, v1, v17
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v17, v16, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_sdwa v31, v0, v31 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v16, 1.0, v16
+; GFX8-SDAG-NEXT:    v_mul_f16_e32 v0, 1.0, v0
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v18, v34, v18 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_max_f16_sdwa v17, v31, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-SDAG-NEXT:    v_max_f16_e32 v0, v0, v16
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v0, v0, v17
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v1, v1, v18
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v2, v2, v19
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v3, v3, v20
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v4, v4, v21
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v5, v5, v22
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v6, v6, v23
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v7, v7, v24
+; GFX8-SDAG-NEXT:    v_or_b32_e32 v15, v15, v33
 ; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-GISEL-LABEL: v_maximumnum_v32f16:

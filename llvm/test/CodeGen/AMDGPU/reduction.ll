@@ -566,13 +566,14 @@ define half @reduction_maxnum_v4f16(<4 x half> %vec4) {
 ; VI-LABEL: reduction_maxnum_v4f16:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v2, v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v3, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v1, v1, v1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
+; VI-NEXT:    v_mul_f16_e32 v2, 1.0, v1
+; VI-NEXT:    v_mul_f16_e32 v3, 1.0, v0
 ; VI-NEXT:    v_max_f16_e32 v2, v3, v2
+; VI-NEXT:    v_mov_b32_e32 v3, 0x3c00
+; VI-NEXT:    v_mul_f16_sdwa v1, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_sdwa v0, v0, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-NEXT:    v_max_f16_e32 v0, v0, v1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v2
+; VI-NEXT:    v_max_f16_e32 v0, v2, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
@@ -596,13 +597,14 @@ define half @reduction_minnum_v4f16(<4 x half> %vec4) {
 ; VI-LABEL: reduction_minnum_v4f16:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v2, v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v3, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v1, v1, v1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
+; VI-NEXT:    v_mul_f16_e32 v2, 1.0, v1
+; VI-NEXT:    v_mul_f16_e32 v3, 1.0, v0
 ; VI-NEXT:    v_min_f16_e32 v2, v3, v2
+; VI-NEXT:    v_mov_b32_e32 v3, 0x3c00
+; VI-NEXT:    v_mul_f16_sdwa v1, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_sdwa v0, v0, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-NEXT:    v_min_f16_e32 v0, v0, v1
-; VI-NEXT:    v_min_f16_e32 v0, v0, v2
+; VI-NEXT:    v_min_f16_e32 v0, v2, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
@@ -628,13 +630,14 @@ define half @reduction_fast_max_pattern_v4f16(<4 x half> %vec4) {
 ; VI-LABEL: reduction_fast_max_pattern_v4f16:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v2, v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v3, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v1, v1, v1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
+; VI-NEXT:    v_mul_f16_e32 v2, 1.0, v1
+; VI-NEXT:    v_mul_f16_e32 v3, 1.0, v0
 ; VI-NEXT:    v_max_f16_e32 v2, v3, v2
+; VI-NEXT:    v_mov_b32_e32 v3, 0x3c00
+; VI-NEXT:    v_mul_f16_sdwa v1, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_sdwa v0, v0, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-NEXT:    v_max_f16_e32 v0, v0, v1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v2
+; VI-NEXT:    v_max_f16_e32 v0, v2, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
@@ -662,13 +665,14 @@ define half @reduction_fast_min_pattern_v4f16(<4 x half> %vec4) {
 ; VI-LABEL: reduction_fast_min_pattern_v4f16:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v2, v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v3, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v1, v1, v1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
+; VI-NEXT:    v_mul_f16_e32 v2, 1.0, v1
+; VI-NEXT:    v_mul_f16_e32 v3, 1.0, v0
 ; VI-NEXT:    v_min_f16_e32 v2, v3, v2
+; VI-NEXT:    v_mov_b32_e32 v3, 0x3c00
+; VI-NEXT:    v_mul_f16_sdwa v1, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_sdwa v0, v0, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-NEXT:    v_min_f16_e32 v0, v0, v1
-; VI-NEXT:    v_min_f16_e32 v0, v0, v2
+; VI-NEXT:    v_min_f16_e32 v0, v2, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>

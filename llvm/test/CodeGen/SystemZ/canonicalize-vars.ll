@@ -199,17 +199,8 @@ define <8 x half> @canonicalize_v8f16(<8 x half> %a) nounwind {
 define <4 x float> @canonicalize_v4f32(<4 x float> %a) {
 ; Z16-LABEL: canonicalize_v4f32:
 ; Z16:       # %bb.0:
-; Z16-NEXT:    vrepf %v0, %v24, 3
-; Z16-NEXT:    vgmf %v1, 2, 8
-; Z16-NEXT:    vrepf %v2, %v24, 2
-; Z16-NEXT:    meebr %f0, %f1
-; Z16-NEXT:    meebr %f2, %f1
-; Z16-NEXT:    vrepf %v3, %v24, 1
-; Z16-NEXT:    vmrhf %v0, %v2, %v0
-; Z16-NEXT:    wfmsb %f2, %v24, %f1
-; Z16-NEXT:    wfmsb %f1, %f3, %f1
-; Z16-NEXT:    vmrhf %v1, %v2, %v1
-; Z16-NEXT:    vmrhg %v24, %v1, %v0
+; Z16-NEXT:    vgmf %v0, 2, 8
+; Z16-NEXT:    vfmsb %v24, %v24, %v0
 ; Z16-NEXT:    br %r14
   %canonicalized = call <4 x float> @llvm.canonicalize.v4f32(<4 x float> %a)
   ret <4 x float> %canonicalized
@@ -219,14 +210,8 @@ define <4 x double> @canonicalize_v4f64(<4 x double> %a) {
 ; Z16-LABEL: canonicalize_v4f64:
 ; Z16:       # %bb.0:
 ; Z16-NEXT:    vgmg %v0, 2, 11
-; Z16-NEXT:    vrepg %v2, %v24, 1
-; Z16-NEXT:    wfmdb %f1, %v24, %f0
-; Z16-NEXT:    mdbr %f2, %f0
-; Z16-NEXT:    vmrhg %v24, %v1, %v2
-; Z16-NEXT:    vrepg %v2, %v26, 1
-; Z16-NEXT:    wfmdb %f1, %v26, %f0
-; Z16-NEXT:    wfmdb %f0, %f2, %f0
-; Z16-NEXT:    vmrhg %v26, %v1, %v0
+; Z16-NEXT:    vfmdb %v24, %v24, %v0
+; Z16-NEXT:    vfmdb %v26, %v26, %v0
 ; Z16-NEXT:    br %r14
   %canonicalized = call <4 x double> @llvm.canonicalize.v4f64(<4 x double> %a)
   ret <4 x double> %canonicalized
@@ -344,17 +329,8 @@ define void @canonicalize_ptr_v4f32(ptr %out) {
 ; Z16-LABEL: canonicalize_ptr_v4f32:
 ; Z16:       # %bb.0:
 ; Z16-NEXT:    vl %v0, 0(%r2), 3
-; Z16-NEXT:    vrepf %v1, %v0, 3
-; Z16-NEXT:    vgmf %v2, 2, 8
-; Z16-NEXT:    vrepf %v3, %v0, 2
-; Z16-NEXT:    meebr %f1, %f2
-; Z16-NEXT:    meebr %f3, %f2
-; Z16-NEXT:    vmrhf %v1, %v3, %v1
-; Z16-NEXT:    wfmsb %f3, %f0, %f2
-; Z16-NEXT:    vrepf %v0, %v0, 1
-; Z16-NEXT:    meebr %f0, %f2
-; Z16-NEXT:    vmrhf %v0, %v3, %v0
-; Z16-NEXT:    vmrhg %v0, %v0, %v1
+; Z16-NEXT:    vgmf %v1, 2, 8
+; Z16-NEXT:    vfmsb %v0, %v0, %v1
 ; Z16-NEXT:    vst %v0, 0(%r2), 3
 ; Z16-NEXT:    br %r14
   %val = load <4 x float>, ptr %out
@@ -366,17 +342,11 @@ define void @canonicalize_ptr_v4f32(ptr %out) {
 define void @canonicalize_ptr_v4f64(ptr %out) {
 ; Z16-LABEL: canonicalize_ptr_v4f64:
 ; Z16:       # %bb.0:
+; Z16-NEXT:    vl %v0, 0(%r2), 4
 ; Z16-NEXT:    vl %v1, 16(%r2), 4
 ; Z16-NEXT:    vgmg %v2, 2, 11
-; Z16-NEXT:    wfmdb %f3, %f1, %f2
-; Z16-NEXT:    vrepg %v1, %v1, 1
-; Z16-NEXT:    mdbr %f1, %f2
-; Z16-NEXT:    vl %v0, 0(%r2), 4
-; Z16-NEXT:    vmrhg %v1, %v3, %v1
-; Z16-NEXT:    wfmdb %f3, %f0, %f2
-; Z16-NEXT:    vrepg %v0, %v0, 1
-; Z16-NEXT:    mdbr %f0, %f2
-; Z16-NEXT:    vmrhg %v0, %v3, %v0
+; Z16-NEXT:    vfmdb %v1, %v1, %v2
+; Z16-NEXT:    vfmdb %v0, %v0, %v2
 ; Z16-NEXT:    vst %v0, 0(%r2), 4
 ; Z16-NEXT:    vst %v1, 16(%r2), 4
 ; Z16-NEXT:    br %r14

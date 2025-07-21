@@ -11582,6 +11582,34 @@ SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
   return Res;
 }
 
+SDValue
+TargetLowering::expandFCanonicalizeWithStrictFmul(SDNode *Node, SDLoc DL,
+                                                  SelectionDAG &DAG) const {
+  // This implements llvm.canonicalize.f* by multiplication with 1.0, as
+  // suggested in
+  // https://llvm.org/docs/LangRef.html#llvm-canonicalize-intrinsic.
+  // It uses strict_fp operations even outside a strict_fp context in order
+  // to guarantee that the canonicalization is not optimized away by later
+  // passes. The result chain introduced by that is intentionally ignored
+  // since no ordering requirement is intended here.
+
+  // Create strict multiplication by 1.0.
+  SDValue Operand = Node->getOperand(0);
+  EVT VT = Operand.getValueType();
+  SDValue One = DAG.getConstantFP(1.0, DL, VT);
+  SDValue Chain = DAG.getEntryNode();
+
+  SDValue Mul = DAG.getNode(ISD::STRICT_FMUL, DL, {VT, MVT::Other},
+                            {Chain, Operand, One});
+
+  // Propagate existing flags on canonicalize, and additionally set NoFPExcept.
+  SDNodeFlags Flags = Node->getFlags();
+  Flags.setNoFPExcept(true);
+  Mul->setFlags(Flags);
+
+  return Mul;
+}
+
 SDValue TargetLowering::expandVecReduceSeq(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc dl(Node);
   SDValue AccOp = Node->getOperand(0);
