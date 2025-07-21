@@ -74,7 +74,7 @@ static mlir::Value lowerComplexToComplexCast(mlir::MLIRContext &ctx,
       mlir::cast<cir::ComplexType>(op.getType()).getElementType();
 
   mlir::Value srcReal = builder.createComplexReal(op.getLoc(), src);
-  mlir::Value srcImag = builder.createComplexReal(op.getLoc(), src);
+  mlir::Value srcImag = builder.createComplexImag(op.getLoc(), src);
 
   mlir::Value dstReal = builder.createCast(op.getLoc(), scalarCastKind, srcReal,
                                            dstComplexElemTy);
@@ -84,57 +84,36 @@ static mlir::Value lowerComplexToComplexCast(mlir::MLIRContext &ctx,
 }
 
 void LoweringPreparePass::lowerCastOp(cir::CastOp op) {
-  mlir::Value loweredValue;
-  switch (op.getKind()) {
-  case cir::CastKind::float_to_complex:
-  case cir::CastKind::int_to_complex:
-    loweredValue = lowerScalarToComplexCast(getContext(), op);
-    break;
+  mlir::MLIRContext &ctx = getContext();
+  mlir::Value loweredValue = [&]() -> Value {
+    switch (op.getKind()) {
+    case cir::CastKind::float_to_complex:
+    case cir::CastKind::int_to_complex:
+      return lowerScalarToComplexCast(ctx, op);
+    case cir::CastKind::float_complex_to_real:
+    case cir::CastKind::int_complex_to_real:
+      return lowerComplexToScalarCast(ctx, op, op.getKind());
+    case cir::CastKind::float_complex_to_bool:
+      return lowerComplexToScalarCast(ctx, op, cir::CastKind::float_to_bool);
+    case cir::CastKind::int_complex_to_bool:
+      return lowerComplexToScalarCast(ctx, op, cir::CastKind::int_to_bool);
+    case cir::CastKind::float_complex:
+      return lowerComplexToComplexCast(ctx, op, cir::CastKind::floating);
+    case cir::CastKind::float_complex_to_int_complex:
+      return lowerComplexToComplexCast(ctx, op, cir::CastKind::float_to_int);
+    case cir::CastKind::int_complex:
+      return lowerComplexToComplexCast(ctx, op, cir::CastKind::integral);
+    case cir::CastKind::int_complex_to_float_complex:
+      return lowerComplexToComplexCast(ctx, op, cir::CastKind::int_to_float);
+    default:
+      return nullptr;
+    }
+  }();
 
-  case cir::CastKind::float_complex_to_real:
-  case cir::CastKind::int_complex_to_real: {
-    loweredValue = lowerComplexToScalarCast(getContext(), op, op.getKind());
-    break;
+  if (loweredValue) {
+    op.replaceAllUsesWith(loweredValue);
+    op.erase();
   }
-
-  case cir::CastKind::float_complex_to_bool: {
-    loweredValue = lowerComplexToScalarCast(getContext(), op,
-                                            cir::CastKind::float_to_bool);
-    break;
-  }
-  case cir::CastKind::int_complex_to_bool: {
-    loweredValue =
-        lowerComplexToScalarCast(getContext(), op, cir::CastKind::int_to_bool);
-    break;
-  }
-
-  case cir::CastKind::float_complex: {
-    loweredValue =
-        lowerComplexToComplexCast(getContext(), op, cir::CastKind::floating);
-    break;
-  }
-  case cir::CastKind::float_complex_to_int_complex: {
-    loweredValue = lowerComplexToComplexCast(getContext(), op,
-                                             cir::CastKind::float_to_int);
-    break;
-  }
-  case cir::CastKind::int_complex: {
-    loweredValue =
-        lowerComplexToComplexCast(getContext(), op, cir::CastKind::integral);
-    break;
-  }
-  case cir::CastKind::int_complex_to_float_complex: {
-    loweredValue = lowerComplexToComplexCast(getContext(), op,
-                                             cir::CastKind::int_to_float);
-    break;
-  }
-
-  default:
-    return;
-  }
-
-  op.replaceAllUsesWith(loweredValue);
-  op.erase();
 }
 
 void LoweringPreparePass::lowerUnaryOp(cir::UnaryOp op) {

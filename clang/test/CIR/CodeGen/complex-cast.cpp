@@ -59,7 +59,7 @@ void scalar_to_complex() {
 //      LLVM: %[[TMP:.*]] = load i32, ptr {{.*}}, align 4
 // LLVM-NEXT: %[[REAL:.*]] = sitofp i32 %[[TMP]] to double
 // LLVM-NEXT: %[[TMP_2:.*]] = insertvalue { double, double } undef, double %[[REAL]], 0
-// LLVM-NEXT: %{{.+}} = insertvalue { double, double } %[[TMP_2]], double 0.000000e+00, 1
+// LLVM-NEXT: %{{.*}} = insertvalue { double, double } %[[TMP_2]], double 0.000000e+00, 1
 
 // OGCG: %[[TMP:.*]] = load i32, ptr {{.*}}, align 4
 // OGCG: %[[REAL:.*]] = sitofp i32 %[[TMP]] to double
@@ -218,7 +218,7 @@ void complex_to_bool() {
 // CIR-AFTER-NEXT: %[[REAL_TO_BOOL:.*]] = cir.cast(float_to_bool, %[[REAL]] : !cir.double), !cir.bool
 // CIR-AFTER-NEXT: %[[IMAG_TO_BOOL:.*]] = cir.cast(float_to_bool, %[[IMAG]] : !cir.double), !cir.bool
 // CIR-AFTER-NEXT: %[[CONST_TRUE:.*]] = cir.const #true
-// CIR-AFTER-NEXT: %{{.+}} = cir.select if %[[REAL_TO_BOOL]] then %[[CONST_TRUE]] else %[[IMAG_TO_BOOL]] : (!cir.bool, !cir.bool, !cir.bool) -> !cir.bool
+// CIR-AFTER-NEXT: %{{.*}} = cir.select if %[[REAL_TO_BOOL]] then %[[CONST_TRUE]] else %[[IMAG_TO_BOOL]] : (!cir.bool, !cir.bool, !cir.bool) -> !cir.bool
 
 //      LLVM: %[[REAL:.*]] = extractvalue { double, double } %{{.*}}, 0
 // LLVM-NEXT: %[[IMAG:.*]] = extractvalue { double, double } %{{.*}}, 1
@@ -256,3 +256,55 @@ void complex_to_bool() {
 // OGCG: %[[COMPLEX_TO_BOOL:.*]] = or i1 %[[REAL_TO_BOOL]], %[[IMAG_TO_BOOL]]
 // OGCG: %[[BOOL_TO_INT:.*]] = zext i1 %[[COMPLEX_TO_BOOL]] to i8
 // OGCG: store i8 %[[BOOL_TO_INT]], ptr {{.*}}, align 1
+
+void complex_to_complex_cast() {
+  cd = cf;
+  ci = cs;
+}
+
+// CIR-BEFORE: %[[TMP:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR-BEFORE: %[[FP_COMPLEX:.*]] = cir.cast(float_complex, %[[TMP]] : !cir.complex<!cir.float>), !cir.complex<!cir.double>
+
+// CIR-AFTER: %[[REAL:.*]] = cir.complex.real %{{.*}} : !cir.complex<!cir.float> -> !cir.float
+// CIR-AFTER: %[[IMAG:.*]] = cir.complex.imag %{{.*}} : !cir.complex<!cir.float> -> !cir.float
+// CIR-AFTER: %[[REAL_FP_CAST:.*]] = cir.cast(floating, %[[REAL]] : !cir.float), !cir.double
+// CIR-AFTER: %[[IMAG_FP_CAST:.*]] = cir.cast(floating, %[[IMAG]] : !cir.float), !cir.double
+// CIR-AFTER: %{{.*}} = cir.complex.create %[[REAL_FP_CAST]], %[[IMAG_FP_CAST]] : !cir.double -> !cir.complex<!cir.double>
+
+// LLVM: %[[REAL:.*]] = extractvalue { float, float } %{{.*}}, 0
+// LLVM: %[[IMAG:.*]] = extractvalue { float, float } %{{.*}}, 1
+// LLVM: %[[REAL_FP_CAST:.*]] = fpext float %[[REAL]] to double
+// LLVM: %[[IMAG_FP_CAST:.*]] = fpext float %[[IMAG]] to double
+// LLVM: %[[TMP:.*]] = insertvalue { double, double } undef, double %[[REAL_FP_CAST]], 0
+// LLVM: %{{.*}} = insertvalue { double, double } %[[TMP]], double %5, 1
+
+// OGCG: %[[REAL:.*]] = load float, ptr {{.*}}, align 4
+// OGCG: %[[IMAG:.*]] = load float, ptr getelementptr inbounds nuw ({ float, float }, ptr {{.*}}, i32 0, i32 1), align 4
+// OGCG: %[[REAL_FP_CAST:.*]] = fpext float %[[REAL]] to double
+// OGCG: %[[IMAG_FP_CAST:.*]] = fpext float %[[IMAG]] to double
+// OGCG: store double %[[REAL_FP_CAST]], ptr {{.*}}, align 8
+// OGCG: store double %[[IMAG_FP_CAST]], ptr getelementptr inbounds nuw ({ double, double }, ptr {{.*}}, i32 0, i32 1), align 8
+
+// CIR-BEFORE: %[[TMP:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!cir.complex<!s16i>>, !cir.complex<!s16i>
+// CIR-BEFORE: %[[INT_COMPLEX:.*]] = cir.cast(int_complex, %[[TMP]] : !cir.complex<!s16i>), !cir.complex<!s32i>
+
+// CIR-AFTER: %[[REAL:.*]] = cir.complex.real %{{.*}} : !cir.complex<!s16i> -> !s16i
+// CIR-AFTER: %[[IMAG:.*]] = cir.complex.imag %{{.*}} : !cir.complex<!s16i> -> !s16i
+// CIR-AFTER: %[[REAL_INT_CAST:.*]] = cir.cast(integral, %[[REAL]] : !s16i), !s32i
+// CIR-AFTER: %[[IMAG_INT_CAST:.*]] = cir.cast(integral, %[[IMAG]] : !s16i), !s32i
+// CIR-AFTER: %{{.*}} = cir.complex.create %[[REAL_INT_CAST]], %[[IMAG_INT_CAST]] : !s32i -> !cir.complex<!s32i>
+
+// LLVM: %[[REAL:.*]] = extractvalue { i16, i16 } %{{.*}}, 0
+// LLVM: %[[IMAG:.*]] = extractvalue { i16, i16 } %{{.*}}, 1
+// LLVM: %[[REAL_INT_CAST:.*]] = sext i16 %[[REAL]] to i32
+// LLVM: %[[IMAG_INT_CAST:.*]] = sext i16 %[[IMAG]] to i32
+// LLVM: %[[TMP:.*]] = insertvalue { i32, i32 } undef, i32 %[[REAL_INT_CAST]], 0
+// LLVM: %{{.*}} = insertvalue { i32, i32 } %[[TMP]], i32 %[[IMAG_INT_CAST]], 1
+
+// OGCG:  %[[REAL:.*]] = load i16, ptr {{.*}}, align 2
+// OGCG: %[[IMAG:.*]] = load i16, ptr getelementptr inbounds nuw ({ i16, i16 }, ptr {{.*}}, i32 0, i32 1), align 2
+// OGCG: %[[REAL_INT_CAST:.*]] = sext i16 %[[REAL]] to i32
+// OGCG: %[[IMAG_INT_CAST:.*]] = sext i16 %[[IMAG]] to i32
+// OGCG: store i32 %[[REAL_INT_CAST]], ptr {{.*}}, align 4
+// OGCG: store i32 %[[IMAG_INT_CAST]], ptr getelementptr inbounds nuw ({ i32, i32 }, ptr {{.*}}, i32 0, i32 1), align 4
+
