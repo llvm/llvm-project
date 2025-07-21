@@ -429,6 +429,63 @@ handleAllocSite(Instruction &I, CallBase *CI,
   }
 }
 
+// Helper struct for maintaining refs to callsite data. As an alternative we
+// could store a pointer to the CallSiteInfo struct but we also need the frame
+// index. Using ArrayRefs instead makes it a little easier to read.
+struct CallSiteEntry {
+  // Subset of frames for the corresponding CallSiteInfo.
+  ArrayRef<Frame> Frames;
+  // Potential targets for indirect calls.
+  ArrayRef<GlobalValue::GUID> CalleeGuids;
+
+  // Only compare Frame contents.
+  // Use pointer-based equality instead of ArrayRef's operator== which does
+  // element-wise comparison. We want to check if it's the same slice of the
+  // underlying array, not just equivalent content.
+  bool operator==(const CallSiteEntry &Other) const {
+    return Frames.data() == Other.Frames.data() &&
+           Frames.size() == Other.Frames.size();
+  }
+};
+
+struct CallSiteEntryHash {
+  size_t operator()(const CallSiteEntry &Entry) const {
+    return computeFullStackId(Entry.Frames);
+  }
+};
+
+static void handleCallSite(
+    Instruction &I, const Function *CalledFunction,
+    ArrayRef<uint64_t> InlinedCallStack,
+    const std::unordered_set<CallSiteEntry, CallSiteEntryHash> &CallSiteEntries,
+    Module &M, std::set<std::vector<uint64_t>> &MatchedCallSites) {
+  auto &Ctx = M.getContext();
+  for (const auto &CallSiteEntry : CallSiteEntries) {
+    // If we found and thus matched all frames on the call, create and
+    // attach call stack metadata.
+    if (stackFrameIncludesInlinedCallStack(CallSiteEntry.Frames,
+                                           InlinedCallStack)) {
+      NumOfMemProfMatchedCallSites++;
+      addCallsiteMetadata(I, InlinedCallStack, Ctx);
+
+      // Try to attach indirect call metadata if possible.
+      if (!CalledFunction)
+        addVPMetadata(M, I, CallSiteEntry.CalleeGuids);
+
+      // Only need to find one with a matching call stack and add a single
+      // callsite metadata.
+
+      // Accumulate call site matching information upon request.
+      if (ClPrintMemProfMatchInfo) {
+        std::vector<uint64_t> CallStack;
+        append_range(CallStack, InlinedCallStack);
+        MatchedCallSites.insert(std::move(CallStack));
+      }
+      break;
+    }
+  }
+}
+
 static void readMemprof(Module &M, Function &F,
                         IndexedInstrProfReader *MemProfReader,
                         const TargetLibraryInfo &TLI,
@@ -498,31 +555,6 @@ static void readMemprof(Module &M, Function &F,
   // Build maps of the location hash to all profile data with that leaf location
   // (allocation info and the callsites).
   std::map<uint64_t, std::set<const AllocationInfo *>> LocHashToAllocInfo;
-
-  // Helper struct for maintaining refs to callsite data. As an alternative we
-  // could store a pointer to the CallSiteInfo struct but we also need the frame
-  // index. Using ArrayRefs instead makes it a little easier to read.
-  struct CallSiteEntry {
-    // Subset of frames for the corresponding CallSiteInfo.
-    ArrayRef<Frame> Frames;
-    // Potential targets for indirect calls.
-    ArrayRef<GlobalValue::GUID> CalleeGuids;
-
-    // Only compare Frame contents.
-    // Use pointer-based equality instead of ArrayRef's operator== which does
-    // element-wise comparison. We want to check if it's the same slice of the
-    // underlying array, not just equivalent content.
-    bool operator==(const CallSiteEntry &Other) const {
-      return Frames.data() == Other.Frames.data() &&
-             Frames.size() == Other.Frames.size();
-    }
-  };
-
-  struct CallSiteEntryHash {
-    size_t operator()(const CallSiteEntry &Entry) const {
-      return computeFullStackId(Entry.Frames);
-    }
-  };
 
   // For the callsites we need to record slices of the frame array (see comments
   // below where the map entries are added) along with their CalleeGuids.
@@ -633,30 +665,8 @@ static void readMemprof(Module &M, Function &F,
       // Otherwise, add callsite metadata. If we reach here then we found the
       // instruction's leaf location in the callsites map and not the allocation
       // map.
-      for (const auto &CallSiteEntry : CallSitesIter->second) {
-        // If we found and thus matched all frames on the call, create and
-        // attach call stack metadata.
-        if (stackFrameIncludesInlinedCallStack(CallSiteEntry.Frames,
-                                               InlinedCallStack)) {
-          NumOfMemProfMatchedCallSites++;
-          addCallsiteMetadata(I, InlinedCallStack, Ctx);
-
-          // Try to attach indirect call metadata if possible.
-          if (!CalledFunction)
-            addVPMetadata(M, I, CallSiteEntry.CalleeGuids);
-
-          // Only need to find one with a matching call stack and add a single
-          // callsite metadata.
-
-          // Accumulate call site matching information upon request.
-          if (ClPrintMemProfMatchInfo) {
-            std::vector<uint64_t> CallStack;
-            append_range(CallStack, InlinedCallStack);
-            MatchedCallSites.insert(std::move(CallStack));
-          }
-          break;
-        }
-      }
+      handleCallSite(I, CalledFunction, InlinedCallStack, CallSitesIter->second,
+                     M, MatchedCallSites);
     }
   }
 }
