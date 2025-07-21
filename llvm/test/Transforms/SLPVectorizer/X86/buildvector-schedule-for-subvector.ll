@@ -4,9 +4,6 @@
 define void @test() {
 ; CHECK-LABEL: define void @test() {
 ; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 1, 0
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, i32 [[ADD]], i32 3
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i32> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp samesign ult i32 0, 0
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[ICMP]], i32 0, i32 0
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[SELECT]] to i64
@@ -17,8 +14,7 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, i32 [[CALL]], i32 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i1> [[TMP3]], <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i1> [[TMP4]], <8 x i1> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i1> [[TMP4]], <8 x i1> <i1 false, i1 false, i1 false, i1 false, i1 undef, i1 undef, i1 undef, i1 undef>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    ret void
 ;
 bb:
