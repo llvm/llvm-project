@@ -27,7 +27,8 @@ class CanonicalizationOfOmp {
 public:
   template <typename T> bool Pre(T &) { return true; }
   template <typename T> void Post(T &) {}
-  CanonicalizationOfOmp(parser::Messages &messages) : messages_{messages} {}
+  CanonicalizationOfOmp(SemanticsContext &context)
+      : context_{context}, messages_{context.messages()} {}
 
   void Post(parser::Block &block) {
     for (auto it{block.begin()}; it != block.end(); ++it) {
@@ -437,12 +438,13 @@ private:
   // same construct. This is for converting utility constructs to executable
   // constructs.
   std::map<parser::SpecificationPart *, parser::Block *> blockForSpec_;
+  SemanticsContext &context_;
   parser::Messages &messages_;
 };
 
-bool CanonicalizeOmp(parser::Messages &messages, parser::Program &program) {
-  CanonicalizationOfOmp omp{messages};
+bool CanonicalizeOmp(SemanticsContext &context, parser::Program &program) {
+  CanonicalizationOfOmp omp{context};
   Walk(program, omp);
-  return !messages.AnyFatalError();
+  return !context.messages().AnyFatalError();
 }
 } // namespace Fortran::semantics
