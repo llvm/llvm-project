@@ -286,8 +286,8 @@ ImplementDeclaredCXXMethodsOperation::runInImplementationAST(
       llvm::SmallVector<const NamespaceDecl *, 4> Namespaces;
       for (const NestedNameSpecifier *Qualifier = NamePrefix; Qualifier;
            Qualifier = Qualifier->getPrefix()) {
-        if (const NamespaceDecl *ND = Qualifier->getAsNamespace())
-          Namespaces.push_back(ND);
+        if (const auto *ND = Qualifier->getAsNamespace())
+          Namespaces.push_back(ND->getNamespace());
       }
       // When the class is in a namespace, add a 'using' declaration if it's
       // needed and adjust the out-of-line qualification.
