@@ -246,6 +246,29 @@ static void emitNewInitializer(CIRGenFunction &cgf, const CXXNewExpr *e,
   }
 }
 
+RValue CIRGenFunction::emitCXXDestructorCall(
+    GlobalDecl dtor, const CIRGenCallee &callee, mlir::Value thisVal,
+    QualType thisTy, mlir::Value implicitParam, QualType implicitParamTy,
+    const CallExpr *ce) {
+  const CXXMethodDecl *dtorDecl = cast<CXXMethodDecl>(dtor.getDecl());
+
+  assert(!thisTy.isNull());
+  assert(thisTy->getAsCXXRecordDecl() == dtorDecl->getParent() &&
+         "Pointer/Object mixup");
+
+  assert(!cir::MissingFeatures::addressSpace());
+
+  CallArgList args;
+  commonBuildCXXMemberOrOperatorCall(*this, dtorDecl, thisVal, implicitParam,
+                                     implicitParamTy, ce, args, nullptr);
+  assert((ce || dtor.getDecl()) && "expected source location provider");
+  assert(!cir::MissingFeatures::opCallMustTail());
+  return emitCall(cgm.getTypes().arrangeCXXStructorDeclaration(dtor), callee,
+                  ReturnValueSlot(), args, nullptr,
+                  ce ? getLoc(ce->getExprLoc())
+                     : getLoc(dtor.getDecl()->getSourceRange()));
+}
+
 /// Emit a call to an operator new or operator delete function, as implicitly
 /// created by new-expressions and delete-expressions.
 static RValue emitNewDeleteCall(CIRGenFunction &cgf,
