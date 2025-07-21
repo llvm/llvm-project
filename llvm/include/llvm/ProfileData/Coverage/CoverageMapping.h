@@ -1006,6 +1006,7 @@ class CoverageMapping {
   std::vector<std::pair<std::string, uint64_t>> FuncHashMismatches;
   StringRef Arch;
   DenseMap<std::pair<size_t, hash_code>, unsigned> RecordIndices;
+  uint64_t Counter = 0;
 
   std::map<std::pair<std::string, std::string>, std::vector<uint64_t>> AggregatedCounts;
 

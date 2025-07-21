@@ -218,9 +218,6 @@ void SourceCoverageViewText::renderLineCoverageColumn(
     return;
   }
   std::string C = formatBinaryCount(Line.getExecutionCount());
-  if(C == "2"){
-    llvm::errs() << C << "\n";
-  }
   OS.indent(LineCoverageColumnWidth - C.size());
   colored_ostream(OS, raw_ostream::MAGENTA, Line.hasMultipleRegions() && getOptions().Colors) << C;
   OS << '|';

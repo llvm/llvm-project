@@ -254,8 +254,7 @@ void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
                                 InstrProfRecord &&I, uint64_t Weight,
                                 function_ref<void(Error)> Warn, StringRef Architecture) {
   auto &ProfileDataMap = FunctionData[Name];
-  StringRef SHAHash = hashSourceFile(Architecture);
-  llvm::errs() << "SHA Hashing: " << SHAHash << "\n";
+  // StringRef SHAHash = hashSourceFile(Architecture);
   if(!Architecture.empty()){
     std::string HashStr = std::to_string(Hash) + ":" + Architecture.str();
     llvm::StringRef HashRef(HashStr);

@@ -1100,11 +1100,39 @@ Error CoverageMapping::loadFunctionRecord(
     Function.pushMCDCRecord(std::move(*Record));
   }
 
-  // Don't create records for (filenames, function) pairs we've already seen.
+  //CHANGES MADE HERE
   auto FilenamesHash = hash_combine_range(Record.Filenames);
-  if (!RecordProvenance[FilenamesHash].insert(FuncArchHash).second){
+  std::string HashStr = OrigFuncName.str(); /*+ ":" + Arch.str();*/
+  if(!Arch.empty()){
+    HashStr += ":" + Arch.str();
+    // auto LogicalFuncKey = std::make_pair(FilenamesHash, hash_value(OrigFuncName));
+    // auto It = RecordIndices.find(LogicalFuncKey);
+    // std::vector<llvm::coverage::CountedRegion> RegionsToAdd;
+
+    // if (It != RecordIndices.end()) {
+    //   auto &ExistingFunction = Functions[It->second];
+
+    //   for (const auto &NewRegion : Function.CountedRegions) {
+    //     for (auto &ExistingRegion : ExistingFunction.CountedRegions) {
+    //       if((NewRegion.ObjectFilename != ExistingRegion.ObjectFilename) &&
+    //         (NewRegion.startLoc() >= ExistingRegion.startLoc()) &&
+    //           (NewRegion.endLoc() <= ExistingRegion.endLoc())){
+    //           RegionsToAdd.push_back(NewRegion);
+    //       }
+    //     }
+    //   }
+    //   ExistingFunction.CountedRegions.insert(ExistingFunction.CountedRegions.end(), RegionsToAdd.begin(), RegionsToAdd.end());
+    // }
+    // RecordIndices[LogicalFuncKey] = Functions.size();
+  }
+  //CHANGES MADE HERE
+
+  // Don't create records for (filenames, function) pairs we've already seen.
+  StringRef HashStrRef(HashStr);
+  if (!RecordProvenance[FilenamesHash].insert(hash_value(HashStrRef)).second){
     return Error::success();
   }
+
   Functions.push_back(std::move(Function));
 
   // Performance optimization: keep track of the indices of the function records
