@@ -2074,10 +2074,12 @@ define void @test_writelane_half(ptr addrspace(1) %out, half %src, i32 %src1) {
 ; GFX1100-SDAG:       ; %bb.0:
 ; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-SDAG-NEXT:    global_load_u16 v4, v[0:1], off
-; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX1100-SDAG-NEXT:    ; implicit-def: $vgpr5
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX1100-SDAG-NEXT:    v_mov_b16_e32 v5.l, v2.l
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s0, v5
 ; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v4, s0, s1
 ; GFX1100-SDAG-NEXT:    global_store_b16 v[0:1], v4, off
 ; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -2230,10 +2232,12 @@ define void @test_writelane_bfloat(ptr addrspace(1) %out, bfloat %src, i32 %src1
 ; GFX1100-SDAG:       ; %bb.0:
 ; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-SDAG-NEXT:    global_load_u16 v4, v[0:1], off
-; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX1100-SDAG-NEXT:    ; implicit-def: $vgpr5
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX1100-SDAG-NEXT:    v_mov_b16_e32 v5.l, v2.l
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s0, v5
 ; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v4, s0, s1
 ; GFX1100-SDAG-NEXT:    global_store_b16 v[0:1], v4, off
 ; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -2266,10 +2270,12 @@ define void @test_writelane_bfloat(ptr addrspace(1) %out, bfloat %src, i32 %src1
 ; GFX1100-GISEL:       ; %bb.0:
 ; GFX1100-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-GISEL-NEXT:    global_load_u16 v4, v[0:1], off
-; GFX1100-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX1100-GISEL-NEXT:    ; implicit-def: $vgpr5
 ; GFX1100-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX1100-GISEL-NEXT:    v_mov_b16_e32 v5.l, v2.l
+; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1100-GISEL-NEXT:    v_readfirstlane_b32 s0, v5
 ; GFX1100-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-GISEL-NEXT:    v_writelane_b32 v4, s0, s1
 ; GFX1100-GISEL-NEXT:    global_store_b16 v[0:1], v4, off
 ; GFX1100-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -2308,10 +2314,12 @@ define void @test_writelane_i16(ptr addrspace(1) %out, i16 %src, i32 %src1) {
 ; GFX1100-SDAG:       ; %bb.0:
 ; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-SDAG-NEXT:    global_load_u16 v4, v[0:1], off
-; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX1100-SDAG-NEXT:    ; implicit-def: $vgpr5
 ; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX1100-SDAG-NEXT:    v_mov_b16_e32 v5.l, v2.l
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1100-SDAG-NEXT:    v_readfirstlane_b32 s0, v5
 ; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_writelane_b32 v4, s0, s1
 ; GFX1100-SDAG-NEXT:    global_store_b16 v[0:1], v4, off
 ; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]

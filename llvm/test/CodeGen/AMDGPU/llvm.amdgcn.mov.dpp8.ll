@@ -428,11 +428,20 @@ define amdgpu_ps void @dpp8_i16(i16 %in, ptr addrspace(1) %out) {
 ; GFX10-NEXT:    global_store_short v[1:2], v0, off
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: dpp8_i16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_dpp v0, v0 dpp8:[1,0,0,0,0,0,0,0]
-; GFX11-NEXT:    global_store_b16 v[1:2], v0, off
-; GFX11-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: dpp8_i16:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    ; implicit-def: $vgpr3
+; GFX11-SDAG-NEXT:    v_mov_b16_e32 v3.l, v0.l
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_mov_b32_dpp v3, v3 dpp8:[1,0,0,0,0,0,0,0]
+; GFX11-SDAG-NEXT:    global_store_b16 v[1:2], v3, off
+; GFX11-SDAG-NEXT:    s_endpgm
+;
+; GFX11-GISEL-LABEL: dpp8_i16:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    v_mov_b32_dpp v0, v0 dpp8:[1,0,0,0,0,0,0,0]
+; GFX11-GISEL-NEXT:    global_store_b16 v[1:2], v0, off
+; GFX11-GISEL-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: dpp8_i16:
 ; GFX12:       ; %bb.0:
@@ -621,11 +630,20 @@ define amdgpu_ps void @dpp8_half(half %in, ptr addrspace(1) %out) {
 ; GFX10-NEXT:    global_store_short v[1:2], v0, off
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: dpp8_half:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_dpp v0, v0 dpp8:[1,0,0,0,0,0,0,0]
-; GFX11-NEXT:    global_store_b16 v[1:2], v0, off
-; GFX11-NEXT:    s_endpgm
+; GFX11-SDAG-LABEL: dpp8_half:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    ; implicit-def: $vgpr3
+; GFX11-SDAG-NEXT:    v_mov_b16_e32 v3.l, v0.l
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_mov_b32_dpp v3, v3 dpp8:[1,0,0,0,0,0,0,0]
+; GFX11-SDAG-NEXT:    global_store_b16 v[1:2], v3, off
+; GFX11-SDAG-NEXT:    s_endpgm
+;
+; GFX11-GISEL-LABEL: dpp8_half:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    v_mov_b32_dpp v0, v0 dpp8:[1,0,0,0,0,0,0,0]
+; GFX11-GISEL-NEXT:    global_store_b16 v[1:2], v0, off
+; GFX11-GISEL-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: dpp8_half:
 ; GFX12:       ; %bb.0:
@@ -646,8 +664,11 @@ define amdgpu_ps void @dpp8_bfloat(bfloat %in, ptr addrspace(1) %out) {
 ;
 ; GFX11-LABEL: dpp8_bfloat:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_dpp v0, v0 dpp8:[1,0,0,0,0,0,0,0]
-; GFX11-NEXT:    global_store_b16 v[1:2], v0, off
+; GFX11-NEXT:    ; implicit-def: $vgpr3
+; GFX11-NEXT:    v_mov_b16_e32 v3.l, v0.l
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_mov_b32_dpp v3, v3 dpp8:[1,0,0,0,0,0,0,0]
+; GFX11-NEXT:    global_store_b16 v[1:2], v3, off
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: dpp8_bfloat:

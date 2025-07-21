@@ -645,10 +645,12 @@ define i32 @v_uaddsat_v4i8(i32 %lhs.arg, i32 %rhs.arg) {
 ; GFX11-TRUE16-NEXT:    v_pk_lshlrev_b16 v0, 8, v0 op_sel_hi:[0,1]
 ; GFX11-TRUE16-NEXT:    v_pk_lshlrev_b16 v1, 8, v1 op_sel_hi:[0,1]
 ; GFX11-TRUE16-NEXT:    v_pk_lshlrev_b16 v2, 8, v3 op_sel_hi:[0,1]
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3
 ; GFX11-TRUE16-NEXT:    v_pk_add_u16 v0, v0, v1 clamp
 ; GFX11-TRUE16-NEXT:    v_pk_lshlrev_b16 v1, 8, v6 op_sel_hi:[0,1]
 ; GFX11-TRUE16-NEXT:    v_pk_lshrrev_b16 v0, 8, v0 op_sel_hi:[0,1]
 ; GFX11-TRUE16-NEXT:    v_pk_add_u16 v1, v2, v1 clamp
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v0.h
 ; GFX11-TRUE16-NEXT:    v_pk_lshrrev_b16 v1, 8, v1 op_sel_hi:[0,1]
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v2, 0xff, v2
@@ -894,6 +896,8 @@ define amdgpu_ps i32 @s_uaddsat_v4i8(i32 inreg %lhs.arg, i32 inreg %rhs.arg) {
 ; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s1, s1, s2
 ; GFX11-TRUE16-NEXT:    v_pk_lshrrev_b16 v0, 8, v0 op_sel_hi:[0,1]
 ; GFX11-TRUE16-NEXT:    v_pk_add_u16 v1, s0, s1 clamp
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v0.h
 ; GFX11-TRUE16-NEXT:    v_pk_lshrrev_b16 v1, 8, v1 op_sel_hi:[0,1]
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v2, 0xff, v2

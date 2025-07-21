@@ -1159,8 +1159,8 @@ define i128 @v_sdiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-G-NEXT:    v_subb_co_u32_e32 v9, vcc, v1, v16, vcc
 ; GFX9-G-NEXT:    v_ashrrev_i32_e32 v17, 31, v7
 ; GFX9-G-NEXT:    v_xor_b32_e32 v3, v16, v3
-; GFX9-G-NEXT:    v_subb_co_u32_e32 v10, vcc, v2, v16, vcc
-; GFX9-G-NEXT:    v_subb_co_u32_e32 v11, vcc, v3, v16, vcc
+; GFX9-G-NEXT:    v_subb_co_u32_e32 v12, vcc, v2, v16, vcc
+; GFX9-G-NEXT:    v_subb_co_u32_e32 v13, vcc, v3, v16, vcc
 ; GFX9-G-NEXT:    v_xor_b32_e32 v0, v17, v4
 ; GFX9-G-NEXT:    v_xor_b32_e32 v1, v17, v5
 ; GFX9-G-NEXT:    v_sub_co_u32_e32 v18, vcc, v0, v17
@@ -1172,8 +1172,8 @@ define i128 @v_sdiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-G-NEXT:    v_or_b32_e32 v0, v18, v4
 ; GFX9-G-NEXT:    v_or_b32_e32 v1, v19, v5
 ; GFX9-G-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
-; GFX9-G-NEXT:    v_or_b32_e32 v0, v8, v10
-; GFX9-G-NEXT:    v_or_b32_e32 v1, v9, v11
+; GFX9-G-NEXT:    v_or_b32_e32 v0, v8, v12
+; GFX9-G-NEXT:    v_or_b32_e32 v1, v9, v13
 ; GFX9-G-NEXT:    v_cmp_eq_u64_e64 s[4:5], 0, v[0:1]
 ; GFX9-G-NEXT:    v_ffbh_u32_e32 v1, v18
 ; GFX9-G-NEXT:    v_ffbh_u32_e32 v0, v19
@@ -1189,11 +1189,11 @@ define i128 @v_sdiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-G-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[6:7]
 ; GFX9-G-NEXT:    v_ffbh_u32_e32 v1, v9
 ; GFX9-G-NEXT:    v_add_u32_e32 v2, 32, v2
-; GFX9-G-NEXT:    v_ffbh_u32_e32 v3, v10
+; GFX9-G-NEXT:    v_ffbh_u32_e32 v3, v12
 ; GFX9-G-NEXT:    v_min_u32_e32 v1, v1, v2
-; GFX9-G-NEXT:    v_ffbh_u32_e32 v2, v11
+; GFX9-G-NEXT:    v_ffbh_u32_e32 v2, v13
 ; GFX9-G-NEXT:    v_add_u32_e32 v3, 32, v3
-; GFX9-G-NEXT:    v_cmp_eq_u64_e64 s[6:7], 0, v[10:11]
+; GFX9-G-NEXT:    v_cmp_eq_u64_e64 s[6:7], 0, v[12:13]
 ; GFX9-G-NEXT:    v_add_u32_e32 v1, 64, v1
 ; GFX9-G-NEXT:    v_min_u32_e32 v2, v2, v3
 ; GFX9-G-NEXT:    v_cndmask_b32_e64 v1, v2, v1, s[6:7]
@@ -1220,8 +1220,8 @@ define i128 @v_sdiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-G-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v6
 ; GFX9-G-NEXT:    v_cndmask_b32_e64 v6, v8, 0, vcc
 ; GFX9-G-NEXT:    v_cndmask_b32_e64 v7, v9, 0, vcc
-; GFX9-G-NEXT:    v_cndmask_b32_e64 v12, v10, 0, vcc
-; GFX9-G-NEXT:    v_cndmask_b32_e64 v13, v11, 0, vcc
+; GFX9-G-NEXT:    v_cndmask_b32_e64 v10, v12, 0, vcc
+; GFX9-G-NEXT:    v_cndmask_b32_e64 v11, v13, 0, vcc
 ; GFX9-G-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[14:15]
 ; GFX9-G-NEXT:    v_cndmask_b32_e64 v14, 0, 1, vcc
 ; GFX9-G-NEXT:    v_or_b32_e32 v14, v20, v14
@@ -1236,23 +1236,23 @@ define i128 @v_sdiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-G-NEXT:    v_addc_co_u32_e32 v22, vcc, 0, v2, vcc
 ; GFX9-G-NEXT:    v_addc_co_u32_e32 v23, vcc, 0, v3, vcc
 ; GFX9-G-NEXT:    s_xor_b64 s[4:5], vcc, -1
-; GFX9-G-NEXT:    v_sub_co_u32_e32 v12, vcc, 0x7f, v0
-; GFX9-G-NEXT:    v_sub_u32_e32 v0, 64, v12
+; GFX9-G-NEXT:    v_sub_co_u32_e32 v10, vcc, 0x7f, v0
+; GFX9-G-NEXT:    v_sub_u32_e32 v0, 64, v10
 ; GFX9-G-NEXT:    v_lshrrev_b64 v[0:1], v0, v[8:9]
-; GFX9-G-NEXT:    v_lshlrev_b64 v[2:3], v12, v[10:11]
-; GFX9-G-NEXT:    v_add_u32_e32 v13, 0xffffffc0, v12
-; GFX9-G-NEXT:    v_lshlrev_b64 v[6:7], v12, v[8:9]
+; GFX9-G-NEXT:    v_lshlrev_b64 v[2:3], v10, v[12:13]
+; GFX9-G-NEXT:    v_add_u32_e32 v11, 0xffffffc0, v10
+; GFX9-G-NEXT:    v_lshlrev_b64 v[6:7], v10, v[8:9]
 ; GFX9-G-NEXT:    v_or_b32_e32 v2, v0, v2
 ; GFX9-G-NEXT:    v_or_b32_e32 v3, v1, v3
-; GFX9-G-NEXT:    v_lshlrev_b64 v[0:1], v13, v[8:9]
-; GFX9-G-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v12
+; GFX9-G-NEXT:    v_lshlrev_b64 v[0:1], v11, v[8:9]
+; GFX9-G-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v10
 ; GFX9-G-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
 ; GFX9-G-NEXT:    v_cndmask_b32_e32 v7, 0, v7, vcc
 ; GFX9-G-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
 ; GFX9-G-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
-; GFX9-G-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v12
-; GFX9-G-NEXT:    v_cndmask_b32_e32 v12, v0, v10, vcc
-; GFX9-G-NEXT:    v_cndmask_b32_e32 v13, v1, v11, vcc
+; GFX9-G-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v10
+; GFX9-G-NEXT:    v_cndmask_b32_e32 v10, v0, v12, vcc
+; GFX9-G-NEXT:    v_cndmask_b32_e32 v11, v1, v13, vcc
 ; GFX9-G-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX9-G-NEXT:    v_mov_b32_e32 v0, s8
 ; GFX9-G-NEXT:    v_mov_b32_e32 v1, s9
@@ -1264,12 +1264,12 @@ define i128 @v_sdiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-G-NEXT:  ; %bb.2: ; %udiv-preheader
 ; GFX9-G-NEXT:    v_sub_u32_e32 v2, 64, v20
 ; GFX9-G-NEXT:    v_lshrrev_b64 v[0:1], v20, v[8:9]
-; GFX9-G-NEXT:    v_lshlrev_b64 v[2:3], v2, v[10:11]
+; GFX9-G-NEXT:    v_lshlrev_b64 v[2:3], v2, v[12:13]
 ; GFX9-G-NEXT:    v_add_u32_e32 v24, 0xffffffc0, v20
-; GFX9-G-NEXT:    v_lshrrev_b64 v[14:15], v20, v[10:11]
+; GFX9-G-NEXT:    v_lshrrev_b64 v[14:15], v20, v[12:13]
 ; GFX9-G-NEXT:    v_or_b32_e32 v2, v0, v2
 ; GFX9-G-NEXT:    v_or_b32_e32 v3, v1, v3
-; GFX9-G-NEXT:    v_lshrrev_b64 v[0:1], v24, v[10:11]
+; GFX9-G-NEXT:    v_lshrrev_b64 v[0:1], v24, v[12:13]
 ; GFX9-G-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v20
 ; GFX9-G-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
 ; GFX9-G-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
@@ -1279,8 +1279,8 @@ define i128 @v_sdiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-G-NEXT:    s_mov_b64 s[8:9], 0
 ; GFX9-G-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v20
 ; GFX9-G-NEXT:    v_addc_co_u32_e32 v25, vcc, -1, v19, vcc
-; GFX9-G-NEXT:    v_cndmask_b32_e64 v10, v0, v8, s[4:5]
-; GFX9-G-NEXT:    v_cndmask_b32_e64 v11, v1, v9, s[4:5]
+; GFX9-G-NEXT:    v_cndmask_b32_e64 v12, v0, v8, s[4:5]
+; GFX9-G-NEXT:    v_cndmask_b32_e64 v13, v1, v9, s[4:5]
 ; GFX9-G-NEXT:    v_addc_co_u32_e32 v26, vcc, -1, v4, vcc
 ; GFX9-G-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX9-G-NEXT:    v_mov_b32_e32 v0, s8
@@ -1295,21 +1295,21 @@ define i128 @v_sdiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-G-NEXT:    v_lshrrev_b32_e32 v8, 31, v7
 ; GFX9-G-NEXT:    v_or_b32_e32 v6, v0, v2
 ; GFX9-G-NEXT:    v_or_b32_e32 v7, v1, v3
-; GFX9-G-NEXT:    v_lshlrev_b64 v[2:3], 1, v[10:11]
-; GFX9-G-NEXT:    v_lshrrev_b32_e32 v10, 31, v13
+; GFX9-G-NEXT:    v_lshlrev_b64 v[2:3], 1, v[12:13]
+; GFX9-G-NEXT:    v_lshrrev_b32_e32 v12, 31, v11
 ; GFX9-G-NEXT:    v_lshlrev_b64 v[0:1], 1, v[14:15]
-; GFX9-G-NEXT:    v_or_b32_e32 v2, v2, v10
-; GFX9-G-NEXT:    v_lshrrev_b32_e32 v14, 31, v11
-; GFX9-G-NEXT:    v_sub_co_u32_e32 v10, vcc, v24, v2
+; GFX9-G-NEXT:    v_or_b32_e32 v2, v2, v12
+; GFX9-G-NEXT:    v_lshrrev_b32_e32 v14, 31, v13
+; GFX9-G-NEXT:    v_sub_co_u32_e32 v12, vcc, v24, v2
 ; GFX9-G-NEXT:    v_or_b32_e32 v0, v0, v14
-; GFX9-G-NEXT:    v_subb_co_u32_e32 v10, vcc, v25, v3, vcc
-; GFX9-G-NEXT:    v_subb_co_u32_e32 v10, vcc, v26, v0, vcc
-; GFX9-G-NEXT:    v_subb_co_u32_e32 v10, vcc, v27, v1, vcc
-; GFX9-G-NEXT:    v_ashrrev_i32_e32 v28, 31, v10
-; GFX9-G-NEXT:    v_and_b32_e32 v10, v28, v18
-; GFX9-G-NEXT:    v_and_b32_e32 v11, v28, v19
-; GFX9-G-NEXT:    v_sub_co_u32_e32 v10, vcc, v2, v10
-; GFX9-G-NEXT:    v_subb_co_u32_e32 v11, vcc, v3, v11, vcc
+; GFX9-G-NEXT:    v_subb_co_u32_e32 v12, vcc, v25, v3, vcc
+; GFX9-G-NEXT:    v_subb_co_u32_e32 v12, vcc, v26, v0, vcc
+; GFX9-G-NEXT:    v_subb_co_u32_e32 v12, vcc, v27, v1, vcc
+; GFX9-G-NEXT:    v_ashrrev_i32_e32 v28, 31, v12
+; GFX9-G-NEXT:    v_and_b32_e32 v12, v28, v18
+; GFX9-G-NEXT:    v_and_b32_e32 v13, v28, v19
+; GFX9-G-NEXT:    v_sub_co_u32_e32 v12, vcc, v2, v12
+; GFX9-G-NEXT:    v_subb_co_u32_e32 v13, vcc, v3, v13, vcc
 ; GFX9-G-NEXT:    v_and_b32_e32 v2, v28, v4
 ; GFX9-G-NEXT:    v_and_b32_e32 v3, v28, v5
 ; GFX9-G-NEXT:    v_subb_co_u32_e32 v14, vcc, v0, v2, vcc
@@ -1318,14 +1318,15 @@ define i128 @v_sdiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-G-NEXT:    v_addc_co_u32_e32 v21, vcc, -1, v21, vcc
 ; GFX9-G-NEXT:    v_addc_co_u32_e32 v22, vcc, -1, v22, vcc
 ; GFX9-G-NEXT:    v_addc_co_u32_e32 v23, vcc, -1, v23, vcc
-; GFX9-G-NEXT:    v_lshlrev_b64 v[12:13], 1, v[12:13]
+; GFX9-G-NEXT:    v_lshlrev_b64 v[10:11], 1, v[10:11]
 ; GFX9-G-NEXT:    v_or_b32_e32 v0, v20, v22
 ; GFX9-G-NEXT:    v_or_b32_e32 v1, v21, v23
 ; GFX9-G-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
-; GFX9-G-NEXT:    v_or_b32_e32 v12, v12, v8
+; GFX9-G-NEXT:    v_or_b32_e32 v10, v10, v8
 ; GFX9-G-NEXT:    v_and_b32_e32 v8, 1, v28
-; GFX9-G-NEXT:    v_mov_b32_e32 v0, v8
+; GFX9-G-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX9-G-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; GFX9-G-NEXT:    v_mov_b32_e32 v0, v8
 ; GFX9-G-NEXT:    v_mov_b32_e32 v1, v9
 ; GFX9-G-NEXT:    s_andn2_b64 exec, exec, s[8:9]
 ; GFX9-G-NEXT:    s_cbranch_execnz .LBB0_3
@@ -1334,9 +1335,9 @@ define i128 @v_sdiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-G-NEXT:  .LBB0_5: ; %Flow2
 ; GFX9-G-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; GFX9-G-NEXT:    v_lshlrev_b64 v[2:3], 1, v[6:7]
-; GFX9-G-NEXT:    v_lshlrev_b64 v[12:13], 1, v[12:13]
+; GFX9-G-NEXT:    v_lshlrev_b64 v[10:11], 1, v[10:11]
 ; GFX9-G-NEXT:    v_lshrrev_b32_e32 v4, 31, v7
-; GFX9-G-NEXT:    v_or_b32_e32 v12, v12, v4
+; GFX9-G-NEXT:    v_or_b32_e32 v10, v10, v4
 ; GFX9-G-NEXT:    v_or_b32_e32 v6, v0, v2
 ; GFX9-G-NEXT:    v_or_b32_e32 v7, v1, v3
 ; GFX9-G-NEXT:  .LBB0_6: ; %Flow3
@@ -1345,9 +1346,9 @@ define i128 @v_sdiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-G-NEXT:    v_xor_b32_e32 v0, v6, v3
 ; GFX9-G-NEXT:    v_xor_b32_e32 v1, v7, v3
 ; GFX9-G-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v3
-; GFX9-G-NEXT:    v_xor_b32_e32 v2, v12, v3
+; GFX9-G-NEXT:    v_xor_b32_e32 v2, v10, v3
 ; GFX9-G-NEXT:    v_subb_co_u32_e32 v1, vcc, v1, v3, vcc
-; GFX9-G-NEXT:    v_xor_b32_e32 v4, v13, v3
+; GFX9-G-NEXT:    v_xor_b32_e32 v4, v11, v3
 ; GFX9-G-NEXT:    v_subb_co_u32_e32 v2, vcc, v2, v3, vcc
 ; GFX9-G-NEXT:    v_subb_co_u32_e32 v3, vcc, v4, v3, vcc
 ; GFX9-G-NEXT:    s_setpc_b64 s[30:31]
@@ -3391,14 +3392,15 @@ define i128 @v_udiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-G-NEXT:    v_addc_co_u32_e32 v19, vcc, -1, v19, vcc
 ; GFX9-G-NEXT:    v_addc_co_u32_e32 v20, vcc, -1, v20, vcc
 ; GFX9-G-NEXT:    v_addc_co_u32_e32 v21, vcc, -1, v21, vcc
+; GFX9-G-NEXT:    v_lshlrev_b64 v[8:9], 1, v[8:9]
 ; GFX9-G-NEXT:    v_or_b32_e32 v10, v18, v20
 ; GFX9-G-NEXT:    v_or_b32_e32 v11, v19, v21
-; GFX9-G-NEXT:    v_lshlrev_b64 v[8:9], 1, v[8:9]
 ; GFX9-G-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[10:11]
 ; GFX9-G-NEXT:    v_or_b32_e32 v8, v8, v0
 ; GFX9-G-NEXT:    v_and_b32_e32 v0, 1, v12
-; GFX9-G-NEXT:    v_mov_b32_e32 v11, v1
+; GFX9-G-NEXT:    ; implicit-def: $vgpr10_vgpr11_vgpr12_vgpr13
 ; GFX9-G-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
+; GFX9-G-NEXT:    v_mov_b32_e32 v11, v1
 ; GFX9-G-NEXT:    v_mov_b32_e32 v10, v0
 ; GFX9-G-NEXT:    s_andn2_b64 exec, exec, s[8:9]
 ; GFX9-G-NEXT:    s_cbranch_execnz .LBB1_3

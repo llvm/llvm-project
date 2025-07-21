@@ -31,7 +31,9 @@ define amdgpu_ps void @buffer_store_bf16(ptr addrspace(8) inreg %rsrc, bfloat %d
 ;
 ; GFX11-LABEL: buffer_store_bf16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    buffer_store_b16 v0, v1, s[0:3], 0 offen
+; GFX11-NEXT:    ; implicit-def: $vgpr2
+; GFX11-NEXT:    v_mov_b16_e32 v2.l, v0.l
+; GFX11-NEXT:    buffer_store_b16 v2, v1, s[0:3], 0 offen
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: buffer_store_bf16:
