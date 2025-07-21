@@ -71,6 +71,14 @@ SyntheticChildrenFrontEnd *
 MsvcStlOptionalSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                         lldb::ValueObjectSP valobj_sp);
 
+// MSVC STL std::variant<>
+bool IsMsvcStlVariant(ValueObject &valobj);
+bool MsvcStlVariantSummaryProvider(ValueObject &valobj, Stream &stream,
+                                   const TypeSummaryOptions &options);
+SyntheticChildrenFrontEnd *
+MsvcStlVariantSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                       lldb::ValueObjectSP valobj_sp);
+
 } // namespace formatters
 } // namespace lldb_private
 
