@@ -174,6 +174,10 @@ Changes to BOLT
 Changes to Sanitizers
 ---------------------
 
+* The [sanitizer special case list format](https://clang.llvm.org/docs/SanitizerSpecialCaseList.html#format)
+  now treats forward slashes as either a forward or a backslash, to handle
+  paths with mixed unix and window styles.
+
 Other Changes
 -------------
 

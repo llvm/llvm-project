@@ -360,4 +360,27 @@ TEST_F(SuppressionMappingTest, ParsingRespectsOtherWarningOpts) {
   clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
   EXPECT_THAT(diags(), IsEmpty());
 }
+
+TEST_F(SuppressionMappingTest, ForwardSlashMatchesBothDirections) {
+  llvm::StringLiteral SuppressionMappingFile = R"(
+  [unused]
+  src:*clang/*
+  src:*clang/lib/Sema/*=emit
+  src:*clang/lib\\Sema/foo*)";
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer(SuppressionMappingFile));
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(diags(), IsEmpty());
+
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang/lib/Basic/foo.h)")));
+  EXPECT_FALSE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang/lib/Sema\bar.h)")));
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang\lib\Sema/foo.h)")));
+  // The third pattern requires a literal backslash before Sema
+  EXPECT_FALSE(Diags.isSuppressedViaMapping(
+      diag::warn_unused_function, locForFile(R"(clang/lib/Sema/foo.h)")));
+}
 } // namespace
