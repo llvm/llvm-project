@@ -1295,12 +1295,8 @@ add_entrypoint_object(
   HDRS
     ../erff.h
   DEPENDS
-    .common_constants
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.except_value_utils
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.macros.optimization
+    libc.src.__support.math.erff
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
