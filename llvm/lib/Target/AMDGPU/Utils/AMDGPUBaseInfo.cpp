@@ -1494,6 +1494,20 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
   return std::min(MaxNumVGPRs, AddressableNumVGPRs);
 }
 
+unsigned getMaxNumAGPRs(const MCSubtargetInfo *STI, unsigned int WavesPerEU) {
+  if (!STI->getFeatureBits().test(FeatureMAIInsts))
+    return 0;
+
+  assert(WavesPerEU != 0);
+
+  assert(!STI->getFeatureBits().test(FeatureDynamicVGPR));
+
+  unsigned MaxNumAGPRs =
+      alignTo(getTotalNumVGPRs(STI) / WavesPerEU, getVGPRAllocGranule(STI, 0));
+  unsigned AddressableNumAGPRs = getAddressableNumArchVGPRs(STI);
+  return std::min(MaxNumAGPRs, AddressableNumAGPRs);
+}
+
 unsigned getEncodedNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumVGPRs,
                                  std::optional<bool> EnableWavefrontSize32) {
   return getGranulatedNumRegisterBlocks(

@@ -53,7 +53,8 @@ protected:
   void initCandidate(SchedCandidate &Cand, SUnit *SU, bool AtTop,
                      const RegPressureTracker &RPTracker,
                      const SIRegisterInfo *SRI, unsigned SGPRPressure,
-                     unsigned VGPRPressure, bool IsBottomUp);
+                     unsigned VGPRPressure, unsigned AGPRPressure,
+                     bool IsBottomUp);
 
   std::vector<unsigned> Pressure;
 
@@ -62,6 +63,8 @@ protected:
   unsigned SGPRExcessLimit;
 
   unsigned VGPRExcessLimit;
+
+  unsigned AGPRExcessLimit;
 
   unsigned TargetOccupancy;
 
@@ -102,6 +105,8 @@ public:
   unsigned SGPRCriticalLimit;
 
   unsigned VGPRCriticalLimit;
+
+  unsigned AGPRCriticalLimit;
 
   unsigned SGPRLimitBias = 0;
 
@@ -183,8 +188,7 @@ public:
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const ScheduleMetrics &Sm) {
-  dbgs() << "\n Schedule Metric (scaled by "
-         << ScheduleMetrics::ScaleFactor
+  dbgs() << "\n Schedule Metric (scaled by " << ScheduleMetrics::ScaleFactor
          << " ) is: " << Sm.getMetric() << " [ " << Sm.getBubbles() << "/"
          << Sm.getLength() << " ]\n";
   return OS;
