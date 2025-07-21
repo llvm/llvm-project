@@ -126,8 +126,8 @@ struct WmmaLoadOpToNVVMLowering
         cast<MemRefType>(subgroupMmaLoadMatrixOp.getSrcMemref().getType()),
         adaptor.getSrcMemref(), adaptor.getIndices());
 
-    Value leadingDim = rewriter.create<LLVM::ConstantOp>(
-        loc, rewriter.getI32Type(),
+    Value leadingDim = LLVM::ConstantOp::create(
+        rewriter, loc, rewriter.getI32Type(),
         subgroupMmaLoadMatrixOp.getLeadDimensionAttr());
     rewriter.replaceOpWithNewOp<NVVM::WMMALoadOp>(
         op, resType, dataPtr, leadingDim, m, n, k, layout, eltype, frag);
@@ -173,7 +173,7 @@ struct WmmaStoreOpToNVVMLowering
     auto matrixType = cast<LLVM::LLVMStructType>(adaptor.getSrc().getType());
     for (unsigned i = 0, e = matrixType.getBody().size(); i < e; ++i) {
       Value toUse =
-          rewriter.create<LLVM::ExtractValueOp>(loc, adaptor.getSrc(), i);
+          LLVM::ExtractValueOp::create(rewriter, loc, adaptor.getSrc(), i);
       storeOpOperands.push_back(toUse);
     }
 
@@ -181,8 +181,8 @@ struct WmmaStoreOpToNVVMLowering
         rewriter, loc,
         cast<MemRefType>(subgroupMmaStoreMatrixOp.getDstMemref().getType()),
         adaptor.getDstMemref(), adaptor.getIndices());
-    Value leadingDim = rewriter.create<LLVM::ConstantOp>(
-        loc, rewriter.getI32Type(),
+    Value leadingDim = LLVM::ConstantOp::create(
+        rewriter, loc, rewriter.getI32Type(),
         subgroupMmaStoreMatrixOp.getLeadDimensionAttr());
     rewriter.replaceOpWithNewOp<NVVM::WMMAStoreOp>(
         op, dataPtr, m, n, k, layout, eltype, storeOpOperands, leadingDim);
@@ -216,7 +216,7 @@ struct WmmaMmaOpToNVVMLowering
     auto unpackOp = [&](Value operand) {
       auto structType = cast<LLVM::LLVMStructType>(operand.getType());
       for (size_t i = 0, e = structType.getBody().size(); i < e; ++i) {
-        Value toUse = rewriter.create<LLVM::ExtractValueOp>(loc, operand, i);
+        Value toUse = LLVM::ExtractValueOp::create(rewriter, loc, operand, i);
         unpackedOps.push_back(toUse);
       }
     };
@@ -280,19 +280,19 @@ struct WmmaConstantOpToNVVMLowering
         cast<gpu::MMAMatrixType>(subgroupMmaConstantOp.getType()));
     // If the element type is a vector create a vector from the operand.
     if (auto vecType = dyn_cast<VectorType>(type.getBody()[0])) {
-      Value vecCst = rewriter.create<LLVM::PoisonOp>(loc, vecType);
+      Value vecCst = LLVM::PoisonOp::create(rewriter, loc, vecType);
       for (int64_t vecEl = 0; vecEl < vecType.getNumElements(); vecEl++) {
-        Value idx = rewriter.create<LLVM::ConstantOp>(
-            loc, rewriter.getI32Type(), vecEl);
-        vecCst = rewriter.create<LLVM::InsertElementOp>(loc, vecType, vecCst,
-                                                        cst, idx);
+        Value idx = LLVM::ConstantOp::create(rewriter, loc,
+                                             rewriter.getI32Type(), vecEl);
+        vecCst = LLVM::InsertElementOp::create(rewriter, loc, vecType, vecCst,
+                                               cst, idx);
       }
       cst = vecCst;
     }
-    Value matrixStruct = rewriter.create<LLVM::PoisonOp>(loc, type);
+    Value matrixStruct = LLVM::PoisonOp::create(rewriter, loc, type);
     for (size_t i : llvm::seq(size_t(0), type.getBody().size())) {
       matrixStruct =
-          rewriter.create<LLVM::InsertValueOp>(loc, matrixStruct, cst, i);
+          LLVM::InsertValueOp::create(rewriter, loc, matrixStruct, cst, i);
     }
     rewriter.replaceOp(subgroupMmaConstantOp, matrixStruct);
     return success();
@@ -305,17 +305,17 @@ static Value createMinMaxF(OpBuilder &builder, Location loc, Value lhs,
   Type i1Type = builder.getI1Type();
   if (auto vecType = dyn_cast<VectorType>(lhs.getType()))
     i1Type = VectorType::get(vecType.getShape(), i1Type);
-  Value cmp = builder.create<LLVM::FCmpOp>(
-      loc, i1Type, isMin ? LLVM::FCmpPredicate::olt : LLVM::FCmpPredicate::ogt,
-      lhs, rhs);
-  Value sel = builder.create<LLVM::SelectOp>(loc, cmp, lhs, rhs);
-  Value isNan = builder.create<LLVM::FCmpOp>(
-      loc, i1Type, LLVM::FCmpPredicate::uno, lhs, rhs);
-  Value nan = builder.create<LLVM::ConstantOp>(
-      loc, lhs.getType(),
+  Value cmp = LLVM::FCmpOp::create(
+      builder, loc, i1Type,
+      isMin ? LLVM::FCmpPredicate::olt : LLVM::FCmpPredicate::ogt, lhs, rhs);
+  Value sel = LLVM::SelectOp::create(builder, loc, cmp, lhs, rhs);
+  Value isNan = LLVM::FCmpOp::create(builder, loc, i1Type,
+                                     LLVM::FCmpPredicate::uno, lhs, rhs);
+  Value nan = LLVM::ConstantOp::create(
+      builder, loc, lhs.getType(),
       builder.getFloatAttr(floatType,
                            APFloat::getQNaN(floatType.getFloatSemantics())));
-  return builder.create<LLVM::SelectOp>(loc, isNan, nan, sel);
+  return LLVM::SelectOp::create(builder, loc, isNan, nan, sel);
 }
 
 static Value createScalarOp(OpBuilder &builder, Location loc,
@@ -323,11 +323,11 @@ static Value createScalarOp(OpBuilder &builder, Location loc,
                             ArrayRef<Value> operands) {
   switch (op) {
   case gpu::MMAElementwiseOp::ADDF:
-    return builder.create<LLVM::FAddOp>(loc, operands[0].getType(), operands);
+    return LLVM::FAddOp::create(builder, loc, operands[0].getType(), operands);
   case gpu::MMAElementwiseOp::MULF:
-    return builder.create<LLVM::FMulOp>(loc, operands[0].getType(), operands);
+    return LLVM::FMulOp::create(builder, loc, operands[0].getType(), operands);
   case gpu::MMAElementwiseOp::DIVF:
-    return builder.create<LLVM::FDivOp>(loc, operands[0].getType(), operands);
+    return LLVM::FDivOp::create(builder, loc, operands[0].getType(), operands);
   case gpu::MMAElementwiseOp::MAXF:
     return createMinMaxF(builder, loc, operands[0], operands[1],
                          /*isMin=*/false);
@@ -356,18 +356,18 @@ struct WmmaElementwiseOpToNVVMLowering
     size_t numOperands = adaptor.getOperands().size();
     LLVM::LLVMStructType destType = convertMMAToLLVMType(
         cast<gpu::MMAMatrixType>(subgroupMmaElementwiseOp.getType()));
-    Value matrixStruct = rewriter.create<LLVM::PoisonOp>(loc, destType);
+    Value matrixStruct = LLVM::PoisonOp::create(rewriter, loc, destType);
     for (size_t i = 0, e = destType.getBody().size(); i < e; ++i) {
       SmallVector<Value> extractedOperands;
       for (size_t opIdx = 0; opIdx < numOperands; opIdx++) {
-        extractedOperands.push_back(rewriter.create<LLVM::ExtractValueOp>(
-            loc, adaptor.getOperands()[opIdx], i));
+        extractedOperands.push_back(LLVM::ExtractValueOp::create(
+            rewriter, loc, adaptor.getOperands()[opIdx], i));
       }
       Value element =
           createScalarOp(rewriter, loc, subgroupMmaElementwiseOp.getOpType(),
                          extractedOperands);
       matrixStruct =
-          rewriter.create<LLVM::InsertValueOp>(loc, matrixStruct, element, i);
+          LLVM::InsertValueOp::create(rewriter, loc, matrixStruct, element, i);
     }
     rewriter.replaceOp(subgroupMmaElementwiseOp, matrixStruct);
     return success();
