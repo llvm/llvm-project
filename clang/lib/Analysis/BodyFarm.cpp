@@ -256,7 +256,7 @@ ValueDecl *ASTMaker::findMemberField(const RecordDecl *RD, StringRef Name) {
 // Creation functions for faux ASTs.
 //===----------------------------------------------------------------------===//
 
-typedef Stmt *(*FunctionFarmer)(ASTContext &C, const FunctionDecl *D);
+using FunctionFarmer = Stmt *(*)(ASTContext & C, const FunctionDecl *D);
 
 static CallExpr *create_call_once_funcptr_call(ASTContext &C, ASTMaker M,
                                                const ParmVarDecl *Callback,

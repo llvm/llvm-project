@@ -271,7 +271,7 @@ namespace {
 // Process a Decl pointer.  Add* methods call back into ODRHash while Visit*
 // methods process the relevant parts of the Decl.
 class ODRDeclVisitor : public ConstDeclVisitor<ODRDeclVisitor> {
-  typedef ConstDeclVisitor<ODRDeclVisitor> Inherited;
+  using Inherited = ConstDeclVisitor<ODRDeclVisitor>;
   llvm::FoldingSetNodeID &ID;
   ODRHash &Hash;
 
@@ -856,7 +856,7 @@ namespace {
 // Process a Type pointer.  Add* methods call back into ODRHash while Visit*
 // methods process the relevant parts of the Type.
 class ODRTypeVisitor : public TypeVisitor<ODRTypeVisitor> {
-  typedef TypeVisitor<ODRTypeVisitor> Inherited;
+  using Inherited = TypeVisitor<ODRTypeVisitor>;
   llvm::FoldingSetNodeID &ID;
   ODRHash &Hash;
 

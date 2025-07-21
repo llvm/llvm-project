@@ -1298,7 +1298,7 @@ static bool unsupportedTypeConversion(const Sema &S, QualType LHSType,
   return true;
 }
 
-typedef ExprResult PerformCastFn(Sema &S, Expr *operand, QualType toType);
+using PerformCastFn = ExprResult(Sema &S, Expr *operand, QualType toType);
 
 namespace {
 /// These helper callbacks are placed in an anonymous namespace to
@@ -17486,7 +17486,7 @@ namespace {
   // Handle the case where we conclude a expression which we speculatively
   // considered to be unevaluated is actually evaluated.
   class TransformToPE : public TreeTransform<TransformToPE> {
-    typedef TreeTransform<TransformToPE> BaseTransform;
+    using BaseTransform = TreeTransform<TransformToPE>;
 
   public:
     TransformToPE(Sema &SemaRef) : BaseTransform(SemaRef) { }
@@ -20354,7 +20354,7 @@ namespace {
 /// potentially-evaluated subexpressions as "referenced".
 class EvaluatedExprMarker : public UsedDeclVisitor<EvaluatedExprMarker> {
 public:
-  typedef UsedDeclVisitor<EvaluatedExprMarker> Inherited;
+  using Inherited = UsedDeclVisitor<EvaluatedExprMarker>;
   bool SkipLocalVariables;
   ArrayRef<const Expr *> StopAt;
 

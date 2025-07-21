@@ -54,8 +54,8 @@ class ExprInspectionChecker
   void analyzerExpress(const CallExpr *CE, CheckerContext &C) const;
   void analyzerIsTainted(const CallExpr *CE, CheckerContext &C) const;
 
-  typedef void (ExprInspectionChecker::*FnCheck)(const CallExpr *,
-                                                 CheckerContext &C) const;
+  using FnCheck = void (ExprInspectionChecker::*)(const CallExpr *,
+                                                  CheckerContext &C) const;
 
   // Optional parameter `ExprVal` for expression value to be marked interesting.
   ExplodedNode *reportBug(llvm::StringRef Msg, CheckerContext &C,

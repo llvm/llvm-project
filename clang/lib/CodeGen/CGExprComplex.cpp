@@ -31,7 +31,7 @@ namespace llvm {
 extern cl::opt<bool> EnableSingleByteCoverage;
 } // namespace llvm
 
-typedef CodeGenFunction::ComplexPairTy ComplexPairTy;
+using ComplexPairTy = CodeGenFunction::ComplexPairTy;
 
 /// Return the complex type that we are meant to emit.
 static const ComplexType *getComplexType(QualType type) {
@@ -1525,7 +1525,7 @@ LValue CodeGenFunction::EmitComplexAssignmentLValue(const BinaryOperator *E) {
   return LVal;
 }
 
-typedef ComplexPairTy (ComplexExprEmitter::*CompoundFunc)(
+using CompoundFunc = ComplexPairTy (ComplexExprEmitter::*)(
     const ComplexExprEmitter::BinOpInfo &);
 
 static CompoundFunc getComplexOp(BinaryOperatorKind Op) {

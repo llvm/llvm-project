@@ -23,7 +23,7 @@ protected:
   Sema &S;
 
 public:
-  typedef EvaluatedExprVisitor<Derived> Inherited;
+  using Inherited = EvaluatedExprVisitor<Derived>;
 
   UsedDeclVisitor(Sema &S) : Inherited(S.Context), S(S) {}
 

@@ -18430,7 +18430,7 @@ namespace {
 // Transform MemberExpression for specified FieldDecl of current class to
 // DeclRefExpr to specified OMPCapturedExprDecl.
 class TransformExprToCaptures : public TreeTransform<TransformExprToCaptures> {
-  typedef TreeTransform<TransformExprToCaptures> BaseTransform;
+  using BaseTransform = TreeTransform<TransformExprToCaptures>;
   ValueDecl *Field = nullptr;
   DeclRefExpr *CapturedExpr = nullptr;
 

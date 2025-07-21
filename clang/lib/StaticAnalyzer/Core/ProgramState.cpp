@@ -144,8 +144,8 @@ ProgramState::bindDefaultZero(SVal loc, const LocationContext *LCtx) const {
   return Mgr.getOwningEngine().processRegionChange(State, R, LCtx);
 }
 
-typedef ArrayRef<const MemRegion *> RegionList;
-typedef ArrayRef<SVal> ValueList;
+using RegionList = ArrayRef<const MemRegion *>;
+using ValueList = ArrayRef<SVal>;
 
 ProgramStateRef ProgramState::invalidateRegions(
     RegionList Regions, ConstCFGElementRef Elem, unsigned Count,

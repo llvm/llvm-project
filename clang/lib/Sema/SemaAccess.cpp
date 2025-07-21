@@ -145,7 +145,7 @@ struct EffectiveContext {
     return Inner;
   }
 
-  typedef SmallVectorImpl<CXXRecordDecl*>::const_iterator record_iterator;
+  using record_iterator = SmallVectorImpl<CXXRecordDecl *>::const_iterator;
 
   DeclContext *Inner;
   SmallVector<FunctionDecl*, 4> Functions;

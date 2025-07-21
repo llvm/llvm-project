@@ -3160,7 +3160,7 @@ class OffloadingActionBuilder final {
   /// Builder interface. It doesn't build anything or keep any state.
   class DeviceActionBuilder {
   public:
-    typedef const llvm::SmallVectorImpl<phases::ID> PhasesTy;
+    using PhasesTy = const llvm::SmallVectorImpl<phases::ID>;
 
     enum ActionBuilderReturnCode {
       // The builder acted successfully on the current action.

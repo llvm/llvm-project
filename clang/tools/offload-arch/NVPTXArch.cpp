@@ -21,17 +21,17 @@
 
 using namespace llvm;
 
-typedef enum cudaError_enum {
+using CUresult = enum cudaError_enum {
   CUDA_SUCCESS = 0,
   CUDA_ERROR_NO_DEVICE = 100,
-} CUresult;
+};
 
-typedef enum CUdevice_attribute_enum {
+using CUdevice_attribute = enum CUdevice_attribute_enum {
   CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR = 75,
   CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR = 76,
-} CUdevice_attribute;
+};
 
-typedef uint32_t CUdevice;
+using CUdevice = uint32_t;
 
 CUresult (*cuInit)(unsigned int);
 CUresult (*cuDeviceGetCount)(int *);

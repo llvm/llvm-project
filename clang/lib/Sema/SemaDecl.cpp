@@ -12664,7 +12664,7 @@ namespace {
     llvm::SmallVector<unsigned, 4> InitFieldIndex;
 
   public:
-    typedef EvaluatedExprVisitor<SelfReferenceChecker> Inherited;
+    using Inherited = EvaluatedExprVisitor<SelfReferenceChecker>;
 
     SelfReferenceChecker(Sema &S, Decl *OrigDecl) : Inherited(S.Context),
                                                     S(S), OrigDecl(OrigDecl) {
@@ -20268,13 +20268,13 @@ static void CheckForDuplicateEnumValues(Sema &S, ArrayRef<Decl *> Elements,
   if (S.Diags.isIgnored(diag::warn_duplicate_enum_values, Enum->getLocation()))
     return;
 
-  typedef SmallVector<EnumConstantDecl *, 3> ECDVector;
-  typedef SmallVector<std::unique_ptr<ECDVector>, 3> DuplicatesVector;
+  using ECDVector = SmallVector<EnumConstantDecl *, 3>;
+  using DuplicatesVector = SmallVector<std::unique_ptr<ECDVector>, 3>;
 
-  typedef llvm::PointerUnion<EnumConstantDecl*, ECDVector*> DeclOrVector;
+  using DeclOrVector = llvm::PointerUnion<EnumConstantDecl *, ECDVector *>;
 
   // DenseMaps cannot contain the all ones int64_t value, so use unordered_map.
-  typedef std::unordered_map<int64_t, DeclOrVector> ValueToVectorMap;
+  using ValueToVectorMap = std::unordered_map<int64_t, DeclOrVector>;
 
   // Use int64_t as a key to avoid needing special handling for map keys.
   auto EnumConstantToKey = [](const EnumConstantDecl *D) {

@@ -329,8 +329,8 @@ public:
 
   bool hasWritebacks() const { return !Writebacks.empty(); }
 
-  typedef llvm::iterator_range<SmallVectorImpl<Writeback>::const_iterator>
-      writeback_const_range;
+  using writeback_const_range =
+      llvm::iterator_range<SmallVectorImpl<Writeback>::const_iterator>;
 
   writeback_const_range writebacks() const {
     return writeback_const_range(Writebacks.begin(), Writebacks.end());

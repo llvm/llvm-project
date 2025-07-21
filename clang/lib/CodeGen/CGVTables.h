@@ -35,16 +35,16 @@ class CodeGenVTables {
   VTableContextBase *VTContext;
 
   /// VTableAddressPointsMapTy - Address points for a single vtable.
-  typedef VTableLayout::AddressPointsMapTy VTableAddressPointsMapTy;
+  using VTableAddressPointsMapTy = VTableLayout::AddressPointsMapTy;
 
-  typedef std::pair<const CXXRecordDecl *, BaseSubobject> BaseSubobjectPairTy;
-  typedef llvm::DenseMap<BaseSubobjectPairTy, uint64_t> SubVTTIndicesMapTy;
+  using BaseSubobjectPairTy = std::pair<const CXXRecordDecl *, BaseSubobject>;
+  using SubVTTIndicesMapTy = llvm::DenseMap<BaseSubobjectPairTy, uint64_t>;
 
   /// SubVTTIndices - Contains indices into the various sub-VTTs.
   SubVTTIndicesMapTy SubVTTIndices;
 
-  typedef llvm::DenseMap<BaseSubobjectPairTy, uint64_t>
-    SecondaryVirtualPointerIndicesMapTy;
+  using SecondaryVirtualPointerIndicesMapTy =
+      llvm::DenseMap<BaseSubobjectPairTy, uint64_t>;
 
   /// SecondaryVirtualPointerIndices - Contains the secondary virtual pointer
   /// indices.

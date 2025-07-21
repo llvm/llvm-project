@@ -94,8 +94,8 @@ public:
   // Helpers.
   bool checkCall_strCommon(const CallExpr *CE, const FunctionDecl *FD);
 
-  typedef void (WalkAST::*FnCheck)(const CallExpr *, const FunctionDecl *);
-  typedef void (WalkAST::*MsgCheck)(const ObjCMessageExpr *);
+  using FnCheck = void (WalkAST::*)(const CallExpr *, const FunctionDecl *);
+  using MsgCheck = void (WalkAST::*)(const ObjCMessageExpr *);
 
   // Checker-specific methods.
   void checkLoopConditionForFloat(const ForStmt *FS);

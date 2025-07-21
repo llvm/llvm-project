@@ -139,7 +139,7 @@ static const FunctionDecl *getStructor(const NamedDecl *ND) {
 /// MicrosoftMangleContextImpl - Overrides the default MangleContext for the
 /// Microsoft Visual C++ ABI.
 class MicrosoftMangleContextImpl : public MicrosoftMangleContext {
-  typedef std::pair<const DeclContext *, IdentifierInfo *> DiscriminatorKeyTy;
+  using DiscriminatorKeyTy = std::pair<const DeclContext *, IdentifierInfo *>;
   llvm::DenseMap<DiscriminatorKeyTy, unsigned> Discriminator;
   llvm::DenseMap<const NamedDecl *, unsigned> Uniquifier;
   llvm::DenseMap<const CXXRecordDecl *, unsigned> LambdaIds;
@@ -316,19 +316,19 @@ class MicrosoftCXXNameMangler {
   const NamedDecl *Structor;
   unsigned StructorType;
 
-  typedef llvm::SmallVector<std::string, 10> BackRefVec;
+  using BackRefVec = llvm::SmallVector<std::string, 10>;
   BackRefVec NameBackReferences;
 
-  typedef llvm::DenseMap<const void *, unsigned> ArgBackRefMap;
+  using ArgBackRefMap = llvm::DenseMap<const void *, unsigned>;
   ArgBackRefMap FunArgBackReferences;
   ArgBackRefMap TemplateArgBackReferences;
 
-  typedef llvm::DenseMap<const void *, StringRef> TemplateArgStringMap;
+  using TemplateArgStringMap = llvm::DenseMap<const void *, StringRef>;
   TemplateArgStringMap TemplateArgStrings;
   llvm::BumpPtrAllocator TemplateArgStringStorageAlloc;
   llvm::StringSaver TemplateArgStringStorage;
 
-  typedef std::set<std::pair<int, bool>> PassObjectSizeArgsSet;
+  using PassObjectSizeArgsSet = std::set<std::pair<int, bool>>;
   PassObjectSizeArgsSet PassObjectSizeArgs;
 
   ASTContext &getASTContext() const { return Context.getASTContext(); }

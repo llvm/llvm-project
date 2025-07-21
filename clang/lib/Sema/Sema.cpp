@@ -1069,8 +1069,7 @@ void Sema::LoadExternalWeakUndeclaredIdentifiers() {
     (void)WeakUndeclaredIdentifiers[WeakID.first].insert(WeakID.second);
 }
 
-
-typedef llvm::DenseMap<const CXXRecordDecl*, bool> RecordCompleteMap;
+using RecordCompleteMap = llvm::DenseMap<const CXXRecordDecl *, bool>;
 
 /// Returns true, if all methods and nested classes of the given
 /// CXXRecordDecl are defined in this translation unit.
@@ -1832,7 +1831,7 @@ namespace {
 class DeferredDiagnosticsEmitter
     : public UsedDeclVisitor<DeferredDiagnosticsEmitter> {
 public:
-  typedef UsedDeclVisitor<DeferredDiagnosticsEmitter> Inherited;
+  using Inherited = UsedDeclVisitor<DeferredDiagnosticsEmitter>;
 
   // Whether the function is already in the current use-path.
   llvm::SmallPtrSet<CanonicalDeclPtr<Decl>, 4> InUsePath;

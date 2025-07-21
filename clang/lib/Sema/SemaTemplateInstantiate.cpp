@@ -1401,7 +1401,7 @@ namespace {
     bool maybeInstantiateFunctionParameterToScope(ParmVarDecl *OldParm);
 
   public:
-    typedef TreeTransform<TemplateInstantiator> inherited;
+    using inherited = TreeTransform<TemplateInstantiator>;
 
     TemplateInstantiator(Sema &SemaRef,
                          const MultiLevelTemplateArgumentList &TemplateArgs,
@@ -2518,7 +2518,7 @@ TemplateInstantiator::TransformFunctionParmPackExpr(FunctionParmPackExpr *E) {
 ExprResult
 TemplateInstantiator::TransformFunctionParmPackRefExpr(DeclRefExpr *E,
                                                        ValueDecl *PD) {
-  typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
+  using DeclArgumentPack = LocalInstantiationScope::DeclArgumentPack;
   llvm::PointerUnion<Decl *, DeclArgumentPack *> *Found
     = getSema().CurrentInstantiationScope->findInstantiationOf(PD);
   assert(Found && "no instantiation for parameter pack");
@@ -4029,7 +4029,7 @@ static ActionResult<CXXRecordDecl *> getPatternForClassTemplateSpecialization(
     //   matching the template arguments of the class template
     //   specialization with the template argument lists of the partial
     //   specializations.
-    typedef PartialSpecMatchResult MatchResult;
+    using MatchResult = PartialSpecMatchResult;
     SmallVector<MatchResult, 4> Matched, ExtraMatched;
     SmallVector<ClassTemplatePartialSpecializationDecl *, 4> PartialSpecs;
     Template->getPartialSpecializations(PartialSpecs);

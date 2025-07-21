@@ -8822,7 +8822,7 @@ namespace {
 /// enumeration types.
 class BuiltinCandidateTypeSet  {
   /// TypeSet - A set of types.
-  typedef llvm::SmallSetVector<QualType, 8> TypeSet;
+  using TypeSet = llvm::SmallSetVector<QualType, 8>;
 
   /// PointerTypes - The set of pointer types that will be used in the
   /// built-in candidates.
@@ -8871,7 +8871,7 @@ class BuiltinCandidateTypeSet  {
 
 public:
   /// iterator - Iterates through the types that are part of the set.
-  typedef TypeSet::iterator iterator;
+  using iterator = TypeSet::iterator;
 
   BuiltinCandidateTypeSet(Sema &SemaRef)
     : HasNonRecordTypes(false),

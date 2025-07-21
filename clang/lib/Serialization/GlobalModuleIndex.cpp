@@ -71,11 +71,11 @@ namespace {
 /// table.
 class IdentifierIndexReaderTrait {
 public:
-  typedef StringRef external_key_type;
-  typedef StringRef internal_key_type;
-  typedef SmallVector<unsigned, 2> data_type;
-  typedef unsigned hash_value_type;
-  typedef unsigned offset_type;
+  using external_key_type = StringRef;
+  using internal_key_type = StringRef;
+  using data_type = SmallVector<unsigned, 2>;
+  using hash_value_type = unsigned;
+  using offset_type = unsigned;
 
   static bool EqualKey(const internal_key_type& a, const internal_key_type& b) {
     return a == b;
@@ -119,9 +119,8 @@ public:
   }
 };
 
-typedef llvm::OnDiskIterableChainedHashTable<IdentifierIndexReaderTrait>
-    IdentifierIndexTable;
-
+using IdentifierIndexTable =
+    llvm::OnDiskIterableChainedHashTable<IdentifierIndexReaderTrait>;
 }
 
 GlobalModuleIndex::GlobalModuleIndex(
@@ -419,7 +418,7 @@ namespace {
 
     /// Mapping from identifiers to the list of module file IDs that
     /// consider this identifier to be interesting.
-    typedef llvm::StringMap<SmallVector<unsigned, 2> > InterestingIdentifierMap;
+    using InterestingIdentifierMap = llvm::StringMap<SmallVector<unsigned, 2>>;
 
     /// A mapping from all interesting identifiers to the set of module
     /// files in which those identifiers are considered interesting.
@@ -501,7 +500,7 @@ namespace {
 
   public:
     /// The identifier and whether it is "interesting".
-    typedef std::pair<StringRef, bool> data_type;
+    using data_type = std::pair<StringRef, bool>;
 
     data_type ReadData(const internal_key_type& k,
                        const unsigned char* d,
@@ -672,8 +671,8 @@ llvm::Error GlobalModuleIndexBuilder::loadModuleFile(FileEntryRef File) {
 
     // Handle the identifier table
     if (State == ASTBlock && Code == IDENTIFIER_TABLE && Record[0] > 0) {
-      typedef llvm::OnDiskIterableChainedHashTable<
-          InterestingASTIdentifierLookupTrait> InterestingIdentifierTable;
+      using InterestingIdentifierTable = llvm::OnDiskIterableChainedHashTable<
+          InterestingASTIdentifierLookupTrait>;
       std::unique_ptr<InterestingIdentifierTable> Table(
           InterestingIdentifierTable::Create(
               (const unsigned char *)Blob.data() + Record[0],
@@ -710,12 +709,12 @@ namespace {
 /// table.
 class IdentifierIndexWriterTrait {
 public:
-  typedef StringRef key_type;
-  typedef StringRef key_type_ref;
-  typedef SmallVector<unsigned, 2> data_type;
-  typedef const SmallVector<unsigned, 2> &data_type_ref;
-  typedef unsigned hash_value_type;
-  typedef unsigned offset_type;
+  using key_type = StringRef;
+  using key_type_ref = StringRef;
+  using data_type = SmallVector<unsigned, 2>;
+  using data_type_ref = const SmallVector<unsigned, 2> &;
+  using hash_value_type = unsigned;
+  using offset_type = unsigned;
 
   static hash_value_type ComputeHash(key_type_ref Key) {
     return llvm::djbHash(Key);

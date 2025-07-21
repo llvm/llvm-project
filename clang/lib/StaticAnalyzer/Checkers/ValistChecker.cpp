@@ -25,7 +25,7 @@ using namespace ento;
 REGISTER_SET_WITH_PROGRAMSTATE(InitializedVALists, const MemRegion *)
 
 namespace {
-typedef SmallVector<const MemRegion *, 2> RegionVector;
+using RegionVector = SmallVector<const MemRegion *, 2>;
 
 class ValistChecker : public Checker<check::PreCall, check::PreStmt<VAArgExpr>,
                                      check::DeadSymbols> {

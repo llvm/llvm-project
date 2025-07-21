@@ -91,16 +91,16 @@ class StdLibraryFunctionsChecker
 
   /// The universal integral type to use in value range descriptions.
   /// Unsigned to make sure overflows are well-defined.
-  typedef uint64_t RangeInt;
+  using RangeInt = uint64_t;
 
   /// Describes a single range constraint. Eg. {{0, 1}, {3, 4}} is
   /// a non-negative integer, which less than 5 and not equal to 2.
-  typedef std::vector<std::pair<RangeInt, RangeInt>> IntRangeVector;
+  using IntRangeVector = std::vector<std::pair<RangeInt, RangeInt>>;
 
   /// A reference to an argument or return value by its number.
   /// ArgNo in CallExpr and CallEvent is defined as Unsigned, but
   /// obviously uint32_t should be enough for all practical purposes.
-  typedef uint32_t ArgNo;
+  using ArgNo = uint32_t;
   /// Special argument number for specifying the return value.
   static const ArgNo Ret;
 

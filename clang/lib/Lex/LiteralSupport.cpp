@@ -756,7 +756,7 @@ static void EncodeUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
                             FullSourceLoc Loc, unsigned CharByteWidth,
                             DiagnosticsEngine *Diags,
                             const LangOptions &Features) {
-  typedef uint32_t UTF32;
+  using UTF32 = uint32_t;
   UTF32 UcnVal = 0;
   unsigned short UcnLen = 0;
   if (!ProcessUCNEscape(ThisTokBegin, ThisTokBuf, ThisTokEnd, UcnVal, UcnLen,
@@ -805,7 +805,7 @@ static void EncodeUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
   // The conversion below was inspired by:
   //   http://www.unicode.org/Public/PROGRAMS/CVTUTF/ConvertUTF.c
   // First, we determine how many bytes the result will require.
-  typedef uint8_t UTF8;
+  using UTF8 = uint8_t;
 
   unsigned short bytesToWrite = 0;
   if (UcnVal < (UTF32)0x80)

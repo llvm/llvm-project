@@ -631,7 +631,7 @@ struct GenDefaultInitialize
       GenFuncBase<GenDefaultInitialize>,
       DefaultInitializedTypeVisitor<GenDefaultInitialize> {
   using Super = DefaultInitializedTypeVisitor<GenDefaultInitialize>;
-  typedef GenFuncBase<GenDefaultInitialize> GenFuncBaseTy;
+  using GenFuncBaseTy = GenFuncBase<GenDefaultInitialize>;
 
   GenDefaultInitialize(ASTContext &Ctx)
       : StructVisitor<GenDefaultInitialize>(Ctx) {}

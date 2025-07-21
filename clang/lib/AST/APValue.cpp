@@ -262,7 +262,7 @@ namespace {
 struct APValue::MemberPointerData : MemberPointerBase {
   static const unsigned InlinePathSpace =
       (DataSize - sizeof(MemberPointerBase)) / sizeof(const CXXRecordDecl*);
-  typedef const CXXRecordDecl *PathElem;
+  using PathElem = const CXXRecordDecl *;
   union {
     PathElem Path[InlinePathSpace];
     PathElem *PathPtr;

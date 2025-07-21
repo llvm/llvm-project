@@ -4024,7 +4024,7 @@ bool CursorVisitor::Visit(const Attr *A) {
 }
 
 namespace {
-typedef SmallVector<SourceRange, 4> RefNamePieces;
+using RefNamePieces = SmallVector<SourceRange, 4>;
 RefNamePieces buildPieces(unsigned NameFlags, bool IsMemberRefExpr,
                           const DeclarationNameInfo &NI, SourceRange QLoc,
                           const SourceRange *TemplateArgsLoc = nullptr) {
@@ -5277,13 +5277,13 @@ static enum CXChildVisitResult visitWithBlock(CXCursor cursor, CXCursor parent,
 #else
 // If we are compiled with a compiler that doesn't have native blocks support,
 // define and call the block manually, so the
-typedef struct _CXChildVisitResult {
+using CXCursorVisitorBlock = struct _CXChildVisitResult {
   void *isa;
   int flags;
   int reserved;
   enum CXChildVisitResult (*invoke)(struct _CXChildVisitResult *, CXCursor,
                                     CXCursor);
-} * CXCursorVisitorBlock;
+} *;
 
 static enum CXChildVisitResult visitWithBlock(CXCursor cursor, CXCursor parent,
                                               CXClientData client_data) {
@@ -9646,7 +9646,7 @@ CXType clang_getIBOutletCollectionType(CXCursor C) {
 // Inspecting memory usage.
 //===----------------------------------------------------------------------===//
 
-typedef std::vector<CXTUResourceUsageEntry> MemUsageEntries;
+using MemUsageEntries = std::vector<CXTUResourceUsageEntry>;
 
 static inline void createCXTUResourceUsageEntry(MemUsageEntries &entries,
                                                 enum CXTUResourceUsageKind k,

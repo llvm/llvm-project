@@ -526,7 +526,7 @@ static CXErrorCode clang_indexSourceFile_Impl(
   if (CInvok->getFrontendOpts().Inputs.empty())
     return CXError_Failure;
 
-  typedef SmallVector<std::unique_ptr<llvm::MemoryBuffer>, 8> MemBufferOwner;
+  using MemBufferOwner = SmallVector<std::unique_ptr<llvm::MemoryBuffer>, 8>;
   std::unique_ptr<MemBufferOwner> BufOwner(new MemBufferOwner);
 
   // Recover resources if we crash before exiting this method.

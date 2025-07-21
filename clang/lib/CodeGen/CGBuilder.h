@@ -42,10 +42,10 @@ private:
   CodeGenFunction *CGF = nullptr;
 };
 
-typedef CGBuilderInserter CGBuilderInserterTy;
+using CGBuilderInserterTy = CGBuilderInserter;
 
-typedef llvm::IRBuilder<llvm::ConstantFolder, CGBuilderInserterTy>
-    CGBuilderBaseTy;
+using CGBuilderBaseTy =
+    llvm::IRBuilder<llvm::ConstantFolder, CGBuilderInserterTy>;
 
 class CGBuilderTy : public CGBuilderBaseTy {
   friend class Address;

@@ -97,7 +97,7 @@ namespace {
   class UnqualUsingDirectiveSet {
     Sema &SemaRef;
 
-    typedef SmallVector<UnqualUsingEntry, 8> ListTy;
+    using ListTy = SmallVector<UnqualUsingEntry, 8>;
 
     ListTy list;
     llvm::SmallPtrSet<DeclContext*, 8> visited;
@@ -195,7 +195,7 @@ namespace {
 
     void done() { llvm::sort(list, UnqualUsingEntry::Comparator()); }
 
-    typedef ListTy::const_iterator const_iterator;
+    using const_iterator = ListTy::const_iterator;
 
     const_iterator begin() const { return list.begin(); }
     const_iterator end() const { return list.end(); }
@@ -4004,12 +4004,12 @@ public:
   /// An entry in the shadow map, which is optimized to store a
   /// single declaration (the common case) but can also store a list
   /// of declarations.
-  typedef llvm::TinyPtrVector<NamedDecl*> ShadowMapEntry;
+  using ShadowMapEntry = llvm::TinyPtrVector<NamedDecl *>;
 
 private:
   /// A mapping from declaration names to the declarations that have
   /// this name within a particular scope.
-  typedef llvm::DenseMap<DeclarationName, ShadowMapEntry> ShadowMap;
+  using ShadowMap = llvm::DenseMap<DeclarationName, ShadowMapEntry>;
 
   /// A list of shadow maps, which is used to model name hiding.
   std::list<ShadowMap> ShadowMaps;
@@ -4047,7 +4047,7 @@ public:
 class ShadowContextRAII {
   VisibleDeclsRecord &Visible;
 
-  typedef VisibleDeclsRecord::ShadowMap ShadowMap;
+  using ShadowMap = VisibleDeclsRecord::ShadowMap;
 
 public:
   ShadowContextRAII(VisibleDeclsRecord &Visible) : Visible(Visible) {

@@ -20,9 +20,8 @@
 namespace clang {
 namespace format {
 
-typedef std::function<std::pair<tooling::Replacements, unsigned>(
-    const Environment &)>
-    AnalyzerPass;
+using AnalyzerPass = std::function<std::pair<tooling::Replacements, unsigned>(
+    const Environment &)>;
 
 void addQualifierAlignmentFixerPasses(const FormatStyle &Style,
                                       SmallVectorImpl<AnalyzerPass> &Passes);

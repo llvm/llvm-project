@@ -86,7 +86,7 @@ struct FormatStyle;
 class BreakableToken {
 public:
   /// Contains starting character index and length of split.
-  typedef std::pair<StringRef::size_type, unsigned> Split;
+  using Split = std::pair<StringRef::size_type, unsigned>;
 
   virtual ~BreakableToken() {}
 

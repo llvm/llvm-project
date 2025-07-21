@@ -35,7 +35,7 @@ public:
   void checkEndAnalysis(ExplodedGraph &G, BugReporter &B,
                         ExprEngine &Eng) const;
 private:
-  typedef llvm::SmallSet<unsigned, 32> CFGBlocksSet;
+  using CFGBlocksSet = llvm::SmallSet<unsigned, 32>;
 
   static inline const Stmt *getUnreachableStmt(const CFGBlock *CB);
   static void FindUnreachableEntryPoints(const CFGBlock *CB,

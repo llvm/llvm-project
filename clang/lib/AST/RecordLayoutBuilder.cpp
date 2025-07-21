@@ -109,8 +109,8 @@ class EmptySubobjectMap {
   const CXXRecordDecl *Class;
 
   /// EmptyClassOffsets - A map from offsets to empty record decls.
-  typedef llvm::TinyPtrVector<const CXXRecordDecl *> ClassVectorTy;
-  typedef llvm::DenseMap<CharUnits, ClassVectorTy> EmptyClassOffsetsMapTy;
+  using ClassVectorTy = llvm::TinyPtrVector<const CXXRecordDecl *>;
+  using EmptyClassOffsetsMapTy = llvm::DenseMap<CharUnits, ClassVectorTy>;
   EmptyClassOffsetsMapTy EmptyClassOffsets;
 
   /// MaxEmptyClassOffset - The highest offset known to contain an empty
@@ -560,7 +560,7 @@ void EmptySubobjectMap::UpdateEmptyFieldSubobjects(
   }
 }
 
-typedef llvm::SmallPtrSet<const CXXRecordDecl*, 4> ClassSetTy;
+using ClassSetTy = llvm::SmallPtrSet<const CXXRecordDecl *, 4>;
 
 class ItaniumRecordLayoutBuilder {
 protected:
@@ -660,7 +660,7 @@ protected:
   /// field has been handled, if any.
   bool HandledFirstNonOverlappingEmptyField;
 
-  typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits> BaseOffsetsMapTy;
+  using BaseOffsetsMapTy = llvm::DenseMap<const CXXRecordDecl *, CharUnits>;
 
   /// Bases - base classes and their offsets in the record.
   BaseOffsetsMapTy Bases;
@@ -719,8 +719,8 @@ protected:
   /// BaseSubobjectInfoAllocator - Allocator for BaseSubobjectInfo objects.
   llvm::SpecificBumpPtrAllocator<BaseSubobjectInfo> BaseSubobjectInfoAllocator;
 
-  typedef llvm::DenseMap<const CXXRecordDecl *, BaseSubobjectInfo *>
-    BaseSubobjectInfoMapTy;
+  using BaseSubobjectInfoMapTy =
+      llvm::DenseMap<const CXXRecordDecl *, BaseSubobjectInfo *>;
 
   /// VirtualBaseInfo - Map from all the (direct or indirect) virtual bases
   /// of the class we're laying out to their base subobject info.
@@ -2554,7 +2554,7 @@ struct MicrosoftRecordLayoutBuilder {
     CharUnits Size;
     CharUnits Alignment;
   };
-  typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits> BaseOffsetsMapTy;
+  using BaseOffsetsMapTy = llvm::DenseMap<const CXXRecordDecl *, CharUnits>;
   MicrosoftRecordLayoutBuilder(const ASTContext &Context,
                                EmptySubobjectMap *EmptySubobjects)
       : Context(Context), EmptySubobjects(EmptySubobjects),

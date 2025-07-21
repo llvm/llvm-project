@@ -257,7 +257,7 @@ bool ento::shouldRegisterCallGraphDumper(const CheckerManager &mgr) {
 
 namespace {
 class ConfigDumper : public Checker< check::EndOfTranslationUnit > {
-  typedef AnalyzerOptions::ConfigTable Table;
+  using Table = AnalyzerOptions::ConfigTable;
 
   static int compareEntry(const Table::MapEntryTy *const *LHS,
                           const Table::MapEntryTy *const *RHS) {

@@ -985,8 +985,8 @@ class TemplateDiff {
   /// The desugared TemplateArgument should provide the canonical argument
   /// for comparisons.
   class TSTiterator {
-    typedef const TemplateArgument& reference;
-    typedef const TemplateArgument* pointer;
+    using reference = const TemplateArgument &;
+    using pointer = const TemplateArgument *;
 
     /// InternalIterator - an iterator that is used to enter a
     /// TemplateSpecializationType and read TemplateArguments inside template

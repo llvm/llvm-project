@@ -177,7 +177,7 @@ public:
 };
 }
 
-typedef llvm::ImmutableMap<SymbolRef, unsigned> ErrorOutFlag;
+using ErrorOutFlag = llvm::ImmutableMap<SymbolRef, unsigned>;
 REGISTER_TRAIT_WITH_PROGRAMSTATE(NSErrorOut, ErrorOutFlag)
 REGISTER_TRAIT_WITH_PROGRAMSTATE(CFErrorOut, ErrorOutFlag)
 
