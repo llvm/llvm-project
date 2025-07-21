@@ -635,9 +635,6 @@ public:
 
   // Map the MD5 of the symbol name to the name.
   Error addSymbolName(StringRef SymbolName) {
-    // StringRef FuncName;
-    // StringRef ArchName = Architecture;
-    // std::tie(FuncName, ArchName) = SymbolName.split("#");
     if (SymbolName.empty())
       return make_error<InstrProfError>(instrprof_error::malformed,
                                         "symbol name is empty");
@@ -1075,6 +1072,7 @@ private:
 struct NamedInstrProfRecord : InstrProfRecord {
   StringRef Name;
   uint64_t Hash;
+  StringRef Filename;
 
   // We reserve this bit as the flag for context sensitive profile record.
   static const int CS_FLAG_IN_FUNC_HASH = 60;

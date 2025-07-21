@@ -46,6 +46,7 @@
 #include <functional>
 #include <map>
 #include <optional>
+#include <string>
 #include <system_error>
 
 using namespace llvm;
@@ -297,8 +298,7 @@ CodeCoverageTool::getSourceFile(StringRef SourceFile) {
     error(EC.message(), SourceFile);
     return EC;
   }
-  LoadedSourceFiles.emplace_back(std::string(SourceFile),
-                                 std::move(Buffer.get()));
+  LoadedSourceFiles.emplace_back(std::string(SourceFile), std::move(Buffer.get()));
   return *LoadedSourceFiles.back().second;
 }
 
@@ -310,6 +310,7 @@ void CodeCoverageTool::attachExpansionSubViews(
   for (const auto &Expansion : Expansions) {
     auto ExpansionCoverage = Coverage.getCoverageForExpansion(Expansion);
     if (ExpansionCoverage.empty())
+    
       continue;
     auto SourceBuffer = getSourceFile(ExpansionCoverage.getFilename());
     if (!SourceBuffer)
@@ -454,6 +455,27 @@ static bool modifiedTimeGT(StringRef LHS, StringRef RHS) {
   return LHSTime > RHSTime;
 }
 
+// void mergeExecutionCounts(CoverageMapping &Coverage){
+//   std::map<std::string, std::vector<const FunctionRecord*>> functionGroups;
+
+//   for(const auto &Function : Coverage.getCoveredFunctions()){
+//     if(Function.CountedRegions.empty()) continue;
+//     const auto &MainRegion = Function.CountedRegions.front();
+//     const std::string Key = Function.Name + ":" + std::to_string(MainRegion.LineStart) + ":" + std::to_string(MainRegion.ColumnStart) + ":" + (Function.Filenames.empty() ? "" : std::string(Function.Filenames[0]));
+//     functionGroups[Key].push_back(&Function);
+//     llvm::errs() << Key << "\n";
+//   }
+
+//   for(auto &Group : functionGroups){
+//     if(Group.second.size() > 1){
+//       uint64_t TotalCount = 0;
+//       for(auto *Func : Group.second){
+//         TotalCount += Func->ExecutionCount;
+//       }
+//     }
+//   }
+// }
+
 std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
   if (PGOFilename) {
     for (StringRef ObjectFilename : ObjectFilenames)
@@ -482,6 +504,8 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
                << '\n';
     }
   }
+
+  // mergeExecutionCounts(*Coverage);
 
   remapPathNames(*Coverage);
 
@@ -648,7 +672,7 @@ void CodeCoverageTool::writeSourceFileView(StringRef SourceFile,
 
   View->print(*OS.get(), /*Wholefile=*/true,
               /*ShowSourceName=*/ShowFilenames,
-              /*ShowTitle=*/ViewOpts.hasOutputDirectory(), SourceFile);
+              /*ShowTitle=*/ViewOpts.hasOutputDirectory());
   Printer->closeViewFile(std::move(OS));
 }
 

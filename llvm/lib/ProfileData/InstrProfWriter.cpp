@@ -15,7 +15,11 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/bit.h"
+#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/IR/ProfileSummary.h"
+#include "llvm/Object/Binary.h"
+#include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/IndexedMemProfData.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -216,16 +220,47 @@ void InstrProfWriter::overlapRecord(NamedInstrProfRecord &&Other,
 //   Dest.sortValueData();
 // }
 
+
+
+// #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+
+
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/Support/MemoryBuffer.h>
+#include <llvm/Support/SHA1.h>
+#include <array>
+
+StringRef hashSourceFile(llvm::StringRef FilePath) {
+    auto FileOrErr = llvm::MemoryBuffer::getFile(FilePath);
+    if (!FileOrErr) {
+        llvm::errs() << "Error reading file: " << FilePath << "\n";
+        return "";
+    }
+
+    const auto &Buffer = *FileOrErr.get();
+    llvm::SHA1 Hasher;
+    Hasher.update(Buffer.getBuffer());
+
+    std::array<uint8_t, 20> Hash = Hasher.final();
+    
+    std::string HexStr = llvm::toHex(llvm::ArrayRef<uint8_t>(Hash));
+    llvm::StringRef HashRef(HexStr);
+    return HashRef;
+}
+
+
+
 void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
                                 InstrProfRecord &&I, uint64_t Weight,
                                 function_ref<void(Error)> Warn, StringRef Architecture) {
   auto &ProfileDataMap = FunctionData[Name];
+  StringRef SHAHash = hashSourceFile(Architecture);
+  llvm::errs() << "SHA Hashing: " << SHAHash << "\n";
   if(!Architecture.empty()){
     std::string HashStr = std::to_string(Hash) + ":" + Architecture.str();
     llvm::StringRef HashRef(HashStr);
     Hash = IndexedInstrProf::ComputeHash(HashRef);
   }
-
   auto [Where, NewFunc] = ProfileDataMap.try_emplace(Hash);
   InstrProfRecord &Dest = Where->second;
 

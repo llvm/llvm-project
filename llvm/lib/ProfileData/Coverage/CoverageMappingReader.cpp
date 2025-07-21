@@ -288,7 +288,7 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
           // Don't do anything when we have a code region with a zero counter.
           break;
         case CounterMappingRegion::SkippedRegion:
-          Kind = CounterMappingRegion::SkippedRegion;
+          Kind = CounterMappingRegion::SkippedRegion; //if you change this to "CodeRegion, then all skipped regions have counter of 0"
           break;
         case CounterMappingRegion::BranchRegion:
           // For a Branch Region, read two successive counters.
@@ -381,7 +381,6 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
         CounterMappingContext(Expressions).dump(C, dbgs());
       dbgs() << "\n";
     });
-
     auto CMR = CounterMappingRegion(
         C, C2, InferredFileID, ExpandedFileID, LineStart, ColumnStart,
         LineStart + NumLines, ColumnEnd, Kind, Params);
