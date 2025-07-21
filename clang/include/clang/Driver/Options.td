@@ -7130,6 +7130,8 @@ def fintrinsic_modules_path : Separate<["-"], "fintrinsic-modules-path">,  Group
   HelpText<"Specify where to find the compiled intrinsic modules">,
   DocBrief<[{This option specifies the location of pre-compiled intrinsic modules,
   if they are not in the default location expected by the compiler.}]>;
+def fintrinsic_modules_path_EQ : Joined<["-"], "fintrinsic-modules-path=">,
+  Group<f_Group>, Alias<fintrinsic_modules_path>;
 
 defm backslash : OptInFC1FFlag<"backslash", "Specify that backslash in string introduces an escape character">;
 defm xor_operator : OptInFC1FFlag<"xor-operator", "Enable .XOR. as a synonym of .NEQV.">;
