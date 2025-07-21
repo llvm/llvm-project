@@ -143,13 +143,14 @@ attributes #0 = { noinline optnone }
 !12 = !{i64 789, i64 300}
 !13 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !14, producer: "clang version 21.0.0git (git@github.com:llvm/llvm-project.git e391301e0e4d9183fe06e69602e87b0bc889aeda)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 !14 = !DIFile(filename: "basic.cc", directory: "", checksumkind: CSK_MD5, checksum: "8636c46e81402013b9d54e8307d2f149")
-!15 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv", scope: !14, file: !14, line: 1, type: !16, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !13)
+!15 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv", scope: !14, file: !14, line: 1, type: !16, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !13, declaration: !22)
 !16 = !DISubroutineType(types: !17)
 !17 = !{!18}
 !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
 !19 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
 !20 = !{i32 7, !"Dwarf Version", i32 5}
 !21 = !{i32 2, !"Debug Info Version", i32 3}
+!22 = !DISubprogram(name: "bar", linkageName: "_Z3barv", scope: !14, file: !14, line: 1, type: !16, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
 
 ; DUMP: CCG before cloning:
 ; DUMP: Callsite Context Graph:
@@ -321,7 +322,8 @@ attributes #0 = { noinline optnone }
 ; IR: attributes #[[NOTCOLD]] = { "memprof"="notcold" }
 ; IR: attributes #[[COLD]] = { "memprof"="cold" }
 ;; Make sure the clone's linkageName was updated.
-; IR: ![[SP]] = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv.memprof.1"
+; IR: ![[SP]] = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv.memprof.1", {{.*}} declaration: ![[SP2:[0-9]+]])
+; IR: ![[SP2]] = !DISubprogram(name: "bar", linkageName: "_Z3barv.memprof.1"
 
 
 ; STATS: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
