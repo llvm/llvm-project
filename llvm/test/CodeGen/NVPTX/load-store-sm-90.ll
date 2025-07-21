@@ -1550,7 +1550,6 @@ define void @shared_seq_cst_volatile_cluster(ptr addrspace(3) %a, ptr addrspace(
 }
 
 ;; local statespace
-
 ; CHECK-LABEL: local_unordered_cluster
 define void @local_unordered_cluster(ptr addrspace(5) %a, ptr addrspace(5) %b, ptr addrspace(5) %c, ptr addrspace(5) %d, ptr addrspace(5) %e) local_unnamed_addr {
 ; CHECK-LABEL: local_unordered_cluster(

@@ -2643,9 +2643,9 @@ define void @local_volatile_i8(ptr addrspace(5) %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_i8_param_0];
-; CHECK-NEXT:    ld.local.b8 %rs1, [%rd1];
+; CHECK-NEXT:    ld.volatile.local.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.local.b8 [%rd1], %rs2;
+; CHECK-NEXT:    st.volatile.local.b8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i8, ptr addrspace(5) %a
   %a.add = add i8 %a.load, 1
@@ -2661,9 +2661,9 @@ define void @local_volatile_i16(ptr addrspace(5) %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_i16_param_0];
-; CHECK-NEXT:    ld.local.b16 %rs1, [%rd1];
+; CHECK-NEXT:    ld.volatile.local.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.local.b16 [%rd1], %rs2;
+; CHECK-NEXT:    st.volatile.local.b16 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i16, ptr addrspace(5) %a
   %a.add = add i16 %a.load, 1
@@ -2679,9 +2679,9 @@ define void @local_volatile_i32(ptr addrspace(5) %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_i32_param_0];
-; CHECK-NEXT:    ld.local.b32 %r1, [%rd1];
+; CHECK-NEXT:    ld.volatile.local.b32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.local.b32 [%rd1], %r2;
+; CHECK-NEXT:    st.volatile.local.b32 [%rd1], %r2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i32, ptr addrspace(5) %a
   %a.add = add i32 %a.load, 1
@@ -2696,9 +2696,9 @@ define void @local_volatile_i64(ptr addrspace(5) %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_i64_param_0];
-; CHECK-NEXT:    ld.local.b64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.volatile.local.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
-; CHECK-NEXT:    st.local.b64 [%rd1], %rd3;
+; CHECK-NEXT:    st.volatile.local.b64 [%rd1], %rd3;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i64, ptr addrspace(5) %a
   %a.add = add i64 %a.load, 1
@@ -2714,9 +2714,9 @@ define void @local_volatile_float(ptr addrspace(5) %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_float_param_0];
-; CHECK-NEXT:    ld.local.b32 %r1, [%rd1];
+; CHECK-NEXT:    ld.volatile.local.b32 %r1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %r2, %r1, 0f3F800000;
-; CHECK-NEXT:    st.local.b32 [%rd1], %r2;
+; CHECK-NEXT:    st.volatile.local.b32 [%rd1], %r2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile float, ptr addrspace(5) %a
   %a.add = fadd float %a.load, 1.
@@ -2731,9 +2731,9 @@ define void @local_volatile_double(ptr addrspace(5) %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_double_param_0];
-; CHECK-NEXT:    ld.local.b64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.volatile.local.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %rd3, %rd2, 0d3FF0000000000000;
-; CHECK-NEXT:    st.local.b64 [%rd1], %rd3;
+; CHECK-NEXT:    st.volatile.local.b64 [%rd1], %rd3;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile double, ptr addrspace(5) %a
   %a.add = fadd double %a.load, 1.

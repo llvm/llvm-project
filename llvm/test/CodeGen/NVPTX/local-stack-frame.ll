@@ -18,7 +18,7 @@ define void @foo(i32 %a) {
 ; PTX32-NEXT:    mov.b32 %SPL, __local_depot0;
 ; PTX32-NEXT:    ld.param.b32 %r1, [foo_param_0];
 ; PTX32-NEXT:    add.u32 %r3, %SPL, 0;
-; PTX32-NEXT:    st.local.b32 [%r3], %r1;
+; PTX32-NEXT:    st.volatile.local.b32 [%r3], %r1;
 ; PTX32-NEXT:    ret;
 ;
 ; PTX64-LABEL: foo(
@@ -33,7 +33,7 @@ define void @foo(i32 %a) {
 ; PTX64-NEXT:    mov.b64 %SPL, __local_depot0;
 ; PTX64-NEXT:    ld.param.b32 %r1, [foo_param_0];
 ; PTX64-NEXT:    add.u64 %rd2, %SPL, 0;
-; PTX64-NEXT:    st.local.b32 [%rd2], %r1;
+; PTX64-NEXT:    st.volatile.local.b32 [%rd2], %r1;
 ; PTX64-NEXT:    ret;
   %local = alloca i32, align 4
   store volatile i32 %a, ptr %local

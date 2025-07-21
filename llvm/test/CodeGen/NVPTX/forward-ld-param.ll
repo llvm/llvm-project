@@ -85,7 +85,7 @@ define i32 @test_modify_param(ptr byval([10 x i32]) %a, i32 %b, i32 %c ) {
 ; CHECK-NEXT:    mov.b64 %rd1, test_modify_param_param_0;
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_modify_param_param_1];
 ; CHECK-NEXT:    ld.param.b32 %r2, [test_modify_param_param_2];
-; CHECK-NEXT:    st.local.b32 [%rd1+2], %r1;
+; CHECK-NEXT:    st.volatile.local.b32 [%rd1+2], %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %p2 = getelementptr i8, ptr %a, i32 2

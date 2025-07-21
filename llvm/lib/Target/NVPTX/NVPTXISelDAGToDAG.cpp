@@ -645,15 +645,17 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   //      Calling "example" in CUDA C++ compiled for sm_60- exhibits undefined
   //      behavior due to lack of Independent Forward Progress. Lowering these
   //      to weak memory operations in sm_60- is therefore fine.
-  //
   //      TODO: lower atomic and volatile operations to memory locations
   //      in local, const, and param to two PTX instructions in sm_70+:
   //        - the "weak" memory instruction we are currently lowering to, and
   //        - some other instruction that preserves the side-effect, e.g.,
   //          a dead dummy volatile load.
-  if (CodeAddrSpace == NVPTX::AddressSpace::Local ||
-      CodeAddrSpace == NVPTX::AddressSpace::Const ||
-      CodeAddrSpace == NVPTX::AddressSpace::Param) {
+
+  if (CodeAddrSpace == NVPTX::AddressSpace::Const ||
+      CodeAddrSpace == NVPTX::AddressSpace::Param ||
+      (CodeAddrSpace == NVPTX::AddressSpace::Local
+      && (!N->isVolatile() || Ordering != AtomicOrdering::NotAtomic))) {
+    // Allow non-atomic local volatile operations
     return NVPTX::Ordering::NotAtomic;
   }
 
@@ -677,12 +679,13 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   // from .generic, .global, or .shared. The behavior of PTX volatile and PTX
   // atomics is undefined if the generic address does not refer to a .global or
   // .shared memory location.
-  bool AddrGenericOrGlobalOrShared =
+  bool AddrGenericOrGlobalOrSharedorLocal =
       (CodeAddrSpace == NVPTX::AddressSpace::Generic ||
        CodeAddrSpace == NVPTX::AddressSpace::Global ||
        CodeAddrSpace == NVPTX::AddressSpace::Shared ||
-       CodeAddrSpace == NVPTX::AddressSpace::SharedCluster);
-  if (!AddrGenericOrGlobalOrShared)
+       CodeAddrSpace == NVPTX::AddressSpace::SharedCluster ||
+       CodeAddrSpace == NVPTX::AddressSpace::Local);
+  if (!AddrGenericOrGlobalOrSharedorLocal)
     return NVPTX::Ordering::NotAtomic;
 
   bool UseRelaxedMMIO =

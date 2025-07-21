@@ -1280,11 +1280,11 @@ define void @local_volatile_32xi8(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_32xi8_param_0];
-; CHECK-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
-; CHECK-NEXT:    ld.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
+; CHECK-NEXT:    ld.volatile.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    ld.volatile.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
 ; CHECK-NEXT:    ld.param.b64 %rd2, [local_volatile_32xi8_param_1];
-; CHECK-NEXT:    st.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
-; CHECK-NEXT:    st.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
+; CHECK-NEXT:    st.volatile.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
+; CHECK-NEXT:    st.volatile.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <32 x i8>, ptr addrspace(5) %a
   store volatile <32 x i8> %a.load, ptr addrspace(5) %b
@@ -1299,11 +1299,11 @@ define void @local_volatile_16xi16(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_16xi16_param_0];
-; CHECK-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
-; CHECK-NEXT:    ld.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
+; CHECK-NEXT:    ld.volatile.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    ld.volatile.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
 ; CHECK-NEXT:    ld.param.b64 %rd2, [local_volatile_16xi16_param_1];
-; CHECK-NEXT:    st.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
-; CHECK-NEXT:    st.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
+; CHECK-NEXT:    st.volatile.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
+; CHECK-NEXT:    st.volatile.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <16 x i16>, ptr addrspace(5) %a
   store volatile <16 x i16> %a.load, ptr addrspace(5) %b
@@ -1318,11 +1318,11 @@ define void @local_volatile_16xhalf(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_16xhalf_param_0];
-; CHECK-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
-; CHECK-NEXT:    ld.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
+; CHECK-NEXT:    ld.volatile.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    ld.volatile.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
 ; CHECK-NEXT:    ld.param.b64 %rd2, [local_volatile_16xhalf_param_1];
-; CHECK-NEXT:    st.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
-; CHECK-NEXT:    st.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
+; CHECK-NEXT:    st.volatile.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
+; CHECK-NEXT:    st.volatile.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <16 x half>, ptr addrspace(5) %a
   store volatile <16 x half> %a.load, ptr addrspace(5) %b
@@ -1337,11 +1337,11 @@ define void @local_volatile_16xbfloat(ptr addrspace(5) %a, ptr addrspace(5) %b) 
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_16xbfloat_param_0];
-; CHECK-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
-; CHECK-NEXT:    ld.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
+; CHECK-NEXT:    ld.volatile.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    ld.volatile.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
 ; CHECK-NEXT:    ld.param.b64 %rd2, [local_volatile_16xbfloat_param_1];
-; CHECK-NEXT:    st.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
-; CHECK-NEXT:    st.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
+; CHECK-NEXT:    st.volatile.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
+; CHECK-NEXT:    st.volatile.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <16 x bfloat>, ptr addrspace(5) %a
   store volatile <16 x bfloat> %a.load, ptr addrspace(5) %b
@@ -1356,11 +1356,11 @@ define void @local_volatile_8xi32(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_8xi32_param_0];
-; CHECK-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
-; CHECK-NEXT:    ld.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
+; CHECK-NEXT:    ld.volatile.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    ld.volatile.local.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1+16];
 ; CHECK-NEXT:    ld.param.b64 %rd2, [local_volatile_8xi32_param_1];
-; CHECK-NEXT:    st.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
-; CHECK-NEXT:    st.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
+; CHECK-NEXT:    st.volatile.local.v4.b32 [%rd2+16], {%r5, %r6, %r7, %r8};
+; CHECK-NEXT:    st.volatile.local.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <8 x i32>, ptr addrspace(5) %a
   store volatile <8 x i32> %a.load, ptr addrspace(5) %b
@@ -1374,11 +1374,11 @@ define void @local_volatile_4xi64(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_4xi64_param_0];
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    ld.local.v2.b64 {%rd4, %rd5}, [%rd1+16];
+; CHECK-NEXT:    ld.volatile.local.v2.b64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    ld.volatile.local.v2.b64 {%rd4, %rd5}, [%rd1+16];
 ; CHECK-NEXT:    ld.param.b64 %rd6, [local_volatile_4xi64_param_1];
-; CHECK-NEXT:    st.local.v2.b64 [%rd6+16], {%rd4, %rd5};
-; CHECK-NEXT:    st.local.v2.b64 [%rd6], {%rd2, %rd3};
+; CHECK-NEXT:    st.volatile.local.v2.b64 [%rd6+16], {%rd4, %rd5};
+; CHECK-NEXT:    st.volatile.local.v2.b64 [%rd6], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <4 x i64>, ptr addrspace(5) %a
   store volatile <4 x i64> %a.load, ptr addrspace(5) %b
@@ -1392,11 +1392,11 @@ define void @local_volatile_8xfloat(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_8xfloat_param_0];
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    ld.local.v2.b64 {%rd4, %rd5}, [%rd1+16];
+; CHECK-NEXT:    ld.volatile.local.v2.b64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    ld.volatile.local.v2.b64 {%rd4, %rd5}, [%rd1+16];
 ; CHECK-NEXT:    ld.param.b64 %rd6, [local_volatile_8xfloat_param_1];
-; CHECK-NEXT:    st.local.v2.b64 [%rd6+16], {%rd4, %rd5};
-; CHECK-NEXT:    st.local.v2.b64 [%rd6], {%rd2, %rd3};
+; CHECK-NEXT:    st.volatile.local.v2.b64 [%rd6+16], {%rd4, %rd5};
+; CHECK-NEXT:    st.volatile.local.v2.b64 [%rd6], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <8 x float>, ptr addrspace(5) %a
   store volatile <8 x float> %a.load, ptr addrspace(5) %b
@@ -1410,11 +1410,11 @@ define void @local_volatile_4xdouble(ptr addrspace(5) %a, ptr addrspace(5) %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_4xdouble_param_0];
-; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%rd1];
-; CHECK-NEXT:    ld.local.v2.b64 {%rd4, %rd5}, [%rd1+16];
+; CHECK-NEXT:    ld.volatile.local.v2.b64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    ld.volatile.local.v2.b64 {%rd4, %rd5}, [%rd1+16];
 ; CHECK-NEXT:    ld.param.b64 %rd6, [local_volatile_4xdouble_param_1];
-; CHECK-NEXT:    st.local.v2.b64 [%rd6+16], {%rd4, %rd5};
-; CHECK-NEXT:    st.local.v2.b64 [%rd6], {%rd2, %rd3};
+; CHECK-NEXT:    st.volatile.local.v2.b64 [%rd6+16], {%rd4, %rd5};
+; CHECK-NEXT:    st.volatile.local.v2.b64 [%rd6], {%rd2, %rd3};
 ; CHECK-NEXT:    ret;
   %a.load = load volatile <4 x double>, ptr addrspace(5) %a
   store volatile <4 x double> %a.load, ptr addrspace(5) %b
