@@ -20,6 +20,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeRange.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -107,22 +108,20 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
     }
 
     Type elementType = memrefType.getElementType();
-    mlir::Value elementTypeLiteral = rewriter.create<emitc::LiteralOp>(
-        loc, mlir::emitc::OpaqueType::get(rewriter.getContext(), "type"),
-        rewriter.getStringAttr(getCTypeName(elementType)));
-    emitc::CallOpaqueOp sizeofElementOp = rewriter.create<emitc::CallOpaqueOp>(
-        loc, mlir::emitc::SizeTType::get(rewriter.getContext()),
-        rewriter.getStringAttr("sizeof"), mlir::ValueRange{elementTypeLiteral});
+    mlir::emitc::CallOpaqueOp sizeofElementOp =
+        rewriter.create<mlir::emitc::CallOpaqueOp>(
+            loc, mlir::emitc::SizeTType::get(rewriter.getContext()),
+            rewriter.getStringAttr("sizeof"), mlir::ValueRange{},
+            mlir::ArrayAttr::get(rewriter.getContext(),
+                                 {mlir::TypeAttr::get(elementType)}));
     mlir::Value sizeofElement = sizeofElementOp.getResult(0);
 
     unsigned int elementWidth = elementType.getIntOrFloatBitWidth();
+    auto indexAttr = rewriter.getIndexAttr(elementWidth);
+
     mlir::Value numElements;
-    if (elementType.isF32())
-      numElements = rewriter.create<emitc::ConstantOp>(
-          loc, elementType, rewriter.getFloatAttr(elementType, elementWidth));
-    else
-      numElements = rewriter.create<emitc::ConstantOp>(
-          loc, elementType, rewriter.getIntegerAttr(elementType, elementWidth));
+    numElements = rewriter.create<emitc::ConstantOp>(
+        loc, rewriter.getIndexType(), indexAttr);
     mlir::Value totalSizeBytes = rewriter.create<emitc::MulOp>(
         loc, mlir::emitc::SizeTType::get(rewriter.getContext()), sizeofElement,
         numElements);
@@ -130,11 +129,9 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
     auto mallocCall = rewriter.create<emitc::CallOpaqueOp>(
         loc,
         emitc::PointerType::get(
-            rewriter.getContext(),
             mlir::emitc::OpaqueType::get(rewriter.getContext(), "void")),
         rewriter.getStringAttr("malloc"), mlir::ValueRange{totalSizeBytes});
-    auto targetPointerType =
-        emitc::PointerType::get(rewriter.getContext(), elementType);
+    auto targetPointerType = emitc::PointerType::get(elementType);
     auto castOp = rewriter.create<emitc::CastOp>(loc, targetPointerType,
                                                  mallocCall.getResult(0));
 
@@ -148,14 +145,41 @@ private:
       return "float";
     if (type.isF64())
       return "double";
-    if (type.isInteger(8))
-      return "int8_t";
-    if (type.isInteger(16))
-      return "int16_t";
-    if (type.isInteger(32))
-      return "int32_t";
-    if (type.isInteger(64))
-      return "int64_t";
+    if (auto integerType = mlir::dyn_cast<mlir::IntegerType>(type)) {
+      unsigned width = integerType.getWidth();
+      bool isSigned = integerType.isSigned();
+      if (isSigned) {
+        switch (width) {
+        case 8:
+          return "int8_t";
+        case 16:
+          return "int16_t";
+        case 32:
+          return "int32_t";
+        case 64:
+          return "int64_t";
+        case 128:
+          return "int128_t";
+        default:
+          return "unsupported_signed_integer_type";
+        }
+      } else {
+        switch (width) {
+        case 8:
+          return "uint8_t";
+        case 16:
+          return "uint16_t";
+        case 32:
+          return "uint32_t";
+        case 64:
+          return "uint64_t";
+        case 128:
+          return "uint128_t";
+        default:
+          return "unsupported_unsigned_integer_type";
+        }
+      }
+    }
     if (type.isIndex())
       return "size_t";
     return "void";
