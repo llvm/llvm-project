@@ -237,8 +237,8 @@ def AMDGPU_FatRawBufferCastOp :
     Arguments<(ins AnyMemRef:$source,
       Optional<I32>:$validBytes,
       Optional<I<14>>:$cacheSwizzleStride,
-      DefaultValuedProp<BoolProp, "true">:$boundsCheck,
-      UnitProp:$resetOffset)>,
+      DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
+      UnitAttr:$resetOffset)>,
     Results<(outs AnyMemRef:$result)> {
   let summary = "Create a raw buffer fat pointer that matches `memref`";
   let description = [{
