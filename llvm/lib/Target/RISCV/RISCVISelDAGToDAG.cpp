@@ -3692,7 +3692,6 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::SUBW:
     case RISCV::MULW:
     case RISCV::SLLW:
-    case RISCV::SLLIW:
     case RISCV::SRAW:
     case RISCV::SRAIW:
     case RISCV::SRLW:
@@ -3742,6 +3741,14 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
       // SLLI only uses the lower (XLen - ShAmt) bits.
       uint64_t ShAmt = User->getConstantOperandVal(1);
       if (Bits >= Subtarget->getXLen() - ShAmt)
+        break;
+      if (hasAllNBitUsers(User, Bits + ShAmt, Depth + 1))
+        break;
+      return false;
+    }
+    case RISCV::SLLIW: {
+      uint64_t ShAmt = User->getConstantOperandVal(1);
+      if (Bits >= 32 - ShAmt)
         break;
       if (hasAllNBitUsers(User, Bits + ShAmt, Depth + 1))
         break;
