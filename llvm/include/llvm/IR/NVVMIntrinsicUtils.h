@@ -112,7 +112,6 @@ inline bool FPToIntegerIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
     return false;
   }
   llvm_unreachable("Checking FTZ flag for invalid f2i/d2i intrinsic");
-  return false;
 }
 
 inline bool FPToIntegerIntrinsicResultIsSigned(Intrinsic::ID IntrinsicID) {
@@ -179,7 +178,6 @@ inline bool FPToIntegerIntrinsicResultIsSigned(Intrinsic::ID IntrinsicID) {
   }
   llvm_unreachable(
       "Checking invalid f2i/d2i intrinsic for signed int conversion");
-  return false;
 }
 
 inline APFloat::roundingMode
@@ -250,7 +248,6 @@ GetFPToIntegerRoundingMode(Intrinsic::ID IntrinsicID) {
     return APFloat::rmTowardZero;
   }
   llvm_unreachable("Checking rounding mode for invalid f2i/d2i intrinsic");
-  return APFloat::roundingMode::Invalid;
 }
 
 inline bool FMinFMaxShouldFTZ(Intrinsic::ID IntrinsicID) {
@@ -280,7 +277,6 @@ inline bool FMinFMaxShouldFTZ(Intrinsic::ID IntrinsicID) {
     return false;
   }
   llvm_unreachable("Checking FTZ flag for invalid fmin/fmax intrinsic");
-  return false;
 }
 
 inline bool FMinFMaxPropagatesNaNs(Intrinsic::ID IntrinsicID) {
@@ -310,7 +306,6 @@ inline bool FMinFMaxPropagatesNaNs(Intrinsic::ID IntrinsicID) {
     return false;
   }
   llvm_unreachable("Checking NaN flag for invalid fmin/fmax intrinsic");
-  return false;
 }
 
 inline bool FMinFMaxIsXorSignAbs(Intrinsic::ID IntrinsicID) {
@@ -340,7 +335,83 @@ inline bool FMinFMaxIsXorSignAbs(Intrinsic::ID IntrinsicID) {
     return false;
   }
   llvm_unreachable("Checking XorSignAbs flag for invalid fmin/fmax intrinsic");
-  return false;
+}
+
+inline bool UnaryMathIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_ceil_ftz_f:
+  case Intrinsic::nvvm_fabs_ftz:
+  case Intrinsic::nvvm_floor_ftz_f:
+  case Intrinsic::nvvm_round_ftz_f:
+  case Intrinsic::nvvm_saturate_ftz_f:
+  case Intrinsic::nvvm_sqrt_rn_ftz_f:
+    return true;
+  case Intrinsic::nvvm_ceil_f:
+  case Intrinsic::nvvm_ceil_d:
+  case Intrinsic::nvvm_fabs:
+  case Intrinsic::nvvm_floor_f:
+  case Intrinsic::nvvm_floor_d:
+  case Intrinsic::nvvm_round_f:
+  case Intrinsic::nvvm_round_d:
+  case Intrinsic::nvvm_saturate_d:
+  case Intrinsic::nvvm_saturate_f:
+  case Intrinsic::nvvm_sqrt_f:
+  case Intrinsic::nvvm_sqrt_rn_d:
+  case Intrinsic::nvvm_sqrt_rn_f:
+    return false;
+  }
+  llvm_unreachable("Checking FTZ flag for invalid unary intrinsic");
+}
+
+inline bool RCPShouldFTZ(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_rcp_rm_ftz_f:
+  case Intrinsic::nvvm_rcp_rn_ftz_f:
+  case Intrinsic::nvvm_rcp_rp_ftz_f:
+  case Intrinsic::nvvm_rcp_rz_ftz_f:
+    return true;
+  case Intrinsic::nvvm_rcp_rm_d:
+  case Intrinsic::nvvm_rcp_rm_f:
+  case Intrinsic::nvvm_rcp_rn_d:
+  case Intrinsic::nvvm_rcp_rn_f:
+  case Intrinsic::nvvm_rcp_rp_d:
+  case Intrinsic::nvvm_rcp_rp_f:
+  case Intrinsic::nvvm_rcp_rz_d:
+  case Intrinsic::nvvm_rcp_rz_f:
+    return false;
+  }
+  llvm_unreachable("Checking FTZ flag for invalid rcp intrinsic");
+}
+
+inline APFloat::roundingMode GetRCPRoundingMode(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_rcp_rm_f:
+  case Intrinsic::nvvm_rcp_rm_d:
+  case Intrinsic::nvvm_rcp_rm_ftz_f:
+    return APFloat::rmTowardNegative;
+
+  case Intrinsic::nvvm_rcp_rn_f:
+  case Intrinsic::nvvm_rcp_rn_d:
+  case Intrinsic::nvvm_rcp_rn_ftz_f:
+    return APFloat::rmNearestTiesToEven;
+
+  case Intrinsic::nvvm_rcp_rp_f:
+  case Intrinsic::nvvm_rcp_rp_d:
+  case Intrinsic::nvvm_rcp_rp_ftz_f:
+    return APFloat::rmTowardPositive;
+
+  case Intrinsic::nvvm_rcp_rz_f:
+  case Intrinsic::nvvm_rcp_rz_d:
+  case Intrinsic::nvvm_rcp_rz_ftz_f:
+    return APFloat::rmTowardZero;
+  }
+  llvm_unreachable("Checking rounding mode for invalid rcp intrinsic");
+}
+
+inline DenormalMode GetNVVMDenromMode(bool ShouldFTZ) {
+  if (ShouldFTZ)
+    return DenormalMode::getPreserveSign();
+  return DenormalMode::getIEEE();
 }
 
 } // namespace nvvm

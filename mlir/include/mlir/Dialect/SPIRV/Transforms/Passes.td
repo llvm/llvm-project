@@ -77,4 +77,11 @@ def SPIRVWebGPUPreparePass : Pass<"spirv-webgpu-prepare", "spirv::ModuleOp"> {
                 "and replacing with supported ones";
 }
 
+def SPIRVReplicatedConstantCompositePass
+    : Pass<"spirv-promote-to-replicated-constants", "spirv::ModuleOp"> {
+  let summary = "Convert splat composite constants and spec constants to "
+                "corresponding replicated constant composite ops defined by "
+                "SPV_EXT_replicated_composites";
+}
+
 #endif // MLIR_DIALECT_SPIRV_TRANSFORMS_PASSES

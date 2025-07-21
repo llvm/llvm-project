@@ -14,9 +14,6 @@ using olWaitEventTest = OffloadQueueTest;
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olWaitEventTest);
 
 TEST_P(olWaitEventTest, Success) {
-  if (getPlatformBackend() == OL_PLATFORM_BACKEND_AMDGPU)
-    GTEST_SKIP() << "AMDGPU synchronize event not implemented";
-
   uint32_t Src = 42;
   void *DstPtr;
 
@@ -32,4 +29,21 @@ TEST_P(olWaitEventTest, Success) {
 
 TEST_P(olWaitEventTest, InvalidNullEvent) {
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olWaitEvent(nullptr));
+}
+
+TEST_P(olWaitEventTest, SuccessMultipleWait) {
+  uint32_t Src = 42;
+  void *DstPtr;
+
+  ol_event_handle_t Event = nullptr;
+  ASSERT_SUCCESS(
+      olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, sizeof(uint32_t), &DstPtr));
+  ASSERT_SUCCESS(
+      olMemcpy(Queue, DstPtr, Device, &Src, Host, sizeof(Src), &Event));
+  ASSERT_NE(Event, nullptr);
+
+  for (size_t I = 0; I < 10; I++)
+    ASSERT_SUCCESS(olWaitEvent(Event));
+
+  ASSERT_SUCCESS(olDestroyEvent(Event));
 }
