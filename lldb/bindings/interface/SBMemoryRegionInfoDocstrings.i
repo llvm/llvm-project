@@ -1,5 +1,8 @@
 % feature("docstring",
-          "API clients can get information about memory regions in processes.")
+          "API clients can get information about memory regions in processes.
+
+          When printed using str(), the memory region info is formatted as:
+                '[Hex start - Hex End] RWX' ")
         lldb::SBMemoryRegionInfo;
 
 %feature("docstring", "
@@ -34,10 +37,11 @@
 
 %feature("docstring", "
         takes a SBStream parameter 'description' where it will write the output to.
-        it formats the memory region information into a string with Memory region info
-        [Hex start - Hex End) and premission flags R/W/X
-        returns a boolean value indicating success or failure
+        The function will formats the memory region information into a string with Memory region info
+        [Hex start - Hex End) and premission flags R/W/X.
+        Returns a boolean value indicating success or failure.
 
-        alternative to using this method to find out the size of the memory region
-        is to use the len() function on the SBMemoryRegionInfo object"
+        alternatively, to get the size of the memory region is to use
+        the len() function on the SBMemoryRegionInfo object.
+        The function function will return the size of the memory region"
 ) lldb::SBMemoryRegionInfo::GetDescription;
