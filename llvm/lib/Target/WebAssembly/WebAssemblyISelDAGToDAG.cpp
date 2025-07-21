@@ -145,7 +145,11 @@ static APInt encodeFunctionSignature(SelectionDAG *DAG, SDLoc &DL,
   auto BitWidth = (NParams + NReturns + 2) * 64;
   auto Sig = APInt(BitWidth, 0);
 
-  Sig |= NParams;
+  // Annoying special case: if getSignificantBits() <= 64 then InstrEmitter will
+  // emit an Imm instead of a CImm. It simplifies WebAssemblyMCInstLower if we
+  // always emit a CImm. So xor NParams with 0x7ffffff to ensure
+  // getSignificantBits() > 64
+  Sig |= NParams ^ 0x7ffffff;
   for (auto &Param : Params) {
     auto V = toWasmValType(Param);
     Sig <<= 64;
