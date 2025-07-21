@@ -318,6 +318,7 @@ def CPolBit {
   int DLC = 2;
   int SCC = 4;
   int NV = 5;
+  int SCAL = 11;
 }
 
 class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst">;
