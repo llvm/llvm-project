@@ -868,20 +868,6 @@ void mlir::affine::getPerfectlyNestedLoops(
   }
 }
 
-/// Identify valid and profitable bands of loops to tile. This is currently just
-/// a temporary placeholder to test the mechanics of tiled code generation.
-/// Returns all maximal outermost perfect loop nests to tile.
-void mlir::affine::getTileableBands(
-    func::FuncOp f, std::vector<SmallVector<AffineForOp, 6>> *bands) {
-  // Get maximal perfect nest of 'affine.for' insts starting from root
-  // (inclusive).
-  for (AffineForOp forOp : f.getOps<AffineForOp>()) {
-    SmallVector<AffineForOp, 6> band;
-    getPerfectlyNestedLoops(band, forOp);
-    bands->push_back(band);
-  }
-}
-
 /// Unrolls this loop completely.
 LogicalResult mlir::affine::loopUnrollFull(AffineForOp forOp) {
   std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
