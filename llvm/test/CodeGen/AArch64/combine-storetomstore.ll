@@ -245,9 +245,8 @@ define void @test_masked_store_multiple(<8 x i32> %x, <8 x i32> %y, ptr %ptr1, p
 ; SVE-NEXT:    zip2 v6.8b, v4.8b, v0.8b
 ; SVE-NEXT:    zip1 v4.8b, v4.8b, v0.8b
 ; SVE-NEXT:    mov x8, #4 // =0x4
-; SVE-NEXT:    zip2 v7.8b, v5.8b, v0.8b
-; SVE-NEXT:    zip1 v5.8b, v5.8b, v0.8b
-; SVE-NEXT:    // kill: def $q3 killed $q3 def $z3
+; SVE-NEXT:    zip1 v7.8b, v5.8b, v0.8b
+; SVE-NEXT:    zip2 v5.8b, v5.8b, v0.8b
 ; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE-NEXT:    ptrue p0.s, vl4
 ; SVE-NEXT:    ushll v6.4s, v6.4h, #0
@@ -263,14 +262,13 @@ define void @test_masked_store_multiple(<8 x i32> %x, <8 x i32> %y, ptr %ptr1, p
 ; SVE-NEXT:    cmlt v7.4s, v7.4s, #0
 ; SVE-NEXT:    cmlt v5.4s, v5.4s, #0
 ; SVE-NEXT:    cmpne p1.s, p0/z, z6.s, #0
-; SVE-NEXT:    ldr q6, [x1]
-; SVE-NEXT:    cmpne p2.s, p0/z, z4.s, #0
-; SVE-NEXT:    cmpne p0.s, p0/z, z7.s, #0
-; SVE-NEXT:    bif v2.16b, v6.16b, v5.16b
+; SVE-NEXT:    ldp q6, q16, [x1]
+; SVE-NEXT:    cmpne p0.s, p0/z, z4.s, #0
+; SVE-NEXT:    bif v2.16b, v6.16b, v7.16b
+; SVE-NEXT:    bif v3.16b, v16.16b, v5.16b
 ; SVE-NEXT:    st1w { z1.s }, p1, [x0, x8, lsl #2]
-; SVE-NEXT:    st1w { z0.s }, p2, [x0]
-; SVE-NEXT:    st1w { z3.s }, p0, [x1, x8, lsl #2]
-; SVE-NEXT:    str q2, [x1]
+; SVE-NEXT:    st1w { z0.s }, p0, [x0]
+; SVE-NEXT:    stp q2, q3, [x1]
 ; SVE-NEXT:    ret
   %load = load <8 x i32>, ptr %ptr1, align 32
   %load2 = load <8 x i32>, ptr %ptr2, align 32
