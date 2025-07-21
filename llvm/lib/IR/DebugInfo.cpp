@@ -45,25 +45,6 @@ using namespace llvm;
 using namespace llvm::at;
 using namespace llvm::dwarf;
 
-TinyPtrVector<DbgDeclareInst *> llvm::findDbgDeclares(Value *V) {
-  // This function is hot. Check whether the value has any metadata to avoid a
-  // DenseMap lookup. This check is a bitfield datamember lookup.
-  if (!V->isUsedByMetadata())
-    return {};
-  auto *L = ValueAsMetadata::getIfExists(V);
-  if (!L)
-    return {};
-  auto *MDV = MetadataAsValue::getIfExists(V->getContext(), L);
-  if (!MDV)
-    return {};
-
-  TinyPtrVector<DbgDeclareInst *> Declares;
-  for (User *U : MDV->users())
-    if (auto *DDI = dyn_cast<DbgDeclareInst>(U))
-      Declares.push_back(DDI);
-
-  return Declares;
-}
 TinyPtrVector<DbgVariableRecord *> llvm::findDVRDeclares(Value *V) {
   // This function is hot. Check whether the value has any metadata to avoid a
   // DenseMap lookup. This check is a bitfield datamember lookup.
@@ -98,42 +79,31 @@ TinyPtrVector<DbgVariableRecord *> llvm::findDVRValues(Value *V) {
   return Values;
 }
 
-template <typename IntrinsicT, bool DbgAssignAndValuesOnly>
+template <bool DbgAssignAndValuesOnly>
 static void
-findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V,
-                  SmallVectorImpl<DbgVariableRecord *> *DbgVariableRecords) {
+findDbgIntrinsics(Value *V,
+                  SmallVectorImpl<DbgVariableRecord *> &DbgVariableRecords) {
   // This function is hot. Check whether the value has any metadata to avoid a
   // DenseMap lookup.
   if (!V->isUsedByMetadata())
     return;
 
-  LLVMContext &Ctx = V->getContext();
   // TODO: If this value appears multiple times in a DIArgList, we should still
-  // only add the owning DbgValueInst once; use this set to track ArgListUsers.
+  // only add the owning dbg.value once; use this set to track ArgListUsers.
   // This behaviour can be removed when we can automatically remove duplicates.
   // V will also appear twice in a dbg.assign if its used in the both the value
   // and address components.
-  SmallPtrSet<IntrinsicT *, 4> EncounteredIntrinsics;
   SmallPtrSet<DbgVariableRecord *, 4> EncounteredDbgVariableRecords;
 
-  /// Append IntrinsicT users of MetadataAsValue(MD).
-  auto AppendUsers = [&Ctx, &EncounteredIntrinsics,
-                      &EncounteredDbgVariableRecords, &Result,
-                      DbgVariableRecords](Metadata *MD) {
-    if (auto *MDV = MetadataAsValue::getIfExists(Ctx, MD)) {
-      for (User *U : MDV->users())
-        if (IntrinsicT *DVI = dyn_cast<IntrinsicT>(U))
-          if (EncounteredIntrinsics.insert(DVI).second)
-            Result.push_back(DVI);
-    }
-    if (!DbgVariableRecords)
-      return;
+  /// Append users of MetadataAsValue(MD).
+  auto AppendUsers = [&EncounteredDbgVariableRecords,
+                      &DbgVariableRecords](Metadata *MD) {
     // Get DbgVariableRecords that use this as a single value.
     if (LocalAsMetadata *L = dyn_cast<LocalAsMetadata>(MD)) {
       for (DbgVariableRecord *DVR : L->getAllDbgVariableRecordUsers()) {
         if (!DbgAssignAndValuesOnly || DVR->isDbgValue() || DVR->isDbgAssign())
           if (EncounteredDbgVariableRecords.insert(DVR).second)
-            DbgVariableRecords->push_back(DVR);
+            DbgVariableRecords.push_back(DVR);
       }
     }
   };
@@ -142,47 +112,29 @@ findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V,
     AppendUsers(L);
     for (Metadata *AL : L->getAllArgListUsers()) {
       AppendUsers(AL);
-      if (!DbgVariableRecords)
-        continue;
       DIArgList *DI = cast<DIArgList>(AL);
       for (DbgVariableRecord *DVR : DI->getAllDbgVariableRecordUsers())
         if (!DbgAssignAndValuesOnly || DVR->isDbgValue() || DVR->isDbgAssign())
           if (EncounteredDbgVariableRecords.insert(DVR).second)
-            DbgVariableRecords->push_back(DVR);
+            DbgVariableRecords.push_back(DVR);
     }
   }
 }
 
 void llvm::findDbgValues(
-    SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V,
-    SmallVectorImpl<DbgVariableRecord *> *DbgVariableRecords) {
-  findDbgIntrinsics<DbgValueInst, /*DbgAssignAndValuesOnly=*/true>(
-      DbgValues, V, DbgVariableRecords);
+    Value *V, SmallVectorImpl<DbgVariableRecord *> &DbgVariableRecords) {
+  findDbgIntrinsics</*DbgAssignAndValuesOnly=*/true>(V, DbgVariableRecords);
 }
 
 void llvm::findDbgUsers(
-    SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers, Value *V,
-    SmallVectorImpl<DbgVariableRecord *> *DbgVariableRecords) {
-  findDbgIntrinsics<DbgVariableIntrinsic, /*DbgAssignAndValuesOnly=*/false>(
-      DbgUsers, V, DbgVariableRecords);
+    Value *V, SmallVectorImpl<DbgVariableRecord *> &DbgVariableRecords) {
+  findDbgIntrinsics</*DbgAssignAndValuesOnly=*/false>(V, DbgVariableRecords);
 }
 
 DISubprogram *llvm::getDISubprogram(const MDNode *Scope) {
   if (auto *LocalScope = dyn_cast_or_null<DILocalScope>(Scope))
     return LocalScope->getSubprogram();
   return nullptr;
-}
-
-DebugLoc llvm::getDebugValueLoc(DbgVariableIntrinsic *DII) {
-  // Original dbg.declare must have a location.
-  const DebugLoc &DeclareLoc = DII->getDebugLoc();
-  MDNode *Scope = DeclareLoc.getScope();
-  DILocation *InlinedAt = DeclareLoc.getInlinedAt();
-  // Because no machine insts can come from debug intrinsics, only the scope
-  // and inlinedAt is significant. Zero line numbers are used in case this
-  // DebugLoc leaks into any adjacent instructions. Produce an unknown location
-  // with the correct scope / inlinedAt fields.
-  return DILocation::get(DII->getContext(), 0, 0, Scope, InlinedAt);
 }
 
 DebugLoc llvm::getDebugValueLoc(DbgVariableRecord *DVR) {
@@ -851,19 +803,6 @@ void DebugTypeInfoRemoval::traverse(MDNode *N) {
 
 bool llvm::stripNonLineTableDebugInfo(Module &M) {
   bool Changed = false;
-
-  // First off, delete the debug intrinsics.
-  auto RemoveUses = [&](StringRef Name) {
-    if (auto *DbgVal = M.getFunction(Name)) {
-      while (!DbgVal->use_empty())
-        cast<Instruction>(DbgVal->user_back())->eraseFromParent();
-      DbgVal->eraseFromParent();
-      Changed = true;
-    }
-  };
-  RemoveUses("llvm.dbg.declare");
-  RemoveUses("llvm.dbg.label");
-  RemoveUses("llvm.dbg.value");
 
   // Delete non-CU debug info named metadata nodes.
   for (auto NMI = M.named_metadata_begin(), NME = M.named_metadata_end();

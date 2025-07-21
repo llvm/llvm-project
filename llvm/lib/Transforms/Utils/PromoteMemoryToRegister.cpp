@@ -243,10 +243,8 @@ struct AllocaInfo {
           OnlyUsedInOneBlock = false;
       }
     }
-    SmallVector<DbgVariableIntrinsic *> AllDbgUsers;
     SmallVector<DbgVariableRecord *> AllDPUsers;
-    findDbgUsers(AllDbgUsers, AI, &AllDPUsers);
-    assert(AllDbgUsers.empty());
+    findDbgUsers(AI, AllDPUsers);
     std::copy_if(AllDPUsers.begin(), AllDPUsers.end(),
                  std::back_inserter(DPUsers),
                  [](DbgVariableRecord *DVR) { return !DVR->isDbgAssign(); });

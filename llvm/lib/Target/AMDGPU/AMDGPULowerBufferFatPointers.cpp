@@ -1583,9 +1583,8 @@ void SplitPtrStructs::killAndReplaceSplitInstructions(
     if (!SplitUsers.contains(I))
       continue;
 
-    SmallVector<DbgValueInst *> DIs;
     SmallVector<DbgVariableRecord *> Dbgs;
-    findDbgValues(DIs, I, &Dbgs);
+    findDbgValues(I, Dbgs);
     for (DbgVariableRecord *Dbg : Dbgs) {
       auto &DL = I->getDataLayout();
       assert(isSplitFatPtr(I->getType()) &&
