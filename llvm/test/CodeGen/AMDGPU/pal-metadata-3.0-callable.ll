@@ -19,6 +19,7 @@
 ; CHECK-NEXT:        .debug_mode:     0
 ; CHECK-NEXT:        .excp_en:        0
 ; CHECK-NEXT:        .float_mode:     0xc0
+; CHECK-NEXT:        .forward_progress: true
 ; GFX11-NEXT:        .ieee_mode:      true
 ; CHECK-NEXT:        .image_op:       false
 ; CHECK-NEXT:        .lds_size:       0x200
