@@ -114,7 +114,7 @@ def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
         /*methodBody=*/"",
         /*defaultImpl=*/ [{
             mlir::Operation* op = $_op;
-            return rewriter.create<LLVM::ConstantOp>(
+            return LLVM::ConstantOp::create(rewriter,
               op->getLoc(), rewriter.getIntegerType(32), val);
         }]
      >,
