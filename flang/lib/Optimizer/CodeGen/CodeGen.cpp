@@ -1376,10 +1376,10 @@ getTypeDescriptor(ModOpTy mod, mlir::ConversionPatternRewriter &rewriter,
     return rewriter.create<mlir::LLVM::ZeroOp>(loc, llvmPtrTy);
 
   if (!options.skipExternalRttiDefinition)
-    fir::emitFatalError(
-        loc, llvm::Twine("runtime derived type info descriptor of '") + name +
-                 "' was not generated and skipExternalRttiDefinition and "
-                 "ignoreMissingTypeDescriptors options are not set");
+    fir::emitFatalError(loc,
+                        "runtime derived type info descriptor was not "
+                        "generated and skipExternalRttiDefinition and "
+                        "ignoreMissingTypeDescriptors options are not set");
 
   // Rtti for a derived type defined in another compilation unit and for which
   // rtti was not defined in lowering because of the skipExternalRttiDefinition
