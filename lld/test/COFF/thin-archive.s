@@ -39,13 +39,13 @@
 
 # RUN: rm %t.lib.obj
 # RUN: lld-link @%t.rsp %t.lib 2>&1 | \
-# RUN:     FileCheck --check-prefix=ERR --allow-empty  %s
+# RUN:     FileCheck %s --check-prefix=ERR --allow-empty
 # RUN: env LLD_IN_TEST=1 not lld-link @%t.rsp %t_thin.lib 2>&1 | \
-# RUN:     FileCheck --check-prefix=NOOBJ %s
+# RUN:     FileCheck %s --check-prefix=NOOBJ
 # RUN: env LLD_IN_TEST=1 not lld-link @%t.rsp /wholearchive:%t_thin.lib 2>&1 | \
-# RUN:     FileCheck --check-prefix=NOOBJWHOLE %s
+# RUN:     FileCheck %s --check-prefix=NOOBJWHOLE
 # RUN: env LLD_IN_TEST=1 not lld-link @%t.rsp %t_thin.lib /demangle:no 2>&1 | \
-# RUN:     FileCheck --check-prefix=NOOBJNODEMANGLE %s
+# RUN:     FileCheck %s --check-prefix=NOOBJNODEMANGLE
 
 # ERR-NOT: error: could not get the buffer for the member defining
 # NOOBJ: error: could not get the buffer for the member defining symbol int __cdecl f(void): {{.*}}.lib({{.*}}.lib.obj):
