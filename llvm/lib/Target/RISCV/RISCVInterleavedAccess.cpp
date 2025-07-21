@@ -131,10 +131,14 @@ static bool getMemOperands(unsigned Factor, VectorType *VTy, Type *XLenTy,
                                    : Constant::getAllOnesValue(XLenTy);
     return true;
   }
-  if (auto *VPLdSt = dyn_cast<VPIntrinsic>(I)) {
-    assert((VPLdSt->getIntrinsicID() == Intrinsic::vp_load ||
-            VPLdSt->getIntrinsicID() == Intrinsic::vp_store) &&
-           "Unexpected intrinsic");
+
+  auto *II = cast<IntrinsicInst>(I);
+  switch (II->getIntrinsicID()) {
+  default:
+    llvm_unreachable("Unsupported intrinsic type");
+  case Intrinsic::vp_load:
+  case Intrinsic::vp_store: {
+    auto *VPLdSt = cast<VPIntrinsic>(I);
     Ptr = VPLdSt->getMemoryPointerParam();
     Alignment = VPLdSt->getPointerAlignment().value_or(
         DL.getABITypeAlign(VTy->getElementType()));
@@ -151,21 +155,21 @@ static bool getMemOperands(unsigned Factor, VectorType *VTy, Type *XLenTy,
     VL = Builder.CreateZExt(Builder.CreateExactUDiv(WideEVL, FactorC), XLenTy);
     return true;
   }
-  auto *II = cast<IntrinsicInst>(I);
-  assert(II->getIntrinsicID() == Intrinsic::masked_load &&
-         "Unexpected intrinsic");
-  Ptr = II->getOperand(0);
-  Alignment = cast<ConstantInt>(II->getArgOperand(1))->getAlignValue();
+  case Intrinsic::masked_load: {
+    Ptr = II->getOperand(0);
+    Alignment = cast<ConstantInt>(II->getArgOperand(1))->getAlignValue();
 
-  if (!isa<UndefValue>(II->getOperand(3)))
-    return false;
+    if (!isa<UndefValue>(II->getOperand(3)))
+      return false;
 
-  assert(Mask && "masked.load needs a mask!");
+    assert(Mask && "masked.load needs a mask!");
 
-  VL = isa<FixedVectorType>(VTy)
-           ? Builder.CreateElementCount(XLenTy, VTy->getElementCount())
-           : Constant::getAllOnesValue(XLenTy);
-  return true;
+    VL = isa<FixedVectorType>(VTy)
+             ? Builder.CreateElementCount(XLenTy, VTy->getElementCount())
+             : Constant::getAllOnesValue(XLenTy);
+    return true;
+  }
+  }
 }
 
 /// Lower an interleaved load into a vlsegN intrinsic.
