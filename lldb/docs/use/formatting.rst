@@ -202,7 +202,7 @@ Scoping
 -------
 
 Many times the information that you might have in your prompt might not be
-available and you won``t want it to print out if it isn``t valid. To take care
+available and you won't want it to print out if it isn't valid. To take care
 of this you can enclose everything that must resolve into a scope. A scope
 starts with ``{`` and ends with ``}``. For example in order to only display the
 current frame line table entry basename and line number when the information is
