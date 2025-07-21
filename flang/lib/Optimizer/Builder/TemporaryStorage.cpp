@@ -28,7 +28,7 @@ fir::factory::Counter::Counter(mlir::Location loc, fir::FirOpBuilder &builder,
   one = builder.createIntegerConstant(loc, type, 1);
   if (canCountThroughLoops) {
     index = builder.createTemporary(loc, type);
-    builder.create<fir::StoreOp>(loc, initialValue, index);
+    fir::StoreOp::create(builder, loc, initialValue, index);
   } else {
     index = initialValue;
   }
@@ -38,21 +38,21 @@ mlir::Value
 fir::factory::Counter::getAndIncrementIndex(mlir::Location loc,
                                             fir::FirOpBuilder &builder) {
   if (canCountThroughLoops) {
-    mlir::Value indexValue = builder.create<fir::LoadOp>(loc, index);
+    mlir::Value indexValue = fir::LoadOp::create(builder, loc, index);
     mlir::Value newValue =
-        builder.create<mlir::arith::AddIOp>(loc, indexValue, one);
-    builder.create<fir::StoreOp>(loc, newValue, index);
+        mlir::arith::AddIOp::create(builder, loc, indexValue, one);
+    fir::StoreOp::create(builder, loc, newValue, index);
     return indexValue;
   }
   mlir::Value indexValue = index;
-  index = builder.create<mlir::arith::AddIOp>(loc, indexValue, one);
+  index = mlir::arith::AddIOp::create(builder, loc, indexValue, one);
   return indexValue;
 }
 
 void fir::factory::Counter::reset(mlir::Location loc,
                                   fir::FirOpBuilder &builder) {
   if (canCountThroughLoops)
-    builder.create<fir::StoreOp>(loc, initialValue, index);
+    fir::StoreOp::create(builder, loc, initialValue, index);
   else
     index = initialValue;
 }
@@ -103,7 +103,7 @@ void fir::factory::HomogeneousScalarStack::pushValue(mlir::Location loc,
   // below should not get hit but is added as a remainder/safety.
   if (!entity.hasIntrinsicType())
     TODO(loc, "creating inlined temporary stack for derived types");
-  builder.create<hlfir::AssignOp>(loc, value, tempElement);
+  hlfir::AssignOp::create(builder, loc, value, tempElement);
 }
 
 void fir::factory::HomogeneousScalarStack::resetFetchPosition(
@@ -125,14 +125,14 @@ void fir::factory::HomogeneousScalarStack::destroy(mlir::Location loc,
   if (allocateOnHeap) {
     auto declare = temp.getDefiningOp<hlfir::DeclareOp>();
     assert(declare && "temp must have been declared");
-    builder.create<fir::FreeMemOp>(loc, declare.getMemref());
+    fir::FreeMemOp::create(builder, loc, declare.getMemref());
   }
 }
 
 hlfir::Entity fir::factory::HomogeneousScalarStack::moveStackAsArrayExpr(
     mlir::Location loc, fir::FirOpBuilder &builder) {
   mlir::Value mustFree = builder.createBool(loc, allocateOnHeap);
-  auto hlfirExpr = builder.create<hlfir::AsExprOp>(loc, temp, mustFree);
+  auto hlfirExpr = hlfir::AsExprOp::create(builder, loc, temp, mustFree);
   return hlfir::Entity{hlfirExpr};
 }
 
@@ -147,14 +147,14 @@ fir::factory::SimpleCopy::SimpleCopy(mlir::Location loc,
   // Use hlfir.as_expr and hlfir.associate to create a copy and leave
   // bufferization deals with how best to make the copy.
   if (source.isVariable())
-    source = hlfir::Entity{builder.create<hlfir::AsExprOp>(loc, source)};
+    source = hlfir::Entity{hlfir::AsExprOp::create(builder, loc, source)};
   copy = hlfir::genAssociateExpr(loc, builder, source,
                                  source.getFortranElementType(), tempName);
 }
 
 void fir::factory::SimpleCopy::destroy(mlir::Location loc,
                                        fir::FirOpBuilder &builder) {
-  builder.create<hlfir::EndAssociateOp>(loc, copy);
+  hlfir::EndAssociateOp::create(builder, loc, copy);
 }
 
 //===----------------------------------------------------------------------===//
@@ -279,7 +279,7 @@ mlir::Value fir::factory::AnyVariableStack::fetch(mlir::Location loc,
   mlir::Value indexValue = counter.getAndIncrementIndex(loc, builder);
   fir::runtime::genDescriptorAt(loc, builder, opaquePtr, indexValue,
                                 retValueBox);
-  hlfir::Entity retBox{builder.create<fir::LoadOp>(loc, retValueBox)};
+  hlfir::Entity retBox{fir::LoadOp::create(builder, loc, retValueBox)};
   // The runtime always tracks variable as address, but the form of the variable
   // that was saved may be different (raw address, fir.boxchar), ensure
   // the returned variable has the same form of the one that was saved.
@@ -326,7 +326,7 @@ void fir::factory::AnyVectorSubscriptStack::pushShape(
         hlfir::getFortranElementOrSequenceType(*boxType));
     mlir::Value null = builder.createNullConstant(loc, refType);
     mlir::Value descriptor =
-        builder.create<fir::EmboxOp>(loc, *boxType, null, shape);
+        fir::EmboxOp::create(builder, loc, *boxType, null, shape);
     shapeTemp->pushValue(loc, builder, descriptor);
     return;
   }
@@ -372,7 +372,7 @@ void fir::factory::AnyAddressStack::pushValue(mlir::Location loc,
   mlir::Value cast = variable;
   if (auto boxProcType = llvm::dyn_cast<fir::BoxProcType>(variable.getType())) {
     cast =
-        builder.create<fir::BoxAddrOp>(loc, boxProcType.getEleTy(), variable);
+        fir::BoxAddrOp::create(builder, loc, boxProcType.getEleTy(), variable);
   }
   cast = builder.createConvert(loc, builder.getIntPtrType(), cast);
   static_cast<AnyValueStack *>(this)->pushValue(loc, builder, cast);
@@ -383,7 +383,7 @@ mlir::Value fir::factory::AnyAddressStack::fetch(mlir::Location loc,
   mlir::Value addr = static_cast<AnyValueStack *>(this)->fetch(loc, builder);
   if (auto boxProcType = llvm::dyn_cast<fir::BoxProcType>(addressType)) {
     mlir::Value cast = builder.createConvert(loc, boxProcType.getEleTy(), addr);
-    return builder.create<fir::EmboxProcOp>(loc, boxProcType, cast);
+    return fir::EmboxProcOp::create(builder, loc, boxProcType, cast);
   }
   return builder.createConvert(loc, addressType, addr);
 }
