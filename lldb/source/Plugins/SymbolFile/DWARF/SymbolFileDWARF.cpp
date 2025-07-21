@@ -2483,10 +2483,13 @@ llvm::Error SymbolFileDWARF::FindAndResolveFunction(
   // eFunctionNameTypeFull for mangled name lookup.
   // eFunctionNameTypeMethod is required for structor lookups (since we look
   // those up by DW_AT_name).
-  Module::LookupInfo info(ConstString(lookup_name),
-                          lldb::eFunctionNameTypeFull |
-                              lldb::eFunctionNameTypeMethod,
+  Module::LookupInfo info(ConstString(lookup_name), {},
                           lldb::eLanguageTypeUnknown);
+
+  // Set this separately because Module::LookupInfo constructor would
+  // unset the eFunctionNameTypeFull for custom linkage names.
+  info.SetNameTypeMask(lldb::eFunctionNameTypeFull |
+                       lldb::eFunctionNameTypeMethod);
 
   llvm::DenseMap<uint8_t, DWARFDIE> variant_to_die;
   m_index->GetFunctions(info, *this, {}, [&](DWARFDIE entry) {
@@ -2539,7 +2542,7 @@ llvm::Error SymbolFileDWARF::FindAndResolveFunction(
         die = it->getSecond();
   }
 
-  if (!die.IsValid())
+  if (!die.IsValid() || die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0))
     return llvm::createStringError(
         llvm::formatv("failed to find definition DIE for [lookup_name={0}] "
                       "[DIE ID={1:x}] [structor={2}]",
