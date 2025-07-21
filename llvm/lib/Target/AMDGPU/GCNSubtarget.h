@@ -1722,8 +1722,11 @@ public:
   /// unit requirement.
   unsigned getMaxNumVGPRs(const Function &F) const;
 
-  unsigned getMaxNumAGPRs(const Function &F) const {
-    return getMaxNumVGPRs(F);
+  unsigned getMaxNumAGPRs(const Function &F, unsigned ArchVGPRs,
+                          unsigned WavesPerEU) const;
+
+  unsigned getMaxNumAGPRs(unsigned WavesPerEU) const {
+    return AMDGPU::IsaInfo::getMaxNumAGPRs(this, WavesPerEU);
   }
 
   /// Return a pair of maximum numbers of VGPRs and AGPRs that meet the number
@@ -1740,17 +1743,18 @@ public:
   /// unit requirement.
   unsigned getMaxNumVGPRs(const MachineFunction &MF) const;
 
+  unsigned getMaxNumAGPRs(const MachineFunction &MF, unsigned ArchVGPRs,
+                          unsigned WavesPerEU) const {
+    return getMaxNumAGPRs(MF.getFunction(), ArchVGPRs, WavesPerEU);
+  }
+
   bool supportsWave32() const { return getGeneration() >= GFX10; }
 
   bool supportsWave64() const { return !hasGFX1250Insts(); }
 
-  bool isWave32() const {
-    return getWavefrontSize() == 32;
-  }
+  bool isWave32() const { return getWavefrontSize() == 32; }
 
-  bool isWave64() const {
-    return getWavefrontSize() == 64;
-  }
+  bool isWave64() const { return getWavefrontSize() == 64; }
 
   /// Returns if the wavesize of this subtarget is known reliable. This is false
   /// only for the a default target-cpu that does not have an explicit

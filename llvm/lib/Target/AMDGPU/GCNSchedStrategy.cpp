@@ -86,6 +86,8 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
       Context->RegClassInfo->getNumAllocatableRegs(&AMDGPU::SGPR_32RegClass);
   VGPRExcessLimit =
       Context->RegClassInfo->getNumAllocatableRegs(&AMDGPU::VGPR_32RegClass);
+  AGPRExcessLimit =
+      Context->RegClassInfo->getNumAllocatableRegs(&AMDGPU::AGPR_32RegClass);
 
   SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
   // Set the initial TargetOccupnacy to the maximum occupancy that we can
@@ -97,6 +99,9 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
       RelaxedOcc ? MFI.getMinAllowedOccupancy() : MFI.getOccupancy();
   SGPRCriticalLimit =
       std::min(ST.getMaxNumSGPRs(TargetOccupancy, true), SGPRExcessLimit);
+
+  AGPRCriticalLimit =
+      std::min(ST.getMaxNumAGPRs(TargetOccupancy), AGPRExcessLimit);
 
   if (!KnownExcessRP) {
     VGPRCriticalLimit = std::min(
@@ -201,7 +206,8 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
                                      const RegPressureTracker &RPTracker,
                                      const SIRegisterInfo *SRI,
                                      unsigned SGPRPressure,
-                                     unsigned VGPRPressure, bool IsBottomUp) {
+                                     unsigned VGPRPressure,
+                                     unsigned AGPRPressure, bool IsBottomUp) {
   Cand.SU = SU;
   Cand.AtTop = AtTop;
 
@@ -230,6 +236,7 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
     Pressure.resize(4, 0);
     Pressure[AMDGPU::RegisterPressureSets::SReg_32] = SGPRPressure;
     Pressure[AMDGPU::RegisterPressureSets::VGPR_32] = VGPRPressure;
+    Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = AGPRPressure;
 
     for (const auto &Diff : DAG->getPressureDiff(SU)) {
       if (!Diff.isValid())
@@ -247,7 +254,9 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
     if (Pressure[AMDGPU::RegisterPressureSets::SReg_32] !=
             CheckPressure[AMDGPU::RegisterPressureSets::SReg_32] ||
         Pressure[AMDGPU::RegisterPressureSets::VGPR_32] !=
-            CheckPressure[AMDGPU::RegisterPressureSets::VGPR_32]) {
+            CheckPressure[AMDGPU::RegisterPressureSets::VGPR_32] ||
+        Pressure[AMDGPU::RegisterPressureSets::AGPR_32] !=
+            CheckPressure[AMDGPU::RegisterPressureSets::AGPR_32]) {
       errs() << "Register Pressure is inaccurate when calculated through "
                 "PressureDiff\n"
              << "SGPR got " << Pressure[AMDGPU::RegisterPressureSets::SReg_32]
@@ -255,7 +264,10 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
              << CheckPressure[AMDGPU::RegisterPressureSets::SReg_32] << "\n"
              << "VGPR got " << Pressure[AMDGPU::RegisterPressureSets::VGPR_32]
              << ", expected "
-             << CheckPressure[AMDGPU::RegisterPressureSets::VGPR_32] << "\n";
+             << CheckPressure[AMDGPU::RegisterPressureSets::VGPR_32] << "\n"
+             << "AGPR got " << Pressure[AMDGPU::RegisterPressureSets::AGPR_32]
+             << ", expected "
+             << CheckPressure[AMDGPU::RegisterPressureSets::AGPR_32] << "\n";
       report_fatal_error("inaccurate register pressure calculation");
     }
 #endif
@@ -263,6 +275,7 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
 
   unsigned NewSGPRPressure = Pressure[AMDGPU::RegisterPressureSets::SReg_32];
   unsigned NewVGPRPressure = Pressure[AMDGPU::RegisterPressureSets::VGPR_32];
+  unsigned NewAGPRPressure = Pressure[AMDGPU::RegisterPressureSets::AGPR_32];
 
   // If two instructions increase the pressure of different register sets
   // by the same amount, the generic scheduler will prefer to schedule the
@@ -272,7 +285,8 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
   // only for VGPRs or only for SGPRs.
 
   // FIXME: Better heuristics to determine whether to prefer SGPRs or VGPRs.
-  const unsigned MaxVGPRPressureInc = 16;
+  static constexpr unsigned MaxVGPRPressureInc = 16;
+  bool ShouldTrackAGPRs = AGPRPressure >= AGPRExcessLimit;
   bool ShouldTrackVGPRs = VGPRPressure + MaxVGPRPressureInc >= VGPRExcessLimit;
   bool ShouldTrackSGPRs = !ShouldTrackVGPRs && SGPRPressure >= SGPRExcessLimit;
 
@@ -291,6 +305,12 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
     Cand.RPDelta.Excess.setUnitInc(NewVGPRPressure - VGPRExcessLimit);
   }
 
+  if (ShouldTrackAGPRs && NewAGPRPressure >= AGPRPressure) {
+    HasHighPressure = true;
+    Cand.RPDelta.Excess = PressureChange(AMDGPU::RegisterPressureSets::AGPR_32);
+    Cand.RPDelta.Excess.setUnitInc(NewAGPRPressure - AGPRExcessLimit);
+  }
+
   if (ShouldTrackSGPRs && NewSGPRPressure >= SGPRExcessLimit) {
     HasHighPressure = true;
     Cand.RPDelta.Excess = PressureChange(AMDGPU::RegisterPressureSets::SReg_32);
@@ -304,13 +324,19 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
 
   int SGPRDelta = NewSGPRPressure - SGPRCriticalLimit;
   int VGPRDelta = NewVGPRPressure - VGPRCriticalLimit;
+  int AGPRDelta = NewAGPRPressure - AGPRCriticalLimit;
 
-  if (SGPRDelta >= 0 || VGPRDelta >= 0) {
+  if (SGPRDelta >= 0 || VGPRDelta >= 0 || AGPRDelta >= 0) {
     HasHighPressure = true;
+    // Prioritize reducing the VGPRDelta if both are >= 0
     if (SGPRDelta > VGPRDelta) {
       Cand.RPDelta.CriticalMax =
           PressureChange(AMDGPU::RegisterPressureSets::SReg_32);
       Cand.RPDelta.CriticalMax.setUnitInc(SGPRDelta);
+    } else if (AGPRDelta > VGPRDelta) {
+      Cand.RPDelta.CriticalMax =
+          PressureChange(AMDGPU::RegisterPressureSets::AGPR_32);
+      Cand.RPDelta.CriticalMax.setUnitInc(AGPRDelta);
     } else {
       Cand.RPDelta.CriticalMax =
           PressureChange(AMDGPU::RegisterPressureSets::VGPR_32);
@@ -330,16 +356,19 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
   ArrayRef<unsigned> Pressure = RPTracker.getRegSetPressureAtPos();
   unsigned SGPRPressure = 0;
   unsigned VGPRPressure = 0;
+  unsigned AGPRPressure = 0;
   if (DAG->isTrackingPressure()) {
     if (!GCNTrackers) {
       SGPRPressure = Pressure[AMDGPU::RegisterPressureSets::SReg_32];
       VGPRPressure = Pressure[AMDGPU::RegisterPressureSets::VGPR_32];
+      AGPRPressure = Pressure[AMDGPU::RegisterPressureSets::AGPR_32];
     } else {
       GCNRPTracker *T = IsBottomUp
                             ? static_cast<GCNRPTracker *>(&UpwardTracker)
                             : static_cast<GCNRPTracker *>(&DownwardTracker);
       SGPRPressure = T->getPressure().getSGPRNum();
       VGPRPressure = T->getPressure().getArchVGPRNum();
+      AGPRPressure = T->getPressure().getAGPRNum();
     }
   }
   ReadyQueue &Q = Zone.Available;
@@ -347,7 +376,7 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
 
     SchedCandidate TryCand(ZonePolicy);
     initCandidate(TryCand, SU, Zone.isTop(), RPTracker, SRI, SGPRPressure,
-                  VGPRPressure, IsBottomUp);
+                  VGPRPressure, AGPRPressure, IsBottomUp);
     // Pass SchedBoundary only when comparing nodes from the same boundary.
     SchedBoundary *ZoneArg = Cand.AtTop == TryCand.AtTop ? &Zone : nullptr;
     tryCandidate(Cand, TryCand, ZoneArg);
@@ -1329,6 +1358,10 @@ void GCNSchedStage::checkScheduling() {
   // file.
   unsigned MaxArchVGPRs = std::min(MaxVGPRs, ST.getAddressableNumArchVGPRs());
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
+
+  unsigned MaxAGPRs = ST.getMaxNumAGPRs(MF, MaxArchVGPRs, WavesAfter);
+
+  assert(MaxAGPRs + MaxArchVGPRs == MaxVGPRs);
 
   if (PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) > MaxVGPRs ||
       PressureAfter.getArchVGPRNum() > MaxArchVGPRs ||
