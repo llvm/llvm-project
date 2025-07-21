@@ -261,6 +261,23 @@ findLinearFunction(DenseMap<int64_t, int64_t> &Cases,
   return std::nullopt;
 }
 
+/// Remove outlier cases, where the offset is not exactly a point on the
+/// calculated function.
+static SmallVector<PhiCase>
+removeOutliers(FuncParams F, SmallVector<PhiCase> PhiCases,
+               DenseMap<int64_t, int64_t> &CaseValueMap) {
+  SmallVector<PhiCase> FilteredCases;
+  for (auto &Case : PhiCases) {
+    auto CaseValue = Case.CaseValue->getSExtValue();
+    auto CaseOffset = CaseValueMap[CaseValue];
+    auto Result = F.Slope * CaseValue + F.Bias;
+
+    if (Result == CaseOffset)
+      FilteredCases.push_back(Case);
+  }
+  return FilteredCases;
+}
+
 PreservedAnalyses SimplifySwitchVarPass::run(Function &F,
                                              FunctionAnalysisManager &AM) {
   bool Changed = false;
@@ -294,6 +311,8 @@ PreservedAnalyses SimplifySwitchVarPass::run(Function &F,
           continue;
 
         auto F = FuncParams.value();
+
+        PhiCases = removeOutliers(F, PhiCases, CaseOffsetMap);
       }
     }
   }
