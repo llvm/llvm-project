@@ -48,6 +48,8 @@ using namespace llvm;
 STATISTIC(NumRemovedSExtW, "Number of removed sign-extensions");
 STATISTIC(NumTransformedToWInstrs,
           "Number of instructions transformed to W-ops");
+STATISTIC(NumTransformedToNonWInstrs,
+          "Number of instructions transformed to non-W-ops");
 
 static cl::opt<bool> DisableSExtWRemoval("riscv-disable-sextw-removal",
                                          cl::desc("Disable removal of sext.w"),
@@ -123,7 +125,7 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
   SmallSet<std::pair<const MachineInstr *, unsigned>, 4> Visited;
   SmallVector<std::pair<const MachineInstr *, unsigned>, 4> Worklist;
 
-  Worklist.push_back(std::make_pair(&OrigMI, OrigBits));
+  Worklist.emplace_back(&OrigMI, OrigBits);
 
   while (!Worklist.empty()) {
     auto P = Worklist.pop_back_val();
@@ -158,7 +160,6 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case RISCV::MULW:
       case RISCV::REMUW:
       case RISCV::REMW:
-      case RISCV::SLLIW:
       case RISCV::SLLW:
       case RISCV::SRAIW:
       case RISCV::SRAW:
@@ -188,6 +189,7 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
         if (Bits >= 32)
           break;
         return false;
+
       case RISCV::SEXT_B:
       case RISCV::PACKH:
         if (Bits >= 8)
@@ -213,7 +215,7 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
         // as an N-Bit user.
         unsigned ShAmt = UserMI->getOperand(2).getImm();
         if (Bits > ShAmt) {
-          Worklist.push_back(std::make_pair(UserMI, Bits - ShAmt));
+          Worklist.emplace_back(UserMI, Bits - ShAmt);
           break;
         }
         return false;
@@ -225,21 +227,29 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
         unsigned ShAmt = UserMI->getOperand(2).getImm();
         if (Bits >= (ST.getXLen() - ShAmt))
           break;
-        Worklist.push_back(std::make_pair(UserMI, Bits + ShAmt));
+        Worklist.emplace_back(UserMI, Bits + ShAmt);
         break;
       }
+      case RISCV::SLLIW: {
+        unsigned ShAmt = UserMI->getOperand(2).getImm();
+        if (Bits >= 32 - ShAmt)
+          break;
+        Worklist.emplace_back(UserMI, Bits + ShAmt);
+        break;
+      }
+
       case RISCV::ANDI: {
         uint64_t Imm = UserMI->getOperand(2).getImm();
         if (Bits >= (unsigned)llvm::bit_width(Imm))
           break;
-        Worklist.push_back(std::make_pair(UserMI, Bits));
+        Worklist.emplace_back(UserMI, Bits);
         break;
       }
       case RISCV::ORI: {
         uint64_t Imm = UserMI->getOperand(2).getImm();
         if (Bits >= (unsigned)llvm::bit_width<uint64_t>(~Imm))
           break;
-        Worklist.push_back(std::make_pair(UserMI, Bits));
+        Worklist.emplace_back(UserMI, Bits);
         break;
       }
 
@@ -253,7 +263,7 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
             break;
           return false;
         }
-        Worklist.push_back(std::make_pair(UserMI, Bits));
+        Worklist.emplace_back(UserMI, Bits);
         break;
 
       case RISCV::SRA:
@@ -272,7 +282,7 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
         // Operand 1 is implicitly zero extended.
         if (OpIdx == 1 && Bits >= 32)
           break;
-        Worklist.push_back(std::make_pair(UserMI, Bits));
+        Worklist.emplace_back(UserMI, Bits);
         break;
 
       case RISCV::BEXTI:
@@ -320,13 +330,13 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case RISCV::BSETI:
       case RISCV::BCLRI:
       case RISCV::BINVI:
-        Worklist.push_back(std::make_pair(UserMI, Bits));
+        Worklist.emplace_back(UserMI, Bits);
         break;
 
       case RISCV::BREV8:
       case RISCV::ORC_B:
         // BREV8 and ORC_B work on bytes. Round Bits down to the nearest byte.
-        Worklist.push_back(std::make_pair(UserMI, alignDown(Bits, 8)));
+        Worklist.emplace_back(UserMI, alignDown(Bits, 8));
         break;
 
       case RISCV::PseudoCCMOVGPR:
@@ -336,7 +346,7 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
         // of operand 4 and 5 is used.
         if (OpIdx != 4 && OpIdx != 5)
           return false;
-        Worklist.push_back(std::make_pair(UserMI, Bits));
+        Worklist.emplace_back(UserMI, Bits);
         break;
 
       case RISCV::CZERO_EQZ:
@@ -345,7 +355,7 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case RISCV::VT_MASKCN:
         if (OpIdx != 1)
           return false;
-        Worklist.push_back(std::make_pair(UserMI, Bits));
+        Worklist.emplace_back(UserMI, Bits);
         break;
       }
     }
@@ -721,6 +731,7 @@ bool RISCVOptWInstrs::stripWSuffixes(MachineFunction &MF,
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       unsigned Opc;
+      // clang-format off
       switch (MI.getOpcode()) {
       default:
         continue;
@@ -728,10 +739,15 @@ bool RISCVOptWInstrs::stripWSuffixes(MachineFunction &MF,
       case RISCV::ADDIW: Opc = RISCV::ADDI; break;
       case RISCV::MULW:  Opc = RISCV::MUL;  break;
       case RISCV::SLLIW: Opc = RISCV::SLLI; break;
+      case RISCV::SUBW:  Opc = RISCV::SUB;  break;
       }
+      // clang-format on
 
       if (hasAllWUsers(MI, ST, MRI)) {
+        LLVM_DEBUG(dbgs() << "Replacing " << MI);
         MI.setDesc(TII.get(Opc));
+        LLVM_DEBUG(dbgs() << "     with " << MI);
+        ++NumTransformedToNonWInstrs;
         MadeChange = true;
       }
     }

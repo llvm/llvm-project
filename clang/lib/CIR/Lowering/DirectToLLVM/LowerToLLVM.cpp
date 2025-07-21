@@ -872,6 +872,21 @@ mlir::LogicalResult CIRToLLVMReturnOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
+mlir::LogicalResult CIRToLLVMRotateOpLowering::matchAndRewrite(
+    cir::RotateOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  // Note that LLVM intrinsic calls to @llvm.fsh{r,l}.i* have the same type as
+  // the operand.
+  mlir::Value input = adaptor.getInput();
+  if (op.isRotateLeft())
+    rewriter.replaceOpWithNewOp<mlir::LLVM::FshlOp>(op, input, input,
+                                                    adaptor.getAmount());
+  else
+    rewriter.replaceOpWithNewOp<mlir::LLVM::FshrOp>(op, input, input,
+                                                    adaptor.getAmount());
+  return mlir::LogicalResult::success();
+}
+
 static mlir::LogicalResult
 rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
                     mlir::ConversionPatternRewriter &rewriter,
@@ -2067,6 +2082,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMComplexAddOpLowering,
                CIRToLLVMComplexCreateOpLowering,
                CIRToLLVMComplexImagOpLowering,
+               CIRToLLVMComplexImagPtrOpLowering,
                CIRToLLVMComplexRealOpLowering,
                CIRToLLVMComplexRealPtrOpLowering,
                CIRToLLVMComplexSubOpLowering,
@@ -2076,6 +2092,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMGetBitfieldOpLowering,
                CIRToLLVMGetGlobalOpLowering,
                CIRToLLVMGetMemberOpLowering,
+               CIRToLLVMRotateOpLowering,
                CIRToLLVMSelectOpLowering,
                CIRToLLVMSetBitfieldOpLowering,
                CIRToLLVMShiftOpLowering,
@@ -2554,7 +2571,7 @@ mlir::LogicalResult CIRToLLVMSetBitfieldOpLowering::matchAndRewrite(
     assert(storageSize > size && "Invalid bitfield size.");
 
     mlir::Value val = rewriter.create<mlir::LLVM::LoadOp>(
-        op.getLoc(), intType, adaptor.getAddr(), /* alignment */ 0,
+        op.getLoc(), intType, adaptor.getAddr(), op.getAlignment(),
         op.getIsVolatile());
 
     srcVal =
@@ -2571,7 +2588,7 @@ mlir::LogicalResult CIRToLLVMSetBitfieldOpLowering::matchAndRewrite(
   }
 
   rewriter.create<mlir::LLVM::StoreOp>(op.getLoc(), srcVal, adaptor.getAddr(),
-                                       /* alignment */ 0, op.getIsVolatile());
+                                       op.getAlignment(), op.getIsVolatile());
 
   mlir::Type resultTy = getTypeConverter()->convertType(op.getType());
 
@@ -2590,6 +2607,23 @@ mlir::LogicalResult CIRToLLVMSetBitfieldOpLowering::matchAndRewrite(
                             info.getIsSigned());
 
   rewriter.replaceOp(op, resultVal);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMComplexImagPtrOpLowering::matchAndRewrite(
+    cir::ComplexImagPtrOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  cir::PointerType operandTy = op.getOperand().getType();
+  mlir::Type resultLLVMTy = getTypeConverter()->convertType(op.getType());
+  mlir::Type elementLLVMTy =
+      getTypeConverter()->convertType(operandTy.getPointee());
+
+  mlir::LLVM::GEPArg gepIndices[2] = {{0}, {1}};
+  mlir::LLVM::GEPNoWrapFlags inboundsNuw =
+      mlir::LLVM::GEPNoWrapFlags::inbounds | mlir::LLVM::GEPNoWrapFlags::nuw;
+  rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
+      op, resultLLVMTy, elementLLVMTy, adaptor.getOperand(), gepIndices,
+      inboundsNuw);
   return mlir::success();
 }
 
@@ -2628,7 +2662,8 @@ mlir::LogicalResult CIRToLLVMGetBitfieldOpLowering::matchAndRewrite(
       computeBitfieldIntType(storageType, context, storageSize);
 
   mlir::Value val = rewriter.create<mlir::LLVM::LoadOp>(
-      op.getLoc(), intType, adaptor.getAddr(), 0, op.getIsVolatile());
+      op.getLoc(), intType, adaptor.getAddr(), op.getAlignment(),
+      op.getIsVolatile());
   val = rewriter.create<mlir::LLVM::BitcastOp>(op.getLoc(), intType, val);
 
   if (info.getIsSigned()) {
