@@ -1373,7 +1373,7 @@ struct VectorScalableExtractOpLowering
 /// ```
 /// is rewritten into:
 /// ```
-///  %r = splat %f0: vector<2x4xf32>
+///  %r = vector.broadcast %f0 : f32 to vector<2x4xf32>
 ///  %va = vector.extractvalue %a[0] : vector<2x4xf32>
 ///  %vb = vector.extractvalue %b[0] : vector<2x4xf32>
 ///  %vc = vector.extractvalue %c[0] : vector<2x4xf32>
@@ -1406,7 +1406,7 @@ public:
     auto elemType = vType.getElementType();
     Value zero = rewriter.create<arith::ConstantOp>(
         loc, elemType, rewriter.getZeroAttr(elemType));
-    Value desc = rewriter.create<vector::SplatOp>(loc, vType, zero);
+    Value desc = rewriter.create<vector::BroadcastOp>(loc, vType, zero);
     for (int64_t i = 0, e = vType.getShape().front(); i != e; ++i) {
       Value extrLHS = rewriter.create<ExtractOp>(loc, op.getLhs(), i);
       Value extrRHS = rewriter.create<ExtractOp>(loc, op.getRhs(), i);
@@ -1548,7 +1548,7 @@ public:
                                  /*isScalable=*/true));
     auto bound = getValueOrCreateCastToIndexLike(rewriter, loc, idxType,
                                                  adaptor.getOperands()[0]);
-    Value bounds = rewriter.create<SplatOp>(loc, indices.getType(), bound);
+    Value bounds = rewriter.create<BroadcastOp>(loc, indices.getType(), bound);
     Value comp = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
                                                 indices, bounds);
     rewriter.replaceOp(op, comp);
@@ -1732,63 +1732,77 @@ private:
   }
 };
 
-/// The Splat operation is lowered to an insertelement + a shufflevector
-/// operation. Splat to only 0-d and 1-d vector result types are lowered.
-struct VectorSplatOpLowering : public ConvertOpToLLVMPattern<vector::SplatOp> {
-  using ConvertOpToLLVMPattern<vector::SplatOp>::ConvertOpToLLVMPattern;
+/// A broadcast of a scalar is lowered to an insertelement + a shufflevector
+/// operation. Only broadcasts to 0-d and 1-d vectors are lowered by this
+/// pattern, the higher rank cases are handled by another pattern.
+struct VectorBroadcastScalarToLowRankLowering
+    : public ConvertOpToLLVMPattern<vector::BroadcastOp> {
+  using ConvertOpToLLVMPattern<vector::BroadcastOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(vector::SplatOp splatOp, OpAdaptor adaptor,
+  matchAndRewrite(vector::BroadcastOp broadcast, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    VectorType resultType = cast<VectorType>(splatOp.getType());
+    if (isa<VectorType>(broadcast.getSourceType()))
+      return rewriter.notifyMatchFailure(
+          broadcast, "broadcast from vector type not handled");
+
+    VectorType resultType = broadcast.getType();
     if (resultType.getRank() > 1)
-      return failure();
+      return rewriter.notifyMatchFailure(broadcast,
+                                         "broadcast to 2+-d handled elsewhere");
 
     // First insert it into a poison vector so we can shuffle it.
-    auto vectorType = typeConverter->convertType(splatOp.getType());
+    auto vectorType = typeConverter->convertType(broadcast.getType());
     Value poison =
-        rewriter.create<LLVM::PoisonOp>(splatOp.getLoc(), vectorType);
+        rewriter.create<LLVM::PoisonOp>(broadcast.getLoc(), vectorType);
     auto zero = rewriter.create<LLVM::ConstantOp>(
-        splatOp.getLoc(),
+        broadcast.getLoc(),
         typeConverter->convertType(rewriter.getIntegerType(32)),
         rewriter.getZeroAttr(rewriter.getIntegerType(32)));
 
     // For 0-d vector, we simply do `insertelement`.
     if (resultType.getRank() == 0) {
       rewriter.replaceOpWithNewOp<LLVM::InsertElementOp>(
-          splatOp, vectorType, poison, adaptor.getInput(), zero);
+          broadcast, vectorType, poison, adaptor.getSource(), zero);
       return success();
     }
 
     // For 1-d vector, we additionally do a `vectorshuffle`.
     auto v = rewriter.create<LLVM::InsertElementOp>(
-        splatOp.getLoc(), vectorType, poison, adaptor.getInput(), zero);
+        broadcast.getLoc(), vectorType, poison, adaptor.getSource(), zero);
 
-    int64_t width = cast<VectorType>(splatOp.getType()).getDimSize(0);
+    int64_t width = cast<VectorType>(broadcast.getType()).getDimSize(0);
     SmallVector<int32_t> zeroValues(width, 0);
 
     // Shuffle the value across the desired number of elements.
-    rewriter.replaceOpWithNewOp<LLVM::ShuffleVectorOp>(splatOp, v, poison,
+    rewriter.replaceOpWithNewOp<LLVM::ShuffleVectorOp>(broadcast, v, poison,
                                                        zeroValues);
     return success();
   }
 };
 
-/// The Splat operation is lowered to an insertelement + a shufflevector
-/// operation. Splat to only 2+-d vector result types are lowered by the
-/// SplatNdOpLowering, the 1-d case is handled by SplatOpLowering.
-struct VectorSplatNdOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
-  using ConvertOpToLLVMPattern<SplatOp>::ConvertOpToLLVMPattern;
+/// The broadcast of a scalar is lowered to an insertelement + a shufflevector
+/// operation. Only broadcasts to 2+-d vector result types are lowered by this
+/// pattern, the 1-d case is handled by another pattern. Broadcasts from vectors
+/// are not converted to LLVM, only broadcasts from scalars are.
+struct VectorBroadcastScalarToNdLowering
+    : public ConvertOpToLLVMPattern<BroadcastOp> {
+  using ConvertOpToLLVMPattern<BroadcastOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(SplatOp splatOp, OpAdaptor adaptor,
+  matchAndRewrite(BroadcastOp broadcast, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    VectorType resultType = splatOp.getType();
+    if (isa<VectorType>(broadcast.getSourceType()))
+      return rewriter.notifyMatchFailure(
+          broadcast, "broadcast from vector type not handled");
+
+    VectorType resultType = broadcast.getType();
     if (resultType.getRank() <= 1)
-      return failure();
+      return rewriter.notifyMatchFailure(
+          broadcast, "broadcast to 1-d or 0-d handled elsewhere");
 
     // First insert it into an undef vector so we can shuffle it.
-    auto loc = splatOp.getLoc();
+    auto loc = broadcast.getLoc();
     auto vectorTypeInfo =
         LLVM::detail::extractNDVectorTypeInfo(resultType, *getTypeConverter());
     auto llvmNDVectorTy = vectorTypeInfo.llvmNDVectorTy;
@@ -1799,26 +1813,26 @@ struct VectorSplatNdOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
     // Construct returned value.
     Value desc = rewriter.create<LLVM::PoisonOp>(loc, llvmNDVectorTy);
 
-    // Construct a 1-D vector with the splatted value that we insert in all the
-    // places within the returned descriptor.
+    // Construct a 1-D vector with the broadcasted value that we insert in all
+    // the places within the returned descriptor.
     Value vdesc = rewriter.create<LLVM::PoisonOp>(loc, llvm1DVectorTy);
     auto zero = rewriter.create<LLVM::ConstantOp>(
         loc, typeConverter->convertType(rewriter.getIntegerType(32)),
         rewriter.getZeroAttr(rewriter.getIntegerType(32)));
     Value v = rewriter.create<LLVM::InsertElementOp>(loc, llvm1DVectorTy, vdesc,
-                                                     adaptor.getInput(), zero);
+                                                     adaptor.getSource(), zero);
 
     // Shuffle the value across the desired number of elements.
     int64_t width = resultType.getDimSize(resultType.getRank() - 1);
     SmallVector<int32_t> zeroValues(width, 0);
     v = rewriter.create<LLVM::ShuffleVectorOp>(loc, v, v, zeroValues);
 
-    // Iterate of linear index, convert to coords space and insert splatted 1-D
-    // vector in each position.
+    // Iterate of linear index, convert to coords space and insert broadcasted
+    // 1-D vector in each position.
     nDVectorIterate(vectorTypeInfo, rewriter, [&](ArrayRef<int64_t> position) {
       desc = rewriter.create<LLVM::InsertValueOp>(loc, desc, v, position);
     });
-    rewriter.replaceOp(splatOp, desc);
+    rewriter.replaceOp(broadcast, desc);
     return success();
   }
 };
@@ -2177,6 +2191,19 @@ public:
   }
 };
 
+/// Convert `vector.splat` to `vector.broadcast`. There is a path to LLVM from
+/// `vector.broadcast` through other patterns.
+struct VectorSplatToBroadcast : public ConvertOpToLLVMPattern<vector::SplatOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+  LogicalResult
+  matchAndRewrite(vector::SplatOp splat, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(splat, splat.getType(),
+                                                     adaptor.getInput());
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::vector::populateVectorRankReducingFMAPattern(
@@ -2216,7 +2243,8 @@ void mlir::populateVectorToLLVMConversionPatterns(
                VectorInsertOpConversion, VectorPrintOpConversion,
                VectorTypeCastOpConversion, VectorScaleOpConversion,
                VectorExpandLoadOpConversion, VectorCompressStoreOpConversion,
-               VectorSplatOpLowering, VectorSplatNdOpLowering,
+               VectorSplatToBroadcast, VectorBroadcastScalarToLowRankLowering,
+               VectorBroadcastScalarToNdLowering,
                VectorScalableInsertOpLowering, VectorScalableExtractOpLowering,
                MaskedReductionOpConversion, VectorInterleaveOpLowering,
                VectorDeinterleaveOpLowering, VectorFromElementsLowering,
