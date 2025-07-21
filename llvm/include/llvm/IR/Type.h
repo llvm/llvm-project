@@ -515,7 +515,7 @@ inline Type **unwrap(LLVMTypeRef* Tys) {
 }
 
 inline LLVMTypeRef *wrap(Type **Tys) {
-  return reinterpret_cast<LLVMTypeRef*>(const_cast<Type**>(Tys));
+  return reinterpret_cast<LLVMTypeRef *>(Tys);
 }
 
 } // end namespace llvm

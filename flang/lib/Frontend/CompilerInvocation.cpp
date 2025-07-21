@@ -14,6 +14,7 @@
 #include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Frontend/TargetOptions.h"
+#include "flang/Optimizer/Passes/CommandLineOpts.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Support/Fortran-features.h"
 #include "flang/Support/OpenMP-features.h"
@@ -290,13 +291,14 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   opts.AliasAnalysis = opts.OptimizationLevel > 0;
 
-  // -mframe-pointer=none/non-leaf/all option.
+  // -mframe-pointer=none/non-leaf/reserved/all option.
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_mframe_pointer_EQ)) {
     std::optional<llvm::FramePointerKind> val =
         llvm::StringSwitch<std::optional<llvm::FramePointerKind>>(a->getValue())
             .Case("none", llvm::FramePointerKind::None)
             .Case("non-leaf", llvm::FramePointerKind::NonLeaf)
+            .Case("reserved", llvm::FramePointerKind::Reserved)
             .Case("all", llvm::FramePointerKind::All)
             .Default(std::nullopt);
 
@@ -483,6 +485,21 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   }
 
   parseDoConcurrentMapping(opts, args, diags);
+
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::driver::options::OPT_complex_range_EQ)) {
+    llvm::StringRef argValue = llvm::StringRef(arg->getValue());
+    if (argValue == "full") {
+      opts.setComplexRange(CodeGenOptions::ComplexRangeKind::CX_Full);
+    } else if (argValue == "improved") {
+      opts.setComplexRange(CodeGenOptions::ComplexRangeKind::CX_Improved);
+    } else if (argValue == "basic") {
+      opts.setComplexRange(CodeGenOptions::ComplexRangeKind::CX_Basic);
+    } else {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << arg->getAsString(args) << arg->getValue();
+    }
+  }
 }
 
 /// Parses all target input arguments and populates the target
@@ -1012,7 +1029,10 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     for (const auto &wArg : wArgs) {
       if (wArg == "error") {
         res.setWarnAsErr(true);
-        // -W(no-)<feature>
+        // -Wfatal-errors
+      } else if (wArg == "fatal-errors") {
+        res.setMaxErrors(1);
+        // -W[no-]<feature>
       } else if (!features.EnableWarning(wArg)) {
         const unsigned diagID = diags.getCustomDiagID(
             clang::DiagnosticsEngine::Error, "Unknown diagnostic option: -W%0");
@@ -1138,8 +1158,9 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   unsigned numErrorsBefore = diags.getNumErrors();
   llvm::Triple t(res.getTargetOpts().triple);
 
-  // By default OpenMP is set to 3.1 version
-  res.getLangOpts().OpenMPVersion = 31;
+  constexpr unsigned newestFullySupported = 31;
+  // By default OpenMP is set to the most recent fully supported version
+  res.getLangOpts().OpenMPVersion = newestFullySupported;
   res.getFrontendOpts().features.Enable(
       Fortran::common::LanguageFeature::OpenMP);
   if (auto *arg =
@@ -1164,6 +1185,9 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     if (!value.getAsInteger(/*radix=*/10, version)) {
       if (llvm::is_contained(ompVersions, version)) {
         res.getLangOpts().OpenMPVersion = version;
+
+        if (version > newestFullySupported)
+          diags.Report(clang::diag::warn_openmp_incomplete) << version;
       } else if (llvm::is_contained(oldVersions, version)) {
         const unsigned diagID =
             diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,
@@ -1243,7 +1267,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 
   // Get the OpenMP target triples if any.
   if (auto *arg =
-          args.getLastArg(clang::driver::options::OPT_fopenmp_targets_EQ)) {
+          args.getLastArg(clang::driver::options::OPT_offload_targets_EQ)) {
     enum ArchPtrSize { Arch16Bit, Arch32Bit, Arch64Bit };
     auto getArchPtrSize = [](const llvm::Triple &triple) {
       if (triple.isArch16Bit())
@@ -1769,6 +1793,7 @@ CompilerInvocation::getSemanticsCtx(
   semanticsContext->set_moduleDirectory(getModuleDir())
       .set_searchDirectories(fortranOptions.searchDirectories)
       .set_intrinsicModuleDirectories(fortranOptions.intrinsicModuleDirectories)
+      .set_maxErrors(getMaxErrors())
       .set_warningsAreErrors(getWarnAsErr())
       .set_moduleFileSuffix(getModuleFileSuffix())
       .set_underscoring(getCodeGenOpts().Underscoring);
@@ -1788,6 +1813,7 @@ void CompilerInvocation::setLoweringOptions() {
   // Lower TRANSPOSE as a runtime call under -O0.
   loweringOpts.setOptimizeTranspose(codegenOpts.OptimizationLevel > 0);
   loweringOpts.setUnderscoring(codegenOpts.Underscoring);
+  loweringOpts.setSkipExternalRttiDefinition(skipExternalRttiDefinition);
 
   const Fortran::common::LangOptions &langOptions = getLangOpts();
   loweringOpts.setIntegerWrapAround(langOptions.getSignedOverflowBehavior() ==
@@ -1805,4 +1831,10 @@ void CompilerInvocation::setLoweringOptions() {
       .setNoSignedZeros(langOptions.NoSignedZeros)
       .setAssociativeMath(langOptions.AssociativeMath)
       .setReciprocalMath(langOptions.ReciprocalMath);
+
+  if (codegenOpts.getComplexRange() ==
+          CodeGenOptions::ComplexRangeKind::CX_Improved ||
+      codegenOpts.getComplexRange() ==
+          CodeGenOptions::ComplexRangeKind::CX_Basic)
+    loweringOpts.setComplexDivisionToRuntime(false);
 }

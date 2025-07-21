@@ -1824,6 +1824,16 @@ func.func @unpack_invalid_outer_dims_perm(%source: tensor<128x256xf32>, %dest: t
 
 // -----
 
+// The outer dims in the output tensor are incorrectly/unexpectedly transposed.
+// This could be fixed by adding `outer_dims_perm = [1, 0]` (the default value assumes no transpose).
+func.func @pack_invalid_result_shape(%input: tensor<256x128xf32>, %output: tensor<4x16x32x16xf32>) -> tensor<4x16x32x16xf32> {
+  // expected-error@+1 {{the shape of output is not large enough to hold the packed data. Expected at least 'tensor<16x4x32x16xf32>', got 'tensor<4x16x32x16xf32>'}}
+  %0 = linalg.pack %input inner_dims_pos = [1, 0] inner_tiles = [32, 16] into %output : tensor<256x128xf32> -> tensor<4x16x32x16xf32>
+  return %0 : tensor<4x16x32x16xf32>
+}
+
+// -----
+
 func.func @pack_invalid(%input: tensor<256x128xf32>, %output: tensor<8x8x32x16xf32>) -> tensor<8x8x32x16xf32> {
   // expected-error@+1 {{the shape of output is not large enough to hold the packed data. Expected at least 'tensor<8x8x16x32xf32>', got 'tensor<8x8x32x16xf32>'}}
   %0 = linalg.pack %input inner_dims_pos = [1, 0] inner_tiles = [16, 32] into %output : tensor<256x128xf32> -> tensor<8x8x32x16xf32>
@@ -1868,9 +1878,43 @@ func.func @unpack_static_inner_tile_size_and_dynamic_output_shape(
 
 // -----
 
+//===----------------------------------------------------------------------===//
+// linalg.reduce
+//===----------------------------------------------------------------------===//
+
+
 func.func @reduce_non_operation_name(%arg0: tensor<4xf32>, %arg1: tensor<f32>) -> tensor<f32> {
   // expected-error @below {{expected bare identifier or keyword}}
   %0 = linalg.reduce {@reduce_fusion_elementwise} ins(
     %arg0: tensor<4xf32>) outs(%arg1: tensor<f32>) dimensions = [0]
   return %0 : tensor<f32>
+}
+
+// -----
+
+
+//===----------------------------------------------------------------------===//
+// Tests for generic infrastructure for named Ops. The actual Ops used are
+// secondary - we merely want to ensure that the diagnostic infra triggers
+// correctly.
+//===----------------------------------------------------------------------===//
+
+module {
+  func.func @add_invalid_mixed_types(%in_f32: memref<3xf32>, %in_i32 : memref< 3xi32>, %out_f32: memref<3xf32>, %arg3: memref<3xf32>) {
+    // expected-error @below {{Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got 'f32' and 'i32'}}
+    linalg.add ins(%in_f32, %in_i32 : memref<3xf32>, memref< 3xi32>) outs(%out_f32 : memref<3xf32>)
+    return
+  }
+}
+
+// -----
+
+func.func @matmul_invalid_mixed_types(%t: tensor<?xf16>, %f: vector<4xf16>)
+  -> (tensor<?xf16>, vector<4xf16>)
+{
+  // expected-warning @unknown {{could not cast operand of type 'f16' to 'vector<4xf16>'}}
+  // expected-error @below {{Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got 'vector<4xf16>' and 'f16'}}
+  %0 = linalg.matmul ins(%t, %t : tensor<?xf16>, tensor<?xf16>)
+                                outs(%f : vector<4xf16>) -> tensor<?xf16>
+  func.return %0, %f : tensor<?xf16>, vector<4xf16>
 }

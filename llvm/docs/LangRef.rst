@@ -410,7 +410,7 @@ added in the future:
       calling convention: on most platforms, they are not preserved and need to
       be saved by the caller, but on Windows, xmm6-xmm15 are preserved.
 
-    - On AArch64 the callee preserve all general purpose registers, except
+    - On AArch64 the callee preserves all general purpose registers, except
       X0-X8 and X16-X18. Not allowed with ``nest``.
 
     The idea behind this convention is to support calls to runtime functions
@@ -425,10 +425,10 @@ added in the future:
     on the hot path and definitely executed a lot. Furthermore `preserve_mostcc`
     doesn't prevent the inliner from inlining the function call.
 
-    This calling convention will be used by a future version of the ObjectiveC
+    This calling convention will be used by a future version of the Objective-C
     runtime and should therefore still be considered experimental at this time.
     Although this convention was created to optimize certain runtime calls to
-    the ObjectiveC runtime, it is not limited to this runtime and might be used
+    the Objective-C runtime, it is not limited to this runtime and might be used
     by other runtimes in the future too. The current implementation only
     supports X86-64, but the intention is to support more architectures in the
     future.
@@ -455,14 +455,14 @@ added in the future:
     that don't need to call out to any other functions.
 
     This calling convention, like the `PreserveMost` calling convention, will be
-    used by a future version of the ObjectiveC runtime and should be considered
+    used by a future version of the Objective-C runtime and should be considered
     experimental at this time.
 "``preserve_nonecc``" - The `PreserveNone` calling convention
     This calling convention doesn't preserve any general registers. So all
     general registers are caller saved registers. It also uses all general
     registers to pass arguments. This attribute doesn't impact non-general
     purpose registers (e.g. floating point registers, on X86 XMMs/YMMs).
-    Non-general purpose registers still follow the standard c calling
+    Non-general purpose registers still follow the standard C calling
     convention. Currently it is for x86_64 and AArch64 only.
 "``cxx_fast_tlscc``" - The `CXX_FAST_TLS` calling convention for access functions
     Clang generates an access function to access C++-style Thread Local Storage
@@ -513,7 +513,7 @@ added in the future:
     - On AArch64 the target address is passed in X15.
 "``cc <n>``" - Numbered convention
     Any calling convention may be specified by number, allowing
-    target-specific calling conventions to be used. Target specific
+    target-specific calling conventions to be used. Target-specific
     calling conventions start at 64.
 
 More calling conventions can be added/defined on an as-needed basis, to
@@ -559,7 +559,7 @@ DLL Storage Classes
 -------------------
 
 All Global Variables, Functions and Aliases can have one of the following
-DLL storage class:
+DLL storage classes:
 
 ``dllimport``
     "``dllimport``" causes the compiler to reference a function or variable via
@@ -569,7 +569,7 @@ DLL storage class:
 ``dllexport``
     On Microsoft Windows targets, "``dllexport``" causes the compiler to provide
     a global pointer to a pointer in a DLL, so that it can be referenced with the
-    ``dllimport`` attribute. the pointer name is formed by combining ``__imp_``
+    ``dllimport`` attribute. The pointer name is formed by combining ``__imp_``
     and the function or variable name. On XCOFF targets, ``dllexport`` indicates
     that the symbol will be made visible to other modules using "exported"
     visibility and thus placed by the linker in the loader section symbol table.
@@ -586,7 +586,7 @@ Thread Local Storage Models
 ---------------------------
 
 A variable may be defined as ``thread_local``, which means that it will
-not be shared by threads (each thread will have a separated copy of the
+not be shared by threads (each thread will have a separate copy of the
 variable). Not all targets support thread-local variables. Optionally, a
 TLS model may be specified:
 
@@ -606,10 +606,10 @@ be used. The target may choose a different TLS model if the specified
 model is not supported, or if a better choice of model can be made.
 
 A model can also be specified in an alias, but then it only governs how
-the alias is accessed. It will not have any effect in the aliasee.
+the alias is accessed. It will not have any effect on the aliasee.
 
 For platforms without linker support of ELF TLS model, the -femulated-tls
-flag can be used to generate GCC compatible emulated TLS code.
+flag can be used to generate GCC-compatible emulated TLS code.
 
 .. _runtime_preemption_model:
 
@@ -750,7 +750,7 @@ is zero. The address space qualifier must precede any other attributes.
 
 LLVM allows an explicit section to be specified for globals. If the
 target supports it, it will emit globals to the section specified.
-Additionally, the global can placed in a comdat if the target has the necessary
+Additionally, the global can be placed in a comdat if the target has the necessary
 support.
 
 External declarations may have an explicit section specified. Section
@@ -1234,8 +1234,7 @@ Currently, only the following parameter attributes are defined:
     ``byval`` parameters). This is not a valid attribute for return
     values.
 
-    The byval type argument indicates the in-memory value type, and
-    must be the same as the pointee type of the argument.
+    The byval type argument indicates the in-memory value type.
 
     The byval attribute also supports specifying an alignment with the
     align attribute. It indicates the alignment of the stack slot to
@@ -1283,8 +1282,7 @@ Currently, only the following parameter attributes are defined:
     any parameter must have a ``"preallocated"`` operand bundle. A ``musttail``
     function call cannot have a ``"preallocated"`` operand bundle.
 
-    The preallocated attribute requires a type argument, which must be
-    the same as the pointee type of the argument.
+    The preallocated attribute requires a type argument.
 
     The preallocated attribute also supports specifying an alignment with the
     align attribute. It indicates the alignment of the stack slot to
@@ -1318,8 +1316,7 @@ Currently, only the following parameter attributes are defined:
     must be cleared off with :ref:`llvm.stackrestore
     <int_stackrestore>`.
 
-    The inalloca attribute requires a type argument, which must be the
-    same as the pointee type of the argument.
+    The ``inalloca`` attribute requires a type argument.
 
     See :doc:`InAlloca` for more information on how to use this
     attribute.
@@ -1331,8 +1328,7 @@ Currently, only the following parameter attributes are defined:
     loads and stores to the structure may be assumed by the callee not
     to trap and to be properly aligned.
 
-    The sret type argument specifies the in memory type, which must be
-    the same as the pointee type of the argument.
+    The sret type argument specifies the in-memory type.
 
     A function that accepts an ``sret`` argument must return ``void``.
     A return value may not be ``sret``.
@@ -1401,7 +1397,7 @@ Currently, only the following parameter attributes are defined:
     pointer. This is not a valid attribute for return values. This attribute
     applies only to the particular copy of the pointer passed in this argument.
 
-    The arguments of ``captures`` is a list of captured pointer components,
+    The arguments of ``captures`` are a list of captured pointer components,
     which may be ``none``, or a combination of:
 
     - ``address``: The integral address of the pointer.
@@ -1433,7 +1429,7 @@ Currently, only the following parameter attributes are defined:
       is null is captured in some other way.
 
 ``nofree``
-    This indicates that callee does not free the pointer argument. This is not
+    This indicates that the callee does not free the pointer argument. This is not
     a valid attribute for return values.
 
 .. _nest:
@@ -1549,7 +1545,7 @@ Currently, only the following parameter attributes are defined:
     (matching the supported types for :ref:`fast-math flags <fastmath>`).
     The test mask has the same format as the second argument to the
     :ref:`llvm.is.fpclass <llvm.is.fpclass>`, and indicates which classes
-    of floating-point values are not permitted for the value. For example
+    of floating-point values are not permitted for the value. For example,
     a bitmask of 3 indicates the parameter may not be a NaN.
 
     If the value is a floating-point class indicated by the
@@ -1741,6 +1737,23 @@ Currently, only the following parameter attributes are defined:
 
     This attribute cannot be applied to return values.
 
+``dead_on_return``
+    This attribute indicates that the memory pointed to by the argument is dead
+    upon function return, both upon normal return and if the calls unwinds, meaning
+    that the caller will not depend on its contents. Stores that would be observable
+    either on the return path or on the unwind path may be elided.
+
+    Specifically, the behavior is as-if any memory written through the pointer
+    during the execution of the function is overwritten with a poison value
+    upon function return. The caller may access the memory, but any load
+    not preceded by a store will return poison.
+
+    This attribute does not imply aliasing properties. For pointer arguments that
+    do not alias other memory locations, ``noalias`` attribute may be used in
+    conjunction. Conversely, this attribute always implies ``dead_on_unwind``.
+
+    This attribute cannot be applied to return values.
+
 ``range(<ty> <a>, <b>)``
     This attribute expresses the possible range of the parameter or return value.
     If the value is not in the specified range, it is converted to poison.
@@ -1770,7 +1783,7 @@ string:
 
     define void @f() gc "name" { ... }
 
-The supported values of *name* includes those :ref:`built in to LLVM
+The supported values of *name* include those :ref:`built in to LLVM
 <builtin-gc-strategies>` and any provided by loaded plugins. Specifying a GC
 strategy will cause the compiler to alter its output in order to support the
 named garbage collection algorithm. Note that LLVM itself does not contain a
@@ -2043,9 +2056,9 @@ For example:
 ``hot``
     This attribute indicates that this function is a hot spot of the program
     execution. The function will be optimized more aggressively and will be
-    placed into special subsection of the text section to improving locality.
+    placed into a special subsection of the text section to improve locality.
 
-    When profile feedback is enabled, this attribute has the precedence over
+    When profile feedback is enabled, this attribute takes precedence over
     the profile information. By marking a function ``hot``, users can work
     around the cases where the training input does not have good coverage
     on all the hot functions.
@@ -2149,10 +2162,10 @@ For example:
     and on function declarations and definitions.
 ``nocallback``
     This attribute indicates that the function is only allowed to jump back into
-    caller's module by a return or an exception, and is not allowed to jump back
+    the caller's module by a return or an exception, and is not allowed to jump back
     by invoking a callback function, a direct, possibly transitive, external
     function call, use of ``longjmp``, or other means. It is a compiler hint that
-    is used at module level to improve dataflow analysis, dropped during linking,
+    is used at the module level to improve dataflow analysis, dropped during linking,
     and has no effect on functions defined in the current module.
 ``nodivergencesource``
     A call to this function is not a source of divergence. In uniformity
@@ -2284,7 +2297,7 @@ For example:
    in address-space 0 is considered to be a valid address for memory loads and
    stores. Any analysis or optimization should not treat dereferencing a
    pointer to ``null`` as undefined behavior in this function.
-   Note: Comparing address of a global variable to ``null`` may still
+   Note: Comparing the address of a global variable to ``null`` may still
    evaluate to false because of a limitation in querying this attribute inside
    constant expressions.
 ``optdebug``
@@ -2357,7 +2370,7 @@ For example:
     This attribute controls the behavior of stack probes: either
     the ``"probe-stack"`` attribute, or ABI-required stack probes, if any.
     It defines the size of the guard region. It ensures that if the function
-    may use more stack space than the size of the guard region, stack probing
+    may use more stack space than the size of the guard region, a stack probing
     sequence will be emitted. It takes one required integer value, which
     is 4096 by default.
 
@@ -3227,12 +3240,24 @@ as follows:
     as :ref:`Non-Integral Pointer Type <nointptrtype>` s.  The ``0``
     address space cannot be specified as non-integral.
 
-Unless explicitly stated otherwise, on every specification that specifies
-an alignment, the value of the alignment must be in the range [1,2^16)
-and must be a power of two times the width of a byte.
-On every specification that takes a ``<abi>:<pref>``, specifying the
-``<pref>`` alignment is optional. If omitted, the preceding ``:``
-should be omitted too and ``<pref>`` will be equal to ``<abi>``.
+``<abi>`` is a lower bound on what is required for a type to be considered
+aligned. This is used in various places, such as:
+
+- The alignment for loads and stores if none is explicitly given.
+- The alignment used to compute struct layout.
+- The alignment used to compute allocation sizes and thus ``getelementptr``
+  offsets.
+- The alignment below which accesses are considered underaligned.
+
+``<pref>`` allows providing a more optimal alignment that should be used when
+possible, primarily for ``alloca`` and the alignment of global variables. It is
+an optional value that must be greater than or equal to ``<abi>``. If omitted,
+the preceding ``:`` should also be omitted and ``<pref>`` will be equal to
+``<abi>``.
+
+Unless explicitly stated otherwise, every alignment specification is provided in
+bits and must be in the range [1,2^16). The value must be a power of two times
+the width of a byte (i.e. ``align = 8 * 2^N``).
 
 When constructing the data layout for a given target, LLVM starts with a
 default set of specifications which are then (possibly) overridden by
@@ -4842,7 +4867,7 @@ to be eliminated. This is because '``poison``' is stronger than '``undef``'.
 
       %D = undef
       %E = icmp slt %D, 4
-      %F = icmp gte %D, 4
+      %F = icmp sge %D, 4
 
     Safe:
       %A = undef
@@ -6975,16 +7000,25 @@ appear in the included source file.
 DILabel
 """""""
 
-``DILabel`` nodes represent labels within a :ref:`DISubprogram`. All fields of
-a ``DILabel`` are mandatory. The ``scope:`` field must be one of either a
-:ref:`DILexicalBlockFile`, a :ref:`DILexicalBlock`, or a :ref:`DISubprogram`.
-The ``name:`` field is the label identifier. The ``file:`` field is the
-:ref:`DIFile` the label is present in. The ``line:`` field is the source line
+``DILabel`` nodes represent labels within a :ref:`DISubprogram`. The ``scope:``
+field must be one of either a :ref:`DILexicalBlockFile`, a
+:ref:`DILexicalBlock`, or a :ref:`DISubprogram`. The ``name:`` field is the
+label identifier. The ``file:`` field is the :ref:`DIFile` the label is
+present in. The ``line:`` and ``column:`` field are the source line and column
 within the file where the label is declared.
+
+Furthermore, a label can be marked as artificial, i.e. compiler-generated,
+using ``isArtificial:``. Such artificial labels are generated, e.g., by
+the ``CoroSplit`` pass. In addition, the ``CoroSplit`` pass also uses the
+``coroSuspendIdx:`` field to identify the coroutine suspend points.
+
+``scope:``, ``name:``, ``file:`` and ``line:`` are mandatory. The remaining
+fields are optional.
 
 .. code-block:: text
 
-  !2 = !DILabel(scope: !0, name: "foo", file: !1, line: 7)
+  !2 = !DILabel(scope: !0, name: "foo", file: !1, line: 7, column: 4)
+  !3 = !DILabel(scope: !0, name: "__coro_resume_3", file: !1, line: 9, column: 3, isArtificial: true, coroSuspendIdx: 3)
 
 DICommonBlock
 """""""""""""
@@ -8136,6 +8170,11 @@ change in the future.
 ^^^^^^^^^^^^^^^^^^^
 
 See :doc:`TypeMetadata`.
+
+'``callee_type``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+See :doc:`CalleeTypeMetadata`.
 
 '``associated``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -11259,7 +11298,7 @@ If the ``load`` is marked as ``atomic``, it takes an extra :ref:`ordering
 Atomic loads produce :ref:`defined <memmodel>` results when they may see
 multiple atomic stores. The type of the pointee must be an integer, pointer, or
 floating-point type whose bit width is a power of two greater than or equal to
-eight and less than or equal to a target-specific size limit.  ``align`` must be
+eight. ``align`` must be
 explicitly specified on atomic loads. Note: if the alignment is not greater or
 equal to the size of the `<value>` type, the atomic operation is likely to
 require a lock and have poor performance. ``!nontemporal`` does not have any
@@ -11400,7 +11439,7 @@ If the ``store`` is marked as ``atomic``, it takes an extra :ref:`ordering
 Atomic loads produce :ref:`defined <memmodel>` results when they may see
 multiple atomic stores. The type of the pointee must be an integer, pointer, or
 floating-point type whose bit width is a power of two greater than or equal to
-eight and less than or equal to a target-specific size limit.  ``align`` must be
+eight. ``align`` must be
 explicitly specified on atomic stores. Note: if the alignment is not greater or
 equal to the size of the `<value>` type, the atomic operation is likely to
 require a lock and have poor performance. ``!nontemporal`` does not have any
@@ -11545,8 +11584,8 @@ There are three arguments to the '``cmpxchg``' instruction: an address
 to operate on, a value to compare to the value currently be at that
 address, and a new value to place at that address if the compared values
 are equal. The type of '<cmp>' must be an integer or pointer type whose
-bit width is a power of two greater than or equal to eight and less
-than or equal to a target-specific size limit. '<cmp>' and '<new>' must
+bit width is a power of two greater than or equal to eight.
+'<cmp>' and '<new>' must
 have the same type, and the type of '<pointer>' must be a pointer to
 that type. If the ``cmpxchg`` is marked as ``volatile``, then the
 optimizer is not allowed to modify the number or order of execution of
@@ -11659,8 +11698,8 @@ operation. The operation must be one of the following keywords:
 -  usub_sat
 
 For most of these operations, the type of '<value>' must be an integer
-type whose bit width is a power of two greater than or equal to eight
-and less than or equal to a target-specific size limit. For xchg, this
+type whose bit width is a power of two greater than or equal to eight.
+For xchg, this
 may also be a floating point or a pointer type with the same size constraints
 as integers.  For fadd/fsub/fmax/fmin/fmaximum/fminimum, this must be a floating-point
 or fixed vector of floating-point type.  The type of the '``<pointer>``'
@@ -13161,7 +13200,7 @@ This instruction requires several arguments:
    -  All ABI-impacting function attributes, such as sret, byval, inreg,
       returned, and inalloca, must match.
    -  The caller and callee prototypes must match. Pointer types of parameters
-      or return types may differ in pointee type, but not in address space.
+      or return types do not differ in address space.
 
    On the other hand, if the calling convention is `swifttailcc` or `tailcc`:
 
@@ -28280,9 +28319,9 @@ Overview:
 
 The '``llvm.experimental.constrained.lrint``' intrinsic returns the first
 argument rounded to the nearest integer. An inexact floating-point exception
-will be raised if the argument is not an integer. An invalid exception is
-raised if the result is too large to fit into a supported integer type,
-and in this case the result is undefined.
+will be raised if the argument is not an integer. If the rounded value is too
+large to fit into the result type, an invalid exception is raised, and the
+return value is a non-deterministic value (equivalent to `freeze poison`).
 
 Arguments:
 """"""""""
@@ -28328,9 +28367,9 @@ Overview:
 
 The '``llvm.experimental.constrained.llrint``' intrinsic returns the first
 argument rounded to the nearest integer. An inexact floating-point exception
-will be raised if the argument is not an integer. An invalid exception is
-raised if the result is too large to fit into a supported integer type,
-and in this case the result is undefined.
+will be raised if the argument is not an integer. If the rounded value is too
+large to fit into the result type, an invalid exception is raised, and the
+return value is a non-deterministic value (equivalent to `freeze poison`).
 
 Arguments:
 """"""""""
@@ -28679,8 +28718,9 @@ Overview:
 The '``llvm.experimental.constrained.lround``' intrinsic returns the first
 argument rounded to the nearest integer with ties away from zero.  It will
 raise an inexact floating-point exception if the argument is not an integer.
-An invalid exception is raised if the result is too large to fit into a
-supported integer type, and in this case the result is undefined.
+If the rounded value is too large to fit into the result type, an invalid
+exception is raised, and the return value is a non-deterministic value
+(equivalent to `freeze poison`).
 
 Arguments:
 """"""""""
@@ -28717,8 +28757,9 @@ Overview:
 The '``llvm.experimental.constrained.llround``' intrinsic returns the first
 argument rounded to the nearest integer with ties away from zero. It will
 raise an inexact floating-point exception if the argument is not an integer.
-An invalid exception is raised if the result is too large to fit into a
-supported integer type, and in this case the result is undefined.
+If the rounded value is too large to fit into the result type, an invalid
+exception is raised, and the return value is a non-deterministic value
+(equivalent to `freeze poison`).
 
 Arguments:
 """"""""""

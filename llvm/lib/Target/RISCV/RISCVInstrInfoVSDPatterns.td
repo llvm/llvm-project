@@ -931,11 +931,11 @@ multiclass VPatWidenOrDisjoint_VV_VX<SDNode extop, string instruction_name> {
     defvar wti = vtiToWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
                                  GetVTypePredicates<wti>.Predicates) in {
-      def : Pat<(wti.Vector (extop (vti.Vector (or_is_add vti.RegClass:$rs2, vti.RegClass:$rs1)))),
+      def : Pat<(wti.Vector (extop (vti.Vector (riscv_or_disjoint vti.RegClass:$rs2, vti.RegClass:$rs1)))),
                 (!cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX)
                    (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
                    vti.RegClass:$rs1, vti.AVL, vti.Log2SEW, TA_MA)>;
-      def : Pat<(wti.Vector (extop (vti.Vector (or_is_add vti.RegClass:$rs2, (SplatPat (XLenVT GPR:$rs1)))))),
+      def : Pat<(wti.Vector (extop (vti.Vector (riscv_or_disjoint vti.RegClass:$rs2, (SplatPat (XLenVT GPR:$rs1)))))),
                 (!cast<Instruction>(instruction_name#"_VX_"#vti.LMul.MX)
                    (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
                    GPR:$rs1, vti.AVL, vti.Log2SEW, TA_MA)>;
@@ -1390,7 +1390,7 @@ defm : VPatFPSetCCSDNode_VV_VF_FV<SETOLE, "PseudoVMFLE", "PseudoVMFGE">;
 // Floating-point vselects:
 // 11.15. Vector Integer Merge Instructions
 // 13.15. Vector Floating-Point Merge Instruction
-foreach fvti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
+foreach fvti = AllFloatVectors in {
   defvar ivti = GetIntVTypeInfo<fvti>.Vti;
   let Predicates = GetVTypePredicates<ivti>.Predicates in {
     def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm), fvti.RegClass:$rs1,

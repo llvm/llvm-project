@@ -4561,6 +4561,13 @@ bool TreeTransform<Derived>::TransformExprs(Expr *const *Inputs,
 template <typename Derived>
 Sema::ConditionResult TreeTransform<Derived>::TransformCondition(
     SourceLocation Loc, VarDecl *Var, Expr *Expr, Sema::ConditionKind Kind) {
+
+  EnterExpressionEvaluationContext Eval(
+      SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+      /*LambdaContextDecl=*/nullptr,
+      /*ExprContext=*/Sema::ExpressionEvaluationContextRecord::EK_Other,
+      /*ShouldEnter=*/Kind == Sema::ConditionKind::ConstexprIf);
+
   if (Var) {
     VarDecl *ConditionVar = cast_or_null<VarDecl>(
         getDerived().TransformDefinition(Var->getLocation(), Var));
@@ -4614,19 +4621,9 @@ NestedNameSpecifierLoc TreeTransform<Derived>::TransformNestedNameSpecifierLoc(
     }
 
     case NestedNameSpecifier::Namespace: {
-      NamespaceDecl *NS =
-          cast_or_null<NamespaceDecl>(getDerived().TransformDecl(
-              Q.getLocalBeginLoc(), QNNS->getAsNamespace()));
+      auto *NS = cast<NamespaceBaseDecl>(getDerived().TransformDecl(
+          Q.getLocalBeginLoc(), QNNS->getAsNamespace()));
       SS.Extend(SemaRef.Context, NS, Q.getLocalBeginLoc(), Q.getLocalEndLoc());
-      break;
-    }
-
-    case NestedNameSpecifier::NamespaceAlias: {
-      NamespaceAliasDecl *Alias =
-          cast_or_null<NamespaceAliasDecl>(getDerived().TransformDecl(
-              Q.getLocalBeginLoc(), QNNS->getAsNamespaceAlias()));
-      SS.Extend(SemaRef.Context, Alias, Q.getLocalBeginLoc(),
-                Q.getLocalEndLoc());
       break;
     }
 
@@ -7246,6 +7243,12 @@ QualType TreeTransform<Derived>::TransformDependentBitIntType(
     NewTL.setNameLoc(TL.getNameLoc());
   }
   return Result;
+}
+
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformPredefinedSugarType(
+    TypeLocBuilder &TLB, PredefinedSugarTypeLoc TL) {
+  llvm_unreachable("This type does not need to be transformed.");
 }
 
   /// Simple iterator that traverses the template arguments in a
@@ -14027,9 +14030,14 @@ TreeTransform<Derived>::TransformCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
     if (Object.isInvalid())
       return ExprError();
 
-    // FIXME: Poor location information
-    SourceLocation FakeLParenLoc = SemaRef.getLocForEndOfToken(
-        static_cast<Expr *>(Object.get())->getEndLoc());
+    // FIXME: Poor location information. Also, if the location for the end of
+    // the token is within a macro expansion, getLocForEndOfToken() will return
+    // an invalid source location. If that happens and we have an otherwise
+    // valid end location, use the valid one instead of the invalid one.
+    SourceLocation EndLoc = static_cast<Expr *>(Object.get())->getEndLoc();
+    SourceLocation FakeLParenLoc = SemaRef.getLocForEndOfToken(EndLoc);
+    if (FakeLParenLoc.isInvalid() && EndLoc.isValid())
+      FakeLParenLoc = EndLoc;
 
     // Transform the call arguments.
     SmallVector<Expr*, 8> Args;
@@ -15723,13 +15731,9 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
   // FIXME: Sema's lambda-building mechanism expects us to push an expression
   // evaluation context even if we're not transforming the function body.
-  getSema().PushExpressionEvaluationContext(
-      E->getCallOperator()->isConsteval() ?
-      Sema::ExpressionEvaluationContext::ImmediateFunctionContext :
-      Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
-  getSema().currentEvaluationContext().InImmediateEscalatingFunctionContext =
-      getSema().getLangOpts().CPlusPlus20 &&
-      E->getCallOperator()->isImmediateEscalating();
+  getSema().PushExpressionEvaluationContextForFunction(
+      Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
+      E->getCallOperator());
 
   Sema::CodeSynthesisContext C;
   C.Kind = clang::Sema::CodeSynthesisContext::LambdaExpressionSubstitution;

@@ -20,6 +20,7 @@
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
@@ -495,8 +496,7 @@ Fortran::lower::genCallOpAndResult(
     auto *context = builder.getContext();
     if (mlir::isa<fir::BoxProcType>(snd) &&
         mlir::isa<mlir::FunctionType>(fst.getType())) {
-      auto funcTy =
-          mlir::FunctionType::get(context, std::nullopt, std::nullopt);
+      auto funcTy = mlir::FunctionType::get(context, {}, {});
       auto boxProcTy = builder.getBoxProcType(funcTy);
       if (mlir::Value host = argumentHostAssocs(converter, fst)) {
         cast = builder.create<fir::EmboxProcOp>(
@@ -545,7 +545,8 @@ Fortran::lower::genCallOpAndResult(
       caller.getProcedureAttrs(builder.getContext());
 
   if (converter.getLoweringOptions().getCUDARuntimeCheck()) {
-    if (caller.getCallDescription().chevrons().empty()) {
+    if (caller.getCallDescription().chevrons().empty() &&
+        !cuf::isCUDADeviceContext(builder.getRegion())) {
       for (auto [oper, arg] :
            llvm::zip(operands, caller.getPassedArguments())) {
         if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(oper.getType())) {
@@ -1712,7 +1713,7 @@ void prepareUserCallArguments(
                                     /*nonDeferredParams=*/mlir::ValueRange{},
                                     /*mutableProperties=*/{});
         fir::factory::associateMutableBox(builder, loc, ptrBox, actualExv,
-                                          /*lbounds=*/std::nullopt);
+                                          /*lbounds=*/{});
         caller.placeInput(arg, irBox);
         continue;
       }

@@ -983,8 +983,9 @@ public:
     return 0;
   }
 
-  virtual Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
-                                                   Type *ExpectedType) const {
+  virtual Value *
+  getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst, Type *ExpectedType,
+                                    bool CanCreate = true) const {
     return nullptr;
   }
 
@@ -1534,11 +1535,15 @@ public:
       ArrayRef<int> Mask = Shuffle->getShuffleMask();
       int NumSubElts, SubIndex;
 
+      // Treat undef/poison mask as free (no matter the length).
+      if (all_of(Mask, [](int M) { return M < 0; }))
+        return TTI::TCC_Free;
+
       // TODO: move more of this inside improveShuffleKindFromMask.
       if (Shuffle->changesLength()) {
         // Treat a 'subvector widening' as a free shuffle.
         if (Shuffle->increasesLength() && Shuffle->isIdentityWithPadding())
-          return 0;
+          return TTI::TCC_Free;
 
         if (Shuffle->isExtractSubvectorMask(SubIndex))
           return TargetTTI->getShuffleCost(TTI::SK_ExtractSubvector, VecTy,
@@ -1599,15 +1604,10 @@ public:
       }
 
       if (Shuffle->isIdentity())
-        return 0;
+        return TTI::TCC_Free;
 
       if (Shuffle->isReverse())
         return TargetTTI->getShuffleCost(TTI::SK_Reverse, VecTy, VecSrcTy, Mask,
-                                         CostKind, 0, nullptr, Operands,
-                                         Shuffle);
-
-      if (Shuffle->isSelect())
-        return TargetTTI->getShuffleCost(TTI::SK_Select, VecTy, VecSrcTy, Mask,
                                          CostKind, 0, nullptr, Operands,
                                          Shuffle);
 
@@ -1631,6 +1631,11 @@ public:
             TTI::SK_InsertSubvector, VecTy, VecSrcTy, Mask, CostKind, SubIndex,
             FixedVectorType::get(VecTy->getScalarType(), NumSubElts), Operands,
             Shuffle);
+
+      if (Shuffle->isSelect())
+        return TargetTTI->getShuffleCost(TTI::SK_Select, VecTy, VecSrcTy, Mask,
+                                         CostKind, 0, nullptr, Operands,
+                                         Shuffle);
 
       if (Shuffle->isSplice(SubIndex))
         return TargetTTI->getShuffleCost(TTI::SK_Splice, VecTy, VecSrcTy, Mask,

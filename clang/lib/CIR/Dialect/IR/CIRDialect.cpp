@@ -21,6 +21,7 @@
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/Support/LogicalResult.h"
 
 #include <numeric>
 
@@ -63,6 +64,10 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
   AliasResult getAlias(Attribute attr, raw_ostream &os) const final {
     if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(attr)) {
       os << (boolAttr.getValue() ? "true" : "false");
+      return AliasResult::FinalAlias;
+    }
+    if (auto bitfield = mlir::dyn_cast<cir::BitfieldInfoAttr>(attr)) {
+      os << "bfi_" << bitfield.getName().str();
       return AliasResult::FinalAlias;
     }
     return AliasResult::NoAlias;
@@ -421,13 +426,13 @@ LogicalResult cir::CastOp::verify() {
     return success();
   }
   case cir::CastKind::floating: {
-    if (!mlir::isa<cir::CIRFPTypeInterface>(srcType) ||
-        !mlir::isa<cir::CIRFPTypeInterface>(resType))
+    if (!mlir::isa<cir::FPTypeInterface>(srcType) ||
+        !mlir::isa<cir::FPTypeInterface>(resType))
       return emitOpError() << "requires !cir.float type for source and result";
     return success();
   }
   case cir::CastKind::float_to_int: {
-    if (!mlir::isa<cir::CIRFPTypeInterface>(srcType))
+    if (!mlir::isa<cir::FPTypeInterface>(srcType))
       return emitOpError() << "requires !cir.float type for source";
     if (!mlir::dyn_cast<cir::IntType>(resType))
       return emitOpError() << "requires !cir.int type for result";
@@ -448,7 +453,7 @@ LogicalResult cir::CastOp::verify() {
     return success();
   }
   case cir::CastKind::float_to_bool: {
-    if (!mlir::isa<cir::CIRFPTypeInterface>(srcType))
+    if (!mlir::isa<cir::FPTypeInterface>(srcType))
       return emitOpError() << "requires !cir.float type for source";
     if (!mlir::isa<cir::BoolType>(resType))
       return emitOpError() << "requires !cir.bool type for result";
@@ -464,14 +469,14 @@ LogicalResult cir::CastOp::verify() {
   case cir::CastKind::int_to_float: {
     if (!mlir::isa<cir::IntType>(srcType))
       return emitOpError() << "requires !cir.int type for source";
-    if (!mlir::isa<cir::CIRFPTypeInterface>(resType))
+    if (!mlir::isa<cir::FPTypeInterface>(resType))
       return emitOpError() << "requires !cir.float type for result";
     return success();
   }
   case cir::CastKind::bool_to_float: {
     if (!mlir::isa<cir::BoolType>(srcType))
       return emitOpError() << "requires !cir.bool type for source";
-    if (!mlir::isa<cir::CIRFPTypeInterface>(resType))
+    if (!mlir::isa<cir::FPTypeInterface>(resType))
       return emitOpError() << "requires !cir.float type for result";
     return success();
   }
@@ -593,7 +598,9 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   llvm::ArrayRef<mlir::Type> allResultTypes;
 
   // If we cannot parse a string callee, it means this is an indirect call.
-  if (!parser.parseOptionalAttribute(calleeAttr, "callee", result.attributes)
+  if (!parser
+           .parseOptionalAttribute(calleeAttr, CIRDialect::getCalleeAttrName(),
+                                   result.attributes)
            .has_value()) {
     OpAsmParser::UnresolvedOperand indirectVal;
     // Do not resolve right now, since we need to figure out the type
@@ -611,6 +618,10 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   if (parser.parseRParen())
     return mlir::failure();
 
+  if (parser.parseOptionalKeyword("nothrow").succeeded())
+    result.addAttribute(CIRDialect::getNoThrowAttrName(),
+                        mlir::UnitAttr::get(parser.getContext()));
+
   if (parser.parseOptionalKeyword("side_effect").succeeded()) {
     if (parser.parseLParen().failed())
       return failure();
@@ -620,7 +631,7 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
     if (parser.parseRParen().failed())
       return failure();
     auto attr = cir::SideEffectAttr::get(parser.getContext(), sideEffect);
-    result.addAttribute("side_effect", attr);
+    result.addAttribute(CIRDialect::getSideEffectAttrName(), attr);
   }
 
   if (parser.parseOptionalAttrDict(result.attributes))
@@ -645,7 +656,7 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
 static void printCallCommon(mlir::Operation *op,
                             mlir::FlatSymbolRefAttr calleeSym,
                             mlir::Value indirectCallee,
-                            mlir::OpAsmPrinter &printer,
+                            mlir::OpAsmPrinter &printer, bool isNothrow,
                             cir::SideEffect sideEffect) {
   printer << ' ';
 
@@ -662,13 +673,19 @@ static void printCallCommon(mlir::Operation *op,
   }
   printer << "(" << ops << ")";
 
+  if (isNothrow)
+    printer << " nothrow";
+
   if (sideEffect != cir::SideEffect::All) {
     printer << " side_effect(";
     printer << stringifySideEffect(sideEffect);
     printer << ")";
   }
 
-  printer.printOptionalAttrDict(op->getAttrs(), {"callee", "side_effect"});
+  printer.printOptionalAttrDict(op->getAttrs(),
+                                {CIRDialect::getCalleeAttrName(),
+                                 CIRDialect::getNoThrowAttrName(),
+                                 CIRDialect::getSideEffectAttrName()});
 
   printer << " : ";
   printer.printFunctionalType(op->getOperands().getTypes(),
@@ -683,13 +700,15 @@ mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
 void cir::CallOp::print(mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
   cir::SideEffect sideEffect = getSideEffect();
-  printCallCommon(*this, getCalleeAttr(), indirectCallee, p, sideEffect);
+  printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getNothrow(),
+                  sideEffect);
 }
 
 static LogicalResult
 verifyCallCommInSymbolUses(mlir::Operation *op,
                            SymbolTableCollection &symbolTable) {
-  auto fnAttr = op->getAttrOfType<FlatSymbolRefAttr>("callee");
+  auto fnAttr =
+      op->getAttrOfType<FlatSymbolRefAttr>(CIRDialect::getCalleeAttrName());
   if (!fnAttr) {
     // This is an indirect call, thus we don't have to check the symbol uses.
     return mlir::success();
@@ -1403,11 +1422,27 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   state.addAttribute(getFunctionTypeAttrName(state.name),
                      TypeAttr::get(fnType));
 
+  bool hasAlias = false;
+  mlir::StringAttr aliaseeNameAttr = getAliaseeAttrName(state.name);
+  if (parser.parseOptionalKeyword("alias").succeeded()) {
+    if (parser.parseLParen().failed())
+      return failure();
+    mlir::StringAttr aliaseeAttr;
+    if (parser.parseOptionalSymbolName(aliaseeAttr).failed())
+      return failure();
+    state.addAttribute(aliaseeNameAttr, FlatSymbolRefAttr::get(aliaseeAttr));
+    if (parser.parseRParen().failed())
+      return failure();
+    hasAlias = true;
+  }
+
   // Parse the optional function body.
   auto *body = state.addRegion();
   OptionalParseResult parseResult = parser.parseOptionalRegion(
       *body, arguments, /*enableNameShadowing=*/false);
   if (parseResult.has_value()) {
+    if (hasAlias)
+      return parser.emitError(loc, "function alias shall not have a body");
     if (failed(*parseResult))
       return failure();
     // Function body was parsed, make sure its not empty.
@@ -1419,13 +1454,17 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 }
 
 // This function corresponds to `llvm::GlobalValue::isDeclaration` and should
-// have a similar implementation. We don't currently support aliases, ifuncs,
-// or materializable functions, but those should be handled here as they are
-// implemented.
+// have a similar implementation. We don't currently ifuncs or materializable
+// functions, but those should be handled here as they are implemented.
 bool cir::FuncOp::isDeclaration() {
-  assert(!cir::MissingFeatures::opFuncGlobalAliases());
   assert(!cir::MissingFeatures::supportIFuncAttr());
-  return getFunctionBody().empty();
+
+  std::optional<StringRef> aliasee = getAliasee();
+  if (!aliasee)
+    return getFunctionBody().empty();
+
+  // Aliases are always definitions.
+  return false;
 }
 
 mlir::Region *cir::FuncOp::getCallableRegion() {
@@ -1459,6 +1498,12 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   cir::FuncType fnType = getFunctionType();
   function_interface_impl::printFunctionSignature(
       p, *this, fnType.getInputs(), fnType.isVarArg(), fnType.getReturnTypes());
+
+  if (std::optional<StringRef> aliaseeName = getAliasee()) {
+    p << " alias(";
+    p.printSymbolName(*aliaseeName);
+    p << ")";
+  }
 
   // Print the body if this is not an external function.
   Region &body = getOperation()->getRegion(0);
@@ -2022,6 +2067,10 @@ LogicalResult cir::ComplexRealOp::verify() {
 }
 
 OpFoldResult cir::ComplexRealOp::fold(FoldAdaptor adaptor) {
+  if (auto complexCreateOp =
+          dyn_cast_or_null<cir::ComplexCreateOp>(getOperand().getDefiningOp()))
+    return complexCreateOp.getOperand(0);
+
   auto complex =
       mlir::cast_if_present<cir::ConstComplexAttr>(adaptor.getOperand());
   return complex ? complex.getReal() : nullptr;
@@ -2040,9 +2089,47 @@ LogicalResult cir::ComplexImagOp::verify() {
 }
 
 OpFoldResult cir::ComplexImagOp::fold(FoldAdaptor adaptor) {
+  if (auto complexCreateOp =
+          dyn_cast_or_null<cir::ComplexCreateOp>(getOperand().getDefiningOp()))
+    return complexCreateOp.getOperand(1);
+
   auto complex =
       mlir::cast_if_present<cir::ConstComplexAttr>(adaptor.getOperand());
   return complex ? complex.getImag() : nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexRealPtrOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ComplexRealPtrOp::verify() {
+  mlir::Type resultPointeeTy = getType().getPointee();
+  cir::PointerType operandPtrTy = getOperand().getType();
+  auto operandPointeeTy =
+      mlir::cast<cir::ComplexType>(operandPtrTy.getPointee());
+
+  if (resultPointeeTy != operandPointeeTy.getElementType()) {
+    return emitOpError() << ": result type does not match operand type";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexImagPtrOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ComplexImagPtrOp::verify() {
+  mlir::Type resultPointeeTy = getType().getPointee();
+  cir::PointerType operandPtrTy = getOperand().getType();
+  auto operandPointeeTy =
+      mlir::cast<cir::ComplexType>(operandPtrTy.getPointee());
+
+  if (resultPointeeTy != operandPointeeTy.getElementType()) {
+    return emitOpError()
+           << "cir.complex.imag_ptr result type does not match operand type";
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

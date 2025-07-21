@@ -64,6 +64,9 @@ inline class_match<const SCEV> m_SCEV() { return class_match<const SCEV>(); }
 inline class_match<const SCEVConstant> m_SCEVConstant() {
   return class_match<const SCEVConstant>();
 }
+inline class_match<const SCEVVScale> m_SCEVVScale() {
+  return class_match<const SCEVVScale>();
+}
 
 template <typename Class> struct bind_ty {
   Class *&VR;

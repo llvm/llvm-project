@@ -1,5 +1,8 @@
 // RUN: %libomp-cxx-compile-and-run | FileCheck %s
-// REQUIRES: ompt
+
+// disabled until fixed, see: https://github.com/llvm/llvm-project/pull/145625#issuecomment-3007625680
+// remove "needs-fix", after fixing the issue in the runtime
+// REQUIRES: ompt, needs-fix
 #include "callback.h"
 #include "omp_testsuite.h"
 

@@ -307,7 +307,8 @@ class SeedCollector {
   }
 
 public:
-  LLVM_ABI SeedCollector(BasicBlock *BB, ScalarEvolution &SE);
+  LLVM_ABI SeedCollector(BasicBlock *BB, ScalarEvolution &SE,
+                         bool CollectStores, bool CollectLoads);
   LLVM_ABI ~SeedCollector();
 
   iterator_range<SeedContainer::iterator> getStoreSeeds() {

@@ -9,7 +9,6 @@
 #include "Utils/CodegenUtils.h"
 #include "Utils/IterationGraphSorter.h"
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -259,7 +258,7 @@ translateMap(linalg::GenericOp op, PatternRewriter &rewriter) {
   // translation.
   auto populateCstMapping = [ctx](DenseMap<AffineExpr, AffineExpr> &cstMapping,
                                   unsigned pos, int64_t lvlSz) {
-    if (!ShapedType::isDynamic(lvlSz)) {
+    if (ShapedType::isStatic(lvlSz)) {
       auto c0 = getAffineConstantExpr(0, ctx);
       auto lvlExp = getAffineDimExpr(pos, ctx);
       auto szExp = getAffineConstantExpr(lvlSz, ctx);

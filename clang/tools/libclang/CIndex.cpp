@@ -270,10 +270,10 @@ bool CursorVisitor::visitFileRegion() {
   ASTUnit *Unit = cxtu::getASTUnit(TU);
   SourceManager &SM = Unit->getSourceManager();
 
-  std::pair<FileID, unsigned> Begin = SM.getDecomposedLoc(
-                                  SM.getFileLoc(RegionOfInterest.getBegin())),
-                              End = SM.getDecomposedLoc(
-                                  SM.getFileLoc(RegionOfInterest.getEnd()));
+  FileIDAndOffset Begin = SM.getDecomposedLoc(
+                      SM.getFileLoc(RegionOfInterest.getBegin())),
+                  End = SM.getDecomposedLoc(
+                      SM.getFileLoc(RegionOfInterest.getEnd()));
 
   if (End.first != Begin.first) {
     // If the end does not reside in the same file, try to recover by
@@ -1438,10 +1438,6 @@ bool CursorVisitor::VisitNestedNameSpecifier(NestedNameSpecifier *NNS,
     return Visit(
         MakeCursorNamespaceRef(NNS->getAsNamespace(), Range.getBegin(), TU));
 
-  case NestedNameSpecifier::NamespaceAlias:
-    return Visit(MakeCursorNamespaceRef(NNS->getAsNamespaceAlias(),
-                                        Range.getBegin(), TU));
-
   case NestedNameSpecifier::TypeSpec: {
     // If the type has a form where we know that the beginning of the source
     // range matches up with a reference cursor. Visit the appropriate reference
@@ -1478,13 +1474,6 @@ bool CursorVisitor::VisitNestedNameSpecifierLoc(
     switch (NNS->getKind()) {
     case NestedNameSpecifier::Namespace:
       if (Visit(MakeCursorNamespaceRef(NNS->getAsNamespace(),
-                                       Q.getLocalBeginLoc(), TU)))
-        return true;
-
-      break;
-
-    case NestedNameSpecifier::NamespaceAlias:
-      if (Visit(MakeCursorNamespaceRef(NNS->getAsNamespaceAlias(),
                                        Q.getLocalBeginLoc(), TU)))
         return true;
 
@@ -1681,6 +1670,10 @@ bool CursorVisitor::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
 
 bool CursorVisitor::VisitTypedefTypeLoc(TypedefTypeLoc TL) {
   return Visit(MakeCursorTypeRef(TL.getTypedefNameDecl(), TL.getNameLoc(), TU));
+}
+
+bool CursorVisitor::VisitPredefinedSugarTypeLoc(PredefinedSugarTypeLoc TL) {
+  return false;
 }
 
 bool CursorVisitor::VisitUnresolvedUsingTypeLoc(UnresolvedUsingTypeLoc TL) {
@@ -7636,7 +7629,7 @@ CXString clang_getTokenSpelling(CXTranslationUnit TU, CXToken CXTok) {
     return cxstring::createEmpty();
 
   SourceLocation Loc = SourceLocation::getFromRawEncoding(CXTok.int_data[1]);
-  std::pair<FileID, unsigned> LocInfo =
+  FileIDAndOffset LocInfo =
       CXXUnit->getSourceManager().getDecomposedSpellingLoc(Loc);
   bool Invalid = false;
   StringRef Buffer =
@@ -7680,9 +7673,9 @@ CXSourceRange clang_getTokenExtent(CXTranslationUnit TU, CXToken CXTok) {
 static void getTokens(ASTUnit *CXXUnit, SourceRange Range,
                       SmallVectorImpl<CXToken> &CXTokens) {
   SourceManager &SourceMgr = CXXUnit->getSourceManager();
-  std::pair<FileID, unsigned> BeginLocInfo =
+  FileIDAndOffset BeginLocInfo =
       SourceMgr.getDecomposedSpellingLoc(Range.getBegin());
-  std::pair<FileID, unsigned> EndLocInfo =
+  FileIDAndOffset EndLocInfo =
       SourceMgr.getDecomposedSpellingLoc(Range.getEnd());
 
   // Cannot tokenize across files.
@@ -7761,7 +7754,7 @@ CXToken *clang_getToken(CXTranslationUnit TU, CXSourceLocation Location) {
   if (Begin.isInvalid())
     return nullptr;
   SourceManager &SM = CXXUnit->getSourceManager();
-  std::pair<FileID, unsigned> DecomposedEnd = SM.getDecomposedLoc(Begin);
+  FileIDAndOffset DecomposedEnd = SM.getDecomposedLoc(Begin);
   DecomposedEnd.second +=
       Lexer::MeasureTokenLength(Begin, SM, CXXUnit->getLangOpts());
 
@@ -8410,9 +8403,9 @@ static void annotatePreprocessorTokens(CXTranslationUnit TU,
 
   Preprocessor &PP = CXXUnit->getPreprocessor();
   SourceManager &SourceMgr = CXXUnit->getSourceManager();
-  std::pair<FileID, unsigned> BeginLocInfo =
+  FileIDAndOffset BeginLocInfo =
       SourceMgr.getDecomposedSpellingLoc(RegionOfInterest.getBegin());
-  std::pair<FileID, unsigned> EndLocInfo =
+  FileIDAndOffset EndLocInfo =
       SourceMgr.getDecomposedSpellingLoc(RegionOfInterest.getEnd());
 
   if (BeginLocInfo.first != EndLocInfo.first)

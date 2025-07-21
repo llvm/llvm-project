@@ -633,7 +633,7 @@ bool LLParser::parseTargetDefinition(std::string &TentativeDLStr,
     if (parseToken(lltok::equal, "expected '=' after target triple") ||
         parseStringConstant(Str))
       return true;
-    M->setTargetTriple(Triple(Str));
+    M->setTargetTriple(Triple(std::move(Str)));
     return false;
   case lltok::kw_datalayout:
     Lex.Lex();
@@ -1234,14 +1234,12 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, unsigned NameID,
   std::unique_ptr<GlobalIFunc> GI;
   GlobalValue *GV;
   if (IsAlias) {
-    GA.reset(GlobalAlias::create(Ty, AddrSpace,
-                                 (GlobalValue::LinkageTypes)Linkage, Name,
-                                 Aliasee, /*Parent*/ nullptr));
+    GA.reset(GlobalAlias::create(Ty, AddrSpace, Linkage, Name, Aliasee,
+                                 /*Parent=*/nullptr));
     GV = GA.get();
   } else {
-    GI.reset(GlobalIFunc::create(Ty, AddrSpace,
-                                 (GlobalValue::LinkageTypes)Linkage, Name,
-                                 Aliasee, /*Parent*/ nullptr));
+    GI.reset(GlobalIFunc::create(Ty, AddrSpace, Linkage, Name, Aliasee,
+                                 /*Parent=*/nullptr));
     GV = GI.get();
   }
   GV->setThreadLocalMode(TLM);
@@ -2274,6 +2272,9 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
     CC = CallingConv::AMDGPU_CS_ChainPreserve;
     break;
   case lltok::kw_amdgpu_kernel:  CC = CallingConv::AMDGPU_KERNEL; break;
+  case lltok::kw_amdgpu_gfx_whole_wave:
+    CC = CallingConv::AMDGPU_Gfx_WholeWave;
+    break;
   case lltok::kw_tailcc:         CC = CallingConv::Tail; break;
   case lltok::kw_m68k_rtdcc:     CC = CallingConv::M68k_RTD; break;
   case lltok::kw_graalcc:        CC = CallingConv::GRAAL; break;
@@ -5876,7 +5877,8 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(retainedNodes, MDField, );                                          \
   OPTIONAL(thrownTypes, MDField, );                                            \
   OPTIONAL(annotations, MDField, );                                            \
-  OPTIONAL(targetFuncName, MDStringField, );
+  OPTIONAL(targetFuncName, MDStringField, );                                   \
+  OPTIONAL(keyInstructions, MDBoolField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -5896,7 +5898,7 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
        type.Val, scopeLine.Val, containingType.Val, virtualIndex.Val,
        thisAdjustment.Val, flags.Val, SPFlags, unit.Val, templateParams.Val,
        declaration.Val, retainedNodes.Val, thrownTypes.Val, annotations.Val,
-       targetFuncName.Val));
+       targetFuncName.Val, keyInstructions.Val));
   return false;
 }
 
@@ -6116,18 +6118,26 @@ bool LLParser::parseDILocalVariable(MDNode *&Result, bool IsDistinct) {
 }
 
 /// parseDILabel:
-///   ::= !DILabel(scope: !0, name: "foo", file: !1, line: 7)
+///   ::= !DILabel(scope: !0, name: "foo", file: !1, line: 7, column: 4)
 bool LLParser::parseDILabel(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   REQUIRED(scope, MDField, (/* AllowNull */ false));                           \
   REQUIRED(name, MDStringField, );                                             \
   REQUIRED(file, MDField, );                                                   \
-  REQUIRED(line, LineField, );
+  REQUIRED(line, LineField, );                                                 \
+  OPTIONAL(column, ColumnField, );                                             \
+  OPTIONAL(isArtificial, MDBoolField, );                                       \
+  OPTIONAL(coroSuspendIdx, MDUnsignedField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
+  std::optional<unsigned> CoroSuspendIdx =
+      coroSuspendIdx.Seen ? std::optional<unsigned>(coroSuspendIdx.Val)
+                          : std::nullopt;
+
   Result = GET_OR_DISTINCT(DILabel,
-                           (Context, scope.Val, name.Val, file.Val, line.Val));
+                           (Context, scope.Val, name.Val, file.Val, line.Val,
+                            column.Val, isArtificial.Val, CoroSuspendIdx));
   return false;
 }
 
