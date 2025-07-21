@@ -33,6 +33,7 @@ static constexpr fputil::ExceptValues<float16, N_EXCEPTS> ACOSHF16_EXCEPTS{{
 }};
 
 LLVM_LIBC_FUNCTION(float16, acoshf16, (float16 x)) {
+  using namespace acoshf_internal;
   using FPBits = fputil::FPBits<float16>;
   FPBits xbits(x);
   uint16_t x_u = xbits.uintval();
