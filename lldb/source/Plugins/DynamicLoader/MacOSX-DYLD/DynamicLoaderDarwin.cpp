@@ -8,7 +8,6 @@
 
 #include "DynamicLoaderDarwin.h"
 
-#include "DynamicLoaderDarwinProperties.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -27,6 +26,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
+#include "lldb/Target/ThreadPlanStepInstruction.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -77,17 +77,6 @@ void DynamicLoaderDarwin::DidLaunch() {
   PrivateInitialize(m_process);
   DoInitialImageFetch();
   SetNotificationBreakpoint();
-}
-
-void DynamicLoaderDarwin::CreateSettings(lldb_private::Debugger &debugger) {
-  if (!PluginManager::GetSettingForDynamicLoaderPlugin(
-          debugger, DynamicLoaderDarwinProperties::GetSettingName())) {
-    const bool is_global_setting = true;
-    PluginManager::CreateSettingForDynamicLoaderPlugin(
-        debugger,
-        DynamicLoaderDarwinProperties::GetGlobal().GetValueProperties(),
-        "Properties for the DynamicLoaderDarwin plug-in.", is_global_setting);
-  }
 }
 
 // Clear out the state of this class.
@@ -419,6 +408,10 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
         image_infos[i].os_type = llvm::Triple::WatchOS;
       else if (os_name == "bridgeos")
         image_infos[i].os_type = llvm::Triple::BridgeOS;
+      else if (os_name == "driverkit")
+        image_infos[i].os_type = llvm::Triple::DriverKit;
+      else if (os_name == "xros")
+        image_infos[i].os_type = llvm::Triple::XROS;
       else if (os_name == "maccatalyst") {
         image_infos[i].os_type = llvm::Triple::IOS;
         image_infos[i].os_env = llvm::Triple::MacABI;
@@ -430,6 +423,9 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
         image_infos[i].os_env = llvm::Triple::Simulator;
       } else if (os_name == "watchossimulator") {
         image_infos[i].os_type = llvm::Triple::WatchOS;
+        image_infos[i].os_env = llvm::Triple::Simulator;
+      } else if (os_name == "xrsimulator") {
+        image_infos[i].os_type = llvm::Triple::XROS;
         image_infos[i].os_env = llvm::Triple::Simulator;
       }
     }
@@ -663,8 +659,7 @@ DynamicLoaderDarwin::PreloadModulesFromImageInfos(
         image_info, FindTargetModuleForImageInfo(image_info, true, nullptr));
   };
   auto it = image_infos.begin();
-  bool is_parallel_load =
-      DynamicLoaderDarwinProperties::GetGlobal().GetEnableParallelImageLoad();
+  bool is_parallel_load = m_process->GetTarget().GetParallelModuleLoad();
   if (is_parallel_load) {
     llvm::ThreadPoolTaskGroup taskGroup(Debugger::GetThreadPool());
     for (size_t i = 0; i < size; ++i, ++it) {
@@ -765,7 +760,8 @@ bool DynamicLoaderDarwin::AddModulesUsingPreloadedModules(
           (dyld_triple.getEnvironment() == llvm::Triple::Simulator &&
            (dyld_triple.getOS() == llvm::Triple::IOS ||
             dyld_triple.getOS() == llvm::Triple::TvOS ||
-            dyld_triple.getOS() == llvm::Triple::WatchOS)))
+            dyld_triple.getOS() == llvm::Triple::WatchOS ||
+            dyld_triple.getOS() == llvm::Triple::XROS)))
         image_module_sp->MergeArchitecture(dyld_spec);
     }
   }
@@ -796,10 +792,8 @@ bool DynamicLoaderDarwin::AlwaysRelyOnEHUnwindInfo(SymbolContext &sym_ctx) {
   if (sym_ctx.symbol) {
     module_sp = sym_ctx.symbol->GetAddressRef().GetModule();
   }
-  if (module_sp.get() == nullptr && sym_ctx.function) {
-    module_sp =
-        sym_ctx.function->GetAddressRange().GetBaseAddress().GetModule();
-  }
+  if (module_sp.get() == nullptr && sym_ctx.function)
+    module_sp = sym_ctx.function->GetAddress().GetModule();
   if (module_sp.get() == nullptr)
     return false;
 
@@ -837,7 +831,7 @@ lldb_private::ArchSpec DynamicLoaderDarwin::ImageInfo::GetArchitecture() const {
   }
   if (os_env == llvm::Triple::Simulator &&
       (os_type == llvm::Triple::IOS || os_type == llvm::Triple::TvOS ||
-       os_type == llvm::Triple::WatchOS)) {
+       os_type == llvm::Triple::WatchOS || os_type == llvm::Triple::XROS)) {
     llvm::Triple triple(llvm::Twine(arch_spec.GetArchitectureName()) +
                         "-apple-" + llvm::Triple::getOSTypeName(os_type) +
                         min_version_os_sdk + "-simulator");
@@ -878,7 +872,6 @@ void DynamicLoaderDarwin::PrivateInitialize(Process *process) {
                StateAsCString(m_process->GetState()));
   Clear(true);
   m_process = process;
-  m_process->GetTarget().ClearAllLoadedSections();
 }
 
 // Member function that gets called when the process state changes.
@@ -930,24 +923,21 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
   if (current_symbol != nullptr) {
     std::vector<Address> addresses;
 
+    ConstString current_name =
+        current_symbol->GetMangled().GetName(Mangled::ePreferMangled);
     if (current_symbol->IsTrampoline()) {
-      ConstString trampoline_name =
-          current_symbol->GetMangled().GetName(Mangled::ePreferMangled);
 
-      if (trampoline_name) {
+      if (current_name) {
         const ModuleList &images = target_sp->GetImages();
 
         SymbolContextList code_symbols;
-        images.FindSymbolsWithNameAndType(trampoline_name, eSymbolTypeCode,
+        images.FindSymbolsWithNameAndType(current_name, eSymbolTypeCode,
                                           code_symbols);
         for (const SymbolContext &context : code_symbols) {
-          AddressRange addr_range;
-          context.GetAddressRange(eSymbolContextEverything, 0, false,
-                                  addr_range);
-          addresses.push_back(addr_range.GetBaseAddress());
+          Address addr = context.GetFunctionOrSymbolAddress();
+          addresses.push_back(addr);
           if (log) {
-            addr_t load_addr =
-                addr_range.GetBaseAddress().GetLoadAddress(target_sp.get());
+            addr_t load_addr = addr.GetLoadAddress(target_sp.get());
 
             LLDB_LOGF(log, "Found a trampoline target symbol at 0x%" PRIx64 ".",
                       load_addr);
@@ -955,8 +945,8 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
         }
 
         SymbolContextList reexported_symbols;
-        images.FindSymbolsWithNameAndType(
-            trampoline_name, eSymbolTypeReExported, reexported_symbols);
+        images.FindSymbolsWithNameAndType(current_name, eSymbolTypeReExported,
+                                          reexported_symbols);
         for (const SymbolContext &context : reexported_symbols) {
           if (context.symbol) {
             Symbol *actual_symbol =
@@ -978,17 +968,14 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
         }
 
         SymbolContextList indirect_symbols;
-        images.FindSymbolsWithNameAndType(trampoline_name, eSymbolTypeResolver,
+        images.FindSymbolsWithNameAndType(current_name, eSymbolTypeResolver,
                                           indirect_symbols);
 
         for (const SymbolContext &context : indirect_symbols) {
-          AddressRange addr_range;
-          context.GetAddressRange(eSymbolContextEverything, 0, false,
-                                  addr_range);
-          addresses.push_back(addr_range.GetBaseAddress());
+          Address addr = context.GetFunctionOrSymbolAddress();
+          addresses.push_back(addr);
           if (log) {
-            addr_t load_addr =
-                addr_range.GetBaseAddress().GetLoadAddress(target_sp.get());
+            addr_t load_addr = addr.GetLoadAddress(target_sp.get());
 
             LLDB_LOGF(log, "Found an indirect target symbol at 0x%" PRIx64 ".",
                       load_addr);
@@ -1040,6 +1027,23 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
       }
       thread_plan_sp = std::make_shared<ThreadPlanRunToAddress>(
           thread, load_addrs, stop_others);
+    }
+    // One more case we have to consider is "branch islands".  These are regular
+    // TEXT symbols but their names end in .island plus maybe a .digit suffix.
+    // They are to allow arm64 code to branch further than the size of the
+    // address slot allows.  We just need to single-instruction step in that
+    // case.
+    static const char *g_branch_island_pattern = "\\.island\\.?[0-9]*$";
+    static RegularExpression g_branch_island_regex(g_branch_island_pattern);
+
+    bool is_branch_island = g_branch_island_regex.Execute(current_name);
+    if (!thread_plan_sp && is_branch_island) {
+      thread_plan_sp = std::make_shared<ThreadPlanStepInstruction>(
+          thread,
+          /* step_over= */ false, /* stop_others */ false, eVoteNoOpinion,
+          eVoteNoOpinion);
+      LLDB_LOG(log, "Stepping one instruction over branch island: '{0}'.",
+               current_name);
     }
   } else {
     LLDB_LOGF(log, "Could not find symbol for step through.");
@@ -1216,34 +1220,45 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
 
 bool DynamicLoaderDarwin::UseDYLDSPI(Process *process) {
   Log *log = GetLog(LLDBLog::DynamicLoader);
-  bool use_new_spi_interface = false;
+  bool use_new_spi_interface = true;
 
   llvm::VersionTuple version = process->GetHostOSVersion();
   if (!version.empty()) {
-    const llvm::Triple::OSType os_type =
+    using namespace llvm;
+    const Triple::OSType os_type =
         process->GetTarget().GetArchitecture().GetTriple().getOS();
 
-    // macOS 10.12 and newer
-    if (os_type == llvm::Triple::MacOSX &&
-        version >= llvm::VersionTuple(10, 12))
-      use_new_spi_interface = true;
+    auto OlderThan = [os_type, version](llvm::Triple::OSType o,
+                                        llvm::VersionTuple v) -> bool {
+      return os_type == o && version < v;
+    };
 
-    // iOS 10 and newer
-    if (os_type == llvm::Triple::IOS && version >= llvm::VersionTuple(10))
-      use_new_spi_interface = true;
+    if (OlderThan(Triple::MacOSX, VersionTuple(10, 12)))
+      use_new_spi_interface = false;
 
-    // tvOS 10 and newer
-    if (os_type == llvm::Triple::TvOS && version >= llvm::VersionTuple(10))
-      use_new_spi_interface = true;
+    if (OlderThan(Triple::IOS, VersionTuple(10)))
+      use_new_spi_interface = false;
 
-    // watchOS 3 and newer
-    if (os_type == llvm::Triple::WatchOS && version >= llvm::VersionTuple(3))
-      use_new_spi_interface = true;
+    if (OlderThan(Triple::TvOS, VersionTuple(10)))
+      use_new_spi_interface = false;
 
-    // NEED_BRIDGEOS_TRIPLE // Any BridgeOS
-    // NEED_BRIDGEOS_TRIPLE if (os_type == llvm::Triple::BridgeOS)
-    // NEED_BRIDGEOS_TRIPLE   use_new_spi_interface = true;
+    if (OlderThan(Triple::WatchOS, VersionTuple(3)))
+      use_new_spi_interface = false;
+
+    // llvm::Triple::BridgeOS and llvm::Triple::XROS always use the new
+    // libdyld SPI interface.
+  } else {
+    // We could not get an OS version string, we are likely not
+    // connected to debugserver and the packets to call the libdyld SPI
+    // will not exist.
+    use_new_spi_interface = false;
   }
+
+  // Corefiles cannot use the libdyld SPI to get the inferior's
+  // binaries, we must find it through metadata or a scan
+  // of the corefile memory.
+  if (!process->IsLiveDebugSession())
+    use_new_spi_interface = false;
 
   if (log) {
     if (use_new_spi_interface)

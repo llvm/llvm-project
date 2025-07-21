@@ -87,8 +87,29 @@ LIBC_INLINE void sync_threads() { __gpu_sync_threads(); }
 
 LIBC_INLINE void sync_lane(uint64_t lane_mask) { __gpu_sync_lane(lane_mask); }
 
-LIBC_INLINE uint32_t shuffle(uint64_t lane_mask, uint32_t idx, uint32_t x) {
-  return __gpu_shuffle_idx_u32(lane_mask, idx, x);
+LIBC_INLINE uint32_t shuffle(uint64_t lane_mask, uint32_t idx, uint32_t x,
+                             uint32_t width = __gpu_num_lanes()) {
+  return __gpu_shuffle_idx_u32(lane_mask, idx, x, width);
+}
+
+LIBC_INLINE uint64_t shuffle(uint64_t lane_mask, uint32_t idx, uint64_t x,
+                             uint32_t width = __gpu_num_lanes()) {
+  return __gpu_shuffle_idx_u64(lane_mask, idx, x, width);
+}
+
+template <typename T>
+LIBC_INLINE T *shuffle(uint64_t lane_mask, uint32_t idx, T *x,
+                       uint32_t width = __gpu_num_lanes()) {
+  return reinterpret_cast<T *>(__gpu_shuffle_idx_u64(
+      lane_mask, idx, reinterpret_cast<uintptr_t>(x), width));
+}
+
+LIBC_INLINE uint64_t match_any(uint64_t lane_mask, uint32_t x) {
+  return __gpu_match_any_u32(lane_mask, x);
+}
+
+LIBC_INLINE uint64_t match_all(uint64_t lane_mask, uint32_t x) {
+  return __gpu_match_all_u32(lane_mask, x);
 }
 
 [[noreturn]] LIBC_INLINE void end_program() { __gpu_exit(); }

@@ -489,7 +489,7 @@ subroutine simple_iostat(x, y, j, stat)
 ! CHECK:   %[[VAL_341:.*]] = fir.address_of(@_QQ{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 ! CHECK:   %[[VAL_342:.*]] = fir.convert %[[VAL_341]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:   %[[VAL_343:.*]] = fir.call @_FortranAioBeginExternalListInput(%[[VAL_334]], %[[VAL_342]], %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-! CHECK:   %[[VAL_344:.*]] = fir.call @_FortranAioEnableHandlers(%[[VAL_343]], %[[VAL_337]], %[[VAL_336]], %[[VAL_336]], %[[VAL_336]], %[[VAL_336]]) {{.*}}: (!fir.ref<i8>, i1, i1, i1, i1, i1) -> none
+! CHECK:   fir.call @_FortranAioEnableHandlers(%[[VAL_343]], %[[VAL_337]], %[[VAL_336]], %[[VAL_336]], %[[VAL_336]], %[[VAL_336]]) {{.*}}: (!fir.ref<i8>, i1, i1, i1, i1, i1) -> ()
 ! CHECK:   %[[VAL_345:.*]]:3 = fir.box_dims %[[VAL_346]], %[[VAL_339]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 ! CHECK:   %[[VAL_347:.*]] = fir.slice %[[VAL_338]], %[[VAL_345]]#1, %[[VAL_338]] : (index, index, index) -> !fir.slice<1>
 ! CHECK:   %[[VAL_348:.*]] = arith.subi %[[VAL_345]]#1, %[[VAL_338]] : index
@@ -538,7 +538,7 @@ subroutine iostat_in_io_loop(k, j, stat)
 ! CHECK:   %[[VAL_376:.*]] = fir.address_of(@_QQ{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 ! CHECK:   %[[VAL_377:.*]] = fir.convert %[[VAL_376]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:   %[[VAL_378:.*]] = fir.call @_FortranAioBeginExternalListInput(%[[VAL_366]], %[[VAL_377]], %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-! CHECK:   %[[VAL_379:.*]] = fir.call @_FortranAioEnableHandlers(%[[VAL_378]], %[[VAL_369]], %[[VAL_370]], %[[VAL_370]], %[[VAL_370]], %[[VAL_370]]) {{.*}}: (!fir.ref<i8>, i1, i1, i1, i1, i1) -> none
+! CHECK:   fir.call @_FortranAioEnableHandlers(%[[VAL_378]], %[[VAL_369]], %[[VAL_370]], %[[VAL_370]], %[[VAL_370]], %[[VAL_370]]) {{.*}}: (!fir.ref<i8>, i1, i1, i1, i1, i1) -> ()
 ! CHECK:   cf.br ^bb1(%[[VAL_371]], %[[VAL_369]] : index, i1)
 ! CHECK: ^bb1(%[[VAL_380:.*]]: index, %[[VAL_381:.*]]: i1):
 ! CHECK:   %[[VAL_382:.*]] = arith.cmpi sle, %[[VAL_380]], %[[VAL_368]] : index

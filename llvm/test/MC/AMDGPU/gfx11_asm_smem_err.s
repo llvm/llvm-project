@@ -29,3 +29,6 @@ s_buffer_load_dwordx8 s[4:11], null, s101
 
 s_buffer_load_dwordx16 s[4:19], null, s101
 // NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+s_atc_probe_buffer 7, null, s2
+// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

@@ -147,6 +147,7 @@ public:
       newResultTypes.emplace_back(getVoidPtrType(result.getContext()));
 
     Op newOp;
+    // TODO: propagate argument and result attributes (need to be shifted).
     // fir::CallOp specific handling.
     if constexpr (std::is_same_v<Op, fir::CallOp>) {
       if (op.getCallee()) {
@@ -189,9 +190,11 @@ public:
       if (op.getPassArgPos())
         passArgPos =
             rewriter.getI32IntegerAttr(*op.getPassArgPos() + passArgShift);
+      // TODO: propagate argument and result attributes (need to be shifted).
       newOp = rewriter.create<fir::DispatchOp>(
           loc, newResultTypes, rewriter.getStringAttr(op.getMethod()),
           op.getOperands()[0], newOperands, passArgPos,
+          /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
           op.getProcedureAttrsAttr());
     }
 
@@ -384,8 +387,12 @@ public:
         mlir::OpBuilder rewriter(context);
         auto resultType = funcTy.getResult(0);
         auto argTy = getResultArgumentType(resultType, shouldBoxResult);
-        func.insertArgument(0u, argTy, {}, loc);
-        func.eraseResult(0u);
+        llvm::LogicalResult res = func.insertArgument(0u, argTy, {}, loc);
+        (void)res;
+        assert(llvm::succeeded(res) && "failed to insert function argument");
+        res = func.eraseResult(0u);
+        (void)res;
+        assert(llvm::succeeded(res) && "failed to erase function result");
         mlir::Value newArg = func.getArgument(0u);
         if (mustEmboxResult(resultType, shouldBoxResult)) {
           auto bufferType = fir::ReferenceType::get(resultType);

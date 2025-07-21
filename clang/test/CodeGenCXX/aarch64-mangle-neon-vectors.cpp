@@ -11,6 +11,7 @@ typedef unsigned short poly16_t;
 typedef __fp16 float16_t;
 typedef float float32_t;
 typedef double float64_t;
+typedef __mfp8 mfloat8_t;
 
 typedef __attribute__((neon_vector_type(8))) int8_t int8x8_t;
 typedef __attribute__((neon_vector_type(16))) int8_t int8x16_t;
@@ -26,6 +27,8 @@ typedef __attribute__((neon_vector_type(8))) uint16_t uint16x8_t;
 typedef __attribute__((neon_vector_type(2))) unsigned int uint32x2_t;
 typedef __attribute__((neon_vector_type(4))) unsigned int uint32x4_t;
 typedef __attribute__((neon_vector_type(2))) uint64_t uint64x2_t;
+typedef __attribute__((neon_vector_type(8))) mfloat8_t mfloat8x8_t;
+typedef __attribute__((neon_vector_type(16))) mfloat8_t mfloat8x16_t;
 typedef __attribute__((neon_vector_type(4))) float16_t float16x4_t;
 typedef __attribute__((neon_vector_type(8))) float16_t float16x8_t;
 typedef __attribute__((neon_vector_type(2))) float32_t float32x2_t;
@@ -82,3 +85,7 @@ void f21(int64x2_t) {}
 void f22(uint64x2_t) {}
 // CHECK: 13__Float64x2_t
 void f23(float64x2_t) {}
+// CHECK: 13__Mfloat8x8_t
+void f24(mfloat8x8_t) {}
+// CHECK: 14__Mfloat8x16_t
+void f25(mfloat8x16_t) {}

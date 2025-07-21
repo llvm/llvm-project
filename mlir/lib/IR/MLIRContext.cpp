@@ -25,16 +25,13 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
-#include "mlir/IR/Types.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/ThreadPool.h"
@@ -221,17 +218,6 @@ public:
   llvm::DenseMap<StringRef, AbstractType *> nameToType;
 
   /// Cached Type Instances.
-  Float4E2M1FNType f4E2M1FNTy;
-  Float6E2M3FNType f6E2M3FNTy;
-  Float6E3M2FNType f6E3M2FNTy;
-  Float8E5M2Type f8E5M2Ty;
-  Float8E4M3Type f8E4M3Ty;
-  Float8E4M3FNType f8E4M3FNTy;
-  Float8E5M2FNUZType f8E5M2FNUZTy;
-  Float8E4M3FNUZType f8E4M3FNUZTy;
-  Float8E4M3B11FNUZType f8E4M3B11FNUZTy;
-  Float8E3M4Type f8E3M4Ty;
-  Float8E8M0FNUType f8E8M0FNUTy;
   BFloat16Type bf16Ty;
   Float16Type f16Ty;
   FloatTF32Type tf32Ty;
@@ -317,17 +303,6 @@ MLIRContext::MLIRContext(const DialectRegistry &registry, Threading setting)
 
   //// Types.
   /// Floating-point Types.
-  impl->f4E2M1FNTy = TypeUniquer::get<Float4E2M1FNType>(this);
-  impl->f6E2M3FNTy = TypeUniquer::get<Float6E2M3FNType>(this);
-  impl->f6E3M2FNTy = TypeUniquer::get<Float6E3M2FNType>(this);
-  impl->f8E5M2Ty = TypeUniquer::get<Float8E5M2Type>(this);
-  impl->f8E4M3Ty = TypeUniquer::get<Float8E4M3Type>(this);
-  impl->f8E4M3FNTy = TypeUniquer::get<Float8E4M3FNType>(this);
-  impl->f8E5M2FNUZTy = TypeUniquer::get<Float8E5M2FNUZType>(this);
-  impl->f8E4M3FNUZTy = TypeUniquer::get<Float8E4M3FNUZType>(this);
-  impl->f8E4M3B11FNUZTy = TypeUniquer::get<Float8E4M3B11FNUZType>(this);
-  impl->f8E3M4Ty = TypeUniquer::get<Float8E3M4Type>(this);
-  impl->f8E8M0FNUTy = TypeUniquer::get<Float8E8M0FNUType>(this);
   impl->bf16Ty = TypeUniquer::get<BFloat16Type>(this);
   impl->f16Ty = TypeUniquer::get<Float16Type>(this);
   impl->tf32Ty = TypeUniquer::get<FloatTF32Type>(this);
@@ -384,7 +359,7 @@ template <typename T>
 static ArrayRef<T> copyArrayRefInto(llvm::BumpPtrAllocator &allocator,
                                     ArrayRef<T> elements) {
   auto result = allocator.Allocate<T>(elements.size());
-  std::uninitialized_copy(elements.begin(), elements.end(), result);
+  llvm::uninitialized_copy(elements, result);
   return ArrayRef<T>(result, elements.size());
 }
 
@@ -714,12 +689,10 @@ ArrayRef<RegisteredOperationName> MLIRContext::getRegisteredOperations() {
 /// Return information for registered operations by dialect.
 ArrayRef<RegisteredOperationName>
 MLIRContext::getRegisteredOperationsByDialect(StringRef dialectName) {
-  auto lowerBound =
-      std::lower_bound(impl->sortedRegisteredOperations.begin(),
-                       impl->sortedRegisteredOperations.end(), dialectName,
-                       [](auto &lhs, auto &rhs) {
-                         return lhs.getDialect().getNamespace().compare(rhs);
-                       });
+  auto lowerBound = llvm::lower_bound(
+      impl->sortedRegisteredOperations, dialectName, [](auto &lhs, auto &rhs) {
+        return lhs.getDialect().getNamespace().compare(rhs);
+      });
 
   if (lowerBound == impl->sortedRegisteredOperations.end() ||
       lowerBound->getDialect().getNamespace() != dialectName)
@@ -834,7 +807,7 @@ OperationName::OperationName(StringRef name, MLIRContext *context) {
   // Acquire a writer-lock so that we can safely create the new instance.
   ScopedWriterLock lock(ctxImpl.operationInfoMutex, isMultithreadingEnabled);
 
-  auto it = ctxImpl.operations.insert({name, nullptr});
+  auto it = ctxImpl.operations.try_emplace(name);
   if (it.second) {
     auto nameAttr = StringAttr::get(context, name);
     it.first->second = std::make_unique<UnregisteredOpModel>(
@@ -1044,39 +1017,6 @@ AbstractType::lookup(StringRef name, MLIRContext *context) {
 /// This should not be used directly.
 StorageUniquer &MLIRContext::getTypeUniquer() { return getImpl().typeUniquer; }
 
-Float4E2M1FNType Float4E2M1FNType::get(MLIRContext *context) {
-  return context->getImpl().f4E2M1FNTy;
-}
-Float6E2M3FNType Float6E2M3FNType::get(MLIRContext *context) {
-  return context->getImpl().f6E2M3FNTy;
-}
-Float6E3M2FNType Float6E3M2FNType::get(MLIRContext *context) {
-  return context->getImpl().f6E3M2FNTy;
-}
-Float8E5M2Type Float8E5M2Type::get(MLIRContext *context) {
-  return context->getImpl().f8E5M2Ty;
-}
-Float8E4M3Type Float8E4M3Type::get(MLIRContext *context) {
-  return context->getImpl().f8E4M3Ty;
-}
-Float8E4M3FNType Float8E4M3FNType::get(MLIRContext *context) {
-  return context->getImpl().f8E4M3FNTy;
-}
-Float8E5M2FNUZType Float8E5M2FNUZType::get(MLIRContext *context) {
-  return context->getImpl().f8E5M2FNUZTy;
-}
-Float8E4M3FNUZType Float8E4M3FNUZType::get(MLIRContext *context) {
-  return context->getImpl().f8E4M3FNUZTy;
-}
-Float8E4M3B11FNUZType Float8E4M3B11FNUZType::get(MLIRContext *context) {
-  return context->getImpl().f8E4M3B11FNUZTy;
-}
-Float8E3M4Type Float8E3M4Type::get(MLIRContext *context) {
-  return context->getImpl().f8E3M4Ty;
-}
-Float8E8M0FNUType Float8E8M0FNUType::get(MLIRContext *context) {
-  return context->getImpl().f8E8M0FNUTy;
-}
 BFloat16Type BFloat16Type::get(MLIRContext *context) {
   return context->getImpl().bf16Ty;
 }

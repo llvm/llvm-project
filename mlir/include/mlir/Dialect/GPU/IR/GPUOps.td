@@ -146,7 +146,7 @@ def GPU_ClusterBlockIdOp : GPU_IndexOp<"cluster_block_id"> {
     ```
 
     If `upper_bound` is set, then executing (a lowering of) this operation in an
-    environment where the number of thread blocks per cluster  along `dimension`
+    environment where the number of thread blocks per cluster along `dimension`
     is greater than `upper_bound` causes undefined behavior.
 
     There is an implicit upper bound of `kMaxClusterDim` (currently 8).
@@ -794,9 +794,9 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
 }
 
 def GPU_LaunchOp : GPU_Op<"launch", [
-      AutomaticAllocationScope, AttrSizedOperandSegments, GPU_AsyncOpInterface,
+      AffineScope, AutomaticAllocationScope, AttrSizedOperandSegments,
       DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
-      RecursiveMemoryEffects]>,
+      GPU_AsyncOpInterface, RecursiveMemoryEffects]>,
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
@@ -840,7 +840,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     -   a variadic number of Private memory attributions.
 
     The `kernelFunc` and `kernelModule` attributes are optional and specifies
-    the kernel name and a module in which the kernel should be outlined. 
+    the kernel name and a module in which the kernel should be outlined.
 
     Syntax:
 
@@ -1055,7 +1055,7 @@ def GPU_PrintfOp : GPU_Op<"printf", [MemoryEffects<[MemWrite]>]>,
     imposed by one's target platform.
   }];
   let assemblyFormat = [{
-    $format attr-dict ($args^ `:` type($args))?
+    $format attr-dict (`,` $args^ `:` type($args))?
   }];
 }
 
@@ -1064,7 +1064,7 @@ def GPU_ReturnOp : GPU_Op<"return", [HasParent<"GPUFuncOp">, Pure,
     Arguments<(ins Variadic<AnyType>:$operands)>, Results<(outs)> {
   let summary = "Terminator for GPU functions.";
   let description = [{
-    A terminator operation for regions that appear in the body of  `gpu.func`
+    A terminator operation for regions that appear in the body of `gpu.func`
     functions. The operands to the `gpu.return` are the result values returned
     by an invocation of the `gpu.func`.
   }];
@@ -1092,7 +1092,7 @@ def GPU_YieldOp : GPU_Op<"yield", [Pure, ReturnLike, Terminator]>,
     Arguments<(ins Variadic<AnyType>:$values)> {
   let summary = "GPU yield operation";
   let description = [{
-    gpu.yield` is a special terminator operation for blocks inside regions
+    `gpu.yield` is a special terminator operation for blocks inside regions
     in gpu ops. It returns values to the immediately enclosing gpu op.
 
     Example:
@@ -1201,7 +1201,7 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
 }
 
 def AnyIntegerOrFloatOr1DVector :
-  AnyTypeOf<[AnyIntegerOrFloat, VectorOfRankAndType<[1], [AnyIntegerOrFloat]>]>;
+  AnyTypeOf<[AnyIntegerOrFloat, FixedVectorOfRankAndType<[1], [AnyIntegerOrFloat]>]>;
 
 def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]> {
   let summary = "Reduce values among subgroup.";
@@ -1304,8 +1304,8 @@ def GPU_ShuffleOp : GPU_Op<
     Results<(outs AnyIntegerOrFloatOr1DVector:$shuffleResult, I1:$valid)> {
   let summary = "Shuffles values within a subgroup.";
   let description = [{
-    The "shuffle" op moves values to a across lanes (a.k.a., invocations,
-    work items) within the same subgroup. The `width` argument specifies the
+    The "shuffle" op moves values across lanes in a subgroup (a.k.a., local
+    invocation) within the same subgroup. The `width` argument specifies the
     number of lanes that participate in the shuffle, and must be uniform
     across all lanes. Further, the first `width` lanes of the subgroup must
     be active.
@@ -1332,7 +1332,8 @@ def GPU_ShuffleOp : GPU_Op<
     %3, %4 = gpu.shuffle down %0, %cst1, %width : f32
     ```
 
-    For lane `k`, returns the value from lane `(k + 1) % width`.
+    For lane `k`, returns the value from lane `(k + cst1)`. If `(k + cst1)` is
+    bigger than or equal to `width`, the value is poison and `valid` is `false`.
 
     `up` example:
 
@@ -1341,7 +1342,8 @@ def GPU_ShuffleOp : GPU_Op<
     %5, %6 = gpu.shuffle up %0, %cst1, %width : f32
     ```
 
-    For lane `k`, returns the value from lane `(k - 1) % width`.
+    For lane `k`, returns the value from lane `(k - cst1)`. If `(k - cst1)` is
+    smaller than `0`, the value is poison and `valid` is `false`.
 
     `idx` example:
 
@@ -1364,10 +1366,58 @@ def GPU_ShuffleOp : GPU_Op<
   ];
 }
 
+def GPU_RotateOp : GPU_Op<
+    "rotate", [Pure, AllTypesMatch<["value", "rotateResult"]>]>,
+    Arguments<(ins AnyIntegerOrFloatOr1DVector:$value, I32:$offset, I32:$width)>,
+    Results<(outs AnyIntegerOrFloatOr1DVector:$rotateResult, I1:$valid)> {
+  let summary = "Rotate values within a subgroup.";
+  let description = [{
+    The "rotate" op moves values across lanes in a subgroup (a.k.a., local
+    invocations) within the same subgroup. The `width` argument specifies the
+    number of lanes that participate in the rotation, and must be uniform across
+    all participating lanes. Further, the first `width` lanes of the subgroup
+    must be active.
+
+    `width` must be a power of two, and `offset` must be in the range
+    `[0, width)`.
+
+    Return the `rotateResult` of the invocation whose id within the group is
+    calculated as follows:
+
+    ```mlir
+    Invocation ID = ((LaneId + offset) & (width - 1)) + (LaneId & ~(width - 1))
+    ```
+
+    Returns the `rotateResult` and `true` if the current lane id is smaller than
+    `width`, and poison value and `false` otherwise.
+
+    example:
+
+    ```mlir
+    %offset = arith.constant 1 : i32
+    %width = arith.constant 16 : i32
+    %1, %2 = gpu.rotate %0, %offset, %width : f32
+    ```
+
+    For lane `k`, returns the value from lane `(k + cst1) % width`.
+  }];
+
+  let assemblyFormat = [{
+    $value `,` $offset `,` $width attr-dict `:` type($value)
+  }];
+
+  let builders = [
+    // Helper function that creates a rotate with constant offset/width.
+    OpBuilder<(ins "Value":$value, "int32_t":$offset, "int32_t":$width)>
+  ];
+
+  let hasVerifier = 1;
+}
+
 def GPU_BarrierOp : GPU_Op<"barrier"> {
   let summary = "Synchronizes all work items of a workgroup.";
   let description = [{
-    The "barrier" op synchronizes all work items of a workgroup. It is used
+    The `barrier` op synchronizes all work items of a workgroup. It is used
     to coordinate communication between the work items of the workgroup.
 
     ```mlir
@@ -1388,7 +1438,7 @@ def GPU_BarrierOp : GPU_Op<"barrier"> {
 }
 
 def GPU_GPUModuleOp : GPU_Op<"module", [
-      DataLayoutOpInterface, HasDefaultDLTIDataLayout, IsolatedFromAbove,
+      IsolatedFromAbove, DataLayoutOpInterface, HasDefaultDLTIDataLayout,
       NoRegionArguments, SymbolTable, Symbol] # GraphRegionNoTerminator.traits> {
   let summary = "A top level compilation unit containing code to be run on a GPU.";
   let description = [{
@@ -1460,6 +1510,8 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
     /// Sets the targets of the module.
     void setTargets(ArrayRef<TargetAttrInterface> targets);
   }];
+  
+  let hasVerifier = 1;
 }
 
 def GPU_BinaryOp : GPU_Op<"binary", [Symbol]>, Arguments<(ins
@@ -1916,6 +1968,95 @@ def GPU_SubgroupMmaConstantMatrixOp : GPU_Op<"subgroup_mma_constant_matrix",
 
   let assemblyFormat = [{
     $value attr-dict `:` type($res)
+  }];
+}
+
+def GPU_SubgroupMmaExtractThreadLocalOp : GPU_Op<"subgroup_mma_extract_thread_local",
+    [Pure,
+     TypesMatchWith<"value type matches element type of mma_matrix",
+                    "matrix", "res",
+                    "::llvm::cast<gpu::MMAMatrixType>($_self).getElementType()">]>{
+
+  let summary = "Extract a value from GPU warp by invocation and indices";
+
+  let description = [{
+    The `gpu.subgroup_mma_extract_thread_local` operation extracts a value from `!gpu.mma_matrix`
+    that is stored at subgroup level.
+
+    This operation takes `!gpu.mma_matrix` as its first operand. It is the source
+    matrix across a subgroup. The op returns a scalar value stored in the invocation
+    in the subgroup.
+
+    Since `matrix` is packed into the the threads within a subgroup, `indices` are
+    the indices into the values stored by each thread. That is, an index of 0 (or [0, 0])
+    does not necessarily refer to the first element of the matrix, but the first element
+    that a particular thread holds.
+
+    The mapping of matrix elements to threads is not defined by this operation and may
+    not be defined by some lowerings (such as the lowering to SPIR-V). However, if the
+    size of the subgroup is S, then `subgroup_mma_extract_thread_local` at each index in
+    `[0, (M * N) / S)` will have the entire matrix extracted across the subgroup.
+
+    Example:
+
+    ```mlir
+    %c0 = arith.constant 0 : index
+    %val = gpu.subgroup_mma_extract_thread_local %m[%c0] : !gpu.mma_matrix<16x16xf32, "AOp"> -> f32
+    ```
+  }];
+
+  let arguments = (ins GPU_MMAMatrix:$matrix, Variadic<Index>:$indices);
+
+  let results = (outs AnyIntegerOrFloat:$res);
+
+  let assemblyFormat = [{
+    $matrix`[`$indices`]` attr-dict `:` type($matrix) `->` type($res)
+  }];
+}
+
+def GPU_SubgroupMmaInsertThreadLocalOp : GPU_Op<"subgroup_mma_insert_thread_local",
+    [Pure,
+     TypesMatchWith<"value type matches element type of mma_matrix",
+                    "matrix", "value",
+                    "::llvm::cast<gpu::MMAMatrixType>($_self).getElementType()"> ]>{
+
+  let summary = "Insert a value into GPU warp by invocation and indices";
+
+  let description = [{
+    The `gpu.subgroup_mma_insert_thread_local` operation inserts a value to `!gpu.mma_matrix`
+    that is stored at subgroup level.
+
+    This operation takes scalar value as its first operand and `!gpu.mma_matrix`
+    as its second operand. The op inserts the scalar value to the matrix.
+
+    Since `matrix` is packed into the the threads within a subgroup, `indices` are
+    the indices into the values stored by each thread. That is, an index of 0 (or [0, 0])
+    does not necessarily refer to the first element of the matrix, but the first element
+    that a particular thread holds.
+
+    The mapping of matrix elements to threads is not defined by this operation and may
+    not be defined by some lowerings (such as the lowering to SPIR-V). However, if the
+    size of the subgroup is S, then `subgroup_mma_insert_thread_local` at each index in
+    `[0, (M * N) / S)` will have the entire matrix inserted across the subgroup.
+
+    The op returns `!gpu.mma_matrix` with the updated value.
+
+    Example:
+
+    ```mlir
+    %c0 = arith.constant 0 : index
+    %s0 = gpu.subgroup_mma_insert_thread_local %val, %m[%c0] : f16, !gpu.mma_matrix<16x16xf16, "COp">
+            -> !gpu.mma_matrix<16x16xf16, "COp">
+    ```
+  }];
+
+  let arguments = (ins AnyIntegerOrFloat:$value, GPU_MMAMatrix:$matrix,
+                       Variadic<Index>:$indices);
+
+  let results = (outs GPU_MMAMatrix:$res);
+
+  let assemblyFormat = [{
+    $value`,` $matrix`[`$indices`]` attr-dict `:` type($value)`,` type($matrix) `->` type($res)
   }];
 }
 

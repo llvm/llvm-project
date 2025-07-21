@@ -11,11 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
-#include "mlir/Interfaces/VectorInterfaces.h"
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -139,7 +136,7 @@ struct TransferReadPermutationLowering
     VectorType newReadType = VectorType::get(
         newVectorShape, op.getVectorType().getElementType(), newScalableDims);
     Value newRead = rewriter.create<vector::TransferReadOp>(
-        op.getLoc(), newReadType, op.getSource(), op.getIndices(),
+        op.getLoc(), newReadType, op.getBase(), op.getIndices(),
         AffineMapAttr::get(newMap), op.getPadding(), op.getMask(),
         newInBoundsAttr);
 
@@ -214,7 +211,7 @@ struct TransferWritePermutationLowering
     auto newMap = AffineMap::getMinorIdentityMap(
         map.getNumDims(), map.getNumResults(), rewriter.getContext());
     auto newWrite = rewriter.create<vector::TransferWriteOp>(
-        op.getLoc(), newVec, op.getSource(), op.getIndices(),
+        op.getLoc(), newVec, op.getBase(), op.getIndices(),
         AffineMapAttr::get(newMap), op.getMask(), newInBoundsAttr);
     if (newWrite.hasPureTensorSemantics())
       return newWrite.getResult();
@@ -300,7 +297,7 @@ struct TransferWriteNonPermutationLowering
     }
     ArrayAttr newInBoundsAttr = rewriter.getBoolArrayAttr(newInBoundsValues);
     auto newWrite = rewriter.create<vector::TransferWriteOp>(
-        op.getLoc(), newVec, op.getSource(), op.getIndices(),
+        op.getLoc(), newVec, op.getBase(), op.getIndices(),
         AffineMapAttr::get(newMap), newMask, newInBoundsAttr);
     if (newWrite.hasPureTensorSemantics())
       return newWrite.getResult();
@@ -371,7 +368,7 @@ struct TransferOpReduceRank
                   op.getInBoundsAttr().getValue().take_back(reducedShapeRank))
             : ArrayAttr();
     Value newRead = rewriter.create<vector::TransferReadOp>(
-        op.getLoc(), newReadType, op.getSource(), op.getIndices(),
+        op.getLoc(), newReadType, op.getBase(), op.getIndices(),
         AffineMapAttr::get(newMap), op.getPadding(), op.getMask(),
         newInBoundsAttr);
     return rewriter
@@ -435,7 +432,7 @@ struct TransferReadToVectorLoadLowering
       return rewriter.notifyMatchFailure(read, "not a memref source");
 
     // Non-unit strides are handled by VectorToSCF.
-    if (!isLastMemrefDimUnitStride(memRefType))
+    if (!memRefType.isLastDimUnitStride())
       return rewriter.notifyMatchFailure(read, "!= 1 stride needs VectorToSCF");
 
     // If there is broadcasting involved then we first load the unbroadcasted
@@ -474,12 +471,12 @@ struct TransferReadToVectorLoadLowering
       Value fill = rewriter.create<vector::SplatOp>(
           read.getLoc(), unbroadcastedVectorType, read.getPadding());
       res = rewriter.create<vector::MaskedLoadOp>(
-          read.getLoc(), unbroadcastedVectorType, read.getSource(),
+          read.getLoc(), unbroadcastedVectorType, read.getBase(),
           read.getIndices(), read.getMask(), fill);
     } else {
-      res = rewriter.create<vector::LoadOp>(
-          read.getLoc(), unbroadcastedVectorType, read.getSource(),
-          read.getIndices());
+      res = rewriter.create<vector::LoadOp>(read.getLoc(),
+                                            unbroadcastedVectorType,
+                                            read.getBase(), read.getIndices());
     }
 
     // Insert a broadcasting op if required.
@@ -490,60 +487,6 @@ struct TransferReadToVectorLoadLowering
   }
 
   std::optional<unsigned> maxTransferRank;
-};
-
-/// Replace a 0-d vector.load with a memref.load + vector.broadcast.
-// TODO: we shouldn't cross the vector/scalar domains just for this
-// but atm we lack the infra to avoid it. Possible solutions include:
-// - go directly to LLVM + bitcast
-// - introduce a bitcast op and likely a new pointer dialect
-// - let memref.load/store additionally support the 0-d vector case
-// There are still deeper data layout issues lingering even in this
-// trivial case (for architectures for which this matters).
-struct VectorLoadToMemrefLoadLowering
-    : public OpRewritePattern<vector::LoadOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(vector::LoadOp loadOp,
-                                PatternRewriter &rewriter) const override {
-    auto vecType = loadOp.getVectorType();
-    if (vecType.getNumElements() != 1)
-      return rewriter.notifyMatchFailure(loadOp, "not a single element vector");
-
-    auto memrefLoad = rewriter.create<memref::LoadOp>(
-        loadOp.getLoc(), loadOp.getBase(), loadOp.getIndices());
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(loadOp, vecType,
-                                                     memrefLoad);
-    return success();
-  }
-};
-
-/// Replace a 0-d vector.store with a vector.extractelement + memref.store.
-struct VectorStoreToMemrefStoreLowering
-    : public OpRewritePattern<vector::StoreOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(vector::StoreOp storeOp,
-                                PatternRewriter &rewriter) const override {
-    auto vecType = storeOp.getVectorType();
-    if (vecType.getNumElements() != 1)
-      return rewriter.notifyMatchFailure(storeOp, "not single element vector");
-
-    Value extracted;
-    if (vecType.getRank() == 0) {
-      // TODO: Unifiy once ExtractOp supports 0-d vectors.
-      extracted = rewriter.create<vector::ExtractElementOp>(
-          storeOp.getLoc(), storeOp.getValueToStore());
-    } else {
-      SmallVector<int64_t> indices(vecType.getRank(), 0);
-      extracted = rewriter.create<vector::ExtractOp>(
-          storeOp.getLoc(), storeOp.getValueToStore(), indices);
-    }
-
-    rewriter.replaceOpWithNewOp<memref::StoreOp>(
-        storeOp, extracted, storeOp.getBase(), storeOp.getIndices());
-    return success();
-  }
 };
 
 /// Progressive lowering of transfer_write. This pattern supports lowering of
@@ -588,7 +531,7 @@ struct TransferWriteToVectorStoreLowering
       });
 
     // Non-unit strides are handled by VectorToSCF.
-    if (!isLastMemrefDimUnitStride(memRefType))
+    if (!memRefType.isLastDimUnitStride())
       return rewriter.notifyMatchFailure(write.getLoc(), [=](Diagnostic &diag) {
         diag << "most minor stride is not 1: " << write;
       });
@@ -624,11 +567,11 @@ struct TransferWriteToVectorStoreLowering
             });
 
       rewriter.create<vector::MaskedStoreOp>(
-          write.getLoc(), write.getSource(), write.getIndices(),
-          write.getMask(), write.getVector());
+          write.getLoc(), write.getBase(), write.getIndices(), write.getMask(),
+          write.getVector());
     } else {
       rewriter.create<vector::StoreOp>(write.getLoc(), write.getVector(),
-                                       write.getSource(), write.getIndices());
+                                       write.getBase(), write.getIndices());
     }
     // There's no return value for StoreOps. Use Value() to signal success to
     // matchAndRewrite.
@@ -645,7 +588,4 @@ void mlir::vector::populateVectorTransferLoweringPatterns(
   patterns.add<TransferReadToVectorLoadLowering,
                TransferWriteToVectorStoreLowering>(patterns.getContext(),
                                                    maxTransferRank, benefit);
-  patterns
-      .add<VectorLoadToMemrefLoadLowering, VectorStoreToMemrefStoreLowering>(
-          patterns.getContext(), benefit);
 }

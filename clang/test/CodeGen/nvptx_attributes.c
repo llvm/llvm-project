@@ -10,8 +10,14 @@
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RET_ADDR]], align 8
 // CHECK-NEXT:    store i32 1, ptr [[TMP0]], align 4
 // CHECK-NEXT:    ret void
+//
 __attribute__((nvptx_kernel)) void foo(int *ret) {
   *ret = 1;
 }
 
-// CHECK: !0 = !{ptr @foo, !"kernel", i32 1}
+//.
+// CHECK: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_61" "target-features"="+ptx32,+sm_61" }
+//.
+// CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+// CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+//.

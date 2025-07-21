@@ -148,7 +148,7 @@ FUNC_GEN(bar, const int *, unsigned);
         },
         {
           "kind": "text",
-          "spelling": " * "
+          "spelling": " *"
         },
         {
           "kind": "internalParam",
@@ -195,7 +195,7 @@ FUNC_GEN(bar, const int *, unsigned);
               },
               {
                 "kind": "text",
-                "spelling": " * "
+                "spelling": " *"
               },
               {
                 "kind": "internalParam",

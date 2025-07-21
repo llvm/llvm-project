@@ -180,7 +180,7 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_min_rtn_f64(ptr addrspace(8) inreg 
 ; G_GFX1030-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.ptr.buffer.atomic.fmin.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 0)
-  store double %ret, ptr addrspace(3) undef
+  store double %ret, ptr addrspace(3) poison
   ret void
 }
 
@@ -417,7 +417,7 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_max_rtn_f64(ptr addrspace(8) inreg 
 ; G_GFX1030-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 0)
-  store double %ret, ptr addrspace(3) undef
+  store double %ret, ptr addrspace(3) poison
   ret void
 }
 

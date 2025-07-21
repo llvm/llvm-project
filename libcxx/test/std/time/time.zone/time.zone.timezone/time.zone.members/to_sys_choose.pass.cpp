@@ -88,7 +88,7 @@ static void test_nonexistent() {
   // Pick an historic date where it's well known what the time zone rules were.
   // This makes it unlikely updates to the database change these rules.
   std::chrono::local_time<std::chrono::seconds> time{
-      (std::chrono::sys_days{std::chrono::March / 30 / 1986} + 2h + 30min).time_since_epoch()};
+      (std::chrono::sys_days{std::chrono::March / 30 / 1986} + 2h).time_since_epoch()};
 
   std::chrono::sys_seconds expected{time.time_since_epoch() - 1h};
 
@@ -100,6 +100,13 @@ static void test_nonexistent() {
   assert(tz->to_sys(time + 0us, std::chrono::choose::latest) == expected);
   assert(tz->to_sys(time + 0ms, std::chrono::choose::earliest) == expected);
   assert(tz->to_sys(time + 0s, std::chrono::choose::latest) == expected);
+
+  // The entire nonexisting hour should map to the same time.
+  // For nonexistant the value of std::chrono::choose has no effect.
+  assert(tz->to_sys(time + 1s, std::chrono::choose::earliest) == expected);
+  assert(tz->to_sys(time + 1min, std::chrono::choose::latest) == expected);
+  assert(tz->to_sys(time + 30min, std::chrono::choose::earliest) == expected);
+  assert(tz->to_sys(time + 59min + 59s, std::chrono::choose::latest) == expected);
 }
 
 // Tests ambiguous conversions.
@@ -120,7 +127,7 @@ static void test_ambiguous() {
   // Pick an historic date where it's well known what the time zone rules were.
   // This makes it unlikely updates to the database change these rules.
   std::chrono::local_time<std::chrono::seconds> time{
-      (std::chrono::sys_days{std::chrono::September / 28 / 1986} + 2h + 30min).time_since_epoch()};
+      (std::chrono::sys_days{std::chrono::September / 28 / 1986} + 2h).time_since_epoch()};
 
   std::chrono::sys_seconds earlier{time.time_since_epoch() - 2h};
   std::chrono::sys_seconds later{time.time_since_epoch() - 1h};
@@ -133,6 +140,12 @@ static void test_ambiguous() {
   assert(tz->to_sys(time + 0us, std::chrono::choose::latest) == later);
   assert(tz->to_sys(time + 0ms, std::chrono::choose::earliest) == earlier);
   assert(tz->to_sys(time + 0s, std::chrono::choose::latest) == later);
+
+  // Test times in the ambigious hour
+  assert(tz->to_sys(time + 1s, std::chrono::choose::earliest) == earlier + 1s);
+  assert(tz->to_sys(time + 1min, std::chrono::choose::latest) == later + 1min);
+  assert(tz->to_sys(time + 30min, std::chrono::choose::earliest) == earlier + 30min);
+  assert(tz->to_sys(time + 59min + 59s, std::chrono::choose::latest) == later + 59min + 59s);
 }
 
 // This test does the basic validations of this function. The library function

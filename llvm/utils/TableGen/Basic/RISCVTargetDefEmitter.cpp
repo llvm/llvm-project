@@ -224,7 +224,12 @@ static void emitRISCVExtensionBitmask(const RecordKeeper &RK, raw_ostream &OS) {
   std::vector<const Record *> Extensions =
       RK.getAllDerivedDefinitionsIfDefined("RISCVExtensionBitmask");
   llvm::sort(Extensions, [](const Record *Rec1, const Record *Rec2) {
-    return getExtensionName(Rec1) < getExtensionName(Rec2);
+    unsigned GroupID1 = Rec1->getValueAsInt("GroupID");
+    unsigned GroupID2 = Rec2->getValueAsInt("GroupID");
+    if (GroupID1 != GroupID2)
+      return GroupID1 < GroupID2;
+
+    return Rec1->getValueAsInt("BitPos") < Rec2->getValueAsInt("BitPos");
   });
 
 #ifndef NDEBUG
@@ -241,8 +246,7 @@ static void emitRISCVExtensionBitmask(const RecordKeeper &RK, raw_ostream &OS) {
     ExtName.consume_front("experimental-");
 
 #ifndef NDEBUG
-    assert(Seen.insert(std::make_pair(GroupIDVal, BitPosVal)).second &&
-           "duplicated bitmask");
+    assert(Seen.insert({GroupIDVal, BitPosVal}).second && "duplicated bitmask");
 #endif
 
     OS.indent(4) << "{"

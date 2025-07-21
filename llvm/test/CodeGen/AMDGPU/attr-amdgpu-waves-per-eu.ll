@@ -116,9 +116,9 @@ attributes #8 = {"amdgpu-waves-per-eu"="5,10"}
 
 ; Exactly 10 waves per execution unit.
 ; CHECK-LABEL: {{^}}exactly_10:
-; CHECK: SGPRBlocks: 2
+; CHECK: SGPRBlocks: 3
 ; CHECK: VGPRBlocks: 5
-; CHECK: NumSGPRsForWavesPerEU: 20
+; CHECK: NumSGPRsForWavesPerEU: 30
 ; CHECK: NumVGPRsForWavesPerEU: 24
 define amdgpu_kernel void @exactly_10() #9 {
   %val0 = load volatile float, ptr addrspace(1) @var
@@ -200,3 +200,28 @@ entry:
   ret void
 }
 attributes #10 = {"amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="2,2"}
+
+; Minimum 2 waves, maximum limited by LDS usage.
+; CHECK-LABEL: {{^}}empty_at_least_2_lds_limited:
+; CHECK: SGPRBlocks: 12
+; CHECK: VGPRBlocks: 12
+; CHECK: NumSGPRsForWavesPerEU: 102
+; CHECK: NumVGPRsForWavesPerEU: 49
+define amdgpu_kernel void @empty_at_least_2_lds_limited() #11 {
+entry:
+  ret void
+}
+attributes #11 = {"amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2" "amdgpu-lds-size"="16384"}
+
+; Minimum 2 waves, maximum limited by LDS usage. Requested maximum within spec
+; but above achievable occupancy has no effect.
+; CHECK-LABEL: {{^}}empty_at_least_2_lds_limited_max_above_achievable:
+; CHECK: SGPRBlocks: 12
+; CHECK: VGPRBlocks: 12
+; CHECK: NumSGPRsForWavesPerEU: 102
+; CHECK: NumVGPRsForWavesPerEU: 49
+define amdgpu_kernel void @empty_at_least_2_lds_limited_max_above_achievable() #12 {
+entry:
+  ret void
+}
+attributes #12 = {"amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2,10" "amdgpu-lds-size"="16384"}

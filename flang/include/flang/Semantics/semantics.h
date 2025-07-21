@@ -13,12 +13,12 @@
 #include "program-tree.h"
 #include "scope.h"
 #include "symbol.h"
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/LangOptions.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/target.h"
 #include "flang/Parser/message.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/LangOptions.h"
 #include <iosfwd>
 #include <set>
 #include <string>
@@ -110,6 +110,12 @@ public:
   }
   Scope &globalScope() { return globalScope_; }
   Scope &intrinsicModulesScope() { return intrinsicModulesScope_; }
+  Scope *currentHermeticModuleFileScope() {
+    return currentHermeticModuleFileScope_;
+  }
+  void set_currentHermeticModuleFileScope(Scope *scope) {
+    currentHermeticModuleFileScope_ = scope;
+  }
   parser::Messages &messages() { return messages_; }
   evaluate::FoldingContext &foldingContext() { return foldingContext_; }
   parser::AllCookedSources &allCookedSources() { return allCookedSources_; }
@@ -148,6 +154,10 @@ public:
     warnOnNonstandardUsage_ = x;
     return *this;
   }
+  SemanticsContext &set_maxErrors(size_t x) {
+    maxErrors_ = x;
+    return *this;
+  }
   SemanticsContext &set_warningsAreErrors(bool x) {
     warningsAreErrors_ = x;
     return *this;
@@ -160,6 +170,8 @@ public:
 
   const DeclTypeSpec &MakeNumericType(TypeCategory, int kind = 0);
   const DeclTypeSpec &MakeLogicalType(int kind = 0);
+
+  std::size_t maxErrors() const { return maxErrors_; }
 
   bool AnyFatalError() const;
 
@@ -206,6 +218,8 @@ public:
     CHECK(location_);
     return Warn(warning, *location_, std::forward<A>(args)...);
   }
+
+  void EmitMessages(llvm::raw_ostream &);
 
   const Scope &FindScope(parser::CharBlock) const;
   Scope &FindScope(parser::CharBlock);
@@ -313,8 +327,10 @@ private:
   evaluate::TargetCharacteristics targetCharacteristics_;
   Scope globalScope_;
   Scope &intrinsicModulesScope_;
+  Scope *currentHermeticModuleFileScope_{nullptr};
   ScopeIndex scopeIndex_;
   parser::Messages messages_;
+  std::size_t maxErrors_{0};
   evaluate::FoldingContext foldingContext_;
   ConstructStack constructStack_;
   struct IndexVarInfo {

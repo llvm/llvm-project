@@ -52,7 +52,11 @@ class ASTContext;
 /// WalkUpFromX or post-order traversal).
 ///
 /// \see RecursiveASTVisitor.
-class DynamicRecursiveASTVisitor {
+template <bool IsConst> class DynamicRecursiveASTVisitorBase {
+protected:
+  template <typename ASTNode>
+  using MaybeConst = std::conditional_t<IsConst, const ASTNode, ASTNode>;
+
 public:
   /// Whether this visitor should recurse into template instantiations.
   bool ShouldVisitTemplateInstantiations = false;
@@ -68,28 +72,29 @@ public:
   bool ShouldVisitLambdaBody = true;
 
 protected:
-  DynamicRecursiveASTVisitor() = default;
-  DynamicRecursiveASTVisitor(DynamicRecursiveASTVisitor &&) = default;
-  DynamicRecursiveASTVisitor(const DynamicRecursiveASTVisitor &) = default;
-  DynamicRecursiveASTVisitor &
-  operator=(DynamicRecursiveASTVisitor &&) = default;
-  DynamicRecursiveASTVisitor &
-  operator=(const DynamicRecursiveASTVisitor &) = default;
+  DynamicRecursiveASTVisitorBase() = default;
+  DynamicRecursiveASTVisitorBase(DynamicRecursiveASTVisitorBase &&) = default;
+  DynamicRecursiveASTVisitorBase(const DynamicRecursiveASTVisitorBase &) =
+      default;
+  DynamicRecursiveASTVisitorBase &
+  operator=(DynamicRecursiveASTVisitorBase &&) = default;
+  DynamicRecursiveASTVisitorBase &
+  operator=(const DynamicRecursiveASTVisitorBase &) = default;
 
 public:
   virtual void anchor();
-  virtual ~DynamicRecursiveASTVisitor() = default;
+  virtual ~DynamicRecursiveASTVisitorBase() = default;
 
   /// Recursively visits an entire AST, starting from the TranslationUnitDecl.
   /// \returns false if visitation was terminated early.
-  virtual bool TraverseAST(ASTContext &AST);
+  virtual bool TraverseAST(MaybeConst<ASTContext> &AST);
 
   /// Recursively visit an attribute, by dispatching to
   /// Traverse*Attr() based on the argument's dynamic type.
   ///
   /// \returns false if the visitation was terminated early, true
   /// otherwise (including when the argument is a Null type location).
-  virtual bool TraverseAttr(Attr *At);
+  virtual bool TraverseAttr(MaybeConst<Attr> *At);
 
   /// Recursively visit a constructor initializer.  This
   /// automatically dispatches to another visitor for the initializer
@@ -97,7 +102,8 @@ public:
   /// be overridden for clients that need access to the name.
   ///
   /// \returns false if the visitation was terminated early, true otherwise.
-  virtual bool TraverseConstructorInitializer(CXXCtorInitializer *Init);
+  virtual bool
+  TraverseConstructorInitializer(MaybeConst<CXXCtorInitializer> *Init);
 
   /// Recursively visit a base specifier. This can be overridden by a
   /// subclass.
@@ -110,7 +116,7 @@ public:
   ///
   /// \returns false if the visitation was terminated early, true
   /// otherwise (including when the argument is NULL).
-  virtual bool TraverseDecl(Decl *D);
+  virtual bool TraverseDecl(MaybeConst<Decl> *D);
 
   /// Recursively visit a name with its location information.
   ///
@@ -121,13 +127,15 @@ public:
   /// will be used to initialize the capture.
   ///
   /// \returns false if the visitation was terminated early, true otherwise.
-  virtual bool TraverseLambdaCapture(LambdaExpr *LE, const LambdaCapture *C,
-                                     Expr *Init);
+  virtual bool TraverseLambdaCapture(MaybeConst<LambdaExpr> *LE,
+                                     const LambdaCapture *C,
+                                     MaybeConst<Expr> *Init);
 
   /// Recursively visit a C++ nested-name-specifier.
   ///
   /// \returns false if the visitation was terminated early, true otherwise.
-  virtual bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS);
+  virtual bool
+  TraverseNestedNameSpecifier(MaybeConst<NestedNameSpecifier> *NNS);
 
   /// Recursively visit a C++ nested-name-specifier with location
   /// information.
@@ -140,7 +148,7 @@ public:
   ///
   /// \returns false if the visitation was terminated early, true
   /// otherwise (including when the argument is nullptr).
-  virtual bool TraverseStmt(Stmt *S);
+  virtual bool TraverseStmt(MaybeConst<Stmt> *S);
 
   /// Recursively visit a template argument and dispatch to the
   /// appropriate method for the argument type.
@@ -190,41 +198,51 @@ public:
 
   /// Traverse a concept (requirement).
   virtual bool TraverseTypeConstraint(const TypeConstraint *C);
-  virtual bool TraverseConceptRequirement(concepts::Requirement *R);
-  virtual bool TraverseConceptTypeRequirement(concepts::TypeRequirement *R);
-  virtual bool TraverseConceptExprRequirement(concepts::ExprRequirement *R);
-  virtual bool TraverseConceptNestedRequirement(concepts::NestedRequirement *R);
-  virtual bool TraverseConceptReference(ConceptReference *CR);
-  virtual bool VisitConceptReference(ConceptReference *CR) { return true; }
+  virtual bool TraverseConceptRequirement(MaybeConst<concepts::Requirement> *R);
+
+  virtual bool
+  TraverseConceptTypeRequirement(MaybeConst<concepts::TypeRequirement> *R);
+
+  virtual bool
+  TraverseConceptExprRequirement(MaybeConst<concepts::ExprRequirement> *R);
+
+  virtual bool
+  TraverseConceptNestedRequirement(MaybeConst<concepts::NestedRequirement> *R);
+
+  virtual bool TraverseConceptReference(MaybeConst<ConceptReference> *CR);
+  virtual bool VisitConceptReference(MaybeConst<ConceptReference> *CR) {
+    return true;
+  }
 
   /// Visit a node.
-  virtual bool VisitAttr(Attr *A) { return true; }
-  virtual bool VisitDecl(Decl *D) { return true; }
-  virtual bool VisitStmt(Stmt *S) { return true; }
-  virtual bool VisitType(Type *T) { return true; }
+  virtual bool VisitAttr(MaybeConst<Attr> *A) { return true; }
+  virtual bool VisitDecl(MaybeConst<Decl> *D) { return true; }
+  virtual bool VisitStmt(MaybeConst<Stmt> *S) { return true; }
+  virtual bool VisitType(MaybeConst<Type> *T) { return true; }
   virtual bool VisitTypeLoc(TypeLoc TL) { return true; }
 
   /// Walk up from a node.
-  bool WalkUpFromDecl(Decl *D) { return VisitDecl(D); }
-  bool WalkUpFromStmt(Stmt *S) { return VisitStmt(S); }
-  bool WalkUpFromType(Type *T) { return VisitType(T); }
+  bool WalkUpFromDecl(MaybeConst<Decl> *D) { return VisitDecl(D); }
+  bool WalkUpFromStmt(MaybeConst<Stmt> *S) { return VisitStmt(S); }
+  bool WalkUpFromType(MaybeConst<Type> *T) { return VisitType(T); }
   bool WalkUpFromTypeLoc(TypeLoc TL) { return VisitTypeLoc(TL); }
 
   /// Invoked before visiting a statement or expression via data recursion.
   ///
   /// \returns false to skip visiting the node, true otherwise.
-  virtual bool dataTraverseStmtPre(Stmt *S) { return true; }
+  virtual bool dataTraverseStmtPre(MaybeConst<Stmt> *S) { return true; }
 
   /// Invoked after visiting a statement or expression via data recursion.
   /// This is not invoked if the previously invoked \c dataTraverseStmtPre
   /// returned false.
   ///
   /// \returns false if the visitation was terminated early, true otherwise.
-  virtual bool dataTraverseStmtPost(Stmt *S) { return true; }
-  virtual bool dataTraverseNode(Stmt *S);
+  virtual bool dataTraverseStmtPost(MaybeConst<Stmt> *S) { return true; }
+  virtual bool dataTraverseNode(MaybeConst<Stmt> *S);
 
 #define DEF_TRAVERSE_TMPL_INST(kind)                                           \
-  virtual bool TraverseTemplateInstantiations(kind##TemplateDecl *D);
+  virtual bool TraverseTemplateInstantiations(                                 \
+      MaybeConst<kind##TemplateDecl> *D);
   DEF_TRAVERSE_TMPL_INST(Class)
   DEF_TRAVERSE_TMPL_INST(Var)
   DEF_TRAVERSE_TMPL_INST(Function)
@@ -232,32 +250,34 @@ public:
 
   // Decls.
 #define ABSTRACT_DECL(DECL)
-#define DECL(CLASS, BASE) virtual bool Traverse##CLASS##Decl(CLASS##Decl *D);
+#define DECL(CLASS, BASE)                                                      \
+  bool WalkUpFrom##CLASS##Decl(MaybeConst<CLASS##Decl> *D);                    \
+  virtual bool Traverse##CLASS##Decl(MaybeConst<CLASS##Decl> *D);
 #include "clang/AST/DeclNodes.inc"
 
 #define DECL(CLASS, BASE)                                                      \
-  bool WalkUpFrom##CLASS##Decl(CLASS##Decl *D);                                \
-  virtual bool Visit##CLASS##Decl(CLASS##Decl *D) { return true; }
+  virtual bool Visit##CLASS##Decl(MaybeConst<CLASS##Decl> *D) { return true; }
 #include "clang/AST/DeclNodes.inc"
 
   // Stmts.
 #define ABSTRACT_STMT(STMT)
-#define STMT(CLASS, PARENT) virtual bool Traverse##CLASS(CLASS *S);
+#define STMT(CLASS, PARENT) virtual bool Traverse##CLASS(MaybeConst<CLASS> *S);
 #include "clang/AST/StmtNodes.inc"
 
 #define STMT(CLASS, PARENT)                                                    \
-  bool WalkUpFrom##CLASS(CLASS *S);                                            \
-  virtual bool Visit##CLASS(CLASS *S) { return true; }
+  bool WalkUpFrom##CLASS(MaybeConst<CLASS> *S);                                \
+  virtual bool Visit##CLASS(MaybeConst<CLASS> *S) { return true; }
 #include "clang/AST/StmtNodes.inc"
 
   // Types.
 #define ABSTRACT_TYPE(CLASS, BASE)
-#define TYPE(CLASS, BASE) virtual bool Traverse##CLASS##Type(CLASS##Type *T);
+#define TYPE(CLASS, BASE)                                                      \
+  bool WalkUpFrom##CLASS##Type(MaybeConst<CLASS##Type> *T);                    \
+  virtual bool Traverse##CLASS##Type(MaybeConst<CLASS##Type> *T);
 #include "clang/AST/TypeNodes.inc"
 
 #define TYPE(CLASS, BASE)                                                      \
-  bool WalkUpFrom##CLASS##Type(CLASS##Type *T);                                \
-  virtual bool Visit##CLASS##Type(CLASS##Type *T) { return true; }
+  virtual bool Visit##CLASS##Type(MaybeConst<CLASS##Type> *T) { return true; }
 #include "clang/AST/TypeNodes.inc"
 
   // TypeLocs.
@@ -271,6 +291,14 @@ public:
   virtual bool Visit##CLASS##TypeLoc(CLASS##TypeLoc TL) { return true; }
 #include "clang/AST/TypeLocNodes.def"
 };
+
+extern template class DynamicRecursiveASTVisitorBase<false>;
+extern template class DynamicRecursiveASTVisitorBase<true>;
+
+using DynamicRecursiveASTVisitor =
+    DynamicRecursiveASTVisitorBase</*Const=*/false>;
+using ConstDynamicRecursiveASTVisitor =
+    DynamicRecursiveASTVisitorBase</*Const=*/true>;
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_DYNAMIC_RECURSIVE_AST_VISITOR_H

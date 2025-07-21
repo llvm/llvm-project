@@ -1,6 +1,30 @@
 add_custom_target(libc_wchar_unittests)
 
 add_libc_test(
+  wcslen_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcslen_test.cpp
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.wchar.wcslen
+)
+
+add_libc_test(
+  wcsnlen_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcsnlen_test.cpp
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.wchar.wcsnlen
+)
+
+add_libc_test(
   btowc_test
   SUITE
     libc_wchar_unittests
@@ -12,6 +36,35 @@ add_libc_test(
 )
 
 add_libc_test(
+  mbrtowc_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    mbrtowc_test.cpp
+  DEPENDS
+    libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbstate
+    libc.src.string.memset
+    libc.src.wchar.mbrtowc
+    libc.hdr.types.mbstate_t
+    libc.hdr.types.wchar_t
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  mbtowc_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    mbtowc_test.cpp
+  DEPENDS
+    libc.src.__support.libc_errno
+    libc.src.wchar.mbtowc
+    libc.hdr.types.wchar_t
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
   wctob_test
   SUITE
     libc_wchar_unittests
@@ -19,4 +72,320 @@ add_libc_test(
     wctob_test.cpp
   DEPENDS
     libc.src.wchar.wctob
+)
+
+add_libc_test(
+  wcrtomb_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcrtomb_test.cpp
+  DEPENDS
+    libc.src.wchar.wcrtomb
+    libc.src.string.memset
+    libc.hdr.types.wchar_t
+    libc.hdr.types.mbstate_t
+    libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbstate
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  wctomb_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wctomb_test.cpp
+  DEPENDS
+    libc.src.wchar.wctomb
+    libc.hdr.types.wchar_t
+)
+
+add_libc_test(
+  wmemset_test 
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wmemset_test.cpp
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.wchar.wmemset
+)
+
+add_libc_test(
+  wcschr_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcschr_test.cpp
+  DEPENDS
+    libc.src.wchar.wcschr
+)
+
+add_libc_test(
+  wcstok_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcstok_test.cpp
+  DEPENDS
+    libc.src.wchar.wcstok
+)
+
+add_libc_test(
+  wcsncmp_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcsncmp_test.cpp
+  DEPENDS
+    libc.src.wchar.wcsncmp
+)
+
+add_libc_test(
+  wcscmp_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcscmp_test.cpp
+  DEPENDS
+    libc.src.wchar.wcscmp
+)
+
+add_libc_test(
+  wcspbrk_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcspbrk_test.cpp
+  DEPENDS
+    libc.src.wchar.wcspbrk
+)
+
+add_libc_test(
+  wcsrchr_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcsrchr_test.cpp
+  DEPENDS
+    libc.src.wchar.wcsrchr
+)
+
+add_libc_test(
+  wcsspn_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcsspn_test.cpp
+  DEPENDS
+    libc.src.wchar.wcsspn
+)
+
+add_libc_test(
+  wcscspn_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcscspn_test.cpp
+  DEPENDS
+    libc.src.wchar.wcscspn
+)
+
+add_libc_test(
+  wmemchr_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wmemchr_test.cpp
+  DEPENDS
+    libc.src.wchar.wmemchr
+)
+
+add_libc_test(
+  wmemcmp_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wmemcmp_test.cpp
+  DEPENDS
+    libc.src.wchar.wmemcmp
+)
+
+add_libc_test(
+  wmempcpy_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wmempcpy_test.cpp
+  DEPENDS
+    libc.src.wchar.wmempcpy
+)
+
+add_libc_test(
+  wmemcpy_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wmemcpy_test.cpp
+  DEPENDS
+    libc.src.wchar.wmemcpy
+)
+
+add_libc_test(
+  wmemmove_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wmemmove_test.cpp
+  DEPENDS
+    libc.src.wchar.wmemmove
+)
+
+add_libc_test(
+  wcsncpy_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcsncpy_test.cpp
+  DEPENDS
+    libc.src.wchar.wcsncpy
+)
+
+add_libc_test(
+  wcscat_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcscat_test.cpp
+  DEPENDS
+    libc.src.wchar.wcscat
+)
+  
+add_libc_test(
+  wcsstr_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcsstr_test.cpp
+  DEPENDS
+    libc.src.wchar.wcsstr
+)
+
+add_libc_test(
+  wcsncat_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcsncat_test.cpp
+  DEPENDS
+    libc.src.wchar.wcsncat
+)
+
+add_libc_test(
+  wcslcat_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcslcat_test.cpp
+  DEPENDS
+    libc.src.wchar.wcslcat
+    libc.hdr.types.size_t
+)
+
+add_libc_test(
+  wcscpy_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcscpy_test.cpp
+  DEPENDS
+    libc.src.wchar.wcscpy
+)
+
+add_libc_test(
+  wcpcpy_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcpcpy_test.cpp
+  DEPENDS
+    libc.src.wchar.wcpcpy
+)
+
+add_libc_test(
+  wcslcpy_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcslcpy_test.cpp
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.src.wchar.wcslcpy
+)
+
+add_libc_test(
+  wcpncpy_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcpncpy_test.cpp
+  DEPENDS
+    libc.src.wchar.wcpncpy
+)
+
+add_header_library(
+  wcstol_test_support
+  HDRS
+    WcstolTest.h
+  DEPENDS
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.type_traits
+    libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  wcstol_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcstol_test.cpp
+  DEPENDS
+    libc.src.wchar.wcstol
+    .wcstol_test_support
+)
+
+add_libc_test(
+  wcstoll_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcstoll_test.cpp
+  DEPENDS
+    libc.src.wchar.wcstoll
+    .wcstol_test_support
+)
+
+add_libc_test(
+  wcstoul_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcstoul_test.cpp
+  DEPENDS
+    libc.src.wchar.wcstoul
+    .wcstol_test_support
+)
+
+add_libc_test(
+  wcstoull_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcstoull_test.cpp
+  DEPENDS
+    libc.src.wchar.wcstoull
+    .wcstol_test_support
 )

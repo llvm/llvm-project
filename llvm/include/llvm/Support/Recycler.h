@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/ilist.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
@@ -24,7 +25,8 @@ namespace llvm {
 /// PrintRecyclingAllocatorStats - Helper for RecyclingAllocator for
 /// printing statistics.
 ///
-void PrintRecyclerStats(size_t Size, size_t Align, size_t FreeListSize);
+LLVM_ABI void PrintRecyclerStats(size_t Size, size_t Align,
+                                 size_t FreeListSize);
 
 /// Recycler - This class manages a linked-list of deallocated nodes
 /// and facilitates reusing deallocated memory in place of allocating
@@ -72,7 +74,7 @@ public:
   void clear(AllocatorType &Allocator) {
     while (FreeList) {
       T *t = reinterpret_cast<T *>(pop_val());
-      Allocator.Deallocate(t);
+      Allocator.Deallocate(t, Size, Align);
     }
   }
 
@@ -89,6 +91,8 @@ public:
                   "Recycler allocation alignment is less than object align!");
     static_assert(sizeof(SubClass) <= Size,
                   "Recycler allocation size is less than object size!");
+    static_assert(Size >= sizeof(FreeNode) &&
+                  "Recycler allocation size must be at least sizeof(FreeNode)");
     return FreeList ? reinterpret_cast<SubClass *>(pop_val())
                     : static_cast<SubClass *>(Allocator.Allocate(Size, Align));
   }

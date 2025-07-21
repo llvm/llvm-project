@@ -1245,7 +1245,6 @@ func.func @matmul_transpose_a_explicit(%arg0: memref<5x3xf32>, %arg1: memref<5x7
                       ]
                       ins(%arg0, %arg1 : memref<5x3xf32>, memref<5x7xf32>)
                       outs(%arg2: memref<3x7xf32>)
-                      
   return
 }
 
@@ -1259,7 +1258,6 @@ func.func @matmul_transpose_b_explicit(%arg0: memref<3x5xf32>, %arg1: memref<7x5
                       ]
                       ins(%arg0, %arg1 : memref<3x5xf32>, memref<7x5xf32>)
                       outs(%arg2: memref<3x7xf32>)
-                      
   return
 }
 
@@ -1271,7 +1269,7 @@ func.func @matmul_transpose_b_explicit(%arg0: memref<3x5xf32>, %arg1: memref<7x5
 // CHECK-SAME:                                           %[[VAL_0:.*]]: memref<3x5xf32>,
 // CHECK-SAME:                                           %[[VAL_1:.*]]: memref<7x5xf32>,
 // CHECK-SAME:                                           %[[VAL_2:.*]]: memref<3x7xf32>) {
-// CHECK:           linalg.matmul ins(%[[VAL_0]], %[[VAL_1]] : memref<3x5xf32>, memref<7x5xf32>) outs(%[[VAL_2]] : memref<3x7xf32>) indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]]
+// CHECK:           linalg.matmul indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]] ins(%[[VAL_0]], %[[VAL_1]] : memref<3x5xf32>, memref<7x5xf32>) outs(%[[VAL_2]] : memref<3x7xf32>)
 // CHECK:           return
 // CHECK:         }
 
@@ -1296,7 +1294,7 @@ func.func @matmul_transpose_a_b_explicit(%arg0: memref<5x3xf32>, %arg1: memref<7
 // CHECK-SAME:                                             %[[VAL_0:.*]]: memref<5x3xf32>,
 // CHECK-SAME:                                             %[[VAL_1:.*]]: memref<7x5xf32>,
 // CHECK-SAME:                                             %[[VAL_2:.*]]: memref<3x7xf32>) {
-// CHECK:           linalg.matmul ins(%[[VAL_0]], %[[VAL_1]] : memref<5x3xf32>, memref<7x5xf32>) outs(%[[VAL_2]] : memref<3x7xf32>) indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]]
+// CHECK:           linalg.matmul indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]] ins(%[[VAL_0]], %[[VAL_1]] : memref<5x3xf32>, memref<7x5xf32>) outs(%[[VAL_2]] : memref<3x7xf32>)
 // CHECK:           return
 // CHECK:         }
 
@@ -1317,6 +1315,7 @@ func.func @matmul_bcast_a(%arg0: memref<5xf32>, %arg1: memref<5x7xf32>, %arg2: m
 // CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 // CHECK-LABEL: func @matmul_bcast_a
 //       CHECK:   linalg.matmul
+//  CHECK-SAME:     indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]]
 //  CHECK-SAME:     ins(%{{.+}}, %{{.+}} : memref<5xf32>, memref<5x7xf32>)
 //  CHECK-SAME:     outs(%{{.+}} : memref<3x7xf32>)
 
@@ -1337,6 +1336,7 @@ func.func @matmul_bcast_a_dim1(%arg0: memref<5xf32>, %arg1: memref<5x7xf32>, %ar
 // CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 // CHECK-LABEL: func @matmul_bcast_a_dim1
 //       CHECK:   linalg.matmul
+//  CHECK-SAME:     indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]]
 //  CHECK-SAME:     ins(%{{.+}}, %{{.+}} : memref<5xf32>, memref<5x7xf32>)
 //  CHECK-SAME:     outs(%{{.+}} : memref<3x7xf32>)
 
@@ -1357,6 +1357,7 @@ func.func @matmul_bcast_b(%arg0: memref<3x5xf32>, %arg1: memref<5xf32>, %arg2: m
 // CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 // CHECK-LABEL: func @matmul_bcast_b
 //       CHECK:   linalg.matmul
+//  CHECK-SAME:     indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]]
 //  CHECK-SAME:     ins(%{{.+}}, %{{.+}} : memref<3x5xf32>, memref<5xf32>)
 //  CHECK-SAME:     outs(%{{.+}} : memref<3x7xf32>)
 
@@ -1378,7 +1379,7 @@ func.func @matmul_bcast_a_b(%arg0: memref<5xf32>, %arg1: memref<5xf32>, %arg2: m
 // CHECK-LABEL:   func.func @matmul_bcast_a_b(
 // CHECK-SAME:                                %[[VAL_0:.*]]: memref<5xf32>, %[[VAL_1:.*]]: memref<5xf32>,
 // CHECK-SAME:                                %[[VAL_2:.*]]: memref<3x7xf32>) {
-// CHECK:           linalg.matmul ins(%[[VAL_0]], %[[VAL_1]] : memref<5xf32>, memref<5xf32>) outs(%[[VAL_2]] : memref<3x7xf32>) indexing_maps = [#[[$ATTR_0]], #[[$ATTR_0]], #[[$ATTR_1]]]
+// CHECK:           linalg.matmul indexing_maps = [#[[$ATTR_0]], #[[$ATTR_0]], #[[$ATTR_1]]] ins(%[[VAL_0]], %[[VAL_1]] : memref<5xf32>, memref<5xf32>) outs(%[[VAL_2]] : memref<3x7xf32>)
 // CHECK:           return
 // CHECK:         }
 
@@ -1399,6 +1400,7 @@ func.func @matmul_bcast_b_dim1(%arg0: memref<3x5xf32>, %arg1: memref<5xf32>, %ar
 // CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 // CHECK-LABEL: func @matmul_bcast_b_dim1
 //       CHECK:   linalg.matmul
+//  CHECK-SAME:     indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]]
 //  CHECK-SAME:     ins(%{{.+}}, %{{.+}} : memref<3x5xf32>, memref<5xf32>)
 //  CHECK-SAME:     outs(%{{.+}} : memref<3x7xf32>)
 
@@ -1422,7 +1424,7 @@ func.func @dynamic_matmul_bcast_a(%arg0: memref<?xf32>, %arg1: memref<?x?xf32>, 
 // CHECK-SAME:                                      %[[VAL_0:.*]]: memref<?xf32>,
 // CHECK-SAME:                                      %[[VAL_1:.*]]: memref<?x?xf32>,
 // CHECK-SAME:                                      %[[VAL_2:.*]]: memref<?x?xf32>) {
-// CHECK:           linalg.matmul ins(%[[VAL_0]], %[[VAL_1]] : memref<?xf32>, memref<?x?xf32>) outs(%[[VAL_2]] : memref<?x?xf32>) indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]]
+// CHECK:           linalg.matmul indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]] ins(%[[VAL_0]], %[[VAL_1]] : memref<?xf32>, memref<?x?xf32>) outs(%[[VAL_2]] : memref<?x?xf32>)
 // CHECK:           return
 // CHECK:         }
 
@@ -1446,7 +1448,7 @@ func.func @matmul_bcast_a_transpose_b(%arg0: memref<5xf32>, %arg1: memref<7x5xf3
 // CHECK-SAME:                                  %[[VAL_0:.*]]: memref<5xf32>,
 // CHECK-SAME:                                  %[[VAL_1:.*]]: memref<7x5xf32>,
 // CHECK-SAME:                                  %[[VAL_2:.*]]: memref<3x7xf32>) {
-// CHECK:           linalg.matmul ins(%[[VAL_0]], %[[VAL_1]] : memref<5xf32>, memref<7x5xf32>) outs(%[[VAL_2]] : memref<3x7xf32>) indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]]
+// CHECK:           linalg.matmul indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]] ins(%[[VAL_0]], %[[VAL_1]] : memref<5xf32>, memref<7x5xf32>) outs(%[[VAL_2]] : memref<3x7xf32>)
 // CHECK:           return
 // CHECK:         }
 
@@ -1470,7 +1472,7 @@ func.func @matmul_bcast_b_transpose_a(%arg0: memref<5x3xf32>, %arg1: memref<5xf3
 // CHECK-SAME:                                          %[[VAL_0:.*]]: memref<5x3xf32>,
 // CHECK-SAME:                                          %[[VAL_1:.*]]: memref<5xf32>,
 // CHECK-SAME:                                          %[[VAL_2:.*]]: memref<3x7xf32>) {
-// CHECK:           linalg.matmul ins(%[[VAL_0]], %[[VAL_1]] : memref<5x3xf32>, memref<5xf32>) outs(%[[VAL_2]] : memref<3x7xf32>) indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]]
+// CHECK:           linalg.matmul indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]] ins(%[[VAL_0]], %[[VAL_1]] : memref<5x3xf32>, memref<5xf32>) outs(%[[VAL_2]] : memref<3x7xf32>)
 // CHECK:           return
 // CHECK:         }
 
@@ -1482,6 +1484,323 @@ func.func @matmul_bcast_b_transpose_a(%arg0: memref<5x3xf32>, %arg1: memref<5xf3
 //  CHECK-SAME:     outs(%{{.+}} : memref<3x7xf32>)
 func.func @matmul_transpose_b(%arg0: memref<3x5xf32>, %arg1: memref<7x5xf32>, %arg2: memref<3x7xf32>) {
   linalg.matmul_transpose_b ins(%arg0, %arg1 : memref<3x5xf32>, memref<7x5xf32>) outs(%arg2: memref<3x7xf32>)
+  return
+}
+
+// -----
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3) -> (d3)>
+// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+
+// CHECK-LABEL:   func.func @batch_matmul_bcast_k_to_fill_missing_dims_A(
+// CHECK-SAME:                                    %[[VAL_0:.*]]: memref<5xf32>,
+// CHECK-SAME:                                    %[[VAL_1:.*]]: memref<2x5x7xf32>,
+// CHECK-SAME:                                    %[[VAL_2:.*]]: memref<2x3x7xf32>) {
+// CHECK:           linalg.batch_matmul indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]] ins(%[[VAL_0]], %[[VAL_1]] : memref<5xf32>, memref<2x5x7xf32>) outs(%[[VAL_2]] : memref<2x3x7xf32>)
+// CHECK:           return
+// CHECK:         }
+func.func @batch_matmul_bcast_k_to_fill_missing_dims_A(%arg0: memref<5xf32>, %arg1: memref<2x5x7xf32>, %arg2: memref<2x3x7xf32>) {
+  linalg.batch_matmul indexing_maps = [
+                       affine_map<(d0, d1, d2, d3) -> (d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+                     ]
+                     ins(%arg0, %arg1 : memref<5xf32>, memref<2x5x7xf32>) outs(%arg2: memref<2x3x7xf32>)
+  return
+}
+
+// -----
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d3)>
+// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+
+// CHECK-LABEL:   func.func @batch_matmul_bcast_batch_dim_A(
+// CHECK-SAME:                                              %[[VAL_0:.*]]: memref<3x5xf32>,
+// CHECK-SAME:                                              %[[VAL_1:.*]]: memref<2x5x7xf32>,
+// CHECK-SAME:                                              %[[VAL_2:.*]]: memref<2x3x7xf32>) {
+// CHECK:           linalg.batch_matmul indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]] ins(%[[VAL_0]], %[[VAL_1]] : memref<3x5xf32>, memref<2x5x7xf32>) outs(%[[VAL_2]] : memref<2x3x7xf32>)
+// CHECK:           return
+// CHECK:         }
+func.func @batch_matmul_bcast_batch_dim_A(%arg0: memref<3x5xf32>, %arg1: memref<2x5x7xf32>, %arg2: memref<2x3x7xf32>) {
+  linalg.batch_matmul indexing_maps = [
+                       affine_map<(d0, d1, d2, d3) -> (d1, d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+                     ]
+                     ins(%arg0, %arg1 : memref<3x5xf32>, memref<2x5x7xf32>) outs(%arg2: memref<2x3x7xf32>)
+  return
+}
+
+// -----
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3) -> (d3)>
+// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+
+// CHECK-LABEL:   func.func @batch_matmul_bcast_batch_and_n_dim_B(
+// CHECK-SAME:                                                    %[[VAL_0:.*]]: memref<2x3x5xf32>,
+// CHECK-SAME:                                                    %[[VAL_1:.*]]: memref<5xf32>,
+// CHECK-SAME:                                                    %[[VAL_2:.*]]: memref<2x3x7xf32>) {
+// CHECK:           linalg.batch_matmul indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]] ins(%[[VAL_0]], %[[VAL_1]] : memref<2x3x5xf32>, memref<5xf32>) outs(%[[VAL_2]] : memref<2x3x7xf32>)
+// CHECK:           return
+// CHECK:         }
+func.func @batch_matmul_bcast_batch_and_n_dim_B(%arg0: memref<2x3x5xf32>, %arg1: memref<5xf32>, %arg2: memref<2x3x7xf32>) {
+  linalg.batch_matmul indexing_maps = [
+                       affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+                     ]
+                     ins(%arg0, %arg1 : memref<2x3x5xf32>, memref<5xf32>) outs(%arg2: memref<2x3x7xf32>)
+  return
+}
+
+// -----
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
+// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+
+// CHECK-LABEL:   func.func @batch_matmul_bcast_batch_dim_B(
+// CHECK-SAME:                                              %[[VAL_0:.*]]: memref<2x3x5xf32>,
+// CHECK-SAME:                                              %[[VAL_1:.*]]: memref<5x7xf32>,
+// CHECK-SAME:                                              %[[VAL_2:.*]]: memref<2x3x7xf32>) {
+// CHECK:           linalg.batch_matmul indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]] ins(%[[VAL_0]], %[[VAL_1]] : memref<2x3x5xf32>, memref<5x7xf32>) outs(%[[VAL_2]] : memref<2x3x7xf32>)
+// CHECK:           return
+// CHECK:         }
+
+func.func @batch_matmul_bcast_batch_dim_B(%arg0: memref<2x3x5xf32>, %arg1: memref<5x7xf32>, %arg2: memref<2x3x7xf32>) {
+  linalg.batch_matmul indexing_maps = [
+                       affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d3, d2)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+                     ]
+                     ins(%arg0, %arg1 : memref<2x3x5xf32>, memref<5x7xf32>) outs(%arg2: memref<2x3x7xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @batch_matmul_explicit_transpose_A
+//       CHECK:   linalg.batch_matmul
+//  CHECK-SAME:     ins(%{{.+}}, %{{.+}} : memref<2x5x3xf32>, memref<2x5x7xf32>)
+//  CHECK-SAME:     outs(%{{.+}} : memref<2x3x7xf32>)
+func.func @batch_matmul_explicit_transpose_A(%arg0: memref<2x5x3xf32>, %arg1: memref<2x5x7xf32>, %arg2: memref<2x3x7xf32>) {
+  linalg.batch_matmul indexing_maps = [
+                       affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+                     ]
+                     ins(%arg0, %arg1 : memref<2x5x3xf32>, memref<2x5x7xf32>) outs(%arg2: memref<2x3x7xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @batch_matmul_explicit_transpose_B
+//       CHECK:   linalg.batch_matmul
+//  CHECK-SAME:     ins(%{{.+}}, %{{.+}} : memref<2x3x5xf32>, memref<2x7x5xf32>)
+//  CHECK-SAME:     outs(%{{.+}} : memref<2x3x7xf32>)
+func.func @batch_matmul_explicit_transpose_B(%arg0: memref<2x3x5xf32>, %arg1: memref<2x7x5xf32>, %arg2: memref<2x3x7xf32>) {
+  linalg.batch_matmul indexing_maps = [
+                       affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+                     ]
+                     ins(%arg0, %arg1 : memref<2x3x5xf32>, memref<2x7x5xf32>) outs(%arg2: memref<2x3x7xf32>)
+  return
+}
+
+// -----
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d3)>
+// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
+// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+
+// CHECK-LABEL:   func.func @batch_matmul_bcast_A_transpose_B(
+// CHECK-SAME:                                                %[[VAL_0:.*]]: memref<3x5xf32>,
+// CHECK-SAME:                                                %[[VAL_1:.*]]: memref<2x7x5xf32>,
+// CHECK-SAME:                                                %[[VAL_2:.*]]: memref<2x3x7xf32>) {
+// CHECK:           linalg.batch_matmul indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]] ins(%[[VAL_0]], %[[VAL_1]] : memref<3x5xf32>, memref<2x7x5xf32>) outs(%[[VAL_2]] : memref<2x3x7xf32>)
+// CHECK:           return
+// CHECK:         }
+func.func @batch_matmul_bcast_A_transpose_B(%arg0: memref<3x5xf32>, %arg1: memref<2x7x5xf32>, %arg2: memref<2x3x7xf32>) {
+  linalg.batch_matmul indexing_maps = [
+                       affine_map<(d0, d1, d2, d3) -> (d1, d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+                     ]
+                     ins(%arg0, %arg1 : memref<3x5xf32>, memref<2x7x5xf32>) outs(%arg2: memref<2x3x7xf32>)
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// linalg.batch_reduce_matmul
+//===----------------------------------------------------------------------===//
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3) -> (d3)>
+// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+// CHECK-LABEL:   func.func @bcast_k_to_fill_missing_dims_A(
+// CHECK-SAME:      %[[A:.*]]: memref<5xf32>,
+// CHECK-SAME:      %[[B:.*]]: memref<2x5x7xf32>,
+// CHECK-SAME:      %[[C:.*]]: memref<3x7xf32>) {
+// CHECK:           linalg.batch_reduce_matmul indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]] ins(%[[A]], %[[B]] : memref<5xf32>, memref<2x5x7xf32>) outs(%[[C]] : memref<3x7xf32>)
+// CHECK:           return
+// CHECK:         }
+
+func.func @bcast_k_to_fill_missing_dims_A(%A: memref<5xf32>, %B: memref<2x5x7xf32>, %C: memref<3x7xf32>) {
+  linalg.batch_reduce_matmul indexing_maps = [
+                       affine_map<(d0, d1, d2, d3) -> (d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
+                       affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+                     ]
+                     ins(%A, %B : memref<5xf32>, memref<2x5x7xf32>) outs(%C: memref<3x7xf32>)
+  return
+}
+
+// -----
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d3)>
+// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+// CHECK-LABEL:   func.func @bcast_batch_dim_A(
+// CHECK-SAME:      %[[A:.*]]: memref<3x5xf32>,
+// CHECK-SAME:      %[[B:.*]]: memref<2x5x7xf32>,
+// CHECK-SAME:      %[[C:.*]]: memref<3x7xf32>) {
+// CHECK:           linalg.batch_reduce_matmul indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]] ins(%[[A]], %[[B]] : memref<3x5xf32>, memref<2x5x7xf32>) outs(%[[C]] : memref<3x7xf32>)
+// CHECK:           return
+// CHECK:         }
+
+func.func @bcast_batch_dim_A(%A: memref<3x5xf32>, %B: memref<2x5x7xf32>, %C: memref<3x7xf32>) {
+  linalg.batch_reduce_matmul indexing_maps = [
+                       affine_map<(d0, d1, d2, d3) -> (d1, d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
+                       affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+                     ]
+                     ins(%A, %B : memref<3x5xf32>, memref<2x5x7xf32>) outs(%C: memref<3x7xf32>)
+  return
+}
+
+// -----
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3) -> (d3)>
+// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+// CHECK-LABEL:   func.func @bcast_batch_and_n_dim_B(
+// CHECK-SAME:      %[[A:.*]]: memref<2x3x5xf32>,
+// CHECK-SAME:      %[[B:.*]]: memref<5xf32>,
+// CHECK-SAME:      %[[C:.*]]: memref<3x7xf32>) {
+// CHECK:           linalg.batch_reduce_matmul indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]] ins(%[[A]], %[[B]] : memref<2x3x5xf32>, memref<5xf32>) outs(%[[C]] : memref<3x7xf32>)
+// CHECK:           return
+// CHECK:         }
+
+func.func @bcast_batch_and_n_dim_B(%A: memref<2x3x5xf32>, %B: memref<5xf32>, %C: memref<3x7xf32>) {
+  linalg.batch_reduce_matmul indexing_maps = [
+                       affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+                     ]
+                     ins(%A, %B : memref<2x3x5xf32>, memref<5xf32>) outs(%C: memref<3x7xf32>)
+  return
+}
+
+// -----
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
+// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+// CHECK-LABEL:   func.func @bcast_batch_dim_B(
+// CHECK-SAME:      %[[A:.*]]: memref<2x3x5xf32>,
+// CHECK-SAME:      %[[B:.*]]: memref<5x7xf32>,
+// CHECK-SAME:      %[[C:.*]]: memref<3x7xf32>) {
+// CHECK:           linalg.batch_reduce_matmul indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]] ins(%[[A]], %[[B]] : memref<2x3x5xf32>, memref<5x7xf32>) outs(%[[C]] : memref<3x7xf32>)
+// CHECK:           return
+// CHECK:         }
+
+func.func @bcast_batch_dim_B(%A: memref<2x3x5xf32>, %B: memref<5x7xf32>, %C: memref<3x7xf32>) {
+  linalg.batch_reduce_matmul indexing_maps = [
+                       affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d3, d2)>,
+                       affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+                     ]
+                     ins(%A, %B : memref<2x3x5xf32>, memref<5x7xf32>) outs(%C: memref<3x7xf32>)
+  return
+}
+
+// -----
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>
+// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+// CHECK-LABEL:   func.func @explicit_transpose_A(
+// CHECK-SAME:      %[[A:.*]]: memref<2x5x3xf32>,
+// CHECK-SAME:      %[[B:.*]]: memref<2x5x7xf32>,
+// CHECK-SAME:      %[[C:.*]]: memref<3x7xf32>) {
+// CHECK:           linalg.batch_reduce_matmul indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]] ins(%[[A]], %[[B]] : memref<2x5x3xf32>, memref<2x5x7xf32>) outs(%[[C]] : memref<3x7xf32>)
+// CHECK:           return
+// CHECK:         }
+func.func @explicit_transpose_A(%A: memref<2x5x3xf32>, %B: memref<2x5x7xf32>, %C: memref<3x7xf32>) {
+  linalg.batch_reduce_matmul indexing_maps = [
+                       affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
+                       affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+                     ]
+                     ins(%A, %B : memref<2x5x3xf32>, memref<2x5x7xf32>) outs(%C: memref<3x7xf32>)
+  return
+}
+
+// -----
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
+// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+// CHECK-LABEL:   func.func @explicit_transpose_B(
+// CHECK-SAME:      %[[A:.*]]: memref<2x3x5xf32>,
+// CHECK-SAME:      %[[B:.*]]: memref<2x7x5xf32>,
+// CHECK-SAME:      %[[C:.*]]: memref<3x7xf32>) {
+// CHECK:           linalg.batch_reduce_matmul indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]] ins(%[[A]], %[[B]] : memref<2x3x5xf32>, memref<2x7x5xf32>) outs(%[[C]] : memref<3x7xf32>)
+// CHECK:           return
+// CHECK:         }
+func.func @explicit_transpose_B(%A: memref<2x3x5xf32>, %B: memref<2x7x5xf32>, %C: memref<3x7xf32>) {
+  linalg.batch_reduce_matmul indexing_maps = [
+                       affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+                     ]
+                     ins(%A, %B : memref<2x3x5xf32>, memref<2x7x5xf32>) outs(%C: memref<3x7xf32>)
+  return
+}
+
+// -----
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d3)>
+// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
+// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+
+// CHECK-LABEL:   func.func @bcast_A_transpose_B(
+// CHECK-SAME:      %[[A:.*]]: memref<3x5xf32>,
+// CHECK-SAME:      %[[B:.*]]: memref<2x7x5xf32>,
+// CHECK-SAME:      %[[C:.*]]: memref<3x7xf32>) {
+// CHECK:           linalg.batch_reduce_matmul indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]] ins(%[[A]], %[[B]] : memref<3x5xf32>, memref<2x7x5xf32>) outs(%[[C]] : memref<3x7xf32>)
+// CHECK:           return
+// CHECK:         }
+func.func @bcast_A_transpose_B(%A: memref<3x5xf32>, %B: memref<2x7x5xf32>, %C: memref<3x7xf32>) {
+  linalg.batch_reduce_matmul indexing_maps = [
+                       affine_map<(d0, d1, d2, d3) -> (d1, d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+                     ]
+                     ins(%A, %B : memref<3x5xf32>, memref<2x7x5xf32>) outs(%C: memref<3x7xf32>)
   return
 }
 
@@ -1504,6 +1823,128 @@ func.func @batchmatmul_transpose_a(%arg0: memref<2x5x3xf32>, %arg1: memref<2x5x7
 //  CHECK-SAME:     outs(%{{.+}} : memref<2x3x7xf32>)
 func.func @batchmatmul_transpose_b(%arg0: memref<2x3x5xf32>, %arg1: memref<2x7x5xf32>, %arg2: memref<2x3x7xf32>) {
   linalg.batch_matmul_transpose_b ins(%arg0, %arg1 : memref<2x3x5xf32>, memref<2x7x5xf32>) outs(%arg2: memref<2x3x7xf32>)
+  return
+}
+
+// -----
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+// CHECK-LABEL: func @contract
+//       CHECK:   linalg.contract
+//  CHECK-SAME:     indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]]
+//  CHECK-SAME:     ins(%{{.+}}, %{{.+}} : memref<2x3x5xf32>, memref<2x5x7xf32>)
+//  CHECK-SAME:     outs(%{{.+}} : memref<2x3x7xf32>)
+func.func @contract(
+    %A: memref<2x3x5xf32>, %B: memref<2x5x7xf32>, %C: memref<2x3x7xf32>) {
+  linalg.contract
+      indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>]
+      ins(%A, %B : memref<2x3x5xf32>, memref<2x5x7xf32>)
+      outs(%C: memref<2x3x7xf32>)
+  return
+}
+
+// -----
+
+// CHECK: #[[$ACCESS_A:.+]] = affine_map<(d0, d1, d2) -> (d2)>
+// CHECK: #[[$ACCESS_B:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
+// CHECK: #[[$ACCESS_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-LABEL: func @contract_matmul_bcast_a
+func.func @contract_matmul_bcast_a(%A: memref<5xf32>, %B: memref<5x7xf32>, %C: memref<3x7xf32>) {
+// CHECK:  linalg.contract
+// CHECK-SAME: indexing_maps = [#[[$ACCESS_A]], #[[$ACCESS_B]], #[[$ACCESS_C]]]
+// CHECK-SAME: ins(%{{.+}}, %{{.+}} : memref<5xf32>, memref<5x7xf32>)
+// CHECK-SAME: outs(%{{.+}} : memref<3x7xf32>)
+  linalg.contract
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d2)>,
+                       affine_map<(d0, d1, d2) -> (d2, d1)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1)>]
+      ins(%A, %B : memref<5xf32>, memref<5x7xf32>)
+      outs(%C: memref<3x7xf32>)
+  return
+}
+
+// -----
+
+// CHECK: #[[$ACCESS_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK: #[[$ACCESS_B:.+]] = affine_map<(d0, d1, d2) -> (d2)>
+// CHECK: #[[$ACCESS_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-LABEL: func @contract_matmul_bcast_b
+func.func @contract_matmul_bcast_b(%A: memref<3x5xf32>, %B: memref<5xf32>, %C: memref<3x7xf32>) {
+// CHECK:  linalg.contract
+// CHECK-SAME: indexing_maps = [#[[$ACCESS_A]], #[[$ACCESS_B]], #[[$ACCESS_C]]]
+// CHECK-SAME: ins(%{{.+}}, %{{.+}} : memref<3x5xf32>, memref<5xf32>)
+// CHECK-SAME: outs(%{{.+}} : memref<3x7xf32>)
+  linalg.contract
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>,
+                       affine_map<(d0, d1, d2) -> (d2)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1)>]
+      ins(%A, %B : memref<3x5xf32>, memref<5xf32>)
+      outs(%C: memref<3x7xf32>)
+  return
+}
+
+// -----
+
+// CHECK: #[[$ACCESS_A:.+]] = affine_map<(d0, d1, d2) -> (d2)>
+// CHECK: #[[$ACCESS_B:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-LABEL: func.func @contract_matmul_bcast_a_b
+func.func @contract_matmul_bcast_a_b(
+    %A: memref<5xf32>, %B: memref<5xf32>, %C: memref<3x7xf32>) {
+// CHECK:  linalg.contract
+// CHECK-SAME: indexing_maps = [#[[$ACCESS_A]], #[[$ACCESS_A]], #[[$ACCESS_B]]]
+// CHECK-SAME: ins(%{{.+}}, %{{.+}} : memref<5xf32>, memref<5xf32>)
+// CHECK-SAME: outs(%{{.+}} : memref<3x7xf32>)
+  linalg.contract
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d2)>,
+                       affine_map<(d0, d1, d2) -> (d2)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1)>]
+      ins(%A, %B : memref<5xf32>, memref<5xf32>)
+      outs(%C: memref<3x7xf32>)
+  return
+}
+
+// -----
+
+// CHECK: #[[$ACCESS_A:.+]] = affine_map<(d0, d1, d2) -> (d2)>
+// CHECK: #[[$ACCESS_B:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// CHECK: #[[$ACCESS_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-LABEL: func.func @contract_matmul_bcast_a_transpose_b
+func.func @contract_matmul_bcast_a_transpose_b(
+    %A: memref<5xf32>, %B: memref<7x5xf32>, %C: memref<3x7xf32>) {
+// CHECK:  linalg.contract
+// CHECK-SAME: indexing_maps = [#[[$ACCESS_A]], #[[$ACCESS_B]], #[[$ACCESS_C]]]
+// CHECK-SAME: ins(%{{.+}}, %{{.+}} : memref<5xf32>, memref<7x5xf32>)
+// CHECK-SAME: outs(%{{.+}} : memref<3x7xf32>)
+  linalg.contract
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d2)>,
+                       affine_map<(d0, d1, d2) -> (d1, d2)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1)>]
+      ins(%A, %B : memref<5xf32>, memref<7x5xf32>)
+      outs(%C: memref<3x7xf32>)
+  return
+}
+
+// -----
+
+// CHECK: #[[$ACCESS_A:.+]] = affine_map<(d0, d1, d2) -> (d2, d0)>
+// CHECK: #[[$ACCESS_B:.+]] = affine_map<(d0, d1, d2) -> (d2)>
+// CHECK: #[[$ACCESS_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-LABEL:   func.func @contract_matmul_bcast_b_transpose_a
+func.func @contract_matmul_bcast_b_transpose_a(%A: memref<5x3xf32>, %B: memref<5xf32>, %C: memref<3x7xf32>) {
+// CHECK:      linalg.contract
+// CHECK-SAME:     indexing_maps = [#[[$ACCESS_A]], #[[$ACCESS_B]], #[[$ACCESS_C]]]
+// CHECK-SAME:     ins(%{{.+}}, %{{.+}} : memref<5x3xf32>, memref<5xf32>)
+// CHECK-SAME:     outs(%{{.+}} : memref<3x7xf32>)
+  linalg.contract
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d2, d0)>,
+                       affine_map<(d0, d1, d2) -> (d2)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1)>]
+      ins(%A, %B : memref<5x3xf32>, memref<5xf32>)
+      outs(%C: memref<3x7xf32>)
   return
 }
 
@@ -2248,3 +2689,203 @@ func.func @select_tensor(%arg0: tensor<4x8x16xi1>, %arg1: tensor<4x8x16xf32>, %a
   %1 = linalg.select ins(%arg0, %arg1, %arg2 : tensor<4x8x16xi1>, tensor<4x8x16xf32>, tensor<4x8x16xf32>) outs(%0: tensor<4x8x16xf32>) -> tensor<4x8x16xf32>
   return %1 : tensor<4x8x16xf32>
 }
+
+//===----------------------------------------------------------------------===//
+// linalg.pack + linalg.unpack
+//===----------------------------------------------------------------------===//
+
+func.func @pack_nc_to_ncnc(%source: tensor<128x256xf32>, %dest: tensor<4x16x32x16xf32>) -> tensor<128x256xf32> {
+  %0 = linalg.pack %source inner_dims_pos = [0, 1] inner_tiles = [32, 16] into %dest : tensor<128x256xf32> -> tensor<4x16x32x16xf32>
+  %1 = tensor.empty() : tensor<128x256xf32>
+  %2 = linalg.unpack %0 inner_dims_pos = [0, 1] inner_tiles = [32, 16] into %1 : tensor<4x16x32x16xf32> -> tensor<128x256xf32>
+  return %2 : tensor<128x256xf32>
+}
+
+// CHECK-LABEL: func.func @pack_nc_to_ncnc(
+// CHECK-SAME:  %[[SOURCE:.*]]: tensor<128x256xf32>,
+// CHECK-SAME:  %[[DEST:.*]]: tensor<4x16x32x16xf32>)
+// CHECK: %[[PACKED:.*]] = linalg.pack %[[SOURCE]] inner_dims_pos = [0, 1] inner_tiles = [32, 16] into %[[DEST]] : tensor<128x256xf32> -> tensor<4x16x32x16xf32>
+// CHECK: %[[BUFF:.*]] = tensor.empty() : tensor<128x256xf32>
+// CHECK: %{{.*}} = linalg.unpack %[[PACKED]] inner_dims_pos = [0, 1] inner_tiles = [32, 16] into %[[BUFF]] : tensor<4x16x32x16xf32> -> tensor<128x256xf32>
+
+// -----
+
+func.func @pack_nc_to_ncnc_with_padding(%source: tensor<13x15xf32>, %dest: tensor<2x8x8x2xf32>, %padding: f32) -> tensor<13x15xf32> {
+  %0 = linalg.pack %source padding_value(%padding : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 2] into %dest : tensor<13x15xf32> -> tensor<2x8x8x2xf32>
+  %1 = tensor.empty() : tensor<13x15xf32>
+  %2 = linalg.unpack %0 inner_dims_pos = [0, 1] inner_tiles = [8, 2] into %1 : tensor<2x8x8x2xf32> -> tensor<13x15xf32>
+  return %2 : tensor<13x15xf32>
+}
+
+// CHECK-LABEL: func.func @pack_nc_to_ncnc_with_padding(
+// CHECK-SAME:  %[[SOURCE:.*]]: tensor<13x15xf32>,
+// CHECK-SAME:  %[[DEST:.*]]: tensor<2x8x8x2xf32>,
+// CHECK-SAME:  %[[PADDING:.*]]: f32)
+// CHECK: %[[PACKED:.*]] = linalg.pack %[[SOURCE]] padding_value(%[[PADDING]] : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 2] into %[[DEST]] : tensor<13x15xf32> -> tensor<2x8x8x2xf32>
+// CHECK: %[[BUFF:.*]] = tensor.empty() : tensor<13x15xf32>
+// CHECK: %{{.*}} = linalg.unpack %[[PACKED]] inner_dims_pos = [0, 1] inner_tiles = [8, 2] into %[[BUFF]] : tensor<2x8x8x2xf32> -> tensor<13x15xf32>
+
+// -----
+
+func.func @pack_ck_to_kcck(%source: tensor<128x256xf32>, %dest: tensor<16x4x32x16xf32>) -> tensor<128x256xf32> {
+  %0 = linalg.pack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [32, 16] into %dest : tensor<128x256xf32> -> tensor<16x4x32x16xf32>
+  %1 = tensor.empty() : tensor<128x256xf32>
+  %2 = linalg.unpack %0 outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [32, 16] into %1 : tensor<16x4x32x16xf32> -> tensor<128x256xf32>
+  return %2 : tensor<128x256xf32>
+}
+
+// CHECK-LABEL: func.func @pack_ck_to_kcck(
+// CHECK-SAME:  %[[SOURCE:.*]]: tensor<128x256xf32>,
+// CHECK-SAME:  %[[DEST:.*]]: tensor<16x4x32x16xf32>)
+// CHECK: %[[PACKED:.*]] = linalg.pack %[[SOURCE]] outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [32, 16] into %[[DEST]] : tensor<128x256xf32> -> tensor<16x4x32x16xf32>
+// CHECK: %[[BUFF:.*]] = tensor.empty() : tensor<128x256xf32>
+// CHECK: %{{.*}} = linalg.unpack %[[PACKED]] outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [32, 16] into %[[BUFF]] : tensor<16x4x32x16xf32> -> tensor<128x256xf32>
+
+// -----
+
+func.func @pad_and_pack_fully_dynamic(%source: tensor<?x?xf32>, %dest: tensor<?x?x?x?xf32>, %pad: f32, %tile_n : index, %tile_m : index) -> tensor<?x?x?x?xf32> {
+  %0 = linalg.pack %source padding_value(%pad : f32) inner_dims_pos = [0, 1] inner_tiles = [%tile_n, %tile_m] into %dest : tensor<?x?xf32> -> tensor<?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?xf32>
+}
+
+// CHECK-LABEL: func.func @pad_and_pack_fully_dynamic(
+// CHECK-SAME:  %[[SOURCE:.*]]: tensor<?x?xf32>,
+// CHECK-SAME:  %[[DEST:.*]]: tensor<?x?x?x?xf32>,
+// CHECK-SAME:  %[[PAD:.*]]: f32,
+// CHECK-SAME:  %[[TILE_N:.*]]: index,
+// CHECK-SAME:  %[[TILE_M:.*]]: index)
+// CHECK: %{{.*}} = linalg.pack %[[SOURCE]] padding_value(%[[PAD]] : f32) inner_dims_pos = [0, 1] inner_tiles = [%[[TILE_N]], %[[TILE_M]]] into %[[DEST]] : tensor<?x?xf32> -> tensor<?x?x?x?xf32>
+
+// -----
+
+func.func @pad_and_pack_partially_dynamic(%source: tensor<?x?xf32>, %dest: tensor<?x?x8x2xf32>, %pad: f32) -> tensor<?x?x8x2xf32> {
+  %0 = linalg.pack %source padding_value(%pad : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 2] into %dest : tensor<?x?xf32> -> tensor<?x?x8x2xf32>
+  return %0 : tensor<?x?x8x2xf32>
+}
+
+// CHECK-LABEL: func.func @pad_and_pack_partially_dynamic(
+// CHECK-SAME:  %[[SOURCE:.*]]: tensor<?x?xf32>,
+// CHECK-SAME:  %[[DEST:.*]]: tensor<?x?x8x2xf32>,
+// CHECK-SAME:  %[[PAD:.*]]: f32)
+// CHECK: %{{.*}} = linalg.pack %[[SOURCE]] padding_value(%[[PAD]] : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 2] into %[[DEST]] : tensor<?x?xf32> -> tensor<?x?x8x2xf32>
+
+// -----
+
+func.func @pack_transposed_inner_dims_with_padding(%source: tensor<1x5x7xf32>, %dest: tensor<1x3x2x4x2xf32>, %pad: f32) -> tensor<1x3x2x4x2xf32> {
+  %0 = linalg.pack %source padding_value(%pad : f32) inner_dims_pos = [2, 1] inner_tiles = [4, 2] into %dest : tensor<1x5x7xf32> -> tensor<1x3x2x4x2xf32>
+  return %0 : tensor<1x3x2x4x2xf32>
+}
+
+// CHECK-LABEL: func.func @pack_transposed_inner_dims_with_padding(
+// CHECK-SAME:  %[[SOURCE:.*]]: tensor<1x5x7xf32>,
+// CHECK-SAME:  %[[DEST:.*]]: tensor<1x3x2x4x2xf32>,
+// CHECK-SAME:  %[[PAD:.*]]: f32)
+// CHECK:       %{{.*}} = linalg.pack
+// CHECK-SAME:      inner_dims_pos = [2, 1]
+// CHECK-SAME:      inner_tiles = [4, 2]
+// CHECK-SAME:      into %[[DEST]] : tensor<1x5x7xf32> -> tensor<1x3x2x4x2xf32>
+
+// -----
+
+// The function suffix "with_padding" refers to the padding that was introduced by the pack operation. But here
+// we are dropping the padding. Creating a tensor with less elements than what we started with.
+func.func @unpack_descending_inner_dims_with_padding(%source: tensor<1x3x2x4x2xf32>, %dest: tensor<1x5x7xf32>) -> tensor<1x5x7xf32> {
+  %0 = linalg.unpack %source inner_dims_pos = [2, 1] inner_tiles = [4, 2] into %dest : tensor<1x3x2x4x2xf32> -> tensor<1x5x7xf32>
+  return %0 : tensor<1x5x7xf32>
+}
+
+// CHECK-LABEL: func.func @unpack_descending_inner_dims_with_padding(
+// CHECK-SAME:  %[[SOURCE:.*]]: tensor<1x3x2x4x2xf32>,
+// CHECK-SAME:  %[[DEST:.*]]: tensor<1x5x7xf32>)
+// CHECK:       %{{.*}} = linalg.unpack
+// CHECK-SAME:      inner_dims_pos = [2, 1]
+// CHECK-SAME:      inner_tiles = [4, 2]
+// CHECK-SAME:      into %[[DEST]] : tensor<1x3x2x4x2xf32> -> tensor<1x5x7xf32>
+
+// -----
+
+func.func @pack_non_adjacent_inner_dims(%source: tensor<20x1x12xf32>, %dest: tensor<10x1x3x4x2xf32>) -> tensor<10x1x3x4x2xf32> {
+  %0 = linalg.pack %source inner_dims_pos = [2, 0] inner_tiles = [4, 2] into %dest : tensor<20x1x12xf32> -> tensor<10x1x3x4x2xf32>
+  return %0 : tensor<10x1x3x4x2xf32>
+}
+
+// CHECK-LABEL: func.func @pack_non_adjacent_inner_dims(
+// CHECK-SAME:  %[[SOURCE:.*]]: tensor<20x1x12xf32>,
+// CHECK-SAME:  %[[DEST:.*]]: tensor<10x1x3x4x2xf32>)
+// CHECK:       %{{.*}} = linalg.pack
+// CHECK-SAME:      inner_dims_pos = [2, 0]
+// CHECK-SAME:      inner_tiles = [4, 2]
+// CHECK-SAME:      into %[[DEST]] : tensor<20x1x12xf32> -> tensor<10x1x3x4x2xf32>
+
+// -----
+
+func.func @unpack_non_adjacent_inner_dims(%source: tensor<10x1x3x4x2xf32>, %dest: tensor<20x1x12xf32>) -> tensor<20x1x12xf32> {
+  %0 = linalg.unpack %source inner_dims_pos = [2, 0] inner_tiles = [4, 2] into %dest : tensor<10x1x3x4x2xf32> -> tensor<20x1x12xf32>
+  return %0 : tensor<20x1x12xf32>
+}
+
+// CHECK-LABEL: func.func @unpack_non_adjacent_inner_dims(
+// CHECK-SAME:  %[[SOURCE:.*]]: tensor<10x1x3x4x2xf32>,
+// CHECK-SAME:  %[[DEST:.*]]: tensor<20x1x12xf32>)
+// CHECK:       %{{.*}} = linalg.unpack
+// CHECK-SAME:      inner_dims_pos = [2, 0]
+// CHECK-SAME:      inner_tiles = [4, 2]
+// CHECK-SAME:      into %[[DEST]] : tensor<10x1x3x4x2xf32> -> tensor<20x1x12xf32>
+
+// -----
+
+func.func @pack_implementing_transpose(%source: tensor<3x5x7xf32>, %dest: tensor<3x7x5xf32>) -> tensor<3x7x5xf32> {
+  %0 = linalg.pack %source outer_dims_perm = [0, 2, 1] inner_dims_pos = [] inner_tiles = [] into %dest : tensor<3x5x7xf32> -> tensor<3x7x5xf32>
+  return %0 : tensor<3x7x5xf32>
+}
+
+// CHECK-LABEL: func.func @pack_implementing_transpose(
+// CHECK-SAME:  %[[SOURCE:.*]]: tensor<3x5x7xf32>,
+// CHECK-SAME:  %[[DEST:.*]]: tensor<3x7x5xf32>)
+// CHECK:       %{{.*}} = linalg.pack
+// CHECK-SAME:      outer_dims_perm = [0, 2, 1]
+// CHECK-SAME:      inner_dims_pos = []
+// CHECK-SAME:      inner_tiles = []
+// CHECK-SAME:      into %[[DEST]] : tensor<3x5x7xf32> -> tensor<3x7x5xf32>
+
+// -----
+
+func.func @unpack_implementing_transpose(%source: tensor<3x7x5xf32>, %dest: tensor<3x5x7xf32>) -> tensor<3x5x7xf32> {
+  %0 = linalg.unpack %source outer_dims_perm = [0, 2, 1] inner_dims_pos = [] inner_tiles = [] into %dest : tensor<3x7x5xf32> -> tensor<3x5x7xf32>
+  return %0 : tensor<3x5x7xf32>
+}
+
+// CHECK-LABEL: func.func @unpack_implementing_transpose(
+// CHECK-SAME:  %[[SOURCE:.*]]: tensor<3x7x5xf32>,
+// CHECK-SAME:  %[[DEST:.*]]: tensor<3x5x7xf32>)
+// CHECK:       %{{.*}} = linalg.unpack
+// CHECK-SAME:      outer_dims_perm = [0, 2, 1]
+// CHECK-SAME:      inner_dims_pos = []
+// CHECK-SAME:      inner_tiles = []
+// CHECK-SAME:      into %[[DEST]] : tensor<3x7x5xf32> -> tensor<3x5x7xf32>
+
+// -----
+
+func.func @unpack_fully_dynamic(%source: tensor<?x?x?x?xf32>, %dest: tensor<?x?xf32>, %tile_n : index, %tile_m : index) -> tensor<?x?xf32> {
+  %0 = linalg.unpack %source inner_dims_pos = [0, 1] inner_tiles = [%tile_n, %tile_m] into %dest : tensor<?x?x?x?xf32> -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// CHECK-LABEL: func.func @unpack_fully_dynamic(
+// CHECK-SAME:  %[[SOURCE:.*]]: tensor<?x?x?x?xf32>,
+// CHECK-SAME:  %[[DEST:.*]]: tensor<?x?xf32>,
+// CHECK-SAME:  %[[TILE_N:.*]]: index,
+// CHECK-SAME:  %[[TILE_M:.*]]: index)
+// CHECK: %{{.*}} = linalg.unpack %[[SOURCE]] inner_dims_pos = [0, 1] inner_tiles = [%[[TILE_N]], %[[TILE_M]]] into %[[DEST]] : tensor<?x?x?x?xf32> -> tensor<?x?xf32>
+
+// -----
+
+func.func @unpack_partially_dynamic(%source: tensor<?x?x8x2xf32>, %dest: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %0 = linalg.unpack %source inner_dims_pos = [0, 1] inner_tiles = [8, 2] into %dest : tensor<?x?x8x2xf32> -> tensor<?x?xf32>
+  return %0: tensor<?x?xf32>
+}
+
+// CHECK-LABEL: func.func @unpack_partially_dynamic(
+// CHECK-SAME:  %[[SOURCE:.*]]: tensor<?x?x8x2xf32>,
+// CHECK-SAME:  %[[DEST:.*]]: tensor<?x?xf32>)
+// CHECK: %{{.*}} = linalg.unpack %[[SOURCE]] inner_dims_pos = [0, 1] inner_tiles = [8, 2] into %[[DEST]] : tensor<?x?x8x2xf32> -> tensor<?x?xf32>

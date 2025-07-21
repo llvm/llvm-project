@@ -32,7 +32,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
@@ -54,7 +54,6 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
-#include <algorithm>
 #include <cstddef>
 #include <iterator>
 #include <optional>
@@ -169,6 +168,11 @@ static cl::opt<DwarfDebug::MinimizeAddrInV5> MinimizeAddrInV5Option(
                clEnumValN(DwarfDebug::MinimizeAddrInV5::Disabled, "Disabled",
                           "Stuff")),
     cl::init(DwarfDebug::MinimizeAddrInV5::Default));
+
+/// Set to false to ignore Key Instructions metadata.
+static cl::opt<bool> KeyInstructionsAreStmts(
+    "dwarf-use-key-instructions", cl::Hidden, cl::init(true),
+    cl::desc("Set to false to ignore Key Instructions metadata"));
 
 static constexpr unsigned ULEB128PadSize = 4;
 
@@ -489,12 +493,17 @@ void DwarfDebug::addSubprogramNames(
   if (SP->getName() != "")
     addAccelName(Unit, NameTableKind, SP->getName(), Die);
 
+  // We drop the mangling escape prefix when emitting the DW_AT_linkage_name. So
+  // ensure we don't include it when inserting into the accelerator tables.
+  llvm::StringRef LinkageName =
+      GlobalValue::dropLLVMManglingEscape(SP->getLinkageName());
+
   // If the linkage name is different than the name, go ahead and output that as
   // well into the name table. Only do that if we are going to actually emit
   // that name.
-  if (SP->getLinkageName() != "" && SP->getName() != SP->getLinkageName() &&
+  if (LinkageName != "" && SP->getName() != LinkageName &&
       (useAllLinkageNames() || InfoHolder.getAbstractScopeDIEs().lookup(SP)))
-    addAccelName(Unit, NameTableKind, SP->getLinkageName(), Die);
+    addAccelName(Unit, NameTableKind, LinkageName, Die);
 
   // If this is an Objective-C selector name add it to the ObjC accelerator
   // too.
@@ -694,8 +703,7 @@ static void interpretValues(const MachineInstr *CurMI,
         for (auto &FwdReg : ForwardedRegWorklist)
           if (TRI.regsOverlap(FwdReg.first, MO.getReg()))
             Defs.insert(FwdReg.first);
-        for (MCRegUnit Unit : TRI.regunits(MO.getReg()))
-          NewClobberedRegUnits.insert(Unit);
+        NewClobberedRegUnits.insert_range(TRI.regunits(MO.getReg()));
       }
     }
   };
@@ -706,8 +714,7 @@ static void interpretValues(const MachineInstr *CurMI,
   getForwardingRegsDefinedByMI(*CurMI, FwdRegDefs);
   if (FwdRegDefs.empty()) {
     // Any definitions by this instruction will clobber earlier reg movements.
-    ClobberedRegUnits.insert(NewClobberedRegUnits.begin(),
-                             NewClobberedRegUnits.end());
+    ClobberedRegUnits.insert_range(NewClobberedRegUnits);
     return;
   }
 
@@ -756,8 +763,7 @@ static void interpretValues(const MachineInstr *CurMI,
     ForwardedRegWorklist.erase(ParamFwdReg);
 
   // Any definitions by this instruction will clobber earlier reg movements.
-  ClobberedRegUnits.insert(NewClobberedRegUnits.begin(),
-                           NewClobberedRegUnits.end());
+  ClobberedRegUnits.insert_range(NewClobberedRegUnits);
 
   // Now that we are done handling this instruction, add items from the
   // temporary worklist to the real one.
@@ -918,7 +924,7 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
 
       // Skip instructions which aren't calls. Both calls and tail-calling jump
       // instructions (e.g TAILJMPd64) are classified correctly here.
-      if (!MI.isCandidateForCallSiteEntry())
+      if (!MI.isCandidateForAdditionalCallInfo())
         continue;
 
       // Skip instructions marked as frame setup, as they are not interesting to
@@ -1265,6 +1271,7 @@ void DwarfDebug::finalizeModuleInfo() {
     auto &TheCU = *P.second;
     if (TheCU.getCUNode()->isDebugDirectivesOnly())
       continue;
+    TheCU.attachLexicalScopesAbstractOrigins();
     // Emit DW_AT_containing_type attribute to connect types with their
     // vtable holding type.
     TheCU.constructContainingTypeDIEs();
@@ -2019,7 +2026,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
 
   // When describing calls, we need a label for the call instruction.
   if (!NoDebug && SP->areAllCallsDescribed() &&
-      MI->isCandidateForCallSiteEntry(MachineInstr::AnyInBundle) &&
+      MI->isCandidateForAdditionalCallInfo(MachineInstr::AnyInBundle) &&
       (!MI->hasDelaySlot() || delaySlotSupported(*MI))) {
     const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
     bool IsTail = TII->isTailCall(*MI);
@@ -2057,10 +2064,33 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     }
   }
 
+  auto RecordSourceLine = [this](auto &DL, auto Flags) {
+    SmallString<128> LocationString;
+    if (Asm->OutStreamer->isVerboseAsm()) {
+      raw_svector_ostream OS(LocationString);
+      DL.print(OS);
+    }
+    recordSourceLine(DL.getLine(), DL.getCol(), DL.getScope(), Flags,
+                     LocationString);
+  };
+
   // When we emit a line-0 record, we don't update PrevInstLoc; so look at
   // the last line number actually emitted, to see if it was line 0.
   unsigned LastAsmLine =
       Asm->OutStreamer->getContext().getCurrentDwarfLoc().getLine();
+
+  // There may be a mixture of scopes using and not using Key Instructions.
+  // Not-Key-Instructions functions inlined into Key Instructions functions
+  // should use not-key is_stmt handling. Key Instructions functions inlined
+  // into Not-Key-Instructions functions should use Key Instructions is_stmt
+  // handling.
+  bool ScopeUsesKeyInstructions =
+      KeyInstructionsAreStmts && DL &&
+      DL->getScope()->getSubprogram()->getKeyInstructionsEnabled();
+
+  bool IsKey = false;
+  if (ScopeUsesKeyInstructions && DL && DL.getLine())
+    IsKey = KeyInstructions.contains(MI);
 
   if (!DL && MI == PrologEndLoc) {
     // In rare situations, we might want to place the end of the prologue
@@ -2076,21 +2106,29 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
       (!PrevInstBB ||
        PrevInstBB->getSectionID() == MI->getParent()->getSectionID());
   bool ForceIsStmt = ForceIsStmtInstrs.contains(MI);
-  if (DL == PrevInstLoc && PrevInstInSameSection && !ForceIsStmt) {
+  if (PrevInstInSameSection && !ForceIsStmt && DL.isSameSourceLocation(PrevInstLoc)) {
     // If we have an ongoing unspecified location, nothing to do here.
     if (!DL)
       return;
-    // We have an explicit location, same as the previous location.
-    // But we might be coming back to it after a line 0 record.
-    if ((LastAsmLine == 0 && DL.getLine() != 0) || Flags) {
-      // Reinstate the source location but not marked as a statement.
-      const MDNode *Scope = DL.getScope();
-      recordSourceLine(DL.getLine(), DL.getCol(), Scope, Flags);
+
+    // Skip this if the instruction is Key, else we might accidentally miss an
+    // is_stmt.
+    if (!IsKey) {
+      // We have an explicit location, same as the previous location.
+      // But we might be coming back to it after a line 0 record.
+      if ((LastAsmLine == 0 && DL.getLine() != 0) || Flags) {
+        // Reinstate the source location but not marked as a statement.
+        RecordSourceLine(DL, Flags);
+      }
+      return;
     }
-    return;
   }
 
   if (!DL) {
+    // FIXME: We could assert that `DL.getKind() != DebugLocKind::Temporary`
+    // here, or otherwise record any temporary DebugLocs seen to ensure that
+    // transient compiler-generated instructions aren't leaking their DLs to
+    // other instructions.
     // We have an unspecified location, which might want to be line 0.
     // If we have already emitted a line-0 record, don't repeat it.
     if (LastAsmLine == 0)
@@ -2130,14 +2168,19 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     Flags |= DWARF2_FLAG_PROLOGUE_END | DWARF2_FLAG_IS_STMT;
     PrologEndLoc = nullptr;
   }
-  // If the line changed, we call that a new statement; unless we went to
-  // line 0 and came back, in which case it is not a new statement.
-  unsigned OldLine = PrevInstLoc ? PrevInstLoc.getLine() : LastAsmLine;
-  if (DL.getLine() && (DL.getLine() != OldLine || ForceIsStmt))
-    Flags |= DWARF2_FLAG_IS_STMT;
 
-  const MDNode *Scope = DL.getScope();
-  recordSourceLine(DL.getLine(), DL.getCol(), Scope, Flags);
+  if (ScopeUsesKeyInstructions) {
+    if (IsKey)
+      Flags |= DWARF2_FLAG_IS_STMT;
+  } else {
+    // If the line changed, we call that a new statement; unless we went to
+    // line 0 and came back, in which case it is not a new statement.
+    unsigned OldLine = PrevInstLoc ? PrevInstLoc.getLine() : LastAsmLine;
+    if (DL.getLine() && (DL.getLine() != OldLine || ForceIsStmt))
+      Flags |= DWARF2_FLAG_IS_STMT;
+  }
+
+  RecordSourceLine(DL, Flags);
 
   // If we're not at line 0, remember this location.
   if (DL.getLine())
@@ -2272,7 +2315,8 @@ findPrologueEndLoc(const MachineFunction *MF) {
 static void recordSourceLine(AsmPrinter &Asm, unsigned Line, unsigned Col,
                              const MDNode *S, unsigned Flags, unsigned CUID,
                              uint16_t DwarfVersion,
-                             ArrayRef<std::unique_ptr<DwarfCompileUnit>> DCUs) {
+                             ArrayRef<std::unique_ptr<DwarfCompileUnit>> DCUs,
+                             StringRef Comment = {}) {
   StringRef Fn;
   unsigned FileNo = 1;
   unsigned Discriminator = 0;
@@ -2286,7 +2330,7 @@ static void recordSourceLine(AsmPrinter &Asm, unsigned Line, unsigned Col,
                  .getOrCreateSourceID(Scope->getFile());
   }
   Asm.OutStreamer->emitDwarfLocDirective(FileNo, Line, Col, Flags, 0,
-                                         Discriminator, Fn);
+                                         Discriminator, Fn, Comment);
 }
 
 const MachineInstr *
@@ -2325,6 +2369,136 @@ DwarfDebug::emitInitialLocDirective(const MachineFunction &MF, unsigned CUID) {
   ::recordSourceLine(*Asm, SP->getScopeLine(), 0, SP, DWARF2_FLAG_IS_STMT,
                      CUID, getDwarfVersion(), getUnits());
   return PrologEndLoc;
+}
+
+void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
+  // New function - reset KeyInstructions.
+  KeyInstructions.clear();
+
+  // The current candidate is_stmt instructions for each source atom.
+  // Map {(InlinedAt, Group): (Rank, Instructions)}.
+  // NOTE: Anecdotally, for a large C++ blob, 99% of the instruction
+  // SmallVectors contain 2 or fewer elements; use 2 inline elements.
+  DenseMap<std::pair<DILocation *, uint64_t>,
+           std::pair<uint8_t, SmallVector<const MachineInstr *, 2>>>
+      GroupCandidates;
+
+  const auto &TII = *MF->getSubtarget().getInstrInfo();
+
+  // For each instruction:
+  //   * Skip insts without DebugLoc, AtomGroup or AtomRank, and line zeros.
+  //   * Check if insts in this group have been seen already in GroupCandidates.
+  //     * If this instr rank is equal, add this instruction to GroupCandidates.
+  //       Remove existing instructions from GroupCandidates if they have the
+  //       same parent.
+  //     * If this instr rank is higher (lower precedence), ignore it.
+  //     * If this instr rank is lower (higher precedence), erase existing
+  //       instructions from GroupCandidates and add this one.
+  //
+  // Then insert each GroupCandidates instruction into KeyInstructions.
+
+  for (auto &MBB : *MF) {
+    // Rather than apply is_stmt directly to Key Instructions, we "float"
+    // is_stmt up to the 1st instruction with the same line number in a
+    // contiguous block. That instruction is called the "buoy". The
+    // buoy gets reset if we encouner an instruction with an atom
+    // group.
+    const MachineInstr *Buoy = nullptr;
+    // The atom group number associated with Buoy which may be 0 if we haven't
+    // encountered an atom group yet in this blob of instructions with the same
+    // line number.
+    uint64_t BuoyAtom = 0;
+
+    for (auto &MI : MBB) {
+      if (MI.isMetaInstruction())
+        continue;
+
+      const DILocation *Loc = MI.getDebugLoc().get();
+      if (!Loc || !Loc->getLine())
+        continue;
+
+      // Reset the Buoy to this instruction if it has a different line number.
+      if (!Buoy || Buoy->getDebugLoc().getLine() != Loc->getLine()) {
+        Buoy = &MI;
+        BuoyAtom = 0; // Set later when we know which atom the buoy is used by.
+      }
+
+      // Call instructions are handled specially - we always mark them as key
+      // regardless of atom info.
+      bool IsCallLike = MI.isCall() || TII.isTailCall(MI);
+      if (IsCallLike) {
+        // Calls are always key. Put the buoy (may not be the call) into
+        // KeyInstructions directly rather than the candidate map to avoid it
+        // being erased (and we may not have a group number for the call).
+        KeyInstructions.insert(Buoy);
+
+        // Avoid floating any future is_stmts up to the call.
+        Buoy = nullptr;
+        BuoyAtom = 0;
+
+        if (!Loc->getAtomGroup() || !Loc->getAtomRank())
+          continue;
+      }
+
+      auto *InlinedAt = Loc->getInlinedAt();
+      uint64_t Group = Loc->getAtomGroup();
+      uint8_t Rank = Loc->getAtomRank();
+      if (!Group || !Rank)
+        continue;
+
+      // Don't let is_stmts float past instructions from different source atoms.
+      if (BuoyAtom && BuoyAtom != Group) {
+        Buoy = &MI;
+        BuoyAtom = Group;
+      }
+
+      auto &[CandidateRank, CandidateInsts] =
+          GroupCandidates[{InlinedAt, Group}];
+
+      // If CandidateRank is zero then CandidateInsts should be empty: there
+      // are no other candidates for this group yet. If CandidateRank is nonzero
+      // then CandidateInsts shouldn't be empty: we've got existing candidate
+      // instructions.
+      assert((CandidateRank == 0 && CandidateInsts.empty()) ||
+             (CandidateRank != 0 && !CandidateInsts.empty()));
+
+      assert(Rank && "expected nonzero rank");
+      // If we've seen other instructions in this group with higher precedence
+      // (lower nonzero rank), don't add this one as a candidate.
+      if (CandidateRank && CandidateRank < Rank)
+        continue;
+
+      // If we've seen other instructions in this group of the same rank,
+      // discard any from this block (keeping the others). Else if we've
+      // seen other instructions in this group of lower precedence (higher
+      // rank), discard them all.
+      if (CandidateRank == Rank)
+        llvm::remove_if(CandidateInsts, [&MI](const MachineInstr *Candidate) {
+          return MI.getParent() == Candidate->getParent();
+        });
+      else if (CandidateRank > Rank)
+        CandidateInsts.clear();
+
+      if (Buoy) {
+        // Add this candidate.
+        CandidateInsts.push_back(Buoy);
+        CandidateRank = Rank;
+
+        assert(!BuoyAtom || BuoyAtom == Loc->getAtomGroup());
+        BuoyAtom = Loc->getAtomGroup();
+      } else {
+        // Don't add calls, because they've been dealt with already. This means
+        // CandidateInsts might now be empty - handle that.
+        assert(IsCallLike);
+        if (CandidateInsts.empty())
+          CandidateRank = 0;
+      }
+    }
+  }
+
+  for (const auto &[_, Insts] : GroupCandidates.values())
+    for (auto *I : Insts)
+      KeyInstructions.insert(I);
 }
 
 /// For the function \p MF, finds the set of instructions which may represent a
@@ -2373,8 +2547,7 @@ void DwarfDebug::findForceIsStmtInstrs(const MachineFunction *MF) {
       continue;
     for (auto &MI : MBB) {
       if (MI.getDebugLoc() && MI.getDebugLoc()->getLine()) {
-        for (auto *Pred : MBB.predecessors())
-          PredMBBsToExamine.insert(Pred);
+        PredMBBsToExamine.insert_range(MBB.predecessors());
         PotentialIsStmtMBBInstrs.insert({&MBB, &MI});
         break;
       }
@@ -2486,6 +2659,11 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
   PrologEndLoc = emitInitialLocDirective(
       *MF, Asm->OutStreamer->getContext().getDwarfCompileUnitID());
 
+  // Run both `findForceIsStmtInstrs` and `computeKeyInstructions` because
+  // Not-Key-Instructions functions may be inlined into Key Instructions
+  // functions and vice versa.
+  if (KeyInstructionsAreStmts)
+    computeKeyInstructions(MF);
   findForceIsStmtInstrs(MF);
 }
 
@@ -2617,10 +2795,10 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
 // Register a source line with debug info. Returns the  unique label that was
 // emitted and which provides correspondence to the source line list.
 void DwarfDebug::recordSourceLine(unsigned Line, unsigned Col, const MDNode *S,
-                                  unsigned Flags) {
+                                  unsigned Flags, StringRef Location) {
   ::recordSourceLine(*Asm, Line, Col, S, Flags,
                      Asm->OutStreamer->getContext().getDwarfCompileUnitID(),
-                     getDwarfVersion(), getUnits());
+                     getDwarfVersion(), getUnits(), Location);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3713,7 +3891,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
   if (!TypeUnitsUnderConstruction.empty() && AddrPool.hasBeenUsed())
     return;
 
-  auto Ins = TypeSignatures.insert(std::make_pair(CTy, 0));
+  auto Ins = TypeSignatures.try_emplace(CTy);
   if (!Ins.second) {
     CU.addDIETypeSignature(RefDie, Ins.first->second);
     return;
@@ -3789,6 +3967,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
       // they depend on addresses, throwing them out and rebuilding them.
       setCurrentDWARF5AccelTable(DWARF5AccelTableKind::CU);
       CU.constructTypeDIE(RefDie, cast<DICompositeType>(CTy));
+      CU.updateAcceleratorTables(CTy->getScope(), CTy, RefDie);
       return;
     }
 
@@ -3928,7 +4107,7 @@ DwarfDebug::getMD5AsBytes(const DIFile *File) const {
   // An MD5 checksum is 16 bytes.
   std::string ChecksumString = fromHex(Checksum->Value);
   MD5::MD5Result CKMem;
-  std::copy(ChecksumString.begin(), ChecksumString.end(), CKMem.data());
+  llvm::copy(ChecksumString, CKMem.data());
   return CKMem;
 }
 

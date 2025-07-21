@@ -88,7 +88,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK-LABEL: define void @test_alloca
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @llvm.thread.pointer()
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @llvm.thread.pointer.p0()
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 48
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = ashr i64 [[TMP2]], 3
@@ -134,7 +134,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; NOIFUNC-TLS-HISTORY-LABEL: define void @test_alloca
 ; NOIFUNC-TLS-HISTORY-SAME: () #[[ATTR0]] {
 ; NOIFUNC-TLS-HISTORY-NEXT:  entry:
-; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP0:%.*]] = call ptr @llvm.thread.pointer()
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP0:%.*]] = call ptr @llvm.thread.pointer.p0()
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 48
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP3:%.*]] = ashr i64 [[TMP2]], 3

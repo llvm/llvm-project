@@ -8,15 +8,12 @@
 
 #include "mlir/Dialect/Mesh/Transforms/Passes.h"
 
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Mesh/IR/MeshDialect.h"
 #include "mlir/Dialect/Mesh/IR/MeshOps.h"
 #include "mlir/Dialect/Mesh/Interfaces/ShardingInterface.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
-#include "mlir/Pass/Pass.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -56,10 +53,10 @@ static llvm::raw_ostream &operator<<(llvm::raw_ostream &stream,
 template <typename Stream, typename Range>
 static Stream &printRange(Stream &stream, Range &&range) {
   stream << "[";
-  llvm::for_each(range, [&stream](auto &v) {
+  for (auto &v : range) {
     stream << v;
     stream << ", ";
-  });
+  }
   return stream << "]";
 }
 
@@ -282,11 +279,12 @@ static FailureOr<ShardingOption> selectShardingOption(
 // a `mesh.shard` operation for all remaining operands and results that do not
 // have sharding annotations.
 static LogicalResult visitOp(Operation *op, OpBuilder &builder) {
+  ShardingInterface shardingOp = llvm::dyn_cast<ShardingInterface>(op);
   if (op->hasTrait<OpTrait::IsTerminator>() ||
-      llvm::isa<mesh::ShardOp, mesh::ShardingOp>(op))
+      (op->hasTrait<OpTrait::ConstantLike>() && !shardingOp) ||
+      llvm::isa<mesh::ShardOp, mesh::ShardingOp, mesh::GetShardingOp>(op))
     return success();
 
-  ShardingInterface shardingOp = llvm::dyn_cast<ShardingInterface>(op);
   if (!shardingOp) {
     op->emitOpError() << "sharding interface is not implemented.";
     return failure();
@@ -361,6 +359,9 @@ static LogicalResult visitOp(Operation *op, OpBuilder &builder) {
 //===----------------------------------------------------------------------===//
 struct ShardingPropagation
     : public mesh::impl::ShardingPropagationBase<ShardingPropagation> {
+
+  using ShardingPropagationBase<ShardingPropagation>::ShardingPropagationBase;
+
   void runOnOperation() override {
     FunctionOpInterface funcOp = getOperation();
     MLIRContext *ctx = funcOp.getContext();
@@ -368,7 +369,7 @@ struct ShardingPropagation
     OpBuilder builder(ctx);
     if (!region.hasOneBlock()) {
       funcOp.emitOpError() << "only one block is supported!";
-      signalPassFailure();
+      return signalPassFailure();
     }
     Block &block = region.front();
 
@@ -381,18 +382,31 @@ struct ShardingPropagation
             shardingOp.printLoopTypesAndIndexingMaps(llvm::dbgs());
         });
 
-    // 1. propagate in reversed order
-    for (Operation &op : llvm::make_early_inc_range(llvm::reverse(block)))
-      if (failed(visitOp(&op, builder)))
-        return signalPassFailure();
+    auto traverse = [&](auto &&range, OpBuilder &builder,
+                        const char *order) -> bool {
+      for (Operation &op : range) {
+        if (failed(visitOp(&op, builder))) {
+          signalPassFailure();
+          return true;
+        }
+      }
+      LLVM_DEBUG(DBGS() << "After " << order << " order propagation:\n"
+                        << funcOp << "\n");
+      LLVM_DEBUG(assert(succeeded(mlir::verify(funcOp))));
+      return false;
+    };
 
-    LLVM_DEBUG(DBGS() << "After reversed order propagation:\n"
-                      << funcOp << "\n");
-    LLVM_DEBUG(assert(succeeded(mlir::verify(funcOp))));
+    // 1. Propagate in reversed order.
+    if (traversal == TraversalOrder::Backward ||
+        traversal == TraversalOrder::BackwardForward)
+      traverse(llvm::reverse(block), builder, "backward");
 
-    // 2. propagate in original order
-    for (Operation &op : llvm::make_early_inc_range(block))
-      if (failed(visitOp(&op, builder)))
-        return signalPassFailure();
+    // 2. Propagate in original order.
+    if (traversal != TraversalOrder::Backward)
+      traverse(block, builder, "forward");
+
+    // 3. Propagate in backward order if needed.
+    if (traversal == TraversalOrder::ForwardBackward)
+      traverse(llvm::reverse(block), builder, "backward");
   }
 };

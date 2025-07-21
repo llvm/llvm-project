@@ -3,6 +3,7 @@
 
 ; RUN: rm -rf %t && split-file %s %t
 
+; Test single object file case
 ; RUN: llc -filetype=obj %t/a.ll -O3 -o %t/a.o -enable-machine-outliner=never -mtriple arm64-apple-macos -addrsig
 ; RUN: %lld -arch arm64 -lSystem --icf=safe_thunks -dylib -o %t/a.dylib %t/a.o
 
@@ -26,6 +27,42 @@
 ; RUN: %lld -arch arm64 -lSystem --icf=safe_thunks --keep-icf-stabs -dylib -o %t/a_thunks.dylib %t/a.o
 ; RUN: dsymutil -s %t/a_thunks.dylib > %t/a_thunks.txt
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;; Test multiple object files with identical functions ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; RUN: llc -filetype=obj %t/b.ll -O3 -o %t/b.o -enable-machine-outliner=never -mtriple arm64-apple-macos -addrsig
+; RUN: %lld -arch arm64 -lSystem --icf=safe_thunks --keep-icf-stabs -dylib -o %t/multi_thunks.dylib %t/a.o %t/b.o
+; RUN: dsymutil -s %t/multi_thunks.dylib | FileCheck %s --check-prefix=VERIFY-MULTI-STABS
+# Check that STABS entries correctly associate functions with their originating object files
+# VERIFY-MULTI-STABS-LABEL: Symbol table for: '{{.*}}/multi_thunks.dylib'
+
+# First object file's source and object file entries
+# VERIFY-MULTI-STABS: N_SO{{.*}}a.cpp
+# VERIFY-MULTI-STABS-NEXT: N_OSO{{.*}}a.o
+
+# Functions from the first object file - all functions share the same address but belong to a.o
+# VERIFY-MULTI-STABS: N_FUN{{.*}}[[FUNC_ADDR:[0-9a-f]+]] '_func_A'
+# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}00     0000   {{.*}} 
+# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}[[FUNC_ADDR]] '_func_B'
+# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}00     0000   {{.*}} 
+# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}[[FUNC_ADDR]] '_func_C'
+# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}00     0000   {{.*}} 
+# VERIFY-MULTI-STABS-NEXT-NEXT: N_FUN{{.*}}[0-9a-f]+ '_take_func_addr'
+
+# End of first object file's entries
+# VERIFY-MULTI-STABS: N_SO{{.*}}01     0000   0000000000000000
+
+# Second object file's source and object file entries
+# VERIFY-MULTI-STABS: N_SO{{.*}}b.cpp
+# VERIFY-MULTI-STABS-NEXT: N_OSO{{.*}}b.o
+
+# Functions from the second object file - same addresses but different object file
+# VERIFY-MULTI-STABS: N_FUN{{.*}}[[FUNC_ADDR]] '_func_D'
+# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}00     0000   {{.*}} 
+# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}[[FUNC_ADDR]] '_func_E'
+# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}00     0000   {{.*}} 
+# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}[[FUNC_ADDR]] '_func_F'
+# VERIFY-MULTI-STABS-NEXT: N_FUN{{.*}}00     0000   {{.*}} 
+# VERIFY-MULTI-STABS-NEXT-NEXT: N_FUN{{.*}}[0-9a-f]+ '_take_func_addr_b'
 
 ; RUN: dsymutil --flat --verify-dwarf=none %t/a_thunks.dylib -o %t/a_thunks.dSYM
 ; RUN: dsymutil -s %t/a_thunks.dSYM >> %t/a_thunks.txt
@@ -73,6 +110,9 @@
 # VERIFY-THUNK-NEXT: {{ +}}DW_AT_low_pc	(0x[[MERGED_FUN_ADDR]])
 # VERIFY-THUNK-NEXT-NEXT-NEXT-NEXT-NEXT: {{ +}}DW_AT_name	("func_C")
 
+
+
+
 ;--- a.cpp
 #define ATTR __attribute__((noinline)) extern "C"
 typedef unsigned long long ULL;
@@ -89,32 +129,56 @@ ATTR ULL take_func_addr() {
     return val;
 }
 
+;--- b.cpp
+#define ATTR __attribute__((noinline)) extern "C"
+typedef unsigned long long ULL;
+
+// Identical functions in a different object file
+ATTR int func_D() { return 1; }
+ATTR int func_E() { return 1; }
+ATTR int func_F() { return 1; }
+
+ATTR ULL take_func_addr_b() {
+    ULL val = 0;
+    val += (ULL)(void*)func_D;
+    val += (ULL)(void*)func_E;
+    val += (ULL)(void*)func_F;
+    return val;
+}
+
 ;--- gen
-clang -target arm64-apple-macos11.0 -S -emit-llvm a.cpp -O3 -g -o -
+clang -target arm64-apple-macos11.0 -S -emit-llvm a.cpp -O3 -g -fdebug-compilation-dir=/proc/self/cwd -o -
+echo ""
+echo ";--- b.ll"
+clang -target arm64-apple-macos11.0 -S -emit-llvm b.cpp -O3 -g -fdebug-compilation-dir=/proc/self/cwd -o -
 
 ;--- a.ll
 ; ModuleID = 'a.cpp'
 source_filename = "a.cpp"
-target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128-Fn32"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "arm64-apple-macosx11.0.0"
 
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync)
 define noundef i32 @func_A() #0 !dbg !12 {
+entry:
   ret i32 1, !dbg !16
 }
 
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync)
 define noundef i32 @func_B() #0 !dbg !17 {
+entry:
   ret i32 1, !dbg !18
 }
 
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync)
 define noundef i32 @func_C() #0 !dbg !19 {
+entry:
   ret i32 1, !dbg !20
 }
 
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync)
 define noundef i64 @take_func_addr() local_unnamed_addr #0 !dbg !21 {
+entry:
     #dbg_value(i64 0, !25, !DIExpression(), !26)
     #dbg_value(i64 ptrtoint (ptr @func_A to i64), !25, !DIExpression(), !26)
     #dbg_value(i64 add (i64 ptrtoint (ptr @func_A to i64), i64 ptrtoint (ptr @func_B to i64)), !25, !DIExpression(), !26)
@@ -122,7 +186,7 @@ define noundef i64 @take_func_addr() local_unnamed_addr #0 !dbg !21 {
   ret i64 add (i64 add (i64 ptrtoint (ptr @func_A to i64), i64 ptrtoint (ptr @func_B to i64)), i64 ptrtoint (ptr @func_C to i64)), !dbg !27
 }
 
-attributes #0 = { mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a,+zcm,+zcz" }
+attributes #0 = { mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!6, !7, !8, !9, !10, !11}
@@ -155,3 +219,71 @@ attributes #0 = { mustprogress nofree noinline norecurse nosync nounwind ssp wil
 !25 = !DILocalVariable(name: "val", scope: !21, file: !1, line: 9, type: !3)
 !26 = !DILocation(line: 0, scope: !21)
 !27 = !DILocation(line: 13, column: 5, scope: !21)
+
+;--- b.ll
+; ModuleID = 'b.cpp'
+source_filename = "b.cpp"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "arm64-apple-macosx11.0.0"
+
+; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync)
+define noundef i32 @func_D() #0 !dbg !12 {
+entry:
+  ret i32 1, !dbg !16
+}
+
+; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync)
+define noundef i32 @func_E() #0 !dbg !17 {
+entry:
+  ret i32 1, !dbg !18
+}
+
+; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync)
+define noundef i32 @func_F() #0 !dbg !19 {
+entry:
+  ret i32 1, !dbg !20
+}
+
+; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync)
+define noundef i64 @take_func_addr_b() local_unnamed_addr #0 !dbg !21 {
+entry:
+    #dbg_value(i64 0, !25, !DIExpression(), !26)
+    #dbg_value(i64 ptrtoint (ptr @func_D to i64), !25, !DIExpression(), !26)
+    #dbg_value(i64 add (i64 ptrtoint (ptr @func_D to i64), i64 ptrtoint (ptr @func_E to i64)), !25, !DIExpression(), !26)
+    #dbg_value(i64 add (i64 add (i64 ptrtoint (ptr @func_D to i64), i64 ptrtoint (ptr @func_E to i64)), i64 ptrtoint (ptr @func_F to i64)), !25, !DIExpression(), !26)
+  ret i64 add (i64 add (i64 ptrtoint (ptr @func_D to i64), i64 ptrtoint (ptr @func_E to i64)), i64 ptrtoint (ptr @func_F to i64)), !dbg !27
+}
+
+attributes #0 = { mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a" }
+
+!llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!6, !7, !8, !9, !10, !11}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, retainedTypes: !2, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/")
+!1 = !DIFile(filename: "b.cpp", directory: "/proc/self/cwd")
+!2 = !{!3, !5}
+!3 = !DIDerivedType(tag: DW_TAG_typedef, name: "ULL", file: !1, line: 2, baseType: !4)
+!4 = !DIBasicType(name: "unsigned long long", size: 64, encoding: DW_ATE_unsigned)
+!5 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
+!6 = !{i32 7, !"Dwarf Version", i32 4}
+!7 = !{i32 2, !"Debug Info Version", i32 3}
+!8 = !{i32 1, !"wchar_size", i32 4}
+!9 = !{i32 8, !"PIC Level", i32 2}
+!10 = !{i32 7, !"uwtable", i32 1}
+!11 = !{i32 7, !"frame-pointer", i32 1}
+!12 = distinct !DISubprogram(name: "func_D", scope: !1, file: !1, line: 5, type: !13, scopeLine: 5, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!13 = !DISubroutineType(types: !14)
+!14 = !{!15}
+!15 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!16 = !DILocation(line: 5, column: 21, scope: !12)
+!17 = distinct !DISubprogram(name: "func_E", scope: !1, file: !1, line: 6, type: !13, scopeLine: 6, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!18 = !DILocation(line: 6, column: 21, scope: !17)
+!19 = distinct !DISubprogram(name: "func_F", scope: !1, file: !1, line: 7, type: !13, scopeLine: 7, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!20 = !DILocation(line: 7, column: 21, scope: !19)
+!21 = distinct !DISubprogram(name: "take_func_addr_b", scope: !1, file: !1, line: 9, type: !22, scopeLine: 9, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !24)
+!22 = !DISubroutineType(types: !23)
+!23 = !{!3}
+!24 = !{!25}
+!25 = !DILocalVariable(name: "val", scope: !21, file: !1, line: 10, type: !3)
+!26 = !DILocation(line: 0, scope: !21)
+!27 = !DILocation(line: 14, column: 5, scope: !21)

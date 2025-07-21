@@ -49,6 +49,7 @@ import a;
 
 int c() {
     (void)(a() == a());
+    return 0;
 }
 
 // CHECK: define{{.*}}linkonce_odr{{.*}}@_ZW1aeqS_1aS0_(

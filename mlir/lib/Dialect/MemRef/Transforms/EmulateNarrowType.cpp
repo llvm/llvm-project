@@ -188,7 +188,6 @@ struct ConvertMemRefAllocation final : OpConversionPattern<OpTy> {
 
     Location loc = op.getLoc();
     OpFoldResult zero = rewriter.getIndexAttr(0);
-    SmallVector<OpFoldResult> indices(currentType.getRank(), zero);
 
     // Get linearized type.
     int srcBits = currentType.getElementType().getIntOrFloatBitWidth();
@@ -230,7 +229,7 @@ struct ConvertMemRefAssumeAlignment final
     }
 
     rewriter.replaceOpWithNewOp<memref::AssumeAlignmentOp>(
-        op, adaptor.getMemref(), adaptor.getAlignmentAttr());
+        op, newTy, adaptor.getMemref(), adaptor.getAlignmentAttr());
     return success();
   }
 };
@@ -324,19 +323,28 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
     // It is not clear if this case actually happens in practice, but we keep
     // the operations just in case. Otherwise, if the arith computation bitwidth
     // is different from the emulated bitwidth we truncate the result.
-    Operation *result;
+    Value result;
     auto resultTy = getTypeConverter()->convertType(oldElementType);
-    if (resultTy == convertedElementType) {
+    auto conversionTy =
+        resultTy.isInteger()
+            ? resultTy
+            : IntegerType::get(rewriter.getContext(),
+                               resultTy.getIntOrFloatBitWidth());
+    if (conversionTy == convertedElementType) {
       auto mask = rewriter.create<arith::ConstantOp>(
           loc, convertedElementType,
           rewriter.getIntegerAttr(convertedElementType, (1 << srcBits) - 1));
 
       result = rewriter.create<arith::AndIOp>(loc, bitsLoad, mask);
     } else {
-      result = rewriter.create<arith::TruncIOp>(loc, resultTy, bitsLoad);
+      result = rewriter.create<arith::TruncIOp>(loc, conversionTy, bitsLoad);
     }
 
-    rewriter.replaceOp(op, result->getResult(0));
+    if (conversionTy != resultTy) {
+      result = rewriter.create<arith::BitcastOp>(loc, resultTy, result);
+    }
+
+    rewriter.replaceOp(op, result);
     return success();
   }
 };
@@ -416,8 +424,18 @@ struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
     }
 
     Location loc = op.getLoc();
-    Value extendedInput = rewriter.create<arith::ExtUIOp>(loc, dstIntegerType,
-                                                          adaptor.getValue());
+
+    // Pad the input value with 0s on the left.
+    Value input = adaptor.getValue();
+    if (!input.getType().isInteger()) {
+      input = rewriter.create<arith::BitcastOp>(
+          loc,
+          IntegerType::get(rewriter.getContext(),
+                           input.getType().getIntOrFloatBitWidth()),
+          input);
+    }
+    Value extendedInput =
+        rewriter.create<arith::ExtUIOp>(loc, dstIntegerType, input);
 
     // Special case 0-rank memref stores. No need for masking.
     if (convertedType.getRank() == 0) {
@@ -620,11 +638,11 @@ void memref::populateMemRefNarrowTypeEmulationConversions(
     arith::NarrowTypeEmulationConverter &typeConverter) {
   typeConverter.addConversion(
       [&typeConverter](MemRefType ty) -> std::optional<Type> {
-        auto intTy = dyn_cast<IntegerType>(ty.getElementType());
-        if (!intTy)
+        Type elementType = ty.getElementType();
+        if (!elementType.isIntOrFloat())
           return ty;
 
-        unsigned width = intTy.getWidth();
+        unsigned width = elementType.getIntOrFloatBitWidth();
         unsigned loadStoreWidth = typeConverter.getLoadStoreBitwidth();
         if (width >= loadStoreWidth)
           return ty;
@@ -632,13 +650,16 @@ void memref::populateMemRefNarrowTypeEmulationConversions(
         // Currently only handle innermost stride being 1, checking
         SmallVector<int64_t> strides;
         int64_t offset;
-        if (failed(getStridesAndOffset(ty, strides, offset)))
+        if (failed(ty.getStridesAndOffset(strides, offset)))
           return nullptr;
         if (!strides.empty() && strides.back() != 1)
           return nullptr;
 
-        auto newElemTy = IntegerType::get(ty.getContext(), loadStoreWidth,
-                                          intTy.getSignedness());
+        auto newElemTy = IntegerType::get(
+            ty.getContext(), loadStoreWidth,
+            elementType.isInteger()
+                ? cast<IntegerType>(elementType).getSignedness()
+                : IntegerType::SignednessSemantics::Signless);
         if (!newElemTy)
           return nullptr;
 

@@ -73,9 +73,6 @@ FunctionPass *createX86OptimizeLEAs();
 /// Return a pass that transforms setcc + movzx pairs into xor + setcc.
 FunctionPass *createX86FixupSetCC();
 
-/// Return a pass that transform inline buffer security check into seperate bb
-FunctionPass *createX86WinFixupBufferSecurityCheckPass();
-
 /// Return a pass that avoids creating store forward block issues in the hardware.
 FunctionPass *createX86AvoidStoreForwardingBlocks();
 
@@ -160,6 +157,9 @@ FunctionPass *createX86InsertX87waitPass();
 /// ways.
 FunctionPass *createX86PartialReductionPass();
 
+/// // Analyzes and emits pseudos to support Win x64 Unwind V2.
+FunctionPass *createX86WinEHUnwindV2Pass();
+
 InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   const X86Subtarget &,
                                                   const X86RegisterBankInfo &);
@@ -169,12 +169,14 @@ FunctionPass *createX86LoadValueInjectionRetHardeningPass();
 FunctionPass *createX86SpeculativeLoadHardeningPass();
 FunctionPass *createX86SpeculativeExecutionSideEffectSuppression();
 FunctionPass *createX86ArgumentStackSlotPass();
+FunctionPass *createX86SuppressAPXForRelocationPass();
 
 void initializeCompressEVEXPassPass(PassRegistry &);
 void initializeFPSPass(PassRegistry &);
 void initializeFixupBWInstPassPass(PassRegistry &);
 void initializeFixupLEAPassPass(PassRegistry &);
 void initializeX86ArgumentStackSlotPassPass(PassRegistry &);
+void initializeX86AsmPrinterPass(PassRegistry &);
 void initializeX86FixupInstTuningPassPass(PassRegistry &);
 void initializeX86FixupVectorConstantsPassPass(PassRegistry &);
 void initializeWinEHStatePassPass(PassRegistry &);
@@ -190,7 +192,6 @@ void initializeX86ExpandPseudoPass(PassRegistry &);
 void initializeX86FastPreTileConfigPass(PassRegistry &);
 void initializeX86FastTileConfigPass(PassRegistry &);
 void initializeX86FixupSetCCPassPass(PassRegistry &);
-void initializeX86WinFixupBufferSecurityCheckPassPass(PassRegistry &);
 void initializeX86FlagsCopyLoweringPassPass(PassRegistry &);
 void initializeX86LoadValueInjectionLoadHardeningPassPass(PassRegistry &);
 void initializeX86LoadValueInjectionRetHardeningPassPass(PassRegistry &);
@@ -204,6 +205,8 @@ void initializeX86ReturnThunksPass(PassRegistry &);
 void initializeX86SpeculativeExecutionSideEffectSuppressionPass(PassRegistry &);
 void initializeX86SpeculativeLoadHardeningPassPass(PassRegistry &);
 void initializeX86TileConfigPass(PassRegistry &);
+void initializeX86SuppressAPXForRelocationPassPass(PassRegistry &);
+void initializeX86WinEHUnwindV2Pass(PassRegistry &);
 
 namespace X86AS {
 enum : unsigned {

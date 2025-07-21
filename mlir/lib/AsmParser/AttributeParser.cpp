@@ -12,17 +12,13 @@
 
 #include "Parser.h"
 
-#include "AsmParserImpl.h"
 #include "mlir/AsmParser/AsmParserState.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/IntegerSet.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Endian.h"
 #include <optional>
 
 using namespace mlir;
@@ -570,6 +566,21 @@ DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc, ShapedType type) {
   if (ComplexType complexTy = dyn_cast<ComplexType>(eltType)) {
     eltType = complexTy.getElementType();
     isComplex = true;
+    // Complex types have N*2 elements or complex splat.
+    // Empty shape may mean a splat or empty literal, only validate splats.
+    bool isSplat = shape.empty() && type.getNumElements() != 0;
+    if (isSplat && storage.size() != 2) {
+      p.emitError(loc) << "parsed " << storage.size() << " elements, but type ("
+                       << complexTy << ") expected 2 elements";
+      return nullptr;
+    }
+    if (!shape.empty() &&
+        storage.size() != static_cast<size_t>(type.getNumElements()) * 2) {
+      p.emitError(loc) << "parsed " << storage.size() << " elements, but type ("
+                       << type << ") expected " << type.getNumElements() * 2
+                       << " elements";
+      return nullptr;
+    }
   }
 
   // Handle integer and index types.
@@ -680,6 +691,11 @@ DenseElementsAttr TensorLiteralParser::getStringAttr(SMLoc loc, ShapedType type,
   stringRefValues.reserve(storage.size());
 
   for (auto val : storage) {
+    if (!val.second.is(Token::string)) {
+      p.emitError(loc) << "expected string token, got "
+                       << val.second.getSpelling();
+      return nullptr;
+    }
     stringValues.push_back(val.second.getStringValue());
     stringRefValues.emplace_back(stringValues.back());
   }
@@ -701,7 +717,7 @@ DenseElementsAttr TensorLiteralParser::getHexAttr(SMLoc loc, ShapedType type) {
   if (parseElementAttrHexValues(p, *hexStorage, data))
     return nullptr;
 
-  ArrayRef<char> rawData(data.data(), data.size());
+  ArrayRef<char> rawData(data);
   bool detectedSplat = false;
   if (!DenseElementsAttr::isValidRawBuffer(type, rawData, detectedSplat)) {
     p.emitError(loc) << "elements hex data size is invalid for provided type: "
@@ -951,14 +967,10 @@ Attribute Parser::parseDenseElementsAttr(Type attrType) {
       return nullptr;
   }
 
-  // If the type is specified `parseElementsLiteralType` will not parse a type.
-  // Use the attribute location as the location for error reporting in that
-  // case.
-  auto loc = attrType ? attribLoc : getToken().getLoc();
-  auto type = parseElementsLiteralType(attrType);
+  auto type = parseElementsLiteralType(attribLoc, attrType);
   if (!type)
     return nullptr;
-  return literalParser.getAttr(loc, type);
+  return literalParser.getAttr(attribLoc, type);
 }
 
 Attribute Parser::parseDenseResourceElementsAttr(Type attrType) {
@@ -999,7 +1011,7 @@ Attribute Parser::parseDenseResourceElementsAttr(Type attrType) {
 ///   elements-literal-type ::= vector-type | ranked-tensor-type
 ///
 /// This method also checks the type has static shape.
-ShapedType Parser::parseElementsLiteralType(Type type) {
+ShapedType Parser::parseElementsLiteralType(SMLoc loc, Type type) {
   // If the user didn't provide a type, parse the colon type for the literal.
   if (!type) {
     if (parseToken(Token::colon, "expected ':'"))
@@ -1010,12 +1022,14 @@ ShapedType Parser::parseElementsLiteralType(Type type) {
 
   auto sType = dyn_cast<ShapedType>(type);
   if (!sType) {
-    emitError("elements literal must be a shaped type");
+    emitError(loc, "elements literal must be a shaped type");
     return nullptr;
   }
 
-  if (!sType.hasStaticShape())
-    return (emitError("elements literal type must have static shape"), nullptr);
+  if (!sType.hasStaticShape()) {
+    emitError(loc, "elements literal type must have static shape");
+    return nullptr;
+  }
 
   return sType;
 }
@@ -1032,7 +1046,7 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
   // of the type.
   Type indiceEltType = builder.getIntegerType(64);
   if (consumeIf(Token::greater)) {
-    ShapedType type = parseElementsLiteralType(attrType);
+    ShapedType type = parseElementsLiteralType(loc, attrType);
     if (!type)
       return nullptr;
 
@@ -1065,7 +1079,7 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
   if (parseToken(Token::greater, "expected '>'"))
     return nullptr;
 
-  auto type = parseElementsLiteralType(attrType);
+  auto type = parseElementsLiteralType(loc, attrType);
   if (!type)
     return nullptr;
 
@@ -1082,6 +1096,8 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
     indicesType = RankedTensorType::get(indiceParser.getShape(), indiceEltType);
   }
   auto indices = indiceParser.getAttr(indicesLoc, indicesType);
+  if (!indices)
+    return nullptr;
 
   // If the values are a splat, set the shape explicitly based on the number of
   // indices. The number of indices is encoded in the first dimension of the
@@ -1092,6 +1108,8 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
           ? RankedTensorType::get({indicesType.getDimSize(0)}, valuesEltType)
           : RankedTensorType::get(valuesParser.getShape(), valuesEltType);
   auto values = valuesParser.getAttr(valuesLoc, valuesType);
+  if (!values)
+    return nullptr;
 
   // Build the sparse elements attribute by the indices and values.
   return getChecked<SparseElementsAttr>(loc, type, indices, values);

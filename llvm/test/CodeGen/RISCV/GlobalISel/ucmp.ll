@@ -97,7 +97,7 @@ define i32 @ucmp.32.32(i32 %x, i32 %y) nounwind {
 ; RV64I-NEXT:    sext.w a1, a1
 ; RV64I-NEXT:    sltu a2, a1, a0
 ; RV64I-NEXT:    sltu a0, a0, a1
-; RV64I-NEXT:    sub a0, a2, a0
+; RV64I-NEXT:    subw a0, a2, a0
 ; RV64I-NEXT:    ret
   %1 = call i32 @llvm.ucmp(i32 %x, i32 %y)
   ret i32 %1
@@ -115,7 +115,7 @@ define i32 @ucmp.32.32_sext(i32 signext %x, i32 signext %y) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sltu a2, a1, a0
 ; RV64I-NEXT:    sltu a0, a0, a1
-; RV64I-NEXT:    sub a0, a2, a0
+; RV64I-NEXT:    subw a0, a2, a0
 ; RV64I-NEXT:    ret
   %1 = call i32 @llvm.ucmp(i32 %x, i32 %y)
   ret i32 %1
@@ -135,7 +135,7 @@ define i32 @ucmp.32.32_zext(i32 zeroext %x, i32 zeroext %y) nounwind {
 ; RV64I-NEXT:    sext.w a1, a1
 ; RV64I-NEXT:    sltu a2, a1, a0
 ; RV64I-NEXT:    sltu a0, a0, a1
-; RV64I-NEXT:    sub a0, a2, a0
+; RV64I-NEXT:    subw a0, a2, a0
 ; RV64I-NEXT:    ret
   %1 = call i32 @llvm.ucmp(i32 %x, i32 %y)
   ret i32 %1
@@ -160,7 +160,7 @@ define i32 @ucmp.32.64(i64 %x, i64 %y) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sltu a2, a1, a0
 ; RV64I-NEXT:    sltu a0, a0, a1
-; RV64I-NEXT:    sub a0, a2, a0
+; RV64I-NEXT:    subw a0, a2, a0
 ; RV64I-NEXT:    ret
   %1 = call i32 @llvm.ucmp(i64 %x, i64 %y)
   ret i32 %1

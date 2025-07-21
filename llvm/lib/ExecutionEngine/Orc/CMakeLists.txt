@@ -8,6 +8,7 @@ endif()
 
 add_llvm_component_library(LLVMOrcJIT
   AbsoluteSymbols.cpp
+  COFF.cpp
   COFFVCRuntimeSupport.cpp
   COFFPlatform.cpp
   CompileOnDemandLayer.cpp
@@ -15,16 +16,18 @@ add_llvm_component_library(LLVMOrcJIT
   Core.cpp
   DebugObjectManagerPlugin.cpp
   DebugUtils.cpp
+  EHFrameRegistrationPlugin.cpp
   EPCDynamicLibrarySearchGenerator.cpp
   EPCDebugObjectRegistrar.cpp
-  EPCEHFrameRegistrar.cpp
   EPCGenericDylibManager.cpp
   EPCGenericJITLinkMemoryManager.cpp
   EPCGenericRTDyldMemoryManager.cpp
   EPCIndirectionUtils.cpp
   ExecutionUtils.cpp
   ObjectFileInterface.cpp
+  GetDylibInterface.cpp
   IndirectionUtils.cpp
+  InProcessMemoryAccess.cpp
   IRCompileLayer.cpp
   IRTransformLayer.cpp
   IRPartitionLayer.cpp
@@ -50,12 +53,14 @@ add_llvm_component_library(LLVMOrcJIT
   OrcV2CBindings.cpp
   RTDyldObjectLinkingLayer.cpp
   SectCreate.cpp
+  SelfExecutorProcessControl.cpp
   SimpleRemoteEPC.cpp
   Speculation.cpp
   SpeculateAnalyses.cpp
   ExecutorProcessControl.cpp
   TaskDispatch.cpp
   ThreadSafeModule.cpp
+  UnwindInfoRegistrationPlugin.cpp
   RedirectionManager.cpp
   JITLinkRedirectableSymbolManager.cpp
   ReOptimizeLayer.cpp
@@ -85,6 +90,7 @@ add_llvm_component_library(LLVMOrcJIT
   Support
   Target
   TargetParser
+  TextAPI
   TransformUtils
   )
 

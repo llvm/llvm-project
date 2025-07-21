@@ -20,10 +20,10 @@
 ;; a bit more information than original source
 
 ;; 0x2 Workgroup
-; CHECK-SPIRV-DAG: %[[#WORKGROUP_SCOPE:]] = OpConstant %[[#UINT]] 2
+; CHECK-SPIRV-DAG: %[[#WORKGROUP_SCOPE:]] = OpConstant %[[#UINT]] 2{{$}}
 
 ;; 0x0 Relaxed
-; CHECK-SPIRV-DAG: %[[#RELAXED:]] = OpConstant %[[#UINT]] 0
+; CHECK-SPIRV-DAG: %[[#RELAXED:]] = OpConstantNull %[[#UINT]]
 
 ; CHECK-SPIRV:     %[[#TEST]] = OpFunction %[[#]]
 ; CHECK-SPIRV:     %[[#PTR:]] = OpFunctionParameter %[[#UINT_PTR]]

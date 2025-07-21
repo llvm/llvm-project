@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/atanhf.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
@@ -24,6 +25,10 @@ LLVM_LIBC_FUNCTION(float, atanhf, (float x)) {
   // |x| >= 1.0
   if (LIBC_UNLIKELY(x_abs >= 0x3F80'0000U)) {
     if (xbits.is_nan()) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
       return x;
     }
     // |x| == 1.0

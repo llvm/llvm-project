@@ -23,7 +23,7 @@ public:
     auto actual_fp = LIBC_NAMESPACE::fputil::FPBits<float>(result);
     auto expected_fp = LIBC_NAMESPACE::fputil::FPBits<float>(bits);
     EXPECT_EQ(actual_fp.uintval(), expected_fp.uintval());
-  };
+  }
 };
 
 TEST_F(LlvmLibcNanfTest, NCharSeq) {
@@ -43,8 +43,8 @@ TEST_F(LlvmLibcNanfTest, RandomString) {
   run_test("123 ", 0x7fc00000);
 }
 
-#if !defined(LIBC_HAS_ADDRESS_SANITIZER) && defined(LIBC_TARGET_OS_IS_LINUX)
+#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
 TEST_F(LlvmLibcNanfTest, InvalidInput) {
-  EXPECT_DEATH([] { LIBC_NAMESPACE::nanf(nullptr); }, WITH_SIGNAL(SIGSEGV));
+  EXPECT_DEATH([] { LIBC_NAMESPACE::nanf(nullptr); }, WITH_SIGNAL(-1));
 }
 #endif // LIBC_HAS_ADDRESS_SANITIZER

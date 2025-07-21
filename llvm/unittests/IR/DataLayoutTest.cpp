@@ -157,7 +157,7 @@ public:
 
   std::string format(StringRef Str) const {
     std::string Res = Str.str();
-    std::replace(Res.begin(), Res.end(), '!', Specifier);
+    llvm::replace(Res, '!', Specifier);
     return Res;
   }
 };
@@ -307,33 +307,10 @@ TEST(DataLayoutTest, ParseAggregateSpec) {
 }
 
 TEST(DataLayout, ParsePointerSpec) {
-  auto BitAlign = [](unsigned Bits) { return Align(Bits / 8); };
-  struct {
-    const char *Str;
-    unsigned AS;
-    unsigned Size;
-    Align AbiAlign;
-    Align PrefAlign;
-    unsigned IndexSize;
-  } TestCases[] = {
-      {"p:16:8", 0, 16, BitAlign(8), BitAlign(8), 16},
-      {"p:16:16:64", 0, 16, BitAlign(16), BitAlign(64), 16},
-      {"p:32:64:64:32", 0, 32, BitAlign(64), BitAlign(64), 32},
-      {"p0:32:64", 0, 32, BitAlign(64), BitAlign(64), 32},
-      {"p42:64:32:32", 42, 64, BitAlign(32), BitAlign(32), 64},
-      {"p16777215:32:32:64:8", 16777215, 32, BitAlign(32), BitAlign(64), 8},
-      {"p16777215:16777215:32768:32768:16777215", 16777215, 16777215,
-       BitAlign(32768), BitAlign(32768), 16777215},
-  };
-  for (const auto& TC : TestCases) {
-    Expected<DataLayout> DL = DataLayout::parse(TC.Str);
-    SCOPED_TRACE(TC.Str);
-    EXPECT_THAT_EXPECTED(DL, Succeeded());
-    EXPECT_EQ(DL->getPointerSizeInBits(TC.AS), TC.Size);
-    EXPECT_EQ(DL->getPointerABIAlignment(TC.AS), TC.AbiAlign);
-    EXPECT_EQ(DL->getPointerPrefAlignment(TC.AS), TC.PrefAlign);
-    EXPECT_EQ(DL->getIndexSizeInBits(TC.AS), TC.IndexSize);
-  }
+  for (StringRef Str :
+       {"p:16:8", "p:16:16:64", "p:32:64:64:32", "p0:32:64", "p42:64:32:32",
+        "p16777215:32:32:64:8", "p16777215:16777215:32768:32768:16777215"})
+    EXPECT_THAT_EXPECTED(DataLayout::parse(Str), Succeeded());
 
   for (StringRef Str :
        {"p", "p0", "p:32", "p0:32", "p:32:32:32:32:32", "p0:32:32:32:32:32"})
@@ -623,7 +600,7 @@ TEST(DataLayout, IsNonIntegralAddressSpace) {
   EXPECT_TRUE(Custom.hasNonIntegralRepresentation(2));
   EXPECT_FALSE(Custom.hasUnstableRepresentation(2));
   EXPECT_FALSE(Custom.hasExternalState(2));
-  EXPECT_TRUE(Custom.shouldAvoidIntToPtr(2));
+  EXPECT_FALSE(Custom.shouldAvoidIntToPtr(2));
   EXPECT_FALSE(Custom.shouldAvoidPtrToInt(2));
   EXPECT_THAT(Custom.getNonStandardAddressSpaces(),
               ::testing::ElementsAreArray({2U}));
@@ -650,6 +627,7 @@ TEST(DataLayout, IsNonIntegralAddressSpace) {
                 ::testing::ElementsAreArray({2U}));
   }
 
+  // Non-integral pointers with have external state ('e' flag, requires 'n').
   for (const auto *Layout : {"pen2:64:64:64:32", "pne2:64:64:64:32"}) {
     DataLayout DL = cantFail(DataLayout::parse(Layout));
     EXPECT_TRUE(DL.isNonIntegralAddressSpace(2));
@@ -703,7 +681,7 @@ TEST(DataLayout, NonIntegralHelpers) {
     EXPECT_EQ(Exp.NonIntegral, DL.hasNonIntegralRepresentation(Exp.Addrspace));
     EXPECT_EQ(Exp.Unstable, DL.hasUnstableRepresentation(Exp.Addrspace));
     EXPECT_EQ(Exp.ExternalState, DL.hasExternalState(Exp.Addrspace));
-    bool AvoidIntToPtr = Exp.Unstable || Exp.NonIntegral;
+    bool AvoidIntToPtr = Exp.Unstable || Exp.ExternalState;
     EXPECT_EQ(AvoidIntToPtr, DL.shouldAvoidIntToPtr(Exp.Addrspace));
     bool AvoidPtrToInt = Exp.Unstable;
     EXPECT_EQ(AvoidPtrToInt, DL.shouldAvoidPtrToInt(Exp.Addrspace));

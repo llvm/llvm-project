@@ -35,11 +35,13 @@ Using Clang as a Compiler
    UndefinedBehaviorSanitizer
    DataFlowSanitizer
    LeakSanitizer
+   TypeSanitizer
    RealtimeSanitizer
    SanitizerCoverage
    SanitizerStats
    SanitizerSpecialCaseList
    BoundsSafety
+   BoundsSafetyAdoptionGuide
    BoundsSafetyImplPlans
    ControlFlowIntegrity
    LTOVisibility
@@ -59,6 +61,7 @@ Using Clang as a Compiler
    APINotes
    DebuggingCoroutines
    AMDGPUSupport
+   CXXTypeAwareAllocators
    CommandGuide/index
    FAQ
 

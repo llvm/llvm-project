@@ -604,7 +604,7 @@ Error Instrumentation::runOnFunctions(BinaryContext &BC) {
                                                  /*IsText=*/false,
                                                  /*IsAllocatable=*/true);
   BC.registerOrUpdateSection(".bolt.instr.counters", ELF::SHT_PROGBITS, Flags,
-                             nullptr, 0, 1);
+                             nullptr, 0, BC.RegularPageSize);
 
   BC.registerOrUpdateNoteSection(".bolt.instr.tables", nullptr, 0,
                                  /*Alignment=*/1,
@@ -666,8 +666,7 @@ Error Instrumentation::runOnFunctions(BinaryContext &BC) {
       auto IsLEA = [&BC](const MCInst &Inst) { return BC.MIB->isLEA64r(Inst); };
       const auto LEA = std::find_if(
           std::next(llvm::find_if(reverse(BB), IsLEA)), BB.rend(), IsLEA);
-      LEA->getOperand(4).setExpr(
-          MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *BC.Ctx));
+      LEA->getOperand(4).setExpr(MCSymbolRefExpr::create(Target, *BC.Ctx));
     } else {
       BC.errs() << "BOLT-WARNING: ___GLOBAL_init_65535 not found\n";
     }

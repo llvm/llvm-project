@@ -124,14 +124,14 @@ BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
     return std::make_shared<BreakpointResolverName>(
         nullptr, RegularExpression(regex_text), language, offset,
         skip_prologue);
-  } else {
-    StructuredData::Array *names_array;
-    success = options_dict.GetValueForKeyAsArray(
-        GetKey(OptionNames::SymbolNameArray), names_array);
-    if (!success) {
-      error = Status::FromErrorString("BRN::CFSD: Missing symbol names entry.");
-      return nullptr;
-    }
+  }
+  StructuredData::Array *names_array;
+  success = options_dict.GetValueForKeyAsArray(
+      GetKey(OptionNames::SymbolNameArray), names_array);
+  if (!success) {
+    error = Status::FromErrorString("BRN::CFSD: Missing symbol names entry.");
+    return nullptr;
+  }
     StructuredData::Array *names_mask_array;
     success = options_dict.GetValueForKeyAsArray(
         GetKey(OptionNames::NameMaskArray), names_mask_array);
@@ -182,7 +182,6 @@ BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
       resolver_sp->AddNameLookup(ConstString(names[i]), name_masks[i]);
     }
     return resolver_sp;
-  }
 }
 
 StructuredData::ObjectSP BreakpointResolverName::SerializeToStructuredData() {
@@ -339,7 +338,7 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
       if (!sc.block->GetStartAddress(break_addr))
         break_addr.Clear();
     } else if (sc.function) {
-      break_addr = sc.function->GetAddressRange().GetBaseAddress();
+      break_addr = sc.function->GetAddress();
       if (m_skip_prologue && break_addr.IsValid()) {
         const uint32_t prologue_byte_size = sc.function->GetPrologueByteSize();
         if (prologue_byte_size)

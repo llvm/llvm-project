@@ -13,15 +13,22 @@
 #include "RISCVTargetStreamer.h"
 #include "RISCVBaseInfo.h"
 #include "RISCVMCTargetDesc.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCSectionELF.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/RISCVAttributes.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 
 using namespace llvm;
 
-// This option controls wether or not we emit ELF attributes for ABI features,
+// This option controls whether or not we emit ELF attributes for ABI features,
 // like RISC-V atomics or X3 usage.
 static cl::opt<bool> RiscvAbiAttr(
     "riscv-abi-attributes",
@@ -33,16 +40,18 @@ RISCVTargetStreamer::RISCVTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
 void RISCVTargetStreamer::finish() { finishAttributeSection(); }
 void RISCVTargetStreamer::reset() {}
 
-void RISCVTargetStreamer::emitDirectiveOptionPush() {}
-void RISCVTargetStreamer::emitDirectiveOptionPop() {}
-void RISCVTargetStreamer::emitDirectiveOptionPIC() {}
-void RISCVTargetStreamer::emitDirectiveOptionNoPIC() {}
-void RISCVTargetStreamer::emitDirectiveOptionRVC() {}
-void RISCVTargetStreamer::emitDirectiveOptionNoRVC() {}
-void RISCVTargetStreamer::emitDirectiveOptionRelax() {}
-void RISCVTargetStreamer::emitDirectiveOptionNoRelax() {}
 void RISCVTargetStreamer::emitDirectiveOptionArch(
     ArrayRef<RISCVOptionArchArg> Args) {}
+void RISCVTargetStreamer::emitDirectiveOptionExact() {}
+void RISCVTargetStreamer::emitDirectiveOptionNoExact() {}
+void RISCVTargetStreamer::emitDirectiveOptionPIC() {}
+void RISCVTargetStreamer::emitDirectiveOptionNoPIC() {}
+void RISCVTargetStreamer::emitDirectiveOptionPop() {}
+void RISCVTargetStreamer::emitDirectiveOptionPush() {}
+void RISCVTargetStreamer::emitDirectiveOptionRelax() {}
+void RISCVTargetStreamer::emitDirectiveOptionNoRelax() {}
+void RISCVTargetStreamer::emitDirectiveOptionRVC() {}
+void RISCVTargetStreamer::emitDirectiveOptionNoRVC() {}
 void RISCVTargetStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {}
 void RISCVTargetStreamer::emitAttribute(unsigned Attribute, unsigned Value) {}
 void RISCVTargetStreamer::finishAttributeSection() {}
@@ -51,14 +60,62 @@ void RISCVTargetStreamer::emitTextAttribute(unsigned Attribute,
 void RISCVTargetStreamer::emitIntTextAttribute(unsigned Attribute,
                                                unsigned IntValue,
                                                StringRef StringValue) {}
+
+void RISCVTargetStreamer::emitNoteGnuPropertySection(
+    const uint32_t Feature1And) {
+  MCStreamer &OutStreamer = getStreamer();
+  MCContext &Ctx = OutStreamer.getContext();
+
+  const Triple &Triple = Ctx.getTargetTriple();
+  Align NoteAlign;
+  if (Triple.isArch64Bit()) {
+    NoteAlign = Align(8);
+  } else {
+    assert(Triple.isArch32Bit());
+    NoteAlign = Align(4);
+  }
+
+  assert(Ctx.getObjectFileType() == MCContext::Environment::IsELF);
+  MCSection *const NoteSection =
+      Ctx.getELFSection(".note.gnu.property", ELF::SHT_NOTE, ELF::SHF_ALLOC);
+  NoteSection->setAlignment(NoteAlign);
+  OutStreamer.pushSection();
+  OutStreamer.switchSection(NoteSection);
+
+  // Emit the note header
+  OutStreamer.emitIntValue(4, 4); // n_namsz
+
+  MCSymbol *const NDescBeginSym = Ctx.createTempSymbol();
+  MCSymbol *const NDescEndSym = Ctx.createTempSymbol();
+  const MCExpr *const NDescSzExpr =
+      MCBinaryExpr::createSub(MCSymbolRefExpr::create(NDescEndSym, Ctx),
+                              MCSymbolRefExpr::create(NDescBeginSym, Ctx), Ctx);
+
+  OutStreamer.emitValue(NDescSzExpr, 4);                    // n_descsz
+  OutStreamer.emitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4); // n_type
+  OutStreamer.emitBytes(StringRef("GNU", 4));               // n_name
+
+  // Emit n_desc field
+  OutStreamer.emitLabel(NDescBeginSym);
+  OutStreamer.emitValueToAlignment(NoteAlign);
+
+  // Emit the feature_1_and property
+  OutStreamer.emitIntValue(ELF::GNU_PROPERTY_RISCV_FEATURE_1_AND, 4); // pr_type
+  OutStreamer.emitIntValue(4, 4);              // pr_datasz
+  OutStreamer.emitIntValue(Feature1And, 4);    // pr_data
+  OutStreamer.emitValueToAlignment(NoteAlign); // pr_padding
+
+  OutStreamer.emitLabel(NDescEndSym);
+  OutStreamer.popSection();
+}
+
 void RISCVTargetStreamer::setTargetABI(RISCVABI::ABI ABI) {
   assert(ABI != RISCVABI::ABI_Unknown && "Improperly initialized target ABI");
   TargetABI = ABI;
 }
 
 void RISCVTargetStreamer::setFlagsFromFeatures(const MCSubtargetInfo &STI) {
-  HasRVC = STI.hasFeature(RISCV::FeatureStdExtC) ||
-           STI.hasFeature(RISCV::FeatureStdExtZca);
+  HasRVC = STI.hasFeature(RISCV::FeatureStdExtZca);
   HasTSO = STI.hasFeature(RISCV::FeatureStdExtZtso);
 }
 
@@ -85,10 +142,13 @@ void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
   }
 
   if (RiscvAbiAttr && STI.hasFeature(RISCV::FeatureStdExtA)) {
-    unsigned AtomicABITag = static_cast<unsigned>(
-        STI.hasFeature(RISCV::FeatureNoTrailingSeqCstFence)
-            ? RISCVAttrs::RISCVAtomicAbiTag::A6C
-            : RISCVAttrs::RISCVAtomicAbiTag::A6S);
+    unsigned AtomicABITag;
+    if (STI.hasFeature(RISCV::FeatureStdExtZalasr))
+      AtomicABITag = static_cast<unsigned>(RISCVAttrs::RISCVAtomicAbiTag::A7);
+    else if (STI.hasFeature(RISCV::FeatureNoTrailingSeqCstFence))
+      AtomicABITag = static_cast<unsigned>(RISCVAttrs::RISCVAtomicAbiTag::A6C);
+    else
+      AtomicABITag = static_cast<unsigned>(RISCVAttrs::RISCVAtomicAbiTag::A6S);
     emitAttribute(RISCVAttrs::ATOMIC_ABI, AtomicABITag);
   }
 }
@@ -120,6 +180,14 @@ void RISCVTargetAsmStreamer::emitDirectiveOptionRVC() {
 
 void RISCVTargetAsmStreamer::emitDirectiveOptionNoRVC() {
   OS << "\t.option\tnorvc\n";
+}
+
+void RISCVTargetAsmStreamer::emitDirectiveOptionExact() {
+  OS << "\t.option\texact\n";
+}
+
+void RISCVTargetAsmStreamer::emitDirectiveOptionNoExact() {
+  OS << "\t.option\tnoexact\n";
 }
 
 void RISCVTargetAsmStreamer::emitDirectiveOptionRelax() {

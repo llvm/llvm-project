@@ -15,7 +15,6 @@
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 using namespace tosa;
@@ -28,7 +27,7 @@ public:
 
   LogicalResult matchAndRewrite(tosa::ConstOp op,
                                 PatternRewriter &rewriter) const final {
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, op.getValue());
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, op.getValues());
     return success();
   }
 };
@@ -65,6 +64,11 @@ public:
 
   LogicalResult matchAndRewrite(tosa::ApplyScaleOp op,
                                 PatternRewriter &rewriter) const final {
+    StringRef roundingMode = op.getRoundingMode();
+    if (roundingMode != "DOUBLE_ROUND" && roundingMode != "SINGLE_ROUND") {
+      return failure();
+    }
+
     Location loc = op.getLoc();
     Value value = op.getValue();
     Value multiplier32 = op.getMultiplier();
@@ -96,7 +100,7 @@ public:
     multiply64 = rewriter.create<arith::AddIOp>(loc, multiply64, round);
 
     // Apply double rounding if necessary.
-    if (op.getDoubleRound()) {
+    if (op.getRoundingMode() == "DOUBLE_ROUND") {
       int64_t roundInt = 1 << 30;
       Value roundUp = getConstantValue(loc, i64Ty, roundInt, rewriter);
       Value roundDown = getConstantValue(loc, i64Ty, -roundInt, rewriter);
@@ -125,6 +129,11 @@ public:
 
   LogicalResult matchAndRewrite(tosa::ApplyScaleOp op,
                                 PatternRewriter &rewriter) const final {
+    StringRef roundingMode = op.getRoundingMode();
+    if (roundingMode != "DOUBLE_ROUND" && roundingMode != "SINGLE_ROUND") {
+      return failure();
+    }
+
     Location loc = op.getLoc();
 
     Type resultTy = op.getType();
@@ -170,7 +179,7 @@ public:
         rewriter.create<arith::SelectOp>(loc, shiftOver32, shiftHighR, zero32);
 
     // Conditionally perform our double round.
-    if (op.getDoubleRound()) {
+    if (op.getRoundingMode() == "DOUBLE_ROUND") {
       Value negOne32 = getConstantValue(loc, i32Ty, -1, rewriter);
       Value valuePositive = rewriter.create<arith::CmpIOp>(
           loc, arith::CmpIPredicate::sge, value32, zero32);

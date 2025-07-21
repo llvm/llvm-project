@@ -1,6 +1,6 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   fir.global @_QMmEvar : !fir.type<_QMmTt1{elm:!fir.array<5xi32>,elm2:!fir.array<5x8xi32>}> {} loc(#loc1)
   fir.type_info @_QMmTt1 noinit nodestroy nofinal : !fir.type<_QMmTt1{elm:!fir.array<5xi32>,elm2:!fir.array<5x8xi32>}> component_info {
     fir.dt_component "elm" lbs [2]

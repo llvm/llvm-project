@@ -107,8 +107,7 @@ struct X86Operand final : public MCParsedAsmOperand {
   /// getOffsetOfLoc - Get the location of the offset operator.
   SMLoc getOffsetOfLoc() const override { return OffsetOfLoc; }
 
-  void print(raw_ostream &OS) const override {
-
+  void print(raw_ostream &OS, const MCAsmInfo &) const override {
     auto PrintImmValue = [&](const MCExpr *Val, const char *VName) {
       if (Val->getKind() == MCExpr::Constant) {
         if (auto Imm = cast<MCConstantExpr>(Val)->getValue())
@@ -340,46 +339,38 @@ struct X86Operand final : public MCParsedAsmOperand {
     return Mem.IndexReg >= LowR && Mem.IndexReg <= HighR;
   }
 
+  bool isMem32_RC128() const {
+    return isMem32() && isMemIndexReg(X86::XMM0, X86::XMM15);
+  }
   bool isMem64_RC128() const {
     return isMem64() && isMemIndexReg(X86::XMM0, X86::XMM15);
   }
-  bool isMem128_RC128() const {
-    return isMem128() && isMemIndexReg(X86::XMM0, X86::XMM15);
+  bool isMem32_RC256() const {
+    return isMem32() && isMemIndexReg(X86::YMM0, X86::YMM15);
   }
-  bool isMem128_RC256() const {
-    return isMem128() && isMemIndexReg(X86::YMM0, X86::YMM15);
-  }
-  bool isMem256_RC128() const {
-    return isMem256() && isMemIndexReg(X86::XMM0, X86::XMM15);
-  }
-  bool isMem256_RC256() const {
-    return isMem256() && isMemIndexReg(X86::YMM0, X86::YMM15);
+  bool isMem64_RC256() const {
+    return isMem64() && isMemIndexReg(X86::YMM0, X86::YMM15);
   }
 
+  bool isMem32_RC128X() const {
+    return isMem32() && X86II::isXMMReg(Mem.IndexReg);
+  }
   bool isMem64_RC128X() const {
     return isMem64() && X86II::isXMMReg(Mem.IndexReg);
   }
-  bool isMem128_RC128X() const {
-    return isMem128() && X86II::isXMMReg(Mem.IndexReg);
+  bool isMem32_RC256X() const {
+    return isMem32() && X86II::isYMMReg(Mem.IndexReg);
   }
-  bool isMem128_RC256X() const {
-    return isMem128() && X86II::isYMMReg(Mem.IndexReg);
+  bool isMem64_RC256X() const {
+    return isMem64() && X86II::isYMMReg(Mem.IndexReg);
   }
-  bool isMem256_RC128X() const {
-    return isMem256() && X86II::isXMMReg(Mem.IndexReg);
+  bool isMem32_RC512() const {
+    return isMem32() && X86II::isZMMReg(Mem.IndexReg);
   }
-  bool isMem256_RC256X() const {
-    return isMem256() && X86II::isYMMReg(Mem.IndexReg);
+  bool isMem64_RC512() const {
+    return isMem64() && X86II::isZMMReg(Mem.IndexReg);
   }
-  bool isMem256_RC512() const {
-    return isMem256() && X86II::isZMMReg(Mem.IndexReg);
-  }
-  bool isMem512_RC256X() const {
-    return isMem512() && X86II::isYMMReg(Mem.IndexReg);
-  }
-  bool isMem512_RC512() const {
-    return isMem512() && X86II::isZMMReg(Mem.IndexReg);
-  }
+
   bool isMem512_GR16() const {
     if (!isMem512())
       return false;
@@ -424,9 +415,15 @@ struct X86Operand final : public MCParsedAsmOperand {
       return isImm();
   }
 
-  bool isAbsMem16() const {
-    return isAbsMem() && Mem.ModeSize == 16;
+  bool isAbsMemMode16() const { return isAbsMem() && Mem.ModeSize == 16; }
+
+  bool isDispImm8() const {
+    if (auto *CE = dyn_cast<MCConstantExpr>(getMemDisp()))
+      return isImmSExti64i8Value(CE->getValue());
+    return true;
   }
+
+  bool isAbsMem8() const { return isAbsMem() && isMem8() && isDispImm8(); }
 
   bool isMemUseUpRegs() const override { return UseUpRegs; }
 
@@ -630,8 +627,8 @@ struct X86Operand final : public MCParsedAsmOperand {
 
   void addTILEPairOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    unsigned Reg = getReg();
-    switch (Reg) {
+    MCRegister Reg = getReg();
+    switch (Reg.id()) {
     default:
       llvm_unreachable("Invalid tile register!");
     case X86::TMM0:

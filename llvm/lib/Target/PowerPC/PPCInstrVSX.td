@@ -1659,8 +1659,6 @@ let Predicates = [HasVSX, HasP9Vector] in {
                         RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">;
 
   // Vector Splat Immediate Byte
-  // FIXME: Setting the hasSideEffects flag here to match current behaviour.
-  let hasSideEffects = 1 in
   def XXSPLTIB : X_RD6_IMM8<60, 360, (outs vsrc:$XT), (ins u8imm:$IMM8),
                             "xxspltib $XT, $IMM8", IIC_VecPerm, []>;
 
@@ -3997,6 +3995,8 @@ defm : ScalToVecWPermute<
   (SUBREG_TO_REG (i64 1), (VEXTSH2Ds (LXSIHZX ForceXForm:$src)), sub_64)>;
 
 // Load/convert and convert/store patterns for f16.
+def : Pat<(f128 (extloadf16 ForceXForm:$src)),
+          (f128 (XSCVDPQP (XSCVHPDP (LXSIHZX ForceXForm:$src))))>;
 def : Pat<(f64 (extloadf16 ForceXForm:$src)),
           (f64 (XSCVHPDP (LXSIHZX ForceXForm:$src)))>;
 def : Pat<(truncstoref16 f64:$src, ForceXForm:$dst),
@@ -4005,6 +4005,8 @@ def : Pat<(f32 (extloadf16 ForceXForm:$src)),
           (f32 (COPY_TO_REGCLASS (XSCVHPDP (LXSIHZX ForceXForm:$src)), VSSRC))>;
 def : Pat<(truncstoref16 f32:$src, ForceXForm:$dst),
           (STXSIHX (XSCVDPHP (COPY_TO_REGCLASS $src, VSFRC)), ForceXForm:$dst)>;
+def : Pat<(f128 (f16_to_fp i32:$A)),
+          (f128 (XSCVDPQP (XSCVHPDP (MTVSRWZ $A))))>;
 def : Pat<(f64 (f16_to_fp i32:$A)),
           (f64 (XSCVHPDP (MTVSRWZ $A)))>;
 def : Pat<(f32 (f16_to_fp i32:$A)),

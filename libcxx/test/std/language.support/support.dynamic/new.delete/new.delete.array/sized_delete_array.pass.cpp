@@ -11,12 +11,14 @@
 // UNSUPPORTED: c++03, c++11
 
 // These compiler versions and platforms don't enable sized deallocation by default.
-// ADDITIONAL_COMPILE_FLAGS(clang-17): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(clang-18): -fsized-deallocation
-// ADDITIONAL_COMPILE_FLAGS(apple-clang-15): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(apple-clang-16): -fsized-deallocation
+// ADDITIONAL_COMPILE_FLAGS(apple-clang-17): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(target=x86_64-w64-windows-gnu): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(target=i686-w64-windows-gnu): -fsized-deallocation
+// ADDITIONAL_COMPILE_FLAGS(target=aarch64-w64-windows-gnu): -fsized-deallocation
+// ADDITIONAL_COMPILE_FLAGS(target=armv7-w64-windows-gnu): -fsized-deallocation
+// ADDITIONAL_COMPILE_FLAGS(target=arm64ec-w64-windows-gnu): -fsized-deallocation
 
 // Android clang-r536225 identifies as clang-19.0 but it predates the real
 // LLVM 19.0.0, so it also leaves sized deallocation off by default.

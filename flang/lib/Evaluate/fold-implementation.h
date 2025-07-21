@@ -290,6 +290,9 @@ std::optional<Constant<T>> Folder<T>::ApplyComponent(
             auto *typedExpr{UnwrapExpr<Expr<T>>(expr.value())};
             CHECK(typedExpr);
             array = std::make_unique<ArrayConstructor<T>>(*typedExpr);
+            if constexpr (T::category == TypeCategory::Character) {
+              array->set_LEN(Expr<SubscriptInteger>{value->LEN()});
+            }
           }
           if (subscripts) {
             if (auto element{ApplySubscripts(*value, *subscripts)}) {
@@ -407,6 +410,7 @@ template <typename T> Expr<T> Folder<T>::Folding(Designator<T> &&designator) {
 template <typename T>
 Constant<T> *Folder<T>::Folding(std::optional<ActualArgument> &arg) {
   if (auto *expr{UnwrapExpr<Expr<SomeType>>(arg)}) {
+    *expr = Fold(context_, std::move(*expr));
     if constexpr (T::category != TypeCategory::Derived) {
       if (!UnwrapExpr<Expr<T>>(*expr)) {
         if (const Symbol *
@@ -899,51 +903,66 @@ template <typename T> Expr<T> Folder<T>::RESHAPE(FunctionRef<T> &&funcRef) {
   std::optional<std::vector<ConstantSubscript>> shape{
       GetIntegerVector<ConstantSubscript>(args[1])};
   std::optional<std::vector<int>> order{GetIntegerVector<int>(args[3])};
-  if (!source || !shape || (args[2] && !pad) || (args[3] && !order)) {
-    return Expr<T>{std::move(funcRef)}; // Non-constant arguments
-  } else if (shape.value().size() > common::maxRank) {
-    context_.messages().Say(
-        "Size of 'shape=' argument must not be greater than %d"_err_en_US,
-        common::maxRank);
-  } else if (HasNegativeExtent(shape.value())) {
-    context_.messages().Say(
-        "'shape=' argument must not have a negative extent"_err_en_US);
-  } else {
-    std::optional<uint64_t> optResultElement{TotalElementCount(shape.value())};
-    if (!optResultElement) {
+  std::optional<uint64_t> optResultElement;
+  std::optional<std::vector<int>> dimOrder;
+  bool ok{true};
+  if (shape) {
+    if (shape->size() > common::maxRank) {
       context_.messages().Say(
-          "'shape=' argument has too many elements"_err_en_US);
+          "Size of 'shape=' argument (%zd) must not be greater than %d"_err_en_US,
+          shape->size(), common::maxRank);
+      ok = false;
+    } else if (HasNegativeExtent(*shape)) {
+      context_.messages().Say(
+          "'shape=' argument (%s) must not have a negative extent"_err_en_US,
+          DEREF(args[1]->UnwrapExpr()).AsFortran());
+      ok = false;
     } else {
-      int rank{GetRank(shape.value())};
-      uint64_t resultElements{*optResultElement};
-      std::optional<std::vector<int>> dimOrder;
-      if (order) {
-        dimOrder = ValidateDimensionOrder(rank, *order);
-      }
-      std::vector<int> *dimOrderPtr{dimOrder ? &dimOrder.value() : nullptr};
-      if (order && !dimOrder) {
+      optResultElement = TotalElementCount(*shape);
+      if (!optResultElement) {
         context_.messages().Say(
-            "Invalid 'order=' argument in RESHAPE"_err_en_US);
-      } else if (resultElements > source->size() && (!pad || pad->empty())) {
-        context_.messages().Say(
-            "Too few elements in 'source=' argument and 'pad=' "
-            "argument is not present or has null size"_err_en_US);
-      } else {
-        Constant<T> result{!source->empty() || !pad
-                ? source->Reshape(std::move(shape.value()))
-                : pad->Reshape(std::move(shape.value()))};
-        ConstantSubscripts subscripts{result.lbounds()};
-        auto copied{result.CopyFrom(*source,
-            std::min(static_cast<uint64_t>(source->size()), resultElements),
-            subscripts, dimOrderPtr)};
-        if (copied < resultElements) {
-          CHECK(pad);
-          copied += result.CopyFrom(
-              *pad, resultElements - copied, subscripts, dimOrderPtr);
-        }
-        CHECK(copied == resultElements);
-        return Expr<T>{std::move(result)};
+            "'shape=' argument (%s) specifies an array with too many elements"_err_en_US,
+            DEREF(args[1]->UnwrapExpr()).AsFortran());
+        ok = false;
       }
+    }
+    if (order) {
+      dimOrder = ValidateDimensionOrder(GetRank(*shape), *order);
+      if (!dimOrder) {
+        context_.messages().Say(
+            "Invalid 'order=' argument (%s) in RESHAPE"_err_en_US,
+            DEREF(args[3]->UnwrapExpr()).AsFortran());
+        ok = false;
+      }
+    }
+  }
+  if (!ok) {
+    // convert into an invalid intrinsic procedure call below
+  } else if (!source || !shape || (args[2] && !pad) || (args[3] && !order)) {
+    return Expr<T>{std::move(funcRef)}; // Non-constant arguments
+  } else {
+    uint64_t resultElements{*optResultElement};
+    std::vector<int> *dimOrderPtr{dimOrder ? &dimOrder.value() : nullptr};
+    if (resultElements > source->size() && (!pad || pad->empty())) {
+      context_.messages().Say(
+          "Too few elements in 'source=' argument and 'pad=' "
+          "argument is not present or has null size"_err_en_US);
+      ok = false;
+    } else {
+      Constant<T> result{!source->empty() || !pad
+              ? source->Reshape(std::move(shape.value()))
+              : pad->Reshape(std::move(shape.value()))};
+      ConstantSubscripts subscripts{result.lbounds()};
+      auto copied{result.CopyFrom(*source,
+          std::min(static_cast<uint64_t>(source->size()), resultElements),
+          subscripts, dimOrderPtr)};
+      if (copied < resultElements) {
+        CHECK(pad);
+        copied += result.CopyFrom(
+            *pad, resultElements - copied, subscripts, dimOrderPtr);
+      }
+      CHECK(copied == resultElements);
+      return Expr<T>{std::move(result)};
     }
   }
   // Invalid, prevent re-folding
@@ -1083,6 +1102,8 @@ template <typename T> Expr<T> Folder<T>::TRANSFER(FunctionRef<T> &&funcRef) {
   }
 }
 
+// TODO: Once the backend supports character extremums we could support
+// min/max with non-optional arguments to trees of extremum operations.
 template <typename T>
 Expr<T> FoldMINorMAX(
     FoldingContext &context, FunctionRef<T> &&funcRef, Ordering order) {
@@ -1090,42 +1111,76 @@ Expr<T> FoldMINorMAX(
       T::category == TypeCategory::Unsigned ||
       T::category == TypeCategory::Real ||
       T::category == TypeCategory::Character);
+
+  // Lots of constraints:
+  // - We want Extremum<T> generated by semantics to compare equal to
+  //   Extremum<T> written out to module files as max or min calls.
+  // - Users can also write min/max calls that must also compare equal
+  //   to min/max calls that wind up being written to module files.
+  // - Extremeum<T> is binary and can't currently handle processing
+  //   optional arguments that may show up in 3rd + argument.
+  // - The code below only accepts more than 2 arguments if all the
+  //   arguments are constant (and hence known to be present).
+  // - ConvertExprToHLFIR can't currently handle Extremum<Character>
+  // - Semantics doesn't currently generate Extremum<Character>
+  // The original code did the folding of arguments and the overall extremum
+  // operation in a single pass. This was shorter code-wise, but took me
+  // a while to tease out all the logic and was doing redundant work.
+  // So I split it into two passes:
+  // 1) fold the arguments and check if they are constant,
+  // 2) Decide if we:
+  //    - can constant-fold the min/max operation, or
+  //    - need to generate an extremum anyway,
+  //    and do it if so.
+  //    Otherwise, return the original call.
   auto &args{funcRef.arguments()};
-  bool ok{true};
-  std::optional<Expr<T>> result;
-  Folder<T> folder{context};
-  for (std::optional<ActualArgument> &arg : args) {
-    // Call Folding on all arguments to make operand promotion explicit.
-    if (!folder.Folding(arg)) {
-      // TODO: Lowering can't handle having every FunctionRef for max and min
-      // being converted into Extremum<T>.  That needs fixing.  Until that
-      // is corrected, however, it is important that max and min references
-      // in module files be converted into Extremum<T> even when not constant;
-      // the Extremum<SubscriptInteger> operations created to normalize the
-      // values of array bounds are formatted as max operations in the
-      // declarations in modules, and need to be read back in as such in
-      // order for expression comparison to not produce false inequalities
-      // when checking function results for procedure interface compatibility.
-      if (!context.moduleFileName()) {
-        ok = false;
-      }
+  std::size_t nargs{args.size()};
+  bool allArgsConstant{true};
+  bool extremumAnyway{nargs == 2 && T::category != TypeCategory::Character};
+  // 1a)Fold the first two arguments.
+  {
+    Folder<T> folder{context, /*forOptionalArgument=*/false};
+    if (!folder.Folding(args[0])) {
+      allArgsConstant = false;
     }
-    Expr<SomeType> *argExpr{arg ? arg->UnwrapExpr() : nullptr};
-    if (argExpr) {
-      *argExpr = Fold(context, std::move(*argExpr));
-    }
-    if (Expr<T> * tExpr{UnwrapExpr<Expr<T>>(argExpr)}) {
-      if (result) {
-        result = FoldOperation(
-            context, Extremum<T>{order, std::move(*result), Expr<T>{*tExpr}});
-      } else {
-        result = Expr<T>{*tExpr};
-      }
-    } else {
-      ok = false;
+    if (!folder.Folding(args[1])) {
+      allArgsConstant = false;
     }
   }
-  return ok && result ? std::move(*result) : Expr<T>{std::move(funcRef)};
+  // 1b) Fold any optional arguments.
+  if (nargs > 2) {
+    Folder<T> folder{context, /*forOptionalArgument=*/true};
+    for (std::size_t i{2}; i < nargs; ++i) {
+      if (args[i]) {
+        if (!folder.Folding(args[i])) {
+          allArgsConstant = false;
+        }
+      }
+    }
+  }
+  // 2) If we can fold the result or the call to min/max may compare equal to
+  // an extremum generated by semantics go ahead and convert to an extremum,
+  // and try to fold the result.
+  if (allArgsConstant || extremumAnyway) {
+    // Folding updates the argument expressions in place, no need to call
+    // Fold() on each argument again.
+    if (const auto *resultp{UnwrapExpr<Expr<T>>(args[0])}) {
+      Expr<T> result{*resultp};
+      for (std::size_t i{1}; i < nargs; ++i) {
+        if (const auto *tExpr{UnwrapExpr<Expr<T>>(args[i])}) {
+          result = FoldOperation(
+              context, Extremum<T>{order, std::move(result), *tExpr});
+        } else {
+          // This should never happen, but here is a value to return.
+          return Expr<T>{std::move(funcRef)};
+        }
+      }
+      return result;
+    }
+  }
+  // If we decided to not generate an extremum just return the original call,
+  // with the arguments folded.
+  return Expr<T>{std::move(funcRef)};
 }
 
 // For AMAX0, AMIN0, AMAX1, AMIN1, DMAX1, DMIN1, MAX0, MIN0, MAX1, and MIN1
@@ -1248,6 +1303,12 @@ public:
   explicit ArrayConstructorFolder(FoldingContext &c) : context_{c} {}
 
   Expr<T> FoldArray(ArrayConstructor<T> &&array) {
+    if constexpr (T::category == TypeCategory::Character) {
+      if (const auto *len{array.LEN()}) {
+        charLength_ = ToInt64(Fold(context_, common::Clone(*len)));
+        knownCharLength_ = charLength_.has_value();
+      }
+    }
     // Calls FoldArray(const ArrayConstructorValues<T> &) below
     if (FoldArray(array)) {
       auto n{static_cast<ConstantSubscript>(elements_.size())};
@@ -1255,12 +1316,9 @@ public:
         return Expr<T>{Constant<T>{array.GetType().GetDerivedTypeSpec(),
             std::move(elements_), ConstantSubscripts{n}}};
       } else if constexpr (T::category == TypeCategory::Character) {
-        if (const auto *len{array.LEN()}) {
-          auto length{Fold(context_, common::Clone(*len))};
-          if (std::optional<ConstantSubscript> lengthValue{ToInt64(length)}) {
-            return Expr<T>{Constant<T>{
-                *lengthValue, std::move(elements_), ConstantSubscripts{n}}};
-          }
+        if (charLength_) {
+          return Expr<T>{Constant<T>{
+              *charLength_, std::move(elements_), ConstantSubscripts{n}}};
         }
       } else {
         return Expr<T>{
@@ -1280,6 +1338,11 @@ private:
         do {
           elements_.emplace_back(c->At(index));
         } while (c->IncrementSubscripts(index));
+      }
+      if constexpr (T::category == TypeCategory::Character) {
+        if (!knownCharLength_) {
+          charLength_ = std::max(c->LEN(), charLength_.value_or(-1));
+        }
       }
       return true;
     } else {
@@ -1330,6 +1393,8 @@ private:
 
   FoldingContext &context_;
   std::vector<Scalar<T>> elements_;
+  std::optional<ConstantSubscript> charLength_;
+  bool knownCharLength_{false};
 };
 
 template <typename T>
@@ -1398,7 +1463,8 @@ AsFlatArrayConstructor(const Expr<SomeKind<CAT>> &expr) {
 template <typename T>
 std::optional<Expr<T>> FromArrayConstructor(
     FoldingContext &context, ArrayConstructor<T> &&values, const Shape &shape) {
-  if (auto constShape{AsConstantExtents(context, shape)}) {
+  if (auto constShape{AsConstantExtents(context, shape)};
+      constShape && !HasNegativeExtent(*constShape)) {
     Expr<T> result{Fold(context, Expr<T>{std::move(values)})};
     if (auto *constant{UnwrapConstantValue<T>(result)}) {
       // Elements and shape are both constant.
@@ -1643,8 +1709,12 @@ auto ApplyElementwise(FoldingContext &context,
     -> std::optional<Expr<RESULT>> {
   auto resultLength{ComputeResultLength(operation)};
   auto &leftExpr{operation.left()};
-  leftExpr = Fold(context, std::move(leftExpr));
   auto &rightExpr{operation.right()};
+  if (leftExpr.Rank() != rightExpr.Rank() && leftExpr.Rank() != 0 &&
+      rightExpr.Rank() != 0) {
+    return std::nullopt; // error recovery
+  }
+  leftExpr = Fold(context, std::move(leftExpr));
   rightExpr = Fold(context, std::move(rightExpr));
   if (leftExpr.Rank() > 0) {
     if (std::optional<Shape> leftShape{GetShape(context, leftExpr)}) {
@@ -2122,7 +2192,14 @@ Expr<T> FoldOperation(FoldingContext &context, Power<T> &&x) {
       }
       return Expr<T>{Constant<T>{power.power}};
     } else {
-      if (auto callable{GetHostRuntimeWrapper<T, T, T>("pow")}) {
+      if (folded->first.IsZero()) {
+        if (folded->second.IsZero()) {
+          context.messages().Say(common::UsageWarning::FoldingException,
+              "REAL/COMPLEX 0**0 is not defined"_warn_en_US);
+        } else {
+          return Expr<T>(Constant<T>{folded->first}); // 0. ** nonzero -> 0.
+        }
+      } else if (auto callable{GetHostRuntimeWrapper<T, T, T>("pow")}) {
         return Expr<T>{
             Constant<T>{(*callable)(context, folded->first, folded->second)}};
       } else if (context.languageFeatures().ShouldWarn(

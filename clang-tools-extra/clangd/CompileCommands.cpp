@@ -315,7 +315,7 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
 
   // Check whether the flag exists in the command.
   auto HasExact = [&](llvm::StringRef Flag) {
-    return llvm::any_of(Cmd, [&](llvm::StringRef Arg) { return Arg == Flag; });
+    return llvm::is_contained(Cmd, Flag);
   };
 
   // Check whether the flag appears in the command as a prefix.
@@ -404,8 +404,7 @@ enum DriverMode : unsigned char {
 DriverMode getDriverMode(const std::vector<std::string> &Args) {
   DriverMode Mode = DM_GCC;
   llvm::StringRef Argv0 = Args.front();
-  if (Argv0.ends_with_insensitive(".exe"))
-    Argv0 = Argv0.drop_back(strlen(".exe"));
+  Argv0.consume_back_insensitive(".exe");
   if (Argv0.ends_with_insensitive("cl"))
     Mode = DM_CL;
   for (const llvm::StringRef Arg : Args) {

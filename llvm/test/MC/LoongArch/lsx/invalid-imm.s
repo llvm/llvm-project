@@ -1167,22 +1167,22 @@ vldrepl.h $vr0, $a0, 2048
 
 ## simm12
 vldrepl.b $vr0, $a0, -2049
-# CHECK: :[[#@LINE-1]]:22: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:22: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 
 vldrepl.b $vr0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:22: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:22: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 
 vst $vr0, $a0, -2049
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 
 vst $vr0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 
 vld $vr0, $a0, -2049
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 
 vld $vr0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 
 ## simm13
 vldi $vr0, -4097

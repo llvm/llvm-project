@@ -400,12 +400,12 @@ func.func @multireturn() -> (i64, f32, memref<42x?x10x?xf32>) {
   %0 = call @get_i64() : () -> (i64)
   %1 = call @get_f32() : () -> (f32)
   %2 = call @get_memref() : () -> (memref<42x?x10x?xf32>)
-// CHECK-NEXT:  {{.*}} = llvm.mlir.undef : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
+// CHECK-NEXT:  {{.*}} = llvm.mlir.poison : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
 // CHECK-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
 // CHECK-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
 // CHECK-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
 // CHECK-NEXT:  llvm.return {{.*}} : !llvm.struct<(i64, f32, struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>)>
-// CHECK32-NEXT:  {{.*}} = llvm.mlir.undef : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
+// CHECK32-NEXT:  {{.*}} = llvm.mlir.poison : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
 // CHECK32-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
 // CHECK32-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
 // CHECK32-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm.struct<(i64, f32, struct<(ptr, ptr, i32, array<4 x i32>, array<4 x i32>)>)>
@@ -473,7 +473,7 @@ func.func @floorf(%arg0 : f32) {
   func.return
 }
 
-// Wrap the following tests in a module to control the place where 
+// Wrap the following tests in a module to control the place where
 // `llvm.func @abort()` is produced.
 module {
 // Lowers `cf.assert` to a function call to `abort` if the assertion is violated.
@@ -555,6 +555,14 @@ func.func @index_arg(%arg0: index) -> index {
   return %arg1 : index
 }
 
+// There is no type conversion rule for tf32, so vector<1xtf32> and, therefore,
+// the func op cannot be converted.
+// CHECK: func.func @non_convertible_arg_type({{.*}}: vector<1xtf32>)
+// CHECK:   llvm.return
+func.func @non_convertible_arg_type(%arg: vector<1xtf32>) {
+  return
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%toplevel_module: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %toplevel_module
@@ -568,7 +576,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
         {index_bitwidth = 32, use_opaque_pointers = true}
     } {
-      legal_dialects = ["llvm"], 
+      legal_dialects = ["llvm"],
       partial_conversion
     } : !transform.any_op
     transform.yield

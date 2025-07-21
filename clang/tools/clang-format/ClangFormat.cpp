@@ -88,7 +88,7 @@ static cl::opt<std::string> AssumeFileName(
              "  CSharp: .cs\n"
              "  Java: .java\n"
              "  JavaScript: .js .mjs .cjs .ts\n"
-             "  Json: .json\n"
+             "  Json: .json .ipynb\n"
              "  Objective-C: .m .mm\n"
              "  Proto: .proto .protodevel\n"
              "  TableGen: .td\n"
@@ -240,21 +240,21 @@ static bool fillRanges(MemoryBuffer *Code,
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
   FileManager Files(FileSystemOptions(), InMemoryFileSystem);
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
-      new DiagnosticOptions);
+      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), DiagOpts);
   SourceManager Sources(Diagnostics, Files);
-  FileID ID = createInMemoryFile("<irrelevant>", *Code, Sources, Files,
-                                 InMemoryFileSystem.get());
+  const auto ID = createInMemoryFile("<irrelevant>", *Code, Sources, Files,
+                                     InMemoryFileSystem.get());
   if (!LineRanges.empty()) {
     if (!Offsets.empty() || !Lengths.empty()) {
       errs() << "error: cannot use -lines with -offset/-length\n";
       return true;
     }
 
-    for (unsigned i = 0, e = LineRanges.size(); i < e; ++i) {
+    for (const auto &LineRange : LineRanges) {
       unsigned FromLine, ToLine;
-      if (parseLineRange(LineRanges[i], FromLine, ToLine)) {
+      if (parseLineRange(LineRange, FromLine, ToLine)) {
         errs() << "error: invalid <start line>:<end line> pair\n";
         return true;
       }
@@ -266,12 +266,12 @@ static bool fillRanges(MemoryBuffer *Code,
         errs() << "error: start line should not exceed end line\n";
         return true;
       }
-      SourceLocation Start = Sources.translateLineCol(ID, FromLine, 1);
-      SourceLocation End = Sources.translateLineCol(ID, ToLine, UINT_MAX);
+      const auto Start = Sources.translateLineCol(ID, FromLine, 1);
+      const auto End = Sources.translateLineCol(ID, ToLine, UINT_MAX);
       if (Start.isInvalid() || End.isInvalid())
         return true;
-      unsigned Offset = Sources.getFileOffset(Start);
-      unsigned Length = Sources.getFileOffset(End) - Offset;
+      const auto Offset = Sources.getFileOffset(Start);
+      const auto Length = Sources.getFileOffset(End) - Offset;
       Ranges.push_back(tooling::Range(Offset, Length));
     }
     return false;
@@ -279,32 +279,28 @@ static bool fillRanges(MemoryBuffer *Code,
 
   if (Offsets.empty())
     Offsets.push_back(0);
-  if (Offsets.size() != Lengths.size() &&
-      !(Offsets.size() == 1 && Lengths.empty())) {
+  const bool EmptyLengths = Lengths.empty();
+  unsigned Length = 0;
+  if (Offsets.size() == 1 && EmptyLengths) {
+    Length = Sources.getFileOffset(Sources.getLocForEndOfFile(ID)) - Offsets[0];
+  } else if (Offsets.size() != Lengths.size()) {
     errs() << "error: number of -offset and -length arguments must match.\n";
     return true;
   }
-  for (unsigned i = 0, e = Offsets.size(); i != e; ++i) {
-    if (Offsets[i] >= Code->getBufferSize()) {
-      errs() << "error: offset " << Offsets[i] << " is outside the file\n";
+  for (unsigned I = 0, E = Offsets.size(), CodeSize = Code->getBufferSize();
+       I < E; ++I) {
+    const auto Offset = Offsets[I];
+    if (Offset >= CodeSize) {
+      errs() << "error: offset " << Offset << " is outside the file\n";
       return true;
     }
-    SourceLocation Start =
-        Sources.getLocForStartOfFile(ID).getLocWithOffset(Offsets[i]);
-    SourceLocation End;
-    if (i < Lengths.size()) {
-      if (Offsets[i] + Lengths[i] > Code->getBufferSize()) {
-        errs() << "error: invalid length " << Lengths[i]
-               << ", offset + length (" << Offsets[i] + Lengths[i]
-               << ") is outside the file.\n";
-        return true;
-      }
-      End = Start.getLocWithOffset(Lengths[i]);
-    } else {
-      End = Sources.getLocForEndOfFile(ID);
+    if (!EmptyLengths)
+      Length = Lengths[I];
+    if (Offset + Length > CodeSize) {
+      errs() << "error: invalid length " << Length << ", offset + length ("
+             << Offset + Length << ") is outside the file.\n";
+      return true;
     }
-    unsigned Offset = Sources.getFileOffset(Start);
-    unsigned Length = Sources.getFileOffset(End) - Offset;
     Ranges.push_back(tooling::Range(Offset, Length));
   }
   return false;
@@ -478,10 +474,9 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   }
 
   if (SortIncludes.getNumOccurrences() != 0) {
+    FormatStyle->SortIncludes = {};
     if (SortIncludes)
-      FormatStyle->SortIncludes = FormatStyle::SI_CaseSensitive;
-    else
-      FormatStyle->SortIncludes = FormatStyle::SI_Never;
+      FormatStyle->SortIncludes.Enabled = true;
   }
   unsigned CursorPosition = Cursor;
   Replacements Replaces = sortIncludes(*FormatStyle, Code->getBuffer(), Ranges,
@@ -492,8 +487,8 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   // To format JSON insert a variable to trick the code into thinking its
   // JavaScript.
   if (IsJson && !FormatStyle->DisableFormat) {
-    auto Err = Replaces.add(tooling::Replacement(
-        tooling::Replacement(AssumedFileName, 0, 0, "x = ")));
+    auto Err =
+        Replaces.add(tooling::Replacement(AssumedFileName, 0, 0, "x = "));
     if (Err)
       llvm::errs() << "Bad Json variable insertion\n";
   }
@@ -520,10 +515,10 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
         new llvm::vfs::InMemoryFileSystem);
     FileManager Files(FileSystemOptions(), InMemoryFileSystem);
 
-    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions());
+    DiagnosticOptions DiagOpts;
     ClangFormatDiagConsumer IgnoreDiagnostics;
     DiagnosticsEngine Diagnostics(
-        IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), &*DiagOpts,
+        IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), DiagOpts,
         &IgnoreDiagnostics, false);
     SourceManager Sources(Diagnostics, Files);
     FileID ID = createInMemoryFile(AssumedFileName, *Code, Sources, Files,

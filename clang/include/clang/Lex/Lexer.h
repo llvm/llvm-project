@@ -124,7 +124,7 @@ class Lexer : public PreprocessorLexer {
   //===--------------------------------------------------------------------===//
   // Context that changes as the file is lexed.
   // NOTE: any state that mutates when in raw mode must have save/restore code
-  // in Lexer::isNextPPTokenLParen.
+  // in Lexer::peekNextPPToken.
 
   // BufferPtr - Current pointer into the buffer.  This is the next character
   // to be lexed.
@@ -142,6 +142,9 @@ class Lexer : public PreprocessorLexer {
 
   /// True if this is the first time we're lexing the input file.
   bool IsFirstTimeLexingFile;
+
+  /// True if current lexing token is the first pp-token.
+  bool IsFirstPPToken;
 
   // NewLinePtr - A pointer to new line character '\n' being lexed. For '\r\n',
   // it also points to '\n.'
@@ -554,7 +557,14 @@ public:
   /// Returns the next token, or std::nullopt if the location is inside a macro.
   static std::optional<Token> findNextToken(SourceLocation Loc,
                                             const SourceManager &SM,
-                                            const LangOptions &LangOpts);
+                                            const LangOptions &LangOpts,
+                                            bool IncludeComments = false);
+
+  /// Finds the token that comes before the given location.
+  static std::optional<Token> findPreviousToken(SourceLocation Loc,
+                                                const SourceManager &SM,
+                                                const LangOptions &LangOpts,
+                                                bool IncludeComments);
 
   /// Checks that the given token is the first token that occurs after
   /// the given location (this excludes comments and whitespace). Returns the
@@ -574,6 +584,17 @@ public:
   /// Checks whether new line pointed by Str is preceded by escape
   /// sequence.
   static bool isNewLineEscaped(const char *BufferStart, const char *Str);
+
+  /// getEscapedNewLineSize - Return the size of the specified escaped newline,
+  /// or 0 if it is not an escaped newline. P[-1] is known to be a "\" on entry
+  /// to this function.
+  static unsigned getEscapedNewLineSize(const char *P);
+
+  /// Diagnose use of a delimited or named escape sequence.
+  static void DiagnoseDelimitedOrNamedEscapeSequence(SourceLocation Loc,
+                                                     bool Named,
+                                                     const LangOptions &Opts,
+                                                     DiagnosticsEngine &Diags);
 
   /// Represents a char and the number of bytes parsed to produce it.
   struct SizedChar {
@@ -629,10 +650,10 @@ private:
     BufferPtr = TokEnd;
   }
 
-  /// isNextPPTokenLParen - Return 1 if the next unexpanded token will return a
-  /// tok::l_paren token, 0 if it is something else and 2 if there are no more
-  /// tokens in the buffer controlled by this lexer.
-  unsigned isNextPPTokenLParen();
+  /// peekNextPPToken - Return std::nullopt if there are no more tokens in the
+  /// buffer controlled by this lexer, otherwise return the next unexpanded
+  /// token.
+  std::optional<Token> peekNextPPToken();
 
   //===--------------------------------------------------------------------===//
   // Lexer character reading interfaces.
@@ -708,11 +729,6 @@ private:
   /// getCharAndSizeSlow - Handle the slow/uncommon case of the getCharAndSize
   /// method.
   SizedChar getCharAndSizeSlow(const char *Ptr, Token *Tok = nullptr);
-
-  /// getEscapedNewLineSize - Return the size of the specified escaped newline,
-  /// or 0 if it is not an escaped newline. P[-1] is known to be a "\" on entry
-  /// to this function.
-  static unsigned getEscapedNewLineSize(const char *P);
 
   /// SkipEscapedNewLines - If P points to an escaped newline (or a series of
   /// them), skip over them and return the first non-escaped-newline found,

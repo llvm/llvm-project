@@ -558,7 +558,7 @@ defm SHUFFLE :
 // Shuffles after custom lowering
 def wasm_shuffle_t : SDTypeProfile<1, 18, []>;
 def wasm_shuffle : SDNode<"WebAssemblyISD::SHUFFLE", wasm_shuffle_t>;
-foreach vec = StdVecs in {
+foreach vec = AllVecs in {
 // The @llvm.wasm.shuffle intrinsic has immediate arguments that become TargetConstants.
 def : Pat<(vec.vt (wasm_shuffle (vec.vt V128:$x), (vec.vt V128:$y),
             (i32 timm:$m0), (i32 timm:$m1),
@@ -1147,11 +1147,15 @@ def : Pat<(wasm_shr_u
 }
 
 // Widening dot product: i32x4.dot_i16x8_s
+def dot_t : SDTypeProfile<1, 2, [SDTCisVT<0, v4i32>, SDTCisVT<1, v8i16>, SDTCisVT<2, v8i16>]>;
+def wasm_dot : SDNode<"WebAssemblyISD::DOT", dot_t>;
 let isCommutable = 1 in
 defm DOT : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs), (outs), (ins),
                   [(set V128:$dst, (int_wasm_dot V128:$lhs, V128:$rhs))],
                   "i32x4.dot_i16x8_s\t$dst, $lhs, $rhs", "i32x4.dot_i16x8_s",
                   186>;
+def : Pat<(wasm_dot V128:$lhs, V128:$rhs),
+          (DOT $lhs, $rhs)>;
 
 // Extending multiplication: extmul_{low,high}_P, extmul_high
 def extend_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
@@ -1532,6 +1536,10 @@ multiclass SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS, list<Predicate>
              (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)))],
            vec.prefix#".relaxed_nmadd\t$dst, $a, $b, $c",
            vec.prefix#".relaxed_nmadd", simdopS, reqs>;
+
+  def : Pat<(fadd_contract (vec.vt V128:$a), (fmul_contract (vec.vt V128:$b), (vec.vt V128:$c))),
+             (!cast<Instruction>("MADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<[HasRelaxedSIMD]>;
+
 }
 
 defm "" : SIMDMADD<F32x4, 0x105, 0x106, [HasRelaxedSIMD]>;

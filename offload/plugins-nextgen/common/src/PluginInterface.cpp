@@ -42,6 +42,7 @@ using namespace llvm;
 using namespace omp;
 using namespace target;
 using namespace plugin;
+using namespace error;
 
 // TODO: Fix any thread safety issues for multi-threaded kernel recording.
 namespace llvm::omp::target::plugin {
@@ -94,7 +95,8 @@ private:
       return Err;
 
     if (isReplaying() && VAddr != MemoryStart) {
-      return Plugin::error("Record-Replay cannot assign the"
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "record-Replay cannot assign the"
                            "requested recorded address (%p, %p)",
                            VAddr, MemoryStart);
     }
@@ -121,7 +123,8 @@ private:
         break;
     }
     if (!MemoryStart)
-      return Plugin::error("Allocating record/replay memory");
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "allocating record/replay memory");
 
     if (VAddr && VAddr != MemoryStart)
       MemoryOffset = uintptr_t(VAddr) - uintptr_t(MemoryStart);
@@ -166,7 +169,8 @@ private:
 
     uint64_t DevMemSize;
     if (Device->getDeviceMemorySize(DevMemSize))
-      return Plugin::error("Cannot determine Device Memory Size");
+      return Plugin::error(ErrorCode::UNKNOWN,
+                           "cannot determine Device Memory Size");
 
     return preAllocateHeuristic(DevMemSize, DeviceMemorySize, ReqVAddr);
   }
@@ -376,24 +380,25 @@ setupIndirectCallTable(GenericPluginTy &Plugin, GenericDeviceTy &Device,
                        DeviceImageTy &Image) {
   GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
 
-  llvm::ArrayRef<__tgt_offload_entry> Entries(Image.getTgtImage()->EntriesBegin,
-                                              Image.getTgtImage()->EntriesEnd);
+  llvm::ArrayRef<llvm::offloading::EntryTy> Entries(
+      Image.getTgtImage()->EntriesBegin, Image.getTgtImage()->EntriesEnd);
   llvm::SmallVector<std::pair<void *, void *>> IndirectCallTable;
   for (const auto &Entry : Entries) {
-    if (Entry.size == 0 || !(Entry.flags & OMP_DECLARE_TARGET_INDIRECT))
+    if (Entry.Kind != object::OffloadKind::OFK_OpenMP || Entry.Size == 0 ||
+        !(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT))
       continue;
 
-    assert(Entry.size == sizeof(void *) && "Global not a function pointer?");
+    assert(Entry.Size == sizeof(void *) && "Global not a function pointer?");
     auto &[HstPtr, DevPtr] = IndirectCallTable.emplace_back();
 
-    GlobalTy DeviceGlobal(Entry.name, Entry.size);
+    GlobalTy DeviceGlobal(Entry.SymbolName, Entry.Size);
     if (auto Err =
             Handler.getGlobalMetadataFromDevice(Device, Image, DeviceGlobal))
       return std::move(Err);
 
-    HstPtr = Entry.addr;
+    HstPtr = Entry.Address;
     if (auto Err = Device.dataRetrieve(&DevPtr, DeviceGlobal.getPtr(),
-                                       Entry.size, nullptr))
+                                       Entry.Size, nullptr))
       return std::move(Err);
   }
 
@@ -439,18 +444,19 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
   ImagePtr = &Image;
 
   // Retrieve kernel environment object for the kernel.
-  GlobalTy KernelEnv(std::string(Name) + "_kernel_environment",
-                     sizeof(KernelEnvironment), &KernelEnvironment);
+  std::string EnvironmentName = std::string(Name) + "_kernel_environment";
   GenericGlobalHandlerTy &GHandler = GenericDevice.Plugin.getGlobalHandler();
-  if (auto Err =
-          GHandler.readGlobalFromImage(GenericDevice, *ImagePtr, KernelEnv)) {
-    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
-    DP("Failed to read kernel environment for '%s': %s\n"
-       "Using default SPMD (2) execution mode\n",
-       Name, ErrStr.data());
-    assert(KernelEnvironment.Configuration.ReductionDataSize == 0 &&
-           "Default initialization failed.");
-    IsBareKernel = true;
+  if (GHandler.isSymbolInImage(GenericDevice, Image, EnvironmentName)) {
+    GlobalTy KernelEnv(EnvironmentName, sizeof(KernelEnvironment),
+                       &KernelEnvironment);
+    if (auto Err =
+            GHandler.readGlobalFromImage(GenericDevice, *ImagePtr, KernelEnv))
+      return Err;
+  } else {
+    KernelEnvironment = KernelEnvironmentTy{};
+    DP("Failed to read kernel environment for '%s' Using default Bare (0) "
+       "execution mode\n",
+       getName());
   }
 
   // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max;
@@ -572,7 +578,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                             KernelArgs.ThreadLimit[2]};
   uint32_t NumBlocks[3] = {KernelArgs.NumTeams[0], KernelArgs.NumTeams[1],
                            KernelArgs.NumTeams[2]};
-  if (!IsBareKernel) {
+  if (!isBareMode()) {
     NumThreads[0] = getNumThreads(GenericDevice, NumThreads);
     NumBlocks[0] = getNumBlocks(GenericDevice, NumBlocks, KernelArgs.Tripcount,
                                 NumThreads[0], KernelArgs.ThreadLimit[0] > 0);
@@ -626,7 +632,7 @@ KernelLaunchParamsTy GenericKernelTy::prepareArgs(
 
 uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,
                                         uint32_t ThreadLimitClause[3]) const {
-  assert(!IsBareKernel && "bare kernel should not call this function");
+  assert(!isBareMode() && "bare kernel should not call this function");
 
   assert(ThreadLimitClause[1] == 1 && ThreadLimitClause[2] == 1 &&
          "Multi dimensional launch not supported yet.");
@@ -644,7 +650,7 @@ uint32_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
                                        uint64_t LoopTripCount,
                                        uint32_t &NumThreads,
                                        bool IsNumThreadsFromUser) const {
-  assert(!IsBareKernel && "bare kernel should not call this function");
+  assert(!isBareMode() && "bare kernel should not call this function");
 
   assert(NumTeamsClause[1] == 1 && NumTeamsClause[2] == 1 &&
          "Multi dimensional launch not supported yet.");
@@ -738,7 +744,7 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
       OMPX_SharedMemorySize("LIBOMPTARGET_SHARED_MEMORY_SIZE"),
       // Do not initialize the following two envars since they depend on the
       // device initialization. These cannot be consulted until the device is
-      // initialized correctly. We intialize them in GenericDeviceTy::init().
+      // initialized correctly. We initialize them in GenericDeviceTy::init().
       OMPX_TargetStackSize(), OMPX_TargetHeapSize(),
       // By default, the initial number of streams and events is 1.
       OMPX_InitialNumStreams("LIBOMPTARGET_NUM_INITIAL_STREAMS", 1),
@@ -815,26 +821,49 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   return Plugin::success();
 }
 
-Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
-  for (DeviceImageTy *Image : LoadedImages)
-    if (auto Err = callGlobalDestructors(Plugin, *Image))
-      return Err;
+Error GenericDeviceTy::unloadBinary(DeviceImageTy *Image) {
+  if (auto Err = callGlobalDestructors(Plugin, *Image))
+    return Err;
 
   if (OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::AllocationTracker)) {
     GenericGlobalHandlerTy &GHandler = Plugin.getGlobalHandler();
-    for (auto *Image : LoadedImages) {
-      DeviceMemoryPoolTrackingTy ImageDeviceMemoryPoolTracking = {0, 0, ~0U, 0};
-      GlobalTy TrackerGlobal("__omp_rtl_device_memory_pool_tracker",
-                             sizeof(DeviceMemoryPoolTrackingTy),
-                             &ImageDeviceMemoryPoolTracking);
-      if (auto Err =
-              GHandler.readGlobalFromDevice(*this, *Image, TrackerGlobal)) {
-        consumeError(std::move(Err));
-        continue;
-      }
-      DeviceMemoryPoolTracking.combine(ImageDeviceMemoryPoolTracking);
+    DeviceMemoryPoolTrackingTy ImageDeviceMemoryPoolTracking = {0, 0, ~0U, 0};
+    GlobalTy TrackerGlobal("__omp_rtl_device_memory_pool_tracker",
+                           sizeof(DeviceMemoryPoolTrackingTy),
+                           &ImageDeviceMemoryPoolTracking);
+    if (auto Err =
+            GHandler.readGlobalFromDevice(*this, *Image, TrackerGlobal)) {
+      consumeError(std::move(Err));
     }
+    DeviceMemoryPoolTracking.combine(ImageDeviceMemoryPoolTracking);
+  }
 
+  GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
+  auto ProfOrErr = Handler.readProfilingGlobals(*this, *Image);
+  if (!ProfOrErr)
+    return ProfOrErr.takeError();
+
+  if (!ProfOrErr->empty()) {
+    // Dump out profdata
+    if ((OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::PGODump)) ==
+        uint32_t(DeviceDebugKind::PGODump))
+      ProfOrErr->dump();
+
+    // Write data to profiling file
+    if (auto Err = ProfOrErr->write())
+      return Err;
+  }
+
+  return unloadBinaryImpl(Image);
+}
+
+Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
+  for (auto &I : LoadedImages)
+    if (auto Err = unloadBinary(I))
+      return Err;
+  LoadedImages.clear();
+
+  if (OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::AllocationTracker)) {
     // TODO: Write this by default into a file.
     printf("\n\n|-----------------------\n"
            "| Device memory tracker:\n"
@@ -848,20 +877,6 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
            DeviceMemoryPoolTracking.AllocationTotal,
            DeviceMemoryPoolTracking.AllocationMin,
            DeviceMemoryPoolTracking.AllocationMax);
-  }
-
-  for (auto *Image : LoadedImages) {
-    GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
-    if (!Handler.hasProfilingGlobals(*this, *Image))
-      continue;
-
-    GPUProfGlobals profdata;
-    auto ProfOrErr = Handler.readProfilingGlobals(*this, *Image);
-    if (!ProfOrErr)
-      return ProfOrErr.takeError();
-
-    // TODO: write data to profiling file
-    ProfOrErr->dump();
   }
 
   // Delete the memory manager before deinitializing the device. Otherwise,
@@ -898,8 +913,9 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   if (!PostJITImageOrErr) {
     auto Err = PostJITImageOrErr.takeError();
     REPORT("Failure to jit IR image %p on device %d: %s\n", InputTgtImage,
-           DeviceId, toString(std::move(Err)).data());
-    return nullptr;
+           DeviceId, toStringWithoutConsuming(Err).data());
+    return Plugin::error(ErrorCode::COMPILE_FAILURE, std::move(Err),
+                         "failure to jit IR image");
   }
 
   // Load the binary and allocate the image object. Use the next available id
@@ -1040,7 +1056,7 @@ Error GenericDeviceTy::setupDeviceMemoryPool(GenericPluginTy &Plugin,
 
 Error GenericDeviceTy::setupRPCServer(GenericPluginTy &Plugin,
                                       DeviceImageTy &Image) {
-  // The plugin either does not need an RPC server or it is unavailible.
+  // The plugin either does not need an RPC server or it is unavailable.
   if (!shouldSetupRPCServer())
     return Plugin::success();
 
@@ -1057,6 +1073,9 @@ Error GenericDeviceTy::setupRPCServer(GenericPluginTy &Plugin,
   if (auto Err = Server.initDevice(*this, Plugin.getGlobalHandler(), Image))
     return Err;
 
+  if (auto Err = Server.startThread())
+    return Err;
+
   RPCServer = &Server;
   DP("Running an RPC server on device %d\n", getDeviceId());
   return Plugin::success();
@@ -1067,7 +1086,8 @@ Error PinnedAllocationMapTy::insertEntry(void *HstPtr, void *DevAccessiblePtr,
   // Insert the new entry into the map.
   auto Res = Allocs.insert({HstPtr, DevAccessiblePtr, Size, ExternallyLocked});
   if (!Res.second)
-    return Plugin::error("Cannot insert locked buffer entry");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "cannot insert locked buffer entry");
 
   // Check whether the next entry overlaps with the inserted entry.
   auto It = std::next(Res.first);
@@ -1076,7 +1096,8 @@ Error PinnedAllocationMapTy::insertEntry(void *HstPtr, void *DevAccessiblePtr,
 
   const EntryTy *NextEntry = &(*It);
   if (intersects(NextEntry->HstPtr, NextEntry->Size, HstPtr, Size))
-    return Plugin::error("Partial overlapping not allowed in locked buffers");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "partial overlapping not allowed in locked buffers");
 
   return Plugin::success();
 }
@@ -1087,14 +1108,16 @@ Error PinnedAllocationMapTy::eraseEntry(const EntryTy &Entry) {
   // the code more difficult to read.
   size_t Erased = Allocs.erase({Entry.HstPtr});
   if (!Erased)
-    return Plugin::error("Cannot erase locked buffer entry");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "cannot erase locked buffer entry");
   return Plugin::success();
 }
 
 Error PinnedAllocationMapTy::registerEntryUse(const EntryTy &Entry,
                                               void *HstPtr, size_t Size) {
   if (!contains(Entry.HstPtr, Entry.Size, HstPtr, Size))
-    return Plugin::error("Partial overlapping not allowed in locked buffers");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "partial overlapping not allowed in locked buffers");
 
   ++Entry.References;
   return Plugin::success();
@@ -1102,7 +1125,8 @@ Error PinnedAllocationMapTy::registerEntryUse(const EntryTy &Entry,
 
 Expected<bool> PinnedAllocationMapTy::unregisterEntryUse(const EntryTy &Entry) {
   if (Entry.References == 0)
-    return Plugin::error("Invalid number of references");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "invalid number of references");
 
   // Return whether this was the last user.
   return (--Entry.References == 0);
@@ -1120,7 +1144,8 @@ Error PinnedAllocationMapTy::registerHostBuffer(void *HstPtr,
   // No pinned allocation should intersect.
   const EntryTy *Entry = findIntersecting(HstPtr);
   if (Entry)
-    return Plugin::error("Cannot insert entry due to an existing one");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "cannot insert entry due to an existing one");
 
   // Now insert the new entry.
   return insertEntry(HstPtr, DevAccessiblePtr, Size);
@@ -1133,11 +1158,13 @@ Error PinnedAllocationMapTy::unregisterHostBuffer(void *HstPtr) {
 
   const EntryTy *Entry = findIntersecting(HstPtr);
   if (!Entry)
-    return Plugin::error("Cannot find locked buffer");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "cannot find locked buffer");
 
   // The address in the entry should be the same we are unregistering.
   if (Entry->HstPtr != HstPtr)
-    return Plugin::error("Unexpected host pointer in locked buffer entry");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "unexpected host pointer in locked buffer entry");
 
   // Unregister from the entry.
   auto LastUseOrErr = unregisterEntryUse(*Entry);
@@ -1146,7 +1173,8 @@ Error PinnedAllocationMapTy::unregisterHostBuffer(void *HstPtr) {
 
   // There should be no other references to the pinned allocation.
   if (!(*LastUseOrErr))
-    return Plugin::error("The locked buffer is still being used");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "the locked buffer is still being used");
 
   // Erase the entry from the map.
   return eraseEntry(*Entry);
@@ -1192,7 +1220,8 @@ Error PinnedAllocationMapTy::unlockHostBuffer(void *HstPtr) {
 
   const EntryTy *Entry = findIntersecting(HstPtr);
   if (!Entry)
-    return Plugin::error("Cannot find locked buffer");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "cannot find locked buffer");
 
   // Unregister from the locked buffer. No need to do anything if there are
   // others using the allocation.
@@ -1278,7 +1307,8 @@ Error PinnedAllocationMapTy::unlockUnmappedHostBuffer(void *HstPtr) {
 
   // No entry, but the automatic locking is enabled, so this is an error.
   if (!Entry)
-    return Plugin::error("Locked buffer not found");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "locked buffer not found");
 
   // There is entry, so unregister a user and check whether it was the last one.
   auto LastUseOrErr = unregisterEntryUse(*Entry);
@@ -1301,7 +1331,8 @@ Error PinnedAllocationMapTy::unlockUnmappedHostBuffer(void *HstPtr) {
 
 Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo) {
   if (!AsyncInfo || !AsyncInfo->Queue)
-    return Plugin::error("Invalid async info queue");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "invalid async info queue");
 
   if (auto Err = synchronizeImpl(*AsyncInfo))
     return Err;
@@ -1316,22 +1347,26 @@ Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo) {
 
 Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo) {
   if (!AsyncInfo || !AsyncInfo->Queue)
-    return Plugin::error("Invalid async info queue");
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "invalid async info queue");
 
   return queryAsyncImpl(*AsyncInfo);
 }
 
 Error GenericDeviceTy::memoryVAMap(void **Addr, void *VAddr, size_t *RSize) {
-  return Plugin::error("Device does not suppport VA Management");
+  return Plugin::error(ErrorCode::UNSUPPORTED,
+                       "device does not support VA Management");
 }
 
 Error GenericDeviceTy::memoryVAUnMap(void *VAddr, size_t Size) {
-  return Plugin::error("Device does not suppport VA Management");
+  return Plugin::error(ErrorCode::UNSUPPORTED,
+                       "device does not support VA Management");
 }
 
 Error GenericDeviceTy::getDeviceMemorySize(uint64_t &DSize) {
   return Plugin::error(
-      "Mising getDeviceMemorySize impelmentation (required by RR-heuristic");
+      ErrorCode::UNIMPLEMENTED,
+      "missing getDeviceMemorySize implementation (required by RR-heuristic");
 }
 
 Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
@@ -1348,7 +1383,8 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
     if (MemoryManager) {
       Alloc = MemoryManager->allocate(Size, HostPtr);
       if (!Alloc)
-        return Plugin::error("Failed to allocate from memory manager");
+        return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
+                             "failed to allocate from memory manager");
       break;
     }
     [[fallthrough]];
@@ -1356,13 +1392,15 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
   case TARGET_ALLOC_SHARED:
     Alloc = allocate(Size, HostPtr, Kind);
     if (!Alloc)
-      return Plugin::error("Failed to allocate from device allocator");
+      return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
+                           "failed to allocate from device allocator");
   }
 
   // Report error if the memory manager or the device allocator did not return
   // any memory buffer.
   if (!Alloc)
-    return Plugin::error("Invalid target data allocation kind or requested "
+    return Plugin::error(ErrorCode::UNIMPLEMENTED,
+                         "invalid target data allocation kind or requested "
                          "allocator not implemented yet");
 
   // Register allocated buffer as pinned memory if the type is host memory.
@@ -1437,7 +1475,8 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
       Res = MemoryManager->free(TgtPtr);
       if (Res)
         return Plugin::error(
-            "Failure to deallocate device pointer %p via memory manager",
+            ErrorCode::OUT_OF_RESOURCES,
+            "failure to deallocate device pointer %p via memory manager",
             TgtPtr);
       break;
     }
@@ -1447,7 +1486,8 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
     Res = free(TgtPtr, Kind);
     if (Res)
       return Plugin::error(
-          "Failure to deallocate device pointer %p via device deallocator",
+          ErrorCode::UNKNOWN,
+          "failure to deallocate device pointer %p via device deallocator",
           TgtPtr);
   }
 
@@ -1543,14 +1583,14 @@ Error GenericDeviceTy::initDeviceInfo(__tgt_device_info *DeviceInfo) {
 }
 
 Error GenericDeviceTy::printInfo() {
-  InfoQueueTy InfoQueue;
+  auto Info = obtainInfoImpl();
 
   // Get the vendor-specific info entries describing the device properties.
-  if (auto Err = obtainInfoImpl(InfoQueue))
+  if (auto Err = Info.takeError())
     return Err;
 
   // Print all info entries.
-  InfoQueue.print();
+  Info->print();
 
   return Plugin::success();
 }
@@ -1630,8 +1670,11 @@ Error GenericPluginTy::deinit() {
   if (GlobalHandler)
     delete GlobalHandler;
 
-  if (RPCServer)
+  if (RPCServer) {
+    if (Error Err = RPCServer->shutDown())
+      return Err;
     delete RPCServer;
+  }
 
   if (RecordReplay)
     delete RecordReplay;
@@ -1698,7 +1741,7 @@ Expected<bool> GenericPluginTy::checkBitcodeImage(StringRef Image) const {
     return ModuleOrErr.takeError();
   Module &M = **ModuleOrErr;
 
-  return Triple(M.getTargetTriple()).getArch() == getTripleArch();
+  return M.getTargetTriple().getArch() == getTripleArch();
 }
 
 int32_t GenericPluginTy::is_initialized() const { return Initialized; }
@@ -1807,7 +1850,7 @@ int32_t GenericPluginTy::initialize_record_replay(int32_t DeviceId,
 
   if (auto Err = RecordReplay->init(&Device, MemorySize, VAddr, Status,
                                     SaveOutput, ReqPtrArgOffset)) {
-    REPORT("WARNING RR did not intialize RR-properly with %lu bytes"
+    REPORT("WARNING RR did not initialize RR-properly with %lu bytes"
            "(Error: %s)\n",
            MemorySize, toString(std::move(Err)).data());
     RecordReplay->setStatus(RecordReplayTy::RRStatusTy::RRDeactivated);
@@ -1954,7 +1997,7 @@ int32_t GenericPluginTy::data_retrieve_async(int32_t DeviceId, void *HstPtr,
   auto Err =
       getDevice(DeviceId).dataRetrieve(HstPtr, TgtPtr, Size, AsyncInfoPtr);
   if (Err) {
-    REPORT("Faliure to copy data from device to host. Pointers: host "
+    REPORT("Failure to copy data from device to host. Pointers: host "
            "= " DPxMOD ", device = " DPxMOD ", size = %" PRId64 ": %s\n",
            DPxPTR(HstPtr), DPxPTR(TgtPtr), Size,
            toString(std::move(Err)).data());

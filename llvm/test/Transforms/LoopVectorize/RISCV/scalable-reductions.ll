@@ -1,5 +1,5 @@
 ; RUN: opt < %s -passes=loop-vectorize -scalable-vectorization=on \
-; RUN:   -riscv-v-vector-bits-min=128 -riscv-v-vector-bits-max=128 \
+; RUN:   -riscv-v-vector-bits-max=128 \
 ; RUN:   -pass-remarks=loop-vectorize -pass-remarks-analysis=loop-vectorize \
 ; RUN:   -pass-remarks-missed=loop-vectorize -mtriple riscv64-linux-gnu \
 ; RUN:   -force-target-max-vector-interleave=2 -mattr=+v,+f -S 2>%t \
@@ -344,6 +344,70 @@ for.end:
   ret float %.sroa.speculated
 }
 
+; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
+define half @fmin_fast_half_zvfhmin(ptr noalias nocapture readonly %a, i64 %n) #1 {
+; CHECK-LABEL: @fmin_fast
+; CHECK: vector.body:
+; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x half>
+; CHECK: %[[LOAD2:.*]] = load <vscale x 8 x half>
+; CHECK: %[[FCMP1:.*]] = fcmp olt <vscale x 8 x half> %[[LOAD1]]
+; CHECK: %[[FCMP2:.*]] = fcmp olt <vscale x 8 x half> %[[LOAD2]]
+; CHECK: %[[SEL1:.*]] = select <vscale x 8 x i1> %[[FCMP1]], <vscale x 8 x half> %[[LOAD1]]
+; CHECK: %[[SEL2:.*]] = select <vscale x 8 x i1> %[[FCMP2]], <vscale x 8 x half> %[[LOAD2]]
+; CHECK: middle.block:
+; CHECK: %[[FCMP:.*]] = fcmp olt <vscale x 8 x half> %[[SEL1]], %[[SEL2]]
+; CHECK-NEXT: %[[SEL:.*]] = select <vscale x 8 x i1> %[[FCMP]], <vscale x 8 x half> %[[SEL1]], <vscale x 8 x half> %[[SEL2]]
+; CHECK-NEXT: call half @llvm.vector.reduce.fmin.nxv8f16(<vscale x 8 x half> %[[SEL]])
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %sum.07 = phi half [ 0.000000e+00, %entry ], [ %.sroa.speculated, %for.body ]
+  %arrayidx = getelementptr inbounds half, ptr %a, i64 %iv
+  %0 = load half, ptr %arrayidx, align 4
+  %cmp.i = fcmp olt half %0, %sum.07
+  %.sroa.speculated = select i1 %cmp.i, half %0, half %sum.07
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
+
+for.end:
+  ret half %.sroa.speculated
+}
+
+; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
+define bfloat @fmin_fast_bfloat_zvfbfmin(ptr noalias nocapture readonly %a, i64 %n) #2 {
+; CHECK-LABEL: @fmin_fast
+; CHECK: vector.body:
+; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x bfloat>
+; CHECK: %[[LOAD2:.*]] = load <vscale x 8 x bfloat>
+; CHECK: %[[FCMP1:.*]] = fcmp olt <vscale x 8 x bfloat> %[[LOAD1]]
+; CHECK: %[[FCMP2:.*]] = fcmp olt <vscale x 8 x bfloat> %[[LOAD2]]
+; CHECK: %[[SEL1:.*]] = select <vscale x 8 x i1> %[[FCMP1]], <vscale x 8 x bfloat> %[[LOAD1]]
+; CHECK: %[[SEL2:.*]] = select <vscale x 8 x i1> %[[FCMP2]], <vscale x 8 x bfloat> %[[LOAD2]]
+; CHECK: middle.block:
+; CHECK: %[[FCMP:.*]] = fcmp olt <vscale x 8 x bfloat> %[[SEL1]], %[[SEL2]]
+; CHECK-NEXT: %[[SEL:.*]] = select <vscale x 8 x i1> %[[FCMP]], <vscale x 8 x bfloat> %[[SEL1]], <vscale x 8 x bfloat> %[[SEL2]]
+; CHECK-NEXT: call bfloat @llvm.vector.reduce.fmin.nxv8bf16(<vscale x 8 x bfloat> %[[SEL]])
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %sum.07 = phi bfloat [ 0.000000e+00, %entry ], [ %.sroa.speculated, %for.body ]
+  %arrayidx = getelementptr inbounds bfloat, ptr %a, i64 %iv
+  %0 = load bfloat, ptr %arrayidx, align 4
+  %cmp.i = fcmp olt bfloat %0, %sum.07
+  %.sroa.speculated = select i1 %cmp.i, bfloat %0, bfloat %sum.07
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
+
+for.end:
+  ret bfloat %.sroa.speculated
+}
+
 ; FMAX (FAST)
 
 ; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
@@ -376,6 +440,70 @@ for.body:
 
 for.end:
   ret float %.sroa.speculated
+}
+
+; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
+define half @fmax_fast_half_zvfhmin(ptr noalias nocapture readonly %a, i64 %n) #1 {
+; CHECK-LABEL: @fmax_fast
+; CHECK: vector.body:
+; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x half>
+; CHECK: %[[LOAD2:.*]] = load <vscale x 8 x half>
+; CHECK: %[[FCMP1:.*]] = fcmp fast ogt <vscale x 8 x half> %[[LOAD1]]
+; CHECK: %[[FCMP2:.*]] = fcmp fast ogt <vscale x 8 x half> %[[LOAD2]]
+; CHECK: %[[SEL1:.*]] = select <vscale x 8 x i1> %[[FCMP1]], <vscale x 8 x half> %[[LOAD1]]
+; CHECK: %[[SEL2:.*]] = select <vscale x 8 x i1> %[[FCMP2]], <vscale x 8 x half> %[[LOAD2]]
+; CHECK: middle.block:
+; CHECK: %[[FCMP:.*]] = fcmp fast ogt <vscale x 8 x half> %[[SEL1]], %[[SEL2]]
+; CHECK-NEXT: %[[SEL:.*]] = select fast <vscale x 8 x i1> %[[FCMP]], <vscale x 8 x half> %[[SEL1]], <vscale x 8 x half> %[[SEL2]]
+; CHECK-NEXT: call fast half @llvm.vector.reduce.fmax.nxv8f16(<vscale x 8 x half> %[[SEL]])
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %sum.07 = phi half [ 0.000000e+00, %entry ], [ %.sroa.speculated, %for.body ]
+  %arrayidx = getelementptr inbounds half, ptr %a, i64 %iv
+  %0 = load half, ptr %arrayidx, align 4
+  %cmp.i = fcmp fast ogt half %0, %sum.07
+  %.sroa.speculated = select i1 %cmp.i, half %0, half %sum.07
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
+
+for.end:
+  ret half %.sroa.speculated
+}
+
+; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
+define bfloat @fmax_fast_bfloat_zvfbfmin(ptr noalias nocapture readonly %a, i64 %n) #2 {
+; CHECK-LABEL: @fmax_fast
+; CHECK: vector.body:
+; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x bfloat>
+; CHECK: %[[LOAD2:.*]] = load <vscale x 8 x bfloat>
+; CHECK: %[[FCMP1:.*]] = fcmp fast ogt <vscale x 8 x bfloat> %[[LOAD1]]
+; CHECK: %[[FCMP2:.*]] = fcmp fast ogt <vscale x 8 x bfloat> %[[LOAD2]]
+; CHECK: %[[SEL1:.*]] = select <vscale x 8 x i1> %[[FCMP1]], <vscale x 8 x bfloat> %[[LOAD1]]
+; CHECK: %[[SEL2:.*]] = select <vscale x 8 x i1> %[[FCMP2]], <vscale x 8 x bfloat> %[[LOAD2]]
+; CHECK: middle.block:
+; CHECK: %[[FCMP:.*]] = fcmp fast ogt <vscale x 8 x bfloat> %[[SEL1]], %[[SEL2]]
+; CHECK-NEXT: %[[SEL:.*]] = select fast <vscale x 8 x i1> %[[FCMP]], <vscale x 8 x bfloat> %[[SEL1]], <vscale x 8 x bfloat> %[[SEL2]]
+; CHECK-NEXT: call fast bfloat @llvm.vector.reduce.fmax.nxv8bf16(<vscale x 8 x bfloat> %[[SEL]])
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %sum.07 = phi bfloat [ 0.000000e+00, %entry ], [ %.sroa.speculated, %for.body ]
+  %arrayidx = getelementptr inbounds bfloat, ptr %a, i64 %iv
+  %0 = load bfloat, ptr %arrayidx, align 4
+  %cmp.i = fcmp fast ogt bfloat %0, %sum.07
+  %.sroa.speculated = select i1 %cmp.i, bfloat %0, bfloat %sum.07
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
+
+for.end:
+  ret bfloat %.sroa.speculated
 }
 
 ; Reduction cannot be vectorized
@@ -591,6 +719,8 @@ for.end:
 declare float @llvm.fmuladd.f32(float, float, float)
 
 attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }
+attributes #1 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "target-features"="+zfhmin,+zvfhmin"}
+attributes #2 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "target-features"="+zfbfmin,+zvfbfmin"}
 
 !0 = distinct !{!0, !1, !2, !3, !4}
 !1 = !{!"llvm.loop.vectorize.width", i32 8}

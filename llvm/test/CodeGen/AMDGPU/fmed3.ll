@@ -5,8 +5,10 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -global-isel=1 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI-GISEL %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -global-isel=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX9,GFX9-SDAG %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -global-isel=1 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX9,GFX9-GISEL %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -global-isel=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-SDAG %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -global-isel=1 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-GISEL %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -global-isel=0 -mattr=-real-true16 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-SDAG,GFX11-SDAG-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -global-isel=1 -mattr=-real-true16 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-GISEL,GFX11-GISEL-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -global-isel=0 -mattr=+real-true16 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-SDAG,GFX11-SDAG-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -global-isel=1 -mattr=+real-true16 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-GISEL,GFX11-GISEL-TRUE16 %s
 
 define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
 ; SI-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_f32:
@@ -5707,7 +5709,7 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(ptr addrspace(1)
   %b = load volatile float, ptr addrspace(1) %gep1
   %c = load volatile float, ptr addrspace(1) %gep2
   %tmp0 = call float @llvm.minnum.f32(float %a, float %b)
-  store volatile float %tmp0, ptr addrspace(1) undef
+  store volatile float %tmp0, ptr addrspace(1) poison
   %tmp1 = call float @llvm.maxnum.f32(float %a, float %b)
   %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c)
   %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
@@ -5935,7 +5937,7 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use1(ptr addrspace(1)
   %c = load volatile float, ptr addrspace(1) %gep2
   %tmp0 = call float @llvm.minnum.f32(float %a, float %b)
   %tmp1 = call float @llvm.maxnum.f32(float %a, float %b)
-  store volatile float %tmp1, ptr addrspace(1) undef
+  store volatile float %tmp1, ptr addrspace(1) poison
   %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c)
   %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
   store float %med3, ptr addrspace(1) %outgep
@@ -6138,7 +6140,7 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use2(ptr addrspace(1)
   %tmp0 = call float @llvm.minnum.f32(float %a, float %b)
   %tmp1 = call float @llvm.maxnum.f32(float %a, float %b)
   %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %c)
-  store volatile float %tmp2, ptr addrspace(1) undef
+  store volatile float %tmp2, ptr addrspace(1) poison
   %med3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
   store float %med3, ptr addrspace(1) %outgep
   ret void
@@ -7531,19 +7533,61 @@ define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f16(ptr addrspace(1) %o
 ; GFX9-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: v_test_nnan_input_fmed3_r_i_i_f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_u16 v1, v0, s[2:3]
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_add_f16_e32 v1, 1.0, v1
-; GFX11-NEXT:    v_med3_f16 v1, v1, 2.0, 4.0
-; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX11-NEXT:    s_endpgm
+; GFX11-SDAG-FAKE16-LABEL: v_test_nnan_input_fmed3_r_i_i_f16:
+; GFX11-SDAG-FAKE16:       ; %bb.0:
+; GFX11-SDAG-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-SDAG-FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX11-SDAG-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
+; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-FAKE16-NEXT:    global_load_u16 v1, v0, s[2:3]
+; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-FAKE16-NEXT:    v_add_f16_e32 v1, 1.0, v1
+; GFX11-SDAG-FAKE16-NEXT:    v_med3_f16 v1, v1, 2.0, 4.0
+; GFX11-SDAG-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+;
+; GFX11-GISEL-FAKE16-LABEL: v_test_nnan_input_fmed3_r_i_i_f16:
+; GFX11-GISEL-FAKE16:       ; %bb.0:
+; GFX11-GISEL-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-GISEL-FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX11-GISEL-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
+; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-GISEL-FAKE16-NEXT:    global_load_u16 v1, v0, s[2:3]
+; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-FAKE16-NEXT:    v_add_f16_e32 v1, 1.0, v1
+; GFX11-GISEL-FAKE16-NEXT:    v_med3_f16 v1, v1, 2.0, 4.0
+; GFX11-GISEL-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX11-SDAG-TRUE16-LABEL: v_test_nnan_input_fmed3_r_i_i_f16:
+; GFX11-SDAG-TRUE16:       ; %bb.0:
+; GFX11-SDAG-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-SDAG-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3]
+; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    v_med3_f16 v0.l, v0.l, 2.0, 4.0
+; GFX11-SDAG-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-GISEL-TRUE16-LABEL: v_test_nnan_input_fmed3_r_i_i_f16:
+; GFX11-GISEL-TRUE16:       ; %bb.0:
+; GFX11-GISEL-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-GISEL-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX11-GISEL-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 1, v0
+; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-GISEL-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3]
+; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    v_med3_f16 v0.l, v0.l, 2.0, 4.0
+; GFX11-GISEL-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX11-GISEL-TRUE16-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr half, ptr addrspace(1) %aptr, i32 %tid
   %outgep = getelementptr half, ptr addrspace(1) %out, i32 %tid
@@ -7723,26 +7767,89 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f16_pat0(ptr addrspace(1) %out, pt
 ; GFX9-NEXT:    global_store_short v0, v1, s[8:9]
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: v_nnan_inputs_med3_f16_pat0:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
-; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_u16 v1, v0, s[2:3] glc dlc
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_load_u16 v2, v0, s[4:5] glc dlc
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_load_u16 v3, v0, s[6:7] glc dlc
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_add_f16_e32 v1, 1.0, v1
-; GFX11-NEXT:    v_add_f16_e32 v2, 2.0, v2
-; GFX11-NEXT:    v_add_f16_e32 v3, 4.0, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_med3_f16 v1, v1, v2, v3
-; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX11-NEXT:    s_endpgm
+; GFX11-SDAG-FAKE16-LABEL: v_nnan_inputs_med3_f16_pat0:
+; GFX11-SDAG-FAKE16:       ; %bb.0:
+; GFX11-SDAG-FAKE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX11-SDAG-FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
+; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-FAKE16-NEXT:    global_load_u16 v1, v0, s[2:3] glc dlc
+; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-FAKE16-NEXT:    global_load_u16 v2, v0, s[4:5] glc dlc
+; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-FAKE16-NEXT:    global_load_u16 v3, v0, s[6:7] glc dlc
+; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-FAKE16-NEXT:    v_add_f16_e32 v1, 1.0, v1
+; GFX11-SDAG-FAKE16-NEXT:    v_add_f16_e32 v2, 2.0, v2
+; GFX11-SDAG-FAKE16-NEXT:    v_add_f16_e32 v3, 4.0, v3
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-FAKE16-NEXT:    v_med3_f16 v1, v1, v2, v3
+; GFX11-SDAG-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
+;
+; GFX11-GISEL-FAKE16-LABEL: v_nnan_inputs_med3_f16_pat0:
+; GFX11-GISEL-FAKE16:       ; %bb.0:
+; GFX11-GISEL-FAKE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX11-GISEL-FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
+; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-GISEL-FAKE16-NEXT:    global_load_u16 v1, v0, s[2:3] glc dlc
+; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-FAKE16-NEXT:    global_load_u16 v2, v0, s[4:5] glc dlc
+; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-FAKE16-NEXT:    global_load_u16 v3, v0, s[6:7] glc dlc
+; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-FAKE16-NEXT:    v_add_f16_e32 v1, 1.0, v1
+; GFX11-GISEL-FAKE16-NEXT:    v_add_f16_e32 v2, 2.0, v2
+; GFX11-GISEL-FAKE16-NEXT:    v_add_f16_e32 v3, 4.0, v3
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-FAKE16-NEXT:    v_med3_f16 v1, v1, v2, v3
+; GFX11-GISEL-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX11-SDAG-TRUE16-LABEL: v_nnan_inputs_med3_f16_pat0:
+; GFX11-SDAG-TRUE16:       ; %bb.0:
+; GFX11-SDAG-TRUE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX11-SDAG-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 1, v0
+; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3] glc dlc
+; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v2, s[4:5] glc dlc
+; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_b16 v1, v2, s[6:7] glc dlc
+; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v0.h, 2.0, v0.h
+; GFX11-SDAG-TRUE16-NEXT:    v_add_f16_e32 v1.l, 4.0, v1.l
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-TRUE16-NEXT:    v_med3_f16 v0.l, v0.l, v0.h, v1.l
+; GFX11-SDAG-TRUE16-NEXT:    global_store_b16 v2, v0, s[0:1]
+; GFX11-SDAG-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-GISEL-TRUE16-LABEL: v_nnan_inputs_med3_f16_pat0:
+; GFX11-GISEL-TRUE16:       ; %bb.0:
+; GFX11-GISEL-TRUE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX11-GISEL-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 1, v0
+; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-GISEL-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3] glc dlc
+; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v2, s[4:5] glc dlc
+; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-TRUE16-NEXT:    global_load_d16_b16 v1, v2, s[6:7] glc dlc
+; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.h, 2.0, v0.h
+; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v1.l, 4.0, v1.l
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-TRUE16-NEXT:    v_med3_f16 v0.l, v0.l, v0.h, v1.l
+; GFX11-GISEL-TRUE16-NEXT:    global_store_b16 v2, v0, s[0:1]
+; GFX11-GISEL-TRUE16-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr half, ptr addrspace(1) %aptr, i32 %tid
   %gep1 = getelementptr half, ptr addrspace(1) %bptr, i32 %tid
@@ -8032,7 +8139,7 @@ define amdgpu_kernel void @one_non_inline_constant(ptr addrspace(1) %out, ptr ad
   store float %med, ptr addrspace(1) %out.gep
 
   %extra.use = fadd float %a, 16.0
-  store volatile float %extra.use, ptr addrspace(1) undef
+  store volatile float %extra.use, ptr addrspace(1) poison
   ret void
 }
 
@@ -8193,10 +8300,10 @@ define amdgpu_kernel void @two_non_inline_constant_multi_use(ptr addrspace(1) %o
 ; GFX11-SDAG-NEXT:    global_load_b32 v1, v0, s[2:3]
 ; GFX11-SDAG-NEXT:    s_mov_b32 s2, 0x41000000
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-NEXT:    v_add_f32_e32 v3, 0x41800000, v1
 ; GFX11-SDAG-NEXT:    v_add_f32_e32 v2, 0.5, v1
+; GFX11-SDAG-NEXT:    v_add_f32_e32 v3, 0x41800000, v1
 ; GFX11-SDAG-NEXT:    v_add_f32_e32 v1, 0x41000000, v1
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-SDAG-NEXT:    v_med3_f32 v2, v2, s2, 0x41800000
 ; GFX11-SDAG-NEXT:    global_store_b32 v0, v2, s[0:1]
 ; GFX11-SDAG-NEXT:    global_store_b32 v[0:1], v3, off dlc
@@ -8236,10 +8343,565 @@ define amdgpu_kernel void @two_non_inline_constant_multi_use(ptr addrspace(1) %o
   store float %med, ptr addrspace(1) %out.gep
 
   %extra.use0 = fadd float %a, 16.0
-  store volatile float %extra.use0, ptr addrspace(1) undef
+  store volatile float %extra.use0, ptr addrspace(1) poison
   %extra.use1 = fadd float %a, 8.0
-  store volatile float %extra.use1, ptr addrspace(1) undef
+  store volatile float %extra.use1, ptr addrspace(1) poison
   ret void
+}
+
+define float @v_test_fmed3_r_i_i_f32_minimumnum_maximumnum(float %a) #1 {
+; SI-LABEL: v_test_fmed3_r_i_i_f32_minimumnum_maximumnum:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; SI-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-SDAG-LABEL: v_test_fmed3_r_i_i_f32_minimumnum_maximumnum:
+; VI-SDAG:       ; %bb.0:
+; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-SDAG-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; VI-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-GISEL-LABEL: v_test_fmed3_r_i_i_f32_minimumnum_maximumnum:
+; VI-GISEL:       ; %bb.0:
+; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-GISEL-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; VI-GISEL-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_fmed3_r_i_i_f32_minimumnum_maximumnum:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX9-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_test_fmed3_r_i_i_f32_minimumnum_maximumnum:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximumnum.f32(float %a, float 2.0)
+  %med = call float @llvm.minimumnum.f32(float %max, float 4.0)
+  ret float %med
+}
+
+define <2 x float> @v_test_fmed3_r_i_i_v2f32_minimumnum_maximumnum(<2 x float> %a) #1 {
+; SI-SDAG-LABEL: v_test_fmed3_r_i_i_v2f32_minimumnum_maximumnum:
+; SI-SDAG:       ; %bb.0:
+; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-SDAG-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; SI-SDAG-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; SI-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; SI-SDAG-NEXT:    v_med3_f32 v1, v1, 2.0, 4.0
+; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-GISEL-LABEL: v_test_fmed3_r_i_i_v2f32_minimumnum_maximumnum:
+; SI-GISEL:       ; %bb.0:
+; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-GISEL-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; SI-GISEL-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; SI-GISEL-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; SI-GISEL-NEXT:    v_med3_f32 v1, v1, 2.0, 4.0
+; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-SDAG-LABEL: v_test_fmed3_r_i_i_v2f32_minimumnum_maximumnum:
+; VI-SDAG:       ; %bb.0:
+; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-SDAG-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; VI-SDAG-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; VI-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; VI-SDAG-NEXT:    v_med3_f32 v1, v1, 2.0, 4.0
+; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-GISEL-LABEL: v_test_fmed3_r_i_i_v2f32_minimumnum_maximumnum:
+; VI-GISEL:       ; %bb.0:
+; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-GISEL-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; VI-GISEL-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; VI-GISEL-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; VI-GISEL-NEXT:    v_med3_f32 v1, v1, 2.0, 4.0
+; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-SDAG-LABEL: v_test_fmed3_r_i_i_v2f32_minimumnum_maximumnum:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX9-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX9-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GFX9-SDAG-NEXT:    v_med3_f32 v1, v1, 2.0, 4.0
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: v_test_fmed3_r_i_i_v2f32_minimumnum_maximumnum:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX9-GISEL-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX9-GISEL-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GFX9-GISEL-NEXT:    v_med3_f32 v1, v1, 2.0, 4.0
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_test_fmed3_r_i_i_v2f32_minimumnum_maximumnum:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GFX11-NEXT:    v_med3_f32 v1, v1, 2.0, 4.0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %max = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> %a, <2 x float> splat (float 2.0))
+  %med = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> %max, <2 x float> splat (float 4.0))
+  ret <2 x float> %med
+}
+
+define { float, float } @v_test_fmed3_r_i_i_f32_minimumnum_maximumnum_multi_use(float %a) #1 {
+; SI-SDAG-LABEL: v_test_fmed3_r_i_i_f32_minimumnum_maximumnum_multi_use:
+; SI-SDAG:       ; %bb.0:
+; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-SDAG-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; SI-SDAG-NEXT:    v_max_f32_e32 v1, 2.0, v0
+; SI-SDAG-NEXT:    v_min_f32_e32 v0, 4.0, v1
+; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-GISEL-LABEL: v_test_fmed3_r_i_i_f32_minimumnum_maximumnum_multi_use:
+; SI-GISEL:       ; %bb.0:
+; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-GISEL-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; SI-GISEL-NEXT:    v_max_f32_e32 v1, 2.0, v0
+; SI-GISEL-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-SDAG-LABEL: v_test_fmed3_r_i_i_f32_minimumnum_maximumnum_multi_use:
+; VI-SDAG:       ; %bb.0:
+; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-SDAG-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; VI-SDAG-NEXT:    v_max_f32_e32 v1, 2.0, v0
+; VI-SDAG-NEXT:    v_min_f32_e32 v0, 4.0, v1
+; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-GISEL-LABEL: v_test_fmed3_r_i_i_f32_minimumnum_maximumnum_multi_use:
+; VI-GISEL:       ; %bb.0:
+; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-GISEL-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; VI-GISEL-NEXT:    v_max_f32_e32 v1, 2.0, v0
+; VI-GISEL-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-SDAG-LABEL: v_test_fmed3_r_i_i_f32_minimumnum_maximumnum_multi_use:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX9-SDAG-NEXT:    v_max_f32_e32 v1, 2.0, v0
+; GFX9-SDAG-NEXT:    v_min_f32_e32 v0, 4.0, v1
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-GISEL-LABEL: v_test_fmed3_r_i_i_f32_minimumnum_maximumnum_multi_use:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX9-GISEL-NEXT:    v_max_f32_e32 v1, 2.0, v0
+; GFX9-GISEL-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_test_fmed3_r_i_i_f32_minimumnum_maximumnum_multi_use:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_max_f32_e32 v1, 2.0, v0
+; GFX11-SDAG-NEXT:    v_min_f32_e32 v0, 4.0, v1
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_test_fmed3_r_i_i_f32_minimumnum_maximumnum_multi_use:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_max_f32_e32 v1, v0, v0
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_med3_f32 v0, v1, 2.0, 4.0
+; GFX11-GISEL-NEXT:    v_max_f32_e32 v1, 2.0, v1
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %max = call float @llvm.maximumnum.f32(float %a, float 2.0)
+  %med = call float @llvm.minimumnum.f32(float %max, float 4.0)
+  %ins.0 = insertvalue { float, float } poison, float %med, 0
+  %ins.1 = insertvalue { float, float } %ins.0, float %max, 1
+  ret { float, float } %ins.1
+}
+
+define float @v_test_nnan_input_fmed3_r_i_i_f32_minimumnum_maximumnum(float %a) #1 {
+; SI-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_minimumnum_maximumnum:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; SI-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_minimumnum_maximumnum:
+; VI-SDAG:       ; %bb.0:
+; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-SDAG-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; VI-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-GISEL-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_minimumnum_maximumnum:
+; VI-GISEL:       ; %bb.0:
+; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-GISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; VI-GISEL-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_minimumnum_maximumnum:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX9-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_minimumnum_maximumnum:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a.add = fadd nnan float %a, 1.0
+  %max = call float @llvm.maximumnum.f32(float %a.add, float 2.0)
+  %med = call float @llvm.minimumnum.f32(float %max, float 4.0)
+  ret float %med
+}
+
+define float @v_test_nnan_input_fmed3_r_i_i_f32_maximumnum_minimumnum(float %a) #1 {
+; SI-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maximumnum_minimumnum:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; SI-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maximumnum_minimumnum:
+; VI-SDAG:       ; %bb.0:
+; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-SDAG-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; VI-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-GISEL-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maximumnum_minimumnum:
+; VI-GISEL:       ; %bb.0:
+; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-GISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; VI-GISEL-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maximumnum_minimumnum:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX9-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maximumnum_minimumnum:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a.add = fadd nnan float %a, 1.0
+  %max = call float @llvm.maximumnum.f32(float %a.add, float 2.0)
+  %med = call float @llvm.minimumnum.f32(float %max, float 4.0)
+  ret float %med
+}
+
+define float @v_test_nnan_input_fmed3_r_i_i_f32_maxnum_minimumnum(float %a) #1 {
+; SI-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maxnum_minimumnum:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; SI-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maxnum_minimumnum:
+; VI-SDAG:       ; %bb.0:
+; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-SDAG-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; VI-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-GISEL-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maxnum_minimumnum:
+; VI-GISEL:       ; %bb.0:
+; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-GISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; VI-GISEL-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maxnum_minimumnum:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX9-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maxnum_minimumnum:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a.add = fadd nnan float %a, 1.0
+  %max = call float @llvm.maxnum.f32(float %a.add, float 2.0)
+  %med = call float @llvm.minimumnum.f32(float %max, float 4.0)
+  ret float %med
+}
+
+define float @v_test_nnan_input_fmed3_r_i_i_f32_maximumnum_minnum(float %a) #1 {
+; SI-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maximumnum_minnum:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; SI-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-SDAG-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maximumnum_minnum:
+; VI-SDAG:       ; %bb.0:
+; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-SDAG-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; VI-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-GISEL-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maximumnum_minnum:
+; VI-GISEL:       ; %bb.0:
+; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-GISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; VI-GISEL-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maximumnum_minnum:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX9-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_test_nnan_input_fmed3_r_i_i_f32_maximumnum_minnum:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a.add = fadd nnan float %a, 1.0
+  %max = call float @llvm.maximumnum.f32(float %a.add, float 2.0)
+  %med = call float @llvm.minnum.f32(float %max, float 4.0)
+  ret float %med
+}
+
+define half @v_test_fmed3_r_i_i_f16_minimumnum_maximumnum(half %a) #1 {
+; SI-SDAG-LABEL: v_test_fmed3_r_i_i_f16_minimumnum_maximumnum:
+; SI-SDAG:       ; %bb.0:
+; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-GISEL-LABEL: v_test_fmed3_r_i_i_f16_minimumnum_maximumnum:
+; SI-GISEL:       ; %bb.0:
+; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, 2.0
+; SI-GISEL-NEXT:    v_max_f32_e32 v0, v0, v1
+; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, 4.0
+; SI-GISEL-NEXT:    v_min_f32_e32 v0, v0, v1
+; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-SDAG-LABEL: v_test_fmed3_r_i_i_f16_minimumnum_maximumnum:
+; VI-SDAG:       ; %bb.0:
+; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-SDAG-NEXT:    v_max_f16_e32 v0, v0, v0
+; VI-SDAG-NEXT:    v_max_f16_e32 v0, 2.0, v0
+; VI-SDAG-NEXT:    v_min_f16_e32 v0, 4.0, v0
+; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-GISEL-LABEL: v_test_fmed3_r_i_i_f16_minimumnum_maximumnum:
+; VI-GISEL:       ; %bb.0:
+; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-GISEL-NEXT:    v_max_f16_e32 v0, v0, v0
+; VI-GISEL-NEXT:    v_max_f16_e32 v0, 2.0, v0
+; VI-GISEL-NEXT:    v_min_f16_e32 v0, 4.0, v0
+; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_fmed3_r_i_i_f16_minimumnum_maximumnum:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX9-NEXT:    v_med3_f16 v0, v0, 2.0, 4.0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-FAKE16-LABEL: v_test_fmed3_r_i_i_f16_minimumnum_maximumnum:
+; GFX11-SDAG-FAKE16:       ; %bb.0:
+; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-FAKE16-NEXT:    v_med3_f16 v0, v0, 2.0, 4.0
+; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-FAKE16-LABEL: v_test_fmed3_r_i_i_f16_minimumnum_maximumnum:
+; GFX11-GISEL-FAKE16:       ; %bb.0:
+; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v0
+; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-FAKE16-NEXT:    v_med3_f16 v0, v0, 2.0, 4.0
+; GFX11-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-TRUE16-LABEL: v_test_fmed3_r_i_i_f16_minimumnum_maximumnum:
+; GFX11-SDAG-TRUE16:       ; %bb.0:
+; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-TRUE16-NEXT:    v_med3_f16 v0.l, v0.l, 2.0, 4.0
+; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-TRUE16-LABEL: v_test_fmed3_r_i_i_f16_minimumnum_maximumnum:
+; GFX11-GISEL-TRUE16:       ; %bb.0:
+; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
+; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-TRUE16-NEXT:    v_med3_f16 v0.l, v0.l, 2.0, 4.0
+; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+  %max = call half @llvm.maximumnum.f16(half %a, half 2.0)
+  %med = call half @llvm.minimumnum.f16(half %max, half 4.0)
+  ret half %med
+}
+
+define <2 x half> @v_test_fmed3_r_i_i_v2f16_minimumnum_maximumnum(<2 x half> %a) #1 {
+; SI-SDAG-LABEL: v_test_fmed3_r_i_i_v2f16_minimumnum_maximumnum:
+; SI-SDAG:       ; %bb.0:
+; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SI-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; SI-SDAG-NEXT:    v_med3_f32 v1, v1, 2.0, 4.0
+; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; SI-GISEL-LABEL: v_test_fmed3_r_i_i_v2f16_minimumnum_maximumnum:
+; SI-GISEL:       ; %bb.0:
+; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v2, 2.0
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v3, 4.0
+; SI-GISEL-NEXT:    v_max_f32_e32 v0, v0, v2
+; SI-GISEL-NEXT:    v_max_f32_e32 v1, v1, v2
+; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SI-GISEL-NEXT:    v_min_f32_e32 v0, v0, v3
+; SI-GISEL-NEXT:    v_min_f32_e32 v1, v1, v3
+; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-SDAG-LABEL: v_test_fmed3_r_i_i_v2f16_minimumnum_maximumnum:
+; VI-SDAG:       ; %bb.0:
+; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-SDAG-NEXT:    v_max_f16_sdwa v1, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-SDAG-NEXT:    v_max_f16_e32 v0, v0, v0
+; VI-SDAG-NEXT:    v_max_f16_e32 v1, 2.0, v1
+; VI-SDAG-NEXT:    v_max_f16_e32 v0, 2.0, v0
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x4400
+; VI-SDAG-NEXT:    v_min_f16_e32 v0, 4.0, v0
+; VI-SDAG-NEXT:    v_min_f16_sdwa v1, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
+; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-GISEL-LABEL: v_test_fmed3_r_i_i_v2f16_minimumnum_maximumnum:
+; VI-GISEL:       ; %bb.0:
+; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-GISEL-NEXT:    v_max_f16_e32 v1, v0, v0
+; VI-GISEL-NEXT:    v_max_f16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-GISEL-NEXT:    v_max_f16_e32 v1, 2.0, v1
+; VI-GISEL-NEXT:    v_max_f16_e32 v0, 2.0, v0
+; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x4400
+; VI-GISEL-NEXT:    v_min_f16_e32 v1, 4.0, v1
+; VI-GISEL-NEXT:    v_min_f16_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
+; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_fmed3_r_i_i_v2f16_minimumnum_maximumnum:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, 2.0 op_sel_hi:[1,0]
+; GFX9-NEXT:    v_pk_min_f16 v0, v0, 4.0 op_sel_hi:[1,0]
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_test_fmed3_r_i_i_v2f16_minimumnum_maximumnum:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_pk_max_f16 v0, v0, 2.0 op_sel_hi:[1,0]
+; GFX11-NEXT:    v_pk_min_f16 v0, v0, 4.0 op_sel_hi:[1,0]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %max = call <2 x half> @llvm.maximumnum.v2f16(<2 x half> %a, <2 x half> splat (half 2.0))
+  %med = call <2 x half> @llvm.minimumnum.v2f16(<2 x half> %max, <2 x half> splat (half 4.0))
+  ret <2 x half> %med
+}
+
+define double @v_test_fmed3_r_i_i_f64_minimumnum_maximumnum(double %a) #1 {
+; SI-LABEL: v_test_fmed3_r_i_i_f64_minimumnum_maximumnum:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; SI-NEXT:    v_max_f64 v[0:1], v[0:1], 2.0
+; SI-NEXT:    v_min_f64 v[0:1], v[0:1], 4.0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-SDAG-LABEL: v_test_fmed3_r_i_i_f64_minimumnum_maximumnum:
+; VI-SDAG:       ; %bb.0:
+; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; VI-SDAG-NEXT:    v_max_f64 v[0:1], v[0:1], 2.0
+; VI-SDAG-NEXT:    v_min_f64 v[0:1], v[0:1], 4.0
+; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-GISEL-LABEL: v_test_fmed3_r_i_i_f64_minimumnum_maximumnum:
+; VI-GISEL:       ; %bb.0:
+; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-GISEL-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; VI-GISEL-NEXT:    v_max_f64 v[0:1], v[0:1], 2.0
+; VI-GISEL-NEXT:    v_min_f64 v[0:1], v[0:1], 4.0
+; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: v_test_fmed3_r_i_i_f64_minimumnum_maximumnum:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX9-NEXT:    v_max_f64 v[0:1], v[0:1], 2.0
+; GFX9-NEXT:    v_min_f64 v[0:1], v[0:1], 4.0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_test_fmed3_r_i_i_f64_minimumnum_maximumnum:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], 2.0
+; GFX11-NEXT:    v_min_f64 v[0:1], v[0:1], 4.0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %max = call double @llvm.maximumnum.f64(double %a, double 2.0)
+  %med = call double @llvm.minimumnum.f64(double %max, double 4.0)
+  ret double %med
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
@@ -8255,5 +8917,3 @@ declare half @llvm.maxnum.f16(half, half) #0
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" }
 attributes #2 = { nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; SI: {{.*}}

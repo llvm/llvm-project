@@ -20,8 +20,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 
-extern llvm::cl::opt<bool> WriteNewDbgInfoFormat;
-
 using namespace mlir;
 
 namespace mlir {
@@ -34,13 +32,7 @@ void registerToLLVMIRTranslation() {
         if (!llvmModule)
           return failure();
 
-        // When printing LLVM IR, we should convert the module to the debug info
-        // format that LLVM expects us to print.
-        // See https://llvm.org/docs/RemoveDIsDebugInfo.html
-        llvm::ScopedDbgInfoFormatSetter formatSetter(*llvmModule,
-                                                     WriteNewDbgInfoFormat);
-        if (WriteNewDbgInfoFormat)
-          llvmModule->removeDebugIntrinsicDeclarations();
+        llvmModule->removeDebugIntrinsicDeclarations();
         llvmModule->print(output, nullptr);
         return success();
       },

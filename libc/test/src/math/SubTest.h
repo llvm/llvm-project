@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SUBTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SUBTEST_H
 
+#include "src/__support/CPP/algorithm.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -39,13 +40,16 @@ public:
   using SubFunc = OutType (*)(InType, InType);
 
   void test_subnormal_range(SubFunc func) {
-    constexpr InStorageType COUNT = 100'001;
-    constexpr InStorageType STEP =
-        (IN_MAX_SUBNORMAL_U - IN_MIN_SUBNORMAL_U) / COUNT;
-    for (InStorageType i = 0, v = 0, w = IN_MAX_SUBNORMAL_U; i <= COUNT;
-         ++i, v += STEP, w -= STEP) {
-      InType x = InFPBits(v).get_val();
-      InType y = InFPBits(w).get_val();
+    constexpr int COUNT = 100'001;
+    constexpr InStorageType STEP = LIBC_NAMESPACE::cpp::max(
+        static_cast<InStorageType>((IN_MAX_SUBNORMAL_U - IN_MIN_SUBNORMAL_U) /
+                                   COUNT),
+        InStorageType(1));
+    for (InStorageType i = IN_MIN_SUBNORMAL_U; i <= IN_MAX_SUBNORMAL_U;
+         i += STEP) {
+      InType x = InFPBits(i).get_val();
+      InType y = InFPBits(static_cast<InStorageType>(IN_MAX_SUBNORMAL_U - i))
+                     .get_val();
       mpfr::BinaryInput<InType> input{x, y};
       EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sub, input, func(x, y),
                                      0.5);
@@ -53,12 +57,14 @@ public:
   }
 
   void test_normal_range(SubFunc func) {
-    constexpr InStorageType COUNT = 100'001;
-    constexpr InStorageType STEP = (IN_MAX_NORMAL_U - IN_MIN_NORMAL_U) / COUNT;
-    for (InStorageType i = 0, v = 0, w = IN_MAX_NORMAL_U; i <= COUNT;
-         ++i, v += STEP, w -= STEP) {
-      InType x = InFPBits(v).get_val();
-      InType y = InFPBits(w).get_val();
+    constexpr int COUNT = 100'001;
+    constexpr InStorageType STEP = LIBC_NAMESPACE::cpp::max(
+        static_cast<InStorageType>((IN_MAX_NORMAL_U - IN_MIN_NORMAL_U) / COUNT),
+        InStorageType(1));
+    for (InStorageType i = IN_MIN_NORMAL_U; i <= IN_MAX_NORMAL_U; i += STEP) {
+      InType x = InFPBits(i).get_val();
+      InType y =
+          InFPBits(static_cast<InStorageType>(IN_MAX_NORMAL_U - i)).get_val();
       mpfr::BinaryInput<InType> input{x, y};
       EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sub, input, func(x, y),
                                      0.5);
@@ -70,5 +76,12 @@ public:
   using LlvmLibcSubTest = SubTest<OutType, InType>;                            \
   TEST_F(LlvmLibcSubTest, SubnormalRange) { test_subnormal_range(&func); }     \
   TEST_F(LlvmLibcSubTest, NormalRange) { test_normal_range(&func); }
+
+#define LIST_SUB_SAME_TYPE_TESTS(suffix, OutType, InType, func)                \
+  using LlvmLibcSubTest##suffix = SubTest<OutType, InType>;                    \
+  TEST_F(LlvmLibcSubTest##suffix, SubnormalRange) {                            \
+    test_subnormal_range(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibcSubTest##suffix, NormalRange) { test_normal_range(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SUBTEST_H

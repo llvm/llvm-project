@@ -8,7 +8,7 @@ void foo(struct x *P, struct x *Q) {
   *P = *Q;
 }
 
-// CHECK: declare void @llvm.memcpy.p0.p0{{.*}}(ptr noalias nocapture writeonly, ptr noalias nocapture readonly
+// CHECK: declare void @llvm.memcpy.p0.p0{{.*}}(ptr noalias writeonly captures(none), ptr noalias readonly
 
 void bar(struct x *P, struct x *Q) {
 // CHECK-LABEL: @bar(

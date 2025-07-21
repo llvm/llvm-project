@@ -1,6 +1,10 @@
-import("//clang/lib/ARCMigrate/enable.gni")
 import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
+
+# `exec_script_allowlist` was added in GN version 2207, so that's the minimum
+# version of GN we require.
+assert(gn_version >= 2207,
+       "Your GN is too old! Update it, perhaps by running llvm/utils/gn/get.py")
 
 group("default") {
   deps = [
@@ -11,12 +15,12 @@ group("default") {
     "//compiler-rt",
     "//compiler-rt/include",
     "//compiler-rt/lib/scudo",
+    "//compiler-rt/test/builtins",
     "//lld/test",
     "//lldb/test",
     "//llvm/test",
   ]
-  # FIXME: Reenable once libc hand-in-hand is figured out.
-  if (false && current_os == "linux") {
+  if (current_os == "linux") {
     deps += [
       "//libcxx",
       "//libcxxabi",
@@ -101,6 +105,9 @@ group("llvm-libtool-darwin") {
 }
 group("llvm-lipo") {
   deps = [ "//llvm/tools/llvm-lipo:symlinks" ]
+}
+group("llvm-ml") {
+  deps = [ "//llvm/tools/llvm-ml:symlinks" ]
 }
 group("llvm-objcopy") {
   deps = [ "//llvm/tools/llvm-objcopy:symlinks" ]

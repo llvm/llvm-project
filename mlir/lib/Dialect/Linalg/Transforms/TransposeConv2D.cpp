@@ -12,14 +12,8 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/ValueRange.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/RWMutex.h"
-#include <memory>
-#include <numeric>
 
 namespace mlir {
 namespace linalg {
@@ -52,7 +46,7 @@ FailureOr<Operation *> transposeConv2DHelper(RewriterBase &rewriter,
                                              FHWCConvOp op) {
   // Construct a permutation of the filter tensor dimensions. For a 2D
   // convolution this will be known statically as [1, 2, 3, 0].
-  SmallVector<int64_t> filterPerm({1, 2, 3, 0});
+  SmallVector<int64_t> filterPerm = {1, 2, 3, 0};
 
   // Create the type for the transposed filter tensor.
   auto filter = op->getOperand(1);
@@ -138,7 +132,7 @@ FailureOr<Operation *> transposeConv2D(RewriterBase &rewriter,
                                linalg::Conv2DNhwcHwcfQOp>(rewriter, op);
 }
 
-void populateTranposeConv2DPatterns(RewritePatternSet &patterns) {
+void populateTransposeConv2DPatterns(RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
   patterns.insert<
       ConvConverter<linalg::Conv2DNhwcFhwcOp, linalg::Conv2DNhwcHwcfOp>,

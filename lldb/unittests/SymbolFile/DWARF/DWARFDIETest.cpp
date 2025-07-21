@@ -394,3 +394,701 @@ DWARF:
   EXPECT_THAT(foo_struct_die.GetTypeLookupContext(),
               testing::ElementsAre(make_struct("struct_t")));
 }
+
+TEST(DWARFDIETest, GetAttributeValue_ImplicitConst) {
+  // Make sure we can correctly retrieve the value of an attribute
+  // that has a DW_FORM_implicit_const form.
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+DWARF:
+  debug_str:
+    - ''
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_object_pointer
+              Form:            DW_FORM_implicit_const
+              Value:           5
+  debug_info:
+    - Version:         5
+      UnitType:        DW_UT_compile
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xDEADBEEFDEADBEEF
+              CStr:            func
+        - AbbrCode:        0x0)";
+
+  YAMLModuleTester t(yamldata);
+  auto *symbol_file =
+      llvm::cast<SymbolFileDWARF>(t.GetModule()->GetSymbolFile());
+  DWARFUnit *unit = symbol_file->DebugInfo().GetUnitAtIndex(0);
+  ASSERT_TRUE(unit);
+
+  DWARFDIE subprogram = unit->DIE().GetFirstChild();
+  ASSERT_TRUE(subprogram);
+  dw_offset_t end_attr_offset;
+  DWARFFormValue form_value;
+  dw_offset_t offset = subprogram.GetDIE()->GetAttributeValue(
+      unit, DW_AT_object_pointer, form_value, &end_attr_offset);
+  EXPECT_EQ(form_value.Unsigned(), 5U);
+  EXPECT_GT(offset, 0U);
+  EXPECT_GT(end_attr_offset, 0U);
+}
+
+struct GetAttributesTestFixture : public testing::TestWithParam<dw_attr_t> {};
+
+TEST_P(GetAttributesTestFixture, TestGetAttributes_IterationOrder) {
+  // Tests that we accumulate all current DIE's attributes first
+  // before checking the attributes of the specification.
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_str:
+    - func
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_declaration
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_data4
+        - Code:            0x3
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       {0}
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_data4
+  debug_info:
+     - Version:         5
+       UnitType:        DW_UT_compile
+       AddrSize:        8
+       Entries:
+
+# DW_TAG_compile_unit
+#   DW_AT_language [DW_FORM_data2]    (DW_LANG_C_plus_plus)
+
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x04
+
+#     DW_TAG_subprogram
+#       DW_AT_high_pc [DW_FORM_data4]
+#       DW_AT_name [DW_FORM_strp] ("func")
+#       DW_AT_low_pc [DW_FORM_data4]
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xdeadbeef
+            - Value:           0x0
+            - Value:           0x1
+            - Value:           0x1
+            - Value:           0xdeadbeef
+
+#     DW_TAG_subprogram
+#       DW_AT_high_pc [DW_FORM_data4]
+#       DW_AT_specification [DW_FORM_ref4] ("func")
+#       DW_AT_low_pc [DW_FORM_data4]
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0xf00dcafe
+            - Value:           0xf
+            - Value:           0xf00dcafe
+
+        - AbbrCode: 0x0
+...
+)";
+  YAMLModuleTester t(llvm::formatv(yamldata, GetParam()).str());
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  auto declaration = cu_die.GetFirstChild();
+  ASSERT_TRUE(declaration.IsValid());
+  ASSERT_EQ(declaration.Tag(), DW_TAG_subprogram);
+
+  auto definition = declaration.GetSibling();
+  ASSERT_TRUE(definition.IsValid());
+  ASSERT_EQ(definition.Tag(), DW_TAG_subprogram);
+  ASSERT_FALSE(definition.GetAttributeValueAsOptionalUnsigned(DW_AT_external));
+
+  auto attrs = definition.GetAttributes(DWARFDebugInfoEntry::Recurse::yes);
+  EXPECT_EQ(attrs.Size(), 7U);
+
+  // Check that the attributes on the definition (that are also present
+  // on the declaration) take precedence.
+  for (auto attr : {DW_AT_low_pc, DW_AT_high_pc}) {
+    auto idx = attrs.FindAttributeIndex(attr);
+    EXPECT_NE(idx, UINT32_MAX);
+
+    DWARFFormValue form_value;
+    auto success = attrs.ExtractFormValueAtIndex(idx, form_value);
+    EXPECT_TRUE(success);
+
+    EXPECT_EQ(form_value.Unsigned(), 0xf00dcafe);
+  }
+}
+
+TEST_P(GetAttributesTestFixture, TestGetAttributes_Cycle) {
+  // Tests that GetAttributes can deal with cycles in
+  // specifications/abstract origins.
+  //
+  // Contrived example:
+  //
+  // func1 -> func3
+  //   ^       |
+  //   |       v
+  //   +------func2
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       {0}
+              Form:            DW_FORM_ref4
+  debug_info:
+     - Version:         5
+       UnitType:        DW_UT_compile
+       AddrSize:        8
+       Entries:
+
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x04
+
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x19
+
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xf
+
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x14
+
+        - AbbrCode: 0x0
+...
+)";
+  YAMLModuleTester t(llvm::formatv(yamldata, GetParam()).str());
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  auto func1 = cu_die.GetFirstChild();
+  ASSERT_TRUE(func1.IsValid());
+  ASSERT_EQ(func1.Tag(), DW_TAG_subprogram);
+
+  auto func2 = func1.GetSibling();
+  ASSERT_TRUE(func2.IsValid());
+  ASSERT_EQ(func2.Tag(), DW_TAG_subprogram);
+
+  auto func3 = func2.GetSibling();
+  ASSERT_TRUE(func3.IsValid());
+  ASSERT_EQ(func3.Tag(), DW_TAG_subprogram);
+
+  auto attrs = func1.GetAttributes(DWARFDebugInfoEntry::Recurse::yes);
+  EXPECT_EQ(attrs.Size(), 3U);
+
+  // Confirm that the specifications do form a cycle.
+  {
+    DWARFFormValue form_value;
+    auto success = attrs.ExtractFormValueAtIndex(0, form_value);
+    ASSERT_TRUE(success);
+
+    EXPECT_EQ(form_value.Reference(), func3);
+  }
+
+  {
+    DWARFFormValue form_value;
+    auto success = attrs.ExtractFormValueAtIndex(1, form_value);
+    ASSERT_TRUE(success);
+
+    EXPECT_EQ(form_value.Reference(), func2);
+  }
+
+  {
+    DWARFFormValue form_value;
+    auto success = attrs.ExtractFormValueAtIndex(2, form_value);
+    ASSERT_TRUE(success);
+
+    EXPECT_EQ(form_value.Reference(), func1);
+  }
+}
+
+TEST_P(GetAttributesTestFixture,
+       TestGetAttributes_SkipNonApplicableAttributes) {
+  // Tests that GetAttributes will omit attributes found through
+  // specifications/abstract origins which are not applicable.
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_str:
+    - func
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_declaration
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_sibling
+              Form:            DW_FORM_ref4
+        - Code:            0x3
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_declaration
+              Form:            DW_FORM_flag_present
+            - Attribute:       {0}
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_sibling
+              Form:            DW_FORM_ref4
+  debug_info:
+     - Version:         5
+       UnitType:        DW_UT_compile
+       AddrSize:        8
+       Entries:
+
+# DW_TAG_compile_unit
+#   DW_AT_language [DW_FORM_data2]    (DW_LANG_C_plus_plus)
+
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x04
+
+#     DW_TAG_subprogram
+#       DW_AT_declaration
+#       DW_AT_name [DW_FORM_strp] ("func")
+#       DW_AT_sibling
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x1
+            - Value:           0x0
+            - Value:           0x18
+
+#     DW_TAG_subprogram
+#       DW_AT_declaration
+#       DW_AT_specification [DW_FORM_ref4] ("func")
+#       DW_AT_sibling
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x1
+            - Value:           0xf
+            - Value:           0xdeadbeef
+
+        - AbbrCode: 0x0
+...
+)";
+  YAMLModuleTester t(llvm::formatv(yamldata, GetParam()).str());
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  auto declaration = cu_die.GetFirstChild();
+  ASSERT_TRUE(declaration.IsValid());
+  ASSERT_EQ(declaration.Tag(), DW_TAG_subprogram);
+
+  auto definition = declaration.GetSibling();
+  ASSERT_TRUE(definition.IsValid());
+  ASSERT_EQ(definition.Tag(), DW_TAG_subprogram);
+
+  auto attrs = definition.GetAttributes(DWARFDebugInfoEntry::Recurse::yes);
+  EXPECT_EQ(attrs.Size(), 4U);
+  EXPECT_NE(attrs.FindAttributeIndex(DW_AT_name), UINT32_MAX);
+  EXPECT_NE(attrs.FindAttributeIndex(GetParam()), UINT32_MAX);
+
+  auto sibling_idx = attrs.FindAttributeIndex(DW_AT_sibling);
+  EXPECT_NE(sibling_idx, UINT32_MAX);
+
+  DWARFFormValue form_value;
+  auto success = attrs.ExtractFormValueAtIndex(sibling_idx, form_value);
+  ASSERT_TRUE(success);
+
+  EXPECT_EQ(form_value.Unsigned(), 0xdeadbeef);
+}
+
+TEST_P(GetAttributesTestFixture, TestGetAttributes_NoRecurse) {
+  // Tests that GetAttributes will not recurse if Recurse::No is passed to it.
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_str:
+    - func
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x3
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_data4
+            - Attribute:       {0}
+              Form:            DW_FORM_ref4
+  debug_info:
+     - Version:         5
+       UnitType:        DW_UT_compile
+       AddrSize:        8
+       Entries:
+
+# DW_TAG_compile_unit
+#   DW_AT_language [DW_FORM_data2]    (DW_LANG_C_plus_plus)
+
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x04
+
+#     DW_TAG_subprogram
+#       DW_AT_name [DW_FORM_strp] ("func")
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x0
+
+#     DW_TAG_subprogram
+#       DW_AT_low_pc [DW_FORM_data4]
+#       DW_AT_specification [DW_FORM_ref4]
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0xdeadbeef
+            - Value:           0xf
+
+        - AbbrCode: 0x0
+...
+)";
+  YAMLModuleTester t(llvm::formatv(yamldata, GetParam()).str());
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  auto declaration = cu_die.GetFirstChild();
+  ASSERT_TRUE(declaration.IsValid());
+  ASSERT_EQ(declaration.Tag(), DW_TAG_subprogram);
+
+  auto definition = declaration.GetSibling();
+  ASSERT_TRUE(definition.IsValid());
+  ASSERT_EQ(definition.Tag(), DW_TAG_subprogram);
+
+  auto attrs = definition.GetAttributes(DWARFDebugInfoEntry::Recurse::no);
+  EXPECT_EQ(attrs.Size(), 2U);
+  EXPECT_EQ(attrs.FindAttributeIndex(DW_AT_name), UINT32_MAX);
+  EXPECT_NE(attrs.FindAttributeIndex(GetParam()), UINT32_MAX);
+  EXPECT_NE(attrs.FindAttributeIndex(DW_AT_low_pc), UINT32_MAX);
+}
+
+TEST_P(GetAttributesTestFixture, TestGetAttributes_InvalidSpec) {
+  // Test that GetAttributes doesn't try following invalid
+  // specifications (but still add it to the list of attributes).
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_str:
+    - func
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x3
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       {0}
+              Form:            DW_FORM_ref4
+  debug_info:
+     - Version:         5
+       UnitType:        DW_UT_compile
+       AddrSize:        8
+       Entries:
+
+# DW_TAG_compile_unit
+#   DW_AT_language [DW_FORM_data2]    (DW_LANG_C_plus_plus)
+
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x04
+
+#     DW_TAG_subprogram
+#       DW_AT_name [DW_FORM_strp] ("func")
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x0
+
+#     DW_TAG_subprogram
+#       DW_AT_specification [DW_FORM_ref4]
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0xdeadbeef
+
+        - AbbrCode: 0x0
+...
+)";
+  YAMLModuleTester t(llvm::formatv(yamldata, GetParam()).str());
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  auto declaration = cu_die.GetFirstChild();
+  ASSERT_TRUE(declaration.IsValid());
+  ASSERT_EQ(declaration.Tag(), DW_TAG_subprogram);
+
+  auto definition = declaration.GetSibling();
+  ASSERT_TRUE(definition.IsValid());
+  ASSERT_EQ(definition.Tag(), DW_TAG_subprogram);
+
+  auto attrs = definition.GetAttributes(DWARFDebugInfoEntry::Recurse::yes);
+  EXPECT_EQ(attrs.Size(), 1U);
+  EXPECT_EQ(attrs.FindAttributeIndex(DW_AT_name), UINT32_MAX);
+  EXPECT_NE(attrs.FindAttributeIndex(GetParam()), UINT32_MAX);
+}
+
+TEST(DWARFDIETest, TestGetAttributes_Worklist) {
+  // Test that GetAttributes will follow both the abstract origin
+  // and specification on a single DIE correctly (omitting non-applicable
+  // attributes in the process).
+
+  // Contrived example where
+  // f1---> f2 --> f4
+  //    `-> f3 `-> f5
+  //
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_str:
+    - foo
+    - bar
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_specification
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_abstract_origin
+              Form:            DW_FORM_ref4
+        - Code:            0x3
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_declaration
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_artificial
+              Form:            DW_FORM_flag_present
+
+  debug_info:
+     - Version:         5
+       UnitType:        DW_UT_compile
+       AddrSize:        8
+       Entries:
+
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x04
+
+#     DW_TAG_subprogram ("f1")
+#       DW_AT_specification [DW_FORM_ref4] ("f2")
+#       DW_AT_abstract_origin [DW_FORM_ref4] ("f3")
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x18
+            - Value:           0x21
+
+#     DW_TAG_subprogram ("f2")
+#       DW_AT_specification [DW_FORM_ref4] ("f4")
+#       DW_AT_abstract_origin [DW_FORM_ref4] ("f5")
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x22
+            - Value:           0x23
+
+#     DW_TAG_subprogram ("f3")
+#       DW_AT_declaration [DW_FORM_flag_present]
+#       DW_AT_artificial [DW_FORM_flag_present]
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x1
+            - Value:           0x1
+
+#     DW_TAG_subprogram ("f4")
+#       DW_AT_declaration [DW_FORM_flag_present]
+#       DW_AT_artificial [DW_FORM_flag_present]
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x1
+            - Value:           0x1
+
+#     DW_TAG_subprogram ("f5")
+#       DW_AT_declaration [DW_FORM_flag_present]
+#       DW_AT_artificial [DW_FORM_flag_present]
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x1
+            - Value:           0x1
+
+        - AbbrCode: 0x0
+...
+)";
+  YAMLModuleTester t(yamldata);
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  auto f1 = cu_die.GetFirstChild();
+  ASSERT_TRUE(f1.IsValid());
+  ASSERT_EQ(f1.Tag(), DW_TAG_subprogram);
+
+  auto attrs = f1.GetAttributes(DWARFDebugInfoEntry::Recurse::yes);
+  EXPECT_EQ(attrs.Size(), 7U);
+  EXPECT_EQ(attrs.FindAttributeIndex(DW_AT_declaration), UINT32_MAX);
+}
+
+INSTANTIATE_TEST_SUITE_P(GetAttributeTests, GetAttributesTestFixture,
+                         testing::Values(DW_AT_specification,
+                                         DW_AT_abstract_origin));

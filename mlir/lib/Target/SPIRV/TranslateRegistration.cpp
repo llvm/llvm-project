@@ -14,8 +14,6 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Support/FileUtilities.h"
@@ -24,9 +22,7 @@
 #include "mlir/Tools/mlir-translate/Translation.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/ToolOutputFile.h"
 
 using namespace mlir;
 
@@ -37,7 +33,8 @@ using namespace mlir;
 // Deserializes the SPIR-V binary module stored in the file named as
 // `inputFilename` and returns a module containing the SPIR-V module.
 static OwningOpRef<Operation *>
-deserializeModule(const llvm::MemoryBuffer *input, MLIRContext *context) {
+deserializeModule(const llvm::MemoryBuffer *input, MLIRContext *context,
+                  const spirv::DeserializationOptions &options) {
   context->loadDialect<spirv::SPIRVDialect>();
 
   // Make sure the input stream can be treated as a stream of SPIR-V words
@@ -51,17 +48,26 @@ deserializeModule(const llvm::MemoryBuffer *input, MLIRContext *context) {
 
   auto binary = llvm::ArrayRef(reinterpret_cast<const uint32_t *>(start),
                                size / sizeof(uint32_t));
-  return spirv::deserialize(binary, context);
+  return spirv::deserialize(binary, context, options);
 }
 
 namespace mlir {
 void registerFromSPIRVTranslation() {
+  static llvm::cl::opt<bool> enableControlFlowStructurization(
+      "spirv-structurize-control-flow",
+      llvm::cl::desc(
+          "Enable control flow structurization into `spirv.mlir.selection` and "
+          "`spirv.mlir.loop`. This may need to be disabled to support "
+          "deserialization of early exits (see #138688)"),
+      llvm::cl::init(true));
+
   TranslateToMLIRRegistration fromBinary(
       "deserialize-spirv", "deserializes the SPIR-V module",
       [](llvm::SourceMgr &sourceMgr, MLIRContext *context) {
         assert(sourceMgr.getNumBuffers() == 1 && "expected one buffer");
         return deserializeModule(
-            sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID()), context);
+            sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID()), context,
+            {enableControlFlowStructurization});
       });
 }
 } // namespace mlir

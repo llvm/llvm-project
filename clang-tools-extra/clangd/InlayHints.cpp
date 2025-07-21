@@ -9,7 +9,6 @@
 #include "../clang-tidy/utils/DesignatedInitializers.h"
 #include "AST.h"
 #include "Config.h"
-#include "HeuristicResolver.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "SourceCode.h"
@@ -27,6 +26,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -112,7 +112,9 @@ std::string summarizeExpr(const Expr *E) {
       return getSimpleName(*E->getFoundDecl()).str();
     }
     std::string VisitCallExpr(const CallExpr *E) {
-      return Visit(E->getCallee());
+      std::string Result = Visit(E->getCallee());
+      Result += E->getNumArgs() == 0 ? "()" : "(...)";
+      return Result;
     }
     std::string
     VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *E) {
@@ -147,6 +149,9 @@ std::string summarizeExpr(const Expr *E) {
     }
 
     // Literals are just printed
+    std::string VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *E) {
+      return "nullptr";
+    }
     std::string VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E) {
       return E->getValue() ? "true" : "false";
     }
@@ -165,12 +170,14 @@ std::string summarizeExpr(const Expr *E) {
       std::string Result = "\"";
       if (E->containsNonAscii()) {
         Result += "...";
-      } else if (E->getLength() > 10) {
-        Result += E->getString().take_front(7);
-        Result += "...";
       } else {
         llvm::raw_string_ostream OS(Result);
-        llvm::printEscapedString(E->getString(), OS);
+        if (E->getLength() > 10) {
+          llvm::printEscapedString(E->getString().take_front(7), OS);
+          Result += "...";
+        } else {
+          llvm::printEscapedString(E->getString(), OS);
+        }
       }
       Result.push_back('"');
       return Result;
@@ -331,49 +338,6 @@ QualType maybeDesugar(ASTContext &AST, QualType QT) {
   return QT;
 }
 
-// Given a callee expression `Fn`, if the call is through a function pointer,
-// try to find the declaration of the corresponding function pointer type,
-// so that we can recover argument names from it.
-// FIXME: This function is mostly duplicated in SemaCodeComplete.cpp; unify.
-static FunctionProtoTypeLoc getPrototypeLoc(Expr *Fn) {
-  TypeLoc Target;
-  Expr *NakedFn = Fn->IgnoreParenCasts();
-  if (const auto *T = NakedFn->getType().getTypePtr()->getAs<TypedefType>()) {
-    Target = T->getDecl()->getTypeSourceInfo()->getTypeLoc();
-  } else if (const auto *DR = dyn_cast<DeclRefExpr>(NakedFn)) {
-    const auto *D = DR->getDecl();
-    if (const auto *const VD = dyn_cast<VarDecl>(D)) {
-      Target = VD->getTypeSourceInfo()->getTypeLoc();
-    }
-  }
-
-  if (!Target)
-    return {};
-
-  // Unwrap types that may be wrapping the function type
-  while (true) {
-    if (auto P = Target.getAs<PointerTypeLoc>()) {
-      Target = P.getPointeeLoc();
-      continue;
-    }
-    if (auto A = Target.getAs<AttributedTypeLoc>()) {
-      Target = A.getModifiedLoc();
-      continue;
-    }
-    if (auto P = Target.getAs<ParenTypeLoc>()) {
-      Target = P.getInnerLoc();
-      continue;
-    }
-    break;
-  }
-
-  if (auto F = Target.getAs<FunctionProtoTypeLoc>()) {
-    return F;
-  }
-
-  return {};
-}
-
 ArrayRef<const ParmVarDecl *>
 maybeDropCxxExplicitObjectParameters(ArrayRef<const ParmVarDecl *> Params) {
   if (!Params.empty() && Params.front()->isExplicitObjectParameter())
@@ -408,12 +372,14 @@ struct Callee {
 class InlayHintVisitor : public RecursiveASTVisitor<InlayHintVisitor> {
 public:
   InlayHintVisitor(std::vector<InlayHint> &Results, ParsedAST &AST,
-                   const Config &Cfg, std::optional<Range> RestrictRange)
+                   const Config &Cfg, std::optional<Range> RestrictRange,
+                   InlayHintOptions HintOptions)
       : Results(Results), AST(AST.getASTContext()), Tokens(AST.getTokens()),
         Cfg(Cfg), RestrictRange(std::move(RestrictRange)),
         MainFileID(AST.getSourceManager().getMainFileID()),
         Resolver(AST.getHeuristicResolver()),
-        TypeHintPolicy(this->AST.getPrintingPolicy()) {
+        TypeHintPolicy(this->AST.getPrintingPolicy()),
+        HintOptions(HintOptions) {
     bool Invalid = false;
     llvm::StringRef Buf =
         AST.getSourceManager().getBufferData(MainFileID, &Invalid);
@@ -500,7 +466,8 @@ public:
       Callee.Decl = FD;
     else if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(CalleeDecls[0]))
       Callee.Decl = FTD->getTemplatedDecl();
-    else if (FunctionProtoTypeLoc Loc = getPrototypeLoc(E->getCallee()))
+    else if (FunctionProtoTypeLoc Loc =
+                 Resolver->getFunctionProtoTypeLoc(E->getCallee()))
       Callee.Loc = Loc;
     else
       return true;
@@ -1120,7 +1087,6 @@ private:
   // Otherwise, the hint shouldn't be shown.
   std::optional<Range> computeBlockEndHintRange(SourceRange BraceRange,
                                                 StringRef OptionalPunctuation) {
-    constexpr unsigned HintMinLineLimit = 2;
 
     auto &SM = AST.getSourceManager();
     auto [BlockBeginFileId, BlockBeginOffset] =
@@ -1148,7 +1114,7 @@ private:
     auto RBraceLine = SM.getLineNumber(RBraceFileId, RBraceOffset);
 
     // Don't show hint on trivial blocks like `class X {};`
-    if (BlockBeginLine + HintMinLineLimit - 1 > RBraceLine)
+    if (BlockBeginLine + HintOptions.HintMinLineLimit - 1 > RBraceLine)
       return std::nullopt;
 
     // This is what we attach the hint to, usually "}" or "};".
@@ -1178,23 +1144,26 @@ private:
   StringRef MainFileBuf;
   const HeuristicResolver *Resolver;
   PrintingPolicy TypeHintPolicy;
+  InlayHintOptions HintOptions;
 };
 
 } // namespace
 
 std::vector<InlayHint> inlayHints(ParsedAST &AST,
-                                  std::optional<Range> RestrictRange) {
+                                  std::optional<Range> RestrictRange,
+                                  InlayHintOptions HintOptions) {
   std::vector<InlayHint> Results;
   const auto &Cfg = Config::current();
   if (!Cfg.InlayHints.Enabled)
     return Results;
-  InlayHintVisitor Visitor(Results, AST, Cfg, std::move(RestrictRange));
+  InlayHintVisitor Visitor(Results, AST, Cfg, std::move(RestrictRange),
+                           HintOptions);
   Visitor.TraverseAST(AST.getASTContext());
 
   // De-duplicate hints. Duplicates can sometimes occur due to e.g. explicit
   // template instantiations.
   llvm::sort(Results);
-  Results.erase(std::unique(Results.begin(), Results.end()), Results.end());
+  Results.erase(llvm::unique(Results), Results.end());
 
   return Results;
 }

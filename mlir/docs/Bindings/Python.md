@@ -51,7 +51,10 @@ python -m pip install --upgrade pip
 # packages will be installed there.
 python -m pip install -r mlir/python/requirements.txt
 
-# Now run `cmake`, `ninja`, et al.
+# Now run your build command with `cmake`, `ninja`, et al.
+
+# Run mlir tests. For example, to run python bindings tests only using ninja:
+ninja check-mlir-python
 ```
 
 For interactive use, it is sufficient to add the
@@ -859,7 +862,7 @@ mutually exclusive with a more complete mapping of the backing constructs.
 
 ## Testing
 
-Tests should be added in the `test/Bindings/Python` directory and should
+Tests should be added in the `mlir/test/python` directory and should
 typically be `.py` files that have a lit run line.
 
 We use `lit` and `FileCheck` based tests:
@@ -1187,3 +1190,43 @@ or nanobind and
 utilities to connect to the rest of Python API. The bindings can be located in a
 separate module or in the same module as attributes and types, and
 loaded along with the dialect.
+
+## Free-threading (No-GIL) support
+
+Free-threading or no-GIL support refers to CPython interpreter (>=3.13) with Global Interpreter Lock made optional. For details on the topic, please check [PEP-703](https://peps.python.org/pep-0703/) and this [Python free-threading guide](https://py-free-threading.github.io/).
+
+MLIR Python bindings are free-threading compatible with exceptions (discussed below) in the following sense: it is safe to work in multiple threads with **independent** contexts. Below we show an example code of safe usage:
+
+```python
+# python3.13t example.py
+import concurrent.futures
+
+import mlir.dialects.arith as arith
+from mlir.ir import Context, Location, Module, IntegerType, InsertionPoint
+
+
+def func(py_value):
+    with Context() as ctx:
+        module = Module.create(loc=Location.file("foo.txt", 0, 0))
+
+        dtype = IntegerType.get_signless(64)
+        with InsertionPoint(module.body), Location.name("a"):
+            arith.constant(dtype, py_value)
+
+    return module
+
+
+num_workers = 8
+with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+    futures = []
+    for i in range(num_workers):
+        futures.append(executor.submit(func, i))
+    assert len(list(f.result() for f in futures)) == num_workers
+```
+
+The exceptions to the free-threading compatibility:
+- IR printing is unsafe, e.g. when using `PassManager` with `PassManager.enable_ir_printing()` which calls thread-unsafe `llvm::raw_ostream`.
+- Usage of `Location.emit_error` is unsafe (due to thread-unsafe `llvm::raw_ostream`).
+- Usage of `Module.dump` is unsafe (due to thread-unsafe `llvm::raw_ostream`).
+- Usage of `mlir.dialects.transform.interpreter` is unsafe.
+- Usage of `mlir.dialects.gpu` and `gpu-module-to-binary` is unsafe.

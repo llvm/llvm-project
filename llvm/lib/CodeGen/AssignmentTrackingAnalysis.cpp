@@ -23,6 +23,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PrintPasses.h"
@@ -230,9 +231,10 @@ void FunctionVarLocs::init(FunctionVarLocsBuilder &Builder) {
     for (const DbgVariableRecord &DVR : filterDbgVars(I->getDbgRecordRange())) {
       // Even though DVR defines a variable location, VarLocsBeforeInst can
       // still be empty if that VarLoc was redundant.
-      if (!Builder.VarLocsBeforeInst.count(&DVR))
+      auto It = Builder.VarLocsBeforeInst.find(&DVR);
+      if (It == Builder.VarLocsBeforeInst.end())
         continue;
-      for (const VarLocInfo &VarLoc : Builder.VarLocsBeforeInst[&DVR])
+      for (const VarLocInfo &VarLoc : It->second)
         VarLocRecords.emplace_back(VarLoc);
     }
     for (const VarLocInfo &VarLoc : P.second)
@@ -326,9 +328,6 @@ getDerefOffsetInBytes(const DIExpression *DIExpr) {
 
 /// A whole (unfragmented) source variable.
 using DebugAggregate = std::pair<const DILocalVariable *, const DILocation *>;
-static DebugAggregate getAggregate(const DbgVariableIntrinsic *DII) {
-  return DebugAggregate(DII->getVariable(), DII->getDebugLoc().getInlinedAt());
-}
 static DebugAggregate getAggregate(const DebugVariable &Var) {
   return DebugAggregate(Var.getVariable(), Var.getInlinedAt());
 }
@@ -341,8 +340,7 @@ static bool shouldCoalesceFragments(Function &F) {
   // has not been explicitly set and instruction-referencing is turned on.
   switch (CoalesceAdjacentFragmentsOpt) {
   case cl::boolOrDefault::BOU_UNSET:
-    return debuginfoShouldUseDebugInstrRef(
-        Triple(F.getParent()->getTargetTriple()));
+    return debuginfoShouldUseDebugInstrRef(F.getParent()->getTargetTriple());
   case cl::boolOrDefault::BOU_TRUE:
     return true;
   case cl::boolOrDefault::BOU_FALSE:
@@ -599,12 +597,12 @@ class MemLocFragmentFill {
         break;
     }
 
-    auto CurrentLiveInEntry = LiveIn.find(&BB);
     // If there's no LiveIn entry for the block yet, add it.
-    if (CurrentLiveInEntry == LiveIn.end()) {
+    auto [CurrentLiveInEntry, Inserted] = LiveIn.try_emplace(&BB);
+    if (Inserted) {
       LLVM_DEBUG(dbgs() << "change=true (first) on meet on " << BB.getName()
                         << "\n");
-      LiveIn[&BB] = std::move(BBLiveIn);
+      CurrentLiveInEntry->second = std::move(BBLiveIn);
       return /*Changed=*/true;
     }
 
@@ -897,8 +895,8 @@ public:
         Worklist.push(RPONumber);
         ++RPONumber;
       }
-      LiveIn.init(RPONumber);
-      LiveOut.init(RPONumber);
+      LiveIn.reserve(RPONumber);
+      LiveOut.reserve(RPONumber);
     }
 
     // Perform the traversal.
@@ -1027,14 +1025,13 @@ public:
   /// i.e. for all values x and y where x != y:
   /// join(x, x) = x
   /// join(x, y) = NoneOrPhi
-  using AssignRecord = PointerUnion<DbgAssignIntrinsic *, DbgVariableRecord *>;
   struct Assignment {
     enum S { Known, NoneOrPhi } Status;
     /// ID of the assignment. nullptr if Status is not Known.
     DIAssignID *ID;
     /// The dbg.assign that marks this dbg-def. Mem-defs don't use this field.
     /// May be nullptr.
-    AssignRecord Source;
+    DbgVariableRecord *Source = nullptr;
 
     bool isSameSourceAssignment(const Assignment &Other) const {
       // Don't include Source in the equality check. Assignments are
@@ -1049,24 +1046,16 @@ public:
       else
         OS << "null";
       OS << ", s=";
-      if (Source.isNull())
+      if (!Source)
         OS << "null";
-      else if (const auto *DAI = dyn_cast<DbgAssignIntrinsic *>(Source))
-        OS << DAI;
       else
-        OS << cast<DbgVariableRecord *>(Source);
+        OS << Source;
       OS << ")";
     }
 
-    static Assignment make(DIAssignID *ID, DbgAssignIntrinsic *Source) {
-      return Assignment(Known, ID, Source);
-    }
     static Assignment make(DIAssignID *ID, DbgVariableRecord *Source) {
-      assert(Source->isDbgAssign() &&
+      assert((!Source || Source->isDbgAssign()) &&
              "Cannot make an assignment from a non-assign DbgVariableRecord");
-      return Assignment(Known, ID, Source);
-    }
-    static Assignment make(DIAssignID *ID, AssignRecord Source) {
       return Assignment(Known, ID, Source);
     }
     static Assignment makeFromMemDef(DIAssignID *ID) {
@@ -1079,17 +1068,7 @@ public:
       // If the Status is Known then we expect there to be an assignment ID.
       assert(Status == NoneOrPhi || ID);
     }
-    Assignment(S Status, DIAssignID *ID, DbgAssignIntrinsic *Source)
-        : Status(Status), ID(ID), Source(Source) {
-      // If the Status is Known then we expect there to be an assignment ID.
-      assert(Status == NoneOrPhi || ID);
-    }
     Assignment(S Status, DIAssignID *ID, DbgVariableRecord *Source)
-        : Status(Status), ID(ID), Source(Source) {
-      // If the Status is Known then we expect there to be an assignment ID.
-      assert(Status == NoneOrPhi || ID);
-    }
-    Assignment(S Status, DIAssignID *ID, AssignRecord Source)
         : Status(Status), ID(ID), Source(Source) {
       // If the Status is Known then we expect there to be an assignment ID.
       assert(Status == NoneOrPhi || ID);
@@ -1102,6 +1081,8 @@ public:
   using UntaggedStoreAssignmentMap =
       DenseMap<const Instruction *,
                SmallVector<std::pair<VariableID, at::AssignmentInfo>>>;
+  using UnknownStoreAssignmentMap =
+      DenseMap<const Instruction *, SmallVector<VariableID>>;
 
 private:
   /// The highest numbered VariableID for partially promoted variables plus 1,
@@ -1112,6 +1093,9 @@ private:
   /// Map untagged stores to the variable fragments they assign to. Used by
   /// processUntaggedInstruction.
   UntaggedStoreAssignmentMap UntaggedStoreVars;
+  /// Map untagged unknown stores (e.g. strided/masked store intrinsics)
+  /// to the variables they may assign to. Used by processUntaggedInstruction.
+  UnknownStoreAssignmentMap UnknownStoreVars;
 
   // Machinery to defer inserting dbg.values.
   using InstInsertMap = MapVector<VarLocInsertPt, SmallVector<VarLocInfo>>;
@@ -1121,15 +1105,7 @@ private:
   void resetInsertionPoint(Instruction &After);
   void resetInsertionPoint(DbgVariableRecord &After);
 
-  // emitDbgValue can be called with:
-  //   Source=[AssignRecord|DbgValueInst*|DbgAssignIntrinsic*|DbgVariableRecord*]
-  // Since AssignRecord can be cast to one of the latter two types, and all
-  // other types have a shared interface, we use a template to handle the latter
-  // three types, and an explicit overload for AssignRecord that forwards to
-  // the template version with the right type.
-  void emitDbgValue(LocKind Kind, AssignRecord Source, VarLocInsertPt After);
-  template <typename T>
-  void emitDbgValue(LocKind Kind, const T Source, VarLocInsertPt After);
+  void emitDbgValue(LocKind Kind, DbgVariableRecord *, VarLocInsertPt After);
 
   static bool mapsAreEqual(const BitVector &Mask, const AssignmentMap &A,
                            const AssignmentMap &B) {
@@ -1306,7 +1282,7 @@ private:
   DenseSet<DebugAggregate> NotAlwaysStackHomed;
 
   VariableID getVariableID(const DebugVariable &Var) {
-    return static_cast<VariableID>(FnVarLocs->insertVariable(Var));
+    return FnVarLocs->insertVariable(Var);
   }
 
   /// Join the LiveOut values of preds that are contained in \p Visited into
@@ -1347,18 +1323,17 @@ private:
   /// location information).
   ///@{
   void processNonDbgInstruction(Instruction &I, BlockInfo *LiveSet);
-  void processDbgInstruction(DbgInfoIntrinsic &I, BlockInfo *LiveSet);
   /// Update \p LiveSet after encountering an instruction with a DIAssignID
   /// attachment, \p I.
   void processTaggedInstruction(Instruction &I, BlockInfo *LiveSet);
   /// Update \p LiveSet after encountering an instruciton without a DIAssignID
   /// attachment, \p I.
   void processUntaggedInstruction(Instruction &I, BlockInfo *LiveSet);
-  void processDbgAssign(AssignRecord Assign, BlockInfo *LiveSet);
+  void processUnknownStoreToVariable(Instruction &I, VariableID &Var,
+                                     BlockInfo *LiveSet);
+  void processDbgAssign(DbgVariableRecord *Assign, BlockInfo *LiveSet);
   void processDbgVariableRecord(DbgVariableRecord &DVR, BlockInfo *LiveSet);
-  void processDbgValue(
-      PointerUnion<DbgValueInst *, DbgVariableRecord *> DbgValueRecord,
-      BlockInfo *LiveSet);
+  void processDbgValue(DbgVariableRecord *DbgValue, BlockInfo *LiveSet);
   /// Add an assignment to memory for the variable /p Var.
   void addMemDef(BlockInfo *LiveSet, VariableID Var, const Assignment &AV);
   /// Add an assignment to the variable /p Var.
@@ -1454,10 +1429,6 @@ static DIAssignID *getIDFromInst(const Instruction &I) {
   return cast<DIAssignID>(I.getMetadata(LLVMContext::MD_DIAssignID));
 }
 
-static DIAssignID *getIDFromMarker(const DbgAssignIntrinsic &DAI) {
-  return cast<DIAssignID>(DAI.getAssignID());
-}
-
 static DIAssignID *getIDFromMarker(const DbgVariableRecord &DVR) {
   assert(DVR.isDbgAssign() &&
          "Cannot get a DIAssignID from a non-assign DbgVariableRecord!");
@@ -1512,27 +1483,8 @@ VarLocInsertPt getNextNode(VarLocInsertPt InsertPt) {
   return getNextNode(cast<const DbgRecord *>(InsertPt));
 }
 
-DbgAssignIntrinsic *CastToDbgAssign(DbgVariableIntrinsic *DVI) {
-  return cast<DbgAssignIntrinsic>(DVI);
-}
-
-DbgVariableRecord *CastToDbgAssign(DbgVariableRecord *DVR) {
-  assert(DVR->isDbgAssign() &&
-         "Attempted to cast non-assign DbgVariableRecord to DVRAssign.");
-  return DVR;
-}
-
 void AssignmentTrackingLowering::emitDbgValue(
-    AssignmentTrackingLowering::LocKind Kind,
-    AssignmentTrackingLowering::AssignRecord Source, VarLocInsertPt After) {
-  if (isa<DbgAssignIntrinsic *>(Source))
-    emitDbgValue(Kind, cast<DbgAssignIntrinsic *>(Source), After);
-  else
-    emitDbgValue(Kind, cast<DbgVariableRecord *>(Source), After);
-}
-template <typename T>
-void AssignmentTrackingLowering::emitDbgValue(
-    AssignmentTrackingLowering::LocKind Kind, const T Source,
+    AssignmentTrackingLowering::LocKind Kind, DbgVariableRecord *Source,
     VarLocInsertPt After) {
 
   DILocation *DL = Source->getDebugLoc();
@@ -1548,7 +1500,7 @@ void AssignmentTrackingLowering::emitDbgValue(
 
     VariableID Var = getVariableID(DebugVariable(Source));
     VarLocInfo VarLoc;
-    VarLoc.VariableID = static_cast<VariableID>(Var);
+    VarLoc.VariableID = Var;
     VarLoc.Expr = Expr;
     VarLoc.Values = RawLocationWrapper(Val);
     VarLoc.DL = DL;
@@ -1558,7 +1510,8 @@ void AssignmentTrackingLowering::emitDbgValue(
 
   // NOTE: This block can mutate Kind.
   if (Kind == LocKind::Mem) {
-    const auto *Assign = CastToDbgAssign(Source);
+    assert(Source->isDbgAssign());
+    const DbgVariableRecord *Assign = Source;
     // Check the address hasn't been dropped (e.g. the debug uses may not have
     // been replaced before deleting a Value).
     if (Assign->isKillAddress()) {
@@ -1603,6 +1556,45 @@ void AssignmentTrackingLowering::processNonDbgInstruction(
     processUntaggedInstruction(I, LiveSet);
 }
 
+void AssignmentTrackingLowering::processUnknownStoreToVariable(
+    Instruction &I, VariableID &Var, BlockInfo *LiveSet) {
+  // We may have assigned to some unknown fragment of the variable, so
+  // treat the memory assignment as unknown for now.
+  addMemDef(LiveSet, Var, Assignment::makeNoneOrPhi());
+  // If we weren't already using a memory location, we don't need to do
+  // anything more.
+  if (getLocKind(LiveSet, Var) != LocKind::Mem)
+    return;
+  // If there is a live debug value for this variable, fall back to using
+  // that.
+  Assignment DbgAV = LiveSet->getAssignment(BlockInfo::Debug, Var);
+  if (DbgAV.Status != Assignment::NoneOrPhi && DbgAV.Source) {
+    LLVM_DEBUG(dbgs() << "Switching to fallback debug value: ";
+               DbgAV.dump(dbgs()); dbgs() << "\n");
+    setLocKind(LiveSet, Var, LocKind::Val);
+    emitDbgValue(LocKind::Val, DbgAV.Source, &I);
+    return;
+  }
+  // Otherwise, find a suitable insert point, before the next instruction or
+  // DbgRecord after I.
+  auto InsertBefore = getNextNode(&I);
+  assert(InsertBefore && "Shouldn't be inserting after a terminator");
+
+  // Get DILocation for this assignment.
+  DebugVariable V = FnVarLocs->getVariable(Var);
+  DILocation *InlinedAt = const_cast<DILocation *>(V.getInlinedAt());
+  const DILocation *DILoc = DILocation::get(
+      Fn.getContext(), 0, 0, V.getVariable()->getScope(), InlinedAt);
+
+  VarLocInfo VarLoc;
+  VarLoc.VariableID = Var;
+  VarLoc.Expr = DIExpression::get(I.getContext(), {});
+  VarLoc.Values = RawLocationWrapper(
+      ValueAsMetadata::get(PoisonValue::get(Type::getInt1Ty(I.getContext()))));
+  VarLoc.DL = DILoc;
+  InsertBeforeMap[InsertBefore].push_back(VarLoc);
+}
+
 void AssignmentTrackingLowering::processUntaggedInstruction(
     Instruction &I, AssignmentTrackingLowering::BlockInfo *LiveSet) {
   // Interpret stack stores that are not tagged as an assignment in memory for
@@ -1618,8 +1610,21 @@ void AssignmentTrackingLowering::processUntaggedInstruction(
   // "early", for example.
   assert(!I.hasMetadata(LLVMContext::MD_DIAssignID));
   auto It = UntaggedStoreVars.find(&I);
-  if (It == UntaggedStoreVars.end())
+  if (It == UntaggedStoreVars.end()) {
+    // It is possible that we have an untagged unknown store, i.e. one that
+    // cannot be represented as a simple (base, offset, size) - in this case we
+    // should undef the memory location of the variable, as if we had a tagged
+    // store that did not match the current assignment.
+    // FIXME: It should be possible to support these stores, but it would
+    // require more extensive changes to our representation of assignments.
+    if (auto UnhandledStoreIt = UnknownStoreVars.find(&I);
+        UnhandledStoreIt != UnknownStoreVars.end()) {
+      LLVM_DEBUG(dbgs() << "Processing untagged unknown store " << I << "\n");
+      for (auto &Var : UnhandledStoreIt->second)
+        processUnknownStoreToVariable(I, Var, LiveSet);
+    }
     return; // No variables associated with the store destination.
+  }
 
   LLVM_DEBUG(dbgs() << "processUntaggedInstruction on UNTAGGED INST " << I
                     << "\n");
@@ -1674,17 +1679,16 @@ void AssignmentTrackingLowering::processUntaggedInstruction(
 
 void AssignmentTrackingLowering::processTaggedInstruction(
     Instruction &I, AssignmentTrackingLowering::BlockInfo *LiveSet) {
-  auto Linked = at::getAssignmentMarkers(&I);
   auto LinkedDPAssigns = at::getDVRAssignmentMarkers(&I);
   // No dbg.assign intrinsics linked.
   // FIXME: All vars that have a stack slot this store modifies that don't have
   // a dbg.assign linked to it should probably treat this like an untagged
   // store.
-  if (Linked.empty() && LinkedDPAssigns.empty())
+  if (LinkedDPAssigns.empty())
     return;
 
   LLVM_DEBUG(dbgs() << "processTaggedInstruction on " << I << "\n");
-  auto ProcessLinkedAssign = [&](auto *Assign) {
+  for (DbgVariableRecord *Assign : LinkedDPAssigns) {
     VariableID Var = getVariableID(DebugVariable(Assign));
     // Something has gone wrong if VarsWithStackSlot doesn't contain a variable
     // that is linked to a store.
@@ -1755,112 +1759,82 @@ void AssignmentTrackingLowering::processTaggedInstruction(
       setLocKind(LiveSet, Var, LocKind::None);
     } break;
     }
-  };
-  for (DbgAssignIntrinsic *DAI : Linked)
-    ProcessLinkedAssign(DAI);
-  for (DbgVariableRecord *DVR : LinkedDPAssigns)
-    ProcessLinkedAssign(DVR);
+  }
 }
 
-void AssignmentTrackingLowering::processDbgAssign(AssignRecord Assign,
+void AssignmentTrackingLowering::processDbgAssign(DbgVariableRecord *DbgAssign,
                                                   BlockInfo *LiveSet) {
-  auto ProcessDbgAssignImpl = [&](auto *DbgAssign) {
-    // Only bother tracking variables that are at some point stack homed. Other
-    // variables can be dealt with trivially later.
-    if (!VarsWithStackSlot->count(getAggregate(DbgAssign)))
-      return;
+  // Only bother tracking variables that are at some point stack homed. Other
+  // variables can be dealt with trivially later.
+  if (!VarsWithStackSlot->count(getAggregate(DbgAssign)))
+    return;
 
-    VariableID Var = getVariableID(DebugVariable(DbgAssign));
-    Assignment AV = Assignment::make(getIDFromMarker(*DbgAssign), DbgAssign);
-    addDbgDef(LiveSet, Var, AV);
+  VariableID Var = getVariableID(DebugVariable(DbgAssign));
+  Assignment AV = Assignment::make(getIDFromMarker(*DbgAssign), DbgAssign);
+  addDbgDef(LiveSet, Var, AV);
 
-    LLVM_DEBUG(dbgs() << "processDbgAssign on " << *DbgAssign << "\n";);
-    LLVM_DEBUG(dbgs() << "   LiveLoc " << locStr(getLocKind(LiveSet, Var))
-                      << " -> ");
+  LLVM_DEBUG(dbgs() << "processDbgAssign on " << *DbgAssign << "\n";);
+  LLVM_DEBUG(dbgs() << "   LiveLoc " << locStr(getLocKind(LiveSet, Var))
+                    << " -> ");
 
-    // Check if the DebugValue and StackHomeValue both hold the same
-    // Assignment.
-    if (hasVarWithAssignment(LiveSet, BlockInfo::Stack, Var, AV)) {
-      // They match. We can use the stack home because the debug intrinsics
-      // state that an assignment happened here, and we know that specific
-      // assignment was the last one to take place in memory for this variable.
-      LocKind Kind;
-      if (DbgAssign->isKillAddress()) {
-        LLVM_DEBUG(
-            dbgs()
-                << "Val, Stack matches Debug program but address is killed\n";);
-        Kind = LocKind::Val;
-      } else {
-        LLVM_DEBUG(dbgs() << "Mem, Stack matches Debug program\n";);
-        Kind = LocKind::Mem;
-      };
-      setLocKind(LiveSet, Var, Kind);
-      emitDbgValue(Kind, DbgAssign, DbgAssign);
+  // Check if the DebugValue and StackHomeValue both hold the same
+  // Assignment.
+  if (hasVarWithAssignment(LiveSet, BlockInfo::Stack, Var, AV)) {
+    // They match. We can use the stack home because the debug intrinsics
+    // state that an assignment happened here, and we know that specific
+    // assignment was the last one to take place in memory for this variable.
+    LocKind Kind;
+    if (DbgAssign->isKillAddress()) {
+      LLVM_DEBUG(
+          dbgs()
+              << "Val, Stack matches Debug program but address is killed\n";);
+      Kind = LocKind::Val;
     } else {
-      // The last assignment to the memory location isn't the one that we want
-      // to show to the user so emit a dbg.value(Value). Value may be undef.
-      LLVM_DEBUG(dbgs() << "Val, Stack contents is unknown\n";);
-      setLocKind(LiveSet, Var, LocKind::Val);
-      emitDbgValue(LocKind::Val, DbgAssign, DbgAssign);
-    }
-  };
-  if (isa<DbgVariableRecord *>(Assign))
-    return ProcessDbgAssignImpl(cast<DbgVariableRecord *>(Assign));
-  return ProcessDbgAssignImpl(cast<DbgAssignIntrinsic *>(Assign));
-}
-
-void AssignmentTrackingLowering::processDbgValue(
-    PointerUnion<DbgValueInst *, DbgVariableRecord *> DbgValueRecord,
-    BlockInfo *LiveSet) {
-  auto ProcessDbgValueImpl = [&](auto *DbgValue) {
-    // Only other tracking variables that are at some point stack homed.
-    // Other variables can be dealt with trivally later.
-    if (!VarsWithStackSlot->count(getAggregate(DbgValue)))
-      return;
-
-    VariableID Var = getVariableID(DebugVariable(DbgValue));
-    // We have no ID to create an Assignment with so we mark this assignment as
-    // NoneOrPhi. Note that the dbg.value still exists, we just cannot determine
-    // the assignment responsible for setting this value.
-    // This is fine; dbg.values are essentially interchangable with unlinked
-    // dbg.assigns, and some passes such as mem2reg and instcombine add them to
-    // PHIs for promoted variables.
-    Assignment AV = Assignment::makeNoneOrPhi();
-    addDbgDef(LiveSet, Var, AV);
-
-    LLVM_DEBUG(dbgs() << "processDbgValue on " << *DbgValue << "\n";);
-    LLVM_DEBUG(dbgs() << "   LiveLoc " << locStr(getLocKind(LiveSet, Var))
-                      << " -> Val, dbg.value override");
-
+      LLVM_DEBUG(dbgs() << "Mem, Stack matches Debug program\n";);
+      Kind = LocKind::Mem;
+    };
+    setLocKind(LiveSet, Var, Kind);
+    emitDbgValue(Kind, DbgAssign, DbgAssign);
+  } else {
+    // The last assignment to the memory location isn't the one that we want
+    // to show to the user so emit a dbg.value(Value). Value may be undef.
+    LLVM_DEBUG(dbgs() << "Val, Stack contents is unknown\n";);
     setLocKind(LiveSet, Var, LocKind::Val);
-    emitDbgValue(LocKind::Val, DbgValue, DbgValue);
-  };
-  if (isa<DbgVariableRecord *>(DbgValueRecord))
-    return ProcessDbgValueImpl(cast<DbgVariableRecord *>(DbgValueRecord));
-  return ProcessDbgValueImpl(cast<DbgValueInst *>(DbgValueRecord));
+    emitDbgValue(LocKind::Val, DbgAssign, DbgAssign);
+  }
 }
 
-template <typename T> static bool hasZeroSizedFragment(T &DbgValue) {
+void AssignmentTrackingLowering::processDbgValue(DbgVariableRecord *DbgValue,
+                                                 BlockInfo *LiveSet) {
+  // Only other tracking variables that are at some point stack homed.
+  // Other variables can be dealt with trivally later.
+  if (!VarsWithStackSlot->count(getAggregate(DbgValue)))
+    return;
+
+  VariableID Var = getVariableID(DebugVariable(DbgValue));
+  // We have no ID to create an Assignment with so we mark this assignment as
+  // NoneOrPhi. Note that the dbg.value still exists, we just cannot determine
+  // the assignment responsible for setting this value.
+  // This is fine; dbg.values are essentially interchangable with unlinked
+  // dbg.assigns, and some passes such as mem2reg and instcombine add them to
+  // PHIs for promoted variables.
+  Assignment AV = Assignment::makeNoneOrPhi();
+  addDbgDef(LiveSet, Var, AV);
+
+  LLVM_DEBUG(dbgs() << "processDbgValue on " << *DbgValue << "\n";);
+  LLVM_DEBUG(dbgs() << "   LiveLoc " << locStr(getLocKind(LiveSet, Var))
+                    << " -> Val, dbg.value override");
+
+  setLocKind(LiveSet, Var, LocKind::Val);
+  emitDbgValue(LocKind::Val, DbgValue, DbgValue);
+}
+
+static bool hasZeroSizedFragment(DbgVariableRecord &DbgValue) {
   if (auto F = DbgValue.getExpression()->getFragmentInfo())
     return F->SizeInBits == 0;
   return false;
 }
 
-void AssignmentTrackingLowering::processDbgInstruction(
-    DbgInfoIntrinsic &I, AssignmentTrackingLowering::BlockInfo *LiveSet) {
-  auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I);
-  if (!DVI)
-    return;
-
-  // Ignore assignments to zero bits of the variable.
-  if (hasZeroSizedFragment(*DVI))
-    return;
-
-  if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
-    processDbgAssign(DAI, LiveSet);
-  else if (auto *DVI = dyn_cast<DbgValueInst>(&I))
-    processDbgValue(DVI, LiveSet);
-}
 void AssignmentTrackingLowering::processDbgVariableRecord(
     DbgVariableRecord &DVR, AssignmentTrackingLowering::BlockInfo *LiveSet) {
   // Ignore assignments to zero bits of the variable.
@@ -1904,14 +1878,12 @@ void AssignmentTrackingLowering::process(BasicBlock &BB, BlockInfo *LiveSet) {
       // attached DbgRecords, or a non-debug instruction with attached processed
       // DbgRecords.
       // II has not been processed.
-      if (!isa<DbgInfoIntrinsic>(&*II)) {
-        if (II->isTerminator())
-          break;
-        resetInsertionPoint(*II);
-        processNonDbgInstruction(*II, LiveSet);
-        assert(LiveSet->isValid());
-        ++II;
-      }
+      if (II->isTerminator())
+        break;
+      resetInsertionPoint(*II);
+      processNonDbgInstruction(*II, LiveSet);
+      assert(LiveSet->isValid());
+      ++II;
     }
     // II is now either a debug intrinsic, a non-debug instruction with no
     // attached DbgRecords, or a non-debug instruction with attached unprocessed
@@ -1927,15 +1899,6 @@ void AssignmentTrackingLowering::process(BasicBlock &BB, BlockInfo *LiveSet) {
       }
     }
     ProcessedLeadingDbgRecords = true;
-    while (II != EI) {
-      auto *Dbg = dyn_cast<DbgInfoIntrinsic>(&*II);
-      if (!Dbg)
-        break;
-      resetInsertionPoint(*II);
-      processDbgInstruction(*Dbg, LiveSet);
-      assert(LiveSet->isValid());
-      ++II;
-    }
     // II is now a non-debug instruction either with no attached DbgRecords, or
     // with attached processed DbgRecords. II has not been processed, and all
     // debug instructions or DbgRecords in the frame preceding II have been
@@ -1996,24 +1959,16 @@ AssignmentTrackingLowering::joinAssignment(const Assignment &A,
   // Here the same assignment (!1) was performed in both preds in the source,
   // but we can't use either one unless they are identical (e.g. .we don't
   // want to arbitrarily pick between constant values).
-  auto JoinSource = [&]() -> AssignRecord {
+  auto JoinSource = [&]() -> DbgVariableRecord * {
     if (A.Source == B.Source)
       return A.Source;
     if (!A.Source || !B.Source)
-      return AssignRecord();
-    assert(isa<DbgVariableRecord *>(A.Source) ==
-           isa<DbgVariableRecord *>(B.Source));
-    if (isa<DbgVariableRecord *>(A.Source) &&
-        cast<DbgVariableRecord *>(A.Source)->isEquivalentTo(
-            *cast<DbgVariableRecord *>(B.Source)))
+      return nullptr;
+    if (A.Source->isEquivalentTo(*B.Source))
       return A.Source;
-    if (isa<DbgAssignIntrinsic *>(A.Source) &&
-        cast<DbgAssignIntrinsic *>(A.Source)->isIdenticalTo(
-            cast<DbgAssignIntrinsic *>(B.Source)))
-      return A.Source;
-    return AssignRecord();
+    return nullptr;
   };
-  AssignRecord Source = JoinSource();
+  DbgVariableRecord *Source = JoinSource();
   assert(A.Status == B.Status && A.Status == Assignment::Known);
   assert(A.ID == B.ID);
   return Assignment::make(A.ID, Source);
@@ -2053,17 +2008,17 @@ bool AssignmentTrackingLowering::join(
   // Exactly one visited pred. Copy the LiveOut from that pred into BB LiveIn.
   if (VisitedPreds.size() == 1) {
     const BlockInfo &PredLiveOut = LiveOut.find(VisitedPreds[0])->second;
-    auto CurrentLiveInEntry = LiveIn.find(&BB);
 
     // Check if there isn't an entry, or there is but the LiveIn set has
     // changed (expensive check).
-    if (CurrentLiveInEntry == LiveIn.end())
-      LiveIn.insert(std::make_pair(&BB, PredLiveOut));
-    else if (PredLiveOut != CurrentLiveInEntry->second)
+    auto [CurrentLiveInEntry, Inserted] = LiveIn.try_emplace(&BB, PredLiveOut);
+    if (Inserted)
+      return /*Changed*/ true;
+    if (PredLiveOut != CurrentLiveInEntry->second) {
       CurrentLiveInEntry->second = PredLiveOut;
-    else
-      return /*Changed*/ false;
-    return /*Changed*/ true;
+      return /*Changed*/ true;
+    }
+    return /*Changed*/ false;
   }
 
   // More than one pred. Join LiveOuts of blocks 1 and 2.
@@ -2122,12 +2077,24 @@ getUntaggedStoreAssignmentInfo(const Instruction &I, const DataLayout &Layout) {
   return std::nullopt;
 }
 
-DbgDeclareInst *DynCastToDbgDeclare(DbgVariableIntrinsic *DVI) {
-  return dyn_cast<DbgDeclareInst>(DVI);
-}
-
-DbgVariableRecord *DynCastToDbgDeclare(DbgVariableRecord *DVR) {
-  return DVR->isDbgDeclare() ? DVR : nullptr;
+AllocaInst *getUnknownStore(const Instruction &I, const DataLayout &Layout) {
+  auto *II = dyn_cast<IntrinsicInst>(&I);
+  if (!II)
+    return nullptr;
+  Intrinsic::ID ID = II->getIntrinsicID();
+  if (ID != Intrinsic::experimental_vp_strided_store &&
+      ID != Intrinsic::masked_store && ID != Intrinsic::vp_scatter &&
+      ID != Intrinsic::masked_scatter && ID != Intrinsic::vp_store &&
+      ID != Intrinsic::masked_compressstore)
+    return nullptr;
+  Value *MemOp = II->getArgOperand(1);
+  // We don't actually use the constant offset for now, but we may in future,
+  // and the non-accumulating versions do not support a vector of pointers.
+  APInt Offset(Layout.getIndexTypeSizeInBits(MemOp->getType()), 0);
+  Value *Base = MemOp->stripAndAccumulateConstantOffsets(Layout, Offset, true);
+  // For Base pointers that are not an alloca instruction we don't need to do
+  // anything, and simply return nullptr.
+  return dyn_cast<AllocaInst>(Base);
 }
 
 /// Build a map of {Variable x: Variables y} where all variable fragments
@@ -2144,7 +2111,8 @@ DbgVariableRecord *DynCastToDbgDeclare(DbgVariableRecord *DVR) {
 /// subsequent variables are either stack homed or fully promoted.
 ///
 /// Finally, populate UntaggedStoreVars with a mapping of untagged stores to
-/// the stored-to variable fragments.
+/// the stored-to variable fragments, and UnknownStoreVars with a mapping
+/// of untagged unknown stores to the stored-to variable aggregates.
 ///
 /// These tasks are bundled together to reduce the number of times we need
 /// to iterate over the function as they can be achieved together in one pass.
@@ -2152,6 +2120,7 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
     Function &Fn, FunctionVarLocsBuilder *FnVarLocs,
     const DenseSet<DebugAggregate> &VarsWithStackSlot,
     AssignmentTrackingLowering::UntaggedStoreAssignmentMap &UntaggedStoreVars,
+    AssignmentTrackingLowering::UnknownStoreAssignmentMap &UnknownStoreVars,
     unsigned &TrackedVariablesVectorSize) {
   DenseSet<DebugVariable> Seen;
   // Map of Variable: [Fragments].
@@ -2160,14 +2129,14 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
   // - dbg.declare    -> add single location variable record
   // - dbg.*          -> Add fragments to FragmentMap
   // - untagged store -> Add fragments to FragmentMap and update
-  //                     UntaggedStoreVars.
+  //                     UntaggedStoreVars, or add to UnknownStoreVars if
+  //                     we can't determine the fragment overlap.
   // We need to add fragments for untagged stores too so that we can correctly
   // clobber overlapped fragment locations later.
-  SmallVector<DbgDeclareInst *> InstDeclares;
   SmallVector<DbgVariableRecord *> DPDeclares;
-  auto ProcessDbgRecord = [&](auto *Record, auto &DeclareList) {
-    if (auto *Declare = DynCastToDbgDeclare(Record)) {
-      DeclareList.push_back(Declare);
+  auto ProcessDbgRecord = [&](DbgVariableRecord *Record) {
+    if (Record->isDbgDeclare()) {
+      DPDeclares.push_back(Record);
       return;
     }
     DebugVariable DV = DebugVariable(Record);
@@ -2180,13 +2149,10 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
   for (auto &BB : Fn) {
     for (auto &I : BB) {
       for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
-        ProcessDbgRecord(&DVR, DPDeclares);
-      if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
-        ProcessDbgRecord(DII, InstDeclares);
-      } else if (auto Info = getUntaggedStoreAssignmentInfo(
-                     I, Fn.getDataLayout())) {
+        ProcessDbgRecord(&DVR);
+      if (auto Info = getUntaggedStoreAssignmentInfo(I, Fn.getDataLayout())) {
         // Find markers linked to this alloca.
-        auto HandleDbgAssignForStore = [&](auto *Assign) {
+        auto HandleDbgAssignForStore = [&](DbgVariableRecord *Assign) {
           std::optional<DIExpression::FragmentInfo> FragInfo;
 
           // Skip this assignment if the affected bits are outside of the
@@ -2219,10 +2185,25 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
           if (Seen.insert(DV).second)
             FragmentMap[DA].push_back(DV);
         };
-        for (DbgAssignIntrinsic *DAI : at::getAssignmentMarkers(Info->Base))
-          HandleDbgAssignForStore(DAI);
         for (DbgVariableRecord *DVR : at::getDVRAssignmentMarkers(Info->Base))
           HandleDbgAssignForStore(DVR);
+      } else if (auto *AI = getUnknownStore(I, Fn.getDataLayout())) {
+        // Find markers linked to this alloca.
+        auto HandleDbgAssignForUnknownStore = [&](DbgVariableRecord *Assign) {
+          // Because we can't currently represent the fragment info for this
+          // store, we treat it as an unusable store to the whole variable.
+          DebugVariable DV =
+              DebugVariable(Assign->getVariable(), std::nullopt,
+                            Assign->getDebugLoc().getInlinedAt());
+          DebugAggregate DA = {DV.getVariable(), DV.getInlinedAt()};
+          if (!VarsWithStackSlot.contains(DA))
+            return;
+
+          // Cache this info for later.
+          UnknownStoreVars[&I].push_back(FnVarLocs->insertVariable(DV));
+        };
+        for (DbgVariableRecord *DVR : at::getDVRAssignmentMarkers(AI))
+          HandleDbgAssignForUnknownStore(DVR);
       }
     }
   }
@@ -2269,9 +2250,6 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
 
   // Finally, insert the declares afterwards, so the first IDs are all
   // partially stack homed vars.
-  for (auto *DDI : InstDeclares)
-    FnVarLocs->addSingleLocVar(DebugVariable(DDI), DDI->getExpression(),
-                               DDI->getDebugLoc(), DDI->getWrappedLocation());
   for (auto *DVR : DPDeclares)
     FnVarLocs->addSingleLocVar(DebugVariable(DVR), DVR->getExpression(),
                                DVR->getDebugLoc(),
@@ -2297,7 +2275,7 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
   // neither does LiveDebugVariables) because that is difficult to do and
   // appears to be rare occurance.
   VarContains = buildOverlapMapAndRecordDeclares(
-      Fn, FnVarLocs, *VarsWithStackSlot, UntaggedStoreVars,
+      Fn, FnVarLocs, *VarsWithStackSlot, UntaggedStoreVars, UnknownStoreVars,
       TrackedVariablesVectorSize);
 
   // Prepare for traversal.
@@ -2318,8 +2296,8 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
       Worklist.push(RPONumber);
       ++RPONumber;
     }
-    LiveIn.init(RPONumber);
-    LiveOut.init(RPONumber);
+    LiveIn.reserve(RPONumber);
+    LiveOut.reserve(RPONumber);
   }
 
   // Perform the traversal.
@@ -2454,7 +2432,7 @@ bool AssignmentTrackingLowering::emitPromotedVarLocs(
   bool InsertedAnyIntrinsics = false;
   // Go through every block, translating debug intrinsics for fully promoted
   // variables into FnVarLocs location defs. No analysis required for these.
-  auto TranslateDbgRecord = [&](auto *Record) {
+  auto TranslateDbgRecord = [&](DbgVariableRecord *Record) {
     // Skip variables that haven't been promoted - we've dealt with those
     // already.
     if (VarsWithStackSlot->contains(getAggregate(Record)))
@@ -2472,9 +2450,6 @@ bool AssignmentTrackingLowering::emitPromotedVarLocs(
       for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
         if (DVR.isDbgValue() || DVR.isDbgAssign())
           TranslateDbgRecord(&DVR);
-      auto *DVI = dyn_cast<DbgValueInst>(&I);
-      if (DVI)
-        TranslateDbgRecord(DVI);
     }
   }
   return InsertedAnyIntrinsics;
@@ -2496,10 +2471,8 @@ removeRedundantDbgLocsUsingBackwardScan(const BasicBlock *BB,
   // FnVarLocs, because wedges in FnVarLocs may only be separated by debug
   // instructions.
   for (const Instruction &I : reverse(*BB)) {
-    if (!isa<DbgVariableIntrinsic>(I)) {
-      // Sequence of consecutive defs ended. Clear map for the next one.
-      VariableDefinedBytes.clear();
-    }
+    // Sequence of consecutive defs ended. Clear map for the next one.
+    VariableDefinedBytes.clear();
 
     auto HandleLocsForWedge = [&](auto *WedgePosition) {
       // Get the location defs that start just before this instruction.
@@ -2612,13 +2585,13 @@ removeRedundantDbgLocsUsingForwardScan(const BasicBlock *BB,
         NumDefsScanned++;
         DebugVariable Key(FnVarLocs.getVariable(Loc.VariableID).getVariable(),
                           std::nullopt, Loc.DL.getInlinedAt());
-        auto VMI = VariableMap.find(Key);
+        auto [VMI, Inserted] = VariableMap.try_emplace(Key);
 
         // Update the map if we found a new value/expression describing the
         // variable, or if the variable wasn't mapped already.
-        if (VMI == VariableMap.end() || VMI->second.first != Loc.Values ||
+        if (Inserted || VMI->second.first != Loc.Values ||
             VMI->second.second != Loc.Expr) {
-          VariableMap[Key] = {Loc.Values, Loc.Expr};
+          VMI->second = {Loc.Values, Loc.Expr};
           NewDefs.push_back(Loc);
           continue;
         }
@@ -2678,7 +2651,6 @@ removeUndefDbgLocsFromEntryBlock(const BasicBlock *BB,
   };
 
   bool Changed = false;
-  DenseMap<DebugVariable, std::pair<Value *, DIExpression *>> VariableMap;
 
   // Scan over the entire block, not just over the instructions mapped by
   // FnVarLocs, because wedges in FnVarLocs may only be separated by debug
@@ -2753,9 +2725,6 @@ static DenseSet<DebugAggregate> findVarsWithStackSlot(Function &Fn) {
       // DIAssignID might get dropped from an alloca but not stores. In that
       // case, we need to consider the variable interesting for NFC behaviour
       // with this change. TODO: Consider only looking at allocas.
-      for (DbgAssignIntrinsic *DAI : at::getAssignmentMarkers(&I)) {
-        Result.insert({DAI->getVariable(), DAI->getDebugLoc().getInlinedAt()});
-      }
       for (DbgVariableRecord *DVR : at::getDVRAssignmentMarkers(&I)) {
         Result.insert({DVR->getVariable(), DVR->getDebugLoc().getInlinedAt()});
       }

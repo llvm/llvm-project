@@ -202,13 +202,13 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Variadic friends</td>
   <td><a href="https://wg21.link/P2893R3">P2893R3</a></td>
-  <td class="unreleased" align="center">Clang 20</td>
+  <td class="full" align="center">Clang 20</td>
  </tr>
  <!-- Summer 2024 papers (St Louis) -->
  <tr>
   <td><tt>constexpr</tt> placement new</td>
   <td><a href="https://wg21.link/P2747R2">P2747R2</a></td>
-  <td class="unreleased" align="center">Clang 20</td>
+  <td class="full" align="center">Clang 20</td>
  </tr>
  <tr>
   <td>Deleting a Pointer to an Incomplete Type Should be Ill-formed</td>
@@ -223,7 +223,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Structured binding declaration as a condition</td>
   <td><a href="https://wg21.link/P0963R3">P0963R3</a></td>
-  <td class="none" align="center">No</td>
+  <td class="unreleased" align="center">Clang 21</td>
  </tr>
  <!--Poland, Fall 2024-->
  <tr>
@@ -239,18 +239,101 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Remove Deprecated Array Comparisons from C++26</td>
   <td><a href="https://wg21.link/P2865R6">P2865R6</a></td>
-  <td class="unreleased" align="center">Clang 20</td>
+  <td class="full" align="center">Clang 20</td>
  </tr>
  <tr>
   <td>Structured Bindings can introduce a Pack</td>
   <td><a href="https://wg21.link/P1061R10">P1061R10</a></td>
-  <td class="none" align="center">No</td>
+  <td class="unreleased" align="center">Clang 21</td>
  </tr>
  <tr>
   <td>The Oxford variadic comma</td>
   <td><a href="https://wg21.link/P3176R1">P3176R1</a></td>
-  <td class="unreleased" align="center">Clang 20</td>
+  <td class="full" align="center">Clang 20</td>
  </tr>
+ <!-- Austria, Winter 2025 -->
+ <tr>
+  <td>Trivial unions</td>
+  <td><a href="https://wg21.link/P3074">P3074R7</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Partial program correctness</td>
+  <td><a href="https://wg21.link/P1494">P1494R5</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Contracts</td>
+  <td><a href="https://wg21.link/P2900">P2900R14</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Defang and deprecate <code>memory_order::consume</code></td>
+  <td><a href="https://wg21.link/P3475">P3475R2</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Concept and variable-template template-parameters</td>
+  <td><a href="https://wg21.link/P2841">P2841R7</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Trivial Relocatability</pre></td>
+  <td><a href="https://wg21.link/P2786">P2786R13</a></td>
+  <td class="partial" align="center">
+    <details>
+      <summary>Clang 21 (Partial)</summary>
+      The feature test macro (<code>__cpp_trivial_relocatability</code>) has not yet been set.
+    </details>
+  </td>
+ </tr>
+ <tr>
+  <td><pre>#embed</pre></td>
+  <td><a href="https://wg21.link/P1967">P1967R14</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <!-- Bulgaria, Spring 2025 -->
+ <tr>
+  <td rowspan="5">Reflection</td>
+  <td><a href="https://wg21.link/P2996">P2996R13</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td><a href="https://wg21.link/P3394">P3394R4</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td><a href="https://wg21.link/P3293">P3293R3</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td><a href="https://wg21.link/P3491">P3491R3</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td><a href="https://wg21.link/P3096">P3096R12</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Attaching main to the global module</td>
+  <td><a href="https://wg21.link/P3618">P3618R0</a> (<a href="#dr">DR</a>)</td>
+  <td class="unreleased" align="center">Clang 21</td>
+ </tr>
+ <tr>
+  <td>Expansion Statements</td>
+  <td><a href="https://wg21.link/P1306">P1306R5</a></td>
+  <td class="none" align="center">No</td>
+  </tr>
+  <tr>
+   <td>constexpr virtual inheritance</td>
+   <td><a href="https://wg21.link/P3533">P3533R2</a></td>
+   <td class="none" align="center">No</td>
+  </tr>
+  <tr>
+   <td>Preprocessing is never undefined</td>
+   <td><a href="https://wg21.link/P2843">P2843R3</a></td>
+   <td class="none" align="center">No</td>
+  </tr>
 </table>
 </details>
 
@@ -440,7 +523,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Using unknown pointers and references in constant expressions</td>
       <td><a href="https://wg21.link/P2280R4">P2280R4</a> (<a href="#dr">DR</a>)</td>
-      <td class="none" align="center">No</td>
+      <td class="full" align="center">Clang 20</td>
     </tr>
     <tr>
       <td>static <code>operator()</code></td>
@@ -828,7 +911,7 @@ C++23, informally referred to as C++26.</p>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p1811r0">P1811R0</a></td>
-        <td class="none" align="center">No</td>
+        <td class="full" align="center">Clang 17</td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p1703r1">P1703R1</a></td>
@@ -840,7 +923,7 @@ C++23, informally referred to as C++26.</p>
       </tr>
       <tr> <!-- from Belfast -->
         <td><a href="https://wg21.link/p1979r0">P1979R0</a></td>
-        <td class="none" align="center">No</td>
+        <td class="full" align="center">Clang 17</td>
       </tr>
       <tr> <!-- from Prague -->
         <td><a href="https://wg21.link/p1779r3">P1779R3</a></td>
@@ -852,7 +935,7 @@ C++23, informally referred to as C++26.</p>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p2115r0">P2115R0</a></td>
-        <td class="partial" align="center">Partial</td>
+        <td class="full" align="center">Yes</td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p1815r2">P1815R2</a></td>
@@ -860,11 +943,11 @@ C++23, informally referred to as C++26.</p>
       </tr>
       <tr> <!-- from Kona 2022 -->
         <td><a href="https://wg21.link/P2615R1">P2615R1</a> (<a href="#dr">DR</a>)</td>
-        <td class="none" align="center">No</td>
+        <td class="full" align="center">Clang 17</td>
       </tr>
       <tr> <!-- from Issaquah 2023 -->
         <td><a href="https://wg21.link/P2788R0">P2788R0</a> (<a href="#dr">DR</a>)</td>
-        <td class="none" align="center">No</td>
+        <td class="full" align="center">Clang 17</td>
       </tr>
     <tr>
       <td>Coroutines</td>
@@ -1204,8 +1287,8 @@ This is not fully supported during constant expression evaluation until Clang 12
 <span id="p0522">(10): While this feature was initially implemented in Clang 4,
 it was not enabled by default prior to clang 19, but could be enabled with
 <tt>-frelaxed-template-template-args</tt>.
-Starting from Clang 19, the flag is deprecated and will be removed in a future
-version.
+In Clang 19, the flag was deprecated.
+In Clang 21, the flag was removed altogether.
 </span>
 </p>
 </details>
