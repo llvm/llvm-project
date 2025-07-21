@@ -110,7 +110,7 @@
 ; RUN: FileCheck %s -input-file=%t/passes.html --check-prefix=CHECK-DOT-CFG-QUIET-MULT-PASSES-FILTER-FUNC
 
 define i32 @g() {
-entry:
+1:
   %a = add i32 2, 3
   ret i32 %a
 }

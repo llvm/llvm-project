@@ -727,8 +727,13 @@ template <typename T>
 template <typename FunctionT>
 bool IRComparer<T>::generateFunctionData(IRDataT<T> &Data, const FunctionT &F) {
   if (shouldGenerateData(F)) {
-    FuncDataT<T> FD(F.front().getName().str());
     int I = 0;
+    std::string FDEntryBlockName = F.front().getName().str();
+    // Basic block with numberic label will be empty here.
+    if (FDEntryBlockName.empty()) {
+      FDEntryBlockName = formatv("{0}", I);
+    }
+    FuncDataT<T> FD(FDEntryBlockName);
     for (const auto &B : F) {
       std::string BBName = B.getName().str();
       if (BBName.empty()) {
