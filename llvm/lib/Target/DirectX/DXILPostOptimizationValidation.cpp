@@ -135,7 +135,7 @@ static void reportRegNotBound(Module &M,
   OS << "register " << ResourceClassToString(Unbound.Class)
      << " (space=" << Unbound.Space << ", register=" << Unbound.LowerBound
      << ")"
-     << " is not defined in Root Signature";
+     << " does not have a binding in the Root Signature";
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
