@@ -2850,6 +2850,8 @@ def Vector_SplatOp : Vector_Op<"splat", [
   ]> {
   let summary = "vector splat or broadcast operation";
   let description = [{
+    Note: This operation is deprecated. Please use vector.broadcast.
+
     Broadcast the operand to all elements of the result vector. The type of the
     operand must match the element type of the vector type.
 
@@ -2858,6 +2860,13 @@ def Vector_SplatOp : Vector_Op<"splat", [
     ```mlir
     %s = arith.constant 10.1 : f32
     %t = vector.splat %s : vector<8x16xf32>
+    ```
+
+    This operation is deprecated, the preferred representation of the above is:
+
+    ```mlir
+    %s = arith.constant 10.1 : f32
+    %t = vector.broadcast %s : f32 to vector<8x16xf32>
     ```
   }];
 
