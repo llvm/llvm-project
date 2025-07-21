@@ -212,7 +212,7 @@ add_header_library(
 add_header_library(
   comparison_operations
   HDRS
-  comparison_operations.h
+    comparison_operations.h
   DEPENDS
     .fenv_impl
     .fp_bits
