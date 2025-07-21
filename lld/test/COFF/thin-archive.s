@@ -22,7 +22,7 @@
 # SYMTAB:        ?f@@YAHXZ in
 # NO-SYMTAB-NOT: ?f@@YAHXZ in
 
-# RUN: echo /entry:main %t.main.obj /out:%t.exe > %t.rsp
+# RUN: echo "/entry:main \"%t.main.obj\" /out:\"%t.exe\"" > %t.rsp
 
 # RUN: lld-link @%t.rsp %t.lib /verbose 2>&1 | \
 # RUN:     FileCheck %s --check-prefix=LOAD_NON_THIN
