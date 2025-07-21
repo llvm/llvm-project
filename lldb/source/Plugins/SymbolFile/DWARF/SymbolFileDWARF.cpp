@@ -2488,6 +2488,7 @@ llvm::Error SymbolFileDWARF::FindAndResolveFunction(
                               lldb::eFunctionNameTypeMethod,
                           lldb::eLanguageTypeUnknown);
 
+  llvm::DenseMap<uint8_t, DWARFDIE> variant_to_die;
   m_index->GetFunctions(info, *this, {}, [&](DWARFDIE entry) {
     if (entry.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
       return true;
@@ -2516,13 +2517,27 @@ llvm::Error SymbolFileDWARF::FindAndResolveFunction(
     if (D.partialDemangle(mangled))
       return true;
 
-    if (D.getCtorOrDtorVariant() != structor_variant)
+    auto maybe_variant = D.getCtorOrDtorVariant();
+    if (!maybe_variant)
       return true;
 
-    die = entry;
+    assert(!variant_to_die.contains(*maybe_variant));
 
-    return false;
+    variant_to_die[*maybe_variant] = entry;
+
+    return true;
   });
+
+  if (structor_variant) {
+    if (auto it = variant_to_die.find(*structor_variant);
+        it != variant_to_die.end()) {
+      die = it->getSecond();
+    } else if (!lookup_name.starts_with("~") && structor_variant == 1)
+      // On Linux the C1 constructor variant is often an alias
+      // to C2 (and C1 is never actually emitted into the object file).
+      if (auto it = variant_to_die.find(2); it != variant_to_die.end())
+        die = it->getSecond();
+  }
 
   if (!die.IsValid())
     return llvm::createStringError(
