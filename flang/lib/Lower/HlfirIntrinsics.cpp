@@ -63,7 +63,7 @@ protected:
 
   template <typename OP, typename... BUILD_ARGS>
   inline OP createOp(BUILD_ARGS... args) {
-    return builder.create<OP>(loc, args...);
+    return OP::create(builder, loc, args...);
   }
 
   mlir::Value loadBoxAddress(
@@ -195,7 +195,7 @@ mlir::Value HlfirTransformationalIntrinsic::loadBoxAddress(
       // this is a box address type but is not dynamically optional. Just load
       // the box, assuming it is well formed (!fir.ref<!fir.box<...>> ->
       // !fir.box<...>)
-      return builder.create<fir::LoadOp>(loc, actual.getBase());
+      return fir::LoadOp::create(builder, loc, actual.getBase());
     }
     return actual;
   }
@@ -209,9 +209,9 @@ mlir::Value HlfirTransformationalIntrinsic::loadBoxAddress(
   // ensures it won't be.
   mlir::Value box = builder.createBox(loc, exv);
   mlir::Type boxType = box.getType();
-  auto absent = builder.create<fir::AbsentOp>(loc, boxType);
-  auto boxOrAbsent = builder.create<mlir::arith::SelectOp>(
-      loc, boxType, isPresent, box, absent);
+  auto absent = fir::AbsentOp::create(builder, loc, boxType);
+  auto boxOrAbsent = mlir::arith::SelectOp::create(builder, loc, boxType,
+                                                   isPresent, box, absent);
 
   return boxOrAbsent;
 }
@@ -232,11 +232,11 @@ static mlir::Value loadOptionalValue(
         assert(actual.isScalar() && fir::isa_trivial(eleType) &&
                "must be a numerical or logical scalar");
         hlfir::Entity val = hlfir::loadTrivialScalar(loc, builder, actual);
-        builder.create<fir::ResultOp>(loc, val);
+        fir::ResultOp::create(builder, loc, val);
       })
       .genElse([&]() {
         mlir::Value zero = fir::factory::createZeroValue(builder, loc, eleType);
-        builder.create<fir::ResultOp>(loc, zero);
+        fir::ResultOp::create(builder, loc, zero);
       })
       .getResults()[0];
 }

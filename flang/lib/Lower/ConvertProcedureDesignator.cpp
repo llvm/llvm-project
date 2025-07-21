@@ -49,7 +49,7 @@ fir::ExtendedValue Fortran::lower::convertProcedureDesignator(
         fir::getUnrestrictedIntrinsicSymbolRefAttr(builder, loc, genericName,
                                                    signature);
     mlir::Value funcPtr =
-        builder.create<fir::AddrOfOp>(loc, signature, symbolRefAttr);
+        fir::AddrOfOp::create(builder, loc, signature, symbolRefAttr);
     return funcPtr;
   }
   const Fortran::semantics::Symbol *symbol = proc.GetSymbol();
@@ -69,7 +69,7 @@ fir::ExtendedValue Fortran::lower::convertProcedureDesignator(
         Fortran::lower::getOrDeclareFunction(proc, converter);
     mlir::SymbolRefAttr nameAttr = builder.getSymbolRefAttr(func.getSymName());
     funcPtr =
-        builder.create<fir::AddrOfOp>(loc, func.getFunctionType(), nameAttr);
+        fir::AddrOfOp::create(builder, loc, func.getFunctionType(), nameAttr);
   }
   if (Fortran::lower::mustPassLengthWithDummyProcedure(proc, converter)) {
     // The result length, if available here, must be propagated along the
@@ -114,7 +114,7 @@ static hlfir::EntityWithAttributes designateProcedurePointerComponent(
   /// Passed argument may be a descriptor. This is a scalar reference, so the
   /// base address can be directly addressed.
   if (mlir::isa<fir::BaseBoxType>(base.getType()))
-    base = builder.create<fir::BoxAddrOp>(loc, base);
+    base = fir::BoxAddrOp::create(builder, loc, base);
   std::string fieldName = converter.getRecordTypeFieldName(procComponentSym);
   auto recordType =
       mlir::cast<fir::RecordType>(hlfir::getFortranElementType(base.getType()));
@@ -124,8 +124,8 @@ static hlfir::EntityWithAttributes designateProcedurePointerComponent(
   if (!fieldType)
     TODO(loc, "passing type bound procedure (extension)");
   mlir::Type designatorType = fir::ReferenceType::get(fieldType);
-  mlir::Value compRef = builder.create<hlfir::DesignateOp>(
-      loc, designatorType, base, fieldName,
+  mlir::Value compRef = hlfir::DesignateOp::create(
+      builder, loc, designatorType, base, fieldName,
       /*compShape=*/mlir::Value{}, hlfir::DesignateOp::Subscripts{},
       /*substring=*/mlir::ValueRange{},
       /*complexPart=*/std::nullopt,
@@ -174,10 +174,10 @@ hlfir::EntityWithAttributes Fortran::lower::convertProcedureDesignatorToHLFIR(
     mlir::Type boxTy =
         Fortran::lower::getUntypedBoxProcType(&converter.getMLIRContext());
     if (auto host = Fortran::lower::argumentHostAssocs(converter, funcAddr))
-      funcAddr = builder.create<fir::EmboxProcOp>(
-          loc, boxTy, llvm::ArrayRef<mlir::Value>{funcAddr, host});
+      funcAddr = fir::EmboxProcOp::create(
+          builder, loc, boxTy, llvm::ArrayRef<mlir::Value>{funcAddr, host});
     else
-      funcAddr = builder.create<fir::EmboxProcOp>(loc, boxTy, funcAddr);
+      funcAddr = fir::EmboxProcOp::create(builder, loc, boxTy, funcAddr);
   }
 
   mlir::Value res = procExv.match(
