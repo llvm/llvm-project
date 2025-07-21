@@ -153,7 +153,7 @@ ExtFOnFloat8RewritePattern::matchAndRewrite(arith::ExtFOp op,
 
   if (inVecType.getShape().empty()) {
     Value zerodSplat =
-        rewriter.createOrFold<vector::SplatOp>(loc, outType, zero);
+        rewriter.createOrFold<vector::BroadcastOp>(loc, outType, zero);
     Value scalarIn =
         rewriter.create<vector::ExtractOp>(loc, in, ArrayRef<int64_t>{});
     Value scalarExt =
@@ -166,7 +166,7 @@ ExtFOnFloat8RewritePattern::matchAndRewrite(arith::ExtFOp op,
 
   VectorType flatTy = VectorType::get(SmallVector<int64_t>{numElements},
                                       outType.getElementType());
-  Value result = rewriter.createOrFold<vector::SplatOp>(loc, flatTy, zero);
+  Value result = rewriter.createOrFold<vector::BroadcastOp>(loc, flatTy, zero);
 
   if (inVecType.getRank() > 1) {
     inVecType = VectorType::get(SmallVector<int64_t>{numElements},
@@ -315,7 +315,7 @@ TruncFToFloat8RewritePattern::matchAndRewrite(arith::TruncFOp op,
 
   VectorType flatTy = VectorType::get(SmallVector<int64_t>{numElements},
                                       outVecType.getElementType());
-  Value result = rewriter.createOrFold<vector::SplatOp>(loc, flatTy, zero);
+  Value result = rewriter.createOrFold<vector::BroadcastOp>(loc, flatTy, zero);
 
   if (inVectorTy.getRank() > 1) {
     inVectorTy = VectorType::get(SmallVector<int64_t>{numElements},
@@ -383,7 +383,8 @@ LogicalResult TruncfToFloat16RewritePattern::matchAndRewrite(
   int64_t numElements = outVecType.getNumElements();
   Value zero = rewriter.createOrFold<arith::ConstantOp>(
       loc, outElemType, rewriter.getFloatAttr(outElemType, 0.0));
-  Value result = rewriter.createOrFold<vector::SplatOp>(loc, outVecType, zero);
+  Value result =
+      rewriter.createOrFold<vector::BroadcastOp>(loc, outVecType, zero);
 
   if (inVectorTy.getRank() > 1) {
     inVectorTy = VectorType::get(SmallVector<int64_t>{numElements},
@@ -478,8 +479,8 @@ ScalingExtFRewritePattern::matchAndRewrite(arith::ScalingExtFOp op,
   VectorType extScaleResultType = VectorType::get(opWidth, outType);
 
   if (!outVecType) {
-    Value inCast =
-        rewriter.create<vector::SplatOp>(loc, VectorType::get(1, inType), in);
+    Value inCast = rewriter.create<vector::BroadcastOp>(
+        loc, VectorType::get(1, inType), in);
     // TODO: replace this with non-packed ScaledExtOp
     Value scaleExt = rewriter.create<amdgpu::ScaledExtPackedOp>(
         loc, extScaleResultType, inCast, scale, 0);
@@ -509,7 +510,8 @@ ScalingExtFRewritePattern::matchAndRewrite(arith::ScalingExtFOp op,
 
   Value zero = rewriter.create<arith::ConstantOp>(
       loc, outType, rewriter.getFloatAttr(outType, 0.0));
-  Value result = rewriter.createOrFold<vector::SplatOp>(loc, outVecType, zero);
+  Value result =
+      rewriter.createOrFold<vector::BroadcastOp>(loc, outVecType, zero);
 
   for (SmallVector<int64_t> offsets : StaticTileOffsetRange(inShape, ratio)) {
     SmallVector<int64_t> strides(offsets.size(), 1);
@@ -523,7 +525,7 @@ ScalingExtFRewritePattern::matchAndRewrite(arith::ScalingExtFOp op,
 
     VectorType blockResultType = VectorType::get(blockSize, outType);
     Value blockResult =
-        rewriter.createOrFold<vector::SplatOp>(loc, blockResultType, zero);
+        rewriter.createOrFold<vector::BroadcastOp>(loc, blockResultType, zero);
 
     for (int64_t i = 0, sliceWidth = std::min(opWidth, blockSize - i);
          i < blockSize;
@@ -587,7 +589,7 @@ ScalingTruncFRewritePattern::matchAndRewrite(arith::ScalingTruncFOp op,
 
   if (!outVecType) {
     Type inVecType = VectorType::get(1, inType);
-    Value inCast = rewriter.create<vector::SplatOp>(loc, inVecType, in);
+    Value inCast = rewriter.create<vector::BroadcastOp>(loc, inVecType, in);
     // TODO: replace this with non-packed ScaledTruncOp
     Value scaleTrunc = rewriter.create<amdgpu::PackedScaledTruncOp>(
         loc, truncScaleResultType, inCast, scale, 0, /*existing=*/nullptr);
@@ -616,7 +618,8 @@ ScalingTruncFRewritePattern::matchAndRewrite(arith::ScalingTruncFOp op,
 
   int64_t blockSize = computeProduct(ratio);
 
-  Value result = rewriter.createOrFold<vector::SplatOp>(loc, outVecType, zero);
+  Value result =
+      rewriter.createOrFold<vector::BroadcastOp>(loc, outVecType, zero);
 
   for (SmallVector<int64_t> offsets : StaticTileOffsetRange(inShape, ratio)) {
     SmallVector<int64_t> strides(offsets.size(), 1);
@@ -630,7 +633,7 @@ ScalingTruncFRewritePattern::matchAndRewrite(arith::ScalingTruncFOp op,
 
     VectorType blockResultType = VectorType::get(blockSize, outType);
     Value blockResult =
-        rewriter.createOrFold<vector::SplatOp>(loc, blockResultType, zero);
+        rewriter.createOrFold<vector::BroadcastOp>(loc, blockResultType, zero);
 
     for (int64_t i = 0, sliceWidth = std::min(opWidth, blockSize - i);
          i < blockSize;
