@@ -16,6 +16,7 @@
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/CompileUnit.h"
+#include "llvm/Support/Error.h"
 #include <lldb/lldb-enumerations.h>
 #include <llvm/ADT/StringRef.h>
 
@@ -205,6 +206,13 @@ TypeSystemSwift::GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) {
 bool TypeSystemSwift::GetPtrAuthAddressDiversity(
     lldb::opaque_compiler_type_t type) {
   return false;
+}
+
+llvm::Expected<CompilerType> TypeSystemSwift::GetDereferencedType(
+    lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
+    std::string &deref_name, uint32_t &deref_byte_size,
+    int32_t &deref_byte_offset, ValueObject *valobj, uint64_t &language_flags) {
+  return llvm::createStringError("Swift types cannot be dereferenced");
 }
 
 namespace llvm {

@@ -350,6 +350,12 @@ public:
   unsigned GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) override;
   bool GetPtrAuthAddressDiversity(lldb::opaque_compiler_type_t type) override;
 
+  llvm::Expected<CompilerType>
+  GetDereferencedType(lldb::opaque_compiler_type_t type,
+                      ExecutionContext *exe_ctx, std::string &deref_name,
+                      uint32_t &deref_byte_size, int32_t &deref_byte_offset,
+                      ValueObject *valobj, uint64_t &language_flags) override;
+
   /// \}
 protected:
   /// Used in the logs.

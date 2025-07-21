@@ -9284,16 +9284,17 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
       validate_pcm = true;
 #endif
     }
-    
-    auto &pp_opts = m_clangimporter->getClangPreprocessor()
-      .getPreprocessorOpts();
-    pp_opts.DisablePCHOrModuleValidation =
-        validate_pcm ? clang::DisableValidationForModuleKind::None
-                     : clang::DisableValidationForModuleKind::All;
-    pp_opts.ModulesCheckRelocated = validate_pcm;
 
-    LOG_PRINTF(GetLog(LLDBLog::Types), "PCM validation is %s",
-               validate_pcm ? "disabled" : "enabled");
+    const auto &pp_opts =
+        m_clangimporter->getClangPreprocessor().getPreprocessorOpts();
+    // rdar://155232969
+    // pp_opts.DisablePCHOrModuleValidation =
+    //     validate_pcm ? clang::DisableValidationForModuleKind::None
+    //                  : clang::DisableValidationForModuleKind::All;
+    // pp_opts.ModulesCheckRelocated = validate_pcm;
+
+    if (!validate_pcm)
+      LOG_PRINTF(GetLog(LLDBLog::Types), "PCM validation cannot be disabled");
   }
   
   LOG_PRINTF(GetLog(LLDBLog::Types), "Importing dependencies of current CU");
