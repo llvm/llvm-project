@@ -176,14 +176,15 @@ DiagnosedSilenceableFailure transform::ParallelForToNestedForOps::apply(
     return diag;
   }
 
-  scf::ForOp opResult;
-  if (failed(scf::parallelForToNestedFors(rewriter, target, &opResult))) {
+  FailureOr<scf::LoopNest> loopNest =
+      scf::parallelForToNestedFors(rewriter, target);
+  if (failed(loopNest)) {
     DiagnosedSilenceableFailure diag =
         emitSilenceableError() << "failed to convert parallel into nested fors";
     return diag;
   }
 
-  results.set(cast<OpResult>(getTransformed()[0]), {opResult});
+  results.set(cast<OpResult>(getTransformed()[0]), {loopNest->loops.front()});
   return DiagnosedSilenceableFailure::success();
 }
 

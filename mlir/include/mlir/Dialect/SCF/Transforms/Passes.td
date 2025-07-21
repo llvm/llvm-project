@@ -128,7 +128,7 @@ def SCFParallelForToNestedFors : Pass<"scf-parallel-for-to-nested-fors"> {
   let summary = "Convert SCF parallel for loops to nested SCF for loops";
   let constructor = "mlir::createParallelForToNestedForsPass()";
   let description = [{
-    This pass transforms SCF.ParallelOp operations into a nest of SCF.ForOp
+    This pass transforms SCF::ParallelOp operations into a nest of SCF::ForOp
     operations. The transformation is useful for cases where the parallel loop
     can be expressed as a series of sequential iterations, allowing for more
     fine-grained control over the loop execution.

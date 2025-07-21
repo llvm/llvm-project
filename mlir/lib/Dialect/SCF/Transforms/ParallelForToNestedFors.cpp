@@ -23,51 +23,40 @@ namespace mlir {
 
 using namespace mlir;
 
-LogicalResult mlir::scf::parallelForToNestedFors(RewriterBase &rewriter,
-                                                 scf::ParallelOp parallelOp,
-                                                 scf::ForOp *result) {
+FailureOr<scf::LoopNest>
+mlir::scf::parallelForToNestedFors(RewriterBase &rewriter,
+                                   scf::ParallelOp parallelOp) {
 
   if (!parallelOp.getResults().empty()) {
-    parallelOp->emitError("Currently ScfParallel to ScfFor conversion "
-                          "doesn't support ScfParallel with results.");
+    parallelOp->emitError("Currently scf.parallel to scf.for conversion "
+                          "doesn't support scf.parallel with results.");
     return failure();
   }
 
   rewriter.setInsertionPoint(parallelOp);
 
   Location loc = parallelOp.getLoc();
-  auto lowerBounds = parallelOp.getLowerBound();
-  auto upperBounds = parallelOp.getUpperBound();
-  auto steps = parallelOp.getStep();
+  SmallVector<Value> lowerBounds = parallelOp.getLowerBound();
+  SmallVector<Value> upperBounds = parallelOp.getUpperBound();
+  SmallVector<Value> steps = parallelOp.getStep();
 
   assert(lowerBounds.size() == upperBounds.size() &&
          lowerBounds.size() == steps.size() &&
          "Mismatched parallel loop bounds");
 
   SmallVector<Value> ivs;
-  auto loopNest =
+  scf::LoopNest loopNest =
       scf::buildLoopNest(rewriter, loc, lowerBounds, upperBounds, steps);
 
-  auto oldInductionVars = parallelOp.getInductionVars();
-  auto newInductionVars = llvm::map_to_vector(
+  SmallVector<Value> newInductionVars = llvm::map_to_vector(
       loopNest.loops, [](scf::ForOp forOp) { return forOp.getInductionVar(); });
-  assert(oldInductionVars.size() == newInductionVars.size() &&
-         "Mismatched induction variables");
-  for (auto [oldIV, newIV] : llvm::zip(oldInductionVars, newInductionVars))
-    oldIV.replaceAllUsesWith(newIV);
-
-  auto *linearizedBody = loopNest.loops.back().getBody();
-  Block &parallelBody = *parallelOp.getBody();
-  for (Operation &op : llvm::make_early_inc_range(parallelBody)) {
-    // Skip the terminator of the parallelOp body.
-    if (&op == parallelBody.getTerminator())
-      continue;
-    op.moveBefore(linearizedBody->getTerminator());
-  }
+  Block *linearizedBody = loopNest.loops.back().getBody();
+  Block *parallelBody = parallelOp.getBody();
+  rewriter.eraseOp(parallelBody->getTerminator());
+  rewriter.inlineBlockBefore(parallelBody, linearizedBody->getTerminator(),
+                             newInductionVars);
   rewriter.eraseOp(parallelOp);
-  if (result)
-    *result = loopNest.loops.front();
-  return success();
+  return loopNest;
 }
 
 namespace {
