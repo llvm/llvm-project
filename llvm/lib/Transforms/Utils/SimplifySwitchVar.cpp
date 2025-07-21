@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SimplifySwitchVar.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include <random>
 
@@ -278,9 +279,45 @@ removeOutliers(FuncParams F, SmallVector<PhiCase> PhiCases,
   return FilteredCases;
 }
 
+/// Create the new generalized value that models all the found cases with the
+/// calculated function.
+/// Uses the slope and bias to modify the switch variable
+/// and uses the resulting value as argument to the new instruction.
+static Value *findNewValue(NewInstParameters InstParameters, FuncParams F,
+                           IRBuilder<> &Builder, SwitchInst *Switch) {
+  auto *BaseValue = InstParameters.BaseValue;
+  auto Op = InstParameters.Op;
+  auto *OffsetTy = InstParameters.OffsetTy;
+
+  auto *SwitchVar = Switch->getCondition();
+  auto SwitchBitWidth = SwitchVar->getType()->getIntegerBitWidth();
+
+  Builder.SetInsertPoint(Switch);
+
+  auto *NewIdx =
+      Builder.CreateMul(SwitchVar, Builder.getIntN(SwitchBitWidth, F.Slope));
+  NewIdx = Builder.CreateAdd(NewIdx, Builder.getIntN(SwitchBitWidth, F.Bias));
+
+  switch (Op) {
+  case SupportedOp::GetElementPtr: {
+    return Builder.CreateGEP(Builder.getInt8Ty(), BaseValue,
+                             Builder.CreateSExtOrTrunc(NewIdx, OffsetTy));
+  };
+  case SupportedOp::IntegerAdd: {
+    return Builder.CreateAdd(BaseValue,
+                             Builder.CreateSExtOrTrunc(NewIdx, OffsetTy));
+  }
+  case SupportedOp::Unsupported: {
+    llvm_unreachable("Unsupported Operation for SimplifySwitchVar.");
+    return nullptr;
+  }
+  }
+}
+
 PreservedAnalyses SimplifySwitchVarPass::run(Function &F,
                                              FunctionAnalysisManager &AM) {
   bool Changed = false;
+  IRBuilder<> Builder(F.getContext());
   BasicBlock *MostCommonSuccessor;
   // collect switch insts
   for (auto &BB : F) {
@@ -313,6 +350,11 @@ PreservedAnalyses SimplifySwitchVarPass::run(Function &F,
         auto F = FuncParams.value();
 
         PhiCases = removeOutliers(F, PhiCases, CaseOffsetMap);
+
+        auto *NewValue = findNewValue(InstParameters, F, Builder, Switch);
+
+        if (!NewValue)
+          continue;
       }
     }
   }
