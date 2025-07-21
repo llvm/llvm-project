@@ -9346,9 +9346,13 @@ bool LValueExprEvaluator::VisitUnaryDeref(const UnaryOperator *E) {
   // [C++26][expr.unary.op]
   // If the operand points to an object or function, the result
   // denotes that object or function; otherwise, the behavior is undefined.
-  return Success &&
-         (!E->getType().getNonReferenceType()->isObjectType() ||
-          findCompleteObject(Info, E, AK_Dereference, Result, E->getType()));
+  // Because &(*(type*)0) is a common pattern, we do not fail the evaluation
+  // immediately.
+  if (!Success || !E->getType().getNonReferenceType()->isObjectType())
+    return Success;
+  return bool(findCompleteObject(Info, E, AK_Dereference, Result,
+                                 E->getType())) ||
+         Info.noteUndefinedBehavior();
 }
 
 bool LValueExprEvaluator::VisitUnaryReal(const UnaryOperator *E) {
@@ -18180,6 +18184,10 @@ bool Expr::EvaluateCharRangeAsString(APValue &Result,
 bool Expr::tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const {
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantFold);
+
+  if (Info.EnableNewConstInterp)
+    return Info.Ctx.getInterpContext().evaluateStrlen(Info, this, Result);
+
   return EvaluateBuiltinStrLen(this, Result, Info);
 }
 

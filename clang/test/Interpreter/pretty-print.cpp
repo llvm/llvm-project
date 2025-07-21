@@ -8,6 +8,9 @@ extern "C" int printf(const char*,...);
 "ab"
 // CHECK: (const char[3]) "ab"
 
+123456
+// CHECK-NEXT: (int) 123456
+
 char ch[2] = {'1','a'}; ch
 // CHECK-NEXT: (char[2]) { '1', 'a' }
 
