@@ -3776,6 +3776,43 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+
+  // ((X & Y & ~Z) | (X & ~Y & Z) | (~X & ~Y &~Z) | (X & Y &Z)) -> ~((Y | Z) ^
+  // X)
+  {
+    Value *X, *Y, *Z;
+    Value *Term1, *Term2, *XAndYAndZ;
+    if (match(&I,
+              m_Or(m_Or(m_Value(Term1), m_Value(Term2)), m_Value(XAndYAndZ))) &&
+        match(XAndYAndZ, m_And(m_And(m_Value(X), m_Value(Y)), m_Value(Z)))) {
+      Value *YOrZ = Builder.CreateOr(Y, Z);
+      Value *YOrZXorX = Builder.CreateXor(YOrZ, X);
+      return BinaryOperator::CreateNot(YOrZXorX);
+    }
+  }
+
+  // (Z & X) | ~((Y ^ X) | Z) -> ~((Y | Z) ^ X)
+  {
+    Value *X, *Y, *Z;
+    Value *ZAndX, *NotPattern;
+
+    if (match(&I, m_c_Or(m_Value(ZAndX), m_Value(NotPattern))) &&
+        match(ZAndX, m_c_And(m_Value(Z), m_Value(X)))) {
+
+      Value *YXorXOrZ;
+      if (match(NotPattern, m_Not(m_Value(YXorXOrZ)))) {
+        Value *YXorX;
+        if (match(YXorXOrZ, m_c_Or(m_Value(YXorX), m_Specific(Z))) &&
+            match(YXorX, m_c_Xor(m_Value(Y), m_Specific(X)))) {
+
+          Value *YOrZ = Builder.CreateOr(Y, Z);
+          Value *YOrZXorX = Builder.CreateXor(YOrZ, X);
+          return BinaryOperator::CreateNot(YOrZXorX);
+        }
+      }
+    }
+  }
+
   Type *Ty = I.getType();
   if (Ty->isIntOrIntVectorTy(1)) {
     if (auto *SI0 = dyn_cast<SelectInst>(Op0)) {
@@ -5179,6 +5216,25 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
         A = Builder.CreateFreeze(A);
       Value *NotB = Builder.CreateNot(B);
       return SelectInst::Create(A, NotB, C);
+    }
+  }
+
+  // ((X & Y) | (~X & ~Y)) ^ (Z & (((X & Y) | (~X & ~Y)) ^ ((X & Y) | (X &
+  // ~Y)))) -> ~((Y | Z) ^ X)
+  if (match(Op1, m_AllOnes())) {
+    Value *X, *Y, *Z;
+    Value *XorWithY;
+    if (match(Op0, m_Xor(m_Value(XorWithY), m_Value(Y)))) {
+      Value *ZAndNotY;
+      if (match(XorWithY, m_Xor(m_Value(X), m_Value(ZAndNotY)))) {
+        Value *NotY;
+        if (match(ZAndNotY, m_And(m_Value(Z), m_Value(NotY))) &&
+            match(NotY, m_Not(m_Specific(Y)))) {
+          Value *YOrZ = Builder.CreateOr(Y, Z);
+          Value *YOrZXorX = Builder.CreateXor(YOrZ, X);
+          return BinaryOperator::CreateNot(YOrZXorX);
+        }
+      }
     }
   }
 
