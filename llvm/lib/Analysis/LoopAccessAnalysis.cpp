@@ -1922,17 +1922,25 @@ static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
 
 /// Check the dependence for two accesses with the same stride \p Stride.
 /// \p Distance is the positive distance in bytes, and \p TypeByteSize is type
-/// size in bytes.
+/// size of source and sink in bytes.
 ///
 /// \returns true if they are independent.
-static bool areStridedAccessesIndependent(uint64_t Distance, uint64_t Stride,
-                                          uint64_t TypeByteSize) {
+static bool
+areStridedAccessesIndependent(uint64_t Distance, uint64_t Stride,
+                              std::pair<uint64_t, uint64_t> TypeByteSize) {
   assert(Stride > 1 && "The stride must be greater than 1");
-  assert(TypeByteSize > 0 && "The type size in byte must be non-zero");
+  assert(TypeByteSize.first > 0 && TypeByteSize.second > 0 &&
+         "The type size in byte must be non-zero");
   assert(Distance > 0 && "The distance must be non-zero");
 
-  // Skip if the distance is not multiple of type byte size.
-  if (Distance % TypeByteSize)
+  // Consider two 8-byte regions accessed at x and y:
+  //
+  //   [o o x x y o o o] 2 and 1 byte acccesses
+  //   [o o x y y o o o] 1 and 2 byte access
+  //
+  // Skip if the distance is not multiple of type byte size of either source or
+  // sink.
+  if (Distance % TypeByteSize.first || Distance % TypeByteSize.second)
     return false;
 
   // No dependence if the distance is not multiple of the stride.
@@ -2064,9 +2072,9 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   uint64_t ASz = DL.getTypeAllocSize(ATy);
   uint64_t BSz = DL.getTypeAllocSize(BTy);
 
-  // The TypeByteSize is used to scale Distance and VF. In these contexts, the
-  // only size that matters is the size of the Sink.
-  uint64_t TypeByteSize = BSz;
+  // Both the source and sink sizes are neeeded in dependence checks, depending
+  // on the use.
+  std::pair<uint64_t, uint64_t> TypeByteSize(ASz, BSz);
 
   uint64_t StrideAScaled = std::abs(StrideAPtrInt) * ASz;
   uint64_t StrideBScaled = std::abs(StrideBPtrInt) * BSz;
@@ -2171,9 +2179,10 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
 
   // Negative distances are not plausible dependencies.
   if (SE.isKnownNonPositive(Dist)) {
-    if (SE.isKnownNonNegative(Dist))
+    if (SE.isKnownNonNegative(Dist)) {
       // Write to the same location with the same size.
       return Dependence::Forward;
+    }
 
     bool IsTrueDataDependence = (AIsWrite && !BIsWrite);
     // Check if the first access writes to a location that is read in a later
@@ -2185,10 +2194,14 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     // forward dependency will allow vectorization using any width.
 
     if (IsTrueDataDependence && EnableForwardingConflictDetection) {
-      if (!ConstDist)
+      if (!ConstDist) {
         return CheckCompletelyBeforeOrAfter() ? Dependence::NoDep
                                               : Dependence::Unknown;
-      if (couldPreventStoreLoadForward(ConstDist, TypeByteSize)) {
+      }
+      // couldPreventStoreLoadForward checks that the distance between loads
+      // cannot prevent forwarding: for its purposes, the source size is
+      // sufficient.
+      if (couldPreventStoreLoadForward(ConstDist, TypeByteSize.first)) {
         LLVM_DEBUG(
             dbgs() << "LAA: Forward but may prevent st->ld forwarding\n");
         return Dependence::ForwardButPreventsForwarding;
@@ -2216,8 +2229,9 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
 
   // It's not vectorizable if the distance is smaller than the minimum distance
   // needed for a vectroized/unrolled version. Vectorizing one iteration in
-  // front needs MaxStride. Vectorizing the last iteration needs TypeByteSize.
-  // (No need to plus the last gap distance).
+  // front needs MaxStride. Vectorizing the last iteration needs TypeByteSize of
+  // the source, for the purposes of determining Backward dependence. (No need
+  // to plus the last gap distance).
   //
   // E.g. Assume one char is 1 byte in memory and one int is 4 bytes.
   //      foo(int *A) {
@@ -2247,7 +2261,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // We know that Dist is positive, but it may not be constant. Use the signed
   // minimum for computations below, as this ensures we compute the closest
   // possible dependence distance.
-  uint64_t MinDistanceNeeded = MaxStride * (MinNumIter - 1) + TypeByteSize;
+  uint64_t MinDistanceNeeded =
+      MaxStride * (MinNumIter - 1) + TypeByteSize.first;
   if (MinDistanceNeeded > static_cast<uint64_t>(MinDistance)) {
     if (!ConstDist) {
       // For non-constant distances, we checked the lower bound of the
@@ -2275,14 +2290,20 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
 
   bool IsTrueDataDependence = (!AIsWrite && BIsWrite);
   if (IsTrueDataDependence && EnableForwardingConflictDetection && ConstDist &&
-      couldPreventStoreLoadForward(MinDistance, TypeByteSize, *CommonStride))
+      // couldPreventStoreLoadForward checks that the distance between loads
+      // cannot prevent forwarding: for its purposes, the source size is
+      // sufficient.
+      couldPreventStoreLoadForward(MinDistance, TypeByteSize.first,
+                                   *CommonStride))
     return Dependence::BackwardVectorizableButPreventsForwarding;
 
   uint64_t MaxVF = MinDepDistBytes / MaxStride;
   LLVM_DEBUG(dbgs() << "LAA: Positive min distance " << MinDistance
                     << " with max VF = " << MaxVF << '\n');
 
-  uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
+  // The VF should be computed for the purposes of Backward dependencies, with
+  // the TypeByteSize of the source.
+  uint64_t MaxVFInBits = MaxVF * TypeByteSize.first * 8;
   if (!ConstDist && MaxVFInBits < MaxTargetVectorWidthInBits) {
     // For non-constant distances, we checked the lower bound of the dependence
     // distance and the distance may be larger at runtime (and safe for

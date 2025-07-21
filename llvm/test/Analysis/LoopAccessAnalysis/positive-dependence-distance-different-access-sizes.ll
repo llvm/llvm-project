@@ -8,7 +8,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define void @test_distance_positive_independent_via_trip_count(ptr %A) {
 ; CHECK-LABEL: 'test_distance_positive_independent_via_trip_count'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 3200 bits
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 800 bits
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            %l = load i8, ptr %gep.A, align 1 ->

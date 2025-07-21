@@ -396,16 +396,16 @@ private:
     uint64_t MaxStride;
     std::optional<uint64_t> CommonStride;
 
-    /// TypeByteSize is the size of the sink.
-    uint64_t TypeByteSize;
+    /// TypeByteSize is a pair of SourceSize and SinkSize.
+    std::pair<uint64_t, uint64_t> TypeByteSize;
 
     bool AIsWrite;
     bool BIsWrite;
 
     DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t MaxStride,
                                  std::optional<uint64_t> CommonStride,
-                                 uint64_t TypeByteSize, bool AIsWrite,
-                                 bool BIsWrite)
+                                 std::pair<uint64_t, uint64_t> TypeByteSize,
+                                 bool AIsWrite, bool BIsWrite)
         : Dist(Dist), MaxStride(MaxStride), CommonStride(CommonStride),
           TypeByteSize(TypeByteSize), AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
   };

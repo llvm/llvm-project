@@ -109,7 +109,7 @@ exit:
 define void @may_overlap_stores_with_different_sizes(ptr %dst) {
 ; CHECK-LABEL: 'may_overlap_stores_with_different_sizes'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 256 bits
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 512 bits
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            store i16 0, ptr %gep.iv, align 2 ->
