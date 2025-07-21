@@ -2170,9 +2170,8 @@ private:
     // Loops with induction variables inside OpenACC compute constructs
     // need special handling to ensure that the IVs are privatized.
     if (Fortran::lower::isInsideOpenACCComputeConstruct(*builder)) {
-      mlir::Operation* loopOp = Fortran::lower::genOpenACCLoopFromDoConstruct(
-                         *this, bridge.getSemanticsContext(), localSymbols,
-                         doConstruct, eval);
+      mlir::Operation *loopOp = Fortran::lower::genOpenACCLoopFromDoConstruct(
+          *this, bridge.getSemanticsContext(), localSymbols, doConstruct, eval);
       bool success = loopOp != nullptr;
       if (success) {
         // Sanity check that the builder insertion point is inside the newly
@@ -2184,7 +2183,8 @@ private:
 
         // Loop body code.
         auto iter = eval.getNestedEvaluations().begin();
-        for (auto end = --eval.getNestedEvaluations().end(); iter != end; ++iter)
+        for (auto end = --eval.getNestedEvaluations().end(); iter != end;
+             ++iter)
           genFIR(*iter, unstructuredContext);
         return;
       }

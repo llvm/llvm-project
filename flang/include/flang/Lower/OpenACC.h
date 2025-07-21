@@ -124,7 +124,8 @@ uint64_t getLoopCountForCollapseAndTile(const Fortran::parser::AccClauseList &);
 /// Checks whether the current insertion point is inside OpenACC loop.
 bool isInOpenACCLoop(fir::FirOpBuilder &);
 
-/// Checks whether the current insertion point is inside OpenACC compute construct.
+/// Checks whether the current insertion point is inside OpenACC compute
+/// construct.
 bool isInsideOpenACCComputeConstruct(fir::FirOpBuilder &);
 
 void setInsertionPointAfterOpenACCLoopIfInside(fir::FirOpBuilder &);
@@ -139,8 +140,7 @@ mlir::Operation *genOpenACCLoopFromDoConstruct(
     AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semanticsContext,
     Fortran::lower::SymMap &localSymbols,
-    const Fortran::parser::DoConstruct &doConstruct,
-    pft::Evaluation &eval);
+    const Fortran::parser::DoConstruct &doConstruct, pft::Evaluation &eval);
 
 } // namespace lower
 } // namespace Fortran
