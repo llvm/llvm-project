@@ -2221,10 +2221,9 @@ bool SIFoldOperandsImpl::tryFoldImmRegSequence(MachineInstr &MI) {
 
   // Only attempting to fold immediate materializations.
   if (!Defs.empty() &&
-      std::any_of(Defs.begin(), Defs.end(),
-                  [](const std::pair<MachineOperand *, unsigned> &Op) {
-                    return !Op.first->isImm();
-                  }))
+      llvm::any_of(Defs, [](const std::pair<MachineOperand *, unsigned> &Op) {
+        return !Op.first->isImm();
+      }))
     return false;
 
   SmallVector<uint64_t, 8> ImmVals;
