@@ -188,6 +188,7 @@ TEST(MetadataTest, DeleteInstUsedByDbgRecord) {
   SmallVector<DbgValueInst *, 1> DVIs;
   SmallVector<DbgVariableRecord *, 1> DVRs;
   findDbgValues(DVIs, &I, &DVRs);
+  assert(DVIs.empty());
 
   // Delete %b. The dbg.value should now point to undef.
   I.eraseFromParent();
@@ -314,6 +315,7 @@ TEST(MetadataTest, DeleteInstUsedByDbgVariableRecord) {
   SmallVector<DbgValueInst *, 2> DVIs;
   SmallVector<DbgVariableRecord *, 2> DVRs;
   findDbgValues(DVIs, &I, &DVRs);
+  assert(DVIs.empty());
   ASSERT_EQ(DVRs.size(), 2u);
 
   // Delete %b. The DbgVariableRecord should now point to undef.
