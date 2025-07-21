@@ -502,6 +502,13 @@ private:
 
 enum class Direction { Forward, Backward };
 
+/// A `ProgramPoint` identifies a location in the CFG by pointing to a specific
+/// `Fact`. identified by a lifetime-related event (`Fact`).
+///
+/// A `ProgramPoint` has "after" semantics: it represents the location
+/// immediately after its corresponding `Fact`.
+using ProgramPoint = const Fact *;
+
 /// A generic, policy-based driver for dataflow analyses. It combines
 /// the dataflow runner and the transferer logic into a single class hierarchy.
 ///
@@ -524,14 +531,20 @@ template <typename Derived, typename LatticeType, Direction Dir>
 class DataflowAnalysis {
 public:
   using Lattice = LatticeType;
-  using Base = DataflowAnalysis<Derived, LatticeType, Dir>;
+  using Base = DataflowAnalysis<Derived, Lattice, Dir>;
 
 private:
   const CFG &Cfg;
   AnalysisDeclContext &AC;
 
+  /// The dataflow state before a basic block is processed.
   llvm::DenseMap<const CFGBlock *, Lattice> InStates;
+  /// The dataflow state after a basic block is processed.
   llvm::DenseMap<const CFGBlock *, Lattice> OutStates;
+  /// The dataflow state at a Program Point.
+  /// In a forward analysis, this is the state after the Fact at that point has
+  /// been applied, while in a backward analysis, it is the state before.
+  llvm::DenseMap<ProgramPoint, Lattice> PerPointStates;
 
   static constexpr bool isForward() { return Dir == Direction::Forward; }
 
@@ -577,6 +590,8 @@ public:
     }
   }
 
+  Lattice getState(ProgramPoint P) const { return PerPointStates.lookup(P); }
+
   Lattice getInState(const CFGBlock *B) const { return InStates.lookup(B); }
 
   Lattice getOutState(const CFGBlock *B) const { return OutStates.lookup(B); }
@@ -590,18 +605,23 @@ public:
     getOutState(&B).dump(llvm::dbgs());
   }
 
+private:
   /// Computes the state at one end of a block by applying all its facts
   /// sequentially to a given state from the other end.
-  /// TODO: We might need to store intermediate states per-fact in the block for
-  /// later analysis.
   Lattice transferBlock(const CFGBlock *Block, Lattice State) {
     auto Facts = AllFacts.getFacts(Block);
-    if constexpr (isForward())
-      for (const Fact *F : Facts)
+    if constexpr (isForward()) {
+      for (const Fact *F : Facts) {
         State = transferFact(State, F);
-    else
-      for (const Fact *F : llvm::reverse(Facts))
+        PerPointStates[F] = State;
+      }
+    } else {
+      for (const Fact *F : llvm::reverse(Facts)) {
+        // In backward analysis, capture the state before applying the fact.
+        PerPointStates[F] = State;
         State = transferFact(State, F);
+      }
+    }
     return State;
   }
 
@@ -769,6 +789,10 @@ public:
         Factory.OriginMapFactory.add(In.Origins, DestOID, SrcLoans));
   }
 
+  LoanSet getLoans(OriginID OID, ProgramPoint P) {
+    return getLoans(getState(P), OID);
+  }
+
 private:
   LoanSet getLoans(Lattice L, OriginID OID) {
     if (auto *Loans = L.Origins.lookup(OID))
@@ -779,7 +803,6 @@ private:
 
 // ========================================================================= //
 //  TODO:
-// - Modifying loan propagation to answer `LoanSet getLoans(Origin O, Point P)`
 // - Modify loan expiry analysis to answer `bool isExpired(Loan L, Point P)`
 // - Modify origin liveness analysis to answer `bool isLive(Origin O, Point P)`
 // - Using the above three to perform the final error reporting.
