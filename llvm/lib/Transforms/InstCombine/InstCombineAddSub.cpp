@@ -2152,14 +2152,17 @@ bool CommonPointerBase::isExpensive() const {
   auto ProcessGEPs = [&SeenConst, &NumGEPs](ArrayRef<GEPOperator *> GEPs) {
     bool SeenMultiUse = false;
     for (GEPOperator *GEP : GEPs) {
-      // Only count GEPs after the first multi-use GEP. For the first one,
-      // we will directly reuse the offset.
-      if (SeenMultiUse) {
-        bool IsConst = GEP->hasAllConstantIndices();
-        SeenConst |= IsConst;
-        NumGEPs += !IsConst;
+      // Only count multi-use GEPs, excluding the first one. For the first one,
+      // we will directly reuse the offset. For one-use GEPs, their offset will
+      // be folded into a multi-use GEP.
+      if (!GEP->hasOneUse()) {
+        if (SeenMultiUse) {
+          bool IsConst = GEP->hasAllConstantIndices();
+          SeenConst |= IsConst;
+          NumGEPs += !IsConst;
+        }
+        SeenMultiUse = true;
       }
-      SeenMultiUse |= !GEP->hasOneUse();
     }
   };
   ProcessGEPs(LHSGEPs);
