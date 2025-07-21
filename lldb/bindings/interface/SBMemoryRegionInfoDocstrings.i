@@ -1,7 +1,7 @@
 %feature("docstring",
-        "API clients can get information about memory regions in processes.
+"API clients can get information about memory regions in processes.
 
-        For Python users, `len()` is overriden to output the size of the memory region in bytes."
+For Python users, `len()` is overriden to output the size of the memory region in bytes."
 ) lldb::SBMemoryRegionInfo;
 
 %feature("docstring", "
@@ -21,16 +21,16 @@
 ) lldb::SBMemoryRegionInfo::GetNumDirtyPages;
 
 %feature("docstring", "
-        Return the address of a modified,
-        or dirty, page of memory.If the provided index is out of range,
-        or this memory region does not have dirty page information,
-        LLDB_INVALID_ADDRESS is returned."
+        Return the address of a modified, or dirty, page of memory.
+        If the provided index is out of range, or this memory region 
+        does not have dirty page information, LLDB_INVALID_ADDRESS 
+        is returned."
 ) lldb::SBMemoryRegionInfo::GetDirtyPageAddressAtIndex;
 
 %feature("docstring", "
-        Return the size of pages in this memory region .0 will be
-        returned if this information was unavailable."
-) lldb::SBMemoryRegionInfo::GetPageSize;
+        Return the size of pages in this memory region.  0 will be returned
+        if this information was unavailable."
+) lldb::SBMemoryRegionInfo::GetPageSize();
 
 %feature("docstring", "
         Takes an SBStream parameter to write output to,
