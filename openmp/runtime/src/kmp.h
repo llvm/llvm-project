@@ -160,17 +160,6 @@ class kmp_stats_list;
 #define USE_FAST_MEMORY 3
 #endif
 
-#ifndef KMP_NESTED_HOT_TEAMS
-#define KMP_NESTED_HOT_TEAMS 0
-#define USE_NESTED_HOT_ARG(x)
-#else
-#if KMP_NESTED_HOT_TEAMS
-#define USE_NESTED_HOT_ARG(x) , x
-#else
-#define USE_NESTED_HOT_ARG(x)
-#endif
-#endif
-
 // Assume using BGET compare_exchange instruction instead of lock by default.
 #ifndef USE_CMP_XCHG_FOR_BGET
 #define USE_CMP_XCHG_FOR_BGET 1
@@ -2913,14 +2902,12 @@ typedef struct kmp_free_list {
   // sync list)
 } kmp_free_list_t;
 #endif
-#if KMP_NESTED_HOT_TEAMS
 // Hot teams array keeps hot teams and their sizes for given thread. Hot teams
 // are not put in teams pool, and they don't put threads in threads pool.
 typedef struct kmp_hot_team_ptr {
   kmp_team_p *hot_team; // pointer to hot_team of given nesting level
   kmp_int32 hot_team_nth; // number of threads allocated for the hot_team
 } kmp_hot_team_ptr_t;
-#endif
 typedef struct kmp_teams_size {
   kmp_int32 nteams; // number of teams in a league
   kmp_int32 nth; // number of threads in each team of the league
@@ -2995,9 +2982,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
   int th_nt_sev; // error severity for strict modifier
   const char *th_nt_msg; // error message for strict modifier
   int th_set_nested_nth_sz;
-#if KMP_NESTED_HOT_TEAMS
   kmp_hot_team_ptr_t *th_hot_teams; /* array of hot teams */
-#endif
   kmp_proc_bind_t
       th_set_proc_bind; /* if != proc_bind_default, use request for next fork */
   kmp_teams_size_t
@@ -3553,10 +3538,8 @@ extern int __kmp_dflt_max_active_levels;
 extern bool __kmp_dflt_max_active_levels_set;
 extern int __kmp_dispatch_num_buffers; /* max possible dynamic loops in
                                           concurrent execution per team */
-#if KMP_NESTED_HOT_TEAMS
 extern int __kmp_hot_teams_mode;
 extern int __kmp_hot_teams_max_level;
-#endif
 
 #if KMP_MIC_SUPPORTED
 extern enum mic_type __kmp_mic_type;
@@ -4040,16 +4023,16 @@ extern void __kmp_suspend_uninitialize_thread(kmp_info_t *th);
 
 extern kmp_info_t *__kmp_allocate_thread(kmp_root_t *root, kmp_team_t *team,
                                          int tid);
-extern kmp_team_t *
-__kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
+extern kmp_team_t *__kmp_allocate_team(kmp_root_t *root, int new_nproc,
+                                       int max_nproc,
 #if OMPT_SUPPORT
-                    ompt_data_t ompt_parallel_data,
+                                       ompt_data_t ompt_parallel_data,
 #endif
-                    kmp_proc_bind_t proc_bind, kmp_internal_control_t *new_icvs,
-                    int argc USE_NESTED_HOT_ARG(kmp_info_t *thr));
+                                       kmp_proc_bind_t proc_bind,
+                                       kmp_internal_control_t *new_icvs,
+                                       int argc, kmp_info_t *thr);
 extern void __kmp_free_thread(kmp_info_t *);
-extern void __kmp_free_team(kmp_root_t *,
-                            kmp_team_t *USE_NESTED_HOT_ARG(kmp_info_t *));
+extern void __kmp_free_team(kmp_root_t *, kmp_team_t *, kmp_info_t *);
 extern kmp_team_t *__kmp_reap_team(kmp_team_t *);
 
 /* ------------------------------------------------------------------------ */
