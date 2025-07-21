@@ -1214,8 +1214,8 @@ void SIFixSGPRCopies::lowerPhysicalSGPRInsts(MachineFunction &MF) {
              MI->definesRegister(End->getOperand(1).getReg(), TRI))
         ++End;
 
-      llvm::loadMBUFScalarOperandsFromVGPR(*TII, *MI, Info.MOs, MDT, Start, End,
-                                           Info.SGPRs);
+      loadMBUFScalarOperandsFromVGPR(*TII, *MI, Info.MOs, MDT, Start, End,
+                                     Info.SGPRs);
     }
   }
   // Avoid some O0 tests where no use of COPY to SGPR
