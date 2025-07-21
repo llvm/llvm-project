@@ -595,8 +595,8 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
 
     if (!isTryBody) {
       QualType thisTy = dtor->getFunctionObjectParameterType();
-      emitCXXDestructorCall(dtor, Dtor_Base, /*ForVirtualBase=*/false,
-                            /*Delegating=*/false, loadCXXThisAddress(), thisTy);
+      emitCXXDestructorCall(dtor, Dtor_Base, /*forVirtualBase=*/false,
+                            /*delegating=*/false, loadCXXThisAddress(), thisTy);
       break;
     }
 
