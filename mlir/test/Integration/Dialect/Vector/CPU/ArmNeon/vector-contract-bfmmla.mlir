@@ -58,7 +58,7 @@ func.func @matrix_by_matrix_mul_and_acc() {
                                    [ 0.5, -1.3, -2.2,  0.1],
                                    [-0.7,  1.0,  1.7, -1.0]]> : vector<4x4xf32>
 
-  %acc_mem = memref.alloc() : memref<4x4xf32>
+  %acc_mem = memref.alloca() : memref<4x4xf32>
   vector.transfer_write %acc_cst, %acc_mem[%c0, %c0] {in_bounds = [true, true] } : vector<4x4xf32>, memref<4x4xf32>
   %acc = vector.transfer_read %acc_mem[%c0, %c0], %c0_f32 {in_bounds = [true, true]} : memref<4x4xf32>, vector<4x4xf32>
 
@@ -68,7 +68,7 @@ func.func @matrix_by_matrix_mul_and_acc() {
                                    [-0.4,  0.6,  0.8, -0.5],
                                    [-0.6, -1.0, -1.0, -1.0]]> : vector<4x4xbf16>
 
-  %lhs_mem = memref.alloc() : memref<4x4xbf16>
+  %lhs_mem = memref.alloca() : memref<4x4xbf16>
   vector.transfer_write %lhs_cst, %lhs_mem[%c0, %c0] {in_bounds = [true, true] } : vector<4x4xbf16>, memref<4x4xbf16>
   %lhs = vector.transfer_read %lhs_mem[%c0, %c0], %c0_bf16 {in_bounds = [true, true]} : memref<4x4xbf16>, vector<4x4xbf16>
 
@@ -78,7 +78,7 @@ func.func @matrix_by_matrix_mul_and_acc() {
                                    [-0.2,  0.4,  1.0,  0.4],
                                    [-1.3, -0.2, -2.2,  0.3]]> : vector<4x4xbf16>
 
-  %rhs_mem = memref.alloc() : memref<4x4xbf16>
+  %rhs_mem = memref.alloca() : memref<4x4xbf16>
   vector.transfer_write %rhs_cst, %rhs_mem[%c0, %c0] {in_bounds = [true, true] } : vector<4x4xbf16>, memref<4x4xbf16>
   %rhs = vector.transfer_read %rhs_mem[%c0, %c0], %c0_bf16 {in_bounds = [true, true]} : memref<4x4xbf16>, vector<4x4xbf16>
 
@@ -121,14 +121,14 @@ func.func @vector_by_matrix_mul_and_acc() {
   // Accumulator test data
   %acc_cst = arith.constant dense<[0.7,  1.0, -0.1,  1.8]> : vector<4xf32>
 
-  %acc_mem = memref.alloc() : memref<4xf32>
+  %acc_mem = memref.alloca() : memref<4xf32>
   vector.transfer_write %acc_cst, %acc_mem[%c0] {in_bounds = [true] } : vector<4xf32>, memref<4xf32>
   %acc = vector.transfer_read %acc_mem[%c0], %c0_f32 {in_bounds = [true]} : memref<4xf32>, vector<4xf32>
 
   // LHS test data
   %lhs_cst = arith.constant dense<[0.1,  0.7, -0.9,  1.3]> : vector<4xbf16>
 
-  %lhs_mem = memref.alloc() : memref<4xbf16>
+  %lhs_mem = memref.alloca() : memref<4xbf16>
   vector.transfer_write %lhs_cst, %lhs_mem[%c0] {in_bounds = [true] } : vector<4xbf16>, memref<4xbf16>
   %lhs = vector.transfer_read %lhs_mem[%c0], %c0_bf16 {in_bounds = [true]} : memref<4xbf16>, vector<4xbf16>
 
@@ -138,7 +138,7 @@ func.func @vector_by_matrix_mul_and_acc() {
                                    [-0.2,  0.4,  1.0,  0.4],
                                    [-1.3, -0.2, -2.2,  0.3]]> : vector<4x4xbf16>
 
-  %rhs_mem = memref.alloc() : memref<4x4xbf16>
+  %rhs_mem = memref.alloca() : memref<4x4xbf16>
   vector.transfer_write %rhs_cst, %rhs_mem[%c0, %c0] {in_bounds = [true, true] } : vector<4x4xbf16>, memref<4x4xbf16>
   %rhs = vector.transfer_read %rhs_mem[%c0, %c0], %c0_bf16 {in_bounds = [true, true]} : memref<4x4xbf16>, vector<4x4xbf16>
 
