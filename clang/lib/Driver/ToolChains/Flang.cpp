@@ -447,6 +447,7 @@ void Flang::addTargetOptions(const ArgList &Args,
   // Add the target features.
   switch (TC.getArch()) {
   default:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     break;
   case llvm::Triple::aarch64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);

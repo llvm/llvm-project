@@ -856,7 +856,7 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
   case llvm::Triple::sparcv9:
-    sparc::getSparcTargetFeatures(D, Args, Features);
+    sparc::getSparcTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
