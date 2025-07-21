@@ -558,10 +558,9 @@ func.func @vector_print_vector_0d(%arg0: vector<f32>) {
 // CHECK-SAME:                                      %[[VEC:.*]]: vector<f32>) {
 // CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[C1:.*]] = arith.constant 1 : index
-// CHECK:           %[[FLAT_VEC:.*]] = vector.shape_cast %[[VEC]] : vector<f32> to vector<1xf32>
 // CHECK:           vector.print punctuation <open>
 // CHECK:           scf.for %[[IDX:.*]] = %[[C0]] to %[[C1]] step %[[C1]] {
-// CHECK:             %[[EL:.*]] = vector.extract %[[FLAT_VEC]][%[[IDX]]] : f32 from vector<1xf32>
+// CHECK:             %[[EL:.*]] = vector.extract %[[VEC]][] : f32 from vector<f32>
 // CHECK:             vector.print %[[EL]] : f32 punctuation <no_punctuation>
 // CHECK:             %[[IS_NOT_LAST:.*]] = arith.cmpi ult, %[[IDX]], %[[C0]] : index
 // CHECK:             scf.if %[[IS_NOT_LAST]] {
