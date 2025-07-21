@@ -2045,13 +2045,13 @@ def NVVM_LdMatrixOp: NVVM_Op<"ldmatrix">,
   Arguments<(ins LLVM_AnyPointer: $ptr, I32Attr: $num,
                  MMALayoutAttr: $layout,
                  LdStMatrixShapeAttr: $shape,
-                 LdStMatrixEltTypeAttr: $elttype)> {
+                 LdStMatrixEltTypeAttr: $eltType)> {
 
   let summary = "cooperative matrix load";
 
   string llvmBuilder = [{
       auto operands = moduleTranslation.lookupValues(opInst.getOperands());
-      auto intId = getLdMatrixIntrinsicId($layout, $num, $shape, $elttype);
+      auto intId = getLdMatrixIntrinsicId($layout, $num, $shape, $eltType);
       $res = createIntrinsicCall(builder, intId, operands, {operands[0]->getType()});
   }];
 

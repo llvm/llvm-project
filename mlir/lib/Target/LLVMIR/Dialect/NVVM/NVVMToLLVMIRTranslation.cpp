@@ -137,10 +137,10 @@ static llvm::Intrinsic::ID getVoteSyncIntrinsicId(NVVM::VoteSyncKind kind) {
 static llvm::Intrinsic::ID
 getLdMatrixIntrinsicId(NVVM::MMALayout layout, int32_t num,
                        NVVM::LdStMatrixShapeAttr shape,
-                       NVVM::LdStMatrixEltType elttype) {
+                       NVVM::LdStMatrixEltType eltType) {
   if (layout == NVVM::MMALayout::row) {
     if (shape.getM() == 8 && shape.getN() == 8 &&
-        elttype == NVVM::LdStMatrixEltType::B16) {
+        eltType == NVVM::LdStMatrixEltType::B16) {
       switch (num) {
       case 1:
         return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_b16;
@@ -150,7 +150,7 @@ getLdMatrixIntrinsicId(NVVM::MMALayout layout, int32_t num,
         return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_b16;
       }
     } else if (shape.getM() == 8 && shape.getN() == 16 &&
-               elttype == NVVM::LdStMatrixEltType::B8X16_B6X16_P32) {
+               eltType == NVVM::LdStMatrixEltType::B8X16_B6X16_P32) {
       switch (num) {
       case 1:
         return llvm::Intrinsic::
@@ -163,7 +163,7 @@ getLdMatrixIntrinsicId(NVVM::MMALayout layout, int32_t num,
             nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b6x16_p32;
       }
     } else if (shape.getM() == 8 && shape.getN() == 16 &&
-               elttype == NVVM::LdStMatrixEltType::B8X16_B4X16_P64) {
+               eltType == NVVM::LdStMatrixEltType::B8X16_B4X16_P64) {
       switch (num) {
       case 1:
         return llvm::Intrinsic::
@@ -178,7 +178,7 @@ getLdMatrixIntrinsicId(NVVM::MMALayout layout, int32_t num,
     }
   } else {
     if (shape.getM() == 8 && shape.getN() == 8 &&
-        elttype == NVVM::LdStMatrixEltType::B16) {
+        eltType == NVVM::LdStMatrixEltType::B16) {
       switch (num) {
       case 1:
         return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_trans_b16;
@@ -188,7 +188,7 @@ getLdMatrixIntrinsicId(NVVM::MMALayout layout, int32_t num,
         return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_trans_b16;
       }
     } else if (shape.getM() == 16 && shape.getN() == 16 &&
-               elttype == NVVM::LdStMatrixEltType::B8) {
+               eltType == NVVM::LdStMatrixEltType::B8) {
       switch (num) {
       case 1:
         return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8;
@@ -196,7 +196,7 @@ getLdMatrixIntrinsicId(NVVM::MMALayout layout, int32_t num,
         return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8;
       }
     } else if (shape.getM() == 16 && shape.getN() == 16 &&
-               elttype == NVVM::LdStMatrixEltType::B8X16_B6X16_P32) {
+               eltType == NVVM::LdStMatrixEltType::B8X16_B6X16_P32) {
       switch (num) {
       case 1:
         return llvm::Intrinsic::
@@ -206,7 +206,7 @@ getLdMatrixIntrinsicId(NVVM::MMALayout layout, int32_t num,
             nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b6x16_p32;
       }
     } else if (shape.getM() == 16 && shape.getN() == 16 &&
-               elttype == NVVM::LdStMatrixEltType::B8X16_B4X16_P64) {
+               eltType == NVVM::LdStMatrixEltType::B8X16_B4X16_P64) {
       switch (num) {
       case 1:
         return llvm::Intrinsic::
