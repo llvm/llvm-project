@@ -4,6 +4,7 @@ import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@skipIf(bugnumber="rdar://156178892")
 class TestSwiftAsyncHiddenFrames(lldbtest.TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
