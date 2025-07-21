@@ -1,7 +1,5 @@
 ; RUN: opt -S -passes='dxil-post-optimization-validation' -mtriple=dxil-pc-shadermodel6.6-compute %s 2>&1 
-
-
-
+; expected-no-diagnostics
 ; Root Signature(
 ;   DescriptorTable(UAV(b0, space=0, visibility=SHADER_VISIBILITY_ALL))
 
