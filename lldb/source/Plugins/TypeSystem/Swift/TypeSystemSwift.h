@@ -213,7 +213,7 @@ public:
   virtual CompilerType ConvertClangTypeToSwiftType(CompilerType clang_type) = 0;
 
   /// \see lldb_private::TypeSystem::Dump
-  void Dump(llvm::raw_ostream &output) override;
+  void Dump(llvm::raw_ostream &output, llvm::StringRef filter) override;
 
   lldb::Format GetFormat(lldb::opaque_compiler_type_t type) override;
 

@@ -113,7 +113,7 @@ bool TypeSystemSwift::ShouldEnableEmbeddedSwift(CompileUnit *cu) {
   return CheckFlagInCU(cu, "-enable-embedded-swift");
 }
 
-void TypeSystemSwift::Dump(llvm::raw_ostream &output) {
+void TypeSystemSwift::Dump(llvm::raw_ostream &output, llvm::StringRef filter) {
   // TODO: What to dump?
 }
 
