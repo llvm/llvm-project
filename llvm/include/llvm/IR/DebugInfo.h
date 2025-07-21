@@ -46,11 +46,13 @@ LLVM_ABI TinyPtrVector<DbgVariableRecord *> findDVRDeclares(Value *V);
 LLVM_ABI TinyPtrVector<DbgVariableRecord *> findDVRValues(Value *V);
 
 /// Finds the debug info records describing a value.
-LLVM_ABI void findDbgUsers(Value *V,
-    SmallVectorImpl<DbgVariableRecord *> &DbgVariableRecords);
+LLVM_ABI void
+findDbgUsers(Value *V,
+             SmallVectorImpl<DbgVariableRecord *> &DbgVariableRecords);
 /// Finds the dbg.values describing a value.
-LLVM_ABI void findDbgValues(Value *V,
-    SmallVectorImpl<DbgVariableRecord *> &DbgVariableRecords);
+LLVM_ABI void
+findDbgValues(Value *V,
+              SmallVectorImpl<DbgVariableRecord *> &DbgVariableRecords);
 
 /// Find subprogram that is enclosing this scope.
 LLVM_ABI DISubprogram *getDISubprogram(const MDNode *Scope);

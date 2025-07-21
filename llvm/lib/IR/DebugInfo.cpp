@@ -122,13 +122,13 @@ findDbgIntrinsics(Value *V,
   }
 }
 
-void llvm::findDbgValues(Value *V,
-    SmallVectorImpl<DbgVariableRecord *> &DbgVariableRecords) {
+void llvm::findDbgValues(
+    Value *V, SmallVectorImpl<DbgVariableRecord *> &DbgVariableRecords) {
   findDbgIntrinsics</*DbgAssignAndValuesOnly=*/true>(V, DbgVariableRecords);
 }
 
-void llvm::findDbgUsers(Value *V,
-    SmallVectorImpl<DbgVariableRecord *> &DbgVariableRecords) {
+void llvm::findDbgUsers(
+    Value *V, SmallVectorImpl<DbgVariableRecord *> &DbgVariableRecords) {
   findDbgIntrinsics</*DbgAssignAndValuesOnly=*/false>(V, DbgVariableRecords);
 }
 
