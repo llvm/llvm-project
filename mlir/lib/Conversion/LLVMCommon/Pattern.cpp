@@ -331,10 +331,35 @@ LogicalResult LLVM::detail::oneToOneRewrite(
       return failure();
   }
 
+  // If the targetAttrs contains DenseElementsAttr,
+  // and the element type of the DenseElementsAttr and result type is
+  // inconsistent after the conversion of result types, we need to convert the
+  // element type of the DenseElementsAttr to the target type by creating a new
+  // DenseElementsAttr with the converted element type, and use the new
+  // DenseElementsAttr to replace the old one in the targetAttrs
+  SmallVector<NamedAttribute> convertedAttrs;
+  for (auto attr : targetAttrs) {
+    if (auto denseAttr = dyn_cast<DenseElementsAttr>(attr.getValue())) {
+      VectorType vectorType = dyn_cast<VectorType>(denseAttr.getType());
+      if (vectorType) {
+        auto convertedElementType =
+            typeConverter.convertType(vectorType.getElementType());
+        VectorType convertedVectorType =
+            VectorType::get(vectorType.getShape(), convertedElementType,
+                            vectorType.getScalableDims());
+        convertedAttrs.emplace_back(
+            attr.getName(), DenseElementsAttr::getFromRawBuffer(
+                                convertedVectorType, denseAttr.getRawData()));
+      }
+    } else {
+      convertedAttrs.push_back(attr);
+    }
+  }
+
   // Create the operation through state since we don't know its C++ type.
   Operation *newOp =
       rewriter.create(op->getLoc(), rewriter.getStringAttr(targetOp), operands,
-                      resultTypes, targetAttrs);
+                      resultTypes, convertedAttrs);
 
   setNativeProperties(newOp, overflowFlags);
 
