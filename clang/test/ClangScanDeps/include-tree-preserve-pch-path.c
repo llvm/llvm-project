@@ -1,5 +1,6 @@
 // REQUIRES: ondisk_cas
 
+// RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb_pch.json.template > %t/cdb_pch.json
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
@@ -10,6 +11,7 @@
 
 // CHECK: "-fmodule-format=obj"
 // CHECK: "-dwarf-ext-refs"
+// CHECK-NOT: -fdebug-compilation-dir
 
 // RUN: %deps-to-rsp %t/deps_pch.json --tu-index 0 > %t/pch.rsp
 // RUN: %clang @%t/pch.rsp
@@ -21,7 +23,9 @@
 // RUN: %clang @%t/tu.rsp
 
 // RUN: cat %t/tu.ll | FileCheck %s -check-prefix=LLVMIR -DPREFIX=%/t
-// LLVMIR: !DICompileUnit({{.*}}, splitDebugFilename: "prefix.pch"
+// LLVMIR: !DIFile(filename: "[[PREFIX]]/tu.c", directory: "")
+// LLVMIR: !DICompileUnit({{.*}}, splitDebugFilename: "[[PREFIX]]/prefix.pch"
+// LLVMIR: !DIFile(filename: "prefix.h", directory: "")
 
 // Extract include-tree casid
 // RUN: cat %t/tu.rsp | sed -E 's|.*"-fcas-include-tree" "(llvmcas://[[:xdigit:]]+)".*|\1|' > %t/tu.casid

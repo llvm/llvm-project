@@ -103,6 +103,9 @@ void tooling::dependencies::configureInvocationForCaching(
     // Clear APINotes options.
     CI.getAPINotesOpts().ModuleSearchPaths = {};
 
+    // Reset debug/coverage compilation dir as include-tree uses absolute path.
+    CodeGenOpts.DebugCompilationDir.clear();
+    CodeGenOpts.CoverageCompilationDir.clear();
     // Update output paths, and clear working directory.
     auto CWD = FileSystemOpts.WorkingDir;
     updateRelativePath(FrontendOpts.OutputFile, CWD);
