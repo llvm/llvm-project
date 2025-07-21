@@ -4001,18 +4001,18 @@ void IndexCallsiteContextGraph::updateCall(CallInfo &CallerCall,
 // Update the debug information attached to NewFunc to use the clone Name. Note
 // this needs to be done for both any existing DISubprogram for the definition,
 // as well as any separate declaration DISubprogram.
-static void updateSubprogramLinkageName(Function *NewFunc, std::string Name) {
+static void updateSubprogramLinkageName(Function *NewFunc, StringRef Name) {
   assert(Name == NewFunc->getName());
   auto *SP = NewFunc->getSubprogram();
   if (!SP)
     return;
-  auto *NewName = MDString::get(NewFunc->getParent()->getContext(), Name);
-  SP->replaceLinkageName(NewName);
+  auto *MDName = MDString::get(NewFunc->getParent()->getContext(), Name);
+  SP->replaceLinkageName(MDName);
   DISubprogram *Decl = SP->getDeclaration();
   if (!Decl)
     return;
   TempDISubprogram NewDecl = Decl->clone();
-  NewDecl->replaceLinkageName(NewName);
+  NewDecl->replaceLinkageName(MDName);
   SP->replaceDeclaration(MDNode::replaceWithUniqued(std::move(NewDecl)));
 }
 
