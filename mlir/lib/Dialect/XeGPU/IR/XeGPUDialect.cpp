@@ -210,6 +210,19 @@ LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// XeGPU_RangeAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+RangeAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                  IntegerAttr startOfRange, IntegerAttr endOfRange) {
+  if (startOfRange.getInt() >= endOfRange.getInt())
+    return emitError() << "EndOfRange must be greater than StartOfRange";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // XeGPU_TensorDescType
 //===----------------------------------------------------------------------===//
 

@@ -341,6 +341,7 @@ def XeGPU_RangeAttr : XeGPUAttr<"Range", "range"> {
   ];
 
   let assemblyFormat = "`<` `[`$start ```,` $end `]``>`";
+  let genVerifyDecl = 1;
 }
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUATTRS_TD
