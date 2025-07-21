@@ -13,7 +13,7 @@
 define void @CSMain() "hlsl.shader"="compute" {
 entry:
 
-  %TB =  tail call target("dx.Texture", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @TB.str)
+  %TB =  tail call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @TB.str)
 
   ret void
 }
@@ -21,11 +21,5 @@ entry:
 !dx.rootsignatures = !{!0}
 
 !0 = !{ptr @CSMain, !1, i32 2}
-!1 = !{!2, !3, !5, !7}
-!2 = !{!"RootCBV", i32 0, i32 3, i32 1, i32 4}
-!3 = !{!"DescriptorTable", i32 0, !4}
-!4 = !{!"SRV", i32 1, i32 0, i32 0, i32 -1, i32 0}
-!5 = !{!"DescriptorTable", i32 0, !6}
-!6 = !{!"Sampler", i32 5, i32 3, i32 2, i32 -1, i32 0}
-!7 = !{!"DescriptorTable", i32 0, !8}
-!8 = !{!"UAV", i32 -1, i32 0, i32 0, i32 -1, i32 2}
+!1 = !{!2}
+!2 = !{!"RootUAV", i32 0, i32 0, i32 0, i32 4}
