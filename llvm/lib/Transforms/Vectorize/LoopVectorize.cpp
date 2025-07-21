@@ -4480,6 +4480,7 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   const SCEV *RemainingIterations = nullptr;
   unsigned MaxTripCount = 0;
   if (MainLoopVF.isFixed()) {
+    // TODO: extend to support scalable VFs.
     const SCEV *TC = vputils::getSCEVExprForVPValue(
         getPlanFor(MainLoopVF).getTripCount(), SE);
     assert(!isa<SCEVCouldNotCompute>(TC) &&
