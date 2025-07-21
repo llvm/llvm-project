@@ -6841,9 +6841,9 @@ public:
     bool IsArraySection = false;
     bool HasCompleteRecord = false;
     // ATTACH information for delayed processing
-    Address AttachBaseAddr = Address::invalid();
-    Address AttachFirstElemAddr = Address::invalid();
-    const ValueDecl *AttachBaseDecl = nullptr;
+    Address AttachPtrAddr = Address::invalid();
+    Address AttachPteeAddr = Address::invalid();
+    const ValueDecl *AttachPtrDecl = nullptr;
     const Expr *AttachMapExpr = nullptr;
   };
 
@@ -7170,9 +7170,8 @@ private:
     // &p, &p, sizeof(float*), TARGET_PARAM | TO | FROM
     //
     // map(p[1:24])
-    // &p, &p[1], 24*sizeof(float), TARGET_PARAM | TO | FROM | PTR_AND_OBJ
-    // in unified shared memory mode or for local pointers
     // p, &p[1], 24*sizeof(float), TARGET_PARAM | TO | FROM
+    // &p, &p[1], sizeof(p), ATTACH
     //
     // map((*a)[0:3])
     // &(*a), &(*a), sizeof(pointer), TARGET_PARAM | TO | FROM
@@ -7242,12 +7241,15 @@ private:
     //
     // map(ps->i)
     // ps, &(ps->i), sizeof(int), TARGET_PARAM | TO | FROM
+    // &ps, &(ps->i), sizeof(ps), ATTACH
     //
     // map(ps->s.f)
     // ps, &(ps->s.f[0]), 50*sizeof(float), TARGET_PARAM | TO | FROM
+    // &ps, &(ps->s.f[0]), sizeof(ps), ATTACH
     //
     // map(from: ps->p)
     // ps, &(ps->p), sizeof(double*), TARGET_PARAM | FROM
+    // &ps, &(ps->p), sizeof(ps), ATTACH
     //
     // map(to: ps->p[:22])
     // ps, &(ps->p), sizeof(double*), TARGET_PARAM
@@ -7256,6 +7258,7 @@ private:
     //
     // map(ps->ps)
     // ps, &(ps->ps), sizeof(S2*), TARGET_PARAM | TO | FROM
+    // &ps, &(ps->ps), sizeof(ps), ATTACH
     //
     // map(from: ps->ps->s.i)
     // ps, &(ps->ps), sizeof(S2*), TARGET_PARAM
@@ -7336,7 +7339,7 @@ private:
     const auto *OAShE = dyn_cast<OMPArrayShapingExpr>(AssocExpr);
 
     // Find the pointer-attachment base-pointer for the given list, if any.
-    const Expr *AttachPtrExpr = findAttachBasePointer(Components);
+    const Expr *AttachPtrExpr = findAttachPtrExpr(Components);
 
     if (isa<MemberExpr>(AssocExpr)) {
       // The base is the 'this' pointer. The content of the pointer is going
@@ -7493,8 +7496,6 @@ private:
       // types.
       const auto *OASE =
           dyn_cast<ArraySectionExpr>(I->getAssociatedExpression());
-      const auto *ASE =
-          dyn_cast<ArraySubscriptExpr>(I->getAssociatedExpression());
       const auto *OAShE =
           dyn_cast<OMPArrayShapingExpr>(I->getAssociatedExpression());
       const auto *UO = dyn_cast<UnaryOperator>(I->getAssociatedExpression());
@@ -7808,25 +7809,25 @@ private:
     if (!EncounteredME)
       PartialStruct.HasCompleteRecord = true;
 
-    // Handle ATTACH entries: delay if PartialStruct is being populated,
-    // otherwise add immediately.
-    const auto &[AttachBaseAddr, AttachFirstElemAddr] = getAttachPtrPteeAddrs(
+    // Add ATTACH entries for pointer-attachment: delay if PartialStruct is
+    // being populated, otherwise add immediately.
+    const auto &[AttachPtrAddr, AttachPteeAddr] = getAttachPtrPteeAddrs(
         AttachPtrExpr,
         /*AttachPteeExpr=*/Components.rbegin()->getAssociatedExpression(),
         /*MapBaseDecl=*/BaseDecl, CGF, CurDir);
-    if (AttachBaseAddr.isValid() && AttachFirstElemAddr.isValid()) {
+    if (AttachPtrAddr.isValid() && AttachPteeAddr.isValid()) {
       if (PartialStruct.Base.isValid()) {
         // We're populating PartialStruct, delay ATTACH entry addition until
         // after emitCombinedEntry.
-        PartialStruct.AttachBaseAddr = AttachBaseAddr;
-        PartialStruct.AttachFirstElemAddr = AttachFirstElemAddr;
-        PartialStruct.AttachBaseDecl = BaseDecl;
+        PartialStruct.AttachPtrAddr = AttachPtrAddr;
+        PartialStruct.AttachPteeAddr = AttachPteeAddr;
+        PartialStruct.AttachPtrDecl = BaseDecl;
         PartialStruct.AttachMapExpr = MapExpr;
       } else if (IsMappingWholeStruct) {
-        addAttachEntry(CGF, StructBaseCombinedInfo, AttachBaseAddr,
-                       AttachFirstElemAddr, BaseDecl, MapExpr);
+        addAttachEntry(CGF, StructBaseCombinedInfo, AttachPtrAddr,
+                       AttachPteeAddr, BaseDecl, MapExpr);
       } else {
-        addAttachEntry(CGF, CombinedInfo, AttachBaseAddr, AttachFirstElemAddr,
+        addAttachEntry(CGF, CombinedInfo, AttachPtrAddr, AttachPteeAddr,
                        BaseDecl, MapExpr);
       }
     }
@@ -8104,9 +8105,9 @@ private:
     }
   }
 
-  /// Returns Pointer/Pointee Addresses for attach mapping between \p
-  /// PointerExpr and \p PointeeExpr. for \p CurDir, when handling a map
-  /// clause with base \p MapBaseDecl.
+  // Returns the Pointer/Pointee Addresses for attach mapping between \p
+  // PointerExpr and \p PointeeExpr. for \p CurDir, when handling a map
+  // clause with base \p MapBaseDecl.
   static std::pair<Address, Address>
   getAttachPtrPteeAddrs(const Expr *PointerExpr, const Expr *PointeeExpr,
                         const ValueDecl *MapBaseDecl, CodeGenFunction &CGF,
@@ -8158,7 +8159,7 @@ private:
   // For example, for:
   //  `map(pp->p->s.a[0])`, the base-pointer is `pp->p`, while the pointee is
   //  `pp->p->s.a[0]`.
-  static const Expr *findAttachBasePointer(
+  static const Expr *findAttachPtrExpr(
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components) {
 
     const auto *Begin = Components.begin();
@@ -8400,7 +8401,7 @@ private:
             } else {
               auto PrevCI = std::next(CI->Components.rbegin());
               const auto *VarD = dyn_cast<VarDecl>(VD);
-              const Expr *AttachPtrExpr = findAttachBasePointer(CI->Components);
+              const Expr *AttachPtrExpr = findAttachPtrExpr(CI->Components);
               if (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
                   isa<MemberExpr>(IE) ||
                   !VD->getType().getNonReferenceType()->isPointerType() ||
@@ -8675,11 +8676,11 @@ public:
         !PartialStruct.IsArraySection) {
       // Even if we are not creating a combined-entry, we need to process any
       // previously delayed ATTACH entries.
-      if (PartialStruct.AttachBaseAddr.isValid() &&
-          PartialStruct.AttachFirstElemAddr.isValid())
-        addAttachEntry(CGF, AttachCombinedInfo, PartialStruct.AttachBaseAddr,
-                       PartialStruct.AttachFirstElemAddr,
-                       PartialStruct.AttachBaseDecl,
+      if (PartialStruct.AttachPtrAddr.isValid() &&
+          PartialStruct.AttachPteeAddr.isValid())
+        addAttachEntry(CGF, AttachCombinedInfo, PartialStruct.AttachPtrAddr,
+                       PartialStruct.AttachPteeAddr,
+                       PartialStruct.AttachPtrDecl,
                        PartialStruct.AttachMapExpr);
       return;
     }
@@ -8777,10 +8778,10 @@ public:
     //   S *ps;
     //   ... map(ps->a, ps->b)
     // We won't emit separate ATTACH entries for the two list items, just one.
-    if (PartialStruct.AttachBaseAddr.isValid() &&
-        PartialStruct.AttachFirstElemAddr.isValid())
-      addAttachEntry(CGF, AttachCombinedInfo, PartialStruct.AttachBaseAddr,
-                     LBAddr, PartialStruct.AttachBaseDecl,
+    if (PartialStruct.AttachPtrAddr.isValid() &&
+        PartialStruct.AttachPteeAddr.isValid())
+      addAttachEntry(CGF, AttachCombinedInfo, PartialStruct.AttachPtrAddr,
+                     LBAddr, PartialStruct.AttachPtrDecl,
                      PartialStruct.AttachMapExpr);
   }
 
