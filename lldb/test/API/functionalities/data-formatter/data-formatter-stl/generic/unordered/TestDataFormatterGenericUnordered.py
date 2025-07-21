@@ -126,6 +126,13 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test_with_run_command()
 
+    @add_test_categories(["libstdcxx"])
+    def test_with_run_command_libstdcxx_debug(self):
+        self.build(
+            dictionary={"USE_LIBSTDCPP": 1, "CXXFLAGS_EXTRAS": "-D_GLIBCXX_DEBUG"}
+        )
+        self.do_test_with_run_command()
+
     @add_test_categories(["libc++"])
     def test_with_run_command_libcpp(self):
         self.build(dictionary={"USE_LIBCPP": 1})
