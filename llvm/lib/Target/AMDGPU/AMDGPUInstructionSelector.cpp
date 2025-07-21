@@ -406,6 +406,231 @@ bool AMDGPUInstructionSelector::selectG_AND_OR_XOR(MachineInstr &I) const {
   return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 }
 
+bool AMDGPUInstructionSelector::selectRotateOrFunnelShiftPattern(
+    MachineInstr &I) const {
+  Register DstReg = I.getOperand(0).getReg();
+  Register LHS = I.getOperand(1).getReg();
+  Register RHS = I.getOperand(2).getReg();
+
+  const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
+  const bool IsVALU = DstRB->getID() == AMDGPU::VGPRRegBankID;
+  if (!IsVALU)
+    return false;
+
+  // Check if this is a 32-bit operation
+  if (MRI->getType(DstReg).getSizeInBits() != 32)
+    return false;
+
+  MachineInstr *LHSInst = getDefIgnoringCopies(LHS, *MRI);
+  MachineInstr *RHSInst = getDefIgnoringCopies(RHS, *MRI);
+
+  MachineInstr *ShlInst = nullptr;
+  MachineInstr *SrlInst = nullptr;
+
+  // Check both orderings: (shl, srl) and (srl, shl)
+  bool IsLHSShl = LHSInst->getOpcode() == TargetOpcode::G_SHL;
+  bool IsRHSSrl = RHSInst->getOpcode() == TargetOpcode::G_LSHR;
+  bool IsLHSSrl = LHSInst->getOpcode() == TargetOpcode::G_LSHR;
+  bool IsRHSShl = RHSInst->getOpcode() == TargetOpcode::G_SHL;
+
+  if ((IsLHSShl && IsRHSSrl) || (IsLHSSrl && IsRHSShl)) {
+    ShlInst = IsLHSShl ? LHSInst : RHSInst;
+    SrlInst = IsRHSSrl ? RHSInst : LHSInst;
+  } else
+    return false;
+
+  // Extract the base sources, handling the legalizer's (src << 1) pattern
+  Register ShlSrc = ShlInst->getOperand(1).getReg();
+  Register SrlSrc = SrlInst->getOperand(1).getReg();
+
+  // Check if SHL source comes from (original_src << 1)
+  MachineInstr *PreShlInst = getDefIgnoringCopies(ShlSrc, *MRI);
+  if (PreShlInst && PreShlInst->getOpcode() == TargetOpcode::G_SHL) {
+    std::optional<ValueAndVReg> PreShlAmt = getIConstantVRegValWithLookThrough(
+        PreShlInst->getOperand(2).getReg(), *MRI);
+    if (PreShlAmt && PreShlAmt->Value.getZExtValue() == 1)
+      ShlSrc = PreShlInst->getOperand(1).getReg();
+  }
+  // Helper function to build AlignBit instruction
+  auto buildAlignBitInstruction = [&](Register AlignBitSrc0,
+                                      Register AlignBitSrc1,
+                                      Register ShiftAmount) -> bool {
+    const DebugLoc &DL = I.getDebugLoc();
+    MachineBasicBlock *BB = I.getParent();
+
+    // Select opcode based on subtarget features
+    unsigned Opcode =
+        STI.getGeneration() >= AMDGPUSubtarget::GFX11
+            ? (STI.useRealTrue16Insts() ? AMDGPU::V_ALIGNBIT_B32_t16_e64
+                                        : AMDGPU::V_ALIGNBIT_B32_fake16_e64)
+        : STI.hasTrue16BitInsts()
+            ? (STI.useRealTrue16Insts() ? AMDGPU::V_ALIGNBIT_B32_t16_e64
+                                        : AMDGPU::V_ALIGNBIT_B32_fake16_e64)
+            : AMDGPU::V_ALIGNBIT_B32_e64;
+
+    // Check constant bus restriction and copy SGPRs to VGPRs if needed
+    unsigned ConstantBusLimit = STI.getConstantBusLimit(Opcode);
+    unsigned SGPRCount = 0;
+
+    Register AlignBitSrc0ToUse = AlignBitSrc0;
+    Register AlignBitSrc1ToUse = AlignBitSrc1;
+    Register ShiftAmountToUse = ShiftAmount;
+
+    // Count SGPR operands
+    SGPRCount += (RBI.getRegBank(AlignBitSrc0, *MRI, TRI)->getID() ==
+                  AMDGPU::SGPRRegBankID)
+                     ? 1
+                     : 0;
+    SGPRCount += (RBI.getRegBank(AlignBitSrc1, *MRI, TRI)->getID() ==
+                  AMDGPU::SGPRRegBankID)
+                     ? 1
+                     : 0;
+    SGPRCount += (RBI.getRegBank(ShiftAmount, *MRI, TRI)->getID() ==
+                  AMDGPU::SGPRRegBankID)
+                     ? 1
+                     : 0;
+
+    // If we exceed the constant bus limit, copy SGPRs to VGPRs
+    if (SGPRCount > ConstantBusLimit) {
+      auto copyToVGPRIfNeeded = [&](Register &RegToUse, Register OrigReg) {
+        if (RBI.getRegBank(OrigReg, *MRI, TRI)->getID() ==
+                AMDGPU::SGPRRegBankID &&
+            SGPRCount > ConstantBusLimit) {
+          RegToUse = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+          BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_MOV_B32_e32), RegToUse)
+              .addReg(OrigReg);
+          SGPRCount--;
+        }
+      };
+
+      copyToVGPRIfNeeded(AlignBitSrc0ToUse, AlignBitSrc0);
+      copyToVGPRIfNeeded(AlignBitSrc1ToUse, AlignBitSrc1);
+      copyToVGPRIfNeeded(ShiftAmountToUse, ShiftAmount);
+    }
+
+    auto AlignBit = BuildMI(*BB, &I, DL, TII.get(Opcode), DstReg);
+
+    if (Opcode == AMDGPU::V_ALIGNBIT_B32_t16_e64 ||
+        Opcode == AMDGPU::V_ALIGNBIT_B32_fake16_e64) {
+      // t16/fake16 variants have extended operand format
+      AlignBit
+          .addImm(0)                 // src0_modifiers
+          .addReg(AlignBitSrc0ToUse) // src0
+          .addImm(0)                 // src1_modifiers
+          .addReg(AlignBitSrc1ToUse) // src1
+          .addImm(0)                 // src2_modifiers
+          .addReg(ShiftAmountToUse)  // src2
+          .addImm(0)                 // clamp
+          .addImm(0);                // op_sel
+    } else {
+      AlignBit.addReg(AlignBitSrc0ToUse)
+          .addReg(AlignBitSrc1ToUse)
+          .addReg(ShiftAmountToUse);
+    }
+
+    I.eraseFromParent();
+    return constrainSelectedInstRegOperands(*AlignBit, TII, TRI, RBI);
+  };
+
+  // Get shift amounts for both SHL and SRL
+  Register ShlAmtReg = ShlInst->getOperand(2).getReg();
+  Register SrlAmtReg = SrlInst->getOperand(2).getReg();
+
+  // Case 1: Both shift amounts are constants (may be through COPY instructions)
+  auto ShlConstVal = getIConstantVRegValWithLookThrough(ShlAmtReg, *MRI);
+  auto SrlConstVal = getIConstantVRegValWithLookThrough(SrlAmtReg, *MRI);
+
+  if (ShlConstVal && SrlConstVal) {
+    int64_t ShlVal = ShlConstVal->Value.getSExtValue();
+    int64_t SrlVal = SrlConstVal->Value.getSExtValue();
+
+    if (ShlVal + SrlVal != 32)
+      return false;
+
+    // Create a constant register for the original shift amount (SRL amount)
+    const DebugLoc &DL = I.getDebugLoc();
+    MachineBasicBlock *BB = I.getParent();
+
+    Register ConstAmtReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_MOV_B32), ConstAmtReg)
+        .addImm(SrlVal);
+
+    return buildAlignBitInstruction(ShlSrc, SrlSrc, ConstAmtReg);
+  }
+
+  // Helper to extract shift amount from (some_value & 31) pattern
+  auto getShiftAmount = [&](Register ShiftAmtReg) -> std::optional<Register> {
+    MachineInstr *AndInst = getDefIgnoringCopies(ShiftAmtReg, *MRI);
+    if (AndInst && AndInst->getOpcode() == TargetOpcode::G_AND) {
+      Register AndSrc = AndInst->getOperand(1).getReg();
+      Register AndMask = AndInst->getOperand(2).getReg();
+
+      std::optional<ValueAndVReg> MaskVal =
+          getIConstantVRegValWithLookThrough(AndMask, *MRI);
+      if (MaskVal && MaskVal->Value.getZExtValue() == 31) {
+        return AndSrc;
+      }
+    }
+    return std::nullopt;
+  };
+
+  // Case 2: Variable shift amounts - check the AND/XOR pattern
+  auto ShlAmtSrc = getShiftAmount(ShlAmtReg);
+  auto SrlAmtSrc = getShiftAmount(SrlAmtReg);
+
+  if (!ShlAmtSrc || !SrlAmtSrc)
+    return false;
+
+  MachineInstr *ShlSrcInst = getDefIgnoringCopies(*ShlAmtSrc, *MRI);
+  if (!ShlSrcInst)
+    return false;
+
+  Register OriginalAmt;
+  bool IsRotatePattern = false;
+
+  if (ShlSrcInst->getOpcode() == TargetOpcode::G_XOR) {
+    // FSHR pattern: SHL amount = (~original_amt) & 31
+    Register XorSrc = ShlSrcInst->getOperand(1).getReg();
+    Register XorMask = ShlSrcInst->getOperand(2).getReg();
+
+    std::optional<ValueAndVReg> XorMaskVal =
+        getIConstantVRegValWithLookThrough(XorMask, *MRI);
+    if (!XorMaskVal || XorMaskVal->Value.getSExtValue() != -1)
+      return false;
+
+    if (XorSrc != *SrlAmtSrc)
+      return false;
+
+    OriginalAmt = *SrlAmtSrc;
+    IsRotatePattern = false;
+
+  } else if (ShlSrcInst->getOpcode() == TargetOpcode::G_SUB) {
+    // ROTR pattern: SHL amount = (-original_amt) & 31 = (0 - original_amt) & 31
+    Register SubLHS = ShlSrcInst->getOperand(1).getReg();
+    Register SubRHS = ShlSrcInst->getOperand(2).getReg();
+
+    std::optional<ValueAndVReg> SubLHSVal =
+        getIConstantVRegValWithLookThrough(SubLHS, *MRI);
+    if (!SubLHSVal || SubLHSVal->Value.getZExtValue() != 0)
+      return false;
+
+    if (SubRHS != *SrlAmtSrc)
+      return false;
+
+    OriginalAmt = *SrlAmtSrc;
+    IsRotatePattern = true;
+
+  } else
+    return false;
+
+  // Build V_ALIGNBIT_B32 instruction
+  Register AlignBitSrc0 = ShlSrc;
+  Register AlignBitSrc1 = IsRotatePattern ? ShlSrc : SrlSrc;
+  Register VarShiftAmount = OriginalAmt;
+
+  return buildAlignBitInstruction(AlignBitSrc0, AlignBitSrc1, VarShiftAmount);
+}
+
 bool AMDGPUInstructionSelector::selectG_ADD_SUB(MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();
   MachineFunction *MF = BB->getParent();
@@ -4032,6 +4257,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_OR:
   case TargetOpcode::G_XOR:
     if (selectBITOP3(I))
+      return true;
+    if (I.getOpcode() == TargetOpcode::G_OR && selectRotateOrFunnelShiftPattern(I))
       return true;
     if (selectImpl(I, *CoverageInfo))
       return true;

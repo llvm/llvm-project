@@ -820,6 +820,13 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     SelectSTACKRESTORE(N);
     return;
   }
+  case ISD::OR: {
+    if (SDNode *Selected = selectRotateOrFunnelShiftPattern(N)) {
+      ReplaceNode(N, Selected);
+      return;
+    }
+    break;
+  }
   }
 
   SelectCode(N);
@@ -4103,6 +4110,168 @@ void AMDGPUDAGToDAGISel::PostprocessISelDAG() {
     }
     CurDAG->RemoveDeadNodes();
   } while (IsModified);
+}
+
+// Pattern matching for rotate/funnel shift operations
+// and converts them to v_alignbit_b32 instructions
+SDNode *AMDGPUDAGToDAGISel::selectRotateOrFunnelShiftPattern(SDNode *N) {
+  if (N->getOpcode() != ISD::OR)
+    return nullptr;
+
+  // Only handle 32-bit operations
+  if (N->getValueType(0) != MVT::i32)
+    return nullptr;
+
+  if (!N->isDivergent())
+    return nullptr;
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  SDNode *ShlNode = nullptr;
+  SDNode *SrlNode = nullptr;
+
+  // Check both orderings: (shl, srl) and (srl, shl)
+  bool IsLHSShl = LHS.getOpcode() == ISD::SHL;
+  bool IsRHSSrl = RHS.getOpcode() == ISD::SRL;
+  bool IsLHSSrl = LHS.getOpcode() == ISD::SRL;
+  bool IsRHSShl = RHS.getOpcode() == ISD::SHL;
+
+  if ((IsLHSShl && IsRHSSrl) || (IsLHSSrl && IsRHSShl)) {
+    ShlNode = IsLHSShl ? LHS.getNode() : RHS.getNode();
+    SrlNode = IsRHSSrl ? RHS.getNode() : LHS.getNode();
+  } else {
+    return nullptr;
+  }
+
+  // Extract sources and shift amounts
+  SDValue ShlSrc = ShlNode->getOperand(0);
+  SDValue ShlAmt = ShlNode->getOperand(1);
+  SDValue SrlSrc = SrlNode->getOperand(0);
+  SDValue SrlAmt = SrlNode->getOperand(1);
+
+  // Handle the legalizer's (src << 1) pattern for SHL source
+  if (ShlSrc.getOpcode() == ISD::SHL)
+    if (ConstantSDNode *PreShlAmt =
+            dyn_cast<ConstantSDNode>(ShlSrc.getOperand(1)))
+      if (PreShlAmt->getZExtValue() == 1)
+        ShlSrc = ShlSrc.getOperand(0);
+
+  // Helper function to build AlignBit instruction
+  auto buildAlignBitInstruction = [&](SDValue AlignBitSrc0,
+                                      SDValue AlignBitSrc1,
+                                      SDValue ShiftAmount) -> SDNode * {
+    SDLoc DL(N);
+
+    // Select opcode based on subtarget features
+    const GCNSubtarget &ST = CurDAG->getSubtarget<GCNSubtarget>();
+    unsigned Opcode =
+        ST.getGeneration() >= AMDGPUSubtarget::GFX11
+            ? (ST.useRealTrue16Insts() ? AMDGPU::V_ALIGNBIT_B32_t16_e64
+                                       : AMDGPU::V_ALIGNBIT_B32_fake16_e64)
+        : ST.hasTrue16BitInsts()
+            ? (ST.useRealTrue16Insts() ? AMDGPU::V_ALIGNBIT_B32_t16_e64
+                                       : AMDGPU::V_ALIGNBIT_B32_fake16_e64)
+            : AMDGPU::V_ALIGNBIT_B32_e64;
+
+    SDValue Ops[8]; // Maximum operands needed
+    unsigned NumOps = 0;
+
+    if (Opcode == AMDGPU::V_ALIGNBIT_B32_t16_e64 ||
+        Opcode == AMDGPU::V_ALIGNBIT_B32_fake16_e64) {
+      // Extended format with modifiers
+      Ops[0] = CurDAG->getTargetConstant(0, DL, MVT::i32); // src0_modifiers
+      Ops[1] = AlignBitSrc0;                               // src0
+      Ops[2] = CurDAG->getTargetConstant(0, DL, MVT::i32); // src1_modifiers
+      Ops[3] = AlignBitSrc1;                               // src1
+      Ops[4] = CurDAG->getTargetConstant(0, DL, MVT::i32); // src2_modifiers
+      Ops[5] = ShiftAmount;                                // src2
+      Ops[6] = CurDAG->getTargetConstant(0, DL, MVT::i32); // clamp
+      Ops[7] = CurDAG->getTargetConstant(0, DL, MVT::i32); // op_sel
+      NumOps = 8;
+    } else {
+      // Regular e64 format
+      Ops[0] = AlignBitSrc0;
+      Ops[1] = AlignBitSrc1;
+      Ops[2] = ShiftAmount;
+      NumOps = 3;
+    }
+
+    return CurDAG->getMachineNode(Opcode, DL, MVT::i32,
+                                  ArrayRef<SDValue>(Ops, NumOps));
+  };
+
+  // Case 1: Both shift amounts are constants
+  ConstantSDNode *ShlConstant = dyn_cast<ConstantSDNode>(ShlAmt);
+  ConstantSDNode *SrlConstant = dyn_cast<ConstantSDNode>(SrlAmt);
+
+  if (ShlConstant && SrlConstant) {
+    int64_t ShlVal = ShlConstant->getSExtValue();
+    int64_t SrlVal = SrlConstant->getSExtValue();
+
+    if (ShlVal + SrlVal != 32)
+      return nullptr;
+
+    // Create constant for shift amount
+    SDLoc DL(N);
+    SDValue ConstAmtNode = CurDAG->getTargetConstant(SrlVal, DL, MVT::i32);
+
+    return buildAlignBitInstruction(ShlSrc, SrlSrc, ConstAmtNode);
+  }
+
+  // Helper to extract shift amount from (some_value & 31) pattern
+  auto getShiftAmount = [&](SDValue ShiftAmtVal) -> SDValue {
+    if (ShiftAmtVal.getOpcode() == ISD::AND)
+      if (ConstantSDNode *MaskNode =
+              dyn_cast<ConstantSDNode>(ShiftAmtVal.getOperand(1)))
+        if (MaskNode->getZExtValue() == 31)
+          return ShiftAmtVal.getOperand(0);
+
+    return SDValue();
+  };
+
+  // Case 2: Variable shift amounts - check the AND pattern
+  SDValue ShlAmtSrc = getShiftAmount(ShlAmt);
+  SDValue SrlAmtSrc = getShiftAmount(SrlAmt);
+
+  if (!ShlAmtSrc || !SrlAmtSrc)
+    return nullptr;
+
+  // Check if SHL amount comes from NOT or NEG of the original amount
+  SDValue OriginalAmt;
+  bool IsRotatePattern = false;
+
+  if (ShlAmtSrc.getOpcode() == ISD::XOR) {
+    // FSHR pattern: SHL amount = (~original_amt) & 31
+    if (ConstantSDNode *XorMask =
+            dyn_cast<ConstantSDNode>(ShlAmtSrc.getOperand(1))) {
+      if (XorMask->getSExtValue() == -1) {
+        if (ShlAmtSrc.getOperand(0) == SrlAmtSrc) {
+          OriginalAmt = SrlAmtSrc;
+          IsRotatePattern = false;
+        }
+      }
+    }
+  } else if (ShlAmtSrc.getOpcode() == ISD::SUB) {
+    // ROTR pattern: SHL amount = (-original_amt) & 31 = (0 - original_amt) & 31
+    if (ConstantSDNode *SubLHS =
+            dyn_cast<ConstantSDNode>(ShlAmtSrc.getOperand(0))) {
+      if (SubLHS->getZExtValue() == 0) {
+        if (ShlAmtSrc.getOperand(1) == SrlAmtSrc) {
+          OriginalAmt = SrlAmtSrc;
+          IsRotatePattern = true;
+        }
+      }
+    }
+  }
+
+  if (!OriginalAmt)
+    return nullptr;
+
+  SDValue AlignBitSrc0 = ShlSrc;
+  SDValue AlignBitSrc1 = IsRotatePattern ? ShlSrc : SrlSrc;
+
+  return buildAlignBitInstruction(AlignBitSrc0, AlignBitSrc1, OriginalAmt);
 }
 
 AMDGPUDAGToDAGISelLegacy::AMDGPUDAGToDAGISelLegacy(TargetMachine &TM,
