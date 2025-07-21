@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ZIP_TYPES_H
-#define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ZIP_TYPES_H
+#ifndef TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ADAPTOR_TYPES_H
+#define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ADAPTOR_TYPES_H
 
 #include <functional>
 #include <ranges>
@@ -17,7 +17,7 @@
 #include "test_range.h"
 
 #if TEST_STD_VER <= 20
-#  error "range.zip/types.h" can only be included in builds supporting C++20
+#  error "range.adaptor/types.h" can only be included in builds supporting C++20
 #endif // TEST_STD_VER <= 20
 
 template <class T>
@@ -27,12 +27,14 @@ struct BufferView : std::ranges::view_base {
 
   template <std::size_t N>
   constexpr BufferView(T (&b)[N]) : buffer_(b), size_(N) {}
+
+  constexpr BufferView(T* b, std::size_t s) : buffer_(b), size_(s) {}
 };
 
 using IntBufferView = BufferView<int>;
 
 template <bool Simple>
-struct Common :  IntBufferView {
+struct Common : IntBufferView {
   using IntBufferView::IntBufferView;
 
   constexpr int* begin()
@@ -48,10 +50,10 @@ struct Common :  IntBufferView {
   }
   constexpr const int* end() const { return buffer_ + size_; }
 };
-using SimpleCommon = Common<true>;
+using SimpleCommon    = Common<true>;
 using NonSimpleCommon = Common<false>;
 
-using SimpleCommonRandomAccessSized = SimpleCommon;
+using SimpleCommonRandomAccessSized    = SimpleCommon;
 using NonSimpleCommonRandomAccessSized = NonSimpleCommon;
 
 static_assert(std::ranges::common_range<Common<true>>);
@@ -64,20 +66,22 @@ template <bool Simple>
 struct CommonNonRandom : IntBufferView {
   using IntBufferView::IntBufferView;
   using const_iterator = forward_iterator<const int*>;
-  using iterator = forward_iterator<int*>;
+  using iterator       = forward_iterator<int*>;
   constexpr iterator begin()
-    requires(!Simple) {
+    requires(!Simple)
+  {
     return iterator(buffer_);
   }
   constexpr const_iterator begin() const { return const_iterator(buffer_); }
   constexpr iterator end()
-    requires(!Simple) {
+    requires(!Simple)
+  {
     return iterator(buffer_ + size_);
   }
   constexpr const_iterator end() const { return const_iterator(buffer_ + size_); }
 };
 
-using SimpleCommonNonRandom = CommonNonRandom<true>;
+using SimpleCommonNonRandom    = CommonNonRandom<true>;
 using NonSimpleCommonNonRandom = CommonNonRandom<false>;
 
 static_assert(std::ranges::common_range<SimpleCommonNonRandom>);
@@ -90,18 +94,20 @@ template <bool Simple>
 struct NonCommon : IntBufferView {
   using IntBufferView::IntBufferView;
   constexpr int* begin()
-    requires(!Simple) {
+    requires(!Simple)
+  {
     return buffer_;
   }
   constexpr const int* begin() const { return buffer_; }
   constexpr sentinel_wrapper<int*> end()
-    requires(!Simple) {
+    requires(!Simple)
+  {
     return sentinel_wrapper<int*>(buffer_ + size_);
   }
   constexpr sentinel_wrapper<const int*> end() const { return sentinel_wrapper<const int*>(buffer_ + size_); }
 };
 
-using SimpleNonCommon = NonCommon<true>;
+using SimpleNonCommon    = NonCommon<true>;
 using NonSimpleNonCommon = NonCommon<false>;
 
 static_assert(!std::ranges::common_range<SimpleNonCommon>);
@@ -114,21 +120,23 @@ template <bool Simple>
 struct NonCommonSized : IntBufferView {
   using IntBufferView::IntBufferView;
   constexpr int* begin()
-    requires(!Simple) {
+    requires(!Simple)
+  {
     return buffer_;
   }
   constexpr const int* begin() const { return buffer_; }
   constexpr sentinel_wrapper<int*> end()
-    requires(!Simple) {
+    requires(!Simple)
+  {
     return sentinel_wrapper<int*>(buffer_ + size_);
   }
   constexpr sentinel_wrapper<const int*> end() const { return sentinel_wrapper<const int*>(buffer_ + size_); }
   constexpr std::size_t size() const { return size_; }
 };
 
-using SimpleNonCommonSized = NonCommonSized<true>;
+using SimpleNonCommonSized                = NonCommonSized<true>;
 using SimpleNonCommonRandomAccessSized    = SimpleNonCommonSized;
-using NonSimpleNonCommonSized = NonCommonSized<false>;
+using NonSimpleNonCommonSized             = NonCommonSized<false>;
 using NonSimpleNonCommonRandomAccessSized = NonSimpleNonCommonSized;
 
 static_assert(!std::ranges::common_range<SimpleNonCommonSized>);
@@ -142,15 +150,17 @@ struct NonCommonNonRandom : IntBufferView {
   using IntBufferView::IntBufferView;
 
   using const_iterator = forward_iterator<const int*>;
-  using iterator = forward_iterator<int*>;
+  using iterator       = forward_iterator<int*>;
 
   constexpr iterator begin()
-    requires(!Simple) {
+    requires(!Simple)
+  {
     return iterator(buffer_);
   }
   constexpr const_iterator begin() const { return const_iterator(buffer_); }
   constexpr sentinel_wrapper<iterator> end()
-    requires(!Simple) {
+    requires(!Simple)
+  {
     return sentinel_wrapper<iterator>(iterator(buffer_ + size_));
   }
   constexpr sentinel_wrapper<const_iterator> end() const {
@@ -158,7 +168,7 @@ struct NonCommonNonRandom : IntBufferView {
   }
 };
 
-using SimpleNonCommonNonRandom = NonCommonNonRandom<true>;
+using SimpleNonCommonNonRandom    = NonCommonNonRandom<true>;
 using NonSimpleNonCommonNonRandom = NonCommonNonRandom<false>;
 
 static_assert(!std::ranges::common_range<SimpleNonCommonNonRandom>);
@@ -172,13 +182,15 @@ struct BasicView : IntBufferView {
   using IntBufferView::IntBufferView;
 
   constexpr NonConstIter begin()
-    requires(!std::is_same_v<Iter, NonConstIter>) {
+    requires(!std::is_same_v<Iter, NonConstIter>)
+  {
     return NonConstIter(buffer_);
   }
   constexpr Iter begin() const { return Iter(buffer_); }
 
   constexpr NonConstSent end()
-    requires(!std::is_same_v<Sent, NonConstSent>) {
+    requires(!std::is_same_v<Sent, NonConstSent>)
+  {
     if constexpr (std::is_same_v<NonConstIter, NonConstSent>) {
       return NonConstIter(buffer_ + size_);
     } else {
@@ -200,10 +212,10 @@ struct forward_sized_iterator {
   Base it_ = nullptr;
 
   using iterator_category = std::forward_iterator_tag;
-  using value_type = int;
-  using difference_type = std::intptr_t;
-  using pointer = Base;
-  using reference = decltype(*Base{});
+  using value_type        = int;
+  using difference_type   = std::intptr_t;
+  using pointer           = Base;
+  using reference         = decltype(*Base{});
 
   forward_sized_iterator() = default;
   constexpr forward_sized_iterator(Base it) : it_(it) {}
@@ -232,8 +244,11 @@ static_assert(std::ranges::common_range<ForwardSizedView>);
 static_assert(!std::ranges::random_access_range<ForwardSizedView>);
 static_assert(simple_view<ForwardSizedView>);
 
-using NonSimpleForwardSizedView = BasicView<forward_sized_iterator<const int*>, forward_sized_iterator<const int*>,
-                                            forward_sized_iterator<int*>, forward_sized_iterator<int*>>;
+using NonSimpleForwardSizedView =
+    BasicView<forward_sized_iterator<const int*>,
+              forward_sized_iterator<const int*>,
+              forward_sized_iterator<int*>,
+              forward_sized_iterator<int*>>;
 static_assert(std::ranges::forward_range<NonSimpleForwardSizedView>);
 static_assert(std::ranges::sized_range<NonSimpleForwardSizedView>);
 static_assert(std::ranges::common_range<NonSimpleForwardSizedView>);
@@ -248,8 +263,10 @@ static_assert(!std::ranges::random_access_range<ForwardSizedNonCommon>);
 static_assert(simple_view<ForwardSizedNonCommon>);
 
 using NonSimpleForwardSizedNonCommon =
-    BasicView<forward_sized_iterator<const int*>, sized_sentinel<forward_sized_iterator<const int*>>,
-              forward_sized_iterator<int*>, sized_sentinel<forward_sized_iterator<int*>>>;
+    BasicView<forward_sized_iterator<const int*>,
+              sized_sentinel<forward_sized_iterator<const int*>>,
+              forward_sized_iterator<int*>,
+              sized_sentinel<forward_sized_iterator<int*>>>;
 static_assert(std::ranges::forward_range<NonSimpleForwardSizedNonCommon>);
 static_assert(std::ranges::sized_range<NonSimpleForwardSizedNonCommon>);
 static_assert(!std::ranges::common_range<NonSimpleForwardSizedNonCommon>);
@@ -278,8 +295,10 @@ static_assert(!std::ranges::sized_range<NonSizedRandomAccessView>);
 static_assert(simple_view<NonSizedRandomAccessView>);
 
 using NonSimpleNonSizedRandomAccessView =
-    BasicView<random_access_iterator<const int*>, sentinel_wrapper<random_access_iterator<const int*>>,
-              random_access_iterator<int*>, sentinel_wrapper<random_access_iterator<int*>> >;
+    BasicView<random_access_iterator<const int*>,
+              sentinel_wrapper<random_access_iterator<const int*>>,
+              random_access_iterator<int*>,
+              sentinel_wrapper<random_access_iterator<int*>> >;
 static_assert(!std::ranges::contiguous_range<NonSimpleNonSizedRandomAccessView>);
 static_assert(std::ranges::random_access_range<NonSimpleNonSizedRandomAccessView>);
 static_assert(!std::ranges::common_range<NonSimpleNonSizedRandomAccessView>);
@@ -308,8 +327,11 @@ static_assert(!std::ranges::forward_range<InputCommonView>);
 static_assert(std::ranges::common_range<InputCommonView>);
 static_assert(simple_view<InputCommonView>);
 
-using NonSimpleInputCommonView = BasicView<common_input_iterator<const int*>, common_input_iterator<const int*>,
-                                           common_input_iterator<int*>, common_input_iterator<int*>>;
+using NonSimpleInputCommonView =
+    BasicView<common_input_iterator<const int*>,
+              common_input_iterator<const int*>,
+              common_input_iterator<int*>,
+              common_input_iterator<int*>>;
 static_assert(std::ranges::input_range<NonSimpleInputCommonView>);
 static_assert(!std::ranges::forward_range<NonSimpleInputCommonView>);
 static_assert(std::ranges::common_range<NonSimpleInputCommonView>);
@@ -322,8 +344,10 @@ static_assert(!std::ranges::common_range<InputNonCommonView>);
 static_assert(simple_view<InputNonCommonView>);
 
 using NonSimpleInputNonCommonView =
-    BasicView<common_input_iterator<const int*>, sentinel_wrapper<common_input_iterator<const int*>>,
-              common_input_iterator<int*>, sentinel_wrapper<common_input_iterator<int*>>>;
+    BasicView<common_input_iterator<const int*>,
+              sentinel_wrapper<common_input_iterator<const int*>>,
+              common_input_iterator<int*>,
+              sentinel_wrapper<common_input_iterator<int*>>>;
 static_assert(std::ranges::input_range<InputNonCommonView>);
 static_assert(!std::ranges::forward_range<InputNonCommonView>);
 static_assert(!std::ranges::common_range<InputNonCommonView>);
@@ -336,8 +360,11 @@ static_assert(!std::ranges::random_access_range<BidiCommonView>);
 static_assert(std::ranges::common_range<BidiCommonView>);
 static_assert(simple_view<BidiCommonView>);
 
-using NonSimpleBidiCommonView = BasicView<bidirectional_iterator<const int*>, bidirectional_iterator<const int*>,
-                                          bidirectional_iterator<int*>, bidirectional_iterator<int*>>;
+using NonSimpleBidiCommonView =
+    BasicView<bidirectional_iterator<const int*>,
+              bidirectional_iterator<const int*>,
+              bidirectional_iterator<int*>,
+              bidirectional_iterator<int*>>;
 static_assert(!std::ranges::sized_range<NonSimpleBidiCommonView>);
 static_assert(std::ranges::bidirectional_range<NonSimpleBidiCommonView>);
 static_assert(!std::ranges::random_access_range<NonSimpleBidiCommonView>);
@@ -372,8 +399,10 @@ static_assert(!std::ranges::common_range<BidiNonCommonView>);
 static_assert(simple_view<BidiNonCommonView>);
 
 using NonSimpleBidiNonCommonView =
-    BasicView<bidirectional_iterator<const int*>, sentinel_wrapper<bidirectional_iterator<const int*>>,
-              bidirectional_iterator<int*>, sentinel_wrapper<bidirectional_iterator<int*>>>;
+    BasicView<bidirectional_iterator<const int*>,
+              sentinel_wrapper<bidirectional_iterator<const int*>>,
+              bidirectional_iterator<int*>,
+              sentinel_wrapper<bidirectional_iterator<int*>>>;
 static_assert(!std::ranges::sized_range<NonSimpleBidiNonCommonView>);
 static_assert(std::ranges::bidirectional_range<NonSimpleBidiNonCommonView>);
 static_assert(!std::ranges::random_access_range<NonSimpleBidiNonCommonView>);
@@ -388,24 +417,25 @@ static_assert(!std::ranges::common_range<SizedBidiNonCommonView>);
 static_assert(simple_view<SizedBidiNonCommonView>);
 
 using NonSimpleSizedBidiNonCommonView =
-    BasicView<bidirectional_iterator<const int*>, sized_sentinel<bidirectional_iterator<const int*>>,
-              bidirectional_iterator<int*>, sized_sentinel<bidirectional_iterator<int*>>>;
+    BasicView<bidirectional_iterator<const int*>,
+              sized_sentinel<bidirectional_iterator<const int*>>,
+              bidirectional_iterator<int*>,
+              sized_sentinel<bidirectional_iterator<int*>>>;
 static_assert(std::ranges::sized_range<NonSimpleSizedBidiNonCommonView>);
 static_assert(std::ranges::bidirectional_range<NonSimpleSizedBidiNonCommonView>);
 static_assert(!std::ranges::random_access_range<NonSimpleSizedBidiNonCommonView>);
 static_assert(!std::ranges::common_range<NonSimpleSizedBidiNonCommonView>);
 static_assert(!simple_view<NonSimpleSizedBidiNonCommonView>);
 
-namespace adltest{
+namespace adltest {
 struct iter_move_swap_iterator {
-
   std::reference_wrapper<int> iter_move_called_times;
   std::reference_wrapper<int> iter_swap_called_times;
   int i = 0;
 
   using iterator_category = std::input_iterator_tag;
-  using value_type = int;
-  using difference_type = std::intptr_t;
+  using value_type        = int;
+  using difference_type   = std::intptr_t;
 
   constexpr int operator*() const { return i; }
 
@@ -435,4 +465,4 @@ struct IterMoveSwapRange {
 };
 } // namespace adltest
 
-#endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ZIP_TYPES_H
+#endif //  TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ADAPTOR_TYPES_H

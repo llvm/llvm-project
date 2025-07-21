@@ -54,7 +54,6 @@ class MCObjectStreamer : public MCStreamer {
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &);
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
-  void emitInstructionImpl(const MCInst &Inst, const MCSubtargetInfo &STI);
 
 protected:
   MCObjectStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
@@ -72,13 +71,6 @@ public:
   void emitFrames(MCAsmBackend *MAB);
   MCSymbol *emitCFILabel() override;
   void emitCFISections(bool EH, bool Debug) override;
-
-  /// Get a data fragment to write into, creating a new one if the current
-  /// fragment is not FT_Data.
-  MCFragment *getOrCreateDataFragment();
-
-protected:
-  bool changeSectionImpl(MCSection *Section, uint32_t Subsection);
 
 public:
   void visitUsedSymbol(const MCSymbol &Sym) override;

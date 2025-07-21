@@ -57,8 +57,7 @@ define <vscale x 2 x float> @exp10_exp10_scalable_vector(<vscale x 2 x float> %x
 
 define float @exp10_poison() {
 ; CHECK-LABEL: define float @exp10_poison() {
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.exp10.f32(float poison)
-; CHECK-NEXT:    ret float [[RET]]
+; CHECK-NEXT:    ret float poison
 ;
   %ret = call float @llvm.exp10.f32(float poison)
   ret float %ret
@@ -66,8 +65,7 @@ define float @exp10_poison() {
 
 define <2 x float> @exp10_poison_vector() {
 ; CHECK-LABEL: define <2 x float> @exp10_poison_vector() {
-; CHECK-NEXT:    [[RET:%.*]] = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
-; CHECK-NEXT:    ret <2 x float> [[RET]]
+; CHECK-NEXT:    ret <2 x float> poison
 ;
   %ret = call <2 x float> @llvm.exp10.v2f32(<2 x float> poison)
   ret <2 x float> %ret
@@ -75,8 +73,7 @@ define <2 x float> @exp10_poison_vector() {
 
 define <vscale x 2 x float> @exp10_poison_scaleable_vector() {
 ; CHECK-LABEL: define <vscale x 2 x float> @exp10_poison_scaleable_vector() {
-; CHECK-NEXT:    [[RET:%.*]] = call <vscale x 2 x float> @llvm.exp10.nxv2f32(<vscale x 2 x float> poison)
-; CHECK-NEXT:    ret <vscale x 2 x float> [[RET]]
+; CHECK-NEXT:    ret <vscale x 2 x float> poison
 ;
   %ret = call <vscale x 2 x float> @llvm.exp10.nxv2f32(<vscale x 2 x float> poison)
   ret <vscale x 2 x float> %ret
