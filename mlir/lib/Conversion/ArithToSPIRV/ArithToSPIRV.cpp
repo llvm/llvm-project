@@ -99,9 +99,12 @@ static FloatAttr convertFloatAttr(FloatAttr srcAttr, FloatType dstType,
   return builder.getF32FloatAttr(dstVal.convertToFloat());
 }
 
-// Get IntegerAttr from FloatAttr.
-IntegerAttr getIntegerAttrFromFloatAttr(FloatAttr floatAttr, Type dstType,
-                                        ConversionPatternRewriter &rewriter) {
+// Get in IntegerAttr from FloatAttr while preserving the bits.
+// Useful for converting float constants to integer constants while preserving
+// the bits.
+static IntegerAttr
+getIntegerAttrFromFloatAttr(FloatAttr floatAttr, Type dstType,
+                            ConversionPatternRewriter &rewriter) {
   APFloat floatVal = floatAttr.getValue();
   APInt intVal = floatVal.bitcastToAPInt();
   return rewriter.getIntegerAttr(dstType, intVal);
