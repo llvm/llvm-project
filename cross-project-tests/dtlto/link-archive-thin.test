@@ -1,0 +1,93 @@
+REQUIRES: lld-link
+
+## Test that a DTLTO link succeeds and outputs the expected set of files
+## correctly when thin archives are present.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+## Compile bitcode. -O2 is required for cross-module importing.
+RUN: %clang -O2 --target=x86_64-pc-windows-msvc -flto=thin -c \
+RUN:   foo.c bar.c dog.c cat.c start.c
+
+## Generate thin archives.
+RUN: lld-link /lib /llvmlibthin /out:foo.lib foo.o
+## Create this bitcode thin archive in a subdirectory to test the expansion of
+## the path to a bitcode file that is referenced using "..", e.g., in this case
+## "../bar.o".
+RUN: mkdir lib
+RUN: lld-link /lib /llvmlibthin /out:lib/bar.lib bar.o
+## Create this bitcode thin archive with an absolute path entry containing "..".
+RUN: lld-link /lib /llvmlibthin /out:dog.lib %t/lib/../dog.o
+RUN: lld-link /lib /llvmlibthin /out:cat.lib cat.o
+RUN: lld-link /lib /llvmlibthin /out:start.lib start.o
+
+## Link from a different directory to ensure that thin archive member paths are
+## resolved correctly relative to the archive locations.
+RUN: mkdir %t/out && cd %t/out
+RUN: lld-link /subsystem:console /machine:x64 /entry:start /out:my.exe  \
+RUN:   %t/foo.lib %t/lib/bar.lib ../start.lib %t/cat.lib \
+RUN:   /includeoptional:dog ../dog.lib \
+RUN:   -thinlto-distributor:%python \
+RUN:   -thinlto-distributor-arg:%llvm_src_root/utils/dtlto/local.py \
+RUN:   -thinlto-remote-compiler:%clang \
+RUN:   /lldsavetemps
+
+## Check that the required output files have been created.
+RUN: ls | FileCheck %s --check-prefix=OUTPUTS --implicit-check-not=cat
+
+## JSON jobs description.
+OUTPUTS-DAG: my.[[PID:[a-zA-Z0-9_]+]].dist-file.json
+
+## Individual summary index files.
+OUTPUTS-DAG: start.1.[[PID]].native.o.thinlto.bc{{$}}
+OUTPUTS-DAG:   dog.2.[[PID]].native.o.thinlto.bc{{$}}
+OUTPUTS-DAG:   foo.3.[[PID]].native.o.thinlto.bc{{$}}
+OUTPUTS-DAG:   bar.4.[[PID]].native.o.thinlto.bc{{$}}
+
+## Native output object files.
+OUTPUTS-DAG: start.1.[[PID]].native.o{{$}}
+OUTPUTS-DAG:   dog.2.[[PID]].native.o{{$}}
+OUTPUTS-DAG:   foo.3.[[PID]].native.o{{$}}
+OUTPUTS-DAG:   bar.4.[[PID]].native.o{{$}}
+
+
+## It is important that cross-module inlining occurs for this test to show that Clang can
+## successfully load the bitcode file dependencies recorded in the summary indices.
+## Explicitly check that the expected importing has occurred.
+
+RUN: llvm-dis start.1.*.native.o.thinlto.bc -o - | \
+RUN:   FileCheck %s --check-prefixes=FOO,BAR,START
+
+RUN: llvm-dis dog.2.*.native.o.thinlto.bc -o - | \
+RUN:   FileCheck %s --check-prefixes=FOO,BAR,DOG,START
+
+RUN: llvm-dis foo.3.*.native.o.thinlto.bc -o - | \
+RUN:   FileCheck %s --check-prefixes=FOO,BAR,START
+
+RUN: llvm-dis bar.4.*.native.o.thinlto.bc -o - | \
+RUN:   FileCheck %s --check-prefixes=FOO,BAR,START
+
+FOO-DAG:   foo.o
+BAR-DAG:   bar.o
+DOG-DAG:   dog.o
+START-DAG: start.o
+
+
+#--- foo.c
+extern int bar(int), start(int);
+__attribute__((retain)) int foo(int x) { return x + bar(x) + start(x); }
+
+#--- bar.c
+extern int foo(int), start(int);
+__attribute__((retain)) int bar(int x) { return x + foo(x) + start(x); }
+
+#--- dog.c
+extern int foo(int), bar(int), start(int);
+__attribute__((retain)) int dog(int x) { return x + foo(x) + bar(x) + start(x); }
+
+#--- cat.c
+__attribute__((retain)) void cat(int x) {}
+
+#--- start.c
+extern int foo(int), bar(int);
+__attribute__((retain)) int start(int x) { return x + foo(x) + bar(x); }
