@@ -5751,15 +5751,3 @@ HLSLAttributedResourceType::findHandleTypeOnResource(const Type *RT) {
   }
   return nullptr;
 }
-
-StringRef PredefinedSugarType::getName(Kind KD) {
-  switch (KD) {
-  case Kind::SizeT:
-    return "__size_t";
-  case Kind::SignedSizeT:
-    return "__signed_size_t";
-  case Kind::PtrdiffT:
-    return "__ptrdiff_t";
-  }
-  llvm_unreachable("unexpected kind");
-}

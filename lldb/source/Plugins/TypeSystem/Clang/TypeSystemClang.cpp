@@ -2602,7 +2602,6 @@ RemoveWrappingTypes(QualType type, ArrayRef<clang::Type::TypeClass> mask = {}) {
     case clang::Type::TypeOf:
     case clang::Type::TypeOfExpr:
     case clang::Type::Using:
-    case clang::Type::PredefinedSugar:
     /* TO_UPSTREAM(BoundsSafety) ON*/
     case clang::Type::CountAttributed:
     case clang::Type::DynamicRangePointer:
@@ -4213,7 +4212,6 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::TypeOf:
   case clang::Type::TypeOfExpr:
   case clang::Type::Using:
-  case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
   case clang::Type::UnaryTransform:
     break;
@@ -4977,7 +4975,6 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::TypeOf:
   case clang::Type::TypeOfExpr:
   case clang::Type::Using:
-  case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
 
   case clang::Type::UnaryTransform:
@@ -5281,7 +5278,6 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::TypeOf:
   case clang::Type::TypeOfExpr:
   case clang::Type::Using:
-  case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
   case clang::Type::UnaryTransform:
     break;
