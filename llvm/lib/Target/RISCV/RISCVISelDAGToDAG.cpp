@@ -3768,9 +3768,7 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::XOR:
     case RISCV::XORI:
     case RISCV::ANDN:
-    case RISCV::BREV8:
     case RISCV::CLMUL:
-    case RISCV::ORC_B:
     case RISCV::ORN:
     case RISCV::XNOR:
     case RISCV::SH1ADD:
@@ -3781,6 +3779,11 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::BINVI:
     RecCheck:
       if (hasAllNBitUsers(User, Bits, Depth + 1))
+        break;
+      return false;
+    case RISCV::BREV8:
+    case RISCV::ORC_B:
+      if (hasAllNBitUsers(User, alignDown(Bits, 8), Depth + 1))
         break;
       return false;
     case RISCV::CZERO_EQZ:
