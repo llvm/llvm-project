@@ -39,7 +39,9 @@ def : Enum {
   let desc = "Supported symbol info.";
   let is_typed = 1;
   let etors = [
-    TaggedEtor<"KIND", "ol_symbol_kind_t", "The kind of this symbol.">
+    TaggedEtor<"KIND", "ol_symbol_kind_t", "The kind of this symbol.">,
+    TaggedEtor<"GLOBAL_VARIABLE_ADDRESS", "void *", "The address in memory for this global variable.">,
+    TaggedEtor<"GLOBAL_VARIABLE_SIZE", "size_t", "The size in bytes for this global variable.">,
   ];
 }
 

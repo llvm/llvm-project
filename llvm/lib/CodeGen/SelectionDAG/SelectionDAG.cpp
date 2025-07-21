@@ -5569,6 +5569,12 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BUILD_VECTOR:
   case ISD::BUILD_PAIR:
   case ISD::SPLAT_VECTOR:
+  case ISD::FABS:
+    return false;
+
+  case ISD::ABS:
+    // ISD::ABS defines abs(INT_MIN) -> INT_MIN and never generates poison.
+    // Different to Intrinsic::abs.
     return false;
 
   case ISD::ADDC:
@@ -5620,6 +5626,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::FMUL:
   case ISD::FDIV:
   case ISD::FREM:
+  case ISD::FCOPYSIGN:
     // No poison except from flags (which is handled above)
     return false;
 
@@ -13866,6 +13873,8 @@ void SelectionDAG::copyExtraInfo(SDNode *From, SDNode *To) {
     return;
   }
 
+  const SDNode *EntrySDN = getEntryNode().getNode();
+
   // We need to copy NodeExtraInfo to all _new_ nodes that are being introduced
   // through the replacement of From with To. Otherwise, replacements of a node
   // (From) with more complex nodes (To and its operands) may result in lost
@@ -13897,9 +13906,14 @@ void SelectionDAG::copyExtraInfo(SDNode *From, SDNode *To) {
       return true;
     if (!Visited.insert(N).second)
       return true;
-    if (getEntryNode().getNode() == N)
+    if (EntrySDN == N)
       return false;
     for (const SDValue &Op : N->op_values()) {
+      if (N == To && Op.getNode() == EntrySDN) {
+        // Special case: New node's operand is the entry node; just need to
+        // copy extra info to new node.
+        break;
+      }
       if (!Self(Self, Op.getNode()))
         return false;
     }
