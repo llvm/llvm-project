@@ -115,6 +115,19 @@ public:
 
   bool operator!=(const lldb::SBMemoryRegionInfo &rhs) const;
 
+  /// writes a description of the memory region to a SBStream.
+  ///
+  /// \param[in,out] description
+  ///     A stream object where the description will be written.
+  ///
+  /// \return
+  ///     Returns true if the description was successfully written,
+  ///     false otherwise.
+  ///
+  /// The description format is: [Hex start - Hex End) with associated permissions (RWX)
+  ///
+  /// In Python bindings, this method is used by the __str__ implementation,
+  /// allowing memory regions to be printed directly.
   bool GetDescription(lldb::SBStream &description);
 
 private:
