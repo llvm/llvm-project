@@ -651,7 +651,7 @@ define void @zext16_abs8(i8 %x, ptr %p) {
 ; RV64I-NEXT:    srai a2, a0, 63
 ; RV64I-NEXT:    srai a0, a0, 56
 ; RV64I-NEXT:    xor a0, a0, a2
-; RV64I-NEXT:    subw a0, a0, a2
+; RV64I-NEXT:    sub a0, a0, a2
 ; RV64I-NEXT:    sh a0, 0(a1)
 ; RV64I-NEXT:    ret
 ;

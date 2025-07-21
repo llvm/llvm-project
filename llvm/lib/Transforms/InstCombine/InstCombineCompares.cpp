@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -21,8 +22,10 @@
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
@@ -8222,6 +8225,98 @@ static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
   return new FCmpInst(Pred, LHSI->getOperand(1), RHSC, "", &I);
 }
 
+// Transform 'fptrunc(x) cmp C' to 'x cmp ext(C)' if possible.
+// Patterns include:
+//    fptrunc(x) <  C  -->  x <  ext(C)
+//    fptrunc(x) <= C  -->  x <= ext(C)
+//    fptrunc(x) >  C  -->  x >  ext(C)
+//    fptrunc(x) >= C  -->  x >= ext(C)
+// where 'ext(C)' is the extension of 'C' to the type of 'x' with a small bias
+// due to precision loss.
+static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
+                                    const Constant &C) {
+  FCmpInst::Predicate Pred = I.getPredicate();
+  bool RoundDown = false;
+
+  if (Pred == FCmpInst::FCMP_OGE || Pred == FCmpInst::FCMP_UGE ||
+      Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_ULT)
+    RoundDown = true;
+  else if (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT ||
+           Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)
+    RoundDown = false;
+  else
+    return nullptr;
+
+  const APFloat *CValue;
+  if (!match(&C, m_APFloat(CValue)))
+    return nullptr;
+
+  if (CValue->isNaN() || CValue->isInfinity())
+    return nullptr;
+
+  auto ConvertFltSema = [](const APFloat &Src, const fltSemantics &Sema) {
+    bool LosesInfo;
+    APFloat Dest = Src;
+    Dest.convert(Sema, APFloat::rmNearestTiesToEven, &LosesInfo);
+    return Dest;
+  };
+
+  auto NextValue = [](const APFloat &Value, bool RoundDown) {
+    APFloat NextValue = Value;
+    NextValue.next(RoundDown);
+    return NextValue;
+  };
+
+  APFloat NextCValue = NextValue(*CValue, RoundDown);
+
+  Type *DestType = FPTrunc.getOperand(0)->getType();
+  const fltSemantics &DestFltSema =
+      DestType->getScalarType()->getFltSemantics();
+
+  APFloat ExtCValue = ConvertFltSema(*CValue, DestFltSema);
+  APFloat ExtNextCValue = ConvertFltSema(NextCValue, DestFltSema);
+
+  // When 'NextCValue' is infinity, use an imaged 'NextCValue' that equals
+  // 'CValue + bias' to avoid the infinity after conversion. The bias is
+  // estimated as 'CValue - PrevCValue', where 'PrevCValue' is the previous
+  // value of 'CValue'.
+  if (NextCValue.isInfinity()) {
+    APFloat PrevCValue = NextValue(*CValue, !RoundDown);
+    APFloat Bias = ConvertFltSema(*CValue - PrevCValue, DestFltSema);
+
+    ExtNextCValue = ExtCValue + Bias;
+  }
+
+  APFloat ExtMidValue =
+      scalbn(ExtCValue + ExtNextCValue, -1, APFloat::rmNearestTiesToEven);
+
+  const fltSemantics &SrcFltSema =
+      C.getType()->getScalarType()->getFltSemantics();
+
+  // 'MidValue' might be rounded to 'NextCValue'. Correct it here.
+  APFloat MidValue = ConvertFltSema(ExtMidValue, SrcFltSema);
+  if (MidValue != *CValue)
+    ExtMidValue.next(!RoundDown);
+
+  // Check whether 'ExtMidValue' is a valid result since the assumption on
+  // imaged 'NextCValue' might not hold for new float types.
+  // ppc_fp128 can't pass here when converting from max float because of
+  // APFloat implementation.
+  if (NextCValue.isInfinity()) {
+    // ExtMidValue --- narrowed ---> Finite
+    if (ConvertFltSema(ExtMidValue, SrcFltSema).isInfinity())
+      return nullptr;
+
+    // NextExtMidValue --- narrowed ---> Infinity
+    APFloat NextExtMidValue = NextValue(ExtMidValue, RoundDown);
+    if (ConvertFltSema(NextExtMidValue, SrcFltSema).isFinite())
+      return nullptr;
+  }
+
+  return new FCmpInst(Pred, FPTrunc.getOperand(0),
+                      ConstantFP::get(DestType, ExtMidValue), "", &I);
+}
+
 /// Optimize fabs(X) compared with zero.
 static Instruction *foldFabsWithFcmpZero(FCmpInst &I, InstCombinerImpl &IC) {
   Value *X;
@@ -8711,6 +8806,10 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
           if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
                   cast<LoadInst>(LHSI), GEP, GV, I))
             return Res;
+      break;
+    case Instruction::FPTrunc:
+      if (Instruction *NV = foldFCmpFpTrunc(I, *LHSI, *RHSC))
+        return NV;
       break;
     }
   }
