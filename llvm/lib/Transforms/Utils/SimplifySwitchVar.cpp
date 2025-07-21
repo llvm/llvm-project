@@ -20,12 +20,53 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SimplifySwitchVar.h"
+#include "llvm/IR/Instructions.h"
 
 using namespace llvm;
+
+/// Return the BB, where (most of) the cases meet.
+/// In that BB are phi nodes, that contain the case BBs.
+static BasicBlock *findMostCommonSuccessor(SwitchInst *Switch) {
+  uint64_t Max = 0;
+  BasicBlock *MostCommonSuccessor = nullptr;
+
+  for (auto &Case : Switch->cases()) {
+    auto *CaseBB = Case.getCaseSuccessor();
+    auto GetNumPredecessors = [](BasicBlock *BB) -> uint64_t {
+      return std::distance(predecessors(BB).begin(), predecessors(BB).end());
+    };
+
+    auto Length = GetNumPredecessors(CaseBB);
+
+    if (Length > Max) {
+      Max = Length;
+      MostCommonSuccessor = CaseBB;
+    }
+
+    for (auto *Successor : successors(CaseBB)) {
+      auto Length = GetNumPredecessors(Successor);
+      if (Length > Max) {
+        Max = Length;
+        MostCommonSuccessor = Successor;
+      }
+    }
+  }
+
+  return MostCommonSuccessor;
+}
 
 PreservedAnalyses SimplifySwitchVarPass::run(Function &F,
                                              FunctionAnalysisManager &AM) {
   bool Changed = false;
+  BasicBlock *MostCommonSuccessor;
+  // collect switch insts
+  for (auto &BB : F) {
+    if (auto *Switch = dyn_cast<SwitchInst>(BB.getTerminator())) {
+      // get the most common successor for the phi nodes
+      MostCommonSuccessor = findMostCommonSuccessor(Switch);
+    }
+  }
+
   if (!Changed)
     return PreservedAnalyses::all();
 
