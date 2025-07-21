@@ -370,7 +370,6 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
       }
 
       int64_t Num;
-      unsigned Count;
       if (DF) {
         Displacement += DF->getContents().size();
       } else if (F->getKind() == MCFragment::FT_Relaxable &&
@@ -379,11 +378,9 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
         // After layout, during relocation generation, it can be treated as a
         // data fragment.
         Displacement += F->getSize();
-      } else if (auto *AF = dyn_cast<MCAlignFragment>(F);
-                 AF && Layout && AF->hasEmitNops() &&
-                 !Asm->getBackend().shouldInsertExtraNopBytesForCodeAlign(
-                     *AF, Count)) {
-        Displacement += Asm->computeFragmentSize(*AF);
+      } else if (F->getKind() == MCFragment::FT_Align && Layout &&
+                 F->isLinkerRelaxable()) {
+        Displacement += Asm->computeFragmentSize(*F);
       } else if (auto *FF = dyn_cast<MCFillFragment>(F);
                  FF && FF->getNumValues().evaluateAsAbsolute(Num)) {
         Displacement += Num * FF->getValueSize();

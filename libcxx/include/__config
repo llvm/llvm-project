@@ -265,13 +265,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 //      When this option is used, the token passed to `std::random_device`'s
 //      constructor *must* be "/dev/urandom" -- anything else is an error.
 //
-// _LIBCPP_USING_NACL_RANDOM
-//      NaCl's sandbox (which PNaCl also runs in) doesn't allow filesystem access,
-//      including accesses to the special files under `/dev`. This implementation
-//      uses the NaCL syscall `nacl_secure_random_init()` to get entropy.
-//      When this option is used, the token passed to `std::random_device`'s
-//      constructor *must* be "/dev/urandom" -- anything else is an error.
-//
 // _LIBCPP_USING_WIN32_RANDOM
 //      Use rand_s(), for use on Windows.
 //      When this option is used, the token passed to `std::random_device`'s
@@ -283,8 +276,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_USING_GETENTROPY
 #  elif defined(__Fuchsia__)
 #    define _LIBCPP_USING_FUCHSIA_CPRNG
-#  elif defined(__native_client__)
-#    define _LIBCPP_USING_NACL_RANDOM
 #  elif defined(_LIBCPP_WIN32API)
 #    define _LIBCPP_USING_WIN32_RANDOM
 #  else
@@ -1089,6 +1080,20 @@ typedef __char32_t char32_t;
 #  else
 #    define _LIBCPP_DIAGNOSE_WARNING(...)
 #  endif
+
+#  if __has_attribute(__diagnose_if__) && !defined(_LIBCPP_APPLE_CLANG_VER) &&                                         \
+      (!defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER >= 2001)
+#    define _LIBCPP_DIAGNOSE_IF(...) __attribute__((__diagnose_if__(__VA_ARGS__)))
+#  else
+#    define _LIBCPP_DIAGNOSE_IF(...)
+#  endif
+
+#  define _LIBCPP_DIAGNOSE_NULLPTR_IF(condition, condition_description)                                                \
+    _LIBCPP_DIAGNOSE_IF(                                                                                               \
+        condition,                                                                                                     \
+        "null passed to callee that requires a non-null argument" condition_description,                               \
+        "warning",                                                                                                     \
+        "nonnull")
 
 #  if __has_cpp_attribute(_Clang::__lifetimebound__)
 #    define _LIBCPP_LIFETIMEBOUND [[_Clang::__lifetimebound__]]

@@ -398,6 +398,8 @@ enum CPol {
   SCOPE_DEV = 2 << 3,
   SCOPE_SYS = 3 << 3,
 
+  NV = 1 << 5, // Non-volatile bit
+
   SWZ = 1 << 6, // Swizzle bit
 
   ALL = TH | SCOPE,

@@ -72,10 +72,10 @@ void receive_vec_512(__m512 x, __m512 y, __m512 z, __m512 w, __m512 q) {
 void receive_vec_1024(__m1024 x, __m1024 y, __m1024 z, __m1024 w, __m1024 q) {
   gv1024 = x + y + z + w + q;
 }
-// CHECK-LABEL: define dso_local void @receive_vec_128(<4 x float> inreg noundef %x, <4 x float> inreg noundef %y, <4 x float> inreg noundef %z, ptr noundef %0, ptr noundef %1)
-// CHECK-LABEL: define dso_local void @receive_vec_256(<8 x float> inreg noundef %x, <8 x float> inreg noundef %y, <8 x float> inreg noundef %z, ptr noundef %0, ptr noundef %1)
-// CHECK-LABEL: define dso_local void @receive_vec_512(<16 x float> inreg noundef %x, <16 x float> inreg noundef %y, <16 x float> inreg noundef %z, ptr noundef %0, ptr noundef %1)
-// CHECK-LABEL: define dso_local void @receive_vec_1024(ptr noundef %0, ptr noundef %1, ptr noundef %2, ptr noundef %3, ptr noundef %4)
+// CHECK-LABEL: define dso_local void @receive_vec_128(<4 x float> inreg noundef %x, <4 x float> inreg noundef %y, <4 x float> inreg noundef %z, ptr dead_on_return noundef %0, ptr dead_on_return noundef %1)
+// CHECK-LABEL: define dso_local void @receive_vec_256(<8 x float> inreg noundef %x, <8 x float> inreg noundef %y, <8 x float> inreg noundef %z, ptr dead_on_return noundef %0, ptr dead_on_return noundef %1)
+// CHECK-LABEL: define dso_local void @receive_vec_512(<16 x float> inreg noundef %x, <16 x float> inreg noundef %y, <16 x float> inreg noundef %z, ptr dead_on_return noundef %0, ptr dead_on_return noundef %1)
+// CHECK-LABEL: define dso_local void @receive_vec_1024(ptr dead_on_return noundef %0, ptr dead_on_return noundef %1, ptr dead_on_return noundef %2, ptr dead_on_return noundef %3, ptr dead_on_return noundef %4)
 
 void pass_vec_128(void) {
   __m128 z = {0};
@@ -83,13 +83,13 @@ void pass_vec_128(void) {
 }
 
 // CHECK-LABEL: define dso_local void @pass_vec_128()
-// CHECK: call void @receive_vec_128(<4 x float> inreg noundef %{{[^,)]*}}, <4 x float> inreg noundef %{{[^,)]*}}, <4 x float> inreg noundef %{{[^,)]*}}, ptr noundef %{{[^,)]*}}, ptr noundef %{{[^,)]*}})
+// CHECK: call void @receive_vec_128(<4 x float> inreg noundef %{{[^,)]*}}, <4 x float> inreg noundef %{{[^,)]*}}, <4 x float> inreg noundef %{{[^,)]*}}, ptr dead_on_return noundef %{{[^,)]*}}, ptr dead_on_return noundef %{{[^,)]*}})
 
 
 void __fastcall fastcall_indirect_vec(__m128 x, __m128 y, __m128 z, __m128 w, int edx, __m128 q) {
   gv128 = x + y + z + w + q;
 }
-// CHECK-LABEL: define dso_local x86_fastcallcc void @"\01@fastcall_indirect_vec@84"(<4 x float> inreg noundef %x, <4 x float> inreg noundef %y, <4 x float> inreg noundef %z, ptr inreg noundef %0, i32 inreg noundef %edx, ptr noundef %1)
+// CHECK-LABEL: define dso_local x86_fastcallcc void @"\01@fastcall_indirect_vec@84"(<4 x float> inreg noundef %x, <4 x float> inreg noundef %y, <4 x float> inreg noundef %z, ptr dead_on_return inreg noundef %0, i32 inreg noundef %edx, ptr dead_on_return noundef %1)
 
 struct __declspec(align(1)) Align1 { unsigned long long x; };
 struct __declspec(align(4)) Align4 { unsigned long long x; };
@@ -156,4 +156,4 @@ void pass_fixed_align_variadic() {
 // correctly in Clang than it is to be bug for bug compatible, so we pass such
 // arguments indirectly.
 // CHECK-LABEL: define dso_local void @pass_fixed_align_variadic()
-// CHECK: call void (ptr, ...) @receive_fixed_align_variadic(ptr noundef %{{[^)]*}}, i32 noundef 42)
+// CHECK: call void (ptr, ...) @receive_fixed_align_variadic(ptr dead_on_return noundef %{{[^)]*}}, i32 noundef 42)

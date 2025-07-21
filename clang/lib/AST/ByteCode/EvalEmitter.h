@@ -40,6 +40,9 @@ public:
   EvaluationResult interpretDecl(const VarDecl *VD, bool CheckFullyInitialized);
   /// Interpret the given Expr to a Pointer.
   EvaluationResult interpretAsPointer(const Expr *E, PtrCallback PtrCB);
+  /// Interpret the given expression as if it was in the body of the given
+  /// function, i.e. the parameters of the function are available for use.
+  bool interpretCall(const FunctionDecl *FD, const Expr *E);
 
   /// Clean up all resources.
   void cleanup();

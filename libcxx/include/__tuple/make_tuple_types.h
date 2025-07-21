@@ -14,12 +14,12 @@
 #include <__fwd/array.h>
 #include <__fwd/tuple.h>
 #include <__tuple/tuple_element.h>
-#include <__tuple/tuple_indices.h>
 #include <__tuple/tuple_size.h>
 #include <__tuple/tuple_types.h>
 #include <__type_traits/copy_cvref.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/remove_reference.h>
+#include <__utility/integer_sequence.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -38,38 +38,35 @@ template <class _TupleTypes, class _TupleIndices>
 struct __make_tuple_types_flat;
 
 template <template <class...> class _Tuple, class... _Types, size_t... _Idx>
-struct __make_tuple_types_flat<_Tuple<_Types...>, __tuple_indices<_Idx...>> {
+struct __make_tuple_types_flat<_Tuple<_Types...>, __index_sequence<_Idx...>> {
   // Specialization for pair, tuple, and __tuple_types
   template <class _Tp>
   using __apply_quals _LIBCPP_NODEBUG = __tuple_types<__copy_cvref_t<_Tp, __type_pack_element<_Idx, _Types...>>...>;
 };
 
 template <class _Vt, size_t _Np, size_t... _Idx>
-struct __make_tuple_types_flat<array<_Vt, _Np>, __tuple_indices<_Idx...>> {
+struct __make_tuple_types_flat<array<_Vt, _Np>, __index_sequence<_Idx...>> {
   template <size_t>
   using __value_type _LIBCPP_NODEBUG = _Vt;
   template <class _Tp>
   using __apply_quals _LIBCPP_NODEBUG = __tuple_types<__copy_cvref_t<_Tp, __value_type<_Idx>>...>;
 };
 
-template <class _Tp,
-          size_t _Ep     = tuple_size<__libcpp_remove_reference_t<_Tp> >::value,
-          size_t _Sp     = 0,
-          bool _SameSize = (_Ep == tuple_size<__libcpp_remove_reference_t<_Tp> >::value)>
+template <class _Tp>
 struct __make_tuple_types {
-  static_assert(_Sp <= _Ep, "__make_tuple_types input error");
   using _RawTp _LIBCPP_NODEBUG = __remove_cvref_t<_Tp>;
-  using _Maker _LIBCPP_NODEBUG = __make_tuple_types_flat<_RawTp, typename __make_tuple_indices<_Ep, _Sp>::type>;
-  using type _LIBCPP_NODEBUG   = typename _Maker::template __apply_quals<_Tp>;
+  using _Maker _LIBCPP_NODEBUG =
+      __make_tuple_types_flat<_RawTp, __make_index_sequence<tuple_size<__libcpp_remove_reference_t<_Tp>>::value>>;
+  using type _LIBCPP_NODEBUG = typename _Maker::template __apply_quals<_Tp>;
 };
 
-template <class... _Types, size_t _Ep>
-struct __make_tuple_types<tuple<_Types...>, _Ep, 0, true> {
+template <class... _Types>
+struct __make_tuple_types<tuple<_Types...>> {
   using type _LIBCPP_NODEBUG = __tuple_types<_Types...>;
 };
 
-template <class... _Types, size_t _Ep>
-struct __make_tuple_types<__tuple_types<_Types...>, _Ep, 0, true> {
+template <class... _Types>
+struct __make_tuple_types<__tuple_types<_Types...>> {
   using type _LIBCPP_NODEBUG = __tuple_types<_Types...>;
 };
 

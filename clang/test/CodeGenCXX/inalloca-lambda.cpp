@@ -22,7 +22,7 @@ void test() {
 // CHECK: %[[V:.*]] = getelementptr inbounds nuw <{ %struct.A }>, ptr %[[ARG]], i32 0, i32 0
 // CHECK: %call = call x86_thiscallcc noundef i32
 // CHECK-SAME: @"?__impl@<lambda_0>@?0??test@@YAXXZ@QBE?A?<auto>@@UA@@@Z"
-// CHECK-SAME: (ptr noundef %this, ptr noundef %[[V]])
+// CHECK-SAME: (ptr noundef %this, ptr dead_on_return noundef %[[V]])
 
 // CHECK: define internal noundef i32
 // CHECK-SAME: @"?__invoke@<lambda_0>@?0??test@@YAXXZ@CA?A?<auto>@@UA@@@Z"
@@ -31,12 +31,12 @@ void test() {
 // CHECK: %[[VAR:.*]] = getelementptr inbounds nuw <{ %struct.A }>, ptr %[[ARG]], i32 0, i32 0
 // CHECK: %call = call x86_thiscallcc noundef i32
 // CHECK-SAME: @"?__impl@<lambda_0>@?0??test@@YAXXZ@QBE?A?<auto>@@UA@@@Z"
-// CHECK-SAME: (ptr noundef %unused.capture, ptr noundef %[[VAR]])
+// CHECK-SAME: (ptr noundef %unused.capture, ptr dead_on_return noundef %[[VAR]])
 // CHECK: ret i32 %call
 
 // CHECK: define internal x86_thiscallcc noundef i32
 // CHECK-SAME: @"?__impl@<lambda_0>@?0??test@@YAXXZ@QBE?A?<auto>@@UA@@@Z"
-// CHECK-SAME: (ptr noundef %this, ptr noundef %[[ARG:.*]])
+// CHECK-SAME: (ptr noundef %this, ptr dead_on_return noundef %[[ARG:.*]])
 // CHECK: %this.addr = alloca ptr, align 4
 // CHECK: store ptr %this, ptr %this.addr, align 4
 // CHECK: %this1 = load ptr, ptr %this.addr, align 4

@@ -6,16 +6,15 @@ define amdgpu_kernel void @matmul_kernel(i32 %a0, i32 %a1) {
 ; GFX942-LABEL: matmul_kernel:
 ; GFX942:       ; %bb.0: ; %entry
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX942-NEXT:    v_mov_b32_e32 v0, 0
-; GFX942-NEXT:    v_accvgpr_write_b32 a2, v0
+; GFX942-NEXT:    v_accvgpr_write_b32 a2, 0
 ; GFX942-NEXT:    s_mov_b32 s2, 0
 ; GFX942-NEXT:    v_accvgpr_write_b32 a1, 0
+; GFX942-NEXT:    s_mov_b32 s3, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX942-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX942-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; GFX942-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v0
-; GFX942-NEXT:    s_mov_b32 s3, 0
 ; GFX942-NEXT:    s_branch .LBB0_2
 ; GFX942-NEXT:  .LBB0_1: ; %bb2
 ; GFX942-NEXT:    ; in Loop: Header=BB0_2 Depth=1
@@ -43,16 +42,15 @@ define amdgpu_kernel void @matmul_kernel(i32 %a0, i32 %a1) {
 ; GFX908-LABEL: matmul_kernel:
 ; GFX908:       ; %bb.0: ; %entry
 ; GFX908-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX908-NEXT:    v_mov_b32_e32 v0, 0
+; GFX908-NEXT:    v_accvgpr_write_b32 a2, 0
 ; GFX908-NEXT:    v_accvgpr_write_b32 a1, 0
 ; GFX908-NEXT:    s_mov_b32 s2, 0
-; GFX908-NEXT:    v_accvgpr_write_b32 a2, v0
+; GFX908-NEXT:    s_mov_b32 s3, 0
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX908-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX908-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; GFX908-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v0
-; GFX908-NEXT:    s_mov_b32 s3, 0
 ; GFX908-NEXT:    s_branch .LBB0_2
 ; GFX908-NEXT:  .LBB0_1: ; %bb2
 ; GFX908-NEXT:    ; in Loop: Header=BB0_2 Depth=1

@@ -78,6 +78,8 @@ def : GINodeEquiv<G_XOR, xor>;
 def : GINodeEquiv<G_SHL, shl>;
 def : GINodeEquiv<G_LSHR, srl>;
 def : GINodeEquiv<G_ASHR, sra>;
+def : GINodeEquiv<G_ABDS, abds>;
+def : GINodeEquiv<G_ABDU, abdu>;
 def : GINodeEquiv<G_SADDSAT, saddsat>;
 def : GINodeEquiv<G_UADDSAT, uaddsat>;
 def : GINodeEquiv<G_SSUBSAT, ssubsat>;

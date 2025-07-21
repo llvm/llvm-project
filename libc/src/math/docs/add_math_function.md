@@ -183,8 +183,8 @@ implementation (which is very often glibc).
 
 - Build and Run exhaustive test (might take hours to run):
 ```
-  $ ninja libc.test.src.math.exhaustive.<func>_test
-  $ projects/libc/test/src/math/exhaustive/libc.test.src.math.exhaustive.<func>_test
+  $ ninja libc.test.src.math.exhaustive.<func>_test.__unit__
+  $ projects/libc/test/src/math/exhaustive/libc.test.src.math.exhaustive.<func>_test.__unit__
 ```
 
 - Build and Run performance test:

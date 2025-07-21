@@ -45,20 +45,13 @@ public:
                   MutableArrayRef<char> Data, uint64_t Value,
                   bool IsResolved) override;
 
-  // Return Size with extra Nop Bytes for alignment directive in code section.
-  bool shouldInsertExtraNopBytesForCodeAlign(const MCAlignFragment &AF,
-                                             unsigned &Size) override;
-
-  // Insert target specific fixup type for alignment directive in code section.
-  bool shouldInsertFixupForCodeAlign(MCAssembler &Asm,
-                                     MCAlignFragment &AF) override;
-
   bool shouldForceRelocation(const MCFixup &Fixup, const MCValue &Target);
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
+  bool relaxAlign(MCFragment &F, unsigned &Size) override;
   bool relaxDwarfLineAddr(MCFragment &F, bool &WasRelaxed) const override;
   bool relaxDwarfCFA(MCFragment &F, bool &WasRelaxed) const override;
   std::pair<bool, bool> relaxLEB128(MCFragment &F,

@@ -2140,17 +2140,44 @@ void ThunkCreator::mergeThunks(ArrayRef<OutputSection *> outputSections) {
       });
 }
 
-static int64_t getPCBias(Ctx &ctx, RelType type) {
-  if (ctx.arg.emachine != EM_ARM)
-    return 0;
-  switch (type) {
-  case R_ARM_THM_JUMP19:
-  case R_ARM_THM_JUMP24:
-  case R_ARM_THM_CALL:
-    return 4;
-  default:
-    return 8;
+constexpr uint32_t HEXAGON_MASK_END_PACKET = 3 << 14;
+constexpr uint32_t HEXAGON_END_OF_PACKET = 3 << 14;
+constexpr uint32_t HEXAGON_END_OF_DUPLEX = 0 << 14;
+
+// Return the distance between the packet start and the instruction in the
+// relocation.
+static int getHexagonPacketOffset(const InputSection &isec,
+                                  const Relocation &rel) {
+  const ArrayRef<uint8_t> data = isec.content();
+
+  // Search back as many as 3 instructions.
+  for (unsigned i = 0;; i++) {
+    if (i == 3 || rel.offset < (i + 1) * 4)
+      return i * 4;
+    uint32_t instWord = 0;
+    const ArrayRef<uint8_t> instWordContents =
+        data.drop_front(rel.offset - (i + 1) * 4);
+    memcpy(&instWord, instWordContents.data(), sizeof(instWord));
+    if (((instWord & HEXAGON_MASK_END_PACKET) == HEXAGON_END_OF_PACKET) ||
+        ((instWord & HEXAGON_MASK_END_PACKET) == HEXAGON_END_OF_DUPLEX))
+      return i * 4;
   }
+}
+static int64_t getPCBias(Ctx &ctx, const InputSection &isec,
+                         const Relocation &rel) {
+  if (ctx.arg.emachine == EM_ARM) {
+    switch (rel.type) {
+    case R_ARM_THM_JUMP19:
+    case R_ARM_THM_JUMP24:
+    case R_ARM_THM_CALL:
+      return 4;
+    default:
+      return 8;
+    }
+  }
+  if (ctx.arg.emachine == EM_HEXAGON)
+    return -getHexagonPacketOffset(isec, rel);
+  return 0;
 }
 
 // Find or create a ThunkSection within the InputSectionDescription (ISD) that
@@ -2162,7 +2189,7 @@ ThunkSection *ThunkCreator::getISDThunkSec(OutputSection *os,
                                            const Relocation &rel,
                                            uint64_t src) {
   // See the comment in getThunk for -pcBias below.
-  const int64_t pcBias = getPCBias(ctx, rel.type);
+  const int64_t pcBias = getPCBias(ctx, *isec, rel);
   for (std::pair<ThunkSection *, uint32_t> tp : isd->thunkSections) {
     ThunkSection *ts = tp.first;
     uint64_t tsBase = os->addr + ts->outSecOff - pcBias;
@@ -2323,7 +2350,7 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
   // out in the relocation addend. We compensate for the PC bias so that
   // an Arm and Thumb relocation to the same destination get the same keyAddend,
   // which is usually 0.
-  const int64_t pcBias = getPCBias(ctx, rel.type);
+  const int64_t pcBias = getPCBias(ctx, *isec, rel);
   const int64_t keyAddend = rel.addend + pcBias;
 
   // We use a ((section, offset), addend) pair to find the thunk position if
@@ -2482,7 +2509,7 @@ bool ThunkCreator::createThunks(uint32_t pass,
             // STT_SECTION + non-zero addend, clear the addend after
             // redirection.
             if (ctx.arg.emachine != EM_MIPS)
-              rel.addend = -getPCBias(ctx, rel.type);
+              rel.addend = -getPCBias(ctx, *isec, rel);
           }
 
         for (auto &p : isd->thunkSections)
@@ -2526,7 +2553,8 @@ void elf::hexagonTLSSymbolUpdate(Ctx &ctx) {
           for (Relocation &rel : isec->relocs())
             if (rel.sym->type == llvm::ELF::STT_TLS && rel.expr == R_PLT_PC) {
               if (needEntry) {
-                sym->allocateAux(ctx);
+                if (sym->auxIdx == 0)
+                  sym->allocateAux(ctx);
                 addPltEntry(ctx, *ctx.in.plt, *ctx.in.gotPlt, *ctx.in.relaPlt,
                             ctx.target->pltRel, *sym);
                 needEntry = false;

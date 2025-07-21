@@ -13,6 +13,7 @@
 // flat_multimap(const flat_multimap& m);
 
 #include <cassert>
+#include <deque>
 #include <flat_map>
 #include <vector>
 
@@ -20,11 +21,12 @@
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-int main(int, char**) {
+template <template <class...> class KeyContainer, template <class...> class ValueContainer>
+constexpr void test() {
   {
     using C = test_less<int>;
-    std::vector<int, test_allocator<int>> ks({1, 1, 3, 3, 5}, test_allocator<int>(6));
-    std::vector<char, test_allocator<char>> vs({2, 2, 1, 1, 1}, test_allocator<char>(7));
+    KeyContainer<int, test_allocator<int>> ks({1, 1, 3, 5}, test_allocator<int>(6));
+    ValueContainer<char, test_allocator<char>> vs({2, 2, 2, 1}, test_allocator<char>(7));
     using M = std::flat_multimap<int, char, C, decltype(ks), decltype(vs)>;
     auto mo = M(ks, vs, C(5));
     auto m  = mo;
@@ -44,10 +46,10 @@ int main(int, char**) {
   }
   {
     using C  = test_less<int>;
-    using Ks = std::vector<int, other_allocator<int>>;
-    using Vs = std::vector<char, other_allocator<char>>;
-    auto ks  = Ks({1, 3, 5, 5, 5, 5}, other_allocator<int>(6));
-    auto vs  = Vs({2, 2, 5, 5, 5, 1}, other_allocator<char>(7));
+    using Ks = KeyContainer<int, other_allocator<int>>;
+    using Vs = ValueContainer<char, other_allocator<char>>;
+    auto ks  = Ks({1, 1, 3, 5}, other_allocator<int>(6));
+    auto vs  = Vs({2, 2, 2, 1}, other_allocator<char>(7));
     using M  = std::flat_multimap<int, char, C, Ks, Vs>;
     auto mo  = M(Ks(ks, other_allocator<int>(6)), Vs(vs, other_allocator<int>(7)), C(5));
     auto m   = mo;
@@ -65,6 +67,26 @@ int main(int, char**) {
     assert(mo.keys().get_allocator() == other_allocator<int>(6));
     assert(mo.values().get_allocator() == other_allocator<char>(7));
   }
+}
+
+constexpr bool test() {
+  test<std::vector, std::vector>();
+
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+  {
+    test<std::deque, std::deque>();
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

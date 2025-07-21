@@ -5239,7 +5239,9 @@ bool Sema::BuiltinVAStartARMMicrosoft(CallExpr *Call) {
         << 2 << Arg1->getType() << ConstCharPtrTy;
 
   const QualType SizeTy = Context.getSizeType();
-  if (Arg2Ty->getCanonicalTypeInternal().withoutLocalFastQualifiers() != SizeTy)
+  if (!Context.hasSameType(
+          Arg2Ty->getCanonicalTypeInternal().withoutLocalFastQualifiers(),
+          SizeTy))
     Diag(Arg2->getBeginLoc(), diag::err_typecheck_convert_incompatible)
         << Arg2->getType() << SizeTy << 1 /* different class */
         << 0                              /* qualifier difference */

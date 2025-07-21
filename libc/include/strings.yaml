@@ -1,15 +1,14 @@
 header: strings.h
-header_template: strings.h.def
-macros: []
+standards:
+  - bsd
+  - posix
 types:
   - type_name: size_t
   - type_name: locale_t
-enums: []
-objects: []
 functions:
   - name: bcmp
     standards:
-      - llvm_libc_ext
+      - bsd
     return_type: int
     arguments:
       - type: const void *
@@ -17,7 +16,7 @@ functions:
       - type: size_t
   - name: bcopy
     standards:
-      - llvm_libc_ext
+      - bsd
     return_type: void
     arguments:
       - type: const void *
@@ -25,69 +24,61 @@ functions:
       - type: size_t
   - name: bzero
     standards:
-      - llvm_libc_ext
+      - bsd
     return_type: void
     arguments:
       - type: void *
       - type: size_t
   - name: ffs
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
   - name: ffsl
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: long
   - name: ffsll
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: long long
   - name: index
     standards:
-      - BSDExtensions
+      - bsd
     return_type: char *
     arguments:
       - type: const char *
       - type: int
   - name: rindex
     standards:
-      - BSDExtensions
+      - bsd
     return_type: char *
     arguments:
       - type: const char *
       - type: int
   - name: strcasecmp
-    standards:
-      - BSDExtensions
     return_type: int
     arguments:
       - type: const char *
       - type: const char *
   - name: strcasecmp_l
-    standards:
-      - BSDExtensions
     return_type: int
     arguments:
       - type: const char *
       - type: const char *
       - type: locale_t
   - name: strncasecmp
-    standards:
-      - BSDExtensions
     return_type: int
     arguments:
       - type: const char *
       - type: const char *
       - type: size_t
   - name: strncasecmp_l
-    standards:
-      - BSDExtensions
     return_type: int
     arguments:
       - type: const char *

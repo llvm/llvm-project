@@ -395,3 +395,37 @@ define i64 @freeze_array() {
   %t1 = add i64 %v1, %v2
   ret i64 %t1
 }
+
+define <8 x i16> @freeze_abdu(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-SD-LABEL: freeze_abdu:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    uaba v0.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_abdu:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    uabd v1.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    add v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    ret
+  %d = call <8 x i16> @llvm.aarch64.neon.uabd.v8i16(<8 x i16> %a, <8 x i16> %b)
+  %f = freeze <8 x i16> %d
+  %r = add <8 x i16> %a, %f
+  ret <8 x i16> %r
+}
+
+define <8 x i16> @freeze_abds(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-SD-LABEL: freeze_abds:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    saba v0.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_abds:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sabd v1.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    add v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    ret
+  %d = call <8 x i16> @llvm.aarch64.neon.sabd.v8i16(<8 x i16> %a, <8 x i16> %b)
+  %f = freeze <8 x i16> %d
+  %r = add <8 x i16> %a, %f
+  ret <8 x i16> %r
+}

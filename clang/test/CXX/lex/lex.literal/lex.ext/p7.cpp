@@ -17,7 +17,7 @@ int main() {
   auto v1 = 1.2_w;    // calls operator""_w(1.2L)
   auto v2 = u"one"_w; // calls operator""_w(u"one", 3)
   auto v3 = 12_w;     // calls operator""_w("12")
-  "two"_w;            // expected-error {{no matching literal operator for call to 'operator""_w' with arguments of types 'const char *' and 'unsigned long'}}
+  "two"_w;            // expected-error {{no matching literal operator for call to 'operator""_w' with arguments of types 'const char *' and '__size_t' (aka 'unsigned long')}}
 
   same_type<decltype(v1), long double> test1;
   same_type<decltype(v2), std::string> test2;

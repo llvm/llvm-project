@@ -196,12 +196,12 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
   switch (F.getKind()) {
   case MCFragment::FT_Data:
   case MCFragment::FT_Relaxable:
+  case MCFragment::FT_Align:
   case MCFragment::FT_LEB:
   case MCFragment::FT_Dwarf:
   case MCFragment::FT_DwarfFrame:
   case MCFragment::FT_CVInlineLines:
   case MCFragment::FT_CVDefRange:
-  case MCFragment::FT_PseudoProbe:
     return F.getSize();
   case MCFragment::FT_Fill: {
     auto &FF = cast<MCFillFragment>(F);
@@ -226,28 +226,6 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
 
   case MCFragment::FT_SymbolId:
     return 4;
-
-  case MCFragment::FT_Align: {
-    const MCAlignFragment &AF = cast<MCAlignFragment>(F);
-    unsigned Offset = getFragmentOffset(AF);
-    unsigned Size = offsetToAlignment(Offset, AF.getAlignment());
-
-    // Insert extra Nops for code alignment if the target define
-    // shouldInsertExtraNopBytesForCodeAlign target hook.
-    if (AF.getParent()->useCodeAlign() && AF.hasEmitNops() &&
-        getBackend().shouldInsertExtraNopBytesForCodeAlign(AF, Size))
-      return Size;
-
-    // If we are padding with nops, force the padding to be larger than the
-    // minimum nop size.
-    if (Size > 0 && AF.hasEmitNops()) {
-      while (Size % getBackend().getMinimumNopSize())
-        Size += AF.getAlignment().value();
-    }
-    if (Size > AF.getMaxBytesToEmit())
-      return 0;
-    return Size;
-  }
 
   case MCFragment::FT_Org: {
     const MCOrgFragment &OF = cast<MCOrgFragment>(F);
@@ -384,7 +362,7 @@ uint64_t MCAssembler::getSectionAddressSize(const MCSection &Sec) const {
 
 uint64_t MCAssembler::getSectionFileSize(const MCSection &Sec) const {
   // Virtual sections have no file size.
-  if (Sec.isVirtualSection())
+  if (Sec.isBssSection())
     return 0;
   return getSectionAddressSize(Sec);
 }
@@ -424,8 +402,7 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
   case MCFragment::FT_Dwarf:
   case MCFragment::FT_DwarfFrame:
   case MCFragment::FT_CVInlineLines:
-  case MCFragment::FT_CVDefRange:
-  case MCFragment::FT_PseudoProbe: {
+  case MCFragment::FT_CVDefRange: {
     if (F.getKind() == MCFragment::FT_Data)
       ++stats::EmittedDataFragments;
     else if (F.getKind() == MCFragment::FT_Relaxable)
@@ -433,48 +410,45 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     const auto &EF = cast<MCFragment>(F);
     OS << StringRef(EF.getContents().data(), EF.getContents().size());
     OS << StringRef(EF.getVarContents().data(), EF.getVarContents().size());
-    break;
-  }
+  } break;
+
   case MCFragment::FT_Align: {
     ++stats::EmittedAlignFragments;
-    const MCAlignFragment &AF = cast<MCAlignFragment>(F);
-    assert(AF.getFillLen() && "Invalid virtual align in concrete fragment!");
+    OS << StringRef(F.getContents().data(), F.getContents().size());
+    assert(F.getAlignFillLen() &&
+           "Invalid virtual align in concrete fragment!");
 
-    uint64_t Count = FragmentSize / AF.getFillLen();
-    assert(FragmentSize % AF.getFillLen() == 0 &&
+    uint64_t Count = (FragmentSize - F.getFixedSize()) / F.getAlignFillLen();
+    assert((FragmentSize - F.getFixedSize()) % F.getAlignFillLen() == 0 &&
            "computeFragmentSize computed size is incorrect");
 
-    // See if we are aligning with nops, and if so do that first to try to fill
-    // the Count bytes.  Then if that did not fill any bytes or there are any
-    // bytes left to fill use the Value and ValueSize to fill the rest.
-    // If we are aligning with nops, ask that target to emit the right data.
-    if (AF.hasEmitNops()) {
-      if (!Asm.getBackend().writeNopData(OS, Count, AF.getSubtargetInfo()))
-        report_fatal_error("unable to write nop sequence of " +
-                          Twine(Count) + " bytes");
-      break;
-    }
-
-    // Otherwise, write out in multiples of the value size.
-    for (uint64_t i = 0; i != Count; ++i) {
-      switch (AF.getFillLen()) {
-      default: llvm_unreachable("Invalid size!");
-      case 1:
-        OS << char(AF.getFill());
-        break;
-      case 2:
-        support::endian::write<uint16_t>(OS, AF.getFill(), Endian);
-        break;
-      case 4:
-        support::endian::write<uint32_t>(OS, AF.getFill(), Endian);
-        break;
-      case 8:
-        support::endian::write<uint64_t>(OS, AF.getFill(), Endian);
-        break;
+    // In the nops mode, call the backend hook to write `Count` nops.
+    if (F.hasAlignEmitNops()) {
+      if (!Asm.getBackend().writeNopData(OS, Count, F.getSubtargetInfo()))
+        reportFatalInternalError("unable to write nop sequence of " +
+                                 Twine(Count) + " bytes");
+    } else {
+      // Otherwise, write out in multiples of the value size.
+      for (uint64_t i = 0; i != Count; ++i) {
+        switch (F.getAlignFillLen()) {
+        default:
+          llvm_unreachable("Invalid size!");
+        case 1:
+          OS << char(F.getAlignFill());
+          break;
+        case 2:
+          support::endian::write<uint16_t>(OS, F.getAlignFill(), Endian);
+          break;
+        case 4:
+          support::endian::write<uint32_t>(OS, F.getAlignFill(), Endian);
+          break;
+        case 8:
+          support::endian::write<uint64_t>(OS, F.getAlignFill(), Endian);
+          break;
+        }
       }
     }
-    break;
-  }
+  } break;
 
   case MCFragment::FT_Fill: {
     ++stats::EmittedFillFragments;
@@ -585,42 +559,45 @@ void MCAssembler::writeSectionData(raw_ostream &OS,
                                    const MCSection *Sec) const {
   assert(getBackendPtr() && "Expected assembler backend");
 
-  // Ignore virtual sections.
-  if (Sec->isVirtualSection()) {
+  if (Sec->isBssSection()) {
     assert(getSectionFileSize(*Sec) == 0 && "Invalid size for section!");
 
-    // Check that contents are only things legal inside a virtual section.
+    // Ensure no fixups or non-zero bytes are written to BSS sections, catching
+    // errors in both input assembly code and MCStreamer API usage. Location is
+    // not tracked for efficiency.
+    auto Fn = [](char c) { return c != 0; };
     for (const MCFragment &F : *Sec) {
+      bool HasNonZero = false;
       switch (F.getKind()) {
-      default: llvm_unreachable("Invalid fragment in virtual section!");
-      case MCFragment::FT_Data: {
-        // Check that we aren't trying to write a non-zero contents (or fixups)
-        // into a virtual section. This is to support clients which use standard
-        // directives to fill the contents of virtual sections.
-        if (F.getFixups().size() || F.getVarFixups().size())
-          reportError(SMLoc(), Sec->getVirtualSectionKind() + " section '" +
-                                   Sec->getName() + "' cannot have fixups");
-        for (char C : F.getContents())
-          if (C) {
-            reportError(SMLoc(), Sec->getVirtualSectionKind() + " section '" +
-                                     Sec->getName() +
-                                     "' cannot have non-zero initializers");
-            break;
-          }
+      default:
+        reportFatalInternalError("BSS section '" + Sec->getName() +
+                                 "' contains invalid fragment");
         break;
-      }
+      case MCFragment::FT_Data:
+      case MCFragment::FT_Relaxable:
+        HasNonZero =
+            any_of(F.getContents(), Fn) || any_of(F.getVarContents(), Fn);
+        break;
       case MCFragment::FT_Align:
-        // Check that we aren't trying to write a non-zero value into a virtual
-        // section.
-        assert((cast<MCAlignFragment>(F).getFillLen() == 0 ||
-                cast<MCAlignFragment>(F).getFill() == 0) &&
-               "Invalid align in virtual section!");
+        // Disallowed for API usage. AsmParser changes non-zero fill values to
+        // 0.
+        assert(F.getAlignFill() == 0 && "Invalid align in virtual section!");
         break;
       case MCFragment::FT_Fill:
-        assert((cast<MCFillFragment>(F).getValue() == 0) &&
-               "Invalid fill in virtual section!");
+        HasNonZero = cast<MCFillFragment>(F).getValue() != 0;
         break;
       case MCFragment::FT_Org:
+        HasNonZero = cast<MCOrgFragment>(F).getValue() != 0;
+        break;
+      }
+      if (HasNonZero) {
+        reportError(SMLoc(), "BSS section '" + Sec->getName() +
+                                 "' cannot have non-zero bytes");
+        break;
+      }
+      if (F.getFixups().size() || F.getVarFixups().size()) {
+        reportError(SMLoc(),
+                    "BSS section '" + Sec->getName() + "' cannot have fixups");
         break;
       }
     }
@@ -724,34 +701,25 @@ void MCAssembler::layout() {
   for (MCSection &Sec : *this) {
     for (MCFragment &F : Sec) {
       // Process fragments with fixups here.
-      if (F.isEncoded()) {
-        auto Contents = F.getContents();
-        for (MCFixup &Fixup : F.getFixups()) {
+      auto Contents = F.getContents();
+      for (MCFixup &Fixup : F.getFixups()) {
+        uint64_t FixedValue;
+        MCValue Target;
+        evaluateFixup(F, Fixup, Target, FixedValue,
+                      /*RecordReloc=*/true, Contents);
+      }
+      if (F.getVarFixups().size()) {
+        // In the variable part, fixup offsets are relative to the fixed part's
+        // start. Extend the variable contents to the left to account for the
+        // fixed part size.
+        Contents = MutableArrayRef(F.getParent()->ContentStorage)
+                       .slice(F.VarContentStart - Contents.size(), F.getSize());
+        for (MCFixup &Fixup : F.getVarFixups()) {
           uint64_t FixedValue;
           MCValue Target;
           evaluateFixup(F, Fixup, Target, FixedValue,
                         /*RecordReloc=*/true, Contents);
         }
-        // In the variable part, fixup offsets are relative to the fixed part's
-        // start. Extend the variable contents to the left to account for the
-        // fixed part size.
-        auto VarFixups = F.getVarFixups();
-        if (VarFixups.size()) {
-          Contents =
-              MutableArrayRef(F.getParent()->ContentStorage)
-                  .slice(F.VarContentStart - Contents.size(), F.getSize());
-          for (MCFixup &Fixup : VarFixups) {
-            uint64_t FixedValue;
-            MCValue Target;
-            evaluateFixup(F, Fixup, Target, FixedValue,
-                          /*RecordReloc=*/true, Contents);
-          }
-        }
-      } else if (auto *AF = dyn_cast<MCAlignFragment>(&F)) {
-        // For RISC-V linker relaxation, an alignment relocation might be
-        // needed.
-        if (AF->hasEmitNops())
-          getBackend().shouldInsertFixupForCodeAlign(*this, *AF);
       }
     }
   }
@@ -955,15 +923,15 @@ bool MCAssembler::relaxDwarfCallFrameFragment(MCFragment &F) {
 }
 
 bool MCAssembler::relaxCVInlineLineTable(MCCVInlineLineTableFragment &F) {
-  unsigned OldSize = F.getContents().size();
+  unsigned OldSize = F.getVarContents().size();
   getContext().getCVContext().encodeInlineLineTable(*this, F);
-  return OldSize != F.getContents().size();
+  return OldSize != F.getVarContents().size();
 }
 
 bool MCAssembler::relaxCVDefRange(MCCVDefRangeFragment &F) {
-  unsigned OldSize = F.getContents().size();
+  unsigned OldSize = F.getVarContents().size();
   getContext().getCVContext().encodeDefRange(*this, F);
-  return OldSize != F.getContents().size();
+  return OldSize != F.getVarContents().size();
 }
 
 bool MCAssembler::relaxFill(MCFillFragment &F) {
@@ -972,22 +940,6 @@ bool MCAssembler::relaxFill(MCFillFragment &F) {
     return false;
   F.setSize(Size);
   return true;
-}
-
-bool MCAssembler::relaxPseudoProbeAddr(MCPseudoProbeAddrFragment &PF) {
-  uint64_t OldSize = PF.getContents().size();
-  int64_t AddrDelta;
-  bool Abs = PF.getAddrDelta().evaluateKnownAbsolute(AddrDelta, *this);
-  assert(Abs && "We created a pseudo probe with an invalid expression");
-  (void)Abs;
-  SmallVector<char, 8> Data;
-  raw_svector_ostream OSE(Data);
-
-  // AddrDelta is a signed integer
-  encodeSLEB128(AddrDelta, OSE, OldSize);
-  PF.setContents(Data);
-  PF.clearFixups();
-  return OldSize != Data.size();
 }
 
 bool MCAssembler::relaxFragment(MCFragment &F) {
@@ -1011,8 +963,6 @@ bool MCAssembler::relaxFragment(MCFragment &F) {
     return relaxCVDefRange(cast<MCCVDefRangeFragment>(F));
   case MCFragment::FT_Fill:
     return relaxFill(cast<MCFillFragment>(F));
-  case MCFragment::FT_PseudoProbe:
-    return relaxPseudoProbeAddr(cast<MCPseudoProbeAddrFragment>(F));
   }
 }
 
@@ -1020,7 +970,32 @@ void MCAssembler::layoutSection(MCSection &Sec) {
   uint64_t Offset = 0;
   for (MCFragment &F : Sec) {
     F.Offset = Offset;
-    Offset += computeFragmentSize(F);
+    if (F.getKind() == MCFragment::FT_Align) {
+      Offset += F.getFixedSize();
+      unsigned Size = offsetToAlignment(Offset, F.getAlignment());
+      // In the nops mode, RISC-V style linker relaxation might adjust the size
+      // and add a fixup, even if `Size` is originally 0.
+      bool AlignFixup = false;
+      if (F.hasAlignEmitNops()) {
+        AlignFixup = getBackend().relaxAlign(F, Size);
+        // If the backend does not handle the fragment specially, pad with nops,
+        // but ensure that the padding is larger than the minimum nop size.
+        if (!AlignFixup)
+          while (Size % getBackend().getMinimumNopSize())
+            Size += F.getAlignment().value();
+      }
+      if (!AlignFixup && Size > F.getAlignMaxBytesToEmit())
+        Size = 0;
+      // Update the variable tail size, offset by FixedSize to prevent ubsan
+      // pointer-overflow in evaluateFixup. The content is ignored.
+      F.VarContentStart = F.getFixedSize();
+      F.VarContentEnd = F.VarContentStart + Size;
+      if (F.VarContentEnd > F.getParent()->ContentStorage.size())
+        F.getParent()->ContentStorage.resize(F.VarContentEnd);
+      Offset += Size;
+    } else {
+      Offset += computeFragmentSize(F);
+    }
   }
 }
 

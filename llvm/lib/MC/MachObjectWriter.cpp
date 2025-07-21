@@ -131,7 +131,7 @@ uint64_t MachObjectWriter::getPaddingSize(const MCAssembler &Asm,
     return 0;
 
   const MCSection &NextSec = *SectionOrder[Next];
-  if (NextSec.isVirtualSection())
+  if (NextSec.isBssSection())
     return 0;
   return offsetToAlignment(EndAddr, NextSec.getAlign());
 }
@@ -267,7 +267,7 @@ void MachObjectWriter::writeSection(const MCAssembler &Asm,
   const MCSectionMachO &Section = cast<MCSectionMachO>(Sec);
 
   // The offset is unused for virtual sections.
-  if (Section.isVirtualSection()) {
+  if (Section.isBssSection()) {
     assert(Asm.getSectionFileSize(Sec) == 0 && "Invalid file size!");
     FileOffset = 0;
   }
@@ -682,13 +682,13 @@ void MachObjectWriter::computeSectionAddresses(const MCAssembler &Asm) {
   unsigned i = 0;
   // Compute the section layout order. Virtual sections must go last.
   for (MCSection &Sec : Asm) {
-    if (!Sec.isVirtualSection()) {
+    if (!Sec.isBssSection()) {
       SectionOrder.push_back(&Sec);
       cast<MCSectionMachO>(Sec).setLayoutOrder(i++);
     }
   }
   for (MCSection &Sec : Asm) {
-    if (Sec.isVirtualSection()) {
+    if (Sec.isBssSection()) {
       SectionOrder.push_back(&Sec);
       cast<MCSectionMachO>(Sec).setLayoutOrder(i++);
     }
@@ -797,11 +797,8 @@ uint64_t MachObjectWriter::writeObject() {
                      UndefinedSymbolData);
 
   if (!CGProfile.empty()) {
-    MCSection *CGProfileSection = getContext().getMachOSection(
-        "__LLVM", "__cg_profile", 0, SectionKind::getMetadata());
-    auto &Frag = *CGProfileSection->begin();
-    Frag.clearContents();
-    raw_svector_ostream OS(Frag.getContentsForAppending());
+    SmallString<0> Content;
+    raw_svector_ostream OS(Content);
     for (const MCObjectWriter::CGProfileEntry &CGPE : CGProfile) {
       uint32_t FromIndex = CGPE.From->getSymbol().getIndex();
       uint32_t ToIndex = CGPE.To->getSymbol().getIndex();
@@ -809,7 +806,9 @@ uint64_t MachObjectWriter::writeObject() {
       support::endian::write(OS, ToIndex, W.Endian);
       support::endian::write(OS, CGPE.Count, W.Endian);
     }
-    Frag.doneAppending();
+    MCSection *Sec = getContext().getMachOSection("__LLVM", "__cg_profile", 0,
+                                                  SectionKind::getMetadata());
+    llvm::copy(OS.str(), Sec->curFragList()->Head->getContents().data());
   }
 
   unsigned NumSections = Asm.end() - Asm.begin();
@@ -883,7 +882,7 @@ uint64_t MachObjectWriter::writeObject() {
 
     VMSize = std::max(VMSize, Address + Size);
 
-    if (Sec.isVirtualSection())
+    if (Sec.isBssSection())
       continue;
 
     SectionDataSize = std::max(SectionDataSize, Address + Size);
@@ -915,7 +914,7 @@ uint64_t MachObjectWriter::writeObject() {
     unsigned Flags = Sec.getTypeAndAttributes();
     if (Sec.hasInstructions())
       Flags |= MachO::S_ATTR_SOME_INSTRUCTIONS;
-    if (!cast<MCSectionMachO>(Sec).isVirtualSection() &&
+    if (!cast<MCSectionMachO>(Sec).isBssSection() &&
         !isUInt<32>(SectionStart)) {
       getContext().reportError(
           SMLoc(), "cannot encode offset of section; object file too large");

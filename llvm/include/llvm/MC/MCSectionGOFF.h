@@ -111,7 +111,7 @@ public:
 
   // Returns the text style for a section. Only defined for ED and PR sections.
   GOFF::ESDTextStyle getTextStyle() const {
-    assert((isED() || isPR() || isVirtualSection()) && "Expect ED or PR section");
+    assert((isED() || isPR() || isBssSection()) && "Expect ED or PR section");
     if (isED())
       return EDAttributes.TextStyle;
     if (isPR())

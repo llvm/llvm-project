@@ -229,7 +229,6 @@ template <class... Types>
 #  include <__tuple/make_tuple_types.h>
 #  include <__tuple/sfinae_helpers.h>
 #  include <__tuple/tuple_element.h>
-#  include <__tuple/tuple_indices.h>
 #  include <__tuple/tuple_like_ext.h>
 #  include <__tuple/tuple_size.h>
 #  include <__tuple/tuple_types.h>
@@ -457,15 +456,15 @@ struct __tuple_impl;
 
 template <size_t... _Indx, class... _Tp>
 struct _LIBCPP_DECLSPEC_EMPTY_BASES
-    __tuple_impl<__tuple_indices<_Indx...>, _Tp...> : public __tuple_leaf<_Indx, _Tp>... {
+    __tuple_impl<__index_sequence<_Indx...>, _Tp...> : public __tuple_leaf<_Indx, _Tp>... {
   _LIBCPP_HIDE_FROM_ABI constexpr __tuple_impl() noexcept(
       __all<is_nothrow_default_constructible<_Tp>::value...>::value) {}
 
   template <size_t... _Uf, class... _Tf, size_t... _Ul, class... _Tl, class... _Up>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_impl(
-      __tuple_indices<_Uf...>,
+      __index_sequence<_Uf...>,
       __tuple_types<_Tf...>,
-      __tuple_indices<_Ul...>,
+      __index_sequence<_Ul...>,
       __tuple_types<_Tl...>,
       _Up&&... __u) noexcept(__all<is_nothrow_constructible<_Tf, _Up>::value...>::value &&
                              __all<is_nothrow_default_constructible<_Tl>::value...>::value)
@@ -475,9 +474,9 @@ struct _LIBCPP_DECLSPEC_EMPTY_BASES
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_impl(
       allocator_arg_t,
       const _Alloc& __a,
-      __tuple_indices<_Uf...>,
+      __index_sequence<_Uf...>,
       __tuple_types<_Tf...>,
-      __tuple_indices<_Ul...>,
+      __index_sequence<_Ul...>,
       __tuple_types<_Tl...>,
       _Up&&... __u)
       : __tuple_leaf<_Uf, _Tf>(__uses_alloc_ctor<_Tf, _Alloc, _Up>(), __a, std::forward<_Up>(__u))...,
@@ -518,19 +517,19 @@ struct _LIBCPP_DECLSPEC_EMPTY_BASES
 
 template <class _Dest, class _Source, size_t... _Np>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
-__memberwise_copy_assign(_Dest& __dest, _Source const& __source, __tuple_indices<_Np...>) {
+__memberwise_copy_assign(_Dest& __dest, _Source const& __source, __index_sequence<_Np...>) {
   std::__swallow(((std::get<_Np>(__dest) = std::get<_Np>(__source)), void(), 0)...);
 }
 
 template <class _Dest, class _Source, class... _Up, size_t... _Np>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
-__memberwise_forward_assign(_Dest& __dest, _Source&& __source, __tuple_types<_Up...>, __tuple_indices<_Np...>) {
+__memberwise_forward_assign(_Dest& __dest, _Source&& __source, __tuple_types<_Up...>, __index_sequence<_Np...>) {
   std::__swallow(((std::get<_Np>(__dest) = std::forward<_Up>(std::get<_Np>(__source))), void(), 0)...);
 }
 
 template <class... _Tp>
 class _LIBCPP_NO_SPECIALIZATIONS tuple {
-  typedef __tuple_impl<typename __make_tuple_indices<sizeof...(_Tp)>::type, _Tp...> _BaseT;
+  typedef __tuple_impl<__make_index_sequence<sizeof...(_Tp)>, _Tp...> _BaseT;
 
   _BaseT __base_;
 
@@ -568,9 +567,9 @@ public:
       tuple(allocator_arg_t, _Alloc const& __a)
       : __base_(allocator_arg_t(),
                 __a,
-                __tuple_indices<>(),
+                __index_sequence<>(),
                 __tuple_types<>(),
-                typename __make_tuple_indices<sizeof...(_Tp), 0>::type(),
+                __make_index_sequence<sizeof...(_Tp)>(),
                 __tuple_types<_Tp...>()) {}
 
   // tuple(const T&...) constructors (including allocator_arg_t variants)
@@ -579,10 +578,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(_Not<_Lazy<_And, is_convertible<const _Tp&, _Tp>...> >::value)
       tuple(const _Tp&... __t) noexcept(_And<is_nothrow_copy_constructible<_Tp>...>::value)
-      : __base_(typename __make_tuple_indices<sizeof...(_Tp)>::type(),
-                typename __make_tuple_types<tuple, sizeof...(_Tp)>::type(),
-                typename __make_tuple_indices<0>::type(),
-                typename __make_tuple_types<tuple, 0>::type(),
+      : __base_(__make_index_sequence<sizeof...(_Tp)>(),
+                __tuple_types<_Tp...>(),
+                __index_sequence<>(),
+                __tuple_types<>(),
                 __t...) {}
 
   template <class _Alloc,
@@ -593,10 +592,10 @@ public:
       tuple(allocator_arg_t, const _Alloc& __a, const _Tp&... __t)
       : __base_(allocator_arg_t(),
                 __a,
-                typename __make_tuple_indices<sizeof...(_Tp)>::type(),
-                typename __make_tuple_types<tuple, sizeof...(_Tp)>::type(),
-                typename __make_tuple_indices<0>::type(),
-                typename __make_tuple_types<tuple, 0>::type(),
+                __make_index_sequence<sizeof...(_Tp)>(),
+                __tuple_types<_Tp...>(),
+                __index_sequence<>(),
+                __tuple_types<>(),
                 __t...) {}
 
   // tuple(U&& ...) constructors (including allocator_arg_t variants)
@@ -616,10 +615,10 @@ public:
                            int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(_Not<_Lazy<_And, is_convertible<_Up, _Tp>...> >::value)
       tuple(_Up&&... __u) noexcept(_And<is_nothrow_constructible<_Tp, _Up>...>::value)
-      : __base_(typename __make_tuple_indices<sizeof...(_Up)>::type(),
-                typename __make_tuple_types<tuple, sizeof...(_Up)>::type(),
-                typename __make_tuple_indices<sizeof...(_Tp), sizeof...(_Up)>::type(),
-                typename __make_tuple_types<tuple, sizeof...(_Tp), sizeof...(_Up)>::type(),
+      : __base_(__make_index_sequence<sizeof...(_Up)>(),
+                __tuple_types<_Tp...>(),
+                __index_sequence<>(),
+                __tuple_types<>(),
                 std::forward<_Up>(__u)...) {}
 
   template <class _Alloc,
@@ -630,10 +629,10 @@ public:
       tuple(allocator_arg_t, const _Alloc& __a, _Up&&... __u)
       : __base_(allocator_arg_t(),
                 __a,
-                typename __make_tuple_indices<sizeof...(_Up)>::type(),
-                typename __make_tuple_types<tuple, sizeof...(_Up)>::type(),
-                typename __make_tuple_indices<sizeof...(_Tp), sizeof...(_Up)>::type(),
-                typename __make_tuple_types<tuple, sizeof...(_Tp), sizeof...(_Up)>::type(),
+                __make_index_sequence<sizeof...(_Up)>(),
+                __tuple_types<_Tp...>(),
+                __index_sequence<>(),
+                __tuple_types<>(),
                 std::forward<_Up>(__u)...) {}
 
   // Copy and move constructors (including the allocator_arg_t variants)
@@ -838,7 +837,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(_If<_And<is_copy_assignable<_Tp>...>::value, tuple, __nat> const& __tuple) noexcept(
       _And<is_nothrow_copy_assignable<_Tp>...>::value) {
-    std::__memberwise_copy_assign(*this, __tuple, typename __make_tuple_indices<sizeof...(_Tp)>::type());
+    std::__memberwise_copy_assign(*this, __tuple, __make_index_sequence<sizeof...(_Tp)>());
     return *this;
   }
 
@@ -846,7 +845,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr const tuple& operator=(tuple const& __tuple) const
     requires(_And<is_copy_assignable<const _Tp>...>::value)
   {
-    std::__memberwise_copy_assign(*this, __tuple, typename __make_tuple_indices<sizeof...(_Tp)>::type());
+    std::__memberwise_copy_assign(*this, __tuple, __make_index_sequence<sizeof...(_Tp)>());
     return *this;
   }
 
@@ -854,7 +853,7 @@ public:
     requires(_And<is_assignable<const _Tp&, _Tp>...>::value)
   {
     std::__memberwise_forward_assign(
-        *this, std::move(__tuple), __tuple_types<_Tp...>(), typename __make_tuple_indices<sizeof...(_Tp)>::type());
+        *this, std::move(__tuple), __tuple_types<_Tp...>(), __make_index_sequence<sizeof...(_Tp)>());
     return *this;
   }
 #    endif // _LIBCPP_STD_VER >= 23
@@ -863,7 +862,7 @@ public:
   operator=(_If<_And<is_move_assignable<_Tp>...>::value, tuple, __nat>&& __tuple) noexcept(
       _And<is_nothrow_move_assignable<_Tp>...>::value) {
     std::__memberwise_forward_assign(
-        *this, std::move(__tuple), __tuple_types<_Tp...>(), typename __make_tuple_indices<sizeof...(_Tp)>::type());
+        *this, std::move(__tuple), __tuple_types<_Tp...>(), __make_index_sequence<sizeof...(_Tp)>());
     return *this;
   }
 
@@ -873,7 +872,7 @@ public:
                      int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(tuple<_Up...> const& __tuple) noexcept(_And<is_nothrow_assignable<_Tp&, _Up const&>...>::value) {
-    std::__memberwise_copy_assign(*this, __tuple, typename __make_tuple_indices<sizeof...(_Tp)>::type());
+    std::__memberwise_copy_assign(*this, __tuple, __make_index_sequence<sizeof...(_Tp)>());
     return *this;
   }
 
@@ -883,7 +882,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(tuple<_Up...>&& __tuple) noexcept(_And<is_nothrow_assignable<_Tp&, _Up>...>::value) {
     std::__memberwise_forward_assign(
-        *this, std::move(__tuple), __tuple_types<_Up...>(), typename __make_tuple_indices<sizeof...(_Tp)>::type());
+        *this, std::move(__tuple), __tuple_types<_Up...>(), __make_index_sequence<sizeof...(_Tp)>());
     return *this;
   }
 
@@ -892,7 +891,7 @@ public:
             enable_if_t< _And<_BoolConstant<sizeof...(_Tp) == sizeof...(_UTypes)>,
                               is_assignable<const _Tp&, const _UTypes&>...>::value>* = nullptr>
   _LIBCPP_HIDE_FROM_ABI constexpr const tuple& operator=(const tuple<_UTypes...>& __u) const {
-    std::__memberwise_copy_assign(*this, __u, typename __make_tuple_indices<sizeof...(_Tp)>::type());
+    std::__memberwise_copy_assign(*this, __u, __make_index_sequence<sizeof...(_Tp)>());
     return *this;
   }
 
@@ -900,8 +899,7 @@ public:
             enable_if_t< _And<_BoolConstant<sizeof...(_Tp) == sizeof...(_UTypes)>,
                               is_assignable<const _Tp&, _UTypes>...>::value>* = nullptr>
   _LIBCPP_HIDE_FROM_ABI constexpr const tuple& operator=(tuple<_UTypes...>&& __u) const {
-    std::__memberwise_forward_assign(
-        *this, __u, __tuple_types<_UTypes...>(), typename __make_tuple_indices<sizeof...(_Tp)>::type());
+    std::__memberwise_forward_assign(*this, __u, __tuple_types<_UTypes...>(), __make_index_sequence<sizeof...(_Tp)>());
     return *this;
   }
 #    endif // _LIBCPP_STD_VER >= 23
@@ -967,7 +965,7 @@ public:
       __enable_if_t< _And< _BoolConstant<_Np == sizeof...(_Tp)>, is_assignable<_Tp&, _Up const&>... >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(array<_Up, _Np> const& __array) noexcept(_And<is_nothrow_assignable<_Tp&, _Up const&>...>::value) {
-    std::__memberwise_copy_assign(*this, __array, typename __make_tuple_indices<sizeof...(_Tp)>::type());
+    std::__memberwise_copy_assign(*this, __array, __make_index_sequence<sizeof...(_Tp)>());
     return *this;
   }
 
@@ -979,10 +977,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
   operator=(array<_Up, _Np>&& __array) noexcept(_And<is_nothrow_assignable<_Tp&, _Up>...>::value) {
     std::__memberwise_forward_assign(
-        *this,
-        std::move(__array),
-        __tuple_types<_If<true, _Up, _Tp>...>(),
-        typename __make_tuple_indices<sizeof...(_Tp)>::type());
+        *this, std::move(__array), __tuple_types<_If<true, _Up, _Tp>...>(), __make_index_sequence<sizeof...(_Tp)>());
     return *this;
   }
 
@@ -1291,17 +1286,17 @@ template <class _Rp, class _Indices, class _Tuple0, class... _Tuples>
 struct __tuple_cat_return_ref_imp;
 
 template <class... _Types, size_t... _I0, class _Tuple0>
-struct __tuple_cat_return_ref_imp<tuple<_Types...>, __tuple_indices<_I0...>, _Tuple0> {
+struct __tuple_cat_return_ref_imp<tuple<_Types...>, __index_sequence<_I0...>, _Tuple0> {
   using _T0 _LIBCPP_NODEBUG = __libcpp_remove_reference_t<_Tuple0>;
   typedef tuple<_Types..., __copy_cvref_t<_Tuple0, typename tuple_element<_I0, _T0>::type>&&...> type;
 };
 
 template <class... _Types, size_t... _I0, class _Tuple0, class _Tuple1, class... _Tuples>
-struct __tuple_cat_return_ref_imp<tuple<_Types...>, __tuple_indices<_I0...>, _Tuple0, _Tuple1, _Tuples...>
+struct __tuple_cat_return_ref_imp<tuple<_Types...>, __index_sequence<_I0...>, _Tuple0, _Tuple1, _Tuples...>
     : public __tuple_cat_return_ref_imp<
           tuple<_Types...,
                 __copy_cvref_t<_Tuple0, typename tuple_element<_I0, __libcpp_remove_reference_t<_Tuple0>>::type>&&...>,
-          typename __make_tuple_indices<tuple_size<__libcpp_remove_reference_t<_Tuple1> >::value>::type,
+          __make_index_sequence<tuple_size<__libcpp_remove_reference_t<_Tuple1> >::value>,
           _Tuple1,
           _Tuples...> {};
 
@@ -1309,7 +1304,7 @@ template <class _Tuple0, class... _Tuples>
 struct __tuple_cat_return_ref
     : public __tuple_cat_return_ref_imp<
           tuple<>,
-          typename __make_tuple_indices< tuple_size<__libcpp_remove_reference_t<_Tuple0> >::value >::type,
+          __make_index_sequence< tuple_size<__libcpp_remove_reference_t<_Tuple0> >::value >,
           _Tuple0,
           _Tuples...> {};
 
@@ -1317,7 +1312,7 @@ template <class _Types, class _I0, class _J0>
 struct __tuple_cat;
 
 template <class... _Types, size_t... _I0, size_t... _J0>
-struct __tuple_cat<tuple<_Types...>, __tuple_indices<_I0...>, __tuple_indices<_J0...> > {
+struct __tuple_cat<tuple<_Types...>, __index_sequence<_I0...>, __index_sequence<_J0...>> {
   template <class _Tuple0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
   typename __tuple_cat_return_ref<tuple<_Types...>&&, _Tuple0&&>::type
@@ -1335,8 +1330,8 @@ struct __tuple_cat<tuple<_Types...>, __tuple_indices<_I0...>, __tuple_indices<_J
     using _T0 _LIBCPP_NODEBUG = __libcpp_remove_reference_t<_Tuple0>;
     using _T1 _LIBCPP_NODEBUG = __libcpp_remove_reference_t<_Tuple1>;
     return __tuple_cat<tuple<_Types..., __copy_cvref_t<_Tuple0, typename tuple_element<_J0, _T0>::type>&&...>,
-                       typename __make_tuple_indices<sizeof...(_Types) + tuple_size<_T0>::value>::type,
-                       typename __make_tuple_indices<tuple_size<_T1>::value>::type>()(
+                       __make_index_sequence<sizeof...(_Types) + tuple_size<_T0>::value>,
+                       __make_index_sequence<tuple_size<_T1>::value>>()(
         std::forward_as_tuple(
             std::forward<_Types>(std::get<_I0>(__t))..., std::get<_J0>(std::forward<_Tuple0>(__t0))...),
         std::forward<_Tuple1>(__t1),
@@ -1346,7 +1341,7 @@ struct __tuple_cat<tuple<_Types...>, __tuple_indices<_I0...>, __tuple_indices<_J
 
 template <class _TupleDst, class _TupleSrc, size_t... _Indices>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _TupleDst
-__tuple_cat_select_element_wise(_TupleSrc&& __src, __tuple_indices<_Indices...>) {
+__tuple_cat_select_element_wise(_TupleSrc&& __src, __index_sequence<_Indices...>) {
   static_assert(tuple_size<_TupleDst>::value == tuple_size<_TupleSrc>::value,
                 "misuse of __tuple_cat_select_element_wise with tuples of different sizes");
   return _TupleDst(std::get<_Indices>(std::forward<_TupleSrc>(__src))...);
@@ -1357,10 +1352,10 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename __tuple_cat_
 tuple_cat(_Tuple0&& __t0, _Tuples&&... __tpls) {
   using _T0 _LIBCPP_NODEBUG          = __libcpp_remove_reference_t<_Tuple0>;
   using _TRet _LIBCPP_NODEBUG        = typename __tuple_cat_return<_Tuple0, _Tuples...>::type;
-  using _T0Indices _LIBCPP_NODEBUG   = typename __make_tuple_indices<tuple_size<_T0>::value>::type;
-  using _TRetIndices _LIBCPP_NODEBUG = typename __make_tuple_indices<tuple_size<_TRet>::value>::type;
+  using _T0Indices _LIBCPP_NODEBUG   = __make_index_sequence<tuple_size<_T0>::value>;
+  using _TRetIndices _LIBCPP_NODEBUG = __make_index_sequence<tuple_size<_TRet>::value>;
   return std::__tuple_cat_select_element_wise<_TRet>(
-      __tuple_cat<tuple<>, __tuple_indices<>, _T0Indices>()(
+      __tuple_cat<tuple<>, __index_sequence<>, _T0Indices>()(
           tuple<>(), std::forward<_Tuple0>(__t0), std::forward<_Tuples>(__tpls)...),
       _TRetIndices());
 }
@@ -1376,7 +1371,7 @@ struct uses_allocator<tuple<_Tp...>, _Alloc> : true_type {};
 // clang-format off
 template <class _Fn, class _Tuple, size_t... _Id>
 inline _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto)
-__apply_tuple_impl(_Fn&& __f, _Tuple&& __t, __tuple_indices<_Id...>)
+__apply_tuple_impl(_Fn&& __f, _Tuple&& __t, index_sequence<_Id...>)
     _LIBCPP_NOEXCEPT_RETURN(std::__invoke(std::forward<_Fn>(__f), std::get<_Id>(std::forward<_Tuple>(__t))...))
 
 template <class _Fn, class _Tuple>
@@ -1384,28 +1379,28 @@ inline _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) apply(_Fn&& __f, _Tuple&& 
     _LIBCPP_NOEXCEPT_RETURN(std::__apply_tuple_impl(
         std::forward<_Fn>(__f),
         std::forward<_Tuple>(__t),
-        typename __make_tuple_indices<tuple_size_v<remove_reference_t<_Tuple>>>::type{}))
+        make_index_sequence<tuple_size_v<remove_reference_t<_Tuple>>>()))
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp, class _Tuple, size_t... _Idx>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp __make_from_tuple_impl(_Tuple&& __t, __tuple_indices<_Idx...>)
+inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp __make_from_tuple_impl(_Tuple&& __t, index_sequence<_Idx...>)
   noexcept(noexcept(_Tp(std::get<_Idx>(std::forward<_Tuple>(__t))...)))
   requires is_constructible_v<_Tp, decltype(std::get<_Idx>(std::forward<_Tuple>(__t)))...> {
   return _Tp(std::get<_Idx>(std::forward<_Tuple>(__t))...);
 }
 #else
 template <class _Tp, class _Tuple, size_t... _Idx>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp __make_from_tuple_impl(_Tuple&& __t, __tuple_indices<_Idx...>,
+inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp __make_from_tuple_impl(_Tuple&& __t, index_sequence<_Idx...>,
     enable_if_t<is_constructible_v<_Tp, decltype(std::get<_Idx>(std::forward<_Tuple>(__t)))...>> * = nullptr)
     _LIBCPP_NOEXCEPT_RETURN(_Tp(std::get<_Idx>(std::forward<_Tuple>(__t))...))
 #endif // _LIBCPP_STD_VER >= 20
 
 template <class _Tp, class _Tuple,
-          class _Seq = typename __make_tuple_indices<tuple_size_v<remove_reference_t<_Tuple>>>::type, class = void>
+          class _Seq = make_index_sequence<tuple_size_v<remove_reference_t<_Tuple>>>, class = void>
 inline constexpr bool __can_make_from_tuple = false;
 
 template <class _Tp, class _Tuple, size_t... _Idx>
-inline constexpr bool __can_make_from_tuple<_Tp, _Tuple, __tuple_indices<_Idx...>,
+inline constexpr bool __can_make_from_tuple<_Tp, _Tuple, index_sequence<_Idx...>,
     enable_if_t<is_constructible_v<_Tp, decltype(std::get<_Idx>(std::declval<_Tuple>()))...>>> = true;
 
 // Based on LWG3528(https://wg21.link/LWG3528) and http://eel.is/c++draft/description#structure.requirements-9,
@@ -1420,7 +1415,7 @@ template <class _Tp, class _Tuple, class = enable_if_t<__can_make_from_tuple<_Tp
 #endif // _LIBCPP_STD_VER >= 20
 inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp make_from_tuple(_Tuple&& __t)
     _LIBCPP_NOEXCEPT_RETURN(std::__make_from_tuple_impl<_Tp>(
-        std::forward<_Tuple>(__t), typename __make_tuple_indices<tuple_size_v<remove_reference_t<_Tuple>>>::type{}))
+        std::forward<_Tuple>(__t), make_index_sequence<tuple_size_v<remove_reference_t<_Tuple>>>()))
 #    undef _LIBCPP_NOEXCEPT_RETURN
 
 #  endif // _LIBCPP_STD_VER >= 17

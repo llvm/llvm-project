@@ -222,7 +222,7 @@ void AllocaReplaceImpl::genIndirectDeallocation(
         rewriter.create<fir::ConvertOp>(loc, intPtrTy, ptrVal);
     mlir::Value isAllocated = rewriter.create<mlir::arith::CmpIOp>(
         loc, mlir::arith::CmpIPredicate::ne, ptrToInt, c0);
-    auto ifOp = rewriter.create<fir::IfOp>(loc, std::nullopt, isAllocated,
+    auto ifOp = rewriter.create<fir::IfOp>(loc, mlir::TypeRange{}, isAllocated,
                                            /*withElseRegion=*/false);
     rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
     mlir::Value cast = fir::factory::createConvert(

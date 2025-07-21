@@ -1520,7 +1520,7 @@ void mulassignf(_Complex float *a, _Complex float b) {
 // PRMTD-NEXT:    ret { double, double } [[DOTFCA_1_INSERT]]
 //
 // X86WINPRMTD-LABEL: define dso_local void @divd(
-// X86WINPRMTD-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr dead_on_return noundef [[A:%.*]], ptr dead_on_return noundef [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD-NEXT:  entry:
 // X86WINPRMTD-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
@@ -1744,7 +1744,7 @@ void mulassignf(_Complex float *a, _Complex float b) {
 // PRMTD_FAST-NEXT:    ret { double, double } [[DOTFCA_1_INSERT]]
 //
 // X86WINPRMTD_STRICT-LABEL: define dso_local void @divd(
-// X86WINPRMTD_STRICT-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD_STRICT-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr dead_on_return noundef [[A:%.*]], ptr dead_on_return noundef [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD_STRICT-NEXT:  entry:
 // X86WINPRMTD_STRICT-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
@@ -1938,7 +1938,7 @@ _Complex double divd(_Complex double a, _Complex double b) {
 // PRMTD-NEXT:    ret void
 //
 // X86WINPRMTD-LABEL: define dso_local void @divassignd(
-// X86WINPRMTD-SAME: ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD-SAME: ptr noundef [[A:%.*]], ptr dead_on_return noundef [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD-NEXT:  entry:
 // X86WINPRMTD-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
 // X86WINPRMTD-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
@@ -2180,7 +2180,7 @@ _Complex double divd(_Complex double a, _Complex double b) {
 // PRMTD_FAST-NEXT:    ret void
 //
 // X86WINPRMTD_STRICT-LABEL: define dso_local void @divassignd(
-// X86WINPRMTD_STRICT-SAME: ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD_STRICT-SAME: ptr noundef [[A:%.*]], ptr dead_on_return noundef [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD_STRICT-NEXT:  entry:
 // X86WINPRMTD_STRICT-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
@@ -2325,7 +2325,7 @@ void divassignd(_Complex double *a, _Complex double b) {
 // PRMTD-NEXT:    ret { double, double } [[DOTFCA_1_INSERT]]
 //
 // X86WINPRMTD-LABEL: define dso_local void @muld(
-// X86WINPRMTD-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr dead_on_return noundef [[A:%.*]], ptr dead_on_return noundef [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD-NEXT:  entry:
 // X86WINPRMTD-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
@@ -2457,7 +2457,7 @@ void divassignd(_Complex double *a, _Complex double b) {
 // PRMTD_FAST-NEXT:    ret { double, double } [[DOTFCA_1_INSERT]]
 //
 // X86WINPRMTD_STRICT-LABEL: define dso_local void @muld(
-// X86WINPRMTD_STRICT-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD_STRICT-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr dead_on_return noundef [[A:%.*]], ptr dead_on_return noundef [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD_STRICT-NEXT:  entry:
 // X86WINPRMTD_STRICT-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
@@ -2594,7 +2594,7 @@ _Complex double muld(_Complex double a, _Complex double b) {
 // PRMTD-NEXT:    ret void
 //
 // X86WINPRMTD-LABEL: define dso_local void @mulassignd(
-// X86WINPRMTD-SAME: ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD-SAME: ptr noundef [[A:%.*]], ptr dead_on_return noundef [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD-NEXT:  entry:
 // X86WINPRMTD-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
 // X86WINPRMTD-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
@@ -2744,7 +2744,7 @@ _Complex double muld(_Complex double a, _Complex double b) {
 // PRMTD_FAST-NEXT:    ret void
 //
 // X86WINPRMTD_STRICT-LABEL: define dso_local void @mulassignd(
-// X86WINPRMTD_STRICT-SAME: ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD_STRICT-SAME: ptr noundef [[A:%.*]], ptr dead_on_return noundef [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD_STRICT-NEXT:  entry:
 // X86WINPRMTD_STRICT-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
@@ -2922,7 +2922,7 @@ void mulassignd(_Complex double *a, _Complex double b) {
 // PRMTD-NEXT:    ret { x86_fp80, x86_fp80 } [[DOTFCA_1_INSERT]]
 //
 // X86WINPRMTD-LABEL: define dso_local void @divld(
-// X86WINPRMTD-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr dead_on_return noundef [[A:%.*]], ptr dead_on_return noundef [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD-NEXT:  entry:
 // X86WINPRMTD-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
@@ -3190,7 +3190,7 @@ void mulassignd(_Complex double *a, _Complex double b) {
 // PRMTD_FAST-NEXT:    ret { x86_fp80, x86_fp80 } [[DOTFCA_1_INSERT]]
 //
 // X86WINPRMTD_STRICT-LABEL: define dso_local void @divld(
-// X86WINPRMTD_STRICT-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD_STRICT-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr dead_on_return noundef [[A:%.*]], ptr dead_on_return noundef [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD_STRICT-NEXT:  entry:
 // X86WINPRMTD_STRICT-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
@@ -3432,7 +3432,7 @@ _Complex long double divld(_Complex long double a, _Complex long double b) {
 // PRMTD-NEXT:    ret void
 //
 // X86WINPRMTD-LABEL: define dso_local void @divassignld(
-// X86WINPRMTD-SAME: ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD-SAME: ptr noundef [[A:%.*]], ptr dead_on_return noundef [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD-NEXT:  entry:
 // X86WINPRMTD-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
 // X86WINPRMTD-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
@@ -3702,7 +3702,7 @@ _Complex long double divld(_Complex long double a, _Complex long double b) {
 // PRMTD_FAST-NEXT:    ret void
 //
 // X86WINPRMTD_STRICT-LABEL: define dso_local void @divassignld(
-// X86WINPRMTD_STRICT-SAME: ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD_STRICT-SAME: ptr noundef [[A:%.*]], ptr dead_on_return noundef [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD_STRICT-NEXT:  entry:
 // X86WINPRMTD_STRICT-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
@@ -3895,7 +3895,7 @@ void divassignld(_Complex long double *a, _Complex long double b) {
 // PRMTD-NEXT:    ret { x86_fp80, x86_fp80 } [[DOTFCA_1_INSERT]]
 //
 // X86WINPRMTD-LABEL: define dso_local void @mulld(
-// X86WINPRMTD-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr dead_on_return noundef [[A:%.*]], ptr dead_on_return noundef [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD-NEXT:  entry:
 // X86WINPRMTD-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
@@ -4059,7 +4059,7 @@ void divassignld(_Complex long double *a, _Complex long double b) {
 // PRMTD_FAST-NEXT:    ret { x86_fp80, x86_fp80 } [[DOTFCA_1_INSERT]]
 //
 // X86WINPRMTD_STRICT-LABEL: define dso_local void @mulld(
-// X86WINPRMTD_STRICT-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD_STRICT-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr dead_on_return noundef [[A:%.*]], ptr dead_on_return noundef [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD_STRICT-NEXT:  entry:
 // X86WINPRMTD_STRICT-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
@@ -4220,7 +4220,7 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // PRMTD-NEXT:    ret void
 //
 // X86WINPRMTD-LABEL: define dso_local void @mulassignld(
-// X86WINPRMTD-SAME: ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD-SAME: ptr noundef [[A:%.*]], ptr dead_on_return noundef [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD-NEXT:  entry:
 // X86WINPRMTD-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
 // X86WINPRMTD-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
@@ -4386,7 +4386,7 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // PRMTD_FAST-NEXT:    ret void
 //
 // X86WINPRMTD_STRICT-LABEL: define dso_local void @mulassignld(
-// X86WINPRMTD_STRICT-SAME: ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD_STRICT-SAME: ptr noundef [[A:%.*]], ptr dead_on_return noundef [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD_STRICT-NEXT:  entry:
 // X86WINPRMTD_STRICT-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
@@ -4644,7 +4644,7 @@ void mulassignld(_Complex long double *a, _Complex long double b) {
 // PRMTD-NEXT:    ret <2 x float> [[RETVAL_SROA_0_4_VEC_INSERT]]
 //
 // X86WINPRMTD-LABEL: define dso_local i64 @f1(
-// X86WINPRMTD-SAME: i64 noundef [[A_COERCE:%.*]], ptr noundef [[B:%.*]], i64 noundef [[C_COERCE:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD-SAME: i64 noundef [[A_COERCE:%.*]], ptr dead_on_return noundef [[B:%.*]], i64 noundef [[C_COERCE:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD-NEXT:  entry:
 // X86WINPRMTD-NEXT:    [[A_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[A_COERCE]] to i32
 // X86WINPRMTD-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_SROA_0_0_EXTRACT_TRUNC]] to float
@@ -5052,7 +5052,7 @@ void mulassignld(_Complex long double *a, _Complex long double b) {
 // PRMTD_FAST-NEXT:    ret <2 x float> [[RETVAL_SROA_0_4_VEC_INSERT]]
 //
 // X86WINPRMTD_STRICT-LABEL: define dso_local i64 @f1(
-// X86WINPRMTD_STRICT-SAME: i64 noundef [[A_COERCE:%.*]], ptr noundef [[B:%.*]], i64 noundef [[C_COERCE:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD_STRICT-SAME: i64 noundef [[A_COERCE:%.*]], ptr dead_on_return noundef [[B:%.*]], i64 noundef [[C_COERCE:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD_STRICT-NEXT:  entry:
 // X86WINPRMTD_STRICT-NEXT:    [[A_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[A_COERCE]] to i32
 // X86WINPRMTD_STRICT-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_SROA_0_0_EXTRACT_TRUNC]] to float

@@ -7,9 +7,9 @@
 #include "src/__support/GPU/utils.h"
 #include "src/__support/fixedvector.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/time/gpu/time_utils.h"
 #include "src/stdio/printf.h"
 #include "src/stdlib/srand.h"
-#include "src/time/gpu/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace benchmarks {

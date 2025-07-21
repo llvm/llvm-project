@@ -102,6 +102,56 @@ static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
   return false;
 }
 
+/// Do the common operand retrieval and validition required by the
+/// routines below.
+static bool getMemOperands(unsigned Factor, VectorType *VTy, Type *XLenTy,
+                           Instruction *I, Value *&Ptr, Value *&Mask,
+                           Value *&VL, Align &Alignment) {
+
+  IRBuilder<> Builder(I);
+  const DataLayout &DL = I->getDataLayout();
+  ElementCount EC = VTy->getElementCount();
+  if (auto *LI = dyn_cast<LoadInst>(I)) {
+    assert(LI->isSimple());
+    Ptr = LI->getPointerOperand();
+    Alignment = LI->getAlign();
+    assert(!Mask && "Unexpected mask on a load");
+    Mask = Builder.getAllOnesMask(EC);
+    VL = isa<FixedVectorType>(VTy) ? Builder.CreateElementCount(XLenTy, EC)
+                                   : Constant::getAllOnesValue(XLenTy);
+    return true;
+  }
+  if (auto *SI = dyn_cast<StoreInst>(I)) {
+    assert(SI->isSimple());
+    Ptr = SI->getPointerOperand();
+    Alignment = SI->getAlign();
+    assert(!Mask && "Unexpected mask on a store");
+    Mask = Builder.getAllOnesMask(EC);
+    VL = isa<FixedVectorType>(VTy) ? Builder.CreateElementCount(XLenTy, EC)
+                                   : Constant::getAllOnesValue(XLenTy);
+    return true;
+  }
+  auto *VPLdSt = cast<VPIntrinsic>(I);
+  assert((VPLdSt->getIntrinsicID() == Intrinsic::vp_load ||
+          VPLdSt->getIntrinsicID() == Intrinsic::vp_store) &&
+         "Unexpected intrinsic");
+  Ptr = VPLdSt->getMemoryPointerParam();
+  Alignment = VPLdSt->getPointerAlignment().value_or(
+      DL.getABITypeAlign(VTy->getElementType()));
+
+  assert(Mask && "vp.load and vp.store needs a mask!");
+
+  Value *WideEVL = VPLdSt->getVectorLengthParam();
+  // Conservatively check if EVL is a multiple of factor, otherwise some
+  // (trailing) elements might be lost after the transformation.
+  if (!isMultipleOfN(WideEVL, I->getDataLayout(), Factor))
+    return false;
+
+  auto *FactorC = ConstantInt::get(WideEVL->getType(), Factor);
+  VL = Builder.CreateZExt(Builder.CreateExactUDiv(WideEVL, FactorC), XLenTy);
+  return true;
+}
+
 /// Lower an interleaved load into a vlsegN intrinsic.
 ///
 /// E.g. Lower an interleaved load (Factor = 2):
@@ -127,32 +177,8 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
 
   Value *Ptr, *VL;
   Align Alignment;
-  if (auto *LI = dyn_cast<LoadInst>(Load)) {
-    assert(LI->isSimple());
-    Ptr = LI->getPointerOperand();
-    Alignment = LI->getAlign();
-    assert(!Mask && "Unexpected mask on a load\n");
-    Mask = Builder.getAllOnesMask(VTy->getElementCount());
-    VL = Builder.CreateElementCount(XLenTy, VTy->getElementCount());
-  } else {
-    auto *VPLoad = cast<VPIntrinsic>(Load);
-    assert(VPLoad->getIntrinsicID() == Intrinsic::vp_load &&
-           "Unexpected intrinsic");
-    Ptr = VPLoad->getMemoryPointerParam();
-    Alignment = VPLoad->getPointerAlignment().value_or(
-        DL.getABITypeAlign(VTy->getElementType()));
-
-    assert(Mask && "vp.load needs a mask!");
-
-    Value *WideEVL = VPLoad->getVectorLengthParam();
-    // Conservatively check if EVL is a multiple of factor, otherwise some
-    // (trailing) elements might be lost after the transformation.
-    if (!isMultipleOfN(WideEVL, DL, Factor))
-      return false;
-
-    auto *FactorC = ConstantInt::get(WideEVL->getType(), Factor);
-    VL = Builder.CreateZExt(Builder.CreateExactUDiv(WideEVL, FactorC), XLenTy);
-  }
+  if (!getMemOperands(Factor, VTy, XLenTy, Load, Ptr, Mask, VL, Alignment))
+    return false;
 
   Type *PtrTy = Ptr->getType();
   unsigned AS = PtrTy->getPointerAddressSpace();
@@ -296,34 +322,8 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
 
   Value *Ptr, *VL;
   Align Alignment;
-  if (auto *LI = dyn_cast<LoadInst>(Load)) {
-    assert(LI->isSimple());
-    Ptr = LI->getPointerOperand();
-    Alignment = LI->getAlign();
-    assert(!Mask && "Unexpected mask on a load\n");
-    Mask = Builder.getAllOnesMask(ResVTy->getElementCount());
-    VL = isa<FixedVectorType>(ResVTy)
-             ? Builder.CreateElementCount(XLenTy, ResVTy->getElementCount())
-             : Constant::getAllOnesValue(XLenTy);
-  } else {
-    auto *VPLoad = cast<VPIntrinsic>(Load);
-    assert(VPLoad->getIntrinsicID() == Intrinsic::vp_load &&
-           "Unexpected intrinsic");
-    Ptr = VPLoad->getMemoryPointerParam();
-    Alignment = VPLoad->getPointerAlignment().value_or(
-        DL.getABITypeAlign(ResVTy->getElementType()));
-
-    assert(Mask && "vp.load needs a mask!");
-
-    Value *WideEVL = VPLoad->getVectorLengthParam();
-    // Conservatively check if EVL is a multiple of factor, otherwise some
-    // (trailing) elements might be lost after the transformation.
-    if (!isMultipleOfN(WideEVL, Load->getDataLayout(), Factor))
-      return false;
-
-    auto *FactorC = ConstantInt::get(WideEVL->getType(), Factor);
-    VL = Builder.CreateZExt(Builder.CreateExactUDiv(WideEVL, FactorC), XLenTy);
-  }
+  if (!getMemOperands(Factor, ResVTy, XLenTy, Load, Ptr, Mask, VL, Alignment))
+    return false;
 
   Type *PtrTy = Ptr->getType();
   unsigned AS = PtrTy->getPointerAddressSpace();
@@ -385,34 +385,8 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
 
   Value *Ptr, *VL;
   Align Alignment;
-  if (auto *SI = dyn_cast<StoreInst>(Store)) {
-    assert(SI->isSimple());
-    Ptr = SI->getPointerOperand();
-    Alignment = SI->getAlign();
-    assert(!Mask && "Unexpected mask on a store");
-    Mask = Builder.getAllOnesMask(InVTy->getElementCount());
-    VL = isa<FixedVectorType>(InVTy)
-             ? Builder.CreateElementCount(XLenTy, InVTy->getElementCount())
-             : Constant::getAllOnesValue(XLenTy);
-  } else {
-    auto *VPStore = cast<VPIntrinsic>(Store);
-    assert(VPStore->getIntrinsicID() == Intrinsic::vp_store &&
-           "Unexpected intrinsic");
-    Ptr = VPStore->getMemoryPointerParam();
-    Alignment = VPStore->getPointerAlignment().value_or(
-        DL.getABITypeAlign(InVTy->getElementType()));
-
-    assert(Mask && "vp.store needs a mask!");
-
-    Value *WideEVL = VPStore->getVectorLengthParam();
-    // Conservatively check if EVL is a multiple of factor, otherwise some
-    // (trailing) elements might be lost after the transformation.
-    if (!isMultipleOfN(WideEVL, DL, Factor))
-      return false;
-
-    auto *FactorC = ConstantInt::get(WideEVL->getType(), Factor);
-    VL = Builder.CreateZExt(Builder.CreateExactUDiv(WideEVL, FactorC), XLenTy);
-  }
+  if (!getMemOperands(Factor, InVTy, XLenTy, Store, Ptr, Mask, VL, Alignment))
+    return false;
   Type *PtrTy = Ptr->getType();
   unsigned AS = Ptr->getType()->getPointerAddressSpace();
   if (!isLegalInterleavedAccessType(InVTy, Factor, Alignment, AS, DL))

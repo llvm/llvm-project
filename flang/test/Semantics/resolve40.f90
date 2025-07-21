@@ -96,3 +96,10 @@ subroutine s12(x)
   !BECAUSE: 'x' is an INTENT(IN) dummy argument
   read(*,nml=nl)
 end
+
+subroutine s13()
+  implicit none
+  !ERROR: No explicit type declared for 'i'
+  !ERROR: No explicit type declared for 'i'
+  print *, (i, i = 1, 2)
+end

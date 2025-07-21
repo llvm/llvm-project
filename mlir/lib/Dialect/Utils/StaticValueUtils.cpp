@@ -181,12 +181,16 @@ bool isEqualConstantIntOrValueArray(ArrayRef<OpFoldResult> ofrs1,
   return true;
 }
 
-/// Return a vector of OpFoldResults with the same size a staticValues, but all
+/// Return a vector of OpFoldResults with the same size as staticValues, but all
 /// elements for which ShapedType::isDynamic is true, will be replaced by
 /// dynamicValues.
 SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
                                          ValueRange dynamicValues,
                                          MLIRContext *context) {
+  assert(dynamicValues.size() == static_cast<size_t>(llvm::count_if(
+                                     staticValues, ShapedType::isDynamic)) &&
+         "expected the rank of dynamic values to match the number of "
+         "values known to be dynamic");
   SmallVector<OpFoldResult> res;
   res.reserve(staticValues.size());
   unsigned numDynamic = 0;

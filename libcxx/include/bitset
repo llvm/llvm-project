@@ -147,7 +147,6 @@ template <size_t N> struct hash<std::bitset<N>>;
 #  include <__functional/hash.h>
 #  include <__functional/identity.h>
 #  include <__functional/unary_function.h>
-#  include <__tuple/tuple_indices.h>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/integral_constant.h>
 #  include <__type_traits/is_char_like_type.h>
@@ -314,7 +313,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI void __init(unsigned long long __v, true_type) _NOEXCEPT;
 #  else
   template <size_t... _Indices>
-  _LIBCPP_HIDE_FROM_ABI constexpr __bitset(unsigned long long __v, std::__tuple_indices<_Indices...>) _NOEXCEPT
+  _LIBCPP_HIDE_FROM_ABI constexpr __bitset(unsigned long long __v, __index_sequence<_Indices...>) _NOEXCEPT
       : __first_{static_cast<__storage_type>(__v >> (_Indices * __bits_per_word))...} {}
 #  endif // _LIBCPP_CXX03_LANG
 };
@@ -352,10 +351,9 @@ template <size_t _N_words, size_t _Size>
 inline _LIBCPP_CONSTEXPR __bitset<_N_words, _Size>::__bitset(unsigned long long __v) _NOEXCEPT
 #  ifndef _LIBCPP_CXX03_LANG
     : __bitset(__v,
-               std::__make_indices_imp< (_N_words < (sizeof(unsigned long long) - 1) / sizeof(__storage_type) + 1)
-                                            ? _N_words
-                                            : (sizeof(unsigned long long) - 1) / sizeof(__storage_type) + 1,
-                                        0>{})
+               __make_index_sequence<(_N_words < (sizeof(unsigned long long) - 1) / sizeof(__storage_type) + 1)
+                                         ? _N_words
+                                         : (sizeof(unsigned long long) - 1) / sizeof(__storage_type) + 1>())
 #  endif
 {
 #  ifdef _LIBCPP_CXX03_LANG

@@ -4365,8 +4365,8 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_imm(ptr addrspace(1) %arg) #
 ; NOLIT-SRCC-LABEL: test_mfma_f32_32x32x1f32_imm:
 ; NOLIT-SRCC:       ; %bb.0: ; %bb
 ; NOLIT-SRCC-NEXT:    v_mov_b32_e32 v0, 1.0
-; NOLIT-SRCC-NEXT:    v_accvgpr_write_b32 a1, 0
 ; NOLIT-SRCC-NEXT:    v_accvgpr_write_b32 a0, 1.0
+; NOLIT-SRCC-NEXT:    v_accvgpr_write_b32 a1, 0
 ; NOLIT-SRCC-NEXT:    v_accvgpr_write_b32 a2, 0
 ; NOLIT-SRCC-NEXT:    v_accvgpr_write_b32 a3, 0
 ; NOLIT-SRCC-NEXT:    v_accvgpr_write_b32 a4, 0
@@ -4465,8 +4465,8 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_imm(ptr addrspace(1) %arg) #
 ; LIT-SRCC-LABEL: test_mfma_f32_32x32x1f32_imm:
 ; LIT-SRCC:       ; %bb.0: ; %bb
 ; LIT-SRCC-NEXT:    v_mov_b32_e32 v0, 1.0
-; LIT-SRCC-NEXT:    v_accvgpr_write_b32 a1, 0
 ; LIT-SRCC-NEXT:    v_accvgpr_write_b32 a0, 1.0
+; LIT-SRCC-NEXT:    v_accvgpr_write_b32 a1, 0
 ; LIT-SRCC-NEXT:    v_accvgpr_write_b32 a2, 0
 ; LIT-SRCC-NEXT:    v_accvgpr_write_b32 a3, 0
 ; LIT-SRCC-NEXT:    v_accvgpr_write_b32 a4, 0

@@ -303,7 +303,7 @@ createStringLitOp(fir::FirOpBuilder &builder, mlir::Location loc,
     mlir::NamedAttribute sizeAttr(sizeTag, builder.getI64IntegerAttr(len));
     llvm::SmallVector<mlir::NamedAttribute> attrs = {dataAttr, sizeAttr};
     return builder.create<fir::StringLitOp>(
-        loc, llvm::ArrayRef<mlir::Type>{type}, std::nullopt, attrs);
+        loc, llvm::ArrayRef<mlir::Type>{type}, mlir::ValueRange{}, attrs);
   }
 }
 

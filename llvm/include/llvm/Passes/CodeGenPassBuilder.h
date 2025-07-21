@@ -281,7 +281,7 @@ protected:
 
       FunctionPassManager FPM;
       FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
-      FPM.addPass(InvalidateAnalysisPass<MachineFunctionAnalysis>());
+      FPM.addPass(FreeMachineFunctionPass());
       if (this->PB.AddInCGSCCOrder) {
         MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
             createCGSCCToFunctionPassAdaptor(std::move(FPM))));

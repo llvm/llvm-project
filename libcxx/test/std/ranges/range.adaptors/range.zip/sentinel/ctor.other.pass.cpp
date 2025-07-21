@@ -13,7 +13,7 @@
 #include <cassert>
 #include <ranges>
 
-#include "../types.h"
+#include "../../range_adaptor_types.h"
 
 template <class T>
 struct convertible_sentinel_wrapper {

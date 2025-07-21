@@ -46,6 +46,7 @@ Potentially Breaking Changes
   ``endbr64`` instruction at the labels named as possible branch
   destinations, so it is not safe to use a register-controlled branch
   instruction to branch to one. (In line with gcc.)
+- Added a sugar type `PredefinedSugarType` to improve diagnostic messages. (#GH143653)
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -808,6 +809,7 @@ Bug Fixes in This Version
   nested scopes. (#GH147495)
 - Fixed a failed assertion with an operator call expression which comes from a
   macro expansion when performing analysis for nullability attributes. (#GH138371)
+- Fixed a concept equivalent checking crash due to untransformed constraint expressions. (#GH146614)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1206,6 +1208,8 @@ Static Analyzer
 ---------------
 - Fixed a crash when C++20 parenthesized initializer lists are used. This issue
   was causing a crash in clang-tidy. (#GH136041)
+- The Clang Static Analyzer now handles parenthesized initialization.
+  (#GH148875)
 
 New features
 ^^^^^^^^^^^^

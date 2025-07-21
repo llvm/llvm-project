@@ -26,28 +26,28 @@
 
 # RUN: ld.lld -o out.s a.o --irpgo-profile=a.profdata --bp-startup-sort=function
 # RUN: llvm-nm -jn out.s | tr '\n' , | FileCheck %s --check-prefix=STARTUP
-# STARTUP: s5,s4,s3,s2,s1,A,B,C,F,E,D,merged1,merged2,_start,d4,d3,d2,d1,{{$}}
+# STARTUP: s5,s4,s3,s2,s1,A,B,C,F,E,D,merged1,merged2,_start,d4,d3,d2,d1,g1,{{$}}
 
 # RUN: ld.lld -o out.os a.o --irpgo-profile=a.profdata --bp-startup-sort=function --symbol-ordering-file a.txt
 # RUN: llvm-nm -jn out.os | tr '\n' , | FileCheck %s --check-prefix=ORDER-STARTUP
-# ORDER-STARTUP: s2,s1,s5,s4,s3,A,F,E,D,B,C,merged1,merged2,_start,d3,d2,d4,d1,{{$}}
+# ORDER-STARTUP: s2,s1,s5,s4,s3,A,F,E,D,B,C,merged1,merged2,_start,d3,d2,d4,d1,g1,{{$}}
 
 # RUN: ld.lld -o out.cf a.o --verbose-bp-section-orderer --bp-compression-sort=function 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-FUNC
 # RUN: ld.lld -o out.cf.icf a.o --verbose-bp-section-orderer --bp-compression-sort=function --icf=all --gc-sections 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-ICF-FUNC
 # RUN: llvm-nm -jn out.cf | tr '\n' , | FileCheck %s --check-prefix=CFUNC
-# CFUNC: s5,s4,s3,s2,s1,A,F,merged1,merged2,C,E,D,B,_start,d4,d3,d2,d1,{{$}}
+# CFUNC: s5,s4,s3,s2,s1,A,F,merged1,merged2,C,E,D,B,_start,d4,d3,d2,d1,g1,{{$}}
 
 # RUN: ld.lld -o out.cd a.o --verbose-bp-section-orderer --bp-compression-sort=data 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-DATA
 # RUN: llvm-nm -jn out.cd | tr '\n' , | FileCheck %s --check-prefix=CDATA
-# CDATA: s5,s3,s4,s2,s1,F,C,E,D,B,A,merged1,merged2,_start,d4,d1,d3,d2,{{$}}
+# CDATA: s5,s3,s4,s2,s1,F,C,E,D,B,A,merged1,merged2,_start,d4,d1,d3,d2,g1,{{$}}
 
 # RUN: ld.lld -o out.cb a.o --verbose-bp-section-orderer --bp-compression-sort=both 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-BOTH
 # RUN: llvm-nm -jn out.cb | tr '\n' , | FileCheck %s --check-prefix=CBOTH
-# CBOTH: s5,s3,s4,s2,s1,A,F,merged1,merged2,C,E,D,B,_start,d4,d1,d3,d2,{{$}}
+# CBOTH: s5,s3,s4,s2,s1,A,F,merged1,merged2,C,E,D,B,_start,d4,d1,d3,d2,g1,{{$}}
 
 # RUN: ld.lld -o out.cbs a.o --verbose-bp-section-orderer --bp-compression-sort=both --irpgo-profile=a.profdata --bp-startup-sort=function 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-BOTH
 # RUN: llvm-nm -jn out.cbs | tr '\n' , | FileCheck %s --check-prefix=CBOTH-STARTUP
-# CBOTH-STARTUP: s5,s3,s4,s2,s1,A,B,C,F,E,D,merged1,merged2,_start,d4,d1,d3,d2,{{$}}
+# CBOTH-STARTUP: s5,s3,s4,s2,s1,A,B,C,F,E,D,merged1,merged2,_start,d4,d1,d3,d2,g1,{{$}}
 
 # BP-COMPRESSION-FUNC: Ordered 9 sections ([[#]] bytes) using balanced partitioning
 # BP-COMPRESSION-ICF-FUNC: Ordered 8 sections ([[#]] bytes) using balanced partitioning
@@ -108,6 +108,7 @@ d3
 d2
 
 #--- a.c
+int g1;
 const char s5[] = "engineering";
 const char s4[] = "computer program";
 const char s3[] = "hardware engineer";
@@ -376,6 +377,14 @@ d1:
 	.word	5                               // 0x5
 	.word	6                               // 0x6
 	.size	d1, 16
+
+	.type	g1,@object                      // @g1
+	.section	.bss.g1,"aw",@nobits
+	.globl	g1
+	.p2align	2, 0x0
+g1:
+	.word	0                               // 0x0
+	.size	g1, 4
 
 	.section	".note.GNU-stack","",@progbits
 	.addrsig

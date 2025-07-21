@@ -135,10 +135,10 @@ public:
         piecewise_construct,
         __transform_tuple(typename __uses_alloc_ctor< _T1, polymorphic_allocator&, _Args1... >::type(),
                           std::move(__x),
-                          typename __make_tuple_indices<sizeof...(_Args1)>::type{}),
+                          make_index_sequence<sizeof...(_Args1)>()),
         __transform_tuple(typename __uses_alloc_ctor< _T2, polymorphic_allocator&, _Args2... >::type(),
                           std::move(__y),
-                          typename __make_tuple_indices<sizeof...(_Args2)>::type{}));
+                          make_index_sequence<sizeof...(_Args2)>()));
   }
 
   template <class _T1, class _T2>
@@ -194,20 +194,20 @@ public:
 private:
   template <class... _Args, size_t... _Is>
   _LIBCPP_HIDE_FROM_ABI tuple<_Args&&...>
-  __transform_tuple(integral_constant<int, 0>, tuple<_Args...>&& __t, __tuple_indices<_Is...>) {
+  __transform_tuple(integral_constant<int, 0>, tuple<_Args...>&& __t, index_sequence<_Is...>) {
     return std::forward_as_tuple(std::get<_Is>(std::move(__t))...);
   }
 
   template <class... _Args, size_t... _Is>
   _LIBCPP_HIDE_FROM_ABI tuple<allocator_arg_t const&, polymorphic_allocator&, _Args&&...>
-  __transform_tuple(integral_constant<int, 1>, tuple<_Args...>&& __t, __tuple_indices<_Is...>) {
+  __transform_tuple(integral_constant<int, 1>, tuple<_Args...>&& __t, index_sequence<_Is...>) {
     using _Tup = tuple<allocator_arg_t const&, polymorphic_allocator&, _Args&&...>;
     return _Tup(allocator_arg, *this, std::get<_Is>(std::move(__t))...);
   }
 
   template <class... _Args, size_t... _Is>
   _LIBCPP_HIDE_FROM_ABI tuple<_Args&&..., polymorphic_allocator&>
-  __transform_tuple(integral_constant<int, 2>, tuple<_Args...>&& __t, __tuple_indices<_Is...>) {
+  __transform_tuple(integral_constant<int, 2>, tuple<_Args...>&& __t, index_sequence<_Is...>) {
     using _Tup = tuple<_Args&&..., polymorphic_allocator&>;
     return _Tup(std::get<_Is>(std::move(__t))..., *this);
   }

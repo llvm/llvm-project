@@ -2114,7 +2114,8 @@ void CodeGenSchedModels::addWriteRes(const Record *ProcWriteResDef,
     const Record *WRDef = ProcWriteResDef->getValueAsDef("WriteType");
     if (!WRMap.try_emplace(WRDef, ProcWriteResDef).second)
       PrintFatalError(ProcWriteResDef->getLoc(),
-                      "WriteType already used in another WriteRes");
+                      "WriteType of " + WRDef->getName() +
+                          " already used in another WriteRes");
   }
 
   // Visit ProcResourceKinds referenced by the newly discovered WriteRes.
@@ -2148,7 +2149,8 @@ void CodeGenSchedModels::addReadAdvance(const Record *ProcReadAdvanceDef,
     const Record *RADef = ProcReadAdvanceDef->getValueAsDef("ReadType");
     if (!RAMap.try_emplace(RADef, ProcReadAdvanceDef).second)
       PrintFatalError(ProcReadAdvanceDef->getLoc(),
-                      "ReadType already used in another ReadAdvance");
+                      "ReadType of " + RADef->getName() +
+                          " already used in another ReadAdvance");
   }
 }
 

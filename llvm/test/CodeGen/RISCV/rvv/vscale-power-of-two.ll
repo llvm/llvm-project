@@ -77,7 +77,7 @@ define i64 @con1024_minus_rem() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 3
-; CHECK-NEXT:    negw a0, a0
+; CHECK-NEXT:    neg a0, a0
 ; CHECK-NEXT:    andi a0, a0, 1024
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()

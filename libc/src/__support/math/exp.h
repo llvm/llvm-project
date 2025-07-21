@@ -40,11 +40,11 @@ static constexpr double LOG2_E = 0x1.71547652b82fep+0;
 
 // Error bounds:
 // Errors when using double precision.
-static constexpr double ERR_D = 0x1.8p-63;
+static constexpr double EXP_ERR_D = 0x1.8p-63;
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 // Errors when using double-double precision.
-static constexpr double ERR_DD = 0x1.0p-99;
+static constexpr double EXP_ERR_DD = 0x1.0p-99;
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 // -2^-12 * log(2)
@@ -387,7 +387,8 @@ static double exp(double x) {
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   if (LIBC_UNLIKELY(denorm)) {
-    return ziv_test_denorm</*SKIP_ZIV_TEST=*/true>(hi, exp_mid.hi, lo, ERR_D)
+    return ziv_test_denorm</*SKIP_ZIV_TEST=*/true>(hi, exp_mid.hi, lo,
+                                                   EXP_ERR_D)
         .value();
   } else {
     // to multiply by 2^hi, a fast way is to simply add hi to the exponent
@@ -399,12 +400,12 @@ static double exp(double x) {
   }
 #else
   if (LIBC_UNLIKELY(denorm)) {
-    if (auto r = ziv_test_denorm(hi, exp_mid.hi, lo, ERR_D);
+    if (auto r = ziv_test_denorm(hi, exp_mid.hi, lo, EXP_ERR_D);
         LIBC_LIKELY(r.has_value()))
       return r.value();
   } else {
-    double upper = exp_mid.hi + (lo + ERR_D);
-    double lower = exp_mid.hi + (lo - ERR_D);
+    double upper = exp_mid.hi + (lo + EXP_ERR_D);
+    double lower = exp_mid.hi + (lo - EXP_ERR_D);
 
     if (LIBC_LIKELY(upper == lower)) {
       // to multiply by 2^hi, a fast way is to simply add hi to the exponent
@@ -419,12 +420,12 @@ static double exp(double x) {
   DoubleDouble r_dd = exp_double_double(x, kd, exp_mid);
 
   if (LIBC_UNLIKELY(denorm)) {
-    if (auto r = ziv_test_denorm(hi, r_dd.hi, r_dd.lo, ERR_DD);
+    if (auto r = ziv_test_denorm(hi, r_dd.hi, r_dd.lo, EXP_ERR_DD);
         LIBC_LIKELY(r.has_value()))
       return r.value();
   } else {
-    double upper_dd = r_dd.hi + (r_dd.lo + ERR_DD);
-    double lower_dd = r_dd.hi + (r_dd.lo - ERR_DD);
+    double upper_dd = r_dd.hi + (r_dd.lo + EXP_ERR_DD);
+    double lower_dd = r_dd.hi + (r_dd.lo - EXP_ERR_DD);
 
     if (LIBC_LIKELY(upper_dd == lower_dd)) {
       int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;

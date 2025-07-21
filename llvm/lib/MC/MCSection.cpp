@@ -18,10 +18,10 @@
 
 using namespace llvm;
 
-MCSection::MCSection(SectionVariant V, StringRef Name, bool IsText,
-                     bool IsVirtual, MCSymbol *Begin)
+MCSection::MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsBss,
+                     MCSymbol *Begin)
     : Begin(Begin), HasInstructions(false), IsRegistered(false), IsText(IsText),
-      IsVirtual(IsVirtual), LinkerRelaxable(false), Name(Name), Variant(V) {
+      IsBss(IsBss), LinkerRelaxable(false), Name(Name), Variant(V) {
   // The initial subsection number is 0. Create a fragment list.
   CurFragList = &Subsections.emplace_back(0u, FragList{}).second;
 }
@@ -33,8 +33,6 @@ MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
 }
 
 bool MCSection::hasEnded() const { return End && End->isInSection(); }
-
-StringRef MCSection::getVirtualSectionKind() const { return "virtual"; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCSection::dump(
@@ -60,16 +58,6 @@ LLVM_DUMP_METHOD void MCSection::dump(
 }
 #endif
 
-void MCFragment::setContents(ArrayRef<char> Contents) {
-  auto &S = getParent()->ContentStorage;
-  if (ContentStart + Contents.size() > ContentEnd) {
-    ContentStart = S.size();
-    S.resize_for_overwrite(S.size() + Contents.size());
-  }
-  ContentEnd = ContentStart + Contents.size();
-  llvm::copy(Contents, S.begin() + ContentStart);
-}
-
 void MCFragment::setVarContents(ArrayRef<char> Contents) {
   auto &S = getParent()->ContentStorage;
   if (VarContentStart + Contents.size() > VarContentEnd) {
@@ -94,16 +82,6 @@ void MCFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
   }
   S.append(Fixups.begin(), Fixups.end());
   FixupEnd = S.size();
-}
-
-void MCFragment::setFixups(ArrayRef<MCFixup> Fixups) {
-  auto &S = getParent()->FixupStorage;
-  if (FixupStart + Fixups.size() > FixupEnd) {
-    FixupStart = S.size();
-    S.resize_for_overwrite(S.size() + Fixups.size());
-  }
-  FixupEnd = FixupStart + Fixups.size();
-  llvm::copy(Fixups, S.begin() + FixupStart);
 }
 
 void MCFragment::setVarFixups(ArrayRef<MCFixup> Fixups) {
