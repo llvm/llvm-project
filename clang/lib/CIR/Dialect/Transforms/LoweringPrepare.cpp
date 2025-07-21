@@ -66,7 +66,6 @@ static mlir::Value lowerComplexToScalarCast(MLIRContext &ctx, CastOp op) {
   mlir::Value srcImagToBool =
       builder.createCast(op.getLoc(), elemToBoolKind, srcImag, boolTy);
 
-  // srcRealToBool || srcImagToBool
   return builder.createLogicalOr(op.getLoc(), srcRealToBool, srcImagToBool);
 }
 

@@ -41,11 +41,12 @@ public:
                           bool isInit);
 
   /// Emit a cast from complex value Val to DestType.
-  mlir::Value emitComplexToComplexCast(mlir::Value Val, QualType SrcType,
-                                       QualType DestType, SourceLocation Loc);
+  mlir::Value emitComplexToComplexCast(mlir::Value value, QualType srcType,
+                                       QualType destType, SourceLocation loc);
+
   /// Emit a cast from scalar value Val to DestType.
-  mlir::Value emitScalarToComplexCast(mlir::Value Val, QualType SrcType,
-                                      QualType DestType, SourceLocation Loc);
+  mlir::Value emitScalarToComplexCast(mlir::Value value, QualType srcType,
+                                      QualType destType, SourceLocation loc);
 
   mlir::Value
   VisitAbstractConditionalOperator(const AbstractConditionalOperator *e);
