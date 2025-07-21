@@ -4,21 +4,20 @@
 @g1 = protected addrspace(1) externally_initialized global i32 0, align 4
 @g2 = protected addrspace(1) externally_initialized global i32 0, align 4
 @g3 = protected addrspace(1) externally_initialized global i32 0, align 4
-@g4 = protected addrspace(1) externally_initialized global i32 0, align 4
 
 define internal void @callee_with_always_uniform_argument(ptr addrspace(1) %x, i32 %y) {
 ; CHECK-LABEL: define internal void @callee_with_always_uniform_argument(
 ; CHECK-SAME: ptr addrspace(1) inreg [[X:%.*]], i32 inreg [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[X_VAL:%.*]] = load i32, ptr addrspace(1) [[X]], align 4
-; CHECK-NEXT:    store i32 [[X_VAL]], ptr addrspace(1) @g3, align 4
-; CHECK-NEXT:    store i32 [[Y]], ptr addrspace(1) @g4, align 4
+; CHECK-NEXT:    store i32 [[X_VAL]], ptr addrspace(1) @g2, align 4
+; CHECK-NEXT:    store i32 [[Y]], ptr addrspace(1) @g3, align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %x.val = load i32, ptr addrspace(1) %x, align 4
-  store i32 %x.val, ptr addrspace(1) @g3, align 4
-  store i32 %y, ptr addrspace(1) @g4, align 4
+  store i32 %x.val, ptr addrspace(1) @g2, align 4
+  store i32 %y, ptr addrspace(1) @g3, align 4
   ret void
 }
 
@@ -36,19 +35,31 @@ entry:
   ret void
 }
 
+define amdgpu_kernel void @kernel_with_constant(i32 %x) {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_with_constant(
+; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @callee_with_always_uniform_argument(ptr addrspace(1) @g1, i32 [[X]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @callee_with_always_uniform_argument(ptr addrspace(1) @g1, i32 %x)
+  ret void
+}
+
 define internal void @callee_without_always_uniform_argument(ptr addrspace(1) %x, i32 %y) {
 ; CHECK-LABEL: define internal void @callee_without_always_uniform_argument(
 ; CHECK-SAME: ptr addrspace(1) [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[X_VAL:%.*]] = load i32, ptr addrspace(1) [[X]], align 4
-; CHECK-NEXT:    store i32 [[X_VAL]], ptr addrspace(1) @g3, align 4
-; CHECK-NEXT:    store i32 [[Y]], ptr addrspace(1) @g4, align 4
+; CHECK-NEXT:    store i32 [[X_VAL]], ptr addrspace(1) @g2, align 4
+; CHECK-NEXT:    store i32 [[Y]], ptr addrspace(1) @g3, align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %x.val = load i32, ptr addrspace(1) %x, align 4
-  store i32 %x.val, ptr addrspace(1) @g3, align 4
-  store i32 %y, ptr addrspace(1) @g4, align 4
+  store i32 %x.val, ptr addrspace(1) @g2, align 4
+  store i32 %y, ptr addrspace(1) @g3, align 4
   ret void
 }
 

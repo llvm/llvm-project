@@ -1356,19 +1356,21 @@ struct AAAMDGPUUniformArgument : public AAAMDGPUUniform {
 
   ChangeStatus updateImpl(Attributor &A) override {
     unsigned ArgNo = getAssociatedArgument()->getArgNo();
-    TargetMachine &TM =
-        static_cast<AMDGPUInformationCache &>(A.getInfoCache()).TM;
 
     auto isUniform = [&](AbstractCallSite ACS) -> bool {
       CallBase *CB = ACS.getInstruction();
       Value *V = CB->getArgOperand(ArgNo);
+      if (isa<Constant>(V))
+        return true;
       if (auto *Arg = dyn_cast<Argument>(V)) {
         auto *AA = A.getOrCreateAAFor<AAAMDGPUUniform>(
             IRPosition::argument(*Arg), this, DepClassTy::REQUIRED);
         return AA && AA->isValidState();
       }
-      TargetTransformInfo TTI = TM.getTargetTransformInfo(*CB->getFunction());
-      return TTI.isAlwaysUniform(V);
+      TargetTransformInfo *TTI =
+          A.getInfoCache().getAnalysisResultForFunction<TargetIRAnalysis>(
+              *CB->getFunction());
+      return TTI->isAlwaysUniform(V);
     };
 
     bool UsedAssumedInformation = true;
