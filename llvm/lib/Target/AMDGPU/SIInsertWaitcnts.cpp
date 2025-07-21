@@ -1812,6 +1812,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   //   with knowledge of the called routines.
   if (MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG ||
       MI.getOpcode() == AMDGPU::SI_RETURN ||
+      MI.getOpcode() == AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN ||
       MI.getOpcode() == AMDGPU::S_SETPC_B64_return ||
       (MI.isReturn() && MI.isCall() && !callWaitsOnFunctionEntry(MI))) {
     Wait = Wait.combined(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false));

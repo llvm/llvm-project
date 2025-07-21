@@ -3206,7 +3206,7 @@ bool GCNHazardRecognizer::fixRequiredExportPriority(MachineInstr *MI) {
   // Check entry priority at each export (as there will only be a few).
   // Note: amdgpu_gfx can only be a callee, so defer to caller setprio.
   bool Changed = false;
-  if (CC != CallingConv::AMDGPU_Gfx)
+  if (CC != CallingConv::AMDGPU_Gfx && CC != CallingConv::AMDGPU_Gfx_WholeWave)
     Changed = ensureEntrySetPrio(MF, NormalPriority, TII);
 
   auto NextMI = std::next(It);
