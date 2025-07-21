@@ -440,10 +440,13 @@ int llvm_add_globaldebuginfo(void) {
   LLVMValueRef Global = LLVMAddGlobal(M, RecType, "global");
 
   LLVMGlobalAddDebugInfo(Global, GVE);
+  // use AddMetadata to add twice
+  int kindId = LLVMGetMDKindID("dbg", 3);
+  LLVMGlobalAddMetadata(Global, kindId, GVE);
   size_t numEntries;
   LLVMValueMetadataEntry *ME = LLVMGlobalCopyAllMetadata(Global, &numEntries);
   assert(ME != NULL);
-  assert(numEntries == 1);
+  assert(numEntries == 2);
 
   LLVMDisposeDIBuilder(Builder);
   LLVMDisposeModule(M);

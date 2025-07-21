@@ -2694,6 +2694,14 @@ LLVM_C_ABI void LLVMGlobalSetMetadata(LLVMValueRef Global, unsigned Kind,
                                       LLVMMetadataRef MD);
 
 /**
+ * Adds a metadata attachment.
+ *
+ * @see llvm::GlobalObject::addMetadata()
+ */
+LLVM_C_ABI void LLVMGlobalAddMetadata(LLVMValueRef Global, unsigned Kind,
+                                      LLVMMetadataRef MD);
+
+/**
  * Erases a metadata attachment of the given kind if it exists.
  *
  * @see llvm::GlobalObject::eraseMetadata()
