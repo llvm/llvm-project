@@ -58,10 +58,12 @@ void MCObjectStreamer::insert(MCFragment *F) {
   newFragment();
 }
 
-void MCObjectStreamer::addFixup(const MCExpr *Value, MCFixupKind Kind,
-                                uint32_t Offset) {
-  CurFrag->addFixup(
-      MCFixup::create(CurFrag->getFixedSize() + Offset, Value, Kind));
+void MCObjectStreamer::appendContents(size_t Num, char Elt) {
+  CurFrag->appendContents(Num, Elt);
+}
+
+void MCObjectStreamer::addFixup(const MCExpr *Value, MCFixupKind Kind) {
+  CurFrag->addFixup(MCFixup::create(CurFrag->getFixedSize(), Value, Kind));
 }
 
 // As a compile-time optimization, avoid allocating and evaluating an MCExpr
