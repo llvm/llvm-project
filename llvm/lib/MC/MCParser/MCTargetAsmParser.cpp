@@ -8,8 +8,8 @@
 
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCRegister.h"
-#include "llvm/MC/MCStreamer.h"
 
 using namespace llvm;
 
@@ -25,8 +25,9 @@ MCSubtargetInfo &MCTargetAsmParser::copySTI() {
   STI = &STICopy;
   // The returned STI will likely be modified. Create a new fragment to prevent
   // mixing STI values within a fragment.
-  if (getStreamer().getCurrentFragment())
-    getStreamer().newFragment();
+  auto &S = getStreamer();
+  if (S.isObj() && S.getCurrentFragment())
+    static_cast<MCObjectStreamer &>(S).newFragment();
   return STICopy;
 }
 
