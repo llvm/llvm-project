@@ -21,7 +21,8 @@
 using LlvmLibcFILETest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcFILETest, UnlockedReadAndWrite) {
-  constexpr char fNAME[] = "testdata/unlocked_read_and_write.test";
+  constexpr char fNAME[] =
+      APPEND_LIBC_TEST("testdata/unlocked_read_and_write.test");
   ::FILE *f = LIBC_NAMESPACE::fopen(fNAME, "w");
   ASSERT_FALSE(f == nullptr);
   constexpr char CONTENT[] = "1234567890987654321";
