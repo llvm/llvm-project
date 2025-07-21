@@ -142,10 +142,12 @@ end:
 
 ;; Check that we respect lifetime.start/lifetime.end intrinsics when deleting
 ;; stores that, without the lifetime calls, would be writebacks.
-define void @test_writeback_lifetimes(ptr %p) {
+define void @test_writeback_lifetimes() {
 ; CHECK-NOMEMSSA-LABEL: @test_writeback_lifetimes(
 ; CHECK-NOMEMSSA-NEXT:  entry:
-; CHECK-NOMEMSSA-NEXT:    [[Q:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
+; CHECK-NOMEMSSA-NEXT:    [[P:%.*]] = alloca i64, align 8
+; CHECK-NOMEMSSA-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[P]])
+; CHECK-NOMEMSSA-NEXT:    [[Q:%.*]] = getelementptr i32, ptr [[P]], i64 1
 ; CHECK-NOMEMSSA-NEXT:    [[PV:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NOMEMSSA-NEXT:    [[QV:%.*]] = load i32, ptr [[Q]], align 4
 ; CHECK-NOMEMSSA-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[P]])
@@ -156,7 +158,9 @@ define void @test_writeback_lifetimes(ptr %p) {
 ;
 ; CHECK-LABEL: @test_writeback_lifetimes(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[Q:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[P:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[P]])
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr i32, ptr [[P]], i64 1
 ; CHECK-NEXT:    [[PV:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    [[QV:%.*]] = load i32, ptr [[Q]], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[P]])
@@ -166,6 +170,8 @@ define void @test_writeback_lifetimes(ptr %p) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  %p = alloca i64
+  call void @llvm.lifetime.start.p0(i64 8, ptr %p)
   %q = getelementptr i32, ptr %p, i64 1
   %pv = load i32, ptr %p
   %qv = load i32, ptr %q
@@ -178,10 +184,12 @@ entry:
 
 ;; Check that we respect lifetime.start/lifetime.end intrinsics when deleting
 ;; stores that, without the lifetime calls, would be writebacks.
-define void @test_writeback_lifetimes_multi_arg(ptr %p, ptr %q) {
+define void @test_writeback_lifetimes_multi_arg(ptr %q) {
 ; CHECK-NOMEMSSA-LABEL: @test_writeback_lifetimes_multi_arg(
 ; CHECK-NOMEMSSA-NEXT:  entry:
-; CHECK-NOMEMSSA-NEXT:    [[PV:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NOMEMSSA-NEXT:    [[P:%.*]] = alloca i64, align 8
+; CHECK-NOMEMSSA-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[P]])
+; CHECK-NOMEMSSA-NEXT:    [[PV:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NOMEMSSA-NEXT:    [[QV:%.*]] = load i32, ptr [[Q:%.*]], align 4
 ; CHECK-NOMEMSSA-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[P]])
 ; CHECK-NOMEMSSA-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[P]])
@@ -191,15 +199,18 @@ define void @test_writeback_lifetimes_multi_arg(ptr %p, ptr %q) {
 ;
 ; CHECK-LABEL: @test_writeback_lifetimes_multi_arg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PV:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[P:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[P]])
+; CHECK-NEXT:    [[PV:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    [[QV:%.*]] = load i32, ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[P]])
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[P]])
 ; CHECK-NEXT:    store i32 [[PV]], ptr [[P]], align 4
-; CHECK-NEXT:    store i32 [[QV]], ptr [[Q]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  %p = alloca i64
+  call void @llvm.lifetime.start.p0(i64 8, ptr %p)
   %pv = load i32, ptr %p
   %qv = load i32, ptr %q
   call void @llvm.lifetime.end.p0(i64 8, ptr %p)

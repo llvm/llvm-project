@@ -37,12 +37,14 @@ define void @atomicrmw(ptr %a, i32 %i) {
   ret void
 }
 
-define void @opaque_mangle(ptr %a) {
+define void @opaque_mangle() {
 ; CHECK-LABEL: @opaque_mangle(
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[A:%.*]])
+; CHECK-NEXT:    [[A:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[A]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
+  %a = alloca i64
   call void @llvm.lifetime.start.p0(i64 8, ptr %a)
   call void @llvm.lifetime.end.p0(i64 8, ptr %a)
   ret void
