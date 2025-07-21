@@ -98,4 +98,40 @@ def CastAndCallOp : Op<Transform_Dialect,
   let hasVerifier = 1;
 }
 
+def ReplaceFuncSignatureOp
+    : Op<Transform_Dialect, "func.replace_func_signature",
+         [DeclareOpInterfaceMethods<TransformOpInterface>,
+          DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let description = [{
+      This transform takes a module and a function name, and replaces the
+      signature of the function by reordering the arguments and results
+      according to the interchange arrays. The function is expected to be
+      defined in the module, and the interchange arrays must match the number
+      of arguments and results of the function.
+
+      The `adjust_func_calls` attribute indicates whether the function calls
+      should be adjusted to match the new signature. If set to `true`, the
+      function calls will be adjusted to match the new signature, otherwise
+      they will not be adjusted.
+
+      This transform will emit a silenceable failure if:
+       - The function with the given name does not exist in the module.
+       - The interchange arrays do not match the number of arguments/results.
+       - The interchange arrays contain out of bound indices.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$module,
+      SymbolRefAttr:$function_name, DenseI32ArrayAttr:$args_interchange,
+      DenseI32ArrayAttr:$results_interchange, UnitAttr:$adjust_func_calls);
+  let results = (outs TransformHandleTypeInterface:$transformed_module,
+                      TransformHandleTypeInterface:$transformed_function);
+
+  let assemblyFormat = [{
+    $function_name
+    `args_interchange` `=` $args_interchange
+    `results_interchange` `=` $results_interchange
+    `at` $module attr-dict `:` functional-type(operands, results)
+  }];
+}
+
 #endif // FUNC_TRANSFORM_OPS

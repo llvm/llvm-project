@@ -12,10 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRV.h"
-#include "mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
@@ -101,13 +98,74 @@ struct WmmaConstantOpToSPIRVLowering final
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaConstantMatrixOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    assert(adaptor.getOperands().size() == 1);
-    Value cst = adaptor.getOperands().front();
+    Value cst = llvm::getSingleElement(adaptor.getOperands());
     auto coopType = getTypeConverter()->convertType(op.getType());
     if (!coopType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
     rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, coopType, cst);
+    return success();
+  }
+};
+
+/// Converts GPU MMA ExtractOp to CompositeExtract SPIR-V KHR/NV cooperative
+/// matrix ops.
+struct WmmaExtractOpToSPIRVLowering final
+    : OpConversionPattern<gpu::SubgroupMmaExtractThreadLocalOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupMmaExtractThreadLocalOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value matrix = adaptor.getMatrix();
+    auto coopType =
+        getTypeConverter()->convertType<spirv::CooperativeMatrixType>(
+            matrix.getType());
+    if (!coopType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    SmallVector<int32_t> intValues;
+    for (Value val : op.getIndices()) {
+      if (auto constOp = val.getDefiningOp<arith::ConstantIndexOp>()) {
+        intValues.push_back(static_cast<int32_t>(constOp.value()));
+      } else {
+        return rewriter.notifyMatchFailure(op, "indices must be constants");
+      }
+    }
+
+    Type elementType = coopType.getElementType();
+    rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(
+        op, elementType, matrix, rewriter.getI32ArrayAttr(intValues));
+    return success();
+  }
+};
+
+/// Converts GPU MMA InsertOp to CompositeInsert SPIR-V KHR/NV cooperative
+/// matrix ops.
+struct WmmaInsertOpToSPIRVLowering final
+    : OpConversionPattern<gpu::SubgroupMmaInsertThreadLocalOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupMmaInsertThreadLocalOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value value = adaptor.getValue();
+    Value matrix = adaptor.getMatrix();
+    auto coopType = getTypeConverter()->convertType(matrix.getType());
+    if (!coopType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    SmallVector<int32_t> intValues;
+    for (Value val : op.getIndices()) {
+      if (auto constOp = val.getDefiningOp<arith::ConstantIndexOp>()) {
+        intValues.push_back(static_cast<int32_t>(constOp.value()));
+      } else {
+        return rewriter.notifyMatchFailure(op, "indices must be constants");
+      }
+    }
+
+    rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(
+        op, coopType, value, matrix, rewriter.getI32ArrayAttr(intValues));
     return success();
   }
 };
@@ -181,8 +239,7 @@ struct WmmaElementwiseOpToSPIRVScalarMulLowering final
                                          "splat is not a composite construct");
     }
 
-    assert(cc.getConstituents().size() == 1);
-    scalar = cc.getConstituents().front();
+    scalar = llvm::getSingleElement(cc.getConstituents());
 
     auto coopType = getTypeConverter()->convertType(op.getType());
     if (!coopType)
@@ -298,6 +355,7 @@ void mlir::populateGpuWMMAToSPIRVCoopMatrixKHRConversionPatterns(
   MLIRContext *context = patterns.getContext();
   patterns.add<khr::WmmaLoadOpToSPIRVLowering, khr::WmmaMmaOpToSPIRVLowering,
                khr::WmmaStoreOpToSPIRVLowering, WmmaConstantOpToSPIRVLowering,
+               WmmaExtractOpToSPIRVLowering, WmmaInsertOpToSPIRVLowering,
                WmmaElementwiseOpToSPIRVDefaultLowering>(converter, context);
   // Give the following patterns higher benefit to prevail over the default one.
   patterns.add<WmmaElementwiseOpToSPIRVScalarMulLowering>(converter, context,

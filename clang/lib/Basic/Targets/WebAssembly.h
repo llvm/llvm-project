@@ -42,6 +42,10 @@ static const unsigned WebAssemblyAddrSpaceMap[] = {
     0,  // ptr32_uptr
     0,  // ptr64
     0,  // hlsl_groupshared
+    0,  // hlsl_constant
+    0,  // hlsl_private
+    0,  // hlsl_device
+    0,  // hlsl_input
     20, // wasm_funcref
 };
 
@@ -120,7 +124,7 @@ private:
 
   bool setCPU(const std::string &Name) final { return isValidCPUName(Name); }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const final;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const final;
 
   BuiltinVaListKind getBuiltinVaListKind() const final {
     return VoidPtrBuiltinVaList;
@@ -172,7 +176,8 @@ private:
 
   bool hasProtectedVisibility() const override { return false; }
 
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override;
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override;
 };
 
 class LLVM_LIBRARY_VISIBILITY WebAssembly32TargetInfo

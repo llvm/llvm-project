@@ -10,7 +10,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Analysis/CallGraph.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/SCCIterator.h"
 
 using namespace clang::ast_matchers;
@@ -51,7 +50,7 @@ public:
     // We've decided that it isn't performant to keep using vector.
     // Let's migrate the data into Set.
     Set.reserve(Storage.size());
-    Set.insert(Storage.begin(), Storage.end());
+    Set.insert_range(Storage);
   }
 
   /// count - Return 1 if the element is in the set, 0 otherwise.
@@ -97,7 +96,7 @@ private:
     const size_t NewMaxElts = 4 * Vector.size();
     Vector.reserve(NewMaxElts);
     Set.reserve(NewMaxElts);
-    Set.insert(Vector.begin(), Vector.end());
+    Set.insert_range(Vector);
   }
 
   /// count - Return 1 if the element is in the set, 0 otherwise.

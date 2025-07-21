@@ -64,7 +64,7 @@ public:
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
                                     Status &&error);
 
-  std::optional<uint64_t> GetByteSize() override;
+  llvm::Expected<uint64_t> GetByteSize() override;
 
   lldb::ValueType GetValueType() const override;
 
@@ -86,8 +86,7 @@ public:
 
   lldb::ValueObjectSP AddressOf(Status &error) override;
 
-  lldb::addr_t GetAddressOf(bool scalar_is_load_address = true,
-                            AddressType *address_type = nullptr) override;
+  AddrAndType GetAddressOf(bool scalar_is_load_address = true) override;
 
   size_t GetPointeeData(DataExtractor &data, uint32_t item_idx = 0,
                         uint32_t item_count = 1) override;

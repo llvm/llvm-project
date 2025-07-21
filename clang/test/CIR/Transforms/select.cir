@@ -1,0 +1,60 @@
+// RUN: cir-opt -cir-canonicalize -cir-simplify -o %t.cir %s
+// RUN: FileCheck --input-file=%t.cir %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @fold_true(%arg0 : !s32i, %arg1 : !s32i) -> !s32i {
+    %0 = cir.const #cir.bool<true> : !cir.bool
+    %1 = cir.select if %0 then %arg0 else %arg1 : (!cir.bool, !s32i, !s32i) -> !s32i
+    cir.return %1 : !s32i
+  }
+
+  //      CHECK: cir.func{{.*}} @fold_true(%[[ARG0:.+]]: !s32i, %[[ARG1:.+]]: !s32i) -> !s32i {
+  // CHECK-NEXT:   cir.return %[[ARG0]] : !s32i
+  // CHECK-NEXT: }
+
+  cir.func @fold_false(%arg0 : !s32i, %arg1 : !s32i) -> !s32i {
+    %0 = cir.const #cir.bool<false> : !cir.bool
+    %1 = cir.select if %0 then %arg0 else %arg1 : (!cir.bool, !s32i, !s32i) -> !s32i
+    cir.return %1 : !s32i
+  }
+
+  //      CHECK: cir.func{{.*}} @fold_false(%[[ARG0:.+]]: !s32i, %[[ARG1:.+]]: !s32i) -> !s32i {
+  // CHECK-NEXT:   cir.return %[[ARG1]] : !s32i
+  // CHECK-NEXT: }
+
+  cir.func @fold_to_const(%arg0 : !cir.bool) -> !s32i {
+    %0 = cir.const #cir.int<42> : !s32i
+    %1 = cir.select if %arg0 then %0 else %0 : (!cir.bool, !s32i, !s32i) -> !s32i
+    cir.return %1 : !s32i
+  }
+
+  //      CHECK: cir.func{{.*}} @fold_to_const(%{{.+}}: !cir.bool) -> !s32i {
+  // CHECK-NEXT:   %[[#A:]] = cir.const #cir.int<42> : !s32i
+  // CHECK-NEXT:   cir.return %[[#A]] : !s32i
+  // CHECK-NEXT: }
+
+  cir.func @simplify_1(%arg0 : !cir.bool) -> !cir.bool {
+    %0 = cir.const #cir.bool<true> : !cir.bool
+    %1 = cir.const #cir.bool<false> : !cir.bool
+    %2 = cir.select if %arg0 then %0 else %1 : (!cir.bool, !cir.bool, !cir.bool) -> !cir.bool
+    cir.return %2 : !cir.bool
+  }
+
+  //      CHECK: cir.func{{.*}} @simplify_1(%[[ARG0:.+]]: !cir.bool) -> !cir.bool {
+  // CHECK-NEXT:   cir.return %[[ARG0]] : !cir.bool
+  // CHECK-NEXT: }
+
+  cir.func @simplify_2(%arg0 : !cir.bool) -> !cir.bool {
+    %0 = cir.const #cir.bool<false> : !cir.bool
+    %1 = cir.const #cir.bool<true> : !cir.bool
+    %2 = cir.select if %arg0 then %0 else %1 : (!cir.bool, !cir.bool, !cir.bool) -> !cir.bool
+    cir.return %2 : !cir.bool
+  }
+
+  //      CHECK: cir.func{{.*}} @simplify_2(%[[ARG0:.+]]: !cir.bool) -> !cir.bool {
+  // CHECK-NEXT:   %[[#A:]] = cir.unary(not, %[[ARG0]]) : !cir.bool, !cir.bool
+  // CHECK-NEXT:   cir.return %[[#A]] : !cir.bool
+  // CHECK-NEXT: }
+}

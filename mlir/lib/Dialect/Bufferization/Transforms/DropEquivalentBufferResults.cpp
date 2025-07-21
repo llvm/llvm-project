@@ -31,12 +31,10 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/Pass/Pass.h"
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_DROPEQUIVALENTBUFFERRESULTS
+#define GEN_PASS_DEF_DROPEQUIVALENTBUFFERRESULTSPASS
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
@@ -113,7 +111,8 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
     }
 
     // Update function.
-    funcOp.eraseResults(erasedResultIndices);
+    if (failed(funcOp.eraseResults(erasedResultIndices)))
+      return failure();
     returnOp.getOperandsMutable().assign(newReturnValues);
 
     // Update function calls.
@@ -149,7 +148,7 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
 
 namespace {
 struct DropEquivalentBufferResultsPass
-    : bufferization::impl::DropEquivalentBufferResultsBase<
+    : bufferization::impl::DropEquivalentBufferResultsPassBase<
           DropEquivalentBufferResultsPass> {
   void runOnOperation() override {
     if (failed(bufferization::dropEquivalentBufferResults(getOperation())))
@@ -157,8 +156,3 @@ struct DropEquivalentBufferResultsPass
   }
 };
 } // namespace
-
-std::unique_ptr<Pass>
-mlir::bufferization::createDropEquivalentBufferResultsPass() {
-  return std::make_unique<DropEquivalentBufferResultsPass>();
-}

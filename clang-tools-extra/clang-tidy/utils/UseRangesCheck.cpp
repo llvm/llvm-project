@@ -22,7 +22,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -44,7 +43,7 @@ static std::string getFullPrefix(ArrayRef<UseRangesCheck::Indexes> Signature) {
   llvm::raw_string_ostream OS(Output);
   for (const UseRangesCheck::Indexes &Item : Signature)
     OS << Item.BeginArg << ":" << Item.EndArg << ":"
-       << (Item.ReplaceArg == Item.First ? '0' : '1');
+       << (Item.ReplaceArg == UseRangesCheck::Indexes::First ? '0' : '1');
   return Output;
 }
 
@@ -195,7 +194,7 @@ static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
 void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
   Replacer *Replacer = nullptr;
   const FunctionDecl *Function = nullptr;
-  for (auto [Node, Value] : Result.Nodes.getMap()) {
+  for (const auto &[Node, Value] : Result.Nodes.getMap()) {
     StringRef NodeStr(Node);
     if (!NodeStr.consume_front(FuncDecl))
       continue;
@@ -215,6 +214,19 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
     const auto *Call = Result.Nodes.getNodeAs<CallExpr>(Buffer);
     if (!Call)
       continue;
+
+    // FIXME: This check specifically handles `CXXNullPtrLiteralExpr`, but
+    // a more general solution might be needed.
+    if (Function->getName() == "find") {
+      const unsigned ValueArgIndex = 2;
+      if (Call->getNumArgs() <= ValueArgIndex)
+        continue;
+      const Expr *ValueExpr =
+          Call->getArg(ValueArgIndex)->IgnoreParenImpCasts();
+      if (isa<CXXNullPtrLiteralExpr>(ValueExpr))
+        return;
+    }
+
     auto Diag = createDiag(*Call);
     if (auto ReplaceName = Replacer->getReplaceName(*Function))
       Diag << FixItHint::CreateReplacement(Call->getCallee()->getSourceRange(),

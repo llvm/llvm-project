@@ -186,7 +186,17 @@ class ClangFormatHelper(FormatHelper):
         filtered_files = []
         for path in changed_files:
             _, ext = os.path.splitext(path)
-            if ext in (".cpp", ".c", ".h", ".hpp", ".hxx", ".cxx", ".inc", ".cppm"):
+            if ext in (
+                ".cpp",
+                ".c",
+                ".h",
+                ".hpp",
+                ".hxx",
+                ".cxx",
+                ".inc",
+                ".cppm",
+                ".cl",
+            ):
                 filtered_files.append(path)
             elif ext == "" and self.should_include_extensionless_file(path):
                 filtered_files.append(path)
@@ -353,6 +363,8 @@ You can test this locally with the following command:
 
     def format_run(self, changed_files: List[str], args: FormatArgs) -> Optional[str]:
         files = self.filter_changed_files(changed_files)
+        if not files:
+            return None
 
         # Use git to find files that have had a change in the number of undefs
         regex = "([^a-zA-Z0-9#_-]undef[^a-zA-Z0-9_-]|UndefValue::get)"
@@ -374,18 +386,25 @@ You can test this locally with the following command:
         sys.stdout.write(proc.stderr)
         stdout = proc.stdout
 
+        if not stdout:
+            return None
+
         files = []
+
         # Split the diff so we have one array entry per file.
         # Each file is prefixed like:
         # diff --git a/file b/file
         for file in re.split("^diff --git ", stdout, 0, re.MULTILINE):
-            # We skip checking in MIR files as undef is a valid token and not
-            # going away.
-            if file.endswith(".mir"):
-                continue
+            lines = file.splitlines()
+            match = re.match("a/([^ ]+)", lines[0] if lines else "")
+            filename = match[1] if match else ""
+            if filename.endswith(".ll"):
+                undef_regex = r"(?<!%)\bundef\b"
+            else:
+                undef_regex = r"UndefValue::get"
             # search for additions of undef
-            if re.search(r"^[+](?!\s*#\s*).*(\bundef\b|UndefValue::get)", file, re.MULTILINE):
-                files.append(re.match("a/([^ ]+)", file.splitlines()[0])[1])
+            if re.search(r"^[+].*" + undef_regex, file, re.MULTILINE):
+                files.append(filename)
 
         if not files:
             return None

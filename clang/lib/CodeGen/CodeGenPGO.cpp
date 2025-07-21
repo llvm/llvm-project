@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenPGO.h"
+#include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
 #include "CoverageMappingGen.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -163,7 +164,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   /// The function hash.
   PGOHash Hash;
   /// The map of statements to counters.
-  llvm::DenseMap<const Stmt *, unsigned> &CounterMap;
+  llvm::DenseMap<const Stmt *, CounterPair> &CounterMap;
   /// The state of MC/DC Coverage in this function.
   MCDC::State &MCDCState;
   /// Maximum number of supported MC/DC conditions in a boolean expression.
@@ -174,7 +175,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   DiagnosticsEngine &Diag;
 
   MapRegionCounters(PGOHashVersion HashVersion, uint64_t ProfileVersion,
-                    llvm::DenseMap<const Stmt *, unsigned> &CounterMap,
+                    llvm::DenseMap<const Stmt *, CounterPair> &CounterMap,
                     MCDC::State &MCDCState, unsigned MCDCMaxCond,
                     DiagnosticsEngine &Diag)
       : NextCounter(0), Hash(HashVersion), CounterMap(CounterMap),
@@ -1083,7 +1084,7 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
       (CGM.getCodeGenOpts().MCDCCoverage ? CGM.getCodeGenOpts().MCDCMaxConds
                                          : 0);
 
-  RegionCounterMap.reset(new llvm::DenseMap<const Stmt *, unsigned>);
+  RegionCounterMap.reset(new llvm::DenseMap<const Stmt *, CounterPair>);
   RegionMCDCState.reset(new MCDC::State);
   MapRegionCounters Walker(HashVersion, ProfileVersion, *RegionCounterMap,
                            *RegionMCDCState, MCDCMaxConditions, CGM.getDiags());
@@ -1185,12 +1186,23 @@ CodeGenPGO::applyFunctionAttributes(llvm::IndexedInstrProfReader *PGOReader,
   Fn->setEntryCount(FunctionCount);
 }
 
+std::pair<bool, bool> CodeGenPGO::getIsCounterPair(const Stmt *S) const {
+  if (!RegionCounterMap)
+    return {false, false};
+
+  auto I = RegionCounterMap->find(S);
+  if (I == RegionCounterMap->end())
+    return {false, false};
+
+  return {I->second.Executed.hasValue(), I->second.Skipped.hasValue()};
+}
+
 void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
                                            llvm::Value *StepV) {
   if (!RegionCounterMap || !Builder.GetInsertBlock())
     return;
 
-  unsigned Counter = (*RegionCounterMap)[S];
+  unsigned Counter = (*RegionCounterMap)[S].Executed;
 
   // Make sure that pointer to global is passed in with zero addrspace
   // This is relevant during GPU profiling
@@ -1346,6 +1358,9 @@ void CodeGenPGO::setProfileVersion(llvm::Module &M) {
 
     IRLevelVersionVariable->setVisibility(llvm::GlobalValue::HiddenVisibility);
     llvm::Triple TT(M.getTargetTriple());
+    if (TT.isGPU())
+      IRLevelVersionVariable->setVisibility(
+          llvm::GlobalValue::ProtectedVisibility);
     if (TT.supportsCOMDAT()) {
       IRLevelVersionVariable->setLinkage(llvm::GlobalValue::ExternalLinkage);
       IRLevelVersionVariable->setComdat(M.getOrInsertComdat(VarName));
@@ -1408,8 +1423,7 @@ void CodeGenPGO::loadRegionCounts(llvm::IndexedInstrProfReader *PGOReader,
                                   bool IsInMainFile) {
   CGM.getPGOStats().addVisited(IsInMainFile);
   RegionCounts.clear();
-  llvm::Expected<llvm::InstrProfRecord> RecordExpected =
-      PGOReader->getInstrProfRecord(FuncName, FunctionHash);
+  auto RecordExpected = PGOReader->getInstrProfRecord(FuncName, FunctionHash);
   if (auto E = RecordExpected.takeError()) {
     auto IPE = std::get<0>(llvm::InstrProfError::take(std::move(E)));
     if (IPE == llvm::instrprof_error::unknown_function)
@@ -1471,7 +1485,7 @@ CodeGenFunction::createProfileWeights(ArrayRef<uint64_t> Weights) const {
     return nullptr;
 
   // Check for empty weights.
-  uint64_t MaxWeight = *std::max_element(Weights.begin(), Weights.end());
+  uint64_t MaxWeight = *llvm::max_element(Weights);
   if (MaxWeight == 0)
     return nullptr;
 
@@ -1490,11 +1504,74 @@ CodeGenFunction::createProfileWeights(ArrayRef<uint64_t> Weights) const {
 llvm::MDNode *
 CodeGenFunction::createProfileWeightsForLoop(const Stmt *Cond,
                                              uint64_t LoopCount) const {
-  if (!PGO.haveRegionCounts())
+  if (!PGO->haveRegionCounts())
     return nullptr;
-  std::optional<uint64_t> CondCount = PGO.getStmtCount(Cond);
+  std::optional<uint64_t> CondCount = PGO->getStmtCount(Cond);
   if (!CondCount || *CondCount == 0)
     return nullptr;
   return createProfileWeights(LoopCount,
                               std::max(*CondCount, LoopCount) - LoopCount);
+}
+
+void CodeGenFunction::incrementProfileCounter(const Stmt *S,
+                                              llvm::Value *StepV) {
+  if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
+      !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
+      !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile)) {
+    auto AL = ApplyDebugLocation::CreateArtificial(*this);
+    PGO->emitCounterSetOrIncrement(Builder, S, StepV);
+  }
+  PGO->setCurrentStmt(S);
+}
+
+std::pair<bool, bool> CodeGenFunction::getIsCounterPair(const Stmt *S) const {
+  return PGO->getIsCounterPair(S);
+}
+void CodeGenFunction::markStmtAsUsed(bool Skipped, const Stmt *S) {
+  PGO->markStmtAsUsed(Skipped, S);
+}
+void CodeGenFunction::markStmtMaybeUsed(const Stmt *S) {
+  PGO->markStmtMaybeUsed(S);
+}
+
+void CodeGenFunction::maybeCreateMCDCCondBitmap() {
+  if (isMCDCCoverageEnabled()) {
+    PGO->emitMCDCParameters(Builder);
+    MCDCCondBitmapAddr = CreateIRTemp(getContext().UnsignedIntTy, "mcdc.addr");
+  }
+}
+void CodeGenFunction::maybeResetMCDCCondBitmap(const Expr *E) {
+  if (isMCDCCoverageEnabled() && isBinaryLogicalOp(E)) {
+    PGO->emitMCDCCondBitmapReset(Builder, E, MCDCCondBitmapAddr);
+    PGO->setCurrentStmt(E);
+  }
+}
+void CodeGenFunction::maybeUpdateMCDCTestVectorBitmap(const Expr *E) {
+  if (isMCDCCoverageEnabled() && isBinaryLogicalOp(E)) {
+    PGO->emitMCDCTestVectorBitmapUpdate(Builder, E, MCDCCondBitmapAddr, *this);
+    PGO->setCurrentStmt(E);
+  }
+}
+
+void CodeGenFunction::maybeUpdateMCDCCondBitmap(const Expr *E,
+                                                llvm::Value *Val) {
+  if (isMCDCCoverageEnabled()) {
+    PGO->emitMCDCCondBitmapUpdate(Builder, E, MCDCCondBitmapAddr, Val, *this);
+    PGO->setCurrentStmt(E);
+  }
+}
+
+uint64_t CodeGenFunction::getProfileCount(const Stmt *S) {
+  return PGO->getStmtCount(S).value_or(0);
+}
+
+/// Set the profiler's current count.
+void CodeGenFunction::setCurrentProfileCount(uint64_t Count) {
+  PGO->setCurrentRegionCount(Count);
+}
+
+/// Get the profiler's current count. This is generally the count for the most
+/// recently incremented counter.
+uint64_t CodeGenFunction::getCurrentProfileCount() {
+  return PGO->getCurrentRegionCount();
 }

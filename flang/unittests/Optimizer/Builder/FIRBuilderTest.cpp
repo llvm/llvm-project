@@ -29,7 +29,7 @@ public:
     moduleOp = builder.create<mlir::ModuleOp>(loc);
     builder.setInsertionPointToStart(moduleOp->getBody());
     mlir::func::FuncOp func = builder.create<mlir::func::FuncOp>(
-        loc, "func1", builder.getFunctionType(std::nullopt, std::nullopt));
+        loc, "func1", builder.getFunctionType({}, {}));
     auto *entryBlock = func.addEntryBlock();
     builder.setInsertionPointToStart(entryBlock);
 
@@ -146,7 +146,7 @@ TEST_F(FIRBuilderTest, createRealZeroConstant) {
   auto builder = getBuilder();
   auto ctx = builder.getContext();
   auto loc = builder.getUnknownLoc();
-  auto realTy = mlir::FloatType::getF64(ctx);
+  auto realTy = mlir::Float64Type::get(ctx);
   auto cst = builder.createRealZeroConstant(loc, realTy);
   EXPECT_TRUE(mlir::isa<arith::ConstantOp>(cst.getDefiningOp()));
   auto cstOp = dyn_cast<arith::ConstantOp>(cst.getDefiningOp());
@@ -176,8 +176,7 @@ TEST_F(FIRBuilderTest, getNamedFunction) {
   auto func2 = builder.getNamedFunction("func2");
   EXPECT_EQ(nullptr, func2);
   auto loc = builder.getUnknownLoc();
-  func2 = builder.createFunction(
-      loc, "func2", builder.getFunctionType(std::nullopt, std::nullopt));
+  func2 = builder.createFunction(loc, "func2", builder.getFunctionType({}, {}));
   auto func2query = builder.getNamedFunction("func2");
   EXPECT_EQ(func2, func2query);
 }
@@ -434,7 +433,7 @@ TEST_F(FIRBuilderTest, createZeroValue) {
   auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(cst.getValue());
   EXPECT_TRUE(intAttr && intAttr.getInt() == 0);
 
-  mlir::Type f32Ty = mlir::FloatType::getF32(builder.getContext());
+  mlir::Type f32Ty = mlir::Float32Type::get(builder.getContext());
   mlir::Value zeroFloat = fir::factory::createZeroValue(builder, loc, f32Ty);
   EXPECT_TRUE(zeroFloat.getType() == f32Ty);
   auto cst2 = mlir::dyn_cast_or_null<mlir::arith::ConstantOp>(
@@ -494,7 +493,7 @@ TEST_F(FIRBuilderTest, getBaseTypeOf) {
     return {scalars, arrays};
   };
 
-  auto f32Ty = mlir::FloatType::getF32(builder.getContext());
+  auto f32Ty = mlir::Float32Type::get(builder.getContext());
   mlir::Type f32SeqTy = builder.getVarLenSeqTy(f32Ty);
   auto [f32Scalars, f32Arrays] = makeExv(f32Ty, f32SeqTy);
   for (const auto &scalar : f32Scalars) {
@@ -537,7 +536,7 @@ TEST_F(FIRBuilderTest, genArithFastMath) {
   auto ctx = builder.getContext();
   auto loc = builder.getUnknownLoc();
 
-  auto realTy = mlir::FloatType::getF32(ctx);
+  auto realTy = mlir::Float32Type::get(ctx);
   auto arg = builder.create<fir::UndefOp>(loc, realTy);
 
   // Test that FastMathFlags is 'none' by default.

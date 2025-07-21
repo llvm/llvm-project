@@ -65,7 +65,7 @@ static void checkFrameBase(WebAssemblyFunctionInfo &MFI, unsigned Local,
   if (MFI.isFrameBaseVirtual() && Reg == MFI.getFrameBaseVreg()) {
     LLVM_DEBUG({
       dbgs() << "Allocating local " << Local << "for VReg "
-             << Register::virtReg2Index(Reg) << '\n';
+             << Register(Reg).virtRegIndex() << '\n';
     });
     MFI.setFrameBaseLocal(Local);
   }
@@ -344,7 +344,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
           const TargetRegisterClass *RC = MRI.getRegClass(OldReg);
           Register NewReg = MRI.createVirtualRegister(RC);
           auto InsertPt = std::next(MI.getIterator());
-          if (UseEmpty[Register::virtReg2Index(OldReg)]) {
+          if (UseEmpty[OldReg.virtRegIndex()]) {
             unsigned Opc = getDropOpcode(RC);
             MachineInstr *Drop =
                 BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc))

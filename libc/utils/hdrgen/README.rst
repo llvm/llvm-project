@@ -1,5 +1,4 @@
-This directory contains the sources and specifications for the types,
-macros and entrypoint functions.  These definitions are organized in the
-``yaml`` subdirectory and match the organization of the ``*.h.def``
-files. This directory also contains the Python sources for hdrgen, which is
-what generates the headers.
+This directory also contains the Python sources for hdrgen, which is
+what generates the headers public libc headers. The definitions for these
+headers are in the ``include`` directory. The ``.h.def`` files are the bases
+and the ``.yaml`` files are the contents.

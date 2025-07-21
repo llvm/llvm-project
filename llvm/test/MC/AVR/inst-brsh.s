@@ -11,14 +11,14 @@ foo:
 
 bar:
 
-; CHECK: brsh (.Ltmp0+32)+2  ; encoding: [0bAAAAA000,0b111101AA]
-; CHECK-NEXT:                ;   fixup A - offset: 0, value: (.Ltmp0+32)+2, kind: fixup_7_pcrel
-; CHECK: brsh (.Ltmp1+70)+2  ; encoding: [0bAAAAA000,0b111101AA]
-; CHECK-NEXT:                ;   fixup A - offset: 0, value: (.Ltmp1+70)+2, kind: fixup_7_pcrel
+; CHECK: brsh .Ltmp0+32+2  ; encoding: [0bAAAAA000,0b111101AA]
+; CHECK: brsh .Ltmp1+70+2  ; encoding: [0bAAAAA000,0b111101AA]
 ; CHECK: brsh bar            ; encoding: [0bAAAAA000,0b111101AA]
-; CHECK-NEXT:                ;   fixup A - offset: 0, value: bar, kind: fixup_7_pcrel
 
 ; INST-LABEL: <foo>:
-; INST-NEXT: 80 f4      brsh .+32
-; INST-NEXT: 18 f5      brsh .+70
-; INST-NEXT: 00 f4      brsh .+0
+; INST-NEXT: f8 f7      brsh .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x22
+; INST-NEXT: f8 f7      brsh .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x4a
+; INST-NEXT: f8 f7      brsh .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x6

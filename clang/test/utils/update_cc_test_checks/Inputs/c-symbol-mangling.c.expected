@@ -18,8 +18,22 @@
 // UTC_ARGS: --enable
 
 #ifdef __arm__
-/// FIXME: UTC does not find this function, but can find all others.
 typedef __attribute__((neon_vector_type(8))) __INT8_TYPE__ int8x8_t;
+// THUMB-DARWIN-LABEL: @test_vaba_s8(
+// THUMB-DARWIN-NEXT:  entry:
+// THUMB-DARWIN-NEXT:    [[A_ADDR:%.*]] = alloca <8 x i8>, align 8
+// THUMB-DARWIN-NEXT:    [[B_ADDR:%.*]] = alloca <8 x i8>, align 8
+// THUMB-DARWIN-NEXT:    [[C_ADDR:%.*]] = alloca <8 x i8>, align 8
+// THUMB-DARWIN-NEXT:    store <8 x i8> [[A:%.*]], ptr [[A_ADDR]], align 8
+// THUMB-DARWIN-NEXT:    store <8 x i8> [[B:%.*]], ptr [[B_ADDR]], align 8
+// THUMB-DARWIN-NEXT:    store <8 x i8> [[C:%.*]], ptr [[C_ADDR]], align 8
+// THUMB-DARWIN-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[A_ADDR]], align 8
+// THUMB-DARWIN-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[B_ADDR]], align 8
+// THUMB-DARWIN-NEXT:    [[ADD:%.*]] = add <8 x i8> [[TMP0]], [[TMP1]]
+// THUMB-DARWIN-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr [[C_ADDR]], align 8
+// THUMB-DARWIN-NEXT:    [[ADD1:%.*]] = add <8 x i8> [[ADD]], [[TMP2]]
+// THUMB-DARWIN-NEXT:    ret <8 x i8> [[ADD1]]
+//
 int8x8_t test_vaba_s8(int8x8_t a, int8x8_t b, int8x8_t c) {
   return a + b + c;
 }

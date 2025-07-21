@@ -89,6 +89,7 @@ int main(void) {
 
   pthread_t tid;
   assert(pthread_create(&tid, &attr, Thread, alt_stack) == 0);
+  assert(pthread_attr_destroy(&attr) == 0);
 
   pthread_join(tid, nullptr);
 

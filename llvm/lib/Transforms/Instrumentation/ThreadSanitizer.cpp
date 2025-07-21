@@ -360,7 +360,7 @@ static bool shouldInstrumentReadWriteFromAddress(const Module *M, Value *Addr) {
     if (GV->hasSection()) {
       StringRef SectionName = GV->getSection();
       // Check if the global is in the PGO counters section.
-      auto OF = Triple(M->getTargetTriple()).getObjectFormat();
+      auto OF = M->getTargetTriple().getObjectFormat();
       if (SectionName.ends_with(
               getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false)))
         return false;
@@ -448,8 +448,9 @@ void ThreadSanitizer::chooseInstructionsToInstrument(
       }
     }
 
-    if (isa<AllocaInst>(getUnderlyingObject(Addr)) &&
-        !PointerMayBeCaptured(Addr, true, true)) {
+    const AllocaInst *AI = findAllocaForValue(Addr);
+    // Instead of Addr, we should check whether its base pointer is captured.
+    if (AI && !PointerMayBeCaptured(AI, /*ReturnCaptures=*/true)) {
       // The variable is addressable but not captured, so it cannot be
       // referenced from a different thread and participate in a data race
       // (see llvm/Analysis/CaptureTracking.h for details).
@@ -479,7 +480,8 @@ static bool isTsanAtomic(const Instruction *I) {
 }
 
 void ThreadSanitizer::InsertRuntimeIgnores(Function &F) {
-  InstrumentationIRBuilder IRB(F.getEntryBlock().getFirstNonPHI());
+  InstrumentationIRBuilder IRB(&F.getEntryBlock(),
+                               F.getEntryBlock().getFirstNonPHIIt());
   IRB.CreateCall(TsanIgnoreBegin);
   EscapeEnumerator EE(F, "tsan_ignore_cleanup", ClHandleCxxExceptions);
   while (IRBuilder<> *AtExit = EE.Next()) {
@@ -525,8 +527,7 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
         AtomicAccesses.push_back(&Inst);
       else if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst))
         LocalLoadsAndStores.push_back(&Inst);
-      else if ((isa<CallInst>(Inst) && !isa<DbgInfoIntrinsic>(Inst)) ||
-               isa<InvokeInst>(Inst)) {
+      else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
         if (CallInst *CI = dyn_cast<CallInst>(&Inst))
           maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
         if (isa<MemIntrinsic>(Inst))
@@ -569,9 +570,10 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
 
   // Instrument function entry/exit points if there were instrumented accesses.
   if ((Res || HasCalls) && ClInstrumentFuncEntryExit) {
-    InstrumentationIRBuilder IRB(F.getEntryBlock().getFirstNonPHI());
+    InstrumentationIRBuilder IRB(&F.getEntryBlock(),
+                                 F.getEntryBlock().getFirstNonPHIIt());
     Value *ReturnAddress =
-        IRB.CreateIntrinsic(Intrinsic::returnaddress, {}, IRB.getInt32(0));
+        IRB.CreateIntrinsic(Intrinsic::returnaddress, IRB.getInt32(0));
     IRB.CreateCall(TsanFuncEntry, ReturnAddress);
 
     EscapeEnumerator EE(F, "tsan_cleanup", ClHandleCxxExceptions);
@@ -726,6 +728,7 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
     Value *C = IRB.CreateCall(TsanAtomicLoad[Idx], Args);
     Value *Cast = IRB.CreateBitOrPointerCast(C, OrigTy);
     I->replaceAllUsesWith(Cast);
+    I->eraseFromParent();
   } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
     Value *Addr = SI->getPointerOperand();
     int Idx =

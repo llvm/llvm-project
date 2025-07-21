@@ -31,6 +31,7 @@ import argparse
 import concurrent.futures
 import contextlib
 import datetime
+import enum
 import json
 import os
 import platform
@@ -44,7 +45,6 @@ import tempfile
 import threading
 import time
 import uuid
-
 
 print_lock = threading.RLock()
 
@@ -296,7 +296,7 @@ class CrashLog(symbolication.Symbolicator):
             except:
                 dsymForUUIDBinary = ""
 
-        dwarfdump_uuid_regex = re.compile("UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
+        dwarfdump_uuid_regex = re.compile(r"UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
 
         def __init__(
             self, text_addr_lo, text_addr_hi, identifier, version, uuid, path, verbose
@@ -501,7 +501,7 @@ class CrashLog(symbolication.Symbolicator):
         for image in self.images:
             if image.identifier == identifier:
                 return image
-        regex_text = "^.*\.%s$" % (re.escape(identifier))
+        regex_text = r"^.*\.%s$" % (re.escape(identifier))
         regex = re.compile(regex_text)
         for image in self.images:
             if regex.match(image.identifier):
@@ -777,10 +777,10 @@ class JSONCrashLogParser(CrashLogParser):
             if json_thread.get("triggered", False):
                 self.crashlog.crashed_thread_idx = idx
                 thread.crashed = True
-                if "threadState" in json_thread:
-                    thread.registers = self.parse_thread_registers(
-                        json_thread["threadState"]
-                    )
+            if "threadState" in json_thread:
+                thread.registers = self.parse_thread_registers(
+                    json_thread["threadState"]
+                )
             if "queue" in json_thread:
                 thread.queue = json_thread.get("queue")
             self.parse_frames(thread, json_thread.get("frames", []))
@@ -925,7 +925,7 @@ class TextCrashLogParser(CrashLogParser):
             version = r"(?:" + super().version + r"\s+)?"
             address = r"(0x[0-9a-fA-F]{4,})"  # 4 digits or more
 
-            symbol = """
+            symbol = r"""
                         (?:
                             [ ]+
                             (?P<symbol>.+)
@@ -1095,7 +1095,7 @@ class TextCrashLogParser(CrashLogParser):
             self.crashlog.process_identifier = line[11:].strip()
         elif line.startswith("Version:"):
             version_string = line[8:].strip()
-            matched_pair = re.search("(.+)\((.+)\)", version_string)
+            matched_pair = re.search(r"(.+)\((.+)\)", version_string)
             if matched_pair:
                 self.crashlog.process_version = matched_pair.group(1)
                 self.crashlog.process_compatability_version = matched_pair.group(2)
@@ -1512,7 +1512,7 @@ def load_crashlog_in_scripted_process(debugger, crashlog_path, options, result):
         arch = crashlog.process_arch
         if not arch:
             raise InteractiveCrashLogException(
-                "couldn't create find the architecture to create the target"
+                "couldn't find the architecture to create the target"
             )
         target = debugger.CreateTargetWithFileAndArch(None, arch)
     # 4. Fail
@@ -1582,9 +1582,12 @@ def load_crashlog_in_scripted_process(debugger, crashlog_path, options, result):
                 debugger.RunCommandInterpreter(True, False, run_options, 0, False, True)
 
 
-def CreateSymbolicateCrashLogOptions(
-    command_name, description, add_interactive_options
-):
+class CrashLogLoadingMode(str, enum.Enum):
+    batch = "batch"
+    interactive = "interactive"
+
+
+def CreateSymbolicateCrashLogOptions(command_name, description):
     usage = "crashlog [options] <FILE> [FILE ...]"
     arg_parser = argparse.ArgumentParser(
         description=description,
@@ -1600,6 +1603,12 @@ def CreateSymbolicateCrashLogOptions(
         help="crash report(s) to symbolicate",
     )
 
+    arg_parser.add_argument(
+        "-m",
+        "--mode",
+        choices=[mode.value for mode in CrashLogLoadingMode],
+        help="change how the symbolicated process and threads are displayed to the user (default: interactive)",
+    )
     arg_parser.add_argument(
         "--version",
         "-V",
@@ -1736,36 +1745,35 @@ def CreateSymbolicateCrashLogOptions(
         help=argparse.SUPPRESS,
         default=False,
     )
-    if add_interactive_options:
-        arg_parser.add_argument(
-            "-i",
-            "--interactive",
-            action="store_true",
-            help="parse a crash log and load it in a ScriptedProcess",
-            default=False,
-        )
-        arg_parser.add_argument(
-            "-b",
-            "--batch",
-            action="store_true",
-            help="dump symbolicated stackframes without creating a debug session",
-            default=True,
-        )
-        arg_parser.add_argument(
-            "--target",
-            "-t",
-            dest="target_path",
-            help="the target binary path that should be used for interactive crashlog (optional)",
-            default=None,
-        )
-        arg_parser.add_argument(
-            "--skip-status",
-            "-s",
-            dest="skip_status",
-            action="store_true",
-            help="prevent the interactive crashlog to dump the process status and thread backtrace at launch",
-            default=False,
-        )
+    arg_parser.add_argument(
+        "--target",
+        "-t",
+        dest="target_path",
+        help="the target binary path that should be used for interactive crashlog (optional)",
+        default=None,
+    )
+    arg_parser.add_argument(
+        "--skip-status",
+        "-s",
+        dest="skip_status",
+        action="store_true",
+        help="prevent the interactive crashlog to dump the process status and thread backtrace at launch",
+        default=False,
+    )
+    legacy_group = arg_parser.add_mutually_exclusive_group()
+    legacy_group.add_argument(
+        "-i",
+        "--interactive",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
+    legacy_group.add_argument(
+        "-b",
+        "--batch",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
+
     return arg_parser
 
 
@@ -1778,7 +1786,7 @@ for use at the LLDB command line. After a crash log has been parsed and symbolic
 created that has all of the shared libraries loaded at the load addresses found in the crash log file. This allows
 you to explore the program as if it were stopped at the locations described in the crash log and functions can
 be disassembled and lookups can be performed using the addresses found in the crash log."""
-    return CreateSymbolicateCrashLogOptions("crashlog", description, True)
+    return CreateSymbolicateCrashLogOptions("crashlog", description)
 
 
 def SymbolicateCrashLogs(debugger, command_args, result, is_command):
@@ -1794,8 +1802,35 @@ def SymbolicateCrashLogs(debugger, command_args, result, is_command):
         result.SetError(str(e))
         return
 
+    # To avoid breaking existing users, we should keep supporting legacy flags
+    # even if we don't use them / advertise them anymore.
+    if not options.mode:
+        if options.batch:
+            options.mode = CrashLogLoadingMode.batch
+        else:
+            options.mode = CrashLogLoadingMode.interactive
+
+    if options.mode != CrashLogLoadingMode.interactive and (
+        options.target_path or options.skip_status
+    ):
+        print(
+            "Target path (-t) and skipping process status (-s) options can only used in interactive mode (-m=interactive)."
+        )
+        print("Aborting symbolication.")
+        arg_parser.print_help()
+        return
+
+    if options.version:
+        print(debugger.GetVersionString())
+        return
+
+    if options.debug:
+        print("command_args = %s" % command_args)
+        print("options", options)
+        print("args", options.reports)
+
     # Interactive mode requires running the crashlog command from inside lldb.
-    if options.interactive and not is_command:
+    if options.mode == CrashLogLoadingMode.interactive and not is_command:
         lldb_exec = (
             subprocess.check_output(["/usr/bin/xcrun", "-f", "lldb"])
             .decode("utf-8")
@@ -1821,31 +1856,26 @@ def SymbolicateCrashLogs(debugger, command_args, result, is_command):
         print(debugger.GetVersionString())
         return
 
-    if options.debug:
-        print("command_args = %s" % command_args)
-        print("options", options)
-        print("args", options.reports)
-
     if options.debug_delay > 0:
         print("Waiting %u seconds for debugger to attach..." % options.debug_delay)
         time.sleep(options.debug_delay)
     error = lldb.SBError()
 
     def should_run_in_interactive_mode(options, ci):
-        if options.interactive:
+        if options.mode == CrashLogLoadingMode.batch:
+            return False
+        elif options.mode == CrashLogLoadingMode.interactive or (
+            ci and ci.IsInteractive()
+        ):
             return True
-        elif options.batch:
-            return False
-        # elif ci and ci.IsInteractive():
-        #     return True
         else:
-            return False
+            return sys.stdout.isatty()
 
     ci = debugger.GetCommandInterpreter()
 
     if options.reports:
         for crashlog_file in options.reports:
-            crashlog_path = os.path.expanduser(crashlog_file)
+            crashlog_path = os.path.normpath(os.path.expanduser(crashlog_file))
             if not os.path.exists(crashlog_path):
                 raise FileNotFoundError(
                     "crashlog file %s does not exist" % crashlog_path

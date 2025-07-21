@@ -7,10 +7,10 @@ define void @tail_call_i32_inreg_uniform(i32 inreg %sgpr) {
 ; CHECK-LABEL: tail_call_i32_inreg_uniform:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_mov_b32 s0, s16
 ; CHECK-NEXT:    s_getpc_b64 s[18:19]
 ; CHECK-NEXT:    s_add_u32 s18, s18, void_func_i32_inreg@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s19, s19, void_func_i32_inreg@rel32@hi+12
+; CHECK-NEXT:    s_mov_b32 s0, s16
 ; CHECK-NEXT:    s_setpc_b64 s[18:19]
   tail call void @void_func_i32_inreg(i32 inreg %sgpr)
   ret void

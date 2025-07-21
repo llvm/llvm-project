@@ -326,11 +326,14 @@ public:
       auto genHlfirBox = [&]() -> mlir::Value {
         if (auto baseBoxType =
                 mlir::dyn_cast<fir::BaseBoxType>(firBase.getType())) {
-          // Rebox so that lower bounds are correct.
+          // Rebox so that lower bounds and attributes are correct.
           if (baseBoxType.isAssumedRank())
             return builder.create<fir::ReboxAssumedRankOp>(
                 loc, hlfirBaseType, firBase,
                 fir::LowerBoundModifierAttribute::SetToOnes);
+          if (!fir::extractSequenceType(baseBoxType.getEleTy()) &&
+              baseBoxType == hlfirBaseType)
+            return firBase;
           return builder.create<fir::ReboxOp>(loc, hlfirBaseType, firBase,
                                               declareOp.getShape(),
                                               /*slice=*/mlir::Value{});
@@ -356,7 +359,7 @@ public:
         // is used for accessing the bounds etc. Using the HLFIR box,
         // that holds the same base_addr at this point, makes
         // the representation a little bit more clear.
-        if (hlfirBase.getType() == firBase.getType())
+        if (hlfirBase.getType() == declareOp.getOriginalBase().getType())
           firBase = hlfirBase;
       } else {
         // Need to conditionally rebox/embox the optional: the input fir.box
@@ -414,11 +417,15 @@ class DesignateOpConversion
     auto attrs = designate.getIsTripletAttr();
     for (auto isTriplet : attrs.asArrayRef()) {
       // Coordinate of the first element are the index and triplets lower
-      // bounds
+      // bounds.
       firstElementIndices.push_back(indices[i]);
       i = i + (isTriplet ? 3 : 1);
     }
-    mlir::Type arrayCoorType = fir::ReferenceType::get(baseEleTy);
+
+    mlir::Type originalDesignateType = designate.getResult().getType();
+    const bool isVolatile = fir::isa_volatile_type(originalDesignateType);
+    mlir::Type arrayCoorType = fir::ReferenceType::get(baseEleTy, isVolatile);
+
     base = builder.create<fir::ArrayCoorOp>(
         loc, arrayCoorType, base, shape,
         /*slice=*/mlir::Value{}, firstElementIndices, firBaseTypeParameters);
@@ -444,6 +451,8 @@ public:
     llvm::SmallVector<mlir::Value> firBaseTypeParameters;
     auto [base, shape] = hlfir::genVariableFirBaseShapeAndParams(
         loc, builder, baseEntity, firBaseTypeParameters);
+    const bool isVolatile = fir::isa_volatile_type(designateResultType) ||
+                            fir::isa_volatile_type(base.getType());
     mlir::Type baseEleTy = hlfir::getFortranElementType(base.getType());
     mlir::Type resultEleTy = hlfir::getFortranElementType(designateResultType);
 
@@ -464,7 +473,8 @@ public:
         mlir::Type componentType =
             mlir::cast<fir::RecordType>(baseEleTy).getType(
                 designate.getComponent().value());
-        mlir::Type coorTy = fir::ReferenceType::get(componentType);
+        mlir::Type coorTy = fir::ReferenceType::get(componentType, isVolatile);
+
         base = builder.create<fir::CoordinateOp>(loc, coorTy, base, fieldIndex);
         if (mlir::isa<fir::BaseBoxType>(componentType)) {
           auto variableInterface = mlir::cast<fir::FortranVariableOpInterface>(
@@ -563,15 +573,19 @@ public:
             builder.create<fir::SliceOp>(loc, triples, sliceFields, substring);
       else
         assert(sliceFields.empty() && substring.empty());
-      llvm::SmallVector<mlir::Type> resultType{designateResultType};
+
+      llvm::SmallVector<mlir::Type> resultType{
+          fir::updateTypeWithVolatility(designateResultType, isVolatile)};
+
       mlir::Value resultBox;
-      if (mlir::isa<fir::BaseBoxType>(base.getType()))
+      if (mlir::isa<fir::BaseBoxType>(base.getType())) {
         resultBox =
             builder.create<fir::ReboxOp>(loc, resultType, base, shape, slice);
-      else
+      } else {
         resultBox =
             builder.create<fir::EmboxOp>(loc, resultType, base, shape, slice,
                                          firBaseTypeParameters, sourceBox);
+      }
       rewriter.replaceOp(designate, resultBox);
       return mlir::success();
     }
@@ -582,7 +596,8 @@ public:
     mlir::Type resultAddressType = designateResultType;
     if (auto boxCharType =
             mlir::dyn_cast<fir::BoxCharType>(designateResultType))
-      resultAddressType = fir::ReferenceType::get(boxCharType.getEleTy());
+      resultAddressType =
+          fir::ReferenceType::get(boxCharType.getEleTy(), isVolatile);
 
     // Array element indexing.
     if (!designate.getIndices().empty()) {
@@ -606,7 +621,8 @@ public:
       assert(!mlir::isa<fir::SequenceType>(designateResultType));
       auto index = builder.createIntegerConstant(loc, builder.getIndexType(),
                                                  *designate.getComplexPart());
-      auto coorTy = fir::ReferenceType::get(resultEleTy);
+      auto coorTy = fir::ReferenceType::get(resultEleTy, isVolatile);
+
       base = builder.create<fir::CoordinateOp>(loc, coorTy, base, index);
     }
 
@@ -616,9 +632,11 @@ public:
              "must have character length");
       auto emboxChar = builder.create<fir::EmboxCharOp>(
           loc, designateResultType, base, designate.getTypeparams()[0]);
+
       rewriter.replaceOp(designate, emboxChar.getResult());
     } else {
       base = builder.createConvert(loc, designateResultType, base);
+
       rewriter.replaceOp(designate, base);
     }
     return mlir::success();
@@ -735,6 +753,9 @@ public:
       llvm::APInt dim = getExtentOp.getDim();
       uint64_t dimVal = dim.getLimitedValue(shapeTy.getRank());
       mlir::Value extent = s.getExtents()[dimVal];
+      fir::FirOpBuilder builder(rewriter, getExtentOp.getOperation());
+      extent = builder.createConvert(getExtentOp.getLoc(),
+                                     builder.getIndexType(), extent);
       rewriter.replaceOp(getExtentOp, extent);
       return mlir::success();
     }

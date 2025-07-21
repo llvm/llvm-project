@@ -17,6 +17,7 @@
 #include "flang/Evaluate/common.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
+#include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 namespace fir {
@@ -1579,7 +1580,7 @@ PPCIntrinsicLibrary::genVecConvert(mlir::Type resultType,
 
       return callOp.getResult(0);
     } else if (width == 64) {
-      auto fTy{mlir::FloatType::getF64(context)};
+      auto fTy{mlir::Float64Type::get(context)};
       auto ty{mlir::VectorType::get(2, fTy)};
 
       // vec_vtf(arg1, arg2) = fmul(1.0 / (1 << arg2), llvm.sitofp(arg1))
@@ -1639,7 +1640,7 @@ PPCIntrinsicLibrary::genVecConvert(mlir::Type resultType,
       newArgs[0] =
           builder.create<fir::CallOp>(loc, funcOp, newArgs).getResult(0);
       auto fvf32Ty{newArgs[0].getType()};
-      auto f32type{mlir::FloatType::getF32(context)};
+      auto f32type{mlir::Float32Type::get(context)};
       auto mvf32Ty{mlir::VectorType::get(4, f32type)};
       newArgs[0] = builder.createConvert(loc, mvf32Ty, newArgs[0]);
 
@@ -1685,7 +1686,9 @@ PPCIntrinsicLibrary::genVecExtract(mlir::Type resultType,
   if (!isNativeVecElemOrderOnLE())
     uremOp = convertVectorElementOrder(builder, loc, vecTyInfo, uremOp);
 
-  return builder.create<mlir::vector::ExtractElementOp>(loc, varg0, uremOp);
+  mlir::Value index = builder.createOrFold<mlir::index::CastUOp>(
+      loc, builder.getIndexType(), uremOp);
+  return builder.create<mlir::vector::ExtractOp>(loc, varg0, index);
 }
 
 // VEC_INSERT
@@ -1706,8 +1709,10 @@ PPCIntrinsicLibrary::genVecInsert(mlir::Type resultType,
   if (!isNativeVecElemOrderOnLE())
     uremOp = convertVectorElementOrder(builder, loc, vecTyInfo, uremOp);
 
-  auto res{builder.create<mlir::vector::InsertElementOp>(loc, argBases[0],
-                                                         varg1, uremOp)};
+  mlir::Value index = builder.createOrFold<mlir::index::CastUOp>(
+      loc, builder.getIndexType(), uremOp);
+  mlir::Value res =
+      builder.create<mlir::vector::InsertOp>(loc, argBases[0], varg1, index);
   return builder.create<fir::ConvertOp>(loc, vecTyInfo.toFirVectorType(), res);
 }
 
@@ -1949,7 +1954,7 @@ PPCIntrinsicLibrary::genVecLdCallGrp(mlir::Type resultType,
     fname = isBEVecElemOrderOnLE() ? "llvm.ppc.vsx.lxvd2x.be"
                                    : "llvm.ppc.vsx.lxvd2x";
     // llvm.ppc.altivec.lxvd2x* returns <2 x double>
-    intrinResTy = mlir::VectorType::get(2, mlir::FloatType::getF64(context));
+    intrinResTy = mlir::VectorType::get(2, mlir::Float64Type::get(context));
   } break;
   case VecOp::Xlw4:
     fname = isBEVecElemOrderOnLE() ? "llvm.ppc.vsx.lxvw4x.be"
@@ -2092,7 +2097,7 @@ PPCIntrinsicLibrary::genVecPerm(mlir::Type resultType,
   auto mlirTy{vecTyInfo.toMlirVectorType(context)};
 
   auto vi32Ty{mlir::VectorType::get(4, mlir::IntegerType::get(context, 32))};
-  auto vf64Ty{mlir::VectorType::get(2, mlir::FloatType::getF64(context))};
+  auto vf64Ty{mlir::VectorType::get(2, mlir::Float64Type::get(context))};
 
   auto mArg0{builder.createConvert(loc, mlirTy, argBases[0])};
   auto mArg1{builder.createConvert(loc, mlirTy, argBases[1])};
@@ -2888,8 +2893,7 @@ void PPCIntrinsicLibrary::genVecStore(llvm::ArrayRef<fir::ExtendedValue> args) {
     llvm_unreachable("invalid vector operation for generator");
   }
 
-  auto funcType{
-      mlir::FunctionType::get(context, {stTy, addr.getType()}, std::nullopt)};
+  auto funcType{mlir::FunctionType::get(context, {stTy, addr.getType()}, {})};
   mlir::func::FuncOp funcOp = builder.createFunction(loc, fname, funcType);
 
   llvm::SmallVector<mlir::Value, 4> biArgs;

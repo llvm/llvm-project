@@ -22,6 +22,10 @@ static int getInstSeqCost(RISCVMatInt::InstSeq &Res, bool HasRVC) {
     // Assume instructions that aren't listed aren't compressible.
     bool Compressed = false;
     switch (Instr.getOpcode()) {
+    case RISCV::QC_E_LI:
+      // One 48-bit instruction takes the space of 1.5 regular instructions.
+      Cost += 150;
+      continue;
     case RISCV::SLLI:
     case RISCV::SRLI:
       Compressed = true;
@@ -57,6 +61,24 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
     return;
   }
 
+  if (!IsRV64 && STI.hasFeature(RISCV::FeatureVendorXqcili)) {
+    bool FitsOneStandardInst = ((Val & 0xFFF) == 0) || isInt<12>(Val);
+
+    // 20-bit signed immediates that don't fit into `ADDI` or `LUI` should use
+    // `QC.LI` (a single 32-bit instruction).
+    if (!FitsOneStandardInst && isInt<20>(Val)) {
+      Res.emplace_back(RISCV::QC_LI, Val);
+      return;
+    }
+
+    // 32-bit signed immediates that don't fit into `ADDI`, `LUI` or `QC.LI`
+    // should use `QC.E.LI` (a single 48-bit instruction).
+    if (!FitsOneStandardInst && isInt<32>(Val)) {
+      Res.emplace_back(RISCV::QC_E_LI, Val);
+      return;
+    }
+  }
+
   if (isInt<32>(Val)) {
     // Depending on the active bits in the immediate Value v, the following
     // instruction sequences are emitted:
@@ -72,7 +94,15 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
       Res.emplace_back(RISCV::LUI, Hi20);
 
     if (Lo12 || Hi20 == 0) {
-      unsigned AddiOpc = (IsRV64 && Hi20) ? RISCV::ADDIW : RISCV::ADDI;
+      unsigned AddiOpc = RISCV::ADDI;
+      if (IsRV64 && Hi20) {
+        // Use ADDIW rather than ADDI only when necessary for correctness. As
+        // noted in RISCVOptWInstrs, this helps reduce test differences vs
+        // RV32 without being a pessimization.
+        int64_t LuiRes = SignExtend64<32>(Hi20 << 12);
+        if (!isInt<32>(LuiRes + Lo12))
+          AddiOpc = RISCV::ADDIW;
+      }
       Res.emplace_back(AddiOpc, Lo12);
     }
     return;
@@ -134,7 +164,7 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
     }
 
     // Try to use SLLI_UW for Val when it is uint32 but not int32.
-    if (isUInt<32>((uint64_t)Val) && !isInt<32>((uint64_t)Val) &&
+    if (isUInt<32>(Val) && !isInt<32>(Val) &&
         STI.hasFeature(RISCV::FeatureStdExtZba)) {
       // Use LUI+ADDI or LUI to compose, then clear the upper 32 bits with
       // SLLI_UW.
@@ -175,7 +205,7 @@ static unsigned extractRotateInfo(int64_t Val) {
 
 static void generateInstSeqLeadingZeros(int64_t Val, const MCSubtargetInfo &STI,
                                         RISCVMatInt::InstSeq &Res) {
-  assert(Val > 0 && "Expected postive val");
+  assert(Val > 0 && "Expected positive val");
 
   unsigned LeadingZeros = llvm::countl_zero((uint64_t)Val);
   uint64_t ShiftedVal = (uint64_t)Val << LeadingZeros;
@@ -330,6 +360,13 @@ InstSeq generateInstSeq(int64_t Val, const MCSubtargetInfo &STI) {
         Hi &= (Hi - 1); // Clear lowest set bit.
       } while (Hi != 0);
       Res = TmpSeq;
+    }
+
+    // Fold LI 1 + SLLI into BSETI.
+    if (Res[0].getOpcode() == RISCV::ADDI && Res[0].getImm() == 1 &&
+        Res[1].getOpcode() == RISCV::SLLI) {
+      Res.erase(Res.begin());                                 // Remove ADDI.
+      Res.front() = Inst(RISCV::BSETI, Res.front().getImm()); // Patch SLLI.
     }
   }
 
@@ -501,8 +538,7 @@ InstSeq generateTwoRegInstSeq(int64_t Val, const MCSubtargetInfo &STI,
 int getIntMatCost(const APInt &Val, unsigned Size, const MCSubtargetInfo &STI,
                   bool CompressionCost, bool FreeZeroes) {
   bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
-  bool HasRVC = CompressionCost && (STI.hasFeature(RISCV::FeatureStdExtC) ||
-                                    STI.hasFeature(RISCV::FeatureStdExtZca));
+  bool HasRVC = CompressionCost && STI.hasFeature(RISCV::FeatureStdExtZca);
   int PlatRegSize = IsRV64 ? 64 : 32;
 
   // Split the constant into platform register sized chunks, and calculate cost
@@ -523,6 +559,8 @@ OpndKind Inst::getOpndKind() const {
   default:
     llvm_unreachable("Unexpected opcode!");
   case RISCV::LUI:
+  case RISCV::QC_LI:
+  case RISCV::QC_E_LI:
     return RISCVMatInt::Imm;
   case RISCV::ADD_UW:
     return RISCVMatInt::RegX0;

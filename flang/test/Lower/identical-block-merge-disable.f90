@@ -55,8 +55,7 @@ END MODULE DMUMPS_SOL_LR
 ! CHECK:         %[[VAL_14:.*]] = fir.convert %[[VAL_11]]#0 : (index) -> i64
 ! CHECK:         %[[VAL_15:.*]] = arith.subi %[[VAL_13]], %[[VAL_14]] : i64
 ! CHECK:         %[[VAL_16:.*]] = fir.coordinate_of %[[VAL_10]], %[[VAL_15]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>>>, i64) -> !fir.ref<!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>
-! CHECK:         %[[VAL_17:.*]] = fir.field_index panels_l, !fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>
-! CHECK:         %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_16]], %[[VAL_17]] : (!fir.ref<!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:         %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_16]], panels_l : (!fir.ref<!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:         %[[VAL_19:.*]] = fir.load %[[VAL_18]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:         %[[VAL_20:.*]] = fir.box_addr %[[VAL_19]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
 ! CHECK:         %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (!fir.ptr<!fir.array<?xi32>>) -> i64
@@ -70,7 +69,7 @@ END MODULE DMUMPS_SOL_LR
 ! CHECK:         %[[VAL_27:.*]] = fir.convert %[[VAL_24]]#0 : (index) -> i64
 ! CHECK:         %[[VAL_28:.*]] = arith.subi %[[VAL_26]], %[[VAL_27]] : i64
 ! CHECK:         %[[VAL_29:.*]] = fir.coordinate_of %[[VAL_23]], %[[VAL_28]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>>>, i64) -> !fir.ref<!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>
-! CHECK:         %[[VAL_30:.*]] = fir.coordinate_of %[[VAL_29]], %[[VAL_17]] : (!fir.ref<!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:         %[[VAL_30:.*]] = fir.coordinate_of %[[VAL_29]], panels_l : (!fir.ref<!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:         %[[VAL_31:.*]] = fir.load %[[VAL_30]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:         %[[VAL_32:.*]]:3 = fir.box_dims %[[VAL_31]], %[[VAL_3]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:         %[[VAL_33:.*]] = fir.convert %[[VAL_32]]#1 : (index) -> i32
@@ -82,8 +81,7 @@ END MODULE DMUMPS_SOL_LR
 ! CHECK:         %[[VAL_38:.*]] = fir.convert %[[VAL_35]]#0 : (index) -> i64
 ! CHECK:         %[[VAL_39:.*]] = arith.subi %[[VAL_37]], %[[VAL_38]] : i64
 ! CHECK:         %[[VAL_40:.*]] = fir.coordinate_of %[[VAL_34]], %[[VAL_39]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>>>, i64) -> !fir.ref<!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>
-! CHECK:         %[[VAL_41:.*]] = fir.field_index begs_blr_static, !fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>
-! CHECK:         %[[VAL_42:.*]] = fir.coordinate_of %[[VAL_40]], %[[VAL_41]] : (!fir.ref<!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:         %[[VAL_42:.*]] = fir.coordinate_of %[[VAL_40]], begs_blr_static : (!fir.ref<!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:         %[[VAL_43:.*]] = fir.load %[[VAL_42]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:         %[[VAL_44:.*]]:3 = fir.box_dims %[[VAL_43]], %[[VAL_3]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:         %[[VAL_45:.*]] = fir.convert %[[VAL_44]]#1 : (index) -> i32
@@ -98,8 +96,7 @@ END MODULE DMUMPS_SOL_LR
 ! CHECK:         %[[VAL_51:.*]] = fir.convert %[[VAL_48]]#0 : (index) -> i64
 ! CHECK:         %[[VAL_52:.*]] = arith.subi %[[VAL_50]], %[[VAL_51]] : i64
 ! CHECK:         %[[VAL_53:.*]] = fir.coordinate_of %[[VAL_47]], %[[VAL_52]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>>>, i64) -> !fir.ref<!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>
-! CHECK:         %[[VAL_54:.*]] = fir.field_index panels_u, !fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>
-! CHECK:         %[[VAL_55:.*]] = fir.coordinate_of %[[VAL_53]], %[[VAL_54]] : (!fir.ref<!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:         %[[VAL_55:.*]] = fir.coordinate_of %[[VAL_53]], panels_u : (!fir.ref<!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:         %[[VAL_56:.*]] = fir.load %[[VAL_55]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:         %[[VAL_57:.*]] = fir.box_addr %[[VAL_56]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
 ! CHECK:         %[[VAL_58:.*]] = fir.convert %[[VAL_57]] : (!fir.ptr<!fir.array<?xi32>>) -> i64
@@ -113,7 +110,7 @@ END MODULE DMUMPS_SOL_LR
 ! CHECK:         %[[VAL_64:.*]] = fir.convert %[[VAL_61]]#0 : (index) -> i64
 ! CHECK:         %[[VAL_65:.*]] = arith.subi %[[VAL_63]], %[[VAL_64]] : i64
 ! CHECK:         %[[VAL_66:.*]] = fir.coordinate_of %[[VAL_60]], %[[VAL_65]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>>>, i64) -> !fir.ref<!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>
-! CHECK:         %[[VAL_67:.*]] = fir.coordinate_of %[[VAL_66]], %[[VAL_54]] : (!fir.ref<!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:         %[[VAL_67:.*]] = fir.coordinate_of %[[VAL_66]], panels_u : (!fir.ref<!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:         %[[VAL_68:.*]] = fir.load %[[VAL_67]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:         %[[VAL_69:.*]]:3 = fir.box_dims %[[VAL_68]], %[[VAL_3]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:         %[[VAL_70:.*]] = fir.convert %[[VAL_69]]#1 : (index) -> i32
@@ -125,8 +122,7 @@ END MODULE DMUMPS_SOL_LR
 ! CHECK:         %[[VAL_75:.*]] = fir.convert %[[VAL_72]]#0 : (index) -> i64
 ! CHECK:         %[[VAL_76:.*]] = arith.subi %[[VAL_74]], %[[VAL_75]] : i64
 ! CHECK:         %[[VAL_77:.*]] = fir.coordinate_of %[[VAL_71]], %[[VAL_76]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>>>, i64) -> !fir.ref<!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>
-! CHECK:         %[[VAL_78:.*]] = fir.field_index begs_blr_static, !fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>
-! CHECK:         %[[VAL_79:.*]] = fir.coordinate_of %[[VAL_77]], %[[VAL_78]] : (!fir.ref<!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:         %[[VAL_79:.*]] = fir.coordinate_of %[[VAL_77]], begs_blr_static : (!fir.ref<!fir.type<_QMdmumps_sol_lrTblr_struc_t{panels_l:!fir.box<!fir.ptr<!fir.array<?xi32>>>,panels_u:!fir.box<!fir.ptr<!fir.array<?xi32>>>,begs_blr_static:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:         %[[VAL_80:.*]] = fir.load %[[VAL_79]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:         %[[VAL_81:.*]]:3 = fir.box_dims %[[VAL_80]], %[[VAL_3]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:         %[[VAL_82:.*]] = fir.convert %[[VAL_81]]#1 : (index) -> i32

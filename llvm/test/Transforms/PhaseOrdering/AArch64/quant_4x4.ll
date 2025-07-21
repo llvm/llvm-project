@@ -8,7 +8,7 @@ target triple = "aarch64"
 
 define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-LABEL: define range(i32 0, 2) i32 @quant_4x4
-; CHECK-SAME: (ptr nocapture noundef [[DCT:%.*]], ptr nocapture noundef readonly [[MF:%.*]], ptr nocapture noundef readonly [[BIAS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr noundef captures(none) [[DCT:%.*]], ptr noundef readonly captures(none) [[MF:%.*]], ptr noundef readonly captures(none) [[BIAS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DCT]], i64 32
 ; CHECK-NEXT:    [[SCEVGEP23:%.*]] = getelementptr i8, ptr [[BIAS]], i64 32
@@ -62,12 +62,11 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-NEXT:    store <8 x i16> [[PREDPHI]], ptr [[DCT]], align 2, !alias.scope [[META0]], !noalias [[META3]]
 ; CHECK-NEXT:    store <8 x i16> [[PREDPHI34]], ptr [[TMP0]], align 2, !alias.scope [[META0]], !noalias [[META3]]
 ; CHECK-NEXT:    [[BIN_RDX35:%.*]] = or <8 x i16> [[PREDPHI34]], [[PREDPHI]]
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = sext <8 x i16> [[BIN_RDX35]] to <8 x i32>
-; CHECK-NEXT:    [[TMP29:%.*]] = tail call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[BIN_RDX]])
+; CHECK-NEXT:    [[TMP29:%.*]] = tail call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> [[BIN_RDX35]])
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond.cleanup:
-; CHECK-NEXT:    [[OR_LCSSA:%.*]] = phi i32 [ [[TMP29]], [[VECTOR_BODY]] ], [ [[OR_15:%.*]], [[IF_END_15:%.*]] ]
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[OR_LCSSA]], 0
+; CHECK-NEXT:    [[OR_LCSSA_IN:%.*]] = phi i16 [ [[TMP29]], [[VECTOR_BODY]] ], [ [[OR_1551:%.*]], [[IF_END_15:%.*]] ]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i16 [[OR_LCSSA_IN]], 0
 ; CHECK-NEXT:    [[LNOT_EXT:%.*]] = zext i1 [[TOBOOL]] to i32
 ; CHECK-NEXT:    ret i32 [[LNOT_EXT]]
 ; CHECK:       for.body:
@@ -514,8 +513,7 @@ define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK:       if.end.15:
 ; CHECK-NEXT:    [[STOREMERGE_15:%.*]] = phi i16 [ [[CONV28_15]], [[IF_ELSE_15]] ], [ [[CONV12_15]], [[IF_THEN_15]] ]
 ; CHECK-NEXT:    store i16 [[STOREMERGE_15]], ptr [[ARRAYIDX_15]], align 2
-; CHECK-NEXT:    [[OR_1551:%.*]] = or i16 [[OR_1450]], [[STOREMERGE_15]]
-; CHECK-NEXT:    [[OR_15]] = sext i16 [[OR_1551]] to i32
+; CHECK-NEXT:    [[OR_1551]] = or i16 [[OR_1450]], [[STOREMERGE_15]]
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ;
 entry:

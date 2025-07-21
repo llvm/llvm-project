@@ -882,7 +882,7 @@ TEST(CompletionTest, IncludeInsertionPreprocessorIntegrationTests) {
               ElementsAre(AllOf(named("X"), insertInclude("\"bar.h\""))));
   // Can be disabled via option.
   CodeCompleteOptions NoInsertion;
-  NoInsertion.InsertIncludes = CodeCompleteOptions::NeverInsert;
+  NoInsertion.InsertIncludes = Config::HeaderInsertionPolicy::NeverInsert;
   Results = completions(TU, Test.point(), {Sym}, NoInsertion);
   EXPECT_THAT(Results.Completions,
               ElementsAre(AllOf(named("X"), Not(insertInclude()))));
@@ -1134,6 +1134,87 @@ int x = foo^
   EXPECT_THAT(
       CompletionList.Completions,
       Contains(AllOf(named("foo"), doc("This comment should be retained!"))));
+}
+
+TEST(CompletionTest, CommentsOnMembersFromHeader) {
+  MockFS FS;
+  MockCompilationDatabase CDB;
+
+  auto Opts = ClangdServer::optsForTest();
+  Opts.BuildDynamicSymbolIndex = true;
+
+  ClangdServer Server(CDB, FS, Opts);
+
+  FS.Files[testPath("foo.h")] = R"cpp(
+    struct alpha {
+      /// This is a member field.
+      int gamma;
+
+      /// This is a member function.
+      int delta();
+    };
+  )cpp";
+
+  auto File = testPath("foo.cpp");
+  Annotations Test(R"cpp(
+#include "foo.h"
+alpha a;
+int x = a.^
+     )cpp");
+  runAddDocument(Server, File, Test.code());
+  auto CompletionList =
+      llvm::cantFail(runCodeComplete(Server, File, Test.point(), {}));
+
+  EXPECT_THAT(CompletionList.Completions,
+              Contains(AllOf(named("gamma"), doc("This is a member field."))));
+  EXPECT_THAT(
+      CompletionList.Completions,
+      Contains(AllOf(named("delta"), doc("This is a member function."))));
+}
+
+TEST(CompletionTest, CommentsOnMembersFromHeaderOverloadBundling) {
+  using testing::AnyOf;
+  MockFS FS;
+  MockCompilationDatabase CDB;
+
+  auto Opts = ClangdServer::optsForTest();
+  Opts.BuildDynamicSymbolIndex = true;
+
+  ClangdServer Server(CDB, FS, Opts);
+
+  FS.Files[testPath("foo.h")] = R"cpp(
+    struct alpha {
+      /// bool overload.
+      int delta(bool b);
+
+      /// int overload.
+      int delta(int i);
+
+      void epsilon(long l);
+
+      /// This one has a comment.
+      void epsilon(int i);
+    };
+  )cpp";
+
+  auto File = testPath("foo.cpp");
+  Annotations Test(R"cpp(
+#include "foo.h"
+alpha a;
+int x = a.^
+     )cpp");
+  runAddDocument(Server, File, Test.code());
+  clangd::CodeCompleteOptions CCOpts;
+  CCOpts.BundleOverloads = true;
+  auto CompletionList =
+      llvm::cantFail(runCodeComplete(Server, File, Test.point(), CCOpts));
+
+  EXPECT_THAT(
+      CompletionList.Completions,
+      Contains(AllOf(named("epsilon"), doc("This one has a comment."))));
+  EXPECT_THAT(CompletionList.Completions,
+              Contains(AllOf(named("delta"), AnyOf(doc("bool overload."),
+                                                   doc("int overload.")))));
 }
 
 TEST(CompletionTest, GlobalCompletionFiltering) {
@@ -3245,6 +3326,40 @@ TEST(CompletionTest, AllScopesCompletion) {
                                  kind(CompletionItemKind::EnumMember))));
 }
 
+TEST(CompletionTest, NoCodePatternsIfDisabled) {
+  clangd::CodeCompleteOptions Opts = {};
+  Opts.EnableSnippets = true;
+  Opts.CodePatterns = Config::CodePatternsPolicy::None;
+
+  auto Results = completions(R"cpp(
+    void function() {
+      /// Trying to trigger "for (init-statement; condition; inc-expression)
+      /// {statements}~" code pattern
+      for^
+    }
+  )cpp",
+                             {}, Opts);
+
+  EXPECT_THAT(Results.Completions,
+              Not(Contains(kind(CompletionItemKind::Snippet))));
+}
+
+TEST(CompletionTest, CompleteIncludeIfCodePatternsNone) {
+  clangd::CodeCompleteOptions Opts = {};
+  Opts.EnableSnippets = true;
+  Opts.CodePatterns = Config::CodePatternsPolicy::None;
+
+  Annotations Test(R"cpp(#include "^)cpp");
+  auto TU = TestTU::withCode(Test.code());
+  TU.AdditionalFiles["foo/bar.h"] = "";
+  TU.ExtraArgs.push_back("-I" + testPath("foo"));
+
+  auto Results = completions(TU, Test.point(), {}, Opts);
+  EXPECT_THAT(Results.Completions,
+              AllOf(has("foo/", CompletionItemKind::Folder),
+                    has("bar.h\"", CompletionItemKind::File)));
+}
+
 TEST(CompletionTest, NoQualifierIfShadowed) {
   clangd::CodeCompleteOptions Opts = {};
   Opts.AllScopes = true;
@@ -4247,6 +4362,36 @@ TEST(CompletionTest, PreambleFromDifferentTarget) {
   // Make sure we don't crash.
   EXPECT_THAT(Result.Completions, Not(testing::IsEmpty()));
   EXPECT_THAT(Signatures.signatures, Not(testing::IsEmpty()));
+}
+
+TEST(CompletionTest, SkipExplicitObjectParameter) {
+  Annotations Code(R"cpp(
+    struct A {
+      void foo(this auto&& self, int arg); 
+    };
+
+    int main() {
+      A a {};
+      a.^
+    }
+  )cpp");
+
+  auto TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs = {"-std=c++23"};
+
+  auto Preamble = TU.preamble();
+  ASSERT_TRUE(Preamble);
+
+  CodeCompleteOptions Opts{};
+
+  MockFS FS;
+  auto Inputs = TU.inputs(FS);
+  auto Result = codeComplete(testPath(TU.Filename), Code.point(),
+                             Preamble.get(), Inputs, Opts);
+
+  EXPECT_THAT(Result.Completions,
+              ElementsAre(AllOf(named("foo"), signature("(int arg)"),
+                                snippetSuffix("(${1:int arg})"))));
 }
 } // namespace
 } // namespace clangd

@@ -276,6 +276,21 @@ Description:
   diagnostic instead of having to do things textually.  The selected string
   does undergo formatting.
 
+**"enum_select" format**
+
+Example:
+  ``unknown frobbling of a %enum_select<FrobbleKind>{%VarDecl{variable declaration}|%FuncDecl{function declaration}}0 when blarging``
+Class:
+  Integers
+Description:
+  This format specifier is used exactly like a ``select`` specifier, except it
+  additionally generates a namespace, enumeration, and enumerator list based on
+  the format string given. In the above case, a namespace is generated named
+  ``FrobbleKind`` that has an unscoped enumeration with the enumerators
+  ``VarDecl`` and ``FuncDecl`` which correspond to the values 0 and 1. This
+  permits a clearer use of the ``Diag`` in source code, as the above could be
+  called as: ``Diag(Loc, diag::frobble) << diag::FrobbleKind::VarDecl``.
+
 **"plural" format**
 
 Example:
@@ -400,6 +415,17 @@ Description:
   record. The substitution must specify all arguments used by the substitution,
   and the modifier indexes in the substitution are re-numbered accordingly. The
   substituted text must itself be a valid format string before substitution.
+
+**"quoted" format**
+
+Example:
+  ``"expression %quoted0 evaluates to 0"``
+Class:
+  ``String``
+Description:
+  This is a simple formatter which adds quotes around the given string.
+  This is useful when the argument could be a string in some cases, but
+  another class in other cases, and it needs to be quoted consistently.
 
 .. _internals-producing-diag:
 
@@ -3534,7 +3560,7 @@ For example:
 
   // expected-note {{{evaluates to '{{2, 3, 4}} == {0, 3, 4}'}}}
 
-The intent is to allow the delimeter to be wider than the longest `{` or `}`
+The intent is to allow the delimiter to be wider than the longest `{` or `}`
 brace sequence in the content, so that if your expected text contains `{{{`
 (three braces) it may be delimited with `{{{{` (four braces), and so on.
 

@@ -252,17 +252,11 @@ define i8 @ext1_ext1_add_uses2(<16 x i8> %x, <16 x i8> %y) {
 }
 
 define i8 @ext0_ext1_add(<16 x i8> %x, <16 x i8> %y) {
-; SSE-LABEL: @ext0_ext1_add(
-; SSE-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 0
-; SSE-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[Y:%.*]], i32 1
-; SSE-NEXT:    [[R:%.*]] = add nuw i8 [[E0]], [[E1]]
-; SSE-NEXT:    ret i8 [[R]]
-;
-; AVX-LABEL: @ext0_ext1_add(
-; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <16 x i8> [[Y:%.*]], <16 x i8> poison, <16 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP1:%.*]] = add nuw <16 x i8> [[X:%.*]], [[SHIFT]]
-; AVX-NEXT:    [[R:%.*]] = extractelement <16 x i8> [[TMP1]], i32 0
-; AVX-NEXT:    ret i8 [[R]]
+; CHECK-LABEL: @ext0_ext1_add(
+; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <16 x i8> [[Y:%.*]], <16 x i8> poison, <16 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw <16 x i8> [[X:%.*]], [[SHIFT]]
+; CHECK-NEXT:    [[R:%.*]] = extractelement <16 x i8> [[TMP1]], i32 0
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %e0 = extractelement <16 x i8> %x, i32 0
   %e1 = extractelement <16 x i8> %y, i32 1
@@ -271,17 +265,11 @@ define i8 @ext0_ext1_add(<16 x i8> %x, <16 x i8> %y) {
 }
 
 define i8 @ext5_ext0_add(<16 x i8> %x, <16 x i8> %y) {
-; SSE-LABEL: @ext5_ext0_add(
-; SSE-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 5
-; SSE-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[Y:%.*]], i32 0
-; SSE-NEXT:    [[R:%.*]] = sub nsw i8 [[E0]], [[E1]]
-; SSE-NEXT:    ret i8 [[R]]
-;
-; AVX-LABEL: @ext5_ext0_add(
-; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <16 x i8> [[X:%.*]], <16 x i8> poison, <16 x i32> <i32 5, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP1:%.*]] = sub nsw <16 x i8> [[SHIFT]], [[Y:%.*]]
-; AVX-NEXT:    [[R:%.*]] = extractelement <16 x i8> [[TMP1]], i64 0
-; AVX-NEXT:    ret i8 [[R]]
+; CHECK-LABEL: @ext5_ext0_add(
+; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <16 x i8> [[X:%.*]], <16 x i8> poison, <16 x i32> <i32 5, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw <16 x i8> [[SHIFT]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = extractelement <16 x i8> [[TMP1]], i64 0
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %e0 = extractelement <16 x i8> %x, i32 5
   %e1 = extractelement <16 x i8> %y, i32 0
@@ -290,17 +278,11 @@ define i8 @ext5_ext0_add(<16 x i8> %x, <16 x i8> %y) {
 }
 
 define i8 @ext1_ext6_add(<16 x i8> %x, <16 x i8> %y) {
-; SSE-LABEL: @ext1_ext6_add(
-; SSE-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 1
-; SSE-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[Y:%.*]], i32 6
-; SSE-NEXT:    [[R:%.*]] = and i8 [[E0]], [[E1]]
-; SSE-NEXT:    ret i8 [[R]]
-;
-; AVX-LABEL: @ext1_ext6_add(
-; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <16 x i8> [[Y:%.*]], <16 x i8> poison, <16 x i32> <i32 poison, i32 6, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP1:%.*]] = and <16 x i8> [[X:%.*]], [[SHIFT]]
-; AVX-NEXT:    [[R:%.*]] = extractelement <16 x i8> [[TMP1]], i32 1
-; AVX-NEXT:    ret i8 [[R]]
+; CHECK-LABEL: @ext1_ext6_add(
+; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <16 x i8> [[Y:%.*]], <16 x i8> poison, <16 x i32> <i32 poison, i32 6, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <16 x i8> [[X:%.*]], [[SHIFT]]
+; CHECK-NEXT:    [[R:%.*]] = extractelement <16 x i8> [[TMP1]], i32 1
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %e0 = extractelement <16 x i8> %x, i32 1
   %e1 = extractelement <16 x i8> %y, i32 6
@@ -584,4 +566,23 @@ define float @constant_fold_crash_commute(<4 x float> %x) {
   %b = extractelement <4 x float> %x, i32 1
   %c = fadd float %b, %a
   ret float %c
+}
+
+; Test case for https://github.com/llvm/llvm-project/issues/147218.
+define i64 @instsimplify_folder_crash(<4 x i64> %in) {
+; CHECK-LABEL: @instsimplify_folder_crash(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHUFFLE_1:%.*]] = shufflevector <4 x i64> [[IN:%.*]], <4 x i64> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[E_0:%.*]] = extractelement <4 x i64> zeroinitializer, i64 0
+; CHECK-NEXT:    [[E_1:%.*]] = extractelement <4 x i64> [[SHUFFLE_1]], i64 1
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[E_1]], [[E_0]]
+; CHECK-NEXT:    ret i64 [[OR]]
+;
+entry:
+  %shuffle.1 = shufflevector <4 x i64> %in, <4 x i64> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+  %e.0 = extractelement <4 x i64> zeroinitializer, i64 0
+  %e.1 = extractelement <4 x i64> %shuffle.1, i64 1
+  %shift = shufflevector <4 x i64> %shuffle.1, <4 x i64> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %or = or i64 %e.1, %e.0
+  ret i64 %or
 }

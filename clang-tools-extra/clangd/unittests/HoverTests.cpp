@@ -974,7 +974,7 @@ class Foo final {})cpp";
          HI.Name = "abc";
          HI.Kind = index::SymbolKind::Variable;
          HI.NamespaceScope = "";
-         HI.Definition = "int abc = <recovery - expr>()";
+         HI.Definition = "int abc";
          HI.Type = "int";
          HI.AccessSpecifier = "public";
        }},
@@ -2794,7 +2794,7 @@ TEST(Hover, All) {
           })cpp",
           [](HoverInfo &HI) {
             HI.Name = "expression";
-            HI.Type = "unsigned long";
+            HI.Type = {"__size_t", "unsigned long"};
             HI.Value = "1";
           }},
       {
@@ -2804,7 +2804,7 @@ TEST(Hover, All) {
           })cpp",
           [](HoverInfo &HI) {
             HI.Name = "expression";
-            HI.Type = "unsigned long";
+            HI.Type = {"__size_t", "unsigned long"};
             HI.Value = "1";
           }},
       {

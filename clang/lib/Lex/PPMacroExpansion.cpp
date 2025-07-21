@@ -418,44 +418,6 @@ static bool isTrivialSingleTokenExpansion(const MacroInfo *MI,
   return !llvm::is_contained(MI->params(), II);
 }
 
-/// isNextPPTokenLParen - Determine whether the next preprocessor token to be
-/// lexed is a '('.  If so, consume the token and return true, if not, this
-/// method should have no observable side-effect on the lexed tokens.
-bool Preprocessor::isNextPPTokenLParen() {
-  // Do some quick tests for rejection cases.
-  unsigned Val;
-  if (CurLexer)
-    Val = CurLexer->isNextPPTokenLParen();
-  else
-    Val = CurTokenLexer->isNextTokenLParen();
-
-  if (Val == 2) {
-    // We have run off the end.  If it's a source file we don't
-    // examine enclosing ones (C99 5.1.1.2p4).  Otherwise walk up the
-    // macro stack.
-    if (CurPPLexer)
-      return false;
-    for (const IncludeStackInfo &Entry : llvm::reverse(IncludeMacroStack)) {
-      if (Entry.TheLexer)
-        Val = Entry.TheLexer->isNextPPTokenLParen();
-      else
-        Val = Entry.TheTokenLexer->isNextTokenLParen();
-
-      if (Val != 2)
-        break;
-
-      // Ran off the end of a source file?
-      if (Entry.ThePPLexer)
-        return false;
-    }
-  }
-
-  // Okay, if we know that the token is a '(', lex it and return.  Otherwise we
-  // have found something that isn't a '(' or we found the end of the
-  // translation unit.  In either case, return false.
-  return Val == 1;
-}
-
 /// HandleMacroExpandedIdentifier - If an identifier token is read that is to be
 /// expanded as a macro, handle it and return the next token as 'Identifier'.
 bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
@@ -1499,8 +1461,7 @@ static IdentifierInfo *ExpectFeatureIdentifierInfo(Token &Tok,
 
 /// Implements the __is_target_arch builtin macro.
 static bool isTargetArch(const TargetInfo &TI, const IdentifierInfo *II) {
-  std::string ArchName = II->getName().lower() + "--";
-  llvm::Triple Arch(ArchName);
+  llvm::Triple Arch(II->getName().lower() + "--");
   const llvm::Triple &TT = TI.getTriple();
   if (TT.isThumb()) {
     // arm matches thumb or thumbv7. armv7 matches thumbv7.
@@ -1529,9 +1490,7 @@ static bool isTargetVendor(const TargetInfo &TI, const IdentifierInfo *II) {
 
 /// Implements the __is_target_os builtin macro.
 static bool isTargetOS(const TargetInfo &TI, const IdentifierInfo *II) {
-  std::string OSName =
-      (llvm::Twine("unknown-unknown-") + II->getName().lower()).str();
-  llvm::Triple OS(OSName);
+  llvm::Triple OS(llvm::Twine("unknown-unknown-") + II->getName().lower());
   if (OS.getOS() == llvm::Triple::Darwin) {
     // Darwin matches macos, ios, etc.
     return TI.getTriple().isOSDarwin();
@@ -1542,12 +1501,11 @@ static bool isTargetOS(const TargetInfo &TI, const IdentifierInfo *II) {
 /// Implements the __is_target_environment builtin macro.
 static bool isTargetEnvironment(const TargetInfo &TI,
                                 const IdentifierInfo *II) {
-  std::string EnvName = (llvm::Twine("---") + II->getName().lower()).str();
-  llvm::Triple Env(EnvName);
+  llvm::Triple Env(llvm::Twine("---") + II->getName().lower());
   // The unknown environment is matched only if
   // '__is_target_environment(unknown)' is used.
   if (Env.getEnvironment() == llvm::Triple::UnknownEnvironment &&
-      EnvName != "---unknown")
+      Env.getEnvironmentName() != "unknown")
     return false;
   return TI.getTriple().getEnvironment() == Env.getEnvironment();
 }
@@ -1559,9 +1517,7 @@ static bool isTargetVariantOS(const TargetInfo &TI, const IdentifierInfo *II) {
     if (!VariantTriple)
       return false;
 
-    std::string OSName =
-        (llvm::Twine("unknown-unknown-") + II->getName().lower()).str();
-    llvm::Triple OS(OSName);
+    llvm::Triple OS(llvm::Twine("unknown-unknown-") + II->getName().lower());
     if (OS.getOS() == llvm::Triple::Darwin) {
       // Darwin matches macos, ios, etc.
       return VariantTriple->isOSDarwin();
@@ -1578,8 +1534,7 @@ static bool isTargetVariantEnvironment(const TargetInfo &TI,
     const llvm::Triple *VariantTriple = TI.getDarwinTargetVariantTriple();
     if (!VariantTriple)
       return false;
-    std::string EnvName = (llvm::Twine("---") + II->getName().lower()).str();
-    llvm::Triple Env(EnvName);
+    llvm::Triple Env(llvm::Twine("---") + II->getName().lower());
     return VariantTriple->getEnvironment() == Env.getEnvironment();
   }
   return false;
@@ -1798,54 +1753,54 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
         return II && HasExtension(*this, II->getName());
       });
   } else if (II == Ident__has_builtin) {
-    EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this, false,
-      [this](Token &Tok, bool &HasLexedNextToken) -> int {
-        IdentifierInfo *II = ExpectFeatureIdentifierInfo(Tok, *this,
-                                           diag::err_feature_check_malformed);
-        if (!II)
-          return false;
-        else if (II->getBuiltinID() != 0) {
-          switch (II->getBuiltinID()) {
-          case Builtin::BI__builtin_cpu_is:
-            return getTargetInfo().supportsCpuIs();
-          case Builtin::BI__builtin_cpu_init:
-            return getTargetInfo().supportsCpuInit();
-          case Builtin::BI__builtin_cpu_supports:
-            return getTargetInfo().supportsCpuSupports();
-          case Builtin::BI__builtin_operator_new:
-          case Builtin::BI__builtin_operator_delete:
-            // denotes date of behavior change to support calling arbitrary
-            // usual allocation and deallocation functions. Required by libc++
-            return 201802;
-          default:
-            return Builtin::evaluateRequiredTargetFeatures(
-                getBuiltinInfo().getRequiredFeatures(II->getBuiltinID()),
-                getTargetInfo().getTargetOpts().FeatureMap);
+    EvaluateFeatureLikeBuiltinMacro(
+        OS, Tok, II, *this, false,
+        [this](Token &Tok, bool &HasLexedNextToken) -> int {
+          IdentifierInfo *II = ExpectFeatureIdentifierInfo(
+              Tok, *this, diag::err_feature_check_malformed);
+          if (!II)
+            return false;
+          else if (II->getBuiltinID() != 0) {
+            switch (II->getBuiltinID()) {
+            case Builtin::BI__builtin_cpu_is:
+              return getTargetInfo().supportsCpuIs();
+            case Builtin::BI__builtin_cpu_init:
+              return getTargetInfo().supportsCpuInit();
+            case Builtin::BI__builtin_cpu_supports:
+              return getTargetInfo().supportsCpuSupports();
+            case Builtin::BI__builtin_operator_new:
+            case Builtin::BI__builtin_operator_delete:
+              // denotes date of behavior change to support calling arbitrary
+              // usual allocation and deallocation functions. Required by libc++
+              return 201802;
+            default:
+              return Builtin::evaluateRequiredTargetFeatures(
+                  getBuiltinInfo().getRequiredFeatures(II->getBuiltinID()),
+                  getTargetInfo().getTargetOpts().FeatureMap);
+            }
+            return true;
+          } else if (IsBuiltinTrait(Tok)) {
+            return true;
+          } else if (II->getTokenID() != tok::identifier &&
+                     II->getName().starts_with("__builtin_")) {
+            return true;
+          } else {
+            return llvm::StringSwitch<bool>(II->getName())
+        // Report builtin templates as being builtins.
+#define BuiltinTemplate(BTName) .Case(#BTName, getLangOpts().CPlusPlus)
+#include "clang/Basic/BuiltinTemplates.inc"
+                // Likewise for some builtin preprocessor macros.
+                // FIXME: This is inconsistent; we usually suggest detecting
+                // builtin macros via #ifdef. Don't add more cases here.
+                .Case("__is_target_arch", true)
+                .Case("__is_target_vendor", true)
+                .Case("__is_target_os", true)
+                .Case("__is_target_environment", true)
+                .Case("__is_target_variant_os", true)
+                .Case("__is_target_variant_environment", true)
+                .Default(false);
           }
-          return true;
-        } else if (IsBuiltinTrait(Tok)) {
-          return true;
-        } else if (II->getTokenID() != tok::identifier &&
-                   II->getName().starts_with("__builtin_")) {
-          return true;
-        } else {
-          return llvm::StringSwitch<bool>(II->getName())
-              // Report builtin templates as being builtins.
-              .Case("__make_integer_seq", getLangOpts().CPlusPlus)
-              .Case("__type_pack_element", getLangOpts().CPlusPlus)
-              .Case("__builtin_common_type", getLangOpts().CPlusPlus)
-              // Likewise for some builtin preprocessor macros.
-              // FIXME: This is inconsistent; we usually suggest detecting
-              // builtin macros via #ifdef. Don't add more cases here.
-              .Case("__is_target_arch", true)
-              .Case("__is_target_vendor", true)
-              .Case("__is_target_os", true)
-              .Case("__is_target_environment", true)
-              .Case("__is_target_variant_os", true)
-              .Case("__is_target_variant_environment", true)
-              .Default(false);
-        }
-      });
+        });
   } else if (II == Ident__has_constexpr_builtin) {
     EvaluateFeatureLikeBuiltinMacro(
         OS, Tok, II, *this, false,
@@ -2089,6 +2044,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
   CreateString(OS.str(), Tok, Tok.getLocation(), Tok.getLocation());
   Tok.setFlagValue(Token::StartOfLine, IsAtStartOfLine);
   Tok.setFlagValue(Token::LeadingSpace, HasLeadingSpace);
+  Tok.clearFlag(Token::NeedsCleaning);
 }
 
 void Preprocessor::markMacroAsUsed(MacroInfo *MI) {

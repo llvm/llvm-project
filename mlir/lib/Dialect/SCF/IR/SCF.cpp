@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
@@ -24,7 +25,6 @@
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::scf;
@@ -73,6 +73,7 @@ void SCFDialect::initialize() {
 #include "mlir/Dialect/SCF/IR/SCFOps.cpp.inc"
       >();
   addInterfaces<SCFInlinerInterface>();
+  declarePromisedInterface<ConvertToEmitCPatternInterface, SCFDialect>();
   declarePromisedInterfaces<bufferization::BufferDeallocationOpInterface,
                             InParallelOp, ReduceReturnOp>();
   declarePromisedInterfaces<bufferization::BufferizableOpInterface, ConditionOp,
@@ -499,15 +500,27 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
   else if (parser.parseType(type))
     return failure();
 
-  // Resolve input operands.
+  // Set block argument types, so that they are known when parsing the region.
   regionArgs.front().type = type;
+  for (auto [iterArg, type] :
+       llvm::zip_equal(llvm::drop_begin(regionArgs), result.types))
+    iterArg.type = type;
+
+  // Parse the body region.
+  Region *body = result.addRegion();
+  if (parser.parseRegion(*body, regionArgs))
+    return failure();
+  ForOp::ensureTerminator(*body, builder, result.location);
+
+  // Resolve input operands. This should be done after parsing the region to
+  // catch invalid IR where operands were defined inside of the region.
   if (parser.resolveOperand(lb, type, result.operands) ||
       parser.resolveOperand(ub, type, result.operands) ||
       parser.resolveOperand(step, type, result.operands))
     return failure();
   if (hasIterArgs) {
-    for (auto argOperandType :
-         llvm::zip(llvm::drop_begin(regionArgs), operands, result.types)) {
+    for (auto argOperandType : llvm::zip_equal(llvm::drop_begin(regionArgs),
+                                               operands, result.types)) {
       Type type = std::get<2>(argOperandType);
       std::get<0>(argOperandType).type = type;
       if (parser.resolveOperand(std::get<1>(argOperandType), type,
@@ -515,13 +528,6 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
         return failure();
     }
   }
-
-  // Parse the body region.
-  Region *body = result.addRegion();
-  if (parser.parseRegion(*body, regionArgs))
-    return failure();
-
-  ForOp::ensureTerminator(*body, builder, result.location);
 
   // Parse the optional attribute list.
   if (parser.parseOptionalAttrDict(result.attributes))
@@ -753,7 +759,7 @@ LoopNest mlir::scf::buildLoopNest(
 
   // Return the loops.
   ValueVector nestResults;
-  llvm::copy(loops.front().getResults(), std::back_inserter(nestResults));
+  llvm::append_range(nestResults, loops.front().getResults());
   return LoopNest{std::move(loops), std::move(nestResults)};
 }
 
@@ -762,7 +768,7 @@ LoopNest mlir::scf::buildLoopNest(
     ValueRange steps,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
   // Delegate to the main function by wrapping the body builder.
-  return buildLoopNest(builder, loc, lbs, ubs, steps, std::nullopt,
+  return buildLoopNest(builder, loc, lbs, ubs, steps, {},
                        [&bodyBuilder](OpBuilder &nestedBuilder,
                                       Location nestedLoc, ValueRange ivs,
                                       ValueRange) -> ValueVector {
@@ -843,9 +849,8 @@ namespace {
 // 3) The iter arguments have no use and the corresponding (operation) results
 // have no use.
 //
-// These arguments must be defined outside of
-// the ForOp region and can just be forwarded after simplifying the op inits,
-// yields and returns.
+// These arguments must be defined outside of the ForOp region and can just be
+// forwarded after simplifying the op inits, yields and returns.
 //
 // The implementation uses `inlineBlockBefore` to steal the content of the
 // original ForOp and avoid cloning.
@@ -871,6 +876,7 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
     newIterArgs.reserve(forOp.getInitArgs().size());
     newYieldValues.reserve(numResults);
     newResultValues.reserve(numResults);
+    DenseMap<std::pair<Value, Value>, std::pair<Value, Value>> initYieldToArg;
     for (auto [init, arg, result, yielded] :
          llvm::zip(forOp.getInitArgs(),       // iter from outside
                    forOp.getRegionIterArgs(), // iter inside region
@@ -884,13 +890,32 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
       // result has no use.
       bool forwarded = (arg == yielded) || (init == yielded) ||
                        (arg.use_empty() && result.use_empty());
-      keepMask.push_back(!forwarded);
-      canonicalize |= forwarded;
       if (forwarded) {
+        canonicalize = true;
+        keepMask.push_back(false);
         newBlockTransferArgs.push_back(init);
         newResultValues.push_back(init);
         continue;
       }
+
+      // Check if a previous kept argument always has the same values for init
+      // and yielded values.
+      if (auto it = initYieldToArg.find({init, yielded});
+          it != initYieldToArg.end()) {
+        canonicalize = true;
+        keepMask.push_back(false);
+        auto [sameArg, sameResult] = it->second;
+        rewriter.replaceAllUsesWith(arg, sameArg);
+        rewriter.replaceAllUsesWith(result, sameResult);
+        // The replacement value doesn't matter because there are no uses.
+        newBlockTransferArgs.push_back(init);
+        newResultValues.push_back(init);
+        continue;
+      }
+
+      // This value is kept.
+      initYieldToArg.insert({{init, yielded}, {arg, result}});
+      keepMask.push_back(true);
       newIterArgs.push_back(init);
       newYieldValues.push_back(yielded);
       newBlockTransferArgs.push_back(Value()); // placeholder with null value
@@ -1149,13 +1174,11 @@ LogicalResult ForallOp::verify() {
       return emitOpError("type mismatch between ")
              << i << "-th output and corresponding block argument";
   if (getMapping().has_value() && !getMapping()->empty()) {
-    if (static_cast<int64_t>(getMapping()->size()) != numLoops)
+    if (getDeviceMappingAttrs().size() != numLoops)
       return emitOpError() << "mapping attribute size must match op rank";
-    for (auto map : getMapping()->getValue()) {
-      if (!isa<DeviceMappingAttrInterface>(map))
-        return emitOpError()
-               << getMappingAttrName() << " is not device mapping attribute";
-    }
+    if (failed(getDeviceMaskingAttr()))
+      return emitOpError() << getMappingAttrName()
+                           << " supports at most one device masking attribute";
   }
 
   // Verify mixed static/dynamic control variables.
@@ -1392,19 +1415,6 @@ bool ForallOp::isNormalized() {
   return allEqual(getMixedLowerBound(), 0) && allEqual(getMixedStep(), 1);
 }
 
-// The ensureTerminator method generated by SingleBlockImplicitTerminator is
-// unaware of the fact that our terminator also needs a region to be
-// well-formed. We override it here to ensure that we do the right thing.
-void ForallOp::ensureTerminator(Region &region, OpBuilder &builder,
-                                Location loc) {
-  OpTrait::SingleBlockImplicitTerminator<InParallelOp>::Impl<
-      ForallOp>::ensureTerminator(region, builder, loc);
-  auto terminator =
-      llvm::dyn_cast<InParallelOp>(region.front().getTerminator());
-  if (terminator.getRegion().empty())
-    builder.createBlock(&terminator.getRegion());
-}
-
 InParallelOp ForallOp::getTerminator() {
   return cast<InParallelOp>(getBody()->getTerminator());
 }
@@ -1420,6 +1430,39 @@ SmallVector<Operation *> ForallOp::getCombiningOps(BlockArgument bbArg) {
     }
   }
   return storeOps;
+}
+
+SmallVector<DeviceMappingAttrInterface> ForallOp::getDeviceMappingAttrs() {
+  SmallVector<DeviceMappingAttrInterface> res;
+  if (!getMapping())
+    return res;
+  for (auto attr : getMapping()->getValue()) {
+    auto m = dyn_cast<DeviceMappingAttrInterface>(attr);
+    if (m)
+      res.push_back(m);
+  }
+  return res;
+}
+
+FailureOr<DeviceMaskingAttrInterface> ForallOp::getDeviceMaskingAttr() {
+  DeviceMaskingAttrInterface res;
+  if (!getMapping())
+    return res;
+  for (auto attr : getMapping()->getValue()) {
+    auto m = dyn_cast<DeviceMaskingAttrInterface>(attr);
+    if (m && res)
+      return failure();
+    if (m)
+      res = m;
+  }
+  return res;
+}
+
+bool ForallOp::usesLinearMapping() {
+  SmallVector<DeviceMappingAttrInterface> ifaces = getDeviceMappingAttrs();
+  if (ifaces.empty())
+    return false;
+  return ifaces.front().isLinearMapping();
 }
 
 std::optional<SmallVector<Value>> ForallOp::getLoopInductionVars() {
@@ -1774,7 +1817,7 @@ struct ForallOpReplaceConstantInductionVar : public OpRewritePattern<ForallOp> {
     for (auto [lb, ub, step, iv] :
          llvm::zip(op.getMixedLowerBound(), op.getMixedUpperBound(),
                    op.getMixedStep(), op.getInductionVars())) {
-      if (iv.getUses().begin() == iv.getUses().end())
+      if (iv.hasNUses(0))
         continue;
       auto numIterations = constantTripCount(lb, ub, step);
       if (!numIterations.has_value() || numIterations.value() != 1) {
@@ -1883,11 +1926,13 @@ void ForallOp::getCanonicalizationPatterns(RewritePatternSet &results,
 /// not a constant.
 void ForallOp::getSuccessorRegions(RegionBranchPoint point,
                                    SmallVectorImpl<RegionSuccessor> &regions) {
-  // Both the operation itself and the region may be branching into the body or
-  // back into the operation itself. It is possible for loop not to enter the
-  // body.
-  regions.push_back(RegionSuccessor(&getRegion()));
-  regions.push_back(RegionSuccessor());
+  // In accordance with the semantics of forall, its body is executed in
+  // parallel by multiple threads. We should not expect to branch back into
+  // the forall body after the region's execution is complete.
+  if (point.isParent())
+    regions.push_back(RegionSuccessor(&getRegion()));
+  else
+    regions.push_back(RegionSuccessor());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2006,8 +2051,7 @@ IfOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
   if (!yieldOp)
     return failure();
   TypeRange types = yieldOp.getOperandTypes();
-  inferredReturnTypes.insert(inferredReturnTypes.end(), types.begin(),
-                             types.end());
+  llvm::append_range(inferredReturnTypes, types);
   return success();
 }
 
@@ -3182,7 +3226,7 @@ struct MergeNestedParallelLoops : public OpRewritePattern<ParallelOp> {
     auto newSteps = concatValues(op.getStep(), innerOp.getStep());
 
     rewriter.replaceOpWithNewOp<ParallelOp>(op, newLowerBounds, newUpperBounds,
-                                            newSteps, std::nullopt,
+                                            newSteps, ValueRange(),
                                             bodyBuilder);
     return success();
   }
@@ -4028,9 +4072,7 @@ struct WhileRemoveDuplicatedResults : public OpRewritePattern<WhileOp> {
     ConditionOp condOp = op.getConditionOp();
     ValueRange condOpArgs = condOp.getArgs();
 
-    llvm::SmallPtrSet<Value, 8> argsSet;
-    for (Value arg : condOpArgs)
-      argsSet.insert(arg);
+    llvm::SmallPtrSet<Value, 8> argsSet(llvm::from_range, condOpArgs);
 
     if (argsSet.size() == condOpArgs.size())
       return rewriter.notifyMatchFailure(op, "No results to remove");
@@ -4273,7 +4315,7 @@ void IndexSwitchOp::getSuccessorRegions(
     return;
   }
 
-  llvm::copy(getRegions(), std::back_inserter(successors));
+  llvm::append_range(successors, getRegions());
 }
 
 void IndexSwitchOp::getEntrySuccessorRegions(
@@ -4284,7 +4326,7 @@ void IndexSwitchOp::getEntrySuccessorRegions(
   // If a constant was not provided, all regions are possible successors.
   auto arg = dyn_cast_or_null<IntegerAttr>(adaptor.getArg());
   if (!arg) {
-    llvm::copy(getRegions(), std::back_inserter(successors));
+    llvm::append_range(successors, getRegions());
     return;
   }
 

@@ -23,7 +23,6 @@
 
 namespace llvm {
 class DominatorTree;
-class DbgVariableIntrinsic;
 class IntrinsicInst;
 class PostDominatorTree;
 class AllocaInst;
@@ -53,8 +52,6 @@ struct AllocaInfo {
   AllocaInst *AI;
   SmallVector<IntrinsicInst *, 2> LifetimeStart;
   SmallVector<IntrinsicInst *, 2> LifetimeEnd;
-  SmallVector<DbgVariableIntrinsic *, 2> DbgVariableIntrinsics;
-  // Non-intrinsic records of variable locations.
   SmallVector<DbgVariableRecord *, 2> DbgVariableRecords;
 };
 
@@ -91,7 +88,6 @@ private:
 
 uint64_t getAllocaSizeInBytes(const AllocaInst &AI);
 void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Align);
-bool isLifetimeIntrinsic(Value *V);
 
 Value *readRegister(IRBuilder<> &IRB, StringRef Name);
 Value *getFP(IRBuilder<> &IRB);

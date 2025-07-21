@@ -43,12 +43,12 @@ records -- called ``member records`` do not.
 Leaf Records
 ------------
 
-All leaf records begin with the following 4 byte prefix:
+All leaf records begin with the following 4-byte prefix:
 
 .. code-block:: c++
 
   struct RecordHeader {
-    uint16_t RecordLen;  // Record length, not including this 2 byte field.
+    uint16_t RecordLen;  // Record length, not including this 2-byte field.
     uint16_t RecordKind; // Record kind enum.
   };
 

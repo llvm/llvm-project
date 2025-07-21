@@ -7,10 +7,11 @@
 # This verifies that LazySymbols (those found in library archives) are correctly
 # demoted to undefined symbols in the final link when they are only weakly
 # referenced.
+# RUN: mkdir -p %t.dir
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.ret32.o %p/Inputs/ret32.s
-# RUN: rm -f %T/libret32.a
-# RUN: llvm-ar cru %T/libret32.a %t.ret32.o
-# RUN: wasm-ld --experimental-pic -shared -o %t.ret32.wasm %t.o %T/libret32.a
+# RUN: rm -f %t.dir/libret32.a
+# RUN: llvm-ar cru %t.dir/libret32.a %t.ret32.o
+# RUN: wasm-ld --experimental-pic -shared -o %t.ret32.wasm %t.o %t.dir/libret32.a
 # RUN: obj2yaml %t.wasm | FileCheck %s
 # RUN: llvm-objdump -d %t.wasm | FileCheck %s -check-prefix=ASM
 

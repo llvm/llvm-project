@@ -18,7 +18,6 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PatternMatch.h"
@@ -111,11 +110,6 @@ isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
         bool NoCapture = Call->doesNotCapture(DataOpNo);
         if ((Call->onlyReadsMemory() && (Call->use_empty() || NoCapture)) ||
             (Call->onlyReadsMemory(DataOpNo) && NoCapture))
-          continue;
-
-        // If this is being passed as a byval argument, the caller is making a
-        // copy, so it is only a read of the alloca.
-        if (IsArgOperand && Call->isByValArgument(DataOpNo))
           continue;
       }
 
@@ -249,11 +243,10 @@ public:
   void replacePointer(Value *V);
 
 private:
-  bool collectUsersRecursive(Instruction &I);
   void replace(Instruction *I);
-  Value *getReplacement(Value *I);
+  Value *getReplacement(Value *V) const { return WorkMap.lookup(V); }
   bool isAvailable(Instruction *I) const {
-    return I == &Root || Worklist.contains(I);
+    return I == &Root || UsersToReplace.contains(I);
   }
 
   bool isEqualOrValidAddrSpaceCast(const Instruction *I,
@@ -265,8 +258,7 @@ private:
     return (FromAS == ToAS) || IC.isValidAddrSpaceCast(FromAS, ToAS);
   }
 
-  SmallPtrSet<Instruction *, 32> ValuesToRevisit;
-  SmallSetVector<Instruction *, 4> Worklist;
+  SmallSetVector<Instruction *, 32> UsersToReplace;
   MapVector<Value *, Value *> WorkMap;
   InstCombinerImpl &IC;
   Instruction &Root;
@@ -275,72 +267,93 @@ private:
 } // end anonymous namespace
 
 bool PointerReplacer::collectUsers() {
-  if (!collectUsersRecursive(Root))
-    return false;
+  SmallVector<Instruction *> Worklist;
+  SmallSetVector<Instruction *, 32> ValuesToRevisit;
 
-  // Ensure that all outstanding (indirect) users of I
-  // are inserted into the Worklist. Return false
-  // otherwise.
-  return llvm::set_is_subset(ValuesToRevisit, Worklist);
-}
+  auto PushUsersToWorklist = [&](Instruction *Inst) {
+    for (auto *U : Inst->users())
+      if (auto *I = dyn_cast<Instruction>(U))
+        if (!isAvailable(I) && !ValuesToRevisit.contains(I))
+          Worklist.emplace_back(I);
+  };
 
-bool PointerReplacer::collectUsersRecursive(Instruction &I) {
-  for (auto *U : I.users()) {
-    auto *Inst = cast<Instruction>(&*U);
+  auto TryPushInstOperand = [&](Instruction *InstOp) {
+    if (!UsersToReplace.contains(InstOp)) {
+      if (!ValuesToRevisit.insert(InstOp))
+        return false;
+      Worklist.emplace_back(InstOp);
+    }
+    return true;
+  };
+
+  PushUsersToWorklist(&Root);
+  while (!Worklist.empty()) {
+    Instruction *Inst = Worklist.pop_back_val();
     if (auto *Load = dyn_cast<LoadInst>(Inst)) {
       if (Load->isVolatile())
         return false;
-      Worklist.insert(Load);
+      UsersToReplace.insert(Load);
     } else if (auto *PHI = dyn_cast<PHINode>(Inst)) {
-      // All incoming values must be instructions for replacability
-      if (any_of(PHI->incoming_values(),
-                 [](Value *V) { return !isa<Instruction>(V); }))
-        return false;
-
-      // If at least one incoming value of the PHI is not in Worklist,
-      // store the PHI for revisiting and skip this iteration of the
-      // loop.
-      if (any_of(PHI->incoming_values(), [this](Value *V) {
-            return !isAvailable(cast<Instruction>(V));
+      /// TODO: Handle poison and null pointers for PHI and select.
+      // If all incoming values are available, mark this PHI as
+      // replacable and push it's users into the worklist.
+      bool IsReplaceable = true;
+      if (all_of(PHI->incoming_values(), [&](Value *V) {
+            if (!isa<Instruction>(V))
+              return IsReplaceable = false;
+            return isAvailable(cast<Instruction>(V));
           })) {
-        ValuesToRevisit.insert(Inst);
+        UsersToReplace.insert(PHI);
+        PushUsersToWorklist(PHI);
         continue;
       }
 
-      Worklist.insert(PHI);
-      if (!collectUsersRecursive(*PHI))
+      // Either an incoming value is not an instruction or not all
+      // incoming values are available. If this PHI was already
+      // visited prior to this iteration, return false.
+      if (!IsReplaceable || !ValuesToRevisit.insert(PHI))
         return false;
+
+      // Push PHI back into the stack, followed by unavailable
+      // incoming values.
+      Worklist.emplace_back(PHI);
+      for (unsigned Idx = 0; Idx < PHI->getNumIncomingValues(); ++Idx) {
+        if (!TryPushInstOperand(cast<Instruction>(PHI->getIncomingValue(Idx))))
+          return false;
+      }
     } else if (auto *SI = dyn_cast<SelectInst>(Inst)) {
-      if (!isa<Instruction>(SI->getTrueValue()) ||
-          !isa<Instruction>(SI->getFalseValue()))
+      auto *TrueInst = dyn_cast<Instruction>(SI->getTrueValue());
+      auto *FalseInst = dyn_cast<Instruction>(SI->getFalseValue());
+      if (!TrueInst || !FalseInst)
         return false;
 
-      if (!isAvailable(cast<Instruction>(SI->getTrueValue())) ||
-          !isAvailable(cast<Instruction>(SI->getFalseValue()))) {
-        ValuesToRevisit.insert(Inst);
+      if (isAvailable(TrueInst) && isAvailable(FalseInst)) {
+        UsersToReplace.insert(SI);
+        PushUsersToWorklist(SI);
         continue;
       }
-      Worklist.insert(SI);
-      if (!collectUsersRecursive(*SI))
+
+      // Push select back onto the stack, followed by unavailable true/false
+      // value.
+      Worklist.emplace_back(SI);
+      if (!TryPushInstOperand(TrueInst) || !TryPushInstOperand(FalseInst))
         return false;
-    } else if (isa<GetElementPtrInst>(Inst)) {
-      Worklist.insert(Inst);
-      if (!collectUsersRecursive(*Inst))
-        return false;
+    } else if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
+      UsersToReplace.insert(GEP);
+      PushUsersToWorklist(GEP);
     } else if (auto *MI = dyn_cast<MemTransferInst>(Inst)) {
       if (MI->isVolatile())
         return false;
-      Worklist.insert(Inst);
+      UsersToReplace.insert(Inst);
     } else if (isEqualOrValidAddrSpaceCast(Inst, FromAS)) {
-      Worklist.insert(Inst);
-      if (!collectUsersRecursive(*Inst))
-        return false;
+      UsersToReplace.insert(Inst);
+      PushUsersToWorklist(Inst);
     } else if (Inst->isLifetimeStartOrEnd()) {
       continue;
     } else {
       // TODO: For arbitrary uses with address space mismatches, should we check
       // if we can introduce a valid addrspacecast?
-      LLVM_DEBUG(dbgs() << "Cannot handle pointer user: " << *U << '\n');
+      LLVM_DEBUG(dbgs() << "Cannot handle pointer user: " << *Inst << '\n');
       return false;
     }
   }
@@ -348,7 +361,39 @@ bool PointerReplacer::collectUsersRecursive(Instruction &I) {
   return true;
 }
 
-Value *PointerReplacer::getReplacement(Value *V) { return WorkMap.lookup(V); }
+void PointerReplacer::replacePointer(Value *V) {
+  assert(cast<PointerType>(Root.getType()) != cast<PointerType>(V->getType()) &&
+         "Invalid usage");
+  WorkMap[&Root] = V;
+  SmallVector<Instruction *> Worklist;
+  SetVector<Instruction *> PostOrderWorklist;
+  SmallPtrSet<Instruction *, 32> Visited;
+
+  // Perform a postorder traversal of the users of Root.
+  Worklist.push_back(&Root);
+  while (!Worklist.empty()) {
+    Instruction *I = Worklist.back();
+
+    // If I has not been processed before, push each of its
+    // replacable users into the worklist.
+    if (Visited.insert(I).second) {
+      for (auto *U : I->users()) {
+        auto *UserInst = cast<Instruction>(U);
+        if (UsersToReplace.contains(UserInst) && !Visited.contains(UserInst))
+          Worklist.push_back(UserInst);
+      }
+      // Otherwise, users of I have already been pushed into
+      // the PostOrderWorklist. Push I as well.
+    } else {
+      PostOrderWorklist.insert(I);
+      Worklist.pop_back();
+    }
+  }
+
+  // Replace pointers in reverse-postorder.
+  for (Instruction *I : reverse(PostOrderWorklist))
+    replace(I);
+}
 
 void PointerReplacer::replace(Instruction *I) {
   if (getReplacement(I))
@@ -365,15 +410,20 @@ void PointerReplacer::replace(Instruction *I) {
 
     IC.InsertNewInstWith(NewI, LT->getIterator());
     IC.replaceInstUsesWith(*LT, NewI);
-    WorkMap[LT] = NewI;
+    // LT has actually been replaced by NewI. It is useless to insert LT into
+    // the map. Instead, we insert NewI into the map to indicate this is the
+    // replacement (new value).
+    WorkMap[NewI] = NewI;
   } else if (auto *PHI = dyn_cast<PHINode>(I)) {
-    Type *NewTy = getReplacement(PHI->getIncomingValue(0))->getType();
-    auto *NewPHI = PHINode::Create(NewTy, PHI->getNumIncomingValues(),
-                                   PHI->getName(), PHI->getIterator());
-    for (unsigned int I = 0; I < PHI->getNumIncomingValues(); ++I)
-      NewPHI->addIncoming(getReplacement(PHI->getIncomingValue(I)),
-                          PHI->getIncomingBlock(I));
-    WorkMap[PHI] = NewPHI;
+    // Create a new PHI by replacing any incoming value that is a user of the
+    // root pointer and has a replacement.
+    Value *V = WorkMap.lookup(PHI->getIncomingValue(0));
+    PHI->mutateType(V ? V->getType() : PHI->getIncomingValue(0)->getType());
+    for (unsigned int I = 0; I < PHI->getNumIncomingValues(); ++I) {
+      Value *V = WorkMap.lookup(PHI->getIncomingValue(I));
+      PHI->setIncomingValue(I, V ? V : PHI->getIncomingValue(I));
+    }
+    WorkMap[PHI] = PHI;
   } else if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
     auto *V = getReplacement(GEP->getPointerOperand());
     assert(V && "Operand not replaced");
@@ -437,18 +487,6 @@ void PointerReplacer::replace(Instruction *I) {
   }
 }
 
-void PointerReplacer::replacePointer(Value *V) {
-#ifndef NDEBUG
-  auto *PT = cast<PointerType>(Root.getType());
-  auto *NT = cast<PointerType>(V->getType());
-  assert(PT != NT && "Invalid usage");
-#endif
-  WorkMap[&Root] = V;
-
-  for (Instruction *Workitem : Worklist)
-    replace(Workitem);
-}
-
 Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
   if (auto *I = simplifyAllocaArraySize(*this, AI, DT))
     return I;
@@ -467,8 +505,8 @@ Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
 
       // Get the first instruction in the entry block.
       BasicBlock &EntryBlock = AI.getParent()->getParent()->getEntryBlock();
-      Instruction *FirstInst = EntryBlock.getFirstNonPHIOrDbg();
-      if (FirstInst != &AI) {
+      BasicBlock::iterator FirstInst = EntryBlock.getFirstNonPHIOrDbg();
+      if (&*FirstInst != &AI) {
         // If the entry block doesn't start with a zero-size alloca then move
         // this one to the start of the entry block.  There is no problem with
         // dominance as the array size was forced to a constant earlier already.
@@ -709,29 +747,22 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
     const DataLayout &DL = IC.getDataLayout();
     auto *SL = DL.getStructLayout(ST);
 
-    // Don't unpack for structure with scalable vector.
-    if (SL->getSizeInBits().isScalable())
-      return nullptr;
-
     if (SL->hasPadding())
       return nullptr;
 
     const auto Align = LI.getAlign();
     auto *Addr = LI.getPointerOperand();
-    auto *IdxType = Type::getInt32Ty(T->getContext());
-    auto *Zero = ConstantInt::get(IdxType, 0);
+    auto *IdxType = DL.getIndexType(Addr->getType());
 
     Value *V = PoisonValue::get(T);
     for (unsigned i = 0; i < NumElements; i++) {
-      Value *Indices[2] = {
-        Zero,
-        ConstantInt::get(IdxType, i),
-      };
-      auto *Ptr = IC.Builder.CreateInBoundsGEP(ST, Addr, ArrayRef(Indices),
-                                               Name + ".elt");
+      auto *Ptr = IC.Builder.CreateInBoundsPtrAdd(
+          Addr, IC.Builder.CreateTypeSize(IdxType, SL->getElementOffset(i)),
+          Name + ".elt");
       auto *L = IC.Builder.CreateAlignedLoad(
           ST->getElementType(i), Ptr,
-          commonAlignment(Align, SL->getElementOffset(i)), Name + ".unpack");
+          commonAlignment(Align, SL->getElementOffset(i).getKnownMinValue()),
+          Name + ".unpack");
       // Propagate AA metadata. It'll still be valid on the narrowed load.
       L->setAAMetadata(LI.getAAMetadata());
       V = IC.Builder.CreateInsertValue(V, L, i);
@@ -927,7 +958,7 @@ static bool canReplaceGEPIdxWithZero(InstCombinerImpl &IC,
   // first non-zero index.
   auto IsAllNonNegative = [&]() {
     for (unsigned i = Idx+1, e = GEPI->getNumOperands(); i != e; ++i) {
-      KnownBits Known = IC.computeKnownBits(GEPI->getOperand(i), 0, MemI);
+      KnownBits Known = IC.computeKnownBits(GEPI->getOperand(i), MemI);
       if (Known.isNonNegative())
         continue;
       return false;
@@ -992,6 +1023,53 @@ static bool canSimplifyNullLoadOrGEP(LoadInst &LI, Value *Op) {
        !NullPointerIsDefined(LI.getFunction(), LI.getPointerAddressSpace())))
     return true;
   return false;
+}
+
+Value *InstCombinerImpl::simplifyNonNullOperand(Value *V,
+                                                bool HasDereferenceable,
+                                                unsigned Depth) {
+  if (auto *Sel = dyn_cast<SelectInst>(V)) {
+    if (isa<ConstantPointerNull>(Sel->getOperand(1)))
+      return Sel->getOperand(2);
+
+    if (isa<ConstantPointerNull>(Sel->getOperand(2)))
+      return Sel->getOperand(1);
+  }
+
+  if (!V->hasOneUse())
+    return nullptr;
+
+  constexpr unsigned RecursionLimit = 3;
+  if (Depth == RecursionLimit)
+    return nullptr;
+
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
+    if (HasDereferenceable || GEP->isInBounds()) {
+      if (auto *Res = simplifyNonNullOperand(GEP->getPointerOperand(),
+                                             HasDereferenceable, Depth + 1)) {
+        replaceOperand(*GEP, 0, Res);
+        addToWorklist(GEP);
+        return nullptr;
+      }
+    }
+  }
+
+  if (auto *PHI = dyn_cast<PHINode>(V)) {
+    bool Changed = false;
+    for (Use &U : PHI->incoming_values()) {
+      // We set Depth to RecursionLimit to avoid expensive recursion.
+      if (auto *Res = simplifyNonNullOperand(U.get(), HasDereferenceable,
+                                             RecursionLimit)) {
+        replaceUse(U, Res);
+        Changed = true;
+      }
+    }
+    if (Changed)
+      addToWorklist(PHI);
+    return nullptr;
+  }
+
+  return nullptr;
 }
 
 Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
@@ -1065,22 +1143,19 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
         V1->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
         V2->setAlignment(Alignment);
         V2->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
+        // It is safe to copy any metadata that does not trigger UB. Copy any
+        // poison-generating metadata.
+        V1->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
+        V2->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
         return SelectInst::Create(SI->getCondition(), V1, V2);
       }
-
-      // load (select (cond, null, P)) -> load P
-      if (isa<ConstantPointerNull>(SI->getOperand(1)) &&
-          !NullPointerIsDefined(SI->getFunction(),
-                                LI.getPointerAddressSpace()))
-        return replaceOperand(LI, 0, SI->getOperand(2));
-
-      // load (select (cond, P, null)) -> load P
-      if (isa<ConstantPointerNull>(SI->getOperand(2)) &&
-          !NullPointerIsDefined(SI->getFunction(),
-                                LI.getPointerAddressSpace()))
-        return replaceOperand(LI, 0, SI->getOperand(1));
     }
   }
+
+  if (!NullPointerIsDefined(LI.getFunction(), LI.getPointerAddressSpace()))
+    if (Value *V = simplifyNonNullOperand(Op, /*HasDereferenceable=*/true))
+      return replaceOperand(LI, 0, V);
+
   return nullptr;
 }
 
@@ -1223,10 +1298,6 @@ static bool unpackStoreToAggregate(InstCombinerImpl &IC, StoreInst &SI) {
     const DataLayout &DL = IC.getDataLayout();
     auto *SL = DL.getStructLayout(ST);
 
-    // Don't unpack for structure with scalable vector.
-    if (SL->getSizeInBits().isScalable())
-      return false;
-
     if (SL->hasPadding())
       return false;
 
@@ -1238,17 +1309,14 @@ static bool unpackStoreToAggregate(InstCombinerImpl &IC, StoreInst &SI) {
     SmallString<16> AddrName = Addr->getName();
     AddrName += ".repack";
 
-    auto *IdxType = Type::getInt32Ty(ST->getContext());
-    auto *Zero = ConstantInt::get(IdxType, 0);
+    auto *IdxType = DL.getIndexType(Addr->getType());
     for (unsigned i = 0; i < Count; i++) {
-      Value *Indices[2] = {
-        Zero,
-        ConstantInt::get(IdxType, i),
-      };
-      auto *Ptr =
-          IC.Builder.CreateInBoundsGEP(ST, Addr, ArrayRef(Indices), AddrName);
+      auto *Ptr = IC.Builder.CreateInBoundsPtrAdd(
+          Addr, IC.Builder.CreateTypeSize(IdxType, SL->getElementOffset(i)),
+          AddrName);
       auto *Val = IC.Builder.CreateExtractValue(V, i, EltName);
-      auto EltAlign = commonAlignment(Align, SL->getElementOffset(i));
+      auto EltAlign =
+          commonAlignment(Align, SL->getElementOffset(i).getKnownMinValue());
       llvm::Instruction *NS = IC.Builder.CreateAlignedStore(Val, Ptr, EltAlign);
       NS->setAAMetadata(SI.getAAMetadata());
     }
@@ -1452,6 +1520,10 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   if (isa<UndefValue>(Val))
     return eraseInstFromFunction(SI);
 
+  if (!NullPointerIsDefined(SI.getFunction(), SI.getPointerAddressSpace()))
+    if (Value *V = simplifyNonNullOperand(Ptr, /*HasDereferenceable=*/true))
+      return replaceOperand(SI, 1, V);
+
   return nullptr;
 }
 
@@ -1549,8 +1621,8 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   // Insert a PHI node now if we need it.
   Value *MergedVal = OtherStore->getValueOperand();
   // The debug locations of the original instructions might differ. Merge them.
-  DebugLoc MergedLoc = DILocation::getMergedLocation(SI.getDebugLoc(),
-                                                     OtherStore->getDebugLoc());
+  DebugLoc MergedLoc =
+      DebugLoc::getMergedLocation(SI.getDebugLoc(), OtherStore->getDebugLoc());
   if (MergedVal != SI.getValueOperand()) {
     PHINode *PN =
         PHINode::Create(SI.getValueOperand()->getType(), 2, "storemerge");

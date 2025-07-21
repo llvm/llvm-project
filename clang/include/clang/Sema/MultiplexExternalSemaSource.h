@@ -92,10 +92,13 @@ public:
 
   ExtKind hasExternalDefinitions(const Decl *D) override;
 
+  bool wasThisDeclarationADefinition(const FunctionDecl *FD) override;
+
   /// Find all declarations with the given name in the
   /// given context.
   bool FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                      DeclarationName Name) override;
+                                      DeclarationName Name,
+                                      const DeclContext *OriginalDC) override;
 
   bool LoadExternalSpecializations(const Decl *D, bool OnlyPartial) override;
 

@@ -61,6 +61,8 @@ public:
 
   virtual bool IsOperatingSystemPluginThread(const lldb::ThreadSP &thread_sp);
 
+  virtual bool DoesPluginReportAllThreads() = 0;
+
 protected:
   // Member variables.
   Process

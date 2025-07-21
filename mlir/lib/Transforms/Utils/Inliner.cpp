@@ -17,12 +17,10 @@
 #include "mlir/IR/Threading.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Support/DebugStringHelper.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "inlining"
@@ -45,7 +43,7 @@ static void walkReferencedSymbolNodes(
 
   Operation *symbolTableOp = op->getParentOp();
   for (const SymbolTable::SymbolUse &use : *symbolUses) {
-    auto refIt = resolvedRefs.insert({use.getSymbolRef(), nullptr});
+    auto refIt = resolvedRefs.try_emplace(use.getSymbolRef());
     CallGraphNode *&node = refIt.first->second;
 
     // If this is the first instance of this reference, try to resolve a
@@ -65,6 +63,7 @@ static void walkReferencedSymbolNodes(
 
 //===----------------------------------------------------------------------===//
 // CGUseList
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// This struct tracks the uses of callgraph nodes that can be dropped when
@@ -540,7 +539,7 @@ Inliner::Impl::optimizeSCCAsync(MutableArrayRef<CallGraphNode *> nodesToVisit,
 
   // An atomic failure variable for the async executors.
   std::vector<std::atomic<bool>> activePMs(pipelines.size());
-  std::fill(activePMs.begin(), activePMs.end(), false);
+  llvm::fill(activePMs, false);
   return failableParallelForEach(ctx, nodesToVisit, [&](CallGraphNode *node) {
     // Find a pass manager for this operation.
     auto it = llvm::find_if(activePMs, [](std::atomic<bool> &isActive) {
@@ -651,7 +650,7 @@ Inliner::Impl::inlineCallsInSCC(InlinerInterfaceImpl &inlinerIface,
     bool inlineInPlace = useList.hasOneUseAndDiscardable(it.targetNode);
 
     LogicalResult inlineResult =
-        inlineCall(inlinerIface, call,
+        inlineCall(inlinerIface, inliner.config.getCloneCallback(), call,
                    cast<CallableOpInterface>(targetRegion->getParentOp()),
                    targetRegion, /*shouldCloneInlinedRegion=*/!inlineInPlace);
     if (failed(inlineResult)) {
@@ -713,9 +712,11 @@ bool Inliner::Impl::shouldInline(ResolvedCall &resolvedCall) {
     return false;
 
   // Don't allow inlining if the target is a self-recursive function.
+  // Don't allow inlining if the call graph is like A->B->A.
   if (llvm::count_if(*resolvedCall.targetNode,
                      [&](CallGraphNode::Edge const &edge) -> bool {
-                       return edge.getTarget() == resolvedCall.targetNode;
+                       return edge.getTarget() == resolvedCall.targetNode ||
+                              edge.getTarget() == resolvedCall.sourceNode;
                      }) > 0)
     return false;
 
@@ -727,19 +728,22 @@ bool Inliner::Impl::shouldInline(ResolvedCall &resolvedCall) {
 
   // Don't allow inlining if the callee has multiple blocks (unstructured
   // control flow) but we cannot be sure that the caller region supports that.
-  bool calleeHasMultipleBlocks =
-      llvm::hasNItemsOrMore(*callableRegion, /*N=*/2);
-  // If both parent ops have the same type, it is safe to inline. Otherwise,
-  // decide based on whether the op has the SingleBlock trait or not.
-  // Note: This check does currently not account for SizedRegion/MaxSizedRegion.
-  auto callerRegionSupportsMultipleBlocks = [&]() {
-    return callableRegion->getParentOp()->getName() ==
-               resolvedCall.call->getParentOp()->getName() ||
-           !resolvedCall.call->getParentOp()
-                ->mightHaveTrait<OpTrait::SingleBlock>();
-  };
-  if (calleeHasMultipleBlocks && !callerRegionSupportsMultipleBlocks())
-    return false;
+  if (!inliner.config.getCanHandleMultipleBlocks()) {
+    bool calleeHasMultipleBlocks =
+        llvm::hasNItemsOrMore(*callableRegion, /*N=*/2);
+    // If both parent ops have the same type, it is safe to inline. Otherwise,
+    // decide based on whether the op has the SingleBlock trait or not.
+    // Note: This check does currently not account for
+    // SizedRegion/MaxSizedRegion.
+    auto callerRegionSupportsMultipleBlocks = [&]() {
+      return callableRegion->getParentOp()->getName() ==
+                 resolvedCall.call->getParentOp()->getName() ||
+             !resolvedCall.call->getParentOp()
+                  ->mightHaveTrait<OpTrait::SingleBlock>();
+    };
+    if (calleeHasMultipleBlocks && !callerRegionSupportsMultipleBlocks())
+      return false;
+  }
 
   if (!inliner.isProfitableToInline(resolvedCall))
     return false;

@@ -15,6 +15,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/ProfDataUtils.h"
 using namespace llvm;
 
 MDString *MDBuilder::createString(StringRef Str) {
@@ -55,9 +56,9 @@ MDNode *MDBuilder::createBranchWeights(ArrayRef<uint32_t> Weights,
 
   unsigned int Offset = IsExpected ? 2 : 1;
   SmallVector<Metadata *, 4> Vals(Weights.size() + Offset);
-  Vals[0] = createString("branch_weights");
+  Vals[0] = createString(MDProfLabels::BranchWeights);
   if (IsExpected)
-    Vals[1] = createString("expected");
+    Vals[1] = createString(MDProfLabels::ExpectedBranchWeights);
 
   Type *Int32Ty = Type::getInt32Ty(Context);
   for (unsigned i = 0, e = Weights.size(); i != e; ++i)
@@ -74,9 +75,9 @@ MDNode *MDBuilder::createFunctionEntryCount(
   Type *Int64Ty = Type::getInt64Ty(Context);
   SmallVector<Metadata *, 8> Ops;
   if (Synthetic)
-    Ops.push_back(createString("synthetic_function_entry_count"));
+    Ops.push_back(createString(MDProfLabels::SyntheticFunctionEntryCount));
   else
-    Ops.push_back(createString("function_entry_count"));
+    Ops.push_back(createString(MDProfLabels::FunctionEntryCount));
   Ops.push_back(createConstant(ConstantInt::get(Int64Ty, Count)));
   if (Imports) {
     SmallVector<GlobalValue::GUID, 2> OrderID(Imports->begin(), Imports->end());
@@ -87,9 +88,9 @@ MDNode *MDBuilder::createFunctionEntryCount(
   return MDNode::get(Context, Ops);
 }
 
-MDNode *MDBuilder::createFunctionSectionPrefix(StringRef Prefix) {
-  return MDNode::get(
-      Context, {createString("function_section_prefix"), createString(Prefix)});
+MDNode *MDBuilder::createGlobalObjectSectionPrefix(StringRef Prefix) {
+  return MDNode::get(Context,
+                     {createString("section_prefix"), createString(Prefix)});
 }
 
 MDNode *MDBuilder::createRange(const APInt &Lo, const APInt &Hi) {

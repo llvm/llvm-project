@@ -8,136 +8,655 @@ Debugging C++ Coroutines
 Introduction
 ============
 
-For performance and other architectural reasons, the C++ Coroutines feature in
-the Clang compiler is implemented in two parts of the compiler.  Semantic
-analysis is performed in Clang, and Coroutine construction and optimization
-takes place in the LLVM middle-end.
+Coroutines in C++ were introduced in C++20, and the user experience for
+debugging them can still be challenging. This document guides you how to most
+efficiently debug coroutines and how to navigate existing shortcomings in
+debuggers and compilers.
 
-However, this design forces us to generate insufficient debugging information.
-Typically, the compiler generates debug information in the Clang frontend, as
-debug information is highly language specific. However, this is not possible
-for Coroutine frames because the frames are constructed in the LLVM middle-end.
+Coroutines are generally used either as generators or for asynchronous
+programming. In this document, we will discuss both use cases. Even if you are
+using coroutines for asynchronous programming, you should still read the
+generators section, as it will introduce foundational debugging techniques also
+applicable to the debugging of asynchronous programs.
+
+Both compilers (clang, gcc, ...) and debuggers (lldb, gdb, ...) are
+still improving their support for coroutines. As such, we recommend using the
+latest available version of your toolchain.
+
+This document focuses on clang and lldb. The screenshots show
+`lldb-dap <https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.lldb-dap>`_
+in combination with VS Code. The same techniques can also be used in other
+IDEs.
+
+Debugging clang-compiled binaries with gdb is possible, but requires more
+scripting. This guide comes with a basic GDB script for coroutine debugging.
+
+This guide will first showcase the more polished, bleeding-edge experience, but
+will also show you how to debug coroutines with older toolchains. In general,
+the older your toolchain, the deeper you will have to dive into the
+implementation details of coroutines (such as their ABI). The further down in
+this document you go, the more low-level, technical the content will become. If
+you are on an up-to-date toolchain, you will hopefully be able to stop reading
+earlier.
+
+Debugging generators
+====================
+
+One of the two major use cases for coroutines in C++ are generators, i.e.,
+functions which can produce values via ``co_yield``. Values are produced
+lazily, on-demand. For this purpose, every time a new value is requested, the
+coroutine gets resumed. As soon as it reaches a ``co_yield`` and thereby
+returns the requested value, the coroutine is suspended again.
+
+This logic is encapsulated in a ``generator`` type similar to this one:
+
+.. code-block:: c++
+
+  // generator.hpp
+  #include <coroutine>
+
+  // `generator` is a stripped down, minimal generator type.
+  template<typename T>
+  struct generator {
+    struct promise_type {
+      T current_value{};
+
+      auto get_return_object() {
+        return std::coroutine_handle<promise_type>::from_promise(*this);
+      }
+      auto initial_suspend() { return std::suspend_always(); }
+      auto final_suspend() noexcept { return std::suspend_always(); }
+      auto return_void() { return std::suspend_always(); }
+      void unhandled_exception() { __builtin_unreachable(); }
+      auto yield_value(T v) {
+        current_value = v;
+        return std::suspend_always();
+      }
+    };
+
+    generator(std::coroutine_handle<promise_type> h) : hdl(h) { hdl.resume(); }
+    ~generator() { hdl.destroy(); }
+
+    generator<T>& operator++() { hdl.resume(); return *this; } // resume the coroutine
+    T operator*() const { return hdl.promise().current_value; }
+
+    private:
+    std::coroutine_handle<promise_type> hdl;
+  };
+
+We can then use this ``generator`` class to print the Fibonacci sequence:
+
+.. code-block:: c++
+
+  #include "generator.hpp"
+  #include <iostream>
+
+  generator<int> fibonacci() {
+    co_yield 0;
+    int prev = 0;
+    co_yield 1;
+    int current = 1;
+    while (true) {
+      int next = current + prev;
+      co_yield next;
+      prev = current;
+      current = next;
+    }
+  }
+
+  template<typename T>
+  void print10Elements(generator<T>& gen) {
+    for (unsigned i = 0; i < 10; ++i) {
+      std::cerr << *gen << "\n";
+      ++gen;
+    }
+  }
+
+  int main() {
+    std::cerr << "Fibonacci sequence - here we go\n";
+    generator<int> fib = fibonacci();
+    for (unsigned i = 0; i < 5; ++i) {
+      ++fib;
+    }
+    print10Elements(fib);
+  }
+
+To compile this code, use ``clang++ --std=c++23 generator-example.cpp -g``.
+
+Breakpoints inside the generators
+---------------------------------
+
+We can set breakpoints inside coroutines just as we set them in regular
+functions. For VS Code, that means clicking next the line number in the editor.
+In the ``lldb`` CLI or in ``gdb``, you can use ``b`` to set a breakpoint.
+
+Inspecting variables in a coroutine
+-----------------------------------
+
+If you hit a breakpoint inside the ``fibonacci`` function, you should be able
+to inspect all local variables (``prev``, ``current``, ``next``) just like in
+a regular function.
+
+.. image:: ./coro-generator-variables.png
+
+Note the two additional variables ``__promise`` and ``__coro_frame``. Those
+show the internal state of the coroutine. They are not relevant for our
+generator example, but will be relevant for asynchronous programming described
+in the next section.
+
+Stepping out of a coroutine
+---------------------------
+
+When single-stepping, you will notice that the debugger will leave the
+``fibonacci`` function as soon as you hit a ``co_yield`` statement. You might
+find yourself inside some standard library code. After stepping out of the
+library code, you will be back in the ``main`` function.
+
+Stepping into a coroutine
+-------------------------
+
+If you stop at ``++fib`` and try to step into the generator, you will first
+find yourself inside ``operator++``. Stepping into the ``handle.resume()`` will
+not work by default.
+
+This is because lldb does not step into functions from the standard library by
+default. To make this work, you first need to run ``settings set
+target.process.thread.step-avoid-regexp ""``. You can do so from the "Debug
+Console" towards the bottom of the screen. With that setting change, you can
+step through ``coroutine_handle::resume`` and into your generator.
+
+You might find yourself at the top of the coroutine at first, instead of at
+your previous suspension point. In that case, single-step and you will arrive
+at the previously suspended ``co_yield`` statement.
+
+
+Inspecting a suspended coroutine
+--------------------------------
+
+The ``print10Elements`` function receives an opaque ``generator`` type. Let's
+assume we are suspended at the ``++gen;`` line, and want to inspect the
+generator and its internal state.
+
+To do so, we can simply look into the ``gen.hdl`` variable. LLDB comes with a
+pretty printer for ``std::coroutine_handle`` which will show us the internal
+state of the coroutine. For GDB, you will have to use the ``show-coro-frame``
+command provided by the :ref:`gdb-script`.
+
+.. image:: ./coro-generator-suspended.png
+
+We can see two function pointers ``resume`` and ``destroy``. These pointers
+point to the resume / destroy functions. By inspecting those function pointers,
+we can see that our ``generator`` is actually backed by our ``fibonacci``
+coroutine. When using VS Code + lldb-dap, you can Cmd+Click on the function
+address (``0x555...`` in the screenshot) to directly jump to the function
+definition backing your coroutine handle.
+
+Next, we see the ``promise``. In our case, this reveals the current value of
+our generator.
+
+The ``coro_frame`` member represents the internal state of the coroutine. It
+contains our internal coroutine state ``prev``, ``current``, ``next``.
+Furthermore, it contains many internal, compiler-specific members, which are
+named based on their type. These represent temporary values which the compiler
+decided to spill across suspension points, but which were not declared in our
+original source code and hence have no proper user-provided name.
+
+Tracking the exact suspension point
+-----------------------------------
+
+Among the compiler-generated members, the ``__coro_index`` is particularly
+important. This member identifies the suspension point at which the coroutine
+is currently suspended.
+
+However, it is non-trivial to map this number back to a source code location.
+The compiler emits debug info labels for the suspension points. This allows us
+to map the suspension point index back to a source code location. In gdb, we
+can use the ``info line`` command to get the source code location of the
+suspension point.
+
+::
+
+  (gdb) info line -function coro_task -label __coro_resume_2
+  Line 45 of "llvm-example.cpp" starts at address 0x1b1b <_ZL9coro_taski.resume+555> and ends at 0x1b46 <_ZL9coro_taski.resume+598>.
+  Line 45 of "llvm-example.cpp" starts at address 0x201b <_ZL9coro_taski.destroy+555> and ends at 0x2046 <_ZL9coro_taski.destroy+598>.
+  Line 45 of "llvm-example.cpp" starts at address 0x253b <_ZL9coro_taski.cleanup+555> and ends at 0x2566 <_ZL9coro_taski.cleanup+598>.
+
+LLDB does not support looking up labels. Furthermore, those labels are only emitted
+starting with clang 21.0.
+
+For simple cases, you might still be able to guess the suspension point correctly.
+Alternatively, you might also want to modify your coroutine library to store
+the line number of the current suspension point in the promise:
+
+.. code-block:: c++
+
+  // For all promise_types we need a new `_coro_return_address` variable:
+  class promise_type {
+    ...
+    void* _coro_return_address = nullptr;
+  };
+
+  // For all the awaiter types we need:
+  class awaiter {
+    ...
+    template <typename Promise>
+    __attribute__((noinline)) auto await_suspend(std::coroutine_handle<Promise> handle) {
+          ...
+          handle.promise()._coro_return_address = __builtin_return_address(0);
+    }
+  };
+
+This stores the return address of ``await_suspend`` within the promise.
+Thereby, we can read it back from the promise of a suspended coroutine, and map
+it to an exact source code location. For a complete example, see the ``task``
+type used below for asynchronous programming.
+
+Alternatively, we can modify the C++ code to store the line number in the
+promise type. We can use a ``std::source_location`` to get the line number of
+the await and store it inside the ``promise_type``. In the debugger, we can
+then read the line number from the promise of the suspended coroutine.
+
+.. code-block:: c++
+
+  // For all the awaiter types we need:
+  class awaiter {
+    ...
+    template <typename Promise>
+    void await_suspend(std::coroutine_handle<Promise> handle,
+                       std::source_location sl = std::source_location::current()) {
+          ...
+          handle.promise().line_number = sl.line();
+    }
+  };
+
+The downside of both approaches is that they come at the price of additional
+runtime cost. In particular the second approach increases binary size, since it
+requires additional ``std::source_location`` objects, and those source
+locations are not stripped by split-dwarf. Whether the first approach is worth
+the additional runtime cost is a trade-off you need to make yourself.
+
+Async stack traces
+==================
+
+Besides generators, the second common use case for coroutines in C++ is
+asynchronous programming, usually involving libraries such as stdexec, folly,
+cppcoro, boost::asio, or similar libraries. Some of those libraries already
+provide custom debugging support, so in addition to this guide, you might want
+to check out their documentation.
+
+When using coroutines for asynchronous programming, your library usually
+provides you some ``task`` type. This type usually looks similar to this:
+
+.. code-block:: c++
+
+  // async-task-library.hpp
+  #include <coroutine>
+  #include <utility>
+
+  struct task {
+    struct promise_type {
+      task get_return_object() { return std::coroutine_handle<promise_type>::from_promise(*this); }
+      auto initial_suspend() { return std::suspend_always{}; }
+
+      void unhandled_exception() noexcept {}
+
+      auto final_suspend() noexcept {
+        struct FinalSuspend {
+          std::coroutine_handle<> continuation;
+          auto await_ready() noexcept { return false; }
+          auto await_suspend(std::coroutine_handle<> handle) noexcept {
+            return continuation;
+          }
+          void await_resume() noexcept {}
+        };
+        return FinalSuspend{continuation};
+      }
+
+      void return_value(int res) { result = res; }
+
+      std::coroutine_handle<> continuation = std::noop_coroutine();
+      int result = 0;
+      #ifndef NDEBUG
+      void* _coro_suspension_point_addr = nullptr;
+      #endif
+    };
+
+    task(std::coroutine_handle<promise_type> handle) : handle(handle) {}
+    ~task() {
+      if (handle)
+        handle.destroy();
+    }
+
+    struct Awaiter {
+      std::coroutine_handle<promise_type> handle;
+      auto await_ready() { return false; }
+
+      template <typename P>
+      #ifndef NDEBUG
+      __attribute__((noinline))
+      #endif
+      auto await_suspend(std::coroutine_handle<P> continuation) {
+        handle.promise().continuation = continuation;
+        #ifndef NDEBUG
+        continuation.promise()._coro_suspension_point_addr = __builtin_return_address(0);
+        #endif
+        return handle;
+      }
+      int await_resume() {
+        return handle.promise().result;
+      }
+    };
+
+    auto operator co_await() {
+      return Awaiter{handle};
+    }
+
+    int syncStart() {
+      handle.resume();
+      return handle.promise().result;
+    }
+
+  private:
+    std::coroutine_handle<promise_type> handle;
+  };
+
+Note how the ``task::promise_type`` has a member variable
+``std::coroutine_handle<> continuation``. This is the handle of the coroutine
+that will be resumed when the current coroutine is finished executing (see
+``final_suspend``). In a sense, this is the "return address" of the coroutine.
+It is set inside ``operator co_await`` when another coroutine calls our
+generator and awaits for the next value to be produced.
+
+The result value is returned via the ``int result`` member. It is written in
+``return_value`` and read by ``Awaiter::await_resume``. Usually, the result
+type of a task is a template argument. For simplicity's sake, we hard-coded the
+``int`` type in this example.
+
+Stack traces of in-flight coroutines
+------------------------------------
+
+Let's assume you have the following program and set a breakpoint inside the
+``write_output`` function. There are multiple call paths through which this
+function could have been reached. How can we find out said call path?
+
+.. code-block:: c++
+
+  #include <iostream>
+  #include <string_view>
+  #include "async-task-library.hpp"
+
+  static task write_output(std::string_view contents) {
+    std::cout << contents << "\n";
+    co_return contents.size();
+  }
+
+  static task greet() {
+    int bytes_written = 0;
+    bytes_written += co_await write_output("Hello");
+    bytes_written += co_await write_output("World");
+    co_return bytes_written;
+  }
+
+  int main() {
+    int bytes_written = greet().syncStart();
+    std::cout << "Bytes written: " << bytes_written << "\n";
+    return 0;
+  }
+
+To do so, let's break inside ``write_output``. We can understand our call-stack
+by looking into the special ``__promise`` variable. This artificial variable is
+generated by the compiler and points to the ``promise_type`` instance
+corresponding to the currently in-flight coroutine. In this case, the
+``__promise`` variable contains the ``continuation`` which points to our
+caller. That caller again contains a ``promise`` with a ``continuation`` which
+points to our caller's caller.
+
+.. image:: ./coro-async-task-continuations.png
+
+We can figure out the involved coroutine functions and their current suspension
+points as discussed above in the "Inspecting a suspended coroutine" section.
+
+When using LLDB's CLI, the command ``p --ptr-depth 4 __promise`` might also be
+useful to automatically dereference all the pointers up to the given depth.
+
+To get a flat representation of that call stack, we can use a debugger script,
+such as the one shown in the :ref:`lldb-script` section. With that
+script, we can run ``coro bt`` to get the following stack trace:
+
+.. code-block::
+
+  (lldb) coro bt
+  frame #0: write_output(std::basic_string_view<char, std::char_traits<char>>) at /home/avogelsgesang/Documents/corotest/async-task-example.cpp:6:16
+  [async] frame #1: greet() at /home/avogelsgesang/Documents/corotest/async-task-example.cpp:12:20
+  [async] frame #2: std::__n4861::coroutine_handle<std::__n4861::noop_coroutine_promise>::__frame::__dummy_resume_destroy() at /usr/include/c++/14/coroutine:298, suspension point unknown
+  frame #3: std::__n4861::coroutine_handle<task::promise_type>::resume() const at /usr/include/c++/14/coroutine:242:29
+  frame #4: task::syncStart() at /home/avogelsgesang/Documents/corotest/async-task-library.hpp:78:14
+  frame #5: main at /home/avogelsgesang/Documents/corotest/async-task-example.cpp:18:11
+  frame #6: __libc_start_call_main at sysdeps/nptl/libc_start_call_main.h:58:16
+  frame #7: __libc_start_main_impl at csu/libc-start.c:360:3
+  frame #8: _start at :4294967295
+
+Note how the frames #1 and #2 are async frames.
+
+The ``coro bt`` command already includes logic to identify the exact suspension
+point of each frame based on the ``_coro_suspension_point_addr`` stored inside
+the promise.
+
+Stack traces of suspended coroutines
+------------------------------------
+
+Usually, while a coroutine is waiting for, e.g., an in-flight network request,
+the suspended ``coroutine_handle`` is stored within the work queues inside the
+IO scheduler. As soon as we get hold of the coroutine handle, we can backtrace
+it by using ``coro bt <coro_handle>`` where ``<coro_handle>`` is an expression
+evaluating to the coroutine handle of the suspended coroutine.
+
+Keeping track of all existing coroutines
+----------------------------------------
+
+Usually, we should be able to get hold of all currently suspended coroutines by
+inspecting the worker queues of the IO scheduler. In cases where this is not
+possible, we can use the following approach to keep track of all currently
+suspended coroutines.
+
+One such solution is to store the list of in-flight coroutines in a collection:
+
+.. code-block:: c++
+
+  inline std::unordered_set<std::coroutine_handle<void>> inflight_coroutines;
+  inline std::mutex inflight_coroutines_mutex;
+
+  class promise_type {
+  public:
+      promise_type() {
+          std::unique_lock<std::mutex> lock(inflight_coroutines_mutex);
+          inflight_coroutines.insert(std::coroutine_handle<promise_type>::from_promise(*this));
+      }
+      ~promise_type() {
+          std::unique_lock<std::mutex> lock(inflight_coroutines_mutex);
+          inflight_coroutines.erase(std::coroutine_handle<promise_type>::from_promise(*this));
+      }
+  };
+
+With this in place, it is possible to inspect ``inflight_coroutines`` from the
+debugger, and rely on LLDB's ``std::coroutine_handle`` pretty-printer to
+inspect the coroutines.
+
+This technique will track *all* coroutines, also the ones which are currently
+awaiting another coroutine, though. To identify just the "roots" of our
+in-flight coroutines, we can use the ``coro in-flight inflight_coroutines``
+command provided by the :ref:`lldb-script`.
+
+Please note that the above is expensive from a runtime performance perspective,
+and requires locking to prevent data races. As such, it is not recommended to
+use this approach in production code.
+
+Known issues & workarounds for older LLDB versions
+==================================================
+
+LLDB before 21.0 did not yet show the ``__coro_frame`` inside
+``coroutine_handle``. To inspect the coroutine frame, you had to use the
+approach described in the :ref:`devirtualization` section.
+
+LLDB before 18.0 was hiding the ``__promise`` and ``__coro_frame``
+variable by default. The variables are still present, but they need to be
+explicitly added to the "watch" pane in VS Code or requested via
+``print __promise`` and ``print __coro_frame`` from the debugger console.
+
+LLDB before 16.0 did not yet provide a pretty-printer for
+``std::coroutine_handle``. To inspect the coroutine handle, you had to manually
+use the approach described in the :ref:`devirtualization`
+section.
+
+Toolchain Implementation Details
+================================
+
+This section covers the ABI, as well as additional compiler-specific behavior.
+The ABI is followed by all compilers, on all major systems, including Windows,
+Linux and macOS. Different compilers emit different debug information, though.
+
+Ramp, resume and destroy functions
+----------------------------------
+
+Every coroutine is split into three parts:
+
+* The ramp function allocates the coroutine frame and initializes it, usually
+  copying over all variables into the coroutine frame
+* The resume function continues the coroutine from its previous suspension point
+* The destroy function destroys and deallocates the coroutine frame
+* The cleanup function destroys the coroutine frame but does not deallocate it.
+  It is used when the coroutine's allocation was elided thanks to
+  `Heap Allocation Elision (HALO) <https://www.open-std.org/JTC1/SC22/WG21/docs/papers/2018/p0981r0.html>`_
+
+The ramp function is called by the coroutine's caller, and available under the
+original function name used in the C++ source code. The resume function is
+called via ``std::coroutine_handle::resume``. The destroy function is called
+via ``std::coroutine_handle::destroy``.
+
+Information between the three functions is passed via the coroutine frame, a
+compiler-synthesized struct that contains all necessary internal state. The
+resume function knows where to resume execution by reading the suspension point
+index from the coroutine frame. Similarly, the destroy function relies on the
+suspension point index to know which variables are currently in scope and need
+to be destructed.
+
+Usually, the destroy function calls all destructors and deallocates the
+coroutine frame. When a coroutine frame was elided thanks to HALO, only the
+destructors need to be called, but the coroutine frame must not be deallocated.
+In those cases, the cleanup function is used instead of the destroy function.
+
+For coroutines allocated with ``[[clang::coro_await_elidable]]``, clang also
+generates a ``.noalloc`` variant of the ramp function, which does not allocate
+the coroutine frame by itself, but instead expects the caller to allocate the
+coroutine frame and pass it to the ramp function.
+
+When trying to intercept all creations of new coroutines in the debugger, you
+hence might have to set breakpoints in the ramp function and its ``.noalloc``
+variant.
+
+Artificial ``__promise`` and ``__coro_frame`` variables
+-------------------------------------------------------
+
+Inside all coroutine functions, clang / LLVM synthesize a ``__promise`` and
+``__coro_frame`` variable. These variables are used to store the coroutine's
+state. When inside the coroutine function, those can be used to directly
+inspect the promise and the coroutine frame of the own function.
+
+The ABI of a coroutine
+----------------------
+
+A ``std::coroutine_handle`` essentially only holds a pointer to a coroutine
+frame. It resembles the following struct:
+
+.. code-block:: c++
+
+  template<typename promise_type>
+  struct coroutine_handle {
+    void* __coroutine_frame = nullptr;
+  };
+
+The structure of coroutine frames is defined as
+
+.. code-block:: c++
+
+  struct my_coroutine_frame {
+    void (*__resume)(coroutine_frame*); // function pointer to the `resume` function
+    void (*__destroy)(coroutine_frame*); // function pointer to the `destroy` function
+    promise_type promise; // the corresponding `promise_type`
+    ... // Internal coroutine state
+  }
+
+For each coroutine, the compiler synthesizes a different coroutine type,
+storing all necessary internal state. The actual coroutine type is type-erased
+behind the ``std::coroutine_handle``.
+
+However, all coroutine frames always contain the ``resume`` and ``destroy``
+functions as their first two members. As such, we can read the function
+pointers from the coroutine frame and then obtain the function's name from its
+address.
+
+The promise is guaranteed to be at a 16 byte offset from the coroutine frame.
+If we have a coroutine handle at address 0x416eb0, we can hence reinterpret-cast
+the promise as follows:
+
+.. code-block:: text
+
+  print (task::promise_type)*(0x416eb0+16)
+
+Implementation in clang / LLVM
+------------------------------
+
+The C++ Coroutines feature in the Clang compiler is implemented in two parts of
+the compiler. Semantic analysis is performed in Clang, and Coroutine
+construction and optimization takes place in the LLVM middle-end.
+
+For each coroutine function, the frontend generates a single corresponding
+LLVM-IR function. This function uses special ``llvm.coro.suspend`` intrinsics
+to mark the suspension points of the coroutine. The middle end first optimizes
+this function and applies, e.g., constant propagation across the whole,
+non-split coroutine.
+
+CoroSplit then splits the function into ramp, resume and destroy functions.
+This pass also moves stack-local variables which are alive across suspension
+points into the coroutine frame. Most of the heavy lifting to preserve debugging
+information is done in this pass. This pass needs to rewrite all variable
+locations to point into the coroutine frame.
+
+Afterwards, a couple of additional optimizations are applied, before code
+gets emitted, but none of them are really interesting regarding debugging
+information.
+
+For more details on the IR representation of coroutines and the relevant
+optimization passes, see `Coroutines in LLVM <https://llvm.org/docs/Coroutines.html>`_.
+
+Emitting debug information inside ``CoroSplit`` forces us to generate
+insufficient debugging information. Usually, the compiler generates debug
+information in the frontend, as debug information is highly language specific.
+However, this is not possible for coroutine frames because the frames are
+constructed in the LLVM middle-end.
 
 To mitigate this problem, the LLVM middle end attempts to generate some debug
 information, which is unfortunately incomplete, since much of the language
 specific information is missing in the middle end.
 
-This document describes how to use this debug information to better debug
-coroutines.
+.. _devirtualization:
 
-Terminology
-===========
+Devirtualization of coroutine handles
+-------------------------------------
 
-Due to the recent nature of C++20 Coroutines, the terminology used to describe
-the concepts of Coroutines is not settled.  This section defines a common,
-understandable terminology to be used consistently throughout this document.
+Figuring out the promise type and the coroutine frame type of a coroutine
+handle requires inspecting the ``resume`` and ``destroy`` function pointers.
+There are two possible approaches to do so:
 
-coroutine type
---------------
+1. clang always names the type by appending ``.coro_frame_ty`` to the
+   linkage name of the ramp function.
+2. Both clang and GCC add the function-local ``__promise`` and
+   ``__coro_frame`` variables to the resume and destroy functions.
+   We can lookup their types and thereby get the types of promise
+   and coroutine frame.
 
-A `coroutine function` is any function that contains any of the Coroutine
-Keywords `co_await`, `co_yield`, or `co_return`.  A `coroutine type` is a
-possible return type of one of these `coroutine functions`.  `Task` and
-`Generator` are commonly referred to coroutine types.
-
-coroutine
----------
-
-By technical definition, a `coroutine` is a suspendable function. However,
-programmers typically use `coroutine` to refer to an individual instance.
-For example:
-
-.. code-block:: c++
-
-  std::vector<Task> Coros; // Task is a coroutine type.
-  for (int i = 0; i < 3; i++)
-    Coros.push_back(CoroTask()); // CoroTask is a coroutine function, which
-                                 // would return a coroutine type 'Task'.
-
-In practice, we typically say "`Coros` contains 3 coroutines" in the above
-example, though this is not strictly correct.  More technically, this should
-say "`Coros` contains 3 coroutine instances" or "Coros contains 3 coroutine
-objects."
-
-In this document, we follow the common practice of using `coroutine` to refer
-to an individual `coroutine instance`, since the terms `coroutine instance` and
-`coroutine object` aren't sufficiently defined in this case.
-
-coroutine frame
----------------
-
-The C++ Standard uses `coroutine state` to describe the allocated storage. In
-the compiler, we use `coroutine frame` to describe the generated data structure
-that contains the necessary information.
-
-The structure of coroutine frames
-=================================
-
-The structure of coroutine frames is defined as:
-
-.. code-block:: c++
-
-  struct {
-    void (*__r)(); // function pointer to the `resume` function
-    void (*__d)(); // function pointer to the `destroy` function
-    promise_type; // the corresponding `promise_type`
-    ... // Any other needed information
-  }
-
-In the debugger, the function's name is obtainable from the address of the
-function. And the name of `resume` function is equal to the name of the
-coroutine function. So the name of the coroutine is obtainable once the
-address of the coroutine is known.
-
-Print promise_type
-==================
-
-Every coroutine has a `promise_type`, which defines the behavior
-for the corresponding coroutine. In other words, if two coroutines have the
-same `promise_type`, they should behave in the same way.
-To print a `promise_type` in a debugger when stopped at a breakpoint inside a
-coroutine, printing the `promise_type` can be done by:
-
-.. parsed-literal::
-
-  print __promise
-
-It is also possible to print the `promise_type` of a coroutine from the address
-of the coroutine frame. For example, if the address of a coroutine frame is
-0x416eb0, and the type of the `promise_type` is `task::promise_type`, printing
-the `promise_type` can be done by:
-
-.. parsed-literal::
-
-  print (task::promise_type)*(0x416eb0+0x10)
-
-This is possible because the `promise_type` is guaranteed by the ABI to be at a
-16 bit offset from the coroutine frame.
-
-Note that there is also an ABI independent method:
-
-.. parsed-literal::
-
-  print std::coroutine_handle<task::promise_type>::from_address((void*)0x416eb0).promise()
-
-The functions `from_address(void*)` and `promise()` are often small enough to
-be removed during optimization, so this method may not be possible.
-
-Print coroutine frames
-======================
-
-LLVM generates the debug information for the coroutine frame in the LLVM middle
-end, which permits printing of the coroutine frame in the debugger. Much like
-the `promise_type`, when stopped at a breakpoint inside a coroutine we can
-print the coroutine frame by:
-
-.. parsed-literal::
-
-  print __coro_frame
-
-
-Just as printing the `promise_type` is possible from the coroutine address,
-printing the details of the coroutine frame from an address is also possible:
+In gdb, one can use the following approach to devirtualize coroutine type,
+assuming we have a ``std::coroutine_handle`` is at address 0x418eb0:
 
 ::
 
@@ -153,143 +672,71 @@ printing the details of the coroutine frame from an address is also possible:
   (gdb) print  ('_ZL9coro_taski.coro_frame_ty')*(0x418eb0)
   $2 = {__resume_fn = 0x4019e0 <coro_task(int)>, __destroy_fn = 0x402000 <coro_task(int)>, __promise = {...}, ...}
 
-The above is possible because:
+In practice, one would use the ``show-coro-frame`` command provided by the
+:ref:`gdb-script`.
 
-(1) The name of the debug type of the coroutine frame is the `linkage_name`,
-plus the `.coro_frame_ty` suffix because each coroutine function shares the
-same coroutine type.
+LLDB comes with devirtualization support out of the box, as part of the
+pretty-printer for ``std::coroutine_handle``. Internally, this pretty-printer
+uses the second approach. We look up the types in the destroy function and not
+the resume function because the resume function pointer will be set to a
+nullptr as soon as a coroutine reaches its final suspension point. If we used
+the resume function, devirtualization would hence fail for all coroutines that
+have reached their final suspension point.
 
-(2) The coroutine function name is accessible from the address of the coroutine
-frame.
+Interpreting the coroutine frame in optimized builds
+----------------------------------------------------
 
-The above commands can be simplified by placing them in debug scripts.
+The ``__coro_frame`` variable usually refers to the coroutine frame of an
+*in-flight* coroutine. This means, the coroutine is currently executing.
+However, the compiler only guarantees the coroutine frame to be in a consistent
+state while the coroutine is suspended. As such, the variables inside the
+``__coro_frame`` variable might be outdated, in particular when optimizations
+are enabled.
 
-Examples to print coroutine frames
-----------------------------------
+Furthermore, when optimizations are enabled, the compiler will layout the
+coroutine frame more aggressively. Unused values are optimized out, and the
+state will usually contain only the minimal information required to reconstruct
+the coroutine's state.
 
-The print examples below use the following definition:
+clang / LLVM usually use variables like ``__int_32_0`` to represent this
+optimized storage. Those values usually do not directly correspond to variables
+in the source code.
 
-.. code-block:: c++
-
-  #include <coroutine>
-  #include <iostream>
-
-  struct task{
-    struct promise_type {
-      task get_return_object() { return std::coroutine_handle<promise_type>::from_promise(*this); }
-      std::suspend_always initial_suspend() { return {}; }
-      std::suspend_always final_suspend() noexcept { return {}; }
-      void return_void() noexcept {}
-      void unhandled_exception() noexcept {}
-
-      int count = 0;
-    };
-
-    void resume() noexcept {
-      handle.resume();
-    }
-
-    task(std::coroutine_handle<promise_type> hdl) : handle(hdl) {}
-    ~task() {
-      if (handle)
-        handle.destroy();
-    }
-
-    std::coroutine_handle<> handle;
-  };
-
-  class await_counter : public std::suspend_always {
-    public:
-      template<class PromiseType>
-      void await_suspend(std::coroutine_handle<PromiseType> handle) noexcept {
-          handle.promise().count++;
-      }
-  };
-
-  static task coro_task(int v) {
-    int a = v;
-    co_await await_counter{};
-    a++;
-    std::cout << a << "\n";
-    a++;
-    std::cout << a << "\n";
-    a++;
-    std::cout << a << "\n";
-    co_await await_counter{};
-    a++;
-    std::cout << a << "\n";
-    a++;
-    std::cout << a << "\n";
-  }
-
-  int main() {
-    task t = coro_task(43);
-    t.resume();
-    t.resume();
-    t.resume();
-    return 0;
-  }
-
-In debug mode (`O0` + `g`), the printing result would be:
-
-.. parsed-literal::
-
-  {__resume_fn = 0x4019e0 <coro_task(int)>, __destroy_fn = 0x402000 <coro_task(int)>, __promise = {count = 1}, v = 43, a = 45, __coro_index = 1 '\001', struct_std__suspend_always_0 = {__int_8 = 0 '\000'},
-    class_await_counter_1 = {__int_8 = 0 '\000'}, class_await_counter_2 = {__int_8 = 0 '\000'}, struct_std__suspend_always_3 = {__int_8 = 0 '\000'}}
-
-In the above, the values of `v` and `a` are clearly expressed, as are the
-temporary values for `await_counter` (`class_await_counter_1` and
-`class_await_counter_2`) and `std::suspend_always` (
-`struct_std__suspend_always_0` and `struct_std__suspend_always_3`). The index
-of the current suspension point of the coroutine is emitted as `__coro_index`.
-In the above example, the `__coro_index` value of `1` means the coroutine
-stopped at the second suspend point (Note that `__coro_index` is zero indexed)
-which is the first `co_await await_counter{};` in `coro_task`. Note that the
-first initial suspend point is the compiler generated
-`co_await promise_type::initial_suspend()`.
-
-However, when optimizations are enabled, the printed result changes drastically:
-
-.. parsed-literal::
-
-  {__resume_fn = 0x401280 <coro_task(int)>, __destroy_fn = 0x401390 <coro_task(int)>, __promise = {count = 1}, __int_32_0 = 43, __coro_index = 1 '\001'}
-
-Unused values are optimized out, as well as the name of the local variable `a`.
-The only information remained is the value of a 32 bit integer. In this simple
-case, it seems to be pretty clear that `__int_32_0` represents `a`. However, it
-is not true.
-
-An important note with optimization is that the value of a variable may not
-properly express the intended value in the source code.  For example:
+When compiling the program
 
 .. code-block:: c++
 
   static task coro_task(int v) {
     int a = v;
-    co_await await_counter{};
+    co_await some_other_task();
     a++; // __int_32_0 is 43 here
     std::cout << a << "\n";
     a++; // __int_32_0 is still 43 here
     std::cout << a << "\n";
     a++; // __int_32_0 is still 43 here!
     std::cout << a << "\n";
-    co_await await_counter{};
+    co_await some_other_task();
     a++; // __int_32_0 is still 43 here!!
     std::cout << a << "\n";
     a++; // Why is __int_32_0 still 43 here?
     std::cout << a << "\n";
   }
 
-When debugging step-by-step, the value of `__int_32_0` seemingly does not
-change, despite being frequently incremented, and instead is always `43`.
+clang creates a single entry ``__int_32_0`` in the coroutine state.
+
+Intuitively, one might assume that ``__int_32_0`` represents the value of the
+local variable ``a``. However, inspecting ``__int_32_0`` in the debugger while
+single-stepping will reveal that the value of ``__int_32_0`` stays constant,
+despite ``a`` being frequently incremented.
+
 While this might be surprising, this is a result of the optimizer recognizing
-that it can eliminate most of the load/store operations. The above code gets
-optimized to the equivalent of:
+that it can eliminate most of the load/store operations.
+The above code gets optimized to the equivalent of:
 
 .. code-block:: c++
 
   static task coro_task(int v) {
-    store v to __int_32_0 in the frame
+    store v into __int_32_0 in the frame
     co_await await_counter{};
     a = load __int_32_0
     std::cout << a+1 << "\n";
@@ -301,173 +748,280 @@ optimized to the equivalent of:
     std::cout << a+5 << "\n";
   }
 
-It should now be obvious why the value of `__int_32_0` remains unchanged
-throughout the function. It is important to recognize that `__int_32_0`
-does not directly correspond to `a`, but is instead a variable generated
-to assist the compiler in code generation. The variables in an optimized
-coroutine frame should not be thought of as directly representing the
-variables in the C++ source.
+It should now be obvious why the value of ``__int_32_0`` remains unchanged
+throughout the function. It is important to recognize that ``__int_32_0`` does
+not directly correspond to ``a``, but is instead a variable generated to assist
+the compiler in code generation. The variables in an optimized coroutine frame
+should not be thought of as directly representing the variables in the C++
+source.
 
-Get the suspended points
-========================
 
-An important requirement for debugging coroutines is to understand suspended
-points, which are where the coroutine is currently suspended and awaiting.
+Resources
+=========
 
-For simple cases like the above, inspecting the value of the `__coro_index`
-variable in the coroutine frame works well.
+.. _lldb-script:
 
-However, it is not quite so simple in really complex situations. In these
-cases, it is necessary to use the coroutine libraries to insert the
-line-number.
+LLDB Debugger Script
+--------------------
 
-For example:
+The following script provides the ``coro bt`` and ``coro in-flight`` commands
+discussed above. It can be loaded into LLDB using ``command script import
+lldb_coro_debugging.py``. To load this by default, add this command to your
+``~/.lldbinit`` file.
 
-.. code-block:: c++
+Note that this script requires LLDB 21.0 or newer.
 
-  // For all the promise_type we want:
-  class promise_type {
-    ...
-  +  unsigned line_number = 0xffffffff;
-  };
+.. code-block:: python
 
-  #include <source_location>
+  # lldb_coro_debugging.py
+  import lldb
+  from lldb.plugins.parsed_cmd import ParsedCommand
 
-  // For all the awaiter types we need:
-  class awaiter {
-    ...
-    template <typename Promise>
-    void await_suspend(std::coroutine_handle<Promise> handle,
-                       std::source_location sl = std::source_location::current()) {
-          ...
-          handle.promise().line_number = sl.line();
-    }
-  };
+  def _get_first_var_path(v, paths):
+      """
+      Tries multiple variable paths via `GetValueForExpressionPath`
+      and returns the first one that succeeds, or None if none succeed.
+      """
+      for path in paths:
+          var = v.GetValueForExpressionPath(path)
+          if var.error.Success():
+              return var
+      return None
 
-In this case, we use `std::source_location` to store the line number of the
-await inside the `promise_type`.  Since we can locate the coroutine function
-from the address of the coroutine, we can identify suspended points this way
-as well.
 
-The downside here is that this comes at the price of additional runtime cost.
-This is consistent with the C++ philosophy of "Pay for what you use".
+  def _print_async_bt(coro_hdl, result, *, curr_idx, start, limit, continuation_paths, prefix=""):
+      """
+      Prints a backtrace for an async coroutine stack starting from `coro_hdl`,
+      using the given `continuation_paths` to get the next coroutine from the promise.
+      """
+      target = coro_hdl.GetTarget()
+      while curr_idx < limit and coro_hdl is not None and coro_hdl.error.Success():
+          # Print the stack frame, if in range
+          if curr_idx >= start:
+              # Figure out the function name
+              destroy_func_var = coro_hdl.GetValueForExpressionPath(".destroy")
+              destroy_addr = target.ResolveLoadAddress(destroy_func_var.GetValueAsAddress())
+              func_name = destroy_addr.function.name
+              # Figure out the line entry to show
+              suspension_addr_var = coro_hdl.GetValueForExpressionPath(".promise._coro_suspension_point_addr")
+              if suspension_addr_var.error.Success():
+                  line_entry = target.ResolveLoadAddress(suspension_addr_var.GetValueAsAddress()).line_entry
+                  print(f"{prefix} frame #{curr_idx}: {func_name} at {line_entry}", file=result)
+              else:
+                  # We don't know the exact line, print the suspension point ID, so we at least show
+                  # the id of the current suspension point
+                  suspension_point_var = coro_hdl.GetValueForExpressionPath(".coro_frame.__coro_index")
+                  if suspension_point_var.error.Success():
+                      suspension_point = suspension_point_var.GetValueAsUnsigned()
+                  else:
+                      suspension_point = "unknown"
+                  line_entry = destroy_addr.line_entry
+                  print(f"{prefix} frame #{curr_idx}: {func_name} at {line_entry}, suspension point {suspension_point}", file=result)
+          # Move to the next stack frame
+          curr_idx += 1
+          promise_var = coro_hdl.GetChildMemberWithName("promise")
+          coro_hdl = _get_first_var_path(promise_var, continuation_paths)
+      return curr_idx
 
-Get the asynchronous stack
-==========================
+  def _print_combined_bt(frame, result, *, unfiltered, curr_idx, start, limit, continuation_paths):
+      """
+      Prints a backtrace starting from `frame`, interleaving async coroutine frames
+      with regular frames.
+      """
+      while curr_idx < limit and frame.IsValid():
+          if curr_idx >= start and (unfiltered or not frame.IsHidden()):
+              print(f"frame #{curr_idx}: {frame.name} at {frame.line_entry}", file=result)
+          curr_idx += 1
+          coro_var = _get_first_var_path(frame.GetValueForVariablePath("__promise"), continuation_paths)
+          if coro_var:
+              curr_idx = _print_async_bt(coro_var, result,
+                  curr_idx=curr_idx, start=start, limit=limit,
+                  continuation_paths=continuation_paths, prefix="[async]")
+          frame = frame.parent
 
-Another important requirement to debug a coroutine is to print the asynchronous
-stack to identify the asynchronous caller of the coroutine.  As many
-implementations of coroutine types store `std::coroutine_handle<> continuation`
-in the promise type, identifying the caller should be trivial.  The
-`continuation` is typically the awaiting coroutine for the current coroutine.
-That is, the asynchronous parent.
 
-Since the `promise_type` is obtainable from the address of a coroutine and
-contains the corresponding continuation (which itself is a coroutine with a
-`promise_type`), it should be trivial to print the entire asynchronous stack.
+  class CoroBacktraceCommand(ParsedCommand):
+      def get_short_help(self):
+          return "Create a backtrace for C++-20 coroutines"
 
-This logic should be quite easily captured in a debugger script.
+      def get_flags(self):
+          return lldb.eCommandRequiresFrame | lldb.eCommandProcessMustBePaused
 
-Examples to print asynchronous stack
-------------------------------------
+      def setup_command_definition(self):
+          ov_parser = self.get_parser()
+          ov_parser.add_option(
+              "e",
+              "continuation-expr",
+              help = (
+                  "Semi-colon-separated list of expressions evaluated against the promise object"
+                  "to get the next coroutine (e.g. `.continuation;.coro_parent`)"
+              ),
+              value_type = lldb.eArgTypeNone,
+              dest = "continuation_expr_arg",
+              default = ".continuation",
+          )
+          ov_parser.add_option(
+              "c",
+              "count",
+              help = "How many frames to display (0 for all)",
+              value_type = lldb.eArgTypeCount,
+              dest = "count_arg",
+              default = 20,
+          )
+          ov_parser.add_option(
+              "s",
+              "start",
+              help = "Frame in which to start the backtrace",
+              value_type = lldb.eArgTypeIndex,
+              dest = "frame_index_arg",
+              default = 0,
+          )
+          ov_parser.add_option(
+              "u",
+              "unfiltered",
+              help = "Do not filter out frames according to installed frame recognizers",
+              value_type = lldb.eArgTypeBoolean,
+              dest = "unfiltered_arg",
+              default = False,
+          )
+          ov_parser.add_argument_set([
+              ov_parser.make_argument_element(
+                  lldb.eArgTypeExpression,
+                  repeat="optional"
+              )
+          ])
 
-Here is an example to print the asynchronous stack for the normal task implementation.
+      def __call__(self, debugger, args_array, exe_ctx, result):
+          ov_parser = self.get_parser()
+          continuation_paths = ov_parser.continuation_expr_arg.split(";")
+          count = ov_parser.count_arg
+          if count == 0:
+              count = 99999
+          frame_index = ov_parser.frame_index_arg
+          unfiltered = ov_parser.unfiltered_arg
 
-.. code-block:: c++
+          frame = exe_ctx.GetFrame()
+          if not frame.IsValid():
+              result.SetError("invalid frame")
+              return
 
-  // debugging-example.cpp
-  #include <coroutine>
-  #include <iostream>
-  #include <utility>
+          if len(args_array) > 1:
+              result.SetError("At most one expression expected")
+              return
+          elif len(args_array) == 1:
+              expr = args_array.GetItemAtIndex(0).GetStringValue(9999)
+              coro_hdl = frame.EvaluateExpression(expr)
+              if not coro_hdl.error.Success():
+                  result.AppendMessage(
+                      f'error: expression failed {expr} => {coro_hdl.error}'
+                  )
+                  result.SetError(f"Expression `{expr}` failed to evaluate")
+                  return
+              _print_async_bt(coro_hdl, result,
+                  curr_idx = 0, start = frame_index, limit = frame_index + count,
+                  continuation_paths = continuation_paths)
+          else:
+              _print_combined_bt(frame, result, unfiltered=unfiltered,
+                  curr_idx = 0, start = frame_index, limit = frame_index + count,
+                  continuation_paths = continuation_paths)
 
-  struct task {
-    struct promise_type {
-      task get_return_object();
-      std::suspend_always initial_suspend() { return {}; }
 
-      void unhandled_exception() noexcept {}
+  class CoroInflightCommand(ParsedCommand):
+      def get_short_help(self):
+          return "Identify all in-flight coroutines"
 
-      struct FinalSuspend {
-        std::coroutine_handle<> continuation;
-        auto await_ready() noexcept { return false; }
-        auto await_suspend(std::coroutine_handle<> handle) noexcept {
-          return continuation;
-        }
-        void await_resume() noexcept {}
-      };
-      FinalSuspend final_suspend() noexcept { return {continuation}; }
+      def get_flags(self):
+          return lldb.eCommandRequiresTarget | lldb.eCommandProcessMustBePaused
 
-      void return_value(int res) { result = res; }
+      def setup_command_definition(self):
+          ov_parser = self.get_parser()
+          ov_parser.add_option(
+              "e",
+              "continuation-expr",
+              help = (
+                  "Semi-colon-separated list of expressions evaluated against the promise object"
+                  "to get the next coroutine (e.g. `.continuation;.coro_parent`)"
+              ),
+              value_type = lldb.eArgTypeNone,
+              dest = "continuation_expr_arg",
+              default = ".continuation",
+          )
+          ov_parser.add_option(
+              "c",
+              "count",
+              help = "How many frames to display (0 for all)",
+              value_type = lldb.eArgTypeCount,
+              dest = "count_arg",
+              default = 5,
+          )
+          ov_parser.add_argument_set([
+              ov_parser.make_argument_element(
+                  lldb.eArgTypeExpression,
+                  repeat="plus"
+              )
+          ])
 
-      std::coroutine_handle<> continuation = std::noop_coroutine();
-      int result = 0;
-    };
+      def __call__(self, debugger, args_array, exe_ctx, result):
+          ov_parser = self.get_parser()
+          continuation_paths = ov_parser.continuation_expr_arg.split(";")
+          count = ov_parser.count_arg
 
-    task(std::coroutine_handle<promise_type> handle) : handle(handle) {}
-    ~task() {
-      if (handle)
-        handle.destroy();
-    }
+          # Collect all coroutine_handles from the provided containers
+          all_coros = []
+          for entry in args_array:
+              expr = entry.GetStringValue(9999)
+              if exe_ctx.frame.IsValid():
+                  coro_container = exe_ctx.frame.EvaluateExpression(expr)
+              else:
+                  coro_container = exe_ctx.target.EvaluateExpression(expr)
+              if not coro_container.error.Success():
+                  result.AppendMessage(
+                      f'error: expression failed {expr} => {coro_container.error}'
+                  )
+                  result.SetError(f"Expression `{expr}` failed to evaluate")
+                  return
+              for entry in coro_container.children:
+                  if "coroutine_handle" not in entry.GetType().name:
+                      result.SetError(f"Found entry of type {entry.GetType().name} in {expr},"
+                                      "  expected a coroutine handle")
+                      return
+                  all_coros.append(entry)
 
-    auto operator co_await() {
-      struct Awaiter {
-        std::coroutine_handle<promise_type> handle;
-        auto await_ready() { return false; }
-        auto await_suspend(std::coroutine_handle<> continuation) {
-          handle.promise().continuation = continuation;
-          return handle;
-        }
-        int await_resume() {
-          int ret = handle.promise().result;
-          handle.destroy();
-          return ret;
-        }
-      };
-      return Awaiter{std::exchange(handle, nullptr)};
-    }
+          # Remove all coroutines that are currently waiting for other coroutines to finish
+          coro_roots = {c.GetChildMemberWithName("coro_frame").GetValueAsAddress(): c for c in all_coros}
+          for coro_hdl in all_coros:
+              parent_coro = _get_first_var_path(coro_hdl.GetChildMemberWithName("promise"), continuation_paths)
+              parent_addr = parent_coro.GetChildMemberWithName("coro_frame").GetValueAsAddress()
+              if parent_addr in coro_roots:
+                  del coro_roots[parent_addr]
 
-    int syncStart() {
-      handle.resume();
-      return handle.promise().result;
-    }
+          # Print all remaining coroutines
+          for addr, root_hdl in coro_roots.items():
+              print(f"coroutine root 0x{addr:x}", file=result)
+              _print_async_bt(root_hdl, result,
+                              curr_idx=0, start=0, limit=count,
+                              continuation_paths=continuation_paths, prefix="    ")
 
-  private:
-    std::coroutine_handle<promise_type> handle;
-  };
 
-  task task::promise_type::get_return_object() {
-    return std::coroutine_handle<promise_type>::from_promise(*this);
-  }
+  def __lldb_init_module(debugger, internal_dict):
+      debugger.HandleCommand("command container add -h 'Debugging utilities for C++20 coroutines' coro")
+      debugger.HandleCommand(f"command script add -o -p -c {__name__}.CoroBacktraceCommand coro bt")
+      debugger.HandleCommand(f"command script add -o -p -c {__name__}.CoroInflightCommand coro in-flight")
+      print("Coro debugging utilities installed. Use `help coro` to see available commands.")
 
-  namespace detail {
-  template <int N>
-  task chain_fn() {
-    co_return N + co_await chain_fn<N - 1>();
-  }
+  if __name__ == '__main__':
+      print("This script should be loaded from LLDB using `command script import <filename>`")
 
-  template <>
-  task chain_fn<0>() {
-    // This is the default breakpoint.
-    __builtin_debugtrap();
-    co_return 0;
-  }
-  }  // namespace detail
+.. _gdb-script:
 
-  task chain() {
-    co_return co_await detail::chain_fn<30>();
-  }
+GDB Debugger Script
+-------------------
 
-  int main() {
-    std::cout << chain().syncStart() << "\n";
-    return 0;
-  }
+For GDB, the following script provides a couple of useful commands:
 
-In the example, the ``task`` coroutine holds a ``continuation`` field,
-which would be resumed once the ``task`` completes.
-In another word, the ``continuation`` is the asynchronous caller for the ``task``.
-Just like the normal function returns to its caller when the function completes.
-
-So we can use the ``continuation`` field to construct the asynchronous stack:
+* ``async-bt`` to print the stack trace of a coroutine
+* ``show-coro-frame`` to print the coroutine frame, similar to
+  LLDB's builtin pretty-printer for coroutine frames
 
 .. code-block:: python
 
@@ -599,7 +1153,7 @@ So we can use the ``continuation`` field to construct the asynchronous stack:
           addr = int(argv[0], 16)
           block = gdb.block_for_pc(long(cast_addr2long_pointer(addr).dereference()))
           if block is None:
-              print "block " + str(addr) + "  is none."
+              print "block " + str(addr) + " is None."
               return
 
           # Disable demangling since gdb will treat names starting with `_Z`(The marker for Itanium ABI) specially.
@@ -614,128 +1168,17 @@ So we can use the ``continuation`` field to construct the asynchronous stack:
 
   ShowCoroFrame()
 
-Then let's run:
+Further Reading
+---------------
 
-.. code-block:: text
+The authors of the Folly libraries wrote a blog post series on how they debug coroutines:
 
-  $ clang++ -std=c++20 -g debugging-example.cpp -o debugging-example
-  $ gdb ./debugging-example
-  (gdb) # We've already set the breakpoint.
-  (gdb) r
-  Program received signal SIGTRAP, Trace/breakpoint trap.
-  detail::chain_fn<0> () at debugging-example2.cpp:73
-  73	  co_return 0;
-  (gdb) # Executes the debugging scripts
-  (gdb) source debugging-helper.py
-  (gdb) # Print the asynchronous stack
-  (gdb) async-bt
-  #0 0x401c40 in detail::chain_fn<0>() ['frame_addr = 0x441860', 'promise_addr = 0x441870', 'continuation_addr = 0x441870'] at debugging-example.cpp:71
-  #1 0x4022d0 in detail::chain_fn<1>() ['frame_addr = 0x441810', 'promise_addr = 0x441820', 'continuation_addr = 0x441820'] at debugging-example.cpp:66
-  #2 0x403060 in detail::chain_fn<2>() ['frame_addr = 0x4417c0', 'promise_addr = 0x4417d0', 'continuation_addr = 0x4417d0'] at debugging-example.cpp:66
-  #3 0x403df0 in detail::chain_fn<3>() ['frame_addr = 0x441770', 'promise_addr = 0x441780', 'continuation_addr = 0x441780'] at debugging-example.cpp:66
-  #4 0x404b80 in detail::chain_fn<4>() ['frame_addr = 0x441720', 'promise_addr = 0x441730', 'continuation_addr = 0x441730'] at debugging-example.cpp:66
-  #5 0x405910 in detail::chain_fn<5>() ['frame_addr = 0x4416d0', 'promise_addr = 0x4416e0', 'continuation_addr = 0x4416e0'] at debugging-example.cpp:66
-  #6 0x4066a0 in detail::chain_fn<6>() ['frame_addr = 0x441680', 'promise_addr = 0x441690', 'continuation_addr = 0x441690'] at debugging-example.cpp:66
-  #7 0x407430 in detail::chain_fn<7>() ['frame_addr = 0x441630', 'promise_addr = 0x441640', 'continuation_addr = 0x441640'] at debugging-example.cpp:66
-  #8 0x4081c0 in detail::chain_fn<8>() ['frame_addr = 0x4415e0', 'promise_addr = 0x4415f0', 'continuation_addr = 0x4415f0'] at debugging-example.cpp:66
-  #9 0x408f50 in detail::chain_fn<9>() ['frame_addr = 0x441590', 'promise_addr = 0x4415a0', 'continuation_addr = 0x4415a0'] at debugging-example.cpp:66
-  #10 0x409ce0 in detail::chain_fn<10>() ['frame_addr = 0x441540', 'promise_addr = 0x441550', 'continuation_addr = 0x441550'] at debugging-example.cpp:66
-  #11 0x40aa70 in detail::chain_fn<11>() ['frame_addr = 0x4414f0', 'promise_addr = 0x441500', 'continuation_addr = 0x441500'] at debugging-example.cpp:66
-  #12 0x40b800 in detail::chain_fn<12>() ['frame_addr = 0x4414a0', 'promise_addr = 0x4414b0', 'continuation_addr = 0x4414b0'] at debugging-example.cpp:66
-  #13 0x40c590 in detail::chain_fn<13>() ['frame_addr = 0x441450', 'promise_addr = 0x441460', 'continuation_addr = 0x441460'] at debugging-example.cpp:66
-  #14 0x40d320 in detail::chain_fn<14>() ['frame_addr = 0x441400', 'promise_addr = 0x441410', 'continuation_addr = 0x441410'] at debugging-example.cpp:66
-  #15 0x40e0b0 in detail::chain_fn<15>() ['frame_addr = 0x4413b0', 'promise_addr = 0x4413c0', 'continuation_addr = 0x4413c0'] at debugging-example.cpp:66
-  #16 0x40ee40 in detail::chain_fn<16>() ['frame_addr = 0x441360', 'promise_addr = 0x441370', 'continuation_addr = 0x441370'] at debugging-example.cpp:66
-  #17 0x40fbd0 in detail::chain_fn<17>() ['frame_addr = 0x441310', 'promise_addr = 0x441320', 'continuation_addr = 0x441320'] at debugging-example.cpp:66
-  #18 0x410960 in detail::chain_fn<18>() ['frame_addr = 0x4412c0', 'promise_addr = 0x4412d0', 'continuation_addr = 0x4412d0'] at debugging-example.cpp:66
-  #19 0x4116f0 in detail::chain_fn<19>() ['frame_addr = 0x441270', 'promise_addr = 0x441280', 'continuation_addr = 0x441280'] at debugging-example.cpp:66
-  #20 0x412480 in detail::chain_fn<20>() ['frame_addr = 0x441220', 'promise_addr = 0x441230', 'continuation_addr = 0x441230'] at debugging-example.cpp:66
-  #21 0x413210 in detail::chain_fn<21>() ['frame_addr = 0x4411d0', 'promise_addr = 0x4411e0', 'continuation_addr = 0x4411e0'] at debugging-example.cpp:66
-  #22 0x413fa0 in detail::chain_fn<22>() ['frame_addr = 0x441180', 'promise_addr = 0x441190', 'continuation_addr = 0x441190'] at debugging-example.cpp:66
-  #23 0x414d30 in detail::chain_fn<23>() ['frame_addr = 0x441130', 'promise_addr = 0x441140', 'continuation_addr = 0x441140'] at debugging-example.cpp:66
-  #24 0x415ac0 in detail::chain_fn<24>() ['frame_addr = 0x4410e0', 'promise_addr = 0x4410f0', 'continuation_addr = 0x4410f0'] at debugging-example.cpp:66
-  #25 0x416850 in detail::chain_fn<25>() ['frame_addr = 0x441090', 'promise_addr = 0x4410a0', 'continuation_addr = 0x4410a0'] at debugging-example.cpp:66
-  #26 0x4175e0 in detail::chain_fn<26>() ['frame_addr = 0x441040', 'promise_addr = 0x441050', 'continuation_addr = 0x441050'] at debugging-example.cpp:66
-  #27 0x418370 in detail::chain_fn<27>() ['frame_addr = 0x440ff0', 'promise_addr = 0x441000', 'continuation_addr = 0x441000'] at debugging-example.cpp:66
-  #28 0x419100 in detail::chain_fn<28>() ['frame_addr = 0x440fa0', 'promise_addr = 0x440fb0', 'continuation_addr = 0x440fb0'] at debugging-example.cpp:66
-  #29 0x419e90 in detail::chain_fn<29>() ['frame_addr = 0x440f50', 'promise_addr = 0x440f60', 'continuation_addr = 0x440f60'] at debugging-example.cpp:66
-  #30 0x41ac20 in detail::chain_fn<30>() ['frame_addr = 0x440f00', 'promise_addr = 0x440f10', 'continuation_addr = 0x440f10'] at debugging-example.cpp:66
-  #31 0x41b9b0 in chain() ['frame_addr = 0x440eb0', 'promise_addr = 0x440ec0', 'continuation_addr = 0x440ec0'] at debugging-example.cpp:77
+* `Async stack traces in folly: Introduction <https://developers.facebook.com/blog/post/2021/09/16/async-stack-traces-folly-Introduction/>`_
+* `Async stack traces in folly: Synchronous and asynchronous stack traces <https://developers.facebook.com/blog/post/2021/09/23/async-stack-traces-folly-synchronous-asynchronous-stack-traces/>`_
+* `Async stack traces in folly: Forming an async stack from individual frames <https://developers.facebook.com/blog/post/2021/09/30/async-stack-traces-folly-forming-async-stack-individual-frames/>`_
+* `Async Stack Traces for C++ Coroutines in Folly: Walking the async stack <https://developers.facebook.com/blog/post/2021/10/14/async-stack-traces-c-plus-plus-coroutines-folly-walking-async-stack/>`_
+* `Async stack traces in folly: Improving debugging in the developer lifecycle <https://developers.facebook.com/blog/post/2021/10/21/async-stack-traces-folly-improving-debugging-developer-lifecycle/>`_
 
-Now we get the complete asynchronous stack!
-It is also possible to print other asynchronous stack which doesn't live in the top of the stack.
-We can make it by passing the address of the corresponding coroutine frame to ``async-bt`` command.
-
-By the debugging scripts, we can print any coroutine frame too as long as we know the address.
-For example, we can print the coroutine frame for ``detail::chain_fn<18>()`` in the above example.
-From the log record, we know the address of the coroutine frame is ``0x4412c0`` in the run. Then we can:
-
-.. code-block:: text
-
-  (gdb) show-coro-frame 0x4412c0
-  {
-    __resume_fn = 0x410960 <detail::chain_fn<18>()>,
-    __destroy_fn = 0x410d60 <detail::chain_fn<18>()>,
-    __promise = {
-      continuation = {
-        _M_fr_ptr = 0x441270
-      },
-      result = 0
-    },
-    struct_Awaiter_0 = {
-      struct_std____n4861__coroutine_handle_0 = {
-        struct_std____n4861__coroutine_handle = {
-          PointerType = 0x441310
-        }
-      }
-    },
-    struct_task_1 = {
-      struct_std____n4861__coroutine_handle_0 = {
-        struct_std____n4861__coroutine_handle = {
-          PointerType = 0x0
-        }
-      }
-    },
-    struct_task__promise_type__FinalSuspend_2 = {
-      struct_std____n4861__coroutine_handle = {
-        PointerType = 0x0
-      }
-    },
-    __coro_index = 1 '\001',
-    struct_std____n4861__suspend_always_3 = {
-      __int_8 = 0 '\000'
-    }
-
-
-Get the living coroutines
-=========================
-
-Another useful task when debugging coroutines is to enumerate the list of
-living coroutines, which is often done with threads.  While technically
-possible, this task is not recommended in production code as it is costly at
-runtime. One such solution is to store the list of currently running coroutines
-in a collection:
-
-.. code-block:: c++
-
-  inline std::unordered_set<void*> lived_coroutines;
-  // For all promise_type we want to record
-  class promise_type {
-  public:
-      promise_type() {
-          // Note to avoid data races
-          lived_coroutines.insert(std::coroutine_handle<promise_type>::from_promise(*this).address());
-      }
-      ~promise_type() {
-          // Note to avoid data races
-          lived_coroutines.erase(std::coroutine_handle<promise_type>::from_promise(*this).address());
-      }
-  };
-
-In the above code snippet, we save the address of every lived coroutine in the
-`lived_coroutines` `unordered_set`. As before, once we know the address of the
-coroutine we can derive the function, `promise_type`, and other members of the
-frame. Thus, we could print the list of lived coroutines from that collection.
-
-Please note that the above is expensive from a storage perspective, and requires
-some level of locking (not pictured) on the collection to prevent data races.
+Besides some topics also covered here (stack traces from the debugger), Folly's blog post series also covers
+more additional topics, such as capturing async stack traces in performance profiles via eBPF filters
+and printing async stack traces on crashes.

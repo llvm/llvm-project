@@ -552,9 +552,8 @@ bool ClassDescriptorV2::Describe(
     } else {
       std::optional<method_list_t> base_method_list =
           GetMethodList(process, class_ro->m_baseMethods_ptr);
-      if (!base_method_list)
-        return false;
-      if (!ProcessMethodList(instance_method_func, *base_method_list))
+      if (base_method_list &&
+          !ProcessMethodList(instance_method_func, *base_method_list))
         return false;
     }
   }
@@ -722,7 +721,7 @@ void ClassDescriptorV2::iVarsStorage::fill(AppleObjCRuntimeV2 &runtime,
                 "name = {0}, encoding = {1}, offset_ptr = {2:x}, size = "
                 "{3}, type_size = {4}",
                 name, type, offset_ptr, size,
-                ivar_type.GetByteSize(nullptr).value_or(0));
+                expectedToOptional(ivar_type.GetByteSize(nullptr)).value_or(0));
       Scalar offset_scalar;
       Status error;
       const int offset_ptr_size = 4;

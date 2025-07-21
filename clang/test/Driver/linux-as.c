@@ -106,11 +106,6 @@
 // RUN:   | FileCheck -check-prefix=CHECK-ARM-MFLOAT-ABI %s
 // CHECK-ARM-MFLOAT-ABI: as{{(.exe)?}}" "-EL" "-mfloat-abi=hard"
 //
-// RUN: %clang -target arm-linux-androideabi -### \
-// RUN:   -no-integrated-as -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK-ARM-ANDROID %s
-// CHECK-ARM-ANDROID: as{{(.exe)?}}" "-EL" "-mfloat-abi=soft"
-//
 // RUN: %clang -target arm-linux-androideabi -march=armv7-a -### \
 // RUN:   -no-integrated-as -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-ARM-ANDROID-SOFTFP %s

@@ -14,7 +14,7 @@
 // RUN:               -convert-arith-to-llvm                                   \
 // RUN:               -convert-cf-to-llvm                                      \
 // RUN:               -reconcile-unrealized-casts                              \
-// RUN: | mlir-cpu-runner                                                      \
+// RUN: | mlir-runner                                                      \
 // RUN: -e entry -entry-point-result=void -O3                                  \
 // RUN: -shared-libs=%mlir_runner_utils  \
 // RUN: -shared-libs=%mlir_c_runner_utils\
@@ -37,7 +37,7 @@
 // RUN:               -convert-arith-to-llvm                                   \
 // RUN:               -convert-cf-to-llvm                                      \
 // RUN:               -reconcile-unrealized-casts                              \
-// RUN: | mlir-cpu-runner                                                      \
+// RUN: | mlir-runner                                                      \
 // RUN: -e entry -entry-point-result=void -O3                                  \
 // RUN: -shared-libs=%mlir_runner_utils  \
 // RUN: -shared-libs=%mlir_c_runner_utils\
@@ -53,7 +53,7 @@
 // RUN:               -convert-arith-to-llvm                                   \
 // RUN:               -convert-cf-to-llvm                                      \
 // RUN:               -reconcile-unrealized-casts                              \
-// RUN: | mlir-cpu-runner                                                      \
+// RUN: | mlir-runner                                                      \
 // RUN: -e entry -entry-point-result=void -O3                                  \
 // RUN: -shared-libs=%mlir_runner_utils  \
 // RUN: -shared-libs=%mlir_c_runner_utils\

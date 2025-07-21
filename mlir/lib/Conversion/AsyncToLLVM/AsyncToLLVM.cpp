@@ -10,7 +10,6 @@
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
-#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -395,9 +394,11 @@ public:
 
     // Allocate memory for the coroutine frame.
     auto allocFuncOp = LLVM::lookupOrCreateAlignedAllocFn(
-        op->getParentOfType<ModuleOp>(), rewriter.getI64Type());
+        rewriter, op->getParentOfType<ModuleOp>(), rewriter.getI64Type());
+    if (failed(allocFuncOp))
+      return failure();
     auto coroAlloc = rewriter.create<LLVM::CallOp>(
-        loc, allocFuncOp, ValueRange{coroAlign, coroSize});
+        loc, allocFuncOp.value(), ValueRange{coroAlign, coroSize});
 
     // Begin a coroutine: @llvm.coro.begin.
     auto coroId = CoroBeginOpAdaptor(adaptor.getOperands()).getId();
@@ -430,8 +431,10 @@ public:
 
     // Free the memory.
     auto freeFuncOp =
-        LLVM::lookupOrCreateFreeFn(op->getParentOfType<ModuleOp>());
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, freeFuncOp,
+        LLVM::lookupOrCreateFreeFn(rewriter, op->getParentOfType<ModuleOp>());
+    if (failed(freeFuncOp))
+      return failure();
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, freeFuncOp.value(),
                                               ValueRange(coroMem.getResult()));
 
     return success();

@@ -11,6 +11,7 @@
 #include "flang/Common/indirection.h"
 #include "flang/Parser/tools.h"
 #include "flang/Parser/user-state.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
@@ -253,6 +254,23 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Name &x) {
   return os << x.ToString();
 }
 
+OmpDirectiveName::OmpDirectiveName(const Verbatim &name) {
+  std::string_view nameView{name.source.begin(), name.source.size()};
+  std::string nameLower{ToLowerCaseLetters(nameView)};
+  // The function getOpenMPDirectiveKind will return OMPD_unknown in two cases:
+  // (1) if the given string doesn't match any actual directive, or
+  // (2) if the given string was "unknown".
+  // The Verbatim(<token>) parser will succeed as long as the given token
+  // matches the source.
+  // Since using "construct<OmpDirectiveName>(verbatim(...))" will succeed
+  // if the verbatim parser succeeds, in order to get OMPD_unknown the
+  // token given to Verbatim must be invalid. Because it's an internal issue
+  // asserting is ok.
+  v = llvm::omp::getOpenMPDirectiveKind(nameLower);
+  assert(v != llvm::omp::Directive::OMPD_unknown && "Invalid directive name");
+  source = name.source;
+}
+
 OmpDependenceType::Value OmpDoacross::GetDepType() const {
   return common::visit( //
       common::visitors{
@@ -281,6 +299,56 @@ OmpTaskDependenceType::Value OmpDependClause::TaskDep::GetTaskDepType() const {
   }
 }
 
+std::string OmpTraitSelectorName::ToString() const {
+  return common::visit( //
+      common::visitors{
+          [&](Value v) { //
+            return std::string(EnumToString(v));
+          },
+          [&](llvm::omp::Directive d) {
+            return llvm::omp::getOpenMPDirectiveName(
+                d, llvm::omp::FallbackVersion)
+                .str();
+          },
+          [&](const std::string &s) { //
+            return s;
+          },
+      },
+      u);
+}
+
+std::string OmpTraitSetSelectorName::ToString() const {
+  return std::string(EnumToString(v));
+}
+
+llvm::omp::Clause OpenMPAtomicConstruct::GetKind() const {
+  auto &dirSpec{std::get<OmpDirectiveSpecification>(t)};
+  for (auto &clause : dirSpec.Clauses().v) {
+    switch (clause.Id()) {
+    case llvm::omp::Clause::OMPC_read:
+    case llvm::omp::Clause::OMPC_write:
+    case llvm::omp::Clause::OMPC_update:
+      return clause.Id();
+    default:
+      break;
+    }
+  }
+  return llvm::omp::Clause::OMPC_update;
+}
+
+bool OpenMPAtomicConstruct::IsCapture() const {
+  auto &dirSpec{std::get<OmpDirectiveSpecification>(t)};
+  return llvm::any_of(dirSpec.Clauses().v, [](auto &clause) {
+    return clause.Id() == llvm::omp::Clause::OMPC_capture;
+  });
+}
+
+bool OpenMPAtomicConstruct::IsCompare() const {
+  auto &dirSpec{std::get<OmpDirectiveSpecification>(t)};
+  return llvm::any_of(dirSpec.Clauses().v, [](auto &clause) {
+    return clause.Id() == llvm::omp::Clause::OMPC_compare;
+  });
+}
 } // namespace Fortran::parser
 
 template <typename C> static llvm::omp::Clause getClauseIdForClass(C &&) {
@@ -298,5 +366,68 @@ template <typename C> static llvm::omp::Clause getClauseIdForClass(C &&) {
 namespace Fortran::parser {
 llvm::omp::Clause OmpClause::Id() const {
   return std::visit([](auto &&s) { return getClauseIdForClass(s); }, u);
+}
+
+bool OmpDirectiveName::IsExecutionPart() const {
+  // Can the directive appear in the execution part of the program.
+  llvm::omp::Directive id{v};
+  switch (llvm::omp::getDirectiveCategory(id)) {
+  case llvm::omp::Category::Executable:
+    return true;
+  case llvm::omp::Category::Declarative:
+    switch (id) {
+    case llvm::omp::Directive::OMPD_allocate:
+      return true;
+    default:
+      return false;
+    }
+    break;
+  case llvm::omp::Category::Informational:
+    switch (id) {
+    case llvm::omp::Directive::OMPD_assume:
+      return true;
+    default:
+      return false;
+    }
+    break;
+  case llvm::omp::Category::Meta:
+    return true;
+  case llvm::omp::Category::Subsidiary:
+    switch (id) {
+    // TODO: case llvm::omp::Directive::OMPD_task_iteration:
+    case llvm::omp::Directive::OMPD_section:
+    case llvm::omp::Directive::OMPD_scan:
+      return true;
+    default:
+      return false;
+    }
+    break;
+  case llvm::omp::Category::Utility:
+    switch (id) {
+    case llvm::omp::Directive::OMPD_error:
+    case llvm::omp::Directive::OMPD_nothing:
+      return true;
+    default:
+      return false;
+    }
+    break;
+  }
+  return false;
+}
+
+const OmpArgumentList &OmpDirectiveSpecification::Arguments() const {
+  static OmpArgumentList empty{decltype(OmpArgumentList::v){}};
+  if (auto &arguments = std::get<std::optional<OmpArgumentList>>(t)) {
+    return *arguments;
+  }
+  return empty;
+}
+
+const OmpClauseList &OmpDirectiveSpecification::Clauses() const {
+  static OmpClauseList empty{decltype(OmpClauseList::v){}};
+  if (auto &clauses = std::get<std::optional<OmpClauseList>>(t)) {
+    return *clauses;
+  }
+  return empty;
 }
 } // namespace Fortran::parser

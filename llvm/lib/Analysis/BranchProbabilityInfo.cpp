@@ -54,7 +54,7 @@ static cl::opt<bool> PrintBranchProb(
     "print-bpi", cl::init(false), cl::Hidden,
     cl::desc("Print the branch probability info."));
 
-cl::opt<std::string> PrintBranchProbFuncName(
+static cl::opt<std::string> PrintBranchProbFuncName(
     "print-bpi-func-name", cl::Hidden,
     cl::desc("The option to specify the name of the function "
              "whose branch probability info is printed."));
@@ -69,10 +69,7 @@ INITIALIZE_PASS_END(BranchProbabilityInfoWrapperPass, "branch-prob",
                     "Branch Probability Analysis", false, true)
 
 BranchProbabilityInfoWrapperPass::BranchProbabilityInfoWrapperPass()
-    : FunctionPass(ID) {
-  initializeBranchProbabilityInfoWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : FunctionPass(ID) {}
 
 char BranchProbabilityInfoWrapperPass::ID = 0;
 
@@ -669,7 +666,6 @@ BranchProbabilityInfo::getEstimatedEdgeWeight(const LoopEdge &Edge) const {
 template <class IterT>
 std::optional<uint32_t> BranchProbabilityInfo::getMaxEstimatedEdgeWeight(
     const LoopBlock &SrcLoopBB, iterator_range<IterT> Successors) const {
-  SmallVector<uint32_t, 4> Weights;
   std::optional<uint32_t> MaxWeight;
   for (const BasicBlock *DstBB : Successors) {
     const LoopBlock DstLoopBB = getLoopBlock(DstBB);
@@ -802,8 +798,9 @@ BranchProbabilityInfo::getInitialEstimatedBlockWeight(const BasicBlock *BB) {
 // Does RPO traversal over all blocks in \p F and assigns weights to
 // 'unreachable', 'noreturn', 'cold', 'unwind' blocks. In addition it does its
 // best to propagate the weight to up/down the IR.
-void BranchProbabilityInfo::computeEestimateBlockWeight(
-    const Function &F, DominatorTree *DT, PostDominatorTree *PDT) {
+void BranchProbabilityInfo::estimateBlockWeights(const Function &F,
+                                                 DominatorTree *DT,
+                                                 PostDominatorTree *PDT) {
   SmallVector<BasicBlock *, 8> BlockWorkList;
   SmallVector<LoopBlock, 8> LoopWorkList;
   SmallDenseMap<LoopData, SmallVector<BasicBlock *, 4>> LoopExitBlocks;
@@ -1176,10 +1173,12 @@ void BranchProbabilityInfo::copyEdgeProbabilities(BasicBlock *Src,
 
 void BranchProbabilityInfo::swapSuccEdgesProbabilities(const BasicBlock *Src) {
   assert(Src->getTerminator()->getNumSuccessors() == 2);
-  if (!Probs.contains(std::make_pair(Src, 0)))
+  auto It0 = Probs.find(std::make_pair(Src, 0));
+  if (It0 == Probs.end())
     return; // No probability is set for edges from Src
-  assert(Probs.contains(std::make_pair(Src, 1)));
-  std::swap(Probs[std::make_pair(Src, 0)], Probs[std::make_pair(Src, 1)]);
+  auto It1 = Probs.find(std::make_pair(Src, 1));
+  assert(It1 != Probs.end());
+  std::swap(It0->second, It1->second);
 }
 
 raw_ostream &
@@ -1246,7 +1245,7 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LoopI,
     PDT = PDTPtr.get();
   }
 
-  computeEestimateBlockWeight(F, DT, PDT);
+  estimateBlockWeights(F, DT, PDT);
 
   // Walk the basic blocks in post-order so that we can build up state about
   // the successors of a block iteratively.

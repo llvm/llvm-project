@@ -14,6 +14,7 @@
 #define LLVM_TEXTAPI_UTILS_H
 
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -51,34 +52,35 @@ struct SymLink {
 ///
 /// \param Path Location of file.
 /// \param Extension File extension to update with.
-void replace_extension(SmallVectorImpl<char> &Path, const Twine &Extension);
+LLVM_ABI void replace_extension(SmallVectorImpl<char> &Path,
+                                const Twine &Extension);
 
 /// Determine whether to skip over symlink due to either too many symlink levels
 /// or is cyclic.
 ///
 /// \param Path Location to symlink.
 /// \param Result Holds whether to skip over Path.
-std::error_code shouldSkipSymLink(const Twine &Path, bool &Result);
+LLVM_ABI std::error_code shouldSkipSymLink(const Twine &Path, bool &Result);
 
 /// Turn absolute symlink into relative.
 ///
 /// \param From The symlink.
 /// \param To What the symlink points to.
 /// \param RelativePath Path location to update what the symlink points to.
-std::error_code make_relative(StringRef From, StringRef To,
-                              SmallVectorImpl<char> &RelativePath);
+LLVM_ABI std::error_code make_relative(StringRef From, StringRef To,
+                                       SmallVectorImpl<char> &RelativePath);
 
 /// Determine if library is private by parsing file path.
 /// It does not touch the file system.
 ///
 /// \param Path File path for library.
 /// \param IsSymLink Whether path points to a symlink.
-bool isPrivateLibrary(StringRef Path, bool IsSymLink = false);
+LLVM_ABI bool isPrivateLibrary(StringRef Path, bool IsSymLink = false);
 
 /// Create a regex rule from provided glob string.
 /// \param Glob String that represents glob input.
 /// \return The equivalent regex rule.
-llvm::Expected<llvm::Regex> createRegexFromGlob(llvm::StringRef Glob);
+LLVM_ABI llvm::Expected<llvm::Regex> createRegexFromGlob(llvm::StringRef Glob);
 
 using AliasEntry = std::pair<std::string, EncodeKind>;
 using AliasMap = std::map<AliasEntry, AliasEntry>;
@@ -87,14 +89,15 @@ using AliasMap = std::map<AliasEntry, AliasEntry>;
 ///
 /// \param Buffer Data contents of file for the alias list.
 /// \return Lookup table of alias to their base symbol.
-Expected<AliasMap> parseAliasList(std::unique_ptr<llvm::MemoryBuffer> &Buffer);
+LLVM_ABI Expected<AliasMap>
+parseAliasList(std::unique_ptr<llvm::MemoryBuffer> &Buffer);
 
 /// Pickup active paths for a given platform.
 ///
 /// \param Paths File or search paths to pick up.
 /// \param Platform Platform to collect paths for.
-PathSeq getPathsForPlatform(const PathToPlatformSeq &Paths,
-                            PlatformType Platform);
+LLVM_ABI PathSeq getPathsForPlatform(const PathToPlatformSeq &Paths,
+                                     PlatformType Platform);
 
 } // namespace llvm::MachO
 #endif // LLVM_TEXTAPI_UTILS_H

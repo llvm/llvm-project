@@ -60,31 +60,17 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool HasAltivec = false;
   bool HasMMA = false;
   bool HasROPProtect = false;
-  bool HasPrivileged = false;
-  bool HasAIXSmallLocalExecTLS = false;
-  bool HasAIXSmallLocalDynamicTLS = false;
   bool HasVSX = false;
-  bool UseCRBits = false;
   bool HasP8Vector = false;
   bool HasP8Crypto = false;
-  bool HasDirectMove = false;
   bool HasHTM = false;
-  bool HasBPERMD = false;
-  bool HasExtDiv = false;
   bool HasP9Vector = false;
   bool HasSPE = false;
   bool HasFrsqrte = false;
   bool HasFrsqrtes = false;
-  bool PairedVectorMemops = false;
   bool HasP10Vector = false;
   bool HasPCRelativeMemops = false;
-  bool HasPrefixInstrs = false;
-  bool IsISA2_06 = false;
-  bool IsISA2_07 = false;
-  bool IsISA3_0 = false;
-  bool IsISA3_1 = false;
   bool HasQuadwordAtomics = false;
-  bool HasAIXShLibTLSModelOpt = false;
   bool UseLongCalls = false;
 
 protected:
@@ -102,7 +88,8 @@ public:
   }
 
   // Set the language option for altivec based on our value.
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override;
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override;
 
   // Note: GCC recognizes the following additional cpus:
   //  401, 403, 405, 405fp, 440fp, 464, 464fp, 476, 476fp, 505, 740, 801,
@@ -187,7 +174,7 @@ public:
 
   StringRef getABI() const override { return ABI; }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool isCLZForZeroUndef() const override { return false; }
 

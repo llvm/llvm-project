@@ -13,7 +13,6 @@
 #include "mlir/Dialect/NVGPU/Transforms/Passes.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/NVGPU/Transforms/Transforms.h"
@@ -150,6 +149,10 @@ mlir::nvgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
                                                 Value memrefValue) {
   auto memRefType = dyn_cast<MemRefType>(memrefValue.getType());
   if (!memRefType || !NVGPUDialect::hasSharedMemoryAddressSpace(memRefType))
+    return failure();
+
+  // Not support 0D MemRefs.
+  if (memRefType.getRank() == 0)
     return failure();
 
   // Abort if the given value has any sub-views; we do not do any alias

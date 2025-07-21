@@ -4,7 +4,7 @@
 ! RUN: flang -fc1 -fopenmp -mmlir --force-byref-reduction -emit-hlfir %s -o - | FileCheck %s
 
 ! CHECK: omp.parallel {
-! CHECK: omp.wsloop reduction(byref @add_reduction_byref_i32
+! CHECK: omp.wsloop private({{.*}}) reduction(byref @add_reduction_byref_i32
 subroutine sb
   integer :: x
   x = 0

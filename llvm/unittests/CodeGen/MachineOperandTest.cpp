@@ -69,10 +69,10 @@ TEST(MachineOperandTest, PrintRegisterMask) {
   ASSERT_TRUE(MO.getRegMask() == Dummy);
 
   // Print a MachineOperand containing a RegMask. Here we check that without a
-  // TRI and IntrinsicInfo we still print a less detailed regmask.
+  // TRI we still print a less detailed regmask.
   std::string str;
   raw_string_ostream OS(str);
-  MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+  MO.print(OS, /*TRI=*/nullptr);
   ASSERT_TRUE(str == "<regmask ...>");
 }
 
@@ -90,10 +90,10 @@ TEST(MachineOperandTest, PrintSubReg) {
   ASSERT_TRUE(MO.getSubReg() == 5);
 
   // Print a MachineOperand containing a SubReg. Here we check that without a
-  // TRI and IntrinsicInfo we can still print the subreg index.
+  // TRI we can still print the subreg index.
   std::string str;
   raw_string_ostream OS(str);
-  MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+  MO.print(OS, /*TRI=*/nullptr);
   ASSERT_TRUE(str == "$physreg1.subreg5");
 }
 
@@ -112,10 +112,10 @@ TEST(MachineOperandTest, PrintCImm) {
   ASSERT_TRUE(MO.getCImm()->getValue() == Int);
 
   // Print a MachineOperand containing a SubReg. Here we check that without a
-  // TRI and IntrinsicInfo we can still print the subreg index.
+  // TRI we can still print the subreg index.
   std::string str;
   raw_string_ostream OS(str);
-  MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+  MO.print(OS, /*TRI=*/nullptr);
   ASSERT_TRUE(str == "i128 18446744073709551616");
 }
 
@@ -129,7 +129,7 @@ TEST(MachineOperandTest, PrintSubRegIndex) {
   ASSERT_TRUE(MO.getImm() == 3);
 
   // Print a MachineOperand containing a SubRegIdx. Here we check that without a
-  // TRI and IntrinsicInfo we can print the operand as a subreg index.
+  // TRI we can print the operand as a subreg index.
   std::string str;
   raw_string_ostream OS(str);
   MachineOperand::printSubRegIdx(OS, MO.getImm(), nullptr);
@@ -151,7 +151,7 @@ TEST(MachineOperandTest, PrintCPI) {
   std::string str;
   {
     raw_string_ostream OS(str);
-    MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+    MO.print(OS, /*TRI=*/nullptr);
     ASSERT_TRUE(str == "%const.0 + 8");
   }
 
@@ -163,7 +163,7 @@ TEST(MachineOperandTest, PrintCPI) {
   // offset.
   {
     raw_string_ostream OS(str);
-    MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+    MO.print(OS, /*TRI=*/nullptr);
     ASSERT_TRUE(str == "%const.0 - 12");
   }
 }
@@ -182,7 +182,7 @@ TEST(MachineOperandTest, PrintTargetIndexName) {
   std::string str;
   {
     raw_string_ostream OS(str);
-    MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+    MO.print(OS, /*TRI=*/nullptr);
     ASSERT_TRUE(str == "target-index(<unknown>) + 8");
   }
 
@@ -193,7 +193,7 @@ TEST(MachineOperandTest, PrintTargetIndexName) {
   // Print a MachineOperand containing a target index and a negative offset.
   {
     raw_string_ostream OS(str);
-    MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+    MO.print(OS, /*TRI=*/nullptr);
     ASSERT_TRUE(str == "target-index(<unknown>) - 12");
   }
 }
@@ -210,7 +210,7 @@ TEST(MachineOperandTest, PrintJumpTableIndex) {
   // Print a MachineOperand containing a jump-table index.
   std::string str;
   raw_string_ostream OS(str);
-  MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+  MO.print(OS, /*TRI=*/nullptr);
   ASSERT_TRUE(str == "%jump-table.3");
 }
 
@@ -227,7 +227,7 @@ TEST(MachineOperandTest, PrintExternalSymbol) {
   std::string str;
   {
     raw_string_ostream OS(str);
-    MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+    MO.print(OS, /*TRI=*/nullptr);
     ASSERT_TRUE(str == "&foo");
   }
 
@@ -237,7 +237,7 @@ TEST(MachineOperandTest, PrintExternalSymbol) {
   // Print a MachineOperand containing an external symbol and a positive offset.
   {
     raw_string_ostream OS(str);
-    MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+    MO.print(OS, /*TRI=*/nullptr);
     ASSERT_TRUE(str == "&foo + 12");
   }
 
@@ -247,7 +247,7 @@ TEST(MachineOperandTest, PrintExternalSymbol) {
   // Print a MachineOperand containing an external symbol and a negative offset.
   {
     raw_string_ostream OS(str);
-    MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+    MO.print(OS, /*TRI=*/nullptr);
     ASSERT_TRUE(str == "&foo - 12");
   }
 }
@@ -273,7 +273,7 @@ TEST(MachineOperandTest, PrintGlobalAddress) {
   // Print a MachineOperand containing a global address and a positive offset.
   {
     raw_string_ostream OS(str);
-    MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+    MO.print(OS, /*TRI=*/nullptr);
     ASSERT_TRUE(str == "@foo + 12");
   }
 
@@ -283,7 +283,7 @@ TEST(MachineOperandTest, PrintGlobalAddress) {
   // Print a MachineOperand containing a global address and a negative offset.
   {
     raw_string_ostream OS(str);
-    MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+    MO.print(OS, /*TRI=*/nullptr);
     ASSERT_TRUE(str == "@foo - 12");
   }
 }
@@ -301,7 +301,7 @@ TEST(MachineOperandTest, PrintRegisterLiveOut) {
   std::string str;
   // Print a MachineOperand containing a register live out list without a TRI.
   raw_string_ostream OS(str);
-  MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+  MO.print(OS, /*TRI=*/nullptr);
   ASSERT_TRUE(str == "liveout(<unknown>)");
 }
 
@@ -325,9 +325,9 @@ TEST(MachineOperandTest, PrintMetadata) {
   std::string str;
   // Print a MachineOperand containing a metadata node.
   raw_string_ostream OS(str);
-  MO.print(OS, MST, LLT{}, /*OpIdx*/~0U, /*PrintDef=*/false, /*IsStandalone=*/false,
-           /*ShouldPrintRegisterTies=*/false, 0, /*TRI=*/nullptr,
-           /*IntrinsicInfo=*/nullptr);
+  MO.print(OS, MST, LLT{}, /*OpIdx*/ ~0U, /*PrintDef=*/false,
+           /*IsStandalone=*/false,
+           /*ShouldPrintRegisterTies=*/false, 0, /*TRI=*/nullptr);
   ASSERT_TRUE(str == "!0");
 }
 
@@ -348,7 +348,7 @@ TEST(MachineOperandTest, PrintMCSymbol) {
   std::string str;
   // Print a MachineOperand containing a metadata node.
   raw_string_ostream OS(str);
-  MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+  MO.print(OS, /*TRI=*/nullptr);
   ASSERT_TRUE(str == "<mcsymbol foo>");
 }
 
@@ -365,7 +365,7 @@ TEST(MachineOperandTest, PrintCFI) {
   // Print a MachineOperand containing a CFI Index node but no machine function
   // attached to it.
   raw_string_ostream OS(str);
-  MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+  MO.print(OS, /*TRI=*/nullptr);
   ASSERT_TRUE(str == "<cfi directive>");
 }
 
@@ -382,7 +382,7 @@ TEST(MachineOperandTest, PrintIntrinsicID) {
   {
     // Print a MachineOperand containing a generic intrinsic ID.
     raw_string_ostream OS(str);
-    MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+    MO.print(OS, /*TRI=*/nullptr);
     ASSERT_TRUE(str == "intrinsic(@llvm.bswap)");
   }
 
@@ -393,7 +393,7 @@ TEST(MachineOperandTest, PrintIntrinsicID) {
     // Print a MachineOperand containing a target-specific intrinsic ID but not
     // IntrinsicInfo.
     raw_string_ostream OS(str);
-    MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+    MO.print(OS, /*TRI=*/nullptr);
     ASSERT_TRUE(str == "intrinsic(4294967295)");
   }
 }
@@ -410,7 +410,7 @@ TEST(MachineOperandTest, PrintPredicate) {
   std::string str;
   // Print a MachineOperand containing a int predicate ICMP_EQ.
   raw_string_ostream OS(str);
-  MO.print(OS, /*TRI=*/nullptr, /*IntrinsicInfo=*/nullptr);
+  MO.print(OS, /*TRI=*/nullptr);
   ASSERT_TRUE(str == "intpred(eq)");
 }
 

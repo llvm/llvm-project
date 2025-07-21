@@ -107,6 +107,4 @@ class TestRunLocker(TestBase):
             "script var = lldb.frame.EvaluateExpression('SomethingToCall()'); var.GetError().GetCString()",
             result,
         )
-        self.assertIn(
-            "can't evaluate expressions when the process is running", result.GetOutput()
-        )
+        self.assertIn("sbframe object is not valid", result.GetOutput())

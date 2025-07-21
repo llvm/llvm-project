@@ -5,7 +5,14 @@ from mlir.ir import *
 from mlir.passmanager import *
 from mlir.execution_engine import *
 from mlir.runtime import *
-from ml_dtypes import bfloat16, float8_e5m2
+
+try:
+    from ml_dtypes import bfloat16, float8_e5m2
+
+    HAS_ML_DTYPES = True
+except ModuleNotFoundError:
+    HAS_ML_DTYPES = False
+
 
 MLIR_RUNNER_UTILS = os.getenv(
     "MLIR_RUNNER_UTILS", "../../../../lib/libmlir_runner_utils.so"
@@ -559,12 +566,15 @@ def testBF16Memref():
         execution_engine.invoke("main", arg1_memref_ptr, arg2_memref_ptr)
 
         # test to-numpy utility
-        # CHECK: [0.5]
-        npout = ranked_memref_to_numpy(arg2_memref_ptr[0])
-        log(npout)
+        x = ranked_memref_to_numpy(arg2_memref_ptr[0])
+        assert len(x) == 1
+        assert x[0] == 0.5
 
 
-run(testBF16Memref)
+if HAS_ML_DTYPES:
+    run(testBF16Memref)
+else:
+    log("TEST: testBF16Memref")
 
 
 # Test f8E5M2 memrefs
@@ -598,12 +608,15 @@ def testF8E5M2Memref():
         execution_engine.invoke("main", arg1_memref_ptr, arg2_memref_ptr)
 
         # test to-numpy utility
-        # CHECK: [0.5]
-        npout = ranked_memref_to_numpy(arg2_memref_ptr[0])
-        log(npout)
+        x = ranked_memref_to_numpy(arg2_memref_ptr[0])
+        assert len(x) == 1
+        assert x[0] == 0.5
 
 
-run(testF8E5M2Memref)
+if HAS_ML_DTYPES:
+    run(testF8E5M2Memref)
+else:
+    log("TEST: testF8E5M2Memref")
 
 
 #  Test addition of two 2d_memref

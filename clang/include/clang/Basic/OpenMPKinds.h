@@ -190,6 +190,13 @@ enum OpenMPReductionClauseModifier {
   OMPC_REDUCTION_unknown,
 };
 
+/// OpenMP 6.0 original sharing modifiers
+enum OpenMPOriginalSharingModifier {
+#define OPENMP_ORIGINAL_SHARING_MODIFIER(Name) OMPC_ORIGINAL_SHARING_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_ORIGINAL_SHARING_unknown,
+};
+
 /// OpenMP adjust-op kinds for 'adjust_args' clause.
 enum OpenMPAdjustArgsOpKind {
 #define OPENMP_ADJUST_ARGS_KIND(Name) OMPC_ADJUST_ARGS_##Name,
@@ -216,6 +223,12 @@ enum OpenMPNumTasksClauseModifier {
   OMPC_NUMTASKS_unknown
 };
 
+enum OpenMPNumThreadsClauseModifier {
+#define OPENMP_NUMTHREADS_MODIFIER(Name) OMPC_NUMTHREADS_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_NUMTHREADS_unknown
+};
+
 /// OpenMP dependence types for 'doacross' clause.
 enum OpenMPDoacrossClauseModifier {
 #define OPENMP_DOACROSS_MODIFIER(Name) OMPC_DOACROSS_##Name,
@@ -229,6 +242,10 @@ enum OpenMPAllocateClauseModifier {
 #include "clang/Basic/OpenMPKinds.def"
   OMPC_ALLOCATE_unknown
 };
+
+/// Number of allowed allocate-modifiers.
+static constexpr unsigned NumberOfOMPAllocateClauseModifiers =
+    OMPC_ALLOCATE_unknown;
 
 /// Contains 'interop' data for 'append_args' and 'init' clauses.
 class Expr;
@@ -395,6 +412,16 @@ bool isOpenMPInformationalDirective(OpenMPDirectiveKind DKind);
 /// \return true - if the above condition is met for this directive
 /// otherwise - false.
 bool isOpenMPCapturingDirective(OpenMPDirectiveKind DKind);
+
+/// Checks if the specified directive is an order concurrent nestable
+/// directive that can be nested within region corresponding to construct
+/// on which order clause was specified with concurrent as ordering argument.
+/// \param DKind Specified directive.
+/// \param LangOpts Used for getting the OpenMP version.
+/// \return true - if the above condition is met for this directive
+/// otherwise - false.
+bool isOpenMPOrderConcurrentNestableDirective(OpenMPDirectiveKind DKind,
+                                              const LangOptions &LangOpts);
 }
 
 template <>

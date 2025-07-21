@@ -70,9 +70,10 @@ public:
     m_Source->updateOutOfDateIdentifier(II);
   }
 
-  bool FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
-                                      clang::DeclarationName Name) override {
-    return m_Source->FindExternalVisibleDeclsByName(DC, Name);
+  bool FindExternalVisibleDeclsByName(
+      const clang::DeclContext *DC, clang::DeclarationName Name,
+      const clang::DeclContext *OriginalDC) override {
+    return m_Source->FindExternalVisibleDeclsByName(DC, Name, OriginalDC);
   }
 
   bool LoadExternalSpecializations(const clang::Decl *D,
@@ -387,10 +388,11 @@ public:
     return EK_ReplyHazy;
   }
 
-  bool FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
-                                      clang::DeclarationName Name) override {
+  bool FindExternalVisibleDeclsByName(
+      const clang::DeclContext *DC, clang::DeclarationName Name,
+      const clang::DeclContext *OriginalDC) override {
     for (size_t i = 0; i < Sources.size(); ++i)
-      if (Sources[i]->FindExternalVisibleDeclsByName(DC, Name))
+      if (Sources[i]->FindExternalVisibleDeclsByName(DC, Name, OriginalDC))
         return true;
     return false;
   }

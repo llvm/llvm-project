@@ -46,8 +46,8 @@ using testing::IsEmpty;
 
 // Check that DiagnosticErrorTrap works with SuppressAllDiagnostics.
 TEST(DiagnosticTest, suppressAndTrap) {
-  DiagnosticsEngine Diags(new DiagnosticIDs(),
-                          new DiagnosticOptions,
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts,
                           new IgnoringDiagConsumer());
   Diags.setSuppressAllDiagnostics(true);
 
@@ -62,7 +62,7 @@ TEST(DiagnosticTest, suppressAndTrap) {
 
     // Diag that would set FatalErrorOccurred
     // (via non-note following a fatal error).
-    Diags.Report(diag::warn_mt_message) << "warning";
+    Diags.Report(diag::warn_apinotes_message) << "warning";
 
     EXPECT_TRUE(trap.hasErrorOccurred());
     EXPECT_TRUE(trap.hasUnrecoverableErrorOccurred());
@@ -77,8 +77,8 @@ TEST(DiagnosticTest, suppressAndTrap) {
 // Check that FatalsAsError works as intended
 TEST(DiagnosticTest, fatalsAsError) {
   for (unsigned FatalsAsError = 0; FatalsAsError != 2; ++FatalsAsError) {
-    DiagnosticsEngine Diags(new DiagnosticIDs(),
-                            new DiagnosticOptions,
+    DiagnosticOptions DiagOpts;
+    DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts,
                             new IgnoringDiagConsumer());
     Diags.setFatalsAsError(FatalsAsError);
 
@@ -87,7 +87,7 @@ TEST(DiagnosticTest, fatalsAsError) {
 
     // Diag that would set FatalErrorOccurred
     // (via non-note following a fatal error).
-    Diags.Report(diag::warn_mt_message) << "warning";
+    Diags.Report(diag::warn_apinotes_message) << "warning";
 
     EXPECT_TRUE(Diags.hasErrorOccurred());
     EXPECT_EQ(Diags.hasFatalErrorOccurred(), FatalsAsError ? 0u : 1u);
@@ -101,7 +101,8 @@ TEST(DiagnosticTest, fatalsAsError) {
 }
 
 TEST(DiagnosticTest, tooManyErrorsIsAlwaysFatal) {
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts,
                           new IgnoringDiagConsumer());
   Diags.setFatalsAsError(true);
 
@@ -117,7 +118,8 @@ TEST(DiagnosticTest, tooManyErrorsIsAlwaysFatal) {
 
 // Check that soft RESET works as intended
 TEST(DiagnosticTest, softReset) {
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts,
                           new IgnoringDiagConsumer());
 
   unsigned numWarnings = 0U, numErrors = 0U;
@@ -140,7 +142,8 @@ TEST(DiagnosticTest, softReset) {
 }
 
 TEST(DiagnosticTest, diagnosticError) {
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts,
                           new IgnoringDiagConsumer());
   PartialDiagnostic::DiagStorageAllocator Alloc;
   llvm::Expected<std::pair<int, int>> Value = DiagnosticError::create(
@@ -162,7 +165,8 @@ TEST(DiagnosticTest, diagnosticError) {
 }
 
 TEST(DiagnosticTest, storedDiagEmptyWarning) {
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions);
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts);
 
   class CaptureDiagnosticConsumer : public DiagnosticConsumer {
   public:
@@ -192,7 +196,8 @@ public:
 protected:
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS =
       llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  DiagnosticsEngine Diags{new DiagnosticIDs(), new DiagnosticOptions};
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags{new DiagnosticIDs(), DiagOpts};
 
   llvm::ArrayRef<StoredDiagnostic> diags() {
     return CaptureConsumer.StoredDiags;
@@ -345,5 +350,14 @@ TEST_F(SuppressionMappingTest, IsIgnored) {
                     SM.getLocForStartOfFile(ClangID));
   EXPECT_FALSE(Diags.isIgnored(diag::warn_unused_function,
                                SM.getLocForStartOfFile(ClangID)));
+}
+
+TEST_F(SuppressionMappingTest, ParsingRespectsOtherWarningOpts) {
+  Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
+  FS->addFile("foo.txt", /*ModificationTime=*/{},
+              llvm::MemoryBuffer::getMemBuffer("[non-existing-warning]"));
+  Diags.getDiagnosticOptions().Warnings.push_back("no-unknown-warning-option");
+  clang::ProcessWarningOptions(Diags, Diags.getDiagnosticOptions(), *FS);
+  EXPECT_THAT(diags(), IsEmpty());
 }
 } // namespace

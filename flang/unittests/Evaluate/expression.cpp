@@ -1,10 +1,10 @@
 #include "flang/Evaluate/expression.h"
-#include "testing.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/target.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/message.h"
+#include "flang/Testing/testing.h"
 #include <cstdio>
 #include <cstdlib>
 #include <string>

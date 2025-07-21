@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Support/TargetSelect.h"
@@ -27,12 +28,15 @@ struct BinaryContextTester : public testing::TestWithParam<Triple::ArchType> {
 
 protected:
   void initalizeLLVM() {
-    llvm::InitializeAllTargetInfos();
-    llvm::InitializeAllTargetMCs();
-    llvm::InitializeAllAsmParsers();
-    llvm::InitializeAllDisassemblers();
-    llvm::InitializeAllTargets();
-    llvm::InitializeAllAsmPrinters();
+#define BOLT_TARGET(target)                                                    \
+  LLVMInitialize##target##TargetInfo();                                        \
+  LLVMInitialize##target##TargetMC();                                          \
+  LLVMInitialize##target##AsmParser();                                         \
+  LLVMInitialize##target##Disassembler();                                      \
+  LLVMInitialize##target##Target();                                            \
+  LLVMInitialize##target##AsmPrinter();
+
+#include "bolt/Core/TargetConfig.def"
   }
 
   void prepareElf() {
@@ -49,8 +53,8 @@ protected:
     Relocation::Arch = ObjFile->makeTriple().getArch();
     BC = cantFail(BinaryContext::createBinaryContext(
         ObjFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
-        ObjFile->getFileName(), nullptr, true,
-        DWARFContext::create(*ObjFile.get()), {llvm::outs(), llvm::errs()}));
+        ObjFile->getFileName(), nullptr, true, DWARFContext::create(*ObjFile),
+        {llvm::outs(), llvm::errs()}));
     ASSERT_FALSE(!BC);
   }
 
@@ -93,12 +97,13 @@ TEST_P(BinaryContextTester, FlushPendingRelocCALL26) {
       DataSize, 4);
   MCSymbol *RelSymbol1 = BC->getOrCreateGlobalSymbol(4, "Func1");
   ASSERT_TRUE(RelSymbol1);
-  BS.addRelocation(8, RelSymbol1, ELF::R_AARCH64_CALL26, 0, 0, true);
+  BS.addPendingRelocation(
+      Relocation{8, RelSymbol1, ELF::R_AARCH64_CALL26, 0, 0});
   MCSymbol *RelSymbol2 = BC->getOrCreateGlobalSymbol(16, "Func2");
   ASSERT_TRUE(RelSymbol2);
-  BS.addRelocation(12, RelSymbol2, ELF::R_AARCH64_CALL26, 0, 0, true);
+  BS.addPendingRelocation(
+      Relocation{12, RelSymbol2, ELF::R_AARCH64_CALL26, 0, 0});
 
-  std::error_code EC;
   SmallVector<char> Vect(DataSize);
   raw_svector_ostream OS(Vect);
 
@@ -134,12 +139,13 @@ TEST_P(BinaryContextTester, FlushPendingRelocJUMP26) {
       (uint8_t *)Data, Size, 4);
   MCSymbol *RelSymbol1 = BC->getOrCreateGlobalSymbol(4, "Func1");
   ASSERT_TRUE(RelSymbol1);
-  BS.addRelocation(8, RelSymbol1, ELF::R_AARCH64_JUMP26, 0, 0, true);
+  BS.addPendingRelocation(
+      Relocation{8, RelSymbol1, ELF::R_AARCH64_JUMP26, 0, 0});
   MCSymbol *RelSymbol2 = BC->getOrCreateGlobalSymbol(16, "Func2");
   ASSERT_TRUE(RelSymbol2);
-  BS.addRelocation(12, RelSymbol2, ELF::R_AARCH64_JUMP26, 0, 0, true);
+  BS.addPendingRelocation(
+      Relocation{12, RelSymbol2, ELF::R_AARCH64_JUMP26, 0, 0});
 
-  std::error_code EC;
   SmallVector<char> Vect(Size);
   raw_svector_ostream OS(Vect);
 
@@ -156,19 +162,50 @@ TEST_P(BinaryContextTester, FlushPendingRelocJUMP26) {
       << "Wrong forward branch value\n";
 }
 
+TEST_P(BinaryContextTester,
+       FlushOptionalOutOfRangePendingRelocCALL26_ForcePatchOn) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  // Tests that flushPendingRelocations can skip flushing any optional pending
+  // relocations that cannot be encoded, given that PatchEntries runs.
+  opts::ForcePatch = true;
+
+  opts::Verbosity = 1;
+  testing::internal::CaptureStdout();
+
+  BinarySection &BS = BC->registerOrUpdateSection(
+      ".text", ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
+  MCSymbol *RelSymbol = BC->getOrCreateGlobalSymbol(4, "Func");
+  ASSERT_TRUE(RelSymbol);
+  Relocation Reloc{8, RelSymbol, ELF::R_AARCH64_CALL26, 0, 0};
+  Reloc.setOptional();
+  BS.addPendingRelocation(Reloc);
+
+  SmallVector<char> Vect;
+  raw_svector_ostream OS(Vect);
+
+  // Resolve relocation symbol to a high value so encoding will be out of range.
+  BS.flushPendingRelocations(OS, [&](const MCSymbol *S) { return 0x800000F; });
+  outs().flush();
+  std::string CapturedStdOut = testing::internal::GetCapturedStdout();
+  EXPECT_EQ(CapturedStdOut,
+            "BOLT-INFO: skipped 1 out-of-range optional relocations\n");
+}
+
 #endif
 
 TEST_P(BinaryContextTester, BaseAddress) {
   // Check that  base address calculation is correct for a binary with the
   // following segment layout:
   BC->SegmentMapInfo[0] =
-      SegmentInfo{0, 0x10e8c2b4, 0, 0x10e8c2b4, 0x1000, true};
-  BC->SegmentMapInfo[0x10e8d2b4] =
-      SegmentInfo{0x10e8d2b4, 0x3952faec, 0x10e8c2b4, 0x3952faec, 0x1000, true};
-  BC->SegmentMapInfo[0x4a3bddc0] =
-      SegmentInfo{0x4a3bddc0, 0x148e828, 0x4a3bbdc0, 0x148e828, 0x1000, true};
-  BC->SegmentMapInfo[0x4b84d5e8] =
-      SegmentInfo{0x4b84d5e8, 0x294f830, 0x4b84a5e8, 0x3d3820, 0x1000, true};
+      SegmentInfo{0, 0x10e8c2b4, 0, 0x10e8c2b4, 0x1000, true, false};
+  BC->SegmentMapInfo[0x10e8d2b4] = SegmentInfo{
+      0x10e8d2b4, 0x3952faec, 0x10e8c2b4, 0x3952faec, 0x1000, true, false};
+  BC->SegmentMapInfo[0x4a3bddc0] = SegmentInfo{
+      0x4a3bddc0, 0x148e828, 0x4a3bbdc0, 0x148e828, 0x1000, true, false};
+  BC->SegmentMapInfo[0x4b84d5e8] = SegmentInfo{
+      0x4b84d5e8, 0x294f830, 0x4b84a5e8, 0x3d3820, 0x1000, true, false};
 
   std::optional<uint64_t> BaseAddress =
       BC->getBaseAddressForMapping(0x7f13f5556000, 0x10e8c000);
@@ -183,13 +220,14 @@ TEST_P(BinaryContextTester, BaseAddress2) {
   // Check that base address calculation is correct for a binary if the
   // alignment in ELF file are different from pagesize.
   // The segment layout is as follows:
-  BC->SegmentMapInfo[0] = SegmentInfo{0, 0x2177c, 0, 0x2177c, 0x10000, true};
+  BC->SegmentMapInfo[0] =
+      SegmentInfo{0, 0x2177c, 0, 0x2177c, 0x10000, true, false};
   BC->SegmentMapInfo[0x31860] =
-      SegmentInfo{0x31860, 0x370, 0x21860, 0x370, 0x10000, true};
+      SegmentInfo{0x31860, 0x370, 0x21860, 0x370, 0x10000, true, false};
   BC->SegmentMapInfo[0x41c20] =
-      SegmentInfo{0x41c20, 0x1f8, 0x21c20, 0x1f8, 0x10000, true};
+      SegmentInfo{0x41c20, 0x1f8, 0x21c20, 0x1f8, 0x10000, true, false};
   BC->SegmentMapInfo[0x54e18] =
-      SegmentInfo{0x54e18, 0x51, 0x24e18, 0x51, 0x10000, true};
+      SegmentInfo{0x54e18, 0x51, 0x24e18, 0x51, 0x10000, true, false};
 
   std::optional<uint64_t> BaseAddress =
       BC->getBaseAddressForMapping(0xaaaaea444000, 0x21000);
@@ -205,13 +243,14 @@ TEST_P(BinaryContextTester, BaseAddressSegmentsSmallerThanAlignment) {
   // when multiple segments are close together in the ELF file (closer
   // than the required alignment in the process space).
   // See https://github.com/llvm/llvm-project/issues/109384
-  BC->SegmentMapInfo[0] = SegmentInfo{0, 0x1d1c, 0, 0x1d1c, 0x10000, false};
+  BC->SegmentMapInfo[0] =
+      SegmentInfo{0, 0x1d1c, 0, 0x1d1c, 0x10000, false, false};
   BC->SegmentMapInfo[0x11d40] =
-      SegmentInfo{0x11d40, 0x11e0, 0x1d40, 0x11e0, 0x10000, true};
+      SegmentInfo{0x11d40, 0x11e0, 0x1d40, 0x11e0, 0x10000, true, false};
   BC->SegmentMapInfo[0x22f20] =
-      SegmentInfo{0x22f20, 0x10e0, 0x2f20, 0x1f0, 0x10000, false};
+      SegmentInfo{0x22f20, 0x10e0, 0x2f20, 0x1f0, 0x10000, false, false};
   BC->SegmentMapInfo[0x33110] =
-      SegmentInfo{0x33110, 0x89, 0x3110, 0x88, 0x10000, false};
+      SegmentInfo{0x33110, 0x89, 0x3110, 0x88, 0x10000, false, false};
 
   std::optional<uint64_t> BaseAddress =
       BC->getBaseAddressForMapping(0xaaaaaaab1000, 0x1000);

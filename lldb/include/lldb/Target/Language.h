@@ -15,6 +15,7 @@
 #include <set>
 #include <vector>
 
+#include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Highlighter.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
@@ -214,6 +215,104 @@ public:
     return std::vector<Language::MethodNameVariant>();
   };
 
+  class MethodName {
+  public:
+    MethodName() {}
+
+    MethodName(ConstString full)
+        : m_full(full), m_basename(), m_context(), m_arguments(),
+          m_qualifiers(), m_return_type(), m_scope_qualified(), m_parsed(false),
+          m_parse_error(false) {}
+
+    virtual ~MethodName() {};
+
+    void Clear() {
+      m_full.Clear();
+      m_basename = llvm::StringRef();
+      m_context = llvm::StringRef();
+      m_arguments = llvm::StringRef();
+      m_qualifiers = llvm::StringRef();
+      m_return_type = llvm::StringRef();
+      m_scope_qualified.clear();
+      m_parsed = false;
+      m_parse_error = false;
+    }
+
+    bool IsValid() {
+      if (!m_parsed)
+        Parse();
+      if (m_parse_error)
+        return false;
+      return (bool)m_full;
+    }
+
+    ConstString GetFullName() const { return m_full; }
+
+    llvm::StringRef GetBasename() {
+      if (!m_parsed)
+        Parse();
+      return m_basename;
+    }
+
+    llvm::StringRef GetContext() {
+      if (!m_parsed)
+        Parse();
+      return m_context;
+    }
+
+    llvm::StringRef GetArguments() {
+      if (!m_parsed)
+        Parse();
+      return m_arguments;
+    }
+
+    llvm::StringRef GetQualifiers() {
+      if (!m_parsed)
+        Parse();
+      return m_qualifiers;
+    }
+
+    llvm::StringRef GetReturnType() {
+      if (!m_parsed)
+        Parse();
+      return m_return_type;
+    }
+
+    std::string GetScopeQualifiedName() {
+      if (!m_parsed)
+        Parse();
+      return m_scope_qualified;
+    }
+
+  protected:
+    virtual void Parse() {
+      m_parsed = true;
+      m_parse_error = true;
+    }
+
+    ConstString m_full; // Full name:
+                        // "size_t lldb::SBTarget::GetBreakpointAtIndex(unsigned
+                        // int) const"
+    llvm::StringRef m_basename;    // Basename:     "GetBreakpointAtIndex"
+    llvm::StringRef m_context;     // Decl context: "lldb::SBTarget"
+    llvm::StringRef m_arguments;   // Arguments:    "(unsigned int)"
+    llvm::StringRef m_qualifiers;  // Qualifiers:   "const"
+    llvm::StringRef m_return_type; // Return type:  "size_t"
+    std::string m_scope_qualified;
+    bool m_parsed = false;
+    bool m_parse_error = false;
+  };
+
+  virtual std::unique_ptr<Language::MethodName>
+  GetMethodName(ConstString name) const {
+    return std::make_unique<Language::MethodName>(name);
+  };
+
+  virtual std::pair<lldb::FunctionNameType, std::optional<ConstString>>
+  GetFunctionNameInfo(ConstString name) const {
+    return std::pair{lldb::eFunctionNameTypeNone, std::nullopt};
+  };
+
   /// Returns true iff the given symbol name is compatible with the mangling
   /// scheme of this language.
   ///
@@ -268,10 +367,17 @@ public:
   // the reference has never been assigned
   virtual bool IsUninitializedReference(ValueObject &valobj);
 
-  virtual bool GetFunctionDisplayName(const SymbolContext *sc,
+  virtual bool GetFunctionDisplayName(const SymbolContext &sc,
                                       const ExecutionContext *exe_ctx,
                                       FunctionNameRepresentation representation,
                                       Stream &s);
+
+  virtual bool HandleFrameFormatVariable(const SymbolContext &sc,
+                                         const ExecutionContext *exe_ctx,
+                                         FormatEntity::Entry::Type type,
+                                         Stream &s) {
+    return false;
+  }
 
   virtual ConstString
   GetDemangledFunctionNameWithoutArguments(Mangled mangled) const {
@@ -354,14 +460,13 @@ public:
 
   virtual llvm::StringRef GetInstanceVariableName() { return {}; }
 
-  /// Returns true if this SymbolContext should be ignored when setting
-  /// breakpoints by line (number or regex). Helpful for languages that create
-  /// artificial functions without meaningful user code associated with them
-  /// (e.g. code that gets expanded in late compilation stages, like by
-  /// CoroSplitter).
-  virtual bool IgnoreForLineBreakpoints(const SymbolContext &) const {
-    return false;
-  }
+  /// Given a symbol context list of matches which supposedly represent the
+  /// same file and line number in a CU, erases those that should be ignored
+  /// when setting breakpoints by line (number or regex). Helpful for languages
+  /// that create split a single source-line into many functions (e.g. call
+  /// sites transformed by CoroSplitter).
+  virtual void
+  FilterForLineBreakpoints(llvm::SmallVectorImpl<SymbolContext> &) const {}
 
   /// Returns a boolean indicating whether two symbol contexts are equal for the
   /// purposes of frame comparison. If the plugin has no opinion, it should
@@ -389,6 +494,8 @@ public:
   /// Returns the keyword used for catch statements in this language, e.g.
   /// Python uses \b except. Defaults to \b catch.
   virtual llvm::StringRef GetCatchKeyword() const { return "catch"; }
+
+  virtual FormatEntity::Entry GetFunctionNameFormat() const { return {}; }
 
 protected:
   // Classes that inherit from Language can see and modify these

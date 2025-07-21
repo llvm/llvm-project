@@ -210,9 +210,9 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::wasm_catch: {
       int Tag = Node->getConstantOperandVal(2);
       SDValue SymNode = getTagSymNode(Tag, CurDAG);
-      unsigned CatchOpcode = WebAssembly::WasmEnableExnref
-                                 ? WebAssembly::CATCH
-                                 : WebAssembly::CATCH_LEGACY;
+      unsigned CatchOpcode = WebAssembly::WasmUseLegacyEH
+                                 ? WebAssembly::CATCH_LEGACY
+                                 : WebAssembly::CATCH;
       MachineSDNode *Catch =
           CurDAG->getMachineNode(CatchOpcode, DL,
                                  {
@@ -343,16 +343,28 @@ bool WebAssemblyDAGToDAGISel::SelectAddrAddOperands(MVT OffsetType, SDValue N,
   if (N.getOpcode() == ISD::ADD && !N.getNode()->getFlags().hasNoUnsignedWrap())
     return false;
 
-  // Folds constants in an add into the offset.
   for (size_t i = 0; i < 2; ++i) {
     SDValue Op = N.getOperand(i);
     SDValue OtherOp = N.getOperand(i == 0 ? 1 : 0);
 
+    // Folds constants in an add into the offset.
     if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Op)) {
       Offset =
           CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(N), OffsetType);
       Addr = OtherOp;
       return true;
+    }
+
+    // Fold target global addresses into the offset.
+    if (!TM.isPositionIndependent()) {
+      if (Op.getOpcode() == WebAssemblyISD::Wrapper)
+        Op = Op.getOperand(0);
+
+      if (Op.getOpcode() == ISD::TargetGlobalAddress) {
+        Addr = OtherOp;
+        Offset = Op;
+        return true;
+      }
     }
   }
   return false;

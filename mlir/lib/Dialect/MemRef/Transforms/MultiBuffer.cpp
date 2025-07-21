@@ -13,7 +13,6 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -60,14 +59,13 @@ static void replaceUsesAndPropagateType(RewriterBase &rewriter,
     // `subview(old_op)` is replaced by a new `subview(val)`.
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPoint(subviewUse);
-    Type newType = memref::SubViewOp::inferRankReducedResultType(
+    MemRefType newType = memref::SubViewOp::inferRankReducedResultType(
         subviewUse.getType().getShape(), cast<MemRefType>(val.getType()),
         subviewUse.getStaticOffsets(), subviewUse.getStaticSizes(),
         subviewUse.getStaticStrides());
     Value newSubview = rewriter.create<memref::SubViewOp>(
-        subviewUse->getLoc(), cast<MemRefType>(newType), val,
-        subviewUse.getMixedOffsets(), subviewUse.getMixedSizes(),
-        subviewUse.getMixedStrides());
+        subviewUse->getLoc(), newType, val, subviewUse.getMixedOffsets(),
+        subviewUse.getMixedSizes(), subviewUse.getMixedStrides());
 
     // Ouch recursion ... is this really necessary?
     replaceUsesAndPropagateType(rewriter, subviewUse, newSubview);
@@ -211,9 +209,8 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
   for (int64_t i = 0, e = originalShape.size(); i != e; ++i)
     sizes[1 + i] = rewriter.getIndexAttr(originalShape[i]);
   // Strides is [1, 1 ... 1 ].
-  auto dstMemref =
-      cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
-          originalShape, mbMemRefType, offsets, sizes, strides));
+  MemRefType dstMemref = memref::SubViewOp::inferRankReducedResultType(
+      originalShape, mbMemRefType, offsets, sizes, strides);
   Value subview = rewriter.create<memref::SubViewOp>(loc, dstMemref, mbAlloc,
                                                      offsets, sizes, strides);
   LLVM_DEBUG(DBGS() << "--multi-buffered slice: " << subview << "\n");

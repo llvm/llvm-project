@@ -32,7 +32,7 @@ data from an executable or a shared library [3]_ consists of a header and
 multiple sections, with each section as a memory dump. The raw profile data needs
 to be reasonably compact and fast to generate.
 
-There are no backward or forward version compatiblity guarantees for the raw profile
+There are no backward or forward version compatibility guarantees for the raw profile
 format. That is, compilers and tools `require`_ a specific raw profile version
 to parse the profiles.
 
@@ -381,7 +381,7 @@ This section contains the profile data for value profiling.
 The value profiles corresponding to a profile metadata are serialized contiguously
 as one record, and value profile records are stored in the same order as the
 respective profile data, such that a raw profile reader `advances`_ the pointer to
-profile data and the pointer to value profile records simutaneously [5]_ to find
+profile data and the pointer to value profile records simultaneously [5]_ to find
 value profiles for a per function, per `FuncHash`_ profile data.
 
 .. _`advances`: https://github.com/llvm/llvm-project/blob/7e15fa9161eda7497a5d6abf0d951a1d12d86550/llvm/include/llvm/ProfileData/InstrProfReader.h#L456-L457
@@ -520,7 +520,7 @@ based profile data. For supported usages, check out `llvm-profdata documentation
 .. [4] The counter section is used by a few variant types (like temporal
    profiling) and might have different semantics there.
 .. [5] The step size of data pointer is the ``sizeof(ProfileData)``, and the step
-   size of value profile pointer is calcuated based on the number of collected
+   size of value profile pointer is calculated based on the number of collected
    values.
 
 .. _`lightweight instrumentation`: https://groups.google.com/g/llvm-dev/c/r03Z6JoN7d4

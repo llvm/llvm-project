@@ -11,7 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCorefileExceptionReason(TestBase):
-    @skipIfOutOfTreeDebugserver  # newer debugserver required for these qMemoryRegionInfo types
     @no_debug_info_test
     @skipUnlessDarwin
     @skipIf(archs=no_match(["arm64", "arm64e"]))
