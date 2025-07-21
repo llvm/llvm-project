@@ -110,32 +110,23 @@ private:
 
   static bool returnTrue(const CheckerManager &) { return true; }
 
-  /// Adds a checker to the registry.
-  /// This private, most general overload is intended for loading the checker
-  /// definitions from `Checkers.td`.
-  /// FIXME: The checker registry should not bother with loading `DocsUri`
-  /// because it is (as of now) never queried from the checker registry.
-  void addChecker(RegisterCheckerFn Fn, ShouldRegisterFunction Sfn,
-                  StringRef FullName, StringRef Desc, StringRef DocsUri,
-                  bool IsHidden);
-
 public:
   /// Adds a checker to the registry.
   /// Use this for a checker defined in a plugin if it requires custom
   /// registration functions (e.g. for handling checker options).
+  /// NOTE: As of now `DocsUri` is never queried from the checker registry.
   void addChecker(RegisterCheckerFn Fn, ShouldRegisterFunction Sfn,
-                  StringRef FullName, StringRef Desc, bool IsHidden = false) {
-    addChecker(Fn, Sfn, FullName, Desc, "NoDocsUri", IsHidden);
-  }
+                  StringRef FullName, StringRef Desc,
+                  StringRef DocsUri = "NoDocsUri", bool IsHidden = false);
 
   /// Adds a checker to the registry.
   /// Use this for a checker defined in a plugin if it doesn't require custom
   /// registration functions.
   template <class T>
-  void addChecker(StringRef FullName, StringRef Desc, bool IsHidden = false) {
+  void addChecker(StringRef FullName, StringRef Desc,
+                  StringRef DocsUri = "NoDocsUri", bool IsHidden = false) {
     addChecker(&CheckerRegistry::initializeManager<CheckerManager, T>,
-               &CheckerRegistry::returnTrue, FullName, Desc,
-               /*IsHidden=*/IsHidden);
+               &CheckerRegistry::returnTrue, FullName, Desc, DocsUri, IsHidden);
   }
 
   /// Add a mock checker to the registry for testing purposes, without
