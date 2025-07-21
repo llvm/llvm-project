@@ -2991,9 +2991,7 @@ static void setLinkageForGV(llvm::GlobalValue *GV, const NamedDecl *ND) {
 
 static bool hasExistingGeneralizedTypeMD(llvm::Function *F) {
   llvm::MDNode *MD = F->getMetadata(llvm::LLVMContext::MD_type);
-  if (!MD)
-    return false;
-  return MD->hasGeneralizedMDString();
+  return MD && MD->hasGeneralizedMDString();
 }
 
 void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
