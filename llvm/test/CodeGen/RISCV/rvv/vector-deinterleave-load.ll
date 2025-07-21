@@ -550,8 +550,8 @@ define {<vscale x 16 x i8>, <vscale x 16 x i8>} @masked_load_factor2(ptr %p) {
   ret {<vscale x 16 x i8>, <vscale x 16 x i8>} %deinterleaved.results
 }
 
-define {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} @masked_loat_factor4(ptr %p) {
-; CHECK-LABEL: masked_loat_factor4:
+define {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} @masked_load_factor4(ptr %p) {
+; CHECK-LABEL: masked_load_factor4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vlseg4e8.v v8, (a0)
@@ -561,8 +561,8 @@ define {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i
   ret {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} %deinterleaved.results
 }
 
-define {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} @masked_loat_factor4_mask(ptr %p, <vscale x 8 x i1> %mask) {
-; CHECK-LABEL: masked_loat_factor4_mask:
+define {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} @masked_load_factor4_mask(ptr %p, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: masked_load_factor4_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vlseg4e8.v v8, (a0), v0.t
@@ -575,8 +575,8 @@ define {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i
 
 ; Negative test - some of the deinterleaved elements might come from the
 ; passthru not the load
-define {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} @masked_loat_factor4_passthru(ptr %p, <vscale x 8 x i1> %mask, <vscale x 32 x i8> %passthru) {
-; CHECK-LABEL: masked_loat_factor4_passthru:
+define {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} @masked_load_factor4_passthru(ptr %p, <vscale x 8 x i1> %mask, <vscale x 32 x i8> %passthru) {
+; CHECK-LABEL: masked_load_factor4_passthru:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
