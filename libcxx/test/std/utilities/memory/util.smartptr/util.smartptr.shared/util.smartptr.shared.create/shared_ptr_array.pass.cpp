@@ -10,8 +10,6 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // These compiler versions and platforms don't enable sized deallocation by default.
-// ADDITIONAL_COMPILE_FLAGS(clang-17): -fsized-deallocation
-// ADDITIONAL_COMPILE_FLAGS(clang-18): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(apple-clang-16): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(target=x86_64-w64-windows-gnu): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(target=i686-w64-windows-gnu): -fsized-deallocation
