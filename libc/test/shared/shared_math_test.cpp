@@ -25,6 +25,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_FP_EQ_ALL_ROUNDING(0.75f16,
                             LIBC_NAMESPACE::shared::frexpf16(24.0f, &exponent));
   EXPECT_EQ(exponent, 5);
+
+  EXPECT_FP_EQ(0x1.921fb6p+0f16, LIBC_NAMESPACE::shared::acosf16(0.0f16));
 }
 
 #endif
