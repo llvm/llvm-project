@@ -160,8 +160,8 @@ struct ConvertGetGlobal final
 
     if (opTy.getRank() == 0) {
       emitc::LValueType lvalueType = emitc::LValueType::get(resultTy);
-      emitc::GetGlobalOp globalLValue = rewriter.create<emitc::GetGlobalOp>(
-          op.getLoc(), lvalueType, operands.getNameAttr());
+      emitc::GetGlobalOp globalLValue = emitc::GetGlobalOp::create(
+          rewriter, op.getLoc(), lvalueType, operands.getNameAttr());
       emitc::PointerType pointerType = emitc::PointerType::get(resultTy);
       rewriter.replaceOpWithNewOp<emitc::ApplyOp>(
           op, pointerType, rewriter.getStringAttr("&"), globalLValue);
@@ -191,8 +191,8 @@ struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
       return rewriter.notifyMatchFailure(op.getLoc(), "expected array type");
     }
 
-    auto subscript = rewriter.create<emitc::SubscriptOp>(
-        op.getLoc(), arrayValue, operands.getIndices());
+    auto subscript = emitc::SubscriptOp::create(
+        rewriter, op.getLoc(), arrayValue, operands.getIndices());
 
     rewriter.replaceOpWithNewOp<emitc::LoadOp>(op, resultTy, subscript);
     return success();
@@ -211,8 +211,8 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
       return rewriter.notifyMatchFailure(op.getLoc(), "expected array type");
     }
 
-    auto subscript = rewriter.create<emitc::SubscriptOp>(
-        op.getLoc(), arrayValue, operands.getIndices());
+    auto subscript = emitc::SubscriptOp::create(
+        rewriter, op.getLoc(), arrayValue, operands.getIndices());
     rewriter.replaceOpWithNewOp<emitc::AssignOp>(op, subscript,
                                                  operands.getValue());
     return success();
@@ -242,7 +242,7 @@ void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
     if (inputs.size() != 1)
       return Value();
 
-    return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+    return UnrealizedConversionCastOp::create(builder, loc, resultType, inputs)
         .getResult(0);
   };
 
