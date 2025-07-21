@@ -830,11 +830,11 @@ LogicalResult NVVM::StMatrixOp::verify() {
 
   int m = getShape().getM(), n = getShape().getN();
   if (m == 8 && n == 8) {
-    if (getElttype() != NVVM::LdStMatrixEltType::B16) {
+    if (getEltType() != NVVM::LdStMatrixEltType::B16) {
       return emitOpError("expected element type to be B16 for 8x8 matrix");
     }
   } else if (m == 16 && n == 8) {
-    if (getElttype() != NVVM::LdStMatrixEltType::B8) {
+    if (getEltType() != NVVM::LdStMatrixEltType::B8) {
       return emitOpError("expected element type to be B8 for 16x8 matrix");
     }
     if (getLayout() != NVVM::MMALayout::col) {

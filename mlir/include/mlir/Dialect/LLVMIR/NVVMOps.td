@@ -2013,7 +2013,7 @@ def LdStMatrixEltTypeAttr : EnumAttr<NVVM_Dialect, LdStMatrixEltType, "ld_st_mat
 
 def NVVM_StMatrixOp: NVVM_Op<"stmatrix">,
   Arguments<(ins LLVM_AnyPointer: $ptr, Variadic<I32>:$sources, MMALayoutAttr:$layout,
-             LdStMatrixShapeAttr:$shape, LdStMatrixEltTypeAttr:$elttype)> {
+             LdStMatrixShapeAttr:$shape, LdStMatrixEltTypeAttr:$eltType)> {
   let summary = "cooperative matrix store";
   let description = [{
     Collectively store one or more matrices across all threads in a warp to the
@@ -2023,7 +2023,7 @@ def NVVM_StMatrixOp: NVVM_Op<"stmatrix">,
   }];
   string llvmBuilder = [{
       auto operands = moduleTranslation.lookupValues(opInst.getOperands());
-      auto intId = getStMatrixIntrinsicId($layout, $sources.size(), $shape, $elttype);
+      auto intId = getStMatrixIntrinsicId($layout, $sources.size(), $shape, $eltType);
       createIntrinsicCall(builder, intId, operands, operands[0]->getType());
   }];
   let assemblyFormat = "$ptr `,` $sources attr-dict `:` type(operands)";
