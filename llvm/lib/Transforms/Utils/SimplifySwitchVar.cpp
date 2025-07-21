@@ -55,6 +55,30 @@ static BasicBlock *findMostCommonSuccessor(SwitchInst *Switch) {
   return MostCommonSuccessor;
 }
 
+namespace {
+struct PhiCase {
+  int PhiIndex;
+  Value *IncomingValue;
+  ConstantInt *CaseValue;
+};
+} // namespace
+
+/// Collect the incoming value, index and associated case value from a phi node.
+/// Ignores incoming values, which do not come from a case BB from the switch.
+static SmallVector<PhiCase> collectPhiCases(PHINode &Phi, SwitchInst *Switch) {
+  SmallVector<PhiCase> PhiInputs;
+
+  for (auto *IncomingBlock : Phi.blocks()) {
+    auto *CaseVal = Switch->findCaseDest(IncomingBlock);
+    if (!CaseVal)
+      continue;
+
+    auto PhiIdx = Phi.getBasicBlockIndex(IncomingBlock);
+    PhiInputs.push_back({PhiIdx, Phi.getIncomingValue(PhiIdx), CaseVal});
+  }
+  return PhiInputs;
+}
+
 PreservedAnalyses SimplifySwitchVarPass::run(Function &F,
                                              FunctionAnalysisManager &AM) {
   bool Changed = false;
@@ -64,6 +88,16 @@ PreservedAnalyses SimplifySwitchVarPass::run(Function &F,
     if (auto *Switch = dyn_cast<SwitchInst>(BB.getTerminator())) {
       // get the most common successor for the phi nodes
       MostCommonSuccessor = findMostCommonSuccessor(Switch);
+
+      for (auto &Phi : MostCommonSuccessor->phis()) {
+        // filter out the phis, whose incoming blocks do not come from the
+        // switch
+        if (none_of(Phi.blocks(), [&Switch](BasicBlock *BB) {
+              return Switch->findCaseDest(BB) != nullptr;
+            }))
+          continue;
+        SmallVector<PhiCase> PhiCases = collectPhiCases(Phi, Switch);
+      }
     }
   }
 
