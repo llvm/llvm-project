@@ -160,6 +160,9 @@ void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
     printTH(MI, TH, Scope, O);
     printScope(Scope, O);
 
+    if (Imm & CPol::NV)
+      O << " nv";
+
     return;
   }
 
@@ -1323,6 +1326,16 @@ void AMDGPUInstPrinter::printIndexKey8bit(const MCInst *MI, unsigned OpNo,
 }
 
 void AMDGPUInstPrinter::printIndexKey16bit(const MCInst *MI, unsigned OpNo,
+                                           const MCSubtargetInfo &STI,
+                                           raw_ostream &O) {
+  auto Imm = MI->getOperand(OpNo).getImm() & 0x7;
+  if (Imm == 0)
+    return;
+
+  O << " index_key:" << Imm;
+}
+
+void AMDGPUInstPrinter::printIndexKey32bit(const MCInst *MI, unsigned OpNo,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
   auto Imm = MI->getOperand(OpNo).getImm() & 0x7;
