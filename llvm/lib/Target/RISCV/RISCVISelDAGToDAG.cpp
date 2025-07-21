@@ -3734,7 +3734,7 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::BSET:
     case RISCV::BCLR:
     case RISCV::BINV:
-      // Shift amount operands only use log2(Xlen) bits.
+      // Shift amount / bit index operands only use log2(Xlen) bits.
       if (Use.getOperandNo() == 1 && Bits >= Log2_32(Subtarget->getXLen()))
         break;
       return false;
