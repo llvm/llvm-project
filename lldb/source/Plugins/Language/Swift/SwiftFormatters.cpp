@@ -577,7 +577,7 @@ bool lldb_private::formatters::swift::SwiftSharedString_SummaryProvider_2(
   Status error;
   auto ptr_size = process->GetAddressByteSize();
 
-  lldb::addr_t raw1 = valobj.GetPointerValue();
+  lldb::addr_t raw1 = valobj.GetPointerValue().address;
   lldb::addr_t address = (raw1 & 0x00FFFFFFFFFFFFFF);
   uint64_t startOffset = (ptr_size == 8 ? 24 : 12);
 
@@ -604,7 +604,7 @@ bool lldb_private::formatters::swift::SwiftStringStorage_SummaryProvider(
   auto ptrSize = process->GetAddressByteSize();
   uint64_t bias = (ptrSize == 8 ? 32 : 20);
   uint64_t raw0_offset = (ptrSize == 8 ? 24 : 12);
-  lldb::addr_t raw1 = valobj.GetPointerValue();
+  lldb::addr_t raw1 = valobj.GetPointerValue().address;
   lldb::addr_t address = (raw1 & 0x00FFFFFFFFFFFFFF) + bias;
 
   Status error;

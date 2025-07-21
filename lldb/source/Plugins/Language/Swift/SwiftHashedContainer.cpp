@@ -495,14 +495,14 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
     return;
   m_keys_ptr = keys_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
 
-  auto last_field_ptr = keys_sp->GetAddressOf();
+  lldb::addr_t last_field_ptr = keys_sp->GetAddressOf().address;
 
   if (value_type) {
     auto values_sp = m_storage->GetChildAtNamePath({g__rawValues, g__rawValue});
     if (!values_sp)
       return;
     m_values_ptr = values_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-    last_field_ptr = values_sp->GetAddressOf();
+    last_field_ptr = values_sp->GetAddressOf().address;
   }
 
   m_metadata_ptr = last_field_ptr + m_ptr_size;
@@ -635,7 +635,7 @@ HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
   ValueObjectSP valobj_sp = valobj.GetSP();
   if (valobj_sp->GetObjectRuntimeLanguage() != eLanguageTypeSwift &&
       valobj_sp->IsPointerType()) {
-    lldb::addr_t address = valobj_sp->GetPointerValue();
+    lldb::addr_t address = valobj_sp->GetPointerValue().address;
     if (auto swiftval_sp = StorageObjectAtAddress(exe_ctx, address))
       valobj_sp = swiftval_sp;
   }
@@ -656,7 +656,7 @@ HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
 
   lldb::addr_t storage_location = LLDB_INVALID_ADDRESS;
   if (type_name_cs == m_nativeStorageRoot_demangled)
-    storage_location = valobj_sp->GetPointerValue();
+    storage_location = valobj_sp->GetPointerValue().address;
   else {
     ValueObjectSP variant_sp =
         valobj_sp->GetChildMemberWithName(g__variant, true);

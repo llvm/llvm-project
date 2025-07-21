@@ -1781,7 +1781,8 @@ static void applyOverrideOptions(std::vector<std::string> &args,
   }};
 
   clang::driver::applyOverrideOptions(raw_args, overrideOpts.data(),
-                                      savedStrings, &log_stream);
+                                      savedStrings, "CCC_OVERRIDE_OPTIONS",
+                                      &log_stream);
 
   // Delete the placeholder "clang" executable argument.
   raw_args.erase(raw_args.begin());
@@ -2946,7 +2947,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
             os << llvm::Triple::getOSTypeName(preferred_triple.getOS());
             os << platform_version.getAsString();
           }
-          computed_triple = llvm::Triple(buffer);
+          computed_triple = llvm::Triple(buffer.data());
         } else if (preferred_triple.getObjectFormat() == llvm::Triple::MachO) {
           LOG_PRINTF(GetLog(LLDBLog::Types),
                      "Completing triple based on main binary load commands.");

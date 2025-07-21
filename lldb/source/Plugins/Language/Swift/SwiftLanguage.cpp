@@ -1047,8 +1047,7 @@ SwiftLanguage::GetHardcodedSynthetics() {
             // If this is a Swift tagged pointer, the Objective-C data
             // formatters may incorrectly classify it as an
             // Objective-C tagged pointer.
-            AddressType address_type;
-            lldb::addr_t ptr = valobj.GetPointerValue(&address_type);
+            auto [ptr, address_type] = valobj.GetPointerValue();
             auto *swift_runtime = SwiftLanguageRuntime::Get(process_sp);
             if (!swift_runtime)
               return nullptr;
