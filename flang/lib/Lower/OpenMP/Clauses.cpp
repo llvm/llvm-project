@@ -1001,7 +1001,7 @@ Map make(const parser::OmpClause::Map &inp,
          semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpMapClause
   CLAUSET_ENUM_CONVERT( //
-      convert1, parser::OmpMapType::Value, Map::MapType,
+      convertMapType, parser::OmpMapType::Value, Map::MapType,
       // clang-format off
       MS(Alloc,   Storage)
       MS(Delete,  Storage)
@@ -1014,7 +1014,8 @@ Map make(const parser::OmpClause::Map &inp,
   );
 
   CLAUSET_ENUM_CONVERT( //
-      convert2, parser::OmpMapTypeModifier::Value, Map::MapTypeModifier,
+      convertMapTypeMod, parser::OmpMapTypeModifier::Value,
+      Map::MapTypeModifier,
       // clang-format off
       MS(Always,    Always)
       MS(Close,     Close)
@@ -1024,7 +1025,7 @@ Map make(const parser::OmpClause::Map &inp,
   );
 
   CLAUSET_ENUM_CONVERT( //
-      convert3, parser::OmpRefModifier::Value, Map::RefModifier,
+      convertRefMod, parser::OmpRefModifier::Value, Map::RefModifier,
       // clang-format off
       MS(Ref_Ptee,     RefPtee)
       MS(Ref_Ptr,      RefPtr)
@@ -1041,7 +1042,7 @@ Map make(const parser::OmpClause::Map &inp,
 
   auto type = [&]() -> std::optional<Map::MapType> {
     if (t1)
-      return convert1(t1->v);
+      return convertMapType(t1->v);
     return std::nullopt;
   }();
 
@@ -1051,7 +1052,7 @@ Map make(const parser::OmpClause::Map &inp,
 
   for (auto *typeMod :
        semantics::OmpGetRepeatableModifier<parser::OmpMapTypeModifier>(mods)) {
-    modSet.insert(convert2(typeMod->v));
+    modSet.insert(convertMapTypeMod(typeMod->v));
   }
   if (semantics::OmpGetUniqueModifier<parser::OmpAlwaysModifier>(mods))
     modSet.insert(Map::MapTypeModifier::Always);
@@ -1072,7 +1073,7 @@ Map make(const parser::OmpClause::Map &inp,
 
   auto refMod = [&]() -> std::optional<Map::RefModifier> {
     if (auto *t = semantics::OmpGetUniqueModifier<parser::OmpRefModifier>(mods))
-      return convert3(t->v);
+      return convertRefMod(t->v);
     return std::nullopt;
   }();
 
