@@ -3058,17 +3058,28 @@ bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
   };
 
   if (auto *C1 = dyn_cast<ConstantSDNode>(RHS)) {
+    // (add (add (shl A C2) B) C1) -> (add (add B C1) (shl A C2))
     if (LHS.getOpcode() == ISD::ADD &&
-        SelectShl(LHS.getOperand(0), Index, Scale) &&
         !isa<ConstantSDNode>(LHS.getOperand(1)) &&
         isInt<12>(C1->getSExtValue())) {
-      // (add (add (shl A C2) B) C1) -> (add (add B C1) (shl A C2))
-      SDValue C1Val = CurDAG->getTargetConstant(*C1->getConstantIntValue(),
-                                                SDLoc(Addr), VT);
-      Base = SDValue(CurDAG->getMachineNode(RISCV::ADDI, SDLoc(Addr), VT,
-                                            LHS.getOperand(1), C1Val),
-                     0);
-      return true;
+      if (SelectShl(LHS.getOperand(1), Index, Scale)) {
+        SDValue C1Val = CurDAG->getTargetConstant(*C1->getConstantIntValue(),
+                                                  SDLoc(Addr), VT);
+        Base = SDValue(CurDAG->getMachineNode(RISCV::ADDI, SDLoc(Addr), VT,
+                                              LHS.getOperand(0), C1Val),
+                       0);
+        return true;
+      }
+
+      // Add is commutative so we need to check both operands.
+      if (SelectShl(LHS.getOperand(0), Index, Scale)) {
+        SDValue C1Val = CurDAG->getTargetConstant(*C1->getConstantIntValue(),
+                                                  SDLoc(Addr), VT);
+        Base = SDValue(CurDAG->getMachineNode(RISCV::ADDI, SDLoc(Addr), VT,
+                                              LHS.getOperand(1), C1Val),
+                       0);
+        return true;
+      }
     }
 
     // Don't match add with constants.
@@ -3093,6 +3104,25 @@ bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
   Index = RHS;
   Scale = CurDAG->getTargetConstant(0, SDLoc(Addr), VT);
   return true;
+}
+
+bool RISCVDAGToDAGISel::SelectAddrRegZextRegScale(SDValue Addr,
+                                                  unsigned MaxShiftAmount,
+                                                  unsigned Bits, SDValue &Base,
+                                                  SDValue &Index,
+                                                  SDValue &Scale) {
+  if (!SelectAddrRegRegScale(Addr, MaxShiftAmount, Base, Index, Scale))
+    return false;
+
+  if (Index.getOpcode() == ISD::AND) {
+    auto *C = dyn_cast<ConstantSDNode>(Index.getOperand(1));
+    if (C && C->getZExtValue() == maskTrailingOnes<uint64_t>(Bits)) {
+      Index = Index.getOperand(0);
+      return true;
+    }
+  }
+
+  return false;
 }
 
 bool RISCVDAGToDAGISel::SelectAddrRegReg(SDValue Addr, SDValue &Base,
