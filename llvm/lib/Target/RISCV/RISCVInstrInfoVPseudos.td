@@ -791,8 +791,8 @@ class VPseudoUSLoadNoMask<VReg RetClass,
                           int EEW,
                           DAGOperand sewop = sew> :
       RISCVVPseudo<(outs RetClass:$rd),
-             (ins RetClass:$dest, GPRMemZeroOffset:$rs1, AVL:$vl, sewop:$sew,
-                  vec_policy:$policy), []>,
+                   (ins RetClass:$dest, GPRMemZeroOffset:$rs1, AVL:$vl,
+                        sewop:$sew, vec_policy:$policy), []>,
       RISCVVLE</*Masked*/0, /*Strided*/0, /*FF*/0, !logtwo(EEW), VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -806,9 +806,9 @@ class VPseudoUSLoadNoMask<VReg RetClass,
 class VPseudoUSLoadMask<VReg RetClass,
                         int EEW> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-             (ins GetVRegNoV0<RetClass>.R:$passthru,
-                  GPRMemZeroOffset:$rs1,
-                  VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy), []>,
+                   (ins GetVRegNoV0<RetClass>.R:$passthru,
+                        GPRMemZeroOffset:$rs1, VMaskOp:$vm, AVL:$vl, sew:$sew,
+                        vec_policy:$policy), []>,
       RISCVVLE</*Masked*/1, /*Strided*/0, /*FF*/0, !logtwo(EEW), VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -824,8 +824,8 @@ class VPseudoUSLoadMask<VReg RetClass,
 class VPseudoUSLoadFFNoMask<VReg RetClass,
                             int EEW> :
       RISCVVPseudo<(outs RetClass:$rd, GPR:$vl),
-             (ins RetClass:$dest, GPRMemZeroOffset:$rs1, AVL:$avl,
-                  sew:$sew, vec_policy:$policy), []>,
+                   (ins RetClass:$dest, GPRMemZeroOffset:$rs1, AVL:$avl,
+                        sew:$sew, vec_policy:$policy), []>,
       RISCVVLE</*Masked*/0, /*Strided*/0, /*FF*/1, !logtwo(EEW), VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -839,9 +839,9 @@ class VPseudoUSLoadFFNoMask<VReg RetClass,
 class VPseudoUSLoadFFMask<VReg RetClass,
                           int EEW> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd, GPR:$vl),
-             (ins GetVRegNoV0<RetClass>.R:$passthru,
-                  GPRMemZeroOffset:$rs1,
-                  VMaskOp:$vm, AVL:$avl, sew:$sew, vec_policy:$policy), []>,
+                   (ins GetVRegNoV0<RetClass>.R:$passthru,
+                        GPRMemZeroOffset:$rs1, VMaskOp:$vm, AVL:$avl, sew:$sew,
+                        vec_policy:$policy), []>,
       RISCVVLE</*Masked*/1, /*Strided*/0, /*FF*/1, !logtwo(EEW), VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -857,8 +857,8 @@ class VPseudoUSLoadFFMask<VReg RetClass,
 class VPseudoSLoadNoMask<VReg RetClass,
                          int EEW> :
       RISCVVPseudo<(outs RetClass:$rd),
-             (ins RetClass:$dest, GPRMemZeroOffset:$rs1, GPR:$rs2, AVL:$vl,
-                  sew:$sew, vec_policy:$policy), []>,
+                   (ins RetClass:$dest, GPRMemZeroOffset:$rs1, GPR:$rs2,
+                        AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVVLE</*Masked*/0, /*Strided*/1, /*FF*/0, !logtwo(EEW), VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -872,9 +872,9 @@ class VPseudoSLoadNoMask<VReg RetClass,
 class VPseudoSLoadMask<VReg RetClass,
                        int EEW> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-             (ins GetVRegNoV0<RetClass>.R:$passthru,
-                  GPRMemZeroOffset:$rs1, GPR:$rs2,
-                  VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy), []>,
+                   (ins GetVRegNoV0<RetClass>.R:$passthru,
+                        GPRMemZeroOffset:$rs1, GPR:$rs2, VMaskOp:$vm, AVL:$vl,
+                        sew:$sew, vec_policy:$policy), []>,
       RISCVVLE</*Masked*/1, /*Strided*/1, /*FF*/0, !logtwo(EEW), VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -895,8 +895,8 @@ class VPseudoILoadNoMask<VReg RetClass,
                          bit EarlyClobber,
                          bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs RetClass:$rd),
-             (ins RetClass:$dest, GPRMemZeroOffset:$rs1, IdxClass:$rs2, AVL:$vl,
-                  sew:$sew, vec_policy:$policy), []>,
+                   (ins RetClass:$dest, GPRMemZeroOffset:$rs1, IdxClass:$rs2,
+                        AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVVLX</*Masked*/0, Ordered, !logtwo(EEW), VLMul, LMUL> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -916,9 +916,9 @@ class VPseudoILoadMask<VReg RetClass,
                        bit EarlyClobber,
                        bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-             (ins GetVRegNoV0<RetClass>.R:$passthru,
-                  GPRMemZeroOffset:$rs1, IdxClass:$rs2,
-                  VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy), []>,
+                   (ins GetVRegNoV0<RetClass>.R:$passthru,
+                        GPRMemZeroOffset:$rs1, IdxClass:$rs2, VMaskOp:$vm,
+                        AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVVLX</*Masked*/1, Ordered, !logtwo(EEW), VLMul, LMUL> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -936,7 +936,8 @@ class VPseudoUSStoreNoMask<VReg StClass,
                            int EEW,
                            DAGOperand sewop = sew> :
       RISCVVPseudo<(outs),
-             (ins StClass:$rd, GPRMemZeroOffset:$rs1, AVL:$vl, sewop:$sew), []>,
+                   (ins StClass:$rd, GPRMemZeroOffset:$rs1, AVL:$vl,
+                        sewop:$sew), []>,
       RISCVVSE</*Masked*/0, /*Strided*/0, !logtwo(EEW), VLMul> {
   let mayLoad = 0;
   let mayStore = 1;
@@ -948,8 +949,8 @@ class VPseudoUSStoreNoMask<VReg StClass,
 class VPseudoUSStoreMask<VReg StClass,
                          int EEW> :
       RISCVVPseudo<(outs),
-             (ins StClass:$rd, GPRMemZeroOffset:$rs1,
-                  VMaskOp:$vm, AVL:$vl, sew:$sew), []>,
+                   (ins StClass:$rd, GPRMemZeroOffset:$rs1,
+                        VMaskOp:$vm, AVL:$vl, sew:$sew), []>,
       RISCVVSE</*Masked*/1, /*Strided*/0, !logtwo(EEW), VLMul> {
   let mayLoad = 0;
   let mayStore = 1;
@@ -962,8 +963,8 @@ class VPseudoUSStoreMask<VReg StClass,
 class VPseudoSStoreNoMask<VReg StClass,
                           int EEW> :
       RISCVVPseudo<(outs),
-             (ins StClass:$rd, GPRMemZeroOffset:$rs1, GPR:$rs2,
-                  AVL:$vl, sew:$sew), []>,
+                   (ins StClass:$rd, GPRMemZeroOffset:$rs1, GPR:$rs2,
+                        AVL:$vl, sew:$sew), []>,
       RISCVVSE</*Masked*/0, /*Strided*/1, !logtwo(EEW), VLMul> {
   let mayLoad = 0;
   let mayStore = 1;
@@ -975,8 +976,8 @@ class VPseudoSStoreNoMask<VReg StClass,
 class VPseudoSStoreMask<VReg StClass,
                         int EEW> :
       RISCVVPseudo<(outs),
-             (ins StClass:$rd, GPRMemZeroOffset:$rs1, GPR:$rs2,
-                  VMaskOp:$vm, AVL:$vl, sew:$sew), []>,
+                   (ins StClass:$rd, GPRMemZeroOffset:$rs1, GPR:$rs2,
+                        VMaskOp:$vm, AVL:$vl, sew:$sew), []>,
       RISCVVSE</*Masked*/1, /*Strided*/1, !logtwo(EEW), VLMul> {
   let mayLoad = 0;
   let mayStore = 1;
@@ -988,8 +989,8 @@ class VPseudoSStoreMask<VReg StClass,
 
 class VPseudoNullaryNoMask<VReg RegClass> :
       RISCVVPseudo<(outs RegClass:$rd),
-             (ins RegClass:$passthru,
-                  AVL:$vl, sew:$sew, vec_policy:$policy), []> {
+                   (ins RegClass:$passthru,
+                        AVL:$vl, sew:$sew, vec_policy:$policy), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1001,8 +1002,9 @@ class VPseudoNullaryNoMask<VReg RegClass> :
 
 class VPseudoNullaryMask<VReg RegClass> :
       RISCVVPseudo<(outs GetVRegNoV0<RegClass>.R:$rd),
-             (ins GetVRegNoV0<RegClass>.R:$passthru,
-                  VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy), []> {
+                   (ins GetVRegNoV0<RegClass>.R:$passthru,
+                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
+                   []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1032,8 +1034,8 @@ class VPseudoUnaryNoMask<DAGOperand RetClass,
                          string Constraint = "",
                          bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs RetClass:$rd),
-             (ins RetClass:$passthru, OpClass:$rs2,
-                  AVL:$vl, sew:$sew, vec_policy:$policy), []> {
+                   (ins RetClass:$passthru, OpClass:$rs2,
+                        AVL:$vl, sew:$sew, vec_policy:$policy), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1049,7 +1051,7 @@ class VPseudoUnaryNoMaskNoPolicy<DAGOperand RetClass,
                                  string Constraint = "",
                                  bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs RetClass:$rd),
-             (ins OpClass:$rs2, AVL:$vl, sew_mask:$sew), []> {
+                   (ins OpClass:$rs2, AVL:$vl, sew_mask:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1064,8 +1066,8 @@ class VPseudoUnaryNoMaskRoundingMode<DAGOperand RetClass,
                                      string Constraint = "",
                                      bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs RetClass:$rd),
-             (ins RetClass:$passthru, OpClass:$rs2, vec_rm:$rm,
-                  AVL:$vl, sew:$sew, vec_policy:$policy), []> {
+                   (ins RetClass:$passthru, OpClass:$rs2, vec_rm:$rm,
+                        AVL:$vl, sew:$sew, vec_policy:$policy), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1085,8 +1087,8 @@ class VPseudoUnaryMask<VReg RetClass,
                        bits<2> TargetConstraintType = 1,
                        DAGOperand sewop = sew> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-             (ins GetVRegNoV0<RetClass>.R:$passthru, OpClass:$rs2,
-                  VMaskOp:$vm, AVL:$vl, sewop:$sew, vec_policy:$policy), []> {
+                   (ins GetVRegNoV0<RetClass>.R:$passthru, OpClass:$rs2,
+                        VMaskOp:$vm, AVL:$vl, sewop:$sew, vec_policy:$policy), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1104,9 +1106,9 @@ class VPseudoUnaryMaskRoundingMode<VReg RetClass,
                                    string Constraint = "",
                                    bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-             (ins GetVRegNoV0<RetClass>.R:$passthru, OpClass:$rs2,
-                  VMaskOp:$vm, vec_rm:$rm,
-                  AVL:$vl, sew:$sew, vec_policy:$policy), []> {
+                   (ins GetVRegNoV0<RetClass>.R:$passthru, OpClass:$rs2,
+                        VMaskOp:$vm, vec_rm:$rm,
+                        AVL:$vl, sew:$sew, vec_policy:$policy), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1141,7 +1143,7 @@ class VPseudoUnaryMask_NoExcept<VReg RetClass,
 
 class VPseudoUnaryNoMaskGPROut :
       RISCVVPseudo<(outs GPR:$rd),
-             (ins VR:$rs2, AVL:$vl, sew_mask:$sew), []> {
+                   (ins VR:$rs2, AVL:$vl, sew_mask:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1151,7 +1153,7 @@ class VPseudoUnaryNoMaskGPROut :
 
 class VPseudoUnaryMaskGPROut :
       RISCVVPseudo<(outs GPR:$rd),
-             (ins VR:$rs1, VMaskOp:$vm, AVL:$vl, sew_mask:$sew), []> {
+                   (ins VR:$rs1, VMaskOp:$vm, AVL:$vl, sew_mask:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1164,8 +1166,8 @@ class VPseudoUnaryMaskGPROut :
 class VPseudoUnaryAnyMask<VReg RetClass,
                           VReg Op1Class> :
       RISCVVPseudo<(outs RetClass:$rd),
-             (ins RetClass:$passthru, Op1Class:$rs2,
-                  VR:$vm, AVL:$vl, sew:$sew), []> {
+                   (ins RetClass:$passthru, Op1Class:$rs2,
+                        VR:$vm, AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1181,7 +1183,8 @@ class VPseudoBinaryNoMask<VReg RetClass,
                           bits<2> TargetConstraintType = 1,
                           DAGOperand sewop = sew> :
       RISCVVPseudo<(outs RetClass:$rd),
-             (ins Op1Class:$rs2, Op2Class:$rs1, AVL:$vl, sewop:$sew), []> {
+                   (ins Op1Class:$rs2, Op2Class:$rs1, AVL:$vl, sewop:$sew),
+                   []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1197,8 +1200,8 @@ class VPseudoBinaryNoMaskPolicy<VReg RetClass,
                                 string Constraint,
                                 bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs RetClass:$rd),
-             (ins RetClass:$passthru, Op1Class:$rs2, Op2Class:$rs1, AVL:$vl,
-                  sew:$sew, vec_policy:$policy), []> {
+                   (ins RetClass:$passthru, Op1Class:$rs2, Op2Class:$rs1,
+                        AVL:$vl, sew:$sew, vec_policy:$policy), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1216,8 +1219,9 @@ class VPseudoBinaryNoMaskRoundingMode<VReg RetClass,
                                       bit UsesVXRM_ = 1,
                                       bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs RetClass:$rd),
-             (ins RetClass:$passthru, Op1Class:$rs2, Op2Class:$rs1, vec_rm:$rm,
-                  AVL:$vl, sew:$sew, vec_policy:$policy), []> {
+                   (ins RetClass:$passthru, Op1Class:$rs2, Op2Class:$rs1,
+                        vec_rm:$rm, AVL:$vl, sew:$sew, vec_policy:$policy),
+                   []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1238,10 +1242,10 @@ class VPseudoBinaryMaskPolicyRoundingMode<VReg RetClass,
                                           bit UsesVXRM_,
                                           bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-             (ins GetVRegNoV0<RetClass>.R:$passthru,
-                  Op1Class:$rs2, Op2Class:$rs1,
-                  VMaskOp:$vm, vec_rm:$rm, AVL:$vl,
-                  sew:$sew, vec_policy:$policy), []> {
+                   (ins GetVRegNoV0<RetClass>.R:$passthru,
+                        Op1Class:$rs2, Op2Class:$rs1,
+                        VMaskOp:$vm, vec_rm:$rm, AVL:$vl,
+                        sew:$sew, vec_policy:$policy), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1265,8 +1269,8 @@ class VPseudoTiedBinaryNoMask<VReg RetClass,
                               string Constraint,
                               bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs RetClass:$rd),
-             (ins RetClass:$rs2, Op2Class:$rs1, AVL:$vl, sew:$sew,
-                  vec_policy:$policy), []> {
+                   (ins RetClass:$rs2, Op2Class:$rs1, AVL:$vl, sew:$sew,
+                        vec_policy:$policy), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1285,10 +1289,10 @@ class VPseudoTiedBinaryNoMaskRoundingMode<VReg RetClass,
                                           string Constraint,
                                           bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs RetClass:$rd),
-             (ins RetClass:$rs2, Op2Class:$rs1,
-                  vec_rm:$rm,
-                  AVL:$vl, sew:$sew,
-                  vec_policy:$policy), []> {
+                   (ins RetClass:$rs2, Op2Class:$rs1,
+                        vec_rm:$rm,
+                        AVL:$vl, sew:$sew,
+                        vec_policy:$policy), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1308,8 +1312,8 @@ class VPseudoTiedBinaryNoMaskRoundingMode<VReg RetClass,
 class VPseudoIStoreNoMask<VReg StClass, VReg IdxClass, int EEW, bits<3> LMUL,
                           bit Ordered>:
       RISCVVPseudo<(outs),
-             (ins StClass:$rd, GPRMemZeroOffset:$rs1, IdxClass:$rs2, AVL:$vl,
-                  sew:$sew),[]>,
+                   (ins StClass:$rd, GPRMemZeroOffset:$rs1, IdxClass:$rs2,
+                        AVL:$vl, sew:$sew),[]>,
       RISCVVSX</*Masked*/0, Ordered, !logtwo(EEW), VLMul, LMUL> {
   let mayLoad = 0;
   let mayStore = 1;
@@ -1321,8 +1325,8 @@ class VPseudoIStoreNoMask<VReg StClass, VReg IdxClass, int EEW, bits<3> LMUL,
 class VPseudoIStoreMask<VReg StClass, VReg IdxClass, int EEW, bits<3> LMUL,
                         bit Ordered>:
       RISCVVPseudo<(outs),
-             (ins StClass:$rd, GPRMemZeroOffset:$rs1, IdxClass:$rs2,
-                  VMaskOp:$vm, AVL:$vl, sew:$sew),[]>,
+                   (ins StClass:$rd, GPRMemZeroOffset:$rs1, IdxClass:$rs2,
+                        VMaskOp:$vm, AVL:$vl, sew:$sew),[]>,
       RISCVVSX</*Masked*/1, Ordered, !logtwo(EEW), VLMul, LMUL> {
   let mayLoad = 0;
   let mayStore = 1;
@@ -1338,9 +1342,10 @@ class VPseudoBinaryMaskPolicy<VReg RetClass,
                               string Constraint,
                               bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-             (ins GetVRegNoV0<RetClass>.R:$passthru,
-                  Op1Class:$rs2, Op2Class:$rs1,
-                  VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy), []> {
+                   (ins GetVRegNoV0<RetClass>.R:$passthru,
+                        Op1Class:$rs2, Op2Class:$rs1,
+                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
+                   []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1357,9 +1362,10 @@ class VPseudoTernaryMaskPolicy<VReg RetClass,
                                RegisterClass Op1Class,
                                DAGOperand Op2Class> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-             (ins GetVRegNoV0<RetClass>.R:$passthru,
-                  Op1Class:$rs2, Op2Class:$rs1,
-                  VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy), []> {
+                   (ins GetVRegNoV0<RetClass>.R:$passthru,
+                        Op1Class:$rs2, Op2Class:$rs1,
+                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
+                   []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1374,11 +1380,11 @@ class VPseudoTernaryMaskPolicyRoundingMode<VReg RetClass,
                                            RegisterClass Op1Class,
                                            DAGOperand Op2Class> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-             (ins GetVRegNoV0<RetClass>.R:$passthru,
-                  Op1Class:$rs2, Op2Class:$rs1,
-                  VMaskOp:$vm,
-                  vec_rm:$rm,
-                  AVL:$vl, sew:$sew, vec_policy:$policy), []> {
+                   (ins GetVRegNoV0<RetClass>.R:$passthru,
+                        Op1Class:$rs2, Op2Class:$rs1,
+                        VMaskOp:$vm,
+                        vec_rm:$rm,
+                        AVL:$vl, sew:$sew, vec_policy:$policy), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1399,9 +1405,10 @@ class VPseudoBinaryMOutMask<VReg RetClass,
                             string Constraint,
                             bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs RetClass:$rd),
-             (ins RetClass:$passthru,
-                  Op1Class:$rs2, Op2Class:$rs1,
-                  VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy), []> {
+                   (ins RetClass:$passthru,
+                        Op1Class:$rs2, Op2Class:$rs1,
+                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
+                   []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1422,9 +1429,10 @@ class VPseudoTiedBinaryMask<VReg RetClass,
                             string Constraint,
                             bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-             (ins GetVRegNoV0<RetClass>.R:$passthru,
-                  Op2Class:$rs1,
-                  VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy), []> {
+                   (ins GetVRegNoV0<RetClass>.R:$passthru,
+                        Op2Class:$rs1,
+                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
+                   []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1443,11 +1451,11 @@ class VPseudoTiedBinaryMaskRoundingMode<VReg RetClass,
                                         string Constraint,
                                         bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-             (ins GetVRegNoV0<RetClass>.R:$passthru,
-                  Op2Class:$rs1,
-                  VMaskOp:$vm,
-                  vec_rm:$rm,
-                  AVL:$vl, sew:$sew, vec_policy:$policy), []> {
+                   (ins GetVRegNoV0<RetClass>.R:$passthru,
+                        Op2Class:$rs1,
+                        VMaskOp:$vm,
+                        vec_rm:$rm,
+                        AVL:$vl, sew:$sew, vec_policy:$policy), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1472,11 +1480,11 @@ class VPseudoBinaryCarry<VReg RetClass,
                          string Constraint,
                          bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs RetClass:$rd),
-             !if(CarryIn,
-                (ins Op1Class:$rs2, Op2Class:$rs1,
-                     VMV0:$carry, AVL:$vl, sew:$sew),
-                (ins Op1Class:$rs2, Op2Class:$rs1,
-                     AVL:$vl, sew:$sew)), []> {
+                   !if(CarryIn,
+                      (ins Op1Class:$rs2, Op2Class:$rs1,
+                           VMV0:$carry, AVL:$vl, sew:$sew),
+                      (ins Op1Class:$rs2, Op2Class:$rs1,
+                           AVL:$vl, sew:$sew)), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1493,8 +1501,8 @@ class VPseudoTiedBinaryCarryIn<VReg RetClass,
                                LMULInfo MInfo,
                                bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs RetClass:$rd),
-             (ins RetClass:$passthru, Op1Class:$rs2, Op2Class:$rs1,
-                  VMV0:$carry, AVL:$vl, sew:$sew), []> {
+                   (ins RetClass:$passthru, Op1Class:$rs2, Op2Class:$rs1,
+                        VMV0:$carry, AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1511,8 +1519,8 @@ class VPseudoTernaryNoMask<VReg RetClass,
                            DAGOperand Op2Class,
                            string Constraint> :
       RISCVVPseudo<(outs RetClass:$rd),
-             (ins RetClass:$rs3, Op1Class:$rs1, Op2Class:$rs2,
-                  AVL:$vl, sew:$sew), []> {
+                   (ins RetClass:$rs3, Op1Class:$rs1, Op2Class:$rs2,
+                        AVL:$vl, sew:$sew), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1527,8 +1535,8 @@ class VPseudoTernaryNoMaskWithPolicy<VReg RetClass,
                                      string Constraint = "",
                                      bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs RetClass:$rd),
-             (ins RetClass:$rs3, Op1Class:$rs1, Op2Class:$rs2,
-                  AVL:$vl, sew:$sew, vec_policy:$policy), []> {
+                   (ins RetClass:$rs3, Op1Class:$rs1, Op2Class:$rs2,
+                        AVL:$vl, sew:$sew, vec_policy:$policy), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1545,8 +1553,9 @@ class VPseudoTernaryNoMaskWithPolicyRoundingMode<VReg RetClass,
                                                  string Constraint = "",
                                                  bits<2> TargetConstraintType = 1> :
       RISCVVPseudo<(outs RetClass:$rd),
-             (ins RetClass:$rs3, Op1Class:$rs1, Op2Class:$rs2,
-                  vec_rm:$rm, AVL:$vl, sew:$sew, vec_policy:$policy), []> {
+                   (ins RetClass:$rs3, Op1Class:$rs1, Op2Class:$rs2,
+                        vec_rm:$rm, AVL:$vl, sew:$sew, vec_policy:$policy),
+                   []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1564,8 +1573,8 @@ class VPseudoUSSegLoadNoMask<VReg RetClass,
                              int EEW,
                              bits<4> NF> :
       RISCVVPseudo<(outs RetClass:$rd),
-             (ins RetClass:$dest, GPRMemZeroOffset:$rs1, AVL:$vl,
-                  sew:$sew, vec_policy:$policy), []>,
+                   (ins RetClass:$dest, GPRMemZeroOffset:$rs1, AVL:$vl,
+                        sew:$sew, vec_policy:$policy), []>,
       RISCVVLSEG<NF, /*Masked*/0, /*Strided*/0, /*FF*/0, !logtwo(EEW), VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -1580,8 +1589,9 @@ class VPseudoUSSegLoadMask<VReg RetClass,
                            int EEW,
                            bits<4> NF> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-             (ins GetVRegNoV0<RetClass>.R:$passthru, GPRMemZeroOffset:$rs1,
-                  VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy), []>,
+                   (ins GetVRegNoV0<RetClass>.R:$passthru,
+                        GPRMemZeroOffset:$rs1, VMaskOp:$vm, AVL:$vl, sew:$sew,
+                        vec_policy:$policy), []>,
       RISCVVLSEG<NF, /*Masked*/1, /*Strided*/0, /*FF*/0, !logtwo(EEW), VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -1598,8 +1608,8 @@ class VPseudoUSSegLoadFFNoMask<VReg RetClass,
                                int EEW,
                                bits<4> NF> :
       RISCVVPseudo<(outs RetClass:$rd, GPR:$vl),
-             (ins RetClass:$dest, GPRMemZeroOffset:$rs1, AVL:$avl,
-                  sew:$sew, vec_policy:$policy), []>,
+                   (ins RetClass:$dest, GPRMemZeroOffset:$rs1, AVL:$avl,
+                        sew:$sew, vec_policy:$policy), []>,
       RISCVVLSEG<NF, /*Masked*/0, /*Strided*/0, /*FF*/1, !logtwo(EEW), VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -1614,8 +1624,9 @@ class VPseudoUSSegLoadFFMask<VReg RetClass,
                              int EEW,
                              bits<4> NF> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd, GPR:$vl),
-             (ins GetVRegNoV0<RetClass>.R:$passthru, GPRMemZeroOffset:$rs1,
-                  VMaskOp:$vm, AVL:$avl, sew:$sew, vec_policy:$policy), []>,
+                   (ins GetVRegNoV0<RetClass>.R:$passthru,
+                        GPRMemZeroOffset:$rs1, VMaskOp:$vm, AVL:$avl, sew:$sew,
+                        vec_policy:$policy), []>,
       RISCVVLSEG<NF, /*Masked*/1, /*Strided*/0, /*FF*/1, !logtwo(EEW), VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -1632,8 +1643,8 @@ class VPseudoSSegLoadNoMask<VReg RetClass,
                             int EEW,
                             bits<4> NF> :
       RISCVVPseudo<(outs RetClass:$rd),
-             (ins RetClass:$passthru, GPRMemZeroOffset:$rs1, GPR:$offset, AVL:$vl,
-                 sew:$sew, vec_policy:$policy), []>,
+                   (ins RetClass:$passthru, GPRMemZeroOffset:$rs1, GPR:$offset,
+                        AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVVLSEG<NF, /*Masked*/0, /*Strided*/1, /*FF*/0, !logtwo(EEW), VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -1648,9 +1659,9 @@ class VPseudoSSegLoadMask<VReg RetClass,
                           int EEW,
                           bits<4> NF> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-             (ins GetVRegNoV0<RetClass>.R:$passthru, GPRMemZeroOffset:$rs1,
-                  GPR:$offset, VMaskOp:$vm, AVL:$vl, sew:$sew,
-                  vec_policy:$policy), []>,
+                   (ins GetVRegNoV0<RetClass>.R:$passthru,
+                        GPRMemZeroOffset:$rs1, GPR:$offset, VMaskOp:$vm,
+                        AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVVLSEG<NF, /*Masked*/1, /*Strided*/1, /*FF*/0, !logtwo(EEW), VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -1670,8 +1681,9 @@ class VPseudoISegLoadNoMask<VReg RetClass,
                             bits<4> NF,
                             bit Ordered> :
       RISCVVPseudo<(outs RetClass:$rd),
-             (ins RetClass:$passthru, GPRMemZeroOffset:$rs1, IdxClass:$offset, AVL:$vl,
-                  sew:$sew, vec_policy:$policy), []>,
+                   (ins RetClass:$passthru, GPRMemZeroOffset:$rs1,
+                        IdxClass:$offset, AVL:$vl, sew:$sew,
+                        vec_policy:$policy), []>,
       RISCVVLXSEG<NF, /*Masked*/0, Ordered, !logtwo(EEW), VLMul, LMUL> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -1691,9 +1703,9 @@ class VPseudoISegLoadMask<VReg RetClass,
                           bits<4> NF,
                           bit Ordered> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-             (ins GetVRegNoV0<RetClass>.R:$passthru, GPRMemZeroOffset:$rs1,
-                  IdxClass:$offset, VMaskOp:$vm, AVL:$vl, sew:$sew,
-                  vec_policy:$policy), []>,
+                   (ins GetVRegNoV0<RetClass>.R:$passthru,
+                        GPRMemZeroOffset:$rs1, IdxClass:$offset, VMaskOp:$vm,
+                        AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVVLXSEG<NF, /*Masked*/1, Ordered, !logtwo(EEW), VLMul, LMUL> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -1712,7 +1724,8 @@ class VPseudoUSSegStoreNoMask<VReg ValClass,
                               int EEW,
                               bits<4> NF> :
       RISCVVPseudo<(outs),
-             (ins ValClass:$rd, GPRMemZeroOffset:$rs1, AVL:$vl, sew:$sew), []>,
+                   (ins ValClass:$rd, GPRMemZeroOffset:$rs1, AVL:$vl, sew:$sew),
+                   []>,
       RISCVVSSEG<NF, /*Masked*/0, /*Strided*/0, !logtwo(EEW), VLMul> {
   let mayLoad = 0;
   let mayStore = 1;
@@ -1725,8 +1738,8 @@ class VPseudoUSSegStoreMask<VReg ValClass,
                             int EEW,
                             bits<4> NF> :
       RISCVVPseudo<(outs),
-             (ins ValClass:$rd, GPRMemZeroOffset:$rs1,
-                  VMaskOp:$vm, AVL:$vl, sew:$sew), []>,
+                   (ins ValClass:$rd, GPRMemZeroOffset:$rs1,
+                        VMaskOp:$vm, AVL:$vl, sew:$sew), []>,
       RISCVVSSEG<NF, /*Masked*/1, /*Strided*/0, !logtwo(EEW), VLMul> {
   let mayLoad = 0;
   let mayStore = 1;
@@ -1740,8 +1753,8 @@ class VPseudoSSegStoreNoMask<VReg ValClass,
                              int EEW,
                              bits<4> NF> :
       RISCVVPseudo<(outs),
-             (ins ValClass:$rd, GPRMemZeroOffset:$rs1, GPR:$offset,
-                  AVL:$vl, sew:$sew), []>,
+                   (ins ValClass:$rd, GPRMemZeroOffset:$rs1, GPR:$offset,
+                        AVL:$vl, sew:$sew), []>,
       RISCVVSSEG<NF, /*Masked*/0, /*Strided*/1, !logtwo(EEW), VLMul> {
   let mayLoad = 0;
   let mayStore = 1;
@@ -1754,8 +1767,8 @@ class VPseudoSSegStoreMask<VReg ValClass,
                            int EEW,
                            bits<4> NF> :
       RISCVVPseudo<(outs),
-             (ins ValClass:$rd, GPRMemZeroOffset:$rs1, GPR: $offset,
-                  VMaskOp:$vm, AVL:$vl, sew:$sew), []>,
+                   (ins ValClass:$rd, GPRMemZeroOffset:$rs1, GPR: $offset,
+                        VMaskOp:$vm, AVL:$vl, sew:$sew), []>,
       RISCVVSSEG<NF, /*Masked*/1, /*Strided*/1, !logtwo(EEW), VLMul> {
   let mayLoad = 0;
   let mayStore = 1;
@@ -1772,8 +1785,8 @@ class VPseudoISegStoreNoMask<VReg ValClass,
                              bits<4> NF,
                              bit Ordered> :
       RISCVVPseudo<(outs),
-             (ins ValClass:$rd, GPRMemZeroOffset:$rs1, IdxClass: $index,
-                  AVL:$vl, sew:$sew), []>,
+                   (ins ValClass:$rd, GPRMemZeroOffset:$rs1, IdxClass: $index,
+                        AVL:$vl, sew:$sew), []>,
       RISCVVSXSEG<NF, /*Masked*/0, Ordered, !logtwo(EEW), VLMul, LMUL> {
   let mayLoad = 0;
   let mayStore = 1;
@@ -1789,8 +1802,8 @@ class VPseudoISegStoreMask<VReg ValClass,
                            bits<4> NF,
                            bit Ordered> :
       RISCVVPseudo<(outs),
-             (ins ValClass:$rd, GPRMemZeroOffset:$rs1, IdxClass: $index,
-                  VMaskOp:$vm, AVL:$vl, sew:$sew), []>,
+                   (ins ValClass:$rd, GPRMemZeroOffset:$rs1, IdxClass: $index,
+                        VMaskOp:$vm, AVL:$vl, sew:$sew), []>,
       RISCVVSXSEG<NF, /*Masked*/1, Ordered, !logtwo(EEW), VLMul, LMUL> {
   let mayLoad = 0;
   let mayStore = 1;
