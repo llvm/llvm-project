@@ -236,7 +236,7 @@ bool operator!=(Foo2 &, Foo2 &) {
   };
 }
 
-// Missing call to member `swap` function
+// Missing call to `swap` function
 class AllocatorAwareClassNoSwap {
   // pointer member to trigger bugprone-unhandled-self-assignment
   void *foo = nullptr;
