@@ -179,7 +179,7 @@ BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
     std::shared_ptr<BreakpointResolverName> resolver_sp =
         std::make_shared<BreakpointResolverName>(
             nullptr, names[0].c_str(), name_masks[0], language,
-            Breakpoint::MatchType::Exact, offset, false, skip_prologue);
+            Breakpoint::MatchType::Exact, offset, /*offset_is_insn_count = */false, skip_prologue);
     for (size_t i = 1; i < num_elem; i++) {
       resolver_sp->AddNameLookup(ConstString(names[i]), name_masks[i]);
     }
