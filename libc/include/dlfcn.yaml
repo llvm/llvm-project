@@ -52,6 +52,8 @@ enums:
     value: 10
   - name: RTLD_DI_PHDR
     value: 11
+  - name: RTLD_DI_MAX
+    value: 11
 functions:
   - name: dlclose
     standards:
