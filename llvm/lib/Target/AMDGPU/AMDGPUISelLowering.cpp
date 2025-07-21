@@ -4069,40 +4069,41 @@ static SDValue getShiftForReduction(unsigned ShiftOpc, SDValue LHS, SDValue RHS,
       "Expected shift Opcode.");
 
   SDLoc SL = SDLoc(RHS);
-  if (RHS->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-    SDValue VAND = RHS.getOperand(0);
-    if (ConstantSDNode *CRRHS = dyn_cast<ConstantSDNode>(RHS->getOperand(1))) {
-      uint64_t AndIndex = RHS->getConstantOperandVal(1);
-      if (VAND->getOpcode() == ISD::AND && CRRHS) {
-        SDValue LHSAND = VAND.getOperand(0);
-        SDValue RHSAND = VAND.getOperand(1);
-        if (RHSAND->getOpcode() == ISD::BUILD_VECTOR) {
-          ConstantSDNode *CANDL =
-              dyn_cast<ConstantSDNode>(RHSAND->getOperand(0));
-          ConstantSDNode *CANDR =
-              dyn_cast<ConstantSDNode>(RHSAND->getOperand(1));
-          if (CANDL && CANDR && RHSAND->getConstantOperandVal(0) == 0x1f &&
-              RHSAND->getConstantOperandVal(1) == 0x1f) {
-            // Get the non-const AND operands and produce scalar AND
-            const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
-            const SDValue One = DAG.getConstant(1, SL, MVT::i32);
-            SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32,
-                                     LHSAND, Zero);
-            SDValue Hi =
-                DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, LHSAND, One);
-            SDValue AndMask = DAG.getConstant(0x1f, SL, MVT::i32);
-            SDValue LoAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Lo, AndMask);
-            SDValue HiAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Hi, AndMask);
-            SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
-            if (AndIndex == 0 || AndIndex == 1)
-              return DAG.getNode(ShiftOpc, SL, MVT::i32, Trunc,
-                                 AndIndex == 0 ? LoAnd : HiAnd,
-                                 RHS->getFlags());
-          }
-        }
-      }
-    }
-  }
+  if (RHS->getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+    return SDValue();
+
+  SDValue VAND = RHS.getOperand(0);
+  if (VAND->getOpcode() != ISD::AND)
+    return SDValue();
+
+  ConstantSDNode *CRRHS = dyn_cast<ConstantSDNode>(RHS->getOperand(1));
+  if (!CRRHS)
+    return SDValue();
+
+  SDValue LHSAND = VAND.getOperand(0);
+  SDValue RHSAND = VAND.getOperand(1);
+  if (RHSAND->getOpcode() != ISD::BUILD_VECTOR)
+    return SDValue();
+
+  ConstantSDNode *CANDL = dyn_cast<ConstantSDNode>(RHSAND->getOperand(0));
+  ConstantSDNode *CANDR = dyn_cast<ConstantSDNode>(RHSAND->getOperand(1));
+  if (!CANDL || !CANDR || RHSAND->getConstantOperandVal(0) != 0x1f ||
+      RHSAND->getConstantOperandVal(1) != 0x1f)
+    return SDValue();
+  // Get the non-const AND operands and produce scalar AND
+  const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
+  const SDValue One = DAG.getConstant(1, SL, MVT::i32);
+  SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, LHSAND, Zero);
+  SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, LHSAND, One);
+  SDValue AndMask = DAG.getConstant(0x1f, SL, MVT::i32);
+  SDValue LoAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Lo, AndMask);
+  SDValue HiAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Hi, AndMask);
+  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
+  uint64_t AndIndex = RHS->getConstantOperandVal(1);
+  if (AndIndex == 0 || AndIndex == 1)
+    return DAG.getNode(ShiftOpc, SL, MVT::i32, Trunc,
+                       AndIndex == 0 ? LoAnd : HiAnd, RHS->getFlags());
+
   return SDValue();
 }
 
