@@ -569,7 +569,7 @@ static mlir::Value convertAllocationType(mlir::PatternRewriter &rewriter,
   auto insertionPoint = rewriter.saveInsertionPoint();
   rewriter.setInsertionPointAfter(stack.getDefiningOp());
   mlir::Value conv =
-      rewriter.create<fir::ConvertOp>(loc, firHeapTy, stack).getResult();
+      fir::ConvertOp::create(rewriter, loc, firHeapTy, stack).getResult();
   rewriter.restoreInsertionPoint(insertionPoint);
   return conv;
 }
@@ -758,9 +758,9 @@ AllocMemConversion::insertAlloca(fir::AllocMemOp &oldAlloc,
 
   llvm::StringRef uniqName = unpackName(oldAlloc.getUniqName());
   llvm::StringRef bindcName = unpackName(oldAlloc.getBindcName());
-  auto alloca = rewriter.create<fir::AllocaOp>(loc, varTy, uniqName, bindcName,
-                                               oldAlloc.getTypeparams(),
-                                               oldAlloc.getShape());
+  auto alloca =
+      fir::AllocaOp::create(rewriter, loc, varTy, uniqName, bindcName,
+                            oldAlloc.getTypeparams(), oldAlloc.getShape());
   if (emitLifetimeMarkers)
     insertLifetimeMarkers(oldAlloc, alloca, rewriter);
 
