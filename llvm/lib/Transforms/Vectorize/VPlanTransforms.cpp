@@ -2418,8 +2418,19 @@ void VPlanTransforms::simplifyEVLIVs(VPlan &Plan) {
   EVLPhi->replaceAllUsesWith(ScalarR);
   EVLPhi->eraseFromParent();
 
-  // Find the latch-exiting block and convert to variable-length stepping.
-  // Before: (branch-on-count CanonicalIVInc, VectorTripCount)
+  // Replace CanonicalIVInc with EVL-PHI increment
+  VPRecipeBase *CanonicalIV = &*Entry->begin();
+  assert(dyn_cast<VPPhi>(CanonicalIV) && "Unexpected canoincal iv");
+  VPValue *Backedge = CanonicalIV->getOperand(1);
+  Backedge->replaceAllUsesWith(EVLIncrement);
+
+  // Remove unused phi
+  VPRecipeBase *CanonicalIVIncrement = Backedge->getDefiningRecipe();
+  CanonicalIVIncrement->eraseFromParent();
+  CanonicalIV->eraseFromParent();
+
+  // Find the latch-exiting block and replace use of VectorTripCount
+  // Before: (branch-on-count EVLIVInc, VectorTripCount)
   // After: (branch-on-count EVLIVInc, TripCount)
   auto Range =
       VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(Entry));
@@ -2428,20 +2439,20 @@ void VPlanTransforms::simplifyEVLIVs(VPlan &Plan) {
                   [&Entry](VPBlockBase *Succ) { return Succ == Entry; });
   });
   assert((It != Range.end()) && "LatchExiting is not found");
+
   VPBasicBlock *LatchExiting = *It;
+
   auto *LatchExitingBr = cast<VPInstruction>(LatchExiting->getTerminator());
-  VPValue *ScalarIVInc;
+
+  // Skip single-iteration loop region
+  if (match(LatchExitingBr, m_BranchOnCond(m_True())))
+    return;
   assert(LatchExitingBr &&
          match(LatchExitingBr,
-               m_BranchOnCount(m_VPValue(ScalarIVInc),
+               m_BranchOnCount(m_VPValue(EVLIncrement),
                                m_Specific(&Plan.getVectorTripCount()))) &&
          "Unexpected terminator in EVL loop");
   LatchExitingBr->setOperand(1, Plan.getTripCount());
-  ScalarIVInc->replaceAllUsesWith(EVLIncrement);
-  VPRecipeBase *IVIncR = ScalarIVInc->getDefiningRecipe();
-  VPRecipeBase *ScalarIV = IVIncR->getOperand(0)->getDefiningRecipe();
-  IVIncR->eraseFromParent();
-  ScalarIV->eraseFromParent();
 }
 
 void VPlanTransforms::dropPoisonGeneratingRecipes(
