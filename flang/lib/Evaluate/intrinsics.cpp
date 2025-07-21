@@ -3193,7 +3193,7 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
   if (dummies.size() == 2) {
     // Handle SHAPE
     DynamicType shapeType{TypeCategory::Integer, defaults_.sizeIntegerKind()};
-    if (arguments.size() >=3 && arguments[2]) {
+    if (arguments.size() >= 3 && arguments[2]) {
       if (auto type{arguments[2]->GetType()}) {
         if (type->category() == TypeCategory::Integer) {
           shapeType = *type;
