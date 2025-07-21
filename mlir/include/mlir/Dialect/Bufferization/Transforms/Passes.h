@@ -148,14 +148,14 @@ struct BufferResultsToOutParamsOpts {
   /// Default memref.alloc is used
   AllocationFn allocationFn = [](OpBuilder &builder, Location loc,
                                  MemRefType type) {
-    return builder.create<memref::AllocOp>(loc, type).getResult();
+    return memref::AllocOp::create(builder, loc, type).getResult();
   };
 
   /// Memcpy function; used to create a copy between two memrefs.
   /// Default memref.copy is used.
   MemCpyFn memCpyFn = [](OpBuilder &builder, Location loc, Value from,
                          Value to) {
-    builder.create<memref::CopyOp>(loc, from, to);
+    memref::CopyOp::create(builder, loc, from, to);
     return success();
   };
 
