@@ -115,7 +115,7 @@ std::optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffsetRemoteAST(
               "get metadata for valueobject %s",
               (instance ? instance->GetName().AsCString() : "<null>"));
     if (instance) {
-      lldb::addr_t pointer = instance->GetPointerValue();
+      lldb::addr_t pointer = instance->GetPointerValue().address;
       if (!pointer || pointer == LLDB_INVALID_ADDRESS)
         break;
       auto address = swift::remote::RemoteAddress(
