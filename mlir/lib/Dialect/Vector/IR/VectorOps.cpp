@@ -1763,6 +1763,7 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
 
   // Get required types and ranks in the chain
   //    input -> broadcast -> extract
+  // (scalars are treated as rank-0).
   auto inputType = llvm::dyn_cast<VectorType>(input.getType());
   auto extractType = llvm::dyn_cast<VectorType>(extractOp.getType());
   unsigned inputRank = inputType ? inputType.getRank() : 0;
