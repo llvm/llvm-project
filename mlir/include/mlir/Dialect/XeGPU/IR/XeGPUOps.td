@@ -699,6 +699,8 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
   }];
 
   let arguments = (ins XeGPU_TensorDesc_or_MemRef: $source,
+                       Variadic<Index>: $offsets,
+                       OptionalAttr<DenseI64ArrayAttr>: $const_offsets,  
                        XeGPU_MaskType: $mask,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
@@ -730,8 +732,20 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
 
   }];
 
-  let assemblyFormat = [{$source `,` $mask prop-dict attr-dict
-      `:` qualified(type($source)) `,` type($mask) `->` type($value)}];
+  let assemblyFormat = [{
+    $source `,` 
+    custom<OptionalDynamicIndexList>($offsets, $const_offsets) 
+    $mask prop-dict 
+    attr-dict `:` qualified(type($source)) `,` type($mask) `->` type($value)
+  }];
+
+//  let builders = [
+//    OpBuilder<(ins "Type": $value, "Value": $TensorDesc, 
+//                    "UnitAttr": $packed, "DenseI64ArrayAttr": $transpose,
+//                    "xegpu::CachePolicyAttr": $l1_hint, 
+//                    "xegpu::CachePolicyAttr": $l2_hint, 
+//                    "xegpu::CachePolicyAttr": $l3_hint)>
+//  ];
 
   let hasVerifier = 1;
 }
