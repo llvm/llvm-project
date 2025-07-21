@@ -9,6 +9,12 @@
 def BITOP3_32 : ComplexPattern<i32, 4, "SelectBITOP3", [and, or, xor]>;
 def BITOP3_16 : ComplexPattern<i16, 4, "SelectBITOP3", [and, or, xor]>;
 
+// Matches PTRADD as a commutative operation. Patterns using this PatFrag must
+// set GISelShouldIgnore = 1 as commuting the corresponding G_PTR_ADD is
+// invalid.
+def ptradd_commutative : PatFrags<(ops node:$src0, node:$src1),
+  [(ptradd node:$src0, node:$src1), (ptradd node:$src1, node:$src0)]>;
+
 // Special case for v_div_fmas_{f32|f64}, since it seems to be the
 // only VOP instruction that implicitly reads VCC.
 let Asm64 = " $vdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$clamp$omod" in {
@@ -554,13 +560,12 @@ let OtherPredicates = [isGFX10Plus, Has16BitInsts], True16Predicate = NotHasTrue
   defm: Ternary_i16_Pats_gfx9<mul, add, V_MAD_U16_gfx9_e64>;
 } // End OtherPredicates = [isGFX10Plus, Has16BitInsts], True16Predicate = NotHasTrue16BitInsts
 
-class ThreeOpFragSDAG<SDPatternOperator op1, SDPatternOperator op2, bit op1IsRight = 0> : PatFrag<
+class ThreeOpFragSDAG<SDPatternOperator op1, SDPatternOperator op2> : PatFrag<
   (ops node:$x, node:$y, node:$z),
   // When the inner operation is used multiple times, selecting 3-op
   // instructions may still be beneficial -- if the other users can be
   // combined similarly. Let's be conservative for now.
-  !if(op1IsRight, (op2 node:$z, (HasOneUseBinOp<op1> node:$x, node:$y)),
-                  (op2 (HasOneUseBinOp<op1> node:$x, node:$y), node:$z)),
+  (op2 (HasOneUseBinOp<op1> node:$x, node:$y), node:$z),
   [{
     // Only use VALU ops when the result is divergent.
     if (!N->isDivergent())
@@ -587,10 +592,7 @@ class ThreeOpFragSDAG<SDPatternOperator op1, SDPatternOperator op2, bit op1IsRig
   let PredicateCodeUsesOperands = 1;
 }
 
-// Matches (op2 (op1 x, y), z) if op1IsRight = 0 and
-// matches (op2 z, (op1, x, y)) if op1IsRight = 1.
-class ThreeOpFrag<SDPatternOperator op1, SDPatternOperator op2,
-                  bit op1IsRight = 0> : ThreeOpFragSDAG<op1, op2, op1IsRight> {
+class ThreeOpFrag<SDPatternOperator op1, SDPatternOperator op2> : ThreeOpFragSDAG<op1, op2> {
   // The divergence predicate is irrelevant in GlobalISel, as we have
   // proper register bank checks. We just need to verify the constant
   // bus restriction when all the sources are considered.
@@ -949,10 +951,11 @@ def : GCNPat<
 >;
 
 def : GCNPat <
-  // (ptradd z, (shl x, y)) -> ((x << y) + z)
-  (ThreeOpFrag<shl_0_to_4, ptradd, /*op1IsRight=*/1> i64:$src0, i32:$src1, i64:$src2),
-  (V_LSHL_ADD_U64_e64 VSrc_b64:$src0, VSrc_b32:$src1, VSrc_b64:$src2)
->;
+  // (ptradd z, (shl x, y)) or (ptradd (shl x, y), z) -> ((x << y) + z)
+  (ThreeOpFrag<shl_0_to_4, ptradd_commutative> i64:$src0, i32:$src1, i64:$src2),
+  (V_LSHL_ADD_U64_e64 VSrc_b64:$src0, VSrc_b32:$src1, VSrc_b64:$src2)> {
+  let GISelShouldIgnore = 1;
+}
 } // End SubtargetPredicate = HasLshlAddU64Inst
 
 let SubtargetPredicate = HasAddMinMaxInsts in {
@@ -1030,14 +1033,16 @@ multiclass IMAD32_Pats <VOP3_Pseudo inst> {
 
 // Handle cases where amdgpu-codegenprepare-mul24 made a mul24 instead of a normal mul.
 // We need to separate this because otherwise OtherPredicates would be overriden.
-class IMAD32_Mul24_Pats_Impl<VOP3_Pseudo inst, SDPatternOperator AddOp, bit mulIsRight = 0> : GCNPat <
-    !if(mulIsRight, (i64 (AddOp i64:$src2, (i64 (AMDGPUmul_u24 i32:$src0, i32:$src1)))),
-                    (i64 (AddOp (i64 (AMDGPUmul_u24 i32:$src0, i32:$src1)), i64:$src2))),
-    (inst $src0, $src1, $src2, 0 /* clamp */)>;
+class IMAD32_Mul24_Pats_Impl<VOP3_Pseudo inst, SDPatternOperator AddOp> : GCNPat <
+    (i64 (AddOp (i64 (AMDGPUmul_u24 i32:$src0, i32:$src1)), i64:$src2)),
+    (inst $src0, $src1, $src2, 0 /* clamp */)
+    >;
 
 multiclass IMAD32_Mul24_Pats<VOP3_Pseudo inst> {
   def : IMAD32_Mul24_Pats_Impl<inst, add>;
-  def : IMAD32_Mul24_Pats_Impl<inst, ptradd, /*mulIsRight=*/1>;
+  def : IMAD32_Mul24_Pats_Impl<inst, ptradd_commutative> {
+    let GISelShouldIgnore = 1;
+  }
 }
 
 // exclude pre-GFX9 where it was slow
