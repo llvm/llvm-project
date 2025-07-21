@@ -16,17 +16,6 @@ using namespace clang::ast_matchers::internal;
 
 namespace clang::tidy::bugprone {
 
-namespace {
-
-AST_MATCHER(Stmt, isC23Stmt) {
-  return Finder->getASTContext().getLangOpts().C23;
-}
-AST_MATCHER(Decl, isC23Decl) {
-  return Finder->getASTContext().getLangOpts().C23;
-}
-
-} // anonymous namespace
-
 static constexpr int UnsignedASCIIUpperBound = 127;
 
 SignedCharMisuseCheck::SignedCharMisuseCheck(StringRef Name,
@@ -85,14 +74,16 @@ void SignedCharMisuseCheck::registerMatchers(MatchFinder *Finder) {
       charCastExpression(true, IntegerType, "signedCastExpression");
   const auto UnSignedCharCastExpr =
       charCastExpression(false, IntegerType, "unsignedCastExpression");
+  const bool IsC23 = getLangOpts().C23;
 
   // Catch assignments with signed char -> integer conversion. Ignore false
   // positives on C23 enums with the fixed underlying type of signed char.
   const auto AssignmentOperatorExpr =
       expr(binaryOperator(hasOperatorName("="), hasLHS(hasType(IntegerType)),
                           hasRHS(SignedCharCastExpr)),
-           unless(allOf(isC23Stmt(), binaryOperator(hasLHS(hasType(
-                                         hasCanonicalType(enumType())))))));
+           IsC23 ? unless(binaryOperator(
+                       hasLHS(hasType(hasCanonicalType(enumType())))))
+                 : Matcher<Stmt>(anything()));
 
   Finder->addMatcher(AssignmentOperatorExpr, this);
 
@@ -100,7 +91,8 @@ void SignedCharMisuseCheck::registerMatchers(MatchFinder *Finder) {
   // positives on C23 enums with the fixed underlying type of signed char.
   const auto Declaration = varDecl(
       isDefinition(), hasType(IntegerType), hasInitializer(SignedCharCastExpr),
-      unless(allOf(isC23Decl(), hasType(hasCanonicalType(enumType())))));
+      IsC23 ? unless(hasType(hasCanonicalType(enumType())))
+            : Matcher<VarDecl>(anything()));
 
   Finder->addMatcher(Declaration, this);
 
