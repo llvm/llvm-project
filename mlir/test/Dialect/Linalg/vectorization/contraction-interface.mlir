@@ -275,10 +275,10 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-func.func @batch_matmul(%A: tensor<3x8x4xf16>, %B: tensor<3x4x16xf16>,
+func.func @batch_matmul(%A: tensor<3x8x4xf32>, %B: tensor<3x4x16xf32>,
     %C: tensor<3x8x16xf32>) -> tensor<3x8x16xf32> {
   %0 = linalg.batch_matmul
-    ins(%A, %B : tensor<3x8x4xf16>, tensor<3x4x16xf16>)
+    ins(%A, %B : tensor<3x8x4xf32>, tensor<3x4x16xf32>)
     outs(%C: tensor<3x8x16xf32>) -> tensor<3x8x16xf32>
   return %0 : tensor<3x8x16xf32>
 }
@@ -287,10 +287,10 @@ func.func @batch_matmul(%A: tensor<3x8x4xf16>, %B: tensor<3x4x16xf16>,
 // CHECK: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
 // CHECK: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
 // CHECK-LABEL: func.func @batch_matmul(
-// CHECK-SAME:    %[[A:.*]]: tensor<3x8x4xf16>, %[[B:.*]]: tensor<3x4x16xf16>,
+// CHECK-SAME:    %[[A:.*]]: tensor<3x8x4xf32>, %[[B:.*]]: tensor<3x4x16xf32>,
 // CHECK-SAME:    %[[C:.*]]: tensor<3x8x16xf32>)
-//      CHECK: %[[LOAD_A:.*]] = vector.transfer_read %[[A]]{{.*}}: tensor<3x8x4xf16>, vector<3x8x4xf16>
-//      CHECK: %[[LOAD_B:.*]] = vector.transfer_read %[[B]]{{.*}}: tensor<3x4x16xf16>, vector<3x4x16xf16>
+//      CHECK: %[[LOAD_A:.*]] = vector.transfer_read %[[A]]{{.*}}: tensor<3x8x4xf32>, vector<3x8x4xf32>
+//      CHECK: %[[LOAD_B:.*]] = vector.transfer_read %[[B]]{{.*}}: tensor<3x4x16xf32>, vector<3x4x16xf32>
 //      CHECK: %[[LOAD_C:.*]] = vector.transfer_read %[[C]]{{.*}}: tensor<3x8x16xf32>, vector<3x8x16xf32>
 //      CHECK: %[[CONTRACT:.*]] = vector.contract
 // CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
@@ -308,10 +308,10 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-func.func @batch_reduce_matmul(%A: tensor<3x8x4xf16>, %B: tensor<3x4x16xf16>,
+func.func @batch_reduce_matmul(%A: tensor<3x8x4xf32>, %B: tensor<3x4x16xf32>,
     %C: tensor<8x16xf32>) -> tensor<8x16xf32> {
   %0 = linalg.batch_reduce_matmul
-    ins(%A, %B : tensor<3x8x4xf16>, tensor<3x4x16xf16>)
+    ins(%A, %B : tensor<3x8x4xf32>, tensor<3x4x16xf32>)
     outs(%C: tensor<8x16xf32>) -> tensor<8x16xf32>
   return %0 : tensor<8x16xf32>
 }
@@ -320,10 +320,10 @@ func.func @batch_reduce_matmul(%A: tensor<3x8x4xf16>, %B: tensor<3x4x16xf16>,
 // CHECK: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
 // CHECK: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
 // CHECK-LABEL: func.func @batch_reduce_matmul(
-// CHECK-SAME:    %[[A:.*]]: tensor<3x8x4xf16>, %[[B:.*]]: tensor<3x4x16xf16>,
+// CHECK-SAME:    %[[A:.*]]: tensor<3x8x4xf32>, %[[B:.*]]: tensor<3x4x16xf32>,
 // CHECK-SAME:    %[[C:.*]]: tensor<8x16xf32>)
-//      CHECK: %[[LOAD_A:.*]] = vector.transfer_read %[[A]]{{.*}}: tensor<3x8x4xf16>, vector<3x8x4xf16>
-//      CHECK: %[[LOAD_B:.*]] = vector.transfer_read %[[B]]{{.*}}: tensor<3x4x16xf16>, vector<3x4x16xf16>
+//      CHECK: %[[LOAD_A:.*]] = vector.transfer_read %[[A]]{{.*}}: tensor<3x8x4xf32>, vector<3x8x4xf32>
+//      CHECK: %[[LOAD_B:.*]] = vector.transfer_read %[[B]]{{.*}}: tensor<3x4x16xf32>, vector<3x4x16xf32>
 //      CHECK: %[[LOAD_C:.*]] = vector.transfer_read %[[C]]{{.*}}: tensor<8x16xf32>, vector<8x16xf32>
 //      CHECK: %[[CONTRACT:.*]] = vector.contract
 // CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
@@ -341,13 +341,13 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-func.func @contract(%A: tensor<4x8x2xf16>, %B: tensor<8x16x2xf16>,
+func.func @contract(%A: tensor<4x8x2xf32>, %B: tensor<8x16x2xf32>,
     %C: tensor<4x16xf32>) -> tensor<4x16xf32> {
   %0 = linalg.contract
-    indexing_maps = [affine_map<(m, n, k, vnni) -> (m, k, vnni)>,
-                     affine_map<(m, n, k, vnni) -> (k, n, vnni)>,
-                     affine_map<(m, n, k, vnni) -> (m, n)>]
-    ins(%A, %B : tensor<4x8x2xf16>, tensor<8x16x2xf16>)
+    indexing_maps = [affine_map<(m, n, k, kk) -> (m, k, kk)>,
+                     affine_map<(m, n, k, kk) -> (k, n, kk)>,
+                     affine_map<(m, n, k, kk) -> (m, n)>]
+    ins(%A, %B : tensor<4x8x2xf32>, tensor<8x16x2xf32>)
     outs(%C : tensor<4x16xf32>) -> tensor<4x16xf32>
   return %0 : tensor<4x16xf32>
 }
@@ -356,10 +356,10 @@ func.func @contract(%A: tensor<4x8x2xf16>, %B: tensor<8x16x2xf16>,
 // CHECK: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2, d3) -> (d2, d1, d3)>
 // CHECK: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1)>
 // CHECK-LABEL: func.func @contract(
-// CHECK-SAME:    %[[A:.*]]: tensor<4x8x2xf16>, %[[B:.*]]: tensor<8x16x2xf16>,
+// CHECK-SAME:    %[[A:.*]]: tensor<4x8x2xf32>, %[[B:.*]]: tensor<8x16x2xf32>,
 // CHECK-SAME:    %[[C:.*]]: tensor<4x16xf32>)
-//      CHECK: %[[LOAD_A:.*]] = vector.transfer_read %[[A]]{{.*}}: tensor<4x8x2xf16>, vector<4x8x2xf16>
-//      CHECK: %[[LOAD_B:.*]] = vector.transfer_read %[[B]]{{.*}}: tensor<8x16x2xf16>, vector<8x16x2xf16>
+//      CHECK: %[[LOAD_A:.*]] = vector.transfer_read %[[A]]{{.*}}: tensor<4x8x2xf32>, vector<4x8x2xf32>
+//      CHECK: %[[LOAD_B:.*]] = vector.transfer_read %[[B]]{{.*}}: tensor<8x16x2xf32>, vector<8x16x2xf32>
 //      CHECK: %[[LOAD_C:.*]] = vector.transfer_read %[[C]]{{.*}}: tensor<4x16xf32>, vector<4x16xf32>
 //      CHECK: %[[CONTRACT:.*]] = vector.contract
 // CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
