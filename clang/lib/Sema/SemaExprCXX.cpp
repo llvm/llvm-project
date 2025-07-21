@@ -3461,11 +3461,11 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
     // non-templated allocation function we are trying to declare here.
     if (FunctionDecl *Func = dyn_cast<FunctionDecl>(*Alloc)) {
       if (Func->getNumParams() == Params.size()) {
-        llvm::SmallVector<QualType, 3> FuncParams;
-        for (auto *P : Func->parameters())
-          FuncParams.push_back(
-              Context.getCanonicalType(P->getType().getUnqualifiedType()));
-        if (llvm::ArrayRef(FuncParams) == Params) {
+        if (std::equal(Func->param_begin(), Func->param_end(), Params.begin(),
+                       Params.end(), [&](ParmVarDecl *D, QualType RT) {
+                         return Context.hasSameUnqualifiedType(D->getType(),
+                                                               RT);
+                       })) {
           // Make the function visible to name lookup, even if we found it in
           // an unimported module. It either is an implicitly-declared global
           // allocation function, or is suppressing that function.
