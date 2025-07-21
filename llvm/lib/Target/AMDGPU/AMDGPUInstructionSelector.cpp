@@ -5489,7 +5489,8 @@ AMDGPUInstructionSelector::selectScratchOffset(MachineOperand &Root) const {
 
 // Match (64-bit SGPR base) + (zext vgpr offset) + sext(imm offset)
 InstructionSelector::ComplexRendererFns
-AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
+AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
+                                             unsigned CPolBits) const {
   Register Addr = Root.getReg();
   Register PtrBase;
   int64_t ConstOffset;
@@ -5533,6 +5534,7 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
                   MIB.addReg(HighBits);
                 }, // voffset
                 [=](MachineInstrBuilder &MIB) { MIB.addImm(SplitImmOffset); },
+                [=](MachineInstrBuilder &MIB) { MIB.addImm(CPolBits); },
             }};
           }
         }
@@ -5572,6 +5574,9 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
                  },
                  [=](MachineInstrBuilder &MIB) { // offset
                    MIB.addImm(ImmOffset);
+                 },
+                 [=](MachineInstrBuilder &MIB) { // cpol
+                   MIB.addImm(CPolBits);
                  }}};
       }
     }
@@ -5595,8 +5600,19 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addReg(AddrDef->Reg); }, // saddr
       [=](MachineInstrBuilder &MIB) { MIB.addReg(VOffset); },      // voffset
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(ImmOffset); }     // offset
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(ImmOffset); },    // offset
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(CPolBits); }      // cpol
   }};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
+  return selectGlobalSAddr(Root, 0);
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectGlobalSAddrGLC(MachineOperand &Root) const {
+  return selectGlobalSAddr(Root, AMDGPU::CPol::GLC);
 }
 
 InstructionSelector::ComplexRendererFns

@@ -596,7 +596,7 @@ absentBoxToUnallocatedBox(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Type boxType = box.getType();
   assert(mlir::isa<fir::BoxType>(boxType) && "argument must be a fir.box");
   mlir::Value emptyBox =
-      fir::factory::createUnallocatedBox(builder, loc, boxType, std::nullopt);
+      fir::factory::createUnallocatedBox(builder, loc, boxType, {});
   auto safeToReadBox =
       builder.create<mlir::arith::SelectOp>(loc, isPresent, box, emptyBox);
   return fir::substBase(exv, safeToReadBox);
@@ -1003,9 +1003,9 @@ public:
           },
           [&](const fir::MutableBoxValue &toBox) {
             if (toBox.isPointer()) {
-              Fortran::lower::associateMutableBox(converter, loc, toBox, expr,
-                                                  /*lbounds=*/std::nullopt,
-                                                  stmtCtx);
+              Fortran::lower::associateMutableBox(
+                  converter, loc, toBox, expr,
+                  /*lbounds=*/mlir::ValueRange{}, stmtCtx);
               return;
             }
             // For allocatable components, a deep copy is needed.
@@ -2663,8 +2663,7 @@ public:
                                        /*nonDeferredParams=*/mlir::ValueRange{},
                                        /*mutableProperties=*/{});
           Fortran::lower::associateMutableBox(converter, loc, pointer, *expr,
-                                              /*lbounds=*/std::nullopt,
-                                              stmtCtx);
+                                              /*lbounds=*/{}, stmtCtx);
           caller.placeInput(arg, irBox);
           continue;
         }
@@ -3605,8 +3604,9 @@ public:
       mlir::Value castTo =
           builder.createConvert(loc, fir::HeapType::get(seqTy), load);
       mlir::Value shapeOp = builder.genShape(loc, shape);
-      return builder.create<fir::ArrayLoadOp>(
-          loc, seqTy, castTo, shapeOp, /*slice=*/mlir::Value{}, std::nullopt);
+      return builder.create<fir::ArrayLoadOp>(loc, seqTy, castTo, shapeOp,
+                                              /*slice=*/mlir::Value{},
+                                              mlir::ValueRange{});
     };
     // Custom lowering of the element store to deal with the extra indirection
     // to the lazy allocated buffer.
@@ -4208,7 +4208,7 @@ private:
       auto addr =
           builder->create<fir::ArrayCoorOp>(loc, eleRefTy, tmp, shape,
                                             /*slice=*/mlir::Value{}, indices,
-                                            /*typeParams=*/std::nullopt);
+                                            /*typeParams=*/mlir::ValueRange{});
       auto load = builder->create<fir::LoadOp>(loc, addr);
       return builder->createConvert(loc, i1Ty, load);
     };
@@ -4523,17 +4523,18 @@ private:
         fir::isRecordWithAllocatableMember(eleTy))
       TODO(loc, "creating an array temp where the element type has "
                 "allocatable members");
-    mlir::Value temp = !seqTy.hasDynamicExtents()
-                           ? builder.create<fir::AllocMemOp>(loc, type)
-                           : builder.create<fir::AllocMemOp>(
-                                 loc, type, ".array.expr", std::nullopt, shape);
+    mlir::Value temp =
+        !seqTy.hasDynamicExtents()
+            ? builder.create<fir::AllocMemOp>(loc, type)
+            : builder.create<fir::AllocMemOp>(loc, type, ".array.expr",
+                                              mlir::ValueRange{}, shape);
     fir::FirOpBuilder *bldr = &converter.getFirOpBuilder();
     stmtCtx.attachCleanup(
         [bldr, loc, temp]() { bldr->create<fir::FreeMemOp>(loc, temp); });
     mlir::Value shapeOp = genShapeOp(shape);
     return builder.create<fir::ArrayLoadOp>(loc, seqTy, temp, shapeOp,
                                             /*slice=*/mlir::Value{},
-                                            std::nullopt);
+                                            mlir::ValueRange{});
   }
 
   static fir::ShapeOp genShapeOp(mlir::Location loc, fir::FirOpBuilder &builder,
@@ -6186,7 +6187,7 @@ private:
   mlir::FunctionType memcpyType() {
     auto ptrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
     llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type()};
-    return mlir::FunctionType::get(builder.getContext(), args, std::nullopt);
+    return mlir::FunctionType::get(builder.getContext(), args, {});
   }
 
   /// Create a call to the LLVM memcpy intrinsic.
@@ -6484,7 +6485,7 @@ private:
         mlir::Value initBuffSz =
             builder.createIntegerConstant(loc, idxTy, clInitialBufferSize);
         mem = builder.create<fir::AllocMemOp>(
-            loc, eleTy, /*typeparams=*/std::nullopt, initBuffSz);
+            loc, eleTy, /*typeparams=*/mlir::ValueRange{}, initBuffSz);
         builder.create<fir::StoreOp>(loc, initBuffSz, buffSize);
       }
     } else {
