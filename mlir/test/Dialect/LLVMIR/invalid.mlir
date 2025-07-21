@@ -1114,7 +1114,7 @@ llvm.func @gpu_wmma_mma_op_invalid_result(%arg0: vector<2 x f16>, %arg1: vector<
 
 // -----
 
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr) {
+llvm.func @ld_matrix(%arg0: !llvm.ptr) {
   // expected-error@+1 {{'nvvm.ldmatrix' op expected source pointer in memory space 3}}
   %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>, eltType  = #nvvm.ld_st_matrix_elttype<b16>} : (!llvm.ptr) -> i32
   llvm.return
@@ -1122,15 +1122,15 @@ llvm.func @wmmald_matrix(%arg0: !llvm.ptr) {
 
 // -----
 
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr<3>) {
-  // expected-error@+1 {{'nvvm.ldmatrix' op expected num attribute to be 1, 2 or 4}}
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected num attribute to be 1, 2 or 4 for 8x8 matrix}}
   %l = nvvm.ldmatrix %arg0 {num = 3 : i32, layout = #nvvm.mma_layout<row>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>, eltType  = #nvvm.ld_st_matrix_elttype<b16>} : (!llvm.ptr<3>) -> i32
   llvm.return
 }
 
 // -----
 
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr<3>) {
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
   // expected-error@+1 {{'nvvm.ldmatrix' op expected destination type is i32}}
   %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>, eltType  = #nvvm.ld_st_matrix_elttype<b16>} : (!llvm.ptr<3>) -> !llvm.struct<(i32)>
   llvm.return
@@ -1138,7 +1138,7 @@ llvm.func @wmmald_matrix(%arg0: !llvm.ptr<3>) {
 
 // -----
 
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr<3>) {
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
   // expected-error@+1 {{'nvvm.ldmatrix' op expected destination type is a structure of 4 elements of type i32}}
   %l = nvvm.ldmatrix %arg0 {num = 4 : i32, layout = #nvvm.mma_layout<row>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>, eltType  = #nvvm.ld_st_matrix_elttype<b16>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
   llvm.return
@@ -1146,12 +1146,65 @@ llvm.func @wmmald_matrix(%arg0: !llvm.ptr<3>) {
 
 // -----
 
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr<3>) {
-  // expected-error@+1 {{'nvvm.ldmatrix' op expected destination type is a structure of 2 elements of type i32}}
-  %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>, shape = #nvvm.ld_st_matrix_shape<m = 16, n = 16>, eltType  = #nvvm.ld_st_matrix_elttype<b8>} : (!llvm.ptr<3>) -> i32
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected element type to be b16 for 8x8 matrix}}
+  %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>, eltType  = #nvvm.ld_st_matrix_elttype<b8>} : (!llvm.ptr<3>) -> i32
   llvm.return
 }
 
+// -----
+
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected num attribute to be 1, 2 or 4 for 8x16 matrix}}
+  %l = nvvm.ldmatrix %arg0 {num = 3 : i32, layout = #nvvm.mma_layout<row>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 16>, eltType  = #nvvm.ld_st_matrix_elttype<b8x16.b4x16_p64>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32)>
+  llvm.return
+}
+
+// -----
+
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected layout to be row for 8x16 matrix}}
+  %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<col>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 16>, eltType  = #nvvm.ld_st_matrix_elttype<b8x16.b4x16_p64>} : (!llvm.ptr<3>) -> i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected element type to be b8x16.b4x16_p64 or b8x16.b6x16_p32 for 8x16 matrix}}
+  %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 16>, eltType  = #nvvm.ld_st_matrix_elttype<b8>} : (!llvm.ptr<3>) -> i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected num attribute to be 1 or 2 for 16x16 matrix}}
+  %l = nvvm.ldmatrix %arg0 {num = 4 : i32, layout = #nvvm.mma_layout<row>, shape = #nvvm.ld_st_matrix_shape<m = 16, n = 16>, eltType  = #nvvm.ld_st_matrix_elttype<b8x16.b4x16_p64>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
+  llvm.return
+}
+
+// -----
+
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected layout to be col for 16x16 matrix}}
+  %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>, shape = #nvvm.ld_st_matrix_shape<m = 16, n = 16>, eltType  = #nvvm.ld_st_matrix_elttype<b8x16.b6x16_p32>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
+  llvm.return
+}
+
+// -----
+
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected element type to be b8, b8x16.b4x16_p64 or b8x16.b6x16_p32 for 16x16 matrix}}
+  %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<col>, shape = #nvvm.ld_st_matrix_shape<m = 16, n = 16>, eltType  = #nvvm.ld_st_matrix_elttype<b16>} : (!llvm.ptr<3>) -> i32
+  llvm.return
+}
+
+llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
+  // expected-error@+1 {{'nvvm.ldmatrix' op expected destination type is a structure of 2 elements of type i32}}
+  %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<col>, shape = #nvvm.ld_st_matrix_shape<m = 16, n = 16>, eltType  = #nvvm.ld_st_matrix_elttype<b8>} : (!llvm.ptr<3>) -> i32
+  llvm.return
+}
 
 // -----
 
