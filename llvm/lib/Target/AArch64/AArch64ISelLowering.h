@@ -183,7 +183,7 @@ public:
                                         MachineBasicBlock *BB) const;
 
   /// Replace (0, vreg) discriminator components with the operands of blend
-  /// or with (immediate, XZR) when possible.
+  /// or with (immediate, NoRegister) when possible.
   void fixupPtrauthDiscriminator(MachineInstr &MI, MachineBasicBlock *BB,
                                  MachineOperand &IntDiscOp,
                                  MachineOperand &AddrDiscOp,

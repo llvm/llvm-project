@@ -2168,6 +2168,7 @@ let Predicates = [HasPAuth] in {
     let usesCustomInserter = 1;
   }
 
+  // A standalone pattern is used, so that literal 0 can be passed as $Disc.
   def : Pat<(int_ptrauth_sign GPR64:$Val, timm:$Key, GPR64noip:$AddrDisc),
             (PAC GPR64:$Val, $Key, 0, GPR64noip:$AddrDisc)>;
 
