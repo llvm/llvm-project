@@ -1630,6 +1630,53 @@ size_t SymbolFileNativePDB::ParseSymbolArrayInScope(
   return count;
 }
 
+void SymbolFileNativePDB::CacheTypeNames() {
+  if (!m_type_base_names.IsEmpty())
+    return;
+
+  LazyRandomTypeCollection &types = m_index->tpi().typeCollection();
+  for (auto ti = types.getFirst(); ti; ti = types.getNext(*ti)) {
+    CVType cvt = types.getType(*ti);
+    llvm::StringRef name;
+    // We are only interested in records, unions, and enums.
+    // We aren't interested in forward references as we'll visit the actual
+    // type later anyway.
+    switch (cvt.kind()) {
+    case LF_STRUCTURE:
+    case LF_CLASS: {
+      ClassRecord cr;
+      llvm::cantFail(TypeDeserializer::deserializeAs<ClassRecord>(cvt, cr));
+      if (cr.isForwardRef())
+        continue;
+      name = cr.Name;
+    } break;
+    case LF_UNION: {
+      UnionRecord ur;
+      llvm::cantFail(TypeDeserializer::deserializeAs<UnionRecord>(cvt, ur));
+      if (ur.isForwardRef())
+        continue;
+      name = ur.Name;
+    } break;
+    case LF_ENUM: {
+      EnumRecord er;
+      llvm::cantFail(TypeDeserializer::deserializeAs<EnumRecord>(cvt, er));
+      if (er.isForwardRef())
+        continue;
+      name = er.Name;
+    } break;
+    default:
+      continue;
+    }
+    if (name.empty())
+      continue;
+
+    auto base_name = MSVCUndecoratedNameParser::DropScope(name);
+    m_type_base_names.Append(ConstString(base_name), ti->getIndex());
+  }
+
+  m_type_base_names.Sort();
+}
+
 void SymbolFileNativePDB::DumpClangAST(Stream &s, llvm::StringRef filter) {
   auto ts_or_err = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   if (!ts_or_err)
@@ -1720,11 +1767,14 @@ void SymbolFileNativePDB::FindTypes(const lldb_private::TypeQuery &query,
 
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
-  std::vector<TypeIndex> matches =
-      m_index->tpi().findRecordsByName(query.GetTypeBasename().GetStringRef());
+  // We can't query for the basename or full name because the type might reside
+  // in an anonymous namespace. Cache the basenames first.
+  CacheTypeNames();
+  std::vector<uint32_t> matches;
+  m_type_base_names.GetValues(query.GetTypeBasename(), matches);
 
-  for (TypeIndex type_idx : matches) {
-    TypeSP type_sp = GetOrCreateType(type_idx);
+  for (uint32_t match_idx : matches) {
+    TypeSP type_sp = GetOrCreateType(TypeIndex(match_idx));
     if (!type_sp)
       continue;
 
