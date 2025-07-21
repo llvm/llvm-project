@@ -2,6 +2,11 @@ if(NOT LLDB_BUILT_STANDALONE)
   set(tablegen_deps intrinsics_gen)
 endif()
 
+set_property(DIRECTORY PROPERTY LLDB_TOLERATED_PLUGIN_DEPENDENCIES 
+  LanguageRuntime 
+  TypeSystem
+)
+
 add_lldb_library(lldbPluginExpressionParserSwift PLUGIN
   SwiftASTManipulator.cpp
   SwiftExpressionParser.cpp

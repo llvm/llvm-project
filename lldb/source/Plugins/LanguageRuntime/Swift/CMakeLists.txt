@@ -1,3 +1,5 @@
+set_property(DIRECTORY PROPERTY LLDB_TOLERATED_PLUGIN_DEPENDENCIES Language)
+
 add_lldb_library(lldbPluginSwiftLanguageRuntime PLUGIN
   LLDBMemoryReader.cpp
   ReflectionContext.cpp
