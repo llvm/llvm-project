@@ -135,8 +135,9 @@ struct GlobalStoreOpInterface
     auto memrefType = getMemRefTypeWithStaticIdentityLayout(tensorType);
 
     auto loc = globalStoreOp.getLoc();
-    auto targetMemref = rewriter.create<memref::GetGlobalOp>(
-        loc, memrefType, globalStoreOp.getGlobalAttr().getLeafReference());
+    auto targetMemref = memref::GetGlobalOp::create(
+        rewriter, loc, memrefType,
+        globalStoreOp.getGlobalAttr().getLeafReference());
 
     auto sourceMemref =
         getBuffer(rewriter, globalStoreOp.getValue(), options, state);
