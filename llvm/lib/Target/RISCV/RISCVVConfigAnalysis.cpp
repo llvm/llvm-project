@@ -1,5 +1,4 @@
-//===- RISCVVConfigAnalysis --------------------------------------*- C++
-//-*-===//
+//===- RISCVVConfigAnalysis -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// This is the RISCV analysis of vector unit config.
+/// This is the RISC-V analysis of vector unit config.
 //===----------------------------------------------------------------------===//
 
 #include "RISCVVConfigAnalysis.h"
@@ -655,9 +654,9 @@ void RISCVVConfigInfo::clear() { BlockInfo.clear(); }
 char RISCVVConfigWrapperPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(RISCVVConfigWrapperPass, DEBUG_TYPE,
-                      "RISCV Vector Config Analysis", false, true)
+                      "RISC-V Vector Config Analysis", false, true)
 INITIALIZE_PASS_END(RISCVVConfigWrapperPass, DEBUG_TYPE,
-                    "RISCV Vector Config Analysis", false, true)
+                    "RISC-V Vector Config Analysis", false, true)
 
 RISCVVConfigWrapperPass::RISCVVConfigWrapperPass() : MachineFunctionPass(ID) {}
 
