@@ -5484,6 +5484,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       StringRef ObjDir = llvm::sys::path::parent_path(FinalOutput->getValue());
       if (!ObjDir.empty())
         EmitSummaryDir = ObjDir;
+    } 
+    
+    if(A->containsValue("src") && Input.isFilename()) {
+      StringRef BasePath = llvm::sys::path::parent_path(Input.getFilename());
+      if(!BasePath.empty())
+        EmitSummaryDir = BasePath.str();
     }
 
     CmdArgs.push_back(

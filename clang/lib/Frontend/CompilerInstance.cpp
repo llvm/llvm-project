@@ -749,8 +749,8 @@ void CompilerInstance::createSummaryConsumer(FrontendInputFile Input) {
     return;
 
   llvm::SmallString<32> SummaryFile = EmitSummaryDir;
-  llvm::sys::path::append(SummaryFile, Input.getFile());
-
+  llvm::sys::path::append(SummaryFile, llvm::sys::path::filename(Input.getFile()));
+  
   StringRef Format = getFrontendOpts().SummaryFormat;
   llvm::sys::path::replace_extension(SummaryFile,
                                      Format == "binary" ? "summary" : Format);
