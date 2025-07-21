@@ -8,18 +8,12 @@ define i8 @gep_switch_consecutive_case_values(ptr %ptr, i32 %index) {
 ; CHECK-SAME: ptr [[PTR:%.*]], i32 [[INDEX:%.*]]) {
 ; CHECK-NEXT:  [[_ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP_DEFAULT:%.*]] = getelementptr i8, ptr [[PTR]], i64 36
-; CHECK-NEXT:    switch i32 [[INDEX]], label %[[DEFAULT:.*]] [
-; CHECK-NEXT:      i32 0, label %[[CASE_0:.*]]
-; CHECK-NEXT:      i32 1, label %[[CASE_1:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[CASE_1]]:
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[PTR]], i64 20
-; CHECK-NEXT:    br label %[[DEFAULT]]
-; CHECK:       [[CASE_0]]:
-; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr i8, ptr [[PTR]], i64 4
-; CHECK-NEXT:    br label %[[DEFAULT]]
-; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = phi ptr [ [[GEP_0]], %[[CASE_0]] ], [ [[GEP_1]], %[[CASE_1]] ], [ [[GEP_DEFAULT]], [[DOTENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP2]], i64 4
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[INDEX]], 2
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[SWITCH]], ptr [[TMP3]], ptr [[GEP_DEFAULT]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[SPEC_SELECT]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
@@ -48,18 +42,18 @@ define i8 @gep_switch_nonconsecutive_case_values(ptr %ptr, i32 %index) {
 ; CHECK-LABEL: define i8 @gep_switch_nonconsecutive_case_values(
 ; CHECK-SAME: ptr [[PTR:%.*]], i32 [[INDEX:%.*]]) {
 ; CHECK-NEXT:  [[_ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP2]]
 ; CHECK-NEXT:    switch i32 [[INDEX]], label %[[DEFAULT:.*]] [
 ; CHECK-NEXT:      i32 4, label %[[CASE_0:.*]]
-; CHECK-NEXT:      i32 16, label %[[CASE_1:.*]]
+; CHECK-NEXT:      i32 16, label %[[CASE_0]]
 ; CHECK-NEXT:    ]
-; CHECK:       [[CASE_1]]:
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[PTR]], i64 68
-; CHECK-NEXT:    br label %[[DEFAULT]]
 ; CHECK:       [[CASE_0]]:
-; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr i8, ptr [[PTR]], i64 20
 ; CHECK-NEXT:    br label %[[DEFAULT]]
 ; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    [[DOTSINK:%.*]] = phi ptr [ [[GEP_0]], %[[CASE_0]] ], [ [[GEP_1]], %[[CASE_1]] ], [ [[PTR]], [[DOTENTRY:%.*]] ]
+; CHECK-NEXT:    [[DOTSINK:%.*]] = phi ptr [ [[TMP3]], %[[CASE_0]] ], [ [[PTR]], [[DOTENTRY:%.*]] ]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[DOTSINK]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
@@ -88,18 +82,18 @@ define i8 @negative_slope(ptr %ptr, i32 %index) {
 ; CHECK-LABEL: define i8 @negative_slope(
 ; CHECK-SAME: ptr [[PTR:%.*]], i32 [[INDEX:%.*]]) {
 ; CHECK-NEXT:  [[_ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 160, [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP2]]
 ; CHECK-NEXT:    switch i32 [[INDEX]], label %[[DEFAULT:.*]] [
 ; CHECK-NEXT:      i32 4, label %[[CASE_0:.*]]
-; CHECK-NEXT:      i32 16, label %[[CASE_1:.*]]
+; CHECK-NEXT:      i32 16, label %[[CASE_0]]
 ; CHECK-NEXT:    ]
-; CHECK:       [[CASE_1]]:
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[PTR]], i64 32
-; CHECK-NEXT:    br label %[[DEFAULT]]
 ; CHECK:       [[CASE_0]]:
-; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr i8, ptr [[PTR]], i64 128
 ; CHECK-NEXT:    br label %[[DEFAULT]]
 ; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    [[DOTSINK:%.*]] = phi ptr [ [[GEP_0]], %[[CASE_0]] ], [ [[GEP_1]], %[[CASE_1]] ], [ [[PTR]], [[DOTENTRY:%.*]] ]
+; CHECK-NEXT:    [[DOTSINK:%.*]] = phi ptr [ [[TMP3]], %[[CASE_0]] ], [ [[PTR]], [[DOTENTRY:%.*]] ]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[DOTSINK]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
@@ -129,17 +123,11 @@ define i8 @gep_i32_sourceelementtype(ptr %ptr, i32 %index) {
 ; CHECK-SAME: ptr [[PTR:%.*]], i32 [[INDEX:%.*]]) {
 ; CHECK-NEXT:  [[_ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP_DEFAULT:%.*]] = getelementptr i8, ptr [[PTR]], i64 256
-; CHECK-NEXT:    switch i32 [[INDEX]], label %[[DEFAULT:.*]] [
-; CHECK-NEXT:      i32 0, label %[[CASE_0:.*]]
-; CHECK-NEXT:      i32 1, label %[[CASE_1:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[CASE_1]]:
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[PTR]], i64 128
-; CHECK-NEXT:    br label %[[DEFAULT]]
-; CHECK:       [[CASE_0]]:
-; CHECK-NEXT:    br label %[[DEFAULT]]
-; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = phi ptr [ [[PTR]], %[[CASE_0]] ], [ [[GEP_1]], %[[CASE_1]] ], [ [[GEP_DEFAULT]], [[DOTENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[INDEX]], 7
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP1]]
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[INDEX]], 2
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[SWITCH]], ptr [[TMP2]], ptr [[GEP_DEFAULT]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[SPEC_SELECT]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
@@ -169,18 +157,12 @@ define i8 @gep_diff_indices(ptr %ptr, i32 %index) {
 ; CHECK-SAME: ptr [[PTR:%.*]], i32 [[INDEX:%.*]]) {
 ; CHECK-NEXT:  [[_ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP_DEFAULT:%.*]] = getelementptr i8, ptr [[PTR]], i64 64
-; CHECK-NEXT:    switch i32 [[INDEX]], label %[[DEFAULT:.*]] [
-; CHECK-NEXT:      i32 0, label %[[CASE_0:.*]]
-; CHECK-NEXT:      i32 1, label %[[CASE_1:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[CASE_1]]:
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[PTR]], i64 20
-; CHECK-NEXT:    br label %[[DEFAULT]]
-; CHECK:       [[CASE_0]]:
-; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr i8, ptr [[PTR]], i64 16
-; CHECK-NEXT:    br label %[[DEFAULT]]
-; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = phi ptr [ [[GEP_0]], %[[CASE_0]] ], [ [[GEP_1]], %[[CASE_1]] ], [ [[GEP_DEFAULT]], [[DOTENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP2]]
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[INDEX]], 2
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[SWITCH]], ptr [[TMP3]], ptr [[GEP_DEFAULT]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[SPEC_SELECT]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
@@ -242,29 +224,23 @@ define i8 @gep_with_outliers(ptr %ptr, i32 %index) {
 ; CHECK-SAME: ptr [[PTR:%.*]], i32 [[INDEX:%.*]]) {
 ; CHECK-NEXT:  [[_ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP_DEFAULT:%.*]] = getelementptr i8, ptr [[PTR]], i64 160
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[INDEX]], 5
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP1]]
 ; CHECK-NEXT:    switch i32 [[INDEX]], label %[[DEFAULT:.*]] [
 ; CHECK-NEXT:      i32 0, label %[[CASE_0:.*]]
-; CHECK-NEXT:      i32 1, label %[[CASE_1:.*]]
-; CHECK-NEXT:      i32 2, label %[[CASE_2:.*]]
+; CHECK-NEXT:      i32 1, label %[[CASE_0]]
+; CHECK-NEXT:      i32 2, label %[[CASE_0]]
 ; CHECK-NEXT:      i32 3, label %[[CASE_3:.*]]
-; CHECK-NEXT:      i32 4, label %[[CASE_4:.*]]
+; CHECK-NEXT:      i32 4, label %[[CASE_0]]
 ; CHECK-NEXT:    ]
-; CHECK:       [[CASE_4]]:
-; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr i8, ptr [[PTR]], i64 128
-; CHECK-NEXT:    br label %[[DEFAULT]]
 ; CHECK:       [[CASE_3]]:
 ; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr i8, ptr [[PTR]], i64 97
-; CHECK-NEXT:    br label %[[DEFAULT]]
-; CHECK:       [[CASE_2]]:
-; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr i8, ptr [[PTR]], i64 64
-; CHECK-NEXT:    br label %[[DEFAULT]]
-; CHECK:       [[CASE_1]]:
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[PTR]], i64 32
 ; CHECK-NEXT:    br label %[[DEFAULT]]
 ; CHECK:       [[CASE_0]]:
 ; CHECK-NEXT:    br label %[[DEFAULT]]
 ; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    [[DOTSINK:%.*]] = phi ptr [ [[PTR]], %[[CASE_0]] ], [ [[GEP_1]], %[[CASE_1]] ], [ [[GEP_2]], %[[CASE_2]] ], [ [[GEP_3]], %[[CASE_3]] ], [ [[GEP_4]], %[[CASE_4]] ], [ [[GEP_DEFAULT]], [[DOTENTRY:%.*]] ]
+; CHECK-NEXT:    [[DOTSINK:%.*]] = phi ptr [ [[TMP2]], %[[CASE_0]] ], [ [[GEP_3]], %[[CASE_3]] ], [ [[GEP_DEFAULT]], [[DOTENTRY:%.*]] ]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[DOTSINK]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
@@ -309,17 +285,11 @@ define i8 @gep_diff_type(ptr %ptr, i32 %index) {
 ; CHECK-SAME: ptr [[PTR:%.*]], i32 [[INDEX:%.*]]) {
 ; CHECK-NEXT:  [[_ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP_DEFAULT:%.*]] = getelementptr i8, ptr [[PTR]], i64 64
-; CHECK-NEXT:    switch i32 [[INDEX]], label %[[DEFAULT:.*]] [
-; CHECK-NEXT:      i32 0, label %[[CASE_0:.*]]
-; CHECK-NEXT:      i32 1, label %[[CASE_1:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[CASE_1]]:
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[PTR]], i64 128
-; CHECK-NEXT:    br label %[[DEFAULT]]
-; CHECK:       [[CASE_0]]:
-; CHECK-NEXT:    br label %[[DEFAULT]]
-; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = phi ptr [ [[PTR]], %[[CASE_0]] ], [ [[GEP_1]], %[[CASE_1]] ], [ [[GEP_DEFAULT]], [[DOTENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[INDEX]], 7
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP1]]
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[INDEX]], 2
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[SWITCH]], ptr [[TMP2]], ptr [[GEP_DEFAULT]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[SPEC_SELECT]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
@@ -348,18 +318,12 @@ define i8 @gep_default_case_bb(ptr %ptr, i32 %index) {
 ; CHECK-LABEL: define i8 @gep_default_case_bb(
 ; CHECK-SAME: ptr [[PTR:%.*]], i32 [[INDEX:%.*]]) {
 ; CHECK-NEXT:  [[_ENTRY:.*:]]
-; CHECK-NEXT:    switch i32 [[INDEX]], label %[[DEFAULT:.*]] [
-; CHECK-NEXT:      i32 0, label %[[SWITCH_END:.*]]
-; CHECK-NEXT:      i32 1, label %[[CASE_1:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[CASE_1]]:
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[PTR]], i64 32
-; CHECK-NEXT:    br label %[[SWITCH_END]]
-; CHECK:       [[DEFAULT]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[INDEX]], 5
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP1]]
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[GEP_DEFAULT:%.*]] = getelementptr i8, ptr [[PTR]], i64 64
-; CHECK-NEXT:    br label %[[SWITCH_END]]
-; CHECK:       [[SWITCH_END]]:
-; CHECK-NEXT:    [[DOTSINK:%.*]] = phi ptr [ [[GEP_1]], %[[CASE_1]] ], [ [[GEP_DEFAULT]], %[[DEFAULT]] ], [ [[PTR]], [[DOTENTRY:%.*]] ]
+; CHECK-NEXT:    [[DOTSINK:%.*]] = select i1 [[SWITCH]], ptr [[TMP2]], ptr [[GEP_DEFAULT]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[DOTSINK]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
@@ -392,20 +356,20 @@ define i8 @non_gep_incoming_value(ptr %ptr0, ptr %ptr1, i32 %index) {
 ; CHECK-SAME: ptr [[PTR0:%.*]], ptr [[PTR1:%.*]], i32 [[INDEX:%.*]]) {
 ; CHECK-NEXT:  [[_ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP_DEFAULT:%.*]] = getelementptr i8, ptr [[PTR0]], i64 64
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[INDEX]], 5
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR0]], i64 [[TMP1]]
 ; CHECK-NEXT:    switch i32 [[INDEX]], label %[[DEFAULT:.*]] [
 ; CHECK-NEXT:      i32 0, label %[[CASE_0:.*]]
-; CHECK-NEXT:      i32 1, label %[[CASE_1:.*]]
+; CHECK-NEXT:      i32 1, label %[[CASE_0]]
 ; CHECK-NEXT:      i32 2, label %[[CASE_2:.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       [[CASE_2]]:
 ; CHECK-NEXT:    br label %[[DEFAULT]]
-; CHECK:       [[CASE_1]]:
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[PTR0]], i64 32
-; CHECK-NEXT:    br label %[[DEFAULT]]
 ; CHECK:       [[CASE_0]]:
 ; CHECK-NEXT:    br label %[[DEFAULT]]
 ; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    [[DOTSINK:%.*]] = phi ptr [ [[PTR0]], %[[CASE_0]] ], [ [[GEP_1]], %[[CASE_1]] ], [ [[PTR1]], %[[CASE_2]] ], [ [[GEP_DEFAULT]], [[DOTENTRY:%.*]] ]
+; CHECK-NEXT:    [[DOTSINK:%.*]] = phi ptr [ [[TMP2]], %[[CASE_0]] ], [ [[PTR1]], %[[CASE_2]] ], [ [[GEP_DEFAULT]], [[DOTENTRY:%.*]] ]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[DOTSINK]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
@@ -439,17 +403,11 @@ define i8 @base_ptr_func_arg(ptr %ptr0, i32 %index) {
 ; CHECK-SAME: ptr [[PTR0:%.*]], i32 [[INDEX:%.*]]) {
 ; CHECK-NEXT:  [[_ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP_DEFAULT:%.*]] = getelementptr i8, ptr [[PTR0]], i64 8
-; CHECK-NEXT:    switch i32 [[INDEX]], label %[[DEFAULT:.*]] [
-; CHECK-NEXT:      i32 0, label %[[CASE_0:.*]]
-; CHECK-NEXT:      i32 1, label %[[CASE_1:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[CASE_1]]:
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[PTR0]], i64 4
-; CHECK-NEXT:    br label %[[DEFAULT]]
-; CHECK:       [[CASE_0]]:
-; CHECK-NEXT:    br label %[[DEFAULT]]
-; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = phi ptr [ [[PTR0]], %[[CASE_0]] ], [ [[GEP_1]], %[[CASE_1]] ], [ [[GEP_DEFAULT]], [[DOTENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR0]], i64 [[TMP1]]
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[INDEX]], 2
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[SWITCH]], ptr [[TMP2]], ptr [[GEP_DEFAULT]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[SPEC_SELECT]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
@@ -482,16 +440,11 @@ define i32 @base_ptr_alloca(i32 %index) {
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds nuw i8, ptr [[ALLOC1]], i64 4
 ; CHECK-NEXT:    store i32 8, ptr [[GEP_1]], align 4
 ; CHECK-NEXT:    [[GEP_DEFAULT:%.*]] = getelementptr inbounds nuw i8, ptr [[ALLOC1]], i64 8
-; CHECK-NEXT:    switch i32 [[INDEX]], label %[[DEFAULT:.*]] [
-; CHECK-NEXT:      i32 0, label %[[CASE_0:.*]]
-; CHECK-NEXT:      i32 1, label %[[CASE_1:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[CASE_1]]:
-; CHECK-NEXT:    br label %[[DEFAULT]]
-; CHECK:       [[CASE_0]]:
-; CHECK-NEXT:    br label %[[DEFAULT]]
-; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = phi ptr [ [[ALLOC1]], %[[CASE_0]] ], [ [[GEP_1]], %[[CASE_1]] ], [ [[GEP_DEFAULT]], [[DOTENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ALLOC1]], i64 [[TMP1]]
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[INDEX]], 2
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[SWITCH]], ptr [[TMP2]], ptr [[GEP_DEFAULT]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[SPEC_SELECT]], align 1
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
@@ -708,18 +661,10 @@ define i32 @add_consecutive_cases(i32 %base, i32 %index) {
 ; CHECK-LABEL: define i32 @add_consecutive_cases(
 ; CHECK-SAME: i32 [[BASE:%.*]], i32 [[INDEX:%.*]]) {
 ; CHECK-NEXT:  [[_ENTRY:.*:]]
-; CHECK-NEXT:    [[ADD_DEFAULT:%.*]] = add i32 [[BASE]], 8
-; CHECK-NEXT:    switch i32 [[INDEX]], label %[[DEFAULT:.*]] [
-; CHECK-NEXT:      i32 0, label %[[CASE_0:.*]]
-; CHECK-NEXT:      i32 1, label %[[CASE_1:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[CASE_1]]:
-; CHECK-NEXT:    [[ADD_1:%.*]] = add i32 [[BASE]], 4
-; CHECK-NEXT:    br label %[[DEFAULT]]
-; CHECK:       [[CASE_0]]:
-; CHECK-NEXT:    br label %[[DEFAULT]]
-; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    [[DOTSINK:%.*]] = phi i32 [ [[BASE]], %[[CASE_0]] ], [ [[ADD_1]], %[[CASE_1]] ], [ [[ADD_DEFAULT]], [[DOTENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[INDEX]], 2
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[INDEX]], 2
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[SWITCH]], i32 [[TMP0]], i32 8
+; CHECK-NEXT:    [[DOTSINK:%.*]] = add i32 [[BASE]], [[SPEC_SELECT]]
 ; CHECK-NEXT:    ret i32 [[DOTSINK]]
 ;
 .entry:
@@ -746,19 +691,17 @@ define i32 @add_nonconsecutive_cases(i32 %base, i32 %index) {
 ; CHECK-LABEL: define i32 @add_nonconsecutive_cases(
 ; CHECK-SAME: i32 [[BASE:%.*]], i32 [[INDEX:%.*]]) {
 ; CHECK-NEXT:  [[_ENTRY:.*:]]
-; CHECK-NEXT:    [[ADD_DEFAULT:%.*]] = add i32 [[BASE]], 260
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 8
 ; CHECK-NEXT:    switch i32 [[INDEX]], label %[[DEFAULT:.*]] [
 ; CHECK-NEXT:      i32 4, label %[[CASE_0:.*]]
-; CHECK-NEXT:      i32 16, label %[[CASE_1:.*]]
+; CHECK-NEXT:      i32 16, label %[[CASE_0]]
 ; CHECK-NEXT:    ]
-; CHECK:       [[CASE_1]]:
-; CHECK-NEXT:    [[ADD_1:%.*]] = add i32 [[BASE]], 40
-; CHECK-NEXT:    br label %[[DEFAULT]]
 ; CHECK:       [[CASE_0]]:
-; CHECK-NEXT:    [[ADD_0:%.*]] = add i32 [[BASE]], 16
 ; CHECK-NEXT:    br label %[[DEFAULT]]
 ; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    [[DOTSINK:%.*]] = phi i32 [ [[ADD_0]], %[[CASE_0]] ], [ [[ADD_1]], %[[CASE_1]] ], [ [[ADD_DEFAULT]], [[DOTENTRY:%.*]] ]
+; CHECK-NEXT:    [[DOTPN:%.*]] = phi i32 [ [[TMP1]], %[[CASE_0]] ], [ 260, [[DOTENTRY:%.*]] ]
+; CHECK-NEXT:    [[DOTSINK:%.*]] = add i32 [[BASE]], [[DOTPN]]
 ; CHECK-NEXT:    ret i32 [[DOTSINK]]
 ;
 .entry:
@@ -786,24 +729,20 @@ define i8 @gep_add_two_phis(ptr %ptr, i8 %base, i32 %index) {
 ; CHECK-SAME: ptr [[PTR:%.*]], i8 [[BASE:%.*]], i32 [[INDEX:%.*]]) {
 ; CHECK-NEXT:  [[_ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP_DEFAULT:%.*]] = getelementptr i8, ptr [[PTR]], i64 64
-; CHECK-NEXT:    [[ADD_DEFAULT_0:%.*]] = add i8 [[BASE]], 8
-; CHECK-NEXT:    [[ADD_DEFAULT_1:%.*]] = add i8 [[BASE]], 14
-; CHECK-NEXT:    switch i32 [[INDEX]], label %[[DEFAULT:.*]] [
-; CHECK-NEXT:      i32 0, label %[[CASE_0:.*]]
-; CHECK-NEXT:      i32 1, label %[[CASE_1:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[CASE_1]]:
-; CHECK-NEXT:    [[ADD_11:%.*]] = add i8 [[BASE]], 8
-; CHECK-NEXT:    [[ADD_01:%.*]] = add i8 [[BASE]], 4
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[PTR]], i64 32
-; CHECK-NEXT:    br label %[[DEFAULT]]
-; CHECK:       [[CASE_0]]:
-; CHECK-NEXT:    [[ADD_10:%.*]] = add i8 [[BASE]], 2
-; CHECK-NEXT:    br label %[[DEFAULT]]
-; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    [[DOTSINK_GEP:%.*]] = phi ptr [ [[PTR]], %[[CASE_0]] ], [ [[GEP_1]], %[[CASE_1]] ], [ [[GEP_DEFAULT]], [[DOTENTRY:%.*]] ]
-; CHECK-NEXT:    [[SINK_ADD0:%.*]] = phi i8 [ [[BASE]], %[[CASE_0]] ], [ [[ADD_01]], %[[CASE_1]] ], [ [[ADD_DEFAULT_0]], [[DOTENTRY]] ]
-; CHECK-NEXT:    [[SINK_ADD1:%.*]] = phi i8 [ [[ADD_10]], %[[CASE_0]] ], [ [[ADD_11]], %[[CASE_1]] ], [ [[ADD_DEFAULT_1]], [[DOTENTRY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[INDEX]], 5
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP1]]
+; CHECK-NEXT:    [[INDEX_TR:%.*]] = trunc i32 [[INDEX]] to i8
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i8 [[INDEX_TR]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[INDEX]] to i8
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i8 [[TMP4]], 6
+; CHECK-NEXT:    [[TMP6:%.*]] = add i8 [[TMP5]], 2
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[INDEX]], 2
+; CHECK-NEXT:    [[DOTSINK_GEP:%.*]] = select i1 [[SWITCH]], ptr [[TMP2]], ptr [[GEP_DEFAULT]]
+; CHECK-NEXT:    [[DOTPN:%.*]] = select i1 [[SWITCH]], i8 [[TMP3]], i8 8
+; CHECK-NEXT:    [[DOTPN1:%.*]] = select i1 [[SWITCH]], i8 [[TMP6]], i8 14
+; CHECK-NEXT:    [[SINK_ADD1:%.*]] = add i8 [[BASE]], [[DOTPN1]]
+; CHECK-NEXT:    [[SINK_ADD0:%.*]] = add i8 [[BASE]], [[DOTPN]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[DOTSINK_GEP]], align 1
 ; CHECK-NEXT:    [[ADD_RESULT:%.*]] = add i8 [[SINK_ADD0]], [[SINK_ADD1]]
 ; CHECK-NEXT:    [[ADD_RESULT2:%.*]] = add i8 [[ADD_RESULT]], [[LOAD]]

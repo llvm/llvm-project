@@ -355,6 +355,11 @@ PreservedAnalyses SimplifySwitchVarPass::run(Function &F,
 
         if (!NewValue)
           continue;
+
+        for (auto &Case : PhiCases) {
+          Phi.setIncomingValue(Case.PhiIndex, NewValue);
+        }
+        Changed = true;
       }
     }
   }
