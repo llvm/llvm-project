@@ -231,13 +231,13 @@ void test_ptrdiff_t_types(void) {
   scanf("%td", &p2); // No warning.
 
   double d2 = 0.;
-  scanf("%td", &d2); // expected-warning{{format specifies type 'ptrdiff_t *' (aka '__ptrdiff_t *') but the argument has type 'double *'}}
+  scanf("%td", &d2); // expected-warning-re{{format specifies type 'ptrdiff_t *' (aka '{{.+}}') but the argument has type 'double *'}}
 
   ptrdiff_t p3 = 0;
   scanf("%tn", &p3); // No warning.
 
   double d3 = 0.;
-  scanf("%tn", &d3); // expected-warning{{format specifies type 'ptrdiff_t *' (aka '__ptrdiff_t *') but the argument has type 'double *'}}
+  scanf("%tn", &d3); // expected-warning-re{{format specifies type 'ptrdiff_t *' (aka '{{.+}}') but the argument has type 'double *'}}
 }
 
 void check_conditional_literal(char *s, int *i) {

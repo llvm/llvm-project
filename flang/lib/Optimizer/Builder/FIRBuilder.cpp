@@ -620,7 +620,7 @@ fir::StringLitOp fir::FirOpBuilder::createStringLitOp(mlir::Location loc,
   mlir::NamedAttribute sizeAttr(sizeTag, getI64IntegerAttr(data.size()));
   llvm::SmallVector<mlir::NamedAttribute> attrs{dataAttr, sizeAttr};
   return create<fir::StringLitOp>(loc, llvm::ArrayRef<mlir::Type>{type},
-                                  std::nullopt, attrs);
+                                  mlir::ValueRange{}, attrs);
 }
 
 mlir::Value fir::FirOpBuilder::genShape(mlir::Location loc,

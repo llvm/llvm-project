@@ -363,41 +363,25 @@ static bool namedTypeToLengthModifierKind(ASTContext &Ctx, QualType QT,
   return false;
 }
 
-// Check whether T and E are compatible size_t/ptrdiff_t typedefs. E must be
+// Check whether T and E are compatible size_t/ptrdiff_t types. E must be
 // consistent with LE.
 // T is the type of the actual expression in the code to be checked, and E is
 // the expected type parsed from the format string.
 static clang::analyze_format_string::ArgType::MatchKind
-matchesSizeTPtrdiffT(ASTContext &C, QualType T, QualType E,
-                     LengthModifier::Kind LE) {
-  using Kind = LengthModifier::Kind;
+matchesSizeTPtrdiffT(ASTContext &C, QualType T, QualType E) {
   using MatchKind = clang::analyze_format_string::ArgType::MatchKind;
-  assert(LE == Kind::AsPtrDiff || LE == Kind::AsSizeT);
 
   if (!T->isIntegerType())
     return MatchKind::NoMatch;
+
+  if (C.hasSameType(T, E))
+    return MatchKind::Match;
 
   if (C.getCorrespondingSignedType(T.getCanonicalType()) !=
       C.getCorrespondingSignedType(E.getCanonicalType()))
     return MatchKind::NoMatch;
 
-  // signed size_t and unsigned ptrdiff_t does not have typedefs in C and C++.
-  if (LE == Kind::AsSizeT && E->isSignedIntegerType())
-    return T->isSignedIntegerType() ? MatchKind::Match
-                                    : MatchKind::NoMatchSignedness;
-
-  if (LE == LengthModifier::Kind::AsPtrDiff && E->isUnsignedIntegerType())
-    return T->isUnsignedIntegerType() ? MatchKind::Match
-                                      : MatchKind::NoMatchSignedness;
-
-  if (Kind Actual = Kind::None; namedTypeToLengthModifierKind(C, T, Actual)) {
-    if (Actual == LE)
-      return MatchKind::Match;
-    else if (Actual == Kind::AsPtrDiff || Actual == Kind::AsSizeT)
-      return MatchKind::NoMatchSignedness;
-  }
-
-  return MatchKind::NoMatch;
+  return MatchKind::NoMatchSignedness;
 }
 
 clang::analyze_format_string::ArgType::MatchKind
@@ -475,10 +459,7 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
 
     case SpecificTy: {
       if (TK != TypeKind::DontCare) {
-        return matchesSizeTPtrdiffT(C, argTy, T,
-                                    TK == TypeKind::SizeT
-                                        ? LengthModifier::Kind::AsSizeT
-                                        : LengthModifier::AsPtrDiff);
+        return matchesSizeTPtrdiffT(C, argTy, T);
       }
 
       if (const EnumType *ETy = argTy->getAs<EnumType>()) {
@@ -741,15 +722,9 @@ ArgType::matchesArgType(ASTContext &C, const ArgType &Other) const {
   if (Left.K == AK::SpecificTy) {
     if (Right.K == AK::SpecificTy) {
       if (Left.TK != TypeKind::DontCare) {
-        return matchesSizeTPtrdiffT(C, Right.T, Left.T,
-                                    Left.TK == TypeKind::SizeT
-                                        ? LengthModifier::Kind::AsSizeT
-                                        : LengthModifier::AsPtrDiff);
+        return matchesSizeTPtrdiffT(C, Right.T, Left.T);
       } else if (Right.TK != TypeKind::DontCare) {
-        return matchesSizeTPtrdiffT(C, Left.T, Right.T,
-                                    Right.TK == TypeKind::SizeT
-                                        ? LengthModifier::Kind::AsSizeT
-                                        : LengthModifier::AsPtrDiff);
+        return matchesSizeTPtrdiffT(C, Left.T, Right.T);
       }
 
       auto Canon1 = C.getCanonicalType(Left.T);
@@ -805,7 +780,11 @@ QualType ArgType::getRepresentativeType(ASTContext &C) const {
       Res = C.CharTy;
       break;
     case SpecificTy:
-      Res = T;
+      if (TK == TypeKind::PtrdiffT || TK == TypeKind::SizeT)
+        // Using Name as name, so no need to show the uglified name.
+        Res = T->getCanonicalTypeInternal();
+      else
+        Res = T;
       break;
     case CStrTy:
       Res = C.getPointerType(C.CharTy);
@@ -832,7 +811,6 @@ QualType ArgType::getRepresentativeType(ASTContext &C) const {
 
 std::string ArgType::getRepresentativeTypeName(ASTContext &C) const {
   std::string S = getRepresentativeType(C).getAsString(C.getPrintingPolicy());
-
   std::string Alias;
   if (Name) {
     // Use a specific name for this type, e.g. "size_t".

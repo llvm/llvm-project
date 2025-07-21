@@ -571,6 +571,8 @@ function(add_integration_test test_name)
   target_compile_options(${fq_build_target_name} PRIVATE
                          ${compile_options} ${INTEGRATION_TEST_COMPILE_OPTIONS})
 
+  set(compiler_runtime "")
+
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} ${INTEGRATION_TEST_COMPILE_OPTIONS}
@@ -599,17 +601,19 @@ function(add_integration_test test_name)
     set(link_options
       -nolibc
       -nostartfiles
-      -static
+      -nostdlib
       ${LIBC_LINK_OPTIONS_DEFAULT}
       ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
     )
     target_link_options(${fq_build_target_name} PRIVATE ${link_options})
+    list(APPEND compiler_runtime ${LIBGCC_S_LOCATION})
   endif()
   target_link_libraries(
     ${fq_build_target_name}
-    ${fq_target_name}.__libc__
     libc.startup.${LIBC_TARGET_OS}.crt1
     libc.test.IntegrationTest.test
+    ${fq_target_name}.__libc__
+    ${compiler_runtime}
   )
   add_dependencies(${fq_build_target_name}
                    libc.test.IntegrationTest.test
@@ -770,6 +774,7 @@ function(add_libc_hermetic test_name)
                          ${HERMETIC_TEST_COMPILE_OPTIONS})
 
   set(link_libraries "")
+  set(compiler_runtime "")
   foreach(lib IN LISTS HERMETIC_TEST_LINK_LIBRARIES)
     if(TARGET ${lib}.hermetic)
       list(APPEND link_libraries ${lib}.hermetic)
@@ -807,12 +812,12 @@ function(add_libc_hermetic test_name)
     set(link_options
       -nolibc
       -nostartfiles
-      -static
+      -nostdlib
       ${LIBC_LINK_OPTIONS_DEFAULT}
       ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
     )
     target_link_options(${fq_build_target_name} PRIVATE ${link_options})
-    list(APPEND link_libraries ${LIBGCC_S_LOCATION})
+    list(APPEND compiler_runtime ${LIBGCC_S_LOCATION})
   endif()
   target_link_libraries(
     ${fq_build_target_name}
@@ -820,7 +825,9 @@ function(add_libc_hermetic test_name)
       libc.startup.${LIBC_TARGET_OS}.crt1
       ${link_libraries}
       LibcHermeticTestSupport.hermetic
-      ${fq_target_name}.__libc__)
+      ${fq_target_name}.__libc__
+      ${compiler_runtime}
+    )
   add_dependencies(${fq_build_target_name}
                    LibcTest.hermetic
                    libc.test.UnitTest.ErrnoSetterMatcher

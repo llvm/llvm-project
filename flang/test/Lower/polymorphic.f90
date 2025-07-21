@@ -178,6 +178,17 @@ module polymorphic_test
 ! CHECK-LABEL: func.func @_QMpolymorphic_testPpolymorphic_to_nonpolymorphic
 ! Just checking that FIR is generated without error.
 
+  subroutine nonpolymorphic_to_polymorphic(p, t)
+    type p1
+    end type
+    type(p1), pointer :: p(:)
+    class(p1), target :: t(:)
+    p(0:1) => t
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPnonpolymorphic_to_polymorphic
+! CHECK: fir.call @_FortranAPointerAssociateRemappingMonomorphic
+
 ! Test that lowering does not crash for function return with unlimited
 ! polymoprhic value.
 

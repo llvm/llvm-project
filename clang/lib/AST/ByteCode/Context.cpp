@@ -52,6 +52,19 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   return Func->isValid();
 }
 
+void Context::isPotentialConstantExprUnevaluated(State &Parent, const Expr *E,
+                                                 const FunctionDecl *FD) {
+  assert(Stk.empty());
+  ++EvalID;
+  size_t StackSizeBefore = Stk.size();
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  if (!C.interpretCall(FD, E)) {
+    C.cleanup();
+    Stk.clearTo(StackSizeBefore);
+  }
+}
+
 bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   ++EvalID;
   bool Recursing = !Stk.empty();
@@ -220,6 +233,43 @@ bool Context::evaluateCharRange(State &Parent, const Expr *SizeExpr,
   assert(PtrExpr);
 
   return evaluateStringRepr(Parent, SizeExpr, PtrExpr, Result);
+}
+
+bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+    const Descriptor *FieldDesc = Ptr.getFieldDesc();
+    if (!FieldDesc->isPrimitiveArray())
+      return false;
+
+    unsigned N = Ptr.getNumElems();
+    if (Ptr.elemSize() == 1) {
+      Result = strnlen(reinterpret_cast<const char *>(Ptr.getRawAddress()), N);
+      return Result != N;
+    }
+
+    PrimType ElemT = FieldDesc->getPrimType();
+    Result = 0;
+    for (unsigned I = Ptr.getIndex(); I != N; ++I) {
+      INT_TYPE_SWITCH(ElemT, {
+        auto Elem = Ptr.elem<T>(I);
+        if (Elem.isZero())
+          return true;
+        ++Result;
+      });
+    }
+    // We didn't find a 0 byte.
+    return false;
+  });
+
+  if (PtrRes.isInvalid()) {
+    C.cleanup();
+    Stk.clear();
+    return false;
+  }
+  return true;
 }
 
 const LangOptions &Context::getLangOpts() const { return Ctx.getLangOpts(); }

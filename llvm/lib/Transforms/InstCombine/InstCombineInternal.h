@@ -825,9 +825,6 @@ public:
   Value *EvaluateInDifferentType(Value *V, Type *Ty, bool isSigned);
 
   bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock);
-  void tryToSinkInstructionDbgValues(
-      Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
-      BasicBlock *DestBlock, SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers);
   void tryToSinkInstructionDbgVariableRecords(
       Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
       BasicBlock *DestBlock, SmallVectorImpl<DbgVariableRecord *> &DPUsers);

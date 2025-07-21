@@ -11354,53 +11354,16 @@ OverloadingResult OverloadCandidateSet::BestViableFunction(Sema &S,
       DeferredCandidatesCount != 0 && !ResolutionByPerfectCandidateIsDisabled;
 
   if (TwoPhaseResolution) {
-
-    PerfectViableFunction(S, Loc, Best);
-    if (Best != end())
-      return ResultForBestCandidate(Best);
+    OverloadingResult Res = BestViableFunctionImpl(S, Loc, Best);
+    if (Best != end() && Best->isPerfectMatch(S.Context)) {
+      if (!(HasDeferredTemplateConstructors &&
+            isa_and_nonnull<CXXConversionDecl>(Best->Function)))
+        return Res;
+    }
   }
 
   InjectNonDeducedTemplateCandidates(S);
   return BestViableFunctionImpl(S, Loc, Best);
-}
-
-void OverloadCandidateSet::PerfectViableFunction(
-    Sema &S, SourceLocation Loc, OverloadCandidateSet::iterator &Best) {
-
-  Best = end();
-  for (auto It = Candidates.begin(); It != Candidates.end(); ++It) {
-
-    if (!It->isPerfectMatch(S.getASTContext()))
-      continue;
-
-    // We found a suitable conversion function
-    // but if there is a template constructor in the target class
-    // we might prefer that instead.
-    if (HasDeferredTemplateConstructors &&
-        isa_and_nonnull<CXXConversionDecl>(It->Function)) {
-      Best = end();
-      break;
-    }
-
-    if (Best == end()) {
-      Best = It;
-      continue;
-    }
-    if (Best->Function && It->Function) {
-      FunctionDecl *D =
-          S.getMoreConstrainedFunction(Best->Function, It->Function);
-      if (D == nullptr) {
-        Best = end();
-        break;
-      }
-      if (D == It->Function)
-        Best = It;
-      continue;
-    }
-    // ambiguous
-    Best = end();
-    break;
-  }
 }
 
 OverloadingResult OverloadCandidateSet::BestViableFunctionImpl(

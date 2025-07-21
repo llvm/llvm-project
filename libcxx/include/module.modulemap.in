@@ -1943,6 +1943,9 @@ module std [system] {
       header "__ranges/zip_view.h"
       export std.utility.pair
     }
+    module zip_transform_view {
+      header "__ranges/zip_transform_view.h"
+    }
 
     header "ranges"
     export *
@@ -2110,7 +2113,6 @@ module std [system] {
     module make_tuple_types         { header "__tuple/make_tuple_types.h" }
     module sfinae_helpers           { header "__tuple/sfinae_helpers.h" }
     module tuple_element            { header "__tuple/tuple_element.h" }
-    module tuple_indices            { header "__tuple/tuple_indices.h" }
     module tuple_like_ext           { header "__tuple/tuple_like_ext.h" }
     module tuple_like_no_subrange   { header "__tuple/tuple_like_no_subrange.h" }
     module tuple_like               { header "__tuple/tuple_like.h" }

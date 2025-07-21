@@ -1003,9 +1003,9 @@ public:
           },
           [&](const fir::MutableBoxValue &toBox) {
             if (toBox.isPointer()) {
-              Fortran::lower::associateMutableBox(converter, loc, toBox, expr,
-                                                  /*lbounds=*/std::nullopt,
-                                                  stmtCtx);
+              Fortran::lower::associateMutableBox(
+                  converter, loc, toBox, expr,
+                  /*lbounds=*/mlir::ValueRange{}, stmtCtx);
               return;
             }
             // For allocatable components, a deep copy is needed.
@@ -3604,8 +3604,9 @@ public:
       mlir::Value castTo =
           builder.createConvert(loc, fir::HeapType::get(seqTy), load);
       mlir::Value shapeOp = builder.genShape(loc, shape);
-      return builder.create<fir::ArrayLoadOp>(
-          loc, seqTy, castTo, shapeOp, /*slice=*/mlir::Value{}, std::nullopt);
+      return builder.create<fir::ArrayLoadOp>(loc, seqTy, castTo, shapeOp,
+                                              /*slice=*/mlir::Value{},
+                                              mlir::ValueRange{});
     };
     // Custom lowering of the element store to deal with the extra indirection
     // to the lazy allocated buffer.
@@ -4207,7 +4208,7 @@ private:
       auto addr =
           builder->create<fir::ArrayCoorOp>(loc, eleRefTy, tmp, shape,
                                             /*slice=*/mlir::Value{}, indices,
-                                            /*typeParams=*/std::nullopt);
+                                            /*typeParams=*/mlir::ValueRange{});
       auto load = builder->create<fir::LoadOp>(loc, addr);
       return builder->createConvert(loc, i1Ty, load);
     };
@@ -4522,17 +4523,18 @@ private:
         fir::isRecordWithAllocatableMember(eleTy))
       TODO(loc, "creating an array temp where the element type has "
                 "allocatable members");
-    mlir::Value temp = !seqTy.hasDynamicExtents()
-                           ? builder.create<fir::AllocMemOp>(loc, type)
-                           : builder.create<fir::AllocMemOp>(
-                                 loc, type, ".array.expr", std::nullopt, shape);
+    mlir::Value temp =
+        !seqTy.hasDynamicExtents()
+            ? builder.create<fir::AllocMemOp>(loc, type)
+            : builder.create<fir::AllocMemOp>(loc, type, ".array.expr",
+                                              mlir::ValueRange{}, shape);
     fir::FirOpBuilder *bldr = &converter.getFirOpBuilder();
     stmtCtx.attachCleanup(
         [bldr, loc, temp]() { bldr->create<fir::FreeMemOp>(loc, temp); });
     mlir::Value shapeOp = genShapeOp(shape);
     return builder.create<fir::ArrayLoadOp>(loc, seqTy, temp, shapeOp,
                                             /*slice=*/mlir::Value{},
-                                            std::nullopt);
+                                            mlir::ValueRange{});
   }
 
   static fir::ShapeOp genShapeOp(mlir::Location loc, fir::FirOpBuilder &builder,
@@ -6483,7 +6485,7 @@ private:
         mlir::Value initBuffSz =
             builder.createIntegerConstant(loc, idxTy, clInitialBufferSize);
         mem = builder.create<fir::AllocMemOp>(
-            loc, eleTy, /*typeparams=*/std::nullopt, initBuffSz);
+            loc, eleTy, /*typeparams=*/mlir::ValueRange{}, initBuffSz);
         builder.create<fir::StoreOp>(loc, initBuffSz, buffSize);
       }
     } else {

@@ -593,7 +593,7 @@ public:
         getContext().reportError(Loc, "relocated expression must be 32-bit");
         return;
       }
-      getOrCreateDataFragment();
+      getCurrentFragment();
     }
 
     emitDataMappingSymbol();
@@ -1207,7 +1207,7 @@ inline void ARMELFStreamer::SwitchToExIdxSection(const MCSymbol &FnStart) {
 }
 
 void ARMELFStreamer::EmitFixup(const MCExpr *Expr, MCFixupKind Kind) {
-  MCFragment *Frag = getOrCreateDataFragment();
+  MCFragment *Frag = getCurrentFragment();
   Frag->addFixup(MCFixup::create(Frag->getContents().size(), Expr, Kind));
 }
 
@@ -1295,7 +1295,7 @@ void ARMELFStreamer::EmitPersonalityFixup(StringRef Name) {
       MCSymbolRefExpr::create(PersonalitySym, ARM::S_ARM_NONE, getContext());
 
   visitUsedExpr(*PersonalityRef);
-  MCFragment *DF = getOrCreateDataFragment();
+  MCFragment *DF = getCurrentFragment();
   DF->addFixup(
       MCFixup::create(DF->getContents().size(), PersonalityRef, FK_Data_4));
 }

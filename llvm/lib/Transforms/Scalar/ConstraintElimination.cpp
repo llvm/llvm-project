@@ -1489,6 +1489,7 @@ static bool checkAndReplaceCondition(
     SmallVector<DbgVariableIntrinsic *> DbgUsers;
     SmallVector<DbgVariableRecord *> DVRUsers;
     findDbgUsers(DbgUsers, Cmp, &DVRUsers);
+    assert(DbgUsers.empty());
 
     for (auto *DVR : DVRUsers) {
       auto *DTN = DT.getNode(DVR->getParent());

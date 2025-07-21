@@ -261,7 +261,7 @@ public:
       innermostUnorderdLoop = rewriter.create<fir::DoLoopOp>(
           doConcurentOp.getLoc(), lb, ub, st,
           /*unordred=*/true, /*finalCountValue=*/false,
-          /*iterArgs=*/std::nullopt, loop.getReduceVars(),
+          /*iterArgs=*/mlir::ValueRange{}, loop.getReduceVars(),
           loop.getReduceAttrsAttr());
       ivArgs.push_back(innermostUnorderdLoop.getInductionVar());
       rewriter.setInsertionPointToStart(innermostUnorderdLoop.getBody());

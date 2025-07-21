@@ -731,6 +731,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setTruncStoreAction(MVT::f32, MVT::bf16, Expand);
   setTruncStoreAction(MVT::f64, MVT::bf16, Expand);
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
+  setTruncStoreAction(MVT::v2f32, MVT::v2f16, Expand);
+  setTruncStoreAction(MVT::v2f32, MVT::v2bf16, Expand);
 
   // PTX does not support load / store predicate registers
   setOperationAction(ISD::LOAD, MVT::i1, Custom);
@@ -5060,12 +5062,6 @@ combineUnpackingMovIntoLoad(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
           return !U.getUser()->use_empty();
         }
 
-        // Handle CopyToReg nodes that will become dead after our replacement
-        if (U.getUser()->getOpcode() == ISD::CopyToReg) {
-          DeadCopyToRegs.push_back(U.getUser());
-          return true;
-        }
-
         // Otherwise, this use prevents us from splitting a value.
         return false;
       }))
@@ -5131,10 +5127,6 @@ combineUnpackingMovIntoLoad(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   // Add remaining chain and glue nodes
   for (unsigned I : seq(NewLoad->getNumValues() - NewNumOutputs))
     Results.push_back(NewLoad.getValue(NewNumOutputs + I));
-
-  // Remove dead CopyToReg nodes by folding them into the chain they reference
-  for (SDNode *CTR : DeadCopyToRegs)
-    DCI.CombineTo(CTR, CTR->getOperand(0));
 
   return DCI.DAG.getMergeValues(Results, DL);
 }

@@ -49,7 +49,7 @@ using llvm::mod;
 /// top level of a `AffineScope` region is always a valid symbol for all
 /// uses in that region.
 bool mlir::affine::isTopLevelValue(Value value, Region *region) {
-  if (auto arg = llvm::dyn_cast<BlockArgument>(value))
+  if (auto arg = dyn_cast<BlockArgument>(value))
     return arg.getParentRegion() == region;
   return value.getDefiningOp()->getParentRegion() == region;
 }
@@ -240,7 +240,7 @@ Operation *AffineDialect::materializeConstant(OpBuilder &builder,
                                               Attribute value, Type type,
                                               Location loc) {
   if (auto poison = dyn_cast<ub::PoisonAttr>(value))
-    return builder.create<ub::PoisonOp>(loc, type, poison);
+    return ub::PoisonOp::create(builder, loc, type, poison);
   return arith::ConstantOp::materialize(builder, value, type, loc);
 }
 
@@ -249,7 +249,7 @@ Operation *AffineDialect::materializeConstant(OpBuilder &builder,
 /// conservatively assume it is not top-level. A value of index type defined at
 /// the top level is always a valid symbol.
 bool mlir::affine::isTopLevelValue(Value value) {
-  if (auto arg = llvm::dyn_cast<BlockArgument>(value)) {
+  if (auto arg = dyn_cast<BlockArgument>(value)) {
     // The block owning the argument may be unlinked, e.g. when the surrounding
     // region has not yet been attached to an Op, at which point the parent Op
     // is null.
@@ -1282,7 +1282,7 @@ mlir::affine::makeComposedAffineApply(OpBuilder &b, Location loc, AffineMap map,
   map = foldAttributesIntoMap(b, map, operands, valueOperands);
   composeAffineMapAndOperands(&map, &valueOperands, composeAffineMin);
   assert(map);
-  return b.create<AffineApplyOp>(loc, map, valueOperands);
+  return AffineApplyOp::create(b, loc, map, valueOperands);
 }
 
 AffineApplyOp
@@ -1389,7 +1389,7 @@ static OpTy makeComposedMinMax(OpBuilder &b, Location loc, AffineMap map,
   SmallVector<Value> valueOperands;
   map = foldAttributesIntoMap(b, map, operands, valueOperands);
   composeMultiResultAffineMap(map, valueOperands);
-  return b.create<OpTy>(loc, b.getIndexType(), map, valueOperands);
+  return OpTy::create(b, loc, b.getIndexType(), map, valueOperands);
 }
 
 AffineMinOp
@@ -1747,6 +1747,32 @@ void AffineDmaStartOp::build(OpBuilder &builder, OperationState &result,
   }
 }
 
+AffineDmaStartOp AffineDmaStartOp::create(
+    OpBuilder &builder, Location location, Value srcMemRef, AffineMap srcMap,
+    ValueRange srcIndices, Value destMemRef, AffineMap dstMap,
+    ValueRange destIndices, Value tagMemRef, AffineMap tagMap,
+    ValueRange tagIndices, Value numElements, Value stride,
+    Value elementsPerStride) {
+  mlir::OperationState state(location, getOperationName());
+  build(builder, state, srcMemRef, srcMap, srcIndices, destMemRef, dstMap,
+        destIndices, tagMemRef, tagMap, tagIndices, numElements, stride,
+        elementsPerStride);
+  auto result = dyn_cast<AffineDmaStartOp>(builder.create(state));
+  assert(result && "builder didn't return the right type");
+  return result;
+}
+
+AffineDmaStartOp AffineDmaStartOp::create(
+    ImplicitLocOpBuilder &builder, Value srcMemRef, AffineMap srcMap,
+    ValueRange srcIndices, Value destMemRef, AffineMap dstMap,
+    ValueRange destIndices, Value tagMemRef, AffineMap tagMap,
+    ValueRange tagIndices, Value numElements, Value stride,
+    Value elementsPerStride) {
+  return create(builder, builder.getLoc(), srcMemRef, srcMap, srcIndices,
+                destMemRef, dstMap, destIndices, tagMemRef, tagMap, tagIndices,
+                numElements, stride, elementsPerStride);
+}
+
 void AffineDmaStartOp::print(OpAsmPrinter &p) {
   p << " " << getSrcMemRef() << '[';
   p.printAffineMapOfSSAIds(getSrcMapAttr(), getSrcIndices());
@@ -1915,6 +1941,25 @@ void AffineDmaWaitOp::build(OpBuilder &builder, OperationState &result,
   result.addAttribute(getTagMapAttrStrName(), AffineMapAttr::get(tagMap));
   result.addOperands(tagIndices);
   result.addOperands(numElements);
+}
+
+AffineDmaWaitOp AffineDmaWaitOp::create(OpBuilder &builder, Location location,
+                                        Value tagMemRef, AffineMap tagMap,
+                                        ValueRange tagIndices,
+                                        Value numElements) {
+  mlir::OperationState state(location, getOperationName());
+  build(builder, state, tagMemRef, tagMap, tagIndices, numElements);
+  auto result = dyn_cast<AffineDmaWaitOp>(builder.create(state));
+  assert(result && "builder didn't return the right type");
+  return result;
+}
+
+AffineDmaWaitOp AffineDmaWaitOp::create(ImplicitLocOpBuilder &builder,
+                                        Value tagMemRef, AffineMap tagMap,
+                                        ValueRange tagIndices,
+                                        Value numElements) {
+  return create(builder, builder.getLoc(), tagMemRef, tagMap, tagIndices,
+                numElements);
 }
 
 void AffineDmaWaitOp::print(OpAsmPrinter &p) {
@@ -2153,7 +2198,7 @@ static ParseResult parseBound(bool isLower, OperationState &result,
     return failure();
 
   // Parse full form - affine map followed by dim and symbol list.
-  if (auto affineMapAttr = llvm::dyn_cast<AffineMapAttr>(boundAttr)) {
+  if (auto affineMapAttr = dyn_cast<AffineMapAttr>(boundAttr)) {
     unsigned currentNumOperands = result.operands.size();
     unsigned numDims;
     if (parseDimAndSymbolList(p, result.operands, numDims))
@@ -2186,7 +2231,7 @@ static ParseResult parseBound(bool isLower, OperationState &result,
   }
 
   // Parse custom assembly form.
-  if (auto integerAttr = llvm::dyn_cast<IntegerAttr>(boundAttr)) {
+  if (auto integerAttr = dyn_cast<IntegerAttr>(boundAttr)) {
     result.attributes.pop_back();
     result.addAttribute(
         boundAttrStrName,
@@ -2688,8 +2733,8 @@ FailureOr<LoopLikeOpInterface> AffineForOp::replaceWithAdditionalYields(
   rewriter.setInsertionPoint(getOperation());
   auto inits = llvm::to_vector(getInits());
   inits.append(newInitOperands.begin(), newInitOperands.end());
-  AffineForOp newLoop = rewriter.create<AffineForOp>(
-      getLoc(), getLowerBoundOperands(), getLowerBoundMap(),
+  AffineForOp newLoop = AffineForOp::create(
+      rewriter, getLoc(), getLowerBoundOperands(), getLowerBoundMap(),
       getUpperBoundOperands(), getUpperBoundMap(), getStepAsInt(), inits);
 
   // Generate the new yield values and append them to the scf.yield operation.
@@ -2756,7 +2801,7 @@ bool mlir::affine::isAffineInductionVar(Value val) {
 }
 
 AffineForOp mlir::affine::getForInductionVarOwner(Value val) {
-  auto ivArg = llvm::dyn_cast<BlockArgument>(val);
+  auto ivArg = dyn_cast<BlockArgument>(val);
   if (!ivArg || !ivArg.getOwner() || !ivArg.getOwner()->getParent())
     return AffineForOp();
   if (auto forOp =
@@ -2767,7 +2812,7 @@ AffineForOp mlir::affine::getForInductionVarOwner(Value val) {
 }
 
 AffineParallelOp mlir::affine::getAffineParallelInductionVarOwner(Value val) {
-  auto ivArg = llvm::dyn_cast<BlockArgument>(val);
+  auto ivArg = dyn_cast<BlockArgument>(val);
   if (!ivArg || !ivArg.getOwner())
     return nullptr;
   Operation *containingOp = ivArg.getOwner()->getParentOp();
@@ -2831,7 +2876,7 @@ static void buildAffineLoopNestImpl(
         OpBuilder::InsertionGuard nestedGuard(nestedBuilder);
         bodyBuilderFn(nestedBuilder, nestedLoc, ivs);
       }
-      nestedBuilder.create<AffineYieldOp>(nestedLoc);
+      AffineYieldOp::create(nestedBuilder, nestedLoc);
     };
 
     // Delegate actual loop creation to the callback in order to dispatch
@@ -2846,8 +2891,8 @@ static AffineForOp
 buildAffineLoopFromConstants(OpBuilder &builder, Location loc, int64_t lb,
                              int64_t ub, int64_t step,
                              AffineForOp::BodyBuilderFn bodyBuilderFn) {
-  return builder.create<AffineForOp>(loc, lb, ub, step,
-                                     /*iterArgs=*/ValueRange(), bodyBuilderFn);
+  return AffineForOp::create(builder, loc, lb, ub, step,
+                             /*iterArgs=*/ValueRange(), bodyBuilderFn);
 }
 
 /// Creates an affine loop from the bounds that may or may not be constants.
@@ -2860,9 +2905,9 @@ buildAffineLoopFromValues(OpBuilder &builder, Location loc, Value lb, Value ub,
   if (lbConst && ubConst)
     return buildAffineLoopFromConstants(builder, loc, lbConst.value(),
                                         ubConst.value(), step, bodyBuilderFn);
-  return builder.create<AffineForOp>(loc, lb, builder.getDimIdentityMap(), ub,
-                                     builder.getDimIdentityMap(), step,
-                                     /*iterArgs=*/ValueRange(), bodyBuilderFn);
+  return AffineForOp::create(builder, loc, lb, builder.getDimIdentityMap(), ub,
+                             builder.getDimIdentityMap(), step,
+                             /*iterArgs=*/ValueRange(), bodyBuilderFn);
 }
 
 void mlir::affine::buildAffineLoopNest(
@@ -3294,11 +3339,11 @@ OpFoldResult AffineLoadOp::fold(FoldAdaptor adaptor) {
 
   // Check if the global memref is a constant.
   auto cstAttr =
-      llvm::dyn_cast_or_null<DenseElementsAttr>(global.getConstantInitValue());
+      dyn_cast_or_null<DenseElementsAttr>(global.getConstantInitValue());
   if (!cstAttr)
     return {};
   // If it's a splat constant, we can fold irrespective of indices.
-  if (auto splatAttr = llvm::dyn_cast<SplatElementsAttr>(cstAttr))
+  if (auto splatAttr = dyn_cast<SplatElementsAttr>(cstAttr))
     return splatAttr.getSplatValue<Attribute>();
   // Otherwise, we can fold only if we know the indices.
   if (!getAffineMap().isConstant())
@@ -4065,19 +4110,19 @@ static bool isResultTypeMatchAtomicRMWKind(Type resultType,
   case arith::AtomicRMWKind::minimumf:
     return isa<FloatType>(resultType);
   case arith::AtomicRMWKind::maxs: {
-    auto intType = llvm::dyn_cast<IntegerType>(resultType);
+    auto intType = dyn_cast<IntegerType>(resultType);
     return intType && intType.isSigned();
   }
   case arith::AtomicRMWKind::mins: {
-    auto intType = llvm::dyn_cast<IntegerType>(resultType);
+    auto intType = dyn_cast<IntegerType>(resultType);
     return intType && intType.isSigned();
   }
   case arith::AtomicRMWKind::maxu: {
-    auto intType = llvm::dyn_cast<IntegerType>(resultType);
+    auto intType = dyn_cast<IntegerType>(resultType);
     return intType && intType.isUnsigned();
   }
   case arith::AtomicRMWKind::minu: {
-    auto intType = llvm::dyn_cast<IntegerType>(resultType);
+    auto intType = dyn_cast<IntegerType>(resultType);
     return intType && intType.isUnsigned();
   }
   case arith::AtomicRMWKind::ori:
@@ -4134,7 +4179,7 @@ LogicalResult AffineParallelOp::verify() {
   // ops
   for (auto it : llvm::enumerate((getReductions()))) {
     Attribute attr = it.value();
-    auto intAttr = llvm::dyn_cast<IntegerAttr>(attr);
+    auto intAttr = dyn_cast<IntegerAttr>(attr);
     if (!intAttr || !arith::symbolizeAtomicRMWKind(intAttr.getInt()))
       return emitOpError("invalid reduction attribute");
     auto kind = arith::symbolizeAtomicRMWKind(intAttr.getInt()).value();
@@ -4883,7 +4928,7 @@ struct DropUnitExtentBasis
     Location loc = delinearizeOp->getLoc();
     auto getZero = [&]() -> Value {
       if (!zero)
-        zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+        zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
       return zero.value();
     };
 
@@ -4906,8 +4951,8 @@ struct DropUnitExtentBasis
 
     if (!newBasis.empty()) {
       // Will drop the leading nullptr from `basis` if there was no outer bound.
-      auto newDelinearizeOp = rewriter.create<affine::AffineDelinearizeIndexOp>(
-          loc, delinearizeOp.getLinearIndex(), newBasis);
+      auto newDelinearizeOp = affine::AffineDelinearizeIndexOp::create(
+          rewriter, loc, delinearizeOp.getLinearIndex(), newBasis);
       int newIndex = 0;
       // Map back the new delinearized indices to the values they replace.
       for (auto &replacement : replacements) {
@@ -4971,12 +5016,12 @@ struct CancelDelinearizeOfLinearizeDisjointExactTail
       return success();
     }
 
-    Value newLinearize = rewriter.create<affine::AffineLinearizeIndexOp>(
-        linearizeOp.getLoc(), linearizeIns.drop_back(numMatches),
+    Value newLinearize = affine::AffineLinearizeIndexOp::create(
+        rewriter, linearizeOp.getLoc(), linearizeIns.drop_back(numMatches),
         ArrayRef<OpFoldResult>{linearizeBasis}.drop_back(numMatches),
         linearizeOp.getDisjoint());
-    auto newDelinearize = rewriter.create<affine::AffineDelinearizeIndexOp>(
-        delinearizeOp.getLoc(), newLinearize,
+    auto newDelinearize = affine::AffineDelinearizeIndexOp::create(
+        rewriter, delinearizeOp.getLoc(), newLinearize,
         ArrayRef<OpFoldResult>{delinearizeBasis}.drop_back(numMatches),
         delinearizeOp.hasOuterBound());
     SmallVector<Value> mergedResults(newDelinearize.getResults());
@@ -5048,19 +5093,16 @@ struct SplitDelinearizeSpanningLastLinearizeArg final
           delinearizeOp,
           "need at least two elements to form the basis product");
 
-    Value linearizeWithoutBack =
-        rewriter.create<affine::AffineLinearizeIndexOp>(
-            linearizeOp.getLoc(), linearizeOp.getMultiIndex().drop_back(),
-            linearizeOp.getDynamicBasis(),
-            linearizeOp.getStaticBasis().drop_back(),
-            linearizeOp.getDisjoint());
-    auto delinearizeWithoutSplitPart =
-        rewriter.create<affine::AffineDelinearizeIndexOp>(
-            delinearizeOp.getLoc(), linearizeWithoutBack,
-            delinearizeOp.getDynamicBasis(), basis.drop_back(elemsToSplit),
-            delinearizeOp.hasOuterBound());
-    auto delinearizeBack = rewriter.create<affine::AffineDelinearizeIndexOp>(
-        delinearizeOp.getLoc(), linearizeOp.getMultiIndex().back(),
+    Value linearizeWithoutBack = affine::AffineLinearizeIndexOp::create(
+        rewriter, linearizeOp.getLoc(), linearizeOp.getMultiIndex().drop_back(),
+        linearizeOp.getDynamicBasis(), linearizeOp.getStaticBasis().drop_back(),
+        linearizeOp.getDisjoint());
+    auto delinearizeWithoutSplitPart = affine::AffineDelinearizeIndexOp::create(
+        rewriter, delinearizeOp.getLoc(), linearizeWithoutBack,
+        delinearizeOp.getDynamicBasis(), basis.drop_back(elemsToSplit),
+        delinearizeOp.hasOuterBound());
+    auto delinearizeBack = affine::AffineDelinearizeIndexOp::create(
+        rewriter, delinearizeOp.getLoc(), linearizeOp.getMultiIndex().back(),
         basis.take_back(elemsToSplit), /*hasOuterBound=*/true);
     SmallVector<Value> results = llvm::to_vector(
         llvm::concat<Value>(delinearizeWithoutSplitPart.getResults(),
@@ -5272,7 +5314,7 @@ OpFoldResult computeProduct(Location loc, OpBuilder &builder,
   }
   if (auto constant = dyn_cast<AffineConstantExpr>(result))
     return getAsIndexOpFoldResult(builder.getContext(), constant.getValue());
-  return builder.create<AffineApplyOp>(loc, result, dynamicPart).getResult();
+  return AffineApplyOp::create(builder, loc, result, dynamicPart).getResult();
 }
 
 /// If conseceutive outputs of a delinearize_index are linearized with the same
@@ -5437,16 +5479,16 @@ public:
       newDelinBasis.erase(newDelinBasis.begin() + m.delinStart,
                           newDelinBasis.begin() + m.delinStart + m.length);
       newDelinBasis.insert(newDelinBasis.begin() + m.delinStart, newSize);
-      auto newDelinearize = rewriter.create<AffineDelinearizeIndexOp>(
-          m.delinearize.getLoc(), m.delinearize.getLinearIndex(),
+      auto newDelinearize = AffineDelinearizeIndexOp::create(
+          rewriter, m.delinearize.getLoc(), m.delinearize.getLinearIndex(),
           newDelinBasis);
 
       // Since there may be other uses of the indices we just merged together,
       // create a residual affine.delinearize_index that delinearizes the
       // merged output into its component parts.
       Value combinedElem = newDelinearize.getResult(m.delinStart);
-      auto residualDelinearize = rewriter.create<AffineDelinearizeIndexOp>(
-          m.delinearize.getLoc(), combinedElem, basisToMerge);
+      auto residualDelinearize = AffineDelinearizeIndexOp::create(
+          rewriter, m.delinearize.getLoc(), combinedElem, basisToMerge);
 
       // Swap all the uses of the unaffected delinearize outputs to the new
       // delinearization so that the old code can be removed if this

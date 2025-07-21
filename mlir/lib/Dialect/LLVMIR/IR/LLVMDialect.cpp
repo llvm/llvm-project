@@ -3384,7 +3384,7 @@ bool LLVM::ConstantOp::isBuildableWith(Attribute value, Type type) {
 ConstantOp LLVM::ConstantOp::materialize(OpBuilder &builder, Attribute value,
                                          Type type, Location loc) {
   if (isBuildableWith(value, type))
-    return builder.create<LLVM::ConstantOp>(loc, cast<TypedAttr>(value));
+    return LLVM::ConstantOp::create(builder, loc, cast<TypedAttr>(value));
   return nullptr;
 }
 
@@ -4133,9 +4133,11 @@ void LLVMDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/LLVMIR/LLVMOps.cpp.inc"
+
       ,
 #define GET_OP_LIST
 #include "mlir/Dialect/LLVMIR/LLVMIntrinsicOps.cpp.inc"
+
       >();
 
   // Support unknown operations because not all LLVM operations are registered.
@@ -4350,13 +4352,13 @@ Operation *LLVMDialect::materializeConstant(OpBuilder &builder, Attribute value,
   // a builtin zero attribute and thus will materialize as a llvm.mlir.constant.
   if (auto symbol = dyn_cast<FlatSymbolRefAttr>(value))
     if (isa<LLVM::LLVMPointerType>(type))
-      return builder.create<LLVM::AddressOfOp>(loc, type, symbol);
+      return LLVM::AddressOfOp::create(builder, loc, type, symbol);
   if (isa<LLVM::UndefAttr>(value))
-    return builder.create<LLVM::UndefOp>(loc, type);
+    return LLVM::UndefOp::create(builder, loc, type);
   if (isa<LLVM::PoisonAttr>(value))
-    return builder.create<LLVM::PoisonOp>(loc, type);
+    return LLVM::PoisonOp::create(builder, loc, type);
   if (isa<LLVM::ZeroAttr>(value))
-    return builder.create<LLVM::ZeroOp>(loc, type);
+    return LLVM::ZeroOp::create(builder, loc, type);
   // Otherwise try materializing it as a regular llvm.mlir.constant op.
   return LLVM::ConstantOp::materialize(builder, value, type, loc);
 }
@@ -4379,16 +4381,16 @@ Value mlir::LLVM::createGlobalString(Location loc, OpBuilder &builder,
   OpBuilder moduleBuilder(module.getBodyRegion(), builder.getListener());
   MLIRContext *ctx = builder.getContext();
   auto type = LLVM::LLVMArrayType::get(IntegerType::get(ctx, 8), value.size());
-  auto global = moduleBuilder.create<LLVM::GlobalOp>(
-      loc, type, /*isConstant=*/true, linkage, name,
+  auto global = LLVM::GlobalOp::create(
+      moduleBuilder, loc, type, /*isConstant=*/true, linkage, name,
       builder.getStringAttr(value), /*alignment=*/0);
 
   LLVMPointerType ptrType = LLVMPointerType::get(ctx);
   // Get the pointer to the first character in the global string.
   Value globalPtr =
-      builder.create<LLVM::AddressOfOp>(loc, ptrType, global.getSymNameAttr());
-  return builder.create<LLVM::GEPOp>(loc, ptrType, type, globalPtr,
-                                     ArrayRef<GEPArg>{0, 0});
+      LLVM::AddressOfOp::create(builder, loc, ptrType, global.getSymNameAttr());
+  return LLVM::GEPOp::create(builder, loc, ptrType, type, globalPtr,
+                             ArrayRef<GEPArg>{0, 0});
 }
 
 bool mlir::LLVM::satisfiesLLVMModule(Operation *op) {
