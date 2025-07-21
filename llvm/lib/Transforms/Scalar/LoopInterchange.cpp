@@ -78,6 +78,7 @@ enum class RuleTy {
   PerLoopCacheAnalysis,
   PerInstrOrderCost,
   ForVectorization,
+  Ignore
 };
 
 } // end anonymous namespace
@@ -106,14 +107,20 @@ static cl::list<RuleTy> Profitabilities(
                clEnumValN(RuleTy::PerInstrOrderCost, "instorder",
                           "Prioritize the IVs order of each instruction"),
                clEnumValN(RuleTy::ForVectorization, "vectorize",
-                          "Prioritize vectorization")));
+                          "Prioritize vectorization"),
+               clEnumValN(RuleTy::Ignore, "ignore",
+                          "Ignore profitability, force interchange (does not "
+                          "work with other options)")));
 
 #ifndef NDEBUG
-static bool noDuplicateRules(ArrayRef<RuleTy> Rules) {
+static bool noDuplicateRulesAndIgnore(ArrayRef<RuleTy> Rules) {
   SmallSet<RuleTy, 4> Set;
-  for (RuleTy Rule : Rules)
+  for (RuleTy Rule : Rules) {
     if (!Set.insert(Rule).second)
       return false;
+    if (Rule == RuleTy::Ignore)
+      return false;
+  }
   return true;
 }
 
@@ -379,6 +386,10 @@ public:
     return InnerLoopInductions;
   }
 
+  ArrayRef<Instruction *> getHasNoWrapReductions() const {
+    return HasNoWrapReductions;
+  }
+
 private:
   bool tightlyNested(Loop *Outer, Loop *Inner);
   bool containsUnsafeInstructions(BasicBlock *BB);
@@ -405,6 +416,11 @@ private:
 
   /// Set of inner loop induction PHIs
   SmallVector<PHINode *, 8> InnerLoopInductions;
+
+  /// Hold instructions that have nuw/nsw flags and involved in reductions,
+  /// like integer addition/multiplication. Those flags must be dropped when
+  /// interchanging the loops.
+  SmallVector<Instruction *, 4> HasNoWrapReductions;
 };
 
 /// Manages information utilized by the profitability check for cache. The main
@@ -473,7 +489,7 @@ public:
       : OuterLoop(Outer), InnerLoop(Inner), SE(SE), LI(LI), DT(DT), LIL(LIL) {}
 
   /// Interchange OuterLoop and InnerLoop.
-  bool transform();
+  bool transform(ArrayRef<Instruction *> DropNoWrapInsts);
   void restructureLoops(Loop *NewInner, Loop *NewOuter,
                         BasicBlock *OrigInnerPreHeader,
                         BasicBlock *OrigOuterPreHeader);
@@ -613,7 +629,7 @@ struct LoopInterchange {
     });
 
     LoopInterchangeTransform LIT(OuterLoop, InnerLoop, SE, LI, DT, LIL);
-    LIT.transform();
+    LIT.transform(LIL.getHasNoWrapReductions());
     LLVM_DEBUG(dbgs() << "Loops interchanged.\n");
     LoopsInterchanged++;
 
@@ -798,7 +814,9 @@ static Value *followLCSSA(Value *SV) {
 }
 
 // Check V's users to see if it is involved in a reduction in L.
-static PHINode *findInnerReductionPhi(Loop *L, Value *V) {
+static PHINode *
+findInnerReductionPhi(Loop *L, Value *V,
+                      SmallVectorImpl<Instruction *> &HasNoWrapInsts) {
   // Reduction variables cannot be constants.
   if (isa<Constant>(V))
     return nullptr;
@@ -812,7 +830,66 @@ static PHINode *findInnerReductionPhi(Loop *L, Value *V) {
         // Detect floating point reduction only when it can be reordered.
         if (RD.getExactFPMathInst() != nullptr)
           return nullptr;
-        return PHI;
+
+        RecurKind RK = RD.getRecurrenceKind();
+        switch (RK) {
+        case RecurKind::Or:
+        case RecurKind::And:
+        case RecurKind::Xor:
+        case RecurKind::SMin:
+        case RecurKind::SMax:
+        case RecurKind::UMin:
+        case RecurKind::UMax:
+        case RecurKind::FAdd:
+        case RecurKind::FMul:
+        case RecurKind::FMin:
+        case RecurKind::FMax:
+        case RecurKind::FMinimum:
+        case RecurKind::FMaximum:
+        case RecurKind::FMinimumNum:
+        case RecurKind::FMaximumNum:
+        case RecurKind::FMulAdd:
+        case RecurKind::AnyOf:
+          return PHI;
+
+        // Change the order of integer addition/multiplication may change the
+        // semantics. Consider the following case:
+        //
+        //  int A[2][2] = {{ INT_MAX, INT_MAX }, { INT_MIN, INT_MIN }};
+        //  int sum = 0;
+        //  for (int i = 0; i < 2; i++)
+        //    for (int j = 0; j < 2; j++)
+        //      sum += A[j][i];
+        //
+        // If the above loops are exchanged, the addition will cause an
+        // overflow. To prevent this, we must drop the nuw/nsw flags from the
+        // addition/multiplication instructions when we actually exchanges the
+        // loops.
+        case RecurKind::Add:
+        case RecurKind::Mul: {
+          unsigned OpCode = RecurrenceDescriptor::getOpcode(RK);
+          SmallVector<Instruction *, 4> Ops = RD.getReductionOpChain(PHI, L);
+
+          // Bail out when we fail to collect reduction instructions chain.
+          if (Ops.empty())
+            return nullptr;
+
+          for (Instruction *I : Ops) {
+            assert(I->getOpcode() == OpCode &&
+                   "Expected the instruction to be the reduction operation");
+            (void)OpCode;
+
+            // If the instruction has nuw/nsw flags, we must drop them when the
+            // transformation is actually performed.
+            if (I->hasNoSignedWrap() || I->hasNoUnsignedWrap())
+              HasNoWrapInsts.push_back(I);
+          }
+          return PHI;
+        }
+
+        default:
+          return nullptr;
+        }
       }
       return nullptr;
     }
@@ -844,7 +921,8 @@ bool LoopInterchangeLegality::findInductionAndReductions(
         // Check if we have a PHI node in the outer loop that has a reduction
         // result from the inner loop as an incoming value.
         Value *V = followLCSSA(PHI.getIncomingValueForBlock(L->getLoopLatch()));
-        PHINode *InnerRedPhi = findInnerReductionPhi(InnerLoop, V);
+        PHINode *InnerRedPhi =
+            findInnerReductionPhi(InnerLoop, V, HasNoWrapReductions);
         if (!InnerRedPhi ||
             !llvm::is_contained(InnerRedPhi->incoming_values(), &PHI)) {
           LLVM_DEBUG(
@@ -1286,6 +1364,13 @@ std::optional<bool> LoopInterchangeProfitability::isProfitableForVectorization(
 bool LoopInterchangeProfitability::isProfitable(
     const Loop *InnerLoop, const Loop *OuterLoop, unsigned InnerLoopId,
     unsigned OuterLoopId, CharMatrix &DepMatrix, CacheCostManager &CCM) {
+
+  // Return true if interchange is forced and the cost-model ignored.
+  if (Profitabilities.size() == 1 && Profitabilities[0] == RuleTy::Ignore)
+    return true;
+  assert(noDuplicateRulesAndIgnore(Profitabilities) &&
+         "Duplicate rules and option 'ignore' are not allowed");
+
   // isProfitable() is structured to avoid endless loop interchange. If the
   // highest priority rule (isProfitablePerLoopCacheAnalysis by default) could
   // decide the profitability then, profitability check will stop and return the
@@ -1294,7 +1379,6 @@ bool LoopInterchangeProfitability::isProfitable(
   // second highest priority rule (isProfitablePerInstrOrderCost by default).
   // Likewise, if it failed to analysis the profitability then only, the last
   // rule (isProfitableForVectorization by default) will decide.
-  assert(noDuplicateRules(Profitabilities) && "Detect duplicate rules");
   std::optional<bool> shouldInterchange;
   for (RuleTy RT : Profitabilities) {
     switch (RT) {
@@ -1310,6 +1394,9 @@ bool LoopInterchangeProfitability::isProfitable(
     case RuleTy::ForVectorization:
       shouldInterchange =
           isProfitableForVectorization(InnerLoopId, OuterLoopId, DepMatrix);
+      break;
+    case RuleTy::Ignore:
+      llvm_unreachable("Option 'ignore' is not supported with other options");
       break;
     }
 
@@ -1430,7 +1517,8 @@ void LoopInterchangeTransform::restructureLoops(
   SE->forgetLoop(NewOuter);
 }
 
-bool LoopInterchangeTransform::transform() {
+bool LoopInterchangeTransform::transform(
+    ArrayRef<Instruction *> DropNoWrapInsts) {
   bool Transformed = false;
 
   if (InnerLoop->getSubLoops().empty()) {
@@ -1529,6 +1617,13 @@ bool LoopInterchangeTransform::transform() {
   if (!Transformed) {
     LLVM_DEBUG(dbgs() << "adjustLoopLinks failed\n");
     return false;
+  }
+
+  // Finally, drop the nsw/nuw flags from the instructions for reduction
+  // calculations.
+  for (Instruction *Reduction : DropNoWrapInsts) {
+    Reduction->setHasNoSignedWrap(false);
+    Reduction->setHasNoUnsignedWrap(false);
   }
 
   return true;

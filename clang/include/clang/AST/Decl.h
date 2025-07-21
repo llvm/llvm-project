@@ -565,8 +565,28 @@ public:
   static bool classofKind(Kind K) { return K == Label; }
 };
 
+/// Represents C++ namespaces and their aliases.
+///
+/// FIXME: Move `NamespaceBaseDecl` and `NamespaceDecl` to "DeclCXX.h" or
+/// explain why not moving.
+class NamespaceBaseDecl : public NamedDecl {
+protected:
+  using NamedDecl::NamedDecl;
+
+public:
+  NamespaceDecl *getNamespace();
+  const NamespaceDecl *getNamespace() const {
+    return const_cast<NamespaceBaseDecl *>(this)->getNamespace();
+  }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) {
+    return K >= firstNamespaceBase && K <= lastNamespaceBase;
+  }
+};
+
 /// Represent a C++ namespace.
-class NamespaceDecl : public NamedDecl,
+class NamespaceDecl : public NamespaceBaseDecl,
                       public DeclContext,
                       public Redeclarable<NamespaceDecl> {
   /// The starting location of the source range, pointing
@@ -3251,6 +3271,11 @@ public:
       return nullptr;
     return hasInClassInitializer() ? InitAndBitWidth->BitWidth : BitWidth;
   }
+
+  /// Determines whether the bit width of this field is a constant integer.
+  /// This may not always be the case, such as inside template-dependent
+  /// expressions.
+  bool hasConstantIntegerBitWidth() const;
 
   /// Computes the bit width of this field, if this is a bit field.
   /// May not be called on non-bitfields.

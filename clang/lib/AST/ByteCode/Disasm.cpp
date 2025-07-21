@@ -445,6 +445,7 @@ LLVM_DUMP_METHOD void InlineDescriptor::dump(llvm::raw_ostream &OS) const {
   OS << "InUnion: " << InUnion << "\n";
   OS << "IsFieldMutable: " << IsFieldMutable << "\n";
   OS << "IsArrayElement: " << IsArrayElement << "\n";
+  OS << "IsConstInMutable: " << IsConstInMutable << '\n';
   OS << "Desc: ";
   if (Desc)
     Desc->dump(OS);

@@ -1323,11 +1323,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FDIV,        MVT::v2f64, Legal);
   }
 
-  if (Subtarget.hasGFNI()) {
+  if (!Subtarget.useSoftFloat() && Subtarget.hasGFNI()) {
     setOperationAction(ISD::BITREVERSE, MVT::i8, Custom);
     setOperationAction(ISD::BITREVERSE, MVT::i16, Custom);
     setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
     setOperationAction(ISD::BITREVERSE, MVT::i64, Custom);
+
+    for (auto VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64}) {
+      setOperationAction(ISD::BITREVERSE, VT, Custom);
+    }
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSSE3()) {
@@ -32694,7 +32698,8 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
   if (Subtarget.hasXOP() && !VT.is512BitVector())
     return LowerBITREVERSE_XOP(Op, DAG);
 
-  assert(Subtarget.hasSSSE3() && "SSSE3 required for BITREVERSE");
+  assert((Subtarget.hasSSSE3() || Subtarget.hasGFNI()) &&
+         "SSSE3 or GFNI required for BITREVERSE");
 
   SDValue In = Op.getOperand(0);
   SDLoc DL(Op);
@@ -36615,8 +36620,7 @@ X86TargetLowering::EmitLoweredSegAlloca(MachineInstr &MI,
            tmpSPVReg = MRI.createVirtualRegister(AddrRegClass),
            SPLimitVReg = MRI.createVirtualRegister(AddrRegClass),
            sizeVReg = MI.getOperand(1).getReg(),
-           physSPReg =
-               IsLP64 || Subtarget.isTargetNaCl64() ? X86::RSP : X86::ESP;
+           physSPReg = IsLP64 ? X86::RSP : X86::ESP;
 
   MachineFunction::iterator MBBIter = ++BB->getIterator();
 
@@ -37121,8 +37125,7 @@ X86TargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
 
   // restoreMBB:
   if (RegInfo->hasBasePointer(*MF)) {
-    const bool Uses64BitFramePtr =
-        Subtarget.isTarget64BitLP64() || Subtarget.isTargetNaCl64();
+    const bool Uses64BitFramePtr = Subtarget.isTarget64BitLP64();
     X86MachineFunctionInfo *X86FI = MF->getInfo<X86MachineFunctionInfo>();
     X86FI->setRestoreBasePointer(MF);
     Register FramePtr = RegInfo->getFrameRegister(*MF);
@@ -37550,8 +37553,7 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
   // Add a register mask with no preserved registers.  This results in all
   // registers being marked as clobbered.
   if (RI.hasBasePointer(*MF)) {
-    const bool FPIs64Bit =
-        Subtarget.isTarget64BitLP64() || Subtarget.isTargetNaCl64();
+    const bool FPIs64Bit = Subtarget.isTarget64BitLP64();
     X86MachineFunctionInfo *MFI = MF->getInfo<X86MachineFunctionInfo>();
     MFI->setRestoreBasePointer(MF);
 

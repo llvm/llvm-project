@@ -296,6 +296,7 @@ unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
 #define GET_MIMGOffsetMappingTable_IMPL
 #define GET_MIMGG16MappingTable_IMPL
 #define GET_MAIInstInfoTable_IMPL
+#define GET_WMMAInstInfoTable_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
@@ -568,6 +569,11 @@ bool getMAIIsGFX940XDL(unsigned Opc) {
   return Info && Info->is_gfx940_xdl;
 }
 
+bool getWMMAIsXDL(unsigned Opc) {
+  const WMMAInstInfo *Info = getWMMAInstInfoHelper(Opc);
+  return Info ? Info->is_wmma_xdl : false;
+}
+
 uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal) {
   switch (EncodingVal) {
   case MFMAScaleFormats::FP6_E2M3:
@@ -589,6 +595,29 @@ const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
                                                       unsigned F8F8Opcode) {
   uint8_t SrcANumRegs = mfmaScaleF8F6F4FormatToNumRegs(CBSZ);
   uint8_t SrcBNumRegs = mfmaScaleF8F6F4FormatToNumRegs(BLGP);
+  return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
+}
+
+uint8_t wmmaScaleF8F6F4FormatToNumRegs(unsigned Fmt) {
+  switch (Fmt) {
+  case WMMA::MATRIX_FMT_FP8:
+  case WMMA::MATRIX_FMT_BF8:
+    return 16;
+  case WMMA::MATRIX_FMT_FP6:
+  case WMMA::MATRIX_FMT_BF6:
+    return 12;
+  case WMMA::MATRIX_FMT_FP4:
+    return 8;
+  }
+
+  llvm_unreachable("covered switch over wmma scale formats");
+}
+
+const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
+                                                      unsigned FmtB,
+                                                      unsigned F8F8Opcode) {
+  uint8_t SrcANumRegs = wmmaScaleF8F6F4FormatToNumRegs(FmtA);
+  uint8_t SrcBNumRegs = wmmaScaleF8F6F4FormatToNumRegs(FmtB);
   return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
 }
 
