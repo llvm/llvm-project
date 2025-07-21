@@ -837,8 +837,8 @@ public:
     return const_iterator(std::addressof(this->__get()));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr iterator end() noexcept { return begin() + this->has_value(); }
-  _LIBCPP_HIDE_FROM_ABI constexpr const_iterator end() const noexcept { return begin() + this->has_value(); }
+  _LIBCPP_HIDE_FROM_ABI constexpr iterator end() noexcept { return begin() + (this->has_value() ? 1 : 0); }
+  _LIBCPP_HIDE_FROM_ABI constexpr const_iterator end() const noexcept { return begin() + (this->has_value() ? 1 : 0); }
 #    endif
 
   _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<value_type const> operator->() const noexcept {
