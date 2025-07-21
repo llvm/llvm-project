@@ -362,7 +362,7 @@ uint64_t MCAssembler::getSectionAddressSize(const MCSection &Sec) const {
 
 uint64_t MCAssembler::getSectionFileSize(const MCSection &Sec) const {
   // Virtual sections have no file size.
-  if (Sec.isVirtualSection())
+  if (Sec.isBssSection())
     return 0;
   return getSectionAddressSize(Sec);
 }
@@ -559,7 +559,7 @@ void MCAssembler::writeSectionData(raw_ostream &OS,
                                    const MCSection *Sec) const {
   assert(getBackendPtr() && "Expected assembler backend");
 
-  if (Sec->isVirtualSection()) {
+  if (Sec->isBssSection()) {
     assert(getSectionFileSize(*Sec) == 0 && "Invalid size for section!");
 
     // Ensure no fixups or non-zero bytes are written to BSS sections, catching
@@ -567,15 +567,37 @@ void MCAssembler::writeSectionData(raw_ostream &OS,
     // not tracked for efficiency.
     auto Fn = [](char c) { return c != 0; };
     for (const MCFragment &F : *Sec) {
-      if (any_of(F.getContents(), Fn) || any_of(F.getVarContents(), Fn)) {
-        reportError(SMLoc(), Sec->getVirtualSectionKind() + " section '" +
-                                 Sec->getName() +
+      bool HasNonZero = false;
+      switch (F.getKind()) {
+      default:
+        reportFatalInternalError("BSS section '" + Sec->getName() +
+                                 "' contains invalid fragment");
+        break;
+      case MCFragment::FT_Data:
+      case MCFragment::FT_Relaxable:
+        HasNonZero =
+            any_of(F.getContents(), Fn) || any_of(F.getVarContents(), Fn);
+        break;
+      case MCFragment::FT_Align:
+        // Disallowed for API usage. AsmParser changes non-zero fill values to
+        // 0.
+        assert(F.getAlignFill() == 0 && "Invalid align in virtual section!");
+        break;
+      case MCFragment::FT_Fill:
+        HasNonZero = cast<MCFillFragment>(F).getValue() != 0;
+        break;
+      case MCFragment::FT_Org:
+        HasNonZero = cast<MCOrgFragment>(F).getValue() != 0;
+        break;
+      }
+      if (HasNonZero) {
+        reportError(SMLoc(), "BSS section '" + Sec->getName() +
                                  "' cannot have non-zero bytes");
         break;
       }
       if (F.getFixups().size() || F.getVarFixups().size()) {
-        reportError(SMLoc(), Sec->getVirtualSectionKind() + " section '" +
-                                 Sec->getName() + "' cannot have fixups");
+        reportError(SMLoc(),
+                    "BSS section '" + Sec->getName() + "' cannot have fixups");
         break;
       }
     }
@@ -901,15 +923,15 @@ bool MCAssembler::relaxDwarfCallFrameFragment(MCFragment &F) {
 }
 
 bool MCAssembler::relaxCVInlineLineTable(MCCVInlineLineTableFragment &F) {
-  unsigned OldSize = F.getContents().size();
+  unsigned OldSize = F.getVarContents().size();
   getContext().getCVContext().encodeInlineLineTable(*this, F);
-  return OldSize != F.getContents().size();
+  return OldSize != F.getVarContents().size();
 }
 
 bool MCAssembler::relaxCVDefRange(MCCVDefRangeFragment &F) {
-  unsigned OldSize = F.getContents().size();
+  unsigned OldSize = F.getVarContents().size();
   getContext().getCVContext().encodeDefRange(*this, F);
-  return OldSize != F.getContents().size();
+  return OldSize != F.getVarContents().size();
 }
 
 bool MCAssembler::relaxFill(MCFillFragment &F) {
@@ -964,10 +986,10 @@ void MCAssembler::layoutSection(MCSection &Sec) {
       }
       if (!AlignFixup && Size > F.getAlignMaxBytesToEmit())
         Size = 0;
-      // Update the variable tail size. The content is ignored.
-      assert(F.VarContentStart == 0 &&
-             "VarContentStart should not be modified");
-      F.VarContentEnd = Size;
+      // Update the variable tail size, offset by FixedSize to prevent ubsan
+      // pointer-overflow in evaluateFixup. The content is ignored.
+      F.VarContentStart = F.getFixedSize();
+      F.VarContentEnd = F.VarContentStart + Size;
       if (F.VarContentEnd > F.getParent()->ContentStorage.size())
         F.getParent()->ContentStorage.resize(F.VarContentEnd);
       Offset += Size;

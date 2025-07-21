@@ -91,8 +91,7 @@ private:
   bool IsRegistered : 1;
 
   bool IsText : 1;
-
-  bool IsVirtual : 1;
+  bool IsBss : 1;
 
   /// Whether the section contains linker-relaxable fragments. If true, the
   /// offset between two locations may not be fully resolved.
@@ -113,7 +112,7 @@ protected:
   StringRef Name;
   SectionVariant Variant;
 
-  MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsVirtual,
+  MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsBss,
             MCSymbol *Begin);
   // Protected non-virtual dtor prevents destroy through a base class pointer.
   ~MCSection() {}
@@ -178,9 +177,7 @@ public:
 
   /// Check whether this section is "virtual", that is has no actual object
   /// file contents.
-  bool isVirtualSection() const { return IsVirtual; }
-
-  virtual StringRef getVirtualSectionKind() const;
+  bool isBssSection() const { return IsBss; }
 };
 
 // Represents a contiguous piece of code or data within a section. Its size is
@@ -234,11 +231,16 @@ protected:
   /// FT_Relaxable, x86-specific
   bool AllowAutoPadding : 1;
 
+  // Track content and fixups for the fixed-size part as fragments are
+  // appended to the section. The content remains immutable, except when
+  // modified by applyFixup.
   uint32_t ContentStart = 0;
   uint32_t ContentEnd = 0;
   uint32_t FixupStart = 0;
   uint32_t FixupEnd = 0;
 
+  // Track content and fixups for the optional variable-size tail part,
+  // typically modified during relaxation.
   uint32_t VarContentStart = 0;
   uint32_t VarContentEnd = 0;
   uint32_t VarFixupStart = 0;
@@ -341,9 +343,9 @@ public:
   bool getAllowAutoPadding() const { return AllowAutoPadding; }
   void setAllowAutoPadding(bool V) { AllowAutoPadding = V; }
 
-  // Content-related functions manage parent's storage using ContentStart and
+  //== Content-related functions manage parent's storage using ContentStart and
   // ContentSize.
-  void clearContents() { ContentEnd = ContentStart; }
+
   // Get a SmallVector reference. The caller should call doneAppending to update
   // `ContentEnd`.
   SmallVectorImpl<char> &getContentsForAppending() {
@@ -367,7 +369,6 @@ public:
     getContentsForAppending().append(Num, Elt);
     doneAppending();
   }
-  LLVM_ABI void setContents(ArrayRef<char> Contents);
   MutableArrayRef<char> getContents() {
     return MutableArrayRef(getParent()->ContentStorage)
         .slice(ContentStart, ContentEnd - ContentStart);
@@ -399,7 +400,6 @@ public:
   void clearFixups() { FixupEnd = FixupStart; }
   LLVM_ABI void addFixup(MCFixup Fixup);
   LLVM_ABI void appendFixups(ArrayRef<MCFixup> Fixups);
-  LLVM_ABI void setFixups(ArrayRef<MCFixup> Fixups);
   MutableArrayRef<MCFixup> getFixups() {
     return MutableArrayRef(getParent()->FixupStorage)
         .slice(FixupStart, FixupEnd - FixupStart);
