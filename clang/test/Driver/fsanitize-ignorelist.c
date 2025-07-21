@@ -74,7 +74,7 @@
 
 // Check that a missing file passed to -fsanitize-system-ignorelist triggers a clean error without crashing.
 // RUN: not %clang --target=x86_64-linux-gnu  -Xclang -fsanitize-system-ignorelist=%t.nonexistent %s  -c -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-SYSTEM-IGNORELIST-NOFILE
-// CHECK-SYSTEM-IGNORELIST-NOFILE: error: failed to load NoSanitize file: can't open file {{.*[\\/]fsanitize-ignorelist\.c\.tmp\.nonexistent}}
+// CHECK-SYSTEM-IGNORELIST-NOFILE: error: error reading '{{.*[\\/]fsanitize-ignorelist\.c\.tmp\.nonexistent}}': can't open file '{{.*[\\/]fsanitize-ignorelist\.c\.tmp\.nonexistent}}': {{[Nn]o such file or directory}}
 // CHECK-SYSTEM-IGNORELIST-NOFILE-NOT: Stack dump:
 // CHECK-SYSTEM-IGNORELIST-NOFILE-NOT: PLEASE submit a bug report
 // CHECK-SYSTEM-IGNORELIST-NOFILE-NOT: diagnostic msg:
