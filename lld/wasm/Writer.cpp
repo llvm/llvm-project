@@ -1366,6 +1366,15 @@ void Writer::createInitMemoryFunction() {
           writeUleb128(os, s->index, "segment index immediate");
           writeU8(os, 0, "memory index immediate");
         }
+
+        // After initializing the TLS segment, we also need to apply TLS
+        // relocations in the same way __wasm_init_tls does.
+        if (ctx.arg.sharedMemory && s->isTLS() &&
+            ctx.sym.applyGlobalTLSRelocs) {
+          writeU8(os, WASM_OPCODE_CALL, "CALL");
+          writeUleb128(os, ctx.sym.applyGlobalTLSRelocs->getFunctionIndex(),
+                      "function index");
+        }
       }
     }
 
