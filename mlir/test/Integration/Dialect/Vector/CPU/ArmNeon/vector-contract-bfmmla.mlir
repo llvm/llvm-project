@@ -44,6 +44,12 @@
 //
 // In this specific test we use M == 4, N == 4, and K == 4.
 
+// Note: In this and in the following test the seemingly unnecessary
+// writes of test vectors to memory are done in order to introduce memory
+// load operations on the path leading up to `vector.contract` since
+// that's more representation of the typical usage when multiplying
+// big, non-constant tensors.
+
 // CHECK-IR-LABEL: llvm.func @matrix_by_matrix_mul_and_acc
 // CHECK-IR-COUNT-4: arm_neon.intr.bfmmla
 func.func @matrix_by_matrix_mul_and_acc() {
@@ -110,10 +116,6 @@ func.func @matrix_by_matrix_mul_and_acc() {
 //   * ACC, OUT: vector<Nxf32>
 // N is even and K is divisible by 4.
 // In this specific test we use N == 4, and K == 4.
-// Note: the seemingly unnecessary writes of test vectors to memory are done
-// in order to introduce memory load operations on the path leading up to
-// `vector.contract` since that's more representation of the typical usage
-// when multiplying big, non-constant tensors.
 
 // CHECK-IR-LABEL: llvm.func @vector_by_matrix_mul_and_acc
 // CHECK-IR-COUNT-2: arm_neon.intr.bfmmla
