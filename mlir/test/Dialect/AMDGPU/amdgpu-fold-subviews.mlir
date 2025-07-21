@@ -8,7 +8,7 @@ func.func @test_memref(%offset_i: index, %offset_j: index) {
   // CHECK: %[[C0:.*]] = arith.constant 0 : index
   // CHECK: %[[LOCAL:.*]] = memref.alloc() : memref<64x64xf16, 3>
   // CHECK: %[[MEM:.*]] = memref.alloc() : memref<64x128xf16>
-  // CHECK:  %[[MEM]][%arg0, %arg1], %[[LOCAL]][%[[C0]], %[[C0]]]
+  // CHECK:  amdgpu.gather_to_lds %[[MEM]][%arg0, %arg1], %[[LOCAL]][%[[C0]], %[[C0]]]
   // CHECK-SAME: vector<8xf16>, memref<64x128xf16>, memref<64x64xf16, 3>
 
   %alloc = memref.alloc() : memref<64x64xf16, #gpu_lds_addrspace>
@@ -37,7 +37,7 @@ func.func @subview_folding_offset(%offset_i: index, %offset_j: index) {
   // CHECK: %[[IDX0:.*]] = affine.apply #[[MAP]]()[%[[ARG0]]]
   // CHECK: %[[IDX1:.*]] = affine.apply #[[MAP1]]()[%[[ARG1]]]
 
-  // CHECK:  %[[MEM]][%[[IDX0]], %[[IDX1]]], %[[LOCAL]][%[[C0]], %[[C0]]]
+  // CHECK:  amdgpu.gather_to_lds %[[MEM]][%[[IDX0]], %[[IDX1]]], %[[LOCAL]][%[[C0]], %[[C0]]]
   // CHECK-SAME: vector<8xf16>, memref<64x128xf16>, memref<64x64xf16, 3>
 
   %alloc = memref.alloc() : memref<64x64xf16, #gpu_lds_addrspace>
