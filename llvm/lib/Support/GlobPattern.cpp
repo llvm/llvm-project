@@ -231,6 +231,10 @@ bool GlobPattern::SubGlobPattern::match(StringRef Str) const {
         ++S;
         continue;
       }
+    } else if (*P == '/' && (*S == '/' || *S == '\\')) {
+      ++P;
+      ++S;
+      continue;
     } else if (*P == *S || *P == '?') {
       ++P;
       ++S;
