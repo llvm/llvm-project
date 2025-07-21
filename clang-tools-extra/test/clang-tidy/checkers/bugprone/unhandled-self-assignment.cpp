@@ -236,6 +236,122 @@ bool operator!=(Foo2 &, Foo2 &) {
   };
 }
 
+// Missing call to member `swap` function
+class AllocatorAwareClassNoSwap {
+  // pointer member to trigger bugprone-unhandled-self-assignment
+  void *foo = nullptr;
+
+  public:
+    using allocator_type = std::pmr::allocator<>;
+
+    AllocatorAwareClassNoSwap(const AllocatorAwareClassNoSwap& other) {
+    }
+
+    AllocatorAwareClassNoSwap(const AllocatorAwareClassNoSwap& other, const allocator_type& alloc) {
+    }
+
+    AllocatorAwareClassNoSwap& operator=(const AllocatorAwareClassNoSwap& other) {
+        // CHECK-MESSAGES: [[@LINE-1]]:32: warning: operator=() does not handle self-assignment properly [bugprone-unhandled-self-assignment]
+        AllocatorAwareClassNoSwap tmp(other, get_allocator());
+        return *this;
+    }
+
+    allocator_type get_allocator() const {
+        return allocator_type();
+    }
+};
+
+// "Wrong" type is passed to member `swap` function
+class AllocatorAwareClassSwapWrongArgType {
+  // pointer member to trigger bugprone-unhandled-self-assignment
+  void *foo = nullptr;
+
+  public:
+    using allocator_type = std::pmr::allocator<>;
+
+    AllocatorAwareClassSwapWrongArgType(const AllocatorAwareClassSwapWrongArgType& other) {
+    }
+
+    AllocatorAwareClassSwapWrongArgType(const AllocatorAwareClassSwapWrongArgType& other, const allocator_type& alloc) {
+    }
+
+    AllocatorAwareClassSwapWrongArgType& operator=(const AllocatorAwareClassSwapWrongArgType& other) {
+        // CHECK-MESSAGES: [[@LINE-1]]:42: warning: operator=() does not handle self-assignment properly [bugprone-unhandled-self-assignment]
+        int tmp = 0;
+        swap(tmp);
+        
+        return *this;
+    }
+
+    void swap(int&) noexcept {
+    }
+
+    allocator_type get_allocator() const {
+        return allocator_type();
+    }
+};
+
+
+// Making ADL `swap` call but with wrong argument type
+class AllocatorAwareClassAdlSwapWrongArgType {
+  // pointer member to trigger bugprone-unhandled-self-assignment
+  void *foo = nullptr;
+
+  public:
+    using allocator_type = std::pmr::allocator<>;
+
+    AllocatorAwareClassAdlSwapWrongArgType(const AllocatorAwareClassAdlSwapWrongArgType& other) {
+    }
+
+    AllocatorAwareClassAdlSwapWrongArgType(const AllocatorAwareClassAdlSwapWrongArgType& other, const allocator_type& alloc) {
+    }
+
+    AllocatorAwareClassAdlSwapWrongArgType& operator=(const AllocatorAwareClassAdlSwapWrongArgType& other) {
+        // CHECK-MESSAGES: [[@LINE-1]]:45: warning: operator=() does not handle self-assignment properly [bugprone-unhandled-self-assignment]
+        int tmp = 0;
+        swap(*this, tmp);
+        
+        return *this;
+    }
+
+    allocator_type get_allocator() const {
+        return allocator_type();
+    }
+    
+    friend void swap(AllocatorAwareClassAdlSwapWrongArgType&, int&) {
+    }
+};
+
+// `this` isn't passed to `swap`
+class AllocatorAwareClassAdlSwapWrongArgs {
+  // pointer member to trigger bugprone-unhandled-self-assignment
+  void *foo = nullptr;
+
+  public:
+    using allocator_type = std::pmr::allocator<>;
+
+    AllocatorAwareClassAdlSwapWrongArgs(const AllocatorAwareClassAdlSwapWrongArgs& other) {
+    }
+
+    AllocatorAwareClassAdlSwapWrongArgs(const AllocatorAwareClassAdlSwapWrongArgs& other, const allocator_type& alloc) {
+    }
+
+    AllocatorAwareClassAdlSwapWrongArgs& operator=(const AllocatorAwareClassAdlSwapWrongArgs& other) {
+        // CHECK-MESSAGES: [[@LINE-1]]:42: warning: operator=() does not handle self-assignment properly [bugprone-unhandled-self-assignment]
+        AllocatorAwareClassAdlSwapWrongArgs tmp1(other, get_allocator());
+        AllocatorAwareClassAdlSwapWrongArgs tmp2(*this, get_allocator());
+        swap(tmp1, tmp2);
+        return *this;
+    }
+
+    allocator_type get_allocator() const {
+        return allocator_type();
+    }
+    
+    friend void swap(AllocatorAwareClassAdlSwapWrongArgs&, AllocatorAwareClassAdlSwapWrongArgs&) {
+    }
+};
+
 ///////////////////////////////////////////////////////////////////
 /// Test cases correctly ignored by the check.
 
