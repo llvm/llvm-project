@@ -12901,7 +12901,7 @@ QualType Sema::GetSignedVectorType(QualType V) {
     return Context.getExtVectorType(Context.LongLongTy, VTy->getNumElements());
   }
 
-  QualType ETy = Context.getGCCCompatibleIntTypeForBitwidth(TypeSize, 1);
+  QualType ETy = Context.getGCCCompatibleIntTypeForBitwidth(TypeSize, /*Signed=*/1);
   assert(!ETy.isNull() && "Unhandled vector element size in vector compare");
   return Context.getVectorType(ETy, VTy->getNumElements(), VectorKind::Generic);
 }
