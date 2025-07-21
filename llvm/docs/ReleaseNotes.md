@@ -98,6 +98,12 @@ Changes to TableGen
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
+Changes to Vectorizers
+----------------------------------------
+
+* Added initial support for copyable elements in SLP, which models copyable
+  elements as add <element>, 0, i.e. uses identity constants for missing lanes.
+
 Changes to the AArch64 Backend
 ------------------------------
 
