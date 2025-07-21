@@ -1463,10 +1463,8 @@ void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
   }
 
   // Update pre-existing debug value uses.
-  SmallVector<DbgValueInst *, 4> DbgValues;
   SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
-  llvm::findDbgValues(DbgValues, I, &DbgVariableRecords);
-  assert(DbgValues.empty());
+  llvm::findDbgValues(I, DbgVariableRecords);
 
   for (DbgVariableRecord *DbgVal : DbgVariableRecords) {
     SmallVector<uint64_t, 1> Ops = {dwarf::DW_OP_not};
@@ -3611,12 +3609,10 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
 
   // If we are removing an alloca with a dbg.declare, insert dbg.value calls
   // before each store.
-  SmallVector<DbgVariableIntrinsic *, 8> DVIs;
   SmallVector<DbgVariableRecord *, 8> DVRs;
   std::unique_ptr<DIBuilder> DIB;
   if (isa<AllocaInst>(MI)) {
-    findDbgUsers(DVIs, &MI, &DVRs);
-    assert(DVIs.empty());
+    findDbgUsers(&MI, DVRs);
     DIB.reset(new DIBuilder(*MI.getModule(), /*AllowUnresolved=*/false));
   }
 
@@ -3738,9 +3734,6 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
     //
     // FIXME: the Assignment Tracking project has now likely made this
     // redundant (and it's sometimes harmful).
-    for (auto *DVI : DVIs)
-      if (DVI->isAddressOfVariable() || DVI->getExpression()->startsWithDeref())
-        DVI->eraseFromParent();
     for (auto *DVR : DVRs)
       if (DVR->isAddressOfVariable() || DVR->getExpression()->startsWithDeref())
         DVR->eraseFromParent();
@@ -5292,10 +5285,8 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
   // maximise the range variables have location for. If we cannot salvage, then
   // mark the location undef: we know it was supposed to receive a new location
   // here, but that computation has been sunk.
-  SmallVector<DbgVariableIntrinsic *, 2> DbgUsers;
   SmallVector<DbgVariableRecord *, 2> DbgVariableRecords;
-  findDbgUsers(DbgUsers, I, &DbgVariableRecords);
-  assert(DbgUsers.empty());
+  findDbgUsers(I, DbgVariableRecords);
   if (!DbgVariableRecords.empty())
     tryToSinkInstructionDbgVariableRecords(I, InsertPos, SrcBlock, DestBlock,
                                            DbgVariableRecords);
@@ -5422,7 +5413,7 @@ void InstCombinerImpl::tryToSinkInstructionDbgVariableRecords(
   if (DVRClones.empty())
     return;
 
-  salvageDebugInfoForDbgValues(*I, {}, DbgVariableRecordsToSalvage);
+  salvageDebugInfoForDbgValues(*I, DbgVariableRecordsToSalvage);
 
   // The clones are in reverse order of original appearance. Assert that the
   // head bit is set on the iterator as we _should_ have received it via
