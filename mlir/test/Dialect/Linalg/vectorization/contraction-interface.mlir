@@ -27,7 +27,7 @@ func.func @matmul(%A: tensor<8x4xf32>, %B: tensor<4x16xf32>,
 // CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
 // CHECK-SAME:   kind = #vector.kind<add>
 // CHECK-SAME:   %[[LOAD_A]], %[[LOAD_B]], %[[LOAD_C]]
-// CHECK: vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<8x16xf32>, tensor<8x16xf32>
+//      CHECK: vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<8x16xf32>, tensor<8x16xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -53,14 +53,82 @@ func.func @matmul_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
 // CHECK-LABEL: func.func @matmul_dynamic(
 // CHECK-SAME:    %[[A:.*]]: tensor<?x?xf32>, %[[B:.*]]: tensor<?x?xf32>,
 // CHECK-SAME:    %[[C:.*]]: tensor<?x?xf32>)
-//      CHECK: %[[LOAD_A:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[A]]{{.*}}: tensor<?x?xf32>, vector<8x4xf32>
-//      CHECK: %[[LOAD_B:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[B]]{{.*}}: tensor<?x?xf32>, vector<4x16xf32>
-//      CHECK: %[[LOAD_C:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[C]]{{.*}}: tensor<?x?xf32>, vector<8x16xf32>
-//      CHECK: %[[CONTRACT:.*]] = vector.mask{{.*}}{ vector.contract
-// CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
-// CHECK-SAME:   kind = #vector.kind<add>
-// CHECK-SAME:   %[[LOAD_A]], %[[LOAD_B]], %[[LOAD_C]]
-// CHECK: vector.mask{{.*}}{ vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<8x16xf32>, tensor<?x?xf32>
+
+/// Get the contraction dimensions
+//  CHECK: %[[MATMUL_DIM_M_IDX:.*]] = arith.constant 0 : index
+//  CHECK: %[[MATMUL_DIM_M:.*]] = tensor.dim %[[A]], %[[MATMUL_DIM_M_IDX]] : tensor<?x?xf32>
+//  CHECK: %[[MATMUL_DIM_N_IDX:.*]] = arith.constant 1 : index
+//  CHECK: %[[MATMUL_DIM_N:.*]] = tensor.dim %[[B]], %[[MATMUL_DIM_N_IDX]] : tensor<?x?xf32>
+//  CHECK: %[[MATMUL_DIM_K_IDX:.*]] = arith.constant 1 : index
+//  CHECK: %[[MATMUL_DIM_K:.*]] = tensor.dim %[[A]], %[[MATMUL_DIM_K_IDX]] : tensor<?x?xf32>
+
+/// Create a mask for the A matrix
+//      CHECK: %[[A_OFFSET:.*]] = arith.constant 0 : index
+//      CHECK: %[[A_DIM_M_IDX:.*]] = arith.constant 0 : index
+//      CHECK: %[[A_DIM_M:.*]] = tensor.dim %[[A]], %[[A_DIM_M_IDX]] : tensor<?x?xf32>
+//      CHECK: %[[A_DIM_K_IDX:.*]] = arith.constant 1 : index
+//      CHECK: %[[A_DIM_K:.*]] = tensor.dim %[[A]], %[[A_DIM_K_IDX]] : tensor<?x?xf32>
+//      CHECK: %[[LOAD_A_MASK:.*]] = vector.create_mask
+// CHECK-SAME:   %[[A_DIM_M]], %[[A_DIM_K]] : vector<8x4xi1>
+/// Read the A matrix
+//      CHECK: %[[LOAD_A:.*]] = vector.mask %[[LOAD_A_MASK]]
+// CHECK-SAME:   { vector.transfer_read %[[A]]{{\[}}%[[A_OFFSET]], %[[A_OFFSET]]{{\]}}
+// CHECK-SAME:     : tensor<?x?xf32>, vector<8x4xf32> }
+// CHECK-SAME:   : vector<8x4xi1> -> vector<8x4xf32>
+
+/// Create a mask for the B matrix
+//      CHECK: %[[B_OFFSET:.*]] = arith.constant 0 : index
+//      CHECK: %[[B_DIM_K_IDX:.*]] = arith.constant 0 : index
+//      CHECK: %[[B_DIM_K:.*]] = tensor.dim %[[B]], %[[B_DIM_K_IDX]] : tensor<?x?xf32>
+//      CHECK: %[[B_DIM_N_IDX:.*]] = arith.constant 1 : index
+//      CHECK: %[[B_DIM_N:.*]] = tensor.dim %[[B]], %[[B_DIM_N_IDX]] : tensor<?x?xf32>
+//      CHECK: %[[LOAD_B_MASK:.*]] = vector.create_mask
+// CHECK-SAME:   %[[B_DIM_K]], %[[B_DIM_N]] : vector<4x16xi1>
+/// Read the B matrix
+//      CHECK: %[[LOAD_B:.*]] = vector.mask %[[LOAD_B_MASK]]
+// CHECK-SAME:   { vector.transfer_read %[[B]]{{\[}}%[[B_OFFSET]], %[[B_OFFSET]]{{\]}}
+// CHECK-SAME:     : tensor<?x?xf32>, vector<4x16xf32> }
+// CHECK-SAME:   : vector<4x16xi1> -> vector<4x16xf32>
+
+/// Create a mask for the C matrix
+//      CHECK: %[[C_OFFSET:.*]] = arith.constant 0 : index
+//      CHECK: %[[C_DIM_M_IDX:.*]] = arith.constant 0 : index
+//      CHECK: %[[C_DIM_M:.*]] = tensor.dim %[[C]], %[[C_DIM_M_IDX]] : tensor<?x?xf32>
+//      CHECK: %[[C_DIM_N_IDX:.*]] = arith.constant 1 : index
+//      CHECK: %[[C_DIM_N:.*]] = tensor.dim %[[C]], %[[C_DIM_N_IDX]] : tensor<?x?xf32>
+//      CHECK: %[[LOAD_C_MASK:.*]] = vector.create_mask
+// CHECK-SAME:   %[[C_DIM_M]], %[[C_DIM_N]] : vector<8x16xi1>
+/// Read the C matrix
+//      CHECK: %[[LOAD_C:.*]] = vector.mask %[[LOAD_C_MASK]]
+// CHECK-SAME:   { vector.transfer_read %[[C]]{{\[}}%[[C_OFFSET]], %[[C_OFFSET]]{{\]}}
+// CHECK-SAME:     : tensor<?x?xf32>, vector<8x16xf32> }
+// CHECK-SAME:   : vector<8x16xi1> -> vector<8x16xf32>
+
+/// Create a mask for the contraction
+//      CHECK: %[[CONTRACTION_MASK:.*]] = vector.create_mask
+// CHECK-SAME:   %[[MATMUL_DIM_M]], %[[MATMUL_DIM_N]], %[[MATMUL_DIM_K]]
+// CHECK-SAME:   : vector<8x16x4xi1>
+/// Perform the contraction
+//      CHECK: %[[D:.*]] = vector.mask %[[CONTRACTION_MASK]]
+// CHECK-SAME:   { vector.contract
+// CHECK-SAME:     indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
+// CHECK-SAME:     kind = #vector.kind<add>
+// CHECK-SAME:     %[[LOAD_A]], %[[LOAD_B]], %[[LOAD_C]]
+// CHECK-SAME:   } : vector<8x16x4xi1> -> vector<8x16xf32>
+
+/// Create a mask for the result
+//      CHECK: %[[D_OFFSET:.*]] = arith.constant 0 : index
+//      CHECK: %[[D_DIM_M_IDX:.*]] = arith.constant 0 : index
+//      CHECK: %[[D_DIM_M:.*]] = tensor.dim %[[C]], %[[D_DIM_M_IDX]] : tensor<?x?xf32>
+//      CHECK: %[[D_DIM_N_IDX:.*]] = arith.constant 1 : index
+//      CHECK: %[[D_DIM_N:.*]] = tensor.dim %[[C]], %[[D_DIM_N_IDX]] : tensor<?x?xf32>
+//      CHECK: %[[LOAD_D_MASK:.*]] = vector.create_mask
+// CHECK-SAME:   %[[D_DIM_M]], %[[D_DIM_N]] : vector<8x16xi1>
+/// Write the result
+//      CHECK: vector.mask %[[LOAD_D_MASK]]
+// CHECK-SAME: { vector.transfer_write %[[D]], %[[C]]{{\[}}%[[D_OFFSET]], %[[D_OFFSET]]{{\]}}
+// CHECK-SAME:   : vector<8x16xf32>, tensor<?x?xf32> }
+// CHECK-SAME: : vector<8x16xi1> -> tensor<?x?xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -94,7 +162,7 @@ func.func @matmul_dynamic_memref(%A: memref<?x?xf32>, %B: memref<?x?xf32>,
 // CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
 // CHECK-SAME:   kind = #vector.kind<add>
 // CHECK-SAME:   %[[LOAD_A]], %[[LOAD_B]], %[[LOAD_C]]
-// CHECK: vector.mask{{.*}}{ vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<8x16xf32>, memref<?x?xf32>
+//      CHECK: vector.mask{{.*}}{ vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<8x16xf32>, memref<?x?xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -121,14 +189,19 @@ func.func @matmul_dynamic_scalable(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
 // CHECK-LABEL: func.func @matmul_dynamic_scalable(
 // CHECK-SAME:    %[[A:.*]]: tensor<?x?xf32>, %[[B:.*]]: tensor<?x?xf32>,
 // CHECK-SAME:    %[[C:.*]]: tensor<?x?xf32>)
-//      CHECK: %[[LOAD_A:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[A]]{{.*}}: tensor<?x?xf32>, vector<8x4xf32>
-//      CHECK: %[[LOAD_B:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[B]]{{.*}}: tensor<?x?xf32>, vector<4x[16]xf32>
-//      CHECK: %[[LOAD_C:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[C]]{{.*}}: tensor<?x?xf32>, vector<8x[16]xf32>
+//      CHECK: %[[LOAD_A:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[A]]{{.*}}: tensor<?x?xf32>, vector<8x4xf32> }
+// CHECK-SAME:   : vector<8x4xi1> -> vector<8x4xf32>
+//      CHECK: %[[LOAD_B:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[B]]{{.*}}: tensor<?x?xf32>, vector<4x[16]xf32> }
+// CHECK-SAME:   : vector<4x[16]xi1> -> vector<4x[16]xf32>
+//      CHECK: %[[LOAD_C:.*]] = vector.mask{{.*}}{ vector.transfer_read %[[C]]{{.*}}: tensor<?x?xf32>, vector<8x[16]xf32> }
+// CHECK-SAME:   : vector<8x[16]xi1> -> vector<8x[16]xf32>
 //      CHECK: %[[CONTRACT:.*]] = vector.mask{{.*}}{ vector.contract
 // CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
 // CHECK-SAME:   kind = #vector.kind<add>
 // CHECK-SAME:   %[[LOAD_A]], %[[LOAD_B]], %[[LOAD_C]]
-// CHECK: vector.mask{{.*}}{ vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<8x[16]xf32>, tensor<?x?xf32>
+// CHECK-SAME:   } : vector<8x[16]x4xi1> -> vector<8x[16]xf32>
+//      CHECK: vector.mask{{.*}}{ vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<8x[16]xf32>, tensor<?x?xf32> }
+// CHECK-SAME:   : vector<8x[16]xi1> -> tensor<?x?xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -165,7 +238,7 @@ func.func @matmul_transpose(%A: tensor<4x8xf32>, %B: tensor<16x4xf32>,
 // CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
 // CHECK-SAME:   kind = #vector.kind<add>
 // CHECK-SAME:   %[[LOAD_A]], %[[LOAD_B]], %[[LOAD_C]]
-// CHECK: vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<8x16xf32>, tensor<8x16xf32>
+//      CHECK: vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<8x16xf32>, tensor<8x16xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -201,7 +274,7 @@ func.func @matmul_dynamic_transpose(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
 // CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
 // CHECK-SAME:   kind = #vector.kind<add>
 // CHECK-SAME:   %[[LOAD_A]], %[[LOAD_B]], %[[LOAD_C]]
-// CHECK: vector.mask{{.*}}{ vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<8x16xf32>, tensor<?x?xf32>
+//      CHECK: vector.mask{{.*}}{ vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<8x16xf32>, tensor<?x?xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -263,7 +336,7 @@ func.func @matmul_mixed_precision(%A: tensor<8x4xf16>, %B: tensor<4x16xf16>,
 // CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
 // CHECK-SAME:   kind = #vector.kind<add>
 // CHECK-SAME:   %[[LOAD_A]], %[[LOAD_B]], %[[LOAD_C]]
-// CHECK: vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<8x16xf32>, tensor<8x16xf32>
+//      CHECK: vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<8x16xf32>, tensor<8x16xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -296,7 +369,7 @@ func.func @batch_matmul(%A: tensor<3x8x4xf32>, %B: tensor<3x4x16xf32>,
 // CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
 // CHECK-SAME:   kind = #vector.kind<add>
 // CHECK-SAME:   %[[LOAD_A]], %[[LOAD_B]], %[[LOAD_C]]
-// CHECK: vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<3x8x16xf32>, tensor<3x8x16xf32>
+//      CHECK: vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<3x8x16xf32>, tensor<3x8x16xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -329,7 +402,7 @@ func.func @batch_reduce_matmul(%A: tensor<3x8x4xf32>, %B: tensor<3x4x16xf32>,
 // CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
 // CHECK-SAME:   kind = #vector.kind<add>
 // CHECK-SAME:   %[[LOAD_A]], %[[LOAD_B]], %[[LOAD_C]]
-// CHECK: vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<8x16xf32>, tensor<8x16xf32>
+//      CHECK: vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<8x16xf32>, tensor<8x16xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
@@ -365,7 +438,7 @@ func.func @contract(%A: tensor<4x8x2xf32>, %B: tensor<8x16x2xf32>,
 // CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
 // CHECK-SAME:   kind = #vector.kind<add>
 // CHECK-SAME:   %[[LOAD_A]], %[[LOAD_B]], %[[LOAD_C]]
-// CHECK: vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<4x16xf32>, tensor<4x16xf32>
+//      CHECK: vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<4x16xf32>, tensor<4x16xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
