@@ -43,8 +43,9 @@ static VNInfo *getVNInfoFromReg(Register Reg, const MachineInstr &MI,
   return LI.getVNInfoBefore(SI);
 }
 
-bool RISCVVectorConfigInfo::areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
-                                           const DemandedFields &Used) {
+bool RISCVVectorConfigInfo::areCompatibleVTYPEs(uint64_t CurVType,
+                                                uint64_t NewVType,
+                                                const DemandedFields &Used) {
   switch (Used.SEW) {
   case DemandedFields::SEWNone:
     break;
@@ -97,14 +98,14 @@ bool RISCVVectorConfigInfo::areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewV
 bool VSETVLIInfo::hasCompatibleVTYPE(const DemandedFields &Used,
                                      const VSETVLIInfo &Require) const {
   return RISCVVectorConfigInfo::areCompatibleVTYPEs(Require.encodeVTYPE(),
-                                               encodeVTYPE(), Used);
+                                                    encodeVTYPE(), Used);
 }
 
 bool RISCVVectorConfigInfo::haveVectorOp() { return HaveVectorOp; }
 
 /// Return the fields and properties demanded by the provided instruction.
 DemandedFields RISCVVectorConfigInfo::getDemanded(const MachineInstr &MI,
-                                             const RISCVSubtarget *ST) {
+                                                  const RISCVSubtarget *ST) {
   // This function works in coalesceVSETVLI too. We can still use the value of a
   // SEW, VL, or Policy operand even though it might not be the exact value in
   // the VL or VTYPE, since we only care about what the instruction originally
@@ -258,7 +259,7 @@ DemandedFields RISCVVectorConfigInfo::getDemanded(const MachineInstr &MI,
 // is compatible with MI. The resulting state is guaranteed to be semantically
 // legal for MI, but may not be the state requested by MI.
 void RISCVVectorConfigInfo::transferBefore(VSETVLIInfo &Info,
-                                      const MachineInstr &MI) const {
+                                           const MachineInstr &MI) const {
   if (RISCVInstrInfo::isVectorCopy(ST->getRegisterInfo(), MI) &&
       (Info.isUnknown() || !Info.isValid() || Info.hasSEWLMULRatioOnly())) {
     // Use an arbitrary but valid AVL and VTYPE so vill will be cleared. It may
@@ -322,7 +323,7 @@ void RISCVVectorConfigInfo::transferBefore(VSETVLIInfo &Info,
 // this might be different that the state MI requested), modify the state to
 // reflect the changes MI might make.
 void RISCVVectorConfigInfo::transferAfter(VSETVLIInfo &Info,
-                                     const MachineInstr &MI) const {
+                                          const MachineInstr &MI) const {
   if (RISCVInstrInfo::isVectorConfigInstr(MI)) {
     Info = getInfoForVSETVLI(MI);
     return;
@@ -351,7 +352,7 @@ void RISCVVectorConfigInfo::transferAfter(VSETVLIInfo &Info,
 }
 
 unsigned RISCVVectorConfigInfo::computeVLMAX(unsigned VLEN, unsigned SEW,
-                                        RISCVVType::VLMUL VLMul) {
+                                             RISCVVType::VLMUL VLMul) {
   auto [LMul, Fractional] = RISCVVType::decodeVLMUL(VLMul);
   if (Fractional)
     VLEN = VLEN / LMul;
@@ -364,8 +365,8 @@ unsigned RISCVVectorConfigInfo::computeVLMAX(unsigned VLEN, unsigned SEW,
 // maintain the SEW/LMUL ratio. This allows us to eliminate VL toggles in more
 // places.
 VSETVLIInfo RISCVVectorConfigInfo::adjustIncoming(const VSETVLIInfo &PrevInfo,
-                                             const VSETVLIInfo &NewInfo,
-                                             DemandedFields &Demanded) {
+                                                  const VSETVLIInfo &NewInfo,
+                                                  DemandedFields &Demanded) {
   VSETVLIInfo Info = NewInfo;
 
   if (!Demanded.LMUL && !Demanded.SEWLMULRatio && PrevInfo.isValid() &&
@@ -380,8 +381,8 @@ VSETVLIInfo RISCVVectorConfigInfo::adjustIncoming(const VSETVLIInfo &PrevInfo,
 }
 
 bool RISCVVectorConfigInfo::needVSETVLI(const DemandedFields &Used,
-                                   const VSETVLIInfo &Require,
-                                   const VSETVLIInfo &CurInfo) const {
+                                        const VSETVLIInfo &Require,
+                                        const VSETVLIInfo &CurInfo) const {
   if (!CurInfo.isValid() || CurInfo.isUnknown() ||
       CurInfo.hasSEWLMULRatioOnly())
     return true;
@@ -392,7 +393,8 @@ bool RISCVVectorConfigInfo::needVSETVLI(const DemandedFields &Used,
   return true;
 }
 
-VSETVLIInfo RISCVVectorConfigInfo::getInfoForVSETVLI(const MachineInstr &MI) const {
+VSETVLIInfo
+RISCVVectorConfigInfo::getInfoForVSETVLI(const MachineInstr &MI) const {
   VSETVLIInfo NewInfo;
   if (MI.getOpcode() == RISCV::PseudoVSETIVLI) {
     NewInfo.setAVLImm(MI.getOperand(1).getImm());
@@ -417,9 +419,9 @@ VSETVLIInfo RISCVVectorConfigInfo::getInfoForVSETVLI(const MachineInstr &MI) con
   return NewInfo;
 }
 
-bool RISCVVectorConfigInfo::canMutatePriorConfig(const MachineInstr &PrevMI,
-                                            const MachineInstr &MI,
-                                            const DemandedFields &Used) const {
+bool RISCVVectorConfigInfo::canMutatePriorConfig(
+    const MachineInstr &PrevMI, const MachineInstr &MI,
+    const DemandedFields &Used) const {
   // If the VL values aren't equal, return false if either a) the former is
   // demanded, or b) we can't rewrite the former to be the later for
   // implementation reasons.
@@ -529,7 +531,7 @@ RISCVVectorConfigInfo::computeInfoForInstr(const MachineInstr &MI) const {
 }
 
 bool RISCVVectorConfigInfo::computeVLVTYPEChanges(const MachineBasicBlock &MBB,
-                                             VSETVLIInfo &Info) const {
+                                                  VSETVLIInfo &Info) const {
   bool HadVectorOp = false;
 
   Info = BlockInfo[MBB.getNumber()].Pred;
@@ -559,7 +561,8 @@ void RISCVVectorConfigInfo::forwardVSETVLIAVL(VSETVLIInfo &Info) const {
   Info.setAVL(DefInstrInfo);
 }
 
-void RISCVVectorConfigInfo::computeIncomingVLVTYPE(const MachineBasicBlock &MBB) {
+void RISCVVectorConfigInfo::computeIncomingVLVTYPE(
+    const MachineBasicBlock &MBB) {
 
   BlockData &BBInfo = BlockInfo[MBB.getNumber()];
 
@@ -658,7 +661,8 @@ INITIALIZE_PASS_BEGIN(RISCVVectorConfigWrapperPass, DEBUG_TYPE,
 INITIALIZE_PASS_END(RISCVVectorConfigWrapperPass, DEBUG_TYPE,
                     "RISC-V Vector Config Analysis", false, true)
 
-RISCVVectorConfigWrapperPass::RISCVVectorConfigWrapperPass() : MachineFunctionPass(ID) {}
+RISCVVectorConfigWrapperPass::RISCVVectorConfigWrapperPass()
+    : MachineFunctionPass(ID) {}
 
 void RISCVVectorConfigWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();

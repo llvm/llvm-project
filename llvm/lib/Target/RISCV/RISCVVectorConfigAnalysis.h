@@ -591,7 +591,8 @@ private:
   void forwardVSETVLIAVL(VSETVLIInfo &Info) const;
 };
 
-class RISCVVectorConfigAnalysis : public AnalysisInfoMixin<RISCVVectorConfigAnalysis> {
+class RISCVVectorConfigAnalysis
+    : public AnalysisInfoMixin<RISCVVectorConfigAnalysis> {
   friend AnalysisInfoMixin<RISCVVectorConfigAnalysis>;
   static AnalysisKey Key;
 
