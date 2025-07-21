@@ -901,35 +901,6 @@ Driver::OpenMPRuntimeKind Driver::getOpenMPRuntime(const ArgList &Args) const {
   return RT;
 }
 
-static llvm::Triple getSYCLDeviceTriple(StringRef TargetArch) {
-  SmallVector<StringRef, 5> SYCLAlias = {"spir", "spir64", "spirv", "spirv32",
-                                         "spirv64"};
-  if (llvm::is_contained(SYCLAlias, TargetArch)) {
-    llvm::Triple TargetTriple;
-    TargetTriple.setArchName(TargetArch);
-    TargetTriple.setVendor(llvm::Triple::UnknownVendor);
-    TargetTriple.setOS(llvm::Triple::UnknownOS);
-    return TargetTriple;
-  }
-  return llvm::Triple(TargetArch);
-}
-
-static bool addSYCLDefaultTriple(Compilation &C,
-                                 SmallVectorImpl<llvm::Triple> &SYCLTriples) {
-  // Check current set of triples to see if the default has already been set.
-  for (const auto &SYCLTriple : SYCLTriples) {
-    if (SYCLTriple.getSubArch() == llvm::Triple::NoSubArch &&
-        SYCLTriple.isSPIROrSPIRV())
-      return false;
-  }
-  // Add the default triple as it was not found.
-  llvm::Triple DefaultTriple = getSYCLDeviceTriple(
-      C.getDefaultToolChain().getTriple().isArch32Bit() ? "spirv32"
-                                                        : "spirv64");
-  SYCLTriples.insert(SYCLTriples.begin(), DefaultTriple);
-  return true;
-}
-
 // Handles `native` offload architectures by using the 'offload-arch' utility.
 static llvm::SmallVector<std::string>
 getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
@@ -951,7 +922,8 @@ getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
           << Action::GetOffloadKindName(Kind) << StdoutOrErr.takeError()
           << "--offload-arch";
       return GPUArchs;
-    } else if ((*StdoutOrErr)->getBuffer().empty()) {
+    }
+    if ((*StdoutOrErr)->getBuffer().empty()) {
       C.getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
           << Action::GetOffloadKindName(Kind) << "No GPU detected in the system"
           << "--offload-arch";
@@ -1087,8 +1059,8 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       (C.getInputArgs().hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
                                 options::OPT_fno_openmp, false) &&
        (C.getInputArgs().hasArg(options::OPT_offload_targets_EQ) ||
-        (C.getInputArgs().hasArg(options::OPT_offload_arch_EQ)) &&
-            !(IsCuda || IsHIP)));
+        (C.getInputArgs().hasArg(options::OPT_offload_arch_EQ) &&
+         !(IsCuda || IsHIP))));
 
   llvm::DenseSet<Action::OffloadKind> Kinds;
   const std::pair<bool, Action::OffloadKind> ActiveKinds[] = {
@@ -4880,7 +4852,7 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
       if (Kind == Action::OFK_SYCL && Phase == phases::Assemble)
         continue;
 
-      auto TCAndArch = TCAndArchs.begin();
+      auto *TCAndArch = TCAndArchs.begin();
       for (Action *&A : DeviceActions) {
         if (A->getType() == types::TY_Nothing)
           continue;
@@ -4920,7 +4892,7 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
       A = C.MakeAction<LinkJobAction>(LinkerInput, types::TY_Image);
     }
 
-    auto TCAndArch = TCAndArchs.begin();
+    auto *TCAndArch = TCAndArchs.begin();
     for (Action *A : DeviceActions) {
       DDeps.add(*A, *TCAndArch->first, TCAndArch->second.data(), Kind);
       OffloadAction::DeviceDependences DDep;
