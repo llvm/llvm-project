@@ -189,20 +189,6 @@ bool isCombinedConstruct(Directive D) {
   return !getLeafConstructs(D).empty() && !isCompositeConstruct(D);
 }
 
-bool isMapEnteringConstruct(Directive D) {
-  for (Directive L : getLeafConstructsOrSelf(D)) {
-    switch (L) {
-    case OMPD_target:
-    case OMPD_target_data:
-    case OMPD_target_enter_data:
-      return true;
-    default:
-      break;
-    }
-  }
-  return false;
-}
-
 ArrayRef<unsigned> getOpenMPVersions() {
   static unsigned Versions[]{31, 40, 45, 50, 51, 52, 60};
   return Versions;
