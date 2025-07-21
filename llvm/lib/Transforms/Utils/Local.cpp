@@ -3876,6 +3876,10 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   if (Op->isSwiftError())
     return false;
 
+  // Cannot replace alloca argument with phi/select.
+  if (I->isLifetimeStartOrEnd())
+    return false;
+
   // Early exit.
   if (!isa<Constant, InlineAsm>(Op))
     return true;
