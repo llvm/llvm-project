@@ -366,8 +366,9 @@ static mlir::Type coordinateArrayElement(fir::ArrayCoorOp op) {
 static void populateIndexArgs(fir::ArrayCoorOp acoOp, fir::ShapeOp shape,
                               SmallVectorImpl<mlir::Value> &indexArgs,
                               mlir::PatternRewriter &rewriter) {
-  auto one = rewriter.create<mlir::arith::ConstantOp>(
-      acoOp.getLoc(), rewriter.getIndexType(), rewriter.getIndexAttr(1));
+  auto one = mlir::arith::ConstantOp::create(rewriter, acoOp.getLoc(),
+                                             rewriter.getIndexType(),
+                                             rewriter.getIndexAttr(1));
   auto extents = shape.getExtents();
   for (auto i = extents.begin(); i < extents.end(); i++) {
     indexArgs.push_back(one);
@@ -379,8 +380,9 @@ static void populateIndexArgs(fir::ArrayCoorOp acoOp, fir::ShapeOp shape,
 static void populateIndexArgs(fir::ArrayCoorOp acoOp, fir::ShapeShiftOp shape,
                               SmallVectorImpl<mlir::Value> &indexArgs,
                               mlir::PatternRewriter &rewriter) {
-  auto one = rewriter.create<mlir::arith::ConstantOp>(
-      acoOp.getLoc(), rewriter.getIndexType(), rewriter.getIndexAttr(1));
+  auto one = mlir::arith::ConstantOp::create(rewriter, acoOp.getLoc(),
+                                             rewriter.getIndexType(),
+                                             rewriter.getIndexAttr(1));
   auto extents = shape.getPairs();
   for (auto i = extents.begin(); i < extents.end();) {
     indexArgs.push_back(*i++);
@@ -422,13 +424,13 @@ createAffineOps(mlir::Value arrayRef, mlir::PatternRewriter &rewriter) {
 
   populateIndexArgs(acoOp, indexArgs, rewriter);
 
-  auto affineApply = rewriter.create<affine::AffineApplyOp>(
-      acoOp.getLoc(), affineMap, indexArgs);
+  auto affineApply = affine::AffineApplyOp::create(rewriter, acoOp.getLoc(),
+                                                   affineMap, indexArgs);
   auto arrayElementType = coordinateArrayElement(acoOp);
   auto newType =
       mlir::MemRefType::get({mlir::ShapedType::kDynamic}, arrayElementType);
-  auto arrayConvert = rewriter.create<fir::ConvertOp>(acoOp.getLoc(), newType,
-                                                      acoOp.getMemref());
+  auto arrayConvert = fir::ConvertOp::create(rewriter, acoOp.getLoc(), newType,
+                                             acoOp.getMemref());
   return std::make_pair(affineApply, arrayConvert);
 }
 
@@ -495,7 +497,7 @@ public:
                                 affineFor.getRegionIterArgs());
     if (!results.empty()) {
       rewriter.setInsertionPointToEnd(affineFor.getBody());
-      rewriter.create<affine::AffineYieldOp>(resultOp->getLoc(), results);
+      affine::AffineYieldOp::create(rewriter, resultOp->getLoc(), results);
     }
     rewriter.finalizeOpModification(affineFor.getOperation());
 
@@ -525,8 +527,8 @@ private:
   std::pair<affine::AffineForOp, mlir::Value>
   positiveConstantStep(fir::DoLoopOp op, int64_t step,
                        mlir::PatternRewriter &rewriter) const {
-    auto affineFor = rewriter.create<affine::AffineForOp>(
-        op.getLoc(), ValueRange(op.getLowerBound()),
+    auto affineFor = affine::AffineForOp::create(
+        rewriter, op.getLoc(), ValueRange(op.getLowerBound()),
         mlir::AffineMap::get(0, 1,
                              mlir::getAffineSymbolExpr(0, op.getContext())),
         ValueRange(op.getUpperBound()),
@@ -543,24 +545,24 @@ private:
     auto step = mlir::getAffineSymbolExpr(2, op.getContext());
     mlir::AffineMap upperBoundMap = mlir::AffineMap::get(
         0, 3, (upperBound - lowerBound + step).floorDiv(step));
-    auto genericUpperBound = rewriter.create<affine::AffineApplyOp>(
-        op.getLoc(), upperBoundMap,
+    auto genericUpperBound = affine::AffineApplyOp::create(
+        rewriter, op.getLoc(), upperBoundMap,
         ValueRange({op.getLowerBound(), op.getUpperBound(), op.getStep()}));
     auto actualIndexMap = mlir::AffineMap::get(
         1, 2,
         (lowerBound + mlir::getAffineDimExpr(0, op.getContext())) *
             mlir::getAffineSymbolExpr(1, op.getContext()));
 
-    auto affineFor = rewriter.create<affine::AffineForOp>(
-        op.getLoc(), ValueRange(),
+    auto affineFor = affine::AffineForOp::create(
+        rewriter, op.getLoc(), ValueRange(),
         AffineMap::getConstantMap(0, op.getContext()),
         genericUpperBound.getResult(),
         mlir::AffineMap::get(0, 1,
                              1 + mlir::getAffineSymbolExpr(0, op.getContext())),
         1, op.getIterOperands());
     rewriter.setInsertionPointToStart(affineFor.getBody());
-    auto actualIndex = rewriter.create<affine::AffineApplyOp>(
-        op.getLoc(), actualIndexMap,
+    auto actualIndex = affine::AffineApplyOp::create(
+        rewriter, op.getLoc(), actualIndexMap,
         ValueRange(
             {affineFor.getInductionVar(), op.getLowerBound(), op.getStep()}));
     return std::make_pair(affineFor, actualIndex.getResult());
@@ -588,8 +590,8 @@ public:
               << "AffineIfConversion: couldn't calculate affine condition\n";);
       return failure();
     }
-    auto affineIf = rewriter.create<affine::AffineIfOp>(
-        op.getLoc(), affineCondition.getIntegerSet(),
+    auto affineIf = affine::AffineIfOp::create(
+        rewriter, op.getLoc(), affineCondition.getIntegerSet(),
         affineCondition.getAffineArgs(), !op.getElseRegion().empty());
     rewriter.startOpModification(affineIf);
     affineIf.getThenBlock()->getOperations().splice(

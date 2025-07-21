@@ -49,13 +49,13 @@ struct DoLoopConversion : public OpRewritePattern<fir::DoLoopOp> {
     // must be a positive value.
     // For easier conversion, we calculate the trip count and use a canonical
     // induction variable.
-    auto diff = rewriter.create<arith::SubIOp>(loc, high, low);
-    auto distance = rewriter.create<arith::AddIOp>(loc, diff, step);
-    auto tripCount = rewriter.create<arith::DivSIOp>(loc, distance, step);
-    auto zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-    auto one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    auto diff = arith::SubIOp::create(rewriter, loc, high, low);
+    auto distance = arith::AddIOp::create(rewriter, loc, diff, step);
+    auto tripCount = arith::DivSIOp::create(rewriter, loc, distance, step);
+    auto zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    auto one = arith::ConstantIndexOp::create(rewriter, loc, 1);
     auto scfForOp =
-        rewriter.create<scf::ForOp>(loc, zero, tripCount, one, iterArgs);
+        scf::ForOp::create(rewriter, loc, zero, tripCount, one, iterArgs);
 
     auto &loopOps = doLoopOp.getBody()->getOperations();
     auto resultOp = cast<fir::ResultOp>(doLoopOp.getBody()->getTerminator());
@@ -68,12 +68,12 @@ struct DoLoopConversion : public OpRewritePattern<fir::DoLoopOp> {
 
     rewriter.setInsertionPointToStart(loweredBody);
     Value iv =
-        rewriter.create<arith::MulIOp>(loc, scfForOp.getInductionVar(), step);
-    iv = rewriter.create<arith::AddIOp>(loc, low, iv);
+        arith::MulIOp::create(rewriter, loc, scfForOp.getInductionVar(), step);
+    iv = arith::AddIOp::create(rewriter, loc, low, iv);
 
     if (!results.empty()) {
       rewriter.setInsertionPointToEnd(loweredBody);
-      rewriter.create<scf::YieldOp>(resultOp->getLoc(), results);
+      scf::YieldOp::create(rewriter, resultOp->getLoc(), results);
     }
     doLoopOp.getInductionVar().replaceAllUsesWith(iv);
     rewriter.replaceAllUsesWith(doLoopOp.getRegionIterArgs(),

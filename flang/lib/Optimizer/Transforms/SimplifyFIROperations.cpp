@@ -88,18 +88,18 @@ mlir::LogicalResult IsContiguousBoxCoversion::matchAndRewrite(
     // The scalar cases are supposed to be optimized by the canonicalization.
     if (rank == 1 || (op.getInnermost() && rank > 0)) {
       mlir::Type idxTy = builder.getIndexType();
-      auto eleSize = builder.create<fir::BoxEleSizeOp>(loc, idxTy, box);
+      auto eleSize = fir::BoxEleSizeOp::create(builder, loc, idxTy, box);
       mlir::Value zero = fir::factory::createZeroValue(builder, loc, idxTy);
       auto dimInfo =
-          builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, box, zero);
+          fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy, box, zero);
       mlir::Value stride = dimInfo.getByteStride();
-      mlir::Value pred1 = builder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::eq, eleSize, stride);
+      mlir::Value pred1 = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::eq, eleSize, stride);
       mlir::Value extent = dimInfo.getExtent();
-      mlir::Value pred2 = builder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::eq, extent, zero);
+      mlir::Value pred2 = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::eq, extent, zero);
       mlir::Value result =
-          builder.create<mlir::arith::OrIOp>(loc, pred1, pred2);
+          mlir::arith::OrIOp::create(builder, loc, pred1, pred2);
       result = builder.createConvert(loc, op.getType(), result);
       rewriter.replaceOp(op, result);
       return mlir::success();
@@ -192,7 +192,7 @@ public:
         // TODO Should this be a heap allocation instead? For now, we allocate
         // on the stack for each loop iteration.
         mlir::Value localAlloc =
-            rewriter.create<fir::AllocaOp>(loop.getLoc(), localizer.getType());
+            fir::AllocaOp::create(rewriter, loop.getLoc(), localizer.getType());
 
         auto cloneLocalizerRegion = [&](mlir::Region &region,
                                         mlir::ValueRange regionArgs,
@@ -258,8 +258,8 @@ public:
     for (auto [lb, ub, st, iv] :
          llvm::zip_equal(loop.getLowerBound(), loop.getUpperBound(),
                          loop.getStep(), *loop.getLoopInductionVars())) {
-      innermostUnorderdLoop = rewriter.create<fir::DoLoopOp>(
-          doConcurentOp.getLoc(), lb, ub, st,
+      innermostUnorderdLoop = fir::DoLoopOp::create(
+          rewriter, doConcurentOp.getLoc(), lb, ub, st,
           /*unordred=*/true, /*finalCountValue=*/false,
           /*iterArgs=*/mlir::ValueRange{}, loop.getReduceVars(),
           loop.getReduceAttrsAttr());
