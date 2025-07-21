@@ -44,6 +44,10 @@
 ! RUN: %flang --target=loongarch64-linux-gnu -c %s -### 2>&1 \
 ! RUN: | FileCheck %s -check-prefix=CHECK-LOONGARCH64
 
+! RUN: %flang --target=sparc64-linux-gnu -c -### %s 2>&1  | FileCheck %s -check-prefix=CHECK-SPARC-VIS
+! RUN: %flang --target=sparc64-freebsd -c -### %s 2>&1  | FileCheck %s -check-prefix=CHECK-SPARC-VIS
+! RUN: %flang --target=sparc64-openbsd -c -### %s 2>&1  | FileCheck %s -check-prefix=CHECK-SPARC-VIS
+
 ! CHECK-A57: "-fc1" "-triple" "aarch64-unknown-linux-gnu"
 ! CHECK-A57-SAME: "-target-cpu" "cortex-a57"
 ! CHECK-A57-SAME: "-target-feature" "+v8a" "-target-feature" "+aes" "-target-feature" "+crc" "-target-feature" "+fp-armv8" "-target-feature" "+neon" "-target-feature" "+perfmon" "-target-feature" "+sha2
@@ -92,3 +96,6 @@
 
 ! CHECK-LOONGARCH64: "-fc1" "-triple" "loongarch64-unknown-linux-gnu"
 ! CHECK-LOONGARCH64-SAME: "-target-cpu" "loongarch64" "-target-feature" "+lsx" "-target-feature" "+64bit" "-target-feature" "+f" "-target-feature" "+d" "-target-feature" "+ual"
+
+! CHECK-SPARC-VIS: "-fc1" "-triple" "sparc64-{{[^"]+}}"
+! CHECK-SPARC-VIS-SAME: "-target-feature" "+vis"

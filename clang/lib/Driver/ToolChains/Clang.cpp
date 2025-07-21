@@ -2731,16 +2731,6 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
     CmdArgs.push_back(MipsTargetFeature);
   }
 
-  // Those OSes default to enabling VIS on 64-bit SPARC.
-  // See also the corresponding code for external assemblers in
-  // sparc::getSparcAsmModeForCPU().
-  bool IsSparcV9ATarget =
-      (C.getDefaultToolChain().getArch() == llvm::Triple::sparcv9) &&
-      (Triple.isOSLinux() || Triple.isOSFreeBSD() || Triple.isOSOpenBSD());
-  if (IsSparcV9ATarget && SparcTargetFeatures.empty()) {
-    CmdArgs.push_back("-target-feature");
-    CmdArgs.push_back("+vis");
-  }
   for (const char *Feature : SparcTargetFeatures) {
     CmdArgs.push_back("-target-feature");
     CmdArgs.push_back(Feature);
@@ -3846,15 +3836,6 @@ static void RenderOpenACCOptions(const Driver &D, const ArgList &Args,
     return;
 
   CmdArgs.push_back("-fopenacc");
-
-  if (Arg *A = Args.getLastArg(options::OPT_openacc_macro_override)) {
-    StringRef Value = A->getValue();
-    int Version;
-    if (!Value.getAsInteger(10, Version))
-      A->renderAsInput(Args, CmdArgs);
-    else
-      D.Diag(diag::err_drv_clang_unsupported) << Value;
-  }
 }
 
 static void RenderBuiltinOptions(const ToolChain &TC, const llvm::Triple &T,

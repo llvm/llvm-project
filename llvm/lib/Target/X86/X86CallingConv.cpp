@@ -389,8 +389,7 @@ static bool CC_X86_32_I128_FP128(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   if (!ArgFlags.isInConsecutiveRegsLast())
     return true;
 
-  unsigned NumRegs = PendingMembers.size();
-  assert(NumRegs == 4 && "Should have two parts");
+  assert(PendingMembers.size() == 4 && "Should have four parts");
 
   int64_t Offset = State.AllocateStack(16, Align(16));
   PendingMembers[0].convertToMem(Offset);
