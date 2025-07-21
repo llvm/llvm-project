@@ -125,17 +125,25 @@ public:
     return {};
   }
 
+  mlir::Value VisitPackIndexingExpr(PackIndexingExpr *e) {
+    return Visit(e->getSelectedExpr());
+  }
+
   mlir::Value VisitParenExpr(ParenExpr *pe) { return Visit(pe->getSubExpr()); }
+
+  mlir::Value VisitGenericSelectionExpr(GenericSelectionExpr *ge) {
+    return Visit(ge->getResultExpr());
+  }
 
   /// Emits the address of the l-value, then loads and returns the result.
   mlir::Value emitLoadOfLValue(const Expr *e) {
     LValue lv = cgf.emitLValue(e);
     // FIXME: add some akin to EmitLValueAlignmentAssumption(E, V);
-    return cgf.emitLoadOfLValue(lv, e->getExprLoc()).getScalarVal();
+    return cgf.emitLoadOfLValue(lv, e->getExprLoc()).getValue();
   }
 
   mlir::Value emitLoadOfLValue(LValue lv, SourceLocation loc) {
-    return cgf.emitLoadOfLValue(lv, loc).getScalarVal();
+    return cgf.emitLoadOfLValue(lv, loc).getValue();
   }
 
   // l-values
@@ -149,17 +157,21 @@ public:
   mlir::Value VisitIntegerLiteral(const IntegerLiteral *e) {
     mlir::Type type = cgf.convertType(e->getType());
     return builder.create<cir::ConstantOp>(
-        cgf.getLoc(e->getExprLoc()),
-        builder.getAttr<cir::IntAttr>(type, e->getValue()));
+        cgf.getLoc(e->getExprLoc()), cir::IntAttr::get(type, e->getValue()));
   }
 
   mlir::Value VisitFloatingLiteral(const FloatingLiteral *e) {
     mlir::Type type = cgf.convertType(e->getType());
-    assert(mlir::isa<cir::CIRFPTypeInterface>(type) &&
+    assert(mlir::isa<cir::FPTypeInterface>(type) &&
            "expect floating-point type");
     return builder.create<cir::ConstantOp>(
-        cgf.getLoc(e->getExprLoc()),
-        builder.getAttr<cir::FPAttr>(type, e->getValue()));
+        cgf.getLoc(e->getExprLoc()), cir::FPAttr::get(type, e->getValue()));
+  }
+
+  mlir::Value VisitCharacterLiteral(const CharacterLiteral *e) {
+    mlir::Type ty = cgf.convertType(e->getType());
+    auto init = cir::IntAttr::get(ty, e->getValue());
+    return builder.create<cir::ConstantOp>(cgf.getLoc(e->getExprLoc()), init);
   }
 
   mlir::Value VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *e) {
@@ -220,6 +232,10 @@ public:
   }
 
   mlir::Value VisitMemberExpr(MemberExpr *e);
+
+  mlir::Value VisitCompoundLiteralExpr(CompoundLiteralExpr *e) {
+    return emitLoadOfLValue(e);
+  }
 
   mlir::Value VisitInitListExpr(InitListExpr *e);
 
@@ -325,18 +341,18 @@ public:
         cgf.getCIRGenModule().errorNYI("signed bool");
       if (cgf.getBuilder().isInt(dstTy))
         castKind = cir::CastKind::bool_to_int;
-      else if (mlir::isa<cir::CIRFPTypeInterface>(dstTy))
+      else if (mlir::isa<cir::FPTypeInterface>(dstTy))
         castKind = cir::CastKind::bool_to_float;
       else
         llvm_unreachable("Internal error: Cast to unexpected type");
     } else if (cgf.getBuilder().isInt(srcTy)) {
       if (cgf.getBuilder().isInt(dstTy))
         castKind = cir::CastKind::integral;
-      else if (mlir::isa<cir::CIRFPTypeInterface>(dstTy))
+      else if (mlir::isa<cir::FPTypeInterface>(dstTy))
         castKind = cir::CastKind::int_to_float;
       else
         llvm_unreachable("Internal error: Cast to unexpected type");
-    } else if (mlir::isa<cir::CIRFPTypeInterface>(srcTy)) {
+    } else if (mlir::isa<cir::FPTypeInterface>(srcTy)) {
       if (cgf.getBuilder().isInt(dstTy)) {
         // If we can't recognize overflow as undefined behavior, assume that
         // overflow saturates. This protects against normal optimizations if we
@@ -345,9 +361,9 @@ public:
           cgf.getCIRGenModule().errorNYI("strict float cast overflow");
         assert(!cir::MissingFeatures::fpConstraints());
         castKind = cir::CastKind::float_to_int;
-      } else if (mlir::isa<cir::CIRFPTypeInterface>(dstTy)) {
-        cgf.getCIRGenModule().errorNYI("floating point casts");
-        return cgf.createDummyValue(src.getLoc(), dstType);
+      } else if (mlir::isa<cir::FPTypeInterface>(dstTy)) {
+        // TODO: split this to createFPExt/createFPTrunc
+        return builder.createFloatingCast(src, fullDstTy);
       } else {
         llvm_unreachable("Internal error: Cast to unexpected type");
       }
@@ -359,6 +375,11 @@ public:
     return builder.create<cir::CastOp>(src.getLoc(), fullDstTy, *castKind, src);
   }
 
+  mlir::Value
+  VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *e) {
+    return Visit(e->getReplacement());
+  }
+
   mlir::Value VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *e);
   mlir::Value
   VisitAbstractConditionalOperator(const AbstractConditionalOperator *e);
@@ -366,22 +387,22 @@ public:
   // Unary Operators.
   mlir::Value VisitUnaryPostDec(const UnaryOperator *e) {
     LValue lv = cgf.emitLValue(e->getSubExpr());
-    return emitScalarPrePostIncDec(e, lv, false, false);
+    return emitScalarPrePostIncDec(e, lv, cir::UnaryOpKind::Dec, false);
   }
   mlir::Value VisitUnaryPostInc(const UnaryOperator *e) {
     LValue lv = cgf.emitLValue(e->getSubExpr());
-    return emitScalarPrePostIncDec(e, lv, true, false);
+    return emitScalarPrePostIncDec(e, lv, cir::UnaryOpKind::Inc, false);
   }
   mlir::Value VisitUnaryPreDec(const UnaryOperator *e) {
     LValue lv = cgf.emitLValue(e->getSubExpr());
-    return emitScalarPrePostIncDec(e, lv, false, true);
+    return emitScalarPrePostIncDec(e, lv, cir::UnaryOpKind::Dec, true);
   }
   mlir::Value VisitUnaryPreInc(const UnaryOperator *e) {
     LValue lv = cgf.emitLValue(e->getSubExpr());
-    return emitScalarPrePostIncDec(e, lv, true, true);
+    return emitScalarPrePostIncDec(e, lv, cir::UnaryOpKind::Inc, true);
   }
   mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
-                                      bool isInc, bool isPre) {
+                                      cir::UnaryOpKind kind, bool isPre) {
     if (cgf.getLangOpts().OpenMP)
       cgf.cgm.errorNYI(e->getSourceRange(), "inc/dec OpenMP");
 
@@ -394,10 +415,10 @@ public:
       cgf.cgm.errorNYI(e->getSourceRange(), "Atomic inc/dec");
       // TODO(cir): This is not correct, but it will produce reasonable code
       // until atomic operations are implemented.
-      value = cgf.emitLoadOfLValue(lv, e->getExprLoc()).getScalarVal();
+      value = cgf.emitLoadOfLValue(lv, e->getExprLoc()).getValue();
       input = value;
     } else {
-      value = cgf.emitLoadOfLValue(lv, e->getExprLoc()).getScalarVal();
+      value = cgf.emitLoadOfLValue(lv, e->getExprLoc()).getValue();
       input = value;
     }
 
@@ -410,7 +431,7 @@ public:
     //          -> bool = ((int)bool + 1 != 0)
     // An interesting aspect of this is that increment is always true.
     // Decrement does not have this property.
-    if (isInc && type->isBooleanType()) {
+    if (kind == cir::UnaryOpKind::Inc && type->isBooleanType()) {
       value = builder.getTrue(cgf.getLoc(e->getExprLoc()));
     } else if (type->isIntegerType()) {
       QualType promotedType;
@@ -441,7 +462,7 @@ public:
 
       assert(!cir::MissingFeatures::sanitizers());
       if (e->canOverflow() && type->isSignedIntegerOrEnumerationType()) {
-        value = emitIncDecConsiderOverflowBehavior(e, value, isInc);
+        value = emitIncDecConsiderOverflowBehavior(e, value, kind);
       } else {
         cir::UnaryOpKind kind =
             e->isIncrementOp() ? cir::UnaryOpKind::Inc : cir::UnaryOpKind::Dec;
@@ -463,7 +484,7 @@ public:
         // For everything else, we can just do a simple increment.
         mlir::Location loc = cgf.getLoc(e->getSourceRange());
         CIRGenBuilderTy &builder = cgf.getBuilder();
-        int amount = (isInc ? 1 : -1);
+        int amount = kind == cir::UnaryOpKind::Inc ? 1 : -1;
         mlir::Value amt = builder.getSInt32(amount, loc);
         assert(!cir::MissingFeatures::sanitizers());
         value = builder.createPtrStride(loc, value, amt);
@@ -483,8 +504,8 @@ public:
       if (mlir::isa<cir::SingleType, cir::DoubleType>(value.getType())) {
         // Create the inc/dec operation.
         // NOTE(CIR): clang calls CreateAdd but folds this to a unary op
-        cir::UnaryOpKind kind =
-            (isInc ? cir::UnaryOpKind::Inc : cir::UnaryOpKind::Dec);
+        assert(kind == cir::UnaryOpKind::Inc ||
+               kind == cir::UnaryOpKind::Dec && "Invalid UnaryOp kind");
         value = emitUnaryOp(e, kind, value);
       } else {
         cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec other fp type");
@@ -503,12 +524,10 @@ public:
         cgf, cgf.getLoc(e->getSourceRange())};
 
     // Store the updated result through the lvalue
-    if (lv.isBitField()) {
-      cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec bitfield");
-      return {};
-    } else {
+    if (lv.isBitField())
+      return cgf.emitStoreThroughBitfieldLValue(RValue::get(value), lv);
+    else
       cgf.emitStoreThroughLValue(RValue::get(value), lv);
-    }
 
     // If this is a postinc, return the value read from memory, otherwise use
     // the updated value.
@@ -517,9 +536,9 @@ public:
 
   mlir::Value emitIncDecConsiderOverflowBehavior(const UnaryOperator *e,
                                                  mlir::Value inVal,
-                                                 bool isInc) {
-    cir::UnaryOpKind kind =
-        e->isIncrementOp() ? cir::UnaryOpKind::Inc : cir::UnaryOpKind::Dec;
+                                                 cir::UnaryOpKind kind) {
+    assert(kind == cir::UnaryOpKind::Inc ||
+           kind == cir::UnaryOpKind::Dec && "Invalid UnaryOp kind");
     switch (cgf.getLangOpts().getSignedOverflowBehavior()) {
     case LangOptions::SOB_Defined:
       return emitUnaryOp(e, kind, inVal, /*nsw=*/false);
@@ -597,7 +616,15 @@ public:
 
   mlir::Value VisitUnaryLNot(const UnaryOperator *e);
 
+  mlir::Value VisitUnaryReal(const UnaryOperator *e);
+
+  mlir::Value VisitUnaryImag(const UnaryOperator *e);
+
   mlir::Value VisitCXXThisExpr(CXXThisExpr *te) { return cgf.loadCXXThis(); }
+
+  mlir::Value VisitCXXNewExpr(const CXXNewExpr *e) {
+    return cgf.emitCXXNewExpr(e);
+  }
 
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are CIR scalar types.
@@ -644,7 +671,7 @@ public:
     if (srcType->isHalfType() &&
         !cgf.getContext().getLangOpts().NativeHalfType) {
       // Cast to FP using the intrinsic if the half type itself isn't supported.
-      if (mlir::isa<cir::CIRFPTypeInterface>(mlirDstType)) {
+      if (mlir::isa<cir::FPTypeInterface>(mlirDstType)) {
         if (cgf.getContext().getTargetInfo().useFP16ConversionIntrinsics())
           cgf.getCIRGenModule().errorNYI(loc,
                                          "cast via llvm.convert.from.fp16");
@@ -884,9 +911,10 @@ public:
       }
     } else {
       // Complex Comparison: can only be an equality comparison.
-      assert(!cir::MissingFeatures::complexType());
-      cgf.cgm.errorNYI(loc, "complex comparison");
-      result = builder.getBool(false, loc);
+      assert(e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE);
+
+      BinOpInfo boInfo = emitBinOps(e);
+      result = builder.create<cir::CmpOp>(loc, kind, boInfo.lhs, boInfo.rhs);
     }
 
     return emitScalarConversion(result, cgf.getContext().BoolTy, e->getType(),
@@ -1799,7 +1827,7 @@ mlir::Value ScalarExprEmitter::VisitCallExpr(const CallExpr *e) {
   if (e->getCallReturnType(cgf.getContext())->isReferenceType())
     return emitLoadOfLValue(e);
 
-  auto v = cgf.emitCallExpr(e).getScalarVal();
+  auto v = cgf.emitCallExpr(e).getValue();
   assert(!cir::MissingFeatures::emitLValueAlignmentAssumption());
   return v;
 }
@@ -1885,6 +1913,48 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
   return maybePromoteBoolResult(boolVal, cgf.convertType(e->getType()));
 }
 
+mlir::Value ScalarExprEmitter::VisitUnaryReal(const UnaryOperator *e) {
+  // TODO(cir): handle scalar promotion.
+  Expr *op = e->getSubExpr();
+  if (op->getType()->isAnyComplexType()) {
+    // If it's an l-value, load through the appropriate subobject l-value.
+    // Note that we have to ask `e` because `op` might be an l-value that
+    // this won't work for, e.g. an Obj-C property.
+    if (e->isGLValue()) {
+      mlir::Location loc = cgf.getLoc(e->getExprLoc());
+      mlir::Value complex = cgf.emitComplexExpr(op);
+      return cgf.builder.createComplexReal(loc, complex);
+    }
+
+    // Otherwise, calculate and project.
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "VisitUnaryReal calculate and project");
+  }
+
+  return Visit(op);
+}
+
+mlir::Value ScalarExprEmitter::VisitUnaryImag(const UnaryOperator *e) {
+  // TODO(cir): handle scalar promotion.
+  Expr *op = e->getSubExpr();
+  if (op->getType()->isAnyComplexType()) {
+    // If it's an l-value, load through the appropriate subobject l-value.
+    // Note that we have to ask `e` because `op` might be an l-value that
+    // this won't work for, e.g. an Obj-C property.
+    if (e->isGLValue()) {
+      mlir::Location loc = cgf.getLoc(e->getExprLoc());
+      mlir::Value complex = cgf.emitComplexExpr(op);
+      return cgf.builder.createComplexImag(loc, complex);
+    }
+
+    // Otherwise, calculate and project.
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "VisitUnaryImag calculate and project");
+  }
+
+  return Visit(op);
+}
+
 /// Return the size or alignment of the type of argument of the sizeof
 /// expression as an integer.
 mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
@@ -1898,28 +1968,21 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
                                      "sizeof operator for VariableArrayType",
                                      e->getStmtClassName());
       return builder.getConstant(
-          loc, builder.getAttr<cir::IntAttr>(
-                   cgf.cgm.UInt64Ty, llvm::APSInt(llvm::APInt(64, 1), true)));
+          loc, cir::IntAttr::get(cgf.cgm.UInt64Ty,
+                                 llvm::APSInt(llvm::APInt(64, 1), true)));
     }
   } else if (e->getKind() == UETT_OpenMPRequiredSimdAlign) {
     cgf.getCIRGenModule().errorNYI(
         e->getSourceRange(), "sizeof operator for OpenMpRequiredSimdAlign",
         e->getStmtClassName());
     return builder.getConstant(
-        loc, builder.getAttr<cir::IntAttr>(
-                 cgf.cgm.UInt64Ty, llvm::APSInt(llvm::APInt(64, 1), true)));
-  } else if (e->getKind() == UETT_VectorElements) {
-    cgf.getCIRGenModule().errorNYI(e->getSourceRange(),
-                                   "sizeof operator for VectorElements",
-                                   e->getStmtClassName());
-    return builder.getConstant(
-        loc, builder.getAttr<cir::IntAttr>(
-                 cgf.cgm.UInt64Ty, llvm::APSInt(llvm::APInt(64, 1), true)));
+        loc, cir::IntAttr::get(cgf.cgm.UInt64Ty,
+                               llvm::APSInt(llvm::APInt(64, 1), true)));
   }
 
   return builder.getConstant(
-      loc, builder.getAttr<cir::IntAttr>(
-               cgf.cgm.UInt64Ty, e->EvaluateKnownConstInt(cgf.getContext())));
+      loc, cir::IntAttr::get(cgf.cgm.UInt64Ty,
+                             e->EvaluateKnownConstInt(cgf.getContext())));
 }
 
 /// Return true if the specified expression is cheap enough and side-effect-free
@@ -2088,8 +2151,9 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
 }
 
 mlir::Value CIRGenFunction::emitScalarPrePostIncDec(const UnaryOperator *e,
-                                                    LValue lv, bool isInc,
+                                                    LValue lv,
+                                                    cir::UnaryOpKind kind,
                                                     bool isPre) {
   return ScalarExprEmitter(*this, builder)
-      .emitScalarPrePostIncDec(e, lv, isInc, isPre);
+      .emitScalarPrePostIncDec(e, lv, kind, isPre);
 }

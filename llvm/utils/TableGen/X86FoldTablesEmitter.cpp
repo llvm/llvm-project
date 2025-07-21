@@ -625,7 +625,7 @@ void X86FoldTablesEmitter::run(raw_ostream &OS) {
   std::map<uint8_t, std::vector<const CodeGenInstruction *>> RegInsts;
 
   ArrayRef<const CodeGenInstruction *> NumberedInstructions =
-      Target.getInstructionsByEnumValue();
+      Target.getInstructions();
 
   for (const CodeGenInstruction *Inst : NumberedInstructions) {
     const Record *Rec = Inst->TheDef;

@@ -701,7 +701,7 @@ template <typename T, typename I, typename E> //
 struct IndirectT {
   using InvokedByFptr = E;
   using WrapperTrait = std::true_type;
-  InvokedByFptr v;
+  OPT(InvokedByFptr) v;
 };
 
 // V5.2: [14.1.2] `init` clause

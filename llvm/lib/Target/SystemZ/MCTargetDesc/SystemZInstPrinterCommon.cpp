@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZInstPrinterCommon.h"
-#include "MCTargetDesc/SystemZMCExpr.h"
+#include "MCTargetDesc/SystemZMCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegister.h"
@@ -53,7 +53,7 @@ void SystemZInstPrinterCommon::printOperand(const MCOperand &MO,
   } else if (MO.isImm())
     markup(O, Markup::Immediate) << MO.getImm();
   else if (MO.isExpr())
-    MO.getExpr()->print(O, MAI);
+    MAI->printExpr(O, *MO.getExpr());
   else
     llvm_unreachable("Invalid operand");
 }
@@ -67,7 +67,7 @@ void SystemZInstPrinterCommon::printUImmOperand(const MCInst *MI, int OpNum,
                                                 raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   if (MO.isExpr()) {
-    O << *MO.getExpr();
+    MAI.printExpr(O, *MO.getExpr());
     return;
   }
   uint64_t Value = static_cast<uint64_t>(MO.getImm());
@@ -80,7 +80,7 @@ void SystemZInstPrinterCommon::printSImmOperand(const MCInst *MI, int OpNum,
                                                 raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   if (MO.isExpr()) {
-    O << *MO.getExpr();
+    MAI.printExpr(O, *MO.getExpr());
     return;
   }
   int64_t Value = MI->getOperand(OpNum).getImm();
@@ -171,7 +171,7 @@ void SystemZInstPrinterCommon::printPCRelOperand(const MCInst *MI,
     markup(O, Markup::Target) << formatHex((uint64_t)TargetAddress);
   } else {
     // Otherwise, just print the expression.
-    MO.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *MO.getExpr());
   }
 }
 
@@ -186,10 +186,10 @@ void SystemZInstPrinterCommon::printPCRelTLSOperand(const MCInst *MI,
     const MCOperand &MO = MI->getOperand(OpNum + 1);
     const MCSymbolRefExpr &refExp = cast<MCSymbolRefExpr>(*MO.getExpr());
     switch (refExp.getSpecifier()) {
-    case SystemZMCExpr::VK_TLSGD:
+    case SystemZ::S_TLSGD:
       O << ":tls_gdcall:";
       break;
-    case SystemZMCExpr::VK_TLSLDM:
+    case SystemZ::S_TLSLDM:
       O << ":tls_ldcall:";
       break;
     default:

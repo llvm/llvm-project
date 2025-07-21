@@ -72,7 +72,7 @@ void MCTargetStreamer::emitValue(const MCExpr *Value) {
   SmallString<128> Str;
   raw_svector_ostream OS(Str);
 
-  Value->print(OS, Streamer.getContext().getAsmInfo());
+  Streamer.getContext().getAsmInfo()->printExpr(OS, *Value);
   Streamer.emitRawText(OS.str());
 }
 
@@ -1328,17 +1328,12 @@ void MCStreamer::emitSLEB128Value(const MCExpr *Value) {}
 void MCStreamer::emitFill(const MCExpr &NumBytes, uint64_t Value, SMLoc Loc) {}
 void MCStreamer::emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                           SMLoc Loc) {}
-void MCStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
-                                      unsigned ValueSize,
-                                      unsigned MaxBytesToEmit) {}
+void MCStreamer::emitValueToAlignment(Align, int64_t, uint8_t, unsigned) {}
 void MCStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                    unsigned MaxBytesToEmit) {}
 void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                                    SMLoc Loc) {}
-void MCStreamer::emitBundleAlignMode(Align Alignment) {}
-void MCStreamer::emitBundleLock(bool AlignToEnd) {}
 void MCStreamer::finishImpl() {}
-void MCStreamer::emitBundleUnlock() {}
 
 bool MCStreamer::popSection() {
   if (SectionStack.size() <= 1)
@@ -1409,6 +1404,15 @@ MCSymbol *MCStreamer::endSection(MCSection *Section) {
   return Sym;
 }
 
+void MCStreamer::addFragment(MCFragment *F) {
+  auto *Sec = CurFrag->getParent();
+  F->setParent(Sec);
+  F->setLayoutOrder(CurFrag->getLayoutOrder() + 1);
+  CurFrag->Next = F;
+  CurFrag = F;
+  Sec->curFragList()->Tail = F;
+}
+
 static VersionTuple
 targetVersionOrMinimumSupportedOSVersion(const Triple &Target,
                                          VersionTuple TargetVersion) {
@@ -1453,10 +1457,9 @@ static VersionTuple getMachoBuildVersionSupportedOS(const Triple &Target) {
   case Triple::WatchOS:
     return VersionTuple(5);
   case Triple::DriverKit:
-    // DriverKit always uses the build version load command.
-    return VersionTuple();
+  case Triple::BridgeOS:
   case Triple::XROS:
-    // XROS always uses the build version load command.
+    // DriverKit/BridgeOS/XROS always use the build version load command.
     return VersionTuple();
   default:
     break;
@@ -1487,6 +1490,8 @@ getMachoBuildVersionPlatformType(const Triple &Target) {
   case Triple::XROS:
     return Target.isSimulatorEnvironment() ? MachO::PLATFORM_XROS_SIMULATOR
                                            : MachO::PLATFORM_XROS;
+  case Triple::BridgeOS:
+    return MachO::PLATFORM_BRIDGEOS;
   default:
     break;
   }
@@ -1520,6 +1525,7 @@ void MCStreamer::emitVersionForTarget(
     Version = Target.getDriverKitVersion();
     break;
   case Triple::XROS:
+  case Triple::BridgeOS:
     Version = Target.getOSVersion();
     break;
   default:

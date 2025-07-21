@@ -1,0 +1,10 @@
+# RUN: llvm-mc -triple=xtensa -mattr=+prid -disassemble %s | FileCheck -check-prefixes=CHECK-PRID %s
+# RUN: not llvm-mc -triple=xtensa -disassemble %s 2>&1 | FileCheck --implicit-check-not=warning: -check-prefixes=CHECK-CORE %s
+
+## Verify that binary code is correctly disassembled with
+## Xtensa prid option enabled. Also verify that dissasembling without
+## Xtensa prid option generates warnings.
+
+[0x20,0xeb,0x03]
+#CHECK-PRID: rsr a2, prid
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding

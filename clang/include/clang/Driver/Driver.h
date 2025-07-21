@@ -367,10 +367,9 @@ private:
   /// stored in it, and will clean them up when torn down.
   mutable llvm::StringMap<std::unique_ptr<ToolChain>> ToolChains;
 
-  /// Cache of known offloading architectures for the ToolChain already derived.
-  /// This should only be modified when we first initialize the offloading
-  /// toolchains.
-  llvm::DenseMap<const ToolChain *, llvm::DenseSet<llvm::StringRef>> KnownArchs;
+  /// The associated offloading architectures with each toolchain.
+  llvm::DenseMap<const ToolChain *, llvm::SmallVector<llvm::StringRef>>
+      OffloadArchs;
 
 private:
   /// TranslateInputArgs - Create a new derived argument list from the input
@@ -535,11 +534,11 @@ public:
 
   /// Returns the set of bound architectures active for this offload kind.
   /// If there are no bound architctures we return a set containing only the
-  /// empty string. The \p SuppressError option is used to suppress errors.
-  llvm::DenseSet<StringRef>
+  /// empty string.
+  llvm::SmallVector<StringRef>
   getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
                   Action::OffloadKind Kind, const ToolChain *TC,
-                  bool SuppressError = false) const;
+                  bool SpecificToolchain = true) const;
 
   /// Check that the file referenced by Value exists. If it doesn't,
   /// issue a diagnostic and return false.

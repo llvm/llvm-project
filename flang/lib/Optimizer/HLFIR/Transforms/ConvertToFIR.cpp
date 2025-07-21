@@ -326,11 +326,14 @@ public:
       auto genHlfirBox = [&]() -> mlir::Value {
         if (auto baseBoxType =
                 mlir::dyn_cast<fir::BaseBoxType>(firBase.getType())) {
-          // Rebox so that lower bounds are correct.
+          // Rebox so that lower bounds and attributes are correct.
           if (baseBoxType.isAssumedRank())
             return builder.create<fir::ReboxAssumedRankOp>(
                 loc, hlfirBaseType, firBase,
                 fir::LowerBoundModifierAttribute::SetToOnes);
+          if (!fir::extractSequenceType(baseBoxType.getEleTy()) &&
+              baseBoxType == hlfirBaseType)
+            return firBase;
           return builder.create<fir::ReboxOp>(loc, hlfirBaseType, firBase,
                                               declareOp.getShape(),
                                               /*slice=*/mlir::Value{});

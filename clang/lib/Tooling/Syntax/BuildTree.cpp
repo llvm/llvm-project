@@ -950,7 +950,6 @@ public:
     case NestedNameSpecifier::Global:
       return syntax::NodeKind::GlobalNameSpecifier;
     case NestedNameSpecifier::Namespace:
-    case NestedNameSpecifier::NamespaceAlias:
     case NestedNameSpecifier::Identifier:
       return syntax::NodeKind::IdentifierNameSpecifier;
     case NestedNameSpecifier::TypeSpec: {

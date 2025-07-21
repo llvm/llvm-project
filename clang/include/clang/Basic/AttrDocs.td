@@ -1750,9 +1750,9 @@ to guard against use of uninitialized memory.
 
 Rather, it is intended for use in "parameter-objects", used to simulate,
 for example, the passing of named parameters.
-The attribute generates a warning when explicit initializers for such
-variables are not provided (this occurs regardless of whether any in-class field
-initializers exist):
+Except inside unevaluated contexts, the attribute generates a warning when
+explicit initializers for such variables are not provided (this occurs
+regardless of whether any in-class field initializers exist):
 
 .. code-block:: c++
 
@@ -2934,7 +2934,7 @@ https://gcc.gnu.org/onlinedocs/gcc/RISC-V-Function-Attributes.html
 https://riscv.org/specifications/privileged-isa/
 The RISC-V Instruction Set Manual Volume II: Privileged Architecture
 Version 1.10.
-https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.7
+https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0
 https://sifive.cdn.prismic.io/sifive/d1984d2b-c9b9-4c91-8de0-d68a5e64fa0f_sifive-interrupt-cookbook-v1p2.pdf
   }];
 }
@@ -8250,6 +8250,21 @@ to be the most optimal for this shader.
 The full documentation is available here: https://microsoft.github.io/DirectX-Specs/d3d/HLSL_SM_6_6_WaveSize.html
 and https://microsoft.github.io/hlsl-specs/proposals/0013-wave-size-range.html
   }];
+}
+
+def VkConstantIdDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``vk::constant_id`` attribute specifies the id for a SPIR-V specialization
+constant. The attribute applies to const global scalar variables. The variable must be initialized with a C++11 constexpr.
+In SPIR-V, the
+variable will be replaced with an `OpSpecConstant` with the given id.
+The syntax is:
+
+.. code-block:: text
+
+  ``[[vk::constant_id(<Id>)]] const T Name = <Init>``
+}];
 }
 
 def RootSignatureDocs : Documentation {

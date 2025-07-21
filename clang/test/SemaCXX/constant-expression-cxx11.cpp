@@ -1413,8 +1413,8 @@ namespace ComplexConstexpr {
   static_assert(t2p[2] == 0.0, ""); // expected-error {{constant expr}} expected-note {{one-past-the-end pointer}}
   static_assert(t2p[3] == 0.0, ""); // expected-error {{constant expr}} expected-note {{cannot refer to element 3 of array of 2 elements}}
   constexpr _Complex float *p = 0; // expected-warning {{'_Complex' is a C99 extension}}
-  constexpr float pr = __real *p; // expected-error {{constant expr}} expected-note {{cannot access real component of null}}
-  constexpr float pi = __imag *p; // expected-error {{constant expr}} expected-note {{cannot access imaginary component of null}}
+  constexpr float pr = __real *p; // expected-error {{constant expr}} expected-note {{dereferencing a null pointer}}
+  constexpr float pi = __imag *p; // expected-error {{constant expr}} expected-note {{dereferencing a null pointer}}
   constexpr const _Complex double *q = &test3 + 1; // expected-warning {{'_Complex' is a C99 extension}}
   constexpr double qr = __real *q; // expected-error {{constant expr}} expected-note {{cannot access real component of pointer past the end}}
   constexpr double qi = __imag *q; // expected-error {{constant expr}} expected-note {{cannot access imaginary component of pointer past the end}}
@@ -1466,7 +1466,7 @@ namespace InstantiateCaseStmt {
 
 namespace ConvertedConstantExpr {
   extern int &m;
-  extern int &n; // pre-cxx23-note 2{{declared here}}
+  extern int &n; // expected-note 2{{declared here}}
 
   constexpr int k = 4;
   int &m = const_cast<int&>(k);
@@ -1475,9 +1475,9 @@ namespace ConvertedConstantExpr {
   // useless note and instead just point to the non-constant subexpression.
   enum class E {
     em = m,
-    en = n, // expected-error {{enumerator value is not a constant expression}} cxx11_20-note {{initializer of 'n' is unknown}}
+    en = n, // expected-error {{enumerator value is not a constant expression}} cxx11_20-note {{initializer of 'n' is unknown}} cxx23-note {{read of non-constexpr variable 'n'}}
     eo = (m + // expected-error {{not a constant expression}}
-          n // cxx11_20-note {{initializer of 'n' is unknown}}
+          n // cxx11_20-note {{initializer of 'n' is unknown}} cxx23-note {{read of non-constexpr variable 'n'}}
           ),
     eq = reinterpret_cast<long>((int*)0) // expected-error {{not a constant expression}} expected-note {{reinterpret_cast}}
   };
@@ -1888,10 +1888,11 @@ namespace PR15884 {
 }
 
 namespace AfterError {
-  constexpr int error() {
+  constexpr int error() { // pre-cxx23-error {{no return statement in constexpr function}}
     return foobar; // expected-error {{undeclared identifier}}
-  }
-  constexpr int k = error(); // expected-error {{constexpr variable 'k' must be initialized by a constant expression}}
+  } // cxx23-note {{control reached end of constexpr function}}
+  constexpr int k = error(); // cxx23-error {{constexpr variable 'k' must be initialized by a constant expression}} \
+                                cxx23-note {{in call to 'error()'}}
 }
 
 namespace std {

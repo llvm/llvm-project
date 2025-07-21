@@ -8,6 +8,7 @@
 ; CHECK: %add.i = add nsw i32 %mul.i, 1, !dbg [[G1R2:!.*]]
 ; CHECK-NEXT: store i32 %add.i, ptr %x.i, align 4, !dbg [[G1R1:!.*]]
 
+; CHECK: distinct !DISubprogram(name: "g", {{.*}}keyInstructions: true)
 ; CHECK: [[G1R2]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 2)
 ; CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
 
@@ -41,11 +42,10 @@ entry:
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !10 = !{!"clang version 19.0.0"}
-!11 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !12, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!11 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !12, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, keyInstructions: true)
 !12 = !DISubroutineType(types: !13)
 !13 = !{}
 !19 = !DILocation(line: 2, scope: !11, atomGroup: 1, atomRank: 2)
 !20 = !DILocation(line: 2, scope: !11, atomGroup: 1, atomRank: 1)
-!23 = distinct !DISubprogram(name: "g", scope: !1, file: !1, line: 4, type: !12, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!23 = distinct !DISubprogram(name: "g", scope: !1, file: !1, line: 4, type: !12, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, keyInstructions: true)
 !24 = !DILocation(line: 5, scope: !23)
-

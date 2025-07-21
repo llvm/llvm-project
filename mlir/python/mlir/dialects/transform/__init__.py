@@ -219,20 +219,20 @@ class YieldOp(YieldOp):
         super().__init__(_get_op_results_or_values(operands), loc=loc, ip=ip)
 
 
+OptionValueTypes = Union[
+    Sequence["OptionValueTypes"], Attribute, Value, Operation, OpView, str, int, bool
+]
+
+
 @_ods_cext.register_operation(_Dialect, replace=True)
 class ApplyRegisteredPassOp(ApplyRegisteredPassOp):
     def __init__(
         self,
         result: Type,
-        pass_name: Union[str, StringAttr],
         target: Union[Operation, Value, OpView],
+        pass_name: Union[str, StringAttr],
         *,
-        options: Optional[
-            Dict[
-                Union[str, StringAttr],
-                Union[Attribute, Value, Operation, OpView],
-            ]
-        ] = None,
+        options: Optional[Dict[Union[str, StringAttr], OptionValueTypes]] = None,
         loc=None,
         ip=None,
     ):
@@ -243,27 +243,37 @@ class ApplyRegisteredPassOp(ApplyRegisteredPassOp):
         context = (loc and loc.context) or Context.current
 
         cur_param_operand_idx = 0
+
+        def option_value_to_attr(value):
+            nonlocal cur_param_operand_idx
+            if isinstance(value, (Value, Operation, OpView)):
+                dynamic_options.append(_get_op_result_or_value(value))
+                cur_param_operand_idx += 1
+                return ParamOperandAttr(cur_param_operand_idx - 1, context)
+            elif isinstance(value, Attribute):
+                return value
+            # The following cases auto-convert Python values to attributes.
+            elif isinstance(value, bool):
+                return BoolAttr.get(value)
+            elif isinstance(value, int):
+                default_int_type = IntegerType.get_signless(64, context)
+                return IntegerAttr.get(default_int_type, value)
+            elif isinstance(value, str):
+                return StringAttr.get(value)
+            elif isinstance(value, Sequence):
+                return ArrayAttr.get([option_value_to_attr(elt) for elt in value])
+            else:
+                raise TypeError(f"Unsupported option type: {type(value)}")
+
         for key, value in options.items() if options is not None else {}:
             if isinstance(key, StringAttr):
                 key = key.value
-
-            if isinstance(value, (Value, Operation, OpView)):
-                dynamic_options.append(_get_op_result_or_value(value))
-                options_dict[key] = ParamOperandAttr(cur_param_operand_idx, context)
-                cur_param_operand_idx += 1
-            elif isinstance(value, Attribute):
-                options_dict[key] = value
-            elif isinstance(value, str):
-                options_dict[key] = StringAttr.get(value)
-            else:
-                raise TypeError(f"Unsupported option type: {type(value)}")
-        if len(options_dict) > 0:
-            print(options_dict, cur_param_operand_idx)
+            options_dict[key] = option_value_to_attr(value)
         super().__init__(
             result,
+            _get_op_result_or_value(target),
             pass_name,
             dynamic_options,
-            target=_get_op_result_or_value(target),
             options=DictAttr.get(options_dict),
             loc=loc,
             ip=ip,
@@ -272,15 +282,10 @@ class ApplyRegisteredPassOp(ApplyRegisteredPassOp):
 
 def apply_registered_pass(
     result: Type,
-    pass_name: Union[str, StringAttr],
     target: Union[Operation, Value, OpView],
+    pass_name: Union[str, StringAttr],
     *,
-    options: Optional[
-        Dict[
-            Union[str, StringAttr],
-            Union[Attribute, Value, Operation, OpView],
-        ]
-    ] = None,
+    options: Optional[Dict[Union[str, StringAttr], OptionValueTypes]] = None,
     loc=None,
     ip=None,
 ) -> Value:

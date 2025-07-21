@@ -205,6 +205,12 @@
 #define PACBTI_LANDING
 #endif
 
+#if defined(__ARM_FEATURE_PAUTH)
+#define PAC_RETURN bxaut r12, lr, sp
+#else
+#define PAC_RETURN aut r12, lr, sp SEPARATOR bx lr
+#endif
+
 #else // !defined(__arm)
 #define DECLARE_FUNC_ENCODING
 #define DEFINE_CODE_STATE

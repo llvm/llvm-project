@@ -70,6 +70,8 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
   AvoidCapabilitiesSet AvoidCaps;
   if (!ST.isShader())
     AvoidCaps.S.insert(SPIRV::Capability::Shader);
+  else
+    AvoidCaps.S.insert(SPIRV::Capability::Kernel);
 
   VersionTuple ReqMinVer = getSymbolicOperandMinVersion(Category, i);
   VersionTuple ReqMaxVer = getSymbolicOperandMaxVersion(Category, i);
@@ -88,8 +90,11 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
   } else if (MinVerOK && MaxVerOK) {
     if (ReqCaps.size() == 1) {
       auto Cap = ReqCaps[0];
-      if (Reqs.isCapabilityAvailable(Cap))
+      if (Reqs.isCapabilityAvailable(Cap)) {
+        ReqExts.append(getSymbolicOperandExtensions(
+            SPIRV::OperandCategory::CapabilityOperand, Cap));
         return {true, {Cap}, ReqExts, ReqMinVer, ReqMaxVer};
+      }
     } else {
       // By SPIR-V specification: "If an instruction, enumerant, or other
       // feature specifies multiple enabling capabilities, only one such
@@ -103,8 +108,11 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
           UseCaps.push_back(Cap);
       for (size_t i = 0, Sz = UseCaps.size(); i < Sz; ++i) {
         auto Cap = UseCaps[i];
-        if (i == Sz - 1 || !AvoidCaps.S.contains(Cap))
+        if (i == Sz - 1 || !AvoidCaps.S.contains(Cap)) {
+          ReqExts.append(getSymbolicOperandExtensions(
+              SPIRV::OperandCategory::CapabilityOperand, Cap));
           return {true, {Cap}, ReqExts, ReqMinVer, ReqMaxVer};
+        }
       }
     }
   }
@@ -594,8 +602,6 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
         } else if (OpCode == SPIRV::OpName || OpCode == SPIRV::OpMemberName) {
           collectOtherInstr(MI, MAI, SPIRV::MB_DebugNames, IS);
         } else if (OpCode == SPIRV::OpEntryPoint) {
-          collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints, IS);
-        } else if (OpCode == SPIRV::OpExecutionMode) {
           collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints, IS);
         } else if (TII->isAliasingInstr(MI)) {
           collectOtherInstr(MI, MAI, SPIRV::MB_AliasingInsts, IS);
@@ -1977,6 +1983,14 @@ static unsigned getFastMathFlags(const MachineInstr &I) {
   return Flags;
 }
 
+static bool isFastMathMathModeAvailable(const SPIRVSubtarget &ST) {
+  if (ST.isKernel())
+    return true;
+  if (ST.getSPIRVVersion() < VersionTuple(1, 2))
+    return false;
+  return ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2);
+}
+
 static void handleMIFlagDecoration(MachineInstr &I, const SPIRVSubtarget &ST,
                                    const SPIRVInstrInfo &TII,
                                    SPIRV::RequirementHandler &Reqs) {
@@ -2000,8 +2014,12 @@ static void handleMIFlagDecoration(MachineInstr &I, const SPIRVSubtarget &ST,
   unsigned FMFlags = getFastMathFlags(I);
   if (FMFlags == SPIRV::FPFastMathMode::None)
     return;
-  Register DstReg = I.getOperand(0).getReg();
-  buildOpDecorate(DstReg, I, TII, SPIRV::Decoration::FPFastMathMode, {FMFlags});
+
+  if (isFastMathMathModeAvailable(ST)) {
+    Register DstReg = I.getOperand(0).getReg();
+    buildOpDecorate(DstReg, I, TII, SPIRV::Decoration::FPFastMathMode,
+                    {FMFlags});
+  }
 }
 
 // Walk all functions and add decorations related to MI flags.

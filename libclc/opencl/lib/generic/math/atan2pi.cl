@@ -8,7 +8,7 @@
 
 #include <clc/clcmacro.h>
 #include <clc/math/clc_atan2pi.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/atan2pi.h>
 
 #define FUNCTION atan2pi
 #define __CLC_BODY <clc/shared/binary_def.inc>

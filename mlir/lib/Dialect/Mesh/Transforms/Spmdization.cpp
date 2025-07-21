@@ -8,7 +8,6 @@
 
 #include "mlir/Dialect/Mesh/Transforms/Spmdization.h"
 
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Mesh/IR/MeshDialect.h"
 #include "mlir/Dialect/Mesh/IR/MeshOps.h"
 #include "mlir/Dialect/Mesh/Interfaces/ShardingInterface.h"
@@ -28,7 +27,6 @@
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
-#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -453,8 +451,8 @@ tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
   auto srcHaloSizes = sourceSharding.getStaticHaloSizes();
   auto tgtHaloSizes = targetSharding.getStaticHaloSizes();
   assert(srcHaloSizes.empty() || srcHaloSizes.size() == tgtHaloSizes.size());
-  assert(((srcHaloSizes.empty() || !ShapedType::isDynamicShape(srcHaloSizes)) &&
-          !ShapedType::isDynamicShape(tgtHaloSizes) &&
+  assert(((srcHaloSizes.empty() || ShapedType::isStaticShape(srcHaloSizes)) &&
+          ShapedType::isStaticShape(tgtHaloSizes) &&
           sourceShard.getType().hasStaticShape()) &&
          "dynamic shapes/halos are not supported yet for mesh-spmdization");
   auto rank = sourceShard.getType().getRank();
