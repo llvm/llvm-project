@@ -555,18 +555,23 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
 
 // Returns true if the section is a data section that's read only and
 // relocatable per its section name.
-static bool isRelRoDataSection(Ctx &ctx, StringRef SectionName) {
-  //  If  -z keep-data-section-prefix is given, '<section>.hot' and
-  //  '<section>.unlikely' is considered a split of '<section>' based on
-  //  hotness. They should share the same section attributes.
+static bool isRelRoDataSection(Ctx &ctx, StringRef secName) {
+  // The section name should start with ".data.rel.ro".
+  if (!secName.consume_front(".data.rel.ro"))
+    return false;
+
+  // If the section name is .data.rel.ro, it is a relocatable read-only data
+  // section.
+  if (secName.empty())
+    return true;
+  //  If  -z keep-data-section-prefix is given, '.data.rel.ro.hot' and
+  //  '.data.rel.ro.unlikely' are considered a split of '.data.rel.ro' based on
+  //  hotness.
   if (ctx.arg.zKeepDataSectionPrefix) {
-    if (SectionName.ends_with(".hot"))
-      SectionName = SectionName.drop_back(4);
-    else if (SectionName.ends_with(".unlikely"))
-      SectionName = SectionName.drop_back(9);
+    return secName == ".hot" || secName == ".unlikely";
   }
 
-  return SectionName == ".data.rel.ro";
+  return false;
 }
 
 // Today's loaders have a feature to make segments read-only after

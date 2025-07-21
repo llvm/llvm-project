@@ -2,21 +2,21 @@
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
 
-# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux input.s -o a.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
 
-# RUN: ld.lld -z keep-data-section-prefix -T linker-script.lds a.o -o a.out
-# RUN: llvm-readelf -l a.out | FileCheck --check-prefixes=SEG,LS %s
-# RUN: llvm-readelf -S a.out | FileCheck %s --check-prefix=CHECK-LS
+# RUN: ld.lld -z keep-data-section-prefix -T x.lds a.o -o out1
+# RUN: llvm-readelf -l out1 | FileCheck --check-prefixes=SEG,LS %s
+# RUN: llvm-readelf -S out1 | FileCheck %s --check-prefix=CHECK-LS
 
-# RUN: ld.lld -z keep-data-section-prefix a.o -o b.out
-# RUN: llvm-readelf -l b.out | FileCheck --check-prefixes=SEG,PRE %s
-# RUN: llvm-readelf -S b.out | FileCheck %s --check-prefix=CHECK-PRE
+# RUN: ld.lld -z keep-data-section-prefix a.o -o out2
+# RUN: llvm-readelf -l out2 | FileCheck --check-prefixes=SEG,PRE %s
+# RUN: llvm-readelf -S out2 | FileCheck %s --check-prefix=CHECK-PRE
 
-# RUN: ld.lld a.o -o c.out
-# RUN: llvm-readelf -l c.out | FileCheck --check-prefixes=SEG,PRE %s
-# RUN: llvm-readelf -S c.out | FileCheck %s --check-prefix=CHECK-PRE
+# RUN: ld.lld a.o -o out3
+# RUN: llvm-readelf -l out3 | FileCheck --check-prefixes=SEG,PRE %s
+# RUN: llvm-readelf -S out3 | FileCheck %s --check-prefix=CHECK-PRE
 
-# RUN: not ld.lld -T linker-script.lds a.o -o d.out 2>&1 | FileCheck %s
+# RUN: not ld.lld -T x.lds a.o 2>&1 | FileCheck %s
 # CHECK: error: section: .relro_padding is not contiguous with other relro sections
 
 ## The first RW PT_LOAD segment has FileSiz 0x126f (0x1000 + 0x200 + 0x60 + 0xf),
@@ -57,7 +57,7 @@
 # CHECK-PRE-NEXT: .data                   PROGBITS        0000000000204438 001438 000001
 # CHECK-PRE-NEXT: .bss                    NOBITS          0000000000204439 001439 000001
 
-#--- linker-script.lds
+#--- x.lds
 SECTIONS {
   .data.rel.ro.hot : { *(.data.rel.ro.hot) }
   .data.rel.ro : { .data.rel.ro }
@@ -65,7 +65,7 @@ SECTIONS {
 } INSERT AFTER .text
 
 
-#--- input.s
+#--- a.s
 .globl _start
 _start:
   ret
