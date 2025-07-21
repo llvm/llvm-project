@@ -11,7 +11,7 @@ Root Signatures
 Overview
 ========
 
-A root signature is used to describe what resources a shader needs to access to
+A root signature is used to describe what resources a shader needs access to
 and how they're organized and bound in the pipeline. The DirectX Container
 (DXContainer) contains a root signature part (RTS0), which stores this
 information in a binary format. To assist with the construction of, and
