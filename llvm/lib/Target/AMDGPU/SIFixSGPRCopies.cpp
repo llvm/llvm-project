@@ -151,7 +151,7 @@ public:
   bool needToBeConvertedToVALU(V2SCopyInfo *I);
   void analyzeVGPRToSGPRCopy(MachineInstr *MI);
   void lowerVGPR2SGPRCopies(MachineFunction &MF);
-  void lowerPysicalSGPRInsts(MachineFunction &MF);
+  void lowerPhysicalSGPRInsts(MachineFunction &MF);
   // Handles copies which source register is:
   // 1. Physical register
   // 2. AGPR
@@ -788,7 +788,7 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
     }
   }
 
-  lowerPysicalSGPRInsts(MF);
+  lowerPhysicalSGPRInsts(MF);
   lowerVGPR2SGPRCopies(MF);
   // Postprocessing
   fixSCCCopies(MF);
@@ -1185,7 +1185,7 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
   }
 }
 
-void SIFixSGPRCopies::lowerPysicalSGPRInsts(MachineFunction &MF) {
+void SIFixSGPRCopies::lowerPhysicalSGPRInsts(MachineFunction &MF) {
   for (auto &Entry : WaterFalls) {
     MachineInstr *MI = Entry.first;
     const V2PhysSCopyInfo &Info = Entry.second;
@@ -1220,7 +1220,7 @@ void SIFixSGPRCopies::lowerPysicalSGPRInsts(MachineFunction &MF) {
   }
   // Avoid some O0 tests where no use of COPY to SGPR
   if (!WaterFalls.empty())
-    for (auto &Entry : V2PhySCopiesToErase)
+    for (MachineInstr *Entry : V2PhySCopiesToErase)
       Entry->eraseFromParent();
 }
 
