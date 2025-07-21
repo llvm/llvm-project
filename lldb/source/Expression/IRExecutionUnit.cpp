@@ -972,7 +972,7 @@ lldb::addr_t IRExecutionUnit::FindSymbol(lldb_private::ConstString name,
       return *addr_or_err;
     } else {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), addr_or_err.takeError(),
-                     "Failed to resolve function call label {1}: {0}",
+                     "Failed to resolve function call label '{1}': {0}",
                      name.GetStringRef());
       return LLDB_INVALID_ADDRESS;
     }
