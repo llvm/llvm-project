@@ -52,8 +52,9 @@ bool VPRecipeBase::mayWriteToMemory() const {
     return cast<VPExpressionRecipe>(this)->mayReadOrWriteMemory();
   case VPInstructionSC:
     return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
+  case VPInterleaveEVLSC:
   case VPInterleaveSC:
-    return cast<VPInterleaveRecipe>(this)->getNumStoreOperands() > 0;
+    return cast<VPInterleaveBase>(this)->getNumStoreOperands() > 0;
   case VPWidenStoreEVLSC:
   case VPWidenStoreSC:
     return true;
@@ -107,6 +108,9 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
     return true;
+  case VPInterleaveEVLSC:
+  case VPInterleaveSC:
+    return cast<VPInterleaveBase>(this)->getNumStoreOperands() == 0;
   case VPReplicateSC:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayReadFromMemory();
@@ -183,6 +187,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
            "underlying instruction has side-effects");
     return false;
   }
+  case VPInterleaveEVLSC:
   case VPInterleaveSC:
     return mayWriteToMemory();
   case VPWidenLoadEVLSC:
@@ -255,7 +260,7 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
   Instruction *UI = nullptr;
   if (auto *S = dyn_cast<VPSingleDefRecipe>(this))
     UI = dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
-  else if (auto *IG = dyn_cast<VPInterleaveRecipe>(this))
+  else if (auto *IG = dyn_cast<VPInterleaveBase>(this))
     UI = IG->getInsertPos();
   else if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(this))
     UI = &WidenMem->getIngredient();
@@ -2221,7 +2226,7 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
   auto ComputeCCH = [&](const VPRecipeBase *R) -> TTI::CastContextHint {
     if (VF.isScalar())
       return TTI::CastContextHint::Normal;
-    if (isa<VPInterleaveRecipe>(R))
+    if (isa<VPInterleaveBase>(R))
       return TTI::CastContextHint::Interleave;
     if (const auto *ReplicateRecipe = dyn_cast<VPReplicateRecipe>(R))
       return ReplicateRecipe->isPredicated() ? TTI::CastContextHint::Masked
@@ -3837,8 +3842,155 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-InstructionCost VPInterleaveRecipe::computeCost(ElementCount VF,
-                                                VPCostContext &Ctx) const {
+void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
+  assert(!State.Lane && "Interleave group being replicated.");
+  assert(State.VF.isScalable() &&
+         "Only support scalable VF for EVL tail-folding.");
+  assert(!NeedsMaskForGaps &&
+         "Masking gaps for scalable vectors is not yet supported.");
+  const InterleaveGroup<Instruction> *Group = IG;
+  Instruction *Instr = Group->getInsertPos();
+
+  // Prepare for the vector type of the interleaved load/store.
+  Type *ScalarTy = getLoadStoreType(Instr);
+  unsigned InterleaveFactor = Group->getFactor();
+  assert(InterleaveFactor <= 8 &&
+         "Unsupported deinterleave/interleave factor for scalable vectors");
+  ElementCount WideVF = State.VF * InterleaveFactor;
+  auto *VecTy = VectorType::get(ScalarTy, WideVF);
+
+  VPValue *BlockInMask = getMask();
+  VPValue *Addr = getAddr();
+  Value *ResAddr = State.get(Addr, VPLane(0));
+  Value *EVL = State.get(getEVL(), VPLane(0));
+  LLVMContext &Ctx = State.Builder.getContext();
+
+  auto CreateGroupMask = [&BlockInMask, &State,
+                          &InterleaveFactor]() -> Value * {
+    auto *ResBlockInMask = State.get(BlockInMask);
+    SmallVector<Value *> Ops(InterleaveFactor, ResBlockInMask);
+    return interleaveVectors(State.Builder, Ops, "interleaved.mask");
+  };
+
+  Value *GroupMask = nullptr;
+  if (BlockInMask)
+    GroupMask = CreateGroupMask();
+  else
+    GroupMask =
+        State.Builder.CreateVectorSplat(WideVF, State.Builder.getTrue());
+
+  const DataLayout &DL = Instr->getDataLayout();
+  // Vectorize the interleaved load group.
+  if (isa<LoadInst>(Instr)) {
+    CallInst *NewLoad = State.Builder.CreateIntrinsic(VecTy, Intrinsic::vp_load,
+                                                      {ResAddr, GroupMask, EVL},
+                                                      nullptr, "wide.vp.load");
+    NewLoad->addParamAttr(0,
+                          Attribute::getWithAlignment(Ctx, Group->getAlign()));
+
+    applyMetadata(*NewLoad);
+    // TODO: Also manage existing metadata using VPIRMetadata.
+    Group->addMetadata(NewLoad);
+
+    ArrayRef<VPValue *> VPDefs = definedValues();
+    // Scalable vectors cannot use arbitrary shufflevectors (only splats),
+    // so must use intrinsics to deinterleave.
+    NewLoad = State.Builder.CreateIntrinsic(
+        Intrinsic::getDeinterleaveIntrinsicID(InterleaveFactor),
+        NewLoad->getType(), NewLoad,
+        /*FMFSource=*/nullptr, "strided.vec");
+
+    for (unsigned I = 0, J = 0; I < InterleaveFactor; ++I) {
+      Instruction *Member = Group->getMember(I);
+      // Skip the gaps in the group.
+      if (!Member)
+        continue;
+
+      Value *StridedVec = State.Builder.CreateExtractValue(NewLoad, I);
+      // If this member has different type, cast the result type.
+      if (Member->getType() != ScalarTy) {
+        VectorType *OtherVTy = VectorType::get(Member->getType(), State.VF);
+        StridedVec =
+            createBitOrPointerCast(State.Builder, StridedVec, OtherVTy, DL);
+      }
+
+      State.set(VPDefs[J], StridedVec);
+      ++J;
+    }
+    return;
+  } // End for interleaved load.
+
+  // The sub vector type for current instruction.
+  auto *SubVT = VectorType::get(ScalarTy, State.VF);
+  // Vectorize the interleaved store group.
+  ArrayRef<VPValue *> StoredValues = getStoredValues();
+  // Collect the stored vector from each member.
+  SmallVector<Value *, 4> StoredVecs;
+  for (unsigned I = 0, StoredIdx = 0; I < InterleaveFactor; I++) {
+    Instruction *Member = Group->getMember(I);
+    // Skip the gaps in the group.
+    if (!Member) {
+      Value *Undef = PoisonValue::get(SubVT);
+      StoredVecs.push_back(Undef);
+      continue;
+    }
+
+    Value *StoredVec = State.get(StoredValues[StoredIdx]);
+    // If this member has different type, cast it to a unified type.
+    if (StoredVec->getType() != SubVT)
+      StoredVec = createBitOrPointerCast(State.Builder, StoredVec, SubVT, DL);
+
+    StoredVecs.push_back(StoredVec);
+    ++StoredIdx;
+  }
+
+  // Interleave all the smaller vectors into one wider vector.
+  Value *IVec = interleaveVectors(State.Builder, StoredVecs, "interleaved.vec");
+  CallInst *NewStore = State.Builder.CreateIntrinsic(
+      Type::getVoidTy(EVL->getContext()), Intrinsic::vp_store,
+      {IVec, ResAddr, GroupMask, EVL});
+  NewStore->addParamAttr(1,
+                         Attribute::getWithAlignment(Ctx, Group->getAlign()));
+
+  applyMetadata(*NewStore);
+  // TODO: Also manage existing metadata using VPIRMetadata.
+  Group->addMetadata(NewStore);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPInterleaveEVLRecipe::print(raw_ostream &O, const Twine &Indent,
+                                  VPSlotTracker &SlotTracker) const {
+  O << Indent << "INTERLEAVE-GROUP with factor " << IG->getFactor() << " at ";
+  IG->getInsertPos()->printAsOperand(O, false);
+  O << ", ";
+  getAddr()->printAsOperand(O, SlotTracker);
+  O << ", ";
+  getEVL()->printAsOperand(O, SlotTracker);
+  if (VPValue *Mask = getMask()) {
+    O << ", ";
+    Mask->printAsOperand(O, SlotTracker);
+  }
+
+  unsigned OpIdx = 0;
+  for (unsigned i = 0; i < IG->getFactor(); ++i) {
+    if (!IG->getMember(i))
+      continue;
+    if (getNumStoreOperands() > 0) {
+      O << "\n" << Indent << "  vp.store ";
+      getOperand(2 + OpIdx)->printAsOperand(O, SlotTracker);
+      O << " to index " << i;
+    } else {
+      O << "\n" << Indent << "  ";
+      getVPValue(OpIdx)->printAsOperand(O, SlotTracker);
+      O << " = vp.load from index " << i;
+    }
+    ++OpIdx;
+  }
+}
+#endif
+
+InstructionCost VPInterleaveBase::computeCost(ElementCount VF,
+                                              VPCostContext &Ctx) const {
   Instruction *InsertPos = getInsertPos();
   // Find the VPValue index of the interleave group. We need to skip gaps.
   unsigned InsertPosIdx = 0;
