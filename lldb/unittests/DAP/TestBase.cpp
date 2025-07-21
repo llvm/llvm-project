@@ -58,10 +58,12 @@ void DAPTestBase::SetUp() {
 }
 
 void DAPTestBase::TearDown() {
-  if (core)
+  if (core) {
     ASSERT_THAT_ERROR(core->discard(), Succeeded());
-  if (binary)
+  }
+  if (binary) {
     ASSERT_THAT_ERROR(binary->discard(), Succeeded());
+  }
 }
 
 void DAPTestBase::SetUpTestSuite() {
