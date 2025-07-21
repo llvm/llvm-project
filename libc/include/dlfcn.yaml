@@ -29,6 +29,29 @@ macros:
     standards:
       - gnu
     macro_value: "0x01000"
+enums:
+  - name: RTLD_DI_LMID
+    value: 1
+  - name: RTLD_DI_LINKMAP
+    value: 2
+  - name: RTLD_DI_CONFIGADDR,
+    value: 3
+  - name: RTLD_DI_SERINFO
+    value: 4
+  - name: RTLD_DI_SERINFOSIZE
+    value: 5
+  - name: RTLD_DI_ORIGIN
+    value: 6
+  - name: RTLD_DI_PROFILENAME
+    value: 7
+  - name: RTLD_DI_PROFILEOUT
+    value: 8
+  - name: RTLD_DI_TLSMODID
+    value: 9
+  - name: RTLD_DI_TLS_DATA
+    value: 10
+  - name: RTLD_DI_PHDR
+    value: 11
 functions:
   - name: dlclose
     standards:
@@ -55,3 +78,11 @@ functions:
     arguments:
       - type: void *__restrict
       - type: const char *__restrict
+  - name: dlinfo
+    standards:
+      - GNUExtensions
+    return_type: int
+    arguments:
+      - type: void *__restrict
+      - type: int
+      - type: void *__restrict
