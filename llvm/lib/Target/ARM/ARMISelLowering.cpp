@@ -20110,9 +20110,9 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     KnownBits KnownLHS = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
 
     unsigned Encoded = Op.getConstantOperandVal(1);
-    unsigned ElemSize = Op.getValueType().getScalarSizeInBits();
+    unsigned ElemSize = Op.getScalarValueSizeInBits();
     uint64_t DecodedVal = ARM_AM::decodeVMOVModImm(Encoded, ElemSize);
-    APInt Imm(Known.getBitWidth(), DecodedVal);
+    APInt Imm(ElemSize, DecodedVal);
 
     Known.One = KnownLHS.One | Imm;
     Known.Zero = KnownLHS.Zero & ~Imm;
@@ -20122,9 +20122,9 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     KnownBits KnownLHS = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
 
     unsigned Encoded = Op.getConstantOperandVal(1);
-    unsigned ElemSize = Op.getValueType().getScalarSizeInBits();
+    unsigned ElemSize = Op.getScalarValueSizeInBits();
     uint64_t DecodedVal = ARM_AM::decodeVMOVModImm(Encoded, ElemSize);
-    APInt Imm(Known.getBitWidth(), DecodedVal);
+    APInt Imm(ElemSize, DecodedVal);
 
     APInt NotImm = ~Imm;
     Known.One = KnownLHS.One & NotImm;
