@@ -736,7 +736,8 @@ bool RISCVOptWInstrs::canonicalizeWSuffixes(MachineFunction &MF,
     for (MachineInstr &MI : MBB) {
       std::optional<unsigned> WOpc;
       std::optional<unsigned> NonWOpc;
-      switch (MI.getOpcode()) {
+      unsigned OrigOpc = MI.getOpcode();
+      switch (OrigOpc) {
       default:
         continue;
       case RISCV::ADDW:
@@ -786,7 +787,10 @@ bool RISCVOptWInstrs::canonicalizeWSuffixes(MachineFunction &MF,
         MadeChange = true;
         continue;
       }
-      if (ShouldPreferW && WOpc.has_value() && hasAllWUsers(MI, ST, MRI)) {
+      // LWU is always converted to LW when possible as 1) LW is compressible
+      // and 2) it helps minimise differences vs RV32.
+      if ((ShouldPreferW || OrigOpc == RISCV::LWU) && WOpc.has_value() &&
+          hasAllWUsers(MI, ST, MRI)) {
         LLVM_DEBUG(dbgs() << "Replacing " << MI);
         MI.setDesc(TII.get(WOpc.value()));
         MI.clearFlag(MachineInstr::MIFlag::NoSWrap);
