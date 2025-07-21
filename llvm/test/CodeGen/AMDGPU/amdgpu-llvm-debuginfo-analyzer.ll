@@ -1,13 +1,25 @@
 ; RUN: llc %s -o %t.o -mcpu=gfx1030 -filetype=obj -O0
-; RUN: llvm-debuginfo-analyzer %t.o --print=all --attribute=all | FileCheck %s
+; RUN: llvm-debuginfo-check %t.o --vars | FileCheck %s
 
 ; This test compiles this module with AMDGPU backend under -O0,
-; and makes sure llvm-debuginfo-analzyer works for it.
+; and makes sure llvm-debuginfo-check works for it.
 
-; Simple checks to make sure llvm-debuginfo-analzyer didn't fail early.
-; CHECK: Logical View:
-; CHECK: {CompileUnit}
-; CHECK: {Code} 's_endpgm'
+; CHECK: FUNCTION: main
+; CHECK: LINE: {{.+}}basic_var.hlsl:7
+; CHECK: LINE: {{.+}}basic_var.hlsl:11
+; CHECK: VAR: dtid: uint3 : reg{{.+}}, piece 4
+; CHECK: LINE: {{.+}}basic_var.hlsl:17
+; CHECK: VAR: dtid: uint3 : reg{{.+}}, piece 4
+; CHECK: LINE: {{.+}}basic_var.hlsl:11
+; CHECK: VAR: dtid: uint3 : reg{{.+}}, piece 4
+; CHECK: LINE: {{.+}}basic_var.hlsl:14
+; CHECK-DAG: VAR: dtid: uint3 : reg{{.+}}, piece 4
+; CHECK: LINE: {{.+}}basic_var.hlsl:17
+; CHECK-DAG: VAR: dtid: uint3 : reg{{.+}}, piece 4
+; CHECK-DAG: VAR: my_var2: float : reg{{.+}}
+; CHECK: LINE: {{.+}}basic_var.hlsl:19
+; CHECK-DAG: VAR: dtid: uint3 : reg{{.+}}, piece 4
+; CHECK-DAG: VAR: my_var2: float : reg{{.+}}
 
 source_filename = "module"
 target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-p10:32:32-p11:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9-p32:32:32-v8:8-v16:16-v32:32-v48:32-v64:32-v80:32-v96:32-v112:32-v128:32-v144:32-v160:32-v176:32-v192:32-v208:32-v224:32-v240:32-v256:32-i1:32-i8:8-i16:16-i32:32-i64:32-f16:16-f32:32-f64:32"
