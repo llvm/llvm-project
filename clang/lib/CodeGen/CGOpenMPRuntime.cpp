@@ -7335,10 +7335,6 @@ private:
     const auto *OASE = dyn_cast<ArraySectionExpr>(AssocExpr);
     const auto *OAShE = dyn_cast<OMPArrayShapingExpr>(AssocExpr);
 
-    // Track info for ATTACH entry generation
-    Address AttachBaseAddr = Address::invalid();
-    Address AttachFirstElemAddr = Address::invalid();
-
     // Find the pointer-attachment base-pointer for the given list, if any.
     std::optional<AttachInfoTy> AttachInfo = findAttachBasePointer(Components);
 
@@ -7785,42 +7781,6 @@ private:
         if (IsFinalArraySection || IsNonContiguous)
           PartialStruct.IsArraySection = true;
 
-        if (Next == CE) {
-          // For now, we are emitting ATTACH entries only when the
-          // "attach-base-pointer" is a vardecl itself, not an expression, or
-          // even a member of a struct.
-          bool IsEligibleForAttachMapping = AttachInfo &&
-                                            AttachInfo->BasePtrDecl &&
-                                            AttachInfo->BasePtrDecl == BaseDecl;
-          // Pointer attachment is needed at map-entering time or for declare
-          // mappers.
-          bool IsMapEnteringConstructOrMapper =
-              isa<const OMPDeclareMapperDecl *>(CurDir) ||
-              isOpenMPTargetMapEnteringDirective(
-                  cast<const OMPExecutableDirective *>(CurDir)
-                      ->getDirectiveKind());
-
-          if (IsEligibleForAttachMapping && IsMapEnteringConstructOrMapper) {
-            AttachBaseAddr =
-                CGF.EmitLValue(AttachInfo->BasePtrExpr).getAddress();
-
-            if (OASE) {
-              AttachFirstElemAddr =
-                  CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/true)
-                      .getAddress();
-            } else if (ASE) {
-              AttachFirstElemAddr = CGF.EmitLValue(ASE).getAddress();
-            } else if (auto *ME =
-                           dyn_cast<MemberExpr>(I->getAssociatedExpression())) {
-              AttachFirstElemAddr = CGF.EmitMemberExpr(ME).getAddress();
-            } else if (auto *UO = dyn_cast<UnaryOperator>(
-                           I->getAssociatedExpression())) {
-              if (UO->getOpcode() == UO_Deref)
-                AttachFirstElemAddr = CGF.EmitLValue(UO).getAddress();
-            }
-          }
-        }
-
         // If we have a final array section, we are done with this expression.
         if (IsFinalArraySection)
           break;
@@ -7846,6 +7806,41 @@ private:
     // record.
     if (!EncounteredME)
       PartialStruct.HasCompleteRecord = true;
+
+    // Track info for ATTACH entry generation
+    Address AttachBaseAddr = Address::invalid();
+    Address AttachFirstElemAddr = Address::invalid();
+    // For now, we are emitting ATTACH entries only when the
+    // "attach-base-pointer" is a vardecl itself, not an expression, or
+    // even a member of a struct.
+    bool IsEligibleForAttachMapping = AttachInfo && AttachInfo->BasePtrDecl &&
+                                      AttachInfo->BasePtrDecl == BaseDecl;
+    // Pointer attachment is needed at map-entering time or for declare
+    // mappers.
+    bool IsMapEnteringConstructOrMapper =
+        isa<const OMPDeclareMapperDecl *>(CurDir) ||
+        isOpenMPTargetMapEnteringDirective(
+            cast<const OMPExecutableDirective *>(CurDir)->getDirectiveKind());
+
+    if (IsEligibleForAttachMapping && IsMapEnteringConstructOrMapper) {
+      AttachBaseAddr = CGF.EmitLValue(AttachInfo->BasePtrExpr).getAddress();
+
+      if (auto *OASE = dyn_cast<ArraySectionExpr>(
+              Components.rbegin()->getAssociatedExpression())) {
+        AttachFirstElemAddr =
+            CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/true).getAddress();
+      } else if (auto *ASE = dyn_cast<ArraySubscriptExpr>(
+                     Components.rbegin()->getAssociatedExpression())) {
+        AttachFirstElemAddr = CGF.EmitLValue(ASE).getAddress();
+      } else if (auto *ME = dyn_cast<MemberExpr>(
+                     Components.rbegin()->getAssociatedExpression())) {
+        AttachFirstElemAddr = CGF.EmitMemberExpr(ME).getAddress();
+      } else if (auto *UO = dyn_cast<UnaryOperator>(
+                     Components.rbegin()->getAssociatedExpression())) {
+        if (UO->getOpcode() == UO_Deref)
+          AttachFirstElemAddr = CGF.EmitLValue(UO).getAddress();
+      }
+    }
 
     // Handle ATTACH entries: delay if PartialStruct is being populated,
     // otherwise add immediately.
