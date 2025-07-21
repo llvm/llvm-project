@@ -253,6 +253,8 @@ public:
       const RecordDecl *RD = RT->getDecl()->getDefinition();
       assert(RD && "Referred record has no definition");
       for (const auto *I : RD->fields()) {
+        if (I->isUnnamedBitField())
+          continue;
         const FieldRegion *FR = MrMgr.getFieldRegion(I, R);
         FieldChain.push_back(I);
         T = I->getType();

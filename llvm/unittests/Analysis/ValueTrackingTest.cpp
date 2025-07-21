@@ -16,6 +16,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -909,16 +910,16 @@ TEST(ValueTracking, propagatesPoison) {
       {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 0},
       {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 1},
       {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 2},
-      {false, "call float @llvm.sqrt.f32(float %fx)", 0},
-      {false, "call float @llvm.powi.f32.i32(float %fx, i32 %x)", 0},
-      {false, "call float @llvm.sin.f32(float %fx)", 0},
-      {false, "call float @llvm.cos.f32(float %fx)", 0},
-      {false, "call float @llvm.pow.f32(float %fx, float %fy)", 0},
-      {false, "call float @llvm.exp.f32(float %fx)", 0},
-      {false, "call float @llvm.exp2.f32(float %fx)", 0},
-      {false, "call float @llvm.log.f32(float %fx)", 0},
-      {false, "call float @llvm.log10.f32(float %fx)", 0},
-      {false, "call float @llvm.log2.f32(float %fx)", 0},
+      {true, "call float @llvm.sqrt.f32(float %fx)", 0},
+      {true, "call float @llvm.powi.f32.i32(float %fx, i32 %x)", 0},
+      {true, "call float @llvm.sin.f32(float %fx)", 0},
+      {true, "call float @llvm.cos.f32(float %fx)", 0},
+      {true, "call float @llvm.pow.f32(float %fx, float %fy)", 0},
+      {true, "call float @llvm.exp.f32(float %fx)", 0},
+      {true, "call float @llvm.exp2.f32(float %fx)", 0},
+      {true, "call float @llvm.log.f32(float %fx)", 0},
+      {true, "call float @llvm.log10.f32(float %fx)", 0},
+      {true, "call float @llvm.log2.f32(float %fx)", 0},
       {false, "call float @llvm.fma.f32(float %fx, float %fx, float %fy)", 0},
       {false, "call float @llvm.fabs.f32(float %fx)", 0},
       {false, "call float @llvm.minnum.f32(float %fx, float %fy)", 0},
@@ -926,17 +927,17 @@ TEST(ValueTracking, propagatesPoison) {
       {false, "call float @llvm.minimum.f32(float %fx, float %fy)", 0},
       {false, "call float @llvm.maximum.f32(float %fx, float %fy)", 0},
       {false, "call float @llvm.copysign.f32(float %fx, float %fy)", 0},
-      {false, "call float @llvm.floor.f32(float %fx)", 0},
-      {false, "call float @llvm.ceil.f32(float %fx)", 0},
-      {false, "call float @llvm.trunc.f32(float %fx)", 0},
-      {false, "call float @llvm.rint.f32(float %fx)", 0},
-      {false, "call float @llvm.nearbyint.f32(float %fx)", 0},
-      {false, "call float @llvm.round.f32(float %fx)", 0},
-      {false, "call float @llvm.roundeven.f32(float %fx)", 0},
+      {true, "call float @llvm.floor.f32(float %fx)", 0},
+      {true, "call float @llvm.ceil.f32(float %fx)", 0},
+      {true, "call float @llvm.trunc.f32(float %fx)", 0},
+      {true, "call float @llvm.rint.f32(float %fx)", 0},
+      {true, "call float @llvm.nearbyint.f32(float %fx)", 0},
+      {true, "call float @llvm.round.f32(float %fx)", 0},
+      {true, "call float @llvm.roundeven.f32(float %fx)", 0},
       {false, "call i32 @llvm.lround.f32(float %fx)", 0},
       {false, "call i64 @llvm.llround.f32(float %fx)", 0},
-      {false, "call i32 @llvm.lrint.f32(float %fx)", 0},
-      {false, "call i64 @llvm.llrint.f32(float %fx)", 0},
+      {true, "call i32 @llvm.lrint.f32(float %fx)", 0},
+      {true, "call i64 @llvm.llrint.f32(float %fx)", 0},
       {false, "call float @llvm.fmuladd.f32(float %fx, float %fx, float %fy)",
        0}};
 
@@ -1255,6 +1256,58 @@ TEST_F(ValueTrackingTest, computePtrAlignment) {
   EXPECT_EQ(getKnownAlignment(A, DL, CxtI, &AC, &DT), Align(1));
   EXPECT_EQ(getKnownAlignment(A, DL, CxtI2, &AC, &DT), Align(1));
   EXPECT_EQ(getKnownAlignment(A, DL, CxtI3, &AC, &DT), Align(16));
+}
+
+TEST_F(ValueTrackingTest, MatchBinaryIntrinsicRecurrenceUMax) {
+  auto M = parseModule(R"(
+    define i8 @test(i8 %a, i8 %b) {
+    entry:
+      br label %loop
+    loop:
+      %iv = phi i8 [ %iv.next, %loop ], [ 0, %entry ]
+      %umax.acc = phi i8 [ %umax, %loop ], [ %a, %entry ]
+      %umax = call i8 @llvm.umax.i8(i8 %umax.acc, i8 %b)
+      %iv.next = add nuw i8 %iv, 1
+      %cmp = icmp ult i8 %iv.next, 10
+      br i1 %cmp, label %loop, label %exit
+    exit:
+      ret i8 %umax
+    }
+  )");
+
+  auto *F = M->getFunction("test");
+  auto *II = &cast<IntrinsicInst>(findInstructionByName(F, "umax"));
+  auto *UMaxAcc = &cast<PHINode>(findInstructionByName(F, "umax.acc"));
+  PHINode *PN;
+  Value *Init, *OtherOp;
+  EXPECT_TRUE(matchSimpleBinaryIntrinsicRecurrence(II, PN, Init, OtherOp));
+  EXPECT_EQ(UMaxAcc, PN);
+  EXPECT_EQ(F->getArg(0), Init);
+  EXPECT_EQ(F->getArg(1), OtherOp);
+}
+
+TEST_F(ValueTrackingTest, MatchBinaryIntrinsicRecurrenceNegativeFSHR) {
+  auto M = parseModule(R"(
+    define i8 @test(i8 %a, i8 %b, i8 %c) {
+    entry:
+      br label %loop
+    loop:
+      %iv = phi i8 [ %iv.next, %loop ], [ 0, %entry ]
+      %fshr.acc = phi i8 [ %fshr, %loop ], [ %a, %entry ]
+      %fshr = call i8 @llvm.fshr.i8(i8 %fshr.acc, i8 %b, i8 %c)
+      %iv.next = add nuw i8 %iv, 1
+      %cmp = icmp ult i8 %iv.next, 10
+      br i1 %cmp, label %loop, label %exit
+    exit:
+      ret i8 %fshr
+    }
+  )");
+
+  auto *F = M->getFunction("test");
+  auto *II = &cast<IntrinsicInst>(findInstructionByName(F, "fshr"));
+  PHINode *PN;
+  Value *Init, *OtherOp;
+  EXPECT_FALSE(matchSimpleBinaryIntrinsicRecurrence(II, PN, Init, OtherOp));
 }
 
 TEST_F(ComputeKnownBitsTest, ComputeKnownBits) {

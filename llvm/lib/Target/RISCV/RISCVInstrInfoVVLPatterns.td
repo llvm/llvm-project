@@ -653,7 +653,7 @@ let HasOneUse = 1 in {
                                                node:$E),
                                           (riscv_or_vl node:$A, node:$B, node:$C,
                                                        node:$D, node:$E), [{
-    return orIsAdd(N);
+    return orDisjoint(N);
   }]>;
   def riscv_sub_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
                                          node:$E),
@@ -2580,7 +2580,7 @@ foreach vti = AllFloatVectors in {
   }
 }
 
-foreach fvti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
+foreach fvti = AllFloatVectors in {
   // Floating-point vselects:
   // 11.15. Vector Integer Merge Instructions
   // 13.15. Vector Floating-Point Merge Instruction
@@ -2630,7 +2630,7 @@ foreach fvti = AllFloatVectors in {
   }
 }
 
-foreach fvti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
+foreach fvti = AllFloatVectors in {
   defvar ivti = GetIntVTypeInfo<fvti>.Vti;
   let Predicates = GetVTypePredicates<ivti>.Predicates in {
     // 13.16. Vector Floating-Point Move Instruction
@@ -2954,7 +2954,7 @@ foreach vti = NoGroupFloatVectors in {
   }
 }
 
-foreach vti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
+foreach vti = AllFloatVectors in {
   defvar ivti = GetIntVTypeInfo<vti>.Vti;
   let Predicates = GetVTypePredicates<ivti>.Predicates in {
     def : Pat<(vti.Vector

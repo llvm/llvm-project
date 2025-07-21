@@ -340,9 +340,8 @@ public:
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
 
-  static bool classifySymbolRef(const MCExpr *Expr,
-                                AArch64MCExpr::Specifier &ELFSpec,
-                                AArch64MCExpr::Specifier &DarwinSpec,
+  static bool classifySymbolRef(const MCExpr *Expr, AArch64::Specifier &ELFSpec,
+                                AArch64::Specifier &DarwinSpec,
                                 int64_t &Addend);
 };
 
@@ -891,8 +890,8 @@ public:
   }
 
   bool isSymbolicUImm12Offset(const MCExpr *Expr) const {
-    AArch64MCExpr::Specifier ELFSpec;
-    AArch64MCExpr::Specifier DarwinSpec;
+    AArch64::Specifier ELFSpec;
+    AArch64::Specifier DarwinSpec;
     int64_t Addend;
     if (!AArch64AsmParser::classifySymbolRef(Expr, ELFSpec, DarwinSpec,
                                              Addend)) {
@@ -1007,8 +1006,8 @@ public:
       Expr = getImm();
     }
 
-    AArch64MCExpr::Specifier ELFSpec;
-    AArch64MCExpr::Specifier DarwinSpec;
+    AArch64::Specifier ELFSpec;
+    AArch64::Specifier DarwinSpec;
     int64_t Addend;
     if (AArch64AsmParser::classifySymbolRef(Expr, ELFSpec, DarwinSpec,
                                             Addend)) {
@@ -1115,12 +1114,12 @@ public:
     return (Val >= -((1<<(N-1)) << 2) && Val <= (((1<<(N-1))-1) << 2));
   }
 
-  bool isMovWSymbol(ArrayRef<AArch64MCExpr::Specifier> AllowedModifiers) const {
+  bool isMovWSymbol(ArrayRef<AArch64::Specifier> AllowedModifiers) const {
     if (!isImm())
       return false;
 
-    AArch64MCExpr::Specifier ELFSpec;
-    AArch64MCExpr::Specifier DarwinSpec;
+    AArch64::Specifier ELFSpec;
+    AArch64::Specifier DarwinSpec;
     int64_t Addend;
     if (!AArch64AsmParser::classifySymbolRef(getImm(), ELFSpec, DarwinSpec,
                                              Addend)) {
@@ -2295,7 +2294,7 @@ public:
     Inst.addOperand(MCOperand::createImm((MCE->getValue() - 90) / 180));
   }
 
-  void print(raw_ostream &OS) const override;
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override;
 
   static std::unique_ptr<AArch64Operand>
   CreateToken(StringRef Str, SMLoc S, MCContext &Ctx, bool IsSuffix = false) {
@@ -2585,7 +2584,7 @@ public:
 
 } // end anonymous namespace.
 
-void AArch64Operand::print(raw_ostream &OS) const {
+void AArch64Operand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   switch (Kind) {
   case k_FPImm:
     OS << "<fpimm " << getFPImm().bitcastToAPInt().getZExtValue();
@@ -2602,12 +2601,12 @@ void AArch64Operand::print(raw_ostream &OS) const {
     break;
   }
   case k_Immediate:
-    OS << *getImm();
+    MAI.printExpr(OS, *getImm());
     break;
   case k_ShiftedImm: {
     unsigned Shift = getShiftedImmShift();
     OS << "<shiftedimm ";
-    OS << *getShiftedImmVal();
+    MAI.printExpr(OS, *getShiftedImmVal());
     OS << ", lsl #" << AArch64_AM::getShiftValue(Shift) << ">";
     break;
   }
@@ -3293,14 +3292,15 @@ ParseStatus AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
   if (parseSymbolicImmVal(Expr))
     return ParseStatus::Failure;
 
-  AArch64MCExpr::Specifier ELFSpec;
-  AArch64MCExpr::Specifier DarwinSpec;
+  AArch64::Specifier ELFSpec;
+  AArch64::Specifier DarwinSpec;
   int64_t Addend;
   if (classifySymbolRef(Expr, ELFSpec, DarwinSpec, Addend)) {
     if (DarwinSpec == AArch64::S_None && ELFSpec == AArch64::S_INVALID) {
       // No modifier was specified at all; this is the syntax for an ELF basic
       // ADRP relocation (unfortunately).
-      Expr = MCSpecifierExpr::create(Expr, AArch64::S_ABS_PAGE, getContext());
+      Expr =
+          MCSpecifierExpr::create(Expr, AArch64::S_ABS_PAGE, getContext(), S);
     } else if ((DarwinSpec == AArch64::S_MACHO_GOTPAGE ||
                 DarwinSpec == AArch64::S_MACHO_TLVPPAGE) &&
                Addend != 0) {
@@ -3345,14 +3345,14 @@ ParseStatus AArch64AsmParser::tryParseAdrLabel(OperandVector &Operands) {
   if (parseSymbolicImmVal(Expr))
     return ParseStatus::Failure;
 
-  AArch64MCExpr::Specifier ELFSpec;
-  AArch64MCExpr::Specifier DarwinSpec;
+  AArch64::Specifier ELFSpec;
+  AArch64::Specifier DarwinSpec;
   int64_t Addend;
   if (classifySymbolRef(Expr, ELFSpec, DarwinSpec, Addend)) {
     if (DarwinSpec == AArch64::S_None && ELFSpec == AArch64::S_INVALID) {
       // No modifier was specified at all; this is the syntax for an ELF basic
       // ADR relocation (unfortunately).
-      Expr = MCSpecifierExpr::create(Expr, AArch64::S_ABS, getContext());
+      Expr = MCSpecifierExpr::create(Expr, AArch64::S_ABS, getContext(), S);
     } else if (ELFSpec != AArch64::S_GOT_AUTH_PAGE) {
       // For tiny code model, we use :got_auth: operator to fill 21-bit imm of
       // adr. It's not actually GOT entry page address but the GOT address
@@ -3742,8 +3742,10 @@ static const struct Extension {
     {"sve2", {AArch64::FeatureSVE2}},
     {"sve-aes", {AArch64::FeatureSVEAES}},
     {"sve2-aes", {AArch64::FeatureAliasSVE2AES, AArch64::FeatureSVEAES}},
-    {"sve2-sm4", {AArch64::FeatureSVE2SM4}},
-    {"sve2-sha3", {AArch64::FeatureSVE2SHA3}},
+    {"sve-sm4", {AArch64::FeatureSVESM4}},
+    {"sve2-sm4", {AArch64::FeatureAliasSVE2SM4, AArch64::FeatureSVESM4}},
+    {"sve-sha3", {AArch64::FeatureSVESHA3}},
+    {"sve2-sha3", {AArch64::FeatureAliasSVE2SHA3, AArch64::FeatureSVESHA3}},
     {"sve-bitperm", {AArch64::FeatureSVEBitPerm}},
     {"sve2-bitperm",
      {AArch64::FeatureAliasSVE2BitPerm, AArch64::FeatureSVEBitPerm,
@@ -4393,8 +4395,8 @@ bool AArch64AsmParser::parseRegister(OperandVector &Operands) {
 
 bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
   bool HasELFModifier = false;
-  AArch64MCExpr::Specifier RefKind;
-
+  AArch64::Specifier RefKind;
+  SMLoc Loc = getLexer().getLoc();
   if (parseOptionalToken(AsmToken::Colon)) {
     HasELFModifier = true;
 
@@ -4402,7 +4404,7 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
       return TokError("expect relocation specifier in operand after ':'");
 
     std::string LowerCase = getTok().getIdentifier().lower();
-    RefKind = StringSwitch<AArch64MCExpr::Specifier>(LowerCase)
+    RefKind = StringSwitch<AArch64::Specifier>(LowerCase)
                   .Case("lo12", AArch64::S_LO12)
                   .Case("abs_g3", AArch64::S_ABS_G3)
                   .Case("abs_g2", AArch64::S_ABS_G2)
@@ -4468,7 +4470,7 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
     return true;
 
   if (HasELFModifier)
-    ImmVal = MCSpecifierExpr::create(ImmVal, RefKind, getContext());
+    ImmVal = MCSpecifierExpr::create(ImmVal, RefKind, getContext(), Loc);
 
   SMLoc EndLoc;
   if (getContext().getAsmInfo()->hasSubsectionsViaSymbols()) {
@@ -5836,8 +5838,8 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
     // some slight duplication here.
     if (Inst.getOperand(2).isExpr()) {
       const MCExpr *Expr = Inst.getOperand(2).getExpr();
-      AArch64MCExpr::Specifier ELFSpec;
-      AArch64MCExpr::Specifier DarwinSpec;
+      AArch64::Specifier ELFSpec;
+      AArch64::Specifier DarwinSpec;
       int64_t Addend;
       if (classifySymbolRef(Expr, ELFSpec, DarwinSpec, Addend)) {
 
@@ -7404,7 +7406,7 @@ bool AArch64AsmParser::parseDirectiveLOH(StringRef IDVal, SMLoc Loc) {
   if (parseEOL())
     return true;
 
-  getStreamer().emitLOHDirective((MCLOHType)Kind, Args);
+  getStreamer().emitLOHDirective(Kind, Args);
   return false;
 }
 
@@ -8211,7 +8213,7 @@ bool AArch64AsmParser::parseDataExpr(const MCExpr *&Res) {
     const MCExpr *Term;
     if (getParser().parsePrimaryExpr(Term, EndLoc, nullptr))
       return true;
-    Res = MCBinaryExpr::create(*Opcode, Res, Term, getContext());
+    Res = MCBinaryExpr::create(*Opcode, Res, Term, getContext(), Res->getLoc());
   }
   return false;
 }
@@ -8265,13 +8267,13 @@ bool AArch64AsmParser::parseAuthExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     return true;
 
   Res = AArch64AuthMCExpr::create(Res, Discriminator, *KeyIDOrNone,
-                                  UseAddressDiversity, Ctx);
+                                  UseAddressDiversity, Ctx, Res->getLoc());
   return false;
 }
 
 bool AArch64AsmParser::classifySymbolRef(const MCExpr *Expr,
-                                         AArch64MCExpr::Specifier &ELFSpec,
-                                         AArch64MCExpr::Specifier &DarwinSpec,
+                                         AArch64::Specifier &ELFSpec,
+                                         AArch64::Specifier &DarwinSpec,
                                          int64_t &Addend) {
   ELFSpec = AArch64::S_INVALID;
   DarwinSpec = AArch64::S_None;
@@ -8285,7 +8287,7 @@ bool AArch64AsmParser::classifySymbolRef(const MCExpr *Expr,
   const MCSymbolRefExpr *SE = dyn_cast<MCSymbolRefExpr>(Expr);
   if (SE) {
     // It's a simple symbol reference with no addend.
-    DarwinSpec = AArch64MCExpr::Specifier(SE->getKind());
+    DarwinSpec = AArch64::Specifier(SE->getKind());
     return true;
   }
 
@@ -8301,7 +8303,7 @@ bool AArch64AsmParser::classifySymbolRef(const MCExpr *Expr,
     return false;
 
   if (Res.getAddSym())
-    DarwinSpec = AArch64MCExpr::Specifier(Res.getSpecifier());
+    DarwinSpec = AArch64::Specifier(Res.getSpecifier());
   Addend = Res.getConstant();
 
   // It's some symbol reference + a constant addend, but really

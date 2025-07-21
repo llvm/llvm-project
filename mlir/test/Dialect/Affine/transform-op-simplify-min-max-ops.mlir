@@ -1,4 +1,4 @@
-// RUN: mlir-opt  %s  --transform-interpreter | FileCheck %s
+// RUN: mlir-opt  %s  --transform-interpreter --split-input-file | FileCheck %s
 
 // CHECK-DAG: #[[MAP_0:.*]] = affine_map<()[s0] -> (32, s0)>
 // CHECK-DAG: #[[MAP_1:.*]] = affine_map<()[s0, s1] -> (s1, s0)>

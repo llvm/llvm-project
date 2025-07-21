@@ -1676,8 +1676,10 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         SubLT.second == MVT::f32 && (Index == 0 || ST->hasSSE41()))
       return 1;
 
-    // If the insertion isn't aligned, treat it like a 2-op shuffle.
-    Kind = TTI::SK_PermuteTwoSrc;
+    // If the insertion is the lowest subvector then it will be blended
+    // otherwise treat it like a 2-op shuffle.
+    Kind =
+        (Index == 0 && LT.first == 1) ? TTI::SK_Select : TTI::SK_PermuteTwoSrc;
   }
 
   // Handle some common (illegal) sub-vector types as they are often very cheap
@@ -5441,7 +5443,8 @@ X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
 
   else if (LT.first * Ty.getVectorNumElements() > NumElem) {
     auto *NewMaskTy = FixedVectorType::get(MaskTy->getElementType(),
-                                           Ty.getVectorNumElements());
+                                           (unsigned)LT.first.getValue() *
+                                               Ty.getVectorNumElements());
     // Expanding requires fill mask with zeroes
     Cost += getShuffleCost(TTI::SK_InsertSubvector, NewMaskTy, NewMaskTy, {},
                            CostKind, 0, MaskTy);

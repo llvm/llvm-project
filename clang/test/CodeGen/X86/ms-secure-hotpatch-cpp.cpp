@@ -3,7 +3,7 @@
 // This verifies that hotpatch function attributes are correctly propagated when compiling directly to OBJ,
 // and that name mangling works as expected.
 //
-// RUN: %clang_cl -c --target=x86_64-windows-msvc -O2 /Z7 -fms-secure-hotpatch-functions-list=?this_gets_hotpatched@@YAHXZ /Fo%t.obj %s
+// RUN: %clang_cl -c --target=x86_64-windows-msvc -O2 /Z7 -fms-secure-hotpatch-functions-list=?this_gets_hotpatched@@YAHXZ /Fo%t.obj -- %s
 // RUN: llvm-readobj --codeview %t.obj | FileCheck %s
 
 void this_might_have_side_effects();

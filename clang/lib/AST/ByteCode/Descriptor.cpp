@@ -162,6 +162,8 @@ static void initField(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
   Desc->IsConst = IsConst || D->IsConst;
   Desc->IsFieldMutable = IsMutable || D->IsMutable;
   Desc->IsVolatile = IsVolatile || D->IsVolatile;
+  // True if this field is const AND the parent is mutable.
+  Desc->IsConstInMutable = Desc->IsConst && IsMutable;
 
   if (auto Fn = D->CtorFn)
     Fn(B, Ptr + FieldOffset, Desc->IsConst, Desc->IsFieldMutable,
@@ -500,6 +502,21 @@ SourceInfo Descriptor::getLoc() const {
   if (const auto *E = dyn_cast<const Expr *>(Source))
     return SourceInfo(E);
   llvm_unreachable("Invalid descriptor type");
+}
+
+bool Descriptor::hasTrivialDtor() const {
+  if (isPrimitive() || isPrimitiveArray() || isDummy())
+    return true;
+
+  if (isRecord()) {
+    assert(ElemRecord);
+    const CXXDestructorDecl *Dtor = ElemRecord->getDestructor();
+    return !Dtor || Dtor->isTrivial();
+  }
+
+  // Composite arrays.
+  assert(ElemDesc);
+  return ElemDesc->hasTrivialDtor();
 }
 
 bool Descriptor::isUnion() const { return isRecord() && ElemRecord->isUnion(); }

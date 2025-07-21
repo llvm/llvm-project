@@ -1041,19 +1041,19 @@ createMutableProperties(Fortran::lower::AbstractConverter &converter,
     baseAddrTy = boxType.getEleTy();
   // Allocate and set a variable to hold the address.
   // It will be set to null in setUnallocatedStatus.
-  mutableProperties.addr = builder.allocateLocal(
-      loc, baseAddrTy, name + ".addr", "",
-      /*shape=*/std::nullopt, /*typeparams=*/std::nullopt);
+  mutableProperties.addr =
+      builder.allocateLocal(loc, baseAddrTy, name + ".addr", "",
+                            /*shape=*/{}, /*typeparams=*/{});
   // Allocate variables to hold lower bounds and extents.
   int rank = sym.Rank();
   mlir::Type idxTy = builder.getIndexType();
   for (decltype(rank) i = 0; i < rank; ++i) {
-    mlir::Value lboundVar = builder.allocateLocal(
-        loc, idxTy, name + ".lb" + std::to_string(i), "",
-        /*shape=*/std::nullopt, /*typeparams=*/std::nullopt);
-    mlir::Value extentVar = builder.allocateLocal(
-        loc, idxTy, name + ".ext" + std::to_string(i), "",
-        /*shape=*/std::nullopt, /*typeparams=*/std::nullopt);
+    mlir::Value lboundVar =
+        builder.allocateLocal(loc, idxTy, name + ".lb" + std::to_string(i), "",
+                              /*shape=*/{}, /*typeparams=*/{});
+    mlir::Value extentVar =
+        builder.allocateLocal(loc, idxTy, name + ".ext" + std::to_string(i), "",
+                              /*shape=*/{}, /*typeparams=*/{});
     mutableProperties.lbounds.emplace_back(lboundVar);
     mutableProperties.extents.emplace_back(extentVar);
   }
@@ -1068,10 +1068,9 @@ createMutableProperties(Fortran::lower::AbstractConverter &converter,
     if (record.getNumLenParams() != 0)
       TODO(loc, "deferred length type parameters.");
   if (fir::isa_char(eleTy) && nonDeferredParams.empty()) {
-    mlir::Value lenVar =
-        builder.allocateLocal(loc, builder.getCharacterLengthType(),
-                              name + ".len", "", /*shape=*/std::nullopt,
-                              /*typeparams=*/std::nullopt);
+    mlir::Value lenVar = builder.allocateLocal(
+        loc, builder.getCharacterLengthType(), name + ".len", "", /*shape=*/{},
+        /*typeparams=*/{});
     mutableProperties.deferredParams.emplace_back(lenVar);
   }
   return mutableProperties;

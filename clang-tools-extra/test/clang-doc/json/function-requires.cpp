@@ -1,6 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --extra-arg -std=c++20 --output=%t --format=json --executor=standalone %s
-// RUN: FileCheck %s < %t/GlobalNamespace/index.json
+// RUN: FileCheck %s < %t/index.json
 
 template<typename T>
 concept Incrementable = requires(T x) {
@@ -23,7 +23,7 @@ template<Incrementable T> Incrementable auto incrementTwo(T t);
 // CHECK-NEXT:        }
 // CHECK-NEXT:      ],
 // CHECK-NEXT:      "ReturnType": {
-// CHECK-NEXT:        "IsBuiltIn": false,
+// CHECK-NEXT:        "IsBuiltIn": true,
 // CHECK-NEXT:        "IsTemplate": false,
 // CHECK-NEXT:        "Name": "void",
 // CHECK-NEXT:        "QualName": "void",

@@ -1978,14 +1978,13 @@ static at::StorageToVarsMap collectEscapedLocals(const DataLayout &DL,
       continue;
 
     // Find all local variables associated with the backing storage.
-    auto CollectAssignsForStorage = [&](auto *DbgAssign) {
+    auto CollectAssignsForStorage = [&](DbgVariableRecord *DbgAssign) {
       // Skip variables from inlined functions - they are not local variables.
       if (DbgAssign->getDebugLoc().getInlinedAt())
         return;
       LLVM_DEBUG(errs() << " > DEF : " << *DbgAssign << "\n");
       EscapedLocals[Base].insert(at::VarRecord(DbgAssign));
     };
-    for_each(at::getAssignmentMarkers(Base), CollectAssignsForStorage);
     for_each(at::getDVRAssignmentMarkers(Base), CollectAssignsForStorage);
   }
   return EscapedLocals;
@@ -2233,7 +2232,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
 // profile. Note: we only update the "name" and "index" operands in the
 // instrumentation intrinsics, we leave the hash and total nr of indices as-is,
 // it's not worth updating those.
-static const std::pair<std::vector<int64_t>, std::vector<int64_t>>
+static std::pair<std::vector<int64_t>, std::vector<int64_t>>
 remapIndices(Function &Caller, BasicBlock *StartBB,
              PGOContextualProfile &CtxProf, uint32_t CalleeCounters,
              uint32_t CalleeCallsites) {
@@ -2336,16 +2335,14 @@ remapIndices(Function &Caller, BasicBlock *StartBB,
           Worklist.push_back(Succ);
   }
 
-  assert(
-      llvm::all_of(CalleeCounterMap, [&](const auto &V) { return V != 0; }) &&
-      "Counter index mapping should be either to -1 or to non-zero index, "
-      "because the 0 "
-      "index corresponds to the entry BB of the caller");
-  assert(
-      llvm::all_of(CalleeCallsiteMap, [&](const auto &V) { return V != 0; }) &&
-      "Callsite index mapping should be either to -1 or to non-zero index, "
-      "because there should have been at least a callsite - the inlined one "
-      "- which would have had a 0 index.");
+  assert(!llvm::is_contained(CalleeCounterMap, 0) &&
+         "Counter index mapping should be either to -1 or to non-zero index, "
+         "because the 0 "
+         "index corresponds to the entry BB of the caller");
+  assert(!llvm::is_contained(CalleeCallsiteMap, 0) &&
+         "Callsite index mapping should be either to -1 or to non-zero index, "
+         "because there should have been at least a callsite - the inlined one "
+         "- which would have had a 0 index.");
 
   return {std::move(CalleeCounterMap), std::move(CalleeCallsiteMap)};
 }

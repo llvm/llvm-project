@@ -35,7 +35,7 @@ typedef std::pair<std::vector<unsigned char>, std::vector<const char *>>
 static bool PrintInsts(const MCDisassembler &DisAsm, const ByteArrayTy &Bytes,
                        SourceMgr &SM, MCStreamer &Streamer, bool InAtomicBlock,
                        const MCSubtargetInfo &STI) {
-  ArrayRef<uint8_t> Data(Bytes.first.data(), Bytes.first.size());
+  ArrayRef<uint8_t> Data(Bytes.first);
 
   // Disassemble it to strings.
   uint64_t Size;
@@ -45,7 +45,11 @@ static bool PrintInsts(const MCDisassembler &DisAsm, const ByteArrayTy &Bytes,
     MCInst Inst;
 
     MCDisassembler::DecodeStatus S;
-    S = DisAsm.getInstruction(Inst, Size, Data.slice(Index), Index, nulls());
+    if (STI.getTargetTriple().getArch() == Triple::hexagon)
+      S = DisAsm.getInstructionBundle(Inst, Size, Data.slice(Index), Index,
+                                      nulls());
+    else
+      S = DisAsm.getInstruction(Inst, Size, Data.slice(Index), Index, nulls());
     switch (S) {
     case MCDisassembler::Fail:
       SM.PrintMessage(SMLoc::getFromPointer(Bytes.second[Index]),

@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64MCAsmInfo.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
@@ -148,7 +147,7 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32) {
 
   ExceptionsType = ExceptionHandling::DwarfCFI;
 
-  initializeVariantKinds(MachOAtSpecifiers);
+  initializeAtSpecifiers(MachOAtSpecifiers);
 }
 
 const MCExpr *AArch64MCAsmInfoDarwin::getExprForPersonalitySymbol(
@@ -170,7 +169,7 @@ void AArch64AuthMCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
   bool WrapSubExprInParens = !isa<MCSymbolRefExpr>(getSubExpr());
   if (WrapSubExprInParens)
     OS << '(';
-  getSubExpr()->print(OS, MAI);
+  MAI->printExpr(OS, *getSubExpr());
   if (WrapSubExprInParens)
     OS << ')';
 
@@ -226,7 +225,7 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
 
   HasIdentDirective = true;
 
-  initializeVariantKinds(ELFAtSpecifiers);
+  initializeAtSpecifiers(ELFAtSpecifiers);
 }
 
 void AArch64MCAsmInfoELF::printSpecifierExpr(
@@ -258,7 +257,7 @@ AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF() {
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
 
-  initializeVariantKinds(COFFAtSpecifiers);
+  initializeAtSpecifiers(COFFAtSpecifiers);
 }
 
 void AArch64MCAsmInfoMicrosoftCOFF::printSpecifierExpr(
@@ -288,7 +287,7 @@ AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF() {
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
 
-  initializeVariantKinds(COFFAtSpecifiers);
+  initializeAtSpecifiers(COFFAtSpecifiers);
 }
 
 void AArch64MCAsmInfoGNUCOFF::printSpecifierExpr(
