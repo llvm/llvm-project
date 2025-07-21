@@ -1,3 +1,9 @@
-add_custom_target(libc-shared-unittests)
+add_custom_target(libc-shared-math-smoke-tests)
 
-add_subdirectory(smoke)
+add_fp_unittest(
+  shared_math_test
+  SUITE
+    libc-shared-math-smoke-tests
+  SRCS
+    shared_math_test.cpp
+)
