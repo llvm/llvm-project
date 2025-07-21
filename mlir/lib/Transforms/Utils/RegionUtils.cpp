@@ -417,7 +417,7 @@ static LogicalResult deleteDeadness(RewriterBase &rewriter,
   for (Region &region : regions) {
     if (region.empty())
       continue;
-    bool hasSingleBlock = llvm::hasSingleElement(region);
+    bool hasSingleBlock = region.hasOneBlock();
 
     // Delete every operation that is not live. Graph regions may have cycles
     // in the use-def graph, so we must explicitly dropAllUses() from each
@@ -850,7 +850,7 @@ LogicalResult BlockMergeCluster::merge(RewriterBase &rewriter) {
 /// failure otherwise.
 static LogicalResult mergeIdenticalBlocks(RewriterBase &rewriter,
                                           Region &region) {
-  if (region.empty() || llvm::hasSingleElement(region))
+  if (region.empty() || region.hasOneBlock())
     return failure();
 
   // Identify sets of blocks, other than the entry block, that branch to the
