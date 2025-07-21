@@ -169,6 +169,17 @@ static bool getMemOperands(unsigned Factor, VectorType *VTy, Type *XLenTy,
              : Constant::getAllOnesValue(XLenTy);
     return true;
   }
+  case Intrinsic::masked_store: {
+    Ptr = II->getOperand(1);
+    Alignment = cast<ConstantInt>(II->getArgOperand(2))->getAlignValue();
+
+    assert(Mask && "masked.store needs a mask!");
+
+    VL = isa<FixedVectorType>(VTy)
+             ? Builder.CreateElementCount(XLenTy, VTy->getElementCount())
+             : Constant::getAllOnesValue(XLenTy);
+    return true;
+  }
   }
 }
 
