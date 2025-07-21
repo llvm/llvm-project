@@ -9,6 +9,10 @@ add_fp_unittest(
   DEPENDS
     libc.src.__support.math.acos
     libc.src.__support.math.acosf
+    libc.src.__support.math.acosf16
+    libc.src.__support.math.acoshf
+    libc.src.__support.math.acoshf16
+    libc.src.__support.math.erff
     libc.src.__support.math.exp
     libc.src.__support.math.exp10
     libc.src.__support.math.exp10f
