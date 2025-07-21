@@ -164,6 +164,8 @@ public:
     CodeGenOpts.DwarfVersion = CI.getCodeGenOpts().DwarfVersion;
     CodeGenOpts.DebugCompilationDir =
         CI.getInvocation().getCodeGenOpts().DebugCompilationDir;
+    CodeGenOpts.NoCompilationDir =
+        CI.getInvocation().getCodeGenOpts().NoCompilationDir;
     CodeGenOpts.DebugPrefixMap =
         CI.getInvocation().getCodeGenOpts().DebugPrefixMap;
     CodeGenOpts.DebugStrictDwarf = CI.getCodeGenOpts().DebugStrictDwarf;
