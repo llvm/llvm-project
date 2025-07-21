@@ -64,7 +64,7 @@ inline OwningOpRef<ContainerOpT> constructContainerOpForParserIfNecessary(
         "block that has an implicit terminator or does not require one");
 
     OpBuilder builder(context);
-    ContainerOpT op = builder.create<ContainerOpT>(sourceFileLoc);
+    ContainerOpT op = ContainerOpT::create(builder, sourceFileLoc);
     OwningOpRef<ContainerOpT> opRef(op);
     assert(op->getNumRegions() == 1 &&
            llvm::hasSingleElement(op->getRegion(0)) &&
