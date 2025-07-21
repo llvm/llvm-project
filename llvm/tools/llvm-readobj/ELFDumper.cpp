@@ -1101,7 +1101,6 @@ const EnumEntry<unsigned> ElfOSABI[] = {
     {"FenixOS", "FenixOS", ELF::ELFOSABI_FENIXOS},
     {"CloudABI", "CloudABI", ELF::ELFOSABI_CLOUDABI},
     {"CUDA", "NVIDIA - CUDA", ELF::ELFOSABI_CUDA},
-    {"CUDA", "NVIDIA - CUDA", ELF::ELFOSABI_CUDA_V2},
     {"Standalone", "Standalone App", ELF::ELFOSABI_STANDALONE}};
 
 const EnumEntry<unsigned> AMDGPUElfOSABI[] = {
