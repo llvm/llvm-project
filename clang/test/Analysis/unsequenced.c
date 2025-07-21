@@ -24,6 +24,8 @@ static void binary_op_checks_inline(void) {
     // expected-warning@-2{{unsequenced writes to variable}}
     // expected-note@-3{{variable is written to here}}
     // expected-note@-4{{variable is written to here}}
+    
+    a1 = a1;
 
     b = a1 + b + (++a1);
     // expected-warning@-1{{unsequenced modification and access}}
@@ -104,12 +106,21 @@ static void binary_op_checks_inline(void) {
     // expected-note@-2{{variable is written to here}}
     // expected-note@-3{{variable is written to here}}
     // expected-warning@-4{{multiple unsequenced modifications}}
-
     
+    a1 = a1 = 1;
+    // expected-warning@-1{{unsequenced writes to variable}}
+    // expected-note@-2{{variable is written to here}}
+    // expected-note@-3{{variable is written to here}}
+    // expected-warning@-4{{multiple unsequenced modifications}}
+
     (void)a1; (void)b;
 }
 
 static void* id(void* param) {
+    return param;
+}
+
+static int id_i(int param) {
     return param;
 }
 
@@ -122,6 +133,8 @@ static void binary_op_checks_with_functions(void) {
     // expected-note@-3{{variable is written to here}}
 
     *(int*)id(&a) = a + 1; // Equivalent to a = a + 1;
+    
+    a = id_i(a++);
 }
 
 static void does_nothing2(int a, int b) {
@@ -160,11 +173,24 @@ static int* inc_and_return(int* a) {
 
 int globalInt;
 
+typedef int (*some_fun_t)(int);
+
+static int some_fun_impl(int x) {
+    return 0;
+}
+
+static int inc_global_int(int a) {
+    globalInt++;
+    return a + 1;
+}
+
 static void function_checks(void) {
 
     float a2 = 0.1f;
     float* fp = &a2;
     int a3 = 22;
+
+    some_fun_t some_funs[3] = {0};
 
     if (inc_and_return(&globalInt) + globalInt) {}
     // expected-warning@-1{{unsequenced write to and read from variable}}
@@ -189,6 +215,18 @@ static void function_checks(void) {
     // expected-note@-3{{variable is written to here}}
 
     a3 = *inc_and_return(&a3);
+
+    some_funs[1] = some_fun_impl;
+
+    a3 = 1;
+    some_funs[a3](a3++);
+    // expected-warning@-1{{unsequenced modification and access}}
+    // expected-warning@-2{{unsequenced write to and read from variable}}
+    // expected-note@-3{{variable is read from here}}
+    // expected-note@-4{{variable is written to here}}
+    
+    if (inc_global_int(globalInt) == 0) {}
+
 }
 
 static void loop_checks(void) {
@@ -269,4 +307,39 @@ static unsigned unsequenced_with_ub(void) {
     return function_with_static_lifetimes() - function_with_static_lifetimes();
     // expected-warning@-1{{unsequenced write to and read from variable}}
     // expected-warning@-2{{unsequenced writes to variable}}
+}
+
+struct int_wrapper {
+    int data;
+};
+
+int post_inc_wrapper(struct int_wrapper* wrap) {
+    wrap->data += 1;
+    // expected-note@-1{{variable is written to here}}
+    return wrap->data;
+}
+
+static void dst_tests(void) {
+    struct int_wrapper wrap = {0};
+
+    if (wrap.data + post_inc_wrapper(&wrap)) {}
+    // expected-warning@-1{{unsequenced write to and read from variable}}
+    // expected-note@-2{{variable is read from here}}
+}
+
+struct two_ints {
+    int a, b;
+};
+
+static void struct_tests(void) {
+    struct two_ints two = { 1, 2 };
+
+    // -Wunsequenced doesn't yet support this
+    two.a = two.a++;
+    // expected-warning@-1{{unsequenced writes to variable}}
+    // expected-note@-2{{variable is written to here}}
+    // expected-note@-3{{variable is written to here}}
+    
+    two = (struct two_ints){ two.a++, 0 };
+    // Not certain
 }
