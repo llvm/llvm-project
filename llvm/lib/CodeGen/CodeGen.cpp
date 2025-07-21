@@ -54,7 +54,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeIfConverterPass(Registry);
   initializeImplicitNullChecksPass(Registry);
   initializeIndirectBrExpandLegacyPassPass(Registry);
-  initializeInitUndefPass(Registry);
+  initializeInitUndefLegacyPass(Registry);
   initializeInterleavedLoadCombinePass(Registry);
   initializeInterleavedAccessPass(Registry);
   initializeJMCInstrumenterPass(Registry);
@@ -106,11 +106,11 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializePatchableFunctionLegacyPass(Registry);
   initializePeepholeOptimizerLegacyPass(Registry);
   initializePostMachineSchedulerLegacyPass(Registry);
+  initializePostRAMachineSinkingLegacyPass(Registry);
   initializePostRAHazardRecognizerLegacyPass(Registry);
-  initializePostRAMachineSinkingPass(Registry);
   initializePostRASchedulerLegacyPass(Registry);
   initializePreISelIntrinsicLoweringLegacyPassPass(Registry);
-  initializeProcessImplicitDefsPass(Registry);
+  initializeProcessImplicitDefsLegacyPass(Registry);
   initializeRABasicPass(Registry);
   initializeRAGreedyLegacyPass(Registry);
   initializeRegAllocFastPass(Registry);

@@ -20,18 +20,22 @@
 
 def simm10 : RISCVSImmLeafOp<10>;
 
+def SImm10UnsignedAsmOperand : SImmAsmOperand<10, "Unsigned"> {
+  let RenderMethod = "addSImm10UnsignedOperands";
+}
+
 // A 10-bit signed immediate allowing range [-512, 1023]
-// but will decode to [-512, 511].
+// but represented as [-512, 511].
 def simm10_unsigned : RISCVOp {
-  let ParserMatchClass = SImmAsmOperand<10, "Unsigned">;
+  let ParserMatchClass = SImm10UnsignedAsmOperand;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<10>";
-  let OperandType = "OPERAND_SIMM10_UNSIGNED";
+  let OperandType = "OPERAND_SIMM10";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
-    return isInt<10>(Imm) || isUInt<10>(Imm);
+    return isInt<10>(Imm);
   }];
 }
 
@@ -65,20 +69,15 @@ class RVPUnaryImm8<bits<8> funct8, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPUnary<bits<3> f, string opcodestr, dag operands, string argstr>
     : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd), operands, opcodestr, argstr> {
-  bits<5> imm;
-  bits<5> rs1;
-
   let Inst{31}    = 0b1;
   let Inst{30-28} = f;
   let Inst{27}    = 0b0;
-  let Inst{19-15} = rs1;
 }
 
 class RVPUnaryImm5<bits<3> f, string opcodestr>
     : RVPUnary<f, opcodestr, (ins GPR:$rs1, uimm5:$uimm5), "$rd, $rs1, $uimm5"> {
   bits<5> uimm5;
 
-  let imm = uimm5;
   let Inst{26-25} = 0b01;
   let Inst{24-20} = uimm5;
 }

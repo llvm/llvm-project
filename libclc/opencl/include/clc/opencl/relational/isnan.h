@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_RELATIONAL_ISNAN_H__
+#define __CLC_OPENCL_RELATIONAL_ISNAN_H__
+
+#include <clc/opencl/opencl-base.h>
+
 #define _CLC_ISNAN_DECL(RET_TYPE, ARG_TYPE)                                    \
   _CLC_OVERLOAD _CLC_DECL RET_TYPE isnan(ARG_TYPE);
 
@@ -31,3 +36,5 @@ _CLC_VECTOR_ISNAN_DECL(short, half)
 
 #undef _CLC_ISNAN_DECL
 #undef _CLC_VECTOR_ISNAN_DECL
+
+#endif // __CLC_OPENCL_RELATIONAL_ISNAN_H__

@@ -1318,8 +1318,10 @@ void CodeViewDebug::collectVariableInfoFromMFTable(
         TFI->getFrameIndexReference(*Asm->MF, VI.getStackSlot(), FrameReg);
     uint16_t CVReg = TRI->getCodeViewRegNum(FrameReg);
 
-    assert(!FrameOffset.getScalable() &&
-           "Frame offsets with a scalable component are not supported");
+    if (FrameOffset.getScalable()) {
+      // No encoding currently exists for scalable offsets; bail out.
+      continue;
+    }
 
     // Calculate the label ranges.
     LocalVarDef DefRange =
@@ -1409,6 +1411,11 @@ void CodeViewDebug::calculateRanges(
     if (Location->FragmentInfo)
       if (Location->FragmentInfo->OffsetInBits % 8)
         continue;
+
+    if (TRI->isIgnoredCVReg(Location->Register)) {
+      // No encoding currently exists for this register; bail out.
+      continue;
+    }
 
     LocalVarDef DR;
     DR.CVRegister = TRI->getCodeViewRegNum(Location->Register);
@@ -3572,7 +3579,8 @@ void CodeViewDebug::collectDebugInfoForJumpTables(const MachineFunction *MF,
                             BaseOffset,
                             Branch,
                             MF->getJTISymbol(JumpTableIndex, MMI->getContext()),
-                            JTE.MBBs.size()};
+                            JTE.MBBs.size(),
+                            {}};
         for (const auto &MBB : JTE.MBBs)
           CVJTI.Cases.push_back(MBB->getSymbol());
         CurFn->JumpTables.push_back(std::move(CVJTI));
