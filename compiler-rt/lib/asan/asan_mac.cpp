@@ -245,7 +245,7 @@ INTERCEPTOR(void, dispatch_group_async_f, dispatch_group_t group,
                                asan_dispatch_call_block_and_release);
 }
 
-extern "C" void asan_dispatch_apply_f_block(void *context, size_t iteration) {
+extern "C" void asan_dispatch_apply_f_work(void *context, size_t iteration) {
   GET_STACK_TRACE_THREAD;
   asan_block_context_t *asan_ctxt = (asan_block_context_t *)context;
   asan_register_worker_thread(asan_ctxt->parent_tid, &stack);
@@ -257,9 +257,8 @@ INTERCEPTOR(void, dispatch_apply_f, size_t iterations, dispatch_queue_t queue,
   GET_STACK_TRACE_THREAD;
   asan_block_context_t *asan_ctxt =
       alloc_asan_context(ctxt, (dispatch_function_t)work, &stack);
-
-  REAL(dispatch_apply_f)
-  (iterations, queue, (void *)asan_ctxt, asan_dispatch_apply_f_block);
+  REAL(dispatch_apply_f)(iterations, queue, (void *)asan_ctxt,
+                         asan_dispatch_apply_f_work);
 }
 
 #  if !defined(MISSING_BLOCKS_SUPPORT)
@@ -269,13 +268,13 @@ void dispatch_group_async(dispatch_group_t dg, dispatch_queue_t dq,
                           void(^work)(void));
 void dispatch_after(dispatch_time_t when, dispatch_queue_t queue,
                     void(^work)(void));
+void dispatch_apply(size_t iterations, dispatch_queue_t queue,
+                    void (^block)(size_t iteration));
 void dispatch_source_set_cancel_handler(dispatch_source_t ds,
                                         void(^work)(void));
 void dispatch_source_set_event_handler(dispatch_source_t ds, void(^work)(void));
 dispatch_mach_t dispatch_mach_create(const char *label, dispatch_queue_t queue,
                                      dispatch_mach_handler_t handler);
-void dispatch_apply(size_t iterations, dispatch_queue_t queue,
-                    void (^block)(size_t iteration));
 }
 
 #define GET_ASAN_BLOCK(work) \

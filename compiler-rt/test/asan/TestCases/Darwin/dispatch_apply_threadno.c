@@ -2,13 +2,12 @@
 // with an empty stack.
 // This tests that dispatch_apply blocks can capture valid thread number and stack.
 
-// RUN: %clang_asan -DDISPATCH_APPLY_F %s -o %t
-// RUN: not %run %t 2>&1 | FileCheck %s
-
 // RUN: %clang_asan %s -o %t
-// RUN: not %run %t 2>&1 | FileCheck %s
+// RUN: not %run %t func 2>&1 | FileCheck %s --check-prefixes=CHECK-FUNC,CHECK
+// RUN: not %run %t block 2>&1 | FileCheck %s --check-prefixes=CHECK-BLOCK,CHECK
 
 #include <dispatch/dispatch.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 __attribute__((noinline)) void access_memory_frame(char *x) { *x = 0; }
@@ -36,11 +35,17 @@ __attribute__((noinline)) void test_dispatch_apply_f() {
 }
 
 int main(int argc, const char *argv[]) {
-#if DISPATCH_APPLY_F
-  test_dispatch_apply_f();
-#else
-  test_dispatch_apply();
-#endif
+  if (strcmp(argv[1], "func") == 0) {
+    fprintf(stderr, "Test dispatch_apply with function\n");
+    // CHECK-FUNC: dispatch_apply with function
+    test_dispatch_apply_f();
+  } else if (strcmp(argv[1], "block") == 0) {
+    fprintf(stderr, "Test dispatch_apply with block\n");
+    // CHECK-BLOCK: dispatch_apply with block
+    test_dispatch_apply();
+  } else {
+    abort();
+  }
   return 0;
 }
 
