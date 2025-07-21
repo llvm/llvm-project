@@ -12368,7 +12368,7 @@ def err_export_using_internal : Error<
   "using declaration referring to %1 with %select{internal|module|unknown}0 "
   "linkage cannot be exported">;
 def err_export_not_in_module_interface : Error<
-  "export declaration can only be used within a module purview">;
+  "export declaration can only be used within a module interface">;
 def err_export_inline_not_defined : Error<
   "inline function not defined%select{| before the private module fragment}0">;
 def err_export_partition_impl : Error<
@@ -13489,6 +13489,12 @@ def err_acc_invalid_default_type
 def err_acc_device_type_multiple_archs
     : Error<"OpenACC 'device_type' clause on a 'set' construct only permits "
             "one architecture">;
+def warn_acc_var_referenced_lacks_op
+    : Warning<"variable of type %0 referenced in OpenACC '%1' clause does not "
+              "have a %enum_select<AccVarReferencedReason>{%DefCtor{default "
+              "constructor}|%Dtor{destructor}}2; reference has no effect">,
+      InGroup<DiagGroup<"openacc-var-lacks-operation">>,
+      DefaultError;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
