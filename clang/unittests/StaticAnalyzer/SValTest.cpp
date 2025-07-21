@@ -139,9 +139,9 @@ class SValTest : public testing::TestWithParam<TestClangConfig> {};
                                                                                \
   void add##NAME##SValCollector(AnalysisASTConsumer &AnalysisConsumer,         \
                                 AnalyzerOptions &AnOpts) {                     \
-    AnOpts.CheckersAndPackages = {{"test.##NAME##SValColl", true}};            \
+    AnOpts.CheckersAndPackages = {{"test." #NAME "SValColl", true}};           \
     AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {  \
-      Registry.addChecker<NAME##SValCollector>("test.##NAME##SValColl",        \
+      Registry.addChecker<NAME##SValCollector>("test." #NAME "SValColl",       \
                                                "MockDescription");             \
     });                                                                        \
   }                                                                            \
