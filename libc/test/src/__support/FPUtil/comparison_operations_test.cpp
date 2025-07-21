@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/FPUtil/ComparisonOperations.h"
 #include "src/__support/FPUtil/bfloat16.h"
+#include "src/__support/FPUtil/comparison_operations.h"
 #include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
