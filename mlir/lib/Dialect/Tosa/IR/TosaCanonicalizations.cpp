@@ -1387,7 +1387,7 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
       return {};
 
     return operand.reshape(
-        llvm::cast<ShapedType>(operand.getType()).clone(shapeVec));
+        llvm::cast<ShapedType>(operand.getType()).clone(shapeVec).getShape());
   }
 
   return {};
@@ -1546,7 +1546,7 @@ OpFoldResult TransposeOp::fold(FoldAdaptor adaptor) {
           llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput1())) {
     if (input.isSplat() && resultTy.hasStaticShape() &&
         input.getType().getElementType() == resultTy.getElementType())
-      return input.reshape(resultTy);
+      return input.reshape(resultTy.getShape());
   }
 
   // Transpose is not the identity transpose.

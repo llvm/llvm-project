@@ -679,8 +679,9 @@ MlirAttribute mlirDenseElementsAttrStringGet(MlirType shapedType,
 
 MlirAttribute mlirDenseElementsAttrReshapeGet(MlirAttribute attr,
                                               MlirType shapedType) {
-  return wrap(llvm::cast<DenseElementsAttr>(unwrap(attr))
-                  .reshape(llvm::cast<ShapedType>(unwrap(shapedType))));
+  return wrap(
+      llvm::cast<DenseElementsAttr>(unwrap(attr))
+          .reshape(llvm::cast<ShapedType>(unwrap(shapedType)).getShape()));
 }
 
 //===----------------------------------------------------------------------===//

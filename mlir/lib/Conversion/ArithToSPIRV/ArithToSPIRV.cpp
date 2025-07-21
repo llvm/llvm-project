@@ -274,7 +274,7 @@ struct ConstantCompositeOpPattern final
       if (isa<RankedTensorType>(srcType)) {
         dstAttrType = RankedTensorType::get(srcType.getNumElements(),
                                             srcType.getElementType());
-        dstElementsAttr = dstElementsAttr.reshape(dstAttrType);
+        dstElementsAttr = dstElementsAttr.reshape(dstAttrType.getShape());
       } else {
         // TODO: add support for large vectors.
         return failure();

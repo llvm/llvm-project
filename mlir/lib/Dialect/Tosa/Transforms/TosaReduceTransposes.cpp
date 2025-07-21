@@ -193,7 +193,7 @@ TosaReduceTransposes::transposeDenseAttribute(DenseElementsAttr input,
       RankedTensorType::get(newShape, oldType.getElementType());
 
   if (input.isSplat()) {
-    return input.reshape(newType);
+    return input.reshape(newType.getShape());
   }
 
   auto rawData = input.getRawData();
