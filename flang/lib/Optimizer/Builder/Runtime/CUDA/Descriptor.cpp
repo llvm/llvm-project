@@ -30,7 +30,7 @@ void fir::runtime::cuda::genSyncGlobalDescriptor(fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
   llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
       builder, loc, fTy, hostPtr, sourceFile, sourceLine)};
-  builder.create<fir::CallOp>(loc, callee, args);
+  fir::CallOp::create(builder, loc, callee, args);
 }
 
 void fir::runtime::cuda::genDescriptorCheckSection(fir::FirOpBuilder &builder,
@@ -45,7 +45,7 @@ void fir::runtime::cuda::genDescriptorCheckSection(fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
   llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
       builder, loc, fTy, desc, sourceFile, sourceLine)};
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 void fir::runtime::cuda::genSetAllocatorIndex(fir::FirOpBuilder &builder,
@@ -60,5 +60,5 @@ void fir::runtime::cuda::genSetAllocatorIndex(fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
   llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
       builder, loc, fTy, desc, index, sourceFile, sourceLine)};
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
