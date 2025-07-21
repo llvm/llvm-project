@@ -1413,17 +1413,6 @@ void MCStreamer::addFragment(MCFragment *F) {
   Sec->curFragList()->Tail = F;
 }
 
-void MCStreamer::newFragment() {
-  addFragment(getContext().allocFragment<MCFragment>());
-}
-
-void MCStreamer::insert(MCFragment *F) {
-  assert(F->getKind() != MCFragment::FT_Data &&
-         "F should have a variable-size tail");
-  addFragment(F);
-  newFragment();
-}
-
 static VersionTuple
 targetVersionOrMinimumSupportedOSVersion(const Triple &Target,
                                          VersionTuple TargetVersion) {
