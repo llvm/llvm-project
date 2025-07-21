@@ -552,10 +552,12 @@ func.func @gather_to_lds(%idx1 : index, %idx2 : index, %mem1 : memref<32xf16>, %
 // CHECK-LABEL: func @waitcnt
 func.func @waitcnt() {
   // CHECK: amdgpu.waitcnt vmcnt(1) expcnt(2) lgkmcnt(3)
+  // CHECK: amdgpu.waitcnt vmcnt(3) expcnt(2) lgkmcnt(1)
   // CHECK: amdgpu.waitcnt vmcnt(1)
   // CHECK: amdgpu.waitcnt expcnt(2)
   // CHECK: amdgpu.waitcnt lgkmcnt(3)
   amdgpu.waitcnt vmcnt(1) expcnt(2) lgkmcnt(3)
+  amdgpu.waitcnt lgkmcnt(1) expcnt(2) vmcnt(3)
   amdgpu.waitcnt vmcnt(1)
   amdgpu.waitcnt expcnt(2)
   amdgpu.waitcnt lgkmcnt(3)

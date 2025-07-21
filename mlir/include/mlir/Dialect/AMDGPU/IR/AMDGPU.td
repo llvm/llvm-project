@@ -735,7 +735,7 @@ def AMDGPU_WaitcntOp :
     supported values.
   }];
   let assemblyFormat = [{
-    (`vmcnt` `(` $vmcnt^ `)` )? (`expcnt` `(` $expcnt^ `)` )? (`lgkmcnt` `(` $lgkmcnt^ `)`)? attr-dict
+    oilist( `vmcnt` `(` $vmcnt `)` | `expcnt` `(` $expcnt `)` | `lgkmcnt` `(` $lgkmcnt `)` ) attr-dict
   }];
 }
 
