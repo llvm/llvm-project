@@ -21,6 +21,7 @@
 
 #include "llvm/Transforms/Utils/SimplifySwitchVar.h"
 #include "llvm/IR/PatternMatch.h"
+#include <random>
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -211,6 +212,55 @@ collectValidCases(SmallVector<PhiCase> &PhiCases,
   return FilteredCases;
 }
 
+namespace {
+struct FuncParams {
+  int64_t Slope;
+  int64_t Bias;
+};
+} // namespace
+
+using RandomEngine = std::minstd_rand;
+using RandomDistribution = std::uniform_int_distribution<int>;
+/// Find the linear function that models the switch variable progression.
+/// Uses random sampling to find the best fit, even if outliers are present.
+/// Abort if there are too many outliers (> 50%)
+static std::optional<FuncParams>
+findLinearFunction(DenseMap<int64_t, int64_t> &Cases,
+                   SmallVector<PhiCase> &PhiCases) {
+  RandomEngine Rand(0xdeadbeef);
+  RandomDistribution RandDist(0, Cases.size() - 1);
+
+  // Repeat the process at most 5 times, because if at least 80% of the points
+  // lie on the line, then we will find the line with 99.4% probability within 5
+  // tries. See https://en.wikipedia.org/wiki/Random_sample_consensus#Parameters
+  for (int I = 0; I < 5; ++I) {
+    auto Index0 = RandDist(Rand);
+    auto Index1 = RandDist(Rand);
+    while (Index0 == Index1) {
+      Index1 = RandDist(Rand);
+    }
+
+    auto X0 = PhiCases[Index0].CaseValue->getSExtValue();
+    auto X1 = PhiCases[Index1].CaseValue->getSExtValue();
+    auto Y0 = Cases[X0];
+    auto Y1 = Cases[X1];
+
+    int64_t Slope = (Y1 - Y0) / (X1 - X0);
+    int64_t Bias = (Y0 - (Slope * X0));
+
+    auto Count = llvm::count_if(Cases, [Bias, Slope](auto Case) {
+      return Slope * Case.first + Bias == Case.second;
+    });
+
+    float InlierRatio = (float)Count / (float)Cases.size();
+    if (InlierRatio > 0.5f) {
+      return std::optional<FuncParams>({Slope, Bias});
+    }
+  }
+
+  return std::nullopt;
+}
+
 PreservedAnalyses SimplifySwitchVarPass::run(Function &F,
                                              FunctionAnalysisManager &AM) {
   bool Changed = false;
@@ -238,6 +288,12 @@ PreservedAnalyses SimplifySwitchVarPass::run(Function &F,
         PhiCases = collectValidCases(PhiCases, InstParameters, CaseOffsetMap);
         if (CaseOffsetMap.size() < 2)
           continue;
+
+        auto FuncParams = findLinearFunction(CaseOffsetMap, PhiCases);
+        if (!FuncParams.has_value())
+          continue;
+
+        auto F = FuncParams.value();
       }
     }
   }
