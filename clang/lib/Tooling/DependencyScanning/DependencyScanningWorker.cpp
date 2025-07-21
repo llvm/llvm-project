@@ -24,7 +24,6 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/InProcessModuleCache.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
-#include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
@@ -376,7 +375,7 @@ public:
 
 /// A clang tool that runs the preprocessor in a mode that's optimized for
 /// dependency scanning for the given compiler invocation.
-class DependencyScanningAction : public tooling::ToolAction {
+class DependencyScanningAction {
 public:
   DependencyScanningAction(
       DependencyScanningService &Service, StringRef WorkingDirectory,
@@ -390,7 +389,7 @@ public:
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                      FileManager *DriverFileMgr,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-                     DiagnosticConsumer *DiagConsumer) override {
+                     DiagnosticConsumer *DiagConsumer) {
     // Make a deep copy of the original Clang invocation.
     CompilerInvocation OriginalInvocation(*Invocation);
     // Restore the value of DisableFree, which may be modified by Tooling.
@@ -716,11 +715,19 @@ static bool createAndRunToolInvocation(
 
   // Save executable path before providing CommandLine to ToolInvocation
   std::string Executable = CommandLine[0];
-  ToolInvocation Invocation(std::move(CommandLine), &Action, &FM,
-                            PCHContainerOps);
-  Invocation.setDiagnosticConsumer(Diags.getClient());
-  Invocation.setDiagnosticOptions(&Diags.getDiagnosticOptions());
-  if (!Invocation.run())
+
+  llvm::opt::ArgStringList Argv;
+  for (const std::string &Str : ArrayRef(CommandLine).drop_front())
+    Argv.push_back(Str.c_str());
+
+  auto Invocation = std::make_shared<CompilerInvocation>();
+  if (!CompilerInvocation::CreateFromArgs(*Invocation, Argv, Diags)) {
+    // FIXME: Should we just go on like cc1_main does?
+    return false;
+  }
+
+  if (!Action.runInvocation(std::move(Invocation), &FM, PCHContainerOps,
+                            Diags.getClient()))
     return false;
 
   std::vector<std::string> Args = Action.takeLastCC1Arguments();
