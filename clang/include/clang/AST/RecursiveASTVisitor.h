@@ -1218,6 +1218,8 @@ DEF_TRAVERSE_TYPE(BitIntType, {})
 DEF_TRAVERSE_TYPE(DependentBitIntType,
                   { TRY_TO(TraverseStmt(T->getNumBitsExpr())); })
 
+DEF_TRAVERSE_TYPE(PredefinedSugarType, {})
+
 #undef DEF_TRAVERSE_TYPE
 
 // ----------------- TypeLoc traversal -----------------
@@ -1541,6 +1543,8 @@ DEF_TRAVERSE_TYPELOC(BitIntType, {})
 DEF_TRAVERSE_TYPELOC(DependentBitIntType, {
   TRY_TO(TraverseStmt(TL.getTypePtr()->getNumBitsExpr()));
 })
+
+DEF_TRAVERSE_TYPELOC(PredefinedSugarType, {})
 
 #undef DEF_TRAVERSE_TYPELOC
 
