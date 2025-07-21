@@ -17,51 +17,20 @@ define float @test1(float %in) local_unnamed_addr {
   ret float %call
 }
 
-define float @test2(float %in) local_unnamed_addr {
+define half @test2(half %in) local_unnamed_addr {
 ; CHECK-LABEL: test2(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [test2_param_0];
-; CHECK-NEXT:    tanh.approx.f32 %r2, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
-; CHECK-NEXT:    ret;
-  %call = tail call afn float @llvm.tanh.f32(float %in)
-  ret float %call
-}
-
-define half @test3(half %in) local_unnamed_addr {
-; CHECK-LABEL: test3(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [test3_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs1, [test2_param_0];
 ; CHECK-NEXT:    cvt.f32.f16 %r1, %rs1;
 ; CHECK-NEXT:    tanh.approx.f32 %r2, %r1;
 ; CHECK-NEXT:    cvt.rn.f16.f32 %rs2, %r2;
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs2;
 ; CHECK-NEXT:    ret;
   %call = call afn half @llvm.tanh.f16(half %in)
-  ret half %call
-}
-
-define half @test4(half %in) local_unnamed_addr {
-; CHECK-LABEL: test4(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b16 %rs1, [test4_param_0];
-; CHECK-NEXT:    cvt.f32.f16 %r1, %rs1;
-; CHECK-NEXT:    tanh.approx.f32 %r2, %r1;
-; CHECK-NEXT:    cvt.rn.f16.f32 %rs2, %r2;
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs2;
-; CHECK-NEXT:    ret;
-  %call = tail call afn half @llvm.tanh.f16(half %in)
   ret half %call
 }
 
