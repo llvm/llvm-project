@@ -147,6 +147,7 @@ LogicalResult NextAccessAnalysis::visitOperation(Operation *op,
 
 void NextAccessAnalysis::buildOperationEquivalentLatticeAnchor(Operation *op) {
   if (isMemoryEffectFree(op)) {
+    addIrrelevantPoint(op);
     unionLatticeAnchors<NextAccess>(getProgramPointBefore(op),
                                     getProgramPointAfter(op));
   }

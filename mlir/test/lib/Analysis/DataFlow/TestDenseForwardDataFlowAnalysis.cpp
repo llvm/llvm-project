@@ -154,6 +154,7 @@ LogicalResult LastModifiedAnalysis::visitOperation(
 void LastModifiedAnalysis::buildOperationEquivalentLatticeAnchor(
     Operation *op) {
   if (isMemoryEffectFree(op)) {
+    addIrrelevantPoint(op);
     unionLatticeAnchors<LastModification>(getProgramPointBefore(op),
                                           getProgramPointAfter(op));
   }
