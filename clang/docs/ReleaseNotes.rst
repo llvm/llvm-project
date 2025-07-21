@@ -717,6 +717,8 @@ Improvements to Clang's diagnostics
   Added a new warning in this group for the case where the attribute is missing/implicit on
   an override of a virtual method.
 
+- Improved diagnostic location for templates declared inside local classes.
+
 Improvements to Clang's time-trace
 ----------------------------------
 

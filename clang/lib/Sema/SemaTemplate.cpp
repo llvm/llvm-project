@@ -8231,6 +8231,19 @@ Sema::CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams) {
   // C++ [temp.class.spec]p6: [P2096]
   //   A partial specialization may be declared in any scope in which the
   //   corresponding primary template may be defined.
+  auto FindTemplateParamsLoc = [](TemplateParameterList *TemplateParams,
+                                  SourceLocation Fallback) {
+    SourceLocation DiagLoc = TemplateParams->getTemplateLoc();
+    if (DiagLoc.isValid())
+      return DiagLoc;
+
+    for (const NamedDecl *Param : *TemplateParams)
+      if (Param && Param->getLocation().isValid())
+        return Param->getLocation();
+
+    return Fallback;
+  };
+
   if (Ctx) {
     if (Ctx->isFileContext())
       return false;
@@ -8238,29 +8251,17 @@ Sema::CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams) {
       // C++ [temp.mem]p2:
       //   A local class shall not have member templates.
       if (RD->isLocalClass()) {
-        SourceLocation DiagLoc = TemplateParams->getTemplateLoc();
-        if (DiagLoc.isInvalid()) {
-          for (const NamedDecl *Param : *TemplateParams) {
-            if (Param && Param->getLocation().isValid()) {
-              DiagLoc = Param->getLocation();
-              break;
-            }
-          }
-        }
-        if (DiagLoc.isInvalid()) {
-          // Still no good location? Fall back to the class declaration itself
-          DiagLoc = RD->getLocation();
-        }
-        return Diag(DiagLoc, diag::err_template_inside_local_class)
+        return Diag(FindTemplateParamsLoc(TemplateParams, RD->getLocation()),
+                    diag::err_template_inside_local_class)
                << TemplateParams->getSourceRange();
       }
       return false;
     }
   }
 
-  return Diag(TemplateParams->getTemplateLoc(),
+  return Diag(FindTemplateParamsLoc(TemplateParams, SourceLocation()),
               diag::err_template_outside_namespace_or_class_scope)
-    << TemplateParams->getSourceRange();
+         << TemplateParams->getSourceRange();
 }
 
 /// Determine what kind of template specialization the given declaration
