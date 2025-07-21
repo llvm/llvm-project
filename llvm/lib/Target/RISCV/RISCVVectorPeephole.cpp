@@ -91,8 +91,7 @@ bool RISCVVectorPeephole::hasSameEEW(const MachineInstr &User,
       User.getOperand(RISCVII::getSEWOpNum(User.getDesc())).getImm();
   unsigned SrcLog2SEW =
       Src.getOperand(RISCVII::getSEWOpNum(Src.getDesc())).getImm();
-  unsigned SrcLog2EEW = RISCV::getDestLog2EEW(
-      TII->get(RISCV::getRVVMCOpcode(Src.getOpcode())), SrcLog2SEW);
+  unsigned SrcLog2EEW = RISCV::getDestLog2EEW(Src.getDesc(), SrcLog2SEW);
   return SrcLog2EEW == UserLog2SEW;
 }
 
@@ -170,8 +169,8 @@ bool RISCVVectorPeephole::tryToReduceVL(MachineInstr &MI) const {
     if (!hasSameEEW(MI, *Src))
       continue;
 
-    bool ElementsDependOnVL = RISCVII::elementsDependOnVL(
-        TII->get(RISCV::getRVVMCOpcode(Src->getOpcode())).TSFlags);
+    bool ElementsDependOnVL =
+        RISCVII::elementsDependOnVL(Src->getDesc().TSFlags);
     if (ElementsDependOnVL || Src->mayRaiseFPException())
       continue;
 
@@ -760,11 +759,11 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
   else
     return false;
 
-  unsigned RVVTSFlags =
-      TII->get(RISCV::getRVVMCOpcode(True.getOpcode())).TSFlags;
-  if (RISCVII::elementsDependOnVL(RVVTSFlags) && !TrueVL.isIdenticalTo(MinVL))
+  if (RISCVII::elementsDependOnVL(True.getDesc().TSFlags) &&
+      !TrueVL.isIdenticalTo(MinVL))
     return false;
-  if (RISCVII::elementsDependOnMask(RVVTSFlags) && !isAllOnesMask(Mask))
+  if (RISCVII::elementsDependOnMask(True.getDesc().TSFlags) &&
+      !isAllOnesMask(Mask))
     return false;
 
   // Use a tumu policy, relaxing it to tail agnostic provided that the passthru
