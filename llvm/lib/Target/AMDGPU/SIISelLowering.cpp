@@ -13377,7 +13377,6 @@ SDValue SITargetLowering::performXorCombine(SDNode *N,
   // v2i32 (xor (vselect cc, x, y), K) ->
   // (v2i32 svelect cc, (xor x, K), (xor y, K)) This enables the xor to be
   // replaced with source modifiers when the select is lowered to CNDMASK.
-  // TODO REMOVE: prevents regressions in fneg-modifier-casting.ll
   unsigned Opc = LHS.getOpcode();
   if(((Opc == ISD::VSELECT && VT==MVT::v2i32) || (Opc == ISD::SELECT && VT==MVT::i64)) && CRHS && CRHS->getAPIntValue().isSignMask()) {
     SDValue CC = LHS->getOperand(0);
@@ -14355,164 +14354,125 @@ bool SITargetLowering::shouldExpandVectorDynExt(SDNode *N) const {
       EltSize, NumElem, Idx->isDivergent(), getSubtarget());
 }
 
-// SDValue
-// SITargetLowering::performBuildVectorCombine(SDNode *N,
-//                                             DAGCombinerInfo &DCI) const {
-//   // if (N->use_empty())
-//   //   return SDValue();
+SDValue
+SITargetLowering::performExtractVectorEltCombine(SDNode *N,
+                                                 DAGCombinerInfo &DCI) const {
+  SDValue Vec = N->getOperand(0);
+  SelectionDAG &DAG = DCI.DAG;
 
-//   // if(!N->getValueType(0).isFloatingPoint())
-//   //    return SDValue();
+  EVT VecVT = Vec.getValueType();
+  EVT VecEltVT = VecVT.getVectorElementType();
+  EVT ResVT = N->getValueType(0);
 
-//   //    SelectionDAG &DAG = DCI.DAG;
+  unsigned VecSize = VecVT.getSizeInBits();
+  unsigned VecEltSize = VecEltVT.getSizeInBits();
 
-//   // // Iterate the operands. Check if source modifier. If so, propogate the
-//   // source
-//   // // modifier to the user and the srcmod from the BUILD_VECTOR element.
-//   // for (unsigned I = 0; I < N->getNumOperands(); I++) {
-//   //   SDValue E = N->getOperand(I);
-//   //   if (E->getOpcode() != ISD::FNEG && E->getOpcode() != ISD::ABS)
-//   //     continue;
-
-//   //   // Users through which we can propogate will include users of
-//   //   // extract_element on this vector, so need to peek-through.
-//   // }
-
-//   // SmallVector<SDNode*, 4> UsersToModify;
-
-//   // // If the use of the BUILD_VECTOR supports source mods it can be
-//   // propogated. for (SDNode *U : N->users()) {
-//   //   if(!U->getOpcode() == ISD::EXTRACT_VECTOR_ELT)
-//   //   if (!allUsesHaveSourceMods(U))
-//   //     continue;
-//   //   UsersToModify.push_back(U);
-//   // }
-
-//   //   for(auto Node: UsersToModify) {
-
-//   //   }
-
-//   return SDValue();
-// }
-
-  SDValue SITargetLowering::performExtractVectorEltCombine(
-      SDNode * N, DAGCombinerInfo & DCI) const {
-    SDValue Vec = N->getOperand(0);
-    SelectionDAG &DAG = DCI.DAG;
-
-    EVT VecVT = Vec.getValueType();
-    EVT VecEltVT = VecVT.getVectorElementType();
-    EVT ResVT = N->getValueType(0);
-
-    unsigned VecSize = VecVT.getSizeInBits();
-    unsigned VecEltSize = VecEltVT.getSizeInBits();
-
-    if ((Vec.getOpcode() == ISD::FNEG || Vec.getOpcode() == ISD::FABS) &&
-        allUsesHaveSourceMods(N)) {
-      SDLoc SL(N);
-      SDValue Idx = N->getOperand(1);
-      SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT,
-                                Vec.getOperand(0), Idx);
-      return DAG.getNode(Vec.getOpcode(), SL, ResVT, Elt);
-    }
-
-    // ScalarRes = EXTRACT_VECTOR_ELT ((vector-BINOP Vec1, Vec2), Idx)
-    //    =>
-    // Vec1Elt = EXTRACT_VECTOR_ELT(Vec1, Idx)
-    // Vec2Elt = EXTRACT_VECTOR_ELT(Vec2, Idx)
-    // ScalarRes = scalar-BINOP Vec1Elt, Vec2Elt
-    if (Vec.hasOneUse() && DCI.isBeforeLegalize() && VecEltVT == ResVT) {
-      SDLoc SL(N);
-      SDValue Idx = N->getOperand(1);
-      unsigned Opc = Vec.getOpcode();
-
-      switch (Opc) {
-      default:
-        break;
-        // TODO: Support other binary operations.
-      case ISD::FADD:
-      case ISD::FSUB:
-      case ISD::FMUL:
-      case ISD::ADD:
-      case ISD::UMIN:
-      case ISD::UMAX:
-      case ISD::SMIN:
-      case ISD::SMAX:
-      case ISD::FMAXNUM:
-      case ISD::FMINNUM:
-      case ISD::FMAXNUM_IEEE:
-      case ISD::FMINNUM_IEEE:
-      case ISD::FMAXIMUM:
-      case ISD::FMINIMUM: {
-        SDValue Elt0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT,
-                                   Vec.getOperand(0), Idx);
-        SDValue Elt1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT,
-                                   Vec.getOperand(1), Idx);
-
-        DCI.AddToWorklist(Elt0.getNode());
-        DCI.AddToWorklist(Elt1.getNode());
-        return DAG.getNode(Opc, SL, ResVT, Elt0, Elt1, Vec->getFlags());
-      }
-      }
-    }
-
-    // EXTRACT_VECTOR_ELT (<n x e>, var-idx) => n x select (e, const-idx)
-    if (shouldExpandVectorDynExt(N)) {
-      SDLoc SL(N);
-      SDValue Idx = N->getOperand(1);
-      SDValue V;
-      for (unsigned I = 0, E = VecVT.getVectorNumElements(); I < E; ++I) {
-        SDValue IC = DAG.getVectorIdxConstant(I, SL);
-        SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT, Vec, IC);
-        if (I == 0)
-          V = Elt;
-        else
-          V = DAG.getSelectCC(SL, Idx, IC, Elt, V, ISD::SETEQ);
-      }
-      return V;
-    }
-
-    if (!DCI.isBeforeLegalize())
-      return SDValue();
-
-    // Try to turn sub-dword accesses of vectors into accesses of the same
-    // 32-bit elements. This exposes more load reduction opportunities by
-    // replacing multiple small extract_vector_elements with a single 32-bit
-    // extract.
-    auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1));
-    if (isa<MemSDNode>(Vec) && VecEltSize <= 16 && VecEltVT.isByteSized() &&
-        VecSize > 32 && VecSize % 32 == 0 && Idx) {
-      EVT NewVT = getEquivalentMemType(*DAG.getContext(), VecVT);
-
-      unsigned BitIndex = Idx->getZExtValue() * VecEltSize;
-      unsigned EltIdx = BitIndex / 32;
-      unsigned LeftoverBitIdx = BitIndex % 32;
-      SDLoc SL(N);
-
-      SDValue Cast = DAG.getNode(ISD::BITCAST, SL, NewVT, Vec);
-      DCI.AddToWorklist(Cast.getNode());
-
-      SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Cast,
-                                DAG.getConstant(EltIdx, SL, MVT::i32));
-      DCI.AddToWorklist(Elt.getNode());
-      SDValue Srl = DAG.getNode(ISD::SRL, SL, MVT::i32, Elt,
-                                DAG.getConstant(LeftoverBitIdx, SL, MVT::i32));
-      DCI.AddToWorklist(Srl.getNode());
-
-      EVT VecEltAsIntVT = VecEltVT.changeTypeToInteger();
-      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, VecEltAsIntVT, Srl);
-      DCI.AddToWorklist(Trunc.getNode());
-
-      if (VecEltVT == ResVT) {
-        return DAG.getNode(ISD::BITCAST, SL, VecEltVT, Trunc);
-      }
-
-      assert(ResVT.isScalarInteger());
-      return DAG.getAnyExtOrTrunc(Trunc, SL, ResVT);
-    }
-
-    return SDValue();
+  if ((Vec.getOpcode() == ISD::FNEG || Vec.getOpcode() == ISD::FABS) &&
+      allUsesHaveSourceMods(N)) {
+    SDLoc SL(N);
+    SDValue Idx = N->getOperand(1);
+    SDValue Elt =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT, Vec.getOperand(0), Idx);
+    return DAG.getNode(Vec.getOpcode(), SL, ResVT, Elt);
   }
+
+  // ScalarRes = EXTRACT_VECTOR_ELT ((vector-BINOP Vec1, Vec2), Idx)
+  //    =>
+  // Vec1Elt = EXTRACT_VECTOR_ELT(Vec1, Idx)
+  // Vec2Elt = EXTRACT_VECTOR_ELT(Vec2, Idx)
+  // ScalarRes = scalar-BINOP Vec1Elt, Vec2Elt
+  if (Vec.hasOneUse() && DCI.isBeforeLegalize() && VecEltVT == ResVT) {
+    SDLoc SL(N);
+    SDValue Idx = N->getOperand(1);
+    unsigned Opc = Vec.getOpcode();
+
+    switch (Opc) {
+    default:
+      break;
+      // TODO: Support other binary operations.
+    case ISD::FADD:
+    case ISD::FSUB:
+    case ISD::FMUL:
+    case ISD::ADD:
+    case ISD::UMIN:
+    case ISD::UMAX:
+    case ISD::SMIN:
+    case ISD::SMAX:
+    case ISD::FMAXNUM:
+    case ISD::FMINNUM:
+    case ISD::FMAXNUM_IEEE:
+    case ISD::FMINNUM_IEEE:
+    case ISD::FMAXIMUM:
+    case ISD::FMINIMUM: {
+      SDValue Elt0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT,
+                                 Vec.getOperand(0), Idx);
+      SDValue Elt1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT,
+                                 Vec.getOperand(1), Idx);
+
+      DCI.AddToWorklist(Elt0.getNode());
+      DCI.AddToWorklist(Elt1.getNode());
+      return DAG.getNode(Opc, SL, ResVT, Elt0, Elt1, Vec->getFlags());
+    }
+    }
+  }
+
+  // EXTRACT_VECTOR_ELT (<n x e>, var-idx) => n x select (e, const-idx)
+  if (shouldExpandVectorDynExt(N)) {
+    SDLoc SL(N);
+    SDValue Idx = N->getOperand(1);
+    SDValue V;
+    for (unsigned I = 0, E = VecVT.getVectorNumElements(); I < E; ++I) {
+      SDValue IC = DAG.getVectorIdxConstant(I, SL);
+      SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, ResVT, Vec, IC);
+      if (I == 0)
+        V = Elt;
+      else
+        V = DAG.getSelectCC(SL, Idx, IC, Elt, V, ISD::SETEQ);
+    }
+    return V;
+  }
+
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  // Try to turn sub-dword accesses of vectors into accesses of the same
+  // 32-bit elements. This exposes more load reduction opportunities by
+  // replacing multiple small extract_vector_elements with a single 32-bit
+  // extract.
+  auto *Idx = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (isa<MemSDNode>(Vec) && VecEltSize <= 16 && VecEltVT.isByteSized() &&
+      VecSize > 32 && VecSize % 32 == 0 && Idx) {
+    EVT NewVT = getEquivalentMemType(*DAG.getContext(), VecVT);
+
+    unsigned BitIndex = Idx->getZExtValue() * VecEltSize;
+    unsigned EltIdx = BitIndex / 32;
+    unsigned LeftoverBitIdx = BitIndex % 32;
+    SDLoc SL(N);
+
+    SDValue Cast = DAG.getNode(ISD::BITCAST, SL, NewVT, Vec);
+    DCI.AddToWorklist(Cast.getNode());
+
+    SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Cast,
+                              DAG.getConstant(EltIdx, SL, MVT::i32));
+    DCI.AddToWorklist(Elt.getNode());
+    SDValue Srl = DAG.getNode(ISD::SRL, SL, MVT::i32, Elt,
+                              DAG.getConstant(LeftoverBitIdx, SL, MVT::i32));
+    DCI.AddToWorklist(Srl.getNode());
+
+    EVT VecEltAsIntVT = VecEltVT.changeTypeToInteger();
+    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, VecEltAsIntVT, Srl);
+    DCI.AddToWorklist(Trunc.getNode());
+
+    if (VecEltVT == ResVT) {
+      return DAG.getNode(ISD::BITCAST, SL, VecEltVT, Trunc);
+    }
+
+    assert(ResVT.isScalarInteger());
+    return DAG.getAnyExtOrTrunc(Trunc, SL, ResVT);
+  }
+
+  return SDValue();
+}
 
 SDValue
 SITargetLowering::performInsertVectorEltCombine(SDNode *N,
