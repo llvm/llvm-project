@@ -90,12 +90,12 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
 
     if (inputETy != resultETy) {
       inputType = inputType.clone(resultETy);
-      input = rewriter.create<tosa::CastOp>(op.getLoc(), inputType, input);
+      input = tosa::CastOp::create(rewriter, op.getLoc(), inputType, input);
     }
 
     if (weightETy != resultETy) {
       weightType = weightType.clone(resultETy);
-      weight = rewriter.create<tosa::CastOp>(op.getLoc(), weightType, weight);
+      weight = tosa::CastOp::create(rewriter, op.getLoc(), weightType, weight);
     }
 
     if (iZp != 0 || wZp != 0) {
@@ -109,9 +109,9 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
         auto zpTy = RankedTensorType::get(shape, ety);
         auto zpAttr =
             DenseElementsAttr::get(zpTy, rewriter.getIntegerAttr(ety, zp));
-        auto zpVal = rewriter.create<tosa::ConstOp>(op.getLoc(), zpTy, zpAttr);
-        return rewriter.create<tosa::SubOp>(op.getLoc(), val.getType(), val,
-                                            zpVal);
+        auto zpVal = tosa::ConstOp::create(rewriter, op.getLoc(), zpTy, zpAttr);
+        return tosa::SubOp::create(rewriter, op.getLoc(), val.getType(), val,
+                                   zpVal);
       };
 
       input = applyZp(input, iZp);
@@ -138,10 +138,10 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
       auto padTy = RankedTensorType::get({1}, inputETy);
       auto padAttr = DenseElementsAttr::get(padTy, zeroAttr);
       Value padVal =
-          rewriter.create<tosa::ConstOp>(op->getLoc(), padTy, padAttr);
+          tosa::ConstOp::create(rewriter, op->getLoc(), padTy, padAttr);
       inputType = RankedTensorType::get(newShape, inputETy);
-      input = rewriter.create<tosa::PadOp>(op->getLoc(), inputType, input,
-                                           padSizeVal, padVal);
+      input = tosa::PadOp::create(rewriter, op->getLoc(), inputType, input,
+                                  padSizeVal, padVal);
     }
 
     // Perform an elementwise mul over the reshaped input and weight.
@@ -161,7 +161,7 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
     auto shiftZeroAttr = DenseElementsAttr::get(
         shiftType, rewriter.getIntegerAttr(shiftElementType, 0));
     Value constZero =
-        rewriter.create<tosa::ConstOp>(op.getLoc(), shiftType, shiftZeroAttr);
+        tosa::ConstOp::create(rewriter, op.getLoc(), shiftType, shiftZeroAttr);
     Value mulValue = rewriter
                          .create<tosa::MulOp>(op.getLoc(), mulShapeType, input,
                                               weight, constZero)
@@ -174,8 +174,8 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
         dyn_cast<RankedTensorType>(input.getType()).getElementType());
     auto outputShapeValue =
         getTosaConstShape(rewriter, op->getLoc(), outputShape);
-    Value outputValue = rewriter.create<tosa::ReshapeOp>(
-        op.getLoc(), outputShapeType, mulValue, outputShapeValue);
+    Value outputValue = tosa::ReshapeOp::create(
+        rewriter, op.getLoc(), outputShapeType, mulValue, outputShapeValue);
 
     Value bias = op.getBias();
     if (EqualizeRanks(rewriter, op.getLoc(), outputValue, bias).failed()) {
