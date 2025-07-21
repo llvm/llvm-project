@@ -1083,26 +1083,26 @@ const EnumEntry<unsigned> ElfObjectFileType[] = {
 };
 
 const EnumEntry<unsigned> ElfOSABI[] = {
-  {"SystemV",      "UNIX - System V",      ELF::ELFOSABI_NONE},
-  {"HPUX",         "UNIX - HP-UX",         ELF::ELFOSABI_HPUX},
-  {"NetBSD",       "UNIX - NetBSD",        ELF::ELFOSABI_NETBSD},
-  {"GNU/Linux",    "UNIX - GNU",           ELF::ELFOSABI_LINUX},
-  {"GNU/Hurd",     "GNU/Hurd",             ELF::ELFOSABI_HURD},
-  {"Solaris",      "UNIX - Solaris",       ELF::ELFOSABI_SOLARIS},
-  {"AIX",          "UNIX - AIX",           ELF::ELFOSABI_AIX},
-  {"IRIX",         "UNIX - IRIX",          ELF::ELFOSABI_IRIX},
-  {"FreeBSD",      "UNIX - FreeBSD",       ELF::ELFOSABI_FREEBSD},
-  {"TRU64",        "UNIX - TRU64",         ELF::ELFOSABI_TRU64},
-  {"Modesto",      "Novell - Modesto",     ELF::ELFOSABI_MODESTO},
-  {"OpenBSD",      "UNIX - OpenBSD",       ELF::ELFOSABI_OPENBSD},
-  {"OpenVMS",      "VMS - OpenVMS",        ELF::ELFOSABI_OPENVMS},
-  {"NSK",          "HP - Non-Stop Kernel", ELF::ELFOSABI_NSK},
-  {"AROS",         "AROS",                 ELF::ELFOSABI_AROS},
-  {"FenixOS",      "FenixOS",              ELF::ELFOSABI_FENIXOS},
-  {"CloudABI",     "CloudABI",             ELF::ELFOSABI_CLOUDABI},
-  {"CUDA",         "NVIDIA - CUDA",        ELF::ELFOSABI_CUDA},
-  {"Standalone",   "Standalone App",       ELF::ELFOSABI_STANDALONE}
-};
+    {"SystemV", "UNIX - System V", ELF::ELFOSABI_NONE},
+    {"HPUX", "UNIX - HP-UX", ELF::ELFOSABI_HPUX},
+    {"NetBSD", "UNIX - NetBSD", ELF::ELFOSABI_NETBSD},
+    {"GNU/Linux", "UNIX - GNU", ELF::ELFOSABI_LINUX},
+    {"GNU/Hurd", "GNU/Hurd", ELF::ELFOSABI_HURD},
+    {"Solaris", "UNIX - Solaris", ELF::ELFOSABI_SOLARIS},
+    {"AIX", "UNIX - AIX", ELF::ELFOSABI_AIX},
+    {"IRIX", "UNIX - IRIX", ELF::ELFOSABI_IRIX},
+    {"FreeBSD", "UNIX - FreeBSD", ELF::ELFOSABI_FREEBSD},
+    {"TRU64", "UNIX - TRU64", ELF::ELFOSABI_TRU64},
+    {"Modesto", "Novell - Modesto", ELF::ELFOSABI_MODESTO},
+    {"OpenBSD", "UNIX - OpenBSD", ELF::ELFOSABI_OPENBSD},
+    {"OpenVMS", "VMS - OpenVMS", ELF::ELFOSABI_OPENVMS},
+    {"NSK", "HP - Non-Stop Kernel", ELF::ELFOSABI_NSK},
+    {"AROS", "AROS", ELF::ELFOSABI_AROS},
+    {"FenixOS", "FenixOS", ELF::ELFOSABI_FENIXOS},
+    {"CloudABI", "CloudABI", ELF::ELFOSABI_CLOUDABI},
+    {"CUDA", "NVIDIA - CUDA", ELF::ELFOSABI_CUDA},
+    {"CUDA", "NVIDIA - CUDA", ELF::ELFOSABI_CUDA_V2},
+    {"Standalone", "Standalone App", ELF::ELFOSABI_STANDALONE}};
 
 const EnumEntry<unsigned> AMDGPUElfOSABI[] = {
   {"AMDGPU_HSA",    "AMDGPU - HSA",    ELF::ELFOSABI_AMDGPU_HSA},
@@ -1666,16 +1666,60 @@ const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion4[] = {
 };
 
 const EnumEntry<unsigned> ElfHeaderNVPTXFlags[] = {
-    ENUM_ENT(EF_CUDA_SM20, "sm_20"), ENUM_ENT(EF_CUDA_SM21, "sm_21"),
-    ENUM_ENT(EF_CUDA_SM30, "sm_30"), ENUM_ENT(EF_CUDA_SM32, "sm_32"),
-    ENUM_ENT(EF_CUDA_SM35, "sm_35"), ENUM_ENT(EF_CUDA_SM37, "sm_37"),
-    ENUM_ENT(EF_CUDA_SM50, "sm_50"), ENUM_ENT(EF_CUDA_SM52, "sm_52"),
-    ENUM_ENT(EF_CUDA_SM53, "sm_53"), ENUM_ENT(EF_CUDA_SM60, "sm_60"),
-    ENUM_ENT(EF_CUDA_SM61, "sm_61"), ENUM_ENT(EF_CUDA_SM62, "sm_62"),
-    ENUM_ENT(EF_CUDA_SM70, "sm_70"), ENUM_ENT(EF_CUDA_SM72, "sm_72"),
-    ENUM_ENT(EF_CUDA_SM75, "sm_75"), ENUM_ENT(EF_CUDA_SM80, "sm_80"),
-    ENUM_ENT(EF_CUDA_SM86, "sm_86"), ENUM_ENT(EF_CUDA_SM87, "sm_87"),
-    ENUM_ENT(EF_CUDA_SM89, "sm_89"), ENUM_ENT(EF_CUDA_SM90, "sm_90"),
+    ENUM_ENT(EF_CUDA_SM20, "sm_20"),
+    ENUM_ENT(EF_CUDA_SM21, "sm_21"),
+    ENUM_ENT(EF_CUDA_SM30, "sm_30"),
+    ENUM_ENT(EF_CUDA_SM32, "sm_32"),
+    ENUM_ENT(EF_CUDA_SM35, "sm_35"),
+    ENUM_ENT(EF_CUDA_SM37, "sm_37"),
+    ENUM_ENT(EF_CUDA_SM50, "sm_50"),
+    ENUM_ENT(EF_CUDA_SM52, "sm_52"),
+    ENUM_ENT(EF_CUDA_SM53, "sm_53"),
+    ENUM_ENT(EF_CUDA_SM60, "sm_60"),
+    ENUM_ENT(EF_CUDA_SM61, "sm_61"),
+    ENUM_ENT(EF_CUDA_SM62, "sm_62"),
+    ENUM_ENT(EF_CUDA_SM70, "sm_70"),
+    ENUM_ENT(EF_CUDA_SM72, "sm_72"),
+    ENUM_ENT(EF_CUDA_SM75, "sm_75"),
+    ENUM_ENT(EF_CUDA_SM80, "sm_80"),
+    ENUM_ENT(EF_CUDA_SM86, "sm_86"),
+    ENUM_ENT(EF_CUDA_SM87, "sm_87"),
+    ENUM_ENT(EF_CUDA_SM88, "sm_88"),
+    ENUM_ENT(EF_CUDA_SM89, "sm_89"),
+    ENUM_ENT(EF_CUDA_SM90, "sm_90"),
+    ENUM_ENT(EF_CUDA_SM100, "sm_100"),
+    ENUM_ENT(EF_CUDA_SM101, "sm_101"),
+    ENUM_ENT(EF_CUDA_SM103, "sm_103"),
+    ENUM_ENT(EF_CUDA_SM110, "sm_110"),
+    ENUM_ENT(EF_CUDA_SM120, "sm_120"),
+    ENUM_ENT(EF_CUDA_SM121, "sm_121"),
+    ENUM_ENT(EF_CUDA_SM20 << EF_CUDA_SM_OFFSET, "sm_20"),
+    ENUM_ENT(EF_CUDA_SM21 << EF_CUDA_SM_OFFSET, "sm_21"),
+    ENUM_ENT(EF_CUDA_SM30 << EF_CUDA_SM_OFFSET, "sm_30"),
+    ENUM_ENT(EF_CUDA_SM32 << EF_CUDA_SM_OFFSET, "sm_32"),
+    ENUM_ENT(EF_CUDA_SM35 << EF_CUDA_SM_OFFSET, "sm_35"),
+    ENUM_ENT(EF_CUDA_SM37 << EF_CUDA_SM_OFFSET, "sm_37"),
+    ENUM_ENT(EF_CUDA_SM50 << EF_CUDA_SM_OFFSET, "sm_50"),
+    ENUM_ENT(EF_CUDA_SM52 << EF_CUDA_SM_OFFSET, "sm_52"),
+    ENUM_ENT(EF_CUDA_SM53 << EF_CUDA_SM_OFFSET, "sm_53"),
+    ENUM_ENT(EF_CUDA_SM60 << EF_CUDA_SM_OFFSET, "sm_60"),
+    ENUM_ENT(EF_CUDA_SM61 << EF_CUDA_SM_OFFSET, "sm_61"),
+    ENUM_ENT(EF_CUDA_SM62 << EF_CUDA_SM_OFFSET, "sm_62"),
+    ENUM_ENT(EF_CUDA_SM70 << EF_CUDA_SM_OFFSET, "sm_70"),
+    ENUM_ENT(EF_CUDA_SM72 << EF_CUDA_SM_OFFSET, "sm_72"),
+    ENUM_ENT(EF_CUDA_SM75 << EF_CUDA_SM_OFFSET, "sm_75"),
+    ENUM_ENT(EF_CUDA_SM80 << EF_CUDA_SM_OFFSET, "sm_80"),
+    ENUM_ENT(EF_CUDA_SM86 << EF_CUDA_SM_OFFSET, "sm_86"),
+    ENUM_ENT(EF_CUDA_SM87 << EF_CUDA_SM_OFFSET, "sm_87"),
+    ENUM_ENT(EF_CUDA_SM88 << EF_CUDA_SM_OFFSET, "sm_88"),
+    ENUM_ENT(EF_CUDA_SM89 << EF_CUDA_SM_OFFSET, "sm_89"),
+    ENUM_ENT(EF_CUDA_SM90 << EF_CUDA_SM_OFFSET, "sm_90"),
+    ENUM_ENT(EF_CUDA_SM100 << EF_CUDA_SM_OFFSET, "sm_100"),
+    ENUM_ENT(EF_CUDA_SM101 << EF_CUDA_SM_OFFSET, "sm_101"),
+    ENUM_ENT(EF_CUDA_SM103 << EF_CUDA_SM_OFFSET, "sm_103"),
+    ENUM_ENT(EF_CUDA_SM110 << EF_CUDA_SM_OFFSET, "sm_110"),
+    ENUM_ENT(EF_CUDA_SM120 << EF_CUDA_SM_OFFSET, "sm_120"),
+    ENUM_ENT(EF_CUDA_SM121 << EF_CUDA_SM_OFFSET, "sm_121"),
 };
 
 const EnumEntry<unsigned> ElfHeaderRISCVFlags[] = {
@@ -3650,10 +3694,16 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
   else if (e.e_machine == EM_XTENSA)
     ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderXtensaFlags),
                           unsigned(ELF::EF_XTENSA_MACH));
-  else if (e.e_machine == EM_CUDA)
+  else if (e.e_machine == EM_CUDA) {
     ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderNVPTXFlags),
                           unsigned(ELF::EF_CUDA_SM));
-  else if (e.e_machine == EM_AMDGPU) {
+    if (e.e_ident[ELF::EI_ABIVERSION] == ELF::ELFABIVERSION_CUDA_V1 &&
+        (e.e_flags & ELF::EF_CUDA_ACCELERATORS_V1))
+      ElfFlags += "a";
+    else if (e.e_ident[ELF::EI_ABIVERSION] == ELF::ELFABIVERSION_CUDA_V2 &&
+             (e.e_flags & ELF::EF_CUDA_ACCELERATORS))
+      ElfFlags += "a";
+  } else if (e.e_machine == EM_AMDGPU) {
     switch (e.e_ident[ELF::EI_ABIVERSION]) {
     default:
       break;
