@@ -58,7 +58,6 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   case MCFragment::FT_SymbolId:      OS << "SymbolId"; break;
   case MCFragment::FT_CVInlineLines: OS << "CVInlineLineTable"; break;
   case MCFragment::FT_CVDefRange:    OS << "CVDefRangeTable"; break;
-  case MCFragment::FT_PseudoProbe:   OS << "PseudoProbe"; break;
     // clang-format on
   }
 
@@ -73,17 +72,9 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   };
 
   switch (getKind()) {
-  case MCFragment::FT_Align: {
-    const auto *AF = cast<MCAlignFragment>(this);
-    OS << " Align:" << AF->getAlignment().value() << " Fill:" << AF->getFill()
-       << " FillLen:" << unsigned(AF->getFillLen())
-       << " MaxBytesToEmit:" << AF->getMaxBytesToEmit();
-    if (AF->hasEmitNops())
-      OS << " Nops";
-    break;
-  }
   case MCFragment::FT_Data:
   case MCFragment::FT_Relaxable:
+  case MCFragment::FT_Align:
   case MCFragment::FT_LEB:
   case MCFragment::FT_Dwarf:
   case MCFragment::FT_DwarfFrame: {
@@ -92,8 +83,13 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     auto Fixed = getContents();
     auto Var = getVarContents();
     OS << " Size:" << Fixed.size();
-    if (getKind() != MCFragment::FT_Data)
+    if (getKind() != MCFragment::FT_Data) {
       OS << '+' << Var.size();
+      // FT_Align uses getVarContents to track the size, but the content is
+      // ignored and not useful.
+      if (getKind() == MCFragment::FT_Align)
+        Var = {};
+    }
     OS << " [";
     for (unsigned i = 0, e = Fixed.size(); i != e; ++i) {
       if (i) OS << ",";
@@ -111,6 +107,13 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     case MCFragment::FT_Relaxable:
       OS << ' ';
       getInst().dump_pretty(OS);
+      break;
+    case MCFragment::FT_Align:
+      OS << "\n  Align:" << getAlignment().value() << " Fill:" << getAlignFill()
+         << " FillLen:" << unsigned(getAlignFillLen())
+         << " MaxBytesToEmit:" << getAlignMaxBytesToEmit();
+      if (hasAlignEmitNops())
+        OS << " Nops";
       break;
     case MCFragment::FT_LEB: {
       OS << " Value:";
@@ -180,12 +183,6 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
       OS << " RangeStart:" << RangeStartEnd.first;
       OS << " RangeEnd:" << RangeStartEnd.second;
     }
-    break;
-  }
-  case MCFragment::FT_PseudoProbe: {
-    const auto *OF = cast<MCPseudoProbeAddrFragment>(this);
-    OS << " AddrDelta:";
-    OF->getAddrDelta().print(OS, nullptr);
     break;
   }
   }

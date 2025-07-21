@@ -20,7 +20,7 @@
 // RUN:   -triple x86_64-unknown-linux 2>&1 | FileCheck %s
 
 // CHECK: Loaded summary for: int isalnum(int)
-// CHECK: Loaded summary for: unsigned long fread(void *restrict, size_t, size_t, FILE *restrict) __attribute__((nonnull(1)))
+// CHECK: Loaded summary for: __size_t fread(void *restrict, size_t, size_t, FILE *restrict) __attribute__((nonnull(1)))
 // CHECK: Loaded summary for: int fileno(FILE *stream)
 
 void initializeSummaryMap(void);
