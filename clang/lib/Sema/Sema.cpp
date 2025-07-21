@@ -1227,15 +1227,6 @@ void Sema::ActOnEndOfTranslationUnitFragment(TUFragmentKind Kind) {
   assert(LateParsedInstantiations.empty() &&
          "end of TU template instantiation should not create more "
          "late-parsed templates");
-
-  // Report diagnostics for uncorrected delayed typos. Ideally all of them
-  // should have been corrected by that time, but it is very hard to cover all
-  // cases in practice.
-  for (const auto &Typo : DelayedTypos) {
-    // We pass an empty TypoCorrection to indicate no correction was performed.
-    Typo.second.DiagHandler(TypoCorrection());
-  }
-  DelayedTypos.clear();
 }
 
 void Sema::ActOnEndOfTranslationUnit() {
@@ -2270,6 +2261,24 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
         }
       }
     }
+
+    if (auto *VT = Ty->getAs<VectorType>();
+        VT && FD &&
+        (VT->getVectorKind() == VectorKind::SveFixedLengthData ||
+         VT->getVectorKind() == VectorKind::SveFixedLengthPredicate) &&
+        (LangOpts.VScaleMin != LangOpts.VScaleStreamingMin ||
+         LangOpts.VScaleMax != LangOpts.VScaleStreamingMax)) {
+      if (IsArmStreamingFunction(FD, /*IncludeLocallyStreaming=*/true)) {
+        Diag(Loc, diag::err_sve_fixed_vector_in_streaming_function)
+            << Ty << /*Streaming*/ 0;
+      } else if (const auto *FTy = FD->getType()->getAs<FunctionProtoType>()) {
+        if (FTy->getAArch64SMEAttributes() &
+            FunctionType::SME_PStateSMCompatibleMask) {
+          Diag(Loc, diag::err_sve_fixed_vector_in_streaming_function)
+              << Ty << /*StreamingCompatible*/ 1;
+        }
+      }
+    }
   };
 
   CheckType(Ty);
@@ -2443,9 +2452,10 @@ Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
     OpenMP().popOpenMPFunctionRegion(Scope.get());
 
   // Issue any analysis-based warnings.
-  if (WP && D)
+  if (WP && D) {
+    inferNoReturnAttr(*this, D);
     AnalysisWarnings.IssueWarnings(*WP, Scope.get(), D, BlockType);
-  else
+  } else
     for (const auto &PUD : Scope->PossiblyUnreachableDiags)
       Diag(PUD.Loc, PUD.PD);
 

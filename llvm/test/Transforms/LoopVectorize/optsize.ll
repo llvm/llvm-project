@@ -621,15 +621,14 @@ define i32 @pr45526_pgso() !prof !14 {
 ; NPGSO:       [[VECTOR_BODY]]:
 ; NPGSO-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; NPGSO-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; NPGSO-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 5>, %[[VECTOR_PH]] ], [ [[TMP0:%.*]], %[[VECTOR_BODY]] ]
-; NPGSO-NEXT:    [[TMP0]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 1)
+; NPGSO-NEXT:    [[TMP0:%.*]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 1)
 ; NPGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; NPGSO-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; NPGSO-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 508
 ; NPGSO-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
 ; NPGSO:       [[MIDDLE_BLOCK]]:
-; NPGSO-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[TMP0]], i32 2
 ; NPGSO-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 3
+; NPGSO-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[TMP0]], i32 2
 ; NPGSO-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; NPGSO:       [[SCALAR_PH]]:
 ; NPGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 508, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]

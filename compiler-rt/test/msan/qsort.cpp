@@ -52,7 +52,7 @@ int compar1(const void *a, const void *b) {
   // kind of random
   for (int i = 0; i < kSize2; ++i)
     p[i] = i * 2 + (i % 3 - 1) * 3;
-  qsort(p, kSize1, sizeof(long), compar2);
+  qsort(p, kSize2, sizeof(long), compar2);
   __msan_check_mem_is_initialized(p, sizeof(long) * kSize2);
   delete[] p;
 

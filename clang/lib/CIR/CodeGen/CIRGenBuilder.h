@@ -10,8 +10,9 @@
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENBUILDER_H
 
 #include "Address.h"
+#include "CIRGenRecordLayout.h"
 #include "CIRGenTypeCache.h"
-#include "clang/CIR/Interfaces/CIRFPTypeInterface.h"
+#include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
@@ -24,6 +25,7 @@ namespace clang::CIRGen {
 class CIRGenBuilderTy : public cir::CIRBaseBuilderTy {
   const CIRGenTypeCache &typeCache;
   llvm::StringMap<unsigned> recordNames;
+  llvm::StringMap<unsigned> globalsVersioning;
 
 public:
   CIRGenBuilderTy(mlir::MLIRContext &mlirContext, const CIRGenTypeCache &tc)
@@ -136,18 +138,6 @@ public:
     if (rd)
       kind = getRecordKind(rd->getTagKind());
     return getType<cir::RecordType>(nameAttr, kind);
-  }
-
-  bool isSized(mlir::Type ty) {
-    if (mlir::isa<cir::PointerType, cir::ArrayType, cir::BoolType,
-                  cir::IntType>(ty))
-      return true;
-
-    if (const auto vt = mlir::dyn_cast<cir::VectorType>(ty))
-      return isSized(vt.getElementType());
-
-    assert(!cir::MissingFeatures::unsizedTypes());
-    return false;
   }
 
   // Return true if the value is a null constant such as null pointer, (+0.0)
@@ -332,6 +322,18 @@ public:
     return Address(baseAddr, destType, addr.getAlignment());
   }
 
+  /// Cast the element type of the given address to a different type,
+  /// preserving information like the alignment.
+  Address createElementBitCast(mlir::Location loc, Address addr,
+                               mlir::Type destType) {
+    if (destType == addr.getElementType())
+      return addr;
+
+    auto ptrTy = getPointerTo(destType);
+    return Address(createBitcast(loc, addr.getPointer(), ptrTy), destType,
+                   addr.getAlignment());
+  }
+
   cir::LoadOp createLoad(mlir::Location loc, Address addr,
                          bool isVolatile = false) {
     mlir::IntegerAttr align = getAlignmentAttr(addr.getAlignment());
@@ -346,6 +348,35 @@ public:
     return CIRBaseBuilderTy::createStore(loc, val, dst.getPointer(), align);
   }
 
+  /// Create a cir.complex.real_ptr operation that derives a pointer to the real
+  /// part of the complex value pointed to by the specified pointer value.
+  mlir::Value createComplexRealPtr(mlir::Location loc, mlir::Value value) {
+    auto srcPtrTy = mlir::cast<cir::PointerType>(value.getType());
+    auto srcComplexTy = mlir::cast<cir::ComplexType>(srcPtrTy.getPointee());
+    return create<cir::ComplexRealPtrOp>(
+        loc, getPointerTo(srcComplexTy.getElementType()), value);
+  }
+
+  Address createComplexRealPtr(mlir::Location loc, Address addr) {
+    return Address{createComplexRealPtr(loc, addr.getPointer()),
+                   addr.getAlignment()};
+  }
+
+  /// Create a cir.complex.imag_ptr operation that derives a pointer to the
+  /// imaginary part of the complex value pointed to by the specified pointer
+  /// value.
+  mlir::Value createComplexImagPtr(mlir::Location loc, mlir::Value value) {
+    auto srcPtrTy = mlir::cast<cir::PointerType>(value.getType());
+    auto srcComplexTy = mlir::cast<cir::ComplexType>(srcPtrTy.getPointee());
+    return create<cir::ComplexImagPtrOp>(
+        loc, getPointerTo(srcComplexTy.getElementType()), value);
+  }
+
+  Address createComplexImagPtr(mlir::Location loc, Address addr) {
+    return Address{createComplexImagPtr(loc, addr.getPointer()),
+                   addr.getAlignment()};
+  }
+
   /// Create a cir.ptr_stride operation to get access to an array element.
   /// \p idx is the index of the element to access, \p shouldDecay is true if
   /// the result should decay to a pointer to the element type.
@@ -358,6 +389,43 @@ public:
   /// pointed to by \p arrayPtr.
   mlir::Value maybeBuildArrayDecay(mlir::Location loc, mlir::Value arrayPtr,
                                    mlir::Type eltTy);
+
+  /// Creates a versioned global variable. If the symbol is already taken, an ID
+  /// will be appended to the symbol. The returned global must always be queried
+  /// for its name so it can be referenced correctly.
+  [[nodiscard]] cir::GlobalOp
+  createVersionedGlobal(mlir::ModuleOp module, mlir::Location loc,
+                        mlir::StringRef name, mlir::Type type,
+                        cir::GlobalLinkageKind linkage) {
+    // Create a unique name if the given name is already taken.
+    std::string uniqueName;
+    if (unsigned version = globalsVersioning[name.str()]++)
+      uniqueName = name.str() + "." + std::to_string(version);
+    else
+      uniqueName = name.str();
+
+    return createGlobal(module, loc, uniqueName, type, linkage);
+  }
+
+  mlir::Value createSetBitfield(mlir::Location loc, mlir::Type resultType,
+                                Address dstAddr, mlir::Type storageType,
+                                mlir::Value src, const CIRGenBitFieldInfo &info,
+                                bool isLvalueVolatile) {
+    return create<cir::SetBitfieldOp>(
+        loc, resultType, dstAddr.getPointer(), storageType, src, info.name,
+        info.size, info.offset, info.isSigned, isLvalueVolatile,
+        dstAddr.getAlignment().getAsAlign().value());
+  }
+
+  mlir::Value createGetBitfield(mlir::Location loc, mlir::Type resultType,
+                                Address addr, mlir::Type storageType,
+                                const CIRGenBitFieldInfo &info,
+                                bool isLvalueVolatile) {
+    return create<cir::GetBitfieldOp>(
+        loc, resultType, addr.getPointer(), storageType, info.name, info.size,
+        info.offset, info.isSigned, isLvalueVolatile,
+        addr.getAlignment().getAsAlign().value());
+  }
 };
 
 } // namespace clang::CIRGen

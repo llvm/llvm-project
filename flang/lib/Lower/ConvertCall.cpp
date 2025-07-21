@@ -20,12 +20,14 @@
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
+#include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
@@ -494,8 +496,7 @@ Fortran::lower::genCallOpAndResult(
     auto *context = builder.getContext();
     if (mlir::isa<fir::BoxProcType>(snd) &&
         mlir::isa<mlir::FunctionType>(fst.getType())) {
-      auto funcTy =
-          mlir::FunctionType::get(context, std::nullopt, std::nullopt);
+      auto funcTy = mlir::FunctionType::get(context, {}, {});
       auto boxProcTy = builder.getBoxProcType(funcTy);
       if (mlir::Value host = argumentHostAssocs(converter, fst)) {
         cast = builder.create<fir::EmboxProcOp>(
@@ -542,6 +543,20 @@ Fortran::lower::genCallOpAndResult(
   unsigned callNumResults;
   fir::FortranProcedureFlagsEnumAttr procAttrs =
       caller.getProcedureAttrs(builder.getContext());
+
+  if (converter.getLoweringOptions().getCUDARuntimeCheck()) {
+    if (caller.getCallDescription().chevrons().empty() &&
+        !cuf::isCUDADeviceContext(builder.getRegion())) {
+      for (auto [oper, arg] :
+           llvm::zip(operands, caller.getPassedArguments())) {
+        if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(oper.getType())) {
+          const Fortran::semantics::Symbol *sym = caller.getDummySymbol(arg);
+          if (sym && Fortran::evaluate::IsCUDADeviceSymbol(*sym))
+            fir::runtime::cuda::genDescriptorCheckSection(builder, loc, oper);
+        }
+      }
+    }
+  }
 
   if (!caller.getCallDescription().chevrons().empty()) {
     // A call to a CUDA kernel with the chevron syntax.
@@ -1698,7 +1713,7 @@ void prepareUserCallArguments(
                                     /*nonDeferredParams=*/mlir::ValueRange{},
                                     /*mutableProperties=*/{});
         fir::factory::associateMutableBox(builder, loc, ptrBox, actualExv,
-                                          /*lbounds=*/std::nullopt);
+                                          /*lbounds=*/{});
         caller.placeInput(arg, irBox);
         continue;
       }

@@ -888,14 +888,9 @@ TEST_F(IRBuilderTest, DIBuilder) {
   };
 
   auto ExpectOrder = [&](DbgInstPtr First, BasicBlock::iterator Second) {
-    if (M->IsNewDbgInfoFormat) {
-      EXPECT_TRUE(isa<DbgRecord *>(First));
-      EXPECT_FALSE(Second->getDbgRecordRange().empty());
-      EXPECT_EQ(GetLastDbgRecord(&*Second), cast<DbgRecord *>(First));
-    } else {
-      EXPECT_TRUE(isa<Instruction *>(First));
-      EXPECT_EQ(&*std::prev(Second), cast<Instruction *>(First));
-    }
+    EXPECT_TRUE(isa<DbgRecord *>(First));
+    EXPECT_FALSE(Second->getDbgRecordRange().empty());
+    EXPECT_EQ(GetLastDbgRecord(&*Second), cast<DbgRecord *>(First));
   };
 
   auto RunTest = [&]() {
@@ -925,9 +920,11 @@ TEST_F(IRBuilderTest, DIBuilder) {
     // --------------------------
     DILocation *LabelLoc = DILocation::get(Ctx, 1, 0, BarScope);
     DILabel *AlwaysPreserveLabel = DIB.createLabel(
-        BarScope, "meles_meles", File, 1, /*AlwaysPreserve*/ true);
-    DILabel *Label =
-        DIB.createLabel(BarScope, "badger", File, 1, /*AlwaysPreserve*/ false);
+        BarScope, "meles_meles", File, 1, /*Column*/ 0, /*IsArtificial*/ false,
+        /*CoroSuspendIdx*/ std::nullopt, /*AlwaysPreserve*/ true);
+    DILabel *Label = DIB.createLabel(
+        BarScope, "badger", File, 1, /*Column*/ 0, /*IsArtificial*/ false,
+        /*CoroSuspendIdx*/ std::nullopt, /*AlwaysPreserve*/ false);
 
     { /* dbg.label | DbgLabelRecord */
       // Insert before I and check order.

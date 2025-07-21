@@ -41,6 +41,11 @@ TEST_F(FormatTestSelective, RemovesTrailingWhitespaceOfFormattedLine) {
   EXPECT_EQ("int a;", format("int a;         ", 0, 0));
   EXPECT_EQ("int a;\n", format("int a;  \n   \n   \n ", 0, 0));
   EXPECT_EQ("int a;\nint b;    ", format("int a;  \nint b;    ", 0, 0));
+
+  EXPECT_EQ("void f() {}", format("void f() {\n"
+                                  "  \n"
+                                  "}",
+                                  11, 0));
 }
 
 TEST_F(FormatTestSelective, FormatsCorrectRegionForLeadingWhitespace) {
@@ -684,8 +689,7 @@ TEST_F(FormatTestSelective, FormatMacroRegardlessOfPreviousIndent) {
             "            }};", // Ditto: Bug?
             format(Code, 57, 0));
 
-  Style.IndentPPDirectives =
-      FormatStyle::PPDirectiveIndentStyle::PPDIS_BeforeHash;
+  Style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
   EXPECT_EQ("      class Foo {\n"
             "            void test() {\n"
             "    #ifdef 1\n"
@@ -694,8 +698,7 @@ TEST_F(FormatTestSelective, FormatMacroRegardlessOfPreviousIndent) {
             "    }};",
             format(Code, 57, 0));
 
-  Style.IndentPPDirectives =
-      FormatStyle::PPDirectiveIndentStyle::PPDIS_AfterHash;
+  Style.IndentPPDirectives = FormatStyle::PPDIS_AfterHash;
   EXPECT_EQ("      class Foo {\n"
             "            void test() {\n"
             "    #ifdef 1\n"

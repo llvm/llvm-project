@@ -22,7 +22,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -136,23 +135,6 @@ WinCOFFObjectWriter &MCWinCOFFStreamer::getWriter() {
   return static_cast<WinCOFFObjectWriter &>(getAssembler().getWriter());
 }
 
-void MCWinCOFFStreamer::emitInstToData(const MCInst &Inst,
-                                       const MCSubtargetInfo &STI) {
-  MCDataFragment *DF = getOrCreateDataFragment();
-
-  SmallVector<MCFixup, 4> Fixups;
-  SmallString<256> Code;
-  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
-
-  // Add the fixups and data.
-  for (MCFixup &Fixup : Fixups) {
-    Fixup.setOffset(Fixup.getOffset() + DF->getContents().size());
-    DF->getFixups().push_back(Fixup);
-  }
-  DF->setHasInstructions(STI);
-  DF->appendContents(Code);
-}
-
 void MCWinCOFFStreamer::initSections(bool NoExecStack,
                                      const MCSubtargetInfo &STI) {
   // FIXME: this is identical to the ELF one.
@@ -171,7 +153,7 @@ void MCWinCOFFStreamer::initSections(bool NoExecStack,
 }
 
 void MCWinCOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
-  changeSectionImpl(Section, Subsection);
+  MCObjectStreamer::changeSection(Section, Subsection);
   // Ensure that the first and the second symbols relative to the section are
   // the section symbol and the COMDAT symbol.
   getAssembler().registerSymbol(*Section->getBeginSymbol());
@@ -296,35 +278,28 @@ void MCWinCOFFStreamer::emitCOFFSymbolIndex(MCSymbol const *Symbol) {
 
 void MCWinCOFFStreamer::emitCOFFSectionIndex(const MCSymbol *Symbol) {
   visitUsedSymbol(*Symbol);
-  MCDataFragment *DF = getOrCreateDataFragment();
   const MCSymbolRefExpr *SRE = MCSymbolRefExpr::create(Symbol, getContext());
-  MCFixup Fixup = MCFixup::create(DF->getContents().size(), SRE, FK_SecRel_2);
-  DF->getFixups().push_back(Fixup);
-  DF->appendContents(2, 0);
+  addFixup(SRE, FK_SecRel_2);
+  appendContents(2, 0);
 }
 
 void MCWinCOFFStreamer::emitCOFFSecRel32(const MCSymbol *Symbol,
                                          uint64_t Offset) {
   visitUsedSymbol(*Symbol);
-  MCDataFragment *DF = getOrCreateDataFragment();
   // Create Symbol A for the relocation relative reference.
   const MCExpr *MCE = MCSymbolRefExpr::create(Symbol, getContext());
   // Add the constant offset, if given.
   if (Offset)
     MCE = MCBinaryExpr::createAdd(
         MCE, MCConstantExpr::create(Offset, getContext()), getContext());
-  // Build the secrel32 relocation.
-  MCFixup Fixup = MCFixup::create(DF->getContents().size(), MCE, FK_SecRel_4);
-  // Record the relocation.
-  DF->getFixups().push_back(Fixup);
+  addFixup(MCE, FK_SecRel_4);
   // Emit 4 bytes (zeros) to the object file.
-  DF->appendContents(4, 0);
+  appendContents(4, 0);
 }
 
 void MCWinCOFFStreamer::emitCOFFImgRel32(const MCSymbol *Symbol,
                                          int64_t Offset) {
   visitUsedSymbol(*Symbol);
-  MCDataFragment *DF = getOrCreateDataFragment();
   // Create Symbol A for the relocation relative reference.
   const MCExpr *MCE = MCSymbolRefExpr::create(
       Symbol, MCSymbolRefExpr::VK_COFF_IMGREL32, getContext());
@@ -332,40 +307,29 @@ void MCWinCOFFStreamer::emitCOFFImgRel32(const MCSymbol *Symbol,
   if (Offset)
     MCE = MCBinaryExpr::createAdd(
         MCE, MCConstantExpr::create(Offset, getContext()), getContext());
-  // Build the imgrel relocation.
-  MCFixup Fixup = MCFixup::create(DF->getContents().size(), MCE, FK_Data_4);
-  // Record the relocation.
-  DF->getFixups().push_back(Fixup);
+  addFixup(MCE, FK_Data_4);
   // Emit 4 bytes (zeros) to the object file.
-  DF->appendContents(4, 0);
+  appendContents(4, 0);
 }
 
 void MCWinCOFFStreamer::emitCOFFSecNumber(MCSymbol const *Symbol) {
   visitUsedSymbol(*Symbol);
-  MCDataFragment *DF = getOrCreateDataFragment();
   // Create Symbol for section number.
   const MCExpr *MCE = MCCOFFSectionNumberTargetExpr::create(
       *Symbol, this->getWriter(), getContext());
-  // Build the relocation.
-  MCFixup Fixup = MCFixup::create(DF->getContents().size(), MCE, FK_Data_4);
-  // Record the relocation.
-  DF->getFixups().push_back(Fixup);
+  addFixup(MCE, FK_Data_4);
   // Emit 4 bytes (zeros) to the object file.
-  DF->appendContents(4, 0);
+  appendContents(4, 0);
 }
 
 void MCWinCOFFStreamer::emitCOFFSecOffset(MCSymbol const *Symbol) {
   visitUsedSymbol(*Symbol);
-  MCDataFragment *DF = getOrCreateDataFragment();
   // Create Symbol for section offset.
   const MCExpr *MCE =
       MCCOFFSectionOffsetTargetExpr::create(*Symbol, getContext());
-  // Build the relocation.
-  MCFixup Fixup = MCFixup::create(DF->getContents().size(), MCE, FK_Data_4);
-  // Record the relocation.
-  DF->getFixups().push_back(Fixup);
+  addFixup(MCE, FK_Data_4);
   // Emit 4 bytes (zeros) to the object file.
-  DF->appendContents(4, 0);
+  appendContents(4, 0);
 }
 
 void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,

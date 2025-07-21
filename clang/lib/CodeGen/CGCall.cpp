@@ -83,17 +83,8 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
     return llvm::CallingConv::AArch64_SVE_VectorCall;
   case CC_SpirFunction:
     return llvm::CallingConv::SPIR_FUNC;
-  case CC_DeviceKernel: {
-    if (CGM.getLangOpts().OpenCL)
-      return CGM.getTargetCodeGenInfo().getOpenCLKernelCallingConv();
-    if (CGM.getTriple().isSPIROrSPIRV())
-      return llvm::CallingConv::SPIR_KERNEL;
-    if (CGM.getTriple().isAMDGPU())
-      return llvm::CallingConv::AMDGPU_KERNEL;
-    if (CGM.getTriple().isNVPTX())
-      return llvm::CallingConv::PTX_Kernel;
-    llvm_unreachable("Unknown kernel calling convention");
-  }
+  case CC_DeviceKernel:
+    return CGM.getTargetCodeGenInfo().getDeviceKernelCallingConv();
   case CC_PreserveMost:
     return llvm::CallingConv::PreserveMost;
   case CC_PreserveAll:
@@ -223,7 +214,7 @@ static void appendParameterTypes(
   for (unsigned I = 0, E = FPT->getNumParams(); I != E; ++I) {
     prefix.push_back(FPT->getParamType(I));
     if (ExtInfos[I].hasPassObjectSize())
-      prefix.push_back(CGT.getContext().getSizeType());
+      prefix.push_back(CGT.getContext().getCanonicalSizeType());
   }
 
   addExtParameterInfosForCall(paramInfos, FPT.getTypePtr(), PrefixSize,
@@ -2669,6 +2660,13 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     // CPU/feature overrides.  addDefaultFunctionDefinitionAttributes
     // handles these separately to set them based on the global defaults.
     GetCPUAndFeaturesAttributes(CalleeInfo.getCalleeDecl(), FuncAttrs);
+
+    // Windows hotpatching support
+    if (!MSHotPatchFunctions.empty()) {
+      bool IsHotPatched = llvm::binary_search(MSHotPatchFunctions, Name);
+      if (IsHotPatched)
+        FuncAttrs.addAttribute("marked_for_windows_hot_patching");
+    }
   }
 
   // Mark functions that are replaceable by the loader.
@@ -2854,8 +2852,21 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       if (AI.getInReg())
         Attrs.addAttribute(llvm::Attribute::InReg);
 
-      if (AI.getIndirectByVal())
+      // Depending on the ABI, this may be either a byval or a dead_on_return
+      // argument.
+      if (AI.getIndirectByVal()) {
         Attrs.addByValAttr(getTypes().ConvertTypeForMem(ParamType));
+      } else {
+        // Add dead_on_return when the object's lifetime ends in the callee.
+        // This includes trivially-destructible objects, as well as objects
+        // whose destruction / clean-up is carried out within the callee (e.g.,
+        // Obj-C ARC-managed structs, MSVC callee-destroyed objects).
+        if (!ParamType.isDestructedType() || !ParamType->isRecordType() ||
+            ParamType->castAs<RecordType>()
+                ->getDecl()
+                ->isParamDestroyedInCallee())
+          Attrs.addAttribute(llvm::Attribute::DeadOnReturn);
+      }
 
       auto *Decl = ParamType->getAsRecordDecl();
       if (CodeGenOpts.PassByValueIsNoAlias && Decl &&

@@ -370,7 +370,7 @@ static void addContextSensitiveTypeNullability(Parser &P,
   // Create the attribute.
   auto getNullabilityAttr = [&](AttributePool &Pool) -> ParsedAttr * {
     return Pool.create(P.getNullabilityKeyword(nullability),
-                       SourceRange(nullabilityLoc), nullptr, SourceLocation(),
+                       SourceRange(nullabilityLoc), AttributeScopeInfo(),
                        nullptr, 0, ParsedAttr::Form::ContextSensitiveKeyword());
   };
 
@@ -2629,10 +2629,7 @@ bool Parser::ParseObjCXXMessageReceiver(bool &IsExpr, void *&TypeOrExpr) {
   if (!Tok.isSimpleTypeSpecifier(getLangOpts())) {
     //   objc-receiver:
     //     expression
-    // Make sure any typos in the receiver are corrected or diagnosed, so that
-    // proper recovery can happen. FIXME: Perhaps filter the corrected expr to
-    // only the things that are valid ObjC receivers?
-    ExprResult Receiver = Actions.CorrectDelayedTyposInExpr(ParseExpression());
+    ExprResult Receiver = ParseExpression();
     if (Receiver.isInvalid())
       return true;
 
@@ -2809,7 +2806,7 @@ ExprResult Parser::ParseObjCMessageExpression() {
   }
 
   // Otherwise, an arbitrary expression can be the receiver of a send.
-  ExprResult Res = Actions.CorrectDelayedTyposInExpr(ParseExpression());
+  ExprResult Res = ParseExpression();
   if (Res.isInvalid()) {
     SkipUntil(tok::r_square, StopAtSemi);
     return Res;
@@ -2930,8 +2927,6 @@ Parser::ParseObjCMessageExpressionBody(SourceLocation LBracLoc,
       SourceLocation commaLoc = ConsumeToken(); // Eat the ','.
       ///  Parse the expression after ','
       ExprResult Res(ParseAssignmentExpression());
-      if (Tok.is(tok::colon))
-        Res = Actions.CorrectDelayedTyposInExpr(Res);
       if (Res.isInvalid()) {
         if (Tok.is(tok::colon)) {
           Diag(commaLoc, diag::note_extra_comma_message_arg) <<
@@ -3078,10 +3073,6 @@ ExprResult Parser::ParseObjCArrayLiteral(SourceLocation AtLoc) {
       return Res;
     }
 
-    Res = Actions.CorrectDelayedTyposInExpr(Res.get());
-    if (Res.isInvalid())
-      HasInvalidEltExpr = true;
-
     // Parse the ellipsis that indicates a pack expansion.
     if (Tok.is(tok::ellipsis))
       Res = Actions.ActOnPackExpansion(Res.get(), ConsumeToken());
@@ -3108,7 +3099,6 @@ ExprResult Parser::ParseObjCArrayLiteral(SourceLocation AtLoc) {
 ExprResult Parser::ParseObjCDictionaryLiteral(SourceLocation AtLoc) {
   SmallVector<ObjCDictionaryElement, 4> Elements; // dictionary elements.
   ConsumeBrace(); // consume the l_square.
-  bool HasInvalidEltExpr = false;
   while (Tok.isNot(tok::r_brace)) {
     // Parse the comma separated key : value expressions.
     ExprResult KeyExpr;
@@ -3138,12 +3128,6 @@ ExprResult Parser::ParseObjCDictionaryLiteral(SourceLocation AtLoc) {
       return ValueExpr;
     }
 
-    // Check the key and value for possible typos
-    KeyExpr = Actions.CorrectDelayedTyposInExpr(KeyExpr.get());
-    ValueExpr = Actions.CorrectDelayedTyposInExpr(ValueExpr.get());
-    if (KeyExpr.isInvalid() || ValueExpr.isInvalid())
-      HasInvalidEltExpr = true;
-
     // Parse the ellipsis that designates this as a pack expansion. Do not
     // ActOnPackExpansion here, leave it to template instantiation time where
     // we can get better diagnostics.
@@ -3162,9 +3146,6 @@ ExprResult Parser::ParseObjCDictionaryLiteral(SourceLocation AtLoc) {
                                                             << tok::comma);
   }
   SourceLocation EndLoc = ConsumeBrace();
-
-  if (HasInvalidEltExpr)
-    return ExprError();
 
   // Create the ObjCDictionaryLiteral.
   return Actions.ObjC().BuildObjCDictionaryLiteral(SourceRange(AtLoc, EndLoc),

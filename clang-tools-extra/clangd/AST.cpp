@@ -440,7 +440,7 @@ QualType declaredType(const TypeDecl *D) {
     if (const auto *Args = CTSD->getTemplateArgsAsWritten())
       return Context.getTemplateSpecializationType(
           TemplateName(CTSD->getSpecializedTemplate()), Args->arguments(),
-          /*CanonicalArgs=*/std::nullopt);
+          /*CanonicalArgs=*/{});
   return Context.getTypeDeclType(D);
 }
 
@@ -666,12 +666,14 @@ std::string getQualification(ASTContext &Context,
   return getQualification(
       Context, DestContext, ND->getDeclContext(),
       [&](NestedNameSpecifier *NNS) {
-        if (NNS->getKind() != NestedNameSpecifier::Namespace)
+        const NamespaceDecl *NS =
+            dyn_cast_if_present<NamespaceDecl>(NNS->getAsNamespace());
+        if (!NS)
           return false;
-        const auto *CanonNSD = NNS->getAsNamespace()->getCanonicalDecl();
+        NS = NS->getCanonicalDecl();
         return llvm::any_of(VisibleNamespaceDecls,
-                            [CanonNSD](const NamespaceDecl *NSD) {
-                              return NSD->getCanonicalDecl() == CanonNSD;
+                            [NS](const NamespaceDecl *NSD) {
+                              return NSD->getCanonicalDecl() == NS;
                             });
       });
 }

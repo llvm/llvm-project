@@ -390,6 +390,10 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[20], tok::l_brace, TT_CompoundRequirementLBrace);
   EXPECT_TOKEN(Tokens[22], tok::star, TT_BinaryOperator);
 
+  Tokens = annotate("bool foo = requires { static_cast<Foo &&>(1); };");
+  ASSERT_EQ(Tokens.size(), 17u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::ampamp, TT_PointerOrReference);
+
   Tokens = annotate("return s.operator int *();");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   // Not TT_FunctionDeclarationName.
@@ -3754,6 +3758,13 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_BRACE_KIND(Tokens[4], BK_BracedInit);
   EXPECT_BRACE_KIND(Tokens[6], BK_BracedInit);
+
+  Tokens = annotate("auto f1{&T::operator()};");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[2], BK_BracedInit);
+  // Not TT_FunctionDeclarationName.
+  EXPECT_TOKEN(Tokens[6], tok::kw_operator, TT_Unknown);
+  EXPECT_BRACE_KIND(Tokens[9], BK_BracedInit);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {
@@ -4117,6 +4128,13 @@ TEST_F(TokenAnnotatorTest, JsonCodeInRawString) {
   EXPECT_TOKEN(Tokens[2], tok::colon, TT_DictLiteral);
   EXPECT_TOKEN(Tokens[5], tok::string_literal, TT_SelectorName);
   EXPECT_TOKEN(Tokens[6], tok::colon, TT_DictLiteral);
+}
+
+TEST_F(TokenAnnotatorTest, LineCommentTrailingBackslash) {
+  auto Tokens = annotate("// a \\\n"
+                         "// b");
+  ASSERT_EQ(Tokens.size(), 3u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::comment, TT_LineComment);
 }
 
 } // namespace

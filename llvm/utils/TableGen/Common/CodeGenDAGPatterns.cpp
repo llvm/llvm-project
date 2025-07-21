@@ -1824,8 +1824,8 @@ bool TreePatternNode::UpdateNodeTypeFromInst(unsigned ResNo,
 }
 
 bool TreePatternNode::ContainsUnresolvedType(TreePattern &TP) const {
-  for (unsigned i = 0, e = Types.size(); i != e; ++i)
-    if (!TP.getInfer().isConcrete(Types[i], true))
+  for (const TypeSetByHwMode &Type : Types)
+    if (!TP.getInfer().isConcrete(Type, true))
       return true;
   for (const TreePatternNode &Child : children())
     if (Child.ContainsUnresolvedType(TP))
@@ -2103,7 +2103,7 @@ TreePatternNodePtr TreePatternNode::clone() const {
 /// RemoveAllTypes - Recursively strip all the types of this tree.
 void TreePatternNode::RemoveAllTypes() {
   // Reset to unknown type.
-  std::fill(Types.begin(), Types.end(), TypeSetByHwMode());
+  llvm::fill(Types, TypeSetByHwMode());
   if (isLeaf())
     return;
   for (TreePatternNode &Child : children())
@@ -3187,7 +3187,7 @@ bool TreePattern::InferAllTypes(
           return true;
         }
 
-        const SmallVectorImpl<TreePatternNode *> &InNodes = InIter->second;
+        ArrayRef<TreePatternNode *> InNodes = InIter->second;
 
         // The input types should be fully resolved by now.
         for (TreePatternNode *Node : Nodes) {
@@ -3604,16 +3604,14 @@ class InstAnalyzer {
   const CodeGenDAGPatterns &CDP;
 
 public:
-  bool hasSideEffects;
-  bool mayStore;
-  bool mayLoad;
-  bool isBitcast;
-  bool isVariadic;
-  bool hasChain;
+  bool hasSideEffects = false;
+  bool mayStore = false;
+  bool mayLoad = false;
+  bool isBitcast = false;
+  bool isVariadic = false;
+  bool hasChain = false;
 
-  InstAnalyzer(const CodeGenDAGPatterns &cdp)
-      : CDP(cdp), hasSideEffects(false), mayStore(false), mayLoad(false),
-        isBitcast(false), isVariadic(false), hasChain(false) {}
+  InstAnalyzer(const CodeGenDAGPatterns &cdp) : CDP(cdp) {}
 
   void Analyze(const PatternToMatch &Pat) {
     const TreePatternNode &N = Pat.getSrcPattern();
@@ -4124,8 +4122,7 @@ void CodeGenDAGPatterns::AddPatternToMatch(TreePattern *Pattern,
 }
 
 void CodeGenDAGPatterns::InferInstructionFlags() {
-  ArrayRef<const CodeGenInstruction *> Instructions =
-      Target.getInstructionsByEnumValue();
+  ArrayRef<const CodeGenInstruction *> Instructions = Target.getInstructions();
 
   unsigned Errors = 0;
 
