@@ -5131,11 +5131,13 @@ Action *Driver::ConstructPhaseAction(
     if (Args.hasArg(options::OPT_extract_api))
       return C.MakeAction<ExtractAPIJobAction>(Input, types::TY_API_INFO);
 
-    // With 'fexperimental-modules-reduced-bmi', we don't want to run the
+    // With 'fmodules-reduced-bmi', we don't want to run the
     // precompile phase unless the user specified '--precompile'. In the case
     // the '--precompile' flag is enabled, we will try to emit the reduced BMI
     // as a by product in GenerateModuleInterfaceAction.
-    if (Args.hasArg(options::OPT_modules_reduced_bmi) &&
+    if (!Args.hasArg(options::OPT_fno_modules_reduced_bmi) &&
+        (Input->getType() == driver::types::TY_CXXModule ||
+         Input->getType() == driver::types::TY_PP_CXXModule) &&
         !Args.getLastArg(options::OPT__precompile))
       return Input;
 
@@ -6323,7 +6325,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
   // `-fmodule-output`.
   if (!AtTopLevel && isa<PrecompileJobAction>(JA) &&
       JA.getType() == types::TY_ModuleFile && SpecifiedModuleOutput) {
-    assert(!C.getArgs().hasArg(options::OPT_modules_reduced_bmi));
+    assert(C.getArgs().hasArg(options::OPT_fno_modules_reduced_bmi));
     return GetModuleOutputPath(C, JA, BaseInput);
   }
 
