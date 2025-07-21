@@ -46,7 +46,7 @@ enums:
     value: 7
   - name: RTLD_DI_PROFILEOUT
     value: 8
-  - name: RTLD_DI_TLSMODID
+  - name: RTLD_DI_TLS_MODID
     value: 9
   - name: RTLD_DI_TLS_DATA
     value: 10
