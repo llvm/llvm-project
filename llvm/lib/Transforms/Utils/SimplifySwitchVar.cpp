@@ -136,6 +136,81 @@ static NewInstParameters findInstParameters(SmallVector<PhiCase> &PhiCases) {
   return {Op, BaseValue, OffsetTy};
 }
 
+/// Collect valid cases.
+/// A case is valid if it uses the same base value (or is the base value like a
+/// pointer from an alloca) and it has a constant offset.
+static SmallVector<PhiCase>
+collectValidCases(SmallVector<PhiCase> &PhiCases,
+                  NewInstParameters NewInstParameters,
+                  DenseMap<int64_t, int64_t> &CaseOffsetMap) {
+  SmallVector<PhiCase> FilteredCases;
+  auto *BaseValue = NewInstParameters.BaseValue;
+  auto CurrentOp = NewInstParameters.Op;
+
+  switch (CurrentOp) {
+  case SupportedOp::GetElementPtr: {
+    for (auto &Case : PhiCases) {
+      auto *GEP = dyn_cast<GetElementPtrInst>(Case.IncomingValue);
+
+      if (!GEP) {
+        if (Case.IncomingValue != BaseValue) {
+          continue;
+        }
+        CaseOffsetMap[Case.CaseValue->getSExtValue()] = 0;
+        FilteredCases.push_back(Case);
+        continue;
+      }
+
+      if (GEP->getPointerOperand() != BaseValue) {
+        continue;
+      }
+
+      auto &DL = GEP->getParent()->getDataLayout();
+      APInt Offset(DL.getTypeSizeInBits(GEP->getPointerOperandType()), 0);
+      if (!GEP->accumulateConstantOffset(GEP->getDataLayout(), Offset)) {
+        continue;
+      }
+      CaseOffsetMap[Case.CaseValue->getSExtValue()] = Offset.getSExtValue();
+      FilteredCases.push_back(Case);
+    }
+    break;
+  }
+  case SupportedOp::IntegerAdd: {
+    for (auto &Case : PhiCases) {
+      bool IsAdd =
+          match(Case.IncomingValue, m_Add(m_Value(), m_AnyIntegralConstant()));
+
+      if (!IsAdd) {
+        if (Case.IncomingValue != BaseValue) {
+          continue;
+        }
+        CaseOffsetMap[Case.CaseValue->getSExtValue()] = 0;
+        FilteredCases.push_back(Case);
+        continue;
+      }
+
+      auto *AddInst = dyn_cast<Instruction>(Case.IncomingValue);
+      if (AddInst->getOperand(0) != BaseValue) {
+        continue;
+      }
+      auto *Offset = cast<ConstantInt>(AddInst->getOperand(1));
+      if (!Offset) {
+        continue;
+      }
+
+      CaseOffsetMap[Case.CaseValue->getSExtValue()] = Offset->getSExtValue();
+      FilteredCases.push_back(Case);
+      continue;
+    }
+    break;
+  }
+  case SupportedOp::Unsupported: {
+    llvm_unreachable("Unsupported Operation for SimplifySwitchVar.");
+  }
+  }
+  return FilteredCases;
+}
+
 PreservedAnalyses SimplifySwitchVarPass::run(Function &F,
                                              FunctionAnalysisManager &AM) {
   bool Changed = false;
@@ -157,6 +232,11 @@ PreservedAnalyses SimplifySwitchVarPass::run(Function &F,
 
         auto InstParameters = findInstParameters(PhiCases);
         if (InstParameters.Op == SupportedOp::Unsupported)
+          continue;
+
+        DenseMap<int64_t, int64_t> CaseOffsetMap;
+        PhiCases = collectValidCases(PhiCases, InstParameters, CaseOffsetMap);
+        if (CaseOffsetMap.size() < 2)
           continue;
       }
     }
