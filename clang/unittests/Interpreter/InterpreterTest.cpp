@@ -114,10 +114,15 @@ createInterpreterWithRemoteExecution(const Args &ExtraArgs = {},
   llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
 
   std::cout << "System Triple: " << SystemTriple.getTriple() << "\n";
-  std::cout << "Executor Path: " << getExecutorPath() << "\n";
 
   if ((SystemTriple.isOSBinFormatELF() || SystemTriple.isOSBinFormatMachO())) {
     std::string OOPExecutor = getExecutorPath();
+    std::cout << "Executor Path: " << OOPExecutor << "\n";
+    if (!llvm::sys::fs::exists(OOPExecutor)) {
+      std::cerr << "Executor path does not exist: " << OOPExecutor << std::endl;
+      return nullptr;
+    }
+
     bool UseSharedMemory = false;
     std::string SlabAllocateSizeString = "";
     std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
