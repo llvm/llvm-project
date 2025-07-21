@@ -26639,19 +26639,14 @@ Arguments:
 
 The first argument is a constant integer representing the size of the
 object, or -1 if it is variable sized. The second argument is a pointer
-to the object.
+to an ``alloca`` instruction.
 
 Semantics:
 """"""""""
 
-If ``ptr`` is a stack-allocated object and it points to the first byte of
-the object, the object is initially marked as dead.
-``ptr`` is conservatively considered as a non-stack-allocated object if
-the stack coloring algorithm that is used in the optimization pipeline cannot
-conclude that ``ptr`` is a stack-allocated object.
-
-After '``llvm.lifetime.start``', the stack object that ``ptr`` points is marked
-as alive and has an uninitialized value.
+The stack-allocated object that ``ptr`` points to is initially marked as dead.
+After '``llvm.lifetime.start``', the stack object is marked as alive and has an
+uninitialized value.
 The stack object is marked as dead when either
 :ref:`llvm.lifetime.end <int_lifeend>` to the alloca is executed or the
 function returns.
@@ -26660,11 +26655,6 @@ After :ref:`llvm.lifetime.end <int_lifeend>` is called,
 '``llvm.lifetime.start``' on the stack object can be called again.
 The second '``llvm.lifetime.start``' call marks the object as alive, but it
 does not change the address of the object.
-
-If ``ptr`` is a non-stack-allocated object, it does not point to the first
-byte of the object or it is a stack object that is already alive, it simply
-fills all bytes of the object with ``poison``.
-
 
 .. _int_lifeend:
 
@@ -26689,23 +26679,15 @@ Arguments:
 
 The first argument is a constant integer representing the size of the
 object, or -1 if it is variable sized. The second argument is a pointer
-to the object.
+to an ``alloca`` instruction.
 
 Semantics:
 """"""""""
 
-If ``ptr`` is a stack-allocated object and it points to the first byte of the
-object, the object is dead.
-``ptr`` is conservatively considered as a non-stack-allocated object if
-the stack coloring algorithm that is used in the optimization pipeline cannot
-conclude that ``ptr`` is a stack-allocated object.
+The stack-allocated object that ``ptr`` points to becomes dead after the call
+to this intrinsic.
 
 Calling ``llvm.lifetime.end`` on an already dead alloca is no-op.
-
-If ``ptr`` is a non-stack-allocated object or it does not point to the first
-byte of the object, it is equivalent to simply filling all bytes of the object
-with ``poison``.
-
 
 '``llvm.invariant.start``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

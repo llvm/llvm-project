@@ -6720,6 +6720,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "llvm.threadlocal.address operand isThreadLocal() must be true");
     break;
   }
+  case Intrinsic::lifetime_start:
+  case Intrinsic::lifetime_end:
+    Check(isa<AllocaInst>(Call.getArgOperand(1)),
+          "llvm.lifetime.start/end can only be used on alloca", &Call);
+    break;
   };
 
   // Verify that there aren't any unmediated control transfers between funclets.
