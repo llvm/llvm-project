@@ -1113,7 +1113,6 @@ public:
   // that will not require an additional 4-bytes; this function assumes that it
   // will.
   bool isInlineConstant(const MachineOperand &MO, uint8_t OperandType) const {
-    assert(!MO.isReg() && "isInlineConstant called on register operand!");
     if (!MO.isImm())
       return false;
     return isInlineConstant(MO.getImm(), OperandType);
@@ -1215,6 +1214,8 @@ public:
   void restoreExec(MachineFunction &MF, MachineBasicBlock &MBB,
                    MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                    Register Reg, SlotIndexes *Indexes = nullptr) const;
+
+  MachineInstr *getWholeWaveFunctionSetup(MachineFunction &MF) const;
 
   /// Return the correct register class for \p OpNo.  For target-specific
   /// instructions, this will return the register class that has been defined
