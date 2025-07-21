@@ -785,7 +785,7 @@ struct AAMDNodes {
   /// The tag specifying the noalias scope.
   MDNode *NoAlias = nullptr;
 
-  /// The tag specifying the noalias address space scope.
+  /// The tag specifying the noalias address spaces.
   MDNode *NoAliasAddrSpace = nullptr;
 
   // Shift tbaa Metadata node to start off bytes later
