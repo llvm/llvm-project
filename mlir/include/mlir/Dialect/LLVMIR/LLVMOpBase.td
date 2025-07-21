@@ -363,7 +363,7 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
     }
     SmallVector<Type> resultTypes =
     }] # !if(!gt(numResults, 0), "{$_resultType};", "{};") # [{
-    auto op = $_builder.create<$_qualCppClassName>(
+    auto op = $_qualCppClassName::create($_builder,
       $_location, resultTypes, mlirOperands, mlirAttrs);
     }];
   string baseMlirBuilderCoda = !if(!gt(numResults, 0), "$res = op;", "$_op = op;");
