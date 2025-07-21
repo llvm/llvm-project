@@ -689,8 +689,7 @@ TEST_F(FormatTestSelective, FormatMacroRegardlessOfPreviousIndent) {
             "            }};", // Ditto: Bug?
             format(Code, 57, 0));
 
-  Style.IndentPPDirectives =
-      FormatStyle::PPDirectiveIndentStyle::PPDIS_BeforeHash;
+  Style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
   EXPECT_EQ("      class Foo {\n"
             "            void test() {\n"
             "    #ifdef 1\n"
@@ -699,8 +698,7 @@ TEST_F(FormatTestSelective, FormatMacroRegardlessOfPreviousIndent) {
             "    }};",
             format(Code, 57, 0));
 
-  Style.IndentPPDirectives =
-      FormatStyle::PPDirectiveIndentStyle::PPDIS_AfterHash;
+  Style.IndentPPDirectives = FormatStyle::PPDIS_AfterHash;
   EXPECT_EQ("      class Foo {\n"
             "            void test() {\n"
             "    #ifdef 1\n"
