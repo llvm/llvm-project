@@ -609,6 +609,8 @@ namespace {
     SDValue foldABSToABD(SDNode *N, const SDLoc &DL);
     SDValue foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
                             SDValue False, ISD::CondCode CC, const SDLoc &DL);
+    SDValue foldSelectToUMin(SDValue LHS, SDValue RHS, SDValue True,
+                             SDValue False, ISD::CondCode CC, const SDLoc &DL);
     SDValue unfoldMaskedMerge(SDNode *N);
     SDValue unfoldExtremeBitClearingToShifts(SDNode *N);
     SDValue SimplifySetCC(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
@@ -859,7 +861,7 @@ namespace {
       auto LK = TLI.getTypeConversion(*DAG.getContext(), VT);
       return (LK.first == TargetLoweringBase::TypeLegal ||
               LK.first == TargetLoweringBase::TypePromoteInteger) &&
-             TLI.isOperationLegal(ISD::UMIN, LK.second);
+             TLI.isOperationLegalOrCustom(ISD::UMIN, LK.second);
     }
 
   public:
@@ -4093,6 +4095,26 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       return N0;
   }
 
+  // (sub x, ([v]select (ult x, y), 0, y)) -> (umin x, (sub x, y))
+  // (sub x, ([v]select (uge x, y), y, 0)) -> (umin x, (sub x, y))
+  if (N1.hasOneUse() && hasUMin(VT)) {
+    SDValue Y;
+    if (sd_match(N1, m_Select(m_SetCC(m_Specific(N0), m_Value(Y),
+                                      m_SpecificCondCode(ISD::SETULT)),
+                              m_Zero(), m_Deferred(Y))) ||
+        sd_match(N1, m_Select(m_SetCC(m_Specific(N0), m_Value(Y),
+                                      m_SpecificCondCode(ISD::SETUGE)),
+                              m_Deferred(Y), m_Zero())) ||
+        sd_match(N1, m_VSelect(m_SetCC(m_Specific(N0), m_Value(Y),
+                                       m_SpecificCondCode(ISD::SETULT)),
+                               m_Zero(), m_Deferred(Y))) ||
+        sd_match(N1, m_VSelect(m_SetCC(m_Specific(N0), m_Value(Y),
+                                       m_SpecificCondCode(ISD::SETUGE)),
+                               m_Deferred(Y), m_Zero())))
+      return DAG.getNode(ISD::UMIN, DL, VT, N0,
+                         DAG.getNode(ISD::SUB, DL, VT, N0, Y));
+  }
+
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
 
@@ -4441,20 +4463,6 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       sd_match(N0, m_UMinLike(m_Value(A), m_Value(B))) &&
       sd_match(N1, m_UMaxLike(m_Specific(A), m_Specific(B))))
     return DAG.getNegative(DAG.getNode(ISD::ABDU, DL, VT, A, B), DL, VT);
-
-  // (sub x, (select (ult x, y), 0, y)) -> (umin x, (sub x, y))
-  // (sub x, (select (uge x, y), y, 0)) -> (umin x, (sub x, y))
-  if (hasUMin(VT)) {
-    SDValue Y;
-    if (sd_match(N1, m_OneUse(m_Select(m_SetCC(m_Specific(N0), m_Value(Y),
-                                               m_SpecificCondCode(ISD::SETULT)),
-                                       m_Zero(), m_Deferred(Y)))) ||
-        sd_match(N1, m_OneUse(m_Select(m_SetCC(m_Specific(N0), m_Value(Y),
-                                               m_SpecificCondCode(ISD::SETUGE)),
-                                       m_Deferred(Y), m_Zero()))))
-      return DAG.getNode(ISD::UMIN, DL, VT, N0,
-                         DAG.getNode(ISD::SUB, DL, VT, N0, Y));
-  }
 
   return SDValue();
 }
@@ -7633,7 +7641,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
 
     if (SDValue(GN0, 0).hasOneUse() &&
         isConstantSplatVectorMaskForType(N1.getNode(), ScalarVT) &&
-        TLI.isVectorLoadExtDesirable(SDValue(SDValue(GN0, 0)))) {
+        TLI.isVectorLoadExtDesirable(SDValue(N, 0))) {
       SDValue Ops[] = {GN0->getChain(),   GN0->getPassThru(), GN0->getMask(),
                        GN0->getBasePtr(), GN0->getIndex(),    GN0->getScale()};
 
@@ -12173,6 +12181,30 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
   return SDValue();
 }
 
+// ([v]select (ugt x, C), (add x, ~C), x) -> (umin (add x, ~C), x)
+// ([v]select (ult x, C), x, (add x, -C)) -> (umin x, (add x, -C))
+SDValue DAGCombiner::foldSelectToUMin(SDValue LHS, SDValue RHS, SDValue True,
+                                      SDValue False, ISD::CondCode CC,
+                                      const SDLoc &DL) {
+  APInt C;
+  EVT VT = True.getValueType();
+  if (sd_match(RHS, m_ConstInt(C)) && hasUMin(VT)) {
+    if (CC == ISD::SETUGT && LHS == False &&
+        sd_match(True, m_Add(m_Specific(False), m_SpecificInt(~C)))) {
+      SDValue AddC = DAG.getConstant(~C, DL, VT);
+      SDValue Add = DAG.getNode(ISD::ADD, DL, VT, False, AddC);
+      return DAG.getNode(ISD::UMIN, DL, VT, Add, False);
+    }
+    if (CC == ISD::SETULT && LHS == True &&
+        sd_match(False, m_Add(m_Specific(True), m_SpecificInt(-C)))) {
+      SDValue AddC = DAG.getConstant(-C, DL, VT);
+      SDValue Add = DAG.getNode(ISD::ADD, DL, VT, True, AddC);
+      return DAG.getNode(ISD::UMIN, DL, VT, True, Add);
+    }
+  }
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitSELECT(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -12358,24 +12390,8 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
 
     // (select (ugt x, C), (add x, ~C), x) -> (umin (add x, ~C), x)
     // (select (ult x, C), x, (add x, -C)) -> (umin x, (add x, -C))
-    APInt C;
-    if (sd_match(Cond1, m_ConstInt(C)) && hasUMin(VT)) {
-      if (CC == ISD::SETUGT && Cond0 == N2 &&
-          sd_match(N1, m_Add(m_Specific(N2), m_SpecificInt(~C)))) {
-        // The resulting code relies on an unsigned wrap in ADD.
-        // Recreating ADD to drop possible nuw/nsw flags.
-        SDValue AddC = DAG.getConstant(~C, DL, VT);
-        SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N2, AddC);
-        return DAG.getNode(ISD::UMIN, DL, VT, Add, N2);
-      }
-      if (CC == ISD::SETULT && Cond0 == N1 &&
-          sd_match(N2, m_Add(m_Specific(N1), m_SpecificInt(-C)))) {
-        // Ditto.
-        SDValue AddC = DAG.getConstant(-C, DL, VT);
-        SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N1, AddC);
-        return DAG.getNode(ISD::UMIN, DL, VT, N1, Add);
-      }
-    }
+    if (SDValue UMin = foldSelectToUMin(Cond0, Cond1, N1, N2, CC, DL))
+      return UMin;
   }
 
   if (!VT.isVector())
@@ -13412,6 +13428,11 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
         }
       }
     }
+
+    // (vselect (ugt x, C), (add x, ~C), x) -> (umin (add x, ~C), x)
+    // (vselect (ult x, C), x, (add x, -C)) -> (umin x, (add x, -C))
+    if (SDValue UMin = foldSelectToUMin(LHS, RHS, N1, N2, CC, DL))
+      return UMin;
   }
 
   if (SimplifySelectOps(N, N1, N2))
@@ -15724,7 +15745,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
   // fold (sext_inreg (masked_gather x)) -> (sext_masked_gather x)
   if (auto *GN0 = dyn_cast<MaskedGatherSDNode>(N0)) {
     if (SDValue(GN0, 0).hasOneUse() && ExtVT == GN0->getMemoryVT() &&
-        TLI.isVectorLoadExtDesirable(SDValue(SDValue(GN0, 0)))) {
+        TLI.isVectorLoadExtDesirable(SDValue(N, 0))) {
       SDValue Ops[] = {GN0->getChain(),   GN0->getPassThru(), GN0->getMask(),
                        GN0->getBasePtr(), GN0->getIndex(),    GN0->getScale()};
 
@@ -16751,12 +16772,8 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     if (DAG.isGuaranteedNotToBeUndefOrPoison(Op, /*PoisonOnly*/ false,
                                              /*Depth*/ 1))
       continue;
-    bool HadMaybePoisonOperands = !MaybePoisonOperands.empty();
-    bool IsNewMaybePoisonOperand = MaybePoisonOperands.insert(Op).second;
-    if (IsNewMaybePoisonOperand)
+    if (MaybePoisonOperands.insert(Op).second)
       MaybePoisonOperandNumbers.push_back(OpNo);
-    if (!HadMaybePoisonOperands)
-      continue;
   }
   // NOTE: the whole op may be not guaranteed to not be undef or poison because
   // it could create undef or poison due to it's poison-generating flags.
@@ -18706,6 +18723,12 @@ SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
   if (SDValue FTrunc = foldFPToIntToFP(N, DL, DAG, TLI))
     return FTrunc;
 
+  // fold (sint_to_fp (trunc nsw x)) -> (sint_to_fp x)
+  if (N0.getOpcode() == ISD::TRUNCATE && N0->getFlags().hasNoSignedWrap() &&
+      TLI.isTypeDesirableForOp(ISD::SINT_TO_FP,
+                               N0.getOperand(0).getValueType()))
+    return DAG.getNode(ISD::SINT_TO_FP, DL, VT, N0.getOperand(0));
+
   return SDValue();
 }
 
@@ -18742,6 +18765,12 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
 
   if (SDValue FTrunc = foldFPToIntToFP(N, DL, DAG, TLI))
     return FTrunc;
+
+  // fold (uint_to_fp (trunc nuw x)) -> (uint_to_fp x)
+  if (N0.getOpcode() == ISD::TRUNCATE && N0->getFlags().hasNoUnsignedWrap() &&
+      TLI.isTypeDesirableForOp(ISD::UINT_TO_FP,
+                               N0.getOperand(0).getValueType()))
+    return DAG.getNode(ISD::UINT_TO_FP, DL, VT, N0.getOperand(0));
 
   return SDValue();
 }
