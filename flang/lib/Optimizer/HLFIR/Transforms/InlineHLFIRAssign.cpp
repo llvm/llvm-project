@@ -126,7 +126,7 @@ public:
     rhsArrayElement = hlfir::loadTrivialScalar(loc, builder, rhsArrayElement);
     auto lhsArrayElement =
         hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
-    builder.create<hlfir::AssignOp>(loc, rhsArrayElement, lhsArrayElement);
+    hlfir::AssignOp::create(builder, loc, rhsArrayElement, lhsArrayElement);
     rewriter.eraseOp(assign);
     return mlir::success();
   }
