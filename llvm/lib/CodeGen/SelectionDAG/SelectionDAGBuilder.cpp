@@ -7773,14 +7773,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
 
   case Intrinsic::reloc_none: {
-    SDValue V = getValue(I.getArgOperand(0));
-    auto *GA = dyn_cast<GlobalAddressSDNode>(V);
-    if (!GA)
-      report_fatal_error("llvm.reloc.none operand must be a GlobalValue");
+    Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(0))->getMetadata();
+    StringRef SymbolName = cast<MDString>(MD)->getString();
+    auto *M = const_cast<Module *>(I.getModule());
+    auto *RelocSymbol = cast<GlobalVariable>(
+        M->getOrInsertGlobal(SymbolName, StructType::create(M->getContext())));
     SDValue Ops[2];
     Ops[0] = getRoot();
-    Ops[1] = DAG.getTargetGlobalAddress(GA->getGlobal(), sdl, V.getValueType(),
-                                        GA->getOffset());
+    Ops[1] = DAG.getTargetGlobalAddress(
+        RelocSymbol, sdl, TLI.getPointerTy(DAG.getDataLayout()), 0);
     DAG.setRoot(DAG.getNode(ISD::RELOC_NONE, sdl, MVT::Other, Ops));
     return;
   }
