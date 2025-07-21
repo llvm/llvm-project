@@ -308,7 +308,7 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
         if (Succ != Header)
           continue;
         BasicBlock *NewSucc = ControlFlowHub::createCallBrTarget(
-            CallBr, Succ, I, false, &CI, &DTU, LI);
+            CallBr, Succ, I, /* AttachToCallBr = */ false, &CI, &DTU, LI);
         CHub.addBranch(NewSucc, Succ);
         LLVM_DEBUG(dbgs() << "Added internal branch: " << printBBPtr(NewSucc)
                           << " -> " << printBBPtr(Succ) << "\n");
@@ -345,7 +345,7 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
         if (!C.contains(Succ))
           continue;
         BasicBlock *NewSucc = ControlFlowHub::createCallBrTarget(
-            CallBr, Succ, I, true, &CI, &DTU, LI);
+            CallBr, Succ, I, /* AttachToCallBr = */ true, &CI, &DTU, LI);
         CHub.addBranch(NewSucc, Succ);
         LLVM_DEBUG(dbgs() << "Added external branch: " << printBBPtr(NewSucc)
                           << " -> " << printBBPtr(Succ) << "\n");
@@ -399,8 +399,6 @@ static bool FixIrreducibleImpl(Function &F, CycleInfo &CI, DominatorTree &DT,
                                LoopInfo *LI) {
   LLVM_DEBUG(dbgs() << "===== Fix irreducible control-flow in function: "
                     << F.getName() << "\n");
-
-  assert(hasOnlySimpleTerminatorOrCallBr(F) && "Unsupported block terminator.");
 
   bool Changed = false;
   for (Cycle *TopCycle : CI.toplevel_cycles()) {

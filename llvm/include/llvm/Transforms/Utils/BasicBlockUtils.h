@@ -608,16 +608,9 @@ LLVM_ABI bool SplitIndirectBrCriticalEdges(Function &F,
 // successors
 LLVM_ABI void InvertBranch(BranchInst *PBI, IRBuilderBase &Builder);
 
-template <typename... TermInst>
-LLVM_ABI bool hasOnlyGivenTerminators(const Function &F);
-
-// Check whether the function only has blocks with simple terminators:
+// Check whether the function only has simple terminator:
 // br/brcond/unreachable/ret
 LLVM_ABI bool hasOnlySimpleTerminator(const Function &F);
-
-// Check whether the function only has blocks with simple terminators
-// (br/brcond/unreachable/ret) or callbr.
-LLVM_ABI bool hasOnlySimpleTerminatorOrCallBr(const Function &F);
 
 LLVM_ABI Printable printBBPtr(const BasicBlock *BB);
 

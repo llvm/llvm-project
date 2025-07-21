@@ -179,7 +179,7 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
         if (L->contains(Succ))
           continue;
         BasicBlock *NewSucc = ControlFlowHub::createCallBrTarget(
-            CallBr, Succ, J, false, nullptr, &DTU, &LI);
+            CallBr, Succ, J, /* AttachToCallBr = */ false, nullptr, &DTU, &LI);
         // ExitingBlocks is later used to restore SSA, so we need to make sure
         // that the blocks used for phi nodes in the guard blocks match the
         // predecessors of the guard blocks, which, in the case of callbr, are
@@ -219,7 +219,7 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   // members of the parent loop. Same goes for the callbr target blocks if they
   // have not already been added to the respective parent loop by adding them to
   // the original callbr target's loop.
-  if (auto ParentLoop = L->getParentLoop()) {
+  if (auto *ParentLoop = L->getParentLoop()) {
     for (auto *G : GuardBlocks) {
       ParentLoop->addBasicBlockToLoop(G, LI);
     }
@@ -253,8 +253,6 @@ bool UnifyLoopExitsLegacyPass::runOnFunction(Function &F) {
                     << "\n");
   auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-
-  assert(hasOnlySimpleTerminatorOrCallBr(F) && "Unsupported block terminator.");
 
   return runImpl(LI, DT);
 }

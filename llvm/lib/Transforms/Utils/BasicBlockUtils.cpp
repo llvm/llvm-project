@@ -1766,23 +1766,14 @@ void llvm::InvertBranch(BranchInst *PBI, IRBuilderBase &Builder) {
   PBI->swapSuccessors();
 }
 
-template <typename... TermInst>
-bool llvm::hasOnlyGivenTerminators(const Function &F) {
+bool llvm::hasOnlySimpleTerminator(const Function &F) {
   for (auto &BB : F) {
     auto *Term = BB.getTerminator();
-    if (!(isa<TermInst>(Term) || ...))
+    if (!(isa<ReturnInst>(Term) || isa<UnreachableInst>(Term) ||
+          isa<BranchInst>(Term)))
       return false;
   }
   return true;
-}
-
-bool llvm::hasOnlySimpleTerminator(const Function &F) {
-  return hasOnlyGivenTerminators<ReturnInst, UnreachableInst, BranchInst>(F);
-}
-
-bool llvm::hasOnlySimpleTerminatorOrCallBr(const Function &F) {
-  return hasOnlyGivenTerminators<ReturnInst, UnreachableInst, BranchInst,
-                                 CallBrInst>(F);
 }
 
 Printable llvm::printBBPtr(const BasicBlock *BB) {
