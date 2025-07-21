@@ -644,6 +644,32 @@ def SI_INIT_WHOLE_WAVE : SPseudoInstSI <
   let isConvergent = 1;
 }
 
+// Sets EXEC to all lanes and returns the previous EXEC.
+def SI_WHOLE_WAVE_FUNC_SETUP : SPseudoInstSI <
+  (outs SReg_1:$dst), (ins), [(set i1:$dst, (AMDGPUwhole_wave_setup))]> {
+  let Defs = [EXEC];
+  let Uses = [EXEC];
+
+  let isConvergent = 1;
+}
+
+// Restores the previous EXEC and otherwise behaves entirely like a SI_RETURN.
+def SI_WHOLE_WAVE_FUNC_RETURN : SPseudoInstSI <
+  (outs), (ins SReg_1:$orig_exec)> {
+  let isTerminator = 1;
+  let isBarrier = 1;
+  let isReturn = 1;
+  let SchedRW = [WriteBranch];
+
+  // We're going to use custom handling to set the $orig_exec to the correct value.
+  let usesCustomInserter = 1;
+}
+
+// Generate a SI_WHOLE_WAVE_FUNC_RETURN pseudo with a placeholder for its
+// argument. It will be filled in by the custom inserter.
+def : GCNPat<
+  (AMDGPUwhole_wave_return), (SI_WHOLE_WAVE_FUNC_RETURN (i1 (IMPLICIT_DEF)))>;
+
 // Return for returning shaders to a shader variant epilog.
 def SI_RETURN_TO_EPILOG : SPseudoInstSI <
   (outs), (ins variable_ops), [(AMDGPUreturn_to_epilog)]> {
@@ -4298,6 +4324,20 @@ def G_AMDGPU_S_MUL_I64_I32 : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1);
   let hasSideEffects = 0;
+}
+
+def G_AMDGPU_WHOLE_WAVE_FUNC_SETUP : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$origExec);
+  let InOperandList = (ins);
+  let isConvergent = 1;
+}
+
+def G_AMDGPU_WHOLE_WAVE_FUNC_RETURN : AMDGPUGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$origExec);
+  let isTerminator = 1;
+  let isBarrier = 1;
+  let isReturn = 1;
 }
 
 // This is equivalent to the G_INTRINSIC*, but the operands may have

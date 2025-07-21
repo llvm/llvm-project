@@ -7,9 +7,9 @@ using test1 = __type_pack_element<0, int>;
 // CHECK-NEXT:       |-name: '__type_pack_element' qualified
 // CHECK-NEXT:       | `-BuiltinTemplateDecl {{.+}} __type_pack_element
 // CHECK-NEXT:       |-TemplateArgument expr '0'
-// CHECK-NEXT:       | `-ConstantExpr 0x{{[0-9A-Fa-f]+}} <col:35> 'unsigned long'
+// CHECK-NEXT:       | `-ConstantExpr 0x{{[0-9A-Fa-f]+}} <col:35> '__size_t':'unsigned long'
 // CHECK-NEXT:       |   |-value: Int 0
-// CHECK-NEXT:       |   `-ImplicitCastExpr 0x{{[0-9A-Fa-f]+}} <col:35> 'unsigned long' <IntegralCast>
+// CHECK-NEXT:       |   `-ImplicitCastExpr 0x{{[0-9A-Fa-f]+}} <col:35> '__size_t':'unsigned long' <IntegralCast>
 // CHECK-NEXT:       |     `-IntegerLiteral 0x{{[0-9A-Fa-f]+}} <col:35> 'int' 0
 // CHECK-NEXT:       |-TemplateArgument type 'int'
 // CHECK-NEXT:       | `-BuiltinType 0x{{[0-9A-Fa-f]+}} 'int'
@@ -23,7 +23,7 @@ template<int N, class ...Ts> struct A {
 // CHECK-NEXT:       |-name: '__type_pack_element' qualified
 // CHECK-NEXT:       | `-BuiltinTemplateDecl {{.+}} __type_pack_element
 // CHECK-NEXT:       |-TemplateArgument expr 'N'
-// CHECK-NEXT:       | `-ImplicitCastExpr 0x{{[0-9A-Fa-f]+}} <col:37> 'unsigned long' <IntegralCast>
+// CHECK-NEXT:       | `-ImplicitCastExpr 0x{{[0-9A-Fa-f]+}} <col:37> '__size_t':'unsigned long' <IntegralCast>
 // CHECK-NEXT:       |   `-DeclRefExpr 0x{{[0-9A-Fa-f]+}} <col:37> 'int' NonTypeTemplateParm 0x{{[0-9A-Fa-f]+}} 'N' 'int'
 // CHECK-NEXT:       `-TemplateArgument type 'Ts...'
 // CHECK-NEXT:         `-PackExpansionType 0x{{[0-9A-Fa-f]+}} 'Ts...' dependent
@@ -37,9 +37,9 @@ template<int N, class ...Ts> struct A {
 // CHECK-NEXT:       |-name: '__type_pack_element' qualified
 // CHECK-NEXT:       | `-BuiltinTemplateDecl {{.+}} __type_pack_element
 // CHECK-NEXT:       |-TemplateArgument expr '0'
-// CHECK-NEXT:       | `-ConstantExpr 0x{{[0-9A-Fa-f]+}} <col:37> 'unsigned long'
+// CHECK-NEXT:       | `-ConstantExpr 0x{{[0-9A-Fa-f]+}} <col:37> '__size_t':'unsigned long'
 // CHECK-NEXT:       |   |-value: Int 0
-// CHECK-NEXT:       |   `-ImplicitCastExpr 0x{{[0-9A-Fa-f]+}} <col:37> 'unsigned long' <IntegralCast>
+// CHECK-NEXT:       |   `-ImplicitCastExpr 0x{{[0-9A-Fa-f]+}} <col:37> '__size_t':'unsigned long' <IntegralCast>
 // CHECK-NEXT:       |     `-IntegerLiteral 0x{{[0-9A-Fa-f]+}} <col:37> 'int' 0
 // CHECK-NEXT:       `-TemplateArgument type 'Ts...'
 // CHECK-NEXT:         `-PackExpansionType 0x{{[0-9A-Fa-f]+}} 'Ts...' dependent
@@ -53,7 +53,7 @@ template<int N, class ...Ts> struct A {
 // CHECK-NEXT:       |-name: '__type_pack_element' qualified
 // CHECK-NEXT:       | `-BuiltinTemplateDecl {{.+}} __type_pack_element
 // CHECK-NEXT:       |-TemplateArgument expr 'N'
-// CHECK-NEXT:       | `-ImplicitCastExpr 0x{{[0-9A-Fa-f]+}} <col:37> 'unsigned long' <IntegralCast>
+// CHECK-NEXT:       | `-ImplicitCastExpr 0x{{[0-9A-Fa-f]+}} <col:37> '__size_t':'unsigned long' <IntegralCast>
 // CHECK-NEXT:       |   `-DeclRefExpr 0x{{[0-9A-Fa-f]+}} <col:37> 'int' NonTypeTemplateParm 0x{{[0-9A-Fa-f]+}} 'N' 'int'
 // CHECK-NEXT:       `-TemplateArgument type 'int'
 // CHECK-NEXT:         `-BuiltinType 0x{{[0-9A-Fa-f]+}} 'int'
