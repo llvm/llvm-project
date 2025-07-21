@@ -601,31 +601,47 @@ static Value *getMask(Value *WideMask, unsigned Factor,
 bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
     IntrinsicInst *DI, SmallSetVector<Instruction *, 32> &DeadInsts) {
   Value *LoadedVal = DI->getOperand(0);
-  if (!LoadedVal->hasOneUse() || !isa<LoadInst, VPIntrinsic>(LoadedVal))
+  if (!LoadedVal->hasOneUse())
+    return false;
+
+  auto *LI = dyn_cast<LoadInst>(LoadedVal);
+  auto *II = dyn_cast<IntrinsicInst>(LoadedVal);
+  if (!LI && !II)
     return false;
 
   const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
   assert(Factor && "unexpected deinterleave intrinsic");
 
   Value *Mask = nullptr;
-  if (auto *VPLoad = dyn_cast<VPIntrinsic>(LoadedVal)) {
-    if (VPLoad->getIntrinsicID() != Intrinsic::vp_load)
-      return false;
-    // Check mask operand. Handle both all-true/false and interleaved mask.
-    Value *WideMask = VPLoad->getOperand(1);
-    Mask = getMask(WideMask, Factor, getDeinterleavedVectorType(DI));
-    if (!Mask)
-      return false;
-
-    LLVM_DEBUG(dbgs() << "IA: Found a vp.load with deinterleave intrinsic "
-                      << *DI << " and factor = " << Factor << "\n");
-  } else {
-    auto *LI = cast<LoadInst>(LoadedVal);
+  if (LI) {
     if (!LI->isSimple())
       return false;
 
     LLVM_DEBUG(dbgs() << "IA: Found a load with deinterleave intrinsic " << *DI
                       << " and factor = " << Factor << "\n");
+  } else {
+    assert(II);
+
+    // Check mask operand. Handle both all-true/false and interleaved mask.
+    Value *WideMask;
+    switch (II->getIntrinsicID()) {
+    default:
+      return false;
+    case Intrinsic::vp_load:
+      WideMask = II->getOperand(1);
+      break;
+    case  Intrinsic::masked_load:
+      WideMask = II->getOperand(2);
+      break;
+    }
+
+    Mask = getMask(WideMask, Factor, getDeinterleavedVectorType(DI));
+    if (!Mask)
+      return false;
+
+    LLVM_DEBUG(dbgs() << "IA: Found a vp.load or masked.load with deinterleave"
+                      << " intrinsic " << *DI << " and factor = "
+                      << Factor << "\n");
   }
 
   // Try and match this with target specific intrinsics.

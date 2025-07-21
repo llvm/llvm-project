@@ -131,24 +131,40 @@ static bool getMemOperands(unsigned Factor, VectorType *VTy, Type *XLenTy,
                                    : Constant::getAllOnesValue(XLenTy);
     return true;
   }
-  auto *VPLdSt = cast<VPIntrinsic>(I);
-  assert((VPLdSt->getIntrinsicID() == Intrinsic::vp_load ||
-          VPLdSt->getIntrinsicID() == Intrinsic::vp_store) &&
+  if (auto *VPLdSt = dyn_cast<VPIntrinsic>(I)) {
+    assert((VPLdSt->getIntrinsicID() == Intrinsic::vp_load ||
+            VPLdSt->getIntrinsicID() == Intrinsic::vp_store) &&
+           "Unexpected intrinsic");
+    Ptr = VPLdSt->getMemoryPointerParam();
+    Alignment = VPLdSt->getPointerAlignment().value_or(
+        DL.getABITypeAlign(VTy->getElementType()));
+
+    assert(Mask && "vp.load and vp.store needs a mask!");
+
+    Value *WideEVL = VPLdSt->getVectorLengthParam();
+    // Conservatively check if EVL is a multiple of factor, otherwise some
+    // (trailing) elements might be lost after the transformation.
+    if (!isMultipleOfN(WideEVL, I->getDataLayout(), Factor))
+      return false;
+
+    auto *FactorC = ConstantInt::get(WideEVL->getType(), Factor);
+    VL = Builder.CreateZExt(Builder.CreateExactUDiv(WideEVL, FactorC), XLenTy);
+    return true;
+  }
+  auto *II = cast<IntrinsicInst>(I);
+  assert(II->getIntrinsicID() == Intrinsic::masked_load &&
          "Unexpected intrinsic");
-  Ptr = VPLdSt->getMemoryPointerParam();
-  Alignment = VPLdSt->getPointerAlignment().value_or(
-      DL.getABITypeAlign(VTy->getElementType()));
+  Ptr = II->getOperand(0);
+  Alignment = cast<ConstantInt>(II->getArgOperand(1))->getAlignValue();
 
-  assert(Mask && "vp.load and vp.store needs a mask!");
-
-  Value *WideEVL = VPLdSt->getVectorLengthParam();
-  // Conservatively check if EVL is a multiple of factor, otherwise some
-  // (trailing) elements might be lost after the transformation.
-  if (!isMultipleOfN(WideEVL, I->getDataLayout(), Factor))
+  if (!isa<UndefValue>(II->getOperand(3)))
     return false;
 
-  auto *FactorC = ConstantInt::get(WideEVL->getType(), Factor);
-  VL = Builder.CreateZExt(Builder.CreateExactUDiv(WideEVL, FactorC), XLenTy);
+  assert(Mask && "masked.load needs a mask!");
+
+  VL = isa<FixedVectorType>(VTy)
+           ? Builder.CreateElementCount(XLenTy, VTy->getElementCount())
+           : Constant::getAllOnesValue(XLenTy);
   return true;
 }
 
