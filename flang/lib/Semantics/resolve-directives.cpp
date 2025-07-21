@@ -728,13 +728,7 @@ public:
 
   void Post(const parser::OmpMapClause &x) {
     unsigned version{context_.langOptions().OpenMPVersion};
-    llvm::omp::Directive id{GetContext().directive};
     std::optional<Symbol::Flag> ompFlag;
-    // Expand "storage" into either "alloc" or "release", depending on the
-    // type of the construct.
-    Symbol::Flag ompFlagForStorage = llvm::omp::isMapEnteringConstruct(id)
-        ? Symbol::Flag::OmpMapAlloc
-        : Symbol::Flag::OmpMapRelease;
 
     auto &mods{OmpGetModifiers(x)};
     if (auto *mapType{OmpGetUniqueModifier<parser::OmpMapType>(mods)}) {
@@ -749,16 +743,12 @@ public:
         ompFlag = Symbol::Flag::OmpMapToFrom;
         break;
       case parser::OmpMapType::Value::Alloc:
-        ompFlag = Symbol::Flag::OmpMapAlloc;
-        break;
       case parser::OmpMapType::Value::Release:
-        ompFlag = Symbol::Flag::OmpMapRelease;
+      case parser::OmpMapType::Value::Storage:
+        ompFlag = Symbol::Flag::OmpMapStorage;
         break;
       case parser::OmpMapType::Value::Delete:
         ompFlag = Symbol::Flag::OmpMapDelete;
-        break;
-      case parser::OmpMapType::Value::Storage:
-        ompFlag = ompFlagForStorage;
         break;
       }
     }
@@ -770,7 +760,7 @@ public:
         // is present on the clause or if the list item for which the map-type
         // is not specified is an assumed-size array.
         if (OmpGetUniqueModifier<parser::OmpDeleteModifier>(mods)) {
-          ompFlag = ompFlagForStorage;
+          ompFlag = Symbol::Flag::OmpMapStorage;
         }
         // Otherwise, if delete-modifier is absent, leave ompFlag unset.
       } else {
@@ -788,7 +778,8 @@ public:
                 if (const auto *name{
                         semantics::getDesignatorNameIfDataRef(designator)}) {
                   if (name->symbol) {
-                    name->symbol->set(ompFlag.value_or(ompFlagForStorage));
+                    name->symbol->set(
+                        ompFlag.value_or(Symbol::Flag::OmpMapStorage));
                     AddToContextObjectWithDSA(*name->symbol, *ompFlag);
                     if (semantics::IsAssumedSizeArray(*name->symbol)) {
                       context_.Say(designator.source,
@@ -803,7 +794,7 @@ public:
           },
           ompObj.u);
 
-      ResolveOmpObject(ompObj, ompFlag.value_or(ompFlagForStorage));
+      ResolveOmpObject(ompObj, ompFlag.value_or(Symbol::Flag::OmpMapStorage));
     }
   }
 
@@ -2802,9 +2793,8 @@ void OmpAttributeVisitor::ResolveOmpObject(
                   }
                   Symbol::Flag dataMappingAttributeFlags[] = {
                       Symbol::Flag::OmpMapTo, Symbol::Flag::OmpMapFrom,
-                      Symbol::Flag::OmpMapToFrom, Symbol::Flag::OmpMapAlloc,
-                      Symbol::Flag::OmpMapRelease, Symbol::Flag::OmpMapDelete,
-                      Symbol::Flag::OmpIsDevicePtr,
+                      Symbol::Flag::OmpMapToFrom, Symbol::Flag::OmpMapStorage,
+                      Symbol::Flag::OmpMapDelete, Symbol::Flag::OmpIsDevicePtr,
                       Symbol::Flag::OmpHasDeviceAddr};
 
                   Symbol::Flag dataSharingAttributeFlags[] = {
