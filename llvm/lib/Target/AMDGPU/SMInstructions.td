@@ -1488,6 +1488,7 @@ class SMEM_Real_Load_gfx12<bits<6> op, string ps, string opName, OffsetMode offs
   let Inst{20} = cpol{CPolBit.NV}; // non-volatile
   let Inst{22-21} = cpol{4-3}; // scope
   let Inst{24-23} = cpol{1-0}; // th - only lower 2 bits are supported
+  let Inst{56} = cpol{CPolBit.SCAL}; // scale offset
 }
 
 multiclass SM_Real_Loads_gfx12<bits<6> op, string ps = NAME> {

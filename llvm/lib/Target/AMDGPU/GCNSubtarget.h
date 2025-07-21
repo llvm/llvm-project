@@ -1162,6 +1162,9 @@ public:
 
   bool hasLshlAddU64Inst() const { return HasLshlAddU64Inst; }
 
+  // Scalar and global loads support scale_offset bit.
+  bool hasScaleOffset() const { return GFX1250Insts; }
+
   bool hasFlatGVSMode() const { return FlatGVSMode; }
 
   bool enableSIScheduler() const {
