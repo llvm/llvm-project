@@ -93,3 +93,11 @@ void f7() {
 }
 
 // CHECK: cir.func{{.*}} @_Z2f7v()
+
+namespace test_alias = test;
+
+int f8() {
+  return test_alias::g2;
+}
+
+// CHECK: cir.func{{.*}} @_Z2f8v()
