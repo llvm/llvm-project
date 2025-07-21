@@ -436,8 +436,8 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
 
   // Masked off lanes past TrueVL will come from False, and converting to vmv
   // will lose these lanes unless MIVL <= TrueVL.
-  MachineOperand &MIVL = MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
-  MachineOperand &TrueVL =
+  const MachineOperand &MIVL = MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
+  const MachineOperand &TrueVL =
       True->getOperand(RISCVII::getVLOpNum(True->getDesc()));
   if (!RISCV::isVLKnownLE(MIVL, TrueVL))
     return false;
