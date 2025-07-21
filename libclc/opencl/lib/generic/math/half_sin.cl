@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_half_sin.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/half_sin.h>
 
 #define __FLOAT_ONLY
 #define FUNCTION half_sin

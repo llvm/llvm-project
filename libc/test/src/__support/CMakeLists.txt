@@ -142,6 +142,17 @@ add_libc_test(
 )
 
 add_libc_test(
+  wcs_to_integer_test
+  SUITE
+    libc-support-tests
+  SRCS
+    wcs_to_integer_test.cpp
+  DEPENDS
+    libc.src.__support.integer_literals
+    libc.src.__support.wcs_to_integer
+)
+
+add_libc_test(
   integer_to_string_test
   SUITE
     libc-support-tests
@@ -275,3 +286,8 @@ add_subdirectory(fixed_point)
 add_subdirectory(HashTable)
 add_subdirectory(time)
 add_subdirectory(threads)
+# Requires access to uchar header which is not on MacOS
+# Cannot currently build this on MacOS in overlay mode
+if(NOT(LIBC_TARGET_OS_IS_DARWIN))
+  add_subdirectory(wchar)
+endif()

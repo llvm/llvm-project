@@ -27,7 +27,7 @@
 using namespace mlir;
 
 /// convert ArrayRef<ValueRange> into SmallVector<Value>
-static SmallVector<Value> flattenValues(ArrayRef<ValueRange> values) {
+SmallVector<Value> xegpu::flattenValues(ArrayRef<ValueRange> values) {
   SmallVector<Value> result;
   for (const auto &vals : values)
     llvm::append_range(result, vals);
@@ -184,6 +184,31 @@ void xegpu::setLayoutAttrs(Operation *op,
   });
 }
 
+template <typename T, typename>
+void xegpu::removeLayoutAttr(const T &operandOrResult) {
+  Operation *owner = operandOrResult.getOwner();
+  std::string name = xegpu::getLayoutName(operandOrResult);
+  if (owner->hasAttrOfType<LayoutAttr>(name))
+    owner->removeAttr(name);
+}
+
+// Explicit instantiation for OpResult
+template void
+xegpu::removeLayoutAttr<mlir::OpResult>(const mlir::OpResult &result);
+
+// Explicit instantiation for OpOperand
+template void
+xegpu::removeLayoutAttr<mlir::OpOperand>(const mlir::OpOperand &operand);
+
+void xegpu::removeLayoutAttrs(Operation *op) {
+  op->walk([&](Operation *nestOp) {
+    for (OpOperand &opr : nestOp->getOpOperands())
+      removeLayoutAttr(opr);
+    for (OpResult result : nestOp->getOpResults())
+      removeLayoutAttr(result);
+  });
+}
+
 SmallVector<Value>
 xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
                                         Value value, ArrayRef<int64_t> shape) {
@@ -271,7 +296,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
       auto resultTy = dyn_cast<RankedTensorType>(result.getType());
 
       // Only look at ops casting from VectorType to RankedTensorType
-      if (!isa<VectorType>(inputTy) || !isa<RankedTensorType>(resultTy))
+      if (!inputTy || !resultTy)
         return WalkResult::skip();
 
       xegpu::LayoutAttr layout = xegpu::getLayoutAttr(input);
@@ -342,7 +367,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
         }
 
         if (isa<RankedTensorType>(inputTy) && isa<VectorType>(outputTy)) {
-          SmallVector<Value> values = flattenValues(adaptor.getInputs());
+          SmallVector<Value> values = xegpu::flattenValues(adaptor.getInputs());
           auto newOp = rewriter.create<UnrealizedConversionCastOp>(
               op.getLoc(), outputTy, values);
           rewriter.replaceOp(op, newOp);

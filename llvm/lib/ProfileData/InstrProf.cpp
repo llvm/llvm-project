@@ -27,6 +27,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/Casting.h"
@@ -616,28 +617,24 @@ Error readAndDecodeStrings(StringRef NameStrings,
 }
 
 Error InstrProfSymtab::create(StringRef NameStrings) {
-  return readAndDecodeStrings(
-      NameStrings,
-      std::bind(&InstrProfSymtab::addFuncName, this, std::placeholders::_1));
+  return readAndDecodeStrings(NameStrings,
+                              [&](StringRef S) { return addFuncName(S); });
 }
 
 Error InstrProfSymtab::create(StringRef FuncNameStrings,
                               StringRef VTableNameStrings) {
-  if (Error E = readAndDecodeStrings(FuncNameStrings,
-                                     std::bind(&InstrProfSymtab::addFuncName,
-                                               this, std::placeholders::_1)))
+  if (Error E = readAndDecodeStrings(
+          FuncNameStrings, [&](StringRef S) { return addFuncName(S); }))
     return E;
 
-  return readAndDecodeStrings(
-      VTableNameStrings,
-      std::bind(&InstrProfSymtab::addVTableName, this, std::placeholders::_1));
+  return readAndDecodeStrings(VTableNameStrings,
+                              [&](StringRef S) { return addVTableName(S); });
 }
 
 Error InstrProfSymtab::initVTableNamesFromCompressedStrings(
     StringRef CompressedVTableStrings) {
-  return readAndDecodeStrings(
-      CompressedVTableStrings,
-      std::bind(&InstrProfSymtab::addVTableName, this, std::placeholders::_1));
+  return readAndDecodeStrings(CompressedVTableStrings,
+                              [&](StringRef S) { return addVTableName(S); });
 }
 
 StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
@@ -1358,7 +1355,7 @@ void annotateValueSite(Module &M, Instruction &Inst,
   MDBuilder MDHelper(Ctx);
   SmallVector<Metadata *, 3> Vals;
   // Tag
-  Vals.push_back(MDHelper.createString("VP"));
+  Vals.push_back(MDHelper.createString(MDProfLabels::ValueProfile));
   // Value Kind
   Vals.push_back(MDHelper.createConstant(
       ConstantInt::get(Type::getInt32Ty(Ctx), ValueKind)));
@@ -1389,7 +1386,7 @@ MDNode *mayHaveValueProfileOfKind(const Instruction &Inst,
     return nullptr;
 
   MDString *Tag = cast<MDString>(MD->getOperand(0));
-  if (!Tag || Tag->getString() != "VP")
+  if (!Tag || Tag->getString() != MDProfLabels::ValueProfile)
     return nullptr;
 
   // Now check kind:

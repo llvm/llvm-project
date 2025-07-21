@@ -675,14 +675,24 @@ ArgumentAccessInfo getArgumentAccessInfo(const Instruction *I,
       [](Value *Length,
          std::optional<int64_t> Offset) -> std::optional<ConstantRange> {
     auto *ConstantLength = dyn_cast<ConstantInt>(Length);
-    if (ConstantLength && Offset &&
-        ConstantLength->getValue().isStrictlyPositive()) {
-      return ConstantRange(
-          APInt(64, *Offset, true),
-          APInt(64, *Offset + ConstantLength->getSExtValue(), true));
+    if (ConstantLength && Offset) {
+      int64_t Len = ConstantLength->getSExtValue();
+
+      // Reject zero or negative lengths
+      if (Len <= 0)
+        return std::nullopt;
+
+      APInt Low(64, *Offset, true);
+      bool Overflow;
+      APInt High = Low.sadd_ov(APInt(64, Len, true), Overflow);
+      if (Overflow)
+        return std::nullopt;
+
+      return ConstantRange(Low, High);
     }
     return std::nullopt;
   };
+
   if (auto *SI = dyn_cast<StoreInst>(I)) {
     if (SI->isSimple() && &SI->getOperandUse(1) == ArgUse.U) {
       // Get the fixed type size of "SI". Since the access range of a write

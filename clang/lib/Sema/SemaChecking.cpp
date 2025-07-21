@@ -1012,7 +1012,10 @@ public:
       break;
     }
 
-    Size += FS.hasPlusPrefix() || FS.hasSpacePrefix();
+    // If field width is specified, the sign/space is already accounted for
+    // within the field width, so no additional size is needed.
+    if ((FS.hasPlusPrefix() || FS.hasSpacePrefix()) && FieldWidth == 0)
+      Size += 1;
 
     if (FS.hasAlternativeForm()) {
       switch (FS.getConversionSpecifier().getKind()) {
@@ -2261,6 +2264,99 @@ static bool BuiltinCountZeroBitsGeneric(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
+static ExprResult BuiltinInvoke(Sema &S, CallExpr *TheCall) {
+  SourceLocation Loc = TheCall->getBeginLoc();
+  MutableArrayRef Args(TheCall->getArgs(), TheCall->getNumArgs());
+  assert(llvm::none_of(Args, [](Expr *Arg) { return Arg->isTypeDependent(); }));
+
+  if (Args.size() == 0) {
+    S.Diag(TheCall->getBeginLoc(),
+           diag::err_typecheck_call_too_few_args_at_least)
+        << /*callee_type=*/0 << /*min_arg_count=*/1 << /*actual_arg_count=*/0
+        << /*is_non_object=*/0 << TheCall->getSourceRange();
+    return ExprError();
+  }
+
+  QualType FuncT = Args[0]->getType();
+
+  if (const auto *MPT = FuncT->getAs<MemberPointerType>()) {
+    if (Args.size() < 2) {
+      S.Diag(TheCall->getBeginLoc(),
+             diag::err_typecheck_call_too_few_args_at_least)
+          << /*callee_type=*/0 << /*min_arg_count=*/2 << /*actual_arg_count=*/1
+          << /*is_non_object=*/0 << TheCall->getSourceRange();
+      return ExprError();
+    }
+
+    const Type *MemPtrClass = MPT->getQualifier()->getAsType();
+    QualType ObjectT = Args[1]->getType();
+
+    if (MPT->isMemberDataPointer() && S.checkArgCount(TheCall, 2))
+      return ExprError();
+
+    ExprResult ObjectArg = [&]() -> ExprResult {
+      // (1.1): (t1.*f)(t2, ..., tN) when f is a pointer to a member function of
+      // a class T and is_same_v<T, remove_cvref_t<decltype(t1)>> ||
+      // is_base_of_v<T, remove_cvref_t<decltype(t1)>> is true;
+      // (1.4): t1.*f when N=1 and f is a pointer to data member of a class T
+      // and is_same_v<T, remove_cvref_t<decltype(t1)>> ||
+      // is_base_of_v<T, remove_cvref_t<decltype(t1)>> is true;
+      if (S.Context.hasSameType(QualType(MemPtrClass, 0),
+                                S.BuiltinRemoveCVRef(ObjectT, Loc)) ||
+          S.BuiltinIsBaseOf(Args[1]->getBeginLoc(), QualType(MemPtrClass, 0),
+                            S.BuiltinRemoveCVRef(ObjectT, Loc))) {
+        return Args[1];
+      }
+
+      // (t1.get().*f)(t2, ..., tN) when f is a pointer to a member function of
+      // a class T and remove_cvref_t<decltype(t1)> is a specialization of
+      // reference_wrapper;
+      if (const auto *RD = ObjectT->getAsCXXRecordDecl()) {
+        if (RD->isInStdNamespace() &&
+            RD->getDeclName().getAsString() == "reference_wrapper") {
+          CXXScopeSpec SS;
+          IdentifierInfo *GetName = &S.Context.Idents.get("get");
+          UnqualifiedId GetID;
+          GetID.setIdentifier(GetName, Loc);
+
+          ExprResult MemExpr = S.ActOnMemberAccessExpr(
+              S.getCurScope(), Args[1], Loc, tok::period, SS,
+              /*TemplateKWLoc=*/SourceLocation(), GetID, nullptr);
+
+          if (MemExpr.isInvalid())
+            return ExprError();
+
+          return S.ActOnCallExpr(S.getCurScope(), MemExpr.get(), Loc, {}, Loc);
+        }
+      }
+
+      // ((*t1).*f)(t2, ..., tN) when f is a pointer to a member function of a
+      // class T and t1 does not satisfy the previous two items;
+
+      return S.ActOnUnaryOp(S.getCurScope(), Loc, tok::star, Args[1]);
+    }();
+
+    if (ObjectArg.isInvalid())
+      return ExprError();
+
+    ExprResult BinOp = S.ActOnBinOp(S.getCurScope(), TheCall->getBeginLoc(),
+                                    tok::periodstar, ObjectArg.get(), Args[0]);
+    if (BinOp.isInvalid())
+      return ExprError();
+
+    if (MPT->isMemberDataPointer())
+      return BinOp;
+
+    auto *MemCall = new (S.Context)
+        ParenExpr(SourceLocation(), SourceLocation(), BinOp.get());
+
+    return S.ActOnCallExpr(S.getCurScope(), MemCall, TheCall->getBeginLoc(),
+                           Args.drop_front(2), TheCall->getRParenLoc());
+  }
+  return S.ActOnCallExpr(S.getCurScope(), Args.front(), TheCall->getBeginLoc(),
+                         Args.drop_front(), TheCall->getRParenLoc());
+}
+
 ExprResult
 Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                                CallExpr *TheCall) {
@@ -2364,6 +2460,17 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
 
+  // The 64-bit acquire, release, and no fence variants are AArch64 only.
+  case Builtin::BI_interlockedbittestandreset64_acq:
+  case Builtin::BI_interlockedbittestandreset64_rel:
+  case Builtin::BI_interlockedbittestandreset64_nf:
+  case Builtin::BI_interlockedbittestandset64_acq:
+  case Builtin::BI_interlockedbittestandset64_rel:
+  case Builtin::BI_interlockedbittestandset64_nf:
+    if (CheckBuiltinTargetInSupported(*this, TheCall, {llvm::Triple::aarch64}))
+      return ExprError();
+    break;
+
   case Builtin::BI__builtin_set_flt_rounds:
     if (CheckBuiltinTargetInSupported(
             *this, TheCall,
@@ -2409,6 +2516,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     return BuiltinShuffleVector(TheCall);
     // TheCall will be freed by the smart pointer here, but that's fine, since
     // BuiltinShuffleVector guts it, but then doesn't release it.
+  case Builtin::BI__builtin_invoke:
+    return BuiltinInvoke(*this, TheCall);
   case Builtin::BI__builtin_prefetch:
     if (BuiltinPrefetch(TheCall))
       return ExprError();
@@ -2648,8 +2757,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     bool IsDelete = BuiltinID == Builtin::BI__builtin_operator_delete;
     ExprResult Res =
         BuiltinOperatorNewDeleteOverloaded(TheCallResult, IsDelete);
-    if (Res.isInvalid())
-      CorrectDelayedTyposInExpr(TheCallResult.get());
     return Res;
   }
   case Builtin::BI__builtin_dump_struct:
@@ -5132,7 +5239,9 @@ bool Sema::BuiltinVAStartARMMicrosoft(CallExpr *Call) {
         << 2 << Arg1->getType() << ConstCharPtrTy;
 
   const QualType SizeTy = Context.getSizeType();
-  if (Arg2Ty->getCanonicalTypeInternal().withoutLocalFastQualifiers() != SizeTy)
+  if (!Context.hasSameType(
+          Arg2Ty->getCanonicalTypeInternal().withoutLocalFastQualifiers(),
+          SizeTy))
     Diag(Arg2->getBeginLoc(), diag::err_typecheck_convert_incompatible)
         << Arg2->getType() << SizeTy << 1 /* different class */
         << 0                              /* qualifier difference */
@@ -10807,10 +10916,9 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
         return std::nullopt;
 
       // If the range was previously non-negative, we need an extra bit for the
-      // sign bit. If the range was not non-negative, we need an extra bit
-      // because the negation of the most-negative value is one bit wider than
-      // that value.
-      return IntRange(SubRange->Width + 1, false);
+      // sign bit. Otherwise, we need an extra bit because the negation of the
+      // most-negative value is one bit wider than that value.
+      return IntRange(std::min(SubRange->Width + 1, MaxWidth), false);
     }
 
     case UO_Not: {
@@ -10827,7 +10935,9 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
 
       // The width increments by 1 if the sub-expression cannot be negative
       // since it now can be.
-      return IntRange(SubRange->Width + (int)SubRange->NonNegative, false);
+      return IntRange(
+          std::min(SubRange->Width + (int)SubRange->NonNegative, MaxWidth),
+          false);
     }
 
     default:
@@ -11686,15 +11796,6 @@ static void DiagnoseFloatingImpCast(Sema &S, const Expr *E, QualType T,
   }
 }
 
-static void CheckCommaOperand(Sema &S, Expr *E, QualType T, SourceLocation CC,
-                              bool ExtraCheckForImplicitConversion) {
-  E = E->IgnoreParenImpCasts();
-  AnalyzeImplicitConversions(S, E, CC);
-
-  if (ExtraCheckForImplicitConversion && E->getType() != T)
-    S.CheckImplicitConversion(E, T, CC);
-}
-
 /// Analyze the given compound assignment for the possible losing of
 /// floating-point precision.
 static void AnalyzeCompoundAssignment(Sema &S, BinaryOperator *E) {
@@ -12057,10 +12158,10 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
   // Strip vector types.
   if (isa<VectorType>(Source)) {
     if (Target->isSveVLSBuiltinType() &&
-        (Context.areCompatibleSveTypes(QualType(Target, 0),
-                                       QualType(Source, 0)) ||
-         Context.areLaxCompatibleSveTypes(QualType(Target, 0),
-                                          QualType(Source, 0))))
+        (ARM().areCompatibleSveTypes(QualType(Target, 0),
+                                     QualType(Source, 0)) ||
+         ARM().areLaxCompatibleSveTypes(QualType(Target, 0),
+                                        QualType(Source, 0))))
       return;
 
     if (Target->isRVVVLSBuiltinType() &&
@@ -12120,10 +12221,10 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
     const Type *OriginalTarget = Context.getCanonicalType(T).getTypePtr();
     // Handle conversion from scalable to fixed when msve-vector-bits is
     // specified
-    if (Context.areCompatibleSveTypes(QualType(OriginalTarget, 0),
-                                      QualType(Source, 0)) ||
-        Context.areLaxCompatibleSveTypes(QualType(OriginalTarget, 0),
-                                         QualType(Source, 0)))
+    if (ARM().areCompatibleSveTypes(QualType(OriginalTarget, 0),
+                                    QualType(Source, 0)) ||
+        ARM().areLaxCompatibleSveTypes(QualType(OriginalTarget, 0),
+                                       QualType(Source, 0)))
       return;
 
     // If the vector cast is cast between two vectors of the same size, it is
@@ -12569,6 +12670,17 @@ struct AnalyzeImplicitConversionsWorkItem {
 };
 }
 
+static void CheckCommaOperand(
+    Sema &S, Expr *E, QualType T, SourceLocation CC,
+    bool ExtraCheckForImplicitConversion,
+    llvm::SmallVectorImpl<AnalyzeImplicitConversionsWorkItem> &WorkList) {
+  E = E->IgnoreParenImpCasts();
+  WorkList.push_back({E, CC, false});
+
+  if (ExtraCheckForImplicitConversion && E->getType() != T)
+    S.CheckImplicitConversion(E, T, CC);
+}
+
 /// Data recursive variant of AnalyzeImplicitConversions. Subexpressions
 /// that should be visited are added to WorkList.
 static void AnalyzeImplicitConversions(
@@ -12644,9 +12756,9 @@ static void AnalyzeImplicitConversions(
       /// how CheckConditionalOperand behaves; it's as-if the correct operand
       /// were directly used for the implicit conversion check.
       CheckCommaOperand(S, BO->getLHS(), T, BO->getOperatorLoc(),
-                        /*ExtraCheckForImplicitConversion=*/false);
+                        /*ExtraCheckForImplicitConversion=*/false, WorkList);
       CheckCommaOperand(S, BO->getRHS(), T, BO->getOperatorLoc(),
-                        /*ExtraCheckForImplicitConversion=*/true);
+                        /*ExtraCheckForImplicitConversion=*/true, WorkList);
       return;
     }
   }

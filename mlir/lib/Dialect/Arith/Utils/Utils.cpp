@@ -216,7 +216,7 @@ static Value convertScalarToComplexDtype(ImplicitLocOpBuilder &b, Value operand,
       from = b.create<arith::TruncFOp>(toFpTy, from);
     }
     Value zero = b.create<mlir::arith::ConstantFloatOp>(
-        mlir::APFloat(toFpTy.getFloatSemantics(), 0), toFpTy);
+        toFpTy, mlir::APFloat(toFpTy.getFloatSemantics(), 0));
     return b.create<complex::CreateOp>(targetType, from, zero);
   }
 
@@ -229,7 +229,7 @@ static Value convertScalarToComplexDtype(ImplicitLocOpBuilder &b, Value operand,
       from = b.create<arith::SIToFPOp>(toFpTy, from);
     }
     Value zero = b.create<mlir::arith::ConstantFloatOp>(
-        mlir::APFloat(toFpTy.getFloatSemantics(), 0), toFpTy);
+        toFpTy, mlir::APFloat(toFpTy.getFloatSemantics(), 0));
     return b.create<complex::CreateOp>(targetType, from, zero);
   }
 

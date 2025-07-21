@@ -10,12 +10,11 @@
 #define __CLC_GEOMETRIC_CLC_FAST_LENGTH_H__
 
 #define __FLOAT_ONLY
-#define __CLC_FUNCTION __clc_fast_length
+#define FUNCTION __clc_fast_length
 #define __CLC_BODY <clc/geometric/unary_decl.inc>
 
 #include <clc/math/gentype.inc>
 
-#undef __FLOAT_ONLY
-#undef __CLC_FUNCTION
+#undef FUNCTION
 
 #endif // __CLC_GEOMETRIC_CLC_FAST_LENGTH_H__

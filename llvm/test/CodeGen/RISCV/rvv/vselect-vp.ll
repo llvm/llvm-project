@@ -470,6 +470,28 @@ define <vscale x 2 x i64> @select_nxv2i64(<vscale x 2 x i1> %a, <vscale x 2 x i6
   ret <vscale x 2 x i64> %v
 }
 
+define <vscale x 2 x i64> @select_nxv2i64_constant_true(<vscale x 2 x i1> %a, <vscale x 2 x i64> %b, i32 zeroext %evl) {
+; CHECK-LABEL: select_nxv2i64_constant_true:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
+; CHECK-NEXT:    ret
+  %v = call <vscale x 2 x i64> @llvm.vp.select.nxv2i64(<vscale x 2 x i1> %a, <vscale x 2 x i64> splat (i64 -1), <vscale x 2 x i64> %b, i32 %evl)
+  ret <vscale x 2 x i64> %v
+}
+
+define <vscale x 2 x i64> @select_nxv2i64_constant_false(<vscale x 2 x i1> %a, <vscale x 2 x i64> %b, i32 zeroext %evl) {
+; CHECK-LABEL: select_nxv2i64_constant_false:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 100
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-NEXT:    vmv.v.x v10, a1
+; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    ret
+  %v = call <vscale x 2 x i64> @llvm.vp.select.nxv2i64(<vscale x 2 x i1> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> splat (i64 100), i32 %evl)
+  ret <vscale x 2 x i64> %v
+}
+
 declare <vscale x 4 x i64> @llvm.vp.select.nxv4i64(<vscale x 4 x i1>, <vscale x 4 x i64>, <vscale x 4 x i64>, i32)
 
 define <vscale x 4 x i64> @select_nxv4i64(<vscale x 4 x i1> %a, <vscale x 4 x i64> %b, <vscale x 4 x i64> %c, i32 zeroext %evl) {
@@ -702,10 +724,10 @@ define <vscale x 16 x double> @select_nxv16f64(<vscale x 16 x i1> %a, <vscale x 
 ; CHECK-NEXT:    and a4, a5, a4
 ; CHECK-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v16, v24, v16, v0
-; CHECK-NEXT:    bltu a2, a1, .LBB48_2
+; CHECK-NEXT:    bltu a2, a1, .LBB50_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a1
-; CHECK-NEXT:  .LBB48_2:
+; CHECK-NEXT:  .LBB50_2:
 ; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload

@@ -1496,6 +1496,12 @@ public:
     return this->getValue();
   }
 
+  template <class T> DataType &operator=(T &&Val) {
+    this->getValue() = std::forward<T>(Val);
+    Callback(this->getValue());
+    return this->getValue();
+  }
+
   template <class... Mods>
   explicit opt(const Mods &... Ms)
       : Option(llvm::cl::Optional, NotHidden), Parser(*this) {

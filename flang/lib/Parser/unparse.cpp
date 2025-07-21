@@ -778,7 +778,7 @@ public:
   }
   void Unparse(const SubstringInquiry &x) {
     Walk(x.v);
-    Put(x.source.end()[-1] == 'n' ? "%LEN" : "%KIND");
+    Put(x.source.back() == 'n' ? "%LEN" : "%KIND");
   }
   void Unparse(const SubstringRange &x) { // R910
     Walk(x.t, ":");
@@ -2094,7 +2094,7 @@ public:
   }
   void Unparse(const OmpMapperSpecifier &x) {
     const auto &mapperName{std::get<std::string>(x.t)};
-    if (mapperName.find("omp.default.mapper") == std::string::npos) {
+    if (mapperName.find(llvm::omp::OmpDefaultMapperName) == std::string::npos) {
       Walk(mapperName);
       Put(":");
     }
@@ -2571,7 +2571,7 @@ public:
     Word(ToUpperCaseLetters(common::EnumToString(x)));
   }
 
-  void Unparse(const OpenMPAtomicConstruct &x) {
+  template <typename Construct> void UnparseBlockConstruct(const Construct &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(std::get<OmpDirectiveSpecification>(x.t));
@@ -2585,6 +2585,10 @@ public:
       Put("\n");
       EndOpenMP();
     }
+  }
+
+  void Unparse(const OpenMPAtomicConstruct &x) { //
+    UnparseBlockConstruct(x);
   }
 
   void Unparse(const OpenMPExecutableAllocate &x) {
@@ -2614,22 +2618,8 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OmpEndAllocators &x) {
-    BeginOpenMP();
-    Word("!$OMP END ALLOCATE");
-    Put("\n");
-    EndOpenMP();
-  }
-  void Unparse(const OpenMPAllocatorsConstruct &x) {
-    BeginOpenMP();
-    Word("!$OMP ALLOCATE");
-    Walk(std::get<OmpClauseList>(x.t));
-    Put("\n");
-    EndOpenMP();
-    Walk(std::get<Statement<AllocateStmt>>(x.t));
-    if (const auto &end = std::get<std::optional<OmpEndAllocators>>(x.t)) {
-      Walk(*end);
-    }
+  void Unparse(const OpenMPAllocatorsConstruct &x) { //
+    UnparseBlockConstruct(x);
   }
   void Unparse(const OmpAssumeDirective &x) {
     BeginOpenMP();
@@ -2740,7 +2730,7 @@ public:
     Word("!$OMP DECLARE MAPPER (");
     const auto &spec{std::get<OmpMapperSpecifier>(z.t)};
     const auto &mapperName{std::get<std::string>(spec.t)};
-    if (mapperName.find("omp.default.mapper") == std::string::npos) {
+    if (mapperName.find(llvm::omp::OmpDefaultMapperName) == std::string::npos) {
       Walk(mapperName);
       Put(":");
     }
@@ -2768,6 +2758,9 @@ public:
     Put("\n");
     EndOpenMP();
   }
+  void Unparse(const OpenMPDispatchConstruct &x) { //
+    UnparseBlockConstruct(x);
+  }
   void Unparse(const OpenMPRequiresConstruct &y) {
     BeginOpenMP();
     Word("!$OMP REQUIRES ");
@@ -2786,15 +2779,6 @@ public:
   bool Pre(const OmpMessageClause &x) {
     Walk(x.v);
     return false;
-  }
-  void Unparse(const OmpDispatchDirective &x) {
-    Word("!$OMP DISPATCH");
-    Walk(x.t);
-    Put("\n");
-  }
-  void Unparse(const OmpEndDispatchDirective &) {
-    Word("!$OMP END DISPATCH");
-    Put("\n");
   }
   void Unparse(const OmpErrorDirective &x) {
     Word("!$OMP ERROR ");
@@ -2926,7 +2910,8 @@ public:
     Walk(std::get<OmpBeginLoopDirective>(x.t));
     Put("\n");
     EndOpenMP();
-    Walk(std::get<std::optional<DoConstruct>>(x.t));
+    Walk(std::get<std::optional<std::variant<DoConstruct,
+            common::Indirection<parser::OpenMPLoopConstruct>>>>(x.t));
     Walk(std::get<std::optional<OmpEndLoopDirective>>(x.t));
   }
   void Unparse(const BasedPointer &x) {
@@ -3022,8 +3007,15 @@ public:
   WALK_NESTED_ENUM(OmpPrescriptiveness, Value) // OMP prescriptiveness
   WALK_NESTED_ENUM(OmpMapType, Value) // OMP map-type
   WALK_NESTED_ENUM(OmpMapTypeModifier, Value) // OMP map-type-modifier
+  WALK_NESTED_ENUM(OmpAlwaysModifier, Value)
+  WALK_NESTED_ENUM(OmpCloseModifier, Value)
+  WALK_NESTED_ENUM(OmpDeleteModifier, Value)
+  WALK_NESTED_ENUM(OmpPresentModifier, Value)
+  WALK_NESTED_ENUM(OmpRefModifier, Value)
+  WALK_NESTED_ENUM(OmpSelfModifier, Value)
   WALK_NESTED_ENUM(OmpTraitSelectorName, Value)
   WALK_NESTED_ENUM(OmpTraitSetSelectorName, Value)
+  WALK_NESTED_ENUM(OmpxHoldModifier, Value)
 
 #undef WALK_NESTED_ENUM
   void Unparse(const ReductionOperator::Operator x) {

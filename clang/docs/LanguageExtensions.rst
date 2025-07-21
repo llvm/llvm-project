@@ -15,6 +15,7 @@ Clang Language Extensions
    AutomaticReferenceCounting
    PointerAuthentication
    MatrixTypes
+   CXXTypeAwareAllocators
 
 Introduction
 ============
@@ -137,7 +138,7 @@ for support for non-standardized features, i.e. features not prefixed ``c_``,
 ``cxx_`` or ``objc_``.
 
 Another use of ``__has_feature`` is to check for compiler features not related
-to the language standard, such as e.g. :doc:`AddressSanitizer
+to the language standard, such as :doc:`AddressSanitizer
 <AddressSanitizer>`.
 
 If the ``-pedantic-errors`` option is given, ``__has_extension`` is equivalent
@@ -376,8 +377,8 @@ Builtin Macros
 
 ``__FILE_NAME__``
   Clang-specific extension that functions similar to ``__FILE__`` but only
-  renders the last path component (the filename) instead of an invocation
-  dependent full path to that file.
+  renders the last path component (the filename) instead of an
+  invocation-dependent full path to that file.
 
 ``__COUNTER__``
   Defined to an integer value that starts at zero and is incremented each time
@@ -715,7 +716,7 @@ See also :ref:`langext-__builtin_shufflevector`, :ref:`langext-__builtin_convert
   a NEON vector or an SVE vector, it's only available in C++ and uses normal bool
   conversions (that is, != 0).
   If it's an extension (OpenCL) vector, it's only available in C and OpenCL C.
-  And it selects base on signedness of the condition operands (OpenCL v1.1 s6.3.9).
+  And it selects based on signedness of the condition operands (OpenCL v1.1 s6.3.9).
 .. [#] sizeof can only be used on vector length specific SVE types.
 .. [#] Clang does not allow the address of an element to be taken while GCC
    allows this. This is intentional for vectors with a boolean element type and
@@ -856,7 +857,7 @@ Each builtin returns a scalar equivalent to applying the specified
 operation(x, y) as recursive even-odd pairwise reduction to all vector
 elements. ``operation(x, y)`` is repeatedly applied to each non-overlapping
 even-odd element pair with indices ``i * 2`` and ``i * 2 + 1`` with
-``i in [0, Number of elements / 2)``. If the numbers of elements is not a
+``i in [0, Number of elements / 2)``. If the number of elements is not a
 power of 2, the vector is widened with neutral elements for the reduction
 at the end to the next power of 2.
 
@@ -1490,7 +1491,7 @@ C++14 digit separators
 
 Use ``__cpp_digit_separators`` to determine if support for digit separators
 using single quotes (for instance, ``10'000``) is enabled. At this time, there
-is no corresponding ``__has_feature`` name
+is no corresponding ``__has_feature`` name.
 
 C++14 generalized lambda capture
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1539,6 +1540,13 @@ C++14 variable templates
 Use ``__has_feature(cxx_variable_templates)`` or
 ``__has_extension(cxx_variable_templates)`` to determine if support for
 templated variable declarations is enabled.
+
+C++ type aware allocators
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Use ``__has_extension(cxx_type_aware_allocators)`` to determine the existence of
+support for the future C++2d type aware allocator feature. For full details, see
+:doc:`C++ Type Aware Allocators <CXXTypeAwareAllocators>` for additional details.
 
 C11
 ---
@@ -1635,7 +1643,7 @@ Modules
 Use ``__has_feature(modules)`` to determine if Modules have been enabled.
 For example, compiling code with ``-fmodules`` enables the use of Modules.
 
-More information could be found `here <https://clang.llvm.org/docs/Modules.html>`_.
+More information can be found `here <https://clang.llvm.org/docs/Modules.html>`_.
 
 Language Extensions Back-ported to Previous Standards
 =====================================================
@@ -1870,7 +1878,7 @@ The following type trait primitives are supported by Clang. Those traits marked
   C++26 relocatable types, and types which
   were made trivially relocatable via the ``clang::trivial_abi`` attribute.
   This trait is deprecated and should be replaced by
-  ``__builtin_is_cpp_trivially_relocatable``. Note however that it is generally
+  ``__builtin_is_cpp_trivially_relocatable``. Note, however, that it is generally
   unsafe to relocate a C++-relocatable type with ``memcpy`` or ``memmove``;
   use ``__builtin_trivially_relocate``.
 * ``__builtin_is_cpp_trivially_relocatable`` (C++): Returns true if an object
@@ -3798,6 +3806,17 @@ Trivially relocates ``count`` objects of relocatable, complete type ``T``
 from ``src`` to ``dest`` and returns ``dest``.
 This builtin is used to implement ``std::trivially_relocate``.
 
+``__builtin_invoke``
+--------------------
+
+**Syntax**:
+
+.. code-block:: c++
+
+  template <class Callee, class... Args>
+  decltype(auto) __builtin_invoke(Callee&& callee, Args&&... args);
+
+``__builtin_invoke`` is equivalent to ``std::invoke``.
 
 ``__builtin_preserve_access_index``
 -----------------------------------

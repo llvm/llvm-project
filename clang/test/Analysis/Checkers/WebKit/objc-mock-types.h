@@ -45,6 +45,7 @@ CFDictionaryRef CFDictionaryCreateCopy(CFAllocatorRef allocator, CFDictionaryRef
 CFDictionaryRef CFDictionaryCreateMutableCopy(CFAllocatorRef allocator, CFIndex capacity, CFDictionaryRef theDict);
 CFIndex CFDictionaryGetCount(CFDictionaryRef theDict);
 Boolean CFDictionaryContainsKey(CFDictionaryRef theDict, const void *key);
+Boolean CFEqual(CFTypeRef, CFTypeRef);
 Boolean CFDictionaryContainsValue(CFDictionaryRef theDict, const void *value);
 const void *CFDictionaryGetValue(CFDictionaryRef theDict, const void *key);
 void CFDictionaryAddValue(CFMutableDictionaryRef theDict, const void *key, const void *value);

@@ -82,7 +82,7 @@ void EmitOffloadErrcodes(const RecordKeeper &Records, raw_ostream &OS) {
 #endif
 
 // Error codes are shared between PluginInterface and liboffload.
-// To add new error codes, add them to offload/liboffload/API/Common.td and run the GenerateOffload target.
+// To add new error codes, add them to offload/liboffload/API/Common.td.
 
 )";
 
@@ -91,5 +91,26 @@ void EmitOffloadErrcodes(const RecordKeeper &Records, raw_ostream &OS) {
   for (const auto &EnumVal : ErrorCodeEnum.getValues()) {
     OS << formatv(TAB_1 "OFFLOAD_ERRC({0}, \"{1}\", {2})\n", EnumVal.getName(),
                   EnumVal.getDesc(), EtorVal++);
+  }
+}
+
+// Emit macro calls for each info
+void EmitOffloadInfo(const RecordKeeper &Records, raw_ostream &OS) {
+  OS << GenericHeader;
+  OS << R"(
+#ifndef OFFLOAD_DEVINFO
+#error Please define the macro OFFLOAD_DEVINFO(Name, Desc, Value)
+#endif
+
+// Device info codes are shared between PluginInterface and liboffload.
+// To add new error codes, add them to offload/liboffload/API/Device.td.
+
+)";
+
+  auto ErrorCodeEnum = EnumRec{Records.getDef("DeviceInfo")};
+  uint32_t EtorVal = 0;
+  for (const auto &EnumVal : ErrorCodeEnum.getValues()) {
+    OS << formatv(TAB_1 "OFFLOAD_DEVINFO({0}, \"{1}\", {2})\n",
+                  EnumVal.getName(), EnumVal.getDesc(), EtorVal++);
   }
 }

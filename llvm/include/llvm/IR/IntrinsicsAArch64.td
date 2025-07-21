@@ -612,7 +612,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                   [IntrReadMem, IntrArgMemOnly]>;
   class AdvSIMD_1Vec_Store_Lane_Intrinsic
     : DefaultAttrsIntrinsic<[], [llvm_anyvector_ty, llvm_i64_ty, llvm_anyptr_ty],
-                [IntrArgMemOnly, NoCapture<ArgIndex<2>>]>;
+                [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<2>>]>;
 
   class AdvSIMD_2Vec_Load_Intrinsic
     : DefaultAttrsIntrinsic<[LLVMMatchType<0>, llvm_anyvector_ty],
@@ -626,11 +626,11 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
   class AdvSIMD_2Vec_Store_Intrinsic
     : DefaultAttrsIntrinsic<[], [llvm_anyvector_ty, LLVMMatchType<0>,
                      llvm_anyptr_ty],
-                [IntrArgMemOnly, NoCapture<ArgIndex<2>>]>;
+                [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<2>>]>;
   class AdvSIMD_2Vec_Store_Lane_Intrinsic
     : DefaultAttrsIntrinsic<[], [llvm_anyvector_ty, LLVMMatchType<0>,
                  llvm_i64_ty, llvm_anyptr_ty],
-                [IntrArgMemOnly, NoCapture<ArgIndex<3>>]>;
+                [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<3>>]>;
 
   class AdvSIMD_3Vec_Load_Intrinsic
     : DefaultAttrsIntrinsic<[LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty],
@@ -644,12 +644,12 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
   class AdvSIMD_3Vec_Store_Intrinsic
     : DefaultAttrsIntrinsic<[], [llvm_anyvector_ty, LLVMMatchType<0>,
                      LLVMMatchType<0>, llvm_anyptr_ty],
-                [IntrArgMemOnly, NoCapture<ArgIndex<3>>]>;
+                [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<3>>]>;
   class AdvSIMD_3Vec_Store_Lane_Intrinsic
     : DefaultAttrsIntrinsic<[], [llvm_anyvector_ty,
                  LLVMMatchType<0>, LLVMMatchType<0>,
                  llvm_i64_ty, llvm_anyptr_ty],
-                [IntrArgMemOnly, NoCapture<ArgIndex<4>>]>;
+                [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<4>>]>;
 
   class AdvSIMD_4Vec_Load_Intrinsic
     : DefaultAttrsIntrinsic<[LLVMMatchType<0>, LLVMMatchType<0>,
@@ -667,12 +667,12 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
     : DefaultAttrsIntrinsic<[], [llvm_anyvector_ty, LLVMMatchType<0>,
                  LLVMMatchType<0>, LLVMMatchType<0>,
                  llvm_anyptr_ty],
-                [IntrArgMemOnly, NoCapture<ArgIndex<4>>]>;
+                [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<4>>]>;
   class AdvSIMD_4Vec_Store_Lane_Intrinsic
     : DefaultAttrsIntrinsic<[], [llvm_anyvector_ty, LLVMMatchType<0>,
                  LLVMMatchType<0>, LLVMMatchType<0>,
                  llvm_i64_ty, llvm_anyptr_ty],
-                [IntrArgMemOnly, NoCapture<ArgIndex<5>>]>;
+                [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<5>>]>;
 }
 
 // Memory ops
@@ -761,7 +761,7 @@ let TargetPrefix = "aarch64" in {
   class RNDR_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_i64_ty, llvm_i1_ty], [], [IntrNoMem, IntrHasSideEffects]>;
   class FPMR_Set_Intrinsic
-    : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrInaccessibleMemOnly]>; 
+    : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrWriteMem, IntrInaccessibleMemOnly]>;
 }
 
 // FP environment registers.

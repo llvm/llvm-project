@@ -21,6 +21,8 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
+#include <stdint.h> // uintptr_t
+
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
@@ -90,12 +92,11 @@ template <typename T> LIBC_INLINE size_t string_length(const T *src) {
   // string a block at a time.
   if constexpr (cpp::is_same_v<T, char>)
     return string_length_wide_read<unsigned int>(src);
-#else
+#endif
   size_t length;
   for (length = 0; *src; ++src, ++length)
     ;
   return length;
-#endif
 }
 
 template <typename Word>

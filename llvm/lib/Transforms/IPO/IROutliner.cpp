@@ -267,8 +267,7 @@ void OutlinableRegion::splitCandidate() {
   // region is the same as the recorded instruction following the last
   // instruction. If they do not match, there could be problems in rewriting
   // the program after outlining, so we ignore it.
-  if (!BackInst->isTerminator() &&
-      EndInst != BackInst->getNextNonDebugInstruction())
+  if (!BackInst->isTerminator() && EndInst != BackInst->getNextNode())
     return;
 
   Instruction *StartInst = (*Candidate->begin()).Inst;
@@ -717,8 +716,6 @@ static void moveFunctionData(Function &Old, Function &New,
     if (ReturnInst *RI = dyn_cast<ReturnInst>(I))
       NewEnds.insert(std::make_pair(RI->getReturnValue(), &CurrBB));
 
-    std::vector<Instruction *> DebugInsts;
-
     for (Instruction &Val : CurrBB) {
       // Since debug-info originates from many different locations in the
       // program, it will cause incorrect reporting from a debugger if we keep
@@ -746,24 +743,12 @@ static void moveFunctionData(Function &Old, Function &New,
         continue;
       }
 
-      // From this point we are only handling call instructions.
-      CallInst *CI = cast<CallInst>(&Val);
-
-      // Collect debug intrinsics for later removal.
-      if (isa<DbgInfoIntrinsic>(CI)) {
-        DebugInsts.push_back(&Val);
-        continue;
-      }
-
       // Edit the scope of called functions inside of outlined functions.
       if (DISubprogram *SP = New.getSubprogram()) {
         DILocation *DI = DILocation::get(New.getContext(), 0, 0, SP);
         Val.setDebugLoc(DI);
       }
     }
-
-    for (Instruction *I : DebugInsts)
-      I->eraseFromParent();
   }
 }
 
@@ -2340,7 +2325,7 @@ static bool nextIRInstructionDataMatchesNextInst(IRInstructionData &ID) {
   Instruction *NextIDLInst = NextIDIt->Inst;
   Instruction *NextModuleInst = nullptr;
   if (!ID.Inst->isTerminator())
-    NextModuleInst = ID.Inst->getNextNonDebugInstruction();
+    NextModuleInst = ID.Inst->getNextNode();
   else if (NextIDLInst != nullptr)
     NextModuleInst =
         &*NextIDIt->Inst->getParent()->instructionsWithoutDebug().begin();
@@ -2367,7 +2352,7 @@ bool IROutliner::isCompatibleWithAlreadyOutlinedCode(
   // if it does not, we fix it in the InstructionDataList.
   if (!Region.Candidate->backInstruction()->isTerminator()) {
     Instruction *NewEndInst =
-        Region.Candidate->backInstruction()->getNextNonDebugInstruction();
+        Region.Candidate->backInstruction()->getNextNode();
     assert(NewEndInst && "Next instruction is a nullptr?");
     if (Region.Candidate->end()->Inst != NewEndInst) {
       IRInstructionDataList *IDL = Region.Candidate->front()->IDL;
