@@ -899,6 +899,11 @@ math_test(
 )
 
 math_test(
+    name = "hypotf16",
+    hdrs = ["HypotTest.h"],
+)
+
+math_test(
     name = "ilogb",
     hdrs = ["ILogbTest.h"],
 )
