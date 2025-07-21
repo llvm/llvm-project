@@ -12105,6 +12105,46 @@ static SDValue lowerShuffleAsByteShiftMask(const SDLoc &DL, MVT VT, SDValue V1,
   return DAG.getBitcast(VT, Res);
 }
 
+static SDValue lowerShuffleAsVSHLD(const SDLoc &DL, MVT VT, SDValue V1,
+                                   SDValue V2, ArrayRef<int> Mask,
+                                   const X86Subtarget &Subtarget,
+                                   SelectionDAG &DAG) {
+  if (!Subtarget.hasVBMI2())
+    return SDValue();
+  if (!Subtarget.hasVLX() && !VT.is512BitVector())
+    return SDValue();
+
+  unsigned ScalarSizeInBits = VT.getScalarSizeInBits();
+  for (int Scale = 2; Scale * ScalarSizeInBits <= 64; Scale *= 2) {
+    unsigned LaneSize = Scale * ScalarSizeInBits;
+    SmallVector<int, 8> RepeatedMask;
+    if (isRepeatedShuffleMask(LaneSize, VT, Mask, RepeatedMask)) {
+      for (int Shift = 1; Shift != Scale; ++Shift) {
+        MVT ShiftVT = MVT::getVectorVT(MVT::getIntegerVT(LaneSize),
+                                       VT.getSizeInBits() / LaneSize);
+        unsigned Offset = Scale - Shift;
+        if (isSequentialOrUndefInRange(RepeatedMask, 0, Shift,
+                                       Scale + Offset) &&
+            isSequentialOrUndefInRange(RepeatedMask, Shift, Offset, 0)) {
+          return DAG.getBitcast(
+              VT, DAG.getNode(X86ISD::VSHLD, DL, ShiftVT, V1, V2,
+                              DAG.getTargetConstant(Shift * ScalarSizeInBits,
+                                                    DL, MVT::i8)));
+        }
+        if (isSequentialOrUndefInRange(RepeatedMask, 0, Shift, Offset) &&
+            isSequentialOrUndefInRange(RepeatedMask, Shift, Offset, 0)) {
+          return DAG.getBitcast(
+              VT, DAG.getNode(X86ISD::VSHLD, DL, ShiftVT, V2, V1,
+                              DAG.getTargetConstant(Shift * ScalarSizeInBits,
+                                                    DL, MVT::i8)));
+        }
+      }
+    }
+  }
+
+  return SDValue();
+}
+
 /// Try to lower a vector shuffle as a bit shift (shifts in zeros).
 ///
 /// Attempts to match a shuffle mask against the PSLL(W/D/Q/DQ) and
@@ -13798,6 +13838,11 @@ static SDValue lowerV4I32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
       return Rotate;
   }
 
+  // Try to use funnel shift instructions.
+  if (SDValue Funnel =
+          lowerShuffleAsVSHLD(DL, MVT::v4i32, V1, V2, Mask, Subtarget, DAG))
+    return Funnel;
+
   // Assume that a single SHUFPS is faster than an alternative sequence of
   // multiple instructions (even if the CPU has a domain penalty).
   // If some CPU is harmed by the domain switch, we can fix it in a later pass.
@@ -14516,6 +14561,11 @@ static SDValue lowerV8I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                                 Subtarget, DAG))
     return Rotate;
 
+  // Try to use funnel shift instructions.
+  if (SDValue Funnel =
+          lowerShuffleAsVSHLD(DL, MVT::v8i16, V1, V2, Mask, Subtarget, DAG))
+    return Funnel;
+
   if (SDValue BitBlend =
           lowerShuffleAsBitBlend(DL, MVT::v8i16, V1, V2, Mask, DAG))
     return BitBlend;
@@ -14710,6 +14760,11 @@ static SDValue lowerV16I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (SDValue Rotate = lowerShuffleAsByteRotate(DL, MVT::v16i8, V1, V2, Mask,
                                                 Subtarget, DAG))
     return Rotate;
+
+  // Try to use funnel shift instructions.
+  if (SDValue Funnel =
+          lowerShuffleAsVSHLD(DL, MVT::v16i8, V1, V2, Mask, Subtarget, DAG))
+    return Funnel;
 
   // Use dedicated pack instructions for masks that match their pattern.
   if (SDValue V =
@@ -16870,6 +16925,11 @@ static SDValue lowerV8I32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                                 Subtarget, DAG))
     return Rotate;
 
+  // Try to use funnel shift instructions.
+  if (SDValue Funnel =
+          lowerShuffleAsVSHLD(DL, MVT::v8i32, V1, V2, Mask, Subtarget, DAG))
+    return Funnel;
+
   // Try to create an in-lane repeating shuffle mask and then shuffle the
   // results into the target lanes.
   if (SDValue V = lowerShuffleAsRepeatedMaskAndLanePermute(
@@ -16963,6 +17023,11 @@ static SDValue lowerV16I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (SDValue Rotate = lowerShuffleAsByteRotate(DL, MVT::v16i16, V1, V2, Mask,
                                                 Subtarget, DAG))
     return Rotate;
+
+  // Try to use funnel shift instructions.
+  if (SDValue Funnel =
+          lowerShuffleAsVSHLD(DL, MVT::v16i16, V1, V2, Mask, Subtarget, DAG))
+    return Funnel;
 
   // Try to create an in-lane repeating shuffle mask and then shuffle the
   // results into the target lanes.
@@ -17086,6 +17151,11 @@ static SDValue lowerV32I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (SDValue Rotate = lowerShuffleAsByteRotate(DL, MVT::v32i8, V1, V2, Mask,
                                                 Subtarget, DAG))
     return Rotate;
+
+  // Try to use funnel shift instructions.
+  if (SDValue Funnel =
+          lowerShuffleAsVSHLD(DL, MVT::v32i8, V1, V2, Mask, Subtarget, DAG))
+    return Funnel;
 
   // Try to use bit rotation instructions.
   if (V2.isUndef())
@@ -17599,6 +17669,11 @@ static SDValue lowerV16I32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                                   Subtarget, DAG))
       return Rotate;
 
+  // Try to use funnel shift instructions.
+  if (SDValue Funnel =
+          lowerShuffleAsVSHLD(DL, MVT::v16i32, V1, V2, Mask, Subtarget, DAG))
+    return Funnel;
+
   // Assume that a single SHUFPS is faster than using a permv shuffle.
   // If some CPU is harmed by the domain switch, we can fix it in a later pass.
   if (Is128BitLaneRepeatedShuffle && isSingleSHUFPSMask(RepeatedMask)) {
@@ -17663,6 +17738,11 @@ static SDValue lowerV32I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (SDValue Rotate = lowerShuffleAsByteRotate(DL, MVT::v32i16, V1, V2, Mask,
                                                 Subtarget, DAG))
     return Rotate;
+
+  // Try to use funnel shift instructions.
+  if (SDValue Funnel =
+          lowerShuffleAsVSHLD(DL, MVT::v32i16, V1, V2, Mask, Subtarget, DAG))
+    return Funnel;
 
   if (V2.isUndef()) {
     // Try to use bit rotation instructions.
@@ -17734,6 +17814,11 @@ static SDValue lowerV64I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (SDValue Rotate = lowerShuffleAsByteRotate(DL, MVT::v64i8, V1, V2, Mask,
                                                 Subtarget, DAG))
     return Rotate;
+
+  // Try to use funnel shift instructions.
+  if (SDValue Funnel =
+          lowerShuffleAsVSHLD(DL, MVT::v64i8, V1, V2, Mask, Subtarget, DAG))
+    return Funnel;
 
   // Try to use bit rotation instructions.
   if (V2.isUndef())
