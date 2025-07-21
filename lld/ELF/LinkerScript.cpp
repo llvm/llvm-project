@@ -48,9 +48,9 @@ static bool isSectionPrefix(StringRef prefix, StringRef name) {
   return name.consume_front(prefix) && (name.empty() || name[0] == '.');
 }
 
-bool hasUnlikelySuffix(StringRef name) {
-  return name.ends_with(".unlikely") || name.ends_with(".unlikely.") ||
-         name.ends_with("unlikely");
+static bool isSectionSuffix(StringRef suffix, StringRef name) {
+  name.consume_back(".");
+  return name.ends_with(suffix);
 }
 
 StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
@@ -110,77 +110,38 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
     return ".text";
   }
 
-  if (isSectionPrefix(".data.rel.ro", s->name)) {
-    // Map input sections' .rodata and rodata.hot into .rodata.hot in the
-    // output. Map input sections' .rodata.unlikely into .rodata in the output.
-    if (ctx.arg.zKeepDataSectionPrefix) {
-      if (isSectionPrefix(".data.rel.ro.unlikely", s->name) ||
-          hasUnlikelySuffix(s->name)) {
-        return ".data.rel.ro.unlikely";
+  // When zKeepDataSectionPrefix is true, keep .hot and .unlikely suffixes
+  // in data sections.
+  static constexpr StringRef dataSectionPrefixes[] = {
+      ".data.rel.ro", ".data", ".rodata", ".bss.rel.ro", ".bss",
+  };
+
+  for (auto [index, v] : llvm::enumerate(dataSectionPrefixes)) {
+    if (isSectionPrefix(v, s->name)) {
+      if (ctx.arg.zKeepDataSectionPrefix) {
+        if (isSectionPrefix(".hot", s->name.substr(v.size())))
+          return s->name.substr(0, v.size() + 4);
+        if (isSectionPrefix(".unlikely", s->name.substr(v.size())))
+          return s->name.substr(0, v.size() + 9);
+        // for .rodata,  a section could be`.rodata.cst<N>.hot.` for constant
+        // pool or  `rodata.str<N>.hot.` for string literals.
+        if (index == 2) {
+          if (isSectionSuffix(".hot", s->name)) {
+            return ".rodata.hot";
+          }
+          if (isSectionSuffix(".unlikely", s->name)) {
+            return ".rodata.unlikely";
+          }
+        }
       }
-
-      return ".data.rel.ro";
+      return v;
     }
-    return ".data.rel.ro";
   }
 
-  if (isSectionPrefix(".data", s->name)) {
-    //  Map input sections' .rodata and rodata.hot into .rodata.hot in the
-    //  output. Map input sections' .rodata.unlikely into .rodata in the output.
-    if (ctx.arg.zKeepDataSectionPrefix) {
-      if (isSectionPrefix(".data.unlikely", s->name) ||
-          hasUnlikelySuffix(s->name)) {
-        // errs() << "LinkerScript.cpp:100\t" << s->name << "\n";
-        return ".data.unlikely";
-      }
-
-      return ".data";
-    }
-    return ".data";
-  }
-
-  if (isSectionPrefix(".rodata", s->name)) {
-    // Map input sections' .rodata and rodata.hot into .rodata.hot in the
-    // output. Map input sections' .rodata.unlikely into .rodata in the output.
-    if (ctx.arg.zKeepDataSectionPrefix) {
-      // if (isSectionPrefix(".rodata.cst", s->name)) {
-      // errs() << "LinkerScript.cpp:100\t" << s->name << "\n";
-      //}
-      //  .rodata.cst<N>.unlikely
-      //  .rodata.str4.16.unlikely
-      if (isSectionPrefix(".rodata.unlikely", s->name) ||
-          hasUnlikelySuffix(s->name)) {
-        // return ".rodata.unlikely";
-        return ".rodata.unlikely";
-      }
-      return ".rodata";
-    }
-    return ".rodata";
-  }
-
-  if (isSectionPrefix(".bss.rel.ro", s->name)) {
-    return ".bss.rel.ro";
-  }
-
-  if (isSectionPrefix(".bss", s->name)) {
-    if (ctx.arg.zKeepDataSectionPrefix) {
-      if (isSectionPrefix(".bss.unlikely", s->name)) {
-        // errs() << "LinkerScript.cpp:100\t" << s->name << "\n";
-        return ".bss.unlikely";
-      }
-
-      return ".bss";
-    }
-    return ".bss";
-  }
-
-  for (StringRef v : {".data.rel.ro", ".data",       ".rodata",
-                      ".bss.rel.ro",  ".bss",        ".ldata",
-                      ".lrodata",     ".lbss",       ".gcc_except_table",
-                      ".init_array",  ".fini_array", ".tbss",
-                      ".tdata",       ".ARM.exidx",  ".ARM.extab",
-                      ".ctors",       ".dtors",      ".sbss",
-                      ".sdata",       ".srodata"})
+  for (StringRef v :
+       {".ldata", ".lrodata", ".lbss", ".gcc_except_table", ".init_array",
+        ".fini_array", ".tbss", ".tdata", ".ARM.exidx", ".ARM.extab", ".ctors",
+        ".dtors", ".sbss", ".sdata", ".srodata"})
     if (isSectionPrefix(v, s->name))
       return v;
 
