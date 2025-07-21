@@ -3515,6 +3515,14 @@ libc_math_function(
     ],
 )
 
+libc_math_function(
+    name = "hypotf16",
+    additional_deps = [
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_sqrt",
+    ],
+)
+
 libc_math_function(name = "ilogb")
 
 libc_math_function(name = "ilogbf")
