@@ -26,7 +26,6 @@ namespace math {
 
 static constexpr double acos(double x) {
   using DoubleDouble = fputil::DoubleDouble;
-  using Float128 = fputil::DyadicFloat<128>;
   using namespace asin_internal;
   using FPBits = fputil::FPBits<double>;
 
