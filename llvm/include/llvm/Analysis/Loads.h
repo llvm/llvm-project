@@ -83,13 +83,15 @@ LLVM_ABI bool isSafeToLoadUnconditionally(
 LLVM_ABI bool isDereferenceableAndAlignedInLoop(
     LoadInst *LI, Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     AssumptionCache *AC = nullptr,
-    SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
+    SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr,
+    bool ShouldCheckWrapping = true);
 
 /// Return true if the loop \p L cannot fault on any iteration and only
 /// contains read-only memory accesses.
 LLVM_ABI bool isDereferenceableReadOnlyLoop(
     Loop *L, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
-    SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
+    SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr,
+    bool ShouldCheckWrapping = true);
 
 /// Return true if we know that executing a load from this value cannot trap.
 ///

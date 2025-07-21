@@ -273,7 +273,8 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *BTC,
     const SCEV *MaxBTC, ScalarEvolution *SE,
     DenseMap<std::pair<const SCEV *, Type *>,
-             std::pair<const SCEV *, const SCEV *>> *PointerBounds) {
+             std::pair<const SCEV *, const SCEV *>> *PointerBounds,
+    bool ShouldCheckWrapping) {
   std::pair<const SCEV *, const SCEV *> *PtrBoundsPair;
   if (PointerBounds) {
     auto [Iter, Ins] = PointerBounds->insert(
@@ -308,8 +309,8 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
       // sets ScEnd to the maximum unsigned value for the type. Note that LAA
       // separately checks that accesses cannot not wrap, so unsigned max
       // represents an upper bound.
-      if (evaluatePtrAddRecAtMaxBTCWillNotWrap(AR, MaxBTC, EltSizeSCEV, *SE,
-                                               DL)) {
+      if (!ShouldCheckWrapping || evaluatePtrAddRecAtMaxBTCWillNotWrap(
+                                      AR, MaxBTC, EltSizeSCEV, *SE, DL)) {
         ScEnd = AR->evaluateAtIteration(MaxBTC, *SE);
       } else {
         ScEnd = SE->getAddExpr(

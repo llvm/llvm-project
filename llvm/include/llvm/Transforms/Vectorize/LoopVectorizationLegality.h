@@ -542,7 +542,7 @@ private:
   /// The list above is not based on theoretical limitations of vectorization,
   /// but simply a statement that more work is needed to support these
   /// additional cases safely.
-  bool isVectorizableEarlyExitLoop();
+  bool isVectorizableEarlyExitLoop(const bool NeedRuntimeChecks);
 
   /// Return true if all of the instructions in the block can be speculatively
   /// executed, and record the loads/stores that require masking.

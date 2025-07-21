@@ -1643,7 +1643,8 @@ bool LoopVectorizationLegality::canVectorizeLoopNestCFG(
   return Result;
 }
 
-bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
+bool LoopVectorizationLegality::isVectorizableEarlyExitLoop(
+    const bool NeedRuntimeChecks) {
   BasicBlock *LatchBB = TheLoop->getLoopLatch();
   if (!LatchBB) {
     reportVectorizationFailure("Loop does not have a latch",
@@ -1851,6 +1852,16 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
+  // Go over each instruction and look at memory deps.
+  if (!canVectorizeMemory()) {
+    LLVM_DEBUG(dbgs() << "LV: Can't vectorize due to memory conflicts\n");
+    if (DoExtraAnalysis)
+      Result = false;
+    else
+      return false;
+  }
+
+  auto NeedRuntimeChecks = LAI->getRuntimePointerChecking()->Need;
   if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
     if (TheLoop->getExitingBlock()) {
       reportVectorizationFailure("Cannot vectorize uncountable loop",
@@ -1860,7 +1871,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       else
         return false;
     } else {
-      if (!isVectorizableEarlyExitLoop()) {
+      if (!isVectorizableEarlyExitLoop(NeedRuntimeChecks)) {
         UncountableEdge = std::nullopt;
         if (DoExtraAnalysis)
           Result = false;
@@ -1870,14 +1881,6 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
     }
   }
 
-  // Go over each instruction and look at memory deps.
-  if (!canVectorizeMemory()) {
-    LLVM_DEBUG(dbgs() << "LV: Can't vectorize due to memory conflicts\n");
-    if (DoExtraAnalysis)
-      Result = false;
-    else
-      return false;
-  }
 
   if (Result) {
     LLVM_DEBUG(dbgs() << "LV: We can vectorize this loop"

@@ -922,7 +922,7 @@ LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
     const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *BTC,
     const SCEV *MaxBTC, ScalarEvolution *SE,
     DenseMap<std::pair<const SCEV *, Type *>,
-             std::pair<const SCEV *, const SCEV *>> *PointerBounds);
+             std::pair<const SCEV *, const SCEV *>> *PointerBounds, bool ShouldCheckWrapping = true);
 
 class LoopAccessInfoManager {
   /// The cache.

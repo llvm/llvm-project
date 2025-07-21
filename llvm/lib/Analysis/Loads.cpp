@@ -288,7 +288,8 @@ static bool AreEquivalentAddressValues(const Value *A, const Value *B) {
 
 bool llvm::isDereferenceableAndAlignedInLoop(
     LoadInst *LI, Loop *L, ScalarEvolution &SE, DominatorTree &DT,
-    AssumptionCache *AC, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
+    AssumptionCache *AC, SmallVectorImpl<const SCEVPredicate *> *Predicates,
+    bool ShouldCheckWrapping) {
   const Align Alignment = LI->getAlign();
   auto &DL = LI->getDataLayout();
   Value *Ptr = LI->getPointerOperand();
@@ -341,8 +342,9 @@ bool llvm::isDereferenceableAndAlignedInLoop(
             ? SE.getPredicatedConstantMaxBackedgeTakenCount(L, *Predicates)
             : SE.getConstantMaxBackedgeTakenCount(L);
   }
-  const auto &[AccessStart, AccessEnd] = getStartAndEndForAccess(
-      L, PtrScev, LI->getType(), BECount, MaxBECount, &SE, nullptr);
+  const auto &[AccessStart, AccessEnd] =
+      getStartAndEndForAccess(L, PtrScev, LI->getType(), BECount, MaxBECount,
+                              &SE, nullptr, ShouldCheckWrapping);
   if (isa<SCEVCouldNotCompute>(AccessStart) ||
       isa<SCEVCouldNotCompute>(AccessEnd))
     return false;
@@ -850,11 +852,13 @@ bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To,
 
 bool llvm::isDereferenceableReadOnlyLoop(
     Loop *L, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
-    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
+    SmallVectorImpl<const SCEVPredicate *> *Predicates,
+    bool ShouldCheckWrapping) {
   for (BasicBlock *BB : L->blocks()) {
     for (Instruction &I : *BB) {
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
-        if (!isDereferenceableAndAlignedInLoop(LI, L, *SE, *DT, AC, Predicates))
+        if (!isDereferenceableAndAlignedInLoop(LI, L, *SE, *DT, AC, Predicates,
+                                               ShouldCheckWrapping))
           return false;
       } else if (I.mayReadFromMemory() || I.mayWriteToMemory() || I.mayThrow())
         return false;
