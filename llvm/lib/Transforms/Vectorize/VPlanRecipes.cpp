@@ -2524,10 +2524,6 @@ void VPReductionRecipe::execute(VPTransformState &State) {
     NewRed = createSimpleReduction(State.Builder, NewVecOp, Kind);
     if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind))
       NextInChain = createMinMaxOp(State.Builder, Kind, NewRed, PrevInChain);
-    else if (Kind == RecurKind::Sub)
-      // A sub reductions is already canonicalised to an add reduction with a
-      // negated input
-      NextInChain = NewRed;
     else
       NextInChain = State.Builder.CreateBinOp(
           (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(Kind), NewRed,
