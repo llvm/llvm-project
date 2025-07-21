@@ -110,7 +110,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
       omp.yield(%newval : i32)
-    }
+    } {atomic_control = #omp.atomic_control<>}
 
     llvm.return
   }

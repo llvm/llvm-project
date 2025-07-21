@@ -6705,6 +6705,9 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setKindMapping(*module, kindMap);
   fir::setTargetCPU(*module, targetMachine.getTargetCPU());
   fir::setTuneCPU(*module, targetOpts.cpuToTuneFor);
+  fir::setAtomicIgnoreDenormalMode(*module, targetOpts.atomicIgnoreDenormalMode);
+  fir::setAtomicFineGrainedMemory(*module, targetOpts.atomicFineGrainedMemory);
+  fir::setAtomicRemoteMemory(*module, targetOpts.atomicRemoteMemory);
   fir::setTargetFeatures(*module, targetMachine.getTargetFeatureString());
   fir::support::setMLIRDataLayout(*module, targetMachine.createDataLayout());
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());
