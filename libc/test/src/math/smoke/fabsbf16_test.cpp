@@ -8,6 +8,7 @@
 
 #include "FAbsTest.h"
 
+#include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/fabsbf16.h"
 
 LIST_FABS_TESTS(bfloat16, LIBC_NAMESPACE::fabsbf16)
