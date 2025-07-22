@@ -1,4 +1,3 @@
-# test
 # Check if this is a in tree build.
 if (NOT DEFINED LLVM_MAIN_SRC_DIR)
   project(Polly)
