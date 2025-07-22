@@ -549,17 +549,19 @@ func.func @gather_to_lds(%idx1 : index, %idx2 : index, %mem1 : memref<32xf16>, %
   func.return
 }
 
-// CHECK-LABEL: func @waitcnt
-func.func @waitcnt() {
-  // CHECK: amdgpu.waitcnt vmcnt(1) expcnt(2) lgkmcnt(3)
-  // CHECK: amdgpu.waitcnt vmcnt(3) expcnt(2) lgkmcnt(1)
-  // CHECK: amdgpu.waitcnt vmcnt(1)
-  // CHECK: amdgpu.waitcnt expcnt(2)
-  // CHECK: amdgpu.waitcnt lgkmcnt(3)
-  amdgpu.waitcnt vmcnt(1) expcnt(2) lgkmcnt(3)
-  amdgpu.waitcnt lgkmcnt(1) expcnt(2) vmcnt(3)
-  amdgpu.waitcnt vmcnt(1)
-  amdgpu.waitcnt expcnt(2)
-  amdgpu.waitcnt lgkmcnt(3)
+// CHECK-LABEL: func @memory_counter_wait
+func.func @memory_counter_wait() {
+  // CHECK: amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4)
+  // CHECK: amdgpu.memory_counter_wait load(4) store(2) ds(3) exp(1)
+  // CHECK: amdgpu.memory_counter_wait load(1)
+  // CHECK: amdgpu.memory_counter_wait store(2)
+  // CHECK: amdgpu.memory_counter_wait ds(3)
+  // CHECK: amdgpu.memory_counter_wait exp(4)
+  amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4)
+  amdgpu.memory_counter_wait exp(1) store(2) ds(3) load(4)
+  amdgpu.memory_counter_wait load(1)
+  amdgpu.memory_counter_wait store(2)
+  amdgpu.memory_counter_wait ds(3)
+  amdgpu.memory_counter_wait exp(4)
   func.return
 }

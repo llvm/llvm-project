@@ -465,15 +465,35 @@ static FailureOr<unsigned> encodeWaitcnt(Chipset chipset, unsigned vmcnt,
   return failure();
 }
 
-struct WaitcntOpLowering : public ConvertOpToLLVMPattern<WaitcntOp> {
-  WaitcntOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<WaitcntOp>(converter), chipset(chipset) {}
+struct MemoryCounterWaitOpLowering
+    : public ConvertOpToLLVMPattern<MemoryCounterWaitOp> {
+  MemoryCounterWaitOpLowering(const LLVMTypeConverter &converter,
+                              Chipset chipset)
+      : ConvertOpToLLVMPattern<MemoryCounterWaitOp>(converter),
+        chipset(chipset) {}
 
   Chipset chipset;
 
   LogicalResult
-  matchAndRewrite(WaitcntOp op, OpAdaptor adaptor,
+  matchAndRewrite(MemoryCounterWaitOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    if (chipset.majorVersion >= 12) {
+      Location loc = op.getLoc();
+      if (auto ds = adaptor.getDs())
+        rewriter.create<ROCDL::WaitDscntOp>(loc, *ds);
+
+      if (auto load = adaptor.getLoad())
+        rewriter.create<ROCDL::WaitLoadcntOp>(loc, *load);
+
+      if (auto store = adaptor.getStore())
+        rewriter.create<ROCDL::WaitStorecntOp>(loc, *store);
+
+      if (auto exp = adaptor.getExp())
+        rewriter.create<ROCDL::WaitExpcntOp>(loc, *exp);
+
+      return success();
+    }
+
     auto getVal = [](Attribute attr) -> unsigned {
       if (attr)
         return cast<IntegerAttr>(attr).getInt();
@@ -481,12 +501,14 @@ struct WaitcntOpLowering : public ConvertOpToLLVMPattern<WaitcntOp> {
       // This value will be clamped to the maximum value for the chipset.
       return 1024 * 1024;
     };
-    unsigned vmcnt = getVal(adaptor.getVmcntAttr());
-    unsigned expcnt = getVal(adaptor.getExpcntAttr());
-    unsigned lgkmcnt = getVal(adaptor.getLgkmcntAttr());
+    unsigned ds = getVal(adaptor.getDsAttr());
+    unsigned load = getVal(adaptor.getLoadAttr());
+    unsigned store = getVal(adaptor.getStoreAttr());
+    unsigned exp = getVal(adaptor.getExpAttr());
 
-    FailureOr<unsigned> waitcnt =
-        encodeWaitcnt(chipset, vmcnt, expcnt, lgkmcnt);
+    unsigned vmcnt = std::min(load, store);
+
+    FailureOr<unsigned> waitcnt = encodeWaitcnt(chipset, vmcnt, exp, ds);
     if (failed(waitcnt))
       return op.emitOpError("unsupported chipset");
 
@@ -1901,7 +1923,7 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                ROCDL::RawPtrBufferAtomicUminOp>,
            RawBufferOpLowering<RawBufferAtomicCmpswapOp,
                                ROCDL::RawPtrBufferAtomicCmpSwap>,
-           AMDGPUDPPLowering, WaitcntOpLowering, LDSBarrierOpLowering,
+           AMDGPUDPPLowering, MemoryCounterWaitOpLowering, LDSBarrierOpLowering,
            SchedBarrierOpLowering, MFMAOpLowering, ScaledMFMAOpLowering,
            WMMAOpLowering, ExtPackedFp8OpLowering, ScaledExtPackedOpLowering,
            PackedScaledTruncOpLowering, PackedTrunc2xFp8OpLowering,

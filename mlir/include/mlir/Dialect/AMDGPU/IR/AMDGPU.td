@@ -719,23 +719,26 @@ def AMDGPU_SchedBarrierOp :
   }];
 }
 
-def AMDGPU_WaitcntOp :
-  AMDGPU_Op<"waitcnt">,
+def AMDGPU_MemoryCounterWaitOp :
+  AMDGPU_Op<"memory_counter_wait">,
   Arguments<(ins
-      OptionalAttr<I32Attr>:$vmcnt,
-      OptionalAttr<I32Attr>:$expcnt,
-      OptionalAttr<I32Attr>:$lgkmcnt
+      OptionalAttr<I32Attr>:$load,
+      OptionalAttr<I32Attr>:$store,
+      OptionalAttr<I32Attr>:$ds,
+      OptionalAttr<I32Attr>:$exp
     )>
   {
-  let summary = "Wrapper on ROCDL SWaitcntOp";
+  let summary = "Wait for specified hardware counters";
   let description = [{
-    Covenience wrapper on `rocdl.s.waitcnt`. Hides the architecture specific
-    bitpacking from user. Missing values will be assumed maximum values supported
-    by the architecture. Large values will also be clamped to the maximum
-    supported values.
+    Wait for the specified counters to be less-than or equal-to the provided
+    values before continuing.
+
+    Counters can lower to different instructions on different architectires,
+    including clamping to the some HW supported max value or combining multiple
+    counters into one.
   }];
   let assemblyFormat = [{
-    oilist( `vmcnt` `(` $vmcnt `)` | `expcnt` `(` $expcnt `)` | `lgkmcnt` `(` $lgkmcnt `)` ) attr-dict
+    oilist( `load` `(` $load `)` | `store` `(` $store `)` | `ds` `(` $ds `)` | `exp` `(` $exp `)` ) attr-dict
   }];
 }
 
