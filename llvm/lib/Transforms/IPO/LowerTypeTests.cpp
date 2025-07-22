@@ -1135,7 +1135,6 @@ void LowerTypeTestsModule::importFunction(
   } else {
     F->setName(Name + ".cfi");
     maybeReplaceComdat(F, Name);
-    F->setLinkage(GlobalValue::ExternalLinkage);
     FDecl = Function::Create(F->getFunctionType(), GlobalValue::ExternalLinkage,
                              F->getAddressSpace(), Name, &M);
     FDecl->setVisibility(Visibility);
