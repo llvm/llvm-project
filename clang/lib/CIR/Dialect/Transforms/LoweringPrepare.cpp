@@ -33,7 +33,7 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
 
 static mlir::Value lowerScalarToComplexCast(mlir::MLIRContext &ctx,
                                             cir::CastOp op) {
-  CIRBaseBuilderTy builder(ctx);
+  cir::CIRBaseBuilderTy builder(ctx);
   builder.setInsertionPoint(op);
 
   mlir::Value src = op.getSrc();
@@ -44,7 +44,7 @@ static mlir::Value lowerScalarToComplexCast(mlir::MLIRContext &ctx,
 static mlir::Value lowerComplexToScalarCast(mlir::MLIRContext &ctx,
                                             cir::CastOp op,
                                             cir::CastKind elemToBoolKind) {
-  CIRBaseBuilderTy builder(ctx);
+  cir::CIRBaseBuilderTy builder(ctx);
   builder.setInsertionPoint(op);
 
   mlir::Value src = op.getSrc();
@@ -159,9 +159,9 @@ void LoweringPreparePass::lowerUnaryOp(cir::UnaryOp op) {
 }
 
 void LoweringPreparePass::runOnOp(mlir::Operation *op) {
-  if (auto cast = dyn_cast<cir::CastOp>(op))
+  if (auto cast = mlir::dyn_cast<cir::CastOp>(op))
     lowerCastOp(cast);
-  else if (auto unary = dyn_cast<cir::UnaryOp>(op))
+  else if (auto unary = mlir::dyn_cast<cir::UnaryOp>(op))
     lowerUnaryOp(unary);
 }
 
