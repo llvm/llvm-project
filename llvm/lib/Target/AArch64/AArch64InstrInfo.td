@@ -2152,7 +2152,7 @@ let Predicates = [HasPAuth] in {
     let Uses = [];
   }
 
-  // PAC pseudo instruction. Is AsmPrinter, it is expanded into an actual PAC*
+  // PAC pseudo instruction. In AsmPrinter, it is expanded into an actual PAC*
   // instruction immediately preceded by the discriminator computation.
   // This enforces the expected immediate modifier is used for signing, even
   // if an attacker is able to substitute AddrDisc.
@@ -2164,7 +2164,7 @@ let Predicates = [HasPAuth] in {
     let mayStore = 0;
     let mayLoad = 0;
     let Size = 12;
-    let Defs = [X17];
+    let Defs = [X16, X17];
     let usesCustomInserter = 1;
   }
 

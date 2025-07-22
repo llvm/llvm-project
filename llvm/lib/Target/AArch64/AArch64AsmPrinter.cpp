@@ -2185,10 +2185,16 @@ void AArch64AsmPrinter::emitPtrauthSign(const MachineInstr *MI) {
   Register AddrDisc = MI->getOperand(4).getReg();
   bool AddrDiscKilled = MI->getOperand(4).isKill();
 
-  // Compute aut discriminator into x17
+  // As long as at least one of Val and AddrDisc is in GPR64noip, a scratch
+  // register is available.
+  Register ScratchReg = Val == AArch64::X16 ? AArch64::X17 : AArch64::X16;
+  assert(ScratchReg != AddrDisc &&
+         "Neither X16 nor X17 is available as a scratch register");
+
+  // Compute pac discriminator
   assert(isUInt<16>(Disc));
   Register DiscReg = emitPtrauthDiscriminator(
-      Disc, AddrDisc, AArch64::X17, /*MayUseAddrAsScratch=*/AddrDiscKilled);
+      Disc, AddrDisc, ScratchReg, /*MayUseAddrAsScratch=*/AddrDiscKilled);
   bool IsZeroDisc = DiscReg == AArch64::XZR;
   unsigned Opc = getPACOpcodeForKey(Key, IsZeroDisc);
 
