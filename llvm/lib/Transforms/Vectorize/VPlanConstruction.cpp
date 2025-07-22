@@ -835,9 +835,9 @@ bool VPlanTransforms::legalizeUnclassifiedPhis(VPlan &Plan) {
     // The incoming value must be a min/max instrinsic.
     // TODO: Also handle the select variant.
     Intrinsic::ID ID = Intrinsic::not_intrinsic;
-    if (auto *WideInt = dyn_cast<VPWidenIntrinsicRecipe>(MinMaxOp))
+    if (auto *WideInt = dyn_cast<VPWidenIntrinsicRecipe>(MinMaxOp)) {
       ID = WideInt->getVectorIntrinsicID();
-    else {
+    } else {
       auto *RepR = dyn_cast<VPReplicateRecipe>(MinMaxOp);
       if (!RepR || !isa<IntrinsicInst>(RepR->getUnderlyingInstr()))
         return false;

@@ -7263,9 +7263,9 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
          ((CmpOp == StartV && isGuaranteedNotToBeUndefOrPoison(CmpOp))));
     assert(IsExpectedPattern && "Unexpected reduction resume pattern");
     MainResumeValue = OrigResumeV;
-  } else {
-    if (auto *VPI = dyn_cast<VPInstruction>(EpiRedHeaderPhi->getStartValue()))
-      MainResumeValue = VPI->getOperand(0)->getUnderlyingValue();
+  } else if (auto *VPI =
+                 dyn_cast<VPInstruction>(EpiRedHeaderPhi->getStartValue())) {
+    MainResumeValue = VPI->getOperand(0)->getUnderlyingValue();
   }
 
   PHINode *MainResumePhi = cast<PHINode>(MainResumeValue);

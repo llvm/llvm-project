@@ -17,8 +17,7 @@ define i64 @test_vectorize_select_umax_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[GEP1]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <4 x i64> [[VEC_PHI1]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP3]] = call <4 x i64> @llvm.umax.v4i64(<4 x i64> [[VEC_PHI1]], <4 x i64> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
@@ -95,8 +94,7 @@ define i64 @test_vectorize_select_umax_idx_cond_flipped(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[GEP]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge <4 x i64> [[WIDE_LOAD]], [[VEC_PHI1]]
 ; CHECK-NEXT:    [[TMP3]] = call <4 x i64> @llvm.umax.v4i64(<4 x i64> [[VEC_PHI1]], <4 x i64> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
@@ -303,8 +301,7 @@ define i64 @test_vectorize_select_umax_idx_min_ops_switched(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[GEP1]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <4 x i64> [[VEC_PHI1]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP3]] = call <4 x i64> @llvm.umax.v4i64(<4 x i64> [[WIDE_LOAD]], <4 x i64> [[VEC_PHI1]])
 ; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
@@ -425,8 +422,7 @@ define i64 @test_cmp_and_umax_use_different_values(ptr %src, i64 %x, i64 %n) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[GEP1]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <4 x i64> [[VEC_PHI1]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3]] = call <4 x i64> @llvm.umax.v4i64(<4 x i64> [[VEC_PHI1]], <4 x i64> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
