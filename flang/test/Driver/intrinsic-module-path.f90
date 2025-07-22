@@ -8,6 +8,7 @@
 !-----------------------------------------
 ! RUN:     %flang_bare -fsyntax-only                                     %s %intrinsic_module_flags 2>&1 | FileCheck %s --check-prefix=WITHOUT --allow-empty
 ! RUN: not %flang_bare -fsyntax-only -fintrinsic-modules-path %S/Inputs/ %s %intrinsic_module_flags 2>&1 | FileCheck %s --check-prefix=GIVEN
+! RUN: not %flang_bare -fsyntax-only -fintrinsic-modules-path=%S/Inputs/ %s %intrinsic_module_flags 2>&1 | FileCheck %s --check-prefix=GIVEN
 
 ! WITHOUT-NOT: 'ieee_arithmetic.mod' was not found
 ! WITHOUT-NOT: 'iso_fortran_env.mod' was not found
