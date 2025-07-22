@@ -159,6 +159,7 @@ MCOperand WebAssemblyMCInstLower::lowerTypeIndexOperand(
 
 MCOperand
 WebAssemblyMCInstLower::lowerEncodedFunctionSignature(const APInt &Sig) const {
+  // For APInt a word is 64 bits on all architectures, see definition in APInt.h
   auto NumWords = Sig.getNumWords();
   SmallVector<wasm::ValType, 4> Params;
   SmallVector<wasm::ValType, 2> Returns;
