@@ -175,7 +175,8 @@ private:
   bool checkFlatScratchSVSSwizzleBug(SDValue VAddr, SDValue SAddr,
                                      uint64_t ImmOffset) const;
   bool SelectScratchSVAddr(SDNode *N, SDValue Addr, SDValue &VAddr,
-                           SDValue &SAddr, SDValue &Offset) const;
+                           SDValue &SAddr, SDValue &Offset,
+                           SDValue &CPol) const;
 
   bool SelectSMRDOffset(SDNode *N, SDValue ByteOffsetNode, SDValue *SOffset,
                         SDValue *Offset, bool Imm32Only = false,
