@@ -1,4 +1,4 @@
-//===-- Linux implementation of the pthread_barrier_init function ---------===//
+//===-- Implementation of the pthread_barrier_wait function ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
