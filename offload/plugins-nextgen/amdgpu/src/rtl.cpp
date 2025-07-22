@@ -1665,6 +1665,11 @@ Error AMDGPUStreamTy::waitEvent(const AMDGPUEventTy &Event) {
 Error AMDGPUStreamTy::synchronizeOn(AMDGPUEventTy &Event) {
   std::lock_guard<std::mutex> Lock(Mutex);
 
+  // If this event was for an older sync cycle, it has already been finalized
+  if (Event.RecordedSyncCycle < SyncCycle)
+    return Plugin::success();
+  assert(Event.RecordedSyncCycle == SyncCycle && "event is from the future?");
+
   // Wait until the requested slot has completed
   if (auto Err = Slots[Event.RecordedSlot].Signal->wait(
           StreamBusyWaitMicroseconds, &Device))

@@ -1354,9 +1354,10 @@ public:
       ChosenTailFoldingStyle = {ForceTailFoldingStyle.getValue(),
                                 ForceTailFoldingStyle.getValue()};
 
-    if (ForceTailFoldingStyle != TailFoldingStyle::DataWithEVL)
+    if (ChosenTailFoldingStyle->first != TailFoldingStyle::DataWithEVL &&
+        ChosenTailFoldingStyle->second != TailFoldingStyle::DataWithEVL)
       return;
-    // Override forced styles if needed.
+    // Override EVL styles if needed.
     // FIXME: Investigate opportunity for fixed vector factor.
     bool EVLIsLegal = UserIC <= 1 && IsScalableVF &&
                       TTI.hasActiveVectorLength() && !EnableVPlanNativePath;
@@ -4361,10 +4362,14 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
 
 bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
     ElementCount VF) const {
-  // Cross iteration phis such as reductions need special handling and are
-  // currently unsupported.
-  if (any_of(OrigLoop->getHeader()->phis(),
-             [&](PHINode &Phi) { return Legal->isFixedOrderRecurrence(&Phi); }))
+  // Cross iteration phis such as fixed-order recurrences and FMaxNum/FMinNum
+  // reductions need special handling and are currently unsupported.
+  if (any_of(OrigLoop->getHeader()->phis(), [&](PHINode &Phi) {
+        if (!Legal->isReductionVariable(&Phi))
+          return Legal->isFixedOrderRecurrence(&Phi);
+        RecurKind RK = Legal->getRecurrenceDescriptor(&Phi).getRecurrenceKind();
+        return RK == RecurKind::FMinNum || RK == RecurKind::FMaxNum;
+      }))
     return false;
 
   // Phis with uses outside of the loop require special handling and are
@@ -4475,6 +4480,28 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   Type *TCType = Legal->getWidestInductionType();
   const SCEV *RemainingIterations = nullptr;
   unsigned MaxTripCount = 0;
+  if (MainLoopVF.isFixed()) {
+    // TODO: extend to support scalable VFs.
+    const SCEV *TC = vputils::getSCEVExprForVPValue(
+        getPlanFor(MainLoopVF).getTripCount(), SE);
+    assert(!isa<SCEVCouldNotCompute>(TC) &&
+           "Trip count SCEV must be computable");
+    RemainingIterations = SE.getURemExpr(
+        TC, SE.getConstant(TCType, MainLoopVF.getFixedValue() * IC));
+
+    // No iterations left to process in the epilogue.
+    if (RemainingIterations->isZero())
+      return Result;
+
+    MaxTripCount = MainLoopVF.getFixedValue() * IC - 1;
+    if (SE.isKnownPredicate(CmpInst::ICMP_ULT, RemainingIterations,
+                            SE.getConstant(TCType, MaxTripCount))) {
+      MaxTripCount = SE.getUnsignedRangeMax(RemainingIterations).getZExtValue();
+    }
+    LLVM_DEBUG(dbgs() << "LEV: Maximum Trip Count for Epilogue: "
+                      << MaxTripCount << "\n");
+  }
+
   for (auto &NextVF : ProfitableVFs) {
     // Skip candidate VFs without a corresponding VPlan.
     if (!hasPlanWithVF(NextVF.Width))
@@ -4492,24 +4519,7 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
 
     // If NextVF is greater than the number of remaining iterations, the
     // epilogue loop would be dead. Skip such factors.
-    if (!MainLoopVF.isScalable() && !NextVF.Width.isScalable()) {
-      // TODO: extend to support scalable VFs.
-      if (!RemainingIterations) {
-        const SCEV *TC = vputils::getSCEVExprForVPValue(
-            getPlanFor(NextVF.Width).getTripCount(), SE);
-        assert(!isa<SCEVCouldNotCompute>(TC) &&
-               "Trip count SCEV must be computable");
-        RemainingIterations = SE.getURemExpr(
-            TC, SE.getConstant(TCType, MainLoopVF.getFixedValue() * IC));
-        MaxTripCount = MainLoopVF.getFixedValue() * IC - 1;
-        if (SE.isKnownPredicate(CmpInst::ICMP_ULT, RemainingIterations,
-                                SE.getConstant(TCType, MaxTripCount))) {
-          MaxTripCount =
-              SE.getUnsignedRangeMax(RemainingIterations).getZExtValue();
-        }
-        LLVM_DEBUG(dbgs() << "LEV: Maximum Trip Count for Epilogue: "
-                          << MaxTripCount << "\n");
-      }
+    if (RemainingIterations && !NextVF.Width.isScalable()) {
       if (SE.isKnownPredicate(
               CmpInst::ICMP_UGT,
               SE.getConstant(TCType, NextVF.Width.getFixedValue()),
@@ -8786,6 +8796,12 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
 
   // Adjust the recipes for any inloop reductions.
   adjustRecipesForReductions(Plan, RecipeBuilder, Range.Start);
+
+  // Apply mandatory transformation to handle FP maxnum/minnum reduction with
+  // NaNs if possible, bail out otherwise.
+  if (!VPlanTransforms::runPass(VPlanTransforms::handleMaxMinNumReductions,
+                                *Plan))
+    return nullptr;
 
   // Transform recipes to abstract recipes if it is legal and beneficial and
   // clamp the range for better cost estimation.
