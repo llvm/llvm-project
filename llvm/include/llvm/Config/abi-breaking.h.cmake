@@ -21,24 +21,29 @@
 /* Define to enable reverse iteration of unordered llvm containers */
 #cmakedefine01 LLVM_ENABLE_REVERSE_ITERATION
 
+#if !defined(__has_attribute)
+#define __has_attribute(attribute) 0
+#endif
+
 // Properly annotate EnableABIBreakingChecks or DisableABIBreakingChecks for
 // export from shared library.
-#if !defined(LLVM_ABI_GENERATING_ANNOTATIONS)
 // TODO(https://github.com/llvm/llvm-project/issues/145406): eliminate need for
 // two preprocessor definitions to gate LLVM_ABI macro definitions.
-#if defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS) && !defined(LLVM_BUILD_STATIC)
-#if defined(_WIN32) && !defined(__MINGW32__)
+#if defined(LLVM_BUILD_STATIC) || !defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS)
+#define ABI_BREAKING_EXPORT_ABI
+#else
+#if defined(_WIN32)
 #if defined(LLVM_EXPORTS)
 #define ABI_BREAKING_EXPORT_ABI __declspec(dllexport)
 #else
 #define ABI_BREAKING_EXPORT_ABI __declspec(dllimport)
 #endif
-#elif defined(__has_attribute) && __has_attribute(visibility)
-#define ABI_BREAKING_EXPORT_ABI __attribute__((visibility("default")))
-#endif
-#endif
-#if !defined(ABI_BREAKING_EXPORT_ABI)
+#else
+#if __has_attribute(visibility)
+#define ABI_BREAKING_EXPORT_ABI __attribute__((__visibility__("default")))
+#else
 #define ABI_BREAKING_EXPORT_ABI
+#endif
 #endif
 #endif
 
