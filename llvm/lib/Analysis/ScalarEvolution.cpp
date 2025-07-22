@@ -11437,11 +11437,9 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
     // second ADD (with the larger constant) requires NUW.
     if ((YFlagsPresent & ExpectedFlags) != ExpectedFlags)
       return false;
-    if (ExpectedFlags != SCEV::FlagNUW) {
-      if ((XFlagsPresent & ExpectedFlags) != ExpectedFlags)
-        return false;
-      if ((YFlagsPresent & ExpectedFlags) != ExpectedFlags)
-        return false;
+    if (ExpectedFlags != SCEV::FlagNUW &&
+        (XFlagsPresent & ExpectedFlags) != ExpectedFlags) {
+      return false;
     }
 
     OutC1 = cast<SCEVConstant>(XConstOp)->getAPInt();
