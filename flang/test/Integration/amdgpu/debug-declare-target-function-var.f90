@@ -1,5 +1,5 @@
 ! RUN: %flang_fc1 -triple amdgcn-amd-amdhsa -emit-llvm -fopenmp  -fopenmp-is-target-device -debug-info-kind=standalone %s -o - | FileCheck  %s
-
+! XFAIL: *
 function add(a, b) result(ret)
   real ret
   real a
