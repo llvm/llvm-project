@@ -535,7 +535,7 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
 
   // Try to create target specific intrinsics to replace the store and
   // shuffle.
-  if (!TLI->lowerInterleavedStore(cast<Instruction>(Store), Mask, SVI, Factor))
+  if (!TLI->lowerInterleavedStore(Store, Mask, SVI, Factor))
     return false;
 
   // Already have a new target specific interleaved store. Erase the old store.
