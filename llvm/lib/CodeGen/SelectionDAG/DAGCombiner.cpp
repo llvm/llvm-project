@@ -263,47 +263,6 @@ public:
         MaximumLegalStoreInBits = VT.getSizeInBits().getKnownMinValue();
   }
 
-  template <typename LTy, typename RTy, typename TTy, typename FTy,
-            typename CCTy>
-  struct SelectCC_match {
-    LTy L;
-    RTy R;
-    TTy T;
-    FTy F;
-    CCTy CC;
-
-    SelectCC_match(LTy L, RTy R, TTy T, FTy F, CCTy CC)
-        : L(std::move(L)), R(std::move(R)), T(std::move(T)), F(std::move(F)),
-          CC(std::move(CC)) {}
-
-    template <typename MatchContext>
-    bool match(const MatchContext &Ctx, SDValue V) const {
-      return V.getOpcode() == ISD::SELECT_CC && L.match(Ctx, V.getOperand(0)) &&
-             R.match(Ctx, V.getOperand(1)) && T.match(Ctx, V.getOperand(2)) &&
-             F.match(Ctx, V.getOperand(3)) && CC.match(Ctx, V.getOperand(4));
-    }
-  };
-
-  template <typename LTy, typename RTy, typename TTy, typename FTy,
-            typename CCTy>
-  inline auto m_SelectCC(LTy &&L, RTy &&R, TTy &&T, FTy &&F, CCTy &&CC) {
-    return SelectCC_match<std::decay_t<LTy>, std::decay_t<RTy>,
-                          std::decay_t<TTy>, std::decay_t<FTy>,
-                          std::decay_t<CCTy>>(
-        std::forward<LTy>(L), std::forward<RTy>(R), std::forward<TTy>(T),
-        std::forward<FTy>(F), std::forward<CCTy>(CC));
-  }
-
-  template <typename LTy, typename RTy, typename TTy, typename FTy,
-            typename CCTy>
-  inline auto m_SelectCCLike(LTy &&L, RTy &&R, TTy &&T, FTy &&F, CCTy &&CC) {
-    return SDPatternMatch::m_AnyOf(
-        SDPatternMatch::m_Select(SDPatternMatch::m_SetCC(L, R, CC), T, F),
-        m_SelectCC(std::forward<LTy>(L), std::forward<RTy>(R),
-                   std::forward<TTy>(T), std::forward<FTy>(F),
-                   std::forward<CCTy>(CC)));
-  }
-
   void ConsiderForPruning(SDNode *N) {
     // Mark this for potential pruning.
     PruningList.insert(N);

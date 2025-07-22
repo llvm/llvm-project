@@ -93,8 +93,7 @@ struct Value_match {
 
   explicit Value_match(SDValue Match) : MatchVal(Match) {}
 
-  template <typename MatchContext>
-  bool match(const MatchContext &, SDValue N) const {
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) const {
     if (MatchVal)
       return MatchVal == N;
     return N.getNode();
@@ -131,8 +130,7 @@ struct DeferredValue_match {
 
   explicit DeferredValue_match(SDValue &Match) : MatchVal(Match) {}
 
-  template <typename MatchContext>
-  bool match(const MatchContext &, SDValue N) const {
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
     return N == MatchVal;
   }
 };
@@ -198,8 +196,7 @@ struct Value_bind {
 
   explicit Value_bind(SDValue &N) : BindVal(N) {}
 
-  template <typename MatchContext>
-  bool match(const MatchContext &, SDValue N) const {
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
     BindVal = N;
     return true;
   }
@@ -579,6 +576,43 @@ template <typename LHS, typename RHS, typename IDX>
 inline TernaryOpc_match<LHS, RHS, IDX>
 m_InsertSubvector(const LHS &Base, const RHS &Sub, const IDX &Idx) {
   return TernaryOpc_match<LHS, RHS, IDX>(ISD::INSERT_SUBVECTOR, Base, Sub, Idx);
+}
+
+template <typename LTy, typename RTy, typename TTy, typename FTy, typename CCTy>
+struct SelectCC_match {
+  LTy L;
+  RTy R;
+  TTy T;
+  FTy F;
+  CCTy CC;
+
+  SelectCC_match(LTy L, RTy R, TTy T, FTy F, CCTy CC)
+      : L(std::move(L)), R(std::move(R)), T(std::move(T)), F(std::move(F)),
+        CC(std::move(CC)) {}
+
+  template <typename MatchContext>
+  bool match(MatchContext &Ctx, SDValue V) {
+    return V.getOpcode() == ISD::SELECT_CC && L.match(Ctx, V.getOperand(0)) &&
+           R.match(Ctx, V.getOperand(1)) && T.match(Ctx, V.getOperand(2)) &&
+           F.match(Ctx, V.getOperand(3)) && CC.match(Ctx, V.getOperand(4));
+  }
+};
+
+template <typename LTy, typename RTy, typename TTy, typename FTy, typename CCTy>
+inline auto m_SelectCC(LTy &&L, RTy &&R, TTy &&T, FTy &&F, CCTy &&CC) {
+  return SelectCC_match<std::decay_t<LTy>, std::decay_t<RTy>, std::decay_t<TTy>,
+                        std::decay_t<FTy>, std::decay_t<CCTy>>(
+      std::forward<LTy>(L), std::forward<RTy>(R), std::forward<TTy>(T),
+      std::forward<FTy>(F), std::forward<CCTy>(CC));
+}
+
+template <typename LTy, typename RTy, typename TTy, typename FTy, typename CCTy>
+inline auto m_SelectCCLike(LTy &&L, RTy &&R, TTy &&T, FTy &&F, CCTy &&CC) {
+  return SDPatternMatch::m_AnyOf(
+      SDPatternMatch::m_Select(SDPatternMatch::m_SetCC(L, R, CC), T, F),
+      m_SelectCC(std::forward<LTy>(L), std::forward<RTy>(R),
+                 std::forward<TTy>(T), std::forward<FTy>(F),
+                 std::forward<CCTy>(CC)));
 }
 
 // === Binary operations ===
@@ -1206,8 +1240,7 @@ struct CondCode_match {
 
   explicit CondCode_match(ISD::CondCode *CC) : BindCC(CC) {}
 
-  template <typename MatchContext>
-  bool match(const MatchContext &, SDValue N) const {
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
     if (auto *CC = dyn_cast<CondCodeSDNode>(N.getNode())) {
       if (CCToMatch && *CCToMatch != CC->get())
         return false;
