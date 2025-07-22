@@ -2708,10 +2708,7 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
   assert(!R->onlyScalarsGenerated(Plan->hasScalableVF()) &&
          "Recipe should have been replaced");
 
-  unsigned CurrentPart = 0;
-  if (R->getNumOperands() > 3)
-    CurrentPart =
-        cast<ConstantInt>(R->getOperand(4)->getLiveInIRValue())->getZExtValue();
+  unsigned CurrentPart = R->getUnrollPart(*R);
 
   VPBuilder Builder(R);
   DebugLoc DL = R->getDebugLoc();
@@ -2724,7 +2721,7 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
   } else {
     // The recipe has been unrolled. In that case, fetch the single pointer phi
     // shared among all unrolled parts of the recipe.
-    auto *PtrAdd = cast<VPInstruction>(R->getOperand(3));
+    auto *PtrAdd = cast<VPInstruction>(R->getFirstUnrolledPartOperand());
     Phi = cast<VPPhi>(PtrAdd->getOperand(0)->getDefiningRecipe());
   }
 
