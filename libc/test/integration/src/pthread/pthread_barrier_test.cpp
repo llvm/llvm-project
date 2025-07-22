@@ -18,68 +18,87 @@
 #include "src/pthread/pthread_mutex_lock.h"
 #include "src/pthread/pthread_mutex_unlock.h"
 #include "src/stdio/printf.h"
+#include "src/string/memset.h"
 
 #include "test/IntegrationTest/test.h"
 
 #include <pthread.h>
 
 pthread_barrier_t barrier;
-
-void smoke_test() {
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_barrier_init(&barrier, nullptr, 1), 0);
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_barrier_wait(&barrier),
-            PTHREAD_BARRIER_SERIAL_THREAD);
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_barrier_destroy(&barrier), 0);
-}
-
 LIBC_NAMESPACE::cpp::Atomic<int> counter;
+
 void *increment_counter_and_wait(void *args) {
   counter.fetch_add(1);
-  LIBC_NAMESPACE::pthread_barrier_wait(&barrier);
-  return 0;
+  return reinterpret_cast<void *>(
+      LIBC_NAMESPACE::pthread_barrier_wait(&barrier));
 }
 
-void single_use_barrier() {
+void single_use_barrier_test(int num_threads) {
   counter.set(0);
-  const int NUM_THREADS = 30;
-  pthread_t threads[NUM_THREADS];
+  // create n - 1 ADDITIONAL threads since the current thread will also wait at
+  // the barrier
+  pthread_t threads[num_threads - 1];
+  LIBC_NAMESPACE::memset(&barrier, 0, sizeof(pthread_barrier_t));
   ASSERT_EQ(
-      LIBC_NAMESPACE::pthread_barrier_init(&barrier, nullptr, NUM_THREADS + 1),
-      0);
+      LIBC_NAMESPACE::pthread_barrier_init(&barrier, nullptr, num_threads), 0);
 
-  for (int i = 0; i < NUM_THREADS; ++i)
+  for (int i = 0; i < num_threads - 1; ++i)
     LIBC_NAMESPACE::pthread_create(&threads[i], nullptr,
                                    increment_counter_and_wait, nullptr);
 
-  LIBC_NAMESPACE::pthread_barrier_wait(&barrier);
-  ASSERT_EQ(counter.load(), NUM_THREADS);
+  uintptr_t return_val_sum =
+      reinterpret_cast<uintptr_t>(increment_counter_and_wait(nullptr));
+  ASSERT_EQ(counter.load(), num_threads);
 
-  for (int i = 0; i < NUM_THREADS; ++i)
-    LIBC_NAMESPACE::pthread_join(threads[i], nullptr);
+  // verify only one thread got the PTHREAD_BARRIER_SERIAL_THREAD return value
+  for (int i = 0; i < num_threads - 1; ++i) {
+    void *ret;
+    LIBC_NAMESPACE::pthread_join(threads[i], &ret);
+    if (reinterpret_cast<uintptr_t>(ret) ==
+        static_cast<uintptr_t>(PTHREAD_BARRIER_SERIAL_THREAD)) {
+      return_val_sum += reinterpret_cast<uintptr_t>(ret);
+    } else {
+      ASSERT_EQ(ret, 0);
+    }
+  }
+  ASSERT_EQ(return_val_sum,
+            static_cast<uintptr_t>(PTHREAD_BARRIER_SERIAL_THREAD));
 
   LIBC_NAMESPACE::pthread_barrier_destroy(&barrier);
 }
 
-void reusable_barrier() {
+void reused_barrier_test() {
   counter.set(0);
   const int NUM_THREADS = 30;
   const int REPEAT = 20;
-  pthread_t threads[NUM_THREADS * REPEAT];
+  pthread_t threads[NUM_THREADS - 1]; // subtract 1 for main thread
+  LIBC_NAMESPACE::memset(&barrier, 0, sizeof(pthread_barrier_t));
   ASSERT_EQ(
-      LIBC_NAMESPACE::pthread_barrier_init(&barrier, nullptr, NUM_THREADS + 1),
-      0);
+      LIBC_NAMESPACE::pthread_barrier_init(&barrier, nullptr, NUM_THREADS), 0);
 
   for (int i = 0; i < REPEAT; ++i) {
-    for (int j = 0; j < NUM_THREADS; ++j)
-      LIBC_NAMESPACE::pthread_create(&threads[NUM_THREADS * i + j], nullptr,
+    for (int j = 0; j < NUM_THREADS - 1; ++j)
+      LIBC_NAMESPACE::pthread_create(&threads[j], nullptr,
                                      increment_counter_and_wait, nullptr);
 
-    LIBC_NAMESPACE::pthread_barrier_wait(&barrier);
+    uintptr_t return_val_sum =
+        reinterpret_cast<uintptr_t>(increment_counter_and_wait(nullptr));
     ASSERT_EQ(counter.load(), NUM_THREADS * (i + 1));
-  }
 
-  for (int i = 0; i < NUM_THREADS * REPEAT; ++i)
-    LIBC_NAMESPACE::pthread_join(threads[i], nullptr);
+    // verify only one thread got the PTHREAD_BARRIER_SERIAL_THREAD return value
+    for (int i = 0; i < NUM_THREADS - 1; ++i) {
+      void *ret;
+      LIBC_NAMESPACE::pthread_join(threads[i], &ret);
+      if (reinterpret_cast<uintptr_t>(ret) ==
+          static_cast<uintptr_t>(PTHREAD_BARRIER_SERIAL_THREAD)) {
+        return_val_sum += reinterpret_cast<uintptr_t>(ret);
+      } else {
+        ASSERT_EQ(ret, 0);
+      }
+    }
+    ASSERT_EQ(return_val_sum,
+              static_cast<uintptr_t>(PTHREAD_BARRIER_SERIAL_THREAD));
+  }
 
   LIBC_NAMESPACE::pthread_barrier_destroy(&barrier);
 }
@@ -89,29 +108,11 @@ void *barrier_wait(void *in) {
       LIBC_NAMESPACE::pthread_barrier_wait(&barrier));
 }
 
-// verify that only one of the wait() calls return PTHREAD_BARRIER_SERIAL_THREAD
-// with the rest returning 0
-void one_nonzero_wait_returnval() {
-  const int NUM_THREADS = 30;
-  pthread_t threads[NUM_THREADS];
-  LIBC_NAMESPACE::pthread_barrier_init(&barrier, nullptr, NUM_THREADS + 1);
-  for (int i = 0; i < NUM_THREADS; ++i)
-    LIBC_NAMESPACE::pthread_create(&threads[i], nullptr, barrier_wait, nullptr);
-
-  uintptr_t retsum = LIBC_NAMESPACE::pthread_barrier_wait(&barrier);
-  for (int i = 0; i < NUM_THREADS; ++i) {
-    void *ret;
-    LIBC_NAMESPACE::pthread_join(threads[i], &ret);
-    retsum += reinterpret_cast<uintptr_t>(ret);
-  }
-
-  ASSERT_EQ(static_cast<int>(retsum), PTHREAD_BARRIER_SERIAL_THREAD);
-}
-
 TEST_MAIN() {
-  smoke_test();
-  single_use_barrier();
-  reusable_barrier();
-  one_nonzero_wait_returnval();
+  // don't create any additional threads; only use main thread
+  single_use_barrier_test(1);
+
+  single_use_barrier_test(30);
+  reused_barrier_test();
   return 0;
 }

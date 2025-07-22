@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC___SUPPORT_SRC_THREADS_LINUX_BARRIER_H
 #define LLVM_LIBC___SUPPORT_SRC_THREADS_LINUX_BARRIER_H
 
+#include "hdr/pthread_macros.h"
 #include "include/llvm-libc-types/pthread_barrier_t.h"
 #include "include/llvm-libc-types/pthread_barrierattr_t.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/threads/CndVar.h"
 #include "src/__support/threads/mutex.h"
 
@@ -20,9 +20,6 @@ namespace LIBC_NAMESPACE_DECL {
 // NOTE: if the size of this class changes, you must ensure that the size of
 // pthread_barrier_t (found in include/llvm-libc/types/pthread_barrier_t.h) is
 // the same size
-
-extern const int BARRIER_FIRST_EXITED;
-
 class Barrier {
 private:
   unsigned expected;

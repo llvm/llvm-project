@@ -14,8 +14,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-const int BARRIER_FIRST_EXITED = -1;
-
 int Barrier::init(Barrier *b,
                   [[maybe_unused]] const pthread_barrierattr_t *attr,
                   unsigned count) {
@@ -36,7 +34,10 @@ int Barrier::init(Barrier *b,
   if (err != 0)
     return err;
 
-  Mutex::init(&b->m, false, false, false, false);
+  auto mutex_err = Mutex::init(&b->m, false, false, false, false);
+  if (mutex_err != MutexError::NONE)
+    return EAGAIN;
+
   return 0;
 }
 
@@ -67,7 +68,10 @@ int Barrier::wait() {
     blocking = true;
     entering.broadcast();
     m.unlock();
-    return BARRIER_FIRST_EXITED;
+
+    // POSIX dictates that the barrier should return a special value to just one
+    // thread, so we can arbitrarily choose this thread
+    return PTHREAD_BARRIER_SERIAL_THREAD;
   }
   m.unlock();
 
