@@ -81,21 +81,24 @@ static void legalizeLifetimeIntrinsics(Module &M) {
 }
 
 static void removeLifetimeIntrinsics(Module &M) {
-  for (Function &F : make_early_inc_range(M))
+  for (Function &F : make_early_inc_range(M)) {
+
     if (Intrinsic::ID IID = F.getIntrinsicID();
-        IID == Intrinsic::lifetime_start || IID == Intrinsic::lifetime_end) {
-      for (User *U : make_early_inc_range(F.users())) {
-        LifetimeIntrinsic *LI = dyn_cast<LifetimeIntrinsic>(U);
-        assert(LI && "Expected user of lifetime intrinsic function to be "
-                     "a LifetimeIntrinsic instruction");
-        BitCastInst *BCI = dyn_cast<BitCastInst>(LI->getArgOperand(1));
-        assert(BCI && "Expected pointer operand of LifetimeIntrinsic to be a "
-                      "BitCastInst");
-        LI->eraseFromParent();
-        BCI->eraseFromParent();
-      }
-      F.eraseFromParent();
+        IID != Intrinsic::lifetime_start && IID != Intrinsic::lifetime_end)
+      continue;
+
+    for (User *U : make_early_inc_range(F.users())) {
+      LifetimeIntrinsic *LI = dyn_cast<LifetimeIntrinsic>(U);
+      assert(LI && "Expected user of lifetime intrinsic function to be "
+                   "a LifetimeIntrinsic instruction");
+      BitCastInst *BCI = dyn_cast<BitCastInst>(LI->getArgOperand(1));
+      assert(BCI && "Expected pointer operand of LifetimeIntrinsic to be a "
+                    "BitCastInst");
+      LI->eraseFromParent();
+      BCI->eraseFromParent();
     }
+    F.eraseFromParent();
+  }
 }
 
 class EmbedDXILPass : public llvm::ModulePass {
