@@ -10,6 +10,7 @@
 #include "AttributeDetail.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/IntegerSet.h"
@@ -386,22 +387,20 @@ APSInt IntegerAttr::getAPSInt() const {
 
 LogicalResult IntegerAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                                   Type type, APInt value) {
-  if (IntegerType integerType = llvm::dyn_cast<IntegerType>(type)) {
-    if (integerType.getWidth() != value.getBitWidth())
-      return emitError() << "integer type bit width (" << integerType.getWidth()
-                         << ") doesn't match value bit width ("
-                         << value.getBitWidth() << ")";
-    return success();
+  unsigned width;
+  if (auto intLikeType = dyn_cast<IntegerLikeTypeInterface>(type)) {
+    width = intLikeType.getStorageBitWidth();
+  } else {
+    return emitError() << "expected integer-like type";
   }
-  if (llvm::isa<IndexType>(type)) {
-    if (value.getBitWidth() != IndexType::kInternalStorageBitWidth)
-      return emitError()
-             << "value bit width (" << value.getBitWidth()
-             << ") doesn't match index type internal storage bit width ("
-             << IndexType::kInternalStorageBitWidth << ")";
-    return success();
+
+  if (width != value.getBitWidth()) {
+    return emitError() << "integer-like type bit width (" << width
+                       << ") doesn't match value bit width ("
+                       << value.getBitWidth() << ")";
   }
-  return emitError() << "expected integer or index type";
+
+  return success();
 }
 
 BoolAttr IntegerAttr::getBoolAttrUnchecked(IntegerType type, bool value) {
@@ -1026,7 +1025,7 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
 /// element type of 'type'.
 DenseElementsAttr DenseElementsAttr::get(ShapedType type,
                                          ArrayRef<APInt> values) {
-  assert(type.getElementType().isIntOrIndex());
+  assert(isa<IntegerLikeTypeInterface>(type.getElementType()));
   assert(hasSameNumElementsOrSplat(type, values));
   size_t storageBitWidth = getDenseElementStorageWidth(type.getElementType());
   return DenseIntOrFPElementsAttr::getRaw(type, storageBitWidth, values);
@@ -1137,11 +1136,11 @@ static bool isValidIntOrFloat(Type type, int64_t dataEltSize, bool isInt,
   if (type.isIndex())
     return true;
 
-  auto intType = llvm::dyn_cast<IntegerType>(type);
+  auto intType = llvm::dyn_cast<IntegerLikeTypeInterface>(type);
   if (!intType) {
     LLVM_DEBUG(llvm::dbgs()
-               << "expected integer type when isInt is true, but found " << type
-               << "\n");
+               << "expected integer-like type when isInt is true, but found "
+               << type << "\n");
     return false;
   }
 
