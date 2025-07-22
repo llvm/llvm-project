@@ -1417,6 +1417,26 @@ static unsigned convertToNonFlagSettingOpc(const MachineInstr &MI) {
     return MIDefinesZeroReg ? AArch64::ADDSXrs : AArch64::ADDXrs;
   case AArch64::ADDSXrx:
     return AArch64::ADDXrx;
+  case AArch64::ANDSWri:
+    return AArch64::ANDWri;
+  case AArch64::ANDSWrr:
+    return AArch64::ANDWrr;
+  case AArch64::ANDSWrs:
+    return AArch64::ANDWrs;
+  case AArch64::ANDSXri:
+    return AArch64::ANDXri;
+  case AArch64::ANDSXrr:
+    return AArch64::ANDXrr;
+  case AArch64::ANDSXrs:
+    return AArch64::ANDXrs;
+  case AArch64::BICSWrr:
+    return AArch64::BICWrr;
+  case AArch64::BICSWrs:
+    return AArch64::BICWrs;
+  case AArch64::BICSXrr:
+    return AArch64::BICXrr;
+  case AArch64::BICSXrs:
+    return AArch64::BICXrs;
   case AArch64::SUBSWrr:
     return AArch64::SUBWrr;
   case AArch64::SUBSWri:
@@ -1433,6 +1453,14 @@ static unsigned convertToNonFlagSettingOpc(const MachineInstr &MI) {
     return MIDefinesZeroReg ? AArch64::SUBSXrs : AArch64::SUBXrs;
   case AArch64::SUBSXrx:
     return AArch64::SUBXrx;
+  case AArch64::SBCSXr:
+    return AArch64::SBCXr;
+  case AArch64::SBCSWr:
+    return AArch64::SBCWr;
+  case AArch64::ADCSXr:
+    return AArch64::ADCXr;
+  case AArch64::ADCSWr:
+    return AArch64::ADCWr;
   }
 }
 
@@ -2861,6 +2889,14 @@ unsigned AArch64InstrInfo::convertToFlagSettingOpc(unsigned Opc) {
     return AArch64::SUBSXrs;
   case AArch64::SUBXrx:
     return AArch64::SUBSXrx;
+  case AArch64::SBCXr:
+    return AArch64::SBCSXr;
+  case AArch64::SBCWr:
+    return AArch64::SBCSWr;
+  case AArch64::ADCXr:
+    return AArch64::ADCSXr;
+  case AArch64::ADCWr:
+    return AArch64::ADCSWr;
   // SVE instructions:
   case AArch64::AND_PPzPP:
     return AArch64::ANDS_PPzPP;
