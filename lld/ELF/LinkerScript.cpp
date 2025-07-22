@@ -118,10 +118,12 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
 
   for (auto [index, v] : llvm::enumerate(dataSectionPrefixes)) {
     if (isSectionPrefix(v, s->name)) {
+      if (!ctx.arg.zKeepDataSectionPrefix)
+        return v;
       // The .bss.rel.ro section is considered rarely accessed. So this section
       // is not partitioned and zKeepDataSectionPrefix is not applied to
       // make the executable simpler with fewer elf sections.
-      if (ctx.arg.zKeepDataSectionPrefix && index != 3) {
+
         if (isSectionPrefix(".hot", s->name.substr(v.size())))
           return s->name.substr(0, v.size() + 4);
         if (isSectionPrefix(".unlikely", s->name.substr(v.size())))
@@ -136,7 +138,7 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
             return ".rodata.unlikely";
           }
         }
-      }
+
       return v;
     }
   }

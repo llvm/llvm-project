@@ -83,13 +83,13 @@ _start:
 .section .bss.split.d,"aw"
   .byte 0
 
-.section .bss.rel.ro.e, "aw"
+.section .bss.rel.ro, "aw"
   .space 2
-.section .bss.rel.ro.hot.f, "aw"
+.section .bss.rel.ro, "aw"
   .space 2
-.section .bss.rel.ro.unlikely.g, "aw"
+.section .bss.rel.ro, "aw"
   .space 2
-.section .bss.rel.ro.split.h, "aw"
+.section .bss.rel.ro, "aw"
   .space 2
 
 .section .rodata.i,"aw"
