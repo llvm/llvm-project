@@ -18,10 +18,12 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeRange.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include <cstdint>
 
 using namespace mlir;
 
@@ -97,7 +99,7 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
   matchAndRewrite(memref::AllocOp allocOp, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = allocOp.getLoc();
-    auto memrefType = allocOp.getType();
+    MemRefType memrefType = allocOp.getType();
     if (!memrefType.hasStaticShape()) {
       // TODO: Handle Dynamic shapes in the future. If the size
       // of the allocation is the result of some function, we could
@@ -107,82 +109,62 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
           loc, "cannot transform alloc with dynamic shape");
     }
 
+    mlir::Type sizeTType = mlir::emitc::SizeTType::get(rewriter.getContext());
     Type elementType = memrefType.getElementType();
     mlir::emitc::CallOpaqueOp sizeofElementOp =
         rewriter.create<mlir::emitc::CallOpaqueOp>(
-            loc, mlir::emitc::SizeTType::get(rewriter.getContext()),
-            rewriter.getStringAttr("sizeof"), mlir::ValueRange{},
+            loc, sizeTType, rewriter.getStringAttr("sizeof"),
+            mlir::ValueRange{},
             mlir::ArrayAttr::get(rewriter.getContext(),
                                  {mlir::TypeAttr::get(elementType)}));
     mlir::Value sizeofElement = sizeofElementOp.getResult(0);
 
     unsigned int elementWidth = elementType.getIntOrFloatBitWidth();
-    auto indexAttr = rewriter.getIndexAttr(elementWidth);
+    IntegerAttr indexAttr = rewriter.getIndexAttr(elementWidth);
 
     mlir::Value numElements;
     numElements = rewriter.create<emitc::ConstantOp>(
         loc, rewriter.getIndexType(), indexAttr);
     mlir::Value totalSizeBytes = rewriter.create<emitc::MulOp>(
-        loc, mlir::emitc::SizeTType::get(rewriter.getContext()), sizeofElement,
-        numElements);
+        loc, sizeTType, sizeofElement, numElements);
 
-    auto mallocCall = rewriter.create<emitc::CallOpaqueOp>(
+    int64_t alignment = alignedAllocationGetAlignment(allocOp, elementWidth);
+    mlir::Value alignmentValue = rewriter.create<emitc::ConstantOp>(
+        loc, sizeTType,
+        rewriter.getIntegerAttr(rewriter.getIndexType(), alignment));
+
+    emitc::CallOpaqueOp alignedAllocCall = rewriter.create<emitc::CallOpaqueOp>(
         loc,
         emitc::PointerType::get(
             mlir::emitc::OpaqueType::get(rewriter.getContext(), "void")),
-        rewriter.getStringAttr("malloc"), mlir::ValueRange{totalSizeBytes});
-    auto targetPointerType = emitc::PointerType::get(elementType);
-    auto castOp = rewriter.create<emitc::CastOp>(loc, targetPointerType,
-                                                 mallocCall.getResult(0));
+        rewriter.getStringAttr("aligned_alloc"),
+        mlir::ValueRange{alignmentValue, totalSizeBytes});
+    emitc::PointerType targetPointerType = emitc::PointerType::get(elementType);
+    emitc::CastOp castOp = rewriter.create<emitc::CastOp>(
+        loc, targetPointerType, alignedAllocCall.getResult(0));
 
     rewriter.replaceOp(allocOp, castOp);
     return success();
   }
 
-private:
-  std::string getCTypeName(mlir::Type type) const {
-    if (type.isF32())
-      return "float";
-    if (type.isF64())
-      return "double";
-    if (auto integerType = mlir::dyn_cast<mlir::IntegerType>(type)) {
-      unsigned width = integerType.getWidth();
-      bool isSigned = integerType.isSigned();
-      if (isSigned) {
-        switch (width) {
-        case 8:
-          return "int8_t";
-        case 16:
-          return "int16_t";
-        case 32:
-          return "int32_t";
-        case 64:
-          return "int64_t";
-        case 128:
-          return "int128_t";
-        default:
-          return "unsupported_signed_integer_type";
-        }
-      } else {
-        switch (width) {
-        case 8:
-          return "uint8_t";
-        case 16:
-          return "uint16_t";
-        case 32:
-          return "uint32_t";
-        case 64:
-          return "uint64_t";
-        case 128:
-          return "uint128_t";
-        default:
-          return "unsupported_unsigned_integer_type";
-        }
-      }
-    }
-    if (type.isIndex())
-      return "size_t";
-    return "void";
+  /// The minimum alignment to use with aligned_alloc (has to be a power of 2).
+  static constexpr uint64_t kMinAlignedAllocAlignment = 16UL;
+
+  /// Computes the alignment for aligned_alloc used to allocate the buffer for
+  /// the memory allocation op.
+  ///
+  /// Aligned_alloc requires the allocation size to be a power of two, and the
+  /// allocation size to be a multiple of the alignment.
+  int64_t alignedAllocationGetAlignment(memref::AllocOp op,
+                                        unsigned int elementWidth) const {
+    if (std::optional<uint64_t> alignment = op.getAlignment())
+      return *alignment;
+
+    // Whenever we don't have alignment set, we will use an alignment
+    // consistent with the element type; since the allocation size has to be a
+    // power of two, we will bump to the next power of two if it isn't.
+    return std::max(kMinAlignedAllocAlignment,
+                    llvm::PowerOf2Ceil(elementWidth));
   }
 };
 
