@@ -258,8 +258,6 @@ private:
 
   void ParseInlineSite(PdbCompilandSymId inline_site_id, Address func_addr);
 
-  void CacheTypeNames();
-
   llvm::BumpPtrAllocator m_allocator;
 
   lldb::addr_t m_obj_load_address = 0;

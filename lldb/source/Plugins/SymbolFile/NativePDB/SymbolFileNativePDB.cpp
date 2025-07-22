@@ -1630,53 +1630,6 @@ size_t SymbolFileNativePDB::ParseSymbolArrayInScope(
   return count;
 }
 
-void SymbolFileNativePDB::CacheTypeNames() {
-  if (!m_type_base_names.IsEmpty())
-    return;
-
-  LazyRandomTypeCollection &types = m_index->tpi().typeCollection();
-  for (auto ti = types.getFirst(); ti; ti = types.getNext(*ti)) {
-    CVType cvt = types.getType(*ti);
-    llvm::StringRef name;
-    // We are only interested in records, unions, and enums.
-    // We aren't interested in forward references as we'll visit the actual
-    // type later anyway.
-    switch (cvt.kind()) {
-    case LF_STRUCTURE:
-    case LF_CLASS: {
-      ClassRecord cr;
-      llvm::cantFail(TypeDeserializer::deserializeAs<ClassRecord>(cvt, cr));
-      if (cr.isForwardRef())
-        continue;
-      name = cr.Name;
-    } break;
-    case LF_UNION: {
-      UnionRecord ur;
-      llvm::cantFail(TypeDeserializer::deserializeAs<UnionRecord>(cvt, ur));
-      if (ur.isForwardRef())
-        continue;
-      name = ur.Name;
-    } break;
-    case LF_ENUM: {
-      EnumRecord er;
-      llvm::cantFail(TypeDeserializer::deserializeAs<EnumRecord>(cvt, er));
-      if (er.isForwardRef())
-        continue;
-      name = er.Name;
-    } break;
-    default:
-      continue;
-    }
-    if (name.empty())
-      continue;
-
-    auto base_name = MSVCUndecoratedNameParser::DropScope(name);
-    m_type_base_names.Append(ConstString(base_name), ti->getIndex());
-  }
-
-  m_type_base_names.Sort();
-}
-
 void SymbolFileNativePDB::DumpClangAST(Stream &s, llvm::StringRef filter) {
   auto ts_or_err = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   if (!ts_or_err)
@@ -1767,9 +1720,9 @@ void SymbolFileNativePDB::FindTypes(const lldb_private::TypeQuery &query,
 
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
-  // We can't query for the basename or full name because the type might reside
-  // in an anonymous namespace. Cache the basenames first.
-  CacheTypeNames();
+  // We can't query for the full name because the type might reside
+  // in an anonymous namespace. Search for the basename in our map and check the
+  // matching types afterwards.
   std::vector<uint32_t> matches;
   m_type_base_names.GetValues(query.GetTypeBasename(), matches);
 
@@ -2253,8 +2206,12 @@ void SymbolFileNativePDB::BuildParentMap() {
     RecordIndices &indices = record_indices[tag.asTag().getUniqueName()];
     if (tag.asTag().isForwardRef())
       indices.forward = *ti;
-    else
+    else {
       indices.full = *ti;
+
+      auto base_name = MSVCUndecoratedNameParser::DropScope(tag.name());
+      m_type_base_names.Append(ConstString(base_name), ti->getIndex());
+    }
 
     if (indices.full != TypeIndex::None() &&
         indices.forward != TypeIndex::None()) {
@@ -2341,6 +2298,8 @@ void SymbolFileNativePDB::BuildParentMap() {
     TypeIndex fwd = full_to_forward[full];
     m_parent_types[fwd] = m_parent_types[full];
   }
+
+  m_type_base_names.Sort();
 }
 
 std::optional<PdbCompilandSymId>
