@@ -1,6 +1,6 @@
 // RUN: %clang_cl -c --target=x86_64-windows-msvc -O2 /EHsc /GS- \
 // RUN:   -Xclang=-import-call-optimization \
-// RUN:   /clang:-S /clang:-o- %s 2>&1 \
+// RUN:   /clang:-S /clang:-o- -- %s 2>&1 \
 // RUN:   | FileCheck %s
 
 #ifdef __clang__
