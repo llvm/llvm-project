@@ -9,7 +9,6 @@
 #include "src/wchar/mblen.h"
 
 #include "hdr/types/size_t.h"
-#include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
@@ -23,9 +22,7 @@ LLVM_LIBC_FUNCTION(int, mblen, (const char *__restrict s, size_t n)) {
   if (s == nullptr)
     return 0;
   internal::mbstate internal_mbstate;
-  // temp ptr to use for internal function
-  wchar_t buf[1];
-  auto ret = internal::mbrtowc(buf, s, n, &internal_mbstate);
+  auto ret = internal::mbrtowc(nullptr, s, n, &internal_mbstate);
   if (!ret.has_value() || static_cast<int>(ret.value()) == -2) {
     // Encoding failure
     if (!ret.has_value())

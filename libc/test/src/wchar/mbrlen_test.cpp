@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/types/wchar_t.h"
 #include "src/__support/libc_errno.h"
 #include "src/wchar/mblen.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
