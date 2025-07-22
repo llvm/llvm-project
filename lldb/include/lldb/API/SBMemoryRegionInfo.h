@@ -125,9 +125,6 @@ public:
   ///     false otherwise.
   ///
   /// The description format is: [Hex start - Hex End) with associated permissions (RWX)
-  ///
-  /// In Python bindings, this method is used by the __str__ implementation,
-  /// allowing memory regions to be printed directly.
   bool GetDescription(lldb::SBStream &description);
 
 private:
