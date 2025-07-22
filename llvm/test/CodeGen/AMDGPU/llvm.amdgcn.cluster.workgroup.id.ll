@@ -39,7 +39,7 @@ define amdgpu_kernel void @test_workgroup_id_x(ptr addrspace(1) %out) #1 {
 ; CHECK-MESA3D-NEXT:     enable_ieee_mode = 0
 ; CHECK-MESA3D-NEXT:     enable_wgp_mode = 0
 ; CHECK-MESA3D-NEXT:     enable_mem_ordered = 1
-; CHECK-MESA3D-NEXT:     enable_fwd_progress = 0
+; CHECK-MESA3D-NEXT:     enable_fwd_progress = 1
 ; CHECK-MESA3D-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; CHECK-MESA3D-NEXT:     user_sgpr_count = 8
 ; CHECK-MESA3D-NEXT:     enable_trap_handler = 0
@@ -127,7 +127,7 @@ define amdgpu_kernel void @test_workgroup_id_x(ptr addrspace(1) %out) #1 {
 ; CHECK-G-MESA3D-NEXT:     enable_ieee_mode = 0
 ; CHECK-G-MESA3D-NEXT:     enable_wgp_mode = 0
 ; CHECK-G-MESA3D-NEXT:     enable_mem_ordered = 1
-; CHECK-G-MESA3D-NEXT:     enable_fwd_progress = 0
+; CHECK-G-MESA3D-NEXT:     enable_fwd_progress = 1
 ; CHECK-G-MESA3D-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; CHECK-G-MESA3D-NEXT:     user_sgpr_count = 8
 ; CHECK-G-MESA3D-NEXT:     enable_trap_handler = 0
@@ -218,7 +218,7 @@ define amdgpu_kernel void @test_workgroup_id_x_optimized(ptr addrspace(1) %out) 
 ; CHECK-MESA3D-NEXT:     enable_ieee_mode = 0
 ; CHECK-MESA3D-NEXT:     enable_wgp_mode = 0
 ; CHECK-MESA3D-NEXT:     enable_mem_ordered = 1
-; CHECK-MESA3D-NEXT:     enable_fwd_progress = 0
+; CHECK-MESA3D-NEXT:     enable_fwd_progress = 1
 ; CHECK-MESA3D-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; CHECK-MESA3D-NEXT:     user_sgpr_count = 8
 ; CHECK-MESA3D-NEXT:     enable_trap_handler = 0
@@ -302,7 +302,7 @@ define amdgpu_kernel void @test_workgroup_id_x_optimized(ptr addrspace(1) %out) 
 ; CHECK-G-MESA3D-NEXT:     enable_ieee_mode = 0
 ; CHECK-G-MESA3D-NEXT:     enable_wgp_mode = 0
 ; CHECK-G-MESA3D-NEXT:     enable_mem_ordered = 1
-; CHECK-G-MESA3D-NEXT:     enable_fwd_progress = 0
+; CHECK-G-MESA3D-NEXT:     enable_fwd_progress = 1
 ; CHECK-G-MESA3D-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; CHECK-G-MESA3D-NEXT:     user_sgpr_count = 8
 ; CHECK-G-MESA3D-NEXT:     enable_trap_handler = 0
@@ -393,7 +393,7 @@ define amdgpu_kernel void @test_workgroup_id_y(ptr addrspace(1) %out) #1 {
 ; CHECK-MESA3D-NEXT:     enable_ieee_mode = 0
 ; CHECK-MESA3D-NEXT:     enable_wgp_mode = 0
 ; CHECK-MESA3D-NEXT:     enable_mem_ordered = 1
-; CHECK-MESA3D-NEXT:     enable_fwd_progress = 0
+; CHECK-MESA3D-NEXT:     enable_fwd_progress = 1
 ; CHECK-MESA3D-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; CHECK-MESA3D-NEXT:     user_sgpr_count = 8
 ; CHECK-MESA3D-NEXT:     enable_trap_handler = 0
@@ -481,7 +481,7 @@ define amdgpu_kernel void @test_workgroup_id_y(ptr addrspace(1) %out) #1 {
 ; CHECK-G-MESA3D-NEXT:     enable_ieee_mode = 0
 ; CHECK-G-MESA3D-NEXT:     enable_wgp_mode = 0
 ; CHECK-G-MESA3D-NEXT:     enable_mem_ordered = 1
-; CHECK-G-MESA3D-NEXT:     enable_fwd_progress = 0
+; CHECK-G-MESA3D-NEXT:     enable_fwd_progress = 1
 ; CHECK-G-MESA3D-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; CHECK-G-MESA3D-NEXT:     user_sgpr_count = 8
 ; CHECK-G-MESA3D-NEXT:     enable_trap_handler = 0
@@ -572,7 +572,7 @@ define amdgpu_kernel void @test_workgroup_id_y_optimized(ptr addrspace(1) %out) 
 ; CHECK-MESA3D-NEXT:     enable_ieee_mode = 0
 ; CHECK-MESA3D-NEXT:     enable_wgp_mode = 0
 ; CHECK-MESA3D-NEXT:     enable_mem_ordered = 1
-; CHECK-MESA3D-NEXT:     enable_fwd_progress = 0
+; CHECK-MESA3D-NEXT:     enable_fwd_progress = 1
 ; CHECK-MESA3D-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; CHECK-MESA3D-NEXT:     user_sgpr_count = 8
 ; CHECK-MESA3D-NEXT:     enable_trap_handler = 0
@@ -656,7 +656,7 @@ define amdgpu_kernel void @test_workgroup_id_y_optimized(ptr addrspace(1) %out) 
 ; CHECK-G-MESA3D-NEXT:     enable_ieee_mode = 0
 ; CHECK-G-MESA3D-NEXT:     enable_wgp_mode = 0
 ; CHECK-G-MESA3D-NEXT:     enable_mem_ordered = 1
-; CHECK-G-MESA3D-NEXT:     enable_fwd_progress = 0
+; CHECK-G-MESA3D-NEXT:     enable_fwd_progress = 1
 ; CHECK-G-MESA3D-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; CHECK-G-MESA3D-NEXT:     user_sgpr_count = 8
 ; CHECK-G-MESA3D-NEXT:     enable_trap_handler = 0
@@ -747,7 +747,7 @@ define amdgpu_kernel void @test_workgroup_id_z(ptr addrspace(1) %out) #1 {
 ; CHECK-MESA3D-NEXT:     enable_ieee_mode = 0
 ; CHECK-MESA3D-NEXT:     enable_wgp_mode = 0
 ; CHECK-MESA3D-NEXT:     enable_mem_ordered = 1
-; CHECK-MESA3D-NEXT:     enable_fwd_progress = 0
+; CHECK-MESA3D-NEXT:     enable_fwd_progress = 1
 ; CHECK-MESA3D-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; CHECK-MESA3D-NEXT:     user_sgpr_count = 8
 ; CHECK-MESA3D-NEXT:     enable_trap_handler = 0
@@ -835,7 +835,7 @@ define amdgpu_kernel void @test_workgroup_id_z(ptr addrspace(1) %out) #1 {
 ; CHECK-G-MESA3D-NEXT:     enable_ieee_mode = 0
 ; CHECK-G-MESA3D-NEXT:     enable_wgp_mode = 0
 ; CHECK-G-MESA3D-NEXT:     enable_mem_ordered = 1
-; CHECK-G-MESA3D-NEXT:     enable_fwd_progress = 0
+; CHECK-G-MESA3D-NEXT:     enable_fwd_progress = 1
 ; CHECK-G-MESA3D-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; CHECK-G-MESA3D-NEXT:     user_sgpr_count = 8
 ; CHECK-G-MESA3D-NEXT:     enable_trap_handler = 0
@@ -928,7 +928,7 @@ define amdgpu_kernel void @test_workgroup_flat_id(ptr addrspace(1) %out) {
 ; CHECK-MESA3D-NEXT:     enable_ieee_mode = 0
 ; CHECK-MESA3D-NEXT:     enable_wgp_mode = 0
 ; CHECK-MESA3D-NEXT:     enable_mem_ordered = 1
-; CHECK-MESA3D-NEXT:     enable_fwd_progress = 0
+; CHECK-MESA3D-NEXT:     enable_fwd_progress = 1
 ; CHECK-MESA3D-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; CHECK-MESA3D-NEXT:     user_sgpr_count = 8
 ; CHECK-MESA3D-NEXT:     enable_trap_handler = 0
@@ -1016,7 +1016,7 @@ define amdgpu_kernel void @test_workgroup_flat_id(ptr addrspace(1) %out) {
 ; CHECK-G-MESA3D-NEXT:     enable_ieee_mode = 0
 ; CHECK-G-MESA3D-NEXT:     enable_wgp_mode = 0
 ; CHECK-G-MESA3D-NEXT:     enable_mem_ordered = 1
-; CHECK-G-MESA3D-NEXT:     enable_fwd_progress = 0
+; CHECK-G-MESA3D-NEXT:     enable_fwd_progress = 1
 ; CHECK-G-MESA3D-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; CHECK-G-MESA3D-NEXT:     user_sgpr_count = 8
 ; CHECK-G-MESA3D-NEXT:     enable_trap_handler = 0
@@ -1107,7 +1107,7 @@ define amdgpu_kernel void @test_workgroup_id_z_optimized(ptr addrspace(1) %out) 
 ; CHECK-MESA3D-NEXT:     enable_ieee_mode = 0
 ; CHECK-MESA3D-NEXT:     enable_wgp_mode = 0
 ; CHECK-MESA3D-NEXT:     enable_mem_ordered = 1
-; CHECK-MESA3D-NEXT:     enable_fwd_progress = 0
+; CHECK-MESA3D-NEXT:     enable_fwd_progress = 1
 ; CHECK-MESA3D-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; CHECK-MESA3D-NEXT:     user_sgpr_count = 8
 ; CHECK-MESA3D-NEXT:     enable_trap_handler = 0
@@ -1191,7 +1191,7 @@ define amdgpu_kernel void @test_workgroup_id_z_optimized(ptr addrspace(1) %out) 
 ; CHECK-G-MESA3D-NEXT:     enable_ieee_mode = 0
 ; CHECK-G-MESA3D-NEXT:     enable_wgp_mode = 0
 ; CHECK-G-MESA3D-NEXT:     enable_mem_ordered = 1
-; CHECK-G-MESA3D-NEXT:     enable_fwd_progress = 0
+; CHECK-G-MESA3D-NEXT:     enable_fwd_progress = 1
 ; CHECK-G-MESA3D-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; CHECK-G-MESA3D-NEXT:     user_sgpr_count = 8
 ; CHECK-G-MESA3D-NEXT:     enable_trap_handler = 0

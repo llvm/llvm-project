@@ -405,8 +405,6 @@ enum CPol {
 
   NV = 1 << 5, // Non-volatile bit
 
-  NV = 1 << 5, // Non-volatile bit
-
   SWZ = 1 << 6, // Swizzle bit
 
   SCAL = 1 << 11, // Scale offset bit
