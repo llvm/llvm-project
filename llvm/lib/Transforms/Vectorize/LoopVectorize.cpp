@@ -1354,9 +1354,10 @@ public:
       ChosenTailFoldingStyle = {ForceTailFoldingStyle.getValue(),
                                 ForceTailFoldingStyle.getValue()};
 
-    if (ForceTailFoldingStyle != TailFoldingStyle::DataWithEVL)
+    if (ChosenTailFoldingStyle->first != TailFoldingStyle::DataWithEVL &&
+        ChosenTailFoldingStyle->second != TailFoldingStyle::DataWithEVL)
       return;
-    // Override forced styles if needed.
+    // Override EVL styles if needed.
     // FIXME: Investigate opportunity for fixed vector factor.
     bool EVLIsLegal = UserIC <= 1 && IsScalableVF &&
                       TTI.hasActiveVectorLength() && !EnableVPlanNativePath;
