@@ -7332,6 +7332,7 @@ private:
     bool IsExpressionFirstInfo = true;
     bool FirstPointerInComplexData = false;
     Address BP = Address::invalid();
+    Address FinalLowestElem = Address::invalid();
     const Expr *AssocExpr = I->getAssociatedExpression();
     const auto *AE = dyn_cast<ArraySubscriptExpr>(AssocExpr);
     const auto *OASE = dyn_cast<ArraySectionExpr>(AssocExpr);
@@ -7594,8 +7595,8 @@ private:
                   LowestElem, CGF.VoidPtrTy, CGF.Int8Ty),
               TypeSize.getQuantity() - 1);
           PartialStruct.HighestElem = {
-              std::numeric_limits<
-                  decltype(PartialStruct.HighestElem.first)>::max(),
+              std::numeric_limits<decltype(
+                  PartialStruct.HighestElem.first)>::max(),
               HB};
           PartialStruct.Base = BP;
           PartialStruct.LB = LB;
@@ -7782,6 +7783,11 @@ private:
         if (IsFinalArraySection || IsNonContiguous)
           PartialStruct.IsArraySection = true;
 
+        // Save the final LowestElem, to use it as the pointee in attach maps,
+        // if emitted.
+        if (Next == CE)
+          FinalLowestElem = LowestElem;
+
         // If we have a final array section, we are done with this expression.
         if (IsFinalArraySection)
           break;
@@ -7810,11 +7816,13 @@ private:
 
     // Add ATTACH entries for pointer-attachment: delay if PartialStruct is
     // being populated, otherwise add immediately.
-    const auto &[AttachPtrAddr, AttachPteeAddr] = getAttachPtrPteeAddrs(
-        AttachPtrExpr,
-        /*AttachPteeExpr=*/Components.begin()->getAssociatedExpression(),
-        /*MapBaseDecl=*/BaseDecl, CGF, CurDir);
-    if (AttachPtrAddr.isValid() && AttachPteeAddr.isValid()) {
+   if (shouldEmitAttachEntry(AttachPtrExpr, BaseDecl, CGF, CurDir)) {
+      Address AttachPtrAddr = CGF.EmitLValue(AttachPtrExpr).getAddress();
+      Address AttachPteeAddr = FinalLowestElem;
+
+      assert(AttachPtrAddr.isValid() && "Attach ptr address is not valid.");
+      assert(AttachPteeAddr.isValid() && "Attach ptee address is not valid.");
+
       if (PartialStruct.Base.isValid()) {
         // We're populating PartialStruct, delay ATTACH entry addition until
         // after emitCombinedEntry.
@@ -8104,53 +8112,34 @@ private:
     }
   }
 
-  // Returns the Pointer/Pointee Addresses for attach mapping between \p
-  // PointerExpr and \p PointeeExpr. for \p CurDir, when handling a map
-  // clause with base \p MapBaseDecl.
-  static std::pair<Address, Address>
-  getAttachPtrPteeAddrs(const Expr *PointerExpr, const Expr *PointeeExpr,
-                        const ValueDecl *MapBaseDecl, CodeGenFunction &CGF,
+  /// Returns whether an attach entry should be emitted for a map on
+  /// \p MapBaseDecl on the directive \p CurDir.
+  static bool
+  shouldEmitAttachEntry(const Expr *PointerExpr, const ValueDecl *MapBaseDecl,
+                        CodeGenFunction &CGF,
                         llvm::PointerUnion<const OMPExecutableDirective *,
                                            const OMPDeclareMapperDecl *>
                             CurDir) {
-
-    Address AttachPtrAddr = Address::invalid();
-    Address AttachPteeAddr = Address::invalid();
-    if (!PointerExpr || !PointeeExpr)
-      return {AttachPtrAddr, AttachPteeAddr};
+    if (!PointerExpr)
+      return false;
 
     // Pointer attachment is needed at map-entering time or for declare
     // mappers.
     if (!isa<const OMPDeclareMapperDecl *>(CurDir) &&
         !isOpenMPTargetMapEnteringDirective(
             cast<const OMPExecutableDirective *>(CurDir)->getDirectiveKind()))
-      return {AttachPtrAddr, AttachPteeAddr};
+      return false;
 
     const auto *DRE = dyn_cast<DeclRefExpr>(PointerExpr);
     const VarDecl *PointerDecl =
         !DRE ? nullptr : dyn_cast_if_present<VarDecl>(DRE->getDecl());
 
     // For now, we are emitting ATTACH entries only when the
-    // "attach-base-pointer" is a vardecl itself, not an expression, or
-    // even a member of a struct.
+    // "attach-base-pointer" is a vardecl that matches the base var of the map.
     if (!PointerDecl || PointerDecl != MapBaseDecl)
-      return {AttachPtrAddr, AttachPteeAddr};
+      return false;
 
-    AttachPtrAddr = CGF.EmitLValue(PointerExpr).getAddress();
-
-    if (auto *OASE = dyn_cast<ArraySectionExpr>(PointeeExpr)) {
-      AttachPteeAddr =
-          CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/true).getAddress();
-    } else if (auto *ASE = dyn_cast<ArraySubscriptExpr>(PointeeExpr)) {
-      AttachPteeAddr = CGF.EmitLValue(ASE).getAddress();
-    } else if (auto *ME = dyn_cast<MemberExpr>(PointeeExpr)) {
-      AttachPteeAddr = CGF.EmitMemberExpr(ME).getAddress();
-    } else if (auto *UO = dyn_cast<UnaryOperator>(PointeeExpr)) {
-      if (UO->getOpcode() == UO_Deref)
-        AttachPteeAddr = CGF.EmitLValue(UO).getAddress();
-    }
-
-    return {AttachPtrAddr, AttachPteeAddr};
+    return true;
   }
 
   // Traverse the list of Components to find the first pointer expression, which
