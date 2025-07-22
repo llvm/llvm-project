@@ -435,8 +435,8 @@ static void constructSeqOffsettoOrigRowMapping(
 
   std::vector<size_t> SeqStartRows;
   SeqStartRows.push_back(0);
-  for (size_t I = 0; I < LT->Rows.size() - 1; ++I)
-    if (LT->Rows[I].EndSequence)
+  for (auto [I, Row] : llvm::enumerate(ArrayRef(LT->Rows).drop_back()))
+    if (Row.EndSequence)
       SeqStartRows.push_back(I + 1);
 
   // While SeqOffToOrigRow parsed from CU could be the ground truth,
@@ -468,58 +468,46 @@ static void constructSeqOffsettoOrigRowMapping(
   // 0x12       --
   // 0x14       15 <- LineTableMapping ground truth
 
-  // Dummy last element to make sure StmtAttrIdx and SeqStartIdx always
+  ArrayRef StmtAttrsRef(StmtAttrs);
+  ArrayRef SeqStartRowsRef(SeqStartRows);
+
+  // Dummy last element to make sure StmtAttrsRef and SeqStartRowsRef always
   // run out first.
   constexpr size_t DummyKey = UINT64_MAX;
   constexpr unsigned DummyVal = UINT32_MAX;
   LineTableMapping[DummyKey] = DummyVal;
 
-  size_t StmtAttrIdx = 0, SeqStartIdx = 0;
-  size_t NextSeqOff = 0;
-  unsigned NextRow = 0;
-
-  auto StmtIdxValidAndSmallerThanNext = [&]() {
-    return StmtAttrIdx < StmtAttrs.size() &&
-           StmtAttrs[StmtAttrIdx].get() < NextSeqOff;
-  };
-
-  auto SeqStartIdxValidAndSmallerThanNext = [&]() {
-    return SeqStartIdx < SeqStartRows.size() &&
-           SeqStartRows[SeqStartIdx] < NextRow;
-  };
-
-  for (auto It : LineTableMapping) {
-    // More verbosed setup to make sure closure capture works.
-    NextSeqOff = It.first;
-    NextRow = It.second;
+  for (auto [NextSeqOff, NextRow] : LineTableMapping) {
+    auto StmtAttrSmallerThanNext = [NextSeqOff](const PatchLocation &SA) {
+      return SA.get() < NextSeqOff;
+    };
+    auto SeqStartSmallerThanNext = [NextRow](const size_t &Row) {
+      return Row < NextRow;
+    };
 
     // If both StmtAttrs and SeqStartRows points to value not in
     // the LineTableMapping yet, we do a dummy one to one mapping and
     // move the pointer.
-    while (StmtIdxValidAndSmallerThanNext() &&
-           SeqStartIdxValidAndSmallerThanNext()) {
-      SeqOffToOrigRow[StmtAttrs[StmtAttrIdx].get()] = SeqStartRows[SeqStartIdx];
-      ++StmtAttrIdx;
-      ++SeqStartIdx;
+    while (!StmtAttrsRef.empty() && !SeqStartRowsRef.empty() &&
+           StmtAttrSmallerThanNext(StmtAttrsRef.front()) &&
+           SeqStartSmallerThanNext(SeqStartRowsRef.front())) {
+      SeqOffToOrigRow[StmtAttrsRef.consume_front().get()] =
+          SeqStartRowsRef.consume_front();
     }
     // One of the pointer points to the value at or past Next in the
     // LineTableMapping, We move the pointer to re-align with the
     // LineTableMapping
-    while (StmtIdxValidAndSmallerThanNext()) {
-      ++StmtAttrIdx;
-    }
-    while (SeqStartIdxValidAndSmallerThanNext()) {
-      ++SeqStartIdx;
-    }
+    StmtAttrsRef = StmtAttrsRef.drop_while(StmtAttrSmallerThanNext);
+    SeqStartRowsRef = SeqStartRowsRef.drop_while(SeqStartSmallerThanNext);
     // Use the LineTableMapping's result as the ground truth and move
     // on.
     if (NextSeqOff != DummyKey) {
       SeqOffToOrigRow[NextSeqOff] = NextRow;
     }
-    // It is possible that the first StmtAttrIdx/SeqStartIdx point to
-    // later entries in LineTableMapping. Therefore we only increment
-    // the pointers after we validate they are pointing to the `Next`
-    // entry. e.g.
+    // Move the pointers if they are pointed at Next.
+    // It is possible that they point to later entries in LineTableMapping.
+    // Therefore we only increment the pointers after we validate they are
+    // pointing to the `Next` entry. e.g.
     //
     // LineTableMapping
     // SeqOff      Row
@@ -527,15 +515,13 @@ static void constructSeqOffsettoOrigRowMapping(
     // 0x14        15
     //
     // StmtAttrs  SeqStartRows
-    // 0x14       13    <- StmtAttrIdx/SeqStartIdx
+    // 0x14       13    <- StmtAttrsRef.front() / SeqStartRowsRef.front()
     // 0x16       15
     //  --        17
-    if (StmtAttrIdx < StmtAttrs.size() &&
-        StmtAttrs[StmtAttrIdx].get() == NextSeqOff)
-      ++StmtAttrIdx;
-    if (SeqStartIdx < SeqStartRows.size() &&
-        SeqStartRows[SeqStartIdx] == NextRow)
-      ++SeqStartIdx;
+    if (!StmtAttrsRef.empty() && StmtAttrsRef.front().get() == NextSeqOff)
+      StmtAttrsRef.consume_front();
+    if (!SeqStartRowsRef.empty() && SeqStartRowsRef.front() == NextRow)
+      SeqStartRowsRef.consume_front();
   }
 }
 
