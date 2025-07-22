@@ -1210,12 +1210,12 @@ MDNode *llvm::GetUnrollMetadata(MDNode *LoopID, StringRef Name) {
 std::optional<RecurrenceDescriptor>
 llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
                                            ScalarEvolution *SE) {
-  RecurrenceDescriptor RedDes;
-  if (!RecurrenceDescriptor::isReductionPHI(&Phi, L, RedDes,
+  RecurrenceDescriptor RdxDesc;
+  if (!RecurrenceDescriptor::isReductionPHI(&Phi, L, RdxDesc,
                                             /*DemandedBits=*/nullptr,
                                             /*AC=*/nullptr, /*DT=*/nullptr, SE))
     return std::nullopt;
-  RecurKind RK = RedDes.getRecurrenceKind();
+  RecurKind RK = RdxDesc.getRecurrenceKind();
   // Skip unsupported reductions.
   // TODO: Handle additional reductions, including FP and min-max
   // reductions.
@@ -1223,6 +1223,9 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
       RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
       RecurrenceDescriptor::isFindIVRecurrenceKind(RK) ||
       RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
+    return std::nullopt;
+
+  if (RdxDesc.IntermediateStore)
     return std::nullopt;
 
   // Don't unroll reductions with constant ops; those can be folded to a
@@ -1239,5 +1242,5 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
           &Phi))
     return std::nullopt;
 
-  return RedDes;
+  return RdxDesc;
 }
