@@ -2563,10 +2563,12 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     if (auto *ModularFormat = TargetDecl->getAttr<ModularFormatAttr>()) {
       // TODO: Error checking
       FormatAttr *Format = TargetDecl->getAttr<FormatAttr>();
+      StringRef Type = Format->getType()->getName();
       std::string FormatIdx = std::to_string(Format->getFormatIdx());
       std::string FirstArg = std::to_string(Format->getFirstArg());
       SmallVector<StringRef> Args = {
-          FormatIdx, FirstArg, ModularFormat->getModularImplFn()->getName(),
+          Type, FormatIdx, FirstArg,
+          ModularFormat->getModularImplFn()->getName(),
           ModularFormat->getImplName()};
       llvm::append_range(Args, ModularFormat->aspects());
       FuncAttrs.addAttribute("modular-format", llvm::join(Args, ","));
