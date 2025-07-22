@@ -22,6 +22,7 @@
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/DXILABI.h"
 
 #define DEBUG_TYPE "dxil-post-optimization-validation"
 
@@ -374,6 +375,17 @@ static bool reportOverlappingRanges(Module &M,
       break;
     }
     }
+  }
+
+  for (const dxbc::RTS0::v1::StaticSampler &Sampler : RSD.StaticSamplers) {
+    RangeInfo Info;
+    Info.Space = Sampler.RegisterSpace;
+    Info.LowerBound = Sampler.ShaderRegister;
+    Info.UpperBound = Info.LowerBound;
+    Info.Class = ResourceClass::Sampler;
+    Info.Visibility = (dxbc::ShaderVisibility)Sampler.ShaderVisibility;
+
+    Infos.push_back(Info);
   }
 
   llvm::SmallVector<OverlappingRanges> Overlaps =
