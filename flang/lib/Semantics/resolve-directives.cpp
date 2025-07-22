@@ -750,8 +750,6 @@ public:
       case parser::OmpMapType::Value::Delete:
         ompFlag = Symbol::Flag::OmpMapDelete;
         break;
-      default:
-        break;
       }
     }
     if (!ompFlag) {
