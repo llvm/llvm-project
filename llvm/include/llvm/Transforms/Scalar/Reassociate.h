@@ -22,6 +22,7 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_REASSOCIATE_H
 #define LLVM_TRANSFORMS_SCALAR_REASSOCIATE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
@@ -96,7 +97,7 @@ protected:
   bool MadeChange;
 
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 
 private:
   void BuildRankMap(Function &F, ReversePostOrderTraversal<Function *> &RPOT);
