@@ -1,4 +1,4 @@
-//===-- Definition of pthread_barrier_t type ------------------------------===//
+//===-- Definition of __barrier_type type ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
