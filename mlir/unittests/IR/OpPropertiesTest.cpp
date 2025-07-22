@@ -98,7 +98,7 @@ setPropertyFromAttribute(TestProperties &prop, StringRef name, Attribute attr,
     auto v = dyn_cast<FloatAttr>(attr);
     if (!v)
       return failure();
-    prop.a = v.getValue().convertToFloat();
+    prop.b = v.getValue().convertToFloat();
     return success();
   }
   if (name == "array") {
