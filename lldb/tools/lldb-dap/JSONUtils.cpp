@@ -555,8 +555,6 @@ llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
     std::string uuid = module.GetUUIDString();
     if (!uuid.empty())
       object.try_emplace("moduleId", uuid);
-    else
-      object.try_emplace("moduleId", module.GetFileSpec().GetFilename());
   }
 
   return llvm::json::Value(std::move(object));
