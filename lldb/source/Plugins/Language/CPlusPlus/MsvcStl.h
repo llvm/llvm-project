@@ -79,6 +79,13 @@ SyntheticChildrenFrontEnd *
 MsvcStlVariantSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                        lldb::ValueObjectSP valobj_sp);
 
+// MSVC STL std::atomic<>
+bool MsvcStlAtomicSummaryProvider(ValueObject &valobj, Stream &stream,
+                                  const TypeSummaryOptions &options);
+SyntheticChildrenFrontEnd *
+MsvcStlAtomicSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                      lldb::ValueObjectSP valobj_sp);
+
 } // namespace formatters
 } // namespace lldb_private
 
