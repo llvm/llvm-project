@@ -21,8 +21,8 @@ def CExpressionInterface : OpInterface<"CExpressionInterface"> {
   }];
 
   let cppNamespace = "::mlir::emitc";
-  let methods = [
-    InterfaceMethod<[{
+  let methods =
+      [InterfaceMethod<[{
       Check whether operation has side effects that may affect the expression
       evaluation.
 
@@ -38,9 +38,28 @@ def CExpressionInterface : OpInterface<"CExpressionInterface"> {
       };
       ```
     }],
-      "bool", "hasSideEffects", (ins), /*methodBody=*/[{}],
-       /*defaultImplementation=*/[{
+                       "bool", "hasSideEffects", (ins), /*methodBody=*/[{}],
+                       /*defaultImplementation=*/[{
         return true;
+    }]>,
+    InterfaceMethod<[{
+      Check whether operation must be inlined into all its users.
+
+      By default operation is not marked as always inlined.
+
+      ```c++
+      class ConcreteOp ... {
+      public:
+        bool alwaysInline() {
+          // That way we can override the default implementation.
+          return true;
+        }
+      };
+      ```
+    }],
+    "bool", "alwaysInline", (ins), /*methodBody=*/[{}],
+    /*defaultImplementation=*/[{
+        return false;
     }]>,
   ];
 }
