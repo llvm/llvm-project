@@ -456,3 +456,56 @@ loop:
 exit:
   ret i64 %rdx.next
 }
+
+define void @reduction_with_intermediate_store(ptr %src, ptr %sum) {
+; CHECK-LABEL: define void @reduction_with_intermediate_store(
+; CHECK-SAME: ptr [[SRC:%.*]], ptr [[SUM:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[SUM_PROMOTED:%.*]] = load i32, ptr [[SUM]], align 4
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT_3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i32 [ [[SUM_PROMOTED]], %[[ENTRY]] ], [ [[RED_NEXT_3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 4
+; CHECK-NEXT:    [[RED_NEXT:%.*]] = add nsw i32 [[RED]], [[L]]
+; CHECK-NEXT:    store i32 [[RED_NEXT]], ptr [[SUM]], align 4
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[L_1:%.*]] = load i32, ptr [[GEP_SRC_1]], align 4
+; CHECK-NEXT:    [[RED_NEXT_1:%.*]] = add nsw i32 [[RED_NEXT]], [[L_1]]
+; CHECK-NEXT:    store i32 [[RED_NEXT_1]], ptr [[SUM]], align 4
+; CHECK-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[IV_NEXT_1]]
+; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[GEP_SRC_2]], align 4
+; CHECK-NEXT:    [[RED_NEXT_2:%.*]] = add nsw i32 [[RED_NEXT_1]], [[L_2]]
+; CHECK-NEXT:    store i32 [[RED_NEXT_2]], ptr [[SUM]], align 4
+; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV]], 3
+; CHECK-NEXT:    [[GEP_SRC_3:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[IV_NEXT_2]]
+; CHECK-NEXT:    [[L_3:%.*]] = load i32, ptr [[GEP_SRC_3]], align 4
+; CHECK-NEXT:    [[RED_NEXT_3]] = add nsw i32 [[RED_NEXT_2]], [[L_3]]
+; CHECK-NEXT:    store i32 [[RED_NEXT_3]], ptr [[SUM]], align 4
+; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
+; CHECK-NEXT:    [[EC_3:%.*]] = icmp eq i64 [[IV_NEXT_3]], 10000
+; CHECK-NEXT:    br i1 [[EC_3]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %sum.promoted = load i32, ptr %sum, align 4
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %red = phi i32 [ %sum.promoted, %entry ], [ %red.next, %loop ]
+  %gep.src = getelementptr inbounds nuw i32, ptr %src, i64 %iv
+  %l = load i32, ptr %gep.src, align 4
+  %red.next = add nsw i32 %red, %l
+  store i32 %red.next, ptr %sum, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 10000
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
