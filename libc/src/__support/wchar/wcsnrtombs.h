@@ -22,31 +22,31 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-LIBC_INLINE static ErrorOr<size_t> wcsnrtombs(char *__restrict s,
-                                              const wchar_t **__restrict pwcs,
-                                              size_t nwc, size_t len,
+LIBC_INLINE static ErrorOr<size_t> wcsnrtombs(char *__restrict dest,
+                                              const wchar_t **__restrict ptr_to_src,
+                                              size_t num_src_widechars, size_t dest_len,
                                               mbstate *ps) {
-  LIBC_CRASH_ON_NULLPTR(pwcs);
+  LIBC_CRASH_ON_NULLPTR(ptr_to_src);
   LIBC_CRASH_ON_NULLPTR(ps);
 
   CharacterConverter cr(ps);
   if (!cr.isValidState())
     return Error(EINVAL);
 
-  if (s == nullptr)
-    len = SIZE_MAX;
+  if (dest == nullptr)
+    dest_len = SIZE_MAX;
 
-  StringConverter<char32_t> str_conv(reinterpret_cast<const char32_t *>(*pwcs),
-                                     ps, len, nwc);
+  StringConverter<char32_t> str_conv(reinterpret_cast<const char32_t *>(*ptr_to_src),
+                                     ps, dest_len, num_src_widechars);
   size_t dst_idx = 0;
   ErrorOr<char8_t> converted = str_conv.popUTF8();
   while (converted.has_value()) {
-    if (s != nullptr)
-      s[dst_idx] = converted.value();
+    if (dest != nullptr)
+      dest[dst_idx] = converted.value();
 
     if (converted.value() == '\0') {
-      if (s != nullptr)
-        *pwcs = nullptr;
+      if (dest != nullptr)
+        *ptr_to_src = nullptr;
       return dst_idx;
     }
 
@@ -54,8 +54,8 @@ LIBC_INLINE static ErrorOr<size_t> wcsnrtombs(char *__restrict s,
     converted = str_conv.popUTF8();
   }
 
-  if (s != nullptr)
-    *pwcs += str_conv.getSourceIndex();
+  if (dest != nullptr)
+    *ptr_to_src += str_conv.getSourceIndex();
 
   if (converted.error() == -1) // if we hit conversion limit
     return dst_idx;

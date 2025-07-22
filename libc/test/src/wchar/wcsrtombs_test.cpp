@@ -59,8 +59,7 @@ TEST_F(LlvmLibcWcsrtombs, DestLimit) {
   const wchar_t *cur = src;
 
   char mbs[11];
-  for (int i = 0; i < 11; ++i)
-    mbs[i] = '\x01'; // dummy initial values
+  LIBC_NAMESPACE::memset(mbs, '\x01', 11); // dummy initial values
 
   ASSERT_EQ(LIBC_NAMESPACE::wcsrtombs(mbs, &cur, 4, &state),
             static_cast<size_t>(4));
@@ -72,8 +71,7 @@ TEST_F(LlvmLibcWcsrtombs, DestLimit) {
   ASSERT_EQ(mbs[3], '\xA1');
   ASSERT_EQ(mbs[4], '\x01'); // didn't write more than 4 bytes
 
-  for (int i = 0; i < 11; ++i)
-    mbs[i] = '\x01'; // dummy initial values
+  LIBC_NAMESPACE::memset(mbs, '\x01', 11); // dummy initial values
   LIBC_NAMESPACE::memset(&state, 0, sizeof(mbstate_t));
 
   // not enough bytes to convert the second character, so only converts one
@@ -124,8 +122,7 @@ TEST_F(LlvmLibcWcsrtombs, NullState) {
   const wchar_t *cur = src;
 
   char mbs[11];
-  for (int i = 0; i < 11; ++i)
-    mbs[i] = '\x01'; // dummy initial values
+  LIBC_NAMESPACE::memset(mbs, '\x01', 11); // dummy initial values
 
   ASSERT_EQ(LIBC_NAMESPACE::wcsrtombs(mbs, &cur, 4, nullptr),
             static_cast<size_t>(4));
@@ -137,8 +134,7 @@ TEST_F(LlvmLibcWcsrtombs, NullState) {
   ASSERT_EQ(mbs[3], '\xA1');
   ASSERT_EQ(mbs[4], '\x01'); // didn't write more than 4 bytes
 
-  for (int i = 0; i < 11; ++i)
-    mbs[i] = '\x01'; // dummy initial values
+  LIBC_NAMESPACE::memset(mbs, '\x01', 11); // dummy initial values
 
   // not enough bytes to convert the second character, so only converts one
   cur = src;
