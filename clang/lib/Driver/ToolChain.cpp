@@ -104,44 +104,6 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
     addIfExists(getFilePaths(), Path);
 }
 
-llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-ToolChain::executeToolChainProgram(StringRef Executable) const {
-  llvm::SmallString<64> OutputFile;
-  llvm::sys::fs::createTemporaryFile("toolchain-program", "txt", OutputFile,
-                                     llvm::sys::fs::OF_Text);
-  llvm::FileRemover OutputRemover(OutputFile.c_str());
-  std::optional<llvm::StringRef> Redirects[] = {
-      {""},
-      OutputFile.str(),
-      {""},
-  };
-
-  std::string ErrorMessage;
-  int SecondsToWait = 60;
-  if (std::optional<std::string> Str =
-          llvm::sys::Process::GetEnv("CLANG_TOOLCHAIN_PROGRAM_TIMEOUT")) {
-    if (!llvm::to_integer(*Str, SecondsToWait))
-      return llvm::createStringError(std::error_code(),
-                                     "CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected "
-                                     "an integer, got '" +
-                                         *Str + "'");
-    SecondsToWait = std::max(SecondsToWait, 0); // infinite
-  }
-  if (llvm::sys::ExecuteAndWait(Executable, {Executable}, {}, Redirects,
-                                SecondsToWait,
-                                /*MemoryLimit=*/0, &ErrorMessage))
-    return llvm::createStringError(std::error_code(),
-                                   Executable + ": " + ErrorMessage);
-
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> OutputBuf =
-      llvm::MemoryBuffer::getFile(OutputFile.c_str());
-  if (!OutputBuf)
-    return llvm::createStringError(OutputBuf.getError(),
-                                   "Failed to read stdout of " + Executable +
-                                       ": " + OutputBuf.getError().message());
-  return std::move(*OutputBuf);
-}
-
 void ToolChain::setTripleEnvironment(llvm::Triple::EnvironmentType Env) {
   Triple.setEnvironment(Env);
   if (EffectiveTriple != llvm::Triple())
