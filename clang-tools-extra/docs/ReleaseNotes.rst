@@ -110,6 +110,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`readability-qualified-auto
+  <clang-tidy/checks/readability/qualified-auto>` check by adding the option
+  `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
@@ -136,4 +140,3 @@ Improvements to pp-trace
 
 Clang-tidy Visual Studio plugin
 -------------------------------
-
