@@ -1784,8 +1784,9 @@ define void @store_factor4_one_active(ptr %ptr, <4 x i32> %v) {
 define void @vpstore_factor4_one_active(ptr %ptr, <4 x i32> %v) {
 ; CHECK-LABEL: vpstore_factor4_one_active:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vsseg4e32.v v8, (a0)
+; CHECK-NEXT:    vsse32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
   %v0 = shufflevector <4 x i32> %v, <4 x i32> poison, <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3,  i32 undef, i32 undef, i32 undef>
   tail call void @llvm.vp.store.v16i32.p0(<16 x i32> %v0, ptr %ptr, <16 x i1> splat (i1 true), i32 16)
@@ -1809,7 +1810,7 @@ define void @store_factor4_one_active_fullwidth(ptr %ptr, <16 x i32> %v) {
 ; CHECK-LABEL: store_factor4_one_active_fullwidth:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 16
-; CHECK-NEXT:    vsetivli zero, 4, e32, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vsse32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
   %v0 = shufflevector <16 x i32> %v, <16 x i32> poison, <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3,  i32 undef, i32 undef, i32 undef>
