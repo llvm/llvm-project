@@ -467,22 +467,22 @@ entry:
 define void @buildvector_v8f32(ptr %dst, float %a0, float %a1, float %a2, float %a3, float %a4, float %a5, float %a6, float %a7) nounwind {
 ; CHECK-LABEL: buildvector_v8f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movfr2gr.s $a1, $fa0
-; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a1, 0
-; CHECK-NEXT:    movfr2gr.s $a1, $fa1
-; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a1, 1
-; CHECK-NEXT:    movfr2gr.s $a1, $fa2
-; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a1, 2
-; CHECK-NEXT:    movfr2gr.s $a1, $fa3
-; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a1, 3
-; CHECK-NEXT:    movfr2gr.s $a1, $fa4
-; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a1, 4
-; CHECK-NEXT:    movfr2gr.s $a1, $fa5
-; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a1, 5
-; CHECK-NEXT:    movfr2gr.s $a1, $fa6
-; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a1, 6
-; CHECK-NEXT:    movfr2gr.s $a1, $fa7
-; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a1, 7
+; CHECK-NEXT:    # kill: def $f7 killed $f7 def $xr7
+; CHECK-NEXT:    # kill: def $f6 killed $f6 def $xr6
+; CHECK-NEXT:    # kill: def $f5 killed $f5 def $xr5
+; CHECK-NEXT:    # kill: def $f4 killed $f4 def $xr4
+; CHECK-NEXT:    # kill: def $f3 killed $f3 def $xr3
+; CHECK-NEXT:    # kill: def $f2 killed $f2 def $xr2
+; CHECK-NEXT:    # kill: def $f1 killed $f1 def $xr1
+; CHECK-NEXT:    # kill: def $f0 killed $f0 def $xr0
+; CHECK-NEXT:    xvinsve0.w $xr0, $xr0, 0
+; CHECK-NEXT:    xvinsve0.w $xr0, $xr1, 1
+; CHECK-NEXT:    xvinsve0.w $xr0, $xr2, 2
+; CHECK-NEXT:    xvinsve0.w $xr0, $xr3, 3
+; CHECK-NEXT:    xvinsve0.w $xr0, $xr4, 4
+; CHECK-NEXT:    xvinsve0.w $xr0, $xr5, 5
+; CHECK-NEXT:    xvinsve0.w $xr0, $xr6, 6
+; CHECK-NEXT:    xvinsve0.w $xr0, $xr7, 7
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -501,14 +501,14 @@ entry:
 define void @buildvector_v4f64(ptr %dst, double %a0, double %a1, double %a2, double %a3) nounwind {
 ; CHECK-LABEL: buildvector_v4f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movfr2gr.d $a1, $fa0
-; CHECK-NEXT:    xvinsgr2vr.d $xr0, $a1, 0
-; CHECK-NEXT:    movfr2gr.d $a1, $fa1
-; CHECK-NEXT:    xvinsgr2vr.d $xr0, $a1, 1
-; CHECK-NEXT:    movfr2gr.d $a1, $fa2
-; CHECK-NEXT:    xvinsgr2vr.d $xr0, $a1, 2
-; CHECK-NEXT:    movfr2gr.d $a1, $fa3
-; CHECK-NEXT:    xvinsgr2vr.d $xr0, $a1, 3
+; CHECK-NEXT:    # kill: def $f3_64 killed $f3_64 def $xr3
+; CHECK-NEXT:    # kill: def $f2_64 killed $f2_64 def $xr2
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 def $xr1
+; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
+; CHECK-NEXT:    xvinsve0.d $xr0, $xr0, 0
+; CHECK-NEXT:    xvinsve0.d $xr0, $xr1, 1
+; CHECK-NEXT:    xvinsve0.d $xr0, $xr2, 2
+; CHECK-NEXT:    xvinsve0.d $xr0, $xr3, 3
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

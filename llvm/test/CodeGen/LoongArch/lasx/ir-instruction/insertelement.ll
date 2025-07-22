@@ -87,8 +87,8 @@ define void @insert_8xfloat(ptr %src, ptr %dst, float %in) nounwind {
 ; CHECK-LABEL: insert_8xfloat:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr1, $a0, 0
-; CHECK-NEXT:    movfr2gr.s $a0, $fa0
-; CHECK-NEXT:    xvinsgr2vr.w $xr1, $a0, 1
+; CHECK-NEXT:    # kill: def $f0 killed $f0 def $xr0
+; CHECK-NEXT:    xvinsve0.w $xr1, $xr0, 1
 ; CHECK-NEXT:    xvst $xr1, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <8 x float>, ptr %src
@@ -101,8 +101,8 @@ define void @insert_4xdouble(ptr %src, ptr %dst, double %in) nounwind {
 ; CHECK-LABEL: insert_4xdouble:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr1, $a0, 0
-; CHECK-NEXT:    movfr2gr.d $a0, $fa0
-; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 1
+; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
+; CHECK-NEXT:    xvinsve0.d $xr1, $xr0, 1
 ; CHECK-NEXT:    xvst $xr1, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <4 x double>, ptr %src

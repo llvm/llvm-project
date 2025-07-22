@@ -576,8 +576,8 @@ define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) #0 {
 ; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(sin)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    movfr2gr.d $a0, $fa0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
+; LA64-NEXT:    vextrins.d $vr0, $vr0, 0
 ; LA64-NEXT:    vst $vr0, $sp, 48 # 16-byte Folded Spill
 ; LA64-NEXT:    vld $vr0, $sp, 16 # 16-byte Folded Reload
 ; LA64-NEXT:    vreplvei.d $vr0, $vr0, 1
@@ -585,24 +585,24 @@ define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) #0 {
 ; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(sin)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    movfr2gr.d $a0, $fa0
-; LA64-NEXT:    vld $vr0, $sp, 48 # 16-byte Folded Reload
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 1
-; LA64-NEXT:    vst $vr0, $sp, 48 # 16-byte Folded Spill
+; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
+; LA64-NEXT:    vld $vr1, $sp, 48 # 16-byte Folded Reload
+; LA64-NEXT:    vextrins.d $vr1, $vr0, 16
+; LA64-NEXT:    vst $vr1, $sp, 48 # 16-byte Folded Spill
 ; LA64-NEXT:    vld $vr0, $sp, 32 # 16-byte Folded Reload
 ; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(cos)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    movfr2gr.d $a0, $fa0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
+; LA64-NEXT:    vextrins.d $vr0, $vr0, 0
 ; LA64-NEXT:    vst $vr0, $sp, 32 # 16-byte Folded Spill
 ; LA64-NEXT:    vld $vr0, $sp, 16 # 16-byte Folded Reload
 ; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(cos)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    movfr2gr.d $a0, $fa0
+; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
 ; LA64-NEXT:    vld $vr1, $sp, 32 # 16-byte Folded Reload
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a0, 1
+; LA64-NEXT:    vextrins.d $vr1, $vr0, 16
 ; LA64-NEXT:    vld $vr0, $sp, 48 # 16-byte Folded Reload
 ; LA64-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 80
