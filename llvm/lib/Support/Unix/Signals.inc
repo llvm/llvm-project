@@ -440,7 +440,9 @@ static void InfoSignalHandler(int Sig) {
     CurrentInfoFunction();
 }
 
-void llvm::sys::RunInterruptHandlers() { RemoveFilesToRemove(); }
+void llvm::sys::RunInterruptHandlers(bool /*ExecuteSignalHandlers*/) {
+  RemoveFilesToRemove();
+}
 
 void llvm::sys::SetInterruptFunction(void (*IF)()) {
   InterruptFunction.exchange(IF);

@@ -3873,7 +3873,7 @@ void mlir::tblgen::generateOpFormat(const Operator &constOp, OpClass &opClass,
     // Exit the process if format errors are treated as fatal.
     if (formatErrorIsFatal) {
       // Invoke the interrupt handlers to run the file cleanup handlers.
-      llvm::sys::RunInterruptHandlers();
+      llvm::sys::RunInterruptHandlers(/*ExecuteSignalHandlers=*/true);
       std::exit(1);
     }
     return;
