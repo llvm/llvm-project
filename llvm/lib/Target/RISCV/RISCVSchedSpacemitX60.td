@@ -37,7 +37,7 @@ class Get1248Latency<string mx> {
 }
 
 // Used for: logical opsz, shifts, sign ext, merge/move, FP sign/recip/convert, mask ops, slides
-class Get44816Latency<string mx> {
+class Get4816Latency<string mx> {
   int c = !cond(
     !eq(mx, "M4") : 8,
     !eq(mx, "M8") : 16,
@@ -46,7 +46,7 @@ class Get44816Latency<string mx> {
 }
 
 // Used for: arithmetic (add/sub/min/max), saturating/averaging, FP add/sub/min/max
-class Get4458Latency<string mx> {
+class Get458Latency<string mx> {
   int c = !cond(
     !eq(mx, "M4") : 5,
     !eq(mx, "M8") : 8,
@@ -383,12 +383,12 @@ foreach LMul = [1, 2, 4, 8] in {
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  let Latency = 4, ReleaseAtCycles = [Get4458Latency<mx>.c] in {
+  let Latency = 4, ReleaseAtCycles = [Get458Latency<mx>.c] in {
     defm "" : LMULWriteResMX<"WriteVIMinMaxV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMinMaxX", [SMX60_VIEU], mx, IsWorstCase>;
   }
 
-  let Latency = 4, ReleaseAtCycles = [Get44816Latency<mx>.c] in {
+  let Latency = 4, ReleaseAtCycles = [Get4816Latency<mx>.c] in {
     // Pattern of vadd, vsub, vrsub: 4/4/5/8
     // Pattern of vand, vor, vxor:   4/4/8/16
     // They are grouped together, so we used the worst case 4/4/8/16
@@ -487,7 +487,7 @@ foreach mx = SchedMxListW in {
     true: 1
   );
 
-  let Latency = 4, ReleaseAtCycles = [!mul(Get44816Latency<mx>.c, Multiplier)] in {
+  let Latency = 4, ReleaseAtCycles = [!mul(Get4816Latency<mx>.c, Multiplier)] in {
     defm "" : LMULWriteResMX<"WriteVNShiftV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVNShiftX", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVNShiftI", [SMX60_VIEU], mx, IsWorstCase>;
