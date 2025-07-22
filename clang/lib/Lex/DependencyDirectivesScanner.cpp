@@ -568,10 +568,7 @@ bool Scanner::lexModuleDirectiveBody(DirectiveKind Kind, const char *&First,
                       Kind == DirectiveKind::cxx_module_decl;
   if (IsCXXModules)
     lexPPDirectiveBody(First, End);
-  pushDirective(Kind);
-  skipWhitespace(First, End);
-  if (First == End)
-    return false;
+
   if (!IsCXXModules) {
     if (!isVerticalWhitespace(*First))
       return reportError(
@@ -746,6 +743,13 @@ bool Scanner::lexModule(const char *&First, const char *const End) {
       return false;
     break;
   }
+  case ';': {
+    // Handle the global module fragment `module;`.
+    if (Id == "module" && !Export)
+      break;
+    skipLine(First, End);
+    return false;
+  }
   case '<':
   case '"':
     break;
@@ -916,10 +920,6 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
     CurDirToks.clear();
   });
 
-  // Handle "@import".
-  if (*First == '@')
-    return lexAt(First, End);
-
   if (*First == '_') {
     if (isNextIdentifierOrSkipLine("_Pragma", First, End))
       return lex_Pragma(First, End);
@@ -932,23 +932,10 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   auto ScEx2 = make_scope_exit(
       [&]() { TheLexer.setParsingPreprocessorDirective(false); });
 
-  // Since P1857R3, the standard handling C++ module/import as a directive:
-  //
-  // [cpp.pre]p1:
-  //  A preprocessing directive consists of a sequence of preprocessing tokens
-  //  that satisfies the following constraints: At the start of translation
-  //  phase 4, the first preprocessing token in the sequence, referred to as a
-  //  directive-introducing token, begins with the first character in the source
-  //  file (optionally after whitespace containing no new-line characters) or
-  //  follows whitespace containing at least one new-line character, and is
-  //    - a # preprocessing token, or
-  //    - an import preprocessing token immediately followed on the same logical
-  //    source line by a header-name, <, identifier, string-literal, or :
-  //    preprocessing token, or
-  //    - a module preprocessing token immediately followed on the same logical
-  //    source line by an identifier, :, or ; preprocessing token, or
-  //    - an export preprocessing token immediately followed on the same logical
-  //    source line by one of the two preceding forms.
+  if (*First == '@')
+    return lexAt(First, End);
+
+  // Handle module directives for C++20 modules.
   if (*First == 'i' || *First == 'e' || *First == 'm')
     return lexModule(First, End);
 
