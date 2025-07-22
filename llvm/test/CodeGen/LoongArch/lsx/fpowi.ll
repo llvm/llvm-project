@@ -16,8 +16,8 @@ define <4 x float> @powi_v4f32(<4 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    move $a0, $fp
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    movfr2gr.s $a0, $fa0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; CHECK-NEXT:    # kill: def $f0 killed $f0 def $vr0
+; CHECK-NEXT:    vextrins.w $vr0, $vr0, 0
 ; CHECK-NEXT:    vst $vr0, $sp, 16 # 16-byte Folded Spill
 ; CHECK-NEXT:    vld $vr0, $sp, 0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 1
@@ -25,29 +25,30 @@ define <4 x float> @powi_v4f32(<4 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    move $a0, $fp
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    movfr2gr.s $a0, $fa0
-; CHECK-NEXT:    vld $vr0, $sp, 16 # 16-byte Folded Reload
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 1
-; CHECK-NEXT:    vst $vr0, $sp, 16 # 16-byte Folded Spill
+; CHECK-NEXT:    # kill: def $f0 killed $f0 def $vr0
+; CHECK-NEXT:    vld $vr1, $sp, 16 # 16-byte Folded Reload
+; CHECK-NEXT:    vextrins.w $vr1, $vr0, 16
+; CHECK-NEXT:    vst $vr1, $sp, 16 # 16-byte Folded Spill
 ; CHECK-NEXT:    vld $vr0, $sp, 0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 2
 ; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; CHECK-NEXT:    move $a0, $fp
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    movfr2gr.s $a0, $fa0
-; CHECK-NEXT:    vld $vr0, $sp, 16 # 16-byte Folded Reload
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 2
-; CHECK-NEXT:    vst $vr0, $sp, 16 # 16-byte Folded Spill
+; CHECK-NEXT:    # kill: def $f0 killed $f0 def $vr0
+; CHECK-NEXT:    vld $vr1, $sp, 16 # 16-byte Folded Reload
+; CHECK-NEXT:    vextrins.w $vr1, $vr0, 32
+; CHECK-NEXT:    vst $vr1, $sp, 16 # 16-byte Folded Spill
 ; CHECK-NEXT:    vld $vr0, $sp, 0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 3
 ; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; CHECK-NEXT:    move $a0, $fp
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    movfr2gr.s $a0, $fa0
-; CHECK-NEXT:    vld $vr0, $sp, 16 # 16-byte Folded Reload
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 3
+; CHECK-NEXT:    # kill: def $f0 killed $f0 def $vr0
+; CHECK-NEXT:    vld $vr1, $sp, 16 # 16-byte Folded Reload
+; CHECK-NEXT:    vextrins.w $vr1, $vr0, 48
+; CHECK-NEXT:    vori.b $vr0, $vr1, 0
 ; CHECK-NEXT:    ld.d $fp, $sp, 32 # 8-byte Folded Reload
 ; CHECK-NEXT:    ld.d $ra, $sp, 40 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 48
@@ -72,8 +73,8 @@ define <2 x double> @powi_v2f64(<2 x double> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    move $a0, $fp
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(__powidf2)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    movfr2gr.d $a0, $fa0
-; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
+; CHECK-NEXT:    vextrins.d $vr0, $vr0, 0
 ; CHECK-NEXT:    vst $vr0, $sp, 16 # 16-byte Folded Spill
 ; CHECK-NEXT:    vld $vr0, $sp, 0 # 16-byte Folded Reload
 ; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 1
@@ -81,9 +82,10 @@ define <2 x double> @powi_v2f64(<2 x double> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    move $a0, $fp
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(__powidf2)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    movfr2gr.d $a0, $fa0
-; CHECK-NEXT:    vld $vr0, $sp, 16 # 16-byte Folded Reload
-; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 1
+; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
+; CHECK-NEXT:    vld $vr1, $sp, 16 # 16-byte Folded Reload
+; CHECK-NEXT:    vextrins.d $vr1, $vr0, 16
+; CHECK-NEXT:    vori.b $vr0, $vr1, 0
 ; CHECK-NEXT:    ld.d $fp, $sp, 32 # 8-byte Folded Reload
 ; CHECK-NEXT:    ld.d $ra, $sp, 40 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 48

@@ -757,6 +757,11 @@ public:
   RValue emitAnyExpr(const clang::Expr *e,
                      AggValueSlot aggSlot = AggValueSlot::ignored());
 
+  /// Emits the code necessary to evaluate an arbitrary expression into the
+  /// given memory location.
+  void emitAnyExprToMem(const Expr *e, Address location, Qualifiers quals,
+                        bool isInitializer);
+
   /// Similarly to emitAnyExpr(), however, the result will always be accessible
   /// even if no aggregate location is provided.
   RValue emitAnyExprToTemp(const clang::Expr *e);
@@ -828,6 +833,7 @@ public:
   mlir::Value emitCheckedArgForAssume(const Expr *e);
 
   LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
+  LValue emitCompoundLiteralLValue(const CompoundLiteralExpr *e);
 
   void emitConstructorBody(FunctionArgList &args);
   void emitDestructorBody(FunctionArgList &args);
@@ -846,6 +852,15 @@ public:
                               clang::CXXCtorType type, bool forVirtualBase,
                               bool delegating, Address thisAddr,
                               CallArgList &args, clang::SourceLocation loc);
+
+  void emitCXXDestructorCall(const CXXDestructorDecl *dd, CXXDtorType type,
+                             bool forVirtualBase, bool delegating,
+                             Address thisAddr, QualType thisTy);
+
+  RValue emitCXXDestructorCall(GlobalDecl dtor, const CIRGenCallee &callee,
+                               mlir::Value thisVal, QualType thisTy,
+                               mlir::Value implicitParam,
+                               QualType implicitParamTy, const CallExpr *e);
 
   mlir::LogicalResult emitCXXForRangeStmt(const CXXForRangeStmt &s,
                                           llvm::ArrayRef<const Attr *> attrs);
@@ -911,7 +926,7 @@ public:
   mlir::Value emitScalarExpr(const clang::Expr *e);
 
   mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
-                                      bool isInc, bool isPre);
+                                      cir::UnaryOpKind kind, bool isPre);
 
   /// Build a debug stoppoint if we are emitting debug info.
   void emitStopPoint(const Stmt *s);
@@ -930,8 +945,10 @@ public:
   /// returning the result.
   mlir::Value emitComplexExpr(const Expr *e);
 
+  void emitComplexExprIntoLValue(const Expr *e, LValue dest, bool isInit);
+
   mlir::Value emitComplexPrePostIncDec(const UnaryOperator *e, LValue lv,
-                                       bool isInc, bool isPre);
+                                       cir::UnaryOpKind op, bool isPre);
 
   LValue emitComplexAssignmentLValue(const BinaryOperator *e);
 
