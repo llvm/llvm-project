@@ -106,16 +106,16 @@ Note in the LLVM alias, the default value is `false`.
 
 .. code-block:: c++
 
-   using IntPtr = int*;
-   IntPtr foo();
+  using IntPtr = int*;
+  IntPtr foo();
 
-   auto bar = foo();
+  auto bar = foo();
 
 If :option:`IgnoreAliasing` is set to `true`, it will be transformed into:
 
 .. code-block:: c++
 
-   auto *bar = foo();
+  auto *bar = foo();
 
 Otherwise no changes will occur.
 
@@ -129,16 +129,11 @@ For example:
 
 .. code-block:: c++
 
-  #include <vector>
-
-  void change(int&);
-
-  using IntPtr = int *; // Relevant typedef
+  using IntPtr = int *;
 
   void loopPtr(const std::vector<IntPtr> &VectorIntPtr) {
 
-    // May fail for IgnoreAliasing==false as AST does not have the IntPtr
+    // May fail for IgnoreAliasing==false as AST does not have the 'IntPtr'
     for (auto Data : VectorIntPtr) {
-      change(*Data);
     }
   }

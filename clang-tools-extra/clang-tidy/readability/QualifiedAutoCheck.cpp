@@ -136,27 +136,29 @@ void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
 
   auto IsBoundToType = refersToType(equalsBoundNode("type"));
   auto UnlessFunctionType = unless(hasUnqualifiedDesugaredType(functionType()));
-  auto IsAutoDeducedToPointer = [this](
-                                    const std::vector<StringRef> &AllowedTypes,
-                                    const auto &...InnerMatchers) {
+
+  auto IsPointerType = [this](const auto &...InnerMatchers) {
     if (this->IgnoreAliasing) {
-      return autoType(hasDeducedType(
-          hasUnqualifiedDesugaredType(pointerType(pointee(InnerMatchers...))),
-          unless(hasUnqualifiedType(
-              matchers::matchesAnyListedTypeName(AllowedTypes, false))),
-          unless(pointerType(pointee(hasUnqualifiedType(
-              matchers::matchesAnyListedTypeName(AllowedTypes, false)))))));
+      return qualType(
+          hasUnqualifiedDesugaredType(pointerType(pointee(InnerMatchers...))));
     } else {
-      return autoType(hasDeducedType(
+      return qualType(
           anyOf(qualType(pointerType(pointee(InnerMatchers...))),
                 qualType(substTemplateTypeParmType(hasReplacementType(
-                    pointerType(pointee(InnerMatchers...)))))),
-          unless(hasUnqualifiedType(
-              matchers::matchesAnyListedTypeName(AllowedTypes, false))),
-          unless(pointerType(pointee(hasUnqualifiedType(
-              matchers::matchesAnyListedTypeName(AllowedTypes, false)))))));
+                    pointerType(pointee(InnerMatchers...)))))));
     }
   };
+
+  auto IsAutoDeducedToPointer =
+      [IsPointerType](const std::vector<StringRef> &AllowedTypes,
+                      const auto &...InnerMatchers) {
+        return autoType(hasDeducedType(
+            IsPointerType(InnerMatchers...),
+            unless(hasUnqualifiedType(
+                matchers::matchesAnyListedTypeName(AllowedTypes, false))),
+            unless(pointerType(pointee(hasUnqualifiedType(
+                matchers::matchesAnyListedTypeName(AllowedTypes, false)))))));
+      };
 
   Finder->addMatcher(
       ExplicitSingleVarDecl(
