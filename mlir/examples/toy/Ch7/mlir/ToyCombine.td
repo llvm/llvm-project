@@ -42,7 +42,7 @@ def ReshapeReshapeOptPattern : Pat<(ReshapeOp(ReshapeOp $arg)),
 
 // Reshape(Constant(x)) = x'
 def ReshapeConstant :
-  NativeCodeCall<"$0.reshape(::llvm::cast<ShapedType>($1.getType()))">;
+  NativeCodeCall<"$0.reshape(::llvm::cast<ShapedType>($1.getType()).getShape())">;
 def FoldConstantReshapeOptPattern : Pat<
   (ReshapeOp:$res (ConstantOp $arg)),
   (ConstantOp (ReshapeConstant $arg, $res))>;
