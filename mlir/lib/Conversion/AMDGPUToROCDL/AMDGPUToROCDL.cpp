@@ -421,15 +421,15 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
 
 // TODO: AMDGPU backend already have all this bitpacking logic, we should move
 // it to some common place.
-/// \details \p Vmcnt, \p Expcnt and \p Lgkmcnt are decoded as follows:
-///     \p Vmcnt = \p Waitcnt[3:0]        (pre-gfx9)
-///     \p Vmcnt = \p Waitcnt[15:14,3:0]  (gfx9,10)
-///     \p Vmcnt = \p Waitcnt[15:10]      (gfx11)
-///     \p Expcnt = \p Waitcnt[6:4]       (pre-gfx11)
-///     \p Expcnt = \p Waitcnt[2:0]       (gfx11)
-///     \p Lgkmcnt = \p Waitcnt[11:8]     (pre-gfx10)
-///     \p Lgkmcnt = \p Waitcnt[13:8]     (gfx10)
-///     \p Lgkmcnt = \p Waitcnt[9:4]      (gfx11)
+///  Vmcnt, Expcnt and Lgkmcnt are decoded as follows:
+///     Vmcnt = Waitcnt[3:0]        (pre-gfx9)
+///     Vmcnt = Waitcnt[15:14,3:0]  (gfx9,10)
+///     Vmcnt = Waitcnt[15:10]      (gfx11)
+///     Expcnt = Waitcnt[6:4]       (pre-gfx11)
+///     Expcnt = Waitcnt[2:0]       (gfx11)
+///     Lgkmcnt = Waitcnt[11:8]     (pre-gfx10)
+///     Lgkmcnt = Waitcnt[13:8]     (gfx10)
+///     Lgkmcnt = Waitcnt[9:4]      (gfx11)
 static FailureOr<unsigned> encodeWaitcnt(Chipset chipset, unsigned vmcnt,
                                          unsigned expcnt, unsigned lgkmcnt) {
   if (chipset.majorVersion < 9) {
@@ -479,16 +479,16 @@ struct MemoryCounterWaitOpLowering
                   ConversionPatternRewriter &rewriter) const override {
     if (chipset.majorVersion >= 12) {
       Location loc = op.getLoc();
-      if (auto ds = adaptor.getDs())
+      if (std::optional<int> ds = adaptor.getDs())
         rewriter.create<ROCDL::WaitDscntOp>(loc, *ds);
 
-      if (auto load = adaptor.getLoad())
+      if (std::optional<int> load = adaptor.getLoad())
         rewriter.create<ROCDL::WaitLoadcntOp>(loc, *load);
 
-      if (auto store = adaptor.getStore())
+      if (std::optional<int> store = adaptor.getStore())
         rewriter.create<ROCDL::WaitStorecntOp>(loc, *store);
 
-      if (auto exp = adaptor.getExp())
+      if (std::optional<int> exp = adaptor.getExp())
         rewriter.create<ROCDL::WaitExpcntOp>(loc, *exp);
 
       rewriter.eraseOp(op);
