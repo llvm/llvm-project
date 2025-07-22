@@ -454,7 +454,7 @@ define i32 @test_reassoc_add_sub_i32_1(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: test_reassoc_add_sub_i32_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    subw a2, a2, a3
+; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    subw a0, a0, a2
 ; CHECK-NEXT:    ret
   %t0 = add i32 %a0, %a1
@@ -467,7 +467,7 @@ define i32 @test_reassoc_add_sub_i32_2(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: test_reassoc_add_sub_i32_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    subw a2, a2, a3
+; CHECK-NEXT:    sub a2, a2, a3
 ; CHECK-NEXT:    addw a0, a0, a2
 ; CHECK-NEXT:    ret
   %t0 = add i32 %a0, %a1
@@ -739,10 +739,10 @@ define i64 @test_reassoc_mul_i64(i64 %a0, i64 %a1, i64 %a2, i64 %a3) {
 define i8 @test_reassoc_minu_i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3) {
 ; CHECK-LABEL: test_reassoc_minu_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi a3, a3, 255
-; CHECK-NEXT:    andi a1, a1, 255
-; CHECK-NEXT:    andi a0, a0, 255
-; CHECK-NEXT:    andi a2, a2, 255
+; CHECK-NEXT:    zext.b a3, a3
+; CHECK-NEXT:    zext.b a1, a1
+; CHECK-NEXT:    zext.b a0, a0
+; CHECK-NEXT:    zext.b a2, a2
 ; CHECK-NEXT:    minu a0, a0, a1
 ; CHECK-NEXT:    minu a1, a2, a3
 ; CHECK-NEXT:    minu a0, a0, a1
@@ -867,10 +867,10 @@ define i64 @test_reassoc_min_i64(i64 %a0, i64 %a1, i64 %a2, i64 %a3) {
 define i8 @test_reassoc_maxu_i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3) {
 ; CHECK-LABEL: test_reassoc_maxu_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi a3, a3, 255
-; CHECK-NEXT:    andi a1, a1, 255
-; CHECK-NEXT:    andi a0, a0, 255
-; CHECK-NEXT:    andi a2, a2, 255
+; CHECK-NEXT:    zext.b a3, a3
+; CHECK-NEXT:    zext.b a1, a1
+; CHECK-NEXT:    zext.b a0, a0
+; CHECK-NEXT:    zext.b a2, a2
 ; CHECK-NEXT:    maxu a0, a0, a1
 ; CHECK-NEXT:    maxu a1, a2, a3
 ; CHECK-NEXT:    maxu a0, a0, a1

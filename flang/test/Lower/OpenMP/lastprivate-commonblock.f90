@@ -22,7 +22,7 @@
 !CHECK:          %[[V_GT:.*]] = arith.cmpi sgt, %[[V]], %{{.*}} : i32
 !CHECK:          %[[LAST_ITER:.*]] = arith.select %[[NEG_STEP]], %[[V_LT]], %[[V_GT]] : i1
 !CHECK:          fir.if %[[LAST_ITER]] {
-!CHECK:            fir.store %[[V]] to %{{.*}} : !fir.ref<i32>
+!CHECK:            hlfir.assign %[[V]] to %{{.*}} : i32, !fir.ref<i32>
 !CHECK:            %[[PRIVATE_X_VAL:.*]] = fir.load %[[PRIVATE_X_DECL]]#0 : !fir.ref<f32>
 !CHECK:            hlfir.assign %[[PRIVATE_X_VAL]] to %[[X_DECL]]#0 : f32, !fir.ref<f32>
 !CHECK:            %[[PRIVATE_Y_VAL:.*]] = fir.load %[[PRIVATE_Y_DECL]]#0 : !fir.ref<f32>

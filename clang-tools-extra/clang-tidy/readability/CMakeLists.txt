@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangTidyReadabilityModule STATIC
+  AmbiguousSmartptrResetCallCheck.cpp
   AvoidConstParamsInDecls.cpp
   AvoidNestedConditionalOperatorCheck.cpp
   AvoidReturnWithVoidValueCheck.cpp
@@ -57,6 +58,7 @@ add_clang_library(clangTidyReadabilityModule STATIC
   UniqueptrDeleteReleaseCheck.cpp
   UppercaseLiteralSuffixCheck.cpp
   UseAnyOfAllOfCheck.cpp
+  UseConcisePreprocessorDirectivesCheck.cpp
   UseStdMinMaxCheck.cpp
 
   LINK_LIBS

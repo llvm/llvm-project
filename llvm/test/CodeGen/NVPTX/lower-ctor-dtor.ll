@@ -84,11 +84,4 @@ define internal void @bar() {
 ; CHECK:       while.end:
 ; CHECK-NEXT:    ret void
 
-; CHECK: attributes #[[ATTR0]] = { "nvvm.maxclusterrank"="1" }
-
-; CHECK: [[META1:![0-9]+]] = !{ptr @"nvptx$device$init", !"maxntidx", i32 1}
-; CHECK: [[META2:![0-9]+]] = !{ptr @"nvptx$device$init", !"maxntidy", i32 1}
-; CHECK: [[META3:![0-9]+]] = !{ptr @"nvptx$device$init", !"maxntidz", i32 1}
-; CHECK: [[META4:![0-9]+]] = !{ptr @"nvptx$device$fini", !"maxntidx", i32 1}
-; CHECK: [[META5:![0-9]+]] = !{ptr @"nvptx$device$fini", !"maxntidy", i32 1}
-; CHECK: [[META6:![0-9]+]] = !{ptr @"nvptx$device$fini", !"maxntidz", i32 1}
+; CHECK: attributes #[[ATTR0]] = { "nvvm.maxclusterrank"="1" "nvvm.maxntid"="1" }

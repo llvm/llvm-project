@@ -172,3 +172,30 @@ def H_TestExtraClassAttr : TestAttr<"TestExtraClass"> {
 // DEF-LABEL: int TestExtraClassAttr::getFoo(int i) {
 // DEF: return i+1;
 // DEF-NEXT: }
+
+def I_TestGenMnemonicAliasAttr : TestAttr<"TestGenMnemonicAlias"> {
+  let mnemonic = "test_gen_mnemonic_alias";
+  let genMnemonicAlias = 1;
+}
+
+// DECL-LABEL: class TestGenMnemonicAliasAttr : public ::mlir::Attribute
+// DECL-SAME: ::mlir::OpAsmAttrInterface::Trait
+// DECL: ::mlir::OpAsmAliasResult getAlias(::llvm::raw_ostream &os) const;
+
+// DEF-LABEL: ::mlir::OpAsmAliasResult TestGenMnemonicAliasAttr::getAlias(::llvm::raw_ostream &os) const {
+// DEF-NEXT: os << "test_gen_mnemonic_alias";
+// DEF-NEXT: return ::mlir::OpAsmAliasResult::OverridableAlias;
+// DEF-NEXT: }
+
+def J_CustomStorageCtorAttr : AttrDef<Test_Dialect, "CustomStorageCtorAttr"> {
+  let attrName = "test_custom_storage_ctor_attr";
+  let parameters = (ins "bool":$flag);
+  let hasStorageCustomConstructor = 1;
+}
+
+// Note: ';' at the end of construct method declaration is important - otherwise
+// one cannot provide custom definition
+
+// DEF-LABEL: struct CustomStorageCtorAttrAttrStorage : public ::mlir::AttributeStorage
+// DEF: static CustomStorageCtorAttrAttrStorage *construct
+// DEF-SAME: (::mlir::AttributeStorageAllocator &allocator, KeyTy &&tblgenKey);

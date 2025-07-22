@@ -201,7 +201,14 @@ def executeShCmd(cmd, shenv, results, timeout=0):
     timeoutHelper = TimeoutHelper(timeout)
     if timeout > 0:
         timeoutHelper.startTimer()
-    finalExitCode = _executeShCmd(cmd, shenv, results, timeoutHelper)
+    try:
+        finalExitCode = _executeShCmd(cmd, shenv, results, timeoutHelper)
+    except InternalShellError:
+        e = sys.exc_info()[1]
+        finalExitCode = 127
+        results.append(
+            ShellCommandResult(e.command, "", e.message, finalExitCode, False)
+        )
     timeoutHelper.cancel()
     timeoutInfo = None
     if timeoutHelper.timeoutReached():
@@ -1105,15 +1112,10 @@ def executeScriptInternal(
 
     results = []
     timeoutInfo = None
-    try:
-        shenv = ShellEnvironment(cwd, test.config.environment)
-        exitCode, timeoutInfo = executeShCmd(
-            cmd, shenv, results, timeout=litConfig.maxIndividualTestTime
-        )
-    except InternalShellError:
-        e = sys.exc_info()[1]
-        exitCode = 127
-        results.append(ShellCommandResult(e.command, "", e.message, exitCode, False))
+    shenv = ShellEnvironment(cwd, test.config.environment)
+    exitCode, timeoutInfo = executeShCmd(
+        cmd, shenv, results, timeout=litConfig.maxIndividualTestTime
+    )
 
     out = err = ""
     for i, result in enumerate(results):
@@ -1231,7 +1233,7 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
                 # the shell's execution trace for the 'set' commands by
                 # redirecting their stderr to /dev/null.
                 if command:
-                    msg = f"'{dbg}': {shlex.quote(command.lstrip())}"
+                    msg = f"{shlex.quote(command.lstrip())} \\# '{dbg}'"
                 else:
                     msg = f"'{dbg}' has no command after substitutions"
                 commands[i] = (
@@ -2290,7 +2292,9 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
     if err:
         output += """Command Output (stderr):\n--\n%s\n--\n""" % (err,)
 
-    return lit.Test.Result(status, output)
+    return lit.Test.Result(
+        status, output, attempts=i + 1, max_allowed_attempts=attempts
+    )
 
 
 def executeShTest(

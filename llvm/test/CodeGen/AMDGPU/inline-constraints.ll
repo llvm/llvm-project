@@ -295,13 +295,13 @@ define i32 @inline_A_constraint_V1() {
 
 ; NOGCN: error: invalid operand for inline asm constraint 'A'
 define i32 @inline_A_constraint_V2() {
-  %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(<2 x i16> <i16 -4, i16 undef>)
+  %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(<2 x i16> <i16 -4, i16 poison>)
   ret i32 %v0
 }
 
 ; NOGCN: error: invalid operand for inline asm constraint 'A'
 define i32 @inline_A_constraint_V3() {
-  %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(<2 x half> <half undef, half -0.5>)
+  %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(<2 x half> <half poison, half -0.5>)
   ret i32 %v0
 }
 
@@ -456,7 +456,7 @@ define i32 @inline_I_constraint_V1() {
 
 ; NOGCN: error: invalid operand for inline asm constraint 'I'
 define i32 @inline_I_constraint_V2() {
-  %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,I"(<2 x i16> <i16 -4, i16 undef>)
+  %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,I"(<2 x i16> <i16 -4, i16 poison>)
   ret i32 %v0
 }
 
@@ -1160,7 +1160,7 @@ define i32 @inline_DA_constraint_V1() {
 
 ; NOGCN: error: invalid operand for inline asm constraint 'DA'
 define i32 @inline_DA_constraint_V2() {
-  %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,^DA"(<2 x i16> <i16 -4, i16 undef>)
+  %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,^DA"(<2 x i16> <i16 -4, i16 poison>)
   ret i32 %v0
 }
 

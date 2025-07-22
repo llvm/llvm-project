@@ -51,6 +51,17 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_string<std::basic_string<char, std::char_traits<char>, safe_allocator<char> > >();
 #endif
 
+  { // check that growing to max_size() works
+    using string_type = std::basic_string<char, std::char_traits<char>, tiny_size_allocator<29, char> >;
+    string_type str;
+    str.resize(str.max_size() - 1);
+    string_type result = str + 'a';
+
+    assert(result.size() == result.max_size());
+    assert(result.back() == 'a');
+    assert(result.capacity() <= result.get_allocator().max_size());
+  }
+
   return true;
 }
 

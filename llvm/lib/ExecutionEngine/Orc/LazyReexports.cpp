@@ -323,7 +323,7 @@ void LazyReexportsManager::handleTransferResources(JITDylib &JD,
     } else {
       auto &SrcAddrs = I->second;
       auto &DstAddrs = J->second;
-      DstAddrs.insert(DstAddrs.end(), SrcAddrs.begin(), SrcAddrs.end());
+      llvm::append_range(DstAddrs, SrcAddrs);
       KeyToReentryAddrs.erase(I);
     }
     if (L)
@@ -387,7 +387,7 @@ void LazyReexportsManager::emitRedirectableSymbols(
   SymbolMap Redirs;
   size_t I = 0;
   for (auto &[Name, AI] : Reexports)
-    Redirs[Name] = (*ReentryPoints)[I++];
+    Redirs[Name] = {(*ReentryPoints)[I++].getAddress(), AI.AliasFlags};
 
   I = 0;
   if (!Reexports.empty()) {
@@ -503,7 +503,7 @@ void SimpleLazyReexportsSpeculator::onLazyReexportsTransfered(
   } else {
     auto &SrcNames = J->second;
     auto &DstNames = K->second;
-    DstNames.insert(DstNames.end(), SrcNames.begin(), SrcNames.end());
+    llvm::append_range(DstNames, SrcNames);
     MapForJD.erase(J);
   }
 }

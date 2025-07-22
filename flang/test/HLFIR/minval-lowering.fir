@@ -86,7 +86,7 @@ func.func @_QPminval3(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"},
 // CHECK-DAG:     %[[ARRAY:.*]]:2 = hlfir.declare %[[ARG0]]
 // CHECK-DAG:     %[[RES:.*]]:2 = hlfir.declare %[[ARG1]]
 // CHECK-DAG:     %[[MASK:.*]]:2 = hlfir.declare %[[ARG2]]
-// CHECK-DAG:     %[[MASK_BOX:.*]] = fir.embox %[[MASK]]#1 : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>
+// CHECK-DAG:     %[[MASK_BOX:.*]] = fir.embox %[[MASK]]#0 : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>
 // CHECK-DAG:     %[[ARRAY_ARG:.*]] = fir.convert %[[ARRAY]]#1 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 // CHECK-DAG:     %[[MASK_ARG:.*]] = fir.convert %[[MASK_BOX]] : (!fir.box<!fir.logical<4>>) -> !fir.box<none>
 // CHECK:         %[[RET:.*]] = fir.call @_FortranAMinvalInteger4(%[[ARRAY_ARG]], %[[LOC_STR:.*]], %[[LOC_N:.*]], %[[INT:.*]], %[[MASK_ARG]]) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
@@ -168,7 +168,7 @@ func.func @_QPminval5(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "s"})
 
 // CHECK-DAG:     %[[ARRAY_ADDR:.*]] = fir.address_of
 // CHECK-DAG:     %[[ARRAY_VAR:.*]]:2 = hlfir.declare %[[ARRAY_ADDR]](%[[ARRAY_SHAPE:.*]])
-// CHECK-DAG:     %[[ARRAY_BOX:.*]] = fir.embox %[[ARRAY_VAR]]#1(%[[ARRAY_SHAPE:.*]])
+// CHECK-DAG:     %[[ARRAY_BOX:.*]] = fir.embox %[[ARRAY_VAR]]#0(%[[ARRAY_SHAPE:.*]])
 
 // CHECK-DAG:     %[[DIM:.*]] = arith.constant 1 : i32
 

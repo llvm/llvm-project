@@ -139,6 +139,7 @@ public:
   }
 
   /// Get the pointer where source information is stored.
+  // FIXME: This should provide a type-safe interface.
   void *getOpaqueData() const {
     return Data;
   }
@@ -827,7 +828,7 @@ public:
   }
 
   ArrayRef<SourceLocation> getProtocolLocs() const {
-    return llvm::ArrayRef(getProtocolLocArray(), getNumProtocols());
+    return {getProtocolLocArray(), getNumProtocols()};
   }
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc);
@@ -972,6 +973,25 @@ public:
   }
 };
 
+struct HLSLInlineSpirvTypeLocInfo {
+  SourceLocation Loc;
+}; // Nothing.
+
+class HLSLInlineSpirvTypeLoc
+    : public ConcreteTypeLoc<UnqualTypeLoc, HLSLInlineSpirvTypeLoc,
+                             HLSLInlineSpirvType, HLSLInlineSpirvTypeLocInfo> {
+public:
+  SourceLocation getSpirvTypeLoc() const { return getLocalData()->Loc; }
+  void setSpirvTypeLoc(SourceLocation loc) const { getLocalData()->Loc = loc; }
+
+  SourceRange getLocalSourceRange() const {
+    return SourceRange(getSpirvTypeLoc(), getSpirvTypeLoc());
+  }
+  void initializeLocal(ASTContext &Context, SourceLocation loc) {
+    setSpirvTypeLoc(loc);
+  }
+};
+
 struct ObjCObjectTypeLocInfo {
   SourceLocation TypeArgsLAngleLoc;
   SourceLocation TypeArgsRAngleLoc;
@@ -1068,7 +1088,7 @@ public:
 
 
   ArrayRef<SourceLocation> getProtocolLocs() const {
-    return llvm::ArrayRef(getProtocolLocArray(), getNumProtocols());
+    return {getProtocolLocArray(), getNumProtocols()};
   }
 
   bool hasBaseTypeAsWritten() const {
@@ -1355,7 +1375,7 @@ public:
 };
 
 struct MemberPointerLocInfo : public PointerLikeLocInfo {
-  TypeSourceInfo *ClassTInfo;
+  void *QualifierData = nullptr;
 };
 
 /// Wrapper for source info for member pointers.
@@ -1371,28 +1391,32 @@ public:
     setSigilLoc(Loc);
   }
 
-  const Type *getClass() const {
-    return getTypePtr()->getClass();
+  NestedNameSpecifierLoc getQualifierLoc() const {
+    return NestedNameSpecifierLoc(getTypePtr()->getQualifier(),
+                                  getLocalData()->QualifierData);
   }
 
-  TypeSourceInfo *getClassTInfo() const {
-    return getLocalData()->ClassTInfo;
-  }
-
-  void setClassTInfo(TypeSourceInfo* TI) {
-    getLocalData()->ClassTInfo = TI;
+  void setQualifierLoc(NestedNameSpecifierLoc QualifierLoc) {
+    assert(QualifierLoc.getNestedNameSpecifier() ==
+               getTypePtr()->getQualifier() &&
+           "Inconsistent nested-name-specifier pointer");
+    getLocalData()->QualifierData = QualifierLoc.getOpaqueData();
   }
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc) {
     setSigilLoc(Loc);
-    setClassTInfo(nullptr);
+    if (auto *Qualifier = getTypePtr()->getQualifier()) {
+      NestedNameSpecifierLocBuilder Builder;
+      Builder.MakeTrivial(Context, Qualifier, Loc);
+      setQualifierLoc(Builder.getWithLocInContext(Context));
+    } else
+      getLocalData()->QualifierData = nullptr;
   }
 
   SourceRange getLocalSourceRange() const {
-    if (TypeSourceInfo *TI = getClassTInfo())
-      return SourceRange(TI->getTypeLoc().getBeginLoc(), getStarLoc());
-    else
-      return SourceRange(getStarLoc());
+    if (NestedNameSpecifierLoc QL = getQualifierLoc())
+      return SourceRange(QL.getBeginLoc(), getStarLoc());
+    return SourceRange(getStarLoc());
   }
 };
 
@@ -1521,7 +1545,7 @@ public:
   }
 
   ArrayRef<ParmVarDecl *> getParams() const {
-    return llvm::ArrayRef(getParmArray(), getNumParams());
+    return {getParmArray(), getNumParams()};
   }
 
   // ParmVarDecls* are stored after Info, one for each parameter.
@@ -2497,8 +2521,9 @@ public:
     if (!getLocalData()->QualifierData)
       return NestedNameSpecifierLoc();
 
-    return NestedNameSpecifierLoc(getTypePtr()->getQualifier(),
-                                  getLocalData()->QualifierData);
+    return NestedNameSpecifierLoc(
+        getTypePtr()->getDependentTemplateName().getQualifier(),
+        getLocalData()->QualifierData);
   }
 
   void setQualifierLoc(NestedNameSpecifierLoc QualifierLoc) {
@@ -2511,8 +2536,8 @@ public:
       return;
     }
 
-    assert(QualifierLoc.getNestedNameSpecifier()
-                                        == getTypePtr()->getQualifier() &&
+    assert(QualifierLoc.getNestedNameSpecifier() ==
+               getTypePtr()->getDependentTemplateName().getQualifier() &&
            "Inconsistent nested-name-specifier pointer");
     getLocalData()->QualifierData = QualifierLoc.getOpaqueData();
   }
@@ -2756,6 +2781,16 @@ public:
   SourceRange getSourceRange() const LLVM_READONLY {
     return SourceRange(Loc, Loc);
   }
+};
+
+struct PredefinedSugarTypeLocInfo {}; // Nothing.
+
+class PredefinedSugarTypeLoc final
+    : public ConcreteTypeLoc<UnqualTypeLoc, PredefinedSugarTypeLoc,
+                             PredefinedSugarType, PredefinedSugarTypeLocInfo> {
+public:
+  void initializeLocal(ASTContext &Context, SourceLocation loc) {}
+  SourceRange getLocalSourceRange() const { return {}; }
 };
 
 } // namespace clang

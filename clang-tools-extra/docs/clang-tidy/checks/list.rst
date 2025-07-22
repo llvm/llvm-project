@@ -84,6 +84,7 @@ Clang-Tidy Checks
    :doc:`bugprone-bitwise-pointer-cast <bugprone/bitwise-pointer-cast>`,
    :doc:`bugprone-bool-pointer-implicit-conversion <bugprone/bool-pointer-implicit-conversion>`, "Yes"
    :doc:`bugprone-branch-clone <bugprone/branch-clone>`,
+   :doc:`bugprone-capturing-this-in-member-variable <bugprone/capturing-this-in-member-variable>`,
    :doc:`bugprone-casting-through-void <bugprone/casting-through-void>`,
    :doc:`bugprone-chained-comparison <bugprone/chained-comparison>`,
    :doc:`bugprone-compare-pointer-to-member-virtual-function <bugprone/compare-pointer-to-member-virtual-function>`,
@@ -108,6 +109,7 @@ Clang-Tidy Checks
    :doc:`bugprone-lambda-function-name <bugprone/lambda-function-name>`,
    :doc:`bugprone-macro-parentheses <bugprone/macro-parentheses>`, "Yes"
    :doc:`bugprone-macro-repeated-side-effects <bugprone/macro-repeated-side-effects>`,
+   :doc:`bugprone-misleading-setter-of-reference <bugprone/misleading-setter-of-reference>`,
    :doc:`bugprone-misplaced-operator-in-strlen-in-alloc <bugprone/misplaced-operator-in-strlen-in-alloc>`, "Yes"
    :doc:`bugprone-misplaced-pointer-arithmetic-in-alloc <bugprone/misplaced-pointer-arithmetic-in-alloc>`, "Yes"
    :doc:`bugprone-misplaced-widening-cast <bugprone/misplaced-widening-cast>`,
@@ -158,6 +160,7 @@ Clang-Tidy Checks
    :doc:`bugprone-undelegated-constructor <bugprone/undelegated-constructor>`,
    :doc:`bugprone-unhandled-exception-at-new <bugprone/unhandled-exception-at-new>`,
    :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,
+   :doc:`bugprone-unintended-char-ostream-output <bugprone/unintended-char-ostream-output>`, "Yes"
    :doc:`bugprone-unique-ptr-array-mismatch <bugprone/unique-ptr-array-mismatch>`, "Yes"
    :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
    :doc:`bugprone-unused-local-non-trivial-variable <bugprone/unused-local-non-trivial-variable>`,
@@ -209,6 +212,7 @@ Clang-Tidy Checks
    :doc:`cppcoreguidelines-rvalue-reference-param-not-moved <cppcoreguidelines/rvalue-reference-param-not-moved>`,
    :doc:`cppcoreguidelines-slicing <cppcoreguidelines/slicing>`,
    :doc:`cppcoreguidelines-special-member-functions <cppcoreguidelines/special-member-functions>`,
+   :doc:`cppcoreguidelines-use-enum-class <cppcoreguidelines/use-enum-class>`,
    :doc:`cppcoreguidelines-virtual-class-destructor <cppcoreguidelines/virtual-class-destructor>`, "Yes"
    :doc:`darwin-avoid-spinlock <darwin/avoid-spinlock>`,
    :doc:`darwin-dispatch-once-nonstatic <darwin/dispatch-once-nonstatic>`, "Yes"
@@ -246,6 +250,7 @@ Clang-Tidy Checks
    :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
    :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals <llvm/prefer-isa-or-dyn-cast-in-conditionals>`, "Yes"
    :doc:`llvm-prefer-register-over-unsigned <llvm/prefer-register-over-unsigned>`, "Yes"
+   :doc:`llvm-prefer-static-over-anonymous-namespace <llvm/prefer-static-over-anonymous-namespace>`,
    :doc:`llvm-twine-local <llvm/twine-local>`, "Yes"
    :doc:`llvmlibc-callee-namespace <llvmlibc/callee-namespace>`,
    :doc:`llvmlibc-implementation-in-namespace <llvmlibc/implementation-in-namespace>`,
@@ -308,6 +313,7 @@ Clang-Tidy Checks
    :doc:`modernize-use-nullptr <modernize/use-nullptr>`, "Yes"
    :doc:`modernize-use-override <modernize/use-override>`, "Yes"
    :doc:`modernize-use-ranges <modernize/use-ranges>`, "Yes"
+   :doc:`modernize-use-scoped-lock <modernize/use-scoped-lock>`, "Yes"
    :doc:`modernize-use-starts-ends-with <modernize/use-starts-ends-with>`, "Yes"
    :doc:`modernize-use-std-format <modernize/use-std-format>`, "Yes"
    :doc:`modernize-use-std-numbers <modernize/use-std-numbers>`, "Yes"
@@ -348,10 +354,12 @@ Clang-Tidy Checks
    :doc:`performance-type-promotion-in-math-fn <performance/type-promotion-in-math-fn>`, "Yes"
    :doc:`performance-unnecessary-copy-initialization <performance/unnecessary-copy-initialization>`, "Yes"
    :doc:`performance-unnecessary-value-param <performance/unnecessary-value-param>`, "Yes"
+   :doc:`portability-avoid-pragma-once <portability/avoid-pragma-once>`,
    :doc:`portability-restrict-system-includes <portability/restrict-system-includes>`, "Yes"
    :doc:`portability-simd-intrinsics <portability/simd-intrinsics>`,
    :doc:`portability-std-allocator-const <portability/std-allocator-const>`,
    :doc:`portability-template-virtual-member-function <portability/template-virtual-member-function>`,
+   :doc:`readability-ambiguous-smartptr-reset-call <readability/ambiguous-smartptr-reset-call>`, "Yes"
    :doc:`readability-avoid-const-params-in-decls <readability/avoid-const-params-in-decls>`, "Yes"
    :doc:`readability-avoid-nested-conditional-operator <readability/avoid-nested-conditional-operator>`,
    :doc:`readability-avoid-return-with-void-value <readability/avoid-return-with-void-value>`, "Yes"
@@ -403,6 +411,7 @@ Clang-Tidy Checks
    :doc:`readability-uniqueptr-delete-release <readability/uniqueptr-delete-release>`, "Yes"
    :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
    :doc:`readability-use-anyofallof <readability/use-anyofallof>`,
+   :doc:`readability-use-concise-preprocessor-directives <readability/use-concise-preprocessor-directives>`, "Yes"
    :doc:`readability-use-std-min-max <readability/use-std-min-max>`, "Yes"
    :doc:`zircon-temporary-objects <zircon/temporary-objects>`,
 

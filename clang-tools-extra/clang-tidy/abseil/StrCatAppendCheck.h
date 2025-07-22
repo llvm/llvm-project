@@ -14,7 +14,7 @@
 namespace clang::tidy::abseil {
 
 /// Flags uses of absl::StrCat to append to a string. Suggests absl::StrAppend
-/// should be used instead. 
+/// should be used instead.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/abseil/str-cat-append.html

@@ -11,10 +11,10 @@ end
 !UNPARSE: !$OMP DEPOBJ(x) DEPEND(IN: y)
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPDepobjConstruct
-!PARSE-TREE: | Verbatim
-!PARSE-TREE: | OmpObject -> Designator -> DataRef -> Name = 'x'
-!PARSE-TREE: | OmpClause -> Depend -> OmpDependClause -> TaskDep
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPDepobjConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = depobj
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | OmpClauseList -> OmpClause -> Depend -> OmpDependClause -> TaskDep
 !PARSE-TREE: | | Modifier -> OmpTaskDependenceType -> Value = In
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'y'
 
@@ -28,10 +28,10 @@ end
 !UNPARSE: !$OMP DEPOBJ(x) UPDATE(OUT)
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPDepobjConstruct
-!PARSE-TREE: | Verbatim
-!PARSE-TREE: | OmpObject -> Designator -> DataRef -> Name = 'x'
-!PARSE-TREE: | OmpClause -> Update -> OmpUpdateClause -> OmpTaskDependenceType -> Value = Out
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPDepobjConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = depobj
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | OmpClauseList -> OmpClause -> Update -> OmpUpdateClause -> OmpTaskDependenceType -> Value = Out
 
 subroutine f02
   integer :: x
@@ -43,10 +43,10 @@ end
 !UNPARSE: !$OMP DEPOBJ(x) DESTROY(x)
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPDepobjConstruct
-!PARSE-TREE: | Verbatim
-!PARSE-TREE: | OmpObject -> Designator -> DataRef -> Name = 'x'
-!PARSE-TREE: | OmpClause -> Destroy -> OmpDestroyClause -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPDepobjConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = depobj
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | OmpClauseList -> OmpClause -> Destroy -> OmpDestroyClause -> OmpObject -> Designator -> DataRef -> Name = 'x'
 
 subroutine f03
   integer :: x
@@ -58,7 +58,7 @@ end
 !UNPARSE: !$OMP DEPOBJ(x) DESTROY
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPDepobjConstruct
-!PARSE-TREE: | Verbatim
-!PARSE-TREE: | OmpObject -> Designator -> DataRef -> Name = 'x'
-!PARSE-TREE: | OmpClause -> Destroy ->
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPDepobjConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = depobj
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | OmpClauseList -> OmpClause -> Destroy ->

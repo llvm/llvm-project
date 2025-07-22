@@ -49,10 +49,11 @@ struct ProcessMultiIndexOpLowering
 
     ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
     builder.setInsertionPointAfter(op.getOperation());
-    Value linearIndex = builder.create<ProcessLinearIndexOp>(mesh);
-    ValueRange meshShape = builder.create<MeshShapeOp>(mesh).getResults();
+    Value linearIndex = ProcessLinearIndexOp::create(builder, mesh);
+    ValueRange meshShape = MeshShapeOp::create(builder, mesh).getResults();
     SmallVector<Value> completeMultiIndex =
-        builder.create<affine::AffineDelinearizeIndexOp>(linearIndex, meshShape)
+        affine::AffineDelinearizeIndexOp::create(builder, linearIndex,
+                                                 meshShape)
             .getMultiIndex();
     SmallVector<Value> multiIndex;
     ArrayRef<MeshAxis> opMeshAxes = op.getAxes();
@@ -101,32 +102,33 @@ struct AllSliceOpLowering
     ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
     builder.setInsertionPointAfter(op.getOperation());
 
-    Value zero = builder.create<arith::ConstantOp>(builder.getIndexAttr(0));
+    Value zero = arith::ConstantOp::create(builder, builder.getIndexAttr(0));
 
     Operation::result_range processInGroupMultiIndex =
-        builder.create<ProcessMultiIndexOp>(mesh.getSymName(), op.getMeshAxes())
+        ProcessMultiIndexOp::create(builder, mesh.getSymName(),
+                                    op.getMeshAxes())
             .getResults();
 
     Operation::result_range processGroupShape =
-        builder.create<MeshShapeOp>(mesh.getSymName(), op.getMeshAxes())
+        MeshShapeOp::create(builder, mesh.getSymName(), op.getMeshAxes())
             .getResult();
     Value processGroupSize =
         createCollectiveProcessGroupSize(mesh, op.getMeshAxes(), builder);
 
     int64_t sliceAxis = op.getSliceAxis().getSExtValue();
     Value operandSliceAxisSize =
-        builder.create<tensor::DimOp>(op.getOperand(), sliceAxis);
+        tensor::DimOp::create(builder, op.getOperand(), sliceAxis);
     Value operandSliceAxisSizeModProcessGroupSize =
-        builder.create<arith::RemUIOp>(operandSliceAxisSize, processGroupSize);
-    Value isTargetShapeExactlyDivisible = builder.create<arith::CmpIOp>(
-        arith::CmpIPredicate::eq, operandSliceAxisSizeModProcessGroupSize,
-        zero);
-    builder.create<cf::AssertOp>(isTargetShapeExactlyDivisible,
-                                 "Slicing a tensor with axis size that is "
-                                 "not exactly divisible by the "
-                                 "mesh process group size is not supported.");
+        arith::RemUIOp::create(builder, operandSliceAxisSize, processGroupSize);
+    Value isTargetShapeExactlyDivisible =
+        arith::CmpIOp::create(builder, arith::CmpIPredicate::eq,
+                              operandSliceAxisSizeModProcessGroupSize, zero);
+    cf::AssertOp::create(builder, isTargetShapeExactlyDivisible,
+                         "Slicing a tensor with axis size that is "
+                         "not exactly divisible by the "
+                         "mesh process group size is not supported.");
     Value resultSliceAxisSize =
-        builder.create<arith::DivUIOp>(operandSliceAxisSize, processGroupSize);
+        arith::DivUIOp::create(builder, operandSliceAxisSize, processGroupSize);
     OpFoldResult processInGroupLinearIndex = affine::linearizeIndex(
         llvm::to_vector_of<OpFoldResult>(processInGroupMultiIndex),
         llvm::to_vector_of<OpFoldResult>(processGroupShape), builder);
@@ -139,7 +141,7 @@ struct AllSliceOpLowering
       if (i == sliceAxis) {
         sizes.emplace_back(resultSliceAxisSize);
       } else {
-        Value dimSize = builder.create<tensor::DimOp>(op.getOperand(), i);
+        Value dimSize = tensor::DimOp::create(builder, op.getOperand(), i);
         sizes.emplace_back(dimSize);
       }
     }
@@ -152,10 +154,10 @@ struct AllSliceOpLowering
                  resultSliceAxisSize);
     SmallVector<OpFoldResult> strides(
         operandType.getRank(), getAsIndexOpFoldResult(builder.getContext(), 1));
-    Value slice = builder.create<tensor::ExtractSliceOp>(
-        op.getOperand(), offsets, sizes, strides);
+    Value slice = tensor::ExtractSliceOp::create(builder, op.getOperand(),
+                                                 offsets, sizes, strides);
     Value newResult =
-        builder.create<tensor::CastOp>(op.getResult().getType(), slice);
+        tensor::CastOp::create(builder, op.getResult().getType(), slice);
     rewriter.replaceAllUsesWith(op.getResult(), newResult);
 
     return success();
@@ -201,23 +203,34 @@ TypedValue<IndexType>
 createCollectiveProcessGroupSize(MeshOp mesh, ArrayRef<MeshAxis> axes,
                                  ImplicitLocOpBuilder &builder) {
   Operation::result_range meshShape =
-      builder.create<mesh::MeshShapeOp>(mesh, axes).getResults();
+      mesh::MeshShapeOp::create(builder, mesh, axes).getResults();
   return cast<TypedValue<IndexType>>(arith::createProduct(
       builder, builder.getLoc(), llvm::to_vector_of<Value>(meshShape),
       builder.getIndexType()));
 }
 
-TypedValue<IndexType> createProcessLinearIndex(StringRef mesh,
-                                               ArrayRef<MeshAxis> meshAxes,
-                                               ImplicitLocOpBuilder &builder) {
-  ResultRange processInGroupMultiIndex =
-      builder.create<ProcessMultiIndexOp>(mesh, meshAxes).getResults();
+TypedValue<IndexType>
+createProcessLinearIndex(StringRef mesh, ValueRange processInGroupMultiIndex,
+                         ArrayRef<MeshAxis> meshAxes,
+                         ImplicitLocOpBuilder &builder) {
   Operation::result_range processGroupShape =
-      builder.create<MeshShapeOp>(mesh, meshAxes).getResult();
+      MeshShapeOp::create(builder, mesh, meshAxes).getResult();
   OpFoldResult processInGroupLinearIndex = affine::linearizeIndex(
       llvm::to_vector_of<OpFoldResult>(processInGroupMultiIndex),
       llvm::to_vector_of<OpFoldResult>(processGroupShape), builder);
-  return cast<TypedValue<IndexType>>(cast<Value>(processInGroupLinearIndex));
+  auto res = dyn_cast<Value>(processInGroupLinearIndex);
+  if (!res)
+    res = arith::ConstantIndexOp::create(
+        builder,
+        cast<IntegerAttr>(cast<Attribute>(processInGroupLinearIndex)).getInt());
+  return cast<TypedValue<IndexType>>(res);
 }
 
+TypedValue<IndexType> createProcessLinearIndex(StringRef mesh,
+                                               ArrayRef<MeshAxis> meshAxes,
+                                               ImplicitLocOpBuilder &builder) {
+  return createProcessLinearIndex(
+      mesh, ProcessMultiIndexOp::create(builder, mesh, meshAxes).getResults(),
+      meshAxes, builder);
+}
 } // namespace mlir::mesh

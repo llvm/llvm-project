@@ -115,8 +115,9 @@ def OpWithOptionalPropsAndAttrs :
 
 // DEFS-LABEL: OpWithProps::computePropertiesHash
 // DEFS: hash_intArray
-// DEFS-NEXT: return ::llvm::hash_value(::llvm::ArrayRef<int64_t>{propStorage})
-// DEFS: ::llvm::hash_value(prop.optional)
+// DEFS: using ::llvm::hash_value;
+// DEFS-NEXT: return hash_value(::llvm::ArrayRef<int64_t>{propStorage})
+// DEFS: hash_value(prop.optional)
 // DEFS: hash_intArray(prop.intArray)
 
 // -----

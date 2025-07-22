@@ -28,7 +28,6 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
@@ -49,7 +48,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
-#include <functional>
 #include <iterator>
 #include <optional>
 #include <string>
@@ -60,6 +58,9 @@ using namespace clang;
 using namespace ento;
 
 #define DEBUG_TYPE "MemRegion"
+
+REGISTER_MAP_WITH_PROGRAMSTATE(MemSpacesMap, const MemRegion *,
+                               const MemSpaceRegion *)
 
 //===----------------------------------------------------------------------===//
 // MemRegion Construction.
@@ -163,20 +164,20 @@ MemRegionManager &SubRegion::getMemRegionManager() const {
 }
 
 const StackFrameContext *VarRegion::getStackFrame() const {
-  const auto *SSR = dyn_cast<StackSpaceRegion>(getMemorySpace());
+  const auto *SSR = dyn_cast<StackSpaceRegion>(getRawMemorySpace());
   return SSR ? SSR->getStackFrame() : nullptr;
 }
 
 const StackFrameContext *
 CXXLifetimeExtendedObjectRegion::getStackFrame() const {
-  const auto *SSR = dyn_cast<StackSpaceRegion>(getMemorySpace());
+  const auto *SSR = dyn_cast<StackSpaceRegion>(getRawMemorySpace());
   return SSR ? SSR->getStackFrame() : nullptr;
 }
 
 const StackFrameContext *CXXTempObjectRegion::getStackFrame() const {
-  assert(isa<StackSpaceRegion>(getMemorySpace()) &&
+  assert(isa<StackSpaceRegion>(getRawMemorySpace()) &&
          "A temporary object can only be allocated on the stack");
-  return cast<StackSpaceRegion>(getMemorySpace())->getStackFrame();
+  return cast<StackSpaceRegion>(getRawMemorySpace())->getStackFrame();
 }
 
 ObjCIvarRegion::ObjCIvarRegion(const ObjCIvarDecl *ivd, const SubRegion *sReg)
@@ -1021,6 +1022,22 @@ getStackOrCaptureRegionForDeclContext(const LocationContext *LC,
   return (const StackFrameContext *)nullptr;
 }
 
+static bool isStdStreamVar(const VarDecl *D) {
+  const IdentifierInfo *II = D->getIdentifier();
+  if (!II)
+    return false;
+  if (!D->getDeclContext()->isTranslationUnit())
+    return false;
+  StringRef N = II->getName();
+  QualType FILETy = D->getASTContext().getFILEType();
+  if (FILETy.isNull())
+    return false;
+  FILETy = FILETy.getCanonicalType();
+  QualType Ty = D->getType().getCanonicalType();
+  return Ty->isPointerType() && Ty->getPointeeType() == FILETy &&
+         (N == "stdin" || N == "stdout" || N == "stderr");
+}
+
 const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
                                                 const LocationContext *LC) {
   const auto *PVD = dyn_cast<ParmVarDecl>(D);
@@ -1053,10 +1070,18 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
     assert(!Ty.isNull());
     if (Ty.isConstQualified()) {
       sReg = getGlobalsRegion(MemRegion::GlobalImmutableSpaceRegionKind);
-    } else if (Ctx.getSourceManager().isInSystemHeader(D->getLocation())) {
-      sReg = getGlobalsRegion(MemRegion::GlobalSystemSpaceRegionKind);
     } else {
-      sReg = getGlobalsRegion(MemRegion::GlobalInternalSpaceRegionKind);
+      // Pointer value of C standard streams is usually not modified by calls
+      // to functions declared in system headers. This means that they should
+      // not get invalidated by calls to functions declared in system headers,
+      // so they are placed in the global internal space, which is not
+      // invalidated by calls to functions declared in system headers.
+      if (Ctx.getSourceManager().isInSystemHeader(D->getLocation()) &&
+          !isStdStreamVar(D)) {
+        sReg = getGlobalsRegion(MemRegion::GlobalSystemSpaceRegionKind);
+      } else {
+        sReg = getGlobalsRegion(MemRegion::GlobalInternalSpaceRegionKind);
+      }
     }
 
   // Finally handle static locals.
@@ -1347,7 +1372,7 @@ MemRegionManager::getAllocaRegion(const Expr *E, unsigned cnt,
   return getSubRegion<AllocaRegion>(E, cnt, getStackLocalsRegion(STC));
 }
 
-const MemSpaceRegion *MemRegion::getMemorySpace() const {
+const MemSpaceRegion *MemRegion::getRawMemorySpace() const {
   const MemRegion *R = this;
   const auto *SR = dyn_cast<SubRegion>(this);
 
@@ -1359,16 +1384,27 @@ const MemSpaceRegion *MemRegion::getMemorySpace() const {
   return cast<MemSpaceRegion>(R);
 }
 
-bool MemRegion::hasStackStorage() const {
-  return isa<StackSpaceRegion>(getMemorySpace());
+const MemSpaceRegion *MemRegion::getMemorySpace(ProgramStateRef State) const {
+  const MemRegion *MR = getBaseRegion();
+
+  const MemSpaceRegion *RawSpace = MR->getRawMemorySpace();
+  if (!isa<UnknownSpaceRegion>(RawSpace))
+    return RawSpace;
+
+  const MemSpaceRegion *const *AssociatedSpace = State->get<MemSpacesMap>(MR);
+  return AssociatedSpace ? *AssociatedSpace : RawSpace;
 }
 
-bool MemRegion::hasStackNonParametersStorage() const {
-  return isa<StackLocalsSpaceRegion>(getMemorySpace());
-}
+ProgramStateRef MemRegion::setMemorySpace(ProgramStateRef State,
+                                          const MemSpaceRegion *Space) const {
+  const MemRegion *Base = getBaseRegion();
 
-bool MemRegion::hasStackParametersStorage() const {
-  return isa<StackArgumentsSpaceRegion>(getMemorySpace());
+  // Shouldn't set unknown space.
+  assert(!isa<UnknownSpaceRegion>(Space));
+
+  // Currently, it we should have no accurate memspace for this region.
+  assert(Base->hasMemorySpace<UnknownSpaceRegion>(State));
+  return State->set<MemSpacesMap>(Base, Space);
 }
 
 // Strips away all elements and fields.

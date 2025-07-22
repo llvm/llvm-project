@@ -63,7 +63,7 @@ BoltProfile("b",
   cl::aliasopt(InputDataFilename),
   cl::cat(BoltCategory));
 
-cl::opt<std::string>
+static cl::opt<std::string>
     LogFile("log-file",
             cl::desc("redirect journaling to a file instead of stdout/stderr"),
             cl::Hidden, cl::cat(BoltCategory));
@@ -183,13 +183,15 @@ int main(int argc, char **argv) {
   std::string ToolPath = llvm::sys::fs::getMainExecutable(argv[0], nullptr);
 
   // Initialize targets and assembly printers/parsers.
-  llvm::InitializeAllTargetInfos();
-  llvm::InitializeAllTargetMCs();
-  llvm::InitializeAllAsmParsers();
-  llvm::InitializeAllDisassemblers();
+#define BOLT_TARGET(target)                                                    \
+  LLVMInitialize##target##TargetInfo();                                        \
+  LLVMInitialize##target##TargetMC();                                          \
+  LLVMInitialize##target##AsmParser();                                         \
+  LLVMInitialize##target##Disassembler();                                      \
+  LLVMInitialize##target##Target();                                            \
+  LLVMInitialize##target##AsmPrinter();
 
-  llvm::InitializeAllTargets();
-  llvm::InitializeAllAsmPrinters();
+#include "bolt/Core/TargetConfig.def"
 
   ToolName = argv[0];
 
@@ -235,6 +237,13 @@ int main(int argc, char **argv) {
       if (Error E = RIOrErr.takeError())
         report_error(opts::InputFilename, std::move(E));
       RewriteInstance &RI = *RIOrErr.get();
+
+      if (opts::AggregateOnly && !RI.getBinaryContext().isAArch64() &&
+          opts::ArmSPE) {
+        errs() << ToolName << ": -spe is available only on AArch64.\n";
+        exit(1);
+      }
+
       if (!opts::PerfData.empty()) {
         if (!opts::AggregateOnly) {
           errs() << ToolName

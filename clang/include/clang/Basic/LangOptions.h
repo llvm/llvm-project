@@ -24,6 +24,7 @@
 #include "clang/Basic/Visibility.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 #include <string>
@@ -75,6 +76,22 @@ public:
   using Visibility = clang::Visibility;
   using RoundingMode = llvm::RoundingMode;
   using CFBranchLabelSchemeKind = clang::CFBranchLabelSchemeKind;
+
+  /// For ASTs produced with different option value, signifies their level of
+  /// compatibility.
+  enum class CompatibilityKind {
+    /// Does affect the construction of the AST in a way that does prevent
+    /// module interoperability.
+    NotCompatible,
+    /// Does affect the construction of the AST in a way that doesn't prevent
+    /// interoperability (that is, the value can be different between an
+    /// explicit module and the user of that module).
+    Compatible,
+    /// Does not affect the construction of the AST in any way (that is, the
+    /// value can be different between an implicit module and the user of that
+    /// module).
+    Benign,
+  };
 
   enum GCMode { NonGC, GCOnly, HybridGC };
   enum StackProtectorMode { SSPOff, SSPOn, SSPStrong, SSPReq };
@@ -304,10 +321,7 @@ public:
   };
 
   /// Possible float expression evaluation method choices.
-  enum FPEvalMethodKind {
-    /// The evaluation method cannot be determined or is inconsistent for this
-    /// target.
-    FEM_Indeterminable = -1,
+  enum FPEvalMethodKind : unsigned {
     /// Use the declared type for fp arithmetic.
     FEM_Source = 0,
     /// Use the type double for fp arithmetic.
@@ -322,9 +336,6 @@ public:
   };
 
   enum ExcessPrecisionKind { FPP_Standard, FPP_Fast, FPP_None };
-
-  /// Possible exception handling behavior.
-  enum class ExceptionHandlingKind { None, SjLj, WinEH, DwarfCFI, Wasm };
 
   enum class LaxVectorConversionKind {
     /// Permit no implicit vector bitcasts.
@@ -488,16 +499,17 @@ public:
   };
 
   // Define simple language options (with no accessors).
-#define LANGOPT(Name, Bits, Default, Description) unsigned Name : Bits;
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description)
+#define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
+  unsigned Name : Bits;
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)
 #include "clang/Basic/LangOptions.def"
 
 protected:
   // Define language options of enumeration type. These are private, and will
   // have accessors (below).
-#define LANGOPT(Name, Bits, Default, Description)
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
-  LLVM_PREFERRED_TYPE(Type) \
+#define LANGOPT(Name, Bits, Default, Compatibility, Description)
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
+  LLVM_PREFERRED_TYPE(Type)                                                    \
   unsigned Name : Bits;
 #include "clang/Basic/LangOptions.def"
 };
@@ -621,14 +633,19 @@ public:
   // received as a result of a standard operator new (-fcheck-new)
   bool CheckNew = false;
 
-  // In OpenACC mode, contains a user provided override for the _OPENACC macro.
-  // This exists so that we can override the macro value and test our incomplete
-  // implementation on real-world examples.
-  std::string OpenACCMacroOverride;
+  /// The HLSL root signature version for dxil.
+  llvm::dxbc::RootSignatureVersion HLSLRootSigVer =
+      llvm::dxbc::RootSignatureVersion::V1_1;
 
   // Indicates if the wasm-opt binary must be ignored in the case of a
   // WebAssembly target.
   bool NoWasmOpt = false;
+
+  /// Atomic code-generation options.
+  /// These flags are set directly from the command-line options.
+  bool AtomicRemoteMemory = false;
+  bool AtomicFineGrainedMemory = false;
+  bool AtomicIgnoreDenormalMode = false;
 
   LangOptions();
 
@@ -647,8 +664,8 @@ public:
                   LangStandard::Kind LangStd = LangStandard::lang_unspecified);
 
   // Define accessors/mutators for language options of enumeration type.
-#define LANGOPT(Name, Bits, Default, Description)
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description)                   \
+#define LANGOPT(Name, Bits, Default, Compatibility, Description)
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
   Type get##Name() const { return static_cast<Type>(Name); }                   \
   void set##Name(Type Value) {                                                 \
     assert(static_cast<unsigned>(Value) < (1u << Bits));                       \
@@ -763,22 +780,6 @@ public:
     return getSignReturnAddressScope() == SignReturnAddressScopeKind::All;
   }
 
-  bool hasSjLjExceptions() const {
-    return getExceptionHandling() == ExceptionHandlingKind::SjLj;
-  }
-
-  bool hasSEHExceptions() const {
-    return getExceptionHandling() == ExceptionHandlingKind::WinEH;
-  }
-
-  bool hasDWARFExceptions() const {
-    return getExceptionHandling() == ExceptionHandlingKind::DwarfCFI;
-  }
-
-  bool hasWasmExceptions() const {
-    return getExceptionHandling() == ExceptionHandlingKind::Wasm;
-  }
-
   bool isSYCL() const { return SYCLIsDevice || SYCLIsHost; }
 
   bool hasDefaultVisibilityExportMapping() const {
@@ -816,6 +817,8 @@ public:
            VisibilityForcedKinds::ForceHidden;
   }
 
+  bool allowArrayReturnTypes() const { return HLSL; }
+
   /// Remap path prefix according to -fmacro-prefix-path option.
   void remapPathPrefix(SmallVectorImpl<char> &Path) const;
 
@@ -829,6 +832,11 @@ public:
     if (EM == FPExceptionModeKind::FPE_Default)
       return FPExceptionModeKind::FPE_Ignore;
     return EM;
+  }
+
+  /// True when compiling for an offloading target device.
+  bool isTargetDevice() const {
+    return OpenMPIsTargetDevice || CUDAIsDevice || SYCLIsDevice;
   }
 };
 
@@ -846,7 +854,7 @@ public:
   // Define a fake option named "First" so that we have a PREVIOUS even for the
   // real first option.
   static constexpr storage_type FirstShift = 0, FirstWidth = 0;
-#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+#define FP_OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                 \
   static constexpr storage_type NAME##Shift =                                  \
       PREVIOUS##Shift + PREVIOUS##Width;                                       \
   static constexpr storage_type NAME##Width = WIDTH;                           \
@@ -855,7 +863,7 @@ public:
 #include "clang/Basic/FPOptions.def"
 
   static constexpr storage_type TotalWidth = 0
-#define OPTION(NAME, TYPE, WIDTH, PREVIOUS) +WIDTH
+#define FP_OPTION(NAME, TYPE, WIDTH, PREVIOUS) +WIDTH
 #include "clang/Basic/FPOptions.def"
       ;
   static_assert(TotalWidth <= StorageBitSize, "Too short type for FPOptions");
@@ -964,7 +972,7 @@ public:
   // We can define most of the accessors automatically:
   // TODO: consider enforcing the assertion that value fits within bits
   // statically.
-#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+#define FP_OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                 \
   TYPE get##NAME() const {                                                     \
     return static_cast<TYPE>((Value & NAME##Mask) >> NAME##Shift);             \
   }                                                                            \
@@ -1075,7 +1083,7 @@ public:
   }
   bool operator!=(FPOptionsOverride other) const { return !(*this == other); }
 
-#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+#define FP_OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                 \
   bool has##NAME##Override() const {                                           \
     return OverrideMask & FPOptions::NAME##Mask;                               \
   }                                                                            \
@@ -1106,6 +1114,66 @@ inline FPOptionsOverride FPOptions::getChangesFrom(const FPOptions &Base) const 
 inline void FPOptions::applyChanges(FPOptionsOverride FPO) {
   *this = FPO.applyOverrides(*this);
 }
+
+// The three atomic code-generation options.
+// The canonical (positive) names are:
+//   "remote_memory", "fine_grained_memory", and "ignore_denormal_mode".
+// In attribute or command-line parsing, a token prefixed with "no_" inverts its
+// value.
+enum class AtomicOptionKind {
+  RemoteMemory,       // enable remote memory.
+  FineGrainedMemory,  // enable fine-grained memory.
+  IgnoreDenormalMode, // ignore floating-point denormals.
+  LANGOPT_ATOMIC_OPTION_LAST = IgnoreDenormalMode,
+};
+
+struct AtomicOptions {
+  // Bitfields for each option.
+  unsigned remote_memory : 1;
+  unsigned fine_grained_memory : 1;
+  unsigned ignore_denormal_mode : 1;
+
+  AtomicOptions()
+      : remote_memory(0), fine_grained_memory(0), ignore_denormal_mode(0) {}
+
+  AtomicOptions(const LangOptions &LO)
+      : remote_memory(LO.AtomicRemoteMemory),
+        fine_grained_memory(LO.AtomicFineGrainedMemory),
+        ignore_denormal_mode(LO.AtomicIgnoreDenormalMode) {}
+
+  bool getOption(AtomicOptionKind Kind) const {
+    switch (Kind) {
+    case AtomicOptionKind::RemoteMemory:
+      return remote_memory;
+    case AtomicOptionKind::FineGrainedMemory:
+      return fine_grained_memory;
+    case AtomicOptionKind::IgnoreDenormalMode:
+      return ignore_denormal_mode;
+    }
+    llvm_unreachable("Invalid AtomicOptionKind");
+  }
+
+  void setOption(AtomicOptionKind Kind, bool Value) {
+    switch (Kind) {
+    case AtomicOptionKind::RemoteMemory:
+      remote_memory = Value;
+      return;
+    case AtomicOptionKind::FineGrainedMemory:
+      fine_grained_memory = Value;
+      return;
+    case AtomicOptionKind::IgnoreDenormalMode:
+      ignore_denormal_mode = Value;
+      return;
+    }
+    llvm_unreachable("Invalid AtomicOptionKind");
+  }
+
+  LLVM_DUMP_METHOD void dump() const {
+    llvm::errs() << "\n remote_memory: " << remote_memory
+                 << "\n fine_grained_memory: " << fine_grained_memory
+                 << "\n ignore_denormal_mode: " << ignore_denormal_mode << "\n";
+  }
+};
 
 /// Describes the kind of translation unit being processed.
 enum TranslationUnitKind {

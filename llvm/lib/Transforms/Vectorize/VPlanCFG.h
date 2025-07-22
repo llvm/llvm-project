@@ -16,6 +16,7 @@
 #include "VPlanUtils.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
@@ -222,6 +223,14 @@ vp_depth_first_shallow(const VPBlockBase *G) {
 }
 
 /// Returns an iterator range to traverse the graph starting at \p G in
+/// post order. The iterator won't traverse through region blocks.
+inline iterator_range<
+    po_iterator<VPBlockShallowTraversalWrapper<VPBlockBase *>>>
+vp_post_order_shallow(VPBlockBase *G) {
+  return post_order(VPBlockShallowTraversalWrapper<VPBlockBase *>(G));
+}
+
+/// Returns an iterator range to traverse the graph starting at \p G in
 /// depth-first order while traversing through region blocks.
 inline iterator_range<df_iterator<VPBlockDeepTraversalWrapper<VPBlockBase *>>>
 vp_depth_first_deep(VPBlockBase *G) {
@@ -307,15 +316,6 @@ template <> struct GraphTraits<VPlan *> {
   }
 };
 
-inline auto VPlan::getExitBlocks() {
-  VPBlockBase *ScalarHeader = getScalarHeader();
-  return make_filter_range(
-      VPBlockUtils::blocksOnly<VPIRBasicBlock>(
-          vp_depth_first_shallow(getVectorLoopRegion()->getSingleSuccessor())),
-      [ScalarHeader](VPIRBasicBlock *VPIRBB) {
-        return VPIRBB != ScalarHeader && VPIRBB->getNumSuccessors() == 0;
-      });
-}
 } // namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLANCFG_H

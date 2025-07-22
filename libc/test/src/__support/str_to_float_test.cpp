@@ -55,11 +55,10 @@ TEST(LlvmLibcStrToFltTest, SimpleDecimalConversionExtraTypes) {
   uint32_t float_output_mantissa = 0;
   uint32_t output_exp2 = 0;
 
-  LIBC_NAMESPACE::libc_errno = 0;
   auto float_result =
       internal::simple_decimal_conversion<float>("123456789012345678900");
   float_output_mantissa = float_result.num.mantissa;
-  output_exp2 = float_result.num.exponent;
+  output_exp2 = static_cast<uint32_t>(float_result.num.exponent);
   EXPECT_EQ(float_output_mantissa, uint32_t(0xd629d4));
   EXPECT_EQ(output_exp2, uint32_t(193));
   EXPECT_EQ(float_result.error, 0);

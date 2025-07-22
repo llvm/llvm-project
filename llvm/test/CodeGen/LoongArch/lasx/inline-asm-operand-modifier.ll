@@ -12,3 +12,43 @@ entry:
   %0 = tail call <4 x i64> asm sideeffect "xvldi ${0:u}, 1", "=f"()
   ret void
 }
+
+define void @test_u_2xi64() nounwind {
+; CHECK-LABEL: test_u_2xi64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    xvldi $xr0, 1
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call <2 x i64> asm sideeffect "xvldi ${0:u}, 1", "=f"()
+  ret void
+}
+
+define void @test_w_4xi64() nounwind {
+; CHECK-LABEL: test_w_4xi64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    vldi $vr0, 1
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call <4 x i64> asm sideeffect "vldi ${0:w}, 1", "=f"()
+  ret void
+}
+
+define void @m128i_to_m256i(ptr %out, ptr %in) nounwind {
+; CHECK-LABEL: m128i_to_m256i:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    xvrepli.b $xr1, 0
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 32
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    xvst $xr1, $a0, 0
+; CHECK-NEXT:    ret
+  %v = load <2 x i64>, ptr %in
+  %x = call <4 x i64> asm sideeffect "xvpermi.q ${0:u}, ${1:u}, 32", "=f,f,0"(<2 x i64> %v, <4 x i64> zeroinitializer)
+  store <4 x i64> %x, ptr %out
+  ret void
+}

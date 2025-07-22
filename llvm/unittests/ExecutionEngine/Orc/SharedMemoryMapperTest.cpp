@@ -9,6 +9,7 @@
 #include "OrcTestCommon.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/ExecutionEngine/Orc/MemoryMapper.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorSharedMemoryMapperService.h"
 #include "llvm/Testing/Support/Error.h"
@@ -21,8 +22,7 @@ using namespace llvm::orc::rt_bootstrap;
 #if (defined(LLVM_ON_UNIX) && !defined(__ANDROID__)) || defined(_WIN32)
 
 // A basic function to be used as both initializer/deinitializer
-orc::shared::CWrapperFunctionResult incrementWrapper(const char *ArgData,
-                                                     size_t ArgSize) {
+CWrapperFunctionResult incrementWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr)>::handle(
              ArgData, ArgSize,
              [](ExecutorAddr A) -> Error {

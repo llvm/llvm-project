@@ -361,21 +361,21 @@ define float @v_fdiv_f32_dynamic_denorm(float %a, float %b) #0 {
 ; GFX11-IEEE-NEXT:    v_div_scale_f32 v2, null, v1, v1, v0
 ; GFX11-IEEE-NEXT:    v_div_scale_f32 v4, vcc_lo, v0, v1, v0
 ; GFX11-IEEE-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 4, 2)
-; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_rcp_f32_e32 v3, v2
 ; GFX11-IEEE-NEXT:    s_denorm_mode 15
 ; GFX11-IEEE-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-IEEE-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
+; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_fmac_f32_e32 v3, v5, v3
-; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_mul_f32_e32 v5, v4, v3
-; GFX11-IEEE-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-IEEE-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX11-IEEE-NEXT:    v_fmac_f32_e32 v5, v6, v3
+; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_fma_f32 v2, -v2, v5, v4
 ; GFX11-IEEE-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s0
-; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
+; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
 ; GFX11-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -385,21 +385,21 @@ define float @v_fdiv_f32_dynamic_denorm(float %a, float %b) #0 {
 ; GFX11-FLUSH-NEXT:    v_div_scale_f32 v2, null, v1, v1, v0
 ; GFX11-FLUSH-NEXT:    v_div_scale_f32 v4, vcc_lo, v0, v1, v0
 ; GFX11-FLUSH-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 4, 2)
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_rcp_f32_e32 v3, v2
 ; GFX11-FLUSH-NEXT:    s_denorm_mode 3
 ; GFX11-FLUSH-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-FLUSH-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_fmac_f32_e32 v3, v5, v3
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_mul_f32_e32 v5, v4, v3
-; GFX11-FLUSH-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-FLUSH-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX11-FLUSH-NEXT:    v_fmac_f32_e32 v5, v6, v3
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_fma_f32 v2, -v2, v5, v4
 ; GFX11-FLUSH-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s0
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
 ; GFX11-FLUSH-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv float %a, %b
@@ -2766,21 +2766,21 @@ define float @v_fdiv_f32_dynamic__nnan_ninf(float %x, float %y, float %z) #0 {
 ; GFX11-IEEE-NEXT:    v_div_scale_f32 v2, null, v1, v1, v0
 ; GFX11-IEEE-NEXT:    v_div_scale_f32 v4, vcc_lo, v0, v1, v0
 ; GFX11-IEEE-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 4, 2)
-; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_rcp_f32_e32 v3, v2
 ; GFX11-IEEE-NEXT:    s_denorm_mode 15
 ; GFX11-IEEE-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-IEEE-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
+; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_fmac_f32_e32 v3, v5, v3
-; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_mul_f32_e32 v5, v4, v3
-; GFX11-IEEE-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-IEEE-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX11-IEEE-NEXT:    v_fmac_f32_e32 v5, v6, v3
+; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_fma_f32 v2, -v2, v5, v4
 ; GFX11-IEEE-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s0
-; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
+; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
 ; GFX11-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2790,21 +2790,21 @@ define float @v_fdiv_f32_dynamic__nnan_ninf(float %x, float %y, float %z) #0 {
 ; GFX11-FLUSH-NEXT:    v_div_scale_f32 v2, null, v1, v1, v0
 ; GFX11-FLUSH-NEXT:    v_div_scale_f32 v4, vcc_lo, v0, v1, v0
 ; GFX11-FLUSH-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 4, 2)
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_rcp_f32_e32 v3, v2
 ; GFX11-FLUSH-NEXT:    s_denorm_mode 3
 ; GFX11-FLUSH-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-FLUSH-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_fmac_f32_e32 v3, v5, v3
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_mul_f32_e32 v5, v4, v3
-; GFX11-FLUSH-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-FLUSH-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX11-FLUSH-NEXT:    v_fmac_f32_e32 v5, v6, v3
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_fma_f32 v2, -v2, v5, v4
 ; GFX11-FLUSH-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s0
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
 ; GFX11-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ; EG-LABEL: v_fdiv_f32_dynamic__nnan_ninf:
@@ -3981,21 +3981,21 @@ define float @v_fdiv_f32_constrhs0_dynamic(float %x) #0 {
 ; GFX11-IEEE-NEXT:    v_div_scale_f32 v1, null, 0x4640e400, 0x4640e400, v0
 ; GFX11-IEEE-NEXT:    v_div_scale_f32 v3, vcc_lo, v0, 0x4640e400, v0
 ; GFX11-IEEE-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 4, 2)
-; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_rcp_f32_e32 v2, v1
 ; GFX11-IEEE-NEXT:    s_denorm_mode 15
 ; GFX11-IEEE-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-IEEE-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_fmac_f32_e32 v2, v4, v2
-; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_mul_f32_e32 v4, v3, v2
-; GFX11-IEEE-NEXT:    v_fma_f32 v5, -v1, v4, v3
 ; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-IEEE-NEXT:    v_fma_f32 v5, -v1, v4, v3
 ; GFX11-IEEE-NEXT:    v_fmac_f32_e32 v4, v5, v2
+; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_fma_f32 v1, -v1, v4, v3
 ; GFX11-IEEE-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s0
-; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_div_fixup_f32 v0, v1, 0x4640e400, v0
 ; GFX11-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4005,21 +4005,21 @@ define float @v_fdiv_f32_constrhs0_dynamic(float %x) #0 {
 ; GFX11-FLUSH-NEXT:    v_div_scale_f32 v1, null, 0x4640e400, 0x4640e400, v0
 ; GFX11-FLUSH-NEXT:    v_div_scale_f32 v3, vcc_lo, v0, 0x4640e400, v0
 ; GFX11-FLUSH-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 4, 2)
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_rcp_f32_e32 v2, v1
 ; GFX11-FLUSH-NEXT:    s_denorm_mode 3
 ; GFX11-FLUSH-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-FLUSH-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_fmac_f32_e32 v2, v4, v2
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_mul_f32_e32 v4, v3, v2
-; GFX11-FLUSH-NEXT:    v_fma_f32 v5, -v1, v4, v3
 ; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-FLUSH-NEXT:    v_fma_f32 v5, -v1, v4, v3
 ; GFX11-FLUSH-NEXT:    v_fmac_f32_e32 v4, v5, v2
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_fma_f32 v1, -v1, v4, v3
 ; GFX11-FLUSH-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s0
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_div_fixup_f32 v0, v1, 0x4640e400, v0
 ; GFX11-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ; EG-LABEL: v_fdiv_f32_constrhs0_dynamic:
@@ -4359,21 +4359,21 @@ define float @v_fdiv_f32_constlhs0_dynamic(float %x) #0 {
 ; GFX11-IEEE-NEXT:    v_div_scale_f32 v1, null, v0, v0, 0x4640e400
 ; GFX11-IEEE-NEXT:    v_div_scale_f32 v3, vcc_lo, 0x4640e400, v0, 0x4640e400
 ; GFX11-IEEE-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 4, 2)
-; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_rcp_f32_e32 v2, v1
 ; GFX11-IEEE-NEXT:    s_denorm_mode 15
 ; GFX11-IEEE-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-IEEE-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_fmac_f32_e32 v2, v4, v2
-; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_mul_f32_e32 v4, v3, v2
-; GFX11-IEEE-NEXT:    v_fma_f32 v5, -v1, v4, v3
 ; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-IEEE-NEXT:    v_fma_f32 v5, -v1, v4, v3
 ; GFX11-IEEE-NEXT:    v_fmac_f32_e32 v4, v5, v2
+; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_fma_f32 v1, -v1, v4, v3
 ; GFX11-IEEE-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s0
-; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_div_fixup_f32 v0, v1, v0, 0x4640e400
 ; GFX11-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4383,21 +4383,21 @@ define float @v_fdiv_f32_constlhs0_dynamic(float %x) #0 {
 ; GFX11-FLUSH-NEXT:    v_div_scale_f32 v1, null, v0, v0, 0x4640e400
 ; GFX11-FLUSH-NEXT:    v_div_scale_f32 v3, vcc_lo, 0x4640e400, v0, 0x4640e400
 ; GFX11-FLUSH-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 4, 2)
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_rcp_f32_e32 v2, v1
 ; GFX11-FLUSH-NEXT:    s_denorm_mode 3
 ; GFX11-FLUSH-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-FLUSH-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_fmac_f32_e32 v2, v4, v2
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_mul_f32_e32 v4, v3, v2
-; GFX11-FLUSH-NEXT:    v_fma_f32 v5, -v1, v4, v3
 ; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-FLUSH-NEXT:    v_fma_f32 v5, -v1, v4, v3
 ; GFX11-FLUSH-NEXT:    v_fmac_f32_e32 v4, v5, v2
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_fma_f32 v1, -v1, v4, v3
 ; GFX11-FLUSH-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s0
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_div_fixup_f32 v0, v1, v0, 0x4640e400
 ; GFX11-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ; EG-LABEL: v_fdiv_f32_constlhs0_dynamic:
@@ -4732,21 +4732,21 @@ define float @v_fdiv_f32_dynamic_nodenorm_x(float nofpclass(sub) %x, float %y) #
 ; GFX11-IEEE-NEXT:    v_div_scale_f32 v2, null, v1, v1, v0
 ; GFX11-IEEE-NEXT:    v_div_scale_f32 v4, vcc_lo, v0, v1, v0
 ; GFX11-IEEE-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 4, 2)
-; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_rcp_f32_e32 v3, v2
 ; GFX11-IEEE-NEXT:    s_denorm_mode 15
 ; GFX11-IEEE-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-IEEE-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
+; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_fmac_f32_e32 v3, v5, v3
-; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_mul_f32_e32 v5, v4, v3
-; GFX11-IEEE-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-IEEE-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX11-IEEE-NEXT:    v_fmac_f32_e32 v5, v6, v3
+; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_fma_f32 v2, -v2, v5, v4
 ; GFX11-IEEE-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s0
-; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
+; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
 ; GFX11-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4756,21 +4756,21 @@ define float @v_fdiv_f32_dynamic_nodenorm_x(float nofpclass(sub) %x, float %y) #
 ; GFX11-FLUSH-NEXT:    v_div_scale_f32 v2, null, v1, v1, v0
 ; GFX11-FLUSH-NEXT:    v_div_scale_f32 v4, vcc_lo, v0, v1, v0
 ; GFX11-FLUSH-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 4, 2)
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_rcp_f32_e32 v3, v2
 ; GFX11-FLUSH-NEXT:    s_denorm_mode 3
 ; GFX11-FLUSH-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-FLUSH-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_fmac_f32_e32 v3, v5, v3
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_mul_f32_e32 v5, v4, v3
-; GFX11-FLUSH-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-FLUSH-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX11-FLUSH-NEXT:    v_fmac_f32_e32 v5, v6, v3
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_fma_f32 v2, -v2, v5, v4
 ; GFX11-FLUSH-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s0
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
 ; GFX11-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ; EG-LABEL: v_fdiv_f32_dynamic_nodenorm_x:
@@ -5121,21 +5121,21 @@ define float @v_fdiv_f32_dynamic_nodenorm_y(float %x, float nofpclass(sub) %y) #
 ; GFX11-IEEE-NEXT:    v_div_scale_f32 v2, null, v1, v1, v0
 ; GFX11-IEEE-NEXT:    v_div_scale_f32 v4, vcc_lo, v0, v1, v0
 ; GFX11-IEEE-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 4, 2)
-; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_rcp_f32_e32 v3, v2
 ; GFX11-IEEE-NEXT:    s_denorm_mode 15
 ; GFX11-IEEE-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-IEEE-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
+; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_fmac_f32_e32 v3, v5, v3
-; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_mul_f32_e32 v5, v4, v3
-; GFX11-IEEE-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-IEEE-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX11-IEEE-NEXT:    v_fmac_f32_e32 v5, v6, v3
+; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_fma_f32 v2, -v2, v5, v4
 ; GFX11-IEEE-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s0
-; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
+; GFX11-IEEE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-IEEE-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
 ; GFX11-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -5145,21 +5145,21 @@ define float @v_fdiv_f32_dynamic_nodenorm_y(float %x, float nofpclass(sub) %y) #
 ; GFX11-FLUSH-NEXT:    v_div_scale_f32 v2, null, v1, v1, v0
 ; GFX11-FLUSH-NEXT:    v_div_scale_f32 v4, vcc_lo, v0, v1, v0
 ; GFX11-FLUSH-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 4, 2)
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_rcp_f32_e32 v3, v2
 ; GFX11-FLUSH-NEXT:    s_denorm_mode 3
 ; GFX11-FLUSH-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-FLUSH-NEXT:    v_fma_f32 v5, -v2, v3, 1.0
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_fmac_f32_e32 v3, v5, v3
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_mul_f32_e32 v5, v4, v3
-; GFX11-FLUSH-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-FLUSH-NEXT:    v_fma_f32 v6, -v2, v5, v4
 ; GFX11-FLUSH-NEXT:    v_fmac_f32_e32 v5, v6, v3
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_fma_f32 v2, -v2, v5, v4
 ; GFX11-FLUSH-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s0
-; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_div_fmas_f32 v2, v2, v3, v5
+; GFX11-FLUSH-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FLUSH-NEXT:    v_div_fixup_f32 v0, v2, v1, v0
 ; GFX11-FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ; EG-LABEL: v_fdiv_f32_dynamic_nodenorm_y:

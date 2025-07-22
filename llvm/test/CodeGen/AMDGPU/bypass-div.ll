@@ -860,7 +860,7 @@ define <2 x i64> @sdivrem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %d = sdiv i64 %a, %b
   %r = srem i64 %a, %b
-  %ins.0 = insertelement <2 x i64> undef, i64 %d, i32 0
+  %ins.0 = insertelement <2 x i64> poison, i64 %d, i32 0
   %ins.1 = insertelement <2 x i64> %ins.0, i64 %r, i32 1
   ret <2 x i64> %ins.1
 }
@@ -1012,7 +1012,7 @@ define <2 x i64> @udivrem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %d = udiv i64 %a, %b
   %r = urem i64 %a, %b
-  %ins.0 = insertelement <2 x i64> undef, i64 %d, i32 0
+  %ins.0 = insertelement <2 x i64> poison, i64 %d, i32 0
   %ins.1 = insertelement <2 x i64> %ins.0, i64 %r, i32 1
   ret <2 x i64> %ins.1
 }

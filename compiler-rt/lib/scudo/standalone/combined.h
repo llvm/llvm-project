@@ -15,7 +15,6 @@
 #include "common.h"
 #include "flags.h"
 #include "flags_parser.h"
-#include "local_cache.h"
 #include "mem_map.h"
 #include "memtag.h"
 #include "mutex.h"
@@ -23,6 +22,7 @@
 #include "quarantine.h"
 #include "report.h"
 #include "secondary.h"
+#include "size_class_allocator.h"
 #include "stack_depot.h"
 #include "string_utils.h"
 #include "tsd.h"
@@ -54,7 +54,7 @@ public:
       typename AllocatorConfig::template PrimaryT<PrimaryConfig<Config>>;
   using SecondaryT =
       typename AllocatorConfig::template SecondaryT<SecondaryConfig<Config>>;
-  using CacheT = typename PrimaryT::CacheT;
+  using SizeClassAllocatorT = typename PrimaryT::SizeClassAllocatorT;
   typedef Allocator<Config, PostInitCallback> ThisT;
   typedef typename AllocatorConfig::template TSDRegistryT<ThisT> TSDRegistryT;
 
@@ -63,8 +63,9 @@ public:
   }
 
   struct QuarantineCallback {
-    explicit QuarantineCallback(ThisT &Instance, CacheT &LocalCache)
-        : Allocator(Instance), Cache(LocalCache) {}
+    explicit QuarantineCallback(ThisT &Instance,
+                                SizeClassAllocatorT &SizeClassAllocator)
+        : Allocator(Instance), SizeClassAllocator(SizeClassAllocator) {}
 
     // Chunk recycling function, returns a quarantined chunk to the backend,
     // first making sure it hasn't been tampered with.
@@ -80,7 +81,7 @@ public:
       if (allocatorSupportsMemoryTagging<AllocatorConfig>())
         Ptr = untagPointer(Ptr);
       void *BlockBegin = Allocator::getBlockBegin(Ptr, &Header);
-      Cache.deallocate(Header.ClassId, BlockBegin);
+      SizeClassAllocator.deallocate(Header.ClassId, BlockBegin);
     }
 
     // We take a shortcut when allocating a quarantine batch by working with the
@@ -89,7 +90,7 @@ public:
     void *allocate(UNUSED uptr Size) {
       const uptr QuarantineClassId = SizeClassMap::getClassIdBySize(
           sizeof(QuarantineBatch) + Chunk::getHeaderSize());
-      void *Ptr = Cache.allocate(QuarantineClassId);
+      void *Ptr = SizeClassAllocator.allocate(QuarantineClassId);
       // Quarantine batch allocation failure is fatal.
       if (UNLIKELY(!Ptr))
         reportOutOfMemory(SizeClassMap::getSizeByClassId(QuarantineClassId));
@@ -126,14 +127,15 @@ public:
 
       Header.State = Chunk::State::Available;
       Chunk::storeHeader(Allocator.Cookie, Ptr, &Header);
-      Cache.deallocate(QuarantineClassId,
-                       reinterpret_cast<void *>(reinterpret_cast<uptr>(Ptr) -
-                                                Chunk::getHeaderSize()));
+      SizeClassAllocator.deallocate(
+          QuarantineClassId,
+          reinterpret_cast<void *>(reinterpret_cast<uptr>(Ptr) -
+                                   Chunk::getHeaderSize()));
     }
 
   private:
     ThisT &Allocator;
-    CacheT &Cache;
+    SizeClassAllocatorT &SizeClassAllocator;
   };
 
   typedef GlobalQuarantine<QuarantineCallback, void> QuarantineT;
@@ -263,7 +265,9 @@ public:
   QuarantineT *getQuarantine() { return &Quarantine; }
 
   // The Cache must be provided zero-initialized.
-  void initCache(CacheT *Cache) { Cache->init(&Stats, &Primary); }
+  void initAllocator(SizeClassAllocatorT *SizeClassAllocator) {
+    SizeClassAllocator->init(&Stats, &Primary);
+  }
 
   // Release the resources used by a TSD, which involves:
   // - draining the local quarantine cache to the global quarantine;
@@ -273,15 +277,16 @@ public:
   void commitBack(TSD<ThisT> *TSD) {
     TSD->assertLocked(/*BypassCheck=*/true);
     Quarantine.drain(&TSD->getQuarantineCache(),
-                     QuarantineCallback(*this, TSD->getCache()));
-    TSD->getCache().destroy(&Stats);
+                     QuarantineCallback(*this, TSD->getSizeClassAllocator()));
+    TSD->getSizeClassAllocator().destroy(&Stats);
   }
 
   void drainCache(TSD<ThisT> *TSD) {
     TSD->assertLocked(/*BypassCheck=*/true);
-    Quarantine.drainAndRecycle(&TSD->getQuarantineCache(),
-                               QuarantineCallback(*this, TSD->getCache()));
-    TSD->getCache().drain();
+    Quarantine.drainAndRecycle(
+        &TSD->getQuarantineCache(),
+        QuarantineCallback(*this, TSD->getSizeClassAllocator()));
+    TSD->getSizeClassAllocator().drain();
   }
   void drainCaches() { TSDRegistry.drainCaches(this); }
 
@@ -390,13 +395,13 @@ public:
       ClassId = SizeClassMap::getClassIdBySize(NeededSize);
       DCHECK_NE(ClassId, 0U);
       typename TSDRegistryT::ScopedTSD TSD(TSDRegistry);
-      Block = TSD->getCache().allocate(ClassId);
+      Block = TSD->getSizeClassAllocator().allocate(ClassId);
       // If the allocation failed, retry in each successively larger class until
       // it fits. If it fails to fit in the largest class, fallback to the
       // Secondary.
       if (UNLIKELY(!Block)) {
         while (ClassId < SizeClassMap::LargestClassId && !Block)
-          Block = TSD->getCache().allocate(++ClassId);
+          Block = TSD->getSizeClassAllocator().allocate(++ClassId);
         if (!Block)
           ClassId = 0;
       }
@@ -770,7 +775,7 @@ public:
 
     // Getting the alloc size of a chunk only makes sense if it's allocated.
     if (UNLIKELY(Header.State != Chunk::State::Allocated))
-      reportInvalidChunkState(AllocatorAction::Sizing, const_cast<void *>(Ptr));
+      reportInvalidChunkState(AllocatorAction::Sizing, Ptr);
 
     return getSize(Ptr, &Header);
   }
@@ -1280,7 +1285,8 @@ private:
         bool CacheDrained;
         {
           typename TSDRegistryT::ScopedTSD TSD(TSDRegistry);
-          CacheDrained = TSD->getCache().deallocate(ClassId, BlockBegin);
+          CacheDrained =
+              TSD->getSizeClassAllocator().deallocate(ClassId, BlockBegin);
         }
         // When we have drained some blocks back to the Primary from TSD, that
         // implies that we may have the chance to release some pages as well.
@@ -1296,7 +1302,8 @@ private:
         retagBlock(Options, TaggedPtr, Ptr, Header, Size, false);
       typename TSDRegistryT::ScopedTSD TSD(TSDRegistry);
       Quarantine.put(&TSD->getQuarantineCache(),
-                     QuarantineCallback(*this, TSD->getCache()), Ptr, Size);
+                     QuarantineCallback(*this, TSD->getSizeClassAllocator()),
+                     Ptr, Size);
     }
   }
 

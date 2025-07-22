@@ -1,5 +1,5 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion))' -split-input-file | FileCheck %s
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{fusion-maximal}))' -split-input-file | FileCheck %s --check-prefix=MAXIMAL
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{maximal}))' -split-input-file | FileCheck %s --check-prefix=MAXIMAL
 
 // Part I of fusion tests in  mlir/test/Transforms/loop-fusion.mlir.
 // Part II of fusion tests in mlir/test/Transforms/loop-fusion-2.mlir
@@ -521,10 +521,7 @@ func.func @fuse_minor_affine_map(%in: memref<128xf32>, %out: memref<20x512xf32>)
   return
 }
 
-// TODO: The size of the private memref is not properly computed in the presence
-// of the 'mod' operation. It should be memref<1xf32> instead of
-// memref<128xf32>: https://bugs.llvm.org/show_bug.cgi?id=46973
-// MAXIMAL:       memref.alloc() : memref<128xf32>
+// MAXIMAL:       memref.alloc() : memref<1xf32>
 // MAXIMAL:       affine.for
 // MAXIMAL-NEXT:    affine.for
 // MAXIMAL-NOT:   affine.for
@@ -553,7 +550,7 @@ func.func @should_fuse_multi_store_producer_and_privatize_memfefs() {
     %0 = affine.load %b[%arg0] : memref<10xf32>
   }
 
-	// All the memrefs should be privatized except '%c', which is not involved in
+  // All the memrefs should be privatized except '%c', which is not involved in
   // the producer-consumer fusion.
   // CHECK:      affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
@@ -584,7 +581,7 @@ func.func @should_fuse_multi_store_producer_with_escaping_memrefs_and_remove_src
     %0 = affine.load %b[%i2] : memref<10xf32>
   }
 
-	// Producer loop '%i0' should be removed after fusion since fusion is maximal.
+  // Producer loop '%i0' should be removed after fusion since fusion is maximal.
   // No memref should be privatized since they escape the function, and the
   // producer is removed after fusion.
   // CHECK:       affine.for %{{.*}} = 0 to 10 {
@@ -769,7 +766,7 @@ func.func @should_not_fuse_defining_node_has_transitive_dependence_from_source_l
     %2 = arith.divf %0, %1 : f32
   }
 
-	// When loops '%i0' and '%i2' are evaluated first, they should not be
+  // When loops '%i0' and '%i2' are evaluated first, they should not be
   // fused. The defining node of '%0' in loop '%i2' has transitive dependence
   // from loop '%i0'. After that, loops '%i0' and '%i1' are evaluated, and they
   // will be fused as usual.

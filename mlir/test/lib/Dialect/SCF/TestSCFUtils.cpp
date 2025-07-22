@@ -41,7 +41,6 @@ struct TestSCFForUtilsPass
 
   void runOnOperation() override {
     func::FuncOp func = getOperation();
-    SmallVector<scf::ForOp, 4> toErase;
 
     if (testReplaceWithNewYields) {
       func.walk([&](scf::ForOp forOp) {

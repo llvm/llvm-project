@@ -43,7 +43,7 @@
 !CHECK:           omp.single copyprivate(
 !CHECK-SAME:        %[[A]]#0 -> @_copy_box_heap_Uxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>,
 !CHECK-SAME:        %[[P]]#0 -> @_copy_box_ptr_i32 : !fir.ref<!fir.box<!fir.ptr<i32>>>)
-!CHEK:          }
+!CHECK:         }
 subroutine test_alloc_ptr()
   integer, allocatable :: a(:)
   integer, pointer :: p

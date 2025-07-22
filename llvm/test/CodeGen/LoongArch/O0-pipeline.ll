@@ -20,7 +20,7 @@
 ; CHECK-NEXT:     Pre-ISel Intrinsic Lowering
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Expand large div/rem
-; CHECK-NEXT:       Expand large fp convert
+; CHECK-NEXT:       Expand fp
 ; CHECK-NEXT:       Expand Atomic instructions
 ; CHECK-NEXT:       Module Verifier
 ; CHECK-NEXT:       Lower Garbage Collection Instructions
@@ -34,15 +34,7 @@
 ; CHECK-NEXT:       Safe Stack instrumentation pass
 ; CHECK-NEXT:       Insert stack protectors
 ; CHECK-NEXT:       Module Verifier
-; CHECK-NEXT:       Dominator Tree Construction
-; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
-; CHECK-NEXT:       Function Alias Analysis Results
-; CHECK-NEXT:       Natural Loop Information
-; CHECK-NEXT:       Post-Dominator Tree Construction
-; CHECK-NEXT:       Branch Probability Analysis
 ; CHECK-NEXT:       Assignment Tracking Analysis
-; CHECK-NEXT:       Lazy Branch Probability Analysis
-; CHECK-NEXT:       Lazy Block Frequency Analysis
 ; CHECK-NEXT:       LoongArch DAG->DAG Pattern Instruction Selection
 ; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
 ; CHECK-NEXT:       Local Stack Slot Allocation

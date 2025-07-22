@@ -3,7 +3,8 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx810 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=PREGFX10-PACKED %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=PREGFX10-PACKED %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GFX10-PACKED %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GFX11-PACKED %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GFX11-PACKED %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GFX11-PACKED %s
 
 define amdgpu_ps half @tbuffer_load_d16_x(ptr addrspace(8) inreg %rsrc) {
 ; PREGFX10-UNPACKED-LABEL: tbuffer_load_d16_x:

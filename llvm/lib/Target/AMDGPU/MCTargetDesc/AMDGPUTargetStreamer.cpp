@@ -18,6 +18,7 @@
 #include "Utils/AMDKernelCodeTUtils.h"
 #include "llvm/BinaryFormat/AMDGPUMetadataVerifier.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
@@ -93,8 +94,6 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX909:  AK = GK_GFX909;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX90A:  AK = GK_GFX90A;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX90C:  AK = GK_GFX90C;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX940:  AK = GK_GFX940;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX941:  AK = GK_GFX941;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX942:  AK = GK_GFX942;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX950:  AK = GK_GFX950;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010: AK = GK_GFX1010; break;
@@ -118,6 +117,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1153: AK = GK_GFX1153; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200: AK = GK_GFX1200; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201: AK = GK_GFX1201; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250: AK = GK_GFX1250; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:     AK = GK_GFX9_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC:   AK = GK_GFX9_4_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC:  AK = GK_GFX10_1_GENERIC; break;
@@ -180,8 +180,6 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX909:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX909;
   case GK_GFX90A:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX90A;
   case GK_GFX90C:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX90C;
-  case GK_GFX940:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX940;
-  case GK_GFX941:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX941;
   case GK_GFX942:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX942;
   case GK_GFX950:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX950;
   case GK_GFX1010: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010;
@@ -205,6 +203,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX1153: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1153;
   case GK_GFX1200: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200;
   case GK_GFX1201: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201;
+  case GK_GFX1250: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1250;
   case GK_GFX9_GENERIC:     return ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC;
   case GK_GFX9_4_GENERIC:   return ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC;
   case GK_GFX10_1_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC;
@@ -286,7 +285,7 @@ void AMDGPUTargetAsmStreamer::EmitMCResourceInfo(
   OS << "\t.set ";                                                             \
   ARG->print(OS, getContext().getAsmInfo());                                   \
   OS << ", ";                                                                  \
-  ARG->getVariableValue()->print(OS, getContext().getAsmInfo());               \
+  getContext().getAsmInfo()->printExpr(OS, *ARG->getVariableValue());          \
   Streamer.addBlankLine();
 
   PRINT_RES_INFO(NumVGPR);
@@ -308,7 +307,7 @@ void AMDGPUTargetAsmStreamer::EmitMCResourceMaximums(const MCSymbol *MaxVGPR,
   OS << "\t.set ";                                                             \
   ARG->print(OS, getContext().getAsmInfo());                                   \
   OS << ", ";                                                                  \
-  ARG->getVariableValue()->print(OS, getContext().getAsmInfo());               \
+  getContext().getAsmInfo()->printExpr(OS, *ARG->getVariableValue());          \
   Streamer.addBlankLine();
 
   PRINT_RES_INFO(MaxVGPR);
@@ -716,7 +715,7 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsR600() {
 }
 
 unsigned AMDGPUTargetELFStreamer::getEFlagsAMDGCN() {
-  assert(STI.getTargetTriple().getArch() == Triple::amdgcn);
+  assert(STI.getTargetTriple().isAMDGCN());
 
   switch (STI.getTargetTriple().getOS()) {
   default:
@@ -1009,11 +1008,9 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
   // It implies R_AMDGPU_REL64, but ends up being R_AMDGPU_ABS64.
   Streamer.emitValue(
       MCBinaryExpr::createSub(
-          MCSymbolRefExpr::create(KernelCodeSymbol,
-                                  MCSymbolRefExpr::VK_AMDGPU_REL64, Context),
-          MCSymbolRefExpr::create(KernelDescriptorSymbol,
-                                  MCSymbolRefExpr::VK_None, Context),
-          Context),
+          MCSymbolRefExpr::create(KernelCodeSymbol, AMDGPUMCExpr::S_REL64,
+                                  Context),
+          MCSymbolRefExpr::create(KernelDescriptorSymbol, Context), Context),
       sizeof(amdhsa::kernel_descriptor_t::kernel_code_entry_byte_offset));
   for (uint32_t i = 0; i < sizeof(amdhsa::kernel_descriptor_t::reserved1); ++i)
     Streamer.emitInt8(0u);

@@ -294,7 +294,7 @@ struct CompletionCandidate {
   std::optional<llvm::StringRef>
   headerToInsertIfAllowed(const CodeCompleteOptions &Opts,
                           CodeCompletionContext::Kind ContextKind) const {
-    if (Opts.InsertIncludes == CodeCompleteOptions::NeverInsert ||
+    if (Opts.InsertIncludes == Config::HeaderInsertionPolicy::NeverInsert ||
         RankedIncludeHeaders.empty() ||
         !contextAllowsHeaderInsertion(ContextKind))
       return std::nullopt;
@@ -870,7 +870,7 @@ bool contextAllowsIndex(enum CodeCompletionContext::Kind K) {
 }
 
 static bool isInjectedClass(const NamedDecl &D) {
-  if (auto *R = dyn_cast_or_null<RecordDecl>(&D))
+  if (auto *R = dyn_cast_or_null<CXXRecordDecl>(&D))
     if (R->isInjectedClassName())
       return true;
   return false;
@@ -926,7 +926,8 @@ struct CompletionRecorder : public CodeCompleteConsumer {
     // FIXME: in case there is no future sema completion callback after the
     // recovery mode, we might still want to provide some results (e.g. trivial
     // identifier-based completion).
-    if (Context.getKind() == CodeCompletionContext::CCC_Recovery) {
+    CodeCompletionContext::Kind ContextKind = Context.getKind();
+    if (ContextKind == CodeCompletionContext::CCC_Recovery) {
       log("Code complete: Ignoring sema code complete callback with Recovery "
           "context.");
       return;
@@ -950,6 +951,12 @@ struct CompletionRecorder : public CodeCompleteConsumer {
     // Retain the results we might want.
     for (unsigned I = 0; I < NumResults; ++I) {
       auto &Result = InResults[I];
+      if (Config::current().Completion.CodePatterns ==
+              Config::CodePatternsPolicy::None &&
+          Result.Kind == CodeCompletionResult::RK_Pattern &&
+          // keep allowing the include files autocomplete suggestions
+          ContextKind != CodeCompletionContext::CCC_IncludedFile)
+        continue;
       // Class members that are shadowed by subclasses are usually noise.
       if (Result.Hidden && Result.Declaration &&
           Result.Declaration->isCXXClassMember())
@@ -1463,11 +1470,9 @@ bool allowIndex(CodeCompletionContext &CC) {
   switch (NameSpec->getKind()) {
   case NestedNameSpecifier::Global:
   case NestedNameSpecifier::Namespace:
-  case NestedNameSpecifier::NamespaceAlias:
     return true;
   case NestedNameSpecifier::Super:
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
   // Unresolved inside a template.
   case NestedNameSpecifier::Identifier:
     return false;
@@ -2154,7 +2159,8 @@ private:
 
 clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
   clang::CodeCompleteOptions Result;
-  Result.IncludeCodePatterns = EnableSnippets;
+  Result.IncludeCodePatterns =
+      EnableSnippets && (CodePatterns != Config::CodePatternsPolicy::None);
   Result.IncludeMacros = true;
   Result.IncludeGlobals = true;
   // We choose to include full comments and not do doxygen parsing in

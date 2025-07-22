@@ -18,10 +18,14 @@ protected:
   // void TearDown() override {}
 
   char str[60];
-  LIBC_NAMESPACE::printf_core::WriteBuffer wb =
-      LIBC_NAMESPACE::printf_core::WriteBuffer(str, sizeof(str) - 1);
-  LIBC_NAMESPACE::printf_core::Writer writer =
-      LIBC_NAMESPACE::printf_core::Writer(&wb);
+  LIBC_NAMESPACE::printf_core::WriteBuffer<
+      LIBC_NAMESPACE::printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>
+      wb = LIBC_NAMESPACE::printf_core::WriteBuffer<
+          LIBC_NAMESPACE::printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>(
+          str, sizeof(str) - 1);
+  LIBC_NAMESPACE::printf_core::Writer<
+      LIBC_NAMESPACE::printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>
+      writer = LIBC_NAMESPACE::printf_core::Writer(wb);
 };
 
 TEST_F(LlvmLibcPrintfConverterTest, SimpleRawConversion) {
@@ -120,7 +124,7 @@ TEST_F(LlvmLibcPrintfConverterTest, StringConversionSimple) {
 TEST_F(LlvmLibcPrintfConverterTest, StringConversionPrecisionHigh) {
   LIBC_NAMESPACE::printf_core::FormatSection high_precision_conv;
   high_precision_conv.has_conv = true;
-  high_precision_conv.raw_string = "%4s";
+  high_precision_conv.raw_string = "%.4s";
   high_precision_conv.conv_name = 's';
   high_precision_conv.precision = 4;
   high_precision_conv.conv_val_ptr = const_cast<char *>("456");

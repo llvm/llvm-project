@@ -246,12 +246,12 @@ public:
   };
 
   enum CommandTypes {
-    eCommandTypesBuiltin = 0x0001, //< native commands such as "frame"
-    eCommandTypesUserDef = 0x0002, //< scripted commands
-    eCommandTypesUserMW = 0x0004,  //< multiword commands (command containers)
-    eCommandTypesAliases = 0x0008, //< aliases such as "po"
-    eCommandTypesHidden = 0x0010,  //< commands prefixed with an underscore
-    eCommandTypesAllThem = 0xFFFF  //< all commands
+    eCommandTypesBuiltin = 0x0001, ///< native commands such as "frame"
+    eCommandTypesUserDef = 0x0002, ///< scripted commands
+    eCommandTypesUserMW = 0x0004,  ///< multiword commands (command containers)
+    eCommandTypesAliases = 0x0008, ///< aliases such as "po"
+    eCommandTypesHidden = 0x0010,  ///< commands prefixed with an underscore
+    eCommandTypesAllThem = 0xFFFF  ///< all commands
   };
 
   using CommandReturnObjectCallback =
@@ -475,6 +475,8 @@ public:
   const char *ProcessEmbeddedScriptCommands(const char *arg);
 
   void UpdatePrompt(llvm::StringRef prompt);
+
+  void UpdateUseColor(bool use_color);
 
   bool Confirm(llvm::StringRef message, bool default_answer);
 
@@ -727,6 +729,12 @@ private:
 
   bool EchoCommandNonInteractive(llvm::StringRef line,
                                  const Flags &io_handler_flags) const;
+
+  /// Return the language specific command object for the current frame.
+  ///
+  /// For example, when stopped on a C++ frame, this returns the command object
+  /// for "language cplusplus" (`CommandObjectMultiwordItaniumABI`).
+  lldb::CommandObjectSP GetFrameLanguageCommand() const;
 
   // A very simple state machine which models the command handling transitions
   enum class CommandHandlingState {

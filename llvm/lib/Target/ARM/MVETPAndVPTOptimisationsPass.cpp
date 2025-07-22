@@ -303,8 +303,7 @@ MachineInstr *MVETPAndVPTOptimisations::CheckForLRUseInPredecessors(
     }
 
     Visited.insert(MBB);
-    for (auto *Pred : MBB->predecessors())
-      Worklist.push_back(Pred);
+    llvm::append_range(Worklist, MBB->predecessors());
   }
   return LoopStart;
 }
@@ -985,6 +984,7 @@ bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
         if (MRI->hasOneUse(GPR))
           DeadInstructions.insert(MRI->getVRegDef(GPR));
       }
+      MRI->clearKillFlags(LastVPTReg);
       LLVM_DEBUG(dbgs() << "Adding VPNot: " << *VPNot << "  to replace use at "
                         << Instr);
       VPR = NewVPR;

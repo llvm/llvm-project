@@ -67,6 +67,14 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- New ``Override pure virtual methods`` code action. When invoked on a class
+  definition, this action automatically generates C++ ``override`` declarations
+  for all pure virtual methods inherited from its base classes that have not yet
+  been implemented. The generated method stubs prompts the user for the actual
+  implementation. The overrides are intelligently grouped under their original
+  access specifiers (e.g., ``public``, ``protected``), creating new access
+  specifier blocks if necessary.
+
 Signature help
 ^^^^^^^^^^^^^^
 
@@ -85,6 +93,11 @@ Improvements to clang-doc
 Improvements to clang-query
 ---------------------------
 
+- Matcher queries interpreted by clang-query are now support trailing comma (,)
+  in matcher arguments. Note that C++ still doesn't allow this in function
+  arguments. So when porting a query to C++, remove all instances of trailing
+  comma (otherwise C++ compiler will just complain about "expected expression").
+
 Improvements to clang-tidy
 --------------------------
 
@@ -97,18 +110,9 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Improved :doc:`bugprone-string-constructor
-  <clang-tidy/checks/bugprone/string-constructor>` check to find suspicious
-  calls of ``std::string`` constructor with char pointer, start position and
-  length parameters.
-
-- Improved :doc:`bugprone-unsafe-functions
-  <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
-  additional C++ member functions to match.
-
-- Improved :doc:`misc-redundant-expression
-  <clang-tidy/checks/misc/redundant-expression>` check by providing additional
-  examples and fixing some macro related false positives.
+- Improved :doc:`bugprone-infinite-loop
+  <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
+  variables introduced by structured bindings.
 
 Removed checks
 ^^^^^^^^^^^^^^
@@ -136,3 +140,4 @@ Improvements to pp-trace
 
 Clang-tidy Visual Studio plugin
 -------------------------------
+

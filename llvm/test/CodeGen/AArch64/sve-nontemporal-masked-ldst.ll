@@ -12,7 +12,7 @@ define <4 x i32> @masked_load_v4i32(ptr %a, <4 x i1> %mask) nounwind {
 ; CHECK-NEXT:    ldnt1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
-  %load = call <4 x i32> @llvm.masked.load.v4i32(ptr %a, i32 1, <4 x i1> %mask, <4 x i32> undef), !nontemporal !0
+  %load = call <4 x i32> @llvm.masked.load.v4i32(ptr %a, i32 1, <4 x i1> %mask, <4 x i32> poison), !nontemporal !0
   ret <4 x i32> %load
 }
 
@@ -36,7 +36,7 @@ define <4 x i32> @load_v4i32(ptr %a) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <4 x i32> @llvm.masked.load.v4i32(ptr %a, i32 1, <4 x i1> <i1 1, i1 1, i1 1, i1 1>, <4 x i32> undef), !nontemporal !0
+  %load = call <4 x i32> @llvm.masked.load.v4i32(ptr %a, i32 1, <4 x i1> <i1 1, i1 1, i1 1, i1 1>, <4 x i32> poison), !nontemporal !0
   ret <4 x i32> %load
 }
 
@@ -55,7 +55,7 @@ define <vscale x 4 x i32> @masked_load_nxv4i32(ptr %a, <vscale x 4 x i1> %mask) 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldnt1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32(ptr %a, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i32> undef), !nontemporal !0
+  %load = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32(ptr %a, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i32> poison), !nontemporal !0
   ret <vscale x 4 x i32> %load
 }
 

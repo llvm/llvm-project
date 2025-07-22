@@ -15,6 +15,7 @@
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Breakpoint/BreakpointResolverFileLine.h"
 #include "lldb/Core/Address.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/SearchFilter.h"
@@ -26,6 +27,7 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadSpec.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
@@ -59,7 +61,7 @@ Breakpoint::Breakpoint(Target &new_target, const Breakpoint &source_bp)
 Breakpoint::~Breakpoint() = default;
 
 BreakpointSP Breakpoint::CopyFromBreakpoint(TargetSP new_target,
-    const Breakpoint& bp_to_copy_from) {
+                                            const Breakpoint &bp_to_copy_from) {
   if (!new_target)
     return BreakpointSP();
 
@@ -161,7 +163,7 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
         std::make_shared<SearchFilterForUnconstrainedSearches>(target_sp);
   else {
     filter_sp = SearchFilter::CreateFromStructuredData(target_sp, *filter_dict,
-        create_error);
+                                                       create_error);
     if (create_error.Fail()) {
       error = Status::FromErrorStringWithFormat(
           "Error creating breakpoint filter from data: %s.",
@@ -172,7 +174,7 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
 
   std::unique_ptr<BreakpointOptions> options_up;
   StructuredData::Dictionary *options_dict;
-  Target& target = *target_sp;
+  Target &target = *target_sp;
   success = breakpoint_dict->GetValueForKeyAsDictionary(
       BreakpointOptions::GetSerializationKey(), options_dict);
   if (success) {
@@ -190,8 +192,8 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
   success = breakpoint_dict->GetValueForKeyAsBoolean(
       Breakpoint::GetKey(OptionNames::Hardware), hardware);
 
-  result_sp = target.CreateBreakpoint(filter_sp, resolver_sp, false,
-                                      hardware, true);
+  result_sp =
+      target.CreateBreakpoint(filter_sp, resolver_sp, false, hardware, true);
 
   if (result_sp && options_up) {
     result_sp->m_options = *options_up;
@@ -248,6 +250,52 @@ const lldb::TargetSP Breakpoint::GetTargetSP() {
 }
 
 bool Breakpoint::IsInternal() const { return LLDB_BREAK_ID_IS_INTERNAL(m_bid); }
+
+llvm::Error Breakpoint::SetIsHardware(bool is_hardware) {
+  if (is_hardware == m_hardware)
+    return llvm::Error::success();
+
+  Log *log = GetLog(LLDBLog::Breakpoints);
+
+  // Disable all non-hardware breakpoint locations.
+  std::vector<BreakpointLocationSP> locations;
+  for (BreakpointLocationSP location_sp : m_locations.BreakpointLocations()) {
+    if (!location_sp || !location_sp->IsEnabled())
+      continue;
+
+    lldb::BreakpointSiteSP breakpoint_site_sp =
+        location_sp->GetBreakpointSite();
+    if (!breakpoint_site_sp ||
+        breakpoint_site_sp->GetType() == BreakpointSite::eHardware)
+      continue;
+
+    locations.push_back(location_sp);
+    if (llvm::Error error = location_sp->SetEnabled(false))
+      LLDB_LOG_ERROR(log, std::move(error),
+                     "Failed to disable breakpoint location: {0}");
+  }
+
+  // Toggle the hardware mode.
+  m_hardware = is_hardware;
+
+  // Re-enable all breakpoint locations.
+  size_t num_failures = 0;
+  for (BreakpointLocationSP location_sp : locations) {
+    if (llvm::Error error = location_sp->SetEnabled(true)) {
+      LLDB_LOG_ERROR(log, std::move(error),
+                     "Failed to re-enable breakpoint location: {0}");
+      num_failures++;
+    }
+  }
+
+  if (num_failures != 0)
+    return llvm::createStringError(
+        "%ull out of %ull breakpoint locations left disabled because they "
+        "couldn't be converted to hardware",
+        num_failures, locations.size());
+
+  return llvm::Error::success();
+}
 
 BreakpointLocationSP Breakpoint::AddLocation(const Address &addr,
                                              bool *new_location) {
@@ -345,8 +393,7 @@ void Breakpoint::SetThreadID(lldb::tid_t thread_id) {
 lldb::tid_t Breakpoint::GetThreadID() const {
   if (m_options.GetThreadSpecNoCreate() == nullptr)
     return LLDB_INVALID_THREAD_ID;
-  else
-    return m_options.GetThreadSpecNoCreate()->GetTID();
+  return m_options.GetThreadSpecNoCreate()->GetTID();
 }
 
 void Breakpoint::SetThreadIndex(uint32_t index) {
@@ -360,8 +407,7 @@ void Breakpoint::SetThreadIndex(uint32_t index) {
 uint32_t Breakpoint::GetThreadIndex() const {
   if (m_options.GetThreadSpecNoCreate() == nullptr)
     return 0;
-  else
-    return m_options.GetThreadSpecNoCreate()->GetIndex();
+  return m_options.GetThreadSpecNoCreate()->GetIndex();
 }
 
 void Breakpoint::SetThreadName(const char *thread_name) {
@@ -376,8 +422,7 @@ void Breakpoint::SetThreadName(const char *thread_name) {
 const char *Breakpoint::GetThreadName() const {
   if (m_options.GetThreadSpecNoCreate() == nullptr)
     return nullptr;
-  else
-    return m_options.GetThreadSpecNoCreate()->GetName();
+  return m_options.GetThreadSpecNoCreate()->GetName();
 }
 
 void Breakpoint::SetQueueName(const char *queue_name) {
@@ -392,17 +437,16 @@ void Breakpoint::SetQueueName(const char *queue_name) {
 const char *Breakpoint::GetQueueName() const {
   if (m_options.GetThreadSpecNoCreate() == nullptr)
     return nullptr;
-  else
-    return m_options.GetThreadSpecNoCreate()->GetQueueName();
+  return m_options.GetThreadSpecNoCreate()->GetQueueName();
 }
 
-void Breakpoint::SetCondition(const char *condition) {
-  m_options.SetCondition(condition);
+void Breakpoint::SetCondition(StopCondition condition) {
+  m_options.SetCondition(std::move(condition));
   SendBreakpointChangedEvent(eBreakpointEventTypeConditionChanged);
 }
 
-const char *Breakpoint::GetConditionText() const {
-  return m_options.GetConditionText();
+const StopCondition &Breakpoint::GetCondition() const {
+  return m_options.GetCondition();
 }
 
 // This function is used when "baton" doesn't need to be freed
@@ -533,11 +577,11 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
           if (!seen)
             seen = true;
 
-          if (!break_loc_sp->ResolveBreakpointSite()) {
-            LLDB_LOGF(log,
-                      "Warning: could not set breakpoint site for "
-                      "breakpoint location %d of breakpoint %d.\n",
-                      break_loc_sp->GetID(), GetID());
+          if (llvm::Error error = break_loc_sp->ResolveBreakpointSite()) {
+            LLDB_LOG_ERROR(log, std::move(error),
+                           "could not set breakpoint site for "
+                           "breakpoint location {1} of breakpoint {2}: {0}",
+                           break_loc_sp->GetID(), GetID());
           }
         }
       }
@@ -576,7 +620,10 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
             // Remove this breakpoint since the shared library is unloaded, but
             // keep the breakpoint location around so we always get complete
             // hit count and breakpoint lifetime info
-            break_loc_sp->ClearBreakpointSite();
+            if (llvm::Error error = break_loc_sp->ClearBreakpointSite())
+              LLDB_LOG_ERROR(log, std::move(error),
+                             "Failed to clear breakpoint locations on library "
+                             "unload: {0}");
             if (removed_locations_event) {
               removed_locations_event->GetBreakpointLocationCollection().Add(
                   break_loc_sp);
@@ -838,12 +885,19 @@ void Breakpoint::GetDescription(Stream *s, lldb::DescriptionLevel level,
                                 bool show_locations) {
   assert(s != nullptr);
 
+  const bool dim_breakpoint_description =
+      !IsEnabled() && s->AsRawOstream().colors_enabled();
+  if (dim_breakpoint_description)
+    s->Printf("%s", ansi::FormatAnsiTerminalCodes(
+                        GetTarget().GetDebugger().GetDisabledAnsiPrefix())
+                        .c_str());
+
   if (!m_kind_description.empty()) {
     if (level == eDescriptionLevelBrief) {
       s->PutCString(GetBreakpointKind());
       return;
-    } else
-      s->Printf("Kind: %s\n", GetBreakpointKind());
+    }
+    s->Printf("Kind: %s\n", GetBreakpointKind());
   }
 
   const size_t num_locations = GetNumLocations();
@@ -934,6 +988,12 @@ void Breakpoint::GetDescription(Stream *s, lldb::DescriptionLevel level,
     }
     s->IndentLess();
   }
+
+  // Reset the colors back to normal if they were previously greyed out.
+  if (dim_breakpoint_description)
+    s->Printf("%s", ansi::FormatAnsiTerminalCodes(
+                        GetTarget().GetDebugger().GetDisabledAnsiSuffix())
+                        .c_str());
 }
 
 void Breakpoint::GetResolverDescription(Stream *s) {
@@ -941,8 +1001,7 @@ void Breakpoint::GetResolverDescription(Stream *s) {
     m_resolver_sp->GetDescription(s);
 }
 
-bool Breakpoint::GetMatchingFileLine(ConstString filename,
-                                     uint32_t line_number,
+bool Breakpoint::GetMatchingFileLine(ConstString filename, uint32_t line_number,
                                      BreakpointLocationCollection &loc_coll) {
   // TODO: To be correct, this method needs to fill the breakpoint location
   // collection
@@ -999,19 +1058,32 @@ void Breakpoint::SendBreakpointChangedEvent(
 
 const char *Breakpoint::BreakpointEventTypeAsCString(BreakpointEventType type) {
   switch (type) {
-    case eBreakpointEventTypeInvalidType: return "invalid";
-    case eBreakpointEventTypeAdded: return "breakpoint added";
-    case eBreakpointEventTypeRemoved: return "breakpoint removed";
-    case eBreakpointEventTypeLocationsAdded: return "locations added";
-    case eBreakpointEventTypeLocationsRemoved: return "locations removed";
-    case eBreakpointEventTypeLocationsResolved: return "locations resolved";
-    case eBreakpointEventTypeEnabled: return "breakpoint enabled";
-    case eBreakpointEventTypeDisabled: return "breakpoint disabled";
-    case eBreakpointEventTypeCommandChanged: return "command changed";
-    case eBreakpointEventTypeConditionChanged: return "condition changed";
-    case eBreakpointEventTypeIgnoreChanged: return "ignore count changed";
-    case eBreakpointEventTypeThreadChanged: return "thread changed";
-    case eBreakpointEventTypeAutoContinueChanged: return "autocontinue changed";
+  case eBreakpointEventTypeInvalidType:
+    return "invalid";
+  case eBreakpointEventTypeAdded:
+    return "breakpoint added";
+  case eBreakpointEventTypeRemoved:
+    return "breakpoint removed";
+  case eBreakpointEventTypeLocationsAdded:
+    return "locations added";
+  case eBreakpointEventTypeLocationsRemoved:
+    return "locations removed";
+  case eBreakpointEventTypeLocationsResolved:
+    return "locations resolved";
+  case eBreakpointEventTypeEnabled:
+    return "breakpoint enabled";
+  case eBreakpointEventTypeDisabled:
+    return "breakpoint disabled";
+  case eBreakpointEventTypeCommandChanged:
+    return "command changed";
+  case eBreakpointEventTypeConditionChanged:
+    return "condition changed";
+  case eBreakpointEventTypeIgnoreChanged:
+    return "ignore count changed";
+  case eBreakpointEventTypeThreadChanged:
+    return "thread changed";
+  case eBreakpointEventTypeAutoContinueChanged:
+    return "autocontinue changed";
   };
   llvm_unreachable("Fully covered switch above!");
 }
@@ -1049,7 +1121,7 @@ void Breakpoint::BreakpointEventData::Dump(Stream *s) const {
   BreakpointEventType event_type = GetBreakpointEventType();
   break_id_t bkpt_id = GetBreakpoint()->GetID();
   s->Format("bkpt: {0} type: {1}", bkpt_id,
-      BreakpointEventTypeAsCString(event_type));
+            BreakpointEventTypeAsCString(event_type));
 }
 
 const Breakpoint::BreakpointEventData *
@@ -1070,8 +1142,7 @@ Breakpoint::BreakpointEventData::GetBreakpointEventTypeFromEvent(
 
   if (data == nullptr)
     return eBreakpointEventTypeInvalidType;
-  else
-    return data->GetBreakpointEventType();
+  return data->GetBreakpointEventType();
 }
 
 BreakpointSP Breakpoint::BreakpointEventData::GetBreakpointFromEvent(

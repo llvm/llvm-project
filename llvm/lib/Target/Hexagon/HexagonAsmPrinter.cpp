@@ -16,11 +16,11 @@
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
-#include "HexagonTargetStreamer.h"
 #include "MCTargetDesc/HexagonInstPrinter.h"
 #include "MCTargetDesc/HexagonMCExpr.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
+#include "MCTargetDesc/HexagonTargetStreamer.h"
 #include "TargetInfo/HexagonTargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -43,6 +43,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -853,6 +854,12 @@ void HexagonAsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI) {
   EmitSled(MI, SledKind::TAIL_CALL);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonAsmPrinter() {
+char HexagonAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(HexagonAsmPrinter, "hexagon-asm-printer",
+                "Hexagon Assembly Printer", false, false)
+
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeHexagonAsmPrinter() {
   RegisterAsmPrinter<HexagonAsmPrinter> X(getTheHexagonTarget());
 }

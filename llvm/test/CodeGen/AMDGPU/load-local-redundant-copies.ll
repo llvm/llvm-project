@@ -7,22 +7,22 @@
 define amdgpu_vs void @test(ptr addrspace(8) inreg %arg1, ptr addrspace(3) %arg2) {
 ; CHECK-LABEL: test:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    v_add_i32_e32 v3, vcc, 12, v0
-; CHECK-NEXT:    v_add_i32_e32 v1, vcc, 8, v0
+; CHECK-NEXT:    v_add_i32_e32 v1, vcc, 12, v0
+; CHECK-NEXT:    v_add_i32_e32 v2, vcc, 8, v0
 ; CHECK-NEXT:    v_add_i32_e32 v4, vcc, 4, v0
 ; CHECK-NEXT:    s_mov_b32 m0, -1
-; CHECK-NEXT:    ds_read_b32 v2, v1
+; CHECK-NEXT:    ds_read_b32 v3, v1
+; CHECK-NEXT:    ds_read_b32 v2, v2
 ; CHECK-NEXT:    ds_read_b32 v1, v4
-; CHECK-NEXT:    ds_read_b32 v3, v3
 ; CHECK-NEXT:    ds_read_b32 v0, v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    exp mrt0 off, off, off, off
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
 ; CHECK-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_DATA_FORMAT_32_32_32_32,BUF_NUM_FORMAT_FLOAT] idxen
 ; CHECK-NEXT:    s_endpgm
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float undef, float undef, float undef, float undef, i1 false, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float poison, float poison, float poison, float poison, i1 false, i1 false)
   %var1 = load <6 x float>, ptr addrspace(3) %arg2, align 4
-  %var2 = shufflevector <6 x float> %var1, <6 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %var2 = shufflevector <6 x float> %var1, <6 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   call void @llvm.amdgcn.struct.ptr.tbuffer.store.v4f32(<4 x float> %var2, ptr addrspace(8) %arg1, i32 0, i32 0, i32 0, i32 126, i32 0)
   ret void
 }
@@ -52,9 +52,9 @@ define amdgpu_vs void @test_2(ptr addrspace(8) inreg %arg1, i32 %arg2, i32 inreg
 ; CHECK-NEXT:    tbuffer_store_format_xyzw v[2:5], v0, s[0:3], s4 format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_UINT] idxen offset:16 glc slc
 ; CHECK-NEXT:    s_endpgm
   %load = load <8 x float>, ptr addrspace(3) %arg4, align 4
-  %vec1 = shufflevector <8 x float> %load, <8 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %vec1 = shufflevector <8 x float> %load, <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   call void @llvm.amdgcn.struct.ptr.tbuffer.store.v4f32(<4 x float> %vec1, ptr addrspace(8) %arg1, i32 %arg2, i32 0, i32 %arg3, i32 77, i32 3)
-  %vec2 = shufflevector <8 x float> %load, <8 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %vec2 = shufflevector <8 x float> %load, <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   call void @llvm.amdgcn.struct.ptr.tbuffer.store.v4f32(<4 x float> %vec2, ptr addrspace(8) %arg1, i32 %arg2, i32 16, i32 %arg3, i32 77, i32 3)
   ret void
 }
@@ -66,53 +66,52 @@ define amdgpu_vs void @test_3(i32 inreg %arg1, i32 inreg %arg2, ptr addrspace(8)
 ; CHECK-NEXT:    s_mov_b32 s6, s4
 ; CHECK-NEXT:    s_mov_b32 s5, s3
 ; CHECK-NEXT:    s_mov_b32 s4, s2
-; CHECK-NEXT:    v_add_i32_e32 v0, vcc, 20, v1
-; CHECK-NEXT:    v_add_i32_e32 v3, vcc, 16, v1
-; CHECK-NEXT:    v_add_i32_e32 v4, vcc, 12, v1
-; CHECK-NEXT:    v_add_i32_e32 v5, vcc, 8, v1
-; CHECK-NEXT:    v_add_i32_e32 v8, vcc, 4, v1
-; CHECK-NEXT:    v_mov_b32_e32 v9, s0
-; CHECK-NEXT:    v_add_i32_e32 v10, vcc, 20, v2
-; CHECK-NEXT:    v_add_i32_e32 v11, vcc, 16, v2
-; CHECK-NEXT:    s_mov_b32 m0, -1
-; CHECK-NEXT:    ds_read_b32 v7, v3
-; CHECK-NEXT:    ds_read_b32 v6, v4
-; CHECK-NEXT:    ds_read_b32 v5, v5
-; CHECK-NEXT:    ds_read_b32 v4, v8
-; CHECK-NEXT:    ds_read_b32 v8, v0
-; CHECK-NEXT:    ds_read_b32 v3, v1
-; CHECK-NEXT:    v_add_i32_e32 v1, vcc, 12, v2
+; CHECK-NEXT:    v_add_i32_e32 v0, vcc, 12, v1
+; CHECK-NEXT:    v_add_i32_e32 v3, vcc, 8, v1
+; CHECK-NEXT:    v_add_i32_e32 v4, vcc, 4, v1
+; CHECK-NEXT:    v_add_i32_e32 v7, vcc, 20, v1
+; CHECK-NEXT:    v_add_i32_e32 v9, vcc, 16, v1
+; CHECK-NEXT:    v_mov_b32_e32 v10, s0
+; CHECK-NEXT:    v_add_i32_e32 v11, vcc, 12, v2
 ; CHECK-NEXT:    v_add_i32_e32 v12, vcc, 8, v2
-; CHECK-NEXT:    v_add_i32_e32 v13, vcc, 4, v2
+; CHECK-NEXT:    s_mov_b32 m0, -1
+; CHECK-NEXT:    ds_read_b32 v6, v0
+; CHECK-NEXT:    ds_read_b32 v5, v3
+; CHECK-NEXT:    ds_read_b32 v4, v4
+; CHECK-NEXT:    ds_read_b32 v8, v7
+; CHECK-NEXT:    ds_read_b32 v7, v9
+; CHECK-NEXT:    ds_read_b32 v3, v1
+; CHECK-NEXT:    v_add_i32_e32 v0, vcc, 4, v2
+; CHECK-NEXT:    v_add_i32_e32 v1, vcc, 20, v2
+; CHECK-NEXT:    v_add_i32_e32 v9, vcc, 16, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    tbuffer_store_format_xyzw v[3:6], v9, s[4:7], s1 format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_UINT] idxen offset:264 glc slc
-; CHECK-NEXT:    tbuffer_store_format_xy v[7:8], v9, s[4:7], s1 format:[BUF_DATA_FORMAT_INVALID,BUF_NUM_FORMAT_UINT] idxen offset:280 glc slc
-; CHECK-NEXT:    ds_read_b32 v0, v11
+; CHECK-NEXT:    tbuffer_store_format_xyzw v[3:6], v10, s[4:7], s1 format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_UINT] idxen offset:264 glc slc
+; CHECK-NEXT:    tbuffer_store_format_xy v[7:8], v10, s[4:7], s1 format:[BUF_DATA_FORMAT_INVALID,BUF_NUM_FORMAT_UINT] idxen offset:280 glc slc
 ; CHECK-NEXT:    s_waitcnt expcnt(1)
-; CHECK-NEXT:    ds_read_b32 v5, v1
+; CHECK-NEXT:    ds_read_b32 v5, v11
 ; CHECK-NEXT:    ds_read_b32 v4, v12
-; CHECK-NEXT:    ds_read_b32 v3, v13
+; CHECK-NEXT:    ds_read_b32 v3, v0
+; CHECK-NEXT:    ds_read_b32 v1, v1
+; CHECK-NEXT:    ds_read_b32 v0, v9
 ; CHECK-NEXT:    ds_read_b32 v2, v2
-; CHECK-NEXT:    ds_read_b32 v1, v10
-; CHECK-NEXT:    s_waitcnt lgkmcnt(5)
-; CHECK-NEXT:    exp mrt0 off, off, off, off
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    tbuffer_store_format_xyzw v[2:5], v9, s[4:7], s1 format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_UINT] idxen offset:240 glc slc
+; CHECK-NEXT:    exp mrt0 off, off, off, off
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    tbuffer_store_format_xy v[0:1], v9, s[4:7], s1 format:[BUF_DATA_FORMAT_INVALID,BUF_NUM_FORMAT_UINT] idxen offset:256 glc slc
+; CHECK-NEXT:    tbuffer_store_format_xyzw v[2:5], v10, s[4:7], s1 format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_UINT] idxen offset:240 glc slc
+; CHECK-NEXT:    tbuffer_store_format_xy v[0:1], v10, s[4:7], s1 format:[BUF_DATA_FORMAT_INVALID,BUF_NUM_FORMAT_UINT] idxen offset:256 glc slc
 ; CHECK-NEXT:    s_endpgm
   %load1 = load <6 x float>, ptr addrspace(3) %arg5, align 4
-  %vec11 = shufflevector <6 x float> %load1, <6 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %vec11 = shufflevector <6 x float> %load1, <6 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   call void @llvm.amdgcn.struct.ptr.tbuffer.store.v4f32(<4 x float> %vec11, ptr addrspace(8) %arg3, i32 %arg1, i32 264, i32 %arg2, i32 77, i32 3)
-  %vec12 = shufflevector <6 x float> %load1, <6 x float> undef, <2 x i32> <i32 4, i32 5>
+  %vec12 = shufflevector <6 x float> %load1, <6 x float> poison, <2 x i32> <i32 4, i32 5>
   call void @llvm.amdgcn.struct.ptr.tbuffer.store.v2f32(<2 x float> %vec12, ptr addrspace(8) %arg3, i32 %arg1, i32 280, i32 %arg2, i32 64, i32 3)
 
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float undef, float undef, float undef, float undef, i1 false, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float poison, float poison, float poison, float poison, i1 false, i1 false)
 
   %load2 = load <6 x float>, ptr addrspace(3) %arg6, align 4
-  %vec21 = shufflevector <6 x float> %load2, <6 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %vec21 = shufflevector <6 x float> %load2, <6 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   call void @llvm.amdgcn.struct.ptr.tbuffer.store.v4f32(<4 x float> %vec21, ptr addrspace(8) %arg3, i32 %arg1, i32 240, i32 %arg2, i32 77, i32 3)
-  %vec22 = shufflevector <6 x float> %load2, <6 x float> undef, <2 x i32> <i32 4, i32 5>
+  %vec22 = shufflevector <6 x float> %load2, <6 x float> poison, <2 x i32> <i32 4, i32 5>
   call void @llvm.amdgcn.struct.ptr.tbuffer.store.v2f32(<2 x float> %vec22, ptr addrspace(8) %arg3, i32 %arg1, i32 256, i32 %arg2, i32 64, i32 3)
 
   ret void

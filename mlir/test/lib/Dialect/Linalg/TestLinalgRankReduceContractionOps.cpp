@@ -51,7 +51,6 @@ struct TestLinalgRankReduceContractionOps
     linalg::populateContractionOpRankReducingPatterns(patterns);
     if (failed(applyPatternsGreedily(funcOp.getBody(), std::move(patterns))))
       return signalPassFailure();
-    return;
   }
 };
 

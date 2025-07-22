@@ -22,6 +22,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SCHEDULER_H
 
 #include "llvm/SandboxIR/Instruction.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/DependencyGraph.h"
 #include <queue>
 
@@ -61,7 +62,18 @@ class ReadyListContainer {
 
 public:
   ReadyListContainer() : List(Cmp) {}
-  void insert(DGNode *N) { List.push(N); }
+  void insert(DGNode *N) {
+#ifndef NDEBUG
+    assert(!N->scheduled() && "Don't insert a scheduled node!");
+    auto ListCopy = List;
+    while (!ListCopy.empty()) {
+      DGNode *Top = ListCopy.top();
+      ListCopy.pop();
+      assert(Top != N && "Node already exists in ready list!");
+    }
+#endif
+    List.push(N);
+  }
   DGNode *pop() {
     auto *Back = List.top();
     List.pop();
@@ -101,8 +113,9 @@ private:
   ContainerTy Nodes;
 
   /// Called by the DGNode destructor to avoid accessing freed memory.
-  void eraseFromBundle(DGNode *N) { Nodes.erase(find(Nodes, N)); }
-  friend DGNode::~DGNode(); // For eraseFromBundle().
+  void eraseFromBundle(DGNode *N) { llvm::erase(Nodes, N); }
+  friend void DGNode::setSchedBundle(SchedBundle &); // For eraseFromBunde().
+  friend DGNode::~DGNode();                          // For eraseFromBundle().
 
 public:
   SchedBundle() = default;
@@ -119,6 +132,10 @@ public:
       N->clearSchedBundle();
   }
   bool empty() const { return Nodes.empty(); }
+  /// Singleton bundles are created when scheduling instructions temporarily to
+  /// fill in the schedule until we schedule the vector bundle. These are
+  /// non-vector bundles containing just a single instruction.
+  bool isSingleton() const { return Nodes.size() == 1u; }
   DGNode *back() const { return Nodes.back(); }
   using iterator = ContainerTy::iterator;
   using const_iterator = ContainerTy::const_iterator;
@@ -127,11 +144,15 @@ public:
   const_iterator begin() const { return Nodes.begin(); }
   const_iterator end() const { return Nodes.end(); }
   /// \Returns the bundle node that comes before the others in program order.
-  DGNode *getTop() const;
+  LLVM_ABI DGNode *getTop() const;
   /// \Returns the bundle node that comes after the others in program order.
-  DGNode *getBot() const;
+  LLVM_ABI DGNode *getBot() const;
   /// Move all bundle instructions to \p Where back-to-back.
-  void cluster(BasicBlock::iterator Where);
+  LLVM_ABI void cluster(BasicBlock::iterator Where);
+  /// \Returns true if all nodes in the bundle are ready.
+  bool ready() const {
+    return all_of(Nodes, [](const auto *N) { return N->ready(); });
+  }
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
@@ -162,7 +183,7 @@ class Scheduler {
   /// Called by Sandbox IR's callback system, after \p I has been created.
   /// NOTE: This should run after DAG's callback has run.
   // TODO: Perhaps call DAG's notify function from within this one?
-  void notifyCreateInstr(Instruction *I);
+  LLVM_ABI void notifyCreateInstr(Instruction *I);
 
   /// \Returns a scheduling bundle containing \p Instrs.
   SchedBundle *createBundle(ArrayRef<Instruction *> Instrs);
@@ -176,15 +197,18 @@ class Scheduler {
   /// The scheduling state of the instructions in the bundle.
   enum class BndlSchedState {
     NoneScheduled, ///> No instruction in the bundle was previously scheduled.
-    PartiallyOrDifferentlyScheduled, ///> Only some of the instrs in the bundle
-                                     /// were previously scheduled, or all of
-                                     /// them were but not in the same
-                                     /// SchedBundle.
+    AlreadyScheduled, ///> At least one instruction in the bundle belongs to a
+                      /// different non-singleton scheduling bundle.
+    TemporarilyScheduled, ///> Instructions were temporarily scheduled as
+                          /// singleton bundles or some of them were not
+                          /// scheduled at all. None of them were in a vector
+                          ///(non-singleton) bundle.
     FullyScheduled, ///> All instrs in the bundle were previously scheduled and
                     /// were in the same SchedBundle.
   };
   /// \Returns whether none/some/all of \p Instrs have been scheduled.
-  BndlSchedState getBndlSchedState(ArrayRef<Instruction *> Instrs) const;
+  LLVM_ABI BndlSchedState
+  getBndlSchedState(ArrayRef<Instruction *> Instrs) const;
   /// Destroy the top-most part of the schedule that includes \p Instrs.
   void trimSchedule(ArrayRef<Instruction *> Instrs);
   /// Disable copies.
@@ -207,7 +231,7 @@ public:
   /// dependencies among \p Instrs. This function may involve scheduling
   /// intermediate instructions or canceling and re-scheduling if needed.
   /// \Returns true on success, false otherwise.
-  bool trySchedule(ArrayRef<Instruction *> Instrs);
+  LLVM_ABI bool trySchedule(ArrayRef<Instruction *> Instrs);
   /// Clear the scheduler's state, including the DAG.
   void clear() {
     Bndls.clear();
@@ -232,6 +256,11 @@ public:
 class SchedulerInternalsAttorney {
 public:
   static DependencyGraph &getDAG(Scheduler &Sched) { return Sched.DAG; }
+  using BndlSchedState = Scheduler::BndlSchedState;
+  static BndlSchedState getBndlSchedState(const Scheduler &Sched,
+                                          ArrayRef<Instruction *> Instrs) {
+    return Sched.getBndlSchedState(Instrs);
+  }
 };
 
 } // namespace llvm::sandboxir

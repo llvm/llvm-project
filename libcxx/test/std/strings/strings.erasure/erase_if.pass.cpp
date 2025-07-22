@@ -11,7 +11,7 @@
 // <string>
 
 // template <class charT, class traits, class Allocator, class Predicate>
-//   typename basic_string<charT, traits, Allocator>::size_type
+//   constexpr typename basic_string<charT, traits, Allocator>::size_type
 //   erase_if(basic_string<charT, traits, Allocator>& c, Predicate pred);
 
 #include <string>
@@ -21,7 +21,7 @@
 #include "min_allocator.h"
 
 template <class S, class Pred>
-void test0(S s, Pred p, S expected, std::size_t expected_erased_count) {
+constexpr void test0(S s, Pred p, S expected, std::size_t expected_erased_count) {
   ASSERT_SAME_TYPE(typename S::size_type, decltype(std::erase_if(s, p)));
   assert(expected_erased_count == std::erase_if(s, p));
   LIBCPP_ASSERT(s.__invariants());
@@ -29,7 +29,7 @@ void test0(S s, Pred p, S expected, std::size_t expected_erased_count) {
 }
 
 template <typename S>
-void test() {
+constexpr void test() {
   auto isA   = [](auto ch) { return ch == 'a'; };
   auto isB   = [](auto ch) { return ch == 'b'; };
   auto isC   = [](auto ch) { return ch == 'c'; };
@@ -66,10 +66,17 @@ void test() {
   test0(S("aba"), True, S(""), 3);
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test<std::string>();
   test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
   test<std::basic_string<char, std::char_traits<char>, test_allocator<char>>>();
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+  static_assert(test());
 
   return 0;
 }

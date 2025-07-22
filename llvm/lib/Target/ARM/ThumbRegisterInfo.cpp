@@ -105,7 +105,7 @@ void ThumbRegisterInfo::emitLoadConstPool(
   MachineFunction &MF = *MBB.getParent();
   const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
   if (STI.isThumb1Only()) {
-    assert((isARMLowRegister(DestReg) || DestReg.isVirtual()) &&
+    assert((DestReg.isVirtual() || isARMLowRegister(DestReg)) &&
            "Thumb1 does not have ldr to high register");
     return emitThumb1LoadConstPool(MBB, MBBI, dl, DestReg, SubIdx, Val, Pred,
                                    PredReg, MIFlags);

@@ -17,70 +17,78 @@ body:             |
   ; RA-NEXT:   [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; RA-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_1024 = S_MOV_B32 -1
   ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_1024 = S_MOV_B32 -1
+  ; RA-NEXT:   SI_SPILL_S1024_SAVE [[S_MOV_B32_]], %stack.0, implicit $exec, implicit $sgpr32 :: (store (s1024) into %stack.0, align 4, addrspace 5)
   ; RA-NEXT:   undef [[S_MOV_B32_1:%[0-9]+]].sub0:sgpr_1024 = S_MOV_B32 0
+  ; RA-NEXT:   SI_SPILL_S1024_SAVE [[S_MOV_B32_1]], %stack.1, implicit $exec, implicit $sgpr32 :: (store (s1024) into %stack.1, align 4, addrspace 5)
   ; RA-NEXT: {{  $}}
   ; RA-NEXT: bb.1:
   ; RA-NEXT:   successors: %bb.2(0x80000000)
   ; RA-NEXT: {{  $}}
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub2:sgpr_1024 = COPY [[S_MOV_B32_]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub3:sgpr_1024 = COPY [[S_MOV_B32_]].sub1
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub4:sgpr_1024 = COPY [[S_MOV_B32_]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub5:sgpr_1024 = COPY [[S_MOV_B32_]].sub1
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub6:sgpr_1024 = COPY [[S_MOV_B32_]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub7:sgpr_1024 = COPY [[S_MOV_B32_]].sub1
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub8:sgpr_1024 = COPY [[S_MOV_B32_]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub9:sgpr_1024 = COPY [[S_MOV_B32_]].sub1
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub10:sgpr_1024 = COPY [[S_MOV_B32_]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub11:sgpr_1024 = COPY [[S_MOV_B32_]].sub1
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub12:sgpr_1024 = COPY [[S_MOV_B32_]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub13:sgpr_1024 = COPY [[S_MOV_B32_]].sub1
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub14:sgpr_1024 = COPY [[S_MOV_B32_]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub15:sgpr_1024 = COPY [[S_MOV_B32_]].sub1
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub16:sgpr_1024 = COPY [[S_MOV_B32_]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub17:sgpr_1024 = COPY [[S_MOV_B32_]].sub1
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub18:sgpr_1024 = COPY [[S_MOV_B32_]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub19:sgpr_1024 = COPY [[S_MOV_B32_]].sub1
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub20:sgpr_1024 = COPY [[S_MOV_B32_]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub21:sgpr_1024 = COPY [[S_MOV_B32_]].sub1
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub22:sgpr_1024 = COPY [[S_MOV_B32_]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub23:sgpr_1024 = COPY [[S_MOV_B32_]].sub1
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub24:sgpr_1024 = COPY [[S_MOV_B32_]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub25:sgpr_1024 = COPY [[S_MOV_B32_]].sub1
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub26:sgpr_1024 = COPY [[S_MOV_B32_]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub27:sgpr_1024 = COPY [[S_MOV_B32_]].sub1
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub28:sgpr_1024 = COPY [[S_MOV_B32_]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub29:sgpr_1024 = COPY [[S_MOV_B32_]].sub1
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub1:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub2:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub3:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub4:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub5:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub6:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub7:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub8:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub9:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub10:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub11:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub12:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub13:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub14:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub15:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub16:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub17:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub18:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub19:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub20:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub21:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub22:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub23:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub24:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub25:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub26:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub27:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub28:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub29:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub30:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
-  ; RA-NEXT:   [[S_MOV_B32_1:%[0-9]+]].sub31:sgpr_1024 = COPY [[S_MOV_B32_1]].sub0
+  ; RA-NEXT:   [[SI_SPILL_S1024_RESTORE:%[0-9]+]]:sgpr_1024 = SI_SPILL_S1024_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s1024) from %stack.0, align 4, addrspace 5)
+  ; RA-NEXT:   undef [[COPY:%[0-9]+]].sub0_sub1:sgpr_1024 = COPY [[SI_SPILL_S1024_RESTORE]].sub0_sub1
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub2:sgpr_1024 = COPY [[COPY]].sub0
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub3:sgpr_1024 = COPY [[COPY]].sub1
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub4:sgpr_1024 = COPY [[COPY]].sub0
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub5:sgpr_1024 = COPY [[COPY]].sub1
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub6:sgpr_1024 = COPY [[COPY]].sub0
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub7:sgpr_1024 = COPY [[COPY]].sub1
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub8:sgpr_1024 = COPY [[COPY]].sub0
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub9:sgpr_1024 = COPY [[COPY]].sub1
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub10:sgpr_1024 = COPY [[COPY]].sub0
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub11:sgpr_1024 = COPY [[COPY]].sub1
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub12:sgpr_1024 = COPY [[COPY]].sub0
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub13:sgpr_1024 = COPY [[COPY]].sub1
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub14:sgpr_1024 = COPY [[COPY]].sub0
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub15:sgpr_1024 = COPY [[COPY]].sub1
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub16:sgpr_1024 = COPY [[COPY]].sub0
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub17:sgpr_1024 = COPY [[COPY]].sub1
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub18:sgpr_1024 = COPY [[COPY]].sub0
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub19:sgpr_1024 = COPY [[COPY]].sub1
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub20:sgpr_1024 = COPY [[COPY]].sub0
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub21:sgpr_1024 = COPY [[COPY]].sub1
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub22:sgpr_1024 = COPY [[COPY]].sub0
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub23:sgpr_1024 = COPY [[COPY]].sub1
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub24:sgpr_1024 = COPY [[COPY]].sub0
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub25:sgpr_1024 = COPY [[COPY]].sub1
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub26:sgpr_1024 = COPY [[COPY]].sub0
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub27:sgpr_1024 = COPY [[COPY]].sub1
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub28:sgpr_1024 = COPY [[COPY]].sub0
+  ; RA-NEXT:   [[COPY:%[0-9]+]].sub29:sgpr_1024 = COPY [[COPY]].sub1
+  ; RA-NEXT:   SI_SPILL_S1024_SAVE [[COPY]], %stack.0, implicit $exec, implicit $sgpr32 :: (store (s1024) into %stack.0, align 4, addrspace 5)
+  ; RA-NEXT:   [[SI_SPILL_S1024_RESTORE1:%[0-9]+]]:sgpr_1024 = SI_SPILL_S1024_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s1024) from %stack.1, align 4, addrspace 5)
+  ; RA-NEXT:   undef [[COPY1:%[0-9]+]].sub0:sgpr_1024 = COPY [[SI_SPILL_S1024_RESTORE1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub1:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub2:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub3:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub4:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub5:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub6:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub7:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub8:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub9:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub10:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub11:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub12:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub13:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub14:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub15:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub16:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub17:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub18:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub19:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub20:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub21:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub22:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub23:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub24:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub25:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub26:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub27:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub28:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub29:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub30:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   [[COPY1:%[0-9]+]].sub31:sgpr_1024 = COPY [[COPY1]].sub0
+  ; RA-NEXT:   SI_SPILL_S1024_SAVE [[COPY1]], %stack.1, implicit $exec, implicit $sgpr32 :: (store (s1024) into %stack.1, align 4, addrspace 5)
   ; RA-NEXT: {{  $}}
   ; RA-NEXT: bb.2:
   ; RA-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -95,14 +103,17 @@ body:             |
   ; VR-NEXT: {{  $}}
   ; VR-NEXT:   renamable $sgpr37 = S_MOV_B32 -1
   ; VR-NEXT:   renamable $sgpr36 = S_MOV_B32 -1
-  ; VR-NEXT:   renamable $sgpr68 = S_MOV_B32 0
+  ; VR-NEXT:   SI_SPILL_S1024_SAVE renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s1024) into %stack.0, align 4, addrspace 5)
+  ; VR-NEXT:   renamable $sgpr36 = S_MOV_B32 0
   ; VR-NEXT:   renamable $sgpr30_sgpr31 = IMPLICIT_DEF
   ; VR-NEXT:   renamable $sgpr34_sgpr35 = IMPLICIT_DEF
+  ; VR-NEXT:   SI_SPILL_S1024_SAVE killed renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, %stack.1, implicit $exec, implicit $sgpr32 :: (store (s1024) into %stack.1, align 4, addrspace 5)
   ; VR-NEXT: {{  $}}
   ; VR-NEXT: bb.1:
   ; VR-NEXT:   successors: %bb.2(0x80000000)
-  ; VR-NEXT:   liveins: $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67:0x000000000000000F, $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99:0x0000000000000003
+  ; VR-NEXT:   liveins: $sgpr30_sgpr31, $sgpr34_sgpr35
   ; VR-NEXT: {{  $}}
+  ; VR-NEXT:   renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67 = SI_SPILL_S1024_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s1024) from %stack.0, align 4, addrspace 5)
   ; VR-NEXT:   renamable $sgpr38 = COPY renamable $sgpr36
   ; VR-NEXT:   renamable $sgpr39 = COPY renamable $sgpr37
   ; VR-NEXT:   renamable $sgpr40 = COPY renamable $sgpr36
@@ -131,41 +142,44 @@ body:             |
   ; VR-NEXT:   renamable $sgpr63 = COPY renamable $sgpr37
   ; VR-NEXT:   renamable $sgpr64 = COPY renamable $sgpr36
   ; VR-NEXT:   renamable $sgpr65 = COPY renamable $sgpr37
-  ; VR-NEXT:   renamable $sgpr69 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr70 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr71 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr72 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr73 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr74 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr75 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr76 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr77 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr78 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr79 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr80 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr81 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr82 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr83 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr84 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr85 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr86 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr87 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr88 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr89 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr90 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr91 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr92 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr93 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr94 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr95 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr96 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr97 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr98 = COPY renamable $sgpr68
-  ; VR-NEXT:   renamable $sgpr99 = COPY renamable $sgpr68
+  ; VR-NEXT:   SI_SPILL_S1024_SAVE killed renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s1024) into %stack.0, align 4, addrspace 5)
+  ; VR-NEXT:   renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67 = SI_SPILL_S1024_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s1024) from %stack.1, align 4, addrspace 5)
+  ; VR-NEXT:   renamable $sgpr37 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr38 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr39 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr40 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr41 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr42 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr43 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr44 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr45 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr46 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr47 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr48 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr49 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr50 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr51 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr52 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr53 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr54 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr55 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr56 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr57 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr58 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr59 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr60 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr61 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr62 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr63 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr64 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr65 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr66 = COPY renamable $sgpr36
+  ; VR-NEXT:   renamable $sgpr67 = COPY renamable $sgpr36
+  ; VR-NEXT:   SI_SPILL_S1024_SAVE killed renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, %stack.1, implicit $exec, implicit $sgpr32 :: (store (s1024) into %stack.1, align 4, addrspace 5)
   ; VR-NEXT: {{  $}}
   ; VR-NEXT: bb.2:
   ; VR-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; VR-NEXT:   liveins: $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67:0x000000000000000F, $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99:0x0000000000000003
+  ; VR-NEXT:   liveins: $sgpr30_sgpr31, $sgpr34_sgpr35
   ; VR-NEXT: {{  $}}
   ; VR-NEXT:   S_NOP 0, csr_amdgpu, implicit renamable $sgpr30_sgpr31, implicit renamable $sgpr34_sgpr35
   ; VR-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc

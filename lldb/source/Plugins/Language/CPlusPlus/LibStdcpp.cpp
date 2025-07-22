@@ -9,7 +9,9 @@
 #include "LibStdcpp.h"
 #include "LibCxx.h"
 
+#include "Plugins/Language/CPlusPlus/Generic.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/VectorIterator.h"
 #include "lldb/Target/Target.h"
@@ -49,9 +51,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   ExecutionContextRef m_exe_ctx_ref;
@@ -70,9 +70,8 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
 private:
 
   // The lifetime of a ValueObject and all its derivative ValueObjects
@@ -80,8 +79,7 @@ private:
   // objects are only destroyed when every shared pointer to any of them
   // is destroyed, so we must not store a shared pointer to any ValueObject
   // derived from our backend ValueObject (since we're in the same cluster).
-  ValueObject* m_ptr_obj = nullptr; // Underlying pointer (held, not owned)
-  ValueObject* m_obj_obj = nullptr; // Underlying object (held, not owned)
+  ValueObject *m_ptr_obj = nullptr; // Underlying pointer (held, not owned)
 };
 
 } // end of anonymous namespace
@@ -149,15 +147,15 @@ LibstdcppMapIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   return lldb::ValueObjectSP();
 }
 
-bool LibstdcppMapIteratorSyntheticFrontEnd::MightHaveChildren() { return true; }
-
-size_t LibstdcppMapIteratorSyntheticFrontEnd::GetIndexOfChildWithName(
+llvm::Expected<size_t>
+LibstdcppMapIteratorSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
   if (name == "first")
     return 0;
   if (name == "second")
     return 1;
-  return UINT32_MAX;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }
 
 SyntheticChildrenFrontEnd *
@@ -232,140 +230,22 @@ VectorIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   return lldb::ValueObjectSP();
 }
 
-bool VectorIteratorSyntheticFrontEnd::MightHaveChildren() { return true; }
-
-size_t VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(
-    ConstString name) {
+llvm::Expected<size_t>
+VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (name == "item")
     return 0;
-  return UINT32_MAX;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }
 
 bool lldb_private::formatters::LibStdcppStringSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  const bool scalar_is_load_addr = true;
-  AddressType addr_type;
-  lldb::addr_t addr_of_string = LLDB_INVALID_ADDRESS;
-  if (valobj.IsPointerOrReferenceType()) {
-    Status error;
-    ValueObjectSP pointee_sp = valobj.Dereference(error);
-    if (pointee_sp && error.Success())
-      addr_of_string = pointee_sp->GetAddressOf(scalar_is_load_addr, &addr_type);
-  } else
-    addr_of_string =
-        valobj.GetAddressOf(scalar_is_load_addr, &addr_type);
-  if (addr_of_string != LLDB_INVALID_ADDRESS) {
-    switch (addr_type) {
-    case eAddressTypeLoad: {
-      ProcessSP process_sp(valobj.GetProcessSP());
-      if (!process_sp)
-        return false;
+  ValueObjectSP ptr = valobj.GetChildAtNamePath({"_M_dataplus", "_M_p"});
+  if (!ptr)
+    return false;
 
-      StringPrinter::ReadStringAndDumpToStreamOptions options(valobj);
-      Status error;
-      lldb::addr_t addr_of_data =
-          process_sp->ReadPointerFromMemory(addr_of_string, error);
-      if (error.Fail() || addr_of_data == 0 ||
-          addr_of_data == LLDB_INVALID_ADDRESS)
-        return false;
-      options.SetLocation(addr_of_data);
-      options.SetTargetSP(valobj.GetTargetSP());
-      options.SetStream(&stream);
-      options.SetNeedsZeroTermination(false);
-      options.SetBinaryZeroIsTerminator(true);
-      lldb::addr_t size_of_data = process_sp->ReadPointerFromMemory(
-          addr_of_string + process_sp->GetAddressByteSize(), error);
-      if (error.Fail())
-        return false;
-      options.SetSourceSize(size_of_data);
-      options.SetHasSourceSize(true);
-
-      if (!StringPrinter::ReadStringAndDumpToStream<
-              StringPrinter::StringElementType::UTF8>(options)) {
-        stream.Printf("Summary Unavailable");
-        return true;
-      } else
-        return true;
-    } break;
-    case eAddressTypeHost:
-      break;
-    case eAddressTypeInvalid:
-    case eAddressTypeFile:
-      break;
-    }
-  }
-  return false;
-}
-
-bool lldb_private::formatters::LibStdcppWStringSummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  const bool scalar_is_load_addr = true;
-  AddressType addr_type;
-  lldb::addr_t addr_of_string =
-      valobj.GetAddressOf(scalar_is_load_addr, &addr_type);
-  if (addr_of_string != LLDB_INVALID_ADDRESS) {
-    switch (addr_type) {
-    case eAddressTypeLoad: {
-      ProcessSP process_sp(valobj.GetProcessSP());
-      if (!process_sp)
-        return false;
-
-      CompilerType wchar_compiler_type =
-          valobj.GetCompilerType().GetBasicTypeFromAST(lldb::eBasicTypeWChar);
-
-      if (!wchar_compiler_type)
-        return false;
-
-      // Safe to pass nullptr for exe_scope here.
-      std::optional<uint64_t> size = wchar_compiler_type.GetBitSize(nullptr);
-      if (!size)
-        return false;
-      const uint32_t wchar_size = *size;
-
-      StringPrinter::ReadStringAndDumpToStreamOptions options(valobj);
-      Status error;
-      lldb::addr_t addr_of_data =
-          process_sp->ReadPointerFromMemory(addr_of_string, error);
-      if (error.Fail() || addr_of_data == 0 ||
-          addr_of_data == LLDB_INVALID_ADDRESS)
-        return false;
-      options.SetLocation(addr_of_data);
-      options.SetTargetSP(valobj.GetTargetSP());
-      options.SetStream(&stream);
-      options.SetNeedsZeroTermination(false);
-      options.SetBinaryZeroIsTerminator(false);
-      lldb::addr_t size_of_data = process_sp->ReadPointerFromMemory(
-          addr_of_string + process_sp->GetAddressByteSize(), error);
-      if (error.Fail())
-        return false;
-      options.SetSourceSize(size_of_data);
-      options.SetHasSourceSize(true);
-      options.SetPrefixToken("L");
-
-      switch (wchar_size) {
-      case 8:
-        return StringPrinter::ReadStringAndDumpToStream<
-            StringPrinter::StringElementType::UTF8>(options);
-      case 16:
-        return StringPrinter::ReadStringAndDumpToStream<
-            StringPrinter::StringElementType::UTF16>(options);
-      case 32:
-        return StringPrinter::ReadStringAndDumpToStream<
-            StringPrinter::StringElementType::UTF32>(options);
-      default:
-        stream.Printf("size for wchar_t is not valid");
-        return true;
-      }
-      return true;
-    } break;
-    case eAddressTypeHost:
-      break;
-    case eAddressTypeInvalid:
-    case eAddressTypeFile:
-      break;
-    }
-  }
-  return false;
+  stream << ptr->GetSummaryAsCString();
+  return true;
 }
 
 LibStdcppSharedPtrSyntheticFrontEnd::LibStdcppSharedPtrSyntheticFrontEnd(
@@ -382,17 +262,21 @@ LibStdcppSharedPtrSyntheticFrontEnd::CalculateNumChildren() {
 
 lldb::ValueObjectSP
 LibStdcppSharedPtrSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
+  if (!m_ptr_obj)
+    return nullptr;
+
   if (idx == 0)
     return m_ptr_obj->GetSP();
+
   if (idx == 1) {
-    if (m_ptr_obj && !m_obj_obj) {
-      Status error;
-      ValueObjectSP obj_obj = m_ptr_obj->Dereference(error);
-      if (error.Success())
-        m_obj_obj = obj_obj->Clone(ConstString("object")).get();
-    }
-    if (m_obj_obj)
-      return m_obj_obj->GetSP();
+    ValueObjectSP valobj_sp = m_backend.GetSP();
+    if (!valobj_sp)
+      return nullptr;
+
+    Status status;
+    ValueObjectSP value_sp = m_ptr_obj->Dereference(status);
+    if (status.Success())
+      return value_sp;
   }
   return lldb::ValueObjectSP();
 }
@@ -410,21 +294,25 @@ lldb::ChildCacheState LibStdcppSharedPtrSyntheticFrontEnd::Update() {
   if (!ptr_obj_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  m_ptr_obj = ptr_obj_sp->Clone(ConstString("pointer")).get();
-  m_obj_obj = nullptr;
+  auto cast_ptr_sp = GetDesugaredSmartPointerValue(*ptr_obj_sp, *valobj_sp);
+  if (!cast_ptr_sp)
+    return lldb::ChildCacheState::eRefetch;
+
+  m_ptr_obj = cast_ptr_sp->Clone(ConstString("pointer")).get();
 
   return lldb::ChildCacheState::eRefetch;
 }
 
-bool LibStdcppSharedPtrSyntheticFrontEnd::MightHaveChildren() { return true; }
-
-size_t LibStdcppSharedPtrSyntheticFrontEnd::GetIndexOfChildWithName(
-    ConstString name) {
+llvm::Expected<size_t>
+LibStdcppSharedPtrSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (name == "pointer")
     return 0;
+
   if (name == "object" || name == "$$dereference$$")
     return 1;
-  return UINT32_MAX;
+
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }
 
 SyntheticChildrenFrontEnd *
@@ -444,29 +332,83 @@ bool lldb_private::formatters::LibStdcppSmartPointerSummaryProvider(
   if (!ptr_sp)
     return false;
 
-  ValueObjectSP usecount_sp(
-      valobj_sp->GetChildAtNamePath({"_M_refcount", "_M_pi", "_M_use_count"}));
-  if (!usecount_sp)
+  DumpCxxSmartPtrPointerSummary(stream, *ptr_sp, options);
+
+  ValueObjectSP pi_sp = valobj_sp->GetChildAtNamePath({"_M_refcount", "_M_pi"});
+  if (!pi_sp)
     return false;
 
-  if (ptr_sp->GetValueAsUnsigned(0) == 0 ||
-      usecount_sp->GetValueAsUnsigned(0) == 0) {
-    stream.Printf("nullptr");
+  bool success;
+  uint64_t pi_addr = pi_sp->GetValueAsUnsigned(0, &success);
+  // Empty control field. We're done.
+  if (!success || pi_addr == 0)
+    return true;
+
+  int64_t shared_count = 0;
+  if (auto count_sp = pi_sp->GetChildMemberWithName("_M_use_count")) {
+    bool success;
+    shared_count = count_sp->GetValueAsSigned(0, &success);
+    if (!success)
+      return false;
+
+    stream.Printf(" strong=%" PRId64, shared_count);
+  }
+
+  // _M_weak_count is the number of weak references + (_M_use_count != 0).
+  if (auto weak_count_sp = pi_sp->GetChildMemberWithName("_M_weak_count")) {
+    bool success;
+    int64_t count = weak_count_sp->GetValueAsUnsigned(0, &success);
+    if (!success)
+      return false;
+
+    stream.Printf(" weak=%" PRId64, count - (shared_count != 0));
+  }
+
+  return true;
+}
+
+static uint64_t LibStdcppVariantNposValue(size_t index_byte_size) {
+  switch (index_byte_size) {
+  case 1:
+    return 0xff;
+  case 2:
+    return 0xffff;
+  default:
+    return 0xffff'ffff;
+  }
+}
+
+bool formatters::LibStdcppVariantSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  ValueObjectSP valobj_sp = valobj.GetNonSyntheticValue();
+  if (!valobj_sp)
+    return false;
+
+  ValueObjectSP index_obj = valobj_sp->GetChildMemberWithName("_M_index");
+  ValueObjectSP data_obj = valobj_sp->GetChildMemberWithName("_M_u");
+  if (!index_obj || !data_obj)
+    return false;
+
+  auto index_bytes = index_obj->GetByteSize();
+  if (!index_bytes)
+    return false;
+  auto npos_value = LibStdcppVariantNposValue(*index_bytes);
+  auto index = index_obj->GetValueAsUnsigned(0);
+  if (index == npos_value) {
+    stream.Printf(" No Value");
     return true;
   }
 
-  Status error;
-  ValueObjectSP pointee_sp = ptr_sp->Dereference(error);
-  if (pointee_sp && error.Success()) {
-    if (pointee_sp->DumpPrintableRepresentation(
-            stream, ValueObject::eValueObjectRepresentationStyleSummary,
-            lldb::eFormatInvalid,
-            ValueObject::PrintableRepresentationSpecialCases::eDisable,
-            false)) {
-      return true;
-    }
+  auto variant_type =
+      valobj_sp->GetCompilerType().GetCanonicalType().GetNonReferenceType();
+  if (!variant_type)
+    return false;
+  if (index >= variant_type.GetNumTemplateArguments(true)) {
+    stream.Printf(" <Invalid>");
+    return true;
   }
 
-  stream.Printf("ptr = 0x%" PRIx64, ptr_sp->GetValueAsUnsigned(0));
+  auto active_type = variant_type.GetTypeTemplateArgument(index, true);
+  stream << " Active Type = " << active_type.GetDisplayTypeName() << " ";
   return true;
 }

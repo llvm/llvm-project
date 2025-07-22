@@ -40,8 +40,10 @@ Region::Region(Context &Ctx, TargetTransformInfo &TTI)
 
   CreateInstCB = Ctx.registerCreateInstrCallback(
       [this](Instruction *NewInst) { add(NewInst); });
-  EraseInstCB = Ctx.registerEraseInstrCallback(
-      [this](Instruction *ErasedInst) { remove(ErasedInst); });
+  EraseInstCB = Ctx.registerEraseInstrCallback([this](Instruction *ErasedInst) {
+    remove(ErasedInst);
+    removeFromAux(ErasedInst);
+  });
 }
 
 Region::~Region() {
@@ -49,12 +51,13 @@ Region::~Region() {
   Ctx.unregisterEraseInstrCallback(EraseInstCB);
 }
 
-void Region::add(Instruction *I) {
+void Region::addImpl(Instruction *I, bool IgnoreCost) {
   Insts.insert(I);
   // TODO: Consider tagging instructions lazily.
   cast<llvm::Instruction>(I->Val)->setMetadata(MDKind, RegionMDN);
-  // Keep track of the instruction cost.
-  Scoreboard.add(I);
+  if (!IgnoreCost)
+    // Keep track of the instruction cost.
+    Scoreboard.add(I);
 }
 
 void Region::setAux(ArrayRef<Instruction *> Aux) {
@@ -62,11 +65,13 @@ void Region::setAux(ArrayRef<Instruction *> Aux) {
   auto &LLVMCtx = Ctx.LLVMCtx;
   for (auto [Idx, I] : enumerate(Aux)) {
     llvm::ConstantInt *IdxC =
-        llvm::ConstantInt::get(LLVMCtx, llvm::APInt(32, Idx, false));
+        llvm::ConstantInt::get(llvm::Type::getInt32Ty(LLVMCtx), Idx, false);
     assert(cast<llvm::Instruction>(I->Val)->getMetadata(AuxMDKind) == nullptr &&
            "Instruction already in Aux!");
     cast<llvm::Instruction>(I->Val)->setMetadata(
         AuxMDKind, MDNode::get(LLVMCtx, ConstantAsMetadata::get(IdxC)));
+    // Aux instrs should always be in a region.
+    addImpl(I, /*DontTrackCost=*/true);
   }
 }
 
@@ -82,13 +87,26 @@ void Region::setAux(unsigned Idx, Instruction *I) {
       Aux[Idx] = nullptr;
   }
   Aux[Idx] = I;
+  // Aux instrs should always be in a region.
+  addImpl(I, /*DontTrackCost=*/true);
+}
+
+void Region::dropAuxMetadata(Instruction *I) {
+  auto *LLVMI = cast<llvm::Instruction>(I->Val);
+  LLVMI->setMetadata(AuxMDKind, nullptr);
+}
+
+void Region::removeFromAux(Instruction *I) {
+  auto It = find(Aux, I);
+  if (It == Aux.end())
+    return;
+  dropAuxMetadata(I);
+  Aux.erase(It);
 }
 
 void Region::clearAux() {
-  for (unsigned Idx : seq<unsigned>(0, Aux.size())) {
-    auto *LLVMI = cast<llvm::Instruction>(Aux[Idx]->Val);
-    LLVMI->setMetadata(AuxMDKind, nullptr);
-  }
+  for (unsigned Idx : seq<unsigned>(0, Aux.size()))
+    dropAuxMetadata(Aux[Idx]);
   Aux.clear();
 }
 
@@ -138,8 +156,8 @@ Region::createRegionsFromMD(Function &F, TargetTransformInfo &TTI) {
   for (BasicBlock &BB : F) {
     for (Instruction &Inst : BB) {
       auto *LLVMI = cast<llvm::Instruction>(Inst.Val);
+      Region *R = nullptr;
       if (auto *MDN = LLVMI->getMetadata(MDKind)) {
-        Region *R = nullptr;
         auto [It, Inserted] = MDNToRegion.try_emplace(MDN);
         if (Inserted) {
           Regions.push_back(std::make_unique<Region>(Ctx, TTI));
@@ -148,14 +166,17 @@ Region::createRegionsFromMD(Function &F, TargetTransformInfo &TTI) {
         } else {
           R = It->second;
         }
-        R->add(&Inst);
-
-        if (auto *AuxMDN = LLVMI->getMetadata(AuxMDKind)) {
-          llvm::Constant *IdxC =
-              dyn_cast<ConstantAsMetadata>(AuxMDN->getOperand(0))->getValue();
-          auto Idx = cast<llvm::ConstantInt>(IdxC)->getSExtValue();
-          R->setAux(Idx, &Inst);
+        R->addImpl(&Inst, /*IgnoreCost=*/true);
+      }
+      if (auto *AuxMDN = LLVMI->getMetadata(AuxMDKind)) {
+        llvm::Constant *IdxC =
+            dyn_cast<ConstantAsMetadata>(AuxMDN->getOperand(0))->getValue();
+        auto Idx = cast<llvm::ConstantInt>(IdxC)->getSExtValue();
+        if (R == nullptr) {
+          errs() << "No region specified for Aux: '" << *LLVMI << "'\n";
+          exit(1);
         }
+        R->setAux(Idx, &Inst);
       }
     }
   }

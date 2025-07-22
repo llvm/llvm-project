@@ -305,7 +305,6 @@ body:             |
     liveins: $x0, $x1
     ; 7 isn't an extend mask for G_AND, so there's no folding opportunities
     ; here.
-    ;
     ; LOWER-LABEL: name: dont_swap_and_lhs_wrong_mask
     ; LOWER: liveins: $x0, $x1
     ; LOWER-NEXT: {{  $}}
@@ -643,7 +642,6 @@ body:             |
 
     ; Don't swap when the RHS's subtract offers a better constant folding
     ; opportunity than the LHS's subtract.
-    ;
     ; In this case, the RHS has a supported extend, plus a shift with a constant
     ; <= 4.
 

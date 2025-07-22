@@ -48,9 +48,9 @@ void UnqualifiedId::setConstructorTemplateId(TemplateIdAnnotation *TemplateId) {
   EndLocation = TemplateId->RAngleLoc;
 }
 
-void CXXScopeSpec::Extend(ASTContext &Context, SourceLocation TemplateKWLoc,
-                          TypeLoc TL, SourceLocation ColonColonLoc) {
-  Builder.Extend(Context, TemplateKWLoc, TL, ColonColonLoc);
+void CXXScopeSpec::Extend(ASTContext &Context, TypeLoc TL,
+                          SourceLocation ColonColonLoc) {
+  Builder.Extend(Context, TL, ColonColonLoc);
   if (Range.getBegin().isInvalid())
     Range.setBegin(TL.getBeginLoc());
   Range.setEnd(ColonColonLoc);
@@ -72,26 +72,13 @@ void CXXScopeSpec::Extend(ASTContext &Context, IdentifierInfo *Identifier,
          "NestedNameSpecifierLoc range computation incorrect");
 }
 
-void CXXScopeSpec::Extend(ASTContext &Context, NamespaceDecl *Namespace,
+void CXXScopeSpec::Extend(ASTContext &Context, NamespaceBaseDecl *Namespace,
                           SourceLocation NamespaceLoc,
                           SourceLocation ColonColonLoc) {
   Builder.Extend(Context, Namespace, NamespaceLoc, ColonColonLoc);
 
   if (Range.getBegin().isInvalid())
     Range.setBegin(NamespaceLoc);
-  Range.setEnd(ColonColonLoc);
-
-  assert(Range == Builder.getSourceRange() &&
-         "NestedNameSpecifierLoc range computation incorrect");
-}
-
-void CXXScopeSpec::Extend(ASTContext &Context, NamespaceAliasDecl *Alias,
-                          SourceLocation AliasLoc,
-                          SourceLocation ColonColonLoc) {
-  Builder.Extend(Context, Alias, AliasLoc, ColonColonLoc);
-
-  if (Range.getBegin().isInvalid())
-    Range.setBegin(AliasLoc);
   Range.setEnd(ColonColonLoc);
 
   assert(Range == Builder.getSourceRange() &&

@@ -11,7 +11,7 @@
 
 ; GFX89: v_mul_lo_u16_e32 v0, v0, v1
 
-; GFX11-TRUE16: v_mul_lo_u16 v0.l, v0.l, v0.h
+; GFX11-TRUE16: v_mul_lo_u16 v{{[0-9]+}}.{{(l|h)}}, v{{[0-9]+}}.{{(l|h)}}, v{{[0-9]+}}.{{(l|h)}}
 ; GFX11-FAKE16: v_mul_lo_u16 v0, v0, v1
 define i16 @v_mul_i16(i16 %a, i16 %b) {
   %r.val = mul i16 %a, %b

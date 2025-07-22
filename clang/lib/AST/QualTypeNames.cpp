@@ -10,6 +10,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Mangle.h"
+#include "clang/AST/Type.h"
 
 namespace clang {
 
@@ -139,7 +140,7 @@ static const Type *getFullyQualifiedTemplateType(const ASTContext &Ctx,
     if (MightHaveChanged) {
       QualType QT = Ctx.getTemplateSpecializationType(
           TST->getTemplateName(), FQArgs,
-          TST->getCanonicalTypeInternal());
+          /*CanonicalArgs=*/{}, TST->desugar());
       // getTemplateSpecializationType returns a fully qualified
       // version of the specialization itself, so no need to qualify
       // it.
@@ -171,7 +172,7 @@ static const Type *getFullyQualifiedTemplateType(const ASTContext &Ctx,
         TemplateName TN(TSTDecl->getSpecializedTemplate());
         QualType QT = Ctx.getTemplateSpecializationType(
             TN, FQArgs,
-            TSTRecord->getCanonicalTypeInternal());
+            /*CanonicalArgs=*/{}, TSTRecord->getCanonicalTypeInternal());
         // getTemplateSpecializationType returns a fully qualified
         // version of the specialization itself, so no need to qualify
         // it.
@@ -212,29 +213,19 @@ static NestedNameSpecifier *getFullyQualifiedNestedNameSpecifier(
     bool WithGlobalNsPrefix) {
   switch (Scope->getKind()) {
     case NestedNameSpecifier::Global:
+    case NestedNameSpecifier::Super:
       // Already fully qualified
       return Scope;
     case NestedNameSpecifier::Namespace:
       return TypeName::createNestedNameSpecifier(
-          Ctx, Scope->getAsNamespace(), WithGlobalNsPrefix);
-    case NestedNameSpecifier::NamespaceAlias:
-      // Namespace aliases are only valid for the duration of the
-      // scope where they were introduced, and therefore are often
-      // invalid at the end of the TU.  So use the namespace name more
-      // likely to be valid at the end of the TU.
-      return TypeName::createNestedNameSpecifier(
-          Ctx,
-          Scope->getAsNamespaceAlias()->getNamespace()->getCanonicalDecl(),
-          WithGlobalNsPrefix);
+          Ctx, Scope->getAsNamespace()->getNamespace(), WithGlobalNsPrefix);
     case NestedNameSpecifier::Identifier:
       // A function or some other construct that makes it un-namable
       // at the end of the TU. Skip the current component of the name,
       // but use the name of it's prefix.
       return getFullyQualifiedNestedNameSpecifier(
           Ctx, Scope->getPrefix(), WithGlobalNsPrefix);
-    case NestedNameSpecifier::Super:
-    case NestedNameSpecifier::TypeSpec:
-    case NestedNameSpecifier::TypeSpecWithTemplate: {
+    case NestedNameSpecifier::TypeSpec: {
       const Type *Type = Scope->getAsType();
       // Find decl context.
       const TagDecl *TD = nullptr;
@@ -366,8 +357,7 @@ NestedNameSpecifier *createNestedNameSpecifier(const ASTContext &Ctx,
   }
 
   return NestedNameSpecifier::Create(
-      Ctx, createOuterNNS(Ctx, TD, FullyQualify, WithGlobalNsPrefix),
-      false /*No TemplateKeyword*/, TypePtr);
+      Ctx, createOuterNNS(Ctx, TD, FullyQualify, WithGlobalNsPrefix), TypePtr);
 }
 
 /// Return the fully qualified type, including fully-qualified
@@ -391,9 +381,10 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
     Qualifiers Quals = QT.getQualifiers();
     // Fully qualify the pointee and class types.
     QT = getFullyQualifiedType(QT->getPointeeType(), Ctx, WithGlobalNsPrefix);
-    QualType Class = getFullyQualifiedType(QualType(MPT->getClass(), 0), Ctx,
-                                           WithGlobalNsPrefix);
-    QT = Ctx.getMemberPointerType(QT, Class.getTypePtr());
+    NestedNameSpecifier *Qualifier = getFullyQualifiedNestedNameSpecifier(
+        Ctx, MPT->getQualifier(), WithGlobalNsPrefix);
+    QT = Ctx.getMemberPointerType(QT, Qualifier,
+                                  MPT->getMostRecentCXXRecordDecl());
     // Add back the qualifiers.
     QT = Ctx.getQualifiedType(QT, Quals);
     return QT;
@@ -415,6 +406,18 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
     // Add back the qualifiers.
     QT = Ctx.getQualifiedType(QT, Quals);
     return QT;
+  }
+
+  // Handle types with attributes such as `unique_ptr<int> _Nonnull`.
+  if (auto *AT = dyn_cast<AttributedType>(QT.getTypePtr())) {
+    QualType NewModified =
+        getFullyQualifiedType(AT->getModifiedType(), Ctx, WithGlobalNsPrefix);
+    QualType NewEquivalent =
+        getFullyQualifiedType(AT->getEquivalentType(), Ctx, WithGlobalNsPrefix);
+    Qualifiers Qualifiers = QT.getLocalQualifiers();
+    return Ctx.getQualifiedType(
+        Ctx.getAttributedType(AT->getAttrKind(), NewModified, NewEquivalent),
+        Qualifiers);
   }
 
   // Remove the part of the type related to the type being a template

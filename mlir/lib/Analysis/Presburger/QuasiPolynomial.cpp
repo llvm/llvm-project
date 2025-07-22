@@ -48,7 +48,7 @@ QuasiPolynomial QuasiPolynomial::operator+(const QuasiPolynomial &x) const {
   SmallVector<Fraction> sumCoeffs = coefficients;
   sumCoeffs.append(x.coefficients);
   std::vector<std::vector<SmallVector<Fraction>>> sumAff = affine;
-  sumAff.insert(sumAff.end(), x.affine.begin(), x.affine.end());
+  llvm::append_range(sumAff, x.affine);
   return QuasiPolynomial(getNumInputs(), sumCoeffs, sumAff);
 }
 
@@ -79,8 +79,8 @@ QuasiPolynomial QuasiPolynomial::operator*(const QuasiPolynomial &x) const {
   for (const std::vector<SmallVector<Fraction>> &term : affine) {
     for (const std::vector<SmallVector<Fraction>> &xterm : x.affine) {
       product.clear();
-      product.insert(product.end(), term.begin(), term.end());
-      product.insert(product.end(), xterm.begin(), xterm.end());
+      llvm::append_range(product, term);
+      llvm::append_range(product, xterm);
       aff.emplace_back(product);
     }
   }

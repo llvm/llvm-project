@@ -47,10 +47,13 @@ enum ActionType {
   GenClangBasicReader,
   GenClangBasicWriter,
   GenClangBuiltins,
+  GenClangBuiltinTemplates,
+  GenClangDiagsCompatIDs,
   GenClangDiagsDefs,
   GenClangDiagsEnums,
   GenClangDiagGroups,
   GenClangDiagsIndexName,
+  GenClangDiagsInterface,
   GenClangCommentNodes,
   GenClangDeclNodes,
   GenClangStmtNodes,
@@ -70,6 +73,7 @@ enum ActionType {
   GenClangOpenCLBuiltinHeader,
   GenClangOpenCLBuiltinTests,
   GenCXX11AttributeInfo,
+  GenAttributeSpellingList,
   GenArmNeon,
   GenArmFP16,
   GenArmBF16,
@@ -106,6 +110,9 @@ enum ActionType {
   GenRISCVSiFiveVectorBuiltins,
   GenRISCVSiFiveVectorBuiltinCG,
   GenRISCVSiFiveVectorBuiltinSema,
+  GenRISCVAndesVectorBuiltins,
+  GenRISCVAndesVectorBuiltinCG,
+  GenRISCVAndesVectorBuiltinSema,
   GenAttrDocs,
   GenDiagDocs,
   GenOptDocs,
@@ -173,6 +180,10 @@ cl::opt<ActionType> Action(
                    "Generate clang attribute traverser"),
         clEnumValN(GenClangBuiltins, "gen-clang-builtins",
                    "Generate clang builtins list"),
+        clEnumValN(GenClangBuiltinTemplates, "gen-clang-builtin-templates",
+                   "Generate clang builtins list"),
+        clEnumValN(GenClangDiagsCompatIDs, "gen-clang-diags-compat-ids",
+                   "Generate Clang diagnostic compatibility ids"),
         clEnumValN(GenClangDiagsDefs, "gen-clang-diags-defs",
                    "Generate Clang diagnostics definitions"),
         clEnumValN(GenClangDiagsEnums, "gen-clang-diags-enums",
@@ -181,6 +192,8 @@ cl::opt<ActionType> Action(
                    "Generate Clang diagnostic groups"),
         clEnumValN(GenClangDiagsIndexName, "gen-clang-diags-index-name",
                    "Generate Clang diagnostic name index"),
+        clEnumValN(GenClangDiagsInterface, "gen-clang-diags-iface",
+                   "Generate Clang diagnostic interface headers"),
         clEnumValN(GenClangBasicReader, "gen-clang-basic-reader",
                    "Generate Clang BasicReader classes"),
         clEnumValN(GenClangBasicWriter, "gen-clang-basic-writer",
@@ -231,6 +244,8 @@ cl::opt<ActionType> Action(
                    "Generate OpenCL builtin declaration tests"),
         clEnumValN(GenCXX11AttributeInfo, "gen-cxx11-attribute-info",
                    "Generate CXX11 attributes info"),
+        clEnumValN(GenAttributeSpellingList, "gen-attribute-spelling-list",
+                   "Generate attribute spelling list"),
         clEnumValN(GenArmNeon, "gen-arm-neon", "Generate arm_neon.h for clang"),
         clEnumValN(GenArmFP16, "gen-arm-fp16", "Generate arm_fp16.h for clang"),
         clEnumValN(GenArmBF16, "gen-arm-bf16", "Generate arm_bf16.h for clang"),
@@ -305,6 +320,15 @@ cl::opt<ActionType> Action(
         clEnumValN(GenRISCVSiFiveVectorBuiltinSema,
                    "gen-riscv-sifive-vector-builtin-sema",
                    "Generate riscv_sifive_vector_builtin_sema.inc for clang"),
+        clEnumValN(GenRISCVAndesVectorBuiltins,
+                   "gen-riscv-andes-vector-builtins",
+                   "Generate riscv_andes_vector_builtins.inc for clang"),
+        clEnumValN(GenRISCVAndesVectorBuiltinCG,
+                   "gen-riscv-andes-vector-builtin-codegen",
+                   "Generate riscv_andes_vector_builtin_cg.inc for clang"),
+        clEnumValN(GenRISCVAndesVectorBuiltinSema,
+                   "gen-riscv-andes-vector-builtin-sema",
+                   "Generate riscv_andes_vector_builtin_sema.inc for clang"),
         clEnumValN(GenAttrDocs, "gen-attr-docs",
                    "Generate attribute documentation"),
         clEnumValN(GenDiagDocs, "gen-diag-docs",
@@ -341,6 +365,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenCXX11AttributeInfo:
     EmitCXX11AttributeInfo(Records, OS);
+    break;
+  case GenAttributeSpellingList:
+    EmitAttributeSpellingList(Records, OS);
     break;
   case GenClangAttrImpl:
     EmitClangAttrImpl(Records, OS);
@@ -393,6 +420,12 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
   case GenClangBuiltins:
     EmitClangBuiltins(Records, OS);
     break;
+  case GenClangBuiltinTemplates:
+    EmitClangBuiltinTemplates(Records, OS);
+    break;
+  case GenClangDiagsCompatIDs:
+    EmitClangDiagsCompatIDs(Records, OS, ClangComponent);
+    break;
   case GenClangDiagsDefs:
     EmitClangDiagsDefs(Records, OS, ClangComponent);
     break;
@@ -404,6 +437,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenClangDiagsIndexName:
     EmitClangDiagsIndexName(Records, OS);
+    break;
+  case GenClangDiagsInterface:
+    EmitClangDiagsInterface(OS, ClangComponent);
     break;
   case GenClangCommentNodes:
     EmitClangASTNodes(Records, OS, CommentNodeClassName, "");
@@ -573,6 +609,15 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     EmitRVVBuiltinCG(Records, OS);
     break;
   case GenRISCVSiFiveVectorBuiltinSema:
+    EmitRVVBuiltinSema(Records, OS);
+    break;
+  case GenRISCVAndesVectorBuiltins:
+    EmitRVVBuiltins(Records, OS);
+    break;
+  case GenRISCVAndesVectorBuiltinCG:
+    EmitRVVBuiltinCG(Records, OS);
+    break;
+  case GenRISCVAndesVectorBuiltinSema:
     EmitRVVBuiltinSema(Records, OS);
     break;
   case GenAttrDocs:

@@ -1,16 +1,47 @@
 set(PLUGINS_TEST_COMMON LLVMOffload)
 set(PLUGINS_TEST_INCLUDE ${LIBOMPTARGET_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/common)
 
-add_libompt_unittest("offload.unittests"
-    ${CMAKE_CURRENT_SOURCE_DIR}/common/Environment.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/platform/olGetPlatform.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/platform/olGetPlatformCount.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/platform/olGetPlatformInfo.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/platform/olGetPlatformInfoSize.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/device/olGetDevice.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/device/olGetDeviceCount.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/device/olGetDeviceInfo.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/device/olGetDeviceInfoSize.cpp)
-add_dependencies("offload.unittests" ${PLUGINS_TEST_COMMON})
-target_link_libraries("offload.unittests" PRIVATE ${PLUGINS_TEST_COMMON})
-target_include_directories("offload.unittests" PRIVATE ${PLUGINS_TEST_INCLUDE})
+add_subdirectory(device_code)
+
+add_offload_unittest("device"
+    device/olIterateDevices.cpp
+    device/olGetDeviceInfo.cpp
+    device/olGetDeviceInfoSize.cpp)
+
+add_offload_unittest("event"
+    event/olDestroyEvent.cpp
+    event/olWaitEvent.cpp
+    event/olGetEventInfo.cpp
+    event/olGetEventInfoSize.cpp)
+
+add_offload_unittest("init"
+    init/olInit.cpp)
+target_compile_definitions("init.unittests" PRIVATE DISABLE_WRAPPER)
+
+add_offload_unittest("kernel"
+    kernel/olLaunchKernel.cpp)
+
+add_offload_unittest("memory"
+    memory/olMemAlloc.cpp
+    memory/olMemFree.cpp
+    memory/olMemcpy.cpp)
+
+add_offload_unittest("platform"
+    platform/olGetPlatformInfo.cpp
+    platform/olGetPlatformInfoSize.cpp)
+
+add_offload_unittest("program"
+    program/olCreateProgram.cpp
+    program/olDestroyProgram.cpp)
+
+add_offload_unittest("queue"
+    queue/olCreateQueue.cpp
+    queue/olWaitQueue.cpp
+    queue/olDestroyQueue.cpp
+    queue/olGetQueueInfo.cpp
+    queue/olGetQueueInfoSize.cpp)
+
+add_offload_unittest("symbol"
+    symbol/olGetSymbol.cpp
+    symbol/olGetSymbolInfo.cpp
+    symbol/olGetSymbolInfoSize.cpp)

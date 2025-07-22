@@ -142,7 +142,7 @@ static bool CC_AArch64_Custom_Block(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   ArrayRef<MCPhysReg> RegList;
   if (LocVT.SimpleTy == MVT::i64 || (IsDarwinILP32 && LocVT.SimpleTy == MVT::i32))
     RegList = XRegList;
-  else if (LocVT.SimpleTy == MVT::f16)
+  else if (LocVT.SimpleTy == MVT::f16 || LocVT.SimpleTy == MVT::bf16)
     RegList = HRegList;
   else if (LocVT.SimpleTy == MVT::f32 || LocVT.is32BitVector())
     RegList = SRegList;

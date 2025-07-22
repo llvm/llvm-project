@@ -25,7 +25,7 @@ body:                   |
     ; CHECK-ZCMP32-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -4
     ; CHECK-ZCMP32-NEXT: $x1 = IMPLICIT_DEF
     ; CHECK-ZCMP32-NEXT: $x8 = IMPLICIT_DEF
-    ; CHECK-ZCMP32-NEXT: CM_POPRET 5, 0, implicit-def $x2, implicit $x2, implicit-def $x1, implicit-def $x8
+    ; CHECK-ZCMP32-NEXT: frame-destroy CM_POPRET 5, 0, implicit-def $x2, implicit $x2, implicit-def $x1, implicit-def $x8
     ;
     ; CHECK-LIBCALL32-LABEL: name: popret_rvlist5
     ; CHECK-LIBCALL32: liveins: $x1, $x8
@@ -47,7 +47,7 @@ body:                   |
     ; CHECK-ZCMP64-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -8
     ; CHECK-ZCMP64-NEXT: $x1 = IMPLICIT_DEF
     ; CHECK-ZCMP64-NEXT: $x8 = IMPLICIT_DEF
-    ; CHECK-ZCMP64-NEXT: CM_POPRET 5, 0, implicit-def $x2, implicit $x2, implicit-def $x1, implicit-def $x8
+    ; CHECK-ZCMP64-NEXT: frame-destroy CM_POPRET 5, 0, implicit-def $x2, implicit $x2, implicit-def $x1, implicit-def $x8
     ;
     ; CHECK-LIBCALL64-LABEL: name: popret_rvlist5
     ; CHECK-LIBCALL64: liveins: $x1, $x8
@@ -115,7 +115,7 @@ body:                   |
     ; CHECK-ZCMP32-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -4
     ; CHECK-ZCMP32-NEXT: $x1 = IMPLICIT_DEF
     ; CHECK-ZCMP32-NEXT: $x8 = IMPLICIT_DEF
-    ; CHECK-ZCMP32-NEXT: CM_POPRETZ 5, 0, implicit-def $x2, implicit-def $x10, implicit $x2, implicit-def $x1, implicit-def $x8
+    ; CHECK-ZCMP32-NEXT: frame-destroy CM_POPRETZ 5, 0, implicit-def $x2, implicit-def $x10, implicit $x2, implicit-def $x1, implicit-def $x8
     ;
     ; CHECK-LIBCALL32-LABEL: name: popretz_rvlist5
     ; CHECK-LIBCALL32: liveins: $x1, $x8
@@ -138,7 +138,7 @@ body:                   |
     ; CHECK-ZCMP64-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -8
     ; CHECK-ZCMP64-NEXT: $x1 = IMPLICIT_DEF
     ; CHECK-ZCMP64-NEXT: $x8 = IMPLICIT_DEF
-    ; CHECK-ZCMP64-NEXT: CM_POPRETZ 5, 0, implicit-def $x2, implicit-def $x10, implicit $x2, implicit-def $x1, implicit-def $x8
+    ; CHECK-ZCMP64-NEXT: frame-destroy CM_POPRETZ 5, 0, implicit-def $x2, implicit-def $x10, implicit $x2, implicit-def $x1, implicit-def $x8
     ;
     ; CHECK-LIBCALL64-LABEL: name: popretz_rvlist5
     ; CHECK-LIBCALL64: liveins: $x1, $x8

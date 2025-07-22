@@ -9,8 +9,10 @@
 #ifndef LLVM_CODEGEN_PBQP_MATH_H
 #define LLVM_CODEGEN_PBQP_MATH_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/InterleavedRange.h"
 #include <algorithm>
 #include <cassert>
 #include <functional>
@@ -23,84 +25,76 @@ using PBQPNum = float;
 
 /// PBQP Vector class.
 class Vector {
-  friend hash_code hash_value(const Vector &);
-
 public:
   /// Construct a PBQP vector of the given size.
-  explicit Vector(unsigned Length)
-    : Length(Length), Data(std::make_unique<PBQPNum []>(Length)) {}
+  explicit Vector(unsigned Length) : Data(Length) {}
 
   /// Construct a PBQP vector with initializer.
-  Vector(unsigned Length, PBQPNum InitVal)
-    : Length(Length), Data(std::make_unique<PBQPNum []>(Length)) {
-    std::fill(Data.get(), Data.get() + Length, InitVal);
+  Vector(unsigned Length, PBQPNum InitVal) : Data(Length) {
+    std::fill(begin(), end(), InitVal);
   }
 
   /// Copy construct a PBQP vector.
-  Vector(const Vector &V)
-    : Length(V.Length), Data(std::make_unique<PBQPNum []>(Length)) {
-    std::copy(V.Data.get(), V.Data.get() + Length, Data.get());
-  }
+  Vector(const Vector &V) : Data(ArrayRef<PBQPNum>(V.Data)) {}
 
   /// Move construct a PBQP vector.
-  Vector(Vector &&V)
-    : Length(V.Length), Data(std::move(V.Data)) {
-    V.Length = 0;
-  }
+  Vector(Vector &&V) : Data(std::move(V.Data)) {}
+
+  // Iterator-based access.
+  const PBQPNum *begin() const { return Data.begin(); }
+  const PBQPNum *end() const { return Data.end(); }
+  PBQPNum *begin() { return Data.begin(); }
+  PBQPNum *end() { return Data.end(); }
 
   /// Comparison operator.
   bool operator==(const Vector &V) const {
-    assert(Length != 0 && Data && "Invalid vector");
-    if (Length != V.Length)
-      return false;
-    return std::equal(Data.get(), Data.get() + Length, V.Data.get());
+    assert(!Data.empty() && "Invalid vector");
+    return llvm::equal(*this, V);
   }
 
   /// Return the length of the vector
   unsigned getLength() const {
-    assert(Length != 0 && Data && "Invalid vector");
-    return Length;
+    assert(!Data.empty() && "Invalid vector");
+    return Data.size();
   }
 
   /// Element access.
   PBQPNum& operator[](unsigned Index) {
-    assert(Length != 0 && Data && "Invalid vector");
-    assert(Index < Length && "Vector element access out of bounds.");
+    assert(!Data.empty() && "Invalid vector");
+    assert(Index < Data.size() && "Vector element access out of bounds.");
     return Data[Index];
   }
 
   /// Const element access.
   const PBQPNum& operator[](unsigned Index) const {
-    assert(Length != 0 && Data && "Invalid vector");
-    assert(Index < Length && "Vector element access out of bounds.");
+    assert(!Data.empty() && "Invalid vector");
+    assert(Index < Data.size() && "Vector element access out of bounds.");
     return Data[Index];
   }
 
   /// Add another vector to this one.
   Vector& operator+=(const Vector &V) {
-    assert(Length != 0 && Data && "Invalid vector");
-    assert(Length == V.Length && "Vector length mismatch.");
-    std::transform(Data.get(), Data.get() + Length, V.Data.get(), Data.get(),
-                   std::plus<PBQPNum>());
+    assert(!Data.empty() && "Invalid vector");
+    assert(Data.size() == V.Data.size() && "Vector length mismatch.");
+    std::transform(begin(), end(), V.begin(), begin(), std::plus<PBQPNum>());
     return *this;
   }
 
   /// Returns the index of the minimum value in this vector
   unsigned minIndex() const {
-    assert(Length != 0 && Data && "Invalid vector");
-    return std::min_element(Data.get(), Data.get() + Length) - Data.get();
+    assert(!Data.empty() && "Invalid vector");
+    return llvm::min_element(*this) - begin();
   }
 
 private:
-  unsigned Length;
-  std::unique_ptr<PBQPNum []> Data;
+  OwningArrayRef<PBQPNum> Data;
 };
 
 /// Return a hash_value for the given vector.
 inline hash_code hash_value(const Vector &V) {
-  unsigned *VBegin = reinterpret_cast<unsigned*>(V.Data.get());
-  unsigned *VEnd = reinterpret_cast<unsigned*>(V.Data.get() + V.Length);
-  return hash_combine(V.Length, hash_combine_range(VBegin, VEnd));
+  const unsigned *VBegin = reinterpret_cast<const unsigned *>(V.begin());
+  const unsigned *VEnd = reinterpret_cast<const unsigned *>(V.end());
+  return hash_combine(V.getLength(), hash_combine_range(VBegin, VEnd));
 }
 
 /// Output a textual representation of the given vector on the given
@@ -108,12 +102,7 @@ inline hash_code hash_value(const Vector &V) {
 template <typename OStream>
 OStream& operator<<(OStream &OS, const Vector &V) {
   assert((V.getLength() != 0) && "Zero-length vector badness.");
-
-  OS << "[ " << V[0];
-  for (unsigned i = 1; i < V.getLength(); ++i)
-    OS << ", " << V[i];
-  OS << " ]";
-
+  OS << "[ " << llvm::interleaved(V) << " ]";
   return OS;
 }
 

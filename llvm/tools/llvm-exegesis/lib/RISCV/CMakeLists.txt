@@ -9,11 +9,15 @@ set(LLVM_LINK_COMPONENTS
   Exegesis
   Core
   Support
+  MC
+  TargetParser
   )
 
 add_llvm_library(LLVMExegesisRISCV
   DISABLE_LLVM_LINK_LLVM_DYLIB
   STATIC
+  RISCVExegesisPreprocessing.cpp
+  RISCVExegesisPostprocessing.cpp
   Target.cpp
 
   DEPENDS

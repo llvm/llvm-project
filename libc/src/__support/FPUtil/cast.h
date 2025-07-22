@@ -18,14 +18,26 @@
 
 namespace LIBC_NAMESPACE::fputil {
 
+// TODO: Add optimization for known good targets with fast
+// float to float16 conversion:
+// https://github.com/llvm/llvm-project/issues/133517
 template <typename OutType, typename InType>
 LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
                                            cpp::is_floating_point_v<InType>,
                                        OutType>
 cast(InType x) {
+  // Casting to the same type is a no-op.
+  if constexpr (cpp::is_same_v<InType, OutType>)
+    return x;
+
+  // bfloat16 is always defined (for now)
+  if constexpr (cpp::is_same_v<OutType, bfloat16> ||
+                cpp::is_same_v<InType, bfloat16>
 #if defined(LIBC_TYPES_HAS_FLOAT16) && !defined(__LIBC_USE_FLOAT16_CONVERSION)
-  if constexpr (cpp::is_same_v<OutType, float16> ||
-                cpp::is_same_v<InType, float16>) {
+                || cpp::is_same_v<OutType, float16> ||
+                cpp::is_same_v<InType, float16>
+#endif
+  ) {
     using InFPBits = FPBits<InType>;
     using InStorageType = typename InFPBits::StorageType;
     using OutFPBits = FPBits<OutType>;
@@ -55,7 +67,6 @@ cast(InType x) {
     DyadicFloat<cpp::bit_ceil(MAX_FRACTION_LEN)> xd(x);
     return xd.template as<OutType, /*ShouldSignalExceptions=*/true>();
   }
-#endif
 
   return static_cast<OutType>(x);
 }

@@ -19,9 +19,9 @@ void *caller(char **x, unsigned long offset) {
   // CHECK-SANITIZE-NEXT:               %[[OFFSETPTR:.*]] = sub i64 %[[PTRINT]], %[[OFFSET_RELOADED]]
   // CHECK-SANITIZE-NEXT:               %[[MASKEDPTR:.*]] = and i64 %[[OFFSETPTR]], 4294967295
   // CHECK-SANITIZE-NEXT:               %[[MASKCOND:.*]] = icmp eq i64 %[[MASKEDPTR]], 0
-  // CHECK-SANITIZE-NEXT:               %[[PTRINT_DUP:.*]] = ptrtoint ptr %[[X_RELOADED]] to i64, !nosanitize
   // CHECK-SANITIZE-NEXT:               br i1 %[[MASKCOND]], label %[[CONT:.*]], label %[[HANDLER_ALIGNMENT_ASSUMPTION:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE:                  [[HANDLER_ALIGNMENT_ASSUMPTION]]:
+  // CHECK-SANITIZE-ANYRECOVER-NEXT:    %[[PTRINT_DUP:.*]] = ptrtoint ptr %[[X_RELOADED]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_alignment_assumption_abort(ptr @[[LINE_100_ALIGNMENT_ASSUMPTION]], i64 %[[PTRINT_DUP]], i64 4294967296, i64 %[[OFFSET_RELOADED]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT:       call void @__ubsan_handle_alignment_assumption(ptr @[[LINE_100_ALIGNMENT_ASSUMPTION]], i64 %[[PTRINT_DUP]], i64 4294967296, i64 %[[OFFSET_RELOADED]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.ubsantrap(i8 23){{.*}}, !nosanitize

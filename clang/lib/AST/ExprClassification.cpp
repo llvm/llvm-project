@@ -129,7 +129,6 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
     // FIXME: Is this wise? Should they get their own kind?
   case Expr::UnresolvedLookupExprClass:
   case Expr::UnresolvedMemberExprClass:
-  case Expr::TypoExprClass:
   case Expr::DependentCoawaitExprClass:
   case Expr::CXXDependentScopeMemberExprClass:
   case Expr::DependentScopeDeclRefExprClass:
@@ -450,13 +449,6 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
 
   case Expr::PackExpansionExprClass:
     return ClassifyInternal(Ctx, cast<PackExpansionExpr>(E)->getPattern());
-
-  case Expr::ResolvedUnexpandedPackExprClass: {
-    if (cast<ResolvedUnexpandedPackExpr>(E)->getNumExprs() > 0)
-      return ClassifyInternal(
-          Ctx, cast<ResolvedUnexpandedPackExpr>(E)->getExpansion(0));
-    return Cl::CL_LValue;
-  }
 
   case Expr::MaterializeTemporaryExprClass:
     return cast<MaterializeTemporaryExpr>(E)->isBoundToLvalueReference()

@@ -26,8 +26,9 @@ public:
 
   LogicalResult matchAndRewrite(tosa::VariableOp op,
                                 PatternRewriter &rewriter) const final {
-    auto newVariable = rewriter.create<mlir::ml_program::GlobalOp>(
-        op.getLoc(), op.getName(), op.getType(), /*is_mutable=*/true,
+    auto variableType = tosa::getVariableType(op);
+    auto newVariable = mlir::ml_program::GlobalOp::create(
+        rewriter, op.getLoc(), op.getName(), variableType, /*is_mutable=*/true,
         op.getInitialValueAttr(), /*sym_visibility=*/nullptr);
     newVariable.setPrivate();
     rewriter.replaceOp(op, newVariable);
@@ -44,8 +45,8 @@ public:
                                 PatternRewriter &rewriter) const final {
     auto globalSymbolRef =
         SymbolRefAttr::get(rewriter.getContext(), op.getName());
-    auto newVariableWrite = rewriter.create<ml_program::GlobalStoreOp>(
-        op.getLoc(), globalSymbolRef, op.getValue());
+    auto newVariableWrite = ml_program::GlobalStoreOp::create(
+        rewriter, op.getLoc(), globalSymbolRef, op.getInput1());
     rewriter.replaceOp(op, newVariableWrite);
     return success();
   }
@@ -59,8 +60,8 @@ public:
                                 PatternRewriter &rewriter) const final {
     auto globalSymbolRef =
         SymbolRefAttr::get(rewriter.getContext(), op.getName());
-    auto newVariableRead = rewriter.create<ml_program::GlobalLoadOp>(
-        op.getLoc(), op.getType(), globalSymbolRef);
+    auto newVariableRead = ml_program::GlobalLoadOp::create(
+        rewriter, op.getLoc(), op.getType(), globalSymbolRef);
     rewriter.replaceOp(op, newVariableRead);
 
     return success();

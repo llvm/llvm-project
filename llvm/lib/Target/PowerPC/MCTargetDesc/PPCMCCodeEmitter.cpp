@@ -12,6 +12,7 @@
 
 #include "PPCMCCodeEmitter.h"
 #include "MCTargetDesc/PPCFixupKinds.h"
+#include "PPCMCAsmInfo.h"
 #include "PPCMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -38,6 +39,19 @@ MCCodeEmitter *llvm::createPPCMCCodeEmitter(const MCInstrInfo &MCII,
   return new PPCMCCodeEmitter(MCII, Ctx);
 }
 
+static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
+                     const MCExpr *Value, uint16_t Kind) {
+  bool PCRel = false;
+  switch (Kind) {
+  case PPC::fixup_ppc_br24:
+  case PPC::fixup_ppc_br24_notoc:
+  case PPC::fixup_ppc_brcond14:
+  case PPC::fixup_ppc_pcrel34:
+    PCRel = true;
+  }
+  Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
+}
+
 unsigned PPCMCCodeEmitter::
 getDirectBrEncoding(const MCInst &MI, unsigned OpNo,
                     SmallVectorImpl<MCFixup> &Fixups,
@@ -48,10 +62,9 @@ getDirectBrEncoding(const MCInst &MI, unsigned OpNo,
     return getMachineOpValue(MI, MO, Fixups, STI);
 
   // Add a fixup for the branch target.
-  Fixups.push_back(MCFixup::create(0, MO.getExpr(),
-                                   (isNoTOCCallInstr(MI)
-                                        ? (MCFixupKind)PPC::fixup_ppc_br24_notoc
-                                        : (MCFixupKind)PPC::fixup_ppc_br24)));
+  addFixup(
+      Fixups, 0, MO.getExpr(),
+      (isNoTOCCallInstr(MI) ? PPC::fixup_ppc_br24_notoc : PPC::fixup_ppc_br24));
   return 0;
 }
 
@@ -156,8 +169,7 @@ unsigned PPCMCCodeEmitter::getCondBrEncoding(const MCInst &MI, unsigned OpNo,
   if (MO.isReg() || MO.isImm()) return getMachineOpValue(MI, MO, Fixups, STI);
 
   // Add a fixup for the branch target.
-  Fixups.push_back(MCFixup::create(0, MO.getExpr(),
-                                   (MCFixupKind)PPC::fixup_ppc_brcond14));
+  addFixup(Fixups, 0, MO.getExpr(), PPC::fixup_ppc_brcond14);
   return 0;
 }
 
@@ -169,8 +181,7 @@ getAbsDirectBrEncoding(const MCInst &MI, unsigned OpNo,
   if (MO.isReg() || MO.isImm()) return getMachineOpValue(MI, MO, Fixups, STI);
 
   // Add a fixup for the branch target.
-  Fixups.push_back(MCFixup::create(0, MO.getExpr(),
-                                   (MCFixupKind)PPC::fixup_ppc_br24abs));
+  addFixup(Fixups, 0, MO.getExpr(), PPC::fixup_ppc_br24abs);
   return 0;
 }
 
@@ -182,8 +193,7 @@ getAbsCondBrEncoding(const MCInst &MI, unsigned OpNo,
   if (MO.isReg() || MO.isImm()) return getMachineOpValue(MI, MO, Fixups, STI);
 
   // Add a fixup for the branch target.
-  Fixups.push_back(MCFixup::create(0, MO.getExpr(),
-                                   (MCFixupKind)PPC::fixup_ppc_brcond14abs));
+  addFixup(Fixups, 0, MO.getExpr(), PPC::fixup_ppc_brcond14abs);
   return 0;
 }
 
@@ -204,8 +214,7 @@ unsigned PPCMCCodeEmitter::getImm16Encoding(const MCInst &MI, unsigned OpNo,
   if (MO.isReg() || MO.isImm()) return getMachineOpValue(MI, MO, Fixups, STI);
 
   // Add a fixup for the immediate field.
-  Fixups.push_back(MCFixup::create(IsLittleEndian? 0 : 2, MO.getExpr(),
-                                   (MCFixupKind)PPC::fixup_ppc_half16));
+  addFixup(Fixups, IsLittleEndian ? 0 : 2, MO.getExpr(), PPC::fixup_ppc_half16);
   return 0;
 }
 
@@ -219,7 +228,7 @@ uint64_t PPCMCCodeEmitter::getImm34Encoding(const MCInst &MI, unsigned OpNo,
     return getMachineOpValue(MI, MO, Fixups, STI);
 
   // Add a fixup for the immediate field.
-  Fixups.push_back(MCFixup::create(0, MO.getExpr(), Fixup));
+  addFixup(Fixups, 0, MO.getExpr(), Fixup);
   return 0;
 }
 
@@ -227,16 +236,14 @@ uint64_t
 PPCMCCodeEmitter::getImm34EncodingNoPCRel(const MCInst &MI, unsigned OpNo,
                                           SmallVectorImpl<MCFixup> &Fixups,
                                           const MCSubtargetInfo &STI) const {
-  return getImm34Encoding(MI, OpNo, Fixups, STI,
-                          (MCFixupKind)PPC::fixup_ppc_imm34);
+  return getImm34Encoding(MI, OpNo, Fixups, STI, PPC::fixup_ppc_imm34);
 }
 
 uint64_t
 PPCMCCodeEmitter::getImm34EncodingPCRel(const MCInst &MI, unsigned OpNo,
                                         SmallVectorImpl<MCFixup> &Fixups,
                                         const MCSubtargetInfo &STI) const {
-  return getImm34Encoding(MI, OpNo, Fixups, STI,
-                          (MCFixupKind)PPC::fixup_ppc_pcrel34);
+  return getImm34Encoding(MI, OpNo, Fixups, STI, PPC::fixup_ppc_pcrel34);
 }
 
 unsigned PPCMCCodeEmitter::getDispRIEncoding(const MCInst &MI, unsigned OpNo,
@@ -247,8 +254,7 @@ unsigned PPCMCCodeEmitter::getDispRIEncoding(const MCInst &MI, unsigned OpNo,
     return getMachineOpValue(MI, MO, Fixups, STI) & 0xFFFF;
 
   // Add a fixup for the displacement field.
-  Fixups.push_back(MCFixup::create(IsLittleEndian? 0 : 2, MO.getExpr(),
-                                   (MCFixupKind)PPC::fixup_ppc_half16));
+  addFixup(Fixups, IsLittleEndian ? 0 : 2, MO.getExpr(), PPC::fixup_ppc_half16);
   return 0;
 }
 
@@ -261,8 +267,8 @@ PPCMCCodeEmitter::getDispRIXEncoding(const MCInst &MI, unsigned OpNo,
     return ((getMachineOpValue(MI, MO, Fixups, STI) >> 2) & 0x3FFF);
 
   // Add a fixup for the displacement field.
-  Fixups.push_back(MCFixup::create(IsLittleEndian? 0 : 2, MO.getExpr(),
-                                   (MCFixupKind)PPC::fixup_ppc_half16ds));
+  addFixup(Fixups, IsLittleEndian ? 0 : 2, MO.getExpr(),
+           PPC::fixup_ppc_half16ds);
   return 0;
 }
 
@@ -278,8 +284,8 @@ PPCMCCodeEmitter::getDispRIX16Encoding(const MCInst &MI, unsigned OpNo,
   }
 
   // Otherwise add a fixup for the displacement field.
-  Fixups.push_back(MCFixup::create(IsLittleEndian ? 0 : 2, MO.getExpr(),
-                                   (MCFixupKind)PPC::fixup_ppc_half16dq));
+  addFixup(Fixups, IsLittleEndian ? 0 : 2, MO.getExpr(),
+           PPC::fixup_ppc_half16dq);
   return 0;
 }
 
@@ -328,18 +334,13 @@ PPCMCCodeEmitter::getDispRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(Expr);
     (void)SRE;
     // Currently these are the only valid PCRelative Relocations.
-    assert((SRE->getKind() == MCSymbolRefExpr::VK_PCREL ||
-            SRE->getKind() == MCSymbolRefExpr::VK_PPC_GOT_PCREL ||
-            SRE->getKind() == MCSymbolRefExpr::VK_PPC_GOT_TLSGD_PCREL ||
-            SRE->getKind() == MCSymbolRefExpr::VK_PPC_GOT_TLSLD_PCREL ||
-            SRE->getKind() == MCSymbolRefExpr::VK_PPC_GOT_TPREL_PCREL) &&
-           "VariantKind must be VK_PCREL or VK_PPC_GOT_PCREL or "
-           "VK_PPC_GOT_TLSGD_PCREL or VK_PPC_GOT_TLSLD_PCREL or "
-           "VK_PPC_GOT_TPREL_PCREL.");
+    assert(is_contained({PPC::S_PCREL, PPC::S_GOT_PCREL, PPC::S_GOT_TLSGD_PCREL,
+                         PPC::S_GOT_TLSLD_PCREL, PPC::S_GOT_TPREL_PCREL},
+                        SRE->getSpecifier()) &&
+           "specifier must be S_PCREL, S_GOT_PCREL, S_GOT_TLSGD_PCREL, "
+           "S_GOT_TLSLD_PCREL, or S_GOT_TPREL_PCREL");
     // Generate the fixup for the relocation.
-    Fixups.push_back(
-        MCFixup::create(0, Expr,
-                        static_cast<MCFixupKind>(PPC::fixup_ppc_pcrel34)));
+    addFixup(Fixups, 0, Expr, PPC::fixup_ppc_pcrel34);
     // Put zero in the location of the immediate. The linker will fill in the
     // correct value based on the relocation.
     return 0;
@@ -367,13 +368,11 @@ PPCMCCodeEmitter::getDispRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
            "Value must fit in 34 bits.");
 
     // Currently these are the only valid PCRelative Relocations.
-    assert((SRE->getKind() == MCSymbolRefExpr::VK_PCREL ||
-            SRE->getKind() == MCSymbolRefExpr::VK_PPC_GOT_PCREL) &&
-           "VariantKind must be VK_PCREL or VK_PPC_GOT_PCREL");
+    assert((getSpecifier(SRE) == PPC::S_PCREL ||
+            getSpecifier(SRE) == PPC::S_GOT_PCREL) &&
+           "VariantKind must be VK_PCREL or VK_GOT_PCREL");
     // Generate the fixup for the relocation.
-    Fixups.push_back(
-        MCFixup::create(0, Expr,
-                        static_cast<MCFixupKind>(PPC::fixup_ppc_pcrel34)));
+    addFixup(Fixups, 0, Expr, PPC::fixup_ppc_pcrel34);
     // Put zero in the location of the immediate. The linker will fill in the
     // correct value based on the relocation.
     return 0;
@@ -432,9 +431,8 @@ unsigned PPCMCCodeEmitter::getTLSRegEncoding(const MCInst &MI, unsigned OpNo,
   // if using PC relative memops.
   const MCExpr *Expr = MO.getExpr();
   const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(Expr);
-  bool IsPCRel = SRE->getKind() == MCSymbolRefExpr::VK_PPC_TLS_PCREL;
-  Fixups.push_back(MCFixup::create(IsPCRel ? 1 : 0, Expr,
-                                   (MCFixupKind)PPC::fixup_ppc_nofixup));
+  bool IsPCRel = getSpecifier(SRE) == PPC::S_TLS_PCREL;
+  addFixup(Fixups, IsPCRel ? 1 : 0, Expr, PPC::fixup_ppc_nofixup);
   const Triple &TT = STI.getTargetTriple();
   bool isPPC64 = TT.isPPC64();
   return CTX.getRegisterInfo()->getEncodingValue(isPPC64 ? PPC::X13 : PPC::R2);
@@ -447,8 +445,7 @@ unsigned PPCMCCodeEmitter::getTLSCallEncoding(const MCInst &MI, unsigned OpNo,
   // (__tls_get_addr), which we create via getDirectBrEncoding as usual,
   // and one for the TLSGD or TLSLD symbol, which is emitted here.
   const MCOperand &MO = MI.getOperand(OpNo+1);
-  Fixups.push_back(MCFixup::create(0, MO.getExpr(),
-                                   (MCFixupKind)PPC::fixup_ppc_nofixup));
+  addFixup(Fixups, 0, MO.getExpr(), PPC::fixup_ppc_nofixup);
   return getDirectBrEncoding(MI, OpNo, Fixups, STI);
 }
 
@@ -488,7 +485,7 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
             MI.getOpcode() != PPC::MFOCRF && MI.getOpcode() != PPC::MFOCRF8) ||
            MO.getReg() < PPC::CR0 || MO.getReg() > PPC::CR7);
     unsigned OpNo = getOpIdxForMO(MI, MO);
-    unsigned Reg =
+    MCRegister Reg =
         PPC::getRegNumForOperand(MCII.get(MI.getOpcode()), MO.getReg(), OpNo);
     return CTX.getRegisterInfo()->getEncodingValue(Reg);
   }

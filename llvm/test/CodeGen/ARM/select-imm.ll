@@ -295,15 +295,13 @@ define i32 @t7(i32 %a, i32 %b) nounwind readnone {
 ; ARM-LABEL: t7:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    subs r0, r0, r1
-; ARM-NEXT:    movne r0, #1
-; ARM-NEXT:    lsl r0, r0, #2
+; ARM-NEXT:    movne r0, #4
 ; ARM-NEXT:    mov pc, lr
 ;
 ; ARMT2-LABEL: t7:
 ; ARMT2:       @ %bb.0: @ %entry
 ; ARMT2-NEXT:    subs r0, r0, r1
-; ARMT2-NEXT:    movwne r0, #1
-; ARMT2-NEXT:    lsl r0, r0, #2
+; ARMT2-NEXT:    movwne r0, #4
 ; ARMT2-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: t7:
@@ -318,8 +316,7 @@ define i32 @t7(i32 %a, i32 %b) nounwind readnone {
 ; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    subs r0, r0, r1
 ; THUMB2-NEXT:    it ne
-; THUMB2-NEXT:    movne r0, #1
-; THUMB2-NEXT:    lsls r0, r0, #2
+; THUMB2-NEXT:    movne r0, #4
 ; THUMB2-NEXT:    bx lr
 ;
 ; V8MBASE-LABEL: t7:
@@ -824,15 +821,13 @@ define i32 @t12(i32 %a) nounwind {
 ; ARM-LABEL: t12:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    cmp r0, #0
-; ARM-NEXT:    movne r0, #1
-; ARM-NEXT:    lsl r0, r0, #1
+; ARM-NEXT:    movne r0, #2
 ; ARM-NEXT:    mov pc, lr
 ;
 ; ARMT2-LABEL: t12:
 ; ARMT2:       @ %bb.0: @ %entry
 ; ARMT2-NEXT:    cmp r0, #0
-; ARMT2-NEXT:    movwne r0, #1
-; ARMT2-NEXT:    lsl r0, r0, #1
+; ARMT2-NEXT:    movwne r0, #2
 ; ARMT2-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: t12:
@@ -846,8 +841,7 @@ define i32 @t12(i32 %a) nounwind {
 ; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    cmp r0, #0
 ; THUMB2-NEXT:    it ne
-; THUMB2-NEXT:    movne r0, #1
-; THUMB2-NEXT:    lsls r0, r0, #1
+; THUMB2-NEXT:    movne r0, #2
 ; THUMB2-NEXT:    bx lr
 ;
 ; V8MBASE-LABEL: t12:

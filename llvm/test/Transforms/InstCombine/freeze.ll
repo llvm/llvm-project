@@ -90,7 +90,7 @@ define void @or_select_multipleuses_logical(i32 %x, i1 %y) {
 
 define <3 x i4> @partial_undef_vec() {
 ; CHECK-LABEL: @partial_undef_vec(
-; CHECK-NEXT:    ret <3 x i4> <i4 0, i4 1, i4 0>
+; CHECK-NEXT:    ret <3 x i4> splat (i4 1)
 ;
   %f = freeze <3 x i4> <i4 poison, i4 1, i4 undef>
   ret <3 x i4> %f
@@ -140,6 +140,17 @@ define i32 @early_freeze_test3(i32 %v1) {
   %v4 = or i32 %v3, 1
   %v4.fr = freeze i32 %v4
   ret i32 %v4.fr
+}
+
+define i32 @early_freeze_test4(i32 %v1) {
+; CHECK-LABEL: @early_freeze_test4(
+; CHECK-NEXT:    [[V2_FR:%.*]] = freeze i32 [[V2:%.*]]
+; CHECK-NEXT:    [[V3:%.*]] = mul i32 [[V2_FR]], [[V2_FR]]
+; CHECK-NEXT:    ret i32 [[V3]]
+;
+  %v2 = mul i32 %v1, %v1
+  %v2.fr = freeze i32 %v2
+  ret i32 %v2.fr
 }
 
 ; If replace all dominated uses of v to freeze(v).
@@ -871,6 +882,104 @@ loop:                                             ; preds = %loop, %entry
   %i.fr = freeze ptr %i
   %i.next = getelementptr i8, ptr %i.fr, i64 1
   %cond = icmp eq ptr %i.next, %end
+  br i1 %cond, label %loop, label %exit
+
+exit:                                             ; preds = %loop
+  ret void
+}
+
+; The recurrence for the GEP offset can't produce poison so the freeze should
+; be pushed through to the ptr, but this is not currently supported.
+define void @fold_phi_gep_phi_offset(ptr %init, ptr %end, i64 noundef %n) {
+; CHECK-LABEL: @fold_phi_gep_phi_offset(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT:%.*]], [[ENTRY:%.*]] ], [ [[I_NEXT_FR:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[N:%.*]], [[ENTRY]] ], [ [[OFF_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OFF_NEXT]] = shl i64 [[OFF]], 3
+; CHECK-NEXT:    [[I_NEXT:%.*]] = getelementptr i8, ptr [[I]], i64 [[OFF_NEXT]]
+; CHECK-NEXT:    [[I_NEXT_FR]] = freeze ptr [[I_NEXT]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT_FR]], [[END:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:                                             ; preds = %loop, %entry
+  %i = phi ptr [ %init, %entry ], [ %i.next.fr, %loop ]
+  %off = phi i64 [ %n, %entry ], [ %off.next, %loop ]
+  %off.next = shl i64 %off, 3
+  %i.next = getelementptr i8, ptr %i, i64 %off.next
+  %i.next.fr = freeze ptr %i.next
+  %cond = icmp eq ptr %i.next.fr, %end
+  br i1 %cond, label %loop, label %exit
+
+exit:                                             ; preds = %loop
+  ret void
+}
+
+; Offset is still guaranteed not to be poison, so the freeze could be moved
+; here if we strip inbounds from the GEP, but this is not currently supported.
+define void @fold_phi_gep_inbounds_phi_offset(ptr %init, ptr %end, i64 noundef %n) {
+; CHECK-LABEL: @fold_phi_gep_inbounds_phi_offset(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT:%.*]], [[ENTRY:%.*]] ], [ [[I_NEXT_FR:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[N:%.*]], [[ENTRY]] ], [ [[OFF_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OFF_NEXT]] = shl i64 [[OFF]], 3
+; CHECK-NEXT:    [[I_NEXT:%.*]] = getelementptr inbounds i8, ptr [[I]], i64 [[OFF_NEXT]]
+; CHECK-NEXT:    [[I_NEXT_FR]] = freeze ptr [[I_NEXT]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT_FR]], [[END:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:                                             ; preds = %loop, %entry
+  %i = phi ptr [ %init, %entry ], [ %i.next.fr, %loop ]
+  %off = phi i64 [ %n, %entry ], [ %off.next, %loop ]
+  %off.next = shl i64 %off, 3
+  %i.next = getelementptr inbounds i8, ptr %i, i64 %off.next
+  %i.next.fr = freeze ptr %i.next
+  %cond = icmp eq ptr %i.next.fr, %end
+  br i1 %cond, label %loop, label %exit
+
+exit:                                             ; preds = %loop
+  ret void
+}
+
+; GEP can produce poison, check freeze isn't moved.
+define void @cant_fold_phi_gep_phi_offset(ptr %init, ptr %end, i64 %n) {
+; CHECK-LABEL: @cant_fold_phi_gep_phi_offset(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT:%.*]], [[ENTRY:%.*]] ], [ [[I_NEXT_FR:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[N:%.*]], [[ENTRY]] ], [ [[OFF_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OFF_NEXT]] = shl i64 [[OFF]], 3
+; CHECK-NEXT:    [[I_NEXT:%.*]] = getelementptr inbounds i8, ptr [[I]], i64 [[OFF_NEXT]]
+; CHECK-NEXT:    [[I_NEXT_FR]] = freeze ptr [[I_NEXT]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT_FR]], [[END:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:                                             ; preds = %loop, %entry
+  %i = phi ptr [ %init, %entry ], [ %i.next.fr, %loop ]
+  %off = phi i64 [ %n, %entry ], [ %off.next, %loop ]
+  %off.next = shl i64 %off, 3
+  %i.next = getelementptr inbounds i8, ptr %i, i64 %off.next
+  %i.next.fr = freeze ptr %i.next
+  %cond = icmp eq ptr %i.next.fr, %end
   br i1 %cond, label %loop, label %exit
 
 exit:                                             ; preds = %loop

@@ -15,6 +15,7 @@
 #include "lldb/Expression/DWARFExpressionList.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Utility/UserID.h"
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/ArrayRef.h"
 
 #include <mutex>
@@ -444,9 +445,6 @@ public:
 
   Function *CalculateSymbolContextFunction() override;
 
-  /// DEPRECATED: Use GetAddressRanges instead.
-  const AddressRange &GetAddressRange() { return m_range; }
-
   AddressRanges GetAddressRanges() { return m_block.GetRanges(); }
 
   /// Return the address of the function (its entry point). This address is also
@@ -460,6 +458,7 @@ public:
   }
 
   lldb::LanguageType GetLanguage() const;
+
   /// Find the file and line number of the source location of the start of the
   /// function.  This will use the declaration if present and fall back on the
   /// line table if that fails.  So there may NOT be a line table entry for
@@ -473,16 +472,9 @@ public:
   void GetStartLineSourceInfo(lldb::SupportFileSP &source_file_sp,
                               uint32_t &line_no);
 
-  /// Find the file and line number of the source location of the end of the
-  /// function.
-  ///
-  ///
-  /// \param[out] source_file
-  ///     The source file.
-  ///
-  /// \param[out] line_no
-  ///     The line number.
-  void GetEndLineSourceInfo(FileSpec &source_file, uint32_t &line_no);
+  using SourceRange = Range<uint32_t, uint32_t>;
+  /// Find the file and line number range of the function.
+  llvm::Expected<std::pair<lldb::SupportFileSP, SourceRange>> GetSourceInfo();
 
   /// Get the outgoing call edges from this function, sorted by their return
   /// PC addresses (in increasing order).
@@ -662,11 +654,6 @@ protected:
 
   /// All lexical blocks contained in this function.
   Block m_block;
-
-  /// The function address range that covers the widest range needed to contain
-  /// all blocks. DEPRECATED: do not use this field in new code as the range may
-  /// include addresses belonging to other functions.
-  AddressRange m_range;
 
   /// The address (entry point) of the function.
   Address m_address;

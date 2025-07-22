@@ -24,7 +24,6 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
-#include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/OptimizationLevel.h"
@@ -76,9 +75,9 @@
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
-#include "llvm/Transforms/Instrumentation/InstrOrderFile.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
-#include "llvm/Transforms/Instrumentation/MemProfiler.h"
+#include "llvm/Transforms/Instrumentation/MemProfInstrumentation.h"
+#include "llvm/Transforms/Instrumentation/MemProfUse.h"
 #include "llvm/Transforms/Instrumentation/PGOCtxProfFlattening.h"
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
 #include "llvm/Transforms/Instrumentation/PGOForceFunctionAttrs.h"
@@ -267,10 +266,6 @@ static cl::opt<bool> FlattenedProfileUsed(
     cl::desc("Indicate the sample profile being used is flattened, i.e., "
              "no inline hierarchy exists in the profile"));
 
-static cl::opt<bool> EnableOrderFileInstrumentation(
-    "enable-order-file-instrumentation", cl::init(false), cl::Hidden,
-    cl::desc("Enable order file instrumentation (default = off)"));
-
 static cl::opt<bool>
     EnableMatrix("enable-matrix", cl::init(false), cl::Hidden,
                  cl::desc("Enable lowering of the matrix intrinsics"));
@@ -411,6 +406,12 @@ static bool isLTOPreLink(ThinOrFullLTOPhase Phase) {
          Phase == ThinOrFullLTOPhase::FullLTOPreLink;
 }
 
+// Helper to check if the current compilation phase is LTO backend
+static bool isLTOPostLink(ThinOrFullLTOPhase Phase) {
+  return Phase == ThinOrFullLTOPhase::ThinLTOPostLink ||
+         Phase == ThinOrFullLTOPhase::FullLTOPostLink;
+}
+
 // Helper to wrap conditionally Coro passes.
 static CoroConditionalWrapper buildCoroWrapper(ThinOrFullLTOPhase Phase) {
   // TODO: Skip passes according to Phase.
@@ -499,9 +500,6 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
   invokeLateLoopOptimizationsEPCallbacks(LPM2, Level);
 
   LPM2.addPass(LoopDeletionPass());
-
-  if (PTO.LoopInterchange)
-    LPM2.addPass(LoopInterchangePass());
 
   // Do not enable unrolling in PreLinkThinLTO phase during sample PGO
   // because it changes IR to makes profile annotation in back compile
@@ -627,7 +625,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
       !Level.isOptimizingForSize())
     FPM.addPass(PGOMemOPSizeOpt());
 
-  FPM.addPass(TailCallElimPass());
+  FPM.addPass(TailCallElimPass(/*UpdateFunctionEntryCount=*/
+                               isInstrumentedPGOUse()));
   FPM.addPass(
       SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
 
@@ -690,9 +689,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   invokeLateLoopOptimizationsEPCallbacks(LPM2, Level);
 
   LPM2.addPass(LoopDeletionPass());
-
-  if (PTO.LoopInterchange)
-    LPM2.addPass(LoopInterchangePass());
 
   // Do not enable unrolling in PreLinkThinLTO phase during sample PGO
   // because it changes IR to makes profile annotation in back compile
@@ -925,14 +921,14 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
     IP = getInlineParamsFromOptLevel(Level);
   else
     IP = getInlineParams(PTO.InlinerThreshold);
-  // For PreLinkThinLTO + SamplePGO, set hot-caller threshold to 0 to
-  // disable hot callsite inline (as much as possible [1]) because it makes
+  // For PreLinkThinLTO + SamplePGO or PreLinkFullLTO + SamplePGO,
+  // set hot-caller threshold to 0 to disable hot
+  // callsite inline (as much as possible [1]) because it makes
   // profile annotation in the backend inaccurate.
   //
   // [1] Note the cost of a function could be below zero due to erased
   // prologue / epilogue.
-  if (Phase == ThinOrFullLTOPhase::ThinLTOPreLink && PGOOpt &&
-      PGOOpt->Action == PGOOptions::SampleUse)
+  if (isLTOPreLink(Phase) && PGOOpt && PGOOpt->Action == PGOOptions::SampleUse)
     IP.HotCallSiteThreshold = 0;
 
   if (PGOOpt)
@@ -1022,14 +1018,14 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
   ModulePassManager MPM;
 
   InlineParams IP = getInlineParamsFromOptLevel(Level);
-  // For PreLinkThinLTO + SamplePGO, set hot-caller threshold to 0 to
-  // disable hot callsite inline (as much as possible [1]) because it makes
+  // For PreLinkThinLTO + SamplePGO or PreLinkFullLTO + SamplePGO,
+  // set hot-caller threshold to 0 to disable hot
+  // callsite inline (as much as possible [1]) because it makes
   // profile annotation in the backend inaccurate.
   //
   // [1] Note the cost of a function could be below zero due to erased
   // prologue / epilogue.
-  if (Phase == ThinOrFullLTOPhase::ThinLTOPreLink && PGOOpt &&
-      PGOOpt->Action == PGOOptions::SampleUse)
+  if (isLTOPreLink(Phase) && PGOOpt && PGOOpt->Action == PGOOptions::SampleUse)
     IP.HotCallSiteThreshold = 0;
 
   if (PGOOpt)
@@ -1047,7 +1043,7 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
   if (!UseCtxProfile.empty() && Phase == ThinOrFullLTOPhase::ThinLTOPostLink) {
     MPM.addPass(GlobalOptPass());
     MPM.addPass(GlobalDCEPass());
-    MPM.addPass(PGOCtxProfFlatteningPass());
+    MPM.addPass(PGOCtxProfFlatteningPass(/*IsPreThinlink=*/false));
   }
 
   MPM.addPass(createModuleToFunctionPassAdaptor(
@@ -1197,7 +1193,10 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 
   // We already asserted this happens in non-FullLTOPostLink earlier.
   const bool IsPreLink = Phase != ThinOrFullLTOPhase::ThinLTOPostLink;
-  const bool IsPGOPreLink = PGOOpt && IsPreLink;
+  // Enable contextual profiling instrumentation.
+  const bool IsCtxProfGen =
+      IsPreLink && PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled();
+  const bool IsPGOPreLink = !IsCtxProfGen && PGOOpt && IsPreLink;
   const bool IsPGOInstrGen =
       IsPGOPreLink && PGOOpt->Action == PGOOptions::IRInstr;
   const bool IsPGOInstrUse =
@@ -1208,9 +1207,6 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   assert(!(IsPGOInstrGen && PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled()) &&
          "Enabling both instrumented PGO and contextual instrumentation is not "
          "supported.");
-  // Enable contextual profiling instrumentation.
-  const bool IsCtxProfGen = !IsPGOInstrGen && IsPreLink &&
-                            PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled();
   const bool IsCtxProfUse =
       !UseCtxProfile.empty() && Phase == ThinOrFullLTOPhase::ThinLTOPreLink;
 
@@ -1241,8 +1237,17 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     // FIXME(mtrofin): move AssignGUIDPass if there is agreement to use this
     // mechanism for GUIDs.
     MPM.addPass(AssignGUIDPass());
-    if (IsCtxProfUse)
+    if (IsCtxProfUse) {
+      MPM.addPass(PGOCtxProfFlatteningPass(/*IsPreThinlink=*/true));
       return MPM;
+    }
+    // Block further inlining in the instrumented ctxprof case. This avoids
+    // confusingly collecting profiles for the same GUID corresponding to
+    // different variants of the function. We could do like PGO and identify
+    // functions by a (GUID, Hash) tuple, but since the ctxprof "use" waits for
+    // thinlto to happen before performing any further optimizations, it's
+    // unnecessary to collect profiles for non-prevailing copies.
+    MPM.addPass(NoinlineNonPrevailing());
     addPostPGOLoopRotation(MPM, Level);
     MPM.addPass(PGOCtxProfLoweringPass());
   } else if (IsColdFuncOnlyInstrGen) {
@@ -1276,6 +1281,9 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // Remove any dead arguments exposed by cleanups, constant folding globals,
   // and argument promotion.
   MPM.addPass(DeadArgumentEliminationPass());
+
+  if (Phase == ThinOrFullLTOPhase::ThinLTOPostLink)
+    MPM.addPass(SimplifyTypeTestsPass());
 
   if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
     MPM.addPass(CoroCleanupPass());
@@ -1453,9 +1461,6 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   if (!LTOPreLink)
     MPM.addPass(EliminateAvailableExternallyPass());
 
-  if (EnableOrderFileInstrumentation)
-    MPM.addPass(InstrOrderFilePass());
-
   // Do RPO function attribute inference across the module to forward-propagate
   // attributes where applicable.
   // FIXME: Is this really an optimization rather than a canonicalization?
@@ -1539,6 +1544,10 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   //        this may need to be revisited once we run GVN before loop deletion
   //        in the simplification pipeline.
   LPM.addPass(LoopDeletionPass());
+
+  if (PTO.LoopInterchange)
+    LPM.addPass(LoopInterchangePass());
+
   OptimizePM.addPass(createFunctionToLoopPassAdaptor(
       std::move(LPM), /*UseMemorySSA=*/false, /*UseBlockFrequencyInfo=*/false));
 
@@ -1571,7 +1580,8 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   OptimizePM.addPass(DivRemPairsPass());
 
   // Try to annotate calls that were created during optimization.
-  OptimizePM.addPass(TailCallElimPass());
+  OptimizePM.addPass(
+      TailCallElimPass(/*UpdateFunctionEntryCount=*/isInstrumentedPGOUse()));
 
   // LoopSink (and other loop passes since the last simplifyCFG) might have
   // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
@@ -1613,8 +1623,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
     MPM.addPass(MergeFunctionsPass());
 
   if (PTO.CallGraphProfile && !LTOPreLink)
-    MPM.addPass(CGProfilePass(LTOPhase == ThinOrFullLTOPhase::FullLTOPostLink ||
-                              LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink));
+    MPM.addPass(CGProfilePass(isLTOPostLink(LTOPhase)));
 
   // RelLookupTableConverterPass runs later in LTO post-link pipeline.
   if (!LTOPreLink)
@@ -1688,6 +1697,19 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
   if (ThinLTO && PGOOpt && PGOOpt->Action == PGOOptions::SampleUse)
     MPM.addPass(buildThinLTODefaultPipeline(Level, /*ImportSummary=*/nullptr));
   else {
+    // ModuleSimplification does not run the coroutine passes for
+    // ThinLTOPreLink, so we need the coroutine passes to run for ThinLTO
+    // builds, otherwise they will miscompile.
+    if (ThinLTO) {
+      // TODO: replace w/ buildCoroWrapper() when it takes phase and level into
+      // consideration.
+      CGSCCPassManager CGPM;
+      CGPM.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
+      CGPM.addPass(CoroAnnotationElidePass());
+      MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
+      MPM.addPass(CoroCleanupPass());
+    }
+
     // otherwise, just use module optimization
     MPM.addPass(
         buildModuleOptimizationPipeline(Level, ThinOrFullLTOPhase::None));
@@ -2047,7 +2069,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   // LTO provides additional opportunities for tailcall elimination due to
   // link-time inlining, and visibility of nocapture attribute.
-  FPM.addPass(TailCallElimPass());
+  FPM.addPass(
+      TailCallElimPass(/*UpdateFunctionEntryCount=*/isInstrumentedPGOUse()));
 
   // Run a few AA driver optimizations here and now to cleanup the code.
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM),
@@ -2301,6 +2324,10 @@ AAManager PassBuilder::buildDefaultAAPipeline() {
   // The order in which these are registered determines their priority when
   // being queried.
 
+  // Add any target-specific alias analyses that should be run early.
+  if (TM)
+    TM->registerEarlyDefaultAliasAnalyses(AA);
+
   // First we register the basic alias analysis that provides the majority of
   // per-function local AA logic. This is a stateless, on-demand local set of
   // AA techniques.
@@ -2323,4 +2350,9 @@ AAManager PassBuilder::buildDefaultAAPipeline() {
     TM->registerDefaultAliasAnalyses(AA);
 
   return AA;
+}
+
+bool PassBuilder::isInstrumentedPGOUse() const {
+  return (PGOOpt && PGOOpt->Action == PGOOptions::IRUse) ||
+         !UseCtxProfile.empty();
 }

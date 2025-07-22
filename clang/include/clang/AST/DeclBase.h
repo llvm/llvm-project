@@ -492,7 +492,7 @@ public:
   /// perform non-Decl specific checks based on the object's type and strict
   /// flex array level.
   static bool isFlexibleArrayMemberLike(
-      ASTContext &Context, const Decl *D, QualType Ty,
+      const ASTContext &Context, const Decl *D, QualType Ty,
       LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
       bool IgnoreTemplateOrMacroSubstitution);
 
@@ -645,6 +645,10 @@ public:
   bool isModulePrivate() const {
     return getModuleOwnershipKind() == ModuleOwnershipKind::ModulePrivate;
   }
+
+  /// Whether this declaration was a local declaration to a C++20
+  /// named module.
+  bool isModuleLocal() const;
 
   /// Whether this declaration was exported in a lexical context.
   /// e.g.:
@@ -2239,9 +2243,13 @@ public:
     return DC && this->getPrimaryContext() == DC->getPrimaryContext();
   }
 
-  /// Determine whether this declaration context encloses the
+  /// Determine whether this declaration context semantically encloses the
   /// declaration context DC.
   bool Encloses(const DeclContext *DC) const;
+
+  /// Determine whether this declaration context lexically encloses the
+  /// declaration context DC.
+  bool LexicallyEncloses(const DeclContext *DC) const;
 
   /// Find the nearest non-closure ancestor of this context,
   /// i.e. the innermost semantic parent of this context which is not

@@ -13,6 +13,8 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-error=implicit-int -triple thumbv7k-apple-watchos2.0 %s 2>&1 | FileCheck %s --check-prefix TLS
 // RUN: not %clang_cc1 -fsyntax-only -triple i386-apple-watchos2.0-simulator %s 2>&1 | FileCheck %s --check-prefix NO-TLS
 // RUN: %clang_cc1 -fsyntax-only -Wno-error=implicit-int -triple i386-apple-watchos3.0-simulator %s 2>&1 | FileCheck %s --check-prefix TLS
+// RUN: %clang_cc1 -fsyntax-only -Wno-error=implicit-int -triple arm64-apple-xros %s 2>&1 | FileCheck %s --check-prefix TLS
+// RUN: %clang_cc1 -fsyntax-only -Wno-error=implicit-int -triple arm64-apple-xros-simulator %s 2>&1 | FileCheck %s --check-prefix TLS
 
 
 __thread int a;

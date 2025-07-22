@@ -45,8 +45,8 @@ static int printSupportedCPUs(llvm::StringRef triple) {
   // the target machine will handle the mcpu printing
   llvm::TargetOptions targetOpts;
   std::unique_ptr<llvm::TargetMachine> targetMachine(
-      target->createTargetMachine(triple, "", "+cpuhelp", targetOpts,
-                                  std::nullopt));
+      target->createTargetMachine(llvm::Triple(triple), "", "+cpuhelp",
+                                  targetOpts, std::nullopt));
   return 0;
 }
 
@@ -67,9 +67,8 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
   // for parsing the arguments
   llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagID(
       new clang::DiagnosticIDs());
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> diagOpts =
-      new clang::DiagnosticOptions();
-  clang::DiagnosticsEngine diags(diagID, &*diagOpts, diagsBuffer);
+  clang::DiagnosticOptions diagOpts;
+  clang::DiagnosticsEngine diags(diagID, diagOpts, diagsBuffer);
   bool success = CompilerInvocation::createFromArgs(flang->getInvocation(),
                                                     argv, diags, argv0);
 
