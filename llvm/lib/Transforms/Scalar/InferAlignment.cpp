@@ -21,44 +21,6 @@
 
 using namespace llvm;
 
-static bool tryToPropagateAlign(Function &F, const DataLayout &DL) {
-  bool Changed = false;
-
-  for (BasicBlock &BB : F) {
-    // We need to reset the map for each block because alignment information
-    // can't be propagated across blocks. This is because control flow could
-    // be dependent on the address at runtime, making an alignment assumption
-    // within one block not true in another. Some sort of dominator tree
-    // approach could be better, but restricting within a basic block is correct
-    // too.
-    DenseMap<Value *, Align> BestBasePointerAligns;
-    for (Instruction &I : BB) {
-      if (auto *PtrOp = getLoadStorePointerOperand(&I)) {
-        Align LoadStoreAlign = getLoadStoreAlignment(&I);
-        APInt OffsetFromBase =
-            APInt(DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
-        PtrOp = PtrOp->stripAndAccumulateConstantOffsets(DL, OffsetFromBase, true);
-        Align BasePointerAlign =
-            commonAlignment(LoadStoreAlign, OffsetFromBase.getLimitedValue());
-
-        auto [It, Inserted] =
-            BestBasePointerAligns.try_emplace(PtrOp, BasePointerAlign);
-        if (!Inserted) {
-          if (It->second > BasePointerAlign) {
-            Align BetterLoadStoreAlign =
-                commonAlignment(It->second, OffsetFromBase.getLimitedValue());
-            setLoadStoreAlignment(&I, BetterLoadStoreAlign);
-            Changed = true;
-          } else {
-            It->second = BasePointerAlign;
-          }
-        }
-      }
-    }
-  }
-  return Changed;
-}
-
 static bool tryToImproveAlign(
     const DataLayout &DL, Instruction *I,
     function_ref<Align(Value *PtrOp, Align OldAlign, Align PrefAlign)> Fn) {
@@ -95,9 +57,17 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
     }
   }
 
-  // Compute alignment from known bits.
   for (BasicBlock &BB : F) {
+    // We need to reset the map for each block because alignment information
+    // can't be propagated across blocks. This is because control flow could
+    // be dependent on the address at runtime, making an alignment assumption
+    // within one block not true in another. Some sort of dominator tree
+    // approach could be better, but restricting within a basic block is correct
+    // too.
+    DenseMap<Value *, Align> BestBasePointerAligns;
+
     for (Instruction &I : BB) {
+      // Compute alignment from known bits.
       Changed |= tryToImproveAlign(
           DL, &I, [&](Value *PtrOp, Align OldAlign, Align PrefAlign) {
             KnownBits Known = computeKnownBits(PtrOp, DL, &AC, &I, &DT);
@@ -105,12 +75,32 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
                                        +Value::MaxAlignmentExponent);
             return Align(1ull << std::min(Known.getBitWidth() - 1, TrailZ));
           });
+
+      // Propagate alignment between loads and stores that originate from the
+      // same base pointer
+      Changed |= tryToImproveAlign(
+          DL, &I, [&](Value *PtrOp, Align LoadStoreAlign, Align PrefAlign) {
+            APInt OffsetFromBase =
+                APInt(DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
+            PtrOp = PtrOp->stripAndAccumulateConstantOffsets(DL, OffsetFromBase,
+                                                             true);
+            Align BasePointerAlign = commonAlignment(
+                LoadStoreAlign, OffsetFromBase.getLimitedValue());
+
+            auto [It, Inserted] =
+                BestBasePointerAligns.try_emplace(PtrOp, BasePointerAlign);
+            if (!Inserted) {
+              if (It->second > BasePointerAlign) {
+                Align BetterLoadStoreAlign = commonAlignment(
+                    It->second, OffsetFromBase.getLimitedValue());
+                return BetterLoadStoreAlign;
+              }
+              It->second = BasePointerAlign;
+            }
+            return LoadStoreAlign;
+          });
     }
   }
-
-  // Propagate alignment between loads and stores that originate from the same
-  // base pointer
-  Changed |= tryToPropagateAlign(F, DL);
 
   return Changed;
 }
