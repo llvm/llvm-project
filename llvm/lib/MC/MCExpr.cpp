@@ -269,7 +269,7 @@ bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
   return IsRelocatable && Value.isAbsolute() && Value.getSpecifier() == 0;
 }
 
-/// Helper method for \see EvaluateSymbolAdd().
+/// Helper method for \see evaluateSymbolicAdd().
 static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
                                                 bool InSet, const MCSymbol *&A,
                                                 const MCSymbol *&B,
@@ -361,6 +361,9 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
         if (BBeforeRelax && AAfterRelax)
           return;
       }
+      if (F->getKind() == MCFragment::FT_Relaxable && Asm->hasFinalLayout() && F->isLinkerRelaxable())
+        // FIXME: More accurate calculation of AAfterRelax/BBeforeRelax?
+        return;
       if (&*F == FA) {
         // If FA and FB belong to the same subsection, the loop will find FA and
         // we can resolve the difference.
