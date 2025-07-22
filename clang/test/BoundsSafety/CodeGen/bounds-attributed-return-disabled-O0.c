@@ -7,7 +7,7 @@
 #include <ptrcheck.h>
 
 // CHECK-LABEL: define dso_local ptr @cb_in_from_bidi(
-// CHECK-SAME: i32 noundef [[COUNT:%.*]], ptr noundef [[P:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: i32 noundef [[COUNT:%.*]], ptr dead_on_return noundef [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[COUNT_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -70,7 +70,7 @@ int *__counted_by_or_null(count) cbn_in_from_single(int count, int *__single p) 
 }
 
 // CHECK-LABEL: define dso_local ptr @sb_in_from_bidi(
-// CHECK-SAME: i32 noundef [[SIZE:%.*]], ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[SIZE:%.*]], ptr dead_on_return noundef [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[SIZE_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -91,7 +91,7 @@ void *__sized_by(size) sb_in_from_bidi(int size, void *__bidi_indexable p) {
 }
 
 // CHECK-LABEL: define dso_local ptr @eb_from_bidi(
-// CHECK-SAME: ptr noundef [[END:%.*]], ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef [[END:%.*]], ptr dead_on_return noundef [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[END_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8

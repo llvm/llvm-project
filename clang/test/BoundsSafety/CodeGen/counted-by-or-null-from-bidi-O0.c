@@ -6,7 +6,7 @@
 
 // TODO: rdar://114446928
 // CHECK-LABEL: define dso_local ptr @foo(
-// CHECK-SAME: ptr noundef [[P:%.*]], i32 noundef [[LEN:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr dead_on_return noundef [[P:%.*]], i32 noundef [[LEN:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[LEN_ADDR:%.*]] = alloca i32, align 4
@@ -104,7 +104,7 @@ int * __counted_by_or_null(len) foo(int * __bidi_indexable p, int len) {
 }
 
 // CHECK-LABEL: define dso_local void @foo_assign(
-// CHECK-SAME: ptr noundef [[P:%.*]], i32 noundef [[LEN:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_return noundef [[P:%.*]], i32 noundef [[LEN:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[LEN_ADDR:%.*]] = alloca i32, align 4

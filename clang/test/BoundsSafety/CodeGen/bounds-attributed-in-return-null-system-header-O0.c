@@ -29,7 +29,7 @@ void consume(int* __bidi_indexable);
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[PTR]], i32 0, i32 2
 // CHECK-NEXT:    store ptr [[CALL]], ptr [[TMP3]], align 8
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[BYVAL_TEMP]], ptr align 8 [[PTR]], i64 24, i1 false)
-// CHECK-NEXT:    call void @consume(ptr noundef [[BYVAL_TEMP]])
+// CHECK-NEXT:    call void @consume(ptr dead_on_return noundef [[BYVAL_TEMP]])
 // CHECK-NEXT:    ret void
 //
 // LEGACY-LABEL: define dso_local void @use_inline_header_func_unspecified_ptr(
@@ -50,7 +50,7 @@ void consume(int* __bidi_indexable);
 // LEGACY-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[PTR]], i32 0, i32 2
 // LEGACY-NEXT:    store ptr [[CALL]], ptr [[TMP3]], align 8
 // LEGACY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[BYVAL_TEMP]], ptr align 8 [[PTR]], i64 24, i1 false)
-// LEGACY-NEXT:    call void @consume(ptr noundef [[BYVAL_TEMP]])
+// LEGACY-NEXT:    call void @consume(ptr dead_on_return noundef [[BYVAL_TEMP]])
 // LEGACY-NEXT:    ret void
 //
 void use_inline_header_func_unspecified_ptr(int count) {
@@ -76,7 +76,7 @@ void use_inline_header_func_unspecified_ptr(int count) {
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[PTR]], i32 0, i32 2
 // CHECK-NEXT:    store ptr [[CALL]], ptr [[TMP3]], align 8
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[BYVAL_TEMP]], ptr align 8 [[PTR]], i64 24, i1 false)
-// CHECK-NEXT:    call void @consume(ptr noundef [[BYVAL_TEMP]])
+// CHECK-NEXT:    call void @consume(ptr dead_on_return noundef [[BYVAL_TEMP]])
 // CHECK-NEXT:    ret void
 //
 // LEGACY-LABEL: define dso_local void @use_inline_header_func_unsafe_indexable_ptr(
@@ -97,7 +97,7 @@ void use_inline_header_func_unspecified_ptr(int count) {
 // LEGACY-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[PTR]], i32 0, i32 2
 // LEGACY-NEXT:    store ptr [[CALL]], ptr [[TMP3]], align 8
 // LEGACY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[BYVAL_TEMP]], ptr align 8 [[PTR]], i64 24, i1 false)
-// LEGACY-NEXT:    call void @consume(ptr noundef [[BYVAL_TEMP]])
+// LEGACY-NEXT:    call void @consume(ptr dead_on_return noundef [[BYVAL_TEMP]])
 // LEGACY-NEXT:    ret void
 //
 void use_inline_header_func_unsafe_indexable_ptr(int count) {

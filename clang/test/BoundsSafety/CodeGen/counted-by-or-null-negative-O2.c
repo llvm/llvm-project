@@ -60,9 +60,8 @@ int *__bidi_indexable to_bidi_const_count(int * arg) {
 }
 
 // CHECK-LABEL: define dso_local void @back_and_forth_to_bidi(
-// CHECK-SAME: ptr noundef writeonly captures(none) initializes((0, 24)) [[ARG:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// CHECK-SAME: ptr dead_on_return noundef readnone captures(none) [[ARG:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  boundscheck.null49:
-// CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(24) [[ARG]], i8 0, i64 24, i1 false)
 // CHECK-NEXT:    ret void
 //
 void back_and_forth_to_bidi(int * __bidi_indexable arg) {

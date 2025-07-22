@@ -82,7 +82,7 @@ char access(struct Outer *bar, int index) {
 
 
 // CHECK-LABEL: define dso_local ptr @assign(
-// CHECK-SAME: ptr noundef [[BAR:%.*]], i32 noundef [[LEN:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_return noundef [[BAR:%.*]], i32 noundef [[LEN:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[BAR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[LEN_ADDR:%.*]] = alloca i32, align 4

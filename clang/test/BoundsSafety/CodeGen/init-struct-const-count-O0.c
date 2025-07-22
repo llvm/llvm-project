@@ -128,7 +128,7 @@ void init_list_cb(int count_param, int*__counted_by(count_param) ptr) {
 }
 
 // SAME-LABEL: define dso_local void @init_list_cb_bidi(
-// SAME-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// SAME-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr dead_on_return noundef [[PTR:%.*]]) #[[ATTR0]] {
 // SAME-NEXT:  [[ENTRY:.*]]:
 // SAME-NEXT:    [[COUNT_PARAM_ADDR:%.*]] = alloca i32, align 4
 // SAME-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -365,7 +365,7 @@ void compound_literal_init_cb(int count_param, int*__counted_by(count_param) ptr
 }
 
 // LEGACY-LABEL: define dso_local void @compound_literal_init_cb_bidi(
-// LEGACY-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// LEGACY-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr dead_on_return noundef [[PTR:%.*]]) #[[ATTR0]] {
 // LEGACY-NEXT:  [[ENTRY:.*:]]
 // LEGACY-NEXT:    [[COUNT_PARAM_ADDR:%.*]] = alloca i32, align 4
 // LEGACY-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -392,7 +392,7 @@ void compound_literal_init_cb(int count_param, int*__counted_by(count_param) ptr
 // LEGACY-NEXT:    ret void
 //
 // NEW-LABEL: define dso_local void @compound_literal_init_cb_bidi(
-// NEW-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// NEW-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr dead_on_return noundef [[PTR:%.*]]) #[[ATTR0]] {
 // NEW-NEXT:  [[ENTRY:.*]]:
 // NEW-NEXT:    [[COUNT_PARAM_ADDR:%.*]] = alloca i32, align 4
 // NEW-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -633,7 +633,7 @@ void init_list_cbon(int count_param, int*__counted_by_or_null(count_param) ptr) 
 }
 
 // SAME-LABEL: define dso_local void @init_list_cbon_bidi(
-// SAME-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// SAME-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr dead_on_return noundef [[PTR:%.*]]) #[[ATTR0]] {
 // SAME-NEXT:  [[ENTRY:.*]]:
 // SAME-NEXT:    [[COUNT_PARAM_ADDR:%.*]] = alloca i32, align 4
 // SAME-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -924,7 +924,7 @@ void compound_literal_init_cbon(int count_param, int*__counted_by_or_null(count_
 }
 
 // LEGACY-LABEL: define dso_local void @compound_literal_init_cbon_bidi(
-// LEGACY-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// LEGACY-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr dead_on_return noundef [[PTR:%.*]]) #[[ATTR0]] {
 // LEGACY-NEXT:  [[ENTRY:.*:]]
 // LEGACY-NEXT:    [[COUNT_PARAM_ADDR:%.*]] = alloca i32, align 4
 // LEGACY-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -951,7 +951,7 @@ void compound_literal_init_cbon(int count_param, int*__counted_by_or_null(count_
 // LEGACY-NEXT:    ret void
 //
 // NEW-LABEL: define dso_local void @compound_literal_init_cbon_bidi(
-// NEW-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// NEW-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr dead_on_return noundef [[PTR:%.*]]) #[[ATTR0]] {
 // NEW-NEXT:  [[ENTRY:.*]]:
 // NEW-NEXT:    [[COUNT_PARAM_ADDR:%.*]] = alloca i32, align 4
 // NEW-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -1178,7 +1178,7 @@ void init_list_sb(int count_param, char*__sized_by(count_param) ptr) {
 }
 
 // SAME-LABEL: define dso_local void @init_list_bidi(
-// SAME-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// SAME-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr dead_on_return noundef [[PTR:%.*]]) #[[ATTR0]] {
 // SAME-NEXT:  [[ENTRY:.*]]:
 // SAME-NEXT:    [[COUNT_PARAM_ADDR:%.*]] = alloca i32, align 4
 // SAME-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -1413,7 +1413,7 @@ void compound_literal_init_sb(int count_param, char*__sized_by(count_param) ptr)
 }
 
 // LEGACY-LABEL: define dso_local void @compound_literal_init_sb_bidi(
-// LEGACY-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// LEGACY-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr dead_on_return noundef [[PTR:%.*]]) #[[ATTR0]] {
 // LEGACY-NEXT:  [[ENTRY:.*:]]
 // LEGACY-NEXT:    [[COUNT_PARAM_ADDR:%.*]] = alloca i32, align 4
 // LEGACY-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -1440,7 +1440,7 @@ void compound_literal_init_sb(int count_param, char*__sized_by(count_param) ptr)
 // LEGACY-NEXT:    ret void
 //
 // NEW-LABEL: define dso_local void @compound_literal_init_sb_bidi(
-// NEW-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// NEW-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr dead_on_return noundef [[PTR:%.*]]) #[[ATTR0]] {
 // NEW-NEXT:  [[ENTRY:.*]]:
 // NEW-NEXT:    [[COUNT_PARAM_ADDR:%.*]] = alloca i32, align 4
 // NEW-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -1679,7 +1679,7 @@ void init_list_sbon(int count_param, char*__sized_by_or_null(count_param) ptr) {
 }
 
 // SAME-LABEL: define dso_local void @init_list_sbon_bidi(
-// SAME-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// SAME-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr dead_on_return noundef [[PTR:%.*]]) #[[ATTR0]] {
 // SAME-NEXT:  [[ENTRY:.*]]:
 // SAME-NEXT:    [[COUNT_PARAM_ADDR:%.*]] = alloca i32, align 4
 // SAME-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -1968,7 +1968,7 @@ void compound_literal_init_sbon(int count_param, char*__sized_by_or_null(count_p
 }
 
 // LEGACY-LABEL: define dso_local void @compound_literal_init_sbon_bidi(
-// LEGACY-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// LEGACY-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr dead_on_return noundef [[PTR:%.*]]) #[[ATTR0]] {
 // LEGACY-NEXT:  [[ENTRY:.*:]]
 // LEGACY-NEXT:    [[COUNT_PARAM_ADDR:%.*]] = alloca i32, align 4
 // LEGACY-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -1995,7 +1995,7 @@ void compound_literal_init_sbon(int count_param, char*__sized_by_or_null(count_p
 // LEGACY-NEXT:    ret void
 //
 // NEW-LABEL: define dso_local void @compound_literal_init_sbon_bidi(
-// NEW-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// NEW-SAME: i32 noundef [[COUNT_PARAM:%.*]], ptr dead_on_return noundef [[PTR:%.*]]) #[[ATTR0]] {
 // NEW-NEXT:  [[ENTRY:.*]]:
 // NEW-NEXT:    [[COUNT_PARAM_ADDR:%.*]] = alloca i32, align 4
 // NEW-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8

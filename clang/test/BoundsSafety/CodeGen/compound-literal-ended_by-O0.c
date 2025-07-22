@@ -59,7 +59,7 @@ void receive_transparent_union(union TransparentUnion);
 // =============================================================================
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr(
-// CHECK-SAME: ptr noundef [[PTR:%.*]], ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr noundef [[PTR:%.*]], ptr dead_on_return noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[NEW_START_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -134,7 +134,7 @@ void assign_via_ptr(struct eb* ptr,
 }
 
 // CHECK-LABEL: define dso_local void @assign_operator(
-// CHECK-SAME: ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_return noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[NEW_START_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[NEW_END_ADDR:%.*]] = alloca ptr, align 8
@@ -212,7 +212,7 @@ void assign_operator(char* __bidi_indexable new_start, char* new_end) {
 
 
 // CHECK-LABEL: define dso_local void @local_var_init(
-// CHECK-SAME: ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_return noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[NEW_START_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[NEW_END_ADDR:%.*]] = alloca ptr, align 8
@@ -282,7 +282,7 @@ void local_var_init(char* __bidi_indexable new_start, char* new_end) {
 }
 
 // CHECK-LABEL: define dso_local void @call_arg(
-// CHECK-SAME: ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_return noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[NEW_START_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[NEW_END_ADDR:%.*]] = alloca ptr, align 8
@@ -354,7 +354,7 @@ void call_arg(char* __bidi_indexable new_start, char* new_end) {
 }
 
 // CHECK-LABEL: define dso_local [2 x i64] @return_eb(
-// CHECK-SAME: ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_return noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_EB:%.*]], align 8
 // CHECK-NEXT:    [[NEW_START_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -425,7 +425,7 @@ struct eb return_eb(char* __bidi_indexable new_start, char* new_end) {
 }
 
 // CHECK-LABEL: define dso_local void @construct_not_used(
-// CHECK-SAME: ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_return noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[NEW_START_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[NEW_END_ADDR:%.*]] = alloca ptr, align 8
@@ -542,7 +542,7 @@ void assign_via_ptr_nullptr(struct eb* ptr, char* new_end) {
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_nested(
-// CHECK-SAME: ptr noundef [[PTR:%.*]], ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef [[PTR:%.*]], ptr dead_on_return noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[NEW_START_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -623,7 +623,7 @@ void assign_via_ptr_nested(struct nested_eb* ptr,
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_nested_v2(
-// CHECK-SAME: ptr noundef [[PTR:%.*]], ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef [[PTR:%.*]], ptr dead_on_return noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[NEW_START_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -704,7 +704,7 @@ void assign_via_ptr_nested_v2(struct nested_eb* ptr,
 }
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_nested_v3(
-// CHECK-SAME: ptr noundef [[PTR:%.*]], ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef [[PTR:%.*]], ptr dead_on_return noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[NEW_START_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -840,7 +840,7 @@ void assign_via_ptr_nested_v3(struct nested_and_outer_eb* ptr,
 }
 
 // CHECK-LABEL: define dso_local void @array_of_struct_init(
-// CHECK-SAME: ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_return noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[NEW_START_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[NEW_END_ADDR:%.*]] = alloca ptr, align 8
@@ -965,7 +965,7 @@ void array_of_struct_init(char* __bidi_indexable new_start, char* new_end) {
 
 
 // CHECK-LABEL: define dso_local void @assign_via_ptr_other_data_side_effect(
-// CHECK-SAME: ptr noundef [[PTR:%.*]], ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef [[PTR:%.*]], ptr dead_on_return noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[NEW_START_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -1102,7 +1102,7 @@ void assign_via_ptr_other_data_side_effect_zero_ptr(struct eb_with_other_data* p
 }
 
 // CHECK-LABEL: define dso_local void @call_arg_transparent_union(
-// CHECK-SAME: ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_return noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[NEW_START_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[NEW_END_ADDR:%.*]] = alloca ptr, align 8
@@ -1166,7 +1166,7 @@ void assign_via_ptr_other_data_side_effect_zero_ptr(struct eb_with_other_data* p
 // CHECK-NEXT:    store i32 0, ptr [[OTHER]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[AGG_TMP]], i64 20
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP3]], i8 0, i64 4, i1 false)
-// CHECK-NEXT:    call void @receive_transparent_union(ptr noundef [[AGG_TMP]])
+// CHECK-NEXT:    call void @receive_transparent_union(ptr dead_on_return noundef [[AGG_TMP]])
 // CHECK-NEXT:    ret void
 //
 void call_arg_transparent_union(char* __bidi_indexable new_start,
@@ -1181,7 +1181,7 @@ void call_arg_transparent_union(char* __bidi_indexable new_start,
 }
 
 // CHECK-LABEL: define dso_local void @call_arg_transparent_union_untransparently(
-// CHECK-SAME: ptr noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_return noundef [[NEW_START:%.*]], ptr noundef [[NEW_END:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[NEW_START_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[NEW_END_ADDR:%.*]] = alloca ptr, align 8
@@ -1247,7 +1247,7 @@ void call_arg_transparent_union(char* __bidi_indexable new_start,
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[DOTCOMPOUNDLITERAL]], i64 20
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP3]], i8 0, i64 4, i1 false)
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[BYVAL_TEMP]], ptr align 8 [[DOTCOMPOUNDLITERAL]], i64 24, i1 false)
-// CHECK-NEXT:    call void @receive_transparent_union(ptr noundef [[BYVAL_TEMP]])
+// CHECK-NEXT:    call void @receive_transparent_union(ptr dead_on_return noundef [[BYVAL_TEMP]])
 // CHECK-NEXT:    ret void
 //
 void call_arg_transparent_union_untransparently(
@@ -2702,7 +2702,7 @@ void assign_via_ptr_other_data_side_effect_zero_ptr_from_eb(struct eb_with_other
 // CHECK-NEXT:    store i32 0, ptr [[OTHER]], align 8
 // CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[AGG_TMP]], i64 20
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP13]], i8 0, i64 4, i1 false)
-// CHECK-NEXT:    call void @receive_transparent_union(ptr noundef [[AGG_TMP]])
+// CHECK-NEXT:    call void @receive_transparent_union(ptr dead_on_return noundef [[AGG_TMP]])
 // CHECK-NEXT:    ret void
 //
 void call_arg_transparent_union_from_eb(char* __ended_by(new_end) new_start,
@@ -2825,7 +2825,7 @@ void call_arg_transparent_union_from_eb(char* __ended_by(new_end) new_start,
 // CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[DOTCOMPOUNDLITERAL]], i64 20
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP13]], i8 0, i64 4, i1 false)
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[BYVAL_TEMP]], ptr align 8 [[DOTCOMPOUNDLITERAL]], i64 24, i1 false)
-// CHECK-NEXT:    call void @receive_transparent_union(ptr noundef [[BYVAL_TEMP]])
+// CHECK-NEXT:    call void @receive_transparent_union(ptr dead_on_return noundef [[BYVAL_TEMP]])
 // CHECK-NEXT:    ret void
 //
 void call_arg_transparent_union_untransparently_from_eb(

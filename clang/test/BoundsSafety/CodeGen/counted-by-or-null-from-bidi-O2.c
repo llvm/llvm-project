@@ -6,7 +6,7 @@
 
 // TODO: rdar://114446928
 // CHECK-LABEL: define dso_local ptr @foo(
-// CHECK-SAME: ptr noundef readonly captures(none) [[P:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[P:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
@@ -42,7 +42,7 @@ int * __counted_by_or_null(len) foo(int * __bidi_indexable p, int len) {
 }
 
 // CHECK-LABEL: define dso_local void @foo_assign(
-// CHECK-SAME: ptr noundef readonly captures(none) [[P:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[P:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[LEN]] to i64
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8

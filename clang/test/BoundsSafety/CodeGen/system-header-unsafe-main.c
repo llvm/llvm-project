@@ -7,8 +7,8 @@
 void func(char * __unsafe_indexable ptr, char * __bidi_indexable bidi) {
   funcInSDK(ptr, bidi);
 }
-// CHECK-LABEL: define dso_local void @funcInSDK
-// CHECK-SAME: (ptr noundef [[PTR:%.*]], ptr noundef [[BIDI:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-LABEL: define dso_local void @funcInSDK(
+// CHECK-SAME: ptr noundef [[PTR:%.*]], ptr dead_on_return noundef [[BIDI:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[BIDI_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -96,7 +96,7 @@ void func(char * __unsafe_indexable ptr, char * __bidi_indexable bidi) {
 // CHECK-NEXT:    br label [[LAND_END46]], !annotation [[META2]]
 // CHECK:       land.end46:
 // CHECK-NEXT:    [[TMP5:%.*]] = phi i1 [ false, [[LAND_LHS_TRUE]] ], [ false, [[ENTRY:%.*]] ], [ [[TMP4]], [[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP5]], label [[CONT:%.*]], label [[TRAP:%.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP5]], label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF3:![0-9]+]], !annotation [[META2]]
 // CHECK:       trap:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4:[0-9]+]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -112,8 +112,8 @@ void func(char * __unsafe_indexable ptr, char * __bidi_indexable bidi) {
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define dso_local void @func
-// CHECK-SAME: (ptr noundef [[PTR:%.*]], ptr noundef [[BIDI:%.*]]) #[[ATTR0]] {
+// CHECK-LABEL: define dso_local void @func(
+// CHECK-SAME: ptr noundef [[PTR:%.*]], ptr dead_on_return noundef [[BIDI:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[BIDI_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
@@ -122,9 +122,6 @@ void func(char * __unsafe_indexable ptr, char * __bidi_indexable bidi) {
 // CHECK-NEXT:    store ptr [[BIDI]], ptr [[BIDI_INDIRECT_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[BYVAL_TEMP]], ptr align 8 [[BIDI]], i64 24, i1 false)
-// CHECK-NEXT:    call void @funcInSDK(ptr noundef [[TMP0]], ptr noundef [[BYVAL_TEMP]])
+// CHECK-NEXT:    call void @funcInSDK(ptr noundef [[TMP0]], ptr dead_on_return noundef [[BYVAL_TEMP]])
 // CHECK-NEXT:    ret void
 //
-//.
-// CHECK: [[META2]] = !{!"bounds-safety-generic"}
-//.

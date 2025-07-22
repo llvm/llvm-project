@@ -437,7 +437,7 @@ void caller_6(int *__sized_by(len) p, int len) {
 }
 
 // CHECK-LABEL: define dso_local void @caller_7(
-// CHECK-SAME: ptr noundef [[P:%.*]], i32 noundef [[LEN:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_return noundef [[P:%.*]], i32 noundef [[LEN:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[LEN_ADDR:%.*]] = alloca i32, align 4
