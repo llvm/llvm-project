@@ -51,8 +51,8 @@
 // CHECK-OPAQUE-REF-COUNTED-NOT: SwiftAttrAttr {{.+}} <<invalid sloc>> "release:
 // CHECK-NON-COPYABLE: Dumping NonCopyableType:
 // CHECK-NON-COPYABLE-NEXT: CXXRecordDecl {{.+}} imported in SwiftImportAs {{.+}} struct NonCopyableType
-// CHECK-NON-COPYABLE: SwiftAttrAttr {{.+}} <<invalid sloc>> "conforms_to:MySwiftModule.MySwiftNonCopyableProtocol"
 // CHECK-NON-COPYABLE: SwiftAttrAttr {{.+}} <<invalid sloc>> "~Copyable"
+// CHECK-NON-COPYABLE: SwiftAttrAttr {{.+}} <<invalid sloc>> "conforms_to:MySwiftModule.MySwiftNonCopyableProtocol"
 
 // CHECK-COPYABLE: Dumping CopyableType:
 // CHECK-COPYABLE-NEXT: CXXRecordDecl {{.+}} imported in SwiftImportAs {{.+}} struct CopyableType
