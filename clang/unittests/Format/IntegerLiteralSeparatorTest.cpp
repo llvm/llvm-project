@@ -24,7 +24,7 @@ TEST_F(IntegerLiteralSeparatorTest, SingleQuoteAsSeparator) {
   EXPECT_EQ(Style.IntegerLiteralSeparator.Decimal, 0);
   EXPECT_EQ(Style.IntegerLiteralSeparator.Hex, 0);
 
-  const StringRef Binary("b = 0b10011'11'0110'1u;");
+  constexpr StringRef Binary("b = 0b10011'11'0110'1u;");
   verifyFormat(Binary, Style);
   Style.IntegerLiteralSeparator.Binary = -1;
   verifyFormat("b = 0b100111101101u;", Binary, Style);
@@ -33,14 +33,14 @@ TEST_F(IntegerLiteralSeparatorTest, SingleQuoteAsSeparator) {
   Style.IntegerLiteralSeparator.Binary = 4;
   verifyFormat("b = 0b1001'1110'1101u;", Binary, Style);
 
-  const StringRef Decimal("d = 184467'440737'0'95505'92Ull;");
+  constexpr StringRef Decimal("d = 184467'440737'0'95505'92Ull;");
   verifyFormat(Decimal, Style);
   Style.IntegerLiteralSeparator.Decimal = -1;
   verifyFormat("d = 18446744073709550592Ull;", Decimal, Style);
   Style.IntegerLiteralSeparator.Decimal = 3;
   verifyFormat("d = 18'446'744'073'709'550'592Ull;", Decimal, Style);
 
-  const StringRef Hex("h = 0xDEAD'BEEF'DE'AD'BEE'Fuz;");
+  constexpr StringRef Hex("h = 0xDEAD'BEEF'DE'AD'BEE'Fuz;");
   verifyFormat(Hex, Style);
   Style.IntegerLiteralSeparator.Hex = -1;
   verifyFormat("h = 0xDEADBEEFDEADBEEFuz;", Hex, Style);
@@ -87,9 +87,9 @@ TEST_F(IntegerLiteralSeparatorTest, SingleQuoteAsSeparator) {
 
 TEST_F(IntegerLiteralSeparatorTest, UnderscoreAsSeparator) {
   FormatStyle Style = getLLVMStyle();
-  const StringRef Binary("B = 0B10011_11_0110_1;");
-  const StringRef Decimal("d = 184467_440737_0_95505_92;");
-  const StringRef Hex("H = 0XDEAD_BEEF_DE_AD_BEE_F;");
+  constexpr StringRef Binary("B = 0B10011_11_0110_1;");
+  constexpr StringRef Decimal("d = 184467_440737_0_95505_92;");
+  constexpr StringRef Hex("H = 0XDEAD_BEEF_DE_AD_BEE_F;");
 
   auto TestUnderscore = [&](auto Language) {
     Style.Language = Language;
@@ -173,16 +173,16 @@ TEST_F(IntegerLiteralSeparatorTest, FixRanges) {
   FormatStyle Style = getLLVMStyle();
   Style.IntegerLiteralSeparator.Decimal = 3;
 
-  const StringRef Code("i = -12'34;\n"
-                       "// clang-format off\n"
-                       "j = 123'4;\n"
-                       "// clang-format on\n"
-                       "k = +1'23'4;");
-  const StringRef Expected("i = -1'234;\n"
+  constexpr StringRef Code("i = -12'34;\n"
                            "// clang-format off\n"
                            "j = 123'4;\n"
                            "// clang-format on\n"
-                           "k = +1'234;");
+                           "k = +1'23'4;");
+  constexpr StringRef Expected("i = -1'234;\n"
+                               "// clang-format off\n"
+                               "j = 123'4;\n"
+                               "// clang-format on\n"
+                               "k = +1'234;");
 
   verifyFormat(Expected, Code, Style);
 

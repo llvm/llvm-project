@@ -53,7 +53,7 @@ static APSInt popToAPSInt(InterpStack &Stk, PrimType T) {
 static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
   assert(QT->isSignedIntegerOrEnumerationType() ||
          QT->isUnsignedIntegerOrEnumerationType());
-  std::optional<PrimType> T = S.getContext().classify(QT);
+  OptPrimType T = S.getContext().classify(QT);
   assert(T);
 
   unsigned BitWidth = S.getASTContext().getTypeSize(QT);
@@ -1530,7 +1530,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
     return false;
 
   bool IsArray = NumElems.ugt(1);
-  std::optional<PrimType> ElemT = S.getContext().classify(ElemType);
+  OptPrimType ElemT = S.getContext().classify(ElemType);
   DynamicAllocator &Allocator = S.getAllocator();
   if (ElemT) {
     Block *B =
@@ -2879,7 +2879,7 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, const Pointer &Src,
 
   auto copyField = [&](const Record::Field &F, bool Activate) -> bool {
     Pointer DestField = Dest.atField(F.Offset);
-    if (std::optional<PrimType> FT = S.Ctx.classify(F.Decl->getType())) {
+    if (OptPrimType FT = S.Ctx.classify(F.Decl->getType())) {
       TYPE_SWITCH(*FT, {
         DestField.deref<T>() = Src.atField(F.Offset).deref<T>();
         if (Src.atField(F.Offset).isInitialized())
