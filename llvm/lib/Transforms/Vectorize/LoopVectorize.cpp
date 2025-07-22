@@ -4479,6 +4479,28 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   Type *TCType = Legal->getWidestInductionType();
   const SCEV *RemainingIterations = nullptr;
   unsigned MaxTripCount = 0;
+  if (MainLoopVF.isFixed()) {
+    // TODO: extend to support scalable VFs.
+    const SCEV *TC = vputils::getSCEVExprForVPValue(
+        getPlanFor(MainLoopVF).getTripCount(), SE);
+    assert(!isa<SCEVCouldNotCompute>(TC) &&
+           "Trip count SCEV must be computable");
+    RemainingIterations = SE.getURemExpr(
+        TC, SE.getConstant(TCType, MainLoopVF.getFixedValue() * IC));
+
+    // No iterations left to process in the epilogue.
+    if (RemainingIterations->isZero())
+      return Result;
+
+    MaxTripCount = MainLoopVF.getFixedValue() * IC - 1;
+    if (SE.isKnownPredicate(CmpInst::ICMP_ULT, RemainingIterations,
+                            SE.getConstant(TCType, MaxTripCount))) {
+      MaxTripCount = SE.getUnsignedRangeMax(RemainingIterations).getZExtValue();
+    }
+    LLVM_DEBUG(dbgs() << "LEV: Maximum Trip Count for Epilogue: "
+                      << MaxTripCount << "\n");
+  }
+
   for (auto &NextVF : ProfitableVFs) {
     // Skip candidate VFs without a corresponding VPlan.
     if (!hasPlanWithVF(NextVF.Width))
@@ -4496,24 +4518,7 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
 
     // If NextVF is greater than the number of remaining iterations, the
     // epilogue loop would be dead. Skip such factors.
-    if (!MainLoopVF.isScalable() && !NextVF.Width.isScalable()) {
-      // TODO: extend to support scalable VFs.
-      if (!RemainingIterations) {
-        const SCEV *TC = vputils::getSCEVExprForVPValue(
-            getPlanFor(NextVF.Width).getTripCount(), SE);
-        assert(!isa<SCEVCouldNotCompute>(TC) &&
-               "Trip count SCEV must be computable");
-        RemainingIterations = SE.getURemExpr(
-            TC, SE.getConstant(TCType, MainLoopVF.getFixedValue() * IC));
-        MaxTripCount = MainLoopVF.getFixedValue() * IC - 1;
-        if (SE.isKnownPredicate(CmpInst::ICMP_ULT, RemainingIterations,
-                                SE.getConstant(TCType, MaxTripCount))) {
-          MaxTripCount =
-              SE.getUnsignedRangeMax(RemainingIterations).getZExtValue();
-        }
-        LLVM_DEBUG(dbgs() << "LEV: Maximum Trip Count for Epilogue: "
-                          << MaxTripCount << "\n");
-      }
+    if (RemainingIterations && !NextVF.Width.isScalable()) {
       if (SE.isKnownPredicate(
               CmpInst::ICMP_UGT,
               SE.getConstant(TCType, NextVF.Width.getFixedValue()),
