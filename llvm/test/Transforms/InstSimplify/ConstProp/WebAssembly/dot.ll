@@ -18,11 +18,11 @@ define <4 x i32> @dot_zero() {
 ; a               =   1    2    3    4    5    6    7    8
 ; b               =   1    2    3    4    5    6    7    8
 ; k1|k2 = a * b   =   1    4    9   16   25   36   49   64
-; k1 + k2         =   (1+25) |  (4+36) | (9+49)  | (16+64)
-; result          =    26    |   40    |   58    |   80
+; k1 + k2         =   (1+4) |  (9 + 16) | (25 + 36)  | (49 + 64)
+; result          =    5    |   25    |   61    |   113
 define <4 x i32> @dot_nonzero() {
 ; CHECK-LABEL: define <4 x i32> @dot_nonzero() {
-; CHECK-NEXT:    ret <4 x i32> <i32 26, i32 40, i32 58, i32 80>
+; CHECK-NEXT:    ret <4 x i32> <i32 5, i32 25, i32 61, i32 113>
 ;
   %res = tail call <4 x i32> @llvm.wasm.dot(<8 x i16> <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>, <8 x i16> <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>)
   ret <4 x i32> %res
@@ -36,4 +36,16 @@ define <4 x i32> @dot_doubly_negative() {
   ret <4 x i32> %res
 }
 
+; This test checks for llvm's compliance on spec's wasm.dot's imul and iadd
+; Since the original number can only be i16::max == 2^15 - 1,
+;   subsequent modulo of 2^32 of imul and iadd
+;   should return the same result
+; 2*(2^15 - 1)^2 % 2^32 == 2*(2^15 - 1)^2
+define <4 x i32> @dot_follow_modulo_spec() {
+; CHECK-LABEL: define <4 x i32> @dot_follow_modulo_spec() {
+; CHECK-NEXT:    ret <4 x i32> <i32 2147352578, i32 0, i32 0, i32 0>
+;
+  %res = tail call <4 x i32> @llvm.wasm.dot(<8 x i16> <i16 32767, i16 32767, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>, <8 x i16> <i16 32767, i16 32767, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>)
+  ret <4 x i32> %res
+}
 

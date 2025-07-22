@@ -3845,13 +3845,12 @@ static Constant *ConstantFoldFixedVectorCall(
       // sext 32 first, according to specs
       APInt IMul = Elt0->getValue().sext(32) * Elt1->getValue().sext(32);
 
-      // TODO: imul in specs includes a modulo operation
-      // Is this performed automatically via trunc = true in APInt creation of *
+      // i16 -> i32 bypasses specs modulo on imul
       MulVector.push_back(IMul);
     }
-    for (unsigned I = 0; I < Result.size(); ++I) {
-      // Same case as with imul
-      APInt IAdd = MulVector[I] + MulVector[I + Result.size()];
+    for (unsigned I = 0; I < Result.size(); I++) {
+      // i16 -> i32 bypasses specs modulo on iadd
+      APInt IAdd = MulVector[I * 2] + MulVector[I * 2 + 1];
       Result[I] = ConstantInt::get(Ty, IAdd);
     }
 
