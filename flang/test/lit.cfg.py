@@ -185,7 +185,7 @@ tools = [
         "%bbc_bare",
         command=FindTool("bbc"),
         unresolved="fatal",
-    )
+    ),
 ]
 
 # Flang has several unimplemented features. TODO messages are used to mark
