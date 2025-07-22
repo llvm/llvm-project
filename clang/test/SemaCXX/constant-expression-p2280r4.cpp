@@ -392,7 +392,8 @@ namespace GH150015 {
   struct X {};
   struct Y {};
   struct Z : X, Y {};
-  extern Z z;
-  constexpr int bases = (void*)(X*)&z <= (Y*)&z; // nointerpreter-error {{constexpr variable 'bases' must be initialized by a constant expression}} \
-                                                 // nointerpreter-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
+  extern Z &z; // interpreter-note{{declared here}}
+  constexpr int bases = (void*)(X*)&z <= (Y*)&z; // expected-error {{constexpr variable 'bases' must be initialized by a constant expression}} \
+                                                 // nointerpreter-note {{comparison of addresses of subobjects of different base classes has unspecified value}} \
+                                                 // interpreter-note {{initializer of 'z' is unknown}}
 }
