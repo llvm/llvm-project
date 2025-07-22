@@ -522,8 +522,7 @@ static bool areAllValuesNoReturn(const VarDecl *VD, const CFGBlock &VarBlk,
     }
 
     // If all checked blocks satisfy the condition, the check is finished.
-    if (std::all_of(BlocksToCheck.begin(), BlocksToCheck.end(),
-                    BlockSatisfiesCondition))
+    if (llvm::all_of(BlocksToCheck, BlockSatisfiesCondition))
       return true;
 
     // If this block does not contain the variable definition, check
@@ -3030,8 +3029,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // TODO: Enable lifetime safety analysis for other languages once it is
   // stable.
   if (EnableLifetimeSafetyAnalysis && S.getLangOpts().CPlusPlus) {
-    if (CFG *cfg = AC.getCFG())
-      runLifetimeSafetyAnalysis(*cast<DeclContext>(D), *cfg, AC);
+    if (AC.getCFG())
+      lifetimes::runLifetimeSafetyAnalysis(AC);
   }
   // Check for violations of "called once" parameter properties.
   if (S.getLangOpts().ObjC && !S.getLangOpts().CPlusPlus &&
