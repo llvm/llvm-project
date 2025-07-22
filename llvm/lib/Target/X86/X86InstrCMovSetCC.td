@@ -106,6 +106,139 @@ let Predicates = [HasCMOV, HasNDD] in {
   def : Pat<(X86cmov (loadi64 addr:$src1), GR64:$src2, timm:$cond, EFLAGS),
             (CMOV64rm_ND GR64:$src2, addr:$src1, (inv_cond_XFORM timm:$cond))>;
 }
+
+// Create pseudo instruction and do the pattern matching to them.
+// We use a machine pass to lower these pseudos into cmov, in order
+// to avoid backend optimizations
+let Uses = [EFLAGS], isNotDuplicable = 1, isPseudo = 1 in {
+
+  multiclass CTSELECT<X86TypeInfo t> {
+    // register-only
+    let isCommutable = 0, SchedRW = [WriteCMOV] in {
+      def rr : PseudoI<(outs t.RegClass:$dst),
+                       (ins t.RegClass:$src1, t.RegClass:$src2, i8imm:$cond),
+                       [(set t.RegClass:$dst, (X86ctselect t.RegClass:$src1, t.RegClass:$src2, timm:$cond, EFLAGS))]>;
+    }
+
+    // register-memory
+    let SchedRW = [WriteCMOV.Folded, WriteCMOV.ReadAfterFold] in {
+      def rm : PseudoI<(outs t.RegClass:$dst),
+                       (ins t.RegClass:$src1, t.MemOperand:$src2, i8imm:$cond),
+                       [(set t.RegClass:$dst, (X86ctselect t.RegClass:$src1, (t.LoadNode addr:$src2), timm:$cond, EFLAGS))]>;
+    }
+  }
+}
+
+let isCodeGenOnly = 1, hasSideEffects = 1, ForceDisassemble = 1 in {
+  let Predicates = [HasCMOV], Constraints = "$dst = $src1" in {
+    defm CTSELECT16 : CTSELECT<Xi16>;
+    defm CTSELECT32 : CTSELECT<Xi32>;
+    defm CTSELECT64 : CTSELECT<Xi64>;
+  }
+}
+
+let Uses = [EFLAGS], usesCustomInserter = 1, isNotDuplicable = 1, isPseudo = 1, hasSideEffects = 1 in {
+  // 128-bit vector types
+  let Predicates = [HasSSE1] in {
+    def CTSELECT_V4F32  : PseudoI<(outs VR128:$dst), (ins VR128:$t, VR128:$f, i8imm:$cond),
+                                  [(set VR128:$dst, (v4f32 (X86ctselect VR128:$t, VR128:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+    def CTSELECT_V2F64  : PseudoI<(outs VR128:$dst), (ins VR128:$t, VR128:$f, i8imm:$cond),
+                                  [(set VR128:$dst, (v2f64 (X86ctselect VR128:$t, VR128:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+    def CTSELECT_V4I32  : PseudoI<(outs VR128:$dst), (ins VR128:$t, VR128:$f, i8imm:$cond),
+                                  [(set VR128:$dst, (v4i32 (X86ctselect VR128:$t, VR128:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+    def CTSELECT_V2I64  : PseudoI<(outs VR128:$dst), (ins VR128:$t, VR128:$f, i8imm:$cond),
+                                  [(set VR128:$dst, (v2i64 (X86ctselect VR128:$t, VR128:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+    def CTSELECT_V8I16  : PseudoI<(outs VR128:$dst), (ins VR128:$t, VR128:$f, i8imm:$cond),
+                                  [(set VR128:$dst, (v8i16 (X86ctselect VR128:$t, VR128:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+    def CTSELECT_V16I8  : PseudoI<(outs VR128:$dst), (ins VR128:$t, VR128:$f, i8imm:$cond),
+                                  [(set VR128:$dst, (v16i8 (X86ctselect VR128:$t, VR128:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+    def CTSELECT_V8F16  : PseudoI<(outs VR128:$dst), (ins VR128:$t, VR128:$f, i8imm:$cond),
+                                  [(set VR128:$dst, (v8f16 (X86ctselect VR128:$t, VR128:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+  }
+
+  // 128-bit vector types (AVX versions)
+  let Predicates = [HasAVX] in {
+    def CTSELECT_V4F32X : PseudoI<(outs VR128X:$dst), (ins VR128X:$t, VR128X:$f, i8imm:$cond),
+                                  [(set VR128X:$dst, (v4f32 (X86ctselect VR128X:$t, VR128X:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+    def CTSELECT_V2F64X : PseudoI<(outs VR128X:$dst), (ins VR128X:$t, VR128X:$f, i8imm:$cond),
+                                  [(set VR128X:$dst, (v2f64 (X86ctselect VR128X:$t, VR128X:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+    def CTSELECT_V4I32X : PseudoI<(outs VR128X:$dst), (ins VR128X:$t, VR128X:$f, i8imm:$cond),
+                                  [(set VR128X:$dst, (v4i32 (X86ctselect VR128X:$t, VR128X:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+    def CTSELECT_V2I64X : PseudoI<(outs VR128X:$dst), (ins VR128X:$t, VR128X:$f, i8imm:$cond),
+                                  [(set VR128X:$dst, (v2i64 (X86ctselect VR128X:$t, VR128X:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+    def CTSELECT_V8I16X : PseudoI<(outs VR128X:$dst), (ins VR128X:$t, VR128X:$f, i8imm:$cond),
+                                  [(set VR128X:$dst, (v8i16 (X86ctselect VR128X:$t, VR128X:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+    def CTSELECT_V16I8X : PseudoI<(outs VR128X:$dst), (ins VR128X:$t, VR128X:$f, i8imm:$cond),
+                                  [(set VR128X:$dst, (v16i8 (X86ctselect VR128X:$t, VR128X:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+    def CTSELECT_V8F16X : PseudoI<(outs VR128X:$dst), (ins VR128X:$t, VR128X:$f, i8imm:$cond),
+                                  [(set VR128X:$dst, (v8f16 (X86ctselect VR128X:$t, VR128X:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+  }
+
+  // 256-bit vector types
+  let Predicates = [HasAVX] in {
+    def CTSELECT_V8F32  : PseudoI<(outs VR256:$dst), (ins VR256:$t, VR256:$f, i8imm:$cond),
+                                  [(set VR256:$dst, (v8f32 (X86ctselect VR256:$t, VR256:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+    def CTSELECT_V4F64  : PseudoI<(outs VR256:$dst), (ins VR256:$t, VR256:$f, i8imm:$cond),
+                                  [(set VR256:$dst, (v4f64 (X86ctselect VR256:$t, VR256:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+    def CTSELECT_V8I32  : PseudoI<(outs VR256:$dst), (ins VR256:$t, VR256:$f, i8imm:$cond),
+                                  [(set VR256:$dst, (v8i32 (X86ctselect VR256:$t, VR256:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+    def CTSELECT_V4I64  : PseudoI<(outs VR256:$dst), (ins VR256:$t, VR256:$f, i8imm:$cond),
+                                  [(set VR256:$dst, (v4i64 (X86ctselect VR256:$t, VR256:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+    def CTSELECT_V16I16 : PseudoI<(outs VR256:$dst), (ins VR256:$t, VR256:$f, i8imm:$cond),
+                                  [(set VR256:$dst, (v16i16 (X86ctselect VR256:$t, VR256:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+    def CTSELECT_V32I8  : PseudoI<(outs VR256:$dst), (ins VR256:$t, VR256:$f, i8imm:$cond),
+                                  [(set VR256:$dst, (v32i8 (X86ctselect VR256:$t, VR256:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+    def CTSELECT_V16F16 : PseudoI<(outs VR256:$dst), (ins VR256:$t, VR256:$f, i8imm:$cond),
+                                  [(set VR256:$dst, (v16f16 (X86ctselect VR256:$t, VR256:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[]>;
+  }
+
+  // 512-bit vector types
+  let Predicates = [HasAVX512] in {
+    def CTSELECT_V16F32 : PseudoI<(outs VR512:$dst), (ins VR512:$t, VR512:$f, i8imm:$cond),
+                                  [(set VR512:$dst, (v16f32 (X86ctselect VR512:$t, VR512:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[WriteCMOV]>;
+    def CTSELECT_V8F64  : PseudoI<(outs VR512:$dst), (ins VR512:$t, VR512:$f, i8imm:$cond),
+                                  [(set VR512:$dst, (v8f64 (X86ctselect VR512:$t, VR512:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[WriteCMOV]>;
+    def CTSELECT_V16I32 : PseudoI<(outs VR512:$dst), (ins VR512:$t, VR512:$f, i8imm:$cond),
+                                  [(set VR512:$dst, (v16i32 (X86ctselect VR512:$t, VR512:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[WriteCMOV]>;
+    def CTSELECT_V8I64  : PseudoI<(outs VR512:$dst), (ins VR512:$t, VR512:$f, i8imm:$cond),
+                                  [(set VR512:$dst, (v8i64 (X86ctselect VR512:$t, VR512:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[WriteCMOV]>;
+    def CTSELECT_V32I16 : PseudoI<(outs VR512:$dst), (ins VR512:$t, VR512:$f, i8imm:$cond),
+                                  [(set VR512:$dst, (v32i16 (X86ctselect VR512:$t, VR512:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[WriteCMOV]>;
+    def CTSELECT_V64I8  : PseudoI<(outs VR512:$dst), (ins VR512:$t, VR512:$f, i8imm:$cond),
+                                  [(set VR512:$dst, (v64i8 (X86ctselect VR512:$t, VR512:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[WriteCMOV]>;
+    def CTSELECT_V32F16 : PseudoI<(outs VR512:$dst), (ins VR512:$t, VR512:$f, i8imm:$cond),
+                                  [(set VR512:$dst, (v32f16 (X86ctselect VR512:$t, VR512:$f, timm:$cond, EFLAGS)))]>,
+                                  Sched<[WriteCMOV]>;
+  }
+}
+
 let Predicates = [HasCMOV, HasCF] in {
   def : Pat<(X86cmov GR16:$src1, 0, timm:$cond, EFLAGS),
             (CFCMOV16rr GR16:$src1, (inv_cond_XFORM timm:$cond))>;
