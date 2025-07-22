@@ -383,3 +383,16 @@ namespace enable_if_2 {
   }
 }
 }
+
+namespace GH150015 {
+  extern int (& c)[8]; // interpreter-note {{declared here}}
+  constexpr int x = c <= c+8; // interpreter-error {{constexpr variable 'x' must be initialized by a constant expression}} \
+                              // interpreter-note {{initializer of 'c' is unknown}}
+
+  struct X {};
+  struct Y {};
+  struct Z : X, Y {};
+  extern Z z;
+  constexpr int bases = (void*)(X*)&z <= (Y*)&z; // nointerpreter-error {{constexpr variable 'bases' must be initialized by a constant expression}} \
+                                                 // nointerpreter-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
+}
