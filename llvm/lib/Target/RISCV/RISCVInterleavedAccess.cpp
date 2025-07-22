@@ -281,8 +281,9 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
         Intrinsic::experimental_vp_strided_store,
         {Data->getType(), BasePtr->getType(), Stride->getType()},
         {Data, BasePtr, Stride, Mask, VL});
+    Align Alignment = commonAlignment(SI->getAlign(), Index * ScalarSizeInBytes);
     CI->addParamAttr(
-        1, Attribute::getWithAlignment(CI->getContext(), SI->getAlign()));
+        1, Attribute::getWithAlignment(CI->getContext(), Alignment));
 
     return true;
   }
