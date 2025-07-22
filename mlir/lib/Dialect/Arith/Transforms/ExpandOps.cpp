@@ -657,7 +657,11 @@ struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
       scaleOperand = b.create<arith::TruncFOp>(scaleTy, scaleOperand, nullptr,
                                                op.getFastmathAttr());
     }
-
+    if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
+      return rewriter.notifyMatchFailure(
+          op, "scaling_extf is using scales of type which can not be converted "
+              "to f8E8M0FNU");
+    }
     Type resultTy = op.getType();
     // extf on scale will essentially create floating point number
     // of type resulTy that is 2^scale and will also propagate NaNs
