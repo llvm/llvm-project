@@ -1160,8 +1160,11 @@ private:
       return {};
 
     // Check that it is the same variable on both sides.
-    if (!Expr::isSameComparisonOperand(DeclExpr1, DeclExpr2))
-      return {};
+    if (!Expr::isSameComparisonOperand(DeclExpr1, DeclExpr2)) {
+      if (!Expr::isSameComparisonOperand(DeclExpr1->IgnoreParenImpCasts(),
+                                         DeclExpr2->IgnoreParenImpCasts()))
+        return {};
+    }
 
     // Make sure the user's intent is clear (e.g. they're comparing against two
     // int literals, or two things from the same enum)
