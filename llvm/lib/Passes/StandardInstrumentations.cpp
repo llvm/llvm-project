@@ -1795,9 +1795,9 @@ public:
                  StringRef Label, StringRef Colour)
       : Graph(G), N(N), Data{&BD, nullptr}, Label(Label), Colour(Colour) {}
   DotCfgDiffNode(const DotCfgDiffNode &DN)
-      : Graph(DN.Graph), N(DN.N), Data{DN.Data[0], DN.Data[1]},
-        Label(DN.Label), Colour(DN.Colour), EdgesMap(DN.EdgesMap),
-        Children(DN.Children), Edges(DN.Edges) {}
+      : Graph(DN.Graph), N(DN.N), Data{DN.Data[0], DN.Data[1]}, Label(DN.Label),
+        Colour(DN.Colour), EdgesMap(DN.EdgesMap), Children(DN.Children),
+        Edges(DN.Edges) {}
 
   unsigned getIndex() const { return N; }
 
@@ -1955,7 +1955,7 @@ std::string DotCfgDiffNode::getBodyContent() const {
   if (BS.front() == '\n')
     BS1 = BS1.drop_front(1);
   // drop predecessors as they can be big and are redundant
-  if(BS1.str().find(Label) != std::string::npos)
+  if (BS1.str().find(Label) != std::string::npos)
     BS1 = BS1.drop_until([](char C) { return C == '\n'; }).drop_front();
 
   std::string S = "<FONT COLOR=\"" + Colour.str() + "\">" + Label.str() + ":";
