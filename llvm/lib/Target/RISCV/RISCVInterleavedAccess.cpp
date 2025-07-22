@@ -232,6 +232,7 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
         Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_load,
                                 {VTy, BasePtr->getType(), Stride->getType()},
                                 {BasePtr, Stride, Mask, VL});
+    Alignment = commonAlignment(Alignment, Indices[0] * ScalarSizeInBytes);
     CI->addParamAttr(0,
                      Attribute::getWithAlignment(CI->getContext(), Alignment));
     Shuffles[0]->replaceAllUsesWith(CI);
@@ -303,8 +304,9 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
         Intrinsic::experimental_vp_strided_store,
         {Data->getType(), BasePtr->getType(), Stride->getType()},
         {Data, BasePtr, Stride, Mask, VL});
+    Align Alignment = commonAlignment(SI->getAlign(), Index * ScalarSizeInBytes);
     CI->addParamAttr(
-        1, Attribute::getWithAlignment(CI->getContext(), SI->getAlign()));
+        1, Attribute::getWithAlignment(CI->getContext(), Alignment));
 
     return true;
   }
