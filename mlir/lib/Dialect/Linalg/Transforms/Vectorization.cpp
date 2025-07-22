@@ -25,6 +25,7 @@
 #include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -1709,10 +1710,13 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vecToStore,
     return write;
 
   // Compute the mask and mask the write Op.
-  auto writeMaskType = VectorType::get(vecToStoreShape, builder.getI1Type());
+  auto writeMaskType = VectorType::get(vecToStoreShape, builder.getI1Type(),
+                                       vecToStoreType.getScalableDims());
 
   SmallVector<OpFoldResult> destSizes =
-      tensor::getMixedSizes(builder, loc, dest);
+      isa<MemRefType>(dest.getType())
+          ? memref::getMixedSizes(builder, loc, dest)
+          : tensor::getMixedSizes(builder, loc, dest);
   SmallVector<OpFoldResult> maskSizes(destSizes.end() - vecToStoreRank,
                                       destSizes.end());
 
@@ -2115,6 +2119,92 @@ vectorizeInsertSliceOpPrecondition(tensor::InsertSliceOp sliceOp,
     LDBG("Failed to get a pad value for out-of-bounds read access\n");
     return failure();
   }
+  return success();
+}
+
+/// Vectorize a named linalg contraction op into:
+///   vector::TransferReadOp - Reads vectors from the operands
+///   vector::ContractionOp - Performs contraction
+///   vector::TransferWriteOp - Write the result vector back to the
+///   destination
+/// The operands shapes are preserved and loaded directly into vectors.
+/// Any further permutations or numerical casting remain within contraction op.
+static LogicalResult
+vectorizeAsLinalgContraction(RewriterBase &rewriter, VectorizationState &state,
+                             LinalgOp linalgOp,
+                             SmallVectorImpl<Value> &newResults) {
+  Location loc = linalgOp.getLoc();
+  MLIRContext *ctx = linalgOp.getContext();
+
+  // For simplicity, contraction vectorization is limited to linalg named ops.
+  // Generic op is ignored as not every arbitrary contraction body can be
+  // expressed by a vector.contract.
+  if (!isa<ContractionOpInterface>(linalgOp.getOperation()))
+    return failure();
+
+  OpOperand *outOperand = linalgOp.getDpsInitOperand(0);
+  Operation *reduceOp = matchLinalgReduction(outOperand);
+  auto maybeKind = getCombinerOpKind(reduceOp);
+  if (!maybeKind) {
+    LDBG("Failed to determine contraction combining kind.\n");
+    return failure();
+  }
+
+  // Check that all dimensions are present in the input operands.
+  // Arbitrary broadcasts are not supported by the vector contraction.
+  // Broadcasts are expected to be decomposed before vectorization.
+  AffineMap lhsMap = linalgOp.getIndexingMapsArray()[0];
+  AffineMap rhsMap = linalgOp.getIndexingMapsArray()[1];
+  if (getUnusedDimsBitVector({lhsMap, rhsMap}).any()) {
+    LDBG("Contractions with broadcasts are not supported.\n");
+    return failure();
+  }
+
+  // Load operands.
+  SmallVector<Value> vecOperands;
+  for (OpOperand &opOperand : linalgOp->getOpOperands()) {
+    // The operand vector shape is computed by mapping the canonical vector
+    // shape to the operand's domain. Further permutations are left as a part of
+    // the contraction.
+    AffineMap indexingMap = linalgOp.getMatchingIndexingMap(&opOperand);
+    AffineMap readMap = AffineMap::getMultiDimIdentityMap(
+        indexingMap.getNumResults(), rewriter.getContext());
+    Type elemType = getElementTypeOrSelf(opOperand.get());
+    VectorType readType =
+        state.getCanonicalVecType(elemType, readMap.compose(indexingMap));
+
+    Value read = mlir::vector::createReadOrMaskedRead(
+        rewriter, loc, opOperand.get(), readType.getShape(),
+        /*padding=*/arith::getZeroConstant(rewriter, loc, elemType),
+        /*useInBoundsInsteadOfMasking=*/false, readType.getScalableDims());
+    vecOperands.push_back(read);
+  }
+
+  // Remap iterators from linalg to vector.
+  SmallVector<Attribute> iterAttrs;
+  auto iterators = linalgOp.getIteratorTypesArray();
+  for (utils::IteratorType iter : iterators) {
+    auto vecIter = iter == utils::IteratorType::parallel
+                       ? vector::IteratorType::parallel
+                       : vector::IteratorType::reduction;
+    iterAttrs.push_back(vector::IteratorTypeAttr::get(ctx, vecIter));
+  }
+
+  // Create contraction.
+  Operation *contractOp = rewriter.create<vector::ContractionOp>(
+      loc, /*lhs=*/vecOperands[0],
+      /*rhs=*/vecOperands[1], /*acc=*/vecOperands[2],
+      linalgOp.getIndexingMaps(), rewriter.getArrayAttr(iterAttrs), *maybeKind);
+  contractOp = state.maskOperation(rewriter, contractOp, linalgOp);
+
+  // Store result.
+  Operation *write = createWriteOrMaskedWrite(
+      rewriter, loc, contractOp->getResult(0), outOperand->get());
+
+  // Finalize.
+  if (!write->getResults().empty())
+    newResults.push_back(write->getResult(0));
+
   return success();
 }
 
@@ -2557,7 +2647,8 @@ bool mlir::linalg::hasVectorizationImpl(Operation *op) {
 FailureOr<VectorizationResult> mlir::linalg::vectorize(
     RewriterBase &rewriter, Operation *op, ArrayRef<int64_t> inputVectorSizes,
     ArrayRef<bool> inputScalableVecDims, bool vectorizeNDExtract,
-    bool flatten1DDepthwiseConv, bool assumeDynamicDimsMatchVecSizes) {
+    bool flatten1DDepthwiseConv, bool assumeDynamicDimsMatchVecSizes,
+    bool createNamedContraction) {
   LDBG("Attempting to vectorize:\n" << *op << "\n");
   LDBG("Input vector sizes: ");
   LLVM_DEBUG(llvm::interleaveComma(inputVectorSizes, llvm::dbgs()));
@@ -2603,6 +2694,11 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
               LDBG("Unsupported convolution can't be vectorized.\n");
               return failure();
             }
+
+            if (createNamedContraction &&
+                isa<ContractionOpInterface>(linalgOp.getOperation()))
+              return vectorizeAsLinalgContraction(rewriter, state, linalgOp,
+                                                  results);
 
             LDBG("Vectorize generic by broadcasting to the canonical vector "
                  "shape\n");
