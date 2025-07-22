@@ -3521,7 +3521,6 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
   // Clamp the range if using extended-reduction is profitable.
   auto IsExtendedRedValidAndClampRange =
       [&](unsigned Opcode, Instruction::CastOps ExtOpc, Type *SrcTy) -> bool {
-    bool IsZExt = ExtOpc == Instruction::CastOps::ZExt;
     return LoopVectorizationPlanner::getDecisionAndClampRange(
         [&](ElementCount VF) {
           auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
@@ -3536,8 +3535,8 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
                 llvm::TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind);
           } else {
             ExtRedCost = Ctx.TTI.getExtendedReductionCost(
-                Opcode, IsZExt, RedTy, SrcVecTy, Red->getFastMathFlags(),
-                CostKind);
+                Opcode, ExtOpc == Instruction::CastOps::ZExt, RedTy, SrcVecTy,
+                Red->getFastMathFlags(), CostKind);
           }
           InstructionCost ExtCost =
               cast<VPWidenCastRecipe>(VecOp)->computeCost(VF, Ctx);
@@ -3626,8 +3625,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
 
     // Match reduce.add(mul(ext, ext)).
     if (RecipeA && RecipeB &&
-        (RecipeA->getOpcode() == RecipeB->getOpcode() ||
-         IsPartialReduction) &&
+        (RecipeA->getOpcode() == RecipeB->getOpcode() || IsPartialReduction) &&
         match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
         match(RecipeB, m_ZExtOrSExt(m_VPValue())) &&
         (IsPartialReduction ||
