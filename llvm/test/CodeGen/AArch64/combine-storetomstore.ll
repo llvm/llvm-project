@@ -2,8 +2,142 @@
 ; RUN: llc < %s -mtriple=aarch64-- -mattr=+neon   | FileCheck %s -check-prefix=AARCH64
 ; RUN: llc < %s -mtriple=aarch64-- -mattr=+sve    | FileCheck %s -check-prefix=SVE
 
-define void @test_masked_store_success(<8 x i32> %x, ptr %ptr, <8 x i1> %mask) {
-; AARCH64-LABEL: test_masked_store_success:
+define void @test_masked_store_success_v4i32(<4 x i32> %x, ptr %ptr, <4 x i1> %mask) {
+; AARCH64-LABEL: test_masked_store_success_v4i32:
+; AARCH64:       // %bb.0:
+; AARCH64-NEXT:    ushll v1.4s, v1.4h, #0
+; AARCH64-NEXT:    ldr q2, [x0]
+; AARCH64-NEXT:    shl v1.4s, v1.4s, #31
+; AARCH64-NEXT:    cmlt v1.4s, v1.4s, #0
+; AARCH64-NEXT:    bif v0.16b, v2.16b, v1.16b
+; AARCH64-NEXT:    str q0, [x0]
+; AARCH64-NEXT:    ret
+;
+; SVE-LABEL: test_masked_store_success_v4i32:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ushll v1.4s, v1.4h, #0
+; SVE-NEXT:    ptrue p0.s, vl4
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    shl v1.4s, v1.4s, #31
+; SVE-NEXT:    cmlt v1.4s, v1.4s, #0
+; SVE-NEXT:    cmpne p0.s, p0/z, z1.s, #0
+; SVE-NEXT:    st1w { z0.s }, p0, [x0]
+; SVE-NEXT:    ret
+  %load = load <4 x i32>, ptr %ptr, align 32
+  %sel = select <4 x i1> %mask, <4 x i32> %x, <4 x i32> %load
+  store <4 x i32> %sel, ptr %ptr, align 32
+  ret void
+}
+
+define void @test_masked_store_success_v4i64(<4 x i64> %x, ptr %ptr, <4 x i1> %mask) {
+; AARCH64-LABEL: test_masked_store_success_v4i64:
+; AARCH64:       // %bb.0:
+; AARCH64-NEXT:    ushll v2.4s, v2.4h, #0
+; AARCH64-NEXT:    ldp q5, q4, [x0]
+; AARCH64-NEXT:    ushll2 v3.2d, v2.4s, #0
+; AARCH64-NEXT:    ushll v2.2d, v2.2s, #0
+; AARCH64-NEXT:    shl v3.2d, v3.2d, #63
+; AARCH64-NEXT:    shl v2.2d, v2.2d, #63
+; AARCH64-NEXT:    cmlt v3.2d, v3.2d, #0
+; AARCH64-NEXT:    cmlt v2.2d, v2.2d, #0
+; AARCH64-NEXT:    bif v1.16b, v4.16b, v3.16b
+; AARCH64-NEXT:    bif v0.16b, v5.16b, v2.16b
+; AARCH64-NEXT:    stp q0, q1, [x0]
+; AARCH64-NEXT:    ret
+;
+; SVE-LABEL: test_masked_store_success_v4i64:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ushll v2.4s, v2.4h, #0
+; SVE-NEXT:    ptrue p0.d, vl2
+; SVE-NEXT:    mov x8, #2 // =0x2
+; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    ushll2 v3.2d, v2.4s, #0
+; SVE-NEXT:    ushll v2.2d, v2.2s, #0
+; SVE-NEXT:    shl v3.2d, v3.2d, #63
+; SVE-NEXT:    shl v2.2d, v2.2d, #63
+; SVE-NEXT:    cmlt v3.2d, v3.2d, #0
+; SVE-NEXT:    cmlt v2.2d, v2.2d, #0
+; SVE-NEXT:    cmpne p1.d, p0/z, z3.d, #0
+; SVE-NEXT:    cmpne p0.d, p0/z, z2.d, #0
+; SVE-NEXT:    st1d { z1.d }, p1, [x0, x8, lsl #3]
+; SVE-NEXT:    st1d { z0.d }, p0, [x0]
+; SVE-NEXT:    ret
+  %load = load <4 x i64>, ptr %ptr, align 32
+  %sel = select <4 x i1> %mask, <4 x i64> %x, <4 x i64> %load
+  store <4 x i64> %sel, ptr %ptr, align 32
+  ret void
+}
+
+define void @test_masked_store_success_v4f32(<4 x float> %x, ptr %ptr, <4 x i1> %mask) {
+; AARCH64-LABEL: test_masked_store_success_v4f32:
+; AARCH64:       // %bb.0:
+; AARCH64-NEXT:    ushll v1.4s, v1.4h, #0
+; AARCH64-NEXT:    ldr q2, [x0]
+; AARCH64-NEXT:    shl v1.4s, v1.4s, #31
+; AARCH64-NEXT:    cmlt v1.4s, v1.4s, #0
+; AARCH64-NEXT:    bif v0.16b, v2.16b, v1.16b
+; AARCH64-NEXT:    str q0, [x0]
+; AARCH64-NEXT:    ret
+;
+; SVE-LABEL: test_masked_store_success_v4f32:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ushll v1.4s, v1.4h, #0
+; SVE-NEXT:    ptrue p0.s, vl4
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    shl v1.4s, v1.4s, #31
+; SVE-NEXT:    cmlt v1.4s, v1.4s, #0
+; SVE-NEXT:    cmpne p0.s, p0/z, z1.s, #0
+; SVE-NEXT:    st1w { z0.s }, p0, [x0]
+; SVE-NEXT:    ret
+  %load = load <4 x float>, ptr %ptr, align 32
+  %sel = select <4 x i1> %mask, <4 x float> %x, <4 x float> %load
+  store <4 x float> %sel, ptr %ptr, align 32
+  ret void
+}
+
+define void @test_masked_store_success_v4f64(<4 x double> %x, ptr %ptr, <4 x i1> %mask) {
+; AARCH64-LABEL: test_masked_store_success_v4f64:
+; AARCH64:       // %bb.0:
+; AARCH64-NEXT:    ushll v2.4s, v2.4h, #0
+; AARCH64-NEXT:    ldp q5, q4, [x0]
+; AARCH64-NEXT:    ushll2 v3.2d, v2.4s, #0
+; AARCH64-NEXT:    ushll v2.2d, v2.2s, #0
+; AARCH64-NEXT:    shl v3.2d, v3.2d, #63
+; AARCH64-NEXT:    shl v2.2d, v2.2d, #63
+; AARCH64-NEXT:    cmlt v3.2d, v3.2d, #0
+; AARCH64-NEXT:    cmlt v2.2d, v2.2d, #0
+; AARCH64-NEXT:    bif v1.16b, v4.16b, v3.16b
+; AARCH64-NEXT:    bif v0.16b, v5.16b, v2.16b
+; AARCH64-NEXT:    stp q0, q1, [x0]
+; AARCH64-NEXT:    ret
+;
+; SVE-LABEL: test_masked_store_success_v4f64:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ushll v2.4s, v2.4h, #0
+; SVE-NEXT:    ptrue p0.d, vl2
+; SVE-NEXT:    mov x8, #2 // =0x2
+; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    ushll2 v3.2d, v2.4s, #0
+; SVE-NEXT:    ushll v2.2d, v2.2s, #0
+; SVE-NEXT:    shl v3.2d, v3.2d, #63
+; SVE-NEXT:    shl v2.2d, v2.2d, #63
+; SVE-NEXT:    cmlt v3.2d, v3.2d, #0
+; SVE-NEXT:    cmlt v2.2d, v2.2d, #0
+; SVE-NEXT:    cmpne p1.d, p0/z, z3.d, #0
+; SVE-NEXT:    cmpne p0.d, p0/z, z2.d, #0
+; SVE-NEXT:    st1d { z1.d }, p1, [x0, x8, lsl #3]
+; SVE-NEXT:    st1d { z0.d }, p0, [x0]
+; SVE-NEXT:    ret
+  %load = load <4 x double>, ptr %ptr, align 32
+  %sel = select <4 x i1> %mask, <4 x double> %x, <4 x double> %load
+  store <4 x double> %sel, ptr %ptr, align 32
+  ret void
+}
+
+define void @test_masked_store_success_v8i32(<8 x i32> %x, ptr %ptr, <8 x i1> %mask) {
+; AARCH64-LABEL: test_masked_store_success_v8i32:
 ; AARCH64:       // %bb.0:
 ; AARCH64-NEXT:    zip1 v3.8b, v2.8b, v0.8b
 ; AARCH64-NEXT:    zip2 v2.8b, v2.8b, v0.8b
@@ -19,7 +153,7 @@ define void @test_masked_store_success(<8 x i32> %x, ptr %ptr, <8 x i1> %mask) {
 ; AARCH64-NEXT:    stp q0, q1, [x0]
 ; AARCH64-NEXT:    ret
 ;
-; SVE-LABEL: test_masked_store_success:
+; SVE-LABEL: test_masked_store_success_v8i32:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; SVE-NEXT:    zip2 v3.8b, v2.8b, v0.8b
@@ -41,6 +175,208 @@ define void @test_masked_store_success(<8 x i32> %x, ptr %ptr, <8 x i1> %mask) {
   %load = load <8 x i32>, ptr %ptr, align 32
   %sel = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %load
   store <8 x i32> %sel, ptr %ptr, align 32
+  ret void
+}
+
+define void @test_masked_store_success_v8i64(<8 x i64> %x, ptr %ptr, <8 x i1> %mask) {
+; AARCH64-LABEL: test_masked_store_success_v8i64:
+; AARCH64:       // %bb.0:
+; AARCH64-NEXT:    // kill: def $d4 killed $d4 def $q4
+; AARCH64-NEXT:    mov b5, v4.b[4]
+; AARCH64-NEXT:    mov b6, v4.b[6]
+; AARCH64-NEXT:    mov b7, v4.b[0]
+; AARCH64-NEXT:    mov b16, v4.b[2]
+; AARCH64-NEXT:    mov v5.b[4], v4.b[5]
+; AARCH64-NEXT:    mov v6.b[4], v4.b[7]
+; AARCH64-NEXT:    mov v7.b[4], v4.b[1]
+; AARCH64-NEXT:    mov v16.b[4], v4.b[3]
+; AARCH64-NEXT:    ushll v4.2d, v5.2s, #0
+; AARCH64-NEXT:    ushll v5.2d, v6.2s, #0
+; AARCH64-NEXT:    ushll v6.2d, v7.2s, #0
+; AARCH64-NEXT:    ushll v7.2d, v16.2s, #0
+; AARCH64-NEXT:    ldp q16, q17, [x0, #32]
+; AARCH64-NEXT:    shl v4.2d, v4.2d, #63
+; AARCH64-NEXT:    shl v5.2d, v5.2d, #63
+; AARCH64-NEXT:    shl v6.2d, v6.2d, #63
+; AARCH64-NEXT:    shl v7.2d, v7.2d, #63
+; AARCH64-NEXT:    cmlt v4.2d, v4.2d, #0
+; AARCH64-NEXT:    cmlt v5.2d, v5.2d, #0
+; AARCH64-NEXT:    cmlt v6.2d, v6.2d, #0
+; AARCH64-NEXT:    cmlt v7.2d, v7.2d, #0
+; AARCH64-NEXT:    bif v2.16b, v16.16b, v4.16b
+; AARCH64-NEXT:    ldp q4, q16, [x0]
+; AARCH64-NEXT:    bif v3.16b, v17.16b, v5.16b
+; AARCH64-NEXT:    bif v0.16b, v4.16b, v6.16b
+; AARCH64-NEXT:    bif v1.16b, v16.16b, v7.16b
+; AARCH64-NEXT:    stp q2, q3, [x0, #32]
+; AARCH64-NEXT:    stp q0, q1, [x0]
+; AARCH64-NEXT:    ret
+;
+; SVE-LABEL: test_masked_store_success_v8i64:
+; SVE:       // %bb.0:
+; SVE-NEXT:    // kill: def $d4 killed $d4 def $q4
+; SVE-NEXT:    mov b5, v4.b[4]
+; SVE-NEXT:    mov b6, v4.b[6]
+; SVE-NEXT:    mov x8, #4 // =0x4
+; SVE-NEXT:    mov b7, v4.b[2]
+; SVE-NEXT:    mov b16, v4.b[0]
+; SVE-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE-NEXT:    mov x9, #6 // =0x6
+; SVE-NEXT:    ptrue p0.d, vl2
+; SVE-NEXT:    // kill: def $q3 killed $q3 def $z3
+; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    mov v5.b[4], v4.b[5]
+; SVE-NEXT:    mov v6.b[4], v4.b[7]
+; SVE-NEXT:    mov v7.b[4], v4.b[3]
+; SVE-NEXT:    mov v16.b[4], v4.b[1]
+; SVE-NEXT:    ushll v4.2d, v5.2s, #0
+; SVE-NEXT:    ushll v5.2d, v6.2s, #0
+; SVE-NEXT:    ushll v6.2d, v7.2s, #0
+; SVE-NEXT:    ushll v7.2d, v16.2s, #0
+; SVE-NEXT:    shl v4.2d, v4.2d, #63
+; SVE-NEXT:    shl v5.2d, v5.2d, #63
+; SVE-NEXT:    shl v6.2d, v6.2d, #63
+; SVE-NEXT:    shl v7.2d, v7.2d, #63
+; SVE-NEXT:    cmlt v4.2d, v4.2d, #0
+; SVE-NEXT:    cmlt v5.2d, v5.2d, #0
+; SVE-NEXT:    cmlt v6.2d, v6.2d, #0
+; SVE-NEXT:    cmpne p1.d, p0/z, z4.d, #0
+; SVE-NEXT:    cmlt v4.2d, v7.2d, #0
+; SVE-NEXT:    cmpne p2.d, p0/z, z5.d, #0
+; SVE-NEXT:    cmpne p3.d, p0/z, z6.d, #0
+; SVE-NEXT:    cmpne p0.d, p0/z, z4.d, #0
+; SVE-NEXT:    st1d { z2.d }, p1, [x0, x8, lsl #3]
+; SVE-NEXT:    mov x8, #2 // =0x2
+; SVE-NEXT:    st1d { z3.d }, p2, [x0, x9, lsl #3]
+; SVE-NEXT:    st1d { z1.d }, p3, [x0, x8, lsl #3]
+; SVE-NEXT:    st1d { z0.d }, p0, [x0]
+; SVE-NEXT:    ret
+  %load = load <8 x i64>, ptr %ptr, align 32
+  %sel = select <8 x i1> %mask, <8 x i64> %x, <8 x i64> %load
+  store <8 x i64> %sel, ptr %ptr, align 32
+  ret void
+}
+
+define void @test_masked_store_success_v8f32(<8 x float> %x, ptr %ptr, <8 x i1> %mask) {
+; AARCH64-LABEL: test_masked_store_success_v8f32:
+; AARCH64:       // %bb.0:
+; AARCH64-NEXT:    zip1 v3.8b, v2.8b, v0.8b
+; AARCH64-NEXT:    zip2 v2.8b, v2.8b, v0.8b
+; AARCH64-NEXT:    ldp q4, q5, [x0]
+; AARCH64-NEXT:    ushll v3.4s, v3.4h, #0
+; AARCH64-NEXT:    ushll v2.4s, v2.4h, #0
+; AARCH64-NEXT:    shl v3.4s, v3.4s, #31
+; AARCH64-NEXT:    shl v2.4s, v2.4s, #31
+; AARCH64-NEXT:    cmlt v3.4s, v3.4s, #0
+; AARCH64-NEXT:    cmlt v2.4s, v2.4s, #0
+; AARCH64-NEXT:    bif v0.16b, v4.16b, v3.16b
+; AARCH64-NEXT:    bif v1.16b, v5.16b, v2.16b
+; AARCH64-NEXT:    stp q0, q1, [x0]
+; AARCH64-NEXT:    ret
+;
+; SVE-LABEL: test_masked_store_success_v8f32:
+; SVE:       // %bb.0:
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    zip2 v3.8b, v2.8b, v0.8b
+; SVE-NEXT:    zip1 v2.8b, v2.8b, v0.8b
+; SVE-NEXT:    mov x8, #4 // =0x4
+; SVE-NEXT:    ptrue p0.s, vl4
+; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-NEXT:    ushll v3.4s, v3.4h, #0
+; SVE-NEXT:    ushll v2.4s, v2.4h, #0
+; SVE-NEXT:    shl v3.4s, v3.4s, #31
+; SVE-NEXT:    shl v2.4s, v2.4s, #31
+; SVE-NEXT:    cmlt v3.4s, v3.4s, #0
+; SVE-NEXT:    cmlt v2.4s, v2.4s, #0
+; SVE-NEXT:    cmpne p1.s, p0/z, z3.s, #0
+; SVE-NEXT:    cmpne p0.s, p0/z, z2.s, #0
+; SVE-NEXT:    st1w { z1.s }, p1, [x0, x8, lsl #2]
+; SVE-NEXT:    st1w { z0.s }, p0, [x0]
+; SVE-NEXT:    ret
+  %load = load <8 x float>, ptr %ptr, align 32
+  %sel = select <8 x i1> %mask, <8 x float> %x, <8 x float> %load
+  store <8 x float> %sel, ptr %ptr, align 32
+  ret void
+}
+
+define void @test_masked_store_success_v8f64(<8 x double> %x, ptr %ptr, <8 x i1> %mask) {
+; AARCH64-LABEL: test_masked_store_success_v8f64:
+; AARCH64:       // %bb.0:
+; AARCH64-NEXT:    // kill: def $d4 killed $d4 def $q4
+; AARCH64-NEXT:    mov b5, v4.b[4]
+; AARCH64-NEXT:    mov b6, v4.b[6]
+; AARCH64-NEXT:    mov b7, v4.b[0]
+; AARCH64-NEXT:    mov b16, v4.b[2]
+; AARCH64-NEXT:    mov v5.b[4], v4.b[5]
+; AARCH64-NEXT:    mov v6.b[4], v4.b[7]
+; AARCH64-NEXT:    mov v7.b[4], v4.b[1]
+; AARCH64-NEXT:    mov v16.b[4], v4.b[3]
+; AARCH64-NEXT:    ushll v4.2d, v5.2s, #0
+; AARCH64-NEXT:    ushll v5.2d, v6.2s, #0
+; AARCH64-NEXT:    ushll v6.2d, v7.2s, #0
+; AARCH64-NEXT:    ushll v7.2d, v16.2s, #0
+; AARCH64-NEXT:    ldp q16, q17, [x0, #32]
+; AARCH64-NEXT:    shl v4.2d, v4.2d, #63
+; AARCH64-NEXT:    shl v5.2d, v5.2d, #63
+; AARCH64-NEXT:    shl v6.2d, v6.2d, #63
+; AARCH64-NEXT:    shl v7.2d, v7.2d, #63
+; AARCH64-NEXT:    cmlt v4.2d, v4.2d, #0
+; AARCH64-NEXT:    cmlt v5.2d, v5.2d, #0
+; AARCH64-NEXT:    cmlt v6.2d, v6.2d, #0
+; AARCH64-NEXT:    cmlt v7.2d, v7.2d, #0
+; AARCH64-NEXT:    bif v2.16b, v16.16b, v4.16b
+; AARCH64-NEXT:    ldp q4, q16, [x0]
+; AARCH64-NEXT:    bif v3.16b, v17.16b, v5.16b
+; AARCH64-NEXT:    bif v0.16b, v4.16b, v6.16b
+; AARCH64-NEXT:    bif v1.16b, v16.16b, v7.16b
+; AARCH64-NEXT:    stp q2, q3, [x0, #32]
+; AARCH64-NEXT:    stp q0, q1, [x0]
+; AARCH64-NEXT:    ret
+;
+; SVE-LABEL: test_masked_store_success_v8f64:
+; SVE:       // %bb.0:
+; SVE-NEXT:    // kill: def $d4 killed $d4 def $q4
+; SVE-NEXT:    mov b5, v4.b[4]
+; SVE-NEXT:    mov b6, v4.b[6]
+; SVE-NEXT:    mov x8, #4 // =0x4
+; SVE-NEXT:    mov b7, v4.b[2]
+; SVE-NEXT:    mov b16, v4.b[0]
+; SVE-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE-NEXT:    mov x9, #6 // =0x6
+; SVE-NEXT:    ptrue p0.d, vl2
+; SVE-NEXT:    // kill: def $q3 killed $q3 def $z3
+; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    mov v5.b[4], v4.b[5]
+; SVE-NEXT:    mov v6.b[4], v4.b[7]
+; SVE-NEXT:    mov v7.b[4], v4.b[3]
+; SVE-NEXT:    mov v16.b[4], v4.b[1]
+; SVE-NEXT:    ushll v4.2d, v5.2s, #0
+; SVE-NEXT:    ushll v5.2d, v6.2s, #0
+; SVE-NEXT:    ushll v6.2d, v7.2s, #0
+; SVE-NEXT:    ushll v7.2d, v16.2s, #0
+; SVE-NEXT:    shl v4.2d, v4.2d, #63
+; SVE-NEXT:    shl v5.2d, v5.2d, #63
+; SVE-NEXT:    shl v6.2d, v6.2d, #63
+; SVE-NEXT:    shl v7.2d, v7.2d, #63
+; SVE-NEXT:    cmlt v4.2d, v4.2d, #0
+; SVE-NEXT:    cmlt v5.2d, v5.2d, #0
+; SVE-NEXT:    cmlt v6.2d, v6.2d, #0
+; SVE-NEXT:    cmpne p1.d, p0/z, z4.d, #0
+; SVE-NEXT:    cmlt v4.2d, v7.2d, #0
+; SVE-NEXT:    cmpne p2.d, p0/z, z5.d, #0
+; SVE-NEXT:    cmpne p3.d, p0/z, z6.d, #0
+; SVE-NEXT:    cmpne p0.d, p0/z, z4.d, #0
+; SVE-NEXT:    st1d { z2.d }, p1, [x0, x8, lsl #3]
+; SVE-NEXT:    mov x8, #2 // =0x2
+; SVE-NEXT:    st1d { z3.d }, p2, [x0, x9, lsl #3]
+; SVE-NEXT:    st1d { z1.d }, p3, [x0, x8, lsl #3]
+; SVE-NEXT:    st1d { z0.d }, p0, [x0]
+; SVE-NEXT:    ret
+  %load = load <8 x double>, ptr %ptr, align 32
+  %sel = select <8 x i1> %mask, <8 x double> %x, <8 x double> %load
+  store <8 x double> %sel, ptr %ptr, align 32
   ret void
 }
 
@@ -210,8 +546,8 @@ define void @test_masked_store_intervening(<8 x i32> %x, ptr %ptr, <8 x i1> %mas
 }
 
 
-define void @test_masked_store_multiple(<8 x i32> %x, <8 x i32> %y, ptr %ptr1, ptr %ptr2, <8 x i1> %mask, <8 x i1> %mask2) {
-; AARCH64-LABEL: test_masked_store_multiple:
+define void @test_masked_store_multiple_v8i32(<8 x i32> %x, <8 x i32> %y, ptr %ptr1, ptr %ptr2, <8 x i1> %mask, <8 x i1> %mask2) {
+; AARCH64-LABEL: test_masked_store_multiple_v8i32:
 ; AARCH64:       // %bb.0:
 ; AARCH64-NEXT:    zip1 v6.8b, v4.8b, v0.8b
 ; AARCH64-NEXT:    zip2 v4.8b, v4.8b, v0.8b
@@ -239,7 +575,7 @@ define void @test_masked_store_multiple(<8 x i32> %x, <8 x i32> %y, ptr %ptr1, p
 ; AARCH64-NEXT:    stp q2, q3, [x1]
 ; AARCH64-NEXT:    ret
 ;
-; SVE-LABEL: test_masked_store_multiple:
+; SVE-LABEL: test_masked_store_multiple_v8i32:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; SVE-NEXT:    zip2 v6.8b, v4.8b, v0.8b
@@ -279,12 +615,233 @@ define void @test_masked_store_multiple(<8 x i32> %x, <8 x i32> %y, ptr %ptr1, p
   ret void
 }
 
-define void @test_masked_store_unaligned(<8 x i32> %data, ptr %ptr, <8 x i1> %mask) {
-; AARCH64-LABEL: test_masked_store_unaligned:
+define void @test_masked_store_multiple_v8i64(<8 x i64> %x, <8 x i64> %y, ptr %ptr1, ptr %ptr2, <8 x i1> %mask, <8 x i1> %mask2) {
+; AARCH64-LABEL: test_masked_store_multiple_v8i64:
+; AARCH64:       // %bb.0:
+; AARCH64-NEXT:    ldp d16, d19, [sp]
+; AARCH64-NEXT:    mov b17, v16.b[0]
+; AARCH64-NEXT:    mov b18, v16.b[4]
+; AARCH64-NEXT:    mov b20, v16.b[2]
+; AARCH64-NEXT:    mov b21, v16.b[6]
+; AARCH64-NEXT:    mov b22, v19.b[6]
+; AARCH64-NEXT:    mov b23, v19.b[4]
+; AARCH64-NEXT:    mov b24, v19.b[0]
+; AARCH64-NEXT:    mov b25, v19.b[2]
+; AARCH64-NEXT:    mov v17.b[4], v16.b[1]
+; AARCH64-NEXT:    mov v18.b[4], v16.b[5]
+; AARCH64-NEXT:    mov v20.b[4], v16.b[3]
+; AARCH64-NEXT:    mov v21.b[4], v16.b[7]
+; AARCH64-NEXT:    mov v22.b[4], v19.b[7]
+; AARCH64-NEXT:    mov v23.b[4], v19.b[5]
+; AARCH64-NEXT:    mov v24.b[4], v19.b[1]
+; AARCH64-NEXT:    mov v25.b[4], v19.b[3]
+; AARCH64-NEXT:    ushll v17.2d, v17.2s, #0
+; AARCH64-NEXT:    ushll v16.2d, v18.2s, #0
+; AARCH64-NEXT:    ushll v18.2d, v20.2s, #0
+; AARCH64-NEXT:    ushll v19.2d, v21.2s, #0
+; AARCH64-NEXT:    ldp q20, q21, [x0]
+; AARCH64-NEXT:    ushll v22.2d, v22.2s, #0
+; AARCH64-NEXT:    ushll v24.2d, v24.2s, #0
+; AARCH64-NEXT:    ushll v25.2d, v25.2s, #0
+; AARCH64-NEXT:    shl v17.2d, v17.2d, #63
+; AARCH64-NEXT:    shl v16.2d, v16.2d, #63
+; AARCH64-NEXT:    shl v18.2d, v18.2d, #63
+; AARCH64-NEXT:    shl v19.2d, v19.2d, #63
+; AARCH64-NEXT:    ushll v23.2d, v23.2s, #0
+; AARCH64-NEXT:    shl v22.2d, v22.2d, #63
+; AARCH64-NEXT:    shl v24.2d, v24.2d, #63
+; AARCH64-NEXT:    shl v25.2d, v25.2d, #63
+; AARCH64-NEXT:    cmlt v17.2d, v17.2d, #0
+; AARCH64-NEXT:    cmlt v16.2d, v16.2d, #0
+; AARCH64-NEXT:    cmlt v18.2d, v18.2d, #0
+; AARCH64-NEXT:    cmlt v19.2d, v19.2d, #0
+; AARCH64-NEXT:    shl v23.2d, v23.2d, #63
+; AARCH64-NEXT:    cmlt v22.2d, v22.2d, #0
+; AARCH64-NEXT:    cmlt v24.2d, v24.2d, #0
+; AARCH64-NEXT:    bif v0.16b, v20.16b, v17.16b
+; AARCH64-NEXT:    ldp q17, q20, [x0, #32]
+; AARCH64-NEXT:    bif v1.16b, v21.16b, v18.16b
+; AARCH64-NEXT:    cmlt v18.2d, v25.2d, #0
+; AARCH64-NEXT:    cmlt v23.2d, v23.2d, #0
+; AARCH64-NEXT:    bif v2.16b, v17.16b, v16.16b
+; AARCH64-NEXT:    bif v3.16b, v20.16b, v19.16b
+; AARCH64-NEXT:    ldp q16, q17, [x1, #32]
+; AARCH64-NEXT:    ldp q19, q20, [x1]
+; AARCH64-NEXT:    stp q0, q1, [x0]
+; AARCH64-NEXT:    mov v0.16b, v24.16b
+; AARCH64-NEXT:    stp q2, q3, [x0, #32]
+; AARCH64-NEXT:    mov v2.16b, v22.16b
+; AARCH64-NEXT:    mov v3.16b, v18.16b
+; AARCH64-NEXT:    bif v6.16b, v16.16b, v23.16b
+; AARCH64-NEXT:    bsl v0.16b, v4.16b, v19.16b
+; AARCH64-NEXT:    bsl v2.16b, v7.16b, v17.16b
+; AARCH64-NEXT:    bsl v3.16b, v5.16b, v20.16b
+; AARCH64-NEXT:    stp q0, q3, [x1]
+; AARCH64-NEXT:    stp q6, q2, [x1, #32]
+; AARCH64-NEXT:    ret
+;
+; SVE-LABEL: test_masked_store_multiple_v8i64:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ldp d16, d18, [sp]
+; SVE-NEXT:    ptrue p0.d, vl2
+; SVE-NEXT:    // kill: def $q3 killed $q3 def $z3
+; SVE-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    mov x8, #6 // =0x6
+; SVE-NEXT:    mov x9, #4 // =0x4
+; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-NEXT:    mov b17, v16.b[4]
+; SVE-NEXT:    mov b19, v16.b[2]
+; SVE-NEXT:    mov b20, v16.b[6]
+; SVE-NEXT:    mov b21, v16.b[0]
+; SVE-NEXT:    mov b22, v18.b[4]
+; SVE-NEXT:    mov b23, v18.b[6]
+; SVE-NEXT:    mov b24, v18.b[0]
+; SVE-NEXT:    mov b25, v18.b[2]
+; SVE-NEXT:    mov v17.b[4], v16.b[5]
+; SVE-NEXT:    mov v19.b[4], v16.b[3]
+; SVE-NEXT:    mov v20.b[4], v16.b[7]
+; SVE-NEXT:    mov v21.b[4], v16.b[1]
+; SVE-NEXT:    mov v22.b[4], v18.b[5]
+; SVE-NEXT:    mov v23.b[4], v18.b[7]
+; SVE-NEXT:    mov v24.b[4], v18.b[1]
+; SVE-NEXT:    mov v25.b[4], v18.b[3]
+; SVE-NEXT:    ushll v17.2d, v17.2s, #0
+; SVE-NEXT:    ushll v18.2d, v21.2s, #0
+; SVE-NEXT:    ushll v21.2d, v24.2s, #0
+; SVE-NEXT:    shl v16.2d, v17.2d, #63
+; SVE-NEXT:    ushll v17.2d, v19.2s, #0
+; SVE-NEXT:    ushll v19.2d, v20.2s, #0
+; SVE-NEXT:    ushll v20.2d, v22.2s, #0
+; SVE-NEXT:    shl v18.2d, v18.2d, #63
+; SVE-NEXT:    ushll v22.2d, v25.2s, #0
+; SVE-NEXT:    shl v21.2d, v21.2d, #63
+; SVE-NEXT:    cmlt v16.2d, v16.2d, #0
+; SVE-NEXT:    shl v17.2d, v17.2d, #63
+; SVE-NEXT:    shl v19.2d, v19.2d, #63
+; SVE-NEXT:    shl v20.2d, v20.2d, #63
+; SVE-NEXT:    cmlt v18.2d, v18.2d, #0
+; SVE-NEXT:    shl v22.2d, v22.2d, #63
+; SVE-NEXT:    cmlt v21.2d, v21.2d, #0
+; SVE-NEXT:    cmpne p1.d, p0/z, z16.d, #0
+; SVE-NEXT:    ushll v16.2d, v23.2s, #0
+; SVE-NEXT:    cmlt v17.2d, v17.2d, #0
+; SVE-NEXT:    cmlt v19.2d, v19.2d, #0
+; SVE-NEXT:    cmlt v20.2d, v20.2d, #0
+; SVE-NEXT:    shl v16.2d, v16.2d, #63
+; SVE-NEXT:    cmpne p2.d, p0/z, z17.d, #0
+; SVE-NEXT:    cmpne p3.d, p0/z, z19.d, #0
+; SVE-NEXT:    ldp q17, q19, [x1, #32]
+; SVE-NEXT:    cmpne p0.d, p0/z, z18.d, #0
+; SVE-NEXT:    cmlt v16.2d, v16.2d, #0
+; SVE-NEXT:    bif v6.16b, v17.16b, v20.16b
+; SVE-NEXT:    cmlt v20.2d, v22.2d, #0
+; SVE-NEXT:    ldp q17, q18, [x1]
+; SVE-NEXT:    st1d { z2.d }, p1, [x0, x9, lsl #3]
+; SVE-NEXT:    mov v2.16b, v16.16b
+; SVE-NEXT:    st1d { z3.d }, p3, [x0, x8, lsl #3]
+; SVE-NEXT:    mov v3.16b, v21.16b
+; SVE-NEXT:    st1d { z0.d }, p0, [x0]
+; SVE-NEXT:    mov v0.16b, v20.16b
+; SVE-NEXT:    mov x9, #2 // =0x2
+; SVE-NEXT:    st1d { z1.d }, p2, [x0, x9, lsl #3]
+; SVE-NEXT:    bsl v2.16b, v7.16b, v19.16b
+; SVE-NEXT:    bsl v3.16b, v4.16b, v17.16b
+; SVE-NEXT:    bsl v0.16b, v5.16b, v18.16b
+; SVE-NEXT:    stp q6, q2, [x1, #32]
+; SVE-NEXT:    stp q3, q0, [x1]
+; SVE-NEXT:    ret
+  %load = load <8 x i64>, ptr %ptr1, align 32
+  %load2 = load <8 x i64>, ptr %ptr2, align 32
+  %sel = select <8 x i1> %mask, <8 x i64> %x, <8 x i64> %load
+  %sel2 = select <8 x i1> %mask2, <8 x i64> %y, <8 x i64> %load2
+  store <8 x i64> %sel, ptr %ptr1, align 32
+  store <8 x i64> %sel2, ptr %ptr2, align 32
+  ret void
+}
+
+define void @test_masked_store_unaligned_v4i32(<4 x i32> %data, ptr %ptr, <4 x i1> %mask) {
+; AARCH64-LABEL: test_masked_store_unaligned_v4i32:
+; AARCH64:       // %bb.0:
+; AARCH64-NEXT:    ushll v1.4s, v1.4h, #0
+; AARCH64-NEXT:    ldur q2, [x0, #1]
+; AARCH64-NEXT:    shl v1.4s, v1.4s, #31
+; AARCH64-NEXT:    cmlt v1.4s, v1.4s, #0
+; AARCH64-NEXT:    bif v0.16b, v2.16b, v1.16b
+; AARCH64-NEXT:    stur q0, [x0, #1]
+; AARCH64-NEXT:    ret
+;
+; SVE-LABEL: test_masked_store_unaligned_v4i32:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ushll v1.4s, v1.4h, #0
+; SVE-NEXT:    ptrue p0.s, vl4
+; SVE-NEXT:    add x8, x0, #1
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    shl v1.4s, v1.4s, #31
+; SVE-NEXT:    cmlt v1.4s, v1.4s, #0
+; SVE-NEXT:    cmpne p0.s, p0/z, z1.s, #0
+; SVE-NEXT:    st1w { z0.s }, p0, [x8]
+; SVE-NEXT:    ret
+  %ptr_i8 = getelementptr i8, ptr %ptr, i32 1
+  %ptr_vec = bitcast ptr %ptr_i8 to ptr
+  %load = load <4 x i32>, ptr %ptr_vec, align 1
+  %sel = select <4 x i1> %mask, <4 x i32> %data, <4 x i32> %load
+  store <4 x i32> %sel, ptr %ptr_vec, align 1
+  ret void
+}
+
+define void @test_masked_store_unaligned_v4i64(<4 x i64> %data, ptr %ptr, <4 x i1> %mask) {
+; AARCH64-LABEL: test_masked_store_unaligned_v4i64:
+; AARCH64:       // %bb.0:
+; AARCH64-NEXT:    ushll v2.4s, v2.4h, #0
+; AARCH64-NEXT:    ldur q4, [x0, #17]
+; AARCH64-NEXT:    ldur q5, [x0, #1]
+; AARCH64-NEXT:    ushll2 v3.2d, v2.4s, #0
+; AARCH64-NEXT:    ushll v2.2d, v2.2s, #0
+; AARCH64-NEXT:    shl v3.2d, v3.2d, #63
+; AARCH64-NEXT:    shl v2.2d, v2.2d, #63
+; AARCH64-NEXT:    cmlt v3.2d, v3.2d, #0
+; AARCH64-NEXT:    cmlt v2.2d, v2.2d, #0
+; AARCH64-NEXT:    bif v1.16b, v4.16b, v3.16b
+; AARCH64-NEXT:    bif v0.16b, v5.16b, v2.16b
+; AARCH64-NEXT:    stur q1, [x0, #17]
+; AARCH64-NEXT:    stur q0, [x0, #1]
+; AARCH64-NEXT:    ret
+;
+; SVE-LABEL: test_masked_store_unaligned_v4i64:
+; SVE:       // %bb.0:
+; SVE-NEXT:    ushll v2.4s, v2.4h, #0
+; SVE-NEXT:    ptrue p0.d, vl2
+; SVE-NEXT:    add x8, x0, #17
+; SVE-NEXT:    add x9, x0, #1
+; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    ushll2 v3.2d, v2.4s, #0
+; SVE-NEXT:    ushll v2.2d, v2.2s, #0
+; SVE-NEXT:    shl v3.2d, v3.2d, #63
+; SVE-NEXT:    shl v2.2d, v2.2d, #63
+; SVE-NEXT:    cmlt v3.2d, v3.2d, #0
+; SVE-NEXT:    cmlt v2.2d, v2.2d, #0
+; SVE-NEXT:    cmpne p1.d, p0/z, z3.d, #0
+; SVE-NEXT:    cmpne p0.d, p0/z, z2.d, #0
+; SVE-NEXT:    st1d { z1.d }, p1, [x8]
+; SVE-NEXT:    st1d { z0.d }, p0, [x9]
+; SVE-NEXT:    ret
+  %ptr_i8 = getelementptr i8, ptr %ptr, i64 1
+  %ptr_vec = bitcast ptr %ptr_i8 to ptr
+  %load = load <4 x i64>, ptr %ptr_vec, align 1
+  %sel = select <4 x i1> %mask, <4 x i64> %data, <4 x i64> %load
+  store <4 x i64> %sel, ptr %ptr_vec, align 1
+  ret void
+}
+
+define void @test_masked_store_unaligned_v8i32(<8 x i32> %data, ptr %ptr, <8 x i1> %mask) {
+; AARCH64-LABEL: test_masked_store_unaligned_v8i32:
 ; AARCH64:       // %bb.0:
 ; AARCH64-NEXT:    zip1 v3.8b, v2.8b, v0.8b
 ; AARCH64-NEXT:    zip2 v2.8b, v2.8b, v0.8b
-; AARCH64-NEXT:    ldp q4, q5, [x0]
+; AARCH64-NEXT:    ldur q4, [x0, #1]
+; AARCH64-NEXT:    ldur q5, [x0, #17]
 ; AARCH64-NEXT:    ushll v3.4s, v3.4h, #0
 ; AARCH64-NEXT:    ushll v2.4s, v2.4h, #0
 ; AARCH64-NEXT:    shl v3.4s, v3.4s, #31
@@ -293,16 +850,18 @@ define void @test_masked_store_unaligned(<8 x i32> %data, ptr %ptr, <8 x i1> %ma
 ; AARCH64-NEXT:    cmlt v2.4s, v2.4s, #0
 ; AARCH64-NEXT:    bif v0.16b, v4.16b, v3.16b
 ; AARCH64-NEXT:    bif v1.16b, v5.16b, v2.16b
-; AARCH64-NEXT:    stp q0, q1, [x0]
+; AARCH64-NEXT:    stur q0, [x0, #1]
+; AARCH64-NEXT:    stur q1, [x0, #17]
 ; AARCH64-NEXT:    ret
 ;
-; SVE-LABEL: test_masked_store_unaligned:
+; SVE-LABEL: test_masked_store_unaligned_v8i32:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; SVE-NEXT:    zip2 v3.8b, v2.8b, v0.8b
 ; SVE-NEXT:    zip1 v2.8b, v2.8b, v0.8b
-; SVE-NEXT:    mov x8, #4 // =0x4
+; SVE-NEXT:    add x8, x0, #17
 ; SVE-NEXT:    ptrue p0.s, vl4
+; SVE-NEXT:    add x9, x0, #1
 ; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE-NEXT:    ushll v3.4s, v3.4h, #0
 ; SVE-NEXT:    ushll v2.4s, v2.4h, #0
@@ -312,13 +871,100 @@ define void @test_masked_store_unaligned(<8 x i32> %data, ptr %ptr, <8 x i1> %ma
 ; SVE-NEXT:    cmlt v2.4s, v2.4s, #0
 ; SVE-NEXT:    cmpne p1.s, p0/z, z3.s, #0
 ; SVE-NEXT:    cmpne p0.s, p0/z, z2.s, #0
-; SVE-NEXT:    st1w { z1.s }, p1, [x0, x8, lsl #2]
-; SVE-NEXT:    st1w { z0.s }, p0, [x0]
+; SVE-NEXT:    st1w { z1.s }, p1, [x8]
+; SVE-NEXT:    st1w { z0.s }, p0, [x9]
 ; SVE-NEXT:    ret
   %ptr_i8 = getelementptr i8, ptr %ptr, i32 1
   %ptr_vec = bitcast ptr %ptr_i8 to ptr
-  %load = load <8 x i32>, ptr %ptr, align 1
+  %load = load <8 x i32>, ptr %ptr_vec, align 1
   %sel = select <8 x i1> %mask, <8 x i32> %data, <8 x i32> %load
-  store <8 x i32> %sel, ptr %ptr, align 1
+  store <8 x i32> %sel, ptr %ptr_vec, align 1
+  ret void
+}
+
+define void @test_masked_store_unaligned_v8i64(<8 x i64> %data, ptr %ptr, <8 x i1> %mask) {
+; AARCH64-LABEL: test_masked_store_unaligned_v8i64:
+; AARCH64:       // %bb.0:
+; AARCH64-NEXT:    // kill: def $d4 killed $d4 def $q4
+; AARCH64-NEXT:    mov b5, v4.b[4]
+; AARCH64-NEXT:    mov b6, v4.b[6]
+; AARCH64-NEXT:    ldur q17, [x0, #49]
+; AARCH64-NEXT:    mov b7, v4.b[0]
+; AARCH64-NEXT:    mov b16, v4.b[2]
+; AARCH64-NEXT:    mov v5.b[4], v4.b[5]
+; AARCH64-NEXT:    mov v6.b[4], v4.b[7]
+; AARCH64-NEXT:    mov v7.b[4], v4.b[1]
+; AARCH64-NEXT:    mov v16.b[4], v4.b[3]
+; AARCH64-NEXT:    ushll v4.2d, v5.2s, #0
+; AARCH64-NEXT:    ushll v5.2d, v6.2s, #0
+; AARCH64-NEXT:    ushll v6.2d, v7.2s, #0
+; AARCH64-NEXT:    ushll v7.2d, v16.2s, #0
+; AARCH64-NEXT:    ldur q16, [x0, #33]
+; AARCH64-NEXT:    shl v4.2d, v4.2d, #63
+; AARCH64-NEXT:    shl v5.2d, v5.2d, #63
+; AARCH64-NEXT:    shl v6.2d, v6.2d, #63
+; AARCH64-NEXT:    shl v7.2d, v7.2d, #63
+; AARCH64-NEXT:    cmlt v4.2d, v4.2d, #0
+; AARCH64-NEXT:    cmlt v5.2d, v5.2d, #0
+; AARCH64-NEXT:    cmlt v6.2d, v6.2d, #0
+; AARCH64-NEXT:    cmlt v7.2d, v7.2d, #0
+; AARCH64-NEXT:    bif v2.16b, v16.16b, v4.16b
+; AARCH64-NEXT:    ldur q4, [x0, #1]
+; AARCH64-NEXT:    ldur q16, [x0, #17]
+; AARCH64-NEXT:    bif v3.16b, v17.16b, v5.16b
+; AARCH64-NEXT:    bif v0.16b, v4.16b, v6.16b
+; AARCH64-NEXT:    bif v1.16b, v16.16b, v7.16b
+; AARCH64-NEXT:    stur q2, [x0, #33]
+; AARCH64-NEXT:    stur q3, [x0, #49]
+; AARCH64-NEXT:    stur q0, [x0, #1]
+; AARCH64-NEXT:    stur q1, [x0, #17]
+; AARCH64-NEXT:    ret
+;
+; SVE-LABEL: test_masked_store_unaligned_v8i64:
+; SVE:       // %bb.0:
+; SVE-NEXT:    // kill: def $d4 killed $d4 def $q4
+; SVE-NEXT:    mov b5, v4.b[4]
+; SVE-NEXT:    mov b6, v4.b[6]
+; SVE-NEXT:    add x8, x0, #33
+; SVE-NEXT:    mov b7, v4.b[0]
+; SVE-NEXT:    mov b16, v4.b[2]
+; SVE-NEXT:    add x9, x0, #49
+; SVE-NEXT:    ptrue p0.d, vl2
+; SVE-NEXT:    // kill: def $q3 killed $q3 def $z3
+; SVE-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    mov v5.b[4], v4.b[5]
+; SVE-NEXT:    mov v6.b[4], v4.b[7]
+; SVE-NEXT:    mov v7.b[4], v4.b[1]
+; SVE-NEXT:    mov v16.b[4], v4.b[3]
+; SVE-NEXT:    ushll v4.2d, v5.2s, #0
+; SVE-NEXT:    ushll v5.2d, v6.2s, #0
+; SVE-NEXT:    ushll v6.2d, v7.2s, #0
+; SVE-NEXT:    ushll v7.2d, v16.2s, #0
+; SVE-NEXT:    shl v4.2d, v4.2d, #63
+; SVE-NEXT:    shl v5.2d, v5.2d, #63
+; SVE-NEXT:    shl v6.2d, v6.2d, #63
+; SVE-NEXT:    shl v7.2d, v7.2d, #63
+; SVE-NEXT:    cmlt v4.2d, v4.2d, #0
+; SVE-NEXT:    cmlt v5.2d, v5.2d, #0
+; SVE-NEXT:    cmlt v6.2d, v6.2d, #0
+; SVE-NEXT:    cmpne p1.d, p0/z, z4.d, #0
+; SVE-NEXT:    cmlt v4.2d, v7.2d, #0
+; SVE-NEXT:    cmpne p2.d, p0/z, z5.d, #0
+; SVE-NEXT:    cmpne p3.d, p0/z, z6.d, #0
+; SVE-NEXT:    cmpne p0.d, p0/z, z4.d, #0
+; SVE-NEXT:    st1d { z2.d }, p1, [x8]
+; SVE-NEXT:    add x8, x0, #1
+; SVE-NEXT:    st1d { z3.d }, p2, [x9]
+; SVE-NEXT:    add x9, x0, #17
+; SVE-NEXT:    st1d { z0.d }, p3, [x8]
+; SVE-NEXT:    st1d { z1.d }, p0, [x9]
+; SVE-NEXT:    ret
+  %ptr_i8 = getelementptr i8, ptr %ptr, i64 1
+  %ptr_vec = bitcast ptr %ptr_i8 to ptr
+  %load = load <8 x i64>, ptr %ptr_vec, align 1
+  %sel = select <8 x i1> %mask, <8 x i64> %data, <8 x i64> %load
+  store <8 x i64> %sel, ptr %ptr_vec, align 1
   ret void
 }
