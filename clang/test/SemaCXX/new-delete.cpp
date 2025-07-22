@@ -28,7 +28,7 @@ struct S // expected-note {{candidate}}
   S(double, int); // expected-note 2 {{candidate}}
   S(float, int); // expected-note 2 {{candidate}}
 };
-struct T; // expected-note{{forward declaration of 'T'}}
+struct T; // expected-note 3{{forward declaration of 'T'}}
 struct U
 {
   // A special new, to verify that the global version isn't used.
@@ -216,6 +216,10 @@ void good_deletes()
   delete (int*)0;
   delete [](int*)0;
   delete (S*)0;
+  delete (S(*)[2])0;
+  // expected-warning@-1 {{'delete' applied to a pointer-to-array type 'S (*)[2]' treated as 'delete[]'}}
+  delete (S(*)[])0;
+  // expected-warning@-1 {{'delete' applied to a pointer-to-array type 'S (*)[]' treated as 'delete[]'}}
   ::delete (int*)0;
 }
 
@@ -229,6 +233,14 @@ void bad_deletes()
   delete (T*)0;
   // cxx98-23-warning@-1 {{deleting pointer to incomplete type 'T'}}
   // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'T'}}
+  delete (T(*)[2])0;
+  // expected-warning@-1 {{'delete' applied to a pointer-to-array type 'T (*)[2]' treated as 'delete[]'}}
+  // cxx98-23-warning@-2 {{deleting pointer to incomplete type 'T'}}
+  // since-cxx26-error@-3 {{cannot delete pointer to incomplete type 'T'}}
+  delete (T(*)[])0;
+  // expected-warning@-1 {{'delete' applied to a pointer-to-array type 'T (*)[]' treated as 'delete[]'}}
+  // cxx98-23-warning@-2 {{deleting pointer to incomplete type 'T'}}
+  // since-cxx26-error@-3 {{cannot delete pointer to incomplete type 'T'}}
   ::S::delete (int*)0; // expected-error {{expected unqualified-id}}
 }
 
