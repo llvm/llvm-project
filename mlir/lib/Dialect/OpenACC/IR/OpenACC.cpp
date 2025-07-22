@@ -333,10 +333,18 @@ checkValidModifier(Op op, acc::DataClauseModifier validModifiers) {
   return success();
 }
 
-template <typename Op>
-static LogicalResult checkNoRecipe(Op op) {
-  if (op.getRecipe().has_value())
-    return op.emitError("no recipes are allowed");
+template <typename OpT, typename RecipeOpT>
+static LogicalResult checkRecipe(OpT op, llvm::StringRef operandName) {
+  mlir::SymbolRefAttr operandRecipe = op.getRecipeAttr();
+  if (!operandRecipe)
+    return op->emitOpError() << "recipe expected for " << operandName;
+
+  auto decl =
+      SymbolTable::lookupNearestSymbolFrom<RecipeOpT>(op, operandRecipe);
+  if (!decl)
+    return op->emitOpError()
+           << "expected symbol reference " << operandRecipe << " to point to a "
+           << operandName << " declaration";
   return success();
 }
 
@@ -446,6 +454,18 @@ static void printVarPtrType(mlir::OpAsmPrinter &p, mlir::Operation *op,
   }
 }
 
+static ParseResult parseRecipeSym(mlir::OpAsmParser &parser,
+                                  mlir::SymbolRefAttr &recipeAttr) {
+  if (failed(parser.parseAttribute(recipeAttr)))
+    return failure();
+  return success();
+}
+
+static void printRecipeSym(mlir::OpAsmPrinter &p, mlir::Operation *op,
+  mlir::SymbolRefAttr recipeAttr) {
+  p << recipeAttr;
+}
+
 //===----------------------------------------------------------------------===//
 // DataBoundsOp
 //===----------------------------------------------------------------------===//
@@ -468,6 +488,9 @@ LogicalResult acc::PrivateOp::verify() {
     return failure();
   if (failed(checkNoModifier(*this)))
     return failure();
+  if (failed(
+          checkRecipe<acc::PrivateOp, acc::PrivateRecipeOp>(*this, "private")))
+    return failure();
   return success();
 }
 
@@ -482,6 +505,9 @@ LogicalResult acc::FirstprivateOp::verify() {
     return failure();
   if (failed(checkNoModifier(*this)))
     return failure();
+  if (failed(checkRecipe<acc::FirstprivateOp, acc::FirstprivateRecipeOp>(
+          *this, "firstprivate")))
+    return failure();
   return success();
 }
 
@@ -495,6 +521,9 @@ LogicalResult acc::ReductionOp::verify() {
   if (failed(checkVarAndVarType(*this)))
     return failure();
   if (failed(checkNoModifier(*this)))
+    return failure();
+  if (failed(checkRecipe<acc::ReductionOp, acc::ReductionRecipeOp>(
+          *this, "reduction")))
     return failure();
   return success();
 }
@@ -1009,40 +1038,6 @@ LogicalResult acc::ReductionRecipeOp::verifyRegions() {
 }
 
 //===----------------------------------------------------------------------===//
-// Custom parser and printer verifier for private clause
-//===----------------------------------------------------------------------===//
-
-static ParseResult parseSymOperandList(
-    mlir::OpAsmParser &parser,
-    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &operands,
-    llvm::SmallVectorImpl<Type> &types, mlir::ArrayAttr &symbols) {
-  llvm::SmallVector<SymbolRefAttr> attributes;
-  if (failed(parser.parseCommaSeparatedList([&]() {
-        if (parser.parseAttribute(attributes.emplace_back()) ||
-            parser.parseArrow() ||
-            parser.parseOperand(operands.emplace_back()) ||
-            parser.parseColonType(types.emplace_back()))
-          return failure();
-        return success();
-      })))
-    return failure();
-  llvm::SmallVector<mlir::Attribute> arrayAttr(attributes.begin(),
-                                               attributes.end());
-  symbols = ArrayAttr::get(parser.getContext(), arrayAttr);
-  return success();
-}
-
-static void printSymOperandList(mlir::OpAsmPrinter &p, mlir::Operation *op,
-                                mlir::OperandRange operands,
-                                mlir::TypeRange types,
-                                std::optional<mlir::ArrayAttr> attributes) {
-  llvm::interleaveComma(llvm::zip(*attributes, operands), p, [&](auto it) {
-    p << std::get<0>(it) << " -> " << std::get<1>(it) << " : "
-      << std::get<1>(it).getType();
-  });
-}
-
-//===----------------------------------------------------------------------===//
 // ParallelOp
 //===----------------------------------------------------------------------===//
 
@@ -1050,7 +1045,7 @@ static void printSymOperandList(mlir::OpAsmPrinter &p, mlir::Operation *op,
 template <typename Op>
 static LogicalResult checkDataOperands(Op op,
                                        const mlir::ValueRange &operands) {
-  for (mlir::Value operand : operands)
+  for (mlir::Value operand : operands) {
     if (!mlir::isa<acc::AttachOp, acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
                    acc::DeleteOp, acc::DetachOp, acc::DevicePtrOp,
                    acc::GetDevicePtrOp, acc::NoCreateOp, acc::PresentOp>(
@@ -1058,66 +1053,26 @@ static LogicalResult checkDataOperands(Op op,
       return op.emitError(
           "expect data entry/exit operation or acc.getdeviceptr "
           "as defining op");
+    mlir::SymbolRefAttr operandRecipe = getRecipe(operand.getDefiningOp());
+    if (operandRecipe)
+      return op.emitError("recipe not expected for data mapping operations");
+  }
   return success();
 }
 
-template <typename Op>
-static LogicalResult
-checkSymOperandList(Operation *op, std::optional<mlir::ArrayAttr> attributes,
-                    mlir::OperandRange operands, llvm::StringRef operandName,
-                    llvm::StringRef symbolName, bool checkOperandType = true) {
-  if (!operands.empty()) {
-    if (!attributes || attributes->size() != operands.size())
-      return op->emitOpError()
-             << "expected as many " << symbolName << " symbol reference as "
-             << operandName << " operands";
-    if (attributes) {
-      for (auto operandAndAttribute : llvm::zip(operands, *attributes)) {
-        mlir::Value operand = std::get<0>(operandAndAttribute);
-        if (auto *definingOp = operand.getDefiningOp()) {
-          mlir::SymbolRefAttr operandRecipe = getRecipe(definingOp);
-          // If the operand operation has a recipe - check that it is consistent
-          // with the one recorded in the construct.
-          if (operandRecipe) {
-            if (operandRecipe.getLeafReference().compare(
-                    llvm::cast<mlir::SymbolRefAttr>(
-                        std::get<1>(operandAndAttribute))
-                        .getLeafReference()) != 0)
-              return op->emitOpError() << "expected consistent recipe for "
-                                       << operandName << " operand";
-          }
-        }
-      }
-    }
-  } else {
-    if (attributes)
-      return op->emitOpError()
-             << "unexpected " << symbolName << " symbol reference";
-    return success();
-  }
-
+template <typename OpT, typename RecipeOpT>
+static LogicalResult checkPrivateOperands(mlir::Operation *accConstructOp,
+                                          const mlir::ValueRange &operands,
+                                          llvm::StringRef operandName) {
   llvm::DenseSet<Value> set;
-  for (auto args : llvm::zip(operands, *attributes)) {
-    mlir::Value operand = std::get<0>(args);
-
+  for (mlir::Value operand : operands) {
+    if (!mlir::isa<OpT>(operand.getDefiningOp()))
+      return accConstructOp->emitOpError()
+             << "expect " << operandName << " as defining op";
     if (!set.insert(operand).second)
-      return op->emitOpError()
+      return accConstructOp->emitOpError()
              << operandName << " operand appears more than once";
-
-    mlir::Type varType = operand.getType();
-    auto symbolRef = llvm::cast<SymbolRefAttr>(std::get<1>(args));
-    auto decl = SymbolTable::lookupNearestSymbolFrom<Op>(op, symbolRef);
-    if (!decl)
-      return op->emitOpError()
-             << "expected symbol reference " << symbolRef << " to point to a "
-             << operandName << " declaration";
-
-    if (checkOperandType && decl.getType() && decl.getType() != varType)
-      return op->emitOpError() << "expected " << operandName << " (" << varType
-                               << ") to be the same type as " << operandName
-                               << " declaration (" << decl.getType() << ")";
   }
-
   return success();
 }
 
@@ -1174,17 +1129,17 @@ static LogicalResult verifyDeviceTypeAndSegmentCountMatch(
 }
 
 LogicalResult acc::ParallelOp::verify() {
-  if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizationRecipes(), getPrivateOperands(), "private",
-          "privatizations", /*checkOperandType=*/false)))
+  if (failed(checkPrivateOperands<mlir::acc::PrivateOp,
+                                  mlir::acc::PrivateRecipeOp>(
+          *this, getPrivateOperands(), "private")))
     return failure();
-  if (failed(checkSymOperandList<mlir::acc::FirstprivateRecipeOp>(
-          *this, getFirstprivatizationRecipes(), getFirstprivateOperands(),
-          "firstprivate", "firstprivatizations", /*checkOperandType=*/false)))
+  if (failed(checkPrivateOperands<mlir::acc::FirstprivateOp,
+                                  mlir::acc::FirstprivateRecipeOp>(
+          *this, getFirstprivateOperands(), "firstprivate")))
     return failure();
-  if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
-          *this, getReductionRecipes(), getReductionOperands(), "reduction",
-          "reductions", false)))
+  if (failed(checkPrivateOperands<mlir::acc::ReductionOp,
+                                  mlir::acc::ReductionRecipeOp>(
+          *this, getReductionOperands(), "reduction")))
     return failure();
 
   if (failed(verifyDeviceTypeAndSegmentCountMatch(
@@ -1315,7 +1270,6 @@ void ParallelOp::build(mlir::OpBuilder &odsBuilder,
                        mlir::ValueRange gangPrivateOperands,
                        mlir::ValueRange gangFirstPrivateOperands,
                        mlir::ValueRange dataClauseOperands) {
-
   ParallelOp::build(
       odsBuilder, odsState, asyncOperands, /*asyncOperandsDeviceType=*/nullptr,
       /*asyncOnly=*/nullptr, waitOperands, /*waitOperandsSegments=*/nullptr,
@@ -1324,9 +1278,8 @@ void ParallelOp::build(mlir::OpBuilder &odsBuilder,
       /*numGangsDeviceType=*/nullptr, numWorkers,
       /*numWorkersDeviceType=*/nullptr, vectorLength,
       /*vectorLengthDeviceType=*/nullptr, ifCond, selfCond,
-      /*selfAttr=*/nullptr, reductionOperands, /*reductionRecipes=*/nullptr,
-      gangPrivateOperands, /*privatizations=*/nullptr, gangFirstPrivateOperands,
-      /*firstprivatizations=*/nullptr, dataClauseOperands,
+      /*selfAttr=*/nullptr, reductionOperands, gangPrivateOperands,
+      gangFirstPrivateOperands, dataClauseOperands,
       /*defaultAttr=*/nullptr, /*combined=*/nullptr);
 }
 
@@ -1965,17 +1918,17 @@ mlir::Value SerialOp::getWaitDevnum(mlir::acc::DeviceType deviceType) {
 }
 
 LogicalResult acc::SerialOp::verify() {
-  if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizationRecipes(), getPrivateOperands(), "private",
-          "privatizations", /*checkOperandType=*/false)))
+  if (failed(checkPrivateOperands<mlir::acc::PrivateOp,
+                                  mlir::acc::PrivateRecipeOp>(
+          *this, getPrivateOperands(), "private")))
     return failure();
-  if (failed(checkSymOperandList<mlir::acc::FirstprivateRecipeOp>(
-          *this, getFirstprivatizationRecipes(), getFirstprivateOperands(),
-          "firstprivate", "firstprivatizations", /*checkOperandType=*/false)))
+  if (failed(checkPrivateOperands<mlir::acc::FirstprivateOp,
+                                  mlir::acc::FirstprivateRecipeOp>(
+          *this, getFirstprivateOperands(), "firstprivate")))
     return failure();
-  if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
-          *this, getReductionRecipes(), getReductionOperands(), "reduction",
-          "reductions", false)))
+  if (failed(checkPrivateOperands<mlir::acc::ReductionOp,
+                                  mlir::acc::ReductionRecipeOp>(
+          *this, getReductionOperands(), "reduction")))
     return failure();
 
   if (failed(verifyDeviceTypeAndSegmentCountMatch(
@@ -2606,14 +2559,13 @@ LogicalResult acc::LoopOp::verify() {
     }
   }
 
-  if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizationRecipes(), getPrivateOperands(), "private",
-          "privatizations", false)))
+  if (failed(checkPrivateOperands<mlir::acc::PrivateOp,
+                                  mlir::acc::PrivateRecipeOp>(
+          *this, getPrivateOperands(), "private")))
     return failure();
-
-  if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
-          *this, getReductionRecipes(), getReductionOperands(), "reduction",
-          "reductions", false)))
+  if (failed(checkPrivateOperands<mlir::acc::ReductionOp,
+                                  mlir::acc::ReductionRecipeOp>(
+          *this, getReductionOperands(), "reduction")))
     return failure();
 
   if (getCombined().has_value() &&

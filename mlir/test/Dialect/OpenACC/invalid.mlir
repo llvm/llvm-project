@@ -483,15 +483,6 @@ acc.loop gang({static=%i64Value: i64, ) control(%iv : i32) = (%1 : i32) to (%2 :
 
 // -----
 
-func.func @fct1(%0 : !llvm.ptr) -> () {
-  // expected-error@+1 {{expected symbol reference @privatization_i32 to point to a private declaration}}
-  acc.serial private(@privatization_i32 -> %0 : !llvm.ptr) {
-  }
-  return
-}
-
-// -----
-
 // expected-error@+1 {{expect at least one of num, dim or static values}}
 acc.loop gang({}) {
   "test.openacc_dummy_op"() : () -> ()
@@ -831,3 +822,4 @@ func.func @acc_loop_container() {
 %value = memref.alloc() : memref<f32>
 // expected-error @below {{invalid data clause modifiers: readonly}}
 %0 = acc.create varPtr(%value : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier readonly,zero,capture,always>}
+

@@ -603,6 +603,7 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
       | `bounds` `(` $bounds `)`
       | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
+      | `recipe` `(` custom<RecipeSym>($recipe) `)`
     ) `->` type($accVar) attr-dict
   }];
 
@@ -1422,12 +1423,9 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
       Optional<I1>:$ifCond,
       Optional<I1>:$selfCond,
       UnitAttr:$selfAttr,
-      Variadic<AnyType>:$reductionOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
+      Variadic<OpenACC_AnyPointerOrMappableType>:$reductionOperands,
       Variadic<OpenACC_AnyPointerOrMappableType>:$privateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$privatizationRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$firstprivateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$firstprivatizationRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$dataClauseOperands,
       OptionalAttr<DefaultValueAttr>:$defaultAttr,
       UnitAttr:$combined);
@@ -1540,16 +1538,12 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
       | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
-      | `firstprivate` `(` custom<SymOperandList>($firstprivateOperands,
-            type($firstprivateOperands), $firstprivatizationRecipes)
-        `)`
+      | `firstprivate` `(` $firstprivateOperands `:` type($firstprivateOperands) `)`
       | `num_gangs` `(` custom<NumGangs>($numGangs,
             type($numGangs), $numGangsDeviceType, $numGangsSegments) `)`
       | `num_workers` `(` custom<DeviceTypeOperands>($numWorkers,
             type($numWorkers), $numWorkersDeviceType) `)`
-      | `private` `(` custom<SymOperandList>(
-            $privateOperands, type($privateOperands), $privatizationRecipes)
-        `)`
+      | `private` `(` $privateOperands `:` type($privateOperands) `)`
       | `vector_length` `(` custom<DeviceTypeOperands>($vectorLength,
             type($vectorLength), $vectorLengthDeviceType) `)`
       | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
@@ -1557,9 +1551,7 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
           $waitOnly)
       | `self` `(` $selfCond `)`
       | `if` `(` $ifCond `)`
-      | `reduction` `(` custom<SymOperandList>(
-            $reductionOperands, type($reductionOperands), $reductionRecipes)
-        `)`
+      | `reduction` `(` $reductionOperands `:` type($reductionOperands) `)`
     )
     $region attr-dict-with-keyword
   }];
@@ -1607,12 +1599,9 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
       Optional<I1>:$ifCond,
       Optional<I1>:$selfCond,
       UnitAttr:$selfAttr,
-      Variadic<AnyType>:$reductionOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
+      Variadic<OpenACC_AnyPointerOrMappableType>:$reductionOperands,
       Variadic<OpenACC_AnyPointerOrMappableType>:$privateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$privatizationRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$firstprivateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$firstprivatizationRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$dataClauseOperands,
       OptionalAttr<DefaultValueAttr>:$defaultAttr,
       UnitAttr:$combined);
@@ -1682,20 +1671,14 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
       | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
-      | `firstprivate` `(` custom<SymOperandList>($firstprivateOperands,
-            type($firstprivateOperands), $firstprivatizationRecipes)
-        `)`
-      | `private` `(` custom<SymOperandList>(
-            $privateOperands, type($privateOperands), $privatizationRecipes)
-        `)`
+      | `firstprivate` `(` $firstprivateOperands `:` type($firstprivateOperands) `)`
+      | `private` `(` $privateOperands `:` type($privateOperands) `)`
       | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
           $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
           $waitOnly)
       | `self` `(` $selfCond `)`
       | `if` `(` $ifCond `)`
-      | `reduction` `(` custom<SymOperandList>(
-            $reductionOperands, type($reductionOperands), $reductionRecipes)
-        `)`
+      | `reduction` `(` $reductionOperands `:` type($reductionOperands) `)`
     )
     $region attr-dict-with-keyword
   }];
@@ -2243,9 +2226,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
       OptionalAttr<DeviceTypeArrayAttr>:$tileOperandsDeviceType,
       Variadic<OpenACC_AnyPointerOrMappableType>:$cacheOperands,
       Variadic<OpenACC_AnyPointerOrMappableType>:$privateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$privatizationRecipes,
-      Variadic<AnyType>:$reductionOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
+      Variadic<OpenACC_AnyPointerOrMappableType>:$reductionOperands,
       OptionalAttr<OpenACC_CombinedConstructsAttr>:$combined
   );
 
@@ -2405,14 +2386,11 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
             $workerNumOperandsDeviceType, $worker)
       | `vector` `` custom<DeviceTypeOperandsWithKeywordOnly>($vectorOperands,
             type($vectorOperands), $vectorOperandsDeviceType, $vector)
-      | `private` `(` custom<SymOperandList>(
-            $privateOperands, type($privateOperands), $privatizationRecipes) `)`
+      | `private` `(` $privateOperands  `:` type($privateOperands) `)`
       | `tile` `(` custom<DeviceTypeOperandsWithSegment>($tileOperands,
             type($tileOperands), $tileOperandsDeviceType, $tileOperandsSegments)
         `)`
-      | `reduction` `(` custom<SymOperandList>(
-            $reductionOperands, type($reductionOperands), $reductionRecipes)
-        `)`
+      | `reduction` `(` $reductionOperands  `:` type($reductionOperands) `)`
       | `cache` `(` $cacheOperands `:` type($cacheOperands) `)`
     )
     custom<LoopControl>($region, $lowerbound, type($lowerbound), $upperbound,
