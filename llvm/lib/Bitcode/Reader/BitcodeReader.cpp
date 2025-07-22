@@ -7125,9 +7125,11 @@ Error BitcodeReader::materializeModule() {
       if (CallInst *CI = dyn_cast<CallInst>(U))
         UpgradeIntrinsicCall(CI, I.second);
     }
-    if (!I.first->use_empty())
-      I.first->replaceAllUsesWith(I.second);
-    I.first->eraseFromParent();
+    if (I.first != I.second) {
+      if (!I.first->use_empty())
+        I.first->replaceAllUsesWith(I.second);
+      I.first->eraseFromParent();
+    }
   }
   UpgradedIntrinsics.clear();
 
