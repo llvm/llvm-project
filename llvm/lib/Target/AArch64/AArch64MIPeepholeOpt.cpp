@@ -204,7 +204,7 @@ bool AArch64MIPeepholeOpt::visitAND(unsigned Opc, MachineInstr &MI,
   // The mov pseudo instruction could be expanded to multiple mov instructions
   // later. Let's try to split the constant operand of mov instruction into two
   // bitmask immediates. It makes only two AND instructions instead of multiple
-  // mov + AND instructions.
+  // mov + and instructions.
 
   return splitTwoPartImm<T>(
       MI,
