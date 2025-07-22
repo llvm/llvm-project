@@ -1780,6 +1780,9 @@ static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       .SetDontShowValue(false)
       .SetShowMembersOneLiner(false)
       .SetHideItemNames(false);
+  SyntheticChildren::Flags stl_synth_flags;
+  stl_synth_flags.SetCascades(true).SetSkipPointers(false).SetSkipReferences(
+      false);
 
   using StringElementType = StringPrinter::StringElementType;
 
@@ -1801,6 +1804,16 @@ static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           stl_summary_flags,
           MsvcStlStringSummaryProvider<StringElementType::UTF32>,
           "MSVC STL std::u32string summary provider"));
+
+  stl_summary_flags.SetDontShowChildren(false);
+
+  AddCXXSynthetic(cpp_category_sp, MsvcStlAtomicSyntheticFrontEndCreator,
+                  "MSVC STL std::atomic synthetic children",
+                  "^std::atomic<.+>$", stl_synth_flags, true);
+
+  AddCXXSummary(cpp_category_sp, MsvcStlAtomicSummaryProvider,
+                "MSVC STL std::atomic summary provider", "^std::atomic<.+>$",
+                stl_summary_flags, true);
 }
 
 static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
