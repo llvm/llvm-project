@@ -2239,7 +2239,7 @@ class CIR_ArrayInitDestroy<string mnemonic> : CIR_Op<mnemonic> {
 
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat = [{
-    `(` $addr `:` qualified(type($addr)) `)` $body attr-dict
+    $addr `:` qualified(type($addr)) $body attr-dict
   }];
 
   let builders = [
@@ -2265,7 +2265,7 @@ def CIR_ArrayCtor : CIR_ArrayInitDestroy<"array.ctor"> {
     ```mlir
     cir.array.ctor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
       ^bb0(%arg0: !cir.ptr<!rec_S>):
-        cir.call @_ZN1SC1Ev(%arg0) : (!cir.ptr<!rec_S>) -> ()
+        cir.call @some_ctor(%arg0) : (!cir.ptr<!rec_S>) -> ()
         cir.yield
     }
     ```

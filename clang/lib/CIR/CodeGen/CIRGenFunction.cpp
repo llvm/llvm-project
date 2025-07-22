@@ -849,9 +849,7 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   }
 
   baseType = eltType;
-  cir::ConstantOp numElements = builder.getConstInt(*currSrcLoc, SizeTy, countFromCLAs);
-
-  return numElements;
+  return builder.getConstInt(*currSrcLoc, SizeTy, countFromCLAs);
 }
 
 } // namespace clang::CIRGen
