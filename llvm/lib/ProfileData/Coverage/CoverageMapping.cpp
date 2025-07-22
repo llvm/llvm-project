@@ -976,7 +976,7 @@ public:
 Error CoverageMapping::loadFunctionRecord(
     const CoverageMappingRecord &Record,
     const std::optional<std::reference_wrapper<IndexedInstrProfReader>>
-        &ProfileReader, StringRef ObjectFilename) {
+        &ProfileReader, StringRef ObjectFilename, bool ShowArchExecutables) {
   StringRef OrigFuncName = Record.FunctionName;
   if (OrigFuncName.empty())
     return make_error<CoverageMapError>(coveragemap_error::malformed,
@@ -991,7 +991,7 @@ Error CoverageMapping::loadFunctionRecord(
 
   uint64_t FuncArchHash = Record.FunctionHash;
   if(!Arch.empty()){
-    std::string HashStr = std::to_string(Record.FunctionHash) + ":" + Arch.str();
+    std::string HashStr = std::to_string(Record.FunctionHash) + ":" + ObjectFilename.str();
     llvm::StringRef HashRef(HashStr);
     FuncArchHash = IndexedInstrProf::ComputeHash(HashRef);
   }
@@ -1102,28 +1102,29 @@ Error CoverageMapping::loadFunctionRecord(
 
   //CHANGES MADE HERE
   auto FilenamesHash = hash_combine_range(Record.Filenames);
-  std::string HashStr = OrigFuncName.str(); /*+ ":" + Arch.str();*/
-  if(!Arch.empty()){
+  std::string HashStr = OrigFuncName.str();
+  if(ShowArchExecutables){
     HashStr += ":" + Arch.str();
-    // auto LogicalFuncKey = std::make_pair(FilenamesHash, hash_value(OrigFuncName));
-    // auto It = RecordIndices.find(LogicalFuncKey);
-    // std::vector<llvm::coverage::CountedRegion> RegionsToAdd;
+  }else{
+    auto LogicalFuncKey = std::make_pair(FilenamesHash, hash_value(OrigFuncName));
+    auto It = RecordIndices.find(LogicalFuncKey);
+    std::vector<llvm::coverage::CountedRegion> RegionsToAdd;
 
-    // if (It != RecordIndices.end()) {
-    //   auto &ExistingFunction = Functions[It->second];
+    if (It != RecordIndices.end()) {
+      auto &ExistingFunction = Functions[It->second];
 
-    //   for (const auto &NewRegion : Function.CountedRegions) {
-    //     for (auto &ExistingRegion : ExistingFunction.CountedRegions) {
-    //       if((NewRegion.ObjectFilename != ExistingRegion.ObjectFilename) &&
-    //         (NewRegion.startLoc() >= ExistingRegion.startLoc()) &&
-    //           (NewRegion.endLoc() <= ExistingRegion.endLoc())){
-    //           RegionsToAdd.push_back(NewRegion);
-    //       }
-    //     }
-    //   }
-    //   ExistingFunction.CountedRegions.insert(ExistingFunction.CountedRegions.end(), RegionsToAdd.begin(), RegionsToAdd.end());
-    // }
-    // RecordIndices[LogicalFuncKey] = Functions.size();
+      for (const auto &NewRegion : Function.CountedRegions) {
+        for (auto &ExistingRegion : ExistingFunction.CountedRegions) {
+          if((NewRegion.ObjectFilename != ExistingRegion.ObjectFilename) &&
+            (NewRegion.startLoc() >= ExistingRegion.startLoc()) &&
+              (NewRegion.endLoc() <= ExistingRegion.endLoc())){
+              RegionsToAdd.push_back(NewRegion);
+          }
+        }
+      }
+      ExistingFunction.CountedRegions.insert(ExistingFunction.CountedRegions.end(), RegionsToAdd.begin(), RegionsToAdd.end());
+    }
+    RecordIndices[LogicalFuncKey] = Functions.size();
   }
   //CHANGES MADE HERE
 
@@ -1180,7 +1181,7 @@ Error CoverageMapping::loadFromReaders(
     ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
     std::optional<std::reference_wrapper<IndexedInstrProfReader>>
         &ProfileReader,
-    CoverageMapping &Coverage, StringRef Arch, StringRef ObjectFilename) {
+    CoverageMapping &Coverage, StringRef Arch, StringRef ObjectFilename, bool ShowArchExecutables) {
   
   Coverage.setArchitecture(Arch);
   assert(!Coverage.SingleByteCoverage || !ProfileReader ||
@@ -1193,7 +1194,7 @@ Error CoverageMapping::loadFromReaders(
       if (Error E = RecordOrErr.takeError())
         return E;
       const auto &Record = *RecordOrErr;
-      if (Error E = Coverage.loadFunctionRecord(Record, ProfileReader, ObjectFilename))
+      if (Error E = Coverage.loadFunctionRecord(Record, ProfileReader, ObjectFilename, ShowArchExecutables))
         return E;
     }
   }
@@ -1224,7 +1225,7 @@ Error CoverageMapping::loadFromFile(
     std::optional<std::reference_wrapper<IndexedInstrProfReader>>
         &ProfileReader,
     CoverageMapping &Coverage, bool &DataFound,
-    SmallVectorImpl<object::BuildID> *FoundBinaryIDs, StringRef ObjectFilename) {
+    SmallVectorImpl<object::BuildID> *FoundBinaryIDs, StringRef ObjectFilename, bool ShowArchExecutables) {
   auto CovMappingBufOrErr = MemoryBuffer::getFileOrSTDIN(
       Filename, /*IsText=*/false, /*RequiresNullTerminator=*/false);
   if (std::error_code EC = CovMappingBufOrErr.getError())
@@ -1256,7 +1257,7 @@ Error CoverageMapping::loadFromFile(
                        }));
   }
   DataFound |= !Readers.empty();
-  if (Error E = loadFromReaders(Readers, ProfileReader, Coverage, Arch, ObjectFilename))
+  if (Error E = loadFromReaders(Readers, ProfileReader, Coverage, Arch, ObjectFilename, ShowArchExecutables))
     return createFileError(Filename, std::move(E));
   return Error::success();
 }
@@ -1265,7 +1266,7 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
     ArrayRef<StringRef> ObjectFilenames,
     std::optional<StringRef> ProfileFilename, vfs::FileSystem &FS,
     ArrayRef<StringRef> Arches, StringRef CompilationDir,
-    const object::BuildIDFetcher *BIDFetcher, bool CheckBinaryIDs) {
+    const object::BuildIDFetcher *BIDFetcher, bool CheckBinaryIDs, bool ShowArchExecutables) {
   std::unique_ptr<IndexedInstrProfReader> ProfileReader;
   if (ProfileFilename) {
     auto ProfileReaderOrErr =
@@ -1297,7 +1298,8 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
   for (const auto &File : llvm::enumerate(ObjectFilenames)) {
     if (Error E = loadFromFile(File.value(), GetArch(File.index()),
                                CompilationDir, ProfileReaderRef, *Coverage,
-                               DataFound, &FoundBinaryIDs, ObjectFilenames[File.index()]))
+                               DataFound, &FoundBinaryIDs, ObjectFilenames[File.index()], 
+                               ShowArchExecutables))
       return std::move(E);
   }
 

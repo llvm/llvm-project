@@ -486,7 +486,8 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
   auto FS = vfs::getRealFileSystem();
   auto CoverageOrErr = CoverageMapping::load(
       ObjectFilenames, PGOFilename, *FS, CoverageArches,
-      ViewOpts.CompilationDirectory, BIDFetcher.get(), CheckBinaryIDs);
+      ViewOpts.CompilationDirectory, BIDFetcher.get(), CheckBinaryIDs, 
+      ViewOpts.ShowArchExecutables);
   if (Error E = CoverageOrErr.takeError()) {
     error("failed to load coverage: " + toString(std::move(E)));
     return nullptr;
@@ -824,6 +825,10 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
   cl::opt<bool> CheckBinaryIDs(
       "check-binary-ids", cl::desc("Fail if an object couldn't be found for a "
                                    "binary ID in the profile"));
+  cl::opt<bool> ShowArchExecutables(
+    "show-arch-executables",
+    cl::desc("Show coverage per architecture and the associated executable slice"),
+    cl::init(false));
 
   auto commandLineParser = [&, this](int argc, const char **argv) -> int {
     cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
@@ -990,6 +995,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     ViewOpts.ExportSummaryOnly = SummaryOnly;
     ViewOpts.NumThreads = NumThreads;
     ViewOpts.CompilationDirectory = CompilationDirectory;
+    ViewOpts.ShowArchExecutables = ShowArchExecutables;
 
     return 0;
   };

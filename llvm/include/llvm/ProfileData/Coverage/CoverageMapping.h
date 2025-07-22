@@ -1019,7 +1019,7 @@ class CoverageMapping {
     ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
     std::optional<std::reference_wrapper<IndexedInstrProfReader>>
         &ProfileReader,
-    CoverageMapping &Coverage, StringRef Arch, StringRef ObjectFilename = "");
+    CoverageMapping &Coverage, StringRef Arch, StringRef ObjectFilename = "", bool ShowArchExecutables = false);
   
   static Error loadFromReaders(
     ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
@@ -1033,15 +1033,18 @@ class CoverageMapping {
                std::optional<std::reference_wrapper<IndexedInstrProfReader>>
                    &ProfileReader,
                CoverageMapping &Coverage, bool &DataFound,
-               SmallVectorImpl<object::BuildID> *FoundBinaryIDs = nullptr, StringRef ObjectFilename = "");
+               SmallVectorImpl<object::BuildID> *FoundBinaryIDs = nullptr, StringRef ObjectFilename = "", 
+                bool ShowArchExecutables = false);
 
   /// Add a function record corresponding to \p Record.
   Error loadFunctionRecord(
       const CoverageMappingRecord &Record,
       const std::optional<std::reference_wrapper<IndexedInstrProfReader>>
-          &ProfileReader, StringRef ObjectFilename = "");
+          &ProfileReader, StringRef ObjectFilename = "", bool ShowArchExecutables = false);
   
-  Error loadFunctionRecord(const CoverageMappingRecord &Record, const std::optional<std::reference_wrapper<IndexedInstrProfReader>> &ProfileReader, const std::string &Arch, StringRef ObjectFilename = "");
+  Error loadFunctionRecord(const CoverageMappingRecord &Record, 
+    const std::optional<std::reference_wrapper<IndexedInstrProfReader>> &ProfileReader, 
+    const std::string &Arch, StringRef ObjectFilename = "");
 
   /// Look up the indices for function records which are at least partially
   /// defined in the specified file. This is guaranteed to return a superset of
@@ -1075,7 +1078,7 @@ public:
        std::optional<StringRef> ProfileFilename, vfs::FileSystem &FS,
        ArrayRef<StringRef> Arches = {}, StringRef CompilationDir = "",
        const object::BuildIDFetcher *BIDFetcher = nullptr,
-       bool CheckBinaryIDs = false);
+       bool CheckBinaryIDs = false, bool ShowArchExecutables = false);
 
   /// The number of functions that couldn't have their profiles mapped.
   ///

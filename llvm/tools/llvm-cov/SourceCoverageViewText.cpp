@@ -229,11 +229,7 @@ void SourceCoverageViewText::renderArchLineCoverageColumn(
     OS.indent(LineCoverageColumnWidth) << '|';
     return;
   }
-  std::string C = "";
-  for(LineCoverageStats Counts : LineArchStats[Line.getLine()]){
-    C += formatBinaryCount(Counts.getExecutionCount()) + "/";
-  }
-  // std::string C = formatBinaryCount(Line.getExecutionCount());
+  std::string C = formatBinaryCount(Line.getExecutionCount());
   OS.indent(LineCoverageColumnWidth - C.size());
   colored_ostream(OS, raw_ostream::MAGENTA, Line.hasMultipleRegions() && getOptions().Colors) << C;
   OS << '|';

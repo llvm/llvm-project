@@ -743,7 +743,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
       consumeError(ArchOrError.takeError());
       Architecture = "unknown";
     }
-    // Architecture = ExeRef;
+    Architecture = ExeRef;
   }
   //ANDRES CODE
 
