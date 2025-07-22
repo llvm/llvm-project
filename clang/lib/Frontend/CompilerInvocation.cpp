@@ -2013,9 +2013,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
             : llvm::codegenoptions::DebugTemplateNamesKind::Mangled);
   }
 
-  if (Args.hasArg(OPT_ftime_report, OPT_ftime_report_EQ,
-                  OPT_ftime_report_json) ||
-      Opts.TimePassesStatsFile) {
+  if (Args.hasArg(OPT_ftime_report, OPT_ftime_report_EQ, OPT_ftime_report_json,
+                  OPT_stats_file_timers)) {
     Opts.TimePasses = true;
 
     // -ftime-report= is only for new pass manager.
