@@ -171,15 +171,15 @@ define void @freeze_extractelement(ptr %origin0, ptr %origin1, ptr %dst) nounwin
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    vmovdqa (%ecx), %xmm0
-; X86-NEXT:    vpand (%edx), %xmm0, %xmm0
+; X86-NEXT:    vmovdqa (%edx), %xmm0
+; X86-NEXT:    vpand (%ecx), %xmm0, %xmm0
 ; X86-NEXT:    vpextrb $6, %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_extractelement:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovdqa (%rsi), %xmm0
-; X64-NEXT:    vpand (%rdi), %xmm0, %xmm0
+; X64-NEXT:    vmovdqa (%rdi), %xmm0
+; X64-NEXT:    vpand (%rsi), %xmm0, %xmm0
 ; X64-NEXT:    vpextrb $6, %xmm0, (%rdx)
 ; X64-NEXT:    retq
   %i0 = load <16 x i8>, ptr %origin0
@@ -198,8 +198,8 @@ define void @freeze_extractelement_escape(ptr %origin0, ptr %origin1, ptr %dst, 
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    vmovdqa (%edx), %xmm0
-; X86-NEXT:    vpand (%esi), %xmm0, %xmm0
+; X86-NEXT:    vmovdqa (%esi), %xmm0
+; X86-NEXT:    vpand (%edx), %xmm0, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%ecx)
 ; X86-NEXT:    vpextrb $6, %xmm0, (%eax)
 ; X86-NEXT:    popl %esi
@@ -207,8 +207,8 @@ define void @freeze_extractelement_escape(ptr %origin0, ptr %origin1, ptr %dst, 
 ;
 ; X64-LABEL: freeze_extractelement_escape:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovdqa (%rsi), %xmm0
-; X64-NEXT:    vpand (%rdi), %xmm0, %xmm0
+; X64-NEXT:    vmovdqa (%rdi), %xmm0
+; X64-NEXT:    vpand (%rsi), %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rcx)
 ; X64-NEXT:    vpextrb $6, %xmm0, (%rdx)
 ; X64-NEXT:    retq
@@ -239,8 +239,8 @@ define void @freeze_extractelement_extra_use(ptr %origin0, ptr %origin1, i64 %id
 ; X86-NEXT:    movl 32(%ebp), %edx
 ; X86-NEXT:    movl 12(%ebp), %esi
 ; X86-NEXT:    movl 8(%ebp), %edi
-; X86-NEXT:    vmovaps (%esi), %xmm0
-; X86-NEXT:    vandps (%edi), %xmm0, %xmm0
+; X86-NEXT:    vmovaps (%edi), %xmm0
+; X86-NEXT:    vandps (%esi), %xmm0, %xmm0
 ; X86-NEXT:    vmovaps %xmm0, (%esp)
 ; X86-NEXT:    movzbl (%esp,%ecx), %ecx
 ; X86-NEXT:    cmpb (%esp,%eax), %cl
@@ -255,8 +255,8 @@ define void @freeze_extractelement_extra_use(ptr %origin0, ptr %origin1, i64 %id
 ; X64:       # %bb.0:
 ; X64-NEXT:    andl $15, %ecx
 ; X64-NEXT:    andl $15, %edx
-; X64-NEXT:    vmovaps (%rsi), %xmm0
-; X64-NEXT:    vandps (%rdi), %xmm0, %xmm0
+; X64-NEXT:    vmovaps (%rdi), %xmm0
+; X64-NEXT:    vandps (%rsi), %xmm0, %xmm0
 ; X64-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl -24(%rsp,%rdx), %eax
 ; X64-NEXT:    cmpb -24(%rsp,%rcx), %al
