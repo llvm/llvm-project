@@ -1618,11 +1618,21 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               // May need relegalization for the scalars.
               return std::pair(0, EltTy);
             })
-    .minScalar(0, S32)
-    .narrowScalarIf(isWideScalarExtLoadTruncStore(0), changeTo(0, S32))
-    .widenScalarToNextPow2(0)
-    .moreElementsIf(vectorSmallerThan(0, 32), moreEltsToNext32Bit(0))
-    .lower();
+        .minScalar(0, S32)
+        // only narrow to mem size if mem size is power of 2
+        .narrowScalarIf(
+            [=](const LegalityQuery &Query) -> bool {
+              unsigned MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
+              return isWideScalarExtLoadTruncStore(0)(Query) &&
+                     isPowerOf2_64(MemSize);
+            },
+            [=](const LegalityQuery &Query) {
+              unsigned MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
+              return std::make_pair(0, LLT::scalar(MemSize));
+            })
+        .widenScalarToNextPow2(0)
+        .moreElementsIf(vectorSmallerThan(0, 32), moreEltsToNext32Bit(0))
+        .lower();
   }
 
   // FIXME: Unaligned accesses not lowered.
