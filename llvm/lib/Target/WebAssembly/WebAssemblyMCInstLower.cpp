@@ -237,7 +237,8 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
       assert(DescIndex < Desc.NumOperands && "unexpected CImmediate operand");
       auto Operands = Desc.operands();
       const MCOperandInfo &Info = Operands[DescIndex];
-      assert(Info.OperandType == WebAssembly::OPERAND_TYPEINDEX && "unexpected CImmediate operand");
+      assert(Info.OperandType == WebAssembly::OPERAND_TYPEINDEX &&
+             "unexpected CImmediate operand");
       MCOp = lowerEncodedFunctionSignature(MO.getCImm()->getValue());
       break;
     }
