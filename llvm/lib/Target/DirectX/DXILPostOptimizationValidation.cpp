@@ -301,23 +301,16 @@ static void reportInvalidHandleTy(
         &Resources) {
   for (auto Res = Resources.begin(), End = Resources.end(); Res != End; Res++) {
     llvm::dxil::ResourceInfo::ResourceBinding Binding = Res->getBinding();
-    bool IsBound = false;
     for (const auto &RD : RDs) {
       if (Binding.overlapsWith(RD)) {
-        IsBound = true;
-        break;
+        TargetExtType *Handle = Res->getHandleTy();
+        auto *TypedBuffer = dyn_cast_or_null<TypedBufferExtType>(Handle);
+        auto *Texture = dyn_cast_or_null<TextureExtType>(Handle);
+
+        if (TypedBuffer != nullptr || Texture != nullptr)
+          reportInvalidHandleTyBoundInRs(M, Res->getName(), Res->getBinding());
       }
     }
-
-    if (!IsBound)
-      continue;
-
-    TargetExtType *Handle = Res->getHandleTy();
-    auto *TypedBuffer = dyn_cast_or_null<TypedBufferExtType>(Handle);
-    auto *Texture = dyn_cast_or_null<TextureExtType>(Handle);
-
-    if (TypedBuffer != nullptr || Texture != nullptr)
-      reportInvalidHandleTyBoundInRs(M, Res->getName(), Res->getBinding());
   }
 }
 
