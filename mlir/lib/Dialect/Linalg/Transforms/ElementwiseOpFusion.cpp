@@ -26,8 +26,6 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/LogicalResult.h"
 #include <optional>
 #include <utility>
 
@@ -1169,19 +1167,10 @@ struct FoldReshapeWithProducerPadOpByExpansion
       OpFoldResult h = high[inDimIdx];
 
       if (!isConstantIntValue(l, 0) || !isConstantIntValue(h, 0)) {
-        auto srcType = cast<RankedTensorType>(padOp.getSource().getType());
-        int64_t originalSize = srcType.getDimSize(inDimIdx);
-
-        OpFoldResult originalSizeOFR;
-        if (originalSize == ShapedType::kDynamic) {
-          Value orgSizeVal =
-              rewriter.create<tensor::DimOp>(loc, padOp.getSource(), inDimIdx);
-          originalSizeOFR = orgSizeVal;
-        } else {
-          originalSizeOFR = rewriter.getI64IntegerAttr(originalSize);
-        }
         assert(reInd.size() == 1 && "expected single dimension");
-        expandedShape[reInd[0]] = originalSizeOFR;
+        expandedShape[reInd[0]] =
+            tensor::getMixedSize(rewriter, loc, padOp.getSource(), inDimIdx);
+        ;
       }
     }
 
@@ -1288,18 +1277,8 @@ struct FoldReshapeWithProducerPadOpByCollapsing
       OpFoldResult h = high[reInd[0]];
 
       if (!isConstantIntValue(l, 0) || !isConstantIntValue(h, 0)) {
-        auto srcType = cast<RankedTensorType>(padOp.getSource().getType());
-        int64_t originalSize = srcType.getDimSize(reInd[0]);
-
-        OpFoldResult originalSizeOFR;
-        if (originalSize == ShapedType::kDynamic) {
-          Value orgSizeVal =
-              rewriter.create<tensor::DimOp>(loc, padOp.getSource(), reInd[0]);
-          originalSizeOFR = orgSizeVal;
-        } else {
-          originalSizeOFR = rewriter.getI64IntegerAttr(originalSize);
-        }
-        collapsedShape[inDimIdx] = originalSizeOFR;
+        collapsedShape[inDimIdx] =
+            tensor::getMixedSize(rewriter, loc, padOp.getSource(), reInd[0]);
       }
     }
 
