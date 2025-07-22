@@ -11,6 +11,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/Stack.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -24,7 +25,14 @@
 using namespace clang;
 using namespace ento;
 
-ModelInjector::ModelInjector(CompilerInstance &CI) : CI(CI) {}
+ModelInjector::ModelInjector(CompilerInstance &CI) : CI(CI) {
+  if (!CI.getAnalyzerOpts().ModelPath.empty()) {
+    auto S = CI.getVirtualFileSystem().status(CI.getAnalyzerOpts().ModelPath);
+    if (!S || S->getType() != llvm::sys::fs::file_type::directory_file)
+      CI.getDiagnostics().Report(diag::err_analyzer_config_invalid_input)
+          << "model-path" << "a filename";
+  }
+}
 
 Stmt *ModelInjector::getBody(const FunctionDecl *D) {
   onBodySynthesis(D);
