@@ -438,7 +438,7 @@ struct UnrollCreateDescOp : public UnrollPattern<xegpu::CreateDescOp> {
           Value inc = arith::ConstantIndexOp::create(rewriter, loc,
                                                      i * blockedChunkSize);
           Value incVec =
-              vector::SplatOp::create(rewriter, loc, indiceType, inc);
+              vector::BroadcastOp::create(rewriter, loc, indiceType, inc);
           Value offsetIndice =
               arith::AddIOp::create(rewriter, loc, indice, incVec);
 
