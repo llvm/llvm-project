@@ -1189,6 +1189,7 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   }
   fixVALUPartialForwardingHazard(MI);
   fixVALUTransUseHazard(MI);
+  fixVALUTransCoexecutionHazards(MI);
   fixWMMAHazards(MI);
   fixShift64HighRegBug(MI);
   fixVALUMaskWriteHazard(MI);
@@ -1806,6 +1807,51 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
           TII.get(AMDGPU::S_WAITCNT_DEPCTR))
       .addImm(AMDGPU::DepCtr::encodeFieldVaVdst(0));
 
+  return true;
+}
+
+bool GCNHazardRecognizer::fixVALUTransCoexecutionHazards(MachineInstr *MI) {
+  if (!AMDGPU::isGFX1250(ST) || // Coexecution disabled.
+      !SIInstrInfo::isVALU(*MI) || SIInstrInfo::isTRANS(*MI))
+    return false;
+
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+
+  auto IsTransHazardFn = [MI, TII, TRI](const MachineInstr &I) {
+    if (!SIInstrInfo::isTRANS(I))
+      return false;
+
+    // RAW: Trans(I) writes, VALU(MI) reads.
+    Register TransDef = TII->getNamedOperand(I, AMDGPU::OpName::vdst)->getReg();
+    for (const MachineOperand &ValuUse : MI->explicit_uses()) {
+      if (ValuUse.isReg() && TRI->regsOverlap(TransDef, ValuUse.getReg()))
+        return true;
+    }
+
+    auto *ValuDst = TII->getNamedOperand(*MI, AMDGPU::OpName::vdst);
+    if (!ValuDst || !ValuDst->isReg())
+      return false;
+
+    // WAR: Trans(I) reads, VALU(MI) writes.
+    Register ValuDef = ValuDst->getReg();
+    for (const MachineOperand &TransUse : I.explicit_uses()) {
+      if (TransUse.isReg() && TRI->regsOverlap(ValuDef, TransUse.getReg()))
+        return true;
+    }
+
+    return false;
+  };
+
+  auto IsExpiredFn = [](const MachineInstr &I, int) {
+    return SIInstrInfo::isVALU(I);
+  };
+
+  const int HasVALU = std::numeric_limits<int>::max();
+  if (::getWaitStatesSince(IsTransHazardFn, MI, IsExpiredFn) == HasVALU)
+    return false;
+
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(AMDGPU::V_NOP_e32));
   return true;
 }
 
@@ -3160,7 +3206,7 @@ bool GCNHazardRecognizer::fixRequiredExportPriority(MachineInstr *MI) {
   // Check entry priority at each export (as there will only be a few).
   // Note: amdgpu_gfx can only be a callee, so defer to caller setprio.
   bool Changed = false;
-  if (CC != CallingConv::AMDGPU_Gfx)
+  if (CC != CallingConv::AMDGPU_Gfx && CC != CallingConv::AMDGPU_Gfx_WholeWave)
     Changed = ensureEntrySetPrio(MF, NormalPriority, TII);
 
   auto NextMI = std::next(It);

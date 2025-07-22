@@ -1422,19 +1422,6 @@ def fno_hip_emit_relocatable : Flag<["-"], "fno-hip-emit-relocatable">,
   HelpText<"Do not override toolchain to compile HIP source to relocatable">;
 }
 
-// Clang specific/exclusive options for OpenACC.
-def openacc_macro_override
-    : Separate<["-"], "fexperimental-openacc-macro-override">,
-      Visibility<[ClangOption, CC1Option]>,
-      Group<f_Group>,
-      HelpText<"Overrides the _OPENACC macro value for experimental testing "
-               "during OpenACC support development">;
-def openacc_macro_override_EQ
-    : Joined<["-"], "fexperimental-openacc-macro-override=">,
-      Alias<openacc_macro_override>;
-
-// End Clang specific/exclusive options for OpenACC.
-
 def libomptarget_amdgpu_bc_path_EQ : Joined<["--"], "libomptarget-amdgpu-bc-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-amdgcn bitcode library">;
 def libomptarget_amdgcn_bc_path_EQ : Joined<["--"], "libomptarget-amdgcn-bc-path=">, Group<i_Group>,
@@ -2176,10 +2163,10 @@ def fwasm_exceptions : Flag<["-"], "fwasm-exceptions">, Group<f_Group>,
   HelpText<"Use WebAssembly style exceptions">;
 def exception_model : Separate<["-"], "exception-model">,
   Visibility<[CC1Option]>, HelpText<"The exception model">,
-  Values<"dwarf,sjlj,seh,wasm">,
-  NormalizedValuesScope<"LangOptions::ExceptionHandlingKind">,
-  NormalizedValues<["DwarfCFI", "SjLj", "WinEH", "Wasm"]>,
-  MarshallingInfoEnum<LangOpts<"ExceptionHandling">, "None">;
+  Values<"dwarf,sjlj,seh,wasm,none">,
+  NormalizedValuesScope<"CodeGenOptions::ExceptionHandlingKind">,
+  NormalizedValues<["DwarfCFI", "SjLj", "WinEH", "Wasm", "None"]>,
+  MarshallingInfoEnum<CodeGenOpts<"ExceptionHandling">, "None">;
 def exception_model_EQ : Joined<["-"], "exception-model=">,
   Visibility<[CC1Option]>, Alias<exception_model>;
 def fignore_exceptions : Flag<["-"], "fignore-exceptions">, Group<f_Group>,
@@ -3270,13 +3257,14 @@ defm skip_odr_check_in_gmf : BoolOption<"f", "skip-odr-check-in-gmf",
           "Perform ODR checks for decls in the global module fragment.">>,
   Group<f_Group>;
 
-def modules_reduced_bmi : Flag<["-"], "fmodules-reduced-bmi">,
-  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Generate the reduced BMI">,
-  MarshallingInfoFlag<FrontendOpts<"GenReducedBMI">>;
+defm modules_reduced_bmi : BoolOption<"f", "modules-reduced-bmi",
+  FrontendOpts<"GenReducedBMI">, DefaultFalse,
+  NegFlag<SetFalse>,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Generate the reduced BMI">>;
 
 def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
-  Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<modules_reduced_bmi>;
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<fmodules_reduced_bmi>;
 
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
   Visibility<[ClangOption, CC1Option, CLOption]>,

@@ -268,6 +268,10 @@ def SIpc_add_rel_offset : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET",
   SDTypeProfile<1, 2, [SDTCisVT<0, iPTR>, SDTCisSameAs<0,1>, SDTCisSameAs<0,2>]>
 >;
 
+def SIpc_add_rel_offset64 : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET64",
+  SDTypeProfile<1, 1, [SDTCisVT<0, iPTR>, SDTCisSameAs<0,1>]>
+>;
+
 def SIlds : SDNode<"AMDGPUISD::LDS",
   SDTypeProfile<1, 1, [SDTCisVT<0, iPTR>, SDTCisSameAs<0,1>]>
 >;
@@ -1637,6 +1641,8 @@ def VOP3PMods  : ComplexPattern<untyped, 2, "SelectVOP3PMods">;
 
 def VOP3PModsDOT  : ComplexPattern<untyped, 2, "SelectVOP3PModsDOT">;
 def VOP3PModsNeg  : ComplexPattern<untyped, 1, "SelectVOP3PModsNeg">;
+def VOP3PModsNegs  : ComplexPattern<untyped, 1, "SelectVOP3PModsNegs">; // chfang: not use complex pattern?
+def VOP3PModsNegAbs  : ComplexPattern<untyped, 1, "SelectVOP3PModsNegAbs">;
 def WMMAOpSelVOP3PMods  : ComplexPattern<untyped, 1, "SelectWMMAOpSelVOP3PMods">;
 
 def WMMAModsF32NegAbs  : ComplexPattern<untyped, 2, "SelectWMMAModsF32NegAbs">;
@@ -2844,6 +2850,7 @@ def VOP_F16_I16 : VOPProfile <[f16, i16, untyped, untyped]>;
 def VOP_I16_F16 : VOPProfile <[i16, f16, untyped, untyped]>;
 def VOP_I16_I16 : VOPProfile <[i16, i16, untyped, untyped]>;
 def VOP_BF16_BF16 : VOPProfile<[bf16, bf16, untyped, untyped]>;
+def VOP1_I16_I32 :  VOPProfile<[i16, i32, untyped, untyped]>;
 
 def VOP_F16_F16_F16 : VOPProfile <[f16, f16, f16, untyped]>;
 def VOP_F16_F16_I16 : VOPProfile <[f16, f16, i16, untyped]>;

@@ -546,6 +546,7 @@ enum NodeType : unsigned {
   /// Pointer to the start of the shader's constant data.
   CONST_DATA_PTR,
   PC_ADD_REL_OFFSET,
+  PC_ADD_REL_OFFSET64,
   LDS,
 
   DUMMY_CHAIN,
@@ -608,6 +609,12 @@ enum NodeType : unsigned {
   BUFFER_ATOMIC_FMAX,
   BUFFER_ATOMIC_COND_SUB_U32,
   LAST_MEMORY_OPCODE = BUFFER_ATOMIC_COND_SUB_U32,
+
+  // Set up a whole wave function.
+  WHOLE_WAVE_SETUP,
+
+  // Return from a whole wave function.
+  WHOLE_WAVE_RETURN,
 };
 
 } // End namespace AMDGPUISD

@@ -89,6 +89,12 @@ def FeatureEnableFlatScratch : SubtargetFeature<"enable-flat-scratch",
   "Use scratch_* flat memory instructions to access scratch"
 >;
 
+def FeatureFlatGVSMode : SubtargetFeature<"flat-gvs-mode",
+  "FlatGVSMode",
+  "true",
+  "Have GVS addressing mode with flat_* instructions"
+>;
+
 def FeatureAddNoCarryInsts : SubtargetFeature<"add-no-carry-insts",
   "AddNoCarryInsts",
   "true",
@@ -1112,6 +1118,12 @@ def FeatureBitOp3Insts : SubtargetFeature<"bitop3-insts",
   "Has v_bitop3_b32/v_bitop3_b16 instructions"
 >;
 
+def FeatureTanhInsts : SubtargetFeature<"tanh-insts",
+  "HasTanhInsts",
+  "true",
+  "Has v_tanh_f32/f16 instructions"
+>;
+
 def FeatureTransposeLoadF4F6Insts : SubtargetFeature<"transpose-load-f4f6-insts",
   "HasTransposeLoadF4F6Insts",
   "true",
@@ -1953,6 +1965,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureShaderCyclesHiLoRegisters,
    FeatureArchitectedFlatScratch,
    FeatureArchitectedSGPRs,
+   FeatureFlatGVSMode,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
    FeatureAtomicDsPkAdd16Insts,
@@ -1971,6 +1984,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureScalarDwordx3Loads,
    FeatureDPPSrc1SGPR,
    FeatureBitOp3Insts,
+   FeatureTanhInsts,
    FeatureTransposeLoadF4F6Insts,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
@@ -2380,6 +2394,9 @@ def HasFlatScratchSTMode : Predicate<"Subtarget->hasFlatScratchSTMode()">,
 def HasFlatScratchSVSMode : Predicate<"Subtarget->hasFlatScratchSVSMode()">,
   AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX11Insts)>;
 
+def HasFlatGVSMode : Predicate<"Subtarget->hasFlatGVSMode()">,
+  AssemblerPredicate<(all_of FeatureFlatGVSMode)>;
+
 def HasGFX10_AEncoding : Predicate<"Subtarget->hasGFX10_AEncoding()">,
   AssemblerPredicate<(all_of FeatureGFX10_AEncoding)>;
 
@@ -2666,6 +2683,9 @@ def HasDefaultComponentBroadcast
 def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
   AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;
 
+def HasAddPC64Inst : Predicate<"Subtarget->hasAddPC64Inst()">,
+  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
+
 def EnableFlatScratch : Predicate<"Subtarget->enableFlatScratch()">;
 
 def DisableFlatScratch : Predicate<"!Subtarget->enableFlatScratch()">;
@@ -2688,6 +2708,9 @@ def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
 
 def HasBitOp3Insts : Predicate<"Subtarget->hasBitOp3Insts()">,
   AssemblerPredicate<(all_of FeatureBitOp3Insts)>;
+
+def HasTanhInsts : Predicate<"Subtarget->hasTanhInsts()">,
+  AssemblerPredicate<(all_of FeatureTanhInsts)>;
 
 def HasTransposeLoadF4F6Insts : Predicate<"Subtarget->hasTransposeLoadF4F6Insts()">,
   AssemblerPredicate<(all_of FeatureTransposeLoadF4F6Insts)>;

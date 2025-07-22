@@ -298,6 +298,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   StringValue LongBranchReservedReg;
 
   bool HasInitWholeWave = false;
+  bool IsWholeWaveFunction = false;
 
   unsigned DynamicVGPRBlockSize = 0;
   unsigned ScratchReservedForDynamicVGPRs = 0;
@@ -357,7 +358,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("dynamicVGPRBlockSize", MFI.DynamicVGPRBlockSize, false);
     YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
                        MFI.ScratchReservedForDynamicVGPRs, 0);
-    YamlIO.mapOptional("usesWholeWave", MFI.UsesWholeWave, false);
+    YamlIO.mapOptional("isWholeWaveFunction", MFI.IsWholeWaveFunction, false);
   }
 };
 
@@ -586,6 +587,8 @@ private:
   // the serialization easier.
   ReservedRegSet WWMReservedRegs;
 
+  bool IsWholeWaveFunction = false;
+
   using PrologEpilogSGPRSpill =
       std::pair<Register, PrologEpilogSGPRSaveRestoreInfo>;
   // To track the SGPR spill method used for a CSR SGPR register during
@@ -692,6 +695,8 @@ public:
   bool isWWMReservedRegister(Register Reg) const {
     return WWMReservedRegs.contains(Reg);
   }
+
+  bool isWholeWaveFunction() const { return IsWholeWaveFunction; }
 
   ArrayRef<PrologEpilogSGPRSpill> getPrologEpilogSGPRSpills() const {
     assert(is_sorted(PrologEpilogSGPRSpills, llvm::less_first()));

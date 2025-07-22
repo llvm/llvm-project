@@ -127,7 +127,7 @@ def AMDGPU_ScaledExtPackedOp
   let summary = "Extend a vector of packed floating point values";
 
   let description = [{
-    Extend and scale two packed floats in `source[index]` to two floats and 
+    Extend and scale two packed floats in `source[index]` to two floats and
     return them.
 
     This rather unusual signature arises from the fact that AMD GPUs cannot
@@ -861,7 +861,7 @@ def AMDGPU_WMMAOp :
 }
 
 def AMDGPU_GatherToLDSOp :
-    AMDGPU_Op<"gather_to_lds", [SameVariadicOperandSize]>,
+    AMDGPU_Op<"gather_to_lds", [AttrSizedOperandSegments]>,
     Arguments<(ins
                    Arg<AnyMemRef, "buffer to gather from", [MemRead]>:$src,
                    Variadic<Index>:$srcIndices,
@@ -966,13 +966,13 @@ def AMDGPU_ScaledMFMAOp :
     order (that is, v[0] will go to arg[7:0], v[1] to arg[15:8] and so on).
 
     This wrapper takes inspiration from `amdgpu.mfma`, but has some key differences:
-    - `amdgpu.scaled_mfma` operates on fp4 (f4E2M1FN), fp6 (f6E2M3FN and f6E3M2FN) and 
-    fp8 (f8E4M3FN and f8E5M2) types using either M=N=16, K=128 or M=N=32, K=64 as their tile 
-    size. 
-    - `amdgpu.scaled_mfma` does not support broadcasting. So, `cbsz`, `abid`, and `blgp` 
+    - `amdgpu.scaled_mfma` operates on fp4 (f4E2M1FN), fp6 (f6E2M3FN and f6E3M2FN) and
+    fp8 (f8E4M3FN and f8E5M2) types using either M=N=16, K=128 or M=N=32, K=64 as their tile
+    size.
+    - `amdgpu.scaled_mfma` does not support broadcasting. So, `cbsz`, `abid`, and `blgp`
     are omitted from this wrapper.
-    - The `negateA`, `negateB`, and `negateC` flags in `amdgpu.mfma` are only supported for 
-    double-precision operations on gfx94x and so are not included here. 
+    - The `negateA`, `negateB`, and `negateC` flags in `amdgpu.mfma` are only supported for
+    double-precision operations on gfx94x and so are not included here.
   }];
   let assemblyFormat = [{
     `(` $scalesA `[` $scalesIdxA `]` `*` $sourceA `)` `*` `(` $scalesB `[` $scalesIdxB `]` `*` $sourceB `)` `+` $destC
