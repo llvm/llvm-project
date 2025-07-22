@@ -7596,32 +7596,17 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 
     const int64_t ObjectSize =
         cast<ConstantInt>(I.getArgOperand(0))->getSExtValue();
-    Value *const ObjectPtr = I.getArgOperand(1);
-    SmallVector<const Value *, 4> Allocas;
-    getUnderlyingObjects(ObjectPtr, Allocas);
+    const AllocaInst *LifetimeObject = cast<AllocaInst>(I.getArgOperand(1));
 
-    for (const Value *Alloca : Allocas) {
-      const AllocaInst *LifetimeObject = dyn_cast_or_null<AllocaInst>(Alloca);
+    // First check that the Alloca is static, otherwise it won't have a
+    // valid frame index.
+    auto SI = FuncInfo.StaticAllocaMap.find(LifetimeObject);
+    if (SI == FuncInfo.StaticAllocaMap.end())
+      return;
 
-      // Could not find an Alloca.
-      if (!LifetimeObject)
-        continue;
-
-      // First check that the Alloca is static, otherwise it won't have a
-      // valid frame index.
-      auto SI = FuncInfo.StaticAllocaMap.find(LifetimeObject);
-      if (SI == FuncInfo.StaticAllocaMap.end())
-        return;
-
-      const int FrameIndex = SI->second;
-      int64_t Offset;
-      if (GetPointerBaseWithConstantOffset(
-              ObjectPtr, Offset, DAG.getDataLayout()) != LifetimeObject)
-        Offset = -1; // Cannot determine offset from alloca to lifetime object.
-      Res = DAG.getLifetimeNode(IsStart, sdl, getRoot(), FrameIndex, ObjectSize,
-                                Offset);
-      DAG.setRoot(Res);
-    }
+    const int FrameIndex = SI->second;
+    Res = DAG.getLifetimeNode(IsStart, sdl, getRoot(), FrameIndex, ObjectSize);
+    DAG.setRoot(Res);
     return;
   }
   case Intrinsic::pseudoprobe: {
