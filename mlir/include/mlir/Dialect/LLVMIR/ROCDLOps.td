@@ -289,7 +289,7 @@ def ROCDL_WaitDscntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.dscnt", [], 0, [0], ["
   let summary = "Wait until DSCNT is less than or equal to `count`";
   let description = [{
       Wait for the counter specified to be less-than or equal-to the `count`
-      before continuing
+      before continuing.
 
       Available on gfx12+.
   }];
@@ -302,7 +302,7 @@ def ROCDL_WaitLoadcntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.loadcnt", [], 0, [0]
   let summary = "Wait until LOADCNT is less than or equal to `count`";
   let description = [{
       Wait for the counter specified to be less-than or equal-to the `count`
-      before continuing
+      before continuing.
 
       Available on gfx12+.
   }];
@@ -315,7 +315,7 @@ def ROCDL_WaitStorecntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.storecnt", [], 0, [
   let summary = "Wait until STORECNT is less than or equal to `count`";
   let description = [{
       Wait for the counter specified to be less-than or equal-to the `count`
-      before continuing
+      before continuing.
 
       Available on gfx12+.
   }];
@@ -328,7 +328,7 @@ def ROCDL_WaitExpcntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.expcnt", [], 0, [0], 
   let summary = "Wait until EXPCNT is less than or equal to `count`";
   let description = [{
       Wait for the counter specified to be less-than or equal-to the `count`
-      before continuing
+      before continuing.
 
       Available on gfx12+.
   }];
