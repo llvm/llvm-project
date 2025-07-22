@@ -6433,13 +6433,15 @@ experimental at this time.
 def PreserveNoneDocs : Documentation {
   let Category = DocCatCallingConvs;
   let Content = [{
-On X86-64 and AArch64 targets, this attribute changes the calling convention of a function.
+On X86, X86-64, and AArch64 targets, this attribute changes the calling convention of a function.
 The ``preserve_none`` calling convention tries to preserve as few general
 registers as possible. So all general registers are caller saved registers. It
 also uses more general registers to pass arguments. This attribute doesn't
 impact floating-point registers. ``preserve_none``'s ABI is still unstable, and
 may be changed in the future.
 
+- On X86, only ESP and EBP are preserved by the callee. Registers EDI, ESI, EDX,
+  ECX, and EAX now can be used to pass function arguments.
 - On X86-64, only RSP and RBP are preserved by the callee.
   Registers R12, R13, R14, R15, RDI, RSI, RDX, RCX, R8, R9, R11, and RAX now can
   be used to pass function arguments. Floating-point registers (XMMs/YMMs) still

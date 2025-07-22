@@ -1,4 +1,5 @@
 ; RUN: not llc -mtriple=x86_64-unknown-unknown -mcpu=corei7 %s -o - 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=i686-unknown-unknown %s -o - 2>&1 | FileCheck %s
 
 ; Incompatible calling convention causes following error message.
 
