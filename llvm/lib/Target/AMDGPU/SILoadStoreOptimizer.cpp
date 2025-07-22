@@ -61,6 +61,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIDefines.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
@@ -1078,7 +1079,9 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
     if (EltOffset0 + CI.Width != EltOffset1 &&
             EltOffset1 + Paired.Width != EltOffset0)
       return false;
-    if (CI.CPol != Paired.CPol)
+    // Instructions with scale_offset modifier cannot be combined unless we
+    // also generate a code to scale the offset and reset that bit.
+    if (CI.CPol != Paired.CPol || (CI.CPol & AMDGPU::CPol::SCAL))
       return false;
     if (CI.InstClass == S_LOAD_IMM || CI.InstClass == S_BUFFER_LOAD_IMM ||
         CI.InstClass == S_BUFFER_LOAD_SGPR_IMM) {

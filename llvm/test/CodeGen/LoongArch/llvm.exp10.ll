@@ -200,17 +200,18 @@ define <2 x double> @exp10_v2f64(<2 x double> %x) #0 {
 ; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(exp10)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    movfr2gr.d $a0, $fa0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
+; LA64-NEXT:    vextrins.d $vr0, $vr0, 0
 ; LA64-NEXT:    vst $vr0, $sp, 16 # 16-byte Folded Spill
 ; LA64-NEXT:    vld $vr0, $sp, 0 # 16-byte Folded Reload
 ; LA64-NEXT:    vreplvei.d $vr0, $vr0, 1
 ; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(exp10)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    movfr2gr.d $a0, $fa0
-; LA64-NEXT:    vld $vr0, $sp, 16 # 16-byte Folded Reload
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 1
+; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
+; LA64-NEXT:    vld $vr1, $sp, 16 # 16-byte Folded Reload
+; LA64-NEXT:    vextrins.d $vr1, $vr0, 16
+; LA64-NEXT:    vori.b $vr0, $vr1, 0
 ; LA64-NEXT:    ld.d $ra, $sp, 40 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 48
 ; LA64-NEXT:    ret
