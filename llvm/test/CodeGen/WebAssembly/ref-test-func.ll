@@ -3,70 +3,9 @@
 
 target triple = "wasm32-unknown-unknown"
 
-; Function Attrs: nounwind
-define void @test_fpsig_1(ptr noundef %func) local_unnamed_addr #0 {
-; CHECK-LABEL: test_fpsig_1:
-; CHECK:         .functype test_fpsig_1 (i32) -> ()
-; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    table.get __indirect_function_table
-; CHECK-NEXT:    ref.test (f32, f64, i32) -> (f32)
-; CHECK-NEXT:    call use
-; CHECK-NEXT:    # fallthrough-return
-entry:
-  %res = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, float 0.000000e+00, float 0.000000e+00, double 0.000000e+00, i32 0)
-  tail call void @use(i32 noundef %res) #3
-  ret void
-}
-
-define void @test_fpsig_2(ptr noundef %func) local_unnamed_addr #0 {
-; CHECK-LABEL: test_fpsig_2:
-; CHECK:         .functype test_fpsig_2 (i32) -> ()
-; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    table.get __indirect_function_table
-; CHECK-NEXT:    ref.test (f32, f64, i32) -> (i32)
-; CHECK-NEXT:    call use
-; CHECK-NEXT:    # fallthrough-return
-entry:
-  %res = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, i32 0, float 0.000000e+00, double 0.000000e+00, i32 0)
-  tail call void @use(i32 noundef %res) #3
-  ret void
-}
-
-define void @test_fpsig_3(ptr noundef %func) local_unnamed_addr #0 {
-; CHECK-LABEL: test_fpsig_3:
-; CHECK:         .functype test_fpsig_3 (i32) -> ()
-; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    table.get __indirect_function_table
-; CHECK-NEXT:    ref.test (i32, i32, i32) -> (i32)
-; CHECK-NEXT:    call use
-; CHECK-NEXT:    # fallthrough-return
-entry:
-  %res = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, i32 0, i32 0, i32 0, i32 0)
-  tail call void @use(i32 noundef %res) #3
-  ret void
-}
-
-define void @test_fpsig_4(ptr noundef %func) local_unnamed_addr #0 {
-; CHECK-LABEL: test_fpsig_4:
-; CHECK:         .functype test_fpsig_4 (i32) -> ()
-; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    table.get __indirect_function_table
-; CHECK-NEXT:    ref.test (i32, i32, i32) -> ()
-; CHECK-NEXT:    call use
-; CHECK-NEXT:    # fallthrough-return
-entry:
-  %res = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, token poison, i32 0, i32 0, i32 0)
-  tail call void @use(i32 noundef %res) #3
-  ret void
-}
-
-define void @test_fpsig_5(ptr noundef %func) local_unnamed_addr #0 {
-; CHECK-LABEL: test_fpsig_5:
-; CHECK:         .functype test_fpsig_5 (i32) -> ()
+define void @test_fpsig_void_void(ptr noundef %func) local_unnamed_addr #0 {
+; CHECK-LABEL: test_fpsig_void_void:
+; CHECK:         .functype test_fpsig_void_void (i32) -> ()
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    table.get __indirect_function_table
@@ -74,9 +13,102 @@ define void @test_fpsig_5(ptr noundef %func) local_unnamed_addr #0 {
 ; CHECK-NEXT:    call use
 ; CHECK-NEXT:    # fallthrough-return
 entry:
-  %res = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, token poison)
+  %res = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func)
   tail call void @use(i32 noundef %res) #3
   ret void
 }
+
+define void @test_fpsig_return_i32(ptr noundef %func) local_unnamed_addr #0 {
+; CHECK-LABEL: test_fpsig_return_i32:
+; CHECK:         .functype test_fpsig_return_i32 (i32) -> ()
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    table.get __indirect_function_table
+; CHECK-NEXT:    ref.test () -> (i32)
+; CHECK-NEXT:    call use
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %res = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, i32 0)
+  tail call void @use(i32 noundef %res) #3
+  ret void
+}
+
+define void @test_fpsig_return_i64(ptr noundef %func) local_unnamed_addr #0 {
+; CHECK-LABEL: test_fpsig_return_i64:
+; CHECK:         .functype test_fpsig_return_i64 (i32) -> ()
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    table.get __indirect_function_table
+; CHECK-NEXT:    ref.test () -> (i64)
+; CHECK-NEXT:    call use
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %res = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, i64 0)
+  tail call void @use(i32 noundef %res) #3
+  ret void
+}
+
+define void @test_fpsig_return_f32(ptr noundef %func) local_unnamed_addr #0 {
+; CHECK-LABEL: test_fpsig_return_f32:
+; CHECK:         .functype test_fpsig_return_f32 (i32) -> ()
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    table.get __indirect_function_table
+; CHECK-NEXT:    ref.test () -> (f32)
+; CHECK-NEXT:    call use
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %res = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, float 0.)
+  tail call void @use(i32 noundef %res) #3
+  ret void
+}
+
+define void @test_fpsig_return_f64(ptr noundef %func) local_unnamed_addr #0 {
+; CHECK-LABEL: test_fpsig_return_f64:
+; CHECK:         .functype test_fpsig_return_f64 (i32) -> ()
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    table.get __indirect_function_table
+; CHECK-NEXT:    ref.test () -> (f64)
+; CHECK-NEXT:    call use
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %res = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, double 0.)
+  tail call void @use(i32 noundef %res) #3
+  ret void
+}
+
+
+define void @test_fpsig_param_i32(ptr noundef %func) local_unnamed_addr #0 {
+; CHECK-LABEL: test_fpsig_param_i32:
+; CHECK:         .functype test_fpsig_param_i32 (i32) -> ()
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    table.get __indirect_function_table
+; CHECK-NEXT:    ref.test (f64) -> ()
+; CHECK-NEXT:    call use
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %res = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, token poison, double 0.)
+  tail call void @use(i32 noundef %res) #3
+  ret void
+}
+
+
+define void @test_fpsig_multiple_params_and_returns(ptr noundef %func) local_unnamed_addr #0 {
+; CHECK-LABEL: test_fpsig_multiple_params_and_returns:
+; CHECK:         .functype test_fpsig_multiple_params_and_returns (i32) -> ()
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    table.get __indirect_function_table
+; CHECK-NEXT:    ref.test (i64, f32, i64) -> (i32, i64, f32, f64)
+; CHECK-NEXT:    call use
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %res = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, i32 0, i64 0, float 0., double 0., token poison, i64 0, float 0., i64 0)
+  tail call void @use(i32 noundef %res) #3
+  ret void
+}
+
 
 declare void @use(i32 noundef) local_unnamed_addr #1

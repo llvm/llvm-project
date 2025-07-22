@@ -121,8 +121,8 @@ static SDValue getTagSymNode(int Tag, SelectionDAG *DAG) {
 }
 
 static APInt encodeFunctionSignature(SelectionDAG *DAG, SDLoc &DL,
-                                     SmallVector<MVT, 4> &Params,
-                                     SmallVector<MVT, 1> &Returns) {
+                                     SmallVector<MVT, 4> &Returns,
+                                     SmallVector<MVT, 4> &Params) {
   auto toWasmValType = [&DAG, &DL](MVT VT) {
     if (VT == MVT::i32) {
       return wasm::ValType::I32;
@@ -148,16 +148,16 @@ static APInt encodeFunctionSignature(SelectionDAG *DAG, SDLoc &DL,
   // emit an Imm instead of a CImm. It simplifies WebAssemblyMCInstLower if we
   // always emit a CImm. So xor NParams with 0x7ffffff to ensure
   // getSignificantBits() > 64
-  Sig |= NParams ^ 0x7ffffff;
-  for (auto &Param : Params) {
-    auto V = toWasmValType(Param);
+  Sig |= NReturns ^ 0x7ffffff;
+  for (auto &Return : Returns) {
+    auto V = toWasmValType(Return);
     Sig <<= 64;
     Sig |= (int64_t)V;
   }
   Sig <<= 64;
-  Sig |= NReturns;
-  for (auto &Return : Returns) {
-    auto V = toWasmValType(Return);
+  Sig |= NParams;
+  for (auto &Param : Params) {
+    auto V = toWasmValType(Param);
     Sig <<= 64;
     Sig |= (int64_t)V;
   }
@@ -252,17 +252,22 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
       // This gets decoded and converted into the actual type signature in
       // WebAssemblyMCInstLower.cpp.
       SmallVector<MVT, 4> Params;
-      SmallVector<MVT, 1> Returns;
+      SmallVector<MVT, 4> Returns;
 
-      MVT VT = Node->getOperand(2).getValueType().getSimpleVT();
-      if (VT != MVT::Untyped) {
-        Returns.push_back(VT);
-      }
-      for (unsigned I = 3; I < Node->getNumOperands(); ++I) {
+      bool IsParam = false;
+      for (unsigned I = 2; I < Node->getNumOperands(); ++I) {
         MVT VT = Node->getOperand(I).getValueType().getSimpleVT();
-        Params.push_back(VT);
+        if (VT == MVT::Untyped) {
+          IsParam = true;
+          continue;
+        }
+        if (IsParam) {
+          Params.push_back(VT);
+        } else {
+          Returns.push_back(VT);
+        }
       }
-      auto Sig = encodeFunctionSignature(CurDAG, DL, Params, Returns);
+      auto Sig = encodeFunctionSignature(CurDAG, DL, Returns, Params);
 
       auto SigOp = CurDAG->getTargetConstant(
           Sig, DL, EVT::getIntegerVT(*CurDAG->getContext(), Sig.getBitWidth()));
