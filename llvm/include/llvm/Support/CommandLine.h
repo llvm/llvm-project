@@ -1518,13 +1518,11 @@ public:
       [](const typename ParserClass::parser_data_type &) {};
 };
 
-#if !defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS) ||                           \
-    !(defined(_MSC_VER) && !defined(__clang__))
-// Only instantiate opt<std::string> when not building a Windows DLL with MSVC.
-// When exporting opt<std::string>, MSVC cl implicitly exports symbols for
+#if !(defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS) && defined(_MSC_VER))
+// Only instantiate opt<std::string> when not building a Windows DLL. When
+// exporting opt<std::string>, MSVC implicitly exports symbols for
 // std::basic_string through transitive inheritance via std::string. These
-// symbols may appear in other TUs with different linkage, leading to duplicate
-// symbol conflicts.
+// symbols may appear in clients, leading to duplicate symbol conflicts.
 extern template class LLVM_TEMPLATE_ABI opt<std::string>;
 #endif
 
