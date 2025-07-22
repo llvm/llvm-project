@@ -153,7 +153,10 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     - If absent, it assumes the tile perfectly divides the dimension.
     - If present, it will pad along high dimensions (high-padding) to make the
       tile complete. Note that it is not allowed to have artificial padding that
-      is not strictly required by linalg.pack.
+      is not strictly required by linalg.pack (i.e., padding past what is needed
+      to complete the last tile along each packed dimension).. It is UB if extra
+      padding is requested for dynamic cases. For static cases, they are caught
+      by the verifier.
 
     Example:
     ```mlir
