@@ -651,26 +651,26 @@ spirv::ConstantOp spirv::ConstantOp::getZero(Type type, Location loc,
   if (auto intType = llvm::dyn_cast<IntegerType>(type)) {
     unsigned width = intType.getWidth();
     if (width == 1)
-      return builder.create<spirv::ConstantOp>(loc, type,
-                                               builder.getBoolAttr(false));
-    return builder.create<spirv::ConstantOp>(
-        loc, type, builder.getIntegerAttr(type, APInt(width, 0)));
+      return spirv::ConstantOp::create(builder, loc, type,
+                                       builder.getBoolAttr(false));
+    return spirv::ConstantOp::create(
+        builder, loc, type, builder.getIntegerAttr(type, APInt(width, 0)));
   }
   if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
-    return builder.create<spirv::ConstantOp>(
-        loc, type, builder.getFloatAttr(floatType, 0.0));
+    return spirv::ConstantOp::create(builder, loc, type,
+                                     builder.getFloatAttr(floatType, 0.0));
   }
   if (auto vectorType = llvm::dyn_cast<VectorType>(type)) {
     Type elemType = vectorType.getElementType();
     if (llvm::isa<IntegerType>(elemType)) {
-      return builder.create<spirv::ConstantOp>(
-          loc, type,
+      return spirv::ConstantOp::create(
+          builder, loc, type,
           DenseElementsAttr::get(vectorType,
                                  IntegerAttr::get(elemType, 0).getValue()));
     }
     if (llvm::isa<FloatType>(elemType)) {
-      return builder.create<spirv::ConstantOp>(
-          loc, type,
+      return spirv::ConstantOp::create(
+          builder, loc, type,
           DenseFPElementsAttr::get(vectorType,
                                    FloatAttr::get(elemType, 0.0).getValue()));
     }
@@ -684,26 +684,26 @@ spirv::ConstantOp spirv::ConstantOp::getOne(Type type, Location loc,
   if (auto intType = llvm::dyn_cast<IntegerType>(type)) {
     unsigned width = intType.getWidth();
     if (width == 1)
-      return builder.create<spirv::ConstantOp>(loc, type,
-                                               builder.getBoolAttr(true));
-    return builder.create<spirv::ConstantOp>(
-        loc, type, builder.getIntegerAttr(type, APInt(width, 1)));
+      return spirv::ConstantOp::create(builder, loc, type,
+                                       builder.getBoolAttr(true));
+    return spirv::ConstantOp::create(
+        builder, loc, type, builder.getIntegerAttr(type, APInt(width, 1)));
   }
   if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
-    return builder.create<spirv::ConstantOp>(
-        loc, type, builder.getFloatAttr(floatType, 1.0));
+    return spirv::ConstantOp::create(builder, loc, type,
+                                     builder.getFloatAttr(floatType, 1.0));
   }
   if (auto vectorType = llvm::dyn_cast<VectorType>(type)) {
     Type elemType = vectorType.getElementType();
     if (llvm::isa<IntegerType>(elemType)) {
-      return builder.create<spirv::ConstantOp>(
-          loc, type,
+      return spirv::ConstantOp::create(
+          builder, loc, type,
           DenseElementsAttr::get(vectorType,
                                  IntegerAttr::get(elemType, 1).getValue()));
     }
     if (llvm::isa<FloatType>(elemType)) {
-      return builder.create<spirv::ConstantOp>(
-          loc, type,
+      return spirv::ConstantOp::create(
+          builder, loc, type,
           DenseFPElementsAttr::get(vectorType,
                                    FloatAttr::get(elemType, 1.0).getValue()));
     }
@@ -1985,7 +1985,7 @@ ParseResult spirv::SpecConstantOperationOp::parse(OpAsmParser &parser,
 
   OpBuilder builder(parser.getContext());
   builder.setInsertionPointToEnd(&block);
-  builder.create<spirv::YieldOp>(wrappedOp->getLoc(), wrappedOp->getResult(0));
+  spirv::YieldOp::create(builder, wrappedOp->getLoc(), wrappedOp->getResult(0));
   result.location = wrappedOp->getLoc();
 
   result.addTypes(wrappedOp->getResult(0).getType());

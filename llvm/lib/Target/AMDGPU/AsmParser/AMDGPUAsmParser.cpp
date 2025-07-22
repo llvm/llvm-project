@@ -5139,13 +5139,45 @@ bool AMDGPUAsmParser::validateAGPRLdSt(const MCInst &Inst) const {
 
 bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
   auto FB = getFeatureBits();
-  unsigned Opc = Inst.getOpcode();
-  // DS_READ_B96_TR_B6 is the only DS instruction in GFX950, that allows
-  // unaligned VGPR. All others only allow even aligned VGPRs.
-  if (!(FB[AMDGPU::FeatureGFX90AInsts]) || Opc == AMDGPU::DS_READ_B96_TR_B6_vi)
+  if (!FB[AMDGPU::FeatureGFX90AInsts] && !FB[AMDGPU::FeatureGFX1250Insts])
     return true;
 
+  unsigned Opc = Inst.getOpcode();
   const MCRegisterInfo *MRI = getMRI();
+  // DS_READ_B96_TR_B6 is the only DS instruction in GFX950, that allows
+  // unaligned VGPR. All others only allow even aligned VGPRs.
+  if (FB[AMDGPU::FeatureGFX90AInsts] && Opc == AMDGPU::DS_READ_B96_TR_B6_vi)
+    return true;
+
+  if (FB[AMDGPU::FeatureGFX1250Insts]) {
+    switch (Opc) {
+    default:
+      break;
+    case AMDGPU::DS_LOAD_TR6_B96:
+    case AMDGPU::DS_LOAD_TR6_B96_gfx12:
+      // DS_LOAD_TR6_B96 is the only DS instruction in GFX1250, that
+      // allows unaligned VGPR. All others only allow even aligned VGPRs.
+      return true;
+    case AMDGPU::GLOBAL_LOAD_TR6_B96:
+    case AMDGPU::GLOBAL_LOAD_TR6_B96_gfx1250: {
+      // GLOBAL_LOAD_TR6_B96 is the only GLOBAL instruction in GFX1250, that
+      // allows unaligned VGPR for vdst, but other operands still only allow
+      // even aligned VGPRs.
+      int VAddrIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr);
+      if (VAddrIdx != -1) {
+        const MCOperand &Op = Inst.getOperand(VAddrIdx);
+        MCRegister Sub = MRI->getSubReg(Op.getReg(), AMDGPU::sub0);
+        if ((Sub - AMDGPU::VGPR0) & 1)
+          return false;
+      }
+      return true;
+    }
+    case AMDGPU::GLOBAL_LOAD_TR6_B96_SADDR:
+    case AMDGPU::GLOBAL_LOAD_TR6_B96_SADDR_gfx1250:
+      return true;
+    }
+  }
+
   const MCRegisterClass &VGPR32 = MRI->getRegClass(AMDGPU::VGPR_32RegClassID);
   const MCRegisterClass &AGPR32 = MRI->getRegClass(AMDGPU::AGPR_32RegClassID);
   for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
@@ -5292,12 +5324,25 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
   unsigned CPol = Inst.getOperand(CPolPos).getImm();
 
   if (!isGFX1250()) {
+    if (CPol & CPol::SCAL) {
+      SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
+      StringRef CStr(S.getPointer());
+      S = SMLoc::getFromPointer(&CStr.data()[CStr.find("scale_offset")]);
+      Error(S, "scale_offset is not supported on this GPU");
+    }
     if (CPol & CPol::NV) {
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
       StringRef CStr(S.getPointer());
       S = SMLoc::getFromPointer(&CStr.data()[CStr.find("nv")]);
       Error(S, "nv is not supported on this GPU");
     }
+  }
+
+  if ((CPol & CPol::SCAL) && !supportsScaleOffset(MII, Inst.getOpcode())) {
+    SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
+    StringRef CStr(S.getPointer());
+    S = SMLoc::getFromPointer(&CStr.data()[CStr.find("scale_offset")]);
+    Error(S, "scale_offset is not supported for this instruction");
   }
 
   if (isGFX12Plus())
@@ -6971,6 +7016,7 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
     ParseStatus ResTH = ParseStatus::NoMatch;
     ParseStatus ResScope = ParseStatus::NoMatch;
     ParseStatus ResNV = ParseStatus::NoMatch;
+    ParseStatus ResScal = ParseStatus::NoMatch;
 
     for (;;) {
       if (ResTH.isNoMatch()) {
@@ -7009,10 +7055,22 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
         }
       }
 
+      if (ResScal.isNoMatch()) {
+        if (trySkipId("scale_offset")) {
+          ResScal = ParseStatus::Success;
+          CPolVal |= CPol::SCAL;
+          continue;
+        } else if (trySkipId("no", "scale_offset")) {
+          ResScal = ParseStatus::Success;
+          continue;
+        }
+      }
+
       break;
     }
 
-    if (ResTH.isNoMatch() && ResScope.isNoMatch() && ResNV.isNoMatch())
+    if (ResTH.isNoMatch() && ResScope.isNoMatch() && ResNV.isNoMatch() &&
+        ResScal.isNoMatch())
       return ParseStatus::NoMatch;
 
     Operands.push_back(AMDGPUOperand::CreateImm(this, CPolVal, StringLoc,
