@@ -955,15 +955,44 @@ TEST_F(SelectionDAGPatternMatchTest, MatchSelectCCLike) {
 
   SDValue LHS = DAG->getConstant(1, SDLoc(), MVT::i32);
   SDValue RHS = DAG->getConstant(2, SDLoc(), MVT::i32);
-  SDValue Select = DAG->getNode(ISD::SELECT_CC, SDLoc(), MVT::i32, LHS,
-                                RHS,
-                                LHS, RHS,
-                                DAG->getCondCode(ISD::SETLT));
+  SDValue TVal = DAG->getConstant(3, SDLoc(), MVT::i32);
+  SDValue FVal = DAG->getConstant(4, SDLoc(), MVT::i32);
+  SDValue Select = DAG->getNode(ISD::SELECT_CC, SDLoc(), MVT::i32, LHS, RHS,
+                                TVal, FVal, DAG->getCondCode(ISD::SETLT));
 
   ISD::CondCode CC = ISD::SETLT;
   auto Matcher =
-      m_SelectCCLike(m_Specific(LHS), m_Specific(RHS), m_Specific(LHS),
-                     m_Specific(RHS), m_CondCode(CC));
+      m_SelectCCLike(m_Specific(LHS), m_Specific(RHS), m_Specific(TVal),
+                     m_Specific(FVal), m_CondCode(CC));
+
+  struct DAGMatchContext {
+    SelectionDAG &DAG;
+    DAGMatchContext(SelectionDAG &DAG) : DAG(DAG) {}
+
+    bool match(SDValue N, unsigned Opcode) const {
+      return N.getOpcode() == Opcode;
+    }
+
+    unsigned getNumOperands(SDValue N) const { return N.getNumOperands(); }
+  };
+
+  DAGMatchContext Ctx(*DAG);
+  EXPECT_TRUE(Matcher.match(Ctx, Select));
+}
+
+TEST_F(SelectionDAGPatternMatchTest, MatchSelectCC) {
+  using namespace SDPatternMatch;
+
+  SDValue LHS = DAG->getConstant(1, SDLoc(), MVT::i32);
+  SDValue RHS = DAG->getConstant(2, SDLoc(), MVT::i32);
+  SDValue TVal = DAG->getConstant(3, SDLoc(), MVT::i32);
+  SDValue FVal = DAG->getConstant(4, SDLoc(), MVT::i32);
+  SDValue Select = DAG->getNode(ISD::SELECT_CC, SDLoc(), MVT::i32, LHS, RHS,
+                                TVal, FVal, DAG->getCondCode(ISD::SETLT));
+
+  ISD::CondCode CC = ISD::SETLT;
+  auto Matcher = m_SelectCC(m_Specific(LHS), m_Specific(RHS), m_Specific(TVal),
+                            m_Specific(FVal), m_CondCode(CC));
 
   struct DAGMatchContext {
     SelectionDAG &DAG;
