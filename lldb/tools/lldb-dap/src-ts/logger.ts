@@ -27,8 +27,8 @@ export class Logger implements vscode.Disposable {
             ],
             format: winston.format.combine(
                 winston.format.errors({ stack: true }),
-                winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-                winston.format.printf(msg => `[${msg.timestamp}][${msg.level}] ${msg.message} ${msg.stack ? msg.stack : ''}`),
+                winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss.SSS" }), // This is the format of `vscode.LogOutputChannel`
+                winston.format.printf(msg => `${msg.timestamp} [${msg.level}] ${msg.message} ${msg.stack ? msg.stack : ''}`),
             ),
         });
         if (process.env.NODE_ENV !== 'production') {
