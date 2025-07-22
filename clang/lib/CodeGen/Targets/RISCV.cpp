@@ -842,6 +842,11 @@ public:
 
     Fn->addFnAttr("interrupt", Kind);
   }
+
+  bool isNoProtoCallVariadic(const CallArgList &,
+                             const FunctionNoProtoType *) const override {
+    return true;
+  }
 };
 } // namespace
 
