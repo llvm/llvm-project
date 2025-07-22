@@ -1846,7 +1846,7 @@ func.func @pack_invalid_result_shape(%input: tensor<256x128xf32>, %output: tenso
 
 // -----
 
-func.func @pack_invalid(%input: tensor<256x128xf32>, %output: tensor<8x7x16x32xf32>) -> tensor<8x7x16x32xf32> {
+func.func @pack_invalid_result_shape(%input: tensor<256x128xf32>, %output: tensor<8x7x16x32xf32>) -> tensor<8x7x16x32xf32> {
   // expected-error@+1 {{expected 'tensor<8x8x16x32xf32>' for the unpacked domain value, got 'tensor<8x7x16x32xf32>'}}
   %0 = linalg.pack %input inner_dims_pos = [1, 0] inner_tiles = [16, 32] into %output : tensor<256x128xf32> -> tensor<8x7x16x32xf32>
   return %0 : tensor<8x7x16x32xf32>
@@ -1854,7 +1854,7 @@ func.func @pack_invalid(%input: tensor<256x128xf32>, %output: tensor<8x7x16x32xf
 
 // -----
 
-func.func @unpack_with_slicing_tiles(%input: tensor<3x8xf32>, %output: tensor<9xf32>) -> tensor<9xf32> {
+func.func @unpack_with_dropping_tiles(%input: tensor<3x8xf32>, %output: tensor<9xf32>) -> tensor<9xf32> {
   // expected-error@+1 {{expected 'tensor<2x8xf32>' for the unpacked domain value, got 'tensor<3x8xf32>'}}
   %0 = linalg.unpack %input inner_dims_pos = [0] inner_tiles = [8] into %output
       : tensor<3x8xf32> -> tensor<9xf32>
@@ -1863,7 +1863,7 @@ func.func @unpack_with_slicing_tiles(%input: tensor<3x8xf32>, %output: tensor<9x
 
 // -----
 
-func.func @unpack_invalid(%output: tensor<256x128xf32>, %input: tensor<8x8x4x32xf32>) -> tensor<256x128xf32> {
+func.func @unpack_invalid_source_shape(%output: tensor<256x128xf32>, %input: tensor<8x8x4x32xf32>) -> tensor<256x128xf32> {
   // expected-error@+1 {{expected 'tensor<8x32x4x32xf32>' for the unpacked domain value, got 'tensor<8x8x4x32xf32>'}}
   %0 = linalg.unpack %input inner_dims_pos = [1, 0] inner_tiles = [4, 32] into %output : tensor<8x8x4x32xf32> -> tensor<256x128xf32>
   return %0 : tensor<256x128xf32>
