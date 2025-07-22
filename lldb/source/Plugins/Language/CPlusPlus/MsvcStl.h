@@ -86,6 +86,12 @@ SyntheticChildrenFrontEnd *
 MsvcStlAtomicSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                       lldb::ValueObjectSP valobj_sp);
 
+// MSVC STL std::unordered_(multi){map|set}<>
+bool IsMsvcStlUnordered(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlUnorderedSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                         lldb::ValueObjectSP valobj_sp);
+
 } // namespace formatters
 } // namespace lldb_private
 
