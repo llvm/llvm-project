@@ -2821,6 +2821,16 @@ public:
   }
 };
 
+struct PredefinedSugarTypeLocInfo {}; // Nothing.
+
+class PredefinedSugarTypeLoc final
+    : public ConcreteTypeLoc<UnqualTypeLoc, PredefinedSugarTypeLoc,
+                             PredefinedSugarType, PredefinedSugarTypeLocInfo> {
+public:
+  void initializeLocal(ASTContext &Context, SourceLocation loc) {}
+  SourceRange getLocalSourceRange() const { return {}; }
+};
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_TYPELOC_H
