@@ -4701,9 +4701,9 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
   }
   if (failed(verifyCompatibleShape(expectedPackedType.getShape(),
                                    packedType.getShape()))) {
-    return op->emitError("the shape of unpacked domain value is not large "
-                         "enough to hold the packed data. Expected at least ")
-           << expectedPackedType << ", got " << packedType;
+    return op->emitError("expected ")
+           << expectedPackedType << " for the unpacked domain value, got "
+           << packedType;
   }
   return success();
 }
