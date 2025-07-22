@@ -868,3 +868,27 @@ func.func @fct1(%0 : !llvm.ptr) -> () {
   }
   return
 }
+
+// -----
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  // expected-error @below {{op recipe expected for private}}
+  %priv = acc.private varPtr(%0 : !llvm.ptr) varType(i32) -> !llvm.ptr
+  return
+}
+
+// -----
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  // expected-error @below {{op recipe expected for firstprivate}}
+  %priv = acc.firstprivate varPtr(%0 : !llvm.ptr) varType(i32) -> !llvm.ptr
+  return
+}
+
+// -----
+
+func.func @fct1(%0 : !llvm.ptr) -> () {
+  // expected-error @below {{op recipe expected for reduction}}
+  %priv = acc.reduction varPtr(%0 : !llvm.ptr) varType(i32) -> !llvm.ptr
+  return
+}
