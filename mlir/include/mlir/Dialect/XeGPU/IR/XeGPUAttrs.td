@@ -169,7 +169,14 @@ def XeGPU_FenceScopeAttr:
     let assemblyFormat = "$value";
 }
 
-def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
+def LayoutTrait: AttrInterface<"LayoutTrait"> {
+  let cppNamespace = "::mlir::xegpu";
+  let description = [{
+    Common trait for all XeGPU layouts.
+  }];
+}
+
+def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [LayoutTrait]> {
   let summary = [{
     Describes the data distribution to subgroups and work-items for a tensor
     specified by the tensor descriptor.
@@ -331,7 +338,7 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
 }
 
 
-def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice"> {
+def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
   let summary = [{Describes the data distribution and sharing among subgroups or work-items.}];
 
   let description = [{

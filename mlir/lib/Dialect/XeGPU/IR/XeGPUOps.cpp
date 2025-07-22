@@ -753,6 +753,7 @@ LogicalResult ConvertLayoutOp::verify() {
 } // namespace xegpu
 } // namespace mlir
 
+#include <mlir/Dialect/XeGPU/IR/XeGPUAttrInterface.cpp.inc>
 #include <mlir/Dialect/XeGPU/IR/XeGPUEnums.cpp.inc>
 #define GET_OP_CLASSES
 #include <mlir/Dialect/XeGPU/IR/XeGPU.cpp.inc>
