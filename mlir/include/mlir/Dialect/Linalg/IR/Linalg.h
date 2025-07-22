@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_LINALG_IR_LINALG_H
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/AffineExpr.h"
@@ -88,6 +89,11 @@ Value createOrFoldDimOp(OpBuilder &b, Location loc, Value val, int64_t dim);
 /// Asserts that `val` is a memref or tensor type.
 OpFoldResult createFoldedDimOp(OpBuilder &b, Location loc, Value val,
                                int64_t dim);
+
+/// Returns the outer shape in the packed domain before applying the
+/// transposition.
+template <typename OpTy>
+SmallVector<int64_t> getPackedOuterShapeWithoutTransposition(OpTy packOrUnPack);
 
 } // namespace linalg
 } // namespace mlir
