@@ -2496,8 +2496,10 @@ llvm::Error SymbolFileDWARF::FindAndResolveFunction(
     if (entry.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
       return true;
 
-    // TODO: this specification check doesn't work if declaration DIE was in a
-    // type-unit (we should only encode DIEs from .debug_info).
+    // FIXME: this specification check doesn't work if declaration DIE was in a
+    // type-unit. We currently work around this by only creating the
+    // LLDB function call labels when the declaration DIE was *not* in a
+    // type-unit.
     auto spec = entry.GetAttributeValueAsReferenceDIE(DW_AT_specification);
     if (!spec)
       return true;

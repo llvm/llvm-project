@@ -279,6 +279,22 @@ static const char *GetMangledOrStructorName(const DWARFDIE &die) {
 }
 
 static std::optional<std::string> MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
+  const DWARFUnit *cu = die.GetCU();
+  if (!cu)
+    return std::nullopt;
+
+  // FIXME: Workaround for when the declaration DIE for a method is in a
+  // type-unit. The definition DIE's specification points to the declaration DIE
+  // in the compile-unit, so if we encoded the DIE from the type-unit, the DIEs
+  // wouldn't match and the label decoder would error out.
+  if (die.IsMethod() && cu->IsTypeUnit()) {
+    const char *mangled = die.GetMangledName(/*substitute_name_allowed=*/false);
+    if (!mangled)
+      return std::nullopt;
+
+    return mangled;
+  }
+
   const char *name = GetMangledOrStructorName(die);
   if (!name)
     return std::nullopt;
