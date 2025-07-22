@@ -53,3 +53,4 @@ def FeaturePromoteAlloca : SubtargetFeature <"promote-alloca",
   "true",
   "Enable promote alloca pass"
 >;
+
