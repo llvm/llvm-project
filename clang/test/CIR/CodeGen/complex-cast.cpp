@@ -28,7 +28,8 @@ void scalar_to_complex() {
 
 //      LLVM: %[[REAL:.*]] = load double, ptr {{.*}}, align 8
 // LLVM-NEXT: %[[TMP:.*]] = insertvalue { double, double } undef, double %[[REAL]], 0
-// LLVM-NEXT: %{{.*}} = insertvalue { double, double } %[[TMP]], double 0.000000e+00, 1
+// LLVM-NEXT: %[[COMPLEX:.*]] = insertvalue { double, double } %[[TMP]], double 0.000000e+00, 1
+// LLVM-NEXT: store { double, double } %[[COMPLEX]], ptr {{.*}}, align 8
 
 // OGCG: %[[REAL:.*]] = load double, ptr {{.*}}, align 8
 // OGCG: store double %[[REAL]], ptr {{.*}}, align 8
@@ -42,7 +43,8 @@ void scalar_to_complex() {
 
 //      LLVM: %[[REAL:.*]] = load i32, ptr {{.*}}, align 4
 // LLVM-NEXT: %[[TMP:.*]] = insertvalue { i32, i32 } undef, i32 %[[REAL]], 0
-// LLVM-NEXT: %{{.*}} = insertvalue { i32, i32 } %[[TMP]], i32 0, 1
+// LLVM-NEXT: %[[COMPLEX:.*]] = insertvalue { i32, i32 } %[[TMP]], i32 0, 1
+// LLVM-NEXT: store { i32, i32 } %[[COMPLEX]], ptr {{.*}}, align 4
 
 // OGCG:  %[[REAL:.*]] = load i32, ptr {{.*}}, align 4
 // OGCG: store i32 %[[REAL]], ptr {{.*}}, align 4
@@ -59,7 +61,8 @@ void scalar_to_complex() {
 //      LLVM: %[[TMP:.*]] = load i32, ptr {{.*}}, align 4
 // LLVM-NEXT: %[[REAL:.*]] = sitofp i32 %[[TMP]] to double
 // LLVM-NEXT: %[[TMP_2:.*]] = insertvalue { double, double } undef, double %[[REAL]], 0
-// LLVM-NEXT: %{{.*}} = insertvalue { double, double } %[[TMP_2]], double 0.000000e+00, 1
+// LLVM-NEXT: %[[COMPLEX:.*]] = insertvalue { double, double } %[[TMP_2]], double 0.000000e+00, 1
+// LLVM-NEXT: store { double, double } %[[COMPLEX]], ptr {{.*}}, align 8
 
 // OGCG: %[[TMP:.*]] = load i32, ptr {{.*}}, align 4
 // OGCG: %[[REAL:.*]] = sitofp i32 %[[TMP]] to double
@@ -77,7 +80,8 @@ void scalar_to_complex() {
 //      LLVM: %[[TMP:.*]] = load double, ptr {{.*}}, align 8
 // LLVM-NEXT: %[[REAL:.*]] = fptosi double %[[TMP]] to i32
 // LLVM-NEXT: %[[TMP_2:.*]] = insertvalue { i32, i32 } undef, i32 %[[REAL]], 0
-// LLVM-NEXT: %{{.*}} = insertvalue { i32, i32 } %[[TMP_2]], i32 0, 1
+// LLVM-NEXT: %[[COMPLEX:.*]] = insertvalue { i32, i32 } %[[TMP_2]], i32 0, 1
+// LLVM-NEXT:  store { i32, i32 } %[[COMPLEX]], ptr {{.*}}, align 4
 
 // OGCG: %[[TMP:.*]] = load double, ptr {{.*}}, align 8
 // OGCG: %[[REAL:.*]] = fptosi double %[[TMP]] to i32
@@ -99,7 +103,8 @@ void scalar_to_complex_explicit() {
 
 //      LLVM: %[[REAL:.*]] = load double, ptr {{.*}}, align 8
 // LLVM-NEXT: %[[TMP:.*]] = insertvalue { double, double } undef, double %[[REAL]], 0
-// LLVM-NEXT: %{{.*}} = insertvalue { double, double } %[[TMP]], double 0.000000e+00, 1
+// LLVM-NEXT: %[[COMPLEX:.*]] = insertvalue { double, double } %[[TMP]], double 0.000000e+00, 1
+// LLVM-NEXT: store { double, double } %[[COMPLEX]], ptr {{.*}}, align 8
 
 // OGCG: %[[REAL:.*]] = load double, ptr {{.*}}, align 8
 // OGCG: store double %[[REAL]], ptr {{.*}}, align 8
@@ -113,7 +118,8 @@ void scalar_to_complex_explicit() {
 
 //      LLVM: %[[REAL:.*]] = load i32, ptr {{.*}}, align 4
 // LLVM-NEXT: %[[TMP:.*]] = insertvalue { i32, i32 } undef, i32 %[[REAL]], 0
-// LLVM-NEXT: %{{.*}} = insertvalue { i32, i32 } %[[TMP]], i32 0, 1
+// LLVM-NEXT: %[[COMPLEX:.*]] = insertvalue { i32, i32 } %[[TMP]], i32 0, 1
+// LLVM-NEXT: store { i32, i32 } %[[COMPLEX]], ptr {{.*}}, align 4
 
 // OGCG:  %[[REAL:.*]] = load i32, ptr {{.*}}, align 4
 // OGCG: store i32 %[[REAL]], ptr {{.*}}, align 4
@@ -130,7 +136,8 @@ void scalar_to_complex_explicit() {
 //      LLVM: %[[TMP:.*]] = load i32, ptr {{.*}}, align 4
 // LLVM-NEXT: %[[REAL:.*]] = sitofp i32 %[[TMP]] to double
 // LLVM-NEXT: %[[TMP_2:.*]] = insertvalue { double, double } undef, double %[[REAL]], 0
-// LLVM-NEXT: %{{.+}} = insertvalue { double, double } %[[TMP_2]], double 0.000000e+00, 1
+// LLVM-NEXT: %[[COMPLEX:.*]] = insertvalue { double, double } %[[TMP_2]], double 0.000000e+00, 1
+// LLVM-NEXT: store { double, double } %[[COMPLEX]], ptr {{.*}}, align 8
 
 // OGCG: %[[TMP:.*]] = load i32, ptr {{.*}}, align 4
 // OGCG: %[[REAL:.*]] = sitofp i32 %[[TMP]] to double
@@ -148,7 +155,8 @@ void scalar_to_complex_explicit() {
 //      LLVM: %[[TMP:.*]] = load double, ptr {{.*}}, align 8
 // LLVM-NEXT: %[[REAL:.*]] = fptosi double %[[TMP]] to i32
 // LLVM-NEXT: %[[TMP_2:.*]] = insertvalue { i32, i32 } undef, i32 %[[REAL]], 0
-// LLVM-NEXT: %{{.*}} = insertvalue { i32, i32 } %[[TMP_2]], i32 0, 1
+// LLVM-NEXT: %[[COMPLEX:.*]] = insertvalue { i32, i32 } %[[TMP_2]], i32 0, 1
+// LLVM-NEXT:  store { i32, i32 } %[[COMPLEX]], ptr {{.*}}, align 4
 
 // OGCG: %[[TMP:.*]] = load double, ptr {{.*}}, align 8
 // OGCG: %[[REAL:.*]] = fptosi double %[[TMP]] to i32
@@ -166,7 +174,8 @@ void complex_to_scalar() {
 
 // CIR-AFTER: %{{.*}} = cir.complex.real %{{.*}} : !cir.complex<!cir.double> -> !cir.double
 
-// LLVM: %{{.*}} = extractvalue { double, double } %{{.*}}, 0
+// LLVM: %[[REAL:.*]] = extractvalue { double, double } %{{.*}}, 0
+// LLVM: store double %[[REAL]], ptr {{.*}}, align 8
 
 // OGCG: %[[REAL:.*]] = load double, ptr {{.*}}, align 8
 // OGCG: store double %[[REAL]], ptr {{.*}}, align 8
@@ -175,7 +184,8 @@ void complex_to_scalar() {
 
 // CIR-AFTER: %{{.*}} = cir.complex.real %{{.*}} : !cir.complex<!s32i> -> !s32i
 
-// LLVM: %{{.*}} = extractvalue { i32, i32 } %{{.*}}, 0
+// LLVM: %[[REAL:.*]] = extractvalue { i32, i32 } %{{.*}}, 0
+// LLVM: store i32 %[[REAL]], ptr {{.*}}, align 4
 
 // OGCG: %[[REAL:.*]] = load i32, ptr {{.*}}, align 4
 // OGCG: store i32 %[[REAL]], ptr {{.*}}, align 4
@@ -187,7 +197,8 @@ void complex_to_scalar() {
 // CIR-AFTER-NEXT: %{{.*}} = cir.cast(int_to_float, %[[REAL]] : !s32i), !cir.double
 
 //      LLVM: %[[REAL:.*]] = extractvalue { i32, i32 } %{{.+}}, 0
-// LLVM-NEXT: %{{.*}} = sitofp i32 %[[REAL]] to double
+// LLVM-NEXT: %[[REAL_TO_DOUBLE:.*]] = sitofp i32 %[[REAL]] to double
+// LLVM-NEXT: store double %[[REAL_TO_DOUBLE]], ptr {{.*}}, align 8
 
 // OGCG: %[[REAL:.*]] = load i32, ptr {{.*}}, align 4
 // OGCG: %[[INT_TO_FP:.*]] = sitofp i32 %[[REAL]] to double
@@ -200,7 +211,8 @@ void complex_to_scalar() {
 // CIR-AFTER-NEXT: %{{.*}} = cir.cast(float_to_int, %[[REAL]] : !cir.double), !s32i
 
 //      LLVM: %[[REAL:.*]] = extractvalue { double, double } %{{.+}}, 0
-// LLVM-NEXT: %{{.*}} = fptosi double %[[REAL]] to i32
+// LLVM-NEXT: %[[REAL_TO_INT:.*]] = fptosi double %[[REAL]] to i32
+// LLVM-NEXT: store i32 %[[REAL_TO_INT]], ptr {{.*}}, align 4
 
 // OGCG: %[[REAL:.*]] = load double, ptr {{.*}}, align 8
 // OGCG: %[[FP_TO_INT:.*]] = fptosi double %[[REAL]] to i32
@@ -224,7 +236,9 @@ void complex_to_bool() {
 // LLVM-NEXT: %[[IMAG:.*]] = extractvalue { double, double } %{{.*}}, 1
 // LLVM-NEXT: %[[REAL_TO_BOOL:.*]] = fcmp une double %[[REAL]], 0.000000e+00
 // LLVM-NEXT: %[[IMAG_TO_BOOL:.*]] = fcmp une double %[[IMAG]], 0.000000e+00
-// LLVM-NEXT: %{{.*}} = or i1 %[[REAL_TO_BOOL]], %[[IMAG_TO_BOOL]]
+// LLVM-NEXT: %[[OR:.*]] = or i1 %[[REAL_TO_BOOL]], %[[IMAG_TO_BOOL]]
+// LLVM-NEXT: %[[RESULT:.*]] = zext i1 %[[OR]] to i8
+// LLVM-NEXT: store i8 %[[RESULT]], ptr {{.*}}, align 1
 
 // OGCG: %[[REAL:.*]] = load double, ptr {{.*}}, align 8
 // OGCG: %[[IMAG:.*]] = load double, ptr getelementptr inbounds nuw ({ double, double }, ptr {{.*}}, i32 0, i32 1), align 8
@@ -247,7 +261,9 @@ void complex_to_bool() {
 // LLVM-NEXT: %[[IMAG:.*]] = extractvalue { i32, i32 } %{{.*}}, 1
 // LLVM-NEXT: %[[REAL_TO_BOOL:.*]] = icmp ne i32 %[[REAL]], 0
 // LLVM-NEXT: %[[IMAG_TO_BOOL:.*]] = icmp ne i32 %[[IMAG]], 0
-// LLVM-NEXT: %{{.*}} = or i1 %[[REAL_TO_BOOL]], %[[IMAG_TO_BOOL]]
+// LLVM-NEXT: %[[OR:.*]] = or i1 %[[REAL_TO_BOOL]], %[[IMAG_TO_BOOL]]
+// LLVM-NEXT: %[[RESULT:.*]] = zext i1 %[[OR]] to i8
+// LLVM-NEXT: store i8 %[[RESULT]], ptr {{.*}}, align 1
 
 // OGCG: %[[REAL:.*]] = load i32, ptr {{.*}}, align 4
 // OGCG: %[[IMAG:.*]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr {{.*}}, i32 0, i32 1), align 4
@@ -276,7 +292,8 @@ void complex_to_complex_cast() {
 // LLVM: %[[REAL_FP_CAST:.*]] = fpext float %[[REAL]] to double
 // LLVM: %[[IMAG_FP_CAST:.*]] = fpext float %[[IMAG]] to double
 // LLVM: %[[TMP:.*]] = insertvalue { double, double } undef, double %[[REAL_FP_CAST]], 0
-// LLVM: %{{.*}} = insertvalue { double, double } %[[TMP]], double %[[IMAG_FP_CAST]], 1
+// LLVM: %[[COMPLEX:.*]] = insertvalue { double, double } %[[TMP]], double %[[IMAG_FP_CAST]], 1
+// LLVM: store { double, double } %[[COMPLEX]], ptr {{.*}}, align 8
 
 // OGCG: %[[REAL:.*]] = load float, ptr {{.*}}, align 4
 // OGCG: %[[IMAG:.*]] = load float, ptr getelementptr inbounds nuw ({ float, float }, ptr {{.*}}, i32 0, i32 1), align 4
@@ -299,7 +316,8 @@ void complex_to_complex_cast() {
 // LLVM: %[[REAL_INT_CAST:.*]] = sext i16 %[[REAL]] to i32
 // LLVM: %[[IMAG_INT_CAST:.*]] = sext i16 %[[IMAG]] to i32
 // LLVM: %[[TMP:.*]] = insertvalue { i32, i32 } undef, i32 %[[REAL_INT_CAST]], 0
-// LLVM: %{{.*}} = insertvalue { i32, i32 } %[[TMP]], i32 %[[IMAG_INT_CAST]], 1
+// LLVM: %[[COMPLEX:.*]] = insertvalue { i32, i32 } %[[TMP]], i32 %[[IMAG_INT_CAST]], 1
+// LLVM: store { i32, i32 } %[[COMPLEX]], ptr {{.*}}, align 4
 
 // OGCG:  %[[REAL:.*]] = load i16, ptr {{.*}}, align 2
 // OGCG: %[[IMAG:.*]] = load i16, ptr getelementptr inbounds nuw ({ i16, i16 }, ptr {{.*}}, i32 0, i32 1), align 2

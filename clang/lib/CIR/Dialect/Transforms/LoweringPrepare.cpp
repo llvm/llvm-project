@@ -159,11 +159,10 @@ void LoweringPreparePass::lowerUnaryOp(cir::UnaryOp op) {
 }
 
 void LoweringPreparePass::runOnOp(mlir::Operation *op) {
-  if (auto cast = dyn_cast<cir::CastOp>(op)) {
+  if (auto cast = dyn_cast<cir::CastOp>(op))
     lowerCastOp(cast);
-  } else if (auto unary = dyn_cast<cir::UnaryOp>(op)) {
+  else if (auto unary = dyn_cast<cir::UnaryOp>(op))
     lowerUnaryOp(unary);
-  }
 }
 
 void LoweringPreparePass::runOnOperation() {
