@@ -152,12 +152,12 @@ can run the LLVM and Clang tests simultaneously using:
 
     % make check-all
 
-To run the tests with Valgrind (Memcheck by default), use the ``LIT_ARGS`` make
+To run the tests with Valgrind (Memcheck by default), use the ``LIT_OPTS`` make
 variable to pass the required options to lit. For example, you can use:
 
 .. code-block:: bash
 
-    % make check LIT_ARGS="-v --vg --vg-leak"
+    % make check LIT_OPTS="-v --vg --vg-leak"
 
 to enable testing with valgrind and with leak checking enabled.
 
