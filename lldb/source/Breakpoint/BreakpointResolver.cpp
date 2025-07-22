@@ -368,15 +368,23 @@ BreakpointLocationSP BreakpointResolver::AddLocation(Address loc_addr,
                                                      bool *new_location) {
   if (m_offset_is_insn_count) {
     Target &target = GetBreakpoint()->GetTarget();
-    const DisassemblerSP instructions =
+    llvm::Expected<DisassemblerSP> expected_instructions =
         target.ReadInstructions(loc_addr, m_offset);
+    if (!expected_instructions) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Breakpoints),
+                     expected_instructions.takeError(),
+                     "error: Unable to read instructions at address 0x{0:x}",
+                     loc_addr.GetLoadAddress(&target));
+      return BreakpointLocationSP();
+    }
+
+    const DisassemblerSP instructions = *expected_instructions;
     if (!instructions ||
         instructions->GetInstructionList().GetSize() != m_offset) {
-      Log *log = GetLog(LLDBLog::Breakpoints);
-      LLDB_LOGF(log,
+      LLDB_LOGF(GetLog(LLDBLog::Breakpoints),
                 "error: Unable to read %lu instructions at address 0x%" PRIx64
                 "\n",
-                m_offset, loc_addr.GetFileAddress());
+                m_offset, loc_addr.GetLoadAddress(&target));
       return BreakpointLocationSP();
     }
 

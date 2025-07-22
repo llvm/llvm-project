@@ -3000,9 +3000,9 @@ lldb::addr_t Target::GetBreakableLoadAddress(lldb::addr_t addr) {
   return arch_plugin ? arch_plugin->GetBreakableLoadAddress(addr, *this) : addr;
 }
 
-lldb::DisassemblerSP Target::ReadInstructions(const Address &start_addr,
-                                              uint32_t count,
-                                              const char *flavor_string) {
+llvm::Expected<lldb::DisassemblerSP>
+Target::ReadInstructions(const Address &start_addr, uint32_t count,
+                         const char *flavor_string) {
   DataBufferHeap data(GetArchitecture().GetMaximumOpcodeByteSize() * count, 0);
   bool force_live_memory = true;
   lldb_private::Status error;
@@ -3010,6 +3010,11 @@ lldb::DisassemblerSP Target::ReadInstructions(const Address &start_addr,
   const size_t bytes_read =
       ReadMemory(start_addr, data.GetBytes(), data.GetByteSize(), error,
                  force_live_memory, &load_addr);
+
+  if (error.Fail())
+    return llvm::createStringError(
+        error.AsCString("Target::ReadInstructions failed to read memory at %s"),
+        start_addr.GetLoadAddress(this));
 
   const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
   if (!flavor_string || flavor_string[0] == '\0') {

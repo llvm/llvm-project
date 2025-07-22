@@ -1970,8 +1970,10 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
 
   if (TargetSP target_sp = GetSP()) {
     if (Address *addr_ptr = base_addr.get()) {
-      sb_instructions.SetDisassembler(
-          target_sp->ReadInstructions(*addr_ptr, count, flavor_string));
+      if (llvm::Expected<DisassemblerSP> disassembler =
+              target_sp->ReadInstructions(*addr_ptr, count, flavor_string)) {
+        sb_instructions.SetDisassembler(*disassembler);
+      }
     }
   }
 

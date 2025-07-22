@@ -1335,9 +1335,9 @@ public:
                                const lldb_private::RegisterFlags &flags,
                                uint32_t byte_size);
 
-  lldb::DisassemblerSP ReadInstructions(const Address &start_addr,
-                                        uint32_t count,
-                                        const char *flavor_string = nullptr);
+  llvm::Expected<lldb::DisassemblerSP>
+  ReadInstructions(const Address &start_addr, uint32_t count,
+                   const char *flavor_string = nullptr);
 
   // Target Stop Hooks
   class StopHook : public UserID {
