@@ -14,10 +14,10 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_EPCINDIRECTIONUTILS_H
 #define LLVM_EXECUTIONENGINE_ORC_EPCINDIRECTIONUTILS_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LazyReexports.h"
+#include "llvm/Support/Compiler.h"
 
 #include <mutex>
 
@@ -104,8 +104,8 @@ public:
   /// Write resolver code to the executor process and return its address.
   /// This must be called before any call to createTrampolinePool or
   /// createLazyCallThroughManager.
-  LLVM_ABI Expected<ExecutorAddr> writeResolverBlock(ExecutorAddr ReentryFnAddr,
-                                            ExecutorAddr ReentryCtxAddr);
+  LLVM_ABI Expected<ExecutorAddr>
+  writeResolverBlock(ExecutorAddr ReentryFnAddr, ExecutorAddr ReentryCtxAddr);
 
   /// Returns the address of the Resolver block. Returns zero if the
   /// writeResolverBlock method has not previously been called.
