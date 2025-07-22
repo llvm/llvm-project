@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=sparc -relocation-model=pic < %s | FileCheck --check-prefix=SPARC %s
 ; RUN: llc -mtriple=sparc64 -relocation-model=pic < %s | FileCheck --check-prefix=SPARC64 %s
 
-;; TODO: Fix the code generation for these functions.
-
 @x = external thread_local global i8
 
 ;; Test that we don't over-allocate stack space when calling __tls_get_addr
@@ -29,7 +27,7 @@ define ptr @no_alloca() nounwind {
 ;
 ; SPARC64-LABEL: no_alloca:
 ; SPARC64:       ! %bb.0: ! %entry
-; SPARC64-NEXT:    save %sp, -144, %sp
+; SPARC64-NEXT:    save %sp, -128, %sp
 ; SPARC64-NEXT:  .Ltmp0:
 ; SPARC64-NEXT:    rd %pc, %o7
 ; SPARC64-NEXT:  .Ltmp2:
@@ -62,13 +60,11 @@ define ptr @dynamic_alloca(i64 %n) nounwind {
 ; SPARC-NEXT:  .Ltmp4:
 ; SPARC-NEXT:    or %i0, %lo(_GLOBAL_OFFSET_TABLE_+(.Ltmp4-.Ltmp3)), %i0
 ; SPARC-NEXT:    add %i0, %o7, %i0
-; SPARC-NEXT:    add %sp, -1, %sp
 ; SPARC-NEXT:    sethi %tgd_hi22(x), %i2
 ; SPARC-NEXT:    add %i2, %tgd_lo10(x), %i2
 ; SPARC-NEXT:    add %i0, %i2, %o0, %tgd_add(x)
 ; SPARC-NEXT:    call __tls_get_addr, %tgd_call(x)
 ; SPARC-NEXT:    nop
-; SPARC-NEXT:    add %sp, 1, %sp
 ; SPARC-NEXT:    add %i1, 7, %i0
 ; SPARC-NEXT:    and %i0, -8, %i0
 ; SPARC-NEXT:    sub %sp, %i0, %i0
@@ -88,13 +84,11 @@ define ptr @dynamic_alloca(i64 %n) nounwind {
 ; SPARC64-NEXT:  .Ltmp4:
 ; SPARC64-NEXT:    or %i1, %lo(_GLOBAL_OFFSET_TABLE_+(.Ltmp4-.Ltmp3)), %i1
 ; SPARC64-NEXT:    add %i1, %o7, %i1
-; SPARC64-NEXT:    add %sp, -1, %sp
 ; SPARC64-NEXT:    sethi %tgd_hi22(x), %i2
 ; SPARC64-NEXT:    add %i2, %tgd_lo10(x), %i2
 ; SPARC64-NEXT:    add %i1, %i2, %o0, %tgd_add(x)
 ; SPARC64-NEXT:    call __tls_get_addr, %tgd_call(x)
 ; SPARC64-NEXT:    nop
-; SPARC64-NEXT:    add %sp, 1, %sp
 ; SPARC64-NEXT:    add %i0, 15, %i0
 ; SPARC64-NEXT:    and %i0, -16, %i0
 ; SPARC64-NEXT:    sub %sp, %i0, %i0
