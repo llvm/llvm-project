@@ -4045,7 +4045,8 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
     return CreateType(cast<HLSLAttributedResourceType>(Ty), Unit);
   case Type::HLSLInlineSpirv:
     return CreateType(cast<HLSLInlineSpirvType>(Ty), Unit);
-
+  case Type::PredefinedSugar:
+    return getOrCreateType(cast<PredefinedSugarType>(Ty)->desugar(), Unit);
   case Type::CountAttributed:
   case Type::Auto:
   case Type::Attributed:
@@ -6061,11 +6062,10 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
     // ptr, in this case its debug info may not match the actual type of object
     // being used as in the next instruction, so we will need to emit a pseudo
     // variable for type-casted value.
-    auto DeclareTypeMatches = [&](auto *DbgDeclare) {
+    auto DeclareTypeMatches = [&](llvm::DbgVariableRecord *DbgDeclare) {
       return DbgDeclare->getVariable()->getType() == Type;
     };
-    if (any_of(llvm::findDbgDeclares(Var), DeclareTypeMatches) ||
-        any_of(llvm::findDVRDeclares(Var), DeclareTypeMatches))
+    if (any_of(llvm::findDVRDeclares(Var), DeclareTypeMatches))
       return;
   }
 

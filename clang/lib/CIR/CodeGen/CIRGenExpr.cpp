@@ -663,7 +663,8 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
   }
   case UO_PreInc:
   case UO_PreDec: {
-    bool isInc = e->isIncrementOp();
+    cir::UnaryOpKind kind =
+        e->isIncrementOp() ? cir::UnaryOpKind::Inc : cir::UnaryOpKind::Dec;
     LValue lv = emitLValue(e->getSubExpr());
 
     assert(e->isPrefix() && "Prefix operator in unexpected state!");
@@ -672,7 +673,7 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
       cgm.errorNYI(e->getSourceRange(), "UnaryOp complex inc/dec");
       lv = LValue();
     } else {
-      emitScalarPrePostIncDec(e, lv, isInc, /*isPre=*/true);
+      emitScalarPrePostIncDec(e, lv, kind, /*isPre=*/true);
     }
 
     return lv;
@@ -1052,6 +1053,67 @@ LValue CIRGenFunction::emitMemberExpr(const MemberExpr *e) {
   }
 
   llvm_unreachable("Unhandled member declaration!");
+}
+
+/// Evaluate an expression into a given memory location.
+void CIRGenFunction::emitAnyExprToMem(const Expr *e, Address location,
+                                      Qualifiers quals, bool isInit) {
+  // FIXME: This function should take an LValue as an argument.
+  switch (getEvaluationKind(e->getType())) {
+  case cir::TEK_Complex: {
+    LValue lv = makeAddrLValue(location, e->getType());
+    emitComplexExprIntoLValue(e, lv, isInit);
+    return;
+  }
+
+  case cir::TEK_Aggregate: {
+    emitAggExpr(e, AggValueSlot::forAddr(location, quals,
+                                         AggValueSlot::IsDestructed_t(isInit),
+                                         AggValueSlot::IsAliased_t(!isInit),
+                                         AggValueSlot::MayOverlap));
+    return;
+  }
+
+  case cir::TEK_Scalar: {
+    RValue rv = RValue::get(emitScalarExpr(e));
+    LValue lv = makeAddrLValue(location, e->getType());
+    emitStoreThroughLValue(rv, lv);
+    return;
+  }
+  }
+
+  llvm_unreachable("bad evaluation kind");
+}
+
+LValue CIRGenFunction::emitCompoundLiteralLValue(const CompoundLiteralExpr *e) {
+  if (e->isFileScope()) {
+    cgm.errorNYI(e->getSourceRange(), "emitCompoundLiteralLValue: FileScope");
+    return {};
+  }
+
+  if (e->getType()->isVariablyModifiedType()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCompoundLiteralLValue: VariablyModifiedType");
+    return {};
+  }
+
+  Address declPtr = createMemTemp(e->getType(), getLoc(e->getSourceRange()),
+                                  ".compoundliteral");
+  const Expr *initExpr = e->getInitializer();
+  LValue result = makeAddrLValue(declPtr, e->getType(), AlignmentSource::Decl);
+
+  emitAnyExprToMem(initExpr, declPtr, e->getType().getQualifiers(),
+                   /*Init*/ true);
+
+  // Block-scope compound literals are destroyed at the end of the enclosing
+  // scope in C.
+  if (!getLangOpts().CPlusPlus && e->getType().isDestructedType()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCompoundLiteralLValue: non C++ DestructedType");
+    return {};
+  }
+
+  return result;
 }
 
 LValue CIRGenFunction::emitCallExprLValue(const CallExpr *e) {
