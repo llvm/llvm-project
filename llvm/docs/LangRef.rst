@@ -2760,6 +2760,9 @@ For example:
     brought into the link to satisfy weak references in the modular
     implemenation function.
 
+    The first two arguments have the same semantics as the arguments to the C
+    ``format`` attribute.
+
     The following aspects are currently supported:
 
     - ``float``: The call has a floating point argument
