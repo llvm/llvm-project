@@ -22,6 +22,10 @@ typedef __INTPTR_TYPE__ intptr_t;
 static_assert(sizeof(int) == 4);
 static_assert(sizeof(long long) == 8);
 
+
+constexpr bool test_bad_bool = __builtin_bit_cast(bool, (char)0xff); // both-error {{must be initialized by a constant expression}} \
+                                                                     // both-note {{value 255 cannot be represented in type 'bool'}}
+
 template <class To, class From>
 constexpr To bit_cast(const From &from) {
   static_assert(sizeof(To) == sizeof(From));
