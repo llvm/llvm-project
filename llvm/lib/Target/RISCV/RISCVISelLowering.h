@@ -434,7 +434,8 @@ public:
                             ArrayRef<unsigned> Indices,
                             unsigned Factor) const override;
 
-  bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
+  bool lowerInterleavedStore(Instruction *Store, Value *Mask,
+                             ShuffleVectorInst *SVI,
                              unsigned Factor) const override;
 
   bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
@@ -443,9 +444,6 @@ public:
   bool lowerInterleaveIntrinsicToStore(
       Instruction *Store, Value *Mask,
       ArrayRef<Value *> InterleaveValues) const override;
-
-  bool lowerInterleavedVPStore(VPIntrinsic *Store, Value *Mask,
-                               ArrayRef<Value *> InterleaveOps) const override;
 
   bool supportKCFIBundles() const override { return true; }
 
