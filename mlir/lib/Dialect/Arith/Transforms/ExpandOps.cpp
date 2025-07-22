@@ -657,6 +657,7 @@ struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
       scaleOperand = b.create<arith::TruncFOp>(scaleTy, scaleOperand, nullptr,
                                                op.getFastmathAttr());
     }
+    // Catch scale types like f8E5M2.
     if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
       return rewriter.notifyMatchFailure(
           op, "scaling_extf is using scales of type which can not be converted "
@@ -777,7 +778,7 @@ struct ArithExpandOpsPass
         if (includeBf16)
           legalTypes &= !(inETy.isF32() && outETy.isBF16());
         if (includeF8E8M0)
-          legalTypes &= !(llvm::isa<Float8E8M0FNUType>(outETy)); 
+          legalTypes &= !(llvm::isa<Float8E8M0FNUType>(outETy));
         if (includeF4E2M1)
           legalTypes &= !llvm::isa<Float4E2M1FNType>(outETy);
         return legalTypes;
@@ -832,7 +833,7 @@ void mlir::arith::populateArithExpandOpsPatterns(RewritePatternSet &patterns) {
     MaximumMinimumFOpConverter<MaximumFOp, arith::CmpFPredicate::UGT>,
     MaximumMinimumFOpConverter<MinimumFOp, arith::CmpFPredicate::ULT>,
     MaxNumMinNumFOpConverter<MaxNumFOp, arith::CmpFPredicate::UGT>,
-    MaxNumMinNumFOpConverter<MinNumFOp, arith::CmpFPredicate::ULT> 
+    MaxNumMinNumFOpConverter<MinNumFOp, arith::CmpFPredicate::ULT>
    >(patterns.getContext());
   // clang-format on
 }
