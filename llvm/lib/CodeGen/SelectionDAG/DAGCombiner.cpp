@@ -22727,11 +22727,7 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
 
 SDValue DAGCombiner::visitLIFETIME_END(SDNode *N) {
   const auto *LifetimeEnd = cast<LifetimeSDNode>(N);
-  if (!LifetimeEnd->hasOffset())
-    return SDValue();
-
-  const BaseIndexOffset LifetimeEndBase(N->getOperand(1), SDValue(),
-                                        LifetimeEnd->getOffset(), false);
+  const BaseIndexOffset LifetimeEndBase(N->getOperand(1), SDValue(), 0, false);
 
   // We walk up the chains to find stores.
   SmallVector<SDValue, 8> Chains = {N->getOperand(0)};
@@ -29418,9 +29414,8 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
       return {false /*isVolatile*/,
               /*isAtomic*/ false,
               LN->getOperand(1),
-              (LN->hasOffset()) ? LN->getOffset() : 0,
-              (LN->hasOffset()) ? LocationSize::precise(LN->getSize())
-                                : LocationSize::beforeOrAfterPointer(),
+              0,
+              LocationSize::precise(LN->getSize()),
               (MachineMemOperand *)nullptr};
     // Default.
     return {false /*isvolatile*/,
