@@ -87,7 +87,7 @@ AR="${AR}" CC="${CC}" CFLAGS="$FLAGS -Wno-deprecated-non-prototype" RANLIB=/bin/
 make -j libz.a
 
 # Build and install libcxxabi and libcxx.
-if [[ ! -f ${LLVM_BUILD}/build.ninja ]]; then
+if [[ ! -f ${LIBCXX_BUILD}/build.ninja ]]; then
   rm -rf "${LIBCXX_BUILD}" "${LIBCXX_INSTALL}"
   mkdir -p ${LIBCXX_BUILD} ${LIBCXX_INSTALL}
   cd ${LIBCXX_BUILD}
