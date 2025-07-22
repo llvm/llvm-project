@@ -1179,6 +1179,9 @@ public:
 
   bool hasFlatGVSMode() const { return FlatGVSMode; }
 
+  // FLAT GLOBAL VOffset is signed
+  bool hasSignedGVSOffset() const { return GFX1250Insts; }
+
   bool enableSIScheduler() const {
     return EnableSIScheduler;
   }
