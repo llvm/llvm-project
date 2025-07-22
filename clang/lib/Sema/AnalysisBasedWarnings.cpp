@@ -2891,8 +2891,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       .setAlwaysAdd(Stmt::UnaryOperatorClass);
   }
 
-  bool EnableLifetimeSafetyAnalysis = !Diags.isIgnored(
-      diag::warn_experimental_lifetime_safety_dummy_warning, D->getBeginLoc());
+  bool EnableLifetimeSafetyAnalysis = S.getLangOpts().EnableLifetimeSafety;
   // Install the logical handler.
   std::optional<LogicalErrorHandler> LEH;
   if (LogicalErrorHandler::hasActiveDiagnostics(Diags, D->getBeginLoc())) {
