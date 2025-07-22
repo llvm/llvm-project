@@ -300,8 +300,8 @@ define amdgpu_vs float @load_addr_no_fold(ptr addrspace(6) inreg noalias %p0) #0
 }
 
 ; GCN-LABEL: {{^}}vgpr_arg_src:
-; GCN: v_readfirstlane_b32 s[[READLANE:[0-9]+]], v0
 ; GCN: s_mov_b32 s[[ZERO:[0-9]+]]
+; GCN: v_readfirstlane_b32 s[[READLANE:[0-9]+]], v0
 ; GCN: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s[[[READLANE]]:[[ZERO]]]
 define amdgpu_vs float @vgpr_arg_src(ptr addrspace(6) %arg) {
 main_body:

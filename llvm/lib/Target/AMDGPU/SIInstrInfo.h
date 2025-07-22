@@ -186,6 +186,10 @@ private:
 
   bool resultDependsOnExec(const MachineInstr &MI) const;
 
+  Register checkIsSourceSGPR(const MachineOperand &MO,
+                             const MachineRegisterInfo &MRI,
+                             const SIRegisterInfo *TRI, int MaxDepth = 6) const;
+
 protected:
   /// If the specific machine instruction is a instruction that moves/copies
   /// value from one register to another register return destination and source
