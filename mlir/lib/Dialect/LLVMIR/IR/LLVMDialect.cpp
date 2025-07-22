@@ -24,6 +24,7 @@
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Transforms/InliningUtils.h"
 
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
@@ -3187,6 +3188,18 @@ static int64_t getNumElements(Type t) {
   return 1;
 }
 
+/// Determine the element type of `type`. Supported types are `VectorType`,
+/// `TensorType`, and `LLVMArrayType`. Everything else is treated as a scalar.
+static Type getElementType(Type type) {
+  while (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(type))
+    type = arrayType.getElementType();
+  if (auto vecType = dyn_cast<VectorType>(type))
+    return vecType.getElementType();
+  if (auto tenType = dyn_cast<TensorType>(type))
+    return tenType.getElementType();
+  return type;
+}
+
 /// Check if the given type is a scalable vector type or a vector/array type
 /// that contains a nested scalable vector type.
 static bool hasScalableVectorType(Type t) {
@@ -3281,60 +3294,69 @@ LogicalResult LLVM::ConstantOp::verify() {
   }
   if (auto structType = dyn_cast<LLVMStructType>(getType())) {
     auto arrayAttr = dyn_cast<ArrayAttr>(getValue());
-    if (!arrayAttr) {
-      return emitOpError() << "expected array attribute for a struct constant";
-    }
+    if (!arrayAttr)
+      return emitOpError() << "expected array attribute for struct type";
 
     ArrayRef<Type> elementTypes = structType.getBody();
     if (arrayAttr.size() != elementTypes.size()) {
       return emitOpError() << "expected array attribute of size "
                            << elementTypes.size();
     }
-    for (auto elementTy : elementTypes) {
-      if (!isa<IntegerType, FloatType, LLVMPPCFP128Type>(elementTy)) {
+    for (auto [i, attr, type] : llvm::enumerate(arrayAttr, elementTypes)) {
+      if (!type.isSignlessIntOrIndexOrFloat()) {
         return emitOpError() << "expected struct element types to be floating "
                                 "point type or integer type";
       }
-    }
-
-    for (size_t i = 0; i < elementTypes.size(); ++i) {
-      Attribute element = arrayAttr[i];
-      if (!isa<IntegerAttr, FloatAttr>(element)) {
-        return emitOpError()
-               << "expected struct element attribute types to be floating "
-                  "point type or integer type";
+      if (!isa<FloatAttr, IntegerAttr>(attr)) {
+        return emitOpError() << "expected element of array attribute to be "
+                                "floating point or integer";
       }
-      auto elementType = cast<TypedAttr>(element).getType();
-      if (elementType != elementTypes[i]) {
+      if (cast<TypedAttr>(attr).getType() != type)
         return emitOpError()
                << "struct element at index " << i << " is of wrong type";
-      }
     }
 
     return success();
   }
-  if (auto targetExtType = dyn_cast<LLVMTargetExtType>(getType())) {
+  if (auto targetExtType = dyn_cast<LLVMTargetExtType>(getType()))
     return emitOpError() << "does not support target extension type.";
-  }
+
+  // Check that an attribute whose element type has floating point semantics
+  // `attributeFloatSemantics` is compatible with a type whose element type
+  // is `constantElementType`.
+  //
+  // Requirement is that either
+  // 1) They have identical floating point types.
+  // 2) `constantElementType` is an integer type of the same width as the float
+  //     attribute. This is to support builtin MLIR float types without LLVM
+  //     equivalents, see comments in getLLVMConstant for more details.
+  auto verifyFloatSemantics =
+      [this](const llvm::fltSemantics &attributeFloatSemantics,
+             Type constantElementType) -> LogicalResult {
+    if (auto floatType = dyn_cast<FloatType>(constantElementType)) {
+      if (&floatType.getFloatSemantics() != &attributeFloatSemantics) {
+        return emitOpError()
+               << "attribute and type have different float semantics";
+      }
+      return success();
+    }
+    unsigned floatWidth = APFloat::getSizeInBits(attributeFloatSemantics);
+    if (isa<IntegerType>(constantElementType)) {
+      if (!constantElementType.isInteger(floatWidth))
+        return emitOpError() << "expected integer type of width " << floatWidth;
+
+      return success();
+    }
+    return success();
+  };
 
   // Verification of IntegerAttr, FloatAttr, ElementsAttr, ArrayAttr.
-  if (auto intAttr = dyn_cast<IntegerAttr>(getValue())) {
+  if (isa<IntegerAttr>(getValue())) {
     if (!llvm::isa<IntegerType>(getType()))
       return emitOpError() << "expected integer type";
   } else if (auto floatAttr = dyn_cast<FloatAttr>(getValue())) {
-    const llvm::fltSemantics &sem = floatAttr.getValue().getSemantics();
-    unsigned floatWidth = APFloat::getSizeInBits(sem);
-    if (auto floatTy = dyn_cast<FloatType>(getType())) {
-      if (floatTy.getWidth() != floatWidth) {
-        return emitOpError() << "expected float type of width " << floatWidth;
-      }
-    }
-    // See the comment for getLLVMConstant for more details about why 8-bit
-    // floats can be represented by integers.
-    if (isa<IntegerType>(getType()) && !getType().isInteger(floatWidth)) {
-      return emitOpError() << "expected integer type of width " << floatWidth;
-    }
-  } else if (isa<ElementsAttr>(getValue())) {
+    return verifyFloatSemantics(floatAttr.getValue().getSemantics(), getType());
+  } else if (auto elementsAttr = dyn_cast<ElementsAttr>(getValue())) {
     if (hasScalableVectorType(getType())) {
       // The exact number of elements of a scalable vector is unknown, so we
       // allow only splat attributes.
@@ -3346,18 +3368,32 @@ LogicalResult LLVM::ConstantOp::verify() {
     }
     if (!isa<VectorType, LLVM::LLVMArrayType>(getType()))
       return emitOpError() << "expected vector or array type";
+
     // The number of elements of the attribute and the type must match.
-    if (auto elementsAttr = dyn_cast<ElementsAttr>(getValue())) {
-      int64_t attrNumElements = elementsAttr.getNumElements();
-      if (getNumElements(getType()) != attrNumElements)
-        return emitOpError()
-               << "type and attribute have a different number of elements: "
-               << getNumElements(getType()) << " vs. " << attrNumElements;
+    int64_t attrNumElements = elementsAttr.getNumElements();
+    if (getNumElements(getType()) != attrNumElements) {
+      return emitOpError()
+             << "type and attribute have a different number of elements: "
+             << getNumElements(getType()) << " vs. " << attrNumElements;
+    }
+
+    Type attrElmType = getElementType(elementsAttr.getType());
+    Type resultElmType = getElementType(getType());
+    if (auto floatType = dyn_cast<FloatType>(attrElmType))
+      return verifyFloatSemantics(floatType.getFloatSemantics(), resultElmType);
+
+    if (isa<IntegerType>(attrElmType) && !isa<IntegerType>(resultElmType)) {
+      return emitOpError(
+          "expected integer element type for integer elements attribute");
     }
   } else if (auto arrayAttr = dyn_cast<ArrayAttr>(getValue())) {
+
+    // The case where the constant is LLVMStructType has already been handled.
     auto arrayType = dyn_cast<LLVM::LLVMArrayType>(getType());
     if (!arrayType)
-      return emitOpError() << "expected array type";
+      return emitOpError()
+             << "expected array or struct type for array attribute";
+
     // When the attribute is an ArrayAttr, check that its nesting matches the
     // corresponding ArrayType or VectorType nesting.
     return verifyStructArrayConstant(*this, arrayType, arrayAttr, /*dim=*/0);

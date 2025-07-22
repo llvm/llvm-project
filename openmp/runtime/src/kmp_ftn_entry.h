@@ -572,16 +572,14 @@ static void __kmp_fortran_strncpy_truncate(char *buffer, size_t buf_size,
 // Convert a Fortran string to a C string by adding null byte
 class ConvertedString {
   char *buf;
-  kmp_info_t *th;
 
 public:
   ConvertedString(char const *fortran_str, size_t size) {
-    th = __kmp_get_thread();
-    buf = (char *)__kmp_thread_malloc(th, size + 1);
+    buf = (char *)KMP_INTERNAL_MALLOC(size + 1);
     KMP_STRNCPY_S(buf, size + 1, fortran_str, size);
     buf[size] = '\0';
   }
-  ~ConvertedString() { __kmp_thread_free(th, buf); }
+  ~ConvertedString() { KMP_INTERNAL_FREE(buf); }
   const char *get() const { return buf; }
 };
 #endif // KMP_STUB
@@ -1495,10 +1493,18 @@ void FTN_STDCALL FTN_SET_DEFAULTS(char const *str
 #endif
 ) {
 #ifndef KMP_STUB
+  size_t sz;
+  char const *defaults = str;
+
 #ifdef PASS_ARGS_BY_VALUE
-  int len = (int)KMP_STRLEN(str);
+  sz = KMP_STRLEN(str);
+#else
+  sz = (size_t)len;
+  ConvertedString cstr(str, sz);
+  defaults = cstr.get();
 #endif
-  __kmp_aux_set_defaults(str, len);
+
+  __kmp_aux_set_defaults(defaults, sz);
 #endif
 }
 

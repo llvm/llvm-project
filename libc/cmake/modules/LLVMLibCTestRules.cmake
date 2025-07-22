@@ -71,6 +71,7 @@ endfunction()
 
 function(_get_hermetic_test_compile_options output_var)
   _get_common_test_compile_options(compile_options "" "")
+  list(APPEND compile_options "-DLIBC_TEST=HERMETIC")
 
   # null check tests are death tests, remove from hermetic tests for now.
   if(LIBC_ADD_NULL_CHECKS)
@@ -232,6 +233,7 @@ function(create_libc_unittest fq_target_name)
 
   _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_C_TEST}"
                                    "${LIBC_UNITTEST_FLAGS}")
+  list(APPEND compile_options "-DLIBC_TEST=UNIT")
   # TODO: Ideally we would have a separate function for link options.
   set(link_options
     ${compile_options}

@@ -374,14 +374,19 @@ bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &B, const Value *Val,
     return true;
   }
 
-  unsigned ReturnOpc =
-      IsShader ? AMDGPU::SI_RETURN_TO_EPILOG : AMDGPU::SI_RETURN;
+  const bool IsWholeWave = MFI->isWholeWaveFunction();
+  unsigned ReturnOpc = IsWholeWave ? AMDGPU::G_AMDGPU_WHOLE_WAVE_FUNC_RETURN
+                       : IsShader  ? AMDGPU::SI_RETURN_TO_EPILOG
+                                   : AMDGPU::SI_RETURN;
   auto Ret = B.buildInstrNoInsert(ReturnOpc);
 
   if (!FLI.CanLowerReturn)
     insertSRetStores(B, Val->getType(), VRegs, FLI.DemoteRegister);
   else if (!lowerReturnVal(B, Val, VRegs, Ret))
     return false;
+
+  if (IsWholeWave)
+    addOriginalExecToReturn(B.getMF(), Ret);
 
   // TODO: Handle CalleeSavedRegsViaCopy.
 
@@ -631,6 +636,17 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   for (auto &Arg : F.args()) {
     if (DL.getTypeStoreSize(Arg.getType()) == 0)
       continue;
+
+    if (Info->isWholeWaveFunction() && Idx == 0) {
+      assert(VRegs[Idx].size() == 1 && "Expected only one register");
+
+      // The first argument for whole wave functions is the original EXEC value.
+      B.buildInstr(AMDGPU::G_AMDGPU_WHOLE_WAVE_FUNC_SETUP)
+          .addDef(VRegs[Idx][0]);
+
+      ++Idx;
+      continue;
+    }
 
     const bool InReg = Arg.hasAttribute(Attribute::InReg);
 
@@ -1347,6 +1363,7 @@ bool AMDGPUCallLowering::lowerTailCall(
   SmallVector<std::pair<MCRegister, Register>, 12> ImplicitArgRegs;
 
   if (Info.CallConv != CallingConv::AMDGPU_Gfx &&
+      Info.CallConv != CallingConv::AMDGPU_Gfx_WholeWave &&
       !AMDGPU::isChainCC(Info.CallConv)) {
     // With a fixed ABI, allocate fixed registers before user arguments.
     if (!passSpecialInputs(MIRBuilder, CCInfo, ImplicitArgRegs, Info))
@@ -1524,7 +1541,8 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // after the ordinary user argument registers.
   SmallVector<std::pair<MCRegister, Register>, 12> ImplicitArgRegs;
 
-  if (Info.CallConv != CallingConv::AMDGPU_Gfx) {
+  if (Info.CallConv != CallingConv::AMDGPU_Gfx &&
+      Info.CallConv != CallingConv::AMDGPU_Gfx_WholeWave) {
     // With a fixed ABI, allocate fixed registers before user arguments.
     if (!passSpecialInputs(MIRBuilder, CCInfo, ImplicitArgRegs, Info))
       return false;
@@ -1591,4 +1609,12 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   }
 
   return true;
+}
+
+void AMDGPUCallLowering::addOriginalExecToReturn(
+    MachineFunction &MF, MachineInstrBuilder &Ret) const {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const MachineInstr *Setup = TII->getWholeWaveFunctionSetup(MF);
+  Ret.addReg(Setup->getOperand(0).getReg());
 }

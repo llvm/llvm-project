@@ -26,11 +26,11 @@ struct GpuGlobalIdRewriter : public OpRewritePattern<gpu::GlobalIdOp> {
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     auto dim = op.getDimension();
-    auto blockId = rewriter.create<gpu::BlockIdOp>(loc, dim);
-    auto blockDim = rewriter.create<gpu::BlockDimOp>(loc, dim);
+    auto blockId = gpu::BlockIdOp::create(rewriter, loc, dim);
+    auto blockDim = gpu::BlockDimOp::create(rewriter, loc, dim);
     // Compute blockId.x * blockDim.x
-    auto tmp = rewriter.create<index::MulOp>(op.getLoc(), blockId, blockDim);
-    auto threadId = rewriter.create<gpu::ThreadIdOp>(loc, dim);
+    auto tmp = index::MulOp::create(rewriter, op.getLoc(), blockId, blockDim);
+    auto threadId = gpu::ThreadIdOp::create(rewriter, loc, dim);
     // Compute threadId.x + blockId.x * blockDim.x
     rewriter.replaceOpWithNewOp<index::AddOp>(op, threadId, tmp);
     return success();

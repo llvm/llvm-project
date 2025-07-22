@@ -164,19 +164,21 @@ define void @test_scatter_8i32(<8 x i32> %a1, <8 x ptr> %ptr, <8 x i1> %mask, i3
 }
 
 declare void @llvm.lifetime.start.p0(i64, ptr)
-define void @test_lifetime_start(i64 %arg0, ptr %ptr) {
+define void @test_lifetime_start(i64 %arg0) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i64 %arg0
   ; CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 %arg0, ptr %ptr)
+  %ptr = alloca i64
   call void @llvm.lifetime.start.p0(i64 %arg0, ptr %ptr)
   ret void
 }
 
 declare void @llvm.lifetime.end.p0(i64, ptr)
-define void @test_lifetime_end(i64 %arg0, ptr %ptr) {
+define void @test_lifetime_end(i64 %arg0) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i64 %arg0
   ; CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 %arg0, ptr %ptr)
+  %ptr = alloca i64
   call void @llvm.lifetime.end.p0(i64 %arg0, ptr %ptr)
   ret void
 }

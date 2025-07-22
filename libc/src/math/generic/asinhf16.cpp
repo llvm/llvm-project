@@ -49,6 +49,7 @@ static constexpr fputil::ExceptValues<float16, N_EXCEPTS> ASINHF16_EXCEPTS{{
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float16, asinhf16, (float16 x)) {
+  using namespace acoshf_internal;
   using FPBits = fputil::FPBits<float16>;
   FPBits xbits(x);
 

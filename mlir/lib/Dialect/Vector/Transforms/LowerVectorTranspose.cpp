@@ -328,21 +328,6 @@ public:
       return rewriter.notifyMatchFailure(
           op, "Options specifies lowering to shuffle");
 
-    // Handle a true 2-D matrix transpose differently when requested.
-    if (vectorTransposeLowering == vector::VectorTransposeLowering::Flat &&
-        resType.getRank() == 2 && transp[0] == 1 && transp[1] == 0) {
-      Type flattenedType =
-          VectorType::get(resType.getNumElements(), resType.getElementType());
-      auto matrix =
-          rewriter.create<vector::ShapeCastOp>(loc, flattenedType, input);
-      auto rows = rewriter.getI32IntegerAttr(resType.getShape()[0]);
-      auto columns = rewriter.getI32IntegerAttr(resType.getShape()[1]);
-      Value trans = rewriter.create<vector::FlatTransposeOp>(
-          loc, flattenedType, matrix, rows, columns);
-      rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, resType, trans);
-      return success();
-    }
-
     // Generate unrolled extract/insert ops. We do not unroll the rightmost
     // (i.e., highest-order) dimensions that are not transposed and leave them
     // in vector form to improve performance. Therefore, we prune those

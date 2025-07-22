@@ -37,6 +37,9 @@ class AMDGPUCallLowering final : public CallLowering {
   bool lowerReturnVal(MachineIRBuilder &B, const Value *Val,
                       ArrayRef<Register> VRegs, MachineInstrBuilder &Ret) const;
 
+  void addOriginalExecToReturn(MachineFunction &MF,
+                               MachineInstrBuilder &Ret) const;
+
 public:
   AMDGPUCallLowering(const AMDGPUTargetLowering &TLI);
 

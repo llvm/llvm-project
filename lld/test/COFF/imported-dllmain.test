@@ -14,11 +14,11 @@ RUN: lld-link -lib c.obj -out:c.lib
 
 ### Later, if b.lib is provided before other libs/objs that export DllMain statically, we previously were using the dllimported DllMain from b.lib, which is wrong.
 RUN: lld-link a.obj b.lib c.lib -dll -out:out.dll -entry:DllMain 2>&1 | FileCheck -check-prefix=WARN %s
-RUN: lld-link a.obj b.lib c.lib -dll -out:out.dll -entry:DllMain -ignore:exporteddllmain 2>&1 | FileCheck -check-prefix=IGNORED --allow-empty %s
+RUN: lld-link a.obj b.lib c.lib -dll -out:out.dll -entry:DllMain -ignore:importeddllmain 2>&1 | FileCheck -check-prefix=IGNORED --allow-empty %s
 RUN: llvm-objdump --private-headers -d out.dll | FileCheck -check-prefix=DISASM %s
 
-WARN: lld-link: warning: b.lib: skipping exported DllMain symbol [exporteddllmain]
-IGNORED-NOT: lld-link: warning: b.lib: skipping exported DllMain symbol [exporteddllmain]
+WARN: lld-link: warning: b.lib: skipping imported DllMain symbol [importeddllmain]
+IGNORED-NOT: lld-link: warning: b.lib: skipping imported DllMain symbol [importeddllmain]
 
 DISASM: The Import Tables:
 DISASM: DLL Name: b.dll

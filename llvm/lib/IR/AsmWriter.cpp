@@ -404,6 +404,9 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
     break;
   case CallingConv::AMDGPU_KERNEL: Out << "amdgpu_kernel"; break;
   case CallingConv::AMDGPU_Gfx:    Out << "amdgpu_gfx"; break;
+  case CallingConv::AMDGPU_Gfx_WholeWave:
+    Out << "amdgpu_gfx_whole_wave";
+    break;
   case CallingConv::M68k_RTD:      Out << "m68k_rtdcc"; break;
   case CallingConv::RISCV_VectorCall:
     Out << "riscv_vector_cc";
@@ -2398,8 +2401,9 @@ static void writeDIFile(raw_ostream &Out, const DIFile *N, AsmWriterContext &) {
   // Print all values for checksum together, or not at all.
   if (N->getChecksum())
     Printer.printChecksum(*N->getChecksum());
-  Printer.printString("source", N->getSource().value_or(StringRef()),
-                      /* ShouldSkipEmpty */ true);
+  if (N->getSource())
+    Printer.printString("source", *N->getSource(),
+                        /* ShouldSkipEmpty */ false);
   Out << ")";
 }
 

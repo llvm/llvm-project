@@ -347,17 +347,11 @@ define double @fcvt_d_wu(i32 %a) nounwind strictfp {
 declare double @llvm.experimental.constrained.uitofp.f64.i32(i32, metadata, metadata)
 
 define double @fcvt_d_wu_load(ptr %p) nounwind strictfp {
-; RV32IFD-LABEL: fcvt_d_wu_load:
-; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    lw a0, 0(a0)
-; RV32IFD-NEXT:    fcvt.d.wu fa0, a0
-; RV32IFD-NEXT:    ret
-;
-; RV64IFD-LABEL: fcvt_d_wu_load:
-; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    lwu a0, 0(a0)
-; RV64IFD-NEXT:    fcvt.d.wu fa0, a0
-; RV64IFD-NEXT:    ret
+; CHECKIFD-LABEL: fcvt_d_wu_load:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    lw a0, 0(a0)
+; CHECKIFD-NEXT:    fcvt.d.wu fa0, a0
+; CHECKIFD-NEXT:    ret
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_d_wu_load:
 ; RV32IZFINXZDINX:       # %bb.0:
@@ -367,7 +361,7 @@ define double @fcvt_d_wu_load(ptr %p) nounwind strictfp {
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_d_wu_load:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    lwu a0, 0(a0)
+; RV64IZFINXZDINX-NEXT:    lw a0, 0(a0)
 ; RV64IZFINXZDINX-NEXT:    fcvt.d.wu a0, a0
 ; RV64IZFINXZDINX-NEXT:    ret
 ;

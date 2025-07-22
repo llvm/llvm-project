@@ -44,7 +44,12 @@ static const void *ptr = 0o0;  /* ext-warning {{octal integer literals are a C2y
 #endif
 
 // 0 by itself is not deprecated, of course.
-int k = 0;
+int k1                = 0;
+unsigned int k2       = 0u;
+long k3               = 0l;
+unsigned long k4      = 0ul;
+long long k5          = 0ll;
+unsigned long long k6 = 0ull;
 
 // Test a preprocessor use of 0 by itself, which is also not deprecated.
 #if 0
@@ -65,7 +70,6 @@ static_assert(__extension__ _Generic(typeof(l), const int : 1, default : 0)); //
 
 // Note that 0o by itself is an invalid literal.
 int m = 0o; /* expected-error {{invalid suffix 'o' on integer constant}}
-               c2y-warning {{octal literals without a '0o' prefix are deprecated}}
              */
 
 // Ensure negation works as expected.
@@ -83,13 +87,11 @@ int n = 0o18; /* expected-error {{invalid digit '8' in octal constant}}
                  cpp-warning {{octal integer literals are a Clang extension}}
                */
 int o1 = 0o8; /* expected-error {{invalid suffix 'o8' on integer constant}}
-                 c2y-warning {{octal literals without a '0o' prefix are deprecated}}
                */
 // FIXME: however, it matches the behavior for hex literals in terms of the
 // error reported. Unfortunately, we then go on to think 0 is an octal literal
 // without a prefix, which is again a bit confusing.
 int o2 = 0xG; /* expected-error {{invalid suffix 'xG' on integer constant}}
-                 c2y-warning {{octal literals without a '0o' prefix are deprecated}}
                */
 
 // Show that floating-point suffixes on octal literals are rejected.
@@ -130,7 +132,6 @@ constexpr int p = 0o0'1'2'3'4'5'6'7; /* compat-warning {{octal integer literals 
                                       */
 static_assert(p == 01234567); // c2y-warning {{octal literals without a '0o' prefix are deprecated}}
 int q = 0o'0'1; /* expected-error {{invalid suffix 'o'0'1' on integer constant}}
-                   c2y-warning {{octal literals without a '0o' prefix are deprecated}}
                  */
 
 #define M 0o123

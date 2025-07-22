@@ -4279,8 +4279,8 @@ void LoopCarriedEdges::modifySUnits(std::vector<SUnit> &SUnits,
             !TII->isGlobalMemoryObject(FromMI) &&
             !TII->isGlobalMemoryObject(ToMI) && !isSuccOrder(From, To)) {
           SDep Pred = Dep;
-          Pred.setSUnit(Src);
-          Dst->addPred(Pred);
+          Pred.setSUnit(From);
+          To->addPred(Pred);
         }
       }
     }

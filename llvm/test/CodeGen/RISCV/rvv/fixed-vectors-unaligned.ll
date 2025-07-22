@@ -204,7 +204,7 @@ define <2 x i64> @mgather_v2i64_align4(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %
 ; RV64-SLOW-NEXT:  # %bb.1: # %cond.load
 ; RV64-SLOW-NEXT:    vsetvli zero, zero, e64, m8, tu, ma
 ; RV64-SLOW-NEXT:    vmv.x.s a1, v8
-; RV64-SLOW-NEXT:    lwu a2, 4(a1)
+; RV64-SLOW-NEXT:    lw a2, 4(a1)
 ; RV64-SLOW-NEXT:    lwu a1, 0(a1)
 ; RV64-SLOW-NEXT:    slli a2, a2, 32
 ; RV64-SLOW-NEXT:    or a1, a2, a1
@@ -216,7 +216,7 @@ define <2 x i64> @mgather_v2i64_align4(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %
 ; RV64-SLOW-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-SLOW-NEXT:    vslidedown.vi v8, v8, 1
 ; RV64-SLOW-NEXT:    vmv.x.s a0, v8
-; RV64-SLOW-NEXT:    lwu a1, 4(a0)
+; RV64-SLOW-NEXT:    lw a1, 4(a0)
 ; RV64-SLOW-NEXT:    lwu a0, 0(a0)
 ; RV64-SLOW-NEXT:    slli a1, a1, 32
 ; RV64-SLOW-NEXT:    or a0, a1, a0

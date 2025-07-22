@@ -10,10 +10,10 @@
 #define LLVM_LIBC_SHARED_MATH_EXP10F_H
 
 #include "include/llvm-libc-macros/float16-macros.h"
+#include "shared/libc_common.h"
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
-#include "shared/libc_common.h"
 #include "src/__support/math/exp10f16.h"
 
 namespace LIBC_NAMESPACE_DECL {

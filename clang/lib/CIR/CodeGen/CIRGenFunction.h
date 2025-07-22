@@ -853,6 +853,15 @@ public:
                               bool delegating, Address thisAddr,
                               CallArgList &args, clang::SourceLocation loc);
 
+  void emitCXXDestructorCall(const CXXDestructorDecl *dd, CXXDtorType type,
+                             bool forVirtualBase, bool delegating,
+                             Address thisAddr, QualType thisTy);
+
+  RValue emitCXXDestructorCall(GlobalDecl dtor, const CIRGenCallee &callee,
+                               mlir::Value thisVal, QualType thisTy,
+                               mlir::Value implicitParam,
+                               QualType implicitParamTy, const CallExpr *e);
+
   mlir::LogicalResult emitCXXForRangeStmt(const CXXForRangeStmt &s,
                                           llvm::ArrayRef<const Attr *> attrs);
 

@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_TYPE_H
 #define LLVM_CLANG_AST_INTERP_TYPE_H
 
+#include "clang/Basic/UnsignedOrNone.h"
 #include "llvm/Support/raw_ostream.h"
 #include <climits>
 #include <cstddef>
@@ -48,6 +49,38 @@ enum PrimType : unsigned {
   PT_Ptr = 13,
   PT_MemberPtr = 14,
 };
+
+// Like std::optional<PrimType>, but only sizeof(PrimType).
+class OptPrimType final {
+  unsigned V = ~0u;
+
+public:
+  OptPrimType() = default;
+  OptPrimType(std::nullopt_t) {}
+  OptPrimType(PrimType T) : V(static_cast<unsigned>(T)) {}
+
+  explicit constexpr operator bool() const { return V != ~0u; }
+  PrimType operator*() const {
+    assert(operator bool());
+    return static_cast<PrimType>(V);
+  }
+
+  PrimType value_or(PrimType PT) const {
+    if (operator bool())
+      return static_cast<PrimType>(V);
+    return PT;
+  }
+
+  bool operator==(PrimType PT) const {
+    if (!operator bool())
+      return false;
+    return V == static_cast<unsigned>(PT);
+  }
+  bool operator==(OptPrimType OPT) const { return V == OPT.V; }
+  bool operator!=(PrimType PT) const { return !(*this == PT); }
+  bool operator!=(OptPrimType OPT) const { return V != OPT.V; }
+};
+static_assert(sizeof(OptPrimType) == sizeof(PrimType));
 
 inline constexpr bool isPtrType(PrimType T) {
   return T == PT_Ptr || T == PT_MemberPtr;

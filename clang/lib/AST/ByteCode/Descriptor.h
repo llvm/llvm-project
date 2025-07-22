@@ -164,7 +164,7 @@ public:
   /// The primitive type this descriptor was created for,
   /// or the primitive element type in case this is
   /// a primitive array.
-  const std::optional<PrimType> PrimT = std::nullopt;
+  const OptPrimType PrimT = std::nullopt;
   /// Flag indicating if the block is mutable.
   const bool IsConst = false;
   /// Flag indicating if a field is mutable.

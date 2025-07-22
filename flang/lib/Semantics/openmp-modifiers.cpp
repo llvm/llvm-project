@@ -141,6 +141,22 @@ OmpGetDescriptor<parser::OmpAllocatorSimpleModifier>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpAlwaysModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"always-modifier",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_map}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpChunkModifier>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"chunk-modifier",
@@ -151,6 +167,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpChunkModifier>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_schedule}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpCloseModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"close-modifier",
+      /*props=*/
+      {
+          {50, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {50, {Clause::OMPC_map}},
       },
   };
   return desc;
@@ -168,6 +200,23 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpContextSelector>() {
       {
           // The MATCH clause takes a selector as an argument, not modifier.
           {50, {Clause::OMPC_when}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDeleteModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"delete-modifier",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique, OmpProperty::Ultimate}},
+          {60, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_map}},
       },
   };
   return desc;
@@ -347,6 +396,7 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpMapType>() {
       /*props=*/
       {
           {45, {OmpProperty::Ultimate}},
+          {60, {OmpProperty::Unique}},
       },
       /*clauses=*/
       {
@@ -367,6 +417,7 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpMapTypeModifier>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_map}},
+          {60, {}},
       },
   };
   return desc;
@@ -421,6 +472,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpPrescriptiveness>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpPresentModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"present-modifier",
+      /*props=*/
+      {
+          {51, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {51, {Clause::OMPC_map}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &
 OmpGetDescriptor<parser::OmpReductionIdentifier>() {
   static const OmpModifierDescriptor desc{
@@ -451,6 +518,38 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpReductionModifier>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_reduction}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpRefModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"ref-modifier",
+      /*props=*/
+      {
+          {60, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {60, {Clause::OMPC_map}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpSelfModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"self-modifier",
+      /*props=*/
+      {
+          {60, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {60, {Clause::OMPC_map}},
       },
   };
   return desc;
@@ -518,6 +617,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpVariableCategory>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_defaultmap}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpxHoldModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"ompx-hold-modifier",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_map}},
       },
   };
   return desc;

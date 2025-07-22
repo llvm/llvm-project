@@ -12,7 +12,7 @@ Welcome to the LLVM project!
 
 The LLVM project has multiple components. The core of the project is
 itself called "LLVM". This contains all of the tools, libraries, and header
-files needed to process intermediate representations and converts it into
+files needed to process intermediate representations and convert them into
 object files.  Tools include an assembler, disassembler, bitcode analyzer, and
 bitcode optimizer.  It also contains basic regression tests.
 
@@ -32,11 +32,11 @@ Getting the Source Code and Building LLVM
 #. Check out LLVM (including subprojects like Clang):
 
    * ``git clone https://github.com/llvm/llvm-project.git``
-   * Or, on windows:
+   * Or, on Windows:
 
      ``git clone --config core.autocrlf=false
      https://github.com/llvm/llvm-project.git``
-   * To save storage and speed-up the checkout time, you may want to do a
+   * To save storage and speed up the checkout time, you may want to do a
      `shallow clone <https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---depthltdepthgt>`_.
      For example, to get the latest revision of the LLVM project, use
 
@@ -71,7 +71,7 @@ Getting the Source Code and Building LLVM
 
      Some common options:
 
-     * ``-DLLVM_ENABLE_PROJECTS='...'`` --- semicolon-separated list of the LLVM
+     * ``-DLLVM_ENABLE_PROJECTS='...'`` --- A semicolon-separated list of the LLVM
        subprojects you'd like to additionally build. Can include any of: clang,
        clang-tools-extra, lldb, lld, polly, or cross-project-tests.
 
@@ -82,10 +82,10 @@ Getting the Source Code and Building LLVM
        pathname of where you want the LLVM tools and libraries to be installed
        (default ``/usr/local``).
 
-     * ``-DCMAKE_BUILD_TYPE=type`` --- Controls optimization level and debug
+     * ``-DCMAKE_BUILD_TYPE=type`` --- Controls the optimization level and debug
        information of the build. Valid options for *type* are ``Debug``,
        ``Release``, ``RelWithDebInfo``, and ``MinSizeRel``. For more detailed
-       information see :ref:`CMAKE_BUILD_TYPE <cmake_build_type>`.
+       information, see :ref:`CMAKE_BUILD_TYPE <cmake_build_type>`.
 
      * ``-DLLVM_ENABLE_ASSERTIONS=ON`` --- Compile with assertion checks enabled
        (default is ON for Debug builds, OFF for all other build types).
@@ -124,7 +124,7 @@ Getting the Source Code and Building LLVM
 
      ``ninja -C build check-llvm``
 
-     This will setup an LLVM build with debugging info, then compile LLVM and
+     This will set up an LLVM build with debugging info, then compile LLVM and
      run LLVM tests.
 
    * For more detailed information on CMake options, see `CMake <CMake.html>`__
@@ -150,7 +150,7 @@ page.
 
 For stand-alone builds, you must have an llvm install that is configured
 properly to be consumable by stand-alone builds of the other projects.
-This could be a distro provided LLVM install, or you can build it yourself,
+This could be a distro-provided LLVM install, or you can build it yourself,
 like this:
 
 .. code-block:: console
@@ -195,7 +195,7 @@ clang        clang, cmake             CLANG_INCLUDE_TESTS=ON (Required for check
 lld          lld, cmake
 ============ ======================== ======================
 
-Example for building stand-alone `clang`:
+Example of building stand-alone `clang`:
 
 .. code-block:: console
 
@@ -224,7 +224,7 @@ Example for building stand-alone `clang`:
 Requirements
 ============
 
-Before you begin to use the LLVM system, review the requirements given below.
+Before you begin to use the LLVM system, review the requirements below.
 This may save you some trouble by knowing ahead of time what hardware and
 software you will need.
 
@@ -265,7 +265,7 @@ Windows on Arm     ARM64                 Visual Studio, Clang\ :sup:`4`
 
   #. Code generation supported for Pentium processors and up
   #. Code generation supported for 32-bit ABI only
-  #. To use LLVM modules on Win32-based system, you may configure LLVM
+  #. To use LLVM modules on a Win32-based system, you may configure LLVM
      with ``-DBUILD_SHARED_LIBS=On``.
   #. Visual Studio alone can compile LLVM. When using Clang, you
      must also have Visual Studio installed.
@@ -309,7 +309,7 @@ Package                                                     Version      Notes
    #. Only needed if you want to run the automated test suite in the
       ``llvm/test`` directory, or if you plan to utilize any Python libraries,
       utilities, or bindings.
-   #. Optional, adds compression / uncompression capabilities to selected LLVM
+   #. Optional, adds compression/uncompression capabilities to selected LLVM
       tools.
    #. Optional, you can use any other build tool supported by CMake.
    #. Only needed when building libc with New Headergen. Mainly used by libc.
@@ -401,11 +401,11 @@ Studio 2019 (or later), or a recent version of mingw64. FreeBSD 10.0 and newer
 have a modern Clang as the system compiler.
 
 However, some Linux distributions and some other or older BSDs sometimes have
-extremely old versions of GCC. These steps attempt to help you upgrade you
+extremely old versions of GCC. These steps attempt to help you upgrade your
 compiler even on such a system. However, if at all possible, we encourage you
 to use a recent version of a distribution with a modern system compiler that
 meets these requirements. Note that it is tempting to install a prior
-version of Clang and libc++ to be the host compiler, however libc++ was not
+version of Clang and libc++ to be the host compiler; however, libc++ was not
 well tested or set up to build on Linux until relatively recently. As
 a consequence, this guide suggests just using libstdc++ and a modern GCC as the
 initial host in a bootstrap, and then using Clang (and potentially libc++).
@@ -514,11 +514,11 @@ appropriate pathname on your local system.  All these paths are absolute:
 
 ``SRC_ROOT``
 
-  This is the top level directory of the LLVM source tree.
+  This is the top-level directory of the LLVM source tree.
 
 ``OBJ_ROOT``
 
-  This is the top level directory of the LLVM object tree (i.e. the tree where
+  This is the top-level directory of the LLVM object tree (i.e. the tree where
   object files and compiled programs will be placed.  It can be the same as
   SRC_ROOT).
 
@@ -666,7 +666,7 @@ cross-compiling CMake provides a variable ``CMAKE_TOOLCHAIN_FILE`` which can
 define compiler flags and variables used during the CMake test operations.
 
 The result of such a build is executables that are not runnable on the build
-host but can be executed on the target. As an example the following CMake
+host but can be executed on the target. As an example, the following CMake
 invocation can generate build files targeting iOS. This will work on macOS
 with the latest Xcode:
 
@@ -770,7 +770,7 @@ Generates system build files.
 - Some simple examples showing how to use LLVM as a compiler for a custom
   language - including lowering, optimization, and code generation.
 
-- Kaleidoscope Tutorial: Kaleidoscope language tutorial run through the
+- Kaleidoscope Tutorial: Kaleidoscope language tutorial runs through the
   implementation of a nice little compiler for a non-trivial language
   including a hand-written lexer, parser, AST, as well as code generation
   support using LLVM- both static (ahead of time) and various approaches to
@@ -858,7 +858,7 @@ share code among the `tools`_.
 
 ``llvm/lib/Support/``
 
-  Source code that corresponding to the header files in ``llvm/include/ADT/``
+  Source code that corresponds to the header files in ``llvm/include/ADT/``
   and ``llvm/include/Support/``.
 
 ``llvm/bindings``
@@ -1051,7 +1051,7 @@ Example with clang
 
      % lli hello.bc
 
-   The second examples shows how to invoke the LLVM JIT, :doc:`lli
+   The second example shows how to invoke the LLVM JIT, :doc:`lli
    <CommandGuide/lli>`.
 
 #. Use the ``llvm-dis`` utility to take a look at the LLVM assembly code:
@@ -1163,7 +1163,7 @@ following options with cmake:
 
    Consider setting this to ``ON`` if you require a debug build, as this will ease
    memory pressure on the linker. This will make linking much faster, as the
-   binaries will not contain any of the debug information. Instead the debug
+   binaries will not contain any of the debug information. Instead, the debug
    information is in a separate DWARF object file (with the extension ``.dwo``).
    This only applies to host platforms using ELF, such as Linux.
 

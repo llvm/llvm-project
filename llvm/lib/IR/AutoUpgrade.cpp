@@ -1310,6 +1310,18 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       return true;
     }
     break;
+  case 'l':
+    if (Name.starts_with("lifetime.start") ||
+        Name.starts_with("lifetime.end")) {
+      // Unless remangling is required, do not upgrade the function declaration,
+      // but do upgrade the calls.
+      if (auto Result = llvm::Intrinsic::remangleIntrinsicFunction(F))
+        NewFn = *Result;
+      else
+        NewFn = F;
+      return true;
+    }
+    break;
   case 'm': {
     // Updating the memory intrinsics (memcpy/memmove/memset) that have an
     // alignment parameter to embedding the alignment as an attribute of
@@ -1629,7 +1641,6 @@ bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn,
   NewFn = nullptr;
   bool Upgraded =
       upgradeIntrinsicFunction1(F, NewFn, CanUpgradeDebugIntrinsicsToRecords);
-  assert(F != NewFn && "Intrinsic function upgraded to the same function");
 
   // Upgrade intrinsic attributes.  This does not change the function.
   if (NewFn)
@@ -4570,6 +4581,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   }
 
   const auto &DefaultCase = [&]() -> void {
+    if (F == NewFn)
+      return;
+
     if (CI->getFunctionType() == NewFn->getFunctionType()) {
       // Handle generic mangling change.
       assert(
@@ -5109,6 +5123,31 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       MTI->setSourceAlignment(Align->getMaybeAlignValue());
     break;
   }
+
+  case Intrinsic::lifetime_start:
+  case Intrinsic::lifetime_end: {
+    Value *Size = CI->getArgOperand(0);
+    Value *Ptr = CI->getArgOperand(1);
+    if (isa<AllocaInst>(Ptr)) {
+      DefaultCase();
+      return;
+    }
+
+    // Try to strip pointer casts, such that the lifetime works on an alloca.
+    Ptr = Ptr->stripPointerCasts();
+    if (isa<AllocaInst>(Ptr)) {
+      // Don't use NewFn, as we might have looked through an addrspacecast.
+      if (NewFn->getIntrinsicID() == Intrinsic::lifetime_start)
+        NewCall = Builder.CreateLifetimeStart(Ptr, cast<ConstantInt>(Size));
+      else
+        NewCall = Builder.CreateLifetimeEnd(Ptr, cast<ConstantInt>(Size));
+      break;
+    }
+
+    // Otherwise remove the lifetime marker.
+    CI->eraseFromParent();
+    return;
+  }
   }
   assert(NewCall && "Should have either set this variable or returned through "
                     "the default case");
@@ -5131,7 +5170,8 @@ void llvm::UpgradeCallsToIntrinsic(Function *F) {
         UpgradeIntrinsicCall(CB, NewFn);
 
     // Remove old function, no longer used, from the module.
-    F->eraseFromParent();
+    if (F != NewFn)
+      F->eraseFromParent();
   }
 }
 

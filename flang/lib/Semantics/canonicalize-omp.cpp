@@ -88,6 +88,8 @@ public:
     CanonicalizeUtilityConstructs(spec);
   }
 
+  void Post(parser::OmpMapClause &map) { CanonicalizeMapModifiers(map); }
+
 private:
   template <typename T> T *GetConstructIf(parser::ExecutionPartConstruct &x) {
     if (auto *y{std::get_if<parser::ExecutableConstruct>(&x.u)}) {
@@ -388,6 +390,42 @@ private:
         });
 
     omps.erase(rlast.base(), omps.end());
+  }
+
+  // Map clause modifiers are parsed as per OpenMP 6.0 spec. That spec has
+  // changed properties of some of the modifiers, for example it has expanded
+  // map-type-modifier into 3 individual modifiers (one for each of the
+  // possible values of the original modifier), and the "map-type" modifier
+  // is no longer ultimate.
+  // To utilize the modifier validation framework for semantic checks,
+  // if the specified OpenMP version is less than 6.0, rewrite the affected
+  // modifiers back into the pre-6.0 forms.
+  void CanonicalizeMapModifiers(parser::OmpMapClause &map) {
+    // Omp{Always, Close, Present, xHold}Modifier -> OmpMapTypeModifier
+    // OmpDeleteModifier -> OmpMapType
+    using Modifier = parser::OmpMapClause::Modifier;
+    using Modifiers = std::optional<std::list<Modifier>>;
+    auto &modifiers{std::get<Modifiers>(map.t)};
+    if (!modifiers) {
+      return;
+    }
+
+    using MapTypeModifier = parser::OmpMapTypeModifier;
+    using MapType = parser::OmpMapType;
+
+    for (auto &mod : *modifiers) {
+      if (std::holds_alternative<parser::OmpAlwaysModifier>(mod.u)) {
+        mod.u = MapTypeModifier(MapTypeModifier::Value::Always);
+      } else if (std::holds_alternative<parser::OmpCloseModifier>(mod.u)) {
+        mod.u = MapTypeModifier(MapTypeModifier::Value::Close);
+      } else if (std::holds_alternative<parser::OmpPresentModifier>(mod.u)) {
+        mod.u = MapTypeModifier(MapTypeModifier::Value::Present);
+      } else if (std::holds_alternative<parser::OmpxHoldModifier>(mod.u)) {
+        mod.u = MapTypeModifier(MapTypeModifier::Value::Ompx_Hold);
+      } else if (std::holds_alternative<parser::OmpDeleteModifier>(mod.u)) {
+        mod.u = MapType(MapType::Value::Delete);
+      }
+    }
   }
 
   // Mapping from the specification parts to the blocks that follow in the

@@ -454,7 +454,7 @@ def TransposeOp : LinalgStructuredBase_Op<"transpose", [
     static void regionBuilder(mlir::ImplicitLocOpBuilder &b, mlir::Block &block,
         mlir::ArrayRef<mlir::NamedAttribute>, function_ref<InFlightDiagnostic()> emitError) {
       OpBuilder::InsertionGuard guard(b);
-      b.create<linalg::YieldOp>(b.getLoc(), block.getArgument(0));
+      linalg::YieldOp::create(b, b.getLoc(), block.getArgument(0));
     }
 
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
@@ -528,7 +528,7 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
                               mlir::ArrayRef<mlir::NamedAttribute>, 
                               function_ref<InFlightDiagnostic()> emitError) {
       OpBuilder::InsertionGuard guard(b);
-      b.create<linalg::YieldOp>(b.getLoc(), block.getArgument(0));
+      linalg::YieldOp::create(b, b.getLoc(), block.getArgument(0));
     }
 
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,

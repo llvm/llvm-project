@@ -25,12 +25,12 @@ define void @test1() {
 
 define void @test2(ptr %P) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[Q:%.*]] = getelementptr i32, ptr [[P:%.*]], i32 1
+; CHECK-NEXT:    [[Q:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[Q]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[Q]])
 ; CHECK-NEXT:    ret void
 ;
-  %Q = getelementptr i32, ptr %P, i32 1
+  %Q = alloca i32
   call void @llvm.lifetime.start.p0(i64 4, ptr %Q)
   store i32 0, ptr %Q  ;; This store is dead.
   call void @llvm.lifetime.end.p0(i64 4, ptr %Q)
@@ -114,19 +114,19 @@ exit:
 
 ; lifetime.end only marks the first two bytes of %A as dead. Make sure
 ; `store i8 20, ptr %A.2 is not removed.
-define void @test5_lifetime_end_partial(ptr %A) {
+define void @test5_lifetime_end_partial() {
 ; CHECK-LABEL: @test5_lifetime_end_partial(
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[A:%.*]])
+; CHECK-NEXT:    [[A:%.*]] = alloca [4 x i8], align 1
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[A]])
 ; CHECK-NEXT:    [[A_1:%.*]] = getelementptr i8, ptr [[A]], i64 1
 ; CHECK-NEXT:    [[A_2:%.*]] = getelementptr i8, ptr [[A]], i64 2
 ; CHECK-NEXT:    store i8 20, ptr [[A_2]], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[A]])
 ; CHECK-NEXT:    call void @use(ptr [[A_1]])
-; CHECK-NEXT:    store i8 30, ptr [[A_1]], align 1
-; CHECK-NEXT:    store i8 40, ptr [[A_2]], align 1
 ; CHECK-NEXT:    ret void
 ;
 
+  %A = alloca [4 x i8]
   call void @llvm.lifetime.start.p0(i64 2, ptr %A)
   %A.1 = getelementptr i8, ptr %A, i64 1
   %A.2 = getelementptr i8, ptr %A, i64 2

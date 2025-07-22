@@ -2892,7 +2892,7 @@ site, these bundles may contain any values that are needed by the
 generated code.  For more details, see :ref:`GC Transitions
 <gc_transition_args>`.
 
-The bundle contain an arbitrary list of Values which need to be passed
+The bundle contains an arbitrary list of Values which need to be passed
 to GC transition code. They will be lowered and passed as operands to
 the appropriate GC_TRANSITION nodes in the selection DAG. It is assumed
 that these arguments must be available before and after (but not
@@ -2903,7 +2903,7 @@ necessarily during) the execution of the callee.
 Assume Operand Bundles
 ^^^^^^^^^^^^^^^^^^^^^^
 
-Operand bundles on an :ref:`llvm.assume <int_assume>` allows representing
+Operand bundles on an :ref:`llvm.assume <int_assume>` allow representing
 assumptions, such as that a :ref:`parameter attribute <paramattrs>` or a
 :ref:`function attribute <fnattrs>` holds for a certain value at a certain
 location. Operand bundles enable assumptions that are either hard or impossible
@@ -2922,11 +2922,11 @@ restricted form:
 
       "<tag>"([ <holds for value> [, <attribute argument>] ])
 
-* The tag of the operand bundle is usually the name of attribute that can be
-  assumed to hold. It can also be `ignore`, this tag doesn't contain any
+* The tag of the operand bundle is usually the name of the attribute that can be
+  assumed to hold. It can also be `ignore`; this tag doesn't contain any
   information and should be ignored.
-* The first argument if present is the value for which the attribute hold.
-* The second argument if present is an argument of the attribute.
+* The first argument, if present, is the value for which the attribute holds.
+* The second argument, if present, is an argument of the attribute.
 
 If there are no arguments the attribute is a property of the call location.
 
@@ -2968,7 +2968,7 @@ the behavior is undefined, unless one of the following exceptions applies:
   dereferenceable at later pointers, e.g. because it could have been freed.
 
 In addition to allowing operand bundles encoding function and parameter
-attributes, an assume operand bundle my also encode a ``separate_storage``
+attributes, an assume operand bundle may also encode a ``separate_storage``
 operand bundle. This has the form:
 
 .. code-block:: llvm
@@ -3115,7 +3115,7 @@ Note that the assembly string *must* be parseable by LLVM's integrated assembler
 Data Layout
 -----------
 
-A module may specify a target specific data layout string that specifies
+A module may specify a target-specific data layout string that specifies
 how data is to be laid out in memory. The syntax for the data layout is
 simply:
 
@@ -3611,7 +3611,7 @@ operation may modify the memory at that address. A volatile operation
 may not modify any other memory accessible by the module being compiled.
 A volatile operation may not call any code in the current module.
 
-In general (without target specific context), the address space of a
+In general (without target-specific context), the address space of a
 volatile operation may not be changed. Different address spaces may
 have different trapping behavior when dereferencing an invalid
 pointer.
@@ -3794,7 +3794,7 @@ If an atomic operation is marked ``syncscope("singlethread")``, it only
 other operations running in the same thread (for example, in signal handlers).
 
 If an atomic operation is marked ``syncscope("<target-scope>")``, where
-``<target-scope>`` is a target specific synchronization scope, then it is target
+``<target-scope>`` is a target-specific synchronization scope, then it is target
 dependent if it *synchronizes with* and participates in the seq\_cst total
 orderings of other operations.
 
@@ -3896,10 +3896,10 @@ Floating-Point Semantics
 ------------------------
 
 This section defines the semantics for core floating-point operations on types
-that use a format specified by IEEE-745. These types are: ``half``, ``float``,
+that use a format specified by IEEE-754. These types are: ``half``, ``float``,
 ``double``, and ``fp128``, which correspond to the binary16, binary32, binary64,
 and binary128 formats, respectively. The "core" operations are those defined in
-section 5 of IEEE-745, which all have corresponding LLVM operations.
+section 5 of IEEE-754, which all have corresponding LLVM operations.
 
 The value returned by those operations matches that of the corresponding
 IEEE-754 operation executed in the :ref:`default LLVM floating-point environment
@@ -8746,11 +8746,11 @@ framework::
 The metadata encoding as lists of lists of options, as opposed to a collapsed
 list of options, is chosen so that the IR encoding can use multiple option
 strings to specify e.g., a single library, while still having that specifier be
-preserved as an atomic element that can be recognized by a target specific
+preserved as an atomic element that can be recognized by a target-specific
 assembly writer or object file emitter.
 
 Each individual option is required to be either a valid option for the target's
-linker, or an option that is reserved by the target specific assembly writer or
+linker, or an option that is reserved by the target-specific assembly writer or
 object file emitter. No other aspect of these options is defined by the IR.
 
 Dependent Libs Named Metadata
@@ -19508,7 +19508,7 @@ Semantics:
 
 The '``llvm.set.loop.iterations.*``' intrinsics do not perform any arithmetic
 on their operand. It's a hint to the backend that can use this to set up the
-hardware-loop count with a target specific instruction, usually a move of this
+hardware-loop count with a target-specific instruction, usually a move of this
 value to a special register or a hardware-loop instruction.
 
 
@@ -19547,7 +19547,7 @@ Semantics:
 
 The '``llvm.start.loop.iterations.*``' intrinsics do not perform any arithmetic
 on their operand. It's a hint to the backend that can use this to set up the
-hardware-loop count with a target specific instruction, usually a move of this
+hardware-loop count with a target-specific instruction, usually a move of this
 value to a special register or a hardware-loop instruction.
 
 '``llvm.test.set.loop.iterations.*``' Intrinsic
@@ -19583,7 +19583,7 @@ Semantics:
 
 The '``llvm.test.set.loop.iterations.*``' intrinsics do not perform any
 arithmetic on their operand. It's a hint to the backend that can use this to
-set up the hardware-loop count with a target specific instruction, usually a
+set up the hardware-loop count with a target-specific instruction, usually a
 move of this value to a special register or a hardware-loop instruction.
 The result is the conditional value of whether the given count is not zero.
 
@@ -19621,7 +19621,7 @@ Semantics:
 
 The '``llvm.test.start.loop.iterations.*``' intrinsics do not perform any
 arithmetic on their operand. It's a hint to the backend that can use this to
-set up the hardware-loop count with a target specific instruction, usually a
+set up the hardware-loop count with a target-specific instruction, usually a
 move of this value to a special register or a hardware-loop instruction.
 The result is a pair of the input and a conditional value of whether the
 given count is not zero.
@@ -26639,19 +26639,14 @@ Arguments:
 
 The first argument is a constant integer representing the size of the
 object, or -1 if it is variable sized. The second argument is a pointer
-to the object.
+to an ``alloca`` instruction.
 
 Semantics:
 """"""""""
 
-If ``ptr`` is a stack-allocated object and it points to the first byte of
-the object, the object is initially marked as dead.
-``ptr`` is conservatively considered as a non-stack-allocated object if
-the stack coloring algorithm that is used in the optimization pipeline cannot
-conclude that ``ptr`` is a stack-allocated object.
-
-After '``llvm.lifetime.start``', the stack object that ``ptr`` points is marked
-as alive and has an uninitialized value.
+The stack-allocated object that ``ptr`` points to is initially marked as dead.
+After '``llvm.lifetime.start``', the stack object is marked as alive and has an
+uninitialized value.
 The stack object is marked as dead when either
 :ref:`llvm.lifetime.end <int_lifeend>` to the alloca is executed or the
 function returns.
@@ -26660,11 +26655,6 @@ After :ref:`llvm.lifetime.end <int_lifeend>` is called,
 '``llvm.lifetime.start``' on the stack object can be called again.
 The second '``llvm.lifetime.start``' call marks the object as alive, but it
 does not change the address of the object.
-
-If ``ptr`` is a non-stack-allocated object, it does not point to the first
-byte of the object or it is a stack object that is already alive, it simply
-fills all bytes of the object with ``poison``.
-
 
 .. _int_lifeend:
 
@@ -26689,23 +26679,15 @@ Arguments:
 
 The first argument is a constant integer representing the size of the
 object, or -1 if it is variable sized. The second argument is a pointer
-to the object.
+to an ``alloca`` instruction.
 
 Semantics:
 """"""""""
 
-If ``ptr`` is a stack-allocated object and it points to the first byte of the
-object, the object is dead.
-``ptr`` is conservatively considered as a non-stack-allocated object if
-the stack coloring algorithm that is used in the optimization pipeline cannot
-conclude that ``ptr`` is a stack-allocated object.
+The stack-allocated object that ``ptr`` points to becomes dead after the call
+to this intrinsic.
 
 Calling ``llvm.lifetime.end`` on an already dead alloca is no-op.
-
-If ``ptr`` is a non-stack-allocated object or it does not point to the first
-byte of the object, it is equivalent to simply filling all bytes of the object
-with ``poison``.
-
 
 '``llvm.invariant.start``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

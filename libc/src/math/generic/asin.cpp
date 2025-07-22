@@ -25,6 +25,7 @@ using DoubleDouble = fputil::DoubleDouble;
 using Float128 = fputil::DyadicFloat<128>;
 
 LLVM_LIBC_FUNCTION(double, asin, (double x)) {
+  using namespace asin_internal;
   using FPBits = fputil::FPBits<double>;
 
   FPBits xbits(x);

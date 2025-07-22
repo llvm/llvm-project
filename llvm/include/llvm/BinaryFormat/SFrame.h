@@ -15,33 +15,36 @@
 #ifndef LLVM_BINARYFORMAT_SFRAME_H
 #define LLVM_BINARYFORMAT_SFRAME_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Endian.h"
 
-namespace llvm::sframe {
+namespace llvm {
+
+template <typename T> struct EnumEntry;
+
+namespace sframe {
 
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 constexpr uint16_t Magic = 0xdee2;
 
 enum class Version : uint8_t {
-  V1 = 1,
-  V2 = 2,
+#define HANDLE_SFRAME_VERSION(CODE, NAME) NAME = CODE,
+#include "llvm/BinaryFormat/SFrameConstants.def"
 };
 
 enum class Flags : uint8_t {
-  FDESorted = 0x01,
-  FramePointer = 0x02,
-  FDEFuncStartPCRel = 0x04,
+#define HANDLE_SFRAME_FLAG(CODE, NAME) NAME = CODE,
+#include "llvm/BinaryFormat/SFrameConstants.def"
   V2AllFlags = FDESorted | FramePointer | FDEFuncStartPCRel,
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/0xff),
 };
 
 enum class ABI : uint8_t {
-  AArch64EndianBig = 1,
-  AArch64EndianLittle = 2,
-  AMD64EndianLittle = 3,
+#define HANDLE_SFRAME_ABI(CODE, NAME) NAME = CODE,
+#include "llvm/BinaryFormat/SFrameConstants.def"
 };
 
 /// SFrame FRE Types. Bits 0-3 of FuncDescEntry.Info.
@@ -160,6 +163,11 @@ template <endianness E> using FrameRowEntryAddr1 = FrameRowEntry<uint8_t, E>;
 template <endianness E> using FrameRowEntryAddr2 = FrameRowEntry<uint16_t, E>;
 template <endianness E> using FrameRowEntryAddr4 = FrameRowEntry<uint32_t, E>;
 
-} // namespace llvm::sframe
+ArrayRef<EnumEntry<Version>> getVersions();
+ArrayRef<EnumEntry<Flags>> getFlags();
+ArrayRef<EnumEntry<ABI>> getABIs();
+
+} // namespace sframe
+} // namespace llvm
 
 #endif // LLVM_BINARYFORMAT_SFRAME_H

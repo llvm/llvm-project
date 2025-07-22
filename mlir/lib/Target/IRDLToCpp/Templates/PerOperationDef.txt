@@ -21,6 +21,29 @@ void __OP_CPP_NAME__::build(::mlir::OpBuilder &odsBuilder,
   odsState.addTypes(resultTypes);
 }
 
+__OP_CPP_NAME__
+__OP_CPP_NAME__::create(::mlir::OpBuilder &odsBuilder,
+                        ::mlir::Location location,
+                        ::mlir::TypeRange resultTypes,
+                        ::mlir::ValueRange operands,
+                        ::llvm::ArrayRef<::mlir::NamedAttribute> attributes)
+{
+  ::mlir::OperationState state(location, getOperationName());
+  build(odsBuilder, state, resultTypes, operands, attributes);
+  auto res = ::llvm::dyn_cast<__OP_CPP_NAME__>(odsBuilder.create(state));
+  assert(res && "builder didn't return the right type");
+  return res;
+}
+
+__OP_CPP_NAME__
+__OP_CPP_NAME__::create(::mlir::ImplicitLocOpBuilder &odsBuilder,
+                        ::mlir::TypeRange resultTypes,
+                        ::mlir::ValueRange operands,
+                        ::llvm::ArrayRef<::mlir::NamedAttribute> attributes)
+{
+  return create(odsBuilder, odsBuilder.getLoc(), resultTypes, operands, attributes);
+}
+
 
 __NAMESPACE_CLOSE__
 

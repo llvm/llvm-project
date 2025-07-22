@@ -363,6 +363,82 @@ v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], v[8:23], v28 index_key:2
 v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], v[8:23], v28 neg_lo:[0,0,1]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
 
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[8:23], v[24:39], v[40:47] neg_lo:[1,0,0]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[8:23], v[24:39], v[40:47] neg_lo:[0,1,0]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[8:23], v[24:39], v[40:47] neg_hi:[1,0,0]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_hi operand
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[8:23], v[24:39], v[40:47] neg_hi:[0,1,0]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_hi operand
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[8:23], v[24:39], v[40:47] clamp
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[8:23], v[24:39], v[40:47] matrix_b_fmt:-1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid matrix_b_fmt value
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[8:23], v[24:39], v[40:47] matrix_b_fmt:xxx
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid matrix_b_fmt value
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:7], v[20:35], v[40:47]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: wrong register tuple size for MATRIX_FMT_FP8
+// GFX1250-ERR-NEXT: {{^}}v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:7], v[20:35], v[40:47]
+// GFX1250-ERR-NEXT: {{^}}                                    ^
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:7], v[20:35], v[40:47] matrix_a_fmt:MATRIX_FMT_FP8
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: wrong register tuple size for MATRIX_FMT_FP8
+// GFX1250-ERR-NEXT: {{^}}v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:7], v[20:35], v[40:47] matrix_a_fmt:MATRIX_FMT_FP8
+// GFX1250-ERR-NEXT: {{^}}                                    ^
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:7], v[20:35], v[40:47] matrix_a_fmt:MATRIX_FMT_BF8
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: wrong register tuple size for MATRIX_FMT_BF8
+// GFX1250-ERR-NEXT: {{^}}v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:7], v[20:35], v[40:47] matrix_a_fmt:MATRIX_FMT_BF8
+// GFX1250-ERR-NEXT: {{^}}                                    ^
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:7], v[20:35], v[40:47] matrix_a_fmt:MATRIX_FMT_FP6
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: wrong register tuple size for MATRIX_FMT_FP6
+// GFX1250-ERR-NEXT: {{^}}v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:7], v[20:35], v[40:47] matrix_a_fmt:MATRIX_FMT_FP6
+// GFX1250-ERR-NEXT: {{^}}                                    ^
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:7], v[20:35], v[40:47] matrix_a_fmt:MATRIX_FMT_BF6
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: wrong register tuple size for MATRIX_FMT_BF6
+// GFX1250-ERR-NEXT: {{^}}v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:7], v[20:35], v[40:47] matrix_a_fmt:MATRIX_FMT_BF6
+// GFX1250-ERR-NEXT: {{^}}                                    ^
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:15], v[20:35], v[40:47] matrix_a_fmt:MATRIX_FMT_FP4
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: wrong register tuple size for MATRIX_FMT_FP4
+// GFX1250-ERR-NEXT: {{^}}v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:15], v[20:35], v[40:47] matrix_a_fmt:MATRIX_FMT_FP4
+// GFX1250-ERR-NEXT: {{^}}                                    ^
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:15], v[20:27], v[40:47] matrix_b_fmt:MATRIX_FMT_FP8
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: wrong register tuple size for MATRIX_FMT_FP8
+// GFX1250-ERR-NEXT: {{^}}v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:15], v[20:27], v[40:47] matrix_b_fmt:MATRIX_FMT_FP8
+// GFX1250-ERR-NEXT: {{^}}                                             ^
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:15], v[20:27], v[40:47] matrix_b_fmt:MATRIX_FMT_BF8
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: wrong register tuple size for MATRIX_FMT_BF8
+// GFX1250-ERR-NEXT: {{^}}v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:15], v[20:27], v[40:47] matrix_b_fmt:MATRIX_FMT_BF8
+// GFX1250-ERR-NEXT: {{^}}                                             ^
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:15], v[20:27], v[40:47] matrix_b_fmt:MATRIX_FMT_FP6
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: wrong register tuple size for MATRIX_FMT_FP6
+// GFX1250-ERR-NEXT: {{^}}v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:15], v[20:27], v[40:47] matrix_b_fmt:MATRIX_FMT_FP6
+// GFX1250-ERR-NEXT: {{^}}                                             ^
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:15], v[20:27], v[40:47] matrix_b_fmt:MATRIX_FMT_BF6
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: wrong register tuple size for MATRIX_FMT_BF6
+// GFX1250-ERR-NEXT: {{^}}v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:15], v[20:27], v[40:47] matrix_b_fmt:MATRIX_FMT_BF6
+// GFX1250-ERR-NEXT: {{^}}                                             ^
+
+v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:15], v[20:35], v[40:47] matrix_b_fmt:MATRIX_FMT_FP4
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: wrong register tuple size for MATRIX_FMT_FP4
+// GFX1250-ERR-NEXT: {{^}}v_wmma_f32_16x16x128_f8f6f4 v[0:7], v[0:15], v[20:35], v[40:47] matrix_b_fmt:MATRIX_FMT_FP4
+// GFX1250-ERR-NEXT: {{^}}                                             ^
+
 v_wmma_f32_32x16x128_f4 v[4:19], v[0:15], v[2:9], v[4:19] neg_lo:[1,0,0]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
 // GFX1250-ERR-NEXT: {{^}}v_wmma_f32_32x16x128_f4 v[4:19], v[0:15], v[2:9], v[4:19] neg_lo:[1,0,0]

@@ -687,16 +687,12 @@ fails to instantiate. For such issues, users can add references to ``N::g`` in
 the `module purview <https://eel.is/c++draft/module.unit#5>`_ of ``M.cppm`` to
 ensure it is reachable, e.g. ``using N::g;``.
 
-Support for Reduced BMIs is still experimental, but it may become the default
-in the future. The expected roadmap for Reduced BMIs as of Clang 19.x is:
-
-1. ``-fexperimental-modules-reduced-bmi`` was introduced in v19.x
-2. For v20.x, ``-fmodules-reduced-bmi`` is introduced as an equivalent non-experimental
-   option. It is expected to stay opt-in for 1~2 releases, though the period depends
-   on user feedback and may be extended.
-3. Finally, ``-fmodules-reduced-bmi`` will be the default. When that time
-   comes, the term BMI will refer to the Reduced BMI and the Full BMI will only
-   be meaningful to build systems which elect to support two-phase compilation.
+As of Clang 22.x, the Reduced BMI is enabled by default. You may still want to
+use Full BMI with ``-fno-modules-reduced-bmi`` in the following case:
+1. Your build system uses two-phase compilation but it haven't adjusted the
+implementation for reduced BMI.
+2. You meet a regression with Reduced BMI that you cannot work around. Please
+report an issue for this case.
 
 Experimental Non-Cascading Changes
 ----------------------------------

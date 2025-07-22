@@ -77,6 +77,10 @@ C++ Specific Potentially Breaking Changes
   whose nested-name-specifier doesn't refer to a base class such as
   ``using CurrentClass::Foo;`` is now rejected in C++98 mode.
 
+- For C++20 modules, the Reduced BMI mode will be the default option. This may introduce
+  regressions if your build system supports two-phase compilation model but haven't support
+  reduced BMI or it is a compiler bug or a bug in users code.
+
 ABI Changes in This Version
 ---------------------------
 

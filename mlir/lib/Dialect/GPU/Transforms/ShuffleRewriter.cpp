@@ -47,16 +47,16 @@ struct GpuShuffleRewriter : public OpRewritePattern<gpu::ShuffleOp> {
 
     // Float types must be converted to i64 to extract the bits.
     if (isa<FloatType>(valueType))
-      value = rewriter.create<arith::BitcastOp>(valueLoc, i64, value);
+      value = arith::BitcastOp::create(rewriter, valueLoc, i64, value);
 
     // Get the low bits by trunc(value).
-    lo = rewriter.create<arith::TruncIOp>(valueLoc, i32, value);
+    lo = arith::TruncIOp::create(rewriter, valueLoc, i32, value);
 
     // Get the high bits by trunc(value >> 32).
-    auto c32 = rewriter.create<arith::ConstantOp>(
-        valueLoc, rewriter.getIntegerAttr(i64, 32));
-    hi = rewriter.create<arith::ShRUIOp>(valueLoc, value, c32);
-    hi = rewriter.create<arith::TruncIOp>(valueLoc, i32, hi);
+    auto c32 = arith::ConstantOp::create(rewriter, valueLoc,
+                                         rewriter.getIntegerAttr(i64, 32));
+    hi = arith::ShRUIOp::create(rewriter, valueLoc, value, c32);
+    hi = arith::TruncIOp::create(rewriter, valueLoc, i32, hi);
 
     // Shuffle the values.
     ValueRange loRes =
@@ -71,21 +71,21 @@ struct GpuShuffleRewriter : public OpRewritePattern<gpu::ShuffleOp> {
             .getResults();
 
     // Convert lo back to i64.
-    lo = rewriter.create<arith::ExtUIOp>(valueLoc, i64, loRes[0]);
+    lo = arith::ExtUIOp::create(rewriter, valueLoc, i64, loRes[0]);
 
     // Convert hi back to i64.
-    hi = rewriter.create<arith::ExtUIOp>(valueLoc, i64, hiRes[0]);
-    hi = rewriter.create<arith::ShLIOp>(valueLoc, hi, c32);
+    hi = arith::ExtUIOp::create(rewriter, valueLoc, i64, hiRes[0]);
+    hi = arith::ShLIOp::create(rewriter, valueLoc, hi, c32);
 
     // Obtain the shuffled bits hi | lo.
-    value = rewriter.create<arith::OrIOp>(loc, hi, lo);
+    value = arith::OrIOp::create(rewriter, loc, hi, lo);
 
     // Convert the value back to float.
     if (isa<FloatType>(valueType))
-      value = rewriter.create<arith::BitcastOp>(valueLoc, valueType, value);
+      value = arith::BitcastOp::create(rewriter, valueLoc, valueType, value);
 
     // Obtain the shuffle validity by combining both validities.
-    auto validity = rewriter.create<arith::AndIOp>(loc, loRes[1], hiRes[1]);
+    auto validity = arith::AndIOp::create(rewriter, loc, loRes[1], hiRes[1]);
 
     // Replace the op.
     rewriter.replaceOp(op, {value, validity});

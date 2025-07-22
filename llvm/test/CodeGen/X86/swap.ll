@@ -47,12 +47,10 @@ define dso_local void @onealloc_noreadback(ptr nocapture %a, ptr nocapture %b) l
 entry:
   %alloc = alloca [16 x i8], i8 2, align 1
   %part2 = getelementptr inbounds [16 x i8], ptr %alloc, i64 1, i64 0
-  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %alloc)
-  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %part2)
+  call void @llvm.lifetime.start.p0(i64 32, ptr nonnull %alloc)
   call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 1 %alloc, ptr align 1 %a, i64 16, i1 false)
   tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 1 %part2, ptr align 1 %b, i64 16, i1 false)
-  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %alloc)
-  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %part2)
+  call void @llvm.lifetime.end.p0(i64 32, ptr nonnull %alloc)
   ret void
 }
 
@@ -115,8 +113,9 @@ define dso_local void @onealloc_readback_1(ptr nocapture %a, ptr nocapture %b) l
 ;
 ; AA-LABEL: onealloc_readback_1:
 ; AA:       # %bb.0: # %entry
-; AA-NEXT:    vmovups (%rsi), %xmm0
+; AA-NEXT:    vmovups (%rdi), %xmm0
 ; AA-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; AA-NEXT:    vmovups (%rsi), %xmm0
 ; AA-NEXT:    vmovups %xmm0, (%rdi)
 ; AA-NEXT:    retq
 entry:

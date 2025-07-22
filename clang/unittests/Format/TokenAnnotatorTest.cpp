@@ -618,7 +618,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   EXPECT_TOKEN(Tokens[19], tok::l_brace, TT_StructLBrace);
   EXPECT_TOKEN(Tokens[20], tok::r_brace, TT_StructRBrace);
 
-  constexpr StringRef Code{"struct EXPORT StructName {};"};
+  constexpr StringRef Code("struct EXPORT StructName {};");
 
   Tokens = annotate(Code);
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
@@ -3958,7 +3958,7 @@ TEST_F(TokenAnnotatorTest, SplitPenalty) {
 }
 
 TEST_F(TokenAnnotatorTest, TemplateName) {
-  constexpr StringRef Code{"return Foo < A || B > (C ^ D);"};
+  constexpr StringRef Code("return Foo < A || B > (C ^ D);");
 
   auto Tokens = annotate(Code);
   ASSERT_EQ(Tokens.size(), 14u) << Tokens;

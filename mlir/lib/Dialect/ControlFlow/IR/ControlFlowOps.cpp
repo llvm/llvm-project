@@ -312,8 +312,9 @@ struct SimplifyCondBranchIdenticalSuccessors
       if (std::get<0>(it) == std::get<1>(it))
         mergedOperands.push_back(std::get<0>(it));
       else
-        mergedOperands.push_back(rewriter.create<arith::SelectOp>(
-            condbr.getLoc(), condition, std::get<0>(it), std::get<1>(it)));
+        mergedOperands.push_back(
+            arith::SelectOp::create(rewriter, condbr.getLoc(), condition,
+                                    std::get<0>(it), std::get<1>(it)));
     }
 
     rewriter.replaceOpWithNewOp<BranchOp>(condbr, trueDest, mergedOperands);
@@ -412,8 +413,8 @@ struct CondBranchTruthPropagation : public OpRewritePattern<CondBranchOp> {
           replaced = true;
 
           if (!constantTrue)
-            constantTrue = rewriter.create<arith::ConstantOp>(
-                condbr.getLoc(), ty, rewriter.getBoolAttr(true));
+            constantTrue = arith::ConstantOp::create(
+                rewriter, condbr.getLoc(), ty, rewriter.getBoolAttr(true));
 
           rewriter.modifyOpInPlace(use.getOwner(),
                                    [&] { use.set(constantTrue); });
@@ -427,8 +428,8 @@ struct CondBranchTruthPropagation : public OpRewritePattern<CondBranchOp> {
           replaced = true;
 
           if (!constantFalse)
-            constantFalse = rewriter.create<arith::ConstantOp>(
-                condbr.getLoc(), ty, rewriter.getBoolAttr(false));
+            constantFalse = arith::ConstantOp::create(
+                rewriter, condbr.getLoc(), ty, rewriter.getBoolAttr(false));
 
           rewriter.modifyOpInPlace(use.getOwner(),
                                    [&] { use.set(constantFalse); });

@@ -1207,6 +1207,7 @@ def VRegSrc_96 : SrcReg9<VReg_96>;
 def VRegSrc_128: SrcReg9<VReg_128>;
 def VRegSrc_192: SrcReg9<VReg_192>;
 def VRegSrc_256: SrcReg9<VReg_256>;
+def VRegSrc_384: SrcReg9<VReg_384>;
 def VRegSrc_512: SrcReg9<VReg_512>;
 def VRegSrc_1024: SrcReg9<VReg_1024>;
 def VRegOrLdsSrc_32 : SrcReg9<VRegOrLds_32>;

@@ -653,20 +653,15 @@ static void readMemprof(Module &M, Function &F,
       // allocation context with the same leaf.
       if (AllocInfoIter != LocHashToAllocInfo.end() &&
           // Only consider allocations which support hinting.
-          isAllocationWithHotColdVariant(CI->getCalledFunction(), TLI)) {
+          isAllocationWithHotColdVariant(CI->getCalledFunction(), TLI))
         handleAllocSite(I, CI, InlinedCallStack, Ctx, ORE, MaxColdSize,
                         AllocInfoIter->second, FullStackIdToAllocMatchInfo);
-        continue;
-      }
-
-      if (CallSitesIter == LocHashToCallSites.end())
-        continue;
-
-      // Otherwise, add callsite metadata. If we reach here then we found the
-      // instruction's leaf location in the callsites map and not the allocation
-      // map.
-      handleCallSite(I, CalledFunction, InlinedCallStack, CallSitesIter->second,
-                     M, MatchedCallSites);
+      else if (CallSitesIter != LocHashToCallSites.end())
+        // Otherwise, add callsite metadata. If we reach here then we found the
+        // instruction's leaf location in the callsites map and not the
+        // allocation map.
+        handleCallSite(I, CalledFunction, InlinedCallStack,
+                       CallSitesIter->second, M, MatchedCallSites);
     }
   }
 }

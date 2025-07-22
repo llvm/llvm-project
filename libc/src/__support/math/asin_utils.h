@@ -19,7 +19,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace {
+namespace asin_internal {
 
 using DoubleDouble = fputil::DoubleDouble;
 using Float128 = fputil::DyadicFloat<128>;
@@ -567,7 +567,7 @@ LIBC_INLINE static constexpr Float128 asin_eval(const Float128 &u,
 
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-} // anonymous namespace
+} // namespace asin_internal
 
 } // namespace LIBC_NAMESPACE_DECL
 

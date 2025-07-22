@@ -236,6 +236,7 @@ float atan2f_double_double(double num_d, double den_d, double q_d, int idx,
 // which is about rounding errors of double-double (2^-104).
 
 LLVM_LIBC_FUNCTION(float, atan2f, (float y, float x)) {
+  using namespace inv_trigf_utils_internal;
   using FPBits = typename fputil::FPBits<float>;
   constexpr double IS_NEG[2] = {1.0, -1.0};
   constexpr double PI = 0x1.921fb54442d18p1;

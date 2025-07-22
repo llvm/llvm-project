@@ -392,6 +392,14 @@ void CIRGenFunction::emitDelegatingCXXConstructorCall(
   }
 }
 
+void CIRGenFunction::emitCXXDestructorCall(const CXXDestructorDecl *dd,
+                                           CXXDtorType type,
+                                           bool forVirtualBase, bool delegating,
+                                           Address thisAddr, QualType thisTy) {
+  cgm.getCXXABI().emitDestructorCall(*this, dd, type, forVirtualBase,
+                                     delegating, thisAddr, thisTy);
+}
+
 Address CIRGenFunction::getAddressOfBaseClass(
     Address value, const CXXRecordDecl *derived,
     llvm::iterator_range<CastExpr::path_const_iterator> path,

@@ -102,9 +102,9 @@ void ObjDumper::printFileSummary(StringRef FileStr, object::ObjectFile &Obj,
   this->printLoadName();
 }
 
-static std::vector<object::SectionRef>
-getSectionRefsByNameOrIndex(const object::ObjectFile &Obj,
-                            ArrayRef<std::string> Sections) {
+std::vector<object::SectionRef>
+ObjDumper::getSectionRefsByNameOrIndex(const object::ObjectFile &Obj,
+                                       ArrayRef<std::string> Sections) {
   std::vector<object::SectionRef> Ret;
   std::map<std::string, bool, std::less<>> SecNames;
   std::map<unsigned, bool> SecIndices;
