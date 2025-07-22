@@ -525,6 +525,12 @@ private:
   void MRI_NoteCloneVirtualRegister(Register NewReg, Register SrcReg) override;
 
 public:
+  // Current known instruction alignment and offset in bytes.
+  // Used to prevent instructions from straddling half cache-line boundaries
+  // for performance.
+  unsigned Alignment = 1;
+  unsigned Offset = 0;
+
   struct VGPRSpillToAGPR {
     SmallVector<MCPhysReg, 32> Lanes;
     bool FullyAllocated = false;

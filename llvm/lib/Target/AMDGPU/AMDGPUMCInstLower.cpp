@@ -274,12 +274,72 @@ static void emitVGPRBlockComment(const MachineInstr *MI, const SIInstrInfo *TII,
   OS.emitRawComment(" transferring at most " + TransferredRegs);
 }
 
+extern cl::opt<bool> PreventHalfCacheLineStraddling;
+
+static unsigned getMCInstSizeInBytes(const MCInst &LoweredMCI,
+                                     const GCNSubtarget &STI,
+                                     MCContext &OutContext) {
+  SmallVector<MCFixup, 4> Fixups;
+  SmallVector<char, 16> CodeBytes;
+
+  std::unique_ptr<MCCodeEmitter> InstEmitter(
+      createAMDGPUMCCodeEmitter(*STI.getInstrInfo(), OutContext));
+  InstEmitter->encodeInstruction(LoweredMCI, CodeBytes, Fixups, STI);
+  return (CodeBytes.size());
+};
+
 void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
   // FIXME: Enable feature predicate checks once all the test pass.
   // AMDGPU_MC::verifyInstructionPredicates(MI->getOpcode(),
   //                                        getSubtargetInfo().getFeatureBits());
 
+  auto AvoidHalfCacheLineBoundary = [this](const MachineInstr *MI,
+                                           const MachineFunction *MF,
+                                           const MCInst &LoweredMCI) -> void {
+    const GCNSubtarget &STI = MF->getSubtarget<GCNSubtarget>();
+    SIMachineFunctionInfo *MFI = const_cast<SIMachineFunctionInfo *>(
+        MF->getInfo<SIMachineFunctionInfo>());
+
+    unsigned InstSizeInBytes = STI.getInstrInfo()->getInstSizeInBytes(*MI);
+
+    // getInstrSizeInBytes convervatively overestimates the size of branches due
+    // to a NOP added for the 0x3f offset bug.  Any inaccuracies in instruction
+    // sizes will cause problems when avoiding straddling half cache-line
+    // boundaries. A NOP is usually not added so remove the +4 that was added.
+    if (MI->isBranch() && STI.hasOffset3fBug())
+      InstSizeInBytes -= 4;
+    // Rarely, some MachineInstr do not have accurate instruction sizes.  Try to
+    // calculate the size from the lowered MCInst.
+    else if (InstSizeInBytes == 0 && STI.isCPUStringValid(STI.getCPU()) &&
+             !(MI->getOpcode() == AMDGPU::SI_ILLEGAL_COPY ||
+               MI->getOpcode() == AMDGPU::ATOMIC_FENCE))
+      InstSizeInBytes = getMCInstSizeInBytes(LoweredMCI, STI, OutContext);
+
+    // FIXME: Workaround bug in V_MADMK_F32 size.
+    if (MI->getOpcode() == AMDGPU::V_MADMK_F32)
+      InstSizeInBytes = 8;
+
+    unsigned Alignment = MFI->Alignment;
+    unsigned Offset = MFI->Offset;
+    constexpr unsigned HalfCacheLineBoundary = 32;
+
+    unsigned Boundary = std::min(Alignment, HalfCacheLineBoundary);
+    Offset %= Boundary;
+
+    if (Offset + InstSizeInBytes > Boundary) {
+      emitAlignment(Align(HalfCacheLineBoundary));
+      // Do not decrease known Alignment.  Increment Offset to satisfy
+      // HalfCacheLineBoundary.
+      MFI->Alignment = std::max(Alignment, HalfCacheLineBoundary);
+      MFI->Offset +=
+          (HalfCacheLineBoundary - (MFI->Offset % HalfCacheLineBoundary));
+    }
+    MFI->Offset += InstSizeInBytes;
+  };
+
   if (MCInst OutInst; lowerPseudoInstExpansion(MI, OutInst)) {
+    if (PreventHalfCacheLineStraddling)
+      AvoidHalfCacheLineBoundary(MI, MF, OutInst);
     EmitToStreamer(*OutStreamer, OutInst);
     return;
   }
@@ -370,6 +430,8 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     MCInst TmpInst;
     MCInstLowering.lower(MI, TmpInst);
+    if (PreventHalfCacheLineStraddling)
+      AvoidHalfCacheLineBoundary(MI, MF, TmpInst);
     EmitToStreamer(*OutStreamer, TmpInst);
 
 #ifdef EXPENSIVE_CHECKS
@@ -382,16 +444,9 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     //
     // We also overestimate branch sizes with the offset bug.
     if (!MI->isPseudo() && STI.isCPUStringValid(STI.getCPU()) &&
-        (!STI.hasOffset3fBug() || !MI->isBranch())) {
-      SmallVector<MCFixup, 4> Fixups;
-      SmallVector<char, 16> CodeBytes;
-
-      std::unique_ptr<MCCodeEmitter> InstEmitter(createAMDGPUMCCodeEmitter(
-          *STI.getInstrInfo(), OutContext));
-      InstEmitter->encodeInstruction(TmpInst, CodeBytes, Fixups, STI);
-
-      assert(CodeBytes.size() == STI.getInstrInfo()->getInstSizeInBytes(*MI));
-    }
+        (!STI.hasOffset3fBug() || !MI->isBranch()))
+      assert(getMCInstSizeInBytes(TmpInst, STI, OutContext) ==
+             STI.getInstrInfo()->getInstSizeInBytes(*MI));
 #endif
 
     if (DumpCodeInstEmitter) {

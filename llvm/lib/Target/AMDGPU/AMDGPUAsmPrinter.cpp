@@ -159,9 +159,16 @@ void AMDGPUAsmPrinter::emitEndOfAsmFile(Module &M) {
 }
 
 void AMDGPUAsmPrinter::emitFunctionBodyStart() {
-  const SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
+  SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
   const Function &F = MF->getFunction();
+
+  const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
+  if (MAI->hasFunctionAlignment()) {
+    Align Alignment = MF->getAlignment();
+    MFI.Alignment = Alignment.value();
+    MFI.Offset = 0;
+  }
 
   // TODO: We're checking this late, would be nice to check it earlier.
   if (STM.requiresCodeObjectV6() && CodeObjectVersion < AMDGPU::AMDHSA_COV6) {
@@ -298,6 +305,18 @@ void AMDGPUAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
     HexLines.emplace_back("");
   }
   AsmPrinter::emitBasicBlockStart(MBB);
+
+  Align Alignment = MBB.getAlignment();
+  if (Alignment != Align(1)) {
+    const MachineFunction *MF = MBB.getParent();
+    SIMachineFunctionInfo *MFI = const_cast<SIMachineFunctionInfo *>(
+        MF->getInfo<SIMachineFunctionInfo>());
+    unsigned BlockAlignment = Alignment.value();
+    // Do not decrease known Alignment.  Increment Offset to satisfy
+    // BlockAlignment.
+    MFI->Alignment = std::max(MFI->Alignment, BlockAlignment);
+    MFI->Offset += (BlockAlignment - (MFI->Offset % BlockAlignment));
+  }
 }
 
 void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
@@ -640,6 +659,12 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
   return KernelDescriptor;
 }
 
+cl::opt<bool> PreventHalfCacheLineStraddling(
+    "amdgpu-prevent-half-cache-line-straddling", cl::Hidden,
+    cl::desc(
+        "Add NOPs to prevent instructions from straddling half a cache-line"),
+    cl::init(false));
+
 bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // Init target streamer lazily on the first function so that previous passes
   // can set metadata.
@@ -654,7 +679,11 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   // The starting address of all shader programs must be 256 bytes aligned.
   // Regular functions just need the basic required instruction alignment.
-  MF.setAlignment(MFI->isEntryFunction() ? Align(256) : Align(4));
+  // However, align regular functions to half a cache-line 64/2 bytes if
+  // PreventHalfCacheLineStraddling is enabled.
+  MF.setAlignment(MFI->isEntryFunction()           ? Align(256)
+                  : PreventHalfCacheLineStraddling ? Align(32)
+                                                   : Align(4));
 
   SetupMachineFunction(MF);
 
