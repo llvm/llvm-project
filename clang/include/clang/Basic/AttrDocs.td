@@ -9643,10 +9643,10 @@ function).
 
 The second argument is a implementation name, and the remaining arguments are
 aspects of the format string for the compiler to report. If the compiler does
-not understand a aspect, it must summarily report that the format string has
+not understand an aspect, it must summarily report that the format string has
 that aspect.
 
-The compiler reports an aspect by issing a relocation for the symbol
+The compiler reports an aspect by issuing a relocation for the symbol
 ``<impl_name>_<aspect>``. This arranges for code and data needed to support the
 aspect of the implementation to be brought into the link to satisfy weak
 references in the modular implemenation function.
