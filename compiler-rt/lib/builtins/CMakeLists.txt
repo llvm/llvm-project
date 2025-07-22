@@ -596,7 +596,9 @@ set(aarch64_SOURCES
 
 # Append sources specific to AArch64 targets that aren't supported by MSVC.
 if(NOT MSVC)
-  list(APPEND aarch64_SOURCES aarch64/emupac.cpp)
+  list(APPEND aarch64_SOURCES
+    aarch64/emupac.cpp
+  )
 endif()
 
 set(COMPILER_RT_AARCH64_FMV_USES_GLOBAL_CONSTRUCTOR NOT(FUCHSIA OR APPLE))
