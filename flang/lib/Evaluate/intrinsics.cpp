@@ -1336,9 +1336,9 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
     {{"log", {{"x", DefaultReal}}, DefaultReal}},
     {{"log10", {{"x", DefaultReal}}, DefaultReal}},
     {{"max0",
-         {{"a1", DefaultInt}, {"a2", DefaultInt},
-             {"a3", DefaultInt, Rank::elemental, Optionality::repeats}},
-         DefaultInt},
+         {{"a1", OperandInt}, {"a2", OperandInt},
+             {"a3", OperandInt, Rank::elemental, Optionality::repeats}},
+         OperandInt},
         "max", true, true},
     {{"max1",
          {{"a1", DefaultReal}, {"a2", DefaultReal},
@@ -1346,9 +1346,9 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
          DefaultInt},
         "max", true, true},
     {{"min0",
-         {{"a1", DefaultInt}, {"a2", DefaultInt},
-             {"a3", DefaultInt, Rank::elemental, Optionality::repeats}},
-         DefaultInt},
+         {{"a1", OperandInt}, {"a2", OperandInt},
+             {"a3", OperandInt, Rank::elemental, Optionality::repeats}},
+         OperandInt},
         "min", true, true},
     {{"min1",
          {{"a1", DefaultReal}, {"a2", DefaultReal},
@@ -3453,6 +3453,9 @@ static DynamicType GetReturnType(const SpecificIntrinsicInterface &interface,
   case KindCode::quadPrecision:
   case KindCode::defaultRealKind:
     category = TypeCategory::Real;
+    break;
+  case KindCode::operand:
+    category = TypeCategory::Integer;
     break;
   default:
     CRASH_NO_CASE;

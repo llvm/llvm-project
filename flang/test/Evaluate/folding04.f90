@@ -86,9 +86,7 @@ module specific_extremums
   ! specified for f18 (converting the result).
   integer(8), parameter :: max_i32_8 = 2_8**31-1
   integer, parameter :: expected_min0 = int(min(max_i32_8, 2_8*max_i32_8), 4)
-  !WARN: portability: Argument types do not match specific intrinsic 'min0' requirements; using 'min' generic instead and converting the result to INTEGER(4) if needed [-Wuse-generic-intrinsic-when-specific-doesnt-match]
-  integer, parameter :: result_min0 =  min0(max_i32_8, 2_8*max_i32_8)
-  ! result_min0 would be -2  if arguments were converted to default integer.
+  integer(8), parameter :: result_min0 =  min0(max_i32_8, 2_8*max_i32_8)
   logical, parameter :: test_min0 = expected_min0 .EQ. result_min0
 
   real, parameter :: expected_amax0 = real(max(max_i32_8, 2_8*max_i32_8), 4)
