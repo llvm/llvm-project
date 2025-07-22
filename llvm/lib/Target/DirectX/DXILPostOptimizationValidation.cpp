@@ -13,18 +13,14 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
-#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/DXContainerRootSignature.h"
-#include "llvm/Support/DXILABI.h"
 
 #define DEBUG_TYPE "dxil-post-optimization-validation"
 
@@ -152,7 +148,7 @@ static void reportRegNotBound(Module &M,
   OS << "register " << ResourceClassToString(Unbound.Class)
      << " (space=" << Unbound.Space << ", register=" << Unbound.LowerBound
      << ")"
-     << " is not defined in Root Signature";
+     << " does not have a binding in the Root Signature";
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 

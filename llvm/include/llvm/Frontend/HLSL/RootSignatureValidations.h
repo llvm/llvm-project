@@ -16,7 +16,6 @@
 
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
-#include "llvm/Support/DXILABI.h"
 
 namespace llvm {
 namespace hlsl {
@@ -180,7 +179,7 @@ public:
   }
 };
 llvm::SmallVector<RangeInfo>
-findUnboundRanges(const llvm::SmallVectorImpl<RangeInfo> &Ranges,
+findUnboundRanges(const llvm::ArrayRef<RangeInfo> &Ranges,
                   const llvm::ArrayRef<RangeInfo> &Bindings);
 } // namespace rootsig
 } // namespace hlsl
