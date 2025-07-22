@@ -1428,6 +1428,12 @@ public:
   }
 };
 
+// Check if the python version is less than 3.13. Py_IsFinalizing is a part
+// of stable ABI since 3.13 and before it was available as _Py_IsFinalizing.
+#if PY_VERSION_HEX < 0x030d0000
+#define Py_IsFinalizing _Py_IsFinalizing
+#endif
+
 class PyDenseResourceElementsAttribute
     : public PyConcreteAttribute<PyDenseResourceElementsAttribute> {
 public:
@@ -1474,7 +1480,7 @@ public:
     // The userData is a Py_buffer* that the deleter owns.
     auto deleter = [](void *userData, const void *data, size_t size,
                       size_t align) {
-      if (!Py_IsInitialized())
+      if (!Py_IsFinalizing() && !Py_IsInitialized())
         Py_Initialize();
       Py_buffer *ownedView = static_cast<Py_buffer *>(userData);
       nb::gil_scoped_acquire gil;
