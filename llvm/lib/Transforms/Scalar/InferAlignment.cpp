@@ -21,6 +21,43 @@
 
 using namespace llvm;
 
+static bool tryToPropagateAlign(Function &F, const DataLayout &DL) {
+  bool Changed = false;
+
+  for (BasicBlock &BB : F) {
+    // We need to reset the map for each block because alignment information
+    // can't be propagated across blocks. This is because control flow could
+    // be dependent on the address at runtime, making an alignment assumption
+    // within one block not true in another. Some sort of dominator tree
+    // approach could be better, but restricting within a basic block is correct
+    // too.
+    DenseMap<Value *, Align> BestBasePointerAligns;
+    for (Instruction &I : BB) {
+      if (auto *PtrOp = getLoadStorePointerOperand(&I)) {
+        Align LoadStoreAlign = getLoadStoreAlignment(&I);
+        APInt OffsetFromBase = APInt(
+            DL.getIndexSizeInBits(PtrOp->getType()->getPointerAddressSpace()),
+            0);
+        PtrOp = PtrOp->stripAndAccumulateInBoundsConstantOffsets(
+            DL, OffsetFromBase);
+        Align BasePointerAlign =
+            commonAlignment(LoadStoreAlign, OffsetFromBase.getLimitedValue());
+
+        if (BestBasePointerAligns.count(PtrOp) &&
+            BestBasePointerAligns[PtrOp] > BasePointerAlign) {
+          Align BetterLoadStoreAlign = commonAlignment(
+              BestBasePointerAligns[PtrOp], OffsetFromBase.getLimitedValue());
+          setLoadStoreAlignment(&I, BetterLoadStoreAlign);
+          Changed = true;
+        } else {
+          BestBasePointerAligns[PtrOp] = BasePointerAlign;
+        }
+      }
+    }
+  }
+  return Changed;
+}
+
 static bool tryToImproveAlign(
     const DataLayout &DL, Instruction *I,
     function_ref<Align(Value *PtrOp, Align OldAlign, Align PrefAlign)> Fn) {
@@ -69,6 +106,10 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
           });
     }
   }
+
+  // Propagate alignment between loads and stores that originate from the same
+  // base pointer
+  Changed |= tryToPropagateAlign(F, DL);
 
   return Changed;
 }
