@@ -169,6 +169,17 @@ static bool getMemOperands(unsigned Factor, VectorType *VTy, Type *XLenTy,
              : Constant::getAllOnesValue(XLenTy);
     return true;
   }
+  case Intrinsic::masked_store: {
+    Ptr = II->getOperand(1);
+    Alignment = cast<ConstantInt>(II->getArgOperand(2))->getAlignValue();
+
+    assert(Mask && "masked.store needs a mask!");
+
+    VL = isa<FixedVectorType>(VTy)
+             ? Builder.CreateElementCount(XLenTy, VTy->getElementCount())
+             : Constant::getAllOnesValue(XLenTy);
+    return true;
+  }
   }
 }
 
@@ -221,6 +232,7 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
         Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_load,
                                 {VTy, BasePtr->getType(), Stride->getType()},
                                 {BasePtr, Stride, Mask, VL});
+    Alignment = commonAlignment(Alignment, Indices[0] * ScalarSizeInBytes);
     CI->addParamAttr(0,
                      Attribute::getWithAlignment(CI->getContext(), Alignment));
     Shuffles[0]->replaceAllUsesWith(CI);
@@ -292,8 +304,9 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
         Intrinsic::experimental_vp_strided_store,
         {Data->getType(), BasePtr->getType(), Stride->getType()},
         {Data, BasePtr, Stride, Mask, VL});
+    Align Alignment = commonAlignment(SI->getAlign(), Index * ScalarSizeInBytes);
     CI->addParamAttr(
-        1, Attribute::getWithAlignment(CI->getContext(), SI->getAlign()));
+        1, Attribute::getWithAlignment(CI->getContext(), Alignment));
 
     return true;
   }
