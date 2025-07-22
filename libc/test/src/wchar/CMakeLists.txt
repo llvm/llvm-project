@@ -65,6 +65,19 @@ add_libc_test(
 )
 
 add_libc_test(
+  mblen_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    mblen_test.cpp
+  DEPENDS
+    libc.src.__support.libc_errno
+    libc.src.wchar.mblen
+    libc.hdr.types.wchar_t
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
   wctob_test
   SUITE
     libc_wchar_unittests

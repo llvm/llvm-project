@@ -160,6 +160,22 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mblen
+  SRCS
+    mblen.cpp
+  HDRS
+    mblen.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbrtowc
+    libc.src.__support.wchar.mbstate
+)
+
+add_entrypoint_object(
   wmemset
   SRCS
     wmemset.cpp
