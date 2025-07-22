@@ -20760,6 +20760,54 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     }
     break;
   }
+  case RISCVISD::TUPLE_EXTRACT: {
+    EVT VT = N->getValueType(0);
+    SDValue Tuple = N->getOperand(0);
+    unsigned Idx = N->getConstantOperandVal(1);
+    if (!Tuple.hasOneUse() || Tuple.getOpcode() != ISD::INTRINSIC_W_CHAIN)
+      break;
+
+    unsigned NF = 0;
+    switch (Tuple.getConstantOperandVal(1)) {
+    default: break;
+    case Intrinsic::riscv_vlseg2_mask: NF = 2; break;
+    case Intrinsic::riscv_vlseg3_mask: NF = 3; break;
+    case Intrinsic::riscv_vlseg4_mask: NF = 4; break;
+    case Intrinsic::riscv_vlseg5_mask: NF = 5; break;
+    case Intrinsic::riscv_vlseg6_mask: NF = 6; break;
+    case Intrinsic::riscv_vlseg7_mask: NF = 7; break;
+    case Intrinsic::riscv_vlseg8_mask: NF = 8; break;
+    }
+    if (!NF || Subtarget.hasOptimizedSegmentLoadStore(NF))
+      break;
+
+    // @REVIEWERS - What's the right value to use for the mem size here?
+    unsigned SEW = VT.getScalarSizeInBits();
+    if (Log2_64(SEW) != Tuple.getConstantOperandVal(7))
+      break;
+    unsigned Stride = SEW/8 * NF;
+    SDValue Offset = DAG.getConstant(SEW/8 * Idx, DL, XLenVT);
+
+    SDValue Ops[] = {
+      /*Chain=*/Tuple.getOperand(0),
+      /*IntID=*/DAG.getTargetConstant(Intrinsic::riscv_vlse_mask, DL, XLenVT),
+      /*Passthru=*/Tuple.getOperand(2),
+      /*Ptr=*/DAG.getNode(ISD::ADD, DL, XLenVT, Tuple.getOperand(3), Offset),
+      /*Stride=*/DAG.getConstant(Stride, DL, XLenVT),
+      /*Mask=*/Tuple.getOperand(4),
+      /*VL=*/Tuple.getOperand(5),
+      /*Policy=*/Tuple.getOperand(6)
+    };
+
+    SDVTList VTs = DAG.getVTList({VT, MVT::Other});
+    // @REVIEWERS - What's the right MemVT and MMO to use here?
+    SDValue Result =
+      DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops,
+                              cast<MemIntrinsicSDNode>(Tuple)->getMemoryVT(),
+                              cast<MemIntrinsicSDNode>(Tuple)->getMemOperand());
+    SDValue Chain = Result.getValue(1);
+    return DAG.getMergeValues({Result, Chain}, DL);
+  }
   }
 
   return SDValue();

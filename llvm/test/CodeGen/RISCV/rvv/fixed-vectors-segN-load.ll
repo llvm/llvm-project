@@ -16,8 +16,10 @@ define <8 x i8> @load_factor2(ptr %ptr) {
 define <8 x i8> @load_factor3(ptr %ptr) {
 ; CHECK-LABEL: load_factor3:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a1, 3
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vlseg3e8.v v6, (a0)
+; CHECK-NEXT:    vlse8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
     %1 = call { <8 x i8>, <8 x i8>, <8 x i8> } @llvm.riscv.seg3.load.mask.v8i8.i64(ptr %ptr, <8 x i1> splat (i1 true), i64 8)
     %2 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8> } %1, 0
@@ -29,8 +31,10 @@ define <8 x i8> @load_factor3(ptr %ptr) {
 define <8 x i8> @load_factor4(ptr %ptr) {
 ; CHECK-LABEL: load_factor4:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, 3
+; CHECK-NEXT:    li a1, 4
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vlseg4e8.v v5, (a0)
+; CHECK-NEXT:    vlse8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
     %1 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.riscv.seg4.load.mask.v8i8.i64(ptr %ptr, <8 x i1> splat (i1 true), i64 8)
     %2 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %1, 0
@@ -43,8 +47,10 @@ define <8 x i8> @load_factor4(ptr %ptr) {
 define <8 x i8> @load_factor5(ptr %ptr) {
 ; CHECK-LABEL: load_factor5:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a1, 5
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vlseg5e8.v v4, (a0)
+; CHECK-NEXT:    vlse8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
     %1 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.riscv.seg5.load.mask.v8i8.i64(ptr %ptr, <8 x i1> splat (i1 true), i64 8)
     %2 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %1, 0
@@ -58,8 +64,10 @@ define <8 x i8> @load_factor5(ptr %ptr) {
 define <8 x i8> @load_factor6(ptr %ptr) {
 ; CHECK-LABEL: load_factor6:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, 5
+; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vlseg6e8.v v3, (a0)
+; CHECK-NEXT:    vlse8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
     %1 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.riscv.seg6.load.mask.v8i8.i64(ptr %ptr, <8 x i1> splat (i1 true), i64 8)
     %2 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %1, 0
@@ -74,8 +82,10 @@ define <8 x i8> @load_factor6(ptr %ptr) {
 define <8 x i8> @load_factor7(ptr %ptr) {
 ; CHECK-LABEL: load_factor7:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, 6
+; CHECK-NEXT:    li a1, 7
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vlseg7e8.v v2, (a0)
+; CHECK-NEXT:    vlse8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
     %1 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.riscv.seg7.load.mask.v8i8.i64(ptr %ptr, <8 x i1> splat (i1 true), i64 8)
     %2 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %1, 0
@@ -91,8 +101,10 @@ define <8 x i8> @load_factor7(ptr %ptr) {
 define <8 x i8> @load_factor8(ptr %ptr) {
 ; CHECK-LABEL: load_factor8:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, 7
+; CHECK-NEXT:    li a1, 8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vlseg8e8.v v1, (a0)
+; CHECK-NEXT:    vlse8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
     %1 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.riscv.seg8.load.mask.v8i8.i64(ptr %ptr, <8 x i1> splat (i1 true), i64 8)
     %2 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %1, 0
