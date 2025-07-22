@@ -28,7 +28,7 @@ constexpr bool test() {
     assert(noexcept(nonconst_opt.begin()));
   }
 
-  { // Dereferencing an iterator at the beggining as indexing the 0th element, and that those iterators are the same value returned by calling begin() again.
+  { // Dereferencing an iterator at the beginning == indexing the 0th element, and that calling begin() again return the same iterator.
     auto iter1 = opt.begin();
     auto iter2 = nonconst_opt.begin();
     assert(*iter1 == iter1[0]);

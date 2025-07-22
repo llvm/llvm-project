@@ -23,6 +23,11 @@ constexpr bool test() {
   std::optional<T> unengaged{std::nullopt};
   constexpr std::optional<T> unengaged2{std::nullopt};
 
+  { // end() is marked noexcept
+    assert(noexcept(opt.end()));
+    assert(noexcept(nonconst_opt.end()));
+  }
+
   { // end() == begin() and end() == end() if the optional is unengaged
     auto it  = unengaged.end();
     auto it2 = unengaged2.end();
