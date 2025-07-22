@@ -398,6 +398,10 @@ public:
 
   bool enableInterleavedAccessVectorization() const override { return true; }
 
+  bool enableMaskedInterleavedAccessVectorization() const override {
+    return true;
+  }
+
   unsigned getMinTripCountTailFoldingThreshold() const override;
 
   enum RISCVRegisterClass { GPRRC, FPRRC, VRRC };
