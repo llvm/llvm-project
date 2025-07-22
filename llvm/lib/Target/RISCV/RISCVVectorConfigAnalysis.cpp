@@ -43,6 +43,274 @@ static VNInfo *getVNInfoFromReg(Register Reg, const MachineInstr &MI,
   return LI.getVNInfoBefore(SI);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+/// Implement operator<<.
+void DemandedFields::print(raw_ostream &OS) const {
+  OS << "{";
+  OS << "VLAny=" << VLAny << ", ";
+  OS << "VLZeroness=" << VLZeroness << ", ";
+  OS << "SEW=";
+  switch (SEW) {
+  case SEWEqual:
+    OS << "SEWEqual";
+    break;
+  case SEWGreaterThanOrEqual:
+    OS << "SEWGreaterThanOrEqual";
+    break;
+  case SEWGreaterThanOrEqualAndLessThan64:
+    OS << "SEWGreaterThanOrEqualAndLessThan64";
+    break;
+  case SEWNone:
+    OS << "SEWNone";
+    break;
+  };
+  OS << ", ";
+  OS << "LMUL=";
+  switch (LMUL) {
+  case LMULEqual:
+    OS << "LMULEqual";
+    break;
+  case LMULLessThanOrEqualToM1:
+    OS << "LMULLessThanOrEqualToM1";
+    break;
+  case LMULNone:
+    OS << "LMULNone";
+    break;
+  };
+  OS << ", ";
+  OS << "SEWLMULRatio=" << SEWLMULRatio << ", ";
+  OS << "TailPolicy=" << TailPolicy << ", ";
+  OS << "MaskPolicy=" << MaskPolicy << ", ";
+  OS << "VILL=" << VILL;
+  OS << "}";
+}
+
+void VSETVLIInfo::print(raw_ostream &OS) const {
+  OS << "{";
+  if (!isValid())
+    OS << "Uninitialized";
+  if (isUnknown())
+    OS << "unknown";
+  if (hasAVLReg())
+    OS << "AVLReg=" << llvm::printReg(getAVLReg());
+  if (hasAVLImm())
+    OS << "AVLImm=" << (unsigned)AVLImm;
+  if (hasAVLVLMAX())
+    OS << "AVLVLMAX";
+  OS << ", ";
+
+  unsigned LMul;
+  bool Fractional;
+  std::tie(LMul, Fractional) = decodeVLMUL(VLMul);
+
+  OS << "VLMul=";
+  if (Fractional)
+    OS << "mf";
+  else
+    OS << "m";
+  OS << LMul << ", "
+     << "SEW=e" << (unsigned)SEW << ", "
+     << "TailAgnostic=" << (bool)TailAgnostic << ", "
+     << "MaskAgnostic=" << (bool)MaskAgnostic << ", "
+     << "SEWLMULRatioOnly=" << (bool)SEWLMULRatioOnly << "}";
+}
+#endif
+
+void DemandedFields::demandVTYPE() {
+  SEW = SEWEqual;
+  LMUL = LMULEqual;
+  SEWLMULRatio = true;
+  TailPolicy = true;
+  MaskPolicy = true;
+  VILL = true;
+}
+
+void DemandedFields::doUnion(const DemandedFields &B) {
+  VLAny |= B.VLAny;
+  VLZeroness |= B.VLZeroness;
+  SEW = std::max(SEW, B.SEW);
+  LMUL = std::max(LMUL, B.LMUL);
+  SEWLMULRatio |= B.SEWLMULRatio;
+  TailPolicy |= B.TailPolicy;
+  MaskPolicy |= B.MaskPolicy;
+  VILL |= B.VILL;
+}
+
+const MachineInstr *VSETVLIInfo::getAVLDefMI(const LiveIntervals *LIS) const {
+  assert(hasAVLReg());
+  if (!LIS || getAVLVNInfo()->isPHIDef())
+    return nullptr;
+  auto *MI = LIS->getInstructionFromIndex(getAVLVNInfo()->def);
+  assert(MI);
+  return MI;
+}
+
+void VSETVLIInfo::setAVL(const VSETVLIInfo &Info) {
+  assert(Info.isValid());
+  if (Info.isUnknown())
+    setUnknown();
+  else if (Info.hasAVLReg())
+    setAVLRegDef(Info.getAVLVNInfo(), Info.getAVLReg());
+  else if (Info.hasAVLVLMAX())
+    setAVLVLMAX();
+  else {
+    assert(Info.hasAVLImm());
+    setAVLImm(Info.getAVLImm());
+  }
+}
+
+bool VSETVLIInfo::hasNonZeroAVL(const LiveIntervals *LIS) const {
+  if (hasAVLImm())
+    return getAVLImm() > 0;
+  if (hasAVLReg()) {
+    if (auto *DefMI = getAVLDefMI(LIS))
+      return RISCVInstrInfo::isNonZeroLoadImmediate(*DefMI);
+  }
+  if (hasAVLVLMAX())
+    return true;
+  return false;
+}
+
+bool VSETVLIInfo::hasSameAVL(const VSETVLIInfo &Other) const {
+  // Without LiveIntervals, we don't know which instruction defines a
+  // register.  Since a register may be redefined, this means all AVLIsReg
+  // states must be treated as possibly distinct.
+  if (hasAVLReg() && Other.hasAVLReg()) {
+    assert(!getAVLVNInfo() == !Other.getAVLVNInfo() &&
+           "we either have intervals or we don't");
+    if (!getAVLVNInfo())
+      return false;
+  }
+  return hasSameAVLLatticeValue(Other);
+}
+
+bool VSETVLIInfo::hasSameAVLLatticeValue(const VSETVLIInfo &Other) const {
+  if (hasAVLReg() && Other.hasAVLReg()) {
+    assert(!getAVLVNInfo() == !Other.getAVLVNInfo() &&
+           "we either have intervals or we don't");
+    if (!getAVLVNInfo())
+      return getAVLReg() == Other.getAVLReg();
+    return getAVLVNInfo()->id == Other.getAVLVNInfo()->id &&
+           getAVLReg() == Other.getAVLReg();
+  }
+
+  if (hasAVLImm() && Other.hasAVLImm())
+    return getAVLImm() == Other.getAVLImm();
+
+  if (hasAVLVLMAX())
+    return Other.hasAVLVLMAX() && hasSameVLMAX(Other);
+
+  return false;
+}
+
+void VSETVLIInfo::setVTYPE(RISCVVType::VLMUL L, unsigned S, bool TA, bool MA) {
+  assert(isValid() && !isUnknown() &&
+         "Can't set VTYPE for uninitialized or unknown");
+  VLMul = L;
+  SEW = S;
+  TailAgnostic = TA;
+  MaskAgnostic = MA;
+}
+
+void VSETVLIInfo::setVTYPE(unsigned VType) {
+  assert(isValid() && !isUnknown() &&
+         "Can't set VTYPE for uninitialized or unknown");
+  VLMul = RISCVVType::getVLMUL(VType);
+  SEW = RISCVVType::getSEW(VType);
+  TailAgnostic = RISCVVType::isTailAgnostic(VType);
+  MaskAgnostic = RISCVVType::isMaskAgnostic(VType);
+}
+
+bool VSETVLIInfo::hasSameVTYPE(const VSETVLIInfo &Other) const {
+  assert(isValid() && Other.isValid() && "Can't compare invalid VSETVLIInfos");
+  assert(!isUnknown() && !Other.isUnknown() &&
+         "Can't compare VTYPE in unknown state");
+  assert(!SEWLMULRatioOnly && !Other.SEWLMULRatioOnly &&
+         "Can't compare when only LMUL/SEW ratio is valid.");
+  return std::tie(VLMul, SEW, TailAgnostic, MaskAgnostic) ==
+         std::tie(Other.VLMul, Other.SEW, Other.TailAgnostic,
+                  Other.MaskAgnostic);
+}
+
+bool VSETVLIInfo::isCompatible(const DemandedFields &Used,
+                               const VSETVLIInfo &Require,
+                               const LiveIntervals *LIS) const {
+  assert(isValid() && Require.isValid() &&
+         "Can't compare invalid VSETVLIInfos");
+  // Nothing is compatible with Unknown.
+  if (isUnknown() || Require.isUnknown())
+    return false;
+
+  // If only our VLMAX ratio is valid, then this isn't compatible.
+  if (SEWLMULRatioOnly || Require.SEWLMULRatioOnly)
+    return false;
+
+  if (Used.VLAny && !(hasSameAVL(Require) && hasSameVLMAX(Require)))
+    return false;
+
+  if (Used.VLZeroness && !hasEquallyZeroAVL(Require, LIS))
+    return false;
+
+  return hasCompatibleVTYPE(Used, Require);
+}
+
+bool VSETVLIInfo::operator==(const VSETVLIInfo &Other) const {
+  // Uninitialized is only equal to another Uninitialized.
+  if (!isValid())
+    return !Other.isValid();
+  if (!Other.isValid())
+    return !isValid();
+
+  // Unknown is only equal to another Unknown.
+  if (isUnknown())
+    return Other.isUnknown();
+  if (Other.isUnknown())
+    return isUnknown();
+
+  if (!hasSameAVLLatticeValue(Other))
+    return false;
+
+  // If the SEWLMULRatioOnly bits are different, then they aren't equal.
+  if (SEWLMULRatioOnly != Other.SEWLMULRatioOnly)
+    return false;
+
+  // If only the VLMAX is valid, check that it is the same.
+  if (SEWLMULRatioOnly)
+    return hasSameVLMAX(Other);
+
+  // If the full VTYPE is valid, check that it is the same.
+  return hasSameVTYPE(Other);
+}
+
+VSETVLIInfo VSETVLIInfo::intersect(const VSETVLIInfo &Other) const {
+  // If the new value isn't valid, ignore it.
+  if (!Other.isValid())
+    return *this;
+
+  // If this value isn't valid, this must be the first predecessor, use it.
+  if (!isValid())
+    return Other;
+
+  // If either is unknown, the result is unknown.
+  if (isUnknown() || Other.isUnknown())
+    return VSETVLIInfo::getUnknown();
+
+  // If we have an exact, match return this.
+  if (*this == Other)
+    return *this;
+
+  // Not an exact match, but maybe the AVL and VLMAX are the same. If so,
+  // return an SEW/LMUL ratio only value.
+  if (hasSameAVL(Other) && hasSameVLMAX(Other)) {
+    VSETVLIInfo MergeInfo = *this;
+    MergeInfo.SEWLMULRatioOnly = true;
+    return MergeInfo;
+  }
+
+  // Otherwise the result is unknown.
+  return VSETVLIInfo::getUnknown();
+}
+
 bool RISCVVectorConfigInfo::areCompatibleVTYPEs(uint64_t CurVType,
                                                 uint64_t NewVType,
                                                 const DemandedFields &Used) {
