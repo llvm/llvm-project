@@ -48,10 +48,10 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
   if (x_abs > 0x4320000000000000) {
     if (x_abs < 0x4330000000000000) {
       if ((x_abs & 2) == 0)
-	return 0.0;
+        return 0.0;
       return (x_abs & 2) ? -1.0 : 1.0;
     }
-  
+
     if (xbits.is_nan())
       return x;
     if (xbits.is_inf()) {
