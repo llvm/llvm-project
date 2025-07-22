@@ -29,19 +29,6 @@
 // CHECK-MIPS64-CPU: "-target-cpu" "mips3"
 // CHECK-MIPS64EL-CPU: "-target-cpu" "mips3"
 
-// Check that LoongArch passes the correct linker emulation.
-//
-// RUN: %clang --target=loongarch64-unknown-openbsd -### %s %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-LA64-LD %s
-// CHECK-LA64-LD: ld{{.*}}" {{.*}} "-m" "elf64loongarch"
-//
-// Check options passed to the linker on LoongArch
-//
-// RUN: %clang --target=loongarch64-unknown-openbsd -mno-relax -### %s %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-LA64-LD-OPTS %s
-// CHECK-LA64-LD-OPTS: ld{{.*}}" {{.*}} "-X" "--no-relax"
-//
-
 // Check that the new linker flags are passed to OpenBSD
 // RUN: %clang --target=i686-pc-openbsd -r -### %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-R %s
@@ -140,9 +127,12 @@
 // UNWIND-TABLES: "-funwind-tables=2"
 // NO-UNWIND-TABLES-NOT: "-funwind-tables=2"
 
-// Check that the -X and --no-relax flags are passed to the linker on riscv64
+// Check that the -X and --no-relax flags are passed to the linker
+// RUN: %clang --target=loongarch64-unknown-openbsd -mno-relax -### %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=LA64-FLAGS %s
 // RUN: %clang --target=riscv64-unknown-openbsd -mno-relax -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=RISCV64-FLAGS %s
+// LA64-FLAGS: "-X" "--no-relax"
 // RISCV64-FLAGS: "-X" "--no-relax"
 
 // Check passing LTO flags to the linker
