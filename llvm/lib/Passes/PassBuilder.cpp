@@ -1189,9 +1189,13 @@ Expected<GVNOptions> parseGVNOptions(StringRef Params) {
     } else if (ParamName == "split-backedge-load-pre") {
       Result.setLoadPRESplitBackedge(Enable);
     } else if (ParamName == "memdep") {
+      // MemDep and MemorySSA are mutually exclusive.
       Result.setMemDep(Enable);
+      Result.setMemorySSA(!Enable);
     } else if (ParamName == "memoryssa") {
+      // MemDep and MemorySSA are mutually exclusive.
       Result.setMemorySSA(Enable);
+      Result.setMemDep(!Enable);
     } else {
       return make_error<StringError>(
           formatv("invalid GVN pass parameter '{}'", ParamName).str(),
