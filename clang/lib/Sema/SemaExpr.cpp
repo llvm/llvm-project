@@ -9638,7 +9638,8 @@ AssignConvertType Sema::CheckAssignmentConstraints(QualType LHSType,
     return AssignConvertType::Compatible;
   }
 
-  if (LHSType->isWebAssemblyExternrefType() && RHSType->isWebAssemblyNonNullExternrefType()) {
+  if (LHSType->isWebAssemblyExternrefType() &&
+      RHSType->isWebAssemblyNonNullExternrefType()) {
     Kind = CK_NoOp;
     return AssignConvertType::Compatible;
   }

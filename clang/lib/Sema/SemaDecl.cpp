@@ -13643,7 +13643,8 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     return;
   }
 
-  if (VDecl->getType().isWebAssemblyExternrefType() && Init->getType()->isWebAssemblyNonNullExternrefType()) {
+  if (VDecl->getType().isWebAssemblyExternrefType() &&
+      Init->getType()->isWebAssemblyNonNullExternrefType()) {
     VDecl->setInit(Init);
     return;
   }
