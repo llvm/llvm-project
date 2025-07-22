@@ -615,8 +615,8 @@ class _LIBCPP_DECLSPEC_EMPTY_BASES optional
   using __base _LIBCPP_NODEBUG = __optional_move_assign_base<_Tp>;
 
 #    if _LIBCPP_STD_VER >= 26
-  using pointer       = std::add_pointer_t<std::remove_cvref_t<_Tp>>;
-  using const_pointer = std::add_pointer_t<const std::remove_cvref_t<_Tp>>;
+  using pointer       = std::add_pointer_t<_Tp>;
+  using const_pointer = std::add_pointer_t<const _Tp>;
 #    endif
 
 public:
