@@ -603,7 +603,7 @@ struct BuiltinDumpStructGenerator {
 
   bool dumpUnnamedRecord(const RecordDecl *RD, Expr *E, unsigned Depth) {
     Expr *IndentLit = getIndentString(Depth);
-    Expr *TypeLit = getTypeString(S.Context.getRecordType(RD));
+    Expr *TypeLit = getTypeString(S.Context.getCanonicalTagType(RD));
     if (IndentLit ? callPrintFunction("%s%s", {IndentLit, TypeLit})
                   : callPrintFunction("%s", {TypeLit}))
       return true;
@@ -2288,7 +2288,7 @@ static ExprResult BuiltinInvoke(Sema &S, CallExpr *TheCall) {
       return ExprError();
     }
 
-    const Type *MemPtrClass = MPT->getQualifier()->getAsType();
+    const Type *MemPtrClass = MPT->getQualifier().getAsType();
     QualType ObjectT = Args[1]->getType();
 
     if (MPT->isMemberDataPointer() && S.checkArgCount(TheCall, 2))
@@ -7798,7 +7798,7 @@ CXXRecordMembersNamed(StringRef Name, Sema &S, QualType Ty) {
 
   // We just need to include all members of the right kind turned up by the
   // filter, at this point.
-  if (S.LookupQualifiedName(R, RT->getDecl()))
+  if (S.LookupQualifiedName(R, RD))
     for (LookupResult::iterator I = R.begin(), E = R.end(); I != E; ++I) {
       NamedDecl *decl = (*I)->getUnderlyingDecl();
       if (MemberKind *FK = dyn_cast<MemberKind>(decl))
@@ -8361,7 +8361,9 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
         NamedDecl *ND = Result.getFoundDecl();
         if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(ND))
           if (TD->getUnderlyingType() == IntendedTy)
-            IntendedTy = S.Context.getTypedefType(TD);
+            IntendedTy =
+                S.Context.getTypedefType(ElaboratedTypeKeyword::None,
+                                         /*Qualifier=*/std::nullopt, TD);
       }
     }
   }
@@ -9959,7 +9961,7 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
                             PDiag(diag::warn_cxxstruct_memaccess)
                                 << FnName << PointeeTy);
       } else if ((BId == Builtin::BImemcpy || BId == Builtin::BImemmove) &&
-                 RT->getDecl()->isNonTrivialToPrimitiveCopy()) {
+                 RD->isNonTrivialToPrimitiveCopy()) {
         DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
                             PDiag(diag::warn_cstruct_memaccess)
                                 << ArgIdx << FnName << PointeeTy << 1);
@@ -15110,10 +15112,9 @@ static bool isLayoutCompatible(const ASTContext &C, const EnumDecl *ED1,
 static bool isLayoutCompatible(const ASTContext &C, const FieldDecl *Field1,
                                const FieldDecl *Field2,
                                bool AreUnionMembers = false) {
-  [[maybe_unused]] const Type *Field1Parent =
-      Field1->getParent()->getTypeForDecl();
-  [[maybe_unused]] const Type *Field2Parent =
-      Field2->getParent()->getTypeForDecl();
+#ifndef NDEBUG
+  CanQualType Field1Parent = C.getCanonicalTagType(Field1->getParent());
+  CanQualType Field2Parent = C.getCanonicalTagType(Field2->getParent());
   assert(((Field1Parent->isStructureOrClassType() &&
            Field2Parent->isStructureOrClassType()) ||
           (Field1Parent->isUnionType() && Field2Parent->isUnionType())) &&
@@ -15122,6 +15123,7 @@ static bool isLayoutCompatible(const ASTContext &C, const FieldDecl *Field1,
   assert(((!AreUnionMembers && Field1Parent->isStructureOrClassType()) ||
           (AreUnionMembers && Field1Parent->isUnionType())) &&
          "AreUnionMembers should be 'true' for union fields (only).");
+#endif
 
   if (!isLayoutCompatible(C, Field1->getType(), Field2->getType()))
     return false;
@@ -15634,7 +15636,7 @@ void Sema::RefersToMemberWithReducedAlignment(
 
   // Compute the CompleteObjectAlignment as the alignment of the whole chain.
   CharUnits CompleteObjectAlignment = Context.getTypeAlignInChars(
-      ReverseMemberChain.back()->getParent()->getTypeForDecl());
+      Context.getCanonicalTagType(ReverseMemberChain.back()->getParent()));
 
   // The base expression of the innermost MemberExpr may give
   // stronger guarantees than the class containing the member.
@@ -15664,9 +15666,9 @@ void Sema::RefersToMemberWithReducedAlignment(
       if (FDI->hasAttr<PackedAttr>() ||
           FDI->getParent()->hasAttr<PackedAttr>()) {
         FD = FDI;
-        Alignment = std::min(
-            Context.getTypeAlignInChars(FD->getType()),
-            Context.getTypeAlignInChars(FD->getParent()->getTypeForDecl()));
+        Alignment = std::min(Context.getTypeAlignInChars(FD->getType()),
+                             Context.getTypeAlignInChars(
+                                 Context.getCanonicalTagType(FD->getParent())));
         break;
       }
     }

@@ -7227,6 +7227,7 @@ public:
 
   void VisitFunctionTypeLoc(FunctionTypeLoc);
   void VisitArrayTypeLoc(ArrayTypeLoc);
+  void VisitTagTypeLoc(TagTypeLoc TL);
 };
 
 } // namespace clang
@@ -7373,15 +7374,24 @@ void TypeLocReader::VisitFunctionNoProtoTypeLoc(FunctionNoProtoTypeLoc TL) {
 }
 
 void TypeLocReader::VisitUnresolvedUsingTypeLoc(UnresolvedUsingTypeLoc TL) {
-  TL.setNameLoc(readSourceLocation());
+  SourceLocation ElaboratedKeywordLoc = readSourceLocation();
+  NestedNameSpecifierLoc QualifierLoc = ReadNestedNameSpecifierLoc();
+  SourceLocation NameLoc = readSourceLocation();
+  TL.set(ElaboratedKeywordLoc, QualifierLoc, NameLoc);
 }
 
 void TypeLocReader::VisitUsingTypeLoc(UsingTypeLoc TL) {
-  TL.setNameLoc(readSourceLocation());
+  SourceLocation ElaboratedKeywordLoc = readSourceLocation();
+  NestedNameSpecifierLoc QualifierLoc = ReadNestedNameSpecifierLoc();
+  SourceLocation NameLoc = readSourceLocation();
+  TL.set(ElaboratedKeywordLoc, QualifierLoc, NameLoc);
 }
 
 void TypeLocReader::VisitTypedefTypeLoc(TypedefTypeLoc TL) {
-  TL.setNameLoc(readSourceLocation());
+  SourceLocation ElaboratedKeywordLoc = readSourceLocation();
+  NestedNameSpecifierLoc QualifierLoc = ReadNestedNameSpecifierLoc();
+  SourceLocation NameLoc = readSourceLocation();
+  TL.set(ElaboratedKeywordLoc, QualifierLoc, NameLoc);
 }
 
 void TypeLocReader::VisitTypeOfExprTypeLoc(TypeOfExprTypeLoc TL) {
@@ -7435,16 +7445,26 @@ void TypeLocReader::VisitAutoTypeLoc(AutoTypeLoc TL) {
 
 void TypeLocReader::VisitDeducedTemplateSpecializationTypeLoc(
     DeducedTemplateSpecializationTypeLoc TL) {
+  TL.setElaboratedKeywordLoc(readSourceLocation());
+  TL.setQualifierLoc(ReadNestedNameSpecifierLoc());
   TL.setTemplateNameLoc(readSourceLocation());
 }
 
-void TypeLocReader::VisitRecordTypeLoc(RecordTypeLoc TL) {
+void TypeLocReader::VisitTagTypeLoc(TagTypeLoc TL) {
+  TL.setElaboratedKeywordLoc(readSourceLocation());
+  TL.setQualifierLoc(ReadNestedNameSpecifierLoc());
   TL.setNameLoc(readSourceLocation());
 }
 
-void TypeLocReader::VisitEnumTypeLoc(EnumTypeLoc TL) {
-  TL.setNameLoc(readSourceLocation());
+void TypeLocReader::VisitRecordTypeLoc(RecordTypeLoc TL) {
+  VisitTagTypeLoc(TL);
 }
+
+void TypeLocReader::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
+  VisitTagTypeLoc(TL);
+}
+
+void TypeLocReader::VisitEnumTypeLoc(EnumTypeLoc TL) { VisitTagTypeLoc(TL); }
 
 void TypeLocReader::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
   TL.setAttr(ReadAttr());
@@ -7483,28 +7503,23 @@ void TypeLocReader::VisitSubstTemplateTypeParmPackTypeLoc(
 
 void TypeLocReader::VisitTemplateSpecializationTypeLoc(
                                            TemplateSpecializationTypeLoc TL) {
-  TL.setTemplateKeywordLoc(readSourceLocation());
-  TL.setTemplateNameLoc(readSourceLocation());
-  TL.setLAngleLoc(readSourceLocation());
-  TL.setRAngleLoc(readSourceLocation());
-  for (unsigned i = 0, e = TL.getNumArgs(); i != e; ++i)
-    TL.setArgLocInfo(i,
-                     Reader.readTemplateArgumentLocInfo(
-                         TL.getTypePtr()->template_arguments()[i].getKind()));
+  SourceLocation ElaboratedKeywordLoc = readSourceLocation();
+  NestedNameSpecifierLoc QualifierLoc = ReadNestedNameSpecifierLoc();
+  SourceLocation TemplateKeywordLoc = readSourceLocation();
+  SourceLocation NameLoc = readSourceLocation();
+  SourceLocation LAngleLoc = readSourceLocation();
+  SourceLocation RAngleLoc = readSourceLocation();
+  TL.set(ElaboratedKeywordLoc, QualifierLoc, TemplateKeywordLoc, NameLoc,
+         LAngleLoc, RAngleLoc);
+  MutableArrayRef<TemplateArgumentLocInfo> Args = TL.getArgLocInfos();
+  for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I)
+    Args[I] = Reader.readTemplateArgumentLocInfo(
+        TL.getTypePtr()->template_arguments()[I].getKind());
 }
 
 void TypeLocReader::VisitParenTypeLoc(ParenTypeLoc TL) {
   TL.setLParenLoc(readSourceLocation());
   TL.setRParenLoc(readSourceLocation());
-}
-
-void TypeLocReader::VisitElaboratedTypeLoc(ElaboratedTypeLoc TL) {
-  TL.setElaboratedKeywordLoc(readSourceLocation());
-  TL.setQualifierLoc(ReadNestedNameSpecifierLoc());
-}
-
-void TypeLocReader::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
-  TL.setNameLoc(readSourceLocation());
 }
 
 void TypeLocReader::VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
@@ -9583,12 +9598,6 @@ void ASTReader::AssignedLambdaNumbering(CXXRecordDecl *Lambda) {
     CXXRecordDecl *Previous =
         cast<CXXRecordDecl>(Iter->second)->getMostRecentDecl();
     Lambda->setPreviousDecl(Previous);
-    // FIXME: It will be best to use the Previous type when we creating the
-    // lambda directly. But that requires us to get the lambda context decl and
-    // lambda index before creating the lambda, which needs a drastic change in
-    // the parser.
-    const_cast<QualType &>(Lambda->TypeForDecl->CanonicalType) =
-        Previous->TypeForDecl->CanonicalType;
     return;
   }
 
@@ -10534,12 +10543,7 @@ void ASTReader::finishPendingActions() {
   // happen now, after the redeclaration chains have been fully wired.
   for (Decl *D : PendingDefinitions) {
     if (TagDecl *TD = dyn_cast<TagDecl>(D)) {
-      if (const TagType *TagT = dyn_cast<TagType>(TD->getTypeForDecl())) {
-        // Make sure that the TagType points at the definition.
-        const_cast<TagType*>(TagT)->decl = TD;
-      }
-
-      if (auto RD = dyn_cast<CXXRecordDecl>(D)) {
+      if (auto *RD = dyn_cast<CXXRecordDecl>(TD)) {
         for (auto *R = getMostRecentExistingDecl(RD); R;
              R = R->getPreviousDecl()) {
           assert((R == D) ==

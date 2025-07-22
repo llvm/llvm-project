@@ -59,7 +59,7 @@ public:
 
   bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
     SourceLocation Loc = TL.getNameLoc();
-    TypedefNameDecl *ND = TL.getTypedefNameDecl();
+    TypedefNameDecl *ND = TL.getDecl();
     if (ND->isTransparentTag()) {
       TagDecl *Underlying = ND->getUnderlyingType()->getAsTagDecl();
       return IndexCtx.handleReference(Underlying, Loc, Parent,
@@ -172,7 +172,8 @@ public:
     return true;
   }
 
-  bool TraverseTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL) {
+  bool TraverseTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL,
+                                             bool TraverseQualifier) {
     if (!WalkUpFromTemplateSpecializationTypeLoc(TL))
       return false;
     if (!TraverseTemplateName(TL.getTypePtr()->getTemplateName()))
@@ -200,11 +201,6 @@ public:
         T->getTemplateName(), TL.getTemplateNameLoc(), T->getAsCXXRecordDecl(),
         /*IsTypeAlias=*/false);
     return true;
-  }
-
-  bool VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
-    return IndexCtx.handleReference(TL.getDecl(), TL.getNameLoc(), Parent,
-                                    ParentDC, SymbolRoleSet(), Relations);
   }
 
   bool VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {

@@ -361,7 +361,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   if (sanitizePerformTypeCheck())
     EmitTypeCheck(CodeGenFunction::TCK_MemberCall, CallLoc,
                   This.emitRawPointer(*this),
-                  C.getRecordType(CalleeDecl->getParent()),
+                  C.getCanonicalTagType(CalleeDecl->getParent()),
                   /*Alignment=*/CharUnits::Zero(), SkippedChecks);
 
   // C++ [class.virtual]p12:
@@ -461,9 +461,9 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
   else
     This = EmitLValue(BaseExpr, KnownNonNull).getAddress();
 
-  EmitTypeCheck(
-      TCK_MemberCall, E->getExprLoc(), This.emitRawPointer(*this),
-      QualType(MPT->getMostRecentCXXRecordDecl()->getTypeForDecl(), 0));
+  CanQualType ClassType = CGM.getContext().getCanonicalTagType(RD);
+  EmitTypeCheck(TCK_MemberCall, E->getExprLoc(), This.emitRawPointer(*this),
+                ClassType);
 
   // Get the member function pointer.
   llvm::Value *MemFnPtr = EmitScalarExpr(MemFnExpr);
@@ -476,8 +476,7 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
 
   CallArgList Args;
 
-  QualType ThisType =
-    getContext().getPointerType(getContext().getTagDeclType(RD));
+  QualType ThisType = getContext().getPointerType(ClassType);
 
   // Push the this ptr.
   Args.add(RValue::get(ThisPtrForCall), ThisType);
@@ -498,7 +497,7 @@ RValue CodeGenFunction::EmitCXXOperatorMemberCallExpr(
   assert(MD->isImplicitObjectMemberFunction() &&
          "Trying to emit a member call expr on a static method!");
   return EmitCXXMemberOrOperatorMemberCallExpr(
-      E, MD, ReturnValue, /*HasQualifier=*/false, /*Qualifier=*/nullptr,
+      E, MD, ReturnValue, /*HasQualifier=*/false, /*Qualifier=*/std::nullopt,
       /*IsArrow=*/false, E->getArg(0), CallOrInvoke);
 }
 

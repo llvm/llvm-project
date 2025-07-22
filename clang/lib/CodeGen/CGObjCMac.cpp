@@ -5670,7 +5670,7 @@ ObjCCommonTypesHelper::ObjCCommonTypesHelper(CodeGen::CodeGenModule &cgm)
                                 nullptr, false, ICIS_NoInit));
   RD->completeDefinition();
 
-  SuperCTy = Ctx.getTagDeclType(RD);
+  SuperCTy = Ctx.getCanonicalTagType(RD);
   SuperPtrCTy = Ctx.getPointerType(SuperCTy);
 
   SuperTy = cast<llvm::StructType>(Types.ConvertType(SuperCTy));
@@ -6016,7 +6016,7 @@ ObjCNonFragileABITypesHelper::ObjCNonFragileABITypesHelper(
                                 false, ICIS_NoInit));
   RD->completeDefinition();
 
-  MessageRefCTy = Ctx.getTagDeclType(RD);
+  MessageRefCTy = Ctx.getCanonicalTagType(RD);
   MessageRefCPtrTy = Ctx.getPointerType(MessageRefCTy);
   MessageRefTy = cast<llvm::StructType>(Types.ConvertType(MessageRefCTy));
 

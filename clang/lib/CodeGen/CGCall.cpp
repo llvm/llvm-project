@@ -125,16 +125,16 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
 /// calling a method pointer.
 CanQualType CodeGenTypes::DeriveThisType(const CXXRecordDecl *RD,
                                          const CXXMethodDecl *MD) {
-  QualType RecTy;
+  CanQualType RecTy;
   if (RD)
-    RecTy = Context.getTagDeclType(RD)->getCanonicalTypeInternal();
+    RecTy = Context.getCanonicalTagType(RD);
   else
     RecTy = Context.VoidTy;
 
   if (MD)
-    RecTy = Context.getAddrSpaceQualType(
-        RecTy, MD->getMethodQualifiers().getAddressSpace());
-  return Context.getPointerType(CanQualType::CreateUnsafe(RecTy));
+    RecTy = CanQualType::CreateUnsafe(Context.getAddrSpaceQualType(
+        RecTy, MD->getMethodQualifiers().getAddressSpace()));
+  return Context.getPointerType(RecTy);
 }
 
 /// Returns the canonical formal type of the given C++ method.

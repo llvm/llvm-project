@@ -1268,7 +1268,7 @@ OverloadKind Sema::CheckOverload(Scope *S, FunctionDecl *New,
       //
       // Exception: if the scope is dependent and this is not a class
       // member, the using declaration can only introduce an enumerator.
-      if (UUD->getQualifier()->isDependent() && !UUD->isCXXClassMember()) {
+      if (UUD->getQualifier().isDependent() && !UUD->isCXXClassMember()) {
         Match = *I;
         return OverloadKind::NonFunction;
       }
@@ -1471,9 +1471,8 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
 
     if (OldMethod->isImplicitObjectMemberFunction() &&
         OldMethod->getParent() != NewMethod->getParent()) {
-      QualType ParentType =
-          SemaRef.Context.getTypeDeclType(OldMethod->getParent())
-              .getCanonicalType();
+      CanQualType ParentType =
+          SemaRef.Context.getCanonicalTagType(OldMethod->getParent());
       if (ParentType.getTypePtr() != BS.Ty)
         return false;
       BS.Ty = DS.Ty;
@@ -2293,7 +2292,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
                == UO_AddrOf &&
                "Non-address-of operator on non-static member address");
         FromType = S.Context.getMemberPointerType(
-            FromType, /*Qualifier=*/nullptr, Method->getParent());
+            FromType, /*Qualifier=*/std::nullopt, Method->getParent());
       } else if (isa<UnaryOperator>(From->IgnoreParens())) {
         assert(cast<UnaryOperator>(From->IgnoreParens())->getOpcode() ==
                UO_AddrOf &&
@@ -2679,8 +2678,7 @@ bool Sema::IsIntegralPromotion(Expr *From, QualType FromType, QualType ToType) {
     // We have already pre-calculated the promotion type, so this is trivial.
     if (ToType->isIntegerType() &&
         isCompleteType(From->getBeginLoc(), FromType))
-      return Context.hasSameUnqualifiedType(
-          ToType, FromEnumType->getDecl()->getPromotionType());
+      return Context.hasSameUnqualifiedType(ToType, FromED->getPromotionType());
 
     // C++ [conv.prom]p5:
     //   If the bit-field has an enumerated type, it is treated as any other
@@ -3347,12 +3345,12 @@ void Sema::HandleFunctionTypeMismatch(PartialDiagnostic &PDiag,
                             ToMember->getMostRecentCXXRecordDecl())) {
       PDiag << ft_different_class;
       if (ToMember->isSugared())
-        PDiag << Context.getTypeDeclType(
+        PDiag << Context.getCanonicalTagType(
             ToMember->getMostRecentCXXRecordDecl());
       else
         PDiag << ToMember->getQualifier();
       if (FromMember->isSugared())
-        PDiag << Context.getTypeDeclType(
+        PDiag << Context.getCanonicalTagType(
             FromMember->getMostRecentCXXRecordDecl());
       else
         PDiag << FromMember->getQualifier();
@@ -3658,8 +3656,7 @@ Sema::MemberPointerConversionResult Sema::CheckMemberPointerConversion(
   if (!IsDerivedFrom(OpRange.getBegin(), Derived, Base, Paths))
     return MemberPointerConversionResult::NotDerived;
 
-  if (Paths.isAmbiguous(
-          Base->getTypeForDecl()->getCanonicalTypeUnqualified())) {
+  if (Paths.isAmbiguous(Context.getCanonicalTagType(Base))) {
     PartialDiagnostic PD = PDiag(diag::err_ambiguous_memptr_conv);
     PD << int(Direction);
     DiagFromTo(PD) << getAmbiguousPathsDisplayString(Paths) << OpRange;
@@ -5934,7 +5931,7 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
 
   assert(FromType->isRecordType());
 
-  QualType ClassType = S.Context.getTypeDeclType(ActingContext);
+  CanQualType ClassType = S.Context.getCanonicalTagType(ActingContext);
   // C++98 [class.dtor]p2:
   //   A destructor can be invoked for a const, volatile or const volatile
   //   object.
@@ -7160,7 +7157,8 @@ void Sema::AddOverloadCandidate(
     // C++ [class.copy]p3:
     //   A member function template is never instantiated to perform the copy
     //   of a class object to an object of its class type.
-    QualType ClassType = Context.getTypeDeclType(Constructor->getParent());
+    CanQualType ClassType =
+        Context.getCanonicalTagType(Constructor->getParent());
     if (Args.size() == 1 && Constructor->isSpecializationCopyingObject() &&
         (Context.hasSameUnqualifiedType(ClassType, Args[0]->getType()) ||
          IsDerivedFrom(Args[0]->getBeginLoc(), Args[0]->getType(),
@@ -7181,8 +7179,8 @@ void Sema::AddOverloadCandidate(
     if (Shadow && Args.size() == 1 && Constructor->getNumParams() >= 1 &&
         Constructor->getParamDecl(0)->getType()->isReferenceType()) {
       QualType P = Constructor->getParamDecl(0)->getType()->getPointeeType();
-      QualType C = Context.getRecordType(Constructor->getParent());
-      QualType D = Context.getRecordType(Shadow->getParent());
+      CanQualType C = Context.getCanonicalTagType(Constructor->getParent());
+      CanQualType D = Context.getCanonicalTagType(Shadow->getParent());
       SourceLocation Loc = Args.front()->getExprLoc();
       if ((Context.hasSameUnqualifiedType(P, C) || IsDerivedFrom(Loc, P, C)) &&
           (Context.hasSameUnqualifiedType(D, P) || IsDerivedFrom(Loc, D, P))) {
@@ -7403,7 +7401,7 @@ static bool convertArgsForAvailabilityChecks(
            "Shouldn't have `this` for ctors!");
     assert(!Method->isStatic() && "Shouldn't have `this` for static methods!");
     ExprResult R = S.PerformImplicitObjectArgumentInitialization(
-        ThisArg, /*Qualifier=*/nullptr, Method, Method);
+        ThisArg, /*Qualifier=*/std::nullopt, Method, Method);
     if (R.isInvalid())
       return false;
     ConvertedThis = R.get();
@@ -8159,29 +8157,24 @@ bool Sema::CheckNonDependentConversions(
       ArgType = ArgType->getPointeeType();
     }
 
-    if (auto *RT = ParamType->getAs<RecordType>())
-      if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
-          RD && RD->hasDefinition()) {
-        if (llvm::any_of(LookupConstructors(RD), [](NamedDecl *ND) {
-              auto Info = getConstructorInfo(ND);
-              if (!Info)
-                return false;
-              CXXConstructorDecl *Ctor = Info.Constructor;
-              /// isConvertingConstructor takes copy/move constructors into
-              /// account!
-              return !Ctor->isCopyOrMoveConstructor() &&
-                     Ctor->isConvertingConstructor(
-                         /*AllowExplicit=*/true);
-            }))
-          return true;
-      }
-
-    if (auto *RT = ArgType->getAs<RecordType>())
-      if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
-          RD && RD->hasDefinition() &&
-          !RD->getVisibleConversionFunctions().empty()) {
-        return true;
-      }
+    if (auto *RD = ParamType->getAsCXXRecordDecl();
+        RD && RD->hasDefinition() &&
+        llvm::any_of(LookupConstructors(RD), [](NamedDecl *ND) {
+          auto Info = getConstructorInfo(ND);
+          if (!Info)
+            return false;
+          CXXConstructorDecl *Ctor = Info.Constructor;
+          /// isConvertingConstructor takes copy/move constructors into
+          /// account!
+          return !Ctor->isCopyOrMoveConstructor() &&
+                 Ctor->isConvertingConstructor(
+                     /*AllowExplicit=*/true);
+        }))
+      return true;
+    if (auto *RD = ArgType->getAsCXXRecordDecl();
+        RD && RD->hasDefinition() &&
+        !RD->getVisibleConversionFunctions().empty())
+      return true;
 
     return false;
   };
@@ -9009,8 +9002,8 @@ BuiltinCandidateTypeSet::AddMemberPointerWithMoreQualifiedTypeVariants(
     if ((CVR | BaseCVR) != CVR) continue;
 
     QualType QPointeeTy = Context.getCVRQualifiedType(PointeeTy, CVR);
-    MemberPointerTypes.insert(
-        Context.getMemberPointerType(QPointeeTy, /*Qualifier=*/nullptr, Cls));
+    MemberPointerTypes.insert(Context.getMemberPointerType(
+        QPointeeTy, /*Qualifier=*/std::nullopt, Cls));
   }
 
   return true;
@@ -10955,9 +10948,9 @@ bool clang::isBetterOverloadCandidate(
             isa<CXXConversionDecl>(Cand1.Function) ? TPOC_Conversion
                                                    : TPOC_Call,
             Cand1.ExplicitCallArguments,
-            Obj1Context ? QualType(Obj1Context->getTypeForDecl(), 0)
+            Obj1Context ? S.Context.getCanonicalTagType(Obj1Context)
                         : QualType{},
-            Obj2Context ? QualType(Obj2Context->getTypeForDecl(), 0)
+            Obj2Context ? S.Context.getCanonicalTagType(Obj2Context)
                         : QualType{},
             Cand1.isReversed() ^ Cand2.isReversed(), PartialOverloading)) {
       return BetterTemplate == Cand1.Function->getPrimaryTemplate();
@@ -14863,8 +14856,8 @@ ExprResult Sema::BuildCXXMemberCallExpr(Expr *E, NamedDecl *FoundDecl,
   if (Method->isExplicitObjectMemberFunction())
     Exp = InitializeExplicitObjectArgument(*this, E, Method);
   else
-    Exp = PerformImplicitObjectArgumentInitialization(E, /*Qualifier=*/nullptr,
-                                                      FoundDecl, Method);
+    Exp = PerformImplicitObjectArgumentInitialization(
+        E, /*Qualifier=*/std::nullopt, FoundDecl, Method);
   if (Exp.isInvalid())
     return true;
 
@@ -15025,7 +15018,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
           InputInit = InitializeExplicitObjectArgument(*this, Input, Method);
         else
           InputInit = PerformImplicitObjectArgumentInitialization(
-              Input, /*Qualifier=*/nullptr, Best->FoundDecl, Method);
+              Input, /*Qualifier=*/std::nullopt, Best->FoundDecl, Method);
         if (InputInit.isInvalid())
           return ExprError();
         Base = Input = InputInit.get();
@@ -15408,7 +15401,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
             ParamIdx = 1;
           } else {
             Arg0 = PerformImplicitObjectArgumentInitialization(
-                Args[0], /*Qualifier=*/nullptr, Best->FoundDecl, Method);
+                Args[0], /*Qualifier=*/std::nullopt, Best->FoundDecl, Method);
           }
           Arg1 = PerformCopyInitialization(
               InitializedEntity::InitializeParameter(
@@ -15878,7 +15871,7 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
           ArgExpr = Args;
         } else {
           ExprResult Arg0 = PerformImplicitObjectArgumentInitialization(
-              Args[0], /*Qualifier=*/nullptr, Best->FoundDecl, Method);
+              Args[0], /*Qualifier=*/std::nullopt, Best->FoundDecl, Method);
           if (Arg0.isInvalid())
             return ExprError();
 
@@ -16541,7 +16534,7 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
     IsError |= PrepareExplicitObjectArgument(*this, Method, Obj, Args, NewArgs);
   } else {
     ExprResult ObjRes = PerformImplicitObjectArgumentInitialization(
-        Object.get(), /*Qualifier=*/nullptr, Best->FoundDecl, Method);
+        Object.get(), /*Qualifier=*/std::nullopt, Best->FoundDecl, Method);
     if (ObjRes.isInvalid())
       IsError = true;
     else
@@ -16686,7 +16679,7 @@ ExprResult Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base,
     Base = R.get();
   } else {
     ExprResult BaseResult = PerformImplicitObjectArgumentInitialization(
-        Base, /*Qualifier=*/nullptr, Best->FoundDecl, Method);
+        Base, /*Qualifier=*/std::nullopt, Best->FoundDecl, Method);
     if (BaseResult.isInvalid())
       return ExprError();
     Base = BaseResult.get();

@@ -826,7 +826,7 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
       for (const CXXRecordDecl *Base : CGM.getMostBaseClasses(RD)) {
         llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(
             getContext().getMemberPointerType(MPT->getPointeeType(),
-                                              /*Qualifier=*/nullptr,
+                                              /*Qualifier=*/std::nullopt,
                                               Base->getCanonicalDecl()));
         llvm::Value *TypeId =
             llvm::MetadataAsValue::get(CGF.getLLVMContext(), MD);
@@ -1236,7 +1236,7 @@ llvm::Constant *ItaniumCXXABI::EmitMemberPointer(const APValue &MP,
   if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(MPD)) {
     llvm::Constant *Src = BuildMemberPointer(MD, ThisAdjustment);
     QualType SrcType = getContext().getMemberPointerType(
-        MD->getType(), /*Qualifier=*/nullptr, MD->getParent());
+        MD->getType(), /*Qualifier=*/std::nullopt, MD->getParent());
     return pointerAuthResignMemberFunctionPointer(Src, MPType, SrcType, CGM);
   }
 
@@ -2016,7 +2016,7 @@ void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
   const VTableLayout &VTLayout = VTContext.getVTableLayout(RD);
   llvm::GlobalVariable::LinkageTypes Linkage = CGM.getVTableLinkage(RD);
   llvm::Constant *RTTI =
-      CGM.GetAddrOfRTTIDescriptor(CGM.getContext().getTagDeclType(RD));
+      CGM.GetAddrOfRTTIDescriptor(CGM.getContext().getCanonicalTagType(RD));
 
   // Create and set the initializer.
   ConstantInitBuilder builder(CGM);
@@ -3815,9 +3815,7 @@ static bool ContainsIncompleteClassType(QualType Ty) {
   if (const MemberPointerType *MemberPointerTy =
       dyn_cast<MemberPointerType>(Ty)) {
     // Check if the class type is incomplete.
-    const auto *ClassType = cast<RecordType>(
-        MemberPointerTy->getMostRecentCXXRecordDecl()->getTypeForDecl());
-    if (IsIncompleteClassType(ClassType))
+    if (!MemberPointerTy->getMostRecentCXXRecordDecl()->hasDefinition())
       return true;
 
     return ContainsIncompleteClassType(MemberPointerTy->getPointeeType());
@@ -4554,9 +4552,8 @@ ItaniumRTTIBuilder::BuildPointerToMemberTypeInfo(const MemberPointerType *Ty) {
   //   attributes of the type pointed to.
   unsigned Flags = extractPBaseFlags(CGM.getContext(), PointeeTy);
 
-  const auto *ClassType =
-      cast<RecordType>(Ty->getMostRecentCXXRecordDecl()->getTypeForDecl());
-  if (IsIncompleteClassType(ClassType))
+  const auto *RD = Ty->getMostRecentCXXRecordDecl();
+  if (!RD->hasDefinition())
     Flags |= PTI_ContainingClassIncomplete;
 
   llvm::Type *UnsignedIntLTy =
@@ -4574,8 +4571,8 @@ ItaniumRTTIBuilder::BuildPointerToMemberTypeInfo(const MemberPointerType *Ty) {
   //   __context is a pointer to an abi::__class_type_info corresponding to the
   //   class type containing the member pointed to
   //   (e.g., the "A" in "int A::*").
-  Fields.push_back(
-      ItaniumRTTIBuilder(CXXABI).BuildTypeInfo(QualType(ClassType, 0)));
+  CanQualType T = CGM.getContext().getCanonicalTagType(RD);
+  Fields.push_back(ItaniumRTTIBuilder(CXXABI).BuildTypeInfo(T));
 }
 
 llvm::Constant *ItaniumCXXABI::getAddrOfRTTIDescriptor(QualType Ty) {
@@ -5155,7 +5152,7 @@ ItaniumCXXABI::getSignedVirtualMemberFunctionPointer(const CXXMethodDecl *MD) {
                               .getDecl());
   llvm::Constant *thunk = getOrCreateVirtualFunctionPointerThunk(origMD);
   QualType funcType = CGM.getContext().getMemberPointerType(
-      MD->getType(), /*Qualifier=*/nullptr, MD->getParent());
+      MD->getType(), /*Qualifier=*/std::nullopt, MD->getParent());
   return CGM.getMemberFunctionPointer(thunk, funcType);
 }
 

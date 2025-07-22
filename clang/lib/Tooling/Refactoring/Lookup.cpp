@@ -217,7 +217,7 @@ std::string tooling::replaceNestedName(const NestedNameSpecifier *Use,
   // We work backwards (from most specific possible namespace to least
   // specific).
   StringRef Suggested = getBestNamespaceSubstr(UseContext, ReplacementString,
-                                               isFullyQualified(Use));
+                                               Use.isFullyQualified());
 
   return disambiguateSpellingInScope(Suggested, ReplacementString, *UseContext,
                                      UseLoc);

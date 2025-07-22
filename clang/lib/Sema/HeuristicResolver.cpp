@@ -101,9 +101,8 @@ QualType resolveDeclsToType(const std::vector<const NamedDecl *> &Decls,
                             ASTContext &Ctx) {
   if (Decls.size() != 1) // Names an overload set -- just bail.
     return QualType();
-  if (const auto *TD = dyn_cast<TypeDecl>(Decls[0])) {
-    return Ctx.getTypeDeclType(TD);
-  }
+  if (const auto *TD = dyn_cast<TypeDecl>(Decls[0]))
+    return Ctx.getCanonicalTypeDeclType(TD);
   if (const auto *VD = dyn_cast<ValueDecl>(Decls[0])) {
     return VD->getType();
   }
@@ -139,8 +138,7 @@ TagDecl *HeuristicResolverImpl::resolveTypeToTagDecl(QualType QT) {
     T = T->getCanonicalTypeInternal().getTypePtr();
   }
 
-  if (auto *TT = T->getAs<TagType>()) {
-    TagDecl *TD = TT->getDecl();
+  if (auto *TD = T->getAsTagDecl()) {
     // Template might not be instantiated yet, fall back to primary template
     // in such cases.
     if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(TD)) {
@@ -150,11 +148,6 @@ TagDecl *HeuristicResolverImpl::resolveTypeToTagDecl(QualType QT) {
     }
     return TD;
   }
-
-  if (const auto *ICNT = T->getAs<InjectedClassNameType>())
-    T = ICNT->getInjectedSpecializationType().getTypePtrOrNull();
-  if (!T)
-    return nullptr;
 
   TemplateName TN = getReferencedTemplateName(T);
   if (TN.isNull())

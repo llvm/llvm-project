@@ -111,10 +111,8 @@ ParsedType Sema::getConstructorName(const IdentifierInfo &II,
     return ParsedType();
   }
 
-  QualType T = Context.getTypeDeclType(InjectedClassName);
-  DiagnoseUseOfDecl(InjectedClassName, NameLoc);
-  MarkAnyDeclReferenced(NameLoc, InjectedClassName, /*OdrUse=*/false);
-
+  QualType T = Context.getTagType(ElaboratedTypeKeyword::None, SS.getScopeRep(),
+                                  InjectedClassName, /*OwnsTag=*/false);
   return ParsedType::make(T);
 }
 
@@ -175,7 +173,7 @@ ParsedType Sema::getDestructorName(const IdentifierInfo &II,
       if (SearchType.isNull() || SearchType->isDependentType())
         return true;
 
-      QualType T = Context.getTypeDeclType(Type);
+      CanQualType T = Context.getCanonicalTypeDeclType(Type);
       return Context.hasSameUnqualifiedType(T, SearchType);
     };
 
@@ -207,7 +205,8 @@ ParsedType Sema::getDestructorName(const IdentifierInfo &II,
         NamedDecl *D = F.next();
         if (auto *TD = dyn_cast<TypeDecl>(D->getUnderlyingDecl()))
           Diag(D->getLocation(), diag::note_destructor_type_here)
-              << Context.getTypeDeclType(TD);
+              << Context.getTypeDeclType(ElaboratedTypeKeyword::None,
+                                         /*Qualifier=*/std::nullopt, TD);
         else
           Diag(D->getLocation(), diag::note_destructor_nontype_here);
 
@@ -222,11 +221,11 @@ ParsedType Sema::getDestructorName(const IdentifierInfo &II,
 
     if (TypeDecl *Type = Found.getAsSingle<TypeDecl>()) {
       if (IsAcceptableResult(Type)) {
-        QualType T = Context.getTypeDeclType(Type);
+        QualType T = Context.getTypeDeclType(ElaboratedTypeKeyword::None,
+                                             /*Qualifier=*/std::nullopt, Type);
         MarkAnyDeclReferenced(Type->getLocation(), Type, /*OdrUse=*/false);
-        return CreateParsedType(
-            Context.getElaboratedType(ElaboratedTypeKeyword::None, nullptr, T),
-            Context.getTrivialTypeSourceInfo(T, NameLoc));
+        return CreateParsedType(T,
+                                Context.getTrivialTypeSourceInfo(T, NameLoc));
       }
     }
 
@@ -374,7 +373,7 @@ ParsedType Sema::getDestructorName(const IdentifierInfo &II,
     //
     // also looks for type-name in the scope. Unfortunately, we can't
     // reasonably apply this fallback for dependent nested-name-specifiers.
-    if (SS.isValid() && SS.getScopeRep()->getPrefix()) {
+    if (Prefix) {
       if (ParsedType T = LookupInScope()) {
         Diag(SS.getEndLoc(), diag::ext_qualified_dtor_named_in_lexical_scope)
             << FixItHint::CreateRemoval(SS.getRange());
@@ -419,9 +418,10 @@ ParsedType Sema::getDestructorName(const IdentifierInfo &II,
     if (auto *TD = dyn_cast<TypeDecl>(FoundDecls[0]->getUnderlyingDecl())) {
       assert(!SearchType.isNull() &&
              "should only reject a type result if we have a search type");
-      QualType T = Context.getTypeDeclType(TD);
       Diag(NameLoc, diag::err_destructor_expr_type_mismatch)
-          << T << SearchType << MakeFixItHint();
+          << Context.getTypeDeclType(ElaboratedTypeKeyword::None,
+                                     /*Qualifier=*/std::nullopt, TD)
+          << SearchType << MakeFixItHint();
     } else {
       Diag(NameLoc, diag::err_destructor_expr_nontype)
           << &II << MakeFixItHint();
@@ -435,7 +435,8 @@ ParsedType Sema::getDestructorName(const IdentifierInfo &II,
   for (NamedDecl *FoundD : FoundDecls) {
     if (auto *TD = dyn_cast<TypeDecl>(FoundD->getUnderlyingDecl()))
       Diag(FoundD->getLocation(), diag::note_destructor_type_here)
-          << Context.getTypeDeclType(TD);
+          << Context.getTypeDeclType(ElaboratedTypeKeyword::None,
+                                     /*Qualifier=*/std::nullopt, TD);
     else
       Diag(FoundD->getLocation(), diag::note_destructor_nontype_here)
           << FoundD;
@@ -659,7 +660,7 @@ Sema::ActOnCXXTypeid(SourceLocation OpLoc, SourceLocation LParenLoc,
     return ExprError(Diag(OpLoc, diag::err_no_typeid_with_fno_rtti));
   }
 
-  QualType TypeInfoType = Context.getTypeDeclType(CXXTypeInfoDecl);
+  CanQualType TypeInfoType = Context.getCanonicalTagType(CXXTypeInfoDecl);
 
   if (isType) {
     // The operand is a type; handle it as such.
@@ -1214,7 +1215,7 @@ QualType Sema::getCurrentThisType() {
     // This is a lambda call operator that is being instantiated as a default
     // initializer. DC must point to the enclosing class type, so we can recover
     // the 'this' type from it.
-    QualType ClassTy = Context.getTypeDeclType(cast<CXXRecordDecl>(DC));
+    CanQualType ClassTy = Context.getCanonicalTagType(cast<CXXRecordDecl>(DC));
     // There are no cv-qualifiers for 'this' within default initializers,
     // per [expr.prim.general]p4.
     ThisTy = Context.getPointerType(ClassTy);
@@ -1244,7 +1245,7 @@ Sema::CXXThisScopeRAII::CXXThisScopeRAII(Sema &S,
   else
     Record = cast<CXXRecordDecl>(ContextDecl);
 
-  QualType T = S.Context.getRecordType(Record);
+  QualType T = S.Context.getCanonicalTagType(Record);
   T = S.getASTContext().getQualifiedType(T, CXXThisTypeQuals);
 
   S.CXXThisTypeOverride =
@@ -1732,7 +1733,7 @@ static bool isNonPlacementDeallocationFunction(Sema &S, FunctionDecl *FD) {
   if (S.getLangOpts().AlignedAllocation && UsualParams < FD->getNumParams() &&
       S.Context.hasSameUnqualifiedType(
           FD->getParamDecl(UsualParams)->getType(),
-          S.Context.getTypeDeclType(S.getStdAlignValT())))
+          S.Context.getCanonicalTagType(S.getStdAlignValT())))
     ++UsualParams;
 
   return UsualParams == FD->getNumParams();
@@ -1860,8 +1861,8 @@ namespace {
           if (FunctionTemplateDecl *Best = S.getMoreSpecializedTemplate(
                   PrimaryTemplate, OtherPrimaryTemplate, SourceLocation(),
                   TPOC_Call, ImplicitArgCount,
-                  DC ? QualType(DC->getTypeForDecl(), 0) : QualType{},
-                  OtherDC ? QualType(OtherDC->getTypeForDecl(), 0) : QualType{},
+                  DC ? S.Context.getCanonicalTagType(DC) : QualType{},
+                  OtherDC ? S.Context.getCanonicalTagType(OtherDC) : QualType{},
                   false)) {
             return Best == PrimaryTemplate ? 1 : -1;
           }
@@ -2505,7 +2506,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     // because there might not be a `std::align_val_t` type.
     EnumDecl *StdAlignValT = getStdAlignValT();
     QualType AlignValT =
-        StdAlignValT ? Context.getTypeDeclType(StdAlignValT) : SizeTy;
+        StdAlignValT ? Context.getCanonicalTagType(StdAlignValT) : SizeTy;
     IntegerLiteral AlignmentLiteral(
         Context,
         llvm::APInt(Context.getTypeSize(SizeTy),
@@ -2966,7 +2967,7 @@ bool Sema::FindAllocationFunctions(
                            isTypeAwareAllocation(IAP.PassTypeIdentity);
   if (IncludeAlignParam) {
     DeclareGlobalNewDelete();
-    AlignValT = Context.getTypeDeclType(getStdAlignValT());
+    AlignValT = Context.getCanonicalTagType(getStdAlignValT());
   }
   CXXScalarValueInitExpr Align(AlignValT, nullptr, SourceLocation());
   if (IncludeAlignParam)
@@ -3426,7 +3427,7 @@ void Sema::DeclareGlobalNewDelete() {
 
       for (int Aligned = 0; Aligned < NumAlignVariants; ++Aligned) {
         if (Aligned)
-          Params.push_back(Context.getTypeDeclType(getStdAlignValT()));
+          Params.push_back(Context.getCanonicalTagType(getStdAlignValT()));
 
         DeclareGlobalAllocationFunction(
             Context.DeclarationNames.getCXXOperatorName(Kind), Return, Params);
@@ -3483,7 +3484,7 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
   bool HasBadAllocExceptionSpec = Name.isAnyOperatorNew();
   if (HasBadAllocExceptionSpec) {
     if (!getLangOpts().CPlusPlus11) {
-      BadAllocType = Context.getTypeDeclType(getStdBadAlloc());
+      BadAllocType = Context.getCanonicalTagType(getStdBadAlloc());
       assert(StdBadAlloc && "Must have std::bad_alloc declared");
       EPI.ExceptionSpec.Type = EST_Dynamic;
       EPI.ExceptionSpec.Exceptions = llvm::ArrayRef(BadAllocType);
@@ -3593,7 +3594,7 @@ FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
   DeclarationName Name = Context.DeclarationNames.getCXXOperatorName(OO_Delete);
 
   FunctionDecl *OperatorDelete = nullptr;
-  QualType DeallocType = Context.getRecordType(RD);
+  CanQualType DeallocType = Context.getCanonicalTagType(RD);
   ImplicitDeallocationParameters IDP = {
       DeallocType, ShouldUseTypeAwareOperatorNewOrDelete(),
       AlignedAllocationMode::No, SizedDeallocationMode::No};
@@ -3627,7 +3628,7 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
   Found.suppressDiagnostics();
 
   if (!isAlignedAllocation(IDP.PassAlignment) &&
-      hasNewExtendedAlignment(*this, Context.getRecordType(RD)))
+      hasNewExtendedAlignment(*this, Context.getCanonicalTagType(RD)))
     IDP.PassAlignment = AlignedAllocationMode::Yes;
 
   // C++17 [expr.delete]p10:
@@ -4574,7 +4575,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
         // If the user-defined conversion is specified by a conversion function,
         // the initial standard conversion sequence converts the source type to
         // the implicit object parameter of the conversion function.
-        BeforeToType = Context.getTagDeclType(Conv->getParent());
+        BeforeToType = Context.getCanonicalTagType(Conv->getParent());
       } else {
         const CXXConstructorDecl *Ctor = cast<CXXConstructorDecl>(FD);
         CastKind = CK_ConstructorConversion;
@@ -5370,16 +5371,18 @@ QualType Sema::CheckPointerToMemberOperands(ExprResult &LHS, ExprResult &RHS,
       return QualType();
     }
 
+    // FIXME: use sugared type from member pointer.
+    CanQualType RHSClassType = Context.getCanonicalTagType(RHSClass);
     CXXCastPath BasePath;
     if (CheckDerivedToBaseConversion(
-            LHSType, QualType(RHSClass->getTypeForDecl(), 0), Loc,
+            LHSType, RHSClassType, Loc,
             SourceRange(LHS.get()->getBeginLoc(), RHS.get()->getEndLoc()),
             &BasePath))
       return QualType();
 
     // Cast LHS to type of use.
-    QualType UseType = Context.getQualifiedType(RHSClass->getTypeForDecl(),
-                                                LHSType.getQualifiers());
+    QualType UseType =
+        Context.getQualifiedType(RHSClassType, LHSType.getQualifiers());
     if (isIndirect)
       UseType = Context.getPointerType(UseType);
     ExprValueKind VK = isIndirect ? VK_PRValue : LHS.get()->getValueKind();
@@ -6184,7 +6187,7 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
       case Pointer:
         return Ctx.getPointerType(T);
       case MemberPointer:
-        return Ctx.getMemberPointerType(T, /*Qualifier=*/nullptr,
+        return Ctx.getMemberPointerType(T, /*Qualifier=*/std::nullopt,
                                         ClassOrBound->getAsCXXRecordDecl());
       case ObjCPointer:
         return Ctx.getObjCObjectPointerType(T);
@@ -6357,7 +6360,7 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
         return QualType();
 
       Steps.emplace_back(Step::MemberPointer,
-                         Context.getTypeDeclType(Cls).getTypePtr());
+                         Context.getCanonicalTagType(Cls).getTypePtr());
       continue;
     }
 
@@ -7243,16 +7246,13 @@ ExprResult Sema::ActOnPseudoDestructorExpr(Scope *S, Expr *Base,
     TemplateIdAnnotation *TemplateId = SecondTypeName.TemplateId;
     ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
                                        TemplateId->NumArgs);
-    TypeResult T = ActOnTemplateIdType(S,
-                                       SS,
-                                       TemplateId->TemplateKWLoc,
-                                       TemplateId->Template,
-                                       TemplateId->Name,
-                                       TemplateId->TemplateNameLoc,
-                                       TemplateId->LAngleLoc,
-                                       TemplateArgsPtr,
-                                       TemplateId->RAngleLoc,
-                                       /*IsCtorOrDtorName*/true);
+    TypeResult T = ActOnTemplateIdType(
+        S, ElaboratedTypeKeyword::None,
+        /*ElaboratedKeywordLoc=*/SourceLocation(), SS,
+        TemplateId->TemplateKWLoc, TemplateId->Template, TemplateId->Name,
+        TemplateId->TemplateNameLoc, TemplateId->LAngleLoc, TemplateArgsPtr,
+        TemplateId->RAngleLoc,
+        /*IsCtorOrDtorName*/ true);
     if (T.isInvalid() || !T.get()) {
       // Recover by assuming we had the right type all along.
       DestructedType = ObjectType;
@@ -7296,16 +7296,13 @@ ExprResult Sema::ActOnPseudoDestructorExpr(Scope *S, Expr *Base,
       TemplateIdAnnotation *TemplateId = FirstTypeName.TemplateId;
       ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
                                          TemplateId->NumArgs);
-      TypeResult T = ActOnTemplateIdType(S,
-                                         SS,
-                                         TemplateId->TemplateKWLoc,
-                                         TemplateId->Template,
-                                         TemplateId->Name,
-                                         TemplateId->TemplateNameLoc,
-                                         TemplateId->LAngleLoc,
-                                         TemplateArgsPtr,
-                                         TemplateId->RAngleLoc,
-                                         /*IsCtorOrDtorName*/true);
+      TypeResult T = ActOnTemplateIdType(
+          S, ElaboratedTypeKeyword::None,
+          /*ElaboratedKeywordLoc=*/SourceLocation(), SS,
+          TemplateId->TemplateKWLoc, TemplateId->Template, TemplateId->Name,
+          TemplateId->TemplateNameLoc, TemplateId->LAngleLoc, TemplateArgsPtr,
+          TemplateId->RAngleLoc,
+          /*IsCtorOrDtorName*/ true);
       if (T.isInvalid() || !T.get()) {
         // Recover by dropping this type.
         ScopeType = QualType();

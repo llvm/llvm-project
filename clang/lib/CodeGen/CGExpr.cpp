@@ -1198,9 +1198,10 @@ llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
     return nullptr;
 
   Indices.push_back(Builder.getInt32(0));
-  return Builder.CreateInBoundsGEP(
-      ConvertType(QualType(RD->getTypeForDecl(), 0)), Res,
-      RecIndicesTy(llvm::reverse(Indices)), "counted_by.gep");
+  CanQualType T = CGM.getContext().getCanonicalTagType(RD);
+  return Builder.CreateInBoundsGEP(ConvertType(T), Res,
+                                   RecIndicesTy(llvm::reverse(Indices)),
+                                   "counted_by.gep");
 }
 
 /// This method is typically called in contexts where we can't generate
@@ -1920,7 +1921,6 @@ static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
     Min = llvm::APInt(CGF.getContext().getTypeSize(Ty), 0);
     End = llvm::APInt(CGF.getContext().getTypeSize(Ty), 2);
   } else {
-    const EnumDecl *ED = ET->getDecl();
     ED->getValueRange(End, Min);
   }
   return true;
@@ -5032,10 +5032,12 @@ LValue CodeGenFunction::EmitLValueForLambdaField(const FieldDecl *Field,
       Address Base = GetAddressOfBaseClass(
           LambdaLV.getAddress(), ThisTy, BasePathArray.begin(),
           BasePathArray.end(), /*NullCheckValue=*/false, SourceLocation());
-      LambdaLV = MakeAddrLValue(Base, QualType{LambdaTy->getTypeForDecl(), 0});
+      CanQualType T = getContext().getCanonicalTagType(LambdaTy);
+      LambdaLV = MakeAddrLValue(Base, T);
     }
   } else {
-    QualType LambdaTagType = getContext().getTagDeclType(Field->getParent());
+    CanQualType LambdaTagType =
+        getContext().getCanonicalTagType(Field->getParent());
     LambdaLV = MakeNaturalAlignAddrLValue(ThisValue, LambdaTagType);
   }
   return EmitLValueForField(LambdaLV, Field);
@@ -5160,7 +5162,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
         }
       } else {
         llvm::DIType *DbgInfo = getDebugInfo()->getOrCreateRecordType(
-            getContext().getRecordType(rec), rec->getLocation());
+            getContext().getCanonicalTagType(rec), rec->getLocation());
         Addr = Builder.CreatePreserveStructAccessIndex(
             Addr, Idx, getDebugInfoFIndex(rec, field->getFieldIndex()),
             DbgInfo);

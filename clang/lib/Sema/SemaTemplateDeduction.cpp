@@ -613,38 +613,29 @@ DeduceTemplateSpecArguments(Sema &S, TemplateParameterList *TemplateParams,
                             TemplateDeductionInfo &Info, bool PartialOrdering,
                             SmallVectorImpl<DeducedTemplateArgument> &Deduced,
                             bool *HasDeducedAnyParam) {
-  QualType UP = P;
-  if (const auto *IP = P->getAs<InjectedClassNameType>())
-    UP = IP->getInjectedSpecializationType();
-
-  assert(isa<TemplateSpecializationType>(UP.getCanonicalType()));
-  const TemplateSpecializationType *TP = ::getLastTemplateSpecType(UP);
-  TemplateName TNP = TP->getTemplateName();
+  TemplateName TNP;
+  ArrayRef<TemplateArgument> PResolved;
+  if (isa<TemplateSpecializationType>(P.getCanonicalType())) {
+    const TemplateSpecializationType *TP = ::getLastTemplateSpecType(P);
+    TNP = TP->getTemplateName();
+    // FIXME: To preserve sugar, the TST needs to carry sugared resolved
+    // arguments.
+    PResolved = TP->getCanonicalTypeInternal()
+                    ->castAs<TemplateSpecializationType>()
+                    ->template_arguments();
+  } else {
+    const auto *TT = P->castAs<InjectedClassNameType>();
+    TNP = TT->getTemplateName(S.Context);
+    PResolved = TT->getTemplateArgs(S.Context);
+  }
 
   // If the parameter is an alias template, there is nothing to deduce.
   if (const auto *TD = TNP.getAsTemplateDecl(); TD && TD->isTypeAlias())
     return TemplateDeductionResult::Success;
 
-  // FIXME: To preserve sugar, the TST needs to carry sugared resolved
-  // arguments.
-  ArrayRef<TemplateArgument> PResolved =
-      TP->getCanonicalTypeInternal()
-          ->castAs<TemplateSpecializationType>()
-          ->template_arguments();
-
-  QualType UA = A;
-  std::optional<NestedNameSpecifier *> NNS;
-  // Treat an injected-class-name as its underlying template-id.
-  if (const auto *Elaborated = A->getAs<ElaboratedType>()) {
-    NNS = Elaborated->getQualifier();
-  } else if (const auto *Injected = A->getAs<InjectedClassNameType>()) {
-    UA = Injected->getInjectedSpecializationType();
-    NNS = nullptr;
-  }
-
   // Check whether the template argument is a dependent template-id.
-  if (isa<TemplateSpecializationType>(UA.getCanonicalType())) {
-    const TemplateSpecializationType *SA = ::getLastTemplateSpecType(UA);
+  if (isa<TemplateSpecializationType>(A.getCanonicalType())) {
+    const TemplateSpecializationType *SA = ::getLastTemplateSpecType(A);
     TemplateName TNA = SA->getTemplateName();
 
     // If the argument is an alias template, there is nothing to deduce.
@@ -678,34 +669,36 @@ DeduceTemplateSpecArguments(Sema &S, TemplateParameterList *TemplateParams,
   // If the argument type is a class template specialization, we
   // perform template argument deduction using its template
   // arguments.
-  const auto *RA = UA->getAs<RecordType>();
-  const auto *SA =
-      RA ? dyn_cast<ClassTemplateSpecializationDecl>(RA->getDecl()) : nullptr;
-  if (!SA) {
+  const auto *TA = A->getAs<TagType>();
+  TemplateName TNA;
+  if (TA) {
+    // FIXME: Can't use the template arguments from this TST, as they are not
+    // resolved.
+    if (const auto *TST = A->getAsNonAliasTemplateSpecializationType())
+      TNA = TST->getTemplateName();
+    else
+      TNA = TA->getTemplateName(S.Context);
+  }
+  if (TNA.isNull()) {
     Info.FirstArg = TemplateArgument(P);
     Info.SecondArg = TemplateArgument(A);
     return TemplateDeductionResult::NonDeducedMismatch;
   }
 
-  TemplateName TNA = TemplateName(SA->getSpecializedTemplate());
-  if (NNS)
-    TNA = S.Context.getQualifiedTemplateName(
-        *NNS, false, TemplateName(SA->getSpecializedTemplate()));
-
+  ArrayRef<TemplateArgument> AResolved = TA->getTemplateArgs(S.Context);
   // Perform template argument deduction for the template name.
-  if (auto Result = DeduceTemplateArguments(
-          S, TemplateParams, TNP, TNA, Info,
-          /*DefaultArguments=*/SA->getTemplateArgs().asArray(), PartialOrdering,
-          Deduced, HasDeducedAnyParam);
+  if (auto Result =
+          DeduceTemplateArguments(S, TemplateParams, TNP, TNA, Info,
+                                  /*DefaultArguments=*/AResolved,
+                                  PartialOrdering, Deduced, HasDeducedAnyParam);
       Result != TemplateDeductionResult::Success)
     return Result;
 
   // Perform template argument deduction for the template arguments.
-  return DeduceTemplateArguments(S, TemplateParams, PResolved,
-                                 SA->getTemplateArgs().asArray(), Info, Deduced,
-                                 /*NumberOfArgumentsMustMatch=*/true,
-                                 PartialOrdering, PackFold::ParameterToArgument,
-                                 HasDeducedAnyParam);
+  return DeduceTemplateArguments(
+      S, TemplateParams, PResolved, AResolved, Info, Deduced,
+      /*NumberOfArgumentsMustMatch=*/true, PartialOrdering,
+      PackFold::ParameterToArgument, HasDeducedAnyParam);
 }
 
 static bool IsPossiblyOpaquelyQualifiedTypeInternal(const Type *T) {
@@ -2853,13 +2846,11 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
       else if (QualifiedTemplateName *QTN =
                    Template.getAsQualifiedTemplateName())
         Builder.MakeTrivial(Context, QTN->getQualifier(), Loc);
-
-      if (Arg.getKind() == TemplateArgument::Template)
-        return TemplateArgumentLoc(Context, Arg,
-                                   Builder.getWithLocInContext(Context), Loc);
-
       return TemplateArgumentLoc(
-          Context, Arg, Builder.getWithLocInContext(Context), Loc, Loc);
+          Context, Arg, Loc, Builder.getWithLocInContext(Context), Loc,
+          /*EllipsisLoc=*/Arg.getKind() == TemplateArgument::TemplateExpansion
+              ? Loc
+              : SourceLocation());
     }
 
   case TemplateArgument::Expression:
@@ -3077,8 +3068,9 @@ static TemplateDeductionResult ConvertDeducedTemplateArguments(
                                        S.getLangOpts().CPlusPlus17);
 
       DefArg = S.SubstDefaultTemplateArgumentIfAvailable(
-          TD, TD->getLocation(), TD->getSourceRange().getEnd(), Param,
-          CTAI.SugaredConverted, CTAI.CanonicalConverted, HasDefaultArg);
+          TD, /*TemplateKWLoc=*/SourceLocation(), TD->getLocation(),
+          TD->getSourceRange().getEnd(), Param, CTAI.SugaredConverted,
+          CTAI.CanonicalConverted, HasDefaultArg);
     }
 
     // If there was no default argument, deduction is incomplete.
@@ -3435,7 +3427,7 @@ Sema::DeduceTemplateArgumentsFromType(TemplateDecl *TD, QualType FromType,
   QualType PType;
   if (const auto *CTD = dyn_cast<ClassTemplateDecl>(TD)) {
     // Use the InjectedClassNameType.
-    PType = Context.getTypeDeclType(CTD->getTemplatedDecl());
+    PType = Context.getCanonicalTagType(CTD->getTemplatedDecl());
   } else if (const auto *AliasTemplate = dyn_cast<TypeAliasTemplateDecl>(TD)) {
     PType = AliasTemplate->getTemplatedDecl()->getUnderlyingType();
   } else {
@@ -4105,7 +4097,7 @@ static QualType GetTypeOfFunction(Sema &S, const OverloadExpr::FindResult &R,
         return {};
 
       return S.Context.getMemberPointerType(
-          Fn->getType(), /*Qualifier=*/nullptr, Method->getParent());
+          Fn->getType(), /*Qualifier=*/std::nullopt, Method->getParent());
     }
 
   if (!R.IsAddressOfOperand) return Fn->getType();
@@ -5061,10 +5053,12 @@ namespace {
         return TransformDesugared(TLB, TL);
 
       QualType Result = SemaRef.Context.getDeducedTemplateSpecializationType(
-          TL.getTypePtr()->getTemplateName(),
+          TL.getTypePtr()->getKeyword(), TL.getTypePtr()->getTemplateName(),
           Replacement, Replacement.isNull());
       auto NewTL = TLB.push<DeducedTemplateSpecializationTypeLoc>(Result);
+      NewTL.setElaboratedKeywordLoc(TL.getElaboratedKeywordLoc());
       NewTL.setNameLoc(TL.getNameLoc());
+      NewTL.setQualifierLoc(TL.getQualifierLoc());
       return Result;
     }
 
@@ -6379,8 +6373,8 @@ Sema::getMoreSpecializedPartialSpecialization(
                                   ClassTemplatePartialSpecializationDecl *PS1,
                                   ClassTemplatePartialSpecializationDecl *PS2,
                                               SourceLocation Loc) {
-  QualType PT1 = PS1->getInjectedSpecializationType().getCanonicalType();
-  QualType PT2 = PS2->getInjectedSpecializationType().getCanonicalType();
+  QualType PT1 = PS1->getCanonicalInjectedSpecializationType(Context);
+  QualType PT2 = PS2->getCanonicalInjectedSpecializationType(Context);
 
   TemplateDeductionInfo Info(Loc);
   return getMoreSpecialized(*this, PT1, PT2, PS1, PS2, Info);
@@ -6389,9 +6383,8 @@ Sema::getMoreSpecializedPartialSpecialization(
 bool Sema::isMoreSpecializedThanPrimary(
     ClassTemplatePartialSpecializationDecl *Spec, TemplateDeductionInfo &Info) {
   ClassTemplateDecl *Primary = Spec->getSpecializedTemplate();
-  QualType PrimaryT =
-      Primary->getInjectedClassNameSpecialization().getCanonicalType();
-  QualType PartialT = Spec->getInjectedSpecializationType().getCanonicalType();
+  QualType PrimaryT = Primary->getCanonicalInjectedSpecializationType(Context);
+  QualType PartialT = Spec->getCanonicalInjectedSpecializationType(Context);
 
   ClassTemplatePartialSpecializationDecl *MaybeSpec =
       getMoreSpecialized(*this, PartialT, PrimaryT, Spec, Primary, Info);
@@ -6761,7 +6754,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
     MarkUsedTemplateParameters(Ctx, MemPtr->getPointeeType(), OnlyDeduced,
                                Depth, Used);
     MarkUsedTemplateParameters(Ctx,
-                               QualType(MemPtr->getQualifier()->getAsType(), 0),
+                               QualType(MemPtr->getQualifier().getAsType(), 0),
                                OnlyDeduced, Depth, Used);
     break;
   }
@@ -6879,7 +6872,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
   }
 
   case Type::InjectedClassName:
-    T = cast<InjectedClassNameType>(T)->getInjectedSpecializationType();
+    T = cast<InjectedClassNameType>(T)->getCanonicalInjectedTST();
     [[fallthrough]];
 
   case Type::TemplateSpecialization: {

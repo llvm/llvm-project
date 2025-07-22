@@ -1332,12 +1332,6 @@ CXCursor cxcursor::getTypeRefCursor(CXCursor cursor) {
   TypeLoc TL = Type->getTypeLoc();
   SourceLocation Loc = TL.getBeginLoc();
 
-  if (const ElaboratedType *ElabT = Ty->getAs<ElaboratedType>()) {
-    Ty = ElabT->getNamedType();
-    ElaboratedTypeLoc ElabTL = TL.castAs<ElaboratedTypeLoc>();
-    Loc = ElabTL.getNamedTypeLoc().getBeginLoc();
-  }
-
   if (const TypedefType *Typedef = Ty->getAs<TypedefType>())
     return MakeCursorTypeRef(Typedef->getDecl(), Loc, TU);
   if (const TagType *Tag = Ty->getAs<TagType>())

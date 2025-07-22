@@ -229,12 +229,13 @@ bool CodeGenTypes::isFuncTypeConvertible(const FunctionType *FT) {
 /// UpdateCompletedType - When we find the full definition for a TagDecl,
 /// replace the 'opaque' type we previously made for it if applicable.
 void CodeGenTypes::UpdateCompletedType(const TagDecl *TD) {
+  CanQualType T = CGM.getContext().getCanonicalTagType(TD);
   // If this is an enum being completed, then we flush all non-struct types from
   // the cache.  This allows function types and other things that may be derived
   // from the enum to be recomputed.
   if (const EnumDecl *ED = dyn_cast<EnumDecl>(TD)) {
     // Only flush the cache if we've actually already converted this type.
-    if (TypeCache.count(ED->getTypeForDecl())) {
+    if (TypeCache.count(T->getTypePtr())) {
       // Okay, we formed some types based on this.  We speculated that the enum
       // would be lowered to i32, so we only need to flush the cache if this
       // didn't happen.
@@ -255,7 +256,7 @@ void CodeGenTypes::UpdateCompletedType(const TagDecl *TD) {
 
   // Only complete it if we converted it already.  If we haven't converted it
   // yet, we'll just do it lazily.
-  if (RecordDeclTypes.count(Context.getTagDeclType(RD).getTypePtr()))
+  if (RecordDeclTypes.count(T.getTypePtr()))
     ConvertRecordDeclType(RD);
 
   // If necessary, provide the full definition of a type only used with a
@@ -265,7 +266,7 @@ void CodeGenTypes::UpdateCompletedType(const TagDecl *TD) {
 }
 
 void CodeGenTypes::RefreshTypeCacheForClass(const CXXRecordDecl *RD) {
-  QualType T = Context.getRecordType(RD);
+  CanQualType T = Context.getCanonicalTagType(RD);
   T = Context.getCanonicalType(T);
 
   const Type *Ty = T.getTypePtr();
@@ -725,8 +726,10 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::MemberPointer: {
     auto *MPTy = cast<MemberPointerType>(Ty);
     if (!getCXXABI().isMemberPointerConvertible(MPTy)) {
-      auto *C = MPTy->getMostRecentCXXRecordDecl()->getTypeForDecl();
-      auto Insertion = RecordsWithOpaqueMemberPointers.try_emplace(C);
+      CanQualType T = CGM.getContext().getCanonicalTagType(
+          MPTy->getMostRecentCXXRecordDecl());
+      auto Insertion =
+          RecordsWithOpaqueMemberPointers.try_emplace(T.getTypePtr());
       if (Insertion.second)
         Insertion.first->second = llvm::StructType::create(getLLVMContext());
       ResultType = Insertion.first->second;
@@ -789,7 +792,7 @@ bool CodeGenModule::isPaddedAtomicType(const AtomicType *type) {
 llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {
   // TagDecl's are not necessarily unique, instead use the (clang)
   // type connected to the decl.
-  const Type *Key = Context.getTagDeclType(RD).getTypePtr();
+  const Type *Key = Context.getCanonicalTagType(RD).getTypePtr();
 
   llvm::StructType *&Entry = RecordDeclTypes[Key];
 
@@ -830,7 +833,7 @@ llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {
 /// getCGRecordLayout - Return record layout info for the given record decl.
 const CGRecordLayout &
 CodeGenTypes::getCGRecordLayout(const RecordDecl *RD) {
-  const Type *Key = Context.getTagDeclType(RD).getTypePtr();
+  const Type *Key = Context.getCanonicalTagType(RD).getTypePtr();
 
   auto I = CGRecordLayouts.find(Key);
   if (I != CGRecordLayouts.end())

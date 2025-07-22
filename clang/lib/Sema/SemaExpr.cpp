@@ -2531,7 +2531,7 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
     if (isa<CXXRecordDecl>(DC)) {
       if (ExplicitTemplateArgs) {
         if (LookupTemplateName(
-                R, S, SS, Context.getRecordType(cast<CXXRecordDecl>(DC)),
+                R, S, SS, Context.getCanonicalTagType(cast<CXXRecordDecl>(DC)),
                 /*EnteringContext*/ false, TemplateNameIsRequired,
                 /*RequiredTemplateKind*/ nullptr, /*AllowTypoCorrection*/ true))
           return true;
@@ -2607,11 +2607,8 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
       }
       R.addDecl(ND);
       if (getLangOpts().CPlusPlus && ND->isCXXClassMember()) {
-        CXXRecordDecl *Record = nullptr;
-        if (Corrected.getCorrectionSpecifier()) {
-          const Type *Ty = Corrected.getCorrectionSpecifier()->getAsType();
-          Record = Ty->getAsCXXRecordDecl();
-        }
+        CXXRecordDecl *Record =
+            Corrected.getCorrectionSpecifier().getAsRecordDecl();
         if (!Record)
           Record = cast<CXXRecordDecl>(
               ND->getDeclContext()->getRedeclContext());
@@ -2831,8 +2828,7 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
 
     // If this name wasn't predeclared and if this is not a function
     // call, diagnose the problem.
-    DefaultFilterCCC DefaultValidator(II, SS.isValid() ? SS.getScopeRep()
-                                                       : nullptr);
+    DefaultFilterCCC DefaultValidator(II, SS.getScopeRep());
     DefaultValidator.IsAddressOfOperand = IsAddressOfOperand;
     assert((!CCC || CCC->IsAddressOfOperand == IsAddressOfOperand) &&
            "Typo correction callback misconfigured");
@@ -2942,8 +2938,28 @@ ExprResult Sema::BuildQualifiedDeclarationNameExpr(
   }
 
   if (const TypeDecl *TD = R.getAsSingle<TypeDecl>()) {
-    QualType Ty = Context.getTypeDeclType(TD);
-    QualType ET = getElaboratedType(ElaboratedTypeKeyword::None, SS, Ty);
+    QualType ET;
+    TypeLocBuilder TLB;
+    if (auto *TagD = dyn_cast<TagDecl>(TD)) {
+      ET = SemaRef.Context.getTagType(ElaboratedTypeKeyword::None,
+                                      SS.getScopeRep(), TagD,
+                                      /*OwnsTag=*/false);
+      auto TL = TLB.push<TagTypeLoc>(ET);
+      TL.setElaboratedKeywordLoc(SourceLocation());
+      TL.setQualifierLoc(SS.getWithLocInContext(Context));
+      TL.setNameLoc(NameInfo.getLoc());
+    } else if (auto *TypedefD = dyn_cast<TypedefNameDecl>(TD)) {
+      ET = SemaRef.Context.getTypedefType(ElaboratedTypeKeyword::None,
+                                          SS.getScopeRep(), TypedefD);
+      TLB.push<TypedefTypeLoc>(ET).set(
+          /*ElaboratedKeywordLoc=*/SourceLocation(),
+          SS.getWithLocInContext(Context), NameInfo.getLoc());
+    } else {
+      // FIXME: What else can appear here?
+      ET = SemaRef.Context.getTypeDeclType(TD);
+      TLB.pushTypeSpec(ET).setNameLoc(NameInfo.getLoc());
+      assert(SS.isEmpty());
+    }
 
     // Diagnose a missing typename if this resolved unambiguously to a type in
     // a dependent context.  If we can recover with a type, downgrade this to
@@ -2964,13 +2980,6 @@ ExprResult Sema::BuildQualifiedDeclarationNameExpr(
     D << FixItHint::CreateInsertion(Loc, "typename ");
 
     // Recover by pretending this was an elaborated type.
-    TypeLocBuilder TLB;
-    TLB.pushTypeSpec(Ty).setNameLoc(NameInfo.getLoc());
-
-    ElaboratedTypeLoc QTL = TLB.push<ElaboratedTypeLoc>(ET);
-    QTL.setElaboratedKeywordLoc(SourceLocation());
-    QTL.setQualifierLoc(SS.getWithLocInContext(Context));
-
     *RecoveryTSI = TLB.getTypeSourceInfo(Context, ET);
 
     return ExprEmpty();
@@ -3001,7 +3010,7 @@ Sema::PerformObjectMemberConversion(Expr *From,
   QualType FromType = From->getType();
   bool PointerConversions = false;
   if (isa<FieldDecl>(Member)) {
-    DestRecordType = Context.getCanonicalType(Context.getTypeDeclType(RD));
+    DestRecordType = Context.getCanonicalTagType(RD);
     auto FromPtrType = FromType->getAs<PointerType>();
     DestRecordType = Context.getAddrSpaceQualType(
         DestRecordType, FromPtrType
@@ -4482,9 +4491,6 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::BitInt:
     case Type::HLSLInlineSpirv:
       llvm_unreachable("type class is never variably-modified!");
-    case Type::Elaborated:
-      T = cast<ElaboratedType>(Ty)->getNamedType();
-      break;
     case Type::Adjusted:
       T = cast<AdjustedType>(Ty)->getOriginalType();
       break;
@@ -5876,7 +5882,7 @@ static bool isParenthetizedAndQualifiedAddressOfExpr(Expr *Fn) {
     return DRE->hasQualifier();
   }
   if (auto *OVL = dyn_cast<OverloadExpr>(UO->getSubExpr()->IgnoreParens()))
-    return OVL->getQualifier();
+    return bool(OVL->getQualifier());
   return false;
 }
 
@@ -12457,7 +12463,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
 
   auto computeResultTy = [&]() {
     if (Opc != BO_Cmp)
-      return Context.getLogicalOperationType();
+      return QualType(Context.getLogicalOperationType());
     assert(getLangOpts().CPlusPlus);
     assert(Context.hasSameType(LHS.get()->getType(), RHS.get()->getType()));
 
@@ -16211,8 +16217,8 @@ ExprResult Sema::BuildBuiltinOffsetOf(SourceLocation BuiltinLoc,
     // If the member was found in a base class, introduce OffsetOfNodes for
     // the base class indirections.
     CXXBasePaths Paths;
-    if (IsDerivedFrom(OC.LocStart, CurrentType, Context.getTypeDeclType(Parent),
-                      Paths)) {
+    if (IsDerivedFrom(OC.LocStart, CurrentType,
+                      Context.getCanonicalTagType(Parent), Paths)) {
       if (Paths.getDetectedVirtual()) {
         Diag(OC.LocEnd, diag::err_offsetof_field_of_virtual_base)
           << MemberDecl->getDeclName()
@@ -16923,7 +16929,7 @@ ExprResult Sema::ActOnSourceLocExpr(SourceLocIdentKind Kind,
         return ExprError();
     }
     ResultTy = Context.getPointerType(
-        Context.getRecordType(StdSourceLocationImplDecl).withConst());
+        Context.getCanonicalTagType(StdSourceLocationImplDecl).withConst());
     break;
   }
 
@@ -21239,16 +21245,16 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     QualType TST;
     {
       SFINAETrap Trap(*this);
-      TST = CheckTemplateIdType(TN, NameInfo.getBeginLoc(), TAL);
+      TST = CheckTemplateIdType(ElaboratedTypeKeyword::None, TN,
+                                NameInfo.getBeginLoc(), TAL);
     }
     if (TST.isNull())
       TST = Context.getTemplateSpecializationType(
-          TN, ULE->template_arguments(), /*CanonicalArgs=*/{},
+          ElaboratedTypeKeyword::None, TN, ULE->template_arguments(),
+          /*CanonicalArgs=*/{},
           HasAnyDependentTA ? Context.DependentTy : Context.IntTy);
-    QualType ET =
-        Context.getElaboratedType(ElaboratedTypeKeyword::None, NNS, TST);
     return CreateRecoveryExpr(NameInfo.getBeginLoc(), NameInfo.getEndLoc(), {},
-                              ET);
+                              TST);
   }
 
   // Overloaded expressions.

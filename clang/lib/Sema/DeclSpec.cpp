@@ -48,9 +48,9 @@ void UnqualifiedId::setConstructorTemplateId(TemplateIdAnnotation *TemplateId) {
   EndLocation = TemplateId->RAngleLoc;
 }
 
-void CXXScopeSpec::Extend(ASTContext &Context, TypeLoc TL,
-                          SourceLocation ColonColonLoc) {
-  Builder.Extend(Context, TL, ColonColonLoc);
+void CXXScopeSpec::Make(ASTContext &Context, TypeLoc TL,
+                        SourceLocation ColonColonLoc) {
+  Builder.Make(Context, TL, ColonColonLoc);
   if (Range.getBegin().isInvalid())
     Range.setBegin(TL.getBeginLoc());
   Range.setEnd(ColonColonLoc);

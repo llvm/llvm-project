@@ -389,13 +389,22 @@ SourceLocation CXIndexDataConsumer::CXXBasesListInfo::getBaseLoc(
   if (QualifiedTypeLoc QL = TL.getAs<QualifiedTypeLoc>())
     TL = QL.getUnqualifiedLoc();
 
-  if (ElaboratedTypeLoc EL = TL.getAs<ElaboratedTypeLoc>())
-    return EL.getNamedTypeLoc().getBeginLoc();
-  if (DependentNameTypeLoc DL = TL.getAs<DependentNameTypeLoc>())
-    return DL.getNameLoc();
-  if (DependentTemplateSpecializationTypeLoc DTL =
-          TL.getAs<DependentTemplateSpecializationTypeLoc>())
-    return DTL.getTemplateNameLoc();
+  // FIXME: Factor this out, a lot of TypeLoc users seem to need a generic
+  // TypeLoc::getNameLoc()
+  if (auto TTL = TL.getAs<DependentNameTypeLoc>())
+    return TTL.getNameLoc();
+  if (auto TTL = TL.getAs<DependentTemplateSpecializationTypeLoc>())
+    return TTL.getTemplateNameLoc();
+  if (auto TTL = TL.getAs<TemplateSpecializationTypeLoc>())
+    return TTL.getTemplateNameLoc();
+  if (auto TTL = TL.getAs<TagTypeLoc>())
+    return TTL.getNameLoc();
+  if (auto TTL = TL.getAs<TypedefTypeLoc>())
+    return TTL.getNameLoc();
+  if (auto TTL = TL.getAs<UnresolvedUsingTypeLoc>())
+    return TTL.getNameLoc();
+  if (auto TTL = TL.getAs<UsingTypeLoc>())
+    return TTL.getNameLoc();
 
   return Loc;
 }

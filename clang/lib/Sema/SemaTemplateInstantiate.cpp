@@ -1165,7 +1165,7 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
         DiagFunc(Active->PointOfInstantiation,
                  PDiag(diag::note_member_synthesized_at)
                      << MD->isExplicitlyDefaulted() << DFK.asSpecialMember()
-                     << Context.getTagDeclType(MD->getParent()));
+                     << Context.getCanonicalTagType(MD->getParent()));
       } else if (DFK.isComparison()) {
         QualType RecordType = FD->getParamDecl(0)
                                   ->getType()
@@ -1649,22 +1649,18 @@ namespace {
       return inherited::TransformFunctionProtoType(TLB, TL);
     }
 
-    QualType TransformInjectedClassNameType(TypeLocBuilder &TLB,
-                                            InjectedClassNameTypeLoc TL) {
-      auto Type = inherited::TransformInjectedClassNameType(TLB, TL);
+    QualType TransformTagType(TypeLocBuilder &TLB, TagTypeLoc TL) {
+      auto Type = inherited::TransformTagType(TLB, TL);
+      if (!Type.isNull())
+        return Type;
       // Special case for transforming a deduction guide, we return a
       // transformed TemplateSpecializationType.
-      if (Type.isNull() &&
-          SemaRef.CodeSynthesisContexts.back().Kind ==
-              Sema::CodeSynthesisContext::BuildingDeductionGuides) {
-        // Return a TemplateSpecializationType for transforming a deduction
-        // guide.
-        if (auto *ICT = TL.getType()->getAs<InjectedClassNameType>()) {
-          auto Type =
-              inherited::TransformType(ICT->getInjectedSpecializationType());
-          TLB.pushTrivial(SemaRef.Context, Type, TL.getNameLoc());
-          return Type;
-        }
+      // FIXME: Why is this hack necessary?
+      if (const auto *ICNT = dyn_cast<InjectedClassNameType>(TL.getTypePtr());
+          ICNT && SemaRef.CodeSynthesisContexts.back().Kind ==
+                      Sema::CodeSynthesisContext::BuildingDeductionGuides) {
+        Type = inherited::TransformType(ICNT->getCanonicalInjectedTST());
+        TLB.pushTrivial(SemaRef.Context, Type, TL.getNameLoc());
       }
       return Type;
     }
@@ -2083,37 +2079,6 @@ VarDecl *TemplateInstantiator::RebuildObjCExceptionDecl(VarDecl *ExceptionDecl,
   return Var;
 }
 
-QualType
-TemplateInstantiator::RebuildElaboratedType(SourceLocation KeywordLoc,
-                                            ElaboratedTypeKeyword Keyword,
-                                            NestedNameSpecifierLoc QualifierLoc,
-                                            QualType T) {
-  if (const TagType *TT = T->getAs<TagType>()) {
-    TagDecl* TD = TT->getDecl();
-
-    SourceLocation TagLocation = KeywordLoc;
-
-    IdentifierInfo *Id = TD->getIdentifier();
-
-    // TODO: should we even warn on struct/class mismatches for this?  Seems
-    // like it's likely to produce a lot of spurious errors.
-    if (Id && Keyword != ElaboratedTypeKeyword::None &&
-        Keyword != ElaboratedTypeKeyword::Typename) {
-      TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForKeyword(Keyword);
-      if (!SemaRef.isAcceptableTagRedeclaration(TD, Kind, /*isDefinition*/false,
-                                                TagLocation, Id)) {
-        SemaRef.Diag(TagLocation, diag::err_use_with_wrong_tag)
-          << Id
-          << FixItHint::CreateReplacement(SourceRange(TagLocation),
-                                          TD->getKindName());
-        SemaRef.Diag(TD->getLocation(), diag::note_previous_use);
-      }
-    }
-  }
-
-  return inherited::RebuildElaboratedType(KeywordLoc, Keyword, QualifierLoc, T);
-}
-
 TemplateName TemplateInstantiator::TransformTemplateName(
     CXXScopeSpec &SS, TemplateName Name, SourceLocation NameLoc,
     QualType ObjectType, NamedDecl *FirstQualifierInScope,
@@ -2182,9 +2147,9 @@ TemplateName TemplateInstantiator::TransformTemplateName(
         getPackIndex(Pack), SubstPack->getFinal());
   }
 
-  return inherited::TransformTemplateName(SS, Name, NameLoc, ObjectType,
-                                          FirstQualifierInScope,
-                                          AllowInjectedClassName);
+  return inherited::TransformTemplateName(
+      QualifierLoc, TemplateKWLoc, Name, NameLoc, ObjectType,
+      FirstQualifierInScope, AllowInjectedClassName);
 }
 
 ExprResult
@@ -3159,10 +3124,6 @@ namespace {
 
     // Only these types can contain 'auto' types, and subsequently be replaced
     // by references to invented parameters.
-
-    TemplateTypeParmDecl *VisitElaboratedType(const ElaboratedType *T) {
-      return Visit(T->getNamedType());
-    }
 
     TemplateTypeParmDecl *VisitPointerType(const PointerType *T) {
       return Visit(T->getPointeeType());

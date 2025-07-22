@@ -1677,10 +1677,16 @@ bool CursorVisitor::VisitPredefinedSugarTypeLoc(PredefinedSugarTypeLoc TL) {
 }
 
 bool CursorVisitor::VisitUnresolvedUsingTypeLoc(UnresolvedUsingTypeLoc TL) {
+  if (VisitNestedNameSpecifierLoc(TL.getQualifierLoc()))
+    return true;
+
   return Visit(MakeCursorTypeRef(TL.getDecl(), TL.getNameLoc(), TU));
 }
 
 bool CursorVisitor::VisitTagTypeLoc(TagTypeLoc TL) {
+  if (VisitNestedNameSpecifierLoc(TL.getQualifierLoc()))
+    return true;
+
   if (TL.isDefinition())
     return Visit(MakeCXCursor(TL.getDecl(), TU, RegionOfInterest));
 
@@ -1763,7 +1769,10 @@ bool CursorVisitor::VisitRValueReferenceTypeLoc(RValueReferenceTypeLoc TL) {
 }
 
 bool CursorVisitor::VisitUsingTypeLoc(UsingTypeLoc TL) {
-  auto *underlyingDecl = TL.getUnderlyingType()->getAsTagDecl();
+  if (VisitNestedNameSpecifierLoc(TL.getQualifierLoc()))
+    return true;
+
+  auto *underlyingDecl = TL.getTypePtr()->desugar()->getAsTagDecl();
   if (underlyingDecl) {
     return Visit(MakeCursorTypeRef(underlyingDecl, TL.getNameLoc(), TU));
   }
@@ -1826,7 +1835,7 @@ bool CursorVisitor::VisitAdjustedTypeLoc(AdjustedTypeLoc TL) {
 bool CursorVisitor::VisitDeducedTemplateSpecializationTypeLoc(
     DeducedTemplateSpecializationTypeLoc TL) {
   if (VisitTemplateName(TL.getTypePtr()->getTemplateName(),
-                        TL.getTemplateNameLoc()))
+                        TL.getTemplateNameLoc(), TL.getQualifierLoc()))
     return true;
 
   return false;
@@ -1836,7 +1845,7 @@ bool CursorVisitor::VisitTemplateSpecializationTypeLoc(
     TemplateSpecializationTypeLoc TL) {
   // Visit the template name.
   if (VisitTemplateName(TL.getTypePtr()->getTemplateName(),
-                        TL.getTemplateNameLoc()))
+                        TL.getTemplateNameLoc(), TL.getQualifierLoc()))
     return true;
 
   // Visit the template arguments.
@@ -1881,13 +1890,6 @@ bool CursorVisitor::VisitDependentTemplateSpecializationTypeLoc(
       return true;
 
   return false;
-}
-
-bool CursorVisitor::VisitElaboratedTypeLoc(ElaboratedTypeLoc TL) {
-  if (VisitNestedNameSpecifierLoc(TL.getQualifierLoc()))
-    return true;
-
-  return Visit(TL.getNamedTypeLoc());
 }
 
 bool CursorVisitor::VisitPackExpansionTypeLoc(PackExpansionTypeLoc TL) {
@@ -5360,9 +5362,13 @@ CXString clang_getCursorSpelling(CXCursor C) {
     case CXCursor_TypeRef: {
       const TypeDecl *Type = getCursorTypeRef(C).first;
       assert(Type && "Missing type decl");
+      const ASTContext &Ctx = getCursorContext(C);
+      QualType T = Ctx.getTypeDeclType(Type);
 
-      return cxstring::createDup(
-          getCursorContext(C).getTypeDeclType(Type).getAsString());
+      PrintingPolicy Policy = Ctx.getPrintingPolicy();
+      Policy.FullyQualifiedName = true;
+      Policy.SuppressTagKeyword = false;
+      return cxstring::createDup(T.getAsString(Policy));
     }
     case CXCursor_TemplateRef: {
       const TemplateDecl *Template = getCursorTemplateRef(C).first;
