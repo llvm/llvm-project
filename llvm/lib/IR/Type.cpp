@@ -308,6 +308,12 @@ Type *Type::getWasm_ExternrefTy(LLVMContext &C) {
   return Ty;
 }
 
+Type *Type::getWasm_NonNullExternrefTy(LLVMContext &C) {
+  // opaque pointer in addrspace(11)
+  static PointerType *Ty = PointerType::get(C, 11);
+  return Ty;
+}
+
 Type *Type::getWasm_FuncrefTy(LLVMContext &C) {
   // opaque pointer in addrspace(20)
   static PointerType *Ty = PointerType::get(C, 20);

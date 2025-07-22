@@ -2553,6 +2553,12 @@ bool Type::isWebAssemblyExternrefType() const {
   return false;
 }
 
+bool Type::isWebAssemblyNonNullExternrefType() const {
+  if (const auto *BT = getAs<BuiltinType>())
+    return BT->getKind() == BuiltinType::WasmNonNullExternRef;
+  return false;
+}
+
 bool Type::isWebAssemblyTableType() const {
   if (const auto *ATy = dyn_cast<ArrayType>(this))
     return ATy->getElementType().isWebAssemblyReferenceType();
@@ -2922,11 +2928,16 @@ bool QualType::hasNonTrivialToPrimitiveCopyCUnion(const RecordDecl *RD) {
 }
 
 bool QualType::isWebAssemblyReferenceType() const {
-  return isWebAssemblyExternrefType() || isWebAssemblyFuncrefType();
+  return isWebAssemblyExternrefType() || isWebAssemblyNonNullExternrefType() ||
+         isWebAssemblyFuncrefType();
 }
 
 bool QualType::isWebAssemblyExternrefType() const {
   return getTypePtr()->isWebAssemblyExternrefType();
+}
+
+bool QualType::isWebAssemblyNonNullExternrefType() const {
+  return getTypePtr()->isWebAssemblyNonNullExternrefType();
 }
 
 bool QualType::isWebAssemblyFuncrefType() const {

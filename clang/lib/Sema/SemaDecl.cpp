@@ -13643,6 +13643,11 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     return;
   }
 
+  if (VDecl->getType().isWebAssemblyExternrefType() && Init->getType()->isWebAssemblyNonNullExternrefType()) {
+    VDecl->setInit(Init);
+    return;
+  }
+
   // C++11 [decl.spec.auto]p6. Deduce the type which 'auto' stands in for.
   if (VDecl->getType()->isUndeducedType()) {
     if (Init->containsErrors()) {

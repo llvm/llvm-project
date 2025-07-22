@@ -29,6 +29,11 @@ def int_wasm_memory_grow :
 //===----------------------------------------------------------------------===//
 def int_wasm_ref_null_extern :
   DefaultAttrsIntrinsic<[llvm_externref_ty], [], [IntrNoMem]>;
+
+// TODO: Is this correct?
+def int_wasm_ref_nonnull_extern
+     : DefaultAttrsIntrinsic<[llvm_externref_nn_ty], [], [IntrNoMem]>;
+
 def int_wasm_ref_null_func :
   DefaultAttrsIntrinsic<[llvm_funcref_ty], [], [IntrNoMem]>;
 def int_wasm_ref_null_exn:

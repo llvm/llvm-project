@@ -36,5 +36,7 @@
 
 WASM_REF_TYPE("__externref_t", "externref_t", WasmExternRef, WasmExternRefTy, 10)
 
+WASM_REF_TYPE("__non_null_externref_t", "non_null_externref_t", WasmNonNullExternRef, WasmNonNullExternRefTy, 10)
+
 #undef WASM_TYPE
 #undef WASM_REF_TYPE

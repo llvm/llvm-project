@@ -569,6 +569,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case BuiltinType::Id: {                                                      \
     if (BuiltinType::Id == BuiltinType::WasmExternRef)                         \
       ResultType = CGM.getTargetCodeGenInfo().getWasmExternrefReferenceType(); \
+    else if (BuiltinType::Id == BuiltinType::WasmNonNullExternRef)             \
+      ResultType =                                                             \
+          CGM.getTargetCodeGenInfo().getWasmNonNullExternrefReferenceType();   \
     else                                                                       \
       llvm_unreachable("Unexpected wasm reference builtin type!");             \
   } break;

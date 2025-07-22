@@ -616,6 +616,7 @@ def llvm_v16f64_ty     : LLVMType<v16f64>;      //   16 x double
 def llvm_vararg_ty     : LLVMType<isVoid>;   // this means vararg here
 
 def llvm_externref_ty  : LLVMType<externref>;
+def llvm_externref_nn_ty  : LLVMType<externref_nn>;
 def llvm_funcref_ty    : LLVMType<funcref>;
 def llvm_exnref_ty     : LLVMType<exnref>;
 

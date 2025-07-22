@@ -1145,6 +1145,9 @@ public:
   /// Returns true if it is a WebAssembly Externref Type.
   bool isWebAssemblyExternrefType() const;
 
+  /// Returns true if it is a WebAssembly non null Externref Type.
+  bool isWebAssemblyNonNullExternrefType() const;
+
   /// Returns true if it is a WebAssembly Funcref Type.
   bool isWebAssemblyFuncrefType() const;
 
@@ -2401,6 +2404,9 @@ public:
 
   /// Check if this is a WebAssembly Externref Type.
   bool isWebAssemblyExternrefType() const;
+
+  /// Check if this is a WebAssembly non null Externref Type.
+  bool isWebAssemblyNonNullExternrefType() const;
 
   /// Returns true if this is a WebAssembly table type: either an array of
   /// reference types, or a pointer to a reference type (which can only be
