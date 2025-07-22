@@ -47,7 +47,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPLoadImm10<bits<7> funct7, string opcodestr,
                    DAGOperand TyImm10 = simm10>
     : RVInst<(outs GPR:$rd), (ins TyImm10:$imm10), opcodestr, "$rd, $imm10", [],
-    InstFormatOther> {
+             InstFormatOther> {
   bits<10> imm10;
   bits<5> rd;
 
