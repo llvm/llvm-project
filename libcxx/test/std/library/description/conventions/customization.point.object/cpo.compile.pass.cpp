@@ -84,8 +84,11 @@ static_assert(test(std::ranges::ssize, a));
 static_assert(test(std::views::iota, 1));
 static_assert(test(std::views::iota, 1, 10));
 static_assert(test(std::views::istream<int>, stream));
-static_assert(test(std::views::repeat, 1));
 static_assert(test(std::views::single, 4));
+
+#if TEST_STD_VER >= 23
+static_assert(test(std::views::repeat, 1));
+#endif
 
 // [range.adaptors]
 static_assert(test(std::views::all, a));
