@@ -361,7 +361,8 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
         if (BBeforeRelax && AAfterRelax)
           return;
       }
-      if (F->getKind() == MCFragment::FT_Relaxable && Asm->hasFinalLayout() && F->isLinkerRelaxable())
+      if (F->getKind() == MCFragment::FT_Relaxable && Asm->hasFinalLayout() &&
+          F->isLinkerRelaxable())
         // FIXME: More accurate calculation of AAfterRelax/BBeforeRelax?
         return;
       if (&*F == FA) {
