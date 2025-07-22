@@ -500,14 +500,21 @@ struct MemoryCounterWaitOpLowering
         return cast<IntegerAttr>(attr).getInt();
 
       // This value will be clamped to the maximum value for the chipset.
-      return 1024 * 1024;
+      return 1024;
     };
     unsigned ds = getVal(adaptor.getDsAttr());
-    unsigned load = getVal(adaptor.getLoadAttr());
-    unsigned store = getVal(adaptor.getStoreAttr());
     unsigned exp = getVal(adaptor.getExpAttr());
 
-    unsigned vmcnt = std::min(load, store);
+    unsigned vmcnt = 1024;
+    Attribute load = adaptor.getLoadAttr();
+    Attribute store = adaptor.getStoreAttr();
+    if (load && store) {
+      vmcnt = getVal(load) + getVal(store);
+    } else if (load) {
+      vmcnt = getVal(load);
+    } else if (store) {
+      vmcnt = getVal(store);
+    }
 
     FailureOr<unsigned> waitcnt = encodeWaitcnt(chipset, vmcnt, exp, ds);
     if (failed(waitcnt))
