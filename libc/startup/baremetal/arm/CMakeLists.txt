@@ -12,5 +12,6 @@ add_startup_object(
   COMPILE_OPTIONS
     -ffreestanding # To avoid compiler warnings about calling the main function.
     -fno-builtin
+    -Wno-global-constructors # To allow vector table initialization
 )
 get_fq_target_name(crt1 fq_name)

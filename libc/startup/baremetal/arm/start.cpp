@@ -48,8 +48,6 @@ void SysTick_Handler() {}
 // has to be 128-byte aligned, however an implementation can require more bits
 // to be zero and Cortex-M23 can require up to 10, so 1024-byte align the vector
 // table.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wglobal-constructors"
 using HandlerType = void (*)(void);
 const HandlerType vector_table[]
     __attribute__((section(".vectors"), aligned(1024), used)) = {
@@ -72,7 +70,6 @@ const HandlerType vector_table[]
                                // Unused
 };
 } // extern "C"
-#pragma clang diagnostic pop
 
 namespace LIBC_NAMESPACE_DECL {
 [[noreturn]] void do_start() {
