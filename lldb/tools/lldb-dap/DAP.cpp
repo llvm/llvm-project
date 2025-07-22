@@ -31,7 +31,6 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/Utility/IOObject.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-types.h"
