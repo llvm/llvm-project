@@ -58,9 +58,7 @@ int main(void) {
 // CHECK-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
 // CHECK-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
 // CHECK-DAG: store ptr @objects, ptr [[BP1]]
-// CHECK-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
-// CHECK-DAG: [[SEC1]] = getelementptr {{.*}}ptr [[RVAR1:%.+]], i{{.+}} 1
-// CHECK-DAG: [[RVAR1]] = load ptr, ptr @objects
+// CHECK-DAG: store ptr [[SEC0]], ptr [[P1]]
 
 #pragma omp target enter data map(to : objects [1:1])
 // CHECK: [[OBJ:%.+]] = load ptr, ptr @objects,

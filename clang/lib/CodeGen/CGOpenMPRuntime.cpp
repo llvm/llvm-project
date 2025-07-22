@@ -7172,6 +7172,10 @@ private:
     // p, &p[1], 24*sizeof(float), TARGET_PARAM | TO | FROM
     // &p, &p[1], sizeof(p), ATTACH
     //
+    // map((22])p)
+    // p, p, 22*sizeof(float), TARGET_PARAM | TO | FROM
+    // &p, p, sizeof(float*), ATTACH
+    //
     // map((*a)[0:3])
     // &(*a), &(*a), sizeof(pointer), TARGET_PARAM | TO | FROM
     // &(*a), &(*a)[0], 3*sizeof(int), PTR_AND_OBJ | TO | FROM

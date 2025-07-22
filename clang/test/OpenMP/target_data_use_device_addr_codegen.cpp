@@ -65,16 +65,12 @@ int main() {
 // CHECK: [[P0:%.+]] = load ptr, ptr [[PTR_ADDR]],
 // CHECK: [[P1:%.+]] = load ptr, ptr [[PTR_ADDR]],
 // CHECK-NEXT: [[ARR_IDX:%.+]] = getelementptr inbounds nuw float, ptr [[P1]], i64 3
-// CHECK: [[P2:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8
-// CHECK-NEXT: [[ARR_IDX1:%.+]] = getelementptr inbounds nuw float, ptr [[P2]], i64 3
-// CHECK: [[P3:%.+]] = load ptr, ptr [[PTR_ADDR]],
-// CHECK: [[P4:%.+]] = load ptr, ptr [[PTR_ADDR]],
-// CHECK-NEXT: [[ARR_IDX2:%.+]] = getelementptr inbounds float, ptr [[P4]], i64 0
-// CHECK: [[P5:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8
-// CHECK-NEXT: [[ARR_IDX3:%.+]] = getelementptr inbounds float, ptr [[P5]], i64 0
+// CHECK: [[P2:%.+]] = load ptr, ptr [[PTR_ADDR]],
+// CHECK: [[P5:%.+]] = load ptr, ptr [[PTR_ADDR]],
+// CHECK-NEXT: [[ARR_IDX1:%.+]] = getelementptr inbounds float, ptr [[P5]], i64 0
 // CHECK: [[P7:%.+]] = load ptr, ptr [[REF_ADDR]],
 // CHECK-NEXT: [[REF:%.+]] = load ptr, ptr [[REF_ADDR]],
-// CHECK-NEXT: [[ARR_IDX4:%.+]] = getelementptr inbounds nuw [4 x float], ptr [[ARR_ADDR]], i64 0, i64 0
+// CHECK-NEXT: [[ARR_IDX2:%.+]] = getelementptr inbounds nuw [4 x float], ptr [[ARR_ADDR]], i64 0, i64 0
 // CHECK: [[P10:%.+]] = mul nuw i64 {{.+}}, 4
 // CHECK-NEXT: [[ARR_IDX5:%.+]] = getelementptr inbounds float, ptr [[VLA_ADDR]], i64 0
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[SIZES]], ptr align 8 [[SIZES1]], i64 64, i1 false)
@@ -89,15 +85,15 @@ int main() {
 // CHECK: [[BPTR2:%.+]] = getelementptr inbounds [8 x ptr], ptr [[BPTRS]], i32 0, i32 2
 // CHECK: store ptr [[PTR_ADDR]], ptr [[BPTR2]],
 // CHECK: [[PTR2:%.+]] = getelementptr inbounds [8 x ptr], ptr [[PTRS]], i32 0, i32 2
-// CHECK: store ptr [[ARR_IDX1]], ptr [[PTR2]],
+// CHECK: store ptr [[ARR_IDX]], ptr [[PTR2]],
 // CHECK: [[BPTR3:%.+]] = getelementptr inbounds [8 x ptr], ptr [[BPTRS]], i32 0, i32 3
-// CHECK: store ptr [[P3]], ptr [[BPTR3]],
+// CHECK: store ptr [[P2]], ptr [[BPTR3]],
 // CHECK: [[PTR3:%.+]] = getelementptr inbounds [8 x ptr], ptr [[PTRS]], i32 0, i32 3
-// CHECK: store ptr [[ARR_IDX2]], ptr [[PTR3]],
+// CHECK: store ptr [[ARR_IDX1]], ptr [[PTR3]],
 // CHECK: [[BPTR4:%.+]] = getelementptr inbounds [8 x ptr], ptr [[BPTRS]], i32 0, i32 4
 // CHECK: store ptr [[PTR_ADDR]], ptr [[BPTR4]], align
 // CHECK: [[PTR4:%.+]] = getelementptr inbounds [8 x ptr], ptr [[PTRS]], i32 0, i32 4
-// CHECK: store ptr [[ARR_IDX3]], ptr [[PTR4]], align 8
+// CHECK: store ptr [[ARR_IDX1]], ptr [[PTR4]], align 8
 // CHECK: [[BPTR5:%.+]] = getelementptr inbounds [8 x ptr], ptr [[BPTRS]], i32 0, i32 5
 // CHECK: store ptr [[P7]], ptr [[BPTR5]], align
 // CHECK: [[PTR5:%.+]] = getelementptr inbounds [8 x ptr], ptr [[PTRS]], i32 0, i32 5
@@ -105,7 +101,7 @@ int main() {
 // CHECK: [[BPTR6:%.+]] = getelementptr inbounds [8 x ptr], ptr [[BPTRS]], i32 0, i32 6
 // CHECK: store ptr [[ARR_ADDR]], ptr [[BPTR6]],
 // CHECK: [[PTR6:%.+]] = getelementptr inbounds [8 x ptr], ptr [[PTRS]], i32 0, i32 6
-// CHECK: store ptr [[ARR_IDX4]], ptr [[PTR6]],
+// CHECK: store ptr [[ARR_IDX2]], ptr [[PTR6]],
 // CHECK: [[SIZE_PTR:%.+]] = getelementptr inbounds [8 x i64], ptr [[SIZES]], i32 0, i32 6
 // CHECK: store i64 [[P10:%.+]], ptr [[SIZE_PTR]], align 8
 // CHECK: [[MAP_PTR:%.+]] = getelementptr inbounds [8 x ptr], ptr [[MAP_PTRS]], i64 0, i64 6

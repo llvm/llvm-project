@@ -31,8 +31,6 @@ void add_one(float *b, int dm)
   // CK1:     [[RB_1:%.*]] = load ptr, ptr [[B:%b.addr]]
   // CK1:     [[RB_2:%.*]] = load ptr, ptr [[B]]
   // CK1:     [[RB0_1:%.*]] = getelementptr inbounds nuw float, ptr [[RB_2]], i{{.*}} 0
-  // CK1:     [[RB_3:%.*]] = load ptr, ptr [[B]]
-  // CK1:     [[RB0_2:%.*]] = getelementptr inbounds nuw float, ptr [[RB_3]], i{{.*}} 0
 
   // CK1:     [[BP0:%.+]] = getelementptr inbounds [2 x ptr], ptr [[BP:%.offload_baseptrs.*]], i32 0, i32 0
   // CK1:     store ptr [[RB_1]], ptr [[BP0]]
@@ -42,7 +40,7 @@ void add_one(float *b, int dm)
   // CK1:     [[BP1:%.+]] = getelementptr inbounds [2 x ptr], ptr [[BP]], i32 0, i32 1
   // CK1:     store ptr [[B]], ptr [[BP1]]
   // CK1:     [[P1:%.+]] = getelementptr inbounds [2 x ptr], ptr [[P]], i32 0, i32 1
-  // CK1:     store ptr [[RB0_2]], ptr [[P1]]
+  // CK1:     store ptr [[RB0_1]], ptr [[P1]]
 
   // CK1:     call void @__tgt_target_data_begin{{.+}}ptr [[MYSIZE00]], ptr [[MTYPE00]]
 
