@@ -4,6 +4,34 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+c -M no-aliases < %s \
 ; RUN:   | FileCheck %s --check-prefix=COMPRESS
 
+define ptr @f1(ptr %x0, ptr %x1) {
+; CHECK-LABEL: f1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset ra, -8
+; CHECK-NEXT:    mv t0, a1
+; CHECK-NEXT:    call __hwasan_check_x10_1
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+;
+; COMPRESS-LABEL: f1:
+; COMPRESS:       # %bb.0:
+; COMPRESS-NEXT:    c.addi sp, -16
+; COMPRESS-NEXT:    .cfi_def_cfa_offset 16
+; COMPRESS-NEXT:    c.sdsp ra, 8(sp) # 8-byte Folded Spill
+; COMPRESS-NEXT:    .cfi_offset ra, -8
+; COMPRESS-NEXT:    c.mv t0, a1
+; COMPRESS-NEXT:    call __hwasan_check_x10_1
+; COMPRESS-NEXT:    c.ldsp ra, 8(sp) # 8-byte Folded Reload
+; COMPRESS-NEXT:    c.addi sp, 16
+; COMPRESS-NEXT:    c.jr ra
+  call void @llvm.hwasan.check.memaccess(ptr %x1, ptr %x0, i32 1)
+  ret ptr %x0
+}
+
 define ptr @f2(ptr %x0, ptr %x1) {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
@@ -36,6 +64,52 @@ define ptr @f2(ptr %x0, ptr %x1) {
   ret ptr %x0
 }
 
+declare void @llvm.hwasan.check.memaccess(ptr, ptr, i32)
+
+; CHECK: .section        .text.hot,"axG",@progbits,__hwasan_check_x10_1,comdat
+; CHECK-NEXT: .type   __hwasan_check_x10_1,@function
+; CHECK-NEXT: .weak   __hwasan_check_x10_1
+; CHECK-NEXT: .hidden __hwasan_check_x10_1
+; CHECK-NEXT: __hwasan_check_x10_1:
+; CHECK-NEXT: slli    t1, a0, 8
+; CHECK-NEXT: srli    t1, t1, 12
+; CHECK-NEXT: add     t1, t0, t1
+; CHECK-NEXT: lbu     t1, 0(t1)
+; CHECK-NEXT: srli    t2, a0, 56
+; CHECK-NEXT: bne     t2, t1, .Ltmp0
+; CHECK-NEXT: .Ltmp1:
+; CHECK-NEXT: ret
+; CHECK-NEXT: .Ltmp0:
+; CHECK-NEXT: addi    sp, sp, -256
+; CHECK-NEXT: sd      a0, 80(sp)
+; CHECK-NEXT: sd      a1, 88(sp)
+; CHECK-NEXT: sd      s0, 64(sp)
+; CHECK-NEXT: sd      ra, 8(sp)
+; CHECK-NEXT: li      a1, 1
+; CHECK-NEXT: call    __hwasan_tag_mismatch_v2
+
+; COMPRESS: .section        .text.hot,"axG",@progbits,__hwasan_check_x10_1,comdat
+; COMPRESS-NEXT: .type   __hwasan_check_x10_1,@function
+; COMPRESS-NEXT: .weak   __hwasan_check_x10_1
+; COMPRESS-NEXT: .hidden __hwasan_check_x10_1
+; COMPRESS-NEXT: __hwasan_check_x10_1:
+; COMPRESS-NEXT: slli    t1, a0, 8
+; COMPRESS-NEXT: srli    t1, t1, 12
+; COMPRESS-NEXT: c.add   t1, t0
+; COMPRESS-NEXT: lbu     t1, 0(t1)
+; COMPRESS-NEXT: srli    t2, a0, 56
+; COMPRESS-NEXT: bne     t2, t1, .Ltmp0
+; COMPRESS-NEXT: .Ltmp1:
+; COMPRESS-NEXT: c.jr    ra
+; COMPRESS-NEXT: .Ltmp0:
+; COMPRESS-NEXT: c.addi16sp sp, -256
+; COMPRESS-NEXT: c.sdsp a0, 80(sp)
+; COMPRESS-NEXT: c.sdsp a1, 88(sp)
+; COMPRESS-NEXT: c.sdsp s0, 64(sp)
+; COMPRESS-NEXT: c.sdsp ra, 8(sp)
+; COMPRESS-NEXT: c.li    a1, 1
+; COMPRESS-NEXT: call    __hwasan_tag_mismatch_v2
+
 declare void @llvm.hwasan.check.memaccess.shortgranules(ptr, ptr, i32)
 
 ; CHECK: .section        .text.hot,"axG",@progbits,__hwasan_check_x10_2_short,comdat
@@ -48,19 +122,19 @@ declare void @llvm.hwasan.check.memaccess.shortgranules(ptr, ptr, i32)
 ; CHECK-NEXT: add     t1, t0, t1
 ; CHECK-NEXT: lbu     t1, 0(t1)
 ; CHECK-NEXT: srli    t2, a0, 56
-; CHECK-NEXT: bne     t2, t1, .Ltmp0
-; CHECK-NEXT: .Ltmp1:
+; CHECK-NEXT: bne     t2, t1, .Ltmp2
+; CHECK-NEXT: .Ltmp3:
 ; CHECK-NEXT: ret
-; CHECK-NEXT: .Ltmp0:
+; CHECK-NEXT: .Ltmp2:
 ; CHECK-NEXT: li      t3, 16
-; CHECK-NEXT: bgeu    t1, t3, .Ltmp2
+; CHECK-NEXT: bgeu    t1, t3, .Ltmp4
 ; CHECK-NEXT: andi    t3, a0, 15
 ; CHECK-NEXT: addi    t3, t3, 3
-; CHECK-NEXT: bge     t3, t1, .Ltmp2
+; CHECK-NEXT: bge     t3, t1, .Ltmp4
 ; CHECK-NEXT: ori     t1, a0, 15
 ; CHECK-NEXT: lbu     t1, 0(t1)
-; CHECK-NEXT: beq     t1, t2, .Ltmp1
-; CHECK-NEXT: .Ltmp2:
+; CHECK-NEXT: beq     t1, t2, .Ltmp3
+; CHECK-NEXT: .Ltmp4:
 ; CHECK-NEXT: addi    sp, sp, -256
 ; CHECK-NEXT: sd      a0, 80(sp)
 ; CHECK-NEXT: sd      a1, 88(sp)
@@ -79,19 +153,19 @@ declare void @llvm.hwasan.check.memaccess.shortgranules(ptr, ptr, i32)
 ; COMPRESS-NEXT: c.add   t1, t0
 ; COMPRESS-NEXT: lbu     t1, 0(t1)
 ; COMPRESS-NEXT: srli    t2, a0, 56
-; COMPRESS-NEXT: bne     t2, t1, .Ltmp0
-; COMPRESS-NEXT: .Ltmp1:
+; COMPRESS-NEXT: bne     t2, t1, .Ltmp2
+; COMPRESS-NEXT: .Ltmp3:
 ; COMPRESS-NEXT: c.jr    ra
-; COMPRESS-NEXT: .Ltmp0:
+; COMPRESS-NEXT: .Ltmp2:
 ; COMPRESS-NEXT: c.li    t3, 16
-; COMPRESS-NEXT: bgeu    t1, t3, .Ltmp2
+; COMPRESS-NEXT: bgeu    t1, t3, .Ltmp4
 ; COMPRESS-NEXT: andi    t3, a0, 15
 ; COMPRESS-NEXT: c.addi  t3, 3
-; COMPRESS-NEXT: bge     t3, t1, .Ltmp2
+; COMPRESS-NEXT: bge     t3, t1, .Ltmp4
 ; COMPRESS-NEXT: ori     t1, a0, 15
 ; COMPRESS-NEXT: lbu     t1, 0(t1)
-; COMPRESS-NEXT: beq     t1, t2, .Ltmp1
-; COMPRESS-NEXT: .Ltmp2:
+; COMPRESS-NEXT: beq     t1, t2, .Ltmp3
+; COMPRESS-NEXT: .Ltmp4:
 ; COMPRESS-NEXT: c.addi16sp sp, -256
 ; COMPRESS-NEXT: c.sdsp a0, 80(sp)
 ; COMPRESS-NEXT: c.sdsp a1, 88(sp)
