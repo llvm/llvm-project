@@ -45059,6 +45059,10 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   unsigned NumElts = DemandedElts.getBitWidth();
 
   switch (Op.getOpcode()) {
+  case X86ISD::GlobalBaseReg:
+  case X86ISD::Wrapper:
+  case X86ISD::WrapperRIP:
+    return true;
   case X86ISD::BLENDI:
   case X86ISD::PSHUFD:
   case X86ISD::UNPCKL:
