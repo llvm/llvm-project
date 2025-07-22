@@ -3453,6 +3453,7 @@ void __kmp_cleanup_indirect_user_locks() {
       }
       __kmp_free(ptr->table[row]);
     }
+    __kmp_free(ptr->table);
     kmp_indirect_lock_table_t *next_table = ptr->next_table;
     if (ptr != &__kmp_i_lock_table)
       __kmp_free(ptr);

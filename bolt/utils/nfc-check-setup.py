@@ -42,14 +42,30 @@ def get_git_ref_or_rev(dir: str) -> str:
     cmd_rev = "git rev-parse --short HEAD"
     return subprocess.check_output(shlex.split(cmd_rev), cwd=dir, text=True).strip()
 
+def switch_back(
+    switch_back: bool, stash: bool, source_dir: str, old_ref: str, new_ref: str
+):
+    # Switch back to the current revision if needed and inform the user of where
+    # the HEAD is. Must be called after checking out the previous commit on all
+    # exit paths.
+    if switch_back:
+        print("Switching back to current revision..")
+        if stash:
+            subprocess.run(shlex.split("git stash pop"), cwd=source_dir)
+        subprocess.run(shlex.split(f"git checkout {old_ref}"), cwd=source_dir)
+    else:
+        print(
+            f"The repository {source_dir} has been switched from {old_ref} "
+            f"to {new_ref}. Local changes were stashed. Switch back using\n\t"
+            f"git checkout {old_ref}\n"
+        )
 
 def main():
     parser = argparse.ArgumentParser(
         description=textwrap.dedent(
             """
             This script builds two versions of BOLT (with the current and
-            previous revision) and sets up symlink for llvm-bolt-wrapper.
-            Passes the options through to llvm-bolt-wrapper.
+            previous revision).
             """
         )
     )
@@ -58,6 +74,12 @@ def main():
         nargs="?",
         default=os.getcwd(),
         help="Path to BOLT build directory, default is current " "directory",
+    )
+    parser.add_argument(
+        "--create-wrapper",
+        default=False,
+        action="store_true",
+        help="Sets up llvm-bolt as a symlink to llvm-bolt-wrapper. Passes the options through to llvm-bolt-wrapper.",
     )
     parser.add_argument(
         "--check-bolt-sources",
@@ -76,25 +98,40 @@ def main():
         default="HEAD^",
         help="Revision to checkout to compare vs HEAD",
     )
+
+    # When creating a wrapper, pass any unknown arguments to it. Otherwise, die.
     args, wrapper_args = parser.parse_known_args()
-    bolt_path = f"{args.build_dir}/bin/llvm-bolt"
+    if not args.create_wrapper and len(wrapper_args) > 0:
+        parser.parse_args()
 
-    source_dir = None
     # find the repo directory
-    with open(f"{args.build_dir}/CMakeCache.txt") as f:
-        for line in f:
-            m = re.match(r"LLVM_SOURCE_DIR:STATIC=(.*)", line)
-            if m:
-                source_dir = m.groups()[0]
-    if not source_dir:
-        sys.exit("Source directory is not found")
+    source_dir = None
+    try:
+        CMCacheFilename = f"{args.build_dir}/CMakeCache.txt"
+        with open(CMCacheFilename) as f:
+            for line in f:
+                m = re.match(r"LLVM_SOURCE_DIR:STATIC=(.*)", line)
+                if m:
+                    source_dir = m.groups()[0]
+        if not source_dir:
+            raise Exception(f"Source directory not found: '{CMCacheFilename}'")
+    except Exception as e:
+        sys.exit(e)
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    wrapper_path = f"{script_dir}/llvm-bolt-wrapper.py"
+    # clean the previous llvm-bolt if it exists
+    bolt_path = f"{args.build_dir}/bin/llvm-bolt"
+    if os.path.exists(bolt_path):
+        os.remove(bolt_path)
+
     # build the current commit
+    print("NFC-Setup: Building current revision..")
     subprocess.run(
         shlex.split("cmake --build . --target llvm-bolt"), cwd=args.build_dir
     )
+
+    if not os.path.exists(bolt_path):
+        sys.exit(f"Failed to build the current revision: '{bolt_path}'")
+
     # rename llvm-bolt
     os.replace(bolt_path, f"{bolt_path}.new")
     # memorize the old hash for logging
@@ -125,31 +162,42 @@ def main():
     subprocess.run(shlex.split(f"git checkout -f {args.cmp_rev}"), cwd=source_dir)
     # get the parent commit hash for logging
     new_ref = get_git_ref_or_rev(source_dir)
+
     # build the previous commit
+    print("NFC-Setup: Building previous revision..")
     subprocess.run(
         shlex.split("cmake --build . --target llvm-bolt"), cwd=args.build_dir
     )
+
     # rename llvm-bolt
+    if not os.path.exists(bolt_path):
+        print(f"Failed to build the previous revision: '{bolt_path}'")
+        switch_back(args.switch_back, stash, source_dir, old_ref, new_ref)
+        sys.exit(1)
     os.replace(bolt_path, f"{bolt_path}.old")
-    # set up llvm-bolt-wrapper.ini
-    ini = subprocess.check_output(
-        shlex.split(f"{wrapper_path} {bolt_path}.old {bolt_path}.new") + wrapper_args,
-        text=True,
-    )
-    with open(f"{args.build_dir}/bin/llvm-bolt-wrapper.ini", "w") as f:
-        f.write(ini)
+
     # symlink llvm-bolt-wrapper
-    os.symlink(wrapper_path, bolt_path)
-    if args.switch_back:
-        if stash:
-            subprocess.run(shlex.split("git stash pop"), cwd=source_dir)
-        subprocess.run(shlex.split(f"git checkout {old_ref}"), cwd=source_dir)
-    else:
-        print(
-            f"The repository {source_dir} has been switched from {old_ref} "
-            f"to {new_ref}. Local changes were stashed. Switch back using\n\t"
-            f"git checkout {old_ref}\n"
-        )
+    if args.create_wrapper:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        wrapper_path = f"{script_dir}/llvm-bolt-wrapper.py"
+        try:
+            # set up llvm-bolt-wrapper.ini
+            ini = subprocess.check_output(
+                shlex.split(f"{wrapper_path} {bolt_path}.old {bolt_path}.new")
+                + wrapper_args,
+                text=True,
+            )
+            with open(f"{args.build_dir}/bin/llvm-bolt-wrapper.ini", "w") as f:
+                f.write(ini)
+            # symlink llvm-bolt-wrapper
+            os.symlink(wrapper_path, bolt_path)
+        except Exception as e:
+            print("Failed to create a wrapper:\n" + str(e))
+            switch_back(args.switch_back, stash, source_dir, old_ref, new_ref)
+            sys.exit(1)
+
+    switch_back(args.switch_back, stash, source_dir, old_ref, new_ref)
+
     print(
         f"Build directory {args.build_dir} is ready to run BOLT tests, e.g.\n"
         "\tbin/llvm-lit -sv tools/bolt/test\nor\n"
