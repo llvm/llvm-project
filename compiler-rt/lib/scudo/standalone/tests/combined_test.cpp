@@ -623,20 +623,20 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DisableMemoryTagging) {
 SCUDO_TYPED_TEST(ScudoCombinedTest, Stats) {
   auto *Allocator = this->Allocator.get();
 
-  scudo::uptr BufferSize = 8192;
-  std::vector<char> Buffer(BufferSize);
-  scudo::uptr ActualSize = Allocator->getStats(Buffer.data(), BufferSize);
-  while (ActualSize > BufferSize) {
-    BufferSize = ActualSize + 1024;
-    Buffer.resize(BufferSize);
-    ActualSize = Allocator->getStats(Buffer.data(), BufferSize);
+  std::string Stats(10000, '\0');
+  scudo::uptr ActualSize = Allocator->getStats(Stats.data(), Stats.size());
+  if (ActualSize > Stats.size()) {
+    Stats.resize(ActualSize);
+    ActualSize = Allocator->getStats(Stats.data(), Stats.size());
   }
-  std::string Stats(Buffer.begin(), Buffer.end());
+  EXPECT_GE(Stats.size(), ActualSize);
+
   // Basic checks on the contents of the statistics output, which also allows us
   // to verify that we got it all.
   EXPECT_NE(Stats.find("Stats: SizeClassAllocator"), std::string::npos);
   EXPECT_NE(Stats.find("Stats: MapAllocator"), std::string::npos);
-  EXPECT_NE(Stats.find("Stats: Quarantine"), std::string::npos);
+  // Do not explicitly check for quarantine stats since a config can disable
+  // them. Other tests verify this (QuarantineEnabled/QuarantineDisabled).
 }
 
 SCUDO_TYPED_TEST_SKIP_THREAD_SAFETY(ScudoCombinedTest, Drain) {
@@ -1076,3 +1076,107 @@ TEST(ScudoCombinedTest, BasicTrustyConfig) {
 
 #endif
 #endif
+
+struct TestQuarantineSizeClassConfig {
+  static const scudo::uptr NumBits = 1;
+  static const scudo::uptr MinSizeLog = 10;
+  static const scudo::uptr MidSizeLog = 10;
+  static const scudo::uptr MaxSizeLog = 13;
+  static const scudo::u16 MaxNumCachedHint = 8;
+  static const scudo::uptr MaxBytesCachedLog = 12;
+  static const scudo::uptr SizeDelta = 0;
+};
+
+struct TestQuarantineConfig {
+  static const bool MaySupportMemoryTagging = false;
+
+  template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 1U, 1U>;
+
+  struct Primary {
+    // Tiny allocator, its Primary only serves chunks of four sizes.
+    using SizeClassMap = scudo::FixedSizeClassMap<DeathSizeClassConfig>;
+    static const scudo::uptr RegionSizeLog = DeathRegionSizeLog;
+    static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+    typedef scudo::uptr CompactPtrT;
+    static const scudo::uptr CompactPtrScale = 0;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+    static const scudo::uptr GroupSizeLog = 18;
+  };
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator64<Config>;
+
+  struct Secondary {
+    template <typename Config>
+    using CacheT = scudo::MapAllocatorNoCache<Config>;
+  };
+
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+};
+
+TEST(ScudoCombinedTest, QuarantineEnabled) {
+  // Enable quarantine options.
+  EXPECT_EQ(0, setenv("SCUDO_OPTIONS",
+                      "quarantine_max_chunk_size=65535:quarantine_size_kb=500:"
+                      "thread_local_quarantine_size_kb=600",
+                      true));
+
+  using AllocatorT = scudo::Allocator<TestQuarantineConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  void *P = Allocator->allocate(100U, Origin);
+  EXPECT_NE(P, nullptr);
+  Allocator->deallocate(P, Origin);
+
+  std::string Stats(10000, '\0');
+  scudo::uptr ActualSize = Allocator->getStats(Stats.data(), Stats.size());
+  if (ActualSize > Stats.size()) {
+    Stats.resize(ActualSize);
+    ActualSize = Allocator->getStats(Stats.data(), Stats.size());
+  }
+  EXPECT_GE(Stats.size(), ActualSize);
+
+  // Verify we get quarantine stats.
+  EXPECT_NE(Stats.find("Stats: Quarantine"), std::string::npos);
+  // Verify that quarantine values get set properly.
+  EXPECT_NE(Stats.find("Quarantine limits: global: 500K; thread local: 600K"),
+            std::string::npos);
+
+  // Clear the options for all other tests.
+  EXPECT_EQ(0, setenv("SCUDO_OPTIONS", "", true));
+}
+
+struct TestQuarantineDisabledConfig : TestQuarantineConfig {
+  static const bool QuarantineDisabled = true;
+};
+
+TEST(ScudoCombinedTest, QuarantineDisabled) {
+  // Enable quarantine options.
+  EXPECT_EQ(0, setenv("SCUDO_OPTIONS",
+                      "quarantine_max_chunk_size=65535:quarantine_size_kb=500:"
+                      "thread_local_quarantine_size_kb=600",
+                      true));
+
+  using AllocatorT = scudo::Allocator<TestQuarantineDisabledConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  const scudo::uptr Size = 1000U;
+  void *P = Allocator->allocate(Size, Origin);
+  EXPECT_NE(P, nullptr);
+  Allocator->deallocate(P, Origin);
+
+  std::string Stats(10000, '\0');
+  scudo::uptr ActualSize = Allocator->getStats(Stats.data(), Stats.size());
+  if (ActualSize > Stats.size()) {
+    Stats.resize(ActualSize);
+    ActualSize = Allocator->getStats(Stats.data(), Stats.size());
+  }
+  EXPECT_GE(Stats.size(), ActualSize);
+
+  // No quarantine stats should exist because the code is not enabled.
+  EXPECT_EQ(Stats.find("Stats: Quarantine"), std::string::npos);
+
+  // Clear the options for all other tests.
+  EXPECT_EQ(0, setenv("SCUDO_OPTIONS", "", true));
+}
