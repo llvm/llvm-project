@@ -886,7 +886,6 @@ defm : DSReadPat_mc <DS_READ_I8, i32, "sextloadi8_local">;
 defm : DSReadPat_mc <DS_READ_U8,  i32, "extloadi8_local">;
 defm : DSReadPat_mc <DS_READ_U8,  i32, "zextloadi8_local">;
 defm : DSReadPat_mc <DS_READ_I16, i32, "sextloadi16_local">;
-defm : DSReadPat_mc <DS_READ_I16, i32, "sextloadi16_local">;
 defm : DSReadPat_mc <DS_READ_U16, i32, "extloadi16_local">;
 defm : DSReadPat_mc <DS_READ_U16, i32, "zextloadi16_local">;
 defm : DSReadPat_t16 <DS_READ_I8,  i16, "sextloadi8_local">;
