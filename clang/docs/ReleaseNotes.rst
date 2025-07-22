@@ -816,6 +816,8 @@ Bug Fixes in This Version
 - Fixed a concept equivalent checking crash due to untransformed constraint expressions. (#GH146614)
 - Fixed a crash in `clang-scan-deps` when a module with the same name is found
   in different locations (#GH134404, #GH146976).
+- Fix a crash when marco name is empty in ``#pragma push_macro("")`` or
+  ``#pragma pop_macro("")``. (GH149762).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
