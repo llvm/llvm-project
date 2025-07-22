@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/SDNodeInfo.h"
+#include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 
 using namespace llvm;
 
@@ -39,6 +42,26 @@ static void checkOperandType(const SelectionDAG &DAG, const SDNode *N,
         "operand #" + Twine(OpIdx) + " has invalid type; expected " +
             ExpectedVT.getEVTString() + ", got " + ActualVT.getEVTString());
 }
+
+namespace {
+
+struct ConstraintOp {
+  const SDNode *N;
+  unsigned Idx;
+  bool IsRes;
+
+  SDValue getValue() const {
+    return IsRes ? SDValue(const_cast<SDNode *>(N), Idx) : N->getOperand(Idx);
+  }
+
+  EVT getValueType() const { return getValue().getValueType(); }
+};
+
+raw_ostream &operator<<(raw_ostream &OS, const ConstraintOp &Info) {
+  return OS << (Info.IsRes ? "result" : "operand") << " #" << Info.Idx;
+}
+
+} // namespace
 
 void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
   const SDNodeDesc &Desc = getDesc(N->getOpcode());
@@ -123,6 +146,88 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
         reportNodeError(DAG, N,
                         "variadic operand #" + Twine(OpIdx) +
                             " must be Register or RegisterMask");
+    }
+  }
+
+  unsigned VTHwMode =
+      DAG.getSubtarget().getHwMode(MCSubtargetInfo::HwMode_ValueType);
+
+  auto GetConstraintOp = [&](unsigned Idx) {
+    if (Idx < Desc.NumResults)
+      return ConstraintOp{N, Idx, /*IsRes=*/true};
+    return ConstraintOp{N, HasChain + (Idx - Desc.NumResults), /*IsRes=*/false};
+  };
+
+  auto GetConstraintVT = [&](const SDTypeConstraint &C) {
+    if (!C.NumHwModes)
+      return static_cast<MVT::SimpleValueType>(C.VT);
+    for (auto [Mode, VT] : ArrayRef(&VTByHwModeTable[C.VT], C.NumHwModes))
+      if (Mode == VTHwMode)
+        return VT;
+    llvm_unreachable("No value type for this HW mode");
+  };
+
+  SmallString<128> ES;
+  raw_svector_ostream SS(ES);
+
+  for (const SDTypeConstraint &C : getConstraints(N->getOpcode())) {
+    ConstraintOp Op = GetConstraintOp(C.OpNo);
+    EVT OpVT = Op.getValue().getValueType();
+
+    switch (C.Kind) {
+    case SDTCisVT: {
+      EVT ExpectedVT = GetConstraintVT(C);
+
+      bool IsPtr = ExpectedVT == MVT::iPTR;
+      if (IsPtr)
+        ExpectedVT =
+            DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
+
+      if (OpVT != ExpectedVT) {
+        SS << Op << " must have type " << ExpectedVT;
+        if (IsPtr)
+          SS << " (iPTR)";
+        SS << ", but has type " << OpVT;
+        reportNodeError(DAG, N, SS.str());
+      }
+      break;
+    }
+    case SDTCisPtrTy:
+      break;
+    case SDTCisInt:
+      break;
+    case SDTCisFP:
+      break;
+    case SDTCisVec:
+      break;
+    case SDTCisSameAs:
+      break;
+    case SDTCisVTSmallerThanOp:
+      break;
+    case SDTCisOpSmallerThanOp:
+      break;
+    case SDTCisEltOfVec:
+      break;
+    case SDTCisSubVecOfVec:
+      break;
+    case SDTCVecEltisVT: {
+      EVT ExpectedVT = GetConstraintVT(C);
+
+      if (!OpVT.isVector()) {
+        SS << Op << " must have vector type";
+        reportNodeError(DAG, N, SS.str());
+      }
+      if (OpVT.getVectorElementType() != ExpectedVT) {
+        SS << Op << " must have " << ExpectedVT << " element type, but has "
+           << OpVT.getVectorElementType() << " element type";
+        reportNodeError(DAG, N, SS.str());
+      }
+      break;
+    }
+    case SDTCisSameNumEltsAs:
+      break;
+    case SDTCisSameSizeAs:
+      break;
     }
   }
 }
