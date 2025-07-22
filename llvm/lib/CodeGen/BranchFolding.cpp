@@ -2098,6 +2098,11 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
         MBB->insert(Loc, &*DI);
         return;
       }
+      // Deleting a DBG_PHI results in an undef at the referenced DBG_INSTR_REF.
+      if (DI->isDebugPHI()) {
+        DI->eraseFromParent();
+        return;
+      }
 
       DI->setDebugValueUndef();
       DI->moveBefore(&*Loc);
