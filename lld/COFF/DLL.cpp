@@ -270,14 +270,10 @@ static const uint8_t tailMergeX64[] = {
 
 static const uint8_t tailMergeUnwindInfoX64[] = {
     0x01,       // Version=1, Flags=UNW_FLAG_NHANDLER
-    0x0a,       // Size of prolog
-    0x05,       // Count of unwind codes
+    0x18,       // Size of prolog
+    0x01,       // Count of unwind codes
     0x00,       // No frame register
-    0x0a, 0x82, // Offset 0xa: UWOP_ALLOC_SMALL(0x48)
-    0x06, 0x02, // Offset 6: UWOP_ALLOC_SMALL(8)
-    0x04, 0x02, // Offset 4: UWOP_ALLOC_SMALL(8)
-    0x02, 0x02, // Offset 2: UWOP_ALLOC_SMALL(8)
-    0x01, 0x02, // Offset 1: UWOP_ALLOC_SMALL(8)
+    0x18, 0xC2, // Offset 0x18: UWOP_ALLOC_SMALL(0x68)
     0x00, 0x00  // Padding to align on 32-bits
 };
 
