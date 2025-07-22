@@ -4098,18 +4098,18 @@ static Value *optimizeModularFormat(CallInst *CI, IRBuilderBase &B) {
 
   SmallVector<StringRef> Args(
       llvm::split(CI->getFnAttr("modular-format").getValueAsString(), ','));
-  // TODO: Examine the format argument in Args[0].
+  // TODO: Make use of the first two arguments
   // TODO: Error handling
   unsigned FirstArgIdx;
-  if (!llvm::to_integer(Args[1], FirstArgIdx))
+  if (!llvm::to_integer(Args[2], FirstArgIdx))
     return nullptr;
   if (FirstArgIdx == 0)
     return nullptr;
   --FirstArgIdx;
-  StringRef FnName = Args[2];
-  StringRef ImplName = Args[3];
+  StringRef FnName = Args[3];
+  StringRef ImplName = Args[4];
   DenseSet<StringRef> Aspects(llvm::from_range,
-                              ArrayRef<StringRef>(Args).drop_front(4));
+                              ArrayRef<StringRef>(Args).drop_front(5));
   Module *M = CI->getModule();
   LLVMContext &Ctx = M->getContext();
   Function *Callee = CI->getCalledFunction();
