@@ -1,3 +1,7 @@
+// Test the histogram support in memprof using the text format output.
+// Shadow memory counters per object are limited to 8b. In memory counters
+// aggregating counts across multiple objects are 64b.
+
 // RUN: %clangxx_memprof -O0 -mllvm -memprof-histogram -mllvm -memprof-use-callbacks=true %s -o %t && %env_memprof_opts=print_text=1:histogram=1:log_path=stdout %run %t 2>&1 | FileCheck %s
 
 #include <stdio.h>

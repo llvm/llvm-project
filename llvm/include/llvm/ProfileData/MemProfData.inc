@@ -218,11 +218,7 @@ void Merge(const MemInfoBlock &newMIB) {
     ShorterHistogramSize = newMIB.AccessHistogramSize;
   }
   for (size_t i = 0; i < ShorterHistogramSize; ++i) {
-    // Cast to uint8_t* and cap the sum at 255 to prevent overflow
-    uint8_t *CurrentHistPtr = (uint8_t *)AccessHistogram;
-    uint8_t *ShorterHistPtr = (uint8_t *)ShorterHistogram;
-    uint32_t sum = CurrentHistPtr[i] + ShorterHistPtr[i];
-    CurrentHistPtr[i] = (sum > 255) ? 255 : (uint8_t)sum;
+    ((uint64_t *)AccessHistogram)[i] += ((uint64_t *)ShorterHistogram)[i];
   }
 }
 
@@ -231,6 +227,41 @@ void Merge(const MemInfoBlock &newMIB) {
 #else
 } __attribute__((__packed__));
 #endif
+
+constexpr int MantissaBits = 12;
+constexpr int ExponentBits = 4;
+constexpr uint16_t MaxMantissa = (1U << MantissaBits) - 1;
+constexpr uint16_t MaxExponent = (1U << ExponentBits) - 1;
+
+// Encodes a 64-bit unsigned integer into a 16-bit scaled integer format.
+inline uint16_t encodeHistogramCount(uint64_t Count) {
+  if (Count == 0)
+    return 0;
+
+  const uint64_t MaxRepresentableValue = static_cast<uint64_t>(MaxMantissa)
+                                         << MaxExponent;
+  if (Count > MaxRepresentableValue)
+    Count = MaxRepresentableValue;
+
+  if (Count <= MaxMantissa)
+    return Count;
+
+  uint64_t M = Count;
+  uint16_t E = 0;
+  while (M > MaxMantissa) {
+    M = (M + 1) >> 1;
+    E++;
+  }
+  return (E << MantissaBits) | static_cast<uint16_t>(M);
+}
+
+// Decodes a 16-bit scaled integer and returns the
+// decoded 64-bit unsigned integer.
+inline uint64_t decodeHistogramCount(uint16_t EncodedValue) {
+  const uint16_t E = EncodedValue >> MantissaBits;
+  const uint16_t M = EncodedValue & MaxMantissa;
+  return static_cast<uint64_t>(M) << E;
+}
 
 } // namespace memprof
 } // namespace llvm

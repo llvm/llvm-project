@@ -178,49 +178,20 @@ readMemInfoBlocksV5(const char *Ptr) {
     const uint64_t Id =
         endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
 
-    MemInfoBlock MIB;
-#define READ_MIB_FIELD(FIELD)                                                  \
-  MIB.FIELD = endian::readNext<decltype(MIB.FIELD), llvm::endianness::little,  \
-                               unaligned>(Ptr)
-
-    READ_MIB_FIELD(AllocCount);
-    READ_MIB_FIELD(TotalAccessCount);
-    READ_MIB_FIELD(MinAccessCount);
-    READ_MIB_FIELD(MaxAccessCount);
-    READ_MIB_FIELD(TotalSize);
-    READ_MIB_FIELD(MinSize);
-    READ_MIB_FIELD(MaxSize);
-    READ_MIB_FIELD(AllocTimestamp);
-    READ_MIB_FIELD(DeallocTimestamp);
-    READ_MIB_FIELD(TotalLifetime);
-    READ_MIB_FIELD(MinLifetime);
-    READ_MIB_FIELD(MaxLifetime);
-    READ_MIB_FIELD(AllocCpuId);
-    READ_MIB_FIELD(DeallocCpuId);
-    READ_MIB_FIELD(NumMigratedCpu);
-    READ_MIB_FIELD(NumLifetimeOverlaps);
-    READ_MIB_FIELD(NumSameAllocCpu);
-    READ_MIB_FIELD(NumSameDeallocCpu);
-    READ_MIB_FIELD(DataTypeId);
-    READ_MIB_FIELD(TotalAccessDensity);
-    READ_MIB_FIELD(MinAccessDensity);
-    READ_MIB_FIELD(MaxAccessDensity);
-    READ_MIB_FIELD(TotalLifetimeAccessDensity);
-    READ_MIB_FIELD(MinLifetimeAccessDensity);
-    READ_MIB_FIELD(MaxLifetimeAccessDensity);
-    READ_MIB_FIELD(AccessHistogramSize);
-    READ_MIB_FIELD(AccessHistogram);
-#undef READ_MIB_FIELD
+    MemInfoBlock MIB = *reinterpret_cast<const MemInfoBlock *>(Ptr);
+    Ptr += sizeof(MemInfoBlock);
 
     if (MIB.AccessHistogramSize > 0) {
       // The in-memory representation uses uint64_t for histogram entries.
       MIB.AccessHistogram =
           (uintptr_t)malloc(MIB.AccessHistogramSize * sizeof(uint64_t));
       for (uint64_t J = 0; J < MIB.AccessHistogramSize; J++) {
-        // The on-disk format for V5 uses uint8_t.
-        const uint8_t Val =
-            endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Ptr);
-        ((uint64_t *)MIB.AccessHistogram)[J] = Val;
+        // The on-disk format for V5 uses uint16_t which is then decoded to
+        // uint64_t.
+        const uint16_t Val =
+            endian::readNext<uint16_t, llvm::endianness::little, unaligned>(
+                Ptr);
+        ((uint64_t *)MIB.AccessHistogram)[J] = decodeHistogramCount(Val);
       }
     }
     Items.push_back({Id, MIB});
