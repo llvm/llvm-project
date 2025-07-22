@@ -1150,17 +1150,8 @@ struct FoldReshapeWithProducerPadOpByExpansion
     }
 
     Location loc = expandOp.getLoc();
-    auto finalType = cast<RankedTensorType>(expandOp.getType());
-    ArrayRef<int64_t> finalShape = finalType.getShape();
-
-    SmallVector<OpFoldResult> expandedShape;
-    for (int64_t dimSize : finalShape) {
-      if (dimSize == ShapedType::kDynamic) {
-        expandedShape.push_back(OpFoldResult{});
-      } else {
-        expandedShape.push_back(rewriter.getI64IntegerAttr(dimSize));
-      }
-    }
+    ArrayRef<int64_t> finalShape = expandOp.getResultType().getShape();
+    SmallVector<OpFoldResult> expandedShape = expandOp.getMixedOutputShape();
 
     for (auto [inDimIdx, reInd] : llvm::enumerate(reassociations)) {
       OpFoldResult l = low[inDimIdx];
@@ -1260,8 +1251,7 @@ struct FoldReshapeWithProducerPadOpByCollapsing
     Location loc = collapseOp.getLoc();
     auto resultType = collapseOp.getResultType();
 
-    auto finalType = cast<RankedTensorType>(collapseOp.getType());
-    ArrayRef<int64_t> finalShape = finalType.getShape();
+    ArrayRef<int64_t> finalShape = collapseOp.getResultType().getShape();
 
     SmallVector<OpFoldResult> collapsedShape;
     for (int64_t dimSize : finalShape) {
