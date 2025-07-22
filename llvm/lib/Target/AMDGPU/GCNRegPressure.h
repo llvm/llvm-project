@@ -51,8 +51,8 @@ struct GCNRegPressure {
                  ? getUnifiedVGPRNum(Value[VGPR], Value[AGPR], Value[AVGPR])
                  : Value[VGPR] + Value[AVGPR];
     }
-    // Until we hit the VGPRThreshold, we will assign AV as VGPR. After that
-    // point, we will assign as AGPR.
+    // AVGPR assignment priority is based on the width of the register. Account
+    // AVGPR pressure as VGPR.
     return std::max(Value[VGPR] + Value[AVGPR], Value[AGPR]);
   }
 
