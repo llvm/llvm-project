@@ -11994,8 +11994,7 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
     // Get the mask value and add it to the current output position. This
     // either increments by 1 if MaskI is true or adds 0 otherwise.
     // Freeze in case we have poison/undef mask entries.
-    SDValue MaskI =
-        DAG.getFreeze(DAG.getExtractVectorElt(DL, MaskScalarVT, Mask, I));
+    SDValue MaskI = DAG.getExtractVectorElt(DL, MaskScalarVT, Mask, I);
     MaskI = DAG.getFreeze(MaskI);
     MaskI = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, MaskI);
     MaskI = DAG.getNode(ISD::ZERO_EXTEND, DL, PositionVT, MaskI);
