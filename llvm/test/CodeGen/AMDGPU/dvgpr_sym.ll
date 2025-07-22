@@ -1,4 +1,4 @@
-; Test generation of _dvgpr$ symbol for an amdgpu_cs_chain function with +dynamic-vgpr.
+; Test generation of _dvgpr$ symbol for an amdgpu_cs_chain function with dynamic vgprs.
 
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 < %s | FileCheck -check-prefixes=DVGPR %s
 

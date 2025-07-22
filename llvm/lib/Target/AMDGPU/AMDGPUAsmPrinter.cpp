@@ -888,8 +888,8 @@ void AMDGPUAsmPrinter::emitDVgprSymbol(MachineFunction &MF) {
     if (!CurrentProgramInfo.NumVGPRsForWavesPerEU->evaluateAsRelocatable(
             NumVGPRs, nullptr) ||
         !NumVGPRs.isAbsolute()) {
-      OutContext.reportError({}, "Unable to resolve _dvgpr$ symbol for '" +
-                                     Twine(MF.getName()) + "'");
+      OutContext.reportError({}, "unable to resolve _dvgpr$ symbol for '" +
+                                     Twine(CurrentFnSym->getName()) + "'");
       return;
     }
     // Calculate number of VGPR blocks.
@@ -899,8 +899,8 @@ void AMDGPUAsmPrinter::emitDVgprSymbol(MachineFunction &MF) {
         BlockSize;
     if (NumBlocks > 8) {
       OutContext.reportError({},
-                             "Too many DVGPR blocks for _dvgpr$ symbol for '" +
-                                 Twine(MF.getName()) + "'");
+                             "too many DVGPR blocks for _dvgpr$ symbol for '" +
+                                 Twine(CurrentFnSym->getName()) + "'");
       return;
     }
     unsigned EncodedNumBlocks = (NumBlocks - 1) << 3;
