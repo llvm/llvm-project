@@ -11435,10 +11435,9 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
 
     // When matching ADDs with NUW flags (and unsigned predicates), only the
     // second ADD (with the larger constant) requires NUW.
-    if (YNonConstOp != Y && ExpectedFlags == SCEV::FlagNUW) {
-      if ((YFlagsPresent & ExpectedFlags) != ExpectedFlags)
-        return false;
-    } else {
+    if ((YFlagsPresent & ExpectedFlags) != ExpectedFlags)
+      return false;
+    if (ExpectedFlags != SCEV::FlagNUW) {
       if ((XFlagsPresent & ExpectedFlags) != ExpectedFlags)
         return false;
       if ((YFlagsPresent & ExpectedFlags) != ExpectedFlags)
