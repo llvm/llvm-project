@@ -1549,7 +1549,7 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
     SavedRegs.reset(CSReg);
 
     auto SubRegs = TRI.subregs(CSReg);
-    // Set the register and its all subregisters.
+    // Set the register and all its subregisters.
     if (!MRI.def_empty(CSReg) || MRI.getUsedPhysRegsMask().test(CSReg)) {
       SavedRegs.set(CSReg);
       llvm::for_each(SubRegs, [&](unsigned Reg) { return SavedRegs.set(Reg); });
