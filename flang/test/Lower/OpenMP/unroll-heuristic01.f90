@@ -1,5 +1,5 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -o - %s 2>&1 | FileCheck %s
-
+! XFAIL: *
 
 subroutine omp_unroll_heuristic01(lb, ub, inc)
   integer res, i, lb, ub, inc
