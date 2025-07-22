@@ -454,7 +454,7 @@ function (flang_module_target tgtname)
 
   # Let it find the other public module files
   target_compile_options(${tgtname} PRIVATE
-      "$<$<COMPILE_LANGUAGE:Fortran>:SHELL:-fintrinsic-modules-path;SHELL:${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}>"
+      "$<$<COMPILE_LANGUAGE:Fortran>:-fintrinsic-modules-path=${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}>"
     )
 
   if (ARG_PUBLIC)

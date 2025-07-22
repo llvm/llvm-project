@@ -147,25 +147,17 @@ def get_resource_module_intrinsic_dir():
 
 intrinsics_search_args = []
 if flang_intrinsics_dir := get_resource_module_intrinsic_dir():
-    intrinsics_search_args += ["-fintrinsic-modules-path", flang_intrinsics_dir]
+    intrinsics_search_args += [f"-fintrinsic-modules-path={flang_intrinsics_dir}"]
     lit_config.note(f"using default module intrinsics: {flang_intrinsics_dir}")
 
 extra_intrinsics_search_args = []
 if config.flang_intrinsic_modules_dir:
     extra_intrinsics_search_args += [
-        "-fintrinsic-modules-path",
-        config.flang_intrinsic_modules_dir,
+        f"-fintrinsic-modules-path={config.flang_intrinsic_modules_dir}",
     ]
     lit_config.note(
         f"using extra module intrinsics: {config.flang_intrinsic_modules_dir}"
     )
-
-config.substitutions.append(
-    (
-        "%intrinsic_module_flags",
-        " ".join(intrinsics_search_args + extra_intrinsics_search_args),
-    )
-)
 
 # For each occurrence of a flang tool name, replace it with the full path to
 # the build directory holding that tool.
@@ -193,13 +185,7 @@ tools = [
         "%bbc_bare",
         command=FindTool("bbc"),
         unresolved="fatal",
-    ),
-    ToolSubst(
-        "%flang_bare",
-        command=FindTool("flang"),
-        extra_args=isysroot_flag,
-        unresolved="fatal",
-    ),
+    )
 ]
 
 # Flang has several unimplemented features. TODO messages are used to mark
