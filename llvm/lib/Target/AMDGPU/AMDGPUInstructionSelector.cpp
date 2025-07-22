@@ -5895,22 +5895,32 @@ AMDGPUInstructionSelector::selectScratchSVAddr(MachineOperand &Root) const {
   if (checkFlatScratchSVSSwizzleBug(RHS, LHS, ImmOffset))
     return std::nullopt;
 
+  unsigned CPol = selectScaleOffset(Root, RHS, true /* IsSigned */)
+                      ? AMDGPU::CPol::SCAL
+                      : 0;
+
   if (LHSDef->MI->getOpcode() == AMDGPU::G_FRAME_INDEX) {
     int FI = LHSDef->MI->getOperand(1).getIndex();
     return {{
-        [=](MachineInstrBuilder &MIB) { MIB.addReg(RHS); }, // vaddr
+        [=](MachineInstrBuilder &MIB) { MIB.addReg(RHS); },       // vaddr
         [=](MachineInstrBuilder &MIB) { MIB.addFrameIndex(FI); }, // saddr
-        [=](MachineInstrBuilder &MIB) { MIB.addImm(ImmOffset); } // offset
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(ImmOffset); }, // offset
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(CPol); }       // cpol
     }};
   }
+
+  if (!isSGPR(LHS))
+    if (auto Def = getDefSrcRegIgnoringCopies(LHS, *MRI))
+      LHS = Def->Reg;
 
   if (!isSGPR(LHS))
     return std::nullopt;
 
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(RHS); }, // vaddr
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(LHS); }, // saddr
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(ImmOffset); } // offset
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(RHS); },       // vaddr
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(LHS); },       // saddr
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(ImmOffset); }, // offset
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(CPol); }       // cpol
   }};
 }
 
