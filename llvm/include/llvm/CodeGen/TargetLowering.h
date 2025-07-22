@@ -3223,7 +3223,7 @@ public:
   /// or a vp.store.
   /// \p Mask is a per-segment (i.e. number of lanes equal to that of one
   /// component being interwoven) mask.  Can be nullptr, in which case the
-  /// result is uncondiitional.
+  /// result is unconditional.
   /// \p SVI is the shufflevector to RE-interleave the stored vector.
   /// \p Factor is the interleave factor.
   virtual bool lowerInterleavedStore(Instruction *Store, Value *Mask,
