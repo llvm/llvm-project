@@ -100,10 +100,8 @@ module;
 #include <shared_mutex>
 #include <source_location>
 #include <span>
-#  include <spanstream>
-#endif
-#if _LIBCPP_HAS_LOCALIZATION
-#  include <sstream>
+#include <spanstream>
+#include <sstream>
 #include <stack>
 #include <stdexcept>
 #include <stop_token>
