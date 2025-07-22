@@ -276,12 +276,7 @@ public:
 
       case NestedNameSpecifier::Namespace:
         cur = NestedNameSpecifier::Create(ctx, cur,
-                                          asImpl().readNamespaceDeclRef());
-        continue;
-
-      case NestedNameSpecifier::NamespaceAlias:
-        cur = NestedNameSpecifier::Create(ctx, cur,
-                                     asImpl().readNamespaceAliasDeclRef());
+                                          asImpl().readNamespaceBaseDeclRef());
         continue;
 
       case NestedNameSpecifier::TypeSpec:
