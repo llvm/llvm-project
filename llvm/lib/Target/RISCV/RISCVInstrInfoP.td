@@ -44,26 +44,34 @@ def simm10_unsigned : RISCVOp {
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVPUnaryImm10<bits<7> funct7, string opcodestr,
-                    DAGOperand TyImm10 = simm10>
-    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd), (ins TyImm10:$imm10),
-                  opcodestr, "$rd, $imm10"> {
+class RVPLoadImm10<bits<7> funct7, string opcodestr,
+                   DAGOperand TyImm10 = simm10>
+    : RVInst<(outs GPR:$rd), (ins TyImm10:$imm10), opcodestr, "$rd, $imm10", [],
+             InstFormatOther> {
   bits<10> imm10;
+  bits<5> rd;
 
   let Inst{31-25} = funct7;
   let Inst{24-16} = imm10{8-0};
   let Inst{15}    = imm10{9};
+  let Inst{14-12} = 0b010;
+  let Inst{11-7} = rd;
+  let Inst{6-0} = OPC_OP_IMM_32.Value;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVPUnaryImm8<bits<8> funct8, string opcodestr>
-    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd), (ins uimm8:$uimm8),
-                  opcodestr, "$rd, $uimm8"> {
+class RVPLoadImm8<bits<8> funct8, string opcodestr>
+    : RVInst<(outs GPR:$rd), (ins uimm8:$uimm8), opcodestr, "$rd, $uimm8", [],
+             InstFormatOther> {
   bits<8> uimm8;
+  bits<5> rd;
 
   let Inst{31-24} = funct8;
   let Inst{23-16} = uimm8;
   let Inst{15}    = 0b0;
+  let Inst{14-12} = 0b010;
+  let Inst{11-7} = rd;
+  let Inst{6-0} = OPC_OP_IMM_32.Value;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -140,11 +148,11 @@ def PSSLAI_W : RVPUnaryImm5<0b101, "psslai.w">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in
-def PLI_H : RVPUnaryImm10<0b1011000, "pli.h">;
+def PLI_H : RVPLoadImm10<0b1011000, "pli.h">;
 let Predicates = [HasStdExtP, IsRV64] in
-def PLI_W : RVPUnaryImm10<0b1011001, "pli.w">;
+def PLI_W : RVPLoadImm10<0b1011001, "pli.w">;
 let Predicates = [HasStdExtP] in
-def PLI_B : RVPUnaryImm8<0b10110100, "pli.b">;
+def PLI_B : RVPLoadImm8<0b10110100, "pli.b">;
 
 let Predicates = [HasStdExtP] in {
 def PSEXT_H_B : RVPUnaryWUF<0b00, 0b00100, "psext.h.b">;
@@ -157,6 +165,6 @@ def PSEXT_W_H      : RVPUnaryWUF<0b01, 0b00101, "psext.w.h">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in
-def PLUI_H : RVPUnaryImm10<0b1111000, "plui.h", simm10_unsigned>;
+def PLUI_H : RVPLoadImm10<0b1111000, "plui.h", simm10_unsigned>;
 let Predicates = [HasStdExtP, IsRV64] in
-def PLUI_W : RVPUnaryImm10<0b1111001, "plui.w", simm10_unsigned>;
+def PLUI_W : RVPLoadImm10<0b1111001, "plui.w", simm10_unsigned>;
