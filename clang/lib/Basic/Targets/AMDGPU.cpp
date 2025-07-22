@@ -266,11 +266,9 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
 
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
   CUMode = !(GPUFeatures & llvm::AMDGPU::FEATURE_WGP);
-  // Mark these features as read-only when the target supports them.
-  llvm::StringMap<bool> Features;
-  llvm::AMDGPU::fillAMDGPUFeatureMap(Opts.CPU, Triple, Features);
+
   for (auto F : {"image-insts", "gws", "vmem-to-lds-load-insts"}) {
-    if (Features[F] == true)
+    if (GPUKind != llvm::AMDGPU::GK_NONE)
       ReadOnlyFeatures.insert(F);
   }
   HalfArgsAndReturns = true;
