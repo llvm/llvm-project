@@ -823,7 +823,7 @@ NVPTXToolChain::getSystemGPUArchs(const ArgList &Args) const {
   else
     Program = GetProgramPath("nvptx-arch");
 
-  auto StdoutOrErr = getDriver().executeProgram({Program});
+  auto StdoutOrErr = executeToolChainProgram(Program);
   if (!StdoutOrErr)
     return StdoutOrErr.takeError();
 
