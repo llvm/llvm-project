@@ -11,7 +11,6 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/math/pow.h"
-#include <iostream>
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -28,8 +27,6 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
 
   double k = fputil::nearest_integer(x * 128);
   int k_int = static_cast<int>(k);
-
-  std::cout << "k" << k << std::endl;
 
   double yk = x - k / 128;
 
@@ -49,10 +46,12 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
     return x;
   // When |x| > 2^51, x is an Integer or Nan/Inf
   if (x_abs > 0x4320000000000000) {
-    if (x_abs & 1)
-      return -1.0;
-    if (!(x_abs & 1))
-      return 1.0;
+    if (x_abs < 0x4330000000000000) {
+      if ((x_abs & 2) == 0)
+	return 0.0;
+      return (x_abs & 2) ? -1.0 : 1.0;
+    }
+  
     if (xbits.is_nan())
       return x;
     if (xbits.is_inf()) {
@@ -68,17 +67,9 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
   DoubleDouble sin_k = SIN_K_PI_OVER_128[k_int & 255];
   DoubleDouble cos_k = SIN_K_PI_OVER_128[(k_int + 64) & 255];
 
-  std::cout << "sin_k: " << sin_k.hi << std::endl;
-  std::cout << "sin_klo: " << sin_k.lo << std::endl;
-  std::cout << "sin_y: " << sin_y.hi << std::endl;
-  std::cout << "cos_y: " << cos_y.hi << std::endl;
-  std::cout << "sin_y.lo: " << sin_y.lo << std::endl;
-  std::cout << "cos_y.o: " << cos_y.lo << std::endl;
-
   double cosm1_y = cos_y.hi - 1.0;
   DoubleDouble sin_y_cos_k = fputil::quick_mult(sin_y, cos_k);
 
-  std::cout << "cosm1" << cosm1_y << std::endl;
   DoubleDouble cosm1_yy;
   cosm1_yy.hi = cosm1_y;
   cosm1_yy.lo = 0.0;
@@ -86,17 +77,7 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
   DoubleDouble cos_y_sin_k = fputil::quick_mult(cos_y, sin_k);
   DoubleDouble rr = fputil::exact_add<false>(sin_y_cos_k.hi, cos_y_sin_k.hi);
 
-  std::cout << "r.hi:" << rr.hi << std::endl;
-  std::cout << "r.lo" << rr.lo << std::endl;
-
   rr.lo += sin_y_cos_k.lo + cos_y_sin_k.lo;
-
-  std::cout << "rrlo2: " << rr.lo << std::endl;
-  std::cout << "cos_y_sin_k:" << cos_y_sin_k.hi << std::endl;
-  std::cout << "siny*cosk.lo:" << sin_y_cos_k.lo << std::endl;
-  std::cout << "rrhi + rrlo + sink.hi " << rr.hi + rr.lo + sin_k.hi + sin_k.lo
-            << std::endl;
-  std::cout << "rrhi + rrlo " << rr.hi + rr.lo << std::endl;
 
   return rr.hi + rr.lo;
 }
