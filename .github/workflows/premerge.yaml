@@ -110,9 +110,9 @@ jobs:
         shell: cmd
         run: |
           call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
-          bash "export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET; \
-          export SCCACHE_GCS_RW_MODE=READ_WRITE; \
-          sccache --start-server; \
+          bash "export SCCACHE_GCS_BUCKET=$CACHE_GCS_BUCKET \
+          export SCCACHE_GCS_RW_MODE=READ_WRITE \
+          sccache --start-server \
           .ci/monolithic-windows.sh \"${{ steps.vars.outputs.windows-projects }}\" \"${{ steps.vars.outputs.windows-check-targets }}\""
       - name: Upload Artifacts
         if: '!cancelled()'
