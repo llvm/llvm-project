@@ -518,10 +518,10 @@ struct F4E2M1TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
     Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
 
-    if (!isa<Float32Type>(operandETy))
-      operand = b.create<arith::ExtFOp>(f32Ty, operand);
     if (!isa<Float4E2M1FNType>(resultETy))
       return rewriter.notifyMatchFailure(op, "not a trunc of F4E2M1FN");
+    if (!isa<Float32Type>(operandETy))
+      operand = b.create<arith::ExtFOp>(f32Ty, operand);
 
     Value c0x1 = createConst(loc, i4Ty, 1, rewriter);
     Value c0x3 = createConst(loc, i4Ty, 3, rewriter);
