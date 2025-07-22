@@ -7574,6 +7574,11 @@ private:
                   .getAddress();
         }
 
+        // Save the final LowestElem, to use it as the pointee in attach maps,
+        // if emitted.
+        if (Next == CE)
+          FinalLowestElem = LowestElem;
+
         // If this component is a pointer inside the base struct then we don't
         // need to create any entry for it - it will be combined with the object
         // it is pointing to into a single PTR_AND_OBJ entry.
@@ -7786,11 +7791,6 @@ private:
         // Need to emit combined struct for array sections.
         if (IsFinalArraySection || IsNonContiguous)
           PartialStruct.IsArraySection = true;
-
-        // Save the final LowestElem, to use it as the pointee in attach maps,
-        // if emitted.
-        if (Next == CE)
-          FinalLowestElem = LowestElem;
 
         // If we have a final array section, we are done with this expression.
         if (IsFinalArraySection)
