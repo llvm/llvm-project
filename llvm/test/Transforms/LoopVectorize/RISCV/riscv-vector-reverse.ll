@@ -241,10 +241,11 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:    vp<%6> = vector-end-pointer inbounds ir<%arrayidx>, ir<%18>
 ; CHECK-NEXT:    WIDEN ir<%19> = load vp<%6>
-; CHECK-NEXT:    WIDEN ir<%add9> = add ir<%19>, ir<1>
+; CHECK-NEXT:    EMIT vp<%7> = broadcast ir<1>
+; CHECK-NEXT:    WIDEN ir<%add9> = add ir<%19>, vp<%7>
 ; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:    vp<%7> = vector-end-pointer inbounds ir<%arrayidx3>, ir<%18>
-; CHECK-NEXT:    WIDEN store vp<%7>, ir<%add9>
+; CHECK-NEXT:    vp<%8> = vector-end-pointer inbounds ir<%arrayidx3>, ir<%18>
+; CHECK-NEXT:    WIDEN store vp<%8>, ir<%add9>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<%18>.1
 ; CHECK-NEXT:    EMIT branch-on-count vp<%index.next>, ir<%n.vec>
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
@@ -654,10 +655,11 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:    vp<%6> = vector-end-pointer inbounds ir<%arrayidx>, ir<%18>
 ; CHECK-NEXT:    WIDEN ir<%19> = load vp<%6>
-; CHECK-NEXT:    WIDEN ir<%conv1> = fadd ir<%19>, ir<1.000000e+00>
+; CHECK-NEXT:    EMIT vp<%7> = broadcast ir<1.000000e+00>
+; CHECK-NEXT:    WIDEN ir<%conv1> = fadd ir<%19>, vp<%7>
 ; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:    vp<%7> = vector-end-pointer inbounds ir<%arrayidx3>, ir<%18>
-; CHECK-NEXT:    WIDEN store vp<%7>, ir<%conv1>
+; CHECK-NEXT:    vp<%8> = vector-end-pointer inbounds ir<%arrayidx3>, ir<%18>
+; CHECK-NEXT:    WIDEN store vp<%8>, ir<%conv1>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<%18>.1
 ; CHECK-NEXT:    EMIT branch-on-count vp<%index.next>, ir<%n.vec>
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
