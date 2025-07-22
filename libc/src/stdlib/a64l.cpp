@@ -16,7 +16,7 @@ namespace LIBC_NAMESPACE_DECL {
 // I'm not sure this should go in ctype_utils since the specific ordering of
 // base64 is so very implementation specific, and also this set is unusual.
 // Returns -1 on any char without a specified value.
-constexpr static int b64_char_to_int(char ch) {
+constexpr static long b64_char_to_int(char ch) {
   // from the standard: "The characters used to represent digits are '.' (dot)
   // for 0, '/' for 1, '0' through '9' for [2,11], 'A' through 'Z' for [12,37],
   // and 'a' through 'z' for [38,63]."
@@ -41,10 +41,10 @@ constexpr static int b64_char_to_int(char ch) {
 LLVM_LIBC_FUNCTION(long, a64l, (const char *s)) {
   // the standard says to only use up to 6 characters.
   constexpr unsigned MAX_LENGTH = 6;
-  int result = 0;
+  long result = 0;
 
   for (unsigned i = 0; i < MAX_LENGTH && s[i] != '\0'; ++i) {
-    int cur_val = b64_char_to_int(s[i]);
+    long cur_val = b64_char_to_int(s[i]);
     // The standard says what happens on an unspecified character is undefined,
     // here we treat it as the end of the string.
     if (cur_val == -1)
@@ -56,7 +56,7 @@ LLVM_LIBC_FUNCTION(long, a64l, (const char *s)) {
   }
 
   // standard says to sign extend from 32 bits.
-  return static_cast<long>(result);
+  return result & 0xFFFF'FFFF;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
