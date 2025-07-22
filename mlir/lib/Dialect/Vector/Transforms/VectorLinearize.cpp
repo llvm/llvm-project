@@ -36,7 +36,7 @@ linearizeConstAttr(Location loc, ConversionPatternRewriter &rewriter,
           loc,
           "Cannot linearize a constant scalable vector that's not a splat");
 
-    return dstElementsAttr.reshape(resType.getShape());
+    return dstElementsAttr.reshape(resType.getNumElements());
   }
 
   if (auto poisonAttr = dyn_cast<ub::PoisonAttr>(value))
