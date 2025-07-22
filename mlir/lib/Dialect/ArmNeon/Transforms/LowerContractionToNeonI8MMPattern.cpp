@@ -195,7 +195,7 @@ protected:
   }
 
 public:
-  void rewrite(vector::ContractionOp op, PatternRewriter &rewriter) {
+  void lower(vector::ContractionOp op, PatternRewriter &rewriter) {
     // Create some convenience types.
     auto inputElementType = cast<ShapedType>(lhs.getType()).getElementType();
     auto accElementType = cast<ShapedType>(acc.getType()).getElementType();
@@ -410,7 +410,7 @@ public:
     VectorContractRewriterI8MM vcr;
     if (failed(vcr.matchAndInit(op, rewriter)))
       return failure();
-    vcr.rewrite(op, rewriter);
+    vcr.lower(op, rewriter);
 
     return success();
   }
