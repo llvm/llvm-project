@@ -2773,8 +2773,8 @@ public:
         Opcode(Opcode), VFScaleFactor(ScaleFactor) {
     [[maybe_unused]] auto *AccumulatorRecipe =
         getChainOp()->getDefiningRecipe();
-    // When cloning as part of a VPExpressionRecipe, the chain op could have
-    // been removed from the plan and so doesn't have a defining recipe.
+    // When cloning as part of a VPExpressionRecipe the chain op could have
+    // replaced by a temporary VPValue, so it doesn't have a defining recipe.
     assert((!AccumulatorRecipe ||
             isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
             isa<VPPartialReductionRecipe>(AccumulatorRecipe)) &&
