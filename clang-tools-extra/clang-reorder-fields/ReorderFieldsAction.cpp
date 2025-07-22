@@ -81,6 +81,20 @@ getNewFieldsOrder(const RecordDecl *Definition,
   return NewFieldsOrder;
 }
 
+struct ReorderedStruct {
+public:
+  ReorderedStruct(const RecordDecl *Decl, ArrayRef<unsigned> NewFieldsOrder)
+      : Definition(Decl), NewFieldsOrder(NewFieldsOrder),
+        NewFieldsPositions(NewFieldsOrder.size()) {
+    for (unsigned I = 0; I < NewFieldsPositions.size(); ++I)
+      NewFieldsPositions[NewFieldsOrder[I]] = I;
+  }
+
+  const RecordDecl *Definition;
+  ArrayRef<unsigned> NewFieldsOrder;
+  SmallVector<unsigned, 4> NewFieldsPositions;
+};
+
 // FIXME: error-handling
 /// Replaces one range of source code by another.
 static void
@@ -194,33 +208,33 @@ static SourceRange getFullFieldSourceRange(const FieldDecl &Field,
 /// different accesses (public/protected/private) is not supported.
 /// \returns true on success.
 static bool reorderFieldsInDefinition(
-    const RecordDecl *Definition, ArrayRef<unsigned> NewFieldsOrder,
-    const ASTContext &Context,
+    const ReorderedStruct &RS, const ASTContext &Context,
     std::map<std::string, tooling::Replacements> &Replacements) {
-  assert(Definition && "Definition is null");
+  assert(RS.Definition && "Definition is null");
 
   SmallVector<const FieldDecl *, 10> Fields;
-  for (const auto *Field : Definition->fields())
+  for (const auto *Field : RS.Definition->fields())
     Fields.push_back(Field);
 
   // Check that the permutation of the fields doesn't change the accesses
-  for (const auto *Field : Definition->fields()) {
+  for (const auto *Field : RS.Definition->fields()) {
     const auto FieldIndex = Field->getFieldIndex();
-    if (Field->getAccess() != Fields[NewFieldsOrder[FieldIndex]]->getAccess()) {
+    if (Field->getAccess() !=
+        Fields[RS.NewFieldsOrder[FieldIndex]]->getAccess()) {
       llvm::errs() << "Currently reordering of fields with different accesses "
                       "is not supported\n";
       return false;
     }
   }
 
-  for (const auto *Field : Definition->fields()) {
+  for (const auto *Field : RS.Definition->fields()) {
     const auto FieldIndex = Field->getFieldIndex();
-    if (FieldIndex == NewFieldsOrder[FieldIndex])
+    if (FieldIndex == RS.NewFieldsOrder[FieldIndex])
       continue;
-    addReplacement(
-        getFullFieldSourceRange(*Field, Context),
-        getFullFieldSourceRange(*Fields[NewFieldsOrder[FieldIndex]], Context),
-        Context, Replacements);
+    addReplacement(getFullFieldSourceRange(*Field, Context),
+                   getFullFieldSourceRange(
+                       *Fields[RS.NewFieldsOrder[FieldIndex]], Context),
+                   Context, Replacements);
   }
   return true;
 }
@@ -231,7 +245,7 @@ static bool reorderFieldsInDefinition(
 /// fields. Thus, we need to ensure that we reorder just the initializers that
 /// are present.
 static void reorderFieldsInConstructor(
-    const CXXConstructorDecl *CtorDecl, ArrayRef<unsigned> NewFieldsOrder,
+    const CXXConstructorDecl *CtorDecl, const ReorderedStruct &RS,
     ASTContext &Context,
     std::map<std::string, tooling::Replacements> &Replacements) {
   assert(CtorDecl && "Constructor declaration is null");
@@ -243,10 +257,6 @@ static void reorderFieldsInConstructor(
   // Thus this assert needs to be after the previous checks.
   assert(CtorDecl->isThisDeclarationADefinition() && "Not a definition");
 
-  SmallVector<unsigned, 10> NewFieldsPositions(NewFieldsOrder.size());
-  for (unsigned i = 0, e = NewFieldsOrder.size(); i < e; ++i)
-    NewFieldsPositions[NewFieldsOrder[i]] = i;
-
   SmallVector<const CXXCtorInitializer *, 10> OldWrittenInitializersOrder;
   SmallVector<const CXXCtorInitializer *, 10> NewWrittenInitializersOrder;
   for (const auto *Initializer : CtorDecl->inits()) {
@@ -257,8 +267,8 @@ static void reorderFieldsInConstructor(
     const FieldDecl *ThisM = Initializer->getMember();
     const auto UsedMembers = findMembersUsedInInitExpr(Initializer, Context);
     for (const FieldDecl *UM : UsedMembers) {
-      if (NewFieldsPositions[UM->getFieldIndex()] >
-          NewFieldsPositions[ThisM->getFieldIndex()]) {
+      if (RS.NewFieldsPositions[UM->getFieldIndex()] >
+          RS.NewFieldsPositions[ThisM->getFieldIndex()]) {
         DiagnosticsEngine &DiagEngine = Context.getDiagnostics();
         auto Description = ("reordering field " + UM->getName() + " after " +
                             ThisM->getName() + " makes " + UM->getName() +
@@ -276,8 +286,8 @@ static void reorderFieldsInConstructor(
   auto ByFieldNewPosition = [&](const CXXCtorInitializer *LHS,
                                 const CXXCtorInitializer *RHS) {
     assert(LHS && RHS);
-    return NewFieldsPositions[LHS->getMember()->getFieldIndex()] <
-           NewFieldsPositions[RHS->getMember()->getFieldIndex()];
+    return RS.NewFieldsPositions[LHS->getMember()->getFieldIndex()] <
+           RS.NewFieldsPositions[RHS->getMember()->getFieldIndex()];
   };
   llvm::sort(NewWrittenInitializersOrder, ByFieldNewPosition);
   assert(OldWrittenInitializersOrder.size() ==
@@ -294,8 +304,8 @@ static void reorderFieldsInConstructor(
 /// At the moment partial initialization is not supported.
 /// \returns true on success
 static bool reorderFieldsInInitListExpr(
-    const InitListExpr *InitListEx, ArrayRef<unsigned> NewFieldsOrder,
-    const ASTContext &Context,
+    const InitListExpr *InitListEx, const ReorderedStruct &RS,
+    ASTContext &Context,
     std::map<std::string, tooling::Replacements> &Replacements) {
   assert(InitListEx && "Init list expression is null");
   // We care only about InitListExprs which originate from source code.
@@ -309,15 +319,16 @@ static bool reorderFieldsInInitListExpr(
   // If there are no initializers we do not need to change anything.
   if (!InitListEx->getNumInits())
     return true;
-  if (InitListEx->getNumInits() != NewFieldsOrder.size()) {
+  if (InitListEx->getNumInits() != RS.NewFieldsOrder.size()) {
     llvm::errs() << "Currently only full initialization is supported\n";
     return false;
   }
   for (unsigned i = 0, e = InitListEx->getNumInits(); i < e; ++i)
-    if (i != NewFieldsOrder[i])
-      addReplacement(InitListEx->getInit(i)->getSourceRange(),
-                     InitListEx->getInit(NewFieldsOrder[i])->getSourceRange(),
-                     Context, Replacements);
+    if (i != RS.NewFieldsOrder[i])
+      addReplacement(
+          InitListEx->getInit(i)->getSourceRange(),
+          InitListEx->getInit(RS.NewFieldsOrder[i])->getSourceRange(), Context,
+          Replacements);
   return true;
 }
 
@@ -345,7 +356,9 @@ public:
         getNewFieldsOrder(RD, DesiredFieldsOrder);
     if (NewFieldsOrder.empty())
       return;
-    if (!reorderFieldsInDefinition(RD, NewFieldsOrder, Context, Replacements))
+    ReorderedStruct RS{RD, NewFieldsOrder};
+
+    if (!reorderFieldsInDefinition(RS, Context, Replacements))
       return;
 
     // CXXRD will be nullptr if C code (not C++) is being processed.
@@ -353,24 +366,25 @@ public:
     if (CXXRD)
       for (const auto *C : CXXRD->ctors())
         if (const auto *D = dyn_cast<CXXConstructorDecl>(C->getDefinition()))
-          reorderFieldsInConstructor(cast<const CXXConstructorDecl>(D),
-                                     NewFieldsOrder, Context, Replacements);
+          reorderFieldsInConstructor(cast<const CXXConstructorDecl>(D), RS,
+                                     Context, Replacements);
 
     // We only need to reorder init list expressions for
     // plain C structs or C++ aggregate types.
     // For other types the order of constructor parameters is used,
     // which we don't change at the moment.
     // Now (v0) partial initialization is not supported.
-    if (!CXXRD || CXXRD->isAggregate())
+    if (!CXXRD || CXXRD->isAggregate()) {
       for (auto Result :
            match(initListExpr(hasType(equalsNode(RD))).bind("initListExpr"),
                  Context))
         if (!reorderFieldsInInitListExpr(
-                Result.getNodeAs<InitListExpr>("initListExpr"), NewFieldsOrder,
-                Context, Replacements)) {
+                Result.getNodeAs<InitListExpr>("initListExpr"), RS, Context,
+                Replacements)) {
           Replacements.clear();
           return;
         }
+    }
   }
 };
 } // end anonymous namespace
