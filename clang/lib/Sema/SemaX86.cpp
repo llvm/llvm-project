@@ -954,6 +954,11 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
     l = 0;
     u = 15;
     break;
+  case X86::BI__builtin_ia32_prefetchi:
+    i = 1;
+    l = 2; // _MM_HINT_T1
+    u = 3; // _MM_HINT_T0
+    break;
   }
 
   // Note that we don't force a hard error on the range check here, allowing
