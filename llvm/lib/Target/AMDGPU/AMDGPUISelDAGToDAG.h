@@ -162,7 +162,8 @@ private:
   bool SelectScratchOffset(SDNode *N, SDValue Addr, SDValue &VAddr,
                            SDValue &Offset) const;
   bool SelectGlobalSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
-                         SDValue &VOffset, SDValue &Offset) const;
+                         SDValue &VOffset, SDValue &Offset, bool &ScaleOffset,
+                         bool NeedIOffset = true) const;
   bool SelectGlobalSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
                          SDValue &VOffset, SDValue &Offset,
                          SDValue &CPol) const;
