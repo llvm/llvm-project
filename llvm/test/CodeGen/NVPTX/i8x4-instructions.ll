@@ -2326,23 +2326,22 @@ define <4 x float> @test_sitofp_v4i8(<4 x i8> %a) {
 ; CHECK-LABEL: test_sitofp_v4i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<10>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_sitofp_v4i8_param_0];
-; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 0xbbb3U;
-; CHECK-NEXT:    cvt.u16.u32 %rs1, %r2;
-; CHECK-NEXT:    cvt.rn.f32.s16 %r3, %rs1;
-; CHECK-NEXT:    prmt.b32 %r4, %r1, 0, 0xaaa2U;
-; CHECK-NEXT:    cvt.u16.u32 %rs2, %r4;
-; CHECK-NEXT:    cvt.rn.f32.s16 %r5, %rs2;
-; CHECK-NEXT:    prmt.b32 %r6, %r1, 0, 0x9991U;
-; CHECK-NEXT:    cvt.u16.u32 %rs3, %r6;
-; CHECK-NEXT:    cvt.rn.f32.s16 %r7, %rs3;
-; CHECK-NEXT:    prmt.b32 %r8, %r1, 0, 0x8880U;
-; CHECK-NEXT:    cvt.u16.u32 %rs4, %r8;
-; CHECK-NEXT:    cvt.rn.f32.s16 %r9, %rs4;
-; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r9, %r7, %r5, %r3};
+; CHECK-NEXT:    cvt.s8.s32 %rs1, %r1;
+; CHECK-NEXT:    cvt.rn.f32.s16 %r2, %rs1;
+; CHECK-NEXT:    prmt.b32 %r3, %r1, 0, 0xbbb3U;
+; CHECK-NEXT:    cvt.u16.u32 %rs2, %r3;
+; CHECK-NEXT:    cvt.rn.f32.s16 %r4, %rs2;
+; CHECK-NEXT:    prmt.b32 %r5, %r1, 0, 0xaaa2U;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r5;
+; CHECK-NEXT:    cvt.rn.f32.s16 %r6, %rs3;
+; CHECK-NEXT:    prmt.b32 %r7, %r1, 0, 0x9991U;
+; CHECK-NEXT:    cvt.u16.u32 %rs4, %r7;
+; CHECK-NEXT:    cvt.rn.f32.s16 %r8, %rs4;
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r2, %r8, %r6, %r4};
 ; CHECK-NEXT:    ret;
   %r = sitofp <4 x i8> %a to <4 x float>
   ret <4 x float> %r
