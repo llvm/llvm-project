@@ -253,7 +253,8 @@ static const char *addDebugCompDirArg(const ArgList &Args,
     else
       return nullptr;
   }
-  CmdArgs.push_back(Args.MakeArgString("-fdebug-compilation-dir=" + DebugCompDir));
+  CmdArgs.push_back(
+      Args.MakeArgString("-fdebug-compilation-dir=" + DebugCompDir));
   StringRef Path(CmdArgs.back());
   return Path.substr(Path.find('=') + 1).data();
 }

@@ -2449,7 +2449,12 @@ CoverageMappingModuleGen::CoverageMappingModuleGen(
     : CGM(CGM), SourceInfo(SourceInfo) {}
 
 std::string CoverageMappingModuleGen::getCurrentDirname() {
-  return CGM.getCodeGenOpts().CoverageCompilationDir;
+  if (!CGM.getCodeGenOpts().CoverageCompilationDir.empty())
+    return CGM.getCodeGenOpts().CoverageCompilationDir;
+
+  SmallString<256> CWD;
+  llvm::sys::fs::current_path(CWD);
+  return CWD.str().str();
 }
 
 std::string CoverageMappingModuleGen::normalizeFilename(StringRef Filename) {

@@ -158,6 +158,7 @@ class CGDebugInfo {
   /// This is a storage for names that are constructed on demand. For
   /// example, C++ destructors, C++ operators etc..
   llvm::BumpPtrAllocator DebugInfoNames;
+  StringRef CWDName;
 
   llvm::DenseMap<const char *, llvm::TrackingMDRef> DIFileCache;
   llvm::DenseMap<const FunctionDecl *, llvm::TrackingMDRef> SPCache;

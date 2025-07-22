@@ -643,7 +643,16 @@ unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc, bool Force) {
 }
 
 StringRef CGDebugInfo::getCurrentDirname() {
-  return CGM.getCodeGenOpts().DebugCompilationDir;
+  if (!CGM.getCodeGenOpts().DebugCompilationDir.empty())
+    return CGM.getCodeGenOpts().DebugCompilationDir;
+
+  if (!CWDName.empty())
+    return CWDName;
+  llvm::ErrorOr<std::string> CWD =
+      CGM.getFileSystem()->getCurrentWorkingDirectory();
+  if (!CWD)
+    return StringRef();
+  return CWDName = internString(*CWD);
 }
 
 void CGDebugInfo::CreateCompileUnit() {
@@ -3237,9 +3246,6 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
     std::string Remapped = remapDIPath(Path);
     StringRef Relative(Remapped);
     StringRef CompDir = TheCU->getDirectory();
-    if (CompDir.empty())
-      return Remapped;
-
     if (Relative.consume_front(CompDir))
       Relative.consume_front(llvm::sys::path::get_separator());
 
