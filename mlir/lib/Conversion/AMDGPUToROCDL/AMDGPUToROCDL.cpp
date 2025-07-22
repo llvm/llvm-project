@@ -491,6 +491,7 @@ struct MemoryCounterWaitOpLowering
       if (auto exp = adaptor.getExp())
         rewriter.create<ROCDL::WaitExpcntOp>(loc, *exp);
 
+      rewriter.eraseOp(op);
       return success();
     }
 
