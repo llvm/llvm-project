@@ -793,6 +793,9 @@ struct VectorLoadOpConverter final
     // Use the converted vector type instead of original (single element vector
     // would get converted to scalar).
     auto spirvVectorType = typeConverter.convertType(vectorType);
+    if (!spirvVectorType)
+      return rewriter.notifyMatchFailure(loadOp, "unsupported vector type");
+
     auto vectorPtrType = spirv::PointerType::get(spirvVectorType, storageClass);
 
     // For single element vectors, we don't need to bitcast the access chain to
