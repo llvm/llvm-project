@@ -63,8 +63,7 @@ struct GCNRegPressure {
                                            unsigned NumAGPRs,
                                            unsigned NumAVGPRs) {
 
-    // Until we hit the VGPRThreshold, we will assign AV as VGPR. After that
-    // point, we will assign as AGPR.
+    // Assume AVGPRs will be assigned as VGPRs.
     return alignTo(NumArchVGPRs + NumAVGPRs,
                    AMDGPU::IsaInfo::getArchVGPRAllocGranule()) +
            NumAGPRs;
