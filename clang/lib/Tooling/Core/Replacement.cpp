@@ -120,8 +120,7 @@ bool operator==(const Replacement &LHS, const Replacement &RHS) {
 void Replacement::setFromSourceLocation(const SourceManager &Sources,
                                         SourceLocation Start, unsigned Length,
                                         StringRef ReplacementText) {
-  const std::pair<FileID, unsigned> DecomposedLocation =
-      Sources.getDecomposedLoc(Start);
+  const FileIDAndOffset DecomposedLocation = Sources.getDecomposedLoc(Start);
   OptionalFileEntryRef Entry =
       Sources.getFileEntryRefForID(DecomposedLocation.first);
   this->FilePath = std::string(Entry ? Entry->getName() : InvalidLocation);
@@ -137,8 +136,8 @@ static int getRangeSize(const SourceManager &Sources,
                         const LangOptions &LangOpts) {
   SourceLocation SpellingBegin = Sources.getSpellingLoc(Range.getBegin());
   SourceLocation SpellingEnd = Sources.getSpellingLoc(Range.getEnd());
-  std::pair<FileID, unsigned> Start = Sources.getDecomposedLoc(SpellingBegin);
-  std::pair<FileID, unsigned> End = Sources.getDecomposedLoc(SpellingEnd);
+  FileIDAndOffset Start = Sources.getDecomposedLoc(SpellingBegin);
+  FileIDAndOffset End = Sources.getDecomposedLoc(SpellingEnd);
   if (Start.first != End.first) return -1;
   if (Range.isTokenRange())
     End.second += Lexer::MeasureTokenLength(SpellingEnd, Sources, LangOpts);
@@ -585,9 +584,9 @@ llvm::Expected<std::string> applyAllReplacements(StringRef Code,
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
   FileManager Files(FileSystemOptions(), InMemoryFileSystem);
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
-      new DiagnosticOptions);
+      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), DiagOpts);
   SourceManager SourceMgr(Diagnostics, Files);
   Rewriter Rewrite(SourceMgr, LangOptions());
   InMemoryFileSystem->addFile(

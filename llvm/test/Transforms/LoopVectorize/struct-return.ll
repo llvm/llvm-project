@@ -70,59 +70,6 @@ exit:
 }
 
 ; CHECK-REMARKS: remark: {{.*}} vectorized loop
-; Note: Later instcombines reduce this down quite a lot.
-define void @struct_return_f32_replicate(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
-; CHECK-LABEL: define void @struct_return_f32_replicate
-; CHECK-SAME:  (ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]])
-; CHECK:       vector.body:
-; CHECK:         [[CALL_LANE_0:%.*]] = tail call { float, float } @foo(float {{%.*}})
-; CHECK:         [[CALL_LANE_1:%.*]] = tail call { float, float } @foo(float {{%.*}})
-;                // Lane 0
-; CHECK:         [[A_0:%.*]] = extractvalue { float, float } [[CALL_LANE_0]], 0
-; CHECK:         [[VEC_A_0:%.*]] = insertelement <2 x float> poison, float [[A_0]], i32 0
-; CHECK:         [[WIDE_A_0:%.*]] = insertvalue { <2 x float>, <2 x float> } poison, <2 x float> [[VEC_A_0]], 0
-; CHECK:         [[B_0:%.*]] = extractvalue { float, float } [[CALL_LANE_0]], 1
-; CHECK:         [[UNDEF_B_0:%.*]] = extractvalue { <2 x float>, <2 x float> } [[WIDE_A_0]], 1
-; CHECK:         [[VEC_B_0:%.*]] = insertelement <2 x float> [[UNDEF_B_0]], float [[B_0]], i32 0
-; CHECK:         [[WIDE_0:%.*]] = insertvalue { <2 x float>, <2 x float> } [[WIDE_A_0]], <2 x float> [[VEC_B_0]], 1
-;                // Lane 1
-; CHECK:         [[A_1:%.*]] = extractvalue { float, float } [[CALL_LANE_1]], 0
-; CHECK:         [[VEC_A_0_EXT:%.*]] = extractvalue { <2 x float>, <2 x float> } [[WIDE_0]], 0
-; CHECK:         [[VEC_A:%.*]] = insertelement <2 x float> [[VEC_A_0_EXT]], float [[A_1]], i32 1
-; CHECK:         [[WIDE_A:%.*]] = insertvalue { <2 x float>, <2 x float> } [[WIDE_0]], <2 x float> [[VEC_A]], 0
-; CHECK:         [[B_1:%.*]] = extractvalue { float, float } [[CALL_LANE_1]], 1
-; CHECK:         [[VEC_B_0_EXT:%.*]] = extractvalue { <2 x float>, <2 x float> } [[WIDE_A]], 1
-; CHECK:         [[VEC_B:%.*]] = insertelement <2 x float> [[VEC_B_0_EXT]], float [[B_1]], i32 1
-; CHECK:         [[WIDE:%.*]] = insertvalue { <2 x float>, <2 x float> } [[WIDE_A]], <2 x float> [[VEC_B]], 1
-;                // Store wide values:
-; CHECK:         [[VEC_A_EXT:%.*]] = extractvalue { <2 x float>, <2 x float> } [[WIDE]], 0
-; CHECK:         [[VEC_B_EXT:%.*]] = extractvalue { <2 x float>, <2 x float> } [[WIDE]], 1
-; CHECK:         store <2 x float> [[VEC_A_EXT]], ptr {{%.*}}, align 4
-; CHECK:         store <2 x float> [[VEC_B_EXT]], ptr {{%.*}}, align 4
-entry:
-  br label %for.body
-
-for.body:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds float, ptr %in, i64 %iv
-  %in_val = load float, ptr %arrayidx, align 4
-  ; #3 does not have a fixed-size vector mapping (so replication is used)
-  %call = tail call { float, float } @foo(float %in_val) #3
-  %extract_a = extractvalue { float, float } %call, 0
-  %extract_b = extractvalue { float, float } %call, 1
-  %arrayidx2 = getelementptr inbounds float, ptr %out_a, i64 %iv
-  store float %extract_a, ptr %arrayidx2, align 4
-  %arrayidx4 = getelementptr inbounds float, ptr %out_b, i64 %iv
-  store float %extract_b, ptr %arrayidx4, align 4
-  %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond.not = icmp eq i64 %iv.next, 1024
-  br i1 %exitcond.not, label %exit, label %for.body
-
-exit:
-  ret void
-}
-
-; CHECK-REMARKS: remark: {{.*}} vectorized loop
 define void @struct_return_f32_widen_rt_checks(ptr %in, ptr writeonly %out_a, ptr writeonly %out_b) {
 ; CHECK-LABEL: define void @struct_return_f32_widen_rt_checks
 ; CHECK-SAME:  (ptr [[IN:%.*]], ptr writeonly [[OUT_A:%.*]], ptr writeonly [[OUT_B:%.*]])

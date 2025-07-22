@@ -159,9 +159,6 @@ define void @versioned_sext_use_in_gep(i32 %scale, ptr %dst, i64 %scale.2) {
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[SCALE]], 1
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[SCALE_2]]
-; CHECK-NEXT:    [[TMP81:%.*]] = getelementptr i8, ptr [[DST]], i64 [[SCALE_2]]
-; CHECK-NEXT:    [[TMP82:%.*]] = getelementptr i8, ptr [[DST]], i64 [[SCALE_2]]
 ; CHECK-NEXT:    [[TMP83:%.*]] = getelementptr i8, ptr [[DST]], i64 [[SCALE_2]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -174,10 +171,10 @@ define void @versioned_sext_use_in_gep(i32 %scale, ptr %dst, i64 %scale.2) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP16]]
-; CHECK-NEXT:    store ptr [[TMP8]], ptr [[TMP11]], align 8
-; CHECK-NEXT:    store ptr [[TMP8]], ptr [[TMP13]], align 8
-; CHECK-NEXT:    store ptr [[TMP8]], ptr [[TMP15]], align 8
-; CHECK-NEXT:    store ptr [[TMP8]], ptr [[TMP17]], align 8
+; CHECK-NEXT:    store ptr [[TMP83]], ptr [[TMP11]], align 8
+; CHECK-NEXT:    store ptr [[TMP83]], ptr [[TMP13]], align 8
+; CHECK-NEXT:    store ptr [[TMP83]], ptr [[TMP15]], align 8
+; CHECK-NEXT:    store ptr [[TMP83]], ptr [[TMP17]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -490,8 +487,7 @@ define void @sext_of_i1_stride(i1 %g, ptr %dst) mustprogress {
 ; CHECK-NEXT:    [[IND_END:%.*]] = mul i64 [[N_VEC]], [[G_64]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, ptr [[TMP6]], i32 -3
 ; CHECK-NEXT:    store <4 x i16> splat (i16 -1), ptr [[TMP7]], align 2
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]

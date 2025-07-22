@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
-#include "ToolChains/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"

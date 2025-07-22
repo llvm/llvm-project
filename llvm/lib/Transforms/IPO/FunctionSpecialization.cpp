@@ -71,7 +71,7 @@ static cl::opt<unsigned> MinCodeSizeSavings(
              "much percent of the original function size"));
 
 static cl::opt<unsigned> MinLatencySavings(
-    "funcspec-min-latency-savings", cl::init(40), cl::Hidden,
+    "funcspec-min-latency-savings", cl::init(20), cl::Hidden,
     cl::desc("Reject specializations whose latency savings are less than this "
              "much percent of the original function size"));
 

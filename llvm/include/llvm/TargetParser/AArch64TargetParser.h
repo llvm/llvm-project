@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -79,7 +80,7 @@ struct FMVInfo {
       : Name(Name), FeatureBit(FeatureBit), PriorityBit(PriorityBit), ID(ID) {};
 };
 
-const std::vector<FMVInfo> &getFMVInfo();
+LLVM_ABI const std::vector<FMVInfo> &getFMVInfo();
 
 // Represents a dependency between two architecture extensions. Later is the
 // feature which was added to the architecture after Earlier, and expands the
@@ -146,7 +147,7 @@ struct ArchInfo {
   StringRef getSubArch() const { return ArchFeature.substr(1); }
 
   // Search for ArchInfo by SubArch name
-  static std::optional<ArchInfo> findBySubArch(StringRef SubArch);
+  LLVM_ABI static std::optional<ArchInfo> findBySubArch(StringRef SubArch);
 };
 
 #define EMIT_ARCHITECTURES
@@ -182,34 +183,36 @@ struct ExtensionSet {
   // Enable the given architecture extension, and any other extensions it
   // depends on. Does not change the base architecture, or follow dependencies
   // between features which are only related by required arcitecture versions.
-  void enable(ArchExtKind E);
+  LLVM_ABI void enable(ArchExtKind E);
 
   // Disable the given architecture extension, and any other extensions which
   // depend on it. Does not change the base architecture, or follow
   // dependencies between features which are only related by required
   // arcitecture versions.
-  void disable(ArchExtKind E);
+  LLVM_ABI void disable(ArchExtKind E);
 
   // Add default extensions for the given CPU. Records the base architecture,
   // to later resolve dependencies which depend on it.
-  void addCPUDefaults(const CpuInfo &CPU);
+  LLVM_ABI void addCPUDefaults(const CpuInfo &CPU);
 
   // Add default extensions for the given architecture version. Records the
   // base architecture, to later resolve dependencies which depend on it.
-  void addArchDefaults(const ArchInfo &Arch);
+  LLVM_ABI void addArchDefaults(const ArchInfo &Arch);
 
   // Add or remove a feature based on a modifier string. The string must be of
   // the form "<name>" to enable a feature or "no<name>" to disable it. This
   // will also enable or disable any features as required by the dependencies
   // between them.
-  bool parseModifier(StringRef Modifier, const bool AllowNoDashForm = false);
+  LLVM_ABI bool parseModifier(StringRef Modifier,
+                              const bool AllowNoDashForm = false);
 
   // Constructs a new ExtensionSet by toggling the corresponding bits for every
   // feature in the \p Features list without expanding their dependencies. Used
   // for reconstructing an ExtensionSet from the output of toLLVMFeatures().
   // Features that are not recognized are pushed back to \p NonExtensions.
-  void reconstructFromParsedFeatures(const std::vector<std::string> &Features,
-                                     std::vector<std::string> &NonExtensions);
+  LLVM_ABI void
+  reconstructFromParsedFeatures(const std::vector<std::string> &Features,
+                                std::vector<std::string> &NonExtensions);
 
   // Convert the set of enabled extension to an LLVM feature list, appending
   // them to Features.
@@ -227,7 +230,7 @@ struct ExtensionSet {
     }
   }
 
-  void dump() const;
+  LLVM_ABI void dump() const;
 };
 
 // Name alias.
@@ -239,52 +242,53 @@ struct Alias {
 #define EMIT_CPU_ALIAS
 #include "llvm/TargetParser/AArch64TargetParserDef.inc"
 
-const ExtensionInfo &getExtensionByID(ArchExtKind(ExtID));
+LLVM_ABI const ExtensionInfo &getExtensionByID(ArchExtKind(ExtID));
 
-bool getExtensionFeatures(
-    const AArch64::ExtensionBitset &Extensions,
-    std::vector<StringRef> &Features);
+LLVM_ABI bool getExtensionFeatures(const AArch64::ExtensionBitset &Extensions,
+                                   std::vector<StringRef> &Features);
 
-StringRef getArchExtFeature(StringRef ArchExt);
-StringRef resolveCPUAlias(StringRef CPU);
+LLVM_ABI StringRef getArchExtFeature(StringRef ArchExt);
+LLVM_ABI StringRef resolveCPUAlias(StringRef CPU);
 
 // Information by Name
-const ArchInfo *getArchForCpu(StringRef CPU);
+LLVM_ABI const ArchInfo *getArchForCpu(StringRef CPU);
 
 // Parser
-const ArchInfo *parseArch(StringRef Arch);
+LLVM_ABI const ArchInfo *parseArch(StringRef Arch);
 
 // Return the extension which has the given -target-feature name.
-std::optional<ExtensionInfo> targetFeatureToExtension(StringRef TargetFeature);
+LLVM_ABI std::optional<ExtensionInfo>
+targetFeatureToExtension(StringRef TargetFeature);
 
 // Parse a name as defined by the Extension class in tablegen.
-std::optional<ExtensionInfo> parseArchExtension(StringRef Extension);
+LLVM_ABI std::optional<ExtensionInfo> parseArchExtension(StringRef Extension);
 
 // Parse a name as defined by the FMVInfo class in tablegen.
-std::optional<FMVInfo> parseFMVExtension(StringRef Extension);
+LLVM_ABI std::optional<FMVInfo> parseFMVExtension(StringRef Extension);
 
 // Given the name of a CPU or alias, return the correponding CpuInfo.
-std::optional<CpuInfo> parseCpu(StringRef Name);
+LLVM_ABI std::optional<CpuInfo> parseCpu(StringRef Name);
 // Used by target parser tests
-void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
+LLVM_ABI void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
 
-bool isX18ReservedByDefault(const Triple &TT);
+LLVM_ABI bool isX18ReservedByDefault(const Triple &TT);
 
 // For a given set of feature names, which can be either target-features, or
 // fmv-features metadata, expand their dependencies and then return a bitmask
 // corresponding to the entries of AArch64::FeatPriorities.
-uint64_t getFMVPriority(ArrayRef<StringRef> Features);
+LLVM_ABI uint64_t getFMVPriority(ArrayRef<StringRef> Features);
 
 // For a given set of FMV feature names, expand their dependencies and then
 // return a bitmask corresponding to the entries of AArch64::CPUFeatures.
 // The values in CPUFeatures are not bitmasks themselves, they are sequential
 // (0, 1, 2, 3, ...). The resulting bitmask is used at runtime to test whether
 // a certain FMV feature is available on the host.
-uint64_t getCpuSupportsMask(ArrayRef<StringRef> Features);
+LLVM_ABI uint64_t getCpuSupportsMask(ArrayRef<StringRef> Features);
 
-void PrintSupportedExtensions();
+LLVM_ABI void PrintSupportedExtensions();
 
-void printEnabledExtensions(const std::set<StringRef> &EnabledFeatureNames);
+LLVM_ABI void
+printEnabledExtensions(const std::set<StringRef> &EnabledFeatureNames);
 
 } // namespace AArch64
 } // namespace llvm

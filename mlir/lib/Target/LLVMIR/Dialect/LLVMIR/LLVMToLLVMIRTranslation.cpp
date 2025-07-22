@@ -19,9 +19,9 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
-#include "llvm/IR/Operator.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -308,7 +308,6 @@ static llvm::Metadata *convertModuleFlagProfileSummaryAttr(
     llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation) {
   llvm::LLVMContext &context = builder.getContext();
   llvm::MDBuilder mdb(context);
-  SmallVector<llvm::Metadata *> summaryNodes;
 
   auto getIntTuple = [&](StringRef key, uint64_t val) -> llvm::MDTuple * {
     SmallVector<llvm::Metadata *> tupleNodes{
@@ -423,9 +422,18 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     ArrayRef<llvm::Value *> operandsRef(operands);
     llvm::CallInst *call;
     if (auto attr = callOp.getCalleeAttr()) {
-      call =
-          builder.CreateCall(moduleTranslation.lookupFunction(attr.getValue()),
-                             operandsRef, opBundles);
+      if (llvm::Function *function =
+              moduleTranslation.lookupFunction(attr.getValue())) {
+        call = builder.CreateCall(function, operandsRef, opBundles);
+      } else {
+        Operation *moduleOp = parentLLVMModule(&opInst);
+        Operation *ifuncOp =
+            moduleTranslation.symbolTable().lookupSymbolIn(moduleOp, attr);
+        llvm::GlobalValue *ifunc = moduleTranslation.lookupIFunc(ifuncOp);
+        llvm::FunctionType *calleeType = llvm::cast<llvm::FunctionType>(
+            moduleTranslation.convertType(callOp.getCalleeFunctionType()));
+        call = builder.CreateCall(calleeType, ifunc, operandsRef, opBundles);
+      }
     } else {
       llvm::FunctionType *calleeType = llvm::cast<llvm::FunctionType>(
           moduleTranslation.convertType(callOp.getCalleeFunctionType()));
@@ -508,6 +516,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     llvm::CallInst *inst = builder.CreateCall(
         inlineAsmInst,
         moduleTranslation.lookupValues(inlineAsmOp.getOperands()));
+    inst->setTailCallKind(convertTailCallKindToLLVM(
+        inlineAsmOp.getTailCallKindAttr().getTailCallKind()));
     if (auto maybeOperandAttrs = inlineAsmOp.getOperandAttrs()) {
       llvm::AttributeList attrList;
       for (const auto &it : llvm::enumerate(*maybeOperandAttrs)) {
@@ -647,18 +657,21 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     LLVM::LLVMFuncOp function =
         addressOfOp.getFunction(moduleTranslation.symbolTable());
     LLVM::AliasOp alias = addressOfOp.getAlias(moduleTranslation.symbolTable());
+    LLVM::IFuncOp ifunc = addressOfOp.getIFunc(moduleTranslation.symbolTable());
 
     // The verifier should not have allowed this.
-    assert((global || function || alias) &&
-           "referencing an undefined global, function, or alias");
+    assert((global || function || alias || ifunc) &&
+           "referencing an undefined global, function, alias, or ifunc");
 
     llvm::Value *llvmValue = nullptr;
     if (global)
       llvmValue = moduleTranslation.lookupGlobal(global);
     else if (alias)
       llvmValue = moduleTranslation.lookupAlias(alias);
-    else
+    else if (function)
       llvmValue = moduleTranslation.lookupFunction(function.getName());
+    else
+      llvmValue = moduleTranslation.lookupIFunc(ifunc);
 
     moduleTranslation.mapValue(addressOfOp.getResult(), llvmValue);
     return success();

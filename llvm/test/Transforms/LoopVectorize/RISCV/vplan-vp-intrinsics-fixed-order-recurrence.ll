@@ -16,10 +16,10 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT: Live-in ir<%TC> = original trip-count
 ; IF-EVL-EMPTY:
 ; IF-EVL: ir-bb<entry>:
-; IF-EVL-NEXT: Successor(s): vector.ph
+; IF-EVL-NEXT: Successor(s): scalar.ph, vector.ph
 ; IF-EVL-EMPTY:
 ; IF-EVL: vector.ph:
-; IF-EVL-NEXT:  EMIT vp<[[VF32:%[0-9]+]]> = trunc vp<[[VF]]> to i32
+; IF-EVL-NEXT:  EMIT-SCALAR vp<[[VF32:%[0-9]+]]> = trunc vp<[[VF]]> to i32
 ; IF-EVL-NEXT: Successor(s): vector loop
 ; IF-EVL-EMPTY:
 ; IF-EVL: <x1> vector loop: {
@@ -27,7 +27,7 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:     EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; IF-EVL-NEXT:     EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<[[FOR_PHI:%.+]]> = phi ir<33>, ir<[[LD:%.+]]>
-; IF-EVL-NEXT:     EMIT vp<[[PREV_EVL:%.+]]> = phi [ vp<[[VF32]]>, vector.ph ], [ vp<[[EVL:%.+]]>, vector.body ]
+; IF-EVL-NEXT:     EMIT-SCALAR vp<[[PREV_EVL:%.+]]> = phi [ vp<[[VF32]]>, vector.ph ], [ vp<[[EVL:%.+]]>, vector.body ]
 ; IF-EVL-NEXT:     EMIT vp<[[AVL:%.+]]> = sub ir<%TC>, vp<[[EVL_PHI]]>
 ; IF-EVL-NEXT:     EMIT vp<[[EVL]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-NEXT:     vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>
@@ -39,7 +39,7 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds nuw ir<%B>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, ir<[[ADD]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     EMIT vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
+; IF-EVL-NEXT:     EMIT-SCALAR vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
 ; IF-EVL-NEXT:     EMIT vp<[[IV_NEXT]]> = add vp<[[CAST]]>, vp<[[EVL_PHI]]>
 ; IF-EVL-NEXT:     EMIT vp<[[IV_NEXT_EXIT:%.+]]> = add vp<[[IV]]>, vp<[[VFUF]]>
 ; IF-EVL-NEXT:     EMIT branch-on-count  vp<[[IV_NEXT_EXIT]]>, vp<[[VTC]]>

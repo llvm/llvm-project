@@ -20,6 +20,11 @@ class RewritePatternSet;
 void populateArmSVELegalizeForLLVMExportPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns);
 
+void populateLowerContractionToSVEI8MMPatternPatterns(
+    RewritePatternSet &patterns);
+
+void populateLowerContractionToSVEBFMMLAPatterns(RewritePatternSet &patterns);
+
 /// Configure the target to support lowering ArmSVE ops to ops that map to LLVM
 /// intrinsics.
 void configureArmSVELegalizeForExportTarget(LLVMConversionTarget &target);

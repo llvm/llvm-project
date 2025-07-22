@@ -163,6 +163,12 @@ private:
                            SDValue &Offset) const;
   bool SelectGlobalSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
                          SDValue &VOffset, SDValue &Offset) const;
+  bool SelectGlobalSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
+                         SDValue &VOffset, SDValue &Offset,
+                         SDValue &CPol) const;
+  bool SelectGlobalSAddrGLC(SDNode *N, SDValue Addr, SDValue &SAddr,
+                            SDValue &VOffset, SDValue &Offset,
+                            SDValue &CPol) const;
   bool SelectScratchSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
                           SDValue &Offset) const;
   bool checkFlatScratchSVSSwizzleBug(SDValue VAddr, SDValue SAddr,
@@ -222,6 +228,8 @@ private:
   bool SelectVOP3PModsDOT(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
   bool SelectVOP3PModsNeg(SDValue In, SDValue &Src) const;
+  bool SelectVOP3PModsNegs(SDValue In, SDValue &Src) const;
+  bool SelectVOP3PModsNegAbs(SDValue In, SDValue &Src) const;
   bool SelectWMMAOpSelVOP3PMods(SDValue In, SDValue &Src) const;
 
   bool SelectWMMAModsF32NegAbs(SDValue In, SDValue &Src,
@@ -233,6 +241,7 @@ private:
 
   bool SelectSWMMACIndex8(SDValue In, SDValue &Src, SDValue &IndexKey) const;
   bool SelectSWMMACIndex16(SDValue In, SDValue &Src, SDValue &IndexKey) const;
+  bool SelectSWMMACIndex32(SDValue In, SDValue &Src, SDValue &IndexKey) const;
 
   bool SelectVOP3OpSel(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 

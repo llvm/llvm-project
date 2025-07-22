@@ -39,7 +39,7 @@ class Type;
 class Value;
 class VectorType;
 
-class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
+class AArch64TTIImpl final : public BasicTTIImplBase<AArch64TTIImpl> {
   using BaseT = BasicTTIImplBase<AArch64TTIImpl>;
   using TTI = TargetTransformInfo;
 
@@ -65,16 +65,14 @@ class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
 
   // A helper function called by 'getVectorInstrCost'.
   //
-  // 'Val' and 'Index' are forwarded from 'getVectorInstrCost'; 'HasRealUse'
-  // indicates whether the vector instruction is available in the input IR or
-  // just imaginary in vectorizer passes.
-  /// \param ScalarUserAndIdx encodes the information about extracts from a
+  // 'Val' and 'Index' are forwarded from 'getVectorInstrCost';
+  // \param ScalarUserAndIdx encodes the information about extracts from a
   /// vector with 'Scalar' being the value being extracted,'User' being the user
   /// of the extract(nullptr if user is not known before vectorization) and
   /// 'Idx' being the extract lane.
   InstructionCost getVectorInstrCostHelper(
       unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
-      bool HasRealUse, const Instruction *I = nullptr, Value *Scalar = nullptr,
+      const Instruction *I = nullptr, Value *Scalar = nullptr,
       ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx = {}) const;
 
 public:
@@ -270,8 +268,9 @@ public:
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP) const override;
 
-  Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
-                                           Type *ExpectedType) const override;
+  Value *
+  getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst, Type *ExpectedType,
+                                    bool CanCreate = true) const override;
 
   bool getTgtMemIntrinsic(IntrinsicInst *Inst,
                           MemIntrinsicInfo &Info) const override;
@@ -382,12 +381,11 @@ public:
     return BaseT::isLegalNTLoad(DataType, Alignment);
   }
 
-  InstructionCost
-  getPartialReductionCost(unsigned Opcode, Type *InputTypeA, Type *InputTypeB,
-                          Type *AccumType, ElementCount VF,
-                          TTI::PartialReductionExtendKind OpAExtend,
-                          TTI::PartialReductionExtendKind OpBExtend,
-                          std::optional<unsigned> BinOp) const override;
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind) const override;
 
   bool enableOrderedReductions() const override { return true; }
 
@@ -452,9 +450,9 @@ public:
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const override;
 
   InstructionCost
-  getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
-                 TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
-                 ArrayRef<const Value *> Args = {},
+  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
 
   InstructionCost getScalarizationOverhead(

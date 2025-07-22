@@ -1,0 +1,36 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Check insertion of runtime checks in host side only
+
+module section_test
+
+contains
+
+  subroutine foo(a)
+    real, device, dimension(:,:) :: a
+  end subroutine
+
+  subroutine test_host()
+    real, device, allocatable, dimension(:,:) :: a
+    allocate(a(10,10))
+    call foo(a(1:10,1:10:2))
+  end subroutine
+
+  attributes(device) subroutine zoo(a)
+    real, device, dimension(:,:) :: a
+  end subroutine
+
+  attributes(global) subroutine test_device()
+    real, device, allocatable, dimension(:,:) :: a
+    allocate(a(10,10))
+    call zoo(a(1:10,1:10:2))
+  end subroutine
+end module
+
+! CHECK-LABEL: func.func @_QMsection_testPtest_host()
+! CHECK: fir.call @_FortranACUFDescriptorCheckSection
+! CHECK: fir.call @_QMsection_testPfoo
+
+! CHECK-LABEL: func.func @_QMsection_testPtest_device()
+! CHECK-NOT: fir.call @_FortranACUFDescriptorCheckSection
+! CHECK: fir.call @_QMsection_testPzoo

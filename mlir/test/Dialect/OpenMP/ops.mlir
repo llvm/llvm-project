@@ -2876,6 +2876,23 @@ func.func @parallel_op_privatizers(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
   return
 }
 
+// CHECK-LABEL: parallel_op_privatizers_barrier
+// CHECK-SAME: (%[[ARG0:[^[:space:]]+]]: !llvm.ptr, %[[ARG1:[^[:space:]]+]]: !llvm.ptr)
+func.func @parallel_op_privatizers_barrier(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
+  // CHECK: omp.parallel private(
+  // CHECK-SAME: @x.privatizer %[[ARG0]] -> %[[ARG0_PRIV:[^[:space:]]+]],
+  // CHECK-SAME: @y.privatizer %[[ARG1]] -> %[[ARG1_PRIV:[^[:space:]]+]] : !llvm.ptr, !llvm.ptr)
+  // CHECK-SAME: private_barrier
+  omp.parallel private(@x.privatizer %arg0 -> %arg2, @y.privatizer %arg1 -> %arg3 : !llvm.ptr, !llvm.ptr) private_barrier {
+    // CHECK: llvm.load %[[ARG0_PRIV]]
+    %0 = llvm.load %arg2 : !llvm.ptr -> i32
+    // CHECK: llvm.load %[[ARG1_PRIV]]
+    %1 = llvm.load %arg3 : !llvm.ptr -> i32
+    omp.terminator
+  }
+  return
+}
+
 // CHECK-LABEL: omp.private {type = private} @a.privatizer : !llvm.ptr init {
 omp.private {type = private} @a.privatizer : !llvm.ptr init {
 // CHECK: ^bb0(%{{.*}}: {{.*}}, %{{.*}}: {{.*}}):
@@ -3180,3 +3197,36 @@ func.func @omp_workshare_loop_wrapper_attrs(%idx : index) {
   }
   return
 }
+
+// CHECK-LABEL: func.func @omp_allocate_dir(
+// CHECK-SAME: %[[ARG0:.*]]: memref<i32>,
+// CHECK-SAME: %[[ARG1:.*]]: memref<i32>) {
+func.func @omp_allocate_dir(%arg0 : memref<i32>, %arg1 : memref<i32>) -> () {
+
+  // Test with one data var
+  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>)
+  omp.allocate_dir (%arg0 : memref<i32>)
+
+  // Test with two data vars
+  // CHECK: omp.allocate_dir(%[[ARG0]], %[[ARG1]] : memref<i32>, memref<i32>)
+  omp.allocate_dir (%arg0, %arg1: memref<i32>, memref<i32>)
+
+  // Test with one data var and align clause
+  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>) align(2)
+  omp.allocate_dir (%arg0 : memref<i32>) align(2)
+
+  // Test with one data var and allocator clause
+  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>) allocator(omp_pteam_mem_alloc)
+  omp.allocate_dir (%arg0 : memref<i32>) allocator(omp_pteam_mem_alloc)
+
+  // Test with one data var, align clause and allocator clause
+  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>) align(2) allocator(omp_thread_mem_alloc)
+  omp.allocate_dir (%arg0 : memref<i32>) align(2) allocator(omp_thread_mem_alloc)
+
+  // Test with two data vars, align clause and allocator clause
+  // CHECK: omp.allocate_dir(%[[ARG0]], %[[ARG1]] : memref<i32>, memref<i32>) align(2) allocator(omp_cgroup_mem_alloc)
+  omp.allocate_dir (%arg0, %arg1 : memref<i32>, memref<i32>) align(2) allocator(omp_cgroup_mem_alloc)
+
+  return
+}
+

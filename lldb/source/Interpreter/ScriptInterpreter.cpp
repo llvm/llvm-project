@@ -220,7 +220,7 @@ ScriptInterpreterIORedirect::ScriptInterpreterIORedirect(
     m_input_file_sp = debugger.GetInputFileSP();
 
     Pipe pipe;
-    Status pipe_result = pipe.CreateNew(false);
+    Status pipe_result = pipe.CreateNew();
 #if defined(_WIN32)
     lldb::file_t read_file = pipe.GetReadNativeHandle();
     pipe.ReleaseReadFileDescriptor();

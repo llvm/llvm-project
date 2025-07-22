@@ -10,7 +10,8 @@ from lldbsuite.test import lldbutil
 class TestSharedPtr(TestBase):
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
-    @skipIf(compiler="clang", compiler_version=['<', '17.0'])
+    @skipIf(compiler="clang", compiler_version=["<", "17.0"])
+    @skipUnlessDarwin
     def test(self):
         self.build()
 
@@ -23,8 +24,8 @@ class TestSharedPtr(TestBase):
         self.expect_expr(
             "w",
             result_type="std::weak_ptr<int>",
-            result_summary="3 strong=1 weak=2",
-            result_children=[ValueCheck(name="__ptr_")],
+            result_summary="3 strong=1 weak=1",
+            result_children=[ValueCheck(name="pointer")],
         )
         self.expect_expr("*w.lock()", result_type="element_type", result_value="3")
         self.expect_expr("*w.lock() = 5", result_type="element_type", result_value="5")

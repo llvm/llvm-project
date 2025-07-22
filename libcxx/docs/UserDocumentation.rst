@@ -82,6 +82,8 @@ when ``-fexperimental-library`` is passed:
       version has shipped. The full policy is explained :ref:`here <experimental features>`.
 
 
+.. _libcxx-configuration-macros:
+
 Libc++ Configuration Macros
 ===========================
 
@@ -111,11 +113,6 @@ enable or disable extended libc++ behavior.
   not support the ``-fexperimental-library`` flag. When used, users also need to
   ensure that the appropriate experimental library (usually ``libc++experimental.a``)
   is linked into their program.
-
-**_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS**:
-  This macro is used to enable -Wthread-safety annotations on libc++'s
-  ``std::mutex`` and ``std::lock_guard``. By default, these annotations are
-  disabled and must be manually enabled by the user.
 
 **_LIBCPP_HARDENING_MODE**:
   This macro is used to choose the :ref:`hardening mode <using-hardening-modes>`.

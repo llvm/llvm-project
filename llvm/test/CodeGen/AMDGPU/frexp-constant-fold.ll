@@ -108,8 +108,8 @@ define { <2 x float>, <2 x i32> } @frexp_zero_negzero_vector() {
 ; CHECK-LABEL: frexp_zero_negzero_vector:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_bfrev_b32_e32 v1, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    v_bfrev_b32_e32 v1, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]

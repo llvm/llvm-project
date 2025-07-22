@@ -316,6 +316,15 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_powr(__CLC_GENTYPE x,
     const __CLC_GENTYPE lnof2_by_64_head = 0.010830424260348081;
     const __CLC_GENTYPE lnof2_by_64_tail = -4.359010638708991e-10;
 
+    // If v is so large that we need to return INFINITY, or so small that we
+    // need to return 0, set v to known values that will produce that result. Do
+    // not try to continue the computation with the original v and patch it up
+    // afterwards because v may be so large that temp is out of range of int, in
+    // which case that conversion, and a value based on that conversion being
+    // passed to __clc_ldexp, results in undefined behavior.
+    v = v > max_exp_arg ? 1000.0 : v;
+    v = v < min_exp_arg ? -1000.0 : v;
+
     __CLC_GENTYPE temp = v * sixtyfour_by_lnof2;
     __CLC_INTN n = __CLC_CONVERT_INTN(temp);
     __CLC_GENTYPE dn = __CLC_CONVERT_GENTYPE(n);
@@ -343,10 +352,6 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_powr(__CLC_GENTYPE x,
 
     expv = __clc_fma(f, q, f2) + f1;
     expv = __clc_ldexp(expv, m);
-
-    expv = v > max_exp_arg ? __CLC_AS_GENTYPE((__CLC_ULONGN)0x7FF0000000000000L)
-                           : expv;
-    expv = v < min_exp_arg ? 0.0 : expv;
   }
 
   // See whether y is an integer.

@@ -129,6 +129,12 @@ enum class EmbedResult {
   Empty = 2,    // Corresponds to __STDC_EMBED_EMPTY__
 };
 
+struct CXXStandardLibraryVersionInfo {
+  enum Library { Unknown, LibStdCXX };
+  Library Lib;
+  std::uint64_t Version;
+};
+
 /// Engages in a tight little dance with the lexer to efficiently
 /// preprocess tokens.
 ///
@@ -343,6 +349,9 @@ private:
 
   /// Whether the last token we lexed was an '@'.
   bool LastTokenWasAt = false;
+
+  /// First pp-token source location in current translation unit.
+  SourceLocation FirstPPTokenLoc;
 
   /// A position within a C++20 import-seq.
   class StdCXXImportSeq {
@@ -1760,6 +1769,13 @@ public:
   std::optional<LexEmbedParametersResult> LexEmbedParameters(Token &Current,
                                                              bool ForHasEmbed);
 
+  /// Get the start location of the first pp-token in main file.
+  SourceLocation getMainFileFirstPPTokenLoc() const {
+    assert(FirstPPTokenLoc.isValid() &&
+           "Did not see the first pp-token in the main file");
+    return FirstPPTokenLoc;
+  }
+
   bool LexAfterModuleImport(Token &Result);
   void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);
 
@@ -2279,10 +2295,43 @@ public:
     }
   }
 
-  /// Determine whether the next preprocessor token to be
-  /// lexed is a '('.  If so, consume the token and return true, if not, this
+  /// Check whether the next pp-token is one of the specificed token kind. this
   /// method should have no observable side-effect on the lexed tokens.
-  bool isNextPPTokenLParen();
+  template <typename... Ts> bool isNextPPTokenOneOf(Ts... Ks) {
+    static_assert(sizeof...(Ts) > 0,
+                  "requires at least one tok::TokenKind specified");
+    // Do some quick tests for rejection cases.
+    std::optional<Token> Val;
+    if (CurLexer)
+      Val = CurLexer->peekNextPPToken();
+    else
+      Val = CurTokenLexer->peekNextPPToken();
+
+    if (!Val) {
+      // We have run off the end.  If it's a source file we don't
+      // examine enclosing ones (C99 5.1.1.2p4).  Otherwise walk up the
+      // macro stack.
+      if (CurPPLexer)
+        return false;
+      for (const IncludeStackInfo &Entry : llvm::reverse(IncludeMacroStack)) {
+        if (Entry.TheLexer)
+          Val = Entry.TheLexer->peekNextPPToken();
+        else
+          Val = Entry.TheTokenLexer->peekNextPPToken();
+
+        if (Val)
+          break;
+
+        // Ran off the end of a source file?
+        if (Entry.ThePPLexer)
+          return false;
+      }
+    }
+
+    // Okay, we found the token and return.  Otherwise we found the end of the
+    // translation unit.
+    return Val->isOneOf(Ks...);
+  }
 
 private:
   /// Identifiers used for SEH handling in Borland. These are only
@@ -2706,6 +2755,15 @@ private:
     return IsFileLexer(CurLexer.get(), CurPPLexer);
   }
 
+  //===--------------------------------------------------------------------===//
+  // Standard Library Identification
+  std::optional<CXXStandardLibraryVersionInfo> CXXStandardLibraryVersion;
+
+public:
+  std::optional<std::uint64_t> getStdLibCxxVersion();
+  bool NeedsStdLibCxxWorkaroundBefore(std::uint64_t FixedVersion);
+
+private:
   //===--------------------------------------------------------------------===//
   // Caching stuff.
   void CachingLex(Token &Result);

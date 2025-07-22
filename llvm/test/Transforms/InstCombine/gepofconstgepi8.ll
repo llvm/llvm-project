@@ -282,7 +282,7 @@ define ptr @test_scalable(ptr %base, i64 %a) {
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 -4
 ; CHECK-NEXT:    [[INDEX:%.*]] = add i64 [[A]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[P2_IDX:%.*]] = mul i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P1]], i64 [[P2_IDX]]
 ; CHECK-NEXT:    ret ptr [[P2]]

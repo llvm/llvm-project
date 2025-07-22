@@ -322,6 +322,15 @@ lto_symbol_attributes lto_module_get_symbol_attribute(lto_module_t mod,
   return unwrap(mod)->getSymbolAttributes(index);
 }
 
+unsigned int lto_module_get_num_asm_undef_symbols(lto_module_t mod) {
+  return unwrap(mod)->getAsmUndefSymbolCount();
+}
+
+const char *lto_module_get_asm_undef_symbol_name(lto_module_t mod,
+                                                 unsigned int index) {
+  return unwrap(mod)->getAsmUndefSymbolName(index).data();
+}
+
 const char* lto_module_get_linkeropts(lto_module_t mod) {
   return unwrap(mod)->getLinkerOpts().data();
 }

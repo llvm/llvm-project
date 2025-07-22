@@ -8,7 +8,7 @@
 
 #include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/math/tanf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -24,7 +24,7 @@ using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcTanfTest, SpecialNumbers) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::tanf(aNaN));
   EXPECT_MATH_ERRNO(0);

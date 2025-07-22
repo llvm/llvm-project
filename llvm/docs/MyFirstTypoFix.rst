@@ -360,7 +360,7 @@ changed.
 Within a few days, someone should start the review. They may add
 themselves as a reviewer, or simply start leaving comments. You'll get
 another email any time the review is updated. For more detail see the
-:ref:`Code Review Poilicy <code_review_policy>`.
+:ref:`Code Review Policy <code_review_policy>`.
 
 Comments
 ~~~~~~~~

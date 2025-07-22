@@ -17,36 +17,40 @@ frameInfo:
 body:             |
   ; CHECK-LABEL: name: pluto
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   liveins: $w1, $x0, $x2
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-  ; CHECK:   [[COPY1:%[0-9]+]]:gpr32sp = COPY $w1
-  ; CHECK:   [[COPY2:%[0-9]+]]:gpr64sp = COPY $x2
-  ; CHECK:   [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-  ; CHECK:   [[COPY3:%[0-9]+]]:fpr32 = COPY [[DEF]]
-  ; CHECK:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 872415232
-  ; CHECK:   [[COPY4:%[0-9]+]]:fpr32 = COPY [[MOVi32imm]]
-  ; CHECK:   FCMPSrr [[COPY3]], [[COPY4]], implicit-def $nzcv, implicit $fpcr
-  ; CHECK:   [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 13, implicit $nzcv
-  ; CHECK:   [[SUBWri:%[0-9]+]]:gpr32common = SUBWri [[COPY1]], 1, 0
-  ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[SUBWri]], %subreg.sub_32
-  ; CHECK:   [[COPY5:%[0-9]+]]:fpr32 = COPY [[DEF]]
-  ; CHECK:   FCMPSrr [[COPY5]], [[COPY4]], implicit-def $nzcv, implicit $fpcr
-  ; CHECK:   [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 12, implicit $nzcv
-  ; CHECK:   [[EORWrr:%[0-9]+]]:gpr32 = EORWrr [[CSINCWr]], [[CSINCWr1]]
-  ; CHECK:   TBNZW [[EORWrr]], 0, %bb.2
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[SUBREG_TO_REG]], 60, 59
-  ; CHECK:   [[LDRSroX:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], [[UBFMXri]], 0, 0 :: (load (s32))
-  ; CHECK:   [[COPY6:%[0-9]+]]:fpr32 = COPY [[DEF]]
-  ; CHECK:   [[FMULSrr:%[0-9]+]]:fpr32 = FMULSrr [[COPY6]], [[LDRSroX]], implicit $fpcr
-  ; CHECK:   [[COPY7:%[0-9]+]]:fpr32 = COPY [[DEF]]
-  ; CHECK:   [[FADDSrr:%[0-9]+]]:fpr32 = FADDSrr [[FMULSrr]], [[COPY7]], implicit $fpcr
-  ; CHECK:   STRSui [[FADDSrr]], [[COPY2]], 0 :: (store (s32))
-  ; CHECK: bb.2:
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $w1, $x0, $x2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32sp = COPY $w1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr64sp = COPY $x2
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:fpr32 = COPY [[DEF]]
+  ; CHECK-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 872415232
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:fpr32 = COPY [[MOVi32imm]]
+  ; CHECK-NEXT:   FCMPSrr [[COPY3]], [[COPY4]], implicit-def $nzcv, implicit $fpcr
+  ; CHECK-NEXT:   [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 13, implicit $nzcv
+  ; CHECK-NEXT:   [[SUBWri:%[0-9]+]]:gpr32common = SUBWri [[COPY1]], 1, 0
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[SUBWri]], %subreg.sub_32
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:fpr32 = COPY [[DEF]]
+  ; CHECK-NEXT:   FCMPSrr [[COPY5]], [[COPY4]], implicit-def $nzcv, implicit $fpcr
+  ; CHECK-NEXT:   [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 12, implicit $nzcv
+  ; CHECK-NEXT:   [[EORWrr:%[0-9]+]]:gpr32 = EORWrr [[CSINCWr]], [[CSINCWr1]]
+  ; CHECK-NEXT:   TBNZW [[EORWrr]], 0, %bb.2
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[SUBREG_TO_REG]], 60, 59
+  ; CHECK-NEXT:   [[LDRSroX:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], [[UBFMXri]], 0, 0 :: (load (s32))
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:fpr32 = COPY [[DEF]]
+  ; CHECK-NEXT:   [[FMULSrr:%[0-9]+]]:fpr32 = FMULSrr [[COPY6]], [[LDRSroX]], implicit $fpcr
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:fpr32 = COPY [[DEF]]
+  ; CHECK-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = FADDSrr [[FMULSrr]], [[COPY7]], implicit $fpcr
+  ; CHECK-NEXT:   STRSui [[FADDSrr]], [[COPY2]], 0 :: (store (s32))
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.1:
     liveins: $w1, $x0, $x2
 

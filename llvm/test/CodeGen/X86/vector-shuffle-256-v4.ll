@@ -861,8 +861,7 @@ define <4 x double> @shuffle_v4f64_2345_0567_select(<4 x double> %vec1, <4 x dou
 define <4 x double> @shuffle_v4f64_1436_split_load(ptr %px, ptr %py) {
 ; AVX1-LABEL: shuffle_v4f64_1436_split_load:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovapd (%rsi), %xmm0
-; AVX1-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX1-NEXT:    vmovupd (%rdi), %ymm1
 ; AVX1-NEXT:    vinsertf128 $1, 16(%rsi), %ymm0, %ymm0
 ; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm1[1],ymm0[1],ymm1[3],ymm0[2]
@@ -2377,33 +2376,21 @@ define <4 x i64> @shuffle_v4i64_0zzz_pgso(<4 x i64> %a) !prof !14 {
 }
 
 define <8 x float> @shuffle_v8f32_0zzzzzzz_pgso(<8 x float> %a) !prof !14 {
-; AVX1OR2-LABEL: shuffle_v8f32_0zzzzzzz_pgso:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX1OR2-NEXT:    retq
-;
-; AVX512VL-LABEL: shuffle_v8f32_0zzzzzzz_pgso:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: shuffle_v8f32_0zzzzzzz_pgso:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; ALL-NEXT:    retq
   %b = shufflevector <8 x float> %a, <8 x float> zeroinitializer, <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <8 x float> %b
 }
 
 define <8 x i32> @shuffle_v8i32_0zzzzzzz_pgso(<8 x i32> %a) !prof !14 {
-; AVX1OR2-LABEL: shuffle_v8i32_0zzzzzzz_pgso:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX1OR2-NEXT:    retq
-;
-; AVX512VL-LABEL: shuffle_v8i32_0zzzzzzz_pgso:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: shuffle_v8i32_0zzzzzzz_pgso:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; ALL-NEXT:    retq
   %b = shufflevector <8 x i32> %a, <8 x i32> zeroinitializer, <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i32> %b
 }
