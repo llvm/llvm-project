@@ -252,17 +252,17 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
       // This gets decoded and converted into the actual type signature in
       // WebAssemblyMCInstLower.cpp.
       SmallVector<MVT, 4> Params;
-      SmallVector<MVT, 1> Results;
+      SmallVector<MVT, 1> Returns;
 
       MVT VT = Node->getOperand(2).getValueType().getSimpleVT();
       if (VT != MVT::Untyped) {
-        Params.push_back(VT);
+        Returns.push_back(VT);
       }
       for (unsigned I = 3; I < Node->getNumOperands(); ++I) {
         MVT VT = Node->getOperand(I).getValueType().getSimpleVT();
-        Results.push_back(VT);
+        Params.push_back(VT);
       }
-      auto Sig = encodeFunctionSignature(CurDAG, DL, Params, Results);
+      auto Sig = encodeFunctionSignature(CurDAG, DL, Params, Returns);
 
       auto SigOp = CurDAG->getTargetConstant(
           Sig, DL, EVT::getIntegerVT(*CurDAG->getContext(), Sig.getBitWidth()));

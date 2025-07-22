@@ -182,7 +182,7 @@ WebAssemblyMCInstLower::lowerEncodedFunctionSignature(const APInt &Sig) const {
   for (int I = 0; I < NReturns; I++) {
     Returns.push_back(static_cast<wasm::ValType>(GetWord()));
   }
-  return lowerTypeIndexOperand(std::move(Params), std::move(Returns));
+  return lowerTypeIndexOperand(std::move(Returns), std::move(Params));
 }
 
 static void getFunctionReturns(const MachineInstr *MI,
