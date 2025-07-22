@@ -1806,7 +1806,6 @@ static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           "MSVC STL std::u32string summary provider"));
 
   stl_summary_flags.SetDontShowChildren(false);
-  stl_summary_flags.SetSkipPointers(false);
 
   AddCXXSynthetic(cpp_category_sp, MsvcStlAtomicSyntheticFrontEndCreator,
                   "MSVC STL std::atomic synthetic children",
