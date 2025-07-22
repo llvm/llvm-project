@@ -125,6 +125,7 @@ Limitations
 When :option:`IgnoreAliasing` is set to `false`, there are cases where
 Clang has not preserved the type alias and the underlying type will be used so
 false positives may occur.
+
 For example:
 
 .. code-block:: c++
