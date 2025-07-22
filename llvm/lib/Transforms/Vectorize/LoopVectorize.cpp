@@ -2539,7 +2539,7 @@ struct CSEDenseMapInfo {
 
 } // end anonymous namespace
 
-///Perform cse of induction variable instructions.
+/// Perform cse of induction variable instructions, casts and selects.
 static void cse(BasicBlock *BB) {
   // Perform simple cse.
   SmallDenseMap<Instruction *, Instruction *, 4, CSEDenseMapInfo> CSEMap;
