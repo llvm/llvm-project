@@ -255,6 +255,9 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
       SmallVector<MVT, 4> Returns;
 
       bool IsParam = false;
+      // Operand 0 is the return register, Operand 1 is the function pointer.
+      // The remaining operands encode the type of the function we are testing
+      // for.
       for (unsigned I = 2, E = Node->getNumOperands(); I < E; ++I) {
         MVT VT = Node->getOperand(I).getValueType().getSimpleVT();
         if (VT == MVT::Untyped) {
