@@ -75,8 +75,7 @@ define void @prefetch_frameindex_test_neg() nounwind {
 ; RV64XMIPSPREFETCH-NEXT:    add sp, sp, a0
 ; RV64XMIPSPREFETCH-NEXT:    ret
   %data = alloca [1024 x i32], align 4
-  %base = bitcast ptr %data to ptr
-  %ptr = getelementptr [127 x i32], ptr %base, i32 0, i32 127
+  %ptr = getelementptr [1024 x i32], ptr %data, i32 0, i32 127
   call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 1)
   ret void
 }
