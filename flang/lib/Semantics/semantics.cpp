@@ -376,8 +376,7 @@ const DeclTypeSpec &SemanticsContext::MakeLogicalType(int kind) {
 }
 
 bool SemanticsContext::AnyFatalError() const {
-  return !messages_.empty() &&
-      (warningsAreErrors_ || messages_.AnyFatalError());
+  return messages_.AnyFatalError(warningsAreErrors_);
 }
 bool SemanticsContext::HasError(const Symbol &symbol) {
   return errorSymbols_.count(symbol) > 0;
@@ -658,7 +657,7 @@ void Semantics::EmitMessages(llvm::raw_ostream &os) {
   context_.messages().ResolveProvenances(context_.allCookedSources());
   context_.messages().Emit(os, context_.allCookedSources(),
       /*echoSourceLine=*/true, &context_.languageFeatures(),
-      /*maxErrorsToEmit=*/context_.maxErrors());
+      context_.maxErrors(), context_.warningsAreErrors());
 }
 
 void SemanticsContext::DumpSymbols(llvm::raw_ostream &os) {

@@ -1470,7 +1470,6 @@ bool allowIndex(CodeCompletionContext &CC) {
   switch (NameSpec->getKind()) {
   case NestedNameSpecifier::Global:
   case NestedNameSpecifier::Namespace:
-  case NestedNameSpecifier::NamespaceAlias:
     return true;
   case NestedNameSpecifier::Super:
   case NestedNameSpecifier::TypeSpec:

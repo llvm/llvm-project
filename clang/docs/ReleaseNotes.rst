@@ -36,7 +36,7 @@ Potentially Breaking Changes
 
 - The Objective-C ARC migrator (ARCMigrate) has been removed.
 - Fix missing diagnostics for uses of declarations when performing typename access,
-  such as when performing member access on a '[[deprecated]]' type alias.
+  such as when performing member access on a ``[[deprecated]]`` type alias.
   (#GH58547)
 - For ARM targets when compiling assembly files, the features included in the selected CPU
   or Architecture's FPU are included. If you wish not to use a specific feature,
@@ -46,6 +46,7 @@ Potentially Breaking Changes
   ``endbr64`` instruction at the labels named as possible branch
   destinations, so it is not safe to use a register-controlled branch
   instruction to branch to one. (In line with gcc.)
+- Added a sugar type `PredefinedSugarType` to improve diagnostic messages. (#GH143653)
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -75,6 +76,10 @@ C++ Specific Potentially Breaking Changes
   `"struct hack" <https://wg21.link/CWG400>`_. Invalid member using-declaration
   whose nested-name-specifier doesn't refer to a base class such as
   ``using CurrentClass::Foo;`` is now rejected in C++98 mode.
+
+- For C++20 modules, the Reduced BMI mode will be the default option. This may introduce
+  regressions if your build system supports two-phase compilation model but haven't support
+  reduced BMI or it is a compiler bug or a bug in users code.
 
 ABI Changes in This Version
 ---------------------------
@@ -674,7 +679,7 @@ Improvements to Clang's diagnostics
   #GH142457, #GH139913, #GH138850, #GH137867, #GH137860, #GH107840, #GH93308,
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
-  
+
 - Clang no longer emits a spurious -Wdangling-gsl warning in C++23 when
   iterating over an element of a temporary container in a range-based
   for loop.(#GH109793, #GH145164)
@@ -709,6 +714,12 @@ Improvements to Clang's diagnostics
   the ``[[noreturn]]`` attribute when the function body is ended with a call via
   pointer, provided it can be proven that the pointer only points to
   ``[[noreturn]]`` functions.
+
+- Added a separate diagnostic group ``-Wfunction-effect-redeclarations``, for the more pedantic
+  diagnostics for function effects (``[[clang::nonblocking]]`` and ``[[clang::nonallocating]]``).
+  Moved the warning for a missing (though implied) attribute on a redeclaration into this group.
+  Added a new warning in this group for the case where the attribute is missing/implicit on
+  an override of a virtual method.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -800,6 +811,9 @@ Bug Fixes in This Version
   declaration statements. Clang now emits a warning for these patterns. (#GH141659)
 - Fixed false positives for redeclaration errors of using enum in
   nested scopes. (#GH147495)
+- Fixed a failed assertion with an operator call expression which comes from a
+  macro expansion when performing analysis for nullability attributes. (#GH138371)
+- Fixed a concept equivalent checking crash due to untransformed constraint expressions. (#GH146614)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -953,6 +967,7 @@ Bug Fixes to C++ Support
 - Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
 - Correctly handles calling an explicit object member function template overload set
   through its address (``(&Foo::bar<baz>)()``).
+- Fix a crash when using an explicit object parameter in a non-member function. (#GH113185)
 - Fix a crash when forming an invalid call to an operator with an explicit object member. (#GH147121)
 - Correctly handle allocations in the condition of a ``if constexpr``.(#GH120197) (#GH134820)
 - Fixed a crash when handling invalid member using-declaration in C++20+ mode. (#GH63254)
@@ -966,6 +981,8 @@ Bug Fixes to C++ Support
 - Fix a crash with NTTP when instantiating local class.
 - Fixed a crash involving list-initialization of an empty class with a
   non-empty initializer list. (#GH147949)
+- Fixed constant evaluation of equality comparisons of constexpr-unknown references. (#GH147663)
+- Diagnose binding a reference to ``*nullptr`` during constant evaluation. (#GH48665)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1142,6 +1159,8 @@ Fixed Point Support in Clang
 AST Matchers
 ------------
 
+- Ensure ``hasBitWidth`` doesn't crash on bit widths that are dependent on template
+  parameters.
 - Ensure ``isDerivedFrom`` matches the correct base in case more than one alias exists.
 - Extend ``templateArgumentCountIs`` to support function and variable template
   specialization.
@@ -1193,6 +1212,8 @@ Static Analyzer
 ---------------
 - Fixed a crash when C++20 parenthesized initializer lists are used. This issue
   was causing a crash in clang-tidy. (#GH136041)
+- The Clang Static Analyzer now handles parenthesized initialization.
+  (#GH148875)
 
 New features
 ^^^^^^^^^^^^
