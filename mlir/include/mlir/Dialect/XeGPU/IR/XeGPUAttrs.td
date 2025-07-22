@@ -174,6 +174,17 @@ def LayoutTrait: AttrInterface<"LayoutTrait"> {
   let description = [{
     Common trait for all XeGPU layouts.
   }];
+
+  let methods = [
+    InterfaceMethod<"Get the effective sg layout",
+                    "std::optional<llvm::SmallVector<int>>",
+                    "getEffectiveSgLayout">,
+    InterfaceMethod<"Get the effective sg data",
+                    "std::optional<llvm::SmallVector<int>>",
+                    "getEffectiveSgData">,
+  ];
+
+
 }
 
 def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [LayoutTrait]> {
@@ -331,6 +342,18 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [LayoutTrait]> {
       return LayoutAttr::get(getContext(), getSgLayout(), getSgData(), nullptr,
                              getLaneLayout(), getLaneData(), getOrder());
     }
+
+    std::optional<llvm::SmallVector<int32_t>> getEffectiveSgLayout() const {
+      if (DenseI32ArrayAttr layout = getSgLayout())
+        return llvm::to_vector(layout.asArrayRef());
+      return std::nullopt;
+    }
+
+    std::optional<llvm::SmallVector<int32_t>> getEffectiveSgData() const {
+      if (DenseI32ArrayAttr data = getSgData())
+        return llvm::to_vector(data.asArrayRef());
+      return std::nullopt;
+    }
   }];
 
   let assemblyFormat = "`<` struct(params) `>`";
@@ -351,11 +374,40 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
   }];
 
   let parameters = (ins
-    "Attribute": $parent,
+    "xegpu::LayoutAttr": $parent,
     "DenseI64ArrayAttr": $dims
   );
 
+  let extraClassDeclaration = [{
+    std::optional<llvm::SmallVector<int32_t>> getEffectiveSgLayout() const {
+      if (DenseI32ArrayAttr layout = getParent().getSgLayout()) {
+        llvm::ArrayRef<int64_t> dims = getDims().asArrayRef();
+        llvm::SmallVector<int32_t> result;
+        for (auto [i, v]: llvm::enumerate(layout.asArrayRef())) {
+          if (!llvm::is_contained(dims, i))
+            result.push_back(v);
+        }
+        return result;
+      }
+      return std::nullopt;
+    }
+    std::optional<llvm::SmallVector<int32_t>> getEffectiveSgData() const {
+      if (DenseI32ArrayAttr data = getParent().getSgData()) {
+        llvm::ArrayRef<int64_t> dims = getDims().asArrayRef();
+        llvm::SmallVector<int32_t> result;
+        for (auto [i, v]: llvm::enumerate(data.asArrayRef())) {
+          if (!llvm::is_contained(dims, i))
+            result.push_back(v);
+        }
+        return result;
+      }
+      return std::nullopt;
+
+    }
+  }];
+
   let assemblyFormat = "`<` $parent `,` `dim` `=` $dims `>`";
+  let genVerifyDecl = 1;
 }
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUATTRS_TD
