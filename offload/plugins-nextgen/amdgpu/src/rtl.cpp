@@ -2232,17 +2232,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Get the stream of the asynchronous info structure or get a new one.
   Error getStream(AsyncInfoWrapperTy &AsyncInfoWrapper,
                   AMDGPUStreamTy *&Stream) {
-    std::lock_guard<std::mutex> StreamLock{StreamMutex};
-    // Get the stream (if any) from the async info.
-    Stream = AsyncInfoWrapper.getQueueAs<AMDGPUStreamTy *>();
-    if (!Stream) {
-      // There was no stream; get an idle one.
-      if (auto Err = AMDGPUStreamManager.getResource(Stream))
-        return Err;
-
-      // Modify the async info's stream.
-      AsyncInfoWrapper.setQueueAs<AMDGPUStreamTy *>(Stream);
-    }
+    auto WrapperStream =
+        AsyncInfoWrapper.getOrInitQueue<AMDGPUStreamTy *>(AMDGPUStreamManager);
+    if (!WrapperStream)
+      return WrapperStream.takeError();
+    Stream = *WrapperStream;
     return Plugin::success();
   }
 
@@ -3072,9 +3066,6 @@ private:
   /// True is the system is configured with XNACK-Enabled.
   /// False otherwise.
   bool IsXnackEnabled = false;
-
-  /// Mutex to guard getting/setting the stream
-  std::mutex StreamMutex;
 };
 
 Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {

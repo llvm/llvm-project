@@ -60,6 +60,7 @@ struct GenericPluginTy;
 struct GenericKernelTy;
 struct GenericDeviceTy;
 struct RecordReplayTy;
+template <typename ResourceRef> class GenericDeviceResourceManagerTy;
 
 namespace Plugin {
 /// Create a success error. This is the same as calling Error::success(), but
@@ -127,6 +128,20 @@ struct AsyncInfoWrapperTy {
     AsyncInfoPtr->Queue = Queue;
   }
 
+  /// Get the queue, using the provided resource manager to initialise it if it
+  /// doesn't exist.
+  template <typename Ty, typename RMTy>
+  Expected<Ty>
+  getOrInitQueue(GenericDeviceResourceManagerTy<RMTy> &ResourceManager) {
+    std::lock_guard<std::mutex> Lock(AsyncInfoPtr->Mutex);
+    if (!AsyncInfoPtr->Queue) {
+      if (auto Err = ResourceManager.getResource(
+              *reinterpret_cast<Ty *>(&AsyncInfoPtr->Queue)))
+        return Err;
+    }
+    return getQueueAs<Ty>();
+  }
+
   /// Synchronize with the __tgt_async_info's pending operations if it's the
   /// internal async info. The error associated to the asynchronous operations
   /// issued in this queue must be provided in \p Err. This function will update
@@ -138,7 +153,7 @@ struct AsyncInfoWrapperTy {
   /// Register \p Ptr as an associated allocation that is freed after
   /// finalization.
   void freeAllocationAfterSynchronization(void *Ptr) {
-    std::lock_guard<std::mutex> AllocationGuard{AsyncInfoPtr->AllocationsMutex};
+    std::lock_guard<std::mutex> AllocationGuard{AsyncInfoPtr->Mutex};
     AsyncInfoPtr->AssociatedAllocations.push_back(Ptr);
   }
 

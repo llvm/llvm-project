@@ -522,17 +522,11 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
   /// Get the stream of the asynchronous info structure or get a new one.
   Error getStream(AsyncInfoWrapperTy &AsyncInfoWrapper, CUstream &Stream) {
-    std::lock_guard<std::mutex> StreamLock{StreamMutex};
-    // Get the stream (if any) from the async info.
-    Stream = AsyncInfoWrapper.getQueueAs<CUstream>();
-    if (!Stream) {
-      // There was no stream; get an idle one.
-      if (auto Err = CUDAStreamManager.getResource(Stream))
-        return Err;
-
-      // Modify the async info's stream.
-      AsyncInfoWrapper.setQueueAs<CUstream>(Stream);
-    }
+    auto WrapperStream =
+        AsyncInfoWrapper.getOrInitQueue<CUstream>(CUDAStreamManager);
+    if (!WrapperStream)
+      return WrapperStream.takeError();
+    Stream = *WrapperStream;
     return Plugin::success();
   }
 
@@ -1293,9 +1287,6 @@ private:
   /// The maximum number of warps that can be resident on all the SMs
   /// simultaneously.
   uint32_t HardwareParallelism = 0;
-
-  /// Mutex to guard getting/setting the stream
-  std::mutex StreamMutex;
 };
 
 Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,

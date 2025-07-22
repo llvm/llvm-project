@@ -1337,7 +1337,7 @@ Error PinnedAllocationMapTy::unlockUnmappedHostBuffer(void *HstPtr) {
 
 Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo,
                                    bool RemoveQueue) {
-  std::lock_guard<std::mutex> AllocationGuard{AsyncInfo->AllocationsMutex};
+  std::lock_guard<std::mutex> AllocationGuard{AsyncInfo->Mutex};
 
   if (!AsyncInfo || !AsyncInfo->Queue)
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
