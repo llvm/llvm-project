@@ -1,4 +1,5 @@
 // Test archive member recognition by name (ELF format)
+// UNSUPPORTED: target={{.*}}-aix{{.*}}
 
 // Generate object files from YAML
 // RUN: yaml2obj -o %t-1.o %S/Inputs/big-archive-elf-1.yaml
