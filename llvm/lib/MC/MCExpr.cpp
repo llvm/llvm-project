@@ -324,7 +324,7 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
     // symbols is limited to specific cases where the fragments between two
     // symbols (including the fragments the symbols are defined in) are
     // fixed-size fragments so the difference can be calculated. For example,
-    // this is important when the Subtarget is changed and a new MCDataFragment
+    // this is important when the Subtarget is changed and a new MCFragment
     // is created in the case of foo: instr; .arch_extension ext; instr .if . -
     // foo.
     if (SA.isVariable() || SB.isVariable())
@@ -352,7 +352,7 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
     // the linker.
     bool BBeforeRelax = false, AAfterRelax = false;
     for (auto F = FB; F; F = F->getNext()) {
-      auto DF = dyn_cast<MCDataFragment>(F);
+      auto DF = F->getKind() == MCFragment::FT_Data ? F : nullptr;
       if (DF && DF->isLinkerRelaxable()) {
         if (&*F != FB || SBOffset != DF->getContents().size())
           BBeforeRelax = true;
@@ -370,20 +370,17 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
       }
 
       int64_t Num;
-      unsigned Count;
       if (DF) {
         Displacement += DF->getContents().size();
-      } else if (auto *RF = dyn_cast<MCRelaxableFragment>(F);
-                 RF && Asm->hasFinalLayout()) {
+      } else if (F->getKind() == MCFragment::FT_Relaxable &&
+                 Asm->hasFinalLayout()) {
         // Before finishLayout, a relaxable fragment's size is indeterminate.
         // After layout, during relocation generation, it can be treated as a
         // data fragment.
-        Displacement += RF->getContents().size();
-      } else if (auto *AF = dyn_cast<MCAlignFragment>(F);
-                 AF && Layout && AF->hasEmitNops() &&
-                 !Asm->getBackend().shouldInsertExtraNopBytesForCodeAlign(
-                     *AF, Count)) {
-        Displacement += Asm->computeFragmentSize(*AF);
+        Displacement += F->getSize();
+      } else if (F->getKind() == MCFragment::FT_Align && Layout &&
+                 F->isLinkerRelaxable()) {
+        Displacement += Asm->computeFragmentSize(*F);
       } else if (auto *FF = dyn_cast<MCFillFragment>(F);
                  FF && FF->getNumValues().evaluateAsAbsolute(Num)) {
         Displacement += Num * FF->getValueSize();

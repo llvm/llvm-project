@@ -786,10 +786,7 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
     break;
   case ISD::LIFETIME_START:
   case ISD::LIFETIME_END:
-    if (cast<LifetimeSDNode>(N)->hasOffset()) {
-      ID.AddInteger(cast<LifetimeSDNode>(N)->getSize());
-      ID.AddInteger(cast<LifetimeSDNode>(N)->getOffset());
-    }
+    ID.AddInteger(cast<LifetimeSDNode>(N)->getSize());
     break;
   case ISD::PSEUDO_PROBE:
     ID.AddInteger(cast<PseudoProbeSDNode>(N)->getGuid());
@@ -3036,7 +3033,7 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
       return TLI->isSplatValueForTargetNode(V, DemandedElts, UndefElts, *this,
                                             Depth);
     break;
-}
+  }
 
   // We don't support other cases than those above for scalable vectors at
   // the moment.
@@ -5544,6 +5541,8 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::USUBSAT:
   case ISD::MULHU:
   case ISD::MULHS:
+  case ISD::ABDU:
+  case ISD::ABDS:
   case ISD::SMIN:
   case ISD::SMAX:
   case ISD::UMIN:
@@ -5569,6 +5568,12 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BUILD_VECTOR:
   case ISD::BUILD_PAIR:
   case ISD::SPLAT_VECTOR:
+  case ISD::FABS:
+    return false;
+
+  case ISD::ABS:
+    // ISD::ABS defines abs(INT_MIN) -> INT_MIN and never generates poison.
+    // Different to Intrinsic::abs.
     return false;
 
   case ISD::ADDC:
@@ -6745,7 +6750,9 @@ SDValue SelectionDAG::FoldSymbolOffset(unsigned Opcode, EVT VT,
     return SDValue();
   int64_t Offset = C2->getSExtValue();
   switch (Opcode) {
-  case ISD::ADD: break;
+  case ISD::ADD:
+  case ISD::PTRADD:
+    break;
   case ISD::SUB: Offset = -uint64_t(Offset); break;
   default: return SDValue();
   }
@@ -9354,7 +9361,7 @@ SDValue SelectionDAG::getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
 
 SDValue SelectionDAG::getLifetimeNode(bool IsStart, const SDLoc &dl,
                                       SDValue Chain, int FrameIndex,
-                                      int64_t Size, int64_t Offset) {
+                                      int64_t Size) {
   const unsigned Opcode = IsStart ? ISD::LIFETIME_START : ISD::LIFETIME_END;
   const auto VTs = getVTList(MVT::Other);
   SDValue Ops[2] = {
@@ -9367,13 +9374,12 @@ SDValue SelectionDAG::getLifetimeNode(bool IsStart, const SDLoc &dl,
   AddNodeIDNode(ID, Opcode, VTs, Ops);
   ID.AddInteger(FrameIndex);
   ID.AddInteger(Size);
-  ID.AddInteger(Offset);
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP))
     return SDValue(E, 0);
 
-  LifetimeSDNode *N = newSDNode<LifetimeSDNode>(
-      Opcode, dl.getIROrder(), dl.getDebugLoc(), VTs, Size, Offset);
+  LifetimeSDNode *N = newSDNode<LifetimeSDNode>(Opcode, dl.getIROrder(),
+                                                dl.getDebugLoc(), VTs, Size);
   createOperands(N, Ops);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
@@ -13867,6 +13873,8 @@ void SelectionDAG::copyExtraInfo(SDNode *From, SDNode *To) {
     return;
   }
 
+  const SDNode *EntrySDN = getEntryNode().getNode();
+
   // We need to copy NodeExtraInfo to all _new_ nodes that are being introduced
   // through the replacement of From with To. Otherwise, replacements of a node
   // (From) with more complex nodes (To and its operands) may result in lost
@@ -13898,9 +13906,14 @@ void SelectionDAG::copyExtraInfo(SDNode *From, SDNode *To) {
       return true;
     if (!Visited.insert(N).second)
       return true;
-    if (getEntryNode().getNode() == N)
+    if (EntrySDN == N)
       return false;
     for (const SDValue &Op : N->op_values()) {
+      if (N == To && Op.getNode() == EntrySDN) {
+        // Special case: New node's operand is the entry node; just need to
+        // copy extra info to new node.
+        break;
+      }
       if (!Self(Self, Op.getNode()))
         return false;
     }

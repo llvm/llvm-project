@@ -778,7 +778,7 @@ public:
   }
   void Unparse(const SubstringInquiry &x) {
     Walk(x.v);
-    Put(x.source.end()[-1] == 'n' ? "%LEN" : "%KIND");
+    Put(x.source.back() == 'n' ? "%LEN" : "%KIND");
   }
   void Unparse(const SubstringRange &x) { // R910
     Walk(x.t, ":");
@@ -3007,8 +3007,15 @@ public:
   WALK_NESTED_ENUM(OmpPrescriptiveness, Value) // OMP prescriptiveness
   WALK_NESTED_ENUM(OmpMapType, Value) // OMP map-type
   WALK_NESTED_ENUM(OmpMapTypeModifier, Value) // OMP map-type-modifier
+  WALK_NESTED_ENUM(OmpAlwaysModifier, Value)
+  WALK_NESTED_ENUM(OmpCloseModifier, Value)
+  WALK_NESTED_ENUM(OmpDeleteModifier, Value)
+  WALK_NESTED_ENUM(OmpPresentModifier, Value)
+  WALK_NESTED_ENUM(OmpRefModifier, Value)
+  WALK_NESTED_ENUM(OmpSelfModifier, Value)
   WALK_NESTED_ENUM(OmpTraitSelectorName, Value)
   WALK_NESTED_ENUM(OmpTraitSetSelectorName, Value)
+  WALK_NESTED_ENUM(OmpxHoldModifier, Value)
 
 #undef WALK_NESTED_ENUM
   void Unparse(const ReductionOperator::Operator x) {

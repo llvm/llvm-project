@@ -254,12 +254,8 @@ protected:
   /// If the function does not exist yet, it is compiled.
   const Function *getFunction(const FunctionDecl *FD);
 
-  std::optional<PrimType> classify(const Expr *E) const {
-    return Ctx.classify(E);
-  }
-  std::optional<PrimType> classify(QualType Ty) const {
-    return Ctx.classify(Ty);
-  }
+  OptPrimType classify(const Expr *E) const { return Ctx.classify(E); }
+  OptPrimType classify(QualType Ty) const { return Ctx.classify(Ty); }
 
   /// Classifies a known primitive type.
   PrimType classifyPrim(QualType Ty) const {
@@ -306,8 +302,9 @@ protected:
   bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *ArrayFiller,
                      const Expr *E);
   bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init,
-                          std::optional<PrimType> InitT);
-  bool visitCallArgs(ArrayRef<const Expr *> Args, const FunctionDecl *FuncDecl);
+                          OptPrimType InitT);
+  bool visitCallArgs(ArrayRef<const Expr *> Args, const FunctionDecl *FuncDecl,
+                     bool Activate);
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
@@ -342,6 +339,7 @@ private:
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
   bool visitZeroRecordInitializer(const Record *R, const Expr *E);
   bool visitZeroArrayInitializer(QualType T, const Expr *E);
+  bool visitAssignment(const Expr *LHS, const Expr *RHS, const Expr *E);
 
   /// Emits an APSInt constant.
   bool emitConst(const llvm::APSInt &Value, PrimType Ty, const Expr *E);
@@ -433,7 +431,7 @@ protected:
   bool InitStackActive = false;
 
   /// Type of the expression returned by the function.
-  std::optional<PrimType> ReturnType;
+  OptPrimType ReturnType;
 
   /// Switch case mapping.
   CaseMap CaseLabels;

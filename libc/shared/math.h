@@ -11,6 +11,16 @@
 
 #include "libc_common.h"
 
+#include "math/acos.h"
+#include "math/acosf.h"
+#include "math/acosf16.h"
+#include "math/acoshf.h"
+#include "math/acoshf16.h"
+#include "math/erff.h"
+#include "math/exp.h"
+#include "math/exp10.h"
+#include "math/exp10f.h"
+#include "math/exp10f16.h"
 #include "math/expf.h"
 #include "math/expf16.h"
 #include "math/frexpf.h"

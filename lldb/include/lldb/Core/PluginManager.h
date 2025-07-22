@@ -261,8 +261,7 @@ public:
   static ObjectFileCreateMemoryInstance
   GetObjectFileCreateMemoryCallbackForPluginName(llvm::StringRef name);
 
-  static Status SaveCore(const lldb::ProcessSP &process_sp,
-                         lldb_private::SaveCoreOptions &core_options);
+  static Status SaveCore(lldb_private::SaveCoreOptions &core_options);
 
   static std::vector<llvm::StringRef> GetSaveCorePluginNames();
 
@@ -787,6 +786,9 @@ public:
 
   static std::vector<RegisteredPluginInfo> GetUnwindAssemblyPluginInfo();
   static bool SetUnwindAssemblyPluginEnabled(llvm::StringRef name, bool enable);
+
+  static void AutoCompletePluginName(llvm::StringRef partial_name,
+                                     CompletionRequest &request);
 };
 
 } // namespace lldb_private
