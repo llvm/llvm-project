@@ -3029,8 +3029,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // TODO: Enable lifetime safety analysis for other languages once it is
   // stable.
   if (EnableLifetimeSafetyAnalysis && S.getLangOpts().CPlusPlus) {
-    if (CFG *cfg = AC.getCFG())
-      runLifetimeSafetyAnalysis(*cast<DeclContext>(D), *cfg, AC);
+    if (AC.getCFG())
+      lifetimes::runLifetimeSafetyAnalysis(AC);
   }
   // Check for violations of "called once" parameter properties.
   if (S.getLangOpts().ObjC && !S.getLangOpts().CPlusPlus &&
