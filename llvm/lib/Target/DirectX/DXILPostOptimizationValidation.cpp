@@ -272,7 +272,7 @@ reportOverlappingRegisters(Module &M,
      << " is overlapping with"
      << " register " << ResourceClassToString(OInfo->Class)
      << " (space=" << OInfo->Space << ", register=" << OInfo->LowerBound << ")"
-     << ", verify your root signature definition";
+     << ", verify your root signature definition.";
 
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
@@ -323,14 +323,15 @@ static bool reportOverlappingRanges(Module &M,
           RSD.ParametersContainer.getDescriptorTable(Loc);
 
       for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
+        assert(Range.NumDescriptors > 0);
         RangeInfo Info;
         Info.Space = Range.RegisterSpace;
         Info.LowerBound = Range.BaseShaderRegister;
         Info.UpperBound = Info.LowerBound + ((Range.NumDescriptors == ~0U)
                                                  ? Range.NumDescriptors
                                                  : Range.NumDescriptors - 1);
-        Info.Visibility = (dxbc::ShaderVisibility)Header.ShaderVisibility;
         Info.Class = RangeToResourceClass(Range.RangeType);
+        Info.Visibility = (dxbc::ShaderVisibility)Header.ShaderVisibility;
 
         Infos.push_back(Info);
       }
@@ -399,22 +400,22 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
                                        "DXILResourceImplicitBinding pass");
 
   if (auto RSD = getRootSignature(RSBI, MMI)) {
-    if (!reportOverlappingRanges(M, *RSD)) {
-      llvm::hlsl::rootsig::RootSignatureBindingValidation Validation =
-          initRSBindingValidation(*RSD, tripleToVisibility(MMI.ShaderProfile));
+    if (reportOverlappingRanges(M, *RSD))
+      return;
+    llvm::hlsl::rootsig::RootSignatureBindingValidation Validation =
+        initRSBindingValidation(*RSD, tripleToVisibility(MMI.ShaderProfile));
 
-      reportUnboundRegisters(M, Validation, ResourceClass::CBuffer,
-                             DRM.cbuffers());
-      reportUnboundRegisters(M, Validation, ResourceClass::UAV, DRM.uavs());
-      reportUnboundRegisters(M, Validation, ResourceClass::Sampler,
-                             DRM.samplers());
-      reportUnboundRegisters(M, Validation, ResourceClass::SRV, DRM.srvs());
+    reportUnboundRegisters(M, Validation, ResourceClass::CBuffer,
+                           DRM.cbuffers());
+    reportUnboundRegisters(M, Validation, ResourceClass::UAV, DRM.uavs());
+    reportUnboundRegisters(M, Validation, ResourceClass::Sampler,
+                           DRM.samplers());
+    reportUnboundRegisters(M, Validation, ResourceClass::SRV, DRM.srvs());
 
-      reportInvalidHandleTy(M, DRM.cbuffers());
-      reportInvalidHandleTy(M, DRM.srvs());
-      reportInvalidHandleTy(M, DRM.uavs());
-      reportInvalidHandleTy(M, DRM.samplers());
-    }
+    reportInvalidHandleTy(M, DRM.cbuffers());
+    reportInvalidHandleTy(M, DRM.srvs());
+    reportInvalidHandleTy(M, DRM.uavs());
+    reportInvalidHandleTy(M, DRM.samplers());
   }
 }
 } // namespace

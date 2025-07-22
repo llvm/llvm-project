@@ -6,7 +6,7 @@ entry:
   ret void
 }
 
-; RootConstants(num32BitConstants=4, b2), DescriptorTable(CBV(b10, numDescriptors=3))
+; RootConstants(num32BitConstants=4, b2), DescriptorTable(CBV(b0, numDescriptors=3))
 !dx.rootsignatures = !{!0}
 !0 = !{ptr @CSMain, !1, i32 2}
 !1 = !{!2, !3}
