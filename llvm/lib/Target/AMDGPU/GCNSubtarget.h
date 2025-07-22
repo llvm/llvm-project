@@ -214,6 +214,7 @@ protected:
   bool FlatInstOffsets = false;
   bool FlatGlobalInsts = false;
   bool FlatScratchInsts = false;
+  bool FlatGVSMode = false;
   bool ScalarFlatScratchInsts = false;
   bool HasArchitectedFlatScratch = false;
   bool EnableFlatScratch = false;
@@ -233,6 +234,7 @@ protected:
   bool HasRestrictedSOffset = false;
   bool Has64BitLiterals = false;
   bool HasBitOp3Insts = false;
+  bool HasTanhInsts = false;
   bool HasTransposeLoadF4F6Insts = false;
   bool HasPrngInst = false;
   bool HasBVHDualAndBVH8Insts = false;
@@ -1020,7 +1022,7 @@ public:
   }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           unsigned NumRegionInstrs) const override;
+                           const SchedRegion &Region) const override;
 
   void mirFileLoaded(MachineFunction &MF) const override;
 
@@ -1100,6 +1102,8 @@ public:
     return getGeneration() >= GFX10 || hasGFX940Insts();
   }
 
+  bool hasFmaakFmamkF64Insts() const { return hasGFX1250Insts(); }
+
   bool hasImageInsts() const {
     return HasImageInsts;
   }
@@ -1154,9 +1158,14 @@ public:
 
   bool hasMadF16() const;
 
-  bool hasMovB64() const { return GFX940Insts; }
+  bool hasMovB64() const { return GFX940Insts || GFX1250Insts; }
 
   bool hasLshlAddU64Inst() const { return HasLshlAddU64Inst; }
+
+  // Scalar and global loads support scale_offset bit.
+  bool hasScaleOffset() const { return GFX1250Insts; }
+
+  bool hasFlatGVSMode() const { return FlatGVSMode; }
 
   bool enableSIScheduler() const {
     return EnableSIScheduler;
@@ -1375,6 +1384,10 @@ public:
     return HasMinimum3Maximum3F16;
   }
 
+  bool hasTanhInsts() const { return HasTanhInsts; }
+
+  bool hasAddPC64Inst() const { return GFX1250Insts; }
+
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
   }
@@ -1481,6 +1494,8 @@ public:
   bool hasSignedScratchOffsets() const { return getGeneration() >= GFX12; }
 
   bool hasGFX1250Insts() const { return GFX1250Insts; }
+
+  bool hasVOPD3() const { return GFX1250Insts; }
 
   // \returns true if target has S_SETPRIO_INC_WG instruction.
   bool hasSetPrioIncWgInst() const { return HasSetPrioIncWgInst; }

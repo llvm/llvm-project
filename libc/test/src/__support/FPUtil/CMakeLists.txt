@@ -39,6 +39,12 @@ add_fp_unittest(
     libc.src.__support.FPUtil.rounding_mode
 )
 
+# TODO: Temporally disable bfloat16 test until MPCommon target is updated
+# https://github.com/llvm/llvm-project/pull/149678
+if(LLVM_LIBC_FULL_BUILD)
+  return()
+endif()
+
 add_fp_unittest(
   bfloat16_test
   NEED_MPFR

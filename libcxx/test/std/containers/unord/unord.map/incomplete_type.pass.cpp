@@ -14,6 +14,7 @@
 
 #include <unordered_map>
 
+#include "min_allocator.h"
 #include "test_macros.h"
 
 template <class Tp>
@@ -35,6 +36,10 @@ inline bool operator==(A const& L, A const& R) { return &L == &R; }
 
 int main(int, char**) {
   A a;
+
+  // Make sure that the allocator isn't rebound to an incomplete type
+  std::unordered_map<int, int, std::hash<int>, std::equal_to<int>, complete_type_allocator<std::pair<const int, int> > >
+      m;
 
   return 0;
 }
