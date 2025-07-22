@@ -51,11 +51,15 @@ void testTemplates() {
 template<typename T>
 struct S {
   void f();
+  void g();
 };
 
 template<typename T>
 void S<T>::f() { throw 0; } 
 template<>
-void S<int>::f() {} // expected-no-diagnostics
+void S<int>::f() {}
 
-
+template<typename T> 
+void S<T>::g() {}  
+template<> 
+void S<int>::g() { throw 0; }
