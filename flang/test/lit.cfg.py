@@ -180,7 +180,7 @@ tools = [
         extra_args=["-fc1"] + intrinsics_search_args + extra_intrinsics_search_args,
         unresolved="fatal",
     ),
-    # For not having intrinsic search paths to be added implicitly
+    # Do not implicitly add intrinsic search paths
     ToolSubst(
         "%bbc_bare",
         command=FindTool("bbc"),
