@@ -15,10 +15,10 @@
 #include "lldb/Symbol/Function.h"
 #include "llvm/Support/DJB.h"
 
-using namespace lldb_private;
 using namespace lldb;
-using namespace lldb_private::dwarf;
+using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 std::unique_ptr<AppleDWARFIndex> AppleDWARFIndex::Create(
     Module &module, DWARFDataExtractor apple_names,
@@ -80,7 +80,7 @@ static bool
 EntryHasMatchingQualhash(const llvm::AppleAcceleratorTable::Entry &entry,
                          uint32_t expected_hash) {
   std::optional<llvm::DWARFFormValue> form_value =
-      entry.lookup(dwarf::DW_ATOM_qual_name_hash);
+      entry.lookup(llvm::dwarf::DW_ATOM_qual_name_hash);
   if (!form_value)
     return false;
   std::optional<uint64_t> hash = form_value->getAsUnsignedConstant();
@@ -93,7 +93,7 @@ EntryHasMatchingQualhash(const llvm::AppleAcceleratorTable::Entry &entry,
 static bool EntryHasMatchingTag(const llvm::AppleAcceleratorTable::Entry &entry,
                                 dw_tag_t expected_tag) {
   std::optional<llvm::DWARFFormValue> form_value =
-      entry.lookup(dwarf::DW_ATOM_die_tag);
+      entry.lookup(llvm::dwarf::DW_ATOM_die_tag);
   if (!form_value)
     return false;
   std::optional<uint64_t> maybe_tag = form_value->getAsUnsignedConstant();
@@ -109,7 +109,7 @@ static bool EntryHasMatchingTag(const llvm::AppleAcceleratorTable::Entry &entry,
 static bool
 HasImplementationFlag(const llvm::AppleAcceleratorTable::Entry &entry) {
   std::optional<llvm::DWARFFormValue> form_value =
-      entry.lookup(dwarf::DW_ATOM_type_flags);
+      entry.lookup(llvm::dwarf::DW_ATOM_type_flags);
   if (!form_value)
     return false;
   std::optional<uint64_t> Flags = form_value->getAsUnsignedConstant();

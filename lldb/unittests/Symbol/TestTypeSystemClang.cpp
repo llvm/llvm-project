@@ -245,7 +245,7 @@ TEST_F(TestTypeSystemClang, TestBuiltinTypeForEmptyTriple) {
 
   EXPECT_FALSE(ast.GetBuiltinTypeByName(ConstString("int")).IsValid());
   EXPECT_FALSE(ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
-                      "char", dwarf::DW_ATE_signed_char, 8)
+                      "char", llvm::dwarf::DW_ATE_signed_char, 8)
                    .IsValid());
   EXPECT_FALSE(ast.GetBuiltinTypeForEncodingAndBitSize(lldb::eEncodingUint, 8)
                    .IsValid());

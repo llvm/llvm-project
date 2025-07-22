@@ -34,7 +34,7 @@ check_num_matches(DebugNamesDWARFIndex &index, int expected_num_matches,
 }
 
 static DWARFDeclContext::Entry make_entry(const char *c) {
-  return DWARFDeclContext::Entry(dwarf::DW_TAG_class_type, c);
+  return DWARFDeclContext::Entry(llvm::dwarf::DW_TAG_class_type, c);
 }
 
 TEST(DWARFDebugNamesIndexTest, FullyQualifiedQueryWithIDXParent) {

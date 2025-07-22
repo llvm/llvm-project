@@ -23,8 +23,8 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 namespace {
 
