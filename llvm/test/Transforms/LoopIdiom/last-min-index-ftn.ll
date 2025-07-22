@@ -134,28 +134,16 @@ define i32 @minlst(i32 %first_index, i32 %last_index, ptr %array) {
 ; CHECK-LOOP-IDIOM-NEXT:    [[FIRST_PTR:%.*]] = getelementptr i8, ptr [[ARRAY]], i64 -8
 ; CHECK-LOOP-IDIOM-NEXT:    [[SECOND_PTR:%.*]] = getelementptr i8, ptr [[ARRAY]], i64 -4
 ; CHECK-LOOP-IDIOM-NEXT:    [[EARLY_EXIT_COND:%.*]] = icmp slt i64 [[ADD]], 0
-; CHECK-LOOP-IDIOM-NEXT:    br i1 [[EARLY_EXIT_COND]], label %[[LOOP_PREHEADER:.*]], [[DOT_CRIT_EDGE:label %.*]]
-; CHECK-LOOP-IDIOM:       [[LOOP_PREHEADER]]:
+; CHECK-LOOP-IDIOM-NEXT:    br i1 [[EARLY_EXIT_COND]], label %[[MINIDX_EARLY_EXIT1:.*]], [[DOT_CRIT_EDGE:label %.*]]
+; CHECK-LOOP-IDIOM:       [[MINIDX_EARLY_EXIT1]]:
 ; CHECK-LOOP-IDIOM-NEXT:    [[LAST_INDEX_SEXT:%.*]] = sext i32 [[LAST_INDEX]] to i64
-; CHECK-LOOP-IDIOM-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_VLEN:%.*]] = shl i64 [[TMP0]], 2
-; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_NOT:%.*]] = sub i64 0, [[MINIDX_VLEN]]
-; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_AND:%.*]] = and i64 [[LAST_INDEX_SEXT]], [[MINIDX_NOT]]
-; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_UMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[MINIDX_AND]], i64 [[FIRST_INDEX_SEXT]])
-; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_ADD:%.*]] = add i64 [[LAST_INDEX_SEXT]], 1
-; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_MASK:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[MINIDX_UMAX]], i64 [[MINIDX_ADD]])
-; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_UMAX_MINUS1:%.*]] = sub i64 [[MINIDX_UMAX]], 1
-; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_ADD_PTR_I:%.*]] = getelementptr inbounds float, ptr [[FIRST_PTR]], i64 [[MINIDX_UMAX_MINUS1]]
-; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_LOADVALS:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr [[MINIDX_ADD_PTR_I]], i32 1, <vscale x 4 x i1> [[MINIDX_MASK]], <vscale x 4 x float> zeroinitializer)
-; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_CURRENTVALS:%.*]] = select <vscale x 4 x i1> [[MINIDX_MASK]], <vscale x 4 x float> [[MINIDX_LOADVALS]], <vscale x 4 x float> splat (float 0x7FF0000000000000)
-; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_REVERSE:%.*]] = call <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> [[MINIDX_MASK]])
-; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_REVERSEVALS:%.*]] = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> [[MINIDX_CURRENTVALS]])
-; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_MINVAL:%.*]] = call float @llvm.vector.reduce.fminimum.nxv4f32(<vscale x 4 x float> [[MINIDX_REVERSEVALS]])
-; CHECK-LOOP-IDIOM-NEXT:    br i1 true, label %[[MINIDX_VEC_ENTRY:.*]], label %[[LOOP:.*]]
-; CHECK-LOOP-IDIOM:       [[LOOP]]:
-; CHECK-LOOP-IDIOM-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[LAST_INDEX_SEXT]], %[[LOOP_PREHEADER]] ]
-; CHECK-LOOP-IDIOM-NEXT:    [[DEC_IV:%.*]] = phi i64 [ [[DEC:%.*]], %[[LOOP]] ], [ [[DIFF]], %[[LOOP_PREHEADER]] ]
-; CHECK-LOOP-IDIOM-NEXT:    [[INDEX:%.*]] = phi i32 [ [[SELECT:%.*]], %[[LOOP]] ], [ [[LAST_INDEX]], %[[LOOP_PREHEADER]] ]
+; CHECK-LOOP-IDIOM-NEXT:    [[FIRST_INDEX_CMP:%.*]] = icmp eq i64 [[FIRST_INDEX_SEXT]], [[LAST_INDEX_SEXT]]
+; CHECK-LOOP-IDIOM-NEXT:    [[SECOND_INDEX_BITCAST:%.*]] = trunc i64 [[LAST_INDEX_SEXT]] to i32
+; CHECK-LOOP-IDIOM-NEXT:    br i1 [[FIRST_INDEX_CMP]], label %[[DOT_CRIT_EDGE_LOOPEXIT:.*]], label %[[MINIDX_VEC_SCALAR_FORK:.*]]
+; CHECK-LOOP-IDIOM:       [[LOOP:.*]]:
+; CHECK-LOOP-IDIOM-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[LAST_INDEX_SEXT]], %[[MINIDX_VEC_SCALAR_FORK]] ]
+; CHECK-LOOP-IDIOM-NEXT:    [[DEC_IV:%.*]] = phi i64 [ [[DEC:%.*]], %[[LOOP]] ], [ [[DIFF]], %[[MINIDX_VEC_SCALAR_FORK]] ]
+; CHECK-LOOP-IDIOM-NEXT:    [[INDEX:%.*]] = phi i32 [ [[SELECT:%.*]], %[[LOOP]] ], [ [[LAST_INDEX]], %[[MINIDX_VEC_SCALAR_FORK]] ]
 ; CHECK-LOOP-IDIOM-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
 ; CHECK-LOOP-IDIOM-NEXT:    [[LOAD1_PTR:%.*]] = getelementptr float, ptr [[FIRST_PTR]], i64 [[IV]]
 ; CHECK-LOOP-IDIOM-NEXT:    [[LOAD1:%.*]] = load float, ptr [[LOAD1_PTR]], align 4
@@ -167,16 +155,32 @@ define i32 @minlst(i32 %first_index, i32 %last_index, ptr %array) {
 ; CHECK-LOOP-IDIOM-NEXT:    [[SELECT]] = select i1 [[CMP]], i32 [[IV_NEXT_TRUNC]], i32 [[INDEX]]
 ; CHECK-LOOP-IDIOM-NEXT:    [[DEC]] = add nsw i64 [[DEC_IV]], -1
 ; CHECK-LOOP-IDIOM-NEXT:    [[LOOP_COND:%.*]] = icmp sgt i64 [[DEC_IV]], 1
-; CHECK-LOOP-IDIOM-NEXT:    br i1 [[LOOP_COND]], label %[[LOOP]], label %[[DOT_CRIT_EDGE_LOOPEXIT:.*]]
+; CHECK-LOOP-IDIOM-NEXT:    br i1 [[LOOP_COND]], label %[[LOOP]], label %[[DOT_CRIT_EDGE_LOOPEXIT]]
 ; CHECK-LOOP-IDIOM:       [[__CRIT_EDGE_LOOPEXIT:.*:]]
-; CHECK-LOOP-IDIOM-NEXT:    [[TMP1:%.*]] = phi i32 [ [[SELECT]], %[[LOOP]] ], [ [[MINIDX_RET_BITCAST:%.*]], %[[MINIDX_END:.*]] ]
+; CHECK-LOOP-IDIOM-NEXT:    [[TMP0:%.*]] = phi i32 [ [[SELECT]], %[[LOOP]] ], [ [[MINIDX_RET_BITCAST:%.*]], %[[MINIDX_END:.*]] ], [ [[SECOND_INDEX_BITCAST]], %[[MINIDX_EARLY_EXIT1]] ]
 ; CHECK-LOOP-IDIOM-NEXT:    br [[DOT_CRIT_EDGE]]
 ; CHECK-LOOP-IDIOM:       [[__CRIT_EDGE:.*:]]
-; CHECK-LOOP-IDIOM-NEXT:    [[LAST_INDEX_RET:%.*]] = phi i32 [ [[LAST_INDEX]], %[[ENTRY]] ], [ [[TMP1]], %[[DOT_CRIT_EDGE_LOOPEXIT]] ]
+; CHECK-LOOP-IDIOM-NEXT:    [[LAST_INDEX_RET:%.*]] = phi i32 [ [[LAST_INDEX]], %[[ENTRY]] ], [ [[TMP0]], %[[DOT_CRIT_EDGE_LOOPEXIT]] ]
 ; CHECK-LOOP-IDIOM-NEXT:    ret i32 [[LAST_INDEX_RET]]
-; CHECK-LOOP-IDIOM:       [[MINIDX_VEC_ENTRY]]:
-; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_ENTRY_CMP:%.*]] = fcmp olt float [[MINIDX_MINVAL]], 0x7FF0000000000000
+; CHECK-LOOP-IDIOM:       [[MINIDX_VEC_ENTRY:.*]]:
+; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_ENTRY_CMP:%.*]] = fcmp olt float [[MINIDX_MINVAL:%.*]], 0x7FF0000000000000
 ; CHECK-LOOP-IDIOM-NEXT:    br i1 [[MINIDX_ENTRY_CMP]], label %[[MINIDX_PARTIAL_1_IF:.*]], label %[[MINIDX_PARTIAL_1_PROC_EXIT:.*]]
+; CHECK-LOOP-IDIOM:       [[MINIDX_VEC_SCALAR_FORK]]:
+; CHECK-LOOP-IDIOM-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_VLEN:%.*]] = shl i64 [[TMP1]], 2
+; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_NOT:%.*]] = sub i64 0, [[MINIDX_VLEN]]
+; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_AND:%.*]] = and i64 [[LAST_INDEX_SEXT]], [[MINIDX_NOT]]
+; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_UMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[MINIDX_AND]], i64 [[FIRST_INDEX_SEXT]])
+; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_ADD:%.*]] = add i64 [[LAST_INDEX_SEXT]], 1
+; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_MASK:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[MINIDX_UMAX]], i64 [[MINIDX_ADD]])
+; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_UMAX_MINUS1:%.*]] = sub i64 [[MINIDX_UMAX]], 1
+; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_ADD_PTR_I:%.*]] = getelementptr inbounds float, ptr [[ARRAY]], i64 [[MINIDX_UMAX_MINUS1]]
+; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_LOADVALS:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr [[MINIDX_ADD_PTR_I]], i32 1, <vscale x 4 x i1> [[MINIDX_MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_CURRENTVALS:%.*]] = select <vscale x 4 x i1> [[MINIDX_MASK]], <vscale x 4 x float> [[MINIDX_LOADVALS]], <vscale x 4 x float> splat (float 0x7FF0000000000000)
+; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_REVERSE:%.*]] = call <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> [[MINIDX_MASK]])
+; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_REVERSEVALS:%.*]] = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> [[MINIDX_CURRENTVALS]])
+; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_MINVAL]] = call float @llvm.vector.reduce.fminimum.nxv4f32(<vscale x 4 x float> [[MINIDX_REVERSEVALS]])
+; CHECK-LOOP-IDIOM-NEXT:    br i1 true, label %[[MINIDX_VEC_ENTRY]], label %[[LOOP]]
 ; CHECK-LOOP-IDIOM:       [[MINIDX_PARTIAL_1_IF]]:
 ; CHECK-LOOP-IDIOM-NEXT:    [[MINVAL_SPLAT_SPLATINSERT:%.*]] = insertelement <vscale x 4 x float> poison, float [[MINIDX_MINVAL]], i64 0
 ; CHECK-LOOP-IDIOM-NEXT:    [[MINVAL_SPLAT_SPLAT:%.*]] = shufflevector <vscale x 4 x float> [[MINVAL_SPLAT_SPLATINSERT]], <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
@@ -201,7 +205,7 @@ define i32 @minlst(i32 %first_index, i32 %last_index, ptr %array) {
 ; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_VECT_BODY_KNOWN_MIN:%.*]] = phi float [ [[MINIDX_PARTIAL_1_EXIT_KNOWN_MIN]], %[[MINIDX_WHILE_BODY_PH]] ], [ [[MINIDX_VECT_CONTINUE_KNOWN_MIN:%.*]], %[[MINIDX_VECT_CONTINUE]] ]
 ; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_VECT_BODY_SUB]] = sub i64 [[MINIDX_VECT_BODY_PHI1]], [[MINIDX_VLEN]]
 ; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_VECT_BODY_SUB_MINUS1:%.*]] = sub i64 [[MINIDX_VECT_BODY_SUB]], 1
-; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_VECT_BODY_GEP:%.*]] = getelementptr inbounds float, ptr [[FIRST_PTR]], i64 [[MINIDX_VECT_BODY_SUB_MINUS1]]
+; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_VECT_BODY_GEP:%.*]] = getelementptr inbounds float, ptr [[ARRAY]], i64 [[MINIDX_VECT_BODY_SUB_MINUS1]]
 ; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_VECT_BODY_UNMASKEDLOAD:%.*]] = load <vscale x 4 x float>, ptr [[MINIDX_VECT_BODY_GEP]], align 16
 ; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_VECT_BODY_REVERSE:%.*]] = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> [[MINIDX_VECT_BODY_UNMASKEDLOAD]])
 ; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_VECT_BODY_REDUCE:%.*]] = call float @llvm.vector.reduce.fminimum.nxv4f32(<vscale x 4 x float> [[MINIDX_VECT_BODY_REVERSE]])
@@ -228,12 +232,13 @@ define i32 @minlst(i32 %first_index, i32 %last_index, ptr %array) {
 ; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_VECT_END_CMP:%.*]] = icmp ugt i64 [[MINIDX_VECT_END_LCSSA]], [[FIRST_INDEX_SEXT]]
 ; CHECK-LOOP-IDIOM-NEXT:    br i1 [[MINIDX_VECT_END_CMP]], label %[[MINIDX_PARTIAL_2_IF:.*]], label %[[MINIDX_END]]
 ; CHECK-LOOP-IDIOM:       [[MINIDX_PARTIAL_2_IF]]:
-; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_PARTIAL_2_IF_ADD_ZERO:%.*]] = add i64 [[MINIDX_VECT_END_LCSSA]], 0
+; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_PARTIAL_2_IF_ADD_ZERO:%.*]] = add i64 [[MINIDX_VECT_END_LCSSA]], 1
 ; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_PARTIAL_2_IF_MASK:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[FIRST_INDEX_SEXT]], i64 [[MINIDX_PARTIAL_2_IF_ADD_ZERO]])
-; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_PARTIAL_2_IF_MASK_REVERSE:%.*]] = call <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> [[MINIDX_PARTIAL_2_IF_MASK]])
 ; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_PARTIAL_2_IF_IPOS1_MINUS1:%.*]] = sub i64 [[FIRST_INDEX_SEXT]], 1
-; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_PARTIAL_2_IF_GEP:%.*]] = getelementptr inbounds float, ptr [[FIRST_PTR]], i64 [[MINIDX_PARTIAL_2_IF_IPOS1_MINUS1]]
-; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_PARTIAL_2_IF_LOAD:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr [[MINIDX_PARTIAL_2_IF_GEP]], i32 1, <vscale x 4 x i1> [[MINIDX_PARTIAL_2_IF_MASK_REVERSE]], <vscale x 4 x float> zeroinitializer)
+; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_PARTIAL_2_IF_GEP:%.*]] = getelementptr inbounds float, ptr [[ARRAY]], i64 [[MINIDX_PARTIAL_2_IF_IPOS1_MINUS1]]
+; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_PARTIAL_2_IF_LOAD1:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr [[MINIDX_PARTIAL_2_IF_GEP]], i32 1, <vscale x 4 x i1> [[MINIDX_PARTIAL_2_IF_MASK]], <vscale x 4 x float> zeroinitializer)
+; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_PARTIAL_2_IF_LOAD:%.*]] = select <vscale x 4 x i1> [[MINIDX_PARTIAL_2_IF_MASK]], <vscale x 4 x float> [[MINIDX_PARTIAL_2_IF_LOAD1]], <vscale x 4 x float> splat (float 0x7FF0000000000000)
+; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_PARTIAL_2_IF_MASK_REVERSE:%.*]] = call <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> [[MINIDX_PARTIAL_2_IF_MASK]])
 ; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_PARTIAL_2_IF_REVERSE:%.*]] = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> [[MINIDX_PARTIAL_2_IF_LOAD]])
 ; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_PARTIAL_2_IF_REDUCE:%.*]] = call float @llvm.vector.reduce.fminimum.nxv4f32(<vscale x 4 x float> [[MINIDX_PARTIAL_2_IF_REVERSE]])
 ; CHECK-LOOP-IDIOM-NEXT:    [[MINIDX_PARTIAL_2_IF_FCMP:%.*]] = fcmp olt float [[MINIDX_PARTIAL_2_IF_REDUCE]], [[MINIDX_VECT_END_KNOWN_MIN_LCSSA]]
