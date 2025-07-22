@@ -1238,7 +1238,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     assert(!Result.isNull() && "Didn't get a type for typeof?");
     if (!Result->isDependentType())
       if (const TagType *TT = Result->getAs<TagType>())
-        S.DiagnoseUseOfDecl(TT->getDecl(), DS.getTypeSpecTypeLoc());
+        S.DiagnoseUseOfDecl(TT->getOriginalDecl(), DS.getTypeSpecTypeLoc());
     // TypeQuals handled by caller.
     Result = Context.getTypeOfType(
         Result, DS.getTypeSpecType() == DeclSpec::TST_typeof_unqualType
@@ -2117,7 +2117,9 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
   if (const RecordType *EltTy = T->getAs<RecordType>()) {
     // If the element type is a struct or union that contains a variadic
     // array, accept it as a GNU extension: C99 6.7.2.1p2.
-    if (EltTy->getDecl()->hasFlexibleArrayMember())
+    if (EltTy->getOriginalDecl()
+            ->getDefinitionOrSelf()
+            ->hasFlexibleArrayMember())
       Diag(Loc, diag::ext_flexible_array_in_array) << T;
   } else if (T->isObjCObjectType()) {
     Diag(Loc, diag::err_objc_array_of_interfaces) << T;
@@ -3964,7 +3966,8 @@ classifyPointerDeclarator(Sema &S, QualType type, Declarator &declarator,
       return PointerDeclaratorKind::NonPointer;
 
     if (auto recordType = type->getAs<RecordType>()) {
-      RecordDecl *recordDecl = recordType->getDecl();
+      RecordDecl *recordDecl =
+          recordType->getOriginalDecl()->getDefinitionOrSelf();
 
       // If this is CFErrorRef*, report it as such.
       if (numNormalPointers == 2 && numTypeSpecifierPointers < 2 &&
@@ -9583,7 +9586,8 @@ bool Sema::RequireLiteralType(SourceLocation Loc, QualType T,
   if (!RT)
     return true;
 
-  const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
+  const CXXRecordDecl *RD =
+      cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
 
   // A partially-defined class type can't be a literal type, because a literal
   // class type must have a trivial destructor (which can't be checked until
@@ -9671,7 +9675,7 @@ QualType Sema::BuildTypeofExprType(Expr *E, TypeOfKind Kind) {
   if (!E->isTypeDependent()) {
     QualType T = E->getType();
     if (const TagType *TT = T->getAs<TagType>())
-      DiagnoseUseOfDecl(TT->getDecl(), E->getExprLoc());
+      DiagnoseUseOfDecl(TT->getOriginalDecl(), E->getExprLoc());
   }
   return Context.getTypeOfExprType(E, Kind);
 }
@@ -9837,8 +9841,7 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
 static QualType GetEnumUnderlyingType(Sema &S, QualType BaseType,
                                       SourceLocation Loc) {
   assert(BaseType->isEnumeralType());
-  EnumDecl *ED = BaseType->castAs<EnumType>()->getDecl();
-  assert(ED && "EnumType has no EnumDecl");
+  EnumDecl *ED = BaseType->castAs<EnumType>()->getOriginalDecl();
 
   S.DiagnoseUseOfDecl(ED, Loc);
 

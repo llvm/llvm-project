@@ -1688,9 +1688,9 @@ bool CursorVisitor::VisitTagTypeLoc(TagTypeLoc TL) {
     return true;
 
   if (TL.isDefinition())
-    return Visit(MakeCXCursor(TL.getDecl(), TU, RegionOfInterest));
+    return Visit(MakeCXCursor(TL.getOriginalDecl(), TU, RegionOfInterest));
 
-  return Visit(MakeCursorTypeRef(TL.getDecl(), TL.getNameLoc(), TU));
+  return Visit(MakeCursorTypeRef(TL.getOriginalDecl(), TL.getNameLoc(), TU));
 }
 
 bool CursorVisitor::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
@@ -1910,7 +1910,7 @@ bool CursorVisitor::VisitPackIndexingTypeLoc(PackIndexingTypeLoc TL) {
 }
 
 bool CursorVisitor::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
-  return Visit(MakeCursorTypeRef(TL.getDecl(), TL.getNameLoc(), TU));
+  return Visit(MakeCursorTypeRef(TL.getOriginalDecl(), TL.getNameLoc(), TU));
 }
 
 bool CursorVisitor::VisitAtomicTypeLoc(AtomicTypeLoc TL) {

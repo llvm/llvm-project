@@ -452,7 +452,7 @@ std::optional<std::string> printExprValue(const Expr *E,
     // Compare to int64_t to avoid bit-width match requirements.
     int64_t Val = Constant.Val.getInt().getExtValue();
     for (const EnumConstantDecl *ECD :
-         T->castAs<EnumType>()->getDecl()->enumerators())
+         T->castAs<EnumType>()->getOriginalDecl()->enumerators())
       if (ECD->getInitVal() == Val)
         return llvm::formatv("{0} ({1})", ECD->getNameAsString(),
                              printHex(Constant.Val.getInt()))

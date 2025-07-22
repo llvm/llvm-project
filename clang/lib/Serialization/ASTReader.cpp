@@ -5501,7 +5501,7 @@ void ASTReader::InitializeContext() {
             Error("Invalid FILE type in AST file");
             return;
           }
-          Context.setFILEDecl(Tag->getDecl());
+          Context.setFILEDecl(Tag->getOriginalDecl());
         }
       }
     }
@@ -5522,7 +5522,7 @@ void ASTReader::InitializeContext() {
             Error("Invalid jmp_buf type in AST file");
             return;
           }
-          Context.setjmp_bufDecl(Tag->getDecl());
+          Context.setjmp_bufDecl(Tag->getOriginalDecl());
         }
       }
     }
@@ -5540,7 +5540,7 @@ void ASTReader::InitializeContext() {
         else {
           const TagType *Tag = Sigjmp_bufType->getAs<TagType>();
           assert(Tag && "Invalid sigjmp_buf type in AST file");
-          Context.setsigjmp_bufDecl(Tag->getDecl());
+          Context.setsigjmp_bufDecl(Tag->getOriginalDecl());
         }
       }
     }
@@ -5575,7 +5575,7 @@ void ASTReader::InitializeContext() {
         else {
           const TagType *Tag = Ucontext_tType->getAs<TagType>();
           assert(Tag && "Invalid ucontext_t type in AST file");
-          Context.setucontext_tDecl(Tag->getDecl());
+          Context.setucontext_tDecl(Tag->getOriginalDecl());
         }
       }
     }

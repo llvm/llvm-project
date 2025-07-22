@@ -2974,7 +2974,7 @@ public:
   /// member.
   bool hasVolatileMember(QualType T) {
     if (const RecordType *RT = T->getAs<RecordType>()) {
-      const RecordDecl *RD = cast<RecordDecl>(RT->getDecl());
+      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       return RD->hasVolatileMember();
     }
     return false;

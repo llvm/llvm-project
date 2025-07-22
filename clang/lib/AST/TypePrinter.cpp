@@ -1640,9 +1640,11 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
 void TypePrinter::printRecordBefore(const RecordType *T, raw_ostream &OS) {
   // Print the preferred name if we have one for this type.
   if (Policy.UsePreferredNames) {
-    for (const auto *PNA : T->getDecl()->specific_attrs<PreferredNameAttr>()) {
+    for (const auto *PNA : T->getOriginalDecl()
+                               ->getMostRecentDecl()
+                               ->specific_attrs<PreferredNameAttr>()) {
       if (!declaresSameEntity(PNA->getTypedefType()->getAsCXXRecordDecl(),
-                              T->getDecl()))
+                              T->getOriginalDecl()))
         continue;
       // Find the outermost typedef or alias template.
       QualType T = PNA->getTypedefType();

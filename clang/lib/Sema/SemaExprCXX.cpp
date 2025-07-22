@@ -566,7 +566,8 @@ ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
 
     QualType T = E->getType();
     if (const RecordType *RecordT = T->getAs<RecordType>()) {
-      CXXRecordDecl *RecordD = cast<CXXRecordDecl>(RecordT->getDecl());
+      CXXRecordDecl *RecordD = cast<CXXRecordDecl>(RecordT->getOriginalDecl())
+                                   ->getDefinitionOrSelf();
       // C++ [expr.typeid]p3:
       //   [...] If the type of the expression is a class type, the class
       //   shall be completely-defined.
@@ -1978,7 +1979,7 @@ static bool doesUsualArrayDeleteWantSize(Sema &S, SourceLocation loc,
   DeclarationName deleteName =
     S.Context.DeclarationNames.getCXXOperatorName(OO_Array_Delete);
   LookupResult ops(S, deleteName, loc, Sema::LookupOrdinaryName);
-  S.LookupQualifiedName(ops, record->getDecl());
+  S.LookupQualifiedName(ops, record->getOriginalDecl()->getDefinitionOrSelf());
 
   // We're just doing this for information.
   ops.suppressDiagnostics();
@@ -3049,8 +3050,9 @@ bool Sema::FindAllocationFunctions(
   LookupResult FoundDelete(*this, DeleteName, StartLoc, LookupOrdinaryName);
   if (AllocElemType->isRecordType() &&
       DeleteScope != AllocationFunctionScope::Global) {
-    auto *RD =
-        cast<CXXRecordDecl>(AllocElemType->castAs<RecordType>()->getDecl());
+    auto *RD = cast<CXXRecordDecl>(
+                   AllocElemType->castAs<RecordType>()->getOriginalDecl())
+                   ->getDefinitionOrSelf();
     LookupQualifiedName(FoundDelete, RD);
   }
   if (FoundDelete.isAmbiguous())
@@ -4051,7 +4053,8 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
                                    : diag::warn_delete_incomplete,
                                Ex.get())) {
         if (const RecordType *RT = PointeeElem->getAs<RecordType>())
-          PointeeRD = cast<CXXRecordDecl>(RT->getDecl());
+          PointeeRD =
+              cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
       }
     }
 
@@ -4819,7 +4822,10 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     if (FromType->isVectorType() || ToType->isVectorType())
       StepTy = adjustVectorType(Context, FromType, ToType, &ElTy);
     if (ElTy->isBooleanType()) {
-      assert(FromType->castAs<EnumType>()->getDecl()->isFixed() &&
+      assert(FromType->castAs<EnumType>()
+                 ->getOriginalDecl()
+                 ->getDefinitionOrSelf()
+                 ->isFixed() &&
              SCS.Second == ICK_Integral_Promotion &&
              "only enums with fixed underlying type can promote to bool");
       From = ImpCastExprToType(From, StepTy, CK_IntegralToBoolean, VK_PRValue,
@@ -6639,7 +6645,8 @@ ExprResult Sema::MaybeBindToTemporary(Expr *E) {
 
   // That should be enough to guarantee that this type is complete, if we're
   // not processing a decltype expression.
-  CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
+  CXXRecordDecl *RD =
+      cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
   if (RD->isInvalidDecl() || RD->isDependentContext())
     return E;
 
@@ -7502,7 +7509,7 @@ ExprResult Sema::IgnoredValueConversions(Expr *E) {
 
   // GCC seems to also exclude expressions of incomplete enum type.
   if (const EnumType *T = E->getType()->getAs<EnumType>()) {
-    if (!T->getDecl()->isComplete()) {
+    if (!T->getOriginalDecl()->getDefinitionOrSelf()->isComplete()) {
       // FIXME: stupid workaround for a codegen bug!
       E = ImpCastExprToType(E, Context.VoidTy, CK_ToVoid).get();
       return E;

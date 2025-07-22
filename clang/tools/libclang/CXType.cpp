@@ -546,11 +546,11 @@ try_again:
     break;
   case Type::Record:
   case Type::Enum:
-    D = cast<TagType>(TP)->getDecl();
+    D = cast<TagType>(TP)->getOriginalDecl();
     break;
   case Type::TemplateSpecialization:
     if (const RecordType *Record = TP->getAs<RecordType>())
-      D = Record->getDecl();
+      D = Record->getOriginalDecl();
     else
       D = cast<TemplateSpecializationType>(TP)->getTemplateName()
                                                          .getAsTemplateDecl();
@@ -564,7 +564,7 @@ try_again:
     break;
 
   case Type::InjectedClassName:
-    D = cast<InjectedClassNameType>(TP)->getDecl();
+    D = cast<InjectedClassNameType>(TP)->getOriginalDecl();
     break;
 
     // FIXME: Template type parameters!
@@ -1037,7 +1037,7 @@ static long long visitRecordForValidation(const RecordDecl *RD) {
       return CXTypeLayoutError_Dependent;
     // recurse
     if (const RecordType *ChildType = I->getType()->getAs<RecordType>()) {
-      if (const RecordDecl *Child = ChildType->getDecl()) {
+      if (const RecordDecl *Child = ChildType->getOriginalDecl()) {
         long long ret = visitRecordForValidation(Child);
         if (ret < 0)
           return ret;

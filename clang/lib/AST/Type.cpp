@@ -113,10 +113,10 @@ const IdentifierInfo *QualType::getBaseTypeIdentifier() const {
     return DNT->getIdentifier();
   if (ty->isPointerOrReferenceType())
     return ty->getPointeeType().getBaseTypeIdentifier();
-  else if (ty->isRecordType())
-    ND = ty->castAs<RecordType>()->getDecl();
+  if (ty->isRecordType())
+    ND = ty->castAs<RecordType>()->getOriginalDecl();
   else if (ty->isEnumeralType())
-    ND = ty->castAs<EnumType>()->getDecl();
+    ND = ty->castAs<EnumType>()->getOriginalDecl();
   else if (ty->getTypeClass() == Type::Typedef)
     ND = ty->castAs<TypedefType>()->getDecl();
   else if (ty->isArrayType())
@@ -673,13 +673,13 @@ const Type *Type::getUnqualifiedDesugaredType() const {
 
 bool Type::isClassType() const {
   if (const auto *RT = getAs<RecordType>())
-    return RT->getDecl()->isClass();
+    return RT->getOriginalDecl()->isClass();
   return false;
 }
 
 bool Type::isStructureType() const {
   if (const auto *RT = getAs<RecordType>())
-    return RT->getDecl()->isStruct();
+    return RT->getOriginalDecl()->isStruct();
   return false;
 }
 
@@ -687,7 +687,7 @@ bool Type::isStructureTypeWithFlexibleArrayMember() const {
   const auto *RT = getAs<RecordType>();
   if (!RT)
     return false;
-  const auto *Decl = RT->getDecl();
+  const auto *Decl = RT->getOriginalDecl()->getDefinitionOrSelf();
   if (!Decl->isStruct())
     return false;
   return Decl->hasFlexibleArrayMember();
@@ -695,19 +695,21 @@ bool Type::isStructureTypeWithFlexibleArrayMember() const {
 
 bool Type::isObjCBoxableRecordType() const {
   if (const auto *RT = getAs<RecordType>())
-    return RT->getDecl()->hasAttr<ObjCBoxableAttr>();
+    return RT->getOriginalDecl()
+        ->getDefinitionOrSelf()
+        ->hasAttr<ObjCBoxableAttr>();
   return false;
 }
 
 bool Type::isInterfaceType() const {
   if (const auto *RT = getAs<RecordType>())
-    return RT->getDecl()->isInterface();
+    return RT->getOriginalDecl()->isInterface();
   return false;
 }
 
 bool Type::isStructureOrClassType() const {
   if (const auto *RT = getAs<RecordType>()) {
-    RecordDecl *RD = RT->getDecl();
+    RecordDecl *RD = RT->getOriginalDecl();
     return RD->isStruct() || RD->isClass() || RD->isInterface();
   }
   return false;
@@ -721,7 +723,7 @@ bool Type::isVoidPointerType() const {
 
 bool Type::isUnionType() const {
   if (const auto *RT = getAs<RecordType>())
-    return RT->getDecl()->isUnion();
+    return RT->getOriginalDecl()->isUnion();
   return false;
 }
 
@@ -738,7 +740,7 @@ bool Type::isComplexIntegerType() const {
 
 bool Type::isScopedEnumeralType() const {
   if (const auto *ET = getAs<EnumType>())
-    return ET->getDecl()->isScoped();
+    return ET->getOriginalDecl()->isScoped();
   return false;
 }
 
@@ -772,13 +774,13 @@ QualType Type::getPointeeType() const {
 const RecordType *Type::getAsStructureType() const {
   // If this is directly a structure type, return it.
   if (const auto *RT = dyn_cast<RecordType>(this)) {
-    if (RT->getDecl()->isStruct())
+    if (RT->getOriginalDecl()->isStruct())
       return RT;
   }
 
   // If the canonical form of this type isn't the right kind, reject it.
   if (const auto *RT = dyn_cast<RecordType>(CanonicalType)) {
-    if (!RT->getDecl()->isStruct())
+    if (!RT->getOriginalDecl()->isStruct())
       return nullptr;
 
     // If this is a typedef for a structure type, strip the typedef off without
@@ -791,13 +793,13 @@ const RecordType *Type::getAsStructureType() const {
 const RecordType *Type::getAsUnionType() const {
   // If this is directly a union type, return it.
   if (const auto *RT = dyn_cast<RecordType>(this)) {
-    if (RT->getDecl()->isUnion())
+    if (RT->getOriginalDecl()->isUnion())
       return RT;
   }
 
   // If the canonical form of this type isn't the right kind, reject it.
   if (const auto *RT = dyn_cast<RecordType>(CanonicalType)) {
-    if (!RT->getDecl()->isUnion())
+    if (!RT->getOriginalDecl()->isUnion())
       return nullptr;
 
     // If this is a typedef for a union type, strip the typedef off without
@@ -1920,25 +1922,32 @@ const CXXRecordDecl *Type::getPointeeCXXRecordDecl() const {
     return nullptr;
 
   if (const auto *RT = PointeeType->getAs<RecordType>())
-    return dyn_cast<CXXRecordDecl>(RT->getDecl());
+    return dyn_cast<CXXRecordDecl>(
+        RT->getOriginalDecl()->getDefinitionOrSelf());
 
   return nullptr;
 }
 
 CXXRecordDecl *Type::getAsCXXRecordDecl() const {
-  return dyn_cast_or_null<CXXRecordDecl>(getAsTagDecl());
+  const auto *TT = dyn_cast<TagType>(CanonicalType);
+  if (!isa_and_present<RecordType, InjectedClassNameType>(TT))
+    return nullptr;
+  auto *TD = TT->getOriginalDecl();
+  if (!isa<InjectedClassNameType>(TT) && !isa<CXXRecordDecl>(TD))
+    return nullptr;
+  return cast<CXXRecordDecl>(TD)->getDefinitionOrSelf();
 }
 
 RecordDecl *Type::getAsRecordDecl() const {
-  return dyn_cast_or_null<RecordDecl>(getAsTagDecl());
+  const auto *TT = dyn_cast<TagType>(CanonicalType);
+  if (!isa_and_present<RecordType, InjectedClassNameType>(TT))
+    return nullptr;
+  return cast<RecordDecl>(TT->getOriginalDecl())->getDefinitionOrSelf();
 }
 
 TagDecl *Type::getAsTagDecl() const {
-  if (const auto *TT = getAs<TagType>())
-    return TT->getDecl();
-  if (const auto *Injected = getAs<InjectedClassNameType>())
-    return Injected->getDecl();
-
+  if (const auto *TT = dyn_cast<TagType>(CanonicalType))
+    return TT->getOriginalDecl()->getDefinitionOrSelf();
   return nullptr;
 }
 
@@ -2109,7 +2118,7 @@ bool Type::isIntegralType(const ASTContext &Ctx) const {
   // Complete enum types are integral in C.
   if (!Ctx.getLangOpts().CPlusPlus)
     if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
-      return ET->getDecl()->isComplete();
+      return IsEnumDeclComplete(ET->getOriginalDecl());
 
   return isBitIntType();
 }
@@ -2126,7 +2135,7 @@ bool Type::isIntegralOrUnscopedEnumerationType() const {
 
 bool Type::isUnscopedEnumerationType() const {
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
-    return !ET->getDecl()->isScoped();
+    return !ET->getOriginalDecl()->isScoped();
 
   return false;
 }
@@ -2211,8 +2220,10 @@ bool Type::isSignedIntegerType() const {
   if (const EnumType *ET = dyn_cast<EnumType>(CanonicalType)) {
     // Incomplete enum types are not treated as integer types.
     // FIXME: In C++, enum types are never integer types.
-    if (ET->getDecl()->isComplete() && !ET->getDecl()->isScoped())
-      return ET->getDecl()->getIntegerType()->isSignedIntegerType();
+    const auto *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
+    if (!ED->isComplete() || ED->isScoped())
+      return false;
+    return ED->getIntegerType()->isSignedIntegerType();
   }
 
   if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
@@ -2227,9 +2238,12 @@ bool Type::isSignedIntegerOrEnumerationType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->isSignedInteger();
 
-  if (const auto *ET = dyn_cast<EnumType>(CanonicalType);
-      ET && ET->getDecl()->isComplete())
-    return ET->getDecl()->getIntegerType()->isSignedIntegerType();
+  if (const auto *ET = dyn_cast<EnumType>(CanonicalType)) {
+    const auto *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
+    if (!ED->isComplete())
+      return false;
+    return ED->getIntegerType()->isSignedIntegerType();
+  }
 
   if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
     return IT->isSigned();
@@ -2256,8 +2270,10 @@ bool Type::isUnsignedIntegerType() const {
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType)) {
     // Incomplete enum types are not treated as integer types.
     // FIXME: In C++, enum types are never integer types.
-    if (ET->getDecl()->isComplete() && !ET->getDecl()->isScoped())
-      return ET->getDecl()->getIntegerType()->isUnsignedIntegerType();
+    const auto *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
+    if (!ED->isComplete() || ED->isScoped())
+      return false;
+    return ED->getIntegerType()->isUnsignedIntegerType();
   }
 
   if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
@@ -2272,9 +2288,12 @@ bool Type::isUnsignedIntegerOrEnumerationType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->isUnsignedInteger();
 
-  if (const auto *ET = dyn_cast<EnumType>(CanonicalType);
-      ET && ET->getDecl()->isComplete())
-    return ET->getDecl()->getIntegerType()->isUnsignedIntegerType();
+  if (const auto *ET = dyn_cast<EnumType>(CanonicalType)) {
+    const auto *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
+    if (!ED->isComplete())
+      return false;
+    return ED->getIntegerType()->isUnsignedIntegerType();
+  }
 
   if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
     return IT->isUnsigned();
@@ -2323,8 +2342,10 @@ bool Type::isRealType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() >= BuiltinType::Bool &&
            BT->getKind() <= BuiltinType::Ibm128;
-  if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
-    return ET->getDecl()->isComplete() && !ET->getDecl()->isScoped();
+  if (const auto *ET = dyn_cast<EnumType>(CanonicalType)) {
+    const auto *ED = ET->getOriginalDecl();
+    return !ED->isScoped() && ED->getDefinitionOrSelf()->isComplete();
+  }
   return isBitIntType();
 }
 
@@ -2332,14 +2353,16 @@ bool Type::isArithmeticType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() >= BuiltinType::Bool &&
            BT->getKind() <= BuiltinType::Ibm128;
-  if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
+  if (const auto *ET = dyn_cast<EnumType>(CanonicalType)) {
     // GCC allows forward declaration of enum types (forbid by C99 6.7.2.3p2).
     // If a body isn't seen by the time we get here, return false.
     //
     // C++0x: Enumerations are not arithmetic types. For now, just return
     // false for scoped enumerations since that will disable any
     // unwanted implicit conversions.
-    return !ET->getDecl()->isScoped() && ET->getDecl()->isComplete();
+    const auto *ED = ET->getOriginalDecl();
+    return !ED->isScoped() && ED->getDefinitionOrSelf()->isComplete();
+  }
   return isa<ComplexType>(CanonicalType) || isBitIntType();
 }
 
@@ -2347,8 +2370,8 @@ bool Type::hasBooleanRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isBooleanType();
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType)) {
-    return ET->getDecl()->isComplete() &&
-           ET->getDecl()->getIntegerType()->isBooleanType();
+    const auto *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
+    return ED->isComplete() && ED->getIntegerType()->isBooleanType();
   }
   if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
     return IT->getNumBits() == 1;
@@ -2380,7 +2403,10 @@ Type::ScalarTypeKind Type::getScalarTypeKind() const {
   } else if (isa<MemberPointerType>(T)) {
     return STK_MemberPointer;
   } else if (isa<EnumType>(T)) {
-    assert(cast<EnumType>(T)->getDecl()->isComplete());
+    assert(cast<EnumType>(T)
+               ->getOriginalDecl()
+               ->getDefinitionOrSelf()
+               ->isComplete());
     return STK_Integral;
   } else if (const auto *CT = dyn_cast<ComplexType>(T)) {
     if (CT->getElementType()->isRealFloatingType())
@@ -2404,7 +2430,8 @@ Type::ScalarTypeKind Type::getScalarTypeKind() const {
 /// includes union types.
 bool Type::isAggregateType() const {
   if (const auto *Record = dyn_cast<RecordType>(CanonicalType)) {
-    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(Record->getDecl()))
+    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(
+            Record->getOriginalDecl()->getDefinitionOrSelf()))
       return ClassDecl->isAggregate();
 
     return true;
@@ -2438,7 +2465,8 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
     // be completed.
     return isVoidType();
   case Enum: {
-    EnumDecl *EnumD = cast<EnumType>(CanonicalType)->getDecl();
+    EnumDecl *EnumD =
+        cast<EnumType>(CanonicalType)->getOriginalDecl()->getDefinitionOrSelf();
     if (Def)
       *Def = EnumD;
     return !EnumD->isComplete();
@@ -2446,13 +2474,17 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
   case Record: {
     // A tagged type (struct/union/enum/class) is incomplete if the decl is a
     // forward declaration, but not a full definition (C99 6.2.5p22).
-    RecordDecl *Rec = cast<RecordType>(CanonicalType)->getDecl();
+    RecordDecl *Rec = cast<RecordType>(CanonicalType)
+                          ->getOriginalDecl()
+                          ->getDefinitionOrSelf();
     if (Def)
       *Def = Rec;
     return !Rec->isCompleteDefinition();
   }
   case InjectedClassName: {
-    CXXRecordDecl *Rec = cast<InjectedClassNameType>(CanonicalType)->getDecl();
+    CXXRecordDecl *Rec = cast<InjectedClassNameType>(CanonicalType)
+                             ->getOriginalDecl()
+                             ->getDefinitionOrSelf();
     if (!Rec->isBeingDefined())
       return false;
     if (Def)
@@ -2734,9 +2766,9 @@ bool QualType::isCXX98PODType(const ASTContext &Context) const {
     return true;
 
   case Type::Record:
-    if (const auto *ClassDecl =
-            dyn_cast<CXXRecordDecl>(cast<RecordType>(CanonicalType)->getDecl()))
-      return ClassDecl->isPOD();
+    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(
+            cast<RecordType>(CanonicalType)->getOriginalDecl()))
+      return ClassDecl->getDefinitionOrSelf()->isPOD();
 
     // C struct/union is POD.
     return true;
@@ -2777,7 +2809,8 @@ bool QualType::isTrivialType(const ASTContext &Context) const {
   if (CanonicalType->isScalarType() || CanonicalType->isVectorType())
     return true;
   if (const auto *RT = CanonicalType->getAs<RecordType>()) {
-    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
+    if (const auto *ClassDecl =
+            dyn_cast<CXXRecordDecl>(RT->getOriginalDecl())) {
       // C++20 [class]p6:
       //   A trivial class is a class that is trivially copyable, and
       //     has one or more eligible default constructors such that each is
@@ -2836,14 +2869,17 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
     return true;
 
   if (const auto *RT = CanonicalType->getAs<RecordType>()) {
-    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
+    if (const auto *ClassDecl =
+            dyn_cast<CXXRecordDecl>(RT->getOriginalDecl())) {
       if (IsCopyConstructible) {
         return ClassDecl->isTriviallyCopyConstructible();
       } else {
         return ClassDecl->isTriviallyCopyable();
       }
     }
-    return !RT->getDecl()->isNonTrivialToPrimitiveCopy();
+    return !RT->getOriginalDecl()
+                ->getDefinitionOrSelf()
+                ->isNonTrivialToPrimitiveCopy();
   }
   // No other types can match.
   return false;
@@ -2933,7 +2969,9 @@ QualType::PrimitiveDefaultInitializeKind
 QualType::isNonTrivialToPrimitiveDefaultInitialize() const {
   if (const auto *RT =
           getTypePtr()->getBaseElementTypeUnsafe()->getAs<RecordType>())
-    if (RT->getDecl()->isNonTrivialToPrimitiveDefaultInitialize())
+    if (RT->getOriginalDecl()
+            ->getDefinitionOrSelf()
+            ->isNonTrivialToPrimitiveDefaultInitialize())
       return PDIK_Struct;
 
   switch (getQualifiers().getObjCLifetime()) {
@@ -2949,7 +2987,9 @@ QualType::isNonTrivialToPrimitiveDefaultInitialize() const {
 QualType::PrimitiveCopyKind QualType::isNonTrivialToPrimitiveCopy() const {
   if (const auto *RT =
           getTypePtr()->getBaseElementTypeUnsafe()->getAs<RecordType>())
-    if (RT->getDecl()->isNonTrivialToPrimitiveCopy())
+    if (RT->getOriginalDecl()
+            ->getDefinitionOrSelf()
+            ->isNonTrivialToPrimitiveCopy())
       return PCK_Struct;
 
   Qualifiers Qs = getQualifiers();
@@ -3017,8 +3057,8 @@ bool Type::isLiteralType(const ASTContext &Ctx) const {
     //    -- all non-static data members and base classes of literal types
     //
     // We resolve DR1361 by ignoring the second bullet.
-    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
-      return ClassDecl->isLiteral();
+    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl()))
+      return ClassDecl->getDefinitionOrSelf()->isLiteral();
 
     return true;
   }
@@ -3071,8 +3111,8 @@ bool Type::isStandardLayoutType() const {
   if (BaseTy->isScalarType() || BaseTy->isVectorType())
     return true;
   if (const auto *RT = BaseTy->getAs<RecordType>()) {
-    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
-      if (!ClassDecl->isStandardLayout())
+    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl()))
+      if (!ClassDecl->getDefinitionOrSelf()->isStandardLayout())
         return false;
 
     // Default to 'true' for non-C++ class types.
@@ -3114,7 +3154,9 @@ bool QualType::isCXX11PODType(const ASTContext &Context) const {
   if (BaseTy->isScalarType() || BaseTy->isVectorType())
     return true;
   if (const auto *RT = BaseTy->getAs<RecordType>()) {
-    if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
+    if (const auto *ClassDecl =
+            dyn_cast<CXXRecordDecl>(RT->getOriginalDecl())) {
+      ClassDecl = ClassDecl->getDefinitionOrSelf();
       // C++11 [class]p10:
       //   A POD struct is a non-union class that is both a trivial class [...]
       if (!ClassDecl->isTrivial())
@@ -3154,8 +3196,9 @@ bool Type::isNothrowT() const {
 
 bool Type::isAlignValT() const {
   if (const auto *ET = getAs<EnumType>()) {
-    IdentifierInfo *II = ET->getDecl()->getIdentifier();
-    if (II && II->isStr("align_val_t") && ET->getDecl()->isInStdNamespace())
+    const auto *ED = ET->getOriginalDecl();
+    IdentifierInfo *II = ED->getIdentifier();
+    if (II && II->isStr("align_val_t") && ED->isInStdNamespace())
       return true;
   }
   return false;
@@ -3163,8 +3206,9 @@ bool Type::isAlignValT() const {
 
 bool Type::isStdByteType() const {
   if (const auto *ET = getAs<EnumType>()) {
-    IdentifierInfo *II = ET->getDecl()->getIdentifier();
-    if (II && II->isStr("byte") && ET->getDecl()->isInStdNamespace())
+    const auto *ED = ET->getOriginalDecl();
+    IdentifierInfo *II = ED->getIdentifier();
+    if (II && II->isStr("byte") && ED->isInStdNamespace())
       return true;
   }
   return false;
@@ -4312,8 +4356,10 @@ bool RecordType::hasConstFields() const {
   unsigned NextToCheckIndex = 0;
 
   while (RecordTypeList.size() > NextToCheckIndex) {
-    for (FieldDecl *FD :
-         RecordTypeList[NextToCheckIndex]->getDecl()->fields()) {
+    for (FieldDecl *FD : RecordTypeList[NextToCheckIndex]
+                             ->getOriginalDecl()
+                             ->getDefinitionOrSelf()
+                             ->fields()) {
       QualType FieldTy = FD->getType();
       if (FieldTy.isConstQualified())
         return true;
@@ -4784,7 +4830,8 @@ static CachedProperties computeCachedProperties(const Type *T) {
 
   case Type::Record:
   case Type::Enum: {
-    const TagDecl *Tag = cast<TagType>(T)->getDecl();
+    const TagDecl *Tag =
+        cast<TagType>(T)->getOriginalDecl()->getDefinitionOrSelf();
 
     // C++ [basic.link]p8:
     //     - it is a class or enumeration type that is named (or has a name
@@ -4893,7 +4940,8 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
 
   case Type::Record:
   case Type::Enum:
-    return getDeclLinkageAndVisibility(cast<TagType>(T)->getDecl());
+    return getDeclLinkageAndVisibility(
+        cast<TagType>(T)->getOriginalDecl()->getDefinitionOrSelf());
 
   case Type::Complex:
     return computeTypeLinkageInfo(cast<ComplexType>(T)->getElementType());
@@ -5096,7 +5144,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
     llvm_unreachable("unknown builtin type");
 
   case Type::Record: {
-    const RecordDecl *RD = cast<RecordType>(type)->getDecl();
+    const RecordDecl *RD = cast<RecordType>(type)->getOriginalDecl();
     // For template specializations, look only at primary template attributes.
     // This is a consistent regardless of whether the instantiation is known.
     if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
@@ -5294,14 +5342,18 @@ bool Type::isCARCBridgableType() const {
 /// Check if the specified type is the CUDA device builtin surface type.
 bool Type::isCUDADeviceBuiltinSurfaceType() const {
   if (const auto *RT = getAs<RecordType>())
-    return RT->getDecl()->hasAttr<CUDADeviceBuiltinSurfaceTypeAttr>();
+    return RT->getOriginalDecl()
+        ->getMostRecentDecl()
+        ->hasAttr<CUDADeviceBuiltinSurfaceTypeAttr>();
   return false;
 }
 
 /// Check if the specified type is the CUDA device builtin texture type.
 bool Type::isCUDADeviceBuiltinTextureType() const {
   if (const auto *RT = getAs<RecordType>())
-    return RT->getDecl()->hasAttr<CUDADeviceBuiltinTextureTypeAttr>();
+    return RT->getOriginalDecl()
+        ->getMostRecentDecl()
+        ->hasAttr<CUDADeviceBuiltinTextureTypeAttr>();
   return false;
 }
 
@@ -5365,7 +5417,7 @@ QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {
   }
 
   if (const auto *RT = type->getBaseElementTypeUnsafe()->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getOriginalDecl();
     if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
       /// Check if this is a C++ object with a non-trivial destructor.
       if (CXXRD->hasDefinition() && !CXXRD->hasTrivialDestructor())

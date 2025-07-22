@@ -198,7 +198,7 @@ static bool IsPartOfAST(const CXXRecordDecl *R) {
   for (const auto &BS : R->bases()) {
     QualType T = BS.getType();
     if (const RecordType *baseT = T->getAs<RecordType>()) {
-      CXXRecordDecl *baseD = cast<CXXRecordDecl>(baseT->getDecl());
+      CXXRecordDecl *baseD = cast<CXXRecordDecl>(baseT->getOriginalDecl());
       if (IsPartOfAST(baseD))
         return true;
     }
@@ -244,7 +244,7 @@ void ASTFieldVisitor::Visit(FieldDecl *D) {
     ReportError(T);
 
   if (const RecordType *RT = T->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl()->getDefinition();
+    const RecordDecl *RD = RT->getOriginalDecl()->getDefinition();
     for (auto *I : RD->fields())
       Visit(I);
   }

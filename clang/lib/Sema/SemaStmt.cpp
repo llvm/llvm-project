@@ -1287,11 +1287,11 @@ static void checkEnumTypesInSwitchStmt(Sema &S, const Expr *Cond,
     return;
 
   // Ignore anonymous enums.
-  if (!CondEnumType->getDecl()->getIdentifier() &&
-      !CondEnumType->getDecl()->getTypedefNameForAnonDecl())
+  if (!CondEnumType->getOriginalDecl()->getIdentifier() &&
+      !CondEnumType->getOriginalDecl()->getTypedefNameForAnonDecl())
     return;
-  if (!CaseEnumType->getDecl()->getIdentifier() &&
-      !CaseEnumType->getDecl()->getTypedefNameForAnonDecl())
+  if (!CaseEnumType->getOriginalDecl()->getIdentifier() &&
+      !CaseEnumType->getOriginalDecl()->getTypedefNameForAnonDecl())
     return;
 
   if (S.Context.hasSameUnqualifiedType(CondType, CaseType))
@@ -1604,9 +1604,11 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
 
     // If switch has default case, then ignore it.
     if (!CaseListIsErroneous && !CaseListIsIncomplete && !HasConstantCond &&
-        ET && ET->getDecl()->isCompleteDefinition() &&
-        !ET->getDecl()->enumerators().empty()) {
-      const EnumDecl *ED = ET->getDecl();
+        ET) {
+      const EnumDecl *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
+      if (!ED->isCompleteDefinition() || ED->enumerators().empty())
+        goto enum_out;
+
       EnumValsTy EnumVals;
 
       // Gather all enum values, set their type and sort them,
@@ -1749,7 +1751,7 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
   if (SrcExpr->isTypeDependent() || SrcExpr->isValueDependent())
     return;
 
-  const EnumDecl *ED = ET->getDecl();
+  const EnumDecl *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
   if (!ED->isClosed())
     return;
 
@@ -3710,7 +3712,7 @@ private:
   Sema &S;
 };
 bool LocalTypedefNameReferencer::VisitRecordType(RecordType *RT) {
-  auto *R = dyn_cast<CXXRecordDecl>(RT->getDecl());
+  auto *R = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl());
   if (!R || !R->isLocalClass() || !R->isLocalClass()->isExternallyVisible() ||
       R->isDependentType())
     return true;
@@ -3929,7 +3931,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
             << RetValExp->getSourceRange();
     if (FD->hasAttr<CmseNSEntryAttr>() && RetValExp) {
       if (const auto *RT = dyn_cast<RecordType>(FnRetType.getCanonicalType())) {
-        if (RT->getDecl()->isOrContainsUnion())
+        if (RT->getOriginalDecl()->isOrContainsUnion())
           Diag(RetValExp->getBeginLoc(), diag::warn_cmse_nonsecure_union) << 1;
       }
     }

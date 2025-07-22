@@ -177,7 +177,7 @@ static bool threadSafetyCheckIsSmartPointer(Sema &S, const RecordType* RT) {
     return !Result.empty();
   };
 
-  const RecordDecl *Record = RT->getDecl();
+  const RecordDecl *Record = RT->getOriginalDecl()->getDefinitionOrSelf();
   bool foundStarOperator = IsOverloadedOperatorPresent(Record, OO_Star);
   bool foundArrowOperator = IsOverloadedOperatorPresent(Record, OO_Arrow);
   if (foundStarOperator && foundArrowOperator)
@@ -271,7 +271,8 @@ static bool checkRecordTypeForCapability(Sema &S, QualType Ty) {
   if (threadSafetyCheckIsSmartPointer(S, RT))
     return true;
 
-  return checkRecordDeclForAttr<CapabilityAttr>(RT->getDecl());
+  return checkRecordDeclForAttr<CapabilityAttr>(
+      RT->getOriginalDecl()->getDefinitionOrSelf());
 }
 
 static bool checkRecordTypeForScopedCapability(Sema &S, QualType Ty) {
@@ -284,7 +285,8 @@ static bool checkRecordTypeForScopedCapability(Sema &S, QualType Ty) {
   if (RT->isIncompleteType())
     return true;
 
-  return checkRecordDeclForAttr<ScopedLockableAttr>(RT->getDecl());
+  return checkRecordDeclForAttr<ScopedLockableAttr>(
+      RT->getOriginalDecl()->getDefinitionOrSelf());
 }
 
 static bool checkTypedefTypeForCapability(QualType Ty) {
@@ -1254,8 +1256,8 @@ bool Sema::isValidPointerAttrType(QualType T, bool RefOkay) {
   // The nonnull attribute, and other similar attributes, can be applied to a
   // transparent union that contains a pointer type.
   if (const RecordType *UT = T->getAsUnionType()) {
-    if (UT && UT->getDecl()->hasAttr<TransparentUnionAttr>()) {
-      RecordDecl *UD = UT->getDecl();
+    RecordDecl *UD = UT->getOriginalDecl()->getDefinitionOrSelf();
+    if (UD->hasAttr<TransparentUnionAttr>()) {
       for (const auto *I : UD->fields()) {
         QualType QT = I->getType();
         if (QT->isAnyPointerType() || QT->isBlockPointerType())
@@ -4362,7 +4364,10 @@ static void handleTransparentUnionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   RecordDecl *RD = nullptr;
   const auto *TD = dyn_cast<TypedefNameDecl>(D);
   if (TD && TD->getUnderlyingType()->isUnionType())
-    RD = TD->getUnderlyingType()->getAsUnionType()->getDecl();
+    RD = TD->getUnderlyingType()
+             ->getAsUnionType()
+             ->getOriginalDecl()
+             ->getDefinitionOrSelf();
   else
     RD = dyn_cast<RecordDecl>(D);
 

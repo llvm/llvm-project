@@ -1596,7 +1596,10 @@ void CXXNameMangler::mangleUnqualifiedName(
 
     if (const VarDecl *VD = dyn_cast<VarDecl>(ND)) {
       // We must have an anonymous union or struct declaration.
-      const RecordDecl *RD = VD->getType()->castAs<RecordType>()->getDecl();
+      const RecordDecl *RD = VD->getType()
+                                 ->castAs<RecordType>()
+                                 ->getOriginalDecl()
+                                 ->getDefinitionOrSelf();
 
       // Itanium C++ ABI 5.1.2:
       //
@@ -2540,7 +2543,8 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
 
   case Type::Enum:
   case Type::Record:
-    mangleSourceNameWithAbiTags(cast<TagType>(Ty)->getDecl());
+    mangleSourceNameWithAbiTags(
+        cast<TagType>(Ty)->getOriginalDecl()->getDefinitionOrSelf());
     break;
 
   case Type::TemplateSpecialization: {
@@ -2601,8 +2605,9 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   }
 
   case Type::InjectedClassName:
-    mangleSourceNameWithAbiTags(
-        cast<InjectedClassNameType>(Ty)->getDecl());
+    mangleSourceNameWithAbiTags(cast<InjectedClassNameType>(Ty)
+                                    ->getOriginalDecl()
+                                    ->getDefinitionOrSelf());
     break;
 
   case Type::DependentName:
@@ -3850,7 +3855,7 @@ void CXXNameMangler::mangleType(const RecordType *T) {
   mangleType(static_cast<const TagType*>(T));
 }
 void CXXNameMangler::mangleType(const TagType *T) {
-  mangleName(T->getDecl());
+  mangleName(T->getOriginalDecl()->getDefinitionOrSelf());
 }
 
 // <type>       ::= <array-type>
@@ -4759,7 +4764,7 @@ void CXXNameMangler::mangleIntegerLiteral(QualType T,
 void CXXNameMangler::mangleMemberExprBase(const Expr *Base, bool IsArrow) {
   // Ignore member expressions involving anonymous unions.
   while (const auto *RT = Base->getType()->getAs<RecordType>()) {
-    if (!RT->getDecl()->isAnonymousStructOrUnion())
+    if (!RT->getOriginalDecl()->isAnonymousStructOrUnion())
       break;
     const auto *ME = dyn_cast<MemberExpr>(Base);
     if (!ME)
@@ -7036,7 +7041,7 @@ static bool hasMangledSubstitutionQualifiers(QualType T) {
 bool CXXNameMangler::mangleSubstitution(QualType T) {
   if (!hasMangledSubstitutionQualifiers(T)) {
     if (const RecordType *RT = T->getAs<RecordType>())
-      return mangleSubstitution(RT->getDecl());
+      return mangleSubstitution(RT->getOriginalDecl()->getDefinitionOrSelf());
   }
 
   uintptr_t TypePtr = reinterpret_cast<uintptr_t>(T.getAsOpaquePtr());
@@ -7077,7 +7082,7 @@ bool CXXNameMangler::isSpecializedAs(QualType S, llvm::StringRef Name,
     return false;
 
   const ClassTemplateSpecializationDecl *SD =
-    dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
+      dyn_cast<ClassTemplateSpecializationDecl>(RT->getOriginalDecl());
   if (!SD || !SD->getIdentifier()->isStr(Name))
     return false;
 
@@ -7207,7 +7212,7 @@ bool CXXNameMangler::mangleStandardSubstitution(const NamedDecl *ND) {
 void CXXNameMangler::addSubstitution(QualType T) {
   if (!hasMangledSubstitutionQualifiers(T)) {
     if (const RecordType *RT = T->getAs<RecordType>()) {
-      addSubstitution(RT->getDecl());
+      addSubstitution(RT->getOriginalDecl()->getDefinitionOrSelf());
       return;
     }
   }

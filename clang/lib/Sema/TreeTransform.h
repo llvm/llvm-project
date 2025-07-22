@@ -14100,7 +14100,7 @@ TreeTransform<Derived>::TransformCXXTypeidExpr(CXXTypeidExpr *E) {
   auto EvalCtx = Sema::ExpressionEvaluationContext::Unevaluated;
   if (E->isGLValue())
     if (auto *RecordT = Op->getType()->getAs<RecordType>())
-      if (cast<CXXRecordDecl>(RecordT->getDecl())->isPolymorphic())
+      if (cast<CXXRecordDecl>(RecordT->getOriginalDecl())->isPolymorphic())
         EvalCtx = SemaRef.ExprEvalContexts.back().Context;
 
   EnterExpressionEvaluationContext Unevaluated(SemaRef, EvalCtx,
@@ -14340,7 +14340,8 @@ TreeTransform<Derived>::TransformCXXNewExpr(CXXNewExpr *E) {
       QualType ElementType
         = SemaRef.Context.getBaseElementType(E->getAllocatedType());
       if (const RecordType *RecordT = ElementType->getAs<RecordType>()) {
-        CXXRecordDecl *Record = cast<CXXRecordDecl>(RecordT->getDecl());
+        CXXRecordDecl *Record = cast<CXXRecordDecl>(RecordT->getOriginalDecl())
+                                    ->getDefinitionOrSelf();
         if (CXXDestructorDecl *Destructor = SemaRef.LookupDestructor(Record)) {
           SemaRef.MarkFunctionReferenced(E->getBeginLoc(), Destructor);
         }
@@ -14410,7 +14411,9 @@ TreeTransform<Derived>::TransformCXXDeleteExpr(CXXDeleteExpr *E) {
       QualType Destroyed = SemaRef.Context.getBaseElementType(
                                                          E->getDestroyedType());
       if (const RecordType *DestroyedRec = Destroyed->getAs<RecordType>()) {
-        CXXRecordDecl *Record = cast<CXXRecordDecl>(DestroyedRec->getDecl());
+        CXXRecordDecl *Record =
+            cast<CXXRecordDecl>(DestroyedRec->getOriginalDecl())
+                ->getDefinitionOrSelf();
         SemaRef.MarkFunctionReferenced(E->getBeginLoc(),
                                        SemaRef.LookupDestructor(Record));
       }

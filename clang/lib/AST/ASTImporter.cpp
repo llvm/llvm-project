@@ -2157,7 +2157,7 @@ Error ASTNodeImporter::ImportDeclParts(
       const Type *LeafT =
           getLeafPointeeType(P->getType().getCanonicalType().getTypePtr());
       auto *RT = dyn_cast<RecordType>(LeafT);
-      if (RT && RT->getDecl() == D) {
+      if (RT && RT->getOriginalDecl() == D) {
         Importer.FromDiag(D->getLocation(), diag::err_unsupported_ast_node)
             << D->getDeclKindName();
         return make_error<ASTImportError>(ASTImportError::UnsupportedConstruct);
@@ -2410,8 +2410,8 @@ Error ASTNodeImporter::ImportFieldDeclDefinition(const FieldDecl *From,
     const RecordType *RecordTo = ToType->getAs<RecordType>();
 
     if (RecordFrom && RecordTo) {
-      FromRecordDecl = RecordFrom->getDecl();
-      ToRecordDecl = RecordTo->getDecl();
+      FromRecordDecl = RecordFrom->getOriginalDecl();
+      ToRecordDecl = RecordTo->getOriginalDecl();
     }
   }
 
@@ -3207,7 +3207,7 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
 
       if (auto *Typedef = dyn_cast<TypedefNameDecl>(FoundDecl)) {
         if (const auto *Tag = Typedef->getUnderlyingType()->getAs<TagType>())
-          FoundDecl = Tag->getDecl();
+          FoundDecl = Tag->getOriginalDecl();
       }
 
       if (auto *FoundEnum = dyn_cast<EnumDecl>(FoundDecl)) {
@@ -3338,7 +3338,7 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
       Decl *Found = FoundDecl;
       if (auto *Typedef = dyn_cast<TypedefNameDecl>(Found)) {
         if (const auto *Tag = Typedef->getUnderlyingType()->getAs<TagType>())
-          Found = Tag->getDecl();
+          Found = Tag->getOriginalDecl();
       }
 
       if (auto *FoundRecord = dyn_cast<RecordDecl>(Found)) {
@@ -3759,11 +3759,12 @@ public:
   }
 
   std::optional<bool> VisitTagType(const TagType *T) {
-    if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(T->getDecl()))
+    if (auto *Spec =
+            dyn_cast<ClassTemplateSpecializationDecl>(T->getOriginalDecl()))
       for (const auto &Arg : Spec->getTemplateArgs().asArray())
         if (checkTemplateArgument(Arg))
           return true;
-    return isAncestorDeclContextOf(ParentDC, T->getDecl());
+    return isAncestorDeclContextOf(ParentDC, T->getOriginalDecl());
   }
 
   std::optional<bool> VisitPointerType(const PointerType *T) {

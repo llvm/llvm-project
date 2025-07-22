@@ -3915,7 +3915,10 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   // Fill the data in the resulting kmp_task_t record.
   // Copy shareds if there are any.
   Address KmpTaskSharedsPtr = Address::invalid();
-  if (!SharedsTy->getAsStructureType()->getDecl()->field_empty()) {
+  if (!SharedsTy->getAsStructureType()
+           ->getOriginalDecl()
+           ->getDefinitionOrSelf()
+           ->field_empty()) {
     KmpTaskSharedsPtr = Address(
         CGF.EmitLoadOfScalar(
             CGF.EmitLValueForField(
@@ -3945,8 +3948,11 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   enum { Priority = 0, Destructors = 1 };
   // Provide pointer to function with destructors for privates.
   auto FI = std::next(KmpTaskTQTyRD->field_begin(), Data1);
-  const RecordDecl *KmpCmplrdataUD =
-      (*FI)->getType()->getAsUnionType()->getDecl();
+  const RecordDecl *KmpCmplrdataUD = (*FI)
+                                         ->getType()
+                                         ->getAsUnionType()
+                                         ->getOriginalDecl()
+                                         ->getDefinitionOrSelf();
   if (NeedsCleanup) {
     llvm::Value *DestructorFn = emitDestructorsFunction(
         CGM, Loc, KmpInt32Ty, KmpTaskTWithPrivatesPtrQTy,

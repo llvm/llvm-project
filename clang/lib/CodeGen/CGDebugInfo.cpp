@@ -1294,7 +1294,7 @@ static bool needsTypeIdentifier(const TagDecl *TD, CodeGenModule &CGM,
 static SmallString<256> getTypeIdentifier(const TagType *Ty, CodeGenModule &CGM,
                                           llvm::DICompileUnit *TheCU) {
   SmallString<256> Identifier;
-  const TagDecl *TD = Ty->getDecl();
+  const TagDecl *TD = Ty->getOriginalDecl()->getDefinitionOrSelf();
 
   if (!needsTypeIdentifier(TD, CGM, TheCU))
     return Identifier;
@@ -1330,8 +1330,8 @@ static llvm::dwarf::Tag getTagForRecord(const RecordDecl *RD) {
 llvm::DICompositeType *
 CGDebugInfo::getOrCreateRecordFwdDecl(const RecordType *Ty,
                                       llvm::DIScope *Ctx) {
-  const RecordDecl *RD = Ty->getDecl();
-  if (llvm::DIType *T = getTypeOrNull(CGM.getContext().getRecordType(RD)))
+  const RecordDecl *RD = Ty->getOriginalDecl()->getDefinitionOrSelf();
+  if (llvm::DIType *T = getTypeOrNull(QualType(Ty, 0)))
     return cast<llvm::DICompositeType>(T);
   llvm::DIFile *DefUnit = getOrCreateFile(RD->getLocation());
   const unsigned Line =
@@ -2367,7 +2367,9 @@ void CGDebugInfo::CollectCXXBasesAux(
   const ASTRecordLayout &RL = CGM.getContext().getASTRecordLayout(RD);
   for (const auto &BI : Bases) {
     const auto *Base =
-        cast<CXXRecordDecl>(BI.getType()->castAs<RecordType>()->getDecl());
+        cast<CXXRecordDecl>(
+            BI.getType()->castAs<RecordType>()->getOriginalDecl())
+            ->getDefinition();
     if (!SeenTypes.insert(Base).second)
       continue;
     auto *BaseTy = getOrCreateType(BI.getType(), Unit);
@@ -3028,7 +3030,7 @@ void CGDebugInfo::completeRequiredType(const RecordDecl *RD) {
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const RecordType *Ty) {
-  RecordDecl *RD = Ty->getDecl();
+  RecordDecl *RD = Ty->getOriginalDecl()->getDefinitionOrSelf();
   llvm::DIType *T = cast_or_null<llvm::DIType>(getTypeOrNull(QualType(Ty, 0)));
   if (T || shouldOmitDefinition(DebugKind, DebugTypeExtRefs, RD,
                                 CGM.getLangOpts())) {
@@ -3056,7 +3058,7 @@ llvm::DIType *CGDebugInfo::GetPreferredNameType(const CXXRecordDecl *RD,
 
 std::pair<llvm::DIType *, llvm::DIType *>
 CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
-  RecordDecl *RD = Ty->getDecl();
+  RecordDecl *RD = Ty->getOriginalDecl()->getDefinitionOrSelf();
 
   // Get overall information about the record type for the debug info.
   llvm::DIFile *DefUnit = getOrCreateFile(RD->getLocation());
@@ -4098,7 +4100,7 @@ CGDebugInfo::getOrCreateLimitedType(const RecordType *Ty) {
 
 // TODO: Currently used for context chains when limiting debug info.
 llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
-  RecordDecl *RD = Ty->getDecl();
+  RecordDecl *RD = Ty->getOriginalDecl()->getDefinitionOrSelf();
 
   // Get overall information about the record type for the debug info.
   StringRef RDName = getClassName(RD);
@@ -5081,7 +5083,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   } else if (const auto *RT = dyn_cast<RecordType>(VD->getType())) {
     // If VD is an anonymous union then Storage represents value for
     // all union fields.
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     if (RD->isUnion() && RD->isAnonymousStructOrUnion()) {
       // GDB has trouble finding local variables in anonymous unions, so we emit
       // artificial local variables for each of the members.
@@ -5631,8 +5633,9 @@ llvm::DIGlobalVariableExpression *CGDebugInfo::CollectAnonRecordDecls(
     // Ignore unnamed fields, but recurse into anonymous records.
     if (FieldName.empty()) {
       if (const auto *RT = dyn_cast<RecordType>(Field->getType()))
-        GVE = CollectAnonRecordDecls(RT->getDecl(), Unit, LineNo, LinkageName,
-                                     Var, DContext);
+        GVE =
+            CollectAnonRecordDecls(RT->getOriginalDecl()->getDefinitionOrSelf(),
+                                   Unit, LineNo, LinkageName, Var, DContext);
       continue;
     }
     // Use VarDecl's Tag, Scope and Line number.
@@ -5651,7 +5654,7 @@ static bool ReferencesAnonymousEntity(RecordType *RT) {
   // But so long as it's not one of those, it doesn't matter if some sub-type
   // of the record (a template parameter) can't be reconstituted - because the
   // un-reconstitutable type itself will carry its own name.
-  const auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
+  const auto *RD = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl());
   if (!RD)
     return false;
   if (!RD->getIdentifier())
@@ -5713,12 +5716,12 @@ struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
   bool TraverseEnumType(EnumType *ET, bool = false) {
     // Unnamed enums can't be reconstituted due to a lack of column info we
     // produce in the DWARF, so we can't get Clang's full name back.
-    if (const auto *ED = dyn_cast<EnumDecl>(ET->getDecl())) {
+    if (const auto *ED = dyn_cast<EnumDecl>(ET->getOriginalDecl())) {
       if (!ED->getIdentifier()) {
         Reconstitutable = false;
         return false;
       }
-      if (!ED->isExternallyVisible()) {
+      if (!ED->getDefinitionOrSelf()->isExternallyVisible()) {
         Reconstitutable = false;
         return false;
       }
@@ -5914,7 +5917,8 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
   // variable for each member of the anonymous union so that it's possible
   // to find the name of any field in the union.
   if (T->isUnionType() && DeclName.empty()) {
-    const RecordDecl *RD = T->castAs<RecordType>()->getDecl();
+    const RecordDecl *RD =
+        T->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
     assert(RD->isAnonymousStructOrUnion() &&
            "unnamed non-anonymous struct or union?");
     GVE = CollectAnonRecordDecls(RD, Unit, LineNo, LinkageName, Var, DContext);

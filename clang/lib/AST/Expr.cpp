@@ -75,8 +75,7 @@ const CXXRecordDecl *Expr::getBestDynamicClassType() const {
     return nullptr;
 
   const RecordType *Ty = DerivedType->castAs<RecordType>();
-  Decl *D = Ty->getDecl();
-  return cast<CXXRecordDecl>(D);
+  return cast<CXXRecordDecl>(Ty->getOriginalDecl())->getDefinitionOrSelf();
 }
 
 const Expr *Expr::skipRValueSubobjectAdjustments(
@@ -92,7 +91,9 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
           E->getType()->isRecordType()) {
         E = CE->getSubExpr();
         const auto *Derived =
-            cast<CXXRecordDecl>(E->getType()->castAs<RecordType>()->getDecl());
+            cast<CXXRecordDecl>(
+                E->getType()->castAs<RecordType>()->getOriginalDecl())
+                ->getDefinitionOrSelf();
         Adjustments.push_back(SubobjectAdjustment(CE, Derived));
         continue;
       }
@@ -2031,7 +2032,8 @@ CXXBaseSpecifier **CastExpr::path_buffer() {
 
 const FieldDecl *CastExpr::getTargetFieldForToUnionCast(QualType unionType,
                                                         QualType opType) {
-  auto RD = unionType->castAs<RecordType>()->getDecl();
+  auto RD =
+      unionType->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
   return getTargetFieldForToUnionCast(RD, opType);
 }
 
@@ -3408,7 +3410,10 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
 
     if (ILE->getType()->isRecordType()) {
       unsigned ElementNo = 0;
-      RecordDecl *RD = ILE->getType()->castAs<RecordType>()->getDecl();
+      RecordDecl *RD = ILE->getType()
+                           ->castAs<RecordType>()
+                           ->getOriginalDecl()
+                           ->getDefinitionOrSelf();
 
       // In C++17, bases were added to the list of members used by aggregate
       // initialization.
@@ -4051,8 +4056,10 @@ Expr::isNullPointerConstant(ASTContext &Ctx,
     return NPCK_CXX11_nullptr;
 
   if (const RecordType *UT = getType()->getAsUnionType())
-    if (!Ctx.getLangOpts().CPlusPlus11 &&
-        UT && UT->getDecl()->hasAttr<TransparentUnionAttr>())
+    if (!Ctx.getLangOpts().CPlusPlus11 && UT &&
+        UT->getOriginalDecl()
+            ->getMostRecentDecl()
+            ->hasAttr<TransparentUnionAttr>())
       if (const CompoundLiteralExpr *CLE = dyn_cast<CompoundLiteralExpr>(this)){
         const Expr *InitExpr = CLE->getInitializer();
         if (const InitListExpr *ILE = dyn_cast<InitListExpr>(InitExpr))

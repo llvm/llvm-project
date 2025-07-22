@@ -2039,7 +2039,7 @@ static const char *GetCompletionTypeString(QualType T, ASTContext &Context,
 
     // Anonymous tag types are constant strings.
     if (const TagType *TagT = dyn_cast<TagType>(T))
-      if (TagDecl *Tag = TagT->getDecl())
+      if (TagDecl *Tag = TagT->getOriginalDecl())
         if (!Tag->hasNameForLinkage()) {
           switch (Tag->getTagKind()) {
           case TagTypeKind::Struct:
@@ -5053,9 +5053,9 @@ void SemaCodeCompletion::CodeCompleteExpression(
                              Data.PreferredType->isMemberPointerType() ||
                              Data.PreferredType->isBlockPointerType();
     if (Data.PreferredType->isEnumeralType()) {
-      EnumDecl *Enum = Data.PreferredType->castAs<EnumType>()->getDecl();
-      if (auto *Def = Enum->getDefinition())
-        Enum = Def;
+      EnumDecl *Enum = Data.PreferredType->castAs<EnumType>()
+                           ->getOriginalDecl()
+                           ->getDefinitionOrSelf();
       // FIXME: collect covered enumerators in cases like:
       //        if (x == my_enum::one) { ... } else if (x == ^) {}
       AddEnumerators(Results, getASTContext(), Enum, SemaRef.CurContext,
@@ -6180,9 +6180,8 @@ void SemaCodeCompletion::CodeCompleteCase(Scope *S) {
 
   // Code-complete the cases of a switch statement over an enumeration type
   // by providing the list of
-  EnumDecl *Enum = type->castAs<EnumType>()->getDecl();
-  if (EnumDecl *Def = Enum->getDefinition())
-    Enum = Def;
+  EnumDecl *Enum =
+      type->castAs<EnumType>()->getOriginalDecl()->getDefinitionOrSelf();
 
   // Determine which enumerators we have already seen in the switch statement.
   // FIXME: Ideally, we would also be able to look *past* the code-completion

@@ -337,17 +337,17 @@ public:
   }
 
   bool VisitUsingTypeLoc(UsingTypeLoc TL) {
-    reportType(TL.getNameLoc(), TL.getFoundDecl());
+    reportType(TL.getNameLoc(), TL.getDecl());
     return true;
   }
 
   bool VisitTagTypeLoc(TagTypeLoc TTL) {
-    reportType(TTL.getNameLoc(), TTL.getDecl());
+    reportType(TTL.getNameLoc(), TTL.getOriginalDecl());
     return true;
   }
 
   bool VisitTypedefTypeLoc(TypedefTypeLoc TTL) {
-    reportType(TTL.getNameLoc(), TTL.getTypedefNameDecl());
+    reportType(TTL.getNameLoc(), TTL.getDecl());
     return true;
   }
 

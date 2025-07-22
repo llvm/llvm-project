@@ -543,8 +543,8 @@ void InstallAPIVisitor::emitVTableSymbols(const CXXRecordDecl *D,
   }
 
   for (const auto &It : D->bases()) {
-    const CXXRecordDecl *Base =
-        cast<CXXRecordDecl>(It.getType()->castAs<RecordType>()->getDecl());
+    const CXXRecordDecl *Base = cast<CXXRecordDecl>(
+        It.getType()->castAs<RecordType>()->getOriginalDecl());
     const auto BaseAccess = getAccessForDecl(Base);
     if (!BaseAccess)
       continue;

@@ -5272,9 +5272,9 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
         Record = dyn_cast<RecordDecl>(Tag);
       else if (const RecordType *RT =
                    DS.getRepAsType().get()->getAsStructureType())
-        Record = RT->getDecl();
+        Record = RT->getOriginalDecl()->getDefinitionOrSelf();
       else if (const RecordType *UT = DS.getRepAsType().get()->getAsUnionType())
-        Record = UT->getDecl();
+        Record = UT->getOriginalDecl()->getDefinitionOrSelf();
 
       if (Record && getLangOpts().MicrosoftExt) {
         Diag(DS.getBeginLoc(), diag::ext_ms_anonymous_record)
@@ -9788,7 +9788,8 @@ static void checkIsValidOpenCLKernelParameter(
 
   // At this point we already handled everything except of a RecordType.
   assert(PT->isRecordType() && "Unexpected type.");
-  const RecordDecl *PD = PT->castAs<RecordType>()->getDecl();
+  const RecordDecl *PD =
+      PT->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
   VisitStack.push_back(PD);
   assert(VisitStack.back() && "First decl null?");
 
@@ -9816,7 +9817,9 @@ static void checkIsValidOpenCLKernelParameter(
              "Unexpected type.");
       const Type *FieldRecTy = FieldTy->getPointeeOrArrayElementType();
 
-      RD = FieldRecTy->castAs<RecordType>()->getDecl();
+      RD = FieldRecTy->castAs<RecordType>()
+               ->getOriginalDecl()
+               ->getDefinitionOrSelf();
     } else {
       RD = cast<RecordDecl>(Next);
     }
@@ -13335,7 +13338,8 @@ struct DiagNonTrivalCUnionDefaultInitializeVisitor
   }
 
   void visitStruct(QualType QT, const FieldDecl *FD, bool InNonTrivialUnion) {
-    const RecordDecl *RD = QT->castAs<RecordType>()->getDecl();
+    const RecordDecl *RD =
+        QT->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
     if (RD->isUnion()) {
       if (OrigLoc.isValid()) {
         bool IsUnion = false;
@@ -13401,7 +13405,8 @@ struct DiagNonTrivalCUnionDestructedTypeVisitor
   }
 
   void visitStruct(QualType QT, const FieldDecl *FD, bool InNonTrivialUnion) {
-    const RecordDecl *RD = QT->castAs<RecordType>()->getDecl();
+    const RecordDecl *RD =
+        QT->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
     if (RD->isUnion()) {
       if (OrigLoc.isValid()) {
         bool IsUnion = false;
@@ -13466,7 +13471,8 @@ struct DiagNonTrivalCUnionCopyVisitor
   }
 
   void visitStruct(QualType QT, const FieldDecl *FD, bool InNonTrivialUnion) {
-    const RecordDecl *RD = QT->castAs<RecordType>()->getDecl();
+    const RecordDecl *RD =
+        QT->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
     if (RD->isUnion()) {
       if (OrigLoc.isValid()) {
         bool IsUnion = false;
@@ -14439,7 +14445,9 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     if (getLangOpts().CPlusPlus && Var->hasLocalStorage()) {
       if (const RecordType *Record
             = Context.getBaseElementType(Type)->getAs<RecordType>()) {
-        CXXRecordDecl *CXXRecord = cast<CXXRecordDecl>(Record->getDecl());
+        CXXRecordDecl *CXXRecord =
+            cast<CXXRecordDecl>(Record->getOriginalDecl())
+                ->getDefinitionOrSelf();
         // Mark the function (if we're in one) for further checking even if the
         // looser rules of C++11 do not require such checks, so that we can
         // diagnose incompatibilities with C++98.
@@ -19061,7 +19069,7 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
   if (!InvalidDecl && getLangOpts().CPlusPlus) {
     if (Record->isUnion()) {
       if (const RecordType *RT = EltTy->getAs<RecordType>()) {
-        CXXRecordDecl* RDecl = cast<CXXRecordDecl>(RT->getDecl());
+        CXXRecordDecl *RDecl = cast<CXXRecordDecl>(RT->getOriginalDecl());
         if (RDecl->getDefinition()) {
           // C++ [class.union]p1: An object of a class with a non-trivial
           // constructor, a non-trivial copy constructor, a non-trivial
@@ -19127,7 +19135,8 @@ bool Sema::CheckNontrivialField(FieldDecl *FD) {
 
   QualType EltTy = Context.getBaseElementType(FD->getType());
   if (const RecordType *RT = EltTy->getAs<RecordType>()) {
-    CXXRecordDecl *RDecl = cast<CXXRecordDecl>(RT->getDecl());
+    CXXRecordDecl *RDecl =
+        cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
     if (RDecl->getDefinition()) {
       // We check for copy constructors before constructors
       // because otherwise we'll never get complaints about
@@ -19450,7 +19459,7 @@ bool Sema::EntirelyFunctionPointers(const RecordDecl *Record) {
     }
     // If a member is a struct entirely of function pointers, that counts too.
     if (const RecordType *RT = FieldType->getAs<RecordType>()) {
-      const RecordDecl *Record = RT->getDecl();
+      const RecordDecl *Record = RT->getOriginalDecl()->getDefinitionOrSelf();
       if (Record->isStruct() && EntirelyFunctionPointers(Record))
         return true;
     }
@@ -19608,7 +19617,9 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       EnclosingDecl->setInvalidDecl();
       continue;
     } else if (const RecordType *FDTTy = FDTy->getAs<RecordType>()) {
-      if (Record && FDTTy->getDecl()->hasFlexibleArrayMember()) {
+      if (Record && FDTTy->getOriginalDecl()
+                        ->getDefinitionOrSelf()
+                        ->hasFlexibleArrayMember()) {
         // A type which contains a flexible array member is considered to be a
         // flexible array member.
         Record->setHasFlexibleArrayMember(true);
@@ -19634,9 +19645,10 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         // Ivars can not have abstract class types
         FD->setInvalidDecl();
       }
-      if (Record && FDTTy->getDecl()->hasObjectMember())
+      const RecordDecl *RD = FDTTy->getOriginalDecl()->getDefinitionOrSelf();
+      if (Record && RD->hasObjectMember())
         Record->setHasObjectMember(true);
-      if (Record && FDTTy->getDecl()->hasVolatileMember())
+      if (Record && RD->hasVolatileMember())
         Record->setHasVolatileMember(true);
     } else if (FDTy->isObjCObjectType()) {
       /// A field cannot be an Objective-c object
@@ -19667,8 +19679,10 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         Record->setHasObjectMember(true);
       else if (Context.getAsArrayType(FD->getType())) {
         QualType BaseType = Context.getBaseElementType(FD->getType());
-        if (BaseType->isRecordType() &&
-            BaseType->castAs<RecordType>()->getDecl()->hasObjectMember())
+        if (BaseType->isRecordType() && BaseType->castAs<RecordType>()
+                                            ->getOriginalDecl()
+                                            ->getDefinitionOrSelf()
+                                            ->hasObjectMember())
           Record->setHasObjectMember(true);
         else if (BaseType->isObjCObjectPointerType() ||
                  BaseType.isObjCGCStrong())
@@ -19701,7 +19715,9 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       }
 
       if (const auto *RT = FT->getAs<RecordType>()) {
-        if (RT->getDecl()->getArgPassingRestrictions() ==
+        if (RT->getOriginalDecl()
+                ->getDefinitionOrSelf()
+                ->getArgPassingRestrictions() ==
             RecordArgPassingKind::CanNeverPassInRegs)
           Record->setArgPassingRestrictions(
               RecordArgPassingKind::CanNeverPassInRegs);

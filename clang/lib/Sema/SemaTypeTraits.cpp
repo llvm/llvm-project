@@ -561,7 +561,8 @@ static bool HasNoThrowOperator(const RecordType *RT, OverloadedOperatorKind Op,
                                bool (CXXRecordDecl::*HasTrivial)() const,
                                bool (CXXRecordDecl::*HasNonTrivial)() const,
                                bool (CXXMethodDecl::*IsDesiredOp)() const) {
-  CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
+  CXXRecordDecl *RD =
+      cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
   if ((RD->*HasTrivial)() && !(RD->*HasNonTrivial)())
     return true;
 
@@ -1609,9 +1610,9 @@ bool Sema::BuiltinIsBaseOf(SourceLocation RhsTLoc, QualType LhsT,
 
   // Unions are never base classes, and never have base classes.
   // It doesn't matter if they are complete or not. See PR#41843
-  if (lhsRecord && lhsRecord->getDecl()->isUnion())
+  if (lhsRecord && lhsRecord->getOriginalDecl()->isUnion())
     return false;
-  if (rhsRecord && rhsRecord->getDecl()->isUnion())
+  if (rhsRecord && rhsRecord->getOriginalDecl()->isUnion())
     return false;
 
   if (lhsRecord == rhsRecord)
@@ -1625,8 +1626,8 @@ bool Sema::BuiltinIsBaseOf(SourceLocation RhsTLoc, QualType LhsT,
                           diag::err_incomplete_type_used_in_type_trait_expr))
     return false;
 
-  return cast<CXXRecordDecl>(rhsRecord->getDecl())
-      ->isDerivedFrom(cast<CXXRecordDecl>(lhsRecord->getDecl()));
+  return cast<CXXRecordDecl>(rhsRecord->getOriginalDecl())
+      ->isDerivedFrom(cast<CXXRecordDecl>(lhsRecord->getOriginalDecl()));
 }
 
 static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
@@ -1666,8 +1667,9 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
                                  diag::err_incomplete_type))
       return false;
 
-    return cast<CXXRecordDecl>(DerivedRecord->getDecl())
-        ->isVirtuallyDerivedFrom(cast<CXXRecordDecl>(BaseRecord->getDecl()));
+    return cast<CXXRecordDecl>(DerivedRecord->getOriginalDecl())
+        ->isVirtuallyDerivedFrom(
+            cast<CXXRecordDecl>(BaseRecord->getOriginalDecl()));
   }
   case BTT_IsSame:
     return Self.Context.hasSameType(LhsT, RhsT);

@@ -233,7 +233,7 @@ static unsigned calculateLegacyCbufferSize(const ASTContext &Context,
   constexpr unsigned CBufferAlign = 16;
   if (const RecordType *RT = T->getAs<RecordType>()) {
     unsigned Size = 0;
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     for (const FieldDecl *Field : RD->fields()) {
       QualType Ty = Field->getType();
       unsigned FieldSize = calculateLegacyCbufferSize(Context, Ty);
@@ -1808,7 +1808,7 @@ SemaHLSL::TakeLocForHLSLAttribute(const HLSLAttributedResourceType *RT) {
 // requirements and adds them to Bindings
 void SemaHLSL::collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
                                                        const RecordType *RT) {
-  const RecordDecl *RD = RT->getDecl();
+  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
   for (FieldDecl *FD : RD->fields()) {
     const Type *Ty = FD->getType()->getUnqualifiedDesugaredType();
 
@@ -3361,7 +3361,7 @@ bool SemaHLSL::ContainsBitField(QualType BaseTy) {
       continue;
     }
     if (const auto *RT = dyn_cast<RecordType>(T)) {
-      const RecordDecl *RD = RT->getDecl();
+      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       if (RD->isUnion())
         continue;
 
@@ -3877,7 +3877,8 @@ class InitListTransformer {
       }
       while (!RecordTypes.empty()) {
         const RecordType *RT = RecordTypes.pop_back_val();
-        for (auto *FD : RT->getDecl()->fields()) {
+        for (auto *FD :
+             RT->getOriginalDecl()->getDefinitionOrSelf()->fields()) {
           DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
           DeclarationNameInfo NameInfo(FD->getDeclName(), E->getBeginLoc());
           ExprResult Res = S.BuildFieldReferenceExpr(
@@ -3925,7 +3926,8 @@ class InitListTransformer {
       }
       while (!RecordTypes.empty()) {
         const RecordType *RT = RecordTypes.pop_back_val();
-        for (auto *FD : RT->getDecl()->fields()) {
+        for (auto *FD :
+             RT->getOriginalDecl()->getDefinitionOrSelf()->fields()) {
           Inits.push_back(generateInitListsImpl(FD->getType()));
         }
       }

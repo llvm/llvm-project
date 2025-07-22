@@ -132,7 +132,7 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     }
     if (const auto *ECD = dyn_cast<EnumConstantDecl>(Used)) {
       if (const auto *ET = ECD->getType()->getAs<EnumType>())
-        removeFromFoundDecls(ET->getDecl());
+        removeFromFoundDecls(ET->getOriginalDecl());
     }
   };
   // We rely on the fact that the clang AST is walked in order, usages are only

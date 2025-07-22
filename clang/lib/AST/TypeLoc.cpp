@@ -303,9 +303,8 @@ bool TypeSpecTypeLoc::isKind(const TypeLoc &TL) {
 }
 
 bool TagTypeLoc::isDefinition() const {
-  TagDecl *D = getDecl();
-  return D->isCompleteDefinition() &&
-         (D->getIdentifier() == nullptr || D->getLocation() == getNameLoc());
+  return getTypePtr()->isTagOwned() &&
+         getOriginalDecl()->isCompleteDefinition();
 }
 
 // Reimplemented to account for GNU/C++ extension

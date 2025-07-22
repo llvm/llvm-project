@@ -8867,8 +8867,8 @@ inline bool Type::isIntegerType() const {
   if (const EnumType *ET = dyn_cast<EnumType>(CanonicalType)) {
     // Incomplete enum types are not treated as integer types.
     // FIXME: In C++, enum types are never integer types.
-    return IsEnumDeclComplete(ET->getDecl()) &&
-      !IsEnumDeclScoped(ET->getDecl());
+    return IsEnumDeclComplete(ET->getOriginalDecl()) &&
+           !IsEnumDeclScoped(ET->getOriginalDecl());
   }
   return isBitIntType();
 }
@@ -8926,7 +8926,7 @@ inline bool Type::isScalarType() const {
   if (const EnumType *ET = dyn_cast<EnumType>(CanonicalType))
     // Enums are scalar types, but only if they are defined.  Incomplete enums
     // are not treated as scalar types.
-    return IsEnumDeclComplete(ET->getDecl());
+    return IsEnumDeclComplete(ET->getOriginalDecl());
   return isa<PointerType>(CanonicalType) ||
          isa<BlockPointerType>(CanonicalType) ||
          isa<MemberPointerType>(CanonicalType) ||
@@ -8942,7 +8942,7 @@ inline bool Type::isIntegralOrEnumerationType() const {
   // Check for a complete enum type; incomplete enum types are not properly an
   // enumeration type in the sense required here.
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
-    return IsEnumDeclComplete(ET->getDecl());
+    return IsEnumDeclComplete(ET->getOriginalDecl());
 
   return isBitIntType();
 }

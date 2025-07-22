@@ -1522,8 +1522,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   // types
   if (Field1->isAnonymousStructOrUnion() &&
       Field2->isAnonymousStructOrUnion()) {
-    RecordDecl *D1 = Field1->getType()->castAs<RecordType>()->getDecl();
-    RecordDecl *D2 = Field2->getType()->castAs<RecordType>()->getDecl();
+    RecordDecl *D1 = Field1->getType()->castAs<RecordType>()->getOriginalDecl();
+    RecordDecl *D2 = Field2->getType()->castAs<RecordType>()->getOriginalDecl();
     return IsStructurallyEquivalent(Context, D1, D2);
   }
 
@@ -2548,7 +2548,7 @@ StructuralEquivalenceContext::findUntaggedStructOrUnionIndex(RecordDecl *Anon) {
     // struct { ... } A;
     QualType FieldType = F->getType();
     if (const auto *RecType = dyn_cast<RecordType>(FieldType)) {
-      const RecordDecl *RecDecl = RecType->getDecl();
+      const RecordDecl *RecDecl = RecType->getOriginalDecl();
       if (RecDecl->getDeclContext() == Owner && !RecDecl->getIdentifier()) {
         if (Context.hasSameType(FieldType, AnonTy))
           break;

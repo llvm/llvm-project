@@ -910,9 +910,13 @@ void USRGenerator::VisitType(QualType T) {
       continue;
     }
     if (const TagType *TT = T->getAs<TagType>()) {
-      Out << '$';
-      VisitTagDecl(TT->getDecl());
-      return;
+      if (const auto *ICNT = dyn_cast<InjectedClassNameType>(TT)) {
+        T = ICNT->getCanonicalInjectedTST();
+      } else {
+        Out << '$';
+        VisitTagDecl(TT->getOriginalDecl());
+        return;
+      }
     }
     if (const ObjCInterfaceType *OIT = T->getAs<ObjCInterfaceType>()) {
       Out << '$';
