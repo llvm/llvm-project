@@ -88,11 +88,19 @@ static std::optional<APInt> extractConstantBits(const Constant *C) {
   if (isa<UndefValue>(C))
     return APInt::getZero(NumBits);
 
-  if (auto *CInt = dyn_cast<ConstantInt>(C))
-    return CInt->getValue();
+  if (auto *CInt = dyn_cast<ConstantInt>(C)) {
+    if (isa<VectorType>(CInt->getType()))
+      return APInt::getSplat(NumBits, CInt->getValue());
 
-  if (auto *CFP = dyn_cast<ConstantFP>(C))
+    return CInt->getValue();
+  }
+
+  if (auto *CFP = dyn_cast<ConstantFP>(C)) {
+    if (isa<VectorType>(CFP->getType()))
+      return APInt::getSplat(NumBits, CFP->getValue().bitcastToAPInt());
+
     return CFP->getValue().bitcastToAPInt();
+  }
 
   if (auto *CV = dyn_cast<ConstantVector>(C)) {
     if (auto *CVSplat = getSplatValueAllowUndef(CV)) {
@@ -333,6 +341,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
                                                      MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
   MachineConstantPool *CP = MI.getParent()->getParent()->getConstantPool();
+  bool HasSSE2 = ST->hasSSE2();
   bool HasSSE41 = ST->hasSSE41();
   bool HasAVX2 = ST->hasAVX2();
   bool HasDQI = ST->hasDQI();
@@ -394,11 +403,13 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   case X86::MOVAPDrm:
   case X86::MOVAPSrm:
   case X86::MOVUPDrm:
-  case X86::MOVUPSrm:
+  case X86::MOVUPSrm: {
     // TODO: SSE3 MOVDDUP Handling
-    return FixupConstant({{X86::MOVSSrm, 1, 32, rebuildZeroUpperCst},
-                          {X86::MOVSDrm, 1, 64, rebuildZeroUpperCst}},
-                         128, 1);
+    FixupEntry Fixups[] = {
+        {X86::MOVSSrm, 1, 32, rebuildZeroUpperCst},
+        {HasSSE2 ? X86::MOVSDrm : 0, 1, 64, rebuildZeroUpperCst}};
+    return FixupConstant(Fixups, 128, 1);
+  }
   case X86::VMOVAPDrm:
   case X86::VMOVAPSrm:
   case X86::VMOVUPDrm:

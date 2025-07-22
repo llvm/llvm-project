@@ -83,12 +83,6 @@ _allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26"]
 def getStdFlag(cfg, std):
     if hasCompileFlag(cfg, "-std=" + std):
         return "-std=" + std
-    # TODO(LLVM-19) Remove the fallbacks needed for Clang 16.
-    fallbacks = {
-        "c++23": "c++2b",
-    }
-    if std in fallbacks and hasCompileFlag(cfg, "-std=" + fallbacks[std]):
-        return "-std=" + fallbacks[std]
     return None
 
 

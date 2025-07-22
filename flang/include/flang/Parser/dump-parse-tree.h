@@ -17,6 +17,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <type_traits>
@@ -210,6 +211,9 @@ public:
   NODE(CompilerDirective, VectorAlways)
   NODE(CompilerDirective, Unroll)
   NODE(CompilerDirective, UnrollAndJam)
+  NODE(CompilerDirective, NoVector)
+  NODE(CompilerDirective, NoUnroll)
+  NODE(CompilerDirective, NoUnrollAndJam)
   NODE(parser, ComplexLiteralConstant)
   NODE(parser, ComplexPart)
   NODE(parser, ComponentArraySpec)
@@ -480,6 +484,11 @@ public:
   NODE(parser, OldParameterStmt)
   NODE(parser, OmpTypeSpecifier)
   NODE(parser, OmpTypeNameList)
+  NODE(parser, OmpAdjustArgsClause)
+  NODE(OmpAdjustArgsClause, OmpAdjustOp)
+  NODE_ENUM(OmpAdjustArgsClause::OmpAdjustOp, Value)
+  NODE(parser, OmpAppendArgsClause)
+  NODE(OmpAppendArgsClause, OmpAppendOp)
   NODE(parser, OmpLocator)
   NODE(parser, OmpLocatorList)
   NODE(parser, OmpReductionSpecifier)
@@ -537,8 +546,8 @@ public:
   NODE(parser, OmpBeginSectionsDirective)
   NODE(parser, OmpBlockDirective)
   static std::string GetNodeName(const llvm::omp::Directive &x) {
-    return llvm::Twine(
-        "llvm::omp::Directive = ", llvm::omp::getOpenMPDirectiveName(x))
+    return llvm::Twine("llvm::omp::Directive = ",
+        llvm::omp::getOpenMPDirectiveName(x, llvm::omp::FallbackVersion))
         .str();
   }
   NODE(parser, OmpClause)
@@ -588,6 +597,7 @@ public:
   NODE(OmpFromClause, Modifier)
   NODE(parser, OmpExpectation)
   NODE_ENUM(OmpExpectation, Value)
+  NODE(parser, OmpHintClause)
   NODE(parser, OmpHoldsClause)
   NODE(parser, OmpIfClause)
   NODE(OmpIfClause, Modifier)
@@ -657,6 +667,13 @@ public:
   NODE_ENUM(OmpDeviceModifier, Value)
   NODE(parser, OmpDeviceTypeClause)
   NODE_ENUM(OmpDeviceTypeClause, DeviceTypeDescription)
+  NODE(parser, OmpInteropRuntimeIdentifier)
+  NODE(parser, OmpInteropPreference)
+  NODE(parser, OmpInteropType)
+  NODE_ENUM(OmpInteropType, Value)
+  NODE(parser, OmpInitClause)
+  NODE(OmpInitClause, Modifier)
+  NODE(parser, OmpUseClause)
   NODE(parser, OmpUpdateClause)
   NODE(parser, OmpChunkModifier)
   NODE_ENUM(OmpChunkModifier, Value)
@@ -675,6 +692,7 @@ public:
   NODE(parser, OpenACCDeclarativeConstruct)
   NODE(parser, OpenACCEndConstruct)
   NODE(parser, OpenACCLoopConstruct)
+  NODE(parser, OpenMPInteropConstruct)
   NODE(parser, OpenACCRoutineConstruct)
   NODE(parser, OpenACCStandaloneDeclarativeConstruct)
   NODE(parser, OpenACCStandaloneConstruct)
@@ -691,15 +709,16 @@ public:
   NODE(parser, OpenMPCriticalConstruct)
   NODE(parser, OpenMPDeclarativeAllocate)
   NODE(parser, OpenMPDeclarativeConstruct)
+  NODE(parser, OmpDeclareVariantDirective)
   NODE(parser, OpenMPDeclareReductionConstruct)
   NODE(parser, OpenMPDeclareSimdConstruct)
   NODE(parser, OpenMPDeclareTargetConstruct)
   NODE(parser, OpenMPDeclareMapperConstruct)
+  NODE_ENUM(common, OmpMemoryOrderType)
   NODE(parser, OmpMemoryOrderClause)
   NODE(parser, OmpAtomicClause)
   NODE(parser, OmpAtomicClauseList)
   NODE(parser, OmpAtomicDefaultMemOrderClause)
-  NODE_ENUM(common, OmpAtomicDefaultMemOrderType)
   NODE(parser, OpenMPDepobjConstruct)
   NODE(parser, OpenMPUtilityConstruct)
   NODE(parser, OpenMPDispatchConstruct)

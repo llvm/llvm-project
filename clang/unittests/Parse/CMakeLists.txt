@@ -1,0 +1,15 @@
+add_clang_unittest(ParseTests
+  ParseHLSLRootSignatureTest.cpp
+  CLANG_LIBS
+  clangAST
+  clangBasic
+  clangLex
+  clangParse
+  clangSema
+  LINK_LIBS
+  LLVMTestingAnnotations
+  LLVMTestingSupport
+  clangTesting
+  LLVM_COMPONENTS
+  Support
+  )

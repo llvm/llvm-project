@@ -18,11 +18,12 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: test_load_i8
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[LDXRB:%[0-9]+]]:gpr32 = LDXRB [[COPY]] :: (volatile load (s8) from %ir.addr)
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[LDXRB]], %subreg.sub_32
-    ; CHECK: $x1 = COPY [[SUBREG_TO_REG]]
-    ; CHECK: RET_ReallyLR implicit $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LDXRB:%[0-9]+]]:gpr32 = LDXRB [[COPY]] :: (volatile load (s8) from %ir.addr)
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[LDXRB]], %subreg.sub_32
+    ; CHECK-NEXT: $x1 = COPY [[SUBREG_TO_REG]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x1
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.ldxr), %0(p0) :: (volatile load (s8) from %ir.addr)
     $x1 = COPY %1(s64)
@@ -40,11 +41,12 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: test_load_i16
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[LDXRH:%[0-9]+]]:gpr32 = LDXRH [[COPY]] :: (volatile load (s16) from %ir.addr)
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[LDXRH]], %subreg.sub_32
-    ; CHECK: $x1 = COPY [[SUBREG_TO_REG]]
-    ; CHECK: RET_ReallyLR implicit $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LDXRH:%[0-9]+]]:gpr32 = LDXRH [[COPY]] :: (volatile load (s16) from %ir.addr)
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[LDXRH]], %subreg.sub_32
+    ; CHECK-NEXT: $x1 = COPY [[SUBREG_TO_REG]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x1
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.ldxr), %0(p0) :: (volatile load (s16) from %ir.addr)
     $x1 = COPY %1(s64)
@@ -62,11 +64,12 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: test_load_i32
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[LDXRW:%[0-9]+]]:gpr32 = LDXRW [[COPY]] :: (volatile load (s32) from %ir.addr)
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[LDXRW]], %subreg.sub_32
-    ; CHECK: $x1 = COPY [[SUBREG_TO_REG]]
-    ; CHECK: RET_ReallyLR implicit $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LDXRW:%[0-9]+]]:gpr32 = LDXRW [[COPY]] :: (volatile load (s32) from %ir.addr)
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[LDXRW]], %subreg.sub_32
+    ; CHECK-NEXT: $x1 = COPY [[SUBREG_TO_REG]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x1
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.ldxr), %0(p0) :: (volatile load (s32) from %ir.addr)
     $x1 = COPY %1(s64)
@@ -85,10 +88,11 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: test_load_i64
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[LDXRX:%[0-9]+]]:gpr64 = LDXRX [[COPY]] :: (volatile load (s64) from %ir.addr)
-    ; CHECK: $x1 = COPY [[LDXRX]]
-    ; CHECK: RET_ReallyLR implicit $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LDXRX:%[0-9]+]]:gpr64 = LDXRX [[COPY]] :: (volatile load (s64) from %ir.addr)
+    ; CHECK-NEXT: $x1 = COPY [[LDXRX]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x1
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.ldxr), %0(p0) :: (volatile load (s64) from %ir.addr)
     $x1 = COPY %1(s64)

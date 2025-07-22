@@ -75,8 +75,7 @@ def err_module_file_not_module : Error<
 def err_module_file_missing_top_level_submodule : Error<
   "module file '%0' is missing its top-level submodule">, DefaultFatal;
 def note_module_file_conflict : Note<
-  "this is generally caused by modules with the same name found in multiple "
-  "paths">;
+  "compiled from '%0' and '%1'">;
 
 def remark_module_import : Remark<
   "importing module '%0'%select{| into '%3'}2 from '%1'">,
@@ -139,6 +138,11 @@ def warn_decls_in_multiple_modules : Warning<
   "the compiler may not be good at merging the definitions. ">,
   InGroup<DiagGroup<"decls-in-multiple-modules">>,
   DefaultIgnore;
+
+def warn_module_file_mapping_mismatch
+    : Warning<"loaded module file '%0' conflicts with imported file '%1'">,
+      InGroup<DiagGroup<"module-file-mapping-mismatch">>,
+      DefaultIgnore;
 
 def err_failed_to_find_module_file : Error<
   "failed to find module file for module '%0'">;

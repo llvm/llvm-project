@@ -75,10 +75,10 @@ public:
   bool select(MachineInstr &I) override;
   static const char *getName() { return DEBUG_TYPE; }
 
-  void setupMF(MachineFunction &MF, GISelKnownBits *KB,
+  void setupMF(MachineFunction &MF, GISelValueTracking *VT,
                CodeGenCoverage *CoverageInfo, ProfileSummaryInfo *PSI,
                BlockFrequencyInfo *BFI) override {
-    InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
+    InstructionSelector::setupMF(MF, VT, CoverageInfo, PSI, BFI);
     MIB.setMF(MF);
 
     // hasFnAttribute() is expensive to call on every BRCOND selection, so
@@ -5743,9 +5743,13 @@ AArch64InstructionSelector::emitConstantVector(Register Dst, Constant *CV,
     }
   }
 
-  if (CV->getSplatValue()) {
+  if (Constant *SplatValue = CV->getSplatValue()) {
+    APInt SplatValueAsInt =
+        isa<ConstantFP>(SplatValue)
+            ? cast<ConstantFP>(SplatValue)->getValueAPF().bitcastToAPInt()
+            : SplatValue->getUniqueInteger();
     APInt DefBits = APInt::getSplat(
-        DstSize, CV->getUniqueInteger().trunc(DstTy.getScalarSizeInBits()));
+        DstSize, SplatValueAsInt.trunc(DstTy.getScalarSizeInBits()));
     auto TryMOVIWithBits = [&](APInt DefBits) -> MachineInstr * {
       MachineInstr *NewOp;
       bool Inv = false;

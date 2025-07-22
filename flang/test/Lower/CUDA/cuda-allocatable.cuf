@@ -90,7 +90,7 @@ end subroutine
 
 subroutine sub4()
   real, allocatable, device :: a(:)
-  integer :: istream
+  integer(8) :: istream
   allocate(a(10), stream=istream)
 end subroutine
 
@@ -98,11 +98,10 @@ end subroutine
 ! CHECK: %[[BOX:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub4Ea"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
 ! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %{{.*}} {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub4Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
-! CHECK: %[[ISTREAM:.*]] = fir.alloca i32 {bindc_name = "istream", uniq_name = "_QFsub4Eistream"}
-! CHECK: %[[ISTREAM_DECL:.*]]:2 = hlfir.declare %[[ISTREAM]] {uniq_name = "_QFsub4Eistream"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[ISTREAM:.*]] = fir.alloca i64 {bindc_name = "istream", uniq_name = "_QFsub4Eistream"}
+! CHECK: %[[ISTREAM_DECL:.*]]:2 = hlfir.declare %[[ISTREAM]] {uniq_name = "_QFsub4Eistream"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK: fir.call @_FortranAAllocatableSetBounds
-! CHECK: %[[STREAM:.*]] = fir.load %[[ISTREAM_DECL]]#0 : !fir.ref<i32>
-! CHECK: %{{.*}} = cuf.allocate %[[BOX_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> stream(%[[STREAM]] : i32) {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: %{{.*}} = cuf.allocate %[[BOX_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> stream(%[[ISTREAM_DECL]]#0 : !fir.ref<i64>) {data_attr = #cuf.cuda<device>} -> i32
 ! CHECK: fir.if %{{.*}} {
 ! CHECK:   %{{.*}} = cuf.deallocate %[[BOX_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
 ! CHECK: }

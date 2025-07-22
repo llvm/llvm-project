@@ -18,6 +18,7 @@
 #include "NameSearchContext.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Address.h"
+#include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Expression/DiagnosticManager.h"
@@ -35,6 +36,7 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -56,7 +58,6 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 
-#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
@@ -1809,10 +1810,10 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
 
     const auto lang = function->GetCompileUnit()->GetLanguage();
     const auto name = function->GetMangled().GetMangledName().AsCString();
-    const bool extern_c = (Language::LanguageIsC(lang) &&
-                           !CPlusPlusLanguage::IsCPPMangledName(name)) ||
-                          (Language::LanguageIsObjC(lang) &&
-                           !Language::LanguageIsCPlusPlus(lang));
+    const bool extern_c =
+        (Language::LanguageIsC(lang) && !Mangled::IsMangledName(name)) ||
+        (Language::LanguageIsObjC(lang) &&
+         !Language::LanguageIsCPlusPlus(lang));
 
     if (!extern_c) {
       TypeSystem *type_system = function->GetDeclContext().GetTypeSystem();

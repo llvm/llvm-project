@@ -753,6 +753,24 @@ func.func @truncExtf3(%arg0: f32) -> f16 {
   return %truncf : f16
 }
 
+// CHECK-LABEL: @truncSitofp
+//       CHECK:     %[[SITOFP:.*]] = arith.sitofp %[[ARG0:.*]] : i32 to f32
+//       CHECK-NOT: truncf
+//       CHECK:     return %[[SITOFP]]
+func.func @truncSitofp(%arg0: i32) -> f32 {
+  %sitofp = arith.sitofp %arg0 : i32 to f64
+  %trunc = arith.truncf %sitofp : f64 to f32
+  return %trunc : f32
+}
+
+// CHECK-LABEL: @truncSitofpConstrained
+//       CHECK: truncf
+func.func @truncSitofpConstrained(%arg0: i32) -> f32 {
+  %sitofp = arith.sitofp %arg0 : i32 to f64
+  %trunc = arith.truncf %sitofp to_nearest_even : f64 to f32
+  return %trunc : f32
+}
+
 // TODO: We should also add a test for not folding arith.extf on information loss.
 // This may happen when extending f8E5M2FNUZ to f16.
 
@@ -1232,6 +1250,24 @@ func.func @doubleAddSub2(%arg0: index, %arg1 : index) -> index {
   %sub = arith.subi %arg0, %arg1 : index
   %add = arith.addi %arg1, %sub : index
   return %add : index
+}
+
+// Negative test case to ensure no further folding is performed when there's a type mismatch between the values and the result.
+// CHECK-LABEL:   func.func @nested_muli() -> i32 {
+// CHECK:           %[[VAL_0:.*]] = "test.constant"() <{value = 2147483647 : i64}> : () -> i32
+// CHECK:           %[[VAL_1:.*]] = "test.constant"() <{value = -2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_2:.*]] = "test.constant"() <{value = 2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_3:.*]] = arith.muli %[[VAL_0]], %[[VAL_1]] : i32
+// CHECK:           %[[VAL_4:.*]] = arith.muli %[[VAL_3]], %[[VAL_2]] : i32
+// CHECK:           return %[[VAL_4]] : i32
+// CHECK:         }
+func.func @nested_muli() -> (i32) {
+  %0 = "test.constant"() {value = 0x7fffffff} : () -> i32
+  %1 = "test.constant"() {value = -2147483648} : () -> i32
+  %2 = "test.constant"() {value = 0x80000000} : () -> i32
+  %4 = arith.muli %0, %1 : i32
+  %5 = arith.muli %4, %2 : i32
+  return %5 : i32
 }
 
 // CHECK-LABEL: @tripleMulIMulIIndex

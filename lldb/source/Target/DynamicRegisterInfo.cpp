@@ -497,10 +497,7 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
        pos != end; ++pos) {
     if (pos->second.size() > 1) {
       llvm::sort(pos->second);
-      reg_num_collection::iterator unique_end =
-          std::unique(pos->second.begin(), pos->second.end());
-      if (unique_end != pos->second.end())
-        pos->second.erase(unique_end, pos->second.end());
+      pos->second.erase(llvm::unique(pos->second), pos->second.end());
     }
     assert(!pos->second.empty());
     if (pos->second.back() != LLDB_INVALID_REGNUM)

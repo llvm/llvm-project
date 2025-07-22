@@ -1,3 +1,13 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#if defined(__opencl_c_images)
+
 _CLC_OVERLOAD _CLC_DECL int get_image_width (image2d_t image);
 _CLC_OVERLOAD _CLC_DECL int get_image_width (image3d_t image);
 
@@ -34,3 +44,5 @@ _CLC_OVERLOAD _CLC_DECL uint4
 read_imageui(image2d_t image, sampler_t sampler, int2 coord);
 _CLC_OVERLOAD _CLC_DECL uint4
 read_imageui(image2d_t image, sampler_t sampler, float2 coord);
+
+#endif

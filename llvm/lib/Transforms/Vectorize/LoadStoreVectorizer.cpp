@@ -1274,9 +1274,7 @@ std::optional<APInt> Vectorizer::getConstantOffsetComplexAddrs(
     APInt BitsAllowedToBeSet = Known.Zero.zext(IdxDiff.getBitWidth());
     if (Signed)
       BitsAllowedToBeSet.clearBit(BitWidth - 1);
-    if (BitsAllowedToBeSet.ult(IdxDiff.abs()))
-      return std::nullopt;
-    Safe = true;
+    Safe = BitsAllowedToBeSet.uge(IdxDiff.abs());
   }
 
   if (Safe)

@@ -10,6 +10,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ExitCodes.h"
+#include "llvm/Support/ProgramStack.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/thread.h"
 #include <cassert>
@@ -522,4 +523,14 @@ bool CrashRecoveryContext::RunSafelyOnThread(function_ref<void()> Fn,
   if (CrashRecoveryContextImpl *CRC = (CrashRecoveryContextImpl *)Impl)
     CRC->setSwitchedThread();
   return Info.Result;
+}
+
+bool CrashRecoveryContext::RunSafelyOnNewStack(function_ref<void()> Fn,
+                                               unsigned RequestedStackSize) {
+#ifdef LLVM_HAS_SPLIT_STACKS
+  return runOnNewStack(RequestedStackSize,
+                       function_ref<bool()>([&]() { return RunSafely(Fn); }));
+#else
+  return RunSafelyOnThread(Fn, RequestedStackSize);
+#endif
 }

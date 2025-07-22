@@ -58,7 +58,7 @@ define i64 @load_acquire_i64(ptr %ptr) {
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    ori $a1, $zero, 2
-; LA32-NEXT:    bl %plt(__atomic_load_8)
+; LA32-NEXT:    bl __atomic_load_8
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -114,7 +114,7 @@ define double @load_acquire_double(ptr %ptr) {
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    ori $a1, $zero, 2
-; LA32-NEXT:    bl %plt(__atomic_load_8)
+; LA32-NEXT:    bl __atomic_load_8
 ; LA32-NEXT:    st.w $a1, $sp, 4
 ; LA32-NEXT:    st.w $a0, $sp, 0
 ; LA32-NEXT:    fld.d $fa0, $sp, 0
@@ -182,7 +182,7 @@ define i64 @load_unordered_i64(ptr %ptr) {
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    move $a1, $zero
-; LA32-NEXT:    bl %plt(__atomic_load_8)
+; LA32-NEXT:    bl __atomic_load_8
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -233,7 +233,7 @@ define double @load_unordered_double(ptr %ptr) {
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    move $a1, $zero
-; LA32-NEXT:    bl %plt(__atomic_load_8)
+; LA32-NEXT:    bl __atomic_load_8
 ; LA32-NEXT:    st.w $a1, $sp, 4
 ; LA32-NEXT:    st.w $a0, $sp, 0
 ; LA32-NEXT:    fld.d $fa0, $sp, 0
@@ -300,7 +300,7 @@ define i64 @load_monotonic_i64(ptr %ptr) {
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    move $a1, $zero
-; LA32-NEXT:    bl %plt(__atomic_load_8)
+; LA32-NEXT:    bl __atomic_load_8
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -351,7 +351,7 @@ define double @load_monotonic_double(ptr %ptr) {
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    move $a1, $zero
-; LA32-NEXT:    bl %plt(__atomic_load_8)
+; LA32-NEXT:    bl __atomic_load_8
 ; LA32-NEXT:    st.w $a1, $sp, 4
 ; LA32-NEXT:    st.w $a0, $sp, 0
 ; LA32-NEXT:    fld.d $fa0, $sp, 0
@@ -424,7 +424,7 @@ define i64 @load_seq_cst_i64(ptr %ptr) {
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    ori $a1, $zero, 5
-; LA32-NEXT:    bl %plt(__atomic_load_8)
+; LA32-NEXT:    bl __atomic_load_8
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -480,7 +480,7 @@ define double @load_seq_cst_double(ptr %ptr) {
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    ori $a1, $zero, 5
-; LA32-NEXT:    bl %plt(__atomic_load_8)
+; LA32-NEXT:    bl __atomic_load_8
 ; LA32-NEXT:    st.w $a1, $sp, 4
 ; LA32-NEXT:    st.w $a0, $sp, 0
 ; LA32-NEXT:    fld.d $fa0, $sp, 0
@@ -553,7 +553,7 @@ define void @store_release_i64(ptr %ptr, i64 %v) {
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    ori $a3, $zero, 3
-; LA32-NEXT:    bl %plt(__atomic_store_8)
+; LA32-NEXT:    bl __atomic_store_8
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -609,7 +609,7 @@ define void @store_release_double(ptr %ptr, double %v) {
 ; LA32-NEXT:    ld.w $a1, $sp, 0
 ; LA32-NEXT:    ld.w $a2, $sp, 4
 ; LA32-NEXT:    ori $a3, $zero, 3
-; LA32-NEXT:    bl %plt(__atomic_store_8)
+; LA32-NEXT:    bl __atomic_store_8
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -673,7 +673,7 @@ define void @store_unordered_i64(ptr %ptr, i64 %v) {
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    move $a3, $zero
-; LA32-NEXT:    bl %plt(__atomic_store_8)
+; LA32-NEXT:    bl __atomic_store_8
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -727,7 +727,7 @@ define void @store_unordered_double(ptr %ptr, double %v) {
 ; LA32-NEXT:    ld.w $a1, $sp, 0
 ; LA32-NEXT:    ld.w $a2, $sp, 4
 ; LA32-NEXT:    move $a3, $zero
-; LA32-NEXT:    bl %plt(__atomic_store_8)
+; LA32-NEXT:    bl __atomic_store_8
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -791,7 +791,7 @@ define void @store_monotonic_i64(ptr %ptr, i64 %v) {
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    move $a3, $zero
-; LA32-NEXT:    bl %plt(__atomic_store_8)
+; LA32-NEXT:    bl __atomic_store_8
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -845,7 +845,7 @@ define void @store_monotonic_double(ptr %ptr, double %v) {
 ; LA32-NEXT:    ld.w $a1, $sp, 0
 ; LA32-NEXT:    ld.w $a2, $sp, 4
 ; LA32-NEXT:    move $a3, $zero
-; LA32-NEXT:    bl %plt(__atomic_store_8)
+; LA32-NEXT:    bl __atomic_store_8
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -919,7 +919,7 @@ define void @store_seq_cst_i64(ptr %ptr, i64 %v) {
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    ori $a3, $zero, 5
-; LA32-NEXT:    bl %plt(__atomic_store_8)
+; LA32-NEXT:    bl __atomic_store_8
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -977,7 +977,7 @@ define void @store_seq_cst_double(ptr %ptr, double %v) {
 ; LA32-NEXT:    ld.w $a1, $sp, 0
 ; LA32-NEXT:    ld.w $a2, $sp, 4
 ; LA32-NEXT:    ori $a3, $zero, 5
-; LA32-NEXT:    bl %plt(__atomic_store_8)
+; LA32-NEXT:    bl __atomic_store_8
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret

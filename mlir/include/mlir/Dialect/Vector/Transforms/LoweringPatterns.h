@@ -241,16 +241,20 @@ void populateVectorStepLoweringPatterns(RewritePatternSet &patterns,
 
 /// Populate the pattern set with the following patterns:
 ///
-/// [FlattenGather]
-/// Flattens 2 or more dimensional `vector.gather` ops by unrolling the
+/// [UnrollGather]
+/// Unrolls 2 or more dimensional `vector.gather` ops by unrolling the
 /// outermost dimension.
+void populateVectorGatherLoweringPatterns(RewritePatternSet &patterns,
+                                          PatternBenefit benefit = 1);
+
+/// Populate the pattern set with the following patterns:
 ///
 /// [Gather1DToConditionalLoads]
 /// Turns 1-d `vector.gather` into a scalarized sequence of `vector.loads` or
 /// `tensor.extract`s. To avoid out-of-bounds memory accesses, these
 /// loads/extracts are made conditional using `scf.if` ops.
-void populateVectorGatherLoweringPatterns(RewritePatternSet &patterns,
-                                          PatternBenefit benefit = 1);
+void populateVectorGatherToConditionalLoadPatterns(RewritePatternSet &patterns,
+                                                   PatternBenefit benefit = 1);
 
 /// Populates instances of `MaskOpRewritePattern` to lower masked operations
 /// with `vector.mask`. Patterns should rewrite the `vector.mask` operation and

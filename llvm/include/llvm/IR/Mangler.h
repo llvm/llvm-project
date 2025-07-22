@@ -25,6 +25,8 @@ class Triple;
 class Twine;
 class raw_ostream;
 
+constexpr std::string_view HybridPatchableTargetSuffix = "$hp_target";
+
 class Mangler {
   /// We need to give global values the same name every time they are mangled.
   /// This keeps track of the number we give to anonymous ones.

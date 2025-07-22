@@ -24,6 +24,10 @@ LLVM_LIBC_FUNCTION(float, atanhf, (float x)) {
   // |x| >= 1.0
   if (LIBC_UNLIKELY(x_abs >= 0x3F80'0000U)) {
     if (xbits.is_nan()) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
       return x;
     }
     // |x| == 1.0

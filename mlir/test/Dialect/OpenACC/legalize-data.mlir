@@ -102,7 +102,7 @@ func.func @test(%a: memref<10xf32>) {
   return
 }
 
-// CHECK: func.func @test
+// CHECK-LABEL: func.func @test
 // CHECK-SAME: (%[[A:.*]]: memref<10xf32>)
 // CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[A]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
 // CHECK: acc.parallel dataOperands(%[[CREATE]] : memref<10xf32>) {
@@ -140,7 +140,7 @@ func.func @test(%a: memref<10xf32>) {
   return
 }
 
-// CHECK: func.func @test
+// CHECK-LABEL: func.func @test
 // CHECK-SAME: (%[[A:.*]]: memref<10xf32>)
 // CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[A]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
 // CHECK: acc.parallel private(@privatization_memref_10_f32 -> %[[PRIVATE]] : memref<10xf32>) {
@@ -178,7 +178,7 @@ func.func @test(%a: memref<10xf32>) {
   return
 }
 
-// CHECK: func.func @test
+// CHECK-LABEL: func.func @test
 // CHECK-SAME: (%[[A:.*]]: memref<10xf32>)
 // CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[A]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
 // CHECK: acc.parallel  {
@@ -216,7 +216,7 @@ func.func @test(%a: memref<10xf32>) {
   return
 }
 
-// CHECK: func.func @test
+// CHECK-LABEL: func.func @test
 // CHECK-SAME: (%[[A:.*]]: memref<10xf32>)
 // CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[A]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
 // CHECK: acc.serial private(@privatization_memref_10_f32 -> %[[PRIVATE]] : memref<10xf32>) {
@@ -226,3 +226,50 @@ func.func @test(%a: memref<10xf32>) {
 // CHECK:   }
 // CHECK:   acc.yield
 // CHECK: }
+
+// -----
+
+func.func @test(%a: memref<10xf32>) {
+  %devptr = acc.use_device varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
+  acc.host_data dataOperands(%devptr : memref<10xf32>) {
+    func.call @foo(%a) : (memref<10xf32>) -> ()
+    acc.terminator
+  }
+  return
+}
+func.func private @foo(memref<10xf32>)
+
+// CHECK-LABEL: func.func @test
+// CHECK-SAME: (%[[A:.*]]: memref<10xf32>)
+// CHECK: %[[USE_DEVICE:.*]] = acc.use_device varPtr(%[[A]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
+// CHECK: acc.host_data dataOperands(%[[USE_DEVICE]] : memref<10xf32>) {
+// DEVICE:   func.call @foo(%[[USE_DEVICE]]) : (memref<10xf32>) -> ()
+// CHECK:   acc.terminator
+// CHECK: }
+
+// -----
+
+func.func @test(%a: memref<10xf32>) {
+  %declare = acc.create varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> {name = "arr"}
+  %token = acc.declare_enter dataOperands(%declare : memref<10xf32>)
+  acc.kernels dataOperands(%declare : memref<10xf32>) {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1.000000e+00 : f32
+    memref.store %c1, %a[%c0] : memref<10xf32>
+    acc.terminator
+  }
+  acc.declare_exit token(%token) dataOperands(%declare : memref<10xf32>)
+  return
+}
+
+// CHECK-LABEL: func.func @test
+// CHECK-SAME: (%[[A:.*]]: memref<10xf32>)
+// CHECK: %[[DECLARE:.*]] = acc.create varPtr(%[[A]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32> {name = "arr"}
+// CHECK: %[[TOKEN:.*]] = acc.declare_enter dataOperands(%[[DECLARE]] : memref<10xf32>)
+// CHECK: acc.kernels dataOperands(%[[DECLARE]] : memref<10xf32>) {
+// DEVICE:   memref.store %{{.*}}, %[[DECLARE]][%{{.*}}] : memref<10xf32>
+// HOST:    memref.store %{{.*}}, %[[A]][%{{.*}}] : memref<10xf32>
+// CHECK:   acc.terminator
+// CHECK: }
+// CHECK: acc.declare_exit token(%[[TOKEN]]) dataOperands(%[[DECLARE]] : memref<10xf32>)
+// CHECK: return

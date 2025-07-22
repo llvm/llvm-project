@@ -108,6 +108,18 @@ define void @test() #0 {
 
 attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
 
+; CHECK: @0 = external constant %RWTypedBuffer
+; CHECK: @1 = external constant %RWTypedBuffer.0
+; CHECK: @2 = external constant %RWTypedBuffer.1
+; CHECK: @3 = external constant %RWTypedBuffer.2
+; CHECK: @4 = external constant %RWByteAddressBuffer
+; CHECK: @5 = external constant %RWStructuredBuffer
+; CHECK: @6 = external constant %RasterizerOrderedTypedBuffer
+; CHECK: @7 = external constant %RasterizerOrderedStructuredBuffer
+; CHECK: @8 = external constant %RasterizerOrderedByteAddressBuffer
+; CHECK: @9 = external constant %RWTypedBuffer.3
+; CHECK: @10 = external constant %RWTypedBuffer.4
+
 ; CHECK: !dx.resources = !{[[ResList:[!][0-9]+]]}
 
 ; CHECK: [[ResList]] = !{null, [[UAVList:[!][0-9]+]], null, null}

@@ -600,7 +600,7 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
           .addReg(Scratch4)
           .addReg(Mips::ZERO)
           .addMBB(loop1MBB);
-      BuildMI(loopMBB, DL, TII->get(Mips::J)).addMBB(loop2MBB);
+      BuildMI(loopMBB, DL, TII->get(Mips::B)).addMBB(loop2MBB);
     }
 
     //  and BinOpRes, BinOpRes, Mask
@@ -962,7 +962,7 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
           .addReg(Scratch2_32)
           .addReg(ZERO)
           .addMBB(loop1MBB);
-      BuildMI(loopMBB, DL, TII->get(Mips::J)).addMBB(loop2MBB);
+      BuildMI(loopMBB, DL, TII->get(Mips::B)).addMBB(loop2MBB);
     }
 
   } else if (Opcode) {

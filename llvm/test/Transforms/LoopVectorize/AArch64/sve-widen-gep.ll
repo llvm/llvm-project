@@ -9,6 +9,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NOT:    LV: Found {{.*}} scalar instruction:   %ptr.iv.2.next = getelementptr inbounds i8, ptr %ptr.iv.2, i64 1
 ;
 ; CHECK:        VPlan 'Initial VPlan for VF={vscale x 2},UF>=1' {
+; CHECK-NEXT:   Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT:   Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT:   Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT:   Live-in ir<%N> = original trip-count
@@ -26,7 +27,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:     EMIT ir<%ptr.iv.2> = WIDEN-POINTER-INDUCTION ir<%start.2>, ir<1>
 ; CHECK-NEXT:     vp<[[PTR_IDX:%.+]]> = DERIVED-IV ir<0> + vp<[[CAN_IV]]> * ir<8>
-; CHECK-NEXT:     vp<[[PTR_IDX_STEPS:%.+]]> = SCALAR-STEPS vp<[[PTR_IDX]]>, ir<8>
+; CHECK-NEXT:     vp<[[PTR_IDX_STEPS:%.+]]> = SCALAR-STEPS vp<[[PTR_IDX]]>, ir<8>, vp<[[VF]]>
 ; CHECK-NEXT:     EMIT vp<[[PTR_IV_1:%.+]]> = ptradd ir<%start.1>, vp<[[PTR_IDX_STEPS]]>
 ; CHECK-NEXT:     WIDEN-GEP Var[Inv] ir<%ptr.iv.2.next> = getelementptr inbounds ir<%ptr.iv.2>, ir<1>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer vp<[[PTR_IV_1]]>
@@ -78,8 +79,7 @@ define void @pointer_induction_used_as_vector(ptr noalias %start.1, ptr noalias 
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul <vscale x 2 x i64> [[TMP13]], splat (i64 1)
 ; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <vscale x 2 x i64> [[TMP14]]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START_1]], i64 [[TMP15]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START_1]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, <vscale x 2 x ptr> [[VECTOR_GEP]], i64 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr ptr, ptr [[NEXT_GEP]], i32 0
 ; CHECK-NEXT:    store <vscale x 2 x ptr> [[TMP16]], ptr [[TMP17]], align 8

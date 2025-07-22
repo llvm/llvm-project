@@ -102,6 +102,7 @@ public:
   bool expressionsUseSymbols = false;
   bool usedInExpression = false;
   bool inOverlay = false;
+  bool firstInOverlay = false;
 
   // Tracks whether the section has ever had an input section added to it, even
   // if the section was later removed (e.g. because it is a synthetic section

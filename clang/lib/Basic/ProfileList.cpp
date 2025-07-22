@@ -37,7 +37,7 @@ public:
 
   bool hasPrefix(StringRef Prefix) const {
     for (const auto &It : Sections)
-      if (It.second.Entries.count(Prefix) > 0)
+      if (It.Entries.count(Prefix) > 0)
         return true;
     return false;
   }
@@ -45,8 +45,7 @@ public:
 
 std::unique_ptr<ProfileSpecialCaseList>
 ProfileSpecialCaseList::create(const std::vector<std::string> &Paths,
-                               llvm::vfs::FileSystem &VFS,
-                               std::string &Error) {
+                               llvm::vfs::FileSystem &VFS, std::string &Error) {
   auto PSCL = std::make_unique<ProfileSpecialCaseList>();
   if (PSCL->createInternal(Paths, VFS, Error))
     return PSCL;
@@ -62,7 +61,7 @@ ProfileSpecialCaseList::createOrDie(const std::vector<std::string> &Paths,
   llvm::report_fatal_error(llvm::Twine(Error));
 }
 
-}
+} // namespace clang
 
 ProfileList::ProfileList(ArrayRef<std::string> Paths, SourceManager &SM)
     : SCL(ProfileSpecialCaseList::createOrDie(
@@ -81,6 +80,8 @@ static StringRef getSectionName(CodeGenOptions::ProfileInstrKind Kind) {
     return "llvm";
   case CodeGenOptions::ProfileCSIRInstr:
     return "csllvm";
+  case CodeGenOptions::ProfileIRSampleColdCov:
+    return "sample-coldcov";
   }
   llvm_unreachable("Unhandled CodeGenOptions::ProfileInstrKind enum");
 }

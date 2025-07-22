@@ -31,7 +31,7 @@ AST_MATCHER_P(QualType, hasAnyType, std::vector<StringRef>, Names) {
     return false;
 
   std::string Name = Node.getLocalUnqualifiedType().getAsString();
-  return llvm::any_of(Names, [&Name](StringRef Ref) { return Ref == Name; });
+  return llvm::is_contained(Names, Name);
 }
 
 AST_MATCHER(FieldDecl, hasIntBitwidth) {

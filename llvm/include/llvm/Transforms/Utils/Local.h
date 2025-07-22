@@ -556,6 +556,30 @@ Value *invertCondition(Value *Condition);
 /// function, explicitly materialize the maximal set in the IR.
 bool inferAttributesFromOthers(Function &F);
 
+//===----------------------------------------------------------------------===//
+//  Helpers to track and update flags on instructions.
+//
+
+struct OverflowTracking {
+  bool HasNUW = true;
+  bool HasNSW = true;
+
+  // Note: At the moment, users are responsible to manage AllKnownNonNegative
+  // and AllKnownNonZero manually. AllKnownNonNegative can be true in a case
+  // where one of the operands is negative, but one the operators is not NSW.
+  // AllKnownNonNegative should not be used independently of HasNSW
+  bool AllKnownNonNegative = true;
+  bool AllKnownNonZero = true;
+
+  OverflowTracking() = default;
+
+  /// Merge in the no-wrap flags from \p I.
+  void mergeFlags(Instruction &I);
+
+  /// Apply the no-wrap flags to \p I if applicable.
+  void applyFlags(Instruction &I);
+};
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_LOCAL_H

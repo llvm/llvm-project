@@ -253,6 +253,8 @@ define void @select_uniform_ugt_16xi8(ptr %ptr, i8 %x) {
 ; CHECK-NEXT:    [[S_8:%.*]] = select i1 [[CMP_8]], i8 [[TMP1]], i8 [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i8>, ptr [[GEP_9]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i8>, ptr [[GEP_12]], align 1
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i8> [[TMP2]], <2 x i8> poison, <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i8> [[TMP2]], <2 x i8> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> [[TMP4]], <16 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 8, i32 9, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <16 x i8> [[TMP5]], i8 [[L_11]], i32 11

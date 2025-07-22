@@ -24,6 +24,7 @@ static UnwindPlan::Row make_simple_row(addr_t offset, uint64_t cfa_value) {
 TEST(UnwindPlan, InsertRow) {
   UnwindPlan::Row row1 = make_simple_row(0, 42);
   UnwindPlan::Row row2 = make_simple_row(0, 47);
+  UnwindPlan::Row row3 = make_simple_row(-1, 4242);
 
   UnwindPlan plan(eRegisterKindGeneric);
   plan.InsertRow(row1);
@@ -34,6 +35,10 @@ TEST(UnwindPlan, InsertRow) {
 
   plan.InsertRow(row2, /*replace_existing=*/true);
   EXPECT_THAT(plan.GetRowForFunctionOffset(0), testing::Pointee(row2));
+
+  EXPECT_THAT(plan.GetRowForFunctionOffset(-1), nullptr);
+  plan.InsertRow(row3);
+  EXPECT_THAT(plan.GetRowForFunctionOffset(-1), testing::Pointee(row3));
 }
 
 TEST(UnwindPlan, GetRowForFunctionOffset) {
@@ -57,15 +62,20 @@ TEST(UnwindPlan, PlanValidAtAddress) {
   UnwindPlan::Row row2 = make_simple_row(10, 47);
 
   UnwindPlan plan(eRegisterKindGeneric);
+  // When valid address range is not set, plans are valid as long as they have a
+  // row that sets the CFA.
   EXPECT_FALSE(plan.PlanValidAtAddress(Address(0)));
+  EXPECT_FALSE(plan.PlanValidAtAddress(Address(10)));
 
   plan.InsertRow(row2);
-  EXPECT_FALSE(plan.PlanValidAtAddress(Address(0)));
+  EXPECT_TRUE(plan.PlanValidAtAddress(Address(0)));
+  EXPECT_TRUE(plan.PlanValidAtAddress(Address(10)));
 
   plan.InsertRow(row1);
   EXPECT_TRUE(plan.PlanValidAtAddress(Address(0)));
   EXPECT_TRUE(plan.PlanValidAtAddress(Address(10)));
 
+  // With an address range, they're only valid within that range.
   plan.SetPlanValidAddressRanges({AddressRange(0, 5), AddressRange(15, 5)});
   EXPECT_TRUE(plan.PlanValidAtAddress(Address(0)));
   EXPECT_FALSE(plan.PlanValidAtAddress(Address(5)));

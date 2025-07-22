@@ -19,7 +19,7 @@ static bool shouldReduceAlign(GlobalObject &GO) {
 
 static bool shouldReduceComdat(GlobalObject &GO) { return GO.hasComdat(); }
 
-static void reduceGOs(Oracle &O, ReducerWorkItem &Program) {
+void llvm::reduceGlobalObjectsDeltaPass(Oracle &O, ReducerWorkItem &Program) {
   for (auto &GO : Program.getModule().global_objects()) {
     if (shouldReduceSection(GO) && !O.shouldKeep())
       GO.setSection("");
@@ -28,8 +28,4 @@ static void reduceGOs(Oracle &O, ReducerWorkItem &Program) {
     if (shouldReduceComdat(GO) && !O.shouldKeep())
       GO.setComdat(nullptr);
   }
-}
-
-void llvm::reduceGlobalObjectsDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceGOs, "Reducing GlobalObjects");
 }

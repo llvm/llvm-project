@@ -388,6 +388,16 @@ public:
   SGPRSaveKind getKind() const { return Kind; }
 };
 
+struct VGPRBlock2IndexFunctor {
+  using argument_type = Register;
+  unsigned operator()(Register Reg) const {
+    assert(AMDGPU::VReg_1024RegClass.contains(Reg) && "Expecting a VGPR block");
+
+    const MCRegister FirstVGPRBlock = AMDGPU::VReg_1024RegClass.getRegister(0);
+    return Reg - FirstVGPRBlock;
+  }
+};
+
 /// This class keeps track of the SPI_SP_INPUT_ADDR config register, which
 /// tells the hardware which interpolation parameters to load.
 class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
@@ -574,6 +584,11 @@ private:
   // frame, so save it here and add it to the RegScavenger later.
   std::optional<int> ScavengeFI;
 
+  // Map each VGPR CSR to the mask needed to save and restore it using block
+  // load/store instructions. Only used if the subtarget feature for VGPR block
+  // load/store is enabled.
+  IndexedMap<uint32_t, VGPRBlock2IndexFunctor> MaskForVGPRBlockOps;
+
 private:
   Register VGPRForAGPRCopy;
 
@@ -593,6 +608,19 @@ public:
   }
 
   bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg) const;
+
+  void setMaskForVGPRBlockOps(Register RegisterBlock, uint32_t Mask) {
+    MaskForVGPRBlockOps.grow(RegisterBlock);
+    MaskForVGPRBlockOps[RegisterBlock] = Mask;
+  }
+
+  uint32_t getMaskForVGPRBlockOps(Register RegisterBlock) const {
+    return MaskForVGPRBlockOps[RegisterBlock];
+  }
+
+  bool hasMaskForVGPRBlockOps(Register RegisterBlock) const {
+    return MaskForVGPRBlockOps.inBounds(RegisterBlock);
+  }
 
 public:
   SIMachineFunctionInfo(const SIMachineFunctionInfo &MFI) = default;
@@ -633,6 +661,10 @@ public:
 
   const WWMSpillsMap &getWWMSpills() const { return WWMSpills; }
   const ReservedRegSet &getWWMReservedRegs() const { return WWMReservedRegs; }
+
+  bool isWWMReservedRegister(Register Reg) const {
+    return WWMReservedRegs.contains(Reg);
+  }
 
   ArrayRef<PrologEpilogSGPRSpill> getPrologEpilogSGPRSpills() const {
     assert(is_sorted(PrologEpilogSGPRSpills, llvm::less_first()));

@@ -413,3 +413,60 @@ define i1 @f32cmp3(float %x, float %y, float %z, float %w) {
   %r = xor i1 %or, %cmpzw
   ret i1 %r
 }
+
+define i1 @PR140534(i32 %a0, i32 %a1, i32 %a2) {
+; SSE2-LABEL: PR140534:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movl %edi, %eax
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm0
+; SSE2-NEXT:    movl %esi, %eax
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm1
+; SSE2-NEXT:    movl %edx, %eax
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm2
+; SSE2-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    movapd %xmm1, %xmm3
+; SSE2-NEXT:    cmpltpd %xmm2, %xmm3
+; SSE2-NEXT:    cmpltpd %xmm0, %xmm1
+; SSE2-NEXT:    orpd %xmm3, %xmm1
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: PR140534:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    movl %edi, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm0, %xmm0
+; AVX1-NEXT:    movl %esi, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm1, %xmm1
+; AVX1-NEXT:    movl %edx, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm2, %xmm2
+; AVX1-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vcmpltpd %xmm2, %xmm1, %xmm2
+; AVX1-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vorpd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    # kill: def $al killed $al killed $eax
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: PR140534:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcvtusi2sd %edi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtusi2sd %esi, %xmm1, %xmm1
+; AVX512-NEXT:    vcvtusi2sd %edx, %xmm2, %xmm2
+; AVX512-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX512-NEXT:    vcmpltpd %zmm2, %zmm1, %k0
+; AVX512-NEXT:    vcmpltpd %zmm0, %zmm1, %k1
+; AVX512-NEXT:    korw %k0, %k1, %k0
+; AVX512-NEXT:    kmovw %k0, %eax
+; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %conv0 = uitofp i32 %a0 to double
+  %conv1 = uitofp i32 %a1 to double
+  %conv2 = uitofp i32 %a2 to double
+  %mul = fmul double %conv1, 0x3FF6A09E667F3BCD
+  %cmp0 = fcmp olt double %mul, %conv0
+  %cmp2 = fcmp olt double %mul, %conv2
+  %or = or i1 %cmp0, %cmp2
+  ret i1 %or
+}

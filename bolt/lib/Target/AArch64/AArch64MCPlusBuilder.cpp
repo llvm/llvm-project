@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64InstrInfo.h"
 #include "AArch64MCSymbolizer.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
@@ -191,6 +192,10 @@ public:
     return false;
   }
 
+  SmallVector<MCPhysReg> getTrustedLiveInRegs() const override {
+    return {AArch64::LR};
+  }
+
   ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case AArch64::AUTIAZ:
@@ -270,6 +275,67 @@ public:
       return make_error_code(std::errc::result_out_of_range);
     default:
       llvm_unreachable("Unhandled return instruction");
+    }
+  }
+
+  MCPhysReg getRegUsedAsIndirectBranchDest(
+      const MCInst &Inst, bool &IsAuthenticatedInternally) const override {
+    assert(isIndirectCall(Inst) || isIndirectBranch(Inst));
+
+    switch (Inst.getOpcode()) {
+    case AArch64::BR:
+    case AArch64::BLR:
+      IsAuthenticatedInternally = false;
+      return Inst.getOperand(0).getReg();
+    case AArch64::BRAA:
+    case AArch64::BRAB:
+    case AArch64::BRAAZ:
+    case AArch64::BRABZ:
+    case AArch64::BLRAA:
+    case AArch64::BLRAB:
+    case AArch64::BLRAAZ:
+    case AArch64::BLRABZ:
+      IsAuthenticatedInternally = true;
+      return Inst.getOperand(0).getReg();
+    default:
+      llvm_unreachable("Unhandled indirect branch or call");
+    }
+  }
+
+  MCPhysReg
+  getMaterializedAddressRegForPtrAuth(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    case AArch64::ADR:
+    case AArch64::ADRP:
+      // These instructions produce an address value based on the information
+      // encoded into the instruction itself (which should reside in a read-only
+      // code memory) and the value of PC register (that is, the location of
+      // this instruction), so the produced value is not attacker-controlled.
+      return Inst.getOperand(0).getReg();
+    default:
+      return getNoRegister();
+    }
+  }
+
+  std::optional<std::pair<MCPhysReg, MCPhysReg>>
+  analyzeAddressArithmeticsForPtrAuth(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    default:
+      return std::nullopt;
+    case AArch64::ADDXri:
+    case AArch64::SUBXri:
+      // The immediate addend is encoded into the instruction itself, so it is
+      // not attacker-controlled under Pointer Authentication threat model.
+      return std::make_pair(Inst.getOperand(0).getReg(),
+                            Inst.getOperand(1).getReg());
+    case AArch64::ORRXrs:
+      // "mov Xd, Xm" is equivalent to "orr Xd, XZR, Xm, lsl #0"
+      if (Inst.getOperand(1).getReg() != AArch64::XZR ||
+          Inst.getOperand(3).getImm() != 0)
+        return std::nullopt;
+
+      return std::make_pair(Inst.getOperand(0).getReg(),
+                            Inst.getOperand(2).getReg());
     }
   }
 
@@ -631,7 +697,7 @@ public:
   }
 
   bool isIndirectCall(const MCInst &Inst) const override {
-    return Inst.getOpcode() == AArch64::BLR;
+    return isIndirectCallOpcode(Inst.getOpcode());
   }
 
   MCPhysReg getSpRegister(int Size) const {
@@ -858,20 +924,12 @@ public:
     if (AArchExpr && AArchExpr->getSubExpr())
       return getTargetSymbol(AArchExpr->getSubExpr());
 
-    auto *BinExpr = dyn_cast<MCBinaryExpr>(Expr);
-    if (BinExpr)
-      return getTargetSymbol(BinExpr->getLHS());
-
-    auto *SymExpr = dyn_cast<MCSymbolRefExpr>(Expr);
-    if (SymExpr && SymExpr->getKind() == MCSymbolRefExpr::VK_None)
-      return &SymExpr->getSymbol();
-
-    return nullptr;
+    return MCPlusBuilder::getTargetSymbol(Expr);
   }
 
   const MCSymbol *getTargetSymbol(const MCInst &Inst,
                                   unsigned OpNum = 0) const override {
-    if (!getSymbolRefOperandNum(Inst, OpNum))
+    if (!OpNum && !getSymbolRefOperandNum(Inst, OpNum))
       return nullptr;
 
     const MCOperand &Op = Inst.getOperand(OpNum);
@@ -1338,17 +1396,47 @@ public:
 
   int getUncondBranchEncodingSize() const override { return 28; }
 
+  // This helper function creates the snippet of code that compares a register
+  // RegNo with an immedaite Imm, and jumps to Target if they are equal.
+  // cmp RegNo, #Imm
+  // b.eq Target
+  // where cmp is an alias for subs, which results in the code below:
+  // subs xzr, RegNo, #Imm
+  // b.eq Target.
   InstructionListType createCmpJE(MCPhysReg RegNo, int64_t Imm,
                                   const MCSymbol *Target,
                                   MCContext *Ctx) const override {
     InstructionListType Code;
     Code.emplace_back(MCInstBuilder(AArch64::SUBSXri)
-                          .addReg(RegNo)
+                          .addReg(AArch64::XZR)
                           .addReg(RegNo)
                           .addImm(Imm)
                           .addImm(0));
     Code.emplace_back(MCInstBuilder(AArch64::Bcc)
+                          .addImm(AArch64CC::EQ)
+                          .addExpr(MCSymbolRefExpr::create(
+                              Target, MCSymbolRefExpr::VK_None, *Ctx)));
+    return Code;
+  }
+
+  // This helper function creates the snippet of code that compares a register
+  // RegNo with an immedaite Imm, and jumps to Target if they are not equal.
+  // cmp RegNo, #Imm
+  // b.ne Target
+  // where cmp is an alias for subs, which results in the code below:
+  // subs xzr, RegNo, #Imm
+  // b.ne Target.
+  InstructionListType createCmpJNE(MCPhysReg RegNo, int64_t Imm,
+                                   const MCSymbol *Target,
+                                   MCContext *Ctx) const override {
+    InstructionListType Code;
+    Code.emplace_back(MCInstBuilder(AArch64::SUBSXri)
+                          .addReg(AArch64::XZR)
+                          .addReg(RegNo)
                           .addImm(Imm)
+                          .addImm(0));
+    Code.emplace_back(MCInstBuilder(AArch64::Bcc)
+                          .addImm(AArch64CC::NE)
                           .addExpr(MCSymbolRefExpr::create(
                               Target, MCSymbolRefExpr::VK_None, *Ctx)));
     return Code;
@@ -2248,7 +2336,7 @@ public:
   std::optional<Relocation>
   createRelocation(const MCFixup &Fixup,
                    const MCAsmBackend &MAB) const override {
-    const MCFixupKindInfo &FKI = MAB.getFixupKindInfo(Fixup.getKind());
+    MCFixupKindInfo FKI = MAB.getFixupKindInfo(Fixup.getKind());
 
     assert(FKI.TargetOffset == 0 && "0-bit relocation offset expected");
     const uint64_t RelOffset = Fixup.getOffset();

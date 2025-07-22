@@ -54,9 +54,9 @@ TEST(DILLexerTests, TokenKindTest) {
 
   EXPECT_TRUE(token.Is(Token::identifier));
   EXPECT_FALSE(token.Is(Token::l_paren));
-  EXPECT_TRUE(token.IsOneOf(Token::eof, Token::identifier));
-  EXPECT_FALSE(token.IsOneOf(Token::l_paren, Token::r_paren, Token::coloncolon,
-                             Token::eof));
+  EXPECT_TRUE(token.IsOneOf({Token::eof, Token::identifier}));
+  EXPECT_FALSE(token.IsOneOf(
+      {Token::l_paren, Token::r_paren, Token::coloncolon, Token::eof}));
 }
 
 TEST(DILLexerTests, LookAheadTest) {
@@ -150,7 +150,7 @@ TEST(DILLexerTests, IdentifiersTest) {
     DILLexer lexer(*maybe_lexer);
     Token token = lexer.GetCurrentToken();
     EXPECT_TRUE(token.IsNot(Token::identifier));
-    EXPECT_TRUE(token.IsOneOf(Token::eof, Token::coloncolon, Token::l_paren,
-                              Token::r_paren));
+    EXPECT_TRUE(token.IsOneOf(
+        {Token::eof, Token::coloncolon, Token::l_paren, Token::r_paren}));
   }
 }

@@ -14,8 +14,7 @@ define void @pr63340(ptr %A, ptr %B) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i8
-; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds ptr, ptr [[B]], i8 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds ptr, ptr [[B]], i8 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    store <4 x ptr> [[DOTSPLAT]], ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4

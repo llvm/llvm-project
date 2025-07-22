@@ -80,17 +80,16 @@ bool AVRMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
     if (!Asm || !Asm->hasLayout())
       return false;
 
-    MCContext &Context = Asm->getContext();
-    const MCSymbolRefExpr *Sym = Value.getSymA();
-    MCSymbolRefExpr::VariantKind Modifier = Sym->getKind();
-    if (Modifier != MCSymbolRefExpr::VK_None)
+    auto Spec = AVRMCExpr::VK_None;
+    if (Value.getSpecifier() != MCSymbolRefExpr::VK_None)
       return false;
-    if (specifier == VK_PM) {
-      Modifier = MCSymbolRefExpr::VariantKind(AVRMCExpr::VK_PM);
-    }
+    assert(!Value.getSubSym());
+    if (specifier == VK_PM)
+      Spec = AVRMCExpr::VK_PM;
 
-    Sym = MCSymbolRefExpr::create(&Sym->getSymbol(), Modifier, Context);
-    Result = MCValue::get(Sym, Value.getSymB(), Value.getConstant());
+    // TODO: don't attach specifier to MCSymbolRefExpr.
+    Result =
+        MCValue::get(Value.getAddSym(), nullptr, Value.getConstant(), Spec);
   }
 
   return true;

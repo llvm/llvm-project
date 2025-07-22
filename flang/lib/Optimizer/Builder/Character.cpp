@@ -15,6 +15,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -270,7 +271,9 @@ fir::factory::CharacterExprHelper::createElementAddr(mlir::Value buffer,
   auto extent = fir::SequenceType::getUnknownExtent();
   if (charTy.getLen() != fir::CharacterType::unknownLen())
     extent = charTy.getLen();
-  auto coorTy = builder.getRefType(fir::SequenceType::get({extent}, singleTy));
+  const bool isVolatile = fir::isa_volatile_type(buffer.getType());
+  auto sequenceType = fir::SequenceType::get({extent}, singleTy);
+  auto coorTy = builder.getRefType(sequenceType, isVolatile);
 
   auto coor = builder.createConvert(loc, coorTy, buffer);
   auto i = builder.createConvert(loc, builder.getIndexType(), index);
@@ -329,19 +332,20 @@ void fir::factory::CharacterExprHelper::createCopy(
   // If the src and dest are the same KIND, then use memmove to move the bits.
   // We don't have to worry about overlapping ranges with memmove.
   if (getCharacterKind(dest.getBuffer().getType()) == kind) {
+    const bool isVolatile = fir::isa_volatile_type(fromBuff.getType()) ||
+                            fir::isa_volatile_type(toBuff.getType());
     auto bytes = builder.getKindMap().getCharacterBitsize(kind) / 8;
     auto i64Ty = builder.getI64Type();
     auto kindBytes = builder.createIntegerConstant(loc, i64Ty, bytes);
     auto castCount = builder.createConvert(loc, i64Ty, count);
     auto totalBytes =
         builder.create<mlir::arith::MulIOp>(loc, kindBytes, castCount);
-    auto notVolatile = builder.createBool(loc, false);
-    auto memmv = getLlvmMemmove(builder);
-    auto argTys = memmv.getFunctionType().getInputs();
-    auto toPtr = builder.createConvert(loc, argTys[0], toBuff);
-    auto fromPtr = builder.createConvert(loc, argTys[1], fromBuff);
-    builder.create<fir::CallOp>(
-        loc, memmv, mlir::ValueRange{toPtr, fromPtr, totalBytes, notVolatile});
+    auto llvmPointerType =
+        mlir::LLVM::LLVMPointerType::get(builder.getContext());
+    auto toPtr = builder.createConvert(loc, llvmPointerType, toBuff);
+    auto fromPtr = builder.createConvert(loc, llvmPointerType, fromBuff);
+    builder.create<mlir::LLVM::MemmoveOp>(loc, toPtr, fromPtr, totalBytes,
+                                          isVolatile);
     return;
   }
 

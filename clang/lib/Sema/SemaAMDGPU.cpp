@@ -27,7 +27,7 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   // position of memory order and scope arguments in the builtin
   unsigned OrderIndex, ScopeIndex;
 
-  const auto *FD = SemaRef.getCurFunctionDecl();
+  const auto *FD = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
   assert(FD && "AMDGPU builtins should not be used outside of a function");
   llvm::StringMap<bool> CallerFeatureMap;
   getASTContext().getFunctionFeatureMap(CallerFeatureMap, FD);
@@ -35,6 +35,8 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
       Builtin::evaluateRequiredTargetFeatures("gfx950-insts", CallerFeatureMap);
 
   switch (BuiltinID) {
+  case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_load_lds:
+  case AMDGPU::BI__builtin_amdgcn_load_to_lds:
   case AMDGPU::BI__builtin_amdgcn_global_load_lds: {
     constexpr const int SizeIdx = 2;
     llvm::APSInt Size;
@@ -54,11 +56,9 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
       [[fallthrough]];
     }
     default:
-      Diag(ArgExpr->getExprLoc(),
-           diag::err_amdgcn_global_load_lds_size_invalid_value)
+      Diag(ArgExpr->getExprLoc(), diag::err_amdgcn_load_lds_size_invalid_value)
           << ArgExpr->getSourceRange();
-      Diag(ArgExpr->getExprLoc(),
-           diag::note_amdgcn_global_load_lds_size_valid_value)
+      Diag(ArgExpr->getExprLoc(), diag::note_amdgcn_load_lds_size_valid_value)
           << HasGFX950Insts << ArgExpr->getSourceRange();
       return true;
     }

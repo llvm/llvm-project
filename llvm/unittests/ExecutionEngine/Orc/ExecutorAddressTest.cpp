@@ -106,6 +106,16 @@ TEST(ExecutorAddrTest, AddrRanges) {
   EXPECT_LT(R0, R1);
   EXPECT_GE(R0, R0);
   EXPECT_GT(R1, R0);
+
+  // Check fromPtr support.
+  char A[10];
+  auto RP1 = ExecutorAddrRange::fromPtrRange(A, A + 10);
+  EXPECT_EQ(RP1.Start.toPtr<char *>(), A);
+  EXPECT_EQ(RP1.End.toPtr<char *>(), A + 10);
+
+  auto RP2 = ExecutorAddrRange::fromPtrRange(A, 10);
+  EXPECT_EQ(RP2.Start.toPtr<char *>(), A);
+  EXPECT_EQ(RP2.End.toPtr<char *>(), A + 10);
 }
 
 TEST(ExecutorSymbolDef, PointerConversion) {

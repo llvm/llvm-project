@@ -45,6 +45,13 @@ struct ExecutionEnvironment {
   const char *GetEnv(
       const char *name, std::size_t name_length, const Terminator &terminator);
 
+  std::int32_t SetEnv(const char *name, std::size_t name_length,
+      const char *value, std::size_t value_length,
+      const Terminator &terminator);
+
+  std::int32_t UnsetEnv(
+      const char *name, std::size_t name_length, const Terminator &terminator);
+
   int argc{0};
   const char **argv{nullptr};
   char **envp{nullptr};
@@ -59,6 +66,7 @@ struct ExecutionEnvironment {
 
   // CUDA related variables
   std::size_t cudaStackLimit{0}; // ACC_OFFLOAD_STACK_SIZE
+  bool cudaDeviceIsManaged{false}; // NV_CUDAFOR_DEVICE_IS_MANAGED
 };
 
 RT_OFFLOAD_VAR_GROUP_BEGIN

@@ -19,17 +19,17 @@ void GlobalISelMatchTableExecutorEmitter::emitSubtargetFeatureBitsetImpl(
 
   // Separate subtarget features by how often they must be recomputed.
   SubtargetFeatureInfoMap ModuleFeatures;
-  std::copy_if(SubtargetFeatures.begin(), SubtargetFeatures.end(),
-               std::inserter(ModuleFeatures, ModuleFeatures.end()),
-               [](const SubtargetFeatureInfoMap::value_type &X) {
-                 return !X.second.mustRecomputePerFunction();
-               });
+  llvm::copy_if(SubtargetFeatures,
+                std::inserter(ModuleFeatures, ModuleFeatures.end()),
+                [](const SubtargetFeatureInfoMap::value_type &X) {
+                  return !X.second.mustRecomputePerFunction();
+                });
   SubtargetFeatureInfoMap FunctionFeatures;
-  std::copy_if(SubtargetFeatures.begin(), SubtargetFeatures.end(),
-               std::inserter(FunctionFeatures, FunctionFeatures.end()),
-               [](const SubtargetFeatureInfoMap::value_type &X) {
-                 return X.second.mustRecomputePerFunction();
-               });
+  llvm::copy_if(SubtargetFeatures,
+                std::inserter(FunctionFeatures, FunctionFeatures.end()),
+                [](const SubtargetFeatureInfoMap::value_type &X) {
+                  return X.second.mustRecomputePerFunction();
+                });
 
   SubtargetFeatureInfo::emitComputeAvailableFeatures(
       getTarget().getName(), getClassName(), "computeAvailableModuleFeatures",

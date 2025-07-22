@@ -342,7 +342,7 @@ public:
   uint32_t GetAddressByteSize();
 
   const char *GetTriple();
-  
+
   const char *GetABIName();
 
   const char *GetLabel() const;
@@ -945,6 +945,8 @@ public:
   /// \param[out] error
   ///     An error if a Trace already exists or the trace couldn't be created.
   lldb::SBTrace CreateTrace(SBError &error);
+
+  lldb::SBMutex GetAPIMutex() const;
 
 protected:
   friend class SBAddress;

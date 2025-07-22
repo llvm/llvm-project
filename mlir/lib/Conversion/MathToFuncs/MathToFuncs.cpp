@@ -586,7 +586,7 @@ static func::FuncOp createElementFPowIFunc(ModuleOp *module,
 LogicalResult
 FPowIOpLowering::matchAndRewrite(math::FPowIOp op,
                                  PatternRewriter &rewriter) const {
-  if (dyn_cast<VectorType>(op.getType()))
+  if (isa<VectorType>(op.getType()))
     return rewriter.notifyMatchFailure(op, "non-scalar operation");
 
   FunctionType funcType = getElementalFuncTypeForOp(op);
@@ -751,7 +751,7 @@ static func::FuncOp createCtlzFunc(ModuleOp *module, Type elementType) {
 /// operation.
 LogicalResult CtlzOpLowering::matchAndRewrite(math::CountLeadingZerosOp op,
                                               PatternRewriter &rewriter) const {
-  if (dyn_cast<VectorType>(op.getType()))
+  if (isa<VectorType>(op.getType()))
     return rewriter.notifyMatchFailure(op, "non-scalar operation");
 
   Type type = getElementTypeOrSelf(op.getResult().getType());

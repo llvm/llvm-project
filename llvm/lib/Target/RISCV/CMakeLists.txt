@@ -16,6 +16,7 @@ tablegen(LLVM RISCVGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM RISCVGenSearchableTables.inc -gen-searchable-tables)
 tablegen(LLVM RISCVGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM RISCVGenExegesis.inc -gen-exegesis)
+tablegen(LLVM RISCVGenSDNodeInfo.inc -gen-sd-node-info)
 
 set(LLVM_TARGET_DEFINITIONS RISCVGISel.td)
 tablegen(LLVM RISCVGenGlobalISel.inc -gen-global-isel)
@@ -34,28 +35,29 @@ add_llvm_target(RISCVCodeGen
   RISCVCodeGenPrepare.cpp
   RISCVConstantPoolValue.cpp
   RISCVDeadRegisterDefinitions.cpp
-  RISCVMakeCompressible.cpp
   RISCVExpandAtomicPseudoInsts.cpp
   RISCVExpandPseudoInsts.cpp
   RISCVFoldMemOffset.cpp
   RISCVFrameLowering.cpp
   RISCVGatherScatterLowering.cpp
   RISCVIndirectBranchTracking.cpp
-  RISCVInsertVSETVLI.cpp
   RISCVInsertReadWriteCSR.cpp
+  RISCVInsertVSETVLI.cpp
   RISCVInsertWriteVXRM.cpp
   RISCVInstrInfo.cpp
   RISCVISelDAGToDAG.cpp
   RISCVISelLowering.cpp
   RISCVLandingPadSetup.cpp
+  RISCVLateBranchOpt.cpp
   RISCVLoadStoreOptimizer.cpp
   RISCVMachineFunctionInfo.cpp
+  RISCVMakeCompressible.cpp
   RISCVMergeBaseOffset.cpp
+  RISCVMoveMerger.cpp
   RISCVOptWInstrs.cpp
   RISCVPostRAExpandPseudoInsts.cpp
-  RISCVRedundantCopyElimination.cpp
-  RISCVMoveMerger.cpp
   RISCVPushPopOptimizer.cpp
+  RISCVRedundantCopyElimination.cpp
   RISCVRegisterInfo.cpp
   RISCVSelectionDAGInfo.cpp
   RISCVSubtarget.cpp

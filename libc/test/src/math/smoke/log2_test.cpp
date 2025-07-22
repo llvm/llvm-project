@@ -18,6 +18,9 @@
 using LlvmLibcLog2Test = LIBC_NAMESPACE::testing::FPTest<double>;
 
 TEST_F(LlvmLibcLog2Test, SpecialNumbers) {
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::log2(sNaN), FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
+
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::log2(aNaN));
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::log2(inf));
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log2(neg_inf), FE_INVALID);

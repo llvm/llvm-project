@@ -853,6 +853,11 @@ void HexagonAsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI) {
   EmitSled(MI, SledKind::TAIL_CALL);
 }
 
+char HexagonAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(HexagonAsmPrinter, "hexagon-asm-printer",
+                "Hexagon Assembly Printer", false, false)
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonAsmPrinter() {
   RegisterAsmPrinter<HexagonAsmPrinter> X(getTheHexagonTarget());
 }

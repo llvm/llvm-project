@@ -7,31 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clc.h>
-#include <clc/clcmacro.h>
+#include <clc/math/clc_lgamma.h>
 
-_CLC_OVERLOAD _CLC_DEF float lgamma(float x) {
-    int s;
-    return lgamma_r(x, &s);
-}
-
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, lgamma, float)
-
-#ifdef cl_khr_fp64
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-
-_CLC_OVERLOAD _CLC_DEF double lgamma(double x) {
-    int s;
-    return lgamma_r(x, &s);
-}
-
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, lgamma, double)
-
-#endif
-
-#ifdef cl_khr_fp16
-
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
-
-_CLC_DEFINE_UNARY_BUILTIN_FP16(lgamma)
-
-#endif
+#define FUNCTION lgamma
+#define __CLC_BODY <clc/shared/unary_def.inc>
+#include <clc/math/gentype.inc>

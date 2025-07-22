@@ -102,8 +102,7 @@ void InterfaceFile::inlineLibrary(std::shared_ptr<InterfaceFile> Library,
 
     if (Overwrite && It != Documents.end() &&
         Reexport->getInstallName() == (*It)->getInstallName()) {
-      std::replace(Documents.begin(), Documents.end(), *It,
-                   std::move(Reexport));
+      llvm::replace(Documents, *It, std::move(Reexport));
       return;
     }
 

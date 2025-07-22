@@ -1,7 +1,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,MUBUF %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-MUBUF,MUBUF %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca,+enable-flat-scratch -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-FLATSCR %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GFX11 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck --check-prefixes=GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck --check-prefixes=GFX11-FAKE16 %s
 
 ; Test that non-entry function frame indices are expanded properly to
 ; give an index relative to the scratch wave offset register
@@ -303,13 +304,20 @@ ret:
 %type.i16 = type { i16 }
 @_ZZN0 = external hidden addrspace(3) global %struct0, align 8
 
-; GFX11-LABEL: tied_operand_test:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11:     scratch_load_u16 [[LDRESULT:v[0-9]+]], off, off
-; GFX11:     v_dual_mov_b32 [[C:v[0-9]+]], 0x7b :: v_dual_mov_b32 v{{[0-9]+}}, s{{[0-9]+}}
-; GFX11-DAG:     ds_store_b16 v{{[0-9]+}}, [[LDRESULT]]  offset:10
-; GFX11-DAG:     ds_store_b16 v{{[0-9]+}}, [[C]]  offset:8
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: tied_operand_test:
+; GFX11-TRUE16:       ; %bb.0: ; %entry
+; GFX11-TRUE16:     scratch_load_d16_b16 [[LDRESULT:v[0-9]+]], off, off
+; GFX11-TRUE16:     v_mov_b16_e32 [[C:v[0-9]]].{{(l|h)}}, 0x7b
+; GFX11-TRUE16-DAG:     ds_store_b16 v{{[0-9]+}}, [[LDRESULT]]  offset:10
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: tied_operand_test:
+; GFX11-FAKE16:       ; %bb.0: ; %entry
+; GFX11-FAKE16:     scratch_load_u16 [[LDRESULT:v[0-9]+]], off, off
+; GFX11-FAKE16:     v_dual_mov_b32 [[C:v[0-9]+]], 0x7b :: v_dual_mov_b32 v{{[0-9]+}}, s{{[0-9]+}}
+; GFX11-FAKE16-DAG:     ds_store_b16 v{{[0-9]+}}, [[LDRESULT]]  offset:10
+; GFX11-FAKE16-DAG:     ds_store_b16 v{{[0-9]+}}, [[C]]  offset:8
+; GFX11-FAKE16-NEXT:    s_endpgm
 define protected amdgpu_kernel void @tied_operand_test(i1 %c1, i1 %c2, i32 %val) {
 entry:
   %scratch0 = alloca i16, align 4, addrspace(5)

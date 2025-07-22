@@ -9,6 +9,7 @@
 #include "clang/Serialization/ModuleCache.h"
 
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Serialization/ModuleFile.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/Path.h"
@@ -30,6 +31,28 @@ public:
   std::unique_ptr<llvm::AdvisoryLock>
   getLock(StringRef ModuleFilename) override {
     return std::make_unique<llvm::LockFileManager>(ModuleFilename);
+  }
+
+  std::time_t getModuleTimestamp(StringRef ModuleFilename) override {
+    std::string TimestampFilename =
+        serialization::ModuleFile::getTimestampFilename(ModuleFilename);
+    llvm::sys::fs::file_status Status;
+    if (llvm::sys::fs::status(ModuleFilename, Status) != std::error_code{})
+      return 0;
+    return llvm::sys::toTimeT(Status.getLastModificationTime());
+  }
+
+  void updateModuleTimestamp(StringRef ModuleFilename) override {
+    // Overwrite the timestamp file contents so that file's mtime changes.
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(
+        serialization::ModuleFile::getTimestampFilename(ModuleFilename), EC,
+        llvm::sys::fs::OF_TextWithCRLF);
+    if (EC)
+      return;
+    OS << "Timestamp file\n";
+    OS.close();
+    OS.clear_error(); // Avoid triggering a fatal error.
   }
 
   InMemoryModuleCache &getInMemoryModuleCache() override { return InMemory; }

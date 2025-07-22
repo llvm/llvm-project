@@ -132,7 +132,6 @@ bool InternalizePass::shouldPreserveGV(const GlobalValue &GV) {
 
 bool InternalizePass::maybeInternalize(
     GlobalValue &GV, DenseMap<const Comdat *, ComdatInfo> &ComdatMap) {
-  SmallString<0> ComdatName;
   if (Comdat *C = GV.getComdat()) {
     // For GlobalAlias, C is the aliasee object's comdat which may have been
     // redirected. So ComdatMap may not contain C.

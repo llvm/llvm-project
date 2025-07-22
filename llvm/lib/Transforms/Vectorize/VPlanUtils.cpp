@@ -62,7 +62,9 @@ bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
 
   if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B))))
     return B == Plan.getTripCount() &&
-           (match(A, m_ScalarIVSteps(m_CanonicalIV(), m_SpecificInt(1))) ||
+           (match(A, m_ScalarIVSteps(m_Specific(Plan.getCanonicalIV()),
+                                     m_SpecificInt(1),
+                                     m_Specific(&Plan.getVF()))) ||
             IsWideCanonicalIV(A));
 
   return match(V, m_Binary<Instruction::ICmp>(m_VPValue(A), m_VPValue(B))) &&
@@ -107,11 +109,15 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
         // VPReplicateRecipe.IsUniform. They are also uniform across UF parts if
         // all their operands are invariant.
         // TODO: Further relax the restrictions.
-        return R->isUniform() &&
+        return R->isSingleScalar() &&
                (isa<LoadInst, StoreInst>(R->getUnderlyingValue())) &&
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
       })
-      .Case<VPScalarCastRecipe, VPWidenCastRecipe>([](const auto *R) {
+      .Case<VPInstruction>([](const auto *VPI) {
+        return VPI->isScalarCast() &&
+               isUniformAcrossVFsAndUFs(VPI->getOperand(0));
+      })
+      .Case<VPWidenCastRecipe>([](const auto *R) {
         // A cast is uniform according to its operand.
         return isUniformAcrossVFsAndUFs(R->getOperand(0));
       })

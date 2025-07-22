@@ -26,7 +26,12 @@ using namespace llvm;
 
 const MipsMCExpr *MipsMCExpr::create(MipsMCExpr::Specifier S,
                                      const MCExpr *Expr, MCContext &Ctx) {
-  return new (Ctx) MipsMCExpr(S, Expr);
+  return new (Ctx) MipsMCExpr(Expr, S);
+}
+
+const MipsMCExpr *MipsMCExpr::create(const MCSymbol *Sym, Specifier S,
+                                     MCContext &Ctx) {
+  return new (Ctx) MipsMCExpr(MCSymbolRefExpr::create(Sym, Ctx), S);
 }
 
 const MipsMCExpr *MipsMCExpr::createGpOff(MipsMCExpr::Specifier S,
@@ -45,7 +50,7 @@ void MipsMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   case MEK_DTPREL:
     // MEK_DTPREL is used for marking TLS DIEExpr only
     // and contains a regular sub-expression.
-    getSubExpr()->print(OS, MAI, true);
+    getSubExpr()->print(OS, MAI);
     return;
   case MEK_CALL_HI16:
     OS << "%call_hi";
@@ -125,7 +130,7 @@ void MipsMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   if (Expr->evaluateAsAbsolute(AbsVal))
     OS << AbsVal;
   else
-    Expr->print(OS, MAI, true);
+    Expr->print(OS, MAI);
   OS << ')';
 }
 
@@ -140,16 +145,14 @@ bool MipsMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
     if (!SubExpr->evaluateAsRelocatable(Res, Asm))
       return false;
 
-    Res = MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(),
-                       MEK_Special);
+    Res.setSpecifier(MEK_Special);
     return true;
   }
 
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
-  Res = MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(),
-                     getSpecifier());
-  return !Res.getSymB();
+  Res.setSpecifier(specifier);
+  return !Res.getSubSym();
 }
 
 void MipsMCExpr::visitUsedExpr(MCStreamer &Streamer) const {

@@ -234,11 +234,8 @@ inline bool operator!=(const FunctionInfo &LHS, const FunctionInfo &RHS) {
 /// the GSYM file.
 inline bool operator<(const FunctionInfo &LHS, const FunctionInfo &RHS) {
   // First sort by address range
-  if (LHS.Range != RHS.Range)
-    return LHS.Range < RHS.Range;
-  if (LHS.Inline == RHS.Inline)
-    return LHS.OptLineTable < RHS.OptLineTable;
-  return LHS.Inline < RHS.Inline;
+  return std::tie(LHS.Range, LHS.Inline, LHS.OptLineTable) <
+         std::tie(RHS.Range, RHS.Inline, RHS.OptLineTable);
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const FunctionInfo &R);

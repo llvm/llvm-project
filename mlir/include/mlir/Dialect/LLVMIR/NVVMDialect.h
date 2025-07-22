@@ -43,8 +43,16 @@ enum NVVMMemorySpace {
   /// Tensor memory space identifier.
   /// Tensor memory is available only in arch-accelerated
   /// variants from sm100 onwards.
-  kTensorMemorySpace = 6
+  kTensorMemorySpace = 6,
+  /// Distributed shared memory space identifier.
+  /// Distributed shared memory is available only in sm90+.
+  kSharedClusterMemorySpace = 7,
 };
+
+/// A pair type of LLVM's Intrinsic ID and args (which are llvm values).
+/// This type is returned by the getIntrinsicIDAndArgs() methods.
+using IDArgPair =
+    std::pair<llvm::Intrinsic::ID, llvm::SmallVector<llvm::Value *>>;
 
 /// Return the element type and number of elements associated with a wmma matrix
 /// of given chracteristics. This matches the logic in IntrinsicsNVVM.td

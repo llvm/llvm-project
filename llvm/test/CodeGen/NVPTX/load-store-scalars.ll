@@ -24,10 +24,10 @@ define void @generic_i8(ptr %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_i8_param_0];
-; CHECK-NEXT:    ld.u8 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_i8_param_0];
+; CHECK-NEXT:    ld.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.u8 [%rd1], %rs2;
+; CHECK-NEXT:    st.b8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load i8, ptr %a
   %a.add = add i8 %a.load, 1
@@ -42,10 +42,10 @@ define void @generic_i16(ptr %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_i16_param_0];
-; CHECK-NEXT:    ld.u16 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_i16_param_0];
+; CHECK-NEXT:    ld.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.u16 [%rd1], %rs2;
+; CHECK-NEXT:    st.b16 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load i16, ptr %a
   %a.add = add i16 %a.load, 1
@@ -60,10 +60,10 @@ define void @generic_i32(ptr %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_i32_param_0];
-; CHECK-NEXT:    ld.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_i32_param_0];
+; CHECK-NEXT:    ld.b32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.u32 [%rd1], %r2;
+; CHECK-NEXT:    st.b32 [%rd1], %r2;
 ; CHECK-NEXT:    ret;
   %a.load = load i32, ptr %a
   %a.add = add i32 %a.load, 1
@@ -77,10 +77,10 @@ define void @generic_i64(ptr %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_i64_param_0];
-; CHECK-NEXT:    ld.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_i64_param_0];
+; CHECK-NEXT:    ld.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
-; CHECK-NEXT:    st.u64 [%rd1], %rd3;
+; CHECK-NEXT:    st.b64 [%rd1], %rd3;
 ; CHECK-NEXT:    ret;
   %a.load = load i64, ptr %a
   %a.add = add i64 %a.load, 1
@@ -91,14 +91,14 @@ define void @generic_i64(ptr %a) {
 define void @generic_float(ptr %a) {
 ; CHECK-LABEL: generic_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_float_param_0];
-; CHECK-NEXT:    ld.f32 %f1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_float_param_0];
+; CHECK-NEXT:    ld.b32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.f32 [%rd1], %f2;
+; CHECK-NEXT:    st.b32 [%rd1], %f2;
 ; CHECK-NEXT:    ret;
   %a.load = load float, ptr %a
   %a.add = fadd float %a.load, 1.
@@ -110,13 +110,13 @@ define void @generic_double(ptr %a) {
 ; CHECK-LABEL: generic_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_double_param_0];
-; CHECK-NEXT:    ld.f64 %fd1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_double_param_0];
+; CHECK-NEXT:    ld.b64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.f64 [%rd1], %fd2;
+; CHECK-NEXT:    st.b64 [%rd1], %fd2;
 ; CHECK-NEXT:    ret;
   %a.load = load double, ptr %a
   %a.add = fadd double %a.load, 1.
@@ -133,10 +133,10 @@ define void @generic_volatile_i8(ptr %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_i8_param_0];
-; CHECK-NEXT:    ld.volatile.u8 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_volatile_i8_param_0];
+; CHECK-NEXT:    ld.volatile.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.volatile.u8 [%rd1], %rs2;
+; CHECK-NEXT:    st.volatile.b8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i8, ptr %a
   %a.add = add i8 %a.load, 1
@@ -151,10 +151,10 @@ define void @generic_volatile_i16(ptr %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_i16_param_0];
-; CHECK-NEXT:    ld.volatile.u16 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_volatile_i16_param_0];
+; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.volatile.u16 [%rd1], %rs2;
+; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i16, ptr %a
   %a.add = add i16 %a.load, 1
@@ -169,10 +169,10 @@ define void @generic_volatile_i32(ptr %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_i32_param_0];
-; CHECK-NEXT:    ld.volatile.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_volatile_i32_param_0];
+; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.volatile.u32 [%rd1], %r2;
+; CHECK-NEXT:    st.volatile.b32 [%rd1], %r2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i32, ptr %a
   %a.add = add i32 %a.load, 1
@@ -186,10 +186,10 @@ define void @generic_volatile_i64(ptr %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_i64_param_0];
-; CHECK-NEXT:    ld.volatile.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_volatile_i64_param_0];
+; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
-; CHECK-NEXT:    st.volatile.u64 [%rd1], %rd3;
+; CHECK-NEXT:    st.volatile.b64 [%rd1], %rd3;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i64, ptr %a
   %a.add = add i64 %a.load, 1
@@ -200,14 +200,14 @@ define void @generic_volatile_i64(ptr %a) {
 define void @generic_volatile_float(ptr %a) {
 ; CHECK-LABEL: generic_volatile_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_float_param_0];
-; CHECK-NEXT:    ld.volatile.f32 %f1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_volatile_float_param_0];
+; CHECK-NEXT:    ld.volatile.b32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.volatile.f32 [%rd1], %f2;
+; CHECK-NEXT:    st.volatile.b32 [%rd1], %f2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile float, ptr %a
   %a.add = fadd float %a.load, 1.
@@ -219,13 +219,13 @@ define void @generic_volatile_double(ptr %a) {
 ; CHECK-LABEL: generic_volatile_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_double_param_0];
-; CHECK-NEXT:    ld.volatile.f64 %fd1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_volatile_double_param_0];
+; CHECK-NEXT:    ld.volatile.b64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.volatile.f64 [%rd1], %fd2;
+; CHECK-NEXT:    st.volatile.b64 [%rd1], %fd2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile double, ptr %a
   %a.add = fadd double %a.load, 1.
@@ -242,10 +242,10 @@ define void @generic_unordered_sys_i8(ptr %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_i8_param_0];
-; SM60-NEXT:    ld.volatile.u8 %rs1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [generic_unordered_sys_i8_param_0];
+; SM60-NEXT:    ld.volatile.b8 %rs1, [%rd1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    st.volatile.u8 [%rd1], %rs2;
+; SM60-NEXT:    st.volatile.b8 [%rd1], %rs2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: generic_unordered_sys_i8(
@@ -254,10 +254,10 @@ define void @generic_unordered_sys_i8(ptr %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_i8_param_0];
-; SM70-NEXT:    ld.relaxed.sys.u8 %rs1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [generic_unordered_sys_i8_param_0];
+; SM70-NEXT:    ld.relaxed.sys.b8 %rs1, [%rd1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    st.relaxed.sys.u8 [%rd1], %rs2;
+; SM70-NEXT:    st.relaxed.sys.b8 [%rd1], %rs2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i8, ptr %a unordered, align 1
   %a.add = add i8 %a.load, 1
@@ -272,10 +272,10 @@ define void @generic_unordered_sys_i16(ptr %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_i16_param_0];
-; SM60-NEXT:    ld.volatile.u16 %rs1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [generic_unordered_sys_i16_param_0];
+; SM60-NEXT:    ld.volatile.b16 %rs1, [%rd1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    st.volatile.u16 [%rd1], %rs2;
+; SM60-NEXT:    st.volatile.b16 [%rd1], %rs2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: generic_unordered_sys_i16(
@@ -284,10 +284,10 @@ define void @generic_unordered_sys_i16(ptr %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_i16_param_0];
-; SM70-NEXT:    ld.relaxed.sys.u16 %rs1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [generic_unordered_sys_i16_param_0];
+; SM70-NEXT:    ld.relaxed.sys.b16 %rs1, [%rd1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    st.relaxed.sys.u16 [%rd1], %rs2;
+; SM70-NEXT:    st.relaxed.sys.b16 [%rd1], %rs2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i16, ptr %a unordered, align 2
   %a.add = add i16 %a.load, 1
@@ -302,10 +302,10 @@ define void @generic_unordered_sys_i32(ptr %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_i32_param_0];
-; SM60-NEXT:    ld.volatile.u32 %r1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [generic_unordered_sys_i32_param_0];
+; SM60-NEXT:    ld.volatile.b32 %r1, [%rd1];
 ; SM60-NEXT:    add.s32 %r2, %r1, 1;
-; SM60-NEXT:    st.volatile.u32 [%rd1], %r2;
+; SM60-NEXT:    st.volatile.b32 [%rd1], %r2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: generic_unordered_sys_i32(
@@ -314,10 +314,10 @@ define void @generic_unordered_sys_i32(ptr %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_i32_param_0];
-; SM70-NEXT:    ld.relaxed.sys.u32 %r1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [generic_unordered_sys_i32_param_0];
+; SM70-NEXT:    ld.relaxed.sys.b32 %r1, [%rd1];
 ; SM70-NEXT:    add.s32 %r2, %r1, 1;
-; SM70-NEXT:    st.relaxed.sys.u32 [%rd1], %r2;
+; SM70-NEXT:    st.relaxed.sys.b32 [%rd1], %r2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i32, ptr %a unordered, align 4
   %a.add = add i32 %a.load, 1
@@ -331,10 +331,10 @@ define void @generic_unordered_sys_i64(ptr %a) {
 ; SM60-NEXT:    .reg .b64 %rd<4>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_i64_param_0];
-; SM60-NEXT:    ld.volatile.u64 %rd2, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [generic_unordered_sys_i64_param_0];
+; SM60-NEXT:    ld.volatile.b64 %rd2, [%rd1];
 ; SM60-NEXT:    add.s64 %rd3, %rd2, 1;
-; SM60-NEXT:    st.volatile.u64 [%rd1], %rd3;
+; SM60-NEXT:    st.volatile.b64 [%rd1], %rd3;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: generic_unordered_sys_i64(
@@ -342,10 +342,10 @@ define void @generic_unordered_sys_i64(ptr %a) {
 ; SM70-NEXT:    .reg .b64 %rd<4>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_i64_param_0];
-; SM70-NEXT:    ld.relaxed.sys.u64 %rd2, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [generic_unordered_sys_i64_param_0];
+; SM70-NEXT:    ld.relaxed.sys.b64 %rd2, [%rd1];
 ; SM70-NEXT:    add.s64 %rd3, %rd2, 1;
-; SM70-NEXT:    st.relaxed.sys.u64 [%rd1], %rd3;
+; SM70-NEXT:    st.relaxed.sys.b64 [%rd1], %rd3;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i64, ptr %a unordered, align 8
   %a.add = add i64 %a.load, 1
@@ -356,26 +356,26 @@ define void @generic_unordered_sys_i64(ptr %a) {
 define void @generic_unordered_sys_float(ptr %a) {
 ; SM60-LABEL: generic_unordered_sys_float(
 ; SM60:       {
-; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b32 %f<3>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_float_param_0];
-; SM60-NEXT:    ld.volatile.f32 %f1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [generic_unordered_sys_float_param_0];
+; SM60-NEXT:    ld.volatile.b32 %f1, [%rd1];
 ; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM60-NEXT:    st.volatile.f32 [%rd1], %f2;
+; SM60-NEXT:    st.volatile.b32 [%rd1], %f2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: generic_unordered_sys_float(
 ; SM70:       {
-; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b32 %f<3>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_float_param_0];
-; SM70-NEXT:    ld.relaxed.sys.f32 %f1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [generic_unordered_sys_float_param_0];
+; SM70-NEXT:    ld.relaxed.sys.b32 %f1, [%rd1];
 ; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM70-NEXT:    st.relaxed.sys.f32 [%rd1], %f2;
+; SM70-NEXT:    st.relaxed.sys.b32 [%rd1], %f2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic float, ptr %a unordered, align 4
   %a.add = fadd float %a.load, 1.
@@ -387,25 +387,25 @@ define void @generic_unordered_sys_double(ptr %a) {
 ; SM60-LABEL: generic_unordered_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b64 %fd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_double_param_0];
-; SM60-NEXT:    ld.volatile.f64 %fd1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [generic_unordered_sys_double_param_0];
+; SM60-NEXT:    ld.volatile.b64 %fd1, [%rd1];
 ; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM60-NEXT:    st.volatile.f64 [%rd1], %fd2;
+; SM60-NEXT:    st.volatile.b64 [%rd1], %fd2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: generic_unordered_sys_double(
 ; SM70:       {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b64 %fd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [generic_unordered_sys_double_param_0];
-; SM70-NEXT:    ld.relaxed.sys.f64 %fd1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [generic_unordered_sys_double_param_0];
+; SM70-NEXT:    ld.relaxed.sys.b64 %fd1, [%rd1];
 ; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM70-NEXT:    st.relaxed.sys.f64 [%rd1], %fd2;
+; SM70-NEXT:    st.relaxed.sys.b64 [%rd1], %fd2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic double, ptr %a unordered, align 8
   %a.add = fadd double %a.load, 1.
@@ -422,10 +422,10 @@ define void @generic_unordered_volatile_sys_i8(ptr %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_unordered_volatile_sys_i8_param_0];
-; CHECK-NEXT:    ld.volatile.u8 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_unordered_volatile_sys_i8_param_0];
+; CHECK-NEXT:    ld.volatile.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.volatile.u8 [%rd1], %rs2;
+; CHECK-NEXT:    st.volatile.b8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i8, ptr %a unordered, align 1
   %a.add = add i8 %a.load, 1
@@ -440,10 +440,10 @@ define void @generic_unordered_volatile_sys_i16(ptr %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_unordered_volatile_sys_i16_param_0];
-; CHECK-NEXT:    ld.volatile.u16 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_unordered_volatile_sys_i16_param_0];
+; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.volatile.u16 [%rd1], %rs2;
+; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i16, ptr %a unordered, align 2
   %a.add = add i16 %a.load, 1
@@ -458,10 +458,10 @@ define void @generic_unordered_volatile_sys_i32(ptr %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_unordered_volatile_sys_i32_param_0];
-; CHECK-NEXT:    ld.volatile.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_unordered_volatile_sys_i32_param_0];
+; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.volatile.u32 [%rd1], %r2;
+; CHECK-NEXT:    st.volatile.b32 [%rd1], %r2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i32, ptr %a unordered, align 4
   %a.add = add i32 %a.load, 1
@@ -475,10 +475,10 @@ define void @generic_unordered_volatile_sys_i64(ptr %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_unordered_volatile_sys_i64_param_0];
-; CHECK-NEXT:    ld.volatile.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_unordered_volatile_sys_i64_param_0];
+; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
-; CHECK-NEXT:    st.volatile.u64 [%rd1], %rd3;
+; CHECK-NEXT:    st.volatile.b64 [%rd1], %rd3;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i64, ptr %a unordered, align 8
   %a.add = add i64 %a.load, 1
@@ -489,14 +489,14 @@ define void @generic_unordered_volatile_sys_i64(ptr %a) {
 define void @generic_unordered_volatile_sys_float(ptr %a) {
 ; CHECK-LABEL: generic_unordered_volatile_sys_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_unordered_volatile_sys_float_param_0];
-; CHECK-NEXT:    ld.volatile.f32 %f1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_unordered_volatile_sys_float_param_0];
+; CHECK-NEXT:    ld.volatile.b32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.volatile.f32 [%rd1], %f2;
+; CHECK-NEXT:    st.volatile.b32 [%rd1], %f2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile float, ptr %a unordered, align 4
   %a.add = fadd float %a.load, 1.
@@ -508,13 +508,13 @@ define void @generic_unordered_volatile_sys_double(ptr %a) {
 ; CHECK-LABEL: generic_unordered_volatile_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_unordered_volatile_sys_double_param_0];
-; CHECK-NEXT:    ld.volatile.f64 %fd1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_unordered_volatile_sys_double_param_0];
+; CHECK-NEXT:    ld.volatile.b64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.volatile.f64 [%rd1], %fd2;
+; CHECK-NEXT:    st.volatile.b64 [%rd1], %fd2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile double, ptr %a unordered, align 8
   %a.add = fadd double %a.load, 1.
@@ -531,10 +531,10 @@ define void @generic_monotonic_sys_i8(ptr %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_i8_param_0];
-; SM60-NEXT:    ld.volatile.u8 %rs1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [generic_monotonic_sys_i8_param_0];
+; SM60-NEXT:    ld.volatile.b8 %rs1, [%rd1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    st.volatile.u8 [%rd1], %rs2;
+; SM60-NEXT:    st.volatile.b8 [%rd1], %rs2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: generic_monotonic_sys_i8(
@@ -543,10 +543,10 @@ define void @generic_monotonic_sys_i8(ptr %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_i8_param_0];
-; SM70-NEXT:    ld.relaxed.sys.u8 %rs1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [generic_monotonic_sys_i8_param_0];
+; SM70-NEXT:    ld.relaxed.sys.b8 %rs1, [%rd1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    st.relaxed.sys.u8 [%rd1], %rs2;
+; SM70-NEXT:    st.relaxed.sys.b8 [%rd1], %rs2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i8, ptr %a monotonic, align 1
   %a.add = add i8 %a.load, 1
@@ -561,10 +561,10 @@ define void @generic_monotonic_sys_i16(ptr %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_i16_param_0];
-; SM60-NEXT:    ld.volatile.u16 %rs1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [generic_monotonic_sys_i16_param_0];
+; SM60-NEXT:    ld.volatile.b16 %rs1, [%rd1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    st.volatile.u16 [%rd1], %rs2;
+; SM60-NEXT:    st.volatile.b16 [%rd1], %rs2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: generic_monotonic_sys_i16(
@@ -573,10 +573,10 @@ define void @generic_monotonic_sys_i16(ptr %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_i16_param_0];
-; SM70-NEXT:    ld.relaxed.sys.u16 %rs1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [generic_monotonic_sys_i16_param_0];
+; SM70-NEXT:    ld.relaxed.sys.b16 %rs1, [%rd1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    st.relaxed.sys.u16 [%rd1], %rs2;
+; SM70-NEXT:    st.relaxed.sys.b16 [%rd1], %rs2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i16, ptr %a monotonic, align 2
   %a.add = add i16 %a.load, 1
@@ -591,10 +591,10 @@ define void @generic_monotonic_sys_i32(ptr %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_i32_param_0];
-; SM60-NEXT:    ld.volatile.u32 %r1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [generic_monotonic_sys_i32_param_0];
+; SM60-NEXT:    ld.volatile.b32 %r1, [%rd1];
 ; SM60-NEXT:    add.s32 %r2, %r1, 1;
-; SM60-NEXT:    st.volatile.u32 [%rd1], %r2;
+; SM60-NEXT:    st.volatile.b32 [%rd1], %r2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: generic_monotonic_sys_i32(
@@ -603,10 +603,10 @@ define void @generic_monotonic_sys_i32(ptr %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_i32_param_0];
-; SM70-NEXT:    ld.relaxed.sys.u32 %r1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [generic_monotonic_sys_i32_param_0];
+; SM70-NEXT:    ld.relaxed.sys.b32 %r1, [%rd1];
 ; SM70-NEXT:    add.s32 %r2, %r1, 1;
-; SM70-NEXT:    st.relaxed.sys.u32 [%rd1], %r2;
+; SM70-NEXT:    st.relaxed.sys.b32 [%rd1], %r2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i32, ptr %a monotonic, align 4
   %a.add = add i32 %a.load, 1
@@ -620,10 +620,10 @@ define void @generic_monotonic_sys_i64(ptr %a) {
 ; SM60-NEXT:    .reg .b64 %rd<4>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_i64_param_0];
-; SM60-NEXT:    ld.volatile.u64 %rd2, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [generic_monotonic_sys_i64_param_0];
+; SM60-NEXT:    ld.volatile.b64 %rd2, [%rd1];
 ; SM60-NEXT:    add.s64 %rd3, %rd2, 1;
-; SM60-NEXT:    st.volatile.u64 [%rd1], %rd3;
+; SM60-NEXT:    st.volatile.b64 [%rd1], %rd3;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: generic_monotonic_sys_i64(
@@ -631,10 +631,10 @@ define void @generic_monotonic_sys_i64(ptr %a) {
 ; SM70-NEXT:    .reg .b64 %rd<4>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_i64_param_0];
-; SM70-NEXT:    ld.relaxed.sys.u64 %rd2, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [generic_monotonic_sys_i64_param_0];
+; SM70-NEXT:    ld.relaxed.sys.b64 %rd2, [%rd1];
 ; SM70-NEXT:    add.s64 %rd3, %rd2, 1;
-; SM70-NEXT:    st.relaxed.sys.u64 [%rd1], %rd3;
+; SM70-NEXT:    st.relaxed.sys.b64 [%rd1], %rd3;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i64, ptr %a monotonic, align 8
   %a.add = add i64 %a.load, 1
@@ -645,26 +645,26 @@ define void @generic_monotonic_sys_i64(ptr %a) {
 define void @generic_monotonic_sys_float(ptr %a) {
 ; SM60-LABEL: generic_monotonic_sys_float(
 ; SM60:       {
-; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b32 %f<3>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_float_param_0];
-; SM60-NEXT:    ld.volatile.f32 %f1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [generic_monotonic_sys_float_param_0];
+; SM60-NEXT:    ld.volatile.b32 %f1, [%rd1];
 ; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM60-NEXT:    st.volatile.f32 [%rd1], %f2;
+; SM60-NEXT:    st.volatile.b32 [%rd1], %f2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: generic_monotonic_sys_float(
 ; SM70:       {
-; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b32 %f<3>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_float_param_0];
-; SM70-NEXT:    ld.relaxed.sys.f32 %f1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [generic_monotonic_sys_float_param_0];
+; SM70-NEXT:    ld.relaxed.sys.b32 %f1, [%rd1];
 ; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM70-NEXT:    st.relaxed.sys.f32 [%rd1], %f2;
+; SM70-NEXT:    st.relaxed.sys.b32 [%rd1], %f2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic float, ptr %a monotonic, align 4
   %a.add = fadd float %a.load, 1.
@@ -676,25 +676,25 @@ define void @generic_monotonic_sys_double(ptr %a) {
 ; SM60-LABEL: generic_monotonic_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b64 %fd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_double_param_0];
-; SM60-NEXT:    ld.volatile.f64 %fd1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [generic_monotonic_sys_double_param_0];
+; SM60-NEXT:    ld.volatile.b64 %fd1, [%rd1];
 ; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM60-NEXT:    st.volatile.f64 [%rd1], %fd2;
+; SM60-NEXT:    st.volatile.b64 [%rd1], %fd2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: generic_monotonic_sys_double(
 ; SM70:       {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b64 %fd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [generic_monotonic_sys_double_param_0];
-; SM70-NEXT:    ld.relaxed.sys.f64 %fd1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [generic_monotonic_sys_double_param_0];
+; SM70-NEXT:    ld.relaxed.sys.b64 %fd1, [%rd1];
 ; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM70-NEXT:    st.relaxed.sys.f64 [%rd1], %fd2;
+; SM70-NEXT:    st.relaxed.sys.b64 [%rd1], %fd2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic double, ptr %a monotonic, align 8
   %a.add = fadd double %a.load, 1.
@@ -711,10 +711,10 @@ define void @generic_monotonic_volatile_sys_i8(ptr %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_monotonic_volatile_sys_i8_param_0];
-; CHECK-NEXT:    ld.volatile.u8 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_monotonic_volatile_sys_i8_param_0];
+; CHECK-NEXT:    ld.volatile.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.volatile.u8 [%rd1], %rs2;
+; CHECK-NEXT:    st.volatile.b8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i8, ptr %a monotonic, align 1
   %a.add = add i8 %a.load, 1
@@ -729,10 +729,10 @@ define void @generic_monotonic_volatile_sys_i16(ptr %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_monotonic_volatile_sys_i16_param_0];
-; CHECK-NEXT:    ld.volatile.u16 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_monotonic_volatile_sys_i16_param_0];
+; CHECK-NEXT:    ld.volatile.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.volatile.u16 [%rd1], %rs2;
+; CHECK-NEXT:    st.volatile.b16 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i16, ptr %a monotonic, align 2
   %a.add = add i16 %a.load, 1
@@ -747,10 +747,10 @@ define void @generic_monotonic_volatile_sys_i32(ptr %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_monotonic_volatile_sys_i32_param_0];
-; CHECK-NEXT:    ld.volatile.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_monotonic_volatile_sys_i32_param_0];
+; CHECK-NEXT:    ld.volatile.b32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.volatile.u32 [%rd1], %r2;
+; CHECK-NEXT:    st.volatile.b32 [%rd1], %r2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i32, ptr %a monotonic, align 4
   %a.add = add i32 %a.load, 1
@@ -764,10 +764,10 @@ define void @generic_monotonic_volatile_sys_i64(ptr %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_monotonic_volatile_sys_i64_param_0];
-; CHECK-NEXT:    ld.volatile.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_monotonic_volatile_sys_i64_param_0];
+; CHECK-NEXT:    ld.volatile.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
-; CHECK-NEXT:    st.volatile.u64 [%rd1], %rd3;
+; CHECK-NEXT:    st.volatile.b64 [%rd1], %rd3;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i64, ptr %a monotonic, align 8
   %a.add = add i64 %a.load, 1
@@ -778,14 +778,14 @@ define void @generic_monotonic_volatile_sys_i64(ptr %a) {
 define void @generic_monotonic_volatile_sys_float(ptr %a) {
 ; CHECK-LABEL: generic_monotonic_volatile_sys_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_monotonic_volatile_sys_float_param_0];
-; CHECK-NEXT:    ld.volatile.f32 %f1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_monotonic_volatile_sys_float_param_0];
+; CHECK-NEXT:    ld.volatile.b32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.volatile.f32 [%rd1], %f2;
+; CHECK-NEXT:    st.volatile.b32 [%rd1], %f2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile float, ptr %a monotonic, align 4
   %a.add = fadd float %a.load, 1.
@@ -797,13 +797,13 @@ define void @generic_monotonic_volatile_sys_double(ptr %a) {
 ; CHECK-LABEL: generic_monotonic_volatile_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [generic_monotonic_volatile_sys_double_param_0];
-; CHECK-NEXT:    ld.volatile.f64 %fd1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [generic_monotonic_volatile_sys_double_param_0];
+; CHECK-NEXT:    ld.volatile.b64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.volatile.f64 [%rd1], %fd2;
+; CHECK-NEXT:    st.volatile.b64 [%rd1], %fd2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile double, ptr %a monotonic, align 8
   %a.add = fadd double %a.load, 1.
@@ -822,10 +822,10 @@ define void @global_i8(ptr addrspace(1) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_i8_param_0];
-; CHECK-NEXT:    ld.global.u8 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [global_i8_param_0];
+; CHECK-NEXT:    ld.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.global.u8 [%rd1], %rs2;
+; CHECK-NEXT:    st.global.b8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load i8, ptr addrspace(1) %a
   %a.add = add i8 %a.load, 1
@@ -840,10 +840,10 @@ define void @global_i16(ptr addrspace(1) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_i16_param_0];
-; CHECK-NEXT:    ld.global.u16 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [global_i16_param_0];
+; CHECK-NEXT:    ld.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.global.u16 [%rd1], %rs2;
+; CHECK-NEXT:    st.global.b16 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load i16, ptr addrspace(1) %a
   %a.add = add i16 %a.load, 1
@@ -858,10 +858,10 @@ define void @global_i32(ptr addrspace(1) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_i32_param_0];
-; CHECK-NEXT:    ld.global.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [global_i32_param_0];
+; CHECK-NEXT:    ld.global.b32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.global.u32 [%rd1], %r2;
+; CHECK-NEXT:    st.global.b32 [%rd1], %r2;
 ; CHECK-NEXT:    ret;
   %a.load = load i32, ptr addrspace(1) %a
   %a.add = add i32 %a.load, 1
@@ -875,10 +875,10 @@ define void @global_i64(ptr addrspace(1) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_i64_param_0];
-; CHECK-NEXT:    ld.global.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [global_i64_param_0];
+; CHECK-NEXT:    ld.global.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
-; CHECK-NEXT:    st.global.u64 [%rd1], %rd3;
+; CHECK-NEXT:    st.global.b64 [%rd1], %rd3;
 ; CHECK-NEXT:    ret;
   %a.load = load i64, ptr addrspace(1) %a
   %a.add = add i64 %a.load, 1
@@ -889,14 +889,14 @@ define void @global_i64(ptr addrspace(1) %a) {
 define void @global_float(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_float_param_0];
-; CHECK-NEXT:    ld.global.f32 %f1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [global_float_param_0];
+; CHECK-NEXT:    ld.global.b32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.global.f32 [%rd1], %f2;
+; CHECK-NEXT:    st.global.b32 [%rd1], %f2;
 ; CHECK-NEXT:    ret;
   %a.load = load float, ptr addrspace(1) %a
   %a.add = fadd float %a.load, 1.
@@ -908,13 +908,13 @@ define void @global_double(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_double_param_0];
-; CHECK-NEXT:    ld.global.f64 %fd1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [global_double_param_0];
+; CHECK-NEXT:    ld.global.b64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.global.f64 [%rd1], %fd2;
+; CHECK-NEXT:    st.global.b64 [%rd1], %fd2;
 ; CHECK-NEXT:    ret;
   %a.load = load double, ptr addrspace(1) %a
   %a.add = fadd double %a.load, 1.
@@ -931,10 +931,10 @@ define void @global_volatile_i8(ptr addrspace(1) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_i8_param_0];
-; CHECK-NEXT:    ld.volatile.global.u8 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [global_volatile_i8_param_0];
+; CHECK-NEXT:    ld.volatile.global.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.volatile.global.u8 [%rd1], %rs2;
+; CHECK-NEXT:    st.volatile.global.b8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i8, ptr addrspace(1) %a
   %a.add = add i8 %a.load, 1
@@ -949,10 +949,10 @@ define void @global_volatile_i16(ptr addrspace(1) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_i16_param_0];
-; CHECK-NEXT:    ld.volatile.global.u16 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [global_volatile_i16_param_0];
+; CHECK-NEXT:    ld.volatile.global.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.volatile.global.u16 [%rd1], %rs2;
+; CHECK-NEXT:    st.volatile.global.b16 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i16, ptr addrspace(1) %a
   %a.add = add i16 %a.load, 1
@@ -967,10 +967,10 @@ define void @global_volatile_i32(ptr addrspace(1) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_i32_param_0];
-; CHECK-NEXT:    ld.volatile.global.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [global_volatile_i32_param_0];
+; CHECK-NEXT:    ld.volatile.global.b32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.volatile.global.u32 [%rd1], %r2;
+; CHECK-NEXT:    st.volatile.global.b32 [%rd1], %r2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i32, ptr addrspace(1) %a
   %a.add = add i32 %a.load, 1
@@ -984,10 +984,10 @@ define void @global_volatile_i64(ptr addrspace(1) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_i64_param_0];
-; CHECK-NEXT:    ld.volatile.global.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [global_volatile_i64_param_0];
+; CHECK-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
-; CHECK-NEXT:    st.volatile.global.u64 [%rd1], %rd3;
+; CHECK-NEXT:    st.volatile.global.b64 [%rd1], %rd3;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i64, ptr addrspace(1) %a
   %a.add = add i64 %a.load, 1
@@ -998,14 +998,14 @@ define void @global_volatile_i64(ptr addrspace(1) %a) {
 define void @global_volatile_float(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_float_param_0];
-; CHECK-NEXT:    ld.volatile.global.f32 %f1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [global_volatile_float_param_0];
+; CHECK-NEXT:    ld.volatile.global.b32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.volatile.global.f32 [%rd1], %f2;
+; CHECK-NEXT:    st.volatile.global.b32 [%rd1], %f2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile float, ptr addrspace(1) %a
   %a.add = fadd float %a.load, 1.
@@ -1017,13 +1017,13 @@ define void @global_volatile_double(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_double_param_0];
-; CHECK-NEXT:    ld.volatile.global.f64 %fd1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [global_volatile_double_param_0];
+; CHECK-NEXT:    ld.volatile.global.b64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.volatile.global.f64 [%rd1], %fd2;
+; CHECK-NEXT:    st.volatile.global.b64 [%rd1], %fd2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile double, ptr addrspace(1) %a
   %a.add = fadd double %a.load, 1.
@@ -1040,10 +1040,10 @@ define void @global_unordered_sys_i8(ptr addrspace(1) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_i8_param_0];
-; SM60-NEXT:    ld.volatile.global.u8 %rs1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_unordered_sys_i8_param_0];
+; SM60-NEXT:    ld.volatile.global.b8 %rs1, [%rd1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    st.volatile.global.u8 [%rd1], %rs2;
+; SM60-NEXT:    st.volatile.global.b8 [%rd1], %rs2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_unordered_sys_i8(
@@ -1052,10 +1052,10 @@ define void @global_unordered_sys_i8(ptr addrspace(1) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_i8_param_0];
-; SM70-NEXT:    ld.relaxed.sys.global.u8 %rs1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_unordered_sys_i8_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.b8 %rs1, [%rd1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    st.relaxed.sys.global.u8 [%rd1], %rs2;
+; SM70-NEXT:    st.relaxed.sys.global.b8 [%rd1], %rs2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i8, ptr addrspace(1) %a unordered, align 1
   %a.add = add i8 %a.load, 1
@@ -1070,10 +1070,10 @@ define void @global_unordered_sys_i16(ptr addrspace(1) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_i16_param_0];
-; SM60-NEXT:    ld.volatile.global.u16 %rs1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_unordered_sys_i16_param_0];
+; SM60-NEXT:    ld.volatile.global.b16 %rs1, [%rd1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    st.volatile.global.u16 [%rd1], %rs2;
+; SM60-NEXT:    st.volatile.global.b16 [%rd1], %rs2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_unordered_sys_i16(
@@ -1082,10 +1082,10 @@ define void @global_unordered_sys_i16(ptr addrspace(1) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_i16_param_0];
-; SM70-NEXT:    ld.relaxed.sys.global.u16 %rs1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_unordered_sys_i16_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.b16 %rs1, [%rd1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    st.relaxed.sys.global.u16 [%rd1], %rs2;
+; SM70-NEXT:    st.relaxed.sys.global.b16 [%rd1], %rs2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i16, ptr addrspace(1) %a unordered, align 2
   %a.add = add i16 %a.load, 1
@@ -1100,10 +1100,10 @@ define void @global_unordered_sys_i32(ptr addrspace(1) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_i32_param_0];
-; SM60-NEXT:    ld.volatile.global.u32 %r1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_unordered_sys_i32_param_0];
+; SM60-NEXT:    ld.volatile.global.b32 %r1, [%rd1];
 ; SM60-NEXT:    add.s32 %r2, %r1, 1;
-; SM60-NEXT:    st.volatile.global.u32 [%rd1], %r2;
+; SM60-NEXT:    st.volatile.global.b32 [%rd1], %r2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_unordered_sys_i32(
@@ -1112,10 +1112,10 @@ define void @global_unordered_sys_i32(ptr addrspace(1) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_i32_param_0];
-; SM70-NEXT:    ld.relaxed.sys.global.u32 %r1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_unordered_sys_i32_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.b32 %r1, [%rd1];
 ; SM70-NEXT:    add.s32 %r2, %r1, 1;
-; SM70-NEXT:    st.relaxed.sys.global.u32 [%rd1], %r2;
+; SM70-NEXT:    st.relaxed.sys.global.b32 [%rd1], %r2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i32, ptr addrspace(1) %a unordered, align 4
   %a.add = add i32 %a.load, 1
@@ -1129,10 +1129,10 @@ define void @global_unordered_sys_i64(ptr addrspace(1) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<4>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_i64_param_0];
-; SM60-NEXT:    ld.volatile.global.u64 %rd2, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_unordered_sys_i64_param_0];
+; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    add.s64 %rd3, %rd2, 1;
-; SM60-NEXT:    st.volatile.global.u64 [%rd1], %rd3;
+; SM60-NEXT:    st.volatile.global.b64 [%rd1], %rd3;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_unordered_sys_i64(
@@ -1140,10 +1140,10 @@ define void @global_unordered_sys_i64(ptr addrspace(1) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<4>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_i64_param_0];
-; SM70-NEXT:    ld.relaxed.sys.global.u64 %rd2, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_unordered_sys_i64_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.b64 %rd2, [%rd1];
 ; SM70-NEXT:    add.s64 %rd3, %rd2, 1;
-; SM70-NEXT:    st.relaxed.sys.global.u64 [%rd1], %rd3;
+; SM70-NEXT:    st.relaxed.sys.global.b64 [%rd1], %rd3;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i64, ptr addrspace(1) %a unordered, align 8
   %a.add = add i64 %a.load, 1
@@ -1154,26 +1154,26 @@ define void @global_unordered_sys_i64(ptr addrspace(1) %a) {
 define void @global_unordered_sys_float(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_unordered_sys_float(
 ; SM60:       {
-; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b32 %f<3>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_float_param_0];
-; SM60-NEXT:    ld.volatile.global.f32 %f1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_unordered_sys_float_param_0];
+; SM60-NEXT:    ld.volatile.global.b32 %f1, [%rd1];
 ; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM60-NEXT:    st.volatile.global.f32 [%rd1], %f2;
+; SM60-NEXT:    st.volatile.global.b32 [%rd1], %f2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_unordered_sys_float(
 ; SM70:       {
-; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b32 %f<3>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_float_param_0];
-; SM70-NEXT:    ld.relaxed.sys.global.f32 %f1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_unordered_sys_float_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.b32 %f1, [%rd1];
 ; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM70-NEXT:    st.relaxed.sys.global.f32 [%rd1], %f2;
+; SM70-NEXT:    st.relaxed.sys.global.b32 [%rd1], %f2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic float, ptr addrspace(1) %a unordered, align 4
   %a.add = fadd float %a.load, 1.
@@ -1185,25 +1185,25 @@ define void @global_unordered_sys_double(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_unordered_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b64 %fd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_double_param_0];
-; SM60-NEXT:    ld.volatile.global.f64 %fd1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_unordered_sys_double_param_0];
+; SM60-NEXT:    ld.volatile.global.b64 %fd1, [%rd1];
 ; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM60-NEXT:    st.volatile.global.f64 [%rd1], %fd2;
+; SM60-NEXT:    st.volatile.global.b64 [%rd1], %fd2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_unordered_sys_double(
 ; SM70:       {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b64 %fd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_sys_double_param_0];
-; SM70-NEXT:    ld.relaxed.sys.global.f64 %fd1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_unordered_sys_double_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.b64 %fd1, [%rd1];
 ; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM70-NEXT:    st.relaxed.sys.global.f64 [%rd1], %fd2;
+; SM70-NEXT:    st.relaxed.sys.global.b64 [%rd1], %fd2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic double, ptr addrspace(1) %a unordered, align 8
   %a.add = fadd double %a.load, 1.
@@ -1220,10 +1220,10 @@ define void @global_unordered_volatile_sys_i8(ptr addrspace(1) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_i8_param_0];
-; SM60-NEXT:    ld.volatile.global.u8 %rs1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_unordered_volatile_sys_i8_param_0];
+; SM60-NEXT:    ld.volatile.global.b8 %rs1, [%rd1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    st.volatile.global.u8 [%rd1], %rs2;
+; SM60-NEXT:    st.volatile.global.b8 [%rd1], %rs2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_unordered_volatile_sys_i8(
@@ -1232,10 +1232,10 @@ define void @global_unordered_volatile_sys_i8(ptr addrspace(1) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_i8_param_0];
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.u8 %rs1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_unordered_volatile_sys_i8_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.b8 %rs1, [%rd1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.u8 [%rd1], %rs2;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.b8 [%rd1], %rs2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic volatile i8, ptr addrspace(1) %a unordered, align 1
   %a.add = add i8 %a.load, 1
@@ -1250,10 +1250,10 @@ define void @global_unordered_volatile_sys_i16(ptr addrspace(1) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_i16_param_0];
-; SM60-NEXT:    ld.volatile.global.u16 %rs1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_unordered_volatile_sys_i16_param_0];
+; SM60-NEXT:    ld.volatile.global.b16 %rs1, [%rd1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    st.volatile.global.u16 [%rd1], %rs2;
+; SM60-NEXT:    st.volatile.global.b16 [%rd1], %rs2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_unordered_volatile_sys_i16(
@@ -1262,10 +1262,10 @@ define void @global_unordered_volatile_sys_i16(ptr addrspace(1) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_i16_param_0];
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.u16 %rs1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_unordered_volatile_sys_i16_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.u16 [%rd1], %rs2;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic volatile i16, ptr addrspace(1) %a unordered, align 2
   %a.add = add i16 %a.load, 1
@@ -1280,10 +1280,10 @@ define void @global_unordered_volatile_sys_i32(ptr addrspace(1) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_i32_param_0];
-; SM60-NEXT:    ld.volatile.global.u32 %r1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_unordered_volatile_sys_i32_param_0];
+; SM60-NEXT:    ld.volatile.global.b32 %r1, [%rd1];
 ; SM60-NEXT:    add.s32 %r2, %r1, 1;
-; SM60-NEXT:    st.volatile.global.u32 [%rd1], %r2;
+; SM60-NEXT:    st.volatile.global.b32 [%rd1], %r2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_unordered_volatile_sys_i32(
@@ -1292,10 +1292,10 @@ define void @global_unordered_volatile_sys_i32(ptr addrspace(1) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_i32_param_0];
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.u32 %r1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_unordered_volatile_sys_i32_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.b32 %r1, [%rd1];
 ; SM70-NEXT:    add.s32 %r2, %r1, 1;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.u32 [%rd1], %r2;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic volatile i32, ptr addrspace(1) %a unordered, align 4
   %a.add = add i32 %a.load, 1
@@ -1309,10 +1309,10 @@ define void @global_unordered_volatile_sys_i64(ptr addrspace(1) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<4>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_i64_param_0];
-; SM60-NEXT:    ld.volatile.global.u64 %rd2, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_unordered_volatile_sys_i64_param_0];
+; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    add.s64 %rd3, %rd2, 1;
-; SM60-NEXT:    st.volatile.global.u64 [%rd1], %rd3;
+; SM60-NEXT:    st.volatile.global.b64 [%rd1], %rd3;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_unordered_volatile_sys_i64(
@@ -1320,10 +1320,10 @@ define void @global_unordered_volatile_sys_i64(ptr addrspace(1) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<4>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_i64_param_0];
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.u64 %rd2, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_unordered_volatile_sys_i64_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.b64 %rd2, [%rd1];
 ; SM70-NEXT:    add.s64 %rd3, %rd2, 1;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.u64 [%rd1], %rd3;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd1], %rd3;
 ; SM70-NEXT:    ret;
   %a.load = load atomic volatile i64, ptr addrspace(1) %a unordered, align 8
   %a.add = add i64 %a.load, 1
@@ -1334,26 +1334,26 @@ define void @global_unordered_volatile_sys_i64(ptr addrspace(1) %a) {
 define void @global_unordered_volatile_sys_float(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_unordered_volatile_sys_float(
 ; SM60:       {
-; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b32 %f<3>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_float_param_0];
-; SM60-NEXT:    ld.volatile.global.f32 %f1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_unordered_volatile_sys_float_param_0];
+; SM60-NEXT:    ld.volatile.global.b32 %f1, [%rd1];
 ; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM60-NEXT:    st.volatile.global.f32 [%rd1], %f2;
+; SM60-NEXT:    st.volatile.global.b32 [%rd1], %f2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_unordered_volatile_sys_float(
 ; SM70:       {
-; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b32 %f<3>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_float_param_0];
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.f32 %f1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_unordered_volatile_sys_float_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.b32 %f1, [%rd1];
 ; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.f32 [%rd1], %f2;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %f2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic volatile float, ptr addrspace(1) %a unordered, align 4
   %a.add = fadd float %a.load, 1.
@@ -1365,25 +1365,25 @@ define void @global_unordered_volatile_sys_double(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_unordered_volatile_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b64 %fd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_double_param_0];
-; SM60-NEXT:    ld.volatile.global.f64 %fd1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_unordered_volatile_sys_double_param_0];
+; SM60-NEXT:    ld.volatile.global.b64 %fd1, [%rd1];
 ; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM60-NEXT:    st.volatile.global.f64 [%rd1], %fd2;
+; SM60-NEXT:    st.volatile.global.b64 [%rd1], %fd2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_unordered_volatile_sys_double(
 ; SM70:       {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b64 %fd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_unordered_volatile_sys_double_param_0];
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.f64 %fd1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_unordered_volatile_sys_double_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.b64 %fd1, [%rd1];
 ; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.f64 [%rd1], %fd2;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd1], %fd2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic volatile double, ptr addrspace(1) %a unordered, align 8
   %a.add = fadd double %a.load, 1.
@@ -1400,10 +1400,10 @@ define void @global_monotonic_sys_i8(ptr addrspace(1) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_i8_param_0];
-; SM60-NEXT:    ld.volatile.global.u8 %rs1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_monotonic_sys_i8_param_0];
+; SM60-NEXT:    ld.volatile.global.b8 %rs1, [%rd1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    st.volatile.global.u8 [%rd1], %rs2;
+; SM60-NEXT:    st.volatile.global.b8 [%rd1], %rs2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_monotonic_sys_i8(
@@ -1412,10 +1412,10 @@ define void @global_monotonic_sys_i8(ptr addrspace(1) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_i8_param_0];
-; SM70-NEXT:    ld.relaxed.sys.global.u8 %rs1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_monotonic_sys_i8_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.b8 %rs1, [%rd1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    st.relaxed.sys.global.u8 [%rd1], %rs2;
+; SM70-NEXT:    st.relaxed.sys.global.b8 [%rd1], %rs2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i8, ptr addrspace(1) %a monotonic, align 1
   %a.add = add i8 %a.load, 1
@@ -1430,10 +1430,10 @@ define void @global_monotonic_sys_i16(ptr addrspace(1) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_i16_param_0];
-; SM60-NEXT:    ld.volatile.global.u16 %rs1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_monotonic_sys_i16_param_0];
+; SM60-NEXT:    ld.volatile.global.b16 %rs1, [%rd1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    st.volatile.global.u16 [%rd1], %rs2;
+; SM60-NEXT:    st.volatile.global.b16 [%rd1], %rs2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_monotonic_sys_i16(
@@ -1442,10 +1442,10 @@ define void @global_monotonic_sys_i16(ptr addrspace(1) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_i16_param_0];
-; SM70-NEXT:    ld.relaxed.sys.global.u16 %rs1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_monotonic_sys_i16_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.b16 %rs1, [%rd1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    st.relaxed.sys.global.u16 [%rd1], %rs2;
+; SM70-NEXT:    st.relaxed.sys.global.b16 [%rd1], %rs2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i16, ptr addrspace(1) %a monotonic, align 2
   %a.add = add i16 %a.load, 1
@@ -1460,10 +1460,10 @@ define void @global_monotonic_sys_i32(ptr addrspace(1) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_i32_param_0];
-; SM60-NEXT:    ld.volatile.global.u32 %r1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_monotonic_sys_i32_param_0];
+; SM60-NEXT:    ld.volatile.global.b32 %r1, [%rd1];
 ; SM60-NEXT:    add.s32 %r2, %r1, 1;
-; SM60-NEXT:    st.volatile.global.u32 [%rd1], %r2;
+; SM60-NEXT:    st.volatile.global.b32 [%rd1], %r2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_monotonic_sys_i32(
@@ -1472,10 +1472,10 @@ define void @global_monotonic_sys_i32(ptr addrspace(1) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_i32_param_0];
-; SM70-NEXT:    ld.relaxed.sys.global.u32 %r1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_monotonic_sys_i32_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.b32 %r1, [%rd1];
 ; SM70-NEXT:    add.s32 %r2, %r1, 1;
-; SM70-NEXT:    st.relaxed.sys.global.u32 [%rd1], %r2;
+; SM70-NEXT:    st.relaxed.sys.global.b32 [%rd1], %r2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i32, ptr addrspace(1) %a monotonic, align 4
   %a.add = add i32 %a.load, 1
@@ -1489,10 +1489,10 @@ define void @global_monotonic_sys_i64(ptr addrspace(1) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<4>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_i64_param_0];
-; SM60-NEXT:    ld.volatile.global.u64 %rd2, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_monotonic_sys_i64_param_0];
+; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    add.s64 %rd3, %rd2, 1;
-; SM60-NEXT:    st.volatile.global.u64 [%rd1], %rd3;
+; SM60-NEXT:    st.volatile.global.b64 [%rd1], %rd3;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_monotonic_sys_i64(
@@ -1500,10 +1500,10 @@ define void @global_monotonic_sys_i64(ptr addrspace(1) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<4>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_i64_param_0];
-; SM70-NEXT:    ld.relaxed.sys.global.u64 %rd2, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_monotonic_sys_i64_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.b64 %rd2, [%rd1];
 ; SM70-NEXT:    add.s64 %rd3, %rd2, 1;
-; SM70-NEXT:    st.relaxed.sys.global.u64 [%rd1], %rd3;
+; SM70-NEXT:    st.relaxed.sys.global.b64 [%rd1], %rd3;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i64, ptr addrspace(1) %a monotonic, align 8
   %a.add = add i64 %a.load, 1
@@ -1514,26 +1514,26 @@ define void @global_monotonic_sys_i64(ptr addrspace(1) %a) {
 define void @global_monotonic_sys_float(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_monotonic_sys_float(
 ; SM60:       {
-; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b32 %f<3>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_float_param_0];
-; SM60-NEXT:    ld.volatile.global.f32 %f1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_monotonic_sys_float_param_0];
+; SM60-NEXT:    ld.volatile.global.b32 %f1, [%rd1];
 ; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM60-NEXT:    st.volatile.global.f32 [%rd1], %f2;
+; SM60-NEXT:    st.volatile.global.b32 [%rd1], %f2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_monotonic_sys_float(
 ; SM70:       {
-; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b32 %f<3>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_float_param_0];
-; SM70-NEXT:    ld.relaxed.sys.global.f32 %f1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_monotonic_sys_float_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.b32 %f1, [%rd1];
 ; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM70-NEXT:    st.relaxed.sys.global.f32 [%rd1], %f2;
+; SM70-NEXT:    st.relaxed.sys.global.b32 [%rd1], %f2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic float, ptr addrspace(1) %a monotonic, align 4
   %a.add = fadd float %a.load, 1.
@@ -1545,25 +1545,25 @@ define void @global_monotonic_sys_double(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_monotonic_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b64 %fd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_double_param_0];
-; SM60-NEXT:    ld.volatile.global.f64 %fd1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_monotonic_sys_double_param_0];
+; SM60-NEXT:    ld.volatile.global.b64 %fd1, [%rd1];
 ; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM60-NEXT:    st.volatile.global.f64 [%rd1], %fd2;
+; SM60-NEXT:    st.volatile.global.b64 [%rd1], %fd2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_monotonic_sys_double(
 ; SM70:       {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b64 %fd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_sys_double_param_0];
-; SM70-NEXT:    ld.relaxed.sys.global.f64 %fd1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_monotonic_sys_double_param_0];
+; SM70-NEXT:    ld.relaxed.sys.global.b64 %fd1, [%rd1];
 ; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM70-NEXT:    st.relaxed.sys.global.f64 [%rd1], %fd2;
+; SM70-NEXT:    st.relaxed.sys.global.b64 [%rd1], %fd2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic double, ptr addrspace(1) %a monotonic, align 8
   %a.add = fadd double %a.load, 1.
@@ -1580,10 +1580,10 @@ define void @global_monotonic_volatile_sys_i8(ptr addrspace(1) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_i8_param_0];
-; SM60-NEXT:    ld.volatile.global.u8 %rs1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_monotonic_volatile_sys_i8_param_0];
+; SM60-NEXT:    ld.volatile.global.b8 %rs1, [%rd1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    st.volatile.global.u8 [%rd1], %rs2;
+; SM60-NEXT:    st.volatile.global.b8 [%rd1], %rs2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_monotonic_volatile_sys_i8(
@@ -1592,10 +1592,10 @@ define void @global_monotonic_volatile_sys_i8(ptr addrspace(1) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_i8_param_0];
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.u8 %rs1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_monotonic_volatile_sys_i8_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.b8 %rs1, [%rd1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.u8 [%rd1], %rs2;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.b8 [%rd1], %rs2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic volatile i8, ptr addrspace(1) %a monotonic, align 1
   %a.add = add i8 %a.load, 1
@@ -1610,10 +1610,10 @@ define void @global_monotonic_volatile_sys_i16(ptr addrspace(1) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_i16_param_0];
-; SM60-NEXT:    ld.volatile.global.u16 %rs1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_monotonic_volatile_sys_i16_param_0];
+; SM60-NEXT:    ld.volatile.global.b16 %rs1, [%rd1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    st.volatile.global.u16 [%rd1], %rs2;
+; SM60-NEXT:    st.volatile.global.b16 [%rd1], %rs2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_monotonic_volatile_sys_i16(
@@ -1622,10 +1622,10 @@ define void @global_monotonic_volatile_sys_i16(ptr addrspace(1) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_i16_param_0];
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.u16 %rs1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_monotonic_volatile_sys_i16_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.b16 %rs1, [%rd1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.u16 [%rd1], %rs2;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.b16 [%rd1], %rs2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic volatile i16, ptr addrspace(1) %a monotonic, align 2
   %a.add = add i16 %a.load, 1
@@ -1640,10 +1640,10 @@ define void @global_monotonic_volatile_sys_i32(ptr addrspace(1) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_i32_param_0];
-; SM60-NEXT:    ld.volatile.global.u32 %r1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_monotonic_volatile_sys_i32_param_0];
+; SM60-NEXT:    ld.volatile.global.b32 %r1, [%rd1];
 ; SM60-NEXT:    add.s32 %r2, %r1, 1;
-; SM60-NEXT:    st.volatile.global.u32 [%rd1], %r2;
+; SM60-NEXT:    st.volatile.global.b32 [%rd1], %r2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_monotonic_volatile_sys_i32(
@@ -1652,10 +1652,10 @@ define void @global_monotonic_volatile_sys_i32(ptr addrspace(1) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_i32_param_0];
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.u32 %r1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_monotonic_volatile_sys_i32_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.b32 %r1, [%rd1];
 ; SM70-NEXT:    add.s32 %r2, %r1, 1;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.u32 [%rd1], %r2;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %r2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic volatile i32, ptr addrspace(1) %a monotonic, align 4
   %a.add = add i32 %a.load, 1
@@ -1669,10 +1669,10 @@ define void @global_monotonic_volatile_sys_i64(ptr addrspace(1) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<4>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_i64_param_0];
-; SM60-NEXT:    ld.volatile.global.u64 %rd2, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_monotonic_volatile_sys_i64_param_0];
+; SM60-NEXT:    ld.volatile.global.b64 %rd2, [%rd1];
 ; SM60-NEXT:    add.s64 %rd3, %rd2, 1;
-; SM60-NEXT:    st.volatile.global.u64 [%rd1], %rd3;
+; SM60-NEXT:    st.volatile.global.b64 [%rd1], %rd3;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_monotonic_volatile_sys_i64(
@@ -1680,10 +1680,10 @@ define void @global_monotonic_volatile_sys_i64(ptr addrspace(1) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<4>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_i64_param_0];
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.u64 %rd2, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_monotonic_volatile_sys_i64_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.b64 %rd2, [%rd1];
 ; SM70-NEXT:    add.s64 %rd3, %rd2, 1;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.u64 [%rd1], %rd3;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd1], %rd3;
 ; SM70-NEXT:    ret;
   %a.load = load atomic volatile i64, ptr addrspace(1) %a monotonic, align 8
   %a.add = add i64 %a.load, 1
@@ -1694,26 +1694,26 @@ define void @global_monotonic_volatile_sys_i64(ptr addrspace(1) %a) {
 define void @global_monotonic_volatile_sys_float(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_monotonic_volatile_sys_float(
 ; SM60:       {
-; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b32 %f<3>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_float_param_0];
-; SM60-NEXT:    ld.volatile.global.f32 %f1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_monotonic_volatile_sys_float_param_0];
+; SM60-NEXT:    ld.volatile.global.b32 %f1, [%rd1];
 ; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM60-NEXT:    st.volatile.global.f32 [%rd1], %f2;
+; SM60-NEXT:    st.volatile.global.b32 [%rd1], %f2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_monotonic_volatile_sys_float(
 ; SM70:       {
-; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b32 %f<3>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_float_param_0];
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.f32 %f1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_monotonic_volatile_sys_float_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.b32 %f1, [%rd1];
 ; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.f32 [%rd1], %f2;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.b32 [%rd1], %f2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic volatile float, ptr addrspace(1) %a monotonic, align 4
   %a.add = fadd float %a.load, 1.
@@ -1725,25 +1725,25 @@ define void @global_monotonic_volatile_sys_double(ptr addrspace(1) %a) {
 ; SM60-LABEL: global_monotonic_volatile_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b64 %fd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_double_param_0];
-; SM60-NEXT:    ld.volatile.global.f64 %fd1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [global_monotonic_volatile_sys_double_param_0];
+; SM60-NEXT:    ld.volatile.global.b64 %fd1, [%rd1];
 ; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM60-NEXT:    st.volatile.global.f64 [%rd1], %fd2;
+; SM60-NEXT:    st.volatile.global.b64 [%rd1], %fd2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: global_monotonic_volatile_sys_double(
 ; SM70:       {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b64 %fd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [global_monotonic_volatile_sys_double_param_0];
-; SM70-NEXT:    ld.mmio.relaxed.sys.global.f64 %fd1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [global_monotonic_volatile_sys_double_param_0];
+; SM70-NEXT:    ld.mmio.relaxed.sys.global.b64 %fd1, [%rd1];
 ; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM70-NEXT:    st.mmio.relaxed.sys.global.f64 [%rd1], %fd2;
+; SM70-NEXT:    st.mmio.relaxed.sys.global.b64 [%rd1], %fd2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic volatile double, ptr addrspace(1) %a monotonic, align 8
   %a.add = fadd double %a.load, 1.
@@ -1762,10 +1762,10 @@ define void @shared_i8(ptr addrspace(3) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_i8_param_0];
-; CHECK-NEXT:    ld.shared.u8 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_i8_param_0];
+; CHECK-NEXT:    ld.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.shared.u8 [%rd1], %rs2;
+; CHECK-NEXT:    st.shared.b8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load i8, ptr addrspace(3) %a
   %a.add = add i8 %a.load, 1
@@ -1780,10 +1780,10 @@ define void @shared_i16(ptr addrspace(3) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_i16_param_0];
-; CHECK-NEXT:    ld.shared.u16 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_i16_param_0];
+; CHECK-NEXT:    ld.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.shared.u16 [%rd1], %rs2;
+; CHECK-NEXT:    st.shared.b16 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load i16, ptr addrspace(3) %a
   %a.add = add i16 %a.load, 1
@@ -1798,10 +1798,10 @@ define void @shared_i32(ptr addrspace(3) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_i32_param_0];
-; CHECK-NEXT:    ld.shared.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_i32_param_0];
+; CHECK-NEXT:    ld.shared.b32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.shared.u32 [%rd1], %r2;
+; CHECK-NEXT:    st.shared.b32 [%rd1], %r2;
 ; CHECK-NEXT:    ret;
   %a.load = load i32, ptr addrspace(3) %a
   %a.add = add i32 %a.load, 1
@@ -1815,10 +1815,10 @@ define void @shared_i64(ptr addrspace(3) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_i64_param_0];
-; CHECK-NEXT:    ld.shared.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_i64_param_0];
+; CHECK-NEXT:    ld.shared.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
-; CHECK-NEXT:    st.shared.u64 [%rd1], %rd3;
+; CHECK-NEXT:    st.shared.b64 [%rd1], %rd3;
 ; CHECK-NEXT:    ret;
   %a.load = load i64, ptr addrspace(3) %a
   %a.add = add i64 %a.load, 1
@@ -1829,14 +1829,14 @@ define void @shared_i64(ptr addrspace(3) %a) {
 define void @shared_float(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_float_param_0];
-; CHECK-NEXT:    ld.shared.f32 %f1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_float_param_0];
+; CHECK-NEXT:    ld.shared.b32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.shared.f32 [%rd1], %f2;
+; CHECK-NEXT:    st.shared.b32 [%rd1], %f2;
 ; CHECK-NEXT:    ret;
   %a.load = load float, ptr addrspace(3) %a
   %a.add = fadd float %a.load, 1.
@@ -1848,13 +1848,13 @@ define void @shared_double(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_double_param_0];
-; CHECK-NEXT:    ld.shared.f64 %fd1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_double_param_0];
+; CHECK-NEXT:    ld.shared.b64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.shared.f64 [%rd1], %fd2;
+; CHECK-NEXT:    st.shared.b64 [%rd1], %fd2;
 ; CHECK-NEXT:    ret;
   %a.load = load double, ptr addrspace(3) %a
   %a.add = fadd double %a.load, 1.
@@ -1871,10 +1871,10 @@ define void @shared_volatile_i8(ptr addrspace(3) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_i8_param_0];
-; CHECK-NEXT:    ld.volatile.shared.u8 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_volatile_i8_param_0];
+; CHECK-NEXT:    ld.volatile.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.volatile.shared.u8 [%rd1], %rs2;
+; CHECK-NEXT:    st.volatile.shared.b8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i8, ptr addrspace(3) %a
   %a.add = add i8 %a.load, 1
@@ -1889,10 +1889,10 @@ define void @shared_volatile_i16(ptr addrspace(3) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_i16_param_0];
-; CHECK-NEXT:    ld.volatile.shared.u16 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_volatile_i16_param_0];
+; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.volatile.shared.u16 [%rd1], %rs2;
+; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i16, ptr addrspace(3) %a
   %a.add = add i16 %a.load, 1
@@ -1907,10 +1907,10 @@ define void @shared_volatile_i32(ptr addrspace(3) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_i32_param_0];
-; CHECK-NEXT:    ld.volatile.shared.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_volatile_i32_param_0];
+; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.volatile.shared.u32 [%rd1], %r2;
+; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i32, ptr addrspace(3) %a
   %a.add = add i32 %a.load, 1
@@ -1924,10 +1924,10 @@ define void @shared_volatile_i64(ptr addrspace(3) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_i64_param_0];
-; CHECK-NEXT:    ld.volatile.shared.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_volatile_i64_param_0];
+; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
-; CHECK-NEXT:    st.volatile.shared.u64 [%rd1], %rd3;
+; CHECK-NEXT:    st.volatile.shared.b64 [%rd1], %rd3;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i64, ptr addrspace(3) %a
   %a.add = add i64 %a.load, 1
@@ -1938,14 +1938,14 @@ define void @shared_volatile_i64(ptr addrspace(3) %a) {
 define void @shared_volatile_float(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_float_param_0];
-; CHECK-NEXT:    ld.volatile.shared.f32 %f1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_volatile_float_param_0];
+; CHECK-NEXT:    ld.volatile.shared.b32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.volatile.shared.f32 [%rd1], %f2;
+; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %f2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile float, ptr addrspace(3) %a
   %a.add = fadd float %a.load, 1.
@@ -1957,13 +1957,13 @@ define void @shared_volatile_double(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_double_param_0];
-; CHECK-NEXT:    ld.volatile.shared.f64 %fd1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_volatile_double_param_0];
+; CHECK-NEXT:    ld.volatile.shared.b64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.volatile.shared.f64 [%rd1], %fd2;
+; CHECK-NEXT:    st.volatile.shared.b64 [%rd1], %fd2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile double, ptr addrspace(3) %a
   %a.add = fadd double %a.load, 1.
@@ -1980,10 +1980,10 @@ define void @shared_unordered_sys_i8(ptr addrspace(3) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_i8_param_0];
-; SM60-NEXT:    ld.volatile.shared.u8 %rs1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [shared_unordered_sys_i8_param_0];
+; SM60-NEXT:    ld.volatile.shared.b8 %rs1, [%rd1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    st.volatile.shared.u8 [%rd1], %rs2;
+; SM60-NEXT:    st.volatile.shared.b8 [%rd1], %rs2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: shared_unordered_sys_i8(
@@ -1992,10 +1992,10 @@ define void @shared_unordered_sys_i8(ptr addrspace(3) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_i8_param_0];
-; SM70-NEXT:    ld.relaxed.sys.shared.u8 %rs1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [shared_unordered_sys_i8_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.b8 %rs1, [%rd1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    st.relaxed.sys.shared.u8 [%rd1], %rs2;
+; SM70-NEXT:    st.relaxed.sys.shared.b8 [%rd1], %rs2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i8, ptr addrspace(3) %a unordered, align 1
   %a.add = add i8 %a.load, 1
@@ -2010,10 +2010,10 @@ define void @shared_unordered_sys_i16(ptr addrspace(3) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_i16_param_0];
-; SM60-NEXT:    ld.volatile.shared.u16 %rs1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [shared_unordered_sys_i16_param_0];
+; SM60-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    st.volatile.shared.u16 [%rd1], %rs2;
+; SM60-NEXT:    st.volatile.shared.b16 [%rd1], %rs2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: shared_unordered_sys_i16(
@@ -2022,10 +2022,10 @@ define void @shared_unordered_sys_i16(ptr addrspace(3) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_i16_param_0];
-; SM70-NEXT:    ld.relaxed.sys.shared.u16 %rs1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [shared_unordered_sys_i16_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.b16 %rs1, [%rd1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    st.relaxed.sys.shared.u16 [%rd1], %rs2;
+; SM70-NEXT:    st.relaxed.sys.shared.b16 [%rd1], %rs2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i16, ptr addrspace(3) %a unordered, align 2
   %a.add = add i16 %a.load, 1
@@ -2040,10 +2040,10 @@ define void @shared_unordered_sys_i32(ptr addrspace(3) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_i32_param_0];
-; SM60-NEXT:    ld.volatile.shared.u32 %r1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [shared_unordered_sys_i32_param_0];
+; SM60-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
 ; SM60-NEXT:    add.s32 %r2, %r1, 1;
-; SM60-NEXT:    st.volatile.shared.u32 [%rd1], %r2;
+; SM60-NEXT:    st.volatile.shared.b32 [%rd1], %r2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: shared_unordered_sys_i32(
@@ -2052,10 +2052,10 @@ define void @shared_unordered_sys_i32(ptr addrspace(3) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_i32_param_0];
-; SM70-NEXT:    ld.relaxed.sys.shared.u32 %r1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [shared_unordered_sys_i32_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.b32 %r1, [%rd1];
 ; SM70-NEXT:    add.s32 %r2, %r1, 1;
-; SM70-NEXT:    st.relaxed.sys.shared.u32 [%rd1], %r2;
+; SM70-NEXT:    st.relaxed.sys.shared.b32 [%rd1], %r2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i32, ptr addrspace(3) %a unordered, align 4
   %a.add = add i32 %a.load, 1
@@ -2069,10 +2069,10 @@ define void @shared_unordered_sys_i64(ptr addrspace(3) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<4>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_i64_param_0];
-; SM60-NEXT:    ld.volatile.shared.u64 %rd2, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [shared_unordered_sys_i64_param_0];
+; SM60-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
 ; SM60-NEXT:    add.s64 %rd3, %rd2, 1;
-; SM60-NEXT:    st.volatile.shared.u64 [%rd1], %rd3;
+; SM60-NEXT:    st.volatile.shared.b64 [%rd1], %rd3;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: shared_unordered_sys_i64(
@@ -2080,10 +2080,10 @@ define void @shared_unordered_sys_i64(ptr addrspace(3) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<4>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_i64_param_0];
-; SM70-NEXT:    ld.relaxed.sys.shared.u64 %rd2, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [shared_unordered_sys_i64_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.b64 %rd2, [%rd1];
 ; SM70-NEXT:    add.s64 %rd3, %rd2, 1;
-; SM70-NEXT:    st.relaxed.sys.shared.u64 [%rd1], %rd3;
+; SM70-NEXT:    st.relaxed.sys.shared.b64 [%rd1], %rd3;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i64, ptr addrspace(3) %a unordered, align 8
   %a.add = add i64 %a.load, 1
@@ -2094,26 +2094,26 @@ define void @shared_unordered_sys_i64(ptr addrspace(3) %a) {
 define void @shared_unordered_sys_float(ptr addrspace(3) %a) {
 ; SM60-LABEL: shared_unordered_sys_float(
 ; SM60:       {
-; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b32 %f<3>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_float_param_0];
-; SM60-NEXT:    ld.volatile.shared.f32 %f1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [shared_unordered_sys_float_param_0];
+; SM60-NEXT:    ld.volatile.shared.b32 %f1, [%rd1];
 ; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM60-NEXT:    st.volatile.shared.f32 [%rd1], %f2;
+; SM60-NEXT:    st.volatile.shared.b32 [%rd1], %f2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: shared_unordered_sys_float(
 ; SM70:       {
-; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b32 %f<3>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_float_param_0];
-; SM70-NEXT:    ld.relaxed.sys.shared.f32 %f1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [shared_unordered_sys_float_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.b32 %f1, [%rd1];
 ; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM70-NEXT:    st.relaxed.sys.shared.f32 [%rd1], %f2;
+; SM70-NEXT:    st.relaxed.sys.shared.b32 [%rd1], %f2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic float, ptr addrspace(3) %a unordered, align 4
   %a.add = fadd float %a.load, 1.
@@ -2125,25 +2125,25 @@ define void @shared_unordered_sys_double(ptr addrspace(3) %a) {
 ; SM60-LABEL: shared_unordered_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b64 %fd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_double_param_0];
-; SM60-NEXT:    ld.volatile.shared.f64 %fd1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [shared_unordered_sys_double_param_0];
+; SM60-NEXT:    ld.volatile.shared.b64 %fd1, [%rd1];
 ; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM60-NEXT:    st.volatile.shared.f64 [%rd1], %fd2;
+; SM60-NEXT:    st.volatile.shared.b64 [%rd1], %fd2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: shared_unordered_sys_double(
 ; SM70:       {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b64 %fd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [shared_unordered_sys_double_param_0];
-; SM70-NEXT:    ld.relaxed.sys.shared.f64 %fd1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [shared_unordered_sys_double_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.b64 %fd1, [%rd1];
 ; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM70-NEXT:    st.relaxed.sys.shared.f64 [%rd1], %fd2;
+; SM70-NEXT:    st.relaxed.sys.shared.b64 [%rd1], %fd2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic double, ptr addrspace(3) %a unordered, align 8
   %a.add = fadd double %a.load, 1.
@@ -2160,10 +2160,10 @@ define void @shared_unordered_volatile_sys_i8(ptr addrspace(3) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_unordered_volatile_sys_i8_param_0];
-; CHECK-NEXT:    ld.volatile.shared.u8 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_unordered_volatile_sys_i8_param_0];
+; CHECK-NEXT:    ld.volatile.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.volatile.shared.u8 [%rd1], %rs2;
+; CHECK-NEXT:    st.volatile.shared.b8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i8, ptr addrspace(3) %a unordered, align 1
   %a.add = add i8 %a.load, 1
@@ -2178,10 +2178,10 @@ define void @shared_unordered_volatile_sys_i16(ptr addrspace(3) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_unordered_volatile_sys_i16_param_0];
-; CHECK-NEXT:    ld.volatile.shared.u16 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_unordered_volatile_sys_i16_param_0];
+; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.volatile.shared.u16 [%rd1], %rs2;
+; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i16, ptr addrspace(3) %a unordered, align 2
   %a.add = add i16 %a.load, 1
@@ -2196,10 +2196,10 @@ define void @shared_unordered_volatile_sys_i32(ptr addrspace(3) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_unordered_volatile_sys_i32_param_0];
-; CHECK-NEXT:    ld.volatile.shared.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_unordered_volatile_sys_i32_param_0];
+; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.volatile.shared.u32 [%rd1], %r2;
+; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i32, ptr addrspace(3) %a unordered, align 4
   %a.add = add i32 %a.load, 1
@@ -2213,10 +2213,10 @@ define void @shared_unordered_volatile_sys_i64(ptr addrspace(3) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_unordered_volatile_sys_i64_param_0];
-; CHECK-NEXT:    ld.volatile.shared.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_unordered_volatile_sys_i64_param_0];
+; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
-; CHECK-NEXT:    st.volatile.shared.u64 [%rd1], %rd3;
+; CHECK-NEXT:    st.volatile.shared.b64 [%rd1], %rd3;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i64, ptr addrspace(3) %a unordered, align 8
   %a.add = add i64 %a.load, 1
@@ -2227,14 +2227,14 @@ define void @shared_unordered_volatile_sys_i64(ptr addrspace(3) %a) {
 define void @shared_unordered_volatile_sys_float(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_unordered_volatile_sys_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_unordered_volatile_sys_float_param_0];
-; CHECK-NEXT:    ld.volatile.shared.f32 %f1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_unordered_volatile_sys_float_param_0];
+; CHECK-NEXT:    ld.volatile.shared.b32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.volatile.shared.f32 [%rd1], %f2;
+; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %f2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile float, ptr addrspace(3) %a unordered, align 4
   %a.add = fadd float %a.load, 1.
@@ -2246,13 +2246,13 @@ define void @shared_unordered_volatile_sys_double(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_unordered_volatile_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_unordered_volatile_sys_double_param_0];
-; CHECK-NEXT:    ld.volatile.shared.f64 %fd1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_unordered_volatile_sys_double_param_0];
+; CHECK-NEXT:    ld.volatile.shared.b64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.volatile.shared.f64 [%rd1], %fd2;
+; CHECK-NEXT:    st.volatile.shared.b64 [%rd1], %fd2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile double, ptr addrspace(3) %a unordered, align 8
   %a.add = fadd double %a.load, 1.
@@ -2269,10 +2269,10 @@ define void @shared_monotonic_sys_i8(ptr addrspace(3) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_i8_param_0];
-; SM60-NEXT:    ld.volatile.shared.u8 %rs1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [shared_monotonic_sys_i8_param_0];
+; SM60-NEXT:    ld.volatile.shared.b8 %rs1, [%rd1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    st.volatile.shared.u8 [%rd1], %rs2;
+; SM60-NEXT:    st.volatile.shared.b8 [%rd1], %rs2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: shared_monotonic_sys_i8(
@@ -2281,10 +2281,10 @@ define void @shared_monotonic_sys_i8(ptr addrspace(3) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_i8_param_0];
-; SM70-NEXT:    ld.relaxed.sys.shared.u8 %rs1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [shared_monotonic_sys_i8_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.b8 %rs1, [%rd1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    st.relaxed.sys.shared.u8 [%rd1], %rs2;
+; SM70-NEXT:    st.relaxed.sys.shared.b8 [%rd1], %rs2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i8, ptr addrspace(3) %a monotonic, align 1
   %a.add = add i8 %a.load, 1
@@ -2299,10 +2299,10 @@ define void @shared_monotonic_sys_i16(ptr addrspace(3) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_i16_param_0];
-; SM60-NEXT:    ld.volatile.shared.u16 %rs1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [shared_monotonic_sys_i16_param_0];
+; SM60-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
 ; SM60-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM60-NEXT:    st.volatile.shared.u16 [%rd1], %rs2;
+; SM60-NEXT:    st.volatile.shared.b16 [%rd1], %rs2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: shared_monotonic_sys_i16(
@@ -2311,10 +2311,10 @@ define void @shared_monotonic_sys_i16(ptr addrspace(3) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_i16_param_0];
-; SM70-NEXT:    ld.relaxed.sys.shared.u16 %rs1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [shared_monotonic_sys_i16_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.b16 %rs1, [%rd1];
 ; SM70-NEXT:    add.s16 %rs2, %rs1, 1;
-; SM70-NEXT:    st.relaxed.sys.shared.u16 [%rd1], %rs2;
+; SM70-NEXT:    st.relaxed.sys.shared.b16 [%rd1], %rs2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i16, ptr addrspace(3) %a monotonic, align 2
   %a.add = add i16 %a.load, 1
@@ -2329,10 +2329,10 @@ define void @shared_monotonic_sys_i32(ptr addrspace(3) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_i32_param_0];
-; SM60-NEXT:    ld.volatile.shared.u32 %r1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [shared_monotonic_sys_i32_param_0];
+; SM60-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
 ; SM60-NEXT:    add.s32 %r2, %r1, 1;
-; SM60-NEXT:    st.volatile.shared.u32 [%rd1], %r2;
+; SM60-NEXT:    st.volatile.shared.b32 [%rd1], %r2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: shared_monotonic_sys_i32(
@@ -2341,10 +2341,10 @@ define void @shared_monotonic_sys_i32(ptr addrspace(3) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_i32_param_0];
-; SM70-NEXT:    ld.relaxed.sys.shared.u32 %r1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [shared_monotonic_sys_i32_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.b32 %r1, [%rd1];
 ; SM70-NEXT:    add.s32 %r2, %r1, 1;
-; SM70-NEXT:    st.relaxed.sys.shared.u32 [%rd1], %r2;
+; SM70-NEXT:    st.relaxed.sys.shared.b32 [%rd1], %r2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i32, ptr addrspace(3) %a monotonic, align 4
   %a.add = add i32 %a.load, 1
@@ -2358,10 +2358,10 @@ define void @shared_monotonic_sys_i64(ptr addrspace(3) %a) {
 ; SM60-NEXT:    .reg .b64 %rd<4>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_i64_param_0];
-; SM60-NEXT:    ld.volatile.shared.u64 %rd2, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [shared_monotonic_sys_i64_param_0];
+; SM60-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
 ; SM60-NEXT:    add.s64 %rd3, %rd2, 1;
-; SM60-NEXT:    st.volatile.shared.u64 [%rd1], %rd3;
+; SM60-NEXT:    st.volatile.shared.b64 [%rd1], %rd3;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: shared_monotonic_sys_i64(
@@ -2369,10 +2369,10 @@ define void @shared_monotonic_sys_i64(ptr addrspace(3) %a) {
 ; SM70-NEXT:    .reg .b64 %rd<4>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_i64_param_0];
-; SM70-NEXT:    ld.relaxed.sys.shared.u64 %rd2, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [shared_monotonic_sys_i64_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.b64 %rd2, [%rd1];
 ; SM70-NEXT:    add.s64 %rd3, %rd2, 1;
-; SM70-NEXT:    st.relaxed.sys.shared.u64 [%rd1], %rd3;
+; SM70-NEXT:    st.relaxed.sys.shared.b64 [%rd1], %rd3;
 ; SM70-NEXT:    ret;
   %a.load = load atomic i64, ptr addrspace(3) %a monotonic, align 8
   %a.add = add i64 %a.load, 1
@@ -2383,26 +2383,26 @@ define void @shared_monotonic_sys_i64(ptr addrspace(3) %a) {
 define void @shared_monotonic_sys_float(ptr addrspace(3) %a) {
 ; SM60-LABEL: shared_monotonic_sys_float(
 ; SM60:       {
-; SM60-NEXT:    .reg .f32 %f<3>;
+; SM60-NEXT:    .reg .b32 %f<3>;
 ; SM60-NEXT:    .reg .b64 %rd<2>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_float_param_0];
-; SM60-NEXT:    ld.volatile.shared.f32 %f1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [shared_monotonic_sys_float_param_0];
+; SM60-NEXT:    ld.volatile.shared.b32 %f1, [%rd1];
 ; SM60-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM60-NEXT:    st.volatile.shared.f32 [%rd1], %f2;
+; SM60-NEXT:    st.volatile.shared.b32 [%rd1], %f2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: shared_monotonic_sys_float(
 ; SM70:       {
-; SM70-NEXT:    .reg .f32 %f<3>;
+; SM70-NEXT:    .reg .b32 %f<3>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_float_param_0];
-; SM70-NEXT:    ld.relaxed.sys.shared.f32 %f1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [shared_monotonic_sys_float_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.b32 %f1, [%rd1];
 ; SM70-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM70-NEXT:    st.relaxed.sys.shared.f32 [%rd1], %f2;
+; SM70-NEXT:    st.relaxed.sys.shared.b32 [%rd1], %f2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic float, ptr addrspace(3) %a monotonic, align 4
   %a.add = fadd float %a.load, 1.
@@ -2414,25 +2414,25 @@ define void @shared_monotonic_sys_double(ptr addrspace(3) %a) {
 ; SM60-LABEL: shared_monotonic_sys_double(
 ; SM60:       {
 ; SM60-NEXT:    .reg .b64 %rd<2>;
-; SM60-NEXT:    .reg .f64 %fd<3>;
+; SM60-NEXT:    .reg .b64 %fd<3>;
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
-; SM60-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_double_param_0];
-; SM60-NEXT:    ld.volatile.shared.f64 %fd1, [%rd1];
+; SM60-NEXT:    ld.param.b64 %rd1, [shared_monotonic_sys_double_param_0];
+; SM60-NEXT:    ld.volatile.shared.b64 %fd1, [%rd1];
 ; SM60-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM60-NEXT:    st.volatile.shared.f64 [%rd1], %fd2;
+; SM60-NEXT:    st.volatile.shared.b64 [%rd1], %fd2;
 ; SM60-NEXT:    ret;
 ;
 ; SM70-LABEL: shared_monotonic_sys_double(
 ; SM70:       {
 ; SM70-NEXT:    .reg .b64 %rd<2>;
-; SM70-NEXT:    .reg .f64 %fd<3>;
+; SM70-NEXT:    .reg .b64 %fd<3>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.u64 %rd1, [shared_monotonic_sys_double_param_0];
-; SM70-NEXT:    ld.relaxed.sys.shared.f64 %fd1, [%rd1];
+; SM70-NEXT:    ld.param.b64 %rd1, [shared_monotonic_sys_double_param_0];
+; SM70-NEXT:    ld.relaxed.sys.shared.b64 %fd1, [%rd1];
 ; SM70-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; SM70-NEXT:    st.relaxed.sys.shared.f64 [%rd1], %fd2;
+; SM70-NEXT:    st.relaxed.sys.shared.b64 [%rd1], %fd2;
 ; SM70-NEXT:    ret;
   %a.load = load atomic double, ptr addrspace(3) %a monotonic, align 8
   %a.add = fadd double %a.load, 1.
@@ -2449,10 +2449,10 @@ define void @shared_monotonic_volatile_sys_i8(ptr addrspace(3) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_monotonic_volatile_sys_i8_param_0];
-; CHECK-NEXT:    ld.volatile.shared.u8 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_monotonic_volatile_sys_i8_param_0];
+; CHECK-NEXT:    ld.volatile.shared.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.volatile.shared.u8 [%rd1], %rs2;
+; CHECK-NEXT:    st.volatile.shared.b8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i8, ptr addrspace(3) %a monotonic, align 1
   %a.add = add i8 %a.load, 1
@@ -2467,10 +2467,10 @@ define void @shared_monotonic_volatile_sys_i16(ptr addrspace(3) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_monotonic_volatile_sys_i16_param_0];
-; CHECK-NEXT:    ld.volatile.shared.u16 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_monotonic_volatile_sys_i16_param_0];
+; CHECK-NEXT:    ld.volatile.shared.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.volatile.shared.u16 [%rd1], %rs2;
+; CHECK-NEXT:    st.volatile.shared.b16 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i16, ptr addrspace(3) %a monotonic, align 2
   %a.add = add i16 %a.load, 1
@@ -2485,10 +2485,10 @@ define void @shared_monotonic_volatile_sys_i32(ptr addrspace(3) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_monotonic_volatile_sys_i32_param_0];
-; CHECK-NEXT:    ld.volatile.shared.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_monotonic_volatile_sys_i32_param_0];
+; CHECK-NEXT:    ld.volatile.shared.b32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.volatile.shared.u32 [%rd1], %r2;
+; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %r2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i32, ptr addrspace(3) %a monotonic, align 4
   %a.add = add i32 %a.load, 1
@@ -2502,10 +2502,10 @@ define void @shared_monotonic_volatile_sys_i64(ptr addrspace(3) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_monotonic_volatile_sys_i64_param_0];
-; CHECK-NEXT:    ld.volatile.shared.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_monotonic_volatile_sys_i64_param_0];
+; CHECK-NEXT:    ld.volatile.shared.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
-; CHECK-NEXT:    st.volatile.shared.u64 [%rd1], %rd3;
+; CHECK-NEXT:    st.volatile.shared.b64 [%rd1], %rd3;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i64, ptr addrspace(3) %a monotonic, align 8
   %a.add = add i64 %a.load, 1
@@ -2516,14 +2516,14 @@ define void @shared_monotonic_volatile_sys_i64(ptr addrspace(3) %a) {
 define void @shared_monotonic_volatile_sys_float(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_monotonic_volatile_sys_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_monotonic_volatile_sys_float_param_0];
-; CHECK-NEXT:    ld.volatile.shared.f32 %f1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_monotonic_volatile_sys_float_param_0];
+; CHECK-NEXT:    ld.volatile.shared.b32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.volatile.shared.f32 [%rd1], %f2;
+; CHECK-NEXT:    st.volatile.shared.b32 [%rd1], %f2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile float, ptr addrspace(3) %a monotonic, align 4
   %a.add = fadd float %a.load, 1.
@@ -2535,13 +2535,13 @@ define void @shared_monotonic_volatile_sys_double(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_monotonic_volatile_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [shared_monotonic_volatile_sys_double_param_0];
-; CHECK-NEXT:    ld.volatile.shared.f64 %fd1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [shared_monotonic_volatile_sys_double_param_0];
+; CHECK-NEXT:    ld.volatile.shared.b64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.volatile.shared.f64 [%rd1], %fd2;
+; CHECK-NEXT:    st.volatile.shared.b64 [%rd1], %fd2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile double, ptr addrspace(3) %a monotonic, align 8
   %a.add = fadd double %a.load, 1.
@@ -2560,10 +2560,10 @@ define void @local_i8(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_i8_param_0];
-; CHECK-NEXT:    ld.local.u8 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_i8_param_0];
+; CHECK-NEXT:    ld.local.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.local.u8 [%rd1], %rs2;
+; CHECK-NEXT:    st.local.b8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load i8, ptr addrspace(5) %a
   %a.add = add i8 %a.load, 1
@@ -2578,10 +2578,10 @@ define void @local_i16(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_i16_param_0];
-; CHECK-NEXT:    ld.local.u16 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_i16_param_0];
+; CHECK-NEXT:    ld.local.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.local.u16 [%rd1], %rs2;
+; CHECK-NEXT:    st.local.b16 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load i16, ptr addrspace(5) %a
   %a.add = add i16 %a.load, 1
@@ -2596,10 +2596,10 @@ define void @local_i32(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_i32_param_0];
-; CHECK-NEXT:    ld.local.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_i32_param_0];
+; CHECK-NEXT:    ld.local.b32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.local.u32 [%rd1], %r2;
+; CHECK-NEXT:    st.local.b32 [%rd1], %r2;
 ; CHECK-NEXT:    ret;
   %a.load = load i32, ptr addrspace(5) %a
   %a.add = add i32 %a.load, 1
@@ -2613,10 +2613,10 @@ define void @local_i64(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_i64_param_0];
-; CHECK-NEXT:    ld.local.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_i64_param_0];
+; CHECK-NEXT:    ld.local.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
-; CHECK-NEXT:    st.local.u64 [%rd1], %rd3;
+; CHECK-NEXT:    st.local.b64 [%rd1], %rd3;
 ; CHECK-NEXT:    ret;
   %a.load = load i64, ptr addrspace(5) %a
   %a.add = add i64 %a.load, 1
@@ -2627,14 +2627,14 @@ define void @local_i64(ptr addrspace(5) %a) {
 define void @local_float(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_float_param_0];
-; CHECK-NEXT:    ld.local.f32 %f1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_float_param_0];
+; CHECK-NEXT:    ld.local.b32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.local.f32 [%rd1], %f2;
+; CHECK-NEXT:    st.local.b32 [%rd1], %f2;
 ; CHECK-NEXT:    ret;
   %a.load = load float, ptr addrspace(5) %a
   %a.add = fadd float %a.load, 1.
@@ -2646,13 +2646,13 @@ define void @local_double(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_double_param_0];
-; CHECK-NEXT:    ld.local.f64 %fd1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_double_param_0];
+; CHECK-NEXT:    ld.local.b64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.local.f64 [%rd1], %fd2;
+; CHECK-NEXT:    st.local.b64 [%rd1], %fd2;
 ; CHECK-NEXT:    ret;
   %a.load = load double, ptr addrspace(5) %a
   %a.add = fadd double %a.load, 1.
@@ -2669,10 +2669,10 @@ define void @local_volatile_i8(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_i8_param_0];
-; CHECK-NEXT:    ld.local.u8 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_i8_param_0];
+; CHECK-NEXT:    ld.local.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.local.u8 [%rd1], %rs2;
+; CHECK-NEXT:    st.local.b8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i8, ptr addrspace(5) %a
   %a.add = add i8 %a.load, 1
@@ -2687,10 +2687,10 @@ define void @local_volatile_i16(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_i16_param_0];
-; CHECK-NEXT:    ld.local.u16 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_i16_param_0];
+; CHECK-NEXT:    ld.local.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.local.u16 [%rd1], %rs2;
+; CHECK-NEXT:    st.local.b16 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i16, ptr addrspace(5) %a
   %a.add = add i16 %a.load, 1
@@ -2705,10 +2705,10 @@ define void @local_volatile_i32(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_i32_param_0];
-; CHECK-NEXT:    ld.local.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_i32_param_0];
+; CHECK-NEXT:    ld.local.b32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.local.u32 [%rd1], %r2;
+; CHECK-NEXT:    st.local.b32 [%rd1], %r2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i32, ptr addrspace(5) %a
   %a.add = add i32 %a.load, 1
@@ -2722,10 +2722,10 @@ define void @local_volatile_i64(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_i64_param_0];
-; CHECK-NEXT:    ld.local.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_i64_param_0];
+; CHECK-NEXT:    ld.local.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
-; CHECK-NEXT:    st.local.u64 [%rd1], %rd3;
+; CHECK-NEXT:    st.local.b64 [%rd1], %rd3;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile i64, ptr addrspace(5) %a
   %a.add = add i64 %a.load, 1
@@ -2736,14 +2736,14 @@ define void @local_volatile_i64(ptr addrspace(5) %a) {
 define void @local_volatile_float(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_float_param_0];
-; CHECK-NEXT:    ld.local.f32 %f1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_float_param_0];
+; CHECK-NEXT:    ld.local.b32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.local.f32 [%rd1], %f2;
+; CHECK-NEXT:    st.local.b32 [%rd1], %f2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile float, ptr addrspace(5) %a
   %a.add = fadd float %a.load, 1.
@@ -2755,13 +2755,13 @@ define void @local_volatile_double(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_double_param_0];
-; CHECK-NEXT:    ld.local.f64 %fd1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_volatile_double_param_0];
+; CHECK-NEXT:    ld.local.b64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.local.f64 [%rd1], %fd2;
+; CHECK-NEXT:    st.local.b64 [%rd1], %fd2;
 ; CHECK-NEXT:    ret;
   %a.load = load volatile double, ptr addrspace(5) %a
   %a.add = fadd double %a.load, 1.
@@ -2778,10 +2778,10 @@ define void @local_unordered_sys_i8(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_sys_i8_param_0];
-; CHECK-NEXT:    ld.local.u8 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_unordered_sys_i8_param_0];
+; CHECK-NEXT:    ld.local.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.local.u8 [%rd1], %rs2;
+; CHECK-NEXT:    st.local.b8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic i8, ptr addrspace(5) %a unordered, align 1
   %a.add = add i8 %a.load, 1
@@ -2796,10 +2796,10 @@ define void @local_unordered_sys_i16(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_sys_i16_param_0];
-; CHECK-NEXT:    ld.local.u16 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_unordered_sys_i16_param_0];
+; CHECK-NEXT:    ld.local.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.local.u16 [%rd1], %rs2;
+; CHECK-NEXT:    st.local.b16 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic i16, ptr addrspace(5) %a unordered, align 2
   %a.add = add i16 %a.load, 1
@@ -2814,10 +2814,10 @@ define void @local_unordered_sys_i32(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_sys_i32_param_0];
-; CHECK-NEXT:    ld.local.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_unordered_sys_i32_param_0];
+; CHECK-NEXT:    ld.local.b32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.local.u32 [%rd1], %r2;
+; CHECK-NEXT:    st.local.b32 [%rd1], %r2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic i32, ptr addrspace(5) %a unordered, align 4
   %a.add = add i32 %a.load, 1
@@ -2831,10 +2831,10 @@ define void @local_unordered_sys_i64(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_sys_i64_param_0];
-; CHECK-NEXT:    ld.local.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_unordered_sys_i64_param_0];
+; CHECK-NEXT:    ld.local.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
-; CHECK-NEXT:    st.local.u64 [%rd1], %rd3;
+; CHECK-NEXT:    st.local.b64 [%rd1], %rd3;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic i64, ptr addrspace(5) %a unordered, align 8
   %a.add = add i64 %a.load, 1
@@ -2845,14 +2845,14 @@ define void @local_unordered_sys_i64(ptr addrspace(5) %a) {
 define void @local_unordered_sys_float(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_unordered_sys_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_sys_float_param_0];
-; CHECK-NEXT:    ld.local.f32 %f1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_unordered_sys_float_param_0];
+; CHECK-NEXT:    ld.local.b32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.local.f32 [%rd1], %f2;
+; CHECK-NEXT:    st.local.b32 [%rd1], %f2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic float, ptr addrspace(5) %a unordered, align 4
   %a.add = fadd float %a.load, 1.
@@ -2864,13 +2864,13 @@ define void @local_unordered_sys_double(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_unordered_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_sys_double_param_0];
-; CHECK-NEXT:    ld.local.f64 %fd1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_unordered_sys_double_param_0];
+; CHECK-NEXT:    ld.local.b64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.local.f64 [%rd1], %fd2;
+; CHECK-NEXT:    st.local.b64 [%rd1], %fd2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic double, ptr addrspace(5) %a unordered, align 8
   %a.add = fadd double %a.load, 1.
@@ -2887,10 +2887,10 @@ define void @local_unordered_volatile_sys_i8(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_volatile_sys_i8_param_0];
-; CHECK-NEXT:    ld.local.u8 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_unordered_volatile_sys_i8_param_0];
+; CHECK-NEXT:    ld.local.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.local.u8 [%rd1], %rs2;
+; CHECK-NEXT:    st.local.b8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i8, ptr addrspace(5) %a unordered, align 1
   %a.add = add i8 %a.load, 1
@@ -2905,10 +2905,10 @@ define void @local_unordered_volatile_sys_i16(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_volatile_sys_i16_param_0];
-; CHECK-NEXT:    ld.local.u16 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_unordered_volatile_sys_i16_param_0];
+; CHECK-NEXT:    ld.local.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.local.u16 [%rd1], %rs2;
+; CHECK-NEXT:    st.local.b16 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i16, ptr addrspace(5) %a unordered, align 2
   %a.add = add i16 %a.load, 1
@@ -2923,10 +2923,10 @@ define void @local_unordered_volatile_sys_i32(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_volatile_sys_i32_param_0];
-; CHECK-NEXT:    ld.local.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_unordered_volatile_sys_i32_param_0];
+; CHECK-NEXT:    ld.local.b32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.local.u32 [%rd1], %r2;
+; CHECK-NEXT:    st.local.b32 [%rd1], %r2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i32, ptr addrspace(5) %a unordered, align 4
   %a.add = add i32 %a.load, 1
@@ -2940,10 +2940,10 @@ define void @local_unordered_volatile_sys_i64(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_volatile_sys_i64_param_0];
-; CHECK-NEXT:    ld.local.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_unordered_volatile_sys_i64_param_0];
+; CHECK-NEXT:    ld.local.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
-; CHECK-NEXT:    st.local.u64 [%rd1], %rd3;
+; CHECK-NEXT:    st.local.b64 [%rd1], %rd3;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i64, ptr addrspace(5) %a unordered, align 8
   %a.add = add i64 %a.load, 1
@@ -2954,14 +2954,14 @@ define void @local_unordered_volatile_sys_i64(ptr addrspace(5) %a) {
 define void @local_unordered_volatile_sys_float(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_unordered_volatile_sys_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_volatile_sys_float_param_0];
-; CHECK-NEXT:    ld.local.f32 %f1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_unordered_volatile_sys_float_param_0];
+; CHECK-NEXT:    ld.local.b32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.local.f32 [%rd1], %f2;
+; CHECK-NEXT:    st.local.b32 [%rd1], %f2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile float, ptr addrspace(5) %a unordered, align 4
   %a.add = fadd float %a.load, 1.
@@ -2973,13 +2973,13 @@ define void @local_unordered_volatile_sys_double(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_unordered_volatile_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_unordered_volatile_sys_double_param_0];
-; CHECK-NEXT:    ld.local.f64 %fd1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_unordered_volatile_sys_double_param_0];
+; CHECK-NEXT:    ld.local.b64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.local.f64 [%rd1], %fd2;
+; CHECK-NEXT:    st.local.b64 [%rd1], %fd2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile double, ptr addrspace(5) %a unordered, align 8
   %a.add = fadd double %a.load, 1.
@@ -2996,10 +2996,10 @@ define void @local_monotonic_sys_i8(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_sys_i8_param_0];
-; CHECK-NEXT:    ld.local.u8 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_monotonic_sys_i8_param_0];
+; CHECK-NEXT:    ld.local.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.local.u8 [%rd1], %rs2;
+; CHECK-NEXT:    st.local.b8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic i8, ptr addrspace(5) %a monotonic, align 1
   %a.add = add i8 %a.load, 1
@@ -3014,10 +3014,10 @@ define void @local_monotonic_sys_i16(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_sys_i16_param_0];
-; CHECK-NEXT:    ld.local.u16 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_monotonic_sys_i16_param_0];
+; CHECK-NEXT:    ld.local.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.local.u16 [%rd1], %rs2;
+; CHECK-NEXT:    st.local.b16 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic i16, ptr addrspace(5) %a monotonic, align 2
   %a.add = add i16 %a.load, 1
@@ -3032,10 +3032,10 @@ define void @local_monotonic_sys_i32(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_sys_i32_param_0];
-; CHECK-NEXT:    ld.local.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_monotonic_sys_i32_param_0];
+; CHECK-NEXT:    ld.local.b32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.local.u32 [%rd1], %r2;
+; CHECK-NEXT:    st.local.b32 [%rd1], %r2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic i32, ptr addrspace(5) %a monotonic, align 4
   %a.add = add i32 %a.load, 1
@@ -3049,10 +3049,10 @@ define void @local_monotonic_sys_i64(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_sys_i64_param_0];
-; CHECK-NEXT:    ld.local.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_monotonic_sys_i64_param_0];
+; CHECK-NEXT:    ld.local.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
-; CHECK-NEXT:    st.local.u64 [%rd1], %rd3;
+; CHECK-NEXT:    st.local.b64 [%rd1], %rd3;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic i64, ptr addrspace(5) %a monotonic, align 8
   %a.add = add i64 %a.load, 1
@@ -3063,14 +3063,14 @@ define void @local_monotonic_sys_i64(ptr addrspace(5) %a) {
 define void @local_monotonic_sys_float(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_monotonic_sys_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_sys_float_param_0];
-; CHECK-NEXT:    ld.local.f32 %f1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_monotonic_sys_float_param_0];
+; CHECK-NEXT:    ld.local.b32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.local.f32 [%rd1], %f2;
+; CHECK-NEXT:    st.local.b32 [%rd1], %f2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic float, ptr addrspace(5) %a monotonic, align 4
   %a.add = fadd float %a.load, 1.
@@ -3082,13 +3082,13 @@ define void @local_monotonic_sys_double(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_monotonic_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_sys_double_param_0];
-; CHECK-NEXT:    ld.local.f64 %fd1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_monotonic_sys_double_param_0];
+; CHECK-NEXT:    ld.local.b64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.local.f64 [%rd1], %fd2;
+; CHECK-NEXT:    st.local.b64 [%rd1], %fd2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic double, ptr addrspace(5) %a monotonic, align 8
   %a.add = fadd double %a.load, 1.
@@ -3105,10 +3105,10 @@ define void @local_monotonic_volatile_sys_i8(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_volatile_sys_i8_param_0];
-; CHECK-NEXT:    ld.local.u8 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_monotonic_volatile_sys_i8_param_0];
+; CHECK-NEXT:    ld.local.b8 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.local.u8 [%rd1], %rs2;
+; CHECK-NEXT:    st.local.b8 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i8, ptr addrspace(5) %a monotonic, align 1
   %a.add = add i8 %a.load, 1
@@ -3123,10 +3123,10 @@ define void @local_monotonic_volatile_sys_i16(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_volatile_sys_i16_param_0];
-; CHECK-NEXT:    ld.local.u16 %rs1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_monotonic_volatile_sys_i16_param_0];
+; CHECK-NEXT:    ld.local.b16 %rs1, [%rd1];
 ; CHECK-NEXT:    add.s16 %rs2, %rs1, 1;
-; CHECK-NEXT:    st.local.u16 [%rd1], %rs2;
+; CHECK-NEXT:    st.local.b16 [%rd1], %rs2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i16, ptr addrspace(5) %a monotonic, align 2
   %a.add = add i16 %a.load, 1
@@ -3141,10 +3141,10 @@ define void @local_monotonic_volatile_sys_i32(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_volatile_sys_i32_param_0];
-; CHECK-NEXT:    ld.local.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_monotonic_volatile_sys_i32_param_0];
+; CHECK-NEXT:    ld.local.b32 %r1, [%rd1];
 ; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.local.u32 [%rd1], %r2;
+; CHECK-NEXT:    st.local.b32 [%rd1], %r2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i32, ptr addrspace(5) %a monotonic, align 4
   %a.add = add i32 %a.load, 1
@@ -3158,10 +3158,10 @@ define void @local_monotonic_volatile_sys_i64(ptr addrspace(5) %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_volatile_sys_i64_param_0];
-; CHECK-NEXT:    ld.local.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_monotonic_volatile_sys_i64_param_0];
+; CHECK-NEXT:    ld.local.b64 %rd2, [%rd1];
 ; CHECK-NEXT:    add.s64 %rd3, %rd2, 1;
-; CHECK-NEXT:    st.local.u64 [%rd1], %rd3;
+; CHECK-NEXT:    st.local.b64 [%rd1], %rd3;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile i64, ptr addrspace(5) %a monotonic, align 8
   %a.add = add i64 %a.load, 1
@@ -3172,14 +3172,14 @@ define void @local_monotonic_volatile_sys_i64(ptr addrspace(5) %a) {
 define void @local_monotonic_volatile_sys_float(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_monotonic_volatile_sys_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_volatile_sys_float_param_0];
-; CHECK-NEXT:    ld.local.f32 %f1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_monotonic_volatile_sys_float_param_0];
+; CHECK-NEXT:    ld.local.b32 %f1, [%rd1];
 ; CHECK-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; CHECK-NEXT:    st.local.f32 [%rd1], %f2;
+; CHECK-NEXT:    st.local.b32 [%rd1], %f2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile float, ptr addrspace(5) %a monotonic, align 4
   %a.add = fadd float %a.load, 1.
@@ -3191,13 +3191,13 @@ define void @local_monotonic_volatile_sys_double(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_monotonic_volatile_sys_double(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [local_monotonic_volatile_sys_double_param_0];
-; CHECK-NEXT:    ld.local.f64 %fd1, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [local_monotonic_volatile_sys_double_param_0];
+; CHECK-NEXT:    ld.local.b64 %fd1, [%rd1];
 ; CHECK-NEXT:    add.rn.f64 %fd2, %fd1, 0d3FF0000000000000;
-; CHECK-NEXT:    st.local.f64 [%rd1], %fd2;
+; CHECK-NEXT:    st.local.b64 [%rd1], %fd2;
 ; CHECK-NEXT:    ret;
   %a.load = load atomic volatile double, ptr addrspace(5) %a monotonic, align 8
   %a.add = fadd double %a.load, 1.

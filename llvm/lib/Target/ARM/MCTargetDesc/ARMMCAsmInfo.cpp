@@ -53,8 +53,6 @@ ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple) {
 
   Data64bitsDirective = nullptr;
   CommentString = "@";
-  Code16Directive = ".code\t16";
-  Code32Directive = ".code\t32";
   UseDataRegionDirectives = true;
 
   SupportsDebugInformation = true;
@@ -82,8 +80,6 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
 
   Data64bitsDirective = nullptr;
   CommentString = "@";
-  Code16Directive = ".code\t16";
-  Code32Directive = ".code\t32";
 
   SupportsDebugInformation = true;
 
@@ -101,7 +97,8 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
   }
 
   // foo(plt) instead of foo@plt
-  UseParensForSymbolVariant = true;
+  UseAtForSpecifier = false;
+  UseParensForSpecifier = true;
 
   initializeVariantKinds(variantKindDescs);
 }
@@ -140,15 +137,14 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
   HasSingleParameterDotFile = true;
 
   CommentString = "@";
-  Code16Directive = ".code\t16";
-  Code32Directive = ".code\t32";
   PrivateGlobalPrefix = ".L";
   PrivateLabelPrefix = ".L";
 
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
-  UseParensForSymbolVariant = true;
+  UseAtForSpecifier = false;
+  UseParensForSpecifier = true;
 
   DwarfRegNumForCFI = false;
 

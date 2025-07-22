@@ -18,9 +18,6 @@ class TestDAP_variables_children(lldbdap_testcase.DAPTestCaseBase):
             ],
         )
         source = "main.cpp"
-        breakpoint1_line = line_number(source, "// break here")
-        lines = [breakpoint1_line]
-
         breakpoint_ids = self.set_source_breakpoints(
             source, [line_number(source, "// break here")]
         )

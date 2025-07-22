@@ -435,6 +435,7 @@ ParseResult Parser::parseOptionalKeywordOrString(std::string *result) {
 
 //===----------------------------------------------------------------------===//
 // Resource Parsing
+//===----------------------------------------------------------------------===//
 
 FailureOr<AsmDialectResourceHandle>
 Parser::parseResourceHandle(const OpAsmDialectInterface *dialect,
@@ -478,6 +479,7 @@ Parser::parseResourceHandle(Dialect *dialect) {
 
 //===----------------------------------------------------------------------===//
 // Code Completion
+//===----------------------------------------------------------------------===//
 
 ParseResult Parser::codeCompleteDialectName() {
   state.codeCompleteContext->completeDialectName();
@@ -2003,6 +2005,11 @@ private:
 
 FailureOr<OperationName> OperationParser::parseCustomOperationName() {
   Token nameTok = getToken();
+  // Accept keywords here as they may be interpreted as a shortened operation
+  // name, e.g., `dialect.keyword` can be spelled as just `keyword` within a
+  // region of an operation from `dialect`.
+  if (nameTok.getKind() != Token::bare_identifier && !nameTok.isKeyword())
+    return emitError("expected bare identifier or keyword");
   StringRef opName = nameTok.getSpelling();
   if (opName.empty())
     return (emitError("empty operation name is invalid"), failure());

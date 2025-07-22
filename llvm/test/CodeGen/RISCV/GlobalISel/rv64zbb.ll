@@ -701,31 +701,9 @@ define signext i32 @ctpop_i32(i32 signext %a) nounwind {
 define i1 @ctpop_i32_ult_two(i32 signext %a) nounwind {
 ; RV64I-LABEL: ctpop_i32_ult_two:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    srliw a1, a0, 1
-; RV64I-NEXT:    lui a2, 349525
-; RV64I-NEXT:    addi a2, a2, 1365
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    lui a2, 209715
-; RV64I-NEXT:    addi a2, a2, 819
-; RV64I-NEXT:    subw a0, a0, a1
-; RV64I-NEXT:    srliw a1, a0, 2
-; RV64I-NEXT:    and a0, a0, a2
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    lui a2, 61681
-; RV64I-NEXT:    add a0, a1, a0
-; RV64I-NEXT:    sraiw a1, a0, 4
-; RV64I-NEXT:    addw a0, a1, a0
-; RV64I-NEXT:    lui a1, 4112
-; RV64I-NEXT:    addiw a2, a2, -241
-; RV64I-NEXT:    and a0, a0, a2
-; RV64I-NEXT:    addiw a1, a1, 257
-; RV64I-NEXT:    call __muldi3
-; RV64I-NEXT:    srliw a0, a0, 24
-; RV64I-NEXT:    sltiu a0, a0, 2
-; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    addiw a1, a0, -1
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: ctpop_i32_ult_two:

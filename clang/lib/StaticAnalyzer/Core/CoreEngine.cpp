@@ -87,8 +87,9 @@ void CoreEngine::setBlockCounter(BlockCounter C) {
 /// ExecuteWorkList - Run the worklist algorithm for a maximum number of steps.
 bool CoreEngine::ExecuteWorkList(const LocationContext *L, unsigned MaxSteps,
                                  ProgramStateRef InitState) {
-  if (G.num_roots() == 0) { // Initialize the analysis by constructing
-    // the root if none exists.
+  if (G.empty()) {
+    assert(!G.getRoot() && "empty graph must not have a root node");
+    // Initialize the analysis by constructing the root if there are no nodes.
 
     const CFGBlock *Entry = &(L->getCFG()->getEntry());
 
@@ -117,7 +118,7 @@ bool CoreEngine::ExecuteWorkList(const LocationContext *L, unsigned MaxSteps,
     bool IsNew;
     ExplodedNode *Node = G.getNode(StartLoc, InitState, false, &IsNew);
     assert(IsNew);
-    G.addRoot(Node);
+    G.designateAsRoot(Node);
 
     NodeBuilderContext BuilderCtx(*this, StartLoc.getDst(), Node);
     ExplodedNodeSet DstBegin;
@@ -199,14 +200,15 @@ static llvm::TimeTraceMetadata timeTraceMetadata(const ExplodedNode *Pred,
   }
   auto SLoc = Loc.getSourceLocation();
   if (!SLoc)
-    return llvm::TimeTraceMetadata{Detail, ""};
+    return llvm::TimeTraceMetadata{std::move(Detail), ""};
   const auto &SM = Pred->getLocationContext()
                        ->getAnalysisDeclContext()
                        ->getASTContext()
                        .getSourceManager();
   auto Line = SM.getPresumedLineNumber(*SLoc);
   auto Fname = SM.getFilename(*SLoc);
-  return llvm::TimeTraceMetadata{Detail, Fname.str(), static_cast<int>(Line)};
+  return llvm::TimeTraceMetadata{std::move(Detail), Fname.str(),
+                                 static_cast<int>(Line)};
 }
 
 void CoreEngine::dispatchWorkItem(ExplodedNode *Pred, ProgramPoint Loc,
@@ -547,15 +549,11 @@ void CoreEngine::HandleVirtualBaseBranch(const CFGBlock *B,
 void CoreEngine::generateNode(const ProgramPoint &Loc,
                               ProgramStateRef State,
                               ExplodedNode *Pred) {
+  assert(Pred);
   bool IsNew;
   ExplodedNode *Node = G.getNode(Loc, State, false, &IsNew);
 
-  if (Pred)
-    Node->addPredecessor(Pred, G); // Link 'Node' with its predecessor.
-  else {
-    assert(IsNew);
-    G.addRoot(Node); // 'Node' has no predecessor.  Make it a root.
-  }
+  Node->addPredecessor(Pred, G); // Link 'Node' with its predecessor.
 
   // Only add 'Node' to the worklist if it was freshly generated.
   if (IsNew) WList->enqueue(Node);

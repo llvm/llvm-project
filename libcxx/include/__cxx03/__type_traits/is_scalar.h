@@ -28,11 +28,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_scalar : _BoolConstant<__is_scalar(_Tp)> {};
 
-#  if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-inline constexpr bool is_scalar_v = __is_scalar(_Tp);
-#  endif
-
 #else // __has_builtin(__is_scalar)
 
 template <class _Tp>
@@ -56,11 +51,6 @@ struct _LIBCPP_TEMPLATE_VIS is_scalar
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS is_scalar<nullptr_t> : public true_type {};
-
-#  if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-inline constexpr bool is_scalar_v = is_scalar<_Tp>::value;
-#  endif
 
 #endif // __has_builtin(__is_scalar)
 

@@ -16,7 +16,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
@@ -45,6 +44,7 @@ class MCAsmInfo;
 class MCContext;
 class MCInstrInfo;
 class MCRegisterInfo;
+class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
 class raw_pwrite_stream;
@@ -396,6 +396,11 @@ public:
   // TODO: Populate all pass names by using <Target>PassRegistry.def.
   virtual void registerPassBuilderCallbacks(PassBuilder &) {}
 
+  /// Allow the target to register early alias analyses (AA before BasicAA) with
+  /// the AAManager for use with the new pass manager. Only affects the
+  /// "default" AAManager.
+  virtual void registerEarlyDefaultAliasAnalyses(AAManager &) {}
+
   /// Allow the target to register alias analyses with the AAManager for use
   /// with the new pass manager. Only affects the "default" AAManager.
   virtual void registerDefaultAliasAnalyses(AAManager &) {}
@@ -451,6 +456,9 @@ public:
   /// Entry point for module splitting. Targets can implement custom module
   /// splitting logic, mainly used by LTO for --lto-partitions.
   ///
+  /// On success, this guarantees that between 1 and \p NumParts modules were
+  /// created and passed to \p ModuleCallBack.
+  ///
   /// \returns `true` if the module was split, `false` otherwise. When  `false`
   /// is returned, it is assumed that \p ModuleCallback has never been called
   /// and \p M has not been modified.
@@ -490,9 +498,7 @@ public:
 
   virtual Expected<std::unique_ptr<MCStreamer>>
   createMCStreamer(raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-                   CodeGenFileType FileType, MCContext &Ctx) {
-    return nullptr;
-  }
+                   CodeGenFileType FileType, MCContext &Ctx);
 
   /// True if the target uses physical regs (as nearly all targets do). False
   /// for stack machines such as WebAssembly and other virtual-register

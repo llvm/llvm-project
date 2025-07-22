@@ -51,6 +51,8 @@ Operation *PassExecutionAction::getOp() const {
                          : llvm::dyn_cast_if_present<Operation *>(irUnits[0]);
 }
 
+MLIR_DEFINE_EXPLICIT_TYPE_ID(::mlir::PassExecutionAction)
+
 //===----------------------------------------------------------------------===//
 // Pass
 //===----------------------------------------------------------------------===//
@@ -687,7 +689,7 @@ LogicalResult OpToOpPassAdaptor::tryMergeInto(MLIRContext *ctx,
     }
     return false; // lhs(op-agnostic) > rhs(op-specific)
   };
-  std::sort(rhs.mgrs.begin(), rhs.mgrs.end(), compareFn);
+  llvm::sort(rhs.mgrs, compareFn);
   return success();
 }
 

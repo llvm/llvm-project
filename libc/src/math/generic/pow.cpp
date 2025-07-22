@@ -217,6 +217,11 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
   uint64_t sign = 0;
 
   ///////// BEGIN - Check exceptional cases ////////////////////////////////////
+  // If x or y is signaling NaN
+  if (x_abs.is_signaling_nan() || y_abs.is_signaling_nan()) {
+    fputil::raise_except_if_required(FE_INVALID);
+    return FPBits::quiet_nan().get_val();
+  }
 
   // The double precision number that is closest to 1 is (1 - 2^-53), which has
   //   log2(1 - 2^-53) ~ -1.715...p-53.

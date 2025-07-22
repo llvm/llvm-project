@@ -10,13 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ABIInfo.h"
 #include "CGBuiltin.h"
-#include "CodeGenFunction.h"
-#include "TargetInfo.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/IR/InlineAsm.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/TargetParser/X86TargetParser.h"
 
@@ -1053,9 +1049,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_vfmaddph512_mask:
   case X86::BI__builtin_ia32_vfmaddph512_maskz:
   case X86::BI__builtin_ia32_vfmaddph512_mask3:
-  case X86::BI__builtin_ia32_vfmaddnepbh128:
-  case X86::BI__builtin_ia32_vfmaddnepbh256:
-  case X86::BI__builtin_ia32_vfmaddnepbh512:
+  case X86::BI__builtin_ia32_vfmaddbf16128:
+  case X86::BI__builtin_ia32_vfmaddbf16256:
+  case X86::BI__builtin_ia32_vfmaddbf16512:
   case X86::BI__builtin_ia32_vfmaddps512_mask:
   case X86::BI__builtin_ia32_vfmaddps512_maskz:
   case X86::BI__builtin_ia32_vfmaddps512_mask3:

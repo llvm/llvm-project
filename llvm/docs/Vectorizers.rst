@@ -479,3 +479,12 @@ through clang using the command line flag:
 .. code-block:: console
 
    $ clang -fno-slp-vectorize file.c
+
+The Sandbox Vectorizer
+======================
+.. toctree::
+   :hidden:
+
+   SandboxVectorizer
+
+The :doc:`Sandbox Vectorizer <SandboxVectorizer>` is an experimental framework for building modular vectorization pipelines on top of :doc:`Sandbox IR <SandboxIR>`, with a focus on ease of testing and ease of development.

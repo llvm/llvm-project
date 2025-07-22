@@ -159,6 +159,11 @@ private:
   }
 
   bool InCompilerDirective() const { return directiveSentinel_ != nullptr; }
+  bool InOpenMPConditionalLine() const {
+    return directiveSentinel_ && directiveSentinel_[0] == '$' &&
+        !directiveSentinel_[1];
+    ;
+  }
   bool InFixedFormSource() const {
     return inFixedForm_ && !inPreprocessorDirective_ && !InCompilerDirective();
   }
@@ -186,7 +191,9 @@ private:
   const char *SkipWhiteSpaceAndCComments(const char *) const;
   const char *SkipCComment(const char *) const;
   bool NextToken(TokenSequence &);
-  bool ExponentAndKind(TokenSequence &);
+  bool HandleExponent(TokenSequence &);
+  bool HandleKindSuffix(TokenSequence &);
+  bool HandleExponentAndOrKindSuffix(TokenSequence &);
   void QuotedCharacterLiteral(TokenSequence &, const char *start);
   void Hollerith(TokenSequence &, int count, const char *start);
   bool PadOutCharacterLiteral(TokenSequence &);

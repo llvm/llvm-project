@@ -56,7 +56,7 @@ namespace detail {
 template <typename Container, typename Predicate>
 typename std::remove_reference_t<Container>::iterator
 find_unique(Container &&container, Predicate &&pred) {
-  auto first = std::find_if(container.begin(), container.end(), pred);
+  auto first = llvm::find_if(container, pred);
   if (first == container.end())
     return first;
   auto second = std::find_if(std::next(first), container.end(), pred);

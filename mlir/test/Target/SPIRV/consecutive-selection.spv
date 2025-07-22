@@ -1,0 +1,71 @@
+; RUN: %if spirv-tools %{ spirv-as --target-env spv1.0 %s -o - | mlir-translate --deserialize-spirv - -o - | FileCheck %s %}
+
+; COM: The purpose of this test is to check that in the case where two selections
+; COM: regions share a header / merge block, this block is split and the selection
+; COM: regions are not incorrectly nested.
+
+; CHECK:      spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+; CHECK:        spirv.func @main() "None" {
+; CHECK:          spirv.mlir.selection {
+; CHECK-NEXT:       spirv.BranchConditional {{.*}}, ^[[bb:.+]], ^[[bb:.+]]
+; CHECK-NEXT:     ^[[bb:.+]]
+; CHECK:            spirv.Branch ^[[bb:.+]]
+; CHECK-NEXT:     ^[[bb:.+]]:
+; CHECK-NEXT:       spirv.mlir.merge
+; CHECK-NEXT:     }
+; CHECK:          spirv.mlir.selection {
+; CHECK-NEXT:       spirv.BranchConditional {{.*}}, ^[[bb:.+]], ^[[bb:.+]]
+; CHECK-NEXT:     ^[[bb:.+]]
+; CHECK:            spirv.Branch ^[[bb:.+]]
+; CHECK-NEXT:     ^[[bb:.+]]:
+; CHECK-NEXT:       spirv.mlir.merge
+; CHECK-NEXT:     }
+; CHECK:          spirv.Return
+; CHECK-NEXT:   }
+; CHECK:      }
+
+               OpCapability Shader
+          %2 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %colorOut
+               OpExecutionMode %main OriginUpperLeft
+               OpDecorate %colorOut Location 0
+       %void = OpTypeVoid
+          %4 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%fun_v4float = OpTypePointer Function %v4float
+    %float_1 = OpConstant %float 1
+    %float_0 = OpConstant %float 0
+         %13 = OpConstantComposite %v4float %float_1 %float_0 %float_0 %float_1
+%out_v4float = OpTypePointer Output %v4float
+   %colorOut = OpVariable %out_v4float Output   
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+  %out_float = OpTypePointer Output %float
+       %bool = OpTypeBool
+         %25 = OpConstantComposite %v4float %float_1 %float_1 %float_0 %float_1
+       %main = OpFunction %void None %4
+          %6 = OpLabel
+      %color = OpVariable %fun_v4float Function
+               OpStore %color %13
+         %19 = OpAccessChain %out_float %colorOut %uint_0
+         %20 = OpLoad %float %19
+         %22 = OpFOrdEqual %bool %20 %float_1
+               OpSelectionMerge %24 None
+               OpBranchConditional %22 %23 %24
+         %23 = OpLabel
+               OpStore %color %25
+               OpBranch %24
+         %24 = OpLabel
+         %30 = OpFOrdEqual %bool %20 %float_1
+               OpSelectionMerge %32 None
+               OpBranchConditional %30 %31 %32
+         %31 = OpLabel
+               OpStore %color %25
+               OpBranch %32
+         %32 = OpLabel
+         %26 = OpLoad %v4float %color
+               OpStore %colorOut %26
+               OpReturn
+               OpFunctionEnd

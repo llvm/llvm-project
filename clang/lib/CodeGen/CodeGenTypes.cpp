@@ -13,6 +13,7 @@
 #include "CodeGenTypes.h"
 #include "CGCXXABI.h"
 #include "CGCall.h"
+#include "CGDebugInfo.h"
 #include "CGHLSLRuntime.h"
 #include "CGOpenCLRuntime.h"
 #include "CGRecordLayout.h"
@@ -106,9 +107,6 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
     return llvm::ArrayType::get(ConvertType(MT->getElementType()),
                                 MT->getNumRows() * MT->getNumColumns());
   }
-
-  if (T->isMFloat8Type())
-    return llvm::Type::getInt8Ty(getLLVMContext());
 
   llvm::Type *R = ConvertType(T);
 
@@ -849,12 +847,14 @@ CodeGenTypes::getCGRecordLayout(const RecordDecl *RD) {
 }
 
 bool CodeGenTypes::isPointerZeroInitializable(QualType T) {
-  assert((T->isAnyPointerType() || T->isBlockPointerType()) && "Invalid type");
+  assert((T->isAnyPointerType() || T->isBlockPointerType() ||
+          T->isNullPtrType()) &&
+         "Invalid type");
   return isZeroInitializable(T);
 }
 
 bool CodeGenTypes::isZeroInitializable(QualType T) {
-  if (T->getAs<PointerType>())
+  if (T->getAs<PointerType>() || T->isNullPtrType())
     return Context.getTargetNullPointerValue(T) == 0;
 
   if (const auto *AT = Context.getAsArrayType(T)) {

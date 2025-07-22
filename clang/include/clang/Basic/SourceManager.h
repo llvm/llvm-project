@@ -1529,6 +1529,15 @@ public:
     return Filename == "<scratch space>";
   }
 
+  /// Returns whether \p Loc is located in a built-in or command line source.
+  bool isInPredefinedFile(SourceLocation Loc) const {
+    PresumedLoc Presumed = getPresumedLoc(Loc);
+    if (Presumed.isInvalid())
+      return false;
+    StringRef Filename(Presumed.getFilename());
+    return Filename == "<built-in>" || Filename == "<command line>";
+  }
+
   /// Returns if a SourceLocation is in a system header.
   bool isInSystemHeader(SourceLocation Loc) const {
     if (Loc.isInvalid())

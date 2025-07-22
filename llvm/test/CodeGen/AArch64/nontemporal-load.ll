@@ -449,10 +449,9 @@ define <33 x i8> @test_ldnp_v33i8(ptr %A) {
 ; CHECK-LABEL: test_ldnp_v33i8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ldnp q0, q1, [x0]
-; CHECK-NEXT:    add x9, x8, #32
 ; CHECK-NEXT:    ldr b2, [x0, #32]
 ; CHECK-NEXT:    stp q0, q1, [x8]
-; CHECK-NEXT:    st1.b { v2 }[0], [x9]
+; CHECK-NEXT:    stur b2, [x8, #32]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_ldnp_v33i8:

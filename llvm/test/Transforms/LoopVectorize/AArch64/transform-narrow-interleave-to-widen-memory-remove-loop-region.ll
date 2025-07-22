@@ -51,8 +51,8 @@ define void @load_store_interleave_group_tc_2(ptr noalias %data) {
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE6]] ]
-; VF4-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i64> [[VEC_IND]], splat (i64 1)
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE6]] ]
+; VF4-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i8> [[VEC_IND]], splat (i8 1)
 ; VF4-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
 ; VF4-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VF4:       [[PRED_STORE_IF]]:
@@ -109,13 +109,13 @@ define void @load_store_interleave_group_tc_2(ptr noalias %data) {
 ; VF4-NEXT:    store i64 [[TMP32]], ptr [[TMP31]], align 8
 ; VF4-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; VF4:       [[PRED_STORE_CONTINUE6]]:
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; VF4-NEXT:    br label %[[EXIT:.*]]
 ; VF4:       [[SCALAR_PH]]:
-; VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF4-NEXT:    br label %[[LOOP:.*]]
 ; VF4:       [[LOOP]]:
 ; VF4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -235,9 +235,8 @@ define void @test_complex_add_float_tc_4(ptr %res, ptr noalias %A, ptr noalias %
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i64 [[TMP0]]
-; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i64 [[TMP0]]
+; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i64 [[INDEX]]
+; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i64 [[INDEX]]
 ; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; VF2-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x float> [[WIDE_VEC]], <4 x float> poison, <2 x i32> <i32 0, i32 2>
 ; VF2-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <4 x float> [[WIDE_VEC]], <4 x float> poison, <2 x i32> <i32 1, i32 3>
@@ -246,7 +245,7 @@ define void @test_complex_add_float_tc_4(ptr %res, ptr noalias %A, ptr noalias %
 ; VF2-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <4 x float> [[WIDE_VEC2]], <4 x float> poison, <2 x i32> <i32 1, i32 3>
 ; VF2-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[STRIDED_VEC]], [[STRIDED_VEC3]]
 ; VF2-NEXT:    [[TMP4:%.*]] = fadd <2 x float> [[STRIDED_VEC1]], [[STRIDED_VEC4]]
-; VF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RES]], i64 [[TMP0]]
+; VF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RES]], i64 [[INDEX]]
 ; VF2-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x float> [[TMP6]], <4 x float> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
 ; VF2-NEXT:    store <4 x float> [[INTERLEAVED_VEC]], ptr [[TMP5]], align 4

@@ -44,7 +44,7 @@ define i32 @test_max_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; MIPS2-NEXT:    j $BB0_4
+; MIPS2-NEXT:    b $BB0_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB0_3: # %entry
 ; MIPS2-NEXT:    # in Loop: Header=BB0_1 Depth=1
@@ -291,7 +291,7 @@ define i32 @test_min_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    # in Loop: Header=BB1_1 Depth=1
-; MIPS2-NEXT:    j $BB1_4
+; MIPS2-NEXT:    b $BB1_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB1_3: # %entry
 ; MIPS2-NEXT:    # in Loop: Header=BB1_1 Depth=1
@@ -538,7 +538,7 @@ define i32 @test_umax_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    # in Loop: Header=BB2_1 Depth=1
-; MIPS2-NEXT:    j $BB2_4
+; MIPS2-NEXT:    b $BB2_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB2_3: # %entry
 ; MIPS2-NEXT:    # in Loop: Header=BB2_1 Depth=1
@@ -785,7 +785,7 @@ define i32 @test_umin_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    # in Loop: Header=BB3_1 Depth=1
-; MIPS2-NEXT:    j $BB3_4
+; MIPS2-NEXT:    b $BB3_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB3_3: # %entry
 ; MIPS2-NEXT:    # in Loop: Header=BB3_1 Depth=1
@@ -1073,7 +1073,7 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB4_1 Depth=1
-; MIPS2-NEXT:    j $BB4_4
+; MIPS2-NEXT:    b $BB4_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB4_3: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB4_1 Depth=1
@@ -1665,7 +1665,7 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB5_1 Depth=1
-; MIPS2-NEXT:    j $BB5_4
+; MIPS2-NEXT:    b $BB5_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB5_3: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB5_1 Depth=1
@@ -2255,7 +2255,7 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB6_1 Depth=1
-; MIPS2-NEXT:    j $BB6_4
+; MIPS2-NEXT:    b $BB6_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB6_3: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB6_1 Depth=1
@@ -2844,7 +2844,7 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB7_1 Depth=1
-; MIPS2-NEXT:    j $BB7_4
+; MIPS2-NEXT:    b $BB7_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB7_3: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB7_1 Depth=1
@@ -3435,7 +3435,7 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB8_1 Depth=1
-; MIPS2-NEXT:    j $BB8_4
+; MIPS2-NEXT:    b $BB8_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB8_3: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB8_1 Depth=1
@@ -4026,7 +4026,7 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB9_1 Depth=1
-; MIPS2-NEXT:    j $BB9_4
+; MIPS2-NEXT:    b $BB9_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB9_3: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB9_1 Depth=1
@@ -4616,7 +4616,7 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB10_1 Depth=1
-; MIPS2-NEXT:    j $BB10_4
+; MIPS2-NEXT:    b $BB10_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB10_3: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB10_1 Depth=1
@@ -5205,7 +5205,7 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  # %bb.2: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB11_1 Depth=1
-; MIPS2-NEXT:    j $BB11_4
+; MIPS2-NEXT:    b $BB11_4
 ; MIPS2-NEXT:    nop
 ; MIPS2-NEXT:  $BB11_3: # %entry
 ; MIPS2-NEXT:    #   in Loop: Header=BB11_1 Depth=1

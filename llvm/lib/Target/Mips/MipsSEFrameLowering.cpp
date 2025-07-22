@@ -19,6 +19,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -33,8 +34,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
-#include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -426,28 +425,23 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
   // No need to allocate space on the stack.
   if (StackSize == 0 && !MFI.adjustsStack()) return;
 
-  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
+  CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::NoFlags);
 
   // Adjust stack.
   TII.adjustStackPtr(SP, -StackSize, MBB, MBBI);
-
-  // emit ".cfi_def_cfa_offset StackSize"
-  unsigned CFIIndex =
-      MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, StackSize));
-  BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
-      .addCFIIndex(CFIIndex);
+  CFIBuilder.buildDefCFAOffset(StackSize);
 
   if (MF.getFunction().hasFnAttribute("interrupt"))
     emitInterruptPrologueStub(MF, MBB);
 
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
-  if (!CSI.empty()) {
-    // Find the instruction past the last instruction that saves a callee-saved
-    // register to the stack.
-    for (unsigned i = 0; i < CSI.size(); ++i)
-      ++MBBI;
+  // Find the instruction past the last instruction that saves a callee-saved
+  // register to the stack.
+  std::advance(MBBI, CSI.size());
+  CFIBuilder.setInsertPoint(MBBI);
 
+  if (!CSI.empty()) {
     // Iterate over list of callee-saved registers and emit .cfi_offset
     // directives.
     for (const CalleeSavedInfo &I : CSI) {
@@ -457,45 +451,26 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
       // If Reg is a double precision register, emit two cfa_offsets,
       // one for each of the paired single precision registers.
       if (Mips::AFGR64RegClass.contains(Reg)) {
-        unsigned Reg0 =
-            MRI->getDwarfRegNum(RegInfo.getSubReg(Reg, Mips::sub_lo), true);
-        unsigned Reg1 =
-            MRI->getDwarfRegNum(RegInfo.getSubReg(Reg, Mips::sub_hi), true);
+        MCRegister Reg0 = RegInfo.getSubReg(Reg, Mips::sub_lo);
+        MCRegister Reg1 = RegInfo.getSubReg(Reg, Mips::sub_hi);
 
         if (!STI.isLittle())
           std::swap(Reg0, Reg1);
 
-        unsigned CFIIndex = MF.addFrameInst(
-            MCCFIInstruction::createOffset(nullptr, Reg0, Offset));
-        BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
-            .addCFIIndex(CFIIndex);
-
-        CFIIndex = MF.addFrameInst(
-            MCCFIInstruction::createOffset(nullptr, Reg1, Offset + 4));
-        BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
-            .addCFIIndex(CFIIndex);
+        CFIBuilder.buildOffset(Reg0, Offset);
+        CFIBuilder.buildOffset(Reg1, Offset + 4);
       } else if (Mips::FGR64RegClass.contains(Reg)) {
-        unsigned Reg0 = MRI->getDwarfRegNum(Reg, true);
-        unsigned Reg1 = MRI->getDwarfRegNum(Reg, true) + 1;
+        MCRegister Reg0 = Reg;
+        MCRegister Reg1 = Reg + 1;
 
         if (!STI.isLittle())
           std::swap(Reg0, Reg1);
 
-        unsigned CFIIndex = MF.addFrameInst(
-          MCCFIInstruction::createOffset(nullptr, Reg0, Offset));
-        BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
-            .addCFIIndex(CFIIndex);
-
-        CFIIndex = MF.addFrameInst(
-          MCCFIInstruction::createOffset(nullptr, Reg1, Offset + 4));
-        BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
-            .addCFIIndex(CFIIndex);
+        CFIBuilder.buildOffset(Reg0, Offset);
+        CFIBuilder.buildOffset(Reg1, Offset + 4);
       } else {
         // Reg is either in GPR32 or FGR32.
-        unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
-            nullptr, MRI->getDwarfRegNum(Reg, true), Offset));
-        BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
-            .addCFIIndex(CFIIndex);
+        CFIBuilder.buildOffset(Reg, Offset);
       }
     }
   }
@@ -513,11 +488,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
     // Emit .cfi_offset directives for eh data registers.
     for (int I = 0; I < 4; ++I) {
       int64_t Offset = MFI.getObjectOffset(MipsFI->getEhDataRegFI(I));
-      unsigned Reg = MRI->getDwarfRegNum(ABI.GetEhDataReg(I), true);
-      unsigned CFIIndex = MF.addFrameInst(
-          MCCFIInstruction::createOffset(nullptr, Reg, Offset));
-      BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndex);
+      CFIBuilder.buildOffset(ABI.GetEhDataReg(I), Offset);
     }
   }
 
@@ -527,11 +498,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
     BuildMI(MBB, MBBI, dl, TII.get(MOVE), FP).addReg(SP).addReg(ZERO)
       .setMIFlag(MachineInstr::FrameSetup);
 
-    // emit ".cfi_def_cfa_register $fp"
-    unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createDefCfaRegister(
-        nullptr, MRI->getDwarfRegNum(FP, true)));
-    BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex);
+    CFIBuilder.buildDefCFARegister(FP);
 
     if (RegInfo.hasStackRealignment(MF)) {
       // addiu $Reg, $zero, -MaxAlignment

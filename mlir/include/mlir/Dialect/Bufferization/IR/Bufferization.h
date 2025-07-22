@@ -56,10 +56,10 @@ FailureOr<Value> castOrReallocMemRefValue(OpBuilder &b, Value value,
                                           MemRefType type,
                                           const BufferizationOptions &options);
 
-/// Try to fold to_memref(to_tensor(x)). If x's type and the result type of the
-/// to_memref op are different, a memref.cast is needed.
-LogicalResult foldToMemrefToTensorPair(RewriterBase &rewriter,
-                                       ToMemrefOp toMemref,
+/// Try to fold to_buffer(to_tensor(x)). If x's type and the result type of the
+/// to_buffer op are different, a memref.cast is needed.
+LogicalResult foldToBufferToTensorPair(RewriterBase &rewriter,
+                                       ToBufferOp toBuffer,
                                        const BufferizationOptions &options);
 
 /// Add the canonicalization patterns for bufferization.dealloc to the given

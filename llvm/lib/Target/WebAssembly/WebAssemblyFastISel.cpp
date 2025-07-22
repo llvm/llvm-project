@@ -992,7 +992,10 @@ bool WebAssemblyFastISel::selectTrunc(const Instruction *I) {
   if (Reg == 0)
     return false;
 
-  if (Trunc->getOperand(0)->getType()->isIntegerTy(64)) {
+  unsigned FromBitWidth = Trunc->getOperand(0)->getType()->getIntegerBitWidth();
+  unsigned ToBitWidth = Trunc->getType()->getIntegerBitWidth();
+
+  if (ToBitWidth <= 32 && (32 < FromBitWidth && FromBitWidth <= 64)) {
     Register Result = createResultReg(&WebAssembly::I32RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(WebAssembly::I32_WRAP_I64), Result)

@@ -258,6 +258,7 @@ IOHandlerEditline::IOHandlerEditline(
     m_editline_up->SetAutoCompleteCallback([this](CompletionRequest &request) {
       this->AutoCompleteCallback(request);
     });
+    m_editline_up->SetRedrawCallback([this]() { this->RedrawCallback(); });
 
     if (debugger.GetUseAutosuggestion()) {
       m_editline_up->SetSuggestionCallback([this](llvm::StringRef line) {
@@ -439,6 +440,11 @@ IOHandlerEditline::SuggestionCallback(llvm::StringRef line) {
 void IOHandlerEditline::AutoCompleteCallback(CompletionRequest &request) {
   m_delegate.IOHandlerComplete(*this, request);
 }
+
+void IOHandlerEditline::RedrawCallback() {
+  m_debugger.RedrawStatusline(/*update=*/false);
+}
+
 #endif
 
 const char *IOHandlerEditline::GetPrompt() {
@@ -465,6 +471,21 @@ bool IOHandlerEditline::SetPrompt(llvm::StringRef prompt) {
         ansi::FormatAnsiTerminalCodes(m_debugger.GetPromptAnsiPrefix()));
     m_editline_up->SetPromptAnsiSuffix(
         ansi::FormatAnsiTerminalCodes(m_debugger.GetPromptAnsiSuffix()));
+  }
+#endif
+  return true;
+}
+
+bool IOHandlerEditline::SetUseColor(bool use_color) {
+  m_color = use_color;
+
+#if LLDB_ENABLE_LIBEDIT
+  if (m_editline_up) {
+    m_editline_up->UseColor(use_color);
+    m_editline_up->SetSuggestionAnsiPrefix(ansi::FormatAnsiTerminalCodes(
+        m_debugger.GetAutosuggestionAnsiPrefix()));
+    m_editline_up->SetSuggestionAnsiSuffix(ansi::FormatAnsiTerminalCodes(
+        m_debugger.GetAutosuggestionAnsiSuffix()));
   }
 #endif
   return true;

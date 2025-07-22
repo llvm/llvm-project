@@ -443,23 +443,17 @@ define half @faddv_v4f16(half %start, <4 x half> %a) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    str d1, [sp, #8]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    ldr h1, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr h2, [sp, #10]
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fadd s1, s1, s2
-; NONEON-NOSVE-NEXT:    ldr h2, [sp, #12]
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h1, s1
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fadd s1, s1, s2
+; NONEON-NOSVE-NEXT:    ldr h1, [sp, #10]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #14]
+; NONEON-NOSVE-NEXT:    ldr h3, [sp, #12]
+; NONEON-NOSVE-NEXT:    ldr h4, [sp, #8]
+; NONEON-NOSVE-NEXT:    fcvt s1, h1
+; NONEON-NOSVE-NEXT:    fcvt s3, h3
 ; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h1, s1
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
+; NONEON-NOSVE-NEXT:    fcvt s4, h4
+; NONEON-NOSVE-NEXT:    fadd s2, s3, s2
+; NONEON-NOSVE-NEXT:    fadd s1, s4, s1
 ; NONEON-NOSVE-NEXT:    fadd s1, s1, s2
-; NONEON-NOSVE-NEXT:    fcvt h1, s1
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fadd s0, s0, s1
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
@@ -481,44 +475,30 @@ define half @faddv_v8f16(half %start, <8 x half> %a) {
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    str q1, [sp, #-16]!
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
-; NONEON-NOSVE-NEXT:    ldr h1, [sp]
-; NONEON-NOSVE-NEXT:    ldr h2, [sp, #2]
-; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fadd s1, s1, s2
-; NONEON-NOSVE-NEXT:    ldr h2, [sp, #4]
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h1, s1
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fadd s1, s1, s2
+; NONEON-NOSVE-NEXT:    ldr h1, [sp, #2]
 ; NONEON-NOSVE-NEXT:    ldr h2, [sp, #6]
+; NONEON-NOSVE-NEXT:    fcvt s0, h0
+; NONEON-NOSVE-NEXT:    ldr h3, [sp, #4]
+; NONEON-NOSVE-NEXT:    ldr h4, [sp]
+; NONEON-NOSVE-NEXT:    ldr h5, [sp, #10]
+; NONEON-NOSVE-NEXT:    ldr h6, [sp, #8]
+; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h1, s1
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
+; NONEON-NOSVE-NEXT:    fcvt s4, h4
+; NONEON-NOSVE-NEXT:    fcvt s3, h3
+; NONEON-NOSVE-NEXT:    fcvt s5, h5
+; NONEON-NOSVE-NEXT:    fcvt s6, h6
+; NONEON-NOSVE-NEXT:    ldr h7, [sp, #12]
+; NONEON-NOSVE-NEXT:    fadd s1, s4, s1
+; NONEON-NOSVE-NEXT:    fadd s2, s3, s2
+; NONEON-NOSVE-NEXT:    fcvt s3, h7
+; NONEON-NOSVE-NEXT:    fadd s4, s6, s5
+; NONEON-NOSVE-NEXT:    ldr h5, [sp, #14]
 ; NONEON-NOSVE-NEXT:    fadd s1, s1, s2
-; NONEON-NOSVE-NEXT:    ldr h2, [sp, #8]
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h1, s1
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
+; NONEON-NOSVE-NEXT:    fadd s2, s4, s3
+; NONEON-NOSVE-NEXT:    fcvt s3, h5
 ; NONEON-NOSVE-NEXT:    fadd s1, s1, s2
-; NONEON-NOSVE-NEXT:    ldr h2, [sp, #10]
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h1, s1
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fadd s1, s1, s2
-; NONEON-NOSVE-NEXT:    ldr h2, [sp, #12]
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h1, s1
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fadd s1, s1, s2
-; NONEON-NOSVE-NEXT:    ldr h2, [sp, #14]
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt h1, s1
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fadd s1, s1, s2
-; NONEON-NOSVE-NEXT:    fcvt h1, s1
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
+; NONEON-NOSVE-NEXT:    fadd s0, s0, s3
 ; NONEON-NOSVE-NEXT:    fadd s0, s0, s1
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
@@ -547,79 +527,49 @@ define half @faddv_v16f16(half %start, ptr %a) {
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
 ; NONEON-NOSVE-NEXT:    ldr h3, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldr h4, [sp]
+; NONEON-NOSVE-NEXT:    ldr h5, [sp, #20]
+; NONEON-NOSVE-NEXT:    ldr h6, [sp, #4]
 ; NONEON-NOSVE-NEXT:    fcvt s1, h1
 ; NONEON-NOSVE-NEXT:    fcvt s2, h2
+; NONEON-NOSVE-NEXT:    ldr h7, [sp, #22]
+; NONEON-NOSVE-NEXT:    ldr h16, [sp, #6]
 ; NONEON-NOSVE-NEXT:    fcvt s3, h3
+; NONEON-NOSVE-NEXT:    ldr h17, [sp, #24]
+; NONEON-NOSVE-NEXT:    ldr h18, [sp, #8]
 ; NONEON-NOSVE-NEXT:    fcvt s4, h4
+; NONEON-NOSVE-NEXT:    ldr h19, [sp, #26]
+; NONEON-NOSVE-NEXT:    ldr h20, [sp, #10]
+; NONEON-NOSVE-NEXT:    fcvt s5, h5
+; NONEON-NOSVE-NEXT:    fcvt s6, h6
+; NONEON-NOSVE-NEXT:    fcvt s7, h7
+; NONEON-NOSVE-NEXT:    fcvt s16, h16
+; NONEON-NOSVE-NEXT:    fcvt s17, h17
+; NONEON-NOSVE-NEXT:    fcvt s18, h18
+; NONEON-NOSVE-NEXT:    fcvt s19, h19
+; NONEON-NOSVE-NEXT:    fcvt s20, h20
+; NONEON-NOSVE-NEXT:    ldr h21, [sp, #28]
+; NONEON-NOSVE-NEXT:    ldr h22, [sp, #12]
 ; NONEON-NOSVE-NEXT:    fadd s1, s2, s1
 ; NONEON-NOSVE-NEXT:    fadd s2, s4, s3
-; NONEON-NOSVE-NEXT:    ldr h3, [sp, #20]
-; NONEON-NOSVE-NEXT:    ldr h4, [sp, #4]
-; NONEON-NOSVE-NEXT:    fcvt s3, h3
-; NONEON-NOSVE-NEXT:    fcvt s4, h4
-; NONEON-NOSVE-NEXT:    fcvt h1, s1
-; NONEON-NOSVE-NEXT:    fcvt h2, s2
-; NONEON-NOSVE-NEXT:    fadd s3, s4, s3
-; NONEON-NOSVE-NEXT:    ldr h4, [sp, #6]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt s4, h4
+; NONEON-NOSVE-NEXT:    fadd s3, s6, s5
+; NONEON-NOSVE-NEXT:    fadd s4, s16, s7
+; NONEON-NOSVE-NEXT:    fcvt s5, h21
+; NONEON-NOSVE-NEXT:    fcvt s6, h22
+; NONEON-NOSVE-NEXT:    fadd s7, s18, s17
+; NONEON-NOSVE-NEXT:    ldr h17, [sp, #30]
+; NONEON-NOSVE-NEXT:    fadd s16, s20, s19
+; NONEON-NOSVE-NEXT:    ldr h18, [sp, #14]
 ; NONEON-NOSVE-NEXT:    fadd s1, s2, s1
-; NONEON-NOSVE-NEXT:    fcvt h2, s3
-; NONEON-NOSVE-NEXT:    ldr h3, [sp, #22]
-; NONEON-NOSVE-NEXT:    fcvt s3, h3
-; NONEON-NOSVE-NEXT:    fcvt h1, s1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fadd s3, s4, s3
-; NONEON-NOSVE-NEXT:    ldr h4, [sp, #8]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s4, h4
+; NONEON-NOSVE-NEXT:    fadd s2, s3, s4
+; NONEON-NOSVE-NEXT:    fcvt s4, h17
+; NONEON-NOSVE-NEXT:    fadd s5, s6, s5
+; NONEON-NOSVE-NEXT:    fcvt s6, h18
+; NONEON-NOSVE-NEXT:    fadd s3, s7, s16
 ; NONEON-NOSVE-NEXT:    fadd s1, s1, s2
-; NONEON-NOSVE-NEXT:    fcvt h2, s3
-; NONEON-NOSVE-NEXT:    ldr h3, [sp, #24]
-; NONEON-NOSVE-NEXT:    fcvt s3, h3
-; NONEON-NOSVE-NEXT:    fcvt h1, s1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fadd s3, s4, s3
-; NONEON-NOSVE-NEXT:    ldr h4, [sp, #10]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s4, h4
+; NONEON-NOSVE-NEXT:    fadd s2, s3, s5
+; NONEON-NOSVE-NEXT:    fadd s3, s6, s4
 ; NONEON-NOSVE-NEXT:    fadd s1, s1, s2
-; NONEON-NOSVE-NEXT:    fcvt h2, s3
-; NONEON-NOSVE-NEXT:    ldr h3, [sp, #26]
-; NONEON-NOSVE-NEXT:    fcvt s3, h3
-; NONEON-NOSVE-NEXT:    fcvt h1, s1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fadd s3, s4, s3
-; NONEON-NOSVE-NEXT:    ldr h4, [sp, #12]
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s4, h4
-; NONEON-NOSVE-NEXT:    fadd s1, s1, s2
-; NONEON-NOSVE-NEXT:    fcvt h2, s3
-; NONEON-NOSVE-NEXT:    ldr h3, [sp, #28]
-; NONEON-NOSVE-NEXT:    fcvt s3, h3
-; NONEON-NOSVE-NEXT:    fcvt h1, s1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fadd s1, s1, s2
-; NONEON-NOSVE-NEXT:    fadd s2, s4, s3
-; NONEON-NOSVE-NEXT:    ldr h3, [sp, #30]
-; NONEON-NOSVE-NEXT:    ldr h4, [sp, #14]
-; NONEON-NOSVE-NEXT:    fcvt s3, h3
-; NONEON-NOSVE-NEXT:    fcvt s4, h4
-; NONEON-NOSVE-NEXT:    fcvt h1, s1
-; NONEON-NOSVE-NEXT:    fcvt h2, s2
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fadd s1, s1, s2
-; NONEON-NOSVE-NEXT:    fadd s2, s4, s3
-; NONEON-NOSVE-NEXT:    fcvt h1, s1
-; NONEON-NOSVE-NEXT:    fcvt h2, s2
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
-; NONEON-NOSVE-NEXT:    fcvt s2, h2
-; NONEON-NOSVE-NEXT:    fadd s1, s1, s2
-; NONEON-NOSVE-NEXT:    fcvt h1, s1
-; NONEON-NOSVE-NEXT:    fcvt s1, h1
+; NONEON-NOSVE-NEXT:    fadd s0, s0, s3
 ; NONEON-NOSVE-NEXT:    fadd s0, s0, s1
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
 ; NONEON-NOSVE-NEXT:    add sp, sp, #32

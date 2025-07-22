@@ -11,7 +11,7 @@ define i16  @test_v2i8(i16 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [test_v2i8_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs1, [test_v2i8_param_0];
 ; CHECK-NEXT:    cvt.s16.s8 %rs2, %rs1;
 ; CHECK-NEXT:    shr.s16 %rs3, %rs1, 8;
 ; CHECK-NEXT:    add.s16 %rs4, %rs2, %rs3;
@@ -36,12 +36,12 @@ define i1  @test_v2i8_load(ptr %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_v2i8_load_param_0];
-; CHECK-NEXT:    ld.v2.u8 {%rs1, %rs2}, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_v2i8_load_param_0];
+; CHECK-NEXT:    ld.v2.b8 {%rs1, %rs2}, [%rd1];
 ; CHECK-NEXT:    or.b16 %rs5, %rs1, %rs2;
 ; CHECK-NEXT:    and.b16 %rs6, %rs5, 255;
 ; CHECK-NEXT:    setp.eq.s16 %p1, %rs6, 0;
-; CHECK-NEXT:    selp.u32 %r1, 1, 0, %p1;
+; CHECK-NEXT:    selp.b32 %r1, 1, 0, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %v = load <2 x i8>, ptr %a, align 4
@@ -59,7 +59,7 @@ define i16  @test_v4i8(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_v4i8_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_v4i8_param_0];
 ; CHECK-NEXT:    bfe.s32 %r2, %r1, 0, 8;
 ; CHECK-NEXT:    cvt.s8.s32 %rs1, %r2;
 ; CHECK-NEXT:    bfe.s32 %r3, %r1, 8, 8;
@@ -95,7 +95,7 @@ define i32  @test_v4i8_s32(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_v4i8_s32_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_v4i8_s32_param_0];
 ; CHECK-NEXT:    bfe.s32 %r2, %r1, 0, 8;
 ; CHECK-NEXT:    bfe.s32 %r3, %r1, 8, 8;
 ; CHECK-NEXT:    bfe.s32 %r4, %r1, 16, 8;
@@ -126,7 +126,7 @@ define i32  @test_v4i8_u32(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_v4i8_u32_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_v4i8_u32_param_0];
 ; CHECK-NEXT:    bfe.u32 %r2, %r1, 0, 8;
 ; CHECK-NEXT:    bfe.u32 %r3, %r1, 8, 8;
 ; CHECK-NEXT:    bfe.u32 %r4, %r1, 16, 8;
@@ -161,7 +161,7 @@ define i16  @test_v8i8(i64 %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_v8i8_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_v8i8_param_0];
 ; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r1}, %rd1; }
 ; CHECK-NEXT:    cvt.u32.u64 %r2, %rd1;
 ; CHECK-NEXT:    bfe.s32 %r3, %r2, 0, 8;

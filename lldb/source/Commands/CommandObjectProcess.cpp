@@ -468,7 +468,13 @@ protected:
       case 'b':
         m_run_to_bkpt_args.AppendArgument(option_arg);
         m_any_bkpts_specified = true;
-      break;
+        break;
+      case 'F':
+        m_base_direction = lldb::RunDirection::eRunForward;
+        break;
+      case 'R':
+        m_base_direction = lldb::RunDirection::eRunReverse;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -479,6 +485,7 @@ protected:
       m_ignore = 0;
       m_run_to_bkpt_args.Clear();
       m_any_bkpts_specified = false;
+      m_base_direction = std::nullopt;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -488,6 +495,7 @@ protected:
     uint32_t m_ignore = 0;
     Args m_run_to_bkpt_args;
     bool m_any_bkpts_specified = false;
+    std::optional<lldb::RunDirection> m_base_direction;
   };
 
   void DoExecute(Args &command, CommandReturnObject &result) override {
@@ -653,6 +661,9 @@ protected:
               eStateRunning, override_suspend);
         }
       }
+
+      if (m_options.m_base_direction.has_value())
+        process->SetBaseDirection(*m_options.m_base_direction);
 
       const uint32_t iohandler_id = process->GetIOHandlerID();
 
@@ -1377,6 +1388,9 @@ public:
       case 'v':
         m_verbose = true;
         break;
+      case 'd':
+        m_dump = true;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -1386,6 +1400,7 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_verbose = false;
+      m_dump = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -1394,6 +1409,7 @@ public:
 
     // Instance variables to hold the values for command options.
     bool m_verbose = false;
+    bool m_dump = false;
   };
 
 protected:
@@ -1446,6 +1462,14 @@ protected:
         strm.EOL();
         strm.PutCString("Extended Crash Information:\n");
         crash_info_sp->GetDescription(strm);
+      }
+    }
+
+    if (m_options.m_dump) {
+      StateType state = process->GetState();
+      if (state == eStateStopped) {
+        ProcessModID process_mod_id = process->GetModID();
+        process_mod_id.Dump(result.GetOutputStream());
       }
     }
   }

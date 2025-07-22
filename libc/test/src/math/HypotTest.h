@@ -73,7 +73,7 @@ public:
     constexpr StorageType COUNT = 10'001;
     for (unsigned scale = 0; scale < 4; ++scale) {
       StorageType max_value = MAX_SUBNORMAL << scale;
-      StorageType step = (max_value - MIN_SUBNORMAL) / COUNT;
+      StorageType step = (max_value - MIN_SUBNORMAL) / COUNT + 1;
       for (int signs = 0; signs < 4; ++signs) {
         for (StorageType v = MIN_SUBNORMAL, w = max_value;
              v <= max_value && w >= MIN_SUBNORMAL; v += step, w -= step) {

@@ -71,6 +71,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
+#include "clang/ASTMatchers/LowLevelHelpers.h"
 #include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/FileManager.h"
@@ -5211,72 +5212,25 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParamType,
                            internal::Matcher<Expr>, ArgMatcher,
                            internal::Matcher<QualType>, ParamMatcher) {
   BoundNodesTreeBuilder Result;
-  // The first argument of an overloaded member operator is the implicit object
-  // argument of the method which should not be matched against a parameter, so
-  // we skip over it here.
-  BoundNodesTreeBuilder Matches;
-  unsigned ArgIndex =
-      cxxOperatorCallExpr(
-          callee(cxxMethodDecl(unless(isExplicitObjectMemberFunction()))))
-              .matches(Node, Finder, &Matches)
-          ? 1
-          : 0;
-  const FunctionProtoType *FProto = nullptr;
-
-  if (const auto *Call = dyn_cast<CallExpr>(&Node)) {
-    if (const auto *Value =
-            dyn_cast_or_null<ValueDecl>(Call->getCalleeDecl())) {
-      QualType QT = Value->getType().getCanonicalType();
-
-      // This does not necessarily lead to a `FunctionProtoType`,
-      // e.g. K&R functions do not have a function prototype.
-      if (QT->isFunctionPointerType())
-        FProto = QT->getPointeeType()->getAs<FunctionProtoType>();
-
-      if (QT->isMemberFunctionPointerType()) {
-        const auto *MP = QT->getAs<MemberPointerType>();
-        assert(MP && "Must be member-pointer if its a memberfunctionpointer");
-        FProto = MP->getPointeeType()->getAs<FunctionProtoType>();
-        assert(FProto &&
-               "The call must have happened through a member function "
-               "pointer");
-      }
-    }
-  }
-
-  unsigned ParamIndex = 0;
   bool Matched = false;
-  unsigned NumArgs = Node.getNumArgs();
-  if (FProto && FProto->isVariadic())
-    NumArgs = std::min(NumArgs, FProto->getNumParams());
-
-  for (; ArgIndex < NumArgs; ++ArgIndex, ++ParamIndex) {
+  auto ProcessParamAndArg = [&](QualType ParamType, const Expr *Arg) {
     BoundNodesTreeBuilder ArgMatches(*Builder);
-    if (ArgMatcher.matches(*(Node.getArg(ArgIndex)->IgnoreParenCasts()), Finder,
-                           &ArgMatches)) {
-      BoundNodesTreeBuilder ParamMatches(ArgMatches);
+    if (!ArgMatcher.matches(*Arg, Finder, &ArgMatches))
+      return;
+    BoundNodesTreeBuilder ParamMatches(std::move(ArgMatches));
+    if (!ParamMatcher.matches(ParamType, Finder, &ParamMatches))
+      return;
+    Result.addMatch(ParamMatches);
+    Matched = true;
+    return;
+  };
+  if (auto *Call = llvm::dyn_cast<CallExpr>(&Node))
+    matchEachArgumentWithParamType(*Call, ProcessParamAndArg);
+  else if (auto *Construct = llvm::dyn_cast<CXXConstructExpr>(&Node))
+    matchEachArgumentWithParamType(*Construct, ProcessParamAndArg);
+  else
+    llvm_unreachable("expected CallExpr or CXXConstructExpr");
 
-      // This test is cheaper compared to the big matcher in the next if.
-      // Therefore, please keep this order.
-      if (FProto && FProto->getNumParams() > ParamIndex) {
-        QualType ParamType = FProto->getParamType(ParamIndex);
-        if (ParamMatcher.matches(ParamType, Finder, &ParamMatches)) {
-          Result.addMatch(ParamMatches);
-          Matched = true;
-          continue;
-        }
-      }
-      if (expr(anyOf(cxxConstructExpr(hasDeclaration(cxxConstructorDecl(
-                         hasParameter(ParamIndex, hasType(ParamMatcher))))),
-                     callExpr(callee(functionDecl(
-                         hasParameter(ParamIndex, hasType(ParamMatcher)))))))
-              .matches(Node, Finder, &ParamMatches)) {
-        Result.addMatch(ParamMatches);
-        Matched = true;
-        continue;
-      }
-    }
-  }
   *Builder = std::move(Result);
   return Matched;
 }

@@ -181,10 +181,10 @@ private:
 bool IsModuleFileUpToDate(PathRef ModuleFilePath,
                           const PrerequisiteModules &RequisiteModules,
                           llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
-  auto HSOpts = std::make_shared<HeaderSearchOptions>();
-  RequisiteModules.adjustHeaderSearchOptions(*HSOpts);
-  HSOpts->ForceCheckCXX20ModulesInputFiles = true;
-  HSOpts->ValidateASTInputFilesContent = true;
+  HeaderSearchOptions HSOpts;
+  RequisiteModules.adjustHeaderSearchOptions(HSOpts);
+  HSOpts.ForceCheckCXX20ModulesInputFiles = true;
+  HSOpts.ValidateASTInputFilesContent = true;
 
   clang::clangd::IgnoreDiagnostics IgnoreDiags;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
@@ -199,12 +199,13 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
 
   SourceManager SourceMgr(*Diags, FileMgr);
 
-  HeaderSearch HeaderInfo(std::move(HSOpts), SourceMgr, *Diags, LangOpts,
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, *Diags, LangOpts,
                           /*Target=*/nullptr);
 
+  PreprocessorOptions PPOpts;
   TrivialModuleLoader ModuleLoader;
-  Preprocessor PP(std::make_shared<PreprocessorOptions>(), *Diags, LangOpts,
-                  SourceMgr, HeaderInfo, ModuleLoader);
+  Preprocessor PP(PPOpts, *Diags, LangOpts, SourceMgr, HeaderInfo,
+                  ModuleLoader);
 
   IntrusiveRefCntPtr<ModuleCache> ModCache = createCrossProcessModuleCache();
   PCHContainerOperations PCHOperations;

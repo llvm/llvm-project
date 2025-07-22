@@ -794,12 +794,17 @@ AArch64TargetInfo::getTargetBuiltins() const {
 
 std::optional<std::pair<unsigned, unsigned>>
 AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts,
-                                  bool IsArmStreamingFunction) const {
+                                  bool IsArmStreamingFunction,
+                                  llvm::StringMap<bool> *FeatureMap) const {
   if (LangOpts.VScaleMin || LangOpts.VScaleMax)
     return std::pair<unsigned, unsigned>(
         LangOpts.VScaleMin ? LangOpts.VScaleMin : 1, LangOpts.VScaleMax);
 
-  if (hasFeature("sve") || (IsArmStreamingFunction && hasFeature("sme")))
+  if (hasFeature("sve") || (FeatureMap && (FeatureMap->lookup("sve"))))
+    return std::pair<unsigned, unsigned>(1, 16);
+
+  if (IsArmStreamingFunction &&
+      (hasFeature("sme") || (FeatureMap && (FeatureMap->lookup("sme")))))
     return std::pair<unsigned, unsigned>(1, 16);
 
   return std::nullopt;

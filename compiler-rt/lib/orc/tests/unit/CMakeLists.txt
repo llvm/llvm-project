@@ -11,6 +11,7 @@ set(UNITTEST_SOURCES
   interval_map_test.cpp
   interval_set_test.cpp
   orc_unit_test_main.cpp
+  unique_function_test.cpp
   wrapper_function_utils_test.cpp
   simple_packed_serialization_test.cpp
   string_pool_test.cpp

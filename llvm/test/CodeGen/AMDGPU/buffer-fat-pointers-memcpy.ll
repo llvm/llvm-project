@@ -12,14 +12,13 @@
 ; for buffer-related memcpy() calls turns into something reasonable in
 ; the backend, despite the wide intermediate vectors
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8"
 target triple = "amdgcn--"
 
 ;; memcpy
 
 declare void @llvm.memcpy.p7.p7.i32(ptr addrspace(7), ptr addrspace(7), i32, i1)
 
-define amdgpu_kernel void @memcpy_known(ptr addrspace(7) inreg %src, ptr addrspace(7) inreg %dst) {
+define amdgpu_kernel void @memcpy_known(ptr addrspace(7) %src, ptr addrspace(7) %dst) {
 ; SDAG-LABEL: memcpy_known:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -236,14 +235,7 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) inreg %src, ptr addrspa
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ; SDAG-GFX942-LABEL: memcpy_known:
-; SDAG-GFX942:       ; %bb.3:
-; SDAG-GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; SDAG-GFX942-NEXT:    s_load_dword s12, s[4:5], 0x10
-; SDAG-GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX942-NEXT:    s_branch .LBB0_0
-; SDAG-GFX942-NEXT:    .p2align 8
-; SDAG-GFX942-NEXT:  ; %bb.4:
-; SDAG-GFX942-NEXT:  .LBB0_0:
+; SDAG-GFX942:       ; %bb.0:
 ; SDAG-GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX942-NEXT:    s_load_dword s17, s[4:5], 0x34
 ; SDAG-GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x44
@@ -595,7 +587,7 @@ define amdgpu_kernel void @memcpy_known(ptr addrspace(7) inreg %src, ptr addrspa
   ret void
 }
 
-define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) inreg %src, ptr addrspace(7) inreg %dst) {
+define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) %src, ptr addrspace(7) %dst) {
 ; SDAG-LABEL: memcpy_known_medium:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -803,14 +795,7 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) inreg %src, ptr 
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ; SDAG-GFX942-LABEL: memcpy_known_medium:
-; SDAG-GFX942:       ; %bb.3:
-; SDAG-GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; SDAG-GFX942-NEXT:    s_load_dword s12, s[4:5], 0x10
-; SDAG-GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX942-NEXT:    s_branch .LBB1_0
-; SDAG-GFX942-NEXT:    .p2align 8
-; SDAG-GFX942-NEXT:  ; %bb.4:
-; SDAG-GFX942-NEXT:  .LBB1_0:
+; SDAG-GFX942:       ; %bb.0:
 ; SDAG-GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX942-NEXT:    s_load_dword s13, s[4:5], 0x34
 ; SDAG-GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x44
@@ -1155,7 +1140,7 @@ define amdgpu_kernel void @memcpy_known_medium(ptr addrspace(7) inreg %src, ptr 
   ret void
 }
 
-define amdgpu_kernel void @memcpy_known_small(ptr addrspace(7) inreg %src, ptr addrspace(7) inreg %dst) {
+define amdgpu_kernel void @memcpy_known_small(ptr addrspace(7) %src, ptr addrspace(7) %dst) {
 ; SDAG-LABEL: memcpy_known_small:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1192,14 +1177,7 @@ define amdgpu_kernel void @memcpy_known_small(ptr addrspace(7) inreg %src, ptr a
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ; SDAG-GFX942-LABEL: memcpy_known_small:
-; SDAG-GFX942:       ; %bb.1:
-; SDAG-GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; SDAG-GFX942-NEXT:    s_load_dword s12, s[4:5], 0x10
-; SDAG-GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX942-NEXT:    s_branch .LBB2_0
-; SDAG-GFX942-NEXT:    .p2align 8
-; SDAG-GFX942-NEXT:  ; %bb.2:
-; SDAG-GFX942-NEXT:  .LBB2_0:
+; SDAG-GFX942:       ; %bb.0:
 ; SDAG-GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-GFX942-NEXT:    s_load_dword s13, s[4:5], 0x34
 ; SDAG-GFX942-NEXT:    s_mov_b32 s12, 0

@@ -36,6 +36,64 @@ LogicalResult mlir::verifyListOfOperandsOrIntegers(Operation *op,
   return success();
 }
 
+SliceBoundsVerificationResult mlir::verifyInBoundsSlice(
+    ArrayRef<int64_t> shape, ArrayRef<int64_t> staticOffsets,
+    ArrayRef<int64_t> staticSizes, ArrayRef<int64_t> staticStrides,
+    bool generateErrorMessage) {
+  SliceBoundsVerificationResult result;
+  result.isValid = true;
+  for (int64_t i = 0, e = shape.size(); i < e; ++i) {
+    // Nothing to verify for dynamic source dims.
+    if (ShapedType::isDynamic(shape[i]))
+      continue;
+    // Nothing to verify if the offset is dynamic.
+    if (ShapedType::isDynamic(staticOffsets[i]))
+      continue;
+    if (staticOffsets[i] >= shape[i]) {
+      result.errorMessage =
+          std::string("offset ") + std::to_string(i) +
+          " is out-of-bounds: " + std::to_string(staticOffsets[i]) +
+          " >= " + std::to_string(shape[i]);
+      result.isValid = false;
+      return result;
+    }
+    if (ShapedType::isDynamic(staticSizes[i]) ||
+        ShapedType::isDynamic(staticStrides[i]))
+      continue;
+    int64_t lastPos =
+        staticOffsets[i] + (staticSizes[i] - 1) * staticStrides[i];
+    if (lastPos >= shape[i]) {
+      result.errorMessage = std::string("slice along dimension ") +
+                            std::to_string(i) +
+                            " runs out-of-bounds: " + std::to_string(lastPos) +
+                            " >= " + std::to_string(shape[i]);
+      result.isValid = false;
+      return result;
+    }
+  }
+  return result;
+}
+
+SliceBoundsVerificationResult mlir::verifyInBoundsSlice(
+    ArrayRef<int64_t> shape, ArrayRef<OpFoldResult> mixedOffsets,
+    ArrayRef<OpFoldResult> mixedSizes, ArrayRef<OpFoldResult> mixedStrides,
+    bool generateErrorMessage) {
+  auto getStaticValues = [](ArrayRef<OpFoldResult> ofrs) {
+    SmallVector<int64_t> staticValues;
+    for (OpFoldResult ofr : ofrs) {
+      if (auto attr = dyn_cast<Attribute>(ofr)) {
+        staticValues.push_back(cast<IntegerAttr>(attr).getInt());
+      } else {
+        staticValues.push_back(ShapedType::kDynamic);
+      }
+    }
+    return staticValues;
+  };
+  return verifyInBoundsSlice(
+      shape, getStaticValues(mixedOffsets), getStaticValues(mixedSizes),
+      getStaticValues(mixedStrides), generateErrorMessage);
+}
+
 LogicalResult
 mlir::detail::verifyOffsetSizeAndStrideOp(OffsetSizeAndStrideOpInterface op) {
   std::array<unsigned, 3> maxRanks = op.getArrayAttrMaxRanks();

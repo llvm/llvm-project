@@ -1048,6 +1048,14 @@ private:
   void setValueSubclassDataBit(unsigned Bit, bool On);
 };
 
+namespace CallingConv {
+
+// TODO: Need similar function for support of argument in position. General
+// version on FunctionType + Attributes + CallingConv::ID?
+LLVM_READNONE
+bool supportsNonVoidReturnType(CallingConv::ID CC);
+} // namespace CallingConv
+
 /// Check whether null pointer dereferencing is considered undefined behavior
 /// for a given function or an address space.
 /// Null pointer access in non-zero address space is not considered undefined.

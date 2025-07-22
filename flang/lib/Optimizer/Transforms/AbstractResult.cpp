@@ -387,8 +387,12 @@ public:
         mlir::OpBuilder rewriter(context);
         auto resultType = funcTy.getResult(0);
         auto argTy = getResultArgumentType(resultType, shouldBoxResult);
-        func.insertArgument(0u, argTy, {}, loc);
-        func.eraseResult(0u);
+        llvm::LogicalResult res = func.insertArgument(0u, argTy, {}, loc);
+        (void)res;
+        assert(llvm::succeeded(res) && "failed to insert function argument");
+        res = func.eraseResult(0u);
+        (void)res;
+        assert(llvm::succeeded(res) && "failed to erase function result");
         mlir::Value newArg = func.getArgument(0u);
         if (mustEmboxResult(resultType, shouldBoxResult)) {
           auto bufferType = fir::ReferenceType::get(resultType);

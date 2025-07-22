@@ -61,7 +61,7 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel loop copyin((float)ArrayParam[2])
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{invalid tag 'invalid' on 'copyin' clause}}
+  // expected-error@+2{{unknown modifier 'invalid' in OpenACC modifier-list on 'copyin' clause}}
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel loop copyin(invalid:(float)ArrayParam[2])
   for(int i = 0; i < 5; ++i);
@@ -74,5 +74,21 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
   for(int i = 5; i < 10;++i);
   // expected-error@+1{{OpenACC 'present_or_copyin' clause is not valid on 'loop' directive}}
 #pragma acc loop present_or_copyin(LocalInt)
+  for(int i = 5; i < 10;++i);
+}
+
+void ModList() {
+  int V1;
+  // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'copyin' clause}}
+  // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copyin' clause}}
+#pragma acc parallel loop copyin(always, alwaysin, alwaysout, zero, readonly: V1)
+  for(int i = 5; i < 10;++i);
+  // expected-error@+1{{OpenACC 'alwaysout' modifier not valid on 'copyin' clause}}
+#pragma acc serial loop copyin(alwaysout: V1)
+  for(int i = 5; i < 10;++i);
+  // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copyin' clause}}
+#pragma acc kernels loop copyin(zero: V1)
+  for(int i = 5; i < 10;++i);
+#pragma acc parallel loop copyin(always, alwaysin, readonly: V1)
   for(int i = 5; i < 10;++i);
 }

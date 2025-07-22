@@ -124,6 +124,21 @@ def SDT_PPCFPMinMax : SDTypeProfile<1, 2, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisFP<0>
 ]>;
 
+// RES, CARRY = op LHS, RHS
+def SDT_PPCBinaryArithWithFlagsOut : SDTypeProfile<2, 2, [
+  SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>,
+  SDTCisInt<0>,
+  SDTCisVT<1, i32>,
+]>;
+
+// RES, CARRY = op LHS, RHS, CARRY
+def SDT_PPCBinaryArithWithFlagsInOut : SDTypeProfile<2, 3, [
+  SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>,
+  SDTCisInt<0>,
+  SDTCisSameAs<1, 4>,
+  SDTCisVT<1, i32>,
+]>;
+
 //===----------------------------------------------------------------------===//
 // PowerPC specific DAG Nodes.
 //
@@ -400,6 +415,15 @@ def PPCtlsdynamatpcreladdr : SDNode<"PPCISD::TLS_DYNAMIC_MAT_PCREL_ADDR",
                                     SDTIntUnaryOp, []>;
 def PPCtlslocalexecmataddr : SDNode<"PPCISD::TLS_LOCAL_EXEC_MAT_ADDR",
                                     SDTIntUnaryOp, []>;
+
+def PPCaddc : SDNode<"PPCISD::ADDC", SDT_PPCBinaryArithWithFlagsOut,
+                     [SDNPCommutative]>;
+def PPCadde : SDNode<"PPCISD::ADDE", SDT_PPCBinaryArithWithFlagsInOut,
+                     []>;
+def PPCsubc : SDNode<"PPCISD::SUBC", SDT_PPCBinaryArithWithFlagsOut,
+                     []>;
+def PPCsube : SDNode<"PPCISD::SUBE", SDT_PPCBinaryArithWithFlagsInOut,
+                     []>;
 
 //===----------------------------------------------------------------------===//
 // PowerPC specific transformation functions and pattern fragments.
@@ -2291,7 +2315,7 @@ let BaseName = "addic" in {
 let Defs = [CARRY] in
 def ADDIC  : DForm_2<12, (outs gprc:$RST), (ins gprc:$RA, s16imm:$D),
                      "addic $RST, $RA, $D", IIC_IntGeneral,
-                     [(set i32:$RST, (addc i32:$RA, imm32SExt16:$D))]>,
+                     [(set i32:$RST, (PPCaddc i32:$RA, imm32SExt16:$D))]>,
                      RecFormRel, PPC970_DGroup_Cracked;
 let Defs = [CARRY, CR0] in
 def ADDIC_rec : DForm_2<13, (outs gprc:$RST), (ins gprc:$RA, s16imm:$D),
@@ -2312,7 +2336,7 @@ def MULLI  : DForm_2< 7, (outs gprc:$RST), (ins gprc:$RA, s16imm:$D),
 let Defs = [CARRY] in
 def SUBFIC : DForm_2< 8, (outs gprc:$RST), (ins gprc:$RA, s16imm:$D),
                      "subfic $RST, $RA, $D", IIC_IntGeneral,
-                     [(set i32:$RST, (subc imm32SExt16:$D, i32:$RA))]>;
+                     [(set i32:$RST, (PPCsubc imm32SExt16:$D, i32:$RA))]>;
 
 let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1 in {
   def LI  : DForm_2_r0<14, (outs gprc:$RST), (ins s16imm:$D),
@@ -2909,7 +2933,7 @@ def ADD4TLS  : XOForm_1<31, 266, 0, (outs gprc:$RT), (ins gprc:$RA, tlsreg32:$RB
 let isCommutable = 1 in
 defm ADDC  : XOForm_1rc<31, 10, 0, (outs gprc:$RT), (ins gprc:$RA, gprc:$RB),
                         "addc", "$RT, $RA, $RB", IIC_IntGeneral,
-                        [(set i32:$RT, (addc i32:$RA, i32:$RB))]>,
+                        [(set i32:$RT, (PPCaddc i32:$RA, i32:$RB))]>,
                         PPC970_DGroup_Cracked;
 
 defm DIVW  : XOForm_1rcr<31, 491, 0, (outs gprc:$RT), (ins gprc:$RA, gprc:$RB),
@@ -2942,7 +2966,7 @@ defm SUBF  : XOForm_1rx<31, 40, (outs gprc:$RT), (ins gprc:$RA, gprc:$RB),
                         [(set i32:$RT, (sub i32:$RB, i32:$RA))]>;
 defm SUBFC : XOForm_1rc<31, 8, 0, (outs gprc:$RT), (ins gprc:$RA, gprc:$RB),
                         "subfc", "$RT, $RA, $RB", IIC_IntGeneral,
-                        [(set i32:$RT, (subc i32:$RB, i32:$RA))]>,
+                        [(set i32:$RT, (PPCsubc i32:$RB, i32:$RA))]>,
                         PPC970_DGroup_Cracked;
 defm NEG    : XOForm_3r<31, 104, 0, (outs gprc:$RT), (ins gprc:$RA),
                         "neg", "$RT, $RA", IIC_IntSimple,
@@ -2951,22 +2975,22 @@ let Uses = [CARRY] in {
 let isCommutable = 1 in
 defm ADDE  : XOForm_1rc<31, 138, 0, (outs gprc:$RT), (ins gprc:$RA, gprc:$RB),
                         "adde", "$RT, $RA, $RB", IIC_IntGeneral,
-                        [(set i32:$RT, (adde i32:$RA, i32:$RB))]>;
+                        [(set i32:$RT, (PPCadde i32:$RA, i32:$RB, CARRY))]>;
 defm ADDME  : XOForm_3rc<31, 234, 0, (outs gprc:$RT), (ins gprc:$RA),
                          "addme", "$RT, $RA", IIC_IntGeneral,
-                         [(set i32:$RT, (adde i32:$RA, -1))]>;
+                         [(set i32:$RT, (PPCadde i32:$RA, -1, CARRY))]>;
 defm ADDZE  : XOForm_3rc<31, 202, 0, (outs gprc:$RT), (ins gprc:$RA),
                          "addze", "$RT, $RA", IIC_IntGeneral,
-                         [(set i32:$RT, (adde i32:$RA, 0))]>;
+                         [(set i32:$RT, (PPCadde i32:$RA, 0, CARRY))]>;
 defm SUBFE : XOForm_1rc<31, 136, 0, (outs gprc:$RT), (ins gprc:$RA, gprc:$RB),
                         "subfe", "$RT, $RA, $RB", IIC_IntGeneral,
-                        [(set i32:$RT, (sube i32:$RB, i32:$RA))]>;
+                        [(set i32:$RT, (PPCsube i32:$RB, i32:$RA, CARRY))]>;
 defm SUBFME : XOForm_3rc<31, 232, 0, (outs gprc:$RT), (ins gprc:$RA),
                          "subfme", "$RT, $RA", IIC_IntGeneral,
-                         [(set i32:$RT, (sube -1, i32:$RA))]>;
+                         [(set i32:$RT, (PPCsube -1, i32:$RA, CARRY))]>;
 defm SUBFZE : XOForm_3rc<31, 200, 0, (outs gprc:$RT), (ins gprc:$RA),
                          "subfze", "$RT, $RA", IIC_IntGeneral,
-                         [(set i32:$RT, (sube 0, i32:$RA))]>;
+                         [(set i32:$RT, (PPCsube 0, i32:$RA, CARRY))]>;
 }
 }
 
@@ -5060,12 +5084,12 @@ defm : TrapExtendedMnemonic<"lng", 6>;
 defm : TrapExtendedMnemonic<"u", 31>;
 
 // Atomic loads
-def : Pat<(i32 (atomic_load_8  DForm:$src)), (LBZ  memri:$src)>;
-def : Pat<(i32 (atomic_load_16 DForm:$src)), (LHZ  memri:$src)>;
-def : Pat<(i32 (atomic_load_32 DForm:$src)), (LWZ  memri:$src)>;
-def : Pat<(i32 (atomic_load_8  XForm:$src)), (LBZX memrr:$src)>;
-def : Pat<(i32 (atomic_load_16 XForm:$src)), (LHZX memrr:$src)>;
-def : Pat<(i32 (atomic_load_32 XForm:$src)), (LWZX memrr:$src)>;
+def : Pat<(i32 (atomic_load_azext_8  DForm:$src)), (LBZ  memri:$src)>;
+def : Pat<(i32 (atomic_load_azext_16 DForm:$src)), (LHZ  memri:$src)>;
+def : Pat<(i32 (atomic_load_nonext_32 DForm:$src)), (LWZ  memri:$src)>;
+def : Pat<(i32 (atomic_load_azext_8  XForm:$src)), (LBZX memrr:$src)>;
+def : Pat<(i32 (atomic_load_azext_16 XForm:$src)), (LHZX memrr:$src)>;
+def : Pat<(i32 (atomic_load_nonext_32 XForm:$src)), (LWZX memrr:$src)>;
 
 // Atomic stores
 def : Pat<(atomic_store_8  i32:$val, DForm:$ptr), (STB  gprc:$val, memri:$ptr)>;

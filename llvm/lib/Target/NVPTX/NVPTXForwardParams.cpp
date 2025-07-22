@@ -105,7 +105,7 @@ static bool eliminateMove(MachineInstr &Mov, const MachineRegisterInfo &MRI,
   const MachineOperand *ParamSymbol = Mov.uses().begin();
   assert(ParamSymbol->isSymbol());
 
-  constexpr unsigned LDInstBasePtrOpIdx = 6;
+  constexpr unsigned LDInstBasePtrOpIdx = 5;
   constexpr unsigned LDInstAddrSpaceOpIdx = 2;
   for (auto *LI : LoadInsts) {
     (LI->uses().begin() + LDInstBasePtrOpIdx)
@@ -136,16 +136,10 @@ static bool forwardDeviceParams(MachineFunction &MF) {
 ///                       Pass (Manager) Boilerplate
 /// ----------------------------------------------------------------------------
 
-namespace llvm {
-void initializeNVPTXForwardParamsPassPass(PassRegistry &);
-} // namespace llvm
-
 namespace {
 struct NVPTXForwardParamsPass : public MachineFunctionPass {
   static char ID;
-  NVPTXForwardParamsPass() : MachineFunctionPass(ID) {
-    initializeNVPTXForwardParamsPassPass(*PassRegistry::getPassRegistry());
-  }
+  NVPTXForwardParamsPass() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

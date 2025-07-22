@@ -22,9 +22,9 @@ define internal i32 @foo() {
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot0;
 ; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.global.u64 %rd1, [ptr];
+; CHECK-NEXT:    ld.global.b64 %rd1, [ptr];
 ; CHECK-NEXT:    add.u64 %rd3, %SPL, 1;
-; CHECK-NEXT:    ld.local.u8 %rs1, [%rd3];
+; CHECK-NEXT:    ld.local.b8 %rs1, [%rd3];
 ; CHECK-NEXT:    add.u64 %rd4, %SP, 0;
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .align 1 .b8 param0[1];
@@ -65,9 +65,9 @@ define internal i32 @bar() {
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot1;
 ; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.global.u64 %rd1, [ptr];
+; CHECK-NEXT:    ld.global.b64 %rd1, [ptr];
 ; CHECK-NEXT:    add.u64 %rd3, %SPL, 8;
-; CHECK-NEXT:    ld.local.u64 %rd4, [%rd3];
+; CHECK-NEXT:    ld.local.b64 %rd4, [%rd3];
 ; CHECK-NEXT:    add.u64 %rd5, %SP, 0;
 ; CHECK-NEXT:    { // callseq 1, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];

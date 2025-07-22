@@ -1296,7 +1296,7 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
                      "unexpected result less than 0 at expression #")
                  << dim << " in " << mapStr;
         }
-        if (dyn_cast<AffineDimExpr>(indexingMap.getResult(dim))) {
+        if (isa<AffineDimExpr>(indexingMap.getResult(dim))) {
           if (inferredDimSize != shape[dim]) {
             return op->emitOpError("inferred input/output operand #")
                    << opOperand.getOperandNumber() << " has shape's dimension #"

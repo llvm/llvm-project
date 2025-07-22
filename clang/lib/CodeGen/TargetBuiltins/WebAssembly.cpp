@@ -10,13 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ABIInfo.h"
 #include "CGBuiltin.h"
-#include "CodeGenFunction.h"
-#include "TargetInfo.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/IR/InlineAsm.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 
 using namespace clang;
@@ -213,6 +208,11 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   case WebAssembly::BI__builtin_wasm_ref_null_extern: {
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_ref_null_extern);
     return Builder.CreateCall(Callee);
+  }
+  case WebAssembly::BI__builtin_wasm_ref_is_null_extern: {
+    Value *Src = EmitScalarExpr(E->getArg(0));
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_ref_is_null_extern);
+    return Builder.CreateCall(Callee, {Src});
   }
   case WebAssembly::BI__builtin_wasm_ref_null_func: {
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_ref_null_func);

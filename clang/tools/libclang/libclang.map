@@ -438,6 +438,11 @@ LLVM_20 {
     clang_visitCXXMethods;
 };
 
+LLVM_21 {
+  global:
+    clang_getFullyQualifiedName;
+};
+
 # Example of how to add a new symbol version entry.  If you do add a new symbol
 # version, please update the example to depend on the version you added.
 # LLVM_X {

@@ -8,8 +8,8 @@ target triple = "aarch64"
 ; CHECK-LABEL: LV: Checking a loop in 'or_reduction_neon' from <stdin>
 ; CHECK: LV(REG): VF = 32
 ; CHECK-NEXT: LV(REG): Found max usage: 2 item
+; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 72 registers
-; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 1 registers
 
 define i1 @or_reduction_neon(i32 %arg, ptr %ptr) {
 entry:
@@ -31,8 +31,8 @@ loop:
 ; CHECK-LABEL: LV: Checking a loop in 'or_reduction_sve'
 ; CHECK: LV(REG): VF = 64
 ; CHECK-NEXT: LV(REG): Found max usage: 2 item
+; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 136 registers
-; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 1 registers
 
 define i1 @or_reduction_sve(i32 %arg, ptr %ptr) vscale_range(2,2) "target-features"="+sve" {
 entry:

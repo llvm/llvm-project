@@ -1140,7 +1140,7 @@ def conv_3d_ncdhw_fcdhw(
     them to the same data type as the accumulator/output.
     """
     implements(ConvolutionOpInterface)
-    domain(D.n, D.od, D.oh, D.ow, D.f, D.kd, D.kh, D.kw, D.c)
+    domain(D.n, D.f, D.od, D.oh, D.ow, D.c, D.kd, D.kh, D.kw)
     O[D.n, D.f, D.od, D.oh, D.ow] += TypeFn.cast_signed(
         U,
         I[

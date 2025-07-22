@@ -11945,11 +11945,11 @@ define <2 x i64> @ugt_1_v2i64(<2 x i64> %0) {
 ; PWR5-LABEL: ugt_1_v2i64:
 ; PWR5:       # %bb.0:
 ; PWR5-NEXT:    addi 5, 3, -1
+; PWR5-NEXT:    addi 6, 4, -1
 ; PWR5-NEXT:    and 3, 3, 5
-; PWR5-NEXT:    addi 5, 4, -1
+; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    subfic 3, 3, 0
 ; PWR5-NEXT:    subfe 3, 3, 3
-; PWR5-NEXT:    and 4, 4, 5
 ; PWR5-NEXT:    subfic 4, 4, 0
 ; PWR5-NEXT:    subfe 4, 4, 4
 ; PWR5-NEXT:    blr
@@ -11957,11 +11957,11 @@ define <2 x i64> @ugt_1_v2i64(<2 x i64> %0) {
 ; PWR6-LABEL: ugt_1_v2i64:
 ; PWR6:       # %bb.0:
 ; PWR6-NEXT:    addi 5, 3, -1
+; PWR6-NEXT:    addi 6, 4, -1
 ; PWR6-NEXT:    and 3, 3, 5
-; PWR6-NEXT:    addi 5, 4, -1
+; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    subfic 3, 3, 0
 ; PWR6-NEXT:    subfe 3, 3, 3
-; PWR6-NEXT:    and 4, 4, 5
 ; PWR6-NEXT:    subfic 4, 4, 0
 ; PWR6-NEXT:    subfe 4, 4, 4
 ; PWR6-NEXT:    blr
@@ -12016,11 +12016,11 @@ define <2 x i64> @ult_2_v2i64(<2 x i64> %0) {
 ; PWR5-LABEL: ult_2_v2i64:
 ; PWR5:       # %bb.0:
 ; PWR5-NEXT:    addi 5, 3, -1
+; PWR5-NEXT:    addi 6, 4, -1
 ; PWR5-NEXT:    and 3, 3, 5
-; PWR5-NEXT:    addi 5, 4, -1
+; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    addic 3, 3, -1
 ; PWR5-NEXT:    subfe 3, 3, 3
-; PWR5-NEXT:    and 4, 4, 5
 ; PWR5-NEXT:    addic 4, 4, -1
 ; PWR5-NEXT:    subfe 4, 4, 4
 ; PWR5-NEXT:    blr
@@ -12028,11 +12028,11 @@ define <2 x i64> @ult_2_v2i64(<2 x i64> %0) {
 ; PWR6-LABEL: ult_2_v2i64:
 ; PWR6:       # %bb.0:
 ; PWR6-NEXT:    addi 5, 3, -1
+; PWR6-NEXT:    addi 6, 4, -1
 ; PWR6-NEXT:    and 3, 3, 5
-; PWR6-NEXT:    addi 5, 4, -1
+; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    addic 3, 3, -1
 ; PWR6-NEXT:    subfe 3, 3, 3
-; PWR6-NEXT:    and 4, 4, 5
 ; PWR6-NEXT:    addic 4, 4, -1
 ; PWR6-NEXT:    subfe 4, 4, 4
 ; PWR6-NEXT:    blr

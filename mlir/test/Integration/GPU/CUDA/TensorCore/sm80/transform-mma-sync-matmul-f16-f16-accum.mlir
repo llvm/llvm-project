@@ -96,21 +96,21 @@ func.func @main() {
   %f0 = arith.constant 0.0e+00 : f16
   %c32 = arith.constant 32 : index
 
-  // Intialize the lhs matrix with a linspace function.
+  // Initialize the lhs matrix with a linspace function.
   scf.for %r = %c0 to %M step %c1 {
     scf.for %c = %c0 to %K step %c1 {
       %idx = func.call @compute_linspace_val(%r, %c, %K) : (index, index, index) -> f16
       memref.store %idx, %lhs[%r, %c] : !lhs_memref_type
     }
   }
-  // Intialize the rhs matrix with a linspace function.
+  // Initialize the rhs matrix with a linspace function.
   scf.for %r = %c0 to %K step %c1 {
     scf.for %c = %c0 to %N step %c1 {
       %idx = func.call @compute_linspace_val(%r, %c, %N) : (index, index, index) -> f16
       memref.store %idx, %rhs[%r, %c] : !rhs_memref_type
     }
   }
-  // Intialize the rhs matrix with a linspace function.
+  // Initialize the rhs matrix with a linspace function.
   scf.for %r = %c0 to %M step %c1 {
     scf.for %c = %c0 to %N step %c1 {
       %idx = func.call @compute_linspace_val(%r, %c, %N) : (index, index, index) -> f16

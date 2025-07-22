@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -verify=expected,all -std=c11 -Wcast-qual %s
-// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -pedantic -verify=pedantic,pedantic-expected,all -std=c11 -Wcast-qual %s
-// RUN: %clang_cc1 -triple x86_64-linux -verify=ref,all -std=c11 -Wcast-qual %s
-// RUN: %clang_cc1 -triple x86_64-linux -pedantic -verify=pedantic,pedantic-ref,all -std=c11 -Wcast-qual %s
+// RUN: %clang_cc1 -triple x86_64-linux -verify=expected,all                   -std=c11 -Wcast-qual           %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -triple x86_64-linux -verify=pedantic,pedantic-expected,all -std=c11 -Wcast-qual -pedantic %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -triple x86_64-linux -verify=ref,all                        -std=c11 -Wcast-qual           %s
+// RUN: %clang_cc1 -triple x86_64-linux -verify=pedantic,pedantic-ref,all      -std=c11 -Wcast-qual -pedantic %s
 
 typedef __INTPTR_TYPE__ intptr_t;
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
@@ -203,6 +203,16 @@ const struct StrA sc = *sb;
 _Static_assert(sc.a == 12, ""); // pedantic-ref-warning {{GNU extension}} \
                                 // pedantic-expected-warning {{GNU extension}}
 
+struct ComplexS {
+  int a;
+  float b;
+  struct StrA sa[2];
+};
+const struct ComplexS CS = {12, 23.0f, {{1}, {2}}};
+const struct ComplexS CS2 = CS;
+_Static_assert(CS2.sa[0].a == 1, ""); // pedantic-ref-warning {{GNU extension}} \
+                                      // pedantic-expected-warning {{GNU extension}}
+
 _Static_assert(((void*)0 + 1) != (void*)0, ""); // pedantic-expected-warning {{arithmetic on a pointer to void is a GNU extension}} \
                                                 // pedantic-expected-warning {{not an integer constant expression}} \
                                                 // pedantic-expected-note {{cannot perform pointer arithmetic on null pointer}} \
@@ -221,7 +231,8 @@ int castViaInt[*(int*)(unsigned long)"test"]; // ref-error {{variable length arr
                                               // expected-error {{variable length array}} \
                                               // pedantic-expected-error {{variable length array}}
 
-const void (*const funcp)(void) = (void*)123; // pedantic-warning {{converts between void pointer and function pointer}}
+const void (*const funcp)(void) = (void*)123; // pedantic-warning {{converts between void pointer and function pointer}} \
+                                              // pedantic-expected-note {{this conversion is not allowed in a constant expression}}
 _Static_assert(funcp == (void*)0, ""); // all-error {{failed due to requirement 'funcp == (void *)0'}} \
                                        // pedantic-warning {{expression is not an integer constant expression}}
 _Static_assert(funcp == (void*)123, ""); // pedantic-warning {{equality comparison between function pointer and void pointer}} \

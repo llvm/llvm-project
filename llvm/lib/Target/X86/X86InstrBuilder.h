@@ -54,6 +54,7 @@ struct X86AddressMode {
   int Disp = 0;
   const GlobalValue *GV = nullptr;
   unsigned GVOpFlags = 0;
+  bool CP = false;
 
   void getFullAddress(SmallVectorImpl<MachineOperand> &MO) {
     assert(Scale == 1 || Scale == 2 || Scale == 4 || Scale == 8);

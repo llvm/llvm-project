@@ -247,7 +247,7 @@ module {
     ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):
       tensor.yield %cst_f32 : f32
     } : tensor<1x32x32x8xf32> to tensor<1x40x8229x8xf32>
-    %1 = bufferization.to_memref %padded : tensor<1x40x8229x8xf32> to memref<1x40x8229x8xf32>
+    %1 = bufferization.to_buffer %padded : tensor<1x40x8229x8xf32> to memref<1x40x8229x8xf32>
     %alloc_0 = memref.alloc() {alignment = 64 : i64} : memref<1x32x32x8xf32>
     affine.for %arg1 = 0 to 1 {
       affine.for %arg2 = 0 to 32 {

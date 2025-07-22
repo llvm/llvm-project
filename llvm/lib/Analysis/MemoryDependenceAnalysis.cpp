@@ -1729,9 +1729,7 @@ INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(MemoryDependenceWrapperPass, "memdep",
                     "Memory Dependence Analysis", false, true)
 
-MemoryDependenceWrapperPass::MemoryDependenceWrapperPass() : FunctionPass(ID) {
-  initializeMemoryDependenceWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+MemoryDependenceWrapperPass::MemoryDependenceWrapperPass() : FunctionPass(ID) {}
 
 MemoryDependenceWrapperPass::~MemoryDependenceWrapperPass() = default;
 

@@ -714,9 +714,8 @@ printMemOperandEA(const MachineInstr *MI, int opNum, raw_ostream &O) {
   printOperand(MI, opNum+1, O);
 }
 
-void MipsAsmPrinter::
-printFCCOperand(const MachineInstr *MI, int opNum, raw_ostream &O,
-                const char *Modifier) {
+void MipsAsmPrinter::printFCCOperand(const MachineInstr *MI, int opNum,
+                                     raw_ostream &O) {
   const MachineOperand &MO = MI->getOperand(opNum);
   O << Mips::MipsFCCToString((Mips::CondCode)MO.getImm());
 }
@@ -1292,6 +1291,11 @@ bool MipsAsmPrinter::isLongBranchPseudo(int Opcode) const {
           || Opcode == Mips::LONG_BRANCH_DADDiu
           || Opcode == Mips::LONG_BRANCH_DADDiu2Op);
 }
+
+char MipsAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(MipsAsmPrinter, "mips-asm-printer", "Mips Assembly Printer",
+                false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsAsmPrinter() {

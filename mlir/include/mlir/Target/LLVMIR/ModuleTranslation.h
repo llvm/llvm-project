@@ -136,6 +136,28 @@ public:
     return callMapping.lookup(op);
   }
 
+  /// Maps a blockaddress operation to its corresponding placeholder LLVM
+  /// value.
+  void mapUnresolvedBlockAddress(BlockAddressOp op, llvm::Value *cst) {
+    auto result = unresolvedBlockAddressMapping.try_emplace(op, cst);
+    (void)result;
+    assert(result.second &&
+           "attempting to map a blockaddress operation that is already mapped");
+  }
+
+  /// Maps a BlockAddressAttr to its corresponding LLVM basic block.
+  void mapBlockAddress(BlockAddressAttr attr, llvm::BasicBlock *block) {
+    auto result = blockAddressToLLVMMapping.try_emplace(attr, block);
+    (void)result;
+    assert(result.second &&
+           "attempting to map a blockaddress attribute that is already mapped");
+  }
+
+  /// Finds the LLVM basic block that corresponds to the given BlockAddressAttr.
+  llvm::BasicBlock *lookupBlockAddress(BlockAddressAttr attr) const {
+    return blockAddressToLLVMMapping.lookup(attr);
+  }
+
   /// Removes the mapping for blocks contained in the region and values defined
   /// in these blocks.
   void forgetMapping(Region &region);
@@ -338,6 +360,8 @@ private:
   LogicalResult convertFunctions();
   LogicalResult convertComdats();
 
+  LogicalResult convertUnresolvedBlockAddress();
+
   /// Handle conversion for both globals and global aliases.
   ///
   /// - Create named global variables that correspond to llvm.mlir.global
@@ -362,6 +386,9 @@ private:
 
   /// Process the llvm.commandline LLVM Metadata, if it exists.
   LogicalResult createCommandlineMetadata();
+
+  /// Process the llvm.dependent_libraries LLVM Metadata, if it exists.
+  LogicalResult createDependentLibrariesMetadata();
 
   /// Translates dialect attributes attached to the given operation.
   LogicalResult
@@ -429,6 +456,15 @@ private:
   /// Mapping from a comdat selector operation to its LLVM comdat struct.
   /// This map is populated on module entry.
   DenseMap<ComdatSelectorOp, llvm::Comdat *> comdatMapping;
+
+  /// Mapping from llvm.blockaddress operations to their corresponding LLVM
+  /// constant placeholders. After all basic blocks are translated, this
+  /// mapping is used to replace the placeholders with the LLVM block addresses.
+  DenseMap<BlockAddressOp, llvm::Value *> unresolvedBlockAddressMapping;
+
+  /// Mapping from a BlockAddressAttr attribute to it's matching LLVM basic
+  /// block.
+  DenseMap<BlockAddressAttr, llvm::BasicBlock *> blockAddressToLLVMMapping;
 
   /// Stack of user-specified state elements, useful when translating operations
   /// with regions.

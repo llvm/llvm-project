@@ -26,7 +26,7 @@ struct GpuGlobalIdRewriter : public OpRewritePattern<gpu::GlobalIdOp> {
 
   LogicalResult matchAndRewrite(gpu::GlobalIdOp op,
                                 PatternRewriter &rewriter) const override {
-    auto loc = op.getLoc();
+    Location loc = op.getLoc();
     auto dim = op.getDimension();
     auto blockId = rewriter.create<gpu::BlockIdOp>(loc, dim);
     auto blockDim = rewriter.create<gpu::BlockDimOp>(loc, dim);

@@ -46,6 +46,10 @@ static const void *ptr = 0o0;  /* ext-warning {{octal integer literals are a C2y
 // 0 by itself is not deprecated, of course.
 int k = 0;
 
+// Test a preprocessor use of 0 by itself, which is also not deprecated.
+#if 0
+#endif
+
 // Make sure there are no surprises with auto and type deduction. Promotion
 // turns this into an 'int', and 'constexpr' implies 'const'.
 constexpr auto l = 0o1234567; /* ext-warning {{octal integer literals are a C2y extension}}

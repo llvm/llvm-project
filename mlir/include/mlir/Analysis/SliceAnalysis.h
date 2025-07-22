@@ -10,7 +10,6 @@
 #define MLIR_ANALYSIS_SLICEANALYSIS_H_
 
 #include <functional>
-#include <vector>
 
 #include "mlir/Support/LLVM.h"
 

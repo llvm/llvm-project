@@ -30,6 +30,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVETarget() {
   RegisterTargetMachine<VETargetMachine> X(getTheVETarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeVEAsmPrinterPass(PR);
   initializeVEDAGToDAGISelLegacyPass(PR);
 }
 
@@ -101,7 +102,7 @@ VETargetMachine::~VETargetMachine() = default;
 
 TargetTransformInfo
 VETargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(VETTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<VETTIImpl>(this, F));
 }
 
 MachineFunctionInfo *VETargetMachine::createMachineFunctionInfo(

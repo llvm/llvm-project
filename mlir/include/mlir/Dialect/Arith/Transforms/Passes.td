@@ -20,7 +20,7 @@ def ArithExpandOpsPass : Pass<"arith-expand"> {
   ];
 }
 
-def ArithUnsignedWhenEquivalent : Pass<"arith-unsigned-when-equivalent"> {
+def ArithUnsignedWhenEquivalentPass : Pass<"arith-unsigned-when-equivalent"> {
   let summary = "Replace signed ops with unsigned ones where they are proven equivalent";
   let description = [{
     Replace signed ops with their unsigned equivalents when integer range analysis
@@ -33,7 +33,6 @@ def ArithUnsignedWhenEquivalent : Pass<"arith-unsigned-when-equivalent"> {
     The affect ops include division, remainder, shifts, min, max, and integer
     comparisons.
   }];
-  let constructor = "mlir::arith::createArithUnsignedWhenEquivalentPass()";
 }
 
 def ArithIntRangeOpts : Pass<"int-range-optimizations"> {

@@ -136,10 +136,7 @@ template <typename IRUnitT, typename... ExtraArgTs>
 inline typename AnalysisManager<IRUnitT, ExtraArgTs...>::ResultConceptT &
 AnalysisManager<IRUnitT, ExtraArgTs...>::getResultImpl(
     AnalysisKey *ID, IRUnitT &IR, ExtraArgTs... ExtraArgs) {
-  typename AnalysisResultMapT::iterator RI;
-  bool Inserted;
-  std::tie(RI, Inserted) = AnalysisResults.insert(std::make_pair(
-      std::make_pair(ID, &IR), typename AnalysisResultListT::iterator()));
+  auto [RI, Inserted] = AnalysisResults.try_emplace(std::make_pair(ID, &IR));
 
   // If we don't have a cached result for this function, look up the pass and
   // run it to produce a result, which we then add to the cache.

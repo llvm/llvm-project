@@ -313,6 +313,15 @@ public:
   const MachineFunction *getParent() const { return xParent; }
   MachineFunction *getParent() { return xParent; }
 
+  /// Returns true if the original IR terminator is an `indirectbr`. This
+  /// typically corresponds to a `goto` in C, rather than jump tables.
+  bool terminatorIsComputedGoto() const {
+    return back().isIndirectBranch() &&
+           llvm::all_of(successors(), [](const MachineBasicBlock *Succ) {
+             return Succ->isIRBlockAddressTaken();
+           });
+  }
+
   using instr_iterator = Instructions::iterator;
   using const_instr_iterator = Instructions::const_iterator;
   using reverse_instr_iterator = Instructions::reverse_iterator;
@@ -1254,6 +1263,9 @@ public:
   /// MachineBranchProbabilityInfo class.
   BranchProbability getSuccProbability(const_succ_iterator Succ) const;
 
+  // Helper function for MIRPrinter.
+  bool canPredictBranchProbabilities() const;
+
 private:
   /// Return probability iterator corresponding to the I successor iterator.
   probability_iterator getProbabilityIterator(succ_iterator I);
@@ -1261,7 +1273,6 @@ private:
   getProbabilityIterator(const_succ_iterator I) const;
 
   friend class MachineBranchProbabilityInfo;
-  friend class MIPrinter;
 
   // Methods used to maintain doubly linked list of blocks...
   friend struct ilist_callback_traits<MachineBasicBlock>;

@@ -33,6 +33,87 @@ bool AArch64SelectionDAGInfo::isTargetStrictFPOpcode(unsigned Opcode) const {
          Opcode <= AArch64ISD::LAST_STRICTFP_OPCODE;
 }
 
+void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
+                                               const SDNode *N) const {
+#ifndef NDEBUG
+  switch (N->getOpcode()) {
+  default:
+    break;
+  case AArch64ISD::SADDWT:
+  case AArch64ISD::SADDWB:
+  case AArch64ISD::UADDWT:
+  case AArch64ISD::UADDWB: {
+    assert(N->getNumValues() == 1 && "Expected one result!");
+    assert(N->getNumOperands() == 2 && "Expected two operands!");
+    EVT VT = N->getValueType(0);
+    EVT Op0VT = N->getOperand(0).getValueType();
+    EVT Op1VT = N->getOperand(1).getValueType();
+    assert(VT.isVector() && Op0VT.isVector() && Op1VT.isVector() &&
+           VT.isInteger() && Op0VT.isInteger() && Op1VT.isInteger() &&
+           "Expected integer vectors!");
+    assert(VT == Op0VT &&
+           "Expected result and first input to have the same type!");
+    assert(Op0VT.getSizeInBits() == Op1VT.getSizeInBits() &&
+           "Expected vectors of equal size!");
+    assert(Op0VT.getVectorElementCount() * 2 == Op1VT.getVectorElementCount() &&
+           "Expected result vector and first input vector to have half the "
+           "lanes of the second input vector!");
+    break;
+  }
+  case AArch64ISD::SUNPKLO:
+  case AArch64ISD::SUNPKHI:
+  case AArch64ISD::UUNPKLO:
+  case AArch64ISD::UUNPKHI: {
+    assert(N->getNumValues() == 1 && "Expected one result!");
+    assert(N->getNumOperands() == 1 && "Expected one operand!");
+    EVT VT = N->getValueType(0);
+    EVT OpVT = N->getOperand(0).getValueType();
+    assert(OpVT.isVector() && VT.isVector() && OpVT.isInteger() &&
+           VT.isInteger() && "Expected integer vectors!");
+    assert(OpVT.getSizeInBits() == VT.getSizeInBits() &&
+           "Expected vectors of equal size!");
+    assert(OpVT.getVectorElementCount() == VT.getVectorElementCount() * 2 &&
+           "Expected result vector with half the lanes of its input!");
+    break;
+  }
+  case AArch64ISD::TRN1:
+  case AArch64ISD::TRN2:
+  case AArch64ISD::UZP1:
+  case AArch64ISD::UZP2:
+  case AArch64ISD::ZIP1:
+  case AArch64ISD::ZIP2: {
+    assert(N->getNumValues() == 1 && "Expected one result!");
+    assert(N->getNumOperands() == 2 && "Expected two operands!");
+    EVT VT = N->getValueType(0);
+    EVT Op0VT = N->getOperand(0).getValueType();
+    EVT Op1VT = N->getOperand(1).getValueType();
+    assert(VT.isVector() && Op0VT.isVector() && Op1VT.isVector() &&
+           "Expected vectors!");
+    assert(VT == Op0VT && VT == Op1VT && "Expected matching vectors!");
+    break;
+  }
+  case AArch64ISD::RSHRNB_I: {
+    assert(N->getNumValues() == 1 && "Expected one result!");
+    assert(N->getNumOperands() == 2 && "Expected two operands!");
+    EVT VT = N->getValueType(0);
+    EVT Op0VT = N->getOperand(0).getValueType();
+    EVT Op1VT = N->getOperand(1).getValueType();
+    assert(VT.isVector() && VT.isInteger() &&
+           "Expected integer vector result type!");
+    assert(Op0VT.isVector() && Op0VT.isInteger() &&
+           "Expected first operand to be an integer vector!");
+    assert(VT.getSizeInBits() == Op0VT.getSizeInBits() &&
+           "Expected vectors of equal size!");
+    assert(VT.getVectorElementCount() == Op0VT.getVectorElementCount() * 2 &&
+           "Expected input vector with half the lanes of its result!");
+    assert(Op1VT == MVT::i32 && isa<ConstantSDNode>(N->getOperand(1)) &&
+           "Expected second operand to be a constant i32!");
+    break;
+  }
+  }
+#endif
+}
+
 SDValue AArch64SelectionDAGInfo::EmitMOPS(unsigned Opcode, SelectionDAG &DAG,
                                           const SDLoc &DL, SDValue Chain,
                                           SDValue Dst, SDValue SrcOrValue,

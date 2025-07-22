@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #pragma once
 
+#include "PluginInterface.h"
 #include <OffloadAPI.h>
 #include <iostream>
 #include <memory>
@@ -19,9 +20,11 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Error.h"
 
 struct OffloadConfig {
   bool TracingEnabled = false;
+  bool ValidationEnabled = true;
 };
 
 OffloadConfig &offloadConfig();
@@ -87,8 +90,27 @@ struct ol_impl_result_t {
     Result = errors().emplace(std::move(Err)).first->get();
   }
 
+  static ol_impl_result_t fromError(llvm::Error &&Error) {
+    ol_errc_t ErrCode;
+    llvm::StringRef Details;
+    llvm::handleAllErrors(std::move(Error), [&](llvm::StringError &Err) {
+      ErrCode = GetErrorCode(Err.convertToErrorCode());
+      Details = errorStrs().insert(Err.getMessage()).first->getKeyData();
+    });
+
+    return ol_impl_result_t{ErrCode, Details};
+  }
+
   operator ol_result_t() { return Result; }
 
 private:
+  static ol_errc_t GetErrorCode(std::error_code Code) {
+    if (Code.category() ==
+        error::make_error_code(error::ErrorCode::SUCCESS).category()) {
+      return static_cast<ol_errc_t>(Code.value());
+    }
+    return OL_ERRC_UNKNOWN;
+  }
+
   ol_result_t Result;
 };

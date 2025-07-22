@@ -36,7 +36,7 @@ define double @fsqrt_f64(double %a) nounwind {
 ; LA32F:       # %bb.0:
 ; LA32F-NEXT:    addi.w $sp, $sp, -16
 ; LA32F-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32F-NEXT:    bl %plt(sqrt)
+; LA32F-NEXT:    bl sqrt
 ; LA32F-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32F-NEXT:    addi.w $sp, $sp, 16
 ; LA32F-NEXT:    ret
@@ -94,12 +94,12 @@ define double @frsqrt_f64(double %a) nounwind {
 ; LA32F:       # %bb.0:
 ; LA32F-NEXT:    addi.w $sp, $sp, -16
 ; LA32F-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32F-NEXT:    bl %plt(sqrt)
+; LA32F-NEXT:    bl sqrt
 ; LA32F-NEXT:    move $a2, $a0
 ; LA32F-NEXT:    move $a3, $a1
 ; LA32F-NEXT:    lu12i.w $a1, 261888
 ; LA32F-NEXT:    move $a0, $zero
-; LA32F-NEXT:    bl %plt(__divdf3)
+; LA32F-NEXT:    bl __divdf3
 ; LA32F-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32F-NEXT:    addi.w $sp, $sp, 16
 ; LA32F-NEXT:    ret

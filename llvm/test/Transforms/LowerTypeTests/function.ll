@@ -73,16 +73,10 @@ define i1 @foo(ptr %p) {
 ; X86-SAME: int3
 ; X86-SAME: int3
 ; X86-SAME: int3
-; X86-SAME: jmp ${1:c}@plt
-; X86-SAME: int3
-; X86-SAME: int3
-; X86-SAME: int3
 
 ; ARM:      b $0
-; ARM-SAME: b $1
 
 ; THUMB:      b.w $0
-; THUMB-SAME: b.w $1
 
 ; THUMBV6M:      push {r0,r1}
 ; THUMBV6M-SAME: ldr r0, 1f
@@ -91,23 +85,37 @@ define i1 @foo(ptr %p) {
 ; THUMBV6M-SAME: pop {r0,pc}
 ; THUMBV6M-SAME: .balign 4
 ; THUMBV6M-SAME: 1: .word $0 - (0b + 4)
-; THUMBV6M-SAME: push {r0,r1}
+
+; RISCV:      tail $0@plt
+
+; LOONGARCH64:      pcalau12i $$t0, %pc_hi20($0)
+; LOONGARCH64-SAME: jirl $$r0, $$t0, %pc_lo12($0)
+
+; NATIVE-SAME: "s"(ptr @f.cfi)
+
+; X86-NEXT: jmp ${0:c}@plt
+; X86-SAME: int3
+; X86-SAME: int3
+; X86-SAME: int3
+
+; ARM-NEXT: b $0
+
+; THUMB-NEXT: b.w $0
+
+; THUMBV6M-NEXT: push {r0,r1}
 ; THUMBV6M-SAME: ldr r0, 1f
 ; THUMBV6M-SAME: 0: add r0, r0, pc
 ; THUMBV6M-SAME: str r0, [sp, #4]
 ; THUMBV6M-SAME: pop {r0,pc}
 ; THUMBV6M-SAME: .balign 4
-; THUMBV6M-SAME: 1: .word $1 - (0b + 4)
+; THUMBV6M-SAME: 1: .word $0 - (0b + 4)
 
-; RISCV:      tail $0@plt
-; RISCV-SAME: tail $1@plt
+; RISCV-NEXT: tail $0@plt
 
-; LOONGARCH64:      pcalau12i $$t0, %pc_hi20($0)
+; LOONGARCH64-NEXT: pcalau12i $$t0, %pc_hi20($0)
 ; LOONGARCH64-SAME: jirl $$r0, $$t0, %pc_lo12($0)
-; LOONGARCH64-SAME: pcalau12i $$t0, %pc_hi20($1)
-; LOONGARCH64-SAME: jirl $$r0, $$t0, %pc_lo12($1)
 
-; NATIVE-SAME: "s,s"(ptr @f.cfi, ptr @g.cfi)
+; NATIVE-SAME: "s"(ptr @g.cfi)
 
 ; X86-LINUX: attributes #[[ATTR]] = { naked nocf_check noinline }
 ; X86-WIN32: attributes #[[ATTR]] = { nocf_check noinline }
