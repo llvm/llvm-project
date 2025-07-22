@@ -75,7 +75,7 @@ def node_5b : SDNode<"MyTargetISD::NODE_5", SDTypeProfile<0, 0, []>, [SDNPHasCha
 // CHECK-NEXT:    ;
 
 // CHECK:       static const SDTypeConstraint MyTargetSDTypeConstraints[] = {
-// CHECK-NEXT:    /* dummy */ {SDTCisVT, 0, 0, MVT::INVALID_SIMPLE_VALUE_TYPE}
+// CHECK-NEXT:    /* dummy */ {SDTCisVT, 0, 0, 0, MVT::INVALID_SIMPLE_VALUE_TYPE}
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static const SDNodeDesc MyTargetSDNodeDescs[] = {
@@ -83,8 +83,8 @@ def node_5b : SDNode<"MyTargetISD::NODE_5", SDTypeProfile<0, 0, []>, [SDNPHasCha
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static const SDNodeInfo MyTargetGenSDNodeInfo(
-// CHECK-NEXT:      /*NumOpcodes=*/1, MyTargetSDNodeDescs,
-// CHECK-NEXT:      MyTargetSDNodeNames, MyTargetSDTypeConstraints);
+// CHECK-NEXT:      /*NumOpcodes=*/1, MyTargetSDNodeDescs, MyTargetSDNodeNames,
+// CHECK-NEXT:      MyTargetVTByHwModeTable, MyTargetSDTypeConstraints);
 
 def compat_a : SDNode<"MyTargetISD::COMPAT", SDTypeProfile<1, -1, []>>;
 def compat_b : SDNode<"MyTargetISD::COMPAT", SDTypeProfile<1, -1, [SDTCisVT<0, untyped>]>>;
