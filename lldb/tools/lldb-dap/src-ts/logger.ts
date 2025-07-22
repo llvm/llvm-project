@@ -71,10 +71,12 @@ export class Logger implements vscode.Disposable {
     private normalizeMessage(message: any) {
         if (typeof message === "string") {
             return message;
-        } else if (typeof message === "object") {
-            return JSON.stringify(message);
         }
-        return `${message}`;
+        try {
+            return JSON.stringify(message);
+        } catch (e) {
+            return `${message}`;
+        }
     }
 
     private outputChannelLevel(): string {
