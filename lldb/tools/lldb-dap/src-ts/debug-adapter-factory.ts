@@ -231,8 +231,7 @@ export class LLDBDapDescriptorFactory
     executable: vscode.DebugAdapterExecutable | undefined,
   ): Promise<vscode.DebugAdapterDescriptor | undefined> {
     this.logger.info(`Creating debug adapter for session "${session.name}"`);
-    this.logger.debug(`Session "${session.name}" debug configuration:`);
-    this.logger.debug(JSON.stringify(session.configuration, undefined, 2));
+    this.logger.debug(`Session "${session.name}" debug configuration:\n` + JSON.stringify(session.configuration, undefined, 2));
     if (executable) {
       const error = new Error(
         "Setting the debug adapter executable in the package.json is not supported.",
