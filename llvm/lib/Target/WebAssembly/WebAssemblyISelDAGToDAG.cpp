@@ -255,7 +255,7 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
       SmallVector<MVT, 4> Returns;
 
       bool IsParam = false;
-      for (unsigned I = 2; I < Node->getNumOperands(); ++I) {
+      for (unsigned I = 2, E = Node->getNumOperands(); I < E; ++I) {
         MVT VT = Node->getOperand(I).getValueType().getSimpleVT();
         if (VT == MVT::Untyped) {
           IsParam = true;
