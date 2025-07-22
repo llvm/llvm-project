@@ -9036,8 +9036,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
         Type *PhiTy = PhiR->getUnderlyingValue()->getType();
         auto *Zero = Plan->getOrAddLiveIn(ConstantInt::get(PhiTy, 0));
         VPWidenRecipe *Sub = new VPWidenRecipe(
-            Instruction::Sub, {Zero, CurrentLink->getOperand(1)}, {}, VPIRMetadata(),
-            CurrentLinkI->getDebugLoc());
+            Instruction::Sub, {Zero, CurrentLink->getOperand(1)}, {},
+            VPIRMetadata(), CurrentLinkI->getDebugLoc());
         Sub->setUnderlyingValue(CurrentLinkI);
         LinkVPBB->insert(Sub, CurrentLink->getIterator());
         VecOp = Sub;
