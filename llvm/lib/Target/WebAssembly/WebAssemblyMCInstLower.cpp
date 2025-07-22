@@ -172,6 +172,7 @@ WebAssemblyMCInstLower::lowerEncodedFunctionSignature(const APInt &Sig) const {
   // emit an Imm instead of a CImm. It simplifies WebAssemblyMCInstLower if we
   // always emit a CImm. So xor NParams with 0x7ffffff to ensure
   // getSignificantBits() > 64
+  // See encodeFunctionSignature in WebAssemblyISelDAGtoDAG.cpp
   int NParams = GetWord() ^ 0x7ffffff;
   for (int I = 0; I < NParams; I++) {
     Params.push_back(static_cast<wasm::ValType>(GetWord()));
