@@ -100,8 +100,8 @@ Note in the LLVM alias, the default value is `false`.
 .. option:: IgnoreAliasing
 
   If set to `true` the check will use the underlying type to determine the type
-  that ``auto`` is deduced to.
-  If set to `false` the check will not look beyond the first type alias.
+  that ``auto`` is deduced to. If set to `false` the check will not look beyond
+  the first type alias.
   Default value is `true`.
 
 .. code-block:: c++
