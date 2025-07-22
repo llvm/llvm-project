@@ -66,7 +66,7 @@ private:
   void CheckVolatile(const Symbol &, const DerivedTypeSpec *);
   void CheckContiguous(const Symbol &);
   void CheckPointer(const Symbol &);
-  void CheckExternal(const Symbol &);
+  void CheckExternalAttrConflicts(const Symbol &);
   void CheckPassArg(
       const Symbol &proc, const Symbol *interface, const WithPassArg &);
   void CheckProcBinding(const Symbol &, const ProcBindingDetails &);
@@ -984,7 +984,7 @@ void CheckHelper::CheckObjectEntity(
     }
   }
   if (symbol.attrs().test(Attr::EXTERNAL)) {
-    CheckExternal(symbol);
+    CheckExternalAttrConflicts(symbol);
     SayWithDeclaration(symbol,
         "'%s' is a data object and may not be EXTERNAL"_err_en_US,
         symbol.name());
@@ -2462,7 +2462,7 @@ void CheckHelper::CheckPointer(const Symbol &symbol) { // C852
   }
 }
 
-void CheckHelper::CheckExternal(const Symbol &symbol) {
+void CheckHelper::CheckExternalAttrConflicts(const Symbol &symbol) {
   CheckConflicting(symbol, Attr::EXTERNAL, Attr::INTRINSIC); // F'2023 C842
   CheckConflicting(symbol, Attr::EXTERNAL, Attr::PARAMETER);
 }
