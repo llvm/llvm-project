@@ -3,7 +3,8 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx810 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=PREGFX10-PACKED %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=PREGFX10-PACKED %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GFX10-PACKED %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GFX11-PACKED %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GFX11-PACKED,GFX11-PACKED-TRUE16 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-delay-alu=0 -verify-machineinstrs | FileCheck -enable-var-scope -check-prefixes=GFX11-PACKED,GFX11-PACKED-FAKE16 %s
 
 define amdgpu_ps half @tbuffer_load_d16_x(ptr addrspace(8) inreg %rsrc) {
 ; PREGFX10-UNPACKED-LABEL: tbuffer_load_d16_x:
@@ -90,12 +91,19 @@ define amdgpu_ps half @tbuffer_load_d16_xyz(ptr addrspace(8) inreg %rsrc) {
 ; GFX10-PACKED-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX10-PACKED-NEXT:    ; return to shader part epilog
 ;
-; GFX11-PACKED-LABEL: tbuffer_load_d16_xyz:
-; GFX11-PACKED:       ; %bb.0: ; %main_body
-; GFX11-PACKED-NEXT:    tbuffer_load_d16_format_xyz v[0:1], off, s[0:3], 0 format:[BUF_FMT_32_FLOAT]
-; GFX11-PACKED-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-PACKED-NEXT:    v_mov_b32_e32 v0, v1
-; GFX11-PACKED-NEXT:    ; return to shader part epilog
+; GFX11-PACKED-TRUE16-LABEL: tbuffer_load_d16_xyz:
+; GFX11-PACKED-TRUE16:       ; %bb.0: ; %main_body
+; GFX11-PACKED-TRUE16-NEXT:    tbuffer_load_d16_format_xyz v[0:1], off, s[0:3], 0 format:[BUF_FMT_32_FLOAT]
+; GFX11-PACKED-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-PACKED-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l
+; GFX11-PACKED-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX11-PACKED-FAKE16-LABEL: tbuffer_load_d16_xyz:
+; GFX11-PACKED-FAKE16:       ; %bb.0: ; %main_body
+; GFX11-PACKED-FAKE16-NEXT:    tbuffer_load_d16_format_xyz v[0:1], off, s[0:3], 0 format:[BUF_FMT_32_FLOAT]
+; GFX11-PACKED-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-PACKED-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-PACKED-FAKE16-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <3 x half> @llvm.amdgcn.raw.ptr.tbuffer.load.v3f16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 22, i32 0)
   %elt = extractelement <3 x half> %data, i32 2

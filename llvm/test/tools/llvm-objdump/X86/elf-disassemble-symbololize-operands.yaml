@@ -7,20 +7,20 @@
 ## Expect to find the branch labels and global variable name.
 # ATT:      <_start>:
 # ATT-NEXT:   pushq %rax
-# ATT-NEXT: <L1>:
-# ATT-NEXT:   cmpl  , %eax <symbol>
-# ATT-NEXT:   jge    <L0>
-# ATT-NEXT:   jmp    <L1>
 # ATT-NEXT: <L0>:
+# ATT-NEXT:   cmpl  , %eax <symbol>
+# ATT-NEXT:   jge    <L1>
+# ATT-NEXT:   jmp    <L0>
+# ATT-NEXT: <L1>:
 # ATT-NEXT:   retq
 
 # INTEL:      <_start>:
 # INTEL-NEXT:   push rax
-# INTEL-NEXT: <L1>:
-# INTEL-NEXT:   cmp  eax, dword ptr <symbol>
-# INTEL-NEXT:   jge   <L0>
-# INTEL-NEXT:   jmp   <L1>
 # INTEL-NEXT: <L0>:
+# INTEL-NEXT:   cmp  eax, dword ptr <symbol>
+# INTEL-NEXT:   jge   <L1>
+# INTEL-NEXT:   jmp   <L0>
+# INTEL-NEXT: <L1>:
 # INTEL-NEXT:   ret
 
 --- !ELF

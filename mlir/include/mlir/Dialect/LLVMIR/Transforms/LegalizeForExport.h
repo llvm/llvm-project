@@ -17,7 +17,7 @@ class Pass;
 
 namespace LLVM {
 
-#define GEN_PASS_DECL_LLVMLEGALIZEFOREXPORT
+#define GEN_PASS_DECL_LLVMLEGALIZEFOREXPORTPASS
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h.inc"
 
 /// Make argument-taking successors of each block distinct.  PHI nodes in LLVM
@@ -26,10 +26,6 @@ namespace LLVM {
 /// another block as a successor more than once with different values, insert
 /// a new dummy block for LLVM PHI nodes to tell the sources apart.
 void ensureDistinctSuccessors(Operation *op);
-
-/// Creates a pass that legalizes the LLVM dialect operations so that they can
-/// be translated to LLVM IR.
-std::unique_ptr<Pass> createLegalizeForExportPass();
 
 } // namespace LLVM
 } // namespace mlir

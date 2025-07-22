@@ -5,9 +5,9 @@
 @"$qux" = external dso_local global i32
 
 define i32 @"$foo"() nounwind {
-; CHECK: movl	($bar),
-; CHECK: addl	($qux),
-; CHECK: calll	($hen)
+; CHECK: movl	$bar,
+; CHECK: addl	$qux,
+; CHECK: calll	$hen
   %m = load i32, ptr @"$bar"
   %n = load i32, ptr @"$qux"
   %t = add i32 %m, %n

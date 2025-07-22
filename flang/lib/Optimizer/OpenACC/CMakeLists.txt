@@ -1,12 +1,12 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
 add_flang_library(FIROpenACCSupport
+  FIROpenACCAttributes.cpp
   FIROpenACCTypeInterfaces.cpp
   RegisterOpenACCExtensions.cpp
 
   DEPENDS
   FIRBuilder
-  FIRCodeGen
   FIRDialect
   FIRDialectSupport
   FIRSupport
@@ -14,7 +14,7 @@ add_flang_library(FIROpenACCSupport
 
   LINK_LIBS
   FIRBuilder
-  FIRCodeGen
+  FIRCodeGenDialect
   FIRDialect
   FIRDialectSupport
   FIRSupport

@@ -119,6 +119,19 @@ public:
   ///   an empty collection will be returned.
   SBThreadCollection GetThreadsToSave() const;
 
+  /// Get the current total number of bytes the core is expected to have
+  /// excluding the overhead of the core file format. Requires a Process and
+  /// Style to be specified.
+  ///
+  /// \note
+  ///   This can cause some modification of the underlying data store
+  ///   as regions with no permissions, or invalid permissions will be removed
+  ///   and stacks will be minified up to their stack pointer + the redzone.
+  ///
+  /// \returns
+  ///   The expected size of the data contained in the core in bytes.
+  uint64_t GetCurrentSizeInBytes(SBError &error);
+
   /// Reset all options.
   void Clear();
 

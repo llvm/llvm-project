@@ -58,6 +58,13 @@ TEST(DenseSetTest, InsertRange) {
   EXPECT_THAT(set, ::testing::UnorderedElementsAre(1, 2, 3));
 }
 
+TEST(SmallDenseSetTest, InsertRange) {
+  llvm::SmallDenseSet<unsigned> set;
+  constexpr unsigned Args[] = {9, 7, 8};
+  set.insert_range(Args);
+  EXPECT_THAT(set, ::testing::UnorderedElementsAre(7, 8, 9));
+}
+
 struct TestDenseSetInfo {
   static inline unsigned getEmptyKey() { return ~0; }
   static inline unsigned getTombstoneKey() { return ~0U - 1; }

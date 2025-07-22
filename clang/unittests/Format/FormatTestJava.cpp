@@ -158,6 +158,8 @@ TEST_F(FormatTestJava, AnonymousClasses) {
 
 TEST_F(FormatTestJava, EnumDeclarations) {
   verifyFormat("enum SomeThing { ABC, CDE }");
+  // A C++ keyword should not mess things up.
+  verifyFormat("enum union { ABC, CDE }");
   verifyFormat("enum SomeThing {\n"
                "  ABC,\n"
                "  CDE,\n"

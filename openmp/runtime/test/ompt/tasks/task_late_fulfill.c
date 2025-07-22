@@ -49,7 +49,7 @@ int main() {
 // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_parallel_begin:
 // CHECK-SAME: parent_task_id=[[PARENT_TASK_ID:[0-9]+]],
 // CHECK-SAME: parent_task_frame.exit=[[NULL]],
-// CHECK-SAME: parent_task_frame.reenter=0x{{[0-f]+}},
+// CHECK-SAME: parent_task_frame.reenter={{(0x)?[0-f]+}},
 // CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-9]+]],
 // CHECK-SAME: requested_team_size=3,
 
@@ -66,8 +66,8 @@ int main() {
 
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create:
 // CHECK-SAME: parent_task_id=[[IMPLICIT_TASK_ID]],
-// CHECK-SAME: parent_task_frame.exit=0x{{[0-f]+}},
-// CHECK-SAME: parent_task_frame.reenter=0x{{[0-f]+}},
+// CHECK-SAME: parent_task_frame.exit={{(0x)?[0-f]+}},
+// CHECK-SAME: parent_task_frame.reenter={{(0x)?[0-f]+}},
 // CHECK-SAME: new_task_id=[[TASK_ID:[0-9]+]],
 
 // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_task_schedule:

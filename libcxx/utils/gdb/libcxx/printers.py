@@ -673,7 +673,7 @@ class StdMapPrinter(AbstractRBTreePrinter):
         return "map"
 
     def _get_key_value(self, node):
-        key_value = _cc_field(node.cast(self.util.cast_type).dereference())
+        key_value = node.cast(self.util.cast_type).dereference()["__value_"]
         return [key_value["first"], key_value["second"]]
 
 
@@ -738,7 +738,7 @@ class MapIteratorPrinter(AbstractRBTreeIteratorPrinter):
         self._initialize(val["__i_"], _remove_generics(_prettify_typename(val.type)))
 
     def _get_node_value(self, node):
-        return _cc_field(node)
+        return node["__value_"]
 
 
 class SetIteratorPrinter(AbstractRBTreeIteratorPrinter):

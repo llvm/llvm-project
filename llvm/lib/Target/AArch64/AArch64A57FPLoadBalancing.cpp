@@ -112,9 +112,7 @@ class AArch64A57FPLoadBalancing : public MachineFunctionPass {
 
 public:
   static char ID;
-  explicit AArch64A57FPLoadBalancing() : MachineFunctionPass(ID) {
-    initializeAArch64A57FPLoadBalancingPass(*PassRegistry::getPassRegistry());
-  }
+  explicit AArch64A57FPLoadBalancing() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
@@ -367,8 +365,10 @@ bool AArch64A57FPLoadBalancing::runOnBasicBlock(MachineBasicBlock &MBB) {
 
   // Convert the EquivalenceClasses to a simpler set of sets.
   std::vector<std::vector<Chain*> > V;
-  for (auto I = EC.begin(), E = EC.end(); I != E; ++I) {
-    std::vector<Chain*> Cs(EC.member_begin(I), EC.member_end());
+  for (const auto &E : EC) {
+    if (!E->isLeader())
+      continue;
+    std::vector<Chain *> Cs(EC.member_begin(*E), EC.member_end());
     if (Cs.empty()) continue;
     V.push_back(std::move(Cs));
   }

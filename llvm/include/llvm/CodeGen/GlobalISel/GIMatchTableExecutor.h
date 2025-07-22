@@ -41,7 +41,7 @@ class MachineBasicBlock;
 class ProfileSummaryInfo;
 class APInt;
 class APFloat;
-class GISelKnownBits;
+class GISelValueTracking;
 class MachineInstr;
 class MachineIRBuilder;
 class MachineInstrBuilder;
@@ -588,7 +588,7 @@ public:
   virtual ~GIMatchTableExecutor() = default;
 
   CodeGenCoverage *CoverageInfo = nullptr;
-  GISelKnownBits *KB = nullptr;
+  GISelValueTracking *VT = nullptr;
   MachineFunction *MF = nullptr;
   ProfileSummaryInfo *PSI = nullptr;
   BlockFrequencyInfo *BFI = nullptr;
@@ -598,12 +598,12 @@ public:
   virtual void setupGeneratedPerFunctionState(MachineFunction &MF) = 0;
 
   /// Setup per-MF executor state.
-  virtual void setupMF(MachineFunction &mf, GISelKnownBits *kb,
+  virtual void setupMF(MachineFunction &mf, GISelValueTracking *vt,
                        CodeGenCoverage *covinfo = nullptr,
                        ProfileSummaryInfo *psi = nullptr,
                        BlockFrequencyInfo *bfi = nullptr) {
     CoverageInfo = covinfo;
-    KB = kb;
+    VT = vt;
     MF = &mf;
     PSI = psi;
     BFI = bfi;

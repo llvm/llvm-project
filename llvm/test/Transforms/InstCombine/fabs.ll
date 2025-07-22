@@ -257,9 +257,44 @@ define double @select_fcmp_ole_zero(double %x) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[FABS]]
 ;
+  %lezero = fcmp nnan ole double %x, 0.0
+  %negx = fsub double 0.0, %x
+  %fabs = select i1 %lezero, double %negx, double %x
+  ret double %fabs
+}
+
+define double @select_fcmp_ole_zero_no_nnan(double %x) {
+; CHECK-LABEL: @select_fcmp_ole_zero_no_nnan(
+; CHECK-NEXT:    [[LEZERO:%.*]] = fcmp ole double [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[NEGX:%.*]] = fsub double 0.000000e+00, [[X]]
+; CHECK-NEXT:    [[FABS:%.*]] = select i1 [[LEZERO]], double [[NEGX]], double [[X]]
+; CHECK-NEXT:    ret double [[FABS]]
+;
   %lezero = fcmp ole double %x, 0.0
   %negx = fsub double 0.0, %x
   %fabs = select i1 %lezero, double %negx, double %x
+  ret double %fabs
+}
+
+define double @select_fcmp_ole_zero_no_nnan_input_nofpclass_nan(double nofpclass(nan) %x) {
+; CHECK-LABEL: @select_fcmp_ole_zero_no_nnan_input_nofpclass_nan(
+; CHECK-NEXT:    [[FABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    ret double [[FABS]]
+;
+  %lezero = fcmp ole double %x, 0.0
+  %negx = fsub double 0.0, %x
+  %fabs = select i1 %lezero, double %negx, double %x
+  ret double %fabs
+}
+
+define double @select_fcmp_ole_zero_select_nnan(double %x) {
+; CHECK-LABEL: @select_fcmp_ole_zero_select_nnan(
+; CHECK-NEXT:    [[FABS:%.*]] = call nnan double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    ret double [[FABS]]
+;
+  %lezero = fcmp ole double %x, 0.0
+  %negx = fsub double 0.0, %x
+  %fabs = select nnan i1 %lezero, double %negx, double %x
   ret double %fabs
 }
 
@@ -268,7 +303,7 @@ define double @select_fcmp_nnan_ole_zero(double %x) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[FABS]]
 ;
-  %lezero = fcmp ole double %x, 0.0
+  %lezero = fcmp nnan ole double %x, 0.0
   %negx = fsub nnan double 0.0, %x
   %fabs = select i1 %lezero, double %negx, double %x
   ret double %fabs
@@ -279,7 +314,7 @@ define double @select_nnan_fcmp_nnan_ole_zero(double %x) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call nnan double @llvm.fabs.f64(double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[FABS]]
 ;
-  %lezero = fcmp ole double %x, 0.0
+  %lezero = fcmp nnan ole double %x, 0.0
   %negx = fsub nnan double 0.0, %x
   %fabs = select nnan i1 %lezero, double %negx, double %x
   ret double %fabs
@@ -292,7 +327,7 @@ define double @select_fcmp_nnan_ule_zero(double %x) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[FABS]]
 ;
-  %lezero = fcmp ule double %x, 0.0
+  %lezero = fcmp nnan ule double %x, 0.0
   %negx = fsub nnan double 0.0, %x
   %fabs = select i1 %lezero, double %negx, double %x
   ret double %fabs
@@ -320,7 +355,7 @@ define <2 x float> @select_fcmp_nnan_ole_negzero(<2 x float> %x) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
-  %lezero = fcmp ole <2 x float> %x, <float -0.0, float -0.0>
+  %lezero = fcmp nnan ole <2 x float> %x, <float -0.0, float -0.0>
   %negx = fsub nnan <2 x float> <float 0.0, float poison>, %x
   %fabs = select <2 x i1> %lezero, <2 x float> %negx, <2 x float> %x
   ret <2 x float> %fabs
@@ -331,7 +366,7 @@ define <2 x float> @select_nnan_fcmp_nnan_ole_negzero(<2 x float> %x) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call nnan <2 x float> @llvm.fabs.v2f32(<2 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
-  %lezero = fcmp ole <2 x float> %x, <float -0.0, float -0.0>
+  %lezero = fcmp nnan ole <2 x float> %x, <float -0.0, float -0.0>
   %negx = fsub nnan <2 x float> <float 0.0, float poison>, %x
   %fabs = select nnan <2 x i1> %lezero, <2 x float> %negx, <2 x float> %x
   ret <2 x float> %fabs
@@ -344,7 +379,7 @@ define fp128 @select_fcmp_ogt_zero(fp128 %x) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call fp128 @llvm.fabs.f128(fp128 [[X:%.*]])
 ; CHECK-NEXT:    ret fp128 [[FABS]]
 ;
-  %gtzero = fcmp ogt fp128 %x, zeroinitializer
+  %gtzero = fcmp nnan ogt fp128 %x, zeroinitializer
   %negx = fsub fp128 zeroinitializer, %x
   %fabs = select i1 %gtzero, fp128 %x, fp128 %negx
   ret fp128 %fabs
@@ -382,7 +417,7 @@ define fp128 @select_fcmp_nnan_ogt_zero(fp128 %x) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call fp128 @llvm.fabs.f128(fp128 [[X:%.*]])
 ; CHECK-NEXT:    ret fp128 [[FABS]]
 ;
-  %gtzero = fcmp ogt fp128 %x, zeroinitializer
+  %gtzero = fcmp nnan ogt fp128 %x, zeroinitializer
   %negx = fsub nnan fp128 zeroinitializer, %x
   %fabs = select i1 %gtzero, fp128 %x, fp128 %negx
   ret fp128 %fabs
@@ -393,7 +428,7 @@ define fp128 @select_nnan_fcmp_nnan_ogt_zero(fp128 %x) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call nnan fp128 @llvm.fabs.f128(fp128 [[X:%.*]])
 ; CHECK-NEXT:    ret fp128 [[FABS]]
 ;
-  %gtzero = fcmp ogt fp128 %x, zeroinitializer
+  %gtzero = fcmp nnan ogt fp128 %x, zeroinitializer
   %negx = fsub nnan fp128 zeroinitializer, %x
   %fabs = select nnan i1 %gtzero, fp128 %x, fp128 %negx
   ret fp128 %fabs
@@ -406,7 +441,7 @@ define half @select_fcmp_nnan_ogt_negzero(half %x) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
 ; CHECK-NEXT:    ret half [[FABS]]
 ;
-  %gtzero = fcmp ogt half %x, -0.0
+  %gtzero = fcmp nnan ogt half %x, -0.0
   %negx = fsub nnan half 0.0, %x
   %fabs = select i1 %gtzero, half %x, half %negx
   ret half %fabs
@@ -417,7 +452,7 @@ define half @select_nnan_fcmp_nnan_ogt_negzero(half %x) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call nnan half @llvm.fabs.f16(half [[X:%.*]])
 ; CHECK-NEXT:    ret half [[FABS]]
 ;
-  %gtzero = fcmp ogt half %x, -0.0
+  %gtzero = fcmp nnan ogt half %x, -0.0
   %negx = fsub nnan half 0.0, %x
   %fabs = select nnan i1 %gtzero, half %x, half %negx
   ret half %fabs
@@ -430,7 +465,7 @@ define half @select_fcmp_nnan_ugt_negzero(half %x) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
 ; CHECK-NEXT:    ret half [[FABS]]
 ;
-  %gtzero = fcmp ugt half %x, -0.0
+  %gtzero = fcmp nnan ugt half %x, -0.0
   %negx = fsub nnan half 0.0, %x
   %fabs = select i1 %gtzero, half %x, half %negx
   ret half %fabs

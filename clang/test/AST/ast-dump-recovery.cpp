@@ -34,21 +34,22 @@ void test_invalid_call_1(int s) {
 
 int some_func2(int a, int b);
 void test_invalid_call_2() {
-  // CHECK:   -RecoveryExpr {{.*}} 'int' contains-errors
+  // CHECK:   -RecoveryExpr {{.*}} '<dependent type>' contains-errors
   // CHECK-NEXT: `-UnresolvedLookupExpr {{.*}} '<overloaded function type>' lvalue (ADL) = 'some_func2'
   some_func2(,);
 
-  // CHECK:   -RecoveryExpr {{.*}} 'int' contains-errors
+  // CHECK:   -RecoveryExpr {{.*}} '<dependent type>' contains-errors
   // CHECK-NEXT: `-UnresolvedLookupExpr {{.*}} '<overloaded function type>' lvalue (ADL) = 'some_func2'
   some_func2(,,);
 
-  // CHECK:   `-RecoveryExpr {{.*}} 'int' contains-errors
+  // CHECK:   -RecoveryExpr {{.*}} '<dependent type>' contains-errors
   // CHECK-NEXT: |-UnresolvedLookupExpr {{.*}} '<overloaded function type>' lvalue (ADL) = 'some_func2'
   // CHECK-NEXT: `-IntegerLiteral {{.*}} 'int' 1
   some_func2(1,);
 
-  // FIXME: Handle invalid argument with recovery
-  // CHECK-NOT: `-RecoveryExpr
+  // CHECK:   -RecoveryExpr {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT: |-UnresolvedLookupExpr {{.*}} '<overloaded function type>' lvalue (ADL) = 'some_func2'
+  // CHECK-NEXT: `-IntegerLiteral {{.*}} 'int' 1
   some_func2(,1);
 }
 

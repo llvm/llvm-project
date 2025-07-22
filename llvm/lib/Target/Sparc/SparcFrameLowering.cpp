@@ -14,6 +14,7 @@
 #include "SparcInstrInfo.h"
 #include "SparcMachineFunctionInfo.h"
 #include "SparcSubtarget.h"
+#include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -88,14 +89,7 @@ void SparcFrameLowering::emitPrologue(MachineFunction &MF,
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const SparcSubtarget &Subtarget = MF.getSubtarget<SparcSubtarget>();
-  const SparcInstrInfo &TII =
-      *static_cast<const SparcInstrInfo *>(Subtarget.getInstrInfo());
-  const SparcRegisterInfo &RegInfo =
-      *static_cast<const SparcRegisterInfo *>(Subtarget.getRegisterInfo());
   MachineBasicBlock::iterator MBBI = MBB.begin();
-  // Debug location must be unknown since the first debug location is used
-  // to determine the end of the prologue.
-  DebugLoc dl;
 
   // Get the number of bytes to allocate from the FrameInfo
   int NumBytes = (int) MFI.getStackSize();
@@ -141,26 +135,12 @@ void SparcFrameLowering::emitPrologue(MachineFunction &MF,
 
   emitSPAdjustment(MF, MBB, MBBI, -NumBytes, SAVErr, SAVEri);
 
-  unsigned regFP = RegInfo.getDwarfRegNum(SP::I6, true);
-
-  // Emit ".cfi_def_cfa_register 30".
-  unsigned CFIIndex =
-      MF.addFrameInst(MCCFIInstruction::createDefCfaRegister(nullptr, regFP));
-  BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
-      .addCFIIndex(CFIIndex);
-
-  // Emit ".cfi_window_save".
-  CFIIndex = MF.addFrameInst(MCCFIInstruction::createWindowSave(nullptr));
-  BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
-      .addCFIIndex(CFIIndex);
-
-  unsigned regInRA = RegInfo.getDwarfRegNum(SP::I7, true);
-  unsigned regOutRA = RegInfo.getDwarfRegNum(SP::O7, true);
-  // Emit ".cfi_register 15, 31".
-  CFIIndex = MF.addFrameInst(
-      MCCFIInstruction::createRegister(nullptr, regOutRA, regInRA));
-  BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
-      .addCFIIndex(CFIIndex);
+  if (MF.needsFrameMoves()) {
+    CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::NoFlags);
+    CFIBuilder.buildDefCFARegister(SP::I6);
+    CFIBuilder.buildWindowSave();
+    CFIBuilder.buildRegister(SP::O7, SP::I7);
+  }
 }
 
 MachineBasicBlock::iterator SparcFrameLowering::

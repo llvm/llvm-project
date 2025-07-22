@@ -82,13 +82,13 @@ image_atomic_swap v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_NT
 image_store v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_LU
 // GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: invalid th value
 
-image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_RT_WB
+image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_WB
 // GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: invalid th value
 
 image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_NT_WB
 // GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: invalid th value
 
-image_store v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_RT_WB scope:SCOPE_SYS
+image_store v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_WB scope:SCOPE_SYS
 // GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: scope and th combination is not valid
 
 image_store v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_STORE_BYPASS scope:SCOPE_DEV

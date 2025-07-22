@@ -24,11 +24,15 @@ define void @has_varargs(...) hybrid_patchable nounwind {
 ; CHECK-NEXT:      .p2align 2
 ; CHECK-NEXT:  "#has_varargs$hp_target":               // @"#has_varargs$hp_target"
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:      sub     sp, sp, #32
-; CHECK-NEXT:      stp     x0, x1, [x4, #-32]
-; CHECK-NEXT:      stp     x2, x3, [x4, #-16]
-; CHECK-NEXT:      add     sp, sp, #32
+; CHECK-NEXT:      sub sp, sp, #48
+; CHECK-NEXT:      stp x0, x1, [x4, #-32]!
+; CHECK-NEXT:      stp x2, x3, [x4, #16]
+; CHECK-NEXT:      str x4, [sp, #8]
+; CHECK-NEXT:      add sp, sp, #48
 ; CHECK-NEXT:      ret
+  %valist = alloca ptr
+  call void @llvm.va_start(ptr %valist)
+  call void @llvm.va_end(ptr %valist)
   ret void
 }
 
@@ -81,8 +85,8 @@ define dso_local void @caller() nounwind {
 ; CHECK-NEXT:      adrp    x11, func
 ; CHECK-NEXT:      add     x11, x11, :lo12:func
 ; CHECK-NEXT:      ldr     x8, [x8, :lo12:__os_arm64x_check_icall]
-; CHECK-NEXT:      adrp    x10, ($iexit_thunk$cdecl$v$v)
-; CHECK-NEXT:      add     x10, x10, :lo12:($iexit_thunk$cdecl$v$v)
+; CHECK-NEXT:      adrp    x10, $iexit_thunk$cdecl$v$v
+; CHECK-NEXT:      add     x10, x10, :lo12:$iexit_thunk$cdecl$v$v
 ; CHECK-NEXT:      str     x11, [sp, #8]
 ; CHECK-NEXT:      blr     x8
 ; CHECK-NEXT:      blr     x11
@@ -111,8 +115,8 @@ define dso_local void @caller() nounwind {
 ; CHECK-NEXT:       adrp    x11, func
 ; CHECK-NEXT:       add     x11, x11, :lo12:func
 ; CHECK-NEXT:       ldr     x8, [x8, :lo12:__os_arm64x_dispatch_call]
-; CHECK-NEXT:       adrp    x10, ($iexit_thunk$cdecl$i8$v)
-; CHECK-NEXT:       add     x10, x10, :lo12:($iexit_thunk$cdecl$i8$v)
+; CHECK-NEXT:       adrp    x10, $iexit_thunk$cdecl$i8$v
+; CHECK-NEXT:       add     x10, x10, :lo12:$iexit_thunk$cdecl$i8$v
 ; CHECK-NEXT:       adrp    x9, "#func$hp_target"
 ; CHECK-NEXT:       add     x9, x9, :lo12:"#func$hp_target"
 ; CHECK-NEXT:       blr     x8
@@ -138,8 +142,8 @@ define dso_local void @caller() nounwind {
 ; CHECK-NEXT:       adrp    x11, has_varargs
 ; CHECK-NEXT:       add     x11, x11, :lo12:has_varargs
 ; CHECK-NEXT:       ldr     x8, [x8, :lo12:__os_arm64x_dispatch_call]
-; CHECK-NEXT:       adrp    x10, ($iexit_thunk$cdecl$v$varargs)
-; CHECK-NEXT:       add     x10, x10, :lo12:($iexit_thunk$cdecl$v$varargs)
+; CHECK-NEXT:       adrp    x10, $iexit_thunk$cdecl$v$varargs
+; CHECK-NEXT:       add     x10, x10, :lo12:$iexit_thunk$cdecl$v$varargs
 ; CHECK-NEXT:       adrp    x9, "#has_varargs$hp_target"
 ; CHECK-NEXT:       add     x9, x9, :lo12:"#has_varargs$hp_target"
 ; CHECK-NEXT:       blr     x8
@@ -165,8 +169,8 @@ define dso_local void @caller() nounwind {
 ; CHECK-NEXT:      adrp    x11, has_sret
 ; CHECK-NEXT:      add     x11, x11, :lo12:has_sret
 ; CHECK-NEXT:      ldr     x12, [x9, :lo12:__os_arm64x_dispatch_call]
-; CHECK-NEXT:      adrp    x10, ($iexit_thunk$cdecl$m100$v)
-; CHECK-NEXT:      add     x10, x10, :lo12:($iexit_thunk$cdecl$m100$v)
+; CHECK-NEXT:      adrp    x10, $iexit_thunk$cdecl$m100$v
+; CHECK-NEXT:      add     x10, x10, :lo12:$iexit_thunk$cdecl$m100$v
 ; CHECK-NEXT:      adrp    x9, "#has_sret$hp_target"
 ; CHECK-NEXT:      add     x9, x9, :lo12:"#has_sret$hp_target"
 ; CHECK-NEXT:      blr     x12
@@ -192,8 +196,8 @@ define dso_local void @caller() nounwind {
 ; CHECK-NEXT:      adrp    x11, exp
 ; CHECK-NEXT:      add     x11, x11, :lo12:exp
 ; CHECK-NEXT:      ldr     x8, [x8, :lo12:__os_arm64x_dispatch_call]
-; CHECK-NEXT:      adrp    x10, ($iexit_thunk$cdecl$v$v)
-; CHECK-NEXT:      add     x10, x10, :lo12:($iexit_thunk$cdecl$v$v)
+; CHECK-NEXT:      adrp    x10, $iexit_thunk$cdecl$v$v
+; CHECK-NEXT:      add     x10, x10, :lo12:$iexit_thunk$cdecl$v$v
 ; CHECK-NEXT:      adrp    x9, "#exp$hp_target"
 ; CHECK-NEXT:      add     x9, x9, :lo12:"#exp$hp_target"
 ; CHECK-NEXT:      blr     x8

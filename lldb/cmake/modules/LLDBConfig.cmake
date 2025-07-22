@@ -181,6 +181,17 @@ else ()
 endif ()
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/../clang/include")
 
+if(LLDB_BUILT_STANDALONE)
+  if (TARGET clang-resource-headers)
+    get_target_property(CLANG_RESOURCE_DIR clang-resource-headers INTERFACE_INCLUDE_DIRECTORIES)
+    set(CLANG_RESOURCE_DIR "${CLANG_RESOURCE_DIR}/..")
+  else()
+    set(CLANG_RESOURCE_DIR "${LLDB_EXTERNAL_CLANG_RESOURCE_DIR}")
+  endif()
+else()
+  get_clang_resource_dir(CLANG_RESOURCE_DIR PREFIX "${CMAKE_BINARY_DIR}")
+endif()
+
 # GCC silently accepts any -Wno-<foo> option, but warns about those options
 # being unrecognized only if the compilation triggers other warnings to be
 # printed. Therefore, check for whether the compiler supports options in the

@@ -13,6 +13,7 @@
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -44,9 +45,7 @@ ImmutablePass *llvm::createNVPTXExternalAAWrapperPass() {
   return new NVPTXExternalAAWrapper();
 }
 
-NVPTXAAWrapperPass::NVPTXAAWrapperPass() : ImmutablePass(ID) {
-  initializeNVPTXAAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+NVPTXAAWrapperPass::NVPTXAAWrapperPass() : ImmutablePass(ID) {}
 
 void NVPTXAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
@@ -87,6 +86,12 @@ static AliasResult::Kind getAliasResult(unsigned AS1, unsigned AS2) {
   // TODO: cvta.param is not yet supported. We need to change aliasing
   // rules once it is added.
 
+  // Distributed shared memory aliases with shared memory.
+  if (((AS1 == ADDRESS_SPACE_SHARED) &&
+       (AS2 == ADDRESS_SPACE_SHARED_CLUSTER)) ||
+      ((AS1 == ADDRESS_SPACE_SHARED_CLUSTER) && (AS2 == ADDRESS_SPACE_SHARED)))
+    return AliasResult::MayAlias;
+
   return (AS1 == AS2 ? AliasResult::MayAlias : AliasResult::NoAlias);
 }
 
@@ -114,4 +119,30 @@ ModRefInfo NVPTXAAResult::getModRefInfoMask(const MemoryLocation &Loc,
     return ModRefInfo::NoModRef;
 
   return ModRefInfo::ModRef;
+}
+
+MemoryEffects NVPTXAAResult::getMemoryEffects(const CallBase *Call,
+                                              AAQueryInfo &AAQI) {
+  // Inline assembly with no side-effect or memory clobbers should not
+  // indirectly access memory in the PTX specification.
+  if (const auto *IA = dyn_cast<InlineAsm>(Call->getCalledOperand())) {
+    // Volatile is translated as side-effects.
+    if (IA->hasSideEffects())
+      return MemoryEffects::unknown();
+
+    for (const InlineAsm::ConstraintInfo &Constraint : IA->ParseConstraints()) {
+      // Indirect constraints (e.g. =*m) are unsupported in inline PTX.
+      if (Constraint.isIndirect)
+        return MemoryEffects::unknown();
+
+      // Memory clobbers prevent optimization.
+      if ((Constraint.Type & InlineAsm::ConstraintPrefix::isClobber) &&
+          any_of(Constraint.Codes,
+                 [](const auto &Code) { return Code == "{memory}"; }))
+        return MemoryEffects::unknown();
+    }
+    return MemoryEffects::none();
+  }
+
+  return MemoryEffects::unknown();
 }

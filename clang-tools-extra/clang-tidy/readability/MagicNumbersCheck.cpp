@@ -202,8 +202,7 @@ bool MagicNumbersCheck::isIgnoredValue(const IntegerLiteral *Literal) const {
   if (IgnorePowersOf2IntegerValues && IntValue.isPowerOf2())
     return true;
 
-  return std::binary_search(IgnoredIntegerValues.begin(),
-                            IgnoredIntegerValues.end(), Value);
+  return llvm::binary_search(IgnoredIntegerValues, Value);
 }
 
 bool MagicNumbersCheck::isIgnoredValue(const FloatingLiteral *Literal) const {
@@ -213,14 +212,12 @@ bool MagicNumbersCheck::isIgnoredValue(const FloatingLiteral *Literal) const {
 
   if (&FloatValue.getSemantics() == &llvm::APFloat::IEEEsingle()) {
     const float Value = FloatValue.convertToFloat();
-    return std::binary_search(IgnoredFloatingPointValues.begin(),
-                              IgnoredFloatingPointValues.end(), Value);
+    return llvm::binary_search(IgnoredFloatingPointValues, Value);
   }
 
   if (&FloatValue.getSemantics() == &llvm::APFloat::IEEEdouble()) {
     const double Value = FloatValue.convertToDouble();
-    return std::binary_search(IgnoredDoublePointValues.begin(),
-                              IgnoredDoublePointValues.end(), Value);
+    return llvm::binary_search(IgnoredDoublePointValues, Value);
   }
 
   return false;

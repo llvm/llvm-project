@@ -15,6 +15,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAsmMacro.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
 #include <string>
@@ -22,10 +24,8 @@
 
 namespace llvm {
 
-class MCAsmLexer;
 class MCAsmInfo;
 class MCAsmParserExtension;
-class MCContext;
 class MCExpr;
 class MCInstPrinter;
 class MCInstrInfo;
@@ -136,8 +136,13 @@ private:
   MCTargetAsmParser *TargetParser = nullptr;
 
 protected: // Can only create subclasses.
-  MCAsmParser();
+  MCAsmParser(MCContext &, MCStreamer &, SourceMgr &, const MCAsmInfo &);
 
+  MCContext &Ctx;
+  MCStreamer &Out;
+  SourceMgr &SrcMgr;
+  const MCAsmInfo &MAI;
+  AsmLexer Lexer;
   SmallVector<MCPendingError, 0> PendingErrors;
 
   /// Flag tracking whether any errors have been encountered.
@@ -155,17 +160,11 @@ public:
 
   virtual void addAliasForDirective(StringRef Directive, StringRef Alias) = 0;
 
-  virtual SourceMgr &getSourceManager() = 0;
-
-  virtual MCAsmLexer &getLexer() = 0;
-  const MCAsmLexer &getLexer() const {
-    return const_cast<MCAsmParser*>(this)->getLexer();
-  }
-
-  virtual MCContext &getContext() = 0;
-
-  /// Return the output streamer for the assembler.
-  virtual MCStreamer &getStreamer() = 0;
+  MCContext &getContext() { return Ctx; }
+  MCStreamer &getStreamer() { return Out; }
+  SourceMgr &getSourceManager() { return SrcMgr; }
+  MCAsmLexer &getLexer() { return Lexer; }
+  const MCAsmLexer &getLexer() const { return Lexer; }
 
   MCTargetAsmParser &getTargetParser() const { return *TargetParser; }
   void setTargetParser(MCTargetAsmParser &P);
@@ -309,7 +308,7 @@ public:
   /// on error.
   /// \return - False on success.
   virtual bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
-                                AsmTypeInfo *TypeInfo) = 0;
+                                AsmTypeInfo *TypeInfo = nullptr) = 0;
 
   /// Parse an arbitrary expression, assuming that an initial '(' has
   /// already been consumed.
@@ -333,6 +332,9 @@ public:
 
   /// Parse a .gnu_attribute.
   bool parseGNUAttribute(SMLoc L, int64_t &Tag, int64_t &IntegerValue);
+
+  bool parseAtSpecifier(const MCExpr *&Res, SMLoc &EndLoc);
+  const MCExpr *applySpecifier(const MCExpr *E, uint32_t Variant);
 };
 
 /// Create an MCAsmParser instance for parsing assembly similar to gas syntax

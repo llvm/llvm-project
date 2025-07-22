@@ -11,9 +11,9 @@ define i32 @icmp_i1_eq(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [icmp_i1_eq_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [icmp_i1_eq_param_0];
 ; CHECK-NEXT:    setp.gt.s32 %p1, %r1, 1;
-; CHECK-NEXT:    ld.param.u32 %r2, [icmp_i1_eq_param_1];
+; CHECK-NEXT:    ld.param.b32 %r2, [icmp_i1_eq_param_1];
 ; CHECK-NEXT:    setp.gt.s32 %p2, %r2, 1;
 ; CHECK-NEXT:    xor.pred %p3, %p1, %p2;
 ; CHECK-NEXT:    @%p3 bra $L__BB0_2;
@@ -42,9 +42,9 @@ define i32 @icmp_i1_ne(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [icmp_i1_ne_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [icmp_i1_ne_param_0];
 ; CHECK-NEXT:    setp.gt.s32 %p1, %r1, 1;
-; CHECK-NEXT:    ld.param.u32 %r2, [icmp_i1_ne_param_1];
+; CHECK-NEXT:    ld.param.b32 %r2, [icmp_i1_ne_param_1];
 ; CHECK-NEXT:    setp.gt.s32 %p2, %r2, 1;
 ; CHECK-NEXT:    xor.pred %p3, %p1, %p2;
 ; CHECK-NEXT:    not.pred %p4, %p3;
@@ -74,9 +74,9 @@ define i32 @icmp_i1_sgt(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [icmp_i1_sgt_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [icmp_i1_sgt_param_0];
 ; CHECK-NEXT:    setp.gt.s32 %p1, %r1, 1;
-; CHECK-NEXT:    ld.param.u32 %r2, [icmp_i1_sgt_param_1];
+; CHECK-NEXT:    ld.param.b32 %r2, [icmp_i1_sgt_param_1];
 ; CHECK-NEXT:    setp.lt.s32 %p2, %r2, 2;
 ; CHECK-NEXT:    or.pred %p3, %p1, %p2;
 ; CHECK-NEXT:    @%p3 bra $L__BB2_2;
@@ -105,9 +105,9 @@ define i32 @icmp_i1_slt(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [icmp_i1_slt_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [icmp_i1_slt_param_0];
 ; CHECK-NEXT:    setp.lt.s32 %p1, %r1, 2;
-; CHECK-NEXT:    ld.param.u32 %r2, [icmp_i1_slt_param_1];
+; CHECK-NEXT:    ld.param.b32 %r2, [icmp_i1_slt_param_1];
 ; CHECK-NEXT:    setp.gt.s32 %p2, %r2, 1;
 ; CHECK-NEXT:    or.pred %p3, %p2, %p1;
 ; CHECK-NEXT:    @%p3 bra $L__BB3_2;
@@ -136,9 +136,9 @@ define i32 @icmp_i1_sge(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [icmp_i1_sge_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [icmp_i1_sge_param_0];
 ; CHECK-NEXT:    setp.gt.s32 %p1, %r1, 1;
-; CHECK-NEXT:    ld.param.u32 %r2, [icmp_i1_sge_param_1];
+; CHECK-NEXT:    ld.param.b32 %r2, [icmp_i1_sge_param_1];
 ; CHECK-NEXT:    setp.lt.s32 %p2, %r2, 2;
 ; CHECK-NEXT:    and.pred %p3, %p1, %p2;
 ; CHECK-NEXT:    @%p3 bra $L__BB4_2;
@@ -167,9 +167,9 @@ define i32 @icmp_i1_sle(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [icmp_i1_sle_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [icmp_i1_sle_param_0];
 ; CHECK-NEXT:    setp.lt.s32 %p1, %r1, 2;
-; CHECK-NEXT:    ld.param.u32 %r2, [icmp_i1_sle_param_1];
+; CHECK-NEXT:    ld.param.b32 %r2, [icmp_i1_sle_param_1];
 ; CHECK-NEXT:    setp.gt.s32 %p2, %r2, 1;
 ; CHECK-NEXT:    and.pred %p3, %p2, %p1;
 ; CHECK-NEXT:    @%p3 bra $L__BB5_2;
@@ -198,9 +198,9 @@ define i32 @icmp_i1_uge(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [icmp_i1_uge_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [icmp_i1_uge_param_0];
 ; CHECK-NEXT:    setp.lt.s32 %p1, %r1, 2;
-; CHECK-NEXT:    ld.param.u32 %r2, [icmp_i1_uge_param_1];
+; CHECK-NEXT:    ld.param.b32 %r2, [icmp_i1_uge_param_1];
 ; CHECK-NEXT:    setp.gt.s32 %p2, %r2, 1;
 ; CHECK-NEXT:    and.pred %p3, %p2, %p1;
 ; CHECK-NEXT:    @%p3 bra $L__BB6_2;
@@ -229,9 +229,9 @@ define i32 @icmp_i1_ugt(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [icmp_i1_ugt_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [icmp_i1_ugt_param_0];
 ; CHECK-NEXT:    setp.lt.s32 %p1, %r1, 2;
-; CHECK-NEXT:    ld.param.u32 %r2, [icmp_i1_ugt_param_1];
+; CHECK-NEXT:    ld.param.b32 %r2, [icmp_i1_ugt_param_1];
 ; CHECK-NEXT:    setp.gt.s32 %p2, %r2, 1;
 ; CHECK-NEXT:    or.pred %p3, %p2, %p1;
 ; CHECK-NEXT:    @%p3 bra $L__BB7_2;
@@ -260,9 +260,9 @@ define i32 @icmp_i1_ule(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [icmp_i1_ule_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [icmp_i1_ule_param_0];
 ; CHECK-NEXT:    setp.gt.s32 %p1, %r1, 1;
-; CHECK-NEXT:    ld.param.u32 %r2, [icmp_i1_ule_param_1];
+; CHECK-NEXT:    ld.param.b32 %r2, [icmp_i1_ule_param_1];
 ; CHECK-NEXT:    setp.lt.s32 %p2, %r2, 2;
 ; CHECK-NEXT:    and.pred %p3, %p1, %p2;
 ; CHECK-NEXT:    @%p3 bra $L__BB8_2;
@@ -291,9 +291,9 @@ define i32 @icmp_i1_ult(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [icmp_i1_ult_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [icmp_i1_ult_param_0];
 ; CHECK-NEXT:    setp.gt.s32 %p1, %r1, 1;
-; CHECK-NEXT:    ld.param.u32 %r2, [icmp_i1_ult_param_1];
+; CHECK-NEXT:    ld.param.b32 %r2, [icmp_i1_ult_param_1];
 ; CHECK-NEXT:    setp.lt.s32 %p2, %r2, 2;
 ; CHECK-NEXT:    or.pred %p3, %p1, %p2;
 ; CHECK-NEXT:    @%p3 bra $L__BB9_2;

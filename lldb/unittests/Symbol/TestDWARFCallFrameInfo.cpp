@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
@@ -236,12 +237,12 @@ Symbols:
       ConstString(symbol), eSymbolTypeAny);
   ASSERT_NE(nullptr, sym);
 
-  UnwindPlan plan(eRegisterKindGeneric);
-  ASSERT_TRUE(cfi.GetUnwindPlan(sym->GetAddress(), plan));
-  ASSERT_EQ(3, plan.GetRowCount());
-  EXPECT_EQ(GetExpectedRow0(), *plan.GetRowAtIndex(0));
-  EXPECT_EQ(GetExpectedRow1(), *plan.GetRowAtIndex(1));
-  EXPECT_EQ(GetExpectedRow2(), *plan.GetRowAtIndex(2));
+  std::unique_ptr<UnwindPlan> plan_up = cfi.GetUnwindPlan(sym->GetAddress());
+  ASSERT_TRUE(plan_up);
+  ASSERT_EQ(3, plan_up->GetRowCount());
+  EXPECT_THAT(plan_up->GetRowAtIndex(0), testing::Pointee(GetExpectedRow0()));
+  EXPECT_THAT(plan_up->GetRowAtIndex(1), testing::Pointee(GetExpectedRow1()));
+  EXPECT_THAT(plan_up->GetRowAtIndex(2), testing::Pointee(GetExpectedRow2()));
 }
 
 TEST_F(DWARFCallFrameInfoTest, Basic_dwarf3) {

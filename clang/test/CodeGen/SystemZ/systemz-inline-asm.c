@@ -106,6 +106,14 @@ void test_M(void) {
 // CHECK: call void asm sideeffect "#FOO $0", "M"(i32 2147483647)
 }
 
+_Float16 test_f16(_Float16 a) {
+  _Float16 f;
+  asm("ler %0, %1" : "=f" (f) : "f" (a));
+  return f;
+// CHECK-LABEL: define{{.*}} half @test_f16(half noundef %a)
+// CHECK: call half asm "ler $0, $1", "=f,f"(half %a)
+}
+
 float test_f32(float f, float g) {
   asm("aebr %0, %2" : "=f" (f) : "0" (f), "f" (g));
   return f;

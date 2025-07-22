@@ -91,10 +91,7 @@ static bool isBlockValidForExtraction(const BasicBlock &BB,
   // don't hoist code that uses another basicblock address, as it's likely to
   // lead to unexpected behavior, like cross-function jumps
   SmallPtrSet<User const *, 16> Visited;
-  SmallVector<User const *, 16> ToVisit;
-
-  for (Instruction const &Inst : BB)
-    ToVisit.push_back(&Inst);
+  SmallVector<User const *, 16> ToVisit(llvm::make_pointer_range(BB));
 
   while (!ToVisit.empty()) {
     User const *Curr = ToVisit.pop_back_val();
@@ -170,6 +167,14 @@ static bool isBlockValidForExtraction(const BasicBlock &BB,
     }
 
     if (const CallInst *CI = dyn_cast<CallInst>(I)) {
+      // musttail calls have several restrictions, generally enforcing matching
+      // calling conventions between the caller parent and musttail callee.
+      // We can't usually honor them, because the extracted function has a
+      // different signature altogether, taking inputs/outputs and returning
+      // a control-flow identifier rather than the actual return value.
+      if (CI->isMustTailCall())
+        return false;
+
       if (const Function *F = CI->getCalledFunction()) {
         auto IID = F->getIntrinsicID();
         if (IID == Intrinsic::vastart) {
@@ -238,6 +243,21 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
   }
 
   return Result;
+}
+
+/// isAlignmentPreservedForAddrCast - Return true if the cast operation
+/// for specified target preserves original alignment
+static bool isAlignmentPreservedForAddrCast(const Triple &TargetTriple) {
+  switch (TargetTriple.getArch()) {
+  case Triple::ArchType::amdgcn:
+  case Triple::ArchType::r600:
+    return true;
+  // TODO: Add other architectures for which we are certain that alignment
+  // is preserved during address space cast operations.
+  default:
+    return false;
+  }
+  return false;
 }
 
 CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
@@ -1219,11 +1239,19 @@ static void eraseDebugIntrinsicsWithNonLocalRefs(Function &F) {
   }
 }
 
-/// Fix up the debug info in the old and new functions by pointing line
-/// locations and debug intrinsics to the new subprogram scope, and by deleting
-/// intrinsics which point to values outside of the new function.
+/// Fix up the debug info in the old and new functions. Following changes are
+/// done.
+/// 1. If a debug record points to a value that has been replaced, update the
+///    record to use the new value.
+/// 2. If an Input value that has been replaced was used as a location of a
+///    debug record in the Parent function, then materealize a similar record in
+///    the new function.
+/// 3. Point line locations and debug intrinsics to the new subprogram scope
+/// 4. Remove intrinsics which point to values outside of the new function.
 static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
-                                         CallInst &TheCall) {
+                                         CallInst &TheCall,
+                                         const SetVector<Value *> &Inputs,
+                                         ArrayRef<Value *> NewValues) {
   DISubprogram *OldSP = OldFunc.getSubprogram();
   LLVMContext &Ctx = OldFunc.getContext();
 
@@ -1250,14 +1278,49 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
       /*LineNo=*/0, SPType, /*ScopeLine=*/0, DINode::FlagZero, SPFlags);
   NewFunc.setSubprogram(NewSP);
 
+  auto UpdateOrInsertDebugRecord = [&](auto *DR, Value *OldLoc, Value *NewLoc,
+                                       DIExpression *Expr, bool Declare) {
+    if (DR->getParent()->getParent() == &NewFunc) {
+      DR->replaceVariableLocationOp(OldLoc, NewLoc);
+      return;
+    }
+    if (Declare) {
+      DIB.insertDeclare(NewLoc, DR->getVariable(), Expr, DR->getDebugLoc(),
+                        &NewFunc.getEntryBlock());
+      return;
+    }
+    DIB.insertDbgValueIntrinsic(
+        NewLoc, DR->getVariable(), Expr, DR->getDebugLoc(),
+        NewFunc.getEntryBlock().getTerminator()->getIterator());
+  };
+  for (auto [Input, NewVal] : zip_equal(Inputs, NewValues)) {
+    SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
+    SmallVector<DbgVariableRecord *, 1> DPUsers;
+    findDbgUsers(DbgUsers, Input, &DPUsers);
+    DIExpression *Expr = DIB.createExpression();
+
+    // Iterate the debud users of the Input values. If they are in the extracted
+    // function then update their location with the new value. If they are in
+    // the parent function then create a similar debug record.
+    for (auto *DVI : DbgUsers)
+      UpdateOrInsertDebugRecord(DVI, Input, NewVal, Expr,
+                                isa<DbgDeclareInst>(DVI));
+    for (auto *DVR : DPUsers)
+      UpdateOrInsertDebugRecord(DVR, Input, NewVal, Expr, DVR->isDbgDeclare());
+  }
+
   auto IsInvalidLocation = [&NewFunc](Value *Location) {
-    // Location is invalid if it isn't a constant or an instruction, or is an
-    // instruction but isn't in the new function.
-    if (!Location ||
-        (!isa<Constant>(Location) && !isa<Instruction>(Location)))
+    // Location is invalid if it isn't a constant, an instruction or an
+    // argument, or is an instruction/argument but isn't in the new function.
+    if (!Location || (!isa<Constant>(Location) && !isa<Argument>(Location) &&
+                      !isa<Instruction>(Location)))
       return true;
-    Instruction *LocationInst = dyn_cast<Instruction>(Location);
-    return LocationInst && LocationInst->getFunction() != &NewFunc;
+
+    if (Argument *Arg = dyn_cast<Argument>(Location))
+      return Arg->getParent() != &NewFunc;
+    if (Instruction *LocationInst = dyn_cast<Instruction>(Location))
+      return LocationInst->getFunction() != &NewFunc;
+    return false;
   };
 
   // Debug intrinsics in the new function need to be updated in one of two
@@ -1486,9 +1549,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
       inputs, outputs, EntryFreq, oldFunction->getName() + "." + SuffixToUse,
       StructValues, StructTy);
   newFunction->IsNewDbgInfoFormat = oldFunction->IsNewDbgInfoFormat;
+  SmallVector<Value *> NewValues;
 
   emitFunctionBody(inputs, outputs, StructValues, newFunction, StructTy, header,
-                   SinkingCands);
+                   SinkingCands, NewValues);
 
   std::vector<Value *> Reloads;
   CallInst *TheCall = emitReplacerCall(
@@ -1498,7 +1562,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   insertReplacerCall(oldFunction, header, TheCall->getParent(), outputs,
                      Reloads, ExitWeights);
 
-  fixupDebugInfoPostExtraction(*oldFunction, *newFunction, *TheCall);
+  fixupDebugInfoPostExtraction(*oldFunction, *newFunction, *TheCall, inputs,
+                               NewValues);
 
   LLVM_DEBUG(if (verifyFunction(*newFunction, &errs())) {
     newFunction->dump();
@@ -1563,7 +1628,8 @@ Type *CodeExtractor::getSwitchType() {
 void CodeExtractor::emitFunctionBody(
     const ValueSet &inputs, const ValueSet &outputs,
     const ValueSet &StructValues, Function *newFunction,
-    StructType *StructArgTy, BasicBlock *header, const ValueSet &SinkingCands) {
+    StructType *StructArgTy, BasicBlock *header, const ValueSet &SinkingCands,
+    SmallVectorImpl<Value *> &NewValues) {
   Function *oldFunction = header->getParent();
   LLVMContext &Context = oldFunction->getContext();
 
@@ -1595,7 +1661,6 @@ void CodeExtractor::emitFunctionBody(
 
   // Rewrite all users of the inputs in the extracted region to use the
   // arguments (or appropriate addressing into struct) instead.
-  SmallVector<Value *> NewValues;
   for (unsigned i = 0, e = inputs.size(), aggIdx = 0; i != e; ++i) {
     Value *RewriteVal;
     if (StructValues.contains(inputs[i])) {
@@ -1604,8 +1669,42 @@ void CodeExtractor::emitFunctionBody(
       Idx[1] = ConstantInt::get(Type::getInt32Ty(header->getContext()), aggIdx);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructArgTy, AggArg, Idx, "gep_" + inputs[i]->getName(), newFuncRoot);
-      RewriteVal = new LoadInst(StructArgTy->getElementType(aggIdx), GEP,
-                                "loadgep_" + inputs[i]->getName(), newFuncRoot);
+      LoadInst *LoadGEP =
+          new LoadInst(StructArgTy->getElementType(aggIdx), GEP,
+                       "loadgep_" + inputs[i]->getName(), newFuncRoot);
+      // If we load pointer, we can add optional !align metadata
+      // The existence of the !align metadata on the instruction tells
+      // the optimizer that the value loaded is known to be aligned to
+      // a boundary specified by the integer value in the metadata node.
+      // Example:
+      // %res = load ptr, ptr %input, align 8, !align !align_md_node
+      //                                 ^         ^
+      //                                 |         |
+      //            alignment of %input address    |
+      //                                           |
+      //                                     alignment of %res object
+      if (StructArgTy->getElementType(aggIdx)->isPointerTy()) {
+        unsigned AlignmentValue;
+        const Triple &TargetTriple =
+            newFunction->getParent()->getTargetTriple();
+        const DataLayout &DL = header->getDataLayout();
+        // Pointers without casting can provide more information about
+        // alignment. Use pointers without casts if given target preserves
+        // alignment information for cast the operation.
+        if (isAlignmentPreservedForAddrCast(TargetTriple))
+          AlignmentValue =
+              inputs[i]->stripPointerCasts()->getPointerAlignment(DL).value();
+        else
+          AlignmentValue = inputs[i]->getPointerAlignment(DL).value();
+        MDBuilder MDB(header->getContext());
+        LoadGEP->setMetadata(
+            LLVMContext::MD_align,
+            MDNode::get(
+                header->getContext(),
+                MDB.createConstant(ConstantInt::get(
+                    Type::getInt64Ty(header->getContext()), AlignmentValue))));
+      }
+      RewriteVal = LoadGEP;
       ++aggIdx;
     } else
       RewriteVal = &*ScalarAI++;

@@ -232,7 +232,9 @@ public:
         State.ActiveFlat = true;
 
       // SMEM or VMEM clears hazards
-      if (SIInstrInfo::isVMEM(*MI) || SIInstrInfo::isSMRD(*MI)) {
+      // FIXME: adapt to add FLAT without VALU (so !isLDSDMA())?
+      if ((SIInstrInfo::isVMEM(*MI) && !SIInstrInfo::isFLAT(*MI)) ||
+          SIInstrInfo::isSMRD(*MI)) {
         State.VCCHazard = HazardState::None;
         State.SALUHazards.reset();
         State.VALUHazards.reset();

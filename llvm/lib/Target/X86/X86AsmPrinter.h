@@ -25,6 +25,10 @@ class X86Subtarget;
 class TargetMachine;
 
 class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
+public:
+  static char ID;
+
+private:
   const X86Subtarget *Subtarget = nullptr;
   FaultMaps FM;
   std::unique_ptr<MCCodeEmitter> CodeEmitter;
@@ -112,14 +116,14 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
   void PrintSymbolOperand(const MachineOperand &MO, raw_ostream &O) override;
   void PrintOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
   void PrintModifiedOperand(const MachineInstr *MI, unsigned OpNo,
-                            raw_ostream &O, const char *Modifier);
+                            raw_ostream &O, StringRef Modifier = {});
   void PrintPCRelImm(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
   void PrintLeaMemReference(const MachineInstr *MI, unsigned OpNo,
-                            raw_ostream &O, const char *Modifier);
+                            raw_ostream &O, StringRef Modifier = {});
   void PrintMemReference(const MachineInstr *MI, unsigned OpNo, raw_ostream &O,
-                         const char *Modifier);
+                         StringRef Modifier = {});
   void PrintIntelMemReference(const MachineInstr *MI, unsigned OpNo,
-                              raw_ostream &O, const char *Modifier);
+                              raw_ostream &O, StringRef Modifier = {});
   const MCSubtargetInfo *getIFuncMCSubtargetInfo() const override;
   void emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
                               MCSymbol *LazyPointer) override;

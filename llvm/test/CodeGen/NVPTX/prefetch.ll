@@ -23,7 +23,7 @@ define void @prefetch_local(ptr addrspace(5) %local_ptr) {
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.u64 %rd1, [prefetch_local_param_0];
+; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [prefetch_local_param_0];
 ; CHECK-PTX64-NEXT:    prefetch.local.L1 [%rd1];
 ; CHECK-PTX64-NEXT:    prefetch.local.L2 [%rd1];
 ; CHECK-PTX64-NEXT:    ret;
@@ -38,7 +38,7 @@ define void @prefetch_global(ptr addrspace(1) %global_ptr) {
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.u64 %rd1, [prefetch_global_param_0];
+; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [prefetch_global_param_0];
 ; CHECK-PTX64-NEXT:    prefetch.global.L1 [%rd1];
 ; CHECK-PTX64-NEXT:    prefetch.global.L2 [%rd1];
 ; CHECK-PTX64-NEXT:    prefetch.global.L2::evict_normal [%rd1];
@@ -58,7 +58,7 @@ define void @prefetch_(ptr %ptr) {
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.u64 %rd1, [prefetch__param_0];
+; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [prefetch__param_0];
 ; CHECK-PTX64-NEXT:    prefetch.L1 [%rd1];
 ; CHECK-PTX64-NEXT:    prefetch.L2 [%rd1];
 ; CHECK-PTX64-NEXT:    ret;
@@ -73,7 +73,7 @@ define void @prefetchu_l1(ptr %ptr) {
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.u64 %rd1, [prefetchu_l1_param_0];
+; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [prefetchu_l1_param_0];
 ; CHECK-PTX64-NEXT:    prefetchu.L1 [%rd1];
 ; CHECK-PTX64-NEXT:    ret;
   tail call void @llvm.nvvm.prefetchu.L1(ptr %ptr)

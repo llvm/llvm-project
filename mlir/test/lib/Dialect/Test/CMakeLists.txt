@@ -87,12 +87,12 @@ mlir_target_link_libraries(MLIRTestDialect PUBLIC
   MLIRPtrDialect
   MLIRLLVMDialect
   MLIRPass
-  MLIRPolynomialDialect
   MLIRReduce
   MLIRTensorDialect
   MLIRTransformUtils
   MLIRTransforms
   MLIRValueBoundsOpInterface
+  MLIRBufferizationDialect
 )
 
 add_mlir_translation_library(MLIRTestFromLLVMIRTranslation

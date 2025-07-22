@@ -179,6 +179,7 @@ static constexpr ByteCodeField kInferTypesMarker =
 
 //===----------------------------------------------------------------------===//
 // Generator
+//===----------------------------------------------------------------------===//
 
 namespace {
 struct ByteCodeLiveRange;
@@ -1086,6 +1087,7 @@ void PDLByteCode::initializeMutableState(PDLByteCodeMutableState &state) const {
 
 //===----------------------------------------------------------------------===//
 // ByteCode Execution
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// This class is an instantiation of the PDLResultList that provides access to
@@ -1196,8 +1198,7 @@ private:
   /// Pops a code iterator from the stack, returning true on success.
   void popCodeIt() {
     assert(!resumeCodeIt.empty() && "attempt to pop code off empty stack");
-    curCodeIt = resumeCodeIt.back();
-    resumeCodeIt.pop_back();
+    curCodeIt = resumeCodeIt.pop_back_val();
   }
 
   /// Return the bytecode iterator at the start of the current op code.

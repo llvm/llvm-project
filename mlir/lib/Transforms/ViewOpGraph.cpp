@@ -292,8 +292,8 @@ private:
       operand.printAsOperand(os, OpPrintingFlags());
     });
     // Replace % and # with _
-    std::replace(str.begin(), str.end(), '%', '_');
-    std::replace(str.begin(), str.end(), '#', '_');
+    llvm::replace(str, '%', '_');
+    llvm::replace(str, '#', '_');
     return str;
   }
 

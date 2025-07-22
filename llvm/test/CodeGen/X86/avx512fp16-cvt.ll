@@ -82,7 +82,8 @@ define <8 x half> @f32to4f16_mask(<4 x float> %a, <8 x half> %b, i8 %mask) {
 ;
 ; X86-LABEL: f32to4f16_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vcvtps2phx %xmm0, %xmm1 {%k1}
 ; X86-NEXT:    vmovaps %xmm1, %xmm0
 ; X86-NEXT:    retl
@@ -101,7 +102,8 @@ define <8 x half> @f32to8f16_mask(<8 x float> %a, <8 x half> %b, i8 %mask) {
 ;
 ; X86-LABEL: f32to8f16_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vcvtps2phx %ymm0, %xmm1 {%k1}
 ; X86-NEXT:    vmovaps %xmm1, %xmm0
 ; X86-NEXT:    vzeroupper

@@ -8,6 +8,7 @@ static_library("Vectorize") {
     "//llvm/lib/Transforms/Utils",
   ]
   sources = [
+    "EVLIndVarSimplify.cpp",
     "LoadStoreVectorizer.cpp",
     "LoopIdiomVectorize.cpp",
     "LoopVectorizationLegality.cpp",
@@ -31,7 +32,6 @@ static_library("Vectorize") {
     "VPlan.cpp",
     "VPlanAnalysis.cpp",
     "VPlanConstruction.cpp",
-    "VPlanHCFGBuilder.cpp",
     "VPlanRecipes.cpp",
     "VPlanSLP.cpp",
     "VPlanTransforms.cpp",

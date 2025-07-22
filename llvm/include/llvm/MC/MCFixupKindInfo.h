@@ -9,6 +9,8 @@
 #ifndef LLVM_MC_MCFIXUPKINDINFO_H
 #define LLVM_MC_MCFIXUPKINDINFO_H
 
+#include <cstdint>
+
 namespace llvm {
 
 /// Target independent information on a fixup kind.
@@ -23,11 +25,6 @@ struct MCFixupKindInfo {
 
     /// Should this fixup be evaluated in a target dependent manner?
     FKF_IsTarget = (1 << 2),
-
-    /// This fixup kind should be resolved if defined.
-    /// FIXME This is a workaround because we don't support certain ARM
-    /// relocation types. This flag should eventually be removed.
-    FKF_Constant = 1 << 3,
   };
 
   /// A target specific name for the fixup kind. The names will be unique for
@@ -35,11 +32,11 @@ struct MCFixupKindInfo {
   const char *Name;
 
   /// The bit offset to write the relocation into.
-  unsigned TargetOffset;
+  uint8_t TargetOffset;
 
   /// The number of bits written by this fixup. The bits are assumed to be
   /// contiguous.
-  unsigned TargetSize;
+  uint8_t TargetSize;
 
   /// Flags describing additional information on this fixup kind.
   unsigned Flags;

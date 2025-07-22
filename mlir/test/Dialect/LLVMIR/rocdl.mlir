@@ -636,14 +636,17 @@ llvm.func @rocdl.ds.read.tr(%ptr : !llvm.ptr<3>) -> vector<4xf16> {
   llvm.return %r3 : vector<4xf16>
 }
 
+llvm.func @rocdl.load.to.lds(%src : !llvm.ptr<7>, %dst: !llvm.ptr<3>) {
+  // CHECK-LABEL @rocdl.load.to.lds
+  //CHECK: rocdl.load.to.lds %{{.*}}, %{{.*}}, 4, 0, 0 : <7>
+  rocdl.load.to.lds %src, %dst, 4, 0, 0 : <7>
+  llvm.return
+}
+
 llvm.func @rocdl.global.load.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
-  %aux = llvm.mlir.constant(0 : i32) : i32
-  %offset = llvm.mlir.constant(0 : i32) : i32
-  %size = llvm.mlir.constant(10 : i32) : i32
-
-  //CHECK: rocdl.global.load.lds %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}
-  rocdl.global.load.lds %src, %dst, %size, %offset, %aux
-
+  // CHECK-LABEL @rocdl.global.load.lds
+  //CHECK: rocdl.global.load.lds %{{.*}}, %{{.*}}, 4, 0, 0
+  rocdl.global.load.lds %src, %dst, 4, 0, 0
   llvm.return
 }
 
@@ -765,8 +768,8 @@ llvm.func @rocdl_8bit_floats(%source: i32, %source_half: f16, %source_bfloat: bf
 // CHECK: rocdl.cvt.f32.fp8
 // CHECK: rocdl.cvt.scalef32.f32.bf8
 // CHECK: rocdl.cvt.scalef32.f32.fp8
-// CHECK: rocdl.cvt.scalef32.pk.f16.bf8 
-// CHECK: rocdl.cvt.scalef32.pk.f16.fp8 
+// CHECK: rocdl.cvt.scalef32.pk.f16.bf8
+// CHECK: rocdl.cvt.scalef32.pk.f16.fp8
 // CHECK: rocdl.cvt.scalef32.pk.bf16.bf8
 // CHECK: rocdl.cvt.scalef32.pk.bf16.fp8
 // CHECK: rocdl.cvt.scalef32.f16.fp8
@@ -889,6 +892,16 @@ llvm.func @rocdl.readlane(%src : f32) -> f32 {
 
 // -----
 
+llvm.func @rocdl.permlanex16(%src : f32) -> f32 {
+  %cst0 = llvm.mlir.constant(-1 : i32) : i32
+  // CHECK-LABEL: rocdl.permlanex16
+  // CHECK: rocdl.permlanex16 %{{.*}} %{{.*}}
+  %ret = rocdl.permlanex16 %src, %src, %cst0, %cst0, 0, -1 : f32, i32
+  llvm.return %ret : f32
+}
+
+// -----
+
 // expected-error@below {{attribute attached to unexpected op}}
 func.func private @expected_llvm_func() attributes { rocdl.kernel }
 
@@ -899,4 +912,7 @@ gpu.module @module_1 [#rocdl.target<O = 1, chip = "gfx900", abi = "500", link = 
 }
 
 gpu.module @module_2 [#rocdl.target<chip = "gfx900">, #rocdl.target<chip = "gfx90a">] {
+}
+
+gpu.module @module_3 [#rocdl.target<O = 1, chip = "gfx900", abi = "600", link = ["my_device_lib.bc"], flags = {fast, daz, unsafe_math}>] {
 }

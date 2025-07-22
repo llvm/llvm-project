@@ -31,7 +31,7 @@ public:
   bool isPromotableIntegerTypeForABI(QualType Ty) const;
   bool isCompoundType(QualType Ty) const;
   bool isVectorArgumentType(QualType Ty) const;
-  bool isFPArgumentType(QualType Ty) const;
+  llvm::Type *getFPArgumentType(QualType Ty, uint64_t Size) const;
   QualType GetSingleElementType(QualType Ty) const;
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
@@ -107,7 +107,8 @@ public:
       return nullptr;
 
     llvm::Type *Ty = V->getType();
-    if (Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isFP128Ty()) {
+    if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy() ||
+        Ty->isFP128Ty()) {
       llvm::Module &M = CGM.getModule();
       auto &Ctx = M.getContext();
       llvm::Function *TDCFunc = llvm::Intrinsic::getOrInsertDeclaration(
@@ -179,20 +180,31 @@ bool SystemZABIInfo::isVectorArgumentType(QualType Ty) const {
           getContext().getTypeSize(Ty) <= 128);
 }
 
-bool SystemZABIInfo::isFPArgumentType(QualType Ty) const {
+// The Size argument will in case of af an overaligned single element struct
+// reflect the overalignment value. In such a case the argument will be
+// passed using the type matching Size.
+llvm::Type *SystemZABIInfo::getFPArgumentType(QualType Ty,
+                                              uint64_t Size) const {
   if (IsSoftFloatABI)
-    return false;
+    return nullptr;
 
   if (const BuiltinType *BT = Ty->getAs<BuiltinType>())
     switch (BT->getKind()) {
+    case BuiltinType::Float16:
+      if (Size == 16)
+        return llvm::Type::getHalfTy(getVMContext());
+      LLVM_FALLTHROUGH;
     case BuiltinType::Float:
+      if (Size == 32)
+        return llvm::Type::getFloatTy(getVMContext());
+      LLVM_FALLTHROUGH;
     case BuiltinType::Double:
-      return true;
+      return llvm::Type::getDoubleTy(getVMContext());
     default:
-      return false;
+      return nullptr;
     }
 
-  return false;
+  return nullptr;
 }
 
 QualType SystemZABIInfo::GetSingleElementType(QualType Ty) const {
@@ -277,7 +289,8 @@ RValue SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   } else {
     if (AI.getCoerceToType())
       ArgTy = AI.getCoerceToType();
-    InFPRs = (!IsSoftFloatABI && (ArgTy->isFloatTy() || ArgTy->isDoubleTy()));
+    InFPRs = (!IsSoftFloatABI &&
+              (ArgTy->isHalfTy() || ArgTy->isFloatTy() || ArgTy->isDoubleTy()));
     IsVector = ArgTy->isVectorTy();
     UnpaddedSize = TyInfo.Width;
     DirectAlign = TyInfo.Align;
@@ -447,12 +460,11 @@ ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                      /*ByVal=*/false);
 
-    // The structure is passed as an unextended integer, a float, or a double.
-    if (isFPArgumentType(SingleElementTy)) {
-      assert(Size == 32 || Size == 64);
-      return ABIArgInfo::getDirect(
-          Size == 32 ? llvm::Type::getFloatTy(getVMContext())
-                     : llvm::Type::getDoubleTy(getVMContext()));
+    // The structure is passed as an unextended integer, a half, a float,
+    // or a double.
+    if (llvm::Type *FPArgTy = getFPArgumentType(SingleElementTy, Size)) {
+      assert(Size == 16 || Size == 32 || Size == 64);
+      return ABIArgInfo::getDirect(FPArgTy);
     } else {
       llvm::IntegerType *PassTy = llvm::IntegerType::get(getVMContext(), Size);
       return Size <= 32 ? ABIArgInfo::getNoExtend(PassTy)

@@ -1205,18 +1205,6 @@ void SymtabSection::emitEndFunStab(Defined *defined) {
   stabs.emplace_back(std::move(stab));
 }
 
-// Given a pointer to a function symbol, return the symbol that points to the
-// actual function body that will go in the final binary. Generally this is the
-// symbol itself, but if the symbol was folded using a thunk, we retrieve the
-// target function body from the thunk.
-Defined *SymtabSection::getFuncBodySym(Defined *originalSym) {
-  if (originalSym->identicalCodeFoldingKind == Symbol::ICFFoldKind::None ||
-      originalSym->identicalCodeFoldingKind == Symbol::ICFFoldKind::Body)
-    return originalSym;
-
-  return macho::getBodyForThunkFoldedSym(originalSym);
-}
-
 void SymtabSection::emitStabs() {
   if (config->omitDebugInfo)
     return;
@@ -1252,10 +1240,11 @@ void SymtabSection::emitStabs() {
       if (!file || !file->compileUnit)
         continue;
 
-      // We use 'originalIsec' to get the file id of the symbol since 'isec()'
-      // might point to the merged ICF symbol's file
-      symbolsNeedingStabs.emplace_back(
-          defined, getFuncBodySym(defined)->originalIsec->getFile()->id);
+      // We use the symbol's original InputSection to get the file id,
+      // even for ICF folded symbols, to ensure STABS entries point to the
+      // correct object file where the symbol was originally defined
+      symbolsNeedingStabs.emplace_back(defined,
+                                       defined->originalIsec->getFile()->id);
     }
   }
 
@@ -1270,10 +1259,12 @@ void SymtabSection::emitStabs() {
   InputFile *lastFile = nullptr;
   for (SortingPair &pair : symbolsNeedingStabs) {
     Defined *defined = pair.first;
-    // We use 'originalIsec' of the symbol since we care about the actual origin
-    // of the symbol, not the canonical location returned by `isec()`.
-    Defined *funcBodySym = getFuncBodySym(defined);
-    InputSection *isec = funcBodySym->originalIsec;
+    // When emitting STABS entries for a symbol, always use the original
+    // InputSection of the defined symbol, not the section of the function body
+    // (which might be a different function entirely if ICF folded this
+    // function). This ensures STABS entries point back to the original object
+    // file.
+    InputSection *isec = defined->originalIsec;
     ObjFile *file = cast<ObjFile>(isec->getFile());
 
     if (lastFile == nullptr || lastFile != file) {
@@ -1288,12 +1279,30 @@ void SymtabSection::emitStabs() {
     StabsEntry symStab;
     symStab.sect = isec->parent->index;
     symStab.strx = stringTableSection.addString(defined->getName());
-    symStab.value = funcBodySym->getVA();
+
+    // When using --keep-icf-stabs, we need to use the VA of the actual function
+    // body that the linker will place in the binary. This is the function that
+    // the symbol refers to after ICF folding.
+    if (defined->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk) {
+      // For thunks, we need to get the function they point to
+      Defined *target = getBodyForThunkFoldedSym(defined);
+      symStab.value = target->getVA();
+    } else {
+      symStab.value = defined->getVA();
+    }
 
     if (isCodeSection(isec)) {
       symStab.type = N_FUN;
       stabs.emplace_back(std::move(symStab));
-      emitEndFunStab(funcBodySym);
+      // For the end function marker in STABS, we need to use the size of the
+      // actual function body that exists in the output binary
+      if (defined->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk) {
+        // For thunks, we use the target's size
+        Defined *target = getBodyForThunkFoldedSym(defined);
+        emitEndFunStab(target);
+      } else {
+        emitEndFunStab(defined);
+      }
     } else {
       symStab.type = defined->isExternal() ? N_GSYM : N_STSYM;
       stabs.emplace_back(std::move(symStab));

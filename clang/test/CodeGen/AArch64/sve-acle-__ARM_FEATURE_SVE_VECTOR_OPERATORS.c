@@ -52,9 +52,8 @@ vec2048 x2048 = {0, 1, 2, 3, 3 , 2 , 1, 0, 0, 1, 2, 3, 3 , 2 , 1, 0,
 typedef int8_t vec_int8 __attribute__((vector_size(N / 8)));
 // CHECK128-LABEL: define{{.*}} <16 x i8> @f2(<16 x i8> noundef %x)
 // CHECK128-NEXT:  entry:
-// CHECK128-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
 // CHECK128-NEXT:    [[CASTSCALABLESVE:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> poison, <16 x i8> [[X:%.*]], i64 0)
-// CHECK128-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.asrd.nxv16i8(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[CASTSCALABLESVE]], i32 1)
+// CHECK128-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.asrd.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[CASTSCALABLESVE]], i32 1)
 // CHECK128-NEXT:    [[CASTFIXEDSVE:%.*]] = tail call <16 x i8> @llvm.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> [[TMP1]], i64 0)
 // CHECK128-NEXT:    ret <16 x i8> [[CASTFIXEDSVE]]
 
@@ -62,9 +61,8 @@ typedef int8_t vec_int8 __attribute__((vector_size(N / 8)));
 // CHECK-SAME:   ptr dead_on_unwind noalias writable writeonly sret(<[[#div(VBITS,8)]] x i8>) align 16 captures(none) initializes((0, [[#div(VBITS,8)]])) %agg.result, ptr noundef readonly captures(none) %0)
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[X:%.*]] = load <[[#div(VBITS,8)]] x i8>, ptr [[TMP0:%.*]], align 16, [[TBAA6:!tbaa !.*]]
-// CHECK-NEXT:   [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
 // CHECK-NEXT:   [[CASTSCALABLESVE:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v[[#div(VBITS,8)]]i8(<vscale x 16 x i8> poison, <[[#div(VBITS,8)]] x i8> [[X]], i64 0)
-// CHECK-NEXT:   [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.asrd.nxv16i8(<vscale x 16 x i1> [[TMP1]], <vscale x 16 x i8> [[CASTSCALABLESVE]], i32 1)
+// CHECK-NEXT:   [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.asrd.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[CASTSCALABLESVE]], i32 1)
 // CHECK-NEXT:   [[CASTFIXEDSVE:%.*]] = tail call <[[#div(VBITS,8)]] x i8> @llvm.vector.extract.v[[#div(VBITS,8)]]i8.nxv16i8(<vscale x 16 x i8> [[TMP2]], i64 0)
 // CHECK-NEXT:   store <[[#div(VBITS,8)]] x i8> [[CASTFIXEDSVE]], ptr [[AGG_RESULT:%.*]], align 16, [[TBAA6]]
 // CHECK-NEXT:   ret void

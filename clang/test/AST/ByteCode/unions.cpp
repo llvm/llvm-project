@@ -76,9 +76,10 @@ namespace DefaultInit {
 
   constexpr U1 u1; /// OK.
 
-  constexpr int foo() {
+  constexpr int foo() { // expected-error {{never produces a constant expression}}
     U1 u;
-    return u.a; // both-note {{read of member 'a' of union with active member 'b'}}
+    return u.a; // both-note {{read of member 'a' of union with active member 'b'}} \
+                // expected-note {{read of member 'a' of union with active member 'b'}}
   }
   static_assert(foo() == 42); // both-error {{not an integral constant expression}} \
                               // both-note {{in call to}}
@@ -600,3 +601,41 @@ namespace MoveOrAssignOp {
   static_assert(foo());
 }
 #endif
+
+namespace AddressComparison {
+  union {
+    int a;
+    int c;
+  } U;
+  static_assert(__builtin_addressof(U.a) == (void*)__builtin_addressof(U.c));
+  static_assert(&U.a == &U.c);
+
+
+  struct {
+    union {
+      struct {
+        int a;
+        int b;
+      } a;
+      struct {
+        int b;
+        int a;
+      }b;
+    } u;
+    int b;
+  } S;
+
+  static_assert(&S.u.a.a == &S.u.b.b);
+  static_assert(&S.u.a.b != &S.u.b.b);
+  static_assert(&S.u.a.b == &S.u.b.b); // both-error {{failed}}
+
+
+  union {
+    int a[2];
+    int b[2];
+  } U2;
+
+  static_assert(&U2.a[0] == &U2.b[0]);
+  static_assert(&U2.a[0] != &U2.b[1]);
+  static_assert(&U2.a[0] == &U2.b[1]); // both-error {{failed}}
+}

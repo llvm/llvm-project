@@ -357,10 +357,10 @@ define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
 ; CHECK-NEXT:  .LBB7_2: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB7_4 Depth 2
-; CHECK-NEXT:    sub 5, 6, 4
-; CHECK-NEXT:    cmpld 5, 6
+; CHECK-NEXT:    subc 5, 6, 4
 ; CHECK-NEXT:    li 7, 0
-; CHECK-NEXT:    bgt 0, .LBB7_4
+; CHECK-NEXT:    addze. 8, 7
+; CHECK-NEXT:    beq 0, .LBB7_4
 ; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    mr 7, 5

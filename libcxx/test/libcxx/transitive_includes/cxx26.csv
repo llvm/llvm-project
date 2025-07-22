@@ -301,6 +301,7 @@ experimental/type_traits type_traits
 experimental/type_traits version
 experimental/utility compare
 experimental/utility cstdint
+experimental/utility cstring
 experimental/utility initializer_list
 experimental/utility limits
 experimental/utility utility
@@ -1127,6 +1128,7 @@ unordered_set tuple
 unordered_set version
 utility compare
 utility cstdint
+utility cstring
 utility initializer_list
 utility limits
 utility version

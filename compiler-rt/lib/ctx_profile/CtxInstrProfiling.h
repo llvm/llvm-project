@@ -145,7 +145,9 @@ struct FunctionData {
 #define _PTRDECL(T, N) T *N = nullptr;
 #define _VOLATILE_PTRDECL(T, N) T *volatile N = nullptr;
 #define _MUTEXDECL(N) ::__sanitizer::SpinMutex N;
-  CTXPROF_FUNCTION_DATA(_PTRDECL, _VOLATILE_PTRDECL, _MUTEXDECL)
+#define _CONTEXT_PTR ContextRoot *CtxRoot = nullptr;
+  CTXPROF_FUNCTION_DATA(_PTRDECL, _CONTEXT_PTR, _VOLATILE_PTRDECL, _MUTEXDECL)
+#undef _CONTEXT_PTR
 #undef _PTRDECL
 #undef _VOLATILE_PTRDECL
 #undef _MUTEXDECL
@@ -165,6 +167,11 @@ struct FunctionData {
 /// LLVM.
 inline bool isScratch(const void *Ctx) {
   return (reinterpret_cast<uint64_t>(Ctx) & 1);
+}
+
+// True if Ctx is either nullptr or not the 0x1 value.
+inline bool canBeRoot(const ContextRoot *Ctx) {
+  return reinterpret_cast<uintptr_t>(Ctx) != 1U;
 }
 
 } // namespace __ctx_profile
@@ -207,7 +214,7 @@ ContextNode *__llvm_ctx_profile_get_context(__ctx_profile::FunctionData *FData,
 
 /// Prepares for collection. Currently this resets counter values but preserves
 /// internal context tree structure.
-void __llvm_ctx_profile_start_collection();
+void __llvm_ctx_profile_start_collection(unsigned AutodetectDuration = 0);
 
 /// Completely free allocated memory.
 void __llvm_ctx_profile_free();

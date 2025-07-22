@@ -84,6 +84,10 @@ This document describes the available MLIR passes and their contracts.
 
 [include "NVGPUPasses.md"]
 
+## 'quant' Dialect Passes
+
+[include "QuantPasses.md"]
+
 ## Reducer Passes
 
 [include "ReducerPasses.md"]

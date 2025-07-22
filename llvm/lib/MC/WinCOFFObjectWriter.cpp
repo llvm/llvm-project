@@ -837,9 +837,9 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
                                      const MCFragment *Fragment,
                                      const MCFixup &Fixup, MCValue Target,
                                      uint64_t &FixedValue) {
-  assert(Target.getSymA() && "Relocation must reference a symbol!");
+  assert(Target.getAddSym() && "Relocation must reference a symbol!");
 
-  const MCSymbol &A = Target.getSymA()->getSymbol();
+  const MCSymbol &A = *Target.getAddSym();
   if (!A.isRegistered()) {
     Asm.getContext().reportError(Fixup.getLoc(), Twine("symbol '") +
                                                      A.getName() +

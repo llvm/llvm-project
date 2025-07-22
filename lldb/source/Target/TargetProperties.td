@@ -217,6 +217,9 @@ let Definition = "target" in {
          "launched. If you change this setting, the new value will only apply to "
          "subsequent launches. Commands that take an explicit working directory "
          "will override this setting.">;
+  def ParallelModuleLoad: Property<"parallel-module-load", "Boolean">,
+    DefaultTrue,
+    Desc<"Enable loading of modules in parallel for the dynamic loader.">;
 }
 
 let Definition = "process_experimental" in {
@@ -296,6 +299,9 @@ let Definition = "process" in {
     DefaultEnumValue<"eFollowParent">,
     EnumValues<"OptionEnumValues(g_follow_fork_mode_values)">,
     Desc<"Debugger's behavior upon fork or vfork.">;
+  def TrackMemoryCacheChanges: Property<"track-memory-cache-changes", "Boolean">,
+    DefaultTrue,
+    Desc<"If true, memory cache modifications (which happen often during expressions evaluation) will bump process state ID (and invalidate all synthetic children). Disabling this option helps to avoid synthetic children reevaluation when pretty printers heavily use expressions. The downside of disabled setting is that convenience variables won't reevaluate synthetic children automatically.">;
 }
 
 let Definition = "platform" in {

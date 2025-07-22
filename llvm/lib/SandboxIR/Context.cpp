@@ -360,6 +360,14 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
       It->second = std::unique_ptr<ConstantVector>(
           new ConstantVector(cast<llvm::ConstantVector>(LLVMC), *this));
       break;
+    case llvm::Value::ConstantDataArrayVal:
+      It->second = std::unique_ptr<ConstantDataArray>(
+          new ConstantDataArray(cast<llvm::ConstantDataArray>(LLVMC), *this));
+      break;
+    case llvm::Value::ConstantDataVectorVal:
+      It->second = std::unique_ptr<ConstantDataVector>(
+          new ConstantDataVector(cast<llvm::ConstantDataVector>(LLVMC), *this));
+      break;
     case llvm::Value::FunctionVal:
       It->second = std::unique_ptr<Function>(
           new Function(cast<llvm::Function>(LLVMC), *this));

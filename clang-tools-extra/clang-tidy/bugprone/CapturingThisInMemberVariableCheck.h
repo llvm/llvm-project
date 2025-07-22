@@ -37,6 +37,7 @@ public:
 private:
   ///< store the function wrapper types
   const std::vector<StringRef> FunctionWrapperTypes;
+  const std::vector<StringRef> BindFunctions;
 };
 
 } // namespace clang::tidy::bugprone

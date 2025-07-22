@@ -38,7 +38,7 @@ class allocator;
 // These specializations shouldn't be marked _LIBCPP_DEPRECATED_IN_CXX17.
 // Specializing allocator<void> is deprecated, but not using it.
 template <>
-class _LIBCPP_TEMPLATE_VIS allocator<void> {
+class allocator<void> {
 public:
   _LIBCPP_DEPRECATED_IN_CXX17 typedef void* pointer;
   _LIBCPP_DEPRECATED_IN_CXX17 typedef const void* const_pointer;
@@ -77,7 +77,7 @@ struct __non_trivial_if<true, _Unique> {
 //       allocator<void> trivial in C++20.
 
 template <class _Tp>
-class _LIBCPP_TEMPLATE_VIS allocator : private __non_trivial_if<!is_void<_Tp>::value, allocator<_Tp> > {
+class allocator : private __non_trivial_if<!is_void<_Tp>::value, allocator<_Tp> > {
   static_assert(!is_const<_Tp>::value, "std::allocator does not support const types");
   static_assert(!is_volatile<_Tp>::value, "std::allocator does not support volatile types");
 

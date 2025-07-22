@@ -32,8 +32,7 @@
 
 ; FORCED-LABEL: vector.body:                                      ; preds = %vector.body, %vector.ph
 ; FORCED-NEXT:    %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; FORCED-NEXT:    [[IV_0:%.]] = add i32 %index, 0
-; FORCED-NEXT:    [[GEP:%.+]] = getelementptr i64, ptr %dst, i32 [[IV_0]]
+; FORCED-NEXT:    [[GEP:%.+]] = getelementptr i64, ptr %dst, i32 %index
 ; FORCED-NEXT:    [[GEP2:%.+]] = getelementptr i64, ptr [[GEP]], i32 0
 ; FORCED-NEXT:    store <2 x i64> [[ADD]], ptr [[GEP2]], align 4
 ; FORCED-NEXT:    %index.next = add nuw i32 %index, 2
@@ -83,8 +82,7 @@ declare float @powf(float, float) readnone nounwind
 
 ; FORCED-LABEL: vector.body:                                      ; preds = %vector.body, %vector.ph
 ; FORCED-NEXT:    %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; FORCED-NEXT:    [[IV0:%.+]] = add i32 %index, 0
-; FORCED-NEXT:    [[GEP1:%.+]] = getelementptr float, ptr %dst, i32 [[IV0]]
+; FORCED-NEXT:    [[GEP1:%.+]] = getelementptr float, ptr %dst, i32 %index
 ; FORCED-NEXT:    [[POW:%.+]] = call <2 x float> @llvm.pow.v2f32(<2 x float> %broadcast.splat, <2 x float> %broadcast.splat2)
 ; FORCED-NEXT:    [[GEP2:%.+]] = getelementptr float, ptr [[GEP1]], i32 0
 ; FORCED-NEXT:    store <2 x float> [[POW]], ptr [[GEP2]], align 4

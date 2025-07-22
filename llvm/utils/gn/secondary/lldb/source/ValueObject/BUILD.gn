@@ -24,7 +24,10 @@ static_library("ValueObject") {
   ]
   include_dirs = [ ".." ]
   sources = [
+    "DILAST.cpp",
+    "DILEval.cpp",
     "DILLexer.cpp",
+    "DILParser.cpp",
     "ValueObject.cpp",
     "ValueObjectCast.cpp",
     "ValueObjectChild.cpp",

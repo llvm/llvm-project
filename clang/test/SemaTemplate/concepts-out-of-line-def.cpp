@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -std=c++20 -verify %s
+// RUN: %clang_cc1 -std=c++20 -Wno-c++26-extensions -verify %s
+// RUN: %clang_cc1 -std=c++2c -Wno-c++26-extensions -verify %s
+
 
 static constexpr int PRIMARY = 0;
 static constexpr int SPECIALIZATION_CONCEPT = 1;
@@ -778,4 +780,76 @@ struct S {
 template <typename T>
 consteval void S::mfn() requires (bool(&fn)) {}
 
+}
+
+
+namespace GH138255 {
+
+template <typename... T>
+concept C = true;
+
+struct Func {
+  template<typename... Ts>
+  requires C<Ts...[0]>
+  static auto buggy() -> void;
+
+  template<typename... Ts>
+  requires C<Ts...[0]>
+  friend auto fr() -> void;
+
+  template<typename... Ts>
+  requires C<Ts...[0]>
+  friend auto fr2() -> void{}; // expected-note{{previous definition is here}}
+};
+
+template<typename... Ts>
+requires C<Ts...[0]>
+auto Func::buggy() -> void {}
+
+template<typename... Ts>
+requires C<Ts...[0]>
+auto fr() -> void {}
+
+template<typename... Ts>
+requires C<Ts...[0]>
+auto fr2() -> void {} // expected-error{{redefinition of 'fr2'}}
+
+
+template <typename... Ts>
+requires C<Ts...[0]>
+struct Class;
+
+template <typename... Ts>
+requires C<Ts...[0]>
+struct Class;
+
+
+template <typename...>
+struct TplClass {
+  template<typename... Ts>
+  requires C<Ts...[0]>
+  static auto buggy() -> void;
+};
+
+template<>
+template<typename... Ts>
+requires C<Ts...[0]>
+auto TplClass<int>::buggy() -> void {}
+
+}
+
+namespace PackIndexExpr {
+template <int... T>
+concept C = true;
+
+template <typename...> struct TplClass {
+  template <int... Ts>
+  requires C<Ts...[0]>
+  static auto buggy() -> void;
+};
+
+template <>
+template <int... Ts>
+requires C<Ts...[0]>
+auto TplClass<int>::buggy() -> void {}
 }

@@ -13,7 +13,7 @@ define void @applypriority_global_L2(ptr addrspace(1) %global_ptr, i64 %size) {
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.u64 %rd1, [applypriority_global_L2_param_0];
+; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [applypriority_global_L2_param_0];
 ; CHECK-PTX64-NEXT:    applypriority.global.L2::evict_normal [%rd1], 128;
 ; CHECK-PTX64-NEXT:    ret;
   tail call void @llvm.nvvm.applypriority.global.L2.evict.normal(ptr addrspace(1) %global_ptr, i64 128)
@@ -26,7 +26,7 @@ define void @applypriority_L2(ptr %ptr, i64 %size) {
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.u64 %rd1, [applypriority_L2_param_0];
+; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [applypriority_L2_param_0];
 ; CHECK-PTX64-NEXT:    applypriority.L2::evict_normal [%rd1], 128;
 ; CHECK-PTX64-NEXT:    ret;
   tail call void @llvm.nvvm.applypriority.L2.evict.normal(ptr %ptr, i64 128)

@@ -11,12 +11,18 @@ define amdgpu_ps ptr addrspace(8) @basic_raw_buffer(ptr inreg %p) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
   ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], killed [[S_MOV_B32_]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_AND_B32_]]
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY2]], implicit $exec
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY3]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1234
-  ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 5678
-  ; CHECK-NEXT:   $sgpr0 = COPY [[COPY1]]
-  ; CHECK-NEXT:   $sgpr1 = COPY [[S_AND_B32_]]
-  ; CHECK-NEXT:   $sgpr2 = COPY [[S_MOV_B32_1]]
-  ; CHECK-NEXT:   $sgpr3 = COPY [[S_MOV_B32_2]]
+  ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[S_MOV_B32_1]]
+  ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 5678
+  ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[S_MOV_B32_3]]
+  ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_1]]
+  ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_]]
+  ; CHECK-NEXT:   $sgpr2 = COPY [[S_MOV_B32_2]]
+  ; CHECK-NEXT:   $sgpr3 = COPY [[S_MOV_B32_4]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr %p, i16 0, i32 1234, i32 5678)
   ret ptr addrspace(8) %rsrc
@@ -52,12 +58,18 @@ define amdgpu_ps ptr addrspace(8) @basic_struct_buffer(ptr inreg %p) {
   ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], killed [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 262144
   ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 killed [[S_AND_B32_]], killed [[S_MOV_B32_1]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_OR_B32_]]
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY2]], implicit $exec
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY3]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 1234
-  ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 5678
-  ; CHECK-NEXT:   $sgpr0 = COPY [[COPY1]]
-  ; CHECK-NEXT:   $sgpr1 = COPY [[S_OR_B32_]]
-  ; CHECK-NEXT:   $sgpr2 = COPY [[S_MOV_B32_2]]
-  ; CHECK-NEXT:   $sgpr3 = COPY [[S_MOV_B32_3]]
+  ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[S_MOV_B32_2]]
+  ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 5678
+  ; CHECK-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 killed [[S_MOV_B32_4]]
+  ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_1]]
+  ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_]]
+  ; CHECK-NEXT:   $sgpr2 = COPY [[S_MOV_B32_3]]
+  ; CHECK-NEXT:   $sgpr3 = COPY [[S_MOV_B32_5]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr %p, i16 4, i32 1234, i32 5678)
   ret ptr addrspace(8) %rsrc
@@ -76,10 +88,18 @@ define amdgpu_ps ptr addrspace(8) @variable_top_half(ptr inreg %p, i32 inreg %nu
   ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY2]], killed [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 262144
   ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 killed [[S_AND_B32_]], killed [[S_MOV_B32_1]], implicit-def dead $scc
-  ; CHECK-NEXT:   $sgpr0 = COPY [[COPY3]]
-  ; CHECK-NEXT:   $sgpr1 = COPY [[S_OR_B32_]]
-  ; CHECK-NEXT:   $sgpr2 = COPY [[COPY1]]
-  ; CHECK-NEXT:   $sgpr3 = COPY [[COPY]]
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[S_OR_B32_]]
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY4]], implicit $exec
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY3]]
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY6]], implicit $exec
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
+  ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_1]]
+  ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_]]
+  ; CHECK-NEXT:   $sgpr2 = COPY [[V_READFIRSTLANE_B32_2]]
+  ; CHECK-NEXT:   $sgpr3 = COPY [[V_READFIRSTLANE_B32_3]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr %p, i16 4, i32 %numVals, i32 %flags)
   ret ptr addrspace(8) %rsrc
@@ -99,10 +119,18 @@ define amdgpu_ps ptr addrspace(8) @general_case(ptr inreg %p, i16 inreg %stride,
   ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY3]], killed [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY2]], 16, implicit-def dead $scc
   ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 killed [[S_AND_B32_]], killed [[S_LSHL_B32_]], implicit-def dead $scc
-  ; CHECK-NEXT:   $sgpr0 = COPY [[COPY4]]
-  ; CHECK-NEXT:   $sgpr1 = COPY [[S_OR_B32_]]
-  ; CHECK-NEXT:   $sgpr2 = COPY [[COPY1]]
-  ; CHECK-NEXT:   $sgpr3 = COPY [[COPY]]
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[S_OR_B32_]]
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY5]], implicit $exec
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY6]], implicit $exec
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY7]], implicit $exec
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]], implicit $exec
+  ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_1]]
+  ; CHECK-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_]]
+  ; CHECK-NEXT:   $sgpr2 = COPY [[V_READFIRSTLANE_B32_2]]
+  ; CHECK-NEXT:   $sgpr3 = COPY [[V_READFIRSTLANE_B32_3]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $sgpr0, $sgpr1, $sgpr2, $sgpr3
   %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr %p, i16 %stride, i32 %numVals, i32 %flags)
   ret ptr addrspace(8) %rsrc

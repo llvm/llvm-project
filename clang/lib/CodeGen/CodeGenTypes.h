@@ -207,7 +207,7 @@ public:
 
   /// Free functions are functions that are compatible with an ordinary
   /// C function pointer type.
-  const CGFunctionInfo &arrangeFunctionDeclaration(const FunctionDecl *FD);
+  const CGFunctionInfo &arrangeFunctionDeclaration(const GlobalDecl GD);
   const CGFunctionInfo &arrangeFreeFunctionCall(const CallArgList &Args,
                                                 const FunctionType *Ty,
                                                 bool ChainCall);
@@ -228,6 +228,13 @@ public:
                                     ArrayRef<CanQualType> argTypes);
   const CGFunctionInfo &arrangeBuiltinFunctionCall(QualType resultType,
                                                    const CallArgList &args);
+
+  /// A SYCL kernel caller function is an offload device entry point function
+  /// with a target device dependent calling convention such as amdgpu_kernel,
+  /// ptx_kernel, or spir_kernel.
+  const CGFunctionInfo &
+  arrangeSYCLKernelCallerDeclaration(QualType resultType,
+                                     const FunctionArgList &args);
 
   /// Objective-C methods are C functions with some implicit parameters.
   const CGFunctionInfo &arrangeObjCMethodDeclaration(const ObjCMethodDecl *MD);

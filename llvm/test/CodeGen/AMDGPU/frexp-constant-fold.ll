@@ -10,9 +10,9 @@ define { float, i32 } @frexp_frexp(float %x) {
 ; CHECK-LABEL: frexp_frexp:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_frexp_mant_f32_e32 v2, v0
-; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v1, v0
-; CHECK-NEXT:    v_mov_b32_e32 v0, v2
+; CHECK-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; CHECK-NEXT:    v_frexp_mant_f32_e32 v0, v1
+; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v1, v1
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %frexp0 = call { float, i32 } @llvm.frexp.f32.i32(float %x)
   %frexp0.0 = extractvalue { float, i32 } %frexp0, 0
@@ -24,12 +24,12 @@ define { <2 x float>, <2 x i32> } @frexp_frexp_vector(<2 x float> %x) {
 ; CHECK-LABEL: frexp_frexp_vector:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_frexp_mant_f32_e32 v4, v0
-; CHECK-NEXT:    v_frexp_mant_f32_e32 v5, v1
-; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v2, v0
-; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v3, v1
-; CHECK-NEXT:    v_mov_b32_e32 v0, v4
-; CHECK-NEXT:    v_mov_b32_e32 v1, v5
+; CHECK-NEXT:    v_frexp_mant_f32_e32 v3, v1
+; CHECK-NEXT:    v_frexp_mant_f32_e32 v2, v0
+; CHECK-NEXT:    v_frexp_mant_f32_e32 v0, v2
+; CHECK-NEXT:    v_frexp_mant_f32_e32 v1, v3
+; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v2, v2
+; CHECK-NEXT:    v_frexp_exp_i32_f32_e32 v3, v3
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %frexp0 = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> %x)
   %frexp0.0 = extractvalue { <2 x float>, <2 x i32> } %frexp0, 0

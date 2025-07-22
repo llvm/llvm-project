@@ -705,7 +705,8 @@ private:
   unsigned RadixTreeSize = 0;
 
   Error deserializeV2(const unsigned char *Start, const unsigned char *Ptr);
-  Error deserializeV3(const unsigned char *Start, const unsigned char *Ptr);
+  Error deserializeRadixTreeBased(const unsigned char *Start,
+                                  const unsigned char *Ptr);
 
 public:
   IndexedMemProfReader() = default;

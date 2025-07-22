@@ -65,6 +65,7 @@ static void walkReferencedSymbolNodes(
 
 //===----------------------------------------------------------------------===//
 // CGUseList
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// This struct tracks the uses of callgraph nodes that can be dropped when
@@ -651,7 +652,7 @@ Inliner::Impl::inlineCallsInSCC(InlinerInterfaceImpl &inlinerIface,
     bool inlineInPlace = useList.hasOneUseAndDiscardable(it.targetNode);
 
     LogicalResult inlineResult =
-        inlineCall(inlinerIface, call,
+        inlineCall(inlinerIface, inliner.config.getCloneCallback(), call,
                    cast<CallableOpInterface>(targetRegion->getParentOp()),
                    targetRegion, /*shouldCloneInlinedRegion=*/!inlineInPlace);
     if (failed(inlineResult)) {
@@ -729,19 +730,22 @@ bool Inliner::Impl::shouldInline(ResolvedCall &resolvedCall) {
 
   // Don't allow inlining if the callee has multiple blocks (unstructured
   // control flow) but we cannot be sure that the caller region supports that.
-  bool calleeHasMultipleBlocks =
-      llvm::hasNItemsOrMore(*callableRegion, /*N=*/2);
-  // If both parent ops have the same type, it is safe to inline. Otherwise,
-  // decide based on whether the op has the SingleBlock trait or not.
-  // Note: This check does currently not account for SizedRegion/MaxSizedRegion.
-  auto callerRegionSupportsMultipleBlocks = [&]() {
-    return callableRegion->getParentOp()->getName() ==
-               resolvedCall.call->getParentOp()->getName() ||
-           !resolvedCall.call->getParentOp()
-                ->mightHaveTrait<OpTrait::SingleBlock>();
-  };
-  if (calleeHasMultipleBlocks && !callerRegionSupportsMultipleBlocks())
-    return false;
+  if (!inliner.config.getCanHandleMultipleBlocks()) {
+    bool calleeHasMultipleBlocks =
+        llvm::hasNItemsOrMore(*callableRegion, /*N=*/2);
+    // If both parent ops have the same type, it is safe to inline. Otherwise,
+    // decide based on whether the op has the SingleBlock trait or not.
+    // Note: This check does currently not account for
+    // SizedRegion/MaxSizedRegion.
+    auto callerRegionSupportsMultipleBlocks = [&]() {
+      return callableRegion->getParentOp()->getName() ==
+                 resolvedCall.call->getParentOp()->getName() ||
+             !resolvedCall.call->getParentOp()
+                  ->mightHaveTrait<OpTrait::SingleBlock>();
+    };
+    if (calleeHasMultipleBlocks && !callerRegionSupportsMultipleBlocks())
+      return false;
+  }
 
   if (!inliner.isProfitableToInline(resolvedCall))
     return false;

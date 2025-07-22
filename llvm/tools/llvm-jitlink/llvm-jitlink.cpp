@@ -1243,7 +1243,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
       if ((Err = ES.getBootstrapMapValue<bool, bool>("darwin-use-ehframes-only",
                                                      ForceEHFrames)))
         return;
-      bool UseEHFrames = ForceEHFrames ? *ForceEHFrames : false;
+      bool UseEHFrames = ForceEHFrames.value_or(false);
       if (!UseEHFrames)
         ObjLayer.addPlugin(ExitOnErr(UnwindInfoRegistrationPlugin::Create(ES)));
       else
@@ -2360,7 +2360,7 @@ static Error addLibraries(Session &S,
         SmallVector<char, 256> LibPath;
         LibPath.reserve(SearchPath.size() + strlen("lib") + LL.LibName.size() +
                         LibExt.size() + 2); // +2 for pathsep, null term.
-        llvm::copy(SearchPath, std::back_inserter(LibPath));
+        llvm::append_range(LibPath, SearchPath);
         if (LibExt != ".lib" && LibExt != ".dll")
           sys::path::append(LibPath, "lib" + LL.LibName + LibExt);
         else

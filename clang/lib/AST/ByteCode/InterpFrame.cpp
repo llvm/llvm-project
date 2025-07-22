@@ -107,12 +107,21 @@ void InterpFrame::destroy(unsigned Idx) {
 template <typename T>
 static void print(llvm::raw_ostream &OS, const T &V, ASTContext &ASTCtx,
                   QualType Ty) {
-  V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+  if constexpr (std::is_same_v<Pointer, T>) {
+    if (Ty->isPointerOrReferenceType())
+      V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+    else {
+      if (std::optional<APValue> RValue = V.toRValue(ASTCtx, Ty))
+        RValue->printPretty(OS, ASTCtx, Ty);
+      else
+        OS << "...";
+    }
+  } else {
+    V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+  }
 }
 
 static bool shouldSkipInBacktrace(const Function *F) {
-  if (F->isBuiltin())
-    return true;
   if (F->isLambdaStaticInvoker())
     return true;
 
@@ -124,11 +133,7 @@ static bool shouldSkipInBacktrace(const Function *F) {
 }
 
 void InterpFrame::describe(llvm::raw_ostream &OS) const {
-  // We create frames for builtin functions as well, but we can't reliably
-  // diagnose them. The 'in call to' diagnostics for them add no value to the
-  // user _and_ it doesn't generally work since the argument types don't always
-  // match the function prototype. Just ignore them.
-  // Similarly, for lambda static invokers, we would just print __invoke().
+  // For lambda static invokers, we would just print __invoke().
   if (const auto *F = getFunction(); F && shouldSkipInBacktrace(F))
     return;
 
