@@ -30,7 +30,6 @@ namespace llvm {
 
 class APInt;
 class MachineFunction;
-
 class ScheduleDAGMutation;
 class CallLowering;
 class GlobalValue;
