@@ -2390,10 +2390,10 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   return true;
 }
 
-void VPlanTransforms::simplifyEVLIVs(VPlan &Plan) {
+void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
-  // Find EVL loop entries by locating VPEVLBasedIVPHIRecipe
-  // There should be only one EVL PHI in the entire plan
+  // Find EVL loop entries by locating VPEVLBasedIVPHIRecipe.
+  // There should be only one EVL PHI in the entire plan.
   VPEVLBasedIVPHIRecipe *EVLPhi = nullptr;
 
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
@@ -2404,11 +2404,11 @@ void VPlanTransforms::simplifyEVLIVs(VPlan &Plan) {
         EVLPhi = PhiR;
       }
 
-  // Early return if no EVL PHI is found
+  // Early return if no EVL PHI is found.
   if (!EVLPhi)
     return;
 
-  VPBasicBlock *Entry = EVLPhi->getParent();
+  VPBasicBlock *HeaderVPBB = EVLPhi->getParent();
   VPValue *EVLIncrement = EVLPhi->getBackedgeValue();
 
   // Convert EVLPhi to concrete recipe.
@@ -2418,32 +2418,29 @@ void VPlanTransforms::simplifyEVLIVs(VPlan &Plan) {
   EVLPhi->replaceAllUsesWith(ScalarR);
   EVLPhi->eraseFromParent();
 
-  // Replace CanonicalIVInc with EVL-PHI increment
-  VPRecipeBase *CanonicalIV = &*Entry->begin();
-  assert(dyn_cast<VPPhi>(CanonicalIV) && "Unexpected canoincal iv");
+  // Replace CanonicalIVInc with EVL-PHI increment.
+  VPRecipeBase *CanonicalIV = &*HeaderVPBB->begin();
+  assert(
+      isa<VPPhi>(CanonicalIV) &&
+      match(CanonicalIV->getOperand(1),
+            m_c_Binary<Instruction::Add>(m_Specific(cast<VPPhi>(CanonicalIV)),
+                                         m_Specific(&Plan.getVFxUF()))) &&
+      "Unexpected canoincal iv");
   VPValue *Backedge = CanonicalIV->getOperand(1);
   Backedge->replaceAllUsesWith(EVLIncrement);
 
-  // Remove unused phi
+  // Remove unused phi and increment.
   VPRecipeBase *CanonicalIVIncrement = Backedge->getDefiningRecipe();
   CanonicalIVIncrement->eraseFromParent();
   CanonicalIV->eraseFromParent();
 
-  // Find the latch-exiting block and replace use of VectorTripCount
+  // Replace the use of VectorTripCount in the latch-exiting block.
   // Before: (branch-on-count EVLIVInc, VectorTripCount)
   // After: (branch-on-count EVLIVInc, TripCount)
-  auto Range =
-      VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(Entry));
-  auto It = find_if(Range, [&Entry](VPBasicBlock *VPBB) {
-    return any_of(VPBB->successors(),
-                  [&Entry](VPBlockBase *Succ) { return Succ == Entry; });
-  });
-  assert((It != Range.end()) && "LatchExiting is not found");
 
-  VPBasicBlock *LatchExiting = *It;
-
+  VPBasicBlock *LatchExiting =
+      HeaderVPBB->getPredecessors()[1]->getEntryBasicBlock();
   auto *LatchExitingBr = cast<VPInstruction>(LatchExiting->getTerminator());
-
   // Skip single-iteration loop region
   if (match(LatchExitingBr, m_BranchOnCond(m_True())))
     return;
