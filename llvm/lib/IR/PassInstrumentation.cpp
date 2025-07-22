@@ -27,7 +27,7 @@ void PassInstrumentationCallbacks::addClassToPassName(StringRef ClassName,
   ClassToPassName.try_emplace(ClassName, PassName.str());
 }
 
-std::optional<StringRef>
+StringRef
 PassInstrumentationCallbacks::getPassNameForClassName(StringRef ClassName) {
   if (!ClassToPassNameCallbacks.empty()) {
     for (auto &Fn : ClassToPassNameCallbacks)
@@ -37,7 +37,7 @@ PassInstrumentationCallbacks::getPassNameForClassName(StringRef ClassName) {
   auto PassNameIter = ClassToPassName.find(ClassName);
   if (PassNameIter != ClassToPassName.end())
     return PassNameIter->second;
-  return std::nullopt;
+  return {};
 }
 
 AnalysisKey PassInstrumentationAnalysis::Key;

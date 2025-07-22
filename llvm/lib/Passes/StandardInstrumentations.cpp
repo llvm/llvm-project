@@ -454,12 +454,12 @@ template <typename T>
 void ChangeReporter<T>::registerRequiredCallbacks(
     PassInstrumentationCallbacks &PIC) {
   PIC.registerBeforeNonSkippedPassCallback([&PIC, this](StringRef P, Any IR) {
-    saveIRBeforePass(IR, P, PIC.getPassNameForClassName(P).value_or(""));
+    saveIRBeforePass(IR, P, PIC.getPassNameForClassName(P));
   });
 
   PIC.registerAfterPassCallback(
       [&PIC, this](StringRef P, Any IR, const PreservedAnalyses &) {
-        handleIRAfterPass(IR, P, PIC.getPassNameForClassName(P).value_or(""));
+        handleIRAfterPass(IR, P, PIC.getPassNameForClassName(P));
       });
   PIC.registerAfterPassInvalidatedCallback(
       [this](StringRef P, const PreservedAnalyses &) {
@@ -970,7 +970,7 @@ bool PrintIRInstrumentation::shouldPrintBeforePass(StringRef PassID) {
   if (shouldPrintBeforeAll())
     return true;
 
-  StringRef PassName = PIC->getPassNameForClassName(PassID).value_or("");
+  StringRef PassName = PIC->getPassNameForClassName(PassID);
   return is_contained(printBeforePasses(), PassName);
 }
 
@@ -978,7 +978,7 @@ bool PrintIRInstrumentation::shouldPrintAfterPass(StringRef PassID) {
   if (shouldPrintAfterAll())
     return true;
 
-  StringRef PassName = PIC->getPassNameForClassName(PassID).value_or("");
+  StringRef PassName = PIC->getPassNameForClassName(PassID);
   return is_contained(printAfterPasses(), PassName);
 }
 
@@ -1080,10 +1080,10 @@ void OptPassGateInstrumentation::registerCallbacks(
 
   PIC.registerShouldRunOptionalPassCallback(
       [this, &PIC](StringRef ClassName, Any IR) {
-        auto PassName = PIC.getPassNameForClassName(ClassName);
-        if (!PassName)
+        StringRef PassName = PIC.getPassNameForClassName(ClassName);
+        if (PassName.empty())
           return this->shouldRun(ClassName, IR);
-        return this->shouldRun(*PassName, IR);
+        return this->shouldRun(PassName, IR);
       });
 }
 
@@ -2501,8 +2501,7 @@ void PrintCrashIRInstrumentation::registerCallbacks(
         raw_string_ostream OS(SavedIR);
         OS << formatv("*** Dump of {0}IR Before Last Pass {1}",
                       llvm::forcePrintModuleIR() ? "Module " : "", PassID);
-        if (!isInteresting(IR, PassID,
-                           PIC.getPassNameForClassName(PassID).value_or(""))) {
+        if (!isInteresting(IR, PassID, PIC.getPassNameForClassName(PassID))) {
           OS << " Filtered Out ***\n";
           return;
         }

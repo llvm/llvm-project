@@ -681,8 +681,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::setStartStopPasses(
       }
 
       auto PassName = PIC->getPassNameForClassName(ClassName);
-      if (PassName && Info.StartPass == *PassName &&
-          ++Count == Info.StartInstanceNum)
+      if (Info.StartPass == PassName && ++Count == Info.StartInstanceNum)
         Started = !Info.StartAfter;
 
       return Started;

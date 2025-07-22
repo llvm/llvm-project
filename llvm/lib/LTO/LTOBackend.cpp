@@ -346,7 +346,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
     raw_string_ostream OS(PipelineStr);
     MPM.printPipeline(OS, [&PIC](StringRef ClassName) {
       auto PassName = PIC.getPassNameForClassName(ClassName);
-      return PassName ? ClassName : *PassName;
+      return PassName.empty() ? ClassName : PassName;
     });
     outs() << "pipeline-passes: " << PipelineStr << '\n';
   }
