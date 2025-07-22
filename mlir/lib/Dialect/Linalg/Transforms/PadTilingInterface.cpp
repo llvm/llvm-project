@@ -55,6 +55,28 @@ getFullRankPaddingSizes(Builder &b, ArrayRef<OpFoldResult> indexingSizes,
   return paddingSizes;
 }
 
+/// Extracts the constant multiplier from an affine expression of the form
+/// `d * c` or `c * d`, where `d` is an AffineDimExpr and `c` is an
+/// AffineConstantExpr. Returns 1 if the expression is not a simple
+/// multiplication of a dimension and a constant.
+static int64_t extractConstantMultiplier(AffineExpr expr) {
+  if (auto binOp = dyn_cast<AffineBinaryOpExpr>(expr)) {
+    if (binOp.getKind() == AffineExprKind::Mul) {
+      auto lhsD = dyn_cast<AffineDimExpr>(binOp.getLHS());
+      auto rhsC = dyn_cast<AffineConstantExpr>(binOp.getRHS());
+      if (lhsD && rhsC) {
+        return rhsC.getValue();
+      }
+      auto lhsC = dyn_cast<AffineConstantExpr>(binOp.getLHS());
+      auto rhsD = dyn_cast<AffineDimExpr>(binOp.getRHS());
+      if (lhsC && rhsD) {
+        return lhsC.getValue();
+      }
+    }
+  }
+  return 1;
+}
+
 /// Compute the padded shape of the given value `v` of `RankedTensorType` given
 ///   - `indexingSizes` a list of OpFoldResult.
 ///   - an `indexingMap` that encodes how the shape of varies with increases
@@ -131,12 +153,14 @@ SmallVector<OpFoldResult> linalg::computePaddedShape(
             rewriter, loc, projectedMap, paddingSize);
       }
 
-      // Adjust for the maximum accessed index which is (padding_size - 1).
+      // Adjust for the maximum accessed index, which is (paddingSize - 1) *
+      // multiplier.
       AffineExpr d0;
       bindDims(rewriter.getContext(), d0);
-      AffineMap subtractOneMap = AffineMap::get(1, 0, d0 - 1);
+      int64_t multiplier = extractConstantMultiplier(projectedMap.getResult(0));
+      AffineMap subtractMap = AffineMap::get(1, 0, d0 - multiplier);
       OpFoldResult maxAccessIdx = affine::makeComposedFoldedAffineApply(
-          rewriter, loc, subtractOneMap, {paddingDimOfr});
+          rewriter, loc, subtractMap, {paddingDimOfr});
       terms.push_back(maxAccessIdx);
 
       LLVM_DEBUG(DBGS() << "------new term: " << terms.back() << "\n");
