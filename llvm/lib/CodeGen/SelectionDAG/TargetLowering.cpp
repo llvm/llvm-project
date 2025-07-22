@@ -10942,6 +10942,10 @@ SDValue TargetLowering::expandCMP(SDNode *Node, SelectionDAG &DAG) const {
   SDValue IsLT = DAG.getSetCC(dl, BoolVT, LHS, RHS, LTPredicate);
   SDValue IsGT = DAG.getSetCC(dl, BoolVT, LHS, RHS, GTPredicate);
 
+  if (isa<VTSDNode>(RHS->getOperand(1)) &&
+      cast<VTSDNode>(RHS->getOperand(1))->getVT().getScalarSizeInBits() == 1) {
+    return DAG.getNode(ISD::SUB, dl, VT, LHS, RHS);
+  }
   // We can't perform arithmetic on i1 values. Extending them would
   // probably result in worse codegen, so let's just use two selects instead.
   // Some targets are also just better off using selects rather than subtraction
