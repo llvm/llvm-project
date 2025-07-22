@@ -1868,6 +1868,7 @@ void AsmPrinter::emitFunctionBody() {
         OutStreamer->emitLabel(MI.getOperand(0).getMCSymbol());
         break;
       case TargetOpcode::EH_LABEL:
+        OutStreamer->AddComment("EH_LABEL");
         OutStreamer->emitLabel(MI.getOperand(0).getMCSymbol());
         // For AsynchEH, insert a Nop if followed by a trap inst
         //   Or the exception won't be caught.
