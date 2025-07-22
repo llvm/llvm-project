@@ -3061,44 +3061,34 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
 
   // v2i32 xor/or/and are legal. A vselect using these instructions as operands
   // is scalarised into two selects with EXTRACT_VECTOR_ELT operands. Peek
-  // through this extract if possible.
-  auto getVectorBitWiseOp = [](SDValue S) -> SDValue {
-    if (S->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-      SDValue VecOp = S->getOperand(0);
-      if (VecOp.getOpcode() == ISD::XOR || VecOp.getOpcode() == ISD::AND ||
-          VecOp.getOpcode() == ISD::OR)
-        return VecOp;
-    }
-    return SDValue();
-  };
+  // through the extract to the bitwise op.
 
-  SDValue Vec = getVectorBitWiseOp(Src);
-  SDValue BWSrc = Vec ? Vec : Src;
+  SDValue PeekSrc = Src->getOpcode() == ISD::EXTRACT_VECTOR_ELT ? Src->getOperand(0) : Src;
   // Convert various sign-bit masks to src mods. Currently disabled for 16-bit
   // types as the codegen replaces the operand without adding a srcmod.
   // This is intentionally finding the cases where we are performing float neg
   // and abs on int types, the goal is not to obtain two's complement neg or
   // abs.
   // TODO: Add 16-bit support.
-  unsigned Opc = Vec ? Vec->getOpcode() : Src->getOpcode();
+  unsigned Opc = PeekSrc.getOpcode();
   EVT VT = Src.getValueType();
   if ((Opc != ISD::AND && Opc != ISD::OR && Opc != ISD::XOR) ||
       (VT != MVT::i32 && VT != MVT::v2i32 && VT != MVT::i64))
     return true;
 
   ConstantSDNode *CRHS =
-      isConstOrConstSplat(Vec ? Vec->getOperand(1) : Src->getOperand(1));
+      isConstOrConstSplat(PeekSrc ? PeekSrc->getOperand(1) : Src->getOperand(1));
   if (!CRHS)
     return true;
 
   auto ReplaceSrc = [&]() -> SDValue {
-    if (Vec) {
-      SDValue LHS = BWSrc->getOperand(0);
+    if (Src->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+      SDValue LHS = PeekSrc->getOperand(0);
       SDValue Index = Src->getOperand(1);
       return Src = CurDAG->getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(Src),
                                    Src.getValueType(), LHS, Index);
     }
-    return Src = BWSrc.getOperand(0);
+    return Src = PeekSrc.getOperand(0);
   };
 
   // Recognise (xor a, 0x80000000) as NEG SrcMod.
