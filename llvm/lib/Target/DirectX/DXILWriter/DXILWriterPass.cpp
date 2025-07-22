@@ -82,7 +82,6 @@ static void legalizeLifetimeIntrinsics(Module &M) {
 
 static void removeLifetimeIntrinsics(Module &M) {
   for (Function &F : make_early_inc_range(M)) {
-
     if (Intrinsic::ID IID = F.getIntrinsicID();
         IID != Intrinsic::lifetime_start && IID != Intrinsic::lifetime_end)
       continue;
