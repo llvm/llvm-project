@@ -5294,7 +5294,7 @@ InstructionCost AArch64TTIImpl::getExtendedReductionCost(
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
   if (Opcode == Instruction::Add && VecVT.isSimple() && ResVT.isSimple() &&
-      VecVT.getSizeInBits() >= 64) {
+      VecVT.isFixedLengthVector() && VecVT.getSizeInBits() >= 64) {
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VecTy);
 
     // The legal cases are:
