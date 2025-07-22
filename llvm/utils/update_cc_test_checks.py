@@ -359,11 +359,6 @@ def update_test(ti: common.TestInfo):
         # and append args.clang_args
         clang_args = exec_args
         # DO_NOT_UPSTREAM(BoundsSafety) ON
-        original_subst = clang_args[0] # Apple Internal
-        # DO_NOT_UPSTREAM(BoundsSafety) OFF
-        clang_args[0:1] = SUBST[clang_args[0]]
-
-        # DO_NOT_UPSTREAM(BoundsSafety) ON
         # The -fbounds-safety tests under:
         #
         # * `clang/test/BoundsSafety` expect to be run with the new bounds checks enabled.
@@ -377,16 +372,17 @@ def update_test(ti: common.TestInfo):
         #
         # This can be removed once support for the legacy bounds checks are
         # removed (rdar://134095901)
+        original_subst = clang_args[0] # Apple Internal
         if is_bounds_safety_test_with_new_bounds_checks(ti) and original_subst == "%clang_cc1":
-            enable_bounds_safety_checks_flag = '-fbounds-safety-bringup-missing-checks=batch_0'
-            print(f"Implicitly adding {enable_bounds_safety_checks_flag}")
-            clang_args.append(enable_bounds_safety_checks_flag)
-
-        if is_bounds_safety_test_with_legacy_bounds_checks(ti) and original_subst == "%clang_cc1":
-            enable_bounds_safety_legacy_checks_flag = '-fno-bounds-safety-bringup-missing-checks=all'
-            print(f"Implicitly adding {enable_bounds_safety_legacy_checks_flag}")
-            clang_args.append(enable_bounds_safety_legacy_checks_flag)
+            default_bounds_safety_checks_flag = ['-fbounds-safety-bringup-missing-checks=batch_0']
+            print(f"Implicitly adding {default_bounds_safety_checks_flag[0]}")
+        elif is_bounds_safety_test_with_legacy_bounds_checks(ti) and original_subst == "%clang_cc1":
+            default_bounds_safety_checks_flag = ['-fno-bounds-safety-bringup-missing-checks=all']
+            print(f"Implicitly adding {default_bounds_safety_checks_flag[0]}")
+        else:
+            default_bounds_safety_checks_flag = []
         # DO_NOT_UPSTREAM(BoundsSafety) OFF
+        clang_args[0:1] = SUBST[clang_args[0]] + default_bounds_safety_checks_flag
 
         for s in subs:
             clang_args = [i.replace(s, subs[s]) if s in i else i for i in clang_args]
