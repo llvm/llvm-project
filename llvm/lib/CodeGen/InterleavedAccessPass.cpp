@@ -268,17 +268,9 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   if (isa<ScalableVectorType>(Load->getType()))
     return false;
 
-  if (auto *LI = dyn_cast<LoadInst>(Load)) {
-    if (!LI->isSimple())
-      return false;
-  } else if (auto *VPLoad = dyn_cast<VPIntrinsic>(Load)) {
-    assert(VPLoad->getIntrinsicID() == Intrinsic::vp_load);
-    // Require a constant mask.
-    if (!isa<ConstantVector>(VPLoad->getMaskParam()))
-      return false;
-  } else {
-    llvm_unreachable("unsupported load operation");
-  }
+  if (auto *LI = dyn_cast<LoadInst>(Load);
+      LI && !LI->isSimple())
+    return false;
 
   // Check if all users of this load are shufflevectors. If we encounter any
   // users that are extractelement instructions or binary operators, we save
@@ -497,9 +489,6 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
     StoredValue = SI->getValueOperand();
   } else if (auto *VPStore = dyn_cast<VPIntrinsic>(Store)) {
     assert(VPStore->getIntrinsicID() == Intrinsic::vp_store);
-    // Require a constant mask.
-    if (!isa<ConstantVector>(VPStore->getMaskParam()))
-      return false;
     StoredValue = VPStore->getArgOperand(0);
   } else {
     llvm_unreachable("unsupported store operation");
