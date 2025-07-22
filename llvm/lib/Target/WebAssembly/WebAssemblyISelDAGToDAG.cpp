@@ -123,7 +123,7 @@ static SDValue getTagSymNode(int Tag, SelectionDAG *DAG) {
 static APInt encodeFunctionSignature(SelectionDAG *DAG, SDLoc &DL,
                                      SmallVector<MVT, 4> &Returns,
                                      SmallVector<MVT, 4> &Params) {
-  auto toWasmValType = [&DAG, &DL](MVT VT) {
+  auto toWasmValType = [&](MVT VT) {
     if (VT == MVT::i32) {
       return wasm::ValType::I32;
     }
