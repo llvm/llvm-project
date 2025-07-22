@@ -1317,15 +1317,15 @@ mlir::Type getTypeFromBounds(llvm::SmallVector<mlir::Value> &bounds,
 }
 
 template <typename RecipeOp>
-static void genPrivatizationRecipes(
-    const Fortran::parser::AccObjectList &objectList,
-    Fortran::lower::AbstractConverter &converter,
-    Fortran::semantics::SemanticsContext &semanticsContext,
-    Fortran::lower::StatementContext &stmtCtx,
-    llvm::SmallVectorImpl<mlir::Value> &dataOperands,
-    llvm::ArrayRef<mlir::Value> async,
-    llvm::ArrayRef<mlir::Attribute> asyncDeviceTypes,
-    llvm::ArrayRef<mlir::Attribute> asyncOnlyDeviceTypes) {
+static void
+genPrivatizationRecipes(const Fortran::parser::AccObjectList &objectList,
+                        Fortran::lower::AbstractConverter &converter,
+                        Fortran::semantics::SemanticsContext &semanticsContext,
+                        Fortran::lower::StatementContext &stmtCtx,
+                        llvm::SmallVectorImpl<mlir::Value> &dataOperands,
+                        llvm::ArrayRef<mlir::Value> async,
+                        llvm::ArrayRef<mlir::Attribute> asyncDeviceTypes,
+                        llvm::ArrayRef<mlir::Attribute> asyncOnlyDeviceTypes) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
   for (const auto &accObject : objectList.v) {
@@ -2011,14 +2011,14 @@ mlir::Type getTypeFromIvTypeSize(fir::FirOpBuilder &builder,
   return builder.getIntegerType(ivTypeSize * 8);
 }
 
-static void
-privatizeIv(Fortran::lower::AbstractConverter &converter,
-            const Fortran::semantics::Symbol &sym, mlir::Location loc,
-            llvm::SmallVector<mlir::Type> &ivTypes,
-            llvm::SmallVector<mlir::Location> &ivLocs,
-            llvm::SmallVector<mlir::Value> &privateOperands,
-            llvm::SmallVector<mlir::Value> &ivPrivate,
-            bool isDoConcurrent = false) {
+static void privatizeIv(Fortran::lower::AbstractConverter &converter,
+                        const Fortran::semantics::Symbol &sym,
+                        mlir::Location loc,
+                        llvm::SmallVector<mlir::Type> &ivTypes,
+                        llvm::SmallVector<mlir::Location> &ivLocs,
+                        llvm::SmallVector<mlir::Value> &privateOperands,
+                        llvm::SmallVector<mlir::Value> &ivPrivate,
+                        bool isDoConcurrent = false) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   mlir::Type ivTy = getTypeFromIvTypeSize(builder, sym);
@@ -2358,8 +2358,7 @@ static mlir::acc::LoopOp createLoopOp(
 
       const auto &name = std::get<Fortran::parser::Name>(control.t);
       privatizeIv(converter, *name.symbol, currentLocation, ivTypes, ivLocs,
-                  privateOperands, ivPrivate,
-                  isDoConcurrent);
+                  privateOperands, ivPrivate, isDoConcurrent);
 
       inclusiveBounds.push_back(true);
     }
@@ -2807,15 +2806,13 @@ static Op createComputeOp(
       if (!combinedConstructs)
         genPrivatizationRecipes<mlir::acc::PrivateRecipeOp>(
             privateClause->v, converter, semanticsContext, stmtCtx,
-            privateOperands, async, asyncDeviceTypes,
-            asyncOnlyDeviceTypes);
+            privateOperands, async, asyncDeviceTypes, asyncOnlyDeviceTypes);
     } else if (const auto *firstprivateClause =
                    std::get_if<Fortran::parser::AccClause::Firstprivate>(
                        &clause.u)) {
       genPrivatizationRecipes<mlir::acc::FirstprivateRecipeOp>(
           firstprivateClause->v, converter, semanticsContext, stmtCtx,
-          firstprivateOperands, async,
-          asyncDeviceTypes, asyncOnlyDeviceTypes);
+          firstprivateOperands, async, asyncDeviceTypes, asyncOnlyDeviceTypes);
     } else if (const auto *reductionClause =
                    std::get_if<Fortran::parser::AccClause::Reduction>(
                        &clause.u)) {
@@ -2826,8 +2823,8 @@ static Op createComputeOp(
       // instead.
       if (!combinedConstructs) {
         genReductions(reductionClause->v, converter, semanticsContext, stmtCtx,
-                      reductionOperands, async,
-                      asyncDeviceTypes, asyncOnlyDeviceTypes);
+                      reductionOperands, async, asyncDeviceTypes,
+                      asyncOnlyDeviceTypes);
       } else {
         auto crtDataStart = dataClauseOperands.size();
         genDataOperandOperations<mlir::acc::CopyinOp>(

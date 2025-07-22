@@ -462,7 +462,7 @@ static ParseResult parseRecipeSym(mlir::OpAsmParser &parser,
 }
 
 static void printRecipeSym(mlir::OpAsmPrinter &p, mlir::Operation *op,
-  mlir::SymbolRefAttr recipeAttr) {
+                           mlir::SymbolRefAttr recipeAttr) {
   p << recipeAttr;
 }
 
