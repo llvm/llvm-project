@@ -10,6 +10,8 @@
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
@@ -128,6 +130,17 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
   }
 }
 
+static void
+reportInvalidHandleTyBoundInRs(Module &M, Twine Type,
+                               ResourceInfo::ResourceBinding Binding) {
+  SmallString<128> Message;
+  raw_svector_ostream OS(Message);
+  OS << "resource " << Type << " at register (space=" << Binding.Space
+     << ", register=" << Binding.LowerBound << ")"
+     << " is bound to a texture or typed buffer.";
+  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
+}
+
 static void reportRegNotBound(Module &M,
                               llvm::hlsl::rootsig::RangeInfo Unbound) {
   SmallString<128> Message;
@@ -232,6 +245,44 @@ initRSBindingValidation(const mcdxbc::RootSignatureDesc &RSD,
   return Validation;
 }
 
+static SmallVector<ResourceInfo::ResourceBinding>
+getRootDescriptorsBindingInfo(const mcdxbc::RootSignatureDesc &RSD,
+                              dxbc::ShaderVisibility Visibility) {
+
+  SmallVector<ResourceInfo::ResourceBinding> RDs;
+
+  for (size_t I = 0; I < RSD.ParametersContainer.size(); I++) {
+    const auto &[Type, Loc] =
+        RSD.ParametersContainer.getTypeAndLocForParameter(I);
+
+    const auto &Header = RSD.ParametersContainer.getHeader(I);
+    if (Header.ShaderVisibility !=
+            llvm::to_underlying(dxbc::ShaderVisibility::All) &&
+        Header.ShaderVisibility != llvm::to_underlying(Visibility))
+      continue;
+
+    switch (Type) {
+
+    case llvm::to_underlying(dxbc::RootParameterType::SRV):
+    case llvm::to_underlying(dxbc::RootParameterType::UAV):
+    case llvm::to_underlying(dxbc::RootParameterType::CBV): {
+      dxbc::RTS0::v2::RootDescriptor Desc =
+          RSD.ParametersContainer.getRootDescriptor(Loc);
+
+      ResourceInfo::ResourceBinding Binding;
+      Binding.LowerBound = Desc.ShaderRegister;
+      Binding.Space = Desc.RegisterSpace;
+      Binding.Size = 1;
+
+      RDs.push_back(Binding);
+      break;
+    }
+    }
+  }
+
+  return RDs;
+}
+
 std::optional<mcdxbc::RootSignatureDesc>
 getRootSignature(RootSignatureBindingInfo &RSBI,
                  dxil::ModuleMetadataInfo &MMI) {
@@ -242,6 +293,25 @@ getRootSignature(RootSignatureBindingInfo &RSBI,
   if (!RootSigDesc)
     return std::nullopt;
   return RootSigDesc;
+}
+
+static void reportInvalidHandleTy(
+    Module &M, const llvm::ArrayRef<dxil::ResourceInfo::ResourceBinding> &RDs,
+    const iterator_range<SmallVectorImpl<dxil::ResourceInfo>::iterator>
+        &Resources) {
+  for (auto Res = Resources.begin(), End = Resources.end(); Res != End; Res++) {
+    llvm::dxil::ResourceInfo::ResourceBinding Binding = Res->getBinding();
+    for (const auto &RD : RDs) {
+      if (Binding.overlapsWith(RD)) {
+        TargetExtType *Handle = Res->getHandleTy();
+        auto *TypedBuffer = dyn_cast_or_null<TypedBufferExtType>(Handle);
+        auto *Texture = dyn_cast_or_null<TextureExtType>(Handle);
+
+        if (TypedBuffer != nullptr || Texture != nullptr)
+          reportInvalidHandleTyBoundInRs(M, Res->getName(), Res->getBinding());
+      }
+    }
+  }
 }
 
 static void reportUnboundRegisters(
@@ -282,9 +352,9 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
                                        "DXILResourceImplicitBinding pass");
 
   if (auto RSD = getRootSignature(RSBI, MMI)) {
-
+    dxbc::ShaderVisibility Visibility = tripleToVisibility(MMI.ShaderProfile);
     llvm::hlsl::rootsig::RootSignatureBindingValidation Validation =
-        initRSBindingValidation(*RSD, tripleToVisibility(MMI.ShaderProfile));
+        initRSBindingValidation(*RSD, Visibility);
 
     reportUnboundRegisters(M, Validation, ResourceClass::CBuffer,
                            DRM.cbuffers());
@@ -292,6 +362,14 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
     reportUnboundRegisters(M, Validation, ResourceClass::Sampler,
                            DRM.samplers());
     reportUnboundRegisters(M, Validation, ResourceClass::SRV, DRM.srvs());
+
+    SmallVector<ResourceInfo::ResourceBinding> RDs =
+        getRootDescriptorsBindingInfo(*RSD, Visibility);
+
+    reportInvalidHandleTy(M, RDs, DRM.cbuffers());
+    reportInvalidHandleTy(M, RDs, DRM.srvs());
+    reportInvalidHandleTy(M, RDs, DRM.uavs());
+    reportInvalidHandleTy(M, RDs, DRM.samplers());
   }
 }
 } // namespace
