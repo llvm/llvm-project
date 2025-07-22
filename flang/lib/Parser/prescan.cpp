@@ -435,6 +435,7 @@ void Prescanner::LabelField(TokenSequence &token) {
   int outCol{1};
   const char *start{at_};
   std::optional<int> badColumn;
+  SkipCComments();
   for (; *at_ != '\n' && column_ <= 6; ++at_) {
     if (*at_ == '\t') {
       ++at_;
