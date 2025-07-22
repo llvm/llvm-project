@@ -2716,8 +2716,7 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
   // Build a pointer phi
   VPPhi *Phi;
   if (CurrentPart == 0) {
-    Phi = Builder.createScalarPhi({R->getStartValue()}, R->getDebugLoc(),
-                                  "pointer.phi");
+    Phi = Builder.createScalarPhi({R->getStartValue()}, DL, "pointer.phi");
   } else {
     // The recipe has been unrolled. In that case, fetch the single pointer phi
     // shared among all unrolled parts of the recipe.
