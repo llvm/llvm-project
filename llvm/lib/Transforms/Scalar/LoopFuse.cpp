@@ -1033,8 +1033,8 @@ private:
                                                FuseCounter);
 
           FusionCandidate FusedCand(
-              performFusion((Peel ? FC0Copy : *FC0), *FC1, SafeToSink), DT,
-              &PDT, ORE, FC0Copy.PP);
+              performFusion((Peel ? FC0Copy : *FC0), *FC1), DT, &PDT, ORE,
+              FC0Copy.PP);
           FusedCand.verify();
           assert(FusedCand.isEligibleForFusion(SE) &&
                  "Fused candidate should be eligible for fusion!");
@@ -1176,18 +1176,19 @@ private:
     return true;
   }
 
-  // This function fixes sunk PHI nodes after fusion.
-  void fixPHINodes(SmallVector<Instruction *, 4> &SafeToSink,
+  /// This function fixes PHI nodes after fusion in \p SafeToSink.
+  /// \p SafeToSink instructions are the instructions that are to be moved past
+  /// the fused loop. Thus, the PHI nodes in \p SafeToSink should be updated to
+  /// receive values from the fused loop if they are currently taking values
+  /// from the first loop (i.e. FC0)'s latch.
+  void fixPHINodes(ArrayRef<Instruction *> SafeToSink,
                    const FusionCandidate &FC0,
                    const FusionCandidate &FC1) const {
-    // Iterate over SafeToSink instructions and update PHI nodes
-    // to take values from the latch block of FC0 if they are taking
-    // from the latch block of FC1.
     for (Instruction *Inst : SafeToSink) {
-      // Continue if the instruction is not a PHI node.
-      if (!isa<PHINode>(Inst))
-        continue;
+      // No update needed for non-PHI nodes.
       PHINode *Phi = dyn_cast<PHINode>(Inst);
+      if (!Phi)
+        continue;
       for (unsigned I = 0; I < Phi->getNumIncomingValues(); I++) {
         if (Phi->getIncomingBlock(I) != FC0.Latch)
           continue;
@@ -1502,6 +1503,9 @@ private:
       assert(I->getParent() == FC1.Preheader);
       I->moveBefore(*FC1.ExitBlock, FC1.ExitBlock->getFirstInsertionPt());
     }
+    // PHI nodes in SinkInsts need to be updated to receive values from the
+    // fused loop.
+    fixPHINodes(SinkInsts, FC0, FC1);
   }
 
   /// Determine if two fusion candidates have identical guards
@@ -1590,8 +1594,7 @@ private:
   /// two loops could also be fused into a single block. This will require
   /// analysis to prove it is safe to move the contents of the block past
   /// existing code, which currently has not been implemented.
-  Loop *performFusion(const FusionCandidate &FC0, const FusionCandidate &FC1,
-                      SmallVector<Instruction *, 4> &SafeToSink) {
+  Loop *performFusion(const FusionCandidate &FC0, const FusionCandidate &FC1) {
     assert(FC0.isValid() && FC1.isValid() &&
            "Expecting valid fusion candidates");
 
@@ -1732,9 +1735,6 @@ private:
                                                        FC1.Latch, FC0.Header));
     TreeUpdates.emplace_back(DominatorTree::UpdateType(DominatorTree::Delete,
                                                        FC1.Latch, FC1.Header));
-
-    // Fix PHI nodes that are sunk into the body of the loop.
-    fixPHINodes(SafeToSink, FC0, FC1);
 
     // Update DT/PDT
     DTU.applyUpdates(TreeUpdates);
