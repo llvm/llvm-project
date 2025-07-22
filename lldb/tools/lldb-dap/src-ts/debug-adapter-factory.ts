@@ -158,7 +158,7 @@ async function getDAPArguments(
 }
 
 /**
- * Formats the given date as a string in the form "YYYYMMdd".
+ * Formats the given date as a string in the form "YYYYMMddTHHMMSS".
  *
  * @param date The date to format as a string.
  * @returns The formatted date.
