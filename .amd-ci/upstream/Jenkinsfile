@@ -68,7 +68,7 @@ Integer successStat = 0
 
 String jobName = (
     (isPrBranch ? 'presub' : 'update') + underScore +
-        env.CHANGE_TARGET ?: (env.BRANCH_NAME ?: 'NoSuchBranchName')
+        (env.CHANGE_TARGET ?: (env.BRANCH_NAME ?: 'NoSuchBranchName'))
 )
 if (env.CHANGE_BRANCH) {
     jobName += underScore + env.BRANCH_NAME // Sic, the PR-<n> string.
