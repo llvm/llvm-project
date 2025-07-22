@@ -26,6 +26,7 @@ OpClass::OpClass(StringRef name, std::string extraClassDeclaration,
   /// Inherit functions from Op.
   declare<UsingDeclaration>("Op::Op");
   declare<UsingDeclaration>("Op::print");
+  declare<UsingDeclaration>("Op::printProperties");
   /// Type alias for the adaptor class.
   declare<UsingDeclaration>("Adaptor", className + "Adaptor");
   declare<UsingDeclaration>("GenericAdaptor",
