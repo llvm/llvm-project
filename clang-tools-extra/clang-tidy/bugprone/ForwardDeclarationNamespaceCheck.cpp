@@ -69,10 +69,9 @@ void ForwardDeclarationNamespaceCheck::check(
     //      struct B { friend A; };
     //    \endcode
     // `A` will not be marked as "referenced" in the AST.
-    if (const TypeSourceInfo *Tsi = Decl->getFriendType()) {
-      QualType Desugared = Tsi->getType().getDesugaredType(*Result.Context);
-      FriendTypes.insert(Desugared.getTypePtr());
-    }
+    if (const TypeSourceInfo *Tsi = Decl->getFriendType())
+      FriendTypes.insert(
+          Tsi->getType()->getCanonicalTypeUnqualified().getTypePtr());
   }
 }
 
@@ -119,7 +118,9 @@ void ForwardDeclarationNamespaceCheck::onEndOfTranslationUnit() {
       if (CurDecl->hasDefinition() || CurDecl->isReferenced()) {
         continue; // Skip forward declarations that are used/referenced.
       }
-      if (FriendTypes.contains(CurDecl->getTypeForDecl())) {
+      if (FriendTypes.contains(CurDecl->getASTContext()
+                                   .getCanonicalTagType(CurDecl)
+                                   ->getTypePtr())) {
         continue; // Skip forward declarations referenced as friend.
       }
       if (CurDecl->getLocation().isMacroID() ||

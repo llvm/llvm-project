@@ -455,13 +455,12 @@ std::string NewFunction::renderQualifiers() const {
 }
 
 std::string NewFunction::renderDeclarationName(FunctionDeclKind K) const {
-  if (DefinitionQualifier == nullptr || K != OutOfLineDefinition) {
+  if (!DefinitionQualifier || K != OutOfLineDefinition)
     return Name;
-  }
 
   std::string QualifierName;
   llvm::raw_string_ostream Oss(QualifierName);
-  DefinitionQualifier->print(Oss, *LangOpts);
+  DefinitionQualifier.print(Oss, *LangOpts);
   return llvm::formatv("{0}{1}", QualifierName, Name);
 }
 

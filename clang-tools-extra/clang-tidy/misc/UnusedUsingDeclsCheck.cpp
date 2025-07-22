@@ -71,11 +71,7 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
                          templateArgument().bind("used")))),
                      this);
   Finder->addMatcher(userDefinedLiteral().bind("used"), this);
-  Finder->addMatcher(
-      loc(elaboratedType(unless(hasQualifier(nestedNameSpecifier())),
-                         hasUnqualifiedDesugaredType(
-                             type(asTagDecl(tagDecl().bind("used")))))),
-      this);
+  Finder->addMatcher(loc(asTagDecl(tagDecl().bind("used"))), this);
   // Cases where we can identify the UsingShadowDecl directly, rather than
   // just its target.
   // FIXME: cover more cases in this way, as the AST supports it.

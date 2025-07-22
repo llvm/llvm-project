@@ -169,13 +169,14 @@ HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
     QT = QT->castAs<DecltypeType>()->getUnderlyingType();
   HoverInfo::PrintedType Result;
   llvm::raw_string_ostream OS(Result.Type);
-  // Special case: if the outer type is a tag type without qualifiers, then
-  // include the tag for extra clarity.
-  // This isn't very idiomatic, so don't attempt it for complex cases, including
-  // pointers/references, template specializations, etc.
+  // Special case: if the outer type is a canonical tag type, then include the
+  // tag for extra clarity. This isn't very idiomatic, so don't attempt it for
+  // complex cases, including pointers/references, template specializations,
+  // etc.
   if (!QT.isNull() && !QT.hasQualifiers() && PP.SuppressTagKeyword) {
-    if (auto *TT = llvm::dyn_cast<TagType>(QT.getTypePtr()))
-      OS << TT->getDecl()->getKindName() << " ";
+    if (auto *TT = llvm::dyn_cast<TagType>(QT.getTypePtr());
+        TT && TT->isCanonicalUnqualified())
+      OS << TT->getOriginalDecl()->getKindName() << " ";
   }
   QT.print(OS, PP);
 
@@ -1002,10 +1003,11 @@ void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
 
   const auto &Ctx = ND.getASTContext();
   if (auto *RD = llvm::dyn_cast<RecordDecl>(&ND)) {
-    if (auto Size = Ctx.getTypeSizeInCharsIfKnown(RD->getTypeForDecl()))
+    CanQualType RT = Ctx.getCanonicalTagType(RD);
+    if (auto Size = Ctx.getTypeSizeInCharsIfKnown(RT))
       HI.Size = Size->getQuantity() * 8;
     if (!RD->isDependentType() && RD->isCompleteDefinition())
-      HI.Align = Ctx.getTypeAlign(RD->getTypeForDecl());
+      HI.Align = Ctx.getTypeAlign(RT);
     return;
   }
 

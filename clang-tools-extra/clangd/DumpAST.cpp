@@ -346,8 +346,10 @@ public:
     return !D || isInjectedClassName(D) ||
            traverseNode("declaration", D, [&] { Base::TraverseDecl(D); });
   }
-  bool TraverseTypeLoc(TypeLoc TL) {
-    return !TL || traverseNode("type", TL, [&] { Base::TraverseTypeLoc(TL); });
+  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true) {
+    return !TL || traverseNode("type", TL, [&] {
+      Base::TraverseTypeLoc(TL, TraverseQualifier);
+    });
   }
   bool TraverseTemplateName(const TemplateName &TN) {
     return traverseNode("template name", TN,

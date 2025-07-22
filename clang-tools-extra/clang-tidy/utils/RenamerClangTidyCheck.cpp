@@ -323,48 +323,34 @@ public:
   }
 
   bool VisitTypedefTypeLoc(const TypedefTypeLoc &Loc) {
-    Check->addUsage(Loc.getTypedefNameDecl(), Loc.getSourceRange(), SM);
+    Check->addUsage(Loc.getDecl(), Loc.getNameLoc(), SM);
     return true;
   }
 
   bool VisitTagTypeLoc(const TagTypeLoc &Loc) {
-    Check->addUsage(Loc.getDecl(), Loc.getSourceRange(), SM);
-    return true;
-  }
-
-  bool VisitInjectedClassNameTypeLoc(const InjectedClassNameTypeLoc &Loc) {
-    Check->addUsage(Loc.getDecl(), Loc.getSourceRange(), SM);
+    Check->addUsage(Loc.getOriginalDecl(), Loc.getNameLoc(), SM);
     return true;
   }
 
   bool VisitUnresolvedUsingTypeLoc(const UnresolvedUsingTypeLoc &Loc) {
-    Check->addUsage(Loc.getDecl(), Loc.getSourceRange(), SM);
+    Check->addUsage(Loc.getDecl(), Loc.getNameLoc(), SM);
     return true;
   }
 
   bool VisitTemplateTypeParmTypeLoc(const TemplateTypeParmTypeLoc &Loc) {
-    Check->addUsage(Loc.getDecl(), Loc.getSourceRange(), SM);
+    Check->addUsage(Loc.getDecl(), Loc.getNameLoc(), SM);
     return true;
   }
 
   bool
   VisitTemplateSpecializationTypeLoc(const TemplateSpecializationTypeLoc &Loc) {
     const TemplateDecl *Decl =
-        Loc.getTypePtr()->getTemplateName().getAsTemplateDecl();
+        Loc.getTypePtr()->getTemplateName().getAsTemplateDecl(
+            /*IgnoreDeduced=*/true);
 
-    SourceRange Range(Loc.getTemplateNameLoc(), Loc.getTemplateNameLoc());
-    if (const auto *ClassDecl = dyn_cast<TemplateDecl>(Decl)) {
+    if (const auto *ClassDecl = dyn_cast<TemplateDecl>(Decl))
       if (const NamedDecl *TemplDecl = ClassDecl->getTemplatedDecl())
-        Check->addUsage(TemplDecl, Range, SM);
-    }
-
-    return true;
-  }
-
-  bool VisitDependentTemplateSpecializationTypeLoc(
-      const DependentTemplateSpecializationTypeLoc &Loc) {
-    if (const TagDecl *Decl = Loc.getTypePtr()->getAsTagDecl())
-      Check->addUsage(Decl, Loc.getSourceRange(), SM);
+        Check->addUsage(TemplDecl, Loc.getTemplateNameLoc(), SM);
 
     return true;
   }
