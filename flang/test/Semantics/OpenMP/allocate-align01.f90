@@ -13,7 +13,7 @@ program allocate_align_tree
     z = 3
     !ERROR: The alignment value should be a constant positive integer
 !$omp allocate(j) align(xx)
-    !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
+    !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead. [-Wopen-mp-usage]
     !ERROR: The alignment value should be a constant positive integer
 !$omp allocate(xarray) align(-32) allocator(omp_large_cap_mem_alloc)
     allocate(j(z), xarray(t))

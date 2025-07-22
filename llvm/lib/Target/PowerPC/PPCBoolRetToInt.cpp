@@ -45,7 +45,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -100,8 +99,8 @@ class PPCBoolRetToInt : public FunctionPass {
       Value *Zero = Constant::getNullValue(IntTy);
       PHINode *Q =
         PHINode::Create(IntTy, P->getNumIncomingValues(), P->getName(), P->getIterator());
-      for (unsigned i = 0; i < P->getNumOperands(); ++i)
-        Q->addIncoming(Zero, P->getIncomingBlock(i));
+      for (unsigned I = 0; I < P->getNumOperands(); ++I)
+        Q->addIncoming(Zero, P->getIncomingBlock(I));
       return Q;
     }
 
@@ -253,8 +252,8 @@ class PPCBoolRetToInt : public FunctionPass {
       // Operands of CallInst/Constant are skipped because they may not be Bool
       // type. For CallInst, their positions are defined by ABI.
       if (First && !isa<CallInst>(First) && !isa<Constant>(First))
-        for (unsigned i = 0; i < First->getNumOperands(); ++i)
-          Second->setOperand(i, BoolToIntMap[First->getOperand(i)]);
+        for (unsigned I = 0; I < First->getNumOperands(); ++I)
+          Second->setOperand(I, BoolToIntMap[First->getOperand(I)]);
     }
 
     Value *IntRetVal = BoolToIntMap[U];

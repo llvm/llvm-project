@@ -856,7 +856,7 @@ static bool getAdjustedExtents(mlir::Location loc,
   auto idxTy = rewriter.getIndexType();
   if (isAssumedSize(result)) {
     // Use slice information to compute the extent of the column.
-    auto one = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 1);
+    auto one = mlir::arith::ConstantIndexOp::create(rewriter, loc, 1);
     mlir::Value size = one;
     if (mlir::Value sliceArg = arrLoad.getSlice()) {
       if (auto sliceOp =
@@ -896,14 +896,14 @@ static mlir::Value getOrReadExtentsAndShapeOp(
         mlir::cast<SequenceType>(dyn_cast_ptrOrBoxEleTy(boxTy)).getDimension();
     auto idxTy = rewriter.getIndexType();
     for (decltype(rank) dim = 0; dim < rank; ++dim) {
-      auto dimVal = rewriter.create<mlir::arith::ConstantIndexOp>(loc, dim);
-      auto dimInfo = rewriter.create<BoxDimsOp>(loc, idxTy, idxTy, idxTy,
-                                                arrLoad.getMemref(), dimVal);
+      auto dimVal = mlir::arith::ConstantIndexOp::create(rewriter, loc, dim);
+      auto dimInfo = BoxDimsOp::create(rewriter, loc, idxTy, idxTy, idxTy,
+                                       arrLoad.getMemref(), dimVal);
       result.emplace_back(dimInfo.getResult(1));
     }
     if (!arrLoad.getShape()) {
       auto shapeType = ShapeType::get(rewriter.getContext(), rank);
-      return rewriter.create<ShapeOp>(loc, shapeType, result);
+      return ShapeOp::create(rewriter, loc, shapeType, result);
     }
     auto shiftOp = arrLoad.getShape().getDefiningOp<ShiftOp>();
     auto shapeShiftType = ShapeShiftType::get(rewriter.getContext(), rank);
@@ -912,8 +912,8 @@ static mlir::Value getOrReadExtentsAndShapeOp(
       shapeShiftOperands.push_back(lb);
       shapeShiftOperands.push_back(extent);
     }
-    return rewriter.create<ShapeShiftOp>(loc, shapeShiftType,
-                                         shapeShiftOperands);
+    return ShapeShiftOp::create(rewriter, loc, shapeShiftType,
+                                shapeShiftOperands);
   }
   copyUsingSlice =
       getAdjustedExtents(loc, rewriter, arrLoad, result, arrLoad.getShape());
@@ -952,13 +952,13 @@ static mlir::Value genCoorOp(mlir::PatternRewriter &rewriter,
   auto module = load->getParentOfType<mlir::ModuleOp>();
   FirOpBuilder builder(rewriter, module);
   auto typeparams = getTypeParamsIfRawData(loc, builder, load, alloc.getType());
-  mlir::Value result = rewriter.create<ArrayCoorOp>(
-      loc, eleTy, alloc, shape, slice,
+  mlir::Value result = ArrayCoorOp::create(
+      rewriter, loc, eleTy, alloc, shape, slice,
       llvm::ArrayRef<mlir::Value>{originated}.take_front(dimension),
       typeparams);
   if (dimension < originated.size())
-    result = rewriter.create<fir::CoordinateOp>(
-        loc, resTy, result,
+    result = fir::CoordinateOp::create(
+        rewriter, loc, resTy, result,
         llvm::ArrayRef<mlir::Value>{originated}.drop_front(dimension));
   return result;
 }
@@ -971,13 +971,13 @@ static mlir::Value getCharacterLen(mlir::Location loc, FirOpBuilder &builder,
       // The loaded array is an emboxed value. Get the CHARACTER length from
       // the box value.
       auto eleSzInBytes =
-          builder.create<BoxEleSizeOp>(loc, charLenTy, load.getMemref());
+          BoxEleSizeOp::create(builder, loc, charLenTy, load.getMemref());
       auto kindSize =
           builder.getKindMap().getCharacterBitsize(charTy.getFKind());
       auto kindByteSize =
           builder.createIntegerConstant(loc, charLenTy, kindSize / 8);
-      return builder.create<mlir::arith::DivSIOp>(loc, eleSzInBytes,
-                                                  kindByteSize);
+      return mlir::arith::DivSIOp::create(builder, loc, eleSzInBytes,
+                                          kindByteSize);
     }
     // The loaded array is a (set of) unboxed values. If the CHARACTER's
     // length is not a constant, it must be provided as a type parameter to
@@ -1003,11 +1003,11 @@ void genArrayCopy(mlir::Location loc, mlir::PatternRewriter &rewriter,
   auto idxTy = rewriter.getIndexType();
   // Build loop nest from column to row.
   for (auto sh : llvm::reverse(extents)) {
-    auto ubi = rewriter.create<ConvertOp>(loc, idxTy, sh);
-    auto zero = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 0);
-    auto one = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 1);
-    auto ub = rewriter.create<mlir::arith::SubIOp>(loc, idxTy, ubi, one);
-    auto loop = rewriter.create<DoLoopOp>(loc, zero, ub, one);
+    auto ubi = ConvertOp::create(rewriter, loc, idxTy, sh);
+    auto zero = mlir::arith::ConstantIndexOp::create(rewriter, loc, 0);
+    auto one = mlir::arith::ConstantIndexOp::create(rewriter, loc, 1);
+    auto ub = mlir::arith::SubIOp::create(rewriter, loc, idxTy, ubi, one);
+    auto loop = DoLoopOp::create(rewriter, loc, zero, ub, one);
     rewriter.setInsertionPointToStart(loop.getBody());
     indices.push_back(loop.getInductionVar());
   }
@@ -1015,13 +1015,13 @@ void genArrayCopy(mlir::Location loc, mlir::PatternRewriter &rewriter,
   std::reverse(indices.begin(), indices.end());
   auto module = arrLoad->getParentOfType<mlir::ModuleOp>();
   FirOpBuilder builder(rewriter, module);
-  auto fromAddr = rewriter.create<ArrayCoorOp>(
-      loc, getEleTy(src.getType()), src, shapeOp,
+  auto fromAddr = ArrayCoorOp::create(
+      rewriter, loc, getEleTy(src.getType()), src, shapeOp,
       CopyIn && copyUsingSlice ? sliceOp : mlir::Value{},
       factory::originateIndices(loc, rewriter, src.getType(), shapeOp, indices),
       getTypeParamsIfRawData(loc, builder, arrLoad, src.getType()));
-  auto toAddr = rewriter.create<ArrayCoorOp>(
-      loc, getEleTy(dst.getType()), dst, shapeOp,
+  auto toAddr = ArrayCoorOp::create(
+      rewriter, loc, getEleTy(dst.getType()), dst, shapeOp,
       !CopyIn && copyUsingSlice ? sliceOp : mlir::Value{},
       factory::originateIndices(loc, rewriter, dst.getType(), shapeOp, indices),
       getTypeParamsIfRawData(loc, builder, arrLoad, dst.getType()));
@@ -1093,15 +1093,16 @@ allocateArrayTemp(mlir::Location loc, mlir::PatternRewriter &rewriter,
       findNonconstantExtents(baseType, extents);
   llvm::SmallVector<mlir::Value> typeParams =
       genArrayLoadTypeParameters(loc, rewriter, load);
-  mlir::Value allocmem = rewriter.create<AllocMemOp>(
-      loc, dyn_cast_ptrOrBoxEleTy(baseType), typeParams, nonconstantExtents);
+  mlir::Value allocmem =
+      AllocMemOp::create(rewriter, loc, dyn_cast_ptrOrBoxEleTy(baseType),
+                         typeParams, nonconstantExtents);
   mlir::Type eleType =
       fir::unwrapSequenceType(fir::unwrapPassByRefType(baseType));
   if (fir::isRecordWithAllocatableMember(eleType)) {
     // The allocatable component descriptors need to be set to a clean
     // deallocated status before anything is done with them.
-    mlir::Value box = rewriter.create<fir::EmboxOp>(
-        loc, fir::BoxType::get(allocmem.getType()), allocmem, shape,
+    mlir::Value box = fir::EmboxOp::create(
+        rewriter, loc, fir::BoxType::get(allocmem.getType()), allocmem, shape,
         /*slice=*/mlir::Value{}, typeParams);
     auto module = load->getParentOfType<mlir::ModuleOp>();
     FirOpBuilder builder(rewriter, module);
@@ -1111,12 +1112,12 @@ allocateArrayTemp(mlir::Location loc, mlir::PatternRewriter &rewriter,
     auto cleanup = [=](mlir::PatternRewriter &r) {
       FirOpBuilder builder(r, module);
       runtime::genDerivedTypeDestroy(builder, loc, box);
-      r.create<FreeMemOp>(loc, allocmem);
+      FreeMemOp::create(r, loc, allocmem);
     };
     return {allocmem, cleanup};
   }
   auto cleanup = [=](mlir::PatternRewriter &r) {
-    r.create<FreeMemOp>(loc, allocmem);
+    FreeMemOp::create(r, loc, allocmem);
   };
   return {allocmem, cleanup};
 }
@@ -1257,7 +1258,7 @@ public:
       if (auto inEleTy = dyn_cast_ptrEleTy(input.getType())) {
         emitFatalError(loc, "array_update on references not supported");
       } else {
-        rewriter.create<fir::StoreOp>(loc, input, coor);
+        fir::StoreOp::create(rewriter, loc, input, coor);
       }
     };
     auto lhsEltRefType = toRefType(update.getMerge().getType());
@@ -1368,7 +1369,7 @@ public:
     auto *op = amend.getOperation();
     rewriter.setInsertionPoint(op);
     auto loc = amend.getLoc();
-    auto undef = rewriter.create<UndefOp>(loc, amend.getType());
+    auto undef = UndefOp::create(rewriter, loc, amend.getType());
     rewriter.replaceOp(amend, undef.getResult());
     return mlir::success();
   }

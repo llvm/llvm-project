@@ -316,7 +316,7 @@ subroutine s9()
   ! Technically non-conformant (F'2023 19.4 p8)
   do concurrent (ivar = 1:10)
     print *, "hello"
-    !PORTABILITY: Index variable 'ivar' should not also be an index in an enclosing FORALL or DO CONCURRENT
+    !PORTABILITY: Index variable 'ivar' should not also be an index in an enclosing FORALL or DO CONCURRENT [-Wodd-index-variable-restrictions]
     do concurrent (ivar = 1:10)
       print *, "hello"
     end do
@@ -392,7 +392,7 @@ subroutine s12()
 
   call intentInOutSub(jvar, ivar)
   do ivar = 1,10
-    !WARNING: Possible redefinition of DO variable 'ivar'
+    !WARNING: Possible redefinition of DO variable 'ivar' [-Windex-var-redefinition]
     call intentInOutSub(jvar, ivar)
   end do
 
@@ -437,7 +437,7 @@ subroutine s13()
   end do
 
   do ivar = 1, 10
-    !WARNING: Possible redefinition of DO variable 'ivar'
+    !WARNING: Possible redefinition of DO variable 'ivar' [-Windex-var-redefinition]
     jvar = intentInOutFunc(ivar)
   end do
 

@@ -26,7 +26,7 @@ protected:
 
   std::unique_ptr<Module> M;
 
-  TargetLibraryInfoTest() : TLI(TLII) {}
+  TargetLibraryInfoTest() : TLII(Triple()), TLI(TLII) {}
 
   void parseAssembly(const char *Assembly) {
     SMDiagnostic Error;
@@ -315,6 +315,7 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare i32 @putchar(i32)\n"
       "declare i32 @putchar_unlocked(i32)\n"
       "declare i32 @puts(i8*)\n"
+      "declare i8* @pvalloc(i64)\n"
       "declare void @qsort(i8*, i64, i64, i32 (i8*, i8*)*)\n"
       "declare i64 @readlink(i8*, i8*, i64)\n"
       "declare i8* @realloc(i8*, i64)\n"

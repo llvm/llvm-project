@@ -23,7 +23,7 @@ bb:
 declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { argmemonly nofree nosync nounwind willreturn }
-attributes #1 = { "target-features"="+aes,+crypto,+fp-armv8,+neon,+sha2,+zcm,+zcz" }
+attributes #1 = { "target-features"="+aes,+crypto,+fp-armv8,+neon,+sha2" }
 attributes #2 = { nofree nosync nounwind readnone speculatable willreturn }
 attributes #3 = { nounwind }
 

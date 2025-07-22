@@ -120,9 +120,8 @@ static inline const MCExpr *makeEndMinusStartExpr(MCContext &Ctx,
                                                   const MCSymbol &Start,
                                                   const MCSymbol &End,
                                                   int IntVal) {
-  MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
-  const MCExpr *Res = MCSymbolRefExpr::create(&End, Variant, Ctx);
-  const MCExpr *RHS = MCSymbolRefExpr::create(&Start, Variant, Ctx);
+  const MCExpr *Res = MCSymbolRefExpr::create(&End, Ctx);
+  const MCExpr *RHS = MCSymbolRefExpr::create(&Start, Ctx);
   const MCExpr *Res1 = MCBinaryExpr::create(MCBinaryExpr::Sub, Res, RHS, Ctx);
   const MCExpr *Res2 = MCConstantExpr::create(IntVal, Ctx);
   const MCExpr *Res3 = MCBinaryExpr::create(MCBinaryExpr::Sub, Res1, Res2, Ctx);
@@ -134,8 +133,7 @@ static inline const MCExpr *makeEndMinusStartExpr(MCContext &Ctx,
 //
 static inline const MCExpr *
 makeStartPlusIntExpr(MCContext &Ctx, const MCSymbol &Start, int IntVal) {
-  MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
-  const MCExpr *LHS = MCSymbolRefExpr::create(&Start, Variant, Ctx);
+  const MCExpr *LHS = MCSymbolRefExpr::create(&Start, Ctx);
   const MCExpr *RHS = MCConstantExpr::create(IntVal, Ctx);
   const MCExpr *Res = MCBinaryExpr::create(MCBinaryExpr::Add, LHS, RHS, Ctx);
   return Res;
@@ -449,10 +447,17 @@ static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
         StringRef(reinterpret_cast<const char *>(Cksum.data()), Cksum.size()));
   }
   if (HasAnySource) {
+    // From https://dwarfstd.org/issues/180201.1.html
+    // * The value is an empty null-terminated string if no source is available
+    StringRef Source = DwarfFile.Source.value_or(StringRef());
+    // * If the source is available but is an empty file then the value is a
+    // null-terminated single "\n".
+    if (DwarfFile.Source && DwarfFile.Source->empty())
+      Source = "\n";
     if (LineStr)
-      LineStr->emitRef(MCOS, DwarfFile.Source.value_or(StringRef()));
+      LineStr->emitRef(MCOS, Source);
     else {
-      MCOS->emitBytes(DwarfFile.Source.value_or(StringRef())); // Source and...
+      MCOS->emitBytes(Source);             // Source and...
       MCOS->emitBytes(StringRef("\0", 1)); // its null terminator.
     }
   }
@@ -1881,7 +1886,7 @@ struct CIEKey {
   unsigned LsdaEncoding = -1;
   bool IsSignalFrame = false;
   bool IsSimple = false;
-  unsigned RAReg = static_cast<unsigned>(UINT_MAX);
+  unsigned RAReg = UINT_MAX;
   bool IsBKeyFrame = false;
   bool IsMTETaggedFrame = false;
 };

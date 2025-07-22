@@ -26,6 +26,8 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallSet.h"
 
 namespace Fortran {
 namespace lower {
@@ -49,7 +51,7 @@ DataSharingProcessor::DataSharingProcessor(
       firOpBuilder(converter.getFirOpBuilder()), clauses(clauses), eval(eval),
       shouldCollectPreDeterminedSymbols(shouldCollectPreDeterminedSymbols),
       useDelayedPrivatization(useDelayedPrivatization), symTable(symTable),
-      visitor() {
+      visitor(semaCtx) {
   eval.visit([&](const auto &functionParserNode) {
     parser::Walk(functionParserNode, visitor);
   });
@@ -204,6 +206,42 @@ void DataSharingProcessor::collectOmpObjectListSymbol(
 }
 
 void DataSharingProcessor::collectSymbolsForPrivatization() {
+  // Add checks here for exceptional cases where privatization is not
+  // needed and be deferred to a later phase (like OpenMP IRBuilder).
+  // Such cases are suggested to be clearly documented and explained
+  // instead of being silently skipped
+  auto isException = [&](const Fortran::semantics::Symbol *sym) -> bool {
+    // `OmpPreDetermined` symbols cannot be exceptions since
+    // their privatized symbols are heavily used in FIR.
+    if (sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined))
+      return false;
+
+    // The handling of linear clause is deferred to the OpenMP
+    // IRBuilder which is responsible for all its aspects,
+    // including privatization. Privatizing linear variables at this point would
+    // cause the following structure:
+    //
+    // omp.op linear(%linear = %step : !fir.ref<type>) {
+    //	Use %linear in this BB
+    // }
+    //
+    // to be changed to the following:
+    //
+    // omp. op linear(%linear = %step : !fir.ref<type>)
+    // 	private(%linear -> %arg0 : !fir.ref<i32>) {
+    //	Declare and use %arg0 in this BB
+    // }
+    //
+    // The OpenMP IRBuilder needs to map the linear MLIR value
+    // (i.e. %linear) to its `uses` in the BB to correctly
+    // implement the functionalities of linear clause. However,
+    // privatizing here disallows the IRBuilder to
+    // draw a relation between %linear and %arg0. Hence skip.
+    if (sym->test(Fortran::semantics::Symbol::Flag::OmpLinear))
+      return true;
+    return false;
+  };
+
   for (const omp::Clause &clause : clauses) {
     if (const auto &privateClause =
             std::get_if<omp::clause::Private>(&clause.u)) {
@@ -222,10 +260,10 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
   }
 
   // TODO For common blocks, add the underlying objects within the block. Doing
-  // so, we won't need to explicitely handle block objects (or forget to do
+  // so, we won't need to explicitly handle block objects (or forget to do
   // so).
   for (auto *sym : explicitlyPrivatizedSymbols)
-    if (!sym->test(Fortran::semantics::Symbol::Flag::OmpLinear))
+    if (!isException(sym))
       allPrivatizedSymbols.insert(sym);
 }
 
@@ -253,7 +291,7 @@ void DataSharingProcessor::insertBarrier(
       clauseOps->privateNeedsBarrier =
           mlir::UnitAttr::get(&converter.getMLIRContext());
   } else {
-    firOpBuilder.create<mlir::omp::BarrierOp>(converter.getCurrentLocation());
+    mlir::omp::BarrierOp::create(firOpBuilder, converter.getCurrentLocation());
   }
 }
 
@@ -313,32 +351,32 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
              loopOp.getIVs(), result.loopUpperBounds, result.loopSteps)) {
       // v = iv + step
       // cmp = step < 0 ? v < ub : v > ub
-      mlir::Value v = firOpBuilder.create<mlir::arith::AddIOp>(loc, iv, step);
+      mlir::Value v = mlir::arith::AddIOp::create(firOpBuilder, loc, iv, step);
       vs.push_back(v);
       mlir::Value zero =
           firOpBuilder.createIntegerConstant(loc, step.getType(), 0);
-      mlir::Value negativeStep = firOpBuilder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::slt, step, zero);
-      mlir::Value vLT = firOpBuilder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::slt, v, ub);
-      mlir::Value vGT = firOpBuilder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::sgt, v, ub);
-      mlir::Value icmpOp = firOpBuilder.create<mlir::arith::SelectOp>(
-          loc, negativeStep, vLT, vGT);
+      mlir::Value negativeStep = mlir::arith::CmpIOp::create(
+          firOpBuilder, loc, mlir::arith::CmpIPredicate::slt, step, zero);
+      mlir::Value vLT = mlir::arith::CmpIOp::create(
+          firOpBuilder, loc, mlir::arith::CmpIPredicate::slt, v, ub);
+      mlir::Value vGT = mlir::arith::CmpIOp::create(
+          firOpBuilder, loc, mlir::arith::CmpIPredicate::sgt, v, ub);
+      mlir::Value icmpOp = mlir::arith::SelectOp::create(
+          firOpBuilder, loc, negativeStep, vLT, vGT);
 
       if (cmpOp)
-        cmpOp = firOpBuilder.create<mlir::arith::AndIOp>(loc, cmpOp, icmpOp);
+        cmpOp = mlir::arith::AndIOp::create(firOpBuilder, loc, cmpOp, icmpOp);
       else
         cmpOp = icmpOp;
     }
 
-    auto ifOp = firOpBuilder.create<fir::IfOp>(loc, cmpOp, /*else*/ false);
+    auto ifOp = fir::IfOp::create(firOpBuilder, loc, cmpOp, /*else*/ false);
     firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     for (auto [v, loopIV] : llvm::zip_equal(vs, loopIVs)) {
       hlfir::Entity loopIVEntity{loopIV};
       loopIVEntity =
           hlfir::derefPointersAndAllocatables(loc, firOpBuilder, loopIVEntity);
-      firOpBuilder.create<hlfir::AssignOp>(loc, v, loopIVEntity);
+      hlfir::AssignOp::create(firOpBuilder, loc, v, loopIVEntity);
     }
     lastPrivIP = firOpBuilder.saveInsertionPoint();
   } else if (mlir::isa<mlir::omp::SectionsOp>(op)) {
@@ -388,24 +426,55 @@ getSource(const semantics::SemanticsContext &semaCtx,
   return source;
 }
 
+static void collectPrivatizingConstructs(
+    llvm::SmallSet<llvm::omp::Directive, 16> &constructs, unsigned version) {
+  using Clause = llvm::omp::Clause;
+  using Directive = llvm::omp::Directive;
+
+  static const Clause privatizingClauses[] = {
+      Clause::OMPC_private,
+      Clause::OMPC_lastprivate,
+      Clause::OMPC_firstprivate,
+      Clause::OMPC_in_reduction,
+      Clause::OMPC_reduction,
+      Clause::OMPC_linear,
+      // TODO: Clause::OMPC_induction,
+      Clause::OMPC_task_reduction,
+      Clause::OMPC_detach,
+      Clause::OMPC_use_device_ptr,
+      Clause::OMPC_is_device_ptr,
+  };
+
+  for (auto dir : llvm::enum_seq_inclusive<Directive>(Directive::First_,
+                                                      Directive::Last_)) {
+    bool allowsPrivatizing = llvm::any_of(privatizingClauses, [&](Clause cls) {
+      return llvm::omp::isAllowedClauseForDirective(dir, cls, version);
+    });
+    if (allowsPrivatizing)
+      constructs.insert(dir);
+  }
+}
+
 bool DataSharingProcessor::isOpenMPPrivatizingConstruct(
-    const parser::OpenMPConstruct &omp) {
-  return common::visit(
-      [](auto &&s) {
-        using BareS = llvm::remove_cvref_t<decltype(s)>;
-        return std::is_same_v<BareS, parser::OpenMPBlockConstruct> ||
-               std::is_same_v<BareS, parser::OpenMPLoopConstruct> ||
-               std::is_same_v<BareS, parser::OpenMPSectionsConstruct>;
-      },
-      omp.u);
+    const parser::OpenMPConstruct &omp, unsigned version) {
+  static llvm::SmallSet<llvm::omp::Directive, 16> privatizing;
+  [[maybe_unused]] static bool init =
+      (collectPrivatizingConstructs(privatizing, version), true);
+
+  // As of OpenMP 6.0, privatizing constructs (with the test being if they
+  // allow a privatizing clause) are: dispatch, distribute, do, for, loop,
+  // parallel, scope, sections, simd, single, target, target_data, task,
+  // taskgroup, taskloop, and teams.
+  return llvm::is_contained(privatizing, extractOmpDirective(omp));
 }
 
 bool DataSharingProcessor::isOpenMPPrivatizingEvaluation(
     const pft::Evaluation &eval) const {
-  return eval.visit([](auto &&s) {
+  unsigned version = semaCtx.langOptions().OpenMPVersion;
+  return eval.visit([=](auto &&s) {
     using BareS = llvm::remove_cvref_t<decltype(s)>;
     if constexpr (std::is_same_v<BareS, parser::OpenMPConstruct>) {
-      return isOpenMPPrivatizingConstruct(s);
+      return isOpenMPPrivatizingConstruct(s, version);
     } else {
       return false;
     }

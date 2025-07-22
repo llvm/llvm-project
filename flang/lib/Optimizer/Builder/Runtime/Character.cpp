@@ -34,7 +34,7 @@ static void genCharacterSearch(FN func, fir::FirOpBuilder &builder,
   auto args = fir::runtime::createArguments(builder, loc, fTy, resultBox,
                                             string1Box, string2Box, backBox,
                                             kind, sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }
 
 /// Helper function to recover the KIND from the FIR type.
@@ -72,7 +72,7 @@ static void genAdjust(fir::FirOpBuilder &builder, mlir::Location loc,
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto args = fir::runtime::createArguments(builder, loc, fTy, resultBox,
                                             stringBox, sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, adjustFunc, args);
+  fir::CallOp::create(builder, loc, adjustFunc, args);
 }
 
 void fir::runtime::genAdjustL(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -114,9 +114,9 @@ fir::runtime::genCharCompare(fir::FirOpBuilder &builder, mlir::Location loc,
   auto fTy = beginFunc.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, fTy, lhsBuff, rhsBuff,
                                             lhsLen, rhsLen);
-  auto tri = builder.create<fir::CallOp>(loc, beginFunc, args).getResult(0);
+  auto tri = fir::CallOp::create(builder, loc, beginFunc, args).getResult(0);
   auto zero = builder.createIntegerConstant(loc, tri.getType(), 0);
-  return builder.create<mlir::arith::CmpIOp>(loc, cmp, tri, zero);
+  return mlir::arith::CmpIOp::create(builder, loc, cmp, tri, zero);
 }
 
 mlir::Value fir::runtime::genCharCompare(fir::FirOpBuilder &builder,
@@ -130,8 +130,8 @@ mlir::Value fir::runtime::genCharCompare(fir::FirOpBuilder &builder,
     if (fir::isa_ref_type(base.getType()))
       return base;
     auto mem =
-        builder.create<fir::AllocaOp>(loc, base.getType(), /*pinned=*/false);
-    builder.create<fir::StoreOp>(loc, base, mem);
+        fir::AllocaOp::create(builder, loc, base.getType(), /*pinned=*/false);
+    fir::StoreOp::create(builder, loc, base, mem);
     return mem;
   };
   auto lhsBuffer = allocateIfNotInMemory(fir::getBase(lhs));
@@ -165,7 +165,7 @@ mlir::Value fir::runtime::genIndex(fir::FirOpBuilder &builder,
   auto args =
       fir::runtime::createArguments(builder, loc, fTy, stringBase, stringLen,
                                     substringBase, substringLen, back);
-  return builder.create<fir::CallOp>(loc, indexFunc, args).getResult(0);
+  return fir::CallOp::create(builder, loc, indexFunc, args).getResult(0);
 }
 
 void fir::runtime::genIndexDescriptor(fir::FirOpBuilder &builder,
@@ -189,7 +189,7 @@ void fir::runtime::genRepeat(fir::FirOpBuilder &builder, mlir::Location loc,
 
   auto args = fir::runtime::createArguments(
       builder, loc, fTy, resultBox, stringBox, ncopies, sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, repeatFunc, args);
+  fir::CallOp::create(builder, loc, repeatFunc, args);
 }
 
 void fir::runtime::genTrim(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -202,7 +202,7 @@ void fir::runtime::genTrim(fir::FirOpBuilder &builder, mlir::Location loc,
 
   auto args = fir::runtime::createArguments(builder, loc, fTy, resultBox,
                                             stringBox, sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, trimFunc, args);
+  fir::CallOp::create(builder, loc, trimFunc, args);
 }
 
 void fir::runtime::genScanDescriptor(fir::FirOpBuilder &builder,
@@ -237,7 +237,7 @@ mlir::Value fir::runtime::genScan(fir::FirOpBuilder &builder,
   auto fTy = func.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, fTy, stringBase,
                                             stringLen, setBase, setLen, back);
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 void fir::runtime::genVerifyDescriptor(fir::FirOpBuilder &builder,
@@ -274,5 +274,5 @@ mlir::Value fir::runtime::genVerify(fir::FirOpBuilder &builder,
   auto fTy = func.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, fTy, stringBase,
                                             stringLen, setBase, setLen, back);
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }

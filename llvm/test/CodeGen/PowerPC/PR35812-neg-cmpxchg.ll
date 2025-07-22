@@ -18,7 +18,6 @@ define signext i32 @main() nounwind {
 ; CHECK-NEXT:    sth 3, 46(1)
 ; CHECK-NEXT:    addi 3, 1, 46
 ; CHECK-NEXT:    lharx 4, 0, 3
-; CHECK-NEXT:    clrlwi 4, 4, 16
 ; CHECK-NEXT:    cmplwi 4, 33059
 ; CHECK-NEXT:    bne 0, .LBB0_4
 ; CHECK-NEXT:  # %bb.1: # %cmpxchg.fencedstore
@@ -32,7 +31,6 @@ define signext i32 @main() nounwind {
 ; CHECK-NEXT:  # %bb.3: # %cmpxchg.releasedload
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 5, 0, 3
-; CHECK-NEXT:    clrlwi 5, 5, 16
 ; CHECK-NEXT:    cmplwi 5, 33059
 ; CHECK-NEXT:    beq 0, .LBB0_2
 ; CHECK-NEXT:  .LBB0_4: # %cmpxchg.nostore

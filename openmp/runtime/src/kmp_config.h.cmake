@@ -114,7 +114,6 @@
 # define BUILD_I8 1
 #endif
 
-#define KMP_NESTED_HOT_TEAMS 1
 #define KMP_ADJUST_BLOCKTIME 1
 #define BUILD_PARALLEL_ORDERED 1
 #define KMP_ASM_INTRINS 1

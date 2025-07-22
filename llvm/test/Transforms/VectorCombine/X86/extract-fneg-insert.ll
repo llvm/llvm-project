@@ -48,13 +48,13 @@ define <4 x float> @ext2_v4f32(<4 x float> %x, <4 x float> %y) {
 define <4 x float> @ext2_v2f32v4f32(<2 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: @ext2_v2f32v4f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg <2 x float> [[X:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 2, i32 poison>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 poison, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
-  %e = extractelement <2 x float> %x, i32 2
+  %e = extractelement <2 x float> %x, i32 1
   %n = fneg float %e
-  %r = insertelement <4 x float> %y, float %n, i32 2
+  %r = insertelement <4 x float> %y, float %n, i32 1
   ret <4 x float> %r
 }
 

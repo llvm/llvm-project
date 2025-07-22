@@ -26,35 +26,41 @@ define i32 @test1(ptr nocapture %foobie) nounwind noinline ssp uwtable {
 }
 
 ; Check that the memcpy is removed.
-define void @test2(ptr sret(i8) noalias nocapture %out, ptr %in) nounwind noinline ssp uwtable {
+define void @test2(ptr sret(i8) noalias nocapture %out) nounwind noinline ssp uwtable {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[IN:%.*]])
+; CHECK-NEXT:    [[IN:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[IN]])
 ; CHECK-NEXT:    ret void
 ;
+  %in = alloca i64
   call void @llvm.lifetime.start.p0(i64 8, ptr %in)
   call void @llvm.memcpy.p0.p0.i64(ptr %out, ptr %in, i64 8, i1 false)
   ret void
 }
 
 ; Check that the memcpy is not removed.
-define void @test3(ptr sret(i8) noalias nocapture %out, ptr %in) nounwind noinline ssp uwtable {
+define void @test3(ptr sret(i8) noalias nocapture %out) nounwind noinline ssp uwtable {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[IN:%.*]])
+; CHECK-NEXT:    [[IN:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[IN]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[OUT:%.*]], ptr [[IN]], i64 8, i1 false)
 ; CHECK-NEXT:    ret void
 ;
+  %in = alloca i64
   call void @llvm.lifetime.start.p0(i64 4, ptr %in)
   call void @llvm.memcpy.p0.p0.i64(ptr %out, ptr %in, i64 8, i1 false)
   ret void
 }
 
 ; Check that the memcpy is not removed.
-define void @test_lifetime_may_alias(ptr %lifetime, ptr %src, ptr %dst) {
+define void @test_lifetime_may_alias(ptr %src, ptr %dst) {
 ; CHECK-LABEL: @test_lifetime_may_alias(
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[LIFETIME:%.*]])
+; CHECK-NEXT:    [[LIFETIME:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[LIFETIME]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 8, i1 false)
 ; CHECK-NEXT:    ret void
 ;
+  %lifetime = alloca i64
   call void @llvm.lifetime.start.p0(i64 8, ptr %lifetime)
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 8, i1 false)
   ret void

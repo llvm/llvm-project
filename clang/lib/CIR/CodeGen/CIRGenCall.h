@@ -33,7 +33,8 @@ public:
   CIRGenCalleeInfo(const clang::FunctionProtoType *calleeProtoTy,
                    clang::GlobalDecl calleeDecl)
       : calleeProtoTy(calleeProtoTy), calleeDecl(calleeDecl) {}
-  CIRGenCalleeInfo(clang::GlobalDecl calleeDecl) : calleeDecl(calleeDecl) {}
+  CIRGenCalleeInfo(clang::GlobalDecl calleeDecl)
+      : calleeProtoTy(nullptr), calleeDecl(calleeDecl) {}
 
   const clang::FunctionProtoType *getCalleeFunctionProtoType() const {
     return calleeProtoTy;
@@ -104,6 +105,12 @@ public:
   /// If this is a delayed callee computation of some sort, prepare a concrete
   /// callee
   CIRGenCallee prepareConcreteCallee(CIRGenFunction &cgf) const;
+
+  CIRGenCalleeInfo getAbstractInfo() const {
+    assert(!cir::MissingFeatures::opCallVirtual());
+    assert(isOrdinary());
+    return abstractInfo;
+  }
 
   mlir::Operation *getFunctionPointer() const {
     assert(isOrdinary());
