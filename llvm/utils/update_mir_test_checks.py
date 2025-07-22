@@ -35,7 +35,8 @@ from UpdateTestChecks import common
 VREG_RE = re.compile(r"(%[0-9]+)(?:\.[a-z0-9_]+)?(?::[a-z0-9_]+)?(?:\([<>a-z0-9 ]+\))?")
 MI_FLAGS_STR = (
     r"(frame-setup |frame-destroy |nnan |ninf |nsz |arcp |contract |afn "
-    r"|reassoc |nuw |nsw |exact |nofpexcept |nomerge |disjoint )*"
+    r"|reassoc |nuw |nsw |exact |nofpexcept |nomerge |unpredictable "
+    r"|noconvergent |nneg |disjoint |nusw |samesign )*"
 )
 VREG_DEF_FLAGS_STR = r"(?:dead |undef )*"
 VREG_DEF_RE = re.compile(
