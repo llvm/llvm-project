@@ -130,7 +130,8 @@ struct DeferredValue_match {
 
   explicit DeferredValue_match(SDValue &Match) : MatchVal(Match) {}
 
-  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+  template <typename MatchContext> 
+  bool match(const MatchContext &, SDValue N) {
     return N == MatchVal;
   }
 };
