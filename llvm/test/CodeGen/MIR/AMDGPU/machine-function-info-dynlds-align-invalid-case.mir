@@ -1,4 +1,4 @@
-# RUN: not llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
+# RUN: not llc -mtriple=amdgcn-amd-amdhsa -run-pass=none %s -o - 2>&1 | FileCheck %s
 
 ---
 # CHECK: error: YAML:8:16: must be a power of two

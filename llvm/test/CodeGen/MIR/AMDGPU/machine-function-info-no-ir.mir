@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -verify-machineinstrs %s -o - | FileCheck -check-prefixes=FULL,ALL %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -simplify-mir -verify-machineinstrs %s -o - | FileCheck -check-prefixes=SIMPLE,ALL %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=none %s -o - | FileCheck -check-prefixes=FULL,ALL %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -simplify-mir %s -o - | FileCheck -check-prefixes=SIMPLE,ALL %s
 
 
 ---

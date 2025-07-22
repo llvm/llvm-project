@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -amdgpu-s-branch-bits=4 -stop-after=branch-relaxation -verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -amdgpu-s-branch-bits=4 -stop-after=branch-relaxation %s -o - | FileCheck %s
 
 ; Test that debug instructions do not change long branch reserved serialized through
 ; MIR.

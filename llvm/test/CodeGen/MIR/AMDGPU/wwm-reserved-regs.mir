@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -verify-machineinstrs %s -o - | FileCheck %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -simplify-mir -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=none %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -simplify-mir %s -o - | FileCheck %s
 
 # CHECK-LABEL: name: empty_wwm_regs{{$}}
 # CHECK: machineFunctionInfo:
