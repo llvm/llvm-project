@@ -8,8 +8,8 @@
 ; SI-DAG: '0x2e12 (COMPUTE_PGM_RSRC1)': 0xf0000{{$}}
 ; VI-DAG: '0x2e12 (COMPUTE_PGM_RSRC1)': 0xf02c0{{$}}
 ; GFX9-DAG: '0x2e12 (COMPUTE_PGM_RSRC1)': 0xf0000{{$}}
-; GFX1170-DAG: '0x2e12 (COMPUTE_PGM_RSRC1)': 0x600f0000{{$}}
-; GFX12-DAG: '0x2e12 (COMPUTE_PGM_RSRC1)': 0x600f0000{{$}}
+; GFX1170-DAG: '0x2e12 (COMPUTE_PGM_RSRC1)': 0xe00f0000{{$}}
+; GFX12-DAG: '0x2e12 (COMPUTE_PGM_RSRC1)': 0xe00f0000{{$}}
 define amdgpu_cs half @cs_amdpal(half %arg0) #0 {
   %add = fadd half %arg0, 1.0
   ret half %add
