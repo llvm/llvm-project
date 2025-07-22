@@ -44,3 +44,18 @@ void testTemplates() {
   throwErrorTemplate("ERROR");
   (void)ensureZeroTemplate(42);
 }
+
+// Ensure that explicit specialization of a member function does not inherit
+// the warning from the primary template.
+
+template<typename T>
+struct S {
+  void f();
+};
+
+template<typename T>
+void S<T>::f() { throw 0; } 
+template<>
+void S<int>::f() {} // expected-no-diagnostics
+
+
