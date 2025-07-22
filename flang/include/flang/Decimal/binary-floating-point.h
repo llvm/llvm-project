@@ -15,6 +15,7 @@
 #include "flang/Common/api-attrs.h"
 #include "flang/Common/real.h"
 #include "flang/Common/uint128.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include <cinttypes>
 #include <climits>
 #include <cstring>
@@ -68,7 +69,7 @@ public:
   template <typename A>
   explicit constexpr RT_API_ATTRS BinaryFloatingPointNumber(A x) {
     static_assert(sizeof raw_ <= sizeof x);
-    std::memcpy(reinterpret_cast<void *>(&raw_),
+    Fortran::runtime::memcpy(reinterpret_cast<void *>(&raw_),
         reinterpret_cast<const void *>(&x), sizeof raw_);
   }
 

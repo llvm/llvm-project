@@ -296,9 +296,9 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
     auto shft{static_cast<int>(sizeof value - kind)};
     if (!isHostLittleEndian && shft >= 0) {
       auto shifted{value << (8 * shft)};
-      std::memcpy(n, &shifted, kind);
+      Fortran::runtime::memcpy(n, &shifted, kind);
     } else {
-      std::memcpy(n, &value, kind); // a blank field means zero
+      Fortran::runtime::memcpy(n, &value, kind); // a blank field means zero
     }
 #else
     auto shft{static_cast<int>(sizeof(value.low())) - kind};
