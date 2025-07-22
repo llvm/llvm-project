@@ -35,9 +35,8 @@ static void addSubArchsWithTargetID(Compilation &C, const ArgList &Args,
                                     const llvm::Triple &Triple,
                                     SmallVectorImpl<std::string> &subarchs) {
   // process OPT_offload_arch_EQ subarch specification
-  ToolChain *TC;
   for (auto itr : C.getDriver().getOffloadArchs(
-           C, C.getArgs(), Action::OFK_OpenMP, *TC))
+           C, C.getArgs(), Action::OFK_OpenMP, nullptr, true))
     subarchs.push_back(itr.str());
 
   // process OPT_Xopenmp_target_EQ subarch specification with march

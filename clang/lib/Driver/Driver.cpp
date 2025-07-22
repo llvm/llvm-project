@@ -4723,6 +4723,12 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
   }
 
   llvm::DenseSet<StringRef> Archs;
+
+  if (!TC->getTargetID().empty()) {
+    Archs.insert(TC->getTargetID());
+    return llvm::SmallVector<StringRef>();
+  }
+
   for (auto *Arg : C.getArgsForToolChain(&TC, /*BoundArch=*/"", Kind)) {
     // Add or remove the seen architectures in order of appearance. If an
     // invalid architecture is given we simply exit.
@@ -4731,23 +4737,27 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
         if (Arch == "native" || Arch.empty()) {
           auto GPUsOrErr = TC.getSystemGPUArchs(Args);
           if (!GPUsOrErr) {
-            TC.getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
-              << llvm::Triple::getArchTypeName(TC.getArch())
-              << llvm::toString(GPUsOrErr.takeError()) << "--offload-arch";
+            if (!SpecificToolchain)
+              llvm::consumeError(GPUsOrErr.takeError());
+            else
+              TC.getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
+                  << llvm::Triple::getArchTypeName(TC.getArch())
+                  << llvm::toString(GPUsOrErr.takeError()) << "--offload-arch";
             continue;
           }
 
           for (auto ArchStr : *GPUsOrErr) {
-            StringRef CanonicalStr = getCanonicalArchString(
-              C, Args, Args.MakeArgString(ArchStr), TC.getTriple());
+            StringRef CanonicalStr =
+                getCanonicalArchString(C, Args, Args.MakeArgString(ArchStr),
+                                       TC.getTriple());
             if (!CanonicalStr.empty())
               Archs.insert(CanonicalStr);
             else
               return llvm::SmallVector<StringRef>();
           }
         } else {
-          StringRef CanonicalStr =
-            getCanonicalArchString(C, Args, Arch, TC.getTriple());
+          StringRef CanonicalStr = getCanonicalArchString(
+              C, Args, Arch, TC.getTriple());
           if (!CanonicalStr.empty())
             Archs.insert(CanonicalStr);
           else
@@ -4755,12 +4765,12 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
         }
       }
     } else if (Arg->getOption().matches(options::OPT_no_offload_arch_EQ)) {
-      for (StringRef Arch : Arg->getValues()) {
+      for (StringRef Arch :  Arg->getValues()) {
         if (Arch == "all") {
           Archs.clear();
         } else {
-          StringRef ArchStr =
-            getCanonicalArchString(C, Args, Arch, TC.getTriple());
+          StringRef ArchStr = getCanonicalArchString(
+            C, Args, Arch, TC.getTriple());
           Archs.erase(ArchStr);
         }
       }
