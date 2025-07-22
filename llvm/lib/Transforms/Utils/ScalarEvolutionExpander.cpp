@@ -1240,6 +1240,10 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
       ExitSCEV = SE.getPtrToIntExpr(ExitSCEV, STy);
     else if (S->getType() != PN.getType())
       continue;
+
+    // Check if we can re-use the existing PN, by adjusting it with an expanded
+    // offset, if the offset is simpler (for now just checks if it is
+    // AddRec-free).
     const SCEV *Diff = SE.getMinusSCEV(S, ExitSCEV);
     if (isa<SCEVCouldNotCompute>(Diff) ||
         SCEVExprContains(Diff,
