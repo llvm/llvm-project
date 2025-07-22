@@ -59,7 +59,7 @@ functions:
       - type: const char *__restrict
   - name: dladdr
     standards:
-      - GNUExtensions
+      - POSIX
     return_type: int
     arguments:
       - type: const void *
