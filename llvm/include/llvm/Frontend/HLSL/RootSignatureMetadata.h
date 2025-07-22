@@ -133,7 +133,6 @@ class MetadataParser {
 public:
   MetadataParser(MDNode *Root) : Root(Root) {}
 
-  /// Iterates through root signature and converts them into MapT
   LLVM_ABI llvm::Expected<llvm::mcdxbc::RootSignatureDesc>
   ParseRootSignature(uint32_t Version);
 
