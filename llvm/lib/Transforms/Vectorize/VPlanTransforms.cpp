@@ -2692,7 +2692,7 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
 ///    vector.body:
 ///      EMIT-SCALAR %pointer.phi = phi %start, %ptr.ind
 ///      EMIT %mul = mul %stepvector, %step
-///      EMIT %vector.gep = ptradd %pointer.phi, %add
+///      EMIT %vector.gep = ptradd %pointer.phi, %mul
 ///      ...
 ///      EMIT %ptr.ind = ptradd %pointer.phi, %vf
 ///      EMIT branch-on-count ...
