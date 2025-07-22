@@ -236,9 +236,8 @@ mlir::Value Fortran::lower::genInitialDataTarget(
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
           initialTarget))
-    return fir::factory::createUnallocatedBox(
-        builder, loc, boxType,
-        /*nonDeferredParams=*/std::nullopt);
+    return fir::factory::createUnallocatedBox(builder, loc, boxType,
+                                              /*nonDeferredParams=*/{});
   // Pointer initial data target, and NULL(mold).
   for (const auto &sym : Fortran::evaluate::CollectSymbols(initialTarget)) {
     // Derived type component symbols should not be instantiated as objects
@@ -354,8 +353,8 @@ static mlir::Value genComponentDefaultInit(
       // From a standard point of view, pointer without initialization do not
       // need to be disassociated, but for sanity and simplicity, do it in
       // global constructor since this has no runtime cost.
-      componentValue = fir::factory::createUnallocatedBox(
-          builder, loc, componentTy, std::nullopt);
+      componentValue =
+          fir::factory::createUnallocatedBox(builder, loc, componentTy, {});
     } else if (Fortran::lower::hasDefaultInitialization(component)) {
       // Component type has default initialization.
       componentValue = genDefaultInitializerValue(converter, loc, component,
@@ -554,7 +553,7 @@ fir::GlobalOp Fortran::lower::defineGlobal(
       createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
         mlir::Value box = fir::factory::createUnallocatedBox(
             b, loc, symTy,
-            /*nonDeferredParams=*/std::nullopt,
+            /*nonDeferredParams=*/{},
             /*typeSourceBox=*/{}, getAllocatorIdxFromDataAttr(dataAttr));
         b.create<fir::HasValueOp>(loc, box);
       });
@@ -814,6 +813,10 @@ initializeDeviceComponentAllocator(Fortran::lower::AbstractConverter &converter,
       if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(baseTy))
         baseTy = boxTy.getEleTy();
       baseTy = fir::unwrapRefType(baseTy);
+
+      if (mlir::isa<fir::SequenceType>(baseTy))
+        TODO(loc, "array of derived-type with device component");
+
       auto recTy =
           mlir::dyn_cast<fir::RecordType>(fir::unwrapSequenceType(baseTy));
       assert(recTy && "expected fir::RecordType");
@@ -824,7 +827,7 @@ initializeDeviceComponentAllocator(Fortran::lower::AbstractConverter &converter,
         if (Fortran::semantics::IsDeviceAllocatable(sym)) {
           unsigned fieldIdx = recTy.getFieldIndex(sym.name().ToString());
           mlir::Type fieldTy;
-          std::vector<mlir::Value> coordinates;
+          llvm::SmallVector<mlir::Value> coordinates;
 
           if (fieldIdx != std::numeric_limits<unsigned>::max()) {
             // Field found in the base record type.
@@ -867,8 +870,24 @@ initializeDeviceComponentAllocator(Fortran::lower::AbstractConverter &converter,
             TODO(loc, "device resident component in complex derived-type "
                       "hierarchy");
 
-          mlir::Value comp = builder.create<fir::CoordinateOp>(
-              loc, builder.getRefType(fieldTy), fir::getBase(exv), coordinates);
+          mlir::Value base = fir::getBase(exv);
+          mlir::Value comp;
+          if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(base.getType()))) {
+            mlir::Value box = builder.create<fir::LoadOp>(loc, base);
+            mlir::Value addr = builder.create<fir::BoxAddrOp>(loc, box);
+            llvm::SmallVector<mlir::Value> lenParams;
+            assert(coordinates.size() == 1 && "expect one coordinate");
+            auto field = mlir::dyn_cast<fir::FieldIndexOp>(
+                coordinates[0].getDefiningOp());
+            comp = builder.create<hlfir::DesignateOp>(
+                loc, builder.getRefType(fieldTy), addr,
+                /*component=*/field.getFieldName(),
+                /*componentShape=*/mlir::Value{},
+                hlfir::DesignateOp::Subscripts{});
+          } else {
+            comp = builder.create<fir::CoordinateOp>(
+                loc, builder.getRefType(fieldTy), base, coordinates);
+          }
           cuf::DataAttributeAttr dataAttr =
               Fortran::lower::translateSymbolCUFDataAttribute(
                   builder.getContext(), sym);

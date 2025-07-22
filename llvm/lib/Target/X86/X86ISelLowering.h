@@ -1661,7 +1661,7 @@ namespace llvm {
 
     /// Lower interleaved load(s) into target specific
     /// instructions/intrinsics.
-    bool lowerInterleavedLoad(LoadInst *LI,
+    bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                               ArrayRef<ShuffleVectorInst *> Shuffles,
                               ArrayRef<unsigned> Indices,
                               unsigned Factor) const override;

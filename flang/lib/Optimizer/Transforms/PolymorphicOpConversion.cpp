@@ -456,7 +456,7 @@ llvm::LogicalResult SelectTypeConv::genTypeLadderStep(
   rewriter.setInsertionPointToEnd(thisBlock);
   if (destOps.has_value())
     rewriter.create<mlir::cf::CondBranchOp>(loc, cmp, dest, destOps.value(),
-                                            newBlock, std::nullopt);
+                                            newBlock, mlir::ValueRange{});
   else
     rewriter.create<mlir::cf::CondBranchOp>(loc, cmp, dest, newBlock);
   rewriter.setInsertionPointToEnd(newBlock);

@@ -17,7 +17,7 @@
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
-#include "inv_trigf_utils.h"
+#include "src/__support/math/inv_trigf_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

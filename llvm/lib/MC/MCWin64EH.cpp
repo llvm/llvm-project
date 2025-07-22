@@ -318,7 +318,7 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
 
   // Emit the epilog instructions.
   if (EnableUnwindV2) {
-    MCFragment *DF = OS->getOrCreateDataFragment();
+    MCFragment *DF = OS->getCurrentFragment();
 
     bool IsLast = true;
     for (const auto &Epilog : llvm::reverse(info->EpilogMap)) {
