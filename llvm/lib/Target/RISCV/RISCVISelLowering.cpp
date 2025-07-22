@@ -20809,8 +20809,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops,
                               cast<MemIntrinsicSDNode>(Tuple)->getMemoryVT(),
                               cast<MemIntrinsicSDNode>(Tuple)->getMemOperand());
-    SDValue Chain = Result.getValue(1);
-    return DAG.getMergeValues({Result, Chain}, DL);
+    DAG.ReplaceAllUsesOfValueWith(Tuple.getValue(1), Result.getValue(1));
+    return Result.getValue(0);
   }
   }
 
