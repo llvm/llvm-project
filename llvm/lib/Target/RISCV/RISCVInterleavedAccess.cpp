@@ -305,12 +305,12 @@ bool RISCVTargetLowering::lowerInterleavedStore(Instruction *Store,
     // Note: Same VL as above, but i32 not xlen due to signature of
     // vp.strided.store
     VL = Builder.CreateElementCount(Builder.getInt32Ty(),
-                                           VTy->getElementCount());
+                                    VTy->getElementCount());
 
-    CallInst *CI = Builder.CreateIntrinsic(
-        Intrinsic::experimental_vp_strided_store,
-        {VTy, BasePtr->getType(), Stride->getType()},
-        {Data, BasePtr, Stride, LaneMask, VL});
+    CallInst *CI =
+        Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_store,
+                                {VTy, BasePtr->getType(), Stride->getType()},
+                                {Data, BasePtr, Stride, LaneMask, VL});
     Alignment = commonAlignment(Alignment, Index * ScalarSizeInBytes);
     CI->addParamAttr(1,
                      Attribute::getWithAlignment(CI->getContext(), Alignment));
