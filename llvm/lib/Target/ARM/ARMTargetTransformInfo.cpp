@@ -1882,9 +1882,11 @@ InstructionCost ARMTTIImpl::getExtendedReductionCost(
 }
 
 InstructionCost
-ARMTTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
+ARMTTIImpl::getMulAccReductionCost(bool IsUnsigned, bool IsNegated, Type *ResTy,
                                    VectorType *ValTy,
                                    TTI::TargetCostKind CostKind) const {
+  if (IsNegated)
+    return InstructionCost::getInvalid(CostKind);
   EVT ValVT = TLI->getValueType(DL, ValTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
@@ -1905,7 +1907,8 @@ ARMTTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
       return ST->getMVEVectorCostFactor(CostKind) * LT.first;
   }
 
-  return BaseT::getMulAccReductionCost(IsUnsigned, ResTy, ValTy, CostKind);
+  return BaseT::getMulAccReductionCost(IsUnsigned, IsNegated, ResTy, ValTy,
+                                       CostKind);
 }
 
 InstructionCost
