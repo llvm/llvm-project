@@ -2,8 +2,10 @@
 // RUN: %clang_cc1 -triple wasm32-unknown-unknown -target-feature +reference-types -o - -emit-llvm %s | FileCheck %s
 
 typedef __externref_t externref_t;
+typedef __non_null_externref_t nn_externref_t;
 
 void helper(externref_t);
+void helper_2(nn_externref_t);
 
 // CHECK-LABEL: @handle(
 // CHECK-NEXT:  entry:
@@ -16,3 +18,48 @@ void helper(externref_t);
 void handle(externref_t obj) {
   helper(obj);
 }
+
+
+// CHECK-LABEL: @handle_2(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OBJ_ADDR:%.*]] = alloca ptr addrspace(11), align 1
+// CHECK-NEXT:    store ptr addrspace(11) [[OBJ:%.*]], ptr [[OBJ_ADDR]], align 1
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(11), ptr [[OBJ_ADDR]], align 1
+// CHECK-NEXT:    call void @helper_2(ptr addrspace(11) [[TMP0]])
+// CHECK-NEXT:    ret void
+//
+void handle_2(nn_externref_t obj) {
+  helper_2(obj);
+}
+
+
+nn_externref_t socketpair_js_concat(nn_externref_t, nn_externref_t)
+__attribute__((import_module("wasm:js-string"), import_name("concat")));
+
+nn_externref_t get_string_ref(const char *s);
+void print_string_ref(nn_externref_t);
+
+// CHECK-LABEL: @socketpair_example(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[STR1:%.*]] = alloca ptr addrspace(11), align 1
+// CHECK-NEXT:    [[STR2:%.*]] = alloca ptr addrspace(11), align 1
+// CHECK-NEXT:    [[RESULT:%.*]] = alloca ptr addrspace(11), align 1
+// CHECK-NEXT:    [[CALL:%.*]] = call ptr addrspace(11) @get_string_ref(ptr noundef @.str)
+// CHECK-NEXT:    store ptr addrspace(11) [[CALL]], ptr [[STR1]], align 1
+// CHECK-NEXT:    [[CALL1:%.*]] = call ptr addrspace(11) @get_string_ref(ptr noundef @.str.1)
+// CHECK-NEXT:    store ptr addrspace(11) [[CALL1]], ptr [[STR2]], align 1
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(11), ptr [[STR1]], align 1
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(11), ptr [[STR2]], align 1
+// CHECK-NEXT:    [[CALL2:%.*]] = call ptr addrspace(11) @socketpair_js_concat(ptr addrspace(11) [[TMP0]], ptr addrspace(11) [[TMP1]])
+// CHECK-NEXT:    store ptr addrspace(11) [[CALL2]], ptr [[RESULT]], align 1
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(11), ptr [[RESULT]], align 1
+// CHECK-NEXT:    call void @print_string_ref(ptr addrspace(11) [[TMP2]])
+// CHECK-NEXT:    ret void
+//
+void socketpair_example() {
+    nn_externref_t str1 = get_string_ref("Hello, ");
+    nn_externref_t str2 = get_string_ref("world!");
+    nn_externref_t result = socketpair_js_concat(str1, str2);
+    print_string_ref(result);
+}
+
