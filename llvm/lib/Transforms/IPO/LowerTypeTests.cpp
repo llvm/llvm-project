@@ -2375,6 +2375,11 @@ bool LowerTypeTestsModule::lower() {
 
   {
     ScopedSaveAliaseesAndUsed S(M);
+
+    std::vector<Metadata *> TypeIds;
+    std::vector<GlobalTypeMember *> Globals;
+    std::vector<ICallBranchFunnel *> ICallBranchFunnels;
+
     // For each disjoint set we found...
     for (const auto &C : GlobalClasses) {
       if (!C->isLeader())
@@ -2382,9 +2387,9 @@ bool LowerTypeTestsModule::lower() {
 
       ++NumTypeIdDisjointSets;
       // Build the list of type identifiers in this disjoint set.
-      std::vector<Metadata *> TypeIds;
-      std::vector<GlobalTypeMember *> Globals;
-      std::vector<ICallBranchFunnel *> ICallBranchFunnels;
+      TypeIds.clear();
+      Globals.clear();
+      ICallBranchFunnels.clear();
       for (auto M : GlobalClasses.members(*C)) {
         if (isa<Metadata *>(M))
           TypeIds.push_back(cast<Metadata *>(M));
