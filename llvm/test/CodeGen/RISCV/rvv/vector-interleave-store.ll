@@ -303,3 +303,26 @@ define void @vector_interleave_store_factor8(<vscale x 2 x i32> %a, <vscale x 2 
   store <vscale x 16 x i32> %v, ptr %p
   ret void
 }
+
+define void @masked_store_factor3(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, ptr %p) {
+; CHECK-LABEL: masked_store_factor3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg3e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v = call <vscale x 6 x i32> @llvm.vector.interleave3(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c)
+  call void @llvm.masked.store(<vscale x 6 x i32> %v, ptr %p, i32 4, <vscale x 6 x i1> splat (i1 true))
+  ret void
+}
+
+define void @masked_store_factor3_masked(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c, ptr %p, <vscale x 2 x i1> %m) {
+; CHECK-LABEL: masked_store_factor3_masked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg3e32.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+  %interleaved.mask = call <vscale x 6 x i1> @llvm.vector.interleave3(<vscale x 2 x i1> %m, <vscale x 2 x i1> %m, <vscale x 2 x i1> %m)
+  %v = call <vscale x 6 x i32> @llvm.vector.interleave3(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c)
+  call void @llvm.masked.store(<vscale x 6 x i32> %v, ptr %p, i32 4, <vscale x 6 x i1> %interleaved.mask)
+  ret void
+}

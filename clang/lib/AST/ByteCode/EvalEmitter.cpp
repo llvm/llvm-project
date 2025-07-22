@@ -324,7 +324,7 @@ void EvalEmitter::updateGlobalTemporaries() {
       const Pointer &Ptr = P.getPtrGlobal(*GlobalIndex);
       APValue *Cached = Temp->getOrCreateValue(true);
 
-      if (std::optional<PrimType> T = Ctx.classify(E->getType())) {
+      if (OptPrimType T = Ctx.classify(E->getType())) {
         TYPE_SWITCH(
             *T, { *Cached = Ptr.deref<T>().toAPValue(Ctx.getASTContext()); });
       } else {

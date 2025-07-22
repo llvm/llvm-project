@@ -110,6 +110,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-infinite-loop
+  <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
+  variables introduced by structured bindings.
+
 - Improved :doc:`bugprone-signed-char-misuse
   <clang-tidy/checks/bugprone/signed-char-misuse>` check by fixing
   false positives on C23 enums with the fixed underlying type of signed char.
