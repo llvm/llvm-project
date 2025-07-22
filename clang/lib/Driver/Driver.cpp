@@ -70,6 +70,7 @@
 #include "clang/Driver/Util.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -1065,7 +1066,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         (C.getInputArgs().hasArg(options::OPT_offload_arch_EQ) &&
          !(IsCuda || IsHIP))));
 
-  llvm::DenseSet<Action::OffloadKind> Kinds;
+  llvm::SmallSet<Action::OffloadKind, 4> Kinds;
   const std::pair<bool, Action::OffloadKind> ActiveKinds[] = {
       {IsCuda, Action::OFK_Cuda},
       {IsHIP, Action::OFK_HIP},

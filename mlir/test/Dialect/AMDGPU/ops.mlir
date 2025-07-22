@@ -548,3 +548,20 @@ func.func @gather_to_lds(%idx1 : index, %idx2 : index, %mem1 : memref<32xf16>, %
   amdgpu.gather_to_lds %mem1[%idx1],        %smem2[%idx1, %idx2] : vector<2xf16>, memref<32xf16>,    memref<32x32xf16, #gpu.address_space<workgroup>>
   func.return
 }
+
+// CHECK-LABEL: func @memory_counter_wait
+func.func @memory_counter_wait() {
+  // CHECK: amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4)
+  // CHECK: amdgpu.memory_counter_wait load(4) store(2) ds(3) exp(1)
+  // CHECK: amdgpu.memory_counter_wait load(1)
+  // CHECK: amdgpu.memory_counter_wait store(2)
+  // CHECK: amdgpu.memory_counter_wait ds(3)
+  // CHECK: amdgpu.memory_counter_wait exp(4)
+  amdgpu.memory_counter_wait load(1) store(2) ds(3) exp(4)
+  amdgpu.memory_counter_wait exp(1) store(2) ds(3) load(4)
+  amdgpu.memory_counter_wait load(1)
+  amdgpu.memory_counter_wait store(2)
+  amdgpu.memory_counter_wait ds(3)
+  amdgpu.memory_counter_wait exp(4)
+  func.return
+}
