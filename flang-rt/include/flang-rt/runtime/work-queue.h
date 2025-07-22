@@ -127,8 +127,8 @@ protected:
   const Descriptor &instance_, *from_{nullptr};
   std::size_t elements_{instance_.InlineElements()};
   std::size_t elementAt_{0};
-  SubscriptValue subscripts_[common::maxRank];
-  SubscriptValue fromSubscripts_[common::maxRank];
+  SubscriptValue subscripts_[maxRank];
+  SubscriptValue fromSubscripts_[maxRank];
 };
 
 // Base class for ticket workers that operate over derived type components.
@@ -162,7 +162,7 @@ protected:
   const typeInfo::DerivedType &derived_;
   std::size_t components_{0}, componentAt_{0};
   const typeInfo::Component *component_{nullptr};
-  StaticDescriptor<common::maxRank, true, 0> componentDescriptor_;
+  StaticDescriptor<maxRank, true, 0> componentDescriptor_;
 
 private:
   RT_API_ATTRS void GetFirstComponent() {
@@ -275,7 +275,7 @@ private:
   const Descriptor &clone_;
   bool hasStat_{false};
   const Descriptor *errMsg_{nullptr};
-  StaticDescriptor<common::maxRank, true, 0> cloneComponentDescriptor_;
+  StaticDescriptor<maxRank, true, 0> cloneComponentDescriptor_;
 };
 
 // Implements derived type instance finalization
@@ -331,7 +331,7 @@ private:
   const Descriptor *from_{nullptr};
   int flags_{0}; // enum AssignFlags
   MemmoveFct memmoveFct_{nullptr};
-  StaticDescriptor<common::maxRank, true, 0> tempDescriptor_;
+  StaticDescriptor<maxRank, true, 0> tempDescriptor_;
   const typeInfo::DerivedType *declaredType_{nullptr};
   const typeInfo::DerivedType *toDerived_{nullptr};
   Descriptor *toDeallocate_{nullptr};
@@ -364,7 +364,7 @@ private:
   int flags_{0};
   MemmoveFct memmoveFct_{nullptr};
   Descriptor *deallocateAfter_{nullptr};
-  StaticDescriptor<common::maxRank, true, 0> fromComponentDescriptor_;
+  StaticDescriptor<maxRank, true, 0> fromComponentDescriptor_;
 };
 
 namespace io::descr {
@@ -392,7 +392,7 @@ private:
   common::optional<typeInfo::SpecialBinding> nonTbpSpecial_;
   const typeInfo::DerivedType *derived_{nullptr};
   const typeInfo::SpecialBinding *special_{nullptr};
-  StaticDescriptor<common::maxRank, true, 0> elementDescriptor_;
+  StaticDescriptor<maxRank, true, 0> elementDescriptor_;
 };
 
 template <io::Direction DIR>
