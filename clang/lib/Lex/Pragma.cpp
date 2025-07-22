@@ -604,6 +604,10 @@ IdentifierInfo *Preprocessor::ParsePragmaPushOrPopMacro(Token &Tok) {
   assert(StrVal[0] == '"' && StrVal[StrVal.size()-1] == '"' &&
          "Invalid string token!");
 
+  // FIXME: Should we emit a warning?
+  if (StrVal.size() <= 2)
+    return nullptr;
+
   // Create a Token from the string.
   Token MacroTok;
   MacroTok.startToken();
