@@ -76,11 +76,10 @@ resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
   }
 }
 
-// This pattern rewrites ConvertLayoutOp by removing the inst_data field
-// from the layout attributes. As the surrounding extract_strided_slice
-// and insert_strided_slice operations reconstruct the original value
-// shape and partition it into instruction-sized tiles, its lowering is
-// simply to drop the inst_data field for ConvertLayoutOp.
+// This pattern lowers ConvertLayoutOp by removing the inst_data field from the
+// layout attributes. Since both producer and consumer operations handle data
+// partitioning based on their own inst_data, while maintaining original input
+// and output shape, ConvertLayoutOp does not need to manage inst_data.
 struct ConvertLayoutOpPattern
     : public OpRewritePattern<xegpu::ConvertLayoutOp> {
   using OpRewritePattern::OpRewritePattern;

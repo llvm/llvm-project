@@ -433,12 +433,15 @@ struct WgToSgConvertLayoutOp
 
     DenseI32ArrayAttr inputSgLayout = input.getSgLayout();
     DenseI32ArrayAttr inputSgData = input.getSgData();
+    DenseI32ArrayAttr inputOrder = input.getOrder();
     DenseI32ArrayAttr targetSgLayout = target.getSgLayout();
     DenseI32ArrayAttr targetSgData = target.getSgData();
+    DenseI32ArrayAttr targetOrder = target.getOrder();
 
     // TODO: currently we only support for optimal case, where input and
     // output has the same sg_layout and sg_data, so SLM is not involved.
-    if (inputSgLayout != targetSgLayout || inputSgData != targetSgData)
+    if (inputSgLayout != targetSgLayout || inputSgData != targetSgData ||
+        inputOrder != targetOrder)
       return failure();
 
     input = input.dropSgLayoutAndData();
