@@ -231,6 +231,7 @@ std::string lookupBuiltinNameHelper(StringRef DemangledCall,
   // - "__spirv_SubgroupImageMediaBlockReadINTEL"
   // - "__spirv_SubgroupImageMediaBlockWriteINTEL"
   // - "__spirv_Convert"
+  // - "__spirv_Round"
   // - "__spirv_UConvert"
   // - "__spirv_SConvert"
   // - "__spirv_FConvert"
@@ -243,7 +244,7 @@ std::string lookupBuiltinNameHelper(StringRef DemangledCall,
       "SDotKHR|SUDotKHR|SDotAccSatKHR|UDotAccSatKHR|SUDotAccSatKHR|"
       "ReadClockKHR|SubgroupBlockReadINTEL|SubgroupImageBlockReadINTEL|"
       "SubgroupImageMediaBlockReadINTEL|SubgroupImageMediaBlockWriteINTEL|"
-      "Convert|"
+      "Convert|Round"
       "UConvert|SConvert|FConvert|SatConvert)[^_]*)(_R[^_]*_?(\\w+)?.*)?");
   std::smatch Match;
   if (std::regex_match(BuiltinName, Match, SpvWithR) && Match.size() > 1) {
@@ -2682,14 +2683,14 @@ static bool generateConvertInst(const StringRef DemangledCall,
         const auto *ST = static_cast<const SPIRVSubtarget *>(
           &MIRBuilder.getMF().getSubtarget());
         if (!ST->canUseExtension(
-                SPIRV::Extension::SPV_INTEL_bfloat16_conversion))
-          NeedExtMsg = "SPV_INTEL_bfloat16_conversion";
+                SPIRV::Extension::SPV_INTEL_tensor_float32_conversion))
+          NeedExtMsg = "SPV_INTEL_tensor_float32_conversion";
           IsRightComponentsNumber =
             GR->getScalarOrVectorComponentCount(Call->Arguments[0]) ==
             GR->getScalarOrVectorComponentCount(Call->ReturnRegister);
         Opcode = SPIRV::OpRoundFToTF32INTEL;
       } else {
-        Float -> Float
+        // Float -> Float
         Opcode = SPIRV::OpFConvert;
       }
     }
