@@ -410,7 +410,7 @@ added in the future:
       calling convention: on most platforms, they are not preserved and need to
       be saved by the caller, but on Windows, xmm6-xmm15 are preserved.
 
-    - On AArch64 the callee preserve all general purpose registers, except
+    - On AArch64 the callee preserves all general purpose registers, except
       X0-X8 and X16-X18. Not allowed with ``nest``.
 
     The idea behind this convention is to support calls to runtime functions
@@ -425,10 +425,10 @@ added in the future:
     on the hot path and definitely executed a lot. Furthermore `preserve_mostcc`
     doesn't prevent the inliner from inlining the function call.
 
-    This calling convention will be used by a future version of the ObjectiveC
+    This calling convention will be used by a future version of the Objective-C
     runtime and should therefore still be considered experimental at this time.
     Although this convention was created to optimize certain runtime calls to
-    the ObjectiveC runtime, it is not limited to this runtime and might be used
+    the Objective-C runtime, it is not limited to this runtime and might be used
     by other runtimes in the future too. The current implementation only
     supports X86-64, but the intention is to support more architectures in the
     future.
@@ -455,14 +455,14 @@ added in the future:
     that don't need to call out to any other functions.
 
     This calling convention, like the `PreserveMost` calling convention, will be
-    used by a future version of the ObjectiveC runtime and should be considered
+    used by a future version of the Objective-C runtime and should be considered
     experimental at this time.
 "``preserve_nonecc``" - The `PreserveNone` calling convention
     This calling convention doesn't preserve any general registers. So all
     general registers are caller saved registers. It also uses all general
     registers to pass arguments. This attribute doesn't impact non-general
     purpose registers (e.g. floating point registers, on X86 XMMs/YMMs).
-    Non-general purpose registers still follow the standard c calling
+    Non-general purpose registers still follow the standard C calling
     convention. Currently it is for x86_64 and AArch64 only.
 "``cxx_fast_tlscc``" - The `CXX_FAST_TLS` calling convention for access functions
     Clang generates an access function to access C++-style Thread Local Storage
@@ -513,7 +513,7 @@ added in the future:
     - On AArch64 the target address is passed in X15.
 "``cc <n>``" - Numbered convention
     Any calling convention may be specified by number, allowing
-    target-specific calling conventions to be used. Target specific
+    target-specific calling conventions to be used. Target-specific
     calling conventions start at 64.
 
 More calling conventions can be added/defined on an as-needed basis, to
@@ -559,7 +559,7 @@ DLL Storage Classes
 -------------------
 
 All Global Variables, Functions and Aliases can have one of the following
-DLL storage class:
+DLL storage classes:
 
 ``dllimport``
     "``dllimport``" causes the compiler to reference a function or variable via
@@ -569,7 +569,7 @@ DLL storage class:
 ``dllexport``
     On Microsoft Windows targets, "``dllexport``" causes the compiler to provide
     a global pointer to a pointer in a DLL, so that it can be referenced with the
-    ``dllimport`` attribute. the pointer name is formed by combining ``__imp_``
+    ``dllimport`` attribute. The pointer name is formed by combining ``__imp_``
     and the function or variable name. On XCOFF targets, ``dllexport`` indicates
     that the symbol will be made visible to other modules using "exported"
     visibility and thus placed by the linker in the loader section symbol table.
@@ -586,7 +586,7 @@ Thread Local Storage Models
 ---------------------------
 
 A variable may be defined as ``thread_local``, which means that it will
-not be shared by threads (each thread will have a separated copy of the
+not be shared by threads (each thread will have a separate copy of the
 variable). Not all targets support thread-local variables. Optionally, a
 TLS model may be specified:
 
@@ -606,10 +606,10 @@ be used. The target may choose a different TLS model if the specified
 model is not supported, or if a better choice of model can be made.
 
 A model can also be specified in an alias, but then it only governs how
-the alias is accessed. It will not have any effect in the aliasee.
+the alias is accessed. It will not have any effect on the aliasee.
 
 For platforms without linker support of ELF TLS model, the -femulated-tls
-flag can be used to generate GCC compatible emulated TLS code.
+flag can be used to generate GCC-compatible emulated TLS code.
 
 .. _runtime_preemption_model:
 
@@ -750,7 +750,7 @@ is zero. The address space qualifier must precede any other attributes.
 
 LLVM allows an explicit section to be specified for globals. If the
 target supports it, it will emit globals to the section specified.
-Additionally, the global can placed in a comdat if the target has the necessary
+Additionally, the global can be placed in a comdat if the target has the necessary
 support.
 
 External declarations may have an explicit section specified. Section
@@ -1316,7 +1316,7 @@ Currently, only the following parameter attributes are defined:
     must be cleared off with :ref:`llvm.stackrestore
     <int_stackrestore>`.
 
-    The inalloca attribute requires a type argument.
+    The ``inalloca`` attribute requires a type argument.
 
     See :doc:`InAlloca` for more information on how to use this
     attribute.
@@ -1328,7 +1328,7 @@ Currently, only the following parameter attributes are defined:
     loads and stores to the structure may be assumed by the callee not
     to trap and to be properly aligned.
 
-    The sret type argument specifies the in memory type.
+    The sret type argument specifies the in-memory type.
 
     A function that accepts an ``sret`` argument must return ``void``.
     A return value may not be ``sret``.
@@ -1397,7 +1397,7 @@ Currently, only the following parameter attributes are defined:
     pointer. This is not a valid attribute for return values. This attribute
     applies only to the particular copy of the pointer passed in this argument.
 
-    The arguments of ``captures`` is a list of captured pointer components,
+    The arguments of ``captures`` are a list of captured pointer components,
     which may be ``none``, or a combination of:
 
     - ``address``: The integral address of the pointer.
@@ -1429,7 +1429,7 @@ Currently, only the following parameter attributes are defined:
       is null is captured in some other way.
 
 ``nofree``
-    This indicates that callee does not free the pointer argument. This is not
+    This indicates that the callee does not free the pointer argument. This is not
     a valid attribute for return values.
 
 .. _nest:
@@ -1545,7 +1545,7 @@ Currently, only the following parameter attributes are defined:
     (matching the supported types for :ref:`fast-math flags <fastmath>`).
     The test mask has the same format as the second argument to the
     :ref:`llvm.is.fpclass <llvm.is.fpclass>`, and indicates which classes
-    of floating-point values are not permitted for the value. For example
+    of floating-point values are not permitted for the value. For example,
     a bitmask of 3 indicates the parameter may not be a NaN.
 
     If the value is a floating-point class indicated by the
@@ -1783,7 +1783,7 @@ string:
 
     define void @f() gc "name" { ... }
 
-The supported values of *name* includes those :ref:`built in to LLVM
+The supported values of *name* include those :ref:`built in to LLVM
 <builtin-gc-strategies>` and any provided by loaded plugins. Specifying a GC
 strategy will cause the compiler to alter its output in order to support the
 named garbage collection algorithm. Note that LLVM itself does not contain a
@@ -2056,9 +2056,9 @@ For example:
 ``hot``
     This attribute indicates that this function is a hot spot of the program
     execution. The function will be optimized more aggressively and will be
-    placed into special subsection of the text section to improving locality.
+    placed into a special subsection of the text section to improve locality.
 
-    When profile feedback is enabled, this attribute has the precedence over
+    When profile feedback is enabled, this attribute takes precedence over
     the profile information. By marking a function ``hot``, users can work
     around the cases where the training input does not have good coverage
     on all the hot functions.
@@ -2162,10 +2162,10 @@ For example:
     and on function declarations and definitions.
 ``nocallback``
     This attribute indicates that the function is only allowed to jump back into
-    caller's module by a return or an exception, and is not allowed to jump back
+    the caller's module by a return or an exception, and is not allowed to jump back
     by invoking a callback function, a direct, possibly transitive, external
     function call, use of ``longjmp``, or other means. It is a compiler hint that
-    is used at module level to improve dataflow analysis, dropped during linking,
+    is used at the module level to improve dataflow analysis, dropped during linking,
     and has no effect on functions defined in the current module.
 ``nodivergencesource``
     A call to this function is not a source of divergence. In uniformity
@@ -2297,7 +2297,7 @@ For example:
    in address-space 0 is considered to be a valid address for memory loads and
    stores. Any analysis or optimization should not treat dereferencing a
    pointer to ``null`` as undefined behavior in this function.
-   Note: Comparing address of a global variable to ``null`` may still
+   Note: Comparing the address of a global variable to ``null`` may still
    evaluate to false because of a limitation in querying this attribute inside
    constant expressions.
 ``optdebug``
@@ -2370,7 +2370,7 @@ For example:
     This attribute controls the behavior of stack probes: either
     the ``"probe-stack"`` attribute, or ABI-required stack probes, if any.
     It defines the size of the guard region. It ensures that if the function
-    may use more stack space than the size of the guard region, stack probing
+    may use more stack space than the size of the guard region, a stack probing
     sequence will be emitted. It takes one required integer value, which
     is 4096 by default.
 
