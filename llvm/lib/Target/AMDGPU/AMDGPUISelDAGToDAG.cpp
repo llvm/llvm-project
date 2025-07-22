@@ -2116,7 +2116,8 @@ bool AMDGPUDAGToDAGISel::checkFlatScratchSVSSwizzleBug(
 
 bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
                                              SDValue &VAddr, SDValue &SAddr,
-                                             SDValue &Offset) const  {
+                                             SDValue &Offset,
+                                             SDValue &CPol) const {
   int64_t ImmOffset = 0;
 
   SDValue LHS, RHS;
@@ -2148,6 +2149,7 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
         if (checkFlatScratchSVSSwizzleBug(VAddr, SAddr, SplitImmOffset))
           return false;
         Offset = CurDAG->getTargetConstant(SplitImmOffset, SDLoc(), MVT::i32);
+        CPol = CurDAG->getTargetConstant(0, SDLoc(), MVT::i32);
         return true;
       }
     }
@@ -2181,6 +2183,10 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
     return false;
   SAddr = SelectSAddrFI(CurDAG, SAddr);
   Offset = CurDAG->getSignedTargetConstant(ImmOffset, SDLoc(), MVT::i32);
+
+  bool ScaleOffset = SelectScaleOffset(N, VAddr, true /* IsSigned */);
+  CPol = CurDAG->getTargetConstant(ScaleOffset ? AMDGPU::CPol::SCAL : 0,
+                                   SDLoc(), MVT::i32);
   return true;
 }
 
