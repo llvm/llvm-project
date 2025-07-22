@@ -1068,7 +1068,7 @@ static LogicalResult checkPrivateOperands(mlir::Operation *accConstructOp,
   for (mlir::Value operand : operands) {
     if (!mlir::isa<OpT>(operand.getDefiningOp()))
       return accConstructOp->emitOpError()
-             << "expect " << operandName << " as defining op";
+             << "expected " << operandName << " as defining op";
     if (!set.insert(operand).second)
       return accConstructOp->emitOpError()
              << operandName << " operand appears more than once";
