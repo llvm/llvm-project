@@ -5894,7 +5894,7 @@ static void addAllocasForDeclareTargetFunctionPointerArgs(
       llvm::Value *Load = builder.CreateLoad(Arg.getType(), GenericV);
       llvm::SmallVector<llvm::DbgVariableIntrinsic *> DbgUsers;
       llvm::SmallVector<llvm::DbgVariableRecord *> DPUsers;
-      llvm::findDbgUsers(DbgUsers, &Arg, &DPUsers);
+      llvm::findDbgUsers(&Arg, DPUsers);
       for (auto *DVI : DbgUsers) {
         DVI->replaceVariableLocationOp(&Arg, AllocaV);
         DVI->setExpression(Expr);

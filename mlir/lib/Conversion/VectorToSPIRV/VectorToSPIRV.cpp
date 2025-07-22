@@ -79,6 +79,20 @@ struct VectorShapeCast final : public OpConversionPattern<vector::ShapeCastOp> {
   }
 };
 
+// Convert `vector.splat` to `vector.broadcast`. There is a path from
+// `vector.broadcast` to SPIRV via other patterns.
+struct VectorSplatToBroadcast final
+    : public OpConversionPattern<vector::SplatOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(vector::SplatOp splat, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(splat, splat.getType(),
+                                                     adaptor.getInput());
+    return success();
+  }
+};
+
 struct VectorBitcastConvert final
     : public OpConversionPattern<vector::BitCastOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -556,22 +570,27 @@ struct VectorReductionFloatMinMax final
   }
 };
 
-class VectorSplatPattern final : public OpConversionPattern<vector::SplatOp> {
+class VectorScalarBroadcastPattern final
+    : public OpConversionPattern<vector::BroadcastOp> {
 public:
-  using OpConversionPattern<vector::SplatOp>::OpConversionPattern;
+  using OpConversionPattern<vector::BroadcastOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(vector::SplatOp op, OpAdaptor adaptor,
+  matchAndRewrite(vector::BroadcastOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    if (isa<VectorType>(op.getSourceType())) {
+      return rewriter.notifyMatchFailure(
+          op, "only conversion of 'broadcast from scalar' is supported");
+    }
     Type dstType = getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return failure();
     if (isa<spirv::ScalarType>(dstType)) {
-      rewriter.replaceOp(op, adaptor.getInput());
+      rewriter.replaceOp(op, adaptor.getSource());
     } else {
       auto dstVecType = cast<VectorType>(dstType);
       SmallVector<Value, 4> source(dstVecType.getNumElements(),
-                                   adaptor.getInput());
+                                   adaptor.getSource());
       rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, dstType,
                                                                source);
     }
@@ -1089,11 +1108,11 @@ void mlir::populateVectorToSPIRVPatterns(
       VectorReductionPattern<CL_INT_MAX_MIN_OPS>,
       VectorReductionFloatMinMax<CL_FLOAT_MAX_MIN_OPS>,
       VectorReductionFloatMinMax<GL_FLOAT_MAX_MIN_OPS>, VectorShapeCast,
-      VectorInsertStridedSliceOpConvert, VectorShuffleOpConvert,
-      VectorInterleaveOpConvert, VectorDeinterleaveOpConvert,
-      VectorSplatPattern, VectorLoadOpConverter, VectorStoreOpConverter,
-      VectorStepOpConvert>(typeConverter, patterns.getContext(),
-                           PatternBenefit(1));
+      VectorSplatToBroadcast, VectorInsertStridedSliceOpConvert,
+      VectorShuffleOpConvert, VectorInterleaveOpConvert,
+      VectorDeinterleaveOpConvert, VectorScalarBroadcastPattern,
+      VectorLoadOpConverter, VectorStoreOpConverter, VectorStepOpConvert>(
+      typeConverter, patterns.getContext(), PatternBenefit(1));
 
   // Make sure that the more specialized dot product pattern has higher benefit
   // than the generic one that extracts all elements.
