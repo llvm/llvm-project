@@ -1063,7 +1063,7 @@ StructType::get(ArrayRef<Type> memberTypes,
       memberDecorations);
   llvm::array_pod_sort(sortedMemberDecorations.begin(),
                        sortedMemberDecorations.end());
-  SmallVector<StructType::StructDecorationInfo, 4> sortedStructDecorations(
+  SmallVector<StructType::StructDecorationInfo, 1> sortedStructDecorations(
       structDecorations);
   llvm::array_pod_sort(sortedStructDecorations.begin(),
                        sortedStructDecorations.end());

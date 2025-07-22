@@ -698,7 +698,7 @@ LogicalResult Serializer::prepareBasicType(
       }
     }
 
-    SmallVector<spirv::StructType::StructDecorationInfo, 0> structDecorations;
+    SmallVector<spirv::StructType::StructDecorationInfo, 1> structDecorations;
     structType.getStructDecorations(structDecorations);
 
     for (spirv::StructType::StructDecorationInfo &structDecoration :

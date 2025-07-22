@@ -770,7 +770,7 @@ static Type parseStructType(SPIRVDialect const &dialect,
   if (failed(parser.parseRParen()))
     return Type();
 
-  SmallVector<StructType::StructDecorationInfo, 0> structDecorationInfo;
+  SmallVector<StructType::StructDecorationInfo, 1> structDecorationInfo;
 
   auto parseStructDecoration = [&]() {
     std::optional<spirv::Decoration> decoration =
@@ -928,7 +928,7 @@ static void print(StructType type, DialectAsmPrinter &os) {
                         printMember);
   os << ")";
 
-  SmallVector<spirv::StructType::StructDecorationInfo, 0> decorations;
+  SmallVector<spirv::StructType::StructDecorationInfo, 1> decorations;
   type.getStructDecorations(decorations);
   if (!decorations.empty()) {
     os << ", ";

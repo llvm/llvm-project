@@ -330,7 +330,7 @@ public:
     bool hasValue() const { return !isa<UnitAttr>(decorationValue); }
   };
 
-  // Type for specifying the decoration(s) on the struct itself
+  // Type for specifying the decoration(s) on the struct itself.
   struct StructDecorationInfo {
     bool hasValue;
     Decoration decoration;
