@@ -17,15 +17,45 @@ namespace mlir {
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
 
+#define DEBUG_TYPE "generate-runtime-verification"
+#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
+#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
+
 using namespace mlir;
+
+static bool defaultShouldHandleVerifiableOpFn(RuntimeVerifiableOpInterface op) {
+  // By default, all verifiable ops are considered
+  return true;
+}
 
 namespace {
 struct GenerateRuntimeVerificationPass
     : public impl::GenerateRuntimeVerificationBase<
           GenerateRuntimeVerificationPass> {
+
+  GenerateRuntimeVerificationPass();
+  GenerateRuntimeVerificationPass(const GenerateRuntimeVerificationPass &) =
+      default;
+  GenerateRuntimeVerificationPass(
+      std::function<bool(RuntimeVerifiableOpInterface)>
+          shouldHandleVerifiableOpFn);
+
   void runOnOperation() override;
+
+private:
+  // A filter function to select verifiable ops to generate verification for.
+  // If empty, all verifiable ops are considered.
+  std::function<bool(RuntimeVerifiableOpInterface)> shouldHandleVerifiableOpFn;
 };
 } // namespace
+
+GenerateRuntimeVerificationPass::GenerateRuntimeVerificationPass()
+    : shouldHandleVerifiableOpFn(defaultShouldHandleVerifiableOpFn) {}
+
+GenerateRuntimeVerificationPass::GenerateRuntimeVerificationPass(
+    std::function<bool(RuntimeVerifiableOpInterface)>
+        shouldHandleVerifiableOpFn)
+    : shouldHandleVerifiableOpFn(std::move(shouldHandleVerifiableOpFn)) {}
 
 void GenerateRuntimeVerificationPass::runOnOperation() {
   // The implementation of the RuntimeVerifiableOpInterface may create ops that
@@ -38,11 +68,22 @@ void GenerateRuntimeVerificationPass::runOnOperation() {
 
   OpBuilder builder(getOperation()->getContext());
   for (RuntimeVerifiableOpInterface verifiableOp : ops) {
-    builder.setInsertionPoint(verifiableOp);
-    verifiableOp.generateRuntimeVerification(builder, verifiableOp.getLoc());
-  };
+    if (shouldHandleVerifiableOpFn(verifiableOp)) {
+      builder.setInsertionPoint(verifiableOp);
+      verifiableOp.generateRuntimeVerification(builder, verifiableOp.getLoc());
+    } else {
+      LDBG("Skipping operation: " << verifiableOp.getOperation());
+    }
+  }
 }
 
 std::unique_ptr<Pass> mlir::createGenerateRuntimeVerificationPass() {
   return std::make_unique<GenerateRuntimeVerificationPass>();
+}
+
+std::unique_ptr<Pass> mlir::createGenerateRuntimeVerificationPass(
+    std::function<bool(RuntimeVerifiableOpInterface)>
+        shouldHandleVerifiableOpFn) {
+  return std::make_unique<GenerateRuntimeVerificationPass>(
+      std::move(shouldHandleVerifiableOpFn));
 }
