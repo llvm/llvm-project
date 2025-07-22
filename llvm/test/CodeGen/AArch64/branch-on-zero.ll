@@ -59,28 +59,24 @@ while.end:                                        ; preds = %while.body, %entry
 define i32 @test_lshr2(ptr nocapture %x, ptr nocapture readonly %y, i32 %n) {
 ; CHECK-SD-LABEL: test_lshr2:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    cmp w2, #4
-; CHECK-SD-NEXT:    b.lo .LBB1_3
-; CHECK-SD-NEXT:  // %bb.1: // %while.body.preheader
 ; CHECK-SD-NEXT:    lsr w8, w2, #2
-; CHECK-SD-NEXT:  .LBB1_2: // %while.body
+; CHECK-SD-NEXT:    cbz w8, .LBB1_2
+; CHECK-SD-NEXT:  .LBB1_1: // %while.body
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SD-NEXT:    ldr w9, [x1], #4
 ; CHECK-SD-NEXT:    subs w8, w8, #1
 ; CHECK-SD-NEXT:    lsl w9, w9, #1
 ; CHECK-SD-NEXT:    str w9, [x0], #4
-; CHECK-SD-NEXT:    b.ne .LBB1_2
-; CHECK-SD-NEXT:  .LBB1_3: // %while.end
+; CHECK-SD-NEXT:    b.ne .LBB1_1
+; CHECK-SD-NEXT:  .LBB1_2: // %while.end
 ; CHECK-SD-NEXT:    mov w0, wzr
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_lshr2:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    cmp w2, #4
-; CHECK-GI-NEXT:    b.lo .LBB1_3
-; CHECK-GI-NEXT:  // %bb.1: // %while.body.preheader
 ; CHECK-GI-NEXT:    lsr w8, w2, #2
-; CHECK-GI-NEXT:  .LBB1_2: // %while.body
+; CHECK-GI-NEXT:    cbz w8, .LBB1_2
+; CHECK-GI-NEXT:  .LBB1_1: // %while.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    ldr w9, [x1], #4
 ; CHECK-GI-NEXT:    add x10, x0, #4
@@ -88,8 +84,8 @@ define i32 @test_lshr2(ptr nocapture %x, ptr nocapture readonly %y, i32 %n) {
 ; CHECK-GI-NEXT:    lsl w9, w9, #1
 ; CHECK-GI-NEXT:    str w9, [x0]
 ; CHECK-GI-NEXT:    mov x0, x10
-; CHECK-GI-NEXT:    b.ne .LBB1_2
-; CHECK-GI-NEXT:  .LBB1_3: // %while.end
+; CHECK-GI-NEXT:    b.ne .LBB1_1
+; CHECK-GI-NEXT:  .LBB1_2: // %while.end
 ; CHECK-GI-NEXT:    mov w0, wzr
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -126,11 +122,10 @@ define i32 @lshr(i32 %u) {
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mov w19, w0
-; CHECK-NEXT:    cmp w0, #16
-; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    b.lo .LBB2_2
+; CHECK-NEXT:    lsr w0, w0, #4
+; CHECK-NEXT:    mov w8, w19
+; CHECK-NEXT:    cbz w0, .LBB2_2
 ; CHECK-NEXT:  // %bb.1: // %if.then
-; CHECK-NEXT:    lsr w0, w19, #4
 ; CHECK-NEXT:    bl use
 ; CHECK-NEXT:    add w8, w19, w19, lsl #1
 ; CHECK-NEXT:  .LBB2_2: // %if.end

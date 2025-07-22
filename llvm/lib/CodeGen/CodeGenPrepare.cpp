@@ -8630,7 +8630,7 @@ static bool optimizeBranch(BranchInst *Branch, const TargetLowering &TLI,
   //  br %c, bla, blb
   // Creating the cmp to zero can be better for the backend, especially if the
   // lshr produces flags that can be used automatically.
-  if (!TLI.preferZeroCompareBranch() || !Branch->isConditional())
+  if (!TLI.preferZeroCompareBranch(Branch) || !Branch->isConditional())
     return false;
 
   ICmpInst *Cmp = dyn_cast<ICmpInst>(Branch->getCondition());

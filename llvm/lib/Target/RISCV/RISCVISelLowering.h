@@ -225,7 +225,7 @@ public:
 
   unsigned getCustomCtpopCost(EVT VT, ISD::CondCode Cond) const override;
 
-  bool preferZeroCompareBranch() const override { return true; }
+  bool preferZeroCompareBranch(BranchInst *) const override { return true; }
 
   // Note that one specific case requires fence insertion for an
   // AtomicCmpXchgInst but is handled via the RISCVZacasABIFix pass rather

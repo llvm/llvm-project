@@ -28508,6 +28508,16 @@ Register AArch64TargetLowering::getExceptionSelectorRegister(
   return AArch64::X1;
 }
 
+bool AArch64TargetLowering::preferZeroCompareBranch(BranchInst *Branch) const {
+  // If we can use Armv9.6 CB instructions, prefer that over zero compare
+  // branches.
+
+  // If we have speculative load hardening enabled, we cannot use
+  // zero compare branches.
+  return !Subtarget->hasCMPBR() && !Branch->getFunction()->hasFnAttribute(
+                                       Attribute::SpeculativeLoadHardening);
+}
+
 bool AArch64TargetLowering::isMaskAndCmp0FoldingBeneficial(
     const Instruction &AndI) const {
   // Only sink 'and' mask to cmp use block if it is masking a single bit, since
