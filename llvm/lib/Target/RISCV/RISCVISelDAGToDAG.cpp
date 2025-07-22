@@ -3106,6 +3106,25 @@ bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
   return true;
 }
 
+bool RISCVDAGToDAGISel::SelectAddrRegZextRegScale(SDValue Addr,
+                                                  unsigned MaxShiftAmount,
+                                                  unsigned Bits, SDValue &Base,
+                                                  SDValue &Index,
+                                                  SDValue &Scale) {
+  if (!SelectAddrRegRegScale(Addr, MaxShiftAmount, Base, Index, Scale))
+    return false;
+
+  if (Index.getOpcode() == ISD::AND) {
+    auto *C = dyn_cast<ConstantSDNode>(Index.getOperand(1));
+    if (C && C->getZExtValue() == maskTrailingOnes<uint64_t>(Bits)) {
+      Index = Index.getOperand(0);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 bool RISCVDAGToDAGISel::SelectAddrRegReg(SDValue Addr, SDValue &Base,
                                          SDValue &Offset) {
   if (Addr.getOpcode() != ISD::ADD)

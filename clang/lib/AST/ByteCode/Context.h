@@ -66,6 +66,10 @@ public:
   bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
                          const Expr *PtrExpr, std::string &Result);
 
+  /// Evalute \param E and if it can be evaluated to a string literal,
+  /// run strlen() on it.
+  bool evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result);
+
   /// Returns the AST context.
   ASTContext &getASTContext() const { return Ctx; }
   /// Returns the language options.
@@ -78,10 +82,10 @@ public:
   uint32_t getBitWidth(QualType T) const { return Ctx.getIntWidth(T); }
 
   /// Classifies a type.
-  std::optional<PrimType> classify(QualType T) const;
+  OptPrimType classify(QualType T) const;
 
   /// Classifies an expression.
-  std::optional<PrimType> classify(const Expr *E) const {
+  OptPrimType classify(const Expr *E) const {
     assert(E);
     if (E->isGLValue())
       return PT_Ptr;
