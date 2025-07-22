@@ -16,7 +16,7 @@
 
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/DeclarationName.h"
-#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
@@ -192,6 +192,21 @@ public:
 
   /// Get the SourceLocation of the template keyword (if any).
   SourceLocation getTemplateKeywordLoc() const;
+
+  /// If this type represents a qualified-id, this returns it's nested name
+  /// specifier. For example, for the qualified-id "foo::bar::baz", this returns
+  /// "foo::bar". Returns null if this type represents an unqualified-id.
+  NestedNameSpecifierLoc getPrefix() const;
+
+  /// This returns the position of the type after any elaboration, such as the
+  /// 'struct' keyword, and name qualifiers. This will the 'template' keyword if
+  /// present, or the name location otherwise.
+  SourceLocation getNonPrefixBeginLoc() const;
+
+  /// This returns the position of the type after any elaboration, such as the
+  /// 'struct' keyword. This may be the position of the name qualifiers,
+  /// 'template' keyword, or the name location otherwise.
+  SourceLocation getNonElaboratedBeginLoc() const;
 
   /// Initializes this to state that every location in this
   /// type is the given location.
@@ -1520,7 +1535,7 @@ public:
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc) {
     setSigilLoc(Loc);
-    if (auto *Qualifier = getTypePtr()->getQualifier()) {
+    if (NestedNameSpecifier Qualifier = getTypePtr()->getQualifier()) {
       NestedNameSpecifierLocBuilder Builder;
       Builder.MakeTrivial(Context, Qualifier, Loc);
       setQualifierLoc(Builder.getWithLocInContext(Context));

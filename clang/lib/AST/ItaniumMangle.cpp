@@ -463,9 +463,7 @@ public:
   void mangleVendorType(StringRef Name);
 
 private:
-
   bool mangleSubstitution(const NamedDecl *ND);
-  bool mangleSubstitution(NestedNameSpecifier *NNS);
   bool mangleSubstitution(QualType T);
   bool mangleSubstitution(TemplateName Template);
   bool mangleSubstitution(uintptr_t Ptr);
@@ -479,21 +477,15 @@ private:
 
     addSubstitution(reinterpret_cast<uintptr_t>(ND));
   }
-  void addSubstitution(NestedNameSpecifier *NNS) {
-    NNS = Context.getASTContext().getCanonicalNestedNameSpecifier(NNS);
-
-    addSubstitution(reinterpret_cast<uintptr_t>(NNS));
-  }
   void addSubstitution(QualType T);
   void addSubstitution(TemplateName Template);
   void addSubstitution(uintptr_t Ptr);
   // Destructive copy substitutions from other mangler.
   void extendSubstitutions(CXXNameMangler* Other);
 
-  void mangleUnresolvedPrefix(NestedNameSpecifier *qualifier,
+  void mangleUnresolvedPrefix(NestedNameSpecifier Qualifier,
                               bool recursive = false);
-  void mangleUnresolvedName(NestedNameSpecifier *qualifier,
-                            DeclarationName name,
+  void mangleUnresolvedName(NestedNameSpecifier Qualifier, DeclarationName name,
                             const TemplateArgumentLoc *TemplateArgs,
                             unsigned NumTemplateArgs,
                             unsigned KnownArity = UnknownArity);
@@ -542,7 +534,7 @@ private:
   void mangleNestedNameWithClosurePrefix(GlobalDecl GD,
                                          const NamedDecl *PrefixND,
                                          const AbiTagList *AdditionalAbiTags);
-  void manglePrefix(NestedNameSpecifier *qualifier);
+  void manglePrefix(NestedNameSpecifier Qualifier);
   void manglePrefix(const DeclContext *DC, bool NoFunction=false);
   void manglePrefix(QualType type);
   void mangleTemplatePrefix(GlobalDecl GD, bool NoFunction=false);
@@ -588,12 +580,10 @@ private:
 
   void mangleMemberExprBase(const Expr *base, bool isArrow);
   void mangleMemberExpr(const Expr *base, bool isArrow,
-                        NestedNameSpecifier *qualifier,
-                        NamedDecl *firstQualifierLookup,
-                        DeclarationName name,
+                        NestedNameSpecifier Qualifier,
+                        NamedDecl *firstQualifierLookup, DeclarationName name,
                         const TemplateArgumentLoc *TemplateArgs,
-                        unsigned NumTemplateArgs,
-                        unsigned knownArity);
+                        unsigned NumTemplateArgs, unsigned knownArity);
   void mangleCastExpression(const Expr *E, StringRef CastEncoding);
   void mangleInitListElements(const InitListExpr *InitList);
   void mangleRequirement(SourceLocation RequiresExprLoc,
@@ -1360,7 +1350,7 @@ void CXXNameMangler::manglePrefix(QualType type) {
 ///
 /// \param recursive - true if this is being called recursively,
 ///   i.e. if there is more prefix "to the right".
-void CXXNameMangler::mangleUnresolvedPrefix(NestedNameSpecifier *qualifier,
+void CXXNameMangler::mangleUnresolvedPrefix(NestedNameSpecifier Qualifier,
                                             bool recursive) {
 
   // x, ::x
@@ -1377,8 +1367,11 @@ void CXXNameMangler::mangleUnresolvedPrefix(NestedNameSpecifier *qualifier,
   // <unresolved-name> ::= [gs] sr <unresolved-qualifier-level>+ E
   //                       <base-unresolved-name>
 
-  switch (qualifier->getKind()) {
-  case NestedNameSpecifier::Global:
+  switch (Qualifier.getKind()) {
+  case NestedNameSpecifier::Kind::Null:
+    llvm_unreachable("unexpected null nested name specifier");
+
+  case NestedNameSpecifier::Kind::Global:
     Out << "gs";
 
     // We want an 'sr' unless this is the entire NNS.
@@ -1388,27 +1381,29 @@ void CXXNameMangler::mangleUnresolvedPrefix(NestedNameSpecifier *qualifier,
     // We never want an 'E' here.
     return;
 
-  case NestedNameSpecifier::Super:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
     llvm_unreachable("Can't mangle __super specifier");
 
-  case NestedNameSpecifier::Namespace:
-    if (qualifier->getPrefix())
-      mangleUnresolvedPrefix(qualifier->getPrefix(),
+  case NestedNameSpecifier::Kind::Namespace: {
+    auto [Namespace, Prefix] = Qualifier.getAsNamespaceAndPrefix();
+    if (Prefix)
+      mangleUnresolvedPrefix(Prefix,
                              /*recursive*/ true);
     else
       Out << "sr";
-    mangleSourceNameWithAbiTags(qualifier->getAsNamespace());
+    mangleSourceNameWithAbiTags(Namespace);
     break;
+  }
 
-  case NestedNameSpecifier::TypeSpec: {
-    const Type *type = qualifier->getAsType();
+  case NestedNameSpecifier::Kind::Type: {
+    const Type *type = Qualifier.getAsType();
 
     // We only want to use an unresolved-type encoding if this is one of:
     //   - a decltype
     //   - a template type parameter
     //   - a template template parameter with arguments
     // In all of these cases, we should have no prefix.
-    if (NestedNameSpecifier *Prefix = qualifier->getPrefix()) {
+    if (NestedNameSpecifier Prefix = type->getPrefix()) {
       mangleUnresolvedPrefix(Prefix,
                              /*recursive=*/true);
     } else {
@@ -1421,18 +1416,6 @@ void CXXNameMangler::mangleUnresolvedPrefix(NestedNameSpecifier *qualifier,
 
     break;
   }
-
-  case NestedNameSpecifier::Identifier:
-    // Member expressions can have these without prefixes.
-    if (qualifier->getPrefix())
-      mangleUnresolvedPrefix(qualifier->getPrefix(),
-                             /*recursive*/ true);
-    else
-      Out << "sr";
-
-    mangleSourceName(qualifier->getAsIdentifier());
-    // An Identifier has no type information, so we can't emit abi tags for it.
-    break;
   }
 
   // If this was the innermost part of the NNS, and we fell out to
@@ -1444,10 +1427,11 @@ void CXXNameMangler::mangleUnresolvedPrefix(NestedNameSpecifier *qualifier,
 /// Mangle an unresolved-name, which is generally used for names which
 /// weren't resolved to specific entities.
 void CXXNameMangler::mangleUnresolvedName(
-    NestedNameSpecifier *qualifier, DeclarationName name,
+    NestedNameSpecifier Qualifier, DeclarationName name,
     const TemplateArgumentLoc *TemplateArgs, unsigned NumTemplateArgs,
     unsigned knownArity) {
-  if (qualifier) mangleUnresolvedPrefix(qualifier);
+  if (Qualifier)
+    mangleUnresolvedPrefix(Qualifier);
   switch (name.getNameKind()) {
     // <base-unresolved-name> ::= <simple-id>
     case DeclarationName::Identifier:
@@ -2185,49 +2169,22 @@ void CXXNameMangler::mangleLambdaSig(const CXXRecordDecl *Lambda) {
                          Lambda->getLambdaStaticInvoker());
 }
 
-void CXXNameMangler::manglePrefix(NestedNameSpecifier *qualifier) {
-  switch (qualifier->getKind()) {
-  case NestedNameSpecifier::Global:
+void CXXNameMangler::manglePrefix(NestedNameSpecifier Qualifier) {
+  switch (Qualifier.getKind()) {
+  case NestedNameSpecifier::Kind::Null:
+  case NestedNameSpecifier::Kind::Global:
     // nothing
     return;
 
-  case NestedNameSpecifier::Super:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
     llvm_unreachable("Can't mangle __super specifier");
 
-  case NestedNameSpecifier::Namespace:
-    mangleName(qualifier->getAsNamespace()->getNamespace());
+  case NestedNameSpecifier::Kind::Namespace:
+    mangleName(Qualifier.getAsNamespaceAndPrefix().Namespace->getNamespace());
     return;
 
-  case NestedNameSpecifier::TypeSpec:
-    if (NestedNameSpecifier *Prefix = qualifier->getPrefix()) {
-      const auto *DTST =
-          cast<DependentTemplateSpecializationType>(qualifier->getAsType());
-      QualType NewT = getASTContext().getDependentTemplateSpecializationType(
-          DTST->getKeyword(),
-          {Prefix, DTST->getDependentTemplateName().getName(),
-           /*HasTemplateKeyword=*/true},
-          DTST->template_arguments(), /*IsCanonical=*/true);
-      manglePrefix(NewT);
-      return;
-    }
-    manglePrefix(QualType(qualifier->getAsType(), 0));
-    return;
-
-  case NestedNameSpecifier::Identifier:
-    // Clang 14 and before did not consider this substitutable.
-    bool Clang14Compat = isCompatibleWith(LangOptions::ClangABI::Ver14);
-    if (!Clang14Compat && mangleSubstitution(qualifier))
-      return;
-
-    // Member expressions can have these without prefixes, but that
-    // should end up in mangleUnresolvedPrefix instead.
-    assert(qualifier->getPrefix());
-    manglePrefix(qualifier->getPrefix());
-
-    mangleSourceName(qualifier->getAsIdentifier());
-
-    if (!Clang14Compat)
-      addSubstitution(qualifier);
+  case NestedNameSpecifier::Kind::Type:
+    manglePrefix(QualType(Qualifier.getAsType(), 0));
     return;
   }
 
@@ -2287,8 +2244,7 @@ void CXXNameMangler::mangleTemplatePrefix(TemplateName Template) {
   if (!Clang11Compat && mangleSubstitution(Template))
     return;
 
-  if (NestedNameSpecifier *Qualifier = Dependent->getQualifier())
-    manglePrefix(Qualifier);
+  manglePrefix(Dependent->getQualifier());
 
   if (Clang11Compat && mangleSubstitution(Template))
     return;
@@ -3892,16 +3848,10 @@ void CXXNameMangler::mangleType(const IncompleteArrayType *T) {
 // <pointer-to-member-type> ::= M <class type> <member type>
 void CXXNameMangler::mangleType(const MemberPointerType *T) {
   Out << 'M';
-  if (auto *RD = T->getMostRecentCXXRecordDecl()) {
+  if (auto *RD = T->getMostRecentCXXRecordDecl())
     mangleCXXRecordDecl(RD);
-  } else {
-    NestedNameSpecifier *NNS = T->getQualifier();
-    if (auto *II = NNS->getAsIdentifier())
-      mangleType(getASTContext().getDependentNameType(
-          ElaboratedTypeKeyword::None, NNS->getPrefix(), II));
-    else
-      manglePrefix(NNS);
-  }
+  else
+    mangleType(QualType(T->getQualifier().getAsType(), 0));
   QualType PointeeType = T->getPointeeType();
   if (const FunctionProtoType *FPT = dyn_cast<FunctionProtoType>(PointeeType)) {
     mangleType(FPT);
@@ -4785,9 +4735,8 @@ void CXXNameMangler::mangleMemberExprBase(const Expr *Base, bool IsArrow) {
 }
 
 /// Mangles a member expression.
-void CXXNameMangler::mangleMemberExpr(const Expr *base,
-                                      bool isArrow,
-                                      NestedNameSpecifier *qualifier,
+void CXXNameMangler::mangleMemberExpr(const Expr *base, bool isArrow,
+                                      NestedNameSpecifier Qualifier,
                                       NamedDecl *firstQualifierLookup,
                                       DeclarationName member,
                                       const TemplateArgumentLoc *TemplateArgs,
@@ -5247,7 +5196,7 @@ recurse:
     const auto *PDE = cast<CXXPseudoDestructorExpr>(E);
     if (const Expr *Base = PDE->getBase())
       mangleMemberExprBase(Base, PDE->isArrow());
-    NestedNameSpecifier *Qualifier = PDE->getQualifier();
+    NestedNameSpecifier Qualifier = PDE->getQualifier();
     if (TypeSourceInfo *ScopeInfo = PDE->getScopeTypeInfo()) {
       if (Qualifier) {
         mangleUnresolvedPrefix(Qualifier,
@@ -7021,14 +6970,6 @@ bool CXXNameMangler::mangleSubstitution(const NamedDecl *ND) {
 
   ND = cast<NamedDecl>(ND->getCanonicalDecl());
   return mangleSubstitution(reinterpret_cast<uintptr_t>(ND));
-}
-
-bool CXXNameMangler::mangleSubstitution(NestedNameSpecifier *NNS) {
-  assert(NNS->getKind() == NestedNameSpecifier::Identifier &&
-         "mangleSubstitution(NestedNameSpecifier *) is only used for "
-         "identifier nested name specifiers.");
-  NNS = Context.getASTContext().getCanonicalNestedNameSpecifier(NNS);
-  return mangleSubstitution(reinterpret_cast<uintptr_t>(NNS));
 }
 
 /// Determine whether the given type has any qualifiers that are relevant for

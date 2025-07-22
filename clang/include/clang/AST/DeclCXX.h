@@ -3136,7 +3136,7 @@ public:
 
   /// Retrieve the nested-name-specifier that qualifies the
   /// name of the namespace.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return QualifierLoc.getNestedNameSpecifier();
   }
 
@@ -3257,7 +3257,7 @@ public:
 
   /// Retrieve the nested-name-specifier that qualifies the
   /// name of the namespace.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return QualifierLoc.getNestedNameSpecifier();
   }
 
@@ -3619,7 +3619,7 @@ public:
   NestedNameSpecifierLoc getQualifierLoc() const { return QualifierLoc; }
 
   /// Retrieve the nested-name-specifier that qualifies the name.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return QualifierLoc.getNestedNameSpecifier();
   }
 
@@ -3809,13 +3809,11 @@ public:
   /// The source location of the 'enum' keyword.
   SourceLocation getEnumLoc() const { return EnumLocation; }
   void setEnumLoc(SourceLocation L) { EnumLocation = L; }
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return getQualifierLoc().getNestedNameSpecifier();
   }
   NestedNameSpecifierLoc getQualifierLoc() const {
-    if (auto ETL = EnumType->getTypeLoc().getAs<ElaboratedTypeLoc>())
-      return ETL.getQualifierLoc();
-    return NestedNameSpecifierLoc();
+    return getEnumTypeLoc().getPrefix();
   }
   // Returns the "qualifier::Name" part as a TypeLoc.
   TypeLoc getEnumTypeLoc() const {
@@ -3975,7 +3973,7 @@ public:
   NestedNameSpecifierLoc getQualifierLoc() const { return QualifierLoc; }
 
   /// Retrieve the nested-name-specifier that qualifies the name.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return QualifierLoc.getNestedNameSpecifier();
   }
 
@@ -4065,7 +4063,7 @@ public:
   NestedNameSpecifierLoc getQualifierLoc() const { return QualifierLoc; }
 
   /// Retrieve the nested-name-specifier that qualifies the name.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return QualifierLoc.getNestedNameSpecifier();
   }
 

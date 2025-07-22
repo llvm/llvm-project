@@ -2016,11 +2016,10 @@ static ExtractedTypeTraitInfo ExtractTypeTraitFromExpression(const Expr *E) {
   // std::is_xxx<>::value
   if (const auto *VD = dyn_cast<VarDecl>(Ref->getDecl());
       Ref->hasQualifier() && VD && VD->getIdentifier()->isStr("value")) {
-    const Type *T = Ref->getQualifier()->getAsType();
-    if (!T)
+    NestedNameSpecifier Qualifier = Ref->getQualifier();
+    if (Qualifier.getKind() != NestedNameSpecifier::Kind::Type)
       return std::nullopt;
-    const TemplateSpecializationType *Ts =
-        T->getAs<TemplateSpecializationType>();
+    const auto *Ts = Qualifier.getAsType()->getAs<TemplateSpecializationType>();
     if (!Ts)
       return std::nullopt;
     const TemplateDecl *D = Ts->getTemplateName().getAsTemplateDecl();

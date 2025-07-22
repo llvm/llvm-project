@@ -242,7 +242,7 @@ public:
   /// Recursively visit a C++ nested-name-specifier.
   ///
   /// \returns false if the visitation was terminated early, true otherwise.
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS);
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier NNS);
 
   /// Recursively visit a C++ nested-name-specifier with location
   /// information.
@@ -787,46 +787,43 @@ bool RecursiveASTVisitor<Derived>::TraverseDecl(Decl *D) {
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseNestedNameSpecifier(
-    NestedNameSpecifier *NNS) {
-  if (!NNS)
+    NestedNameSpecifier NNS) {
+  switch (NNS.getKind()) {
+  case NestedNameSpecifier::Kind::Null:
+  case NestedNameSpecifier::Kind::Global:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
     return true;
-
-  if (NNS->getPrefix())
-    TRY_TO(TraverseNestedNameSpecifier(NNS->getPrefix()));
-
-  switch (NNS->getKind()) {
-  case NestedNameSpecifier::Identifier:
-  case NestedNameSpecifier::Namespace:
-  case NestedNameSpecifier::Global:
-  case NestedNameSpecifier::Super:
+  case NestedNameSpecifier::Kind::Namespace:
+    TRY_TO(TraverseNestedNameSpecifier(NNS.getAsNamespaceAndPrefix().Prefix));
     return true;
-
-  case NestedNameSpecifier::TypeSpec:
-    TRY_TO(TraverseType(QualType(NNS->getAsType(), 0)));
+  case NestedNameSpecifier::Kind::Type: {
+    auto *T = const_cast<Type *>(NNS.getAsType());
+    TRY_TO(TraverseNestedNameSpecifier(T->getPrefix()));
+    TRY_TO(TraverseType(QualType(T, 0), /*TraverseQualifier=*/false));
+    return true;
   }
-
-  return true;
+  }
+  llvm_unreachable("unhandled kind");
 }
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseNestedNameSpecifierLoc(
     NestedNameSpecifierLoc NNS) {
-  if (!NNS)
+  switch (NNS.getNestedNameSpecifier().getKind()) {
+  case NestedNameSpecifier::Kind::Null:
+  case NestedNameSpecifier::Kind::Global:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
     return true;
-
-  if (NestedNameSpecifierLoc Prefix = NNS.getPrefix())
-    TRY_TO(TraverseNestedNameSpecifierLoc(Prefix));
-
-  switch (NNS.getNestedNameSpecifier()->getKind()) {
-  case NestedNameSpecifier::Identifier:
-  case NestedNameSpecifier::Namespace:
-  case NestedNameSpecifier::Global:
-  case NestedNameSpecifier::Super:
+  case NestedNameSpecifier::Kind::Namespace:
+    TRY_TO(
+        TraverseNestedNameSpecifierLoc(NNS.castAsNamespaceAndPrefix().Prefix));
     return true;
-
-  case NestedNameSpecifier::TypeSpec:
-    TRY_TO(TraverseTypeLoc(NNS.getTypeLoc()));
-    break;
+  case NestedNameSpecifier::Kind::Type: {
+    TypeLoc TL = NNS.castAsTypeLoc();
+    TRY_TO(TraverseNestedNameSpecifierLoc(TL.getPrefix()));
+    TRY_TO(TraverseTypeLoc(TL, /*TraverseQualifier=*/false));
+    return true;
+  }
   }
 
   return true;
@@ -1011,10 +1008,11 @@ DEF_TRAVERSE_TYPE(RValueReferenceType,
                   { TRY_TO(TraverseType(T->getPointeeType())); })
 
 DEF_TRAVERSE_TYPE(MemberPointerType, {
-  TRY_TO(TraverseNestedNameSpecifier(T->getQualifier()));
-  if (T->isSugared())
-    TRY_TO(TraverseType(
-        QualType(T->getMostRecentCXXRecordDecl()->getTypeForDecl(), 0)));
+  NestedNameSpecifier Qualifier =
+      T->isSugared() ? cast<MemberPointerType>(T->getCanonicalTypeUnqualified())
+                           ->getQualifier()
+                     : T->getQualifier();
+  TRY_TO(TraverseNestedNameSpecifier(Qualifier));
   TRY_TO(TraverseType(T->getPointeeType()));
 })
 
@@ -1279,8 +1277,10 @@ DEF_TRAVERSE_TYPE(PredefinedSugarType, {})
   }
 
 template <typename Derived>
-bool
-RecursiveASTVisitor<Derived>::TraverseQualifiedTypeLoc(QualifiedTypeLoc TL) {
+bool RecursiveASTVisitor<Derived>::TraverseQualifiedTypeLoc(
+    QualifiedTypeLoc TL, bool TraverseQualifier) {
+  assert(TraverseQualifier &&
+         "Qualifiers should never occur within NestedNameSpecifiers");
   // Move this over to the 'main' typeloc tree.  Note that this is a
   // move -- we pretend that we were really looking at the unqualified
   // typeloc all along -- rather than a recursion, so we don't follow

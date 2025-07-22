@@ -111,34 +111,28 @@ void ODRHash::AddDeclarationNameInfoImpl(DeclarationNameInfo NameInfo) {
   }
 }
 
-void ODRHash::AddNestedNameSpecifier(const NestedNameSpecifier *NNS) {
-  assert(NNS && "Expecting non-null pointer.");
-  const auto *Prefix = NNS->getPrefix();
-  AddBoolean(Prefix);
-  if (Prefix) {
-    AddNestedNameSpecifier(Prefix);
-  }
-  auto Kind = NNS->getKind();
-  ID.AddInteger(Kind);
+void ODRHash::AddNestedNameSpecifier(NestedNameSpecifier NNS) {
+  auto Kind = NNS.getKind();
+  ID.AddInteger(llvm::to_underlying(Kind));
   switch (Kind) {
-  case NestedNameSpecifier::Identifier:
-    AddIdentifierInfo(NNS->getAsIdentifier());
+  case NestedNameSpecifier::Kind::Namespace: {
+    auto [Namespace, Prefix] = NNS.getAsNamespaceAndPrefix();
+    AddDecl(Namespace);
+    AddNestedNameSpecifier(Prefix);
     break;
-  case NestedNameSpecifier::Namespace:
-    AddDecl(NNS->getAsNamespace());
+  }
+  case NestedNameSpecifier::Kind::Type:
+    AddType(NNS.getAsType());
     break;
-  case NestedNameSpecifier::TypeSpec:
-    AddType(NNS->getAsType());
-    break;
-  case NestedNameSpecifier::Global:
-  case NestedNameSpecifier::Super:
+  case NestedNameSpecifier::Kind::Null:
+  case NestedNameSpecifier::Kind::Global:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
     break;
   }
 }
 
 void ODRHash::AddDependentTemplateName(const DependentTemplateStorage &Name) {
-  if (NestedNameSpecifier *NNS = Name.getQualifier())
-    AddNestedNameSpecifier(NNS);
+  AddNestedNameSpecifier(Name.getQualifier());
   if (IdentifierOrOverloadedOperator IO = Name.getName();
       const IdentifierInfo *II = IO.getIdentifier())
     AddIdentifierInfo(II);
@@ -156,8 +150,7 @@ void ODRHash::AddTemplateName(TemplateName Name) {
     break;
   case TemplateName::QualifiedTemplate: {
     QualifiedTemplateName *QTN = Name.getAsQualifiedTemplateName();
-    if (NestedNameSpecifier *NNS = QTN->getQualifier())
-      AddNestedNameSpecifier(NNS);
+    AddNestedNameSpecifier(QTN->getQualifier());
     AddBoolean(QTN->hasTemplateKeyword());
     AddTemplateName(QTN->getUnderlyingTemplate());
     break;
@@ -889,11 +882,8 @@ public:
     }
   }
 
-  void AddNestedNameSpecifier(const NestedNameSpecifier *NNS) {
-    Hash.AddBoolean(NNS);
-    if (NNS) {
-      Hash.AddNestedNameSpecifier(NNS);
-    }
+  void AddNestedNameSpecifier(NestedNameSpecifier NNS) {
+    Hash.AddNestedNameSpecifier(NNS);
   }
 
   void AddIdentifierInfo(const IdentifierInfo *II) {

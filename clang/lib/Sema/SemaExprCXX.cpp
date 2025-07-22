@@ -57,11 +57,11 @@ using namespace sema;
 ParsedType Sema::getInheritingConstructorName(CXXScopeSpec &SS,
                                               SourceLocation NameLoc,
                                               const IdentifierInfo &Name) {
-  NestedNameSpecifier *NNS = SS.getScopeRep();
-  if ([[maybe_unused]] const IdentifierInfo *II = NNS->getAsIdentifier())
-    assert(II == &Name && "not a constructor name");
+  NestedNameSpecifier NNS = SS.getScopeRep();
+  QualType Type(NNS.getAsType(), 0);
+  if ([[maybe_unused]] const auto *DNT = dyn_cast<DependentNameType>(Type))
+    assert(DNT->getIdentifier() == &Name && "not a constructor name");
 
-  QualType Type(NNS->translateToType(Context), 0);
   // This reference to the type is located entirely at the location of the
   // final identifier in the qualified-id.
   return CreateParsedType(Type,
@@ -310,15 +310,23 @@ ParsedType Sema::getDestructorName(const IdentifierInfo &II,
   // If both lookups succeed and find a dependent result, which result should
   // we retain? (Same question for p->~type-name().)
 
-  if (NestedNameSpecifier *Prefix =
-      SS.isSet() ? SS.getScopeRep()->getPrefix() : nullptr) {
+  auto Prefix = [&]() -> NestedNameSpecifierLoc {
+    NestedNameSpecifierLoc NNS = SS.getWithLocInContext(Context);
+    if (!NNS)
+      return NestedNameSpecifierLoc();
+    if (auto TL = NNS.getAsTypeLoc())
+      return TL.getPrefix();
+    return NNS.getAsNamespaceAndPrefix().Prefix;
+  }();
+
+  if (Prefix) {
     // This is
     //
     //   nested-name-specifier type-name :: ~ type-name
     //
     // Look for the second type-name in the nested-name-specifier.
     CXXScopeSpec PrefixSS;
-    PrefixSS.Adopt(NestedNameSpecifierLoc(Prefix, SS.location_data()));
+    PrefixSS.Adopt(Prefix);
     if (ParsedType T = LookupInNestedNameSpec(PrefixSS))
       return T;
   } else {
@@ -502,12 +510,8 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
           << II << static_cast<int>(Status) << Hint;
   }
 
-  if (!SS.isValid())
-    return false;
-
-  switch (SS.getScopeRep()->getKind()) {
-  case NestedNameSpecifier::Identifier:
-  case NestedNameSpecifier::TypeSpec:
+  switch (SS.getScopeRep().getKind()) {
+  case NestedNameSpecifier::Kind::Type:
     // Per C++11 [over.literal]p2, literal operators can only be declared at
     // namespace scope. Therefore, this unqualified-id cannot name anything.
     // Reject it early, because we have no AST representation for this in the
@@ -516,9 +520,10 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
         << SS.getScopeRep();
     return true;
 
-  case NestedNameSpecifier::Global:
-  case NestedNameSpecifier::Super:
-  case NestedNameSpecifier::Namespace:
+  case NestedNameSpecifier::Kind::Null:
+  case NestedNameSpecifier::Kind::Global:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
+  case NestedNameSpecifier::Kind::Namespace:
     return false;
   }
 

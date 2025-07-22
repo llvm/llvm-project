@@ -1959,6 +1959,35 @@ Type::getAsNonAliasTemplateSpecializationType() const {
   return TST;
 }
 
+NestedNameSpecifier Type::getPrefix() const {
+  switch (getTypeClass()) {
+  case Type::DependentName:
+    return cast<DependentNameType>(this)->getQualifier();
+  case Type::TemplateSpecialization: {
+    QualifiedTemplateName *S = cast<TemplateSpecializationType>(this)
+                                   ->getTemplateName()
+                                   .getAsAdjustedQualifiedTemplateName();
+    return S ? S->getQualifier() : std::nullopt;
+  }
+  case Type::DependentTemplateSpecialization:
+    return cast<DependentTemplateSpecializationType>(this)
+        ->getDependentTemplateName()
+        .getQualifier();
+  case Type::Enum:
+  case Type::Record:
+  case Type::InjectedClassName:
+    return cast<TagType>(this)->getQualifier();
+  case Type::Typedef:
+    return cast<TypedefType>(this)->getQualifier();
+  case Type::UnresolvedUsing:
+    return cast<UnresolvedUsingType>(this)->getQualifier();
+  case Type::Using:
+    return cast<UsingType>(this)->getQualifier();
+  default:
+    return std::nullopt;
+  }
+}
+
 bool Type::hasAttr(attr::Kind AK) const {
   const Type *Cur = this;
   while (const auto *AT = Cur->getAs<AttributedType>()) {
@@ -5435,16 +5464,16 @@ QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {
 
 bool MemberPointerType::isSugared() const {
   CXXRecordDecl *D1 = getMostRecentCXXRecordDecl(),
-                *D2 = getQualifier()->getAsRecordDecl();
+                *D2 = getQualifier().getAsRecordDecl();
   assert(!D1 == !D2);
   return D1 != D2 && D1->getCanonicalDecl() != D2->getCanonicalDecl();
 }
 
 void MemberPointerType::Profile(llvm::FoldingSetNodeID &ID, QualType Pointee,
-                                const NestedNameSpecifier *Qualifier,
+                                const NestedNameSpecifier Qualifier,
                                 const CXXRecordDecl *Cls) {
   ID.AddPointer(Pointee.getAsOpaquePtr());
-  ID.AddPointer(Qualifier);
+  Qualifier.Profile(ID);
   if (Cls)
     ID.AddPointer(Cls->getCanonicalDecl());
 }

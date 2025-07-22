@@ -45,14 +45,6 @@ static bool incrementWithoutOverflow(const APSInt &Value, APSInt &Result) {
   return Value < Result;
 }
 
-static bool areEquivalentNameSpecifier(const NestedNameSpecifier *Left,
-                                       const NestedNameSpecifier *Right) {
-  llvm::FoldingSetNodeID LeftID, RightID;
-  Left->Profile(LeftID);
-  Right->Profile(RightID);
-  return LeftID == RightID;
-}
-
 static bool areEquivalentExpr(const Expr *Left, const Expr *Right) {
   if (!Left || !Right)
     return !Left && !Right;

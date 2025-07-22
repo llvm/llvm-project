@@ -3639,12 +3639,12 @@ Sema::MemberPointerConversionResult Sema::CheckMemberPointerConversion(
   CXXRecordDecl *FromClass = FromPtrType->getMostRecentCXXRecordDecl(),
                 *ToClass = ToPtrType->getMostRecentCXXRecordDecl();
 
-  auto DiagCls = [](PartialDiagnostic &PD, NestedNameSpecifier *Qual,
-                    const CXXRecordDecl *Cls) {
-    if (declaresSameEntity(Qual->getAsRecordDecl(), Cls))
+  auto DiagCls = [&](PartialDiagnostic &PD, NestedNameSpecifier Qual,
+                     const CXXRecordDecl *Cls) {
+    if (declaresSameEntity(Qual.getAsRecordDecl(), Cls))
       PD << Qual;
     else
-      PD << QualType(Cls->getTypeForDecl(), 0);
+      PD << Context.getCanonicalTagType(Cls);
   };
   auto DiagFromTo = [&](PartialDiagnostic &PD) -> PartialDiagnostic & {
     DiagCls(PD, FromPtrType->getQualifier(), FromClass);
@@ -3689,8 +3689,8 @@ Sema::MemberPointerConversionResult Sema::CheckMemberPointerConversion(
             ? diag::err_upcast_to_inaccessible_base
             : diag::err_downcast_from_inaccessible_base,
         [&](PartialDiagnostic &PD) {
-          NestedNameSpecifier *BaseQual = FromPtrType->getQualifier(),
-                              *DerivedQual = ToPtrType->getQualifier();
+          NestedNameSpecifier BaseQual = FromPtrType->getQualifier(),
+                              DerivedQual = ToPtrType->getQualifier();
           if (Direction == MemberPointerConversionDirection::Upcast)
             std::swap(BaseQual, DerivedQual);
           DiagCls(PD, DerivedQual, Derived);
@@ -6062,7 +6062,7 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
 /// the implicit object parameter for the given Method with the given
 /// expression.
 ExprResult Sema::PerformImplicitObjectArgumentInitialization(
-    Expr *From, NestedNameSpecifier *Qualifier, NamedDecl *FoundDecl,
+    Expr *From, NestedNameSpecifier Qualifier, NamedDecl *FoundDecl,
     CXXMethodDecl *Method) {
   QualType FromRecordType, DestType;
   QualType ImplicitParamRecordType = Method->getFunctionObjectParameterType();
@@ -16081,7 +16081,7 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
   CXXMethodDecl *Method = nullptr;
   bool HadMultipleCandidates = false;
   DeclAccessPair FoundDecl = DeclAccessPair::make(nullptr, AS_public);
-  NestedNameSpecifier *Qualifier = nullptr;
+  NestedNameSpecifier Qualifier = std::nullopt;
   if (isa<MemberExpr>(NakedMemExpr)) {
     MemExpr = cast<MemberExpr>(NakedMemExpr);
     Method = cast<CXXMethodDecl>(MemExpr->getMemberDecl());
@@ -16951,7 +16951,7 @@ ExprResult Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
 
         assert(isa<DeclRefExpr>(SubExpr.get()) &&
                "fixed to something other than a decl ref");
-        NestedNameSpecifier *Qualifier =
+        NestedNameSpecifier Qualifier =
             cast<DeclRefExpr>(SubExpr.get())->getQualifier();
         assert(Qualifier &&
                "fixed to a member ref with no nested name qualifier");

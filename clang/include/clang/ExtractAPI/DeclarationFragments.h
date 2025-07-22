@@ -440,9 +440,8 @@ private:
                                                   DeclarationFragments &);
 
   /// Build DeclarationFragments for a NestedNameSpecifier.
-  static DeclarationFragments getFragmentsForNNS(const NestedNameSpecifier *,
-                                                 ASTContext &,
-                                                 DeclarationFragments &);
+  static DeclarationFragments
+  getFragmentsForNNS(NestedNameSpecifier, ASTContext &, DeclarationFragments &);
 
   /// Build DeclarationFragments for Qualifiers.
   static DeclarationFragments getFragmentsForQualifiers(const Qualifiers quals);

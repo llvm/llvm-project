@@ -206,7 +206,7 @@ RValue CodeGenFunction::EmitCXXMemberCallExpr(const CXXMemberCallExpr *CE,
   }
 
   bool HasQualifier = ME->hasQualifier();
-  NestedNameSpecifier *Qualifier = HasQualifier ? ME->getQualifier() : nullptr;
+  NestedNameSpecifier Qualifier = ME->getQualifier();
   bool IsArrow = ME->isArrow();
   const Expr *Base = ME->getBase();
 
@@ -217,7 +217,7 @@ RValue CodeGenFunction::EmitCXXMemberCallExpr(const CXXMemberCallExpr *CE,
 
 RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     const CallExpr *CE, const CXXMethodDecl *MD, ReturnValueSlot ReturnValue,
-    bool HasQualifier, NestedNameSpecifier *Qualifier, bool IsArrow,
+    bool HasQualifier, NestedNameSpecifier Qualifier, bool IsArrow,
     const Expr *Base, llvm::CallBase **CallOrInvoke) {
   assert(isa<CXXMemberCallExpr>(CE) || isa<CXXOperatorCallExpr>(CE));
 

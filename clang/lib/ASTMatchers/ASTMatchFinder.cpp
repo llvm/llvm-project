@@ -122,15 +122,15 @@ public:
     else if (const Stmt *S = DynNode.get<Stmt>())
       traverse(*S);
     else if (const NestedNameSpecifier *NNS =
-             DynNode.get<NestedNameSpecifier>())
+                 DynNode.get<NestedNameSpecifier>())
       traverse(*NNS);
     else if (const NestedNameSpecifierLoc *NNSLoc =
              DynNode.get<NestedNameSpecifierLoc>())
       traverse(*NNSLoc);
     else if (const QualType *Q = DynNode.get<QualType>())
-      traverse(*Q);
+      traverse(*Q, /*TraverseQualifier=*/true);
     else if (const TypeLoc *T = DynNode.get<TypeLoc>())
-      traverse(*T);
+      traverse(*T, /*TraverseQualifier=*/true);
     else if (const auto *C = DynNode.get<CXXCtorInitializer>())
       traverse(*C);
     else if (const TemplateArgumentLoc *TALoc =
@@ -217,17 +217,17 @@ public:
     if (!match(TypeLocNode.getType()))
       return false;
     // The TypeLoc is matched inside traverse.
-    return traverse(TypeLocNode);
+    return traverse(TypeLocNode, TraverseQualifier);
   }
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS) {
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier NNS) {
     ScopedIncrement ScopedDepth(&CurrentDepth);
-    return (NNS == nullptr) || traverse(*NNS);
+    return !NNS || traverse(NNS);
   }
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
     if (!NNS)
       return true;
     ScopedIncrement ScopedDepth(&CurrentDepth);
-    if (!match(*NNS.getNestedNameSpecifier()))
+    if (!match(NNS.getNestedNameSpecifier()))
       return false;
     return traverse(NNS);
   }
@@ -340,15 +340,14 @@ private:
   bool baseTraverse(const Stmt &StmtNode) {
     return VisitorBase::TraverseStmt(const_cast<Stmt*>(&StmtNode));
   }
-  bool baseTraverse(QualType TypeNode) {
-    return VisitorBase::TraverseType(TypeNode);
+  bool baseTraverse(QualType TypeNode, bool TraverseQualifier) {
+    return VisitorBase::TraverseType(TypeNode, TraverseQualifier);
   }
-  bool baseTraverse(TypeLoc TypeLocNode) {
-    return VisitorBase::TraverseTypeLoc(TypeLocNode);
+  bool baseTraverse(TypeLoc TypeLocNode, bool TraverseQualifier) {
+    return VisitorBase::TraverseTypeLoc(TypeLocNode, TraverseQualifier);
   }
-  bool baseTraverse(const NestedNameSpecifier &NNS) {
-    return VisitorBase::TraverseNestedNameSpecifier(
-        const_cast<NestedNameSpecifier*>(&NNS));
+  bool baseTraverse(NestedNameSpecifier NNS) {
+    return VisitorBase::TraverseNestedNameSpecifier(NNS);
   }
   bool baseTraverse(NestedNameSpecifierLoc NNS) {
     return VisitorBase::TraverseNestedNameSpecifierLoc(NNS);
@@ -501,9 +500,9 @@ public:
 
   bool TraverseDecl(Decl *DeclNode);
   bool TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue = nullptr);
-  bool TraverseType(QualType TypeNode);
-  bool TraverseTypeLoc(TypeLoc TypeNode);
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS);
+  bool TraverseType(QualType TypeNode, bool TraverseQualifier = true);
+  bool TraverseTypeLoc(TypeLoc TypeNode, bool TraverseQualifier = true);
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier NNS);
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS);
   bool TraverseConstructorInitializer(CXXCtorInitializer *CtorInit);
   bool TraverseTemplateArgumentLoc(TemplateArgumentLoc TAL);
@@ -1530,11 +1529,12 @@ bool MatchASTVisitor::TraverseTypeLoc(TypeLoc TypeLocNode,
   // each TypeLoc.
   match(TypeLocNode);
   match(TypeLocNode.getType());
-  return RecursiveASTVisitor<MatchASTVisitor>::TraverseTypeLoc(TypeLocNode);
+  return RecursiveASTVisitor<MatchASTVisitor>::TraverseTypeLoc(
+      TypeLocNode, TraverseQualifier);
 }
 
-bool MatchASTVisitor::TraverseNestedNameSpecifier(NestedNameSpecifier *NNS) {
-  match(*NNS);
+bool MatchASTVisitor::TraverseNestedNameSpecifier(NestedNameSpecifier NNS) {
+  match(NNS);
   return RecursiveASTVisitor<MatchASTVisitor>::TraverseNestedNameSpecifier(NNS);
 }
 
@@ -1548,7 +1548,7 @@ bool MatchASTVisitor::TraverseNestedNameSpecifierLoc(
   // We only match the nested name specifier here (as opposed to traversing it)
   // because the traversal is already done in the parallel "Loc"-hierarchy.
   if (NNS.hasQualifier())
-    match(*NNS.getNestedNameSpecifier());
+    match(NNS.getNestedNameSpecifier());
   return
       RecursiveASTVisitor<MatchASTVisitor>::TraverseNestedNameSpecifierLoc(NNS);
 }

@@ -353,45 +353,50 @@ Response HandleFunctionTemplateDecl(Sema &SemaRef,
             SemaRef.Context),
         /*Final=*/false);
 
-    NestedNameSpecifier *NNS = FTD->getTemplatedDecl()->getQualifier();
+    NestedNameSpecifier NNS = FTD->getTemplatedDecl()->getQualifier();
 
-    while (const Type *Ty = NNS ? NNS->getAsType() : nullptr) {
-      if (NNS->isInstantiationDependent()) {
-        if (const auto *TSTy = Ty->getAs<TemplateSpecializationType>()) {
-          ArrayRef<TemplateArgument> Arguments = TSTy->template_arguments();
-          // Prefer template arguments from the injected-class-type if possible.
-          // For example,
-          // ```cpp
-          // template <class... Pack> struct S {
-          //   template <class T> void foo();
-          // };
-          // template <class... Pack> template <class T>
-          //           ^^^^^^^^^^^^^ InjectedTemplateArgs
-          //           They're of kind TemplateArgument::Pack, not of
-          //           TemplateArgument::Type.
-          // void S<Pack...>::foo() {}
-          //        ^^^^^^^
-          //        TSTy->template_arguments() (which are of PackExpansionType)
-          // ```
-          // This meets the contract in
-          // TreeTransform::TryExpandParameterPacks that the template arguments
-          // for unexpanded parameters should be of a Pack kind.
-          if (TSTy->isCurrentInstantiation()) {
-            auto *RD = TSTy->getCanonicalTypeInternal()->getAsCXXRecordDecl();
-            if (ClassTemplateDecl *CTD = RD->getDescribedClassTemplate())
-              Arguments = CTD->getInjectedTemplateArgs(SemaRef.Context);
-            else if (auto *Specialization =
-                         dyn_cast<ClassTemplateSpecializationDecl>(RD))
-              Arguments =
-                  Specialization->getTemplateInstantiationArgs().asArray();
-          }
-          Result.addOuterTemplateArguments(
-              TSTy->getTemplateName().getAsTemplateDecl(), Arguments,
-              /*Final=*/false);
-        }
+    for (const Type *Ty = NNS.getKind() == NestedNameSpecifier::Kind::Type
+                              ? NNS.getAsType()
+                              : nullptr,
+                    *NextTy = nullptr;
+         Ty && Ty->isInstantiationDependentType();
+         Ty = std::exchange(NextTy, nullptr)) {
+      if (NestedNameSpecifier P = Ty->getPrefix();
+          P.getKind() == NestedNameSpecifier::Kind::Type)
+        NextTy = P.getAsType();
+      const auto *TSTy = dyn_cast<TemplateSpecializationType>(Ty);
+      if (!TSTy)
+        continue;
+
+      ArrayRef<TemplateArgument> Arguments = TSTy->template_arguments();
+      // Prefer template arguments from the injected-class-type if possible.
+      // For example,
+      // ```cpp
+      // template <class... Pack> struct S {
+      //   template <class T> void foo();
+      // };
+      // template <class... Pack> template <class T>
+      //           ^^^^^^^^^^^^^ InjectedTemplateArgs
+      //           They're of kind TemplateArgument::Pack, not of
+      //           TemplateArgument::Type.
+      // void S<Pack...>::foo() {}
+      //        ^^^^^^^
+      //        TSTy->template_arguments() (which are of PackExpansionType)
+      // ```
+      // This meets the contract in
+      // TreeTransform::TryExpandParameterPacks that the template arguments
+      // for unexpanded parameters should be of a Pack kind.
+      if (TSTy->isCurrentInstantiation()) {
+        auto *RD = TSTy->getCanonicalTypeInternal()->getAsCXXRecordDecl();
+        if (ClassTemplateDecl *CTD = RD->getDescribedClassTemplate())
+          Arguments = CTD->getInjectedTemplateArgs(SemaRef.Context);
+        else if (auto *Specialization =
+                     dyn_cast<ClassTemplateSpecializationDecl>(RD))
+          Arguments = Specialization->getTemplateInstantiationArgs().asArray();
       }
-
-      NNS = NNS->getPrefix();
+      Result.addOuterTemplateArguments(
+          TSTy->getTemplateName().getAsTemplateDecl(), Arguments,
+          /*Final=*/false);
     }
   }
 
@@ -1595,15 +1600,9 @@ namespace {
     VarDecl *RebuildObjCExceptionDecl(VarDecl *ExceptionDecl,
                                       TypeSourceInfo *TSInfo, QualType T);
 
-    /// Check for tag mismatches when instantiating an
-    /// elaborated type.
-    QualType RebuildElaboratedType(SourceLocation KeywordLoc,
-                                   ElaboratedTypeKeyword Keyword,
-                                   NestedNameSpecifierLoc QualifierLoc,
-                                   QualType T);
-
     TemplateName
-    TransformTemplateName(CXXScopeSpec &SS, TemplateName Name,
+    TransformTemplateName(NestedNameSpecifierLoc &QualifierLoc,
+                          SourceLocation TemplateKWLoc, TemplateName Name,
                           SourceLocation NameLoc,
                           QualType ObjectType = QualType(),
                           NamedDecl *FirstQualifierInScope = nullptr,
@@ -2080,9 +2079,9 @@ VarDecl *TemplateInstantiator::RebuildObjCExceptionDecl(VarDecl *ExceptionDecl,
 }
 
 TemplateName TemplateInstantiator::TransformTemplateName(
-    CXXScopeSpec &SS, TemplateName Name, SourceLocation NameLoc,
-    QualType ObjectType, NamedDecl *FirstQualifierInScope,
-    bool AllowInjectedClassName) {
+    NestedNameSpecifierLoc &QualifierLoc, SourceLocation TemplateKWLoc,
+    TemplateName Name, SourceLocation NameLoc, QualType ObjectType,
+    NamedDecl *FirstQualifierInScope, bool AllowInjectedClassName) {
   if (TemplateTemplateParmDecl *TTP
        = dyn_cast_or_null<TemplateTemplateParmDecl>(Name.getAsTemplateDecl())) {
     if (TTP->getDepth() < TemplateArgs.getNumLevels()) {
@@ -2128,6 +2127,12 @@ TemplateName TemplateInstantiator::TransformTemplateName(
 
       TemplateName Template = Arg.getAsTemplate();
       assert(!Template.isNull() && "Null template template argument");
+
+      if (NestedNameSpecifier Qualifier = Template.getQualifier()) {
+        NestedNameSpecifierLocBuilder Builder;
+        Builder.MakeTrivial(SemaRef.Context, Qualifier, NameLoc);
+        QualifierLoc = Builder.getWithLocInContext(SemaRef.Context);
+      }
 
       return getSema().Context.getSubstTemplateTemplateParm(
           Template, AssociatedDecl, TTP->getIndex(), PackIndex, Final);
@@ -4519,14 +4524,14 @@ Sema::SubstDeclarationNameInfo(const DeclarationNameInfo &NameInfo,
 }
 
 TemplateName
-Sema::SubstTemplateName(NestedNameSpecifierLoc QualifierLoc,
-                        TemplateName Name, SourceLocation Loc,
+Sema::SubstTemplateName(SourceLocation TemplateKWLoc,
+                        NestedNameSpecifierLoc &QualifierLoc, TemplateName Name,
+                        SourceLocation NameLoc,
                         const MultiLevelTemplateArgumentList &TemplateArgs) {
-  TemplateInstantiator Instantiator(*this, TemplateArgs, Loc,
+  TemplateInstantiator Instantiator(*this, TemplateArgs, NameLoc,
                                     DeclarationName());
-  CXXScopeSpec SS;
-  SS.Adopt(QualifierLoc);
-  return Instantiator.TransformTemplateName(SS, Name, Loc);
+  return Instantiator.TransformTemplateName(QualifierLoc, TemplateKWLoc, Name,
+                                            NameLoc);
 }
 
 static const Decl *getCanonicalParmVarDecl(const Decl *D) {

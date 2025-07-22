@@ -283,11 +283,11 @@ class ASTContext : public RefCountedBase<ASTContext> {
                      llvm::to_underlying(PredefinedSugarType::Kind::Last) + 1>
       PredefinedSugarTypes{};
 
-  /// The set of nested name specifiers.
+  /// Internal storage for NestedNameSpecifiers.
   ///
   /// This set is managed by the NestedNameSpecifier class.
-  mutable llvm::FoldingSet<NestedNameSpecifier> NestedNameSpecifiers;
-  mutable NestedNameSpecifier *GlobalNestedNameSpecifier = nullptr;
+  mutable llvm::FoldingSet<NamespaceAndPrefixStorage>
+      NamespaceAndPrefixStorages;
 
   /// A cache mapping from RecordDecls to ASTRecordLayouts.
   ///
@@ -1620,7 +1620,7 @@ public:
 
   /// Return the uniqued reference to the type for a member pointer to
   /// the specified type in the specified nested name.
-  QualType getMemberPointerType(QualType T, NestedNameSpecifier *Qualifier,
+  QualType getMemberPointerType(QualType T, NestedNameSpecifier Qualifier,
                                 const CXXRecordDecl *Cls) const;
 
   /// Return a non-unique reference to the type for a variable array of
@@ -1921,7 +1921,7 @@ public:
                                  const IdentifierInfo *MacroII) const;
 
   QualType getDependentNameType(ElaboratedTypeKeyword Keyword,
-                                NestedNameSpecifier *NNS,
+                                NestedNameSpecifier NNS,
                                 const IdentifierInfo *Name) const;
 
   QualType getDependentTemplateSpecializationType(
@@ -2486,7 +2486,7 @@ public:
                                          UnresolvedSetIterator End) const;
   TemplateName getAssumedTemplateName(DeclarationName Name) const;
 
-  TemplateName getQualifiedTemplateName(NestedNameSpecifier *NNS,
+  TemplateName getQualifiedTemplateName(NestedNameSpecifier Qualifier,
                                         bool TemplateKeyword,
                                         TemplateName Template) const;
   TemplateName
@@ -2927,32 +2927,6 @@ public:
 
   /// Determine if two types are similar, ignoring only CVR qualifiers.
   bool hasCvrSimilarType(QualType T1, QualType T2);
-
-  /// Retrieves the "canonical" nested name specifier for a
-  /// given nested name specifier.
-  ///
-  /// The canonical nested name specifier is a nested name specifier
-  /// that uniquely identifies a type or namespace within the type
-  /// system. For example, given:
-  ///
-  /// \code
-  /// namespace N {
-  ///   struct S {
-  ///     template<typename T> struct X { typename T* type; };
-  ///   };
-  /// }
-  ///
-  /// template<typename T> struct Y {
-  ///   typename N::S::X<T>::type member;
-  /// };
-  /// \endcode
-  ///
-  /// Here, the nested-name-specifier for N::S::X<T>:: will be
-  /// S::X<template-param-0-0>, since 'S' and 'X' are uniquely defined
-  /// by declarations in the type system and the canonical type for
-  /// the template type parameter 'T' is template-param-0-0.
-  NestedNameSpecifier *
-  getCanonicalNestedNameSpecifier(NestedNameSpecifier *NNS) const;
 
   /// Retrieves the default calling convention for the current context.
   ///

@@ -7075,49 +7075,50 @@ void ASTRecordWriter::AddQualifierInfo(const QualifierInfo &Info) {
     AddTemplateParameterList(Info.TemplParamLists[i]);
 }
 
-void ASTRecordWriter::AddNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
+void ASTRecordWriter::AddNestedNameSpecifierLoc(
+    NestedNameSpecifierLoc QualifierLoc) {
   // Nested name specifiers usually aren't too long. I think that 8 would
   // typically accommodate the vast majority.
   SmallVector<NestedNameSpecifierLoc , 8> NestedNames;
 
   // Push each of the nested-name-specifiers's onto a stack for
   // serialization in reverse order.
-  while (NNS) {
-    NestedNames.push_back(NNS);
-    NNS = NNS.getPrefix();
+  while (QualifierLoc) {
+    NestedNames.push_back(QualifierLoc);
+    QualifierLoc = QualifierLoc.getAsNamespaceAndPrefix().Prefix;
   }
 
   Record->push_back(NestedNames.size());
   while(!NestedNames.empty()) {
-    NNS = NestedNames.pop_back_val();
-    NestedNameSpecifier::SpecifierKind Kind
-      = NNS.getNestedNameSpecifier()->getKind();
-    Record->push_back(Kind);
+    QualifierLoc = NestedNames.pop_back_val();
+    NestedNameSpecifier Qualifier = QualifierLoc.getNestedNameSpecifier();
+    NestedNameSpecifier::Kind Kind = Qualifier.getKind();
+    Record->push_back(llvm::to_underlying(Kind));
     switch (Kind) {
-    case NestedNameSpecifier::Identifier:
-      AddIdentifierRef(NNS.getNestedNameSpecifier()->getAsIdentifier());
-      AddSourceRange(NNS.getLocalSourceRange());
+    case NestedNameSpecifier::Kind::Namespace:
+      AddDeclRef(Qualifier.getAsNamespaceAndPrefix().Namespace);
+      AddSourceRange(QualifierLoc.getLocalSourceRange());
       break;
 
-    case NestedNameSpecifier::Namespace:
-      AddDeclRef(NNS.getNestedNameSpecifier()->getAsNamespace());
-      AddSourceRange(NNS.getLocalSourceRange());
+    case NestedNameSpecifier::Kind::Type: {
+      TypeLoc TL = QualifierLoc.castAsTypeLoc();
+      AddTypeRef(TL.getType());
+      AddTypeLoc(TL);
+      AddSourceLocation(QualifierLoc.getLocalSourceRange().getEnd());
+      break;
+    }
+
+    case NestedNameSpecifier::Kind::Global:
+      AddSourceLocation(QualifierLoc.getLocalSourceRange().getEnd());
       break;
 
-    case NestedNameSpecifier::TypeSpec:
-      AddTypeRef(NNS.getTypeLoc().getType());
-      AddTypeLoc(NNS.getTypeLoc());
-      AddSourceLocation(NNS.getLocalSourceRange().getEnd());
+    case NestedNameSpecifier::Kind::MicrosoftSuper:
+      AddDeclRef(Qualifier.getAsMicrosoftSuper());
+      AddSourceRange(QualifierLoc.getLocalSourceRange());
       break;
 
-    case NestedNameSpecifier::Global:
-      AddSourceLocation(NNS.getLocalSourceRange().getEnd());
-      break;
-
-    case NestedNameSpecifier::Super:
-      AddDeclRef(NNS.getNestedNameSpecifier()->getAsRecordDecl());
-      AddSourceRange(NNS.getLocalSourceRange());
-      break;
+    case NestedNameSpecifier::Kind::Null:
+      llvm_unreachable("unexpected null nested name specifier");
     }
   }
 }

@@ -307,9 +307,10 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
           if (AllowImplicitTypename == ImplicitTypenameContext::No)
             return nullptr;
           SourceLocation QualifiedLoc = SS->getRange().getBegin();
-          auto DB =
-              DiagCompat(QualifiedLoc, diag_compat::implicit_typename)
-              << NestedNameSpecifier::Create(Context, SS->getScopeRep(), &II);
+          // FIXME: Defer the diagnostic after we build the type and use it.
+          auto DB = DiagCompat(QualifiedLoc, diag_compat::implicit_typename)
+                    << Context.getDependentNameType(ElaboratedTypeKeyword::None,
+                                                    SS->getScopeRep(), &II);
           if (!getLangOpts().CPlusPlus20)
             DB << FixItHint::CreateInsertion(QualifiedLoc, "typename ");
         }
@@ -389,7 +390,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
       bool MemberOfUnknownSpecialization;
       UnqualifiedId TemplateName;
       TemplateName.setIdentifier(NewII, NameLoc);
-      NestedNameSpecifier *NNS = Correction.getCorrectionSpecifier();
+      NestedNameSpecifier NNS = Correction.getCorrectionSpecifier();
       CXXScopeSpec NewSS, *NewSSPtr = SS;
       if (SS && NNS) {
         NewSS.MakeTrivial(Context, NNS, SourceRange(NameLoc));
@@ -568,8 +569,9 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
   } else if (AllowDeducedTemplate) {
     if (auto *TD = getAsTypeTemplateDecl(IIDecl)) {
       assert(!FoundUsingShadow || FoundUsingShadow->getTargetDecl() == TD);
+      // FIXME: Support UsingType here.
       TemplateName Template = Context.getQualifiedTemplateName(
-          SS ? SS->getScopeRep() : nullptr, /*TemplateKeyword=*/false,
+          SS ? SS->getScopeRep() : std::nullopt, /*TemplateKeyword=*/false,
           FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(TD));
       QualType T = Context.getDeducedTemplateSpecializationType(
           ElaboratedTypeKeyword::None, Template, QualType(), false);
@@ -582,31 +584,23 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     }
   }
 
-  if (T.isNull()) {
-    // If it's not plausibly a type, suppress diagnostics.
-    Result.suppressDiagnostics();
-    return nullptr;
-  }
-
-  if (FoundUsingShadow)
-    T = Context.getUsingType(FoundUsingShadow, T);
-
-  return buildNamedType(*this, SS, T, NameLoc, WantNontrivialTypeSourceInfo);
+  // As it's not plausibly a type, suppress diagnostics.
+  Result.suppressDiagnostics();
+  return nullptr;
 }
 
 // Builds a fake NNS for the given decl context.
-static NestedNameSpecifier *
+static NestedNameSpecifier
 synthesizeCurrentNestedNameSpecifier(ASTContext &Context, DeclContext *DC) {
   for (;; DC = DC->getLookupParent()) {
     DC = DC->getPrimaryContext();
     auto *ND = dyn_cast<NamespaceDecl>(DC);
     if (ND && !ND->isInline() && !ND->isAnonymousNamespace())
-      return NestedNameSpecifier::Create(Context, nullptr, ND);
+      return NestedNameSpecifier(Context, ND, std::nullopt);
     if (auto *RD = dyn_cast<CXXRecordDecl>(DC))
-      return NestedNameSpecifier::Create(Context, nullptr,
-                                         RD->getTypeForDecl());
+      return NestedNameSpecifier(Context.getCanonicalTagType(RD)->getTypePtr());
     if (isa<TranslationUnitDecl>(DC))
-      return NestedNameSpecifier::GlobalSpecifier(Context);
+      return NestedNameSpecifier::getGlobal();
   }
   llvm_unreachable("something isn't in TU scope?");
 }
@@ -631,7 +625,7 @@ ParsedType Sema::ActOnMSVCUnknownTypeName(const IdentifierInfo &II,
                                           bool IsTemplateTypeArg) {
   assert(getLangOpts().MSVCCompat && "shouldn't be called in non-MSVC mode");
 
-  NestedNameSpecifier *NNS = nullptr;
+  NestedNameSpecifier NNS = std::nullopt;
   if (IsTemplateTypeArg && getCurScope()->isTemplateParamScope()) {
     // If we weren't able to parse a default template argument, delay lookup
     // until instantiation time by making a non-dependent DependentTypeName. We
@@ -646,7 +640,7 @@ ParsedType Sema::ActOnMSVCUnknownTypeName(const IdentifierInfo &II,
                  findRecordWithDependentBasesOfEnclosingMethod(CurContext)) {
     // Build a DependentNameType that will perform lookup into RD at
     // instantiation time.
-    NNS = NestedNameSpecifier::Create(Context, nullptr, RD->getTypeForDecl());
+    NNS = NestedNameSpecifier(Context.getCanonicalTagType(RD)->getTypePtr());
 
     // Diagnose that this identifier was undeclared, and retry the lookup during
     // template instantiation.
@@ -699,19 +693,22 @@ DeclSpec::TST Sema::isTagName(IdentifierInfo &II, Scope *S) {
 }
 
 bool Sema::isMicrosoftMissingTypename(const CXXScopeSpec *SS, Scope *S) {
-  if (CurContext->isRecord()) {
-    if (SS->getScopeRep()->getKind() == NestedNameSpecifier::Super)
-      return true;
+  if (!CurContext->isRecord())
+    return CurContext->isFunctionOrMethod() || S->isFunctionPrototypeScope();
 
-    const Type *Ty = SS->getScopeRep()->getAsType();
-
-    CXXRecordDecl *RD = cast<CXXRecordDecl>(CurContext);
-    for (const auto &Base : RD->bases())
-      if (Ty && Context.hasSameUnqualifiedType(QualType(Ty, 1), Base.getType()))
+  switch (SS->getScopeRep().getKind()) {
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
+    return true;
+  case NestedNameSpecifier::Kind::Type: {
+    QualType T(SS->getScopeRep().getAsType(), 0);
+    for (const auto &Base : cast<CXXRecordDecl>(CurContext)->bases())
+      if (Context.hasSameUnqualifiedType(T, Base.getType()))
         return true;
+    [[fallthrough]];
+  }
+  default:
     return S->isFunctionPrototypeScope();
   }
-  return CurContext->isFunctionOrMethod() || S->isFunctionPrototypeScope();
 }
 
 void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
@@ -815,12 +812,13 @@ void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
     if (getLangOpts().MSVCCompat && isMicrosoftMissingTypename(SS, S))
       DiagID = diag::ext_typename_missing;
 
+    SuggestedType =
+        ActOnTypenameType(S, SourceLocation(), *SS, *II, IILoc).get();
+
     Diag(SS->getRange().getBegin(), DiagID)
-        << NestedNameSpecifier::Create(Context, SS->getScopeRep(), II)
+        << GetTypeFromParser(SuggestedType)
         << SourceRange(SS->getRange().getBegin(), IILoc)
         << FixItHint::CreateInsertion(SS->getRange().getBegin(), "typename ");
-    SuggestedType = ActOnTypenameType(S, SourceLocation(),
-                                      *SS, *II, IILoc).get();
   } else {
     assert(SS && SS->isInvalid() &&
            "Invalid scope specifier has already been diagnosed");

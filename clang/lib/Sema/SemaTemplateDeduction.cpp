@@ -2103,26 +2103,19 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
           Result != TemplateDeductionResult::Success)
         return Result;
 
-      QualType TP;
-      if (MPP->isSugared()) {
-        TP = S.Context.getTypeDeclType(MPP->getMostRecentCXXRecordDecl());
-      } else {
-        NestedNameSpecifier *QP = MPP->getQualifier();
-        if (QP->getKind() == NestedNameSpecifier::Identifier)
-          // Skip translation if it's a non-deduced context anyway.
-          return TemplateDeductionResult::Success;
-        TP = QualType(QP->translateToType(S.Context), 0);
-      }
+      QualType TP =
+          MPP->isSugared()
+              ? S.Context.getCanonicalTagType(MPP->getMostRecentCXXRecordDecl())
+              : QualType(MPP->getQualifier().getAsType(), 0);
       assert(!TP.isNull() && "member pointer with non-type class");
 
-      QualType TA;
-      if (MPA->isSugared()) {
-        TA = S.Context.getTypeDeclType(MPA->getMostRecentCXXRecordDecl());
-      } else {
-        NestedNameSpecifier *QA = MPA->getQualifier();
-        TA = QualType(QA->translateToType(S.Context), 0).getUnqualifiedType();
-      }
+      QualType TA =
+          MPA->isSugared()
+              ? S.Context.getCanonicalTagType(MPA->getMostRecentCXXRecordDecl())
+              : QualType(MPA->getQualifier().getAsType(), 0)
+                    .getUnqualifiedType();
       assert(!TA.isNull() && "member pointer with non-type class");
+
       return DeduceTemplateArgumentsByTypeMatch(
           S, TemplateParams, TP, TA, Info, Deduced, SubTDF,
           degradeCallPartialOrderingKind(POK),
@@ -6668,19 +6661,13 @@ MarkUsedTemplateParameters(ASTContext &Ctx,
 
 /// Mark the template parameters that are used by the given
 /// nested name specifier.
-static void
-MarkUsedTemplateParameters(ASTContext &Ctx,
-                           NestedNameSpecifier *NNS,
-                           bool OnlyDeduced,
-                           unsigned Depth,
-                           llvm::SmallBitVector &Used) {
-  if (!NNS)
+static void MarkUsedTemplateParameters(ASTContext &Ctx, NestedNameSpecifier NNS,
+                                       bool OnlyDeduced, unsigned Depth,
+                                       llvm::SmallBitVector &Used) {
+  if (NNS.getKind() != NestedNameSpecifier::Kind::Type)
     return;
-
-  MarkUsedTemplateParameters(Ctx, NNS->getPrefix(), OnlyDeduced, Depth,
-                             Used);
-  MarkUsedTemplateParameters(Ctx, QualType(NNS->getAsType(), 0),
-                             OnlyDeduced, Depth, Used);
+  MarkUsedTemplateParameters(Ctx, QualType(NNS.getAsType(), 0), OnlyDeduced,
+                             Depth, Used);
 }
 
 /// Mark the template parameters that are used by the given

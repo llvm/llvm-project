@@ -180,10 +180,17 @@ public:
       MaterializedTypedefs.push_back(Decl);
     }
 
-    QualType TDTy = Context.getTypedefType(Decl);
-    TypedefTypeLoc TypedefTL = TLB.push<TypedefTypeLoc>(TDTy);
-    TypedefTL.setNameLoc(TL.getNameLoc());
+    NestedNameSpecifierLoc QualifierLoc = TL.getQualifierLoc();
+    if (QualifierLoc) {
+      QualifierLoc = getDerived().TransformNestedNameSpecifierLoc(QualifierLoc);
+      if (!QualifierLoc)
+        return QualType();
+    }
 
+    QualType TDTy = Context.getTypedefType(
+        T->getKeyword(), QualifierLoc.getNestedNameSpecifier(), Decl);
+    TLB.push<TypedefTypeLoc>(TDTy).set(TL.getElaboratedKeywordLoc(),
+                                       QualifierLoc, TL.getNameLoc());
     return TDTy;
   }
 };

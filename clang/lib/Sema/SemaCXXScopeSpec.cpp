@@ -51,18 +51,17 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
   if (!SS.isSet() || SS.isInvalid())
     return nullptr;
 
-  NestedNameSpecifier *NNS = SS.getScopeRep();
-  if (NNS->isDependent()) {
+  NestedNameSpecifier NNS = SS.getScopeRep();
+  if (NNS.isDependent()) {
     // If this nested-name-specifier refers to the current
     // instantiation, return its DeclContext.
     if (CXXRecordDecl *Record = getCurrentInstantiationOf(NNS))
       return Record;
 
     if (EnteringContext) {
-      const Type *NNSType = NNS->getAsType();
-      if (!NNSType) {
+      if (NNS.getKind() != NestedNameSpecifier::Kind::Type)
         return nullptr;
-      }
+      const Type *NNSType = NNS.getAsType();
 
       // Look through type alias templates, per C++0x [temp.dep.type]p1.
       NNSType = Context.getCanonicalType(NNSType);
@@ -129,24 +128,25 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
     return nullptr;
   }
 
-  switch (NNS->getKind()) {
-  case NestedNameSpecifier::Identifier:
-    llvm_unreachable("Dependent nested-name-specifier has no DeclContext");
+  switch (NNS.getKind()) {
+  case NestedNameSpecifier::Kind::Namespace:
+    return const_cast<NamespaceDecl *>(
+        NNS.getAsNamespaceAndPrefix().Namespace->getNamespace());
 
-  case NestedNameSpecifier::Namespace:
-    return NNS->getAsNamespace()->getNamespace();
-
-  case NestedNameSpecifier::TypeSpec: {
-    const TagType *Tag = NNS->getAsType()->getAs<TagType>();
-    assert(Tag && "Non-tag type in nested-name-specifier");
-    return Tag->getDecl();
+  case NestedNameSpecifier::Kind::Type: {
+    auto *TD = NNS.getAsType()->getAsTagDecl();
+    assert(TD && "Non-tag type in nested-name-specifier");
+    return TD;
   }
 
-  case NestedNameSpecifier::Global:
+  case NestedNameSpecifier::Kind::Global:
     return Context.getTranslationUnitDecl();
 
-  case NestedNameSpecifier::Super:
-    return NNS->getAsRecordDecl();
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
+    return NNS.getAsMicrosoftSuper();
+
+  case NestedNameSpecifier::Kind::Null:
+    llvm_unreachable("unexpected null nested name specifier");
   }
 
   llvm_unreachable("Invalid NestedNameSpecifier::Kind!");
@@ -156,17 +156,17 @@ bool Sema::isDependentScopeSpecifier(const CXXScopeSpec &SS) {
   if (!SS.isSet() || SS.isInvalid())
     return false;
 
-  return SS.getScopeRep()->isDependent();
+  return SS.getScopeRep().isDependent();
 }
 
-CXXRecordDecl *Sema::getCurrentInstantiationOf(NestedNameSpecifier *NNS) {
+CXXRecordDecl *Sema::getCurrentInstantiationOf(NestedNameSpecifier NNS) {
   assert(getLangOpts().CPlusPlus && "Only callable in C++");
-  assert(NNS->isDependent() && "Only dependent nested-name-specifier allowed");
+  assert(NNS.isDependent() && "Only dependent nested-name-specifier allowed");
 
-  if (!NNS->getAsType())
+  if (NNS.getKind() != NestedNameSpecifier::Kind::Type)
     return nullptr;
 
-  QualType T = QualType(NNS->getAsType(), 0);
+  QualType T = QualType(NNS.getAsType(), 0);
   return ::getCurrentInstantiationOf(T, CurContext);
 }
 
@@ -301,7 +301,7 @@ bool Sema::ActOnSuperScopeSpecifier(SourceLocation SuperLoc,
     return true;
   }
 
-  SS.MakeSuper(Context, RD, SuperLoc, ColonColonLoc);
+  SS.MakeMicrosoftSuper(Context, RD, SuperLoc, ColonColonLoc);
   return false;
 }
 
@@ -338,32 +338,42 @@ bool Sema::isAcceptableNestedNameSpecifier(const NamedDecl *SD,
     if (IsExtension)
       *IsExtension = true;
   }
+  if (auto *TD = dyn_cast<TagDecl>(SD)) {
+    if (TD->isDependentType())
+      return true;
+  } else if (Context.getCanonicalTypeDeclType(cast<TypeDecl>(SD))
+                 ->isDependentType()) {
+    return true;
+  }
 
   return false;
 }
 
-NamedDecl *Sema::FindFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS) {
-  if (!S || !NNS)
+NamedDecl *Sema::FindFirstQualifierInScope(Scope *S, NestedNameSpecifier NNS) {
+  if (!S)
     return nullptr;
 
-  while (NNS->getPrefix())
-    NNS = NNS->getPrefix();
+  while (NNS.getKind() == NestedNameSpecifier::Kind::Type) {
+    const Type *T = NNS.getAsType();
+    if ((NNS = T->getPrefix()))
+      continue;
 
-  if (NNS->getKind() != NestedNameSpecifier::Identifier)
-    return nullptr;
+    const auto *DNT = dyn_cast<DependentNameType>(T);
+    if (!DNT)
+      break;
 
-  LookupResult Found(*this, NNS->getAsIdentifier(), SourceLocation(),
-                     LookupNestedNameSpecifierName);
-  LookupName(Found, S);
-  assert(!Found.isAmbiguous() && "Cannot handle ambiguities here yet");
+    LookupResult Found(*this, DNT->getIdentifier(), SourceLocation(),
+                       LookupNestedNameSpecifierName);
+    LookupName(Found, S);
+    assert(!Found.isAmbiguous() && "Cannot handle ambiguities here yet");
 
-  if (!Found.isSingleResult())
-    return nullptr;
+    if (!Found.isSingleResult())
+      return nullptr;
 
-  NamedDecl *Result = Found.getFoundDecl();
-  if (isAcceptableNestedNameSpecifier(Result))
-    return Result;
-
+    NamedDecl *Result = Found.getFoundDecl();
+    if (isAcceptableNestedNameSpecifier(Result))
+      return Result;
+  }
   return nullptr;
 }
 
@@ -899,7 +909,7 @@ bool Sema::ActOnCXXNestedNameSpecifier(Scope *S,
     DependentTemplateSpecializationTypeLoc SpecTL
       = Builder.push<DependentTemplateSpecializationTypeLoc>(T);
     SpecTL.setElaboratedKeywordLoc(SourceLocation());
-    SpecTL.setQualifierLoc(NestedNameSpecifierLoc());
+    SpecTL.setQualifierLoc(SS.getWithLocInContext(Context));
     SpecTL.setTemplateKeywordLoc(TemplateKWLoc);
     SpecTL.setTemplateNameLoc(TemplateNameLoc);
     SpecTL.setLAngleLoc(LAngleLoc);
@@ -962,7 +972,7 @@ namespace {
   /// A structure that stores a nested-name-specifier annotation,
   /// including both the nested-name-specifier
   struct NestedNameSpecifierAnnotation {
-    NestedNameSpecifier *NNS;
+    NestedNameSpecifier NNS = std::nullopt;
   };
 }
 
@@ -1001,8 +1011,6 @@ bool Sema::ShouldEnterDeclaratorScope(Scope *S, const CXXScopeSpec &SS) {
   if (isa<ObjCContainerDecl>(CurContext) || isa<ObjCMethodDecl>(CurContext))
     return false;
 
-  NestedNameSpecifier *Qualifier = SS.getScopeRep();
-
   // There are only two places a well-formed program may qualify a
   // declarator: first, when defining a namespace or class member
   // out-of-line, and second, when naming an explicitly-qualified
@@ -1017,18 +1025,20 @@ bool Sema::ShouldEnterDeclaratorScope(Scope *S, const CXXScopeSpec &SS) {
   //   granting friendship.
   // i.e. we don't push a scope unless it's a class member.
 
-  switch (Qualifier->getKind()) {
-  case NestedNameSpecifier::Global:
-  case NestedNameSpecifier::Namespace:
+  switch (SS.getScopeRep().getKind()) {
+  case NestedNameSpecifier::Kind::Global:
+  case NestedNameSpecifier::Kind::Namespace:
     // These are always namespace scopes.  We never want to enter a
     // namespace scope from anything but a file context.
     return CurContext->getRedeclContext()->isFileContext();
 
-  case NestedNameSpecifier::Identifier:
-  case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::Super:
+  case NestedNameSpecifier::Kind::Type:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
     // These are never namespace scopes.
     return true;
+
+  case NestedNameSpecifier::Kind::Null:
+    llvm_unreachable("unexpected null nested name specifier");
   }
 
   llvm_unreachable("Invalid NestedNameSpecifier::Kind!");

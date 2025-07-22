@@ -5765,38 +5765,33 @@ TEST(NNS, DescendantsOfNestedNameSpecifiers) {
       "namespace a { struct A { struct B { struct C {}; }; }; };"
       "void f() { a::A::B::C c; }";
   EXPECT_TRUE(matches(
-    Fragment,
-    nestedNameSpecifier(specifiesType(asString("struct a::A::B")),
-                        hasDescendant(nestedNameSpecifier(
-                          specifiesNamespace(hasName("a")))))));
+      Fragment, nestedNameSpecifier(specifiesType(asString("a::A::B")),
+                                    hasDescendant(nestedNameSpecifier(
+                                        specifiesNamespace(hasName("a")))))));
   EXPECT_TRUE(notMatches(
-    Fragment,
-    nestedNameSpecifier(specifiesType(asString("struct a::A::B")),
-                        has(nestedNameSpecifier(
-                          specifiesNamespace(hasName("a")))))));
+      Fragment, nestedNameSpecifier(specifiesType(asString("a::A::B")),
+                                    has(nestedNameSpecifier(
+                                        specifiesNamespace(hasName("a")))))));
   EXPECT_TRUE(matches(
-    Fragment,
-    nestedNameSpecifier(specifiesType(asString("struct a::A")),
-                        has(nestedNameSpecifier(
-                          specifiesNamespace(hasName("a")))))));
+      Fragment, nestedNameSpecifier(specifiesType(asString("a::A")),
+                                    has(nestedNameSpecifier(
+                                        specifiesNamespace(hasName("a")))))));
 
   // Not really useful because a NestedNameSpecifier can af at most one child,
   // but to complete the interface.
   EXPECT_TRUE(matchAndVerifyResultTrue(
-    Fragment,
-    nestedNameSpecifier(specifiesType(asString("struct a::A::B")),
-                        forEach(nestedNameSpecifier().bind("x"))),
-    std::make_unique<VerifyIdIsBoundTo<NestedNameSpecifier>>("x", 1)));
+      Fragment,
+      nestedNameSpecifier(specifiesType(asString("a::A::B")),
+                          forEach(nestedNameSpecifier().bind("x"))),
+      std::make_unique<VerifyIdIsBoundTo<NestedNameSpecifier>>("x", 1)));
 }
 
 TEST(NNS, NestedNameSpecifiersAsDescendants) {
   StringRef Fragment =
       "namespace a { struct A { struct B { struct C {}; }; }; };"
       "void f() { a::A::B::C c; }";
-  EXPECT_TRUE(matches(
-    Fragment,
-    decl(hasDescendant(nestedNameSpecifier(specifiesType(
-      asString("struct a::A")))))));
+  EXPECT_TRUE(matches(Fragment, decl(hasDescendant(nestedNameSpecifier(
+                                    specifiesType(asString("a::A")))))));
   EXPECT_TRUE(matchAndVerifyResultTrue(
     Fragment,
     functionDecl(hasName("f"),
@@ -5809,37 +5804,34 @@ TEST(NNSLoc, DescendantsOfNestedNameSpecifierLocs) {
   StringRef Fragment =
       "namespace a { struct A { struct B { struct C {}; }; }; };"
       "void f() { a::A::B::C c; }";
-  EXPECT_TRUE(matches(
-    Fragment,
-    nestedNameSpecifierLoc(loc(specifiesType(asString("struct a::A::B"))),
-                           hasDescendant(loc(nestedNameSpecifier(
-                             specifiesNamespace(hasName("a"))))))));
+  EXPECT_TRUE(matches(Fragment, nestedNameSpecifierLoc(
+                                    loc(specifiesType(asString("a::A::B"))),
+                                    hasDescendant(loc(nestedNameSpecifier(
+                                        specifiesNamespace(hasName("a"))))))));
   EXPECT_TRUE(notMatches(
-    Fragment,
-    nestedNameSpecifierLoc(loc(specifiesType(asString("struct a::A::B"))),
-                           has(loc(nestedNameSpecifier(
-                             specifiesNamespace(hasName("a"))))))));
+      Fragment,
+      nestedNameSpecifierLoc(
+          loc(specifiesType(asString("a::A::B"))),
+          has(loc(nestedNameSpecifier(specifiesNamespace(hasName("a"))))))));
   EXPECT_TRUE(matches(
-    Fragment,
-    nestedNameSpecifierLoc(loc(specifiesType(asString("struct a::A"))),
-                           has(loc(nestedNameSpecifier(
-                             specifiesNamespace(hasName("a"))))))));
+      Fragment,
+      nestedNameSpecifierLoc(
+          loc(specifiesType(asString("a::A"))),
+          has(loc(nestedNameSpecifier(specifiesNamespace(hasName("a"))))))));
 
   EXPECT_TRUE(matchAndVerifyResultTrue(
-    Fragment,
-    nestedNameSpecifierLoc(loc(specifiesType(asString("struct a::A::B"))),
-                           forEach(nestedNameSpecifierLoc().bind("x"))),
-    std::make_unique<VerifyIdIsBoundTo<NestedNameSpecifierLoc>>("x", 1)));
+      Fragment,
+      nestedNameSpecifierLoc(loc(specifiesType(asString("a::A::B"))),
+                             forEach(nestedNameSpecifierLoc().bind("x"))),
+      std::make_unique<VerifyIdIsBoundTo<NestedNameSpecifierLoc>>("x", 1)));
 }
 
 TEST(NNSLoc, NestedNameSpecifierLocsAsDescendants) {
   StringRef Fragment =
       "namespace a { struct A { struct B { struct C {}; }; }; };"
       "void f() { a::A::B::C c; }";
-  EXPECT_TRUE(matches(
-    Fragment,
-    decl(hasDescendant(loc(nestedNameSpecifier(specifiesType(
-      asString("struct a::A"))))))));
+  EXPECT_TRUE(matches(Fragment, decl(hasDescendant(loc(nestedNameSpecifier(
+                                    specifiesType(asString("a::A"))))))));
   EXPECT_TRUE(matchAndVerifyResultTrue(
     Fragment,
     functionDecl(hasName("f"),

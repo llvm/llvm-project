@@ -102,54 +102,78 @@ getUsingNamespaceDirectives(const DeclContext *DestContext,
 // ancestor is redundant, therefore we stop at lowest common ancestor.
 // In addition to that stops early whenever IsVisible returns true. This can be
 // used to implement support for "using namespace" decls.
-std::string
-getQualification(ASTContext &Context, const DeclContext *DestContext,
-                 const DeclContext *SourceContext,
-                 llvm::function_ref<bool(NestedNameSpecifier *)> IsVisible) {
-  std::vector<const NestedNameSpecifier *> Parents;
-  bool ReachedNS = false;
+std::string getQualification(ASTContext &Context,
+                             const DeclContext *DestContext,
+                             const DeclContext *SourceContext,
+                             llvm::function_ref<bool(const Decl *)> IsVisible) {
+  std::vector<const Decl *> Parents;
+  [[maybe_unused]] bool ReachedNS = false;
   for (const DeclContext *CurContext = SourceContext; CurContext;
        CurContext = CurContext->getLookupParent()) {
     // Stop once we reach a common ancestor.
     if (CurContext->Encloses(DestContext))
       break;
 
-    NestedNameSpecifier *NNS = nullptr;
+    const Decl *CurD;
     if (auto *TD = llvm::dyn_cast<TagDecl>(CurContext)) {
       // There can't be any more tag parents after hitting a namespace.
       assert(!ReachedNS);
-      (void)ReachedNS;
-      NNS = NestedNameSpecifier::Create(Context, nullptr, TD->getTypeForDecl());
+      CurD = TD;
     } else if (auto *NSD = llvm::dyn_cast<NamespaceDecl>(CurContext)) {
       ReachedNS = true;
-      NNS = NestedNameSpecifier::Create(Context, nullptr, NSD);
       // Anonymous and inline namespace names are not spelled while qualifying
       // a name, so skip those.
       if (NSD->isAnonymousNamespace() || NSD->isInlineNamespace())
         continue;
+      CurD = NSD;
     } else {
       // Other types of contexts cannot be spelled in code, just skip over
       // them.
       continue;
     }
     // Stop if this namespace is already visible at DestContext.
-    if (IsVisible(NNS))
+    if (IsVisible(CurD))
       break;
 
-    Parents.push_back(NNS);
+    Parents.push_back(CurD);
   }
 
-  // Go over name-specifiers in reverse order to create necessary qualification,
-  // since we stored inner-most parent first.
+  // Go over the declarations in reverse order, since we stored inner-most
+  // parent first.
+  NestedNameSpecifier Qualifier = std::nullopt;
+  bool IsFirst = true;
+  for (const auto *CurD : llvm::reverse(Parents)) {
+    if (auto *TD = llvm::dyn_cast<TagDecl>(CurD)) {
+      QualType T;
+      if (const auto *RD = dyn_cast<CXXRecordDecl>(TD);
+          ClassTemplateDecl *CTD = RD->getDescribedClassTemplate()) {
+        ArrayRef<TemplateArgument> Args;
+        if (const auto *SD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+          Args = SD->getTemplateArgs().asArray();
+        else
+          Args = CTD->getTemplateParameters()->getInjectedTemplateArgs(Context);
+        T = Context.getTemplateSpecializationType(
+            ElaboratedTypeKeyword::None,
+            Context.getQualifiedTemplateName(
+                Qualifier, /*TemplateKeyword=*/!IsFirst, TemplateName(CTD)),
+            Args, /*CanonicalArgs=*/{}, Context.getCanonicalTagType(RD));
+      } else {
+        T = Context.getTagType(ElaboratedTypeKeyword::None, Qualifier, TD,
+                               /*OwnsTag=*/false);
+      }
+      Qualifier = NestedNameSpecifier(T.getTypePtr());
+    } else {
+      Qualifier =
+          NestedNameSpecifier(Context, cast<NamespaceDecl>(CurD), Qualifier);
+    }
+    IsFirst = false;
+  }
+  if (!Qualifier)
+    return "";
+
   std::string Result;
   llvm::raw_string_ostream OS(Result);
-  for (const auto *Parent : llvm::reverse(Parents)) {
-    if (Parent != *Parents.rbegin() && Parent->isDependent() &&
-        Parent->getAsRecordDecl() &&
-        Parent->getAsRecordDecl()->getDescribedClassTemplate())
-      OS << "template ";
-    Parent->print(OS, Context.getPrintingPolicy());
-  }
+  Qualifier.print(OS, Context.getPrintingPolicy());
   return OS.str();
 }
 
@@ -249,8 +273,7 @@ std::string printName(const ASTContext &Ctx, const NamedDecl &ND) {
   }
 
   // Print nested name qualifier if it was written in the source code.
-  if (auto *Qualifier = getQualifierLoc(ND).getNestedNameSpecifier())
-    Qualifier->print(Out, PP);
+  getQualifierLoc(ND).getNestedNameSpecifier().print(Out, PP);
   // Print the name itself.
   ND.getDeclName().print(Out, PP);
   // Print template arguments.
@@ -665,13 +688,10 @@ std::string getQualification(ASTContext &Context,
   auto VisibleNamespaceDecls =
       getUsingNamespaceDirectives(DestContext, InsertionPoint);
   return getQualification(
-      Context, DestContext, ND->getDeclContext(),
-      [&](NestedNameSpecifier *NNS) {
-        const NamespaceDecl *NS =
-            dyn_cast_if_present<NamespaceDecl>(NNS->getAsNamespace());
-        if (!NS)
+      Context, DestContext, ND->getDeclContext(), [&](const Decl *D) {
+        if (D->getKind() != Decl::Namespace)
           return false;
-        NS = NS->getCanonicalDecl();
+        const auto *NS = cast<NamespaceDecl>(D)->getCanonicalDecl();
         return llvm::any_of(VisibleNamespaceDecls,
                             [NS](const NamespaceDecl *NSD) {
                               return NSD->getCanonicalDecl() == NS;
@@ -688,12 +708,11 @@ std::string getQualification(ASTContext &Context,
     (void)NS;
   }
   return getQualification(
-      Context, DestContext, ND->getDeclContext(),
-      [&](NestedNameSpecifier *NNS) {
+      Context, DestContext, ND->getDeclContext(), [&](const Decl *D) {
         return llvm::any_of(VisibleNamespaces, [&](llvm::StringRef Namespace) {
           std::string NS;
           llvm::raw_string_ostream OS(NS);
-          NNS->print(OS, Context.getPrintingPolicy());
+          D->print(OS, Context.getPrintingPolicy());
           return OS.str() == Namespace;
         });
       });
