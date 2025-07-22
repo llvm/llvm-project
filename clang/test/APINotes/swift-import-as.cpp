@@ -40,7 +40,15 @@
 // CHECK-OPAQUE-REF-COUNTED: SwiftAttrAttr {{.+}} <<invalid sloc>> "import_reference"
 // CHECK-OPAQUE-REF-COUNTED: SwiftAttrAttr {{.+}} <<invalid sloc>> "retain:ORCRetain"
 // CHECK-OPAQUE-REF-COUNTED: SwiftAttrAttr {{.+}} <<invalid sloc>> "release:ORCRelease"
+// CHECK-OPAQUE-REF-COUNTED-NOT: SwiftAttrAttr {{.+}} <<invalid sloc>> "release:ORCRelease"
 
+// CHECK-OPAQUE-REF-COUNTED: Dumping OpaqueRefCountedType:
+// CHECK-OPAQUE-REF-COUNTED-NEXT: CXXRecordDecl {{.+}} imported in SwiftImportAs{{.*}}struct OpaqueRefCountedType
+// CHECK-OPAQUE-REF-COUNTED: SwiftAttrAttr {{.+}} <<invalid sloc>> "import_reference"
+// CHECK-OPAQUE-REF-COUNTED: SwiftAttrAttr {{.+}} <<invalid sloc>> "retain:ORCRetain"
+// CHECK-OPAQUE-REF-COUNTED: SwiftAttrAttr {{.+}} <<invalid sloc>> "release:ORCRelease"
+
+// CHECK-OPAQUE-REF-COUNTED-NOT: SwiftAttrAttr {{.+}} <<invalid sloc>> "release:
 // CHECK-NON-COPYABLE: Dumping NonCopyableType:
 // CHECK-NON-COPYABLE-NEXT: CXXRecordDecl {{.+}} imported in SwiftImportAs {{.+}} struct NonCopyableType
 // CHECK-NON-COPYABLE: SwiftAttrAttr {{.+}} <<invalid sloc>> "conforms_to:MySwiftModule.MySwiftNonCopyableProtocol"
