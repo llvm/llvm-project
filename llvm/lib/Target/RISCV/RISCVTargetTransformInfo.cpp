@@ -1506,13 +1506,15 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     Cost +=
         getCastInstrCost(IsSigned ? Instruction::FPToSI : Instruction::FPToUI,
                          RetTy, SrcTy, TTI::CastContextHint::None, CostKind);
-    if (IsSigned) {
-      Type *CondTy = RetTy->getWithNewBitWidth(1);
-      Cost += getCmpSelInstrCost(BinaryOperator::FCmp, SrcTy, CondTy,
-                                 CmpInst::FCMP_UNO, CostKind);
-      Cost += getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
-                                 CmpInst::FCMP_UNO, CostKind);
-    }
+
+    // Handle NaN.
+    // vmfne v0, v8, v8         # If v8[i] is NaN set v0[i] to 1.
+    // vmerge.vim v8, v8, 0, v0 # Convert NaN to 0.
+    Type *CondTy = RetTy->getWithNewBitWidth(1);
+    Cost += getCmpSelInstrCost(BinaryOperator::FCmp, SrcTy, CondTy,
+                               CmpInst::FCMP_UNO, CostKind);
+    Cost += getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                               CmpInst::FCMP_UNO, CostKind);
     return Cost;
   }
   }
