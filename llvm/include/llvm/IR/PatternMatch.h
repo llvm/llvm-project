@@ -822,6 +822,8 @@ template <typename Class> struct bind_ty {
   }
 };
 
+/// Check whether the value has the given Class and matches the nested
+/// pattern. Capture it into the provided variable if successful.
 template <typename Class, typename MatchTy> struct bind_and_match_ty {
   Class *&VR;
   MatchTy Match;
@@ -842,12 +844,14 @@ template <typename Class, typename MatchTy> struct bind_and_match_ty {
 inline bind_ty<Value> m_Value(Value *&V) { return V; }
 inline bind_ty<const Value> m_Value(const Value *&V) { return V; }
 
+/// Match against the nested pattern, and capture the value if we match.
 template <typename MatchTy>
 inline bind_and_match_ty<Value, MatchTy> m_Value(Value *&V,
                                                  const MatchTy &Match) {
   return {V, Match};
 }
 
+/// Match against the nested pattern, and capture the value if we match.
 template <typename MatchTy>
 inline bind_and_match_ty<const Value, MatchTy> m_Value(const Value *&V,
                                                        const MatchTy &Match) {
@@ -857,6 +861,7 @@ inline bind_and_match_ty<const Value, MatchTy> m_Value(const Value *&V,
 /// Match an instruction, capturing it if we match.
 inline bind_ty<Instruction> m_Instruction(Instruction *&I) { return I; }
 
+/// Match against the nested pattern, and capture the instruction if we match.
 template <typename MatchTy>
 inline bind_and_match_ty<Instruction, MatchTy>
 m_Instruction(Instruction *&I, const MatchTy &Match) {
