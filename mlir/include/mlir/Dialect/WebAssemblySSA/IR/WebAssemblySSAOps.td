@@ -19,11 +19,15 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 
+// Base class for WasmSSA operations.
+// Most operations are made to match 1:1, only ignoring the stack-based approach of Wasm
+// for an SSA based approach. In cases where operations match 1:1 the Wasm spec,
+// no description is provided.
 class WasmSSA_Op<string mnemonic, list<Trait> traits = []> :
     Op<WasmSSA_Dialect, mnemonic, traits>;
 
 class WasmSSA_BlockLikeOp<string mnemonic, string summaryStr> :
-  WasmSSA_Op<mnemonic, [Terminator, DeclareOpInterfaceMethods<WasmSSALabelLevelInterface>]> {
+  WasmSSA_Op<mnemonic, [Terminator, DeclareOpInterfaceMethods<WasmSSALabelLevelOpInterface>]> {
   let summary = summaryStr;
   let arguments = (ins Variadic<WasmSSA_ValType>: $inputs);
   let regions = (region AnyRegion: $body);
@@ -44,7 +48,7 @@ def WasmSSA_BlockOp : WasmSSA_BlockLikeOp<"block", "Create a nesting level"> {}
 def WasmSSA_LoopOp : WasmSSA_BlockLikeOp<"loop", "Create a nesting level similar to Block Op, except that it has itself as a successor."> {}
 
 def WasmSSA_BlockReturnOp : WasmSSA_Op<"block_return", [Terminator,
-    DeclareOpInterfaceMethods<WasmSSALabelBranchingInterface>]> {
+    DeclareOpInterfaceMethods<WasmSSALabelBranchingOpInterface>]> {
   let summary = "Return from the current block";
   let arguments = (ins Variadic<WasmSSA_ValType>: $inputs);
   let extraClassDeclaration = [{
@@ -55,7 +59,7 @@ def WasmSSA_BlockReturnOp : WasmSSA_Op<"block_return", [Terminator,
 
 def WasmSSA_BranchIfOp : WasmSSA_Op<"branch_if", [
     Terminator,
-    DeclareOpInterfaceMethods<WasmSSALabelBranchingInterface>]> {
+    DeclareOpInterfaceMethods<WasmSSALabelBranchingOpInterface>]> {
   let summary = "Jump to target level if condition has non-zero value";
   let arguments = (ins I32: $condition,
                        UI32Attr: $exitLevel,
@@ -74,7 +78,7 @@ def WasmSSA_ConstOp : WasmSSA_Op<"const", [
 
 def WasmSSA_FuncOp : WasmSSA_Op<"func", [
     AffineScope, AutomaticAllocationScope,
-    DeclareOpInterfaceMethods<FunctionOpInterface>,
+    DeclareOpInterfaceMethods<FunctionOpInterface, ["verifyBody"]>,
     IsolatedFromAbove,
     Symbol]> {
   let description = [{
@@ -111,8 +115,6 @@ def WasmSSA_FuncOp : WasmSSA_Op<"func", [
     /// function.
     ::mlir::Region *getCallableRegion() { return isExternal() ? nullptr : &getBody(); }
 
-    ::mlir::LogicalResult verifyBody();
-
     /// Returns the argument types of this function.
     ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }
 
@@ -121,7 +123,7 @@ def WasmSSA_FuncOp : WasmSSA_Op<"func", [
   }];
 
   let builders = [
-    OpBuilder<(ins "llvm::StringRef":$symbol, "FunctionType":$funcType )>
+    OpBuilder<(ins "::llvm::StringRef":$symbol, "FunctionType":$funcType )>
   ];
   let hasCustomAssemblyFormat = 1;
 }
@@ -154,11 +156,11 @@ def WasmSSA_FuncImportOp : WasmSSA_Op<"import_func", [
 
     Region *getCallableRegion() { return nullptr; }
 
-    llvm::ArrayRef<Type> getArgumentTypes() {
+    ::llvm::ArrayRef<Type> getArgumentTypes() {
       return getType().getInputs();
     }
 
-    llvm::ArrayRef<Type> getResultTypes() {
+    ::llvm::ArrayRef<Type> getResultTypes() {
       return getType().getResults();
     }
   }];
@@ -224,7 +226,7 @@ def WasmSSA_GlobalGetOp : WasmSSA_Op<"global_get", [DeclareOpInterfaceMethods<Wa
 }
 
 def WasmSSA_IfOp : WasmSSA_Op<"if", [Terminator,
-    DeclareOpInterfaceMethods<WasmSSALabelLevelInterface>]> {
+    DeclareOpInterfaceMethods<WasmSSALabelLevelOpInterface>]> {
   let summary = "Execute the if region if condition value is nonzero, the else region otherwise.";
   let arguments = (ins I32:$condition, Variadic<WasmSSA_ValType>: $inputs);
   let regions = (region AnyRegion: $if, AnyRegion: $else);
@@ -293,8 +295,8 @@ def WasmSSA_MemOp : WasmSSA_Op<"memory", [Symbol]> {
                      OptionalAttr<StrAttr>:$sym_visibility);
   let builders = [
     OpBuilder<(ins
-    "llvm::StringRef":$symbol,
-    "LimitType":$limit)>
+    "::llvm::StringRef":$symbol,
+    "wasmssa::LimitType":$limit)>
   ];
 }
 
@@ -309,9 +311,9 @@ def WasmSSA_MemImportOp : WasmSSA_Op<"import_mem", [Symbol, WasmSSAImportOpInter
      bool isDeclaration() const { return true; }
    }];
   let builders = [OpBuilder<(ins
-    "llvm::StringRef":$symbol,
-    "llvm::StringRef":$moduleName,
-    "llvm::StringRef":$importName,
+    "::llvm::StringRef":$symbol,
+    "::llvm::StringRef":$moduleName,
+    "::llvm::StringRef":$importName,
     "wasmssa::LimitType":$limits)>];
   let assemblyFormat = "$importName `from` $moduleName `as` $sym_name attr-dict";
 }
@@ -322,7 +324,7 @@ def WasmSSA_TableOp : WasmSSA_Op<"table", [Symbol]> {
                      WasmSSA_TableTypeAttr: $type,
                      OptionalAttr<StrAttr>:$sym_visibility);
   let builders = [OpBuilder<(ins
-      "llvm::StringRef":$symbol,
+      "::llvm::StringRef":$symbol,
       "wasmssa::TableType":$type)>];
 }
 
@@ -338,9 +340,9 @@ def WasmSSA_TableImportOp : WasmSSA_Op<"import_table", [Symbol, WasmSSAImportOpI
   }];
   let assemblyFormat = "$importName `from` $moduleName `as` $sym_name attr-dict";
   let builders = [OpBuilder<(ins
-      "llvm::StringRef":$symbol,
-      "llvm::StringRef":$moduleName,
-      "llvm::StringRef":$importName,
+      "::llvm::StringRef":$symbol,
+      "::llvm::StringRef":$moduleName,
+      "::llvm::StringRef":$importName,
       "wasmssa::TableType":$type)>];
 }
 

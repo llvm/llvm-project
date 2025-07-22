@@ -1,3 +1,11 @@
+//===- WebAssemblySSAOps.cpp - WasmSSA dialect operations ----------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===---------------------------------------------------------------------===//
+
 #include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSA.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Types.h"
@@ -29,7 +37,7 @@ Type LimitType::parse(::mlir::AsmParser &parser) {
 
 void LimitType::print(AsmPrinter &printer) const {
   printer << '[' << getMin() << ':';
-  auto maxLim = getMax();
+  std::optional<uint32_t> maxLim = getMax();
   if (maxLim)
     printer << *maxLim;
   printer << ']';

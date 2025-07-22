@@ -22,14 +22,15 @@ namespace mlir::wasmssa {
 namespace detail {
 LogicalResult verifyWasmSSALabelBranchingInterface(Operation *op) {
   auto branchInterface = dyn_cast<WasmSSALabelBranchingInterface>(op);
-  auto res = WasmSSALabelBranchingInterface::getTargetOpFromBlock(
-      op->getBlock(), branchInterface.getExitLevel());
+  llvm::FailureOr<WasmSSALabelLevelInterface> res =
+      WasmSSALabelBranchingInterface::getTargetOpFromBlock(
+          op->getBlock(), branchInterface.getExitLevel());
   return success(succeeded(res));
 }
 
 LogicalResult verifyConstantExpressionInterface(Operation *op) {
   Region &initializerRegion = op->getRegion(0);
-  auto resultState =
+  WalkResult resultState =
       initializerRegion.walk([&](Operation *currentOp) -> WalkResult {
         if (isa<ReturnOp>(currentOp))
           return WalkResult::advance();
@@ -38,7 +39,7 @@ LogicalResult verifyConstantExpressionInterface(Operation *op) {
           if (interfaceOp.isValidInConstantExpr().succeeded())
             return WalkResult::advance();
         }
-        op->emitError("Expected a constant initializer for this operator, got ")
+        op->emitError("expected a constant initializer for this operator, got ")
             << currentOp;
         return WalkResult::interrupt();
       });

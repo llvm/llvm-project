@@ -1,3 +1,11 @@
+//===- WebAssemblySSAOps.cpp - WasmSSA dialect operations ----------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===---------------------------------------------------------------------===//
+
 #include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSA.h"
 
 #include "mlir/IR/Attributes.h"
@@ -92,7 +100,7 @@ ParseResult ExtendLowBitsSOp::parse(::mlir::OpAsmParser &parser,
                                     ::mlir::OperationState &result) {
   OpAsmParser::UnresolvedOperand operand;
   uint64_t nBits;
-  auto parseRes = parser.parseInteger(nBits);
+  ParseResult parseRes = parser.parseInteger(nBits);
   parseRes = parser.parseKeyword("low");
   parseRes = parser.parseKeyword("bits");
   parseRes = parser.parseKeyword("from");
@@ -124,11 +132,11 @@ void ExtendLowBitsSOp::print(OpAsmPrinter &p) {
 LogicalResult ExtendLowBitsSOp::verify() {
   auto bitsToTake = getBitsToTake().getValue().getLimitedValue();
   if (bitsToTake != 32 && bitsToTake != 16 && bitsToTake != 8)
-    return emitError("Extend op can only take 8, 16 or 32 bits. Got ")
+    return emitError("extend op can only take 8, 16 or 32 bits. Got ")
            << bitsToTake;
 
   if (bitsToTake >= getInput().getType().getIntOrFloatBitWidth())
-    return emitError("Trying to extend the ")
+    return emitError("trying to extend the ")
            << bitsToTake << " low bits from a " << getInput().getType()
            << " value";
   return success();
@@ -140,7 +148,7 @@ LogicalResult ExtendLowBitsSOp::verify() {
 
 Block *FuncOp::addEntryBlock() {
   if (!getBody().empty()) {
-    emitError("Adding entry block to a FuncOp which already has one.");
+    emitError("adding entry block to a FuncOp which already has one.");
     return &getBody().front();
   }
   Block &block = getBody().emplaceBlock();
@@ -170,7 +178,7 @@ ParseResult FuncOp::parse(::mlir::OpAsmParser &parser,
       auto refType = dyn_cast<LocalRefType>(argType);
       auto loc = parser.getEncodedSourceLoc(parser.getCurrentLocation());
       if (!refType) {
-        mlir::emitError(loc, "Invalid type for wasm.func argument. Expecting "
+        mlir::emitError(loc, "invalid type for wasm.func argument. Expecting "
                              "!wasm<local T>, got ")
             << argType << ".";
         return;
@@ -192,7 +200,7 @@ LogicalResult FuncOp::verifyBody() {
     return success();
   Block &entry = getBody().front();
   if (entry.getNumArguments() != getFunctionType().getNumInputs())
-    return emitError("Entry block should have same number of arguments as "
+    return emitError("entry block should have same number of arguments as "
                      "function type. Function type has ")
            << getFunctionType().getNumInputs() << ", entry block has "
            << entry.getNumArguments() << ".";
@@ -201,10 +209,10 @@ LogicalResult FuncOp::verifyBody() {
            getFunctionType().getInputs(), entry.getArgumentTypes())) {
     auto blockLocalRefType = dyn_cast<LocalRefType>(blockType);
     if (!blockLocalRefType)
-      return emitError("Entry block argument type should be LocalRefType, got ")
+      return emitError("entry block argument type should be LocalRefType, got ")
              << blockType << " for block argument " << argNo << ".";
     if (blockLocalRefType.getElementType() != funcSignatureType)
-      return emitError("Func argument type #")
+      return emitError("func argument type #")
              << argNo << "(" << funcSignatureType
              << ") doesn't match entry block referenced type ("
              << blockLocalRefType.getElementType() << ").";
@@ -253,7 +261,7 @@ ParseResult GlobalOp::parse(OpAsmParser &parser, OperationState &result) {
   StringAttr symbolName;
   Type globalType;
   auto *ctx = parser.getContext();
-  auto res = parser.parseSymbolName(
+  ParseResult res = parser.parseSymbolName(
       symbolName, SymbolTable::getSymbolAttrName(), result.attributes);
 
   res = parser.parseType(globalType);

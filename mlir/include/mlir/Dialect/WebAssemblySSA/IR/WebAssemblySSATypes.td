@@ -80,7 +80,5 @@ def WasmSSA_ValTypeAttr : TypeAttrOf<WasmSSA_ValType>;
 def WasmSSA_IntegerAttr : AnyAttrOf<[I32Attr, I64Attr]>;
 def WasmSSA_FPAttr : AnyAttrOf<[F32Attr, F64Attr]>;
 def WasmSSA_NumericAttr : AnyAttrOf<[WasmSSA_IntegerAttr, WasmSSA_FPAttr]>;
-def WasmSSA_VecAttr : TypedSignlessIntegerAttrBase<
-    I128, "::llvm::APInt", "128 bits signless integer attribute">;
 
 #endif // WEBASSEMBLYSSA_TYPES

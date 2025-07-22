@@ -1,4 +1,4 @@
-//===-- WebAssemblySSAInterfaces.td - WebAssemblySSA Interfaces -*- tablegen -*-===//
+//===-- WebAssemblySSAInterfaces.td - WasmSSA Interfaces -*- tablegen -*--===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@
 include "mlir/IR/OpBase.td"
 include "mlir/IR/BuiltinAttributes.td"
 
-def WasmSSALabelLevelInterface : OpInterface<"WasmSSALabelLevelInterface"> {
+def WasmSSALabelLevelOpInterface : OpInterface<"WasmSSALabelLevelInterface"> {
   let description = [{
     Operation that defines one level of nesting for wasm branching.
     These operation region can be targeted by branch instructions.
@@ -31,7 +31,7 @@ def WasmSSALabelLevelInterface : OpInterface<"WasmSSALabelLevelInterface"> {
   ];
 }
 
-def WasmSSALabelBranchingInterface : OpInterface<"WasmSSALabelBranchingInterface"> {
+def WasmSSALabelBranchingOpInterface : OpInterface<"WasmSSALabelBranchingInterface"> {
   let description = [{
     Wasm operation that targets a label for a jump.
   }];
@@ -104,7 +104,7 @@ def WasmSSAImportOpInterface : OpInterface<"WasmSSAImportOpInterface"> {
       /*methodName=*/  "getQualifiedImportName",
       /*args=*/        (ins),
       /*methodBody=*/  [{
-        return ($_op.getModuleName() + llvm::Twine{"::"} + $_op.getImportName()).str();
+        return ($_op.getModuleName() + ::llvm::Twine{"::"} + $_op.getImportName()).str();
       }]
       >,
   ];
@@ -183,4 +183,4 @@ def WasmSSAConstantExprInterface :
   ];
 }
 
-#endif // WEBASSEMBLYSSA_INTERFACES
+#endif // WEBASSEMBLY_INTERFACES
