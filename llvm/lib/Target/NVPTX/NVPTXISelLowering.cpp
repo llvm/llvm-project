@@ -2068,6 +2068,8 @@ NVPTXTargetLowering::LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const {
 static SDValue getPRMT(SDValue A, SDValue B, SDValue Selector, SDLoc DL,
                        SelectionDAG &DAG,
                        unsigned Mode = NVPTX::PTXPrmtMode::NONE) {
+  assert(A.getValueType() == MVT::i32 && B.getValueType() == MVT::i32 &&
+         Selector.getValueType() == MVT::i32 && "PRMT must have i32 operands");
   return DAG.getNode(NVPTXISD::PRMT, DL, MVT::i32,
                      {A, B, Selector, DAG.getConstant(Mode, DL, MVT::i32)});
 }
@@ -4006,7 +4008,10 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m8n8k32_store_d_s32_col:
   case Intrinsic::nvvm_wmma_m8n8k32_store_d_s32_col_stride:
   case Intrinsic::nvvm_wmma_m8n8k32_store_d_s32_row:
-  case Intrinsic::nvvm_wmma_m8n8k32_store_d_s32_row_stride: {
+  case Intrinsic::nvvm_wmma_m8n8k32_store_d_s32_row_stride:
+  case Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x2_b16:
+  case Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x2_trans_b16:
+  case Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x2_trans_b8: {
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = MVT::v2i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -4022,6 +4027,30 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m8n8k4_store_d_f64_row_stride: {
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = MVT::v2f64;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align = Align(16);
+    return true;
+  }
+
+  case Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x1_b16:
+  case Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x1_trans_b16:
+  case Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x1_trans_b8: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align = Align(4);
+    return true;
+  }
+
+  case Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x4_b16:
+  case Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x4_trans_b16:
+  case Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x4_trans_b8: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v4i32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
@@ -5845,6 +5874,8 @@ static SDValue combineADDRSPACECAST(SDNode *N,
 // details:
 // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-prmt
 static APInt getPRMTSelector(const APInt &Selector, unsigned Mode) {
+  assert(Selector.getBitWidth() == 32 && "PRMT must have i32 operands");
+
   if (Mode == NVPTX::PTXPrmtMode::NONE)
     return Selector;
 
@@ -5876,6 +5907,8 @@ static APInt getPRMTSelector(const APInt &Selector, unsigned Mode) {
 }
 
 static APInt computePRMT(APInt A, APInt B, APInt Selector, unsigned Mode) {
+  assert(A.getBitWidth() == 32 && B.getBitWidth() == 32 &&
+         Selector.getBitWidth() == 32 && "PRMT must have i32 operands");
   // {b, a} = {{b7, b6, b5, b4}, {b3, b2, b1, b0}}
   APInt BitField = B.concat(A);
   APInt SelectorVal = getPRMTSelector(Selector, Mode);
@@ -6510,10 +6543,13 @@ static void computeKnownBitsForPRMT(const SDValue Op, KnownBits &Known,
   KnownBits BKnown = DAG.computeKnownBits(B, Depth);
 
   // {b, a} = {{b7, b6, b5, b4}, {b3, b2, b1, b0}}
+  assert(AKnown.getBitWidth() == 32 && BKnown.getBitWidth() == 32 &&
+         "PRMT must have i32 operands");
+  assert(Known.getBitWidth() == 32 && "PRMT must have i32 result");
   KnownBits BitField = BKnown.concat(AKnown);
 
   APInt SelectorVal = getPRMTSelector(Selector->getAPIntValue(), Mode);
-  for (unsigned I : llvm::seq(std::min(4U, Known.getBitWidth() / 8))) {
+  for (unsigned I : llvm::seq(4)) {
     APInt Sel = SelectorVal.extractBits(4, I * 4);
     unsigned Idx = Sel.getLoBits(3).getZExtValue();
     unsigned Sign = Sel.getHiBits(1).getZExtValue();

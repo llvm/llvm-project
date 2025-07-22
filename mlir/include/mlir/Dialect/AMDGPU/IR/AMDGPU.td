@@ -237,9 +237,11 @@ def AMDGPU_FatRawBufferCastOp :
     Arguments<(ins AnyMemRef:$source,
       Optional<I32>:$validBytes,
       Optional<I<14>>:$cacheSwizzleStride,
-      DefaultValuedProp<BoolProp, "true">:$boundsCheck,
-      UnitProp:$resetOffset)>,
+      DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
+      UnitAttr:$resetOffset)>,
     Results<(outs AnyMemRef:$result)> {
+  // TODO: Set `resetOffset` and `boundsCheck` to use `Property` once
+  //       we implemented pythonic binding for `Property`.
   let summary = "Create a raw buffer fat pointer that matches `memref`";
   let description = [{
     Wraps the memory pointed to by `source` as a raw buffer fat pointer, or,
@@ -714,6 +716,29 @@ def AMDGPU_SchedBarrierOp :
   }];
   let assemblyFormat = [{
     `allow` `=` $opts attr-dict
+  }];
+}
+
+def AMDGPU_MemoryCounterWaitOp :
+  AMDGPU_Op<"memory_counter_wait">,
+  Arguments<(ins
+      OptionalAttr<I32Attr>:$load,
+      OptionalAttr<I32Attr>:$store,
+      OptionalAttr<I32Attr>:$ds,
+      OptionalAttr<I32Attr>:$exp
+    )>
+  {
+  let summary = "Wait for specified hardware counters";
+  let description = [{
+    Wait for the specified counters to be less-than or equal-to the provided
+    values before continuing.
+
+    Counters can lower to different instructions on different architectires,
+    including clamping to the some HW supported max value or combining multiple
+    counters into one.
+  }];
+  let assemblyFormat = [{
+    oilist( `load` `(` $load `)` | `store` `(` $store `)` | `ds` `(` $ds `)` | `exp` `(` $exp `)` ) attr-dict
   }];
 }
 

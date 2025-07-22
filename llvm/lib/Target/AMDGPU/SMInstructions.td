@@ -864,8 +864,10 @@ def smrd_prefetch : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
 
 def SMRDImm         : ComplexPattern<iPTR, 2, "SelectSMRDImm">;
 def SMRDImm32       : ComplexPattern<iPTR, 2, "SelectSMRDImm32">;
-def SMRDSgpr        : ComplexPattern<iPTR, 2, "SelectSMRDSgpr">;
-def SMRDSgprImm     : ComplexPattern<iPTR, 3, "SelectSMRDSgprImm">;
+let WantsRoot = true in {
+  def SMRDSgpr        : ComplexPattern<iPTR, 3, "SelectSMRDSgpr", [], [], -3>;
+  def SMRDSgprImm     : ComplexPattern<iPTR, 4, "SelectSMRDSgprImm", [], []>;
+}
 def SMRDBufferImm   : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm">;
 def SMRDBufferImm32 : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm32">;
 def SMRDBufferSgprImm : ComplexPattern<iPTR, 2, "SelectSMRDBufferSgprImm">;
@@ -906,15 +908,15 @@ multiclass SMRD_Patterns <string Instr, ValueType vt, PatFrag frag,
     let SubtargetPredicate = isNotGFX9Plus;
   }
   def : GCNPat <
-    (frag (SMRDSgpr i64:$sbase, i32:$soffset)),
-    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM"#suffix) $sbase, $soffset, 0, 0))> {
+    (frag (SMRDSgpr i64:$sbase, i32:$soffset, CPol:$cpol)),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM"#suffix) $sbase, $soffset, 0, $cpol))> {
     let SubtargetPredicate = isGFX9Plus;
   }
 
   // 4. SGPR+IMM offset
   def : GCNPat <
-    (frag (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
-    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM"#suffix) $sbase, $soffset, $offset, 0))> {
+    (frag (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset, CPol:$cpol)),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM"#suffix) $sbase, $soffset, $offset, $cpol))> {
     let SubtargetPredicate = isGFX9Plus;
   }
 
@@ -989,15 +991,15 @@ multiclass ScalarLoadWithExtensionPat <string Instr, SDPatternOperator node, Val
 
    // 2. SGPR offset
    def : GCNPat <
-     (node (SMRDSgpr i64:$sbase, i32:$soffset)),
-     (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, 0, 0))>{
+     (node (SMRDSgpr i64:$sbase, i32:$soffset, CPol:$cpol)),
+     (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, 0, $cpol))>{
        let SubtargetPredicate = isGFX12Plus;
    }
 
    // 3. SGPR+IMM offset
    def : GCNPat <
-     (node (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
-     (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, $offset, 0))>{
+     (node (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset, CPol:$cpol)),
+     (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, $offset, $cpol))>{
        let SubtargetPredicate = isGFX12Plus;
    }
 
@@ -1488,6 +1490,7 @@ class SMEM_Real_Load_gfx12<bits<6> op, string ps, string opName, OffsetMode offs
   let Inst{20} = cpol{CPolBit.NV}; // non-volatile
   let Inst{22-21} = cpol{4-3}; // scope
   let Inst{24-23} = cpol{1-0}; // th - only lower 2 bits are supported
+  let Inst{56} = cpol{CPolBit.SCAL}; // scale offset
 }
 
 multiclass SM_Real_Loads_gfx12<bits<6> op, string ps = NAME> {

@@ -453,6 +453,8 @@ class VOP3Pe_Base {
   bits<2> index_key_8bit;
   bits<1> index_key_16bit;
   bits<1> index_key_32bit;
+  bits<3> matrix_a_fmt;
+  bits<3> matrix_b_fmt;
   bits<1> matrix_a_reuse;
   bits<1> matrix_b_reuse;
 }
