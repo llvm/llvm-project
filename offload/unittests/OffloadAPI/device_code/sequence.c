@@ -7,5 +7,5 @@ __gpu_kernel void sequence(uint32_t idx, uint32_t *inout) {
   else if (idx == 1)
     inout[idx] = 1;
   else
-    inout[idx] = inout[idx-1] + inout[idx-2];
+    inout[idx] = inout[idx - 1] + inout[idx - 2];
 }
