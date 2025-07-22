@@ -77,19 +77,25 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
           });
 
       // Propagate alignment between loads and stores that originate from the
-      // same base pointer
+      // same base pointer.
       Changed |= tryToImproveAlign(
           DL, &I, [&](Value *PtrOp, Align LoadStoreAlign, Align PrefAlign) {
             APInt OffsetFromBase =
                 APInt(DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
             PtrOp = PtrOp->stripAndAccumulateConstantOffsets(DL, OffsetFromBase,
                                                              true);
+            // Derive the base pointer alignment from the load/store alignment
+            // and the offset from the base pointer.
             Align BasePointerAlign = commonAlignment(
                 LoadStoreAlign, OffsetFromBase.getLimitedValue());
 
             auto [It, Inserted] =
                 BestBasePointerAligns.try_emplace(PtrOp, BasePointerAlign);
             if (!Inserted) {
+              // If the stored base pointer alignment is better than the
+              // base pointer alignment we derived, we may be able to use it
+              // to improve the load/store alignment. If not, store the
+              // improved base pointer alignment for future iterations.
               if (It->second > BasePointerAlign) {
                 Align BetterLoadStoreAlign = commonAlignment(
                     It->second, OffsetFromBase.getLimitedValue());
