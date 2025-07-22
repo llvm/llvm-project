@@ -487,7 +487,7 @@ MachOPlatform::MachOPlatform(
     if ((Err = ES.getBootstrapMapValue<bool, bool>("darwin-use-ehframes-only",
                                                    ForceEHFrames)))
       return;
-    this->ForceEHFrames = ForceEHFrames.has_value() ? *ForceEHFrames : false;
+    this->ForceEHFrames = ForceEHFrames.value_or(false);
   }
 
   BootstrapInfo BI;
@@ -1676,10 +1676,8 @@ Error MachOPlatform::MachOPlatformPlugin::prepareSymbolTableRegistration(
   // those names.
   {
     SmallVector<jitlink::Symbol *> SymsToProcess;
-    for (auto *Sym : G.defined_symbols())
-      SymsToProcess.push_back(Sym);
-    for (auto *Sym : G.absolute_symbols())
-      SymsToProcess.push_back(Sym);
+    llvm::append_range(SymsToProcess, G.defined_symbols());
+    llvm::append_range(SymsToProcess, G.absolute_symbols());
 
     for (auto *Sym : SymsToProcess) {
       if (!Sym->hasName())

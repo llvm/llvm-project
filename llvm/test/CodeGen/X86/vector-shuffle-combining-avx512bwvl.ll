@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown -mattr=+avx512bw,+avx512vl | FileCheck %s --check-prefixes=CHECK,X86
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512bw,+avx512vl | FileCheck %s --check-prefixes=CHECK,X64
 
+declare <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16>, <32 x i16>)
 declare <16 x i16> @llvm.x86.avx512.maskz.vpermt2var.hi.256(<16 x i16>, <16 x i16>, <16 x i16>, i16)
 declare <16 x i16> @llvm.x86.avx512.mask.vpermi2var.hi.256(<16 x i16>, <16 x i16>, <16 x i16>, i16)
 
@@ -183,6 +184,18 @@ define <8 x i32> @concat_vrotlv_v4i32(<4 x i32> %a0, <4 x i32> %a1, <8 x i32> %a
   ret <8 x i32> %shuffle
 }
 
+define <8 x i16> @demandedelts_vpermvar_32i16_v8i16(<32 x i16> %x0) {
+; CHECK-LABEL: demandedelts_vpermvar_32i16_v8i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovsxbw {{.*#+}} xmm1 = [7,0,6,1,5,2,4,3]
+; CHECK-NEXT:    vpermw %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    ret{{[l|q]}}
+  %shuffle = call <32 x i16> @llvm.x86.avx512.permvar.hi.512(<32 x i16> %x0, <32 x i16> <i16 7, i16 0, i16 6, i16 1, i16 5, i16 2, i16 4, i16 3, i16 31, i16 30, i16 29, i16 28, i16 27, i16 26, i16 25, i16 24, i16 23, i16 22, i16 21, i16 20, i16 19, i16 18, i16 17, i16 16, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8>)
+  %res = shufflevector <32 x i16> %shuffle, <32 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i16> %res
+}
+
 define void @PR46178(ptr %0) {
 ; X86-LABEL: PR46178:
 ; X86:       # %bb.0:
@@ -191,11 +204,10 @@ define void @PR46178(ptr %0) {
 ; X86-NEXT:    vmovdqu (%eax), %ymm1
 ; X86-NEXT:    vpmovqw %ymm0, %xmm0
 ; X86-NEXT:    vpmovqw %ymm1, %xmm1
-; X86-NEXT:    vpsllw $8, %xmm0, %xmm0
-; X86-NEXT:    vpsraw $8, %xmm0, %xmm0
-; X86-NEXT:    vpsllw $8, %xmm1, %xmm1
-; X86-NEXT:    vpsraw $8, %xmm1, %xmm1
-; X86-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; X86-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; X86-NEXT:    vpsllw $8, %ymm0, %ymm0
+; X86-NEXT:    vpsraw $8, %ymm0, %ymm0
+; X86-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,1]
 ; X86-NEXT:    vmovdqu %ymm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
@@ -256,19 +268,17 @@ define <8 x i32> @PR46393(<8 x i16> %a0, i8 %a1) {
 define i64 @PR55050() {
 ; X86-LABEL: PR55050:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    testb %dl, %dl
-; X86-NEXT:    jne .LBB14_2
+; X86-NEXT:    testb %al, %al
+; X86-NEXT:    jne .LBB15_2
 ; X86-NEXT:  # %bb.1: # %if
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:  .LBB14_2: # %exit
+; X86-NEXT:  .LBB15_2: # %exit
+; X86-NEXT:    movl    %eax, %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR55050:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    testb %al, %al
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq

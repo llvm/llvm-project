@@ -83,6 +83,19 @@ def LLVM_Dialect : Dialect {
       return "llvm.emit_c_interface";
     }
 
+    /// Name of the dependent libraries attribute.
+    static StringRef getDependentLibrariesAttrName() {
+      return "llvm.dependent_libraries";
+    }
+
+    /// Names of known llvm module flag keys.
+    static StringRef getModuleFlagKeyCGProfileName() {
+      return "CG Profile";
+    }
+    static StringRef getModuleFlagKeyProfileSummaryName() {
+      return "ProfileSummary";
+    }
+
     /// Returns `true` if the given type is compatible with the LLVM dialect.
     static bool isCompatibleType(Type);
 

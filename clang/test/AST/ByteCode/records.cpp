@@ -1771,3 +1771,62 @@ namespace RedeclaredCtor {
   constexpr __sp_mut::__sp_mut(void *p) noexcept : __lx_(p) {}
   constexpr __sp_mut muts = &mut_back[0];
 }
+
+namespace IntegralBaseCast {
+  class A {};
+  class B : public A {};
+  struct S {
+    B *a;
+  };
+
+  constexpr int f() {
+    S s{};
+    A *a = s.a;
+    return 0;
+  }
+
+  static_assert(f() == 0, "");
+}
+
+namespace AccessMismatch {
+  struct A {
+  public:
+    constexpr A() : a(0), b(0) {}
+    int a;
+    constexpr bool cmp() const { return &a < &b; } // both-note {{comparison of address of fields 'a' and 'b' of 'A' with differing access specifiers (public vs private) has unspecified value}}
+  private:
+    int b;
+  };
+  static_assert(A().cmp(), ""); // both-error {{constant expression}} \
+                                // both-note {{in call}}
+
+  class B {
+  public:
+    A a;
+    constexpr bool cmp() const { return &a.a < &b.a; } // both-note {{comparison of address of fields 'a' and 'b' of 'B' with differing access specifiers (public vs protected) has unspecified value}}
+  protected:
+    A b;
+  };
+  static_assert(B().cmp(), ""); // both-error {{constant expression}} \
+                                // both-note {{in call}}
+}
+
+namespace GlobalDtor {
+  struct A {
+  };
+  constexpr A a = {};
+  constexpr void destroy1() { // both-error {{constexpr}}
+    a.~A(); // both-note {{cannot modify an object that is visible outside}}
+  }
+}
+
+namespace NullDtor {
+  struct S {};
+  constexpr int foo() { // both-error {{never produces a constant expression}}
+     S *s = nullptr;
+     s->~S(); // both-note 2{{destruction of dereferenced null pointer is not allowed in a constant expression}}
+     return 10;
+  }
+  static_assert(foo() == 10, ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{in call to}}
+}

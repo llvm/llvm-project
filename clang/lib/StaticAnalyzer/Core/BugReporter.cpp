@@ -2660,8 +2660,7 @@ BugPathGetter::BugPathGetter(const ExplodedGraph *OriginalGraph,
   // Perform a forward BFS to find all the shortest paths.
   std::queue<const ExplodedNode *> WS;
 
-  assert(TrimmedGraph->num_roots() == 1);
-  WS.push(*TrimmedGraph->roots_begin());
+  WS.push(TrimmedGraph->getRoot());
   unsigned Priority = 0;
 
   while (!WS.empty()) {
@@ -2722,7 +2721,9 @@ BugPathInfo *BugPathGetter::getNextBugPath() {
 
     // Are we at the final node?
     if (OrigN->pred_empty()) {
-      GNew->addRoot(NewN);
+      assert(OrigN == TrimmedGraph->getRoot() &&
+             "There should be only one root!");
+      GNew->designateAsRoot(NewN);
       break;
     }
 
@@ -2827,7 +2828,7 @@ static void CompactMacroExpandedPieces(PathPieces &path,
   // Now take the pieces and construct a new PathDiagnostic.
   path.clear();
 
-  path.insert(path.end(), Pieces.begin(), Pieces.end());
+  llvm::append_range(path, Pieces);
 }
 
 /// Generate notes from all visitors.
@@ -3377,8 +3378,6 @@ PathSensitiveBugReporter::generateDiagnosticForConsumerMap(
     BugReport *exampleReport,
     ArrayRef<std::unique_ptr<PathDiagnosticConsumer>> consumers,
     ArrayRef<BugReport *> bugReports) {
-  std::vector<BasicBugReport *> BasicBugReports;
-  std::vector<PathSensitiveBugReport *> PathSensitiveBugReports;
   if (isa<BasicBugReport>(exampleReport))
     return BugReporter::generateDiagnosticForConsumerMap(exampleReport,
                                                          consumers, bugReports);

@@ -8,6 +8,7 @@
 
 #include "DAPError.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
 #include <system_error>
 
 namespace lldb_dap {
@@ -23,6 +24,14 @@ DAPError::DAPError(std::string message, std::error_code EC, bool show_user,
 void DAPError::log(llvm::raw_ostream &OS) const { OS << m_message; }
 
 std::error_code DAPError::convertToErrorCode() const {
+  return llvm::inconvertibleErrorCode();
+}
+
+char NotStoppedError::ID;
+
+void NotStoppedError::log(llvm::raw_ostream &OS) const { OS << "not stopped"; }
+
+std::error_code NotStoppedError::convertToErrorCode() const {
   return llvm::inconvertibleErrorCode();
 }
 

@@ -28,21 +28,21 @@ int main()
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
   // master thread explicit barrier
-  // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_barrier_explicit_begin: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]]
+  // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_barrier_explicit_begin: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra=[[RETURN_ADDRESS:(0x)?[0-f]+]]
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_wait_barrier_explicit_begin: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra=[[RETURN_ADDRESS]]
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_wait_barrier_explicit_end: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra=[[RETURN_ADDRESS]]
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_barrier_explicit_end: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra=[[RETURN_ADDRESS]]
   // CHECK: {{^}}[[MASTER_ID]]: current_address={{.*}}[[RETURN_ADDRESS]]
 
   // master thread implicit barrier at parallel end
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_barrier_implicit_parallel_begin: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra=0x{{[0-f]+}}
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_wait_barrier_implicit_parallel_begin: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra=0x{{[0-f]+}}
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_wait_barrier_implicit_parallel_end: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra=0x{{[0-f]+}}
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_barrier_implicit_parallel_end: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra=0x{{[0-f]+}}
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_barrier_implicit_parallel_begin: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra={{(0x)?[0-f]+}}
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_wait_barrier_implicit_parallel_begin: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra={{(0x)?[0-f]+}}
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_wait_barrier_implicit_parallel_end: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra={{(0x)?[0-f]+}}
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_barrier_implicit_parallel_end: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra={{(0x)?[0-f]+}}
 
 
   // worker thread explicit barrier
-  // CHECK: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_barrier_explicit_begin: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]]
+  // CHECK: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_barrier_explicit_begin: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra=[[RETURN_ADDRESS:(0x)?[0-f]+]]
   // CHECK: {{^}}[[THREAD_ID]]: ompt_event_wait_barrier_explicit_begin: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra=[[RETURN_ADDRESS]]
   // CHECK: {{^}}[[THREAD_ID]]: ompt_event_wait_barrier_explicit_end: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra=[[RETURN_ADDRESS]]
   // CHECK: {{^}}[[THREAD_ID]]: ompt_event_barrier_explicit_end: parallel_id={{[0-9]+}}, task_id={{[0-9]+}}, codeptr_ra=[[RETURN_ADDRESS]]

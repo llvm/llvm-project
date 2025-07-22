@@ -33,7 +33,7 @@ if(LLVM_BUILD_LLVM_DYLIB)
   if (LLVM_LINK_LLVM_DYLIB)
     set(INSTALL_WITH_TOOLCHAIN INSTALL_WITH_TOOLCHAIN)
   endif()
-  if (WIN32)
+  if (WIN32 OR CYGWIN)
     add_llvm_library(LLVM SHARED DISABLE_LLVM_LINK_LLVM_DYLIB SONAME ${INSTALL_WITH_TOOLCHAIN} ${SOURCES})
   else()
     add_llvm_library(LLVM SHARED DISABLE_LLVM_LINK_LLVM_DYLIB OUTPUT_NAME LLVM ${INSTALL_WITH_TOOLCHAIN} ${SOURCES})
@@ -70,7 +70,7 @@ if(LLVM_BUILD_LLVM_DYLIB)
         # Solaris ld does not accept global: *; so there is no way to version *all* global symbols
         set(LIB_NAMES -Wl,--version-script,${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map ${LIB_NAMES})
       endif()
-      if (NOT MINGW AND NOT LLVM_LINKER_IS_SOLARISLD_ILLUMOS)
+      if (LLVM_LINKER_SUPPORTS_B_SYMBOLIC_FUNCTIONS)
         # Optimize function calls for default visibility definitions to avoid PLT and
         # reduce dynamic relocations.
         # Note: for -fno-pic default, the address of a function may be different from

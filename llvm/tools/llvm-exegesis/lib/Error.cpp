@@ -49,5 +49,15 @@ void SnippetSignal::log(raw_ostream &OS) const {
 #endif // LLVM_ON_UNIX
 }
 
+char PerfCounterNotFullyEnabled::ID;
+
+std::error_code PerfCounterNotFullyEnabled::convertToErrorCode() const {
+  return inconvertibleErrorCode();
+}
+
+void PerfCounterNotFullyEnabled::log(raw_ostream &OS) const {
+  OS << "The perf counter was not scheduled on the CPU the entire time.";
+}
+
 } // namespace exegesis
 } // namespace llvm

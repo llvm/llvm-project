@@ -561,7 +561,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             "Coindexed scalar actual argument must be associated with a scalar %s"_err_en_US,
             dummyName);
       }
-      bool actualIsArrayElement{IsArrayElement(actual)};
+      bool actualIsArrayElement{IsArrayElement(actual) != nullptr};
       bool actualIsCKindCharacter{
           actualType.type().category() == TypeCategory::Character &&
           actualType.type().kind() == 1};
@@ -581,20 +581,38 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               "Polymorphic scalar may not be associated with a %s array"_err_en_US,
               dummyName);
         }
+        bool isOkBecauseContiguous{
+            context.IsEnabled(
+                common::LanguageFeature::ContiguousOkForSeqAssociation) &&
+            actualLastSymbol &&
+            evaluate::IsContiguous(*actualLastSymbol, foldingContext)};
         if (actualIsArrayElement && actualLastSymbol &&
-            !evaluate::IsContiguous(*actualLastSymbol, foldingContext) &&
             !dummy.ignoreTKR.test(common::IgnoreTKR::Contiguous)) {
           if (IsPointer(*actualLastSymbol)) {
-            basicError = true;
-            messages.Say(
-                "Element of pointer array may not be associated with a %s array"_err_en_US,
-                dummyName);
+            if (isOkBecauseContiguous) {
+              context.Warn(
+                  common::LanguageFeature::ContiguousOkForSeqAssociation,
+                  messages.at(),
+                  "Element of contiguous pointer array is accepted for storage sequence association"_port_en_US);
+            } else {
+              basicError = true;
+              messages.Say(
+                  "Element of pointer array may not be associated with a %s array"_err_en_US,
+                  dummyName);
+            }
           } else if (IsAssumedShape(*actualLastSymbol) &&
               !dummy.ignoreTKR.test(common::IgnoreTKR::Contiguous)) {
-            basicError = true;
-            messages.Say(
-                "Element of assumed-shape array may not be associated with a %s array"_err_en_US,
-                dummyName);
+            if (isOkBecauseContiguous) {
+              context.Warn(
+                  common::LanguageFeature::ContiguousOkForSeqAssociation,
+                  messages.at(),
+                  "Element of contiguous assumed-shape array is accepted for storage sequence association"_port_en_US);
+            } else {
+              basicError = true;
+              messages.Say(
+                  "Element of assumed-shape array may not be associated with a %s array"_err_en_US,
+                  dummyName);
+            }
           }
         }
       }
@@ -754,12 +772,13 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     }
   }
 
-  // Cases when temporaries might be needed but must not be permitted.
-  bool actualIsContiguous{IsSimplyContiguous(actual, foldingContext)};
-  bool dummyIsAssumedShape{dummy.type.attrs().test(
-      characteristics::TypeAndShape::Attr::AssumedShape)};
   bool dummyIsContiguous{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Contiguous)};
+  bool actualIsContiguous{IsSimplyContiguous(actual, foldingContext)};
+
+  // Cases when temporaries might be needed but must not be permitted.
+  bool dummyIsAssumedShape{dummy.type.attrs().test(
+      characteristics::TypeAndShape::Attr::AssumedShape)};
   if ((actualIsAsynchronous || actualIsVolatile) &&
       (dummyIsAsynchronous || dummyIsVolatile) && !dummyIsValue) {
     if (actualCoarrayRef) { // C1538
@@ -834,7 +853,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       if (scope) {
         semantics::CheckPointerAssignment(context, messages.at(), dummyName,
             dummy, actual, *scope,
-            /*isAssumedRank=*/dummyIsAssumedRank);
+            /*isAssumedRank=*/dummyIsAssumedRank, actualIsPointer);
       }
     } else if (!actualIsPointer) {
       messages.Say(
@@ -1015,10 +1034,30 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         actualDataAttr = common::CUDADataAttr::Device;
       }
     }
+    if (dummyDataAttr == common::CUDADataAttr::Device &&
+        (dummyIsAssumedShape || dummyIsAssumedRank) &&
+        !dummy.ignoreTKR.test(common::IgnoreTKR::Contiguous)) {
+      if (auto contig{evaluate::IsContiguous(actual, foldingContext,
+              /*namedConstantSectionsAreContiguous=*/true,
+              /*firstDimensionStride1=*/true)}) {
+        if (!*contig) {
+          messages.Say(
+              "actual argument associated with assumed shape/rank device %s is known to be discontiguous on its first dimension"_err_en_US,
+              dummyName);
+        }
+      } else {
+        messages.Say(
+            "actual argument associated with assumed shape/rank device %s is not known to be contiguous on its first dimension"_warn_en_US,
+            dummyName);
+      }
+    }
     std::optional<std::string> warning;
+    bool isHostDeviceProc{procedure.cudaSubprogramAttrs &&
+        *procedure.cudaSubprogramAttrs ==
+            common::CUDASubprogramAttrs::HostDevice};
     if (!common::AreCompatibleCUDADataAttrs(dummyDataAttr, actualDataAttr,
-            dummy.ignoreTKR, &warning,
-            /*allowUnifiedMatchingRule=*/true, &context.languageFeatures())) {
+            dummy.ignoreTKR, &warning, /*allowUnifiedMatchingRule=*/true,
+            isHostDeviceProc, &context.languageFeatures())) {
       auto toStr{[](std::optional<common::CUDADataAttr> x) {
         return x ? "ATTRIBUTES("s +
                 parser::ToUpperCaseLetters(common::EnumToString(*x)) + ")"s

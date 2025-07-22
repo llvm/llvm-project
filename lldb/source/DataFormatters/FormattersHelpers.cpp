@@ -97,18 +97,17 @@ void lldb_private::formatters::AddFilter(
   category_sp->AddTypeFilter(type_name, match_type, filter_sp);
 }
 
-size_t lldb_private::formatters::ExtractIndexFromString(const char *item_name) {
+std::optional<size_t>
+lldb_private::formatters::ExtractIndexFromString(const char *item_name) {
   if (!item_name || !*item_name)
-    return UINT32_MAX;
+    return std::nullopt;
   if (*item_name != '[')
-    return UINT32_MAX;
+    return std::nullopt;
   item_name++;
   char *endptr = nullptr;
   unsigned long int idx = ::strtoul(item_name, &endptr, 0);
-  if (idx == 0 && endptr == item_name)
-    return UINT32_MAX;
-  if (idx == ULONG_MAX)
-    return UINT32_MAX;
+  if ((idx == 0 && endptr == item_name) || idx == ULONG_MAX)
+    return std::nullopt;
   return idx;
 }
 

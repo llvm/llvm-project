@@ -30,7 +30,7 @@ The following requirements are shared on all platforms.
 If you want to run the test suite, you'll need to build LLDB with Python
 scripting support.
 
-* `Python <http://www.python.org/>`_
+* `Python <http://www.python.org/>`_ 3.8 or later.
 * `SWIG <http://swig.org/>`_ 4 or later.
 
 If you are on FreeBSD or NetBSD, you will need to install ``gmake`` for building
@@ -100,7 +100,7 @@ Windows
 * The Active Template Library (ATL).
 * `GnuWin32 <http://gnuwin32.sourceforge.net/>`_ for CoreUtils and Make.
 * `Python 3 <https://www.python.org/downloads/windows/>`_.  Make sure to (1) get
-  the x64 variant if that's what you're targetting and (2) install the debug
+  the x64 variant if that's what you're targeting and (2) install the debug
   library if you want to build a debug lldb. The standalone installer is the
   easiest way to get the debug library.
 * `Python Tools for Visual Studio

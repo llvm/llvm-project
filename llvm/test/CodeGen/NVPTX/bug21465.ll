@@ -12,13 +12,13 @@ define ptx_kernel void @_Z11TakesStruct1SPi(ptr byval(%struct.S) nocapture reado
 entry:
 ; CHECK-LABEL: @_Z11TakesStruct1SPi
 ; PTX-LABEL: .visible .entry _Z11TakesStruct1SPi(
-; CHECK: addrspacecast ptr %input to ptr addrspace(101)
+; CHECK: call ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr %input)
   %b = getelementptr inbounds %struct.S, ptr %input, i64 0, i32 1
   %0 = load i32, ptr %b, align 4
-; PTX-NOT: ld.param.u32 {{%r[0-9]+}}, [{{%rd[0-9]+}}]
-; PTX: ld.param.u32 [[value:%r[0-9]+]], [_Z11TakesStruct1SPi_param_0+4]
+; PTX-NOT: ld.param.b32 {{%r[0-9]+}}, [{{%rd[0-9]+}}]
+; PTX: ld.param.b32 [[value:%r[0-9]+]], [_Z11TakesStruct1SPi_param_0+4]
   store i32 %0, ptr %output, align 4
-; PTX-NEXT: st.global.u32 [{{%rd[0-9]+}}], [[value]]
+; PTX-NEXT: st.global.b32 [{{%rd[0-9]+}}], [[value]]
   ret void
 }
 

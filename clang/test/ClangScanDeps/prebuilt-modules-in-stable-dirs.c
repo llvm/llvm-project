@@ -1,4 +1,10 @@
-/// This test validates that modules that depend on prebuilt modules resolve `is-in-stable-directories` as false.
+/// This test validates that modules that depend on prebuilt modules 
+///   resolve `is-in-stable-directories` correctly. 
+/// The steps are: 
+/// 1. Scan dependencies to build the PCH. One of the module's depend on header 
+///   that is seemingly from the sysroot. However, it depends on a local header that is overlaid.
+/// 2. Build the PCH & dependency PCMs.
+/// 3. Scan a source file that transitively depends on the same modules as the pcm.
  
 // REQUIRES: shell
 // RUN: rm -rf %t
@@ -15,13 +21,21 @@
 // RUN: clang-scan-deps -compilation-database %t/compile-commands.json \
 // RUN:   -j 1 -format experimental-full > %t/deps.db
 // RUN: cat %t/deps_pch.db | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t --check-prefix PCH_DEP
-// RUN: cat %t/deps.db | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t 
+// RUN: cat %t/deps.db | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t  --check-prefix CLIENT
 
 // PCH_DEP: "is-in-stable-directories": true
 // PCH_DEP: "name": "A"
- 
-// Verify is-in-stable-directories is not in any module dependencies, as they all depend on prebuilt modules.
-// CHECK-NOT: "is-in-stable-directories"
+
+// PCH_DEP-NOT: "is-in-stable-directories": true
+
+// Verify is-in-stable-directories is only assigned to the module that only depends on A.
+// CLIENT-NOT: "is-in-stable-directories": true
+
+// CLIENT: "name": "D"
+// CLIENT: "is-in-stable-directories": true
+// CLIENT: "name": "sys"
+
+// CLIENT-NOT: "is-in-stable-directories": true
 
 //--- compile-pch.json.in
 [
@@ -74,6 +88,7 @@ module B [system] {
 typedef int local_t;
 
 //--- MacOSX.sdk/usr/include/sys/sys.h
+#include <A/A.h>
 typedef int sys_t_m;
 
 //--- MacOSX.sdk/usr/include/sys/module.modulemap
@@ -111,4 +126,5 @@ module D [system] {
 #include <C/C.h> // This dependency transitively depends on a local header.
 
 //--- client.c
+#include <sys/sys.h>
 #include <D/D.h> // This dependency transitively depends on a local header.

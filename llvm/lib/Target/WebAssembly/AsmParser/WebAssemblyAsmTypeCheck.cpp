@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AsmParser/WebAssemblyAsmTypeCheck.h"
+#include "MCTargetDesc/WebAssemblyMCExpr.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
@@ -54,7 +55,7 @@ void WebAssemblyAsmTypeCheck::funcDecl(const wasm::WasmSignature &Sig) {
 
 void WebAssemblyAsmTypeCheck::localDecl(
     const SmallVectorImpl<wasm::ValType> &Locals) {
-  LocalTypes.insert(LocalTypes.end(), Locals.begin(), Locals.end());
+  llvm::append_range(LocalTypes, Locals);
 }
 
 void WebAssemblyAsmTypeCheck::dumpTypeStack(Twine Msg) {
@@ -125,8 +126,8 @@ SmallVector<WebAssemblyAsmTypeCheck::StackType, 4>
 WebAssemblyAsmTypeCheck::valTypesToStackTypes(
     ArrayRef<wasm::ValType> ValTypes) {
   SmallVector<StackType, 4> Types(ValTypes.size());
-  std::transform(ValTypes.begin(), ValTypes.end(), Types.begin(),
-                 [](wasm::ValType Val) -> StackType { return Val; });
+  llvm::transform(ValTypes, Types.begin(),
+                  [](wasm::ValType Val) -> StackType { return Val; });
   return Types;
 }
 
@@ -264,9 +265,9 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc,
     break;
   case wasm::WASM_SYMBOL_TYPE_FUNCTION:
   case wasm::WASM_SYMBOL_TYPE_DATA:
-    switch (SymRef->getKind()) {
-    case MCSymbolRefExpr::VK_GOT:
-    case MCSymbolRefExpr::VK_WASM_GOT_TLS:
+    switch (SymRef->getSpecifier()) {
+    case WebAssembly::S_GOT:
+    case WebAssembly::S_GOT_TLS:
       Type = Is64 ? wasm::ValType::I64 : wasm::ValType::I32;
       return false;
     default:
@@ -356,8 +357,7 @@ bool WebAssemblyAsmTypeCheck::checkTryTable(SMLoc ErrorLoc,
         Opcode == wasm::WASM_OPCODE_CATCH_REF) {
       if (!getSignature(ErrorLoc, Inst.getOperand(OpIdx++),
                         wasm::WASM_SYMBOL_TYPE_TAG, Sig))
-        SentTypes.insert(SentTypes.end(), Sig->Params.begin(),
-                         Sig->Params.end());
+        llvm::append_range(SentTypes, Sig->Params);
       else
         Error = true;
     }

@@ -1361,4 +1361,78 @@ def SPIRV_GroupNonUniformBallotBitCountOp : SPIRV_Op<"GroupNonUniformBallotBitCo
 
 // -----
 
+def SPIRV_GroupNonUniformRotateKHROp : SPIRV_Op<"GroupNonUniformRotateKHR", [
+  Pure, AllTypesMatch<["value", "result"]>]> {
+  let summary = [{
+    Rotate values across invocations within a subgroup.
+  }];
+
+  let description = [{
+    Return the Value of the invocation whose id within the group is calculated
+    as follows:
+
+    LocalId = SubgroupLocalInvocationId if Execution is Subgroup or
+              LocalInvocationId if Execution is Workgroup
+    RotationGroupSize = ClusterSize when ClusterSize is present, otherwise
+    RotationGroupSize = SubgroupMaxSize if the Kernel capability is declared
+                        and SubgroupSize if not.
+    Invocation ID = ( (LocalId + Delta) & (RotationGroupSize - 1) ) +
+                    (LocalId & ~(RotationGroupSize - 1))
+
+    Result Type must be a scalar or vector of floating-point type, integer
+    type, or Boolean type.
+
+    Execution is a Scope. It must be either Workgroup or Subgroup.
+
+    The type of Value must be the same as Result Type.
+
+    Delta must be a scalar of integer type, whose Signedness operand is 0.
+    Delta must be dynamically uniform within Execution.
+
+    Delta is treated as unsigned and the resulting value is undefined if the
+    selected lane is inactive.
+
+    ClusterSize is the size of cluster to use. ClusterSize must be a scalar of
+    integer type, whose Signedness operand is 0. ClusterSize must come from a
+    constant instruction. Behavior is undefined unless ClusterSize is at least
+    1 and a power of 2. If ClusterSize is greater than the declared
+    SubGroupSize, executing this instruction results in undefined behavior.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %four = spirv.Constant 4 : i32
+    %0 = spirv.GroupNonUniformRotateKHR <Subgroup> %value, %delta : f32, i32 -> f32
+    %1 = spirv.GroupNonUniformRotateKHR <Workgroup> %value, %delta,
+         clustersize(%four) : f32, i32, i32 -> f32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_GroupNonUniformRotateKHR]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$value,
+    SPIRV_SignlessOrUnsignedInt:$delta,
+    Optional<SPIRV_SignlessOrUnsignedInt>:$cluster_size
+  );
+
+  let results = (outs
+    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$result
+  );
+
+  let assemblyFormat = [{
+    $execution_scope $value `,` $delta (`,` `cluster_size` `(` $cluster_size^ `)`)? attr-dict `:` type($value) `,` type($delta) (`,` type($cluster_size)^)? `->` type(results)
+  }];
+}
+
+// -----
+
 #endif // MLIR_DIALECT_SPIRV_IR_NON_UNIFORM_OPS

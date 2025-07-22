@@ -362,7 +362,7 @@ let TargetPrefix = "riscv" in {
                     [ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
     let VLOperand = 4;
   }
-  // Input: (passthru, vector_in, vector_in, mask, vl)
+  // Input: (passthru, vector_in, mask, vl)
   class RISCVCompress
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                     [LLVMMatchType<0>, LLVMMatchType<0>,
@@ -1570,7 +1570,7 @@ let TargetPrefix = "riscv" in {
   defm vrgather_vx : RISCVRGatherVX;
   defm vrgatherei16_vv : RISCVRGatherEI16VV;
 
-  def "int_riscv_vcompress" : RISCVCompress;
+  def int_riscv_vcompress : RISCVCompress;
 
   defm vaaddu : RISCVSaturatingBinaryAAXRoundingMode;
   defm vaadd : RISCVSaturatingBinaryAAXRoundingMode;
@@ -1704,19 +1704,27 @@ let TargetPrefix = "riscv" in {
   }
 
   // Segment loads/stores for fixed vectors.
+  // Note: we only have the masked variants because RISCVVectorPeephole
+  // would lower any instructions with all-ones mask into unmasked version
+  // anyway.
   foreach nf = [2, 3, 4, 5, 6, 7, 8] in {
-    def int_riscv_seg # nf # _load
+    // Input: (pointer, mask, vl)
+    def int_riscv_seg # nf # _load_mask
           : DefaultAttrsIntrinsic<!listconcat([llvm_anyvector_ty],
                                               !listsplat(LLVMMatchType<0>,
                                               !add(nf, -1))),
-                                  [llvm_anyptr_ty, llvm_anyint_ty],
+                                  [llvm_ptr_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                   llvm_anyint_ty],
                                   [NoCapture<ArgIndex<0>>, IntrReadMem]>;
-    def int_riscv_seg # nf # _store
+
+    // Input: (<stored values>..., pointer, mask, vl)
+    def int_riscv_seg # nf # _store_mask
           : DefaultAttrsIntrinsic<[],
                                   !listconcat([llvm_anyvector_ty],
                                               !listsplat(LLVMMatchType<0>,
                                                           !add(nf, -1)),
-                                              [llvm_anyptr_ty, llvm_anyint_ty]),
+                                              [llvm_ptr_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                               llvm_anyint_ty]),
                                   [NoCapture<ArgIndex<nf>>, IntrWriteMem]>;
   }
 
@@ -1878,8 +1886,14 @@ let TargetPrefix = "riscv" in {
   def int_riscv_vsm3me   : RISCVBinaryAAXUnMasked;
 } // TargetPrefix = "riscv"
 
+// Zihintpause extensions
+//===----------------------------------------------------------------------===//
+let TargetPrefix = "riscv" in
+def int_riscv_pause : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+
 // Vendor extensions
 //===----------------------------------------------------------------------===//
 include "llvm/IR/IntrinsicsRISCVXTHead.td"
 include "llvm/IR/IntrinsicsRISCVXsf.td"
 include "llvm/IR/IntrinsicsRISCVXCV.td"
+include "llvm/IR/IntrinsicsRISCVXAndes.td"

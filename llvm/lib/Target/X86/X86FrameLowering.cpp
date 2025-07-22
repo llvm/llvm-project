@@ -2431,7 +2431,8 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   uint64_t NumBytes = 0;
 
   bool NeedsDwarfCFI = (!MF.getTarget().getTargetTriple().isOSDarwin() &&
-                        !MF.getTarget().getTargetTriple().isOSWindows()) &&
+                        !MF.getTarget().getTargetTriple().isOSWindows() &&
+                        !MF.getTarget().getTargetTriple().isUEFI()) &&
                        MF.needsFrameMoves();
 
   Register ArgBaseReg;

@@ -6,7 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_BODY <clc/geometric/fast_length.inc>
 #define __FLOAT_ONLY
-#include <clc/geometric/floatn.inc>
+#define __CLC_FUNCTION fast_length
+#define __CLC_BODY <clc/geometric/unary_decl.inc>
+
+#include <clc/math/gentype.inc>
+
 #undef __FLOAT_ONLY
+#undef __CLC_FUNCTION

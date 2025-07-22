@@ -129,7 +129,7 @@ static std::string explainPredicates(const TreePatternNode &N) {
       OS << " AddressSpaces=[";
 
       StringRef AddrSpaceSeparator;
-      for (const Init *Val : AddrSpaces->getValues()) {
+      for (const Init *Val : AddrSpaces->getElements()) {
         const IntInit *IntVal = dyn_cast<IntInit>(Val);
         if (!IntVal)
           continue;
@@ -217,6 +217,9 @@ static Error isTrivialOperatorNode(const TreePatternNode &N) {
       continue;
 
     if (Predicate.isLoad() && Predicate.getMemoryVT())
+      continue;
+
+    if (Predicate.isStore() && Predicate.getMemoryVT())
       continue;
 
     if (Predicate.isLoad() || Predicate.isStore()) {
@@ -597,7 +600,7 @@ Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
     if (const ListInit *AddrSpaces = Predicate.getAddressSpaces()) {
       SmallVector<unsigned, 4> ParsedAddrSpaces;
 
-      for (const Init *Val : AddrSpaces->getValues()) {
+      for (const Init *Val : AddrSpaces->getElements()) {
         const IntInit *IntVal = dyn_cast<IntInit>(Val);
         if (!IntVal)
           return failedImport("Address space is not an integer");
@@ -619,15 +622,17 @@ Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
   }
 
   // G_LOAD is used for both non-extending and any-extending loads.
-  if (Predicate.isLoad() && Predicate.isNonExtLoad()) {
-    InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
-        0, MemoryVsLLTSizePredicateMatcher::EqualTo, 0);
-    return InsnMatcher;
-  }
-  if (Predicate.isLoad() && Predicate.isAnyExtLoad()) {
-    InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
-        0, MemoryVsLLTSizePredicateMatcher::LessThan, 0);
-    return InsnMatcher;
+  if (Predicate.isLoad() || Predicate.isAtomic()) {
+    if (Predicate.isNonExtLoad()) {
+      InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
+          0, MemoryVsLLTSizePredicateMatcher::EqualTo, 0);
+      return InsnMatcher;
+    }
+    if (Predicate.isAnyExtLoad()) {
+      InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
+          0, MemoryVsLLTSizePredicateMatcher::LessThan, 0);
+      return InsnMatcher;
+    }
   }
 
   if (Predicate.isStore()) {
@@ -751,9 +756,10 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     if (isa<IntInit>(SrcInit)) {
       InsnMatcher.addPredicate<InstructionOpcodeMatcher>(
           &Target.getInstruction(RK.getDef("G_CONSTANT")));
-    } else
+    } else {
       return failedImport(
           "Unable to deduce gMIR opcode to handle Src (which is a leaf)");
+    }
   } else {
     SrcGIEquivOrNull = findNodeEquiv(Src.getOperator());
     if (!SrcGIEquivOrNull)
@@ -845,9 +851,10 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       OperandMatcher &OM =
           InsnMatcher.addOperand(OpIdx++, Src.getName(), TempOpIdx);
       OM.addPredicate<LiteralIntOperandMatcher>(SrcIntInit->getValue());
-    } else
+    } else {
       return failedImport(
           "Unable to deduce gMIR opcode to handle Src (which is a leaf)");
+    }
   } else {
     assert(SrcGIOrNull &&
            "Expected to have already found an equivalent Instruction");
@@ -882,7 +889,7 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
                                     : CCDef->getValueAsString("ICmpPredicate");
 
         if (!PredType.empty()) {
-          OM.addPredicate<CmpPredicateOperandMatcher>(std::string(PredType));
+          OM.addPredicate<CmpPredicateOperandMatcher>(PredType.str());
           // Process the other 2 operands normally.
           --NumChildren;
         }
@@ -983,12 +990,12 @@ Error GlobalISelEmitter::importChildMatcher(
     bool OperandIsImmArg, unsigned OpIdx, unsigned &TempOpIdx) {
 
   const Record *PhysReg = nullptr;
-  std::string SrcChildName = std::string(getSrcChildName(SrcChild, PhysReg));
+  std::string SrcChildName = getSrcChildName(SrcChild, PhysReg).str();
   if (!SrcChild.isLeaf() &&
       SrcChild.getOperator()->isSubClassOf("ComplexPattern")) {
     // The "name" of a non-leaf complex pattern (MY_PAT $op1, $op2) is
     // "MY_PAT:op1:op2" and the ones with same "name" represent same operand.
-    std::string PatternName = std::string(SrcChild.getOperator()->getName());
+    std::string PatternName = SrcChild.getOperator()->getName().str();
     for (const TreePatternNode &Child : SrcChild.children()) {
       PatternName += ":";
       PatternName += Child.getName();
@@ -2268,10 +2275,10 @@ void GlobalISelEmitter::emitAdditionalImpl(raw_ostream &OS) {
 
 void GlobalISelEmitter::emitMIPredicateFns(raw_ostream &OS) {
   std::vector<const Record *> MatchedRecords;
-  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
-               std::back_inserter(MatchedRecords), [](const Record *R) {
-                 return !R->getValueAsString("GISelPredicateCode").empty();
-               });
+  llvm::copy_if(AllPatFrags, std::back_inserter(MatchedRecords),
+                [](const Record *R) {
+                  return !R->getValueAsString("GISelPredicateCode").empty();
+                });
   emitMIPredicateFnsImpl<const Record *>(
       OS,
       "  const MachineFunction &MF = *MI.getParent()->getParent();\n"
@@ -2286,13 +2293,13 @@ void GlobalISelEmitter::emitMIPredicateFns(raw_ostream &OS) {
 
 void GlobalISelEmitter::emitI64ImmPredicateFns(raw_ostream &OS) {
   std::vector<const Record *> MatchedRecords;
-  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
-               std::back_inserter(MatchedRecords), [](const Record *R) {
-                 bool Unset;
-                 return !R->getValueAsString("ImmediateCode").empty() &&
-                        !R->getValueAsBitOrUnset("IsAPFloat", Unset) &&
-                        !R->getValueAsBit("IsAPInt");
-               });
+  llvm::copy_if(AllPatFrags, std::back_inserter(MatchedRecords),
+                [](const Record *R) {
+                  bool Unset;
+                  return !R->getValueAsString("ImmediateCode").empty() &&
+                         !R->getValueAsBitOrUnset("IsAPFloat", Unset) &&
+                         !R->getValueAsBit("IsAPInt");
+                });
   emitImmPredicateFnsImpl<const Record *>(
       OS, "I64", "int64_t", ArrayRef<const Record *>(MatchedRecords),
       &getPatFragPredicateEnumName,
@@ -2302,12 +2309,12 @@ void GlobalISelEmitter::emitI64ImmPredicateFns(raw_ostream &OS) {
 
 void GlobalISelEmitter::emitAPFloatImmPredicateFns(raw_ostream &OS) {
   std::vector<const Record *> MatchedRecords;
-  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
-               std::back_inserter(MatchedRecords), [](const Record *R) {
-                 bool Unset;
-                 return !R->getValueAsString("ImmediateCode").empty() &&
-                        R->getValueAsBitOrUnset("IsAPFloat", Unset);
-               });
+  llvm::copy_if(AllPatFrags, std::back_inserter(MatchedRecords),
+                [](const Record *R) {
+                  bool Unset;
+                  return !R->getValueAsString("ImmediateCode").empty() &&
+                         R->getValueAsBitOrUnset("IsAPFloat", Unset);
+                });
   emitImmPredicateFnsImpl<const Record *>(
       OS, "APFloat", "const APFloat &",
       ArrayRef<const Record *>(MatchedRecords), &getPatFragPredicateEnumName,
@@ -2317,11 +2324,11 @@ void GlobalISelEmitter::emitAPFloatImmPredicateFns(raw_ostream &OS) {
 
 void GlobalISelEmitter::emitAPIntImmPredicateFns(raw_ostream &OS) {
   std::vector<const Record *> MatchedRecords;
-  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
-               std::back_inserter(MatchedRecords), [](const Record *R) {
-                 return !R->getValueAsString("ImmediateCode").empty() &&
-                        R->getValueAsBit("IsAPInt");
-               });
+  llvm::copy_if(AllPatFrags, std::back_inserter(MatchedRecords),
+                [](const Record *R) {
+                  return !R->getValueAsString("ImmediateCode").empty() &&
+                         R->getValueAsBit("IsAPInt");
+                });
   emitImmPredicateFnsImpl<const Record *>(
       OS, "APInt", "const APInt &", ArrayRef<const Record *>(MatchedRecords),
       &getPatFragPredicateEnumName,

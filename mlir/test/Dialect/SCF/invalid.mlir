@@ -544,7 +544,7 @@ func.func @while_invalid_terminator() {
 
 func.func @while_cross_region_type_mismatch() {
   %true = arith.constant true
-  // expected-error@+1 {{'scf.while' op  region control flow edge from Region #0 to Region #1: source has 0 operands, but target successor needs 1}}
+  // expected-error@+1 {{'scf.while' op region control flow edge from Region #0 to Region #1: source has 0 operands, but target successor needs 1}}
   scf.while : () -> () {
     scf.condition(%true)
   } do {
@@ -557,7 +557,7 @@ func.func @while_cross_region_type_mismatch() {
 
 func.func @while_cross_region_type_mismatch() {
   %true = arith.constant true
-  // expected-error@+1 {{'scf.while' op  along control flow edge from Region #0 to Region #1: source type #0 'i1' should match input type #0 'i32'}}
+  // expected-error@+1 {{'scf.while' op along control flow edge from Region #0 to Region #1: source type #0 'i1' should match input type #0 'i32'}}
   %0 = scf.while : () -> (i1) {
     scf.condition(%true) %true : i1
   } do {
@@ -570,7 +570,7 @@ func.func @while_cross_region_type_mismatch() {
 
 func.func @while_result_type_mismatch() {
   %true = arith.constant true
-  // expected-error@+1 {{'scf.while' op  region control flow edge from Region #0 to parent results: source has 1 operands, but target successor needs 0}}
+  // expected-error@+1 {{'scf.while' op region control flow edge from Region #0 to parent results: source has 1 operands, but target successor needs 0}}
   scf.while : () -> () {
     scf.condition(%true) %true : i1
   } do {
@@ -668,6 +668,18 @@ func.func @mismatched_mapping(%x: memref<2 x 32 x f32>, %y: memref<2 x 32 x f32>
       memref.store %6, %y[%i, %j] : memref<2 x 32 x f32>
   }  { mapping = [#gpu.block<x>, #gpu.block<y>, #gpu.block<z>] }
   return %y : memref<2 x 32 x f32>
+}
+
+// -----
+
+func.func @forall_wrong_terminator_op() -> () {
+  %c100 = arith.constant 100 : index
+  // expected-error @+2 {{'scf.forall' op expects regions to end with 'scf.forall.in_parallel', found 'llvm.return'}}
+  // expected-note @below {{in custom textual format, the absence of terminator implies 'scf.forall.in_parallel'}}
+  scf.forall (%arg0) in (%c100) {
+    llvm.return
+  }
+  return
 }
 
 // -----

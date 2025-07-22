@@ -11,7 +11,7 @@ subroutine target_teams_loop
     implicit none
     integer :: x, i
 
-    !$omp target teams loop
+    !$omp teams loop
     do i = 0, 10
       x = x + i
     end do
@@ -22,19 +22,15 @@ subroutine target_teams_loop
     implicit none
     integer :: x, i
 
-    !$omp target teams loop bind(teams)
+    !$omp teams loop bind(teams)
     do i = 0, 10
       x = x + i
     end do
 end subroutine target_teams_loop
 
 !CHECK-LABEL: func.func @_QPtarget_teams_loop
-!CHECK:         omp.target map_entries(
-!CHECK-SAME:      %{{.*}} -> %[[I_ARG:[^[:space:]]+]],
-!CHECK-SAME:      %{{.*}} -> %[[X_ARG:[^[:space:]]+]] : {{.*}}) {
-
-!CHECK:           %[[I_DECL:.*]]:2 = hlfir.declare %[[I_ARG]]
-!CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %[[X_ARG]]
+!CHECK:           %[[I_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}i"}
+!CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}x"}
 
 !CHECK:           omp.teams {
 
@@ -51,6 +47,7 @@ end subroutine target_teams_loop
 !CHECK-SAME:                (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
 !CHECK:                     %[[I_PRIV_DECL:.*]]:2 = hlfir.declare %[[I_PRIV_ARG]]
 !CHECK:                     hlfir.assign %{{.*}} to %[[I_PRIV_DECL]]#0 : i32, !fir.ref<i32>
+!CHECK:                     hlfir.assign %{{.*}} to %[[X_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK:                   }
 !CHECK:                 }
 !CHECK:               }

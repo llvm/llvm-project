@@ -622,7 +622,9 @@ public:
       return getNormalTypeUnitMap();
   }
 
-
+  Error doWorkThreadSafely(function_ref<Error()> Work) override {
+    return Work();
+  }
 };
 
 class ThreadSafeState : public ThreadUnsafeDWARFContextState {
@@ -737,6 +739,11 @@ public:
   getTypeUnitMap(bool IsDWO) override {
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
     return ThreadUnsafeDWARFContextState::getTypeUnitMap(IsDWO);
+  }
+
+  Error doWorkThreadSafely(function_ref<Error()> Work) override {
+    std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
+    return ThreadUnsafeDWARFContextState::doWorkThreadSafely(Work);
   }
 };
 } // namespace
@@ -1733,11 +1740,11 @@ DWARFContext::getLocalsForAddress(object::SectionedAddress Address) {
 std::optional<DILineInfo>
 DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
                                     DILineInfoSpecifier Spec) {
-  DILineInfo Result;
   DWARFCompileUnit *CU = getCompileUnitForCodeAddress(Address.Address);
   if (!CU)
-    return Result;
+    return std::nullopt;
 
+  DILineInfo Result;
   getFunctionNameAndStartLineForAddress(
       CU, Address.Address, Spec.FNKind, Spec.FLIKind, Result.FunctionName,
       Result.StartFileName, Result.StartLine, Result.StartAddress);

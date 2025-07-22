@@ -61,7 +61,7 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel copyout((float)ArrayParam[2])
   while(1);
-  // expected-error@+2{{invalid tag 'invalid' on 'copyout' clause}}
+  // expected-error@+2{{unknown modifier 'invalid' in OpenACC modifier-list on 'copyout' clause}}
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel copyout(invalid:(float)ArrayParam[2])
   while(1);
@@ -74,5 +74,20 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
   for(int i = 0; i < 6;++i);
   // expected-error@+1{{OpenACC 'present_or_copyout' clause is not valid on 'loop' directive}}
 #pragma acc loop present_or_copyout(LocalInt)
+  for(int i = 0; i < 6;++i);
+}
+void ModList() {
+  int V1;
+  // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'copyout' clause}}
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copyout' clause}}
+#pragma acc parallel copyout(always, alwaysin, alwaysout, zero, readonly: V1)
+  for(int i = 0; i < 6;++i);
+  // expected-error@+1{{OpenACC 'alwaysout' modifier not valid on 'copyout' clause}}
+#pragma acc serial copyout(alwaysout: V1)
+  for(int i = 0; i < 6;++i);
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copyout' clause}}
+#pragma acc kernels copyout(readonly: V1)
+  for(int i = 0; i < 6;++i);
+#pragma acc parallel copyout(always, alwaysin, zero: V1)
   for(int i = 0; i < 6;++i);
 }

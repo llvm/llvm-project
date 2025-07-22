@@ -57,6 +57,20 @@ public:
   ~DoubleMutexLock() UNLOCK_FUNCTION();
 };
 
+template<typename Mu>
+class SCOPED_LOCKABLE TemplateMutexLock {
+public:
+  TemplateMutexLock(Mu *mu) EXCLUSIVE_LOCK_FUNCTION(mu);
+  ~TemplateMutexLock() UNLOCK_FUNCTION();
+};
+
+template<typename... Mus>
+class SCOPED_LOCKABLE VariadicMutexLock {
+public:
+  VariadicMutexLock(Mus *...mus) EXCLUSIVE_LOCK_FUNCTION(mus...);
+  ~VariadicMutexLock() UNLOCK_FUNCTION();
+};
+
 // The universal lock, written "*", allows checking to be selectively turned
 // off for a particular piece of code.
 void beginNoWarnOnReads()  SHARED_LOCK_FUNCTION("*");
@@ -1821,6 +1835,18 @@ struct TestScopedLockable {
     a = b + 1;
     b = a + 1;
   }
+
+  void foo6() {
+    TemplateMutexLock<Mutex> mulock1(&mu1), mulock2(&mu2);
+    a = b + 1;
+    b = a + 1;
+  }
+
+  void foo7() {
+    VariadicMutexLock<Mutex, Mutex> mulock(&mu1, &mu2);
+    a = b + 1;
+    b = a + 1;
+  }
 };
 
 } // end namespace test_scoped_lockable
@@ -2438,6 +2464,7 @@ class Foo {
     // expected-warning {{declaration does not declare anything}}
     exclusive_locks_required(a))); // \
     // expected-warning {{attribute exclusive_locks_required ignored}}
+
 };
 
 } // end namespace WarnNoDecl
@@ -3114,6 +3141,16 @@ public:
   void Unlock() EXCLUSIVE_LOCK_FUNCTION();
 };
 
+template<typename... Mus>
+class SCOPED_LOCKABLE VariadicMutexUnlock {
+public:
+  VariadicMutexUnlock(Mus *...mus) EXCLUSIVE_UNLOCK_FUNCTION(mus...);
+  ~VariadicMutexUnlock() EXCLUSIVE_UNLOCK_FUNCTION();
+
+  void Lock() EXCLUSIVE_UNLOCK_FUNCTION();
+  void Unlock() EXCLUSIVE_LOCK_FUNCTION();
+};
+
 Mutex mu;
 int x GUARDED_BY(mu);
 bool c;
@@ -3174,6 +3211,17 @@ void doubleLock() EXCLUSIVE_LOCKS_REQUIRED(mu) {
 void doubleUnlock() EXCLUSIVE_LOCKS_REQUIRED(mu) {
   MutexUnlock scope(&mu); // expected-note{{mutex released here}}
   scope.Unlock(); // expected-warning {{releasing mutex 'mu' that was not held}}
+}
+
+Mutex mu2;
+int y GUARDED_BY(mu2);
+
+void variadic() EXCLUSIVE_LOCKS_REQUIRED(mu, mu2) {
+  VariadicMutexUnlock<Mutex, Mutex> scope(&mu, &mu2);
+  x = 2; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+  y = 3; // expected-warning {{writing variable 'y' requires holding mutex 'mu2' exclusively}}
+  scope.Lock();
+  x = y = 4;
 }
 
 class SCOPED_LOCKABLE MutexLockUnlock {
@@ -6708,7 +6756,7 @@ int testAdoptShared() {
 
 } // namespace ReturnScopedLockable
 
-#endif
+#endif // __cpp_guaranteed_copy_elision
 
 namespace PR38640 {
 void f() {
@@ -6716,7 +6764,7 @@ void f() {
   // safety analysis was enabled.
   int &i = i; // expected-warning {{reference 'i' is not yet bound to a value when used within its own initialization}}
 }
-}
+} // namespace PR38640
 
 namespace Derived_Smart_Pointer {
 template <class T>
@@ -6811,4 +6859,4 @@ class PointerGuard {
     mu1.Unlock();
   }
 };
-}
+} // namespace Derived_Smart_Pointer

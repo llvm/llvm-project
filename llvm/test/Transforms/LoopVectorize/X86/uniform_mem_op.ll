@@ -352,11 +352,10 @@ define i32 @test_count_bits(ptr %test_base) {
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i64> [[STEP_ADD_2]], splat (i64 4)
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 12
-; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = udiv i64 [[TMP1]], 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = udiv i64 [[TMP2]], 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = udiv i64 [[TMP3]], 8

@@ -125,6 +125,9 @@ struct fltSemantics {
 
   /* Whether this semantics can represent signed values */
   bool hasSignedRepr = true;
+
+  /* Whether the sign bit of this semantics is the most significant bit */
+  bool hasSignBitInMSB = true;
 };
 
 static constexpr fltSemantics semIEEEhalf = {15, -14, 11, 16};
@@ -144,9 +147,15 @@ static constexpr fltSemantics semFloat8E4M3B11FNUZ = {
     4, -10, 4, 8, fltNonfiniteBehavior::NanOnly, fltNanEncoding::NegativeZero};
 static constexpr fltSemantics semFloat8E3M4 = {3, -2, 5, 8};
 static constexpr fltSemantics semFloatTF32 = {127, -126, 11, 19};
-static constexpr fltSemantics semFloat8E8M0FNU = {
-    127,   -127, 1, 8, fltNonfiniteBehavior::NanOnly, fltNanEncoding::AllOnes,
-    false, false};
+static constexpr fltSemantics semFloat8E8M0FNU = {127,
+                                                  -127,
+                                                  1,
+                                                  8,
+                                                  fltNonfiniteBehavior::NanOnly,
+                                                  fltNanEncoding::AllOnes,
+                                                  false,
+                                                  false,
+                                                  false};
 
 static constexpr fltSemantics semFloat6E3M2FN = {
     4, -2, 3, 6, fltNonfiniteBehavior::FiniteOnly};
@@ -356,6 +365,10 @@ bool APFloatBase::semanticsHasNaN(const fltSemantics &semantics) {
 bool APFloatBase::isIEEELikeFP(const fltSemantics &semantics) {
   // Keep in sync with Type::isIEEELikeFPTy
   return SemanticsToEnum(semantics) <= S_IEEEquad;
+}
+
+bool APFloatBase::hasSignBitInMSB(const fltSemantics &semantics) {
+  return semantics.hasSignBitInMSB;
 }
 
 bool APFloatBase::isRepresentableAsNormalIn(const fltSemantics &Src,
@@ -3249,9 +3262,8 @@ bool IEEEFloat::convertFromStringSpecials(StringRef str) {
     return true;
   }
 
-  bool IsNegative = str.front() == '-';
+  bool IsNegative = str.consume_front("-");
   if (IsNegative) {
-    str = str.drop_front();
     if (str.size() < MIN_NAME_SIZE)
       return false;
 
@@ -3262,16 +3274,13 @@ bool IEEEFloat::convertFromStringSpecials(StringRef str) {
   }
 
   // If we have a 's' (or 'S') prefix, then this is a Signaling NaN.
-  bool IsSignaling = str.front() == 's' || str.front() == 'S';
+  bool IsSignaling = str.consume_front_insensitive("s");
   if (IsSignaling) {
-    str = str.drop_front();
     if (str.size() < MIN_NAME_SIZE)
       return false;
   }
 
-  if (str.starts_with("nan") || str.starts_with("NaN")) {
-    str = str.drop_front(3);
-
+  if (str.consume_front("nan") || str.consume_front("NaN")) {
     // A NaN without payload.
     if (str.empty()) {
       makeNaN(IsSignaling, IsNegative);

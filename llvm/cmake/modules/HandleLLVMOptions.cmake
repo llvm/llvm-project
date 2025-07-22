@@ -199,7 +199,7 @@ endif()
 string(TOUPPER "${LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING}" uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING)
 
 if( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "COVERAGE" )
-  set( ENABLE_DEBUGLOC_COVERAGE_TRACKING 1 )
+  set( LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING 1 )
 elseif( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "DISABLED" OR NOT DEFINED LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING )
   # The DISABLED setting is default and requires no additional defines.
 else()
@@ -882,6 +882,11 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   # The LLVM libraries have no stable C++ API, so -Wnoexcept-type is not useful.
   append("-Wno-noexcept-type" CMAKE_CXX_FLAGS)
 
+  # LLVM has a policy of including virtual "anchor" functions to control
+  # where the vtable is emitted. In `final` classes, these are exactly what
+  # this warning detects: unnecessary virtual methods.
+  add_flag_if_supported("-Wno-unnecessary-virtual-specifier" CXX_SUPPORTS_UNNECESSARY_VIRTUAL_FLAG)
+
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     append("-Wnon-virtual-dtor" CMAKE_CXX_FLAGS)
   endif()
@@ -1235,6 +1240,8 @@ if(LLVM_PROFDATA_FILE AND EXISTS ${LLVM_PROFDATA_FILE})
   else()
     message(FATAL_ERROR "LLVM_PROFDATA_FILE can only be specified when compiling with clang")
   endif()
+elseif(LLVM_PROFDATA_FILE)
+  message(WARNING "LLVM_PROFDATA_FILE specified, but ${LLVM_PROFDATA_FILE} not found")
 endif()
 
 option(LLVM_BUILD_INSTRUMENTED_COVERAGE "Build LLVM and tools with Code Coverage instrumentation" Off)

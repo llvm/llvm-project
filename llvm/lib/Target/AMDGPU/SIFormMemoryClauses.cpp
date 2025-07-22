@@ -100,7 +100,7 @@ FunctionPass *llvm::createSIFormMemoryClausesLegacyPass() {
 }
 
 static bool isVMEMClauseInst(const MachineInstr &MI) {
-  return SIInstrInfo::isFLAT(MI) || SIInstrInfo::isVMEM(MI);
+  return SIInstrInfo::isVMEM(MI);
 }
 
 static bool isSMEMClauseInst(const MachineInstr &MI) {

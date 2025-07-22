@@ -118,8 +118,12 @@ AtomicInfo::EmitAtomicLoadLibcall(AtomicOrdering AO) {
   Value *PtrVal = getAtomicPointer();
   PtrVal = Builder->CreateAddrSpaceCast(PtrVal, PointerType::getUnqual(Ctx));
   Args.push_back(PtrVal);
+
+  auto CurrentIP = Builder->saveIP();
+  Builder->restoreIP(AllocaIP);
   AllocaInst *AllocaResult =
       CreateAlloca(Ty, getAtomicPointer()->getName() + "atomic.temp.load");
+  Builder->restoreIP(CurrentIP);
   const Align AllocaAlignment = DL.getPrefTypeAlign(SizedIntTy);
   AllocaResult->setAlignment(AllocaAlignment);
   Args.push_back(AllocaResult);
@@ -139,6 +143,42 @@ AtomicInfo::EmitAtomicLoadLibcall(AtomicOrdering AO) {
   return std::make_pair(
       Builder->CreateAlignedLoad(Ty, AllocaResult, AllocaAlignment),
       AllocaResult);
+}
+
+void AtomicInfo::EmitAtomicStoreLibcall(AtomicOrdering AO, Value *Source) {
+  LLVMContext &Ctx = getLLVMContext();
+  SmallVector<Value *, 6> Args;
+  AttributeList Attr;
+  Module *M = Builder->GetInsertBlock()->getModule();
+  const DataLayout &DL = M->getDataLayout();
+  Args.push_back(
+      ConstantInt::get(DL.getIntPtrType(Ctx), this->getAtomicSizeInBits() / 8));
+
+  Value *PtrVal = getAtomicPointer();
+  PtrVal = Builder->CreateAddrSpaceCast(PtrVal, PointerType::getUnqual(Ctx));
+  Args.push_back(PtrVal);
+
+  auto CurrentIP = Builder->saveIP();
+  Builder->restoreIP(AllocaIP);
+  Value *SourceAlloca = Builder->CreateAlloca(Source->getType());
+  Builder->restoreIP(CurrentIP);
+  Builder->CreateStore(Source, SourceAlloca);
+  SourceAlloca = Builder->CreatePointerBitCastOrAddrSpaceCast(
+      SourceAlloca, Builder->getPtrTy());
+  Args.push_back(SourceAlloca);
+
+  Constant *OrderingVal =
+      ConstantInt::get(Type::getInt32Ty(Ctx), (int)toCABI(AO));
+  Args.push_back(OrderingVal);
+
+  SmallVector<Type *, 6> ArgTys;
+  for (Value *Arg : Args)
+    ArgTys.push_back(Arg->getType());
+  FunctionType *FnType = FunctionType::get(Type::getVoidTy(Ctx), ArgTys, false);
+  FunctionCallee LibcallFn =
+      M->getOrInsertFunction("__atomic_store", FnType, Attr);
+  CallInst *Call = Builder->CreateCall(LibcallFn, Args);
+  Call->setAttributes(Attr);
 }
 
 std::pair<Value *, Value *> AtomicInfo::EmitAtomicCompareExchange(

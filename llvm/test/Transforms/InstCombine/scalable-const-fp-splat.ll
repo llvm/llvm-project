@@ -13,3 +13,15 @@ define <vscale x 2 x float> @shrink_splat_scalable_extend(<vscale x 2 x float> %
   %5 = fptrunc <vscale x 2 x double> %4 to <vscale x 2 x float>
   ret <vscale x 2 x float> %5
 }
+
+define <vscale x 2 x float> @shrink_splat_scalable_extend_rhs_constexpr(<vscale x 2 x float> %a) {
+; CHECK-LABEL: define <vscale x 2 x float> @shrink_splat_scalable_extend_rhs_constexpr(
+; CHECK-SAME: <vscale x 2 x float> [[A:%.*]]) {
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <vscale x 2 x float> [[A]], splat (float -1.000000e+00)
+; CHECK-NEXT:    ret <vscale x 2 x float> [[TMP3]]
+;
+  %2 = fpext <vscale x 2 x float> %a to <vscale x 2 x double>
+  %4 = fadd <vscale x 2 x double> %2, splat (double -1.000000e+00)
+  %5 = fptrunc <vscale x 2 x double> %4 to <vscale x 2 x float>
+  ret <vscale x 2 x float> %5
+}

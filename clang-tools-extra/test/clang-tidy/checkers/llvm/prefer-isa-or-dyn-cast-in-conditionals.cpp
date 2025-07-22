@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s llvm-prefer-isa-or-dyn-cast-in-conditionals %t
+// RUN: %check_clang_tidy --match-partial-fixes %s llvm-prefer-isa-or-dyn-cast-in-conditionals %t
 
 struct X;
 struct Y;

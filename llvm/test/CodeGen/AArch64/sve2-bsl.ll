@@ -93,3 +93,222 @@ define <vscale x 2 x i64> @nbsl_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b
   %4 = xor <vscale x 2 x i64> %3, splat(i64 -1)
   ret <vscale x 2 x i64> %4
 }
+
+; Test BSL/NBSL/BSL1N/BSL2N code generation for:
+;   #define BSL(x,y,z)   (  ((x) & (z)) | ( (y) & ~(z)))
+;   #define NBSL(x,y,z)  (~(((x) & (z)) | ( (y) & ~(z))))
+;   #define BSL1N(x,y,z) ( (~(x) & (z)) | ( (y) & ~(z)))
+;   #define BSL2N(x,y,z) (  ((x) & (z)) | (~(y) & ~(z)))
+
+define <vscale x 16 x i8> @codegen_bsl_i8(<vscale x 16 x i8> %0, <vscale x 16 x i8> %1, <vscale x 16 x i8> %2) {
+; CHECK-LABEL: codegen_bsl_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %4 = and <vscale x 16 x i8> %2, %0
+  %5 = xor <vscale x 16 x i8> %2, splat (i8 -1)
+  %6 = and <vscale x 16 x i8> %1, %5
+  %7 = or <vscale x 16 x i8> %4, %6
+  ret <vscale x 16 x i8> %7
+}
+
+define <vscale x 16 x i8> @codegen_nbsl_i8(<vscale x 16 x i8> %0, <vscale x 16 x i8> %1, <vscale x 16 x i8> %2) {
+; CHECK-LABEL: codegen_nbsl_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %4 = and <vscale x 16 x i8> %2, %0
+  %5 = xor <vscale x 16 x i8> %2, splat (i8 -1)
+  %6 = and <vscale x 16 x i8> %1, %5
+  %7 = or <vscale x 16 x i8> %4, %6
+  %8 = xor <vscale x 16 x i8> %7, splat (i8 -1)
+  ret <vscale x 16 x i8> %8
+}
+
+define <vscale x 16 x i8> @codegen_bsl1n_i8(<vscale x 16 x i8> %0, <vscale x 16 x i8> %1, <vscale x 16 x i8> %2) {
+; CHECK-LABEL: codegen_bsl1n_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bsl1n z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %4 = xor <vscale x 16 x i8> %0, splat (i8 -1)
+  %5 = and <vscale x 16 x i8> %2, %4
+  %6 = xor <vscale x 16 x i8> %2, splat (i8 -1)
+  %7 = and <vscale x 16 x i8> %1, %6
+  %8 = or <vscale x 16 x i8> %5, %7
+  ret <vscale x 16 x i8> %8
+}
+
+define <vscale x 16 x i8> @codegen_bsl2n_i8(<vscale x 16 x i8> %0, <vscale x 16 x i8> %1, <vscale x 16 x i8> %2) {
+; CHECK-LABEL: codegen_bsl2n_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bsl2n z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %4 = and <vscale x 16 x i8> %2, %0
+  %5 = or <vscale x 16 x i8> %2, %1
+  %6 = xor <vscale x 16 x i8> %5, splat (i8 -1)
+  %7 = or <vscale x 16 x i8> %4, %6
+  ret <vscale x 16 x i8> %7
+}
+
+define <vscale x 8 x i16> @codegen_bsl_i16(<vscale x 8 x i16> %0, <vscale x 8 x i16> %1, <vscale x 8 x i16> %2) {
+; CHECK-LABEL: codegen_bsl_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %4 = and <vscale x 8 x i16> %2, %0
+  %5 = xor <vscale x 8 x i16> %2, splat (i16 -1)
+  %6 = and <vscale x 8 x i16> %1, %5
+  %7 = or <vscale x 8 x i16> %4, %6
+  ret <vscale x 8 x i16> %7
+}
+
+define <vscale x 8 x i16> @codegen_nbsl_i16(<vscale x 8 x i16> %0, <vscale x 8 x i16> %1, <vscale x 8 x i16> %2) {
+; CHECK-LABEL: codegen_nbsl_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %4 = and <vscale x 8 x i16> %2, %0
+  %5 = xor <vscale x 8 x i16> %2, splat (i16 -1)
+  %6 = and <vscale x 8 x i16> %1, %5
+  %7 = or <vscale x 8 x i16> %4, %6
+  %8 = xor <vscale x 8 x i16> %7, splat (i16 -1)
+  ret <vscale x 8 x i16> %8
+}
+
+define <vscale x 8 x i16> @codegen_bsl1n_i16(<vscale x 8 x i16> %0, <vscale x 8 x i16> %1, <vscale x 8 x i16> %2) {
+; CHECK-LABEL: codegen_bsl1n_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bsl1n z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %4 = xor <vscale x 8 x i16> %0, splat (i16 -1)
+  %5 = and <vscale x 8 x i16> %2, %4
+  %6 = xor <vscale x 8 x i16> %2, splat (i16 -1)
+  %7 = and <vscale x 8 x i16> %1, %6
+  %8 = or <vscale x 8 x i16> %5, %7
+  ret <vscale x 8 x i16> %8
+}
+
+define <vscale x 8 x i16> @codegen_bsl2n_i16(<vscale x 8 x i16> %0, <vscale x 8 x i16> %1, <vscale x 8 x i16> %2) {
+; CHECK-LABEL: codegen_bsl2n_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bsl2n z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %4 = and <vscale x 8 x i16> %2, %0
+  %5 = or <vscale x 8 x i16> %2, %1
+  %6 = xor <vscale x 8 x i16> %5, splat (i16 -1)
+  %7 = or <vscale x 8 x i16> %4, %6
+  ret <vscale x 8 x i16> %7
+}
+
+define <vscale x 4 x i32> @codegen_bsl_i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, <vscale x 4 x i32> %2) {
+; CHECK-LABEL: codegen_bsl_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %4 = and <vscale x 4 x i32> %2, %0
+  %5 = xor <vscale x 4 x i32> %2, splat (i32 -1)
+  %6 = and <vscale x 4 x i32> %1, %5
+  %7 = or <vscale x 4 x i32> %4, %6
+  ret <vscale x 4 x i32> %7
+}
+
+define <vscale x 4 x i32> @codegen_nbsl_i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, <vscale x 4 x i32> %2) {
+; CHECK-LABEL: codegen_nbsl_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %4 = and <vscale x 4 x i32> %2, %0
+  %5 = xor <vscale x 4 x i32> %2, splat (i32 -1)
+  %6 = and <vscale x 4 x i32> %1, %5
+  %7 = or <vscale x 4 x i32> %4, %6
+  %8 = xor <vscale x 4 x i32> %7, splat (i32 -1)
+  ret <vscale x 4 x i32> %8
+}
+
+define <vscale x 4 x i32> @codegen_bsl1n_i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, <vscale x 4 x i32> %2) {
+; CHECK-LABEL: codegen_bsl1n_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bsl1n z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %4 = xor <vscale x 4 x i32> %0, splat (i32 -1)
+  %5 = and <vscale x 4 x i32> %2, %4
+  %6 = xor <vscale x 4 x i32> %2, splat (i32 -1)
+  %7 = and <vscale x 4 x i32> %1, %6
+  %8 = or <vscale x 4 x i32> %5, %7
+  ret <vscale x 4 x i32> %8
+}
+
+define <vscale x 4 x i32> @codegen_bsl2n_i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, <vscale x 4 x i32> %2) {
+; CHECK-LABEL: codegen_bsl2n_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bsl2n z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %4 = and <vscale x 4 x i32> %2, %0
+  %5 = or <vscale x 4 x i32> %2, %1
+  %6 = xor <vscale x 4 x i32> %5, splat (i32 -1)
+  %7 = or <vscale x 4 x i32> %4, %6
+  ret <vscale x 4 x i32> %7
+}
+
+define <vscale x 2 x i64> @codegen_bsl_i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, <vscale x 2 x i64> %2) {
+; CHECK-LABEL: codegen_bsl_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %4 = and <vscale x 2 x i64> %2, %0
+  %5 = xor <vscale x 2 x i64> %2, splat (i64 -1)
+  %6 = and <vscale x 2 x i64> %1, %5
+  %7 = or <vscale x 2 x i64> %4, %6
+  ret <vscale x 2 x i64> %7
+}
+
+define <vscale x 2 x i64> @codegen_nbsl_i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, <vscale x 2 x i64> %2) {
+; CHECK-LABEL: codegen_nbsl_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %4 = and <vscale x 2 x i64> %2, %0
+  %5 = xor <vscale x 2 x i64> %2, splat (i64 -1)
+  %6 = and <vscale x 2 x i64> %1, %5
+  %7 = or <vscale x 2 x i64> %4, %6
+  %8 = xor <vscale x 2 x i64> %7, splat (i64 -1)
+  ret <vscale x 2 x i64> %8
+}
+
+define <vscale x 2 x i64> @codegen_bsl1n_i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, <vscale x 2 x i64> %2) {
+; CHECK-LABEL: codegen_bsl1n_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bsl1n z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %4 = xor <vscale x 2 x i64> %0, splat (i64 -1)
+  %5 = and <vscale x 2 x i64> %2, %4
+  %6 = xor <vscale x 2 x i64> %2, splat (i64 -1)
+  %7 = and <vscale x 2 x i64> %1, %6
+  %8 = or <vscale x 2 x i64> %5, %7
+  ret <vscale x 2 x i64> %8
+}
+
+define <vscale x 2 x i64> @codegen_bsl2n_i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, <vscale x 2 x i64> %2) {
+; CHECK-LABEL: codegen_bsl2n_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bsl2n z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %4 = and <vscale x 2 x i64> %2, %0
+  %5 = or <vscale x 2 x i64> %2, %1
+  %6 = xor <vscale x 2 x i64> %5, splat (i64 -1)
+  %7 = or <vscale x 2 x i64> %4, %6
+  ret <vscale x 2 x i64> %7
+}
+
+; (A ^ B) & C) ^ B -> (A & C) | (B & !C) when BIC instructions are available.
+define <vscale x 4 x i32> @bsl_combine_when_bic_available(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
+; CHECK-LABEL: bsl_combine_when_bic_available:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+entry:
+  %t1 = xor <vscale x 4 x i32> %a, %b
+  %t2 = and <vscale x 4 x i32> %t1, %c
+  %t3 = xor <vscale x 4 x i32> %t2, %b
+  ret <vscale x 4 x i32> %t3
+}

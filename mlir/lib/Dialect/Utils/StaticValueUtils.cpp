@@ -237,8 +237,8 @@ getValuesSortedByKeyImpl(ArrayRef<K> keys, ArrayRef<V> values,
     return SmallVector<V>{values};
   assert(keys.size() == values.size() && "unexpected mismatching sizes");
   auto indices = llvm::to_vector(llvm::seq<int64_t>(0, values.size()));
-  std::sort(indices.begin(), indices.end(),
-            [&](int64_t i, int64_t j) { return compare(keys[i], keys[j]); });
+  llvm::sort(indices,
+             [&](int64_t i, int64_t j) { return compare(keys[i], keys[j]); });
   SmallVector<V> res;
   res.reserve(values.size());
   for (int64_t i = 0, e = indices.size(); i < e; ++i)

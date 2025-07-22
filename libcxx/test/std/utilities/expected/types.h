@@ -336,4 +336,17 @@ struct CheckForInvalidWrites : public CheckForInvalidWritesBase<WithPaddedExpect
   }
 };
 
+struct NonComparable {};
+
+struct EqualityComparable {
+  int i;
+  constexpr EqualityComparable(int ii) : i(ii) {}
+
+  friend constexpr bool operator==(const EqualityComparable& data, int ii) { return data.i == ii; }
+};
+
+// Test constraint
+template <class T1, class T2>
+concept CanCompare = requires(T1 t1, T2 t2) { t1 == t2; };
+
 #endif // TEST_STD_UTILITIES_EXPECTED_TYPES_H

@@ -19,12 +19,11 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include <iostream>
 #include <optional>
 #include <unordered_set>
 
 namespace llvm {
+class IntrinsicInst;
 class SPIRVSubtarget;
 class MachineFunction;
 class MachineModuleInfo;

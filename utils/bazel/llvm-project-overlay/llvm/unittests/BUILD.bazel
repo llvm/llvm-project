@@ -174,7 +174,6 @@ cc_test(
         "//llvm:Target",
         "//llvm:TestingSupport",
         "//third-party/unittest:gtest",
-        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -203,7 +202,6 @@ cc_test(
         "//llvm:Support",
         "//llvm:Target",
         "//third-party/unittest:gtest",
-        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -432,6 +430,7 @@ cc_test(
     deps = [
         "//llvm:Analysis",
         "//llvm:Core",
+        "//llvm:FrontendHLSL",
         "//llvm:FrontendOpenACC",
         "//llvm:FrontendOpenMP",
         "//llvm:Passes",
@@ -501,7 +500,6 @@ cc_test(
         "//llvm:Support",
         "//llvm:Target",
         "//third-party/unittest:gtest",
-        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -563,10 +561,7 @@ cc_test(
 gentbl_cc_library(
     name = "option_tests_gen",
     strip_include_prefix = "Option",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "Option/Opts.inc",
-    )],
+    tbl_outs = {"Option/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "Option/Opts.td",
     deps = ["//llvm:OptParserTdFiles"],
@@ -575,16 +570,10 @@ gentbl_cc_library(
 gentbl_cc_library(
     name = "automata_gen",
     strip_include_prefix = "TableGen",
-    tbl_outs = [
-        (
-            ["-gen-automata"],
-            "TableGen/AutomataAutomata.inc",
-        ),
-        (
-            ["-gen-searchable-tables"],
-            "TableGen/AutomataTables.inc",
-        ),
-    ],
+    tbl_outs = {
+        "TableGen/AutomataAutomata.inc": ["-gen-automata"],
+        "TableGen/AutomataTables.inc": ["-gen-searchable-tables"],
+    },
     tblgen = "//llvm:llvm-tblgen",
     td_file = "TableGen/Automata.td",
     deps = ["//llvm:CommonTargetTdFiles"],

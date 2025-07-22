@@ -131,9 +131,7 @@ public:
   /// @name Accessors
   /// @{
 
-  Specifier getKind() const { return specifier; }
-
-  /// getSubExpr - Get the child of this expression.
+  Specifier getSpecifier() const { return specifier; }
   const MCExpr *getSubExpr() const { return Expr; }
 
   /// @}

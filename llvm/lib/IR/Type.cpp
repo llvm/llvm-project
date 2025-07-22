@@ -117,10 +117,6 @@ const fltSemantics &Type::getFltSemantics() const {
   }
 }
 
-bool Type::isIEEE() const {
-  return APFloat::getZero(getFltSemantics()).isIEEE();
-}
-
 bool Type::isScalableTargetExtTy() const {
   if (auto *TT = dyn_cast<TargetExtType>(this))
     return isa<ScalableVectorType>(TT->getLayoutType());
@@ -249,6 +245,20 @@ int Type::getFPMantissaWidth() const {
   if (getTypeID() == FP128TyID) return 113;
   assert(getTypeID() == PPC_FP128TyID && "unknown fp type");
   return -1;
+}
+
+bool Type::isFirstClassType() const {
+  switch (getTypeID()) {
+    default:
+      return true;
+    case FunctionTyID:
+    case VoidTyID:
+      return false;
+    case StructTyID: {
+      auto *ST = cast<StructType>(this);
+      return !ST->isOpaque();
+    }
+  }
 }
 
 bool Type::isSizedDerivedType(SmallPtrSetImpl<Type*> *Visited) const {
@@ -394,7 +404,7 @@ bool FunctionType::isValidReturnType(Type *RetTy) {
 }
 
 bool FunctionType::isValidArgumentType(Type *ArgTy) {
-  return ArgTy->isFirstClassType();
+  return ArgTy->isFirstClassType() && !ArgTy->isLabelTy();
 }
 
 //===----------------------------------------------------------------------===//

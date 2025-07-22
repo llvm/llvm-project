@@ -35,6 +35,7 @@ config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 # The shell tests use their own module caches.
 config.lldb_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_LLDB@", "lldb-shell")
 config.clang_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_CLANG@", "lldb-shell")
+config.clang_resource_dir = os.path.join("@CLANG_RESOURCE_DIR@")
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

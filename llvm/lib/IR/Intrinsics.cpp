@@ -13,6 +13,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringTable.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -325,6 +326,14 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     return;
   case IIT_V1024:
     OutputTable.push_back(IITDescriptor::getVector(1024, IsScalableVector));
+    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    return;
+  case IIT_V2048:
+    OutputTable.push_back(IITDescriptor::getVector(2048, IsScalableVector));
+    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    return;
+  case IIT_V4096:
+    OutputTable.push_back(IITDescriptor::getVector(4096, IsScalableVector));
     DecodeIITType(NextElt, Infos, Info, OutputTable);
     return;
   case IIT_EXTERNREF:

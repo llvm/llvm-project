@@ -81,6 +81,8 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     setCPUFeature(FEAT_SME_F64);
   if (hwcap2 & HWCAP2_MOPS)
     setCPUFeature(FEAT_MOPS);
+  if (hwcap2 & HWCAP2_CSSC)
+    setCPUFeature(FEAT_CSSC);
   if (hwcap & HWCAP_FP) {
     setCPUFeature(FEAT_FP);
     // FP and AdvSIMD fields have the same value

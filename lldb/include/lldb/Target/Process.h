@@ -111,6 +111,7 @@ public:
   void SetOSPluginReportsAllThreads(bool does_report);
   bool GetSteppingRunsAllThreads() const;
   FollowForkMode GetFollowForkMode() const;
+  bool TrackMemoryCacheChanges() const;
 
 protected:
   Process *m_process; // Can be nullptr for global ProcessProperties
@@ -310,6 +311,18 @@ public:
     if (stop_id == m_last_natural_stop_id)
       return m_last_natural_stop_event;
     return lldb::EventSP();
+  }
+
+  void Dump(Stream &stream) const {
+    stream.Format("ProcessModID:\n"
+                  "  m_stop_id: {0}\n  m_last_natural_stop_id: {1}\n"
+                  "  m_resume_id: {2}\n  m_memory_id: {3}\n"
+                  "  m_last_user_expression_resume: {4}\n"
+                  "  m_running_user_expression: {5}\n"
+                  "  m_running_utility_function: {6}\n",
+                  m_stop_id, m_last_natural_stop_id, m_resume_id, m_memory_id,
+                  m_last_user_expression_resume, m_running_user_expression,
+                  m_running_utility_function);
   }
 
 private:
@@ -1114,10 +1127,9 @@ public:
   virtual Status DoResume(lldb::RunDirection direction) {
     if (direction == lldb::RunDirection::eRunForward)
       return Status::FromErrorStringWithFormatv(
-          "error: {0} does not support resuming processes", GetPluginName());
+          "{0} does not support resuming processes", GetPluginName());
     return Status::FromErrorStringWithFormatv(
-        "error: {0} does not support reverse execution of processes",
-        GetPluginName());
+        "{0} does not support reverse execution of processes", GetPluginName());
   }
 
   /// Called after resuming a process.
@@ -1588,6 +1600,52 @@ public:
   ///     returned in the case of an error.
   size_t ReadMemoryFromInferior(lldb::addr_t vm_addr, void *buf, size_t size,
                                 Status &error);
+
+  // Callback definition for read Memory in chunks
+  //
+  // Status, the status returned from ReadMemoryFromInferior
+  // addr_t, the bytes_addr, start + bytes read so far.
+  // void*, pointer to the bytes read
+  // bytes_size, the count of bytes read for this chunk
+  typedef std::function<IterationAction(
+      lldb_private::Status &error, lldb::addr_t bytes_addr, const void *bytes,
+      lldb::offset_t bytes_size)>
+      ReadMemoryChunkCallback;
+
+  /// Read of memory from a process in discrete chunks, terminating
+  /// either when all bytes are read, or the supplied callback returns
+  /// IterationAction::Stop
+  ///
+  /// \param[in] vm_addr
+  ///     A virtual load address that indicates where to start reading
+  ///     memory from.
+  ///
+  /// \param[in] buf
+  ///    If NULL, a buffer of \a chunk_size will be created and used for the
+  ///    callback. If non NULL, this buffer must be at least \a chunk_size bytes
+  ///    and will be used for storing chunked memory reads.
+  ///
+  /// \param[in] chunk_size
+  ///     The minimum size of the byte buffer, and the chunk size of memory
+  ///     to read.
+  ///
+  /// \param[in] total_size
+  ///     The total number of bytes to read.
+  ///
+  /// \param[in] callback
+  ///     The callback to invoke when a chunk is read from memory.
+  ///
+  /// \return
+  ///     The number of bytes that were actually read into \a buf and
+  ///     written to the provided callback.
+  ///     If the returned number is greater than zero, yet less than \a
+  ///     size, then this function will get called again with \a
+  ///     vm_addr, \a buf, and \a size updated appropriately. Zero is
+  ///     returned in the case of an error.
+  lldb::offset_t ReadMemoryInChunks(lldb::addr_t vm_addr, void *buf,
+                                    lldb::addr_t chunk_size,
+                                    lldb::offset_t total_size,
+                                    ReadMemoryChunkCallback callback);
 
   /// Read a NULL terminated C string from memory
   ///

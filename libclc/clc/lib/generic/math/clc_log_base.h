@@ -261,9 +261,8 @@ __clc_log(double x)
   int index = __clc_as_int2(ux).hi >> 13;
   index = ((0x80 | (index & 0x7e)) >> 1) + (index & 0x1);
 
-  double2 tv = USE_TABLE(ln_tbl, index - 64);
-  double z1 = tv.s0;
-  double q = tv.s1;
+  double z1 = USE_TABLE(ln_tbl_lo, index - 64);
+  double q = USE_TABLE(ln_tbl_hi, index - 64);
 
   double f1 = index * 0x1.0p-7;
   double f2 = f - f1;

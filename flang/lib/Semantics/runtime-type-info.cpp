@@ -58,7 +58,7 @@ public:
   void DescribeTypes(Scope &scope, bool inSchemata);
 
 private:
-  const Symbol *DescribeType(Scope &);
+  const Symbol *DescribeType(Scope &, bool wantUninstantiatedPDT);
   const Symbol &GetSchemaSymbol(const char *) const;
   const DeclTypeSpec &GetSchema(const char *) const;
   SomeExpr GetEnumValue(const char *) const;
@@ -238,7 +238,7 @@ void RuntimeTableBuilder::DescribeTypes(Scope &scope, bool inSchemata) {
   inSchemata |= ignoreScopes_.find(&scope) != ignoreScopes_.end();
   if (scope.IsDerivedType()) {
     if (!inSchemata) { // don't loop trying to describe a schema
-      DescribeType(scope);
+      DescribeType(scope, /*wantUninstantiatedPDT=*/false);
     }
   } else {
     scope.InstantiateDerivedTypes();
@@ -310,10 +310,10 @@ static SomeExpr StructureExpr(evaluate::StructureConstructor &&x) {
   return SomeExpr{evaluate::Expr<evaluate::SomeDerived>{std::move(x)}};
 }
 
-static int GetIntegerKind(const Symbol &symbol) {
+static int GetIntegerKind(const Symbol &symbol, bool canBeUninstantiated) {
   auto dyType{evaluate::DynamicType::From(symbol)};
   CHECK((dyType && dyType->category() == TypeCategory::Integer) ||
-      symbol.owner().context().HasError(symbol));
+      symbol.owner().context().HasError(symbol) || canBeUninstantiated);
   return dyType && dyType->category() == TypeCategory::Integer
       ? dyType->kind()
       : symbol.owner().context().GetDefaultKind(TypeCategory::Integer);
@@ -395,7 +395,8 @@ static std::optional<std::string> GetSuffixIfTypeKindParameters(
   return std::nullopt;
 }
 
-const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
+const Symbol *RuntimeTableBuilder::DescribeType(
+    Scope &dtScope, bool wantUninstantiatedPDT) {
   if (const Symbol * info{dtScope.runtimeDerivedTypeDescription()}) {
     return info;
   }
@@ -449,7 +450,7 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
             GetSuffixIfTypeKindParameters(*derivedTypeSpec, parameters)}) {
       distinctName += *suffix;
     }
-  } else if (isPDTDefinitionWithKindParameters) {
+  } else if (isPDTDefinitionWithKindParameters && !wantUninstantiatedPDT) {
     return nullptr;
   }
   std::string dtDescName{(fir::kTypeDescriptorSeparator + distinctName).str()};
@@ -480,7 +481,8 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
   }
   if (const Symbol *
       uninstDescObject{isPDTInstantiation
-              ? DescribeType(DEREF(const_cast<Scope *>(dtSymbol->scope())))
+              ? DescribeType(DEREF(const_cast<Scope *>(dtSymbol->scope())),
+                    /*wantUninstantiatedPDT=*/true)
               : nullptr}) {
     AddValue(dtValues, derivedTypeSchema_, "uninstantiated"s,
         evaluate::AsGenericExpr(evaluate::Expr<evaluate::SomeDerived>{
@@ -516,7 +518,8 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
           }
           kinds.emplace_back(value);
         } else { // LEN= parameter
-          lenKinds.emplace_back(GetIntegerKind(*inst));
+          lenKinds.emplace_back(
+              GetIntegerKind(*inst, isPDTDefinitionWithKindParameters));
         }
       }
     }
@@ -804,7 +807,9 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
     const DerivedTypeSpec &spec{dyType.GetDerivedTypeSpec()};
     Scope *derivedScope{const_cast<Scope *>(
         spec.scope() ? spec.scope() : spec.typeSymbol().scope())};
-    if (const Symbol * derivedDescription{DescribeType(DEREF(derivedScope))}) {
+    if (const Symbol *
+        derivedDescription{DescribeType(
+            DEREF(derivedScope), /*wantUninstantiatedPDT=*/false)}) {
       AddValue(values, componentSchema_, "derived"s,
           evaluate::AsGenericExpr(evaluate::Expr<evaluate::SomeDerived>{
               evaluate::Designator<evaluate::SomeDerived>{

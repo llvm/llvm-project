@@ -184,7 +184,8 @@ class CSKYConstantIslands : public MachineFunctionPass {
   struct ImmBranch {
     MachineInstr *MI;
     unsigned MaxDisp : 31;
-    bool IsCond : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsCond : 1;
     int UncondBr;
 
     ImmBranch(MachineInstr *Mi, unsigned Maxdisp, bool Cond, int Ubr)

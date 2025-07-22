@@ -127,9 +127,7 @@ public:
     return LK.first != TargetLoweringBase::TypeLegal;
   }
 
-  bool isOpLegal(Instruction *I) {
-    return isa<StoreInst>(I) || isa<IntrinsicInst>(I);
-  }
+  bool isOpLegal(Instruction *I) { return isa<StoreInst, IntrinsicInst>(I); }
 
   bool isCoercionProfitable(Instruction *II) {
     SmallPtrSet<Instruction *, 4> CVisited;
@@ -144,9 +142,8 @@ public:
     auto IsLookThru = [](Instruction *II) {
       if (const auto *Intr = dyn_cast<IntrinsicInst>(II))
         return Intr->getIntrinsicID() == Intrinsic::amdgcn_perm;
-      return isa<PHINode>(II) || isa<ShuffleVectorInst>(II) ||
-             isa<InsertElementInst>(II) || isa<ExtractElementInst>(II) ||
-             isa<CastInst>(II);
+      return isa<PHINode, ShuffleVectorInst, InsertElementInst,
+                 ExtractElementInst, CastInst>(II);
     };
 
     while (!UserList.empty()) {
@@ -389,10 +386,9 @@ bool LiveRegOptimizer::optimizeLiveType(
         Value *NextDeadValue = PHIWorklist.pop_back_val();
         VisitedPhis.insert(NextDeadValue);
         auto OriginalPhi =
-            std::find_if(PhiNodes.begin(), PhiNodes.end(),
-                         [this, &NextDeadValue](PHINode *CandPhi) {
-                           return ValMap[CandPhi] == NextDeadValue;
-                         });
+            llvm::find_if(PhiNodes, [this, &NextDeadValue](PHINode *CandPhi) {
+              return ValMap[CandPhi] == NextDeadValue;
+            });
         // This PHI may have already been removed from maps when
         // unwinding a previous Phi
         if (OriginalPhi != PhiNodes.end())

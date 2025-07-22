@@ -21,6 +21,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
@@ -53,6 +54,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <utility>
@@ -2759,6 +2761,9 @@ bool AArch64InstrInfo::isPairableLdStInst(const MachineInstr &MI) {
   case AArch64::LDRXpre:
   case AArch64::LDURSWi:
   case AArch64::LDRSWpre:
+  // SVE instructions.
+  case AArch64::LDR_ZXI:
+  case AArch64::STR_ZXI:
     return true;
   }
 }
@@ -2908,6 +2913,18 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
     Register BaseReg = MI.getOperand(1).getReg();
     const TargetRegisterInfo *TRI = &getRegisterInfo();
     if (MI.modifiesRegister(BaseReg, TRI))
+      return false;
+  }
+
+  // Pairing SVE fills/spills is only valid for little-endian targets that
+  // implement VLS 128.
+  switch (MI.getOpcode()) {
+  default:
+    break;
+  case AArch64::LDR_ZXI:
+  case AArch64::STR_ZXI:
+    if (!Subtarget.isLittleEndian() ||
+        Subtarget.getSVEVectorSizeInBits() != 128)
       return false;
   }
 
@@ -6770,6 +6787,133 @@ static bool getMaddPatterns(MachineInstr &Root,
   }
   return Found;
 }
+
+bool AArch64InstrInfo::isAccumulationOpcode(unsigned Opcode) const {
+  switch (Opcode) {
+  default:
+    break;
+  case AArch64::UABALB_ZZZ_D:
+  case AArch64::UABALB_ZZZ_H:
+  case AArch64::UABALB_ZZZ_S:
+  case AArch64::UABALT_ZZZ_D:
+  case AArch64::UABALT_ZZZ_H:
+  case AArch64::UABALT_ZZZ_S:
+  case AArch64::SABALB_ZZZ_D:
+  case AArch64::SABALB_ZZZ_S:
+  case AArch64::SABALB_ZZZ_H:
+  case AArch64::SABALT_ZZZ_D:
+  case AArch64::SABALT_ZZZ_S:
+  case AArch64::SABALT_ZZZ_H:
+  case AArch64::UABALv16i8_v8i16:
+  case AArch64::UABALv2i32_v2i64:
+  case AArch64::UABALv4i16_v4i32:
+  case AArch64::UABALv4i32_v2i64:
+  case AArch64::UABALv8i16_v4i32:
+  case AArch64::UABALv8i8_v8i16:
+  case AArch64::UABAv16i8:
+  case AArch64::UABAv2i32:
+  case AArch64::UABAv4i16:
+  case AArch64::UABAv4i32:
+  case AArch64::UABAv8i16:
+  case AArch64::UABAv8i8:
+  case AArch64::SABALv16i8_v8i16:
+  case AArch64::SABALv2i32_v2i64:
+  case AArch64::SABALv4i16_v4i32:
+  case AArch64::SABALv4i32_v2i64:
+  case AArch64::SABALv8i16_v4i32:
+  case AArch64::SABALv8i8_v8i16:
+  case AArch64::SABAv16i8:
+  case AArch64::SABAv2i32:
+  case AArch64::SABAv4i16:
+  case AArch64::SABAv4i32:
+  case AArch64::SABAv8i16:
+  case AArch64::SABAv8i8:
+    return true;
+  }
+
+  return false;
+}
+
+unsigned AArch64InstrInfo::getAccumulationStartOpcode(
+    unsigned AccumulationOpcode) const {
+  switch (AccumulationOpcode) {
+  default:
+    llvm_unreachable("Unsupported accumulation Opcode!");
+  case AArch64::UABALB_ZZZ_D:
+    return AArch64::UABDLB_ZZZ_D;
+  case AArch64::UABALB_ZZZ_H:
+    return AArch64::UABDLB_ZZZ_H;
+  case AArch64::UABALB_ZZZ_S:
+    return AArch64::UABDLB_ZZZ_S;
+  case AArch64::UABALT_ZZZ_D:
+    return AArch64::UABDLT_ZZZ_D;
+  case AArch64::UABALT_ZZZ_H:
+    return AArch64::UABDLT_ZZZ_H;
+  case AArch64::UABALT_ZZZ_S:
+    return AArch64::UABDLT_ZZZ_S;
+  case AArch64::UABALv16i8_v8i16:
+    return AArch64::UABDLv16i8_v8i16;
+  case AArch64::UABALv2i32_v2i64:
+    return AArch64::UABDLv2i32_v2i64;
+  case AArch64::UABALv4i16_v4i32:
+    return AArch64::UABDLv4i16_v4i32;
+  case AArch64::UABALv4i32_v2i64:
+    return AArch64::UABDLv4i32_v2i64;
+  case AArch64::UABALv8i16_v4i32:
+    return AArch64::UABDLv8i16_v4i32;
+  case AArch64::UABALv8i8_v8i16:
+    return AArch64::UABDLv8i8_v8i16;
+  case AArch64::UABAv16i8:
+    return AArch64::UABDv16i8;
+  case AArch64::UABAv2i32:
+    return AArch64::UABDv2i32;
+  case AArch64::UABAv4i16:
+    return AArch64::UABDv4i16;
+  case AArch64::UABAv4i32:
+    return AArch64::UABDv4i32;
+  case AArch64::UABAv8i16:
+    return AArch64::UABDv8i16;
+  case AArch64::UABAv8i8:
+    return AArch64::UABDv8i8;
+  case AArch64::SABALB_ZZZ_D:
+    return AArch64::SABDLB_ZZZ_D;
+  case AArch64::SABALB_ZZZ_S:
+    return AArch64::SABDLB_ZZZ_S;
+  case AArch64::SABALB_ZZZ_H:
+    return AArch64::SABDLB_ZZZ_H;
+  case AArch64::SABALT_ZZZ_D:
+    return AArch64::SABDLT_ZZZ_D;
+  case AArch64::SABALT_ZZZ_S:
+    return AArch64::SABDLT_ZZZ_S;
+  case AArch64::SABALT_ZZZ_H:
+    return AArch64::SABDLT_ZZZ_H;
+  case AArch64::SABALv16i8_v8i16:
+    return AArch64::SABDLv16i8_v8i16;
+  case AArch64::SABALv2i32_v2i64:
+    return AArch64::SABDLv2i32_v2i64;
+  case AArch64::SABALv4i16_v4i32:
+    return AArch64::SABDLv4i16_v4i32;
+  case AArch64::SABALv4i32_v2i64:
+    return AArch64::SABDLv4i32_v2i64;
+  case AArch64::SABALv8i16_v4i32:
+    return AArch64::SABDLv8i16_v4i32;
+  case AArch64::SABALv8i8_v8i16:
+    return AArch64::SABDLv8i8_v8i16;
+  case AArch64::SABAv16i8:
+    return AArch64::SABDv16i8;
+  case AArch64::SABAv2i32:
+    return AArch64::SABAv2i32;
+  case AArch64::SABAv4i16:
+    return AArch64::SABDv4i16;
+  case AArch64::SABAv4i32:
+    return AArch64::SABDv4i32;
+  case AArch64::SABAv8i16:
+    return AArch64::SABDv8i16;
+  case AArch64::SABAv8i8:
+    return AArch64::SABDv8i8;
+  }
+}
+
 /// Floating-Point Support
 
 /// Find instructions that can be turned into madd.
@@ -7531,6 +7675,63 @@ static void genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
   DelInstrs.push_back(&Root);
 }
 
+unsigned AArch64InstrInfo::getReduceOpcodeForAccumulator(
+    unsigned int AccumulatorOpCode) const {
+  switch (AccumulatorOpCode) {
+  case AArch64::UABALB_ZZZ_D:
+  case AArch64::SABALB_ZZZ_D:
+  case AArch64::UABALT_ZZZ_D:
+  case AArch64::SABALT_ZZZ_D:
+    return AArch64::ADD_ZZZ_D;
+  case AArch64::UABALB_ZZZ_H:
+  case AArch64::SABALB_ZZZ_H:
+  case AArch64::UABALT_ZZZ_H:
+  case AArch64::SABALT_ZZZ_H:
+    return AArch64::ADD_ZZZ_H;
+  case AArch64::UABALB_ZZZ_S:
+  case AArch64::SABALB_ZZZ_S:
+  case AArch64::UABALT_ZZZ_S:
+  case AArch64::SABALT_ZZZ_S:
+    return AArch64::ADD_ZZZ_S;
+  case AArch64::UABALv16i8_v8i16:
+  case AArch64::SABALv8i8_v8i16:
+  case AArch64::SABAv8i16:
+  case AArch64::UABAv8i16:
+    return AArch64::ADDv8i16;
+  case AArch64::SABALv2i32_v2i64:
+  case AArch64::UABALv2i32_v2i64:
+  case AArch64::SABALv4i32_v2i64:
+    return AArch64::ADDv2i64;
+  case AArch64::UABALv4i16_v4i32:
+  case AArch64::SABALv4i16_v4i32:
+  case AArch64::SABALv8i16_v4i32:
+  case AArch64::SABAv4i32:
+  case AArch64::UABAv4i32:
+    return AArch64::ADDv4i32;
+  case AArch64::UABALv4i32_v2i64:
+    return AArch64::ADDv2i64;
+  case AArch64::UABALv8i16_v4i32:
+    return AArch64::ADDv4i32;
+  case AArch64::UABALv8i8_v8i16:
+  case AArch64::SABALv16i8_v8i16:
+    return AArch64::ADDv8i16;
+  case AArch64::UABAv16i8:
+  case AArch64::SABAv16i8:
+    return AArch64::ADDv16i8;
+  case AArch64::UABAv4i16:
+  case AArch64::SABAv4i16:
+    return AArch64::ADDv4i16;
+  case AArch64::UABAv2i32:
+  case AArch64::SABAv2i32:
+    return AArch64::ADDv2i32;
+  case AArch64::UABAv8i8:
+  case AArch64::SABAv8i8:
+    return AArch64::ADDv8i8;
+  default:
+    llvm_unreachable("Unknown accumulator opcode");
+  }
+}
+
 /// When getMachineCombinerPatterns() finds potential patterns,
 /// this function generates the instructions that could replace the
 /// original code sequence
@@ -7766,7 +7967,6 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     MUL = genMaddR(MF, MRI, TII, Root, InsInstrs, 1, Opc, NewVR, RC);
     break;
   }
-
   case AArch64MachineCombinerPattern::MULADDv8i8_OP1:
     Opc = AArch64::MLAv8i8;
     RC = &AArch64::FPR64RegClass;
@@ -9680,24 +9880,14 @@ void AArch64InstrInfo::buildOutlinedFrame(
     It = MBB.insert(It, STRXpre);
 
     if (MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF)) {
-      const TargetSubtargetInfo &STI = MF.getSubtarget();
-      const MCRegisterInfo *MRI = STI.getRegisterInfo();
-      unsigned DwarfReg = MRI->getDwarfRegNum(AArch64::LR, true);
+      CFIInstBuilder CFIBuilder(MBB, It, MachineInstr::FrameSetup);
 
       // Add a CFI saying the stack was moved 16 B down.
-      int64_t StackPosEntry =
-          MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 16));
-      BuildMI(MBB, It, DebugLoc(), get(AArch64::CFI_INSTRUCTION))
-          .addCFIIndex(StackPosEntry)
-          .setMIFlags(MachineInstr::FrameSetup);
+      CFIBuilder.buildDefCFAOffset(16);
 
       // Add a CFI saying that the LR that we want to find is now 16 B higher
       // than before.
-      int64_t LRPosEntry = MF.addFrameInst(
-          MCCFIInstruction::createOffset(nullptr, DwarfReg, -16));
-      BuildMI(MBB, It, DebugLoc(), get(AArch64::CFI_INSTRUCTION))
-          .addCFIIndex(LRPosEntry)
-          .setMIFlags(MachineInstr::FrameSetup);
+      CFIBuilder.buildOffset(AArch64::LR, -16);
     }
 
     // Insert a restore before the terminator for the function.
@@ -9863,8 +10053,7 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
       (!MI.getOperand(0).getReg().isVirtual() ||
        MI.getOperand(0).getSubReg() == 0) &&
       (!MI.getOperand(0).getReg().isPhysical() ||
-       MI.findRegisterDefOperandIdx(MI.getOperand(0).getReg() - AArch64::W0 +
-                                        AArch64::X0,
+       MI.findRegisterDefOperandIdx(getXRegFromWReg(MI.getOperand(0).getReg()),
                                     /*TRI=*/nullptr) == -1))
     return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
 

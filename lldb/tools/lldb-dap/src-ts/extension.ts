@@ -1,11 +1,15 @@
 import * as vscode from "vscode";
 
-import {
-  LLDBDapDescriptorFactory,
-  isExecutable,
-} from "./debug-adapter-factory";
+import { LLDBDapDescriptorFactory } from "./debug-adapter-factory";
 import { DisposableContext } from "./disposable-context";
 import { LaunchUriHandler } from "./uri-launch-handler";
+import { LLDBDapConfigurationProvider } from "./debug-configuration-provider";
+import { LLDBDapServer } from "./lldb-dap-server";
+import { DebugSessionTracker } from "./debug-session-tracker";
+import {
+  ModulesDataProvider,
+  ModuleProperty,
+} from "./ui/modules-data-provider";
 
 /**
  * This class represents the extension and manages its life cycle. Other extensions
@@ -14,33 +18,35 @@ import { LaunchUriHandler } from "./uri-launch-handler";
 export class LLDBDapExtension extends DisposableContext {
   constructor() {
     super();
-    const factory = new LLDBDapDescriptorFactory();
-    this.pushSubscription(factory);
+
+    const lldbDapServer = new LLDBDapServer();
+    const sessionTracker = new DebugSessionTracker();
+
     this.pushSubscription(
+      lldbDapServer,
+      sessionTracker,
+      vscode.debug.registerDebugConfigurationProvider(
+        "lldb-dap",
+        new LLDBDapConfigurationProvider(lldbDapServer),
+      ),
       vscode.debug.registerDebugAdapterDescriptorFactory(
         "lldb-dap",
-        factory,
-      )
-    );
-    this.pushSubscription(
-      vscode.workspace.onDidChangeConfiguration(async (event) => {
-        if (event.affectsConfiguration("lldb-dap.executable-path")) {
-          const dapPath = vscode.workspace
-            .getConfiguration("lldb-dap")
-            .get<string>("executable-path");
-
-          if (dapPath) {
-            if (await isExecutable(dapPath)) {
-              return;
-            }
-          }
-          LLDBDapDescriptorFactory.showLLDBDapNotFoundMessage(dapPath || "");
-        }
-      }),
+        new LLDBDapDescriptorFactory(),
+      ),
+      vscode.debug.registerDebugAdapterTrackerFactory(
+        "lldb-dap",
+        sessionTracker,
+      ),
+      vscode.window.registerTreeDataProvider(
+        "lldb-dap.modules",
+        new ModulesDataProvider(sessionTracker),
+      ),
+      vscode.window.registerUriHandler(new LaunchUriHandler()),
     );
 
-    this.pushSubscription(
-      vscode.window.registerUriHandler(new LaunchUriHandler())
+    vscode.commands.registerCommand(
+      "lldb-dap.modules.copyProperty",
+      (node: ModuleProperty) => vscode.env.clipboard.writeText(node.value),
     );
   }
 }

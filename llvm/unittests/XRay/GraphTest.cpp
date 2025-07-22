@@ -73,8 +73,8 @@ template <typename T> void graphVertexTester(T &G) {
     EXPECT_EQ(1u, G.count(u));
     EXPECT_EQ(VA[u], EVV->VA);
     EXPECT_NE(G.vertices().end(),
-              std::find_if(G.vertices().begin(), G.vertices().end(),
-                           [&](const VVT &VV) { return VV.first == u; }));
+              llvm::find_if(G.vertices(),
+                            [&](const VVT &VV) { return VV.first == u; }));
     consumeError(EVV.takeError());
   }
 
@@ -85,8 +85,6 @@ template <typename T> void graphVertexTester(T &G) {
 }
 
 template <typename T> void graphEdgeTester(T &G) {
-  std::set<unsigned> V({1u, 2u, 3u, 4u, 5u, 6u});
-
   std::set<std::pair<unsigned, unsigned>> E(
       {{1u, 2u}, {2u, 3u}, {6u, 3u}, {4u, 6u}, {2u, 4u}, {2u, 5u}, {4u, 5u}});
   std::vector<unsigned> VA({0u, 3u, 5u, 7u, 11u, 13u, 17u});
@@ -100,8 +98,7 @@ template <typename T> void graphEdgeTester(T &G) {
     EXPECT_EQ(VA[u.first] * VA[u.second] * ((u.first > u.second) ? 2 : 1),
               EEV->EA);
     auto Pred = [&](const EVT &EV) { return EV.first == u; };
-    EXPECT_NE(G.edges().end(),
-              std::find_if(G.edges().begin(), G.edges().end(), Pred));
+    EXPECT_NE(G.edges().end(), llvm::find_if(G.edges(), Pred));
     consumeError(EEV.takeError());
   }
 

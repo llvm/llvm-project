@@ -19,14 +19,14 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // clang-format off
-template <class _Tp> struct __libcpp_is_signed_integer                   : public false_type {};
-template <>          struct __libcpp_is_signed_integer<signed char>      : public true_type {};
-template <>          struct __libcpp_is_signed_integer<signed short>     : public true_type {};
-template <>          struct __libcpp_is_signed_integer<signed int>       : public true_type {};
-template <>          struct __libcpp_is_signed_integer<signed long>      : public true_type {};
-template <>          struct __libcpp_is_signed_integer<signed long long> : public true_type {};
+template <class _Tp> struct __libcpp_is_signed_integer                   : false_type {};
+template <>          struct __libcpp_is_signed_integer<signed char>      : true_type {};
+template <>          struct __libcpp_is_signed_integer<signed short>     : true_type {};
+template <>          struct __libcpp_is_signed_integer<signed int>       : true_type {};
+template <>          struct __libcpp_is_signed_integer<signed long>      : true_type {};
+template <>          struct __libcpp_is_signed_integer<signed long long> : true_type {};
 #if _LIBCPP_HAS_INT128
-template <>          struct __libcpp_is_signed_integer<__int128_t>       : public true_type {};
+template <>          struct __libcpp_is_signed_integer<__int128_t>       : true_type {};
 #endif
 // clang-format on
 

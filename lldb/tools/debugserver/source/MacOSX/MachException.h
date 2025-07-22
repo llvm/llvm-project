@@ -17,7 +17,6 @@
 #include <vector>
 
 class MachProcess;
-class PThreadMutex;
 
 typedef union MachMessageTag {
   mach_msg_header_t hdr;

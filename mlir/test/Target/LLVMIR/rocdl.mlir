@@ -32,6 +32,13 @@ llvm.func @rocdl_special_regs() -> i32 {
 
   // CHECK: call range(i64 1, 65) i64 @__ockl_get_local_size(i32 0)
   %14 = rocdl.workgroup.dim.x range <i32, 1, 65> : i64
+
+  // CHECK: call i32 @llvm.amdgcn.wavefrontsize()
+  %15 = rocdl.wavefrontsize : i32
+
+  // CHECK: call range(i32 32, 65) i32 @llvm.amdgcn.wavefrontsize()
+  %16 = rocdl.wavefrontsize range <i32, 32, 65> : i32
+
   llvm.return %1 : i32
 }
 
@@ -841,12 +848,15 @@ llvm.func @rocdl.ds.read.tr(%ptr : !llvm.ptr<3>) -> vector<4xf16> {
   llvm.return %r3 : vector<4xf16>
 }
 
+llvm.func @rocdl.load.to.lds(%src : !llvm.ptr<7>, %dst: !llvm.ptr<3>) {
+  //CHECK: call void @llvm.amdgcn.load.to.lds.p7
+  rocdl.load.to.lds %src, %dst, 4, 0, 0 : !llvm.ptr<7>
+  llvm.return
+}
+
 llvm.func @rocdl.global.load.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
-  %aux = llvm.mlir.constant(0 : i32) : i32
-  %offset = llvm.mlir.constant(0 : i32) : i32
-  %size = llvm.mlir.constant(10 : i32) : i32
   //CHECK: call void @llvm.amdgcn.global.load.lds
-  rocdl.global.load.lds %src, %dst, %size, %offset, %aux
+  rocdl.global.load.lds %src, %dst, 4, 0, 0
   llvm.return
 }
 
@@ -870,6 +880,20 @@ llvm.func @rocdl.make.buffer.rsrc.p7.p1(%ptr : !llvm.ptr<1>,
   // CHECK: ret ptr addrspace(7) %[[rsrc]]
   %rsrc = rocdl.make.buffer.rsrc %ptr, %stride, %numRecords, %flags : <1> to <7>
   llvm.return %rsrc : !llvm.ptr<7>
+}
+
+llvm.func @rocdl.permlanex16(%src0 : f32, %src1 : i32, %src2 : vector<2 x f32>, %src3 : vector<2 x i32>) -> f32 {
+  %cst0 = llvm.mlir.constant(-1 : i32) : i32
+  // CHECK-LABEL: rocdl.permlanex16
+  // CHECK: call float @llvm.amdgcn.permlanex16.f32(float %{{.*}}, float %{{.*}}, i32 -1, i32 -1, i1 false, i1 true)
+  %ret0 = rocdl.permlanex16 %src0, %src0, %cst0, %cst0, 0, -1 : f32, i32
+  // CHECK: call i32 @llvm.amdgcn.permlanex16.i32(i32 %{{.*}}, i32 %{{.*}}, i32 -1, i32 -1, i1 false, i1 true)
+  %ret1 = rocdl.permlanex16 %src1, %src1, %cst0, %cst0, 0, -1 : i32, i32
+  // CHECK: call <2 x float> @llvm.amdgcn.permlanex16.v2f32(<2 x float> %{{.*}}, <2 x float> %{{.*}}, i32 -1, i32 -1, i1 false, i1 true)
+  %ret2 = rocdl.permlanex16 %src2, %src2, %cst0, %cst0, 0, -1 : vector<2 x f32>, i32
+  // CHECK: call <2 x i32> @llvm.amdgcn.permlanex16.v2i32(<2 x i32> %{{.*}}, <2 x i32> %{{.*}}, i32 -1, i32 -1, i1 false, i1 true)
+  %ret3 = rocdl.permlanex16 %src3, %src3, %cst0, %cst0, 0, -1 : vector<2 x i32>, i32
+  llvm.return %ret0 : f32
 }
 
 llvm.func @rocdl.wmma.fp8(%arg0 : vector<2 x i32>, %arg1 : vector<8xf32>) -> vector<8xf32> {

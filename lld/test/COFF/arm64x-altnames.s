@@ -10,6 +10,8 @@
 
 // RUN: not lld-link -out:out.dll -machine:arm64x -dll -noentry test-arm64.obj test-arm64ec.obj -alternatename:sym=altsym \
 // RUN:              2>&1 | FileCheck --check-prefix=ERR-NATIVE %s
+// RUN: not lld-link -out:out.dll -machine:arm64ec -dll -noentry test-arm64.obj test-arm64ec.obj -alternatename:sym=altsym \
+// RUN:              2>&1 | FileCheck --check-prefix=ERR-NATIVE %s
 
 // ERR-NATIVE-NOT:  test-arm64ec.obj
 // ERR-NATIVE:      lld-link: error: undefined symbol: sym (native symbol)
@@ -20,8 +22,12 @@
 
 // RUN: not lld-link -out:out.dll -machine:arm64x -dll -noentry test-arm64.obj test-arm64ec.obj drectve-arm64ec.obj \
 // RUN:              2>&1 | FileCheck --check-prefix=ERR-NATIVE %s
+// RUN: not lld-link -out:out.dll -machine:arm64ec -dll -noentry test-arm64.obj test-arm64ec.obj drectve-arm64ec.obj \
+// RUN:              2>&1 | FileCheck --check-prefix=ERR-NATIVE %s
 
 // RUN: not lld-link -out:out.dll -machine:arm64x -dll -noentry test-arm64.obj test-arm64ec.obj drectve-arm64.obj \
+// RUN:              2>&1 | FileCheck --check-prefix=ERR-EC %s
+// RUN: not lld-link -out:out.dll -machine:arm64ec -dll -noentry test-arm64.obj test-arm64ec.obj drectve-arm64.obj \
 // RUN:              2>&1 | FileCheck --check-prefix=ERR-EC %s
 
 // ERR-EC-NOT:  test-arm64.obj

@@ -3361,7 +3361,7 @@ define amdgpu_ps void @test_for_deactivating_lanes_in_wave32(ptr addrspace(6) in
 ; GFX9-W64-NEXT:    s_buffer_load_dword s0, s[0:3], 0x0
 ; GFX9-W64-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-W64-NEXT:    v_cmp_le_f32_e64 vcc, s0, 0
-; GFX9-W64-NEXT:    s_andn2_b64 s[4:5], exec, vcc
+; GFX9-W64-NEXT:    s_andn2_b64 exec, exec, vcc
 ; GFX9-W64-NEXT:    s_cbranch_scc0 .LBB55_1
 ; GFX9-W64-NEXT:    s_endpgm
 ; GFX9-W64-NEXT:  .LBB55_1:
@@ -3377,7 +3377,7 @@ define amdgpu_ps void @test_for_deactivating_lanes_in_wave32(ptr addrspace(6) in
 ; GFX10-W32-NEXT:    s_buffer_load_dword s0, s[0:3], 0x0
 ; GFX10-W32-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-W32-NEXT:    v_cmp_le_f32_e64 vcc_lo, s0, 0
-; GFX10-W32-NEXT:    s_andn2_b32 s4, exec_lo, vcc_lo
+; GFX10-W32-NEXT:    s_andn2_b32 exec_lo, exec_lo, vcc_lo
 ; GFX10-W32-NEXT:    s_cbranch_scc0 .LBB55_1
 ; GFX10-W32-NEXT:    s_endpgm
 ; GFX10-W32-NEXT:  .LBB55_1:

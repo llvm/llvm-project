@@ -32,10 +32,9 @@ protected:
         DiagID(new DiagnosticIDs()),
         Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions),
-        Search(std::make_shared<HeaderSearchOptions>(), SourceMgr, Diags,
-               LangOpts, Target.get()) {
+        Search(HSOpts, SourceMgr, Diags, LangOpts, Target.get()) {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
 
   void addSearchDir(llvm::StringRef Dir) {
@@ -87,6 +86,7 @@ protected:
   LangOptions LangOpts;
   std::shared_ptr<TargetOptions> TargetOpts;
   IntrusiveRefCntPtr<TargetInfo> Target;
+  HeaderSearchOptions HSOpts;
   HeaderSearch Search;
   std::unique_ptr<HeaderMap> HMap;
 };
