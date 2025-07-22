@@ -22,10 +22,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-LIBC_INLINE static ErrorOr<size_t> wcsnrtombs(char *__restrict dest,
-                                              const wchar_t **__restrict ptr_to_src,
-                                              size_t num_src_widechars, size_t dest_len,
-                                              mbstate *ps) {
+LIBC_INLINE static ErrorOr<size_t>
+wcsnrtombs(char *__restrict dest, const wchar_t **__restrict ptr_to_src,
+           size_t num_src_widechars, size_t dest_len, mbstate *ps) {
   LIBC_CRASH_ON_NULLPTR(ptr_to_src);
   LIBC_CRASH_ON_NULLPTR(ps);
 
@@ -36,8 +35,9 @@ LIBC_INLINE static ErrorOr<size_t> wcsnrtombs(char *__restrict dest,
   if (dest == nullptr)
     dest_len = SIZE_MAX;
 
-  StringConverter<char32_t> str_conv(reinterpret_cast<const char32_t *>(*ptr_to_src),
-                                     ps, dest_len, num_src_widechars);
+  StringConverter<char32_t> str_conv(
+      reinterpret_cast<const char32_t *>(*ptr_to_src), ps, dest_len,
+      num_src_widechars);
   size_t dst_idx = 0;
   ErrorOr<char8_t> converted = str_conv.popUTF8();
   while (converted.has_value()) {
