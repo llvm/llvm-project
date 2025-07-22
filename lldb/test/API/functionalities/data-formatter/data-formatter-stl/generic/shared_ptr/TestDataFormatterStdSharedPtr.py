@@ -77,7 +77,7 @@ class TestCase(TestBase):
         self.assertEqual(str(valobj), '(User) *pointer = (id = 30, name = "steph")')
 
         self.expect_var_path("sp_user->id", type="int", value="30")
-        self.expect_var_path("sp_user->name", type="std::string", summary='"steph"')
+        self.expect_var_path("sp_user->name", type="string", summary='"steph"')
 
         valobj = self.expect_var_path(
             "si", type="std::shared_ptr<int>", summary="47 strong=2 weak=0"

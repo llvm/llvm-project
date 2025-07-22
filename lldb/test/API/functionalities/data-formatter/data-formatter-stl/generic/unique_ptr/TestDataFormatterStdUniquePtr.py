@@ -84,7 +84,7 @@ class TestCase(TestBase):
         self.assertNotEqual(valobj.child[0].unsigned, 0)
 
         self.expect_var_path("up_user->id", type="int", value="30")
-        self.expect_var_path("up_user->name", type="std::string", summary='"steph"')
+        self.expect_var_path("up_user->name", type="string", summary='"steph"')
 
         self.runCmd("settings set target.experimental.use-DIL true")
         self.expect_var_path("ptr_node->value", value="1")

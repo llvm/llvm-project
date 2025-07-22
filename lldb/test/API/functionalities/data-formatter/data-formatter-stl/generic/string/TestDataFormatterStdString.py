@@ -39,7 +39,7 @@ class StdStringDataFormatterTestCase(TestBase):
         ns = self.namespace
 
         # Check 'S' pre-assignment.
-        self.expect("frame variable S", substrs=['(%s::wstring) S = L"!!!!"' % ns])
+        self.expect("frame variable S", substrs=['(wstring) S = L"!!!!"'])
 
         thread.StepOver()
 
@@ -54,32 +54,29 @@ class StdStringDataFormatterTestCase(TestBase):
         )
 
         self.expect_expr(
-            "s", result_type=ns + "::wstring", result_summary='L"hello world! מזל טוב!"'
+            "s", result_type="wstring", result_summary='L"hello world! מזל טוב!"'
         )
 
-        self.expect_expr(
-            "q", result_type=ns + "::string", result_summary='"hello world"'
-        )
+        self.expect_expr("q", result_type="string", result_summary='"hello world"')
 
         self.expect_expr(
             "Q",
-            result_type=ns + "::string",
+            result_type="string",
             result_summary='"quite a long std::strin with lots of info inside it"',
         )
 
         self.expect(
             "frame variable",
             substrs=[
-                '(%s::wstring) wempty = L""' % ns,
-                '(%s::wstring) s = L"hello world! מזל טוב!"' % ns,
-                '(%s::wstring) S = L"!!!!!"' % ns,
+                '(wstring) wempty = L""',
+                '(wstring) s = L"hello world! מזל טוב!"',
+                '(wstring) S = L"!!!!!"',
                 "(const wchar_t *) mazeltov = 0x",
                 'L"מזל טוב"',
-                '(%s::string) empty = ""' % ns,
-                '(%s::string) q = "hello world"' % ns,
-                '(%s::string) Q = "quite a long std::strin with lots of info inside it"'
-                % ns,
-                "(%s::string *) null_str = nullptr" % ns,
+                '(string) empty = ""',
+                '(string) q = "hello world"',
+                '(string) Q = "quite a long std::strin with lots of info inside it"',
+                "(string *) null_str = nullptr",
             ],
         )
 
@@ -139,10 +136,10 @@ class StdStringDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable",
             substrs=[
-                '(%s::u16string) u16_string = u"ß水氶"' % ns,
-                '(%s::u16string) u16_empty = u""' % ns,
-                '(%s::u32string) u32_string = U"🍄🍅🍆🍌"' % ns,
-                '(%s::u32string) u32_empty = U""' % ns,
+                '(u16string) u16_string = u"ß水氶"',
+                '(u16string) u16_empty = u""',
+                '(u32string) u32_string = U"🍄🍅🍆🍌"',
+                '(u32string) u32_empty = U""',
             ],
         )
 
@@ -217,9 +214,6 @@ class StdStringDataFormatterTestCase(TestBase):
         self.build(dictionary={"USE_LIBCPP": 1})
         self.do_test_summary_unavailable()
 
-    @expectedFailureAll(
-        bugnumber="libstdc++ std::string summary provider doesn't output a user-friendly message for invalid strings."
-    )
     @add_test_categories(["libstdcxx"])
     def test_unavailable_summary_libstdcxx(self):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
@@ -268,9 +262,8 @@ class StdStringDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable",
             substrs=[
-                '(%s::string) IHaveEmbeddedZeros = "a\\0b\\0c\\0d"' % ns,
-                '(%s::wstring) IHaveEmbeddedZerosToo = L"hello world!\\0てざ ル゜䋨ミ㠧槊 きゅへ狦穤襩 じゃ馩リョ 䤦監"'
-                % ns,
+                '(string) IHaveEmbeddedZeros = "a\\0b\\0c\\0d"',
+                '(wstring) IHaveEmbeddedZerosToo = L"hello world!\\0てざ ル゜䋨ミ㠧槊 きゅへ狦穤襩 じゃ馩リョ 䤦監"',
             ],
         )
 
