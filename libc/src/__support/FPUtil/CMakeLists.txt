@@ -274,8 +274,8 @@ add_header_library(
     bfloat16.h
   DEPENDS
     .cast
-    .dyadic_float
     .comparison_operations
+    .dyadic_float
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
     libc.src.__support.macros.config
