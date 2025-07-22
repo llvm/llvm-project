@@ -3595,11 +3595,19 @@ static Value *foldOrOfInversions(BinaryOperator &I,
   return nullptr;
 }
 
-/// Match "shufflevector -> bitcast" or "extractelement -> zext -> shl" patterns
-/// which extract vector elements and pack them in the same relative positions.
+/// Match \p V as "shufflevector -> bitcast" or "extractelement -> zext -> shl"
+/// patterns, which extract vector elements and pack them in the same relative
+/// positions.
+///
+/// \p Vec is the underlying vector being extracted from.
+/// \p Mask is a bitmask identifying which packed elements are obtained from the
+/// vector.
+/// \p VecOffset is the vector element corresponding to index 0 of the
+/// mask.
 static bool matchSubIntegerPackFromVector(Value *V, Value *&Vec,
-                                          uint64_t &VecOffset,
-                                          SmallBitVector &Mask) {
+                                          int64_t &VecOffset,
+                                          SmallBitVector &Mask,
+                                          const DataLayout &DL) {
   static const auto m_ConstShlOrSelf = [](const auto &Base, uint64_t &ShlAmt) {
     ShlAmt = 0;
     return m_CombineOr(m_Shl(Base, m_ConstantInt(ShlAmt)), Base);
@@ -3621,13 +3629,15 @@ static bool matchSubIntegerPackFromVector(Value *V, Value *&Vec,
     const unsigned TargetBitWidth = V->getType()->getIntegerBitWidth();
     if (TargetBitWidth % EltBitWidth != 0 || ShlAmt % EltBitWidth != 0)
       return false;
+    const unsigned TargetEltWidth = TargetBitWidth / EltBitWidth;
     const unsigned ShlEltAmt = ShlAmt / EltBitWidth;
 
-    if (ShlEltAmt > VecIdx)
-      return false;
-    VecOffset = VecIdx - ShlEltAmt;
-    Mask.resize(V->getType()->getIntegerBitWidth() / EltBitWidth);
-    Mask.set(ShlEltAmt);
+    const unsigned MaskIdx =
+        DL.isLittleEndian() ? ShlEltAmt : TargetEltWidth - ShlEltAmt - 1;
+
+    VecOffset = static_cast<int64_t>(VecIdx) - static_cast<int64_t>(MaskIdx);
+    Mask.resize(TargetEltWidth);
+    Mask.set(MaskIdx);
     return true;
   }
 
@@ -3700,19 +3710,20 @@ static bool matchSubIntegerPackFromVector(Value *V, Value *&Vec,
   return true;
 }
 
-/// Try to fold the or of two scalar integers whose contents are packed elements
-/// of the same vector.
+/// Try to fold the join of two scalar integers whose contents are packed
+/// elements of the same vector.
 Instruction *foldIntegerPackFromVector(Instruction &I,
-                                       InstCombiner::BuilderTy &Builder) {
+                                       InstCombiner::BuilderTy &Builder,
+                                       const DataLayout &DL) {
   assert(I.getOpcode() == Instruction::Or);
   Value *LhsVec, *RhsVec;
-  uint64_t LhsVecOffset, RhsVecOffset;
+  int64_t LhsVecOffset, RhsVecOffset;
   SmallBitVector Mask;
   if (!matchSubIntegerPackFromVector(I.getOperand(0), LhsVec, LhsVecOffset,
-                                     Mask))
+                                     Mask, DL))
     return nullptr;
   if (!matchSubIntegerPackFromVector(I.getOperand(1), RhsVec, RhsVecOffset,
-                                     Mask))
+                                     Mask, DL))
     return nullptr;
   if (LhsVec != RhsVec || LhsVecOffset != RhsVecOffset)
     return nullptr;
@@ -3721,8 +3732,10 @@ Instruction *foldIntegerPackFromVector(Instruction &I,
   const unsigned ZeroVecIdx =
       cast<FixedVectorType>(LhsVec->getType())->getNumElements();
   SmallVector<int> ShuffleMask(Mask.size(), ZeroVecIdx);
-  for (unsigned Idx : Mask.set_bits())
+  for (unsigned Idx : Mask.set_bits()) {
+    assert(LhsVecOffset + Idx >= 0);
     ShuffleMask[Idx] = LhsVecOffset + Idx;
+  }
 
   Value *MaskedVec = Builder.CreateShuffleVector(
       LhsVec, Constant::getNullValue(LhsVec->getType()), ShuffleMask,
@@ -3826,7 +3839,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *X = foldComplexAndOrPatterns(I, Builder))
     return X;
 
-  if (Instruction *X = foldIntegerPackFromVector(I, Builder))
+  if (Instruction *X = foldIntegerPackFromVector(I, Builder, DL))
     return X;
 
   // (A & B) | (C & D) -> A ^ D where A == ~C && B == ~D
