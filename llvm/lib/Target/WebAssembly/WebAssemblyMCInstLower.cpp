@@ -235,15 +235,17 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
       // get confused.
       unsigned DescIndex = I - NumVariadicDefs;
       assert(DescIndex < Desc.NumOperands && "unexpected CImmediate operand");
-      const MCOperandInfo &Info = Desc.operands()[DescIndex];
-      assert(Info.OperandType != WebAssembly::OPERAND_TYPEINDEX && "unexpected CImmediate operand");
+      auto Operands = Desc.operands();
+      const MCOperandInfo &Info = Operands[DescIndex];
+      assert(Info.OperandType == WebAssembly::OPERAND_TYPEINDEX && "unexpected CImmediate operand");
       MCOp = lowerEncodedFunctionSignature(MO.getCImm()->getValue());
       break;
     }
     case MachineOperand::MO_Immediate: {
       unsigned DescIndex = I - NumVariadicDefs;
       if (DescIndex < Desc.NumOperands) {
-        const MCOperandInfo &Info = Desc.operands()[DescIndex];
+        auto Operands = Desc.operands();
+        const MCOperandInfo &Info = Operands[DescIndex];
         // Replace type index placeholder with actual type index. The type index
         // placeholders are Immediates and have an operand type of
         // OPERAND_TYPEINDEX or OPERAND_SIGNATURE.
