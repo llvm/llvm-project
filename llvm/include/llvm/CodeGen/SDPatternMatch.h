@@ -93,7 +93,7 @@ struct Value_match {
 
   explicit Value_match(SDValue Match) : MatchVal(Match) {}
 
-  template <typename MatchContext> bool match(const MatchContext &, SDValue N) const {
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
     if (MatchVal)
       return MatchVal == N;
     return N.getNode();
