@@ -62,8 +62,7 @@ def libc_test(
         name = name,
         local_defines = local_defines + LIBC_CONFIGURE_OPTIONS,
         deps = deps,
-        # For complex floating point literals.
-        copts = copts + libc_common_copts() + ["-fext-numeric-literals"],
+        copts = copts + libc_common_copts(),
         linkstatic = 1,
         **kwargs
     )

@@ -110,6 +110,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-infinite-loop
+  <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
+  variables introduced by structured bindings.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
