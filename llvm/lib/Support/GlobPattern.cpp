@@ -132,8 +132,9 @@ parseBraceExpansions(StringRef S, std::optional<size_t> MaxSubPatterns) {
   return std::move(SubPatterns);
 }
 
-Expected<GlobPattern>
-GlobPattern::create(StringRef S, std::optional<size_t> MaxSubPatterns) {
+Expected<GlobPattern> GlobPattern::create(StringRef S,
+                                          std::optional<size_t> MaxSubPatterns,
+                                          bool IsSlashAgnostic) {
   GlobPattern Pat;
 
   // Store the prefix that does not contain any metacharacter.
@@ -147,7 +148,7 @@ GlobPattern::create(StringRef S, std::optional<size_t> MaxSubPatterns) {
   if (auto Err = parseBraceExpansions(S, MaxSubPatterns).moveInto(SubPats))
     return std::move(Err);
   for (StringRef SubPat : SubPats) {
-    auto SubGlobOrErr = SubGlobPattern::create(SubPat);
+    auto SubGlobOrErr = SubGlobPattern::create(SubPat, IsSlashAgnostic);
     if (!SubGlobOrErr)
       return SubGlobOrErr.takeError();
     Pat.SubGlobs.push_back(*SubGlobOrErr);
@@ -157,8 +158,9 @@ GlobPattern::create(StringRef S, std::optional<size_t> MaxSubPatterns) {
 }
 
 Expected<GlobPattern::SubGlobPattern>
-GlobPattern::SubGlobPattern::create(StringRef S) {
+GlobPattern::SubGlobPattern::create(StringRef S, bool SlashAgnostic) {
   SubGlobPattern Pat;
+  Pat.IsSlashAgnostic = SlashAgnostic;
 
   // Parse brackets.
   Pat.Pat.assign(S.begin(), S.end());
@@ -231,7 +233,7 @@ bool GlobPattern::SubGlobPattern::match(StringRef Str) const {
         ++S;
         continue;
       }
-    } else if (*P == '/' && (*S == '/' || *S == '\\')) {
+    } else if (IsSlashAgnostic && *P == '/' && (*S == '/' || *S == '\\')) {
       ++P;
       ++S;
       continue;

@@ -59,7 +59,8 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber,
   Glob->LineNo = LineNumber;
   // We must be sure to use the string in `Glob` rather than the provided
   // reference which could be destroyed before match() is called
-  if (auto Err = GlobPattern::create(Glob->Name, /*MaxSubPatterns=*/1024)
+  if (auto Err = GlobPattern::create(Glob->Name, /*MaxSubPatterns=*/1024,
+                                     /*IsSlashAgnostic=*/true)
                      .moveInto(Glob->Pattern))
     return Err;
   Globs.push_back(std::move(Glob));
