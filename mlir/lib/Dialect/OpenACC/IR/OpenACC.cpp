@@ -1045,7 +1045,7 @@ LogicalResult acc::ReductionRecipeOp::verifyRegions() {
 template <typename Op>
 static LogicalResult checkDataOperands(Op op,
                                        const mlir::ValueRange &operands) {
-  for (mlir::Value operand : operands) {
+  for (mlir::Value operand : operands)
     if (!mlir::isa<acc::AttachOp, acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
                    acc::DeleteOp, acc::DetachOp, acc::DevicePtrOp,
                    acc::GetDevicePtrOp, acc::NoCreateOp, acc::PresentOp>(
@@ -1053,10 +1053,6 @@ static LogicalResult checkDataOperands(Op op,
       return op.emitError(
           "expect data entry/exit operation or acc.getdeviceptr "
           "as defining op");
-    mlir::SymbolRefAttr operandRecipe = getRecipe(operand.getDefiningOp());
-    if (operandRecipe)
-      return op.emitError("recipe not expected for data mapping operations");
-  }
   return success();
 }
 
