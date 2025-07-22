@@ -927,7 +927,7 @@ namespace dynamic_alloc {
   constexpr void use_after_free() { // expected-error {{never produces a constant expression}}
     int *p = new int;
     delete p;
-    *p = 1; // expected-note {{assignment to heap allocated object that has been deleted}}
+    *p = 1; // expected-note {{read of heap allocated object that has been deleted}}
   }
   constexpr void use_after_free_2() { // expected-error {{never produces a constant expression}}
     struct X { constexpr void f() {} };
