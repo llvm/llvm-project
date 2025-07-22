@@ -844,6 +844,10 @@ def ConvertMathToFuncs : Pass<"convert-math-to-funcs", "ModuleOp"> {
 def ConvertMemRefToEmitC : Pass<"convert-memref-to-emitc", "ModuleOp"> {
   let summary = "Convert MemRef dialect to EmitC dialect";
   let dependentDialects = ["emitc::EmitCDialect"];
+  let options = [Option<
+      "lowerToCpp", "lower-to-cpp", "bool",
+      /*default=*/"false",
+      /*description=*/"Target C++ (true) instead of C (false)">];
 }
 
 //===----------------------------------------------------------------------===//

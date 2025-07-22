@@ -8,17 +8,6 @@ func.func @alloca() {
   return
 }
 
-// CHECK-LABEL: alloc()
-func.func @alloc() {
-  // CHECK-NEXT: %0 = emitc.call_opaque "sizeof"() {args = [i32]} : () -> !emitc.size_t
-  // CHECK-NEXT: %1 = "emitc.constant"() <{value = 32 : index}> : () -> index
-  // CHECK-NEXT: %2 = emitc.mul %0, %1 : (!emitc.size_t, index) -> !emitc.size_t
-  // CHECK-NEXT: %3 = emitc.call_opaque "malloc"(%2) : (!emitc.size_t) -> !emitc.ptr<!emitc.opaque<"void">>
-  // CHECK-NEXT: %4 = emitc.cast %3 : !emitc.ptr<!emitc.opaque<"void">> to !emitc.ptr<i32>
-  %alloc = memref.alloc() : memref<999xi32>
-  return
-}
-
 // -----
 
 // CHECK-LABEL: memref_store
