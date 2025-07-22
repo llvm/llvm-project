@@ -1207,6 +1207,8 @@ Static Analyzer
 ---------------
 - Fixed a crash when C++20 parenthesized initializer lists are used. This issue
   was causing a crash in clang-tidy. (#GH136041)
+- The Clang Static Analyzer now handles parenthesized initialization.
+  (#GH148875)
 
 New features
 ^^^^^^^^^^^^
