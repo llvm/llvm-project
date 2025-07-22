@@ -45,7 +45,7 @@ def : Function {
     let name = "olWaitQueue";
     let desc = "Make any future work submitted to this queue wait until the provided events are complete.";
     let details = [
-      "All events in `Events` must complete beforet he queue is unblocked.",
+      "All events in `Events` must complete before the queue is unblocked.",
       "The input events can be from any queue on any device provided by the same platform as `Queue`.",
     ];
     let params = [
