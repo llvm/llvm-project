@@ -59,7 +59,12 @@ enum FeatPriorities {
   PRIOR_SME_I64,
   PRIOR_SME2,
   PRIOR_MOPS,
-  PRIOR_CSSC
+  PRIOR_CSSC,
+  PRIOR_5,
+  PRIOR_4,
+  PRIOR_3,
+  PRIOR_2,
+  PRIOR_1
 };
 
 #endif
