@@ -18,23 +18,25 @@ define i8 @test_load8(ptr %a) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 56
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 72057594037927935
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP6]], [[TMP10]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF2:![0-9]+]]
-; CHECK:       12:
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 0)
-; CHECK-NEXT:    br label [[TMP13]]
-; CHECK:       13:
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 56
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; CHECK-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP9]], 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP7]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF2:![0-9]+]]
+; CHECK:       14:
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 0)
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
 ; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i8 [[B]]
 ;
@@ -42,11 +44,12 @@ define i8 @test_load8(ptr %a) sanitize_hwaddress {
 ; NOFASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NOFASTPATH-NEXT:  entry:
 ; NOFASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; NOFASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; NOFASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; NOFASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; NOFASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 0)
+; NOFASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; NOFASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; NOFASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; NOFASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; NOFASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 0)
 ; NOFASTPATH-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; NOFASTPATH-NEXT:    ret i8 [[B]]
 ;
@@ -54,23 +57,25 @@ define i8 @test_load8(ptr %a) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; FASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; FASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; FASTPATH-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; FASTPATH-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 56
-; FASTPATH-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; FASTPATH-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; FASTPATH-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
-; FASTPATH-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; FASTPATH-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP6]], [[TMP10]]
-; FASTPATH-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF2:![0-9]+]]
-; FASTPATH:       12:
-; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 0)
-; FASTPATH-NEXT:    br label [[TMP13]]
-; FASTPATH:       13:
+; FASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; FASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; FASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; FASTPATH-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 56
+; FASTPATH-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; FASTPATH-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 8
+; FASTPATH-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; FASTPATH-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP9]], 4
+; FASTPATH-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP10]]
+; FASTPATH-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; FASTPATH-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP7]], [[TMP12]]
+; FASTPATH-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF2:![0-9]+]]
+; FASTPATH:       14:
+; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 0)
+; FASTPATH-NEXT:    br label [[TMP15]]
+; FASTPATH:       15:
 ; FASTPATH-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; FASTPATH-NEXT:    ret i8 [[B]]
 ;
@@ -81,16 +86,17 @@ define i8 @test_load8(ptr %a) sanitize_hwaddress {
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; ABORT-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF2:![0-9]+]]
-; ABORT-DYNAMIC-SHADOW:       8:
-; ABORT-DYNAMIC-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 0)
-; ABORT-DYNAMIC-SHADOW-NEXT:    br label [[TMP9]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP5]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF2:![0-9]+]]
 ; ABORT-DYNAMIC-SHADOW:       9:
+; ABORT-DYNAMIC-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 0)
+; ABORT-DYNAMIC-SHADOW-NEXT:    br label [[TMP10]]
+; ABORT-DYNAMIC-SHADOW:       10:
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; ABORT-DYNAMIC-SHADOW-NEXT:    ret i8 [[B]]
 ;
@@ -101,33 +107,34 @@ define i8 @test_load8(ptr %a) sanitize_hwaddress {
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP22:%.*]], !prof [[PROF2:![0-9]+]]
-; RECOVER-DYNAMIC-SHADOW:       8:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP6]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       10:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 96", "{x10}"(i64 [[TMP0]])
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP21:%.*]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP5]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP23:%.*]], !prof [[PROF2:![0-9]+]]
+; RECOVER-DYNAMIC-SHADOW:       9:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP7]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF2]]
 ; RECOVER-DYNAMIC-SHADOW:       11:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 0
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = icmp uge i8 [[TMP14]], [[TMP6]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP15]], label [[TMP10]], label [[TMP16:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       16:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP17:%.*]] = or i64 [[TMP3]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP2]], [[TMP19]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP20]], label [[TMP10]], label [[TMP21]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       21:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP22]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 96", "{x10}"(i64 [[TMP0]])
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP22:%.*]]
+; RECOVER-DYNAMIC-SHADOW:       12:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 0
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP16:%.*]] = icmp uge i8 [[TMP15]], [[TMP7]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP16]], label [[TMP11]], label [[TMP17:%.*]], !prof [[PROF2]]
+; RECOVER-DYNAMIC-SHADOW:       17:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = or i64 [[TMP0]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP2]], [[TMP20]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP21]], label [[TMP11]], label [[TMP22]], !prof [[PROF2]]
 ; RECOVER-DYNAMIC-SHADOW:       22:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP23]]
+; RECOVER-DYNAMIC-SHADOW:       23:
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    ret i8 [[B]]
 ;
@@ -138,16 +145,17 @@ define i8 @test_load8(ptr %a) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; ABORT-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF2:![0-9]+]]
-; ABORT-ZERO-BASED-SHADOW:       8:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 0)
-; ABORT-ZERO-BASED-SHADOW-NEXT:    br label [[TMP9]]
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; ABORT-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF2:![0-9]+]]
 ; ABORT-ZERO-BASED-SHADOW:       9:
+; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 0)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    br label [[TMP10]]
+; ABORT-ZERO-BASED-SHADOW:       10:
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret i8 [[B]]
 ;
@@ -158,33 +166,34 @@ define i8 @test_load8(ptr %a) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP22:%.*]], !prof [[PROF2:![0-9]+]]
-; RECOVER-ZERO-BASED-SHADOW:       8:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP6]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       10:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 96", "{x10}"(i64 [[TMP0]])
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP21:%.*]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP23:%.*]], !prof [[PROF2:![0-9]+]]
+; RECOVER-ZERO-BASED-SHADOW:       9:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP7]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF2]]
 ; RECOVER-ZERO-BASED-SHADOW:       11:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 0
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = icmp uge i8 [[TMP14]], [[TMP6]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP15]], label [[TMP10]], label [[TMP16:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       16:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP17:%.*]] = or i64 [[TMP3]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP2]], [[TMP19]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP20]], label [[TMP10]], label [[TMP21]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       21:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP22]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 96", "{x10}"(i64 [[TMP0]])
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP22:%.*]]
+; RECOVER-ZERO-BASED-SHADOW:       12:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 0
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP16:%.*]] = icmp uge i8 [[TMP15]], [[TMP7]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP16]], label [[TMP11]], label [[TMP17:%.*]], !prof [[PROF2]]
+; RECOVER-ZERO-BASED-SHADOW:       17:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = or i64 [[TMP0]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP2]], [[TMP20]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP21]], label [[TMP11]], label [[TMP22]], !prof [[PROF2]]
 ; RECOVER-ZERO-BASED-SHADOW:       22:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP23]]
+; RECOVER-ZERO-BASED-SHADOW:       23:
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret i8 [[B]]
 ;
@@ -198,23 +207,25 @@ define i16 @test_load16(ptr %a) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 56
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 72057594037927935
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP6]], [[TMP10]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF2]]
-; CHECK:       12:
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 1)
-; CHECK-NEXT:    br label [[TMP13]]
-; CHECK:       13:
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 56
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; CHECK-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP9]], 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP7]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF2]]
+; CHECK:       14:
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 1)
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
 ; CHECK-NEXT:    [[B:%.*]] = load i16, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i16 [[B]]
 ;
@@ -222,11 +233,12 @@ define i16 @test_load16(ptr %a) sanitize_hwaddress {
 ; NOFASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; NOFASTPATH-NEXT:  entry:
 ; NOFASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; NOFASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; NOFASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; NOFASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; NOFASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 1)
+; NOFASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; NOFASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; NOFASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; NOFASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; NOFASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 1)
 ; NOFASTPATH-NEXT:    [[B:%.*]] = load i16, ptr [[A]], align 4
 ; NOFASTPATH-NEXT:    ret i16 [[B]]
 ;
@@ -234,23 +246,25 @@ define i16 @test_load16(ptr %a) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; FASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; FASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; FASTPATH-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; FASTPATH-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 56
-; FASTPATH-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; FASTPATH-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; FASTPATH-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
-; FASTPATH-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; FASTPATH-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP6]], [[TMP10]]
-; FASTPATH-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF2]]
-; FASTPATH:       12:
-; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 1)
-; FASTPATH-NEXT:    br label [[TMP13]]
-; FASTPATH:       13:
+; FASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; FASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; FASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; FASTPATH-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 56
+; FASTPATH-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; FASTPATH-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 8
+; FASTPATH-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; FASTPATH-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP9]], 4
+; FASTPATH-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP10]]
+; FASTPATH-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; FASTPATH-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP7]], [[TMP12]]
+; FASTPATH-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF2]]
+; FASTPATH:       14:
+; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 1)
+; FASTPATH-NEXT:    br label [[TMP15]]
+; FASTPATH:       15:
 ; FASTPATH-NEXT:    [[B:%.*]] = load i16, ptr [[A]], align 4
 ; FASTPATH-NEXT:    ret i16 [[B]]
 ;
@@ -261,16 +275,17 @@ define i16 @test_load16(ptr %a) sanitize_hwaddress {
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; ABORT-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF2]]
-; ABORT-DYNAMIC-SHADOW:       8:
-; ABORT-DYNAMIC-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 1)
-; ABORT-DYNAMIC-SHADOW-NEXT:    br label [[TMP9]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP5]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF2]]
 ; ABORT-DYNAMIC-SHADOW:       9:
+; ABORT-DYNAMIC-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 1)
+; ABORT-DYNAMIC-SHADOW-NEXT:    br label [[TMP10]]
+; ABORT-DYNAMIC-SHADOW:       10:
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[B:%.*]] = load i16, ptr [[A]], align 4
 ; ABORT-DYNAMIC-SHADOW-NEXT:    ret i16 [[B]]
 ;
@@ -281,33 +296,34 @@ define i16 @test_load16(ptr %a) sanitize_hwaddress {
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP22:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       8:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP6]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       10:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 97", "{x10}"(i64 [[TMP0]])
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP21:%.*]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP5]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP23:%.*]], !prof [[PROF2]]
+; RECOVER-DYNAMIC-SHADOW:       9:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP7]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF2]]
 ; RECOVER-DYNAMIC-SHADOW:       11:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = icmp uge i8 [[TMP14]], [[TMP6]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP15]], label [[TMP10]], label [[TMP16:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       16:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP17:%.*]] = or i64 [[TMP3]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP2]], [[TMP19]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP20]], label [[TMP10]], label [[TMP21]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       21:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP22]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 97", "{x10}"(i64 [[TMP0]])
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP22:%.*]]
+; RECOVER-DYNAMIC-SHADOW:       12:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP16:%.*]] = icmp uge i8 [[TMP15]], [[TMP7]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP16]], label [[TMP11]], label [[TMP17:%.*]], !prof [[PROF2]]
+; RECOVER-DYNAMIC-SHADOW:       17:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = or i64 [[TMP0]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP2]], [[TMP20]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP21]], label [[TMP11]], label [[TMP22]], !prof [[PROF2]]
 ; RECOVER-DYNAMIC-SHADOW:       22:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP23]]
+; RECOVER-DYNAMIC-SHADOW:       23:
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[B:%.*]] = load i16, ptr [[A]], align 4
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    ret i16 [[B]]
 ;
@@ -318,16 +334,17 @@ define i16 @test_load16(ptr %a) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; ABORT-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF2]]
-; ABORT-ZERO-BASED-SHADOW:       8:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 1)
-; ABORT-ZERO-BASED-SHADOW-NEXT:    br label [[TMP9]]
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; ABORT-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF2]]
 ; ABORT-ZERO-BASED-SHADOW:       9:
+; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 1)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    br label [[TMP10]]
+; ABORT-ZERO-BASED-SHADOW:       10:
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i16, ptr [[A]], align 4
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret i16 [[B]]
 ;
@@ -338,33 +355,34 @@ define i16 @test_load16(ptr %a) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP22:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       8:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP6]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       10:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 97", "{x10}"(i64 [[TMP0]])
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP21:%.*]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP23:%.*]], !prof [[PROF2]]
+; RECOVER-ZERO-BASED-SHADOW:       9:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP7]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF2]]
 ; RECOVER-ZERO-BASED-SHADOW:       11:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = icmp uge i8 [[TMP14]], [[TMP6]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP15]], label [[TMP10]], label [[TMP16:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       16:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP17:%.*]] = or i64 [[TMP3]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP2]], [[TMP19]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP20]], label [[TMP10]], label [[TMP21]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       21:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP22]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 97", "{x10}"(i64 [[TMP0]])
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP22:%.*]]
+; RECOVER-ZERO-BASED-SHADOW:       12:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP16:%.*]] = icmp uge i8 [[TMP15]], [[TMP7]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP16]], label [[TMP11]], label [[TMP17:%.*]], !prof [[PROF2]]
+; RECOVER-ZERO-BASED-SHADOW:       17:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = or i64 [[TMP0]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP2]], [[TMP20]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP21]], label [[TMP11]], label [[TMP22]], !prof [[PROF2]]
 ; RECOVER-ZERO-BASED-SHADOW:       22:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP23]]
+; RECOVER-ZERO-BASED-SHADOW:       23:
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i16, ptr [[A]], align 4
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret i16 [[B]]
 ;
@@ -378,23 +396,25 @@ define i32 @test_load32(ptr %a) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 56
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 72057594037927935
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP6]], [[TMP10]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF2]]
-; CHECK:       12:
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 2)
-; CHECK-NEXT:    br label [[TMP13]]
-; CHECK:       13:
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 56
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; CHECK-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP9]], 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP7]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF2]]
+; CHECK:       14:
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 2)
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
 ; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
@@ -402,11 +422,12 @@ define i32 @test_load32(ptr %a) sanitize_hwaddress {
 ; NOFASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; NOFASTPATH-NEXT:  entry:
 ; NOFASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; NOFASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; NOFASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; NOFASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; NOFASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 2)
+; NOFASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; NOFASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; NOFASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; NOFASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; NOFASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 2)
 ; NOFASTPATH-NEXT:    [[B:%.*]] = load i32, ptr [[A]], align 4
 ; NOFASTPATH-NEXT:    ret i32 [[B]]
 ;
@@ -414,23 +435,25 @@ define i32 @test_load32(ptr %a) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; FASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; FASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; FASTPATH-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; FASTPATH-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 56
-; FASTPATH-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; FASTPATH-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; FASTPATH-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
-; FASTPATH-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; FASTPATH-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP6]], [[TMP10]]
-; FASTPATH-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF2]]
-; FASTPATH:       12:
-; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 2)
-; FASTPATH-NEXT:    br label [[TMP13]]
-; FASTPATH:       13:
+; FASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; FASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; FASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; FASTPATH-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 56
+; FASTPATH-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; FASTPATH-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 8
+; FASTPATH-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; FASTPATH-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP9]], 4
+; FASTPATH-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP10]]
+; FASTPATH-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; FASTPATH-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP7]], [[TMP12]]
+; FASTPATH-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF2]]
+; FASTPATH:       14:
+; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 2)
+; FASTPATH-NEXT:    br label [[TMP15]]
+; FASTPATH:       15:
 ; FASTPATH-NEXT:    [[B:%.*]] = load i32, ptr [[A]], align 4
 ; FASTPATH-NEXT:    ret i32 [[B]]
 ;
@@ -441,16 +464,17 @@ define i32 @test_load32(ptr %a) sanitize_hwaddress {
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; ABORT-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF2]]
-; ABORT-DYNAMIC-SHADOW:       8:
-; ABORT-DYNAMIC-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 2)
-; ABORT-DYNAMIC-SHADOW-NEXT:    br label [[TMP9]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP5]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF2]]
 ; ABORT-DYNAMIC-SHADOW:       9:
+; ABORT-DYNAMIC-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 2)
+; ABORT-DYNAMIC-SHADOW-NEXT:    br label [[TMP10]]
+; ABORT-DYNAMIC-SHADOW:       10:
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[B:%.*]] = load i32, ptr [[A]], align 4
 ; ABORT-DYNAMIC-SHADOW-NEXT:    ret i32 [[B]]
 ;
@@ -461,33 +485,34 @@ define i32 @test_load32(ptr %a) sanitize_hwaddress {
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP22:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       8:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP6]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       10:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 98", "{x10}"(i64 [[TMP0]])
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP21:%.*]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP5]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP23:%.*]], !prof [[PROF2]]
+; RECOVER-DYNAMIC-SHADOW:       9:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP7]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF2]]
 ; RECOVER-DYNAMIC-SHADOW:       11:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 3
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = icmp uge i8 [[TMP14]], [[TMP6]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP15]], label [[TMP10]], label [[TMP16:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       16:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP17:%.*]] = or i64 [[TMP3]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP2]], [[TMP19]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP20]], label [[TMP10]], label [[TMP21]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       21:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP22]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 98", "{x10}"(i64 [[TMP0]])
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP22:%.*]]
+; RECOVER-DYNAMIC-SHADOW:       12:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 3
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP16:%.*]] = icmp uge i8 [[TMP15]], [[TMP7]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP16]], label [[TMP11]], label [[TMP17:%.*]], !prof [[PROF2]]
+; RECOVER-DYNAMIC-SHADOW:       17:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = or i64 [[TMP0]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP2]], [[TMP20]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP21]], label [[TMP11]], label [[TMP22]], !prof [[PROF2]]
 ; RECOVER-DYNAMIC-SHADOW:       22:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP23]]
+; RECOVER-DYNAMIC-SHADOW:       23:
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[B:%.*]] = load i32, ptr [[A]], align 4
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    ret i32 [[B]]
 ;
@@ -498,16 +523,17 @@ define i32 @test_load32(ptr %a) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; ABORT-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF2]]
-; ABORT-ZERO-BASED-SHADOW:       8:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 2)
-; ABORT-ZERO-BASED-SHADOW-NEXT:    br label [[TMP9]]
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; ABORT-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF2]]
 ; ABORT-ZERO-BASED-SHADOW:       9:
+; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 2)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    br label [[TMP10]]
+; ABORT-ZERO-BASED-SHADOW:       10:
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i32, ptr [[A]], align 4
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret i32 [[B]]
 ;
@@ -518,33 +544,34 @@ define i32 @test_load32(ptr %a) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP22:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       8:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP6]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       10:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 98", "{x10}"(i64 [[TMP0]])
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP21:%.*]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP23:%.*]], !prof [[PROF2]]
+; RECOVER-ZERO-BASED-SHADOW:       9:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP7]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF2]]
 ; RECOVER-ZERO-BASED-SHADOW:       11:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 3
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = icmp uge i8 [[TMP14]], [[TMP6]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP15]], label [[TMP10]], label [[TMP16:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       16:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP17:%.*]] = or i64 [[TMP3]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP2]], [[TMP19]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP20]], label [[TMP10]], label [[TMP21]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       21:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP22]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 98", "{x10}"(i64 [[TMP0]])
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP22:%.*]]
+; RECOVER-ZERO-BASED-SHADOW:       12:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 3
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP16:%.*]] = icmp uge i8 [[TMP15]], [[TMP7]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP16]], label [[TMP11]], label [[TMP17:%.*]], !prof [[PROF2]]
+; RECOVER-ZERO-BASED-SHADOW:       17:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = or i64 [[TMP0]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP2]], [[TMP20]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP21]], label [[TMP11]], label [[TMP22]], !prof [[PROF2]]
 ; RECOVER-ZERO-BASED-SHADOW:       22:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP23]]
+; RECOVER-ZERO-BASED-SHADOW:       23:
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i32, ptr [[A]], align 4
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret i32 [[B]]
 ;
@@ -558,23 +585,25 @@ define i64 @test_load64(ptr %a) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 56
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 72057594037927935
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP6]], [[TMP10]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF2]]
-; CHECK:       12:
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 3)
-; CHECK-NEXT:    br label [[TMP13]]
-; CHECK:       13:
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 56
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; CHECK-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP9]], 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP7]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF2]]
+; CHECK:       14:
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 3)
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
 ; CHECK-NEXT:    [[B:%.*]] = load i64, ptr [[A]], align 8
 ; CHECK-NEXT:    ret i64 [[B]]
 ;
@@ -582,11 +611,12 @@ define i64 @test_load64(ptr %a) sanitize_hwaddress {
 ; NOFASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; NOFASTPATH-NEXT:  entry:
 ; NOFASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; NOFASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; NOFASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; NOFASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; NOFASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 3)
+; NOFASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; NOFASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; NOFASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; NOFASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; NOFASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 3)
 ; NOFASTPATH-NEXT:    [[B:%.*]] = load i64, ptr [[A]], align 8
 ; NOFASTPATH-NEXT:    ret i64 [[B]]
 ;
@@ -594,23 +624,25 @@ define i64 @test_load64(ptr %a) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; FASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; FASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; FASTPATH-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; FASTPATH-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 56
-; FASTPATH-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; FASTPATH-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; FASTPATH-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
-; FASTPATH-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; FASTPATH-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP6]], [[TMP10]]
-; FASTPATH-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF2]]
-; FASTPATH:       12:
-; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 3)
-; FASTPATH-NEXT:    br label [[TMP13]]
-; FASTPATH:       13:
+; FASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; FASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; FASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; FASTPATH-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 56
+; FASTPATH-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; FASTPATH-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 8
+; FASTPATH-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; FASTPATH-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP9]], 4
+; FASTPATH-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP10]]
+; FASTPATH-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; FASTPATH-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP7]], [[TMP12]]
+; FASTPATH-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF2]]
+; FASTPATH:       14:
+; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 3)
+; FASTPATH-NEXT:    br label [[TMP15]]
+; FASTPATH:       15:
 ; FASTPATH-NEXT:    [[B:%.*]] = load i64, ptr [[A]], align 8
 ; FASTPATH-NEXT:    ret i64 [[B]]
 ;
@@ -621,16 +653,17 @@ define i64 @test_load64(ptr %a) sanitize_hwaddress {
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; ABORT-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF2]]
-; ABORT-DYNAMIC-SHADOW:       8:
-; ABORT-DYNAMIC-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 3)
-; ABORT-DYNAMIC-SHADOW-NEXT:    br label [[TMP9]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP5]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF2]]
 ; ABORT-DYNAMIC-SHADOW:       9:
+; ABORT-DYNAMIC-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 3)
+; ABORT-DYNAMIC-SHADOW-NEXT:    br label [[TMP10]]
+; ABORT-DYNAMIC-SHADOW:       10:
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[B:%.*]] = load i64, ptr [[A]], align 8
 ; ABORT-DYNAMIC-SHADOW-NEXT:    ret i64 [[B]]
 ;
@@ -641,33 +674,34 @@ define i64 @test_load64(ptr %a) sanitize_hwaddress {
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP22:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       8:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP6]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       10:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 99", "{x10}"(i64 [[TMP0]])
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP21:%.*]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP5]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP23:%.*]], !prof [[PROF2]]
+; RECOVER-DYNAMIC-SHADOW:       9:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP7]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF2]]
 ; RECOVER-DYNAMIC-SHADOW:       11:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 7
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = icmp uge i8 [[TMP14]], [[TMP6]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP15]], label [[TMP10]], label [[TMP16:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       16:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP17:%.*]] = or i64 [[TMP3]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP2]], [[TMP19]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP20]], label [[TMP10]], label [[TMP21]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       21:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP22]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 99", "{x10}"(i64 [[TMP0]])
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP22:%.*]]
+; RECOVER-DYNAMIC-SHADOW:       12:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 7
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP16:%.*]] = icmp uge i8 [[TMP15]], [[TMP7]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP16]], label [[TMP11]], label [[TMP17:%.*]], !prof [[PROF2]]
+; RECOVER-DYNAMIC-SHADOW:       17:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = or i64 [[TMP0]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP2]], [[TMP20]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP21]], label [[TMP11]], label [[TMP22]], !prof [[PROF2]]
 ; RECOVER-DYNAMIC-SHADOW:       22:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP23]]
+; RECOVER-DYNAMIC-SHADOW:       23:
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[B:%.*]] = load i64, ptr [[A]], align 8
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    ret i64 [[B]]
 ;
@@ -678,16 +712,17 @@ define i64 @test_load64(ptr %a) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; ABORT-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF2]]
-; ABORT-ZERO-BASED-SHADOW:       8:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 3)
-; ABORT-ZERO-BASED-SHADOW-NEXT:    br label [[TMP9]]
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; ABORT-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF2]]
 ; ABORT-ZERO-BASED-SHADOW:       9:
+; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 3)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    br label [[TMP10]]
+; ABORT-ZERO-BASED-SHADOW:       10:
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i64, ptr [[A]], align 8
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret i64 [[B]]
 ;
@@ -698,33 +733,34 @@ define i64 @test_load64(ptr %a) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP22:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       8:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP6]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       10:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 99", "{x10}"(i64 [[TMP0]])
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP21:%.*]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP23:%.*]], !prof [[PROF2]]
+; RECOVER-ZERO-BASED-SHADOW:       9:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP7]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF2]]
 ; RECOVER-ZERO-BASED-SHADOW:       11:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 7
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = icmp uge i8 [[TMP14]], [[TMP6]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP15]], label [[TMP10]], label [[TMP16:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       16:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP17:%.*]] = or i64 [[TMP3]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP2]], [[TMP19]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP20]], label [[TMP10]], label [[TMP21]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       21:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP22]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 99", "{x10}"(i64 [[TMP0]])
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP22:%.*]]
+; RECOVER-ZERO-BASED-SHADOW:       12:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 7
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP16:%.*]] = icmp uge i8 [[TMP15]], [[TMP7]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP16]], label [[TMP11]], label [[TMP17:%.*]], !prof [[PROF2]]
+; RECOVER-ZERO-BASED-SHADOW:       17:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = or i64 [[TMP0]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP2]], [[TMP20]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP21]], label [[TMP11]], label [[TMP22]], !prof [[PROF2]]
 ; RECOVER-ZERO-BASED-SHADOW:       22:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP23]]
+; RECOVER-ZERO-BASED-SHADOW:       23:
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i64, ptr [[A]], align 8
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret i64 [[B]]
 ;
@@ -738,23 +774,25 @@ define i128 @test_load128(ptr %a) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 56
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 72057594037927935
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP6]], [[TMP10]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF2]]
-; CHECK:       12:
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 4)
-; CHECK-NEXT:    br label [[TMP13]]
-; CHECK:       13:
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 56
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; CHECK-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP9]], 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP7]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF2]]
+; CHECK:       14:
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 4)
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
 ; CHECK-NEXT:    [[B:%.*]] = load i128, ptr [[A]], align 16
 ; CHECK-NEXT:    ret i128 [[B]]
 ;
@@ -762,11 +800,12 @@ define i128 @test_load128(ptr %a) sanitize_hwaddress {
 ; NOFASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; NOFASTPATH-NEXT:  entry:
 ; NOFASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; NOFASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; NOFASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; NOFASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; NOFASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 4)
+; NOFASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; NOFASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; NOFASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; NOFASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; NOFASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 4)
 ; NOFASTPATH-NEXT:    [[B:%.*]] = load i128, ptr [[A]], align 16
 ; NOFASTPATH-NEXT:    ret i128 [[B]]
 ;
@@ -774,23 +813,25 @@ define i128 @test_load128(ptr %a) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; FASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; FASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; FASTPATH-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; FASTPATH-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 56
-; FASTPATH-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; FASTPATH-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; FASTPATH-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
-; FASTPATH-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; FASTPATH-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP6]], [[TMP10]]
-; FASTPATH-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF2]]
-; FASTPATH:       12:
-; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 4)
-; FASTPATH-NEXT:    br label [[TMP13]]
-; FASTPATH:       13:
+; FASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; FASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; FASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; FASTPATH-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 56
+; FASTPATH-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; FASTPATH-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 8
+; FASTPATH-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; FASTPATH-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP9]], 4
+; FASTPATH-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP10]]
+; FASTPATH-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; FASTPATH-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP7]], [[TMP12]]
+; FASTPATH-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF2]]
+; FASTPATH:       14:
+; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 4)
+; FASTPATH-NEXT:    br label [[TMP15]]
+; FASTPATH:       15:
 ; FASTPATH-NEXT:    [[B:%.*]] = load i128, ptr [[A]], align 16
 ; FASTPATH-NEXT:    ret i128 [[B]]
 ;
@@ -801,16 +842,17 @@ define i128 @test_load128(ptr %a) sanitize_hwaddress {
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; ABORT-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF2]]
-; ABORT-DYNAMIC-SHADOW:       8:
-; ABORT-DYNAMIC-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 4)
-; ABORT-DYNAMIC-SHADOW-NEXT:    br label [[TMP9]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP5]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF2]]
 ; ABORT-DYNAMIC-SHADOW:       9:
+; ABORT-DYNAMIC-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 4)
+; ABORT-DYNAMIC-SHADOW-NEXT:    br label [[TMP10]]
+; ABORT-DYNAMIC-SHADOW:       10:
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[B:%.*]] = load i128, ptr [[A]], align 16
 ; ABORT-DYNAMIC-SHADOW-NEXT:    ret i128 [[B]]
 ;
@@ -821,33 +863,34 @@ define i128 @test_load128(ptr %a) sanitize_hwaddress {
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP22:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       8:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP6]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       10:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 100", "{x10}"(i64 [[TMP0]])
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP21:%.*]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP5]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP23:%.*]], !prof [[PROF2]]
+; RECOVER-DYNAMIC-SHADOW:       9:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP7]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF2]]
 ; RECOVER-DYNAMIC-SHADOW:       11:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = icmp uge i8 [[TMP14]], [[TMP6]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP15]], label [[TMP10]], label [[TMP16:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       16:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP17:%.*]] = or i64 [[TMP3]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP2]], [[TMP19]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP20]], label [[TMP10]], label [[TMP21]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       21:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP22]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 100", "{x10}"(i64 [[TMP0]])
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP22:%.*]]
+; RECOVER-DYNAMIC-SHADOW:       12:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP16:%.*]] = icmp uge i8 [[TMP15]], [[TMP7]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP16]], label [[TMP11]], label [[TMP17:%.*]], !prof [[PROF2]]
+; RECOVER-DYNAMIC-SHADOW:       17:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = or i64 [[TMP0]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP2]], [[TMP20]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP21]], label [[TMP11]], label [[TMP22]], !prof [[PROF2]]
 ; RECOVER-DYNAMIC-SHADOW:       22:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP23]]
+; RECOVER-DYNAMIC-SHADOW:       23:
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[B:%.*]] = load i128, ptr [[A]], align 16
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    ret i128 [[B]]
 ;
@@ -858,16 +901,17 @@ define i128 @test_load128(ptr %a) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; ABORT-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF2]]
-; ABORT-ZERO-BASED-SHADOW:       8:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 4)
-; ABORT-ZERO-BASED-SHADOW-NEXT:    br label [[TMP9]]
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; ABORT-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF2]]
 ; ABORT-ZERO-BASED-SHADOW:       9:
+; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 4)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    br label [[TMP10]]
+; ABORT-ZERO-BASED-SHADOW:       10:
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i128, ptr [[A]], align 16
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret i128 [[B]]
 ;
@@ -878,33 +922,34 @@ define i128 @test_load128(ptr %a) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP22:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       8:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP6]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       10:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 100", "{x10}"(i64 [[TMP0]])
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP21:%.*]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP23:%.*]], !prof [[PROF2]]
+; RECOVER-ZERO-BASED-SHADOW:       9:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP7]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF2]]
 ; RECOVER-ZERO-BASED-SHADOW:       11:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = icmp uge i8 [[TMP14]], [[TMP6]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP15]], label [[TMP10]], label [[TMP16:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       16:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP17:%.*]] = or i64 [[TMP3]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP2]], [[TMP19]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP20]], label [[TMP10]], label [[TMP21]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       21:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP22]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 100", "{x10}"(i64 [[TMP0]])
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP22:%.*]]
+; RECOVER-ZERO-BASED-SHADOW:       12:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP16:%.*]] = icmp uge i8 [[TMP15]], [[TMP7]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP16]], label [[TMP11]], label [[TMP17:%.*]], !prof [[PROF2]]
+; RECOVER-ZERO-BASED-SHADOW:       17:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = or i64 [[TMP0]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP2]], [[TMP20]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP21]], label [[TMP11]], label [[TMP22]], !prof [[PROF2]]
 ; RECOVER-ZERO-BASED-SHADOW:       22:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP23]]
+; RECOVER-ZERO-BASED-SHADOW:       23:
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i128, ptr [[A]], align 16
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret i128 [[B]]
 ;
@@ -918,12 +963,13 @@ define i40 @test_load40(ptr %a) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    call void @__hwasan_loadN(i64 [[TMP4]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    call void @__hwasan_loadN(i64 [[TMP5]], i64 5)
 ; CHECK-NEXT:    [[B:%.*]] = load i40, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i40 [[B]]
 ;
@@ -931,12 +977,13 @@ define i40 @test_load40(ptr %a) sanitize_hwaddress {
 ; NOFASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; NOFASTPATH-NEXT:  entry:
 ; NOFASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; NOFASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; NOFASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; NOFASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; NOFASTPATH-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; NOFASTPATH-NEXT:    call void @__hwasan_loadN(i64 [[TMP4]], i64 5)
+; NOFASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; NOFASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; NOFASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; NOFASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; NOFASTPATH-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; NOFASTPATH-NEXT:    call void @__hwasan_loadN(i64 [[TMP5]], i64 5)
 ; NOFASTPATH-NEXT:    [[B:%.*]] = load i40, ptr [[A]], align 4
 ; NOFASTPATH-NEXT:    ret i40 [[B]]
 ;
@@ -944,12 +991,13 @@ define i40 @test_load40(ptr %a) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; FASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; FASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; FASTPATH-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; FASTPATH-NEXT:    call void @__hwasan_loadN(i64 [[TMP4]], i64 5)
+; FASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; FASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; FASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; FASTPATH-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    call void @__hwasan_loadN(i64 [[TMP5]], i64 5)
 ; FASTPATH-NEXT:    [[B:%.*]] = load i40, ptr [[A]], align 4
 ; FASTPATH-NEXT:    ret i40 [[B]]
 ;
@@ -999,23 +1047,25 @@ define void @test_store8(ptr %a, i8 %b) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 56
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 72057594037927935
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP6]], [[TMP10]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF2]]
-; CHECK:       12:
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 16)
-; CHECK-NEXT:    br label [[TMP13]]
-; CHECK:       13:
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 56
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; CHECK-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP9]], 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP7]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF2]]
+; CHECK:       14:
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 16)
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
 ; CHECK-NEXT:    store i8 [[B]], ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -1023,11 +1073,12 @@ define void @test_store8(ptr %a, i8 %b) sanitize_hwaddress {
 ; NOFASTPATH-SAME: (ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; NOFASTPATH-NEXT:  entry:
 ; NOFASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; NOFASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; NOFASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; NOFASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; NOFASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 16)
+; NOFASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; NOFASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; NOFASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; NOFASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; NOFASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 16)
 ; NOFASTPATH-NEXT:    store i8 [[B]], ptr [[A]], align 4
 ; NOFASTPATH-NEXT:    ret void
 ;
@@ -1035,23 +1086,25 @@ define void @test_store8(ptr %a, i8 %b) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; FASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; FASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; FASTPATH-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; FASTPATH-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 56
-; FASTPATH-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; FASTPATH-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; FASTPATH-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
-; FASTPATH-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; FASTPATH-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP6]], [[TMP10]]
-; FASTPATH-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF2]]
-; FASTPATH:       12:
-; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 16)
-; FASTPATH-NEXT:    br label [[TMP13]]
-; FASTPATH:       13:
+; FASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; FASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; FASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; FASTPATH-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 56
+; FASTPATH-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; FASTPATH-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 8
+; FASTPATH-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; FASTPATH-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP9]], 4
+; FASTPATH-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP10]]
+; FASTPATH-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; FASTPATH-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP7]], [[TMP12]]
+; FASTPATH-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF2]]
+; FASTPATH:       14:
+; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 16)
+; FASTPATH-NEXT:    br label [[TMP15]]
+; FASTPATH:       15:
 ; FASTPATH-NEXT:    store i8 [[B]], ptr [[A]], align 4
 ; FASTPATH-NEXT:    ret void
 ;
@@ -1062,16 +1115,17 @@ define void @test_store8(ptr %a, i8 %b) sanitize_hwaddress {
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; ABORT-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF2]]
-; ABORT-DYNAMIC-SHADOW:       8:
-; ABORT-DYNAMIC-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 16)
-; ABORT-DYNAMIC-SHADOW-NEXT:    br label [[TMP9]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP5]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF2]]
 ; ABORT-DYNAMIC-SHADOW:       9:
+; ABORT-DYNAMIC-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 16)
+; ABORT-DYNAMIC-SHADOW-NEXT:    br label [[TMP10]]
+; ABORT-DYNAMIC-SHADOW:       10:
 ; ABORT-DYNAMIC-SHADOW-NEXT:    store i8 [[B]], ptr [[A]], align 4
 ; ABORT-DYNAMIC-SHADOW-NEXT:    ret void
 ;
@@ -1082,33 +1136,34 @@ define void @test_store8(ptr %a, i8 %b) sanitize_hwaddress {
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP22:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       8:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP6]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       10:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 112", "{x10}"(i64 [[TMP0]])
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP21:%.*]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP5]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP23:%.*]], !prof [[PROF2]]
+; RECOVER-DYNAMIC-SHADOW:       9:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP7]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF2]]
 ; RECOVER-DYNAMIC-SHADOW:       11:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 0
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = icmp uge i8 [[TMP14]], [[TMP6]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP15]], label [[TMP10]], label [[TMP16:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       16:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP17:%.*]] = or i64 [[TMP3]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP2]], [[TMP19]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP20]], label [[TMP10]], label [[TMP21]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       21:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP22]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 112", "{x10}"(i64 [[TMP0]])
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP22:%.*]]
+; RECOVER-DYNAMIC-SHADOW:       12:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 0
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP16:%.*]] = icmp uge i8 [[TMP15]], [[TMP7]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP16]], label [[TMP11]], label [[TMP17:%.*]], !prof [[PROF2]]
+; RECOVER-DYNAMIC-SHADOW:       17:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = or i64 [[TMP0]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP2]], [[TMP20]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP21]], label [[TMP11]], label [[TMP22]], !prof [[PROF2]]
 ; RECOVER-DYNAMIC-SHADOW:       22:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP23]]
+; RECOVER-DYNAMIC-SHADOW:       23:
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    store i8 [[B]], ptr [[A]], align 4
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    ret void
 ;
@@ -1119,16 +1174,17 @@ define void @test_store8(ptr %a, i8 %b) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; ABORT-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF2]]
-; ABORT-ZERO-BASED-SHADOW:       8:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 16)
-; ABORT-ZERO-BASED-SHADOW-NEXT:    br label [[TMP9]]
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; ABORT-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF2]]
 ; ABORT-ZERO-BASED-SHADOW:       9:
+; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 16)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    br label [[TMP10]]
+; ABORT-ZERO-BASED-SHADOW:       10:
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    store i8 [[B]], ptr [[A]], align 4
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret void
 ;
@@ -1139,33 +1195,34 @@ define void @test_store8(ptr %a, i8 %b) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP22:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       8:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP6]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       10:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 112", "{x10}"(i64 [[TMP0]])
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP21:%.*]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP23:%.*]], !prof [[PROF2]]
+; RECOVER-ZERO-BASED-SHADOW:       9:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP7]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF2]]
 ; RECOVER-ZERO-BASED-SHADOW:       11:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 0
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = icmp uge i8 [[TMP14]], [[TMP6]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP15]], label [[TMP10]], label [[TMP16:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       16:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP17:%.*]] = or i64 [[TMP3]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP2]], [[TMP19]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP20]], label [[TMP10]], label [[TMP21]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       21:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP22]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 112", "{x10}"(i64 [[TMP0]])
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP22:%.*]]
+; RECOVER-ZERO-BASED-SHADOW:       12:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 0
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP16:%.*]] = icmp uge i8 [[TMP15]], [[TMP7]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP16]], label [[TMP11]], label [[TMP17:%.*]], !prof [[PROF2]]
+; RECOVER-ZERO-BASED-SHADOW:       17:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = or i64 [[TMP0]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP2]], [[TMP20]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP21]], label [[TMP11]], label [[TMP22]], !prof [[PROF2]]
 ; RECOVER-ZERO-BASED-SHADOW:       22:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP23]]
+; RECOVER-ZERO-BASED-SHADOW:       23:
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    store i8 [[B]], ptr [[A]], align 4
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret void
 ;
@@ -1179,23 +1236,25 @@ define void @test_store16(ptr %a, i16 %b) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 56
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 72057594037927935
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP6]], [[TMP10]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF2]]
-; CHECK:       12:
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 17)
-; CHECK-NEXT:    br label [[TMP13]]
-; CHECK:       13:
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 56
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; CHECK-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP9]], 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP7]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF2]]
+; CHECK:       14:
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 17)
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
 ; CHECK-NEXT:    store i16 [[B]], ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -1203,11 +1262,12 @@ define void @test_store16(ptr %a, i16 %b) sanitize_hwaddress {
 ; NOFASTPATH-SAME: (ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; NOFASTPATH-NEXT:  entry:
 ; NOFASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; NOFASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; NOFASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; NOFASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; NOFASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 17)
+; NOFASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; NOFASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; NOFASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; NOFASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; NOFASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 17)
 ; NOFASTPATH-NEXT:    store i16 [[B]], ptr [[A]], align 4
 ; NOFASTPATH-NEXT:    ret void
 ;
@@ -1215,23 +1275,25 @@ define void @test_store16(ptr %a, i16 %b) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; FASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; FASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; FASTPATH-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; FASTPATH-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 56
-; FASTPATH-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; FASTPATH-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; FASTPATH-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
-; FASTPATH-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; FASTPATH-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP6]], [[TMP10]]
-; FASTPATH-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF2]]
-; FASTPATH:       12:
-; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 17)
-; FASTPATH-NEXT:    br label [[TMP13]]
-; FASTPATH:       13:
+; FASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; FASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; FASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; FASTPATH-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 56
+; FASTPATH-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; FASTPATH-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 8
+; FASTPATH-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; FASTPATH-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP9]], 4
+; FASTPATH-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP10]]
+; FASTPATH-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; FASTPATH-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP7]], [[TMP12]]
+; FASTPATH-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF2]]
+; FASTPATH:       14:
+; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 17)
+; FASTPATH-NEXT:    br label [[TMP15]]
+; FASTPATH:       15:
 ; FASTPATH-NEXT:    store i16 [[B]], ptr [[A]], align 4
 ; FASTPATH-NEXT:    ret void
 ;
@@ -1242,16 +1304,17 @@ define void @test_store16(ptr %a, i16 %b) sanitize_hwaddress {
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; ABORT-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF2]]
-; ABORT-DYNAMIC-SHADOW:       8:
-; ABORT-DYNAMIC-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 17)
-; ABORT-DYNAMIC-SHADOW-NEXT:    br label [[TMP9]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP5]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF2]]
 ; ABORT-DYNAMIC-SHADOW:       9:
+; ABORT-DYNAMIC-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 17)
+; ABORT-DYNAMIC-SHADOW-NEXT:    br label [[TMP10]]
+; ABORT-DYNAMIC-SHADOW:       10:
 ; ABORT-DYNAMIC-SHADOW-NEXT:    store i16 [[B]], ptr [[A]], align 4
 ; ABORT-DYNAMIC-SHADOW-NEXT:    ret void
 ;
@@ -1262,33 +1325,34 @@ define void @test_store16(ptr %a, i16 %b) sanitize_hwaddress {
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP22:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       8:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP6]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       10:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 113", "{x10}"(i64 [[TMP0]])
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP21:%.*]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP5]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP23:%.*]], !prof [[PROF2]]
+; RECOVER-DYNAMIC-SHADOW:       9:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP7]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF2]]
 ; RECOVER-DYNAMIC-SHADOW:       11:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = icmp uge i8 [[TMP14]], [[TMP6]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP15]], label [[TMP10]], label [[TMP16:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       16:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP17:%.*]] = or i64 [[TMP3]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP2]], [[TMP19]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP20]], label [[TMP10]], label [[TMP21]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       21:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP22]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 113", "{x10}"(i64 [[TMP0]])
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP22:%.*]]
+; RECOVER-DYNAMIC-SHADOW:       12:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP16:%.*]] = icmp uge i8 [[TMP15]], [[TMP7]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP16]], label [[TMP11]], label [[TMP17:%.*]], !prof [[PROF2]]
+; RECOVER-DYNAMIC-SHADOW:       17:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = or i64 [[TMP0]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP2]], [[TMP20]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP21]], label [[TMP11]], label [[TMP22]], !prof [[PROF2]]
 ; RECOVER-DYNAMIC-SHADOW:       22:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP23]]
+; RECOVER-DYNAMIC-SHADOW:       23:
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    store i16 [[B]], ptr [[A]], align 4
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    ret void
 ;
@@ -1299,16 +1363,17 @@ define void @test_store16(ptr %a, i16 %b) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; ABORT-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF2]]
-; ABORT-ZERO-BASED-SHADOW:       8:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 17)
-; ABORT-ZERO-BASED-SHADOW-NEXT:    br label [[TMP9]]
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; ABORT-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF2]]
 ; ABORT-ZERO-BASED-SHADOW:       9:
+; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 17)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    br label [[TMP10]]
+; ABORT-ZERO-BASED-SHADOW:       10:
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    store i16 [[B]], ptr [[A]], align 4
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret void
 ;
@@ -1319,33 +1384,34 @@ define void @test_store16(ptr %a, i16 %b) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP22:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       8:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP6]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       10:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 113", "{x10}"(i64 [[TMP0]])
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP21:%.*]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP23:%.*]], !prof [[PROF2]]
+; RECOVER-ZERO-BASED-SHADOW:       9:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP7]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF2]]
 ; RECOVER-ZERO-BASED-SHADOW:       11:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = icmp uge i8 [[TMP14]], [[TMP6]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP15]], label [[TMP10]], label [[TMP16:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       16:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP17:%.*]] = or i64 [[TMP3]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP2]], [[TMP19]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP20]], label [[TMP10]], label [[TMP21]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       21:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP22]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 113", "{x10}"(i64 [[TMP0]])
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP22:%.*]]
+; RECOVER-ZERO-BASED-SHADOW:       12:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP16:%.*]] = icmp uge i8 [[TMP15]], [[TMP7]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP16]], label [[TMP11]], label [[TMP17:%.*]], !prof [[PROF2]]
+; RECOVER-ZERO-BASED-SHADOW:       17:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = or i64 [[TMP0]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP2]], [[TMP20]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP21]], label [[TMP11]], label [[TMP22]], !prof [[PROF2]]
 ; RECOVER-ZERO-BASED-SHADOW:       22:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP23]]
+; RECOVER-ZERO-BASED-SHADOW:       23:
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    store i16 [[B]], ptr [[A]], align 4
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret void
 ;
@@ -1359,23 +1425,25 @@ define void @test_store32(ptr %a, i32 %b) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 56
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 72057594037927935
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP6]], [[TMP10]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF2]]
-; CHECK:       12:
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 18)
-; CHECK-NEXT:    br label [[TMP13]]
-; CHECK:       13:
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 56
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; CHECK-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP9]], 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP7]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF2]]
+; CHECK:       14:
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 18)
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
 ; CHECK-NEXT:    store i32 [[B]], ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -1383,11 +1451,12 @@ define void @test_store32(ptr %a, i32 %b) sanitize_hwaddress {
 ; NOFASTPATH-SAME: (ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; NOFASTPATH-NEXT:  entry:
 ; NOFASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; NOFASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; NOFASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; NOFASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; NOFASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 18)
+; NOFASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; NOFASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; NOFASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; NOFASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; NOFASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 18)
 ; NOFASTPATH-NEXT:    store i32 [[B]], ptr [[A]], align 4
 ; NOFASTPATH-NEXT:    ret void
 ;
@@ -1395,23 +1464,25 @@ define void @test_store32(ptr %a, i32 %b) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; FASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; FASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; FASTPATH-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; FASTPATH-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 56
-; FASTPATH-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; FASTPATH-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; FASTPATH-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
-; FASTPATH-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; FASTPATH-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP6]], [[TMP10]]
-; FASTPATH-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF2]]
-; FASTPATH:       12:
-; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 18)
-; FASTPATH-NEXT:    br label [[TMP13]]
-; FASTPATH:       13:
+; FASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; FASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; FASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; FASTPATH-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 56
+; FASTPATH-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; FASTPATH-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 8
+; FASTPATH-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; FASTPATH-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP9]], 4
+; FASTPATH-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP10]]
+; FASTPATH-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; FASTPATH-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP7]], [[TMP12]]
+; FASTPATH-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF2]]
+; FASTPATH:       14:
+; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 18)
+; FASTPATH-NEXT:    br label [[TMP15]]
+; FASTPATH:       15:
 ; FASTPATH-NEXT:    store i32 [[B]], ptr [[A]], align 4
 ; FASTPATH-NEXT:    ret void
 ;
@@ -1422,16 +1493,17 @@ define void @test_store32(ptr %a, i32 %b) sanitize_hwaddress {
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; ABORT-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF2]]
-; ABORT-DYNAMIC-SHADOW:       8:
-; ABORT-DYNAMIC-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 18)
-; ABORT-DYNAMIC-SHADOW-NEXT:    br label [[TMP9]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP5]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF2]]
 ; ABORT-DYNAMIC-SHADOW:       9:
+; ABORT-DYNAMIC-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 18)
+; ABORT-DYNAMIC-SHADOW-NEXT:    br label [[TMP10]]
+; ABORT-DYNAMIC-SHADOW:       10:
 ; ABORT-DYNAMIC-SHADOW-NEXT:    store i32 [[B]], ptr [[A]], align 4
 ; ABORT-DYNAMIC-SHADOW-NEXT:    ret void
 ;
@@ -1442,33 +1514,34 @@ define void @test_store32(ptr %a, i32 %b) sanitize_hwaddress {
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP22:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       8:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP6]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       10:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 114", "{x10}"(i64 [[TMP0]])
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP21:%.*]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP5]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP23:%.*]], !prof [[PROF2]]
+; RECOVER-DYNAMIC-SHADOW:       9:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP7]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF2]]
 ; RECOVER-DYNAMIC-SHADOW:       11:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 3
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = icmp uge i8 [[TMP14]], [[TMP6]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP15]], label [[TMP10]], label [[TMP16:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       16:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP17:%.*]] = or i64 [[TMP3]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP2]], [[TMP19]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP20]], label [[TMP10]], label [[TMP21]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       21:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP22]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 114", "{x10}"(i64 [[TMP0]])
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP22:%.*]]
+; RECOVER-DYNAMIC-SHADOW:       12:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 3
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP16:%.*]] = icmp uge i8 [[TMP15]], [[TMP7]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP16]], label [[TMP11]], label [[TMP17:%.*]], !prof [[PROF2]]
+; RECOVER-DYNAMIC-SHADOW:       17:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = or i64 [[TMP0]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP2]], [[TMP20]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP21]], label [[TMP11]], label [[TMP22]], !prof [[PROF2]]
 ; RECOVER-DYNAMIC-SHADOW:       22:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP23]]
+; RECOVER-DYNAMIC-SHADOW:       23:
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    store i32 [[B]], ptr [[A]], align 4
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    ret void
 ;
@@ -1479,16 +1552,17 @@ define void @test_store32(ptr %a, i32 %b) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; ABORT-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF2]]
-; ABORT-ZERO-BASED-SHADOW:       8:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 18)
-; ABORT-ZERO-BASED-SHADOW-NEXT:    br label [[TMP9]]
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; ABORT-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF2]]
 ; ABORT-ZERO-BASED-SHADOW:       9:
+; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 18)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    br label [[TMP10]]
+; ABORT-ZERO-BASED-SHADOW:       10:
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    store i32 [[B]], ptr [[A]], align 4
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret void
 ;
@@ -1499,33 +1573,34 @@ define void @test_store32(ptr %a, i32 %b) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP22:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       8:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP6]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       10:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 114", "{x10}"(i64 [[TMP0]])
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP21:%.*]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP23:%.*]], !prof [[PROF2]]
+; RECOVER-ZERO-BASED-SHADOW:       9:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP7]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF2]]
 ; RECOVER-ZERO-BASED-SHADOW:       11:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 3
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = icmp uge i8 [[TMP14]], [[TMP6]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP15]], label [[TMP10]], label [[TMP16:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       16:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP17:%.*]] = or i64 [[TMP3]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP2]], [[TMP19]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP20]], label [[TMP10]], label [[TMP21]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       21:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP22]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 114", "{x10}"(i64 [[TMP0]])
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP22:%.*]]
+; RECOVER-ZERO-BASED-SHADOW:       12:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 3
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP16:%.*]] = icmp uge i8 [[TMP15]], [[TMP7]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP16]], label [[TMP11]], label [[TMP17:%.*]], !prof [[PROF2]]
+; RECOVER-ZERO-BASED-SHADOW:       17:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = or i64 [[TMP0]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP2]], [[TMP20]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP21]], label [[TMP11]], label [[TMP22]], !prof [[PROF2]]
 ; RECOVER-ZERO-BASED-SHADOW:       22:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP23]]
+; RECOVER-ZERO-BASED-SHADOW:       23:
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    store i32 [[B]], ptr [[A]], align 4
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret void
 ;
@@ -1539,23 +1614,25 @@ define void @test_store64(ptr %a, i64 %b) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 56
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 72057594037927935
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP6]], [[TMP10]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF2]]
-; CHECK:       12:
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 19)
-; CHECK-NEXT:    br label [[TMP13]]
-; CHECK:       13:
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 56
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; CHECK-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP9]], 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP7]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF2]]
+; CHECK:       14:
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 19)
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
 ; CHECK-NEXT:    store i64 [[B]], ptr [[A]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -1563,11 +1640,12 @@ define void @test_store64(ptr %a, i64 %b) sanitize_hwaddress {
 ; NOFASTPATH-SAME: (ptr [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
 ; NOFASTPATH-NEXT:  entry:
 ; NOFASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; NOFASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; NOFASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; NOFASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; NOFASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 19)
+; NOFASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; NOFASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; NOFASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; NOFASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; NOFASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 19)
 ; NOFASTPATH-NEXT:    store i64 [[B]], ptr [[A]], align 8
 ; NOFASTPATH-NEXT:    ret void
 ;
@@ -1575,23 +1653,25 @@ define void @test_store64(ptr %a, i64 %b) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; FASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; FASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; FASTPATH-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; FASTPATH-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 56
-; FASTPATH-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; FASTPATH-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; FASTPATH-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
-; FASTPATH-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; FASTPATH-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP6]], [[TMP10]]
-; FASTPATH-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF2]]
-; FASTPATH:       12:
-; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 19)
-; FASTPATH-NEXT:    br label [[TMP13]]
-; FASTPATH:       13:
+; FASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; FASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; FASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; FASTPATH-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 56
+; FASTPATH-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; FASTPATH-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 8
+; FASTPATH-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; FASTPATH-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP9]], 4
+; FASTPATH-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP10]]
+; FASTPATH-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; FASTPATH-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP7]], [[TMP12]]
+; FASTPATH-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF2]]
+; FASTPATH:       14:
+; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 19)
+; FASTPATH-NEXT:    br label [[TMP15]]
+; FASTPATH:       15:
 ; FASTPATH-NEXT:    store i64 [[B]], ptr [[A]], align 8
 ; FASTPATH-NEXT:    ret void
 ;
@@ -1602,16 +1682,17 @@ define void @test_store64(ptr %a, i64 %b) sanitize_hwaddress {
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; ABORT-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF2]]
-; ABORT-DYNAMIC-SHADOW:       8:
-; ABORT-DYNAMIC-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 19)
-; ABORT-DYNAMIC-SHADOW-NEXT:    br label [[TMP9]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP5]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF2]]
 ; ABORT-DYNAMIC-SHADOW:       9:
+; ABORT-DYNAMIC-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 19)
+; ABORT-DYNAMIC-SHADOW-NEXT:    br label [[TMP10]]
+; ABORT-DYNAMIC-SHADOW:       10:
 ; ABORT-DYNAMIC-SHADOW-NEXT:    store i64 [[B]], ptr [[A]], align 8
 ; ABORT-DYNAMIC-SHADOW-NEXT:    ret void
 ;
@@ -1622,33 +1703,34 @@ define void @test_store64(ptr %a, i64 %b) sanitize_hwaddress {
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP22:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       8:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP6]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       10:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 115", "{x10}"(i64 [[TMP0]])
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP21:%.*]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP5]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP23:%.*]], !prof [[PROF2]]
+; RECOVER-DYNAMIC-SHADOW:       9:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP7]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF2]]
 ; RECOVER-DYNAMIC-SHADOW:       11:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 7
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = icmp uge i8 [[TMP14]], [[TMP6]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP15]], label [[TMP10]], label [[TMP16:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       16:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP17:%.*]] = or i64 [[TMP3]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP2]], [[TMP19]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP20]], label [[TMP10]], label [[TMP21]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       21:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP22]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 115", "{x10}"(i64 [[TMP0]])
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP22:%.*]]
+; RECOVER-DYNAMIC-SHADOW:       12:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 7
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP16:%.*]] = icmp uge i8 [[TMP15]], [[TMP7]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP16]], label [[TMP11]], label [[TMP17:%.*]], !prof [[PROF2]]
+; RECOVER-DYNAMIC-SHADOW:       17:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = or i64 [[TMP0]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP2]], [[TMP20]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP21]], label [[TMP11]], label [[TMP22]], !prof [[PROF2]]
 ; RECOVER-DYNAMIC-SHADOW:       22:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP23]]
+; RECOVER-DYNAMIC-SHADOW:       23:
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    store i64 [[B]], ptr [[A]], align 8
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    ret void
 ;
@@ -1659,16 +1741,17 @@ define void @test_store64(ptr %a, i64 %b) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; ABORT-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF2]]
-; ABORT-ZERO-BASED-SHADOW:       8:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 19)
-; ABORT-ZERO-BASED-SHADOW-NEXT:    br label [[TMP9]]
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; ABORT-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF2]]
 ; ABORT-ZERO-BASED-SHADOW:       9:
+; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 19)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    br label [[TMP10]]
+; ABORT-ZERO-BASED-SHADOW:       10:
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    store i64 [[B]], ptr [[A]], align 8
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret void
 ;
@@ -1679,33 +1762,34 @@ define void @test_store64(ptr %a, i64 %b) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP22:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       8:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP6]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       10:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 115", "{x10}"(i64 [[TMP0]])
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP21:%.*]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP23:%.*]], !prof [[PROF2]]
+; RECOVER-ZERO-BASED-SHADOW:       9:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP7]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF2]]
 ; RECOVER-ZERO-BASED-SHADOW:       11:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 7
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = icmp uge i8 [[TMP14]], [[TMP6]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP15]], label [[TMP10]], label [[TMP16:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       16:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP17:%.*]] = or i64 [[TMP3]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP2]], [[TMP19]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP20]], label [[TMP10]], label [[TMP21]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       21:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP22]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 115", "{x10}"(i64 [[TMP0]])
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP22:%.*]]
+; RECOVER-ZERO-BASED-SHADOW:       12:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 7
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP16:%.*]] = icmp uge i8 [[TMP15]], [[TMP7]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP16]], label [[TMP11]], label [[TMP17:%.*]], !prof [[PROF2]]
+; RECOVER-ZERO-BASED-SHADOW:       17:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = or i64 [[TMP0]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP2]], [[TMP20]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP21]], label [[TMP11]], label [[TMP22]], !prof [[PROF2]]
 ; RECOVER-ZERO-BASED-SHADOW:       22:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP23]]
+; RECOVER-ZERO-BASED-SHADOW:       23:
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    store i64 [[B]], ptr [[A]], align 8
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret void
 ;
@@ -1719,23 +1803,25 @@ define void @test_store128(ptr %a, i128 %b) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]], i128 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 56
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 72057594037927935
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP6]], [[TMP10]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF2]]
-; CHECK:       12:
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 20)
-; CHECK-NEXT:    br label [[TMP13]]
-; CHECK:       13:
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 56
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; CHECK-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP9]], 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP7]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF2]]
+; CHECK:       14:
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 20)
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
 ; CHECK-NEXT:    store i128 [[B]], ptr [[A]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -1743,11 +1829,12 @@ define void @test_store128(ptr %a, i128 %b) sanitize_hwaddress {
 ; NOFASTPATH-SAME: (ptr [[A:%.*]], i128 [[B:%.*]]) #[[ATTR0]] {
 ; NOFASTPATH-NEXT:  entry:
 ; NOFASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; NOFASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; NOFASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; NOFASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; NOFASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 20)
+; NOFASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; NOFASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; NOFASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; NOFASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; NOFASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 20)
 ; NOFASTPATH-NEXT:    store i128 [[B]], ptr [[A]], align 16
 ; NOFASTPATH-NEXT:    ret void
 ;
@@ -1755,23 +1842,25 @@ define void @test_store128(ptr %a, i128 %b) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]], i128 [[B:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; FASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; FASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; FASTPATH-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; FASTPATH-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 56
-; FASTPATH-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; FASTPATH-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; FASTPATH-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
-; FASTPATH-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; FASTPATH-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP6]], [[TMP10]]
-; FASTPATH-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF2]]
-; FASTPATH:       12:
-; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP3]], ptr [[A]], i32 20)
-; FASTPATH-NEXT:    br label [[TMP13]]
-; FASTPATH:       13:
+; FASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; FASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; FASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; FASTPATH-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 56
+; FASTPATH-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; FASTPATH-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 8
+; FASTPATH-NEXT:    [[TMP9:%.*]] = ashr i64 [[TMP8]], 8
+; FASTPATH-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP9]], 4
+; FASTPATH-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 [[TMP10]]
+; FASTPATH-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
+; FASTPATH-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP7]], [[TMP12]]
+; FASTPATH-NEXT:    br i1 [[TMP13]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF2]]
+; FASTPATH:       14:
+; FASTPATH-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP4]], ptr [[A]], i32 20)
+; FASTPATH-NEXT:    br label [[TMP15]]
+; FASTPATH:       15:
 ; FASTPATH-NEXT:    store i128 [[B]], ptr [[A]], align 16
 ; FASTPATH-NEXT:    ret void
 ;
@@ -1782,16 +1871,17 @@ define void @test_store128(ptr %a, i128 %b) sanitize_hwaddress {
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; ABORT-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF2]]
-; ABORT-DYNAMIC-SHADOW:       8:
-; ABORT-DYNAMIC-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 20)
-; ABORT-DYNAMIC-SHADOW-NEXT:    br label [[TMP9]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP5]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; ABORT-DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; ABORT-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF2]]
 ; ABORT-DYNAMIC-SHADOW:       9:
+; ABORT-DYNAMIC-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 20)
+; ABORT-DYNAMIC-SHADOW-NEXT:    br label [[TMP10]]
+; ABORT-DYNAMIC-SHADOW:       10:
 ; ABORT-DYNAMIC-SHADOW-NEXT:    store i128 [[B]], ptr [[A]], align 16
 ; ABORT-DYNAMIC-SHADOW-NEXT:    ret void
 ;
@@ -1802,33 +1892,34 @@ define void @test_store128(ptr %a, i128 %b) sanitize_hwaddress {
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP4]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP22:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       8:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP6]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       10:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 116", "{x10}"(i64 [[TMP0]])
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP21:%.*]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP5]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP23:%.*]], !prof [[PROF2]]
+; RECOVER-DYNAMIC-SHADOW:       9:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP7]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF2]]
 ; RECOVER-DYNAMIC-SHADOW:       11:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = icmp uge i8 [[TMP14]], [[TMP6]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP15]], label [[TMP10]], label [[TMP16:%.*]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       16:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP17:%.*]] = or i64 [[TMP3]], 15
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
-; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP2]], [[TMP19]]
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP20]], label [[TMP10]], label [[TMP21]], !prof [[PROF2]]
-; RECOVER-DYNAMIC-SHADOW:       21:
-; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP22]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 116", "{x10}"(i64 [[TMP0]])
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP22:%.*]]
+; RECOVER-DYNAMIC-SHADOW:       12:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP16:%.*]] = icmp uge i8 [[TMP15]], [[TMP7]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP16]], label [[TMP11]], label [[TMP17:%.*]], !prof [[PROF2]]
+; RECOVER-DYNAMIC-SHADOW:       17:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = or i64 [[TMP0]], 15
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; RECOVER-DYNAMIC-SHADOW-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP2]], [[TMP20]]
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br i1 [[TMP21]], label [[TMP11]], label [[TMP22]], !prof [[PROF2]]
 ; RECOVER-DYNAMIC-SHADOW:       22:
+; RECOVER-DYNAMIC-SHADOW-NEXT:    br label [[TMP23]]
+; RECOVER-DYNAMIC-SHADOW:       23:
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    store i128 [[B]], ptr [[A]], align 16
 ; RECOVER-DYNAMIC-SHADOW-NEXT:    ret void
 ;
@@ -1839,16 +1930,17 @@ define void @test_store128(ptr %a, i128 %b) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; ABORT-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF2]]
-; ABORT-ZERO-BASED-SHADOW:       8:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 20)
-; ABORT-ZERO-BASED-SHADOW-NEXT:    br label [[TMP9]]
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; ABORT-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF2]]
 ; ABORT-ZERO-BASED-SHADOW:       9:
+; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 20)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    br label [[TMP10]]
+; ABORT-ZERO-BASED-SHADOW:       10:
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    store i128 [[B]], ptr [[A]], align 16
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret void
 ;
@@ -1859,33 +1951,34 @@ define void @test_store128(ptr %a, i128 %b) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 72057594037927935
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 4
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP2]], [[TMP6]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP22:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       8:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP6]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       10:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 116", "{x10}"(i64 [[TMP0]])
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP21:%.*]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ashr i64 [[TMP4]], 4
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP2]], [[TMP7]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP23:%.*]], !prof [[PROF2]]
+; RECOVER-ZERO-BASED-SHADOW:       9:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP10:%.*]] = icmp ugt i8 [[TMP7]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF2]]
 ; RECOVER-ZERO-BASED-SHADOW:       11:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP12:%.*]] = and i64 [[TMP0]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = add i8 [[TMP13]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = icmp uge i8 [[TMP14]], [[TMP6]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP15]], label [[TMP10]], label [[TMP16:%.*]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       16:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP17:%.*]] = or i64 [[TMP3]], 15
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP20:%.*]] = icmp ne i8 [[TMP2]], [[TMP19]]
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP20]], label [[TMP10]], label [[TMP21]], !prof [[PROF2]]
-; RECOVER-ZERO-BASED-SHADOW:       21:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP22]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void asm sideeffect "ebreak\0Aaddiw x0, x11, 116", "{x10}"(i64 [[TMP0]])
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP22:%.*]]
+; RECOVER-ZERO-BASED-SHADOW:       12:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = and i64 [[TMP0]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = add i8 [[TMP14]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP16:%.*]] = icmp uge i8 [[TMP15]], [[TMP7]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP16]], label [[TMP11]], label [[TMP17:%.*]], !prof [[PROF2]]
+; RECOVER-ZERO-BASED-SHADOW:       17:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = or i64 [[TMP0]], 15
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP21:%.*]] = icmp ne i8 [[TMP2]], [[TMP20]]
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br i1 [[TMP21]], label [[TMP11]], label [[TMP22]], !prof [[PROF2]]
 ; RECOVER-ZERO-BASED-SHADOW:       22:
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    br label [[TMP23]]
+; RECOVER-ZERO-BASED-SHADOW:       23:
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    store i128 [[B]], ptr [[A]], align 16
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    ret void
 ;
@@ -1899,12 +1992,13 @@ define void @test_store40(ptr %a, i40 %b) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]], i40 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    call void @__hwasan_storeN(i64 [[TMP4]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    call void @__hwasan_storeN(i64 [[TMP5]], i64 5)
 ; CHECK-NEXT:    store i40 [[B]], ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -1912,12 +2006,13 @@ define void @test_store40(ptr %a, i40 %b) sanitize_hwaddress {
 ; NOFASTPATH-SAME: (ptr [[A:%.*]], i40 [[B:%.*]]) #[[ATTR0]] {
 ; NOFASTPATH-NEXT:  entry:
 ; NOFASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; NOFASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; NOFASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; NOFASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; NOFASTPATH-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; NOFASTPATH-NEXT:    call void @__hwasan_storeN(i64 [[TMP4]], i64 5)
+; NOFASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; NOFASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; NOFASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; NOFASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; NOFASTPATH-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; NOFASTPATH-NEXT:    call void @__hwasan_storeN(i64 [[TMP5]], i64 5)
 ; NOFASTPATH-NEXT:    store i40 [[B]], ptr [[A]], align 4
 ; NOFASTPATH-NEXT:    ret void
 ;
@@ -1925,12 +2020,13 @@ define void @test_store40(ptr %a, i40 %b) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]], i40 [[B:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; FASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; FASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; FASTPATH-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; FASTPATH-NEXT:    call void @__hwasan_storeN(i64 [[TMP4]], i64 5)
+; FASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; FASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; FASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; FASTPATH-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    call void @__hwasan_storeN(i64 [[TMP5]], i64 5)
 ; FASTPATH-NEXT:    store i40 [[B]], ptr [[A]], align 4
 ; FASTPATH-NEXT:    ret void
 ;
@@ -1980,12 +2076,13 @@ define void @test_store_unaligned(ptr %a, i64 %b) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    call void @__hwasan_storeN(i64 [[TMP4]], i64 8)
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    call void @__hwasan_storeN(i64 [[TMP5]], i64 8)
 ; CHECK-NEXT:    store i64 [[B]], ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -1993,12 +2090,13 @@ define void @test_store_unaligned(ptr %a, i64 %b) sanitize_hwaddress {
 ; NOFASTPATH-SAME: (ptr [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
 ; NOFASTPATH-NEXT:  entry:
 ; NOFASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; NOFASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; NOFASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; NOFASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; NOFASTPATH-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; NOFASTPATH-NEXT:    call void @__hwasan_storeN(i64 [[TMP4]], i64 8)
+; NOFASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; NOFASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; NOFASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; NOFASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; NOFASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; NOFASTPATH-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; NOFASTPATH-NEXT:    call void @__hwasan_storeN(i64 [[TMP5]], i64 8)
 ; NOFASTPATH-NEXT:    store i64 [[B]], ptr [[A]], align 4
 ; NOFASTPATH-NEXT:    ret void
 ;
@@ -2006,12 +2104,13 @@ define void @test_store_unaligned(ptr %a, i64 %b) sanitize_hwaddress {
 ; FASTPATH-SAME: (ptr [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
 ; FASTPATH-NEXT:  entry:
 ; FASTPATH-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; FASTPATH-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 72057594037927935
-; FASTPATH-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
-; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
-; FASTPATH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
-; FASTPATH-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; FASTPATH-NEXT:    call void @__hwasan_storeN(i64 [[TMP4]], i64 8)
+; FASTPATH-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 8
+; FASTPATH-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP1]], 8
+; FASTPATH-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], 4294967295
+; FASTPATH-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP3]], 1
+; FASTPATH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; FASTPATH-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[A]] to i64
+; FASTPATH-NEXT:    call void @__hwasan_storeN(i64 [[TMP5]], i64 8)
 ; FASTPATH-NEXT:    store i64 [[B]], ptr [[A]], align 4
 ; FASTPATH-NEXT:    ret void
 ;
