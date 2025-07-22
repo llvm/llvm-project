@@ -112,8 +112,8 @@ fir::factory::CharacterExprHelper::materializeValue(mlir::Value str) {
   }
   auto len = builder.createIntegerConstant(
       loc, builder.getCharacterLengthType(), charTy.getLen());
-  auto temp = builder.create<fir::AllocaOp>(loc, charTy);
-  builder.create<fir::StoreOp>(loc, str, temp);
+  auto temp = fir::AllocaOp::create(builder, loc, charTy);
+  fir::StoreOp::create(builder, loc, str, temp);
   LLVM_DEBUG(llvm::dbgs() << "materialized as local: " << str << " -> (" << temp
                           << ", " << len << ")\n");
   return {temp, len};
@@ -163,7 +163,7 @@ fir::factory::CharacterExprHelper::toExtendedValue(mlir::Value character,
     }
     if (!boxCharLen) {
       auto unboxed =
-          builder.create<fir::UnboxCharOp>(loc, refType, lenType, character);
+          fir::UnboxCharOp::create(builder, loc, refType, lenType, character);
       base = builder.createConvert(loc, refType, unboxed.getResult(0));
       boxCharLen = unboxed.getResult(1);
     }
@@ -208,7 +208,7 @@ fir::factory::CharacterExprHelper::createEmbox(const fir::CharBoxValue &box) {
   // not in memory.
   if (!fir::isa_ref_type(buff.getType())) {
     auto temp = builder.createTemporary(loc, buff.getType());
-    builder.create<fir::StoreOp>(loc, buff, temp);
+    fir::StoreOp::create(builder, loc, buff, temp);
     buff = temp;
   }
   // fir.emboxchar only accepts scalar, cast array buffer to a scalar buffer.
@@ -218,7 +218,7 @@ fir::factory::CharacterExprHelper::createEmbox(const fir::CharBoxValue &box) {
   // be used in boxchar.
   auto len = builder.createConvert(loc, builder.getCharacterLengthType(),
                                    box.getLen());
-  return builder.create<fir::EmboxCharOp>(loc, boxCharType, buff, len);
+  return fir::EmboxCharOp::create(builder, loc, boxCharType, buff, len);
 }
 
 fir::CharBoxValue fir::factory::CharacterExprHelper::toScalarCharacter(
@@ -231,8 +231,8 @@ fir::CharBoxValue fir::factory::CharacterExprHelper::toScalarCharacter(
   auto lenType = builder.getCharacterLengthType();
   auto len = builder.createConvert(loc, lenType, box.getLen());
   for (auto extent : box.getExtents())
-    len = builder.create<mlir::arith::MulIOp>(
-        loc, len, builder.createConvert(loc, lenType, extent));
+    len = mlir::arith::MulIOp::create(
+        builder, loc, len, builder.createConvert(loc, lenType, extent));
 
   // TODO: typeLen can be improved in compiled constant cases
   // TODO: allow bare fir.array<> (no ref) conversion here ?
@@ -277,7 +277,7 @@ fir::factory::CharacterExprHelper::createElementAddr(mlir::Value buffer,
 
   auto coor = builder.createConvert(loc, coorTy, buffer);
   auto i = builder.createConvert(loc, builder.getIndexType(), index);
-  return builder.create<fir::CoordinateOp>(loc, singleRefTy, coor, i);
+  return fir::CoordinateOp::create(builder, loc, singleRefTy, coor, i);
 }
 
 /// Load a character out of `buff` from offset `index`.
@@ -287,7 +287,7 @@ fir::factory::CharacterExprHelper::createLoadCharAt(mlir::Value buff,
                                                     mlir::Value index) {
   LLVM_DEBUG(llvm::dbgs() << "load a char: " << buff << " type: "
                           << buff.getType() << " at: " << index << '\n');
-  return builder.create<fir::LoadOp>(loc, createElementAddr(buff, index));
+  return fir::LoadOp::create(builder, loc, createElementAddr(buff, index));
 }
 
 /// Store the singleton character `c` to `str` at offset `index`.
@@ -299,7 +299,7 @@ void fir::factory::CharacterExprHelper::createStoreCharAt(mlir::Value str,
                           << " type: " << str.getType() << " at: " << index
                           << '\n');
   auto addr = createElementAddr(str, index);
-  builder.create<fir::StoreOp>(loc, c, addr);
+  fir::StoreOp::create(builder, loc, c, addr);
 }
 
 // FIXME: this temp is useless... either fir.coordinate_of needs to
@@ -311,8 +311,8 @@ mlir::Value fir::factory::CharacterExprHelper::getCharBoxBuffer(
     const fir::CharBoxValue &box) {
   auto buff = box.getBuffer();
   if (fir::isa_char(buff.getType())) {
-    auto newBuff = builder.create<fir::AllocaOp>(loc, buff.getType());
-    builder.create<fir::StoreOp>(loc, buff, newBuff);
+    auto newBuff = fir::AllocaOp::create(builder, loc, buff.getType());
+    fir::StoreOp::create(builder, loc, buff, newBuff);
     return newBuff;
   }
   return buff;
@@ -339,19 +339,19 @@ void fir::factory::CharacterExprHelper::createCopy(
     auto kindBytes = builder.createIntegerConstant(loc, i64Ty, bytes);
     auto castCount = builder.createConvert(loc, i64Ty, count);
     auto totalBytes =
-        builder.create<mlir::arith::MulIOp>(loc, kindBytes, castCount);
+        mlir::arith::MulIOp::create(builder, loc, kindBytes, castCount);
     auto llvmPointerType =
         mlir::LLVM::LLVMPointerType::get(builder.getContext());
     auto toPtr = builder.createConvert(loc, llvmPointerType, toBuff);
     auto fromPtr = builder.createConvert(loc, llvmPointerType, fromBuff);
-    builder.create<mlir::LLVM::MemmoveOp>(loc, toPtr, fromPtr, totalBytes,
-                                          isVolatile);
+    mlir::LLVM::MemmoveOp::create(builder, loc, toPtr, fromPtr, totalBytes,
+                                  isVolatile);
     return;
   }
 
   // Convert a CHARACTER of one KIND into a CHARACTER of another KIND.
-  builder.create<fir::CharConvertOp>(loc, src.getBuffer(), count,
-                                     dest.getBuffer());
+  fir::CharConvertOp::create(builder, loc, src.getBuffer(), count,
+                             dest.getBuffer());
 }
 
 void fir::factory::CharacterExprHelper::createPadding(
@@ -397,7 +397,7 @@ fir::CharBoxValue fir::factory::CharacterExprHelper::createTempFrom(
   } else {
     auto ref = builder.createConvert(loc, builder.getRefType(sourceTy),
                                      temp.getBuffer());
-    builder.create<fir::StoreOp>(loc, charBox->getBuffer(), ref);
+    fir::StoreOp::create(builder, loc, charBox->getBuffer(), ref);
   }
   return temp;
 }
@@ -412,23 +412,23 @@ void fir::factory::CharacterExprHelper::createLengthOneAssign(
     auto fromCharLen1RefTy = builder.getRefType(getSingletonCharType(
         builder.getContext(),
         getCharacterKind(fir::unwrapRefType(val.getType()))));
-    val = builder.create<fir::LoadOp>(
-        loc, builder.createConvert(loc, fromCharLen1RefTy, val));
+    val = fir::LoadOp::create(
+        builder, loc, builder.createConvert(loc, fromCharLen1RefTy, val));
   }
   auto toCharLen1Ty =
       getSingletonCharType(builder.getContext(), getCharacterKind(toTy));
   val = builder.createConvert(loc, toCharLen1Ty, val);
-  builder.create<fir::StoreOp>(
-      loc, val,
+  fir::StoreOp::create(
+      builder, loc, val,
       builder.createConvert(loc, builder.getRefType(toCharLen1Ty), addr));
 }
 
 /// Returns the minimum of integer mlir::Value \p a and \b.
 mlir::Value genMin(fir::FirOpBuilder &builder, mlir::Location loc,
                    mlir::Value a, mlir::Value b) {
-  auto cmp = builder.create<mlir::arith::CmpIOp>(
-      loc, mlir::arith::CmpIPredicate::slt, a, b);
-  return builder.create<mlir::arith::SelectOp>(loc, cmp, a, b);
+  auto cmp = mlir::arith::CmpIOp::create(builder, loc,
+                                         mlir::arith::CmpIPredicate::slt, a, b);
+  return mlir::arith::SelectOp::create(builder, loc, cmp, a, b);
 }
 
 void fir::factory::CharacterExprHelper::createAssign(
@@ -479,7 +479,7 @@ void fir::factory::CharacterExprHelper::createAssign(
   if (!compileTimeSameLength) {
     auto one = builder.createIntegerConstant(loc, lhs.getLen().getType(), 1);
     auto maxPadding =
-        builder.create<mlir::arith::SubIOp>(loc, lhs.getLen(), one);
+        mlir::arith::SubIOp::create(builder, loc, lhs.getLen(), one);
     createPadding(lhs, copyCount, maxPadding);
   }
 }
@@ -490,18 +490,19 @@ fir::CharBoxValue fir::factory::CharacterExprHelper::createConcatenate(
                                       lhs.getLen());
   auto rhsLen = builder.createConvert(loc, builder.getCharacterLengthType(),
                                       rhs.getLen());
-  mlir::Value len = builder.create<mlir::arith::AddIOp>(loc, lhsLen, rhsLen);
+  mlir::Value len = mlir::arith::AddIOp::create(builder, loc, lhsLen, rhsLen);
   auto temp = createCharacterTemp(getCharacterType(rhs), len);
   createCopy(temp, lhs, lhsLen);
   auto one = builder.createIntegerConstant(loc, len.getType(), 1);
-  auto upperBound = builder.create<mlir::arith::SubIOp>(loc, len, one);
+  auto upperBound = mlir::arith::SubIOp::create(builder, loc, len, one);
   auto lhsLenIdx = builder.createConvert(loc, builder.getIndexType(), lhsLen);
   auto fromBuff = getCharBoxBuffer(rhs);
   auto toBuff = getCharBoxBuffer(temp);
   fir::factory::DoLoopHelper{builder, loc}.createLoop(
       lhsLenIdx, upperBound, one,
       [&](fir::FirOpBuilder &bldr, mlir::Value index) {
-        auto rhsIndex = bldr.create<mlir::arith::SubIOp>(loc, index, lhsLenIdx);
+        auto rhsIndex =
+            mlir::arith::SubIOp::create(bldr, loc, index, lhsLenIdx);
         auto charVal = createLoadCharAt(fromBuff, rhsIndex);
         createStoreCharAt(toBuff, index, charVal);
       });
@@ -514,7 +515,7 @@ mlir::Value fir::factory::CharacterExprHelper::genSubstringBase(
   if (!one)
     one = builder.createIntegerConstant(loc, lowerBound.getType(), 1);
   auto offset =
-      builder.create<mlir::arith::SubIOp>(loc, lowerBound, one).getResult();
+      mlir::arith::SubIOp::create(builder, loc, lowerBound, one).getResult();
   auto addr = createElementAddr(stringRawAddr, offset);
   return builder.createConvert(loc, substringAddrType, addr);
 }
@@ -545,19 +546,19 @@ fir::CharBoxValue fir::factory::CharacterExprHelper::createSubstring(
   mlir::Value substringLen;
   if (nbounds < 2) {
     substringLen =
-        builder.create<mlir::arith::SubIOp>(loc, box.getLen(), castBounds[0]);
+        mlir::arith::SubIOp::create(builder, loc, box.getLen(), castBounds[0]);
   } else {
     substringLen =
-        builder.create<mlir::arith::SubIOp>(loc, castBounds[1], castBounds[0]);
+        mlir::arith::SubIOp::create(builder, loc, castBounds[1], castBounds[0]);
   }
-  substringLen = builder.create<mlir::arith::AddIOp>(loc, substringLen, one);
+  substringLen = mlir::arith::AddIOp::create(builder, loc, substringLen, one);
 
   // Set length to zero if bounds were reversed (Fortran 2018 9.4.1)
   auto zero = builder.createIntegerConstant(loc, substringLen.getType(), 0);
-  auto cdt = builder.create<mlir::arith::CmpIOp>(
-      loc, mlir::arith::CmpIPredicate::slt, substringLen, zero);
+  auto cdt = mlir::arith::CmpIOp::create(
+      builder, loc, mlir::arith::CmpIPredicate::slt, substringLen, zero);
   substringLen =
-      builder.create<mlir::arith::SelectOp>(loc, cdt, zero, substringLen);
+      mlir::arith::SelectOp::create(builder, loc, cdt, zero, substringLen);
 
   return {substringRef, substringLen};
 }
@@ -573,11 +574,11 @@ fir::factory::CharacterExprHelper::createLenTrim(const fir::CharBoxValue &str) {
   auto zero = builder.createIntegerConstant(loc, indexType, 0);
   auto trueVal = builder.createIntegerConstant(loc, builder.getI1Type(), 1);
   auto blank = createBlankConstantCode(getCharacterType(str));
-  mlir::Value lastChar = builder.create<mlir::arith::SubIOp>(loc, len, one);
+  mlir::Value lastChar = mlir::arith::SubIOp::create(builder, loc, len, one);
 
   auto iterWhile =
-      builder.create<fir::IterWhileOp>(loc, lastChar, zero, minusOne, trueVal,
-                                       /*returnFinalCount=*/false, lastChar);
+      fir::IterWhileOp::create(builder, loc, lastChar, zero, minusOne, trueVal,
+                               /*returnFinalCount=*/false, lastChar);
   auto insPt = builder.saveInsertionPoint();
   builder.setInsertionPointToStart(iterWhile.getBody());
   auto index = iterWhile.getInductionVar();
@@ -586,17 +587,17 @@ fir::factory::CharacterExprHelper::createLenTrim(const fir::CharBoxValue &str) {
   auto elemAddr = createElementAddr(fromBuff, index);
   auto codeAddr =
       builder.createConvert(loc, builder.getRefType(blank.getType()), elemAddr);
-  auto c = builder.create<fir::LoadOp>(loc, codeAddr);
-  auto isBlank = builder.create<mlir::arith::CmpIOp>(
-      loc, mlir::arith::CmpIPredicate::eq, blank, c);
+  auto c = fir::LoadOp::create(builder, loc, codeAddr);
+  auto isBlank = mlir::arith::CmpIOp::create(
+      builder, loc, mlir::arith::CmpIPredicate::eq, blank, c);
   llvm::SmallVector<mlir::Value> results = {isBlank, index};
-  builder.create<fir::ResultOp>(loc, results);
+  fir::ResultOp::create(builder, loc, results);
   builder.restoreInsertionPoint(insPt);
   // Compute length after iteration (zero if all blanks)
   mlir::Value newLen =
-      builder.create<mlir::arith::AddIOp>(loc, iterWhile.getResult(1), one);
-  auto result = builder.create<mlir::arith::SelectOp>(
-      loc, iterWhile.getResult(0), zero, newLen);
+      mlir::arith::AddIOp::create(builder, loc, iterWhile.getResult(1), one);
+  auto result = mlir::arith::SelectOp::create(
+      builder, loc, iterWhile.getResult(0), zero, newLen);
   return builder.createConvert(loc, builder.getCharacterLengthType(), result);
 }
 
@@ -606,7 +607,7 @@ fir::factory::CharacterExprHelper::createCharacterTemp(mlir::Type type,
   assert(len >= 0 && "expected positive length");
   auto kind = recoverCharacterType(type).getFKind();
   auto charType = fir::CharacterType::get(builder.getContext(), kind, len);
-  auto addr = builder.create<fir::AllocaOp>(loc, charType);
+  auto addr = fir::AllocaOp::create(builder, loc, charType);
   auto mlirLen =
       builder.createIntegerConstant(loc, builder.getCharacterLengthType(), len);
   return {addr, mlirLen};
@@ -690,10 +691,10 @@ fir::factory::CharacterExprHelper::createSingletonFromCode(mlir::Value code,
   auto bits = builder.getKindMap().getCharacterBitsize(kind);
   auto intType = builder.getIntegerType(bits);
   auto cast = builder.createConvert(loc, intType, code);
-  auto undef = builder.create<fir::UndefOp>(loc, charType);
+  auto undef = fir::UndefOp::create(builder, loc, charType);
   auto zero = builder.getIntegerAttr(builder.getIndexType(), 0);
-  return builder.create<fir::InsertValueOp>(loc, charType, undef, cast,
-                                            builder.getArrayAttr(zero));
+  return fir::InsertValueOp::create(builder, loc, charType, undef, cast,
+                                    builder.getArrayAttr(zero));
 }
 
 mlir::Value fir::factory::CharacterExprHelper::extractCodeFromSingleton(
@@ -703,8 +704,8 @@ mlir::Value fir::factory::CharacterExprHelper::extractCodeFromSingleton(
   auto bits = builder.getKindMap().getCharacterBitsize(type.getFKind());
   auto intType = builder.getIntegerType(bits);
   auto zero = builder.getIntegerAttr(builder.getIndexType(), 0);
-  return builder.create<fir::ExtractValueOp>(loc, intType, singleton,
-                                             builder.getArrayAttr(zero));
+  return fir::ExtractValueOp::create(builder, loc, intType, singleton,
+                                     builder.getArrayAttr(zero));
 }
 
 mlir::Value
@@ -716,12 +717,12 @@ fir::factory::CharacterExprHelper::readLengthFromBox(mlir::Value box) {
 mlir::Value fir::factory::CharacterExprHelper::readLengthFromBox(
     mlir::Value box, fir::CharacterType charTy) {
   auto lenTy = builder.getCharacterLengthType();
-  auto size = builder.create<fir::BoxEleSizeOp>(loc, lenTy, box);
+  auto size = fir::BoxEleSizeOp::create(builder, loc, lenTy, box);
   auto bits = builder.getKindMap().getCharacterBitsize(charTy.getFKind());
   auto width = bits / 8;
   if (width > 1) {
     auto widthVal = builder.createIntegerConstant(loc, lenTy, width);
-    return builder.create<mlir::arith::DivSIOp>(loc, size, widthVal);
+    return mlir::arith::DivSIOp::create(builder, loc, size, widthVal);
   }
   return size;
 }
@@ -748,18 +749,18 @@ fir::factory::extractCharacterProcedureTuple(fir::FirOpBuilder &builder,
                                              mlir::Value tuple,
                                              bool openBoxProc) {
   mlir::TupleType tupleType = mlir::cast<mlir::TupleType>(tuple.getType());
-  mlir::Value addr = builder.create<fir::ExtractValueOp>(
-      loc, tupleType.getType(0), tuple,
+  mlir::Value addr = fir::ExtractValueOp::create(
+      builder, loc, tupleType.getType(0), tuple,
       builder.getArrayAttr(
           {builder.getIntegerAttr(builder.getIndexType(), 0)}));
   mlir::Value proc = [&]() -> mlir::Value {
     if (openBoxProc)
       if (auto addrTy = mlir::dyn_cast<fir::BoxProcType>(addr.getType()))
-        return builder.create<fir::BoxAddrOp>(loc, addrTy.getEleTy(), addr);
+        return fir::BoxAddrOp::create(builder, loc, addrTy.getEleTy(), addr);
     return addr;
   }();
-  mlir::Value len = builder.create<fir::ExtractValueOp>(
-      loc, tupleType.getType(1), tuple,
+  mlir::Value len = fir::ExtractValueOp::create(
+      builder, loc, tupleType.getType(1), tuple,
       builder.getArrayAttr(
           {builder.getIntegerAttr(builder.getIndexType(), 1)}));
   return {proc, len};
@@ -773,14 +774,14 @@ mlir::Value fir::factory::createCharacterProcedureTuple(
   if (len)
     len = builder.createConvert(loc, tupleType.getType(1), len);
   else
-    len = builder.create<fir::UndefOp>(loc, tupleType.getType(1));
-  mlir::Value tuple = builder.create<fir::UndefOp>(loc, tupleType);
-  tuple = builder.create<fir::InsertValueOp>(
-      loc, tupleType, tuple, addr,
+    len = fir::UndefOp::create(builder, loc, tupleType.getType(1));
+  mlir::Value tuple = fir::UndefOp::create(builder, loc, tupleType);
+  tuple = fir::InsertValueOp::create(
+      builder, loc, tupleType, tuple, addr,
       builder.getArrayAttr(
           {builder.getIntegerAttr(builder.getIndexType(), 0)}));
-  tuple = builder.create<fir::InsertValueOp>(
-      loc, tupleType, tuple, len,
+  tuple = fir::InsertValueOp::create(
+      builder, loc, tupleType, tuple, len,
       builder.getArrayAttr(
           {builder.getIntegerAttr(builder.getIndexType(), 1)}));
   return tuple;
@@ -827,10 +828,10 @@ fir::CharBoxValue fir::factory::CharacterExprHelper::createCharExtremum(
     auto currLen = builder.createConvert(loc, builder.getCharacterLengthType(),
                                          currChar.getLen());
     // biggest len result
-    mlir::Value lhsBigger = builder.create<mlir::arith::CmpIOp>(
-        loc, mlir::arith::CmpIPredicate::uge, biggestLen, currLen);
-    biggestLen = builder.create<mlir::arith::SelectOp>(loc, lhsBigger,
-                                                       biggestLen, currLen);
+    mlir::Value lhsBigger = mlir::arith::CmpIOp::create(
+        builder, loc, mlir::arith::CmpIPredicate::uge, biggestLen, currLen);
+    biggestLen = mlir::arith::SelectOp::create(builder, loc, lhsBigger,
+                                               biggestLen, currLen);
 
     auto cmp = predIsMin ? mlir::arith::CmpIPredicate::slt
                          : mlir::arith::CmpIPredicate::sgt;
@@ -843,10 +844,10 @@ fir::CharBoxValue fir::factory::CharacterExprHelper::createCharExtremum(
     resultBuf = builder.createConvert(loc, type, resultBuf);
     currBuf = builder.createConvert(loc, type, currBuf);
 
-    resultBuf = builder.create<mlir::arith::SelectOp>(loc, resultCmp, currBuf,
-                                                      resultBuf);
-    resultLen = builder.create<mlir::arith::SelectOp>(loc, resultCmp, currLen,
-                                                      resultLen);
+    resultBuf = mlir::arith::SelectOp::create(builder, loc, resultCmp, currBuf,
+                                              resultBuf);
+    resultLen = mlir::arith::SelectOp::create(builder, loc, resultCmp, currLen,
+                                              resultLen);
   }
 
   // now that we know the lexicographically biggest/smallest char and which char
@@ -876,7 +877,7 @@ fir::factory::convertCharacterKind(fir::FirOpBuilder &builder,
     // As a value, it ought to have a constant LEN value.
     assert(charTy.hasConstantLen() && "must have constant length");
     mlir::Value tmp = builder.createTemporary(loc, charTy);
-    builder.create<fir::StoreOp>(loc, boxCharAddr, tmp);
+    fir::StoreOp::create(builder, loc, boxCharAddr, tmp);
     boxCharAddr = tmp;
   }
   auto fromBits = kindMap.getCharacterBitsize(
@@ -886,13 +887,13 @@ fir::factory::convertCharacterKind(fir::FirOpBuilder &builder,
     // Scale by relative ratio to give a buffer of the same length.
     auto ratio = builder.createIntegerConstant(loc, bufferSize.getType(),
                                                fromBits / toBits);
-    bufferSize = builder.create<mlir::arith::MulIOp>(loc, bufferSize, ratio);
+    bufferSize = mlir::arith::MulIOp::create(builder, loc, bufferSize, ratio);
   }
   mlir::Type toType =
       fir::CharacterType::getUnknownLen(builder.getContext(), toKind);
   auto dest = builder.createTemporary(loc, toType, /*name=*/{}, /*shape=*/{},
                                       mlir::ValueRange{bufferSize});
-  builder.create<fir::CharConvertOp>(loc, boxCharAddr, srcBoxChar.getLen(),
-                                     dest);
+  fir::CharConvertOp::create(builder, loc, boxCharAddr, srcBoxChar.getLen(),
+                             dest);
   return fir::CharBoxValue{dest, srcBoxChar.getLen()};
 }

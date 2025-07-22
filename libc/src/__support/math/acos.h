@@ -24,10 +24,9 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-using DoubleDouble = fputil::DoubleDouble;
-using Float128 = fputil::DyadicFloat<128>;
-
 static constexpr double acos(double x) {
+  using DoubleDouble = fputil::DoubleDouble;
+  using namespace asin_internal;
   using FPBits = fputil::FPBits<double>;
 
   FPBits xbits(x);

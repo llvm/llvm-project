@@ -219,18 +219,64 @@ Value *InstCombinerImpl::EmitGEPOffset(GEPOperator *GEP, bool RewriteGEP) {
 Value *InstCombinerImpl::EmitGEPOffsets(ArrayRef<GEPOperator *> GEPs,
                                         GEPNoWrapFlags NW, Type *IdxTy,
                                         bool RewriteGEPs) {
-  Value *Sum = nullptr;
-  for (GEPOperator *GEP : reverse(GEPs)) {
-    Value *Offset = EmitGEPOffset(GEP, RewriteGEPs);
-    if (Offset->getType() != IdxTy)
-      Offset = Builder.CreateVectorSplat(
-          cast<VectorType>(IdxTy)->getElementCount(), Offset);
+  auto Add = [&](Value *Sum, Value *Offset) -> Value * {
     if (Sum)
-      Sum = Builder.CreateAdd(Sum, Offset, "", NW.hasNoUnsignedWrap(),
-                              NW.isInBounds());
+      return Builder.CreateAdd(Sum, Offset, "", NW.hasNoUnsignedWrap(),
+                               NW.isInBounds());
     else
-      Sum = Offset;
+      return Offset;
+  };
+
+  Value *Sum = nullptr;
+  Value *OneUseSum = nullptr;
+  Value *OneUseBase = nullptr;
+  GEPNoWrapFlags OneUseFlags = GEPNoWrapFlags::all();
+  for (GEPOperator *GEP : reverse(GEPs)) {
+    Value *Offset;
+    {
+      // Expand the offset at the point of the previous GEP to enable rewriting.
+      // However, use the original insertion point for calculating Sum.
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      auto *Inst = dyn_cast<Instruction>(GEP);
+      if (RewriteGEPs && Inst)
+        Builder.SetInsertPoint(Inst);
+
+      Offset = llvm::emitGEPOffset(&Builder, DL, GEP);
+      if (Offset->getType() != IdxTy)
+        Offset = Builder.CreateVectorSplat(
+            cast<VectorType>(IdxTy)->getElementCount(), Offset);
+      if (GEP->hasOneUse()) {
+        // Offsets of one-use GEPs will be merged into the next multi-use GEP.
+        OneUseSum = Add(OneUseSum, Offset);
+        OneUseFlags = OneUseFlags.intersectForOffsetAdd(GEP->getNoWrapFlags());
+        if (!OneUseBase)
+          OneUseBase = GEP->getPointerOperand();
+        continue;
+      }
+
+      if (OneUseSum)
+        Offset = Add(OneUseSum, Offset);
+
+      // Rewrite the GEP to reuse the computed offset. This also includes
+      // offsets from preceding one-use GEPs.
+      if (RewriteGEPs && Inst &&
+          !(GEP->getSourceElementType()->isIntegerTy(8) &&
+            GEP->getOperand(1) == Offset)) {
+        replaceInstUsesWith(
+            *Inst,
+            Builder.CreatePtrAdd(
+                OneUseBase ? OneUseBase : GEP->getPointerOperand(), Offset, "",
+                OneUseFlags.intersectForOffsetAdd(GEP->getNoWrapFlags())));
+        eraseInstFromFunction(*Inst);
+      }
+    }
+
+    Sum = Add(Sum, Offset);
+    OneUseSum = OneUseBase = nullptr;
+    OneUseFlags = GEPNoWrapFlags::all();
   }
+  if (OneUseSum)
+    Sum = Add(Sum, OneUseSum);
   if (!Sum)
     return Constant::getNullValue(IdxTy);
   return Sum;
@@ -1417,10 +1463,8 @@ void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
   }
 
   // Update pre-existing debug value uses.
-  SmallVector<DbgValueInst *, 4> DbgValues;
   SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
-  llvm::findDbgValues(DbgValues, I, &DbgVariableRecords);
-  assert(DbgValues.empty());
+  llvm::findDbgValues(I, DbgVariableRecords);
 
   for (DbgVariableRecord *DbgVal : DbgVariableRecords) {
     SmallVector<uint64_t, 1> Ops = {dwarf::DW_OP_not};
@@ -3565,12 +3609,10 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
 
   // If we are removing an alloca with a dbg.declare, insert dbg.value calls
   // before each store.
-  SmallVector<DbgVariableIntrinsic *, 8> DVIs;
   SmallVector<DbgVariableRecord *, 8> DVRs;
   std::unique_ptr<DIBuilder> DIB;
   if (isa<AllocaInst>(MI)) {
-    findDbgUsers(DVIs, &MI, &DVRs);
-    assert(DVIs.empty());
+    findDbgUsers(&MI, DVRs);
     DIB.reset(new DIBuilder(*MI.getModule(), /*AllowUnresolved=*/false));
   }
 
@@ -3692,9 +3734,6 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
     //
     // FIXME: the Assignment Tracking project has now likely made this
     // redundant (and it's sometimes harmful).
-    for (auto *DVI : DVIs)
-      if (DVI->isAddressOfVariable() || DVI->getExpression()->startsWithDeref())
-        DVI->eraseFromParent();
     for (auto *DVR : DVRs)
       if (DVR->isAddressOfVariable() || DVR->getExpression()->startsWithDeref())
         DVR->eraseFromParent();
@@ -5246,10 +5285,8 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
   // maximise the range variables have location for. If we cannot salvage, then
   // mark the location undef: we know it was supposed to receive a new location
   // here, but that computation has been sunk.
-  SmallVector<DbgVariableIntrinsic *, 2> DbgUsers;
   SmallVector<DbgVariableRecord *, 2> DbgVariableRecords;
-  findDbgUsers(DbgUsers, I, &DbgVariableRecords);
-  assert(DbgUsers.empty());
+  findDbgUsers(I, DbgVariableRecords);
   if (!DbgVariableRecords.empty())
     tryToSinkInstructionDbgVariableRecords(I, InsertPos, SrcBlock, DestBlock,
                                            DbgVariableRecords);
@@ -5376,7 +5413,7 @@ void InstCombinerImpl::tryToSinkInstructionDbgVariableRecords(
   if (DVRClones.empty())
     return;
 
-  salvageDebugInfoForDbgValues(*I, {}, DbgVariableRecordsToSalvage);
+  salvageDebugInfoForDbgValues(*I, DbgVariableRecordsToSalvage);
 
   // The clones are in reverse order of original appearance. Assert that the
   // head bit is set on the iterator as we _should_ have received it via

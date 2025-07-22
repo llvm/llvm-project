@@ -2,6 +2,27 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck --check-prefix=GCN %s
 
 ; TODO: Add global-isel when it can support bf16
+define amdgpu_ps void @llvm_sqrt_bf16_v(ptr addrspace(1) %out, bfloat %src) {
+; GCN-LABEL: llvm_sqrt_bf16_v:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_sqrt_bf16_e32 v2, v2
+; GCN-NEXT:    global_store_b16 v[0:1], v2, off
+; GCN-NEXT:    s_endpgm
+  %sqrt = call bfloat @llvm.sqrt.bf16(bfloat %src)
+  store bfloat %sqrt, ptr addrspace(1) %out, align 2
+  ret void
+}
+
+define amdgpu_ps void @llvm_sqrt_bf16_s(ptr addrspace(1) %out, bfloat inreg %src) {
+; GCN-LABEL: llvm_sqrt_bf16_s:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_sqrt_bf16_e32 v2, s0
+; GCN-NEXT:    global_store_b16 v[0:1], v2, off
+; GCN-NEXT:    s_endpgm
+  %sqrt = call bfloat @llvm.sqrt.bf16(bfloat %src)
+  store bfloat %sqrt, ptr addrspace(1) %out, align 2
+  ret void
+}
 
 define amdgpu_ps void @llvm_log2_bf16_v(ptr addrspace(1) %out, bfloat %src) {
 ; GCN-LABEL: llvm_log2_bf16_v:
@@ -47,5 +68,6 @@ define amdgpu_ps void @llvm_exp2_bf16_s(ptr addrspace(1) %out, bfloat inreg %src
   ret void
 }
 
+declare bfloat @llvm.sqrt.bf16(bfloat)
 declare bfloat @llvm.log2.bf16(bfloat)
 declare bfloat @llvm.exp2.bf16(bfloat)

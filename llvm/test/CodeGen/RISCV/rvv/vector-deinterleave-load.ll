@@ -542,95 +542,30 @@ define { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x 
 define {<vscale x 16 x i8>, <vscale x 16 x i8>} @masked_load_factor2(ptr %p) {
 ; CHECK-LABEL: masked_load_factor2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl4r.v v12, (a0)
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v12, 0
-; CHECK-NEXT:    vnsrl.wi v10, v12, 8
+; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vlseg2e8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = call <vscale x 32 x i8> @llvm.masked.load(ptr %p, i32 4, <vscale x 32 x i1> splat (i1 true), <vscale x 32 x i8> poison)
   %deinterleaved.results = call {<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> %vec)
   ret {<vscale x 16 x i8>, <vscale x 16 x i8>} %deinterleaved.results
 }
 
-define {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} @masked_loat_factor4(ptr %p) {
-; CHECK-LABEL: masked_loat_factor4:
+define {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} @masked_load_factor4(ptr %p) {
+; CHECK-LABEL: masked_load_factor4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 2
-; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
-; CHECK-NEXT:    vl4r.v v8, (a0)
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs4r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vlseg4e8.v v8, (a0)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 2
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %vec = call <vscale x 32 x i8> @llvm.masked.load(ptr %p, i32 4, <vscale x 32 x i1> splat (i1 true), <vscale x 32 x i8> poison)
   %deinterleaved.results = call {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} @llvm.vector.deinterleave4.nxv32i8(<vscale x 32 x i8> %vec)
   ret {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} %deinterleaved.results
 }
 
-define {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} @masked_loat_factor4_mask(ptr %p, <vscale x 8 x i1> %mask) {
-; CHECK-LABEL: masked_loat_factor4_mask:
+define {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} @masked_load_factor4_mask(ptr %p, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: masked_load_factor4_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    add a3, a1, a2
-; CHECK-NEXT:    vmv.v.v v9, v8
-; CHECK-NEXT:    srli a4, a2, 2
-; CHECK-NEXT:    vmv.v.v v10, v8
-; CHECK-NEXT:    srli a5, a2, 3
-; CHECK-NEXT:    vmv.v.v v11, v8
-; CHECK-NEXT:    vsseg4e8.v v8, (a1)
-; CHECK-NEXT:    vl1r.v v8, (a1)
-; CHECK-NEXT:    add a1, a4, a5
-; CHECK-NEXT:    vl1r.v v9, (a3)
-; CHECK-NEXT:    add a3, a3, a2
-; CHECK-NEXT:    add a2, a3, a2
-; CHECK-NEXT:    vl1r.v v10, (a3)
-; CHECK-NEXT:    vl1r.v v11, (a2)
-; CHECK-NEXT:    vmsne.vi v9, v9, 0
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
-; CHECK-NEXT:    vmsne.vi v8, v10, 0
-; CHECK-NEXT:    vmsne.vi v10, v11, 0
-; CHECK-NEXT:    vsetvli zero, a4, e8, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vx v0, v9, a5
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vx v0, v8, a4
-; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vx v0, v10, a1
-; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0), v0.t
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 2
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs4r.v v8, (a0)
-; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vlseg4e8.v v8, (a0)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    vlseg4e8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %interleaved.mask = tail call <vscale x 32 x i1> @llvm.vector.interleave4.nxv32i1(<vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask)
   %vec = call <vscale x 32 x i8> @llvm.masked.load(ptr %p, i32 4, <vscale x 32 x i1> %interleaved.mask, <vscale x 32 x i8> poison)
@@ -640,8 +575,8 @@ define {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i
 
 ; Negative test - some of the deinterleaved elements might come from the
 ; passthru not the load
-define {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} @masked_loat_factor4_passthru(ptr %p, <vscale x 8 x i1> %mask, <vscale x 32 x i8> %passthru) {
-; CHECK-LABEL: masked_loat_factor4_passthru:
+define {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} @masked_load_factor4_passthru(ptr %p, <vscale x 8 x i1> %mask, <vscale x 32 x i8> %passthru) {
+; CHECK-LABEL: masked_load_factor4_passthru:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16

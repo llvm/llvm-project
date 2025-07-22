@@ -44,6 +44,7 @@ static constexpr fputil::ExceptValues<float, N_EXCEPTS> ASINF_EXCEPTS_HI = {{
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
+  using namespace inv_trigf_utils_internal;
   using FPBits = typename fputil::FPBits<float>;
 
   FPBits xbits(x);

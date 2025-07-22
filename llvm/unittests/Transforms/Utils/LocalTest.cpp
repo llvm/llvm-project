@@ -673,20 +673,17 @@ TEST(Local, FindDbgRecords) {
   Function &Fun = *cast<Function>(M->getNamedValue("fun"));
   Value *Arg = Fun.getArg(0);
 
-  SmallVector<DbgVariableIntrinsic *> Users;
   SmallVector<DbgVariableRecord *> Records;
   // Arg (%a) is used twice by a single dbg_assign. Check findDbgUsers returns
   // only 1 pointer to it rather than 2.
-  findDbgUsers(Users, Arg, &Records);
-  EXPECT_EQ(Users.size(), 0u);
+  findDbgUsers(Arg, Records);
   EXPECT_EQ(Records.size(), 1u);
 
   SmallVector<DbgValueInst *> Vals;
   Records.clear();
   // Arg (%a) is used twice by a single dbg_assign. Check findDbgValues returns
   // only 1 pointer to it rather than 2.
-  findDbgValues(Vals, Arg, &Records);
-  EXPECT_EQ(Vals.size(), 0u);
+  findDbgValues(Arg, Records);
   EXPECT_EQ(Records.size(), 1u);
 }
 
@@ -787,20 +784,16 @@ TEST(Local, ReplaceAllDbgUsesWith) {
   // Simulate i32* <-> i64* conversion.
   EXPECT_TRUE(replaceAllDbgUsesWith(D, C, C, DT));
 
-  SmallVector<DbgVariableIntrinsic *, 2> CDbgVals;
   SmallVector<DbgVariableRecord *, 2> CDbgRecords;
-  findDbgUsers(CDbgVals, &C, &CDbgRecords);
-  EXPECT_EQ(0U, CDbgVals.size());
+  findDbgUsers(&C, CDbgRecords);
   EXPECT_EQ(2U, CDbgRecords.size());
   EXPECT_TRUE(all_of(
       CDbgRecords, [](DbgVariableRecord *DVR) { return DVR->isDbgDeclare(); }));
 
   EXPECT_TRUE(replaceAllDbgUsesWith(C, D, D, DT));
 
-  SmallVector<DbgVariableIntrinsic *, 2> DDbgVals;
   SmallVector<DbgVariableRecord *, 2> DDbgRecords;
-  findDbgUsers(DDbgVals, &D, &DDbgRecords);
-  EXPECT_EQ(0U, DDbgVals.size());
+  findDbgUsers(&D, DDbgRecords);
   EXPECT_EQ(2U, DDbgRecords.size());
   EXPECT_TRUE(all_of(
       DDbgRecords, [](DbgVariableRecord *DVR) { return DVR->isDbgDeclare(); }));
@@ -824,10 +817,8 @@ TEST(Local, ReplaceAllDbgUsesWith) {
   EXPECT_EQ(BarrierDbgVal->getNumVariableLocationOps(), 1u);
   EXPECT_TRUE(BarrierDbgVal->isKillLocation());
 
-  SmallVector<DbgValueInst *, 1> BarrierDbgVals;
   SmallVector<DbgVariableRecord *, 8> BarrierDbgRecs;
-  findDbgValues(BarrierDbgVals, &F_, &BarrierDbgRecs);
-  EXPECT_EQ(0U, BarrierDbgVals.size());
+  findDbgValues(&F_, BarrierDbgRecs);
   EXPECT_EQ(0U, BarrierDbgRecs.size());
 
   // Simulate i32 -> i64 conversion to test sign-extension. Here are some
@@ -838,10 +829,8 @@ TEST(Local, ReplaceAllDbgUsesWith) {
   //  4-6) like (1-3), but with a fragment
   EXPECT_TRUE(replaceAllDbgUsesWith(B, A, A, DT));
 
-  SmallVector<DbgValueInst *, 8> BDbgVals;
   SmallVector<DbgVariableRecord *, 8> BDbgRecs;
-  findDbgValues(BDbgVals, &A, &BDbgRecs);
-  EXPECT_EQ(0U, BDbgVals.size());
+  findDbgValues(&A, BDbgRecs);
   EXPECT_EQ(6U, BDbgRecs.size());
 
   // Check that %a has a dbg.value with a DIExpression matching \p Ops.

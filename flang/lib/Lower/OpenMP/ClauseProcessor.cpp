@@ -723,7 +723,7 @@ bool ClauseProcessor::processCopyin() const {
   // barrier is inserted following all of them.
   firOpBuilder.restoreInsertionPoint(insPt);
   if (hasCopyin)
-    firOpBuilder.create<mlir::omp::BarrierOp>(converter.getCurrentLocation());
+    mlir::omp::BarrierOp::create(firOpBuilder, converter.getCurrentLocation());
   return hasCopyin;
 }
 
@@ -803,7 +803,7 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Type> argsTy = {varType, varType};
   auto funcType = mlir::FunctionType::get(builder.getContext(), argsTy, {});
   mlir::func::FuncOp funcOp =
-      modBuilder.create<mlir::func::FuncOp>(loc, copyFuncName, funcType);
+      mlir::func::FuncOp::create(modBuilder, loc, copyFuncName, funcType);
   funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
   fir::factory::setInternalLinkage(funcOp);
   builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), argsTy,
@@ -819,22 +819,22 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
     for (auto extent : typeInfo.getShape())
       extents.push_back(
           builder.createIntegerConstant(loc, builder.getIndexType(), extent));
-    shape = builder.create<fir::ShapeOp>(loc, extents);
+    shape = fir::ShapeOp::create(builder, loc, extents);
   }
   mlir::Value dst = funcOp.getArgument(0);
   mlir::Value src = funcOp.getArgument(1);
   llvm::SmallVector<mlir::Value> typeparams;
   if (typeInfo.isBoxChar()) {
     // fir.boxchar will be passed here as fir.ref<fir.boxchar>
-    auto loadDst = builder.create<fir::LoadOp>(loc, dst);
-    auto loadSrc = builder.create<fir::LoadOp>(loc, src);
+    auto loadDst = fir::LoadOp::create(builder, loc, dst);
+    auto loadSrc = fir::LoadOp::create(builder, loc, src);
     // get the actual fir.ref<fir.char> type
     mlir::Type refType =
         fir::ReferenceType::get(mlir::cast<fir::BoxCharType>(eleTy).getEleTy());
-    auto unboxedDst = builder.create<fir::UnboxCharOp>(
-        loc, refType, builder.getIndexType(), loadDst);
-    auto unboxedSrc = builder.create<fir::UnboxCharOp>(
-        loc, refType, builder.getIndexType(), loadSrc);
+    auto unboxedDst = fir::UnboxCharOp::create(builder, loc, refType,
+                                               builder.getIndexType(), loadDst);
+    auto unboxedSrc = fir::UnboxCharOp::create(builder, loc, refType,
+                                               builder.getIndexType(), loadSrc);
     // Add length to type parameters
     typeparams.push_back(unboxedDst.getResult(1));
     dst = unboxedDst.getResult(0);
@@ -844,14 +844,14 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
         loc, builder.getCharacterLengthType(), *typeInfo.getCharLength());
     typeparams.push_back(charLen);
   }
-  auto declDst = builder.create<hlfir::DeclareOp>(
-      loc, dst, copyFuncName + "_dst", shape, typeparams,
+  auto declDst = hlfir::DeclareOp::create(
+      builder, loc, dst, copyFuncName + "_dst", shape, typeparams,
       /*dummy_scope=*/nullptr, attrs);
-  auto declSrc = builder.create<hlfir::DeclareOp>(
-      loc, src, copyFuncName + "_src", shape, typeparams,
+  auto declSrc = hlfir::DeclareOp::create(
+      builder, loc, src, copyFuncName + "_src", shape, typeparams,
       /*dummy_scope=*/nullptr, attrs);
   converter.copyVar(loc, declDst.getBase(), declSrc.getBase(), varAttrs);
-  builder.create<mlir::func::ReturnOp>(loc);
+  mlir::func::ReturnOp::create(builder, loc);
   return funcOp;
 }
 
@@ -882,8 +882,8 @@ bool ClauseProcessor::processCopyprivate(
     if (mlir::isa<fir::BaseBoxType>(symType) ||
         mlir::isa<fir::BoxCharType>(symType)) {
       fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-      auto alloca = builder.create<fir::AllocaOp>(currentLocation, symType);
-      builder.create<fir::StoreOp>(currentLocation, symVal, alloca);
+      auto alloca = fir::AllocaOp::create(builder, currentLocation, symType);
+      fir::StoreOp::create(builder, currentLocation, symVal, alloca);
       cpVar = alloca;
     }
 
@@ -1002,8 +1002,8 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
       // allocations so this is not a reliable way to identify the dependency.
       if (auto ref = mlir::dyn_cast<fir::ReferenceType>(dependVar.getType()))
         if (fir::isa_box_type(ref.getElementType()))
-          dependVar = builder.create<fir::LoadOp>(
-              converter.getCurrentLocation(), dependVar);
+          dependVar = fir::LoadOp::create(
+              builder, converter.getCurrentLocation(), dependVar);
 
       // The openmp dialect doesn't know what to do with boxes (and it would
       // break layering to teach it about them). The dependency variable can be
@@ -1012,8 +1012,8 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
       // Getting the address of the box data is okay because all the runtime
       // ultimately cares about is the base address of the array.
       if (fir::isa_box_type(dependVar.getType()))
-        dependVar = builder.create<fir::BoxAddrOp>(
-            converter.getCurrentLocation(), dependVar);
+        dependVar = fir::BoxAddrOp::create(
+            builder, converter.getCurrentLocation(), dependVar);
 
       result.dependVars.push_back(dependVar);
     }

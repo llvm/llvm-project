@@ -1,0 +1,28 @@
+add_custom_target(libc-shared-tests)
+
+add_fp_unittest(
+  shared_math_test
+  SUITE
+    libc-shared-tests
+  SRCS
+    shared_math_test.cpp
+  DEPENDS
+    libc.src.__support.math.acos
+    libc.src.__support.math.acosf
+    libc.src.__support.math.acosf16
+    libc.src.__support.math.acoshf
+    libc.src.__support.math.acoshf16
+    libc.src.__support.math.erff
+    libc.src.__support.math.exp
+    libc.src.__support.math.exp10
+    libc.src.__support.math.exp10f
+    libc.src.__support.math.exp10f16
+    libc.src.__support.math.expf
+    libc.src.__support.math.expf16
+    libc.src.__support.math.frexpf
+    libc.src.__support.math.frexpf128
+    libc.src.__support.math.frexpf16
+    libc.src.__support.math.ldexpf
+    libc.src.__support.math.ldexpf128
+    libc.src.__support.math.ldexpf16
+)

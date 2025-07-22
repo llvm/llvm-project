@@ -749,6 +749,8 @@ public:
       case parser::OmpMapType::Value::Delete:
         ompFlag = Symbol::Flag::OmpMapDelete;
         break;
+      default:
+        break;
       }
     }
     const auto &ompObjList{std::get<parser::OmpObjectList>(x.t)};

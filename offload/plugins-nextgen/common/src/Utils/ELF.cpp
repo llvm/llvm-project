@@ -60,23 +60,30 @@ static Expected<bool>
 checkMachineImpl(const object::ELFObjectFile<ELFT> &ELFObj, uint16_t EMachine) {
   const auto Header = ELFObj.getELFFile().getHeader();
   if (Header.e_type != ET_EXEC && Header.e_type != ET_DYN)
-    return createError("Only executable ELF files are supported");
+    return createError("only executable ELF files are supported");
 
   if (Header.e_machine == EM_AMDGPU) {
     if (Header.e_ident[EI_OSABI] != ELFOSABI_AMDGPU_HSA)
-      return createError("Invalid AMD OS/ABI, must be AMDGPU_HSA");
+      return createError("invalid AMD OS/ABI, must be AMDGPU_HSA");
     if (Header.e_ident[EI_ABIVERSION] != ELFABIVERSION_AMDGPU_HSA_V5 &&
         Header.e_ident[EI_ABIVERSION] != ELFABIVERSION_AMDGPU_HSA_V6)
-      return createError("Invalid AMD ABI version, must be version 5 or above");
+      return createError("invalid AMD ABI version, must be version 5 or above");
     if ((Header.e_flags & EF_AMDGPU_MACH) < EF_AMDGPU_MACH_AMDGCN_GFX700 ||
         (Header.e_flags & EF_AMDGPU_MACH) >
             EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC)
-      return createError("Unsupported AMDGPU architecture");
+      return createError("unsupported AMDGPU architecture");
   } else if (Header.e_machine == EM_CUDA) {
-    if (~Header.e_flags & EF_CUDA_64BIT_ADDRESS)
-      return createError("Invalid CUDA addressing mode");
-    if ((Header.e_flags & EF_CUDA_SM) < EF_CUDA_SM35)
-      return createError("Unsupported NVPTX architecture");
+    if (Header.e_ident[EI_ABIVERSION] == ELFABIVERSION_CUDA_V1) {
+      if (~Header.e_flags & EF_CUDA_64BIT_ADDRESS)
+        return createError("invalid CUDA addressing mode");
+      if ((Header.e_flags & EF_CUDA_SM) < EF_CUDA_SM35)
+        return createError("unsupported NVPTX architecture");
+    } else if (Header.e_ident[EI_ABIVERSION] == ELFABIVERSION_CUDA_V2) {
+      if ((Header.e_flags & EF_CUDA_SM_MASK) < EF_CUDA_SM100)
+        return createError("unsupported NVPTX architecture");
+    } else {
+      return createError("invalid CUDA ABI version");
+    }
   }
 
   return Header.e_machine == EMachine;

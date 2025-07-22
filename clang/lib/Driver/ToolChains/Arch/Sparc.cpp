@@ -130,7 +130,8 @@ std::string sparc::getSparcTargetCPU(const Driver &D, const ArgList &Args,
   return "";
 }
 
-void sparc::getSparcTargetFeatures(const Driver &D, const ArgList &Args,
+void sparc::getSparcTargetFeatures(const Driver &D, const llvm::Triple &Triple,
+                                   const ArgList &Args,
                                    std::vector<StringRef> &Features) {
   sparc::FloatABI FloatABI = sparc::getSparcFloatABI(D, Args);
   if (FloatABI == sparc::FloatABI::Soft)
@@ -150,11 +151,19 @@ void sparc::getSparcTargetFeatures(const Driver &D, const ArgList &Args,
       Features.push_back("-popc");
   }
 
+  // Those OSes default to enabling VIS on 64-bit SPARC.
+  // See also the corresponding code for external assemblers in
+  // sparc::getSparcAsmModeForCPU().
+  bool IsSparcV9ATarget =
+      (Triple.getArch() == llvm::Triple::sparcv9) &&
+      (Triple.isOSLinux() || Triple.isOSFreeBSD() || Triple.isOSOpenBSD());
   if (Arg *A = Args.getLastArg(options::OPT_mvis, options::OPT_mno_vis)) {
     if (A->getOption().matches(options::OPT_mvis))
       Features.push_back("+vis");
     else
       Features.push_back("-vis");
+  } else if (IsSparcV9ATarget) {
+    Features.push_back("+vis");
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_mvis2, options::OPT_mno_vis2)) {

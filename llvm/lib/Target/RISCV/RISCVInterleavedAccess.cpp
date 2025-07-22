@@ -131,25 +131,56 @@ static bool getMemOperands(unsigned Factor, VectorType *VTy, Type *XLenTy,
                                    : Constant::getAllOnesValue(XLenTy);
     return true;
   }
-  auto *VPLdSt = cast<VPIntrinsic>(I);
-  assert((VPLdSt->getIntrinsicID() == Intrinsic::vp_load ||
-          VPLdSt->getIntrinsicID() == Intrinsic::vp_store) &&
-         "Unexpected intrinsic");
-  Ptr = VPLdSt->getMemoryPointerParam();
-  Alignment = VPLdSt->getPointerAlignment().value_or(
-      DL.getABITypeAlign(VTy->getElementType()));
 
-  assert(Mask && "vp.load and vp.store needs a mask!");
+  auto *II = cast<IntrinsicInst>(I);
+  switch (II->getIntrinsicID()) {
+  default:
+    llvm_unreachable("Unsupported intrinsic type");
+  case Intrinsic::vp_load:
+  case Intrinsic::vp_store: {
+    auto *VPLdSt = cast<VPIntrinsic>(I);
+    Ptr = VPLdSt->getMemoryPointerParam();
+    Alignment = VPLdSt->getPointerAlignment().value_or(
+        DL.getABITypeAlign(VTy->getElementType()));
 
-  Value *WideEVL = VPLdSt->getVectorLengthParam();
-  // Conservatively check if EVL is a multiple of factor, otherwise some
-  // (trailing) elements might be lost after the transformation.
-  if (!isMultipleOfN(WideEVL, I->getDataLayout(), Factor))
-    return false;
+    assert(Mask && "vp.load and vp.store needs a mask!");
 
-  auto *FactorC = ConstantInt::get(WideEVL->getType(), Factor);
-  VL = Builder.CreateZExt(Builder.CreateExactUDiv(WideEVL, FactorC), XLenTy);
-  return true;
+    Value *WideEVL = VPLdSt->getVectorLengthParam();
+    // Conservatively check if EVL is a multiple of factor, otherwise some
+    // (trailing) elements might be lost after the transformation.
+    if (!isMultipleOfN(WideEVL, I->getDataLayout(), Factor))
+      return false;
+
+    auto *FactorC = ConstantInt::get(WideEVL->getType(), Factor);
+    VL = Builder.CreateZExt(Builder.CreateExactUDiv(WideEVL, FactorC), XLenTy);
+    return true;
+  }
+  case Intrinsic::masked_load: {
+    Ptr = II->getOperand(0);
+    Alignment = cast<ConstantInt>(II->getArgOperand(1))->getAlignValue();
+
+    if (!isa<UndefValue>(II->getOperand(3)))
+      return false;
+
+    assert(Mask && "masked.load needs a mask!");
+
+    VL = isa<FixedVectorType>(VTy)
+             ? Builder.CreateElementCount(XLenTy, VTy->getElementCount())
+             : Constant::getAllOnesValue(XLenTy);
+    return true;
+  }
+  case Intrinsic::masked_store: {
+    Ptr = II->getOperand(1);
+    Alignment = cast<ConstantInt>(II->getArgOperand(2))->getAlignValue();
+
+    assert(Mask && "masked.store needs a mask!");
+
+    VL = isa<FixedVectorType>(VTy)
+             ? Builder.CreateElementCount(XLenTy, VTy->getElementCount())
+             : Constant::getAllOnesValue(XLenTy);
+    return true;
+  }
+  }
 }
 
 /// Lower an interleaved load into a vlsegN intrinsic.

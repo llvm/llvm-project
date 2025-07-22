@@ -593,11 +593,12 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
 
     assert(!cir::MissingFeatures::dtorCleanups());
 
-    // TODO(cir): A complete destructor is supposed to call the base destructor.
-    // Since we have to emit both dtor kinds we just fall through for now and.
-    // As long as we don't support virtual bases this should be functionally
-    // equivalent.
-    assert(!cir::MissingFeatures::completeDtors());
+    if (!isTryBody) {
+      QualType thisTy = dtor->getFunctionObjectParameterType();
+      emitCXXDestructorCall(dtor, Dtor_Base, /*forVirtualBase=*/false,
+                            /*delegating=*/false, loadCXXThisAddress(), thisTy);
+      break;
+    }
 
     // Fallthrough: act like we're in the base variant.
     [[fallthrough]];
