@@ -843,10 +843,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error setupRPCServer(GenericPluginTy &Plugin, DeviceImageTy &Image);
 
   /// Synchronize the current thread with the pending operations on the
-  /// __tgt_async_info structure.
-  Error synchronize(__tgt_async_info *AsyncInfo, bool RemoveQueue = true);
+  /// __tgt_async_info structure. If ReleaseQueue is false, then the
+  // underlying queue will not be released. In this case, additional
+  // work may be submitted to the queue whilst a synchronize is running.
+  Error synchronize(__tgt_async_info *AsyncInfo, bool ReleaseQueue = true);
   virtual Error synchronizeImpl(__tgt_async_info &AsyncInfo,
-                                bool RemoveQueue) = 0;
+                                bool ReleaseQueue) = 0;
 
   /// Invokes any global constructors on the device if present and is required
   /// by the target.

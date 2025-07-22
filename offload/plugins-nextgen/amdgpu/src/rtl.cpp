@@ -2292,7 +2292,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   /// Synchronize current thread with the pending operations on the async info.
   Error synchronizeImpl(__tgt_async_info &AsyncInfo,
-                        bool RemoveQueue) override {
+                        bool ReleaseQueue) override {
     AMDGPUStreamTy *Stream =
         reinterpret_cast<AMDGPUStreamTy *>(AsyncInfo.Queue);
     assert(Stream && "Invalid stream");
@@ -2303,7 +2303,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // Once the stream is synchronized, return it to stream pool and reset
     // AsyncInfo. This is to make sure the synchronization only works for its
     // own tasks.
-    if (RemoveQueue) {
+    if (ReleaseQueue) {
       AsyncInfo.Queue = nullptr;
       return AMDGPUStreamManager.returnResource(Stream);
     }

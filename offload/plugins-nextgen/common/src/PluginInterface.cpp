@@ -1336,7 +1336,7 @@ Error PinnedAllocationMapTy::unlockUnmappedHostBuffer(void *HstPtr) {
 }
 
 Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo,
-                                   bool RemoveQueue) {
+                                   bool ReleaseQueue) {
   SmallVector<void *, 2> AllocsToDelete{};
   {
     std::lock_guard<std::mutex> AllocationGuard{AsyncInfo->Mutex};
@@ -1345,7 +1345,7 @@ Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo,
       return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                            "invalid async info queue");
 
-    if (auto Err = synchronizeImpl(*AsyncInfo, RemoveQueue))
+    if (auto Err = synchronizeImpl(*AsyncInfo, ReleaseQueue))
       return Err;
 
     std::swap(AllocsToDelete, AsyncInfo->AssociatedAllocations);

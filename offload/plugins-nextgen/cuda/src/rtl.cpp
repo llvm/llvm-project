@@ -638,15 +638,15 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
   /// Synchronize current thread with the pending operations on the async info.
   Error synchronizeImpl(__tgt_async_info &AsyncInfo,
-                        bool RemoveQueue) override {
+                        bool ReleaseQueue) override {
     CUstream Stream = reinterpret_cast<CUstream>(AsyncInfo.Queue);
     CUresult Res;
     Res = cuStreamSynchronize(Stream);
 
-    // Once the stream is synchronized, return it to stream pool and reset
-    // AsyncInfo. This is to make sure the synchronization only works for its
-    // own tasks.
-    if (RemoveQueue) {
+    // Once the stream is synchronized and we want to release the queue, return
+    // it to stream pool and reset AsyncInfo. This is to make sure the
+    // synchronization only works for its own tasks.
+    if (ReleaseQueue) {
       AsyncInfo.Queue = nullptr;
       if (auto Err = CUDAStreamManager.returnResource(Stream))
         return Err;
