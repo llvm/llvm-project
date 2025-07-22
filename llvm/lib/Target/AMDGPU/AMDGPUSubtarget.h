@@ -15,7 +15,6 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUSUBTARGET_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/TargetParser/Triple.h"
@@ -81,7 +80,6 @@ protected:
   unsigned LocalMemorySize = 0;
   unsigned AddressableLocalMemorySize = 0;
   char WavefrontSizeLog2 = 0;
-  MISched::Direction PostRASchedDirection = MISched::TopDown;
 
 public:
   AMDGPUSubtarget(Triple TT);
@@ -384,10 +382,6 @@ public:
   AMDGPUDwarfFlavour getAMDGPUDwarfFlavour() const;
 
   virtual ~AMDGPUSubtarget() = default;
-
-  MISched::Direction getPostRASchedDirection() const {
-    return PostRASchedDirection;
-  }
 };
 
 } // end namespace llvm

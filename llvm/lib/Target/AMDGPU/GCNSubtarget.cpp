@@ -346,9 +346,8 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
 }
 
 void GCNSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
-                                             const MachineBasicBlock &MBB,
-                                             unsigned NumRegionInstr) const {
-  const Function &F = MBB.getParent()->getFunction();
+                                             const SchedRegion &Region) const {
+  const Function &F = Region.RegionBegin->getMF()->getFunction();
   Attribute PostRADirectionAttr = F.getFnAttribute("amdgpu-post-ra-direction");
   if (!PostRADirectionAttr.isValid())
     return;
@@ -370,39 +369,19 @@ void GCNSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
             PostRADirectionStr);
     F.getContext().diagnose(Diag);
   }
-  // }
 
-  // switch (getPostRASchedDirection()) {
-  // case MISched::TopDown:
-  //   Policy.OnlyTopDown = true;
-  //   Policy.OnlyBottomUp = false;
-  //   break;
-  // case MISched::BottomUp:
-  //   Policy.OnlyTopDown = false;
-  //   Policy.OnlyBottomUp = true;
-  //   break;
-  // case MISched::Bidirectional:
-  //   Policy.OnlyTopDown = false;
-  //   Policy.OnlyBottomUp = false;
-  //   break;
-  // default:
-  //   break;
-  // }
+  LLVM_DEBUG({
+    const char *DirStr = "default";
+    if (Policy.OnlyTopDown && !Policy.OnlyBottomUp)
+      DirStr = "topdown";
+    else if (!Policy.OnlyTopDown && Policy.OnlyBottomUp)
+      DirStr = "bottomup";
+    else if (!Policy.OnlyTopDown && !Policy.OnlyBottomUp)
+      DirStr = "bidirectional";
 
-  // LLVM_DEBUG({
-  //   const char *DirStr = "topdown";
-  //   switch (getPostRASchedDirection()) {
-  //   case MISched::BottomUp:
-  //     DirStr = "bottomup";
-  //     break;
-  //   case MISched::Bidirectional:
-  //     DirStr = "bidirectional";
-  //     break;
-  //   default:
-  //     break;
-  //   }
-  //   dbgs() << "Post-MI-sched direction: " << DirStr << '\n';
-  // });
+    dbgs() << "Post-MI-sched direction (" << F.getName() << "): " << DirStr
+           << '\n';
+  });
 }
 
 void GCNSubtarget::mirFileLoaded(MachineFunction &MF) const {

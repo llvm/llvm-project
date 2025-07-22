@@ -1042,8 +1042,7 @@ public:
                            const SchedRegion &Region) const override;
 
   void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
-                                 const MachineBasicBlock &MBB,
-                                 unsigned NumRegionInstr) const override;
+                                 const SchedRegion &Region) const override;
 
   void mirFileLoaded(MachineFunction &MF) const override;
 

@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-defvar TopDown       = [{ MISched::TopDown }];
-defvar BottomUp      = [{ MISched::BottomUp }];
-defvar Bidirectional = [{ MISched::Bidirectional }];
-
 def FeatureFP64 : SubtargetFeature<"fp64",
   "FP64",
   "true",
@@ -56,22 +52,4 @@ def FeaturePromoteAlloca : SubtargetFeature <"promote-alloca",
   "EnablePromoteAlloca",
   "true",
   "Enable promote alloca pass"
->;
-
-def FeaturePostRATopDown : SubtargetFeature <"postra-top-down",
- "PostRASchedDirection",
-  TopDown,
-  "Force Post-RA scheduler to run top-down"
->;
-
-def FeaturePostRABottomUp : SubtargetFeature <"postra-bottom-up",
-  "PostRASchedDirection",
-  BottomUp,
-  "Force Post-RA scheduler to run bottom-up"
->;
-
-def FeaturePostRABidirectional : SubtargetFeature <"postra-bidirectional",
-  "PostRASchedDirection",
-  Bidirectional,
-  "Force Post-RA scheduler to run bidirectionally"
 >;
