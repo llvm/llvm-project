@@ -694,9 +694,6 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       NeedCRTs)
     CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(CRTEnd)));
 
-  if (TC.getTriple().isRISCV())
-    CmdArgs.push_back("-X");
-
   // The R_ARM_TARGET2 relocation must be treated as R_ARM_REL32 on arm*-*-elf
   // and arm*-*-eabi (the default is R_ARM_GOT_PREL, used on arm*-*-linux and
   // arm*-*-*bsd).
