@@ -802,9 +802,11 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::BSWAP, VT, Expand);
   }
 
-  if (!Subtarget->isThumb1Only())
+  if (!Subtarget->isThumb1Only() && !Subtarget->hasMVEIntegerOps())
     setOperationAction(ISD::SCMP, MVT::i32, Custom);
-  setOperationAction(ISD::UCMP, MVT::i32, Custom);
+
+  if (!Subtarget->hasMVEIntegerOps())
+    setOperationAction(ISD::UCMP, MVT::i32, Custom);
 
   setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
   setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
@@ -1630,6 +1632,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
 bool ARMTargetLowering::useSoftFloat() const {
   return Subtarget->useSoftFloat();
+}
+
+bool ARMTargetLowering::shouldExpandCmpUsingSelects(EVT VT) const {
+  return (!Subtarget->isThumb1Only() && VT.getSizeInBits() <= 32);
 }
 
 // FIXME: It might make sense to define the representative register class as the
