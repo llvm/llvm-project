@@ -317,7 +317,7 @@ findOverlappingRanges(llvm::SmallVector<RangeInfo> &Infos) {
 }
 
 llvm::SmallVector<RangeInfo>
-findUnboundRanges(const llvm::SmallVectorImpl<RangeInfo> &Ranges,
+findUnboundRanges(const llvm::ArrayRef<RangeInfo> &Ranges,
                   const llvm::ArrayRef<RangeInfo> &Bindings) {
   llvm::SmallVector<RangeInfo> Unbounds;
   for (const auto &Range : Ranges) {

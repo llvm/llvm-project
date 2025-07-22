@@ -17,6 +17,7 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+
 class DXILPostOptimizationValidation
     : public PassInfoMixin<DXILPostOptimizationValidation> {
 public:

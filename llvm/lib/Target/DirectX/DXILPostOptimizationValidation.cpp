@@ -10,9 +10,9 @@
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/BinaryFormat/DXContainer.h"
@@ -22,8 +22,6 @@
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/DXContainerRootSignature.h"
-#include "llvm/Support/DXILABI.h"
 
 #define DEBUG_TYPE "dxil-post-optimization-validation"
 
@@ -151,7 +149,7 @@ static void reportRegNotBound(Module &M,
   OS << "register " << ResourceClassToString(Unbound.Class)
      << " (space=" << Unbound.Space << ", register=" << Unbound.LowerBound
      << ")"
-     << " is not defined in Root Signature";
+     << " does not have a binding in the Root Signature";
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
@@ -246,6 +244,44 @@ initRSBindingValidation(const mcdxbc::RootSignatureDesc &RSD,
   }
 
   return Validation;
+}
+
+static SmallVector<ResourceInfo::ResourceBinding>
+getRootDescriptorsBindingInfo(const mcdxbc::RootSignatureDesc &RSD,
+                              dxbc::ShaderVisibility Visibility) {
+
+  SmallVector<ResourceInfo::ResourceBinding> RDs;
+
+  for (size_t I = 0; I < RSD.ParametersContainer.size(); I++) {
+    const auto &[Type, Loc] =
+        RSD.ParametersContainer.getTypeAndLocForParameter(I);
+
+    const auto &Header = RSD.ParametersContainer.getHeader(I);
+    if (Header.ShaderVisibility !=
+            llvm::to_underlying(dxbc::ShaderVisibility::All) &&
+        Header.ShaderVisibility != llvm::to_underlying(Visibility))
+      continue;
+
+    switch (Type) {
+
+    case llvm::to_underlying(dxbc::RootParameterType::SRV):
+    case llvm::to_underlying(dxbc::RootParameterType::UAV):
+    case llvm::to_underlying(dxbc::RootParameterType::CBV): {
+      dxbc::RTS0::v2::RootDescriptor Desc =
+          RSD.ParametersContainer.getRootDescriptor(Loc);
+
+      ResourceInfo::ResourceBinding Binding;
+      Binding.LowerBound = Desc.ShaderRegister;
+      Binding.Space = Desc.RegisterSpace;
+      Binding.Size = 1;
+
+      RDs.push_back(Binding);
+      break;
+    }
+    }
+  }
+
+  return RDs;
 }
 
 std::optional<mcdxbc::RootSignatureDesc>
@@ -349,10 +385,22 @@ static bool reportOverlappingRanges(Module &M,
 }
 
 static void reportInvalidHandleTy(
-    Module &M,
+    Module &M, const llvm::ArrayRef<dxil::ResourceInfo::ResourceBinding> &RDs,
     const iterator_range<SmallVectorImpl<dxil::ResourceInfo>::iterator>
         &Resources) {
   for (auto Res = Resources.begin(), End = Resources.end(); Res != End; Res++) {
+    llvm::dxil::ResourceInfo::ResourceBinding Binding = Res->getBinding();
+    bool IsBound = false;
+    for (const auto &RD : RDs) {
+      if (Binding.overlapsWith(RD)) {
+        IsBound = true;
+        break;
+      }
+    }
+
+    if (!IsBound)
+      continue;
+
     TargetExtType *Handle = Res->getHandleTy();
     auto *TypedBuffer = dyn_cast_or_null<TypedBufferExtType>(Handle);
     auto *Texture = dyn_cast_or_null<TextureExtType>(Handle);
@@ -402,8 +450,9 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
   if (auto RSD = getRootSignature(RSBI, MMI)) {
     if (reportOverlappingRanges(M, *RSD))
       return;
+    dxbc::ShaderVisibility Visibility = tripleToVisibility(MMI.ShaderProfile);
     llvm::hlsl::rootsig::RootSignatureBindingValidation Validation =
-        initRSBindingValidation(*RSD, tripleToVisibility(MMI.ShaderProfile));
+        initRSBindingValidation(*RSD, Visibility);
 
     reportUnboundRegisters(M, Validation, ResourceClass::CBuffer,
                            DRM.cbuffers());
@@ -412,10 +461,13 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
                            DRM.samplers());
     reportUnboundRegisters(M, Validation, ResourceClass::SRV, DRM.srvs());
 
-    reportInvalidHandleTy(M, DRM.cbuffers());
-    reportInvalidHandleTy(M, DRM.srvs());
-    reportInvalidHandleTy(M, DRM.uavs());
-    reportInvalidHandleTy(M, DRM.samplers());
+    SmallVector<ResourceInfo::ResourceBinding> RDs =
+        getRootDescriptorsBindingInfo(*RSD, Visibility);
+
+    reportInvalidHandleTy(M, RDs, DRM.cbuffers());
+    reportInvalidHandleTy(M, RDs, DRM.srvs());
+    reportInvalidHandleTy(M, RDs, DRM.uavs());
+    reportInvalidHandleTy(M, RDs, DRM.samplers());
   }
 }
 } // namespace
