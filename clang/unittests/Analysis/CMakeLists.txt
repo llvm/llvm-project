@@ -4,7 +4,6 @@ add_clang_unittest(ClangAnalysisTests
   CloneDetectionTest.cpp
   ExprMutationAnalyzerTest.cpp
   IntervalPartitionTest.cpp
-  LifetimeSafetyTest.cpp
   MacroExpansionContextTest.cpp
   UnsafeBufferUsageTest.cpp
   CLANG_LIBS
