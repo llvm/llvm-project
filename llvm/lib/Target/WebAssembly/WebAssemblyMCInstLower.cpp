@@ -234,13 +234,9 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
       // Currently this is the only way that CImmediates show up so panic if we
       // get confused.
       unsigned DescIndex = I - NumVariadicDefs;
-      if (DescIndex >= Desc.NumOperands) {
-        llvm_unreachable("unexpected CImmediate operand");
-      }
+      assert(DescIndex < Desc.NumOperands && "unexpected CImmediate operand");
       const MCOperandInfo &Info = Desc.operands()[DescIndex];
-      if (Info.OperandType != WebAssembly::OPERAND_TYPEINDEX) {
-        llvm_unreachable("unexpected CImmediate operand");
-      }
+      assert(Info.OperandType != WebAssembly::OPERAND_TYPEINDEX && "unexpected CImmediate operand");
       MCOp = lowerEncodedFunctionSignature(MO.getCImm()->getValue());
       break;
     }
