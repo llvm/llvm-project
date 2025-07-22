@@ -192,7 +192,6 @@ add_entrypoint_object(
     a64l.h
   DEPENDS
     libc.src.__support.ctype_utils
-    libc.hdr.types.size_t
 )
 
 add_entrypoint_object(

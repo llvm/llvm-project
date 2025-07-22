@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/a64l.h"
-#include "hdr/types/size_t.h"
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"
@@ -41,10 +40,10 @@ constexpr static int b64_char_to_int(char ch) {
 // TODO: use LIBC_ADD_NULL_CHECKS for checking if the input is a null pointer.
 LLVM_LIBC_FUNCTION(long, a64l, (const char *s)) {
   // the standard says to only use up to 6 characters.
-  constexpr size_t MAX_LENGTH = 6;
+  constexpr unsigned MAX_LENGTH = 6;
   int result = 0;
 
-  for (size_t i = 0; i < MAX_LENGTH && s[i] != '\0'; ++i) {
+  for (unsigned i = 0; i < MAX_LENGTH && s[i] != '\0'; ++i) {
     int cur_val = b64_char_to_int(s[i]);
     // The standard says what happens on an unspecified character is undefined,
     // here we treat it as the end of the string.
