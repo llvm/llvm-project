@@ -136,9 +136,8 @@ static APInt encodeFunctionSignature(SelectionDAG *DAG, SDLoc &DL,
     if (VT == MVT::f64) {
       return wasm::ValType::F64;
     }
-    DAG->getContext()->diagnose(
-        DiagnosticInfoUnsupported(DAG->getMachineFunction().getFunction(),
-                                  "Unhandled type!", DL.getDebugLoc()));
+    LLVM_DEBUG(errs() << "Unhandled type for llvm.wasm.ref.test.func: " << VT << "\n");
+    llvm_unreachable("Unhandled type for llvm.wasm.ref.test.func");
   };
   auto NParams = Params.size();
   auto NReturns = Returns.size();
