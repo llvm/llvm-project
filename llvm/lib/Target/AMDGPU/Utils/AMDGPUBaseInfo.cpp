@@ -598,6 +598,29 @@ const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
   return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
 }
 
+uint8_t wmmaScaleF8F6F4FormatToNumRegs(unsigned Fmt) {
+  switch (Fmt) {
+  case WMMA::MATRIX_FMT_FP8:
+  case WMMA::MATRIX_FMT_BF8:
+    return 16;
+  case WMMA::MATRIX_FMT_FP6:
+  case WMMA::MATRIX_FMT_BF6:
+    return 12;
+  case WMMA::MATRIX_FMT_FP4:
+    return 8;
+  }
+
+  llvm_unreachable("covered switch over wmma scale formats");
+}
+
+const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
+                                                      unsigned FmtB,
+                                                      unsigned F8F8Opcode) {
+  uint8_t SrcANumRegs = wmmaScaleF8F6F4FormatToNumRegs(FmtA);
+  uint8_t SrcBNumRegs = wmmaScaleF8F6F4FormatToNumRegs(FmtB);
+  return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
+}
+
 unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
   if (ST.hasFeature(AMDGPU::FeatureGFX1250Insts))
     return SIEncodingFamily::GFX1250;
@@ -3203,6 +3226,25 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
   return isGFX11Plus(STI) ? getGfx11PlusBufferFormatInfo(Format)
          : isGFX10(STI)   ? getGfx10BufferFormatInfo(Format)
                           : getGfx9BufferFormatInfo(Format);
+}
+
+bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
+  uint64_t TSFlags = MII.get(Opcode).TSFlags;
+
+  if (TSFlags & SIInstrFlags::SMRD)
+    return !getSMEMIsBuffer(Opcode);
+  if (!(TSFlags & SIInstrFlags::FLAT))
+    return false;
+
+  // Only SV and SVS modes are supported.
+  if (TSFlags & SIInstrFlags::FlatScratch)
+    return hasNamedOperand(Opcode, OpName::vaddr);
+
+  // Only GVS mode is supported.
+  return hasNamedOperand(Opcode, OpName::vaddr) &&
+         hasNamedOperand(Opcode, OpName::saddr);
+
+  return false;
 }
 
 bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
