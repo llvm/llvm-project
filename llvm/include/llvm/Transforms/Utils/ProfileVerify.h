@@ -13,6 +13,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_PROFILEVERIFY_H
 #define LLVM_TRANSFORMS_UTILS_PROFILEVERIFY_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
 
@@ -21,7 +22,7 @@ namespace llvm {
 /// don't accidentally drop this metadata.
 class ProfileInjectorPass : public PassInfoMixin<ProfileInjectorPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 /// Checks that MD_prof is present on every instruction that supports it. Used
@@ -29,7 +30,7 @@ public:
 /// valid (i.e. !{!"unknown"})
 class ProfileVerifierPass : public PassInfoMixin<ProfileVerifierPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm
