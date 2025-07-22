@@ -414,16 +414,14 @@ static bool isTlsAddressCode(uint8_t DW_OP_Code) {
 }
 
 static void constructSeqOffsettoOrigRowMapping(
-    CompileUnit &Unit, const DWARFDebugLine::LineTable *LT,
+    CompileUnit &Unit, const DWARFDebugLine::LineTable &LT,
     DenseMap<size_t, unsigned> &SeqOffToOrigRow) {
-
-  assert(LT && "Line table is null");
 
   // Use std::map for ordered iteration.
   std::map<uint64_t, unsigned> LineTableMapping;
 
   // First, trust the sequences that the DWARF parser did identify.
-  for (const DWARFDebugLine::Sequence &Seq : LT->Sequences)
+  for (const DWARFDebugLine::Sequence &Seq : LT.Sequences)
     LineTableMapping[Seq.StmtSeqOffset] = Seq.FirstRowIndex;
 
   // Second, manually find sequence boundaries and match them to the
@@ -435,7 +433,7 @@ static void constructSeqOffsettoOrigRowMapping(
 
   std::vector<size_t> SeqStartRows;
   SeqStartRows.push_back(0);
-  for (auto [I, Row] : llvm::enumerate(ArrayRef(LT->Rows).drop_back()))
+  for (auto [I, Row] : llvm::enumerate(ArrayRef(LT.Rows).drop_back()))
     if (Row.EndSequence)
       SeqStartRows.push_back(I + 1);
 
@@ -2414,7 +2412,7 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
         // build a map from both the parser's results and a manual
         // reconstruction.
         if (!LT->Rows.empty())
-          constructSeqOffsettoOrigRowMapping(Unit, LT, SeqOffToOrigRow);
+          constructSeqOffsettoOrigRowMapping(Unit, *LT, SeqOffToOrigRow);
 
         // Create a map of original row indices to new row indices.
         DenseMap<size_t, size_t> OrigRowToNewRow;
