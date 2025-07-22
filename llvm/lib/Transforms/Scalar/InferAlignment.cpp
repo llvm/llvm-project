@@ -35,22 +35,23 @@ static bool tryToPropagateAlign(Function &F, const DataLayout &DL) {
     for (Instruction &I : BB) {
       if (auto *PtrOp = getLoadStorePointerOperand(&I)) {
         Align LoadStoreAlign = getLoadStoreAlignment(&I);
-        APInt OffsetFromBase = APInt(
-            DL.getIndexSizeInBits(PtrOp->getType()->getPointerAddressSpace()),
-            0);
-        PtrOp = PtrOp->stripAndAccumulateInBoundsConstantOffsets(
-            DL, OffsetFromBase);
+        APInt OffsetFromBase =
+            APInt(DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
+        PtrOp = PtrOp->stripAndAccumulateConstantOffsets(DL, OffsetFromBase, true);
         Align BasePointerAlign =
             commonAlignment(LoadStoreAlign, OffsetFromBase.getLimitedValue());
 
-        if (BestBasePointerAligns.count(PtrOp) &&
-            BestBasePointerAligns[PtrOp] > BasePointerAlign) {
-          Align BetterLoadStoreAlign = commonAlignment(
-              BestBasePointerAligns[PtrOp], OffsetFromBase.getLimitedValue());
-          setLoadStoreAlignment(&I, BetterLoadStoreAlign);
-          Changed = true;
-        } else {
-          BestBasePointerAligns[PtrOp] = BasePointerAlign;
+        auto [It, Inserted] =
+            BestBasePointerAligns.try_emplace(PtrOp, BasePointerAlign);
+        if (!Inserted) {
+          if (It->second > BasePointerAlign) {
+            Align BetterLoadStoreAlign =
+                commonAlignment(It->second, OffsetFromBase.getLimitedValue());
+            setLoadStoreAlignment(&I, BetterLoadStoreAlign);
+            Changed = true;
+          } else {
+            It->second = BasePointerAlign;
+          }
         }
       }
     }

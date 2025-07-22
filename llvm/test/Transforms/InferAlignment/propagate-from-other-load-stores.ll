@@ -8,10 +8,9 @@
 ; Test that we can propagate the align 16 to the load and store that are set to align 4
 ; ------------------------------------------------------------------------------
 
-; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
-define void @prop_align(ptr noundef readonly captures(none) %v, ptr noundef writeonly captures(none) initializes((0, 32)) %vout) local_unnamed_addr #0 {
+define void @prop_align(ptr %v, ptr %vout) {
 ; CHECK-LABEL: define void @prop_align(
-; CHECK-SAME: ptr noundef readonly captures(none) [[V:%.*]], ptr noundef writeonly captures(none) initializes((0, 32)) [[VOUT:%.*]]) local_unnamed_addr {
+; CHECK-SAME: ptr [[V:%.*]], ptr [[VOUT:%.*]]) {
 ; CHECK-NEXT:    [[DOTUNPACK_UNPACK:%.*]] = load float, ptr [[V]], align 16
 ; CHECK-NEXT:    [[DOTUNPACK_ELT7:%.*]] = getelementptr inbounds nuw i8, ptr [[V]], i64 4
 ; CHECK-NEXT:    [[DOTUNPACK_UNPACK8:%.*]] = load float, ptr [[DOTUNPACK_ELT7]], align 4
@@ -81,10 +80,9 @@ define void @prop_align(ptr noundef readonly captures(none) %v, ptr noundef writ
 ; Test that alignment is not propagated from a source that does not dominate the destination
 ; ------------------------------------------------------------------------------
 
-; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
-define void @no_prop_align(ptr noundef readonly captures(none) %v, ptr noundef writeonly captures(none) initializes((0, 32)) %vout, i1 %cond) local_unnamed_addr #0 {
+define void @no_prop_align(ptr %v, ptr %vout, i1 %cond) {
 ; CHECK-LABEL: define void @no_prop_align(
-; CHECK-SAME: ptr noundef readonly captures(none) [[V:%.*]], ptr noundef writeonly captures(none) initializes((0, 32)) [[VOUT:%.*]], i1 [[COND:%.*]]) local_unnamed_addr {
+; CHECK-SAME: ptr [[V:%.*]], ptr [[VOUT:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:    br i1 [[COND]], label %[[BRANCH1:.*]], label %[[BRANCH2:.*]]
 ; CHECK:       [[BRANCH1]]:
 ; CHECK-NEXT:    [[DOTUNPACK_UNPACK:%.*]] = load float, ptr [[V]], align 16
