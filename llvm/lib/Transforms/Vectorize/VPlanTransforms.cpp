@@ -3573,7 +3573,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
 
     // Match reduce.add(mul(ext, ext)).
     if (RecipeA && RecipeB &&
-        (RecipeA->getOpcode() == RecipeB->getOpcode() || A == B ||
+        (RecipeA->getOpcode() == RecipeB->getOpcode() ||
          IsPartialReduction) &&
         match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
         match(RecipeB, m_ZExtOrSExt(m_VPValue())) &&
