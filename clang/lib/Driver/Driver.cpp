@@ -951,8 +951,8 @@ getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
 
     if (!StdoutOrErr) {
       C.getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
-          << Action::GetOffloadKindName(Kind)
-          << llvm::toString(StdoutOrErr.takeError()) << "--offload-arch";
+          << Action::GetOffloadKindName(Kind) << StdoutOrErr.takeError()
+          << "--offload-arch";
       return GPUArchs;
     } else if ((*StdoutOrErr)->getBuffer().empty()) {
       C.getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
@@ -1004,16 +1004,19 @@ inferOffloadToolchains(Compilation &C, Action::OffloadKind Kind) {
       C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
           << "HIP" << Arch;
       return llvm::DenseSet<llvm::StringRef>();
-    } else if (Kind == Action::OFK_Cuda && !IsNVIDIAOffloadArch(ID)) {
+    }
+    if (Kind == Action::OFK_Cuda && !IsNVIDIAOffloadArch(ID)) {
       C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
           << "CUDA" << Arch;
       return llvm::DenseSet<llvm::StringRef>();
-    } else if (Kind == Action::OFK_OpenMP &&
-               (ID == OffloadArch::UNKNOWN || ID == OffloadArch::UNUSED)) {
+    }
+    if (Kind == Action::OFK_OpenMP &&
+        (ID == OffloadArch::UNKNOWN || ID == OffloadArch::UNUSED)) {
       C.getDriver().Diag(clang::diag::err_drv_failed_to_deduce_target_from_arch)
           << Arch;
       return llvm::DenseSet<llvm::StringRef>();
-    } else if (ID == OffloadArch::UNKNOWN || ID == OffloadArch::UNUSED) {
+    }
+    if (ID == OffloadArch::UNKNOWN || ID == OffloadArch::UNUSED) {
       C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
           << "offload" << Arch;
       return llvm::DenseSet<llvm::StringRef>();
@@ -4732,14 +4735,14 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
           auto GPUsOrErr = TC.getSystemGPUArchs(Args);
           if (!GPUsOrErr) {
             TC.getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
-              << llvm::Triple::getArchTypeName(TC.getArch())
-              << llvm::toString(GPUsOrErr.takeError()) << "--offload-arch";
+                << llvm::Triple::getArchTypeName(TC.getArch())
+                << llvm::toString(GPUsOrErr.takeError()) << "--offload-arch";
             continue;
           }
 
           for (auto ArchStr : *GPUsOrErr) {
             StringRef CanonicalStr = getCanonicalArchString(
-              C, Args, Args.MakeArgString(ArchStr), TC.getTriple());
+                C, Args, Args.MakeArgString(ArchStr), TC.getTriple());
             if (!CanonicalStr.empty())
               Archs.insert(CanonicalStr);
             else
@@ -4747,7 +4750,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
           }
         } else {
           StringRef CanonicalStr =
-            getCanonicalArchString(C, Args, Arch, TC.getTriple());
+              getCanonicalArchString(C, Args, Arch, TC.getTriple());
           if (!CanonicalStr.empty())
             Archs.insert(CanonicalStr);
           else
@@ -4760,7 +4763,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
           Archs.clear();
         } else {
           StringRef ArchStr =
-            getCanonicalArchString(C, Args, Arch, TC.getTriple());
+              getCanonicalArchString(C, Args, Arch, TC.getTriple());
           Archs.erase(ArchStr);
         }
       }
