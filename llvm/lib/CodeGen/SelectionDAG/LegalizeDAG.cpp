@@ -4135,6 +4135,15 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
     Results.push_back(Tmp1);
     break;
+  case ISD::CTSELECT: {
+    Tmp1 = Node->getOperand(0);
+    Tmp2 = Node->getOperand(1);
+    Tmp3 = Node->getOperand(2);
+    Tmp1 = DAG.getCTSelect(dl, Tmp1.getValueType(), Tmp1, Tmp2, Tmp3);
+    Tmp1->setFlags(Node->getFlags());
+    Results.push_back(Tmp1);
+    break;
+  }
   case ISD::BR_JT: {
     SDValue Chain = Node->getOperand(0);
     SDValue Table = Node->getOperand(1);
@@ -5473,7 +5482,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp2));
     break;
   }
-  case ISD::SELECT: {
+  case ISD::SELECT:
+  case ISD::CTSELECT: {
     unsigned ExtOp, TruncOp;
     if (Node->getValueType(0).isVector() ||
         Node->getValueType(0).getSizeInBits() == NVT.getSizeInBits()) {

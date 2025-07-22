@@ -3472,6 +3472,93 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (BuiltinCountedByRef(TheCall))
       return ExprError();
     break;
+
+  case Builtin::BI__builtin_ct_select: {
+    if (TheCall->getNumArgs() != 3) {
+      // Simple argument count check without complex diagnostics
+      if (TheCall->getNumArgs() < 3) {
+        return Diag(TheCall->getEndLoc(), diag::err_typecheck_call_too_few_args_at_least)
+               << 0 << 3 << TheCall->getNumArgs() << 0
+               << TheCall->getCallee()->getSourceRange();
+      } else {
+        return Diag(TheCall->getEndLoc(), diag::err_typecheck_call_too_many_args)
+               << 0 << 3 << TheCall->getNumArgs() << 0
+               << TheCall->getCallee()->getSourceRange();
+      }
+    }
+    auto *Cond = TheCall->getArg(0);
+    auto *A = TheCall->getArg(1);
+    auto *B = TheCall->getArg(2);
+
+    QualType CondTy = Cond->getType();
+    if (!CondTy->isIntegerType()) {
+      return Diag(Cond->getBeginLoc(), diag::err_typecheck_cond_expect_scalar)
+             << CondTy << Cond->getSourceRange();
+    }
+
+    QualType ATy = A->getType();
+    QualType BTy = B->getType();
+
+    // check for scalar or vector scalar type
+    if ((!ATy->isScalarType() && !ATy->isVectorType()) ||
+        (!BTy->isScalarType() && !BTy->isVectorType())) {
+      return Diag(A->getBeginLoc(),
+                  diag::err_typecheck_cond_incompatible_operands)
+             << ATy << BTy << A->getSourceRange() << B->getSourceRange();
+    }
+
+    // Check if both operands have the same type or can be implicitly converted
+    QualType ResultTy;
+    if (Context.hasSameType(ATy, BTy)) {
+      ResultTy = ATy;
+    } else {
+      // Try to find a common type using the same logic as conditional
+      // expressions
+      ExprResult ARes = ExprResult(A);
+      ExprResult BRes = ExprResult(B);
+
+      // For arithmetic types, allow promotions within the same category only
+      if (ATy->isArithmeticType() && BTy->isArithmeticType()) {
+        // Check if both are integer types or both are floating types
+        bool AIsInteger = ATy->isIntegerType();
+        bool BIsInteger = BTy->isIntegerType();
+        bool AIsFloating = ATy->isFloatingType();
+        bool BIsFloating = BTy->isFloatingType();
+
+        if ((AIsInteger && BIsInteger) || (AIsFloating && BIsFloating)) {
+          // Both are in the same category, allow usual arithmetic conversions
+          ResultTy = UsualArithmeticConversions(
+              ARes, BRes, TheCall->getBeginLoc(), ACK_Conditional);
+          if (ARes.isInvalid() || BRes.isInvalid() || ResultTy.isNull()) {
+            return Diag(A->getBeginLoc(),
+                        diag::err_typecheck_cond_incompatible_operands)
+                   << ATy << BTy << A->getSourceRange() << B->getSourceRange();
+          }
+          // Update the arguments with any necessary implicit casts
+          TheCall->setArg(1, ARes.get());
+          TheCall->setArg(2, BRes.get());
+        } else {
+          // Different categories (int vs float), not allowed
+          return Diag(A->getBeginLoc(),
+                      diag::err_typecheck_cond_incompatible_operands)
+                 << ATy << BTy << A->getSourceRange() << B->getSourceRange();
+        }
+      } else {
+        // For non-arithmetic types, they must be exactly the same
+        return Diag(A->getBeginLoc(),
+                    diag::err_typecheck_cond_incompatible_operands)
+               << ATy << BTy << A->getSourceRange() << B->getSourceRange();
+      }
+    }
+
+    ExprResult CondRes = PerformContextuallyConvertToBool(Cond);
+    if (CondRes.isInvalid())
+      return ExprError();
+
+    TheCall->setArg(0, CondRes.get());
+    TheCall->setType(ResultTy);
+    return TheCall;
+  } break;
   }
 
   if (getLangOpts().HLSL && HLSL().CheckBuiltinFunctionCall(BuiltinID, TheCall))

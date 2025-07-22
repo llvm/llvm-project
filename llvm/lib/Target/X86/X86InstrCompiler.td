@@ -693,6 +693,45 @@ def : Pat<(v16f32 (X86cmov VR512:$t, VR512:$f, timm:$cond, EFLAGS)),
 def : Pat<(v8f64 (X86cmov VR512:$t, VR512:$f, timm:$cond, EFLAGS)),
           (CMOV_VR512 VR512:$t, VR512:$f, timm:$cond)>;
 
+// CTSELECT
+
+let Uses = [EFLAGS], isNotDuplicable = 1, isPseudo = 1 in {
+  multiclass CTSELECT_NOCMOV<RegisterClass RC, ValueType VT> {
+    let hasNoSchedulingInfo = 1 in {
+      def rr  : PseudoI<(outs RC:$dst),
+                        (ins RC:$src1, RC:$src2, i8imm:$cond),
+                        [(set RC:$dst, ( VT (X86ctselect RC:$src1, RC:$src2, timm:$cond, EFLAGS)))]>;
+
+      // TODO: Do we need register-memory variant??
+      //def rm : PseudoI<(outs t.RegClass:$dst),
+      //                 (ins t.RegClass:$src1, t.MemOperand:$src2, i8imm:$cond),
+      //                 [(set t.RegClass:$dst, (X86ctselect t.RegClass:$src1, (t.LoadNode addr:$src2), timm:$cond, EFLAGS))]>;
+    }
+  }
+}
+
+let usesCustomInserter = 1,
+    isCodeGenOnly = 1,
+    hasSideEffects = 1,
+    ForceDisassemble = 1,
+    Constraints = "$dst = $src1" in {
+  let Predicates = [NoCMOV] in {
+    defm CTSELECT_GR16 : CTSELECT_NOCMOV<GR16, i16>;
+    defm CTSELECT_GR32 : CTSELECT_NOCMOV<GR32, i32>;
+  }
+
+  let Predicates = [FPStackf32] in
+    defm CTSELECT_FP32 : CTSELECT_NOCMOV<RFP32, f32>;
+
+  let Predicates = [FPStackf64] in
+    defm CTSELECT_FP64 : CTSELECT_NOCMOV<RFP64, f64>;
+
+  defm CTSELECT_FP80 : CTSELECT_NOCMOV<RFP80, f80>;
+
+  let Predicates = [HasMMX] in
+    defm CTSELECT_VR64   : CTSELECT_NOCMOV<VR64, x86mmx>;
+}
+
 //===----------------------------------------------------------------------===//
 // Normal-Instructions-With-Lock-Prefix Pseudo Instructions
 //===----------------------------------------------------------------------===//

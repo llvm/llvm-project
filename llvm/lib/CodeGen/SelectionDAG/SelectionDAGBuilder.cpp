@@ -6667,6 +6667,35 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     updateDAGForMaybeTailCall(MC);
     return;
   }
+  case Intrinsic::ct_select: {
+    SDLoc DL = getCurSDLoc();
+
+    SDValue Cond = getValue(I.getArgOperand(0)); // i1
+    SDValue A = getValue(I.getArgOperand(1));    // T
+    SDValue B = getValue(I.getArgOperand(2));    // T
+
+    assert((A.getValueType() == B.getValueType()) &&
+           "Operands are of different types");
+
+    EVT VT = A.getValueType();
+    EVT CondVT = Cond.getValueType();
+
+    // assert if Cond type is Vector
+    assert(!CondVT.isVector() && "Vector type cond not supported yet");
+
+    // Handle scalar types
+    if (TLI.isSelectSupported(
+            TargetLoweringBase::SelectSupportKind::CtSelect) &&
+        !CondVT.isVector()) {
+      SDValue Result = DAG.getNode(ISD::CTSELECT, DL, VT, Cond, A, B);
+      setValue(&I, Result);
+      return;
+    }
+
+    SDValue Result = DAG.getNode(ISD::SELECT, DL, VT, Cond, A, B);
+    setValue(&I, Result);
+    return;
+  }
   case Intrinsic::call_preallocated_setup: {
     const CallBase *PreallocatedCall = FindPreallocatedCall(&I);
     SDValue SrcValue = DAG.getSrcValue(PreallocatedCall);

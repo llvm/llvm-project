@@ -475,6 +475,41 @@ bool X86InstrInfo::isFrameOperand(const MachineInstr &MI, unsigned int Op,
   return false;
 }
 
+bool X86InstrInfo::expandCtSelect(unsigned Opcode,
+                                  MachineInstrBuilder &MIB) const {
+  MachineInstr *MI = MIB.getInstr();
+  MachineBasicBlock &MBB = *MIB->getParent();
+  DebugLoc DL = MIB->getDebugLoc();
+
+  // CTSELECT pseudo has: (outs dst), (ins true_val, false_val, cond)
+  MachineOperand &OperandRes = MI->getOperand(0); // destination register
+  MachineOperand &OperandTrue = MI->getOperand(1);  // true value
+  MachineOperand &OperandCond = MI->getOperand(3);  // condition code
+
+  assert(OperandTrue.isReg() && OperandRes.isReg() && OperandCond.isImm() &&
+         "Invalid operand types");
+  assert(OperandTrue.getReg() == OperandRes.getReg() &&
+         "Result register different from True register");
+
+  assert(Subtarget.hasCMOV() && "target does not support CMOV instructions");
+
+  if (Subtarget.hasCMOV()) {
+    // Build CMOV instruction: copy the first 3 operands (dst, true, false) and
+    // add condition code
+    MachineInstrBuilder CmovBuilder =
+        BuildMI(MBB, MIB.getInstr(), DL, get(Opcode));
+    for (unsigned i = 0; i < MI->getNumOperands(); ++i) { // Copy
+      CmovBuilder.add(MIB->getOperand(i));
+    }
+  } else {
+    llvm_unreachable("target does not support cmov");
+  }
+
+  // Remove the original CTSELECT instruction
+  MI->eraseFromParent();
+  return true;
+}
+
 static bool isFrameLoadOpcode(int Opcode, TypeSize &MemBytes) {
   switch (Opcode) {
   default:
@@ -6410,6 +6445,24 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     break;
   case X86::ADD64ri32_DB:
     MIB->setDesc(get(X86::OR64ri32));
+    break;
+  case X86::CTSELECT64rr:
+  expandCtSelect(X86::CMOV64rr, MIB);
+    break;
+  case X86::CTSELECT32rr:
+  expandCtSelect(X86::CMOV32rr, MIB);
+    break;
+  case X86::CTSELECT16rr:
+  expandCtSelect(X86::CMOV16rr, MIB);
+    break;
+  case X86::CTSELECT64rm:
+  expandCtSelect(X86::CMOV64rm, MIB);
+    break;
+  case X86::CTSELECT32rm:
+  expandCtSelect(X86::CMOV32rm, MIB);
+    break;
+  case X86::CTSELECT16rm:
+  expandCtSelect(X86::CMOV16rm, MIB);
     break;
   }
   return false;

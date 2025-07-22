@@ -26,6 +26,10 @@
 #include "TargetInfo.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/OperationKinds.h"
+#include "clang/AST/Type.h"
+#include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/IR/InlineAsm.h"
@@ -6440,6 +6444,40 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         cast<DeclRefExpr>(E->getArg(0)->IgnoreImpCasts())->getDecl());
     auto Str = CGM.GetAddrOfConstantCString(Name, "");
     return RValue::get(Str.getPointer());
+  }
+  case Builtin::BI__builtin_ct_select: {
+    if (E->getNumArgs() != 3) {
+      CGM.getDiags().Report(E->getBeginLoc(),
+                            E->getNumArgs() > 3
+                                ? diag::err_typecheck_call_too_many_args
+                                : diag::err_typecheck_call_too_few_args);
+      return GetUndefRValue(E->getType());
+    }
+
+    auto *Cond = EmitScalarExpr(E->getArg(0));
+    auto *A = EmitScalarExpr(E->getArg(1));
+    auto *B = EmitScalarExpr(E->getArg(2));
+
+    // Verify types match
+    if (A->getType() != B->getType()) {
+      CGM.getDiags().Report(E->getBeginLoc(),
+                            diag::err_typecheck_convert_incompatible);
+      return GetUndefRValue(E->getType());
+    }
+
+    // Verify condition is integer type
+    if (!Cond->getType()->isIntegerTy()) {
+      CGM.getDiags().Report(E->getBeginLoc(), diag::err_typecheck_expect_int);
+      return GetUndefRValue(E->getType());
+    }
+
+    if (Cond->getType()->getIntegerBitWidth() != 1)
+      Cond = Builder.CreateICmpNE(
+          Cond, llvm::ConstantInt::get(Cond->getType(), 0), "cond.bool");
+
+    llvm::Function *Fn =
+        CGM.getIntrinsic(llvm::Intrinsic::ct_select, {A->getType()});
+    return RValue::get(Builder.CreateCall(Fn, {Cond, A, B}));
   }
   }
 
