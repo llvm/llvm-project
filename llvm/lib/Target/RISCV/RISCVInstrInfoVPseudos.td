@@ -550,10 +550,6 @@ class RISCVVPseudo<dag outs, dag ins, list<dag> pattern, string opcodestr = "", 
   // SEW = 0 is used to denote that the Pseudo is not SEW specific (or unknown).
   bits<8> SEW = 0;
   bit IncludeInInversePseudoTable = 1;
-
-  // Set common TSFlags in RVInst from the base instruction.
-  let ElementsDependOn = !cast<RVInst>(BaseInstr).ElementsDependOn;
-  let DestEEW = !cast<RVInst>(BaseInstr).DestEEW;
 }
 
 // The actual table.
