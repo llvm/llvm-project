@@ -305,7 +305,10 @@ public:
   void queueWork(std::function<void()> work, bool reap);
 };
 
-#include <chrono>
+// #ifndef NDEBUG
+#include <iomanip>
+#include <iostream>
+// #endif
 
 // Most input files have been mapped but not yet paged in.
 // This code forces the page-ins on multiple threads so
@@ -317,28 +320,7 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
   static std::atomic_uint64_t totalBytes = 0;
   std::atomic_int index = 0, included = 0;
   auto t0 = high_resolution_clock::now();
-#if 0
-  ThreadPoolStrategy oldStrategy = llvm::parallel::strategy;
-  (void)llvm::make_scope_exit([&]() { llvm::parallel::strategy = oldStrategy; });
-  llvm::parallel::strategy = llvm::hardware_concurrency(config->readThreads);
 
-  parallelTransformReduce(deferred, 0,
-    [](size_t acc, size_t size) { return acc + size; },
-    [&](DeferredFile &file) {
-      const StringRef &buffer = file.buffer.getBuffer();
-      size_t size = buffer.size();
-      totalBytes += size;
-      if (size > largeArchive)
-        return size;
-
-      included += 1;
-      for (const char *page = buffer.data(), *end = page + buffer.size();
-           page < end; page += pageSize)
-        LLVM_ATTRIBUTE_UNUSED volatile char t = *page;
-      return buffer.size();
-    }
-    );
-#else
   parallelFor(0, config->readThreads, [&](size_t I) {
     while (true) {
       int localIndex = index.fetch_add(1);
@@ -357,12 +339,14 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
         LLVM_ATTRIBUTE_UNUSED volatile char t = *page;
     }
   });
-#endif
-  auto dt = high_resolution_clock::now() - t0;
+
+  LLVM_ATTRIBUTE_UNUSED auto dt = high_resolution_clock::now() - t0;
+  //  LLVM_DEBUG(;
   if (Process::GetEnv("LLD_MULTI_THREAD_PAGE"))
-    llvm::dbgs() << "multiThreadedPageIn " << totalBytes << "/" << included
-                 << "/" << deferred.size() << "/"
-                 << duration_cast<milliseconds>(dt).count() / 1000. << "\n";
+    std::cerr << "multiThreadedPageIn " << totalBytes << "/" << included << "/"
+              << deferred.size() << "/" << std::setprecision(4)
+              << duration_cast<milliseconds>(dt).count() / 1000. << "\n";
+  //  );
 }
 
 void BackgroundQueue::queueWork(std::function<void()> work, bool reap) {
