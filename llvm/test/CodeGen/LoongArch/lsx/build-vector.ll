@@ -338,7 +338,6 @@ define void @buildvector_v4f32(ptr %dst, float %a0, float %a1, float %a2, float 
 ; CHECK-NEXT:    # kill: def $f2 killed $f2 def $vr2
 ; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vr1
 ; CHECK-NEXT:    # kill: def $f0 killed $f0 def $vr0
-; CHECK-NEXT:    vextrins.w $vr0, $vr0, 0
 ; CHECK-NEXT:    vextrins.w $vr0, $vr1, 16
 ; CHECK-NEXT:    vextrins.w $vr0, $vr2, 32
 ; CHECK-NEXT:    vextrins.w $vr0, $vr3, 48
@@ -358,7 +357,6 @@ define void @buildvector_v2f64(ptr %dst, double %a0, double %a1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 def $vr1
 ; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
-; CHECK-NEXT:    vextrins.d $vr0, $vr0, 0
 ; CHECK-NEXT:    vextrins.d $vr0, $vr1, 16
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
