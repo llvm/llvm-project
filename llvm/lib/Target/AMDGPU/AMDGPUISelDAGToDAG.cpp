@@ -3059,6 +3059,54 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
     Src = Src.getOperand(0);
   }
 
+  // v2i32 xor/or/and are legal. A vselect using these instructions as operands
+  // is scalarised into two selects with EXTRACT_VECTOR_ELT operands. Peek
+  // through the extract to the bitwise op.
+
+  SDValue PeekSrc = Src->getOpcode() == ISD::EXTRACT_VECTOR_ELT ? Src->getOperand(0) : Src;
+  // Convert various sign-bit masks to src mods. Currently disabled for 16-bit
+  // types as the codegen replaces the operand without adding a srcmod.
+  // This is intentionally finding the cases where we are performing float neg
+  // and abs on int types, the goal is not to obtain two's complement neg or
+  // abs.
+  // TODO: Add 16-bit support.
+  unsigned Opc = PeekSrc.getOpcode();
+  EVT VT = Src.getValueType();
+  if ((Opc != ISD::AND && Opc != ISD::OR && Opc != ISD::XOR) ||
+      (VT != MVT::i32 && VT != MVT::v2i32 && VT != MVT::i64))
+    return true;
+
+  ConstantSDNode *CRHS =
+      isConstOrConstSplat(PeekSrc ? PeekSrc->getOperand(1) : Src->getOperand(1));
+  if (!CRHS)
+    return true;
+
+  auto ReplaceSrc = [&]() -> SDValue {
+    if (Src->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+      SDValue LHS = PeekSrc->getOperand(0);
+      SDValue Index = Src->getOperand(1);
+      return Src = CurDAG->getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(Src),
+                                   Src.getValueType(), LHS, Index);
+    }
+    return Src = PeekSrc.getOperand(0);
+  };
+
+  // Recognise (xor a, 0x80000000) as NEG SrcMod.
+  // Recognise (and a, 0x7fffffff) as ABS SrcMod.
+  // Recognise (or a, 0x80000000) as NEG+ABS SrcModifiers.
+  if (Opc == ISD::XOR && CRHS->getAPIntValue().isSignMask()) {
+    Mods |= SISrcMods::NEG;
+    Src = ReplaceSrc();
+  } else if (Opc == ISD::AND && AllowAbs &&
+             CRHS->getAPIntValue().isMaxSignedValue()) {
+    Mods |= SISrcMods::ABS;
+    Src = ReplaceSrc();
+  } else if (Opc == ISD::OR && AllowAbs && CRHS->getAPIntValue().isSignMask()) {
+    Mods |= SISrcMods::ABS;
+    Mods |= SISrcMods::NEG;
+    Src = ReplaceSrc();
+  }
+
   return true;
 }
 
