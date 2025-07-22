@@ -45,8 +45,8 @@ def simm10_unsigned : RISCVOp {
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class PLI_i<bits<7> funct7, string opcodestr>
-    : RVInst<(outs GPR:$rd), (ins simm10:$imm10), opcodestr, "$rd, $imm10",
-             [], InstFormatOther> {
+    : RVInst<(outs GPR:$rd), (ins simm10:$imm10), opcodestr, "$rd, $imm10", [],
+             InstFormatOther> {
   bits<10> imm10;
   bits<5> rd;
 
