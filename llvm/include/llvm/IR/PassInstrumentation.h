@@ -165,7 +165,8 @@ public:
   /// Add a class name to pass name mapping for use by pass instrumentation.
   LLVM_ABI void addClassToPassName(StringRef ClassName, StringRef PassName);
   /// Get the pass name for a given pass class name.
-  LLVM_ABI StringRef getPassNameForClassName(StringRef ClassName);
+  LLVM_ABI std::optional<StringRef>
+  getPassNameForClassName(StringRef ClassName);
 
 private:
   friend class PassInstrumentation;
@@ -339,7 +340,8 @@ public:
   /// Get the pass name for a given pass class name.
   StringRef getPassNameForClassName(StringRef ClassName) const {
     if (Callbacks)
-      return Callbacks->getPassNameForClassName(ClassName);
+      return Callbacks->getPassNameForClassName(ClassName).value_or(
+          StringRef());
     return {};
   }
 };

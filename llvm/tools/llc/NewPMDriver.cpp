@@ -164,7 +164,7 @@ int llvm::compileModuleWithNewPM(
     raw_string_ostream OS(PipelineStr);
     MPM.printPipeline(OS, [&PIC](StringRef ClassName) {
       auto PassName = PIC.getPassNameForClassName(ClassName);
-      return PassName.empty() ? ClassName : PassName;
+      return PassName ? ClassName : *PassName;
     });
     outs() << PipelineStr << '\n';
     return 0;

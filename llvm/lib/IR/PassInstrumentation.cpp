@@ -23,17 +23,21 @@ template struct LLVM_EXPORT_TEMPLATE Any::TypeId<const Loop *>;
 
 void PassInstrumentationCallbacks::addClassToPassName(StringRef ClassName,
                                                       StringRef PassName) {
+  assert(!PassName.empty() && "PassName can't be empty!");
   ClassToPassName.try_emplace(ClassName, PassName.str());
 }
 
-StringRef
+std::optional<StringRef>
 PassInstrumentationCallbacks::getPassNameForClassName(StringRef ClassName) {
   if (!ClassToPassNameCallbacks.empty()) {
     for (auto &Fn : ClassToPassNameCallbacks)
       Fn();
     ClassToPassNameCallbacks.clear();
   }
-  return ClassToPassName[ClassName];
+  auto PassNameIter = ClassToPassName.find(ClassName);
+  if (PassNameIter != ClassToPassName.end())
+    return PassNameIter->second;
+  return std::nullopt;
 }
 
 AnalysisKey PassInstrumentationAnalysis::Key;

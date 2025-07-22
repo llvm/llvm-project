@@ -534,7 +534,7 @@ bool llvm::runPassPipeline(
     raw_string_ostream SOS(Pipeline);
     MPM.printPipeline(SOS, [&PIC](StringRef ClassName) {
       auto PassName = PIC.getPassNameForClassName(ClassName);
-      return PassName.empty() ? ClassName : PassName;
+      return PassName ? ClassName : *PassName;
     });
     outs() << Pipeline;
     outs() << "\n";
