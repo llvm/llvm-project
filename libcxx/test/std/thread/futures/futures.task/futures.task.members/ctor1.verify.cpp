@@ -31,7 +31,8 @@ int main(int, char**)
     auto const& c_init = init;
     PT p1{init}; // expected-error {{no matching constructor}}
     PT p2{c_init}; // expected-error {{no matching constructor}}
-    PT p3{std::move(init)}; // expected-error {{no matching constructor for initialization of 'PT' (aka 'packaged_task<A (int, char)>')}}
+    PT p3{std::move(init)};
+    // expected-error-re@-1 {{no matching constructor for initialization of 'PT' (aka '{{(std::)?}}packaged_task<A (int, char)>')}}
 
-  return 0;
+    return 0;
 }

@@ -190,13 +190,11 @@ TEST(TypeMatcher, MatchesDeclTypes) {
   EXPECT_TRUE(matches("template <typename T> struct S {"
                       "  void f(S s);"
                       "};",
-                      parmVarDecl(hasType(elaboratedType(
-                          namesType(injectedClassNameType()))))));
+                      parmVarDecl(hasType(injectedClassNameType()))));
   EXPECT_TRUE(notMatches("template <typename T> struct S {"
                          "  void g(S<T> s);"
                          "};",
-                         parmVarDecl(hasType(elaboratedType(
-                             namesType(injectedClassNameType()))))));
+                         parmVarDecl(hasType(injectedClassNameType()))));
   // InjectedClassNameType -> CXXRecordDecl
   EXPECT_TRUE(matches("template <typename T> struct S {"
                         "  void f(S s);"
@@ -228,46 +226,39 @@ TEST(HasDeclaration, HasDeclarationOfEnumType) {
 TEST(HasDeclaration, HasGetDeclTraitTest) {
   static_assert(internal::has_getDecl<TypedefType>,
                 "Expected TypedefType to have a getDecl.");
-  static_assert(internal::has_getDecl<RecordType>,
-                "Expected RecordType to have a getDecl.");
   static_assert(!internal::has_getDecl<TemplateSpecializationType>,
                 "Expected TemplateSpecializationType to *not* have a getDecl.");
 }
 
 TEST(HasDeclaration, ElaboratedType) {
-  EXPECT_TRUE(matches(
-      "namespace n { template <typename T> struct X {}; }"
-      "void f(n::X<int>);",
-      parmVarDecl(hasType(qualType(hasDeclaration(cxxRecordDecl()))))));
-  EXPECT_TRUE(matches(
-      "namespace n { template <typename T> struct X {}; }"
-      "void f(n::X<int>);",
-      parmVarDecl(hasType(elaboratedType(hasDeclaration(cxxRecordDecl()))))));
+  static const char Elaborated[] = "namespace n { struct X {}; }"
+                                   "void f(n::X);";
+  EXPECT_TRUE(
+      matches(Elaborated,
+              parmVarDecl(hasType(qualType(hasDeclaration(cxxRecordDecl()))))));
+  EXPECT_TRUE(matches(Elaborated, parmVarDecl(hasType(recordType(
+                                      hasDeclaration(cxxRecordDecl()))))));
 }
 
 TEST(HasDeclaration, HasDeclarationOfTypeWithDecl) {
   EXPECT_TRUE(matches(
       "typedef int X; X a;",
-      varDecl(hasName("a"), hasType(elaboratedType(namesType(
-                                typedefType(hasDeclaration(decl()))))))));
+      varDecl(hasName("a"), hasType(typedefType(hasDeclaration(decl()))))));
 
   // FIXME: Add tests for other types with getDecl() (e.g. RecordType)
 }
 
 TEST(HasDeclaration, HasDeclarationOfTemplateSpecializationType) {
-  EXPECT_TRUE(matches(
-      "template <typename T> class A {}; A<int> a;",
-      varDecl(hasType(elaboratedType(namesType(templateSpecializationType(
-          hasDeclaration(namedDecl(hasName("A"))))))))));
-  EXPECT_TRUE(matches(
-      "template <typename T> class A {};"
-      "template <typename T> class B { A<T> a; };",
-      fieldDecl(hasType(elaboratedType(namesType(templateSpecializationType(
-          hasDeclaration(namedDecl(hasName("A"))))))))));
-  EXPECT_TRUE(matches(
-      "template <typename T> class A {}; A<int> a;",
-      varDecl(hasType(elaboratedType(namesType(
-          templateSpecializationType(hasDeclaration(cxxRecordDecl()))))))));
+  EXPECT_TRUE(matches("template <typename T> class A {}; A<int> a;",
+                      varDecl(hasType(templateSpecializationType(
+                          hasDeclaration(namedDecl(hasName("A"))))))));
+  EXPECT_TRUE(matches("template <typename T> class A {};"
+                      "template <typename T> class B { A<T> a; };",
+                      fieldDecl(hasType(templateSpecializationType(
+                          hasDeclaration(namedDecl(hasName("A"))))))));
+  EXPECT_TRUE(matches("template <typename T> class A {}; A<int> a;",
+                      varDecl(hasType(templateSpecializationType(
+                          hasDeclaration(cxxRecordDecl()))))));
 }
 
 TEST(HasDeclaration, HasDeclarationOfCXXNewExpr) {
@@ -277,10 +268,9 @@ TEST(HasDeclaration, HasDeclarationOfCXXNewExpr) {
 }
 
 TEST(HasDeclaration, HasDeclarationOfTypeAlias) {
-  EXPECT_TRUE(matches(
-      "template <typename T> using C = T; C<int> c;",
-      varDecl(hasType(elaboratedType(namesType(templateSpecializationType(
-          hasDeclaration(typeAliasTemplateDecl()))))))));
+  EXPECT_TRUE(matches("template <typename T> using C = T; C<int> c;",
+                      varDecl(hasType(templateSpecializationType(
+                          hasDeclaration(typeAliasTemplateDecl()))))));
 }
 
 TEST(HasDeclaration, HasDeclarationOfObjCInterface) {
@@ -5410,14 +5400,15 @@ TEST(LoopingMatchers, DoNotOverwritePreviousMatchResultOnFailure) {
       functionDecl(parameterCountIs(1))))),
     std::make_unique<VerifyIdIsBoundTo<Decl>>("x", 1)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
-    "class A{}; class B{}; class C : B, A {};",
-    cxxRecordDecl(decl().bind("x"), isDerivedFrom("::A")),
-    std::make_unique<VerifyIdIsBoundTo<Decl>>("x", 1)));
+      "class A{}; class B{}; class C : B, A {};",
+      cxxRecordDecl(decl().bind("x"), isDerivedFrom("::A"),
+                    unless(isImplicit())),
+      std::make_unique<VerifyIdIsBoundTo<Decl>>("x", 1)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
-    "class A{}; typedef A B; typedef A C; typedef A D;"
+      "class A{}; typedef A B; typedef A C; typedef A D;"
       "class E : A {};",
-    cxxRecordDecl(decl().bind("x"), isDerivedFrom("C")),
-    std::make_unique<VerifyIdIsBoundTo<Decl>>("x", 1)));
+      cxxRecordDecl(decl().bind("x"), isDerivedFrom("C"), unless(isImplicit())),
+      std::make_unique<VerifyIdIsBoundTo<Decl>>("x", 1)));
   EXPECT_TRUE(matchAndVerifyResultTrue(
     "class A { class B { void f() {} }; };",
     functionDecl(decl().bind("x"), hasAncestor(recordDecl(hasName("::A")))),
@@ -5710,7 +5701,7 @@ TEST(HasAnyBase, BindsInnerBoundNodes) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "struct Inner {}; struct Proxy : Inner {}; struct Main : public "
       "Proxy {};",
-      cxxRecordDecl(hasName("Main"),
+      cxxRecordDecl(hasName("Main"), unless(isImplicit()),
                     hasAnyBase(cxxBaseSpecifier(hasType(
                         cxxRecordDecl(hasName("Inner")).bind("base-class")))))
           .bind("class"),
@@ -5736,47 +5727,28 @@ TEST(TypeMatching, PointeeTypes) {
 
 TEST(ElaboratedTypeNarrowing, hasQualifier) {
   EXPECT_TRUE(matches(
-    "namespace N {"
+      "namespace N {"
       "  namespace M {"
       "    class D {};"
       "  }"
       "}"
       "N::M::D d;",
-    elaboratedType(hasQualifier(hasPrefix(specifiesNamespace(hasName("N")))))));
+      recordType(hasQualifier(hasPrefix(specifiesNamespace(hasName("N")))))));
   EXPECT_TRUE(notMatches(
-    "namespace M {"
+      "namespace M {"
       "  class D {};"
       "}"
       "M::D d;",
-    elaboratedType(hasQualifier(hasPrefix(specifiesNamespace(hasName("N")))))));
-  EXPECT_TRUE(notMatches(
-    "struct D {"
-      "} d;",
-    elaboratedType(hasQualifier(nestedNameSpecifier()))));
-}
-
-TEST(ElaboratedTypeNarrowing, namesType) {
-  EXPECT_TRUE(matches(
-    "namespace N {"
-      "  namespace M {"
-      "    class D {};"
-      "  }"
-      "}"
-      "N::M::D d;",
-    elaboratedType(elaboratedType(namesType(recordType(
-      hasDeclaration(namedDecl(hasName("D")))))))));
-  EXPECT_TRUE(notMatches(
-    "namespace M {"
-      "  class D {};"
-      "}"
-      "M::D d;",
-    elaboratedType(elaboratedType(namesType(typedefType())))));
+      recordType(hasQualifier(hasPrefix(specifiesNamespace(hasName("N")))))));
+  EXPECT_TRUE(notMatches("struct D {"
+                         "} d;",
+                         recordType(hasQualifier(nestedNameSpecifier()))));
 }
 
 TEST(NNS, BindsNestedNameSpecifiers) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "namespace ns { struct E { struct B {}; }; } ns::E::B b;",
-      nestedNameSpecifier(specifiesType(asString("struct ns::E"))).bind("nns"),
+      nestedNameSpecifier(specifiesType(asString("ns::E"))).bind("nns"),
       std::make_unique<VerifyIdIsBoundTo<NestedNameSpecifier>>("nns",
                                                                "ns::E::")));
 }
@@ -5883,7 +5855,9 @@ TEST(Attr, AttrsAsDescendants) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       Fragment,
       namespaceDecl(hasName("a"),
-                    forEachDescendant(attr(unless(isImplicit())).bind("x"))),
+                    forEachDescendant(decl(
+                        hasDescendant(attr(unless(isImplicit())).bind("x")),
+                        unless(isImplicit())))),
       std::make_unique<VerifyIdIsBoundTo<Attr>>("x", 2)));
 }
 
@@ -6531,21 +6505,19 @@ TEST(HasReferentLoc, DoesNotBindToParameterWithoutIntReferenceTypeLoc) {
 }
 
 TEST(HasAnyTemplateArgumentLoc, BindsToSpecializationWithIntArgument) {
-  EXPECT_TRUE(matches(
-      "template<typename T> class A {}; A<int> a;",
-      varDecl(hasName("a"),
-              hasTypeLoc(elaboratedTypeLoc(hasNamedTypeLoc(
-                  templateSpecializationTypeLoc(hasAnyTemplateArgumentLoc(
-                      hasTypeLoc(loc(asString("int")))))))))));
+  EXPECT_TRUE(
+      matches("template<typename T> class A {}; A<int> a;",
+              varDecl(hasName("a"), hasTypeLoc(templateSpecializationTypeLoc(
+                                        hasAnyTemplateArgumentLoc(hasTypeLoc(
+                                            loc(asString("int")))))))));
 }
 
 TEST(HasAnyTemplateArgumentLoc, BindsToSpecializationWithDoubleArgument) {
-  EXPECT_TRUE(matches(
-      "template<typename T> class A {}; A<double> a;",
-      varDecl(hasName("a"),
-              hasTypeLoc(elaboratedTypeLoc(hasNamedTypeLoc(
-                  templateSpecializationTypeLoc(hasAnyTemplateArgumentLoc(
-                      hasTypeLoc(loc(asString("double")))))))))));
+  EXPECT_TRUE(
+      matches("template<typename T> class A {}; A<double> a;",
+              varDecl(hasName("a"), hasTypeLoc(templateSpecializationTypeLoc(
+                                        hasAnyTemplateArgumentLoc(hasTypeLoc(
+                                            loc(asString("double")))))))));
 }
 
 TEST(HasAnyTemplateArgumentLoc, BindsToExplicitSpecializationWithIntArgument) {
@@ -6598,30 +6570,27 @@ TEST(HasAnyTemplateArgumentLoc,
 }
 
 TEST(HasTemplateArgumentLoc, BindsToSpecializationWithIntArgument) {
-  EXPECT_TRUE(
-      matches("template<typename T> class A {}; A<int> a;",
-              varDecl(hasName("a"),
-                      hasTypeLoc(elaboratedTypeLoc(hasNamedTypeLoc(
-                          templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-                              0, hasTypeLoc(loc(asString("int")))))))))));
+  EXPECT_TRUE(matches(
+      "template<typename T> class A {}; A<int> a;",
+      varDecl(hasName("a"),
+              hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
+                  0, hasTypeLoc(loc(asString("int")))))))));
 }
 
 TEST(HasTemplateArgumentLoc, BindsToSpecializationWithDoubleArgument) {
-  EXPECT_TRUE(
-      matches("template<typename T> class A {}; A<double> a;",
-              varDecl(hasName("a"),
-                      hasTypeLoc(elaboratedTypeLoc(hasNamedTypeLoc(
-                          templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-                              0, hasTypeLoc(loc(asString("double")))))))))));
+  EXPECT_TRUE(matches(
+      "template<typename T> class A {}; A<double> a;",
+      varDecl(hasName("a"),
+              hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
+                  0, hasTypeLoc(loc(asString("double")))))))));
 }
 
 TEST(HasTemplateArgumentLoc, DoesNotBindToSpecializationWithIntArgument) {
   EXPECT_TRUE(notMatches(
       "template<typename T> class A {}; A<int> a;",
       varDecl(hasName("a"),
-              hasTypeLoc(elaboratedTypeLoc(hasNamedTypeLoc(
-                  templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-                      0, hasTypeLoc(loc(asString("double")))))))))));
+              hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
+                  0, hasTypeLoc(loc(asString("double")))))))));
 }
 
 TEST(HasTemplateArgumentLoc, BindsToExplicitSpecializationWithIntArgument) {
@@ -6735,12 +6704,11 @@ TEST(HasNamedTypeLoc, BindsToElaboratedObjectDeclaration) {
       class C<int> c;
       )",
       varDecl(hasName("c"),
-              hasTypeLoc(elaboratedTypeLoc(
-                  hasNamedTypeLoc(templateSpecializationTypeLoc(
-                      hasAnyTemplateArgumentLoc(templateArgumentLoc()))))))));
+              hasTypeLoc(templateSpecializationTypeLoc(
+                  hasAnyTemplateArgumentLoc(templateArgumentLoc()))))));
 }
 
-TEST(HasNamedTypeLoc, DoesNotBindToNonElaboratedObjectDeclaration) {
+TEST(HasNamedTypeLoc, BindsToNonElaboratedObjectDeclaration) {
   EXPECT_TRUE(matches(
       R"(
       template <typename T>
@@ -6748,9 +6716,8 @@ TEST(HasNamedTypeLoc, DoesNotBindToNonElaboratedObjectDeclaration) {
       C<int> c;
       )",
       varDecl(hasName("c"),
-              hasTypeLoc(elaboratedTypeLoc(
-                  hasNamedTypeLoc(templateSpecializationTypeLoc(
-                      hasAnyTemplateArgumentLoc(templateArgumentLoc()))))))));
+              hasTypeLoc(templateSpecializationTypeLoc(
+                  hasAnyTemplateArgumentLoc(templateArgumentLoc()))))));
 }
 
 } // namespace ast_matchers
