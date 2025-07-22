@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -run-pass=si-lower-sgpr-spills -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=si-lower-sgpr-spills -o - %s | FileCheck %s
 
 # CHECK-LABEL: name: empty_entry_block
 # CHECK: SI_SPILL_S32_TO_VGPR

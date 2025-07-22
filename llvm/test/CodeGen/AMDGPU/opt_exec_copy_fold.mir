@@ -1,4 +1,4 @@
-# RUN: llc -run-pass si-optimize-exec-masking-pre-ra -mtriple=amdgcn -verify-machineinstrs -o - %s | FileCheck --check-prefixes=GCN %s
+# RUN: llc -run-pass si-optimize-exec-masking-pre-ra -mtriple=amdgcn -o - %s | FileCheck --check-prefixes=GCN %s
 ---
 # GCN-LABEL: name: opt_exec_copy_fold
 # GCN:             %2:vreg_64 = COPY $exec
@@ -16,7 +16,7 @@ body:             |
     %3:sreg_64 = V_CMP_EQ_U64_e64 %1, %2, implicit $exec
     $scc = COPY %3
     S_CBRANCH_SCC0 %bb.1, implicit $scc
-  
+
   bb.1:
 ...
 

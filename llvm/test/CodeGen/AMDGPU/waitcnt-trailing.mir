@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -run-pass si-insert-waitcnts -o - %s | FileCheck %s
 
 # Check that a trivial soft waitcnt at the end of a block is deleted even if it
 # is followed by a meta instruction.

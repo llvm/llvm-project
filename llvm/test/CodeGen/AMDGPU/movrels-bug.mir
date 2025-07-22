@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass post-RA-sched  %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgcn -run-pass post-RA-sched  %s -o - | FileCheck %s
 # RUN: llc -mtriple=amdgcn -passes=post-RA-sched  %s -o - | FileCheck %s
 
 # This tests a situation where a sub-register of a killed super-register operand

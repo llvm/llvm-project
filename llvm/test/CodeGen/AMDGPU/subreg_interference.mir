@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -mtriple=amdgcn--amdhsa -verify-machineinstrs -run-pass=greedy,virtregrewriter | FileCheck %s
+# RUN: llc -o - %s -mtriple=amdgcn--amdhsa -run-pass=greedy,virtregrewriter | FileCheck %s
 --- |
 
   define amdgpu_kernel void @func0() {

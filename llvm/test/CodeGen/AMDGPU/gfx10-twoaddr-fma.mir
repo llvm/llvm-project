@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass=twoaddressinstruction -verify-machineinstrs -o - %s | FileCheck --check-prefixes=GFX10,GFX10-NOLIS %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass=twoaddressinstruction -o - %s | FileCheck --check-prefixes=GFX10,GFX10-NOLIS %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -passes=two-address-instruction -verify-each -o - %s | FileCheck --check-prefixes=GFX10,GFX10-NOLIS %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass=liveintervals,twoaddressinstruction -verify-machineinstrs -o - %s | FileCheck --check-prefixes=GFX10,GFX10-LIS %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass=liveintervals,twoaddressinstruction -o - %s | FileCheck --check-prefixes=GFX10,GFX10-LIS %s
 
 
 # GFX10-LABEL: name: test_fmamk_reg_imm_f16

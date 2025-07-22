@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -run-pass=machine-cse -verify-machineinstrs %s -o - 2>&1 | FileCheck --check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -run-pass=machine-cse %s -o - 2>&1 | FileCheck --check-prefix=GCN %s
 
 ---
 name: test_machine_cse_op_sel_v_add_nc_u16

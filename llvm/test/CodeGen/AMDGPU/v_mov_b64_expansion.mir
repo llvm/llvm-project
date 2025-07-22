@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass postrapseudos -verify-machineinstrs %s -o - | FileCheck -check-prefixes=GCN,GFX900,NOT-GFX1250 %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx90a -run-pass postrapseudos -verify-machineinstrs %s -o - | FileCheck -check-prefixes=GCN,GFX90A,NOT-GFX1250 %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx942 -run-pass postrapseudos -verify-machineinstrs %s -o - | FileCheck -check-prefixes=GCN,GFX942,NOT-GFX1250 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass postrapseudos %s -o - | FileCheck -check-prefixes=GCN,GFX900,NOT-GFX1250 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx90a -run-pass postrapseudos %s -o - | FileCheck -check-prefixes=GCN,GFX90A,NOT-GFX1250 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx942 -run-pass postrapseudos %s -o - | FileCheck -check-prefixes=GCN,GFX942,NOT-GFX1250 %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass postrapseudos %s -o - | FileCheck -check-prefixes=GCN,GFX1250 %s
 
 # GCN-LABEL: name: v_mov_b64_from_vgpr

@@ -1,4 +1,4 @@
-# RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -start-before=greedy,0 -stop-after=virtregrewriter,1 -verify-machineinstrs -o - 2> %t.err %s | FileCheck %s
+# RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -start-before=greedy,0 -stop-after=virtregrewriter,1 -o - 2> %t.err %s | FileCheck %s
 # RUN: FileCheck -check-prefix=ERR %s < %t.err
 
 # ERR: error: register allocation failed: maximum depth for recoloring reached. Use -fexhaustive-register-search to skip cutoffs

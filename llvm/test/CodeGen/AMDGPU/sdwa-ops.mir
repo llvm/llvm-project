@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=GFX9 %s
-# RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=GFX9 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=GFX9 %s
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=GFX9 %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx900 -passes=si-peephole-sdwa -o - %s | FileCheck -check-prefix=GFX9 %s
 # RUN: llc -mtriple=amdgcn -mcpu=fiji -passes=si-peephole-sdwa -o - %s | FileCheck -check-prefix=GFX9 %s
 

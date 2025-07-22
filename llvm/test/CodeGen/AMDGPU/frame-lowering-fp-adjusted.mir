@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass=prologepilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=prologepilog %s -o - | FileCheck %s
 
 
 # CHECK-LABEL: name: foo
@@ -14,16 +14,16 @@
 ---
 name:            foo
 tracksRegLiveness: true
-liveins:         
+liveins:
   - { reg: '$vgpr0' }
   - { reg: '$sgpr4_sgpr5' }
   - { reg: '$sgpr6_sgpr7' }
   - { reg: '$sgpr8' }
-frameInfo:       
+frameInfo:
   maxAlignment:    4
-stack:           
+stack:
   - { id: 0, type: spill-slot, size: 4, alignment: 4 }
-machineFunctionInfo: 
+machineFunctionInfo:
   explicitKernArgSize: 660
   maxKernArgAlign: 4
   isEntryFunction: true
@@ -41,7 +41,7 @@ body:             |
   bb.0:
     successors: %bb.1
     liveins: $sgpr8, $vgpr0, $sgpr4_sgpr5, $sgpr6_sgpr7
-  
+
   bb.1:
     liveins: $sgpr4, $sgpr5, $sgpr9, $sgpr22, $vgpr0, $sgpr6_sgpr7
 

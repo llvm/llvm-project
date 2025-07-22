@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -start-before=si-lower-sgpr-spills -stop-after=greedy,1 -verify-machineinstrs --stress-regalloc=2 -o - %s | FileCheck -check-prefix GCN-REGALLOC %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -start-before=si-lower-sgpr-spills -stop-after=virtregrewriter,1 -verify-machineinstrs --stress-regalloc=2 -o - %s | FileCheck -check-prefix GCN-REWRITER %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -start-before=si-lower-sgpr-spills -stop-after=greedy,1 --stress-regalloc=2 -o - %s | FileCheck -check-prefix GCN-REGALLOC %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -start-before=si-lower-sgpr-spills -stop-after=virtregrewriter,1 --stress-regalloc=2 -o - %s | FileCheck -check-prefix GCN-REWRITER %s
 
 name:            test_wwm_reg_superclass_spill
 tracksRegLiveness: true

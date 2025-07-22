@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -run-pass si-insert-waitcnts -o - %s | FileCheck %s
 
 # Check that the waitcnt pass does *not* insert a redundant waitcnt instr.
 # In this testcase, ensure that pass does not insert redundant S_WAITCNT 3952

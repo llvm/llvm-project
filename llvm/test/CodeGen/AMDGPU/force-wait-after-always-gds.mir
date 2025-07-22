@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass si-insert-waitcnts %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -run-pass si-insert-waitcnts %s -o - | FileCheck -check-prefix=GCN %s
 
 ---
 # GCN-LABEL: name: test_ordered_count

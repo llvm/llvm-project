@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,GFX9 %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx803 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,GFX8 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,GFX9 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx803 -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,GFX8 %s
 
 # GCN-LABEL: name: diffoporder_add
 # GFX9: %{{[0-9]+}}:vreg_64 = GLOBAL_LOAD_DWORDX2 %{{[0-9]+}}, -2048, 0
