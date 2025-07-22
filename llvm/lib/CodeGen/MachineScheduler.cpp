@@ -771,24 +771,6 @@ static bool isSchedBoundary(MachineBasicBlock::iterator MI,
          MI->isFakeUse();
 }
 
-/// A region of an MBB for scheduling.
-namespace {
-struct SchedRegion {
-  /// RegionBegin is the first instruction in the scheduling region, and
-  /// RegionEnd is either MBB->end() or the scheduling boundary after the
-  /// last instruction in the scheduling region. These iterators cannot refer
-  /// to instructions outside of the identified scheduling region because
-  /// those may be reordered before scheduling this region.
-  MachineBasicBlock::iterator RegionBegin;
-  MachineBasicBlock::iterator RegionEnd;
-  unsigned NumRegionInstrs;
-
-  SchedRegion(MachineBasicBlock::iterator B, MachineBasicBlock::iterator E,
-              unsigned N) :
-    RegionBegin(B), RegionEnd(E), NumRegionInstrs(N) {}
-};
-} // end anonymous namespace
-
 using MBBRegionsVector = SmallVector<SchedRegion, 16>;
 
 static void
@@ -3703,7 +3685,6 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
                                   MachineBasicBlock::iterator End,
                                   unsigned NumRegionInstrs) {
   const MachineFunction &MF = *Begin->getMF();
-  const MachineBasicBlock &MBB = *Begin->getParent();
   const TargetLowering *TLI = MF.getSubtarget().getTargetLowering();
 
   // Avoid setting up the register pressure tracker for small regions to save
@@ -3726,7 +3707,8 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
   RegionPolicy.OnlyBottomUp = true;
 
   // Allow the subtarget to override default policy.
-  MF.getSubtarget().overrideSchedPolicy(RegionPolicy, MBB, NumRegionInstrs);
+  SchedRegion Region(Begin, End, NumRegionInstrs);
+  MF.getSubtarget().overrideSchedPolicy(RegionPolicy, Region);
 
   // After subtarget overrides, apply command line options.
   if (!EnableRegPressure) {
@@ -4332,7 +4314,6 @@ void PostGenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
                                       MachineBasicBlock::iterator End,
                                       unsigned NumRegionInstrs) {
   const MachineFunction &MF = *Begin->getMF();
-  const MachineBasicBlock &MBB = *Begin->getParent();
 
   // Default to top-down because it was implemented first and existing targets
   // expect that behavior by default.
@@ -4340,8 +4321,8 @@ void PostGenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
   RegionPolicy.OnlyBottomUp = false;
 
   // Allow the subtarget to override default policy.
-  MF.getSubtarget().overridePostRASchedPolicy(RegionPolicy, MBB,
-                                              NumRegionInstrs);
+  SchedRegion Region(Begin, End, NumRegionInstrs);
+  MF.getSubtarget().overridePostRASchedPolicy(RegionPolicy, Region);
 
   // After subtarget overrides, apply command line options.
   if (PostRADirection == MISched::TopDown) {

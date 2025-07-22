@@ -240,8 +240,8 @@ public:
   void getCriticalPathRCs(RegClassVector &CriticalPathRCs) const override;
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           const MachineBasicBlock &MBB,
-                           unsigned NumRegionInstrs) const override;
+                           const SchedRegion &Region) const override;
+
   bool useAA() const override;
 
   bool enableSubRegLiveness() const override;

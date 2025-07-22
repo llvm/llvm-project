@@ -30,7 +30,7 @@ namespace llvm {
 
 class APInt;
 class MachineFunction;
-class MachineBasicBlock;
+
 class ScheduleDAGMutation;
 class CallLowering;
 class GlobalValue;
@@ -55,6 +55,7 @@ class TargetRegisterClass;
 class TargetRegisterInfo;
 class TargetSchedModel;
 class Triple;
+struct SchedRegion;
 
 //===----------------------------------------------------------------------===//
 ///
@@ -232,8 +233,7 @@ public:
   /// scheduling heuristics (no custom MachineSchedStrategy) to make
   /// changes to the generic scheduling policy.
   virtual void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                   const MachineBasicBlock &MBB,
-                                   unsigned NumRegionInstrs) const {}
+                                   const SchedRegion &Region) const {}
 
   /// Override generic post-ra scheduling policy within a region.
   ///
@@ -243,8 +243,7 @@ public:
   /// Note that some options like tracking register pressure won't take effect
   /// in post-ra scheduling.
   virtual void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
-                                         const MachineBasicBlock &MBB,
-                                         unsigned NumRegionInstrs) const {}
+                                         const SchedRegion &Region) const {}
 
   // Perform target-specific adjustments to the latency of a schedule
   // dependency.

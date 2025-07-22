@@ -343,8 +343,8 @@ public:
   }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           const MachineBasicBlock &MBB,
-                           unsigned NumRegionInstrs) const override;
+                           const SchedRegion &Region) const override;
+
   void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
                              SDep &Dep,
                              const TargetSchedModel *SchedModel) const override;
