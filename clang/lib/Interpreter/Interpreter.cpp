@@ -758,8 +758,9 @@ llvm::Error Interpreter::Undo(unsigned N) {
                                                std::error_code());
   } else if (N > getEffectivePTUSize()) {
     return llvm::make_error<llvm::StringError>(
-        llvm::formatv("Operation failed. Wanted to undo {0} inputs, only have {1}.",
-            N, getEffectivePTUSize()),
+        llvm::formatv(
+            "Operation failed. Wanted to undo {0} inputs, only have {1}.", N,
+            getEffectivePTUSize()),
         std::error_code());
   }
 
