@@ -46,7 +46,6 @@ Potentially Breaking Changes
   ``endbr64`` instruction at the labels named as possible branch
   destinations, so it is not safe to use a register-controlled branch
   instruction to branch to one. (In line with gcc.)
-- Added a sugar type `PredefinedSugarType` to improve diagnostic messages. (#GH143653)
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------

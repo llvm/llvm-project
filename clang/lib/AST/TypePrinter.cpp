@@ -264,7 +264,6 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::BTFTagAttributed:
     case Type::HLSLAttributedResource:
     case Type::HLSLInlineSpirv:
-    case Type::PredefinedSugar:
       CanPrefixQualifiers = true;
       break;
 
@@ -1465,15 +1464,6 @@ void TypePrinter::printDependentBitIntBefore(const DependentBitIntType *T,
 }
 
 void TypePrinter::printDependentBitIntAfter(const DependentBitIntType *T,
-                                            raw_ostream &OS) {}
-
-void TypePrinter::printPredefinedSugarBefore(const PredefinedSugarType *T,
-                                             raw_ostream &OS) {
-  OS << T->getIdentifier()->getName();
-  spaceBeforePlaceHolder(OS);
-}
-
-void TypePrinter::printPredefinedSugarAfter(const PredefinedSugarType *T,
                                             raw_ostream &OS) {}
 
 /// Appends the given scope to the end of a string.
