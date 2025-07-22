@@ -100,6 +100,9 @@ void ConvertVectorToLLVMPass::runOnOperation() {
       if (armSVE)
         populateLowerContractionToSVEI8MMPatternPatterns(patterns);
     }
+    if (armBF16)
+      populateLowerContractionToSVEBFMMLAPatterns(patterns);
+
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 

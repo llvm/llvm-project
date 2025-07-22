@@ -37,8 +37,8 @@ Value mlir::x86vector::avx2::inline_asm::mm256BlendPsAsm(
       "=x,x,x"; // Careful: constraint parser is very brittle: no ws!
   SmallVector<Value> asmVals{v1, v2};
   auto asmStr = llvm::formatv(asmTp, llvm::format_hex(mask, /*width=*/2)).str();
-  auto asmOp = b.create<LLVM::InlineAsmOp>(
-      v1.getType(), /*operands=*/asmVals, /*asm_string=*/asmStr,
+  auto asmOp = LLVM::InlineAsmOp::create(
+      b, v1.getType(), /*operands=*/asmVals, /*asm_string=*/asmStr,
       /*constraints=*/asmCstr, /*has_side_effects=*/false,
       /*is_align_stack=*/false, LLVM::TailCallKind::None,
       /*asm_dialect=*/asmDialectAttr,
@@ -48,14 +48,14 @@ Value mlir::x86vector::avx2::inline_asm::mm256BlendPsAsm(
 
 Value mlir::x86vector::avx2::intrin::mm256UnpackLoPs(ImplicitLocOpBuilder &b,
                                                      Value v1, Value v2) {
-  return b.create<vector::ShuffleOp>(
-      v1, v2, ArrayRef<int64_t>{0, 8, 1, 9, 4, 12, 5, 13});
+  return vector::ShuffleOp::create(b, v1, v2,
+                                   ArrayRef<int64_t>{0, 8, 1, 9, 4, 12, 5, 13});
 }
 
 Value mlir::x86vector::avx2::intrin::mm256UnpackHiPs(ImplicitLocOpBuilder &b,
                                                      Value v1, Value v2) {
-  return b.create<vector::ShuffleOp>(
-      v1, v2, ArrayRef<int64_t>{2, 10, 3, 11, 6, 14, 7, 15});
+  return vector::ShuffleOp::create(
+      b, v1, v2, ArrayRef<int64_t>{2, 10, 3, 11, 6, 14, 7, 15});
 }
 ///                            a  a   b   b  a  a   b   b
 /// Takes an 8 bit mask, 2 bit for each position of a[0, 3)  **and** b[0, 4):
@@ -68,7 +68,7 @@ Value mlir::x86vector::avx2::intrin::mm256ShufflePs(ImplicitLocOpBuilder &b,
   MaskHelper::extractShuffle(mask, b01, b23, b45, b67);
   SmallVector<int64_t> shuffleMask = {
       b01, b23, b45 + 8, b67 + 8, b01 + 4, b23 + 4, b45 + 8 + 4, b67 + 8 + 4};
-  return b.create<vector::ShuffleOp>(v1, v2, shuffleMask);
+  return vector::ShuffleOp::create(b, v1, v2, shuffleMask);
 }
 
 // imm[0:1] out of imm[0:3] is:
@@ -96,7 +96,7 @@ Value mlir::x86vector::avx2::intrin::mm256Permute2f128Ps(
   MaskHelper::extractPermute(mask, b03, b47);
   appendToMask(b03);
   appendToMask(b47);
-  return b.create<vector::ShuffleOp>(v1, v2, shuffleMask);
+  return vector::ShuffleOp::create(b, v1, v2, shuffleMask);
 }
 
 /// If bit i of `mask` is zero, take f32@i from v1 else take it from v2.
@@ -108,7 +108,7 @@ Value mlir::x86vector::avx2::intrin::mm256BlendPs(ImplicitLocOpBuilder &b,
     bool isSet = mask & (1 << i);
     shuffleMask.push_back(!isSet ? i : i + 8);
   }
-  return b.create<vector::ShuffleOp>(v1, v2, shuffleMask);
+  return vector::ShuffleOp::create(b, v1, v2, shuffleMask);
 }
 
 /// AVX2 4x8xf32-specific transpose lowering using a "C intrinsics" model.
@@ -244,13 +244,13 @@ public:
           VectorType::get({n * m}, op.getSourceVectorType().getElementType());
       auto reshInputType = VectorType::get({m, n}, srcType.getElementType());
       auto reshInput =
-          ib.create<vector::ShapeCastOp>(flattenedType, op.getVector());
-      reshInput = ib.create<vector::ShapeCastOp>(reshInputType, reshInput);
+          vector::ShapeCastOp::create(ib, flattenedType, op.getVector());
+      reshInput = vector::ShapeCastOp::create(ib, reshInputType, reshInput);
 
       // Extract 1-D vectors from the higher-order dimension of the input
       // vector.
       for (int64_t i = 0; i < m; ++i)
-        vs.push_back(ib.create<vector::ExtractOp>(reshInput, i));
+        vs.push_back(vector::ExtractOp::create(ib, reshInput, i));
 
       // Transpose set of 1-D vectors.
       if (m == 4)
@@ -260,16 +260,16 @@ public:
 
       // Insert transposed 1-D vectors into the higher-order dimension of the
       // output vector.
-      Value res = ib.create<arith::ConstantOp>(reshInputType,
-                                               ib.getZeroAttr(reshInputType));
+      Value res = arith::ConstantOp::create(ib, reshInputType,
+                                            ib.getZeroAttr(reshInputType));
       for (int64_t i = 0; i < m; ++i)
-        res = ib.create<vector::InsertOp>(vs[i], res, i);
+        res = vector::InsertOp::create(ib, vs[i], res, i);
 
       // The output vector still has the shape of the input vector (e.g., 4x8).
       // We have to transpose their dimensions and retrieve its original rank
       // (e.g., 1x8x1x4x1).
-      res = ib.create<vector::ShapeCastOp>(flattenedType, res);
-      res = ib.create<vector::ShapeCastOp>(op.getResultVectorType(), res);
+      res = vector::ShapeCastOp::create(ib, flattenedType, res);
+      res = vector::ShapeCastOp::create(ib, op.getResultVectorType(), res);
       rewriter.replaceOp(op, res);
       return success();
     };

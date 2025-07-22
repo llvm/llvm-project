@@ -4786,9 +4786,13 @@ struct MDField : public MDFieldImpl<Metadata *> {
 };
 
 struct MDStringField : public MDFieldImpl<MDString *> {
-  bool AllowEmpty;
-  MDStringField(bool AllowEmpty = true)
-      : ImplTy(nullptr), AllowEmpty(AllowEmpty) {}
+  enum class EmptyIs {
+    Null,  //< Allow empty input string, map to nullptr
+    Empty, //< Allow empty input string, map to an empty MDString
+    Error, //< Disallow empty string, map to an error
+  } EmptyIs;
+  MDStringField(enum EmptyIs EmptyIs = EmptyIs::Null)
+      : ImplTy(nullptr), EmptyIs(EmptyIs) {}
 };
 
 struct MDFieldList : public MDFieldImpl<SmallVector<Metadata *, 4>> {
@@ -5260,10 +5264,19 @@ bool LLParser::parseMDField(LocTy Loc, StringRef Name, MDStringField &Result) {
   if (parseStringConstant(S))
     return true;
 
-  if (!Result.AllowEmpty && S.empty())
-    return error(ValueLoc, "'" + Name + "' cannot be empty");
+  if (S.empty()) {
+    switch (Result.EmptyIs) {
+    case MDStringField::EmptyIs::Null:
+      Result.assign(nullptr);
+      return false;
+    case MDStringField::EmptyIs::Empty:
+      break;
+    case MDStringField::EmptyIs::Error:
+      return error(ValueLoc, "'" + Name + "' cannot be empty");
+    }
+  }
 
-  Result.assign(S.empty() ? nullptr : MDString::get(Context, S));
+  Result.assign(MDString::get(Context, S));
   return false;
 }
 
@@ -5781,7 +5794,7 @@ bool LLParser::parseDIFile(MDNode *&Result, bool IsDistinct) {
   REQUIRED(directory, MDStringField, );                                        \
   OPTIONAL(checksumkind, ChecksumKindField, (DIFile::CSK_MD5));                \
   OPTIONAL(checksum, MDStringField, );                                         \
-  OPTIONAL(source, MDStringField, );
+  OPTIONAL(source, MDStringField, (MDStringField::EmptyIs::Empty));
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -6065,7 +6078,7 @@ bool LLParser::parseDITemplateValueParameter(MDNode *&Result, bool IsDistinct) {
 ///                         declaration: !4, align: 8)
 bool LLParser::parseDIGlobalVariable(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
-  OPTIONAL(name, MDStringField, (/* AllowEmpty */ false));                     \
+  OPTIONAL(name, MDStringField, (MDStringField::EmptyIs::Error));              \
   OPTIONAL(scope, MDField, );                                                  \
   OPTIONAL(linkageName, MDStringField, );                                      \
   OPTIONAL(file, MDField, );                                                   \

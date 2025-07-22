@@ -1105,7 +1105,9 @@ bool ScalarizerVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
     Res.push_back(ResElem);
   }
 
-  gather(&EVI, Res, *VS);
+  Type *ActualVecType = cast<FixedVectorType>(OpTy->getContainedType(Index));
+  std::optional<VectorSplit> AVS = getVectorSplit(ActualVecType);
+  gather(&EVI, Res, *AVS);
   return true;
 }
 

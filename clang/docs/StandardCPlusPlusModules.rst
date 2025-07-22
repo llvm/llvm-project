@@ -690,9 +690,9 @@ ensure it is reachable, e.g. ``using N::g;``.
 As of Clang 22.x, the Reduced BMI is enabled by default. You may still want to
 use Full BMI with ``-fno-modules-reduced-bmi`` in the following case:
 1. Your build system uses two-phase compilation but it haven't adjusted the
-   implementation for reduced BMI.
+implementation for reduced BMI.
 2. You meet a regression with Reduced BMI that you cannot work around. Please
-   report an issue for this case.
+report an issue for this case.
 
 Experimental Non-Cascading Changes
 ----------------------------------

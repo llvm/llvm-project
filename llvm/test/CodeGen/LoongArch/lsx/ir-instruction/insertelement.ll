@@ -57,8 +57,8 @@ define void @insert_4xfloat(ptr %src, ptr %dst, float %ins) nounwind {
 ; CHECK-LABEL: insert_4xfloat:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr1, $a0, 0
-; CHECK-NEXT:    movfr2gr.s $a0, $fa0
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a0, 1
+; CHECK-NEXT:    # kill: def $f0 killed $f0 def $vr0
+; CHECK-NEXT:    vextrins.w $vr1, $vr0, 16
 ; CHECK-NEXT:    vst $vr1, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <4 x float>, ptr %src
@@ -71,8 +71,8 @@ define void @insert_2xdouble(ptr %src, ptr %dst, double %ins) nounwind {
 ; CHECK-LABEL: insert_2xdouble:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr1, $a0, 0
-; CHECK-NEXT:    movfr2gr.d $a0, $fa0
-; CHECK-NEXT:    vinsgr2vr.d $vr1, $a0, 1
+; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
+; CHECK-NEXT:    vextrins.d $vr1, $vr0, 16
 ; CHECK-NEXT:    vst $vr1, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <2 x double>, ptr %src
