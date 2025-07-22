@@ -1461,6 +1461,7 @@ class ConvertBuiltin<string name, InstructionSet set> {
   bit IsRounded = !not(!eq(!find(name, "_rt"), -1));
   bit IsBfloat16 = !or(!not(!eq(!find(name, "BF16"), -1)),
                        !not(!eq(!find(name, "bfloat16"), -1)));
+  bit IsTF32 = !not(!eq(!find(name, "TF32"), -1));
   FPRoundingMode RoundingMode = !cond(!not(!eq(!find(name, "_rte"), -1)) : RTE,
                                   !not(!eq(!find(name, "_rtz"), -1)) : RTZ,
                                   !not(!eq(!find(name, "_rtp"), -1)) : RTP,
@@ -1472,7 +1473,7 @@ class ConvertBuiltin<string name, InstructionSet set> {
 def ConvertBuiltins : GenericTable {
   let FilterClass = "ConvertBuiltin";
   let Fields = ["Name", "Set", "IsDestinationSigned", "IsSaturated",
-                "IsRounded", "IsBfloat16", "RoundingMode"];
+                "IsRounded", "IsBfloat16", "IsTF32", "RoundingMode"];
   string TypeOf_Set = "InstructionSet";
   string TypeOf_RoundingMode = "FPRoundingMode";
 }
@@ -1552,6 +1553,24 @@ defm : DemangledBF16ConvertBuiltin<"bfloat16", "_as_ushort">;
 defm : DemangledBF16ConvertBuiltin<"as_bfloat16", "_float">;
 
 foreach conv = ["FToBF16INTEL", "BF16ToFINTEL"] in {
+  def : DemangledBuiltin<!strconcat("__spirv_Convert", conv), OpenCL_std, Convert, 1, 1>;
+  def : ConvertBuiltin<!strconcat("__spirv_Convert", conv), OpenCL_std>;
+}
+
+// SPV_INTEL_tensor_float32_conversion
+// Multiclass used to define at the same time both a demangled builtin records
+// and a corresponding convert builtin records.
+multiclass DemangledTF32ConvertBuiltin<string name1, string name2> {
+  // Create records for scalar and vector conversions.
+  foreach i = ["", "2", "3", "4", "8", "16"] in {
+    def : DemangledBuiltin<!strconcat("intel_convert_", name1, i, name2, i), OpenCL_std, Convert, 1, 1>;
+    def : ConvertBuiltin<!strconcat("intel_convert_", name1, i, name2, i), OpenCL_std>;
+  }
+}
+
+defm : DemangledTF32ConvertBuiltin<"ConvertFToTF32INTEL">;
+
+foreach conv = ["FToTF32INTEL"] in {
   def : DemangledBuiltin<!strconcat("__spirv_Convert", conv), OpenCL_std, Convert, 1, 1>;
   def : ConvertBuiltin<!strconcat("__spirv_Convert", conv), OpenCL_std>;
 }
