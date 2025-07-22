@@ -142,8 +142,12 @@ static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
     return false;
 
   if (isa<ParmVarDecl>(D)) {
-    if (D->getType()->isReferenceType())
+    if (D->getType()->isReferenceType()) {
+      if (S.inConstantContext() && S.getLangOpts().CPlusPlus &&
+          !S.getLangOpts().CPlusPlus11)
+        diagnoseNonConstVariable(S, OpPC, D);
       return false;
+    }
 
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     if (S.getLangOpts().CPlusPlus11) {
@@ -566,7 +570,10 @@ bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   assert(Ptr.isLive() && "Pointer is not live");
-  if (!Ptr.isConst() || Ptr.isMutable())
+  if (!Ptr.isConst())
+    return true;
+
+  if (Ptr.isMutable() && !Ptr.isConstInMutable())
     return true;
 
   if (!Ptr.isBlockPointer())
@@ -574,7 +581,7 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
   // The This pointer is writable in constructors and destructors,
   // even if isConst() returns true.
-  if (llvm::find(S.InitializingBlocks, Ptr.block()))
+  if (llvm::is_contained(S.InitializingBlocks, Ptr.block()))
     return true;
 
   const QualType Ty = Ptr.getType();
@@ -657,6 +664,9 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   if (Ptr.isInitialized())
     return true;
+
+  if (Ptr.isExtern() && S.checkingPotentialConstantExpression())
+    return false;
 
   if (const auto *VD = Ptr.getDeclDesc()->asVarDecl();
       VD && (VD->isConstexpr() || VD->hasGlobalStorage())) {
