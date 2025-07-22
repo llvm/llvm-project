@@ -147,11 +147,8 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       if (auto attr = getEncodingOfType<BlockTensorDescAttr>())
         return attr.getMemorySpace().getValue();
 
-      if (auto attr = getEncodingOfType<ScatterTensorDescAttr>())
-        return attr.getMemorySpace().getValue();
-
-      llvm_unreachable("invalid encoding");
-      return MemorySpace::Global;
+      auto attr = getEncodingOfType<ScatterTensorDescAttr>();
+      return attr.getMemorySpace().getValue();
     }
 
     // get the ArrayLength for blocked TensorDesc
