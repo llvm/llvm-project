@@ -110,17 +110,15 @@ analyzeModule(Module &M) {
       reportError(Ctx, "Root Element is not a metadata node.");
       continue;
     }
-    uint32_t Version = 1;
-    if (std::optional<uint32_t> V = extractMdIntValue(RSDefNode, 2))
-      Version = *V;
-    else {
+    std::optional<uint32_t> V = extractMdIntValue(RSDefNode, 2);
+    if (!V.has_value()) {
       reportError(Ctx, "Invalid RSDefNode value, expected constant int");
       continue;
     }
 
     llvm::hlsl::rootsig::MetadataParser MDParser(RootElementListNode);
     llvm::Expected<mcdxbc::RootSignatureDesc> RSDOrErr =
-        MDParser.ParseRootSignature(Version);
+        MDParser.ParseRootSignature(V.value());
 
     if (auto Err = RSDOrErr.takeError()) {
       reportError(Ctx, toString(std::move(Err)));
