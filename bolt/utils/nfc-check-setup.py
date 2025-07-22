@@ -7,6 +7,8 @@ import subprocess
 import sys
 import textwrap
 
+msg_prefix = "\n> NFC-Mode:"
+
 def get_relevant_bolt_changes(dir: str) -> str:
     # Return a list of bolt source changes that are relevant to testing.
     all_changes = subprocess.run(
@@ -49,7 +51,7 @@ def switch_back(
     # the HEAD is. Must be called after checking out the previous commit on all
     # exit paths.
     if switch_back:
-        print("Switching back to current revision..")
+        print(f"{msg_prefix} Switching back to current revision..")
         if stash:
             subprocess.run(shlex.split("git stash pop"), cwd=source_dir)
         subprocess.run(shlex.split(f"git checkout {old_ref}"), cwd=source_dir)
@@ -64,8 +66,10 @@ def main():
     parser = argparse.ArgumentParser(
         description=textwrap.dedent(
             """
-            This script builds two versions of BOLT (with the current and
-            previous revision).
+            This script builds two versions of BOLT:
+            llvm-bolt.new, using the current revision, and llvm-bolt.old using
+            the previous revision. These can be used to check whether the
+            current revision changes BOLT's functional behavior.
             """
         )
     )
@@ -104,7 +108,7 @@ def main():
     if not args.create_wrapper and len(wrapper_args) > 0:
         parser.parse_args()
 
-    # find the repo directory
+    # Find the repo directory.
     source_dir = None
     try:
         CMCacheFilename = f"{args.build_dir}/CMakeCache.txt"
@@ -118,13 +122,13 @@ def main():
     except Exception as e:
         sys.exit(e)
 
-    # clean the previous llvm-bolt if it exists
+    # Clean the previous llvm-bolt if it exists.
     bolt_path = f"{args.build_dir}/bin/llvm-bolt"
     if os.path.exists(bolt_path):
         os.remove(bolt_path)
 
-    # build the current commit
-    print("NFC-Setup: Building current revision..")
+    # Build the current commit.
+    print(f"{msg_prefix} Building current revision..")
     subprocess.run(
         shlex.split("cmake --build . --target llvm-bolt"), cwd=args.build_dir
     )
@@ -132,9 +136,8 @@ def main():
     if not os.path.exists(bolt_path):
         sys.exit(f"Failed to build the current revision: '{bolt_path}'")
 
-    # rename llvm-bolt
+    # Rename llvm-bolt and memorize the old hash for logging.
     os.replace(bolt_path, f"{bolt_path}.new")
-    # memorize the old hash for logging
     old_ref = get_git_ref_or_rev(source_dir)
 
     if args.check_bolt_sources:
@@ -147,7 +150,7 @@ def main():
             print(f"BOLT source changes were found:\n{file_changes}")
             open(marker, "a").close()
 
-    # determine whether a stash is needed
+    # Determine whether a stash is needed.
     stash = subprocess.run(
         shlex.split("git status --porcelain"),
         cwd=source_dir,
@@ -156,32 +159,33 @@ def main():
         text=True,
     ).stdout
     if stash:
-        # save local changes before checkout
+        # Save local changes before checkout.
         subprocess.run(shlex.split("git stash push -u"), cwd=source_dir)
-    # check out the previous/cmp commit
+
+    # Check out the previous/cmp commit and get its commit hash for logging.
     subprocess.run(shlex.split(f"git checkout -f {args.cmp_rev}"), cwd=source_dir)
-    # get the parent commit hash for logging
     new_ref = get_git_ref_or_rev(source_dir)
 
-    # build the previous commit
-    print("NFC-Setup: Building previous revision..")
+    # Build the previous commit.
+    print(f"{msg_prefix} Building previous revision..")
     subprocess.run(
         shlex.split("cmake --build . --target llvm-bolt"), cwd=args.build_dir
     )
 
-    # rename llvm-bolt
+    # Rename llvm-bolt.
     if not os.path.exists(bolt_path):
         print(f"Failed to build the previous revision: '{bolt_path}'")
         switch_back(args.switch_back, stash, source_dir, old_ref, new_ref)
         sys.exit(1)
     os.replace(bolt_path, f"{bolt_path}.old")
 
-    # symlink llvm-bolt-wrapper
+    # Symlink llvm-bolt-wrapper
     if args.create_wrapper:
+        print(f"{msg_prefix} Creating llvm-bolt wrapper..")
         script_dir = os.path.dirname(os.path.abspath(__file__))
         wrapper_path = f"{script_dir}/llvm-bolt-wrapper.py"
         try:
-            # set up llvm-bolt-wrapper.ini
+            # Set up llvm-bolt-wrapper.ini
             ini = subprocess.check_output(
                 shlex.split(f"{wrapper_path} {bolt_path}.old {bolt_path}.new")
                 + wrapper_args,
@@ -189,7 +193,6 @@ def main():
             )
             with open(f"{args.build_dir}/bin/llvm-bolt-wrapper.ini", "w") as f:
                 f.write(ini)
-            # symlink llvm-bolt-wrapper
             os.symlink(wrapper_path, bolt_path)
         except Exception as e:
             print("Failed to create a wrapper:\n" + str(e))
@@ -199,10 +202,16 @@ def main():
     switch_back(args.switch_back, stash, source_dir, old_ref, new_ref)
 
     print(
-        f"Build directory {args.build_dir} is ready to run BOLT tests, e.g.\n"
-        "\tbin/llvm-lit -sv tools/bolt/test\nor\n"
-        "\tbin/llvm-lit -sv tools/bolttests"
+        f"{msg_prefix} Completed!\nBuild directory {args.build_dir} is ready for"
+        " NFC-Mode comparison between the two revisions."
     )
+
+    if args.create_wrapper:
+        print(
+            "Can run BOLT tests using:\n"
+            "\tbin/llvm-lit -sv tools/bolt/test\nor\n"
+            "\tbin/llvm-lit -sv tools/bolttests"
+        )
 
 
 if __name__ == "__main__":
