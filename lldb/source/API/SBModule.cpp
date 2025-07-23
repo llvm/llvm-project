@@ -677,5 +677,9 @@ const char *SBModule::GetName() const {
   if (!m_opaque_sp) {
     return nullptr;
   }
-  return m_opaque_sp->GetObjectName().AsCString();
+  auto mod_name = m_opaque_sp->GetObjectName();
+  if (!mod_name) {
+    return nullptr;
+  }
+  return mod_name.AsCString();
 }
