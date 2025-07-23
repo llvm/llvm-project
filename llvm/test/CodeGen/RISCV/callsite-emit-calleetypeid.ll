@@ -12,8 +12,8 @@
 ; CHECK-NEXT: [ 7854600665770582568 ] }
 define i32 @main() {
 entry:
-  %0 = load ptr, ptr null, align 8
-  call void %0(i8 0), !callee_type !0
+  %fn = load ptr, ptr null, align 8
+  call void %fn(i8 0), !callee_type !0
   ret i32 0
 }
 
