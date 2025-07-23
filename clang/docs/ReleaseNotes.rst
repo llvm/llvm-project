@@ -376,6 +376,8 @@ New Compiler Flags
 
 - New options ``-g[no-]key-instructions`` added, disabled by default. Reduces jumpiness of debug stepping for optimized code in some debuggers (not LLDB at this time). Not recommended for use without optimizations. DWARF only. Note both the positive and negative flags imply ``-g``.
 
+- New options ``-fthinlto-distributor=`` and ``-Xthinlto-distributor=`` added for Integrated Distributed ThinLTO (DTLTO). DTLTO enables the distribution of backend ThinLTO compilations via external distribution systems, such as Incredibuild, during the traditional link step. (#GH147265, `ThinLTODocs <https://clang.llvm.org/docs/ThinLTO.html#integrated-distributed-thinlto-dtlto>`_).
+
 Deprecated Compiler Flags
 -------------------------
 
