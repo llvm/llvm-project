@@ -187,7 +187,7 @@ def LayoutTrait: AttrInterface<"LayoutTrait"> {
                     "getEffectiveSgLayout">,
     InterfaceMethod<"Get the effective sg data",
                     "std::optional<llvm::SmallVector<int>>",
-                    "getEffectiveSgData">,
+                    "getEffectiveSgData">
   ];
 }
 
@@ -375,6 +375,16 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
     specified dimensions share the data, provided that the remaining ranks match the data
     rank. SliceAttr is commonly used by operations such as vector.multi_reduction and
     vector.broadcast.
+
+    Example:
+    ```
+    #l = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>
+    #r = #xegpu.slice<#l, dim = 0>
+
+    %exp = math.exp %input {layout_result_0 = #l}: vector<256x128xf32>
+    %red = vector.multi_reduction<add>, %exp, %acc [0] {layout_result_0 = #r}: vector<256x128xf32> to vector<128xf32>
+    %bcast = vector.broadcast %red {layout_result_0 = #l} : vector<128xf32> to vector<256x128xf32>
+    ```
   }];
 
   let parameters = (ins
