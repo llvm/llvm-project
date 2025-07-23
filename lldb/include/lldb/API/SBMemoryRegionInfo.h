@@ -124,7 +124,8 @@ public:
   ///     Returns true if the description was successfully written,
   ///     false otherwise.
   ///
-  /// The description format is: [Hex start - Hex End) with associated permissions (RWX)
+  /// The description format is: [Hex start - Hex End) with associated
+  /// permissions (RWX)
   bool GetDescription(lldb::SBStream &description);
 
 private:
