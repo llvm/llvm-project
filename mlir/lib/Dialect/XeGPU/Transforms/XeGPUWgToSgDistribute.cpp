@@ -219,6 +219,11 @@ struct WgToSgLoadNdOp : public OpConversionPattern<xegpu::LoadNdOp> {
   matchAndRewrite(xegpu::LoadNdOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     SmallVector<Value> newLoadOps;
+
+    int64_t offsetSize = static_cast<int64_t>(op.getOffsets().size());
+    if ((offsetSize != 0) || op.getConstOffsetsAttr())
+      return failure();
+
     for (auto src : adaptor.getTensorDesc()) {
       xegpu::TensorDescType tdescTy =
           dyn_cast<xegpu::TensorDescType>(src.getType());
@@ -241,6 +246,11 @@ struct WgToSgStoreNdOp : public OpConversionPattern<xegpu::StoreNdOp> {
   LogicalResult
   matchAndRewrite(xegpu::StoreNdOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+
+    int64_t offsetSize = static_cast<int64_t>(op.getOffsets().size());
+    if ((offsetSize != 0) || op.getConstOffsetsAttr())
+      return failure();
+
     for (auto [v, t] : llvm::zip(adaptor.getValue(), adaptor.getTensorDesc()))
       xegpu::StoreNdOp::create(rewriter, op.getLoc(), v, t, op.getL1HintAttr(),
                                op.getL2HintAttr(), op.getL3HintAttr());
@@ -323,6 +333,11 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
   LogicalResult
   matchAndRewrite(xegpu::PrefetchNdOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+
+    int64_t offsetSize = static_cast<int64_t>(op.getOffsets().size());
+    if ((offsetSize != 0) || op.getConstOffsetsAttr())
+      return failure();
+
     for (auto src : adaptor.getTensorDesc())
       xegpu::PrefetchNdOp::create(rewriter, op.getLoc(), TypeRange(), src,
                                   op->getAttrs());
