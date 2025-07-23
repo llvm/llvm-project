@@ -123,7 +123,7 @@ static SDValue getTagSymNode(int Tag, SelectionDAG *DAG) {
 static APInt encodeFunctionSignature(SelectionDAG *DAG, SDLoc &DL,
                                      SmallVector<MVT, 4> &Returns,
                                      SmallVector<MVT, 4> &Params) {
-  auto toWasmValType = [&](MVT VT) {
+  auto toWasmValType = [](MVT VT) {
     if (VT == MVT::i32) {
       return wasm::ValType::I32;
     }
@@ -244,10 +244,18 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
       MCSymbol *Table = WebAssembly::getOrCreateFunctionTableSymbol(
           MF.getContext(), Subtarget);
       SDValue TableSym = CurDAG->getMCSymbol(Table, PtrVT);
-      SDValue FuncRef = SDValue(
-          CurDAG->getMachineNode(WebAssembly::TABLE_GET_FUNCREF, DL,
-                                 MVT::funcref, TableSym, Node->getOperand(1)),
-          0);
+      SDValue FuncPtr = Node->getOperand(1);
+      if (Subtarget->hasAddr64() && FuncPtr.getValueType() == MVT::i64) {
+        // table.get expects an i32 but on 64 bit platforms the function pointer
+        // is an i64. In that case, i32.wrap_i64 to convert.
+        FuncPtr = SDValue(CurDAG->getMachineNode(WebAssembly::I32_WRAP_I64, DL,
+                                                 MVT::i32, FuncPtr),
+                          0);
+      }
+      SDValue FuncRef =
+          SDValue(CurDAG->getMachineNode(WebAssembly::TABLE_GET_FUNCREF, DL,
+                                         MVT::funcref, TableSym, FuncPtr),
+                  0);
 
       // Encode the signature information into the type index placeholder.
       // This gets decoded and converted into the actual type signature in
