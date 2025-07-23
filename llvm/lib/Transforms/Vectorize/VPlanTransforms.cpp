@@ -2263,6 +2263,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     }
   }
 
+  Type *EVLType = TypeInfo.inferScalarType(&EVL);
   for (VPRecipeBase *R : reverse(ToErase)) {
     SmallVector<VPValue *> PossiblyDead(R->operands());
     R->eraseFromParent();
@@ -2275,7 +2276,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   // icmp ule widen-canonical-iv backedge-taken-count
   // ->
   // icmp ult step-vector, EVL
-  Type *EVLType = TypeInfo.inferScalarType(&EVL);
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     VPRecipeBase *EVLR = EVL.getDefiningRecipe();
     VPBuilder Builder(Plan.getVectorPreheader());
