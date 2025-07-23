@@ -300,83 +300,20 @@ bool DataScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
   return replaceDynamicExtractElementInst(EEI);
 }
 
-static void buildConstExprGEPChain(GetElementPtrInst &GEPI, Value *CurrentPtr,
-                                   SmallVector<ConstantExpr *, 4> &GEPChain,
-                                   IRBuilder<> &Builder) {
-  // Process the rest of the chain in reverse order (skipping the innermost)
-  for (int I = GEPChain.size() - 2; I >= 0; I--) {
-    ConstantExpr *CE = GEPChain[I];
-    GetElementPtrInst *GEPInst =
-        cast<GetElementPtrInst>(CE->getAsInstruction());
-    GEPInst->insertBefore(GEPI.getIterator());
-    SmallVector<Value *, MaxVecSize> CurrIndices(GEPInst->indices());
-
-    // Create a new GEP instruction
-    Type *SourceTy = GEPInst->getSourceElementType();
-    CurrentPtr =
-        Builder.CreateGEP(SourceTy, CurrentPtr, CurrIndices, GEPInst->getName(),
-                          GEPInst->getNoWrapFlags());
-
-    // If this is the outermost GEP, update the main GEPI
-    if (I == 0) {
-      GEPI.setOperand(GEPI.getPointerOperandIndex(), CurrentPtr);
-    }
-
-    // Clean up the temporary instruction
-    GEPInst->eraseFromParent();
-  }
-}
-
 bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
-  Value *PtrOperand = GEPI.getPointerOperand();
-  Type *OrigGEPType = GEPI.getSourceElementType();
-  Type *NewGEPType = OrigGEPType;
+  GEPOperator *GOp = cast<GEPOperator>(&GEPI);
+  Value *PtrOperand = GOp->getPointerOperand();
+  Type *NewGEPType = GOp->getSourceElementType();
   bool NeedsTransform = false;
-  // Check if the pointer operand is a ConstantExpr GEP
-  if (auto *PtrOpGEPCE = dyn_cast<ConstantExpr>(PtrOperand);
-      PtrOpGEPCE && PtrOpGEPCE->getOpcode() == Instruction::GetElementPtr) {
 
-    // Collect all nested GEPs in the chain
-    SmallVector<ConstantExpr *, 4> GEPChain;
-    Value *BasePointer = PtrOpGEPCE->getOperand(0);
-    GEPChain.push_back(PtrOpGEPCE);
-
-    // Walk up the chain to find all nested GEPs and the base pointer
-    while (auto *NextGEP = dyn_cast<ConstantExpr>(BasePointer)) {
-      if (NextGEP->getOpcode() != Instruction::GetElementPtr)
-        break;
-
-      GEPChain.push_back(NextGEP);
-      BasePointer = NextGEP->getOperand(0);
-    }
-
-    // Check if the base pointer is a global that needs replacement
-    if (GlobalVariable *NewGlobal = lookupReplacementGlobal(BasePointer)) {
-      IRBuilder<> Builder(&GEPI);
-
-      // Create a new GEP for the innermost GEP (last in the chain)
-      ConstantExpr *InnerGEPCE = GEPChain.back();
-      GetElementPtrInst *InnerGEP =
-          cast<GetElementPtrInst>(InnerGEPCE->getAsInstruction());
-      InnerGEP->insertBefore(GEPI.getIterator());
-
-      SmallVector<Value *, MaxVecSize> Indices(InnerGEP->indices());
-      Type *NewGEPType = NewGlobal->getValueType();
-      Value *NewInnerGEP =
-          Builder.CreateGEP(NewGEPType, NewGlobal, Indices, InnerGEP->getName(),
-                            InnerGEP->getNoWrapFlags());
-
-      // If there's only one GEP in the chain, update the main GEPI directly
-      if (GEPChain.size() == 1)
-        GEPI.setOperand(GEPI.getPointerOperandIndex(), NewInnerGEP);
-      else
-        // For multiple GEPs, we need to create a chain of GEPs
-        buildConstExprGEPChain(GEPI, NewInnerGEP, GEPChain, Builder);
-
-      // Clean up the innermost GEP
-      InnerGEP->eraseFromParent();
-      return true;
-    }
+  // Unwrap GEP ConstantExprs to find the base operand and element type
+  while (auto *CE = dyn_cast<ConstantExpr>(PtrOperand)) {
+    if (auto *GEPCE = dyn_cast<GEPOperator>(CE)) {
+      GOp = GEPCE;
+      PtrOperand = GEPCE->getPointerOperand();
+      NewGEPType = GEPCE->getSourceElementType();
+    } else
+      break;
   }
 
   if (GlobalVariable *NewGlobal = lookupReplacementGlobal(PtrOperand)) {
@@ -385,30 +322,32 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
     NeedsTransform = true;
   } else if (AllocaInst *Alloca = dyn_cast<AllocaInst>(PtrOperand)) {
     Type *AllocatedType = Alloca->getAllocatedType();
-    // Only transform if the allocated type is an array
-    if (AllocatedType != OrigGEPType && isa<ArrayType>(AllocatedType)) {
+    if (isa<ArrayType>(AllocatedType) &&
+        AllocatedType != GOp->getResultElementType()) {
       NewGEPType = AllocatedType;
       NeedsTransform = true;
     }
   }
 
-  // Scalar geps should remain scalars geps. The dxil-flatten-arrays pass will
-  // convert these scalar geps into flattened array geps
-  if (!isa<ArrayType>(OrigGEPType))
-    NewGEPType = OrigGEPType;
-
-  // Note: We bail if this isn't a gep touched via alloca or global
-  // transformations
   if (!NeedsTransform)
     return false;
 
+  // Keep scalar GEPs scalar; dxil-flatten-arrays will do flattening later
+  if (!isa<ArrayType>(GOp->getSourceElementType()))
+    NewGEPType = GOp->getSourceElementType();
+
   IRBuilder<> Builder(&GEPI);
   SmallVector<Value *, MaxVecSize> Indices(GEPI.indices());
-
   Value *NewGEP = Builder.CreateGEP(NewGEPType, PtrOperand, Indices,
-                                    GEPI.getName(), GEPI.getNoWrapFlags());
-  GEPI.replaceAllUsesWith(NewGEP);
-  GEPI.eraseFromParent();
+                                    GOp->getName(), GOp->getNoWrapFlags());
+
+  GOp->replaceAllUsesWith(NewGEP);
+
+  if (auto *CE = dyn_cast<ConstantExpr>(GOp))
+    CE->destroyConstant();
+  else if (auto *OldGEPI = dyn_cast<GetElementPtrInst>(GOp))
+    OldGEPI->eraseFromParent(); // This will always be true in visit* context
+
   return true;
 }
 
