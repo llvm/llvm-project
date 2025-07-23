@@ -1305,10 +1305,10 @@ define <4 x i8> @test_call(<4 x i8> %a, <4 x i8> %b) #0 {
 ; O0-NEXT:    ld.param.b32 %r1, [test_call_param_0];
 ; O0-NEXT:    { // callseq 0, 0
 ; O0-NEXT:    .param .align 4 .b8 param0[4];
-; O0-NEXT:    st.param.b32 [param0], %r1;
 ; O0-NEXT:    .param .align 4 .b8 param1[4];
-; O0-NEXT:    st.param.b32 [param1], %r2;
 ; O0-NEXT:    .param .align 4 .b8 retval0[4];
+; O0-NEXT:    st.param.b32 [param1], %r2;
+; O0-NEXT:    st.param.b32 [param0], %r1;
 ; O0-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; O0-NEXT:    ld.param.b32 %r3, [retval0];
 ; O0-NEXT:    } // callseq 0
@@ -1321,13 +1321,13 @@ define <4 x i8> @test_call(<4 x i8> %a, <4 x i8> %b) #0 {
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
 ; O3-NEXT:    ld.param.b32 %r1, [test_call_param_0];
-; O3-NEXT:    ld.param.b32 %r2, [test_call_param_1];
 ; O3-NEXT:    { // callseq 0, 0
 ; O3-NEXT:    .param .align 4 .b8 param0[4];
-; O3-NEXT:    st.param.b32 [param0], %r1;
 ; O3-NEXT:    .param .align 4 .b8 param1[4];
-; O3-NEXT:    st.param.b32 [param1], %r2;
 ; O3-NEXT:    .param .align 4 .b8 retval0[4];
+; O3-NEXT:    ld.param.b32 %r2, [test_call_param_1];
+; O3-NEXT:    st.param.b32 [param1], %r2;
+; O3-NEXT:    st.param.b32 [param0], %r1;
 ; O3-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; O3-NEXT:    ld.param.b32 %r3, [retval0];
 ; O3-NEXT:    } // callseq 0
@@ -1347,10 +1347,10 @@ define <4 x i8> @test_call_flipped(<4 x i8> %a, <4 x i8> %b) #0 {
 ; O0-NEXT:    ld.param.b32 %r1, [test_call_flipped_param_0];
 ; O0-NEXT:    { // callseq 1, 0
 ; O0-NEXT:    .param .align 4 .b8 param0[4];
-; O0-NEXT:    st.param.b32 [param0], %r2;
 ; O0-NEXT:    .param .align 4 .b8 param1[4];
-; O0-NEXT:    st.param.b32 [param1], %r1;
 ; O0-NEXT:    .param .align 4 .b8 retval0[4];
+; O0-NEXT:    st.param.b32 [param1], %r1;
+; O0-NEXT:    st.param.b32 [param0], %r2;
 ; O0-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; O0-NEXT:    ld.param.b32 %r3, [retval0];
 ; O0-NEXT:    } // callseq 1
@@ -1363,13 +1363,13 @@ define <4 x i8> @test_call_flipped(<4 x i8> %a, <4 x i8> %b) #0 {
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
 ; O3-NEXT:    ld.param.b32 %r1, [test_call_flipped_param_0];
-; O3-NEXT:    ld.param.b32 %r2, [test_call_flipped_param_1];
 ; O3-NEXT:    { // callseq 1, 0
 ; O3-NEXT:    .param .align 4 .b8 param0[4];
-; O3-NEXT:    st.param.b32 [param0], %r2;
 ; O3-NEXT:    .param .align 4 .b8 param1[4];
-; O3-NEXT:    st.param.b32 [param1], %r1;
 ; O3-NEXT:    .param .align 4 .b8 retval0[4];
+; O3-NEXT:    st.param.b32 [param1], %r1;
+; O3-NEXT:    ld.param.b32 %r2, [test_call_flipped_param_1];
+; O3-NEXT:    st.param.b32 [param0], %r2;
 ; O3-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; O3-NEXT:    ld.param.b32 %r3, [retval0];
 ; O3-NEXT:    } // callseq 1
@@ -1389,10 +1389,10 @@ define <4 x i8> @test_tailcall_flipped(<4 x i8> %a, <4 x i8> %b) #0 {
 ; O0-NEXT:    ld.param.b32 %r1, [test_tailcall_flipped_param_0];
 ; O0-NEXT:    { // callseq 2, 0
 ; O0-NEXT:    .param .align 4 .b8 param0[4];
-; O0-NEXT:    st.param.b32 [param0], %r2;
 ; O0-NEXT:    .param .align 4 .b8 param1[4];
-; O0-NEXT:    st.param.b32 [param1], %r1;
 ; O0-NEXT:    .param .align 4 .b8 retval0[4];
+; O0-NEXT:    st.param.b32 [param1], %r1;
+; O0-NEXT:    st.param.b32 [param0], %r2;
 ; O0-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; O0-NEXT:    ld.param.b32 %r3, [retval0];
 ; O0-NEXT:    } // callseq 2
@@ -1405,13 +1405,13 @@ define <4 x i8> @test_tailcall_flipped(<4 x i8> %a, <4 x i8> %b) #0 {
 ; O3-EMPTY:
 ; O3-NEXT:  // %bb.0:
 ; O3-NEXT:    ld.param.b32 %r1, [test_tailcall_flipped_param_0];
-; O3-NEXT:    ld.param.b32 %r2, [test_tailcall_flipped_param_1];
 ; O3-NEXT:    { // callseq 2, 0
 ; O3-NEXT:    .param .align 4 .b8 param0[4];
-; O3-NEXT:    st.param.b32 [param0], %r2;
 ; O3-NEXT:    .param .align 4 .b8 param1[4];
-; O3-NEXT:    st.param.b32 [param1], %r1;
 ; O3-NEXT:    .param .align 4 .b8 retval0[4];
+; O3-NEXT:    st.param.b32 [param1], %r1;
+; O3-NEXT:    ld.param.b32 %r2, [test_tailcall_flipped_param_1];
+; O3-NEXT:    st.param.b32 [param0], %r2;
 ; O3-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; O3-NEXT:    ld.param.b32 %r3, [retval0];
 ; O3-NEXT:    } // callseq 2
