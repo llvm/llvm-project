@@ -117,17 +117,17 @@ add_clang_library(clangCodeGen
   PatternInit.cpp
   SanitizerMetadata.cpp
   SwiftCallingConv.cpp
-  TargetBuiltins/ARM.cpp
-  TargetBuiltins/AMDGPU.cpp
-  TargetBuiltins/DirectX.cpp
-  TargetBuiltins/Hexagon.cpp
-  TargetBuiltins/NVPTX.cpp
-  TargetBuiltins/PPC.cpp
-  TargetBuiltins/RISCV.cpp
-  TargetBuiltins/SPIR.cpp
-  TargetBuiltins/SystemZ.cpp
-  TargetBuiltins/WebAssembly.cpp
-  TargetBuiltins/X86.cpp
+  TargetBuiltins/BuiltinARM.cpp
+  TargetBuiltins/BuiltinAMDGPU.cpp
+  TargetBuiltins/BuiltinDirectX.cpp
+  TargetBuiltins/BuiltinHexagon.cpp
+  TargetBuiltins/BuiltinNVPTX.cpp
+  TargetBuiltins/BuiltinPPC.cpp
+  TargetBuiltins/BuiltinRISCV.cpp
+  TargetBuiltins/BuiltinSPIR.cpp
+  TargetBuiltins/BuiltinSystemZ.cpp
+  TargetBuiltins/BuiltinWebAssembly.cpp
+  TargetBuiltins/BuiltinX86.cpp
   TargetInfo.cpp
   Targets/AArch64.cpp
   Targets/AMDGPU.cpp
