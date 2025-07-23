@@ -32,8 +32,8 @@ def : Function {
 }
 
 def : Function {
-    let name = "olWaitQueue";
-    let desc = "Wait for the enqueued work on a queue to complete.";
+    let name = "olSyncQueue";
+    let desc = "Block the calling thread until the enqueued work on a queue is complete.";
     let details = [];
     let params = [
         Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>
