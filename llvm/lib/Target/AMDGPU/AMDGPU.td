@@ -167,6 +167,12 @@ def FeatureMinimum3Maximum3F16 : SubtargetFeature<"minimum3-maximum3-f16",
   "Has v_minimum3_f16 and v_maximum3_f16 instructions"
 >;
 
+def FeatureMin3Max3PKF16 : SubtargetFeature<"min3-max3-pkf16",
+  "HasMin3Max3PKF16",
+  "true",
+  "Has v_pk_min3_num_f16 and v_pk_max3_num_f16 instructions"
+>;
+
 def FeatureMinimum3Maximum3PKF16 : SubtargetFeature<"minimum3-maximum3-pkf16",
   "HasMinimum3Maximum3PKF16",
   "true",
@@ -2001,6 +2007,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,
    FeatureCvtPkF16F32Inst,
+   FeatureMin3Max3PKF16,
    FeatureMinimum3Maximum3PKF16,
    FeaturePrngInst,
    FeaturePermlane16Swap,
@@ -2360,6 +2367,10 @@ def HasMinimum3Maximum3F32 :
 def HasMinimum3Maximum3F16 :
   Predicate<"Subtarget->hasMinimum3Maximum3F16()">,
   AssemblerPredicate<(all_of FeatureMinimum3Maximum3F16)>;
+
+def HasMin3Max3PKF16 :
+  Predicate<"Subtarget->hasMin3Max3PKF16()">,
+  AssemblerPredicate<(all_of FeatureMin3Max3PKF16)>;
 
 def HasMinimum3Maximum3PKF16 :
   Predicate<"Subtarget->hasMinimum3Maximum3PKF16()">,
