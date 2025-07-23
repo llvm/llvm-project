@@ -4177,7 +4177,7 @@ static SDValue valueToCarryFlag(SDValue Value, SelectionDAG &DAG, bool Invert) {
   SDValue Op0 = Invert ? DAG.getConstant(0, DL, VT) : Value;
   SDValue Op1 = Invert ? Value : DAG.getConstant(1, DL, VT);
   SDValue Cmp =
-      DAG.getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, MVT::i32), Op0, Op1);
+      DAG.getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, MVT_CC), Op0, Op1);
   return Cmp.getValue(1);
 }
 
@@ -4222,7 +4222,7 @@ static SDValue lowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG,
   SDLoc DL(Op);
   SDVTList VTs = DAG.getVTList(VT0, VT1);
 
-  SDValue Sum = DAG.getNode(Opcode, DL, DAG.getVTList(VT0, MVT::i32), OpLHS,
+  SDValue Sum = DAG.getNode(Opcode, DL, DAG.getVTList(VT0, MVT_CC), OpLHS,
                             OpRHS, OpCarryIn);
 
   SDValue OutFlag =
@@ -11106,7 +11106,7 @@ SDValue AArch64TargetLowering::LowerSETCCCARRY(SDValue Op,
   SDValue Carry = Op.getOperand(2);
   // SBCS uses a carry not a borrow so the carry flag should be inverted first.
   SDValue InvCarry = valueToCarryFlag(Carry, DAG, true);
-  SDValue Cmp = DAG.getNode(AArch64ISD::SBCS, DL, DAG.getVTList(VT, MVT::i32),
+  SDValue Cmp = DAG.getNode(AArch64ISD::SBCS, DL, DAG.getVTList(VT, MVT_CC),
                             LHS, RHS, InvCarry);
 
   EVT OpVT = Op.getValueType();
