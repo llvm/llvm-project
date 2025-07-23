@@ -220,9 +220,9 @@ SliceAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
   llvm::SmallDenseSet<int64_t> seen;
   for (int64_t dim : dims.asArrayRef()) {
     if (dim >= rank)
-      return emitError() << "invalid dim: " << dim;
+      return emitError() << "invalid dim (" << dim << ") in slice attribute.";
     if (!seen.insert(dim).second)
-      return emitError() << "repeated dim: " << dim;
+      return emitError() << "repeated dim (" << dim << ") in slice attribute.";
   }
   return success();
 }

@@ -406,7 +406,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
     }
   }];
 
-  let assemblyFormat = "`<` $parent `,` `dim` `=` $dims `>`";
+  let assemblyFormat = "`<` $parent `,` `dims` `=` $dims `>`";
   let genVerifyDecl = 1;
 }
 
