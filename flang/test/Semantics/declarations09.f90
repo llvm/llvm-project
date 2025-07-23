@@ -2,8 +2,8 @@
 
 subroutine bug149771
 
-  !ERROR: 'x1' may not have both the EXTERNAL and INTRINSIC attributes
-  integer, external, intrinsic :: x1
+  !ERROR: 'exp' may not have both the EXTERNAL and INTRINSIC attributes
+  real, external, intrinsic :: exp
 
   !ERROR: 'x2' may not have both the EXTERNAL and PARAMETER attributes
   integer, external, parameter :: x2
