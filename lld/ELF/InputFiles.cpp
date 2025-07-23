@@ -1775,7 +1775,7 @@ static bool dtltoAdjustMemberPathIfThinArchive(Ctx &ctx, StringRef archivePath,
   if (!bufferOrErr->get()->getBuffer().starts_with(ThinArchiveMagic))
     return false;
 
-  SmallString<64> resolvedPath;
+  SmallString<128> resolvedPath;
   if (path::is_relative(memberPath)) {
     resolvedPath = path::parent_path(archivePath);
     path::append(resolvedPath, memberPath);
