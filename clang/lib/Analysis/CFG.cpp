@@ -2848,7 +2848,7 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
         auto CalleeCFG = CFG::buildCFG(DefFD, DefFD->getBody(),
                                        &DefFD->getASTContext(), BuildOpts);
 
-        if (CalleeCFG && CalleeCFG->getEntry().isInevitablySinking()) {
+        if (CalleeCFG && CalleeCFG->getEntry().isInevitablySinking(true)) {
           CanCD->setAnalyzerSinkKind(FunctionDecl::AnalyzerSinkKind::NoReturn);
           NoReturn = true;
         }
@@ -6314,7 +6314,8 @@ void CFGBlock::printTerminatorJson(raw_ostream &Out, const LangOptions &LO,
 // functions. When a function is determined to never return through this
 // analysis, it's automatically marked with analyzer_noreturn attribute
 // for caching and future reference.
-static bool isImmediateSinkBlock(const CFGBlock *Blk) {
+static bool isImmediateSinkBlock(const CFGBlock *Blk,
+                                 bool InterProceduralCheck) {
   if (Blk->hasNoReturnElement())
     return true;
 
@@ -6330,6 +6331,9 @@ static bool isImmediateSinkBlock(const CFGBlock *Blk) {
         return false;
       }))
     return true;
+
+  if (!InterProceduralCheck)
+    return false;
 
   auto HasNoReturnCall = [&](const CallExpr *CE) {
     if (!CE)
@@ -6360,7 +6364,8 @@ static bool isImmediateSinkBlock(const CFGBlock *Blk) {
       auto CalleeCFG =
           CFG::buildCFG(DefFD, DefFD->getBody(), &DefFD->getASTContext(), {});
 
-      NoReturn = CalleeCFG && CalleeCFG->getEntry().isInevitablySinking();
+      NoReturn = CalleeCFG && CalleeCFG->getEntry().isInevitablySinking(
+                                  InterProceduralCheck);
 
       // Override to `analyzer_noreturn(true)`
       if (NoReturn)
@@ -6382,11 +6387,11 @@ static bool isImmediateSinkBlock(const CFGBlock *Blk) {
   return false;
 }
 
-bool CFGBlock::isInevitablySinking() const {
+bool CFGBlock::isInevitablySinking(bool DoInterProcAnalysis) const {
   const CFG &Cfg = *getParent();
 
   const CFGBlock *StartBlk = this;
-  if (isImmediateSinkBlock(StartBlk))
+  if (isImmediateSinkBlock(StartBlk, DoInterProcAnalysis))
     return true;
 
   llvm::SmallVector<const CFGBlock *, 32> DFSWorkList;
@@ -6406,7 +6411,8 @@ bool CFGBlock::isInevitablySinking() const {
 
     for (const auto &Succ : Blk->succs()) {
       if (const CFGBlock *SuccBlk = Succ.getReachableBlock()) {
-        if (!isImmediateSinkBlock(SuccBlk) && !Visited.count(SuccBlk)) {
+        if (!isImmediateSinkBlock(SuccBlk, DoInterProcAnalysis) &&
+            !Visited.count(SuccBlk)) {
           // If the block has reachable child blocks that aren't no-return,
           // add them to the worklist.
           DFSWorkList.push_back(SuccBlk);

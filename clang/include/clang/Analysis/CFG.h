@@ -1080,7 +1080,7 @@ public:
 
   /// Returns true if the block would eventually end with a sink (a noreturn
   /// node).
-  bool isInevitablySinking() const;
+  bool isInevitablySinking(bool DoInterProcAnalysis = false) const;
 
   CFGTerminator getTerminator() const { return Terminator; }
 
