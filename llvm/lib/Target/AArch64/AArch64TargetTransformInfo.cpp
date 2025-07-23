@@ -4802,8 +4802,9 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   // Limit to loops with trip counts that are cheap to expand.
   UP.SCEVExpansionBudget = 1;
 
-  // Try to unroll small, single block loops, if they have load/store
-  // dependencies, to expose more parallel memory access streams.
+  // Try to unroll small loops, of few-blocks with low budget, if they have
+  // load/store dependencies, to expose more parallel memory access streams,
+  // or if they do little work inside a block (i.e. load -> X -> store pattern).
   BasicBlock *Header = L->getHeader();
   if (Header == L->getLoopLatch()) {
     // Estimate the size of the loop.
