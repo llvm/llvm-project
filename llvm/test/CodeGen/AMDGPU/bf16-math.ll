@@ -432,4 +432,3 @@ declare <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat>, <2 x bfloat>, <2 x bfloat>)
 declare bfloat @llvm.sqrt.bf16(bfloat)
 declare bfloat @llvm.log2.bf16(bfloat)
 declare bfloat @llvm.exp2.bf16(bfloat)
-
