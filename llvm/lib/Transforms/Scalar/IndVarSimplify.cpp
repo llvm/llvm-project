@@ -1049,9 +1049,28 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
     if (Extended) {
       bool Discard;
       L->makeLoopInvariant(ExitCnt, Discard);
-    } else
+    } else{
       CmpIndVar = Builder.CreateTrunc(CmpIndVar, ExitCnt->getType(),
                                       "lftr.wideiv");
+
+      // Set the correct wrap flag to avoid the masking issue.
+      Instruction *TruncInst = dyn_cast<Instruction>(CmpIndVar);
+      
+      // The TruncatedIV is incrementing.
+      if (const SCEVAddRecExpr *TruncAR =
+              dyn_cast<SCEVAddRecExpr>(TruncatedIV)) {
+        // If TruncIV does not cause self-wrap, explicitly add the nsw and nuw
+        // flags to TruncInst.
+        if (TruncAR->hasNoSelfWrap()) {
+          TruncInst->setHasNoSignedWrap();
+          TruncInst->setHasNoUnsignedWrap();
+        } else if (TruncAR->hasNoSignedWrap()) {
+          TruncInst->setHasNoSignedWrap();
+        } else if (TruncAR->hasNoUnsignedWrap()) {
+          TruncInst->setHasNoUnsignedWrap();
+        }
+      }
+    }  
   }
   LLVM_DEBUG(dbgs() << "INDVARS: Rewriting loop exit condition to:\n"
                     << "      LHS:" << *CmpIndVar << '\n'
