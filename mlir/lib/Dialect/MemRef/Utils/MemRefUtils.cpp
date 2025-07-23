@@ -12,7 +12,6 @@
 
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
@@ -216,71 +215,6 @@ MemrefValue skipViewLikeOps(MemrefValue source) {
     return source;
   }
   return source;
-}
-
-LogicalResult resolveSourceIndicesExpandShape(
-    Location loc, PatternRewriter &rewriter,
-    memref::ExpandShapeOp expandShapeOp, ValueRange indices,
-    SmallVectorImpl<Value> &sourceIndices, bool startsInbounds) {
-  SmallVector<OpFoldResult> destShape = expandShapeOp.getMixedOutputShape();
-
-  // Traverse all reassociation groups to determine the appropriate indices
-  // corresponding to each one of them post op folding.
-  for (ArrayRef<int64_t> group : expandShapeOp.getReassociationIndices()) {
-    assert(!group.empty() && "association indices groups cannot be empty");
-    int64_t groupSize = group.size();
-    if (groupSize == 1) {
-      sourceIndices.push_back(indices[group[0]]);
-      continue;
-    }
-    SmallVector<OpFoldResult> groupBasis =
-        llvm::map_to_vector(group, [&](int64_t d) { return destShape[d]; });
-    SmallVector<Value> groupIndices =
-        llvm::map_to_vector(group, [&](int64_t d) { return indices[d]; });
-    Value collapsedIndex = rewriter.create<affine::AffineLinearizeIndexOp>(
-        loc, groupIndices, groupBasis, /*disjoint=*/startsInbounds);
-    sourceIndices.push_back(collapsedIndex);
-  }
-  return success();
-}
-
-LogicalResult
-resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
-                                  memref::CollapseShapeOp collapseShapeOp,
-                                  ValueRange indices,
-                                  SmallVectorImpl<Value> &sourceIndices) {
-  // Note: collapse_shape requires a strided memref, we can do this.
-  auto metadata = rewriter.create<memref::ExtractStridedMetadataOp>(
-      loc, collapseShapeOp.getSrc());
-  SmallVector<OpFoldResult> sourceSizes = metadata.getConstifiedMixedSizes();
-  for (auto [index, group] :
-       llvm::zip(indices, collapseShapeOp.getReassociationIndices())) {
-    assert(!group.empty() && "association indices groups cannot be empty");
-    int64_t groupSize = group.size();
-
-    if (groupSize == 1) {
-      sourceIndices.push_back(index);
-      continue;
-    }
-
-    SmallVector<OpFoldResult> basis =
-        llvm::map_to_vector(group, [&](int64_t d) { return sourceSizes[d]; });
-    auto delinearize = rewriter.create<affine::AffineDelinearizeIndexOp>(
-        loc, index, basis, /*hasOuterBound=*/true);
-    llvm::append_range(sourceIndices, delinearize.getResults());
-  }
-  if (collapseShapeOp.getReassociationIndices().empty()) {
-    auto zeroAffineMap = rewriter.getConstantAffineMap(0);
-    int64_t srcRank =
-        cast<MemRefType>(collapseShapeOp.getViewSource().getType()).getRank();
-    OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
-        rewriter, loc, zeroAffineMap, ArrayRef<OpFoldResult>{});
-    for (int64_t i = 0; i < srcRank; i++) {
-      sourceIndices.push_back(
-          getValueOrCreateConstantIndexOp(rewriter, loc, ofr));
-    }
-  }
-  return success();
 }
 
 } // namespace memref
