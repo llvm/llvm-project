@@ -578,7 +578,6 @@ public:
 
   void allocatePreloadKernArgSGPRs(CCState &CCInfo,
                                    SmallVectorImpl<CCValAssign> &ArgLocs,
-                                   const SmallVectorImpl<ISD::InputArg> &Ins,
                                    MachineFunction &MF,
                                    const SIRegisterInfo &TRI,
                                    SIMachineFunctionInfo &Info) const;

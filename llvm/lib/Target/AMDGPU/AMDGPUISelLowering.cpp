@@ -1219,8 +1219,6 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
   uint64_t ExplicitArgOffset = 0;
   const DataLayout &DL = Fn.getDataLayout();
 
-  unsigned InIndex = 0;
-
   for (const Argument &Arg : Fn.args()) {
     const bool IsByRef = Arg.hasByRefAttr();
     Type *BaseArgTy = Arg.getType();
@@ -1309,10 +1307,9 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
 
       unsigned PartOffset = 0;
       for (unsigned i = 0; i != NumRegs; ++i) {
-        State.addLoc(CCValAssign::getCustomMem(InIndex++, RegisterVT,
-                                               BasePartOffset + PartOffset,
-                                               MemVT.getSimpleVT(),
-                                               CCValAssign::Full));
+        State.addLoc(CCValAssign::getCustomMem(
+            Arg.getArgNo(), RegisterVT, BasePartOffset + PartOffset,
+            MemVT.getSimpleVT(), CCValAssign::Full));
         PartOffset += MemVT.getStoreSize();
       }
     }

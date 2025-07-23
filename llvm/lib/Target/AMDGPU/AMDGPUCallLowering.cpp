@@ -20,8 +20,10 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/MC/MCRegister.h"
 
 #define DEBUG_TYPE "amdgpu-call-lowering"
 
@@ -508,6 +510,66 @@ static void allocateHSAUserSGPRs(CCState &CCInfo,
   // these from the dispatch pointer.
 }
 
+void AMDGPUCallLowering::lowerPreloadedParameter(
+    MachineIRBuilder &B, ArrayRef<Register> VRegs, Type *ArgTy,
+    uint64_t ArgOffset, Align Alignment,
+    ArrayRef<MCRegister> PreloadRegs) const {
+  MachineFunction &MF = B.getMF();
+  const GCNSubtarget *Subtarget = &MF.getSubtarget<GCNSubtarget>();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+  const DataLayout &DL = B.getDataLayout();
+
+  LLT ResTy = getLLTForType(*ArgTy, DL);
+  LLT ScalarTy = LLT::scalar(ResTy.getSizeInBits());
+  unsigned TotalSize = 0;
+  SmallVector<Register> SrcRegs(PreloadRegs.size());
+
+  for (auto [Idx, PhysReg] : enumerate(PreloadRegs)) {
+    Register VReg = MRI.getLiveInVirtReg(PhysReg);
+    TypeSize RegSize = TRI->getRegSizeInBits(VReg, MRI);
+
+    if (!MRI.getVRegDef(VReg)) {
+      MRI.setType(VReg, LLT::scalar(RegSize));
+      B.getMBB().addLiveIn(PhysReg);
+      B.buildInstr(TargetOpcode::COPY).addDef(VReg).addReg(PhysReg);
+    }
+
+    constexpr const unsigned SGPRSize = 4;
+    // Arg is preloaded into the previous SGPR.
+    if (DL.getTypeStoreSize(ArgTy) < SGPRSize && Alignment < SGPRSize) {
+      int64_t AlignDownOffset = alignDown(ArgOffset, SGPRSize);
+      int64_t OffsetDiff = ArgOffset - AlignDownOffset;
+      auto ShiftAmt = B.buildConstant(LLT::scalar(32), OffsetDiff * 8);
+      auto Shift = B.buildRotateLeft(LLT::scalar(RegSize), VReg, ShiftAmt);
+
+      if (ResTy.isVector())
+        B.buildBitcast(VRegs[0], B.buildTrunc(ScalarTy, Shift));
+      else
+        B.buildTrunc(VRegs[0], Shift);
+
+      return;
+    }
+
+    TotalSize += RegSize;
+    SrcRegs[Idx] = VReg;
+  }
+
+  LLT MergeTy = LLT::scalar(TotalSize);
+  Register Res = SrcRegs.back();
+
+  if (SrcRegs.size() > 1)
+    Res = B.buildMergeLikeInstr(MergeTy, SrcRegs).getReg(0);
+
+  if (ScalarTy.getSizeInBits() < MergeTy.getSizeInBits())
+    Res = B.buildTrunc(ScalarTy, Res).getReg(0);
+
+  if (ResTy.isVector())
+    Res = B.buildBitcast(ResTy, Res).getReg(0);
+
+  MRI.replaceRegWith(Res, VRegs[0]);
+}
+
 bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
     MachineIRBuilder &B, const Function &F,
     ArrayRef<ArrayRef<Register>> VRegs) const {
@@ -524,6 +586,9 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
 
   allocateHSAUserSGPRs(CCInfo, B, MF, *TRI, *Info);
 
+  if (Subtarget->hasKernargPreload())
+    TLI.allocatePreloadKernArgSGPRs(CCInfo, ArgLocs, MF, *TRI, *Info);
+
   unsigned i = 0;
   const Align KernArgBaseAlign(16);
   const unsigned BaseOffset = Subtarget->getExplicitKernelArgOffset();
@@ -531,12 +596,6 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
 
   // TODO: Align down to dword alignment and extract bits for extending loads.
   for (auto &Arg : F.args()) {
-    // TODO: Add support for kernarg preload.
-    if (Arg.hasAttribute("amdgpu-hidden-argument")) {
-      LLVM_DEBUG(dbgs() << "Preloading hidden arguments is not supported\n");
-      return false;
-    }
-
     const bool IsByRef = Arg.hasByRefAttr();
     Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
     unsigned AllocSize = DL.getTypeAllocSize(ArgTy);
@@ -570,13 +629,30 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
 
         B.buildAddrSpaceCast(VRegs[i][0], PtrReg);
       }
-    } else {
-      ArgInfo OrigArg(VRegs[i], Arg, i);
-      const unsigned OrigArgIdx = i + AttributeList::FirstArgIndex;
-      setArgFlags(OrigArg, OrigArgIdx, DL, F);
-      lowerParameter(B, OrigArg, ArgOffset, Alignment);
+      i++;
+      continue;
     }
 
+    auto &PreloadKernArgs = Info->getArgInfo().PreloadKernArgs;
+    auto PreloadKernArg =
+        Arg.hasInRegAttr() ? PreloadKernArgs.find(i) : PreloadKernArgs.end();
+    if (PreloadKernArg != PreloadKernArgs.end()) {
+      lowerPreloadedParameter(B, VRegs[i], ArgTy, ArgOffset, Alignment,
+                              PreloadKernArg->getSecond().Regs);
+      ++i;
+      continue;
+    }
+
+    if (Arg.hasAttribute("amdgpu-hidden-argument")) {
+      F.getContext().diagnose(DiagnosticInfoUnsupported(
+          F, "hidden argument in kernel signature was not preloaded",
+          B.getDL()));
+    }
+
+    ArgInfo OrigArg(VRegs[i], Arg, i);
+    const unsigned OrigArgIdx = i + AttributeList::FirstArgIndex;
+    setArgFlags(OrigArg, OrigArgIdx, DL, F);
+    lowerParameter(B, OrigArg, ArgOffset, Alignment);
     ++i;
   }
 
