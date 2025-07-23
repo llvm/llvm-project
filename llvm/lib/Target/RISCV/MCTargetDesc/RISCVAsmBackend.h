@@ -12,8 +12,10 @@
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVFixupKinds.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 
 namespace llvm {
@@ -33,10 +35,22 @@ class RISCVAsmBackend : public MCAsmBackend {
 
   StringMap<MCSymbol *> VendorSymbols;
 
+  SmallPtrSet<MCSection *, 8> RelaxEverSections;
+  SmallPtrSet<MCSection *, 8> RVCEverSections;
+
 public:
   RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
                   const MCTargetOptions &Options);
   ~RISCVAsmBackend() override = default;
+
+  void setRVCEver(MCSection *Sec) { RVCEverSections.insert(Sec); }
+  bool hasRVCEver(MCSection *Sec) const {
+    return RVCEverSections.contains(Sec);
+  }
+  void setRelaxEver(MCSection *Sec) { RelaxEverSections.insert(Sec); }
+  bool hasRelaxEver(MCSection *Sec) const {
+    return RelaxEverSections.contains(Sec);
+  }
 
   std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &, MCValue &,
                                     uint64_t &) override;
