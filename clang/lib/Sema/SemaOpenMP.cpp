@@ -6620,6 +6620,8 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
       case OMPC_affinity:
       case OMPC_bind:
       case OMPC_filter:
+      case OMPC_severity:
+      case OMPC_message:
         continue;
       case OMPC_allocator:
       case OMPC_flush:
@@ -6637,8 +6639,6 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
       case OMPC_match:
       case OMPC_when:
       case OMPC_at:
-      case OMPC_severity:
-      case OMPC_message:
       default:
         llvm_unreachable("Unexpected clause");
       }
@@ -7610,6 +7610,23 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
     // Anything that is not a function parameter is an error.
     Diag(E->getExprLoc(), diag::err_omp_param_or_this_in_clause) << FD << 0;
     return;
+  }
+
+  // OpenMP 6.0 [9.6.2 (page 332, line 31-33, adjust_args clause, Restrictions]
+  // If the `need_device_addr` adjust-op modifier is present, each list item
+  // that appears in the clause must refer to an argument in the declaration of
+  // the function variant that has a reference type
+  if (getLangOpts().OpenMP >= 60) {
+    for (Expr *E : AdjustArgsNeedDeviceAddr) {
+      E = E->IgnoreParenImpCasts();
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+        if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+          if (!VD->getType()->isReferenceType())
+            Diag(E->getExprLoc(),
+                 diag::err_omp_non_by_ref_need_device_addr_modifier_argument);
+        }
+      }
+    }
   }
 
   auto *NewAttr = OMPDeclareVariantAttr::CreateImplicit(

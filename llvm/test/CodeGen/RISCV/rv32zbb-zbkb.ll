@@ -205,8 +205,7 @@ define i32 @inverted_masked_merge_i32(i32 %x, i32 %y, i32 %z) nounwind {
 ; RV32ZBB-ZBKB:       # %bb.0:
 ; RV32ZBB-ZBKB-NEXT:    and a1, a0, a1
 ; RV32ZBB-ZBKB-NEXT:    andn a0, a2, a0
-; RV32ZBB-ZBKB-NEXT:    or a0, a1, a0
-; RV32ZBB-ZBKB-NEXT:    not a0, a0
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a1, a0
 ; RV32ZBB-ZBKB-NEXT:    ret
   %a = and i32 %x, %y
   %notx = xor i32 %x, -1
@@ -231,14 +230,12 @@ define i64 @inverted_masked_merge_i64(i64 %x, i64 %y, i64 %z) nounwind {
 ;
 ; RV32ZBB-ZBKB-LABEL: inverted_masked_merge_i64:
 ; RV32ZBB-ZBKB:       # %bb.0:
-; RV32ZBB-ZBKB-NEXT:    and a2, a0, a2
 ; RV32ZBB-ZBKB-NEXT:    and a3, a1, a3
-; RV32ZBB-ZBKB-NEXT:    andn a0, a4, a0
+; RV32ZBB-ZBKB-NEXT:    and a2, a0, a2
 ; RV32ZBB-ZBKB-NEXT:    andn a1, a5, a1
-; RV32ZBB-ZBKB-NEXT:    or a1, a3, a1
-; RV32ZBB-ZBKB-NEXT:    or a0, a2, a0
-; RV32ZBB-ZBKB-NEXT:    not a0, a0
-; RV32ZBB-ZBKB-NEXT:    not a1, a1
+; RV32ZBB-ZBKB-NEXT:    andn a0, a4, a0
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a2, a0
+; RV32ZBB-ZBKB-NEXT:    xnor a1, a3, a1
 ; RV32ZBB-ZBKB-NEXT:    ret
   %a = and i64 %x, %y
   %notx = xor i64 %x, -1

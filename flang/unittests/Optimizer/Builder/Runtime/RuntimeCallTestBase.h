@@ -26,9 +26,8 @@ public:
     // Set the insertion point in the function entry block.
     moduleOp = builder.create<mlir::ModuleOp>(loc);
     builder.setInsertionPointToStart(moduleOp->getBody());
-    mlir::func::FuncOp func =
-        builder.create<mlir::func::FuncOp>(loc, "runtime_unit_tests_func",
-            builder.getFunctionType(std::nullopt, std::nullopt));
+    mlir::func::FuncOp func = builder.create<mlir::func::FuncOp>(
+        loc, "runtime_unit_tests_func", builder.getFunctionType({}, {}));
     auto *entryBlock = func.addEntryBlock();
     builder.setInsertionPointToStart(entryBlock);
 

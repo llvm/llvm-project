@@ -178,7 +178,7 @@ public:
   }
   // Find and return a user-defined assignment
   std::optional<ProcedureRef> TryDefinedAssignment();
-  std::optional<ProcedureRef> GetDefinedAssignmentProc();
+  std::optional<ProcedureRef> GetDefinedAssignmentProc(bool &isAmbiguous);
   std::optional<DynamicType> GetType(std::size_t) const;
   void Dump(llvm::raw_ostream &);
 
@@ -191,7 +191,7 @@ private:
   MaybeExpr AnalyzeExprOrWholeAssumedSizeArray(const parser::Expr &);
   bool AreConformable() const;
   const Symbol *FindBoundOp(parser::CharBlock, int passIndex,
-      const Symbol *&generic, bool isSubroutine);
+      const Symbol *&generic, bool isSubroutine, bool *isAmbiguous = nullptr);
   void AddAssignmentConversion(
       const DynamicType &lhsType, const DynamicType &rhsType);
   bool OkLogicalIntegerAssignment(TypeCategory lhs, TypeCategory rhs);
@@ -199,7 +199,8 @@ private:
   bool IsBOZLiteral(std::size_t i) const {
     return evaluate::IsBOZLiteral(GetExpr(i));
   }
-  void SayNoMatch(const std::string &, bool isAssignment = false);
+  void SayNoMatch(
+      const std::string &, bool isAssignment = false, bool isAmbiguous = false);
   std::string TypeAsFortran(std::size_t);
   bool AnyUntypedOrMissingOperand();
 
@@ -1269,7 +1270,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::SubstringInquiry &x) {
   if (MaybeExpr substring{Analyze(x.v)}) {
     CHECK(x.source.size() >= 8);
-    int nameLen{x.source.end()[-1] == 'n' ? 3 /*LEN*/ : 4 /*KIND*/};
+    int nameLen{x.source.back() == 'n' ? 3 /*LEN*/ : 4 /*KIND*/};
     parser::CharBlock name{
         x.source.end() - nameLen, static_cast<std::size_t>(nameLen)};
     CHECK(name == "len" || name == "kind");
@@ -4781,7 +4782,9 @@ std::optional<ProcedureRef> ArgumentAnalyzer::TryDefinedAssignment() {
     return std::nullopt; // user-defined assignment not allowed for these args
   }
   auto restorer{context_.GetContextualMessages().SetLocation(source_)};
-  if (std::optional<ProcedureRef> procRef{GetDefinedAssignmentProc()}) {
+  bool isAmbiguous{false};
+  if (std::optional<ProcedureRef> procRef{
+          GetDefinedAssignmentProc(isAmbiguous)}) {
     if (context_.inWhereBody() && !procRef->proc().IsElemental()) { // C1032
       context_.Say(
           "Defined assignment in WHERE must be elemental, but '%s' is not"_err_en_US,
@@ -4791,9 +4794,11 @@ std::optional<ProcedureRef> ArgumentAnalyzer::TryDefinedAssignment() {
     return std::move(*procRef);
   }
   if (isDefined == Tristate::Yes) {
-    if (!lhsType || !rhsType || (lhsRank != rhsRank && rhsRank != 0) ||
+    if (isAmbiguous || !lhsType || !rhsType ||
+        (lhsRank != rhsRank && rhsRank != 0) ||
         !OkLogicalIntegerAssignment(lhsType->category(), rhsType->category())) {
-      SayNoMatch("ASSIGNMENT(=)", true);
+      SayNoMatch(
+          "ASSIGNMENT(=)", /*isAssignment=*/true, /*isAmbiguous=*/isAmbiguous);
     }
   } else if (!fatalErrors_) {
     CheckAssignmentConformance();
@@ -4822,13 +4827,15 @@ bool ArgumentAnalyzer::OkLogicalIntegerAssignment(
   return true;
 }
 
-std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc() {
+std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc(
+    bool &isAmbiguous) {
   const Symbol *proc{nullptr};
   bool isProcElemental{false};
   std::optional<int> passedObjectIndex;
   std::string oprNameString{"assignment(=)"};
   parser::CharBlock oprName{oprNameString};
   const auto &scope{context_.context().FindScope(source_)};
+  isAmbiguous = false;
   {
     auto restorer{context_.GetContextualMessages().DiscardMessages()};
     if (const Symbol *symbol{scope.FindSymbol(oprName)}) {
@@ -4842,8 +4849,8 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc() {
     for (std::size_t i{0}; (!proc || isProcElemental) && i < actuals_.size();
         ++i) {
       const Symbol *generic{nullptr};
-      if (const Symbol *
-          binding{FindBoundOp(oprName, i, generic, /*isSubroutine=*/true)}) {
+      if (const Symbol *binding{FindBoundOp(oprName, i, generic,
+              /*isSubroutine=*/true, /*isAmbiguous=*/&isAmbiguous)}) {
         // ignore inaccessible type-bound ASSIGNMENT(=) generic
         if (!CheckAccessibleSymbol(scope, DEREF(generic))) {
           const Symbol *resolution{GetBindingResolution(GetType(i), *binding)};
@@ -4967,7 +4974,8 @@ bool ArgumentAnalyzer::AreConformable() const {
 
 // Look for a type-bound operator in the type of arg number passIndex.
 const Symbol *ArgumentAnalyzer::FindBoundOp(parser::CharBlock oprName,
-    int passIndex, const Symbol *&generic, bool isSubroutine) {
+    int passIndex, const Symbol *&generic, bool isSubroutine,
+    bool *isAmbiguous) {
   const auto *type{GetDerivedTypeSpec(GetType(passIndex))};
   const semantics::Scope *scope{type ? type->scope() : nullptr};
   if (scope) {
@@ -4989,6 +4997,9 @@ const Symbol *ArgumentAnalyzer::FindBoundOp(parser::CharBlock oprName,
       // Use the most recent override of the binding, if any
       return scope->FindComponent(binding->name());
     } else {
+      if (isAmbiguous) {
+        *isAmbiguous = pair.second;
+      }
       context_.EmitGenericResolutionError(*generic, pair.second, isSubroutine);
     }
   }
@@ -5072,40 +5083,37 @@ void ArgumentAnalyzer::ConvertBOZAssignmentRHS(const DynamicType &lhsType) {
 }
 
 // Report error resolving opr when there is a user-defined one available
-void ArgumentAnalyzer::SayNoMatch(const std::string &opr, bool isAssignment) {
+void ArgumentAnalyzer::SayNoMatch(
+    const std::string &opr, bool isAssignment, bool isAmbiguous) {
   std::string type0{TypeAsFortran(0)};
   auto rank0{actuals_[0]->Rank()};
+  std::string prefix{"No intrinsic or user-defined "s + opr + " matches"};
+  if (isAmbiguous) {
+    prefix = "Multiple specific procedures for the generic "s + opr + " match";
+  }
   if (actuals_.size() == 1) {
     if (rank0 > 0) {
-      context_.Say("No intrinsic or user-defined %s matches "
-                   "rank %d array of %s"_err_en_US,
-          opr, rank0, type0);
+      context_.Say("%s rank %d array of %s"_err_en_US, prefix, rank0, type0);
     } else {
-      context_.Say("No intrinsic or user-defined %s matches "
-                   "operand type %s"_err_en_US,
-          opr, type0);
+      context_.Say("%s operand type %s"_err_en_US, prefix, type0);
     }
   } else {
     std::string type1{TypeAsFortran(1)};
     auto rank1{actuals_[1]->Rank()};
     if (rank0 > 0 && rank1 > 0 && rank0 != rank1) {
-      context_.Say("No intrinsic or user-defined %s matches "
-                   "rank %d array of %s and rank %d array of %s"_err_en_US,
-          opr, rank0, type0, rank1, type1);
+      context_.Say("%s rank %d array of %s and rank %d array of %s"_err_en_US,
+          prefix, rank0, type0, rank1, type1);
     } else if (isAssignment && rank0 != rank1) {
       if (rank0 == 0) {
-        context_.Say("No intrinsic or user-defined %s matches "
-                     "scalar %s and rank %d array of %s"_err_en_US,
-            opr, type0, rank1, type1);
+        context_.Say("%s scalar %s and rank %d array of %s"_err_en_US, prefix,
+            type0, rank1, type1);
       } else {
-        context_.Say("No intrinsic or user-defined %s matches "
-                     "rank %d array of %s and scalar %s"_err_en_US,
-            opr, rank0, type0, type1);
+        context_.Say("%s rank %d array of %s and scalar %s"_err_en_US, prefix,
+            rank0, type0, type1);
       }
     } else {
-      context_.Say("No intrinsic or user-defined %s matches "
-                   "operand types %s and %s"_err_en_US,
-          opr, type0, type1);
+      context_.Say(
+          "%s operand types %s and %s"_err_en_US, prefix, type0, type1);
     }
   }
 }
