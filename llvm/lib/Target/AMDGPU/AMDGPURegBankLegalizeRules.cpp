@@ -671,6 +671,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{{UniB256, UniP1}, isAlign4 && isUL}, {{SgprB256}, {SgprP1}}})
       .Any({{{UniB512, UniP1}, isAlign4 && isUL}, {{SgprB512}, {SgprP1}}})
       .Any({{{UniB32, UniP1}, !isAlign4 || !isUL}, {{UniInVgprB32}, {SgprP1}}})
+      .Any({{{UniB64, UniP1}, !isAlign4 || !isUL}, {{UniInVgprB64}, {SgprP1}}})
+      .Any({{{UniB96, UniP1}, !isAlign4 || !isUL}, {{UniInVgprB96}, {SgprP1}}})
+      .Any({{{UniB128, UniP1}, !isAlign4 || !isUL}, {{UniInVgprB128}, {SgprP1}}})
       .Any({{{UniB256, UniP1}, !isAlign4 || !isUL}, {{UniInVgprB256}, {VgprP1}, SplitLoad}})
       .Any({{{UniB512, UniP1}, !isAlign4 || !isUL}, {{UniInVgprB512}, {VgprP1}, SplitLoad}})
 
