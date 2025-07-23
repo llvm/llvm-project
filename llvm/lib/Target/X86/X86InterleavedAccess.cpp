@@ -822,7 +822,8 @@ bool X86TargetLowering::lowerInterleavedLoad(
   return Grp.isSupported() && Grp.lowerIntoOptimizedSequence();
 }
 
-bool X86TargetLowering::lowerInterleavedStore(StoreInst *SI,
+bool X86TargetLowering::lowerInterleavedStore(Instruction *Store,
+                                              Value *LaneMask,
                                               ShuffleVectorInst *SVI,
                                               unsigned Factor) const {
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
@@ -831,6 +832,11 @@ bool X86TargetLowering::lowerInterleavedStore(StoreInst *SI,
   assert(cast<FixedVectorType>(SVI->getType())->getNumElements() % Factor ==
              0 &&
          "Invalid interleaved store");
+
+  auto *SI = dyn_cast<StoreInst>(Store);
+  if (!SI)
+    return false;
+  assert(!LaneMask && "Unexpected mask on store");
 
   // Holds the indices of SVI that correspond to the starting index of each
   // interleaved shuffle.

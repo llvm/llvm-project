@@ -215,7 +215,8 @@ public:
                             ArrayRef<ShuffleVectorInst *> Shuffles,
                             ArrayRef<unsigned> Indices,
                             unsigned Factor) const override;
-  bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
+  bool lowerInterleavedStore(Instruction *Store, Value *Mask,
+                             ShuffleVectorInst *SVI,
                              unsigned Factor) const override;
 
   bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,

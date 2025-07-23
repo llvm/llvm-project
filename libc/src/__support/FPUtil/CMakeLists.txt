@@ -210,6 +210,17 @@ add_header_library(
 )
 
 add_header_library(
+  comparison_operations
+  HDRS
+    comparison_operations.h
+  DEPENDS
+    .fenv_impl
+    .fp_bits
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   hypot
   HDRS
     Hypot.h

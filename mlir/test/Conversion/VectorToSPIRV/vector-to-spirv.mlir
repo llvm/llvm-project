@@ -1161,3 +1161,15 @@ func.func @vector_store_2d(%arg0 : memref<4x4xf32, #spirv.storage_class<StorageB
 }
 
 } // end module
+
+// -----
+
+// Ensure the case without module attributes not crash.
+
+// CHECK-LABEL: @vector_load
+//       CHECK:   vector.load
+func.func @vector_load(%arg0 : memref<4xf32, #spirv.storage_class<StorageBuffer>>) -> vector<4xf32> {
+  %idx = arith.constant 0 : index
+  %0 = vector.load %arg0[%idx] : memref<4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
+  return %0: vector<4xf32>
+}

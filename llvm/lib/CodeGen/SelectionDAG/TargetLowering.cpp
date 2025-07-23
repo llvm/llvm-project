@@ -8129,7 +8129,7 @@ static bool isNonZeroModBitWidthOrUndef(SDValue Z, unsigned BW) {
   return ISD::matchUnaryPredicate(
       Z,
       [=](ConstantSDNode *C) { return !C || C->getAPIntValue().urem(BW) != 0; },
-      /*AllowUndef=*/true, /*AllowTruncation=*/true);
+      /*AllowUndefs=*/true, /*AllowTruncation=*/true);
 }
 
 static SDValue expandVPFunnelShift(SDNode *Node, SelectionDAG &DAG) {
@@ -8634,9 +8634,8 @@ TargetLowering::createSelectForFMINNUM_FMAXNUM(SDNode *Node,
       return SDValue();
     SDValue Op1 = Node->getOperand(0);
     SDValue Op2 = Node->getOperand(1);
-    SDValue SelCC = DAG.getSelectCC(SDLoc(Node), Op1, Op2, Op1, Op2, Pred);
-    SelCC->setFlags(Node->getFlags());
-    return SelCC;
+    return DAG.getSelectCC(SDLoc(Node), Op1, Op2, Op1, Op2, Pred,
+                           Node->getFlags());
   }
 
   return SDValue();
@@ -11995,8 +11994,7 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
     // Get the mask value and add it to the current output position. This
     // either increments by 1 if MaskI is true or adds 0 otherwise.
     // Freeze in case we have poison/undef mask entries.
-    SDValue MaskI =
-        DAG.getFreeze(DAG.getExtractVectorElt(DL, MaskScalarVT, Mask, I));
+    SDValue MaskI = DAG.getExtractVectorElt(DL, MaskScalarVT, Mask, I);
     MaskI = DAG.getFreeze(MaskI);
     MaskI = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, MaskI);
     MaskI = DAG.getNode(ISD::ZERO_EXTEND, DL, PositionVT, MaskI);

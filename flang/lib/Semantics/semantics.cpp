@@ -642,8 +642,7 @@ bool Semantics::Perform() {
   return ValidateLabels(context_, program_) &&
       parser::CanonicalizeDo(program_) && // force line break
       CanonicalizeAcc(context_.messages(), program_) &&
-      CanonicalizeOmp(context_.messages(), program_) &&
-      CanonicalizeCUDA(program_) &&
+      CanonicalizeOmp(context_, program_) && CanonicalizeCUDA(program_) &&
       PerformStatementSemantics(context_, program_) &&
       CanonicalizeDirectives(context_.messages(), program_) &&
       ModFileWriter{context_}

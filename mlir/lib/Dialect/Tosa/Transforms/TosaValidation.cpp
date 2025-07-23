@@ -1200,6 +1200,28 @@ static bool isOpIsolatedWithinRegion(Operation *op, Region *region) {
   });
 }
 
+static bool isRegionIsolatedFromAbove(Region &regionToCheck) {
+  bool noLiveInValue = true;
+  regionToCheck.walk([&noLiveInValue, &regionToCheck](Operation *op) {
+    if (!isOpIsolatedWithinRegion(op, &regionToCheck)) {
+      noLiveInValue = false;
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  return noLiveInValue;
+}
+
+LogicalResult checkIsolatedRegion(Operation *op, Region &regionToCheck,
+                                  StringRef regionName) {
+  if (isRegionIsolatedFromAbove(regionToCheck))
+    return success();
+  op->emitOpError()
+      << "is not conformant to the TOSA specification. It requires the '"
+      << regionName << "' region is isolated from above.\n";
+  return failure();
+}
+
 bool checkErrorIfCondIf(Operation *op) {
   auto ifOp = dyn_cast<tosa::IfOp>(op);
   if (!ifOp)
@@ -1236,32 +1258,17 @@ bool checkErrorIfCondIf(Operation *op) {
   // used in then/else regions (see 'simplified' example above), so it
   // must be rewritten to use the generic syntax in order to be conformant
   // to the specification.
+  return failed(checkIsolatedRegion(op, ifOp.getThenGraph(), "then")) ||
+         failed(checkIsolatedRegion(op, ifOp.getElseGraph(), "else"));
+}
 
-  // Returns true if the region uses no external input operands.
-  auto isIsolatedRegion = [](Region &regionToCheck) -> bool {
-    bool noLiveInValue = true;
-    regionToCheck.walk([&noLiveInValue, &regionToCheck](Operation *opInRegion) {
-      if (!isOpIsolatedWithinRegion(opInRegion, &regionToCheck)) {
-        noLiveInValue = false;
-        return WalkResult::interrupt();
-      }
-      return WalkResult::advance();
-    });
-    return noLiveInValue;
-  };
+bool checkErrorIfWhileLoop(Operation *op) {
+  auto whileOp = dyn_cast<tosa::WhileOp>(op);
+  if (!whileOp)
+    return true;
 
-  auto checkIsolatedRegion = [&](Region &regionToCheck,
-                                 StringRef regionName) -> LogicalResult {
-    if (isIsolatedRegion(regionToCheck))
-      return success();
-    op->emitOpError()
-        << "is not conformant to the TOSA specification. It requires the '"
-        << regionName << "' region is isolated from above.\n";
-    return failure();
-  };
-
-  return failed(checkIsolatedRegion(ifOp.getThenGraph(), "then")) ||
-         failed(checkIsolatedRegion(ifOp.getElseGraph(), "else"));
+  return failed(checkIsolatedRegion(op, whileOp.getCondGraph(), "cond")) ||
+         failed(checkIsolatedRegion(op, whileOp.getBodyGraph(), "body"));
 }
 
 bool checkErrorIfScatter(Operation *op) {
@@ -1293,7 +1300,7 @@ LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
   if (!checkErrorIfResize(op) || !checkErrorIfMul(op) ||
       !checkErrorIfTable(op) || !checkErrorIfRescale(op) ||
       !checkErrorIfPad(op) || !checkErrorIfCondIf(op) ||
-      !checkErrorIfScatter(op))
+      !checkErrorIfWhileLoop(op) || !checkErrorIfScatter(op))
     return failure();
   return success();
 }

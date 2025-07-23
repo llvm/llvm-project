@@ -54,7 +54,7 @@ mlir::xegpu::getDistributedVectorType(xegpu::TensorDescType tdescTy) {
                                 std::multiplies<int64_t>());
 
   // Case 1: regular loads/stores
-  auto scatterAttr = tdescTy.getEncodingAsScatterTensorDescAttr();
+  auto scatterAttr = tdescTy.getEncodingOfType<ScatterTensorDescAttr>();
   if (scatterAttr) {
     auto chunkSize = scatterAttr.getChunkSize().getInt();
     // Verify if the first dimension of the tensor descriptor shape is

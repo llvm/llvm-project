@@ -268,17 +268,9 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   if (isa<ScalableVectorType>(Load->getType()))
     return false;
 
-  if (auto *LI = dyn_cast<LoadInst>(Load)) {
-    if (!LI->isSimple())
-      return false;
-  } else if (auto *VPLoad = dyn_cast<VPIntrinsic>(Load)) {
-    assert(VPLoad->getIntrinsicID() == Intrinsic::vp_load);
-    // Require a constant mask.
-    if (!isa<ConstantVector>(VPLoad->getMaskParam()))
-      return false;
-  } else {
-    llvm_unreachable("unsupported load operation");
-  }
+  if (auto *LI = dyn_cast<LoadInst>(Load);
+      LI && !LI->isSimple())
+    return false;
 
   // Check if all users of this load are shufflevectors. If we encounter any
   // users that are extractelement instructions or binary operators, we save
@@ -497,9 +489,6 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
     StoredValue = SI->getValueOperand();
   } else if (auto *VPStore = dyn_cast<VPIntrinsic>(Store)) {
     assert(VPStore->getIntrinsicID() == Intrinsic::vp_store);
-    // Require a constant mask.
-    if (!isa<ConstantVector>(VPStore->getMaskParam()))
-      return false;
     StoredValue = VPStore->getArgOperand(0);
   } else {
     llvm_unreachable("unsupported store operation");
@@ -518,45 +507,25 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
   assert(NumStoredElements % Factor == 0 &&
          "number of stored element should be a multiple of Factor");
 
+  Value *Mask = nullptr;
   if (auto *VPStore = dyn_cast<VPIntrinsic>(Store)) {
     unsigned LaneMaskLen = NumStoredElements / Factor;
-    Value *LaneMask = getMask(VPStore->getMaskParam(), Factor,
-                              ElementCount::getFixed(LaneMaskLen));
-    if (!LaneMask)
+    Mask = getMask(VPStore->getMaskParam(), Factor,
+                   ElementCount::getFixed(LaneMaskLen));
+    if (!Mask)
       return false;
 
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.store: " << *Store
                       << "\n");
 
-    IRBuilder<> Builder(VPStore);
-    // We need to effectively de-interleave the shufflemask
-    // because lowerInterleavedVPStore expects individual de-interleaved
-    // values.
-    SmallVector<Value *, 10> NewShuffles;
-    SmallVector<int, 16> NewShuffleMask(LaneMaskLen);
-    auto ShuffleMask = SVI->getShuffleMask();
-
-    for (unsigned i = 0; i < Factor; i++) {
-      for (unsigned j = 0; j < LaneMaskLen; j++)
-        NewShuffleMask[j] = ShuffleMask[i + Factor * j];
-
-      NewShuffles.push_back(Builder.CreateShuffleVector(
-          SVI->getOperand(0), SVI->getOperand(1), NewShuffleMask));
-    }
-
-    // Try to create target specific intrinsics to replace the vp.store and
-    // shuffle.
-    if (!TLI->lowerInterleavedVPStore(VPStore, LaneMask, NewShuffles))
-      // We already created new shuffles.
-      return true;
   } else {
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved store: " << *Store << "\n");
-
-    // Try to create target specific intrinsics to replace the store and
-    // shuffle.
-    if (!TLI->lowerInterleavedStore(cast<StoreInst>(Store), SVI, Factor))
-      return false;
   }
+
+  // Try to create target specific intrinsics to replace the store and
+  // shuffle.
+  if (!TLI->lowerInterleavedStore(Store, Mask, SVI, Factor))
+    return false;
 
   // Already have a new target specific interleaved store. Erase the old store.
   DeadInsts.insert(Store);

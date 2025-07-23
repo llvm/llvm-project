@@ -26,6 +26,8 @@ add_proxy_header_library(
     mbstate_t.h
   DEPENDS
     libc.include.llvm-libc-types.mbstate_t
+  FULL_BUILD_DEPENDS
+    libc.include.uchar
 )
 
 add_proxy_header_library(

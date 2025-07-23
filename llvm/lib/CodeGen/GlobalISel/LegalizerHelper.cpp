@@ -10120,14 +10120,10 @@ LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
     return Legalized;
   }
 
-  bool IsVolatile = MemOp->isVolatile();
-  // Don't try to optimize volatile.
-  if (IsVolatile)
-    return UnableToLegalize;
-
   if (MaxLen && KnownLen > MaxLen)
     return UnableToLegalize;
 
+  bool IsVolatile = MemOp->isVolatile();
   if (Opc == TargetOpcode::G_MEMCPY) {
     auto &MF = *MI.getParent()->getParent();
     const auto &TLI = *MF.getSubtarget().getTargetLowering();

@@ -2435,6 +2435,7 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
       DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_vector_sizes,
       OptionalAttr<UnitAttr>:$vectorize_nd_extract,
       OptionalAttr<UnitAttr>:$assume_dynamic_dims_match_vec_sizes,
+      OptionalAttr<UnitAttr>:$create_named_contraction,
       DefaultValuedOptionalAttr<DenseBoolArrayAttr, "{}">:$scalable_sizes);
 
   let results = (outs);
