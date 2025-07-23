@@ -607,8 +607,8 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 defvar CIR_YieldableScopes = [
-  "ArrayCtor", "CaseOp", "DoWhileOp", "ForOp", "IfOp", "ScopeOp", "SwitchOp",
-  "TernaryOp", "WhileOp"
+  "ArrayCtor", "ArrayDtor", "CaseOp", "DoWhileOp", "ForOp", "IfOp", "ScopeOp",
+  "SwitchOp", "TernaryOp", "WhileOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -2229,7 +2229,7 @@ def CIR_TrapOp : CIR_Op<"trap", [Terminator]> {
 }
 
 //===----------------------------------------------------------------------===//
-// ArrayCtor
+// ArrayCtor & ArrayDtor
 //===----------------------------------------------------------------------===//
 
 class CIR_ArrayInitDestroy<string mnemonic> : CIR_Op<mnemonic> {
@@ -2266,6 +2266,23 @@ def CIR_ArrayCtor : CIR_ArrayInitDestroy<"array.ctor"> {
     cir.array.ctor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
       ^bb0(%arg0: !cir.ptr<!rec_S>):
         cir.call @some_ctor(%arg0) : (!cir.ptr<!rec_S>) -> ()
+        cir.yield
+    }
+    ```
+  }];
+}
+
+def CIR_ArrayDtor : CIR_ArrayInitDestroy<"array.dtor"> {
+  let summary = "Destroy array elements with C++ dtors";
+  let description = [{
+    Destroy each array element using the same C++ destructor. This
+    operation has one region, with one single block. The block has an
+    incoming argument for the current array index to initialize.
+
+    ```mlir
+    cir.array.dtor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
+      ^bb0(%arg0: !cir.ptr<!rec_S>):
+        cir.call @some_dtor(%arg0) : (!cir.ptr<!rec_S>) -> ()
         cir.yield
     }
     ```
