@@ -199,6 +199,11 @@ static cl::opt<std::string> RemappingFile("remapping-file",
                                           cl::desc("Symbol remapping file"));
 static cl::alias RemappingFileA("r", cl::desc("Alias for --remapping-file"),
                                 cl::aliasopt(RemappingFile));
+static cl::list<std::string> ObjectAwareHashing("object-aware-hashing", 
+                                cl::desc("Includes the object file name when hashing function names "
+                                              "and control flow hashes, allowing functions from different "
+                                              "binaries to be distinguished"), 
+                                cl::sub(MergeSubcommand));
 static cl::opt<bool>
     UseMD5("use-md5", cl::init(false), cl::Hidden,
            cl::desc("Choose to use MD5 to represent string in name table (only "
@@ -690,32 +695,32 @@ static void overlapInput(const std::string &BaseFilename,
   }
 }
 
-//ANDRES FUNCTION
-Expected<std::string> getArchitectureFromExecutable(StringRef ExecutablePath){
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrError = MemoryBuffer::getFile(ExecutablePath);
-  if(!BufferOrError){
-    return createStringError(BufferOrError.getError(), "Failed to load input file");
-  }
+// //ANDRES FUNCTION
+// Expected<std::string> getArchitectureFromExecutable(StringRef ExecutablePath){
+//   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrError = MemoryBuffer::getFile(ExecutablePath);
+//   if(!BufferOrError){
+//     return createStringError(BufferOrError.getError(), "Failed to load input file");
+//   }
 
-  Expected<std::unique_ptr<object::ObjectFile>> ObjectOrError = object::ObjectFile::createObjectFile(BufferOrError.get()->getMemBufferRef());
-  if(!ObjectOrError){
-    return ObjectOrError.takeError();
-  }
+//   Expected<std::unique_ptr<object::ObjectFile>> ObjectOrError = object::ObjectFile::createObjectFile(BufferOrError.get()->getMemBufferRef());
+//   if(!ObjectOrError){
+//     return ObjectOrError.takeError();
+//   }
 
-  std::unique_ptr<llvm::object::ObjectFile> &Object = ObjectOrError.get();
+//   std::unique_ptr<llvm::object::ObjectFile> &Object = ObjectOrError.get();
 
-  StringRef ArchStr = Object->getArch() != Triple::UnknownArch ? Triple::getArchTypeName(Object->getArch()) : "unknown";
+//   StringRef ArchStr = Object->getArch() != Triple::UnknownArch ? Triple::getArchTypeName(Object->getArch()) : "unknown";
 
-  return ArchStr.str();
-}
-//ANDRES FUNCTION
+//   return ArchStr.str();
+// }
+// //ANDRES FUNCTION
 
 /// Load an input into a writer context.
 static void
 loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
           const InstrProfCorrelator *Correlator, const StringRef ProfiledBinary,
           WriterContext *WC, const object::BuildIDFetcher *BIDFetcher = nullptr,
-          const ProfCorrelatorKind *BIDFetcherCorrelatorKind = nullptr) {
+          const ProfCorrelatorKind *BIDFetcherCorrelatorKind = nullptr, StringRef ObjectFilename = "") {
   std::unique_lock<std::mutex> CtxGuard{WC->Lock};
 
   // Copy the filename, because llvm::ThreadPool copied the input "const
@@ -726,24 +731,24 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   //ANDRES CODE
   std::string ExecutableName;
   std::string ProfileFile = Input.Filename;
-  std::string Architecture = "";
+  std::string ObjectFilename = "";
 
   StringRef FilenameRef = Filename;
-  if(FilenameRef.contains(':')){
-    StringRef ExeRef, ProfRef;
-    std::tie(ExeRef, ProfRef) = FilenameRef.split(':');
-    if(!ExeRef.empty() && !ProfRef.empty()){
-      ExecutableName = ExeRef.str();
-      ProfileFile = ProfRef.str();
-    }
-    Expected<std::string> ArchOrError = getArchitectureFromExecutable(ExeRef);
-    if(ArchOrError){
-      Architecture = std::move(ArchOrError.get());
-    }else{
-      consumeError(ArchOrError.takeError());
-      Architecture = "unknown";
-    }
-    Architecture = ExeRef;
+  if(!ObjectFilename.empty()){
+    // StringRef ExeRef, ProfRef;
+    // std::tie(ExeRef, ProfRef) = FilenameRef.split(':');
+    // if(!ExeRef.empty() && !ProfRef.empty()){
+    ObjectFilename = ObjectFilename.data();
+      // ProfileFile = ProfRef.str();
+    // }
+    // Expected<std::string> ArchOrError = getArchitectureFromExecutable(ExeRef);
+    // if(ArchOrError){
+    //   Architecture = std::move(ArchOrError.get());
+    // }else{
+    //   consumeError(ArchOrError.takeError());
+    //   Architecture = "unknown";
+    // }
+    // ObjectFilename = ExeRef;
   }
   //ANDRES CODE
 
@@ -837,7 +842,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
                                                 ? *BIDFetcherCorrelatorKind
                                                 : ProfCorrelatorKind::NONE;
   auto ReaderOrErr = InstrProfReader::create(ProfileFile /*ANDRES changed from Input.Filename to ProfileFile*/, *FS, Correlator, //THIS IS THE IMPORTANT LINE!!!!
-                                             BIDFetcher, CorrelatorKind, Warn, Architecture /*ANDRES added this parameter*/);
+                                             BIDFetcher, CorrelatorKind, Warn, ObjectFilename /*ANDRES added this parameter*/);
   if (Error E = ReaderOrErr.takeError()) {
     // Skip the empty profiles by returning silently.
     auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
@@ -875,7 +880,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
       bool firstTime = WC->WriterErrorCodes.insert(ErrCode).second;
       handleMergeWriterError(make_error<InstrProfError>(ErrCode, Msg),
                              Input.Filename, FuncName, firstTime);
-    }, Architecture);
+    }, ObjectFilename);
   }
 
   if (KeepVTableSymbols) {
@@ -1084,18 +1089,18 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
         MaxTraceLength));
 
   if (NumThreads == 1) {
-    for (const auto &Input : Inputs)
-      loadInput(Input, Remapper, Correlator.get(), ProfiledBinary,
-                Contexts[0].get(), BIDFetcher.get(), &BIDFetcherCorrelateKind);
+    for (int I = 0; I < int(Inputs.size()); ++I)
+      loadInput(Inputs[I], Remapper, Correlator.get(), ProfiledBinary,
+                Contexts[0].get(), BIDFetcher.get(), &BIDFetcherCorrelateKind, !ObjectAwareHashing.empty() ? ObjectAwareHashing[I] : "");
   } else {
     DefaultThreadPool Pool(hardware_concurrency(NumThreads));
 
     // Load the inputs in parallel (N/NumThreads serial steps).
     unsigned Ctx = 0;
-    for (const auto &Input : Inputs) {
-      Pool.async(loadInput, Input, Remapper, Correlator.get(), ProfiledBinary,
+    for (int I = 0; I < int(Inputs.size()); ++I) {
+      Pool.async(loadInput, Inputs[I], Remapper, Correlator.get(), ProfiledBinary,
                  Contexts[Ctx].get(), BIDFetcher.get(),
-                 &BIDFetcherCorrelateKind);
+                 &BIDFetcherCorrelateKind, !ObjectAwareHashing[I].empty() ? ObjectAwareHashing[I] : "");
       Ctx = (Ctx + 1) % NumThreads;
     }
     Pool.wait();

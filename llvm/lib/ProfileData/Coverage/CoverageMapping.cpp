@@ -40,7 +40,7 @@
 #include <stack>
 #include <string>
 #include <system_error>
-#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -1113,24 +1113,27 @@ Error CoverageMapping::loadFunctionRecord(
     if (It != RecordIndices.end()) {
       auto &ExistingFunction = Functions[It->second];
 
-      for (const auto &NewRegion : Function.CountedRegions) {
-        for (auto &ExistingRegion : ExistingFunction.CountedRegions) {
-          if((NewRegion.ObjectFilename != ExistingRegion.ObjectFilename) &&
-            (NewRegion.startLoc() >= ExistingRegion.startLoc()) &&
-              (NewRegion.endLoc() <= ExistingRegion.endLoc())){
-              RegionsToAdd.push_back(NewRegion);
-          }
-        }
+      // Step 1: Build a set of existing ObjectFilenames
+      std::unordered_set<std::string> ExistingFilenames;
+      for (const auto &ExistingRegion : ExistingFunction.CountedRegions) {
+        ExistingFilenames.insert(ExistingRegion.ObjectFilename.str());
       }
-      ExistingFunction.CountedRegions.insert(ExistingFunction.CountedRegions.end(), RegionsToAdd.begin(), RegionsToAdd.end());
+
+      // Step 2: Only add NewRegions with unique ObjectFilenames
+      for (const auto &NewRegion : Function.CountedRegions) {
+        if (ExistingFilenames.find(NewRegion.ObjectFilename.str()) == ExistingFilenames.end()) {
+          ExistingFunction.CountedRegions.push_back(NewRegion);
+        }
+        
+      }
     }
     RecordIndices[LogicalFuncKey] = Functions.size();
   }
   //CHANGES MADE HERE
 
   // Don't create records for (filenames, function) pairs we've already seen.
-  StringRef HashStrRef(HashStr);
-  if (!RecordProvenance[FilenamesHash].insert(hash_value(HashStrRef)).second){
+  StringRef Hash(HashStr);
+  if (!RecordProvenance[FilenamesHash].insert(hash_value(Hash)).second){
     return Error::success();
   }
 
