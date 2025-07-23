@@ -345,7 +345,7 @@ public:
   void emitIdent(StringRef IdentString) override;
   void emitCFIBKeyFrame() override;
   void emitCFIMTETaggedFrame() override;
-  void emitCFISections(bool EH, bool Debug) override;
+  void emitCFISections(bool EH, bool Debug, bool SFrame) override;
   void emitCFIDefCfa(int64_t Register, int64_t Offset, SMLoc Loc) override;
   void emitCFIDefCfaOffset(int64_t Offset, SMLoc Loc) override;
   void emitCFIDefCfaRegister(int64_t Register, SMLoc Loc) override;
@@ -1906,15 +1906,24 @@ void MCAsmStreamer::emitIdent(StringRef IdentString) {
   EmitEOL();
 }
 
-void MCAsmStreamer::emitCFISections(bool EH, bool Debug) {
-  MCStreamer::emitCFISections(EH, Debug);
+void MCAsmStreamer::emitCFISections(bool EH, bool Debug, bool SFrame) {
+  MCStreamer::emitCFISections(EH, Debug, SFrame);
   OS << "\t.cfi_sections ";
+  bool C = false;
   if (EH) {
     OS << ".eh_frame";
-    if (Debug)
-      OS << ", .debug_frame";
-  } else if (Debug) {
+    C = true;
+  }
+  if (Debug) {
+    if (C)
+      OS << ", ";
     OS << ".debug_frame";
+    C = true;
+  }
+  if (SFrame) {
+    if (C)
+      OS << ", ";
+    OS << ".sframe";
   }
 
   EmitEOL();
