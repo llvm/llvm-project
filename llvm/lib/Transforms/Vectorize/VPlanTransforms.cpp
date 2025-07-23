@@ -2277,8 +2277,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   // icmp ult step-vector, EVL
   Type *EVLType = TypeInfo.inferScalarType(&EVL);
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
-    if (HeaderMask->users().empty())
-      continue;
     VPRecipeBase *EVLR = EVL.getDefiningRecipe();
     VPBuilder Builder(Plan.getVectorPreheader());
     VPValue *StepVector =
