@@ -1621,6 +1621,12 @@ let OtherPredicates = [HasImageInsts] in {
   def S_WAIT_KMCNT_soft : SOPP_Pseudo <"s_soft_wait_kmcnt", (ins s16imm:$simm16), "$simm16">;
 }
 
+def S_WAITCNT_FENCE_soft : SPseudoInstSI <
+   (outs), (ins i32imm:$Ordering, i32imm:$Scope, i32imm:$AddrSpace)> {
+   let hasSideEffects = 0;
+   let UseNamedOperandTable = 1;
+}
+
 def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",
     [(int_amdgcn_s_sethalt timm:$simm16)]>;
 def S_SETKILL : SOPP_Pseudo <"s_setkill" , (ins i16imm:$simm16), "$simm16">;

@@ -57,38 +57,6 @@ enum class Position {
   AFTER
 };
 
-/// The atomic synchronization scopes supported by the AMDGPU target.
-enum class SIAtomicScope {
-  NONE,
-  SINGLETHREAD,
-  WAVEFRONT,
-  WORKGROUP,
-  AGENT,
-  SYSTEM
-};
-
-/// The distinct address spaces supported by the AMDGPU target for
-/// atomic memory operation. Can be ORed together.
-enum class SIAtomicAddrSpace {
-  NONE = 0u,
-  GLOBAL = 1u << 0,
-  LDS = 1u << 1,
-  SCRATCH = 1u << 2,
-  GDS = 1u << 3,
-  OTHER = 1u << 4,
-
-  /// The address spaces that can be accessed by a FLAT instruction.
-  FLAT = GLOBAL | LDS | SCRATCH,
-
-  /// The address spaces that support atomic instructions.
-  ATOMIC = GLOBAL | LDS | SCRATCH | GDS,
-
-  /// All address spaces.
-  ALL = GLOBAL | LDS | SCRATCH | GDS | OTHER,
-
-  LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
-};
-
 class SIMemOpInfo final {
 private:
 
@@ -1160,6 +1128,19 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     Changed = true;
   }
 
+  // Emit a soft wait count as a place holder for SIInsertWaitcnts, which will
+  // later add additional waits. To minimize clutter, we do this only when
+  // required. For now this just means a release operation at workgroup scope
+  // that synchronizes LDS, required by direct loads to LDS.
+  if (isReleaseOrStronger(Order) && Scope == SIAtomicScope::WORKGROUP &&
+      any((SIAtomicAddrSpace)AddrSpace & SIAtomicAddrSpace::LDS)) {
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_FENCE_soft))
+        .addImm((unsigned)Order)
+        .addImm((unsigned)Scope)
+        .addImm((unsigned)AddrSpace);
+    Changed = true;
+  }
+
   if (Pos == Position::AFTER)
     --MI;
 
@@ -2068,6 +2049,19 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     Changed = true;
   }
 
+  // Emit a soft wait count as a place holder for SIInsertWaitcnts, which will
+  // later add additional waits. To minimize clutter, we do this only when
+  // required. For now this just means a release operation at workgroup scope
+  // that synchronizes LDS, required by direct loads to LDS.
+  if (isReleaseOrStronger(Order) && Scope == SIAtomicScope::WORKGROUP &&
+      any((SIAtomicAddrSpace)AddrSpace & SIAtomicAddrSpace::LDS)) {
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_FENCE_soft))
+        .addImm((unsigned)Order)
+        .addImm((unsigned)Scope)
+        .addImm((unsigned)AddrSpace);
+    Changed = true;
+  }
+
   if (VSCnt) {
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT_soft))
         .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
@@ -2382,6 +2376,19 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
 
   if (DSCnt) {
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_DSCNT_soft)).addImm(0);
+    Changed = true;
+  }
+
+  // Emit a soft wait count as a place holder for SIInsertWaitcnts, which will
+  // later add additional waits. To minimize clutter, we do this only when
+  // required. For now this just means a release operation at workgroup scope
+  // that synchronizes LDS, required by direct loads to LDS.
+  if (isReleaseOrStronger(Order) && Scope == SIAtomicScope::WORKGROUP &&
+      any((SIAtomicAddrSpace)AddrSpace & SIAtomicAddrSpace::LDS)) {
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_FENCE_soft))
+        .addImm((unsigned)Order)
+        .addImm((unsigned)Scope)
+        .addImm((unsigned)AddrSpace);
     Changed = true;
   }
 

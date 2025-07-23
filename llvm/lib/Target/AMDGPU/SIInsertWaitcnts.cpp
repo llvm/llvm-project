@@ -37,7 +37,9 @@
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/TargetParser/TargetParser.h"
+
 using namespace llvm;
+using namespace AMDGPU;
 
 #define DEBUG_TYPE "si-insert-waitcnts"
 
@@ -1381,6 +1383,32 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
         Modified = true;
       } else
         WaitcntInstr = &II;
+    } else if (Opcode == AMDGPU::S_WAITCNT_FENCE_soft) {
+      // Each direct load to LDS is also a store to LDS, but we do not have a
+      // separate counter for it. Instead these operations increment LOAD_CNT
+      // and need to be waited for at a release fence. So we treat a release
+      // fence as if it depends on any previous LDS DMA stores.
+      unsigned Ordering =
+          TII->getNamedOperand(II, AMDGPU::OpName::Ordering)->getImm();
+      unsigned Scope =
+          TII->getNamedOperand(II, AMDGPU::OpName::Scope)->getImm();
+      unsigned AddrSpace =
+          TII->getNamedOperand(II, AMDGPU::OpName::AddrSpace)->getImm();
+      if (isReleaseOrStronger((AtomicOrdering)Ordering) &&
+          Scope >= (unsigned)AMDGPU::SIAtomicScope::WORKGROUP &&
+          any((SIAtomicAddrSpace)AddrSpace & SIAtomicAddrSpace::LDS)) {
+        LLVM_DEBUG(dbgs() << "Processing S_WAITCNT_FENCE_soft: " << II
+                          << "Before: " << Wait.LoadCnt << '\n';);
+        ScoreBrackets.determineWait(LOAD_CNT, FIRST_LDS_VGPR, Wait);
+        LLVM_DEBUG(dbgs() << "After: " << Wait.LoadCnt << '\n';);
+      }
+      // It is possible (but unlikely) that this is the only wait instruction,
+      // in which case, we exit this loop without a WaitcntInstr to consume
+      // `Wait`. But that works because `Wait` was passed in by reference, and
+      // the callee eventually calls createNewWaitcnt on it. We test this
+      // possibility in an articial MIR test since such a situation cannot be
+      // recreated by running the memory legalizer.
+      II.eraseFromParent();
     } else {
       assert(Opcode == AMDGPU::S_WAITCNT_VSCNT);
       assert(II.getOperand(0).getReg() == AMDGPU::SGPR_NULL);
@@ -1552,6 +1580,11 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
         ScoreBrackets.simplifyWaitcnt(OldWait);
       Wait = Wait.combined(OldWait);
       UpdatableInstr = &CombinedStoreDsCntInstr;
+    } else if (Opcode == AMDGPU::S_WAITCNT_FENCE_soft) {
+      // Architectures higher than GFX10 do not have direct loads to
+      // LDS, so no work required here yet.
+      II.eraseFromParent();
+      continue;
     } else {
       std::optional<InstCounterType> CT = counterTypeForInstr(Opcode);
       assert(CT.has_value());
@@ -2444,6 +2477,7 @@ static bool isWaitInstr(MachineInstr &Inst) {
           Inst.getOperand(0).getReg() == AMDGPU::SGPR_NULL) ||
          Opcode == AMDGPU::S_WAIT_LOADCNT_DSCNT ||
          Opcode == AMDGPU::S_WAIT_STORECNT_DSCNT ||
+         Opcode == AMDGPU::S_WAITCNT_FENCE_soft ||
          counterTypeForInstr(Opcode).has_value();
 }
 

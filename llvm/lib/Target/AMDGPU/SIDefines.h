@@ -10,6 +10,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 #define LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/MC/MCInstrDesc.h"
 
 namespace llvm {
@@ -418,6 +419,38 @@ enum CPol {
 };
 
 } // namespace CPol
+
+/// The atomic synchronization scopes supported by the AMDGPU target.
+enum class SIAtomicScope {
+  NONE,
+  SINGLETHREAD,
+  WAVEFRONT,
+  WORKGROUP,
+  AGENT,
+  SYSTEM
+};
+
+/// The distinct address spaces supported by the AMDGPU target for
+/// atomic memory operation. Can be ORed together.
+enum class SIAtomicAddrSpace {
+  NONE = 0u,
+  GLOBAL = 1u << 0,
+  LDS = 1u << 1,
+  SCRATCH = 1u << 2,
+  GDS = 1u << 3,
+  OTHER = 1u << 4,
+
+  /// The address spaces that can be accessed by a FLAT instruction.
+  FLAT = GLOBAL | LDS | SCRATCH,
+
+  /// The address spaces that support atomic instructions.
+  ATOMIC = GLOBAL | LDS | SCRATCH | GDS,
+
+  /// All address spaces.
+  ALL = GLOBAL | LDS | SCRATCH | GDS | OTHER,
+
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
+};
 
 namespace SendMsg { // Encoding of SIMM16 used in s_sendmsg* insns.
 
