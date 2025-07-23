@@ -183,8 +183,6 @@ def LayoutTrait: AttrInterface<"LayoutTrait"> {
                     "std::optional<llvm::SmallVector<int>>",
                     "getEffectiveSgData">,
   ];
-
-
 }
 
 def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [LayoutTrait]> {
@@ -402,7 +400,18 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
         return result;
       }
       return std::nullopt;
+    }
 
+    DenseI32ArrayAttr getOrder() const {
+      return getParent().getOrder();
+    }
+
+    bool isWgLayout() const {
+      return getParent().isWgLayout();
+    }
+
+    bool isSgLayout() const {
+      return getParent().isSgLayout();
     }
   }];
 
