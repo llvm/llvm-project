@@ -172,7 +172,7 @@ struct NoInstantiation<int, U>{
 };
 } // namespace PartialSpecializationNoInstantiation
 
-namespace PR139031 {
+namespace PureVirtual {
 
 template<typename T>
 struct Base {
