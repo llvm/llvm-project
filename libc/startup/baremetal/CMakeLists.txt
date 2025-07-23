@@ -65,12 +65,10 @@ add_startup_object(
 )
 
 add_custom_target(libc-startup)
-set(startup_components crt1)
-foreach(target IN LISTS startup_components)
-  set(fq_target_name libc.startup.baremetal.${target})
-  add_dependencies(libc-startup ${fq_target_name})
-  install(FILES $<TARGET_OBJECTS:${fq_target_name}>
-          DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
-          RENAME $<TARGET_PROPERTY:${fq_target_name},OUTPUT_NAME>
-          COMPONENT libc)
-endforeach()
+
+set(fq_target_name libc.startup.baremetal.${LIBC_TARGET_ARCHITECTURE}.crt1)
+add_dependencies(libc-startup ${fq_target_name})
+install(FILES $<TARGET_OBJECTS:${fq_target_name}>
+        DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
+        RENAME $<TARGET_PROPERTY:${fq_target_name},OUTPUT_NAME>
+        COMPONENT libc)

@@ -14,4 +14,3 @@ add_startup_object(
     -fno-builtin
     -Wno-global-constructors # To allow vector table initialization
 )
-get_fq_target_name(crt1 fq_name)
