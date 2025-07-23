@@ -408,7 +408,7 @@ LogicalResult Serializer::processMemberDecoration(
        static_cast<uint32_t>(memberDecoration.decoration)});
   if (memberDecoration.hasValue()) {
     args.push_back(
-        cast<mlir::IntegerAttr>(memberDecoration.decorationValue).getInt());
+        cast<IntegerAttr>(memberDecoration.decorationValue).getInt());
   }
   encodeInstructionInto(decorations, spirv::Opcode::OpMemberDecorate, args);
   return success();

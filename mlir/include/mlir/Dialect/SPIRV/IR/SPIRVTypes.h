@@ -316,17 +316,18 @@ public:
 
     friend bool operator==(const MemberDecorationInfo &lhs,
                            const MemberDecorationInfo &rhs) {
-      return (lhs.memberIndex == rhs.memberIndex) &&
-             (lhs.decoration == rhs.decoration) &&
-             (lhs.decorationValue == rhs.decorationValue);
+      return lhs.memberIndex == rhs.memberIndex &&
+             lhs.decoration == rhs.decoration &&
+             lhs.decorationValue == rhs.decorationValue;
     }
 
     friend bool operator<(const MemberDecorationInfo &lhs,
                           const MemberDecorationInfo &rhs) {
       return lhs.memberIndex < rhs.memberIndex ||
-             (lhs.memberIndex == rhs.memberIndex &&
-              llvm::to_underlying(lhs.decoration) <
-                  llvm::to_underlying(rhs.decoration));
+             std::make_tuple(lhs.memberIndex,
+                             llvm::to_underlying(lhs.decoration)) <
+                 std::make_tuple(rhs.memberIndex,
+                                 llvm::to_underlying(rhs.decoration));
     }
 
     bool hasValue() const { return !isa<UnitAttr>(decorationValue); }
