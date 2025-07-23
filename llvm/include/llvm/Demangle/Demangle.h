@@ -9,7 +9,7 @@
 #ifndef LLVM_DEMANGLE_DEMANGLE_H
 #define LLVM_DEMANGLE_DEMANGLE_H
 
-#include "Visibility.h"
+#include "DemangleConfig.h"
 #include <cstddef>
 #include <optional>
 #include <string>

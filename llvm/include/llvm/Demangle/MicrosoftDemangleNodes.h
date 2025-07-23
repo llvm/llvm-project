@@ -13,7 +13,7 @@
 #ifndef LLVM_DEMANGLE_MICROSOFTDEMANGLENODES_H
 #define LLVM_DEMANGLE_MICROSOFTDEMANGLENODES_H
 
-#include "Visibility.h"
+#include "DemangleConfig.h"
 #include <array>
 #include <cstdint>
 #include <string>

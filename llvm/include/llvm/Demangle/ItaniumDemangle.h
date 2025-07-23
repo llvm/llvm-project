@@ -19,7 +19,6 @@
 #include "DemangleConfig.h"
 #include "StringViewExtras.h"
 #include "Utility.h"
-#include "Visibility.h"
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
