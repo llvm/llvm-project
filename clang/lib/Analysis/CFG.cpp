@@ -2848,7 +2848,8 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
         auto CalleeCFG = CFG::buildCFG(DefFD, DefFD->getBody(),
                                        &DefFD->getASTContext(), BuildOpts);
 
-        if (CalleeCFG && CalleeCFG->getEntry().isInevitablySinking(true)) {
+        if (CalleeCFG && CalleeCFG->getEntry().isInevitablySinking(
+                             CFGBlock::InterProcAnalysis::On)) {
           CanCD->setAnalyzerSinkKind(FunctionDecl::AnalyzerSinkKind::NoReturn);
           NoReturn = true;
         }
