@@ -3576,11 +3576,19 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
   if (!blockIsSimpleEnoughToThreadThrough(BB, NonLocalUseBlocks))
     return false;
 
+  // Jump-threading can only be done to destinations where no values defined
+  // in BB are live.
+
+  // Quickly check if both destinations have uses.  If so, jump-threading cannot
+  // be done.
   if (NonLocalUseBlocks.contains(BI->getSuccessor(0)) &&
       NonLocalUseBlocks.contains(BI->getSuccessor(1)))
     return false;
 
+  // Search backward from NonLocalUseBlocks to find which blocks
+  // reach non-local uses.
   for (BasicBlock *UseBB : NonLocalUseBlocks)
+    // Give up if too many blocks are searched.
     if (!findReaching(UseBB, BB, ReachesNonLocalUseBlocks))
       return false;
 
