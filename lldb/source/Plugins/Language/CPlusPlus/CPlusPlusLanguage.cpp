@@ -1464,12 +1464,12 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
 
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::ContainerSizeSummaryProvider,
-                "libstdc++ std::map summary provider",
+                "libstdc++ debug std::map summary provider",
                 "^std::__debug::map<.+> >(( )?&)?$", stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::ContainerSizeSummaryProvider,
-                "libstdc++ std::set summary provider",
+                "libstdc++ debug std::set summary provider",
                 "^std::__debug::set<.+> >(( )?&)?$", stl_summary_flags, true);
 
   AddCXXSummary(
@@ -1479,12 +1479,12 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
 
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
-      "libstdc++ std::multimap summary provider",
+      "libstdc++ debug std::multimap summary provider",
       "^std::__debug::multimap<.+> >(( )?&)?$", stl_summary_flags, true);
 
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
-      "libstdc++ std::multiset summary provider",
+      "libstdc++ debug std::multiset summary provider",
       "^std::__debug::multiset<.+> >(( )?&)?$", stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
