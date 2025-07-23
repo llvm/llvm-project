@@ -522,8 +522,7 @@ static bool areAllValuesNoReturn(const VarDecl *VD, const CFGBlock &VarBlk,
     }
 
     // If all checked blocks satisfy the condition, the check is finished.
-    if (std::all_of(BlocksToCheck.begin(), BlocksToCheck.end(),
-                    BlockSatisfiesCondition))
+    if (llvm::all_of(BlocksToCheck, BlockSatisfiesCondition))
       return true;
 
     // If this block does not contain the variable definition, check
@@ -2112,11 +2111,26 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
 
   void handleNoMutexHeld(const NamedDecl *D, ProtectedOperationKind POK,
                          AccessKind AK, SourceLocation Loc) override {
-    assert((POK == POK_VarAccess || POK == POK_VarDereference) &&
-           "Only works for variables");
-    unsigned DiagID = POK == POK_VarAccess?
-                        diag::warn_variable_requires_any_lock:
-                        diag::warn_var_deref_requires_any_lock;
+    unsigned DiagID = 0;
+    switch (POK) {
+    case POK_VarAccess:
+    case POK_PassByRef:
+    case POK_ReturnByRef:
+    case POK_PassPointer:
+    case POK_ReturnPointer:
+      DiagID = diag::warn_variable_requires_any_lock;
+      break;
+    case POK_VarDereference:
+    case POK_PtPassByRef:
+    case POK_PtReturnByRef:
+    case POK_PtPassPointer:
+    case POK_PtReturnPointer:
+      DiagID = diag::warn_var_deref_requires_any_lock;
+      break;
+    case POK_FunctionCall:
+      llvm_unreachable("Only works for variables");
+      break;
+    }
     PartialDiagnosticAt Warning(Loc, S.PDiag(DiagID)
       << D << getLockKindFromAccessKind(AK));
     Warnings.emplace_back(std::move(Warning), getNotes());
@@ -2887,8 +2901,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       .setAlwaysAdd(Stmt::UnaryOperatorClass);
   }
 
-  bool EnableLifetimeSafetyAnalysis = !Diags.isIgnored(
-      diag::warn_experimental_lifetime_safety_dummy_warning, D->getBeginLoc());
+  bool EnableLifetimeSafetyAnalysis = S.getLangOpts().EnableLifetimeSafety;
   // Install the logical handler.
   std::optional<LogicalErrorHandler> LEH;
   if (LogicalErrorHandler::hasActiveDiagnostics(Diags, D->getBeginLoc())) {
@@ -3015,8 +3028,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // TODO: Enable lifetime safety analysis for other languages once it is
   // stable.
   if (EnableLifetimeSafetyAnalysis && S.getLangOpts().CPlusPlus) {
-    if (CFG *cfg = AC.getCFG())
-      runLifetimeSafetyAnalysis(*cast<DeclContext>(D), *cfg, AC);
+    if (AC.getCFG())
+      lifetimes::runLifetimeSafetyAnalysis(AC);
   }
   // Check for violations of "called once" parameter properties.
   if (S.getLangOpts().ObjC && !S.getLangOpts().CPlusPlus &&
