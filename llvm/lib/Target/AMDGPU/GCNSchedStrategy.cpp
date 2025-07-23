@@ -286,9 +286,10 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
 
   // FIXME: Better heuristics to determine whether to prefer SGPRs or VGPRs.
   static constexpr unsigned MaxVGPRPressureInc = 16;
-  bool ShouldTrackAGPRs = AGPRPressure >= AGPRExcessLimit;
   bool ShouldTrackVGPRs = VGPRPressure + MaxVGPRPressureInc >= VGPRExcessLimit;
-  bool ShouldTrackSGPRs = !ShouldTrackVGPRs && SGPRPressure >= SGPRExcessLimit;
+  bool ShouldTrackAGPRs = !ShouldTrackVGPRs && AGPRPressure >= AGPRExcessLimit;
+  bool ShouldTrackSGPRs =
+      !ShouldTrackVGPRs && !ShouldTrackAGPRs && SGPRPressure >= SGPRExcessLimit;
 
   // FIXME: We have to enter REG-EXCESS before we reach the actual threshold
   // to increase the likelihood we don't go over the limits.  We should improve
@@ -329,7 +330,7 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
   if (SGPRDelta >= 0 || VGPRDelta >= 0 || AGPRDelta >= 0) {
     HasHighPressure = true;
     // Prioritize reducing the VGPRDelta if both are >= 0
-    if (SGPRDelta > VGPRDelta) {
+    if (SGPRDelta > VGPRDelta && SGPRDelta > AGPRDelta) {
       Cand.RPDelta.CriticalMax =
           PressureChange(AMDGPU::RegisterPressureSets::SReg_32);
       Cand.RPDelta.CriticalMax.setUnitInc(SGPRDelta);
