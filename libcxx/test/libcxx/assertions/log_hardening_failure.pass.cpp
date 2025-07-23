@@ -8,9 +8,8 @@
 
 // Basic smoke test for `__log_hardening_failure`.
 //
+// UNSUPPORTED: c++03
 // UNSUPPORTED: libcpp-has-no-experimental-hardening-observe-semantic
-// XFAIL: availability-log_hardening_failure-missing
-// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
 
 #include <__log_hardening_failure>
 

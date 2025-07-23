@@ -16,13 +16,15 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_HAS_EXPERIMENTAL_HARDENING_OBSERVE_SEMANTIC
+// Hardening logging is not available in the C++03 mode; moreover, it is currently only available in the experimental
+// library.
+#if _LIBCPP_HAS_EXPERIMENTAL_HARDENING_OBSERVE_SEMANTIC && !defined(_LIBCPP_CXX03_LANG)
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // This function should never be called directly from the code -- it should only be called through the
 // `_LIBCPP_LOG_HARDENING_FAILURE` macro.
-_LIBCPP_EXPORTED_FROM_ABI void __log_hardening_failure(const char* __message) _NOEXCEPT;
+[[__gnu__::__cold__]] _LIBCPP_EXPORTED_FROM_ABI void __log_hardening_failure(const char* __message) _NOEXCEPT;
 
 // _LIBCPP_LOG_HARDENING_FAILURE(message)
 //
@@ -35,6 +37,6 @@ _LIBCPP_EXPORTED_FROM_ABI void __log_hardening_failure(const char* __message) _N
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_HAS_EXPERIMENTAL_HARDENING_OBSERVE_SEMANTIC
+#endif // _LIBCPP_HAS_EXPERIMENTAL_HARDENING_OBSERVE_SEMANTIC && !defined(_LIBCPP_CXX03_LANG)
 
 #endif // _LIBCPP___LOG_HARDENING_FAILURE
