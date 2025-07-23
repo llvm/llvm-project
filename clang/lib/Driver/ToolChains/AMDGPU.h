@@ -194,7 +194,7 @@ public:
   llvm::SmallVector<BitCodeLibraryInfo, 12>
   getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
                           const std::string &GPUArch,
-                          Action::OffloadKind DeviceOffloadingKind) const;
+                          bool isOpenMP = false) const;
 
   SanitizerMask getSupportedSanitizers() const override {
     return SanitizerKind::Address;

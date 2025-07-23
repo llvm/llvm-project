@@ -278,7 +278,7 @@ void HIPAMDToolChain::addClangTargetOptions(
     return; // No DeviceLibs for SPIR-V.
   }
 
-  for (auto BCFile : getDeviceLibs(DriverArgs, DeviceOffloadingKind)) {
+  for (auto BCFile : getDeviceLibs(DriverArgs)) {
     CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
                                                : "-mlink-bitcode-file");
     CC1Args.push_back(DriverArgs.MakeArgString(BCFile.Path));
@@ -369,8 +369,7 @@ VersionTuple HIPAMDToolChain::computeMSVCVersion(const Driver *D,
 }
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
-HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
-                               Action::OffloadKind DeviceOffloadingKind) const {
+HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
   llvm::SmallVector<BitCodeLibraryInfo, 12> BCLibs;
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                           true) ||
@@ -412,8 +411,7 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
     assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
 
     // Add common device libraries like ocml etc.
-    for (auto N : getCommonDeviceLibNames(DriverArgs, GpuArch.str(),
-                                          DeviceOffloadingKind))
+    for (auto N : getCommonDeviceLibNames(DriverArgs, GpuArch.str()))
       BCLibs.emplace_back(N);
 
     // Add instrument lib.
