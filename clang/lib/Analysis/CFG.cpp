@@ -2833,7 +2833,27 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
     if (!FD->isVariadic())
       findConstructionContextsForArguments(C);
 
-    NoReturn |= FD->getAnalyzerNoReturn().value_or(false) || C->isBuiltinAssumeFalse(*Context);
+    auto SinkKind = FD->getAnalyzerSinkKind();
+    NoReturn |= (SinkKind == FunctionDecl::AnalyzerSinkKind::NoReturn) ||
+                C->isBuiltinAssumeFalse(*Context);
+
+    if (BuildOpts.ExtendedNoReturnAnalysis && !NoReturn &&
+        SinkKind == FunctionDecl::AnalyzerSinkKind::Undefined) {
+      auto *CanCD = FD->getCanonicalDecl();
+      auto *DefFD = CanCD->getDefinition();
+
+      CanCD->setAnalyzerSinkKind(FunctionDecl::AnalyzerSinkKind::NoSink);
+
+      if (DefFD && DefFD->getBody()) {
+        auto CalleeCFG = CFG::buildCFG(DefFD, DefFD->getBody(),
+                                       &DefFD->getASTContext(), BuildOpts);
+
+        if (CalleeCFG && CalleeCFG->getEntry().isInevitablySinking()) {
+          CanCD->setAnalyzerSinkKind(FunctionDecl::AnalyzerSinkKind::NoReturn);
+          NoReturn = true;
+        }
+      }
+    }
 
     if (FD->hasAttr<NoThrowAttr>())
       AddEHEdge = false;
@@ -6322,10 +6342,11 @@ static bool isImmediateSinkBlock(const CFGBlock *Blk) {
 
     auto *CanCD = FD->getCanonicalDecl();
     auto *DefFD = CanCD->getDefinition();
-    auto NoRetAttrOpt = CanCD->getAnalyzerNoReturn();
+    auto NoRetKind = CanCD->getAnalyzerSinkKind();
     auto NoReturn = false;
 
-    if (!NoRetAttrOpt && DefFD && DefFD->getBody()) {
+    if ((NoRetKind == FunctionDecl::AnalyzerSinkKind::Undefined) && DefFD &&
+        DefFD->getBody()) {
       // HACK: we are gonna cache analysis result as implicit
       // `analyzer_noreturn` attribute
       auto *MutCD = const_cast<FunctionDecl *>(CanCD);
@@ -6334,8 +6355,7 @@ static bool isImmediateSinkBlock(const CFGBlock *Blk) {
       //  * prevent infinite recursion in noreturn analysis
       //  * indicate that we've already analyzed(-ing) this function
       //  * serve as a safe default assumption (function may return)
-      MutCD->addAttr(AnalyzerNoReturnAttr::CreateImplicit(
-          CanCD->getASTContext(), false, CanCD->getLocation()));
+      MutCD->setAnalyzerSinkKind(FunctionDecl::AnalyzerSinkKind::NoSink);
 
       auto CalleeCFG =
           CFG::buildCFG(DefFD, DefFD->getBody(), &DefFD->getASTContext(), {});
@@ -6343,14 +6363,11 @@ static bool isImmediateSinkBlock(const CFGBlock *Blk) {
       NoReturn = CalleeCFG && CalleeCFG->getEntry().isInevitablySinking();
 
       // Override to `analyzer_noreturn(true)`
-      if (NoReturn) {
-        MutCD->dropAttr<AnalyzerNoReturnAttr>();
-        MutCD->addAttr(AnalyzerNoReturnAttr::CreateImplicit(
-            CanCD->getASTContext(), NoReturn, CanCD->getLocation()));
-      }
+      if (NoReturn)
+        MutCD->setAnalyzerSinkKind(FunctionDecl::AnalyzerSinkKind::NoReturn);
 
-    } else if (NoRetAttrOpt)
-      NoReturn = *NoRetAttrOpt;
+    } else
+      NoReturn = (NoRetKind == FunctionDecl::AnalyzerSinkKind::NoReturn);
 
     return NoReturn;
   };

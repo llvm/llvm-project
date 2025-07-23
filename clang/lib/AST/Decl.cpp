@@ -3596,14 +3596,23 @@ bool FunctionDecl::isNoReturn() const {
   return false;
 }
 
-std::optional<bool> FunctionDecl::getAnalyzerNoReturn() const {
+FunctionDecl::AnalyzerSinkKind FunctionDecl::getAnalyzerSinkKind() const {
   if (isNoReturn())
-    return true;
+    return AnalyzerSinkKind::NoReturn;
 
   if (auto *Attr = getAttr<AnalyzerNoReturnAttr>())
-    return Attr->getValue();
+    return Attr->getValue() ? AnalyzerSinkKind::NoReturn
+                            : AnalyzerSinkKind::NoSink;
 
-  return std::nullopt;
+  return AnalyzerSinkKind::Undefined;
+}
+
+void FunctionDecl::setAnalyzerSinkKind(FunctionDecl::AnalyzerSinkKind kind) {
+  dropAttr<AnalyzerNoReturnAttr>();
+
+  if (kind != AnalyzerSinkKind::Undefined)
+    addAttr(AnalyzerNoReturnAttr::CreateImplicit(
+        getASTContext(), kind == AnalyzerSinkKind::NoReturn, getLocation()));
 }
 
 bool FunctionDecl::isMemberLikeConstrainedFriend() const {

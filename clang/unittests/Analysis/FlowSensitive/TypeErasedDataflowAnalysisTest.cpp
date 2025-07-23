@@ -443,15 +443,7 @@ public:
 TEST_F(DataflowAnalysisTest, NonConvergingAnalysis) {
   std::string Code = R"(
     void target() {
-      unsigned i =0;
-      for(;;++i) {
-        // preventing CFG from considering this function
-        // as 'noreturn'
-        if (i == ~0)
-           break;
-        else
-           i = 0;
-      }
+      while(true) {}
     }
   )";
   auto Res = runAnalysis<NonConvergingAnalysis>(
@@ -740,6 +732,9 @@ protected:
       void trap() {}
     )"));
 
+    CFG::BuildOptions Opts;
+    Opts.ExtendedNoReturnAnalysis = true;
+
     ASSERT_THAT_ERROR(
         test::checkDataflow<FunctionCallAnalysis>(
             AnalysisInputs<FunctionCallAnalysis>(
@@ -748,7 +743,8 @@ protected:
                   return FunctionCallAnalysis(C);
                 })
                 .withASTBuildArgs({"-fsyntax-only", "-std=c++17"})
-                .withASTBuildVirtualMappedFiles(std::move(FilesContents)),
+                .withASTBuildVirtualMappedFiles(std::move(FilesContents))
+                .withCfgBuildOptions(std::move(Opts)),
             /*VerifyResults=*/
             [&Expectations](
                 const llvm::StringMap<
@@ -784,9 +780,7 @@ TEST_F(AnalyzerNoreturnTest, DirectNoReturnCall) {
       // [[p]]
     }
   )";
-  runDataflow(Code, Not(UnorderedElementsAre(IsStringMapEntry(
-                        "p", HoldsFunctionCallLattice(HasCalledFunctions(
-                                 UnorderedElementsAre("trap")))))));
+  runDataflow(Code, IsEmpty());
 }
 
 TEST_F(AnalyzerNoreturnTest, IndirectNoReturnCall) {
@@ -799,9 +793,7 @@ TEST_F(AnalyzerNoreturnTest, IndirectNoReturnCall) {
       // [[p]]
     }
   )";
-  runDataflow(Code, Not(UnorderedElementsAre(IsStringMapEntry(
-                        "p", HoldsFunctionCallLattice(HasCalledFunctions(
-                                 UnorderedElementsAre("trap")))))));
+  runDataflow(Code, IsEmpty());
 }
 
 TEST_F(AnalyzerNoreturnTest, CanonicalDeclCallCheck) {
@@ -815,9 +807,7 @@ TEST_F(AnalyzerNoreturnTest, CanonicalDeclCallCheck) {
       // [[p]]
     }
   )";
-  runDataflow(Code, Not(UnorderedElementsAre(IsStringMapEntry(
-                        "p", HoldsFunctionCallLattice(HasCalledFunctions(
-                                 UnorderedElementsAre("trap")))))));
+  runDataflow(Code, IsEmpty());
 }
 
 TEST_F(AnalyzerNoreturnTest, NoReturnFromCFGCheck) {
@@ -830,9 +820,7 @@ TEST_F(AnalyzerNoreturnTest, NoReturnFromCFGCheck) {
       // [[p]]
     }
   )";
-  runDataflow(Code, Not(UnorderedElementsAre(IsStringMapEntry(
-                        "p", HoldsFunctionCallLattice(HasCalledFunctions(
-                                 UnorderedElementsAre("trap")))))));
+  runDataflow(Code, IsEmpty());
 }
 
 TEST_F(AnalyzerNoreturnTest, InfiniteLoop) {
@@ -845,9 +833,7 @@ TEST_F(AnalyzerNoreturnTest, InfiniteLoop) {
       // [[p]]
     }
   )";
-  runDataflow(Code, Not(UnorderedElementsAre(IsStringMapEntry(
-                        "p", HoldsFunctionCallLattice(HasCalledFunctions(
-                                 UnorderedElementsAre("trap")))))));
+  runDataflow(Code, IsEmpty());
 }
 
 // Models an analysis that uses flow conditions.

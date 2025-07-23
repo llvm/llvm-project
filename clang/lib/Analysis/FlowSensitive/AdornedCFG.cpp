@@ -132,17 +132,20 @@ StmtToBlockMap::StmtToBlockMap(const CFG &Cfg)
 
 } // namespace internal
 
-llvm::Expected<AdornedCFG> AdornedCFG::build(const FunctionDecl &Func) {
+llvm::Expected<AdornedCFG>
+AdornedCFG::build(const FunctionDecl &Func,
+                  const CFG::BuildOptions &CfgInitOpts) {
   if (!Func.doesThisDeclarationHaveABody())
     return llvm::createStringError(
         std::make_error_code(std::errc::invalid_argument),
         "Cannot analyze function without a body");
 
-  return build(Func, *Func.getBody(), Func.getASTContext());
+  return build(Func, *Func.getBody(), Func.getASTContext(), CfgInitOpts);
 }
 
-llvm::Expected<AdornedCFG> AdornedCFG::build(const Decl &D, Stmt &S,
-                                             ASTContext &C) {
+llvm::Expected<AdornedCFG>
+AdornedCFG::build(const Decl &D, Stmt &S, ASTContext &C,
+                  const CFG::BuildOptions &CfgInitOpts) {
   if (D.isTemplated())
     return llvm::createStringError(
         std::make_error_code(std::errc::invalid_argument),
@@ -155,7 +158,9 @@ llvm::Expected<AdornedCFG> AdornedCFG::build(const Decl &D, Stmt &S,
         std::make_error_code(std::errc::invalid_argument),
         "Can only analyze C++");
 
-  CFG::BuildOptions Options;
+  CFG::BuildOptions Options = CfgInitOpts;
+
+  // Override some options
   Options.PruneTriviallyFalseEdges = true;
   Options.AddImplicitDtors = true;
   Options.AddTemporaryDtors = true;

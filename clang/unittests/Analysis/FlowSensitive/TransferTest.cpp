@@ -5940,18 +5940,8 @@ TEST(TransferTest, ForStmtBranchExtendsFlowCondition) {
 TEST(TransferTest, ForStmtBranchWithoutConditionDoesNotExtendFlowCondition) {
   std::string Code = R"(
     void target(bool Foo) {
-      unsigned i = 0;
-
-      for (;;++i) {
+      for (;;) {
         (void)0;
-
-        // preventing CFG from considering this function
-        // as 'noreturn'
-        if (i == ~0)
-           break;
-        else
-           i = 0;
-
         // [[loop_body]]
       }
     }
@@ -5969,7 +5959,6 @@ TEST(TransferTest, ForStmtBranchWithoutConditionDoesNotExtendFlowCondition) {
         auto &LoopBodyFooVal = getFormula(*FooDecl, LoopBodyEnv);
         EXPECT_FALSE(LoopBodyEnv.proves(LoopBodyFooVal));
       });
-});
 }
 
 TEST(TransferTest, ContextSensitiveOptionDisabled) {

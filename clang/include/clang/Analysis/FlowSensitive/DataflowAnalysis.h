@@ -322,8 +322,9 @@ llvm::Expected<llvm::SmallVector<Diagnostic>>
 diagnoseFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx,
                  DiagnosisCallbacks<AnalysisT, Diagnostic> Diagnoser,
                  std::int64_t MaxSATIterations = kDefaultMaxSATIterations,
-                 std::int32_t MaxBlockVisits = kDefaultMaxBlockVisits) {
-  llvm::Expected<AdornedCFG> Context = AdornedCFG::build(FuncDecl);
+                 std::int32_t MaxBlockVisits = kDefaultMaxBlockVisits,
+                 const CFG::BuildOptions &CfgOptions = {}) {
+  llvm::Expected<AdornedCFG> Context = AdornedCFG::build(FuncDecl, CfgOptions);
   if (!Context)
     return Context.takeError();
 
@@ -383,10 +384,11 @@ llvm::Expected<llvm::SmallVector<Diagnostic>>
 diagnoseFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx,
                  DiagnosisCallback<AnalysisT, Diagnostic> Diagnoser,
                  std::int64_t MaxSATIterations = kDefaultMaxSATIterations,
-                 std::int32_t MaxBlockVisits = kDefaultMaxBlockVisits) {
+                 std::int32_t MaxBlockVisits = kDefaultMaxBlockVisits,
+                 const CFG::BuildOptions &Opts = {}) {
   DiagnosisCallbacks<AnalysisT, Diagnostic> Callbacks = {nullptr, Diagnoser};
   return diagnoseFunction(FuncDecl, ASTCtx, Callbacks, MaxSATIterations,
-                          MaxBlockVisits);
+                          MaxBlockVisits, Opts);
 }
 
 /// Abstract base class for dataflow "models": reusable analysis components that
