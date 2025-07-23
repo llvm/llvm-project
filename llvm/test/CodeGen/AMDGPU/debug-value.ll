@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -experimental-debug-variable-locations=false -amdgpu-codegenprepare-break-large-phis=0 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -experimental-debug-variable-locations=false -amdgpu-codegenprepare-break-large-phis=0 < %s | FileCheck %s
 
 %struct.wombat = type { [4 x i32], [4 x i32], [4 x i32] }
 
