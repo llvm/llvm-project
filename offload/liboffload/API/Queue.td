@@ -41,6 +41,23 @@ def : Function {
     let returns = [];
 }
 
+def : Function {
+    let name = "olWaitEvents";
+    let desc = "Make any future work submitted to this queue wait until the provided events are complete.";
+    let details = [
+      "All events in `Events` must complete before the queue is unblocked.",
+      "The input events can be from any queue on any device provided by the same platform as `Queue`.",
+    ];
+    let params = [
+        Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
+        Param<"ol_event_handle_t *", "Events", "list of `NumEvents` events to wait for", PARAM_IN>,
+        Param<"size_t", "NumEvents", "size of `Events`", PARAM_IN>,
+    ];
+    let returns = [
+      Return<"OL_ERRC_INVALID_NULL_HANDLE", ["Any event handle in the list is NULL"]>,
+    ];
+}
+
 def : Enum {
   let name = "ol_queue_info_t";
   let desc = "Supported queue info.";
