@@ -15,6 +15,7 @@
 #define LLVM_CLANG_CAS_CASOPTIONS_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CAS/CASConfiguration.h"
 #include "llvm/Support/Error.h"
 #include <string>
 #include <vector>
@@ -30,52 +31,6 @@ namespace clang {
 
 class DiagnosticsEngine;
 
-/// Base class for options configuring which CAS to use. Separated for the
-/// fields where we don't need special move/copy logic.
-///
-/// TODO: Add appropriate options once we support plugins.
-class CASConfiguration {
-public:
-  enum CASKind {
-    UnknownCAS,
-    InMemoryCAS,
-    OnDiskCAS,
-  };
-
-  /// Kind of CAS to use.
-  CASKind getKind() const {
-    return IsFrozen ? UnknownCAS : CASPath.empty() ? InMemoryCAS : OnDiskCAS;
-  }
-
-  /// Path to a persistent backing store on-disk. This is optional, although \a
-  /// CASFileSystemRootID is unlikely to work without it.
-  ///
-  /// - "" means there is none; falls back to in-memory.
-  /// - "auto" is an alias for an automatically chosen location in the user's
-  ///   system cache.
-  std::string CASPath;
-
-  std::string PluginPath;
-  /// Each entry is a (<option-name>, <value>) pair.
-  std::vector<std::pair<std::string, std::string>> PluginOptions;
-
-  friend bool operator==(const CASConfiguration &LHS,
-                         const CASConfiguration &RHS) {
-    return LHS.CASPath == RHS.CASPath && LHS.PluginPath == RHS.PluginPath &&
-           LHS.PluginOptions == RHS.PluginOptions;
-  }
-  friend bool operator!=(const CASConfiguration &LHS,
-                         const CASConfiguration &RHS) {
-    return !(LHS == RHS);
-  }
-
-private:
-  /// Whether the configuration has been "frozen", in order to hide the kind of
-  /// CAS that's in use.
-  bool IsFrozen = false;
-  friend class CASOptions;
-};
-
 /// Options configuring which CAS to use. User-accessible fields should be
 /// defined in CASConfiguration to enable caching a CAS instance.
 ///
@@ -87,8 +42,18 @@ private:
 /// clang::createVFSFromCompilerInvocation() uses the same CAS instance that
 /// the rest of the compiler job does, without updating all callers. Probably
 /// it would be better to update all callers and remove it from here.
-class CASOptions : public CASConfiguration {
+class CASOptions : public llvm::cas::CASConfiguration {
 public:
+  enum CASKind {
+    UnknownCAS,
+    InMemoryCAS,
+    OnDiskCAS,
+  };
+
+  /// Kind of CAS to use.
+  CASKind getKind() const {
+    return IsFrozen ? UnknownCAS : CASPath.empty() ? InMemoryCAS : OnDiskCAS;
+  }
   /// Get a CAS & ActionCache defined by the options above. Future calls will
   /// return the same instances... unless the configuration has changed, in
   /// which case new ones will be created.
@@ -117,8 +82,6 @@ public:
   /// default on-disk CAS, otherwise this is a noop.
   void ensurePersistentCAS();
 
-  void getResolvedCASPath(llvm::SmallVectorImpl<char> &Result) const;
-
 private:
   /// Initialize Cached CAS and ActionCache.
   llvm::Error initCache() const;
@@ -133,6 +96,10 @@ private:
     CASConfiguration Config;
   };
   mutable CachedCAS Cache;
+
+  /// Whether the configuration has been "frozen", in order to hide the kind of
+  /// CAS that's in use.
+  bool IsFrozen = false;
 };
 
 } // end namespace clang

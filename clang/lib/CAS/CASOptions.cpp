@@ -22,7 +22,7 @@ std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
           std::shared_ptr<llvm::cas::ActionCache>>
 CASOptions::getOrCreateDatabases(DiagnosticsEngine &Diags,
                                  bool CreateEmptyDBsOnFailure) const {
-  if (Cache.Config.IsFrozen)
+  if (IsFrozen)
     return {Cache.CAS, Cache.AC};
 
   if (auto E = initCache())
@@ -44,7 +44,7 @@ CASOptions::getOrCreateDatabases() const {
 }
 
 void CASOptions::freezeConfig(DiagnosticsEngine &Diags) {
-  if (Cache.Config.IsFrozen)
+  if (IsFrozen)
     return;
 
   // Make sure the cache is initialized.
@@ -57,7 +57,7 @@ void CASOptions::freezeConfig(DiagnosticsEngine &Diags) {
   // scheduled/executed at a level that has access to the configuration.
   auto &CurrentConfig = static_cast<CASConfiguration &>(*this);
   CurrentConfig = CASConfiguration();
-  CurrentConfig.IsFrozen = Cache.Config.IsFrozen = true;
+  IsFrozen = true;
 
   if (Cache.CAS) {
     // Set the CASPath to the hash schema, since that leaks through CASContext's
@@ -90,41 +90,10 @@ llvm::Error CASOptions::initCache() const {
   Cache.Config = CurrentConfig;
   StringRef CASPath = Cache.Config.CASPath;
 
-  if (!PluginPath.empty()) {
-    std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>> DBs;
-    if (llvm::Error E =
-            createPluginCASDatabases(PluginPath, CASPath, PluginOptions)
-                .moveInto(DBs)) {
-      return E;
-    }
-    std::tie(Cache.CAS, Cache.AC) = std::move(DBs);
-    return llvm::Error::success();
-  }
+  auto DBs = Cache.Config.createDatabases();
+  if (!DBs)
+    return DBs.takeError();
 
-  if (CASPath.empty()) {
-    Cache.CAS = llvm::cas::createInMemoryCAS();
-    Cache.AC = llvm::cas::createInMemoryActionCache();
-    return llvm::Error::success();
-  }
-
-  SmallString<256> PathBuf;
-  getResolvedCASPath(PathBuf);
-  if (CASPath == "auto") {
-    getDefaultOnDiskCASPath(PathBuf);
-    CASPath = PathBuf;
-  }
-  std::pair<std::unique_ptr<ObjectStore>, std::unique_ptr<ActionCache>> DBs;
-  if (llvm::Error E = createOnDiskUnifiedCASDatabases(CASPath).moveInto(DBs))
-    return E;
-
-  std::tie(Cache.CAS, Cache.AC) = std::move(DBs);
+  std::tie(Cache.CAS, Cache.AC) = std::move(*DBs);
   return llvm::Error::success();
-}
-
-void CASOptions::getResolvedCASPath(SmallVectorImpl<char> &Result) const {
-  if (CASPath == "auto") {
-    getDefaultOnDiskCASPath(Result);
-  } else {
-    Result.assign(CASPath.begin(), CASPath.end());
-  }
 }
