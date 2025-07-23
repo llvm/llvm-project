@@ -46,63 +46,6 @@ static bool arePartialAxesCompatible(const SourceAxes &sourceAxes,
   });
 }
 
-// Return the reduced value and its corresponding sharding.
-// Example:
-// sourceSharding = <@mesh_1d, [[0]], partial = sum[0]>
-// targetSharding = <@mesh_1d, [[]]>
-// Then will apply all-reduce on the source value
-// and return it with the sharding <@mesh_1d, [[0]]>.
-static std::tuple<TypedValue<ShapedType>, MeshSharding>
-handlePartialAxesDuringResharding(OpBuilder &builder,
-                                  MeshSharding sourceSharding,
-                                  MeshSharding targetSharding,
-                                  TypedValue<ShapedType> sourceShard) {
-  if (sourceSharding.getPartialAxes().empty() &&
-      targetSharding.getPartialAxes().empty()) {
-    return {sourceShard, sourceSharding};
-  }
-  assert(targetSharding.getPartialAxes().empty() ||
-         (!sourceSharding.getPartialAxes().empty() &&
-          sourceSharding.getPartialType() == targetSharding.getPartialType()));
-  using Axis = std::decay_t<decltype(sourceSharding.getPartialAxes().front())>;
-  using AxisSet = llvm::SmallDenseSet<Axis>;
-  AxisSet sourceShardingPartialAxesSet(sourceSharding.getPartialAxes().begin(),
-                                       sourceSharding.getPartialAxes().end());
-  AxisSet targetShardingPartialAxesSet(targetSharding.getPartialAxes().begin(),
-                                       targetSharding.getPartialAxes().end());
-  assert(arePartialAxesCompatible(sourceShardingPartialAxesSet,
-                                  targetShardingPartialAxesSet));
-  llvm::SmallVector<MeshAxis> allReduceMeshAxes;
-  llvm::copy_if(sourceShardingPartialAxesSet,
-                std::back_inserter(allReduceMeshAxes),
-                [&targetShardingPartialAxesSet](Axis a) {
-                  return !targetShardingPartialAxesSet.contains(a);
-                });
-  if (allReduceMeshAxes.empty()) {
-    return {sourceShard, sourceSharding};
-  }
-
-  builder.setInsertionPointAfterValue(sourceShard);
-  TypedValue<ShapedType> resultValue = cast<TypedValue<ShapedType>>(
-      builder
-          .create<AllReduceOp>(sourceShard.getLoc(), sourceShard.getType(),
-                               sourceSharding.getMeshAttr().getLeafReference(),
-                               allReduceMeshAxes, sourceShard,
-                               sourceSharding.getPartialType())
-          .getResult());
-
-  llvm::SmallVector<MeshAxis> remainingPartialAxes;
-  llvm::copy_if(sourceShardingPartialAxesSet,
-                std::back_inserter(allReduceMeshAxes),
-                [&targetShardingPartialAxesSet](Axis a) {
-                  return targetShardingPartialAxesSet.contains(a);
-                });
-  MeshSharding resultSharding = MeshSharding::get(
-      sourceSharding.getMeshAttr(), sourceSharding.getSplitAxes(),
-      remainingPartialAxes, sourceSharding.getPartialType());
-  return {resultValue, resultSharding};
-}
-
 static MeshSharding targetShardingInSplitLastAxis(MLIRContext *ctx,
                                                   MeshSharding sourceSharding,
                                                   int64_t splitTensorAxis,
@@ -118,9 +61,8 @@ static MeshSharding targetShardingInSplitLastAxis(MLIRContext *ctx,
   targetSplitAxes.push_back(splitMeshAxis);
   targetShardingSplitAxes[splitTensorAxis] =
       MeshAxesAttr::get(ctx, targetSplitAxes);
-  return MeshSharding::get(
-      sourceSharding.getMeshAttr(), targetShardingSplitAxes,
-      sourceSharding.getPartialAxes(), sourceSharding.getPartialType());
+  return MeshSharding::get(sourceSharding.getMeshAttr(),
+                           targetShardingSplitAxes);
 }
 
 // Split a replicated tensor along a mesh axis.
@@ -239,9 +181,8 @@ static MeshSharding targetShardingInUnsplitLastAxis(MLIRContext *ctx,
   targetSplitAxes.pop_back();
   targetShardingSplitAxes[splitTensorAxis] =
       MeshAxesAttr::get(ctx, targetSplitAxes);
-  return MeshSharding::get(
-      sourceSharding.getMeshAttr(), targetShardingSplitAxes,
-      sourceSharding.getPartialAxes(), sourceSharding.getPartialType());
+  return MeshSharding::get(sourceSharding.getMeshAttr(),
+                           targetShardingSplitAxes);
 }
 
 static ShapedType allGatherResultShapeInUnsplitLastAxis(
@@ -368,9 +309,8 @@ static MeshSharding targetShardingInMoveLastAxis(MLIRContext *ctx,
   targetShardingSplitAxes[targetTensorAxis] =
       MeshAxesAttr::get(ctx, targetSplitAxes);
 
-  return MeshSharding::get(
-      sourceSharding.getMeshAttr(), targetShardingSplitAxes,
-      sourceSharding.getPartialAxes(), sourceSharding.getPartialType());
+  return MeshSharding::get(sourceSharding.getMeshAttr(),
+                           targetShardingSplitAxes);
 }
 
 static ShapedType allToAllResultShapeInMoveLastAxis(ShapedType sourceShape,
@@ -442,9 +382,7 @@ tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
                           TypedValue<ShapedType> sourceShard) {
   // Currently handles only cases where halo sizes differ but everything else
   // stays the same (from source to destination sharding).
-  if (!sourceSharding.equalSplitAndPartialAxes(targetSharding) ||
-      !sourceSharding.getPartialAxes().empty() ||
-      !targetSharding.getPartialAxes().empty() ||
+  if (!sourceSharding.equalSplitAxes(targetSharding) ||
       !sourceSharding.getStaticShardedDimsOffsets().empty() ||
       !targetSharding.getStaticShardedDimsOffsets().empty() ||
       sourceSharding.equalHaloSizes(targetSharding)) {
@@ -523,31 +461,27 @@ reshardOn1DMesh(ImplicitLocOpBuilder &builder, MeshOp mesh,
   assert(sourceShard.getType().getRank() == targetShardType.getRank());
   assert(mesh.getRank() == 1 && "Only 1D meshes are currently supported.");
 
-  auto [reducedSourceShard, reducedSourceSharding] =
-      handlePartialAxesDuringResharding(builder, sourceSharding, targetSharding,
-                                        sourceShard);
-
-  if (reducedSourceSharding == targetSharding) {
-    return reducedSourceShard;
+  if (sourceSharding == targetSharding) {
+    return sourceShard;
   }
 
   TypedValue<ShapedType> targetShard;
   MeshSharding actualTargetSharding;
-  if (reducedSourceSharding.getStaticShardedDimsOffsets().empty() &&
+  if (sourceSharding.getStaticShardedDimsOffsets().empty() &&
       targetSharding.getStaticShardedDimsOffsets().empty() &&
-      reducedSourceSharding.getStaticHaloSizes().empty() &&
+      sourceSharding.getStaticHaloSizes().empty() &&
       targetSharding.getStaticHaloSizes().empty()) {
     if (auto tryRes = tryMoveLastSplitAxisInResharding(
-            builder, mesh, reducedSourceSharding, targetSharding,
-            sourceUnshardedValue.getType(), reducedSourceShard)) {
+            builder, mesh, sourceSharding, targetSharding,
+            sourceUnshardedValue.getType(), sourceShard)) {
       std::tie(targetShard, actualTargetSharding) = tryRes.value();
-    } else if (auto tryRes = trySplitLastAxisInResharding(
-                   builder, mesh, reducedSourceSharding, targetSharding,
-                   reducedSourceShard)) {
+    } else if (auto tryRes =
+                   trySplitLastAxisInResharding(builder, mesh, sourceSharding,
+                                                targetSharding, sourceShard)) {
       std::tie(targetShard, actualTargetSharding) = tryRes.value();
     } else if (auto tryRes = tryUnsplitLastAxisInResharding(
-                   builder, mesh, reducedSourceSharding, targetSharding,
-                   sourceUnshardedValue.getType(), reducedSourceShard)) {
+                   builder, mesh, sourceSharding, targetSharding,
+                   sourceUnshardedValue.getType(), sourceShard)) {
       std::tie(targetShard, actualTargetSharding) = tryRes.value();
     }
   }
