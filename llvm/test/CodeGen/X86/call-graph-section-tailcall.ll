@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux --call-graph-section -filetype=obj -o - < %s | \
 ; RUN: llvm-readelf -x .callgraph - | FileCheck %s
 
-define i32 @_Z13call_indirectPFicEc(ptr %func, i8 %x) !type !0 {
+define i32 @check_tailcall(ptr %func, i8 %x) !type !0 {
 entry:
   %call = tail call i32 %func(i8 signext %x), !callee_type !1
   ret i32 %call
@@ -11,16 +11,16 @@ entry:
 
 define i32 @main(i32 %argc) !type !3 {
 entry:
-  %0 = and i32 %argc, 1
-  %cmp = icmp eq i32 %0, 0
-  %_Z3fooc._Z3barc = select i1 %cmp, ptr @_Z3fooc, ptr @_Z3barc
-  %call.i = tail call i32 %_Z3fooc._Z3barc(i8 signext 97), !callee_type !1
+  %andop = and i32 %argc, 1
+  %cmp = icmp eq i32 %andop, 0
+  %foo.bar = select i1 %cmp, ptr @foo, ptr @bar
+  %call.i = tail call i32 %foo.bar(i8 signext 97), !callee_type !1
   ret i32 %call.i
 }
 
-declare !type !2 i32 @_Z3fooc(i8 signext)
+declare !type !2 i32 @foo(i8 signext)
 
-declare !type !2 i32 @_Z3barc(i8 signext)
+declare !type !2 i32 @bar(i8 signext)
 
 ;; Check that the numeric type id (md5 hash) for the below type ids are emitted
 ;; to the callgraph section.

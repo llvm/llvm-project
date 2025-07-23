@@ -3,9 +3,9 @@
 
 ;; Verify the exact calleeTypeId value to ensure it is not garbage but the value
 ;; computed as the type id from the callee_type metadata.
-; RUN: llc --call-graph-section -mtriple=mips-linux-gnu < %s -stop-after=finalize-isel -o - | FileCheck %s
+; RUN: llc --call-graph-section -mtriple=mips-linux-gnu < %s -stop-after=finalize-isel -o - | FileCheck --match-full-lines %s
 
-define i32 @_Z13call_indirectPFicEc(ptr %func, i8 %x) !type !0 {
+define i32 @check_tailcall(ptr %func, i8 %x) !type !0 {
 entry:
   ; CHECK: callSites:
   ; CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], calleeTypeIds:
