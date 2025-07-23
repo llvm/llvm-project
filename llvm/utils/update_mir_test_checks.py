@@ -39,6 +39,10 @@ MI_FLAGS_STR = (
     r"|noconvergent |nneg |disjoint |nusw |samesign )*"
 )
 VREG_DEF_FLAGS_STR = r"(?:dead |undef )*"
+
+# Pattern to match the defined vregs and the opcode of an instruction that
+# defines vregs. Opcodes starting with a lower-case 't' are allowed to match
+# ARM's thumb instructions, like tADDi8 and t2ADDri.
 VREG_DEF_RE = re.compile(
     r"^ *(?P<vregs>{2}{0}(?:, {2}{0})*) = "
     r"{1}(?P<opcode>[A-Zt][A-Za-z0-9_]+)".format(
