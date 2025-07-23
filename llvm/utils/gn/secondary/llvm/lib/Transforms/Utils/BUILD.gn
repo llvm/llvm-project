@@ -76,6 +76,7 @@ static_library("Utils") {
     "MoveAutoInit.cpp",
     "NameAnonGlobals.cpp",
     "PredicateInfo.cpp",
+    "ProfileVerify.cpp",
     "PromoteMemoryToRegister.cpp",
     "RelLookupTableConverter.cpp",
     "SCCPSolver.cpp",
