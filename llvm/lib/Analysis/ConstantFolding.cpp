@@ -2004,21 +2004,20 @@ inline bool llvm_fenv_testexcept() {
   return false;
 }
 
-static const APFloat FTZPreserveSign(const APFloat &V) {
+static APFloat FTZPreserveSign(const APFloat &V) {
   if (V.isDenormal())
     return APFloat::getZero(V.getSemantics(), V.isNegative());
   return V;
 }
 
-static const APFloat FlushToPositiveZero(const APFloat &V) {
+static APFloat FlushToPositiveZero(const APFloat &V) {
   if (V.isDenormal())
     return APFloat::getZero(V.getSemantics(), false);
   return V;
 }
 
-static const APFloat
-FlushWithDenormKind(const APFloat &V,
-                    DenormalMode::DenormalModeKind DenormKind) {
+static APFloat FlushWithDenormKind(const APFloat &V,
+                                   DenormalMode::DenormalModeKind DenormKind) {
   assert(DenormKind != DenormalMode::DenormalModeKind::Invalid &&
          DenormKind != DenormalMode::DenormalModeKind::Dynamic);
   switch (DenormKind) {
