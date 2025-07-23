@@ -13,6 +13,7 @@ add_mlir_dialect_library(MLIRAMDGPUTransforms
   LINK_LIBS PUBLIC
   MLIRAMDGPUDialect
   MLIRAMDGPUUtils
+  MLIRAffineUtils
   MLIRArithDialect
   MLIRMemRefDialect
   MLIRSCFDialect
