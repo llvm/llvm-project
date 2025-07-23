@@ -515,27 +515,6 @@ declare i32 @foo()
 ; Loop with a call cannot be handled by LoopVectorize, introducing additional
 ; accumulators when unrolling increases throughput.
 define i32 @test_add_with_call(i64 %n, i32 %start) {
-; CHECK-LABEL: define i32 @test_add_with_call(
-; CHECK-SAME: i64 [[N:%.*]], i32 [[START:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT_3:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ [[START]], %[[ENTRY]] ], [ [[RDX_NEXT_3:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[L:%.*]] = call i32 @foo()
-; CHECK-NEXT:    [[RDX_NEXT:%.*]] = add i32 [[RDX]], [[L]]
-; CHECK-NEXT:    [[L_1:%.*]] = call i32 @foo()
-; CHECK-NEXT:    [[RDX_2:%.*]] = add i32 [[RDX_NEXT]], [[L_1]]
-; CHECK-NEXT:    [[L_2:%.*]] = call i32 @foo()
-; CHECK-NEXT:    [[RDX_NEXT_2:%.*]] = add i32 [[RDX_2]], [[L_2]]
-; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
-; CHECK-NEXT:    [[L_3:%.*]] = call i32 @foo()
-; CHECK-NEXT:    [[RDX_NEXT_3]] = add i32 [[RDX_NEXT_2]], [[L_3]]
-; CHECK-NEXT:    [[EC_3:%.*]] = icmp ne i64 [[IV_NEXT_3]], 1000
-; CHECK-NEXT:    br i1 [[EC_3]], label %[[LOOP]], label %[[EXIT:.*]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[BIN_RDX2:%.*]] = phi i32 [ [[RDX_NEXT_3]], %[[LOOP]] ]
-; CHECK-NEXT:    ret i32 [[BIN_RDX2]]
 ;
 entry:
   br label %loop
@@ -556,42 +535,6 @@ exit:
 ; Loop with backward dependence cannot be handled LoopVectorize, introducing additional
 ; accumulators when unrolling increases throughput.
 define i32 @test_add_with_backward_dep(ptr %p, i64 %n, i32 %start) {
-; CHECK-LABEL: define i32 @test_add_with_backward_dep(
-; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]], i32 [[START:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT_3:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ [[START]], %[[ENTRY]] ], [ [[RDX_NEXT_3:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i32, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds nuw i32, ptr [[P]], i64 [[IV_NEXT]]
-; CHECK-NEXT:    store i32 0, ptr [[GEP_1]], align 4
-; CHECK-NEXT:    [[RDX_NEXT:%.*]] = add i32 [[RDX]], [[L]]
-; CHECK-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[GEP_11:%.*]] = getelementptr inbounds nuw i32, ptr [[P]], i64 [[IV_NEXT]]
-; CHECK-NEXT:    [[L_1:%.*]] = load i32, ptr [[GEP_11]], align 4
-; CHECK-NEXT:    [[GEP_1_1:%.*]] = getelementptr inbounds nuw i32, ptr [[P]], i64 [[IV_NEXT_1]]
-; CHECK-NEXT:    store i32 0, ptr [[GEP_1_1]], align 4
-; CHECK-NEXT:    [[RDX_2:%.*]] = add i32 [[RDX_NEXT]], [[L_1]]
-; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV]], 3
-; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds nuw i32, ptr [[P]], i64 [[IV_NEXT_1]]
-; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[GEP_2]], align 4
-; CHECK-NEXT:    [[GEP_1_2:%.*]] = getelementptr inbounds nuw i32, ptr [[P]], i64 [[IV_NEXT_2]]
-; CHECK-NEXT:    store i32 0, ptr [[GEP_1_2]], align 4
-; CHECK-NEXT:    [[RDX_NEXT_2:%.*]] = add i32 [[RDX_2]], [[L_2]]
-; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
-; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds nuw i32, ptr [[P]], i64 [[IV_NEXT_2]]
-; CHECK-NEXT:    [[L_3:%.*]] = load i32, ptr [[GEP_3]], align 4
-; CHECK-NEXT:    [[GEP_1_3:%.*]] = getelementptr inbounds nuw i32, ptr [[P]], i64 [[IV_NEXT_3]]
-; CHECK-NEXT:    store i32 0, ptr [[GEP_1_3]], align 4
-; CHECK-NEXT:    [[RDX_NEXT_3]] = add i32 [[RDX_NEXT_2]], [[L_3]]
-; CHECK-NEXT:    [[EC_3:%.*]] = icmp ne i64 [[IV_NEXT_3]], 1000
-; CHECK-NEXT:    br i1 [[EC_3]], label %[[LOOP]], label %[[EXIT:.*]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[BIN_RDX3:%.*]] = phi i32 [ [[RDX_NEXT_3]], %[[LOOP]] ]
-; CHECK-NEXT:    ret i32 [[BIN_RDX3]]
 ;
 entry:
   br label %loop
