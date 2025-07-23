@@ -601,6 +601,28 @@ sees fit (generally the section that would provide the best locality).
 
 .. _CFI jump table: https://clang.llvm.org/docs/ControlFlowIntegrityDesign.html#forward-edge-cfi-for-indirect-function-calls
 
+``SHT_LLVM_MIN_ADDRALIGN`` Section (minimum section alignment)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This section is used to specify the minimum alignment of a section
+where that differs from its preferred alignment. Its ``sh_link``
+field identifies the section whose alignment is being specified, its
+``sh_addralign`` field specifies the linked section's minimum alignment
+and the ``sh_addralign`` field of the linked section's section header
+specifies its preferred alignment. This section has the ``SHF_EXCLUDE``
+flag so that it is stripped from the final executable or shared library,
+and the ``SHF_LINK_ORDER`` flag so that the ``sh_link`` field is updated
+by tools such as ``ld -r`` and ``objcopy``. The contents of the section
+must be empty.
+
+.. code-block:: gas
+
+  .prefalign n
+
+Specifies that the preferred alignment of the current section is
+determined by taking the maximum of ``n`` and the section's minimum
+alignment, and causes an ``SHT_LLVM_MIN_ADDRALIGN`` section to be emitted
+if necessary.
+
 CodeView-Dependent
 ------------------
 

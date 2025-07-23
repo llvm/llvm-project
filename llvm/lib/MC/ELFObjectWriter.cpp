@@ -926,10 +926,10 @@ void ELFWriter::writeSectionHeader(uint32_t GroupSymbolIndex, uint64_t Offset,
       sh_link = Sym->getSection().getOrdinal();
   }
 
-  writeSectionHeaderEntry(StrTabBuilder.getOffset(Section.getName()),
-                          Section.getType(), Section.getFlags(), 0, Offset,
-                          Size, sh_link, sh_info, Section.getAlign(),
-                          Section.getEntrySize());
+  writeSectionHeaderEntry(
+      StrTabBuilder.getOffset(Section.getName()), Section.getType(),
+      Section.getFlags(), 0, Offset, Size, sh_link, sh_info,
+      Section.getPreferredAlignment(), Section.getEntrySize());
 }
 
 void ELFWriter::writeSectionHeaders() {
@@ -1060,6 +1060,15 @@ uint64_t ELFWriter::writeObject() {
     if (RelSection) {
       RelSection->setOrdinal(addToSectionTable(RelSection));
       Relocations.push_back(RelSection);
+    }
+
+    if (Sec.getPreferredAlignment() != Sec.getAlign()) {
+      MCSectionELF *MinAlign = Ctx.getELFSection(
+          ".llvm.minalign", ELF::SHT_LLVM_MIN_ADDRALIGN,
+          ELF::SHF_EXCLUDE | ELF::SHF_LINK_ORDER, 0, "", false, 0,
+          cast<MCSymbolELF>(Section.getBeginSymbol()));
+      MinAlign->setOrdinal(addToSectionTable(MinAlign));
+      MinAlign->setAlignment(Sec.getAlign());
     }
 
     if (GroupIdxEntry) {
