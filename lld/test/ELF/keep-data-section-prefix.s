@@ -32,7 +32,7 @@
 ##   .data.rel.ro.split -> .data.rel.ro
 ##   .data.rel.ro -> .data.rel.ro
 ##   .data.rel.ro.hot -> .data.rel.ro.hot
-##   .data.rel.ro.unlikely -> .data.rel.ro.unlikely 
+##   .data.rel.ro.unlikely -> .data.rel.ro.unlikely
 # LS:      .text
 # LS-NEXT: .data.rel.ro.hot .data.rel.ro .data.rel.ro.unlikely .relro_padding
 # LS-NEXT: .data .bss
@@ -61,7 +61,7 @@
 SECTIONS {
   .data.rel.ro.hot : { *(.data.rel.ro.hot) }
   .data.rel.ro : { .data.rel.ro }
-  .data.rel.ro.unlikely : { *(.data.rel.ro.unlikely) } 
+  .data.rel.ro.unlikely : { *(.data.rel.ro.unlikely) }
 } INSERT AFTER .text
 
 

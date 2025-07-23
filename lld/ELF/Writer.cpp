@@ -553,24 +553,16 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
   }
 }
 
-// Returns true if the section is a data section that's read only and
-// relocatable per its section name.
+// Returns true if this is a variant of .data.rel.ro.
 static bool isRelRoDataSection(Ctx &ctx, StringRef secName) {
-  // The section name should start with ".data.rel.ro".
   if (!secName.consume_front(".data.rel.ro"))
     return false;
-
-  // If the section name is .data.rel.ro, it is a relocatable read-only data
-  // section.
   if (secName.empty())
     return true;
-  //  If  -z keep-data-section-prefix is given, '.data.rel.ro.hot' and
-  //  '.data.rel.ro.unlikely' are considered a split of '.data.rel.ro' based on
-  //  hotness.
-  if (ctx.arg.zKeepDataSectionPrefix) {
+  // If -z keep-data-section-prefix is specified, additionally allow
+  // '.data.rel.ro.hot' and '.data.rel.ro.unlikely'.
+  if (ctx.arg.zKeepDataSectionPrefix)
     return secName == ".hot" || secName == ".unlikely";
-  }
-
   return false;
 }
 
