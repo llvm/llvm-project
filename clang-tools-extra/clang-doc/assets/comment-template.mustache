@@ -32,6 +32,14 @@
     </div> 
     {{/ParamComments}}
 {{/HasParamComments}}
+{{#HasReturnComments}}
+    <h3>Returns</h3>
+    {{#ReturnComments}}
+        {{#.}}
+        <p>{{TextComment}}</p>
+        {{/.}}
+    {{/ReturnComments}}
+{{/HasReturnComments}}
 {{#BlockCommandComment}}
     <div class="block-command-comment__command">
         <div class="block-command-command">
