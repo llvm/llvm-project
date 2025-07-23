@@ -279,6 +279,7 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"mask", asValue}, {"pred", asValue}}},
      /*isElemental=*/false},
     {"asind", &I::genAsind},
+    {"asinpi", &I::genAsinpi},
     {"associated",
      &I::genAssociated,
      {{{"pointer", asInquired}, {"target", asInquired}}},
@@ -2843,6 +2844,21 @@ mlir::Value IntrinsicLibrary::genAsind(mlir::Type resultType,
       loc, mlir::Float64Type::get(context), llvm::APFloat(180.0) / pi);
   mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
   return mlir::arith::MulFOp::create(builder, loc, result, factor);
+}
+
+// ASINPI
+mlir::Value IntrinsicLibrary::genAsinpi(mlir::Type resultType,
+                                        llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  mlir::Value asin = getRuntimeCallGenerator("asin", ftype)(builder, loc, args);
+  llvm::APFloat inv_pi = llvm::APFloat(llvm::numbers::inv_pi);
+  mlir::Value dfactor =
+      builder.createRealConstant(loc, mlir::Float64Type::get(context), inv_pi);
+  mlir::Value factor = builder.createConvert(loc, resultType, dfactor);
+  return mlir::arith::MulFOp::create(builder, loc, asin, factor);
 }
 
 // ATAND, ATAN2D

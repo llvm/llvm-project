@@ -359,6 +359,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"asin", {{"x", SameFloating}}, SameFloating},
     {"asind", {{"x", SameFloating}}, SameFloating},
     {"asinh", {{"x", SameFloating}}, SameFloating},
+    {"asinpi", {{"x", SameFloating}}, SameFloating},
     {"associated",
         {{"pointer", AnyPointer, Rank::anyOrAssumedRank, Optionality::required,
              common::Intent::In, {ArgFlag::canBeNullPointer}},
