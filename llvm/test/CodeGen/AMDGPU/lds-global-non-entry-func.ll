@@ -15,10 +15,10 @@
 ; we emit a trap. The s_endpgm needs to be emitted in a terminator
 ; position.
 
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs < %s 2> %t | FileCheck -check-prefixes=CHECK,SDAG %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s 2> %t | FileCheck -check-prefixes=CHECK,SDAG %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
-; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs < %s 2> %t | FileCheck -check-prefixes=CHECK,GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s 2> %t | FileCheck -check-prefixes=CHECK,GISEL %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
 
