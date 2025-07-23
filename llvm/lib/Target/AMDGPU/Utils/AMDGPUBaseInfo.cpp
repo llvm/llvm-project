@@ -1508,6 +1508,8 @@ unsigned getMaxNumAGPRs(const MCSubtargetInfo *STI, unsigned int WavesPerEU) {
   return std::min(MaxNumAGPRs, AddressableNumAGPRs);
 }
 
+unsigned getAddressableNumAGPRs(const MCSubtargetInfo *STI) { return 256; }
+
 unsigned getEncodedNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumVGPRs,
                                  std::optional<bool> EnableWavefrontSize32) {
   return getGranulatedNumRegisterBlocks(
