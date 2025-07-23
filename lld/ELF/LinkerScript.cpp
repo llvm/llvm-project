@@ -48,9 +48,10 @@ static bool isSectionPrefix(StringRef prefix, StringRef name) {
   return name.consume_front(prefix) && (name.empty() || name[0] == '.');
 }
 
-static bool isSectionSuffix(StringRef suffix, StringRef name) {
-  name.consume_back(".");
-  return name.ends_with(suffix);
+// If name starts with prefix, trim the prefix and return true.
+// Otherwise, leave the name unchanged and return false.
+static bool trimSectionPrefix(StringRef prefix, StringRef &name) {
+  return name.consume_front(prefix) && (name.empty() || name[0] == '.');
 }
 
 StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
@@ -117,28 +118,27 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
   };
 
   for (auto [index, v] : llvm::enumerate(dataSectionPrefixes)) {
-    if (isSectionPrefix(v, s->name)) {
+    StringRef secName = s->name;
+    if (trimSectionPrefix(v, secName)) {
       if (!ctx.arg.zKeepDataSectionPrefix)
         return v;
-      // The .bss.rel.ro section is considered rarely accessed. So this section
-      // is not partitioned and zKeepDataSectionPrefix is not applied to
-      // make the executable simpler with fewer elf sections.
+      if (isSectionPrefix(".hot", secName))
+        return s->name.substr(0, v.size() + 4);
+      if (isSectionPrefix(".unlikely", secName))
+        return s->name.substr(0, v.size() + 9);
+      // For .rodata,  a section could be`.rodata.cst<N>.hot.` for constant
+      // pool or  `rodata.str<N>.hot.` for string literals.
+      if (index == 2) {
+        // The reason to specialize this path is to spell out .rodata.hot and
+        // .rodata.unlikely as string literals for StringRef lifetime
+        // considerations. We cannot use the pattern above to get substr from
+        // section names.
+        if (s->name.ends_with(".hot."))
+          return ".rodata.hot";
 
-        if (isSectionPrefix(".hot", s->name.substr(v.size())))
-          return s->name.substr(0, v.size() + 4);
-        if (isSectionPrefix(".unlikely", s->name.substr(v.size())))
-          return s->name.substr(0, v.size() + 9);
-        // For .rodata,  a section could be`.rodata.cst<N>.hot.` for constant
-        // pool or  `rodata.str<N>.hot.` for string literals.
-        if (index == 2) {
-          if (isSectionSuffix(".hot", s->name)) {
-            return ".rodata.hot";
-          }
-          if (isSectionSuffix(".unlikely", s->name)) {
-            return ".rodata.unlikely";
-          }
-        }
-
+        if (s->name.ends_with(".unlikely."))
+          return ".rodata.unlikely";
+      }
       return v;
     }
   }
