@@ -92,6 +92,9 @@ Breaking changes
 
 COFF Improvements
 -----------------
+* ``/thinlto-distributor`` and ``/thinlto-remote-compiler`` options
+  added to support Integrated Distributed ThinLTO.
+  (`#147265 <https://github.com/llvm/llvm-project/pull/147265>`_)
 
 MinGW Improvements
 ------------------
