@@ -11,6 +11,17 @@
 //===----------------------------------------------------------------------===//
 
 def : Function {
+    let name = "olCreateEvent";
+    let desc = "Create an event that will resolve when all current work in the queue is complete.";
+    let details = [];
+    let params = [
+        Param<"ol_queue_handle_t", "Queue", "queue to create the event for", PARAM_IN>,
+        Param<"ol_event_handle_t*", "Event", "output pointer for the created event", PARAM_OUT>
+    ];
+    let returns = [];
+}
+
+def : Function {
     let name = "olDestroyEvent";
     let desc = "Destroy the event and free all underlying resources.";
     let details = [];
