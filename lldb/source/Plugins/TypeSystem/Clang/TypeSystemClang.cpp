@@ -1013,6 +1013,11 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
         if (QualTypeMatchesBitSize(bit_size, ast, ast.Int128Ty))
           return GetType(ast.Int128Ty);
       }
+      if (type_name.contains("_BitInt")) {
+        auto bitIntTy = ast.getBitIntType(false, bit_size);
+        if (QualTypeMatchesBitSize(bit_size, ast, bitIntTy))
+          return GetType(bitIntTy);
+      }
     }
     // We weren't able to match up a type name, just search by size
     if (QualTypeMatchesBitSize(bit_size, ast, ast.CharTy))
@@ -1064,6 +1069,10 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
           return GetType(ast.UnsignedIntTy);
         if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedInt128Ty))
           return GetType(ast.UnsignedInt128Ty);
+      } else if (type_name.contains("_BitInt")) {
+        auto bitIntTy = ast.getBitIntType(true, bit_size);
+        if (QualTypeMatchesBitSize(bit_size, ast, bitIntTy))
+          return GetType(bitIntTy);
       }
     }
     // We weren't able to match up a type name, just search by size
@@ -3858,6 +3867,14 @@ TypeSystemClang::GetTypeInfo(lldb::opaque_compiler_type_t type,
                            ->getModifiedType()
                            .getAsOpaquePtr(),
                        pointee_or_element_clang_type);
+  case clang::Type::BitInt: {
+    const clang::BitIntType *bitint_type = llvm::cast<clang::BitIntType>(qual_type->getCanonicalTypeInternal());
+    uint32_t bitint_type_flags = eTypeHasValue | eTypeIsScalar | eTypeIsInteger;
+    if (bitint_type->isSigned()) {
+      bitint_type_flags |= eTypeIsSigned;
+    }
+    return bitint_type_flags;
+  }
   case clang::Type::Builtin: {
     const clang::BuiltinType *builtin_type =
         llvm::cast<clang::BuiltinType>(qual_type->getCanonicalTypeInternal());
