@@ -67,17 +67,17 @@ invoke.cont:
 lpad.v0:
   %i8 = landingpad { ptr, i32 } cleanup
   call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %i0)
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %i4)
   br label %end
 
 lpad.v1:
   %i9 = landingpad { ptr, i32 } cleanup
   call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %i2)
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %i6)
   br label %end
 
 end:
   %i10 = phi { ptr, i32 } [ %i8, %lpad.v0 ], [ %i9, %lpad.v1 ]
-  %i11 = phi ptr [ %i4, %lpad.v0 ], [ %i6, %lpad.v1 ]
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %i11)
   resume { ptr, i32 } %i10
 }
 ;.
