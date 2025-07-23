@@ -344,6 +344,7 @@ Non-comprehensive list of changes in this release
 - Added `__builtin_elementwise_exp10`.
 - For AMDPGU targets, added `__builtin_v_cvt_off_f32_i4` that maps to the `v_cvt_off_f32_i4` instruction.
 - Added `__builtin_elementwise_minnum` and `__builtin_elementwise_maxnum`.
+- Added `__builtin_elementwise_minnumnum` and `__builtin_elementwise_maxnumnum`.
 - No longer crashing on invalid Objective-C categories and extensions when
   dumping the AST as JSON. (#GH137320)
 - Clang itself now uses split stacks instead of threads for allocating more
