@@ -355,3 +355,34 @@ def another_reduce(reduce_op):
     for r in reduce_op.regions:
         if len(r.blocks[0].operations) == 0:
             return r
+
+
+@region_op
+def in_parallel():
+    return InParallelOp()
+
+
+def parallel_insert_slice(
+    source,
+    dest,
+    static_offsets=None,
+    static_sizes=None,
+    static_strides=None,
+    offsets=None,
+    sizes=None,
+    strides=None,
+):
+    from . import tensor
+
+    @in_parallel
+    def foo():
+        tensor.parallel_insert_slice(
+            source,
+            dest,
+            offsets,
+            sizes,
+            strides,
+            static_offsets,
+            static_sizes,
+            static_strides,
+        )
