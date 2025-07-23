@@ -269,8 +269,8 @@ public:
                               std::optional<int64_t> Value, unsigned ValueSize,
                               unsigned MaxBytesToEmit);
 
-  void emitValueToAlignment(Align Alignment, int64_t Value = 0,
-                            unsigned ValueSize = 1,
+  void emitValueToAlignment(Align Alignment, int64_t Fill = 0,
+                            uint8_t FillLen = 1,
                             unsigned MaxBytesToEmit = 0) override;
 
   void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
@@ -407,13 +407,8 @@ public:
                        const MCPseudoProbeInlineStack &InlineStack,
                        MCSymbol *FnSym) override;
 
-  void emitBundleAlignMode(Align Alignment) override;
-  void emitBundleLock(bool AlignToEnd) override;
-  void emitBundleUnlock() override;
-
-  std::optional<std::pair<bool, std::string>>
-  emitRelocDirective(const MCExpr &Offset, StringRef Name, const MCExpr *Expr,
-                     SMLoc Loc, const MCSubtargetInfo &STI) override;
+  void emitRelocDirective(const MCExpr &Offset, StringRef Name,
+                          const MCExpr *Expr, SMLoc Loc) override;
 
   void emitAddrsig() override;
   void emitAddrsigSym(const MCSymbol *Sym) override;
@@ -1528,10 +1523,10 @@ void MCAsmStreamer::emitAlignmentDirective(uint64_t ByteAlignment,
   EmitEOL();
 }
 
-void MCAsmStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
-                                         unsigned ValueSize,
+void MCAsmStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
+                                         uint8_t FillLen,
                                          unsigned MaxBytesToEmit) {
-  emitAlignmentDirective(Alignment.value(), Value, ValueSize, MaxBytesToEmit);
+  emitAlignmentDirective(Alignment.value(), Fill, FillLen, MaxBytesToEmit);
 }
 
 void MCAsmStreamer::emitCodeAlignment(Align Alignment,
@@ -2466,32 +2461,14 @@ void MCAsmStreamer::emitPseudoProbe(uint64_t Guid, uint64_t Index,
   for (const auto &Site : InlineStack)
     OS << " @ " << std::get<0>(Site) << ":" << std::get<1>(Site);
 
-  OS << " " << FnSym->getName();
+  OS << " ";
+  FnSym->print(OS, MAI);
 
   EmitEOL();
 }
 
-void MCAsmStreamer::emitBundleAlignMode(Align Alignment) {
-  OS << "\t.bundle_align_mode " << Log2(Alignment);
-  EmitEOL();
-}
-
-void MCAsmStreamer::emitBundleLock(bool AlignToEnd) {
-  OS << "\t.bundle_lock";
-  if (AlignToEnd)
-    OS << " align_to_end";
-  EmitEOL();
-}
-
-void MCAsmStreamer::emitBundleUnlock() {
-  OS << "\t.bundle_unlock";
-  EmitEOL();
-}
-
-std::optional<std::pair<bool, std::string>>
-MCAsmStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
-                                  const MCExpr *Expr, SMLoc,
-                                  const MCSubtargetInfo &STI) {
+void MCAsmStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
+                                       const MCExpr *Expr, SMLoc) {
   OS << "\t.reloc ";
   MAI->printExpr(OS, Offset);
   OS << ", " << Name;
@@ -2500,7 +2477,6 @@ MCAsmStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
     MAI->printExpr(OS, *Expr);
   }
   EmitEOL();
-  return std::nullopt;
 }
 
 void MCAsmStreamer::emitAddrsig() {

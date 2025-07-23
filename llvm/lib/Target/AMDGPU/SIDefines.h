@@ -229,6 +229,7 @@ enum OperandType : unsigned {
   /// Operand with 32-bit immediate that uses the constant bus.
   OPERAND_KIMM32,
   OPERAND_KIMM16,
+  OPERAND_KIMM64,
 
   /// Operands with an AccVGPR register or inline constant
   OPERAND_REG_INLINE_AC_INT32,
@@ -254,7 +255,7 @@ enum OperandType : unsigned {
   OPERAND_SRC_LAST = OPERAND_REG_INLINE_C_LAST,
 
   OPERAND_KIMM_FIRST = OPERAND_KIMM32,
-  OPERAND_KIMM_LAST = OPERAND_KIMM16
+  OPERAND_KIMM_LAST = OPERAND_KIMM64
 
 };
 }
@@ -397,7 +398,11 @@ enum CPol {
   SCOPE_DEV = 2 << 3,
   SCOPE_SYS = 3 << 3,
 
+  NV = 1 << 5, // Non-volatile bit
+
   SWZ = 1 << 6, // Swizzle bit
+
+  SCAL = 1 << 11, // Scale offset bit
 
   ALL = TH | SCOPE,
 
@@ -1001,6 +1006,16 @@ enum Target : unsigned {
 };
 
 } // namespace Exp
+
+namespace WMMA {
+enum MatrixFMT : unsigned {
+  MATRIX_FMT_FP8 = 0,
+  MATRIX_FMT_BF8 = 1,
+  MATRIX_FMT_FP6 = 2,
+  MATRIX_FMT_BF6 = 3,
+  MATRIX_FMT_FP4 = 4
+};
+} // namespace WMMA
 
 namespace VOP3PEncoding {
 

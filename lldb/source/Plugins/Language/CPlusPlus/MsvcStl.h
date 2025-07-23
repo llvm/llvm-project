@@ -37,6 +37,61 @@ bool MsvcStlSmartPointerSummaryProvider(ValueObject &valobj, Stream &stream,
 lldb_private::SyntheticChildrenFrontEnd *
 MsvcStlSmartPointerSyntheticFrontEndCreator(lldb::ValueObjectSP valobj_sp);
 
+// MSVC STL std::unique_ptr<>
+bool IsMsvcStlUniquePtr(ValueObject &valobj);
+bool MsvcStlUniquePtrSummaryProvider(ValueObject &valobj, Stream &stream,
+                                     const TypeSummaryOptions &options);
+
+lldb_private::SyntheticChildrenFrontEnd *
+MsvcStlUniquePtrSyntheticFrontEndCreator(lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::tuple<>
+bool IsMsvcStlTuple(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlTupleSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                     lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::vector<>
+bool IsMsvcStlVector(ValueObject &valobj);
+lldb_private::SyntheticChildrenFrontEnd *
+MsvcStlVectorSyntheticFrontEndCreator(lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::list and std::forward_list
+bool IsMsvcStlList(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlForwardListSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                           lldb::ValueObjectSP valobj_sp);
+SyntheticChildrenFrontEnd *
+MsvcStlListSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                    lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::optional<>
+bool IsMsvcStlOptional(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlOptionalSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                        lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::variant<>
+bool IsMsvcStlVariant(ValueObject &valobj);
+bool MsvcStlVariantSummaryProvider(ValueObject &valobj, Stream &stream,
+                                   const TypeSummaryOptions &options);
+SyntheticChildrenFrontEnd *
+MsvcStlVariantSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                       lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::atomic<>
+bool MsvcStlAtomicSummaryProvider(ValueObject &valobj, Stream &stream,
+                                  const TypeSummaryOptions &options);
+SyntheticChildrenFrontEnd *
+MsvcStlAtomicSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                      lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::unordered_(multi){map|set}<>
+bool IsMsvcStlUnordered(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlUnorderedSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                         lldb::ValueObjectSP valobj_sp);
+
 } // namespace formatters
 } // namespace lldb_private
 

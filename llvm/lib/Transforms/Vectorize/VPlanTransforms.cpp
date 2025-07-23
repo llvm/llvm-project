@@ -1481,9 +1481,9 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   // (BranchOnCond true).
   auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
   auto *CanIVTy = Plan.getCanonicalIV()->getScalarType();
-  if (all_of(
-          Header->phis(),
-          IsaPred<VPCanonicalIVPHIRecipe, VPFirstOrderRecurrencePHIRecipe>)) {
+  if (all_of(Header->phis(),
+             IsaPred<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe,
+                     VPFirstOrderRecurrencePHIRecipe>)) {
     for (VPRecipeBase &HeaderR : make_early_inc_range(Header->phis())) {
       auto *HeaderPhiR = cast<VPHeaderPHIRecipe>(&HeaderR);
       HeaderPhiR->replaceAllUsesWith(HeaderPhiR->getStartValue());
@@ -3083,16 +3083,15 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 }
 
 /// Returns true if \p V is VPWidenLoadRecipe or VPInterleaveRecipe that can be
-/// converted to a narrower recipe. \p V is used by a wide recipe \p WideMember
-/// that feeds a store interleave group at index \p Idx, \p WideMember0 is the
-/// recipe feeding the same interleave group at index 0. A VPWidenLoadRecipe can
-/// be narrowed to an index-independent load if it feeds all wide ops at all
-/// indices (\p OpV must be the operand at index \p OpIdx for both the recipe at
-/// lane 0, \p WideMember0, and \p WideMember). A VPInterleaveRecipe can be
-/// narrowed to a wide load, if \p V is defined at \p Idx of a load interleave
-/// group.
-static bool canNarrowLoad(VPWidenRecipe *WideMember0, VPWidenRecipe *WideMember,
-                          unsigned OpIdx, VPValue *OpV, unsigned Idx) {
+/// converted to a narrower recipe. \p V is used by a wide recipe that feeds a
+/// store interleave group at index \p Idx, \p WideMember0 is the recipe feeding
+/// the same interleave group at index 0. A VPWidenLoadRecipe can be narrowed to
+/// an index-independent load if it feeds all wide ops at all indices (\p OpV
+/// must be the operand at index \p OpIdx for both the recipe at lane 0, \p
+/// WideMember0). A VPInterleaveRecipe can be narrowed to a wide load, if \p V
+/// is defined at \p Idx of a load interleave group.
+static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
+                          VPValue *OpV, unsigned Idx) {
   auto *DefR = OpV->getDefiningRecipe();
   if (!DefR)
     return WideMember0->getOperand(OpIdx) == OpV;
@@ -3240,9 +3239,9 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
           R->getNumOperands() > 2)
         return;
       if (any_of(enumerate(R->operands()),
-                 [WideMember0, Idx = I, R](const auto &P) {
+                 [WideMember0, Idx = I](const auto &P) {
                    const auto &[OpIdx, OpV] = P;
-                   return !canNarrowLoad(WideMember0, R, OpIdx, OpV, Idx);
+                   return !canNarrowLoad(WideMember0, OpIdx, OpV, Idx);
                  }))
         return;
     }
@@ -3276,10 +3275,13 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     }
     auto *WideLoad = cast<VPWidenLoadRecipe>(R);
 
+    VPValue *PtrOp = WideLoad->getAddr();
+    if (auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(PtrOp))
+      PtrOp = VecPtr->getOperand(0);
     // Narrow wide load to uniform scalar load, as transformed VPlan will only
     // process one original iteration.
-    auto *N = new VPReplicateRecipe(&WideLoad->getIngredient(),
-                                    WideLoad->operands(), /*IsUniform*/ true,
+    auto *N = new VPReplicateRecipe(&WideLoad->getIngredient(), {PtrOp},
+                                    /*IsUniform*/ true,
                                     /*Mask*/ nullptr, *WideLoad);
     N->insertBefore(WideLoad);
     return N;

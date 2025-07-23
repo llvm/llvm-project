@@ -1,3 +1,4 @@
+include(TableGen)
 include(GNUInstallDirs)
 include(LLVMDistributionSupport)
 
