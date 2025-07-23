@@ -15,7 +15,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 LIBC_INLINE constexpr bool is_constant_evaluated() {
+#if LIBC_HAS_BUILTIN(__builtin_is_constant_evaluated)
   return __builtin_is_constant_evaluated();
+#else
+  return false;
+#endif
 }
 
 } // namespace cpp
