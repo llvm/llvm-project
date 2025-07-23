@@ -500,8 +500,8 @@ Error olSyncQueue_impl(ol_queue_handle_t Queue) {
   return Error::success();
 }
 
-Error olWaitQueue_impl(ol_queue_handle_t Queue, ol_event_handle_t *Events,
-                       size_t NumEvents) {
+Error olWaitEvents_impl(ol_queue_handle_t Queue, ol_event_handle_t *Events,
+                        size_t NumEvents) {
   auto *Device = Queue->Device->Device;
 
   for (size_t I = 0; I < NumEvents; I++) {
@@ -509,7 +509,7 @@ Error olWaitQueue_impl(ol_queue_handle_t Queue, ol_event_handle_t *Events,
 
     if (!Event)
       return Plugin::error(ErrorCode::INVALID_NULL_HANDLE,
-                           "olWaitQueue asked to wait on a NULL event");
+                           "olWaitEvents asked to wait on a NULL event");
 
     // Do nothing if the event is for this queue
     if (Event->Queue == Queue)

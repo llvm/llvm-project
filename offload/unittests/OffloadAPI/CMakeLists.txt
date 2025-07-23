@@ -40,7 +40,7 @@ add_offload_unittest("queue"
     queue/olDestroyQueue.cpp
     queue/olGetQueueInfo.cpp
     queue/olGetQueueInfoSize.cpp
-    queue/olWaitQueue.cpp)
+    queue/olWaitEvents.cpp)
 
 add_offload_unittest("symbol"
     symbol/olGetSymbol.cpp

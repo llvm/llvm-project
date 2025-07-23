@@ -42,7 +42,7 @@ def : Function {
 }
 
 def : Function {
-    let name = "olWaitQueue";
+    let name = "olWaitEvents";
     let desc = "Make any future work submitted to this queue wait until the provided events are complete.";
     let details = [
       "All events in `Events` must complete before the queue is unblocked.",

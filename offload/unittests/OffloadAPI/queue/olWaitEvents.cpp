@@ -1,4 +1,4 @@
-//===------- Offload API tests - olWaitQueue ------------------------------===//
+//===------- Offload API tests - olWaitEvents -----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
-struct olWaitQueueTest : OffloadProgramTest {
+struct olWaitEventsTest : OffloadProgramTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadProgramTest::SetUpWith("sequence"));
     ASSERT_SUCCESS(
@@ -28,9 +28,9 @@ struct olWaitQueueTest : OffloadProgramTest {
   ol_symbol_handle_t Kernel = nullptr;
   ol_kernel_launch_size_args_t LaunchArgs{};
 };
-OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olWaitQueueTest);
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olWaitEventsTest);
 
-TEST_P(olWaitQueueTest, Success) {
+TEST_P(olWaitEventsTest, Success) {
   constexpr size_t NUM_KERNELS = 16;
   ol_queue_handle_t Queues[NUM_KERNELS];
   ol_event_handle_t Events[NUM_KERNELS];
@@ -49,7 +49,7 @@ TEST_P(olWaitQueueTest, Success) {
     ASSERT_SUCCESS(olCreateQueue(Device, &Queues[I]));
 
     if (I > 0)
-      ASSERT_SUCCESS(olWaitQueue(Queues[I], &Events[I - 1], 1));
+      ASSERT_SUCCESS(olWaitEvents(Queues[I], &Events[I - 1], 1));
 
     ASSERT_SUCCESS(olLaunchKernel(Queues[I], Device, Kernel, &Args,
                                   sizeof(Args), &LaunchArgs, &Events[I]));
@@ -63,7 +63,7 @@ TEST_P(olWaitQueueTest, Success) {
   }
 }
 
-TEST_P(olWaitQueueTest, SuccessSingleQueue) {
+TEST_P(olWaitEventsTest, SuccessSingleQueue) {
   constexpr size_t NUM_KERNELS = 16;
   ol_queue_handle_t Queue;
   ol_event_handle_t Events[NUM_KERNELS];
@@ -82,7 +82,7 @@ TEST_P(olWaitQueueTest, SuccessSingleQueue) {
     Args.Idx = I;
 
     if (I > 0)
-      ASSERT_SUCCESS(olWaitQueue(Queue, &Events[I - 1], 1));
+      ASSERT_SUCCESS(olWaitEvents(Queue, &Events[I - 1], 1));
 
     ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
                                   &LaunchArgs, &Events[I]));
@@ -96,7 +96,7 @@ TEST_P(olWaitQueueTest, SuccessSingleQueue) {
   }
 }
 
-TEST_P(olWaitQueueTest, SuccessMultipleEvents) {
+TEST_P(olWaitEventsTest, SuccessMultipleEvents) {
   constexpr size_t NUM_KERNELS = 16;
   ol_queue_handle_t Queues[NUM_KERNELS];
   ol_event_handle_t Events[NUM_KERNELS];
@@ -115,7 +115,7 @@ TEST_P(olWaitQueueTest, SuccessMultipleEvents) {
     ASSERT_SUCCESS(olCreateQueue(Device, &Queues[I]));
 
     if (I > 0)
-      ASSERT_SUCCESS(olWaitQueue(Queues[I], Events, I));
+      ASSERT_SUCCESS(olWaitEvents(Queues[I], Events, I));
 
     ASSERT_SUCCESS(olLaunchKernel(Queues[I], Device, Kernel, &Args,
                                   sizeof(Args), &LaunchArgs, &Events[I]));
@@ -129,20 +129,20 @@ TEST_P(olWaitQueueTest, SuccessMultipleEvents) {
   }
 }
 
-TEST_P(olWaitQueueTest, InvalidNullQueue) {
+TEST_P(olWaitEventsTest, InvalidNullQueue) {
   ol_event_handle_t Event;
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olWaitQueue(nullptr, &Event, 1));
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olWaitEvents(nullptr, &Event, 1));
 }
 
-TEST_P(olWaitQueueTest, InvalidNullEvent) {
+TEST_P(olWaitEventsTest, InvalidNullEvent) {
   ol_queue_handle_t Queue;
   ASSERT_SUCCESS(olCreateQueue(Device, &Queue));
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER, olWaitQueue(Queue, nullptr, 1));
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER, olWaitEvents(Queue, nullptr, 1));
 }
 
-TEST_P(olWaitQueueTest, InvalidNullInnerEvent) {
+TEST_P(olWaitEventsTest, InvalidNullInnerEvent) {
   ol_queue_handle_t Queue;
   ASSERT_SUCCESS(olCreateQueue(Device, &Queue));
   ol_event_handle_t Event = nullptr;
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olWaitQueue(Queue, &Event, 1));
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olWaitEvents(Queue, &Event, 1));
 }
