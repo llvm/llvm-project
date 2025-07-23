@@ -6315,7 +6315,7 @@ void CFGBlock::printTerminatorJson(raw_ostream &Out, const LangOptions &LO,
 // analysis, it's automatically marked with analyzer_noreturn attribute
 // for caching and future reference.
 static bool isImmediateSinkBlock(const CFGBlock *Blk,
-                                 bool InterProceduralCheck) {
+                                 CFGBlock::InterProcAnalysis flag) {
   if (Blk->hasNoReturnElement())
     return true;
 
@@ -6332,7 +6332,7 @@ static bool isImmediateSinkBlock(const CFGBlock *Blk,
       }))
     return true;
 
-  if (!InterProceduralCheck)
+  if (flag != CFGBlock::InterProcAnalysis::On)
     return false;
 
   auto HasNoReturnCall = [&](const CallExpr *CE) {
@@ -6364,8 +6364,7 @@ static bool isImmediateSinkBlock(const CFGBlock *Blk,
       auto CalleeCFG =
           CFG::buildCFG(DefFD, DefFD->getBody(), &DefFD->getASTContext(), {});
 
-      NoReturn = CalleeCFG && CalleeCFG->getEntry().isInevitablySinking(
-                                  InterProceduralCheck);
+      NoReturn = CalleeCFG && CalleeCFG->getEntry().isInevitablySinking(flag);
 
       // Override to `analyzer_noreturn(true)`
       if (NoReturn)
@@ -6387,11 +6386,11 @@ static bool isImmediateSinkBlock(const CFGBlock *Blk,
   return false;
 }
 
-bool CFGBlock::isInevitablySinking(bool DoInterProcAnalysis) const {
+bool CFGBlock::isInevitablySinking(InterProcAnalysis flag) const {
   const CFG &Cfg = *getParent();
 
   const CFGBlock *StartBlk = this;
-  if (isImmediateSinkBlock(StartBlk, DoInterProcAnalysis))
+  if (isImmediateSinkBlock(StartBlk, flag))
     return true;
 
   llvm::SmallVector<const CFGBlock *, 32> DFSWorkList;
@@ -6411,8 +6410,7 @@ bool CFGBlock::isInevitablySinking(bool DoInterProcAnalysis) const {
 
     for (const auto &Succ : Blk->succs()) {
       if (const CFGBlock *SuccBlk = Succ.getReachableBlock()) {
-        if (!isImmediateSinkBlock(SuccBlk, DoInterProcAnalysis) &&
-            !Visited.count(SuccBlk)) {
+        if (!isImmediateSinkBlock(SuccBlk, flag) && !Visited.count(SuccBlk)) {
           // If the block has reachable child blocks that aren't no-return,
           // add them to the worklist.
           DFSWorkList.push_back(SuccBlk);
