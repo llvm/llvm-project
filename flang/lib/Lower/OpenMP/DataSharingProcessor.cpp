@@ -24,6 +24,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/Sequence.h"
@@ -465,7 +466,8 @@ bool DataSharingProcessor::isOpenMPPrivatizingConstruct(
   // allow a privatizing clause) are: dispatch, distribute, do, for, loop,
   // parallel, scope, sections, simd, single, target, target_data, task,
   // taskgroup, taskloop, and teams.
-  return llvm::is_contained(privatizing, extractOmpDirective(omp));
+  return llvm::is_contained(privatizing,
+                            parser::omp::GetOmpDirectiveName(omp).v);
 }
 
 bool DataSharingProcessor::isOpenMPPrivatizingEvaluation(
