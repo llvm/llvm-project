@@ -106,17 +106,11 @@ exit:
   ret void
 }
 
-; TOOD: The loop should be safe without dependence, as all accesses to %l are
-; completely before the first store.
 define void @backward_dep_known_safe_due_to_backedge_taken_count(ptr %A) {
 ; CHECK-LABEL: 'backward_dep_known_safe_due_to_backedge_taken_count'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 8160 bits
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        BackwardVectorizable:
-; CHECK-NEXT:            %l = load i32, ptr %gep, align 4 ->
-; CHECK-NEXT:            store i32 %add, ptr %gep.mul.2, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
