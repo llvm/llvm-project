@@ -604,8 +604,7 @@ struct GH99278_2 {
 };
 GH99278_2<void> e;
 void GH99278_3(int(*p)[]) {
-  delete p;
-  // expected-warning@-1 {{'delete' applied to a pointer-to-array type 'int (*)[]' treated as 'delete[]'}}
+  delete[] p;
 };
 #endif
 
