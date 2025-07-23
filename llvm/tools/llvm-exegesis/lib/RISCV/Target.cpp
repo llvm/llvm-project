@@ -654,7 +654,7 @@ static std::vector<MCInst> loadFP64RegBits32(const MCSubtargetInfo &STI,
   Instrs.push_back(MCInstBuilder(RISCV::FCVT_D_W)
                        .addReg(Reg)
                        .addReg(ScratchIntReg)
-                       .addImm(7));
+                       .addImm(RISCVFPRndMode::RoundingMode::RNE));
   return Instrs;
 }
 
