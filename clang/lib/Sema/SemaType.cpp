@@ -7947,6 +7947,10 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     if (!S.checkStringLiteralArgumentAttr(attr, 0, Argument))
       return false;
 
+    // Delay if this is not a function type.
+    if (!unwrapped.isFunctionType())
+      return false;
+
     const auto *FnTy = unwrapped.get()->getAs<FunctionProtoType>();
     FunctionProtoType::ExtProtoInfo EPI = FnTy->getExtProtoInfo();
     EPI.ExtraAttributeInfo.CFISalt = Argument;

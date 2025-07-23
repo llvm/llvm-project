@@ -11441,6 +11441,11 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     if (lproto->getMethodQuals() != rproto->getMethodQuals())
       return {};
 
+    // Function protos with different 'cfi_salt' values aren't compatible.
+    if (lproto->getExtraAttributeInfo().CFISalt !=
+        rproto->getExtraAttributeInfo().CFISalt)
+      return {};
+
     // Function effects are handled similarly to noreturn, see above.
     FunctionEffectsRef LHSFX = lproto->getFunctionEffects();
     FunctionEffectsRef RHSFX = rproto->getFunctionEffects();
