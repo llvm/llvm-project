@@ -2453,6 +2453,17 @@ bool LowerTypeTestsModule::lower() {
         } else {
           Alias->setName(AliasName);
         }
+
+        if (auto *F = M.getFunction((AliasName + ".cfi").str())) {
+          // Function can be an alias. In such case we need definition of .cfi
+          // of aliasee.
+          if (auto *CfiAleasee = M.getFunction((Aliasee + ".cfi").str())) {
+            F->replaceAllUsesWith(CfiAleasee);
+            F->eraseFromParent();
+          } else {
+            F->setName(Aliasee + ".cfi");
+          }
+        }
       }
     }
   }
