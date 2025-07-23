@@ -17,12 +17,16 @@
 #include "mlir/IR/OpDefinition.h"
 
 namespace mlir::wasmssa {
+
+template <class OperationType>
+struct AlwaysValidConstantExprTrait
+    : public OpTrait::TraitBase<OperationType, AlwaysValidConstantExprTrait> {};
+
 namespace detail {
 LogicalResult verifyConstantExpressionInterface(Operation *op);
 LogicalResult verifyWasmSSALabelBranchingInterface(Operation *op);
 } // namespace detail
-
-#include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSAInterfaces.h.inc"
 } // namespace mlir::wasmssa
+#include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSAInterfaces.h.inc"
 
 #endif // MLIR_DIALECT_WEBASSEMBLYSSA_IR_WEBASSEMBLYSSAINTERFACES_H_

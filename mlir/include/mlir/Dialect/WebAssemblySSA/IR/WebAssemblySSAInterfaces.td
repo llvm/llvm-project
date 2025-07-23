@@ -17,6 +17,7 @@ include "mlir/IR/OpBase.td"
 include "mlir/IR/BuiltinAttributes.td"
 
 def WasmSSALabelLevelOpInterface : OpInterface<"WasmSSALabelLevelInterface"> {
+  let cppNamespace = "::mlir::wasmssa";
   let description = [{
     Operation that defines one level of nesting for wasm branching.
     These operation region can be targeted by branch instructions.
@@ -32,6 +33,7 @@ def WasmSSALabelLevelOpInterface : OpInterface<"WasmSSALabelLevelInterface"> {
 }
 
 def WasmSSALabelBranchingOpInterface : OpInterface<"WasmSSALabelBranchingInterface"> {
+  let cppNamespace = "::mlir::wasmssa";
   let description = [{
     Wasm operation that targets a label for a jump.
   }];
@@ -70,6 +72,7 @@ def WasmSSALabelBranchingOpInterface : OpInterface<"WasmSSALabelBranchingInterfa
 }
 
 def WasmSSAImportOpInterface : OpInterface<"WasmSSAImportOpInterface"> {
+  let cppNamespace = "::mlir::wasmssa";
   let description = [{
     Operation that imports a symbol from an external wasm module;
   }];
@@ -112,6 +115,7 @@ def WasmSSAImportOpInterface : OpInterface<"WasmSSAImportOpInterface"> {
 
 def WasmSSAConstantExpressionInitializerInterface :
           OpInterface<"WasmSSAConstantExpressionInitializerInterface"> {
+  let cppNamespace = "::mlir::wasmssa";
   let description = [{
     Operation that must be constant initialized. This
     interface adds a verifier that checks that all ops
@@ -122,11 +126,11 @@ def WasmSSAConstantExpressionInitializerInterface :
   let verify = [{ return detail::verifyConstantExpressionInterface($_op); }];
 }
 
-def WasmSSAConstantExprCheckInterface :
-          OpInterface<"WasmSSAConstantExprCheckInterface"> {
+def ConstantExprCheckInterface :
+          OpInterface<"ConstantExprCheckInterface"> {
+  let cppNamespace = "::mlir::wasmssa";
   let description = [{
     Base interface for operations that can be used in a Wasm Constant Expression.
-    It shouldn't be used directly, use one of the derived instead.
   }];
 
   let methods = [
@@ -136,51 +140,17 @@ def WasmSSAConstantExprCheckInterface :
       }],
       /*returnType=*/  "::mlir::LogicalResult",
       /*methodName=*/  "isValidInConstantExpr",
-      /*args=*/        (ins),
-      /*methodBody=*/ [{
-        return $_op.verifyConstantExprValidity();
-      }]
-      >
-  ];
-}
-
-def WasmSSAContextuallyConstantExprInterface :
-          OpInterface<"WasmSSAContextuallyConstantExprInterface", [WasmSSAConstantExprCheckInterface]> {
-  let description = [{
-    Base interface for operations that can be used in a Wasm Constant Expression
-    depending on the context.
-  }];
-
-  let methods = [
-    InterfaceMethod<
-      /*desc=*/        [{
-        Returns success if the current operation is valid in a constant expression context.
-      }],
-      /*returnType=*/  "::mlir::LogicalResult",
-      /*methodName=*/  "verifyConstantExprValidity",
       /*args=*/        (ins)
       >
   ];
 }
 
-def WasmSSAConstantExprInterface :
-          OpInterface<"WasmSSAConstantExprInterface", [WasmSSAConstantExprCheckInterface]> {
-  let description = [{
-    Base interface for operations that can always be used in a Wasm Constant Expression.
-  }];
-
-  let methods = [
-    InterfaceMethod<
-      /*desc=*/        [{
-        Returns success if the current operation is valid in a constant expression context.
-      }],
-      /*returnType=*/  "::mlir::LogicalResult",
-      /*methodName=*/  "verifyConstantExprValidity",
-      /*args=*/        (ins),
-      /*methodBody=*/ [{}],
-      /*DefaultImplementation=*/ [{ return success(); }]
-      >
-  ];
+def AlwaysValidConstantExprTrait : NativeOpTrait<"AlwaysValidConstantExprTrait", [], [{
+    ::mlir::LogicalResult isValidInConstantExpr() {
+      return success();
+    }
+  }]> {
+  let cppNamespace = "::mlir::wasmssa";
 }
 
 #endif // WEBASSEMBLY_INTERFACES

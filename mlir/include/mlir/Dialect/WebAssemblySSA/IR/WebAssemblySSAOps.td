@@ -69,7 +69,9 @@ def WasmSSA_BranchIfOp : WasmSSA_Op<"branch_if", [
 }
 
 def WasmSSA_ConstOp : WasmSSA_Op<"const", [
-    AllTypesMatch<["value", "result"]>, WasmSSAConstantExprInterface]> {
+    AllTypesMatch<["value", "result"]>,
+    ConstantExprCheckInterface,
+    AlwaysValidConstantExprTrait]> {
   let summary = "Operator that represents a constant value";
   let arguments = (ins TypedAttrInterface: $value);
   let results = (outs WasmSSA_NumericType: $result);
@@ -218,7 +220,7 @@ def WasmSSA_GlobalImportOp : WasmSSA_Op<"import_global", [
   let hasCustomAssemblyFormat = 1;
 }
 
-def WasmSSA_GlobalGetOp : WasmSSA_Op<"global_get", [DeclareOpInterfaceMethods<WasmSSAContextuallyConstantExprInterface>]> {
+def WasmSSA_GlobalGetOp : WasmSSA_Op<"global_get", [DeclareOpInterfaceMethods<ConstantExprCheckInterface>]> {
   let summary = "Returns the value of the global passed as argument.";
   let arguments = (ins FlatSymbolRefAttr: $global);
   let results = (outs WasmSSA_ValType: $global_val);

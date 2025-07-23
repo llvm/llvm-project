@@ -35,7 +35,7 @@ LogicalResult verifyConstantExpressionInterface(Operation *op) {
         if (isa<ReturnOp>(currentOp))
           return WalkResult::advance();
         if (auto interfaceOp =
-                dyn_cast<WasmSSAConstantExprCheckInterface>(currentOp)) {
+                dyn_cast<ConstantExprCheckInterface>(currentOp)) {
           if (interfaceOp.isValidInConstantExpr().succeeded())
             return WalkResult::advance();
         }

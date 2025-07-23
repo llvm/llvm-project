@@ -6,6 +6,7 @@
 //
 //===---------------------------------------------------------------------===//
 
+#include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSAInterfaces.h"
 #include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSA.h"
 
 #include "mlir/IR/Attributes.h"
@@ -301,7 +302,7 @@ void GlobalOp::print(OpAsmPrinter &printer) {
 //===----------------------------------------------------------------------===//
 
 // Custom interface overrides
-LogicalResult GlobalGetOp::verifyConstantExprValidity() {
+LogicalResult GlobalGetOp::isValidInConstantExpr() {
   StringRef referencedSymbol = getGlobal();
   Operation *symTableOp =
       getOperation()->getParentWithTrait<OpTrait::SymbolTable>();
