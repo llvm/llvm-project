@@ -340,6 +340,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"acos", {{"x", SameFloating}}, SameFloating},
     {"acosd", {{"x", SameFloating}}, SameFloating},
     {"acosh", {{"x", SameFloating}}, SameFloating},
+    {"acospi", {{"x", SameFloating}}, SameFloating},
     {"adjustl", {{"string", SameChar}}, SameChar},
     {"adjustr", {{"string", SameChar}}, SameChar},
     {"aimag", {{"z", SameComplex}}, SameReal},

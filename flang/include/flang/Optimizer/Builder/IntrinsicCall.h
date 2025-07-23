@@ -174,6 +174,7 @@ struct IntrinsicLibrary {
   /// real and to the `hypot` math routine if the argument is of complex type.
   mlir::Value genAbs(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genAcosd(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAcospi(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <void (*CallRuntime)(fir::FirOpBuilder &, mlir::Location loc,
                                 mlir::Value, mlir::Value)>
   fir::ExtendedValue genAdjustRtCall(mlir::Type,
