@@ -48,6 +48,13 @@ static const MachineMemOperand::Flags MONoClobber =
 static const MachineMemOperand::Flags MOLastUse =
     MachineMemOperand::MOTargetFlag2;
 
+struct V2PhysSCopyInfo {
+  // Operands that need to replaced by waterfall
+  SmallVector<MachineOperand *> MOs;
+  // Target physical registers replacing the MOs
+  SmallVector<Register> SGPRs;
+};
+
 /// Utility to store machine instructions worklist.
 struct SIInstrWorklist {
   SIInstrWorklist() = default;
@@ -74,6 +81,9 @@ struct SIInstrWorklist {
   bool isDeferred(MachineInstr *MI);
 
   SetVector<MachineInstr *> &getDeferredList() { return DeferredList; }
+
+  DenseMap<MachineInstr *, V2PhysSCopyInfo> WaterFalls;
+  DenseMap<MachineInstr *, bool> V2PhySCopiesToErase;
 
 private:
   /// InstrList contains the MachineInstrs.
@@ -1333,6 +1343,10 @@ public:
   void moveToVALUImpl(SIInstrWorklist &Worklist, MachineDominatorTree *MDT,
                       MachineInstr &Inst) const;
 
+  void createWaterFall(MachineInstr *MI, MachineDominatorTree *MDT,
+                       ArrayRef<MachineOperand *> ScalarOps,
+                       ArrayRef<Register> PhySGPRs = {}) const;
+
   void insertNoop(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator MI) const override;
 
@@ -1569,17 +1583,6 @@ bool execMayBeModifiedBeforeUse(const MachineRegisterInfo &MRI,
 bool execMayBeModifiedBeforeAnyUse(const MachineRegisterInfo &MRI,
                                    Register VReg,
                                    const MachineInstr &DefMI);
-
-/// Build a waterfall loop around \p MI, replacing the VGPR \p ScalarOp register
-/// with SGPRs by iterating over all unique values across all lanes.
-/// Returns the loop basic block that now contains \p MI.
-MachineBasicBlock *
-loadMBUFScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
-                               ArrayRef<MachineOperand *> ScalarOps,
-                               MachineDominatorTree *MDT,
-                               MachineBasicBlock::iterator Begin = nullptr,
-                               MachineBasicBlock::iterator End = nullptr,
-                               ArrayRef<Register> PhySGPRs = {});
 
 namespace AMDGPU {
 
