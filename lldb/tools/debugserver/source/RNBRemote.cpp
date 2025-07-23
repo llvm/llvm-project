@@ -4251,7 +4251,6 @@ rnb_err_t RNBRemote::HandlePacket_MemoryRegionInfo(const char *p) {
      is in unmapped memory
          Region lookup cannot be performed on this platform or process is not
      yet launched
-         This packet isn't implemented
 
      Examples of use:
         qMemoryRegionInfo:3a55140
@@ -4302,6 +4301,16 @@ rnb_err_t RNBRemote::HandlePacket_MemoryRegionInfo(const char *p) {
     if (region_info.permissions & eMemoryPermissionsExecutable)
       ostrm << 'x';
     ostrm << ';';
+
+    if (!region_info.flags.empty()) {
+      ostrm << "flags:";
+      for (size_t i = 0; i < region_info.flags.size(); i++) {
+        if (i != 0)
+          ostrm << " ";  // Separator is whitespace
+        ostrm << region_info.flags[i];
+      }
+      ostrm << ";";
+    }
 
     ostrm << "dirty-pages:";
     if (region_info.dirty_pages.size() > 0) {
