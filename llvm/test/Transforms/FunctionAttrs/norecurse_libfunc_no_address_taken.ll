@@ -8,8 +8,8 @@
 @.str = private unnamed_addr constant [12 x i8] c"Hello World\00", align 1
 
 ; Function Attrs: nofree noinline nounwind uwtable
-define internal void @bob() #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nounwind uwtable
+define internal void @bob() {
+; CHECK: Function Attrs: norecurse
 ; CHECK-LABEL: define internal void @bob(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -22,13 +22,13 @@ entry:
 }
 
 ; Function Attrs: nofree nounwind
-declare noundef i32 @printf(ptr noundef readonly captures(none), ...) local_unnamed_addr #1
+declare noundef i32 @printf(ptr noundef readonly captures(none), ...)
 
 ; Function Attrs: nofree norecurse nounwind uwtable
-define dso_local noundef i32 @main() #2 {
-; CHECK: Function Attrs: nofree norecurse nounwind uwtable
+define dso_local noundef i32 @main() norecurse {
+; CHECK: Function Attrs: norecurse
 ; CHECK-LABEL: define dso_local noundef i32 @main(
-; CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    tail call void @bob()
 ; CHECK-NEXT:    ret i32 0
@@ -37,7 +37,3 @@ entry:
   tail call void @bob()
   ret i32 0
 }
-
-attributes #0 = { nofree noinline nounwind uwtable }
-attributes #1 = { nofree nounwind }
-attributes #2 = { nofree norecurse nounwind uwtable }

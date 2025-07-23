@@ -2285,13 +2285,10 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
   addColdAttrs(Nodes.SCCNodes, Changed);
   addWillReturn(Nodes.SCCNodes, Changed);
   addNoUndefAttrs(Nodes.SCCNodes, Changed);
-
-  // If we have no external nodes participating in the SCC, we can deduce some
-  // more precise attributes as well.
-    addNoAliasAttrs(Nodes.SCCNodes, Changed);
-    addNonNullAttrs(Nodes.SCCNodes, Changed);
-    inferAttrsFromFunctionBodies(Nodes.SCCNodes, Changed);
-    addNoRecurseAttrs(Nodes.SCCNodes, Changed, NoFunctionAddressIsTaken);
+  addNoAliasAttrs(Nodes.SCCNodes, Changed);
+  addNonNullAttrs(Nodes.SCCNodes, Changed);
+  inferAttrsFromFunctionBodies(Nodes.SCCNodes, Changed);
+  addNoRecurseAttrs(Nodes.SCCNodes, Changed, NoFunctionAddressIsTaken);
 
   // Finally, infer the maximal set of attributes from the ones we've inferred
   // above.  This is handling the cases where one attribute on a signature
@@ -2333,38 +2330,37 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
     Functions.push_back(&N.getFunction());
   }
 
-  bool NoFunctionsAddressIsTaken = false;
   // Check if any function in the whole program has its address taken or has
   // potentially external linkage.
   // We use this information when inferring norecurse attribute: If there is
   // no function whose address is taken and all functions have internal
   // linkage, there is no path for a callback to any user function.
-  if (IsLTOPostLink || ForceLTOFuncAttrs) {
-    bool AnyFunctionsAddressIsTaken = false;
-    // Get the parent Module of the Function
-    Module &M = *C.begin()->getFunction().getParent();
-    for (Function &F : M) {
-      // We only care about functions defined in user program whose addresses
-      // escape, making them potential callback targets.
-      if (F.isDeclaration())
-        continue;
+  bool AnyFunctionsAddressIsTaken = false;
+  // Get the parent Module of the Function
+  Module &M = *C.begin()->getFunction().getParent();
+  for (Function &F : M) {
+    // We only care about functions defined in user program whose addresses
+    // escape, making them potential callback targets.
+    if (F.isDeclaration())
+      continue;
 
-      // If the function is already marked as norecurse, this should not block
-      // norecurse inference even though it may have external linkage.
-      // For ex: main() in C++.
-      if (F.doesNotRecurse())
-        continue;
+    // If the function is already marked as norecurse, this should not block
+    // norecurse inference even though it may have external linkage.
+    // For ex: main() in C++.
+    if (F.doesNotRecurse())
+      continue;
 
-      if (!F.hasLocalLinkage() || F.hasAddressTaken()) {
-        AnyFunctionsAddressIsTaken = true;
-        break; // break if we found one
-      }
+    if (!F.hasLocalLinkage() || F.hasAddressTaken()) {
+      AnyFunctionsAddressIsTaken = true;
+      break; // break if we found one
     }
-    NoFunctionsAddressIsTaken = !AnyFunctionsAddressIsTaken;
   }
 
+  if (ForceLTOFuncAttrs)
+    IsLTOPostLink = true; // For testing purposes only
   auto ChangedFunctions = deriveAttrsInPostOrder(
-      Functions, AARGetter, ArgAttrsOnly, NoFunctionsAddressIsTaken);
+      Functions, AARGetter, ArgAttrsOnly,
+      IsLTOPostLink ? !AnyFunctionsAddressIsTaken : false);
 
   if (ChangedFunctions.empty())
     return PreservedAnalyses::all();

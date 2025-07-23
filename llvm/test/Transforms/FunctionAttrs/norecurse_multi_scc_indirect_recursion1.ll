@@ -12,8 +12,8 @@
 ; norecurse.
 
 ; Function Attrs: nofree noinline norecurse nosync nounwind memory(none) uwtable
-define dso_local noundef i32 @main() #1 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind memory(none) uwtable
+define dso_local noundef i32 @main() norecurse {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind memory(none)
 ; CHECK-LABEL: define dso_local noundef i32 @main(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -26,8 +26,8 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-define internal void @f1() #0 {
-; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind memory(none) uwtable
+define internal void @f1() {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind memory(none)
 ; CHECK-LABEL: define internal void @f1(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -42,8 +42,8 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-define internal void @bar4() #0 {
-; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
+define internal void @bar4() {
+; CHECK: Function Attrs: nofree nosync nounwind memory(none)
 ; CHECK-LABEL: define internal void @bar4(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -56,8 +56,8 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-define internal void @bar2() #0 {
-; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
+define internal void @bar2() {
+; CHECK: Function Attrs: nofree nosync nounwind memory(none)
 ; CHECK-LABEL: define internal void @bar2(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -70,8 +70,8 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-define internal void @bar3() #0 {
-; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
+define internal void @bar3() {
+; CHECK: Function Attrs: nofree nosync nounwind memory(none)
 ; CHECK-LABEL: define internal void @bar3(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -84,8 +84,8 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-define internal void @fun() #0 {
-; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
+define internal void @fun() {
+; CHECK: Function Attrs: nofree nosync nounwind memory(none)
 ; CHECK-LABEL: define internal void @fun(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -98,8 +98,8 @@ entry:
 }
 
 ; Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
-define internal void @baz() #0 {
-; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
+define internal void @baz() {
+; CHECK: Function Attrs: nofree nosync nounwind memory(none)
 ; CHECK-LABEL: define internal void @baz(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -110,6 +110,3 @@ entry:
   tail call void @fun()
   ret void
 }
-
-attributes #0 = { nofree noinline nosync nounwind memory(none) uwtable }
-attributes #1 = { nofree noinline norecurse nosync nounwind memory(none) uwtable }
