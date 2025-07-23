@@ -2968,14 +2968,6 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
   }
 
   llvm::Value *V = CGF.CGM.GetAddrOfGlobalVar(VD);
-  if (VD->hasAttr<OMPIteratorAttr>()) {
-    if (auto *GV = dyn_cast<llvm::GlobalVariable>(V)) {
-      llvm::LLVMContext &Ctx = GV->getContext();
-      llvm::MDNode *MD =
-          llvm::MDNode::get(Ctx, llvm::MDString::get(Ctx, "omp.iterator"));
-      GV->setMetadata("omp.iterator", MD);
-    }
-  }
 
   if (VD->getTLSKind() != VarDecl::TLS_None)
     V = CGF.Builder.CreateThreadLocalAddress(V);

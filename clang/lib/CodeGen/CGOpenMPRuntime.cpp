@@ -7803,6 +7803,13 @@ private:
       const auto *C = dyn_cast<OMPMapClause>(Cl);
       if (!C)
         continue;
+      if (auto *IE = dyn_cast_or_null<OMPIteratorExpr>(
+          const_cast<OMPMapClause *>(C)->getIteratorModifier())) {
+        if (auto *VD = dyn_cast<VarDecl>(IE->getIteratorDecl(0))) {
+          if (!VD->isLocalVarDecl())
+            CGF.CGM.EmitGlobal(GlobalDecl(VD));
+        }
+      }
       MapKind Kind = Other;
       if (llvm::is_contained(C->getMapTypeModifiers(),
                              OMPC_MAP_MODIFIER_present))
