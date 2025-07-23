@@ -187,7 +187,11 @@ def LayoutTrait: AttrInterface<"LayoutTrait"> {
                     "getEffectiveSgLayout">,
     InterfaceMethod<"Get the effective sg data",
                     "std::optional<llvm::SmallVector<int>>",
-                    "getEffectiveSgData">
+                    "getEffectiveSgData">,
+    InterfaceMethod<"Delinearize the Subgroup Id",
+                    "FailureOr<SmallVector<Value>>",
+                    "delinearizeSubgroupId",
+                    (ins "Value":$linearId, "Location":$loc, "OpBuilder &": $builder)>
   ];
 }
 
@@ -358,6 +362,10 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [LayoutTrait]> {
         return llvm::to_vector(data.asArrayRef());
       return std::nullopt;
     }
+
+    FailureOr<SmallVector<Value>>
+    delinearizeSubgroupId(Value linearId, Location loc, OpBuilder &builder);
+
   }];
 
   let assemblyFormat = "`<` struct(params) `>`";
@@ -408,6 +416,9 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
       }
       return std::nullopt;
     }
+
+    FailureOr<llvm::SmallVector<Value>>
+    delinearizeSubgroupId(Value linearId, Location loc, OpBuilder &builder);
 
     DenseI32ArrayAttr getOrder() const {
       return getParent().getOrder();

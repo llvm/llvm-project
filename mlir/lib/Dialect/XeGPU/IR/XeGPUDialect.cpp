@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPUTargetInfo.h"
@@ -211,6 +212,18 @@ LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
   return success();
 }
 
+FailureOr<SmallVector<Value>>
+LayoutAttr::delinearizeSubgroupId(Value linearId, Location loc,
+                                  OpBuilder &builder) {
+  assert(isWgLayout() && "delinearizeSubgroupId is only available for "
+                         "workgroup-level layout attribute.");
+  auto dims =
+      llvm::map_to_vector(getSgLayout().asArrayRef(), [&](int32_t d) -> Value {
+        return arith::ConstantIndexOp::create(builder, loc, d);
+      });
+  return affine::delinearizeIndex(builder, loc, linearId, dims);
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_SliceAttr
 //===----------------------------------------------------------------------===//
@@ -230,6 +243,12 @@ SliceAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
       return emitError() << "repeated dim (" << dim << ") in slice attribute.";
   }
   return success();
+}
+
+FailureOr<SmallVector<Value>>
+SliceAttr::delinearizeSubgroupId(Value linearId, Location loc,
+                                 OpBuilder &builder) {
+  return getParent().delinearizeSubgroupId(linearId, loc, builder);
 }
 
 //===----------------------------------------------------------------------===//
