@@ -403,7 +403,8 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
         builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
     builder.create<cir::ArrayCtor>(
         *currSrcLoc, arrayOp, [&](mlir::OpBuilder &b, mlir::Location loc) {
-          auto arg = b.getInsertionBlock()->addArgument(ptrToElmType, loc);
+          mlir::BlockArgument arg =
+              b.getInsertionBlock()->addArgument(ptrToElmType, loc);
           Address curAddr = Address(arg, elementType, eltAlignment);
           assert(!cir::MissingFeatures::sanitizers());
           auto currAVS = AggValueSlot::forAddr(

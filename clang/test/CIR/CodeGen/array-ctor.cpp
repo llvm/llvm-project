@@ -81,13 +81,26 @@ void foo() {
 // OGCG: ret void
 
 void zero_sized() {
-    int s[0];
+    S s[0];
 }
 
 // CIR-BEFORE-LPP:     cir.func dso_local @_Z10zero_sizedv()
+// CIR-BEFORE-LPP:       cir.alloca !cir.array<!rec_S x 0>, !cir.ptr<!cir.array<!rec_S x 0>>, ["s"]
 // CIR-BEFORE-LPP-NOT:   cir.array.ctor
 // CIR-BEFORE-LPP:       cir.return
 
 // CIR:     cir.func dso_local @_Z10zero_sizedv()
+// CIR:       cir.alloca !cir.array<!rec_S x 0>, !cir.ptr<!cir.array<!rec_S x 0>>, ["s"]
 // CIR-NOT:   cir.do
+// CIR-NOT:   cir.call @_ZN1SC1Ev
 // CIR:       cir.return
+
+// LLVM:     define dso_local void @_Z10zero_sizedv()
+// LLVM:       alloca [0 x %struct.S]
+// LLVM-NOT:   call void @_ZN1SC1Ev
+// LLVM:       ret void
+
+// OGCG:     define dso_local void @_Z10zero_sizedv()
+// OGCG:       alloca [0 x %struct.S]
+// OGCG-NOT:   call void @_ZN1SC1Ev
+// OGCG:       ret void
