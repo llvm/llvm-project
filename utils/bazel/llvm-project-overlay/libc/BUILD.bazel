@@ -1002,6 +1002,19 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_fputil_comparison_operations",
+    hdrs = [
+        "src/__support/FPUtil/comparison_operations.h",
+    ],
+    deps = [
+        ":__support_cpp_type_traits",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_file_file",
     srcs = [
         "include/llvm-libc-types/off_t.h",
