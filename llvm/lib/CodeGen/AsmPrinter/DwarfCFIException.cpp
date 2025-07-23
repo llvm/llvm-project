@@ -109,11 +109,9 @@ void DwarfCFIException::beginBasicBlockSection(const MachineBasicBlock &MBB) {
     // chose not to be verbose in that case. And with `ForceDwarfFrameSection`,
     // we should always emit .debug_frame.
     if (CFISecType == AsmPrinter::CFISection::Debug ||
-        Asm->TM.Options.ForceDwarfFrameSection ||
-        Asm->TM.Options.MCOptions.EmitSFrameUnwind)
+        Asm->TM.Options.ForceDwarfFrameSection)
       Asm->OutStreamer->emitCFISections(
-          CFISecType == AsmPrinter::CFISection::EH, true,
-          Asm->TM.Options.MCOptions.EmitSFrameUnwind);
+          CFISecType == AsmPrinter::CFISection::EH, true);
     hasEmittedCFISections = true;
   }
 
