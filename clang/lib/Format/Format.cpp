@@ -711,6 +711,18 @@ struct ScalarEnumerationTraits<FormatStyle::SortUsingDeclarationsOptions> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<FormatStyle::SpaceAfterNotOptions> {
+  static void enumeration(IO &IO, FormatStyle::SpaceAfterNotOptions &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::SAN_Never);
+    IO.enumCase(Value, "Exclaim", FormatStyle::SAN_Exclaim);
+    IO.enumCase(Value, "Always", FormatStyle::SAN_Always);
+
+    // For backward compatibility.
+    IO.enumCase(Value, "false", FormatStyle::SAN_Never);
+    IO.enumCase(Value, "true", FormatStyle::SAN_Exclaim);
+  }
+};
+
 template <>
 struct ScalarEnumerationTraits<FormatStyle::SpaceAroundPointerQualifiersStyle> {
   static void
@@ -1659,7 +1671,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SortJavaStaticImport = FormatStyle::SJSIO_Before;
   LLVMStyle.SortUsingDeclarations = FormatStyle::SUD_LexicographicNumeric;
   LLVMStyle.SpaceAfterCStyleCast = false;
-  LLVMStyle.SpaceAfterLogicalNot = false;
+  LLVMStyle.SpaceAfterLogicalNot = FormatStyle::SAN_Never;
   LLVMStyle.SpaceAfterOperatorKeyword = false;
   LLVMStyle.SpaceAfterTemplateKeyword = true;
   LLVMStyle.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_Default;

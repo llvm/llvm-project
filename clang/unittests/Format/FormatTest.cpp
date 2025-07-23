@@ -17762,14 +17762,19 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
 }
 
 TEST_F(FormatTest, SpaceAfterLogicalNot) {
-  FormatStyle Spaces = getLLVMStyle();
-  Spaces.SpaceAfterLogicalNot = true;
+  auto Spaces = getLLVMStyle();
+  EXPECT_EQ(Spaces.SpaceAfterLogicalNot, FormatStyle::SAN_Never);
 
+  Spaces.SpaceAfterLogicalNot = FormatStyle::SAN_Exclaim;
   verifyFormat("bool x = ! y", Spaces);
   verifyFormat("if (! isFailure())", Spaces);
   verifyFormat("if (! (a && b))", Spaces);
   verifyFormat("\"Error!\"", Spaces);
   verifyFormat("! ! x", Spaces);
+
+  Spaces.SpaceAfterLogicalNot = FormatStyle::SAN_Always;
+  verifyFormat("return ! (a || b);", Spaces);
+  verifyFormat("return not (a || b);", Spaces);
 }
 
 TEST_F(FormatTest, ConfigurableSpacesInParens) {

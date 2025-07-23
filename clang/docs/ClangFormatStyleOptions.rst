@@ -6118,13 +6118,37 @@ the configuration (without a prefix: ``Auto``).
 
 .. _SpaceAfterLogicalNot:
 
-**SpaceAfterLogicalNot** (``Boolean``) :versionbadge:`clang-format 9` :ref:`¶ <SpaceAfterLogicalNot>`
-  If ``true``, a space is inserted after the logical not operator (``!``).
+**SpaceAfterLogicalNot** (``SpaceAfterNotOptions``) :versionbadge:`clang-format 9` :ref:`¶ <SpaceAfterLogicalNot>`
+  Controls if a space is inserted after the logical not operator (``!`` or
+  ``not``).
 
-  .. code-block:: c++
+  Possible values:
 
-     true:                                  false:
-     ! someExpression();            vs.     !someExpression();
+  * ``SAN_Never`` (in configuration: ``Never``)
+    Never insert a space after ``!``.
+
+    .. code-block:: c++
+
+       return !someExpression();
+       return not(a || b);
+
+  * ``SAN_Exclaim`` (in configuration: ``Exclaim``)
+    Always insert a space after ``!``.
+
+    .. code-block:: c++
+
+       return ! someExpression();
+       return not(a || b);
+
+  * ``SAN_Always`` (in configuration: ``Always``)
+    Always insert a space after both ``!`` and ``not``.
+
+    .. code-block:: c++
+
+       return ! someExpression();
+       return not (a || b);
+
+
 
 .. _SpaceAfterOperatorKeyword:
 

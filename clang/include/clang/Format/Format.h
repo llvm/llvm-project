@@ -4483,13 +4483,32 @@ struct FormatStyle {
   /// \version 3.5
   bool SpaceAfterCStyleCast;
 
-  /// If ``true``, a space is inserted after the logical not operator (``!``).
-  /// \code
-  ///    true:                                  false:
-  ///    ! someExpression();            vs.     !someExpression();
-  /// \endcode
+  /// Space after logical not operator options.
+  enum SpaceAfterNotOptions : int8_t {
+    /// Never insert a space after ``!``.
+    /// \code
+    ///    return !someExpression();
+    ///    return not(a || b);
+    /// \endcode
+    SAN_Never,
+    /// Always insert a space after ``!``.
+    /// \code
+    ///    return ! someExpression();
+    ///    return not(a || b);
+    /// \endcode
+    SAN_Exclaim,
+    /// Always insert a space after both ``!`` and ``not``.
+    /// \code
+    ///    return ! someExpression();
+    ///    return not (a || b);
+    /// \endcode
+    SAN_Always,
+  };
+
+  /// Controls if a space is inserted after the logical not operator (``!`` or
+  /// ``not``).
   /// \version 9
-  bool SpaceAfterLogicalNot;
+  SpaceAfterNotOptions SpaceAfterLogicalNot;
 
   /// If ``true``, a space will be inserted after the ``operator`` keyword.
   /// \code

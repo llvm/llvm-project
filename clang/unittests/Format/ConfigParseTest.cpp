@@ -205,7 +205,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(SpaceAfterCStyleCast);
   CHECK_PARSE_BOOL(SpaceAfterTemplateKeyword);
   CHECK_PARSE_BOOL(SpaceAfterOperatorKeyword);
-  CHECK_PARSE_BOOL(SpaceAfterLogicalNot);
   CHECK_PARSE_BOOL(SpaceBeforeAssignmentOperators);
   CHECK_PARSE_BOOL(SpaceBeforeCaseColon);
   CHECK_PARSE_BOOL(SpaceBeforeCpp11BracedList);
@@ -653,6 +652,18 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               AllowShortLambdasOnASingleLine, FormatStyle::SLS_None);
   CHECK_PARSE("AllowShortLambdasOnASingleLine: true",
               AllowShortLambdasOnASingleLine, FormatStyle::SLS_All);
+
+  CHECK_PARSE("SpaceAfterLogicalNot: Exclaim", SpaceAfterLogicalNot,
+              FormatStyle::SAN_Exclaim);
+  CHECK_PARSE("SpaceAfterLogicalNot: Never", SpaceAfterLogicalNot,
+              FormatStyle::SAN_Never);
+  CHECK_PARSE("SpaceAfterLogicalNot: Always", SpaceAfterLogicalNot,
+              FormatStyle::SAN_Always);
+  // For backward compatibility:
+  CHECK_PARSE("SpaceAfterLogicalNot: false", SpaceAfterLogicalNot,
+              FormatStyle::SAN_Never);
+  CHECK_PARSE("SpaceAfterLogicalNot: true", SpaceAfterLogicalNot,
+              FormatStyle::SAN_Exclaim);
 
   Style.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_Both;
   CHECK_PARSE("SpaceAroundPointerQualifiers: Default",
