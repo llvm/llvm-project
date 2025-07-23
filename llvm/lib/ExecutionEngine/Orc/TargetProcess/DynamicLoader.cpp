@@ -92,6 +92,15 @@ static bool shouldIgnoreSymbol(const object::SymbolRef &Sym,
   }
 
   uint32_t Flags = *FlagsOrErr;
+
+  if (Flags & object::BasicSymbolRef::SF_FormatSpecific ||
+      Flags & object::BasicSymbolRef::SF_Hidden)
+    return true;
+
+  if (!(Flags & object::BasicSymbolRef::SF_Global) &&
+      !(Flags & object::BasicSymbolRef::SF_Exported))
+    return true;
+
   using Filter = SymbolEnumerator::Filter;
   if ((IgnoreFlags & static_cast<uint32_t>(Filter::IgnoreUndefined)) &&
       (Flags & object::SymbolRef::SF_Undefined))
@@ -172,6 +181,23 @@ bool SymbolEnumerator::enumerateSymbols(StringRef Path, OnEachSymbolFn OnEach,
 
   return true;
 }
+
+class SymbolSearchContext {
+public:
+  SymbolSearchContext(SymbolQuery &Q) : m_query(Q) {}
+
+  bool hasSearched(LibraryInfo *lib) const { return m_searched.count(lib); }
+
+  void markSearched(LibraryInfo *lib) { m_searched.insert(lib); }
+
+  inline bool allResolved() const { return m_query.allResolved(); }
+
+  SymbolQuery &query() { return m_query; }
+
+private:
+  SymbolQuery &m_query;
+  DenseSet<LibraryInfo *> m_searched;
+};
 
 void DynamicLoader::resolveSymbolsInLibrary(LibraryInfo &lib,
                                             SymbolQuery &unresolvedSymbols) {
@@ -264,17 +290,30 @@ void DynamicLoader::searchSymbolsInLibraries(
   using LibraryState = LibraryManager::State;
   using LibraryType = PathType;
   auto tryResolveFrom = [&](LibraryState S, LibraryType K) {
-    if (query.allResolved())
-      return;
     // LLVM_DEBUG(
     dbgs() << "Trying resolve from state=" << static_cast<int>(S)
            << " type=" << static_cast<int>(K) << "\n"; //);
-    scanLibrariesIfNeeded(K);
-    for (auto &lib : m_libMgr.getView(S, K)) {
-      // can use Async here?
-      resolveSymbolsInLibrary(*lib, query);
-      if (query.allResolved())
-        break;
+
+    SymbolSearchContext Ctx(query);
+    while (!Ctx.allResolved()) {
+
+      for (auto &lib : m_libMgr.getView(S, K)) {
+        if (Ctx.hasSearched(lib.get()))
+          continue;
+
+        // can use Async here?
+        resolveSymbolsInLibrary(*lib, Ctx.query());
+        Ctx.markSearched(lib.get());
+
+        if (Ctx.allResolved())
+          return;
+      }
+
+      if (Ctx.allResolved())
+        return;
+
+      if (!scanLibrariesIfNeeded(K))
+        break; // no more new libs to scan
     }
   };
 
@@ -284,7 +323,7 @@ void DynamicLoader::searchSymbolsInLibraries(
       break;
   }
 
-// done:
+  // done:
   // LLVM_DEBUG({
   dbgs() << "Search complete.\n";
   for (const auto &r : query.getAllResults())
@@ -295,14 +334,15 @@ void DynamicLoader::searchSymbolsInLibraries(
   onComplete(query);
 }
 
-void DynamicLoader::scanLibrariesIfNeeded(PathType PK) {
+bool DynamicLoader::scanLibrariesIfNeeded(PathType PK) {
   // LLVM_DEBUG(
   dbgs() << "DynamicLoader::scanLibrariesIfNeeded: Scanning for "
          << (PK == PathType::User ? "User" : "System") << " libraries\n"; //);
   if (!m_scanH.leftToScan(PK))
-    return;
+    return false;
   LibraryScanner Scanner(m_scanH, m_libMgr, m_shouldScan);
   Scanner.scanNext(PK);
+  return true;
 }
 
 bool DynamicLoader::symbolExistsInLibrary(
