@@ -25,11 +25,18 @@ using APSInt = llvm::APSInt;
 namespace clang {
 namespace interp {
 
+static bool hasTrivialDefaultCtorParent(const FieldDecl *FD) {
+  assert(FD);
+  assert(FD->getParent()->isUnion());
+  const auto *CXXRD = dyn_cast<CXXRecordDecl>(FD->getParent());
+  return !CXXRD || CXXRD->hasTrivialDefaultConstructor();
+}
+
 static bool refersToUnion(const Expr *E) {
   for (;;) {
     if (const auto *ME = dyn_cast<MemberExpr>(E)) {
       if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
-          FD && FD->getParent()->isUnion())
+          FD && FD->getParent()->isUnion() && hasTrivialDefaultCtorParent(FD))
         return true;
       E = ME->getBase();
       continue;
