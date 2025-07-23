@@ -75,7 +75,7 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
                                   const CXXConstructorDecl *constructor,
                                   FunctionArgList &args) {
   assert(memberInit->isAnyMemberInitializer() &&
-         "Mush have member initializer!");
+         "Must have member initializer!");
   assert(memberInit->getInit() && "Must have initializer!");
 
   assert(!cir::MissingFeatures::generateDebugInfo());
@@ -390,6 +390,14 @@ void CIRGenFunction::emitDelegatingCXXConstructorCall(
                  "emitDelegatingCXXConstructorCall: exception");
     return;
   }
+}
+
+void CIRGenFunction::emitCXXDestructorCall(const CXXDestructorDecl *dd,
+                                           CXXDtorType type,
+                                           bool forVirtualBase, bool delegating,
+                                           Address thisAddr, QualType thisTy) {
+  cgm.getCXXABI().emitDestructorCall(*this, dd, type, forVirtualBase,
+                                     delegating, thisAddr, thisTy);
 }
 
 Address CIRGenFunction::getAddressOfBaseClass(

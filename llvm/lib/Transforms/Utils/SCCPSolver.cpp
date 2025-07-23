@@ -19,7 +19,9 @@
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/NoFolder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
@@ -245,9 +247,41 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
   const APInt *RHSC;
   // Remove masking operations.
   if (match(&Inst, m_And(m_Value(X), m_LowBitMask(RHSC)))) {
-    ConstantRange LRange = GetRange(Inst.getOperand(0));
+    ConstantRange LRange = GetRange(X);
     if (LRange.getUnsignedMax().ule(*RHSC))
       return X;
+  }
+
+  // Check if we can simplify [us]cmp(X, Y) to X - Y.
+  if (auto *Cmp = dyn_cast<CmpIntrinsic>(&Inst)) {
+    Value *LHS = Cmp->getOperand(0);
+    Value *RHS = Cmp->getOperand(1);
+    unsigned BitWidth = LHS->getType()->getScalarSizeInBits();
+    // Bail out on 1-bit comparisons.
+    if (BitWidth == 1)
+      return nullptr;
+    ConstantRange LRange = GetRange(LHS);
+    if (LRange.isSizeLargerThan(3))
+      return nullptr;
+    ConstantRange RRange = GetRange(RHS);
+    if (RRange.isSizeLargerThan(3))
+      return nullptr;
+    ConstantRange RHSLower = RRange.sub(APInt(BitWidth, 1));
+    ConstantRange RHSUpper = RRange.add(APInt(BitWidth, 1));
+    ICmpInst::Predicate Pred =
+        Cmp->isSigned() ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE;
+    if (!RHSLower.icmp(Pred, LRange) || !LRange.icmp(Pred, RHSUpper))
+      return nullptr;
+
+    IRBuilder<NoFolder> Builder(&Inst);
+    Value *Sub = Builder.CreateSub(LHS, RHS, Inst.getName(), /*HasNUW=*/false,
+                                   /*HasNSW=*/Cmp->isSigned());
+    InsertedValues.insert(Sub);
+    if (Sub->getType() != Inst.getType()) {
+      Sub = Builder.CreateSExtOrTrunc(Sub, Inst.getType());
+      InsertedValues.insert(Sub);
+    }
+    return Sub;
   }
 
   return nullptr;

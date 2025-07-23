@@ -260,6 +260,12 @@ public:
     return aliasesMapping.lookup(op);
   }
 
+  /// Finds an LLVM IR global value that corresponds to the given MLIR operation
+  /// defining an IFunc.
+  llvm::GlobalValue *lookupIFunc(Operation *op) {
+    return ifuncMapping.lookup(op);
+  }
+
   /// Returns the OpenMP IR builder associated with the LLVM IR module being
   /// constructed.
   llvm::OpenMPIRBuilder *getOpenMPBuilder();
@@ -345,6 +351,7 @@ private:
                                  bool recordInsertions = false);
   LogicalResult convertFunctionSignatures();
   LogicalResult convertFunctions();
+  LogicalResult convertIFuncs();
   LogicalResult convertComdats();
 
   LogicalResult convertUnresolvedBlockAddress();
@@ -405,6 +412,10 @@ private:
   /// Mappings between llvm.mlir.alias definitions and corresponding global
   /// aliases.
   DenseMap<Operation *, llvm::GlobalValue *> aliasesMapping;
+
+  /// Mappings between llvm.mlir.ifunc definitions and corresponding global
+  /// ifuncs.
+  DenseMap<Operation *, llvm::GlobalValue *> ifuncMapping;
 
   /// A stateful object used to translate types.
   TypeToLLVMIRTranslator typeTranslator;
