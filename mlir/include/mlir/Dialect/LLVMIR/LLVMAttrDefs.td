@@ -39,19 +39,13 @@ def LLVM_TargetAttr : LLVM_Attr<"Target", "target",
          * Individual features can be queried for on this attribute.
   }];
   let parameters = (ins "StringAttr":$triple,
-                        OptionalParameter<"StringAttr">:$chip,
-                        OptionalParameter<"TargetFeaturesAttr">:$features);
+                        "StringAttr":$chip,
+                        OptionalParameter<"StringAttr">:$features);
 
-  let assemblyFormat = [{`<` `triple` `=` $triple
-                         (`,` `chip` `=` $chip^)?
-                         (`,` qualified($features)^)? `>`}];
+  let assemblyFormat = [{`<` struct($triple, $chip, $features) `>`}];
 
   let extraClassDeclaration = [{
-    std::optional<llvm::TargetMachine *> targetMachine = std::nullopt;
-
-    FailureOr<llvm::TargetMachine *> getTargetMachine();
-
-    std::optional<llvm::DataLayout> dataLayout = std::nullopt;
+    FailureOr<std::unique_ptr<llvm::TargetMachine>> getTargetMachine();
     FailureOr<llvm::DataLayout> getDataLayout();
     FailureOr<Attribute> query(DataLayoutEntryKey key);
   }];
@@ -86,11 +80,6 @@ def LLVM_DataLayoutAttr
     template <typename Ty>
     DataLayoutEntryList getSpecForType() {
       return getDataLayoutSpec().getSpecForType(TypeID::get<Ty>());
-    }
-
-    inline ::mlir::FailureOr<::mlir::Attribute>
-    queryHelper(::mlir::DataLayoutEntryKey key) const {
-      return getDataLayoutSpec().queryHelper(key);
     }
 
     void bucketEntriesByType(

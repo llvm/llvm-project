@@ -4,26 +4,26 @@
 // CHECK-SAME: dlti.dl_spec = #llvm.data_layout
 // CHECK-SAME: llvm.target = #llvm.target<
 // CHECK-SAME:   triple = "x86_64-unknown-linux"
-// CHECK-NOT:    chip =
-// CHECK-NOT:    #llvm.target_features
+// CHECK-SAME:   chip = ""
+// CHECK-NOT:    features =
 
-module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux"> } {
+module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux", chip = ""> } {
 }
 
 // -----
 
-// TODO: module attributes
-// TODO-SAME: dlti.dl_spec = #llvm.data_layout
-// TODO-SAME: llvm.target = #llvm.target<
-// TODO-SAME:   triple = "x86_64-unknown-linux"
-// TODO-NOT:   chip = "skylake"
-// TODO-SAME:   #llvm.target_features<["+mmx", "+sse"]>
-// TODO-NOT:   chip = "skylake"
+// CHECK: module attributes
+// CHECK-SAME: dlti.dl_spec = #llvm.data_layout
+// CHECK-SAME: llvm.target = #llvm.target<
+// CHECK-SAME:   triple = "x86_64-unknown-linux"
+// CHECK-SAME:   chip = ""
+// CHECK-SAME:   features = "+mmx,+sse"
+// CHECK-NOT:    chip = "skylake"
 
-//module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux",
-//                                               // Generated parser is dumb: expected 'chip'
-//                                               #llvm.target_features<["+mmx", "+sse"]>> } {
-//}
+module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux",
+                                               chip = "",
+                                               features = "+mmx,+sse"> } {
+}
 
 // -----
 
@@ -32,7 +32,7 @@ module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux"> 
 // CHECK-SAME: llvm.target = #llvm.target<
 // CHECK-SAME:   triple = "x86_64-unknown-linux"
 // CHECK-SAME:   chip = "skylake"
-// CHECK-NOT:    #llvm.target_features
+// CHECK-NOT:    features =
 
 module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux",
                                                chip = "skylake"> } {
@@ -45,11 +45,11 @@ module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux",
 // CHECK-SAME: llvm.target = #llvm.target<
 // CHECK-SAME:   triple = "x86_64-unknown-linux"
 // CHECK-SAME:   chip = "skylake"
-// CHECK-SAME:   #llvm.target_features<["+mmx", "+sse"]>
+// CHECK-SAME:   features = "+mmx,+sse">
 
 module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux",
                                                chip = "skylake",
-                                               #llvm.target_features<["+mmx", "+sse"]>> } {
+                                               features = "+mmx,+sse"> } {
 }
 
 // -----
@@ -60,10 +60,10 @@ module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux",
 // CHECK-SAME: llvm.target = #llvm.target<
 // CHECK-SAME:   triple = "x86_64-unknown-linux"
 // CHECK-SAME:   chip = "skylake"
-// CHECK-SAME:   #llvm.target_features<["+mmx", "+sse"]>
+// CHECK-SAME:   features = "+mmx,+sse"
 
 module attributes { dlti.dl_spec = #dlti.dl_spec<index = 32>,
                     llvm.target = #llvm.target<triple = "x86_64-unknown-linux",
                                                chip = "skylake",
-                                               #llvm.target_features<["+mmx", "+sse"]>> } {
+                                               features = "+mmx,+sse"> } {
 }

@@ -566,13 +566,13 @@ def LLVM_TargetAttrInterface
     >,
     InterfaceMethod<
       /*description=*/"Returns the target features as a string.",
-      /*retTy=*/"::mlir::LLVM::TargetFeaturesAttr",
+      /*retTy=*/"::llvm::StringRef",
       /*methodName=*/"getFeatures",
       /*args=*/(ins)
     >,
     InterfaceMethod<
       /*description=*/"Returns the target machine.",
-      /*retTy=*/"FailureOr<::llvm::TargetMachine *>",
+      /*retTy=*/"FailureOr<std::unique_ptr<::llvm::TargetMachine>>",
       /*methodName=*/"getTargetMachine",
       /*args=*/(ins)
     >,

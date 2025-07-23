@@ -420,13 +420,7 @@ FailureOr<Attribute> TargetFeaturesAttr::query(DataLayoutEntryKey key) {
 // LLVM_TargetAttr
 //===----------------------------------------------------------------------===//
 
-FailureOr<llvm::TargetMachine *> TargetAttr::getTargetMachine() {
-  if (targetMachine.has_value()) {
-    llvm::TargetMachine *tm = targetMachine.value();
-    if (tm != nullptr)
-      return {tm};
-    return failure();
-  }
+FailureOr<std::unique_ptr<llvm::TargetMachine>> TargetAttr::getTargetMachine() {
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
 
@@ -435,35 +429,28 @@ FailureOr<llvm::TargetMachine *> TargetAttr::getTargetMachine() {
       llvm::TargetRegistry::lookupTarget(getTriple(), error);
   if (!target || !error.empty()) {
     LLVM_DEBUG({
-      llvm::dbgs() << "Failed to retrieve the target with: `" << error << "`\n";
+      llvm::dbgs() << "Looking up target '" << getTriple()
+                   << "' failed: " << error << "\n";
     });
-    targetMachine = {nullptr};
     return failure();
   }
 
-  targetMachine = {target->createTargetMachine(
-      llvm::Triple(getTriple().strref()), getChip() ? getChip().strref() : "",
-      getFeatures() ? getFeatures().getFeaturesString() : "", {}, {})};
-
-  return {targetMachine.value()};
+  return std::unique_ptr<llvm::TargetMachine>(target->createTargetMachine(
+      llvm::Triple(getTriple().strref()), getChip().strref(),
+      getFeatures() ? getFeatures().strref() : "", {}, {}));
 }
 
 FailureOr<llvm::DataLayout> TargetAttr::getDataLayout() {
-  if (dataLayout.has_value()) {
-    return dataLayout.value();
-  }
-
-  FailureOr<llvm::TargetMachine *> targetMachine = getTargetMachine();
+  FailureOr<std::unique_ptr<llvm::TargetMachine>> targetMachine =
+      getTargetMachine();
   if (failed(targetMachine)) {
     LLVM_DEBUG({
       llvm::dbgs()
           << "Failed to retrieve the target machine for data layout.\n";
     });
-    dataLayout = std::nullopt;
     return failure();
   }
-  dataLayout = (targetMachine.value())->createDataLayout();
-  return dataLayout.value();
+  return (targetMachine.value())->createDataLayout();
 }
 
 FailureOr<::mlir::Attribute> TargetAttr::query(DataLayoutEntryKey key) {
