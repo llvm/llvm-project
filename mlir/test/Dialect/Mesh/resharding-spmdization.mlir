@@ -166,17 +166,3 @@ func.func @unshard_static_axis_on_dynamic_mesh_axis(
   // CHECK: return %[[RES]] : tensor<10x14xf32>
   return %1 : tensor<10x14xf32>
 }
-
-// CHECK-LABEL: func @partial_axis_to_full_replication
-func.func @partial_axis_to_full_replication(
-// CHECK-SAME: %[[ARG:.*]]: tensor<10x14xf32>  
-  %arg0: tensor<10x14xf32>
-) -> tensor<10x14xf32> {
-  // CHECK: %[[ALL_REDUCE:.*]] = mesh.all_reduce %[[ARG]] on @mesh_1d mesh_axes = [0] : tensor<10x14xf32> -> tensor<10x14xf32>
-  %s0 = mesh.sharding @mesh_1d split_axes = [[]] partial = sum[0] : !mesh.sharding
-  %0 = mesh.shard %arg0 to %s0 : tensor<10x14xf32>
-  %s1 = mesh.sharding @mesh_1d split_axes = [[]] : !mesh.sharding
-  %1 = mesh.shard %0 to %s1 annotate_for_users : tensor<10x14xf32>
-  // CHECK: %[[ALL_REDUCE]] : tensor<10x14xf32>
-  return %1 : tensor<10x14xf32>
-}
