@@ -47,7 +47,7 @@
 // Note: In this and in the following test the seemingly unnecessary
 // writes of test vectors to memory are done in order to introduce memory
 // load operations on the path leading up to `vector.contract` since
-// that's more representation of the typical usage when multiplying
+// that's more representative of the typical usage when multiplying
 // big, non-constant tensors.
 
 // CHECK-IR-LABEL: llvm.func @matrix_by_matrix_mul_and_acc
