@@ -677,7 +677,7 @@ the device used to execute the code match the features enabled when
 generating the code. A mismatch of features may result in incorrect
 execution, or a reduction in performance.
 
-The target features supported by each processor is listed in
+The target features supported by each processor are listed in
 :ref:`amdgpu-processors`.
 
 Target features are controlled by exactly one of the following Clang
@@ -783,7 +783,7 @@ description. The AMDGPU target specific information is:
   Is an AMDGPU processor or alternative processor name specified in
   :ref:`amdgpu-processor-table`. The non-canonical form target ID allows both
   the primary processor and alternative processor names. The canonical form
-  target ID only allow the primary processor name.
+  target ID only allows the primary processor name.
 
 **target-feature**
   Is a target feature name specified in :ref:`amdgpu-target-features-table` that
@@ -793,7 +793,7 @@ description. The AMDGPU target specific information is:
   ``--offload-arch``. Each target feature must appear at most once in a target
   ID. The non-canonical form target ID allows the target features to be
   specified in any order. The canonical form target ID requires the target
-  features to be specified in alphabetic order.
+  features to be specified in alphabetical order.
 
 .. _amdgpu-target-id-v2-v3:
 
@@ -886,7 +886,7 @@ supported for the ``amdgcn`` target.
   setup (see :ref:`amdgpu-amdhsa-kernel-prolog-m0`).
 
   To convert between a private or group address space address (termed a segment
-  address) and a flat address the base address of the corresponding aperture
+  address) and a flat address, the base address of the corresponding aperture
   can be used. For GFX7-GFX8 these are available in the
   :ref:`amdgpu-amdhsa-hsa-aql-queue` the address of which can be obtained with
   Queue Ptr SGPR (see :ref:`amdgpu-amdhsa-initial-kernel-execution-state`). For
@@ -1186,7 +1186,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
   :ref:`llvm.stackrestore.p5 <int_stackrestore>`   Implemented, must use the alloca address space.
 
   :ref:`llvm.get.fpmode.i32 <int_get_fpmode>`      The natural floating-point mode type is i32. This
-                                                   implemented by extracting relevant bits out of the MODE
+                                                   is implemented by extracting relevant bits out of the MODE
                                                    register with s_getreg_b32. The first 10 bits are the
                                                    core floating-point mode. Bits 12:18 are the exception
                                                    mask. On gfx9+, bit 23 is FP16_OVFL. Bitfields not
@@ -1266,14 +1266,14 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
   llvm.amdgcn.permlane16                           Provides direct access to v_permlane16_b32. Performs arbitrary gather-style
                                                    operation within a row (16 contiguous lanes) of the second input operand.
-                                                   The third and fourth inputs must be scalar values. these are combined into
+                                                   The third and fourth inputs must be scalar values. These are combined into
                                                    a single 64-bit value representing lane selects used to swizzle within each
                                                    row. Currently implemented for i16, i32, float, half, bfloat, <2 x i16>,
                                                    <2 x half>, <2 x bfloat>, i64, double, pointers, multiples of the 32-bit vectors.
 
   llvm.amdgcn.permlanex16                          Provides direct access to v_permlanex16_b32. Performs arbitrary gather-style
                                                    operation across two rows of the second input operand (each row is 16 contiguous
-                                                   lanes). The third and fourth inputs must be scalar values. these are combined
+                                                   lanes). The third and fourth inputs must be scalar values. These are combined
                                                    into a single 64-bit value representing lane selects used to swizzle within each
                                                    row. Currently implemented for i16, i32, float, half, bfloat, <2 x i16>, <2 x half>,
                                                    <2 x bfloat>, i64, double, pointers, multiples of the 32-bit vectors.
@@ -1285,31 +1285,31 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    32-bit vectors.
 
   llvm.amdgcn.udot2                                Provides direct access to v_dot2_u32_u16 across targets which
-                                                   support such instructions. This performs unsigned dot product
+                                                   support such instructions. This performs an unsigned dot product
                                                    with two v2i16 operands, summed with the third i32 operand. The
                                                    i1 fourth operand is used to clamp the output.
 
   llvm.amdgcn.udot4                                Provides direct access to v_dot4_u32_u8 across targets which
-                                                   support such instructions. This performs unsigned dot product
+                                                   support such instructions. This performs an unsigned dot product
                                                    with two i32 operands (holding a vector of 4 8bit values), summed
                                                    with the third i32 operand. The i1 fourth operand is used to clamp
                                                    the output.
 
   llvm.amdgcn.udot8                                Provides direct access to v_dot8_u32_u4 across targets which
-                                                   support such instructions. This performs unsigned dot product
+                                                   support such instructions. This performs an unsigned dot product
                                                    with two i32 operands (holding a vector of 8 4bit values), summed
                                                    with the third i32 operand. The i1 fourth operand is used to clamp
                                                    the output.
 
   llvm.amdgcn.sdot2                                Provides direct access to v_dot2_i32_i16 across targets which
-                                                   support such instructions. This performs signed dot product
+                                                   support such instructions. This performs a signed dot product
                                                    with two v2i16 operands, summed with the third i32 operand. The
                                                    i1 fourth operand is used to clamp the output.
                                                    When applicable (e.g. no clamping), this is lowered into
                                                    v_dot2c_i32_i16 for targets which support it.
 
   llvm.amdgcn.sdot4                                Provides direct access to v_dot4_i32_i8 across targets which
-                                                   support such instructions. This performs signed dot product
+                                                   support such instructions. This performs a signed dot product
                                                    with two i32 operands (holding a vector of 4 8bit values), summed
                                                    with the third i32 operand. The i1 fourth operand is used to clamp
                                                    the output.
@@ -1321,7 +1321,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    of this instruction for gfx11 targets.
 
   llvm.amdgcn.sdot8                                Provides direct access to v_dot8_u32_u4 across targets which
-                                                   support such instructions. This performs signed dot product
+                                                   support such instructions. This performs a signed dot product
                                                    with two i32 operands (holding a vector of 8 4bit values), summed
                                                    with the third i32 operand. The i1 fourth operand is used to clamp
                                                    the output.
@@ -1401,7 +1401,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
   llvm.amdgcn.atomic.cond.sub.u32                  Provides direct access to flat_atomic_cond_sub_u32, global_atomic_cond_sub_u32
                                                    and ds_cond_sub_u32 based on address space on gfx12 targets. This
-                                                   performs subtraction only if the memory value is greater than or
+                                                   performs a subtraction only if the memory value is greater than or
                                                    equal to the data value.
 
   llvm.amdgcn.s.barrier.signal.isfirst             Provides access to the s_barrier_signal_first instruction;
@@ -1646,7 +1646,7 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       llvm.amdgcn.queue.ptr intrinsic. Note that unlike the other ABI hint
                                                       attributes, the queue pointer may be required in situations where the
                                                       intrinsic call does not directly appear in the program. Some subtargets
-                                                      require the queue pointer for to handle some addrspacecasts, as well
+                                                      require the queue pointer to handle some addrspacecasts, as well
                                                       as the llvm.amdgcn.is.shared, llvm.amdgcn.is.private, llvm.trap, and
                                                       llvm.debug intrinsics.
 
@@ -1947,7 +1947,7 @@ The following describes all emitted function resource usage symbols:
                                                      callees, contains an indirect call
      ===================================== ========= ========================================= ===============================================================================
 
-Futhermore, three symbols are additionally emitted describing the compilation
+Furthermore, three symbols are additionally emitted describing the compilation
 unit's worst case (i.e, maxima) ``num_vgpr``, ``num_agpr``, and
 ``numbered_sgpr`` which may be referenced and used by the aforementioned
 symbolic expressions. These three symbols are ``amdgcn.max_num_vgpr``,
@@ -17948,7 +17948,7 @@ set architecture (ISA) version of the assembly program.
 "AMD" and *arch* should always be equal to "AMDGPU".
 
 By default, the assembler will derive the ISA version, *vendor*, and *arch*
-from the value of the -mcpu option that is passed to the assembler.
+from the value of the ``-mcpu`` option that is passed to the assembler.
 
 .. _amdgpu-amdhsa-assembler-directive-amdgpu_hsa_kernel:
 
@@ -17972,7 +17972,7 @@ default value for all keys is 0, with the following exceptions:
 - *amd_kernel_code_version_minor* defaults to 2.
 - *amd_machine_kind* defaults to 1.
 - *amd_machine_version_major*, *machine_version_minor*, and
-  *amd_machine_version_stepping* are derived from the value of the -mcpu option
+  *amd_machine_version_stepping* are derived from the value of the ``-mcpu`` option
   that is passed to the assembler.
 - *kernel_code_entry_byte_offset* defaults to 256.
 - *wavefront_size* defaults 6 for all targets before GFX10. For GFX10 onwards
