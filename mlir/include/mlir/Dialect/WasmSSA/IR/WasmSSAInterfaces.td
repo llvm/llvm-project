@@ -1,4 +1,4 @@
-//===-- WebAssemblySSAInterfaces.td - WasmSSA Interfaces -*- tablegen -*--===//
+//===-- WasmSSAInterfaces.td - WasmSSA Interfaces -*- tablegen -*--===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines interfaces for the WebAssemblySSA dialect in MLIR.
+// This file defines interfaces for the WasmSSA dialect in MLIR.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef WEBASSEMBLYSSA_INTERFACES
-#define WEBASSEMBLYSSA_INTERFACES
+#ifndef WasmSSA_INTERFACES
+#define WasmSSA_INTERFACES
 
 include "mlir/IR/OpBase.td"
 include "mlir/IR/BuiltinAttributes.td"
 
-def WasmSSALabelLevelOpInterface : OpInterface<"WasmSSALabelLevelInterface"> {
+def WasmSSALabelLevelOpInterface : OpInterface<"WasmSSALabelLevelOpInterface"> {
   let cppNamespace = "::mlir::wasmssa";
   let description = [{
     Operation that defines one level of nesting for wasm branching.
@@ -32,7 +32,7 @@ def WasmSSALabelLevelOpInterface : OpInterface<"WasmSSALabelLevelInterface"> {
   ];
 }
 
-def WasmSSALabelBranchingOpInterface : OpInterface<"WasmSSALabelBranchingInterface"> {
+def WasmSSALabelBranchingOpInterface : OpInterface<"WasmSSALabelBranchingOpInterface"> {
   let cppNamespace = "::mlir::wasmssa";
   let description = [{
     Wasm operation that targets a label for a jump.
@@ -46,11 +46,11 @@ def WasmSSALabelBranchingOpInterface : OpInterface<"WasmSSALabelBranchingInterfa
     >,
     InterfaceMethod<
       /*desc=*/        "Returns the destination of this operation",
-      /*returnType=*/  "WasmSSALabelLevelInterface",
+      /*returnType=*/  "WasmSSALabelLevelOpInterface",
       /*methodName=*/  "getTargetOp",
       /*args=*/        (ins),
       /*methodBody=*/ [{
-        return *WasmSSALabelBranchingInterface::getTargetOpFromBlock($_op.getOperation()->getBlock(), $_op.getExitLevel());
+        return *WasmSSALabelBranchingOpInterface::getTargetOpFromBlock($_op.getOperation()->getBlock(), $_op.getExitLevel());
       }]
     >,
     InterfaceMethod<
@@ -60,15 +60,15 @@ def WasmSSALabelBranchingOpInterface : OpInterface<"WasmSSALabelBranchingInterfa
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
-        auto op = mlir::cast<WasmSSALabelBranchingInterface>(this->getOperation());
+        auto op = mlir::cast<WasmSSALabelBranchingOpInterface>(this->getOperation());
         return op.getTargetOp().getLabelTarget();
       }]
     >
   ];
   let extraClassDeclaration = [{
-    static ::llvm::FailureOr<WasmSSALabelLevelInterface> getTargetOpFromBlock(::mlir::Block *block, uint32_t level);
+    static ::llvm::FailureOr<WasmSSALabelLevelOpInterface> getTargetOpFromBlock(::mlir::Block *block, uint32_t level);
   }];
-  let verify = [{return verifyWasmSSALabelBranchingInterface($_op);}];
+  let verify = [{return verifyWasmSSALabelBranchingOpInterface($_op);}];
 }
 
 def WasmSSAImportOpInterface : OpInterface<"WasmSSAImportOpInterface"> {
@@ -113,12 +113,12 @@ def WasmSSAImportOpInterface : OpInterface<"WasmSSAImportOpInterface"> {
   ];
 }
 
-def ConstantExpressionInitializerTrait : NativeOpTrait<"ConstantExpressionInitializerTrait"> {
+def ConstantExpressionInitializerOpTrait : NativeOpTrait<"ConstantExpressionInitializerOpTrait"> {
   let cppNamespace = "::mlir::wasmssa";
 }
 
-def ConstantExprCheckInterface :
-          OpInterface<"ConstantExprCheckInterface"> {
+def ConstantExprCheckOpInterface :
+          OpInterface<"ConstantExprCheckOpInterface"> {
   let cppNamespace = "::mlir::wasmssa";
   let description = [{
     Base interface for operations that can be used in a Wasm Constant Expression.
@@ -136,7 +136,7 @@ def ConstantExprCheckInterface :
   ];
 }
 
-def AlwaysValidConstantExprTrait : NativeOpTrait<"AlwaysValidConstantExprTrait", [], [{
+def AlwaysValidInConstantExprOpTrait : NativeOpTrait<"AlwaysValidConstantExprOpTrait", [], [{
     ::mlir::LogicalResult isValidInConstantExpr() {
       return success();
     }

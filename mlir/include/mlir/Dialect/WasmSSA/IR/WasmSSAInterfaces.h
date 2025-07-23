@@ -1,4 +1,4 @@
-//===- WebAssemblySSAInterfaces.h - WebAssemblySSA Interfaces ---*- C++ -*-===//
+//===- WasmSSAInterfaces.h - WasmSSA Interfaces ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines op interfaces for the WebAssemblySSA dialect in MLIR.
+// This file defines op interfaces for the WasmSSA dialect in MLIR.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_WEBASSEMBLYSSA_IR_WEBASSEMBLYSSAINTERFACES_H_
-#define MLIR_DIALECT_WEBASSEMBLYSSA_IR_WEBASSEMBLYSSAINTERFACES_H_
+#ifndef MLIR_DIALECT_WasmSSA_IR_WasmSSAINTERFACES_H_
+#define MLIR_DIALECT_WasmSSA_IR_WasmSSAINTERFACES_H_
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpDefinition.h"
@@ -19,21 +19,21 @@
 namespace mlir::wasmssa {
 namespace detail {
 LogicalResult verifyConstantExpressionInterface(Operation *op);
-LogicalResult verifyWasmSSALabelBranchingInterface(Operation *op);
+LogicalResult verifyWasmSSALabelBranchingOpInterface(Operation *op);
 } // namespace detail
 template <class OperationType>
-struct AlwaysValidConstantExprTrait
-    : public OpTrait::TraitBase<OperationType, AlwaysValidConstantExprTrait> {};
+struct AlwaysValidConstantExprOpTrait
+    : public OpTrait::TraitBase<OperationType, AlwaysValidConstantExprOpTrait> {};
 
 
 template<typename OpType>
-struct ConstantExpressionInitializerTrait : public OpTrait::TraitBase<OpType, ConstantExpressionInitializerTrait>{
+struct ConstantExpressionInitializerOpTrait : public OpTrait::TraitBase<OpType, ConstantExpressionInitializerOpTrait>{
     static LogicalResult verifyTrait(Operation* op) {
         return detail::verifyConstantExpressionInterface(op);
     }
 };
 
 } // namespace mlir::wasmssa
-#include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSAInterfaces.h.inc"
+#include "mlir/Dialect/WasmSSA/IR/WasmSSAInterfaces.h.inc"
 
-#endif // MLIR_DIALECT_WEBASSEMBLYSSA_IR_WEBASSEMBLYSSAINTERFACES_H_
+#endif // MLIR_DIALECT_WasmSSA_IR_WasmSSAINTERFACES_H_

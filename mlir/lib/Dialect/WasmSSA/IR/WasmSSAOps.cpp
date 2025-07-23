@@ -1,4 +1,4 @@
-//===- WebAssemblySSAOps.cpp - WasmSSA dialect operations ----------------===//
+//===- WasmSSAOps.cpp - WasmSSA dialect operations ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSAInterfaces.h"
-#include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSA.h"
+#include "mlir/Dialect/WasmSSA/IR/WasmSSAInterfaces.h"
+#include "mlir/Dialect/WasmSSA/IR/WasmSSA.h"
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -23,7 +23,7 @@
 //===----------------------------------------------------------------------===//
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSAOps.cpp.inc"
+#include "mlir/Dialect/WasmSSA/IR/WasmSSAOps.cpp.inc"
 
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Types.h"
@@ -87,7 +87,7 @@ Block *BlockOp::getLabelTarget() { return getTarget(); }
 std::size_t BlockReturnOp::getExitLevel() { return 0; }
 
 Block *BlockReturnOp::getTarget() {
-  return cast<WasmSSALabelBranchingInterface>(getOperation())
+  return cast<WasmSSALabelBranchingOpInterface>(getOperation())
       .getTargetOp()
       .getOperation()
       ->getSuccessor(0);

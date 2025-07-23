@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSA.h"
+#include "mlir/Dialect/WasmSSA/IR/WasmSSA.h"
 
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -17,22 +17,22 @@
 using namespace mlir;
 using namespace mlir::wasmssa;
 
-#include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSAOpsDialect.cpp.inc"
+#include "mlir/Dialect/WasmSSA/IR/WasmSSAOpsDialect.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // TableGen'd types definitions
 //===----------------------------------------------------------------------===//
 
 #define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSAOpsTypes.cpp.inc"
+#include "mlir/Dialect/WasmSSA/IR/WasmSSAOpsTypes.cpp.inc"
 
 void wasmssa::WasmSSADialect::initialize() {
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSAOps.cpp.inc"
+#include "mlir/Dialect/WasmSSA/IR/WasmSSAOps.cpp.inc"
       >();
   addTypes<
 #define GET_TYPEDEF_LIST
-#include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSAOpsTypes.cpp.inc"
+#include "mlir/Dialect/WasmSSA/IR/WasmSSAOpsTypes.cpp.inc"
       >();
 }

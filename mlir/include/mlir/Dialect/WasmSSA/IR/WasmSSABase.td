@@ -1,4 +1,4 @@
-//===- WebAssemblySSABase.td - Base defs for wasmssa dialect -*- tablegen -*-==//
+//===- WasmSSABase.td - Base defs for wasmssa dialect -*- tablegen -*-==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef WEBASSEMBLYSSA_BASE
-#define WEBASSEMBLYSSA_BASE
+#ifndef WasmSSA_BASE
+#define WasmSSA_BASE
 
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
@@ -22,4 +22,4 @@ def WasmSSA_Dialect : Dialect {
   let useDefaultTypePrinterParser = true;
 }
 
-#endif //WEBASSEMBLYSSA_BASE
+#endif //WasmSSA_BASE

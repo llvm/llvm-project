@@ -1,15 +1,15 @@
 add_mlir_dialect_library(MLIRWasmSSADialect
-  WebAssemblySSAOps.cpp
-  WebAssemblySSADialect.cpp
-  WebAssemblySSAInterfaces.cpp
-  WebAssemblySSATypes.cpp
+  WasmSSAOps.cpp
+  WasmSSADialect.cpp
+  WasmSSAInterfaces.cpp
+  WasmSSATypes.cpp
 
   ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/WebAssemblySSA
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/WasmSSA
 
   DEPENDS
-  MLIRWebAssemblySSAOpsIncGen
-  MLIRWebAssemblySSAInterfacesIncGen
+  MLIRWasmSSAOpsIncGen
+  MLIRWasmSSAInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRCastInterfaces

@@ -1,4 +1,4 @@
-//===- WebAssemblySSAOps.td - WebAssemblySSA op definitions -*- tablegen -*-===//
+//===- WasmSSAOps.td - WasmSSA op definitions -*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef WEBASSEMBLYSSA_OPS
-#define WEBASSEMBLYSSA_OPS
+#ifndef WasmSSA_OPS
+#define WasmSSA_OPS
 
 
-include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSABase.td"
-include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSATypes.td"
-include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSAInterfaces.td"
+include "mlir/Dialect/WasmSSA/IR/WasmSSABase.td"
+include "mlir/Dialect/WasmSSA/IR/WasmSSATypes.td"
+include "mlir/Dialect/WasmSSA/IR/WasmSSAInterfaces.td"
 
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
@@ -70,8 +70,8 @@ def WasmSSA_BranchIfOp : WasmSSA_Op<"branch_if", [
 
 def WasmSSA_ConstOp : WasmSSA_Op<"const", [
     AllTypesMatch<["value", "result"]>,
-    ConstantExprCheckInterface,
-    AlwaysValidConstantExprTrait]> {
+    ConstantExprCheckOpInterface,
+    AlwaysValidInConstantExprOpTrait]> {
   let summary = "Operator that represents a constant value";
   let arguments = (ins TypedAttrInterface: $value);
   let results = (outs WasmSSA_NumericType: $result);
@@ -177,7 +177,7 @@ def WasmSSA_FuncImportOp : WasmSSA_Op<"import_func", [
 
 def WasmSSA_GlobalOp : WasmSSA_Op<"global", [
   AffineScope, AutomaticAllocationScope,
-  IsolatedFromAbove, Symbol, ConstantExpressionInitializerTrait]> {
+  IsolatedFromAbove, Symbol, ConstantExpressionInitializerOpTrait]> {
   let summary= "WebAssembly global value";
   let arguments = (ins SymbolNameAttr: $sym_name,
                      WasmSSA_ValTypeAttr: $type,
@@ -220,7 +220,7 @@ def WasmSSA_GlobalImportOp : WasmSSA_Op<"import_global", [
   let hasCustomAssemblyFormat = 1;
 }
 
-def WasmSSA_GlobalGetOp : WasmSSA_Op<"global_get", [DeclareOpInterfaceMethods<ConstantExprCheckInterface>]> {
+def WasmSSA_GlobalGetOp : WasmSSA_Op<"global_get", [DeclareOpInterfaceMethods<ConstantExprCheckOpInterface>]> {
   let summary = "Returns the value of the global passed as argument.";
   let arguments = (ins FlatSymbolRefAttr: $global);
   let results = (outs WasmSSA_ValType: $global_val);
@@ -675,4 +675,4 @@ def WasmSSA_PopCntOp : WasmSSA_UnaryNumericalOp<"popcnt",
                                        [WasmSSA_IntegerType]>{}
 
 
-#endif // WEBASSEMBLYSSA_OPS
+#endif // WasmSSA_OPS

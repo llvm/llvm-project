@@ -1,4 +1,4 @@
-//===- WebAssemblySSAInterfaces.cpp - WebAssemblySSA Interfaces -*- C++ -*-===//
+//===- WasmSSAInterfaces.cpp - WasmSSA Interfaces -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,24 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines op interfaces for the WebAssemblySSA dialect in MLIR.
+// This file defines op interfaces for the WasmSSA dialect in MLIR.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSAInterfaces.h"
-#include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSA.h"
+#include "mlir/Dialect/WasmSSA/IR/WasmSSAInterfaces.h"
+#include "mlir/Dialect/WasmSSA/IR/WasmSSA.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Support/LLVM.h"
 
 namespace mlir::wasmssa {
-#include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSAInterfaces.cpp.inc"
+#include "mlir/Dialect/WasmSSA/IR/WasmSSAInterfaces.cpp.inc"
 
 namespace detail {
-LogicalResult verifyWasmSSALabelBranchingInterface(Operation *op) {
-  auto branchInterface = dyn_cast<WasmSSALabelBranchingInterface>(op);
-  llvm::FailureOr<WasmSSALabelLevelInterface> res =
-      WasmSSALabelBranchingInterface::getTargetOpFromBlock(
+LogicalResult verifyWasmSSALabelBranchingOpInterface(Operation *op) {
+  auto branchInterface = dyn_cast<WasmSSALabelBranchingOpInterface>(op);
+  llvm::FailureOr<WasmSSALabelLevelOpInterface> res =
+      WasmSSALabelBranchingOpInterface::getTargetOpFromBlock(
           op->getBlock(), branchInterface.getExitLevel());
   return success(succeeded(res));
 }
@@ -35,7 +35,7 @@ LogicalResult verifyConstantExpressionInterface(Operation *op) {
         if (isa<ReturnOp>(currentOp))
           return WalkResult::advance();
         if (auto interfaceOp =
-                dyn_cast<ConstantExprCheckInterface>(currentOp)) {
+                dyn_cast<ConstantExprCheckOpInterface>(currentOp)) {
           if (interfaceOp.isValidInConstantExpr().succeeded())
             return WalkResult::advance();
         }
@@ -47,12 +47,12 @@ LogicalResult verifyConstantExpressionInterface(Operation *op) {
 }
 } // namespace detail
 
-llvm::FailureOr<WasmSSALabelLevelInterface>
-WasmSSALabelBranchingInterface::getTargetOpFromBlock(::mlir::Block *block,
+llvm::FailureOr<WasmSSALabelLevelOpInterface>
+WasmSSALabelBranchingOpInterface::getTargetOpFromBlock(::mlir::Block *block,
                                                      uint32_t breakLevel) {
-  WasmSSALabelLevelInterface res{};
+  WasmSSALabelLevelOpInterface res{};
   for (size_t curLevel{0}; curLevel <= breakLevel; curLevel++) {
-    res = dyn_cast_or_null<WasmSSALabelLevelInterface>(block->getParentOp());
+    res = dyn_cast_or_null<WasmSSALabelLevelOpInterface>(block->getParentOp());
     if (!res)
       return failure();
     block = res->getBlock();

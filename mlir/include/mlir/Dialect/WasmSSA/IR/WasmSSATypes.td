@@ -1,4 +1,4 @@
-//===- WebAssemblySSATypes.td - WebAssemblySSA types def ----*- tablegen -*-===//
+//===- WasmSSATypes.td - WasmSSA types def ----*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef WEBASSEMBLYSSA_TYPES
-#define WEBASSEMBLYSSA_TYPES
+#ifndef WasmSSA_TYPES
+#define WasmSSA_TYPES
 
-include "mlir/Dialect/WebAssemblySSA/IR/WebAssemblySSABase.td"
+include "mlir/Dialect/WasmSSA/IR/WasmSSABase.td"
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinTypes.td"
@@ -81,4 +81,4 @@ def WasmSSA_IntegerAttr : AnyAttrOf<[I32Attr, I64Attr]>;
 def WasmSSA_FPAttr : AnyAttrOf<[F32Attr, F64Attr]>;
 def WasmSSA_NumericAttr : AnyAttrOf<[WasmSSA_IntegerAttr, WasmSSA_FPAttr]>;
 
-#endif // WEBASSEMBLYSSA_TYPES
+#endif // WasmSSA_TYPES
