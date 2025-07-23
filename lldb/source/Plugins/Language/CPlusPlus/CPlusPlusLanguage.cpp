@@ -1409,7 +1409,7 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           stl_synth_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdVectorSynthProvider")));
   cpp_category_sp->AddTypeSynthetic(
-      "^std::(__debug::)?map<.+> >(( )?&)?$", eFormatterMatchRegex,
+      "^std::__debug::map<.+> >(( )?&)?$", eFormatterMatchRegex,
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_synth_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider")));
@@ -1419,17 +1419,17 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           stl_deref_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdDequeSynthProvider")));
   cpp_category_sp->AddTypeSynthetic(
-      "^std::(__debug::)?set<.+> >(( )?&)?$", eFormatterMatchRegex,
+      "^std::__debug::set<.+> >(( )?&)?$", eFormatterMatchRegex,
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_deref_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider")));
   cpp_category_sp->AddTypeSynthetic(
-      "^std::(__debug::)?multimap<.+> >(( )?&)?$", eFormatterMatchRegex,
+      "^std::__debug::multimap<.+> >(( )?&)?$", eFormatterMatchRegex,
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_deref_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider")));
   cpp_category_sp->AddTypeSynthetic(
-      "^std::(__debug::)?multiset<.+> >(( )?&)?$", eFormatterMatchRegex,
+      "^std::__debug::multiset<.+> >(( )?&)?$", eFormatterMatchRegex,
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_deref_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider")));
@@ -1462,15 +1462,15 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "libstdc++ std::__debug::vector summary provider",
                 "^std::__debug::vector<.+>(( )?&)?$", stl_summary_flags, true);
 
-  AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
-      "libstdc++ std::map summary provider",
-      "^std::(__debug::)?map<.+> >(( )?&)?$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
+                "libstdc++ debug std::map summary provider",
+                "^std::__debug::map<.+> >(( )?&)?$", stl_summary_flags, true);
 
-  AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
-      "libstdc++ std::set summary provider",
-      "^std::(__debug::)?set<.+> >(( )?&)?$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
+                "libstdc++ debug std::set summary provider",
+                "^std::__debug::set<.+> >(( )?&)?$", stl_summary_flags, true);
 
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
@@ -1479,13 +1479,13 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
 
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
-      "libstdc++ std::multimap summary provider",
-      "^std::(__debug::)?multimap<.+> >(( )?&)?$", stl_summary_flags, true);
+      "libstdc++ debug std::multimap summary provider",
+      "^std::__debug::multimap<.+> >(( )?&)?$", stl_summary_flags, true);
 
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
-      "libstdc++ std::multiset summary provider",
-      "^std::(__debug::)?multiset<.+> >(( )?&)?$", stl_summary_flags, true);
+      "libstdc++ debug std::multiset summary provider",
+      "^std::__debug::multiset<.+> >(( )?&)?$", stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::ContainerSizeSummaryProvider,
@@ -1672,6 +1672,18 @@ GenericUnorderedSyntheticFrontEndCreator(CXXSyntheticChildren *children,
       *valobj_sp);
 }
 
+static SyntheticChildrenFrontEnd *
+GenericMapLikeSyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                       ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+
+  if (IsMsvcStlMapLike(*valobj_sp))
+    return MsvcStlMapLikeSyntheticFrontEndCreator(valobj_sp);
+  return new ScriptedSyntheticChildren::FrontEnd(
+      "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider", *valobj_sp);
+}
+
 /// Load formatters that are formatting types from more than one STL
 static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   if (!cpp_category_sp)
@@ -1749,6 +1761,10 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(cpp_category_sp, GenericOptionalSyntheticFrontEndCreator,
                   "std::optional synthetic children",
                   "^std::optional<.+>(( )?&)?$", stl_deref_flags, true);
+  AddCXXSynthetic(cpp_category_sp, GenericMapLikeSyntheticFrontEndCreator,
+                  "std::(multi)?map/set synthetic children",
+                  "^std::(multi)?(map|set)<.+>(( )?&)?$", stl_synth_flags,
+                  true);
 
   AddCXXSummary(cpp_category_sp, GenericSmartPointerSummaryProvider,
                 "MSVC STL/libstdc++ std::shared_ptr summary provider",
@@ -1785,6 +1801,10 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
                 "MSVC STL/libstdc++ std unordered container summary provider",
                 "^std::unordered_(multi)?(map|set)<.+> ?>$", stl_summary_flags,
+                true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "MSVC STL/libstdc++ std::(multi)?map/set summary provider",
+                "^std::(multi)?(map|set)<.+>(( )?&)?$", stl_summary_flags,
                 true);
 }
 
@@ -1834,6 +1854,14 @@ static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, MsvcStlAtomicSummaryProvider,
                 "MSVC STL std::atomic summary provider", "^std::atomic<.+>$",
                 stl_summary_flags, true);
+  AddCXXSynthetic(cpp_category_sp, MsvcStlTreeIterSyntheticFrontEndCreator,
+                  "MSVC STL tree iterator synthetic children",
+                  "^std::_Tree(_const)?_iterator<.+>(( )?&)?$", stl_synth_flags,
+                  true);
+  AddCXXSummary(cpp_category_sp, MsvcStlTreeIterSummaryProvider,
+                "MSVC STL tree iterator summary",
+                "^std::_Tree(_const)?_iterator<.+>(( )?&)?$", stl_summary_flags,
+                true);
 }
 
 static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
