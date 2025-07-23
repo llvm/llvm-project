@@ -286,8 +286,8 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
 
   // FIXME: Better heuristics to determine whether to prefer SGPRs or VGPRs.
   static constexpr unsigned MaxVGPRPressureInc = 16;
-  bool ShouldTrackAGPRs = AGPRPressure >= AGPRExcessLimit;
   bool ShouldTrackVGPRs = VGPRPressure + MaxVGPRPressureInc >= VGPRExcessLimit;
+  bool ShouldTrackAGPRs = !ShouldTrackVGPRs && AGPRPressure >= AGPRExcessLimit;
   bool ShouldTrackSGPRs = !ShouldTrackVGPRs && SGPRPressure >= SGPRExcessLimit;
 
   // FIXME: We have to enter REG-EXCESS before we reach the actual threshold
