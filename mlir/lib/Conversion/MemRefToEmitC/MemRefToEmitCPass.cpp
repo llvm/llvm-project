@@ -64,7 +64,7 @@ struct ConvertMemRefToEmitCPass
       }
 
       for (auto &op : *module.getBody()) {
-        auto includeOp = llvm::dyn_cast<mlir::emitc::IncludeOp>(op);
+        emitc::IncludeOp includeOp = llvm::dyn_cast<mlir::emitc::IncludeOp>(op);
         if (!includeOp) {
           continue;
         }
