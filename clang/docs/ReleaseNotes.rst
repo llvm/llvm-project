@@ -344,6 +344,7 @@ Non-comprehensive list of changes in this release
 - Added `__builtin_elementwise_exp10`.
 - For AMDPGU targets, added `__builtin_v_cvt_off_f32_i4` that maps to the `v_cvt_off_f32_i4` instruction.
 - Added `__builtin_elementwise_minnum` and `__builtin_elementwise_maxnum`.
+- Added `__builtin_elementwise_minnumnum` and `__builtin_elementwise_maxnumnum`.
 - No longer crashing on invalid Objective-C categories and extensions when
   dumping the AST as JSON. (#GH137320)
 - Clang itself now uses split stacks instead of threads for allocating more
@@ -814,6 +815,8 @@ Bug Fixes in This Version
 - Fixed a failed assertion with an operator call expression which comes from a
   macro expansion when performing analysis for nullability attributes. (#GH138371)
 - Fixed a concept equivalent checking crash due to untransformed constraint expressions. (#GH146614)
+- Fixed a crash in `clang-scan-deps` when a module with the same name is found
+  in different locations (#GH134404, #GH146976).
 - Fix a crash when marco name is empty in ``#pragma push_macro("")`` or
   ``#pragma pop_macro("")``. (GH149762).
 
