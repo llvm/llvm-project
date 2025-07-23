@@ -130,7 +130,7 @@ static HMODULE LoadSystemModuleSecure(LPCWSTR lpModuleName) {
   Buf.append(lpModuleName, lpModuleName + std::wcslen(lpModuleName));
   Buf.push_back(0);
 
-  return GetModuleHandleW(Buf.data());
+  return ::GetModuleHandleW(Buf.data());
 }
 
 SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
@@ -143,8 +143,8 @@ SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
         _In_reads_bytes_(ThreadInformationSize) PVOID ThreadInformation,
         ULONG ThreadInformationSize);
     static const auto pfnSetThreadInformation =
-        (SetThreadInformation_t)GetProcAddress(kernelMod,
-                                               "SetThreadInformation");
+        (SetThreadInformation_t)::GetProcAddress(kernelMod,
+                                                 "SetThreadInformation");
 
     if (pfnSetThreadInformation) {
       auto setThreadInformation = [](ULONG ControlMaskAndStateMask) {
@@ -153,7 +153,7 @@ SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
         state.ControlMask = ControlMaskAndStateMask;
         state.StateMask = ControlMaskAndStateMask;
         return pfnSetThreadInformation(
-            GetCurrentThread(), ThreadPowerThrottling, &state, sizeof(state));
+            ::GetCurrentThread(), ThreadPowerThrottling, &state, sizeof(state));
       };
 
       // Use EcoQoS for ThreadPriority::Background available (running on most
