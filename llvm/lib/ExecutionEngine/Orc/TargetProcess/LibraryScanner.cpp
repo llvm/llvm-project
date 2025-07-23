@@ -63,16 +63,6 @@ T handleExpectedAndReturn(Expected<T> &&ValOrErr, T ReturnValue,
   return *ValOrErr;
 }
 
-bool isLibraryFile(StringRef filename) {
-  static const std::vector<std::string> suffixes = {".so", ".so.", ".dylib",
-                                                    ".dll"};
-  for (const auto &suf : suffixes) {
-    if (filename.find(suf) != std::string::npos)
-      return true;
-  }
-  return false;
-}
-
 template <class ELFT>
 bool isELFSharedLibrary(const object::ELFFile<ELFT> &ELFObj) {
   return ELFObj.getHeader().e_type == ELF::ET_DYN;
@@ -123,14 +113,6 @@ bool DylibPathValidator::isSharedLibrary(StringRef Path) {
   // LLVM_DEBUG(
   dbgs() << "Checking if path is a shared library: " << Path << "\n"; //);
 
-  if (isLibraryFile(Path)) {
-    // LLVM_DEBUG(
-    dbgs() << "Path recognized as a library file by extension: " << Path
-           << "\n"; //);
-
-    return true;
-  }
-
   auto filetype = sys::fs::get_file_type(Path, /*Follow*/ true);
   if (filetype != sys::fs::file_type::regular_file) {
     // LLVM_DEBUG(
@@ -148,6 +130,12 @@ bool DylibPathValidator::isSharedLibrary(StringRef Path) {
   }
 
   object::Binary *Bin = BinOrErr.get().getBinary();
+
+  if (Bin->isArchive()) {
+    // LLVM_DEBUG(
+    dbgs() << "Binary is archive : " << Path << "\n"; //);
+    return false;
+  }
 
   // Handle fat/universal binaries on macOS
   if (auto *UB = dyn_cast<object::MachOUniversalBinary>(Bin)) {
@@ -666,7 +654,6 @@ PathType LibraryScanHelper::classifyKind(StringRef path) const {
   if (home && path.find(home) == 0)
     return PathType::User;
 
-  // Standard user install locations
   static const std::array<std::string, 5> userPrefixes = {
       "/usr/local",    // often used by users for manual installs
       "/opt/homebrew", // common on macOS M1/M2
@@ -837,6 +824,14 @@ Expected<LibraryDepsInfo> LibraryScanner::extractDeps(StringRef filePath) {
 
   object::Binary *Bin = BinOrErr.get().getBinary();
 
+  if (Bin->isArchive()) {
+    // LLVM_DEBUG(
+    dbgs() << "extractDeps: Binary is archive file " << filePath << "\n"; //);
+    return createStringError(std::errc::file_exists,
+                             "Binary is archive file %s",
+                             filePath.str().c_str());
+  }
+
   // Handle fat/universal binaries on macOS
   if (auto *UB = dyn_cast<object::MachOUniversalBinary>(Bin)) {
     for (auto ObjForArch : UB->objects()) {
@@ -855,7 +850,7 @@ Expected<LibraryDepsInfo> LibraryScanner::extractDeps(StringRef filePath) {
         return parseMachODeps(*macho);
       }
     }
-  } else {
+  } else if (Bin->isObject()) {
     object::ObjectFile *Obj = dyn_cast<object::ObjectFile>(Bin);
 
     if (auto *elfObj = dyn_cast<object::ELFObjectFileBase>(Obj)) {

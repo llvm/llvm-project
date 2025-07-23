@@ -57,7 +57,7 @@ public:
     m_seen.insert(canon_path);
   }
 
-  bool hasSeen(StringRef canon_path) {
+  bool hasSeen(StringRef canon_path) const {
     std::shared_lock<std::shared_mutex> lock(m_mutex);
     return m_seen.contains(canon_path);
     // return m_seen.count(canon_path) > 0;
@@ -90,7 +90,7 @@ private:
     m_realpathCache.insert({path, info});
   }
 
-  std::optional<PathInfo> read_realpath(StringRef path) {
+  std::optional<PathInfo> read_realpath(StringRef path) const {
     std::shared_lock<std::shared_mutex> lock(m_mutex);
     auto it = m_realpathCache.find(path);
     if (it != m_realpathCache.end()) {
@@ -111,7 +111,7 @@ private:
     m_readlinkCache.insert({path, s});
   }
 
-  std::optional<std::string> read_link(StringRef path) {
+  std::optional<std::string> read_link(StringRef path) const {
     std::shared_lock<std::shared_mutex> lock(m_mutex);
     auto it = m_readlinkCache.find(path);
     if (it != m_readlinkCache.end()) {
@@ -125,7 +125,7 @@ private:
     m_lstatCache.insert({path, m});
   }
 
-  std::optional<mode_t> read_lstat(StringRef path) {
+  std::optional<mode_t> read_lstat(StringRef path) const {
     std::shared_lock<std::shared_mutex> lock(m_mutex);
     auto it = m_lstatCache.find(path);
     if (it != m_lstatCache.end()) {
@@ -187,7 +187,7 @@ public:
 
   static bool isSharedLibrary(StringRef path);
 
-  std::optional<std::string> normalize(StringRef path) {
+  std::optional<std::string> normalize(StringRef path) const {
     std::error_code ec;
     auto real = m_pathResolver.resolve(path, ec);
     if (!real || ec)
@@ -196,7 +196,7 @@ public:
     return real;
   }
 
-  std::optional<std::string> validate(StringRef path) {
+  std::optional<std::string> validate(StringRef path) const {
     auto realOpt = normalize(path);
     if (!realOpt)
       return std::nullopt;
