@@ -179,7 +179,7 @@ struct OffloadEventTest : OffloadQueueTest {
         olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, sizeof(Value), &Alloc));
     ASSERT_SUCCESS(
         olMemcpy(Queue, Alloc, Device, &Value, Host, sizeof(Value), &Event));
-    ASSERT_SUCCESS(olWaitEvent(Event));
+    ASSERT_SUCCESS(olSyncEvent(Event));
     ASSERT_SUCCESS(olMemFree(Alloc));
   }
 
