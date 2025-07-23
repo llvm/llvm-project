@@ -2960,6 +2960,7 @@ TemplateInstantiator::TransformNestedRequirement(
     return Req;
   }
 
+#if 0
   if (Req->isDependent() || AlwaysRebuild()) {
     Sema::InstantiatingTemplate ReqInst(
         SemaRef, Constraint->getBeginLoc(), Req,
@@ -2977,16 +2978,20 @@ TemplateInstantiator::TransformNestedRequirement(
 
   if (Constraint->isInstantiationDependent())
     return new (C) concepts::NestedRequirement(Constraint);
+#endif
 
   bool Success;
+  Expr *NewConstraint;
   TemplateDeductionInfo Info(Constraint->getBeginLoc());
   {
     EnterExpressionEvaluationContext ContextRAII(
         SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
-    Sema::InstantiatingTemplate ConstrInst(SemaRef, Constraint->getBeginLoc(),
-                                           Req, Info,
-                                           Constraint->getSourceRange());
+    Sema::InstantiatingTemplate ConstrInst(
+        SemaRef, Constraint->getBeginLoc(), Req,
+        Sema::InstantiatingTemplate::ConstraintsCheck(),
+        Constraint->getSourceRange());
+
     if (ConstrInst.isInvalid())
       return nullptr;
 
@@ -2994,7 +2999,8 @@ TemplateInstantiator::TransformNestedRequirement(
 
     Success = !SemaRef.CheckConstraintSatisfaction(
         Req, AssociatedConstraint(Constraint, SemaRef.ArgPackSubstIndex),
-        TemplateArgs, Constraint->getSourceRange(), Satisfaction);
+        TemplateArgs, Constraint->getSourceRange(), Satisfaction,
+        /*TopLevelConceptId=*/nullptr, &NewConstraint);
 
     assert(!Success || !Trap.hasErrorOccurred() &&
                            "Substitution failures must be handled "
@@ -3005,7 +3011,10 @@ TemplateInstantiator::TransformNestedRequirement(
     return NestedReqWithDiag(Constraint, Satisfaction);
 
   // FIXME: const correctness
-  return new (C) concepts::NestedRequirement(C, Constraint, Satisfaction);
+  // MLTAL might be dependent.
+  if (!NewConstraint)
+    NewConstraint = Constraint;
+  return new (C) concepts::NestedRequirement(C, NewConstraint, Satisfaction);
 }
 
 TypeSourceInfo *Sema::SubstType(TypeSourceInfo *T,

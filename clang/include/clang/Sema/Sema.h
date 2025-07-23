@@ -14801,7 +14801,8 @@ public:
       ArrayRef<AssociatedConstraint> AssociatedConstraints,
       const MultiLevelTemplateArgumentList &TemplateArgLists,
       SourceRange TemplateIDRange, ConstraintSatisfaction &Satisfaction,
-      const ConceptReference *TopLevelConceptId = nullptr);
+      const ConceptReference *TopLevelConceptId = nullptr,
+      Expr **ConvertedExpr = nullptr);
 
   /// \brief Check whether the given non-dependent constraint expression is
   /// satisfied. Returns false and updates Satisfaction with the satisfaction

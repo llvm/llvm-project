@@ -124,8 +124,7 @@ constexpr int f5() requires C<T> { return 1; } // expected-note {{while checking
 template <typename T>
 constexpr int f5() requires (!C<T>) { return 2; } // expected-note 4 {{while checking the satisfaction}} \
                                                   // expected-note 4 {{while substituting template arguments}} \
-                                                  // expected-note {{candidate template ignored}} \
-                                                  // expected-note {{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
+                                                  // expected-note {{candidate template ignored}}
 
 static_assert(f5<int>() == 1);
 static_assert(f5<D>() == 1); // expected-note 3 {{while checking constraint satisfaction}}
