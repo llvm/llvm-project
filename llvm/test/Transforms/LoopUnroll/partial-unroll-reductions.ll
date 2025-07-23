@@ -515,7 +515,6 @@ declare i32 @foo()
 ; Loop with a call cannot be handled by LoopVectorize, introducing additional
 ; accumulators when unrolling increases throughput.
 define i32 @test_add_with_call(i64 %n, i32 %start) {
-;
 entry:
   br label %loop
 
@@ -535,7 +534,6 @@ exit:
 ; Loop with backward dependence cannot be handled LoopVectorize, introducing additional
 ; accumulators when unrolling increases throughput.
 define i32 @test_add_with_backward_dep(ptr %p, i64 %n, i32 %start) {
-;
 entry:
   br label %loop
 
