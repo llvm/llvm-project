@@ -11,6 +11,7 @@
 #include "llvm/Config/config.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Process.h"
+#include <limits>
 #include <mutex>
 #include <optional>
 #include <thread>
@@ -115,16 +116,25 @@ cas::ondisk::tryLockFileThreadSafe(int FD, std::chrono::milliseconds Timeout,
 }
 
 Expected<size_t> cas::ondisk::preallocateFileTail(int FD, size_t CurrentSize, size_t NewSize) {
-  auto CreateErrorFromErrno = [&]() -> Expected<size_t> {
-    std::error_code EC = errnoAsErrorCode();
+  auto CreateError = [&](std::error_code EC) -> Expected<size_t> {
     if (EC == std::errc::not_supported)
       // Ignore ENOTSUP in case the filesystem cannot preallocate.
       return NewSize;
+#if defined(HAVE_POSIX_FALLOCATE)
+    if (EC == std::errc::invalid_argument &&
+        CurrentSize < NewSize && // len > 0
+        NewSize < std::numeric_limits<off_t>::max()) // 0 <= offset, len < max
+      // Prior to 2024, POSIX required EINVAL for cases that should be ENOTSUP,
+      // so handle it the same as above if it is not one of the other ways to
+      // get EINVAL.
+      return NewSize;
+#endif
     return createStringError(EC, "failed to allocate to CAS file: " + EC.message());
   };
 #if defined(HAVE_POSIX_FALLOCATE)
-  if (posix_fallocate(FD, CurrentSize, NewSize - CurrentSize))
-    return CreateErrorFromErrno();
+  // Note: posix_fallocate returns its error directly, not via errno.
+  if (int Err = posix_fallocate(FD, CurrentSize, NewSize - CurrentSize))
+    return CreateError(std::error_code(Err, std::generic_category()));
   return NewSize;
 #elif defined(__APPLE__)
   fstore_t FAlloc;
@@ -134,7 +144,7 @@ Expected<size_t> cas::ondisk::preallocateFileTail(int FD, size_t CurrentSize, si
   FAlloc.fst_length = NewSize - CurrentSize;
   FAlloc.fst_bytesalloc = 0;
   if (fcntl(FD, F_PREALLOCATE, &FAlloc))
-    return CreateErrorFromErrno();
+    return CreateError(errnoAsErrorCode());
   assert(CurrentSize + FAlloc.fst_bytesalloc >= NewSize);
   return CurrentSize + FAlloc.fst_bytesalloc;
 #else
