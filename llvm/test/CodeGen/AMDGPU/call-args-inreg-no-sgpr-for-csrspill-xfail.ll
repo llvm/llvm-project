@@ -104,10 +104,10 @@ define void @test_call_external_void_func_a16i32_inreg([16 x i32] inreg %arg0) #
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v2, s31, 1
 ; CHECK-NEXT:  .LBB4_1: ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    v_readfirstlane_b32 s26, v0
 ; CHECK-NEXT:    v_readfirstlane_b32 s27, v1
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s26, v0
-; CHECK-NEXT:    v_cmp_eq_u32_e64 s[16:17], s27, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s26, v0
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s27, v1
+; CHECK-NEXT:    v_cmp_eq_u32_e64 s[16:17], s26, v0
 ; CHECK-NEXT:    s_and_b64 s[16:17], vcc, s[16:17]
 ; CHECK-NEXT:    s_and_saveexec_b64 s[62:63], s[16:17]
 ; CHECK-NEXT:    s_getpc_b64 s[72:73]
@@ -128,8 +128,8 @@ define void @test_call_external_void_func_a16i32_inreg([16 x i32] inreg %arg0) #
 ; CHECK-NEXT:    s_mov_b32 s24, s28
 ; CHECK-NEXT:    s_mov_b32 s25, s29
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[72:73]
-; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
+; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr31
 ; CHECK-NEXT:    s_xor_b64 exec, exec, s[62:63]
 ; CHECK-NEXT:    s_cbranch_execnz .LBB4_1
@@ -174,10 +174,10 @@ define void @test_call_external_void_func_a15i32_inreg_i32_inreg([15 x i32] inre
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v2, s31, 1
 ; CHECK-NEXT:  .LBB5_1: ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    v_readfirstlane_b32 s26, v0
 ; CHECK-NEXT:    v_readfirstlane_b32 s27, v1
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s26, v0
-; CHECK-NEXT:    v_cmp_eq_u32_e64 s[16:17], s27, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s26, v0
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, s27, v1
+; CHECK-NEXT:    v_cmp_eq_u32_e64 s[16:17], s26, v0
 ; CHECK-NEXT:    s_and_b64 s[16:17], vcc, s[16:17]
 ; CHECK-NEXT:    s_and_saveexec_b64 s[62:63], s[16:17]
 ; CHECK-NEXT:    s_getpc_b64 s[72:73]
@@ -198,8 +198,8 @@ define void @test_call_external_void_func_a15i32_inreg_i32_inreg([15 x i32] inre
 ; CHECK-NEXT:    s_mov_b32 s24, s28
 ; CHECK-NEXT:    s_mov_b32 s25, s29
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[72:73]
-; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
+; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr31
 ; CHECK-NEXT:    s_xor_b64 exec, exec, s[62:63]
 ; CHECK-NEXT:    s_cbranch_execnz .LBB5_1

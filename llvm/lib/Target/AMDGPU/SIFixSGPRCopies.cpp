@@ -124,14 +124,6 @@ class SIFixSGPRCopies {
   SmallVector<MachineInstr*, 4> RegSequences;
   SmallVector<MachineInstr*, 4> PHINodes;
   SmallVector<MachineInstr*, 4> S2VCopies;
-  struct V2PhysSCopyInfo {
-    // Operands that need to replaced by waterfall
-    SmallVector<MachineOperand *> MOs;
-    // Target physical registers replacing the MOs
-    SmallVector<Register> SGPRs;
-  };
-  DenseMap<MachineInstr *, V2PhysSCopyInfo> WaterFalls;
-  DenseSet<MachineInstr *> V2PhySCopiesToErase;
   unsigned NextVGPRToSGPRCopyID = 0;
   MapVector<unsigned, V2SCopyInfo> V2SCopies;
   DenseMap<MachineInstr *, SetVector<unsigned>> SiblingPenalty;
@@ -151,7 +143,6 @@ public:
   bool needToBeConvertedToVALU(V2SCopyInfo *I);
   void analyzeVGPRToSGPRCopy(MachineInstr *MI);
   void lowerVGPR2SGPRCopies(MachineFunction &MF);
-  void lowerPhysicalSGPRInsts(MachineFunction &MF);
   // Handles copies which source register is:
   // 1. Physical register
   // 2. AGPR
@@ -788,7 +779,6 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
     }
   }
 
-  lowerPhysicalSGPRInsts(MF);
   lowerVGPR2SGPRCopies(MF);
   // Postprocessing
   fixSCCCopies(MF);
@@ -822,8 +812,6 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
   PHINodes.clear();
   S2VCopies.clear();
   PHISources.clear();
-  WaterFalls.clear();
-  V2PhySCopiesToErase.clear();
 
   return true;
 }
@@ -921,41 +909,20 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
               TII->get(AMDGPU::V_READFIRSTLANE_B32), TmpReg)
           .add(MI.getOperand(1));
       MI.getOperand(1).setReg(TmpReg);
-    } else if (tryMoveVGPRConstToSGPR(MI.getOperand(1), DstReg, MI.getParent(),
-                                      MI, MI.getDebugLoc())) {
+      return true;
+    }
+
+    if (tryMoveVGPRConstToSGPR(MI.getOperand(1), DstReg, MI.getParent(), MI,
+                               MI.getDebugLoc())) {
       I = std::next(I);
       MI.eraseFromParent();
-    } else if (SrcReg.isVirtual() && TRI->getRegSizeInBits(SrcReg, *MRI) ==
-                                         TRI->getRegSizeInBits(DstReg, *MRI)) {
-      auto I = MI.getIterator();
-      auto E = MI.getParent()->end();
-      // COPY can be erased if all its uses can be converted to waterfall.
-      bool CanErase = true;
-      // Only search current block since phyreg's def & use cannot cross
-      // blocks when MF.NoPhi = false.
-      while (++I != E) {
-        // Currently, we only support waterfall on SI_CALL_ISEL.
-        if (I->getOpcode() == AMDGPU::SI_CALL_ISEL) {
-          MachineInstr *UseMI = &*I;
-          for (unsigned i = 0; i < UseMI->getNumOperands(); ++i) {
-            if (UseMI->getOperand(i).isReg() &&
-                UseMI->getOperand(i).getReg() == DstReg) {
-              MachineOperand *MO = &UseMI->getOperand(i);
-              MO->setReg(SrcReg);
-              V2PhysSCopyInfo &V2SCopyInfo = WaterFalls[UseMI];
-              V2SCopyInfo.MOs.push_back(MO);
-              V2SCopyInfo.SGPRs.push_back(DstReg);
-            }
-          }
-        } else if (I->readsRegister(DstReg, TRI))
-          CanErase = false;
-        if (I->findRegisterDefOperand(DstReg, TRI))
-          break;
-      }
-      if (CanErase)
-        V2PhySCopiesToErase.insert(&MI);
+      return true;
     }
-    return true;
+
+    if (!SrcReg.isVirtual() || TRI->getRegSizeInBits(SrcReg, *MRI) !=
+                                   TRI->getRegSizeInBits(DstReg, *MRI)) {
+      return true;
+    }
   }
   if (!SrcReg.isVirtual() || TRI->isAGPR(*MRI, SrcReg)) {
     SIInstrWorklist worklist;
@@ -981,7 +948,9 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
   if (PHISources.contains(MI))
     return;
   Register DstReg = MI->getOperand(0).getReg();
-  const TargetRegisterClass *DstRC = MRI->getRegClass(DstReg);
+  const TargetRegisterClass *DstRC = DstReg.isVirtual()
+                                         ? MRI->getRegClass(DstReg)
+                                         : TRI->getPhysRegBaseClass(DstReg);
 
   V2SCopyInfo Info(getNextVGPRToSGPRCopyId(), MI,
                    TRI->getRegSizeInBits(*DstRC));
@@ -1183,45 +1152,6 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
     }
     MI->eraseFromParent();
   }
-}
-
-void SIFixSGPRCopies::lowerPhysicalSGPRInsts(MachineFunction &MF) {
-  for (auto &Entry : WaterFalls) {
-    MachineInstr *MI = Entry.first;
-    const V2PhysSCopyInfo &Info = Entry.second;
-    assert((Info.MOs.size() != 0 && Info.SGPRs.size() == Info.MOs.size()) &&
-           "Error in MOs or SGPRs size.");
-
-    if (MI->getOpcode() == AMDGPU::SI_CALL_ISEL) {
-      // Move everything between ADJCALLSTACKUP and ADJCALLSTACKDOWN and
-      // following copies, we also need to move copies from and to physical
-      // registers into the loop block.
-      unsigned FrameSetupOpcode = TII->getCallFrameSetupOpcode();
-      unsigned FrameDestroyOpcode = TII->getCallFrameDestroyOpcode();
-
-      // Also move the copies to physical registers into the loop block
-      MachineBasicBlock &MBB = *MI->getParent();
-      MachineBasicBlock::iterator Start(MI);
-      while (Start->getOpcode() != FrameSetupOpcode)
-        --Start;
-      MachineBasicBlock::iterator End(MI);
-      while (End->getOpcode() != FrameDestroyOpcode)
-        ++End;
-
-      // Also include following copies of the return value
-      ++End;
-      while (End != MBB.end() && End->isCopy() && End->getOperand(1).isReg() &&
-             MI->definesRegister(End->getOperand(1).getReg(), TRI))
-        ++End;
-
-      loadMBUFScalarOperandsFromVGPR(*TII, *MI, Info.MOs, MDT, Start, End,
-                                     Info.SGPRs);
-    }
-  }
-  // Avoid some O0 tests where no use of COPY to SGPR
-  if (!WaterFalls.empty())
-    for (MachineInstr *Entry : V2PhySCopiesToErase)
-      Entry->eraseFromParent();
 }
 
 void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
