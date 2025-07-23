@@ -23,7 +23,9 @@ const char *sparc::getSparcAsmModeForCPU(StringRef Name,
   if (Triple.getArch() == llvm::Triple::sparcv9) {
     const char *DefV9CPU;
 
-    if (Triple.isOSLinux() || Triple.isOSFreeBSD() || Triple.isOSOpenBSD())
+    if (Triple.isOSSolaris())
+      DefV9CPU = "-Av9b";
+    else if (Triple.isOSLinux() || Triple.isOSFreeBSD() || Triple.isOSOpenBSD())
       DefV9CPU = "-Av9a";
     else
       DefV9CPU = "-Av9";
@@ -157,6 +159,7 @@ void sparc::getSparcTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   bool IsSparcV9ATarget =
       (Triple.getArch() == llvm::Triple::sparcv9) &&
       (Triple.isOSLinux() || Triple.isOSFreeBSD() || Triple.isOSOpenBSD());
+  bool IsSparcV9BTarget = Triple.isOSSolaris();
   if (Arg *A = Args.getLastArg(options::OPT_mvis, options::OPT_mno_vis)) {
     if (A->getOption().matches(options::OPT_mvis))
       Features.push_back("+vis");
@@ -171,6 +174,8 @@ void sparc::getSparcTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       Features.push_back("+vis2");
     else
       Features.push_back("-vis2");
+  } else if (IsSparcV9BTarget) {
+    Features.push_back("+vis2");
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_mvis3, options::OPT_mno_vis3)) {
