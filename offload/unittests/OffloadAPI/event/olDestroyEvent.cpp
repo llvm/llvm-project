@@ -23,7 +23,7 @@ TEST_P(olDestroyEventTest, Success) {
   ASSERT_SUCCESS(
       olMemcpy(Queue, DstPtr, Device, &Src, Host, sizeof(Src), &Event));
   ASSERT_NE(Event, nullptr);
-  ASSERT_SUCCESS(olWaitQueue(Queue));
+  ASSERT_SUCCESS(olSyncQueue(Queue));
   ASSERT_SUCCESS(olDestroyEvent(Event));
 }
 
