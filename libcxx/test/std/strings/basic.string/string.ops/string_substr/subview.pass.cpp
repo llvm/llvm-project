@@ -15,7 +15,6 @@
 #include <cassert>
 #include <string>
 
-#include "asan_testing.h"
 #include "constexpr_char_traits.h"
 #include "make_string.h"
 #include "min_allocator.h"
@@ -28,11 +27,30 @@ template <typename CharT, typename TraitsT, typename AllocT>
 constexpr void test() {
   std::basic_string<CharT, TraitsT, AllocT> s{CS("Hello cruel world!"), AllocT{}};
 
-  std::same_as<std::basic_string_view<CharT, TraitsT>> decltype(auto) sv = s.subview(6);
-  assert(sv == CS("cruel world!"));
+  { // With a default position and a character length.
+    std::same_as<std::basic_string_view<CharT, TraitsT>> decltype(auto) sv = s.subview();
+    assert(sv == CS("Hello cruel world!"));
+  }
 
-  std::same_as<std::basic_string_view<CharT, TraitsT>> decltype(auto) subsv = sv.subview(0, 5);
-  assert(subsv == CS("cruel"));
+  { // With a explict position and a character length.
+    std::same_as<std::basic_string_view<CharT, TraitsT>> decltype(auto) sv = s.subview(6, 5);
+    assert(sv == CS("cruel"));
+  }
+
+  { // From the beginning of the string with a explicit character length.
+    std::same_as<std::basic_string_view<CharT, TraitsT>> decltype(auto) sv = s.subview(0, 5);
+    assert(sv == CS("Hello"));
+  }
+
+  { // To the end of string with the default character length.
+    std::same_as<std::basic_string_view<CharT, TraitsT>> decltype(auto) sv = s.subview(12);
+    assert(sv == CS("world!"));
+  }
+
+  { // From the beginning to the end of the string with explicit values.
+    std::same_as<std::basic_string_view<CharT, TraitsT>> decltype(auto) sv = s.subview(0, s.size());
+    assert(sv == CS("Hello cruel world!"));
+  }
 }
 
 template <typename CharT>
