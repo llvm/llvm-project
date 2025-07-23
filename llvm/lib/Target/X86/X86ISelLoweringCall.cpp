@@ -2095,7 +2095,12 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       isTailCall = false;
   }
 
-  if (isTailCall && !IsMustTail) {
+  if (IsMustTail && !isTailCall) {
+    report_fatal_error("failed to perform tail call elimination on a call site "
+                       "marked musttail");
+  }
+
+  if (isTailCall) {
     // Check if it's really possible to do a tail call.
     isTailCall = IsEligibleForTailCallOptimization(CLI, CCInfo, ArgLocs,
                                                    IsCalleePopSRet);
@@ -2109,9 +2114,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       ++NumTailCalls;
   }
 
-  if (IsMustTail && !isTailCall)
-    report_fatal_error("failed to perform tail call elimination on a call "
-                       "site marked musttail");
+  if (IsMustTail) {
+    isTailCall = true;
+  }
 
   assert(!(isVarArg && canGuaranteeTCO(CallConv)) &&
          "Var args not supported with calling convention fastcc, ghc or hipe");
