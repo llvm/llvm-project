@@ -37,6 +37,13 @@ const char *sparc::getSparcAsmModeForCPU(StringRef Name,
         .Case("niagara4", "-Av9d")
         .Default(DefV9CPU);
   } else {
+    const char *DefV8CPU;
+
+    if (Triple.isOSSolaris())
+      DefV8CPU = "-Av8plus";
+    else
+      DefV8CPU = "-Av8";
+
     return llvm::StringSwitch<const char *>(Name)
         .Case("v8", "-Av8")
         .Case("supersparc", "-Av8")
@@ -72,7 +79,7 @@ const char *sparc::getSparcAsmModeForCPU(StringRef Name,
         .Case("gr712rc", "-Aleon")
         .Case("leon4", "-Aleon")
         .Case("gr740", "-Aleon")
-        .Default("-Av8");
+        .Default(DefV8CPU);
   }
 }
 
@@ -160,6 +167,8 @@ void sparc::getSparcTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       (Triple.getArch() == llvm::Triple::sparcv9) &&
       (Triple.isOSLinux() || Triple.isOSFreeBSD() || Triple.isOSOpenBSD());
   bool IsSparcV9BTarget = Triple.isOSSolaris();
+  bool IsSparcV8PlusTarget =
+      Triple.getArch() == llvm::Triple::sparc && Triple.isOSSolaris();
   if (Arg *A = Args.getLastArg(options::OPT_mvis, options::OPT_mno_vis)) {
     if (A->getOption().matches(options::OPT_mvis))
       Features.push_back("+vis");
@@ -196,6 +205,8 @@ void sparc::getSparcTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   if (Arg *A = Args.getLastArg(options::OPT_mv8plus, options::OPT_mno_v8plus)) {
     if (A->getOption().matches(options::OPT_mv8plus))
       Features.push_back("+v8plus");
+  } else if (IsSparcV8PlusTarget) {
+    Features.push_back("+v8plus");
   }
 
   if (Args.hasArg(options::OPT_ffixed_g1))
