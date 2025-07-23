@@ -2689,7 +2689,7 @@ static bool generateConvertInst(const StringRef DemangledCall,
             GR->getScalarOrVectorComponentCount(Call->ReturnRegister);
         Opcode = SPIRV::OpRoundFToTF32INTEL;
       } else {
-        Float -> Float
+        // Float -> Float
         Opcode = SPIRV::OpFConvert;
       }
     }
