@@ -176,7 +176,7 @@ public:
     return true;
   }
 
-  bool hasLibrary(StringRef path) {
+  bool hasLibrary(StringRef path) const {
     std::shared_lock<std::shared_mutex> lock(mutex);
     if (libraries.count(path) > 0)
       return true;
@@ -429,7 +429,7 @@ public:
       const SearchPolicy &policy = SearchPolicy::defaultPlan());
 
 private:
-  void scanLibrariesIfNeeded(PathType K);
+  bool scanLibrariesIfNeeded(PathType K);
   void resolveSymbolsInLibrary(LibraryInfo &library, SymbolQuery &query);
   bool
   symbolExistsInLibrary(const LibraryInfo &library, StringRef symbol,
@@ -460,6 +460,9 @@ public:
   void addScanPath(const std::string &path, PathType Kind);
   bool markLibraryLoaded(StringRef path);
   bool markLibraryUnLoaded(StringRef path);
+  bool isLibraryLoaded(StringRef path) const {
+    return Loader->m_libMgr.isLoaded(path);
+  }
   void resolveSymbols(std::vector<std::string> symbols,
                       DynamicLoader::OnSearchComplete OnCompletion,
                       const SearchPolicy &policy = SearchPolicy::defaultPlan());
