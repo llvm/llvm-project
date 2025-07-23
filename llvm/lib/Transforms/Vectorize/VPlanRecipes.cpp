@@ -991,7 +991,13 @@ bool VPInstruction::isVectorToScalar() const {
 }
 
 bool VPInstruction::isSingleScalar() const {
-  return getOpcode() == Instruction::PHI || isScalarCast();
+  switch (getOpcode()) {
+  case Instruction::PHI:
+  case VPInstruction::ExplicitVectorLength:
+    return true;
+  default:
+    return isScalarCast();
+  }
 }
 
 void VPInstruction::execute(VPTransformState &State) {
