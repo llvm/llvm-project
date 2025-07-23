@@ -130,11 +130,10 @@ void MCObjectStreamer::visitUsedSymbol(const MCSymbol &Sym) {
   Assembler->registerSymbol(Sym);
 }
 
-void MCObjectStreamer::emitCFISections(bool EH, bool Debug, bool SFrame) {
-  MCStreamer::emitCFISections(EH, Debug, SFrame);
+void MCObjectStreamer::emitCFISections(bool EH, bool Debug) {
+  MCStreamer::emitCFISections(EH, Debug);
   EmitEHFrame = EH;
   EmitDebugFrame = Debug;
-  EmitSFrame = SFrame;
 }
 
 void MCObjectStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,

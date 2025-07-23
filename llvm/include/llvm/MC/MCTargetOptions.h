@@ -102,9 +102,6 @@ public:
   // functions on Darwins.
   bool EmitCompactUnwindNonCanonical : 1;
 
-  // Whether to emit SFrame unwind sections.
-  bool EmitSFrameUnwind : 1;
-
   // Whether or not to use full register names on PowerPC.
   bool PPCUseFullRegisterNames : 1;
 
