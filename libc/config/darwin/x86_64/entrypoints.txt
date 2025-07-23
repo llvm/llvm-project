@@ -233,7 +233,7 @@ set(TARGET_LIBM_ENTRYPOINTS
 
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
-    libc.src.math.fabsbf16
+  libc.src.math.fabsbf16
 )
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS
