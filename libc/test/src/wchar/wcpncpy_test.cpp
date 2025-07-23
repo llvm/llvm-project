@@ -45,7 +45,7 @@ TEST(LlvmLibcWCPNCpyTest, CopyNull) {
   wchar_t *res = LIBC_NAMESPACE::wcpncpy(dest, src, 1);
   ASSERT_TRUE(dest[0] == L'\0');
   ASSERT_TRUE(dest[1] == L'b');
-  ASSERT_EQ(dest + 1, res);
+  ASSERT_EQ(dest, res);
 }
 
 TEST(LlvmLibcWCPNCpyTest, CopyPastSrc) {
@@ -54,7 +54,7 @@ TEST(LlvmLibcWCPNCpyTest, CopyPastSrc) {
   wchar_t *res = LIBC_NAMESPACE::wcpncpy(dest, src, 2);
   ASSERT_TRUE(dest[0] == L'\0');
   ASSERT_TRUE(dest[1] == L'\0');
-  ASSERT_EQ(dest + 2, res);
+  ASSERT_EQ(dest, res);
 }
 
 TEST(LlvmLibcWCPNCpyTest, CopyTwoNoNull) {
@@ -72,7 +72,16 @@ TEST(LlvmLibcWCPNCpyTest, CopyTwoWithNull) {
   wchar_t *res = LIBC_NAMESPACE::wcpncpy(dest, src, 2);
   ASSERT_TRUE(dest[0] == L'x');
   ASSERT_TRUE(dest[1] == L'\0');
-  ASSERT_EQ(dest + 2, res);
+  ASSERT_EQ(dest + 1, res);
+}
+
+TEST(LlvmLibcWCPNCpyTest, CopyAndFill) {
+  wchar_t dest[] = {L'a', L'b', L'c'};
+  wchar_t *res = LIBC_NAMESPACE::wcpncpy(dest, L"x", 3);
+  ASSERT_TRUE(dest[0] == L'x');
+  ASSERT_TRUE(dest[1] == L'\0');
+  ASSERT_TRUE(dest[2] == L'\0');
+  ASSERT_EQ(dest + 1, res);
 }
 
 #if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)

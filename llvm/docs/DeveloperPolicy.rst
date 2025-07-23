@@ -42,7 +42,7 @@ upcoming projects, new designs, enhancements, and other community business.
 First and foremost is the `LLVM Discourse forums`_, which is the successor
 to our former mailing lists (llvm-dev@, cfe-dev@, lldb-dev@, etc). This is
 probably the most vital and active communication channel to our highly
-distributed open source project. It enables long-form asyncronous text
+distributed open source project. It enables long-form asynchronous text
 communication, and this is where people tend to propose major changes or
 propose new designs in the form of RFCs (Request For Comment), which are
 described later. Please be aware that the Discourse forums are public and
@@ -623,7 +623,7 @@ After posting a major proposal, it is common to receive lots of conflicting
 feedback from different parties, or no feedback at all, leaving authors without
 clear next steps. As a community, we are aiming for `"rough consensus"
 <https://en.wikipedia.org/wiki/Rough_consensus>`_, similar in spirit to what is
-desribed in `IETF RFC7282 <https://datatracker.ietf.org/doc/html/rfc7282>`_.
+described in `IETF RFC7282 <https://datatracker.ietf.org/doc/html/rfc7282>`_.
 This requires considering and addressing all of the objections to the RFC, and
 confirming that we can all live with the tradeoffs embodied in the proposal.
 

@@ -176,7 +176,8 @@ private:
 
   bool hasProtectedVisibility() const override { return false; }
 
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override;
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override;
 };
 
 class LLVM_LIBRARY_VISIBILITY WebAssembly32TargetInfo

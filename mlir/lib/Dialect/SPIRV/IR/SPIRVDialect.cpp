@@ -25,13 +25,9 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 using namespace mlir::spirv;
@@ -944,12 +940,12 @@ Operation *SPIRVDialect::materializeConstant(OpBuilder &builder,
                                              Attribute value, Type type,
                                              Location loc) {
   if (auto poison = dyn_cast<ub::PoisonAttr>(value))
-    return builder.create<ub::PoisonOp>(loc, type, poison);
+    return ub::PoisonOp::create(builder, loc, type, poison);
 
   if (!spirv::ConstantOp::isBuildableWith(type))
     return nullptr;
 
-  return builder.create<spirv::ConstantOp>(loc, type, value);
+  return spirv::ConstantOp::create(builder, loc, type, value);
 }
 
 //===----------------------------------------------------------------------===//

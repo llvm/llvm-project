@@ -735,10 +735,12 @@ bool Parser::TrySkipAttributes() {
                      tok::kw_alignas) ||
          Tok.isRegularKeywordAttribute()) {
     if (Tok.is(tok::l_square)) {
+      if (!NextToken().is(tok::l_square))
+        return true;
+
       ConsumeBracket();
-      if (Tok.isNot(tok::l_square))
-        return false;
       ConsumeBracket();
+
       if (!SkipUntil(tok::r_square) || Tok.isNot(tok::r_square))
         return false;
       // Note that explicitly checking for `[[` and `]]` allows to fail as

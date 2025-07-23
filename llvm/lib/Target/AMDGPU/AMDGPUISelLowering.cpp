@@ -375,7 +375,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v16f64, MVT::v16bf16, Expand);
   setTruncStoreAction(MVT::v16f64, MVT::v16f16, Expand);
   setTruncStoreAction(MVT::v16i64, MVT::v16i16, Expand);
-  setTruncStoreAction(MVT::v16i64, MVT::v16i16, Expand);
   setTruncStoreAction(MVT::v16i64, MVT::v16i8, Expand);
   setTruncStoreAction(MVT::v16i64, MVT::v16i8, Expand);
   setTruncStoreAction(MVT::v16i64, MVT::v16i1, Expand);
@@ -422,6 +421,11 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction({ISD::FLOG10, ISD::FLOG, ISD::FEXP, ISD::FEXP10}, MVT::f16,
                      Custom);
+
+  setOperationAction(ISD::FCANONICALIZE, {MVT::f32, MVT::f64}, Legal);
+  if (Subtarget->has16BitInsts()) {
+    setOperationAction(ISD::FCANONICALIZE, MVT::f16, Legal);
+  }
 
   // FIXME: These IS_FPCLASS vector fp types are marked custom so it reaches
   // scalarization code. Can be removed when IS_FPCLASS expand isn't called by
@@ -1138,6 +1142,7 @@ CCAssignFn *AMDGPUCallLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::Cold:
     return CC_AMDGPU_Func;
   case CallingConv::AMDGPU_Gfx:
+  case CallingConv::AMDGPU_Gfx_WholeWave:
     return CC_SI_Gfx;
   case CallingConv::AMDGPU_KERNEL:
   case CallingConv::SPIR_KERNEL:
@@ -1163,6 +1168,7 @@ CCAssignFn *AMDGPUCallLowering::CCAssignFnForReturn(CallingConv::ID CC,
   case CallingConv::AMDGPU_LS:
     return RetCC_SI_Shader;
   case CallingConv::AMDGPU_Gfx:
+  case CallingConv::AMDGPU_Gfx_WholeWave:
     return RetCC_SI_Gfx;
   case CallingConv::C:
   case CallingConv::Fast:
@@ -3853,7 +3859,7 @@ bool AMDGPUTargetLowering::shouldCombineMemoryType(EVT VT) const {
   return true;
 }
 
-// Replace load of an illegal type with a store of a bitcast to a friendlier
+// Replace load of an illegal type with a bitcast from a load of a friendlier
 // type.
 SDValue AMDGPUTargetLowering::performLoadCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
@@ -4001,7 +4007,8 @@ SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   case Intrinsic::amdgcn_rsq:
   case Intrinsic::amdgcn_rcp_legacy:
   case Intrinsic::amdgcn_rsq_legacy:
-  case Intrinsic::amdgcn_rsq_clamp: {
+  case Intrinsic::amdgcn_rsq_clamp:
+  case Intrinsic::amdgcn_tanh: {
     // FIXME: This is probably wrong. If src is an sNaN, it won't be quieted
     SDValue Src = N->getOperand(1);
     return Src.isUndef() ? Src : SDValue();
@@ -4218,10 +4225,17 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
     SDValue SplitLHS = DAG.getNode(ISD::BITCAST, LHSSL, ConcatType, LHS);
     Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, LHSSL, TargetType, SplitLHS, One);
   }
-  Hi = DAG.getFreeze(Hi);
 
-  SDValue HiShift = DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftFullAmt);
-  SDValue NewShift = DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftAmt);
+  KnownBits KnownLHS = DAG.computeKnownBits(LHS);
+  SDValue HiShift;
+  if (KnownLHS.isNegative()) {
+    HiShift = DAG.getAllOnesConstant(SL, TargetType);
+  } else {
+    Hi = DAG.getFreeze(Hi);
+    HiShift = DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftFullAmt);
+  }
+  SDValue NewShift =
+      DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftAmt, N->getFlags());
 
   SDValue Vec;
   if (VT.isVector()) {
@@ -4328,7 +4342,8 @@ SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
     Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, LHSSL, TargetType, SplitLHS, One);
   }
 
-  SDValue NewShift = DAG.getNode(ISD::SRL, SL, TargetType, Hi, ShiftAmt);
+  SDValue NewShift =
+      DAG.getNode(ISD::SRL, SL, TargetType, Hi, ShiftAmt, N->getFlags());
 
   SDValue Vec;
   if (VT.isVector()) {
@@ -4829,9 +4844,92 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
   return SDValue();
 }
 
+// Detect when CMP and SELECT use the same constant and fold them to avoid
+// loading the constant twice. Specifically handles patterns like:
+// %cmp = icmp eq i32 %val, 4242
+// %sel = select i1 %cmp, i32 4242, i32 %other
+// It can be optimized to reuse %val instead of 4242 in select.
+static SDValue
+foldCmpSelectWithSharedConstant(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                                const AMDGPUSubtarget *ST) {
+  SDValue Cond = N->getOperand(0);
+  SDValue TrueVal = N->getOperand(1);
+  SDValue FalseVal = N->getOperand(2);
+
+  // Check if condition is a comparison.
+  if (Cond.getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  SDValue LHS = Cond.getOperand(0);
+  SDValue RHS = Cond.getOperand(1);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+
+  bool isFloatingPoint = LHS.getValueType().isFloatingPoint();
+  bool isInteger = LHS.getValueType().isInteger();
+
+  // Handle simple floating-point and integer types only.
+  if (!isFloatingPoint && !isInteger)
+    return SDValue();
+
+  bool isEquality = CC == (isFloatingPoint ? ISD::SETOEQ : ISD::SETEQ);
+  bool isNonEquality = CC == (isFloatingPoint ? ISD::SETONE : ISD::SETNE);
+  if (!isEquality && !isNonEquality)
+    return SDValue();
+
+  SDValue ArgVal, ConstVal;
+  if ((isFloatingPoint && isa<ConstantFPSDNode>(RHS)) ||
+      (isInteger && isa<ConstantSDNode>(RHS))) {
+    ConstVal = RHS;
+    ArgVal = LHS;
+  } else if ((isFloatingPoint && isa<ConstantFPSDNode>(LHS)) ||
+             (isInteger && isa<ConstantSDNode>(LHS))) {
+    ConstVal = LHS;
+    ArgVal = RHS;
+  } else {
+    return SDValue();
+  }
+
+  // Check if constant should not be optimized - early return if not.
+  if (isFloatingPoint) {
+    const APFloat &Val = cast<ConstantFPSDNode>(ConstVal)->getValueAPF();
+    const GCNSubtarget *GCNST = static_cast<const GCNSubtarget *>(ST);
+
+    // Only optimize normal floating-point values (finite, non-zero, and
+    // non-subnormal as per IEEE 754), skip optimization for inlinable
+    // floating-point constants.
+    if (!Val.isNormal() || GCNST->getInstrInfo()->isInlineConstant(Val))
+      return SDValue();
+  } else {
+    int64_t IntVal = cast<ConstantSDNode>(ConstVal)->getSExtValue();
+
+    // Skip optimization for inlinable integer immediates.
+    // Inlinable immediates include: -16 to 64 (inclusive).
+    if (IntVal >= -16 && IntVal <= 64)
+      return SDValue();
+  }
+
+  // For equality and non-equality comparisons, patterns:
+  // select (setcc x, const), const, y -> select (setcc x, const), x, y
+  // select (setccinv x, const), y, const -> select (setccinv x, const), y, x
+  if (!(isEquality && TrueVal == ConstVal) &&
+      !(isNonEquality && FalseVal == ConstVal))
+    return SDValue();
+
+  SDValue SelectLHS = (isEquality && TrueVal == ConstVal) ? ArgVal : TrueVal;
+  SDValue SelectRHS =
+      (isNonEquality && FalseVal == ConstVal) ? ArgVal : FalseVal;
+  return DCI.DAG.getNode(ISD::SELECT, SDLoc(N), N->getValueType(0), Cond,
+                         SelectLHS, SelectRHS);
+}
+
 SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   if (SDValue Folded = foldFreeOpFromSelect(DCI, SDValue(N, 0)))
+    return Folded;
+
+  // Try to fold CMP + SELECT patterns with shared constants (both FP and
+  // integer).
+  if (SDValue Folded = foldCmpSelectWithSharedConstant(N, DCI, Subtarget))
     return Folded;
 
   SDValue Cond = N->getOperand(0);
@@ -5720,6 +5818,7 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(BUILD_VERTICAL_VECTOR)
   NODE_NAME_CASE(CONST_DATA_PTR)
   NODE_NAME_CASE(PC_ADD_REL_OFFSET)
+  NODE_NAME_CASE(PC_ADD_REL_OFFSET64)
   NODE_NAME_CASE(LDS)
   NODE_NAME_CASE(DUMMY_CHAIN)
   NODE_NAME_CASE(LOAD_D16_HI)
@@ -5777,6 +5876,8 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(BUFFER_ATOMIC_FMIN)
   NODE_NAME_CASE(BUFFER_ATOMIC_FMAX)
   NODE_NAME_CASE(BUFFER_ATOMIC_COND_SUB_U32)
+  NODE_NAME_CASE(WHOLE_WAVE_SETUP)
+  NODE_NAME_CASE(WHOLE_WAVE_RETURN)
   }
   return nullptr;
 }
@@ -6183,7 +6284,8 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(
     case Intrinsic::amdgcn_rsq:
     case Intrinsic::amdgcn_rcp_legacy:
     case Intrinsic::amdgcn_rsq_legacy:
-    case Intrinsic::amdgcn_rsq_clamp: {
+    case Intrinsic::amdgcn_rsq_clamp:
+    case Intrinsic::amdgcn_tanh: {
       if (SNaN)
         return true;
 

@@ -49,8 +49,8 @@ define void @foo(ptr %arg3, i1 %icmp16) #0 {
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb5
 ; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    movq %r14, %r15
 ; CHECK-NEXT:    orl $1, %r12d
+; CHECK-NEXT:    movq %r14, %r15
 ; CHECK-NEXT:  .LBB0_2: # %bb7
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    xorl %eax, %eax

@@ -46,7 +46,7 @@
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectDynamicValue.h"
 #include "lldb/ValueObject/ValueObjectMemory.h"
-#include "lldb/ValueObject/ValueObjectSyntheticFilter.h"
+#include "lldb/ValueObject/ValueObjectSynthetic.h"
 #include "lldb/ValueObject/ValueObjectVTable.h"
 #include "lldb/lldb-private-types.h"
 

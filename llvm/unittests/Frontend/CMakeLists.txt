@@ -20,6 +20,7 @@ add_llvm_unittest(LLVMFrontendTests
   OpenMPCompositionTest.cpp
   OpenMPDecompositionTest.cpp
   OpenMPDirectiveNameTest.cpp
+  OpenMPDirectiveNameParserTest.cpp
 
   DEPENDS
   acc_gen

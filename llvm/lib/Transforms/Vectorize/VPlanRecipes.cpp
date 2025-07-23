@@ -67,8 +67,10 @@ bool VPRecipeBase::mayWriteToMemory() const {
                 ->onlyReadsMemory();
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
+  case VPCanonicalIVPHISC:
   case VPBranchOnMaskSC:
   case VPFirstOrderRecurrencePHISC:
+  case VPReductionPHISC:
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
     return false;
@@ -585,6 +587,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *Op = State.get(getOperand(0), vputils::onlyFirstLaneUsed(this));
     return Builder.CreateFreeze(Op, Name);
   }
+  case Instruction::FCmp:
   case Instruction::ICmp: {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
     Value *A = State.get(getOperand(0), OnlyFirstLaneUsed);
@@ -751,8 +754,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // and will be removed by breaking up the recipe further.
     auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
     // Get its reduction variable descriptor.
-    const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-    RecurKind RK = RdxDesc.getRecurrenceKind();
+    RecurKind RK = PhiR->getRecurrenceKind();
     assert(RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
            "Unexpected reduction kind");
     assert(!PhiR->isInLoop() &&
@@ -764,14 +766,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *ReducedPartRdx = State.get(getOperand(3));
     RecurKind MinMaxKind;
     bool IsSigned = RecurrenceDescriptor::isSignedRecurrenceKind(RK);
-    if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
+    if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
       MinMaxKind = IsSigned ? RecurKind::SMax : RecurKind::UMax;
-    } else {
-      assert(RecurrenceDescriptor::isFindFirstIVRecurrenceKind(RK) &&
-             "Kind must either be FindLastIV or FindFirstIV");
-      assert(IsSigned && "Only FindFirstIV with SMax is currently supported");
-      MinMaxKind = RecurKind::SMin;
-    }
+    else
+      MinMaxKind = IsSigned ? RecurKind::SMin : RecurKind::UMin;
     for (unsigned Part = 1; Part < UF; ++Part)
       ReducedPartRdx = createMinMaxOp(Builder, MinMaxKind, ReducedPartRdx,
                                       State.get(getOperand(3 + Part)));
@@ -786,9 +784,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // and will be removed by breaking up the recipe further.
     auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
     // Get its reduction variable descriptor.
-    const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
 
-    RecurKind RK = RdxDesc.getRecurrenceKind();
+    RecurKind RK = PhiR->getRecurrenceKind();
     assert(!RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
            "should be handled by ComputeFindIVResult");
 
@@ -814,9 +811,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
         if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
           ReducedPartRdx = createMinMaxOp(Builder, RK, ReducedPartRdx, RdxPart);
         else
-          ReducedPartRdx =
-              Builder.CreateBinOp((Instruction::BinaryOps)RdxDesc.getOpcode(),
-                                  RdxPart, ReducedPartRdx, "bin.rdx");
+          ReducedPartRdx = Builder.CreateBinOp(
+              (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK),
+              RdxPart, ReducedPartRdx, "bin.rdx");
       }
     }
 
@@ -864,7 +861,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *Res = State.get(getOperand(0));
     for (VPValue *Op : drop_begin(operands()))
       Res = Builder.CreateOr(Res, State.get(Op));
-    return Builder.CreateOrReduce(Res);
+    return State.VF.isScalar() ? Res : Builder.CreateOrReduce(Res);
   }
   case VPInstruction::FirstActiveLane: {
     if (getNumOperands() == 1) {
@@ -1037,6 +1034,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   switch (getOpcode()) {
   case Instruction::ExtractElement:
   case Instruction::Freeze:
+  case Instruction::FCmp:
   case Instruction::ICmp:
   case Instruction::Select:
   case VPInstruction::AnyOf:
@@ -1072,6 +1070,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
     return Op == getOperand(1);
   case Instruction::PHI:
     return true;
+  case Instruction::FCmp:
   case Instruction::ICmp:
   case Instruction::Select:
   case Instruction::Or:
@@ -1104,6 +1103,7 @@ bool VPInstruction::onlyFirstPartUsed(const VPValue *Op) const {
   switch (getOpcode()) {
   default:
     return false;
+  case Instruction::FCmp:
   case Instruction::ICmp:
   case Instruction::Select:
     return vputils::onlyFirstPartUsed(this);
@@ -1769,6 +1769,8 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
     return Opcode == Instruction::Add || Opcode == Instruction::Sub ||
            Opcode == Instruction::Mul ||
            Opcode == VPInstruction::VPInstruction::CanonicalIVIncrementForPart;
+  case OperationType::Trunc:
+    return Opcode == Instruction::Trunc;
   case OperationType::DisjointOp:
     return Opcode == Instruction::Or;
   case OperationType::PossiblyExactOp:
@@ -1788,7 +1790,7 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
     return Opcode == Instruction::ZExt;
     break;
   case OperationType::Cmp:
-    return Opcode == Instruction::ICmp;
+    return Opcode == Instruction::FCmp || Opcode == Instruction::ICmp;
   case OperationType::Other:
     return true;
   }
@@ -1814,6 +1816,12 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
     if (WrapFlags.HasNUW)
       O << " nuw";
     if (WrapFlags.HasNSW)
+      O << " nsw";
+    break;
+  case OperationType::Trunc:
+    if (TruncFlags.HasNUW)
+      O << " nuw";
+    if (TruncFlags.HasNSW)
       O << " nsw";
     break;
   case OperationType::FPMathOp:
@@ -3061,8 +3069,7 @@ void VPPredInstPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
                                                  VPCostContext &Ctx) const {
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
-  const Align Alignment =
-      getLoadStoreAlignment(const_cast<Instruction *>(&Ingredient));
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
   unsigned Opcode = isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(this)
@@ -3202,10 +3209,8 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
   // TODO: Using getMemoryOpCost() instead of getMaskedMemoryOpCost when we
   // don't need to compare to the legacy cost model.
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
-  const Align Alignment =
-      getLoadStoreAlignment(const_cast<Instruction *>(&Ingredient));
-  unsigned AS =
-      getLoadStoreAddressSpace(const_cast<Instruction *>(&Ingredient));
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
+  unsigned AS = getLoadStoreAddressSpace(&Ingredient);
   InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
       Instruction::Load, Ty, Alignment, AS, Ctx.CostKind);
   if (!Reverse)
@@ -3315,10 +3320,8 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
   // TODO: Using getMemoryOpCost() instead of getMaskedMemoryOpCost when we
   // don't need to compare to the legacy cost model.
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
-  const Align Alignment =
-      getLoadStoreAlignment(const_cast<Instruction *>(&Ingredient));
-  unsigned AS =
-      getLoadStoreAddressSpace(const_cast<Instruction *>(&Ingredient));
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
+  unsigned AS = getLoadStoreAddressSpace(&Ingredient);
   InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
       Instruction::Store, Ty, Alignment, AS, Ctx.CostKind);
   if (!Reverse)
@@ -3439,18 +3442,9 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   unsigned InterleaveFactor = Group->getFactor();
   auto *VecTy = VectorType::get(ScalarTy, State.VF * InterleaveFactor);
 
-  // TODO: extend the masked interleaved-group support to reversed access.
   VPValue *BlockInMask = getMask();
-  assert((!BlockInMask || !Group->isReverse()) &&
-         "Reversed masked interleave-group not supported.");
-
   VPValue *Addr = getAddr();
   Value *ResAddr = State.get(Addr, VPLane(0));
-  if (auto *I = dyn_cast<Instruction>(ResAddr))
-    State.setDebugLocFrom(I->getDebugLoc());
-
-  State.setDebugLocFrom(getDebugLoc());
-  Value *PoisonVec = PoisonValue::get(VecTy);
 
   auto CreateGroupMask = [&BlockInMask, &State,
                           &InterleaveFactor](Value *MaskForGaps) -> Value * {
@@ -3489,6 +3483,7 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
     Instruction *NewLoad;
     if (BlockInMask || MaskForGaps) {
       Value *GroupMask = CreateGroupMask(MaskForGaps);
+      Value *PoisonVec = PoisonValue::get(VecTy);
       NewLoad = State.Builder.CreateMaskedLoad(VecTy, ResAddr,
                                                Group->getAlign(), GroupMask,
                                                PoisonVec, "wide.masked.vec");
@@ -3498,57 +3493,39 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
     Group->addMetadata(NewLoad);
 
     ArrayRef<VPValue *> VPDefs = definedValues();
-    const DataLayout &DL = State.CFG.PrevBB->getDataLayout();
     if (VecTy->isScalableTy()) {
       // Scalable vectors cannot use arbitrary shufflevectors (only splats),
       // so must use intrinsics to deinterleave.
       assert(InterleaveFactor <= 8 &&
              "Unsupported deinterleave factor for scalable vectors");
-      Value *Deinterleave = State.Builder.CreateIntrinsic(
+      NewLoad = State.Builder.CreateIntrinsic(
           getDeinterleaveIntrinsicID(InterleaveFactor), NewLoad->getType(),
           NewLoad,
           /*FMFSource=*/nullptr, "strided.vec");
-
-      for (unsigned I = 0, J = 0; I < InterleaveFactor; ++I) {
-        Instruction *Member = Group->getMember(I);
-        Value *StridedVec = State.Builder.CreateExtractValue(Deinterleave, I);
-        if (!Member) {
-          // This value is not needed as it's not used
-          cast<Instruction>(StridedVec)->eraseFromParent();
-          continue;
-        }
-        // If this member has different type, cast the result type.
-        if (Member->getType() != ScalarTy) {
-          VectorType *OtherVTy = VectorType::get(Member->getType(), State.VF);
-          StridedVec =
-              createBitOrPointerCast(State.Builder, StridedVec, OtherVTy, DL);
-        }
-
-        if (Group->isReverse())
-          StridedVec = State.Builder.CreateVectorReverse(StridedVec, "reverse");
-
-        State.set(VPDefs[J], StridedVec);
-        ++J;
-      }
-
-      return;
     }
-    assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
 
-    // For each member in the group, shuffle out the appropriate data from the
-    // wide loads.
-    unsigned J = 0;
-    for (unsigned I = 0; I < InterleaveFactor; ++I) {
+    auto CreateStridedVector = [&InterleaveFactor, &State,
+                                &NewLoad](unsigned Index) -> Value * {
+      assert(Index < InterleaveFactor && "Illegal group index");
+      if (State.VF.isScalable())
+        return State.Builder.CreateExtractValue(NewLoad, Index);
+
+      // For fixed length VF, use shuffle to extract the sub-vectors from the
+      // wide load.
+      auto StrideMask =
+          createStrideMask(Index, InterleaveFactor, State.VF.getFixedValue());
+      return State.Builder.CreateShuffleVector(NewLoad, StrideMask,
+                                               "strided.vec");
+    };
+
+    for (unsigned I = 0, J = 0; I < InterleaveFactor; ++I) {
       Instruction *Member = Group->getMember(I);
 
       // Skip the gaps in the group.
       if (!Member)
         continue;
 
-      auto StrideMask =
-          createStrideMask(I, InterleaveFactor, State.VF.getFixedValue());
-      Value *StridedVec =
-          State.Builder.CreateShuffleVector(NewLoad, StrideMask, "strided.vec");
+      Value *StridedVec = CreateStridedVector(I);
 
       // If this member has different type, cast the result type.
       if (Member->getType() != ScalarTy) {

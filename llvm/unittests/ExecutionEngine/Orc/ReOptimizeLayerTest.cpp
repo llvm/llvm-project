@@ -172,8 +172,8 @@ TEST_F(ReOptimizeLayerTest, BasicReOptimization) {
       });
   EXPECT_THAT_ERROR(ROLayer->reigsterRuntimeFunctions(*JD), Succeeded());
 
-  ThreadSafeContext Ctx(std::make_unique<LLVMContext>());
-  auto M = std::make_unique<Module>("<main>", *Ctx.getContext());
+  auto Ctx = std::make_unique<LLVMContext>();
+  auto M = std::make_unique<Module>("<main>", *Ctx);
   M->setTargetTriple(Triple(sys::getProcessTriple()));
 
   (void)createRetFunction(M.get(), "main", 42);

@@ -29,6 +29,19 @@ class Symbol;
 
 // Add this namespace to avoid potential conflicts
 namespace omp {
+// There is no consistent way to get the source of an ActionStmt, but there
+// is "source" in Statement<T>. This structure keeps the ActionStmt with the
+// extracted source for further use.
+struct SourcedActionStmt {
+  const parser::ActionStmt *stmt{nullptr};
+  parser::CharBlock source;
+
+  operator bool() const { return stmt != nullptr; }
+};
+
+SourcedActionStmt GetActionStmt(const parser::ExecutionPartConstruct *x);
+SourcedActionStmt GetActionStmt(const parser::Block &block);
+
 std::string ThisVersion(unsigned version);
 std::string TryVersion(unsigned version);
 
@@ -45,6 +58,9 @@ bool IsCommonBlock(const Symbol &sym);
 bool IsExtendedListItem(const Symbol &sym);
 bool IsVariableListItem(const Symbol &sym);
 bool IsVarOrFunctionRef(const MaybeExpr &expr);
+
+bool IsMapEnteringType(parser::OmpMapType::Value type);
+bool IsMapExitingType(parser::OmpMapType::Value type);
 
 std::optional<SomeExpr> GetEvaluateExpr(const parser::Expr &parserExpr);
 std::optional<evaluate::DynamicType> GetDynamicType(

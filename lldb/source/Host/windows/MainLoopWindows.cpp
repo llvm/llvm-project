@@ -12,16 +12,16 @@
 #include "lldb/Host/windows/windows.h"
 #include "lldb/Utility/Status.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/WindowsError.h"
 #include <algorithm>
 #include <cassert>
-#include <cerrno>
-#include <csignal>
 #include <ctime>
 #include <io.h>
+#include <synchapi.h>
 #include <thread>
 #include <vector>
+#include <winbase.h>
+#include <winerror.h>
 #include <winsock2.h>
 
 using namespace lldb;
@@ -42,11 +42,12 @@ namespace {
 class PipeEvent : public MainLoopWindows::IOEvent {
 public:
   explicit PipeEvent(HANDLE handle)
-      : IOEvent(CreateEventW(NULL, /*bManualReset=*/FALSE,
+      : IOEvent(CreateEventW(NULL, /*bManualReset=*/TRUE,
                              /*bInitialState=*/FALSE, NULL)),
-        m_handle(handle), m_ready(CreateEventW(NULL, /*bManualReset=*/FALSE,
+        m_handle(handle), m_ready(CreateEventW(NULL, /*bManualReset=*/TRUE,
                                                /*bInitialState=*/FALSE, NULL)) {
     assert(m_event && m_ready);
+    m_monitor_thread = std::thread(&PipeEvent::Monitor, this);
   }
 
   ~PipeEvent() override {
@@ -65,19 +66,32 @@ public:
   }
 
   void WillPoll() override {
-    if (!m_monitor_thread.joinable())
-      m_monitor_thread = std::thread(&PipeEvent::Monitor, this);
+    if (WaitForSingleObject(m_event, /*dwMilliseconds=*/0) != WAIT_TIMEOUT) {
+      // The thread has already signalled that the data is available. No need
+      // for further polling until we consume that event.
+      return;
+    }
+    if (WaitForSingleObject(m_ready, /*dwMilliseconds=*/0) != WAIT_TIMEOUT) {
+      // The thread is already waiting for data to become available.
+      return;
+    }
+    // Start waiting.
+    SetEvent(m_ready);
   }
 
-  void Disarm() override { SetEvent(m_ready); }
+  void Disarm() override { ResetEvent(m_event); }
 
   /// Monitors the handle performing a zero byte read to determine when data is
   /// avaiable.
   void Monitor() {
+    // Wait until the MainLoop tells us to start.
+    WaitForSingleObject(m_ready, INFINITE);
+
     do {
       char buf[1];
       DWORD bytes_read = 0;
-      OVERLAPPED ov = {0};
+      OVERLAPPED ov;
+      ZeroMemory(&ov, sizeof(ov));
       // Block on a 0-byte read; this will only resume when data is
       // available in the pipe. The pipe must be PIPE_WAIT or this thread
       // will spin.
@@ -109,7 +123,11 @@ public:
         continue;
       }
 
+      // Notify that data is available on the pipe. It's important to set this
+      // before clearing m_ready to avoid a race with WillPoll.
       SetEvent(m_event);
+      // Stop polling until we're told to resume.
+      ResetEvent(m_ready);
 
       // Wait until the current read is consumed before doing the next read.
       WaitForSingleObject(m_ready, INFINITE);
@@ -132,14 +150,14 @@ public:
 
   ~SocketEvent() override { WSACloseEvent(m_event); }
 
-  void WillPoll() {
+  void WillPoll() override {
     int result =
         WSAEventSelect(m_socket, m_event, FD_READ | FD_ACCEPT | FD_CLOSE);
     assert(result == 0);
     UNUSED_IF_ASSERT_DISABLED(result);
   }
 
-  void DidPoll() {
+  void DidPoll() override {
     int result = WSAEventSelect(m_socket, WSA_INVALID_EVENT, 0);
     assert(result == 0);
     UNUSED_IF_ASSERT_DISABLED(result);

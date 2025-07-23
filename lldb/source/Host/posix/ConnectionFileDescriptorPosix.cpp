@@ -272,13 +272,11 @@ size_t ConnectionFileDescriptor::Read(void *dst, size_t dst_len,
   error = m_io_sp->Read(dst, bytes_read);
 
   if (log) {
-    LLDB_LOGF(log,
-              "%p ConnectionFileDescriptor::Read()  fd = %" PRIuFT
-              ", dst = %p, dst_len = %" PRIu64 ") => %" PRIu64 ", error = %s",
-              static_cast<void *>(this),
-              static_cast<file_t>(m_io_sp->GetWaitableHandle()),
-              static_cast<void *>(dst), static_cast<uint64_t>(dst_len),
-              static_cast<uint64_t>(bytes_read), error.AsCString());
+    LLDB_LOG(log,
+             "{0} ConnectionFileDescriptor::Read()  fd = {1}"
+             ", dst = {2}, dst_len = {3}) => {4}, error = {5}",
+             this, m_io_sp->GetWaitableHandle(), dst, dst_len, bytes_read,
+             error.AsCString());
   }
 
   if (bytes_read == 0) {
@@ -376,13 +374,11 @@ size_t ConnectionFileDescriptor::Write(const void *src, size_t src_len,
   error = m_io_sp->Write(src, bytes_sent);
 
   if (log) {
-    LLDB_LOGF(log,
-              "%p ConnectionFileDescriptor::Write(fd = %" PRIuFT
-              ", src = %p, src_len = %" PRIu64 ") => %" PRIu64 " (error = %s)",
-              static_cast<void *>(this),
-              static_cast<file_t>(m_io_sp->GetWaitableHandle()),
-              static_cast<const void *>(src), static_cast<uint64_t>(src_len),
-              static_cast<uint64_t>(bytes_sent), error.AsCString());
+    LLDB_LOG(log,
+             "{0} ConnectionFileDescriptor::Write(fd = {1}"
+             ", src = {2}, src_len = {3}) => {4} (error = {5})",
+             this, m_io_sp->GetWaitableHandle(), src, src_len, bytes_sent,
+             error.AsCString());
   }
 
   if (error_ptr)

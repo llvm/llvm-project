@@ -65,16 +65,14 @@ class AArch64TTIImpl final : public BasicTTIImplBase<AArch64TTIImpl> {
 
   // A helper function called by 'getVectorInstrCost'.
   //
-  // 'Val' and 'Index' are forwarded from 'getVectorInstrCost'; 'HasRealUse'
-  // indicates whether the vector instruction is available in the input IR or
-  // just imaginary in vectorizer passes.
-  /// \param ScalarUserAndIdx encodes the information about extracts from a
+  // 'Val' and 'Index' are forwarded from 'getVectorInstrCost';
+  // \param ScalarUserAndIdx encodes the information about extracts from a
   /// vector with 'Scalar' being the value being extracted,'User' being the user
   /// of the extract(nullptr if user is not known before vectorization) and
   /// 'Idx' being the extract lane.
   InstructionCost getVectorInstrCostHelper(
       unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
-      bool HasRealUse, const Instruction *I = nullptr, Value *Scalar = nullptr,
+      const Instruction *I = nullptr, Value *Scalar = nullptr,
       ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx = {}) const;
 
 public:
@@ -270,8 +268,9 @@ public:
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP) const override;
 
-  Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
-                                           Type *ExpectedType) const override;
+  Value *
+  getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst, Type *ExpectedType,
+                                    bool CanCreate = true) const override;
 
   bool getTgtMemIntrinsic(IntrinsicInst *Inst,
                           MemIntrinsicInfo &Info) const override;

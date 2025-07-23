@@ -11,7 +11,6 @@
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Matchers.h"
 #include <optional>
@@ -44,7 +43,7 @@ FailureOr<Value> mlir::bufferization::castOrReallocMemRefValue(
         failed(target.getStridesAndOffset(targetStrides, targetOffset)))
       return false;
     auto dynamicToStatic = [](int64_t a, int64_t b) {
-      return ShapedType::isDynamic(a) && !ShapedType::isDynamic(b);
+      return ShapedType::isDynamic(a) && ShapedType::isStatic(b);
     };
     if (dynamicToStatic(sourceOffset, targetOffset))
       return false;

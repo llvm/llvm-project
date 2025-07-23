@@ -2547,6 +2547,8 @@ void PruneThreadPlans();
 
   bool CurrentThreadIsPrivateStateThread();
 
+  bool CurrentThreadPosesAsPrivateStateThread();
+
   virtual Status SendEventData(const char *data) {
     return Status::FromErrorString(
         "Sending an event is not supported for this process.");
