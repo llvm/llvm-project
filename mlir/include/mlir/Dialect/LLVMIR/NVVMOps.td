@@ -2042,7 +2042,7 @@ def NVVM_StMatrixOp: NVVM_PTXBuilder_Op<"stmatrix">,
 
 def NVVM_LdMatrixOp: NVVM_Op<"ldmatrix">,
   Results<(outs AnyType:$res)>,
-  Arguments<(ins LLVM_AnyPointer: $ptr, I32Attr: $num,
+  Arguments<(ins LLVM_PointerShared: $ptr, I32Attr: $num,
                  MMALayoutAttr: $layout,
                  LdStMatrixShapeAttr: $shape,
                  LdStMatrixEltTypeAttr: $eltType)> {

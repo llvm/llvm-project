@@ -315,14 +315,6 @@ llvm.func @nvvm_prefetch_uniform_with_invalid_addr_space(%global_ptr: !llvm.ptr<
 
 // -----
 
-llvm.func @ld_matrix(%arg0: !llvm.ptr) {
-  // expected-error@+1 {{'nvvm.ldmatrix' op expected source pointer in memory space 3}}
-  %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>, eltType  = #nvvm.ld_st_matrix_elt_type<b16>} : (!llvm.ptr) -> i32
-  llvm.return
-}
-
-// -----
-
 llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
   // expected-error@+1 {{'nvvm.ldmatrix' op expected num attribute to be 1, 2 or 4 for 8x8 matrix}}
   %l = nvvm.ldmatrix %arg0 {num = 3 : i32, layout = #nvvm.mma_layout<row>, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>, eltType  = #nvvm.ld_st_matrix_elt_type<b16>} : (!llvm.ptr<3>) -> i32

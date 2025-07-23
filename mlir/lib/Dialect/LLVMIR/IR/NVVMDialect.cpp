@@ -797,11 +797,6 @@ LogicalResult NVVM::WMMAMmaOp::verify() {
 }
 
 LogicalResult NVVM::LdMatrixOp::verify() {
-  unsigned addressSpace =
-      llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
-  if (addressSpace != NVVM::kSharedMemorySpace)
-    return emitOpError("expected source pointer in memory space 3");
-
   uint32_t num = getNum(), m = getShape().getM(), n = getShape().getN();
   if (m == 8 && n == 8) {
     if (num != 1 && num != 2 && num != 4) {
