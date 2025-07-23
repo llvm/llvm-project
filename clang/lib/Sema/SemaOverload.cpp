@@ -12320,12 +12320,13 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
           << (index + 1);
     }
 
+    // FIXME: Attach this diagnostic to the parent error.
     if (PartialDiagnosticAt *PDiag = DeductionFailure.getSFINAEDiagnostic()) {
       unsigned DiagID =
           S.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Note, "%0");
-      SmallString<128> SFINAEArgString;
-      PDiag->second.EmitToString(S.getDiagnostics(), SFINAEArgString);
-      S.Diag(Templated->getLocation(), DiagID) << SFINAEArgString;
+      SmallString<128> DiagContent;
+      PDiag->second.EmitToString(S.getDiagnostics(), DiagContent);
+      S.Diag(Templated->getLocation(), DiagID) << DiagContent;
     }
 
     MaybeEmitInheritedConstructorNote(S, Found);
