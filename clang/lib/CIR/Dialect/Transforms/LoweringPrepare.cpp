@@ -13,6 +13,7 @@
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/Passes.h"
 
+#include <iostream>
 #include <memory>
 
 using namespace mlir;
@@ -24,10 +25,96 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   void runOnOperation() override;
 
   void runOnOp(mlir::Operation *op);
+  void lowerCastOp(cir::CastOp op);
   void lowerUnaryOp(cir::UnaryOp op);
 };
 
 } // namespace
+
+static mlir::Value lowerScalarToComplexCast(mlir::MLIRContext &ctx,
+                                            cir::CastOp op) {
+  cir::CIRBaseBuilderTy builder(ctx);
+  builder.setInsertionPoint(op);
+
+  mlir::Value src = op.getSrc();
+  mlir::Value imag = builder.getNullValue(src.getType(), op.getLoc());
+  return builder.createComplexCreate(op.getLoc(), src, imag);
+}
+
+static mlir::Value lowerComplexToScalarCast(mlir::MLIRContext &ctx,
+                                            cir::CastOp op,
+                                            cir::CastKind elemToBoolKind) {
+  cir::CIRBaseBuilderTy builder(ctx);
+  builder.setInsertionPoint(op);
+
+  mlir::Value src = op.getSrc();
+  if (!mlir::isa<cir::BoolType>(op.getType()))
+    return builder.createComplexReal(op.getLoc(), src);
+
+  // Complex cast to bool: (bool)(a+bi) => (bool)a || (bool)b
+  mlir::Value srcReal = builder.createComplexReal(op.getLoc(), src);
+  mlir::Value srcImag = builder.createComplexImag(op.getLoc(), src);
+
+  cir::BoolType boolTy = builder.getBoolTy();
+  mlir::Value srcRealToBool =
+      builder.createCast(op.getLoc(), elemToBoolKind, srcReal, boolTy);
+  mlir::Value srcImagToBool =
+      builder.createCast(op.getLoc(), elemToBoolKind, srcImag, boolTy);
+  return builder.createLogicalOr(op.getLoc(), srcRealToBool, srcImagToBool);
+}
+
+static mlir::Value lowerComplexToComplexCast(mlir::MLIRContext &ctx,
+                                             cir::CastOp op,
+                                             cir::CastKind scalarCastKind) {
+  CIRBaseBuilderTy builder(ctx);
+  builder.setInsertionPoint(op);
+
+  mlir::Value src = op.getSrc();
+  auto dstComplexElemTy =
+      mlir::cast<cir::ComplexType>(op.getType()).getElementType();
+
+  mlir::Value srcReal = builder.createComplexReal(op.getLoc(), src);
+  mlir::Value srcImag = builder.createComplexImag(op.getLoc(), src);
+
+  mlir::Value dstReal = builder.createCast(op.getLoc(), scalarCastKind, srcReal,
+                                           dstComplexElemTy);
+  mlir::Value dstImag = builder.createCast(op.getLoc(), scalarCastKind, srcImag,
+                                           dstComplexElemTy);
+  return builder.createComplexCreate(op.getLoc(), dstReal, dstImag);
+}
+
+void LoweringPreparePass::lowerCastOp(cir::CastOp op) {
+  mlir::MLIRContext &ctx = getContext();
+  mlir::Value loweredValue = [&]() -> mlir::Value {
+    switch (op.getKind()) {
+    case cir::CastKind::float_to_complex:
+    case cir::CastKind::int_to_complex:
+      return lowerScalarToComplexCast(ctx, op);
+    case cir::CastKind::float_complex_to_real:
+    case cir::CastKind::int_complex_to_real:
+      return lowerComplexToScalarCast(ctx, op, op.getKind());
+    case cir::CastKind::float_complex_to_bool:
+      return lowerComplexToScalarCast(ctx, op, cir::CastKind::float_to_bool);
+    case cir::CastKind::int_complex_to_bool:
+      return lowerComplexToScalarCast(ctx, op, cir::CastKind::int_to_bool);
+    case cir::CastKind::float_complex:
+      return lowerComplexToComplexCast(ctx, op, cir::CastKind::floating);
+    case cir::CastKind::float_complex_to_int_complex:
+      return lowerComplexToComplexCast(ctx, op, cir::CastKind::float_to_int);
+    case cir::CastKind::int_complex:
+      return lowerComplexToComplexCast(ctx, op, cir::CastKind::integral);
+    case cir::CastKind::int_complex_to_float_complex:
+      return lowerComplexToComplexCast(ctx, op, cir::CastKind::int_to_float);
+    default:
+      return nullptr;
+    }
+  }();
+
+  if (loweredValue) {
+    op.replaceAllUsesWith(loweredValue);
+    op.erase();
+  }
+}
 
 void LoweringPreparePass::lowerUnaryOp(cir::UnaryOp op) {
   mlir::Type ty = op.getType();
@@ -72,7 +159,9 @@ void LoweringPreparePass::lowerUnaryOp(cir::UnaryOp op) {
 }
 
 void LoweringPreparePass::runOnOp(mlir::Operation *op) {
-  if (auto unary = dyn_cast<cir::UnaryOp>(op))
+  if (auto cast = mlir::dyn_cast<cir::CastOp>(op))
+    lowerCastOp(cast);
+  else if (auto unary = mlir::dyn_cast<cir::UnaryOp>(op))
     lowerUnaryOp(unary);
 }
 
@@ -82,7 +171,7 @@ void LoweringPreparePass::runOnOperation() {
   llvm::SmallVector<mlir::Operation *> opsToTransform;
 
   op->walk([&](mlir::Operation *op) {
-    if (mlir::isa<cir::UnaryOp>(op))
+    if (mlir::isa<cir::CastOp, cir::UnaryOp>(op))
       opsToTransform.push_back(op);
   });
 
