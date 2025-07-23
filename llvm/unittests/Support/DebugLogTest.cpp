@@ -17,23 +17,39 @@ using testing::HasSubstr;
 
 #ifndef NDEBUG
 TEST(DebugLogTest, Basic) {
-  std::string s1, s2;
-  raw_string_ostream os1(s1), os2(s2);
+  llvm::DebugFlag = true;
   static const char *DT[] = {"A", "B"};
 
-  llvm::DebugFlag = true;
+  // Clear debug types.
+  setCurrentDebugTypes(DT, 0);
+  {
+    std::string str;
+    raw_string_ostream os(str);
+    DEBUGLOG_WITH_STREAM_AND_TYPE(os, nullptr) << "NoType";
+    EXPECT_TRUE(StringRef(os.str()).starts_with('['));
+    EXPECT_TRUE(StringRef(os.str()).ends_with("NoType\n"));
+  }
+
   setCurrentDebugTypes(DT, 2);
-  DEBUGLOG_WITH_STREAM_AND_TYPE(os1, "A") << "A";
-  DEBUGLOG_WITH_STREAM_AND_TYPE(os1, "B") << "B";
-  EXPECT_THAT(os1.str(), AllOf(HasSubstr("A\n"), HasSubstr("B\n")));
+  {
+    std::string str;
+    raw_string_ostream os(str);
+    DEBUGLOG_WITH_STREAM_AND_TYPE(os, "A") << "A";
+    DEBUGLOG_WITH_STREAM_AND_TYPE(os, "B") << "B";
+    EXPECT_THAT(os.str(), AllOf(HasSubstr("A\n"), HasSubstr("B\n")));
+  }
 
   setCurrentDebugType("A");
-  // Just check that the macro doesn't result in dangling else.
-  if (true)
-    DEBUGLOG_WITH_STREAM_AND_TYPE(os2, "A") << "A";
-  else
-    DEBUGLOG_WITH_STREAM_AND_TYPE(os2, "A") << "B";
-  DEBUGLOG_WITH_STREAM_AND_TYPE(os2, "B") << "B";
-  EXPECT_THAT(os2.str(), AllOf(HasSubstr("A\n"), Not(HasSubstr("B\n"))));
+  {
+    std::string str;
+    raw_string_ostream os(str);
+    // Just check that the macro doesn't result in dangling else.
+    if (true)
+      DEBUGLOG_WITH_STREAM_AND_TYPE(os, "A") << "A";
+    else
+      DEBUGLOG_WITH_STREAM_AND_TYPE(os, "A") << "B";
+    DEBUGLOG_WITH_STREAM_AND_TYPE(os, "B") << "B";
+    EXPECT_THAT(os.str(), AllOf(HasSubstr("A\n"), Not(HasSubstr("B\n"))));
+  }
 }
 #endif
