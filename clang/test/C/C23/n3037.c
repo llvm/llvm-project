@@ -429,4 +429,9 @@ void gh149965(void) {
   // FIXME: this should be an error in both C17 and C23 mode.
   struct GH149965_3 { int h; };     // c17-note {{previous definition is here}}
   struct GH149965_3 { enum E1 h; }; // c17-error {{redefinition of 'GH149965_3'}}
+
+  // For Clang, the composite type after declaration merging is the enumeration
+  // type rather than an integer type.
+  enum E1 *eptr;
+  [[maybe_unused]] __typeof__(x1.h) *ptr = eptr;
 }
