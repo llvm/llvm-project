@@ -59,27 +59,27 @@ struct BFloat16 {
     return cpp::bit_cast<float>(x_bits);
   }
 
-  LIBC_INLINE constexpr bool operator==(BFloat16 other) const {
+  LIBC_INLINE bool operator==(BFloat16 other) const {
     return fputil::equals(*this, other);
   }
 
-  LIBC_INLINE constexpr bool operator!=(BFloat16 other) const {
+  LIBC_INLINE bool operator!=(BFloat16 other) const {
     return !fputil::equals(*this, other);
   }
 
-  LIBC_INLINE constexpr bool operator<(BFloat16 other) const {
+  LIBC_INLINE bool operator<(BFloat16 other) const {
     return fputil::less_than(*this, other);
   }
 
-  LIBC_INLINE constexpr bool operator<=(BFloat16 other) const {
+  LIBC_INLINE bool operator<=(BFloat16 other) const {
     return fputil::less_than_or_equals(*this, other);
   }
 
-  LIBC_INLINE constexpr bool operator>(BFloat16 other) const {
+  LIBC_INLINE bool operator>(BFloat16 other) const {
     return fputil::greater_than(*this, other);
   }
 
-  LIBC_INLINE constexpr bool operator>=(BFloat16 other) const {
+  LIBC_INLINE bool operator>=(BFloat16 other) const {
     return fputil::greater_than_or_equals(*this, other);
   }
 }; // struct BFloat16
