@@ -559,6 +559,12 @@ def FeatureBF16ConversionInsts : SubtargetFeature<"bf16-cvt-insts",
   "Has bf16 conversion instructions"
 >;
 
+def FeatureBF16PackedInsts : SubtargetFeature<"bf16-pk-insts",
+  "HasBF16PackedInsts",
+  "true",
+  "Has bf16 packed instructions (fma, add, mul, max, min)"
+>;
+
 def FeatureVOP3P : SubtargetFeature<"vop3p",
   "HasVOP3PInsts",
   "true",
@@ -1349,6 +1355,10 @@ def FeatureLshlAddU64Inst
     : SubtargetFeature<"lshl-add-u64-inst", "HasLshlAddU64Inst", "true",
                        "Has v_lshl_add_u64 instruction">;
 
+def FeatureAddSubU64Insts
+    : SubtargetFeature<"add-sub-u64-insts", "HasAddSubU64Insts", "true",
+                       "Has v_add_u64 and v_sub_u64 instructions">;
+
 def FeatureMemToLDSLoad : SubtargetFeature<"vmem-to-lds-load-insts",
   "HasVMemToLDSLoad",
   "true",
@@ -1989,6 +1999,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureTransposeLoadF4F6Insts,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
+   FeatureBF16PackedInsts,
    FeatureCvtPkF16F32Inst,
    FeatureMinimum3Maximum3PKF16,
    FeaturePrngInst,
@@ -2003,6 +2014,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureMemoryAtomicFAddF32DenormalSupport,
    FeatureKernargPreload,
    FeatureLshlAddU64Inst,
+   FeatureAddSubU64Insts,
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
 ]>;
@@ -2472,6 +2484,9 @@ def HasBF16TransInsts : Predicate<"Subtarget->hasBF16TransInsts()">,
 def HasBF16ConversionInsts : Predicate<"Subtarget->hasBF16ConversionInsts()">,
   AssemblerPredicate<(all_of FeatureBF16ConversionInsts)>;
 
+def HasBF16PackedInsts : Predicate<"Subtarget->hasBF16PackedInsts()">,
+  AssemblerPredicate<(all_of FeatureBF16PackedInsts)>;
+
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<(all_of FeatureVOP3P)>;
 
@@ -2776,6 +2791,9 @@ def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
 
 def HasLshlAddU64Inst : Predicate<"Subtarget->hasLshlAddU64Inst()">,
                         AssemblerPredicate<(all_of FeatureLshlAddU64Inst)>;
+
+def HasAddSubU64Insts : Predicate<"Subtarget->hasAddSubU64Insts()">,
+                        AssemblerPredicate<(all_of FeatureAddSubU64Insts)>;
 
 def HasLdsBarrierArriveAtomic : Predicate<"Subtarget->hasLdsBarrierArriveAtomic()">,
   AssemblerPredicate<(all_of FeatureLdsBarrierArriveAtomic)>;

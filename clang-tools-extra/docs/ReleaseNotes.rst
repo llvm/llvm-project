@@ -118,7 +118,14 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
   an additional matcher that generalizes the copy-and-swap idiom pattern
   detection.
-  
+
+- Improved :doc:`misc-header-include-cycle
+  <clang-tidy/checks/misc/header-include-cycle>` check performance.
+
+- Improved :doc:`portability-template-virtual-member-function
+  <clang-tidy/checks/portability/template-virtual-member-function>` check to
+  avoid false positives on pure virtual member functions.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

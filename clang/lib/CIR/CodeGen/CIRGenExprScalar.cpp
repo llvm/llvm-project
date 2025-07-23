@@ -88,6 +88,10 @@ public:
   //                               Utilities
   //===--------------------------------------------------------------------===//
 
+  mlir::Value emitComplexToScalarConversion(mlir::Location loc,
+                                            mlir::Value value, CastKind kind,
+                                            QualType destTy);
+
   mlir::Value emitPromotedValue(mlir::Value result, QualType promotionType) {
     return builder.createFloatingCast(result, cgf.convertType(promotionType));
   }
@@ -1135,6 +1139,31 @@ LValue ScalarExprEmitter::emitCompoundAssignLValue(
   return lhsLV;
 }
 
+mlir::Value ScalarExprEmitter::emitComplexToScalarConversion(mlir::Location lov,
+                                                             mlir::Value value,
+                                                             CastKind kind,
+                                                             QualType destTy) {
+  cir::CastKind castOpKind;
+  switch (kind) {
+  case CK_FloatingComplexToReal:
+    castOpKind = cir::CastKind::float_complex_to_real;
+    break;
+  case CK_IntegralComplexToReal:
+    castOpKind = cir::CastKind::int_complex_to_real;
+    break;
+  case CK_FloatingComplexToBoolean:
+    castOpKind = cir::CastKind::float_complex_to_bool;
+    break;
+  case CK_IntegralComplexToBoolean:
+    castOpKind = cir::CastKind::int_complex_to_bool;
+    break;
+  default:
+    llvm_unreachable("invalid complex-to-scalar cast kind");
+  }
+
+  return builder.createCast(lov, castOpKind, value, cgf.convertType(destTy));
+}
+
 mlir::Value ScalarExprEmitter::emitPromoted(const Expr *e,
                                             QualType promotionType) {
   e = e->IgnoreParens();
@@ -1756,6 +1785,15 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     }
     return emitScalarConversion(Visit(subExpr), subExpr->getType(), destTy,
                                 ce->getExprLoc(), opts);
+  }
+
+  case CK_FloatingComplexToReal:
+  case CK_IntegralComplexToReal:
+  case CK_FloatingComplexToBoolean:
+  case CK_IntegralComplexToBoolean: {
+    mlir::Value value = cgf.emitComplexExpr(subExpr);
+    return emitComplexToScalarConversion(cgf.getLoc(ce->getExprLoc()), value,
+                                         kind, destTy);
   }
 
   case CK_FloatingRealToComplex:
