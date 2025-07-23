@@ -11,7 +11,6 @@ void test_exact_size() {
 
 void test_undersize() {
     void *buf = ::operator new(sizeof(int)*1);
-    // Remember the exact text including the checker name, or use regex for robustness.
     int *placement_int = new (buf) int[2]; // expected-warning {{Storage provided to placement new is only 4 bytes, whereas the allocated type requires 8 bytes [cplusplus.PlacementNew]}}
     placement_int[0] = 42;
     ::operator delete(buf);

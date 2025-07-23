@@ -115,10 +115,10 @@ bool PlacementNewChecker::checkPlaceCapacityIsSufficient(
     if (ExplodedNode *N = C.generateErrorNode(C.getState())) {
       std::string Msg;
       // TODO: use clang constant
-      Msg = std::string(llvm::formatv(
-          "Storage provided to placement new is only {0} bytes, "
-          "whereas the allocated type requires {1} bytes",
-          SizeOfPlaceCI->getValue(), SizeOfTargetCI->getValue()));
+      Msg = std::string(
+          llvm::formatv("Storage provided to placement new is only {0} bytes, "
+                        "whereas the allocated type requires {1} bytes",
+                        SizeOfPlaceCI->getValue(), SizeOfTargetCI->getValue()));
 
       auto R = std::make_unique<PathSensitiveBugReport>(SBT, Msg, N);
       bugreporter::trackExpressionValue(N, NE->getPlacementArg(0), *R);

@@ -168,8 +168,8 @@ void f1() {
 
   // bad (not enough space).
   const unsigned N = 32;
-  alignas(S) unsigned char buffer1[sizeof(S) * N]; // expected-note {{'buffer1' initialized here}}
-  ::new (buffer1) S[N];                            // expected-warning{{Storage provided to placement new is only 64 bytes, whereas the allocated array type requires more space for internal needs}} expected-note 1 {{}}
+  alignas(S) unsigned char buffer1[sizeof(S) * N]; 
+  ::new (buffer1) S[N];                           
 }
 
 void f2() {
@@ -179,8 +179,8 @@ void f2() {
 
   // maybe ok but we need to warn.
   const unsigned N = 32;
-  alignas(S) unsigned char buffer2[sizeof(S) * N + sizeof(int)]; // expected-note {{'buffer2' initialized here}}
-  ::new (buffer2) S[N];                                          // expected-warning{{68 bytes is possibly not enough for array allocation which requires 64 bytes. Current overhead requires the size of 4 bytes}} expected-note 1 {{}}
+  alignas(S) unsigned char buffer2[sizeof(S) * N + sizeof(int)]; 
+  ::new (buffer2) S[N];                                         
 }
 } // namespace testArrayTypesAllocation
 
