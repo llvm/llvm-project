@@ -5635,10 +5635,13 @@ Clobber constraints
 A clobber constraint is indicated by a "``~``" prefix. A clobber does not
 consume an input operand, nor generate an output. Clobbers cannot use any of the
 general constraint code letters -- they may use only explicit register
-constraints, e.g., "``~{eax}``". The one exception is that a clobber string of
-"``~{memory}``" indicates that the assembly writes to arbitrary undeclared
-memory locations -- not only the memory pointed to by a declared indirect
-output.
+constraints, e.g., "``~{eax}``".
+
+The one exception is that a clobber string of "``~{memory}``" indicates that the
+assembly reads and writes arbitrary undeclared memory locations -- not only the
+memory pointed to by a declared indirect output. Furthermore, the assembly may
+also cause synchronization with other threads, such as via release/acquire
+fences and atomic memory accesses.
 
 Note that clobbering named registers that are also present in output
 constraints is not legal.
