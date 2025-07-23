@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the definition of numerical utilities, including
-/// functions to compute ULP distance and traits for floating-point types.
+/// This file contains the definition of numeric utilities, including functions
+/// to compute ULP distance and traits for floating-point types.
 ///
 //===----------------------------------------------------------------------===//
 
