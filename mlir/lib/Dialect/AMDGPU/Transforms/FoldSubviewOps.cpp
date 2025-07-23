@@ -18,12 +18,7 @@
 namespace mlir::amdgpu {
 #define GEN_PASS_DEF_AMDGPUFOLDSUBVIEWOPSPASS
 #include "mlir/Dialect/AMDGPU/Transforms/Passes.h.inc"
-} // namespace mlir::amdgpu
 
-using namespace mlir;
-using namespace mlir::amdgpu;
-
-namespace {
 struct AmdgpuFoldSubviewOpsPass
     : public amdgpu::impl::AmdgpuFoldSubviewOpsPassBase<
           AmdgpuFoldSubviewOpsPass> {
@@ -43,32 +38,51 @@ struct FoldSubviewIntoGatherToLDSOp final : OpRewritePattern<GatherToLDSOp> {
 
     Value memrefSource;
     SmallVector<Value> sourceIndices;
-    llvm::TypeSwitch<Operation *>(op.getSrc().getDefiningOp())
-        .Case<memref::SubViewOp>([&](memref::SubViewOp subviewOp) {
-          // If the source is a SubViewOp, we can directly rewrite the
-          // GatherToLDSOp.
-          mlir::affine::resolveIndicesIntoOpWithOffsetsAndStrides(
-              rewriter, loc, subviewOp.getMixedOffsets(),
-              subviewOp.getMixedStrides(), subviewOp.getDroppedDims(),
-              op.getSrcIndices(), sourceIndices);
-          memrefSource = subviewOp.getSource();
-        })
-        .Case<memref::ExpandShapeOp>([&](memref::ExpandShapeOp expandShapeOp) {
-          mlir::memref::resolveSourceIndicesExpandShape(
-              loc, rewriter, expandShapeOp, op.getSrcIndices(), sourceIndices,
-              false);
-          memrefSource = expandShapeOp.getViewSource();
-        })
-        .Case<memref::CollapseShapeOp>(
-            [&](memref::CollapseShapeOp collapseShapeOp) {
-              mlir::memref::resolveSourceIndicesCollapseShape(
-                  loc, rewriter, collapseShapeOp, op.getSrcIndices(),
-                  sourceIndices);
-              memrefSource = collapseShapeOp.getViewSource();
+    auto foldResult =
+        llvm::TypeSwitch<Operation *, LogicalResult>(
+            op.getSrc().getDefiningOp())
+            .Case<memref::SubViewOp>([&](memref::SubViewOp subviewOp) {
+              // If the source is a SubViewOp, we can directly rewrite the
+              // GatherToLDSOp.
+              mlir::affine::resolveIndicesIntoOpWithOffsetsAndStrides(
+                  rewriter, loc, subviewOp.getMixedOffsets(),
+                  subviewOp.getMixedStrides(), subviewOp.getDroppedDims(),
+                  op.getSrcIndices(), sourceIndices);
+              memrefSource = subviewOp.getSource();
+              return success();
+            })
+            .Case<memref::ExpandShapeOp>(
+                [&](memref::ExpandShapeOp expandShapeOp) {
+                  if (failed(mlir::memref::resolveSourceIndicesExpandShape(
+                          loc, rewriter, expandShapeOp, op.getSrcIndices(),
+                          sourceIndices, false))) {
+                    return failure();
+                  }
+                  memrefSource = expandShapeOp.getViewSource();
+                  return success();
+                })
+            .Case<memref::CollapseShapeOp>(
+                [&](memref::CollapseShapeOp collapseShapeOp) {
+                  if (failed(mlir::memref::resolveSourceIndicesCollapseShape(
+                          loc, rewriter, collapseShapeOp, op.getSrcIndices(),
+                          sourceIndices))) {
+                    return failure();
+                  }
+                  memrefSource = collapseShapeOp.getViewSource();
+                  return success();
+                })
+            .Default([&](Operation *op) {
+              // If the source is not a SubViewOp, ExpandShapeOp, or
+              // CollapseShapeOp, we cannot fold the GatherToLDSOp.
+              return rewriter.notifyMatchFailure(
+                  op,
+                  "source producer is not one of SubViewOp, ExpandShapeOp, or "
+                  "CollapseShapeOp");
             });
 
-    if (!memrefSource)
+    if (failed(foldResult)) {
       return failure();
+    }
 
     rewriter.replaceOpWithNewOp<GatherToLDSOp>(op, memrefSource, sourceIndices,
                                                op.getDst(), op.getDstIndices(),
@@ -77,9 +91,9 @@ struct FoldSubviewIntoGatherToLDSOp final : OpRewritePattern<GatherToLDSOp> {
     return success();
   }
 };
-} // namespace
 
-void mlir::amdgpu::populateAmdgpuFoldSubviewOpsPatterns(
-    RewritePatternSet &patterns, PatternBenefit benefit) {
+void populateAmdgpuFoldSubviewOpsPatterns(RewritePatternSet &patterns,
+                                          PatternBenefit benefit) {
   patterns.add<FoldSubviewIntoGatherToLDSOp>(patterns.getContext(), benefit);
 }
+} // namespace mlir::amdgpu

@@ -1,10 +1,10 @@
-// RUN: mlir-opt -amdgpu-fold-subview-ops -split-input-file %s | FileCheck %s
+// RUN: mlir-opt --amdgpu-fold-subview-ops --split-input-file %s | FileCheck %s
 
 #gpu_lds_addrspace = 3
 
-// CHECK: func @test_memref
+// CHECK: func @test_subview_folding
 // CHECK-SAME: %[[ARG0:.*]]: index, %[[ARG1:.*]]: index
-func.func @test_memref(%offset_i: index, %offset_j: index) {
+func.func @test_subview_folding(%offset_i: index, %offset_j: index) {
   // CHECK: %[[C0:.*]] = arith.constant 0 : index
   // CHECK: %[[LOCAL:.*]] = memref.alloc() : memref<64x64xf16, 3>
   // CHECK: %[[MEM:.*]] = memref.alloc() : memref<64x128xf16>
@@ -46,5 +46,51 @@ func.func @subview_folding_offset(%offset_i: index, %offset_j: index) {
   %c0 = arith.constant 0 : index
   amdgpu.gather_to_lds %subview[%offset_i, %offset_j], %alloc[%c0, %c0]
     : vector<8xf16>, memref<32x64xf16, strided<[128, 1], offset: 4160>>, memref<64x64xf16, #gpu_lds_addrspace>
+  func.return
+}
+
+// -----
+
+#gpu_lds_addrspace = 3
+
+// CHECK: func @test_expand_shape
+// CHECK-SAME: %[[ARG0:.*]]: index, %[[ARG1:.*]]: index
+func.func @test_expand_shape(%offset_i: index, %offset_j: index) {
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: %[[LOCAL:.*]] = memref.alloc() : memref<64x64xf16, 3>
+  // CHECK: %[[MEM:.*]] = memref.alloc() : memref<8192xf16>
+  // CHECK: %[[IDX:.*]] = affine.linearize_index [%[[ARG0]], %[[ARG1]]] by (64, 128) : index
+  // CHECK:  amdgpu.gather_to_lds %[[MEM]][%[[IDX]]], %[[LOCAL]][%[[C0]], %[[C0]]]
+  // CHECK-SAME: vector<8xf16>, memref<8192xf16>, memref<64x64xf16, 3>
+
+  %alloc = memref.alloc() : memref<64x64xf16, #gpu_lds_addrspace>
+  %mem = memref.alloc() : memref<8192xf16>
+  %expand = memref.expand_shape %mem [[0, 1]] output_shape [64, 128] : memref<8192xf16> into memref<64x128xf16>
+  %c0 = arith.constant 0 : index
+  amdgpu.gather_to_lds %expand[%offset_i, %offset_j], %alloc[%c0, %c0]
+    : vector<8xf16>, memref<64x128xf16>, memref<64x64xf16, #gpu_lds_addrspace>
+  func.return
+}
+
+// -----
+
+#gpu_lds_addrspace = 3
+
+// CHECK: func @test_collapse_shape
+// CHECK-SAME: %[[ARG0:.*]]: index, %[[ARG1:.*]]: index
+func.func @test_collapse_shape(%offset_i: index, %offset_j: index) {
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: %[[LOCAL:.*]] = memref.alloc() : memref<64x64xf16, 3>
+  // CHECK: %[[MEM:.*]] = memref.alloc() : memref<64x128xf16>
+  // CHECK: %[[INDICES:.*]]:2 = affine.delinearize_index %[[ARG0]] into (64, 128) : index, index
+  // CHECK:  amdgpu.gather_to_lds %[[MEM]][%[[INDICES]]#0, %[[INDICES]]#1], %[[LOCAL]][%[[C0]], %[[C0]]]
+  // CHECK-SAME: vector<8xf16>, memref<64x128xf16>, memref<64x64xf16, 3>
+
+  %alloc = memref.alloc() : memref<64x64xf16, #gpu_lds_addrspace>
+  %mem = memref.alloc() : memref<64x128xf16>
+  %collapse = memref.collapse_shape %mem [[0, 1]] : memref<64x128xf16> into memref<8192xf16>
+  %c0 = arith.constant 0 : index
+  amdgpu.gather_to_lds %collapse[%offset_i], %alloc[%c0, %c0]
+    : vector<8xf16>, memref<8192xf16>, memref<64x64xf16, #gpu_lds_addrspace>
   func.return
 }
