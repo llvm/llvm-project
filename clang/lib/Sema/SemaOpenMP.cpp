@@ -24392,7 +24392,7 @@ ExprResult SemaOpenMP::ActOnOMPArraySectionExpr(
         return ExprError();
       }
     }
-  } else if (ColonLocFirst.isValid() &&
+  } else if (SemaRef.getLangOpts().OpenMP < 60 && ColonLocFirst.isValid() &&
              (OriginalTy.isNull() || (!OriginalTy->isConstantArrayType() &&
                                       !OriginalTy->isVariableArrayType()))) {
     // OpenMP 5.0, [2.1.5 Array Sections]
