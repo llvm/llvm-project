@@ -1360,7 +1360,7 @@ void GCNSchedStage::checkScheduling() {
   unsigned MaxArchVGPRs = std::min(MaxVGPRs, ST.getAddressableNumArchVGPRs());
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
 
-  unsigned MaxAGPRs = ST.getMaxNumAGPRs(MF, MaxArchVGPRs);
+  unsigned MaxAGPRs = ST.getMaxNumAGPRs(MF, MaxArchVGPRs, WavesAfter);
 
   assert(MaxAGPRs + MaxArchVGPRs == MaxVGPRs);
 

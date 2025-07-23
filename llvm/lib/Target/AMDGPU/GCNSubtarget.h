@@ -1632,7 +1632,8 @@ public:
   /// unit requirement.
   unsigned getMaxNumVGPRs(const Function &F) const;
 
-  unsigned getMaxNumAGPRs(const Function &F, unsigned ArchVGPRs) const;
+  unsigned getMaxNumAGPRs(const Function &F, unsigned ArchVGPRs,
+                          unsigned WavesPerEU) const;
 
   unsigned getMaxNumAGPRs(unsigned WavesPerEU) const {
     return AMDGPU::IsaInfo::getMaxNumAGPRs(this, WavesPerEU);
@@ -1648,8 +1649,9 @@ public:
   /// unit requirement.
   unsigned getMaxNumVGPRs(const MachineFunction &MF) const;
 
-  unsigned getMaxNumAGPRs(const MachineFunction &MF, unsigned ArchVGPRs) const {
-    return getMaxNumAGPRs(MF.getFunction(), ArchVGPRs);
+  unsigned getMaxNumAGPRs(const MachineFunction &MF, unsigned ArchVGPRs,
+                          unsigned WavesPerEU) const {
+    return getMaxNumAGPRs(MF.getFunction(), ArchVGPRs, WavesPerEU);
   }
 
   bool isWave32() const { return getWavefrontSize() == 32; }
