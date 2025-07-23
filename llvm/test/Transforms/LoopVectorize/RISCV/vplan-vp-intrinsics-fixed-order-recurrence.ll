@@ -29,7 +29,7 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<[[FOR_PHI:%.+]]> = phi ir<33>, ir<[[LD:%.+]]>
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[PREV_EVL:%.+]]> = phi [ vp<[[VF32]]>, vector.ph ], [ vp<[[EVL:%.+]]>, vector.body ]
 ; IF-EVL-NEXT:     EMIT vp<[[AVL:%.+]]> = sub ir<%TC>, vp<[[EVL_PHI]]>
-; IF-EVL-NEXT:     EMIT vp<[[EVL]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
+; IF-EVL-NEXT:     EMIT-SCALAR vp<[[EVL]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-NEXT:     vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>
 ; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds nuw ir<%A>, vp<[[ST]]
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
