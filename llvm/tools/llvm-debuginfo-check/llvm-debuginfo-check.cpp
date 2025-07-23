@@ -1,4 +1,4 @@
-//===-- llvm-debuginfo-analyzer.cpp - LLVM Debug info analysis utility ---===//
+//===-- llvm-debuginfo-check.cpp - LLVM Debug info analysis utility -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,6 +23,22 @@
 #include <unordered_map>
 #include <unordered_set>
 
+constexpr const char *HelpText =
+    R"(Prints debug info in a way that is easy to verify correctness of debug info.
+
+FUNCTION: main
+  LINE: my_source_file.c:1 [main]       <---- New statement lines, inlined callstack
+    VAR: argc : int     : {expression}  <---- Variables live at this point
+    VAR: argv : char ** : {expression}
+  LINE: my_source_file.c:2 [main]
+    VAR: argc : int
+    VAR: argv : char **
+  LINE: my_source_file.c:3 [main]
+    VAR: argc : int
+    VAR: argv : char **
+  LINE: my_source_file.c:4 [main]
+)";
+
 using namespace llvm;
 using namespace logicalview;
 
@@ -32,8 +48,8 @@ static cl::opt<std::string>
                   cl::Required);
 
 static cl::opt<bool> IncludeCode("code", cl::desc("Include asm"));
-static cl::opt<bool> IncludeRanges("ranges",
-                                   cl::desc("Include variable ranges"));
+static cl::opt<bool>
+    IncludeRanges("ranges", cl::desc("Include variable ranges"), cl::Hidden);
 static cl::opt<bool> IncludeVars("vars", cl::desc("Include live variables"));
 
 template <typename T> T Take(Expected<T> ExpectedResult, const Twine &Msg) {
@@ -141,8 +157,6 @@ struct ScopePrinter {
   void Print() {
     SetVector<const LVLocation *>
         LiveSymbols; // This needs to be ordered since we're iterating over it.
-    int LastLine = -1;
-    StringRef LastFilename;
     for (const LVLine *Line : Lines) {
 
       const LVScope *Scope = Line->getParentScope();
@@ -154,35 +168,31 @@ struct ScopePrinter {
       for (auto Loc : LivetimeEndsExclusive[Line->getAddress()])
         LiveSymbols.remove(Loc);
 
-      if (Line->getIsLineDebug() && Line->getLineNumber() != 0) {
+      if (Line->getIsNewStatement() && Line->getIsLineDebug() &&
+          Line->getLineNumber() != 0) {
         auto LineDebug = cast<LVLineDebug>(Line);
 
-        if (LastLine != LineDebug->getLineNumber() ||
-            LineDebug->getPathname() != LastFilename) {
-          OS << "LINE: " << " [" << hexValue(LineDebug->getAddress()) << "] "
-             << LineDebug->getPathname() << ":" << LineDebug->getLineNumber()
-             << " ";
-          PrintCallstack(OS, Scope);
-          OS << "\n";
-          if (IncludeVars) {
-            for (auto SymLoc : LiveSymbols) {
-              const LVSymbol *Sym = SymLoc->getParentSymbol();
-              auto SymScope = Sym->getParentScope();
-              auto LineScope = LineDebug->getParentScope();
-              if (SymScope != LineScope && !IsChildScopeOf(LineScope, SymScope))
-                continue;
-              PrintIndent(OS, 1);
-              OS << "VAR: " << Sym->getName() << ": "
-                 << Sym->getType()->getName() << " : ";
-              SymLoc->printLocations(OS);
-              OS << " (line " << Sym->getLineNumber() << ")";
-              OS << "\n";
-            }
+        OS << "LINE: " << " [" << hexValue(LineDebug->getAddress()) << "] "
+           << LineDebug->getPathname() << ":" << LineDebug->getLineNumber()
+           << " ";
+        PrintCallstack(OS, Scope);
+        OS << "\n";
+        if (IncludeVars) {
+          for (auto SymLoc : LiveSymbols) {
+            const LVSymbol *Sym = SymLoc->getParentSymbol();
+            auto SymScope = Sym->getParentScope();
+            auto LineScope = LineDebug->getParentScope();
+            if (SymScope != LineScope && !IsChildScopeOf(LineScope, SymScope))
+              continue;
+            PrintIndent(OS, 1);
+            OS << "VAR: " << Sym->getName() << ": " << Sym->getType()->getName()
+               << " : ";
+            SymLoc->printLocations(OS);
+            OS << " (line " << Sym->getLineNumber() << ")";
+            OS << "\n";
           }
         }
 
-        LastLine = Line->getLineNumber();
-        LastFilename = Line->getPathname();
       } else if (IncludeCode && Line->getIsLineAssembler()) {
         OS << "  CODE: " << " [" << hexValue(Line->getAddress()) << "]  "
            << Line->getName() << "\n";
@@ -200,7 +210,7 @@ int main(int argc, char *argv[]) {
   InitializeAllDisassemblers();
 
   cl::ParseCommandLineOptions(
-      argc, argv, "Check debug info correctness via annotations.\n");
+      argc, argv, HelpText);
 
   ScopedPrinter W(llvm::outs());
   LVOptions Options;
@@ -216,8 +226,10 @@ int main(int argc, char *argv[]) {
                           Twine(InputFilename) + Twine("'"));
 
   auto *CU = Readers->getCompileUnit();
-  if (!CU)
+  if (!CU) {
+    errs() << "No compute unit found.\n";
     return 2;
+  }
 
   for (LVElement *Child : *CU->getChildren()) {
     auto *Fn = dyn_cast<LVScopeFunction>(Child);
