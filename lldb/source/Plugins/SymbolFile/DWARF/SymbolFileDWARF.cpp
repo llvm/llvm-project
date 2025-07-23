@@ -3109,6 +3109,36 @@ SymbolFileDWARF::FindDefinitionDIE(const DWARFDIE &die) {
   return result;
 }
 
+namespace {
+const char *GetFlags(const char *option, DWARFUnit *dwarf_cu) {
+  if (!dwarf_cu)
+    return nullptr;
+
+  const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
+  if (!die)
+    return nullptr;
+
+  const char *flags = die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
+  if (!flags)
+    return nullptr;
+
+  if (strstr(flags, option))
+    return flags;
+
+  return nullptr;
+}
+bool FindOptionInDWARFCU(const char *option, DWARFUnit *dwarf_cu,
+                         std::string &value) {
+  const char *flags = GetFlags(option, dwarf_cu);
+  if (!flags)
+    return false;
+
+  Args compiler_args(flags);
+  OptionParsing::GetOptionValueAsString(compiler_args, option, value);
+  return true;
+}
+} // namespace
+
 bool SymbolFileDWARF::GetCompileOption(const char *option, std::string &value,
                                        CompileUnit *cu) {
   value.clear();
@@ -3118,52 +3148,19 @@ bool SymbolFileDWARF::GetCompileOption(const char *option, std::string &value,
   const uint32_t num_compile_units = GetNumCompileUnits();
 
   if (cu) {
-    auto *dwarf_cu =
-        llvm::dyn_cast_or_null<DWARFCompileUnit>(GetDWARFCompileUnit(cu));
-
-    if (dwarf_cu) {
+    if (auto *dwarf_cu =
+            llvm::dyn_cast_or_null<DWARFCompileUnit>(GetDWARFCompileUnit(cu))) {
       // GetDWARFCompileUnit() only looks up by CU#. Make sure that
       // this is actually the correct SymbolFile by converting it
       // back to a CompileUnit.
       if (GetCompUnitForDWARFCompUnit(*dwarf_cu) != cu)
         return false;
-
-      const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
-      if (die) {
-        const char *flags =
-            die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
-
-        if (flags) {
-          if (strstr(flags, option)) {
-            Args compiler_args(flags);
-
-            return OptionParsing::GetOptionValueAsString(compiler_args,
-                                                         option, value);
-          }
-        }
-      }
+      return FindOptionInDWARFCU(option, dwarf_cu, value);
     }
   } else {
-    for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
-      DWARFUnit *dwarf_cu = debug_info.GetUnitAtIndex(cu_idx);
-
-      if (dwarf_cu) {
-        const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
-        if (die) {
-          const char *flags =
-              die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
-
-          if (flags) {
-            if (strstr(flags, option)) {
-              Args compiler_args(flags);
-
-              return OptionParsing::GetOptionValueAsString(compiler_args,
-                                                           option, value);
-            }
-          }
-        }
-      }
-    }
+    for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx)
+      if (DWARFUnit *dwarf_cu = debug_info.GetUnitAtIndex(cu_idx))
+        return FindOptionInDWARFCU(option, dwarf_cu, value);
   }
 
   return false;
