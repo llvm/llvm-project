@@ -4952,6 +4952,15 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     CompareType = ARMISD::CMPZ;
     break;
   }
+
+  // If we have MI or PL and a binop, we can just do that instead of a CMP.
+  if (CondCode == ARMCC::MI || CondCode == ARMCC::PL) {
+    if (LHS.getOpcode() == ISD::SUB && LHS.hasOneUse()) {
+      ARMcc = DAG.getConstant(CondCode, dl, MVT::i32);
+      return DAG.getNode(CompareType, dl, FlagsVT, LHS.getOperand(0),
+                         LHS.getOperand(1));
+    }
+  }
   ARMcc = DAG.getConstant(CondCode, dl, MVT::i32);
   return DAG.getNode(CompareType, dl, FlagsVT, LHS, RHS);
 }
