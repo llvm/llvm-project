@@ -989,6 +989,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"tan", {{"x", SameFloating}}, SameFloating},
     {"tand", {{"x", SameFloating}}, SameFloating},
     {"tanh", {{"x", SameFloating}}, SameFloating},
+    {"tanpi", {{"x", SameFloating}}, SameFloating},
     {"team_number", {OptionalTEAM}, DefaultInt, Rank::scalar,
         IntrinsicClass::transformationalFunction},
     {"this_image",

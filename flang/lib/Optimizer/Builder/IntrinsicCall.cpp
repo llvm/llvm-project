@@ -942,6 +942,7 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"count", asAddr}, {"count_rate", asAddr}, {"count_max", asAddr}}},
      /*isElemental=*/false},
     {"tand", &I::genTand},
+    {"tanpi", &I::genTanpi},
     {"this_grid", &I::genThisGrid, {}, /*isElemental=*/false},
     {"this_thread_block", &I::genThisThreadBlock, {}, /*isElemental=*/false},
     {"this_warp", &I::genThisWarp, {}, /*isElemental=*/false},
@@ -8174,6 +8175,21 @@ mlir::Value IntrinsicLibrary::genTand(mlir::Type resultType,
       loc, mlir::Float64Type::get(context), pi / llvm::APFloat(180.0));
   mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
   mlir::Value arg = mlir::arith::MulFOp::create(builder, loc, args[0], factor);
+  return getRuntimeCallGenerator("tan", ftype)(builder, loc, {arg});
+}
+
+// TANPI
+mlir::Value IntrinsicLibrary::genTanpi(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
+  mlir::Value dfactor =
+      builder.createRealConstant(loc, mlir::Float64Type::get(context), pi);
+  mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
+  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
   return getRuntimeCallGenerator("tan", ftype)(builder, loc, {arg});
 }
 
