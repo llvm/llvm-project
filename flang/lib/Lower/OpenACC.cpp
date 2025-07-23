@@ -5018,9 +5018,18 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
   // TODO: There may be other strategies that can be employed such
   // as generating acc.private for the loop variables without attaching
   // them to acc.loop.
-  if (eval.lowerAsUnstructured())
-    TODO(converter.getCurrentLocation(),
-         "unstructured do loops in acc regions");
+  // For now - generate a not-yet-implemented message because without
+  // privatizing the induction variable, the loop may not execute correctly.
+  // Only do this for `acc kernels` because in `acc parallel`, scalars end
+  // up as implicitly firstprivate.
+  if (eval.lowerAsUnstructured()) {
+    if (mlir::isa_and_present<mlir::acc::KernelsOp>(
+            mlir::acc::getEnclosingComputeOp(
+                converter.getFirOpBuilder().getRegion())))
+      TODO(converter.getCurrentLocation(),
+           "unstructured do loop in acc kernels");
+    return nullptr;
+  }
 
   // Open up a new scope for the loop variables.
   localSymbols.pushScope();
