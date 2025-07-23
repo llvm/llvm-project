@@ -607,7 +607,8 @@ struct InsertTileSliceConversion
         rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
     auto predTy = VectorType::get(tileType.getShape()[0], rewriter.getI1Type(),
                                   /*scalableDims=*/{true});
-    auto allActiveMask = vector::SplatOp::create(rewriter, loc, predTy, one);
+    auto allActiveMask =
+        vector::BroadcastOp::create(rewriter, loc, predTy, one);
 
     // Create 'arm_sme.intr.write.(horiz|vert)' to write vector to tile slice.
     switch (insertTileSliceOp.getLayout()) {
