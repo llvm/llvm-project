@@ -1,3 +1,4 @@
+// #scratch_space
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs %s
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -fno-signed-char %s
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-unknown-fuchsia %s
@@ -899,4 +900,14 @@ void test_promotion(void) {
   
   // pointers
   printf("%s", i); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
+}
+
+void test_consteval_init_array(void) {
+  const char buf_not_terminated[] = {'%', 55 * 2 + 5, '\n'}; // expected-note{{format string is defined here}}
+  printf(buf_not_terminated, "hello"); // expected-warning{{format string is not null-terminated}}
+
+  const char buf[] = {'%', 55 * 2 + 5, '\n', 0};
+  printf(buf, "hello"); // no-warning
+  printf(buf, 123); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
+  // expected-note@#scratch_space {{format string computed from non-literal expression}}
 }

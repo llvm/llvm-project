@@ -469,6 +469,40 @@ related warnings within the method body.
   ``format_matches`` accepts an example valid format string as its third
   argument. For more information, see the Clang attributes documentation.
 
+- Clang can now verify format strings that can be constant-folded even if they
+  do not resolve to a string literal. For instance, all of these can now be
+  verified:
+
+  .. code-block:: c++
+
+    const char format[] = {'h', 'e', 'l', 'l', 'o', ' ', '%', 's', 0};
+    printf(format, "world");
+    // no warning
+    
+    printf(format, 123);
+    // warning: format specifies type 'char *' but the argument has type 'int'
+
+    printf(("%"s + "i"s).c_str(), "world");
+    // warning: format specifies type 'int' but the argument has type 'char *'
+  
+  When the format expression does not evaluate to a string literal, Clang
+  points diagnostics into a pseudo-file called ``<scratch space>`` that contains
+  the format string literal as it evaluated, like so:
+
+  .. code-block:: text
+
+    example.c:6:17: warning: format specifies type 'char *' but the argument has type 'int' [-Wformat]
+        6 |     printf(format, 123);
+          |            ~~~~~~  ^~~
+    <scratch space>:1:4: note: format string computed from non-literal expression
+        1 | "hello %s"
+          |        ^~
+          |        %d
+  
+  This may mean that format strings which were previously unverified (or which
+  triggered ``-Wformat-nonliteral``) are now verified by ``-Wformat`` and its
+  allies.
+
 - Introduced a new statement attribute ``[[clang::atomic]]`` that enables
   fine-grained control over atomic code generation on a per-statement basis.
   Supported options include ``[no_]remote_memory``,

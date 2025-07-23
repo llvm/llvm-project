@@ -100,6 +100,7 @@
 #include "llvm/Support/Locale.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
@@ -181,12 +182,13 @@ static bool checkBuiltinVerboseTrap(CallExpr *Call, Sema &S) {
     if (Arg->isValueDependent())
       continue;
 
-    std::optional<std::string> ArgString = Arg->tryEvaluateString(S.Context);
+    // Arguments must be pointers to constant strings, must be NUL-terminated,
+    // and cannot contain '$'.
+    auto ArgString = Arg->tryEvaluateString(S.Context);
     int DiagMsgKind = -1;
-    // Arguments must be pointers to constant strings and cannot use '$'.
-    if (!ArgString.has_value())
+    if (!(ArgString && ArgString->hasNullTerminator()))
       DiagMsgKind = 0;
-    else if (ArgString->find('$') != std::string::npos)
+    else if (ArgString->getString().find('$') != llvm::StringRef::npos)
       DiagMsgKind = 1;
 
     if (DiagMsgKind >= 0) {
@@ -6204,23 +6206,79 @@ static void CheckFormatString(
     llvm::SmallBitVector &CheckedVarArgs, UncoveredArgHandler &UncoveredArg,
     bool IgnoreStringsWithoutSpecifiers);
 
-static const Expr *maybeConstEvalStringLiteral(ASTContext &Context,
-                                               const Expr *E);
+class FormatStringFinder {
+  enum StringLiteralConstantEvaluationResult {
+    SLCER_NotEvaluated,
+    SLCER_NotNullTerminated,
+    SLCER_Evaluated,
+  };
 
-// Determine if an expression is a string literal or constant string.
-// If this function returns false on the arguments to a function expecting a
-// format string, we will usually need to emit a warning.
-// True string literals are then checked by CheckFormatString.
-static StringLiteralCheckType checkFormatStringExpr(
-    Sema &S, const StringLiteral *ReferenceFormatString, const Expr *E,
-    ArrayRef<const Expr *> Args, Sema::FormatArgumentPassingKind APK,
-    unsigned format_idx, unsigned firstDataArg, FormatStringType Type,
-    VariadicCallType CallType, bool InFunctionCall,
-    llvm::SmallBitVector &CheckedVarArgs, UncoveredArgHandler &UncoveredArg,
-    llvm::APSInt Offset, bool IgnoreStringsWithoutSpecifiers = false) {
-  if (S.isConstantEvaluatedContext())
-    return SLCT_NotALiteral;
-tryAgain:
+  Sema &S;
+  const StringLiteral *ReferenceFormatString;
+  ArrayRef<const Expr *> Args;
+  llvm::SmallBitVector &CheckedVarArgs;
+  UncoveredArgHandler &UncoveredArg;
+  Sema::FormatArgumentPassingKind APK;
+  FormatStringType Type;
+  VariadicCallType CallType;
+  unsigned format_idx;
+  unsigned firstDataArg;
+  bool InFunctionCall;
+  bool IgnoreStringsWithoutSpecifiers;
+
+  FormatStringFinder(Sema &S, const StringLiteral *ReferenceFormatString,
+                     ArrayRef<const Expr *> Args,
+                     llvm::SmallBitVector &CheckedVarArgs,
+                     UncoveredArgHandler &UncoveredArg,
+                     Sema::FormatArgumentPassingKind APK, FormatStringType Type,
+                     VariadicCallType CallType, unsigned format_idx,
+                     unsigned firstDataArg, bool InFunctionCall)
+      : S(S), ReferenceFormatString(ReferenceFormatString), Args(Args),
+        CheckedVarArgs(CheckedVarArgs), UncoveredArg(UncoveredArg), APK(APK),
+        Type(Type), CallType(CallType), format_idx(format_idx),
+        firstDataArg(firstDataArg), InFunctionCall(InFunctionCall),
+        IgnoreStringsWithoutSpecifiers(false) {}
+
+  /// Attempt to fold \c E into a constant string that \c checkFormatStringExpr
+  /// can use. If \c E folds to a string literal, that string literal will be
+  /// used for diagnostics. If \c E has a constant string value but it does not
+  /// fold to a literal (for instance, ("%"s + "i"s).c_str() constant-folds to
+  /// "%i"), a <scratch space> pseudo-source file will be allocated, containing
+  /// a string literal representation of the constant string, and format
+  /// diagnostics will point to it.
+  static StringLiteralConstantEvaluationResult
+  EvaluateStringAndCreateLiteral(Sema &S, const Expr *E,
+                                 bool IsConstantEvaluation,
+                                 const StringLiteral *&SL, uint64_t &Offset);
+
+  StringLiteralCheckType
+  checkEvaluateLiteral(const Expr *E, llvm::APSInt Offset,
+                       bool IsConstantInitialization = false);
+  StringLiteralCheckType check(const Expr *E, llvm::APSInt Offset);
+
+public:
+  // Determine if an expression is a string literal or constant string.
+  // If this function returns false on the arguments to a function expecting a
+  // format string, we will usually need to emit a warning.
+  // True string literals are then checked by CheckFormatString.
+  static StringLiteralCheckType
+  check(Sema &S, const StringLiteral *ReferenceFormatString,
+        ArrayRef<const Expr *> Args, unsigned FormatIdx, unsigned FirstDataArg,
+        Sema::FormatArgumentPassingKind APK, FormatStringType FST,
+        VariadicCallType CallType, llvm::SmallBitVector &CheckedVarArgs,
+        UncoveredArgHandler &UncoveredArg) {
+    FormatStringFinder Finder(S, ReferenceFormatString, Args, CheckedVarArgs,
+                              UncoveredArg, APK, FST, CallType, FormatIdx,
+                              FirstDataArg, true);
+    const Expr *E = Args[FormatIdx];
+    return S.isConstantEvaluatedContext()
+               ? Finder.checkEvaluateLiteral(E, llvm::APSInt(64, false) = 0)
+               : Finder.check(E, llvm::APSInt(64, false) = 0);
+  }
+};
+
+StringLiteralCheckType FormatStringFinder::check(const Expr *E,
+                                                 llvm::APSInt Offset) {
   assert(Offset.isSigned() && "invalid offset");
 
   if (E->isTypeDependent() || E->isValueDependent())
@@ -6236,15 +6294,15 @@ tryAgain:
     return SLCT_UncheckedLiteral;
 
   switch (E->getStmtClass()) {
-  case Stmt::InitListExprClass:
-    // Handle expressions like {"foobar"}.
-    if (const clang::Expr *SLE = maybeConstEvalStringLiteral(S.Context, E)) {
-      return checkFormatStringExpr(
-          S, ReferenceFormatString, SLE, Args, APK, format_idx, firstDataArg,
-          Type, CallType, /*InFunctionCall*/ false, CheckedVarArgs,
-          UncoveredArg, Offset, IgnoreStringsWithoutSpecifiers);
-    }
-    return SLCT_NotALiteral;
+  case Stmt::InitListExprClass: {
+    const InitListExpr *InitList = cast<InitListExpr>(E);
+    // Look through initializers like const char c[] = { "foo" }
+    if (InitList->isStringLiteralInit())
+      return check(InitList->getInit(0), Offset);
+
+    return checkEvaluateLiteral(E, Offset);
+  }
+
   case Stmt::BinaryConditionalOperatorClass:
   case Stmt::ConditionalOperatorClass: {
     // The expression is a literal if both sub-expressions were, and it was
@@ -6258,8 +6316,7 @@ tryAgain:
     bool CheckLeft = true, CheckRight = true;
 
     bool Cond;
-    if (C->getCond()->EvaluateAsBooleanCondition(
-            Cond, S.getASTContext(), S.isConstantEvaluatedContext())) {
+    if (C->getCond()->EvaluateAsBooleanCondition(Cond, S.getASTContext())) {
       if (Cond)
         CheckRight = false;
       else
@@ -6274,31 +6331,22 @@ tryAgain:
     if (!CheckLeft)
       Left = SLCT_UncheckedLiteral;
     else {
-      Left = checkFormatStringExpr(
-          S, ReferenceFormatString, C->getTrueExpr(), Args, APK, format_idx,
-          firstDataArg, Type, CallType, InFunctionCall, CheckedVarArgs,
-          UncoveredArg, Offset, IgnoreStringsWithoutSpecifiers);
+      Left = check(C->getTrueExpr(), Offset);
       if (Left == SLCT_NotALiteral || !CheckRight) {
         return Left;
       }
     }
 
-    StringLiteralCheckType Right = checkFormatStringExpr(
-        S, ReferenceFormatString, C->getFalseExpr(), Args, APK, format_idx,
-        firstDataArg, Type, CallType, InFunctionCall, CheckedVarArgs,
-        UncoveredArg, Offset, IgnoreStringsWithoutSpecifiers);
-
+    StringLiteralCheckType Right = check(C->getFalseExpr(), Offset);
     return (CheckLeft && Left < Right) ? Left : Right;
   }
 
   case Stmt::ImplicitCastExprClass:
-    E = cast<ImplicitCastExpr>(E)->getSubExpr();
-    goto tryAgain;
+    return check(cast<ImplicitCastExpr>(E)->getSubExpr(), Offset);
 
   case Stmt::OpaqueValueExprClass:
     if (const Expr *src = cast<OpaqueValueExpr>(E)->getSourceExpr()) {
-      E = src;
-      goto tryAgain;
+      return check(src, Offset);
     }
     return SLCT_NotALiteral;
 
@@ -6329,16 +6377,17 @@ tryAgain:
       }
 
       if (isConstant) {
-        if (const Expr *Init = VD->getAnyInitializer()) {
-          // Look through initializers like const char c[] = { "foo" }
-          if (const InitListExpr *InitList = dyn_cast<InitListExpr>(Init)) {
-            if (InitList->isStringLiteralInit())
-              Init = InitList->getInit(0)->IgnoreParenImpCasts();
-          }
-          return checkFormatStringExpr(
-              S, ReferenceFormatString, Init, Args, APK, format_idx,
-              firstDataArg, Type, CallType,
-              /*InFunctionCall*/ false, CheckedVarArgs, UncoveredArg, Offset);
+        // If the variable has C++ constant initialization, we need to jump out
+        // of format string handling ad-hoc constant evaluation and follow the
+        // standard rules.
+        const Expr *Init = VD->getInit();
+        if (Init && VD->hasConstantInitialization()) {
+          return checkEvaluateLiteral(Init, Offset, true);
+        }
+        Init = VD->getAnyInitializer();
+        if (Init) {
+          InFunctionCall = false;
+          return check(Init, Offset);
         }
       }
 
@@ -6411,11 +6460,8 @@ tryAgain:
                 }
                 return SLCT_UncheckedLiteral;
               }
-              return checkFormatStringExpr(
-                  S, ReferenceFormatString, PVFormatMatches->getFormatString(),
-                  Args, APK, format_idx, firstDataArg, Type, CallType,
-                  /*InFunctionCall*/ false, CheckedVarArgs, UncoveredArg,
-                  Offset, IgnoreStringsWithoutSpecifiers);
+              InFunctionCall = false;
+              return check(PVFormatMatches->getFormatString(), Offset);
             }
           }
 
@@ -6467,10 +6513,7 @@ tryAgain:
       StringLiteralCheckType CommonResult;
       for (const auto *FA : ND->specific_attrs<FormatArgAttr>()) {
         const Expr *Arg = CE->getArg(FA->getFormatIdx().getASTIndex());
-        StringLiteralCheckType Result = checkFormatStringExpr(
-            S, ReferenceFormatString, Arg, Args, APK, format_idx, firstDataArg,
-            Type, CallType, InFunctionCall, CheckedVarArgs, UncoveredArg,
-            Offset, IgnoreStringsWithoutSpecifiers);
+        StringLiteralCheckType Result = check(Arg, Offset);
         if (IsFirst) {
           CommonResult = Result;
           IsFirst = false;
@@ -6483,20 +6526,11 @@ tryAgain:
         unsigned BuiltinID = FD->getBuiltinID();
         if (BuiltinID == Builtin::BI__builtin___CFStringMakeConstantString ||
             BuiltinID == Builtin::BI__builtin___NSStringMakeConstantString) {
-          const Expr *Arg = CE->getArg(0);
-          return checkFormatStringExpr(
-              S, ReferenceFormatString, Arg, Args, APK, format_idx,
-              firstDataArg, Type, CallType, InFunctionCall, CheckedVarArgs,
-              UncoveredArg, Offset, IgnoreStringsWithoutSpecifiers);
+          return check(CE->getArg(0), Offset);
         }
       }
     }
-    if (const Expr *SLE = maybeConstEvalStringLiteral(S.Context, E))
-      return checkFormatStringExpr(
-          S, ReferenceFormatString, SLE, Args, APK, format_idx, firstDataArg,
-          Type, CallType, /*InFunctionCall*/ false, CheckedVarArgs,
-          UncoveredArg, Offset, IgnoreStringsWithoutSpecifiers);
-    return SLCT_NotALiteral;
+    return checkEvaluateLiteral(E, Offset);
   }
   case Stmt::ObjCMessageExprClass: {
     const auto *ME = cast<ObjCMessageExpr>(E);
@@ -6517,11 +6551,7 @@ tryAgain:
           IgnoreStringsWithoutSpecifiers = true;
         }
 
-        const Expr *Arg = ME->getArg(FA->getFormatIdx().getASTIndex());
-        return checkFormatStringExpr(
-            S, ReferenceFormatString, Arg, Args, APK, format_idx, firstDataArg,
-            Type, CallType, InFunctionCall, CheckedVarArgs, UncoveredArg,
-            Offset, IgnoreStringsWithoutSpecifiers);
+        return check(ME->getArg(FA->getFormatIdx().getASTIndex()), Offset);
       }
     }
 
@@ -6572,18 +6602,16 @@ tryAgain:
         if (LIsInt) {
           if (BinOpKind == BO_Add) {
             sumOffsets(Offset, LResult.Val.getInt(), BinOpKind, RIsInt);
-            E = BinOp->getRHS();
-            goto tryAgain;
+            return check(BinOp->getRHS(), Offset);
           }
         } else {
           sumOffsets(Offset, RResult.Val.getInt(), BinOpKind, RIsInt);
-          E = BinOp->getLHS();
-          goto tryAgain;
+          return check(BinOp->getLHS(), Offset);
         }
       }
     }
 
-    return SLCT_NotALiteral;
+    return checkEvaluateLiteral(E, Offset);
   }
   case Stmt::UnaryOperatorClass: {
     const UnaryOperator *UnaOp = cast<UnaryOperator>(E);
@@ -6595,31 +6623,86 @@ tryAgain:
                                        S.isConstantEvaluatedContext())) {
         sumOffsets(Offset, IndexResult.Val.getInt(), BO_Add,
                    /*RHS is int*/ true);
-        E = ASE->getBase();
-        goto tryAgain;
+        return check(ASE->getBase(), Offset);
       }
     }
 
-    return SLCT_NotALiteral;
+    return checkEvaluateLiteral(E, Offset);
   }
 
   default:
-    return SLCT_NotALiteral;
+    return checkEvaluateLiteral(E, Offset);
   }
 }
 
-// If this expression can be evaluated at compile-time,
-// check if the result is a StringLiteral and return it
-// otherwise return nullptr
-static const Expr *maybeConstEvalStringLiteral(ASTContext &Context,
-                                               const Expr *E) {
-  Expr::EvalResult Result;
-  if (E->EvaluateAsRValue(Result, Context) && Result.Val.isLValue()) {
-    const auto *LVE = Result.Val.getLValueBase().dyn_cast<const Expr *>();
-    if (isa_and_nonnull<StringLiteral>(LVE))
-      return LVE;
+StringLiteralCheckType
+FormatStringFinder::checkEvaluateLiteral(const Expr *E, llvm::APSInt Offset,
+                                         bool IsConstantEvaluation) {
+  uint64_t EvalOffset = 0;
+  const StringLiteral *FakeLiteral = nullptr;
+  switch (EvaluateStringAndCreateLiteral(S, E, IsConstantEvaluation,
+                                         FakeLiteral, EvalOffset)) {
+  case SLCER_NotEvaluated:
+    return SLCT_NotALiteral;
+
+  case SLCER_NotNullTerminated:
+    S.Diag(Args[format_idx]->getBeginLoc(),
+           diag::warn_printf_format_string_not_null_terminated)
+        << Args[format_idx]->getSourceRange();
+    if (!InFunctionCall)
+      S.Diag(E->getBeginLoc(), diag::note_format_string_defined);
+    // Stop checking, as this might just mean we're missing a chunk of the
+    // format string and there would be other spurious format issues.
+    return SLCT_UncheckedLiteral;
+
+  case SLCER_Evaluated:
+    InFunctionCall = false;
+    if (EvalOffset)
+      sumOffsets(Offset, llvm::APSInt(64, false) = EvalOffset, BO_Add, true);
+    return check(FakeLiteral, Offset);
   }
-  return nullptr;
+}
+
+FormatStringFinder::StringLiteralConstantEvaluationResult
+FormatStringFinder::EvaluateStringAndCreateLiteral(Sema &S, const Expr *E,
+                                                   bool IsConstantEvaluation,
+                                                   const StringLiteral *&SL,
+                                                   uint64_t &Offset) {
+  // As a last resort, try to constant-evaluate the format string.
+  auto SER = E->tryEvaluateString(S.Context, IsConstantEvaluation);
+  if (!SER)
+    return SLCER_NotEvaluated;
+  if (!SER || !SER->hasNullTerminator())
+    return SLCER_NotNullTerminated;
+
+  // If it evaluates to a string literal in the first place, we can point to
+  // that string literal in source and use that.
+  if (SER->getStringLiteral(SL, Offset))
+    return SLCER_Evaluated;
+
+  // Otherwise, plop that string into a scratch buffer, create a string literal
+  // and then go with that.
+  std::unique_ptr<llvm::MemoryBuffer> MemBuf;
+  {
+    llvm::SmallString<80> EscapedString;
+    {
+      llvm::raw_svector_ostream OS(EscapedString);
+      OS << '"';
+      OS.write_escaped(SER->getString());
+      OS << '"';
+    }
+    MemBuf.reset(new llvm::SmallVectorMemoryBuffer(std::move(EscapedString),
+                                                   "<scratch space>", true));
+  }
+
+  FileID ScratchFile = S.getSourceManager().createFileID(std::move(MemBuf));
+  SourceLocation Begin = S.getSourceManager().getLocForStartOfFile(ScratchFile);
+  QualType SLType = S.Context.getStringLiteralArrayType(
+      S.Context.CharTy, SER->getString().size());
+  SL = StringLiteral::Create(S.Context, SER->getString(),
+                             StringLiteralKind::Ordinary, false, SLType, Begin);
+  Offset = 0;
+  return SLCER_Evaluated;
 }
 
 StringRef Sema::GetFormatStringTypeName(FormatStringType FST) {
@@ -6708,6 +6791,11 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
                                 VariadicCallType CallType, SourceLocation Loc,
                                 SourceRange Range,
                                 llvm::SmallBitVector &CheckedVarArgs) {
+  // As a last resort, Clang attempts to evaluate the format string as a
+  // constant, which is expensive. Before we go down that route, check that
+  // the warnings are at least enabled at Loc, which in the common case points
+  // at the opening parenthesis of the function call.
+
   // CHECK: printf/scanf-like function is called with no format string.
   if (format_idx >= Args.size()) {
     Diag(Loc, diag::warn_missing_format_string) << Range;
@@ -6720,20 +6808,13 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
   //
   // Dynamically generated format strings are difficult to
   // automatically vet at compile time.  Requiring that format strings
-  // are string literals: (1) permits the checking of format strings by
-  // the compiler and thereby (2) can practically remove the source of
-  // many format string exploits.
-
-  // Format string can be either ObjC string (e.g. @"%d") or
-  // C string (e.g. "%d")
-  // ObjC string uses the same format specifiers as C string, so we can use
-  // the same format string checking logic for both ObjC and C strings.
+  // can evaluate to constant strings: (1) permits the checking of format
+  // strings by the compiler and thereby (2) can practically remove the source
+  // of many format string exploits.
   UncoveredArgHandler UncoveredArg;
-  StringLiteralCheckType CT = checkFormatStringExpr(
-      *this, ReferenceFormatString, OrigFormatExpr, Args, APK, format_idx,
-      firstDataArg, Type, CallType,
-      /*IsFunctionCall*/ true, CheckedVarArgs, UncoveredArg,
-      /*no string offset*/ llvm::APSInt(64, false) = 0);
+  StringLiteralCheckType CT = FormatStringFinder::check(
+      *this, ReferenceFormatString, Args, format_idx, firstDataArg, APK, Type,
+      CallType, CheckedVarArgs, UncoveredArg);
 
   // Generate a diagnostic where an uncovered argument is detected.
   if (UncoveredArg.hasUncoveredArg()) {
@@ -7243,10 +7324,11 @@ void CheckFormatHandler::EmitFormatDiagnostic(
     S.Diag(IsStringLocation ? ArgumentExpr->getExprLoc() : Loc, PDiag)
       << ArgumentExpr->getSourceRange();
 
-    const Sema::SemaDiagnosticBuilder &Note =
-      S.Diag(IsStringLocation ? Loc : StringRange.getBegin(),
-             diag::note_format_string_defined);
-
+    SourceLocation DiagLoc = IsStringLocation ? Loc : StringRange.getBegin();
+    unsigned DiagID = S.getSourceManager().isWrittenInScratchSpace(DiagLoc)
+                          ? diag::note_format_string_evaluated_to
+                          : diag::note_format_string_defined;
+    const Sema::SemaDiagnosticBuilder &Note = S.Diag(DiagLoc, DiagID);
     Note << StringRange;
     Note << FixIt;
   }
