@@ -1297,7 +1297,6 @@ LogicalResult vector::ExtractElementOp::verify() {
 /// scalar_source --> vector.splat --> value     - return scalar_source
 /// scalar_source --> vector.broadcast --> value - return scalar_source
 static Value getSplatSource(Value value) {
-
   // Block argument:
   Operation *defOp = value.getDefiningOp();
   if (!defOp)
@@ -2605,7 +2604,7 @@ class FromElementsToShapeCast : public OpRewritePattern<FromElementsOp> {
   LogicalResult matchAndRewrite(FromElementsOp fromElements,
                                 PatternRewriter &rewriter) const override {
 
-    // Handled by `rewriteFromElementsAsBroadcast`
+    // Handled by `rewriteFromElementsAsBroadcast`.
     if (fromElements.getType().getNumElements() == 1)
       return failure();
 
@@ -3147,7 +3146,7 @@ struct Canonicalize0DShuffleOp : public OpRewritePattern<ShuffleOp> {
   }
 };
 
-/// Pattern to rewrite shuffle(splat-like(v), splat-like(v)) as broadcast(v)
+/// Pattern to rewrite shuffle(splat-like(v), splat-like(v)) as broadcast(v).
 class ShuffleSplat final : public OpRewritePattern<ShuffleOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
@@ -3368,7 +3367,7 @@ public:
   }
 };
 
-/// Pattern to rewrite a insert(splat-like(v), splat-like(v)) as broadcast(v)
+/// Pattern to rewrite a insert(splat-like(v), splat-like(v)) as broadcast(v).
 class InsertSplatToSplat final : public OpRewritePattern<InsertOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
@@ -3648,7 +3647,7 @@ LogicalResult InsertStridedSliceOp::verify() {
 }
 
 namespace {
-/// Rewrite insert_strided_slice(splat-like(v), splat-like(v)) as v
+/// Rewrite insert_strided_slice(splat-like(v), splat-like(v)) as v.
 class FoldInsertStridedSliceSplat final
     : public OpRewritePattern<InsertStridedSliceOp> {
 public:
@@ -4317,7 +4316,7 @@ public:
   }
 };
 
-/// Rewrite extract_strided_slice(splat-like(v)) with broadcast(v)
+/// Rewrite extract_strided_slice(splat-like(v)) with broadcast(v).
 class StridedSliceSplat final : public OpRewritePattern<ExtractStridedSliceOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
@@ -7244,7 +7243,7 @@ OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
 
 // Canonicalizer for vector.splat. It always gets canonicalized to a
 // vector.broadcast.
-class SplatToBroadcastPattern : public OpRewritePattern<SplatOp> {
+class SplatToBroadcastPattern final : public OpRewritePattern<SplatOp> {
 public:
   using OpRewritePattern<SplatOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(SplatOp splatOp,
