@@ -267,8 +267,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     addType(LLVMFuncTy->getReturnType());
     // The token type indicates the boundary between return types and param
     // types.
-    Args.push_back(
-        PoisonValue::get(llvm::Type::getTokenTy(getLLVMContext())));
+    Args.push_back(PoisonValue::get(llvm::Type::getTokenTy(getLLVMContext())));
     for (uint i = 0; i < NParams; i++) {
       addType(LLVMFuncTy->getParamType(i));
     }
