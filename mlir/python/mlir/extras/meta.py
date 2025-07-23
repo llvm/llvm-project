@@ -6,7 +6,7 @@ import inspect
 from functools import wraps
 
 from ..dialects._ods_common import get_op_result_or_op_results
-from ..ir import Type, InsertionPoint
+from ..ir import Type, InsertionPoint, Value
 
 
 def op_region_builder(op, op_region, terminator=None):
@@ -81,3 +81,17 @@ def region_op(op_constructor, terminator=None):
             return op_decorator(*args, **kwargs)
 
     return maybe_no_args
+
+
+def region_adder(terminator=None):
+    def wrapper(op_region_adder):
+        def region_adder_decorator(op, *args, **kwargs):
+            if isinstance(op, Value):
+                op = op.owner.opview
+            region = op_region_adder(op, *args, **kwargs)
+
+            return op_region_builder(op, region, terminator)
+
+        return region_adder_decorator
+
+    return wrapper
