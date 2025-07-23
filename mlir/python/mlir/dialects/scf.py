@@ -271,8 +271,9 @@ def _parfor(op_ctor):
         params = [lower_bounds, upper_bounds, steps]
         for i, p in enumerate(params):
             for j, pp in enumerate(p):
-                if isinstance(p, int):
-                    pp = arith.constant(IndexType.get(), p)
+                if isinstance(pp, int):
+                    pp = arith.constant(IndexType.get(), pp)
+                assert isinstance(pp, Value), f"expected ir.Value, got {type(pp)=}"
                 if not is_index_type(pp.type):
                     pp = arith.index_cast(pp)
                 p[j] = pp
@@ -343,8 +344,8 @@ class ReduceOp(ReduceOp):
             self.regions[i].blocks.append(operands[i].type, operands[i].type)
 
 
-def reduce_(*operands, num_reductions=1):
-    return ReduceOp(operands, num_reductions, loc=loc)
+def reduce_(*operands, num_reductions=1, loc=None, ip=None):
+    return ReduceOp(operands, num_reductions, loc=loc, ip=ip)
 
 
 reduce = region_op(reduce_, terminator=lambda xs: reduce_return(*xs))

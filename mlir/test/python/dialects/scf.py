@@ -85,7 +85,7 @@ def test_parange_inits_with_for():
 
         @scf.reduce(ten2)
         def res(lhs: tensor_type, rhs: tensor_type):
-            return lhs + rhs
+            return arith.addi(lhs, rhs)
 
     # CHECK:  %[[VAL_0:.*]] = tensor.empty() : tensor<10x10xi32>
     # CHECK:  %[[VAL_1:.*]] = arith.constant 1 : index
@@ -115,11 +115,11 @@ def test_parange_inits_with_for_with_two_reduce():
 
         @scf.reduce(i, j, num_reductions=2)
         def res1(lhs: index_type, rhs: index_type):
-            return lhs + rhs
+            return arith.addi(lhs, rhs)
 
         @scf.another_reduce(res1)
         def res2(lhs: index_type, rhs: index_type):
-            return lhs + rhs
+            return arith.addi(lhs, rhs)
 
     # CHECK:  %[[VAL_0:.*]] = arith.constant 1 : index
     # CHECK:  %[[VAL_1:.*]] = arith.constant 1 : index
@@ -151,15 +151,15 @@ def test_parange_inits_with_for_with_three_reduce():
 
         @scf.reduce(i, j, k, num_reductions=3)
         def res1(lhs: index_type, rhs: index_type):
-            return lhs + rhs
+            return arith.addi(lhs, rhs)
 
         @scf.another_reduce(res1)
         def res2(lhs: index_type, rhs: index_type):
-            return lhs + rhs
+            return arith.addi(lhs, rhs)
 
         @scf.another_reduce(res2)
         def res3(lhs: index_type, rhs: index_type):
-            return lhs + rhs
+            return arith.addi(lhs, rhs)
 
     # CHECK:  %[[VAL_0:.*]] = arith.constant 1 : index
     # CHECK:  %[[VAL_1:.*]] = arith.constant 1 : index
