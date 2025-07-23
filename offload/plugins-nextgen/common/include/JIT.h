@@ -93,7 +93,7 @@ private:
     /// LLVM Context in which the modules will be constructed.
     LLVMContext Context;
 
-    /// Output images generated from LLVM backend.
+    /// A map of embedded IR images to the buffer used to store JITed code
     DenseMap<const __tgt_device_image *, std::unique_ptr<MemoryBuffer>>
         JITImages;
 
