@@ -5924,6 +5924,134 @@ void CombinerHelper::applyUMulHToLShr(MachineInstr &MI) const {
   MI.eraseFromParent();
 }
 
+bool CombinerHelper::matchTruncSSatS(MachineInstr &MI,
+                                     Register &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+  unsigned NumDstBits = DstTy.getScalarSizeInBits();
+  unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
+  assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
+
+  APInt MinConst, MaxConst;
+  APInt SignedMax = APInt::getSignedMaxValue(NumDstBits).sext(NumSrcBits);
+  APInt SignedMin = APInt::getSignedMinValue(NumDstBits).sext(NumSrcBits);
+
+  if (isLegal({TargetOpcode::G_TRUNC_SSAT_S, {DstTy, SrcTy}})) {
+    if (mi_match(Src, MRI,
+                 m_GSMin(m_GSMax(m_Reg(MatchInfo), m_ICstOrSplat(MinConst)),
+                         m_ICstOrSplat(MaxConst))) &&
+        APInt::isSameValue(MinConst, SignedMin) &&
+        APInt::isSameValue(MaxConst, SignedMax))
+      return true;
+    if (mi_match(Src, MRI,
+                 m_GSMax(m_GSMin(m_Reg(MatchInfo), m_ICstOrSplat(MaxConst)),
+                         m_ICstOrSplat(MinConst))) &&
+        APInt::isSameValue(MinConst, SignedMin) &&
+        APInt::isSameValue(MaxConst, SignedMax))
+      return true;
+  }
+  return false;
+}
+
+void CombinerHelper::applyTruncSSatS(MachineInstr &MI,
+                                     Register &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Builder.buildTruncSSatS(Dst, MatchInfo);
+  MI.eraseFromParent();
+}
+
+bool CombinerHelper::matchTruncSSatU(MachineInstr &MI,
+                                     Register &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+  unsigned NumDstBits = DstTy.getScalarSizeInBits();
+  unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
+  assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
+
+  APInt MaxConst;
+  APInt UnsignedMax = APInt::getMaxValue(NumDstBits).zext(NumSrcBits);
+
+  if (isLegal({TargetOpcode::G_TRUNC_SSAT_U, {DstTy, SrcTy}})) {
+    if (mi_match(Src, MRI,
+                 m_GSMin(m_GSMax(m_Reg(MatchInfo), m_SpecificICstOrSplat(0)),
+                         m_ICstOrSplat(MaxConst))) &&
+        APInt::isSameValue(MaxConst, UnsignedMax))
+      return true;
+    if (mi_match(Src, MRI,
+                 m_GSMax(m_GSMin(m_Reg(MatchInfo), m_ICstOrSplat(MaxConst)),
+                         m_SpecificICstOrSplat(0))) &&
+        APInt::isSameValue(MaxConst, UnsignedMax))
+      return true;
+    if (mi_match(Src, MRI,
+                 m_GUMin(m_GSMax(m_Reg(MatchInfo), m_SpecificICstOrSplat(0)),
+                         m_ICstOrSplat(MaxConst))) &&
+        APInt::isSameValue(MaxConst, UnsignedMax))
+      return true;
+  }
+  return false;
+}
+
+void CombinerHelper::applyTruncSSatU(MachineInstr &MI,
+                                     Register &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Builder.buildTruncSSatU(Dst, MatchInfo);
+  MI.eraseFromParent();
+}
+
+bool CombinerHelper::matchTruncUSatU(MachineInstr &MI,
+                                     Register &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+  unsigned NumDstBits = DstTy.getScalarSizeInBits();
+  unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
+  assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
+
+  APInt MaxConst;
+  APInt UnsignedMax = APInt::getMaxValue(NumDstBits).zext(NumSrcBits);
+
+  if (isLegal({TargetOpcode::G_TRUNC_SSAT_U, {DstTy, SrcTy}})) {
+    if (mi_match(Src, MRI,
+                 m_GUMin(m_Reg(MatchInfo), m_ICstOrSplat(MaxConst))) &&
+        APInt::isSameValue(MaxConst, UnsignedMax))
+      return true;
+  }
+  return false;
+}
+
+void CombinerHelper::applyTruncUSatU(MachineInstr &MI,
+                                     Register &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Builder.buildTruncUSatU(Dst, MatchInfo);
+  MI.eraseFromParent();
+}
+
+bool CombinerHelper::matchTruncUSatUToFPTOUISat(MachineInstr &MI,
+                                                Register &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  if (isLegalOrBeforeLegalizer({TargetOpcode::G_FPTOUI_SAT, {DstTy, SrcTy}})) {
+    if (mi_match(Src, MRI, m_GFPToUI((m_Reg(MatchInfo)))))
+      return true;
+  }
+  return false;
+}
+
+void CombinerHelper::applyTruncUSatUToFPTOUISat(MachineInstr &MI,
+                                                Register &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Builder.buildFPTOUI_SAT(Dst, MatchInfo);
+  MI.eraseFromParent();
+}
+
 bool CombinerHelper::matchRedundantNegOperands(MachineInstr &MI,
                                                BuildFnTy &MatchInfo) const {
   unsigned Opc = MI.getOpcode();

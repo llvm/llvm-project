@@ -741,6 +741,18 @@ m_GFPTrunc(const SrcTy &Src) {
 }
 
 template <typename SrcTy>
+inline UnaryOp_match<SrcTy, TargetOpcode::G_FPTOSI>
+m_GFPToSI(const SrcTy &Src) {
+  return UnaryOp_match<SrcTy, TargetOpcode::G_FPTOSI>(Src);
+}
+
+template <typename SrcTy>
+inline UnaryOp_match<SrcTy, TargetOpcode::G_FPTOUI>
+m_GFPToUI(const SrcTy &Src) {
+  return UnaryOp_match<SrcTy, TargetOpcode::G_FPTOUI>(Src);
+}
+
+template <typename SrcTy>
 inline UnaryOp_match<SrcTy, TargetOpcode::G_FABS> m_GFabs(const SrcTy &Src) {
   return UnaryOp_match<SrcTy, TargetOpcode::G_FABS>(Src);
 }
