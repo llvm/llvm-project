@@ -2210,6 +2210,10 @@ multiclass VOP3P_Real_with_name_gfx12<bits<8> op,
 defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1b, "V_PK_MIN_F16", "v_pk_min_num_f16">;
 defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1c, "V_PK_MAX_F16", "v_pk_max_num_f16">;
 
+defm V_PK_FMA_F32 : VOP3P_Real_gfx12<0x1f>;
+defm V_PK_MUL_F32 : VOP3P_Real_gfx12<0x28>;
+defm V_PK_ADD_F32 : VOP3P_Real_gfx12<0x29>;
+
 defm V_PK_ADD_MAX_I16  : VOP3P_Real_gfx1250<0x14>;
 defm V_PK_ADD_MAX_U16  : VOP3P_Real_gfx1250<0x15>;
 defm V_PK_ADD_MIN_I16  : VOP3P_Real_gfx1250<0x2d>;
