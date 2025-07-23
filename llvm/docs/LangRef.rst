@@ -280,9 +280,9 @@ linkage:
     linkage are linked together, the two global arrays are appended
     together. This is the LLVM, typesafe, equivalent of having the
     system linker append together "sections" with identical names when
-    .o files are linked.
+    ``.o`` files are linked.
 
-    Unfortunately this doesn't correspond to any feature in .o files, so it
+    Unfortunately this doesn't correspond to any feature in ``.o`` files, so it
     can only be used for variables like ``llvm.global_ctors`` which llvm
     interprets specially.
 
@@ -371,7 +371,7 @@ added in the future:
 
     This calling convention supports `tail call
     optimization <CodeGenerator.html#tail-call-optimization>`_ but requires
-    both the caller and callee are using it.
+    both the caller and callee to use it.
 "``cc 11``" - The HiPE calling convention
     This calling convention has been implemented specifically for use by
     the `High-Performance Erlang
@@ -447,7 +447,7 @@ added in the future:
       R11. R11 can be used as a scratch register. Furthermore it also preserves
       all floating-point registers (XMMs/YMMs).
 
-    - On AArch64 the callee preserve all general purpose registers, except
+    - On AArch64 the callee preserves all general purpose registers, except
       X0-X8 and X16-X18. Furthermore it also preserves lower 128 bits of V8-V31
       SIMD floating point registers. Not allowed with ``nest``.
 
@@ -890,7 +890,7 @@ Syntax::
            [gc] [prefix Constant] [prologue Constant] [personality Constant]
            (!name !N)* { ... }
 
-The argument list is a comma separated sequence of arguments where each
+The argument list is a comma-separated sequence of arguments where each
 argument is of the following form:
 
 Syntax::
@@ -1011,7 +1011,7 @@ some can only be checked when producing an object file:
 IFuncs
 -------
 
-IFuncs, like as aliases, don't create any new data or func. They are just a new
+IFuncs, like aliases, don't create any new data or func. They are just a new
 symbol that is resolved at runtime by calling a resolver function.
 
 On ELF platforms, IFuncs are resolved by the dynamic linker at load time. On
@@ -1211,7 +1211,7 @@ Currently, only the following parameter attributes are defined:
     the callee (for a return value).
 ``noext``
     This indicates to the code generator that the parameter or return
-    value has the high bits undefined, as for a struct in register, and
+    value has the high bits undefined, as for a struct in a register, and
     therefore does not need to be sign or zero extended. This is the same
     as default behavior and is only actually used (by some targets) to
     validate that one of the attributes is always present.
@@ -1252,7 +1252,7 @@ Currently, only the following parameter attributes are defined:
     on the stack. This implies the pointer is dereferenceable up to
     the storage size of the type.
 
-    It is not generally permissible to introduce a write to an
+    It is not generally permissible to introduce a write to a
     ``byref`` pointer. The pointer may have any address space and may
     be read only.
 
@@ -1393,7 +1393,7 @@ Currently, only the following parameter attributes are defined:
     storage for any other object accessible to the caller.
 
 ``captures(...)``
-    This attributes restrict the ways in which the callee may capture the
+    This attribute restricts the ways in which the callee may capture the
     pointer. This is not a valid attribute for return values. This attribute
     applies only to the particular copy of the pointer passed in this argument.
 
@@ -1615,7 +1615,7 @@ Currently, only the following parameter attributes are defined:
     assigning this parameter or return value to a stack slot during calling
     convention lowering. The enforcement of the specified alignment is
     target-dependent, as target-specific calling convention rules may override
-    this value. This attribute serves the purpose of carrying language specific
+    this value. This attribute serves the purpose of carrying language-specific
     alignment information that is not mapped to base types in the backend (for
     example, over-alignment specification through language attributes).
 
@@ -1993,7 +1993,7 @@ For example:
 ``cold``
     This attribute indicates that this function is rarely called. When
     computing edge weights, basic blocks post-dominated by a cold
-    function call are also considered to be cold; and, thus, given low
+    function call are also considered to be cold and, thus, given a low
     weight.
 
 .. _attr_convergent:
