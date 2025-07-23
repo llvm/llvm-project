@@ -5732,7 +5732,6 @@ static SDValue combinePRMT(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return SDValue();
 }
 
-
 // During call lowering we wrap the return values in a ProxyReg node which
 // depend on the chain value produced by the completed call. This ensures that
 // the full call is emitted in cases where libcalls are used to legalize
