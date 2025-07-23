@@ -2397,10 +2397,6 @@ void VPVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-void VPBlendRecipe::execute(VPTransformState &State) {
-  llvm_unreachable("VPBlendRecipe should be expanded by simplifyBlends");
-}
-
 InstructionCost VPBlendRecipe::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
   // Handle cases where only the first lane is used the same way as the legacy
