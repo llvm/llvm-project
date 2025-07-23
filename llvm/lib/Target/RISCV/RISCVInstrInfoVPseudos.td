@@ -543,7 +543,7 @@ defset list<VTypeInfoToWide> AllWidenableBFloatToFloatVectors = {
 // This represents the information we need in codegen for each pseudo.
 // The definition should be consistent with `struct PseudoInfo` in
 // RISCVInstrInfo.h.
-class RISCVVPseudo<dag outs, dag ins, list<dag> pattern, string opcodestr = "", string argstr = "">
+class RISCVVPseudo<dag outs, dag ins, list<dag> pattern = [], string opcodestr = "", string argstr = "">
     : Pseudo<outs, ins, pattern, opcodestr, argstr> {
   Pseudo Pseudo = !cast<Pseudo>(NAME); // Used as a key.
   Instruction BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
