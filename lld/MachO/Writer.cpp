@@ -1210,7 +1210,8 @@ void Writer::writeSections() {
 }
 
 void Writer::applyOptimizationHints() {
-  if (config->arch() != AK_arm64 || config->ignoreOptimizationHints)
+  if (!is_contained({AK_arm64, AK_arm64e, AK_arm64_32}, config->arch()) ||
+      config->ignoreOptimizationHints)
     return;
 
   uint8_t *buf = buffer->getBufferStart();

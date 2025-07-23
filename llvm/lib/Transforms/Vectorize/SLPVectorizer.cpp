@@ -11693,6 +11693,7 @@ void BoUpSLP::transformNodes() {
         if (StartIdx + VF > End)
           continue;
         SmallVector<std::pair<unsigned, unsigned>> Slices;
+        bool AllStrided = true;
         for (unsigned Cnt = StartIdx; Cnt + VF <= End; Cnt += VF) {
           ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
           // If any instruction is vectorized already - do not try again.
@@ -11743,6 +11744,9 @@ void BoUpSLP::transformNodes() {
                 SmallVector<Value *> PointerOps;
                 LoadsState Res =
                     canVectorizeLoads(Slice, Slice.front(), Order, PointerOps);
+                AllStrided &= Res == LoadsState::StridedVectorize ||
+                              Res == LoadsState::ScatterVectorize ||
+                              Res == LoadsState::Gather;
                 // Do not vectorize gathers.
                 if (Res == LoadsState::ScatterVectorize ||
                     Res == LoadsState::Gather) {
@@ -11772,6 +11776,11 @@ void BoUpSLP::transformNodes() {
           }
           Slices.emplace_back(Cnt, Slice.size());
         }
+        // Do not try to vectorize if all slides are strided or gathered with
+        // vector factor 2 and there are more than 2 slices. Better to handle
+        // them in gathered loads analysis, may result in better vectorization.
+        if (VF == 2 && AllStrided && Slices.size() > 2)
+          continue;
         auto AddCombinedNode = [&](unsigned Idx, unsigned Cnt, unsigned Sz) {
           E.CombinedEntriesWithIndices.emplace_back(Idx, Cnt);
           if (StartIdx == Cnt)
@@ -23193,6 +23202,8 @@ private:
         case RecurKind::FindFirstIVUMin:
         case RecurKind::FindLastIVSMax:
         case RecurKind::FindLastIVUMax:
+        case RecurKind::FMaxNum:
+        case RecurKind::FMinNum:
         case RecurKind::FMaximumNum:
         case RecurKind::FMinimumNum:
         case RecurKind::None:
@@ -23330,6 +23341,8 @@ private:
     case RecurKind::FindFirstIVUMin:
     case RecurKind::FindLastIVSMax:
     case RecurKind::FindLastIVUMax:
+    case RecurKind::FMaxNum:
+    case RecurKind::FMinNum:
     case RecurKind::FMaximumNum:
     case RecurKind::FMinimumNum:
     case RecurKind::None:
@@ -23432,6 +23445,8 @@ private:
     case RecurKind::FindFirstIVUMin:
     case RecurKind::FindLastIVSMax:
     case RecurKind::FindLastIVUMax:
+    case RecurKind::FMaxNum:
+    case RecurKind::FMinNum:
     case RecurKind::FMaximumNum:
     case RecurKind::FMinimumNum:
     case RecurKind::None:
