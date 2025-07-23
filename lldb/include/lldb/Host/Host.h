@@ -109,10 +109,6 @@ public:
   /// Emit the given message to the operating system log.
   static void SystemLog(lldb::Severity severity, llvm::StringRef message);
 
-  /// Emit the given message to the stdout or stderr depending on severity.
-  static void SystemLogFallback(lldb::Severity severity,
-                                llvm::StringRef message);
-
   /// Get the process ID for the calling process.
   ///
   /// \return

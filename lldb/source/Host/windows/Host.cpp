@@ -338,13 +338,11 @@ static LPCWSTR AnsiToUtf16(const std::string &ansi) {
 void Host::SystemLog(Severity severity, llvm::StringRef message) {
   HANDLE h = event_log->GetHandle();
   if (!h) {
-    SystemLogFallback(severity, message);
     return;
   }
 
   LPCWSTR wide_message = AnsiToUtf16(message.str());
   if (!wide_message) {
-    SystemLogFallback(severity, message);
     return;
   }
 
