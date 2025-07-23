@@ -38,14 +38,14 @@ define void @caller(i32 %a, i32 %b) #1 {
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[CALLEE_EXIT:.*]], label %[[FOR_END:.*]]
-; CHECK:       [[CALLEE_EXIT]]:
+; CHECK-NEXT:    br i1 [[CMP]], label %[[CALLEE_EXIT1:.*]], label %[[FOR_END:.*]]
+; CHECK:       [[CALLEE_EXIT1]]:
 ; CHECK-NEXT:    br label %[[FOR_COND]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_I:.*]]
 ; CHECK:       [[FOR_COND_I]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_I]], !llvm.loop [[LOOP0]]
-; CHECK:       [[CALLEE_EXIT1:.*:]]
+; CHECK:       [[CALLEE_EXIT:.*:]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -95,14 +95,14 @@ define void @caller_no_metadata(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[CALLEE_NO_METADATA_EXIT:.*]], label %[[FOR_END:.*]]
-; CHECK:       [[CALLEE_NO_METADATA_EXIT]]:
+; CHECK-NEXT:    br i1 [[CMP]], label %[[CALLEE_NO_METADATA_EXIT1:.*]], label %[[FOR_END:.*]]
+; CHECK:       [[CALLEE_NO_METADATA_EXIT1]]:
 ; CHECK-NEXT:    br label %[[FOR_COND]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_I:.*]]
 ; CHECK:       [[FOR_COND_I]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_I]]
-; CHECK:       [[CALLEE_NO_METADATA_EXIT1:.*:]]
+; CHECK:       [[CALLEE_NO_METADATA_EXIT:.*:]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -154,14 +154,14 @@ define void @caller_mustprogress(i32 %a, i32 %b) #0 {
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[CALLEE_MUSTPROGRESS_EXIT:.*]], label %[[FOR_END:.*]]
-; CHECK:       [[CALLEE_MUSTPROGRESS_EXIT]]:
+; CHECK-NEXT:    br i1 [[CMP]], label %[[CALLEE_MUSTPROGRESS_EXIT1:.*]], label %[[FOR_END:.*]]
+; CHECK:       [[CALLEE_MUSTPROGRESS_EXIT1]]:
 ; CHECK-NEXT:    br label %[[FOR_COND]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_I:.*]]
 ; CHECK:       [[FOR_COND_I]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_I]]
-; CHECK:       [[CALLEE_MUSTPROGRESS_EXIT1:.*:]]
+; CHECK:       [[CALLEE_MUSTPROGRESS_EXIT:.*:]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -183,14 +183,14 @@ define void @caller_mustprogress_callee_no_metadata(i32 %a, i32 %b) #0 {
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[CALLEE_NO_METADATA_EXIT:.*]], label %[[FOR_END:.*]]
-; CHECK:       [[CALLEE_NO_METADATA_EXIT]]:
+; CHECK-NEXT:    br i1 [[CMP]], label %[[CALLEE_NO_METADATA_EXIT1:.*]], label %[[FOR_END:.*]]
+; CHECK:       [[CALLEE_NO_METADATA_EXIT1]]:
 ; CHECK-NEXT:    br label %[[FOR_COND]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_I:.*]]
 ; CHECK:       [[FOR_COND_I]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_I]]
-; CHECK:       [[CALLEE_NO_METADATA_EXIT1:.*:]]
+; CHECK:       [[CALLEE_NO_METADATA_EXIT:.*:]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -312,9 +312,9 @@ define void @caller_multiple(i32 %a, i32 %b) #1 {
 ; CHECK-NEXT:    store i32 [[INC]], ptr [[I]], align 4
 ; CHECK-NEXT:    br label %[[FOR_COND1]]
 ; CHECK:       [[FOR_END4]]:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A_ADDR_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[B_ADDR_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[I_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_ADDR_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[B_ADDR_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I_I]])
 ; CHECK-NEXT:    store i32 0, ptr [[A_ADDR_I]], align 4
 ; CHECK-NEXT:    store i32 5, ptr [[B_ADDR_I]], align 4
 ; CHECK-NEXT:    br label %[[FOR_COND_I:.*]]
@@ -331,17 +331,17 @@ define void @caller_multiple(i32 %a, i32 %b) #1 {
 ; CHECK:       [[FOR_COND1_I]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[I_I]], align 4
 ; CHECK-NEXT:    [[CMP2_I:%.*]] = icmp slt i32 [[TMP6]], 10
-; CHECK-NEXT:    br i1 [[CMP2_I]], label %[[FOR_BODY3_I:.*]], label %[[CALLEE_MULTIPLE_EXIT:.*]]
+; CHECK-NEXT:    br i1 [[CMP2_I]], label %[[FOR_BODY3_I:.*]], label %[[CALLEE_MULTIPLE_EXIT1:.*]]
 ; CHECK:       [[FOR_BODY3_I]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[I_I]], align 4
 ; CHECK-NEXT:    [[INC_I:%.*]] = add nsw i32 [[TMP7]], 1
 ; CHECK-NEXT:    store i32 [[INC_I]], ptr [[I_I]], align 4
 ; CHECK-NEXT:    br label %[[FOR_COND1_I]], !llvm.loop [[LOOP3]]
-; CHECK:       [[CALLEE_MULTIPLE_EXIT]]:
+; CHECK:       [[CALLEE_MULTIPLE_EXIT1]]:
 ; CHECK-NEXT:    br label %[[WHILE_BODY_I:.*]]
 ; CHECK:       [[WHILE_BODY_I]]:
 ; CHECK-NEXT:    br label %[[WHILE_BODY_I]]
-; CHECK:       [[CALLEE_MULTIPLE_EXIT1:.*:]]
+; CHECK:       [[CALLEE_MULTIPLE_EXIT:.*:]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -526,9 +526,9 @@ define void @caller_nested(i32 %a, i32 %b) #1 {
 ; CHECK-NEXT:    store i32 [[INC14]], ptr [[I9]], align 4
 ; CHECK-NEXT:    br label %[[FOR_COND10]]
 ; CHECK:       [[FOR_END15]]:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A_ADDR_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[B_ADDR_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[I_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_ADDR_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[B_ADDR_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I_I]])
 ; CHECK-NEXT:    store i32 0, ptr [[A_ADDR_I]], align 4
 ; CHECK-NEXT:    store i32 5, ptr [[B_ADDR_I]], align 4
 ; CHECK-NEXT:    br label %[[FOR_COND_I:.*]]
@@ -545,7 +545,7 @@ define void @caller_nested(i32 %a, i32 %b) #1 {
 ; CHECK:       [[FOR_COND1_I]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[I_I]], align 4
 ; CHECK-NEXT:    [[CMP2_I:%.*]] = icmp slt i32 [[TMP10]], 10
-; CHECK-NEXT:    br i1 [[CMP2_I]], label %[[FOR_BODY3_I:.*]], label %[[CALLEE_NESTED_EXIT:.*]]
+; CHECK-NEXT:    br i1 [[CMP2_I]], label %[[FOR_BODY3_I:.*]], label %[[CALLEE_NESTED_EXIT1:.*]]
 ; CHECK:       [[FOR_BODY3_I]]:
 ; CHECK-NEXT:    br label %[[FOR_COND4_I:.*]]
 ; CHECK:       [[FOR_COND4_I]]:
@@ -560,11 +560,11 @@ define void @caller_nested(i32 %a, i32 %b) #1 {
 ; CHECK-NEXT:    [[INC_I:%.*]] = add nsw i32 [[TMP13]], 1
 ; CHECK-NEXT:    store i32 [[INC_I]], ptr [[I_I]], align 4
 ; CHECK-NEXT:    br label %[[FOR_COND1_I]], !llvm.loop [[LOOP4]]
-; CHECK:       [[CALLEE_NESTED_EXIT]]:
+; CHECK:       [[CALLEE_NESTED_EXIT1]]:
 ; CHECK-NEXT:    br label %[[WHILE_BODY_I:.*]]
 ; CHECK:       [[WHILE_BODY_I]]:
 ; CHECK-NEXT:    br label %[[WHILE_BODY_I]]
-; CHECK:       [[CALLEE_NESTED_EXIT1:.*:]]
+; CHECK:       [[CALLEE_NESTED_EXIT:.*:]]
 ; CHECK-NEXT:    ret void
 ;
 entry:

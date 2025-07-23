@@ -190,7 +190,17 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
       return MemoryLocation::getAfter(Arg, AATags);
 
     case Intrinsic::lifetime_start:
-    case Intrinsic::lifetime_end:
+    case Intrinsic::lifetime_end: {
+      assert(ArgIdx == 0 && "Invalid argument index");
+      std::optional<TypeSize> AllocSize =
+          cast<AllocaInst>(II->getArgOperand(0))
+              ->getAllocationSize(II->getDataLayout());
+      return MemoryLocation(Arg,
+                            AllocSize ? LocationSize::precise(*AllocSize)
+                                      : LocationSize::afterPointer(),
+                            AATags);
+    }
+
     case Intrinsic::invariant_start:
       assert(ArgIdx == 1 && "Invalid argument index");
       return MemoryLocation(

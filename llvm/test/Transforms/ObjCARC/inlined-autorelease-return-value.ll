@@ -7,8 +7,8 @@ declare ptr @llvm.objc.autoreleaseReturnValue(ptr)
 declare ptr @llvm.objc.retainAutoreleasedReturnValue(ptr)
 declare ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue(ptr)
 declare void @opaque()
-declare void @llvm.lifetime.start(i64, ptr nocapture)
-declare void @llvm.lifetime.end(i64, ptr nocapture)
+declare void @llvm.lifetime.start(ptr nocapture)
+declare void @llvm.lifetime.end(ptr nocapture)
 
 ; CHECK-LABEL: define ptr @elide_with_retainRV(
 ; CHECK-NEXT:  entry:
@@ -81,16 +81,16 @@ entry:
 ; CHECK-LABEL: define ptr @elide_with_retainRV_splitByLifetime(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    %x = alloca ptr
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr %x)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr %x)
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr %x)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr %x)
 ; CHECK-NEXT:    ret ptr %x
 define ptr @elide_with_retainRV_splitByLifetime() nounwind {
 entry:
   ; Cleanup should skip over lifetime intrinsics.
   %x = alloca ptr
-  call void @llvm.lifetime.start(i64 8, ptr %x)
+  call void @llvm.lifetime.start(ptr %x)
   %b = call ptr @llvm.objc.autoreleaseReturnValue(ptr %x) nounwind
-  call void @llvm.lifetime.end(i64 8, ptr %x)
+  call void @llvm.lifetime.end(ptr %x)
   %d = call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %b) nounwind
   ret ptr %d
 }
@@ -221,17 +221,17 @@ entry:
 ; CHECK-LABEL: define ptr @elide_with_claimRV_splitByLifetime(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    %x = alloca ptr
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr %x)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr %x)
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr %x)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr %x)
 ; CHECK-NEXT:    tail call void @llvm.objc.release(ptr %x)
 ; CHECK-NEXT:    ret ptr %x
 define ptr @elide_with_claimRV_splitByLifetime() nounwind {
 entry:
   ; Cleanup should skip over lifetime intrinsics.
   %x = alloca ptr
-  call void @llvm.lifetime.start(i64 8, ptr %x)
+  call void @llvm.lifetime.start(ptr %x)
   %b = call ptr @llvm.objc.autoreleaseReturnValue(ptr %x) nounwind
-  call void @llvm.lifetime.end(i64 8, ptr %x)
+  call void @llvm.lifetime.end(ptr %x)
   %d = call ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue(ptr %b) nounwind
   ret ptr %d
 }

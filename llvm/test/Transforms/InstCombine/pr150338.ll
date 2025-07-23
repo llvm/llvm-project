@@ -11,6 +11,6 @@ define void @test(ptr %arg) {
   %a = alloca i32
   store ptr %a, ptr %arg
   store i1 true, ptr poison
-  call void @llvm.lifetime.end.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.end.p0(ptr %a)
   ret void
 }

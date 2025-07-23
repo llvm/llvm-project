@@ -6770,7 +6770,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
   case Intrinsic::lifetime_start:
   case Intrinsic::lifetime_end:
-    Check(isa<AllocaInst>(Call.getArgOperand(1)),
+    Check(isa<AllocaInst>(Call.getArgOperand(0)),
           "llvm.lifetime.start/end can only be used on alloca", &Call);
     break;
   };

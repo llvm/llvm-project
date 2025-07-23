@@ -7598,7 +7598,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     if (TM.getOptLevel() == CodeGenOptLevel::None)
       return;
 
-    const AllocaInst *LifetimeObject = cast<AllocaInst>(I.getArgOperand(1));
+    const AllocaInst *LifetimeObject = cast<AllocaInst>(I.getArgOperand(0));
 
     // First check that the Alloca is static, otherwise it won't have a
     // valid frame index.

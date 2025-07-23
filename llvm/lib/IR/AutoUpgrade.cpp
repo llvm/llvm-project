@@ -1311,14 +1311,15 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     }
     break;
   case 'l':
-    if (Name.starts_with("lifetime.start") ||
-        Name.starts_with("lifetime.end")) {
-      // Unless remangling is required, do not upgrade the function declaration,
-      // but do upgrade the calls.
-      if (auto Result = llvm::Intrinsic::remangleIntrinsicFunction(F))
-        NewFn = *Result;
-      else
-        NewFn = F;
+    if ((Name.starts_with("lifetime.start") ||
+         Name.starts_with("lifetime.end")) &&
+        F->arg_size() == 2) {
+      rename(F);
+      NewFn = Intrinsic::getOrInsertDeclaration(
+          F->getParent(),
+          Name.starts_with("lifetime.start") ? Intrinsic::lifetime_start
+                                             : Intrinsic::lifetime_end,
+          F->getArg(0)->getType());
       return true;
     }
     break;
@@ -5133,21 +5134,20 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
   case Intrinsic::lifetime_start:
   case Intrinsic::lifetime_end: {
-    Value *Size = CI->getArgOperand(0);
-    Value *Ptr = CI->getArgOperand(1);
-    if (isa<AllocaInst>(Ptr)) {
+    if (CI->arg_size() != 2) {
       DefaultCase();
       return;
     }
 
+    Value *Ptr = CI->getArgOperand(1);
     // Try to strip pointer casts, such that the lifetime works on an alloca.
     Ptr = Ptr->stripPointerCasts();
     if (isa<AllocaInst>(Ptr)) {
       // Don't use NewFn, as we might have looked through an addrspacecast.
       if (NewFn->getIntrinsicID() == Intrinsic::lifetime_start)
-        NewCall = Builder.CreateLifetimeStart(Ptr, cast<ConstantInt>(Size));
+        NewCall = Builder.CreateLifetimeStart(Ptr);
       else
-        NewCall = Builder.CreateLifetimeEnd(Ptr, cast<ConstantInt>(Size));
+        NewCall = Builder.CreateLifetimeEnd(Ptr);
       break;
     }
 

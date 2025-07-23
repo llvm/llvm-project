@@ -10,7 +10,7 @@ define void @test(ptr %d) {
 ; CHECK-SAME: (ptr [[D:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARR:%.*]] = alloca [1024 x i32], align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4096, ptr [[ARR]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ARR]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 128, [[TMP1]]
@@ -25,10 +25,10 @@ define void @test(ptr %d) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4096, ptr [[ARR]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ARR]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[D]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <vscale x 2 x i32> splat (i32 100), ptr [[TMP6]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4096, ptr [[ARR]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ARR]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -40,39 +40,39 @@ define void @test(ptr %d) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4096, ptr [[ARR]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ARR]])
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[D]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    store i32 100, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4096, ptr [[ARR]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ARR]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[LFTR_WIDEIV]], 128
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4096, ptr [[ARR]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ARR]])
 ; CHECK-NEXT:    ret void
 ;
 
 entry:
   %arr = alloca [1024 x i32], align 16
-  call void @llvm.lifetime.start.p0(i64 4096, ptr %arr) #1
+  call void @llvm.lifetime.start.p0(ptr %arr) #1
   br label %for.body
 
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  call void @llvm.lifetime.end.p0(i64 4096, ptr %arr) #1
+  call void @llvm.lifetime.end.p0(ptr %arr) #1
   %arrayidx = getelementptr inbounds i32, ptr %d, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 8
   store i32 100, ptr %arrayidx, align 8
-  call void @llvm.lifetime.start.p0(i64 4096, ptr %arr) #1
+  call void @llvm.lifetime.start.p0(ptr %arr) #1
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp ne i32 %lftr.wideiv, 128
   br i1 %exitcond, label %for.body, label %for.end, !llvm.loop !0
 
 for.end:
-  call void @llvm.lifetime.end.p0(i64 4096, ptr %arr) #1
+  call void @llvm.lifetime.end.p0(ptr %arr) #1
   ret void
 }
 
@@ -95,10 +95,10 @@ define void @testloopvariant(ptr %d) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4096, ptr [[ARR]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ARR]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[D]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <vscale x 2 x i32> splat (i32 100), ptr [[TMP6]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4096, ptr [[ARR]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ARR]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -111,11 +111,11 @@ define void @testloopvariant(ptr %d) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr [1024 x i32], ptr [[ARR]], i32 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4096, ptr [[ARR]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ARR]])
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[D]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    store i32 100, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4096, ptr [[ARR]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ARR]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[LFTR_WIDEIV]], 128
@@ -130,11 +130,11 @@ entry:
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %0 = getelementptr [1024 x i32], ptr %arr, i32 0, i64 %indvars.iv
-  call void @llvm.lifetime.end.p0(i64 4096, ptr %arr) #1
+  call void @llvm.lifetime.end.p0(ptr %arr) #1
   %arrayidx = getelementptr inbounds i32, ptr %d, i64 %indvars.iv
   %1 = load i32, ptr %arrayidx, align 8
   store i32 100, ptr %arrayidx, align 8
-  call void @llvm.lifetime.start.p0(i64 4096, ptr %arr) #1
+  call void @llvm.lifetime.start.p0(ptr %arr) #1
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp ne i32 %lftr.wideiv, 128
@@ -144,9 +144,9 @@ for.end:
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}

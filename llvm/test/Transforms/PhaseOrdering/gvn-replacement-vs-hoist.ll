@@ -35,7 +35,7 @@ entry:
   %i = alloca i32, align 4
   store ptr %a, ptr %a.addr, align 8
   store i32 %beam, ptr %beam.addr, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i)
+  call void @llvm.lifetime.start.p0(ptr %i)
   store i32 0, ptr %i, align 4
   br label %for.cond
 
@@ -45,7 +45,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i)
+  call void @llvm.lifetime.end.p0(ptr %i)
   br label %for.end
 
 for.body:                                         ; preds = %for.cond
@@ -85,6 +85,6 @@ for.end:                                          ; preds = %for.cond.cleanup
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
