@@ -1481,9 +1481,9 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   // (BranchOnCond true).
   auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
   auto *CanIVTy = Plan.getCanonicalIV()->getScalarType();
-  if (all_of(
-          Header->phis(),
-          IsaPred<VPCanonicalIVPHIRecipe, VPFirstOrderRecurrencePHIRecipe>)) {
+  if (all_of(Header->phis(),
+             IsaPred<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe,
+                     VPFirstOrderRecurrencePHIRecipe>)) {
     for (VPRecipeBase &HeaderR : make_early_inc_range(Header->phis())) {
       auto *HeaderPhiR = cast<VPHeaderPHIRecipe>(&HeaderR);
       HeaderPhiR->replaceAllUsesWith(HeaderPhiR->getStartValue());
@@ -2711,6 +2711,18 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
         continue;
       }
 
+      // Expand VPBlendRecipe into VPInstruction::Select.
+      VPBuilder Builder(&R);
+      if (auto *Blend = dyn_cast<VPBlendRecipe>(&R)) {
+        VPValue *Select = Blend->getIncomingValue(0);
+        for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
+          Select = Builder.createSelect(Blend->getMask(I),
+                                        Blend->getIncomingValue(I), Select,
+                                        R.getDebugLoc(), "predphi");
+        Blend->replaceAllUsesWith(Select);
+        ToRemove.push_back(Blend);
+      }
+
       if (auto *Expr = dyn_cast<VPExpressionRecipe>(&R)) {
         Expr->decompose();
         ToRemove.push_back(Expr);
@@ -2724,7 +2736,6 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
 
       // Expand WideIVStep.
       auto *VPI = cast<VPInstruction>(&R);
-      VPBuilder Builder(VPI);
       Type *IVTy = TypeInfo.inferScalarType(VPI);
       if (TypeInfo.inferScalarType(VectorStep) != IVTy) {
         Instruction::CastOps CastOp = IVTy->isFloatingPointTy()
