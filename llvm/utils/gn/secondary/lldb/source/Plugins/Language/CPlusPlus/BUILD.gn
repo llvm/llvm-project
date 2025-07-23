@@ -64,6 +64,7 @@ static_library("CPlusPlus") {
     "MsvcStl.cpp",
     "MsvcStlAtomic.cpp",
     "MsvcStlSmartPointer.cpp",
+    "MsvcStlTree.cpp",
     "MsvcStlTuple.cpp",
     "MsvcStlUnordered.cpp",
     "MsvcStlVariant.cpp",
