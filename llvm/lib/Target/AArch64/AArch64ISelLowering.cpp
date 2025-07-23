@@ -4059,12 +4059,12 @@ getAArch64XALUOOp(AArch64CC::CondCode &CC, SDValue Op, SelectionDAG &DAG) {
                                       DAG.getConstant(63, DL, MVT::i64));
       // It is important that LowerBits is last, otherwise the arithmetic
       // shift will not be folded into the compare (SUBS).
-      SDVTList VTs = DAG.getVTList(MVT::i64, MVT::i32);
+      SDVTList VTs = DAG.getVTList(MVT::i64, MVT_CC);
       Overflow = DAG.getNode(AArch64ISD::SUBS, DL, VTs, UpperBits, LowerBits)
                      .getValue(1);
     } else {
       SDValue UpperBits = DAG.getNode(ISD::MULHU, DL, MVT::i64, LHS, RHS);
-      SDVTList VTs = DAG.getVTList(MVT::i64, MVT::i32);
+      SDVTList VTs = DAG.getVTList(MVT::i64, MVT_CC);
       Overflow =
           DAG.getNode(AArch64ISD::SUBS, DL, VTs,
                       DAG.getConstant(0, DL, MVT::i64),
@@ -4075,7 +4075,7 @@ getAArch64XALUOOp(AArch64CC::CondCode &CC, SDValue Op, SelectionDAG &DAG) {
   } // switch (...)
 
   if (Opc) {
-    SDVTList VTs = DAG.getVTList(Op->getValueType(0), MVT::i32);
+    SDVTList VTs = DAG.getVTList(Op->getValueType(0), MVT_CC);
 
     // Emit the AArch64 operation with overflow check.
     Value = DAG.getNode(Opc, DL, VTs, LHS, RHS);
@@ -7038,7 +7038,7 @@ SDValue AArch64TargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
                             Op.getOperand(0));
   // Generate SUBS & CSEL.
   SDValue Cmp =
-      DAG.getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, MVT::i32),
+      DAG.getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, MVT_CC),
                   Op.getOperand(0), DAG.getConstant(0, DL, VT));
   return DAG.getNode(AArch64ISD::CSEL, DL, VT, Op.getOperand(0), Neg,
                      DAG.getConstant(AArch64CC::PL, DL, MVT::i32),
@@ -18593,7 +18593,7 @@ AArch64TargetLowering::BuildSREMPow2(SDNode *N, const APInt &Divisor,
     Created.push_back(And.getNode());
   } else {
     SDValue CCVal = DAG.getConstant(AArch64CC::MI, DL, MVT_CC);
-    SDVTList VTs = DAG.getVTList(VT, MVT::i32);
+    SDVTList VTs = DAG.getVTList(VT, MVT_CC);
 
     SDValue Negs = DAG.getNode(AArch64ISD::SUBS, DL, VTs, Zero, N0);
     SDValue AndPos = DAG.getNode(ISD::AND, DL, VT, N0, Pow2MinusOne);
