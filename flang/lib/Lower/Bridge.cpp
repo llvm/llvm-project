@@ -5509,10 +5509,34 @@ private:
   void genFIR(const Fortran::parser::AssignStmt &stmt) {
     const Fortran::semantics::Symbol &symbol =
         *std::get<Fortran::parser::Name>(stmt.t).symbol;
+
     mlir::Location loc = toLocation();
+    mlir::Type symbolType = genType(symbol);
+    mlir::Value addr = getSymbolAddress(symbol);
+
+    // Handle the case where the assigned variable is declared as a pointer
+    if (auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(symbolType)) {
+      if (auto ptrType = mlir::dyn_cast<fir::PointerType>(eleTy)) {
+        symbolType = ptrType.getEleTy();
+      } else {
+        symbolType = eleTy;
+      }
+    } else if (auto ptrType = mlir::dyn_cast<fir::PointerType>(symbolType)) {
+      symbolType = ptrType.getEleTy();
+    }
+
     mlir::Value labelValue = builder->createIntegerConstant(
-        loc, genType(symbol), std::get<Fortran::parser::Label>(stmt.t));
-    builder->create<fir::StoreOp>(loc, labelValue, getSymbolAddress(symbol));
+        loc, symbolType, std::get<Fortran::parser::Label>(stmt.t));
+
+    // If the address points to a boxed pointer, we need to dereference it
+    if (auto refType = mlir::dyn_cast<fir::ReferenceType>(addr.getType())) {
+      if (auto boxType = mlir::dyn_cast<fir::BoxType>(refType.getEleTy())) {
+        mlir::Value boxValue = builder->create<fir::LoadOp>(loc, addr);
+        addr = builder->create<fir::BoxAddrOp>(loc, boxValue);
+      }
+    }
+
+    builder->create<fir::StoreOp>(loc, labelValue, addr);
   }
 
   void genFIR(const Fortran::parser::FormatStmt &) {
