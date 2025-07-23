@@ -304,14 +304,12 @@ IntegerType *Type::getIntNTy(LLVMContext &C, unsigned N) {
 
 Type *Type::getWasm_ExternrefTy(LLVMContext &C) {
   // opaque pointer in addrspace(10)
-  static PointerType *Ty = PointerType::get(C, 10);
-  return Ty;
+  return PointerType::get(C, 10);
 }
 
 Type *Type::getWasm_FuncrefTy(LLVMContext &C) {
   // opaque pointer in addrspace(20)
-  static PointerType *Ty = PointerType::get(C, 20);
-  return Ty;
+  return PointerType::get(C, 20);
 }
 
 //===----------------------------------------------------------------------===//
