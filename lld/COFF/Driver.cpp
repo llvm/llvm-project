@@ -274,8 +274,13 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
       make<std::unique_ptr<Archive>>(std::move(file)); // take ownership
 
       int memberIndex = 0;
-      for (MemoryBufferRef m : getArchiveMembers(ctx, archive))
-        addArchiveBuffer(m, "<whole-archive>", filename, memberIndex++);
+      for (MemoryBufferRef m : getArchiveMembers(ctx, archive)) {
+        if (!archive->isThin())
+          addArchiveBuffer(m, "<whole-archive>", filename, memberIndex++);
+        else
+          addThinArchiveBuffer(m, "<whole-archive>");
+      }
+
       return;
     }
     addFile(make<ArchiveFile>(ctx, mbref));
@@ -386,6 +391,14 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
   Log(ctx) << "Loaded " << obj << " for " << symName;
 }
 
+void LinkerDriver::addThinArchiveBuffer(MemoryBufferRef mb, StringRef symName) {
+  // Pass an empty string as the archive name and an offset of 0 so that
+  // the original filename is used as the buffer identifier. This is
+  // useful for DTLTO, where having the member identifier be the actual
+  // path on disk enables distribution of bitcode files during ThinLTO.
+  addArchiveBuffer(mb, symName, /*parentName=*/"", /*OffsetInArchive=*/0);
+}
+
 void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
                                         const Archive::Symbol &sym,
                                         StringRef parentName) {
@@ -422,11 +435,8 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
       reportBufferError(errorCodeToError(mbOrErr.second), childName);
     llvm::TimeTraceScope timeScope("Archive: ",
                                    mbOrErr.first->getBufferIdentifier());
-    // Pass empty string as archive name so that the original filename is
-    // used as the buffer identifier.
-    ctx.driver.addArchiveBuffer(takeBuffer(std::move(mbOrErr.first)),
-                                toCOFFString(ctx, sym), "",
-                                /*OffsetInArchive=*/0);
+    ctx.driver.addThinArchiveBuffer(takeBuffer(std::move(mbOrErr.first)),
+                                    toCOFFString(ctx, sym));
   });
 }
 
