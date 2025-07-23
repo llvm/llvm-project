@@ -22,3 +22,8 @@ v_fmamk_f16 v4, v2, 3, v6 row_share:1
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 // GFX1250-ERR-NEXT:{{^}}v_fmamk_f16 v4, v2, 3, v6 row_share:1
 // GFX1250-ERR-NEXT:{{^}}                          ^
+
+v_mul_u64 v[4:5], v[2:3], v[8:9] clamp
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1250-ERR-NEXT:{{^}}v_mul_u64 v[4:5], v[2:3], v[8:9] clamp
+// GFX1250-ERR-NEXT:{{^}}                                 ^
