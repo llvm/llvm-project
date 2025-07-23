@@ -1089,7 +1089,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   if ((FD && (FD->UsesFPIntrin() || FD->hasAttr<StrictFPAttr>())) ||
       (!FD && (FPExceptionBehavior != llvm::fp::ebIgnore ||
                RM != llvm::RoundingMode::NearestTiesToEven))) {
-    Builder.setIsFPConstrained(true);
+    Builder.setIsFPConstrained(true, false);
     Fn->addFnAttr(llvm::Attribute::StrictFP);
   }
 

@@ -153,8 +153,8 @@ protected:
   FastMathFlags FMF;
 
   bool IsFPConstrained = false;
-  fp::ExceptionBehavior DefaultConstrainedExcept = fp::ebStrict;
-  RoundingMode DefaultConstrainedRounding = RoundingMode::Dynamic;
+  fp::ExceptionBehavior DefaultConstrainedExcept = fp::ebIgnore;
+  RoundingMode DefaultConstrainedRounding = RoundingMode::NearestTiesToEven;
 
   ArrayRef<OperandBundleDef> DefaultOperandBundles;
 
@@ -348,7 +348,18 @@ public:
   /// enabled the CreateF<op>() calls instead create constrained
   /// floating point intrinsic calls. Fast math flags are unaffected
   /// by this setting.
-  void setIsFPConstrained(bool IsCon) { IsFPConstrained = IsCon; }
+  void setIsFPConstrained(bool IsCon, bool AndReset = true) {
+    if (AndReset) {
+      if (IsCon) {
+        setDefaultConstrainedRounding(RoundingMode::Dynamic);
+        setDefaultConstrainedExcept(fp::ebStrict);
+      } else {
+        setDefaultConstrainedRounding(RoundingMode::NearestTiesToEven);
+        setDefaultConstrainedExcept(fp::ebIgnore);
+      }
+    }
+    IsFPConstrained = IsCon;
+  }
 
   /// Query for the use of constrained floating point math
   bool getIsFPConstrained() { return IsFPConstrained; }
@@ -2767,23 +2778,21 @@ public:
   LLVM_ABI CallInst *CreateDereferenceableAssumption(Value *PtrValue,
                                                      Value *SizeValue);
 
-  /// Create an operand bundle in the provided bundle set to represent given FP
-  /// rounding mode.
+  /// Create an operand bundle in the provided bundle set to represent the given
+  /// floating-point rounding mode.
   ///
   /// If the rounding mode is not defined, adds the default rounding mode,
   /// stored in this builder object.
-  void
-  createFPRoundingBundle(SmallVectorImpl<OperandBundleDef> &Bundles,
-                         std::optional<RoundingMode> Rounding = std::nullopt);
+  void createRoundingBundle(SmallVectorImpl<OperandBundleDef> &Bundles,
+                            RoundingMode RM);
 
-  /// Create an operand bundle in the provided bundle set to represent FP
-  /// exception behavior.
+  /// Create an operand bundle in the provided bundle set to represent the given
+  /// floating-point exception behavior.
   ///
   /// If the exception behavior is not defined, adds the default behavior,
   /// stored in this builder object.
-  void createFPExceptionBundle(
-      SmallVectorImpl<OperandBundleDef> &Bundles,
-      std::optional<fp::ExceptionBehavior> Except = std::nullopt);
+  void createExceptionBundle(SmallVectorImpl<OperandBundleDef> &Bundles,
+                             fp::ExceptionBehavior Except);
 };
 
 /// This provides a uniform API for creating instructions and inserting
