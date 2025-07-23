@@ -124,4 +124,23 @@ entry:
 }
 
 
+define void @test_fpsig_ptrs(ptr noundef %func) local_unnamed_addr #0 {
+; CHECK-LABEL: test_fpsig_ptrs:
+; CHK32:         .functype test_fpsig_ptrs (i32) -> ()
+; CHK64:         .functype test_fpsig_ptrs (i64) -> ()
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 0
+; CHK64-NEXT:    i32.wrap_i64
+; CHECK-NEXT:    table.get __indirect_function_table
+; CHK32-NEXT:    ref.test (i32, i32) -> (i32)
+; CHK64-NEXT:    ref.test (i64, i64) -> (i64)
+; CHECK-NEXT:    call use
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %res = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, ptr null, token poison, ptr null, ptr null)
+  tail call void @use(i32 noundef %res) #3
+  ret void
+}
+
+
 declare void @use(i32 noundef) local_unnamed_addr #1
