@@ -346,7 +346,7 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
   if (auto *CE = dyn_cast<ConstantExpr>(GOp))
     CE->destroyConstant();
   else if (auto *OldGEPI = dyn_cast<GetElementPtrInst>(GOp))
-    OldGEPI->eraseFromParent(); // This will always be true in visit* context
+    OldGEPI->eraseFromParent();
 
   return true;
 }
