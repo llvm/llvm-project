@@ -7820,7 +7820,7 @@ private:
 
     // Add ATTACH entries for pointer-attachment: delay if PartialStruct is
     // being populated, otherwise add immediately.
-   if (shouldEmitAttachEntry(AttachPtrExpr, BaseDecl, CGF, CurDir)) {
+    if (shouldEmitAttachEntry(AttachPtrExpr, BaseDecl, CGF, CurDir)) {
       Address AttachPtrAddr = CGF.EmitLValue(AttachPtrExpr).getAddress();
       Address AttachPteeAddr = FinalLowestElem;
 
@@ -8146,63 +8146,114 @@ private:
     return true;
   }
 
-  // Traverse the list of Components to find the first pointer expression, which
-  // should be the attachable-base-pointer for the current component-list.
-  // For example, for:
-  //  `map(pp->p->s.a[0])`, the base-pointer is `pp->p`, while the pointee is
-  //  `pp->p->s.a[0]`.
+  /// Get the type of an element of a ComponentList Expr \p Exp.
+  ///
+  /// For something like the following:
+  /// ```c
+  ///  int *p, **p;
+  /// ```
+  /// The types for the following Exprs would be:
+  ///   Expr     | Type
+  ///   ---------|-----------
+  ///   p        | int *
+  ///   *p       | int
+  ///   p[0]     | int
+  ///   p[0:1]   | int
+  ///   pp       | int **
+  ///   pp[0]    | int *
+  ///   pp[0:1]  | int *
+  static QualType getComponentExprElementType(const Expr *Exp) {
+    assert(!isa<OMPArrayShapingExpr>(Exp) &&
+           "Cannot get element-type from array-shaping expr.");
+
+    // Unless we are handling array-section expressions, including
+    // array-subscripts, derefs, we can rely on getType.
+    if (!isa<ArraySectionExpr>(Exp))
+      return Exp->getType().getNonReferenceType().getCanonicalType();
+
+    // For array-sections, we need to find the type of one element of
+    // the section.
+    const auto *OASE = cast<ArraySectionExpr>(Exp);
+
+    QualType BaseType = ArraySectionExpr::getBaseOriginalType(OASE->getBase());
+
+    QualType ElemTy;
+    if (const auto *ATy = BaseType->getAsArrayTypeUnsafe())
+      ElemTy = ATy->getElementType();
+    else
+      ElemTy = BaseType->getPointeeType();
+
+    ElemTy = ElemTy.getNonReferenceType().getCanonicalType();
+    return ElemTy;
+  }
+
+  /// Traverse the list of Components to find the first pointer expression,
+  /// which should be the attachable-base-pointer for the current
+  /// component-list.
+  ///
+  /// For example, given the following:
+  /// ```c
+  /// struct S {
+  ///   int a;
+  ///   int b[10];
+  ///   int *p;
+  /// }
+  /// S s, *ps, **pps, *(pas[10]);
+  /// ```
+  /// The base-pointers for the following map operands would be:
+  ///   map list-item   | attach base-pointer
+  ///   ----------------|---------------------
+  ///   s               | N/A
+  ///   s.a             | N/A
+  ///   s.p             | N/A
+  ///   ps              | N/A
+  ///   ps->p           | ps
+  ///   ps[1]           | ps
+  ///   *(ps + 1)       | ps
+  ///   (ps + 1)[1]     | ps
+  ///   ps[1:10]        | ps
+  ///   ps->b[10]       | ps
+  ///   ps->p[10]       | ps->p
+  ///   pps[1][2]       | pps[1]
+  ///   pps[1:1][2]     | pps[1:1]
+  ///   pps[1]->p       | pps[1]
+  ///   pps[1]->p[10]   | pps[1]
+  ///   pas[1]          | N/A
+  ///   pas[1][2]       | pas[1]
+  /// TODO: This may need to be updated to handle ref_ptr/ptee cases for byref
+  /// map operands.
   static const Expr *findAttachPtrExpr(
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components) {
 
     const auto *Begin = Components.begin();
     const auto *End = Components.end();
 
-    // Keep stripping away one component at a time, until we reach a pointer.
-    // The first pointer we encounter should be the base-pointer for
-    // pointer-attachment.
-    for (const auto *I = Begin; I != End; ++I) {
-      const Expr *CurrentExpr = I->getAssociatedExpression();
-      if (!CurrentExpr)
+    // If we only have a single component, we have a map like "map(p)", which
+    // cannot have a base-pointer.
+    if (Components.size() < 2)
+      return nullptr;
+
+    // To find the attach base-pointer, we start with the second component,
+    // stripping away one component at a time, until we reach a pointer Expr
+    // (that is not a binary operator). The first such pointer should be the
+    // attach base-pointer for the component list.
+    for (const auto *I = std::next(Begin); I != End; ++I) {
+      const Expr *CurExpr = I->getAssociatedExpression();
+      if (!CurExpr)
         break;
 
-      const auto *NextI = std::next(I);
-      if (NextI == End)
-        break;
-
-      QualType NextType;
-      if (const auto *NextDecl = NextI->getAssociatedDeclaration()) {
-        NextType = NextDecl->getType().getNonReferenceType().getCanonicalType();
-      } else if (const auto *NextExpr = NextI->getAssociatedExpression()) {
-        // If NextExpr is an array-section, compute the result type using
-        // getBaseOriginalType
-        if (const auto *OASE = dyn_cast<ArraySectionExpr>(NextExpr)) {
-          // Get the original base type, handling chains of array sections
-          // properly
-          QualType BaseType =
-              ArraySectionExpr::getBaseOriginalType(OASE->getBase());
-          if (const auto *ATy = BaseType->getAsArrayTypeUnsafe())
-            NextType = ATy->getElementType();
-          else
-            NextType = BaseType->getPointeeType();
-
-          NextType = NextType.getNonReferenceType().getCanonicalType();
-        } else {
-          NextType =
-              NextExpr->getType().getNonReferenceType().getCanonicalType();
-        }
-      } else {
-        break;
-      }
-
-      // Stop if the next component is a pointer type - this means we found
-      // the base-pointer
-      if (!NextType->isPointerType())
+      // If CurExpr is something like `p + 10`, we need to ignore it, since
+      // we are looking for `p`.
+      if (isa<BinaryOperator>(CurExpr))
         continue;
 
-      // The Next component is the first pointer expression encountered, so
-      // that is the attachable-base-pointer for the current component-list.
-      const Expr *BasePtrExpr = NextI->getAssociatedExpression();
-      return BasePtrExpr;
+      // Keep going until we reach an Expr of pointer type.
+      QualType CurType = getComponentExprElementType(CurExpr);
+      if (!CurType->isPointerType())
+        continue;
+
+      // We have found a pointer Expr. This must be the attach pointer.
+      return CurExpr;
     }
 
     return nullptr;
