@@ -432,10 +432,11 @@ end subroutine omp_target_implicit
 !CHECK-LABEL: func.func @_QPomp_target_implicit_nested() {
 subroutine omp_target_implicit_nested
    integer::a, b
-   !CHECK: omp.target   map_entries(%{{.*}} -> %[[ARG0:.*]], %{{.*}} -> %[[ARG1:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
+   !CHECK: omp.target   map_entries(%{{.*}} -> %[[ARG0:.*]], %{{.*}} -> %[[ARG1:.*]] : !fir.ref<i32>, !fir.ref<i32>) private(@{{.*}} %{{.*}} -> %[[ARG2:.*]] [map_idx=0], @{{.*}} %{{.*}} -> %[[ARG3:.*]] [map_idx=1] : !fir.ref<i32>, !fir.ref<i32>) {
    !$omp target
-      !CHECK: %[[VAL_8:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFomp_target_implicit_nestedEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-      !CHECK: %[[VAL_9:.*]]:2 = hlfir.declare %[[ARG1]] {uniq_name = "_QFomp_target_implicit_nestedEb"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+      !CHECK: %[[VAL_8:.*]]:2 = hlfir.declare %[[ARG2]] {uniq_name = "_QFomp_target_implicit_nestedEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+      !CHECK: %[[VAL_9:.*]]:2 = hlfir.declare %[[ARG3]] {uniq_name = "_QFomp_target_implicit_nestedEb"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
       !CHECK: %[[VAL_10:.*]] = arith.constant 10 : i32
       !CHECK: hlfir.assign %[[VAL_10]] to %[[VAL_8]]#0 : i32, !fir.ref<i32>
       a = 10
@@ -636,12 +637,12 @@ subroutine target_unstructured
    integer :: i = 1
    !CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtarget_unstructuredEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
    integer :: j = 11
-   !CHECK: %[[VAL_4:.*]] = omp.map.info var_ptr(%[[VAL_1]]#1 : !fir.ref<i32>, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = "i"}
-   !CHECK: %[[VAL_5:.*]] = omp.map.info var_ptr(%[[VAL_3]]#1 : !fir.ref<i32>, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = "j"}
-   !CHECK: omp.target map_entries(%[[VAL_4]] -> %[[VAL_6:.*]], %[[VAL_5]] -> %[[VAL_7:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
+   !CHECK: %[[VAL_4:.*]] = omp.map.info var_ptr(%[[VAL_1]]#0 : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) -> !fir.ref<i32>
+   !CHECK: %[[VAL_5:.*]] = omp.map.info var_ptr(%[[VAL_3]]#0 : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) -> !fir.ref<i32>
+   !CHECK: omp.target map_entries(%[[VAL_4]] -> %[[ARG_0:.*]], %[[VAL_5]] -> %[[ARG_1:.*]] : !fir.ref<i32>, !fir.ref<i32>) private(@{{.*}} %[[VAL_1]]#0 -> %[[ARG_2:.*]] [map_idx=0], @{{.*}} %[[VAL_3]]#0 -> %[[ARG_3:.*]] [map_idx=1] : !fir.ref<i32>, !fir.ref<i32>) {
    !$omp target
-      !CHECK: %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFtarget_unstructuredEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-      !CHECK: %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = "_QFtarget_unstructuredEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+      !CHECK: %[[VAL_8:.*]]:2 = hlfir.declare %[[ARG_2]] {uniq_name = "_QFtarget_unstructuredEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+      !CHECK: %[[VAL_9:.*]]:2 = hlfir.declare %[[ARG_3]] {uniq_name = "_QFtarget_unstructuredEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
       !CHECK: ^bb1:
       do while (i <= j)
          !CHECK: ^bb2:
