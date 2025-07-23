@@ -3177,14 +3177,18 @@ bool VectorCombine::foldCastFromReductions(Instruction &I) {
 /// Returns true if this ShuffleVectorInst eventually feeds into a
 /// vector reduction intrinsic (e.g., vector_reduce_add) by only following
 /// chains of shuffles and binary operators (in any combination/order).
-static bool feedsIntoVectorReduction(ShuffleVectorInst *SVI) {
+/// The search does not go deeper than the given Depth.
+static bool feedsIntoVectorReduction(ShuffleVectorInst *SVI, unsigned Depth) {
   SmallPtrSet<Instruction *, 8> Visited;
-  SmallVector<Instruction *, 4> WorkList;
+  SmallVector<std::pair<Instruction *, unsigned>, 4> WorkList;
   bool FoundReduction = false;
 
-  WorkList.push_back(SVI);
+  WorkList.push_back({SVI, 0});
   while (!WorkList.empty()) {
-    Instruction *I = WorkList.pop_back_val();
+    auto [I, CurDepth] = WorkList.pop_back_val();
+    if (CurDepth > Depth)
+      return false;
+
     for (User *U : I->users()) {
       auto *UI = dyn_cast<Instruction>(U);
       if (!UI || !Visited.insert(UI).second)
@@ -3199,6 +3203,10 @@ static bool feedsIntoVectorReduction(ShuffleVectorInst *SVI) {
         case Intrinsic::vector_reduce_and:
         case Intrinsic::vector_reduce_or:
         case Intrinsic::vector_reduce_xor:
+        case Intrinsic::vector_reduce_smin:
+        case Intrinsic::vector_reduce_smax:
+        case Intrinsic::vector_reduce_umin:
+        case Intrinsic::vector_reduce_umax:
           FoundReduction = true;
           continue;
         default:
@@ -3208,8 +3216,7 @@ static bool feedsIntoVectorReduction(ShuffleVectorInst *SVI) {
 
       if (!isa<BinaryOperator>(UI) && !isa<ShuffleVectorInst>(UI))
         return false;
-
-      WorkList.emplace_back(UI);
+      WorkList.emplace_back(UI, CurDepth + 1);
     }
   }
   return FoundReduction;
@@ -3481,9 +3488,9 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
     unsigned NumGroups = Mask.size() / MaxElementsInVector;
     // For each group of MaxElementsInVector contiguous elements,
     // collect their shuffle pattern and insert into the set of unique patterns.
-    for (unsigned k = 0; k < NumFullVectors; ++k) {
-      for (unsigned l = 0; l < MaxElementsInVector; ++l)
-        SubShuffle[l] = Mask[MaxElementsInVector * k + l];
+    for (unsigned I = 0; I < NumFullVectors; ++I) {
+      for (unsigned J = 0; J < MaxElementsInVector; ++J)
+        SubShuffle[J] = Mask[MaxElementsInVector * I + J];
       if (UniqueShuffles.insert(SubShuffle).second)
         NumUniqueGroups += 1;
     }
@@ -3552,8 +3559,8 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   LLVM_DEBUG(dbgs() << "Found a binop select shuffle pattern: " << I << "\n");
   LLVM_DEBUG(dbgs() << "  CostBefore: " << CostBefore
                     << " vs CostAfter: " << CostAfter << "\n");
-  if (CostBefore < CostAfter || CostBefore == 0 ||
-      (CostBefore == CostAfter && !feedsIntoVectorReduction(SVI)))
+  if (CostBefore < CostAfter ||
+      (CostBefore == CostAfter && !feedsIntoVectorReduction(SVI, 8)))
     return false;
 
   // The cost model has passed, create the new instructions.
