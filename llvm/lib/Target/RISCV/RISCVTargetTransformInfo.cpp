@@ -1566,6 +1566,20 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
+InstructionCost
+RISCVTTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
+                                        const SCEV *Ptr,
+                                        TTI::TargetCostKind CostKind) const {
+  // Address computations with vector type are usually for indexed load/store
+  // which is likely more expensive.
+  if (ST->hasVInstructions() && PtrTy->isVectorTy())
+    return getArithmeticInstrCost(Instruction::Add, PtrTy, CostKind,
+                                  {TTI::OK_AnyValue, TTI::OP_None},
+                                  {TTI::OK_AnyValue, TTI::OP_None}, {});
+
+  return BaseT::getAddressComputationCost(PtrTy, SE, Ptr, CostKind);
+}
+
 InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                Type *Src,
                                                TTI::CastContextHint CCH,
