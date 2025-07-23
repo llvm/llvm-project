@@ -2922,7 +2922,7 @@ declare void @unknown() #7
 declare void @unknowni32p(ptr) #7
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr captures(none)) #8
+declare void @llvm.lifetime.start.p0(ptr captures(none)) #8
 
 define weak i32 @__kmpc_target_init(ptr %0, ptr %1) {
 ; AMDGPU-LABEL: define {{[^@]+}}@__kmpc_target_init
@@ -2958,7 +2958,7 @@ declare void @__kmpc_get_shared_variables(ptr)
 declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64) #9
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr captures(none)) #8
+declare void @llvm.lifetime.end.p0(ptr captures(none)) #8
 
 ; Function Attrs: convergent
 declare void @spmd_amenable() #6
@@ -3158,9 +3158,8 @@ attributes #9 = { alwaysinline }
 ; AMDGPU: attributes #[[ATTR6:[0-9]+]] = { nofree nosync nounwind allocsize(0) }
 ; AMDGPU: attributes #[[ATTR7]] = { convergent "llvm.assume"="ompx_spmd_amenable" }
 ; AMDGPU: attributes #[[ATTR8]] = { convergent }
-; AMDGPU: attributes #[[ATTR9:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; AMDGPU: attributes #[[ATTR10:[0-9]+]] = { alwaysinline }
-; AMDGPU: attributes #[[ATTR11:[0-9]+]] = { convergent nounwind }
+; AMDGPU: attributes #[[ATTR9:[0-9]+]] = { alwaysinline }
+; AMDGPU: attributes #[[ATTR10:[0-9]+]] = { convergent nounwind }
 ;.
 ; NVPTX: attributes #[[ATTR0]] = { alwaysinline convergent norecurse nounwind "kernel" }
 ; NVPTX: attributes #[[ATTR1]] = { norecurse }
@@ -3171,9 +3170,8 @@ attributes #9 = { alwaysinline }
 ; NVPTX: attributes #[[ATTR6:[0-9]+]] = { nofree nosync nounwind allocsize(0) }
 ; NVPTX: attributes #[[ATTR7]] = { convergent "llvm.assume"="ompx_spmd_amenable" }
 ; NVPTX: attributes #[[ATTR8]] = { convergent }
-; NVPTX: attributes #[[ATTR9:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; NVPTX: attributes #[[ATTR10:[0-9]+]] = { alwaysinline }
-; NVPTX: attributes #[[ATTR11:[0-9]+]] = { convergent nounwind }
+; NVPTX: attributes #[[ATTR9:[0-9]+]] = { alwaysinline }
+; NVPTX: attributes #[[ATTR10:[0-9]+]] = { convergent nounwind }
 ;.
 ; AMDGPU-DISABLED1: attributes #[[ATTR0]] = { alwaysinline convergent norecurse nounwind "kernel" }
 ; AMDGPU-DISABLED1: attributes #[[ATTR1]] = { norecurse }
@@ -3184,9 +3182,8 @@ attributes #9 = { alwaysinline }
 ; AMDGPU-DISABLED1: attributes #[[ATTR6:[0-9]+]] = { nofree nosync nounwind allocsize(0) }
 ; AMDGPU-DISABLED1: attributes #[[ATTR7]] = { convergent "llvm.assume"="ompx_spmd_amenable" }
 ; AMDGPU-DISABLED1: attributes #[[ATTR8]] = { convergent }
-; AMDGPU-DISABLED1: attributes #[[ATTR9:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; AMDGPU-DISABLED1: attributes #[[ATTR10:[0-9]+]] = { alwaysinline }
-; AMDGPU-DISABLED1: attributes #[[ATTR11:[0-9]+]] = { convergent nounwind }
+; AMDGPU-DISABLED1: attributes #[[ATTR9:[0-9]+]] = { alwaysinline }
+; AMDGPU-DISABLED1: attributes #[[ATTR10:[0-9]+]] = { convergent nounwind }
 ;.
 ; AMDGPU-DISABLED2: attributes #[[ATTR0]] = { alwaysinline convergent norecurse nounwind "kernel" }
 ; AMDGPU-DISABLED2: attributes #[[ATTR1]] = { norecurse }
@@ -3197,8 +3194,7 @@ attributes #9 = { alwaysinline }
 ; AMDGPU-DISABLED2: attributes #[[ATTR6:[0-9]+]] = { nofree nosync nounwind allocsize(0) }
 ; AMDGPU-DISABLED2: attributes #[[ATTR7]] = { convergent "llvm.assume"="ompx_spmd_amenable" }
 ; AMDGPU-DISABLED2: attributes #[[ATTR8]] = { convergent }
-; AMDGPU-DISABLED2: attributes #[[ATTR9:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; AMDGPU-DISABLED2: attributes #[[ATTR10:[0-9]+]] = { alwaysinline }
+; AMDGPU-DISABLED2: attributes #[[ATTR9:[0-9]+]] = { alwaysinline }
 ;.
 ; NVPTX-DISABLED1: attributes #[[ATTR0]] = { alwaysinline convergent norecurse nounwind "kernel" }
 ; NVPTX-DISABLED1: attributes #[[ATTR1]] = { norecurse }
@@ -3209,9 +3205,8 @@ attributes #9 = { alwaysinline }
 ; NVPTX-DISABLED1: attributes #[[ATTR6:[0-9]+]] = { nofree nosync nounwind allocsize(0) }
 ; NVPTX-DISABLED1: attributes #[[ATTR7]] = { convergent "llvm.assume"="ompx_spmd_amenable" }
 ; NVPTX-DISABLED1: attributes #[[ATTR8]] = { convergent }
-; NVPTX-DISABLED1: attributes #[[ATTR9:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; NVPTX-DISABLED1: attributes #[[ATTR10:[0-9]+]] = { alwaysinline }
-; NVPTX-DISABLED1: attributes #[[ATTR11:[0-9]+]] = { convergent nounwind }
+; NVPTX-DISABLED1: attributes #[[ATTR9:[0-9]+]] = { alwaysinline }
+; NVPTX-DISABLED1: attributes #[[ATTR10:[0-9]+]] = { convergent nounwind }
 ;.
 ; NVPTX-DISABLED2: attributes #[[ATTR0]] = { alwaysinline convergent norecurse nounwind "kernel" }
 ; NVPTX-DISABLED2: attributes #[[ATTR1]] = { norecurse }
@@ -3222,8 +3217,7 @@ attributes #9 = { alwaysinline }
 ; NVPTX-DISABLED2: attributes #[[ATTR6:[0-9]+]] = { nofree nosync nounwind allocsize(0) }
 ; NVPTX-DISABLED2: attributes #[[ATTR7]] = { convergent "llvm.assume"="ompx_spmd_amenable" }
 ; NVPTX-DISABLED2: attributes #[[ATTR8]] = { convergent }
-; NVPTX-DISABLED2: attributes #[[ATTR9:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; NVPTX-DISABLED2: attributes #[[ATTR10:[0-9]+]] = { alwaysinline }
+; NVPTX-DISABLED2: attributes #[[ATTR9:[0-9]+]] = { alwaysinline }
 ;.
 ; AMDGPU: [[META0:![0-9]+]] = !{i32 0, i32 64770, i32 541341486, !"do_not_spmdize_task", i32 74, i32 5}
 ; AMDGPU: [[META1:![0-9]+]] = !{i32 0, i32 64770, i32 541341486, !"sequential_loop_to_stack_var", i32 20, i32 1}

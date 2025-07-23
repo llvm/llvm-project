@@ -40,7 +40,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local void @init_arry() #0 {
 entry:
   %i = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #6
+  call void @llvm.lifetime.start.p0(ptr %i) #6
   store i32 0, ptr %i, align 4, !tbaa !4
   br label %for.cond
 
@@ -65,12 +65,12 @@ for.inc:                                          ; preds = %for.body
   br label %for.cond
 
 for.end:                                          ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #6
+  call void @llvm.lifetime.end.p0(ptr %i) #6
   ret void
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
@@ -79,7 +79,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 declare dso_local i32 @rand() #3
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 ; Function Attrs: nounwind uwtable
 define dso_local i32 @main() #0 {
@@ -90,9 +90,9 @@ entry:
   %condition = alloca i32, align 4
   store i32 0, ptr %retval, align 4
   call void @init_arry()
-  call void @llvm.lifetime.start.p0(i64 4, ptr %val) #6
+  call void @llvm.lifetime.start.p0(ptr %val) #6
   store i32 0, ptr %val, align 4, !tbaa !4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %j) #6
+  call void @llvm.lifetime.start.p0(ptr %j) #6
   store i32 0, ptr %j, align 4, !tbaa !4
   br label %for.cond
 
@@ -102,7 +102,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  call void @llvm.lifetime.start.p0(i64 4, ptr %condition) #6
+  call void @llvm.lifetime.start.p0(ptr %condition) #6
   %call = call i32 @rand() #6
   %rem = srem i32 %call, 5
   store i32 %rem, ptr %condition, align 4, !tbaa !4
@@ -138,7 +138,7 @@ sw.default:                                       ; preds = %for.body
   unreachable
 
 sw.epilog:                                        ; preds = %sw.bb3, %sw.bb2, %sw.bb
-  call void @llvm.lifetime.end.p0(i64 4, ptr %condition) #6
+  call void @llvm.lifetime.end.p0(ptr %condition) #6
   br label %for.inc
 
 for.inc:                                          ; preds = %sw.epilog
@@ -148,8 +148,8 @@ for.inc:                                          ; preds = %sw.epilog
   br label %for.cond
 
 for.end:                                          ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 4, ptr %j) #6
-  call void @llvm.lifetime.end.p0(i64 4, ptr %val) #6
+  call void @llvm.lifetime.end.p0(ptr %j) #6
+  call void @llvm.lifetime.end.p0(ptr %val) #6
   ret i32 0
 }
 

@@ -226,13 +226,6 @@ public:
                              /*IsVarArgs=*/false);
   }
 
-  static ConstantInt *sizeOfAlloca(LLVMContext &Ctx, const DataLayout &DL,
-                                   AllocaInst *Alloced) {
-    std::optional<TypeSize> AllocaTypeSize = Alloced->getAllocationSize(DL);
-    uint64_t AsInt = AllocaTypeSize ? AllocaTypeSize->getFixedValue() : 0;
-    return ConstantInt::get(Type::getInt64Ty(Ctx), AsInt);
-  }
-
   bool expansionApplicableToFunction(Module &M, Function *F) {
     if (F->isIntrinsic() || !F->isVarArg() ||
         F->hasFnAttribute(Attribute::Naked))
@@ -577,8 +570,7 @@ ExpandVariadics::defineVariadicWrapper(Module &M, IRBuilder<> &Builder,
   AllocaInst *VaListInstance =
       Builder.CreateAlloca(VaListTy, nullptr, "va_start");
 
-  Builder.CreateLifetimeStart(VaListInstance,
-                              sizeOfAlloca(Ctx, DL, VaListInstance));
+  Builder.CreateLifetimeStart(VaListInstance);
 
   Builder.CreateIntrinsic(Intrinsic::vastart, {DL.getAllocaPtrType(Ctx)},
                           {VaListInstance});
@@ -595,8 +587,7 @@ ExpandVariadics::defineVariadicWrapper(Module &M, IRBuilder<> &Builder,
 
   Builder.CreateIntrinsic(Intrinsic::vaend, {DL.getAllocaPtrType(Ctx)},
                           {VaListInstance});
-  Builder.CreateLifetimeEnd(VaListInstance,
-                            sizeOfAlloca(Ctx, DL, VaListInstance));
+  Builder.CreateLifetimeEnd(VaListInstance);
 
   if (Result->getType()->isVoidTy())
     Builder.CreateRetVoid();
@@ -746,7 +737,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
 
   // Initialize the fields in the struct
   Builder.SetInsertPoint(CB);
-  Builder.CreateLifetimeStart(Alloced, sizeOfAlloca(Ctx, DL, Alloced));
+  Builder.CreateLifetimeStart(Alloced);
   Frame.initializeStructAlloca(DL, Builder, Alloced);
 
   const unsigned NumArgs = FuncType->getNumParams();
@@ -762,7 +753,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
       Builder.SetCurrentDebugLocation(CB->getStableDebugLoc());
       VaList = Builder.CreateAlloca(VaListTy, nullptr, "va_argument");
       Builder.SetInsertPoint(CB);
-      Builder.CreateLifetimeStart(VaList, sizeOfAlloca(Ctx, DL, VaList));
+      Builder.CreateLifetimeStart(VaList);
     }
     Builder.SetInsertPoint(CB);
     Args.push_back(ABI->initializeVaList(M, Ctx, Builder, VaList, Alloced));
@@ -802,9 +793,9 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   }
 
   if (VaList)
-    Builder.CreateLifetimeEnd(VaList, sizeOfAlloca(Ctx, DL, VaList));
+    Builder.CreateLifetimeEnd(VaList);
 
-  Builder.CreateLifetimeEnd(Alloced, sizeOfAlloca(Ctx, DL, Alloced));
+  Builder.CreateLifetimeEnd(Alloced);
 
   NewCB->setAttributes(PAL);
   NewCB->takeName(CB);
