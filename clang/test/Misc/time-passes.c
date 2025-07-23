@@ -19,6 +19,12 @@
 // RUN:     -ftime-report-json %s -o /dev/null \
 // RUN:     -mllvm -info-output-file=%t
 // RUN: cat %t | FileCheck %s --check-prefixes=JSON
+// Check that -stats-file-timers only outputs pass time info in the stats file
+// and not stderr.
+// RUN: %clang_cc1 -emit-obj -O1 \
+// RUN:     %s -o /dev/null \
+// RUN:     -stats-file=%t -stats-file-timers 2>&1 | count 0
+// RUN: FileCheck %s -input-file=%t -check-prefixes=JSON
 
 // TIME: Pass execution timing report
 // TIME: Total Execution Time:

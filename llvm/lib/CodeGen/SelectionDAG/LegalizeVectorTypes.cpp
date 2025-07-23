@@ -372,9 +372,9 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_OverflowOp(SDNode *N,
 
   SDVTList ScalarVTs = DAG.getVTList(
       ResVT.getVectorElementType(), OvVT.getVectorElementType());
-  SDNode *ScalarNode = DAG.getNode(
-      N->getOpcode(), DL, ScalarVTs, ScalarLHS, ScalarRHS).getNode();
-  ScalarNode->setFlags(N->getFlags());
+  SDNode *ScalarNode = DAG.getNode(N->getOpcode(), DL, ScalarVTs,
+                                   {ScalarLHS, ScalarRHS}, N->getFlags())
+                           .getNode();
 
   // Replace the other vector result not being explicitly scalarized here.
   unsigned OtherNo = 1 - ResNo;
@@ -1898,7 +1898,7 @@ SDValue DAGTypeLegalizer::UnrollVectorOp_StrictFP(SDNode *N, unsigned ResNE) {
     NE = ResNE;
 
   //The results of each unrolled operation, including the chain.
-  EVT ChainVTs[] = {EltVT, MVT::Other};
+  SDVTList ChainVTs = DAG.getVTList(EltVT, MVT::Other);
   SmallVector<SDValue, 8> Chains;
 
   unsigned i;
@@ -1914,8 +1914,8 @@ SDValue DAGTypeLegalizer::UnrollVectorOp_StrictFP(SDNode *N, unsigned ResNE) {
         Operands[j] = Operand;
       }
     }
-    SDValue Scalar = DAG.getNode(N->getOpcode(), dl, ChainVTs, Operands);
-    Scalar.getNode()->setFlags(N->getFlags());
+    SDValue Scalar =
+        DAG.getNode(N->getOpcode(), dl, ChainVTs, Operands, N->getFlags());
 
     //Add in the scalar as well as its chain value to the
     //result vectors.
@@ -1956,10 +1956,10 @@ void DAGTypeLegalizer::SplitVecRes_OverflowOp(SDNode *N, unsigned ResNo,
   unsigned Opcode = N->getOpcode();
   SDVTList LoVTs = DAG.getVTList(LoResVT, LoOvVT);
   SDVTList HiVTs = DAG.getVTList(HiResVT, HiOvVT);
-  SDNode *LoNode = DAG.getNode(Opcode, dl, LoVTs, LoLHS, LoRHS).getNode();
-  SDNode *HiNode = DAG.getNode(Opcode, dl, HiVTs, HiLHS, HiRHS).getNode();
-  LoNode->setFlags(N->getFlags());
-  HiNode->setFlags(N->getFlags());
+  SDNode *LoNode =
+      DAG.getNode(Opcode, dl, LoVTs, {LoLHS, LoRHS}, N->getFlags()).getNode();
+  SDNode *HiNode =
+      DAG.getNode(Opcode, dl, HiVTs, {HiLHS, HiRHS}, N->getFlags()).getNode();
 
   Lo = SDValue(LoNode, ResNo);
   Hi = SDValue(HiNode, ResNo);
@@ -2669,10 +2669,8 @@ void DAGTypeLegalizer::SplitVecRes_UnaryOpWithTwoResults(SDNode *N,
   else
     std::tie(Lo, Hi) = DAG.SplitVectorOperand(N, 0);
 
-  Lo = DAG.getNode(N->getOpcode(), dl, {LoVT, LoVT1}, Lo);
-  Hi = DAG.getNode(N->getOpcode(), dl, {HiVT, HiVT1}, Hi);
-  Lo->setFlags(N->getFlags());
-  Hi->setFlags(N->getFlags());
+  Lo = DAG.getNode(N->getOpcode(), dl, {LoVT, LoVT1}, Lo, N->getFlags());
+  Hi = DAG.getNode(N->getOpcode(), dl, {HiVT, HiVT1}, Hi, N->getFlags());
 
   SDNode *HiNode = Hi.getNode();
   SDNode *LoNode = Lo.getNode();

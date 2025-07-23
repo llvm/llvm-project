@@ -284,10 +284,56 @@ def ROCDL_BarrierWaitOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.wait", [], 0, [0
   let assemblyFormat = "$id attr-dict";
 }
 
-def ROCDL_WaitDscntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.dscnt", [], 0, [0], ["id"]>,
-  Arguments<(ins I16Attr:$id)> {
+def ROCDL_WaitDscntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.dscnt", [], 0, [0], ["count"]>,
+  Arguments<(ins I16Attr:$count)> {
+  let summary = "Wait until DSCNT is less than or equal to `count`";
+  let description = [{
+      Wait for the counter specified to be less-than or equal-to the `count`
+      before continuing.
+
+      Available on gfx12+.
+  }];
   let results = (outs);
-  let assemblyFormat = "$id attr-dict";
+  let assemblyFormat = "$count attr-dict";
+}
+
+def ROCDL_WaitLoadcntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.loadcnt", [], 0, [0], ["count"]>,
+  Arguments<(ins I16Attr:$count)> {
+  let summary = "Wait until LOADCNT is less than or equal to `count`";
+  let description = [{
+      Wait for the counter specified to be less-than or equal-to the `count`
+      before continuing.
+
+      Available on gfx12+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$count attr-dict";
+}
+
+def ROCDL_WaitStorecntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.storecnt", [], 0, [0], ["count"]>,
+  Arguments<(ins I16Attr:$count)> {
+  let summary = "Wait until STORECNT is less than or equal to `count`";
+  let description = [{
+      Wait for the counter specified to be less-than or equal-to the `count`
+      before continuing.
+
+      Available on gfx12+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$count attr-dict";
+}
+
+def ROCDL_WaitExpcntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.expcnt", [], 0, [0], ["count"]>,
+  Arguments<(ins I16Attr:$count)> {
+  let summary = "Wait until EXPCNT is less than or equal to `count`";
+  let description = [{
+      Wait for the counter specified to be less-than or equal-to the `count`
+      before continuing.
+
+      Available on gfx12+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$count attr-dict";
 }
 
 def ROCDL_SetPrioOp : ROCDL_ConcreteNonMemIntrOp<"s.setprio", [], 0, [0], ["priority"]>,

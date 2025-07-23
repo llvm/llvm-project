@@ -172,8 +172,9 @@ bool mlir::linalg::areElementwiseOpsFusable(OpOperand *fusedOperand) {
 
   // Finally the index_map for the result must be invertible. For now just
   // verify it is a permutation.
+  auto producerResult = cast<OpResult>(fusedOperand->get());
   AffineMap producerResultIndexMap =
-      producer.getMatchingIndexingMap(producer.getDpsInitOperand(0));
+      producer.getIndexingMapMatchingResult(producerResult);
   if (!producerResultIndexMap.isPermutation())
     return false;
 

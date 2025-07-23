@@ -886,35 +886,20 @@ static std::optional<PartStore> matchPartStore(Instruction &I,
   return {{PtrBase, PtrOffset, Val, ValOffset, ValWidth, Store}};
 }
 
-static bool mergePartStores(SmallVectorImpl<PartStore> &Parts,
-                            const DataLayout &DL, TargetTransformInfo &TTI) {
+static bool mergeConsecutivePartStores(ArrayRef<PartStore> Parts,
+                                       unsigned Width, const DataLayout &DL,
+                                       TargetTransformInfo &TTI) {
   if (Parts.size() < 2)
     return false;
 
-  // We now have multiple parts of the same value stored to the same pointer.
-  // Sort the parts by pointer offset, and make sure they are consistent with
-  // the value offsets. Also check that the value is fully covered without
-  // overlaps.
-  // FIXME: We could support merging stores for only part of the value here.
-  llvm::sort(Parts);
-  int64_t LastEndOffsetFromFirst = 0;
-  const PartStore &First = Parts[0];
-  for (const PartStore &Part : Parts) {
-    APInt PtrOffsetFromFirst = Part.PtrOffset - First.PtrOffset;
-    int64_t ValOffsetFromFirst = Part.ValOffset - First.ValOffset;
-    if (PtrOffsetFromFirst * 8 != ValOffsetFromFirst ||
-        LastEndOffsetFromFirst != ValOffsetFromFirst)
-      return false;
-    LastEndOffsetFromFirst = ValOffsetFromFirst + Part.ValWidth;
-  }
-
   // Check whether combining the stores is profitable.
   // FIXME: We could generate smaller stores if we can't produce a large one.
+  const PartStore &First = Parts.front();
   LLVMContext &Ctx = First.Store->getContext();
-  Type *NewTy = Type::getIntNTy(Ctx, LastEndOffsetFromFirst);
+  Type *NewTy = Type::getIntNTy(Ctx, Width);
   unsigned Fast = 0;
   if (!TTI.isTypeLegal(NewTy) ||
-      !TTI.allowsMisalignedMemoryAccesses(Ctx, LastEndOffsetFromFirst,
+      !TTI.allowsMisalignedMemoryAccesses(Ctx, Width,
                                           First.Store->getPointerAddressSpace(),
                                           First.Store->getAlign(), &Fast) ||
       !Fast)
@@ -939,6 +924,39 @@ static bool mergePartStores(SmallVectorImpl<PartStore> &Parts,
     Part.Store->eraseFromParent();
 
   return true;
+}
+
+static bool mergePartStores(SmallVectorImpl<PartStore> &Parts,
+                            const DataLayout &DL, TargetTransformInfo &TTI) {
+  if (Parts.size() < 2)
+    return false;
+
+  // We now have multiple parts of the same value stored to the same pointer.
+  // Sort the parts by pointer offset, and make sure they are consistent with
+  // the value offsets. Also check that the value is fully covered without
+  // overlaps.
+  bool Changed = false;
+  llvm::sort(Parts);
+  int64_t LastEndOffsetFromFirst = 0;
+  const PartStore *First = &Parts[0];
+  for (const PartStore &Part : Parts) {
+    APInt PtrOffsetFromFirst = Part.PtrOffset - First->PtrOffset;
+    int64_t ValOffsetFromFirst = Part.ValOffset - First->ValOffset;
+    if (PtrOffsetFromFirst * 8 != ValOffsetFromFirst ||
+        LastEndOffsetFromFirst != ValOffsetFromFirst) {
+      Changed |= mergeConsecutivePartStores(ArrayRef(First, &Part),
+                                            LastEndOffsetFromFirst, DL, TTI);
+      First = &Part;
+      LastEndOffsetFromFirst = Part.ValWidth;
+      continue;
+    }
+
+    LastEndOffsetFromFirst = ValOffsetFromFirst + Part.ValWidth;
+  }
+
+  Changed |= mergeConsecutivePartStores(ArrayRef(First, Parts.end()),
+                                        LastEndOffsetFromFirst, DL, TTI);
+  return Changed;
 }
 
 static bool foldConsecutiveStores(BasicBlock &BB, const DataLayout &DL,

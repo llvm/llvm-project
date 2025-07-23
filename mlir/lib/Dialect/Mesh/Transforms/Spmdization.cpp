@@ -265,7 +265,8 @@ unsplitLastAxisInResharding(ImplicitLocOpBuilder &builder,
       targetShardingInUnsplitLastAxis(ctx, sourceSharding, splitTensorAxis);
   ShapedType allGatherResultShape = allGatherResultShapeInUnsplitLastAxis(
       sourceShard.getType(), mesh.getShape()[splitMeshAxis], splitTensorAxis);
-  Value allGatherResult = builder.create<AllGatherOp>(
+  Value allGatherResult = AllGatherOp::create(
+      builder,
       RankedTensorType::get(allGatherResultShape.getShape(),
                             allGatherResultShape.getElementType()),
       mesh.getSymName(), SmallVector<MeshAxis>({splitMeshAxis}), sourceShard,
@@ -273,7 +274,8 @@ unsplitLastAxisInResharding(ImplicitLocOpBuilder &builder,
   ShapedType targetShape =
       shardShapedType(sourceUnshardedShape, mesh, targetSharding);
   TypedValue<ShapedType> targetShard = cast<TypedValue<ShapedType>>(
-      builder.create<tensor::CastOp>(targetShape, allGatherResult).getResult());
+      tensor::CastOp::create(builder, targetShape, allGatherResult)
+          .getResult());
   return {targetShard, targetSharding};
 }
 
@@ -398,7 +400,8 @@ moveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
   ShapedType allToAllResultShape = allToAllResultShapeInMoveLastAxis(
       sourceShard.getType(), mesh.getShape()[meshAxis], sourceTensorAxis,
       targetTensorAxis);
-  Value allToAllResult = builder.create<AllToAllOp>(
+  Value allToAllResult = AllToAllOp::create(
+      builder,
       RankedTensorType::get(allToAllResultShape.getShape(),
                             allToAllResultShape.getElementType()),
       mesh.getSymName(), SmallVector<MeshAxis>({meshAxis}), sourceShard,
@@ -406,7 +409,7 @@ moveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
   ShapedType targetShape =
       shardShapedType(sourceUnshardedShape, mesh, targetSharding);
   TypedValue<ShapedType> targetShard = cast<TypedValue<ShapedType>>(
-      builder.create<tensor::CastOp>(targetShape, allToAllResult).getResult());
+      tensor::CastOp::create(builder, targetShape, allToAllResult).getResult());
   return {targetShard, targetSharding};
 }
 
@@ -477,15 +480,16 @@ tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
 
   // Extract core from source and copy into destination core.
   auto noVals = ValueRange{};
-  auto initVal = builder.create<tensor::EmptyOp>(
-      sourceShard.getLoc(), outShape, sourceShard.getType().getElementType());
-  auto core = builder.create<tensor::ExtractSliceOp>(
-      sourceShard.getLoc(),
+  auto initVal =
+      tensor::EmptyOp::create(builder, sourceShard.getLoc(), outShape,
+                              sourceShard.getType().getElementType());
+  auto core = tensor::ExtractSliceOp::create(
+      builder, sourceShard.getLoc(),
       RankedTensorType::get(coreShape, sourceShard.getType().getElementType()),
       sourceShard, noVals, noVals, noVals, srcCoreOffs, coreShape, strides);
-  auto initOprnd = builder.create<tensor::InsertSliceOp>(
-      sourceShard.getLoc(), core, initVal, noVals, noVals, noVals, tgtCoreOffs,
-      coreShape, strides);
+  auto initOprnd = tensor::InsertSliceOp::create(
+      builder, sourceShard.getLoc(), core, initVal, noVals, noVals, noVals,
+      tgtCoreOffs, coreShape, strides);
 
   // Finally update the halo.
   auto updateHaloResult =

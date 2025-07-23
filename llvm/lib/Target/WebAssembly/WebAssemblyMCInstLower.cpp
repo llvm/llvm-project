@@ -15,13 +15,18 @@
 #include "WebAssemblyMCInstLower.h"
 #include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyAsmPrinter.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyUtilities.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -152,6 +157,34 @@ MCOperand WebAssemblyMCInstLower::lowerTypeIndexOperand(
   return MCOperand::createExpr(Expr);
 }
 
+MCOperand
+WebAssemblyMCInstLower::lowerEncodedFunctionSignature(const APInt &Sig) const {
+  // For APInt a word is 64 bits on all architectures, see definition in APInt.h
+  auto NumWords = Sig.getNumWords();
+  SmallVector<wasm::ValType, 4> Params;
+  SmallVector<wasm::ValType, 2> Returns;
+
+  int Idx = NumWords;
+  auto GetWord = [&Idx, &Sig]() {
+    Idx--;
+    return Sig.extractBitsAsZExtValue(64, 64 * Idx);
+  };
+  // Annoying special case: if getSignificantBits() <= 64 then InstrEmitter will
+  // emit an Imm instead of a CImm. It simplifies WebAssemblyMCInstLower if we
+  // always emit a CImm. So xor NParams with 0x7ffffff to ensure
+  // getSignificantBits() > 64
+  // See encodeFunctionSignature in WebAssemblyISelDAGtoDAG.cpp
+  int NReturns = GetWord() ^ 0x7ffffff;
+  for (int I = 0; I < NReturns; I++) {
+    Returns.push_back(static_cast<wasm::ValType>(GetWord()));
+  }
+  int NParams = GetWord();
+  for (int I = 0; I < NParams; I++) {
+    Params.push_back(static_cast<wasm::ValType>(GetWord()));
+  }
+  return lowerTypeIndexOperand(std::move(Returns), std::move(Params));
+}
+
 static void getFunctionReturns(const MachineInstr *MI,
                                SmallVectorImpl<wasm::ValType> &Returns) {
   const Function &F = MI->getMF()->getFunction();
@@ -196,11 +229,30 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
       MCOp = MCOperand::createReg(WAReg);
       break;
     }
+    case llvm::MachineOperand::MO_CImmediate: {
+      // Lower type index placeholder for ref.test
+      // Currently this is the only way that CImmediates show up so panic if we
+      // get confused.
+      unsigned DescIndex = I - NumVariadicDefs;
+      assert(DescIndex < Desc.NumOperands && "unexpected CImmediate operand");
+      auto Operands = Desc.operands();
+      const MCOperandInfo &Info = Operands[DescIndex];
+      assert(Info.OperandType == WebAssembly::OPERAND_TYPEINDEX &&
+             "unexpected CImmediate operand");
+      (void)Info;
+      MCOp = lowerEncodedFunctionSignature(MO.getCImm()->getValue());
+      break;
+    }
     case MachineOperand::MO_Immediate: {
       unsigned DescIndex = I - NumVariadicDefs;
       if (DescIndex < Desc.NumOperands) {
-        const MCOperandInfo &Info = Desc.operands()[DescIndex];
+        auto Operands = Desc.operands();
+        const MCOperandInfo &Info = Operands[DescIndex];
+        // Replace type index placeholder with actual type index. The type index
+        // placeholders are Immediates and have an operand type of
+        // OPERAND_TYPEINDEX or OPERAND_SIGNATURE.
         if (Info.OperandType == WebAssembly::OPERAND_TYPEINDEX) {
+          // Lower type index placeholder for a CALL_INDIRECT instruction
           SmallVector<wasm::ValType, 4> Returns;
           SmallVector<wasm::ValType, 4> Params;
 
@@ -228,6 +280,7 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
           break;
         }
         if (Info.OperandType == WebAssembly::OPERAND_SIGNATURE) {
+          // Lower type index placeholder for blocks
           auto BT = static_cast<WebAssembly::BlockType>(MO.getImm());
           assert(BT != WebAssembly::BlockType::Invalid);
           if (BT == WebAssembly::BlockType::Multivalue) {

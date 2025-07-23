@@ -19,8 +19,8 @@
 #include "DWARFUnit.h"
 
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 void DWARFFormValue::Clear() {
   m_unit = nullptr;
@@ -564,25 +564,25 @@ uint64_t DWARFFormValue::Reference(dw_offset_t base_offset) const {
 }
 
 std::optional<uint64_t> DWARFFormValue::getAsUnsignedConstant() const {
-  if ((!IsDataForm(m_form)) || m_form == lldb_private::dwarf::DW_FORM_sdata)
+  if ((!IsDataForm(m_form)) || m_form == llvm::dwarf::DW_FORM_sdata)
     return std::nullopt;
   return m_value.uval;
 }
 
 std::optional<int64_t> DWARFFormValue::getAsSignedConstant() const {
   if ((!IsDataForm(m_form)) ||
-      (m_form == lldb_private::dwarf::DW_FORM_udata &&
+      (m_form == llvm::dwarf::DW_FORM_udata &&
        uint64_t(std::numeric_limits<int64_t>::max()) < m_value.uval))
     return std::nullopt;
   switch (m_form) {
-  case lldb_private::dwarf::DW_FORM_data4:
+  case llvm::dwarf::DW_FORM_data4:
     return int32_t(m_value.uval);
-  case lldb_private::dwarf::DW_FORM_data2:
+  case llvm::dwarf::DW_FORM_data2:
     return int16_t(m_value.uval);
-  case lldb_private::dwarf::DW_FORM_data1:
+  case llvm::dwarf::DW_FORM_data1:
     return int8_t(m_value.uval);
-  case lldb_private::dwarf::DW_FORM_sdata:
-  case lldb_private::dwarf::DW_FORM_data8:
+  case llvm::dwarf::DW_FORM_sdata:
+  case llvm::dwarf::DW_FORM_data8:
   default:
     return m_value.sval;
   }

@@ -11,8 +11,8 @@
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
 
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 TEST(DWARF64UnitTest, DWARF64DebugInfoAndCU) {
   const char *yamldata = R"(

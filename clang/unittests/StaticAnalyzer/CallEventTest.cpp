@@ -56,7 +56,7 @@ void addCXXDeallocatorChecker(AnalysisASTConsumer &AnalysisConsumer,
   AnOpts.CheckersAndPackages = {{"test.CXXDeallocator", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
     Registry.addChecker<CXXDeallocatorChecker>("test.CXXDeallocator",
-                                               "Description", "");
+                                               "MockDescription");
   });
 }
 

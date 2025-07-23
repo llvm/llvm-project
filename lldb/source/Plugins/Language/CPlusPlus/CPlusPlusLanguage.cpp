@@ -1434,8 +1434,7 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           stl_deref_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider")));
   cpp_category_sp->AddTypeSynthetic(
-      "^std::(__debug::)?unordered_(multi)?(map|set)<.+> >$",
-      eFormatterMatchRegex,
+      "^std::__debug::unordered_(multi)?(map|set)<.+> >$", eFormatterMatchRegex,
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_deref_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdUnorderedMapSynthProvider")));
@@ -1490,8 +1489,8 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
 
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::ContainerSizeSummaryProvider,
-                "libstdc++ std unordered container summary provider",
-                "^std::(__debug::)?unordered_(multi)?(map|set)<.+> >$",
+                "libstdc++ debug std unordered container summary provider",
+                "^std::__debug::unordered_(multi)?(map|set)<.+> >$",
                 stl_summary_flags, true);
 
   AddCXXSummary(
@@ -1660,6 +1659,19 @@ static bool GenericVariantSummaryProvider(ValueObject &valobj, Stream &stream,
   return LibStdcppVariantSummaryProvider(valobj, stream, options);
 }
 
+static SyntheticChildrenFrontEnd *
+GenericUnorderedSyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                         ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+
+  if (IsMsvcStlUnordered(*valobj_sp))
+    return MsvcStlUnorderedSyntheticFrontEndCreator(children, valobj_sp);
+  return new ScriptedSyntheticChildren::FrontEnd(
+      "lldb.formatters.cpp.gnu_libstdcpp.StdUnorderedMapSynthProvider",
+      *valobj_sp);
+}
+
 /// Load formatters that are formatting types from more than one STL
 static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   if (!cpp_category_sp)
@@ -1727,6 +1739,10 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(cpp_category_sp, GenericVariantSyntheticFrontEndCreator,
                   "std::variant synthetic children", "^std::variant<.*>$",
                   stl_synth_flags, true);
+  AddCXXSynthetic(cpp_category_sp, GenericUnorderedSyntheticFrontEndCreator,
+                  "std::unordered container synthetic children",
+                  "^std::unordered_(multi)?(map|set)<.+> ?>$", stl_synth_flags,
+                  true);
 
   SyntheticChildren::Flags stl_deref_flags = stl_synth_flags;
   stl_deref_flags.SetFrontEndWantsDereference();
@@ -1766,6 +1782,10 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, GenericVariantSummaryProvider,
                 "MSVC STL/libstdc++ std::variant summary provider",
                 "^std::variant<.*>$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "MSVC STL/libstdc++ std unordered container summary provider",
+                "^std::unordered_(multi)?(map|set)<.+> ?>$", stl_summary_flags,
+                true);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
@@ -1780,6 +1800,9 @@ static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       .SetDontShowValue(false)
       .SetShowMembersOneLiner(false)
       .SetHideItemNames(false);
+  SyntheticChildren::Flags stl_synth_flags;
+  stl_synth_flags.SetCascades(true).SetSkipPointers(false).SetSkipReferences(
+      false);
 
   using StringElementType = StringPrinter::StringElementType;
 
@@ -1801,6 +1824,16 @@ static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           stl_summary_flags,
           MsvcStlStringSummaryProvider<StringElementType::UTF32>,
           "MSVC STL std::u32string summary provider"));
+
+  stl_summary_flags.SetDontShowChildren(false);
+
+  AddCXXSynthetic(cpp_category_sp, MsvcStlAtomicSyntheticFrontEndCreator,
+                  "MSVC STL std::atomic synthetic children",
+                  "^std::atomic<.+>$", stl_synth_flags, true);
+
+  AddCXXSummary(cpp_category_sp, MsvcStlAtomicSummaryProvider,
+                "MSVC STL std::atomic summary provider", "^std::atomic<.+>$",
+                stl_summary_flags, true);
 }
 
 static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {

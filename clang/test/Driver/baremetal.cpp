@@ -257,7 +257,7 @@
 // CHECK-RV64-SAME:"{{.*}}.o"
 // CHECK-RV64-SAME: "{{[^"]*}}libclang_rt.builtins.a"
 // CHECK-RV64-SAME: "-lc"
-// CHECK-RV64-SAME: "-X" "-o" "{{.*}}.tmp.out"
+// CHECK-RV64-SAME: "-o" "{{.*}}.tmp.out"
 
 // RUN: %clangxx %s -### --target=riscv64-unknown-elf 2>&1 \
 // RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf \
@@ -271,7 +271,7 @@
 // CHECK-RV64-DEFAULTCXX-SAME: "-lc++" "-lm"
 // CHECK-RV64-DEFAULTCXX-SAME: "{{[^"]*}}libclang_rt.builtins.a"
 // CHECK-RV64-DEFAULTCXX-SAME: "-lc"
-// CHECK-RV64-DEFAULTCXX-SAME: "-X" "-o" "a.out"
+// CHECK-RV64-DEFAULTCXX-SAME: "-o" "a.out"
 
 // RUN: %clangxx %s -### --target=riscv64-unknown-elf 2>&1 \
 // RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf \
@@ -288,7 +288,7 @@
 // CHECK-RV64-LIBCXX-SAME: "-lc++" "-lm"
 // CHECK-RV64-LIBCXX-SAME: "{{[^"]*}}libclang_rt.builtins.a"
 // CHECK-RV64-LIBCXX-SAME: "-lc"
-// CHECK-RV64-LIBCXX-SAME: "-X" "-o" "a.out"
+// CHECK-RV64-LIBCXX-SAME: "-o" "a.out"
 
 // RUN: %clangxx %s -### 2>&1 --target=riscv64-unknown-elf \
 // RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf \
@@ -305,7 +305,7 @@
 // CHECK-RV64-LIBSTDCXX-SAME: "-lstdc++" "-lm"
 // CHECK-RV64-LIBSTDCXX-SAME: "{{[^"]*}}libclang_rt.builtins.a"
 // CHECK-RV64-LIBSTDCXX-SAME: "-lc"
-// CHECK-RV64-LIBSTDCXX-SAME: "-X" "-o" "a.out"
+// CHECK-RV64-LIBSTDCXX-SAME: "-o" "a.out"
 
 // RUN: %clang %s -### 2>&1 --target=riscv32-unknown-elf \
 // RUN:     -L some/directory/user/asked/for \
@@ -325,7 +325,7 @@
 // CHECK-RV32-SAME: "{{.*}}.o"
 // CHECK-RV32-SAME: "{{[^"]*}}libclang_rt.builtins.a"
 // CHECK-RV32-SAME: "-lc"
-// CHECK-RV32-SAME: "-X" "-o" "a.out"
+// CHECK-RV32-SAME: "-o" "a.out"
 
 // RUN: %clangxx %s -### 2>&1 --target=riscv32-unknown-elf \
 // RUN:     --sysroot=%S/Inputs/basic_riscv32_tree/riscv32-unknown-elf \
@@ -339,7 +339,7 @@
 // CHECK-RV32-DEFAULTCXX-SAME: "-lc++" "-lm"
 // CHECK-RV32-DEFAULTCXX-SAME: "{{[^"]*}}libclang_rt.builtins.a"
 // CHECK-RV32-DEFAULTCXX-SAME: "-lc"
-// CHECK-RV32-DEFAULTCXX-SAME: "-X" "-o" "a.out"
+// CHECK-RV32-DEFAULTCXX-SAME: "-o" "a.out"
 
 // RUN: %clangxx %s -### 2>&1 --target=riscv32-unknown-elf \
 // RUN:     --sysroot=%S/Inputs/basic_riscv32_tree/riscv32-unknown-elf \
@@ -355,7 +355,7 @@
 // CHECK-RV32-LIBCXX-SAME: "{{.*}}.o"
 // CHECK-RV32-LIBCXX-SAME: "-lc++" "-lm"
 // CHECK-RV32-LIBCXX-SAME: "{{[^"]*}}libclang_rt.builtins.a"
-// CHECK-RV32-LIBCXX-SAME: "-X" "-o" "a.out"
+// CHECK-RV32-LIBCXX-SAME: "-o" "a.out"
 
 // RUN: %clangxx %s -### 2>&1 --target=riscv32-unknown-elf \
 // RUN:     --sysroot=%S/Inputs/basic_riscv32_tree/riscv32-unknown-elf \
@@ -372,7 +372,7 @@
 // CHECK-RV32-LIBSTDCXX-SAME: "-lstdc++" "-lm"
 // CHECK-RV32-LIBSTDCXX-SAME: "{{[^"]*}}libclang_rt.builtins.a"
 // CHECK-RV32-LIBSTDCXX-SAME: "-lc"
-// CHECK-RV32-LIBSTDCXX-SAME: "-X" "-o" "a.out"
+// CHECK-RV32-LIBSTDCXX-SAME: "-o" "a.out"
 
 // RUN: %clang %s -### 2>&1 --target=riscv64-unknown-elf \
 // RUN:     -nostdlibinc -nobuiltininc \

@@ -629,8 +629,8 @@ Value VectorShuffleTreeBuilder::generateShuffleTree(PatternRewriter &rewriter) {
                                                     nextLevelVectorSize);
       }
 
-      Value shuffleVal = rewriter.create<vector::ShuffleOp>(
-          loc, lhsVector, rhsVector, shuffleMask);
+      Value shuffleVal = vector::ShuffleOp::create(rewriter, loc, lhsVector,
+                                                   rhsVector, shuffleMask);
       levelOutputs.push_back(shuffleVal);
     }
 

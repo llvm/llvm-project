@@ -1022,7 +1022,7 @@ public:
   }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           unsigned NumRegionInstrs) const override;
+                           const SchedRegion &Region) const override;
 
   void mirFileLoaded(MachineFunction &MF) const override;
 
@@ -1166,6 +1166,9 @@ public:
   bool hasScaleOffset() const { return GFX1250Insts; }
 
   bool hasFlatGVSMode() const { return FlatGVSMode; }
+
+  // FLAT GLOBAL VOffset is signed
+  bool hasSignedGVSOffset() const { return GFX1250Insts; }
 
   bool enableSIScheduler() const {
     return EnableSIScheduler;

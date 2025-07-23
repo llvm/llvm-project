@@ -901,6 +901,7 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"number", asValue}, {"handler", asAddr}, {"status", asAddr}}},
      /*isElemental=*/false},
     {"sind", &I::genSind},
+    {"sinpi", &I::genSinpi},
     {"size",
      &I::genSize,
      {{{"array", asBox},
@@ -8076,6 +8077,21 @@ mlir::Value IntrinsicLibrary::genSind(mlir::Type resultType,
       loc, mlir::Float64Type::get(context), pi / llvm::APFloat(180.0));
   mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
   mlir::Value arg = mlir::arith::MulFOp::create(builder, loc, args[0], factor);
+  return getRuntimeCallGenerator("sin", ftype)(builder, loc, {arg});
+}
+
+// SINPI
+mlir::Value IntrinsicLibrary::genSinpi(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
+  mlir::Value dfactor =
+      builder.createRealConstant(loc, mlir::Float64Type::get(context), pi);
+  mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
+  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
   return getRuntimeCallGenerator("sin", ftype)(builder, loc, {arg});
 }
 

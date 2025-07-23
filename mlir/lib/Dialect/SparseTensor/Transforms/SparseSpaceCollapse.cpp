@@ -126,8 +126,8 @@ void collapseSparseSpace(MutableArrayRef<CollapseSpaceInfo> toCollapse) {
   OpBuilder builder(root);
 
   // Construct the collapsed iteration space.
-  auto collapsedSpace = builder.create<ExtractIterSpaceOp>(
-      loc, root.getTensor(), root.getParentIter(), root.getLoLvl(),
+  auto collapsedSpace = ExtractIterSpaceOp::create(
+      builder, loc, root.getTensor(), root.getParentIter(), root.getLoLvl(),
       leaf.getHiLvl());
 
   auto rItOp = llvm::cast<IterateOp>(*root->getUsers().begin());

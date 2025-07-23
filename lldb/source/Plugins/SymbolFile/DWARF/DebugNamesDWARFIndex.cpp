@@ -17,10 +17,10 @@
 #include "llvm/ADT/Sequence.h"
 #include <optional>
 
-using namespace lldb_private;
 using namespace lldb;
-using namespace lldb_private::dwarf;
+using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 llvm::Expected<std::unique_ptr<DebugNamesDWARFIndex>>
 DebugNamesDWARFIndex::Create(Module &module, DWARFDataExtractor debug_names,
@@ -484,7 +484,7 @@ void DebugNamesDWARFIndex::GetNamespaces(
     ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
-    lldb_private::dwarf::Tag entry_tag = entry.tag();
+    llvm::dwarf::Tag entry_tag = entry.tag();
     if (entry_tag == DW_TAG_namespace ||
         entry_tag == DW_TAG_imported_declaration) {
       if (!ProcessEntry(entry, callback))
@@ -574,7 +574,7 @@ void DebugNamesDWARFIndex::GetNamespacesWithParents(
                [](const CompilerContext &ctx) { return !ctx.name.IsEmpty(); });
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
-    lldb_private::dwarf::Tag entry_tag = entry.tag();
+    llvm::dwarf::Tag entry_tag = entry.tag();
     if (entry_tag == DW_TAG_namespace ||
         entry_tag == DW_TAG_imported_declaration) {
       std::optional<llvm::SmallVector<Entry, 4>> parent_chain =

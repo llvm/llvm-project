@@ -419,6 +419,112 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
   }
 };
 
+// TODO: AMDGPU backend already have all this bitpacking logic, we should move
+// it to some common place.
+///  Vmcnt, Expcnt and Lgkmcnt are decoded as follows:
+///     Vmcnt = Waitcnt[3:0]        (pre-gfx9)
+///     Vmcnt = Waitcnt[15:14,3:0]  (gfx9,10)
+///     Vmcnt = Waitcnt[15:10]      (gfx11)
+///     Expcnt = Waitcnt[6:4]       (pre-gfx11)
+///     Expcnt = Waitcnt[2:0]       (gfx11)
+///     Lgkmcnt = Waitcnt[11:8]     (pre-gfx10)
+///     Lgkmcnt = Waitcnt[13:8]     (gfx10)
+///     Lgkmcnt = Waitcnt[9:4]      (gfx11)
+static FailureOr<unsigned> encodeWaitcnt(Chipset chipset, unsigned vmcnt,
+                                         unsigned expcnt, unsigned lgkmcnt) {
+  if (chipset.majorVersion < 9) {
+    vmcnt = std::min(15u, vmcnt);
+    expcnt = std::min(7u, expcnt);
+    lgkmcnt = std::min(15u, lgkmcnt);
+    return vmcnt | (expcnt << 4) | (lgkmcnt << 8);
+  }
+  if (chipset.majorVersion == 9) {
+    vmcnt = std::min(63u, vmcnt);
+    expcnt = std::min(7u, expcnt);
+    lgkmcnt = std::min(15u, lgkmcnt);
+    unsigned lowBits = vmcnt & 0xF;
+    unsigned highBits = (vmcnt >> 4) << 14;
+    unsigned otherCnts = (expcnt << 4) | (lgkmcnt << 8);
+    return lowBits | highBits | otherCnts;
+  }
+  if (chipset.majorVersion == 10) {
+    vmcnt = std::min(63u, vmcnt);
+    expcnt = std::min(7u, expcnt);
+    lgkmcnt = std::min(63u, lgkmcnt);
+    unsigned lowBits = vmcnt & 0xF;
+    unsigned highBits = (vmcnt >> 4) << 14;
+    unsigned otherCnts = (expcnt << 4) | (lgkmcnt << 8);
+    return lowBits | highBits | otherCnts;
+  }
+  if (chipset.majorVersion == 11) {
+    vmcnt = std::min(63u, vmcnt);
+    expcnt = std::min(7u, expcnt);
+    lgkmcnt = std::min(63u, lgkmcnt);
+    return (vmcnt << 10) | expcnt | (lgkmcnt << 4);
+  }
+  return failure();
+}
+
+struct MemoryCounterWaitOpLowering
+    : public ConvertOpToLLVMPattern<MemoryCounterWaitOp> {
+  MemoryCounterWaitOpLowering(const LLVMTypeConverter &converter,
+                              Chipset chipset)
+      : ConvertOpToLLVMPattern<MemoryCounterWaitOp>(converter),
+        chipset(chipset) {}
+
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(MemoryCounterWaitOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset.majorVersion >= 12) {
+      Location loc = op.getLoc();
+      if (std::optional<int> ds = adaptor.getDs())
+        rewriter.create<ROCDL::WaitDscntOp>(loc, *ds);
+
+      if (std::optional<int> load = adaptor.getLoad())
+        rewriter.create<ROCDL::WaitLoadcntOp>(loc, *load);
+
+      if (std::optional<int> store = adaptor.getStore())
+        rewriter.create<ROCDL::WaitStorecntOp>(loc, *store);
+
+      if (std::optional<int> exp = adaptor.getExp())
+        rewriter.create<ROCDL::WaitExpcntOp>(loc, *exp);
+
+      rewriter.eraseOp(op);
+      return success();
+    }
+
+    auto getVal = [](Attribute attr) -> unsigned {
+      if (attr)
+        return cast<IntegerAttr>(attr).getInt();
+
+      // This value will be clamped to the maximum value for the chipset.
+      return 1024;
+    };
+    unsigned ds = getVal(adaptor.getDsAttr());
+    unsigned exp = getVal(adaptor.getExpAttr());
+
+    unsigned vmcnt = 1024;
+    Attribute load = adaptor.getLoadAttr();
+    Attribute store = adaptor.getStoreAttr();
+    if (load && store) {
+      vmcnt = getVal(load) + getVal(store);
+    } else if (load) {
+      vmcnt = getVal(load);
+    } else if (store) {
+      vmcnt = getVal(store);
+    }
+
+    FailureOr<unsigned> waitcnt = encodeWaitcnt(chipset, vmcnt, exp, ds);
+    if (failed(waitcnt))
+      return op.emitOpError("unsupported chipset");
+
+    rewriter.replaceOpWithNewOp<ROCDL::SWaitcntOp>(op, *waitcnt);
+    return success();
+  }
+};
+
 struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
   LDSBarrierOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
       : ConvertOpToLLVMPattern<LDSBarrierOp>(converter), chipset(chipset) {}
@@ -1825,9 +1931,9 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                ROCDL::RawPtrBufferAtomicUminOp>,
            RawBufferOpLowering<RawBufferAtomicCmpswapOp,
                                ROCDL::RawPtrBufferAtomicCmpSwap>,
-           AMDGPUDPPLowering, LDSBarrierOpLowering, SchedBarrierOpLowering,
-           MFMAOpLowering, ScaledMFMAOpLowering, WMMAOpLowering,
-           ExtPackedFp8OpLowering, ScaledExtPackedOpLowering,
+           AMDGPUDPPLowering, MemoryCounterWaitOpLowering, LDSBarrierOpLowering,
+           SchedBarrierOpLowering, MFMAOpLowering, ScaledMFMAOpLowering,
+           WMMAOpLowering, ExtPackedFp8OpLowering, ScaledExtPackedOpLowering,
            PackedScaledTruncOpLowering, PackedTrunc2xFp8OpLowering,
            PackedStochRoundFp8OpLowering, GatherToLDSOpLowering,
            TransposeLoadOpLowering>(converter, chipset);

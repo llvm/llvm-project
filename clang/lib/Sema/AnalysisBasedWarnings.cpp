@@ -2901,8 +2901,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       .setAlwaysAdd(Stmt::UnaryOperatorClass);
   }
 
-  bool EnableLifetimeSafetyAnalysis = !Diags.isIgnored(
-      diag::warn_experimental_lifetime_safety_dummy_warning, D->getBeginLoc());
+  bool EnableLifetimeSafetyAnalysis = S.getLangOpts().EnableLifetimeSafety;
   // Install the logical handler.
   std::optional<LogicalErrorHandler> LEH;
   if (LogicalErrorHandler::hasActiveDiagnostics(Diags, D->getBeginLoc())) {
@@ -3029,8 +3028,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // TODO: Enable lifetime safety analysis for other languages once it is
   // stable.
   if (EnableLifetimeSafetyAnalysis && S.getLangOpts().CPlusPlus) {
-    if (CFG *cfg = AC.getCFG())
-      runLifetimeSafetyAnalysis(*cast<DeclContext>(D), *cfg, AC);
+    if (AC.getCFG())
+      lifetimes::runLifetimeSafetyAnalysis(AC);
   }
   // Check for violations of "called once" parameter properties.
   if (S.getLangOpts().ObjC && !S.getLangOpts().CPlusPlus &&
