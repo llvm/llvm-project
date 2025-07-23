@@ -1,3 +1,17 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the definition of numerical utilities, including
+/// functions to compute ULP distance and traits for floating-point types.
+///
+//===----------------------------------------------------------------------===//
+
 #ifndef MATHTEST_NUMERICS_HPP
 #define MATHTEST_NUMERICS_HPP
 
@@ -95,7 +109,7 @@ template <typename FloatType>
       // When X == Y, different sign bits imply that X and Y are +0.0 and -0.0
       // (in any order). Since we want to treat them as unequal in the context
       // of accuracy testing of mathematical functions, we return the smallest
-      // non-zero value
+      // non-zero value.
       return 1;
     }
     return 0;
@@ -114,9 +128,9 @@ template <typename FloatType>
 
   // Linearise FloatType values into an ordered unsigned space. Let a and b
   // be bits(x), bits(y), respectively, where x and y are FloatType values.
-  //  * The mapping is monotonic: x >= y if, and only if, map(a) >= map(b)
+  //  * The mapping is monotonic: x >= y if, and only if, map(a) >= map(b).
   //  * The difference |map(a) − map(b)| equals the number of std::nextafter
-  //    steps between a and b within the same type
+  //    steps between a and b within the same type.
   auto MapToOrderedUnsigned = [](FPBits Bits) {
     const StorageType Unsigned = Bits.uintval();
     return (Unsigned & SignMask) ? SignMask - (Unsigned - SignMask)

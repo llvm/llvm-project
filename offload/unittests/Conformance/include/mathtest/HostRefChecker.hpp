@@ -1,3 +1,18 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the definition of the HostRefChecker class, which
+/// verifies the results of a device computation against a reference
+/// implementation on the host.
+///
+//===----------------------------------------------------------------------===//
+
 #ifndef MATHTEST_HOSTREFCHECKER_HPP
 #define MATHTEST_HOSTREFCHECKER_HPP
 

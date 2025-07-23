@@ -1,3 +1,17 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the implementation of helpers and non-template member
+/// functions for the DeviceContext class.
+///
+//===----------------------------------------------------------------------===//
+
 #include "mathtest/DeviceContext.hpp"
 
 #include "mathtest/ErrorHandling.hpp"
@@ -254,7 +268,7 @@ void DeviceContext::launchKernelImpl(
     const void *KernelArgs, std::size_t KernelArgsSize) const noexcept {
   ol_kernel_launch_size_args_t LaunchArgs;
   LaunchArgs.Dimensions = 3; // It seems this field is not used anywhere.
-                             // Defaulting to the safest value
+                             // Defaulting to the safest value.
   LaunchArgs.NumGroups = {NumGroups[0], NumGroups[1], NumGroups[2]};
   LaunchArgs.GroupSize = {GroupSize[0], GroupSize[1], GroupSize[2]};
   LaunchArgs.DynSharedMemory = 0;

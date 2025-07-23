@@ -1,3 +1,17 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the definition of the TestResult class, which aggregates
+/// and stores the results of a math test run.
+///
+//===----------------------------------------------------------------------===//
+
 #ifndef MATHTEST_TESTRESULT_HPP
 #define MATHTEST_TESTRESULT_HPP
 
