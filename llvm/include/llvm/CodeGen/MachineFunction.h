@@ -515,8 +515,6 @@ public:
   struct CallSiteInfo {
     /// Vector of call argument and its forwarding register.
     SmallVector<ArgRegPair, 1> ArgRegPairs;
-    /// Callee type ids.
-    SmallVector<ConstantInt *, 4> CalleeTypeIds;
   };
 
   struct CalledGlobalInfo {
