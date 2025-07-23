@@ -969,17 +969,13 @@ private:
 /// If `value` is the result of a splat or broadcast operation, return the input
 /// of the splat/broadcast operation.
 static Value getBroadcastLikeSource(Value value) {
-
   Operation *op = value.getDefiningOp();
   if (!op)
     return {};
-
   if (auto broadcast = dyn_cast<vector::BroadcastOp>(op))
     return broadcast.getSource();
-
   if (auto splat = dyn_cast<vector::SplatOp>(op))
     return splat.getInput();
-
   return {};
 }
 
