@@ -57,8 +57,8 @@ struct ConstraintOp {
   EVT getValueType() const { return getValue().getValueType(); }
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const ConstraintOp &Info) {
-  return OS << (Info.IsRes ? "result" : "operand") << " #" << Info.Idx;
+raw_ostream &operator<<(raw_ostream &OS, const ConstraintOp &Op) {
+  return OS << (Op.IsRes ? "result" : "operand") << " #" << Op.Idx;
 }
 
 } // namespace
@@ -172,7 +172,7 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
 
   for (const SDTypeConstraint &C : getConstraints(N->getOpcode())) {
     ConstraintOp Op = GetConstraintOp(C.OpNo);
-    EVT OpVT = Op.getValue().getValueType();
+    EVT OpVT = Op.getValueType();
 
     switch (C.Kind) {
     case SDTCisVT: {
