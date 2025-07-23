@@ -304,7 +304,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     *IOFile << "{\n";
     llvm::TimerGroup::printAllJSONValues(*IOFile, "");
     *IOFile << "\n}\n";
-  } else {
+  } else if (!Clang->getCodeGenOpts().TimePassesStatsFile) {
     llvm::TimerGroup::printAll(*IOFile);
   }
   llvm::TimerGroup::clearAll();
