@@ -113,17 +113,8 @@ def WasmSSAImportOpInterface : OpInterface<"WasmSSAImportOpInterface"> {
   ];
 }
 
-def WasmSSAConstantExpressionInitializerInterface :
-          OpInterface<"WasmSSAConstantExpressionInitializerInterface"> {
+def ConstantExpressionInitializerTrait : NativeOpTrait<"ConstantExpressionInitializerTrait"> {
   let cppNamespace = "::mlir::wasmssa";
-  let description = [{
-    Operation that must be constant initialized. This
-    interface adds a verifier that checks that all ops
-    within the initializer region are "constant expressions"
-    as defined by the WASM standard.
-  }];
-
-  let verify = [{ return detail::verifyConstantExpressionInterface($_op); }];
 }
 
 def ConstantExprCheckInterface :

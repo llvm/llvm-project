@@ -177,7 +177,7 @@ def WasmSSA_FuncImportOp : WasmSSA_Op<"import_func", [
 
 def WasmSSA_GlobalOp : WasmSSA_Op<"global", [
   AffineScope, AutomaticAllocationScope,
-  IsolatedFromAbove, Symbol, WasmSSAConstantExpressionInitializerInterface]> {
+  IsolatedFromAbove, Symbol, ConstantExpressionInitializerTrait]> {
   let summary= "WebAssembly global value";
   let arguments = (ins SymbolNameAttr: $sym_name,
                      WasmSSA_ValTypeAttr: $type,
