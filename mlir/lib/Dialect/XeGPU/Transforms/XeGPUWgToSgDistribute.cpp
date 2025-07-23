@@ -619,7 +619,8 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
   patterns.add<WgToSgCreateNdOp, WgToSgLoadNdOp, WgToSgStoreNdOp,
                WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp,
                UnrealizedConversionCastOpPattern, WgToSgElementwiseOp,
-               WgToSgVectorBroadcastOp, WgToSgConvertLayoutOp>(patterns.getContext());
+               WgToSgVectorBroadcastOp, WgToSgConvertLayoutOp>(
+      patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
