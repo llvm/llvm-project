@@ -209,8 +209,7 @@ int main(int argc, char *argv[]) {
   llvm::InitializeAllTargetMCs();
   InitializeAllDisassemblers();
 
-  cl::ParseCommandLineOptions(
-      argc, argv, HelpText);
+  cl::ParseCommandLineOptions(argc, argv, HelpText);
 
   ScopedPrinter W(llvm::outs());
   LVOptions Options;
