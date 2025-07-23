@@ -31,20 +31,20 @@ metadata representation of this root signature and the corresponding operands.
 
 .. code-block:: HLSL
 
-RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT),
-RootConstants(b0, space = 1, num32Constants = 3),
-CBV(b1, flags = 0),
-StaticSampler(
-  filter = FILTER_MIN_MAG_POINT_MIP_LINEAR,
-  addressU = TEXTURE_ADDRESS_BORDER,
-),
-DescriptorTable(
-  visibility = VISIBILITY_ALL,
-  SRV(t0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE),
-  UAV(
-    numDescriptors = 5, u1, space = 10, offset = 5,
-    flags = DATA_VOLATILE
-  )
+  RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT),
+  RootConstants(b0, space = 1, num32Constants = 3),
+  CBV(b1, flags = 0),
+  StaticSampler(
+    filter = FILTER_MIN_MAG_POINT_MIP_LINEAR,
+    addressU = TEXTURE_ADDRESS_BORDER,
+  ),
+  DescriptorTable(
+    visibility = VISIBILITY_ALL,
+    SRV(t0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE),
+    UAV(
+      numDescriptors = 5, u1, space = 10, offset = 5,
+      flags = DATA_VOLATILE
+    )
 )
 
 .. note::
