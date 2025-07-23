@@ -164,3 +164,22 @@ void test_bool_assign(void)
     // should return _Bool, but not int.
     _Bool ret = __builtin_mul_overflow(10, 20, &res); // no crash
 }
+
+void test_unsigned_int128_negative_literal(void)
+{
+    unsigned __int128 a = 42;
+
+    // This should not crash the static analyzer.
+    // Reproduces issue from GitHub #150206 where __builtin_mul_overflow
+    // with unsigned __int128 and negative literal caused a crash in
+    // SimpleSValBuilder::MakeSymIntVal.
+    __builtin_mul_overflow(a, -16, &a); // no crash
+
+    // Test other overflow builtins with the same pattern
+    __builtin_add_overflow(a, -16, &a); // no crash
+    __builtin_sub_overflow(a, -16, &a); // no crash
+
+    // Test with different negative values
+    __builtin_mul_overflow(a, -1, &a);   // no crash
+    __builtin_mul_overflow(a, -255, &a); // no crash
+}
