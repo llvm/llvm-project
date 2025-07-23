@@ -82,6 +82,7 @@ private:
   MCSymbol *End = nullptr;
   /// The alignment requirement of this section.
   Align Alignment;
+  MaybeAlign PreferredAlignment;
   /// The section index in the assemblers section list.
   unsigned Ordinal = 0;
 
@@ -145,6 +146,17 @@ public:
   void ensureMinAlignment(Align MinAlignment) {
     if (Alignment < MinAlignment)
       Alignment = MinAlignment;
+  }
+
+  Align getPreferredAlignment() const {
+    if (!PreferredAlignment || Alignment > *PreferredAlignment)
+      return Alignment;
+    return *PreferredAlignment;
+  }
+
+  void ensurePreferredAlignment(Align PrefAlign) {
+    if (!PreferredAlignment || PrefAlign > *PreferredAlignment)
+      PreferredAlignment = PrefAlign;
   }
 
   unsigned getOrdinal() const { return Ordinal; }

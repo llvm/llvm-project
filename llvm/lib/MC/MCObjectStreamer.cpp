@@ -567,6 +567,10 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
   }
 }
 
+void MCObjectStreamer::emitPrefAlign(Align Alignment) {
+  getCurrentSectionOnly()->ensurePreferredAlignment(Alignment);
+}
+
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
                                          unsigned char Value,
                                          SMLoc Loc) {
