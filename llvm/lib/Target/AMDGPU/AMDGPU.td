@@ -1118,6 +1118,12 @@ def FeatureBitOp3Insts : SubtargetFeature<"bitop3-insts",
   "Has v_bitop3_b32/v_bitop3_b16 instructions"
 >;
 
+def FeatureTanhInsts : SubtargetFeature<"tanh-insts",
+  "HasTanhInsts",
+  "true",
+  "Has v_tanh_f32/f16 instructions"
+>;
+
 def FeatureTransposeLoadF4F6Insts : SubtargetFeature<"transpose-load-f4f6-insts",
   "HasTransposeLoadF4F6Insts",
   "true",
@@ -1842,7 +1848,8 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureImageInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
-   FeatureMemoryAtomicFAddF32DenormalSupport]>;
+   FeatureMemoryAtomicFAddF32DenormalSupport,
+   FeatureRealTrue16Insts]>;
 
 // There are few workarounds that need to be
 // added to all targets. This pessimizes codegen
@@ -1862,8 +1869,7 @@ def FeatureISAVersion11_0_Common : FeatureSet<
     [FeatureMSAALoadDstSelBug,
      FeatureVALUTransUseHazard,
      FeatureMADIntraFwdBug,
-     FeaturePrivEnabledTrap2NopBug,
-     FeatureRealTrue16Insts])>;
+     FeaturePrivEnabledTrap2NopBug])>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
@@ -1979,6 +1985,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureScalarDwordx3Loads,
    FeatureDPPSrc1SGPR,
    FeatureBitOp3Insts,
+   FeatureTanhInsts,
    FeatureTransposeLoadF4F6Insts,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
@@ -2512,6 +2519,14 @@ def HasFmaakFmamkF64Insts :
   Predicate<"Subtarget->hasFmaakFmamkF64Insts()">,
   AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
 
+def HasPkAddMinMaxInsts :
+  Predicate<"Subtarget->hasPkAddMinMaxInsts()">,
+  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
+
+def HasPkMinMax3Insts :
+  Predicate<"Subtarget->hasPkMinMax3Insts()">,
+  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
+
 def HasImageInsts : Predicate<"Subtarget->hasImageInsts()">,
   AssemblerPredicate<(all_of FeatureImageInsts)>;
 
@@ -2702,6 +2717,9 @@ def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
 
 def HasBitOp3Insts : Predicate<"Subtarget->hasBitOp3Insts()">,
   AssemblerPredicate<(all_of FeatureBitOp3Insts)>;
+
+def HasTanhInsts : Predicate<"Subtarget->hasTanhInsts()">,
+  AssemblerPredicate<(all_of FeatureTanhInsts)>;
 
 def HasTransposeLoadF4F6Insts : Predicate<"Subtarget->hasTransposeLoadF4F6Insts()">,
   AssemblerPredicate<(all_of FeatureTransposeLoadF4F6Insts)>;

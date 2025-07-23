@@ -67,6 +67,14 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- New ``Override pure virtual methods`` code action. When invoked on a class
+  definition, this action automatically generates C++ ``override`` declarations
+  for all pure virtual methods inherited from its base classes that have not yet
+  been implemented. The generated method stubs prompts the user for the actual
+  implementation. The overrides are intelligently grouped under their original
+  access specifiers (e.g., ``public``, ``protected``), creating new access
+  specifier blocks if necessary.
+
 Signature help
 ^^^^^^^^^^^^^^
 
@@ -102,6 +110,15 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-infinite-loop
+  <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
+  variables introduced by structured bindings.
+
+- Improved :doc:`bugprone-unhandled-self-assignment
+  <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
+  an additional matcher that generalizes the copy-and-swap idiom pattern
+  detection.
+  
 Removed checks
 ^^^^^^^^^^^^^^
 

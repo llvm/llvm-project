@@ -171,9 +171,6 @@ struct OffloadQueueTest : OffloadDeviceTest {
 struct OffloadEventTest : OffloadQueueTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
-    if (getPlatformBackend() == OL_PLATFORM_BACKEND_AMDGPU)
-      GTEST_SKIP() << "AMDGPU synchronize event not implemented";
-
     // Get an event from a memcpy. We can still use it in olGetEventInfo etc
     // after it has been waited on.
     void *Alloc;
@@ -182,7 +179,7 @@ struct OffloadEventTest : OffloadQueueTest {
         olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, sizeof(Value), &Alloc));
     ASSERT_SUCCESS(
         olMemcpy(Queue, Alloc, Device, &Value, Host, sizeof(Value), &Event));
-    ASSERT_SUCCESS(olWaitEvent(Event));
+    ASSERT_SUCCESS(olSyncEvent(Event));
     ASSERT_SUCCESS(olMemFree(Alloc));
   }
 
