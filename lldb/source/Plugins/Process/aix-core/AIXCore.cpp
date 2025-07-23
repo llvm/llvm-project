@@ -105,7 +105,7 @@ bool AIXCore64Header::ParseCoreHeader(lldb_private::DataExtractor &data,
     DataSize = data.GetU64(offset);
 
     *offset += 104;
-    lldb::offset_t offset_to_user = (*offset + sizeof(ThreadContext64));
+
     // This offset calculation is due to the difference between
     // AIX register size and LLDB register variables order.
     // __context64 does not match RegContext
