@@ -56,12 +56,6 @@ MAKE_CONSTR_ID(OpenMPThreadprivate, D::OMPD_threadprivate);
 #undef MAKE_CONSTR_ID
 
 struct DirectiveNameScope {
-  // Helper types to make overloaded function signatures different.
-  struct TagA {};
-  struct TagB {};
-  struct TagC {};
-  struct TagD {};
-
   static OmpDirectiveName MakeName(CharBlock source = {},
       llvm::omp::Directive id = llvm::omp::Directive::OMPD_unknown) {
     OmpDirectiveName name;
@@ -90,50 +84,49 @@ struct DirectiveNameScope {
     return MakeName(dir.source, dir.v);
   }
 
-  template <typename T, typename = std::enable_if_t<WrapperTrait<T>>>
-  static OmpDirectiveName GetOmpDirectiveName(const T &x, TagA = {}) {
-    if constexpr (std::is_same_v<T, OpenMPCancelConstruct> ||
-        std::is_same_v<T, OpenMPCancellationPointConstruct> ||
-        std::is_same_v<T, OpenMPDepobjConstruct> ||
-        std::is_same_v<T, OpenMPFlushConstruct> ||
-        std::is_same_v<T, OpenMPInteropConstruct> ||
-        std::is_same_v<T, OpenMPSimpleStandaloneConstruct>) {
-      return x.v.DirName();
+  template <typename T>
+  static OmpDirectiveName GetOmpDirectiveName(const T &x) {
+    if constexpr (WrapperTrait<T>) {
+      if constexpr (std::is_same_v<T, OpenMPCancelConstruct> ||
+          std::is_same_v<T, OpenMPCancellationPointConstruct> ||
+          std::is_same_v<T, OpenMPDepobjConstruct> ||
+          std::is_same_v<T, OpenMPFlushConstruct> ||
+          std::is_same_v<T, OpenMPInteropConstruct> ||
+          std::is_same_v<T, OpenMPSimpleStandaloneConstruct>) {
+        return x.v.DirName();
+      } else {
+        return GetOmpDirectiveName(x.v);
+      }
+    } else if constexpr (TupleTrait<T>) {
+      if constexpr (std::is_same_v<T, OpenMPAllocatorsConstruct> ||
+          std::is_same_v<T, OpenMPAtomicConstruct> ||
+          std::is_same_v<T, OpenMPDispatchConstruct>) {
+        return std::get<OmpDirectiveSpecification>(x.t).DirName();
+      } else if constexpr (std::is_same_v<T, OmpAssumeDirective> ||
+          std::is_same_v<T, OmpCriticalDirective> ||
+          std::is_same_v<T, OmpDeclareVariantDirective> ||
+          std::is_same_v<T, OmpErrorDirective> ||
+          std::is_same_v<T, OmpMetadirectiveDirective> ||
+          std::is_same_v<T, OpenMPDeclarativeAllocate> ||
+          std::is_same_v<T, OpenMPDeclarativeAssumes> ||
+          std::is_same_v<T, OpenMPDeclareMapperConstruct> ||
+          std::is_same_v<T, OpenMPDeclareReductionConstruct> ||
+          std::is_same_v<T, OpenMPDeclareSimdConstruct> ||
+          std::is_same_v<T, OpenMPDeclareTargetConstruct> ||
+          std::is_same_v<T, OpenMPExecutableAllocate> ||
+          std::is_same_v<T, OpenMPRequiresConstruct> ||
+          std::is_same_v<T, OpenMPThreadprivate>) {
+        return MakeName(std::get<Verbatim>(x.t).source, ConstructId<T>::id);
+      } else {
+        return GetFromTuple(
+            x.t, std::make_index_sequence<std::tuple_size_v<decltype(x.t)>>{});
+      }
+    } else if constexpr (UnionTrait<T>) {
+      return common::visit(
+          [](auto &&s) { return GetOmpDirectiveName(s); }, x.u);
     } else {
-      return GetOmpDirectiveName(x.v);
+      return MakeName();
     }
-  }
-
-  template <typename T, typename = std::enable_if_t<TupleTrait<T>>>
-  static OmpDirectiveName GetOmpDirectiveName(const T &x, TagB = {}) {
-    if constexpr (std::is_same_v<T, OpenMPAllocatorsConstruct> ||
-        std::is_same_v<T, OpenMPAtomicConstruct> ||
-        std::is_same_v<T, OpenMPDispatchConstruct>) {
-      return std::get<OmpDirectiveSpecification>(x.t).DirName();
-    } else if constexpr (std::is_same_v<T, OmpAssumeDirective> ||
-        std::is_same_v<T, OmpCriticalDirective> ||
-        std::is_same_v<T, OmpDeclareVariantDirective> ||
-        std::is_same_v<T, OmpErrorDirective> ||
-        std::is_same_v<T, OmpMetadirectiveDirective> ||
-        std::is_same_v<T, OpenMPDeclarativeAllocate> ||
-        std::is_same_v<T, OpenMPDeclarativeAssumes> ||
-        std::is_same_v<T, OpenMPDeclareMapperConstruct> ||
-        std::is_same_v<T, OpenMPDeclareReductionConstruct> ||
-        std::is_same_v<T, OpenMPDeclareSimdConstruct> ||
-        std::is_same_v<T, OpenMPDeclareTargetConstruct> ||
-        std::is_same_v<T, OpenMPExecutableAllocate> ||
-        std::is_same_v<T, OpenMPRequiresConstruct> ||
-        std::is_same_v<T, OpenMPThreadprivate>) {
-      return MakeName(std::get<Verbatim>(x.t).source, ConstructId<T>::id);
-    } else {
-      return GetFromTuple(
-          x.t, std::make_index_sequence<std::tuple_size_v<decltype(x.t)>>{});
-    }
-  }
-
-  template <typename T, typename = std::enable_if_t<UnionTrait<T>>>
-  static OmpDirectiveName GetOmpDirectiveName(const T &x, TagC = {}) {
-    return common::visit([](auto &&s) { return GetOmpDirectiveName(s); }, x.u);
   }
 
   template <typename... Ts, size_t... Is>
@@ -155,13 +148,6 @@ struct DirectiveNameScope {
   template <typename T>
   static OmpDirectiveName GetOmpDirectiveName(const common::Indirection<T> &x) {
     return GetOmpDirectiveName(x.value());
-  }
-
-  template <typename T,
-      typename = std::enable_if_t<!WrapperTrait<T> && !TupleTrait<T> &&
-          !UnionTrait<T>>>
-  static OmpDirectiveName GetOmpDirectiveName(const T &x, TagD = {}) {
-    return MakeName();
   }
 };
 } // namespace detail
