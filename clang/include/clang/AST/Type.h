@@ -4676,11 +4676,11 @@ public:
   /// \p AttributedType.
   struct alignas(void *) FunctionTypeExtraAttributeInfo {
     /// A CFI "salt" that differentiates functions with the same prototype.
-    StringRef KCFISalt;
+    StringRef CFISalt;
 
-    operator bool() const { return !KCFISalt.empty(); }
+    operator bool() const { return !CFISalt.empty(); }
 
-    void Profile(llvm::FoldingSetNodeID &ID) const { ID.AddString(KCFISalt); }
+    void Profile(llvm::FoldingSetNodeID &ID) const { ID.AddString(CFISalt); }
   };
 
   /// The AArch64 SME ACLE (Arm C/C++ Language Extensions) define a number

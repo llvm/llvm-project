@@ -156,8 +156,8 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_Allocating:                                              \
   case ParsedAttr::AT_Regparm:                                                 \
   case ParsedAttr::AT_CFIUncheckedCallee:                                      \
+  case ParsedAttr::AT_CFISalt:                                                 \
   case ParsedAttr::AT_CmseNSCall:                                              \
-  case ParsedAttr::AT_KCFISalt:                                                \
   case ParsedAttr::AT_ArmStreaming:                                            \
   case ParsedAttr::AT_ArmStreamingCompatible:                                  \
   case ParsedAttr::AT_ArmPreserves:                                            \
@@ -7942,14 +7942,14 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     return true;
   }
 
-  if (attr.getKind() == ParsedAttr::AT_KCFISalt) {
+  if (attr.getKind() == ParsedAttr::AT_CFISalt) {
     StringRef Argument;
     if (!S.checkStringLiteralArgumentAttr(attr, 0, Argument))
       return false;
 
     const auto *FnTy = unwrapped.get()->getAs<FunctionProtoType>();
     FunctionProtoType::ExtProtoInfo EPI = FnTy->getExtProtoInfo();
-    EPI.ExtraAttributeInfo.KCFISalt = Argument;
+    EPI.ExtraAttributeInfo.CFISalt = Argument;
 
     QualType newtype = S.Context.getFunctionType(FnTy->getReturnType(),
                                                  FnTy->getParamTypes(), EPI);

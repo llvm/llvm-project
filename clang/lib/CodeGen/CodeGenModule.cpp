@@ -3019,7 +3019,7 @@ void CodeGenModule::setKCFIType(const FunctionDecl *FD, llvm::Function *F) {
 
   if (const auto *FP = FD->getType()->getAs<FunctionProtoType>())
     if (const auto &Info = FP->getExtraAttributeInfo())
-      Salt = Info.KCFISalt;
+      Salt = Info.CFISalt;
 
   F->setMetadata(llvm::LLVMContext::MD_kcfi_type,
                  llvm::MDNode::get(Ctx, MDB.createConstant(CreateKCFITypeId(

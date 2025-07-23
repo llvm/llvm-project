@@ -2912,7 +2912,7 @@ void CodeGenFunction::EmitKCFIOperandBundle(
 
   StringRef Salt;
   if (const auto &Info = FP->getExtraAttributeInfo())
-    Salt = Info.KCFISalt;
+    Salt = Info.CFISalt;
 
   Bundles.emplace_back("kcfi", CGM.CreateKCFITypeId(FP->desugar(), Salt));
 }

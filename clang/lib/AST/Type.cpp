@@ -3680,7 +3680,7 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
   // Propagate any extra attribute information.
   if (epi.requiresFunctionProtoTypeExtraAttributeInfo()) {
     auto &ExtraAttrInfo = *getTrailingObjects<FunctionTypeExtraAttributeInfo>();
-    ExtraAttrInfo.KCFISalt = epi.ExtraAttributeInfo.KCFISalt;
+    ExtraAttrInfo.CFISalt = epi.ExtraAttributeInfo.CFISalt;
 
     // Also set the bit in FunctionTypeExtraBitfields.
     auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
