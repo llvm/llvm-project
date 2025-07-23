@@ -434,4 +434,6 @@ void gh149965(void) {
   // type rather than an integer type.
   enum E1 *eptr;
   [[maybe_unused]] __typeof__(x1.h) *ptr = eptr;
+  enum E2 *eptr2;
+  [[maybe_unused]] __typeof__(x2.h) *ptr2 = eptr2;
 }
