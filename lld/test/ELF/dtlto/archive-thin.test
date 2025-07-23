@@ -63,4 +63,3 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @t1() {
   ret void
 }
-
