@@ -367,6 +367,15 @@ LogicalResult PrefetchNdOp::verify() {
   if (!isReadHintOrNone(getL3HintAttr()))
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
+  int64_t tDescRank = tdescTy.getRank();
+  int64_t offsetSize = static_cast<int64_t>(getOffsets().size());
+  int64_t constOffsetSize =
+      getConstOffsetsAttr() ? getConstOffsetsAttr().size() : 0;
+  if (((offsetSize != 0) && (offsetSize != tDescRank)) ||
+      ((constOffsetSize != 0) && (constOffsetSize != tDescRank)))
+    return emitOpError(
+        "Mismatched ranks between offsets and tensor descriptor");
+
   return success();
 }
 
@@ -467,6 +476,15 @@ LogicalResult LoadNdOp::verify() {
                          << " is not consistent with tensor descriptor "
                          << tdescTy;
 
+  int64_t tDescRank = tdescTy.getRank();
+  int64_t offsetSize = static_cast<int64_t>(getOffsets().size());
+  int64_t constOffsetSize =
+      getConstOffsetsAttr() ? getConstOffsetsAttr().size() : 0;
+  if (((offsetSize != 0) && (offsetSize != tDescRank)) ||
+      ((constOffsetSize != 0) && (constOffsetSize != tDescRank)))
+    return emitOpError(
+        "Mismatched ranks between offsets and tensor descriptor");
+
   return success();
 }
 
@@ -536,6 +554,15 @@ LogicalResult StoreNdOp::verify() {
     return emitOpError() << "Value shape " << makeString(valueShape)
                          << " is not consistent with tensor descriptor "
                          << dstTy;
+
+  int64_t tDescRank = dstTy.getRank();
+  int64_t offsetSize = static_cast<int64_t>(getOffsets().size());
+  int64_t constOffsetSize =
+      getConstOffsetsAttr() ? getConstOffsetsAttr().size() : 0;
+  if (((offsetSize != 0) && (offsetSize != tDescRank)) ||
+      ((constOffsetSize != 0) && (constOffsetSize != tDescRank)))
+    return emitOpError(
+        "Mismatched ranks between offsets and tensor descriptor");
 
   return success();
 }
