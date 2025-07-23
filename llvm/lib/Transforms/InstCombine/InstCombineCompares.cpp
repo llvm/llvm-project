@@ -712,7 +712,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
   };
 
   CommonPointerBase Base = CommonPointerBase::compute(GEPLHS, RHS);
-  if (Base.Ptr == RHS && CanFold(Base.LHSNW)) {
+  if (Base.Ptr == RHS && CanFold(Base.LHSNW) && !Base.isExpensive()) {
     // ((gep Ptr, OFFSET) cmp Ptr)   ---> (OFFSET cmp 0).
     Type *IdxTy = DL.getIndexType(GEPLHS->getType());
     Value *Offset =
