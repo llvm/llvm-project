@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -Winteger-overflow -Wno-unused-value -foverflow-behavior-types -Wimplicitly-discarded-overflow-behavior -verify -fsyntax-only
+// RUN: %clang_cc1 %s -Winteger-overflow -Wno-unused-value -foverflow-behavior-types -Woverflow-behavior-conversion -verify -fsyntax-only
 
 typedef int __attribute__((overflow_behavior)) bad_arg_count; // expected-error {{'overflow_behavior' attribute takes one argument}}
 typedef int __attribute__((overflow_behavior(not_real))) bad_arg_spec; // expected-error {{'not_real' is not a valid argument to attribute 'overflow_behavior'}}
@@ -34,7 +34,7 @@ void imp_disc_test(unsigned __attribute__((overflow_behavior(wrap))) a) {
   imp_disc(a); // expected-warning {{implicit conversion from '__wrap unsigned int' to 'int' discards overflow behavior}}
 }
 
-// -Wimplicitly-discarded-overflow-behavior-assignment
+// -Wconversion for assignments that discard overflow behavior
 void assignment_disc_test(unsigned __attribute__((overflow_behavior(wrap))) a) {
   int b = a; // expected-warning {{implicit conversion from '__wrap unsigned int' to 'int' during assignment discards overflow behavior}}
   int c = (int)a; // OK
