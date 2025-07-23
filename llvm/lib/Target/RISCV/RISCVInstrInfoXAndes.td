@@ -448,11 +448,10 @@ class NDSRVInstVLN<bits<5> funct5, string opcodestr>
 }
 
 class VPseudoVLN8NoMask<VReg RetClass, bit U> :
-      Pseudo<(outs RetClass:$rd),
-             (ins RetClass:$dest,
-                  GPRMemZeroOffset:$rs1,
-                  AVL:$vl, sew:$sew, vec_policy:$policy), []>,
-      RISCVVPseudo,
+      RISCVVPseudo<(outs RetClass:$rd),
+                   (ins RetClass:$dest,
+                        GPRMemZeroOffset:$rs1,
+                        AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVNDSVLN</*Masked*/0, /*Unsigned*/U, !logtwo(8), VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -464,11 +463,11 @@ class VPseudoVLN8NoMask<VReg RetClass, bit U> :
 }
 
 class VPseudoVLN8Mask<VReg RetClass, bit U> :
-      Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-             (ins GetVRegNoV0<RetClass>.R:$passthru,
-                  GPRMemZeroOffset:$rs1,
-                  VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy), []>,
-      RISCVVPseudo,
+      RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
+                   (ins GetVRegNoV0<RetClass>.R:$passthru,
+                        GPRMemZeroOffset:$rs1,
+                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
+                   []>,
       RISCVNDSVLN</*Masked*/1, /*Unsigned*/U, !logtwo(8), VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -766,6 +765,13 @@ def : Sh1AddPat<NDS_LEA_H_ZE>;
 def : Sh2AddPat<NDS_LEA_W_ZE>;
 def : Sh3AddPat<NDS_LEA_D_ZE>;
 } // Predicates = [HasVendorXAndesPerf, IsRV64]
+
+let Predicates = [HasVendorXAndesBFHCvt] in {
+def : Pat<(fpextend (bf16 FPR16:$rs)),
+          (NDS_FCVT_S_BF16 (bf16 FPR16:$rs))>;
+def : Pat<(bf16 (fpround FPR32:$rs)),
+          (NDS_FCVT_BF16_S FPR32:$rs)>;
+} // Predicates = [HasVendorXAndesBFHCvt]
 
 let Predicates = [HasVendorXAndesVBFHCvt] in {
 defm PseudoNDS_VFWCVT_S_BF16 : VPseudoVWCVT_S_BF16;

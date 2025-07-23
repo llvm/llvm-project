@@ -68,7 +68,7 @@ unsigned SparcELFObjectWriter::getRelocType(const MCFixup &Fixup,
 
   // Extract the relocation type from the fixup kind, after applying STT_TLS as
   // needed.
-  unsigned Kind = Fixup.getTargetKind();
+  auto Kind = Fixup.getKind();
   if (mc::isRelocation(Fixup.getKind()))
     return Kind;
 
