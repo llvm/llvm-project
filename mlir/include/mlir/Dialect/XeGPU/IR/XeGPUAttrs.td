@@ -396,24 +396,15 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
     std::optional<llvm::SmallVector<int32_t>> getEffectiveSgLayout() const {
       if (DenseI32ArrayAttr layout = getParent().getSgLayout()) {
         llvm::ArrayRef<int64_t> dims = getDims().asArrayRef();
-        llvm::SmallVector<int32_t> result;
-        for (auto [i, v]: llvm::enumerate(layout.asArrayRef())) {
-          if (!llvm::is_contained(dims, i))
-            result.push_back(v);
-        }
-        return result;
+        return XeGPUDialect::dropDims(layout.asArrayRef(), dims);
       }
       return std::nullopt;
     }
+
     std::optional<llvm::SmallVector<int32_t>> getEffectiveSgData() const {
       if (DenseI32ArrayAttr data = getParent().getSgData()) {
         llvm::ArrayRef<int64_t> dims = getDims().asArrayRef();
-        llvm::SmallVector<int32_t> result;
-        for (auto [i, v]: llvm::enumerate(data.asArrayRef())) {
-          if (!llvm::is_contained(dims, i))
-            result.push_back(v);
-        }
-        return result;
+        return XeGPUDialect::dropDims(data.asArrayRef(), dims);
       }
       return std::nullopt;
     }
