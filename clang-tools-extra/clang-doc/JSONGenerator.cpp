@@ -45,7 +45,7 @@ static auto SerializeReferenceLambda = [](const auto &Ref, Object &Object) {
 
 static json::Object
 serializeLocation(const Location &Loc,
-                  const std::optional<StringRef> &RepositoryUrl) {
+                  const std::optional<StringRef> RepositoryUrl) {
   Object LocationObj = Object();
   LocationObj["LineNumber"] = Loc.StartLineNumber;
   LocationObj["Filename"] = Loc.Filename;
@@ -169,7 +169,7 @@ static json::Value serializeComment(const CommentInfo &I) {
 
 static void
 serializeCommonAttributes(const Info &I, json::Object &Obj,
-                          const std::optional<StringRef> &RepositoryUrl) {
+                          const std::optional<StringRef> RepositoryUrl) {
   Obj["Name"] = I.Name;
   Obj["USR"] = toHex(toStringRef(I.USR));
 
@@ -211,9 +211,9 @@ static void serializeReference(const Reference &Ref, Object &ReferenceObj) {
 // differently. Only enums, records, and typedefs are handled here.
 static void
 serializeCommonChildren(const ScopeChildren &Children, json::Object &Obj,
-                        const std::optional<StringRef> &RepositoryUrl) {
-  static auto SerializeInfo = [&RepositoryUrl](const auto &Info,
-                                               Object &Object) {
+                        const std::optional<StringRef> RepositoryUrl) {
+  static auto SerializeInfo = [RepositoryUrl](const auto &Info,
+                                              Object &Object) {
     serializeInfo(Info, Object, RepositoryUrl);
   };
 
@@ -304,7 +304,7 @@ static void serializeInfo(const FieldTypeInfo &I, Object &Obj) {
 }
 
 static void serializeInfo(const FunctionInfo &F, json::Object &Obj,
-                          const std::optional<StringRef> &RepositoryURL) {
+                          const std::optional<StringRef> RepositoryURL) {
   serializeCommonAttributes(F, Obj, RepositoryURL);
   Obj["IsStatic"] = F.IsStatic;
 
@@ -386,6 +386,7 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
   Obj["FullName"] = I.FullName;
   Obj["TagType"] = getTagType(I.TagType);
   Obj["IsTypedef"] = I.IsTypeDef;
+  Obj["MangledName"] = I.MangledName;
 
   if (!I.Children.Functions.empty()) {
     json::Value PubFunctionsArray = Array();
@@ -458,7 +459,7 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
 }
 
 static void serializeInfo(const VarInfo &I, json::Object &Obj,
-                          const std::optional<StringRef> &RepositoryUrl) {
+                          const std::optional<StringRef> RepositoryUrl) {
   serializeCommonAttributes(I, Obj, RepositoryUrl);
   Obj["IsStatic"] = I.IsStatic;
   auto TypeObj = Object();
@@ -467,15 +468,15 @@ static void serializeInfo(const VarInfo &I, json::Object &Obj,
 }
 
 static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
-                          const std::optional<StringRef> &RepositoryUrl) {
+                          const std::optional<StringRef> RepositoryUrl) {
   serializeCommonAttributes(I, Obj, RepositoryUrl);
 
   if (!I.Children.Namespaces.empty())
     serializeArray(I.Children.Namespaces, Obj, "Namespaces",
                    SerializeReferenceLambda);
 
-  static auto SerializeInfo = [&RepositoryUrl](const auto &Info,
-                                               Object &Object) {
+  static auto SerializeInfo = [RepositoryUrl](const auto &Info,
+                                              Object &Object) {
     serializeInfo(Info, Object, RepositoryUrl);
   };
 
@@ -491,6 +492,23 @@ static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
   serializeCommonChildren(I.Children, Obj, RepositoryUrl);
 }
 
+static SmallString<16> determineFileName(Info *I, SmallString<128> &Path) {
+  SmallString<16> FileName;
+  if (I->IT == InfoType::IT_record) {
+    auto *RecordSymbolInfo = static_cast<SymbolInfo *>(I);
+    if (RecordSymbolInfo->MangledName.size() < 255)
+      FileName = RecordSymbolInfo->MangledName;
+    else
+      FileName = toStringRef(toHex(RecordSymbolInfo->USR));
+  } else if (I->IT == InfoType::IT_namespace && I->Name != "")
+    // Serialize the global namespace as index.json
+    FileName = I->Name;
+  else
+    FileName = I->getFileBaseName();
+  sys::path::append(Path, FileName + ".json");
+  return FileName;
+}
+
 Error JSONGenerator::generateDocs(
     StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
     const ClangDocContext &CDCtx) {
@@ -501,7 +519,6 @@ Error JSONGenerator::generateDocs(
 
     SmallString<128> Path;
     sys::path::native(RootDir, Path);
-    sys::path::append(Path, Info->getRelativeFilePath(""));
     if (!CreatedDirs.contains(Path)) {
       if (std::error_code Err = sys::fs::create_directories(Path);
           Err != std::error_code())
@@ -509,7 +526,7 @@ Error JSONGenerator::generateDocs(
       CreatedDirs.insert(Path);
     }
 
-    sys::path::append(Path, Info->getFileBaseName() + ".json");
+    SmallString<16> FileName = determineFileName(Info, Path);
     FileToInfos[Path].push_back(Info);
   }
 

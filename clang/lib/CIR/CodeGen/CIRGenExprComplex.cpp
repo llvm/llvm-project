@@ -52,11 +52,88 @@ public:
   mlir::Value VisitGenericSelectionExpr(GenericSelectionExpr *e);
   mlir::Value VisitImplicitCastExpr(ImplicitCastExpr *e);
   mlir::Value VisitInitListExpr(const InitListExpr *e);
+
+  mlir::Value VisitCompoundLiteralExpr(CompoundLiteralExpr *e) {
+    return emitLoadOfLValue(e);
+  }
+
   mlir::Value VisitImaginaryLiteral(const ImaginaryLiteral *il);
   mlir::Value VisitParenExpr(ParenExpr *e);
   mlir::Value
   VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *e);
+
+  mlir::Value VisitPrePostIncDec(const UnaryOperator *e, cir::UnaryOpKind op,
+                                 bool isPre);
+
+  mlir::Value VisitUnaryPostDec(const UnaryOperator *e) {
+    return VisitPrePostIncDec(e, cir::UnaryOpKind::Dec, false);
+  }
+
+  mlir::Value VisitUnaryPostInc(const UnaryOperator *e) {
+    return VisitPrePostIncDec(e, cir::UnaryOpKind::Inc, false);
+  }
+
+  mlir::Value VisitUnaryPreDec(const UnaryOperator *e) {
+    return VisitPrePostIncDec(e, cir::UnaryOpKind::Dec, true);
+  }
+
+  mlir::Value VisitUnaryPreInc(const UnaryOperator *e) {
+    return VisitPrePostIncDec(e, cir::UnaryOpKind::Inc, true);
+  }
+
   mlir::Value VisitUnaryDeref(const Expr *e);
+  mlir::Value VisitUnaryNot(const UnaryOperator *e);
+
+  struct BinOpInfo {
+    mlir::Location loc;
+    mlir::Value lhs{};
+    mlir::Value rhs{};
+    QualType ty{}; // Computation Type.
+    FPOptions fpFeatures{};
+  };
+
+  BinOpInfo emitBinOps(const BinaryOperator *e,
+                       QualType promotionTy = QualType());
+
+  mlir::Value emitPromoted(const Expr *e, QualType promotionTy);
+
+  mlir::Value emitPromotedComplexOperand(const Expr *e, QualType promotionTy);
+
+  mlir::Value emitBinAdd(const BinOpInfo &op);
+  mlir::Value emitBinSub(const BinOpInfo &op);
+
+  QualType getPromotionType(QualType ty, bool isDivOpCode = false) {
+    if (auto *complexTy = ty->getAs<ComplexType>()) {
+      QualType elementTy = complexTy->getElementType();
+      if (isDivOpCode && elementTy->isFloatingType() &&
+          cgf.getLangOpts().getComplexRange() ==
+              LangOptions::ComplexRangeKind::CX_Promoted) {
+        cgf.cgm.errorNYI("HigherPrecisionTypeForComplexArithmetic");
+        return QualType();
+      }
+
+      if (elementTy.UseExcessPrecision(cgf.getContext()))
+        return cgf.getContext().getComplexType(cgf.getContext().FloatTy);
+    }
+
+    if (ty.UseExcessPrecision(cgf.getContext()))
+      return cgf.getContext().FloatTy;
+    return QualType();
+  }
+
+#define HANDLEBINOP(OP)                                                        \
+  mlir::Value VisitBin##OP(const BinaryOperator *e) {                          \
+    QualType promotionTy = getPromotionType(                                   \
+        e->getType(), e->getOpcode() == BinaryOperatorKind::BO_Div);           \
+    mlir::Value result = emitBin##OP(emitBinOps(e, promotionTy));              \
+    if (!promotionTy.isNull())                                                 \
+      cgf.cgm.errorNYI("Binop emitUnPromotedValue");                           \
+    return result;                                                             \
+  }
+
+  HANDLEBINOP(Add)
+  HANDLEBINOP(Sub)
+#undef HANDLEBINOP
 };
 } // namespace
 
@@ -179,8 +256,7 @@ mlir::Value ComplexExprEmitter::VisitBinComma(const BinaryOperator *e) {
 mlir::Value ComplexExprEmitter::VisitCallExpr(const CallExpr *e) {
   if (e->getCallReturnType(cgf.getContext())->isReferenceType())
     return emitLoadOfLValue(e);
-
-  return cgf.emitCallExpr(e).getValue();
+  return cgf.emitCallExpr(e).getComplexValue();
 }
 
 mlir::Value ComplexExprEmitter::VisitCastExpr(CastExpr *e) {
@@ -242,12 +318,8 @@ mlir::Value ComplexExprEmitter::VisitInitListExpr(const InitListExpr *e) {
   }
 
   assert(e->getNumInits() == 0 && "Unexpected number of inits");
-  QualType complexElemTy =
-      e->getType()->castAs<clang::ComplexType>()->getElementType();
-  mlir::Type complexElemLLVMTy = cgf.convertType(complexElemTy);
-  mlir::TypedAttr defaultValue = builder.getZeroInitAttr(complexElemLLVMTy);
-  auto complexAttr = cir::ConstComplexAttr::get(defaultValue, defaultValue);
-  return builder.create<cir::ConstantOp>(loc, complexAttr);
+  mlir::Type complexTy = cgf.convertType(e->getType());
+  return builder.getNullValue(complexTy, loc);
 }
 
 mlir::Value
@@ -287,8 +359,81 @@ mlir::Value ComplexExprEmitter::VisitSubstNonTypeTemplateParmExpr(
   return Visit(e->getReplacement());
 }
 
+mlir::Value ComplexExprEmitter::VisitPrePostIncDec(const UnaryOperator *e,
+                                                   cir::UnaryOpKind op,
+                                                   bool isPre) {
+  LValue lv = cgf.emitLValue(e->getSubExpr());
+  return cgf.emitComplexPrePostIncDec(e, lv, op, isPre);
+}
+
 mlir::Value ComplexExprEmitter::VisitUnaryDeref(const Expr *e) {
   return emitLoadOfLValue(e);
+}
+
+mlir::Value ComplexExprEmitter::VisitUnaryNot(const UnaryOperator *e) {
+  mlir::Value op = Visit(e->getSubExpr());
+  return builder.createNot(op);
+}
+
+mlir::Value ComplexExprEmitter::emitPromoted(const Expr *e,
+                                             QualType promotionTy) {
+  e = e->IgnoreParens();
+  if (const auto *bo = dyn_cast<BinaryOperator>(e)) {
+    switch (bo->getOpcode()) {
+#define HANDLE_BINOP(OP)                                                       \
+  case BO_##OP:                                                                \
+    return emitBin##OP(emitBinOps(bo, promotionTy));
+      HANDLE_BINOP(Add)
+      HANDLE_BINOP(Sub)
+#undef HANDLE_BINOP
+    default:
+      break;
+    }
+  } else if (isa<UnaryOperator>(e)) {
+    cgf.cgm.errorNYI("emitPromoted UnaryOperator");
+    return {};
+  }
+
+  mlir::Value result = Visit(const_cast<Expr *>(e));
+  if (!promotionTy.isNull())
+    cgf.cgm.errorNYI("emitPromoted emitPromotedValue");
+
+  return result;
+}
+
+mlir::Value
+ComplexExprEmitter::emitPromotedComplexOperand(const Expr *e,
+                                               QualType promotionTy) {
+  if (e->getType()->isAnyComplexType()) {
+    if (!promotionTy.isNull())
+      return cgf.emitPromotedComplexExpr(e, promotionTy);
+    return Visit(const_cast<Expr *>(e));
+  }
+
+  cgf.cgm.errorNYI("emitPromotedComplexOperand non-complex type");
+  return {};
+}
+
+ComplexExprEmitter::BinOpInfo
+ComplexExprEmitter::emitBinOps(const BinaryOperator *e, QualType promotionTy) {
+  BinOpInfo binOpInfo{cgf.getLoc(e->getExprLoc())};
+  binOpInfo.lhs = emitPromotedComplexOperand(e->getLHS(), promotionTy);
+  binOpInfo.rhs = emitPromotedComplexOperand(e->getRHS(), promotionTy);
+  binOpInfo.ty = promotionTy.isNull() ? e->getType() : promotionTy;
+  binOpInfo.fpFeatures = e->getFPFeaturesInEffect(cgf.getLangOpts());
+  return binOpInfo;
+}
+
+mlir::Value ComplexExprEmitter::emitBinAdd(const BinOpInfo &op) {
+  assert(!cir::MissingFeatures::fastMathFlags());
+  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+  return builder.create<cir::ComplexAddOp>(op.loc, op.lhs, op.rhs);
+}
+
+mlir::Value ComplexExprEmitter::emitBinSub(const BinOpInfo &op) {
+  assert(!cir::MissingFeatures::fastMathFlags());
+  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+  return builder.create<cir::ComplexSubOp>(op.loc, op.lhs, op.rhs);
 }
 
 LValue CIRGenFunction::emitComplexAssignmentLValue(const BinaryOperator *e) {
@@ -309,7 +454,47 @@ mlir::Value CIRGenFunction::emitComplexExpr(const Expr *e) {
   return ComplexExprEmitter(*this).Visit(const_cast<Expr *>(e));
 }
 
+mlir::Value CIRGenFunction::emitComplexPrePostIncDec(const UnaryOperator *e,
+                                                     LValue lv,
+                                                     cir::UnaryOpKind op,
+                                                     bool isPre) {
+  assert(op == cir::UnaryOpKind::Inc ||
+         op == cir::UnaryOpKind::Dec && "Invalid UnaryOp kind for ComplexType");
+
+  mlir::Value inVal = emitLoadOfComplex(lv, e->getExprLoc());
+  mlir::Location loc = getLoc(e->getExprLoc());
+  mlir::Value incVal = builder.createUnaryOp(loc, op, inVal);
+
+  // Store the updated result through the lvalue.
+  emitStoreOfComplex(loc, incVal, lv, /*isInit=*/false);
+
+  if (getLangOpts().OpenMP)
+    cgm.errorNYI(loc, "emitComplexPrePostIncDec OpenMP");
+
+  // If this is a postinc, return the value read from memory, otherwise use the
+  // updated value.
+  return isPre ? incVal : inVal;
+}
+
+void CIRGenFunction::emitComplexExprIntoLValue(const Expr *e, LValue dest,
+                                               bool isInit) {
+  assert(e && getComplexType(e->getType()) &&
+         "Invalid complex expression to emit");
+  ComplexExprEmitter emitter(*this);
+  mlir::Value value = emitter.Visit(const_cast<Expr *>(e));
+  emitter.emitStoreOfComplex(getLoc(e->getExprLoc()), value, dest, isInit);
+}
+
+mlir::Value CIRGenFunction::emitLoadOfComplex(LValue src, SourceLocation loc) {
+  return ComplexExprEmitter(*this).emitLoadOfLValue(src, loc);
+}
+
 void CIRGenFunction::emitStoreOfComplex(mlir::Location loc, mlir::Value v,
                                         LValue dest, bool isInit) {
   ComplexExprEmitter(*this).emitStoreOfComplex(loc, v, dest, isInit);
+}
+
+mlir::Value CIRGenFunction::emitPromotedComplexExpr(const Expr *e,
+                                                    QualType promotionType) {
+  return ComplexExprEmitter(*this).emitPromoted(e, promotionType);
 }

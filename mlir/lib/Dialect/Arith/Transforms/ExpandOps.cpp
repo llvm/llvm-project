@@ -14,8 +14,6 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/SmallVectorExtras.h"
-#include <cstdint>
 
 namespace mlir {
 namespace arith {
@@ -520,10 +518,10 @@ struct F4E2M1TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
     Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
 
-    if (!isa<Float32Type>(operandETy))
-      operand = b.create<arith::ExtFOp>(f32Ty, operand);
     if (!isa<Float4E2M1FNType>(resultETy))
       return rewriter.notifyMatchFailure(op, "not a trunc of F4E2M1FN");
+    if (!isa<Float32Type>(operandETy))
+      operand = b.create<arith::ExtFOp>(f32Ty, operand);
 
     Value c0x1 = createConst(loc, i4Ty, 1, rewriter);
     Value c0x3 = createConst(loc, i4Ty, 3, rewriter);
@@ -659,6 +657,7 @@ struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
       scaleOperand = b.create<arith::TruncFOp>(scaleTy, scaleOperand, nullptr,
                                                op.getFastmathAttr());
     }
+    // Catch scale types like f8E5M2.
     if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
       return rewriter.notifyMatchFailure(
           op, "scaling_extf is using scales of type which can not be converted "
@@ -779,7 +778,7 @@ struct ArithExpandOpsPass
         if (includeBf16)
           legalTypes &= !(inETy.isF32() && outETy.isBF16());
         if (includeF8E8M0)
-          legalTypes &= !(llvm::isa<Float8E8M0FNUType>(outETy)); 
+          legalTypes &= !(llvm::isa<Float8E8M0FNUType>(outETy));
         if (includeF4E2M1)
           legalTypes &= !llvm::isa<Float4E2M1FNType>(outETy);
         return legalTypes;
@@ -834,7 +833,7 @@ void mlir::arith::populateArithExpandOpsPatterns(RewritePatternSet &patterns) {
     MaximumMinimumFOpConverter<MaximumFOp, arith::CmpFPredicate::UGT>,
     MaximumMinimumFOpConverter<MinimumFOp, arith::CmpFPredicate::ULT>,
     MaxNumMinNumFOpConverter<MaxNumFOp, arith::CmpFPredicate::UGT>,
-    MaxNumMinNumFOpConverter<MinNumFOp, arith::CmpFPredicate::ULT> 
+    MaxNumMinNumFOpConverter<MinNumFOp, arith::CmpFPredicate::ULT>
    >(patterns.getContext());
   // clang-format on
 }

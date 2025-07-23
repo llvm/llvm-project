@@ -56,7 +56,7 @@ unsigned VEELFObjectWriter::getRelocType(const MCFixup &Fixup,
   }
 
   if (IsPCRel) {
-    switch (Fixup.getTargetKind()) {
+    switch (Fixup.getKind()) {
     default:
       reportError(Fixup.getLoc(), "Unsupported pc-relative fixup kind");
       return ELF::R_VE_NONE;
@@ -84,7 +84,7 @@ unsigned VEELFObjectWriter::getRelocType(const MCFixup &Fixup,
     }
   }
 
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     reportError(Fixup.getLoc(), "Unknown ELF relocation type");
     return ELF::R_VE_NONE;
