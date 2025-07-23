@@ -1,3 +1,17 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the definition of the IndexedRange class, which provides
+/// an indexable view over a contiguous range of numeric values.
+///
+//===----------------------------------------------------------------------===//
+
 #ifndef MATHTEST_INDEXEDRANGE_HPP
 #define MATHTEST_INDEXEDRANGE_HPP
 
@@ -51,9 +65,9 @@ private:
   using StorageType = StorageTypeOf_t<T>;
 
   // Linearise T values into an ordered unsigned space:
-  //  * The mapping is monotonic: a >= b if, and only if, map(a) >= map(b)
+  //  * The mapping is monotonic: a >= b if, and only if, map(a) >= map(b).
   //  * The difference |map(a) − map(b)| equals the number of representable
-  //    values between a and b within the same type
+  //    values between a and b within the same type.
   static constexpr StorageType mapToOrderedUnsigned(T Value) {
     if constexpr (IsFloatingPoint_v<T>) {
       constexpr StorageType SignMask = FPBits<T>::SIGN_MASK;

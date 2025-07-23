@@ -1,10 +1,22 @@
-#include "mathtest/TypeExtras.hpp"
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the conformance test of the hypotf16 function.
+///
+//===----------------------------------------------------------------------===//
 
 #include "mathtest/DeviceContext.hpp"
 #include "mathtest/ExhaustiveGenerator.hpp"
 #include "mathtest/GpuMathTest.hpp"
 #include "mathtest/IndexedRange.hpp"
 #include "mathtest/TestRunner.hpp"
+#include "mathtest/TypeExtras.hpp"
 
 #include "llvm/ADT/StringRef.h"
 

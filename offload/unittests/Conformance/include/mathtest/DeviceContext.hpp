@@ -1,3 +1,20 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the definition of the DeviceContext class, which serves
+/// as the high-level interface to a particular device (GPU).
+///
+/// This class provides methods for allocating buffers, loading binaries, and
+/// getting and launching kernels on the device.
+///
+//===----------------------------------------------------------------------===//
+
 #ifndef MATHTEST_DEVICECONTEXT_HPP
 #define MATHTEST_DEVICECONTEXT_HPP
 
