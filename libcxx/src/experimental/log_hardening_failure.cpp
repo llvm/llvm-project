@@ -20,8 +20,6 @@ extern "C" void android_set_abort_message(const char* msg);
 #  include <os/reason_private.h>
 #endif
 
-#if _LIBCPP_HAS_EXPERIMENTAL_HARDENING_OBSERVE_SEMANTIC
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 void __log_hardening_failure(const char* message) noexcept {
@@ -50,5 +48,3 @@ void __log_hardening_failure(const char* message) noexcept {
 }
 
 _LIBCPP_END_NAMESPACE_STD
-
-#endif // _LIBCPP_HAS_EXPERIMENTAL_HARDENING_OBSERVE_SEMANTIC
