@@ -23488,8 +23488,8 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, X86::CondCode X86CC,
     Op1 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op1);
   }
 
-  // Try to shrink signed i64 compares if the input has enough one bits.
-  // Or the input is sign extended from a 32-bit value.
+  // Try to shrink signed i64 compares if the inputs are representable as signed
+  // i32.
   if (CmpVT == MVT::i64 && isX86CCSigned(X86CC) &&
       Op0.hasOneUse() && // Hacky way to not break CSE opportunities with sub.
       DAG.ComputeNumSignBits(Op1) > 32 && DAG.ComputeNumSignBits(Op0) > 32) {
