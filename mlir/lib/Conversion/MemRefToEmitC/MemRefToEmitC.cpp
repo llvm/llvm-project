@@ -128,20 +128,34 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
     mlir::Value totalSizeBytes = rewriter.create<emitc::MulOp>(
         loc, sizeTType, sizeofElement, numElements);
 
-    int64_t alignment = alignedAllocationGetAlignment(allocOp, elementWidth);
-    mlir::Value alignmentValue = rewriter.create<emitc::ConstantOp>(
-        loc, sizeTType,
-        rewriter.getIntegerAttr(rewriter.getIndexType(), alignment));
+    emitc::CallOpaqueOp allocCall;
+    StringAttr allocFunctionName = allocOp.getAlignment()
+                                       ? rewriter.getStringAttr("aligned_alloc")
+                                       : rewriter.getStringAttr("malloc");
+    mlir::Value alignmentValue;
+    if (allocOp.getAlignment()) {
+      alignmentValue = rewriter.create<emitc::ConstantOp>(
+          loc, sizeTType,
+          rewriter.getIntegerAttr(
+              rewriter.getIndexType(),
+              alignedAllocationGetAlignment(allocOp, elementWidth)));
+    }
 
-    emitc::CallOpaqueOp alignedAllocCall = rewriter.create<emitc::CallOpaqueOp>(
+    SmallVector<mlir::Value, 2> argsVec;
+    if (allocOp.getAlignment())
+      argsVec.push_back(alignmentValue);
+    argsVec.push_back(totalSizeBytes);
+    mlir::ValueRange args(argsVec);
+
+    allocCall = rewriter.create<emitc::CallOpaqueOp>(
         loc,
         emitc::PointerType::get(
             mlir::emitc::OpaqueType::get(rewriter.getContext(), "void")),
-        rewriter.getStringAttr("aligned_alloc"),
-        mlir::ValueRange{alignmentValue, totalSizeBytes});
+        allocFunctionName, args);
+
     emitc::PointerType targetPointerType = emitc::PointerType::get(elementType);
     emitc::CastOp castOp = rewriter.create<emitc::CastOp>(
-        loc, targetPointerType, alignedAllocCall.getResult(0));
+        loc, targetPointerType, allocCall.getResult(0));
 
     rewriter.replaceOp(allocOp, castOp);
     return success();

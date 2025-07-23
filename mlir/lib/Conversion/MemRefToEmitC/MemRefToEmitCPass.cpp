@@ -31,9 +31,7 @@ struct ConvertMemRefToEmitCPass
     : public impl::ConvertMemRefToEmitCBase<ConvertMemRefToEmitCPass> {
   using Base = impl::ConvertMemRefToEmitCBase<ConvertMemRefToEmitCPass>;
   ConvertMemRefToEmitCPass() = default;
-  ConvertMemRefToEmitCPass(ConvertMemRefToEmitCOptions options) {
-    this->lowerToCpp = options.lowerToCpp;
-  }
+  ConvertMemRefToEmitCPass(ConvertMemRefToEmitCOptions options) {}
   void runOnOperation() override {
     TypeConverter converter;
     ConvertMemRefToEmitCOptions options;
@@ -60,17 +58,20 @@ struct ConvertMemRefToEmitCPass
 
     mlir::ModuleOp module = getOperation();
     module.walk([&](mlir::emitc::CallOpaqueOp callOp) {
-      if (callOp.getCallee() != "aligned_alloc") {
+      if (callOp.getCallee() != "aligned_alloc" &&
+          callOp.getCallee() != "malloc") {
         return mlir::WalkResult::advance();
       }
 
       for (auto &op : *module.getBody()) {
-        if (auto includeOp = llvm::dyn_cast<mlir::emitc::IncludeOp>(op)) {
-          if (includeOp.getIsStandardInclude() &&
-              ((options.lowerToCpp && includeOp.getInclude() == "cstdlib") ||
-               (!options.lowerToCpp && includeOp.getInclude() == "stdlib.h"))) {
-            return mlir::WalkResult::interrupt();
-          }
+        auto includeOp = llvm::dyn_cast<mlir::emitc::IncludeOp>(op);
+        if (!includeOp) {
+          continue;
+        }
+        if (includeOp.getIsStandardInclude() &&
+            ((options.lowerToCpp && includeOp.getInclude() == "cstdlib") ||
+             (!options.lowerToCpp && includeOp.getInclude() == "stdlib.h"))) {
+          return mlir::WalkResult::interrupt();
         }
       }
 
