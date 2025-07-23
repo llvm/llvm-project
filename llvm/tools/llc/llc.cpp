@@ -69,6 +69,9 @@ static codegen::RegisterCodeGenFlags CGF;
 static cl::opt<std::string>
 InputFilename(cl::Positional, cl::desc("<input bitcode>"), cl::init("-"));
 
+static cl::list<std::string>
+    InstPrinterOptions("M", cl::desc("InstPrinter options"));
+
 static cl::opt<std::string>
 InputLanguage("x", cl::desc("Input language ('ir' or 'mir')"));
 
@@ -139,6 +142,10 @@ static cl::opt<bool>
 
 static cl::opt<bool> ShowMCEncoding("show-mc-encoding", cl::Hidden,
                                     cl::desc("Show encoding in .s output"));
+
+static cl::opt<unsigned>
+    OutputAsmVariant("output-asm-variant",
+                     cl::desc("Syntax variant to use for output printing"));
 
 static cl::opt<bool>
     DwarfDirectory("dwarf-directory", cl::Hidden,
@@ -497,7 +504,10 @@ static int compileModule(char **argv, LLVMContext &Context) {
     Options.MCOptions.ShowMCEncoding = ShowMCEncoding;
     Options.MCOptions.AsmVerbose = AsmVerbose;
     Options.MCOptions.PreserveAsmComments = PreserveComments;
+    if (OutputAsmVariant.getNumOccurrences())
+      Options.MCOptions.OutputAsmVariant = OutputAsmVariant;
     Options.MCOptions.IASSearchPaths = IncludeDirs;
+    Options.MCOptions.InstPrinterOptions = InstPrinterOptions;
     Options.MCOptions.SplitDwarfFile = SplitDwarfFile;
     if (DwarfDirectory.getPosition()) {
       Options.MCOptions.MCUseDwarfDirectory =
@@ -674,6 +684,17 @@ static int compileModule(char **argv, LLVMContext &Context) {
     MachineModuleInfoWrapperPass *MMIWP =
         new MachineModuleInfoWrapperPass(Target.get());
 
+    // Set a temporary diagnostic handler. This is used before
+    // MachineModuleInfoWrapperPass::doInitialization for features like -M.
+    bool HasMCErrors = false;
+    MCContext &MCCtx = MMIWP->getMMI().getContext();
+    MCCtx.setDiagnosticHandler([&](const SMDiagnostic &SMD, bool IsInlineAsm,
+                                   const SourceMgr &SrcMgr,
+                                   std::vector<const MDNode *> &LocInfos) {
+      WithColor::error(errs(), argv0) << SMD.getMessage() << '\n';
+      HasMCErrors = true;
+    });
+
     // Construct a custom pass pipeline that starts after instruction
     // selection.
     if (!getRunPassNames().empty()) {
@@ -708,7 +729,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
     } else if (Target->addPassesToEmitFile(
                    PM, *OS, DwoOut ? &DwoOut->os() : nullptr,
                    codegen::getFileType(), NoVerify, MMIWP)) {
-      reportError("target does not support generation of this file type");
+      if (!HasMCErrors)
+        reportError("target does not support generation of this file type");
     }
 
     const_cast<TargetLoweringObjectFile *>(Target->getObjFileLowering())
@@ -736,7 +758,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
     PM.run(*M);
 
-    if (Context.getDiagHandlerPtr()->HasErrors)
+    if (Context.getDiagHandlerPtr()->HasErrors || HasMCErrors)
       return 1;
 
     // Compare the two outputs and make sure they're the same

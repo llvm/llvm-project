@@ -127,6 +127,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  sys_ioctl_macros
+  HDRS
+    sys_ioctl_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.sys_ioctl
+    libc.include.llvm-libc-macros.sys_ioctl_macros
+)
+
+add_proxy_header_library(
   sys_stat_macros
   HDRS
     sys_stat_macros.h
@@ -212,6 +221,8 @@ add_proxy_header_library(
 
 add_header_library(wchar_overlay HDRS wchar_overlay.h)
 
+add_header_library(uchar_overlay HDRS uchar_overlay.h)
+
 add_proxy_header_library(
   wchar_macros
   HDRS
@@ -221,6 +232,15 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.wchar_macros
     libc.include.wchar
+)
+
+# offsetof is a macro inside compiler resource header stddef.h
+add_proxy_header_library(
+  offsetof_macros
+  HDRS
+    offsetof_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.offsetof_macro
 )
 
 add_subdirectory(types)

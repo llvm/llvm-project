@@ -56,6 +56,7 @@ static char getCharForLevel(DiagnosticsEngine::Level Level) {
 static IntrusiveRefCntPtr<DiagnosticsEngine>
 createDiagnostics(unsigned int argc, char **argv) {
   IntrusiveRefCntPtr<DiagnosticIDs> DiagIDs(new DiagnosticIDs());
+  DiagnosticOptions DiagOpts;
 
   // Buffer diagnostics from argument parsing so that we can output them using a
   // well formed diagnostic object.
@@ -66,8 +67,7 @@ createDiagnostics(unsigned int argc, char **argv) {
   Args.push_back("diagtool");
   Args.append(argv, argv + argc);
   CreateInvocationOptions CIOpts;
-  CIOpts.Diags =
-      new DiagnosticsEngine(DiagIDs, new DiagnosticOptions(), DiagsBuffer);
+  CIOpts.Diags = new DiagnosticsEngine(DiagIDs, DiagOpts, DiagsBuffer);
   std::unique_ptr<CompilerInvocation> Invocation =
       createInvocation(Args, CIOpts);
   if (!Invocation)
@@ -76,7 +76,7 @@ createDiagnostics(unsigned int argc, char **argv) {
   // Build the diagnostics parser
   IntrusiveRefCntPtr<DiagnosticsEngine> FinalDiags =
       CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                          &Invocation->getDiagnosticOpts());
+                                          Invocation->getDiagnosticOpts());
   if (!FinalDiags)
     return nullptr;
 

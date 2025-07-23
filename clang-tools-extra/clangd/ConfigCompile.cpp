@@ -535,7 +535,7 @@ struct FragmentCompiler {
     }
     if (Filters->empty())
       return std::nullopt;
-    auto Filter = [Filters](llvm::StringRef Path) {
+    auto Filter = [Filters = std::move(Filters)](llvm::StringRef Path) {
       for (auto &Regex : *Filters)
         if (Regex.match(Path))
           return true;
@@ -705,6 +705,17 @@ struct FragmentCompiler {
                   .value())
         Out.Apply.push_back([Val](const Params &, Config &C) {
           C.Completion.HeaderInsertion = *Val;
+        });
+    }
+
+    if (F.CodePatterns) {
+      if (auto Val = compileEnum<Config::CodePatternsPolicy>("CodePatterns",
+                                                             *F.CodePatterns)
+                         .map("All", Config::CodePatternsPolicy::All)
+                         .map("None", Config::CodePatternsPolicy::None)
+                         .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Completion.CodePatterns = *Val;
         });
     }
   }

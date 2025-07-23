@@ -25,19 +25,15 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/OneToNTypeConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
 
-#include <functional>
 #include <optional>
 
 #define DEBUG_TYPE "mlir-spirv-conversion"
@@ -673,21 +669,24 @@ static Value castToSourceType(const spirv::TargetEnv &targetEnv,
                               Location loc) {
   // We can only cast one value in SPIR-V.
   if (inputs.size() != 1) {
-    auto castOp = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    auto castOp =
+        UnrealizedConversionCastOp::create(builder, loc, type, inputs);
     return castOp.getResult(0);
   }
   Value input = inputs.front();
 
   // Only support integer types for now. Floating point types to be implemented.
   if (!isa<IntegerType>(type)) {
-    auto castOp = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    auto castOp =
+        UnrealizedConversionCastOp::create(builder, loc, type, inputs);
     return castOp.getResult(0);
   }
   auto inputType = cast<IntegerType>(input.getType());
 
   auto scalarType = dyn_cast<spirv::ScalarType>(type);
   if (!scalarType) {
-    auto castOp = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    auto castOp =
+        UnrealizedConversionCastOp::create(builder, loc, type, inputs);
     return castOp.getResult(0);
   }
 
@@ -695,14 +694,15 @@ static Value castToSourceType(const spirv::TargetEnv &targetEnv,
   // truncating to go back so we don't need to worry about the signedness.
   // For extension, we cannot have enough signal here to decide which op to use.
   if (inputType.getIntOrFloatBitWidth() < scalarType.getIntOrFloatBitWidth()) {
-    auto castOp = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    auto castOp =
+        UnrealizedConversionCastOp::create(builder, loc, type, inputs);
     return castOp.getResult(0);
   }
 
   // Boolean values would need to use different ops than normal integer values.
   if (type.isInteger(1)) {
     Value one = spirv::ConstantOp::getOne(inputType, loc, builder);
-    return builder.create<spirv::IEqualOp>(loc, input, one);
+    return spirv::IEqualOp::create(builder, loc, input, one);
   }
 
   // Check that the source integer type is supported by the environment.
@@ -712,7 +712,8 @@ static Value castToSourceType(const spirv::TargetEnv &targetEnv,
   scalarType.getCapabilities(caps);
   if (failed(checkCapabilityRequirements(type, targetEnv, caps)) ||
       failed(checkExtensionRequirements(type, targetEnv, exts))) {
-    auto castOp = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    auto castOp =
+        UnrealizedConversionCastOp::create(builder, loc, type, inputs);
     return castOp.getResult(0);
   }
 
@@ -720,9 +721,9 @@ static Value castToSourceType(const spirv::TargetEnv &targetEnv,
   // care about signedness here. Still try to use a corresponding op for better
   // consistency though.
   if (type.isSignedInteger()) {
-    return builder.create<spirv::SConvertOp>(loc, type, input);
+    return spirv::SConvertOp::create(builder, loc, type, input);
   }
-  return builder.create<spirv::UConvertOp>(loc, type, input);
+  return spirv::UConvertOp::create(builder, loc, type, input);
 }
 
 //===----------------------------------------------------------------------===//
@@ -738,7 +739,7 @@ static spirv::GlobalVariableOp getBuiltinVariable(Block &body,
             spirv::SPIRVDialect::getAttributeName(
                 spirv::Decoration::BuiltIn))) {
       auto varBuiltIn = spirv::symbolizeBuiltIn(builtinAttr.getValue());
-      if (varBuiltIn && *varBuiltIn == builtin) {
+      if (varBuiltIn == builtin) {
         return varOp;
       }
     }
@@ -774,17 +775,18 @@ getOrInsertBuiltinVariable(Block &body, Location loc, spirv::BuiltIn builtin,
                                            spirv::StorageClass::Input);
     std::string name = getBuiltinVarName(builtin, prefix, suffix);
     newVarOp =
-        builder.create<spirv::GlobalVariableOp>(loc, ptrType, name, builtin);
+        spirv::GlobalVariableOp::create(builder, loc, ptrType, name, builtin);
     break;
   }
   case spirv::BuiltIn::SubgroupId:
   case spirv::BuiltIn::NumSubgroups:
-  case spirv::BuiltIn::SubgroupSize: {
+  case spirv::BuiltIn::SubgroupSize:
+  case spirv::BuiltIn::SubgroupLocalInvocationId: {
     auto ptrType =
         spirv::PointerType::get(integerType, spirv::StorageClass::Input);
     std::string name = getBuiltinVarName(builtin, prefix, suffix);
     newVarOp =
-        builder.create<spirv::GlobalVariableOp>(loc, ptrType, name, builtin);
+        spirv::GlobalVariableOp::create(builder, loc, ptrType, name, builtin);
     break;
   }
   default:
@@ -845,8 +847,8 @@ getOrInsertPushConstantVariable(Location loc, Block &block,
   auto builder = OpBuilder::atBlockBegin(&block, b.getListener());
   auto type = getPushConstantStorageType(elementCount, builder, indexType);
   const char *name = "__push_constant_var__";
-  return builder.create<spirv::GlobalVariableOp>(loc, type, name,
-                                                 /*initializer=*/nullptr);
+  return spirv::GlobalVariableOp::create(builder, loc, type, name,
+                                         /*initializer=*/nullptr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -882,8 +884,8 @@ struct FuncOpConversion final : OpConversionPattern<func::FuncOp> {
     }
 
     // Create the converted spirv.func op.
-    auto newFuncOp = rewriter.create<spirv::FuncOp>(
-        funcOp.getLoc(), funcOp.getName(),
+    auto newFuncOp = spirv::FuncOp::create(
+        rewriter, funcOp.getLoc(), funcOp.getName(),
         rewriter.getFunctionType(signatureConverter.getConvertedTypes(),
                                  resultType ? TypeRange(resultType)
                                             : TypeRange()));
@@ -922,8 +924,8 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
     }
 
     // Create a new func op with the original type and copy the function body.
-    auto newFuncOp = rewriter.create<func::FuncOp>(funcOp.getLoc(),
-                                                   funcOp.getName(), fnType);
+    auto newFuncOp = func::FuncOp::create(rewriter, funcOp.getLoc(),
+                                          funcOp.getName(), fnType);
     rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());
 
@@ -933,7 +935,8 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(&entryBlock);
 
-    OneToNTypeMapping oneToNTypeMapping(fnType.getInputs());
+    TypeConverter::SignatureConversion oneToNTypeMapping(
+        fnType.getInputs().size());
 
     // For arguments that are of illegal types and require unrolling.
     // `unrolledInputNums` stores the indices of arguments that result from
@@ -956,8 +959,8 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
       auto origVecType = dyn_cast<VectorType>(origType);
       if (!origVecType) {
         // We need a placeholder for the old argument that will be erased later.
-        Value result = rewriter.create<arith::ConstantOp>(
-            loc, origType, rewriter.getZeroAttr(origType));
+        Value result = arith::ConstantOp::create(
+            rewriter, loc, origType, rewriter.getZeroAttr(origType));
         rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
         tmpOps.insert({result.getDefiningOp(), newInputNo});
         oneToNTypeMapping.addInputs(origInputNo, origType);
@@ -969,8 +972,8 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
       auto targetShape = getTargetShape(origVecType);
       if (!targetShape) {
         // We need a placeholder for the old argument that will be erased later.
-        Value result = rewriter.create<arith::ConstantOp>(
-            loc, origType, rewriter.getZeroAttr(origType));
+        Value result = arith::ConstantOp::create(
+            rewriter, loc, origType, rewriter.getZeroAttr(origType));
         rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
         tmpOps.insert({result.getDefiningOp(), newInputNo});
         oneToNTypeMapping.addInputs(origInputNo, origType);
@@ -984,12 +987,12 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
           llvm::to_vector_of<int64_t, 4>(origVecType.getShape());
 
       // Prepare the result vector.
-      Value result = rewriter.create<arith::ConstantOp>(
-          loc, origVecType, rewriter.getZeroAttr(origVecType));
+      Value result = arith::ConstantOp::create(
+          rewriter, loc, origVecType, rewriter.getZeroAttr(origVecType));
       ++newOpCount;
       // Prepare the placeholder for the new arguments that will be added later.
-      Value dummy = rewriter.create<arith::ConstantOp>(
-          loc, unrolledType, rewriter.getZeroAttr(unrolledType));
+      Value dummy = arith::ConstantOp::create(
+          rewriter, loc, unrolledType, rewriter.getZeroAttr(unrolledType));
       ++newOpCount;
 
       // Create the `vector.insert_strided_slice` ops.
@@ -997,8 +1000,8 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
       SmallVector<Type> newTypes;
       for (SmallVector<int64_t> offsets :
            StaticTileOffsetRange(originalShape, *targetShape)) {
-        result = rewriter.create<vector::InsertStridedSliceOp>(
-            loc, dummy, result, offsets, strides);
+        result = vector::InsertStridedSliceOp::create(rewriter, loc, dummy,
+                                                      result, offsets, strides);
         newTypes.push_back(unrolledType);
         unrolledInputNums.push_back(newInputNo);
         ++newInputNo;
@@ -1019,22 +1022,22 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
     SmallVector<Location> locs(convertedTypes.size(), newFuncOp.getLoc());
     entryBlock.addArguments(convertedTypes, locs);
 
-    // Replace the placeholder values with the new arguments. We assume there is
-    // only one block for now.
+    // Replace all uses of placeholders for initially legal arguments with their
+    // original function arguments (that were added to `newFuncOp`).
+    for (auto &[placeholderOp, argIdx] : tmpOps) {
+      if (!placeholderOp)
+        continue;
+      Value replacement = newFuncOp.getArgument(argIdx);
+      rewriter.replaceAllUsesWith(placeholderOp->getResult(0), replacement);
+    }
+
+    // Replace dummy operands of new `vector.insert_strided_slice` ops with
+    // their corresponding new function arguments. The new
+    // `vector.insert_strided_slice` ops are inserted only into the entry block,
+    // so iterating over that block is sufficient.
     size_t unrolledInputIdx = 0;
     for (auto [count, op] : enumerate(entryBlock.getOperations())) {
-      // We first look for operands that are placeholders for initially legal
-      // arguments.
       Operation &curOp = op;
-      for (auto [operandIdx, operandVal] : llvm::enumerate(op.getOperands())) {
-        Operation *operandOp = operandVal.getDefiningOp();
-        if (auto it = tmpOps.find(operandOp); it != tmpOps.end()) {
-          size_t idx = operandIdx;
-          rewriter.modifyOpInPlace(&curOp, [&curOp, &newFuncOp, it, idx] {
-            curOp.setOperand(idx, newFuncOp.getArgument(it->second));
-          });
-        }
-      }
       // Since all newly created operations are in the beginning, reaching the
       // end of them means that any later `vector.insert_strided_slice` should
       // not be touched.
@@ -1073,7 +1076,8 @@ struct ReturnOpVectorUnroll final : OpRewritePattern<func::ReturnOp> {
       return failure();
 
     FunctionType fnType = funcOp.getFunctionType();
-    OneToNTypeMapping oneToNTypeMapping(fnType.getResults());
+    TypeConverter::SignatureConversion oneToNTypeMapping(
+        fnType.getResults().size());
     Location loc = returnOp.getLoc();
 
     // For the new return op.
@@ -1110,12 +1114,12 @@ struct ReturnOpVectorUnroll final : OpRewritePattern<func::ReturnOp> {
       Value returnValue = returnOp.getOperand(origResultNo);
       for (SmallVector<int64_t> offsets :
            StaticTileOffsetRange(originalShape, *targetShape)) {
-        Value result = rewriter.create<vector::ExtractStridedSliceOp>(
-            loc, returnValue, offsets, extractShape, strides);
+        Value result = vector::ExtractStridedSliceOp::create(
+            rewriter, loc, returnValue, offsets, extractShape, strides);
         if (originalShape.size() > 1) {
           SmallVector<int64_t> extractIndices(originalShape.size() - 1, 0);
           result =
-              rewriter.create<vector::ExtractOp>(loc, result, extractIndices);
+              vector::ExtractOp::create(rewriter, loc, result, extractIndices);
         }
         newOperands.push_back(result);
         newTypes.push_back(unrolledType);
@@ -1133,7 +1137,7 @@ struct ReturnOpVectorUnroll final : OpRewritePattern<func::ReturnOp> {
     // Replace the return op using the new operands. This will automatically
     // update the entry block as well.
     rewriter.replaceOp(returnOp,
-                       rewriter.create<func::ReturnOp>(loc, newOperands));
+                       func::ReturnOp::create(rewriter, loc, newOperands));
 
     return success();
   }
@@ -1158,8 +1162,8 @@ Value mlir::spirv::getBuiltinVariableValue(Operation *op,
   spirv::GlobalVariableOp varOp =
       getOrInsertBuiltinVariable(*parent->getRegion(0).begin(), op->getLoc(),
                                  builtin, integerType, builder, prefix, suffix);
-  Value ptr = builder.create<spirv::AddressOfOp>(op->getLoc(), varOp);
-  return builder.create<spirv::LoadOp>(op->getLoc(), ptr);
+  Value ptr = spirv::AddressOfOp::create(builder, op->getLoc(), varOp);
+  return spirv::LoadOp::create(builder, op->getLoc(), ptr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1180,12 +1184,12 @@ Value spirv::getPushConstantValue(Operation *op, unsigned elementCount,
       loc, parent->getRegion(0).front(), elementCount, builder, integerType);
 
   Value zeroOp = spirv::ConstantOp::getZero(integerType, loc, builder);
-  Value offsetOp = builder.create<spirv::ConstantOp>(
-      loc, integerType, builder.getI32IntegerAttr(offset));
-  auto addrOp = builder.create<spirv::AddressOfOp>(loc, varOp);
-  auto acOp = builder.create<spirv::AccessChainOp>(
-      loc, addrOp, llvm::ArrayRef({zeroOp, offsetOp}));
-  return builder.create<spirv::LoadOp>(loc, acOp);
+  Value offsetOp = spirv::ConstantOp::create(builder, loc, integerType,
+                                             builder.getI32IntegerAttr(offset));
+  auto addrOp = spirv::AddressOfOp::create(builder, loc, varOp);
+  auto acOp = spirv::AccessChainOp::create(builder, loc, addrOp,
+                                           llvm::ArrayRef({zeroOp, offsetOp}));
+  return spirv::LoadOp::create(builder, loc, acOp);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1245,7 +1249,7 @@ Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
     linearizedIndices.push_back(
         linearizeIndex(indices, strides, offset, indexType, loc, builder));
   }
-  return builder.create<spirv::AccessChainOp>(loc, basePtr, linearizedIndices);
+  return spirv::AccessChainOp::create(builder, loc, basePtr, linearizedIndices);
 }
 
 Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
@@ -1276,11 +1280,11 @@ Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
       cast<spirv::PointerType>(basePtr.getType()).getPointeeType();
   if (isa<spirv::ArrayType>(pointeeType)) {
     linearizedIndices.push_back(linearIndex);
-    return builder.create<spirv::AccessChainOp>(loc, basePtr,
-                                                linearizedIndices);
+    return spirv::AccessChainOp::create(builder, loc, basePtr,
+                                        linearizedIndices);
   }
-  return builder.create<spirv::PtrAccessChainOp>(loc, basePtr, linearIndex,
-                                                 linearizedIndices);
+  return spirv::PtrAccessChainOp::create(builder, loc, basePtr, linearIndex,
+                                         linearizedIndices);
 }
 
 Value mlir::spirv::getElementPtr(const SPIRVTypeConverter &typeConverter,
@@ -1352,9 +1356,9 @@ LogicalResult mlir::spirv::unrollVectorsInSignatures(Operation *op) {
   // We only want to apply signature conversion once to the existing func ops.
   // Without specifying strictMode, the greedy pattern rewriter will keep
   // looking for newly created func ops.
-  GreedyRewriteConfig config;
-  config.strictMode = GreedyRewriteStrictness::ExistingOps;
-  return applyPatternsGreedily(op, std::move(patterns), config);
+  return applyPatternsGreedily(op, std::move(patterns),
+                               GreedyRewriteConfig().setStrictness(
+                                   GreedyRewriteStrictness::ExistingOps));
 }
 
 LogicalResult mlir::spirv::unrollVectorsInFuncBodies(Operation *op) {
@@ -1466,7 +1470,7 @@ SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
       });
   addTargetMaterialization([](OpBuilder &builder, Type type, ValueRange inputs,
                               Location loc) {
-    auto cast = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    auto cast = UnrealizedConversionCastOp::create(builder, loc, type, inputs);
     return cast.getResult(0);
   });
 }

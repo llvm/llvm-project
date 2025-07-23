@@ -48,6 +48,14 @@ static_assert(DivA / DivB == 2, "");
 constexpr _BitInt(4) DivC = DivA / 0; // both-error {{must be initialized by a constant expression}} \
                                       // both-note {{division by zero}}
 
+#ifdef __SIZEOF_INT128__
+constexpr __int128 isMinDiv() {
+  return __int128{0} / __int128{-1};
+}
+static_assert(isMinDiv() == 0, "");
+#endif
+
+
 constexpr _BitInt(7) RemA = 47;
 constexpr _BitInt(6) RemB = 9;
 static_assert(RemA % RemB == 2, "");
@@ -272,5 +280,19 @@ namespace IncDec {
   static_assert(dec1(false) == 1, "");
 #endif
 }
+
+#if __cplusplus >= 201402L
+const __int128_t a = ( (__int128_t)1 << 64 );
+const _BitInt(72) b = ( 1 << 72 ); // both-warning {{shift count >= width of type}}
+constexpr int shifts() { // both-error {{never produces a constant expression}}
+  (void)(2 >> a); // both-warning {{shift count >= width of type}} \
+                  // both-note {{shift count 18446744073709551616 >= width of type 'int' (32 bits)}}
+  (void)(2 >> b); // ref-warning {{shift count is negative}}
+  (void)(2 << a); // both-warning {{shift count >= width of type}}
+  (void)(2 << b); // ref-warning {{shift count is negative}}
+  return 1;
+}
+#endif
+
 
 #endif

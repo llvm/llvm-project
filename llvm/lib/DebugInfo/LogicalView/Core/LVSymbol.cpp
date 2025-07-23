@@ -182,8 +182,7 @@ void LVSymbol::getLocations(LVLocations &LocationList) const {
   if (!Locations)
     return;
 
-  for (LVLocation *Location : *Locations)
-    LocationList.push_back(Location);
+  llvm::append_range(LocationList, *Locations);
 }
 
 // Calculate coverage factor.

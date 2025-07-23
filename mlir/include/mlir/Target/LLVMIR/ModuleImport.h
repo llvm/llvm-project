@@ -48,7 +48,7 @@ class ModuleImport {
 public:
   ModuleImport(ModuleOp mlirModule, std::unique_ptr<llvm::Module> llvmModule,
                bool emitExpensiveWarnings, bool importEmptyDICompositeTypes,
-               bool preferUnregisteredIntrinsics);
+               bool preferUnregisteredIntrinsics, bool importStructsAsLiterals);
 
   /// Calls the LLVMImportInterface initialization that queries the registered
   /// dialect interfaces for the supported LLVM IR intrinsics and metadata kinds
@@ -70,6 +70,9 @@ public:
 
   /// Converts all aliases of the LLVM module to MLIR variables.
   LogicalResult convertAliases();
+
+  /// Converts all ifuncs of the LLVM module to MLIR variables.
+  LogicalResult convertIFuncs();
 
   /// Converts the data layout of the LLVM module to an MLIR data layout
   /// specification.
@@ -229,6 +232,10 @@ public:
   /// attribute.
   LogicalResult convertCommandlineMetadata();
 
+  /// Converts !llvm.dependent-libraries metadata to llvm.dependent_libraries
+  /// LLVM ModuleOp attribute.
+  LogicalResult convertDependentLibrariesMetadata();
+
   /// Converts all LLVM metadata nodes that translate to attributes such as
   /// alias analysis or access group metadata, and builds a map from the
   /// metadata nodes to the converted attributes.
@@ -316,6 +323,8 @@ private:
   /// Converts an LLVM global alias variable into an MLIR LLVM dialect alias
   /// operation if a conversion exists. Otherwise, returns failure.
   LogicalResult convertAlias(llvm::GlobalAlias *alias);
+  // Converts an LLVM global ifunc into an MLIR LLVM dialect ifunc operation.
+  LogicalResult convertIFunc(llvm::GlobalIFunc *ifunc);
   /// Returns personality of `func` as a FlatSymbolRefAttr.
   FlatSymbolRefAttr getPersonalityAsAttr(llvm::Function *func);
   /// Imports `bb` into `block`, which must be initially empty.
@@ -326,6 +335,9 @@ private:
   /// Converts a single debug intrinsic.
   LogicalResult processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
                                       DominanceInfo &domInfo);
+  /// Converts LLMV IR asm inline call operand's attributes into an array of
+  /// MLIR attributes to be utilized in `llvm.inline_asm`.
+  ArrayAttr convertAsmInlineOperandAttrs(const llvm::CallBase &llvmCall);
   /// Converts an LLVM intrinsic to an MLIR LLVM dialect operation if an MLIR
   /// counterpart exists. Otherwise, returns failure.
   LogicalResult convertIntrinsic(llvm::CallInst *inst);
@@ -358,9 +370,11 @@ private:
   /// Converts the callee's function type. For direct calls, it converts the
   /// actual function type, which may differ from the called operand type in
   /// variadic functions. For indirect calls, it converts the function type
-  /// associated with the call instruction. Returns failure when the call and
-  /// the callee are not compatible or when nested type conversions failed.
-  FailureOr<LLVMFunctionType> convertFunctionType(llvm::CallBase *callInst);
+  /// associated with the call instruction. When the call and the callee are not
+  /// compatible (or when nested type conversions failed), emit a warning and
+  /// update `isIncompatibleCall` to indicate it.
+  FailureOr<LLVMFunctionType> convertFunctionType(llvm::CallBase *callInst,
+                                                  bool &isIncompatibleCall);
   /// Returns the callee name, or an empty symbol if the call is not direct.
   FlatSymbolRefAttr convertCalleeName(llvm::CallBase *callInst);
   /// Converts the parameter and result attributes attached to `func` and adds

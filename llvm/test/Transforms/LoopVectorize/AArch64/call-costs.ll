@@ -79,11 +79,10 @@ define void @powi_call(ptr %P) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[P]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[P]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.powi.v2f64.i32(<2 x double> [[WIDE_LOAD]], i32 3)
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[P]], i32 0
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[TMP4]], align 8
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

@@ -52,6 +52,7 @@ class MIMGBaseOpcode : PredicateControl {
   bit BVH = 0;
   bit A16 = 0;
   bit NoReturn = 0;
+  bit PointSampleAccel = 0; // Opcode eligible for gfx11.5 point sample acceleration
 }
 
 def MIMGBaseOpcode : GenericEnum {
@@ -63,7 +64,8 @@ def MIMGBaseOpcodesTable : GenericTable {
   let CppTypeName = "MIMGBaseOpcodeInfo";
   let Fields = ["BaseOpcode", "Store", "Atomic", "AtomicX2", "Sampler",
                 "Gather4", "NumExtraArgs", "Gradients", "G16", "Coordinates",
-                "LodOrClampOrMip", "HasD16", "MSAA", "BVH", "A16", "NoReturn"];
+                "LodOrClampOrMip", "HasD16", "MSAA", "BVH", "A16", "NoReturn",
+                "PointSampleAccel"];
   string TypeOf_BaseOpcode = "MIMGBaseOpcode";
 
   let PrimaryKey = ["BaseOpcode"];
@@ -1458,13 +1460,14 @@ multiclass MIMG_Sampler_NoReturn <mimgopc op, AMDGPUSampleVariant sample, bit wq
   }
 }
 
-multiclass MIMG_Sampler <mimgopc op, AMDGPUSampleVariant sample, bit wqm = 0,
-                         bit isG16 = 0, bit isGetLod = 0,
+multiclass MIMG_Sampler <mimgopc op, AMDGPUSampleVariant sample, bit isPointSampleAccel = 0,
+                         bit wqm = 0, bit isG16 = 0, bit isGetLod = 0,
                          string asm = "image_sample"#sample.LowerCaseMod#!if(isG16, "_g16", ""),
                          bit ExtendedImageInst = !ne(sample.LowerCaseMod, "")> {
   def "" : MIMG_Sampler_BaseOpcode<sample> {
     let HasD16 = !not(isGetLod);
     let G16 = isG16;
+    let PointSampleAccel = isPointSampleAccel;
   }
 
   let BaseOpcode = !cast<MIMGBaseOpcode>(NAME), WQM = wqm,
@@ -1485,8 +1488,8 @@ multiclass MIMG_Sampler <mimgopc op, AMDGPUSampleVariant sample, bit wqm = 0,
   defm "_nortn" : MIMG_Sampler_NoReturn <op, sample, wqm, isG16, asm>;
 }
 
-multiclass MIMG_Sampler_WQM <mimgopc op, AMDGPUSampleVariant sample>
-    : MIMG_Sampler<op, sample, 1>;
+multiclass MIMG_Sampler_WQM <mimgopc op, AMDGPUSampleVariant sample, bit isPointSampleAccel = 0>
+    : MIMG_Sampler<op, sample, isPointSampleAccel, 1>;
 
 multiclass MIMG_Gather <mimgopc op, AMDGPUSampleVariant sample, bit wqm = 0,
                         string asm = "image_gather4"#sample.LowerCaseMod> {
@@ -1684,15 +1687,15 @@ let AssemblerPredicate = isGFX12Plus in {
   def : AMDGPUMnemonicAlias<"image_atomic_fmax", "image_atomic_max_flt">;
 }
 
-defm IMAGE_SAMPLE               : MIMG_Sampler_WQM <mimgopc<0x1b, 0x1b, 0x20>, AMDGPUSample>;
+defm IMAGE_SAMPLE               : MIMG_Sampler_WQM <mimgopc<0x1b, 0x1b, 0x20>, AMDGPUSample, 1>;
 let OtherPredicates = [HasImageInsts, HasExtendedImageInsts] in {
 defm IMAGE_SAMPLE_CL            : MIMG_Sampler_WQM <mimgopc<0x40, 0x40, 0x21>, AMDGPUSample_cl>;
 defm IMAGE_SAMPLE_D             : MIMG_Sampler <mimgopc<0x1c, 0x1c, 0x22>, AMDGPUSample_d>;
 defm IMAGE_SAMPLE_D_CL          : MIMG_Sampler <mimgopc<0x41, 0x41, 0x23>, AMDGPUSample_d_cl>;
-defm IMAGE_SAMPLE_L             : MIMG_Sampler <mimgopc<0x1d, 0x1d, 0x24>, AMDGPUSample_l>;
+defm IMAGE_SAMPLE_L             : MIMG_Sampler <mimgopc<0x1d, 0x1d, 0x24>, AMDGPUSample_l, 1>;
 defm IMAGE_SAMPLE_B             : MIMG_Sampler_WQM <mimgopc<0x1e, 0x1e, 0x25>, AMDGPUSample_b>;
 defm IMAGE_SAMPLE_B_CL          : MIMG_Sampler_WQM <mimgopc<0x42, 0x42, 0x26>, AMDGPUSample_b_cl>;
-defm IMAGE_SAMPLE_LZ            : MIMG_Sampler <mimgopc<0x1f, 0x1f, 0x27>, AMDGPUSample_lz>;
+defm IMAGE_SAMPLE_LZ            : MIMG_Sampler <mimgopc<0x1f, 0x1f, 0x27>, AMDGPUSample_lz, 1>;
 defm IMAGE_SAMPLE_C             : MIMG_Sampler_WQM <mimgopc<0x20, 0x20, 0x28>, AMDGPUSample_c>;
 defm IMAGE_SAMPLE_C_CL          : MIMG_Sampler_WQM <mimgopc<0x43, 0x43, 0x29>, AMDGPUSample_c_cl>;
 defm IMAGE_SAMPLE_C_D           : MIMG_Sampler <mimgopc<0x21, 0x21, 0x2a>, AMDGPUSample_c_d>;
@@ -1745,7 +1748,7 @@ defm IMAGE_GATHER4_C_LZ_O       : MIMG_Gather <mimgopc<0x37, 0x37, 0x5f>, AMDGPU
 let OtherPredicates = [HasImageInsts, HasExtendedImageInsts, isGFX9Plus] in
 defm IMAGE_GATHER4H             : MIMG_Gather <mimgopc<0x90, 0x90, 0x61, 0x42>, AMDGPUSample, 1, "image_gather4h">;
 
-defm IMAGE_GET_LOD              : MIMG_Sampler <mimgopc<0x38, 0x38, 0x60>, AMDGPUSample, 1, 0, 1, "image_get_lod">;
+defm IMAGE_GET_LOD              : MIMG_Sampler <mimgopc<0x38, 0x38, 0x60>, AMDGPUSample, 0, 1, 0, 1, "image_get_lod">;
 
 defm IMAGE_SAMPLE_CD            : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0x68>, AMDGPUSample_cd>;
 defm IMAGE_SAMPLE_CD_CL         : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0x69>, AMDGPUSample_cd_cl>;
@@ -1758,22 +1761,22 @@ defm IMAGE_SAMPLE_C_CD_CL_O     : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0x6f
 } // End OtherPredicates = [HasImageInsts, HasExtendedImageInsts]
 
 let OtherPredicates = [HasImageInsts, HasExtendedImageInsts, HasG16] in {
-defm IMAGE_SAMPLE_D_G16         : MIMG_Sampler <mimgopc<0x39, 0x39, 0xa2>, AMDGPUSample_d, 0, 1>;
-defm IMAGE_SAMPLE_D_CL_G16      : MIMG_Sampler <mimgopc<0x5f, 0x5f, 0xa3>, AMDGPUSample_d_cl, 0, 1>;
-defm IMAGE_SAMPLE_C_D_G16       : MIMG_Sampler <mimgopc<0x3a, 0x3a, 0xaa>, AMDGPUSample_c_d, 0, 1>;
-defm IMAGE_SAMPLE_C_D_CL_G16    : MIMG_Sampler <mimgopc<0x54, 0x54, 0xab>, AMDGPUSample_c_d_cl, 0, 1>;
-defm IMAGE_SAMPLE_D_O_G16       : MIMG_Sampler <mimgopc<0x3b, 0x3b, 0xb2>, AMDGPUSample_d_o, 0, 1>;
-defm IMAGE_SAMPLE_D_CL_O_G16    : MIMG_Sampler <mimgopc<0x55, 0x55, 0xb3>, AMDGPUSample_d_cl_o, 0, 1>;
-defm IMAGE_SAMPLE_C_D_O_G16     : MIMG_Sampler <mimgopc<0x3c, 0x3c, 0xba>, AMDGPUSample_c_d_o, 0, 1>;
-defm IMAGE_SAMPLE_C_D_CL_O_G16  : MIMG_Sampler <mimgopc<0x56, 0x56, 0xbb>, AMDGPUSample_c_d_cl_o, 0, 1>;
-defm IMAGE_SAMPLE_CD_G16        : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xe8>, AMDGPUSample_cd, 0, 1>;
-defm IMAGE_SAMPLE_CD_CL_G16     : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xe9>, AMDGPUSample_cd_cl, 0, 1>;
-defm IMAGE_SAMPLE_C_CD_G16      : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xea>, AMDGPUSample_c_cd, 0, 1>;
-defm IMAGE_SAMPLE_C_CD_CL_G16   : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xeb>, AMDGPUSample_c_cd_cl, 0, 1>;
-defm IMAGE_SAMPLE_CD_O_G16      : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xec>, AMDGPUSample_cd_o, 0, 1>;
-defm IMAGE_SAMPLE_CD_CL_O_G16   : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xed>, AMDGPUSample_cd_cl_o, 0, 1>;
-defm IMAGE_SAMPLE_C_CD_O_G16    : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xee>, AMDGPUSample_c_cd_o, 0, 1>;
-defm IMAGE_SAMPLE_C_CD_CL_O_G16 : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xef>, AMDGPUSample_c_cd_cl_o, 0, 1>;
+defm IMAGE_SAMPLE_D_G16         : MIMG_Sampler <mimgopc<0x39, 0x39, 0xa2>, AMDGPUSample_d, 0, 0, 1>;
+defm IMAGE_SAMPLE_D_CL_G16      : MIMG_Sampler <mimgopc<0x5f, 0x5f, 0xa3>, AMDGPUSample_d_cl, 0, 0, 1>;
+defm IMAGE_SAMPLE_C_D_G16       : MIMG_Sampler <mimgopc<0x3a, 0x3a, 0xaa>, AMDGPUSample_c_d, 0, 0, 1>;
+defm IMAGE_SAMPLE_C_D_CL_G16    : MIMG_Sampler <mimgopc<0x54, 0x54, 0xab>, AMDGPUSample_c_d_cl, 0, 0, 1>;
+defm IMAGE_SAMPLE_D_O_G16       : MIMG_Sampler <mimgopc<0x3b, 0x3b, 0xb2>, AMDGPUSample_d_o, 0, 0, 1>;
+defm IMAGE_SAMPLE_D_CL_O_G16    : MIMG_Sampler <mimgopc<0x55, 0x55, 0xb3>, AMDGPUSample_d_cl_o, 0, 0, 1>;
+defm IMAGE_SAMPLE_C_D_O_G16     : MIMG_Sampler <mimgopc<0x3c, 0x3c, 0xba>, AMDGPUSample_c_d_o, 0, 0, 1>;
+defm IMAGE_SAMPLE_C_D_CL_O_G16  : MIMG_Sampler <mimgopc<0x56, 0x56, 0xbb>, AMDGPUSample_c_d_cl_o, 0, 0, 1>;
+defm IMAGE_SAMPLE_CD_G16        : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xe8>, AMDGPUSample_cd, 0, 0, 1>;
+defm IMAGE_SAMPLE_CD_CL_G16     : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xe9>, AMDGPUSample_cd_cl, 0, 0, 1>;
+defm IMAGE_SAMPLE_C_CD_G16      : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xea>, AMDGPUSample_c_cd, 0, 0, 1>;
+defm IMAGE_SAMPLE_C_CD_CL_G16   : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xeb>, AMDGPUSample_c_cd_cl, 0, 0, 1>;
+defm IMAGE_SAMPLE_CD_O_G16      : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xec>, AMDGPUSample_cd_o, 0, 0, 1>;
+defm IMAGE_SAMPLE_CD_CL_O_G16   : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xed>, AMDGPUSample_cd_cl_o, 0, 0, 1>;
+defm IMAGE_SAMPLE_C_CD_O_G16    : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xee>, AMDGPUSample_c_cd_o, 0, 0, 1>;
+defm IMAGE_SAMPLE_C_CD_CL_O_G16 : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xef>, AMDGPUSample_c_cd_cl_o, 0, 0, 1>;
 } // End OtherPredicates = [HasImageInsts, HasExtendedImageInsts, HasG16]
 
 //def IMAGE_RSRC256 : MIMG_NoPattern_RSRC256 <"image_rsrc256", mimgopc<0x7e>>;
@@ -2016,3 +2019,97 @@ def : MIMGG16Mapping<IMAGE_SAMPLE_CD_O_nortn, IMAGE_SAMPLE_CD_O_G16_nortn>;
 def : MIMGG16Mapping<IMAGE_SAMPLE_CD_CL_O_nortn, IMAGE_SAMPLE_CD_CL_O_G16_nortn>;
 def : MIMGG16Mapping<IMAGE_SAMPLE_C_CD_O_nortn, IMAGE_SAMPLE_C_CD_O_G16_nortn>;
 def : MIMGG16Mapping<IMAGE_SAMPLE_C_CD_CL_O_nortn, IMAGE_SAMPLE_C_CD_CL_O_G16_nortn>;
+
+//===----------------------------------------------------------------------===//
+// VIMAGE Tensor Instructions
+//===----------------------------------------------------------------------===//
+
+class VIMAGE_TENSOR_Pseudo<string opName, bit _UpTo2D = 0> :
+  InstSI<(outs ), (ins ), "", []>,
+  SIMCInstr<opName#!if(_UpTo2D, "_D2", ""), SIEncodingFamily.NONE> {
+
+  let isPseudo = 1;
+  let isCodeGenOnly = 1;
+  string Mnemonic = opName;
+
+  let VALU = 1;
+  let maybeAtomic = 0;
+  let TENSOR_CNT = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
+  let Uses = [EXEC, TENSORcnt];
+  let Defs = [TENSORcnt];
+  let SchedRW = [WriteVMEM, WriteLDS];
+  let UseNamedOperandTable = 1;
+  let hasSideEffects = 0;
+
+  bit UpTo2D = _UpTo2D;
+  let InOperandList = !if(UpTo2D, (ins SReg_128:$vaddr0, SReg_256:$vaddr1, R128A16:$r128, CPol:$cpol),
+                                      (ins SReg_128:$vaddr0, SReg_256:$vaddr1, SReg_128:$vaddr2,
+                                       SReg_128:$vaddr3, R128A16:$r128, CPol:$cpol));
+  string AsmOperands = " $vaddr0, $vaddr1"#!if(UpTo2D, "", ", $vaddr2, $vaddr3")#"$r128$cpol";
+}
+
+let SubtargetPredicate = isGFX1250Plus in {
+def TENSOR_LOAD_TO_LDS    : VIMAGE_TENSOR_Pseudo<"tensor_load_to_lds">;
+def TENSOR_STORE_FROM_LDS : VIMAGE_TENSOR_Pseudo<"tensor_store_from_lds">;
+def TENSOR_LOAD_TO_LDS_D2    : VIMAGE_TENSOR_Pseudo<"tensor_load_to_lds", 1>;
+def TENSOR_STORE_FROM_LDS_D2 : VIMAGE_TENSOR_Pseudo<"tensor_store_from_lds", 1>;
+} // End SubtargetPredicate = isGFX1250Plus.
+
+class TensorPat <VIMAGE_TENSOR_Pseudo inst, SDPatternOperator node> : GCNPat <
+  (node v4i32:$vaddr0, v8i32:$vaddr1, v4i32:$vaddr2, v4i32:$vaddr3, (i32 timm:$cpol)),
+  (inst $vaddr0, $vaddr1, $vaddr2, $vaddr3, 0, $cpol)
+>;
+
+class TensorD2Pat <VIMAGE_TENSOR_Pseudo inst, SDPatternOperator node> : GCNPat <
+  (node v4i32:$vaddr0, v8i32:$vaddr1, (i32 timm:$cpol)),
+  (inst $vaddr0, $vaddr1, 0, $cpol)
+>;
+
+let SubtargetPredicate = isGFX1250Plus in {
+def : TensorPat   <TENSOR_LOAD_TO_LDS, int_amdgcn_tensor_load_to_lds>;
+def : TensorPat   <TENSOR_STORE_FROM_LDS, int_amdgcn_tensor_store_from_lds>;
+def : TensorD2Pat <TENSOR_LOAD_TO_LDS_D2, int_amdgcn_tensor_load_to_lds_d2>;
+def : TensorD2Pat <TENSOR_STORE_FROM_LDS_D2, int_amdgcn_tensor_store_from_lds_d2>;
+}
+
+class VIMAGE_TENSOR_Real <bits<8> op, VIMAGE_TENSOR_Pseudo ps, string opName = ps.Mnemonic> :
+  InstSI <ps.OutOperandList, ps.InOperandList, opName # ps.AsmOperands, []>,
+  VIMAGEe<op> {
+
+  // copy relevant pseudo op flags
+  let SubtargetPredicate   = ps.SubtargetPredicate;
+  let TSFlags              = ps.TSFlags;
+  let mayLoad              = ps.mayLoad;
+  let mayStore             = ps.mayStore;
+  let UseNamedOperandTable = ps.UseNamedOperandTable;
+  let SchedRW              = ps.SchedRW;
+
+  // D# group 2 and 3 set to NULL for 2D or less.
+  let vaddr2 = !if(ps.UpTo2D, !cast<int>(SGPR_NULL_gfx11plus.HWEncoding), ?);
+  let vaddr3 = !if(ps.UpTo2D, !cast<int>(SGPR_NULL_gfx11plus.HWEncoding), ?);
+
+  // set to 0 based on SPG.
+  let vaddr4 = 0;
+  let rsrc = 0;
+  let vdata = 0;
+  let d16 = 0;
+  let a16 = 0;
+  let tfe = 0;
+  let dmask = 1; // sp3
+  let dim = 1;   // sp3
+}
+
+multiclass VIMAGE_TENSOR_Real_gfx1250<bits<8> op> {
+  let AssemblerPredicate = isGFX1250Plus, DecoderNamespace = "GFX1250" in {
+    foreach DSuffix = ["_D2", ""] in {
+      defvar ps = !cast<VIMAGE_TENSOR_Pseudo>(NAME # DSuffix);
+      def DSuffix # _gfx1250 : VIMAGE_TENSOR_Real<op, ps, ps.Mnemonic>,
+                SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX1250>;
+    }
+  }
+}
+
+defm TENSOR_LOAD_TO_LDS    : VIMAGE_TENSOR_Real_gfx1250<0xc4>;
+defm TENSOR_STORE_FROM_LDS : VIMAGE_TENSOR_Real_gfx1250<0xc5>;

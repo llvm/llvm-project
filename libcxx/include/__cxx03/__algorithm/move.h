@@ -30,14 +30,12 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _InIter, class _Sent, class _OutIter>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
-__move(_InIter __first, _Sent __last, _OutIter __result);
+inline _LIBCPP_HIDE_FROM_ABI pair<_InIter, _OutIter> __move(_InIter __first, _Sent __last, _OutIter __result);
 
 template <class _AlgPolicy>
 struct __move_impl {
   template <class _InIter, class _Sent, class _OutIter>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
-  operator()(_InIter __first, _Sent __last, _OutIter __result) const {
+  _LIBCPP_HIDE_FROM_ABI pair<_InIter, _OutIter> operator()(_InIter __first, _Sent __last, _OutIter __result) const {
     while (__first != __last) {
       *__result = _IterOps<_AlgPolicy>::__iter_move(__first);
       ++__first;
@@ -52,18 +50,16 @@ struct __move_impl {
 
     _OutIter& __result_;
 
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit _MoveSegment(_OutIter& __result)
-        : __result_(__result) {}
+    _LIBCPP_HIDE_FROM_ABI explicit _MoveSegment(_OutIter& __result) : __result_(__result) {}
 
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+    _LIBCPP_HIDE_FROM_ABI void
     operator()(typename _Traits::__local_iterator __lfirst, typename _Traits::__local_iterator __llast) {
       __result_ = std::__move<_AlgPolicy>(__lfirst, __llast, std::move(__result_)).second;
     }
   };
 
   template <class _InIter, class _OutIter, __enable_if_t<__is_segmented_iterator<_InIter>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
-  operator()(_InIter __first, _InIter __last, _OutIter __result) const {
+  _LIBCPP_HIDE_FROM_ABI pair<_InIter, _OutIter> operator()(_InIter __first, _InIter __last, _OutIter __result) const {
     std::__for_each_segment(__first, __last, _MoveSegment<_InIter, _OutIter>(__result));
     return std::make_pair(__last, std::move(__result));
   }
@@ -73,8 +69,7 @@ struct __move_impl {
             __enable_if_t<__has_random_access_iterator_category<_InIter>::value &&
                               !__is_segmented_iterator<_InIter>::value && __is_segmented_iterator<_OutIter>::value,
                           int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
-  operator()(_InIter __first, _InIter __last, _OutIter __result) const {
+  _LIBCPP_HIDE_FROM_ABI pair<_InIter, _OutIter> operator()(_InIter __first, _InIter __last, _OutIter __result) const {
     using _Traits = __segmented_iterator_traits<_OutIter>;
     using _DiffT  = typename common_type<__iter_diff_t<_InIter>, __iter_diff_t<_OutIter> >::type;
 
@@ -98,21 +93,19 @@ struct __move_impl {
 
   // At this point, the iterators have been unwrapped so any `contiguous_iterator` has been unwrapped to a pointer.
   template <class _In, class _Out, __enable_if_t<__can_lower_move_assignment_to_memmove<_In, _Out>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_In*, _Out*>
-  operator()(_In* __first, _In* __last, _Out* __result) const {
+  _LIBCPP_HIDE_FROM_ABI pair<_In*, _Out*> operator()(_In* __first, _In* __last, _Out* __result) const {
     return std::__copy_trivial_impl(__first, __last, __result);
   }
 };
 
 template <class _AlgPolicy, class _InIter, class _Sent, class _OutIter>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
-__move(_InIter __first, _Sent __last, _OutIter __result) {
+inline _LIBCPP_HIDE_FROM_ABI pair<_InIter, _OutIter> __move(_InIter __first, _Sent __last, _OutIter __result) {
   return std::__copy_move_unwrap_iters<__move_impl<_AlgPolicy> >(
       std::move(__first), std::move(__last), std::move(__result));
 }
 
 template <class _InputIterator, class _OutputIterator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
+inline _LIBCPP_HIDE_FROM_ABI _OutputIterator
 move(_InputIterator __first, _InputIterator __last, _OutputIterator __result) {
   static_assert(is_copy_constructible<_InputIterator>::value, "Iterators has to be copy constructible.");
   static_assert(is_copy_constructible<_OutputIterator>::value, "The output iterator has to be copy constructible.");

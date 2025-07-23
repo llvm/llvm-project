@@ -5,7 +5,7 @@
 ## Rationale
 
 The MLIR TOSA dialect implements the [TOSA
-specification](https://developer.mlplatform.org/w/tosa/).  This document
+specification](https://www.mlplatform.org/tosa/tosa_spec.html). This document
 describes the decision process for how TOSA expresses operators in
 high level dialects.
 

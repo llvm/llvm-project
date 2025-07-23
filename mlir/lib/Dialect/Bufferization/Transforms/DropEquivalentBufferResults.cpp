@@ -31,8 +31,6 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/Pass/Pass.h"
 
 namespace mlir {
 namespace bufferization {
@@ -113,7 +111,8 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
     }
 
     // Update function.
-    funcOp.eraseResults(erasedResultIndices);
+    if (failed(funcOp.eraseResults(erasedResultIndices)))
+      return failure();
     returnOp.getOperandsMutable().assign(newReturnValues);
 
     // Update function calls.

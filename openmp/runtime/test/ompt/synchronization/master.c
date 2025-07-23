@@ -82,8 +82,8 @@ ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
 // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
 // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_master_begin:
-// CHECK-SAME: codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]]{{[0-f][0-f]}}
+// CHECK-SAME: codeptr_ra=[[RETURN_ADDRESS:(0x)?[0-f]+]]{{[0-f][0-f]}}
 // CHECK: {{^}}[[MASTER_ID]]: fuzzy_address={{.*}}[[RETURN_ADDRESS]]
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_master_end:
-// CHECK-SAME: codeptr_ra=[[RETURN_ADDRESS_END:0x[0-f]+]]
+// CHECK-SAME: codeptr_ra=[[RETURN_ADDRESS_END:(0x)?[0-f]+]]
 // CHECK: {{^}}[[MASTER_ID]]: current_address={{.*}}[[RETURN_ADDRESS_END]]

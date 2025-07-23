@@ -17,9 +17,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeRange.h"
 
 using namespace mlir;
@@ -134,7 +132,7 @@ void ModuleOp::build(OpBuilder &builder, OperationState &state,
 /// Construct a module from the given context.
 ModuleOp ModuleOp::create(Location loc, std::optional<StringRef> name) {
   OpBuilder builder(loc->getContext());
-  return builder.create<ModuleOp>(loc, name);
+  return ModuleOp::create(builder, loc, name);
 }
 
 DataLayoutSpecInterface ModuleOp::getDataLayoutSpec() {

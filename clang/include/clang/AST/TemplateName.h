@@ -16,6 +16,8 @@
 #include "clang/AST/DependenceFlags.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/UnsignedOrNone.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -413,9 +415,10 @@ class SubstTemplateTemplateParmStorage
 
   SubstTemplateTemplateParmStorage(TemplateName Replacement,
                                    Decl *AssociatedDecl, unsigned Index,
-                                   std::optional<unsigned> PackIndex)
-      : UncommonTemplateNameStorage(SubstTemplateTemplateParm, Index,
-                                    PackIndex ? *PackIndex + 1 : 0),
+                                   UnsignedOrNone PackIndex, bool Final)
+      : UncommonTemplateNameStorage(
+            SubstTemplateTemplateParm, Index,
+            ((PackIndex.toInternalRepresentation()) << 1) | Final),
         Replacement(Replacement), AssociatedDecl(AssociatedDecl) {
     assert(AssociatedDecl != nullptr);
   }
@@ -429,10 +432,12 @@ public:
   /// This should match the result of `getParameter()->getIndex()`.
   unsigned getIndex() const { return Bits.Index; }
 
-  std::optional<unsigned> getPackIndex() const {
-    if (Bits.Data == 0)
-      return std::nullopt;
-    return Bits.Data - 1;
+  // This substitution is Final, which means the substitution is fully
+  // sugared: it doesn't need to be resugared later.
+  bool getFinal() const { return Bits.Data & 1; }
+
+  UnsignedOrNone getPackIndex() const {
+    return UnsignedOrNone::fromInternalRepresentation(Bits.Data >> 1);
   }
 
   TemplateTemplateParmDecl *getParameter() const;
@@ -442,7 +447,7 @@ public:
 
   static void Profile(llvm::FoldingSetNodeID &ID, TemplateName Replacement,
                       Decl *AssociatedDecl, unsigned Index,
-                      std::optional<unsigned> PackIndex);
+                      UnsignedOrNone PackIndex, bool Final);
 };
 
 class DeducedTemplateStorage : public UncommonTemplateNameStorage,
@@ -537,6 +542,35 @@ public:
   }
 };
 
+struct IdentifierOrOverloadedOperator {
+  IdentifierOrOverloadedOperator() = default;
+  IdentifierOrOverloadedOperator(const IdentifierInfo *II);
+  IdentifierOrOverloadedOperator(OverloadedOperatorKind OOK);
+
+  /// Returns the identifier to which this template name refers.
+  const IdentifierInfo *getIdentifier() const {
+    if (getOperator() != OO_None)
+      return nullptr;
+    return reinterpret_cast<const IdentifierInfo *>(PtrOrOp);
+  }
+
+  /// Return the overloaded operator to which this template name refers.
+  OverloadedOperatorKind getOperator() const {
+    uintptr_t OOK = -PtrOrOp;
+    return OOK < NUM_OVERLOADED_OPERATORS ? OverloadedOperatorKind(OOK)
+                                          : OO_None;
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const;
+
+  bool operator==(const IdentifierOrOverloadedOperator &Other) const {
+    return PtrOrOp == Other.PtrOrOp;
+  };
+
+private:
+  uintptr_t PtrOrOp = 0;
+};
+
 /// Represents a dependent template name that cannot be
 /// resolved prior to template instantiation.
 ///
@@ -545,104 +579,53 @@ public:
 /// DependentTemplateName can refer to "MetaFun::template apply",
 /// where "MetaFun::" is the nested name specifier and "apply" is the
 /// template name referenced. The "template" keyword is implied.
-class DependentTemplateName : public llvm::FoldingSetNode {
-  friend class ASTContext;
-
+class DependentTemplateStorage {
   /// The nested name specifier that qualifies the template
   /// name.
   ///
   /// The bit stored in this qualifier describes whether the \c Name field
-  /// is interpreted as an IdentifierInfo pointer (when clear) or as an
-  /// overloaded operator kind (when set).
+  /// was preceeded by a template keyword.
   llvm::PointerIntPair<NestedNameSpecifier *, 1, bool> Qualifier;
 
   /// The dependent template name.
-  union {
-    /// The identifier template name.
-    ///
-    /// Only valid when the bit on \c Qualifier is clear.
-    const IdentifierInfo *Identifier;
-
-    /// The overloaded operator name.
-    ///
-    /// Only valid when the bit on \c Qualifier is set.
-    OverloadedOperatorKind Operator;
-  };
-
-  /// The canonical template name to which this dependent
-  /// template name refers.
-  ///
-  /// The canonical template name for a dependent template name is
-  /// another dependent template name whose nested name specifier is
-  /// canonical.
-  TemplateName CanonicalTemplateName;
-
-  DependentTemplateName(NestedNameSpecifier *Qualifier,
-                        const IdentifierInfo *Identifier)
-      : Qualifier(Qualifier, false), Identifier(Identifier),
-        CanonicalTemplateName(this) {}
-
-  DependentTemplateName(NestedNameSpecifier *Qualifier,
-                        const IdentifierInfo *Identifier,
-                        TemplateName Canon)
-      : Qualifier(Qualifier, false), Identifier(Identifier),
-        CanonicalTemplateName(Canon) {}
-
-  DependentTemplateName(NestedNameSpecifier *Qualifier,
-                        OverloadedOperatorKind Operator)
-      : Qualifier(Qualifier, true), Operator(Operator),
-        CanonicalTemplateName(this) {}
-
-  DependentTemplateName(NestedNameSpecifier *Qualifier,
-                        OverloadedOperatorKind Operator,
-                        TemplateName Canon)
-       : Qualifier(Qualifier, true), Operator(Operator),
-         CanonicalTemplateName(Canon) {}
+  IdentifierOrOverloadedOperator Name;
 
 public:
+  DependentTemplateStorage(NestedNameSpecifier *Qualifier,
+                           IdentifierOrOverloadedOperator Name,
+                           bool HasTemplateKeyword);
+
   /// Return the nested name specifier that qualifies this name.
   NestedNameSpecifier *getQualifier() const { return Qualifier.getPointer(); }
 
-  /// Determine whether this template name refers to an identifier.
-  bool isIdentifier() const { return !Qualifier.getInt(); }
+  IdentifierOrOverloadedOperator getName() const { return Name; }
 
-  /// Returns the identifier to which this template name refers.
-  const IdentifierInfo *getIdentifier() const {
-    assert(isIdentifier() && "Template name isn't an identifier?");
-    return Identifier;
-  }
+  /// Was this template name was preceeded by the template keyword?
+  bool hasTemplateKeyword() const { return Qualifier.getInt(); }
 
-  /// Determine whether this template name refers to an overloaded
-  /// operator.
-  bool isOverloadedOperator() const { return Qualifier.getInt(); }
+  TemplateNameDependence getDependence() const;
 
-  /// Return the overloaded operator to which this template name refers.
-  OverloadedOperatorKind getOperator() const {
-    assert(isOverloadedOperator() &&
-           "Template name isn't an overloaded operator?");
-    return Operator;
-  }
-
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    if (isIdentifier())
-      Profile(ID, getQualifier(), getIdentifier());
-    else
-      Profile(ID, getQualifier(), getOperator());
+  void Profile(llvm::FoldingSetNodeID &ID) const {
+    Profile(ID, getQualifier(), getName(), hasTemplateKeyword());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, NestedNameSpecifier *NNS,
-                      const IdentifierInfo *Identifier) {
+                      IdentifierOrOverloadedOperator Name,
+                      bool HasTemplateKeyword) {
     ID.AddPointer(NNS);
-    ID.AddBoolean(false);
-    ID.AddPointer(Identifier);
+    ID.AddBoolean(HasTemplateKeyword);
+    Name.Profile(ID);
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID, NestedNameSpecifier *NNS,
-                      OverloadedOperatorKind Operator) {
-    ID.AddPointer(NNS);
-    ID.AddBoolean(true);
-    ID.AddInteger(Operator);
-  }
+  void print(raw_ostream &OS, const PrintingPolicy &Policy) const;
+};
+
+class DependentTemplateName : public DependentTemplateStorage,
+                              public llvm::FoldingSetNode {
+  friend class ASTContext;
+  using DependentTemplateStorage::DependentTemplateStorage;
+  DependentTemplateName(const DependentTemplateStorage &S)
+      : DependentTemplateStorage(S) {}
 };
 
 } // namespace clang.

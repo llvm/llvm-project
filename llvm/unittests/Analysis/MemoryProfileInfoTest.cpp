@@ -14,6 +14,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -23,10 +24,7 @@
 using namespace llvm;
 using namespace llvm::memprof;
 
-extern cl::opt<float> MemProfLifetimeAccessDensityColdThreshold;
-extern cl::opt<unsigned> MemProfAveLifetimeColdThreshold;
-extern cl::opt<unsigned> MemProfMinAveLifetimeAccessDensityHotThreshold;
-extern cl::opt<bool> MemProfUseHotHints;
+LLVM_ABI extern cl::opt<bool> MemProfKeepAllNotColdContexts;
 
 namespace {
 
@@ -60,67 +58,6 @@ protected:
     return nullptr;
   }
 };
-
-// Test getAllocType helper.
-// Basic checks on the allocation type for values just above and below
-// the thresholds.
-TEST_F(MemoryProfileInfoTest, GetAllocType) {
-  const uint64_t AllocCount = 2;
-  // To be cold we require that
-  // ((float)TotalLifetimeAccessDensity) / AllocCount / 100 <
-  //    MemProfLifetimeAccessDensityColdThreshold
-  // so compute the ColdTotalLifetimeAccessDensityThreshold at the threshold.
-  const uint64_t ColdTotalLifetimeAccessDensityThreshold =
-      (uint64_t)(MemProfLifetimeAccessDensityColdThreshold * AllocCount * 100);
-  // To be cold we require that
-  // ((float)TotalLifetime) / AllocCount >=
-  //    MemProfAveLifetimeColdThreshold * 1000
-  // so compute the TotalLifetime right at the threshold.
-  const uint64_t ColdTotalLifetimeThreshold =
-      MemProfAveLifetimeColdThreshold * AllocCount * 1000;
-  // To be hot we require that
-  // ((float)TotalLifetimeAccessDensity) / AllocCount / 100 >
-  //    MemProfMinAveLifetimeAccessDensityHotThreshold
-  // so compute the HotTotalLifetimeAccessDensityThreshold  at the threshold.
-  const uint64_t HotTotalLifetimeAccessDensityThreshold =
-      (uint64_t)(MemProfMinAveLifetimeAccessDensityHotThreshold * AllocCount *
-                 100);
-
-  // Make sure the option for detecting hot allocations is set.
-  MemProfUseHotHints = true;
-  // Test Hot
-  // More accesses per byte per sec than hot threshold is hot.
-  EXPECT_EQ(getAllocType(HotTotalLifetimeAccessDensityThreshold + 1, AllocCount,
-                         ColdTotalLifetimeThreshold + 1),
-            AllocationType::Hot);
-  // Undo the manual set of the option above.
-  cl::ResetAllOptionOccurrences();
-
-  // Without MemProfUseHotHints (default) we should treat simply as NotCold.
-  EXPECT_EQ(getAllocType(HotTotalLifetimeAccessDensityThreshold + 1, AllocCount,
-                         ColdTotalLifetimeThreshold + 1),
-            AllocationType::NotCold);
-
-  // Test Cold
-  // Long lived with less accesses per byte per sec than cold threshold is cold.
-  EXPECT_EQ(getAllocType(ColdTotalLifetimeAccessDensityThreshold - 1, AllocCount,
-                         ColdTotalLifetimeThreshold + 1),
-            AllocationType::Cold);
-  
-  // Test NotCold
-  // Long lived with more accesses per byte per sec than cold threshold is not cold.
-  EXPECT_EQ(getAllocType(ColdTotalLifetimeAccessDensityThreshold + 1, AllocCount,
-                         ColdTotalLifetimeThreshold + 1),
-            AllocationType::NotCold);  
-  // Short lived with more accesses per byte per sec than cold threshold is not cold.
-  EXPECT_EQ(getAllocType(ColdTotalLifetimeAccessDensityThreshold + 1, AllocCount,
-                         ColdTotalLifetimeThreshold - 1),
-            AllocationType::NotCold);
-  // Short lived with less accesses per byte per sec than cold threshold is not cold.
-  EXPECT_EQ(getAllocType(ColdTotalLifetimeAccessDensityThreshold - 1, AllocCount,
-                         ColdTotalLifetimeThreshold - 1),
-            AllocationType::NotCold);
-}
 
 // Test the hasSingleAllocType helper.
 TEST_F(MemoryProfileInfoTest, SingleAllocType) {
@@ -523,6 +460,79 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   CallBase *Call = findCall(*Func, "call");
   ASSERT_NE(Call, nullptr);
   Trie.buildAndAttachMIBMetadata(Call);
+
+  EXPECT_FALSE(Call->hasFnAttr("memprof"));
+  EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
+  MDNode *MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
+  EXPECT_THAT(MemProfMD, MemprofMetadataEquals(ExpectedVals));
+}
+
+// Test to ensure that we keep optionally keep unneeded NotCold contexts.
+// Same as PruneUnneededNotColdContexts test but with the
+// MemProfKeepAllNotColdContexts set to true.
+TEST_F(MemoryProfileInfoTest, KeepUnneededNotColdContexts) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = makeLLVMModule(C,
+                                             R"IR(
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+define i32* @test() {
+entry:
+  %call = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
+  %0 = bitcast i8* %call to i32*
+  ret i32* %0
+}
+declare dso_local noalias noundef i8* @malloc(i64 noundef)
+)IR");
+
+  Function *Func = M->getFunction("test");
+
+  CallStackTrie Trie;
+
+  Trie.addCallStack(AllocationType::Cold, {1, 2, 3, 4});
+  Trie.addCallStack(AllocationType::Cold, {1, 2, 3, 5, 6, 7});
+  // This NotCold context is needed to know where the above two Cold contexts
+  // must be cloned from:
+  Trie.addCallStack(AllocationType::NotCold, {1, 2, 3, 5, 6, 13});
+
+  Trie.addCallStack(AllocationType::Cold, {1, 2, 3, 8, 9, 10});
+  // This NotCold context is needed to know where the above Cold context must be
+  // cloned from:
+  Trie.addCallStack(AllocationType::NotCold, {1, 2, 3, 8, 9, 14});
+  // This NotCold context is not needed since the above is sufficient (we pick
+  // the first in sorted order).
+  Trie.addCallStack(AllocationType::NotCold, {1, 2, 3, 8, 9, 15});
+
+  // None of these NotCold contexts are needed as the Cold contexts they
+  // overlap with are covered by longer overlapping NotCold contexts.
+  Trie.addCallStack(AllocationType::NotCold, {1, 2, 3, 12});
+  Trie.addCallStack(AllocationType::NotCold, {1, 2, 11});
+  Trie.addCallStack(AllocationType::NotCold, {1, 16});
+
+  // We should keep all of the above contexts, even those that are unneeded by
+  // default, because we will set the option to keep them.
+  std::vector<std::pair<AllocationType, std::vector<unsigned>>> ExpectedVals = {
+      {AllocationType::Cold, {1, 2, 3, 4}},
+      {AllocationType::Cold, {1, 2, 3, 5, 6, 7}},
+      {AllocationType::NotCold, {1, 2, 3, 5, 6, 13}},
+      {AllocationType::Cold, {1, 2, 3, 8, 9, 10}},
+      {AllocationType::NotCold, {1, 2, 3, 8, 9, 14}},
+      {AllocationType::NotCold, {1, 2, 3, 8, 9, 15}},
+      {AllocationType::NotCold, {1, 2, 3, 12}},
+      {AllocationType::NotCold, {1, 2, 11}},
+      {AllocationType::NotCold, {1, 16}}};
+
+  CallBase *Call = findCall(*Func, "call");
+  ASSERT_NE(Call, nullptr);
+
+  // Specify that all non-cold contexts should be kept.
+  bool OrigMemProfKeepAllNotColdContexts = MemProfKeepAllNotColdContexts;
+  MemProfKeepAllNotColdContexts = true;
+
+  Trie.buildAndAttachMIBMetadata(Call);
+
+  // Restore original option value.
+  MemProfKeepAllNotColdContexts = OrigMemProfKeepAllNotColdContexts;
 
   EXPECT_FALSE(Call->hasFnAttr("memprof"));
   EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));

@@ -113,7 +113,7 @@ getBaseValue(const Record *record, const RecordVal *value) {
   // On success, `record` is updated to the new parent record.
   StringRef valueName = value->getName();
   auto findValueInSupers = [&](const Record *&record) -> const RecordVal * {
-    for (auto [parentRecord, loc] : record->getSuperClasses()) {
+    for (const Record *parentRecord : record->getSuperClasses()) {
       if (auto *newBase = parentRecord->getValue(valueName)) {
         record = parentRecord;
         return newBase;
@@ -403,8 +403,7 @@ TableGenTextFile::TableGenTextFile(
   llvm::SmallString<32> uriDirectory(uri.file());
   llvm::sys::path::remove_filename(uriDirectory);
   includeDirs.push_back(uriDirectory.str().str());
-  includeDirs.insert(includeDirs.end(), extraIncludeDirs.begin(),
-                     extraIncludeDirs.end());
+  llvm::append_range(includeDirs, extraIncludeDirs);
 
   // Initialize the file.
   initialize(uri, version, diagnostics);

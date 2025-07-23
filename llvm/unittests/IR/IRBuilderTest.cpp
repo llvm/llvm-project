@@ -81,7 +81,12 @@ TEST_F(IRBuilderTest, Intrinsics) {
   II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::maximum);
 
-  Result = Builder.CreateIntrinsic(Intrinsic::readcyclecounter, {}, {});
+  Result = Builder.CreateIntrinsic(Intrinsic::readcyclecounter,
+                                   ArrayRef<Type *>{}, {});
+  II = cast<IntrinsicInst>(Result);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::readcyclecounter);
+
+  Result = Builder.CreateIntrinsic(Intrinsic::readcyclecounter, {});
   II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::readcyclecounter);
 
@@ -134,7 +139,7 @@ TEST_F(IRBuilderTest, Intrinsics) {
   EXPECT_FALSE(II->hasNoNaNs());
 
   Result = Builder.CreateIntrinsic(
-      Intrinsic::set_rounding, {},
+      Intrinsic::set_rounding,
       {Builder.getInt32(static_cast<uint32_t>(RoundingMode::TowardZero))});
   II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::set_rounding);
@@ -174,17 +179,17 @@ TEST_F(IRBuilderTest, IntrinsicsWithScalableVectors) {
   Type *DstVecTy = VectorType::get(Builder.getInt32Ty(), 4, true);
   Type *PredTy = VectorType::get(Builder.getInt1Ty(), 4, true);
 
-  SmallVector<Value*, 3> ArgTys;
-  ArgTys.push_back(UndefValue::get(DstVecTy));
-  ArgTys.push_back(UndefValue::get(PredTy));
-  ArgTys.push_back(UndefValue::get(SrcVecTy));
+  SmallVector<Value *, 3> Args;
+  Args.push_back(UndefValue::get(DstVecTy));
+  Args.push_back(UndefValue::get(PredTy));
+  Args.push_back(UndefValue::get(SrcVecTy));
 
-  Call = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_fcvtzs_i32f16, {},
-                                 ArgTys, nullptr, "aarch64.sve.fcvtzs.i32f16");
+  Call = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_fcvtzs_i32f16, Args,
+                                 nullptr, "aarch64.sve.fcvtzs.i32f16");
   FTy = Call->getFunctionType();
   EXPECT_EQ(FTy->getReturnType(), DstVecTy);
-  for (unsigned i = 0; i != ArgTys.size(); ++i)
-    EXPECT_EQ(FTy->getParamType(i), ArgTys[i]->getType());
+  for (unsigned i = 0; i != Args.size(); ++i)
+    EXPECT_EQ(FTy->getParamType(i), Args[i]->getType());
 
   // Test scalable flag isn't dropped for intrinsic defined with
   // LLVMScalarOrSameVectorWidth.
@@ -193,27 +198,18 @@ TEST_F(IRBuilderTest, IntrinsicsWithScalableVectors) {
   Type *PtrToVecTy = Builder.getPtrTy();
   PredTy = VectorType::get(Builder.getInt1Ty(), 4, true);
 
-  ArgTys.clear();
-  ArgTys.push_back(UndefValue::get(PtrToVecTy));
-  ArgTys.push_back(UndefValue::get(Builder.getInt32Ty()));
-  ArgTys.push_back(UndefValue::get(PredTy));
-  ArgTys.push_back(UndefValue::get(VecTy));
+  Args.clear();
+  Args.push_back(UndefValue::get(PtrToVecTy));
+  Args.push_back(UndefValue::get(Builder.getInt32Ty()));
+  Args.push_back(UndefValue::get(PredTy));
+  Args.push_back(UndefValue::get(VecTy));
 
-  Call = Builder.CreateIntrinsic(Intrinsic::masked_load,
-                                 {VecTy, PtrToVecTy}, ArgTys,
-                                 nullptr, "masked.load");
+  Call = Builder.CreateIntrinsic(Intrinsic::masked_load, {VecTy, PtrToVecTy},
+                                 Args, nullptr, "masked.load");
   FTy = Call->getFunctionType();
   EXPECT_EQ(FTy->getReturnType(), VecTy);
-  for (unsigned i = 0; i != ArgTys.size(); ++i)
-    EXPECT_EQ(FTy->getParamType(i), ArgTys[i]->getType());
-}
-
-TEST_F(IRBuilderTest, CreateVScale) {
-  IRBuilder<> Builder(BB);
-
-  Constant *Zero = Builder.getInt32(0);
-  Value *VScale = Builder.CreateVScale(Zero);
-  EXPECT_TRUE(isa<ConstantInt>(VScale) && cast<ConstantInt>(VScale)->isZero());
+  for (unsigned i = 0; i != Args.size(); ++i)
+    EXPECT_EQ(FTy->getParamType(i), Args[i]->getType());
 }
 
 TEST_F(IRBuilderTest, CreateStepVector) {
@@ -892,14 +888,9 @@ TEST_F(IRBuilderTest, DIBuilder) {
   };
 
   auto ExpectOrder = [&](DbgInstPtr First, BasicBlock::iterator Second) {
-    if (M->IsNewDbgInfoFormat) {
-      EXPECT_TRUE(isa<DbgRecord *>(First));
-      EXPECT_FALSE(Second->getDbgRecordRange().empty());
-      EXPECT_EQ(GetLastDbgRecord(&*Second), cast<DbgRecord *>(First));
-    } else {
-      EXPECT_TRUE(isa<Instruction *>(First));
-      EXPECT_EQ(&*std::prev(Second), cast<Instruction *>(First));
-    }
+    EXPECT_TRUE(isa<DbgRecord *>(First));
+    EXPECT_FALSE(Second->getDbgRecordRange().empty());
+    EXPECT_EQ(GetLastDbgRecord(&*Second), cast<DbgRecord *>(First));
   };
 
   auto RunTest = [&]() {
@@ -929,9 +920,11 @@ TEST_F(IRBuilderTest, DIBuilder) {
     // --------------------------
     DILocation *LabelLoc = DILocation::get(Ctx, 1, 0, BarScope);
     DILabel *AlwaysPreserveLabel = DIB.createLabel(
-        BarScope, "meles_meles", File, 1, /*AlwaysPreserve*/ true);
-    DILabel *Label =
-        DIB.createLabel(BarScope, "badger", File, 1, /*AlwaysPreserve*/ false);
+        BarScope, "meles_meles", File, 1, /*Column*/ 0, /*IsArtificial*/ false,
+        /*CoroSuspendIdx*/ std::nullopt, /*AlwaysPreserve*/ true);
+    DILabel *Label = DIB.createLabel(
+        BarScope, "badger", File, 1, /*Column*/ 0, /*IsArtificial*/ false,
+        /*CoroSuspendIdx*/ std::nullopt, /*AlwaysPreserve*/ false);
 
     { /* dbg.label | DbgLabelRecord */
       // Insert before I and check order.
@@ -1007,18 +1000,8 @@ TEST_F(IRBuilderTest, DIBuilder) {
     EXPECT_TRUE(verifyModule(*M));
   };
 
-  // Test in new-debug mode.
-  EXPECT_TRUE(M->IsNewDbgInfoFormat);
   RunTest();
-
-  // Test in old-debug mode.
-  // Reset the test then call convertFromNewDbgValues to flip the flag
-  // on the test's Module, Function and BasicBlock.
   TearDown();
-  SetUp();
-  M->convertFromNewDbgValues();
-  EXPECT_FALSE(M->IsNewDbgInfoFormat);
-  RunTest();
 }
 
 TEST_F(IRBuilderTest, createArtificialSubprogram) {

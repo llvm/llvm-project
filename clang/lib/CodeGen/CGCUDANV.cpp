@@ -1194,7 +1194,6 @@ void CGNVCUDARuntime::transformManagedVars() {
 // registered. The linker will provide a pointer to this section so we can
 // register the symbols with the linked device image.
 void CGNVCUDARuntime::createOffloadingEntries() {
-  SmallVector<char, 32> Out;
   llvm::object::OffloadKind Kind = CGM.getLangOpts().HIP
                                        ? llvm::object::OffloadKind::OFK_HIP
                                        : llvm::object::OffloadKind::OFK_Cuda;
@@ -1281,7 +1280,8 @@ llvm::Function *CGNVCUDARuntime::finalizeModule() {
     return nullptr;
   }
   if (CGM.getLangOpts().OffloadViaLLVM ||
-      (CGM.getLangOpts().OffloadingNewDriver && RelocatableDeviceCode))
+      (CGM.getLangOpts().OffloadingNewDriver &&
+       (CGM.getLangOpts().HIP || RelocatableDeviceCode)))
     createOffloadingEntries();
   else
     return makeModuleCtorFunction();

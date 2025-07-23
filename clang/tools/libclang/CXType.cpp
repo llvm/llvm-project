@@ -19,6 +19,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/QualTypeNames.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AddressSpaces.h"
@@ -326,6 +327,22 @@ CXString clang_getTypePrettyPrinted(CXType CT, CXPrintingPolicy cxPolicy) {
   T.print(OS, *UserPolicy);
 
   return cxstring::createDup(OS.str());
+}
+
+CXString clang_getFullyQualifiedName(CXType CT, CXPrintingPolicy cxPolicy,
+                                     unsigned int WithGlobalNsPrefix) {
+  const QualType T = GetQualType(CT);
+  if (T.isNull())
+    return cxstring::createEmpty();
+  const CXTranslationUnit TU = GetTU(CT);
+  const ASTContext &Ctx = cxtu::getASTUnit(TU)->getASTContext();
+  const PrintingPolicy *UserPolicy = static_cast<PrintingPolicy *>(cxPolicy);
+  const bool WithGlobalNs = (WithGlobalNsPrefix != 0);
+
+  const std::string Str =
+      TypeName::getFullyQualifiedName(T, Ctx, *UserPolicy, WithGlobalNs);
+
+  return cxstring::createDup(Str);
 }
 
 CXType clang_getTypedefDeclUnderlyingType(CXCursor C) {
@@ -636,6 +653,7 @@ CXString clang_getTypeKindSpelling(enum CXTypeKind K) {
     TKIND(Attributed);
     TKIND(BTFTagAttributed);
     TKIND(HLSLAttributedResource);
+    TKIND(HLSLInlineSpirv);
     TKIND(BFloat16);
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) TKIND(Id);
 #include "clang/Basic/OpenCLImageTypes.def"
@@ -714,8 +732,8 @@ CXCallingConv clang_getFunctionTypeCallingConv(CXType X) {
       TCALLINGCONV(RISCVVLSCall_32768);
       TCALLINGCONV(RISCVVLSCall_65536);
     case CC_SpirFunction: return CXCallingConv_Unexposed;
-    case CC_AMDGPUKernelCall: return CXCallingConv_Unexposed;
-    case CC_OpenCLKernel: return CXCallingConv_Unexposed;
+    case CC_DeviceKernel:
+      return CXCallingConv_Unexposed;
       break;
     }
 #undef TCALLINGCONV

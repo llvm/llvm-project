@@ -313,25 +313,22 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
 
   if (m_jit_start_addr != LLDB_INVALID_ADDRESS || m_can_interpret) {
     if (m_materialized_address == LLDB_INVALID_ADDRESS) {
-      Status alloc_error;
-
       IRMemoryMap::AllocationPolicy policy =
           m_can_interpret ? IRMemoryMap::eAllocationPolicyHostOnly
                           : IRMemoryMap::eAllocationPolicyMirror;
 
       const bool zero_memory = false;
-
-      m_materialized_address = m_execution_unit_sp->Malloc(
-          m_materializer_up->GetStructByteSize(),
-          m_materializer_up->GetStructAlignment(),
-          lldb::ePermissionsReadable | lldb::ePermissionsWritable, policy,
-          zero_memory, alloc_error);
-
-      if (!alloc_error.Success()) {
+      if (auto address_or_error = m_execution_unit_sp->Malloc(
+              m_materializer_up->GetStructByteSize(),
+              m_materializer_up->GetStructAlignment(),
+              lldb::ePermissionsReadable | lldb::ePermissionsWritable, policy,
+              zero_memory)) {
+        m_materialized_address = *address_or_error;
+      } else {
         diagnostic_manager.Printf(
             lldb::eSeverityError,
             "Couldn't allocate space for materialized struct: %s",
-            alloc_error.AsCString());
+            toString(address_or_error.takeError()).c_str());
         return false;
       }
     }
@@ -339,8 +336,6 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
     struct_address = m_materialized_address;
 
     if (m_can_interpret && m_stack_frame_bottom == LLDB_INVALID_ADDRESS) {
-      Status alloc_error;
-
       size_t stack_frame_size = target->GetExprAllocSize();
       if (stack_frame_size == 0) {
         ABISP abi_sp;
@@ -351,19 +346,17 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
       }
 
       const bool zero_memory = false;
-
-      m_stack_frame_bottom = m_execution_unit_sp->Malloc(
-          stack_frame_size, 8,
-          lldb::ePermissionsReadable | lldb::ePermissionsWritable,
-          IRMemoryMap::eAllocationPolicyHostOnly, zero_memory, alloc_error);
-
-      m_stack_frame_top = m_stack_frame_bottom + stack_frame_size;
-
-      if (!alloc_error.Success()) {
+      if (auto address_or_error = m_execution_unit_sp->Malloc(
+              stack_frame_size, 8,
+              lldb::ePermissionsReadable | lldb::ePermissionsWritable,
+              IRMemoryMap::eAllocationPolicyHostOnly, zero_memory)) {
+        m_stack_frame_bottom = *address_or_error;
+        m_stack_frame_top = m_stack_frame_bottom + stack_frame_size;
+      } else {
         diagnostic_manager.Printf(
             lldb::eSeverityError,
             "Couldn't allocate space for the stack frame: %s",
-            alloc_error.AsCString());
+            toString(address_or_error.takeError()).c_str());
         return false;
       }
     }
@@ -382,4 +375,3 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
   }
   return true;
 }
-

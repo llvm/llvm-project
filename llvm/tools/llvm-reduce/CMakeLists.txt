@@ -54,10 +54,12 @@ add_llvm_tool(llvm-reduce
   deltas/ReduceInstructionsMIR.cpp
   deltas/ReduceInstructionFlagsMIR.cpp
   deltas/ReduceIRReferences.cpp
+  deltas/ReduceValuesToReturn.cpp
   deltas/ReduceVirtualRegisters.cpp
   deltas/ReduceRegisterMasks.cpp
   deltas/ReduceRegisterDefs.cpp
   deltas/ReduceRegisterUses.cpp
+  deltas/ReduceTargetFeaturesAttr.cpp
   deltas/ReduceUsingSimplifyCFG.cpp
   deltas/RunIRPasses.cpp
   deltas/SimplifyInstructions.cpp

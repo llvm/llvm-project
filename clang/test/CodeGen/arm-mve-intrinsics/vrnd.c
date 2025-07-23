@@ -148,7 +148,7 @@ float32x4_t test_vrndxq_f32(float32x4_t a)
 
 // CHECK-LABEL: @test_vrndnq_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <8 x half> @llvm.arm.mve.vrintn.v8f16(<8 x half> [[A:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = call <8 x half> @llvm.roundeven.v8f16(<8 x half> [[A:%.*]])
 // CHECK-NEXT:    ret <8 x half> [[TMP0]]
 //
 float16x8_t test_vrndnq_f16(float16x8_t a)
@@ -162,7 +162,7 @@ float16x8_t test_vrndnq_f16(float16x8_t a)
 
 // CHECK-LABEL: @test_vrndnq_f32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.arm.mve.vrintn.v4f32(<4 x float> [[A:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.roundeven.v4f32(<4 x float> [[A:%.*]])
 // CHECK-NEXT:    ret <4 x float> [[TMP0]]
 //
 float32x4_t test_vrndnq_f32(float32x4_t a)

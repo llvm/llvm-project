@@ -15,7 +15,8 @@ if (NOT ${getrandom_index} EQUAL -1)
   message(STATUS "Using getrandom for hashtable randomness")
   set(randomness_compile_flags -DLIBC_HASHTABLE_USE_GETRANDOM)
   set(randomness_extra_depends
-    libc.src.sys.random.getrandom libc.src.errno.errno)
+    libc.src.__support.OSUtil.linux.getrandom
+    libc.hdr.errno_macros)
 endif()
 
 
@@ -25,16 +26,15 @@ add_header_library(
     table.h
   DEPENDS
     .bitmask
-    libc.include.llvm-libc-types.ENTRY
+    libc.hdr.types.ENTRY
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.new
     libc.src.__support.hash
     libc.src.__support.macros.attributes
     libc.src.__support.macros.optimization
     libc.src.__support.memory_size
-    libc.src.string.memset
-    libc.src.string.strcmp
-    libc.src.string.strlen
+    libc.src.string.memory_utils.inline_strcmp
+    libc.src.string.string_utils
 )
 
 add_header_library(

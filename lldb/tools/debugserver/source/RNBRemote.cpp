@@ -38,7 +38,6 @@
 #include "DNBThreadResumeActions.h"
 #include "JSON.h"
 #include "JSONGenerator.h"
-#include "JSONGenerator.h"
 #include "MacOSX/Genealogy.h"
 #include "OsLogger.h"
 #include "RNBContext.h"
@@ -820,7 +819,7 @@ rnb_err_t RNBRemote::GetPacketPayload(std::string &return_packet) {
   // (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__);
 
   {
-    PThreadMutex::Locker locker(m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
     if (m_rx_packets.empty()) {
       // Only reset the remote command available event if we have no more
       // packets
@@ -1052,7 +1051,7 @@ void RNBRemote::CommDataReceived(const std::string &new_data) {
   //  (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__);
 
   // Put the packet data into the buffer in a thread safe fashion
-  PThreadMutex::Locker locker(m_mutex);
+  std::lock_guard<std::mutex> guard(m_mutex);
 
   std::string data;
   // See if we have any left over data from a previous call to this
@@ -1477,7 +1476,6 @@ bool RNBRemote::InitializeRegisters(bool force) {
 
 void RNBRemote::NotifyThatProcessStopped(void) {
   RNBRemote::HandlePacket_last_signal(NULL);
-  return;
 }
 
 /* 'A arglen,argnum,arg,...'
@@ -3477,7 +3475,7 @@ static bool GetProcessNameFrom_vAttach(const char *&p,
 }
 
 rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
-  uint32_t max_packet_size = 128 * 1024; // 128KBytes is a reasonable max packet
+  uint32_t max_packet_size = 128 * 1024; // 128 KiB is a reasonable max packet
                                          // size--debugger can always use less
   std::stringstream reply;
   reply << "qXfer:features:read+;PacketSize=" << std::hex << max_packet_size

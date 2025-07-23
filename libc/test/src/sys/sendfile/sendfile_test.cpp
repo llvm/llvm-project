@@ -7,25 +7,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/string_view.h"
-#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/sys/sendfile/sendfile.h"
 #include "src/unistd/close.h"
 #include "src/unistd/read.h"
 #include "src/unistd/unlink.h"
 #include "src/unistd/write.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/fcntl_macros.h"
 #include <sys/stat.h>
 
+using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
+using LlvmLibcSendfileTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 namespace cpp = LIBC_NAMESPACE::cpp;
 
-TEST(LlvmLibcSendfileTest, CreateAndTransfer) {
-  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-
+TEST_F(LlvmLibcSendfileTest, CreateAndTransfer) {
   // The test strategy is to
   //   1. Create a temporary file with known data.
   //   2. Use sendfile to copy it to another file.
@@ -35,7 +34,6 @@ TEST(LlvmLibcSendfileTest, CreateAndTransfer) {
   constexpr const char *OUT_FILE = "testdata/sendfile_out.test";
   const char IN_DATA[] = "sendfile test";
   constexpr ssize_t IN_SIZE = ssize_t(sizeof(IN_DATA));
-  LIBC_NAMESPACE::libc_errno = 0;
 
   int in_fd = LIBC_NAMESPACE::open(IN_FILE, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(in_fd, 0);

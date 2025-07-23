@@ -240,6 +240,38 @@ The ``BOOTSTRAP_LLVM_ENABLE_LTO=Thin`` will enable ThinLTO for stage 2 and
 stage 3 in case the compiler used for stage 1 does not support the ThinLTO
 option.
 
+Integrated Distributed ThinLTO (DTLTO)
+--------------------------------------
+
+Integrated Distributed ThinLTO (DTLTO) enables the distribution of backend
+ThinLTO compilations via external distribution systems, such as Incredibuild,
+during the traditional link step.
+
+The implementation is documented here: https://llvm.org/docs/DTLTO.html.
+
+DTLTO requires the LLD linker (``-fuse-ld=lld``).
+
+``-fthinlto-distributor=<path>``
+   - Specifies the ``<path>`` to the distributor process executable for DTLTO.
+   - If specified, ThinLTO backend compilations will be distributed by LLD.
+
+``-Xthinlto-distributor=<arg>``
+   - Passes ``<arg>`` to the distributor process (see ``-fthinlto-distributor=``).
+   - Can be specified multiple times to pass multiple options.
+   - Multiple options can also be specified by separating them with commas.
+
+Examples:
+   - ``clang -flto=thin -fthinlto-distributor=incredibuild.exe -Xthinlto-distributor=--verbose,--j10 -fuse-ld=lld``
+   - ``clang -flto=thin -fthinlto-distributor=$(which python) -Xthinlto-distributor=incredibuild.py -fuse-ld=lld``
+
+If ``-fthinlto-distributor=`` is specified, Clang supplies the path to a
+compiler to be executed remotely to perform the ThinLTO backend
+compilations. Currently, this is Clang itself.
+
+Note that currently, DTLTO is only supported in some LLD flavors. Support can
+be added to other LLD flavours in the future.
+See `DTLTO <https://lld.llvm.org/dtlto.html>`_ for more information.
+
 More Information
 ================
 

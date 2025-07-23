@@ -396,6 +396,10 @@ RTLIB::Libcall RTLIB::getPOWI(EVT RetVT) {
                       POWI_PPCF128);
 }
 
+RTLIB::Libcall RTLIB::getPOW(EVT RetVT) {
+  return getFPLibCall(RetVT, POW_F32, POW_F64, POW_F80, POW_F128, POW_PPCF128);
+}
+
 RTLIB::Libcall RTLIB::getLDEXP(EVT RetVT) {
   return getFPLibCall(RetVT, LDEXP_F32, LDEXP_F64, LDEXP_F80, LDEXP_F128,
                       LDEXP_PPCF128);
@@ -404,6 +408,14 @@ RTLIB::Libcall RTLIB::getLDEXP(EVT RetVT) {
 RTLIB::Libcall RTLIB::getFREXP(EVT RetVT) {
   return getFPLibCall(RetVT, FREXP_F32, FREXP_F64, FREXP_F80, FREXP_F128,
                       FREXP_PPCF128);
+}
+
+RTLIB::Libcall RTLIB::getSIN(EVT RetVT) {
+  return getFPLibCall(RetVT, SIN_F32, SIN_F64, SIN_F80, SIN_F128, SIN_PPCF128);
+}
+
+RTLIB::Libcall RTLIB::getCOS(EVT RetVT) {
+  return getFPLibCall(RetVT, COS_F32, COS_F64, COS_F80, COS_F128, COS_PPCF128);
 }
 
 RTLIB::Libcall RTLIB::getSINCOS(EVT RetVT) {
@@ -597,42 +609,86 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
   }
 }
 
-void RTLIB::initCmpLibcallCCs(ISD::CondCode *CmpLibcallCCs) {
-  std::fill(CmpLibcallCCs, CmpLibcallCCs + RTLIB::UNKNOWN_LIBCALL,
-            ISD::SETCC_INVALID);
-  CmpLibcallCCs[RTLIB::OEQ_F32] = ISD::SETEQ;
-  CmpLibcallCCs[RTLIB::OEQ_F64] = ISD::SETEQ;
-  CmpLibcallCCs[RTLIB::OEQ_F128] = ISD::SETEQ;
-  CmpLibcallCCs[RTLIB::OEQ_PPCF128] = ISD::SETEQ;
-  CmpLibcallCCs[RTLIB::UNE_F32] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::UNE_F64] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::UNE_F128] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::UNE_PPCF128] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::OGE_F32] = ISD::SETGE;
-  CmpLibcallCCs[RTLIB::OGE_F64] = ISD::SETGE;
-  CmpLibcallCCs[RTLIB::OGE_F128] = ISD::SETGE;
-  CmpLibcallCCs[RTLIB::OGE_PPCF128] = ISD::SETGE;
-  CmpLibcallCCs[RTLIB::OLT_F32] = ISD::SETLT;
-  CmpLibcallCCs[RTLIB::OLT_F64] = ISD::SETLT;
-  CmpLibcallCCs[RTLIB::OLT_F128] = ISD::SETLT;
-  CmpLibcallCCs[RTLIB::OLT_PPCF128] = ISD::SETLT;
-  CmpLibcallCCs[RTLIB::OLE_F32] = ISD::SETLE;
-  CmpLibcallCCs[RTLIB::OLE_F64] = ISD::SETLE;
-  CmpLibcallCCs[RTLIB::OLE_F128] = ISD::SETLE;
-  CmpLibcallCCs[RTLIB::OLE_PPCF128] = ISD::SETLE;
-  CmpLibcallCCs[RTLIB::OGT_F32] = ISD::SETGT;
-  CmpLibcallCCs[RTLIB::OGT_F64] = ISD::SETGT;
-  CmpLibcallCCs[RTLIB::OGT_F128] = ISD::SETGT;
-  CmpLibcallCCs[RTLIB::OGT_PPCF128] = ISD::SETGT;
-  CmpLibcallCCs[RTLIB::UO_F32] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::UO_F64] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::UO_F128] = ISD::SETNE;
-  CmpLibcallCCs[RTLIB::UO_PPCF128] = ISD::SETNE;
+ISD::CondCode TargetLoweringBase::getSoftFloatCmpLibcallPredicate(
+    RTLIB::LibcallImpl Impl) const {
+  switch (Impl) {
+  case RTLIB::__aeabi_dcmpeq__une:
+  case RTLIB::__aeabi_fcmpeq__une:
+    // Usage in the eq case, so we have to invert the comparison.
+    return ISD::SETEQ;
+  case RTLIB::__aeabi_dcmpeq__oeq:
+  case RTLIB::__aeabi_fcmpeq__oeq:
+    // Normal comparison to boolean value.
+    return ISD::SETNE;
+  case RTLIB::__aeabi_dcmplt:
+  case RTLIB::__aeabi_dcmple:
+  case RTLIB::__aeabi_dcmpge:
+  case RTLIB::__aeabi_dcmpgt:
+  case RTLIB::__aeabi_dcmpun:
+  case RTLIB::__aeabi_fcmplt:
+  case RTLIB::__aeabi_fcmple:
+  case RTLIB::__aeabi_fcmpge:
+  case RTLIB::__aeabi_fcmpgt:
+    /// The AEABI versions return a typical boolean value, so we can compare
+    /// against the integer result as simply != 0.
+    return ISD::SETNE;
+  default:
+    break;
+  }
+
+  // Assume libgcc/compiler-rt behavior. Most of the cases are really aliases of
+  // each other, and return a 3-way comparison style result of -1, 0, or 1
+  // depending on lt/eq/gt.
+  //
+  // FIXME: It would be cleaner to directly express this as a 3-way comparison
+  // soft FP libcall instead of individual compares.
+  RTLIB::Libcall LC = RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(Impl);
+  switch (LC) {
+  case RTLIB::OEQ_F32:
+  case RTLIB::OEQ_F64:
+  case RTLIB::OEQ_F128:
+  case RTLIB::OEQ_PPCF128:
+    return ISD::SETEQ;
+  case RTLIB::UNE_F32:
+  case RTLIB::UNE_F64:
+  case RTLIB::UNE_F128:
+  case RTLIB::UNE_PPCF128:
+    return ISD::SETNE;
+  case RTLIB::OGE_F32:
+  case RTLIB::OGE_F64:
+  case RTLIB::OGE_F128:
+  case RTLIB::OGE_PPCF128:
+    return ISD::SETGE;
+  case RTLIB::OLT_F32:
+  case RTLIB::OLT_F64:
+  case RTLIB::OLT_F128:
+  case RTLIB::OLT_PPCF128:
+    return ISD::SETLT;
+  case RTLIB::OLE_F32:
+  case RTLIB::OLE_F64:
+  case RTLIB::OLE_F128:
+  case RTLIB::OLE_PPCF128:
+    return ISD::SETLE;
+  case RTLIB::OGT_F32:
+  case RTLIB::OGT_F64:
+  case RTLIB::OGT_F128:
+  case RTLIB::OGT_PPCF128:
+    return ISD::SETGT;
+  case RTLIB::UO_F32:
+  case RTLIB::UO_F64:
+  case RTLIB::UO_F128:
+  case RTLIB::UO_PPCF128:
+    return ISD::SETNE;
+  default:
+    llvm_unreachable("not a compare libcall");
+  }
 }
 
 /// NOTE: The TargetMachine owns TLOF.
 TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
-    : TM(tm), Libcalls(TM.getTargetTriple()) {
+    : TM(tm), Libcalls(TM.getTargetTriple(), TM.Options.ExceptionModel,
+                       TM.Options.FloatABIType, TM.Options.EABIVersion,
+                       TM.Options.MCOptions.getABIName()) {
   initActions();
 
   // Perform these initializations only once.
@@ -664,9 +720,11 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
 
   MinCmpXchgSizeInBits = 0;
   SupportsUnalignedAtomics = false;
-
-  RTLIB::initCmpLibcallCCs(CmpLibcallCCs);
 }
+
+// Define the virtual destructor out-of-line to act as a key method to anchor
+// debug info (see coding standards).
+TargetLoweringBase::~TargetLoweringBase() = default;
 
 void TargetLoweringBase::initActions() {
   // All operations default to being supported.
@@ -675,9 +733,8 @@ void TargetLoweringBase::initActions() {
   memset(TruncStoreActions, 0, sizeof(TruncStoreActions));
   memset(IndexedModeActions, 0, sizeof(IndexedModeActions));
   memset(CondCodeActions, 0, sizeof(CondCodeActions));
-  std::fill(std::begin(RegClassForVT), std::end(RegClassForVT), nullptr);
-  std::fill(std::begin(TargetDAGCombineArray),
-            std::end(TargetDAGCombineArray), 0);
+  llvm::fill(RegClassForVT, nullptr);
+  llvm::fill(TargetDAGCombineArray, 0);
 
   // Let extending atomic loads be unsupported by default.
   for (MVT ValVT : MVT::all_valuetypes())
@@ -839,10 +896,6 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::GET_FPENV, VT, Expand);
     setOperationAction(ISD::SET_FPENV, VT, Expand);
     setOperationAction(ISD::RESET_FPENV, VT, Expand);
-
-    // PartialReduceMLA operations default to expand.
-    setOperationAction({ISD::PARTIAL_REDUCE_UMLA, ISD::PARTIAL_REDUCE_SMLA}, VT,
-                       Expand);
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.
@@ -869,6 +922,10 @@ void TargetLoweringBase::initActions() {
                       ISD::FATAN,      ISD::FCOSH, ISD::FSINH,  ISD::FTANH,
                       ISD::FATAN2},
                      {MVT::f32, MVT::f64, MVT::f128}, Expand);
+
+  // Insert custom handling default for llvm.canonicalize.*.
+  setOperationAction(ISD::FCANONICALIZE,
+                     {MVT::f16, MVT::f32, MVT::f64, MVT::f128}, Expand);
 
   // FIXME: Query RuntimeLibCalls to make the decision.
   setOperationAction({ISD::LRINT, ISD::LLRINT, ISD::LROUND, ISD::LLROUND},
@@ -1030,7 +1087,7 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
     // If type is to be expanded, split the vector.
     //  <4 x i140> -> <2 x i140>
     if (LK.first == TypeExpandInteger) {
-      if (VT.getVectorElementCount().isScalable())
+      if (NumElts.isScalable() && NumElts.getKnownMinValue() == 1)
         return LegalizeKind(TypeScalarizeScalableVector, EltVT);
       return LegalizeKind(TypeSplitVector,
                           VT.getHalfNumVectorElementsVT(Context));
@@ -1908,15 +1965,26 @@ TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
 
 Value *
 TargetLoweringBase::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
+  // FIXME: Can this triple check be replaced with SAFESTACK_POINTER_ADDRESS
+  // being available?
   if (!TM.getTargetTriple().isAndroid())
     return getDefaultSafeStackPointerLocation(IRB, true);
 
-  // Android provides a libc function to retrieve the address of the current
-  // thread's unsafe stack pointer.
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   auto *PtrTy = PointerType::getUnqual(M->getContext());
+
+  const char *SafestackPointerAddressName =
+      getLibcallName(RTLIB::SAFESTACK_POINTER_ADDRESS);
+  if (!SafestackPointerAddressName) {
+    M->getContext().emitError(
+        "no libcall available for safestack pointer address");
+    return PoisonValue::get(PtrTy);
+  }
+
+  // Android provides a libc function to retrieve the address of the current
+  // thread's unsafe stack pointer.
   FunctionCallee Fn =
-      M->getOrInsertFunction("__safestack_pointer_address", PtrTy);
+      M->getOrInsertFunction(SafestackPointerAddressName, PtrTy);
   return IRB.CreateCall(Fn);
 }
 
@@ -1974,11 +2042,12 @@ bool TargetLoweringBase::isLegalAddressingMode(const DataLayout &DL,
 Value *TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB) const {
   if (getTargetMachine().getTargetTriple().isOSOpenBSD()) {
     Module &M = *IRB.GetInsertBlock()->getParent()->getParent();
-    PointerType *PtrTy = PointerType::getUnqual(M.getContext());
-    Constant *C = M.getOrInsertGlobal("__guard_local", PtrTy);
-    if (GlobalVariable *G = dyn_cast_or_null<GlobalVariable>(C))
-      G->setVisibility(GlobalValue::HiddenVisibility);
-    return C;
+    const DataLayout &DL = M.getDataLayout();
+    PointerType *PtrTy =
+        PointerType::get(M.getContext(), DL.getDefaultGlobalsAddressSpace());
+    GlobalVariable *G = M.getOrInsertGlobal("__guard_local", PtrTy);
+    G->setVisibility(GlobalValue::HiddenVisibility);
+    return G;
   }
   return nullptr;
 }
@@ -2005,6 +2074,9 @@ void TargetLoweringBase::insertSSPDeclarations(Module &M) const {
 // Currently only support "standard" __stack_chk_guard.
 // TODO: add LOAD_STACK_GUARD support.
 Value *TargetLoweringBase::getSDagStackGuard(const Module &M) const {
+  if (getTargetMachine().getTargetTriple().isOSOpenBSD()) {
+    return M.getNamedValue("__guard_local");
+  }
   return M.getNamedValue("__stack_chk_guard");
 }
 

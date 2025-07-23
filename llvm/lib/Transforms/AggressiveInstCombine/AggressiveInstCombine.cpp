@@ -328,15 +328,33 @@ static bool tryToRecognizePopCount(Instruction &I) {
                               m_SpecificInt(Mask33))))) {
         Value *Root, *SubOp1;
         // Matching "i - ((i >> 1) & 0x55555555...)".
+        const APInt *AndMask;
         if (match(AndOp0, m_Sub(m_Value(Root), m_Value(SubOp1))) &&
             match(SubOp1, m_And(m_LShr(m_Specific(Root), m_SpecificInt(1)),
-                                m_SpecificInt(Mask55)))) {
-          LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
-          IRBuilder<> Builder(&I);
-          I.replaceAllUsesWith(
-              Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
-          ++NumPopCountRecognized;
-          return true;
+                                m_APInt(AndMask)))) {
+          auto CheckAndMask = [&]() {
+            if (*AndMask == Mask55)
+              return true;
+
+            // Exact match failed, see if any bits are known to be 0 where we
+            // expect a 1 in the mask.
+            if (!AndMask->isSubsetOf(Mask55))
+              return false;
+
+            APInt NeededMask = Mask55 & ~*AndMask;
+            return MaskedValueIsZero(cast<Instruction>(SubOp1)->getOperand(0),
+                                     NeededMask,
+                                     SimplifyQuery(I.getDataLayout()));
+          };
+
+          if (CheckAndMask()) {
+            LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
+            IRBuilder<> Builder(&I);
+            I.replaceAllUsesWith(
+                Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
+            ++NumPopCountRecognized;
+            return true;
+          }
         }
       }
     }
@@ -422,8 +440,7 @@ static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
   if (TTI.haveFastSqrt(Ty) &&
       (Call->hasNoNaNs() ||
        cannotBeOrderedLessThanZero(
-           Arg, 0,
-           SimplifyQuery(Call->getDataLayout(), &TLI, &DT, &AC, Call)))) {
+           Arg, SimplifyQuery(Call->getDataLayout(), &TLI, &DT, &AC, Call)))) {
     IRBuilder<> Builder(Call);
     Value *NewSqrt =
         Builder.CreateIntrinsic(Intrinsic::sqrt, Ty, Arg, Call, "sqrt");
@@ -530,7 +547,7 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I) {
     return false;
 
   GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
-  if (!GEP || !GEP->isInBounds() || GEP->getNumIndices() != 2)
+  if (!GEP || !GEP->hasNoUnsignedSignedWrap() || GEP->getNumIndices() != 2)
     return false;
 
   if (!GEP->getSourceElementType()->isArrayTy())
@@ -702,9 +719,7 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
     if (Inst.mayWriteToMemory() && isModSet(AA.getModRefInfo(&Inst, Loc)))
       return false;
 
-    // Ignore debug info so that's not counted against MaxInstrsToScan.
-    // Otherwise debug info could affect codegen.
-    if (!isa<DbgInfoIntrinsic>(Inst) && ++NumScanned > MaxInstrsToScan)
+    if (++NumScanned > MaxInstrsToScan)
       return false;
   }
 
@@ -827,6 +842,218 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   return true;
 }
 
+/// ValWidth bits starting at ValOffset of Val stored at PtrBase+PtrOffset.
+struct PartStore {
+  Value *PtrBase;
+  APInt PtrOffset;
+  Value *Val;
+  uint64_t ValOffset;
+  uint64_t ValWidth;
+  StoreInst *Store;
+
+  bool isCompatibleWith(const PartStore &Other) const {
+    return PtrBase == Other.PtrBase && Val == Other.Val;
+  }
+
+  bool operator<(const PartStore &Other) const {
+    return PtrOffset.slt(Other.PtrOffset);
+  }
+};
+
+static std::optional<PartStore> matchPartStore(Instruction &I,
+                                               const DataLayout &DL) {
+  auto *Store = dyn_cast<StoreInst>(&I);
+  if (!Store || !Store->isSimple())
+    return std::nullopt;
+
+  Value *StoredVal = Store->getValueOperand();
+  Type *StoredTy = StoredVal->getType();
+  if (!StoredTy->isIntegerTy() || !DL.typeSizeEqualsStoreSize(StoredTy))
+    return std::nullopt;
+
+  uint64_t ValWidth = StoredTy->getPrimitiveSizeInBits();
+  uint64_t ValOffset = 0;
+  Value *Val;
+  if (!match(StoredVal, m_CombineOr(m_Trunc(m_LShr(m_Value(Val),
+                                                   m_ConstantInt(ValOffset))),
+                                    m_Trunc(m_Value(Val)))))
+    return std::nullopt;
+
+  Value *Ptr = Store->getPointerOperand();
+  APInt PtrOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+  Value *PtrBase = Ptr->stripAndAccumulateConstantOffsets(
+      DL, PtrOffset, /*AllowNonInbounds=*/true);
+  return {{PtrBase, PtrOffset, Val, ValOffset, ValWidth, Store}};
+}
+
+static bool mergeConsecutivePartStores(ArrayRef<PartStore> Parts,
+                                       unsigned Width, const DataLayout &DL,
+                                       TargetTransformInfo &TTI) {
+  if (Parts.size() < 2)
+    return false;
+
+  // Check whether combining the stores is profitable.
+  // FIXME: We could generate smaller stores if we can't produce a large one.
+  const PartStore &First = Parts.front();
+  LLVMContext &Ctx = First.Store->getContext();
+  Type *NewTy = Type::getIntNTy(Ctx, Width);
+  unsigned Fast = 0;
+  if (!TTI.isTypeLegal(NewTy) ||
+      !TTI.allowsMisalignedMemoryAccesses(Ctx, Width,
+                                          First.Store->getPointerAddressSpace(),
+                                          First.Store->getAlign(), &Fast) ||
+      !Fast)
+    return false;
+
+  // Generate the combined store.
+  IRBuilder<> Builder(First.Store);
+  Value *Val = First.Val;
+  if (First.ValOffset != 0)
+    Val = Builder.CreateLShr(Val, First.ValOffset);
+  Val = Builder.CreateTrunc(Val, NewTy);
+  StoreInst *Store = Builder.CreateAlignedStore(
+      Val, First.Store->getPointerOperand(), First.Store->getAlign());
+
+  AAMDNodes AATags = First.Store->getAAMetadata();
+  for (const PartStore &Part : drop_begin(Parts))
+    AATags = AATags.concat(Part.Store->getAAMetadata());
+  Store->setAAMetadata(AATags);
+
+  // Remove the old stores.
+  for (const PartStore &Part : Parts)
+    Part.Store->eraseFromParent();
+
+  return true;
+}
+
+static bool mergePartStores(SmallVectorImpl<PartStore> &Parts,
+                            const DataLayout &DL, TargetTransformInfo &TTI) {
+  if (Parts.size() < 2)
+    return false;
+
+  // We now have multiple parts of the same value stored to the same pointer.
+  // Sort the parts by pointer offset, and make sure they are consistent with
+  // the value offsets. Also check that the value is fully covered without
+  // overlaps.
+  bool Changed = false;
+  llvm::sort(Parts);
+  int64_t LastEndOffsetFromFirst = 0;
+  const PartStore *First = &Parts[0];
+  for (const PartStore &Part : Parts) {
+    APInt PtrOffsetFromFirst = Part.PtrOffset - First->PtrOffset;
+    int64_t ValOffsetFromFirst = Part.ValOffset - First->ValOffset;
+    if (PtrOffsetFromFirst * 8 != ValOffsetFromFirst ||
+        LastEndOffsetFromFirst != ValOffsetFromFirst) {
+      Changed |= mergeConsecutivePartStores(ArrayRef(First, &Part),
+                                            LastEndOffsetFromFirst, DL, TTI);
+      First = &Part;
+      LastEndOffsetFromFirst = Part.ValWidth;
+      continue;
+    }
+
+    LastEndOffsetFromFirst = ValOffsetFromFirst + Part.ValWidth;
+  }
+
+  Changed |= mergeConsecutivePartStores(ArrayRef(First, Parts.end()),
+                                        LastEndOffsetFromFirst, DL, TTI);
+  return Changed;
+}
+
+static bool foldConsecutiveStores(BasicBlock &BB, const DataLayout &DL,
+                                  TargetTransformInfo &TTI, AliasAnalysis &AA) {
+  // FIXME: Add big endian support.
+  if (DL.isBigEndian())
+    return false;
+
+  BatchAAResults BatchAA(AA);
+  SmallVector<PartStore, 8> Parts;
+  bool MadeChange = false;
+  for (Instruction &I : make_early_inc_range(BB)) {
+    if (std::optional<PartStore> Part = matchPartStore(I, DL)) {
+      if (Parts.empty() || Part->isCompatibleWith(Parts[0])) {
+        Parts.push_back(std::move(*Part));
+        continue;
+      }
+
+      MadeChange |= mergePartStores(Parts, DL, TTI);
+      Parts.clear();
+      Parts.push_back(std::move(*Part));
+      continue;
+    }
+
+    if (Parts.empty())
+      continue;
+
+    if (I.mayThrow() ||
+        (I.mayReadOrWriteMemory() &&
+         isModOrRefSet(BatchAA.getModRefInfo(
+             &I, MemoryLocation::getBeforeOrAfter(Parts[0].PtrBase))))) {
+      MadeChange |= mergePartStores(Parts, DL, TTI);
+      Parts.clear();
+      continue;
+    }
+  }
+
+  MadeChange |= mergePartStores(Parts, DL, TTI);
+  return MadeChange;
+}
+
+/// Combine away instructions providing they are still equivalent when compared
+/// against 0. i.e do they have any bits set.
+static Value *optimizeShiftInOrChain(Value *V, IRBuilder<> &Builder) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I || I->getOpcode() != Instruction::Or || !I->hasOneUse())
+    return nullptr;
+
+  Value *A;
+
+  // Look deeper into the chain of or's, combining away shl (so long as they are
+  // nuw or nsw).
+  Value *Op0 = I->getOperand(0);
+  if (match(Op0, m_CombineOr(m_NSWShl(m_Value(A), m_Value()),
+                             m_NUWShl(m_Value(A), m_Value()))))
+    Op0 = A;
+  else if (auto *NOp = optimizeShiftInOrChain(Op0, Builder))
+    Op0 = NOp;
+
+  Value *Op1 = I->getOperand(1);
+  if (match(Op1, m_CombineOr(m_NSWShl(m_Value(A), m_Value()),
+                             m_NUWShl(m_Value(A), m_Value()))))
+    Op1 = A;
+  else if (auto *NOp = optimizeShiftInOrChain(Op1, Builder))
+    Op1 = NOp;
+
+  if (Op0 != I->getOperand(0) || Op1 != I->getOperand(1))
+    return Builder.CreateOr(Op0, Op1);
+  return nullptr;
+}
+
+static bool foldICmpOrChain(Instruction &I, const DataLayout &DL,
+                            TargetTransformInfo &TTI, AliasAnalysis &AA,
+                            const DominatorTree &DT) {
+  CmpPredicate Pred;
+  Value *Op0;
+  if (!match(&I, m_ICmp(Pred, m_Value(Op0), m_Zero())) ||
+      !ICmpInst::isEquality(Pred))
+    return false;
+
+  // If the chain or or's matches a load, combine to that before attempting to
+  // remove shifts.
+  if (auto OpI = dyn_cast<Instruction>(Op0))
+    if (OpI->getOpcode() == Instruction::Or)
+      if (foldConsecutiveLoads(*OpI, DL, TTI, AA, DT))
+        return true;
+
+  IRBuilder<> Builder(&I);
+  // icmp eq/ne or(shl(a), b), 0 -> icmp eq/ne or(a, b), 0
+  if (auto *Res = optimizeShiftInOrChain(Op0, Builder)) {
+    I.replaceAllUsesWith(Builder.CreateICmp(Pred, Res, I.getOperand(1)));
+    return true;
+  }
+
+  return false;
+}
+
 // Calculate GEP Stride and accumulated const ModOffset. Return Stride and
 // ModOffset
 static std::pair<APInt, APInt>
@@ -843,7 +1070,7 @@ getStrideAndModOffsetOfGEP(Value *PtrOp, const DataLayout &DL) {
 
     for (auto [V, Scale] : VarOffsets) {
       // Only keep a power of two factor for non-inbounds
-      if (!GEP->isInBounds())
+      if (!GEP->hasNoUnsignedSignedWrap())
         Scale = APInt::getOneBitSet(Scale.getBitWidth(), Scale.countr_zero());
 
       if (!Stride)
@@ -1133,6 +1360,7 @@ static bool foldMemChr(CallInst *Call, DomTreeUpdater *DTU,
   BasicBlock *BB = Call->getParent();
   BasicBlock *BBNext = SplitBlock(BB, Call, DTU);
   IRBuilder<> IRB(BB);
+  IRB.SetCurrentDebugLocation(Call->getDebugLoc());
   IntegerType *ByteTy = IRB.getInt8Ty();
   BB->getTerminator()->eraseFromParent();
   SwitchInst *SI = IRB.CreateSwitch(
@@ -1252,11 +1480,15 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= tryToRecognizeTableBasedCttz(I);
       MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);
       MadeChange |= foldPatternedLoads(I, DL);
+      MadeChange |= foldICmpOrChain(I, DL, TTI, AA, DT);
       // NOTE: This function introduces erasing of the instruction `I`, so it
       // needs to be called at the end of this sequence, otherwise we may make
       // bugs.
       MadeChange |= foldLibCalls(I, TTI, TLI, AC, DT, DL, MadeCFGChange);
     }
+
+    // Do this separately to avoid redundantly scanning stores multiple times.
+    MadeChange |= foldConsecutiveStores(BB, DL, TTI, AA);
   }
 
   // We're done with transforms, so remove dead instructions.

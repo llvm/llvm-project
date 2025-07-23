@@ -17,15 +17,12 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
@@ -301,19 +298,8 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
 /// constants, or optional otherwise. Trip count is computed as
 /// ceilDiv(highBound - lowBound, step).
 static std::optional<int64_t> getConstantTripCount(scf::ForOp forOp) {
-  std::optional<int64_t> lbCstOp = getConstantIntValue(forOp.getLowerBound());
-  std::optional<int64_t> ubCstOp = getConstantIntValue(forOp.getUpperBound());
-  std::optional<int64_t> stepCstOp = getConstantIntValue(forOp.getStep());
-  if (!lbCstOp.has_value() || !ubCstOp.has_value() || !stepCstOp.has_value())
-    return {};
-
-  // Constant loop bounds computation.
-  int64_t lbCst = lbCstOp.value();
-  int64_t ubCst = ubCstOp.value();
-  int64_t stepCst = stepCstOp.value();
-  assert(lbCst >= 0 && ubCst >= 0 && stepCst > 0 &&
-         "expected positive loop bounds and step");
-  return llvm::divideCeilSigned(ubCst - lbCst, stepCst);
+  return constantTripCount(forOp.getLowerBound(), forOp.getUpperBound(),
+                           forOp.getStep());
 }
 
 /// Generates unrolled copies of scf::ForOp 'loopBodyBlock', with
@@ -768,7 +754,7 @@ static void denormalizeInductionVariableForIndexType(RewriterBase &rewriter,
   // If an `affine.apply` operation is generated for denormalization, the use
   // of `origLb` in those ops must not be replaced. These arent not generated
   // when `origLb == 0` and `origStep == 1`.
-  if (!isConstantIntValue(origLb, 0) || !isConstantIntValue(origStep, 1)) {
+  if (!isZeroInteger(origLb) || !isOneInteger(origStep)) {
     if (Operation *preservedUse = denormalizedIvVal.getDefiningOp()) {
       preservedUses.insert(preservedUse);
     }
@@ -785,8 +771,8 @@ void mlir::denormalizeInductionVariable(RewriterBase &rewriter, Location loc,
   }
   Value denormalizedIv;
   SmallPtrSet<Operation *, 2> preserve;
-  bool isStepOne = isConstantIntValue(origStep, 1);
-  bool isZeroBased = isConstantIntValue(origLb, 0);
+  bool isStepOne = isOneInteger(origStep);
+  bool isZeroBased = isZeroInteger(origLb);
 
   Value scaled = normalizedIv;
   if (!isStepOne) {
@@ -1482,30 +1468,41 @@ FailureOr<scf::ForallOp> mlir::normalizeForallOp(RewriterBase &rewriter,
   SmallVector<OpFoldResult> ubs = forallOp.getMixedUpperBound();
   SmallVector<OpFoldResult> steps = forallOp.getMixedStep();
 
-  if (llvm::all_of(
-          lbs, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 0); }) &&
-      llvm::all_of(
-          steps, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 1); })) {
+  if (forallOp.isNormalized())
     return forallOp;
-  }
 
-  SmallVector<OpFoldResult> newLbs, newUbs, newSteps;
+  OpBuilder::InsertionGuard g(rewriter);
+  auto loc = forallOp.getLoc();
+  rewriter.setInsertionPoint(forallOp);
+  SmallVector<OpFoldResult> newUbs;
   for (auto [lb, ub, step] : llvm::zip_equal(lbs, ubs, steps)) {
     Range normalizedLoopParams =
-        emitNormalizedLoopBounds(rewriter, forallOp.getLoc(), lb, ub, step);
-    newLbs.push_back(normalizedLoopParams.offset);
+        emitNormalizedLoopBounds(rewriter, loc, lb, ub, step);
     newUbs.push_back(normalizedLoopParams.size);
-    newSteps.push_back(normalizedLoopParams.stride);
   }
+  (void)foldDynamicIndexList(newUbs);
 
+  // Use the normalized builder since the lower bounds are always 0 and the
+  // steps are always 1.
   auto normalizedForallOp = rewriter.create<scf::ForallOp>(
-      forallOp.getLoc(), newLbs, newUbs, newSteps, forallOp.getOutputs(),
-      forallOp.getMapping(), [](OpBuilder &, Location, ValueRange) {});
+      loc, newUbs, forallOp.getOutputs(), forallOp.getMapping(),
+      [](OpBuilder &, Location, ValueRange) {});
 
   rewriter.inlineRegionBefore(forallOp.getBodyRegion(),
                               normalizedForallOp.getBodyRegion(),
                               normalizedForallOp.getBodyRegion().begin());
+  // Remove the original empty block in the new loop.
+  rewriter.eraseBlock(&normalizedForallOp.getBodyRegion().back());
 
-  rewriter.replaceAllOpUsesWith(forallOp, normalizedForallOp);
-  return success();
+  rewriter.setInsertionPointToStart(normalizedForallOp.getBody());
+  // Update the users of the original loop variables.
+  for (auto [idx, iv] :
+       llvm::enumerate(normalizedForallOp.getInductionVars())) {
+    auto origLb = getValueOrCreateConstantIndexOp(rewriter, loc, lbs[idx]);
+    auto origStep = getValueOrCreateConstantIndexOp(rewriter, loc, steps[idx]);
+    denormalizeInductionVariable(rewriter, loc, iv, origLb, origStep);
+  }
+
+  rewriter.replaceOp(forallOp, normalizedForallOp);
+  return normalizedForallOp;
 }
