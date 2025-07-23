@@ -5099,8 +5099,7 @@ Action *Driver::ConstructPhaseAction(
     if (Args.hasArg(options::OPT_emit_llvm) ||
         TargetDeviceOffloadKind == Action::OFK_SYCL ||
         (((Input->getOffloadingToolChain() &&
-           (Input->getOffloadingToolChain()->getTriple().isSPIRV() ||
-            Input->getOffloadingToolChain()->getTriple().isAMDGPU())) ||
+           Input->getOffloadingToolChain()->getTriple().isAMDGPU()) ||
           TargetDeviceOffloadKind == Action::OFK_HIP) &&
          ((Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
                         false) ||
@@ -5108,6 +5107,7 @@ Action *Driver::ConstructPhaseAction(
                          options::OPT_no_offload_new_driver, false) &&
             (!offloadDeviceOnly() ||
              (Input->getOffloadingToolChain() &&
+              TargetDeviceOffloadKind == Action::OFK_HIP &&
               Input->getOffloadingToolChain()->getTriple().isSPIRV())))) ||
           TargetDeviceOffloadKind == Action::OFK_OpenMP))) {
       types::ID Output =
