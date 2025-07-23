@@ -2682,8 +2682,8 @@ static bool generateConvertInst(const StringRef DemangledCall,
         const auto *ST = static_cast<const SPIRVSubtarget *>(
           &MIRBuilder.getMF().getSubtarget());
         if (!ST->canUseExtension(
-                SPIRV::Extension::SPV_INTEL_bfloat16_conversion))
-          NeedExtMsg = "SPV_INTEL_bfloat16_conversion";
+                SPIRV::Extension::SPV_INTEL_tensor_float32_conversion))
+          NeedExtMsg = "SPV_INTEL_tensor_float32_conversion";
           IsRightComponentsNumber =
             GR->getScalarOrVectorComponentCount(Call->Arguments[0]) ==
             GR->getScalarOrVectorComponentCount(Call->ReturnRegister);
