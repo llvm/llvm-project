@@ -5013,13 +5013,14 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
   if (!doConstruct.IsDoNormal() && !doConstruct.IsDoConcurrent())
     return nullptr;
 
-  // If the evaluation is not structured, then we cannot convert the loop
+  // If the evaluation is unstructured, then we cannot convert the loop
   // because acc loop does not have an unstructured form.
   // TODO: There may be other strategies that can be employed such
   // as generating acc.private for the loop variables without attaching
   // them to acc.loop.
   if (eval.lowerAsUnstructured())
-    return nullptr;
+    TODO(converter.getCurrentLocation(),
+         "unstructured do loops in acc regions");
 
   // Open up a new scope for the loop variables.
   localSymbols.pushScope();
