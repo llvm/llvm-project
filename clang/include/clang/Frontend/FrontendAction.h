@@ -102,7 +102,7 @@ protected:
   /// BeginSourceFileAction (and BeginSourceFile).
   virtual void EndSourceFileAction() {
     if (CurrentInput.isPreprocessed())
-      // reset the preprocessor macro expansion to the default
+      // reset the preprocessor macro expansion to the default.
       getCompilerInstance().getPreprocessor().SetEnableMacroExpansion();
   }
 
