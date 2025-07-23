@@ -23490,16 +23490,9 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, X86::CondCode X86CC,
 
   // Try to shrink signed i64 compares if the input has enough one bits.
   // Or the input is sign extended from a 32-bit value.
-  // TODO: Should we peek through freeze?
-  // TODO: Is SIGN_EXTEND_INREG needed here?
   if (CmpVT == MVT::i64 && isX86CCSigned(X86CC) &&
       Op0.hasOneUse() && // Hacky way to not break CSE opportunities with sub.
-      (DAG.ComputeNumSignBits(Op1) > 32 ||
-       Op1.getOpcode() == ISD::SIGN_EXTEND ||
-       Op1.getOpcode() == ISD::SIGN_EXTEND_INREG) &&
-      (DAG.ComputeNumSignBits(Op0) > 32 ||
-       Op0.getOpcode() == ISD::SIGN_EXTEND ||
-       Op0.getOpcode() == ISD::SIGN_EXTEND_INREG)) {
+      DAG.ComputeNumSignBits(Op1) > 32 && DAG.ComputeNumSignBits(Op0) > 32) {
     CmpVT = MVT::i32;
     Op0 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op0);
     Op1 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op1);
