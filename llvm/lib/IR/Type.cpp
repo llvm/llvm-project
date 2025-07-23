@@ -324,12 +324,12 @@ IntegerType *IntegerType::get(LLVMContext &C, unsigned NumBits) {
 
   // Check for the built-in integer types
   switch (NumBits) {
-  case   1: return cast<IntegerType>(Type::getInt1Ty(C));
-  case   8: return cast<IntegerType>(Type::getInt8Ty(C));
-  case  16: return cast<IntegerType>(Type::getInt16Ty(C));
-  case  32: return cast<IntegerType>(Type::getInt32Ty(C));
-  case  64: return cast<IntegerType>(Type::getInt64Ty(C));
-  case 128: return cast<IntegerType>(Type::getInt128Ty(C));
+  case   1: return Type::getInt1Ty(C);
+  case   8: return Type::getInt8Ty(C);
+  case  16: return Type::getInt16Ty(C);
+  case  32: return Type::getInt32Ty(C);
+  case  64: return Type::getInt64Ty(C);
+  case 128: return Type::getInt128Ty(C);
   default:
     break;
   }
