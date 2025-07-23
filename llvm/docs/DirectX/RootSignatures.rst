@@ -45,7 +45,7 @@ metadata representation of this root signature and the corresponding operands.
       numDescriptors = 5, u1, space = 10, offset = 5,
       flags = DATA_VOLATILE
     )
-)
+  )
 
 .. note::
 
