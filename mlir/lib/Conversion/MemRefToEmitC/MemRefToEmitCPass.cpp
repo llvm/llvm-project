@@ -29,9 +29,7 @@ using namespace mlir;
 namespace {
 struct ConvertMemRefToEmitCPass
     : public impl::ConvertMemRefToEmitCBase<ConvertMemRefToEmitCPass> {
-  using Base = impl::ConvertMemRefToEmitCBase<ConvertMemRefToEmitCPass>;
-  ConvertMemRefToEmitCPass() = default;
-  ConvertMemRefToEmitCPass(ConvertMemRefToEmitCOptions options) {}
+  using Base::Base;
   void runOnOperation() override {
     TypeConverter converter;
     ConvertMemRefToEmitCOptions options;
