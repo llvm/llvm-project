@@ -48,10 +48,4 @@
 #define LIBC_PREFERED_TYPE(TYPE)
 #endif
 
-#ifndef __has_builtin
-#define LIBC_HAS_BUILTIN(X) 0
-#else
-#define LIBC_HAS_BUILTIN(X) __has_builtin(X)
-#endif
-
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_ATTRIBUTES_H
