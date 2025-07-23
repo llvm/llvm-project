@@ -92,17 +92,17 @@ Root Signature Element
 A root signature element is identified by the first operand, which is a string.
 The following root signature elements are defined:
 
-.. csv-table::
-
-  Identifier String, Root Signature Element
-
-  \"RootFlags\",       Root Flags
-  \"RootConstants\",   Root Constants
-  \"RootCBV\",         Root Descriptor
-  \"RootSRV\",         Root Descriptor
-  \"RootUAV\",         Root Descriptor
-  \"StaticSampler\",   Static Sampler
-  \"DescriptorTable\", Descriptor Table
+================= ======================
+Identifier String Root Signature Element
+================= ======================
+"RootFlags"       Root Flags
+"RootConstants"   Root Constants
+"RootCBV"         Root Descriptor
+"RootSRV"         Root Descriptor
+"RootUAV"         Root Descriptor
+"StaticSampler"   Static Sampler
+"DescriptorTable" Descriptor Table
+================= ======================
 
 Below is listed the representation for each type of root signature element.
 
@@ -113,12 +113,13 @@ Root Flags
 
   !3 = { !"RootFlags", i32 1 }
 
-.. csv-table::
+======================= ====
+Description             Type
+======================= ====
+`Root Signature Flags`_ i32
+======================= ====
 
-  Description, Type
-
-  `Root Signature Flags <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_root_signature_flags>`_, i32
-
+.. _Root Signature Flags: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_root_signature_flags
 
 Root Constants
 ==============
@@ -127,14 +128,16 @@ Root Constants
 
   !4 = { !"RootConstants", i32 0, i32 1, i32 2, i32 3 }
 
-.. csv-table::
+==================== ====
+Description          Type
+==================== ====
+`Shader Visibility`_ i32
+Shader Register      i32
+Register Space       i32
+Number 32-bit Values i32
+==================== ====
 
-  Description, Type
-
-  `Shader Visibility <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_shader_visibility>`_, i32
-  Shader Register, i32
-  Register Space, i32
-  Number 32-bit Values, i32
+.. _Shader Visibility: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_shader_visibility
 
 Root Descriptor
 ===============
@@ -146,14 +149,16 @@ root descriptor.
 
   !5 = { !"RootCBV", i32 0, i32 1, i32 0, i32 0 }
 
-.. csv-table::
+======================== ====
+Description              Type
+======================== ====
+`Shader Visibility`_     i32
+Shader Register          i32
+Register Space           i32
+`Root Descriptor Flags`_ i32
+======================== ====
 
-  Description, Type
-
-  `Shader Visibility`_, i32
-  Shader Register, i32
-  Register Space, i32
-  `Root Descriptor Flags <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_root_descriptor_flags>`_, i32
+.. _Root Descriptor Flags: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_root_descriptor_flags
 
 Static Sampler
 ==============
@@ -162,23 +167,30 @@ Static Sampler
 
   !6 = !{ !"StaticSampler", i32 1, i32 4, ... }; remaining operands omitted for space
 
-.. csv-table::
+==================== =====
+Description          Type
+==================== =====
+`Filter`_            i32
+`AddressU`_          i32
+`AddressV`_          i32
+`AddressW`_          i32
+MipLODBias           float
+MaxAnisotropy        i32
+`ComparisonFunc`_    i32
+`BorderColor`_       i32
+MinLOD               float
+MaxLOD               float
+ShaderRegister       i32
+RegisterSpace        i32
+`Shader Visibility`_ i32
+==================== =====
 
-  Description, Type
-
-  `Filter <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_filter>`_, i32
-  `AddressU <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_texture_address_mode>`_, i32
-  `AddressV <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_texture_address_mode>`_, i32
-  `AddressW <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_texture_address_mode>`_, i32
-  MipLODBias, float
-  MaxAnisotropy, i32
-  `ComparisonFunc <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_comparison_func>`_, i32
-  `BorderColor <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_static_border_color>`_, i32
-  MinLOD, float
-  MaxLOD, float
-  ShaderRegister, i32
-  RegisterSpace, i32
-  `Shader Visibility`_, i32
+.. _Filter: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_filter
+.. _AddressU: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_texture_address_mode
+.. _AddressV: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_texture_address_mode
+.. _AddressW: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_texture_address_mode
+.. _ComparisonFunc: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_comparison_func>
+.. _BorderColor: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_static_border_color>
 
 Descriptor Table
 ================
@@ -195,12 +207,12 @@ list of references to its descriptor ranges.
 
   !7 = { !"DescriptorTable", i32 0, !8, !9 }
 
-.. csv-table::
-
-  Description, Type
-
-  `Shader Visibility`_, i32
-  Descriptor Range Elements, Descriptor Range
+========================= ================
+Description               Type
+========================= ================
+`Shader Visibility`_      i32
+Descriptor Range Elements Descriptor Range
+========================= ================
 
 
 Descriptor Range
@@ -221,10 +233,15 @@ descriptor range. It is one of the following types:
 
 .. csv-table::
 
-  Description, Type
+============================== ====
+Description                    Type
+============================== ====
+Number of Descriptors in Range i32
+Shader Register                i32
+Register Space                 i32
+`Offset`_                      i32
+`Descriptor Range Flags`_      i32
+============================== ====
 
-  Number of Descriptors in Range, i32
-  Shader Register, i32
-  Register Space, i32
-  `Offset <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_descriptor_range>`_, i32
-  `Descriptor Range Flags <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_descriptor_range_flags>`_, i32
+.. _Offset: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_descriptor_range
+.. _Descriptor Range Flags: https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_descriptor_range_flags
