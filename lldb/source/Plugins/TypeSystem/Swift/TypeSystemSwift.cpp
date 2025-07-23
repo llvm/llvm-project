@@ -17,6 +17,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "llvm/Support/Error.h"
+#include "lldb/Utility/LLDBLog.h"
 #include <lldb/lldb-enumerations.h>
 #include <llvm/ADT/StringRef.h>
 
@@ -75,7 +76,7 @@ void TypeSystemSwift::Terminate() {
 
 bool TypeSystemSwift::CheckFlagInCU(CompileUnit *cu, const char *flag) {
   AutoBool interop_enabled =
-    ModuleList::GetGlobalModuleListProperties().GetSwiftEnableCxxInterop();
+      ModuleList::GetGlobalModuleListProperties().GetSwiftEnableCxxInterop();
   switch (interop_enabled) {
   case AutoBool::True:
     return true;
@@ -90,18 +91,18 @@ bool TypeSystemSwift::CheckFlagInCU(CompileUnit *cu, const char *flag) {
     auto *sym_file = module->GetSymbolFile();
     if (!sym_file)
       return false;
-    auto options = sym_file->GetCompileOptions();
-    for (auto &[unit, args] : options) {
-      if (unit.get() == cu) {
-        if (cu->GetLanguage() == eLanguageTypeSwift)
-          for (const char *arg : args.GetArgumentArrayRef())
-            if (strcmp(arg, flag) == 0)
-              return true;
-        return false;
-      }
+    std::string value;
+    if (sym_file->GetCompileOption(flag, value, cu)) {
+      LLDB_LOGV(GetLog(LLDBLog::Types),
+                "[CheckFlagInCU] Found flag {0} in CU: {1}", flag,
+                cu->GetPrimaryFile().GetFilename().AsCString());
+      return true;
     }
   }
   }
+  LLDB_LOGV(GetLog(LLDBLog::Types),
+            "[CheckFlagInCU] Did not find flag {0} in CU: {1}", flag,
+            cu->GetPrimaryFile().GetFilename().AsCString());
   return false;
 }
 
