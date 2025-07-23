@@ -7804,7 +7804,7 @@ private:
       if (!C)
         continue;
       if (auto *IE = dyn_cast_or_null<OMPIteratorExpr>(
-          const_cast<OMPMapClause *>(C)->getIteratorModifier())) {
+              const_cast<OMPMapClause *>(C)->getIteratorModifier())) {
         if (auto *VD = dyn_cast<VarDecl>(IE->getIteratorDecl(0))) {
           if (!VD->isLocalVarDecl())
             CGF.CGM.EmitGlobal(GlobalDecl(VD));
