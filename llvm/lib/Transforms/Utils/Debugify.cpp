@@ -710,7 +710,7 @@ bool llvm::checkDebugInfoMetadata(Module &M,
   // If we are tracking DebugLoc coverage, replace each empty DebugLoc with an
   // annotated location now so that it does not show up in future passes even if
   // it is propagated to other instructions.
-  for (const auto &L : DILocsAfter)
+  for (auto &L : DILocsAfter)
     if (!L.second)
       L.first->setDebugLoc(DebugLoc::getUnknown());
 #endif
