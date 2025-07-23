@@ -1092,7 +1092,7 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
   auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalValue::InternalLinkage,
                                     Name, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
-  if (CGM.getLangOpts().Optimize) {
+  if (CGM.getCodeGenOpts().OptimizationLevel != 0) {
     Fn->removeFnAttr(llvm::Attribute::NoInline);
     Fn->removeFnAttr(llvm::Attribute::OptimizeNone);
     Fn->addFnAttr(llvm::Attribute::AlwaysInline);
@@ -3199,7 +3199,7 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
       &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), TaskPrivatesMap,
                                     TaskPrivatesMapFnInfo);
-  if (CGM.getLangOpts().Optimize) {
+  if (CGM.getCodeGenOpts().OptimizationLevel != 0) {
     TaskPrivatesMap->removeFnAttr(llvm::Attribute::NoInline);
     TaskPrivatesMap->removeFnAttr(llvm::Attribute::OptimizeNone);
     TaskPrivatesMap->addFnAttr(llvm::Attribute::AlwaysInline);
