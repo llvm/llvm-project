@@ -733,8 +733,19 @@ emitc.class @testClass {
 // -----
 
 func.func @test_while(%arg0 : !emitc.ptr<i32>) {
-  // expected-error @+1 {{'emitc.while' op condition region cannot be empty}}
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+
+  // expected-error @+1 {{'emitc.while' op condition region must contain exactly two operations: 'emitc.expression' followed by 'emitc.yield', but found 3 operations}}
   emitc.while {
+    %r = emitc.expression : i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    %3 = emitc.literal "3" : i32
+
+    emitc.yield %r : i1
   } do {
     emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
   }
@@ -744,14 +755,12 @@ func.func @test_while(%arg0 : !emitc.ptr<i32>) {
 
 // -----
 
-emitc.func @test_while(%arg0 : !emitc.ptr<i32>) {
-  %1 = emitc.literal "1" : i32
-
-  // expected-error @+1 {{'emitc.while' op expected all operations in condition region must implement CExpression trait, but emitc.literal does not}}
+func.func @test_while(%arg0 : !emitc.ptr<i32>) {
+  // expected-error @+1 {{'emitc.while' op expected first op in condition region to be 'emitc.expression', but got emitc.literal}}
   emitc.while {
-    %2 = emitc.literal "2" : i32
-    %3 = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
-    emitc.yield %3 : i1
+    %true = emitc.literal "true" : i1
+
+    emitc.yield %true : i1
   } do {
     emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
   }
@@ -765,9 +774,14 @@ func.func @test_while(%arg0 : !emitc.ptr<i32>) {
   %1 = emitc.literal "1" : i32
   %2 = emitc.literal "2" : i32
 
-  // expected-error @+1 {{'emitc.while' op expected condition region to end with emitc.yield, but got emitc.cmp}}
+  // expected-error @+1 {{'emitc.while' op emitc.expression in condition region must return 'i1', but returns 'i32'}}
   emitc.while {
-    %3 = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+    %r = emitc.expression : i32 {
+      %add = emitc.add %1, %2 : (i32, i32) -> i32
+      emitc.yield %add : i32
+    }
+
+    emitc.yield %r : i32
   } do {
     emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
   }
@@ -781,10 +795,61 @@ func.func @test_while(%arg0 : !emitc.ptr<i32>) {
   %1 = emitc.literal "1" : i32
   %2 = emitc.literal "2" : i32
 
-  // expected-error @+1 {{'emitc.while' op condition region must yield a single i1 value}}
+  // expected-error @+1 {{'emitc.while' op expected last op in condition region to be 'emitc.yield', but got emitc.expression}}
   emitc.while {
-    %3 = emitc.add %1, %2 : (i32, i32) -> i32
-    emitc.yield %3 : i32
+    %r1 = emitc.expression : i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    %r2 = emitc.expression : i32 {
+      %add = emitc.add %1, %2 : (i32, i32) -> i32
+      emitc.yield %add : i32
+    }
+  } do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  }
+
+  return
+}
+
+// -----
+
+func.func @test_while(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+
+  // expected-error @+1 {{'emitc.while' op expected condition region to return 1 value, but it returns 0 values}}
+  emitc.while {
+    %r = emitc.expression : i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    emitc.yield
+  } do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  }
+
+  return
+}
+
+// -----
+
+func.func @test_while(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+
+  %true = emitc.literal "true" : i1
+
+  // expected-error @+1 {{'emitc.yield' must return result of 'emitc.expression' from this condition region}}
+  emitc.while {
+    %r = emitc.expression : i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    emitc.yield %true: i1
   } do {
     emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
   }
@@ -800,9 +865,14 @@ func.func @test_while() {
 
   // expected-error @+1 {{'emitc.while' op body region cannot be empty}}
   emitc.while {
-    %3 = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
-    emitc.yield %3 : i1
+    %r = emitc.expression : i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    emitc.yield %r: i1
   } do {
+    ^bb0:
   }
 
   return
@@ -810,18 +880,21 @@ func.func @test_while() {
 
 // -----
 
-emitc.func @test_while(%arg0 : !emitc.ptr<i32>) {
+func.func @test_while(%arg0 : !emitc.ptr<i32>) {
   %1 = emitc.literal "1" : i32
   %2 = emitc.literal "2" : i32
 
-  // expected-error @+1 {{'emitc.while' op expected body region to return 0 values, but body returns 1}}
+  // expected-error @+1 {{'emitc.while' op body region must not contain terminator}}
   emitc.while {
-    %3 = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
-    emitc.yield %3 : i1
+    %r = emitc.expression : i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    emitc.yield %r: i1
   } do {
     emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
-    %4 = emitc.add %1, %2 : (i32, i32) -> i32
-    emitc.yield %4 : i32
+    emitc.yield
   }
 
   return
@@ -829,44 +902,21 @@ emitc.func @test_while(%arg0 : !emitc.ptr<i32>) {
 
 // -----
 
-func.func @test_do_while(%arg0 : !emitc.ptr<i32>) {
-  // expected-error @+1 {{'emitc.do' op condition region cannot be empty}}
-  emitc.do {
-    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
-  } while {
-  }
-
-  return
-}
-
-// -----
-
-emitc.func @test_do_while(%arg0 : !emitc.ptr<i32>) {
-  %1 = emitc.literal "1" : i32
-
-  // expected-error @+1 {{'emitc.do' op expected all operations in condition region must implement CExpression trait, but emitc.literal does not}}
-  emitc.do {
-    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
-  } while {
-    %2 = emitc.literal "2" : i32
-    %3 = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
-    emitc.yield %3 : i1
-  }
-
-  return
-}
-
-// -----
-
-func.func @test_do_while(%arg0 : !emitc.ptr<i32>) {
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
   %1 = emitc.literal "1" : i32
   %2 = emitc.literal "2" : i32
 
-  // expected-error @+1 {{'emitc.do' op expected condition region to end with emitc.yield, but got emitc.cmp}}
+  // expected-error @+1 {{'emitc.do' op condition region must contain exactly two operations: 'emitc.expression' followed by 'emitc.yield', but found 3 operations}}
   emitc.do {
     emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
   } while {
-    %3 = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+    %r = emitc.expression : i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    %3 = emitc.literal "3" : i32
+    emitc.yield %r : i1
   }
 
   return
@@ -874,16 +924,34 @@ func.func @test_do_while(%arg0 : !emitc.ptr<i32>) {
 
 // -----
 
-func.func @test_do_while(%arg0 : !emitc.ptr<i32>) {
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
+  // expected-error @+1 {{'emitc.do' op expected first op in condition region to be 'emitc.expression', but got emitc.literal}}
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  } while {
+    %true = emitc.literal "true" : i1
+    emitc.yield %true : i1
+  }
+
+  return
+}
+
+// -----
+
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
   %1 = emitc.literal "1" : i32
   %2 = emitc.literal "2" : i32
 
-  // expected-error @+1 {{'emitc.do' op condition region must yield a single i1 value}}
+  // expected-error @+1 {{'emitc.do' op emitc.expression in condition region must return 'i1', but returns 'i32'}}
   emitc.do {
     emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
   } while {
-    %3 = emitc.add %1, %2 : (i32, i32) -> i32
-    emitc.yield %3 : i32
+    %r = emitc.expression : i32 {
+      %add = emitc.add %1, %2 : (i32, i32) -> i32
+      emitc.yield %add : i32
+    }
+
+    emitc.yield %r : i32
   }
 
   return
@@ -891,15 +959,89 @@ func.func @test_do_while(%arg0 : !emitc.ptr<i32>) {
 
 // -----
 
-func.func @test_do_while() {
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+
+  // expected-error @+1 {{'emitc.do' op expected last op in condition region to be 'emitc.yield', but got emitc.expression}}
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  } while {
+    %r1 = emitc.expression : i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    %r2 = emitc.expression : i32 {
+      %add = emitc.add %1, %2 : (i32, i32) -> i32
+      emitc.yield %add : i32
+    }
+  }
+
+  return
+}
+
+// -----
+
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+
+  // expected-error @+1 {{'emitc.do' op expected condition region to return 1 value, but it returns 0 values}}
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  } while {
+    %r = emitc.expression : i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    emitc.yield
+  }
+
+  return
+}
+
+// -----
+
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+
+  %true = emitc.literal "true" : i1
+
+  // expected-error @+1 {{'emitc.yield' must return result of 'emitc.expression' from this condition region}}
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  } while {
+    %r = emitc.expression : i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    emitc.yield %true: i1
+  }
+
+  return
+}
+
+// -----
+
+
+func.func @test_do() {
   %1 = emitc.literal "1" : i32
   %2 = emitc.literal "2" : i32
 
   // expected-error @+1 {{'emitc.do' op body region cannot be empty}}
   emitc.do {
+    ^bb0:
   } while {
-    %3 = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
-    emitc.yield %3 : i1
+    %r = emitc.expression : i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    emitc.yield %r: i1
   }
 
   return
@@ -907,18 +1049,21 @@ func.func @test_do_while() {
 
 // -----
 
-emitc.func @test_do_while(%arg0 : !emitc.ptr<i32>) {
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
   %1 = emitc.literal "1" : i32
   %2 = emitc.literal "2" : i32
 
-  // expected-error @+1 {{'emitc.do' op expected body region to return 0 values, but body returns 1}}
+  // expected-error @+1 {{'emitc.do' op body region must not contain terminator}}
   emitc.do {
     emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
-    %4 = emitc.add %1, %2 : (i32, i32) -> i32
-    emitc.yield %4 : i32
+    emitc.yield
   } while {
-    %3 = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
-    emitc.yield %3 : i1
+    %r = emitc.expression : i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    emitc.yield %r: i1
   }
 
   return

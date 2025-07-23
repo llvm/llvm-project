@@ -1574,37 +1574,50 @@ static Operation *getRootOpFromLoopCondition(Region &condRegion) {
 
 static LogicalResult verifyLoopRegions(Operation &op, Region &condition,
                                        Region &body) {
-  if (condition.empty())
-    return op.emitOpError("condition region cannot be empty");
-
   Block &condBlock = condition.front();
-  for (Operation &inner : condBlock.without_terminator()) {
-    if (!inner.hasTrait<OpTrait::emitc::CExpression>())
-      return op.emitOpError(
-                 "expected all operations in condition region must implement "
-                 "CExpression trait, but ")
-             << inner.getName() << " does not";
+
+  if (condBlock.getOperations().size() != 2)
+    return op.emitOpError(
+               "condition region must contain exactly two operations: "
+               "'emitc.expression' followed by 'emitc.yield', but found ")
+           << condBlock.getOperations().size() << " operations";
+
+  Operation &first = condBlock.front();
+  auto exprOp = dyn_cast<emitc::ExpressionOp>(first);
+  if (!exprOp)
+    return op.emitOpError("expected first op in condition region to be "
+                          "'emitc.expression', "
+                          "but got ")
+           << first.getName();
+
+  if (!exprOp.getResult().getType().isInteger(1))
+    return op.emitOpError("emitc.expression in condition region must return "
+                          "'i1', but returns ")
+           << exprOp.getResult().getType();
+
+  Operation &last = *std::next(condBlock.begin());
+  auto condYield = dyn_cast<emitc::YieldOp>(last);
+  if (!condYield)
+    return op.emitOpError("expected last op in condition region to be "
+                          "'emitc.yield', but got ")
+           << last.getName();
+
+  if (condYield.getNumOperands() != 1) {
+    return op.emitOpError("expected condition region to return 1 value, but "
+                          "it returns ")
+           << condYield.getNumOperands() << " values";
   }
 
-  auto condYield = dyn_cast<emitc::YieldOp>(condBlock.back());
-  if (!condYield)
-    return op.emitOpError(
-               "expected condition region to end with emitc.yield, but got ")
-           << condBlock.back().getName();
-
-  if (condYield.getNumOperands() != 1 ||
-      !condYield.getOperand(0).getType().isInteger(1))
-    return op.emitOpError("condition region must yield a single i1 value");
-
-  if (body.empty())
-    return op.emitOpError("body region cannot be empty");
+  if (condYield.getOperand(0) != exprOp.getResult())
+    return op.emitError("'emitc.yield' must return result of "
+                        "'emitc.expression' from this condition region");
 
   Block &bodyBlock = body.front();
-  if (auto bodyYield = dyn_cast<emitc::YieldOp>(bodyBlock.back()))
-    if (bodyYield.getNumOperands() != 0)
-      return op.emitOpError(
-                 "expected body region to return 0 values, but body returns ")
-             << bodyYield.getNumOperands();
+  if (bodyBlock.empty())
+    return op.emitOpError("body region cannot be empty");
+
+  if (bodyBlock.mightHaveTerminator())
+    return op.emitOpError("body region must not contain terminator");
 
   return success();
 }
