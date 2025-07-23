@@ -1759,7 +1759,10 @@ static uint8_t getOsAbi(const Triple &t) {
 // Returns true if adjusted; false otherwise. Non-thin archives are unsupported.
 static bool dtltoAdjustMemberPathIfThinArchive(Ctx &ctx, StringRef archivePath,
                                                std::string &memberPath) {
-  assert(!archivePath.empty() && !ctx.arg.dtltoDistributor.empty());
+  assert(!archivePath.empty());
+
+  if (ctx.arg.dtltoDistributor.empty())
+    return false;
 
   // Read the archive header to determine if it's a thin archive.
   auto bufferOrErr =
@@ -1794,20 +1797,22 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
   if (ctx.arg.thinLTOIndexOnly)
     path = replaceThinLTOSuffix(ctx, mb.getBufferIdentifier());
 
-  // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
-  // name. If two archives define two members with the same name, this
-  // causes a collision which result in only one of the objects being taken
-  // into consideration at LTO time (which very likely causes undefined
-  // symbols later in the link stage). So we append file offset to make
-  // filename unique.
   StringSaver &ss = ctx.saver;
-  StringRef name =
-      (archiveName.empty() ||
-       (!ctx.arg.dtltoDistributor.empty() &&
-        dtltoAdjustMemberPathIfThinArchive(ctx, archiveName, path)))
-          ? ss.save(path)
-          : ss.save(archiveName + "(" + path::filename(path) + " at " +
-                    utostr(offsetInArchive) + ")");
+  StringRef name;
+  if (archiveName.empty() ||
+      dtltoAdjustMemberPathIfThinArchive(ctx, archiveName, path)) {
+    name = ss.save(path);
+  } else {
+    // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
+    // name. If two archives define two members with the same name, this
+    // causes a collision which result in only one of the objects being taken
+    // into consideration at LTO time (which very likely causes undefined
+    // symbols later in the link stage). So we append file offset to make
+    // filename unique.
+    name = ss.save(archiveName + "(" + path::filename(path) + " at " +
+                   utostr(offsetInArchive) + ")");
+  }
+
   MemoryBufferRef mbref(mb.getBuffer(), name);
 
   obj = CHECK2(lto::InputFile::create(mbref), this);
