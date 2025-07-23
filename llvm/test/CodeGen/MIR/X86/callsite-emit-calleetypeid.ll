@@ -80,24 +80,12 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; Function Attrs: noinline nounwind optnone uwtable
-define void @foo(i8 signext %a) !type !3 {
+define i32 @main() {
 entry:
-  ret void
-}
-
-; Function Attrs: noinline nounwind optnone uwtable
-define i32 @main() !type !4 {
-entry:
-  %retval = alloca i32, align 4
-  %fp = alloca ptr, align 8
-  store i32 0, ptr %retval, align 4
-  store ptr @foo, ptr %fp, align 8
-  %fp_val = load ptr, ptr %fp, align 8
-  call void %fp_val(i8 signext 97), !callee_type !5
+  %0 = load ptr, ptr null, align 8
+  call void %0(i8 0), !callee_type !0
   ret i32 0
 }
 
-!3 = !{i64 0, !"_ZTSFvcE.generalized"}
-!4 = !{i64 0, !"_ZTSFiE.generalized"}
-!5 = !{!3}
+!0 = !{!1}
+!1 = !{i64 0, !"_ZTSFvcE.generalized"}

@@ -3,10 +3,10 @@
 
 ;; Verify the exact calleeTypeIds value to ensure it is not garbage but the value
 ;; computed as the type id from the callee_type operand bundle.
-; RUN: llc --call-graph-section -mtriple riscv64 < %s -stop-after=finalize-isel -o - | FileCheck %s
-; RUN: llc --call-graph-section -mtriple riscv32 < %s -stop-after=finalize-isel -o - | FileCheck %s
+; RUN: llc --call-graph-section -mtriple riscv64 < %s -stop-after=finalize-isel -o - | FileCheck --match-full-lines %s
+; RUN: llc --call-graph-section -mtriple riscv32 < %s -stop-after=finalize-isel -o - | FileCheck --match-full-lines %s
 
-define i32 @_Z13call_indirectPFicEc(ptr %func, i8 %x) !type !0 {
+define i32 @check_tailcall(ptr %func, i8 %x) !type !0 {
 entry:
   ; CHECK: callSites:
   ; CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], calleeTypeIds:
