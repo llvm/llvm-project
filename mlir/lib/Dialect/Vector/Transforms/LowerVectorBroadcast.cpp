@@ -51,7 +51,7 @@ public:
     int64_t srcRank = srcType.getRank();
     int64_t dstRank = dstType.getRank();
 
-    if (srcType.getNumElements() == 1 && dstRank == 1) {
+    if (srcRank <= 1 && dstRank == 1) {
       SmallVector<int64_t> fullRankPosition(srcRank, 0);
       Value ext = vector::ExtractOp::create(rewriter, loc, op.getSource(),
                                             fullRankPosition);
