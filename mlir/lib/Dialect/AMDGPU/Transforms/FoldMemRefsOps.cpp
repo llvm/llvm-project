@@ -12,21 +12,19 @@
 #include "mlir/Dialect/Affine/ViewLikeInterfaceUtils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/WalkPatternRewriteDriver.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir::amdgpu {
-#define GEN_PASS_DEF_AMDGPUFOLDSUBVIEWOPSPASS
+#define GEN_PASS_DEF_AMDGPUFOLDMEMREFOPSPASS
 #include "mlir/Dialect/AMDGPU/Transforms/Passes.h.inc"
 
-struct AmdgpuFoldMemRefOpsPass
-    : public amdgpu::impl::AmdgpuFoldSubviewOpsPassBase<
-          AmdgpuFoldMemRefOpsPass> {
+struct AmdgpuFoldMemRefOpsPass final
+    : amdgpu::impl::AmdgpuFoldMemRefOpsPassBase<AmdgpuFoldMemRefOpsPass> {
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    populateAmdgpuFoldSubviewOpsPatterns(patterns);
-    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
-      signalPassFailure();
+    populateAmdgpuFoldMemRefOpsPatterns(patterns);
+    walkAndApplyPatterns(getOperation(), std::move(patterns));
   }
 };
 
@@ -92,8 +90,8 @@ struct FoldMemRefOpsIntoGatherToLDSOp final : OpRewritePattern<GatherToLDSOp> {
   }
 };
 
-void populateAmdgpuFoldSubviewOpsPatterns(RewritePatternSet &patterns,
-                                          PatternBenefit benefit) {
+void populateAmdgpuFoldMemRefOpsPatterns(RewritePatternSet &patterns,
+                                         PatternBenefit benefit) {
   patterns.add<FoldMemRefOpsIntoGatherToLDSOp>(patterns.getContext(), benefit);
 }
 } // namespace mlir::amdgpu

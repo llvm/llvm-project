@@ -71,7 +71,7 @@ def AmdgpuMaskedloadToLoadPass : Pass<"amdgpu-maskedload-to-load"> {
   ];
 }
 
-def AmdgpuFoldSubviewOpsPass : Pass<"amdgpu-fold-memrefs-ops"> {
+def AmdgpuFoldMemRefOpsPass : Pass<"amdgpu-fold-memrefs-ops"> {
   let summary = "Fold memref operations into their parent operations";
   let description = [{
     This pass identifies memref operations (subview, expand_shape, collapse_shape)
