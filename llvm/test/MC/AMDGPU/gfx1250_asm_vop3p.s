@@ -1025,4 +1025,3 @@ v_pk_fma_bf16 v5, src_scc, vcc_lo, -1 op_sel:[0,1,0] op_sel_hi:[1,0,1] neg_lo:[0
 v_pk_fma_bf16 v255, 0xfe0b, vcc_hi, null op_sel:[0,0,1] op_sel_hi:[1,1,0] neg_lo:[1,1,1] neg_hi:[1,1,1] clamp
 // GFX1250: v_pk_fma_bf16 v255, 0xfe0b, vcc_hi, null op_sel:[0,0,1] op_sel_hi:[1,1,0] neg_lo:[1,1,1] neg_hi:[1,1,1] clamp ; encoding: [0xff,0xa7,0x11,0xcc,0xff,0xd6,0xf0,0xf9,0x0b,0xfe,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
-
