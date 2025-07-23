@@ -1767,18 +1767,24 @@ void CStringChecker::evalstrLengthCommon(CheckerContext &C,
       // All we know is the return value is the min of the string length
       // and the limit. This is better than nothing.
       result = C.getSValBuilder().conjureSymbolVal(Call, C.blockCount());
-      NonLoc resultNL = result.castAs<NonLoc>();
+      std::optional<NonLoc> resultNL = result.getAs<NonLoc>();
+      if (!resultNL)
+        return;
 
       if (strLengthNL) {
-        state = state->assume(C.getSValBuilder().evalBinOpNN(
-                                  state, BO_LE, resultNL, *strLengthNL, cmpTy)
-                                  .castAs<DefinedOrUnknownSVal>(), true);
+        state = state->assume(
+            C.getSValBuilder()
+                .evalBinOpNN(state, BO_LE, *resultNL, *strLengthNL, cmpTy)
+                .castAs<DefinedOrUnknownSVal>(),
+            true);
       }
 
       if (maxlenValNL) {
-        state = state->assume(C.getSValBuilder().evalBinOpNN(
-                                  state, BO_LE, resultNL, *maxlenValNL, cmpTy)
-                                  .castAs<DefinedOrUnknownSVal>(), true);
+        state = state->assume(
+            C.getSValBuilder()
+                .evalBinOpNN(state, BO_LE, *resultNL, *maxlenValNL, cmpTy)
+                .castAs<DefinedOrUnknownSVal>(),
+            true);
       }
     }
 
