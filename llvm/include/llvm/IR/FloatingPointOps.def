@@ -10,15 +10,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Describes floating-point operation.
+// Arguments of the entries are:
+// N - intrinsic function name,
+// D - DAG node corresponding to the intrinsic.
 #ifndef FUNCTION
 #define FUNCTION(N,D)
 #endif
 
-// Arguments of the entries are:
-// - intrinsic function name,
-// - DAG node corresponding to the intrinsic.
+// Describes floating-point operation, which lowers to STRICT_* nodes in DAG.
+#ifndef LEGACY_DAG
+#define LEGACY_DAG(N,D) FUNCTION(N,D)
+#endif
 
-FUNCTION(nearbyint,                          FNEARBYINT)
-FUNCTION(trunc,                              FTRUNC)
+LEGACY_DAG(nearbyint,                        FNEARBYINT)
+LEGACY_DAG(trunc,                            FTRUNC)
 
 #undef FUNCTION
+#undef LEGACY_DAG

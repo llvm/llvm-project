@@ -97,7 +97,7 @@ public:
     OB_ptrauth = 7,                // "ptrauth"
     OB_kcfi = 8,                   // "kcfi"
     OB_convergencectrl = 9,        // "convergencectrl"
-    OB_fp_control = 10,            // "fp.control"
+    OB_fp_round = 10,              // "fp.round"
     OB_fp_except = 11,             // "fp.except"
   };
 
