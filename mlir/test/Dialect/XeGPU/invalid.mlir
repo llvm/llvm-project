@@ -133,6 +133,31 @@ func.func @subgroup_load_nd_9(%src: memref<4x8x16xf16>) {
 }
 
 // -----
+func.func @subgroup_load_nd_offset_1(%src: memref<4x8x16xf16>, %x : index) {
+  %1 = xegpu.create_nd_tdesc %src: memref<4x8x16xf16> -> !xegpu.tensor_desc<16xf16>
+// expected-error@+1 {{Mismatched ranks between offsets and tensor descriptor}}
+  %2 = xegpu.load_nd %1[0, 0] : !xegpu.tensor_desc<16xf16> -> vector<16xf16>
+  return
+}
+
+// -----
+func.func @subgroup_load_nd_offset_2(%src: memref<4x8x16xf16>, %x : index) {
+  %3 = xegpu.create_nd_tdesc %src: memref<4x8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
+    // expected-error@+1 {{Mismatched ranks between offsets and tensor descriptor}}
+  xegpu.prefetch_nd %3[0] : !xegpu.tensor_desc<8x16xf16>
+  return
+}
+
+// -----
+func.func @subgroup_load_nd_offset_3(%src: memref<4x8x16xf16>, %x : index) {  
+  %3 = xegpu.create_nd_tdesc %src: memref<4x8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
+  %5 = xegpu.load_nd %3[0, 0] : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
+    // expected-error@+1 {{Mismatched ranks between offsets and tensor descriptor}}
+  xegpu.store_nd %5, %3[%x] : vector<8x16xf16>, !xegpu.tensor_desc<8x16xf16>
+  return
+}
+
+// -----
 func.func @load_nd_layout(%src: memref<24x32xf32>) {
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> -> !xegpu.tensor_desc<16xf32>
   // expected-error@+1 {{Result shape [3] is not a valid distribution for tensor descriptor}}
