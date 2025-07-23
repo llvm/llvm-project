@@ -33,6 +33,10 @@ def is_index_type(t: Type) -> bool:
     return IndexType.isinstance(t)
 
 
+def is_integer_like_type(t: Type) -> bool:
+    return is_integer_type(t) or is_index_type(t)
+
+
 def get_floating_point_width(t: Type) -> int:
     # TODO: Create a FloatType in the Python API and implement the switch
     # there.
