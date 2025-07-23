@@ -383,12 +383,12 @@ foreach LMul = [1, 2, 4, 8] in {
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  let Latency = 4, ReleaseAtCycles = [Get458Latency<mx>.c] in {
+  let Latency = Get458Latency<mx>.c, ReleaseAtCycles = [4] in {
     defm "" : LMULWriteResMX<"WriteVIMinMaxV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMinMaxX", [SMX60_VIEU], mx, IsWorstCase>;
   }
 
-  let Latency = 4, ReleaseAtCycles = [Get4816Latency<mx>.c] in {
+  let Latency = Get4816Latency<mx>.c, ReleaseAtCycles = [4] in {
     // Pattern of vadd, vsub, vrsub: 4/4/5/8
     // Pattern of vand, vor, vxor:   4/4/8/16
     // They are grouped together, so we used the worst case 4/4/8/16
@@ -413,7 +413,7 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVICALUI", [SMX60_VIEU], mx, IsWorstCase>;
   }
 
-  let Latency = 4, ReleaseAtCycles = [Get461018Latency<mx>.c] in {
+  let Latency = Get461018Latency<mx>.c, ReleaseAtCycles = [4] in {
     defm "" : LMULWriteResMX<"WriteVICALUMV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVICALUMX", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVICALUMI", [SMX60_VIEU], mx, IsWorstCase>;
@@ -425,7 +425,7 @@ foreach mx = SchedMxList in {
   // Pattern of vmacc, vmadd, vmul, vmulh, etc.: e8/e16 = 4/4/5/8, e32 = 5,5,5,8,
   // e64 = 7,8,16,32. We use the worst-case until we can split the SEW.
   // TODO: change WriteVIMulV, etc to be defined with LMULSEWSchedWrites
-  let Latency = 7, ReleaseAtCycles = [Get781632Latency<mx>.c] in {
+  let Latency = Get781632Latency<mx>.c, ReleaseAtCycles = [7] in {
     defm "" : LMULWriteResMX<"WriteVIMulV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMulX", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMulAddV", [SMX60_VIEU], mx, IsWorstCase>;
@@ -439,7 +439,7 @@ foreach mx = SchedMxList in {
 foreach mx = SchedMxListW in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxListW>.c;
 
-  let Latency = 4, ReleaseAtCycles = [Get4588Latency<mx>.c]  in {
+  let Latency = Get4588Latency<mx>.c, ReleaseAtCycles = [4]  in {
     defm "" : LMULWriteResMX<"WriteVIWALUV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIWALUX", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIWALUI", [SMX60_VIEU], mx, IsWorstCase>;
@@ -455,7 +455,7 @@ foreach mx = SchedMxListW in {
 // Pattern of vdiv: 12/12/12/22/44/88/176
 // Pattern of vremu: 12/12/12/22/44/88/176
 // Pattern of vrem: 13/13/13/24/48/96/192
-// We use the worst-case for all: 12/12/12/24/48/96/192
+// We use for all: 12/12/12/24/48/96/192
 // TODO: Create separate WriteVIRem to more closely match the latencies
 foreach mx = SchedMxList in {
   foreach sew = SchedSEWSet<mx>.val in {
@@ -469,7 +469,7 @@ foreach mx = SchedMxList in {
       true: 24
     );
 
-    let Latency = 12, ReleaseAtCycles = [!mul(Get1248Latency<mx>.c, Multiplier)] in {
+    let Latency = !mul(Get1248Latency<mx>.c, Multiplier), ReleaseAtCycles = [12] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVIDivV", [SMX60_VIEU], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVIDivX", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
@@ -487,7 +487,7 @@ foreach mx = SchedMxListW in {
     true: 1
   );
 
-  let Latency = 4, ReleaseAtCycles = [!mul(Get4816Latency<mx>.c, Multiplier)] in {
+  let Latency = !mul(Get4816Latency<mx>.c, Multiplier), ReleaseAtCycles = [4] in {
     defm "" : LMULWriteResMX<"WriteVNShiftV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVNShiftX", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVNShiftI", [SMX60_VIEU], mx, IsWorstCase>;
