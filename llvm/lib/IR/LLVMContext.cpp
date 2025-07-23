@@ -57,8 +57,8 @@ static StringRef knownBundleName(unsigned BundleTagID) {
     return "align";
   case LLVMContext::OB_deactivation_symbol:
     return "deactivation-symbol";
-  case LLVMContext::OB_fp_control:
-    return "fp.control";
+  case LLVMContext::OB_fp_round:
+    return "fp.round";
   case LLVMContext::OB_fp_except:
     return "fp.except";
   default:
@@ -90,9 +90,9 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
     assert(Entry->second == BundleTagID && "operand bundle id drifted!");
   }
 
-  auto *RoundingEntry = pImpl->getOrInsertBundleTag("fp.control");
-  assert(RoundingEntry->second == LLVMContext::OB_fp_control &&
-         "fp.control operand bundle id drifted!");
+  auto *RoundingEntry = pImpl->getOrInsertBundleTag("fp.round");
+  assert(RoundingEntry->second == LLVMContext::OB_fp_round &&
+         "fp.round operand bundle id drifted!");
   (void)RoundingEntry;
 
   auto *ExceptionEntry = pImpl->getOrInsertBundleTag("fp.except");

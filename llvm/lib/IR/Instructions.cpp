@@ -621,7 +621,7 @@ bool CallBase::hasReadingOperandBundles() const {
   return hasOperandBundlesOtherThan(
              {LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi,
               LLVMContext::OB_convergencectrl,
-              LLVMContext::OB_deactivation_symbol, LLVMContext::OB_fp_control,
+              LLVMContext::OB_deactivation_symbol, LLVMContext::OB_fp_round,
               LLVMContext::OB_fp_except}) &&
          getIntrinsicID() != Intrinsic::assume;
 }
@@ -631,25 +631,23 @@ bool CallBase::hasClobberingOperandBundles() const {
              {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
               LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi,
               LLVMContext::OB_convergencectrl,
-              LLVMContext::OB_deactivation_symbol, LLVMContext::OB_fp_control,
+              LLVMContext::OB_deactivation_symbol, LLVMContext::OB_fp_round,
               LLVMContext::OB_fp_except}) &&
          getIntrinsicID() != Intrinsic::assume;
 }
 
 RoundingMode CallBase::getRoundingMode() const {
-  // Try reading rounding mode from FP bundle.
-  std::optional<RoundingMode> RM;
-  if (auto RoundingBundle = getOperandBundle(LLVMContext::OB_fp_control)) {
+  // Try reading rounding mode from operand bundle.
+  if (auto RoundingBundle = getOperandBundle(LLVMContext::OB_fp_round)) {
     Value *V = RoundingBundle->Inputs.front();
     Metadata *MD = cast<MetadataAsValue>(V)->getMetadata();
-    RM = convertBundleToRoundingMode(cast<MDString>(MD)->getString());
+    if (auto RM = convertBundleToRoundingMode(cast<MDString>(MD)->getString()))
+      return *RM;
   }
-  if (RM)
-    return *RM;
 
-  // No FP bundle, try to guess from the current mode.
-  if (getParent())
-    if (auto *F = getFunction(); F)
+  // No FP bundle, try to guess from attributes of the current function.
+  if (const BasicBlock *BB = getParent())
+    if (const Function *F = BB->getParent())
       return F->getAttributes().hasFnAttr(Attribute::StrictFP)
                  ? RoundingMode::Dynamic
                  : RoundingMode::NearestTiesToEven;
@@ -660,18 +658,17 @@ RoundingMode CallBase::getRoundingMode() const {
 
 fp::ExceptionBehavior CallBase::getExceptionBehavior() const {
   // Try determining exception behavior from FP bundle.
-  std::optional<fp::ExceptionBehavior> EB;
   if (auto ExceptionBundle = getOperandBundle(LLVMContext::OB_fp_except)) {
     Value *V = ExceptionBundle->Inputs.front();
     Metadata *MD = cast<MetadataAsValue>(V)->getMetadata();
-    EB = convertBundleToExceptionBehavior(cast<MDString>(MD)->getString());
+    if (auto EB =
+            convertBundleToExceptionBehavior(cast<MDString>(MD)->getString()))
+      return *EB;
   }
-  if (EB)
-    return *EB;
 
-  // No FP bundle, try to guess from the current mode.
-  if (getParent())
-    if (auto *F = getFunction(); F)
+  // No FP bundle, try to guess from attributes of the current function.
+  if (const BasicBlock *BB = getParent())
+    if (const Function *F = BB->getParent())
       return F->getAttributes().hasFnAttr(Attribute::StrictFP) ? fp::ebStrict
                                                                : fp::ebIgnore;
 
@@ -683,10 +680,12 @@ MemoryEffects CallBase::getFloatingPointMemoryEffects() const {
   if (Intrinsic::ID IntrID = getIntrinsicID())
     if (const BasicBlock *BB = getParent())
       if (const Function *F = BB->getParent())
-        if (F->hasFnAttribute(Attribute::StrictFP))
-          if (IntrinsicInst::isFloatingPointOperation(IntrID)) {
-            return MemoryEffects::inaccessibleMemOnly();
-          }
+        if (F->hasFnAttribute(Attribute::StrictFP) &&
+            IntrinsicInst::isFloatingPointOperation(IntrID)) {
+          // Floating-point operations in strictfp function always have side
+          // effect at least because they can raise exceptions.
+          return MemoryEffects::inaccessibleMemOnly();
+        }
   return MemoryEffects::none();
 }
 
@@ -803,19 +802,29 @@ bool CallBase::hasArgumentWithAdditionalReturnCaptureComponents() const {
   return false;
 }
 
-void llvm::addFPRoundingBundle(LLVMContext &Ctx,
-                               SmallVectorImpl<OperandBundleDef> &Bundles,
-                               RoundingMode Rounding) {
+void llvm::addRoundingBundle(LLVMContext &Ctx,
+                             SmallVectorImpl<OperandBundleDef> &Bundles,
+                             RoundingMode Rounding) {
+  assert(std::find_if(Bundles.begin(), Bundles.end(),
+                      [](const OperandBundleDef &B) {
+                        return B.getTag() == "fp.round";
+                      }) == Bundles.end() &&
+         "Bundle 'fp.round' already exists");
   std::optional<StringRef> RndStr = convertRoundingModeToBundle(Rounding);
   assert(RndStr && "Garbage rounding mode!");
   auto *RoundingMDS = MDString::get(Ctx, *RndStr);
   auto *RM = MetadataAsValue::get(Ctx, RoundingMDS);
-  Bundles.emplace_back("fp.control", RM);
+  Bundles.emplace_back("fp.round", RM);
 }
 
-void llvm::addFPExceptionBundle(LLVMContext &Ctx,
-                                SmallVectorImpl<OperandBundleDef> &Bundles,
-                                fp::ExceptionBehavior Except) {
+void llvm::addExceptionBundle(LLVMContext &Ctx,
+                              SmallVectorImpl<OperandBundleDef> &Bundles,
+                              fp::ExceptionBehavior Except) {
+  assert(std::find_if(Bundles.begin(), Bundles.end(),
+                      [](const OperandBundleDef &B) {
+                        return B.getTag() == "fp.except";
+                      }) == Bundles.end() &&
+         "Bundle 'fp.except' already exists");
   std::optional<StringRef> ExcStr = convertExceptionBehaviorToBundle(Except);
   assert(ExcStr && "Garbage exception behavior!");
   auto *ExceptMDS = MDString::get(Ctx, *ExcStr);

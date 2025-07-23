@@ -272,7 +272,9 @@ TEST_F(IRBuilderTest, ConstrainedFP) {
 
   // See if we get constrained intrinsics instead of non-constrained
   // instructions.
-  Builder.setIsFPConstrained(true);
+  Builder.setDefaultConstrainedRounding(RoundingMode::Dynamic);
+  Builder.setDefaultConstrainedExcept(fp::ebStrict);
+  Builder.setIsFPConstrained(true, false);
   auto Parent = BB->getParent();
   Parent->addFnAttr(Attribute::StrictFP);
 
@@ -470,7 +472,7 @@ TEST_F(IRBuilderTest, FPBundlesDefault) {
   {
     Value *V = Builder.CreateCall(Fn, {FnArg});
     auto *I = cast<IntrinsicInst>(V);
-    EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_control).has_value());
+    EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_round).has_value());
     EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_except).has_value());
     EXPECT_EQ(Intrinsic::nearbyint, I->getIntrinsicID());
     EXPECT_EQ(RoundingMode::NearestTiesToEven, I->getRoundingMode());
@@ -480,13 +482,13 @@ TEST_F(IRBuilderTest, FPBundlesDefault) {
   }
 
   // Check call with FP bundles, rounding is set to default value.
-  // nearbyint(%x) [ "fp.control" (metadata !"rte") ]
+  // nearbyint(%x) [ "fp.round" (metadata !"tonearest") ]
   {
     SmallVector<OperandBundleDef, 1> Bundles;
-    llvm::addFPRoundingBundle(Ctx, Bundles, RoundingMode::NearestTiesToEven);
+    llvm::addRoundingBundle(Ctx, Bundles, RoundingMode::NearestTiesToEven);
     Value *V = Builder.CreateCall(Fn, {FnArg}, Bundles);
     auto *I = cast<IntrinsicInst>(V);
-    EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_control).has_value());
+    EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_round).has_value());
     EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_except).has_value());
     EXPECT_EQ(Intrinsic::nearbyint, I->getIntrinsicID());
     EXPECT_EQ(RoundingMode::NearestTiesToEven, I->getRoundingMode());
@@ -499,10 +501,10 @@ TEST_F(IRBuilderTest, FPBundlesDefault) {
   // nearbyint(%x) [ "fp.except" (metadata !"ignore") ]
   {
     SmallVector<OperandBundleDef, 1> Bundles;
-    llvm::addFPExceptionBundle(Ctx, Bundles, fp::ebIgnore);
+    llvm::addExceptionBundle(Ctx, Bundles, fp::ebIgnore);
     Value *V = Builder.CreateCall(Fn, {FnArg}, Bundles);
     auto *I = cast<IntrinsicInst>(V);
-    EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_control).has_value());
+    EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_round).has_value());
     EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_except).has_value());
     EXPECT_EQ(Intrinsic::nearbyint, I->getIntrinsicID());
     EXPECT_EQ(RoundingMode::NearestTiesToEven, I->getRoundingMode());
@@ -513,17 +515,52 @@ TEST_F(IRBuilderTest, FPBundlesDefault) {
 
   // Check call with FP bundles, both rounding mode and exception behavior are
   // set.
-  // nearbyint(%x) [ "fp.except" (metadata !"ignore") ]
+  // nearbyint(%x) [ "fp.round" (metadata !"tonearest"),
+  //                 "fp.except" (metadata !"ignore") ]
   {
     SmallVector<OperandBundleDef, 1> Bundles;
-    llvm::addFPRoundingBundle(Ctx, Bundles, RoundingMode::NearestTiesToEven);
-    llvm::addFPExceptionBundle(Ctx, Bundles, fp::ebIgnore);
+    llvm::addRoundingBundle(Ctx, Bundles, RoundingMode::NearestTiesToEven);
+    llvm::addExceptionBundle(Ctx, Bundles, fp::ebIgnore);
     Value *V = Builder.CreateCall(Fn, {FnArg}, Bundles);
     auto *I = cast<IntrinsicInst>(V);
-    EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_control).has_value());
+    EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_round).has_value());
     EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_except).has_value());
     EXPECT_EQ(Intrinsic::nearbyint, I->getIntrinsicID());
     EXPECT_EQ(RoundingMode::NearestTiesToEven, I->getRoundingMode());
+    EXPECT_EQ(fp::ebIgnore, I->getExceptionBehavior());
+    MemoryEffects ME = I->getMemoryEffects();
+    EXPECT_TRUE(ME.doesNotAccessMemory());
+  }
+
+  // If the builder object specifies a rounding mode, the resulting call will
+  // include the corresponding "fp.round" operand bundle.
+  {
+    Builder.setDefaultConstrainedRounding(RoundingMode::TowardNegative);
+    SmallVector<OperandBundleDef, 1> Bundles;
+    Value *V = Builder.CreateCall(Fn, {FnArg}, Bundles);
+    auto *I = cast<IntrinsicInst>(V);
+    EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_round).has_value());
+    EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_except).has_value());
+    EXPECT_EQ(Intrinsic::nearbyint, I->getIntrinsicID());
+    EXPECT_EQ(RoundingMode::TowardNegative, I->getRoundingMode());
+    EXPECT_EQ(fp::ebIgnore, I->getExceptionBehavior());
+    MemoryEffects ME = I->getMemoryEffects();
+    EXPECT_TRUE(ME.doesNotAccessMemory());
+  }
+
+  // If the builder object specifies a rounding mode but the operand bundles
+  // already contain an "fp.round" bundle, the builder's specified mode
+  // is ignored.
+  {
+    Builder.setDefaultConstrainedRounding(RoundingMode::TowardNegative);
+    SmallVector<OperandBundleDef, 1> Bundles;
+    llvm::addRoundingBundle(Ctx, Bundles, RoundingMode::TowardZero);
+    Value *V = Builder.CreateCall(Fn, {FnArg}, Bundles);
+    auto *I = cast<IntrinsicInst>(V);
+    EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_round).has_value());
+    EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_except).has_value());
+    EXPECT_EQ(Intrinsic::nearbyint, I->getIntrinsicID());
+    EXPECT_EQ(RoundingMode::TowardZero, I->getRoundingMode());
     EXPECT_EQ(fp::ebIgnore, I->getExceptionBehavior());
     MemoryEffects ME = I->getMemoryEffects();
     EXPECT_TRUE(ME.doesNotAccessMemory());
@@ -549,7 +586,7 @@ TEST_F(IRBuilderTest, FPBundlesStrict) {
   {
     Value *V = Builder.CreateCall(Fn, {FnArg});
     auto *I = cast<IntrinsicInst>(V);
-    EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_control).has_value());
+    EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_round).has_value());
     EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_except).has_value());
     EXPECT_EQ(Intrinsic::nearbyint, I->getIntrinsicID());
     EXPECT_EQ(RoundingMode::Dynamic, I->getRoundingMode());
@@ -559,13 +596,13 @@ TEST_F(IRBuilderTest, FPBundlesStrict) {
   }
 
   // Check call with FP bundles, with default (dynamic) rounding mode
-  // nearbyint(%x) [ "fp.control" (metadata !"dyn") ]
+  // nearbyint(%x) [ "fp.round" (metadata !"dynamic") ]
   {
     SmallVector<OperandBundleDef, 1> Bundles;
-    llvm::addFPRoundingBundle(Ctx, Bundles, RoundingMode::Dynamic);
+    llvm::addRoundingBundle(Ctx, Bundles, RoundingMode::Dynamic);
     Value *V = Builder.CreateCall(Fn, {FnArg}, Bundles);
     auto *I = cast<IntrinsicInst>(V);
-    EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_control).has_value());
+    EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_round).has_value());
     EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_except).has_value());
     EXPECT_EQ(Intrinsic::nearbyint, I->getIntrinsicID());
     EXPECT_EQ(RoundingMode::Dynamic, I->getRoundingMode());
@@ -575,13 +612,13 @@ TEST_F(IRBuilderTest, FPBundlesStrict) {
   }
 
   // Check call with FP bundles, with specific rounding mode
-  // nearbyint(%x) [ "fp.control" (metadata !"rtz") ]
+  // nearbyint(%x) [ "fp.round" (metadata !"towardzero") ]
   {
     SmallVector<OperandBundleDef, 1> Bundles;
-    llvm::addFPRoundingBundle(Ctx, Bundles, RoundingMode::TowardZero);
+    llvm::addRoundingBundle(Ctx, Bundles, RoundingMode::TowardZero);
     Value *V = Builder.CreateCall(Fn, {FnArg}, Bundles);
     auto *I = cast<IntrinsicInst>(V);
-    EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_control).has_value());
+    EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_round).has_value());
     EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_except).has_value());
     EXPECT_EQ(Intrinsic::nearbyint, I->getIntrinsicID());
     EXPECT_EQ(RoundingMode::TowardZero, I->getRoundingMode());
@@ -594,10 +631,10 @@ TEST_F(IRBuilderTest, FPBundlesStrict) {
   // nearbyint(%x) [ "fp.except" (metadata !"strict") ]
   {
     SmallVector<OperandBundleDef, 1> Bundles;
-    llvm::addFPExceptionBundle(Ctx, Bundles, fp::ebStrict);
+    llvm::addExceptionBundle(Ctx, Bundles, fp::ebStrict);
     Value *V = Builder.CreateCall(Fn, {FnArg}, Bundles);
     auto *I = cast<IntrinsicInst>(V);
-    EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_control).has_value());
+    EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_round).has_value());
     EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_except).has_value());
     EXPECT_EQ(Intrinsic::nearbyint, I->getIntrinsicID());
     EXPECT_EQ(RoundingMode::Dynamic, I->getRoundingMode());
@@ -610,10 +647,10 @@ TEST_F(IRBuilderTest, FPBundlesStrict) {
   // nearbyint(%x) [ "fp.except" (metadata !"ignore") ]
   {
     SmallVector<OperandBundleDef, 1> Bundles;
-    llvm::addFPExceptionBundle(Ctx, Bundles, fp::ebIgnore);
+    llvm::addExceptionBundle(Ctx, Bundles, fp::ebIgnore);
     Value *V = Builder.CreateCall(Fn, {FnArg}, Bundles);
     auto *I = cast<IntrinsicInst>(V);
-    EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_control).has_value());
+    EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_round).has_value());
     EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_except).has_value());
     EXPECT_EQ(Intrinsic::nearbyint, I->getIntrinsicID());
     EXPECT_EQ(RoundingMode::Dynamic, I->getRoundingMode());
@@ -623,15 +660,15 @@ TEST_F(IRBuilderTest, FPBundlesStrict) {
   }
 
   // Check call with both FP bundles.
-  // nearbyint(%x) [ "fp.control" (metadata !"rtz"),
+  // nearbyint(%x) [ "fp.round" (metadata !"towardzero"),
   //                 "fp.except" (metadata !"ignore") ]
   {
     SmallVector<OperandBundleDef, 1> Bundles;
-    llvm::addFPRoundingBundle(Ctx, Bundles, RoundingMode::NearestTiesToEven);
-    llvm::addFPExceptionBundle(Ctx, Bundles, fp::ebIgnore);
+    llvm::addRoundingBundle(Ctx, Bundles, RoundingMode::NearestTiesToEven);
+    llvm::addExceptionBundle(Ctx, Bundles, fp::ebIgnore);
     Value *V = Builder.CreateCall(Fn, {FnArg}, Bundles);
     auto *I = cast<IntrinsicInst>(V);
-    EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_control).has_value());
+    EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_round).has_value());
     EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_except).has_value());
     EXPECT_EQ(Intrinsic::nearbyint, I->getIntrinsicID());
     EXPECT_EQ(RoundingMode::NearestTiesToEven, I->getRoundingMode());
@@ -648,7 +685,7 @@ TEST_F(IRBuilderTest, FPBundlesStrict) {
     Value *V = Builder.CreateCall(Fn, {FnArg});
     auto *I = cast<IntrinsicInst>(V);
     EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_except).has_value());
-    EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_control).has_value());
+    EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_round).has_value());
     MemoryEffects ME = I->getMemoryEffects();
     EXPECT_TRUE(ME.doesNotAccessMemory());
   }

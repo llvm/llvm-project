@@ -1094,12 +1094,17 @@ public:
 using OperandBundleDef = OperandBundleDefT<Value *>;
 using ConstOperandBundleDef = OperandBundleDefT<const Value *>;
 
-void addFPRoundingBundle(LLVMContext &Ctx,
-                         SmallVectorImpl<OperandBundleDef> &Bundles,
-                         RoundingMode Rounding);
-void addFPExceptionBundle(LLVMContext &Ctx,
-                          SmallVectorImpl<OperandBundleDef> &Bundles,
-                          fp::ExceptionBehavior Except);
+/// Add a bundle with tag "fp.round" and the specified rounding to the given
+/// bundle set.
+void addRoundingBundle(LLVMContext &Ctx,
+                       SmallVectorImpl<OperandBundleDef> &Bundles,
+                       RoundingMode Rounding);
+
+/// Add a bundle with tag "fp.except" and the specified exception behavior to
+/// the given bundle set.
+void addExceptionBundle(LLVMContext &Ctx,
+                        SmallVectorImpl<OperandBundleDef> &Bundles,
+                        fp::ExceptionBehavior Except);
 
 //===----------------------------------------------------------------------===//
 //                               CallBase Class
@@ -1160,6 +1165,7 @@ protected:
   /// number of extra operands.
   LLVM_ABI unsigned getNumSubclassExtraOperandsDynamic() const;
 
+  /// Get memory effects specific to floating-point operations.
   MemoryEffects getFloatingPointMemoryEffects() const;
 
 public:
@@ -2172,10 +2178,10 @@ public:
     return false;
   }
 
-  /// Return rounding mode specified for this call.
+  /// Return the effective rounding mode for this call.
   RoundingMode getRoundingMode() const;
 
-  /// Return exception behavior specified for this call.
+  /// Return the effective exception behavior for this call.
   fp::ExceptionBehavior getExceptionBehavior() const;
 
   /// Used to keep track of an operand bundle.  See the main comment on

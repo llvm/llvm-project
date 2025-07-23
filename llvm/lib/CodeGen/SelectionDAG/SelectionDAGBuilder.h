@@ -380,6 +380,8 @@ public:
   /// Evict any dangling debug information, attempting to salvage it first.
   void resolveOrClearDbgInfo();
 
+  void pushOutChain(SDValue Result, fp::ExceptionBehavior EB);
+
   SDValue getValue(const Value *V);
 
   SDValue getNonRegisterValue(const Value *V);
@@ -633,6 +635,7 @@ private:
   bool visitStrNLenCall(const CallInst &I);
   bool visitUnaryFloatCall(const CallInst &I, unsigned Opcode);
   bool visitBinaryFloatCall(const CallInst &I, unsigned Opcode);
+  bool visitFPOperation(const CallInst &I, unsigned Opcode);
   void visitAtomicLoad(const LoadInst &I);
   void visitAtomicStore(const StoreInst &I);
   void visitLoadFromSwiftError(const LoadInst &I);

@@ -3260,43 +3260,48 @@ Floating-point Operand Bundles
 These operand bundles are used for calls that involve floating-point
 operations and interact with :ref:`floating-point environment <floatenv>` or
 depend on floating-point options, such as rounding mode, denormal modes, etc.
-There are two kinds of such operand bundles, which represent the value of
-floating-point control modes and the treatment of status bits respectively.
 
-An operand bundle tagged with "fp.control" contains information about the
-control modes used for the operation execution. Operands specified in this
-bundle represent particular options. Currently, only rounding mode is supported.
-
-Rounding mode is represented by a metadata string value, which specifies the
-the mode used for the operation evaluation. Possible values are:
+An operand bundle tagged with "fp.round" contains information about the
+rounding mode used for the operation execution (the effective rounding mode).
+This mode is represented by a metadata string value and specifies the mode used
+for the operation evaluation. Possible values are:
 
 ::
 
-    "rtz"  - toward zero
-    "rte"  - to nearest, ties to even
-    "rtp"  - toward positive infinity
-    "rtn"  - toward negative infinity
-    "rmm"  - to nearest, ties away from zero
-    "dyn"  - rounding mode is taken from control register
+    "towardzero"
+    "tonearest"
+    "upward"
+    "downward"
+    "tonearestaway"
+    "dynamic"
 
-Only one such value may be specified. If "fp.control" is absent, the default
-rounding rounding mode is taken from the control register (dynamic rounding).
-In the particular case of :ref:`default floating-point environment <floatenv>`,
-the operation uses rounding to nearest, ties to even.
+Only one value may be specified. If the "fp.round" bundle is absent, and
+the operation depends on rounding mode, the default behavior is to use the value
+from a control register (dynamic rounding). In the specific case of
+:ref:`default floating-point environment <floatenv>`, the register is assumed to
+set rounding to nearest, ties to even.
 
 An operand bundle tagged with "fp.except" may be associated with operations
-that can read or write floating-point exception flags. It contains a single
-metadata string value, which can have one of the following values:
+that can raise floating-point exceptions. It contains a single metadata string
+value, which can have one of the following:
 
 ::
 
     "ignore"
     "strict"
-    "maytrap"
 
-It has the same meaning as the corresponding argument in
-:ref:`constrained intrinsics <constrainedfp>`.
+If the argument is "ignore", floating-point exceptions raised by the call are not
+intended to be observed. Optimization transformations may reorder such operations
+or omit them in some cases. For example, if the call result is unused, the call
+may be removed, even if it could raise exceptions. This is the only permitted value
+in the :ref:`default floating-point environment <floatenv>`.
 
+If the argument of "fp.except" is "strict", all transformations must preserve the
+floating-point exception semantics of the original code. Any exception that would
+have been raised by the original code must also be raised by the transformed code
+unless it can be proven unobservable. No new observable floating-point exceptions
+may be introduced. This value may only be used only in functions with
+``strictfp`` attribute.
 
 .. _moduleasm:
 

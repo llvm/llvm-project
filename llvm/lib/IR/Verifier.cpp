@@ -3972,7 +3972,7 @@ void Verifier::visitCallBase(CallBase &Call) {
        FoundGCTransitionBundle = false, FoundCFGuardTargetBundle = false,
        FoundPreallocatedBundle = false, FoundGCLiveBundle = false,
        FoundPtrauthBundle = false, FoundKCFIBundle = false,
-       FoundAttachedCallBundle = false, FoundFpeControlBundle = false,
+       FoundAttachedCallBundle = false, FoundFpeRoundBundle = false,
        FoundFpeExceptBundle = false;
   for (unsigned i = 0, e = Call.getNumOperandBundles(); i < e; ++i) {
     OperandBundleUse BU = Call.getOperandBundleAt(i);
@@ -4036,30 +4036,29 @@ void Verifier::visitCallBase(CallBase &Call) {
             "Multiple \"clang.arc.attachedcall\" operand bundles", Call);
       FoundAttachedCallBundle = true;
       verifyAttachedCallBundle(Call, BU);
-    } else if (Tag == LLVMContext::OB_fp_control) {
-      Check(!FoundFpeControlBundle, "Multiple \"fp.control\" operand bundles",
+    } else if (Tag == LLVMContext::OB_fp_round) {
+      Check(!FoundFpeRoundBundle, "Multiple \"fp.round\" operand bundles",
             Call);
       bool FoundRoundingMode = false;
       for (auto &U : BU.Inputs) {
         Value *V = U.get();
         Check(isa<MetadataAsValue>(V),
-              "Value of a \"fp.control\" bundle operand must be a metadata",
+              "Value of a \"fp.round\" bundle operand must be a metadata",
               Call);
         Metadata *MD = cast<MetadataAsValue>(V)->getMetadata();
         Check(isa<MDString>(MD),
-              "Value of a \"fp.control\" bundle operand must be a string",
-              Call);
+              "Value of a \"fp.round\" bundle operand must be a string", Call);
         StringRef Item = cast<MDString>(MD)->getString();
         if (convertBundleToRoundingMode(Item)) {
           Check(!FoundRoundingMode, "Rounding mode is specified more that once",
                 Call);
           FoundRoundingMode = true;
         } else {
-          CheckFailed("Unrecognized value in \"fp.control\" bundle operand",
+          CheckFailed("Unrecognized value in \"fp.round\" bundle operand",
                       Call);
         }
       }
-      FoundFpeControlBundle = true;
+      FoundFpeRoundBundle = true;
     } else if (Tag == LLVMContext::OB_fp_except) {
       Check(!FoundFpeExceptBundle, "Multiple \"fp.except\" operand bundles",
             Call);
@@ -4077,6 +4076,15 @@ void Verifier::visitCallBase(CallBase &Call) {
           "Value of a \"fp.except\" bundle operand is not a correct exception "
           "behavior",
           Call);
+      if (EB && *EB != fp::ebIgnore)
+        if (const BasicBlock *BB = Call.getParent())
+          if (const Function *F = BB->getParent()) {
+            bool StrictFP = F->hasFnAttribute(Attribute::StrictFP);
+            Check(StrictFP,
+                  "Value of a \"fp.except\" bundle operand in "
+                  "default mode must be \"ignore\"",
+                  Call);
+          }
       FoundFpeExceptBundle = true;
     }
   }

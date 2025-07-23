@@ -4348,6 +4348,31 @@ void AssemblyWriter::printInfoComment(const Value &V, bool isMaterializable) {
 
   if (PrintInstAddrs)
     Out << " ; " << &V;
+
+  if (auto *CI = dyn_cast<CallInst>(&V))
+    if (Intrinsic::ID IID = CI->getIntrinsicID())
+      if (IntrinsicInst::isFloatingPointOperation(IID))
+        if (const BasicBlock *BB = CI->getParent())
+          if (const Function *F = BB->getParent())
+            if (F->hasFnAttribute(Attribute::StrictFP)) {
+              MemoryEffects ME = CI->getMemoryEffects();
+              ModRefInfo MR = ME.getModRef(IRMemLocation::InaccessibleMem);
+              Out << " ; fpe=[";
+              switch (MR) {
+              case ModRefInfo::NoModRef:
+                break;
+              case ModRefInfo::Ref:
+                Out << "r";
+                break;
+              case ModRefInfo::Mod:
+                Out << "w";
+                break;
+              case ModRefInfo::ModRef:
+                Out << "rw";
+                break;
+              }
+              Out << "]";
+            }
 }
 
 static void maybePrintCallAddrSpace(const Value *Operand, const Instruction *I,

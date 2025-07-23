@@ -38,12 +38,12 @@ llvm::convertStrToRoundingMode(StringRef RoundingArg) {
 std::optional<RoundingMode>
 llvm::convertBundleToRoundingMode(StringRef RoundingArg) {
   return StringSwitch<std::optional<RoundingMode>>(RoundingArg)
-      .Case("dyn", RoundingMode::Dynamic)
-      .Case("rte", RoundingMode::NearestTiesToEven)
-      .Case("rmm", RoundingMode::NearestTiesToAway)
-      .Case("rtn", RoundingMode::TowardNegative)
-      .Case("rtp", RoundingMode::TowardPositive)
-      .Case("rtz", RoundingMode::TowardZero)
+      .Case("dynamic", RoundingMode::Dynamic)
+      .Case("tonearest", RoundingMode::NearestTiesToEven)
+      .Case("tonearestaway", RoundingMode::NearestTiesToAway)
+      .Case("downward", RoundingMode::TowardNegative)
+      .Case("upward", RoundingMode::TowardPositive)
+      .Case("towardzero", RoundingMode::TowardZero)
       .Default(std::nullopt);
 }
 
@@ -80,22 +80,22 @@ llvm::convertRoundingModeToBundle(RoundingMode UseRounding) {
   std::optional<StringRef> RoundingStr;
   switch (UseRounding) {
   case RoundingMode::Dynamic:
-    RoundingStr = "dyn";
+    RoundingStr = "dynamic";
     break;
   case RoundingMode::NearestTiesToEven:
-    RoundingStr = "rte";
+    RoundingStr = "tonearest";
     break;
   case RoundingMode::NearestTiesToAway:
-    RoundingStr = "rmm";
+    RoundingStr = "tonearestaway";
     break;
   case RoundingMode::TowardNegative:
-    RoundingStr = "rtn";
+    RoundingStr = "downward";
     break;
   case RoundingMode::TowardPositive:
-    RoundingStr = "rtp";
+    RoundingStr = "upward";
     break;
   case RoundingMode::TowardZero:
-    RoundingStr = "rtz";
+    RoundingStr = "towardzero";
     break;
   default:
     break;
