@@ -337,7 +337,7 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
     NewGEPType = GOp->getSourceElementType();
 
   IRBuilder<> Builder(&GEPI);
-  SmallVector<Value *, MaxVecSize> Indices(GEPI.indices());
+  SmallVector<Value *, MaxVecSize> Indices(GOp->indices());
   Value *NewGEP = Builder.CreateGEP(NewGEPType, PtrOperand, Indices,
                                     GOp->getName(), GOp->getNoWrapFlags());
 
