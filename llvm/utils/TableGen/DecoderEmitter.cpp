@@ -2353,10 +2353,48 @@ insertBits(IntType &Field, IntType Bits, unsigned StartBit, unsigned NumBits) {
 )";
 }
 
+static void emitDecodeInstructionAsCallToImpl(formatted_raw_ostream &OS,
+                                              const CPPType &Type,
+                                              const CPPType &MaxType,
+                                              StringRef Suffix) {
+  OS << formatv(
+      "static DecodeStatus decodeInstruction(const uint8_t "
+      "DecodeTable[], MCInst &MI, {}, uint64_t Address, "
+      "const MCDisassembler *DisAsm, const MCSubtargetInfo &STI) {{\n",
+      Type.getParamDecl());
+  // Convert `insn` to max bitwidth type.
+  bool UseAssignment = MaxType.Kind == CPPType::UIntTy ||
+                       Type.Kind == CPPType::UIntTy ||
+                       Type.Bitwidth == MaxType.Bitwidth;
+  if (UseAssignment) {
+    OS << formatv("  {} InsnMaxWidth = insn;", MaxType.getName());
+  } else {
+    // Expand from smaller bitset type to larger bitset type.
+    OS << formatv("  const {} Mask(maskTrailingOnes<uint64_t>(64));\n",
+                  Type.getName());
+    OS << formatv("  {} InsnMaxWidth((insn & Mask).to_ulong());\n",
+                  MaxType.getName());
+    for (unsigned I = 64; I < Type.Bitwidth; I += 64)
+      OS << formatv(
+          "  InsnMaxWidth |= {0}(((insn >> {1}) & Mask).to_ulong()) << {1};\n",
+          MaxType.getName(), I);
+  }
+
+  OS << formatv(R"(
+  auto DecodeToMCInst = [{}insn](unsigned DecodeIdx, DecodeStatus S, MCInst &MI, uint64_t Address, const MCDisassembler *DisAsm, bool &DecodeComplete) {{
+    return decodeToMCInst{}(DecodeIdx, S, insn, MI, Address, DisAsm, DecodeComplete);
+  };
+  return decodeInstructionImpl(DecodeTable, MI, InsnMaxWidth, Address, DisAsm, STI, DecodeToMCInst);
+}
+
+)",
+                Type.Kind == CPPType::UIntTy ? "" : "&", Suffix);
+}
+
 // Emit the entry function function decodeInstruction().
 static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
                                   unsigned OpcodeMask, const CPPType &Type,
-                                  StringRef Suffix) {
+                                  StringRef Suffix, bool IsImplFunction) {
   const bool HasTryDecode = OpcodeMask & ((1 << MCD::OPC_TryDecode) |
                                           (1 << MCD::OPC_TryDecodeOrFail));
   const bool HasCheckPredicate =
@@ -2364,17 +2402,35 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
       ((1 << MCD::OPC_CheckPredicate) | (1 << MCD::OPC_CheckPredicateOrFail));
   const bool HasSoftFail = OpcodeMask & (1 << MCD::OPC_SoftFail);
 
+  assert(
+      (!IsVarLenInst || (Type.Kind == CPPType::APIntTy && !IsImplFunction)) &&
+      "For variable length instructions, expected use of APInt and no impl "
+      "function");
+
   emitTemplate(OS, Type);
-  OS << formatv("static DecodeStatus decodeInstruction(const uint8_t "
+  OS << formatv("static DecodeStatus decodeInstruction{}(const uint8_t "
                 "DecodeTable[], MCInst &MI, {}, uint64_t Address, "
                 "const MCDisassembler *DisAsm, const MCSubtargetInfo &STI",
-                Type.getParamDecl());
-  if (IsVarLenInst)
-    OS << ", llvm::function_ref<void(APInt &, uint64_t)> makeUp";
+                IsImplFunction ? "Impl" : "", Type.getParamDecl());
+  if (IsVarLenInst) {
+    OS << ", function_ref<void(APInt &, uint64_t)> makeUp";
+  } else if (IsImplFunction) {
+    OS << ", function_ref<DecodeStatus(unsigned, DecodeStatus, MCInst &, "
+          "uint64_t, const MCDisassembler *, bool &)> decodeToMCInstPtr";
+  }
+
   OS << ") {\n";
 
   if (HasCheckPredicate)
     OS << "  const FeatureBitset &Bits = STI.getFeatureBits();\n";
+
+  std::string DecodeToMCInstDirectCall =
+      "decodeToMCInst" + Suffix.str() +
+      "(DecodeIdx, S, insn, MI, Address, DisAsm, DecodeComplete)";
+  StringRef DecodeToMCInstCall = DecodeToMCInstDirectCall;
+  if (IsImplFunction)
+    DecodeToMCInstCall =
+        "decodeToMCInstPtr(DecodeIdx, S, MI, Address, DisAsm, DecodeComplete)";
 
   OS << R"(
   const uint8_t *Ptr = DecodeTable;
@@ -2496,8 +2552,9 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
     OS << "\n      unsigned Len = InstrLenTable[Opc];\n"
        << "      makeUp(insn, Len);";
   }
+
   OS << formatv(R"(
-      S = decodeToMCInst{}(DecodeIdx, S, insn, MI, Address, DisAsm, DecodeComplete);
+      S = {};
       assert(DecodeComplete);
 
       LLVM_DEBUG(dbgs() << Loc << ": OPC_Decode: opcode " << Opc
@@ -2505,7 +2562,7 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
                    << (S != MCDisassembler::Fail ? "PASS\n" : "FAIL\n"));
       return S;
     })",
-                Suffix);
+                DecodeToMCInstCall);
   if (HasTryDecode) {
     OS << formatv(R"(
     case MCD::OPC_TryDecode:
@@ -2520,7 +2577,7 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
       MCInst TmpMI;
       TmpMI.setOpcode(Opc);
       bool DecodeComplete;
-      S = decodeToMCInst{}(DecodeIdx, S, insn, TmpMI, Address, DisAsm, DecodeComplete);
+      S = {};
       LLVM_DEBUG(dbgs() << Loc << ": OPC_TryDecode: opcode " << Opc
                    << ", using decoder " << DecodeIdx << ": ");
 
@@ -2543,7 +2600,7 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
       S = MCDisassembler::Success;
       break;
     })",
-                  Suffix);
+                  DecodeToMCInstCall);
   }
   if (HasSoftFail) {
     OS << R"(
@@ -2788,6 +2845,7 @@ namespace {
 
   DecoderTableInfo TableInfo;
   bool HasCheckPredicate = false;
+  unsigned OpcodeMask = 0;
 
   // Helper lambda to emit the decoder code for a given instruction Bitwidth
   // and associated C++ type. If `Bitwidth` is 0 (and CPPType is empty) it will
@@ -2795,7 +2853,6 @@ namespace {
   auto emitDecoder = [&](const CPPType &Type, StringRef Suffix) {
     // Reset the Decoders for each non-templated type.
     TableInfo.Decoders.clear();
-    unsigned OpcodeMask = 0;
 
     const bool IsTemplate = Type.Kind == CPPType::TemplateTy;
     if (!IsTemplate) {
@@ -2852,8 +2909,6 @@ namespace {
 
     HasCheckPredicate |= OpcodeMask & ((1 << MCD::OPC_CheckPredicate) |
                                        (1 << MCD::OPC_CheckPredicateOrFail));
-
-    emitDecodeInstruction(OS, IsVarLenInst, OpcodeMask, Type, Suffix);
   };
 
   if (GenerateTemplated) {
@@ -2861,7 +2916,10 @@ namespace {
     emitFieldFromInstruction(
         OS, /*GenerateIntType=*/true, /*GenerateBitsetType=*/false,
         /*GenerateAPIntType=*/false, /*GenerateTemplateType=*/true);
-    emitDecoder(CPPType(0, false), /*Suffix=*/"");
+    const CPPType Type(0, false);
+    emitDecoder(Type, /*Suffix=*/"");
+    emitDecodeInstruction(OS, IsVarLenInst, OpcodeMask, Type, /*Suffix=*/"",
+                          /*IsImplFnuction=*/false);
   } else {
     // Collect all allowed Bitwidths for instructions and keep track of the
     // variants of `fieldFromInstruction` we need to generate.
@@ -2885,9 +2943,28 @@ namespace {
                              /*GenerateAPIntType=*/IsVarLenInst,
                              /*GenerateTemplateType=*/false);
     const bool AddSuffix = InstrBitwidths.size() > 1;
+    unsigned MaxBitwidth = 0;
     for (unsigned Bitwidth : InstrBitwidths) {
       std::string Suffix = AddSuffix ? std::to_string(Bitwidth) : "";
-      emitDecoder(CPPType(Bitwidth, IsVarLenInst), Suffix);
+      const CPPType Type(Bitwidth, IsVarLenInst);
+      emitDecoder(Type, Suffix);
+      if (!AddSuffix) {
+        emitDecodeInstruction(OS, IsVarLenInst, OpcodeMask, Type, Suffix,
+                              /*IsImplFunction=*/false);
+      }
+      MaxBitwidth = std::max(MaxBitwidth, Bitwidth);
+    }
+
+    if (AddSuffix) {
+      // Emit top-level decodeInstruction. This will be an implementation
+      // function and one entry point for each bit width. The implementation
+      // function will operate on the max bitwidth type.
+      const CPPType MaxType(MaxBitwidth, IsVarLenInst);
+      emitDecodeInstruction(OS, IsVarLenInst, OpcodeMask, MaxType, "",
+                            /*IsImplFunction=*/true);
+      for (unsigned Bitwidth : InstrBitwidths)
+        emitDecodeInstructionAsCallToImpl(OS, CPPType(Bitwidth, IsVarLenInst),
+                                          MaxType, std::to_string(Bitwidth));
     }
   }
 
