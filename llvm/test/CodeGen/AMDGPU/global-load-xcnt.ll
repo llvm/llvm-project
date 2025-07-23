@@ -304,78 +304,79 @@ define i64 @test_v16i64_load_store(ptr addrspace(1) %ptr_a, ptr addrspace(1) %pt
 ; GCN-SDAG-NEXT:    scratch_store_b32 off, v42, s32 offset:4
 ; GCN-SDAG-NEXT:    scratch_store_b32 off, v43, s32
 ; GCN-SDAG-NEXT:    s_clause 0x7
-; GCN-SDAG-NEXT:    global_load_b128 v[6:9], v[0:1], off offset:112
-; GCN-SDAG-NEXT:    global_load_b128 v[10:13], v[0:1], off offset:96
-; GCN-SDAG-NEXT:    global_load_b128 v[18:21], v[0:1], off offset:80
-; GCN-SDAG-NEXT:    global_load_b128 v[34:37], v[0:1], off offset:48
-; GCN-SDAG-NEXT:    global_load_b128 v[30:33], v[0:1], off offset:32
-; GCN-SDAG-NEXT:    global_load_b128 v[22:25], v[0:1], off offset:16
-; GCN-SDAG-NEXT:    global_load_b128 v[26:29], v[0:1], off
+; GCN-SDAG-NEXT:    global_load_b128 v[34:37], v[0:1], off offset:112
+; GCN-SDAG-NEXT:    global_load_b128 v[30:33], v[0:1], off offset:96
+; GCN-SDAG-NEXT:    global_load_b128 v[26:29], v[0:1], off offset:80
+; GCN-SDAG-NEXT:    global_load_b128 v[18:21], v[0:1], off offset:48
+; GCN-SDAG-NEXT:    global_load_b128 v[14:17], v[0:1], off offset:32
+; GCN-SDAG-NEXT:    global_load_b128 v[10:13], v[0:1], off offset:16
+; GCN-SDAG-NEXT:    global_load_b128 v[6:9], v[0:1], off
 ; GCN-SDAG-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:64
-; GCN-SDAG-NEXT:    v_mov_b64_e32 v[16:17], 0x70
+; GCN-SDAG-NEXT:    v_mov_b64_e32 v[24:25], 0x70
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[50:51], 0x60
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[52:53], 48
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[38:39], 0x50
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[54:55], 32
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[48:49], 64
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[40:41], 16
-; GCN-SDAG-NEXT:    v_dual_mov_b32 v14, 0xc8 :: v_dual_mov_b32 v15, 0
+; GCN-SDAG-NEXT:    v_dual_mov_b32 v22, 0xc8 :: v_dual_mov_b32 v23, 0
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[42:43], 0
 ; GCN-SDAG-NEXT:    s_wait_loadcnt 0x7
-; GCN-SDAG-NEXT:    global_store_b128 v[16:17], v[6:9], off
+; GCN-SDAG-NEXT:    global_store_b128 v[24:25], v[34:37], off
 ; GCN-SDAG-NEXT:    s_wait_loadcnt 0x6
-; GCN-SDAG-NEXT:    global_store_b128 v[50:51], v[10:13], off
+; GCN-SDAG-NEXT:    global_store_b128 v[50:51], v[30:33], off
 ; GCN-SDAG-NEXT:    s_wait_loadcnt 0x5
 ; GCN-SDAG-NEXT:    s_wait_xcnt 0x1
-; GCN-SDAG-NEXT:    v_dual_mov_b32 v16, v20 :: v_dual_mov_b32 v17, v21
+; GCN-SDAG-NEXT:    v_dual_mov_b32 v24, v28 :: v_dual_mov_b32 v25, v29
 ; GCN-SDAG-NEXT:    s_wait_xcnt 0x0
-; GCN-SDAG-NEXT:    v_lshl_add_u64 v[12:13], v[12:13], 0, v[12:13]
-; GCN-SDAG-NEXT:    v_lshl_add_u64 v[10:11], v[10:11], 0, v[10:11]
-; GCN-SDAG-NEXT:    v_lshl_add_u64 v[8:9], v[8:9], 0, v[8:9]
-; GCN-SDAG-NEXT:    v_lshl_add_u64 v[6:7], v[6:7], 0, v[6:7]
+; GCN-SDAG-NEXT:    v_lshl_add_u64 v[32:33], v[32:33], 0, v[32:33]
+; GCN-SDAG-NEXT:    v_lshl_add_u64 v[30:31], v[30:31], 0, v[30:31]
+; GCN-SDAG-NEXT:    v_lshl_add_u64 v[36:37], v[36:37], 0, v[36:37]
+; GCN-SDAG-NEXT:    v_lshl_add_u64 v[34:35], v[34:35], 0, v[34:35]
 ; GCN-SDAG-NEXT:    s_wait_loadcnt 0x4
-; GCN-SDAG-NEXT:    global_store_b128 v[52:53], v[34:37], off
+; GCN-SDAG-NEXT:    global_store_b128 v[52:53], v[18:21], off
 ; GCN-SDAG-NEXT:    s_wait_loadcnt 0x3
-; GCN-SDAG-NEXT:    global_store_b128 v[54:55], v[30:33], off
+; GCN-SDAG-NEXT:    global_store_b128 v[54:55], v[14:17], off
 ; GCN-SDAG-NEXT:    s_wait_loadcnt 0x2
-; GCN-SDAG-NEXT:    global_store_b128 v[40:41], v[22:25], off
+; GCN-SDAG-NEXT:    global_store_b128 v[40:41], v[10:13], off
 ; GCN-SDAG-NEXT:    s_wait_loadcnt 0x1
-; GCN-SDAG-NEXT:    global_store_b128 v[42:43], v[26:29], off
+; GCN-SDAG-NEXT:    global_store_b128 v[42:43], v[6:9], off
 ; GCN-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GCN-SDAG-NEXT:    s_wait_xcnt 0x3
 ; GCN-SDAG-NEXT:    v_lshl_add_u64 v[52:53], v[2:3], 0, v[2:3]
 ; GCN-SDAG-NEXT:    v_lshl_add_u64 v[50:51], v[0:1], 0, v[0:1]
-; GCN-SDAG-NEXT:    s_wait_xcnt 0x1
-; GCN-SDAG-NEXT:    v_lshl_add_u64 v[24:25], v[24:25], 0, v[24:25]
-; GCN-SDAG-NEXT:    v_lshl_add_u64 v[22:23], v[22:23], 0, v[22:23]
-; GCN-SDAG-NEXT:    s_wait_xcnt 0x0
+; GCN-SDAG-NEXT:    v_lshl_add_u64 v[26:27], v[26:27], 0, 0xc8
+; GCN-SDAG-NEXT:    s_wait_xcnt 0x2
+; GCN-SDAG-NEXT:    v_lshl_add_u64 v[16:17], v[16:17], 0, 0x64
 ; GCN-SDAG-NEXT:    v_lshl_add_u64 v[28:29], v[28:29], 0, v[28:29]
-; GCN-SDAG-NEXT:    v_lshl_add_u64 v[26:27], v[26:27], 0, v[26:27]
-; GCN-SDAG-NEXT:    v_lshl_add_u64 v[36:37], v[36:37], 0, v[36:37]
-; GCN-SDAG-NEXT:    v_lshl_add_u64 v[34:35], v[34:35], 0, v[34:35]
-; GCN-SDAG-NEXT:    v_lshl_add_u64 v[32:33], v[32:33], 0, 0x64
-; GCN-SDAG-NEXT:    v_lshl_add_u64 v[30:31], v[30:31], 0, v[30:31]
 ; GCN-SDAG-NEXT:    v_lshl_add_u64 v[20:21], v[20:21], 0, v[20:21]
-; GCN-SDAG-NEXT:    v_lshl_add_u64 v[18:19], v[18:19], 0, 0xc8
+; GCN-SDAG-NEXT:    v_lshl_add_u64 v[18:19], v[18:19], 0, v[18:19]
+; GCN-SDAG-NEXT:    v_lshl_add_u64 v[14:15], v[14:15], 0, v[14:15]
+; GCN-SDAG-NEXT:    s_wait_xcnt 0x1
+; GCN-SDAG-NEXT:    v_lshl_add_u64 v[12:13], v[12:13], 0, v[12:13]
+; GCN-SDAG-NEXT:    v_lshl_add_u64 v[10:11], v[10:11], 0, v[10:11]
+; GCN-SDAG-NEXT:    s_wait_xcnt 0x0
+; GCN-SDAG-NEXT:    v_lshl_add_u64 v[8:9], v[8:9], 0, v[8:9]
+; GCN-SDAG-NEXT:    v_lshl_add_u64 v[6:7], v[6:7], 0, v[6:7]
 ; GCN-SDAG-NEXT:    s_clause 0x1
-; GCN-SDAG-NEXT:    global_store_b128 v[38:39], v[14:17], off
+; GCN-SDAG-NEXT:    global_store_b128 v[38:39], v[22:25], off
 ; GCN-SDAG-NEXT:    global_store_b128 v[48:49], v[0:3], off
 ; GCN-SDAG-NEXT:    s_clause 0x7
-; GCN-SDAG-NEXT:    global_store_b128 v[4:5], v[10:13], off offset:96
-; GCN-SDAG-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:112
+; GCN-SDAG-NEXT:    global_store_b128 v[4:5], v[30:33], off offset:96
+; GCN-SDAG-NEXT:    global_store_b128 v[4:5], v[34:37], off offset:112
 ; GCN-SDAG-NEXT:    global_store_b128 v[4:5], v[50:53], off offset:64
-; GCN-SDAG-NEXT:    global_store_b128 v[4:5], v[18:21], off offset:80
-; GCN-SDAG-NEXT:    global_store_b128 v[4:5], v[30:33], off offset:32
-; GCN-SDAG-NEXT:    global_store_b128 v[4:5], v[34:37], off offset:48
-; GCN-SDAG-NEXT:    global_store_b128 v[4:5], v[26:29], off
-; GCN-SDAG-NEXT:    global_store_b128 v[4:5], v[22:25], off offset:16
+; GCN-SDAG-NEXT:    global_store_b128 v[4:5], v[26:29], off offset:80
+; GCN-SDAG-NEXT:    global_store_b128 v[4:5], v[14:17], off offset:32
+; GCN-SDAG-NEXT:    global_store_b128 v[4:5], v[18:21], off offset:48
+; GCN-SDAG-NEXT:    global_store_b128 v[4:5], v[6:9], off
+; GCN-SDAG-NEXT:    global_store_b128 v[4:5], v[10:13], off offset:16
 ; GCN-SDAG-NEXT:    s_clause 0x3
 ; GCN-SDAG-NEXT:    scratch_load_b32 v43, off, s32
 ; GCN-SDAG-NEXT:    scratch_load_b32 v42, off, s32 offset:4
 ; GCN-SDAG-NEXT:    scratch_load_b32 v41, off, s32 offset:8
 ; GCN-SDAG-NEXT:    scratch_load_b32 v40, off, s32 offset:12
 ; GCN-SDAG-NEXT:    s_wait_xcnt 0xc
-; GCN-SDAG-NEXT:    v_dual_mov_b32 v0, v28 :: v_dual_mov_b32 v1, v29
+; GCN-SDAG-NEXT:    v_dual_mov_b32 v0, v8 :: v_dual_mov_b32 v1, v9
 ; GCN-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GCN-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
