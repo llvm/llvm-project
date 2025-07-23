@@ -174,11 +174,21 @@ public:
   /// Needed because `Data` may be non-zero by default unless explicitly
   /// cleared.
   bool onlyAccessTargetMemoryLocation() {
-    return getWithoutLoc(static_cast<IRMemLocation>(
-                             llvm::InaccessibleTargetMemLocation::AARCH64_FPMR))
-        .getWithoutLoc(static_cast<IRMemLocation>(
-            llvm::InaccessibleTargetMemLocation::AARCH64_ZA))
-        .doesNotAccessMemory();
+    MemoryEffectsBase ME = *this;
+    for (unsigned I = static_cast<int>(LocationEnum::ErrnoMem);
+         I < static_cast<int>(LocationEnum::Last); I++)
+      ME = ME.getWithoutLoc(static_cast<IRMemLocation>(I));
+    return ME.doesNotAccessMemory();
+  }
+
+  /// Create MemoryEffectsBase that can only access Target Memory Locations
+  static MemoryEffectsBase
+  setTargetMemLocationModRef(ModRefInfo MR = ModRefInfo::NoModRef) {
+    MemoryEffectsBase FRMB = none();
+    for (unsigned I = static_cast<int>(LocationEnum::ErrnoMem);
+         I < static_cast<int>(LocationEnum::Last); I++)
+      FRMB.setModRef(static_cast<Location>(I), MR);
+    return FRMB;
   }
 
   /// Create MemoryEffectsBase that can only access inaccessible or argument
