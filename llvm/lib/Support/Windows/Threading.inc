@@ -107,9 +107,8 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
 }
 
 SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
-
-  // SetThreadInformation is only available on Windows 8 and later. Since we still
-  // support compilation on Windows 7, we load the function dynamically.
+  // SetThreadInformation is only available on Windows 8 and later. Since we
+  // still support compilation on Windows 7, we load the function dynamically.
   typedef BOOL(WINAPI * SetThreadInformation_t)(
       HANDLE hThread, THREAD_INFORMATION_CLASS ThreadInformationClass,
       _In_reads_bytes_(ThreadInformationSize) PVOID ThreadInformation,
@@ -132,8 +131,9 @@ SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
     // efficent cores at the most efficient cpu frequency):
     // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreadinformation
     // https://learn.microsoft.com/en-us/windows/win32/procthread/quality-of-service
-    setThreadInformation(Priority == ThreadPriority::Background ? THREAD_POWER_THROTTLING_EXECUTION_SPEED
-                                                                : 0);
+    setThreadInformation(Priority == ThreadPriority::Background
+                             ? THREAD_POWER_THROTTLING_EXECUTION_SPEED
+                             : 0);
   }
 
   // https://docs.microsoft.com/en-us/windows/desktop/api/processthreadsapi/nf-processthreadsapi-setthreadpriority
