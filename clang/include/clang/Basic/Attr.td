@@ -975,7 +975,7 @@ def AnalyzerNoReturn : InheritableAttr {
   // analyzer?
   let Spellings = [GNU<"analyzer_noreturn">];
   let Args = [DefaultBoolArgument<"Value", /*default=*/1, /*fake=*/0>];
-  let Subjects = SubjectList<[Function]>;
+  let Subjects = SubjectList<[Function, ObjCMethod, BlockDecl]>;
   let Documentation = [Undocumented];
 }
 

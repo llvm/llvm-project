@@ -408,7 +408,6 @@ TEST_F(DiscardExprStateTest, CallWithParenExprTreatedCorrectly) {
   EXPECT_NE(CallExpectState.Env.getValue(FnToPtrDecay), nullptr);
 }
 
-
 struct NonConvergingLattice {
   int State;
 

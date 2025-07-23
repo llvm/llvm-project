@@ -2684,7 +2684,6 @@ public:
   AnalyzerSinkKind getAnalyzerSinkKind() const;
   void setAnalyzerSinkKind(AnalyzerSinkKind kind);
 
-
   /// True if the function was a definition but its body was skipped.
   bool hasSkippedBody() const { return FunctionDeclBits.HasSkippedBody; }
   void setHasSkippedBody(bool Skipped = true) {
