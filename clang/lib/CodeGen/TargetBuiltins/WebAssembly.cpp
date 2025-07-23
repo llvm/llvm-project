@@ -261,7 +261,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
       } else if (T->isIntegerTy()) {
         Args.push_back(ConstantInt::get(T, 0));
       } else if (T->isPointerTy()) {
-        Args.push_back(ConstantPointerNull::get(llvm::PointerType::get(getLLVMContext(), T->getPointerAddressSpace())));
+        Args.push_back(ConstantPointerNull::get(llvm::PointerType::get(
+            getLLVMContext(), T->getPointerAddressSpace())));
       } else {
         // TODO: Handle reference types. For now, we reject them in Sema.
         llvm_unreachable("Unhandled type");
