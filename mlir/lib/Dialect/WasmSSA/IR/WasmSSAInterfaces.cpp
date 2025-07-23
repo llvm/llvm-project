@@ -20,10 +20,10 @@ namespace mlir::wasmssa {
 #include "mlir/Dialect/WasmSSA/IR/WasmSSAInterfaces.cpp.inc"
 
 namespace detail {
-LogicalResult verifyWasmSSALabelBranchingOpInterface(Operation *op) {
-  auto branchInterface = dyn_cast<WasmSSALabelBranchingOpInterface>(op);
-  llvm::FailureOr<WasmSSALabelLevelOpInterface> res =
-      WasmSSALabelBranchingOpInterface::getTargetOpFromBlock(
+LogicalResult verifyLabelBranchingOpInterface(Operation *op) {
+  auto branchInterface = dyn_cast<LabelBranchingOpInterface>(op);
+  llvm::FailureOr<LabelLevelOpInterface> res =
+      LabelBranchingOpInterface::getTargetOpFromBlock(
           op->getBlock(), branchInterface.getExitLevel());
   return success(succeeded(res));
 }
@@ -47,12 +47,12 @@ LogicalResult verifyConstantExpressionInterface(Operation *op) {
 }
 } // namespace detail
 
-llvm::FailureOr<WasmSSALabelLevelOpInterface>
-WasmSSALabelBranchingOpInterface::getTargetOpFromBlock(::mlir::Block *block,
+llvm::FailureOr<LabelLevelOpInterface>
+LabelBranchingOpInterface::getTargetOpFromBlock(::mlir::Block *block,
                                                      uint32_t breakLevel) {
-  WasmSSALabelLevelOpInterface res{};
+  LabelLevelOpInterface res{};
   for (size_t curLevel{0}; curLevel <= breakLevel; curLevel++) {
-    res = dyn_cast_or_null<WasmSSALabelLevelOpInterface>(block->getParentOp());
+    res = dyn_cast_or_null<LabelLevelOpInterface>(block->getParentOp());
     if (!res)
       return failure();
     block = res->getBlock();

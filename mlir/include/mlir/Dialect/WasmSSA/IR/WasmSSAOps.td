@@ -27,7 +27,7 @@ class WasmSSA_Op<string mnemonic, list<Trait> traits = []> :
     Op<WasmSSA_Dialect, mnemonic, traits>;
 
 class WasmSSA_BlockLikeOp<string mnemonic, string summaryStr> :
-  WasmSSA_Op<mnemonic, [Terminator, DeclareOpInterfaceMethods<WasmSSALabelLevelOpInterface>]> {
+  WasmSSA_Op<mnemonic, [Terminator, DeclareOpInterfaceMethods<LabelLevelOpInterface>]> {
   let summary = summaryStr;
   let arguments = (ins Variadic<WasmSSA_ValType>: $inputs);
   let regions = (region AnyRegion: $body);
@@ -48,7 +48,7 @@ def WasmSSA_BlockOp : WasmSSA_BlockLikeOp<"block", "Create a nesting level"> {}
 def WasmSSA_LoopOp : WasmSSA_BlockLikeOp<"loop", "Create a nesting level similar to Block Op, except that it has itself as a successor."> {}
 
 def WasmSSA_BlockReturnOp : WasmSSA_Op<"block_return", [Terminator,
-    DeclareOpInterfaceMethods<WasmSSALabelBranchingOpInterface>]> {
+    DeclareOpInterfaceMethods<LabelBranchingOpInterface>]> {
   let summary = "Return from the current block";
   let arguments = (ins Variadic<WasmSSA_ValType>: $inputs);
   let extraClassDeclaration = [{
@@ -59,7 +59,7 @@ def WasmSSA_BlockReturnOp : WasmSSA_Op<"block_return", [Terminator,
 
 def WasmSSA_BranchIfOp : WasmSSA_Op<"branch_if", [
     Terminator,
-    DeclareOpInterfaceMethods<WasmSSALabelBranchingOpInterface>]> {
+    DeclareOpInterfaceMethods<LabelBranchingOpInterface>]> {
   let summary = "Jump to target level if condition has non-zero value";
   let arguments = (ins I32: $condition,
                        UI32Attr: $exitLevel,
@@ -144,7 +144,7 @@ def WasmSSA_FuncCallOp : WasmSSA_Op<"call"> {
 def WasmSSA_FuncImportOp : WasmSSA_Op<"import_func", [
     Symbol,
     CallableOpInterface,
-    WasmSSAImportOpInterface]> {
+    ImportOpInterface]> {
   let summary = "Importing a function variable";
   let arguments = (ins SymbolNameAttr: $sym_name,
                      StrAttr: $moduleName,
@@ -199,7 +199,7 @@ def WasmSSA_GlobalOp : WasmSSA_Op<"global", [
 
 def WasmSSA_GlobalImportOp : WasmSSA_Op<"import_global", [
     Symbol,
-    WasmSSAImportOpInterface]> {
+    ImportOpInterface]> {
   let summary = "Importing a global variable";
   let arguments = (ins SymbolNameAttr: $sym_name,
                      StrAttr: $moduleName,
@@ -228,7 +228,7 @@ def WasmSSA_GlobalGetOp : WasmSSA_Op<"global_get", [DeclareOpInterfaceMethods<Co
 }
 
 def WasmSSA_IfOp : WasmSSA_Op<"if", [Terminator,
-    DeclareOpInterfaceMethods<WasmSSALabelLevelOpInterface>]> {
+    DeclareOpInterfaceMethods<LabelLevelOpInterface>]> {
   let summary = "Execute the if region if condition value is nonzero, the else region otherwise.";
   let arguments = (ins I32:$condition, Variadic<WasmSSA_ValType>: $inputs);
   let regions = (region AnyRegion: $if, AnyRegion: $else);
@@ -302,7 +302,7 @@ def WasmSSA_MemOp : WasmSSA_Op<"memory", [Symbol]> {
   ];
 }
 
-def WasmSSA_MemImportOp : WasmSSA_Op<"import_mem", [Symbol, WasmSSAImportOpInterface]> {
+def WasmSSA_MemImportOp : WasmSSA_Op<"import_mem", [Symbol, ImportOpInterface]> {
   let summary = "Importing a memory";
   let arguments = (ins SymbolNameAttr: $sym_name,
                      StrAttr: $moduleName,
@@ -330,7 +330,7 @@ def WasmSSA_TableOp : WasmSSA_Op<"table", [Symbol]> {
       "wasmssa::TableType":$type)>];
 }
 
-def WasmSSA_TableImportOp : WasmSSA_Op<"import_table", [Symbol, WasmSSAImportOpInterface]> {
+def WasmSSA_TableImportOp : WasmSSA_Op<"import_table", [Symbol, ImportOpInterface]> {
   let summary = "Importing a table";
   let arguments = (ins SymbolNameAttr: $sym_name,
                      StrAttr: $moduleName,

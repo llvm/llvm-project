@@ -16,7 +16,7 @@
 include "mlir/IR/OpBase.td"
 include "mlir/IR/BuiltinAttributes.td"
 
-def WasmSSALabelLevelOpInterface : OpInterface<"WasmSSALabelLevelOpInterface"> {
+def LabelLevelOpInterface : OpInterface<"LabelLevelOpInterface"> {
   let cppNamespace = "::mlir::wasmssa";
   let description = [{
     Operation that defines one level of nesting for wasm branching.
@@ -32,7 +32,7 @@ def WasmSSALabelLevelOpInterface : OpInterface<"WasmSSALabelLevelOpInterface"> {
   ];
 }
 
-def WasmSSALabelBranchingOpInterface : OpInterface<"WasmSSALabelBranchingOpInterface"> {
+def LabelBranchingOpInterface : OpInterface<"LabelBranchingOpInterface"> {
   let cppNamespace = "::mlir::wasmssa";
   let description = [{
     Wasm operation that targets a label for a jump.
@@ -46,11 +46,11 @@ def WasmSSALabelBranchingOpInterface : OpInterface<"WasmSSALabelBranchingOpInter
     >,
     InterfaceMethod<
       /*desc=*/        "Returns the destination of this operation",
-      /*returnType=*/  "WasmSSALabelLevelOpInterface",
+      /*returnType=*/  "LabelLevelOpInterface",
       /*methodName=*/  "getTargetOp",
       /*args=*/        (ins),
       /*methodBody=*/ [{
-        return *WasmSSALabelBranchingOpInterface::getTargetOpFromBlock($_op.getOperation()->getBlock(), $_op.getExitLevel());
+        return *LabelBranchingOpInterface::getTargetOpFromBlock($_op.getOperation()->getBlock(), $_op.getExitLevel());
       }]
     >,
     InterfaceMethod<
@@ -60,18 +60,18 @@ def WasmSSALabelBranchingOpInterface : OpInterface<"WasmSSALabelBranchingOpInter
       /*args=*/        (ins),
       /*methodBody=*/  [{}],
       /*defaultImpl=*/ [{
-        auto op = mlir::cast<WasmSSALabelBranchingOpInterface>(this->getOperation());
+        auto op = mlir::cast<LabelBranchingOpInterface>(this->getOperation());
         return op.getTargetOp().getLabelTarget();
       }]
     >
   ];
   let extraClassDeclaration = [{
-    static ::llvm::FailureOr<WasmSSALabelLevelOpInterface> getTargetOpFromBlock(::mlir::Block *block, uint32_t level);
+    static ::llvm::FailureOr<LabelLevelOpInterface> getTargetOpFromBlock(::mlir::Block *block, uint32_t level);
   }];
-  let verify = [{return verifyWasmSSALabelBranchingOpInterface($_op);}];
+  let verify = [{return verifyLabelBranchingOpInterface($_op);}];
 }
 
-def WasmSSAImportOpInterface : OpInterface<"WasmSSAImportOpInterface"> {
+def ImportOpInterface : OpInterface<"ImportOpInterface"> {
   let cppNamespace = "::mlir::wasmssa";
   let description = [{
     Operation that imports a symbol from an external wasm module;

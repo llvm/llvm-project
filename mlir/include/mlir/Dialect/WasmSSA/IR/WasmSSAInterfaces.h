@@ -19,7 +19,7 @@
 namespace mlir::wasmssa {
 namespace detail {
 LogicalResult verifyConstantExpressionInterface(Operation *op);
-LogicalResult verifyWasmSSALabelBranchingOpInterface(Operation *op);
+LogicalResult verifyLabelBranchingOpInterface(Operation *op);
 } // namespace detail
 template <class OperationType>
 struct AlwaysValidConstantExprOpTrait

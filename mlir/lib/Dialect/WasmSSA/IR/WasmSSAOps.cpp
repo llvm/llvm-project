@@ -87,7 +87,7 @@ Block *BlockOp::getLabelTarget() { return getTarget(); }
 std::size_t BlockReturnOp::getExitLevel() { return 0; }
 
 Block *BlockReturnOp::getTarget() {
-  return cast<WasmSSALabelBranchingOpInterface>(getOperation())
+  return cast<LabelBranchingOpInterface>(getOperation())
       .getTargetOp()
       .getOperation()
       ->getSuccessor(0);
