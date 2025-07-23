@@ -10675,7 +10675,7 @@ SDValue ARMTargetLowering::LowerSCMP(SDValue Op, SelectionDAG &DAG) const {
 
   // Constants for conditional moves
   SDValue One = DAG.getConstant(1, dl, MVT::i32);
-  SDValue MinusOne = DAG.getConstant(0xFFFFFFFF, dl, MVT::i32);
+  SDValue MinusOne = DAG.getAllOnesConstant(dl, MVT::i32);
 
   // movgt: if greater than, set to 1
   SDValue GTCond = DAG.getConstant(ARMCC::GT, dl, MVT::i32);
@@ -10781,7 +10781,7 @@ SDValue ARMTargetLowering::LowerUCMP(SDValue Op, SelectionDAG &DAG) const {
 
   // Constants for conditional moves
   SDValue One = DAG.getConstant(1, dl, MVT::i32);
-  SDValue MinusOne = DAG.getConstant(0xFFFFFFFF, dl, MVT::i32);
+  SDValue MinusOne = DAG.getAllOnesConstant(dl, MVT::i32);
 
   // movhi: if higher (unsigned greater than), set to 1
   SDValue HICond = DAG.getConstant(ARMCC::HI, dl, MVT::i32);

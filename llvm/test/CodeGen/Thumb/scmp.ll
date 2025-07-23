@@ -35,9 +35,8 @@ define i8 @scmp_8_8(i8 signext %x, i8 signext %y) nounwind {
 ;
 ; V81M-LABEL: scmp_8_8:
 ; V81M:       @ %bb.0:
-; V81M-NEXT:    subs r0, r0, r1
-; V81M-NEXT:    it gt
-; V81M-NEXT:    movgt r0, #1
+; V81M-NEXT:    cmp r0, r1
+; V81M-NEXT:    cset r0, gt
 ; V81M-NEXT:    it lt
 ; V81M-NEXT:    movlt.w r0, #-1
 ; V81M-NEXT:    bx lr
@@ -77,9 +76,8 @@ define i8 @scmp_8_16(i16 signext %x, i16 signext %y) nounwind {
 ;
 ; V81M-LABEL: scmp_8_16:
 ; V81M:       @ %bb.0:
-; V81M-NEXT:    subs r0, r0, r1
-; V81M-NEXT:    it gt
-; V81M-NEXT:    movgt r0, #1
+; V81M-NEXT:    cmp r0, r1
+; V81M-NEXT:    cset r0, gt
 ; V81M-NEXT:    it lt
 ; V81M-NEXT:    movlt.w r0, #-1
 ; V81M-NEXT:    bx lr
@@ -119,9 +117,8 @@ define i8 @scmp_8_32(i32 %x, i32 %y) nounwind {
 ;
 ; V81M-LABEL: scmp_8_32:
 ; V81M:       @ %bb.0:
-; V81M-NEXT:    subs r0, r0, r1
-; V81M-NEXT:    it gt
-; V81M-NEXT:    movgt r0, #1
+; V81M-NEXT:    cmp r0, r1
+; V81M-NEXT:    cset r0, gt
 ; V81M-NEXT:    it lt
 ; V81M-NEXT:    movlt.w r0, #-1
 ; V81M-NEXT:    bx lr
@@ -328,9 +325,8 @@ define i32 @scmp_32_32(i32 %x, i32 %y) nounwind {
 ;
 ; V81M-LABEL: scmp_32_32:
 ; V81M:       @ %bb.0:
-; V81M-NEXT:    subs r0, r0, r1
-; V81M-NEXT:    it gt
-; V81M-NEXT:    movgt r0, #1
+; V81M-NEXT:    cmp r0, r1
+; V81M-NEXT:    cset r0, gt
 ; V81M-NEXT:    it lt
 ; V81M-NEXT:    movlt.w r0, #-1
 ; V81M-NEXT:    bx lr
