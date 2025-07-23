@@ -246,27 +246,16 @@ void DemandedBits::determineLiveOperandBits(
     else
       AB &= ~(Known.One & ~Known2.One);
     break;
-  case Instruction::SRem:
-  case Instruction::URem:
-  case Instruction::UDiv:
-  case Instruction::SDiv: {
-    auto Opc = UserI->getOpcode();
-    auto IsDiv = Opc == Instruction::UDiv || Opc == Instruction::SDiv;
-    bool IsSigned = Opc == Instruction::SDiv || Opc == Instruction::SRem;
-    if (OperandNo == 0) {
-      const APInt *DivAmnt;
-      if (match(UserI->getOperand(1), m_APInt(DivAmnt))) {
-        if (DivAmnt->isPowerOf2()) {
-          unsigned Sh = DivAmnt->countr_zero();
-          if (IsDiv) {
-            AB = AOut.shl(Sh);
-          } else {
-            AB = AOut & APInt::getLowBitsSet(BitWidth, Sh);
-          }
-          if (IsSigned) {
-            AB.setSignBit();
-          }
-        }
+  case Instruction::SRem: {
+    // urem and udiv will be converted to and/lshr
+    // multiple times and early on. So, we don't
+    // need to calculate demanded-bits for those.
+    const APInt *DivAmnt;
+    if (match(UserI->getOperand(1), m_APInt(DivAmnt))) {
+      if (DivAmnt->isPowerOf2()) {
+        unsigned Sh = DivAmnt->countr_zero();
+        AB = AOut & APInt::getLowBitsSet(BitWidth, Sh);
+        AB.setSignBit();
       }
     }
     break;
