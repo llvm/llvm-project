@@ -870,7 +870,29 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     else if (T1->getTypeClass() == Type::FunctionNoProto &&
              T2->getTypeClass() == Type::FunctionProto)
       TC = Type::FunctionNoProto;
-    else
+    else if (Context.LangOpts.C23 && !Context.StrictTypeSpelling &&
+             (T1->getTypeClass() == Type::Enum ||
+              T2->getTypeClass() == Type::Enum)) {
+      // In C23, if not being strict about token equivalence, we need to handle
+      // the case where one type is an enumeration and the other type is an
+      // integral type.
+      //
+      // C23 6.7.3.3p16: The enumerated type is compatible with the underlying
+      // type of the enumeration.
+      //
+      // Treat the enumeration as its underlying type and use the builtin type
+      // class comparison.
+      if (T1->getTypeClass() == Type::Enum) {
+        T1 = T1->getAs<EnumType>()->getDecl()->getIntegerType();
+        if (!T2->isBuiltinType() || T1.isNull()) // Sanity check
+          return false;
+      } else if (T2->getTypeClass() == Type::Enum) {
+        T2 = T2->getAs<EnumType>()->getDecl()->getIntegerType();
+        if (!T1->isBuiltinType() || T2.isNull()) // Sanity check
+          return false;
+      }
+      TC = Type::Builtin;
+    } else
       return false;
   }
 
