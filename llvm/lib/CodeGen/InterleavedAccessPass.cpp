@@ -564,6 +564,19 @@ static Value *getMask(Value *WideMask, unsigned Factor,
     }
   }
 
+  if (auto *SVI = dyn_cast<ShuffleVectorInst>(WideMask)) {
+    unsigned LeafMaskLen = LeafValueEC.getFixedValue();
+    if (SVI->isInterleave(Factor) &&
+        llvm::all_of(SVI->getShuffleMask(),
+                     [&](int Idx) { return Idx < (int)LeafMaskLen; })) {
+      auto *LeafMaskTy =
+          FixedVectorType::get(Type::getInt1Ty(SVI->getContext()), LeafMaskLen);
+      IRBuilder<> Builder(SVI);
+      return Builder.CreateExtractVector(LeafMaskTy, SVI->getOperand(0),
+                                         uint64_t(0));
+    }
+  }
+
   return nullptr;
 }
 
