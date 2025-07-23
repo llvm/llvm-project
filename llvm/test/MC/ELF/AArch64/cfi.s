@@ -557,14 +557,12 @@ f37:
 // CHECK-NEXT:  }
 
 .ifdef ERR
-// ERR: [[#@LINE+1]]:15: error: expected .eh_frame, .debug_frame, or .sframe
+// ERR: [[#@LINE+1]]:15: error: expected .eh_frame or .debug_frame
 .cfi_sections $
 // ERR: [[#@LINE+1]]:28: error: expected comma
 .cfi_sections .debug_frame $
 // ERR: [[#@LINE+1]]:39: error: expected comma
 .cfi_sections .debug_frame, .eh_frame $
-// ERR: [[#@LINE+1]]:48: error: expected comma
-.cfi_sections .debug_frame, .eh_frame, .sframe $
 
 // ERR: [[#@LINE+1]]:16: error: unexpected token
 .cfi_startproc $
