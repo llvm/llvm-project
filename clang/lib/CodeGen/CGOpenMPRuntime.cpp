@@ -2718,11 +2718,14 @@ void CGOpenMPRuntime::emitNumThreadsClause(
     // as if sev-level is fatal."
     Args.push_back(llvm::ConstantInt::get(
         CGM.Int32Ty, Severity == OMPC_SEVERITY_warning ? 1 : 2));
-    if (Message)
-      Args.push_back(CGF.EmitStringLiteralLValue(cast<StringLiteral>(Message))
-                         .getPointer(CGF));
-    else
+    if (Message) {
+      if (const StringLiteral *Msg = dyn_cast<StringLiteral>(Message))
+        Args.push_back(CGF.EmitStringLiteralLValue(Msg).getPointer(CGF));
+      else
+        Args.push_back(CGF.EmitScalarExpr(Message));
+    } else {
       Args.push_back(llvm::ConstantPointerNull::get(CGF.VoidPtrTy));
+    }
   }
   CGF.EmitRuntimeCall(
       OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(), FnID), Args);
