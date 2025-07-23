@@ -112,8 +112,8 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-tagged-union-member-count
   <clang-tidy/checks/bugprone/tagged-union-member-count>` by fixing a false
-  positive when typedefed enums or unions from system header files or the
-  ``std`` namespace are treated as the tag or the data part of a user-defined
+  positive when enums or unions from system header files or the ``std``
+  namespace are treated as the tag or the data part of a user-defined
   tagged union respectively.
 
 - Improved :doc:`bugprone-unchecked-optional-access

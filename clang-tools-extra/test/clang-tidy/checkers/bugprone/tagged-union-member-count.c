@@ -149,12 +149,12 @@ struct Name {\
 // CHECK-MESSAGES: :[[@LINE+1]]:44: warning: tagged union has more data members (4) than tags (3)
 DECLARE_TAGGED_UNION_STRUCT(Tags3, Union4, TaggedUnionStructFromMacro);
 
-// Typedefed unions from system header files should be ignored when
+// Unions from system header files should be ignored when
 // we are trying to pinpoint the union part in a user-defined tagged union.
 #include <pthread.h>
 
 // This should not be analyzed as a user-defined tagged union,
-// even though pthread_mutex_t may be declared as a typedefed union.
+// even though pthread_mutex_t could be a union.
 struct SystemTypedefedUnionDataMemberShouldBeIgnored {
   pthread_mutex_t Mutex;
   enum {
