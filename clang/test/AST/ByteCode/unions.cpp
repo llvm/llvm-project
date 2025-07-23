@@ -861,6 +861,61 @@ namespace CopyCtorMutable {
                        // both-note {{in call}}
 }
 
+
+namespace NonTrivialCtor {
+  struct A { int x = 1; constexpr int f() { return 1; } };
+  struct B : A { int y = 1; constexpr int g() { return 2; } };
+  struct C {
+    int x;
+    constexpr virtual int f() = 0;
+  };
+  struct D : C {
+    int y;
+    constexpr virtual int f() override { return 3; }
+  };
+
+  union U {
+    int n;
+    B b;
+    D d;
+  };
+
+  consteval int test(int which) {
+    if (which == 0) {}
+
+    U u{.n = 5};
+    assert_active(u);
+    assert_active(u.n);
+    assert_inactive(u.b);
+
+    switch (which) {
+    case 0:
+      u.b.x = 10; // both-note {{assignment to member 'b' of union with active member 'n'}}
+      return u.b.f();
+    case 1:
+      u.b.y = 10; // both-note {{assignment to member 'b' of union with active member 'n'}}
+      return u.b.g();
+    case 2:
+      u.d.x = 10; // both-note {{assignment to member 'd' of union with active member 'n'}}
+     return u.d.f();
+    case 3:
+    u.d.y = 10; // both-note {{assignment to member 'd' of union with active member 'n'}}
+      return u.d.f();
+    }
+
+    return 1;
+  }
+  static_assert(test(0)); // both-error {{not an integral constant expression}} \
+                          // both-note {{in call}}
+  static_assert(test(1)); // both-error {{not an integral constant expression}} \
+                          // both-note {{in call}}
+  static_assert(test(2)); // both-error {{not an integral constant expression}} \
+                          // both-note {{in call}}
+  static_assert(test(3)); // both-error {{not an integral constant expression}} \
+                          // both-note {{in call}}
+
+}
+
 #endif
 
 namespace AddressComparison {
