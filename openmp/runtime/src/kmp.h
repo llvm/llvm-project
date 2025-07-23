@@ -150,6 +150,10 @@ class kmp_stats_list;
 #define UNLIKELY(x) (x)
 #endif
 
+#ifndef LIKELY
+#define LIKELY(x) (x)
+#endif
+
 // Affinity format function
 #include "kmp_str.h"
 
@@ -1758,8 +1762,6 @@ typedef struct kmp_sys_info {
 typedef int kmp_itt_mark_t;
 #define KMP_ITT_DEBUG 0
 #endif /* USE_ITT_BUILD */
-
-typedef kmp_int32 kmp_critical_name[8];
 
 /*!
 @ingroup PARALLEL
@@ -3510,6 +3512,7 @@ extern int __kmp_abort_delay;
 extern int __kmp_need_register_atfork_specified;
 extern int __kmp_need_register_atfork; /* At initialization, call pthread_atfork
                                           to install fork handler */
+extern int __kmp_in_atexit; /*Denote that we are in the atexit handler*/
 extern int __kmp_gtid_mode; /* Method of getting gtid, values:
                                0 - not set, will be set at runtime
                                1 - using stack search

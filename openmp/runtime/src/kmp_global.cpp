@@ -414,6 +414,8 @@ int __kmp_need_register_atfork =
     TRUE; /* At initialization, call pthread_atfork to install fork handler */
 int __kmp_need_register_atfork_specified = TRUE;
 
+int __kmp_in_atexit = FALSE; /*Denote that we are in the atexit handler*/
+
 int __kmp_env_stksize = FALSE; /* KMP_STACKSIZE specified? */
 int __kmp_env_blocktime = FALSE; /* KMP_BLOCKTIME specified? */
 int __kmp_env_checks = FALSE; /* KMP_CHECKS specified?    */

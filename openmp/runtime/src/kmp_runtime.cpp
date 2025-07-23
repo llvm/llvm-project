@@ -6139,6 +6139,7 @@ void __kmp_internal_end_atexit(void) {
      Windows dynamic, there is DllMain(THREAD_DETACH). For Windows static, there
      is nothing.  Thus, the workaround is applicable only for Windows static
      stat library. */
+  __kmp_in_atexit = TRUE;
   __kmp_internal_end_library(-1);
 #if KMP_OS_WINDOWS
   __kmp_close_console();
