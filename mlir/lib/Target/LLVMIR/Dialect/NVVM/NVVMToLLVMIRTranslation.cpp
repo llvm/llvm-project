@@ -170,39 +170,31 @@ getStMatrixIntrinsicId(NVVM::MMALayout layout, int32_t num,
                        NVVM::LdStMatrixShapeAttr shape,
                        NVVM::LdStMatrixEltType eltType) {
   if (shape.getM() == 8 && shape.getN() == 8) {
-    if (eltType == NVVM::LdStMatrixEltType::B16) {
-      if (layout == NVVM::MMALayout::row) {
-        switch (num) {
-        case 1:
-          return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x1_b16;
-        case 2:
-          return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x2_b16;
-        case 4:
-          return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x4_b16;
-        }
-      } else {
-        switch (num) {
-        case 1:
-          return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x1_trans_b16;
-        case 2:
-          return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x2_trans_b16;
-        case 4:
-          return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x4_trans_b16;
-        }
-      }
+    switch (num) {
+    case 1:
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x1_b16
+                 : llvm::Intrinsic::
+                       nvvm_stmatrix_sync_aligned_m8n8_x1_trans_b16;
+    case 2:
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x2_b16
+                 : llvm::Intrinsic::
+                       nvvm_stmatrix_sync_aligned_m8n8_x2_trans_b16;
+    case 4:
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x4_b16
+                 : llvm::Intrinsic::
+                       nvvm_stmatrix_sync_aligned_m8n8_x4_trans_b16;
     }
   } else if (shape.getM() == 16 && shape.getN() == 8) {
-    if (eltType == NVVM::LdStMatrixEltType::B8) {
-      if (layout == NVVM::MMALayout::col) {
-        switch (num) {
-        case 1:
-          return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x1_trans_b8;
-        case 2:
-          return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x2_trans_b8;
-        case 4:
-          return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x4_trans_b8;
-        }
-      }
+    switch (num) {
+    case 1:
+      return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x1_trans_b8;
+    case 2:
+      return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x2_trans_b8;
+    case 4:
+      return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x4_trans_b8;
     }
   }
   llvm_unreachable("unknown stmatrix kind");
