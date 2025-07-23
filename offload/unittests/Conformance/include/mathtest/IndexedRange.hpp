@@ -3,6 +3,8 @@
 
 #include "mathtest/Numerics.hpp"
 
+#include "llvm/Support/MathExtras.h"
+
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -54,14 +56,14 @@ private:
   //    values between a and b within the same type
   static constexpr StorageType mapToOrderedUnsigned(T Value) {
     if constexpr (IsFloatingPoint_v<T>) {
-      StorageType SignMask = FPUtils<T>::SignMask;
-      StorageType Bits = FPUtils<T>::getAsBits(Value);
-      return (Bits & SignMask) ? SignMask - (Bits - SignMask) - 1
-                               : SignMask + Bits;
+      constexpr StorageType SignMask = FPBits<T>::SIGN_MASK;
+      StorageType Unsigned = FPBits<T>(Value).uintval();
+      return (Unsigned & SignMask) ? SignMask - (Unsigned - SignMask) - 1
+                                   : SignMask + Unsigned;
     }
 
     if constexpr (std::is_signed_v<T>) {
-      StorageType SignMask = maskLeadingOnes<StorageType, 1>();
+      constexpr StorageType SignMask = llvm::maskLeadingOnes<StorageType>(1);
       return __builtin_bit_cast(StorageType, Value) ^ SignMask;
     }
 
@@ -70,16 +72,16 @@ private:
 
   static constexpr T mapFromOrderedUnsigned(StorageType MappedValue) {
     if constexpr (IsFloatingPoint_v<T>) {
-      StorageType SignMask = FPUtils<T>::SignMask;
-      StorageType Bits = (MappedValue < SignMask)
-                             ? (SignMask - MappedValue) + SignMask - 1
-                             : MappedValue - SignMask;
+      constexpr StorageType SignMask = FPBits<T>::SIGN_MASK;
+      StorageType Unsigned = (MappedValue < SignMask)
+                                 ? (SignMask - MappedValue) + SignMask - 1
+                                 : MappedValue - SignMask;
 
-      return FPUtils<T>::createFromBits(Bits);
+      return FPBits<T>(Unsigned).get_val();
     }
 
     if constexpr (std::is_signed_v<T>) {
-      StorageType SignMask = maskLeadingOnes<StorageType, 1>();
+      constexpr StorageType SignMask = llvm::maskLeadingOnes<StorageType>(1);
       return __builtin_bit_cast(T, MappedValue ^ SignMask);
     }
 
