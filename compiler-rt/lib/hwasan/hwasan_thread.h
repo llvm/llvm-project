@@ -69,8 +69,8 @@ class Thread {
     Print("Thread: ");
   }
 
-  tid_t os_id() const { return os_id_; }
-  void set_os_id(tid_t os_id) { os_id_ = os_id; }
+  ThreadID os_id() const { return os_id_; }
+  void set_os_id(ThreadID os_id) { os_id_ = os_id; }
 
   uptr &vfork_spill() { return vfork_spill_; }
 
@@ -96,7 +96,7 @@ class Thread {
 
   u32 unique_id_;  // counting from zero.
 
-  tid_t os_id_;
+  ThreadID os_id_;
 
   u32 tagging_disabled_;  // if non-zero, malloc uses zero tag in this thread.
 

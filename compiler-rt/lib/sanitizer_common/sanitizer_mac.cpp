@@ -394,8 +394,8 @@ bool DirExists(const char *path) {
   return S_ISDIR(st.st_mode);
 }
 
-tid_t GetTid() {
-  tid_t tid;
+ThreadID GetTid() {
+  ThreadID tid;
   pthread_threadid_np(nullptr, &tid);
   return tid;
 }
