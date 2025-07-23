@@ -7361,6 +7361,10 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
   }
 
   case AMDGPU::S_MUL_U64:
+    if (ST.hasVectorMulU64()) {
+      NewOpcode = AMDGPU::V_MUL_U64_e64;
+      break;
+    }
     // Split s_mul_u64 in 32-bit vector multiplications.
     splitScalarSMulU64(Worklist, Inst, MDT);
     Inst.eraseFromParent();

@@ -2528,7 +2528,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     // Special case for s_mul_u64. There is not a vector equivalent of
     // s_mul_u64. Hence, we have to break down s_mul_u64 into 32-bit vector
     // multiplications.
-    if (Opc == AMDGPU::G_MUL && DstTy.getSizeInBits() == 64) {
+    if (!Subtarget.hasVectorMulU64() && Opc == AMDGPU::G_MUL &&
+        DstTy.getSizeInBits() == 64) {
       applyMappingSMULU64(B, OpdMapper);
       return;
     }
@@ -3973,7 +3974,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         OpdsMapping[0] = getValueMappingSGPR64Only(AMDGPU::SGPRRegBankID, Size);
         OpdsMapping[1] = OpdsMapping[2] = OpdsMapping[0];
       } else {
-        OpdsMapping[0] = getValueMappingSGPR64Only(AMDGPU::VGPRRegBankID, Size);
+        if (MI.getOpcode() == AMDGPU::G_MUL && Subtarget.hasVectorMulU64())
+          OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
+        else
+          OpdsMapping[0] =
+              getValueMappingSGPR64Only(AMDGPU::VGPRRegBankID, Size);
         unsigned Bank1 = getRegBankID(MI.getOperand(1).getReg(), MRI /*, DefaultBankID*/);
         OpdsMapping[1] = AMDGPU::getValueMapping(Bank1, Size);
 
