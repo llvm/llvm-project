@@ -2125,9 +2125,10 @@ private:
 
     llvm::SmallVector<mlir::Value> reduceVars;
     Fortran::lower::omp::ReductionProcessor rp;
-    rp.processReductionArguments<fir::DeclareReductionOp>(
+    bool result = rp.processReductionArguments<fir::DeclareReductionOp>(
         toLocation(), *this, info.reduceOperatorList, reduceVars,
         reduceVarByRef, reductionDeclSymbols, info.reduceSymList);
+    assert(result && "Failed to process `do concurrent` reductions");
 
     doConcurrentLoopOp.getReduceVarsMutable().assign(reduceVars);
     doConcurrentLoopOp.setReduceSymsAttr(
