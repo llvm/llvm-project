@@ -232,15 +232,17 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     const FunctionType *FuncTy = PtrTy->getPointeeType()->getAs<FunctionType>();
     assert(FuncTy && "Sema should have ensured this is a function pointer");
 
-    // In the llvm IR, we won't have access anymore to the type of the function
-    // pointer so we need to insert this type information somehow. We gave the
-    // @llvm.wasm.ref.test.func varargs and here we add an extra 0 argument of
-    // the type corresponding to the type of each argument of the function
-    // signature. When we lower from the IR we'll use the types of these
-    // arguments to determine the signature we want to test for.
+    // In the llvm IR, we won't have access any more to the type of the function
+    // pointer so we need to insert this type information somehow. The
+    // @llvm.wasm.ref.test.func takes varargs arguments whose values are unused
+    // to indicate the type of the function to test for. See the test here:
+    // llvm/test/CodeGen/WebAssembly/ref-test-func.ll
+    //
+    // The format is: first we include the return types (since this is a C
+    // function pointer, there will be 0 or one of these) then a token type to
+    // indicate the boundary between return types and param types, then the
+    // param types.
 
-    // Make a type index constant with 0. This gets replaced by the actual type
-    // in WebAssemblyMCInstLower.cpp.
     llvm::FunctionType *LLVMFuncTy =
         cast<llvm::FunctionType>(ConvertType(QualType(FuncTy, 0)));
 
@@ -259,7 +261,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
       } else if (T->isIntegerTy()) {
         Args.push_back(ConstantInt::get(T, 0));
       } else {
-        // TODO: Handle reference types here. For now, we reject them in Sema.
+        // TODO: Handle reference types. For now, we reject them in Sema.
         llvm_unreachable("Unhandled type");
       }
     };
