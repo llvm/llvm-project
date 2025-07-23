@@ -1250,3 +1250,11 @@ static_assert(!D<Priv>::has, "Private should be invisible.");
 static_assert(!D<Prot>::has, "Protected should be invisible.");
 
 }
+
+
+namespace GH149986 {
+template <typename T> concept PerfectSquare = [](){} // expected-note 2{{here}}
+([](auto) { return true; }) < PerfectSquare <class T>;
+// expected-error@-1 {{declaration of 'T' shadows template parameter}} \
+// expected-error@-1 {{a concept definition cannot refer to itself}}
+}
