@@ -57,7 +57,6 @@ struct AllocaInfo {
 
 struct StackInfo {
   MapVector<AllocaInst *, AllocaInfo> AllocasToInstrument;
-  SmallVector<Instruction *, 4> UnrecognizedLifetimes;
   SmallVector<Instruction *, 8> RetVec;
   bool CallsReturnTwice = false;
 };

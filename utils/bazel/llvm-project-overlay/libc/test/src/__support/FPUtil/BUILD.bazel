@@ -58,3 +58,15 @@ libc_test(
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
     ],
 )
+
+libc_test(
+    name = "comparison_operations_test",
+    srcs = ["comparison_operations_test.cpp"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+        "//libc:__support_fputil_comparison_operations",
+        "//libc:__support_fputil_rounding_mode",
+        "//libc:__support_macros_properties_types",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)

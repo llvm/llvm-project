@@ -448,11 +448,10 @@ class NDSRVInstVLN<bits<5> funct5, string opcodestr>
 }
 
 class VPseudoVLN8NoMask<VReg RetClass, bit U> :
-      Pseudo<(outs RetClass:$rd),
-             (ins RetClass:$dest,
-                  GPRMemZeroOffset:$rs1,
-                  AVL:$vl, sew:$sew, vec_policy:$policy), []>,
-      RISCVVPseudo,
+      RISCVVPseudo<(outs RetClass:$rd),
+                   (ins RetClass:$dest,
+                        GPRMemZeroOffset:$rs1,
+                        AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVNDSVLN</*Masked*/0, /*Unsigned*/U, !logtwo(8), VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
@@ -464,11 +463,11 @@ class VPseudoVLN8NoMask<VReg RetClass, bit U> :
 }
 
 class VPseudoVLN8Mask<VReg RetClass, bit U> :
-      Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-             (ins GetVRegNoV0<RetClass>.R:$passthru,
-                  GPRMemZeroOffset:$rs1,
-                  VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy), []>,
-      RISCVVPseudo,
+      RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
+                   (ins GetVRegNoV0<RetClass>.R:$passthru,
+                        GPRMemZeroOffset:$rs1,
+                        VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy),
+                   []>,
       RISCVNDSVLN</*Masked*/1, /*Unsigned*/U, !logtwo(8), VLMul> {
   let mayLoad = 1;
   let mayStore = 0;

@@ -15,7 +15,7 @@ define internal fastcc void @foo(ptr %kg) {
 ; CHECK-NEXT:    br label %[[WHILE_COND:.*]]
 ; CHECK:       [[WHILE_COND]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[KG]] to ptr addrspace(5)
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4, !noalias.addrspace [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[IDXPROM_I:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    switch i32 0, label %[[SW_BB92:.*]] [
 ; CHECK-NEXT:      i32 1, label %[[SW_BB92]]
@@ -24,21 +24,21 @@ define internal fastcc void @foo(ptr %kg) {
 ; CHECK:       [[SUBD_TRIANGLE_PATCH_EXIT_I_I35]]:
 ; CHECK-NEXT:    [[ARRAYIDX_I27_I:%.*]] = getelementptr float, ptr [[KG]], i64 [[IDXPROM_I]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[ARRAYIDX_I27_I]] to ptr addrspace(5)
-; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[TMP2]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr addrspace(5) [[TMP2]], align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    br label %[[WHILE_COND]]
 ; CHECK:       [[SW_BB92]]:
 ; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <3 x i32> zeroinitializer, i32 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = bitcast <3 x i32> [[INSERT]] to <3 x float>
 ; CHECK-NEXT:    [[SHFL:%.*]] = shufflevector <3 x float> [[SPLAT_SPLATINSERT_I]], <3 x float> zeroinitializer, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = addrspacecast ptr [[NUM_CLOSURE_I26_I]] to ptr addrspace(5)
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[TMP3]], align 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[TMP3]], align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    [[IDXPROM_I27_I:%.*]] = sext i32 [[LOAD]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX_I28_I:%.*]] = getelementptr [64 x %struct.ShaderClosure], ptr [[CLOSURE_I25_I]], i64 0, i64 [[IDXPROM_I27_I]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[ARRAYIDX_I28_I]] to ptr addrspace(5)
-; CHECK-NEXT:    store <4 x float> [[SHFL]], ptr addrspace(5) [[TMP4]], align 16
+; CHECK-NEXT:    store <4 x float> [[SHFL]], ptr addrspace(5) [[TMP4]], align 16, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    [[INC_I30_I:%.*]] = or i32 [[LOAD]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = addrspacecast ptr [[NUM_CLOSURE_I26_I]] to ptr addrspace(5)
-; CHECK-NEXT:    store i32 [[INC_I30_I]], ptr addrspace(5) [[TMP5]], align 4
+; CHECK-NEXT:    store i32 [[INC_I30_I]], ptr addrspace(5) [[TMP5]], align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    br label %[[WHILE_COND]]
 ;
 entry:
@@ -93,3 +93,6 @@ entry:
 }
 
 attributes #0 = { norecurse }
+;.
+; CHECK: [[META0]] = !{i32 1, i32 5, i32 6, i32 10}
+;.

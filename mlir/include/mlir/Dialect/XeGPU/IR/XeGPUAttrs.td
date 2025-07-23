@@ -336,4 +336,33 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
   let genVerifyDecl = 1;
 }
 
+def XeGPU_RangeAttr : XeGPUAttr<"Range", "range"> {
+  let summary = [{Specifies a half-open range}];
+  let description = [{
+    `RangeAttr` is an attribute that defines a half-open range [start, end).
+    The range is inclusive of the start value and exclusive of the end value.
+    One usage of this attribute can be to specify the subgroup id range.
+    The subgroup id range can be specified using this attribute,
+    and it can be attached to a scf.if op like
+    ```mlir
+    scf.if %cond {
+      // some operations
+    } {sg_id_range = #xegpu.range<[2, 4]>}
+    ```
+    In this case, the scf.if op will only be executed for subgroup IDs 2 and 3.
+  }];
+
+  let parameters = (ins
+    "IntegerAttr": $start,
+    "IntegerAttr": $end
+  );
+
+  let builders = [
+    AttrBuilder<(ins "int":$start, "int":$end)>
+  ];
+
+  let assemblyFormat = "`<` `[`$start `,` $end `]` `>`";
+  let genVerifyDecl = 1;
+}
+
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUATTRS_TD

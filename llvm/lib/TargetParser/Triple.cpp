@@ -8,7 +8,6 @@
 
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CodeGen.h"

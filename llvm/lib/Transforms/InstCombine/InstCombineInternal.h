@@ -910,6 +910,9 @@ struct CommonPointerBase {
   GEPNoWrapFlags RHSNW = GEPNoWrapFlags::all();
 
   static CommonPointerBase compute(Value *LHS, Value *RHS);
+
+  /// Whether expanding the GEP chains is expensive.
+  bool isExpensive() const;
 };
 
 } // end namespace llvm

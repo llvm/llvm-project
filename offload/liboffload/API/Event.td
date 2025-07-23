@@ -21,8 +21,8 @@ def : Function {
 }
 
 def : Function {
-    let name = "olWaitEvent";
-    let desc = "Wait for the event to be complete.";
+    let name = "olSyncEvent";
+    let desc = "Block the calling thread until the event is complete.";
     let details = [];
     let params = [
         Param<"ol_event_handle_t", "Event", "handle of the event", PARAM_IN>

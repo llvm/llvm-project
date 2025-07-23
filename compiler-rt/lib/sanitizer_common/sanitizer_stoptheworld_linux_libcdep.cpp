@@ -94,17 +94,17 @@ class SuspendedThreadsListLinux final : public SuspendedThreadsList {
  public:
   SuspendedThreadsListLinux() { thread_ids_.reserve(1024); }
 
-  tid_t GetThreadID(uptr index) const override;
+  ThreadID GetThreadID(uptr index) const override;
   uptr ThreadCount() const override;
-  bool ContainsTid(tid_t thread_id) const;
-  void Append(tid_t tid);
+  bool ContainsTid(ThreadID thread_id) const;
+  void Append(ThreadID tid);
 
   PtraceRegistersStatus GetRegistersAndSP(uptr index,
                                           InternalMmapVector<uptr> *buffer,
                                           uptr *sp) const override;
 
  private:
-  InternalMmapVector<tid_t> thread_ids_;
+  InternalMmapVector<ThreadID> thread_ids_;
 };
 
 // Structure for passing arguments into the tracer thread.
@@ -137,10 +137,10 @@ class ThreadSuspender {
  private:
   SuspendedThreadsListLinux suspended_threads_list_;
   pid_t pid_;
-  bool SuspendThread(tid_t thread_id);
+  bool SuspendThread(ThreadID thread_id);
 };
 
-bool ThreadSuspender::SuspendThread(tid_t tid) {
+bool ThreadSuspender::SuspendThread(ThreadID tid) {
   int pterrno;
   if (internal_iserror(internal_ptrace(PTRACE_ATTACH, tid, nullptr, nullptr),
                        &pterrno)) {
@@ -210,7 +210,7 @@ void ThreadSuspender::KillAllThreads() {
 bool ThreadSuspender::SuspendAllThreads() {
   ThreadLister thread_lister(pid_);
   bool retry = true;
-  InternalMmapVector<tid_t> threads;
+  InternalMmapVector<ThreadID> threads;
   threads.reserve(128);
   for (int i = 0; i < 30 && retry; ++i) {
     retry = false;
@@ -226,7 +226,7 @@ bool ThreadSuspender::SuspendAllThreads() {
       case ThreadLister::Ok:
         break;
     }
-    for (tid_t tid : threads) {
+    for (ThreadID tid : threads) {
       // Are we already attached to this thread?
       // Currently this check takes linear time, however the number of threads
       // is usually small.
@@ -546,7 +546,7 @@ static constexpr uptr kExtraRegs[] = {0};
 #error "Unsupported architecture"
 #endif // SANITIZER_ANDROID && defined(__arm__)
 
-tid_t SuspendedThreadsListLinux::GetThreadID(uptr index) const {
+ThreadID SuspendedThreadsListLinux::GetThreadID(uptr index) const {
   CHECK_LT(index, thread_ids_.size());
   return thread_ids_[index];
 }
@@ -555,14 +555,14 @@ uptr SuspendedThreadsListLinux::ThreadCount() const {
   return thread_ids_.size();
 }
 
-bool SuspendedThreadsListLinux::ContainsTid(tid_t thread_id) const {
+bool SuspendedThreadsListLinux::ContainsTid(ThreadID thread_id) const {
   for (uptr i = 0; i < thread_ids_.size(); i++) {
     if (thread_ids_[i] == thread_id) return true;
   }
   return false;
 }
 
-void SuspendedThreadsListLinux::Append(tid_t tid) {
+void SuspendedThreadsListLinux::Append(ThreadID tid) {
   thread_ids_.push_back(tid);
 }
 

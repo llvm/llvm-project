@@ -468,8 +468,10 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
       fir::BoxType boxTy =
           fir::BoxType::get(fir::PointerType::get(converter.genType(s)));
       auto descFunc = [&](fir::FirOpBuilder &b) {
+        bool couldBeInEquivalence =
+            Fortran::semantics::FindEquivalenceSet(s) != nullptr;
         auto box = Fortran::lower::genInitialDataTarget(
-            converter, loc, boxTy, *expr, /*couldBeInEquivalence=*/true);
+            converter, loc, boxTy, *expr, couldBeInEquivalence);
         fir::HasValueOp::create(b, loc, box);
       };
       builder.createGlobalConstant(loc, boxTy, mangleName, descFunc, linkOnce);

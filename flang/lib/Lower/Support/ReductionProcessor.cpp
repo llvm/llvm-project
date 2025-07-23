@@ -39,7 +39,7 @@ namespace lower {
 namespace omp {
 
 // explicit template declarations
-template void ReductionProcessor::processReductionArguments<
+template bool ReductionProcessor::processReductionArguments<
     mlir::omp::DeclareReductionOp, omp::clause::ReductionOperatorList>(
     mlir::Location currentLocation, lower::AbstractConverter &converter,
     const omp::clause::ReductionOperatorList &redOperatorList,
@@ -48,7 +48,7 @@ template void ReductionProcessor::processReductionArguments<
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
     const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols);
 
-template void ReductionProcessor::processReductionArguments<
+template bool ReductionProcessor::processReductionArguments<
     fir::DeclareReductionOp, llvm::SmallVector<fir::ReduceOperationEnum>>(
     mlir::Location currentLocation, lower::AbstractConverter &converter,
     const llvm::SmallVector<fir::ReduceOperationEnum> &redOperatorList,
@@ -607,7 +607,7 @@ static bool doReductionByRef(mlir::Value reductionVar) {
 }
 
 template <typename OpType, typename RedOperatorListTy>
-void ReductionProcessor::processReductionArguments(
+bool ReductionProcessor::processReductionArguments(
     mlir::Location currentLocation, lower::AbstractConverter &converter,
     const RedOperatorListTy &redOperatorList,
     llvm::SmallVectorImpl<mlir::Value> &reductionVars,
@@ -627,10 +627,10 @@ void ReductionProcessor::processReductionArguments(
               std::get_if<omp::clause::ProcedureDesignator>(&redOperator.u)) {
         if (!ReductionProcessor::supportedIntrinsicProcReduction(
                 *reductionIntrinsic)) {
-          return;
+          return false;
         }
       } else {
-        return;
+        return false;
       }
     }
   }
@@ -765,6 +765,8 @@ void ReductionProcessor::processReductionArguments(
 
   if (isDoConcurrent)
     builder.restoreInsertionPoint(dcIP);
+
+  return true;
 }
 
 const semantics::SourceName
