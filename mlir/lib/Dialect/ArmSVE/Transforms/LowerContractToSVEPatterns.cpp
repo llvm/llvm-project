@@ -12,7 +12,7 @@
 // TODO: There may be opportunities to unify this with a similar pattern
 // for Neon. See:
 //   https://github.com/llvm/llvm-project/issues/145559
-//   LowerContractionToNeonI8MMPattern.cpp
+//   LowerContractToNeonPatterns.cpp
 //
 //===----------------------------------------------------------------------===//
 
@@ -580,7 +580,7 @@ public:
 
 } // namespace
 
-void mlir::populateLowerContractionToSVEI8MMPatternPatterns(
+void mlir::populateLowerContractionToSVEI8MMPatterns(
     RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
   patterns.add<LowerContractionToSVEI8MMPattern>(context, /*benefit=*/2);

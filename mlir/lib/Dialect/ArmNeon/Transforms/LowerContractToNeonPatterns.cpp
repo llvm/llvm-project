@@ -1,4 +1,4 @@
-//===- LowerContractionToNeonI8MMPattern.cpp - Contract to I8MM -*- C++ -*-===//
+//===- LowerContractToNeonPatterns.cpp - Contract to I8MM/BF16 --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -93,14 +93,19 @@ protected:
   // multiplications.
   enum class MMLA {
     Nop,
-    Signed,      // smmla
-    Unsigned,    // ummla
-    Mixed,       // usmmla
-    MixedSwapped // usmmla with LHS and RHS swapped
+    SignedInt,   // smmla
+    UnsignedInt, // ummla
+    MixedInt,    // usmmla
+    Bfloat       // bfmmla
   };
 
   // Lower-level operation to be emitted.
   MMLA mmlaOp = MMLA::Nop;
+
+  // Indicate if the operands for the ArmNeon dialect operation need to be
+  // swapped. Currently this is needed in order to emulate an "summla"
+  // operation.
+  bool swapOperands = false;
 
   // The operand tiles. These are not necessarily the operands of
   // `vector.contract`, for example they could be operands to `arith.extsi`
@@ -126,21 +131,22 @@ protected:
   // Create the matrix multiply and accumulate operation according to `mmlaOp`.
   Value createMMLA(PatternRewriter &rewriter, Location loc, Value acc,
                    Value lhs, Value rhs) {
+
+    if (swapOperands)
+      std::swap(lhs, rhs);
     switch (mmlaOp) {
-    case MMLA::Signed:
+    case MMLA::SignedInt:
       return rewriter.createOrFold<arm_neon::SmmlaOp>(loc, acc.getType(), acc,
                                                       lhs, rhs);
-    case MMLA::Unsigned:
+    case MMLA::UnsignedInt:
       return rewriter.createOrFold<arm_neon::UmmlaOp>(loc, acc.getType(), acc,
                                                       lhs, rhs);
-    case MMLA::Mixed:
+    case MMLA::MixedInt:
       return rewriter.createOrFold<arm_neon::UsmmlaOp>(loc, acc.getType(), acc,
                                                        lhs, rhs);
-    case MMLA::MixedSwapped:
-      // The accumulator comes transposed and the result will be transposed
-      // later, so all we have to do here is swap the operands.
-      return rewriter.createOrFold<arm_neon::UsmmlaOp>(loc, acc.getType(), acc,
-                                                       rhs, lhs);
+    case MMLA::Bfloat:
+      return rewriter.create<arm_neon::BfmmlaOp>(loc, acc.getType(), acc, lhs,
+                                                 rhs);
     case MMLA::Nop:
       llvm_unreachable("Uninitialized operation type");
     }
@@ -273,7 +279,7 @@ public:
       // Transpose ACC if doing signed by unsigned multiplication, because we're
       // using the instruction for unsigned by signed multiplication with
       // reversed operands.
-      if (mmlaOp == MMLA::MixedSwapped)
+      if (swapOperands)
         tiledAcc = rewriter.create<vector::TransposeOp>(
             loc, tiledAcc, ArrayRef<int64_t>({1, 0}));
 
@@ -302,7 +308,7 @@ public:
 
       // Because of the reversed operands the result is obtained transposed.
       // Transpose it back,
-      if (mmlaOp == MMLA::MixedSwapped)
+      if (swapOperands)
         tiledRes = rewriter.create<vector::TransposeOp>(
             loc, tiledRes, ArrayRef<int64_t>({1, 0}));
 
@@ -339,10 +345,10 @@ public:
     // values before the extension. All four signed/unsigned combinations for
     // input operands are supported, but they are lowered to different
     // operations. Determine which is the appropriate operation to lower to.
-    mmlaOp = MMLA::Signed;
+    mmlaOp = MMLA::SignedInt;
     auto maybeLhs = getExtOperand<arith::ExtSIOp>(op.getLhs());
     if (!maybeLhs) {
-      mmlaOp = MMLA::Unsigned;
+      mmlaOp = MMLA::UnsignedInt;
       maybeLhs = getExtOperand<arith::ExtUIOp>(op.getLhs());
     }
     if (!maybeLhs)
@@ -351,11 +357,13 @@ public:
 
     auto maybeRhs = getExtOperand<arith::ExtSIOp>(op.getRhs());
     if (maybeRhs) {
-      if (mmlaOp == MMLA::Unsigned)
-        mmlaOp = MMLA::Mixed;
+      if (mmlaOp == MMLA::UnsignedInt)
+        mmlaOp = MMLA::MixedInt;
     } else {
-      if (mmlaOp == MMLA::Signed)
-        mmlaOp = MMLA::MixedSwapped;
+      if (mmlaOp == MMLA::SignedInt) {
+        mmlaOp = MMLA::MixedInt;
+        swapOperands = true;
+      }
       maybeRhs = getExtOperand<arith::ExtUIOp>(op.getRhs());
     }
 
@@ -372,16 +380,17 @@ public:
     auto lhsExtInType = cast<VectorType>(lhs.getType());
     if (lhsExtInType.getElementTypeBitWidth() < 8)
       lhs = extendSmallIntVector(loc, lhsExtInType, lhs,
-                                 /* signExt */ mmlaOp == MMLA::Signed ||
-                                     mmlaOp == MMLA::Mixed,
+                                 /* signExt */
+                                 (mmlaOp == MMLA::SignedInt ||
+                                  (mmlaOp == MMLA::MixedInt && !swapOperands)),
                                  rewriter);
 
     auto rhsExtInType = cast<VectorType>(rhs.getType());
     if (rhsExtInType.getElementTypeBitWidth() < 8)
-
       rhs = extendSmallIntVector(loc, rhsExtInType, rhs,
-                                 /* signExt */ mmlaOp != MMLA::Unsigned &&
-                                     mmlaOp != MMLA::Mixed,
+                                 /* signExt */
+                                 (mmlaOp == MMLA::SignedInt ||
+                                  (mmlaOp == MMLA::MixedInt && swapOperands)),
                                  rewriter);
 
     // Initialize parameters for unrolling.
@@ -390,6 +399,47 @@ public:
       subTileShape = SmallVector<int64_t>({dimM == 1 ? 1 : 2, 2, 8});
     else
       subTileShape = SmallVector<int64_t>({2, 8});
+
+    return success();
+  }
+};
+
+class VectorContractRewriterBFMMLA : public VectorContractRewriter {
+public:
+  LogicalResult matchAndInit(vector::ContractionOp op,
+                             PatternRewriter &rewriter) {
+
+    if (failed(VectorContractRewriter::matchAndInit(op, rewriter)))
+      return failure();
+
+    // Unrolling patterns can handle any [2, 2, 4] shaped multiple of inputs for
+    // tiling.
+    if ((dimM != 1 && dimM % 2 != 0) || dimN % 2 != 0 || dimK % 4 != 0)
+      return rewriter.notifyMatchFailure(op, "Unsupported operand shapes");
+
+    // Check the output is a vector of Float32 elements.
+    auto outTy = dyn_cast<VectorType>(op.getResultType());
+    if (!outTy || outTy.getElementType() != rewriter.getF32Type())
+      return rewriter.notifyMatchFailure(op,
+                                         "output type is not a vector of f32");
+
+    // Check the inputs are vectors of BFloat16 elements.
+    if (op.getLhsType().getElementType() != rewriter.getBF16Type())
+      return rewriter.notifyMatchFailure(op,
+                                         "input type is not a vector of bf16");
+
+    mmlaOp = MMLA::Bfloat;
+    swapOperands = false;
+    lhs = op.getLhs();
+    rhs = op.getRhs();
+    acc = op.getAcc();
+
+    // Initialize parameters for unrolling.
+    iterationBounds = *op.getShapeForUnroll();
+    if (iterationBounds.size() == 3)
+      subTileShape = SmallVector<int64_t>({dimM == 1 ? 1 : 2, 2, 4});
+    else
+      subTileShape = SmallVector<int64_t>({2, 4});
 
     return success();
   }
@@ -416,10 +466,32 @@ public:
   }
 };
 
+class LowerContractionToNeonBFMMLAPattern
+    : public OpRewritePattern<vector::ContractionOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(vector::ContractionOp op,
+                                PatternRewriter &rewriter) const override {
+
+    VectorContractRewriterBFMMLA vcr;
+    if (failed(vcr.matchAndInit(op, rewriter)))
+      return failure();
+    vcr.lower(op, rewriter);
+
+    return success();
+  }
+};
+
 } // namespace
 
-void mlir::arm_neon::populateLowerContractionToNeonI8MMPatternPatterns(
+void mlir::arm_neon::populateLowerContractionToNeonI8MMPatterns(
     RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
   patterns.add<LowerContractionToNeonI8MMPattern>(context, /*benefit=*/2);
+}
+
+void mlir::arm_neon::populateLowerContractionToNeonBFMMLAPatterns(
+    RewritePatternSet &patterns) {
+  MLIRContext *context = patterns.getContext();
+  patterns.add<LowerContractionToNeonBFMMLAPattern>(context, /*benefit=*/2);
 }
