@@ -16,15 +16,14 @@ namespace detail {
 template <typename T>
 void printValue(llvm::raw_ostream &OS, const T &Value) noexcept {
   if constexpr (IsFloatingPoint_v<T>) {
-    using FPUtils = FPUtils<T>;
 
     if constexpr (sizeof(T) < sizeof(float))
       OS << float(Value);
     else
       OS << Value;
 
-    OS << llvm::formatv(" (0x{0})",
-                        llvm::Twine::utohexstr(FPUtils::getAsBits(Value)));
+    const FPBits<T> Bits(Value);
+    OS << llvm::formatv(" (0x{0})", llvm::Twine::utohexstr(Bits.uintval()));
   } else {
     OS << Value;
   }
