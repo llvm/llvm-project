@@ -6967,7 +6967,7 @@ static void emitLoadScalarOpsFromVGPRLoop(
 // Build a waterfall loop around \p MI, replacing the VGPR \p ScalarOp register
 // with SGPRs by iterating over all unique values across all lanes.
 // Returns the loop basic block that now contains \p MI.
-MachineBasicBlock *
+static MachineBasicBlock *
 loadMBUFScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
                                ArrayRef<MachineOperand *> ScalarOps,
                                MachineDominatorTree *MDT,
