@@ -2599,12 +2599,12 @@ static void cse(BasicBlock *BB) {
   }
 }
 
-/// This function attempts to return a value that represents the vectorization
-/// factor at runtime. For fixed-width VFs we know this precisely at compile
+/// This function attempts to return a value that represents the ElementCount
+/// at runtime. For fixed-width VFs we know this precisely at compile
 /// time, but for scalable VFs we calculate it based on an estimate of the
 /// vscale value.
-static unsigned getEstimatedRuntimeVF(ElementCount VF,
-                                      std::optional<unsigned> VScale) {
+static unsigned estimateElementCount(ElementCount VF,
+                                     std::optional<unsigned> VScale) {
   unsigned EstimatedVF = VF.getKnownMinValue();
   if (VF.isScalable())
     if (VScale)
@@ -2714,7 +2714,7 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   // use the value of vscale used for tuning.
   Loop *VectorLoop = LI->getLoopFor(HeaderBB);
   unsigned EstimatedVFxUF =
-      getEstimatedRuntimeVF(VF * UF, Cost->getVScaleForTuning());
+      estimateElementCount(VF * UF, Cost->getVScaleForTuning());
   setProfileInfoAfterUnrolling(OrigLoop, VectorLoop, OrigLoop, EstimatedVFxUF);
 }
 
@@ -4317,7 +4317,7 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
 
       VectorizationFactor Candidate(VF, C, ScalarCost.ScalarCost);
       unsigned Width =
-          getEstimatedRuntimeVF(Candidate.Width, CM.getVScaleForTuning());
+          estimateElementCount(Candidate.Width, CM.getVScaleForTuning());
       LLVM_DEBUG(dbgs() << "LV: Vector loop of width " << VF
                         << " costs: " << (Candidate.Cost / Width));
       if (VF.isScalable())
@@ -4421,7 +4421,7 @@ bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
   unsigned MinVFThreshold = EpilogueVectorizationMinVF.getNumOccurrences() > 0
                                 ? EpilogueVectorizationMinVF
                                 : TTI.getEpilogueVectorizationMinVF();
-  return getEstimatedRuntimeVF(VF * Multiplier, VScaleForTuning) >=
+  return estimateElementCount(VF * Multiplier, VScaleForTuning) >=
          MinVFThreshold;
 }
 
@@ -4474,7 +4474,7 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   // the main loop handles 8 lanes per iteration. We could still benefit from
   // vectorizing the epilogue loop with VF=4.
   ElementCount EstimatedRuntimeVF = ElementCount::getFixed(
-      getEstimatedRuntimeVF(MainLoopVF, CM.getVScaleForTuning()));
+      estimateElementCount(MainLoopVF, CM.getVScaleForTuning()));
 
   ScalarEvolution &SE = *PSE.getSE();
   Type *TCType = Legal->getWidestInductionType();
@@ -4725,8 +4725,8 @@ LoopVectorizationCostModel::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   // For fixed length VFs treat a scalable trip count as unknown.
   if (BestKnownTC && (BestKnownTC->isFixed() || VF.isScalable())) {
     // Re-evaluate trip counts and VFs to be in the same numerical space.
-    unsigned AvailableTC = getEstimatedRuntimeVF(*BestKnownTC, VScaleForTuning);
-    unsigned EstimatedVF = getEstimatedRuntimeVF(VF, VScaleForTuning);
+    unsigned AvailableTC = estimateElementCount(*BestKnownTC, VScaleForTuning);
+    unsigned EstimatedVF = estimateElementCount(VF, VScaleForTuning);
 
     // At least one iteration must be scalar when this constraint holds. So the
     // maximum available iterations for interleaving is one less.
@@ -6902,7 +6902,7 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   // Now compute and add the VPlan-based cost.
   Cost += Plan.cost(VF, CostCtx);
 #ifndef NDEBUG
-  unsigned EstimatedWidth = getEstimatedRuntimeVF(VF, CM.getVScaleForTuning());
+  unsigned EstimatedWidth = estimateElementCount(VF, CM.getVScaleForTuning());
   LLVM_DEBUG(dbgs() << "Cost for VF " << VF << ": " << Cost
                     << " (Estimated cost per lane: ");
   if (Cost.isValid()) {
@@ -9580,7 +9580,7 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   // For now we assume the epilogue cost EpiC = 0 for simplicity. Note that
   // the computations are performed on doubles, not integers and the result
   // is rounded up, hence we get an upper estimate of the TC.
-  unsigned IntVF = getEstimatedRuntimeVF(VF.Width, VScale);
+  unsigned IntVF = estimateElementCount(VF.Width, VScale);
   uint64_t RtC = TotalCost.getValue();
   uint64_t Div = ScalarC * IntVF - VF.Cost.getValue();
   uint64_t MinTC1 = Div == 0 ? 0 : divideCeil(RtC * IntVF, Div);
