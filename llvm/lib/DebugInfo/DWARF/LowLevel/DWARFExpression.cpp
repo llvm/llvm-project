@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Support/Format.h"
 #include <cassert>
 #include <cstdint>
 #include <vector>

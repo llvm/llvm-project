@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/SparcFixupKinds.h"
-#include "MCTargetDesc/SparcMCAsmInfo.h"
 #include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
