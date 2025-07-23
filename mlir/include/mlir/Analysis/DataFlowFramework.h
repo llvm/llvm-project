@@ -659,9 +659,8 @@ protected:
   }
 
   /// Add irrelevant program point.
-  template <typename PointT>
-  void addIrrelevantPoint(PointT point) {
-    irrelevantPoints.insert(ProgramPoint(point));
+  void addIrrelevantPoint(ProgramPoint *point) {
+    irrelevantPoints.insert(point);
   }
 
   /// Get a read-only analysis state for the given point and create a dependency
@@ -702,7 +701,7 @@ protected:
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 
   /// Program points shouldn't analyzed by this analysis.
-  DenseSet<ProgramPoint> irrelevantPoints;
+  DenseSet<ProgramPoint *> irrelevantPoints;
 
 private:
   /// The parent data-flow solver.

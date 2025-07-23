@@ -105,10 +105,10 @@ void AbstractDenseForwardDataFlowAnalysis::visitCallOperation(
 LogicalResult
 AbstractDenseForwardDataFlowAnalysis::processOperation(Operation *op) {
   // Skip irrelavant program points.
-  if (irrelevantPoints.contains(ProgramPoint(op)))
-    return;
-
   ProgramPoint *point = getProgramPointAfter(op);
+  if (irrelevantPoints.contains(point))
+    return success();
+
   // If the containing block is not executable, bail out.
   if (op->getBlock() != nullptr &&
       !getOrCreateFor<Executable>(point, getProgramPointBefore(op->getBlock()))
@@ -338,10 +338,10 @@ void AbstractDenseBackwardDataFlowAnalysis::visitCallOperation(
 LogicalResult
 AbstractDenseBackwardDataFlowAnalysis::processOperation(Operation *op) {
   // Skip irrelavant program points.
-  if (irrelevantPoints.contains(ProgramPoint(op)))
-    return;
-
   ProgramPoint *point = getProgramPointBefore(op);
+  if (irrelevantPoints.contains(point))
+    return success();
+
   // If the containing block is not executable, bail out.
   if (op->getBlock() != nullptr &&
       !getOrCreateFor<Executable>(point, getProgramPointBefore(op->getBlock()))
