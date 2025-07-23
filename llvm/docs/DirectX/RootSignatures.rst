@@ -231,8 +231,6 @@ descriptor range. It is one of the following types:
   !8 = !{ !"SRV", i32 1, i32 0, i32 0, i32 -1, i32 4 }
   !9 = !{ !"UAV", i32 5, i32 1, i32 10, i32 5, i32 2 }
 
-.. csv-table::
-
 ============================== ====
 Description                    Type
 ============================== ====
