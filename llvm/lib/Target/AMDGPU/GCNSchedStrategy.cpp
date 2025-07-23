@@ -190,10 +190,13 @@ static void getRegisterPressures(
     TempUpwardTracker.recede(*MI);
     NewPressure = TempUpwardTracker.getPressure();
   }
+  unsigned AddressableArchVGPR =
+      DAG->MF.getSubtarget<GCNSubtarget>().getAddressableNumArchVGPRs();
   Pressure[AMDGPU::RegisterPressureSets::SReg_32] = NewPressure.getSGPRNum();
   Pressure[AMDGPU::RegisterPressureSets::VGPR_32] =
-      NewPressure.getArchVGPRNum();
-  Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = NewPressure.getAGPRNum();
+      NewPressure.getArchVGPRNum(AddressableArchVGPR);
+  Pressure[AMDGPU::RegisterPressureSets::AGPR_32] =
+      NewPressure.getAGPRNum(AddressableArchVGPR);
 }
 
 void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
@@ -339,7 +342,8 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
                             ? static_cast<GCNRPTracker *>(&UpwardTracker)
                             : static_cast<GCNRPTracker *>(&DownwardTracker);
       SGPRPressure = T->getPressure().getSGPRNum();
-      VGPRPressure = T->getPressure().getArchVGPRNum();
+      VGPRPressure = T->getPressure().getArchVGPRNum(
+          DAG->MF.getSubtarget<GCNSubtarget>().getAddressableNumArchVGPRs());
     }
   }
   ReadyQueue &Q = Zone.Available;
@@ -1279,9 +1283,10 @@ void GCNSchedStage::checkScheduling() {
   LLVM_DEBUG(dbgs() << "Region: " << RegionIdx << ".\n");
 
   unsigned DynamicVGPRBlockSize = DAG.MFI.getDynamicVGPRBlockSize();
-
+  unsigned AddressableArchVGPR = ST.getAddressableNumArchVGPRs();
   if (PressureAfter.getSGPRNum() <= S.SGPRCriticalLimit &&
-      PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) <= S.VGPRCriticalLimit) {
+      PressureAfter.getVGPRNum(ST.hasGFX90AInsts(), AddressableArchVGPR) <=
+          S.VGPRCriticalLimit) {
     DAG.Pressure[RegionIdx] = PressureAfter;
     DAG.RegionsWithMinOcc[RegionIdx] =
         PressureAfter.getOccupancy(ST, DynamicVGPRBlockSize) ==
@@ -1331,9 +1336,10 @@ void GCNSchedStage::checkScheduling() {
   unsigned MaxArchVGPRs = std::min(MaxVGPRs, ST.getAddressableNumArchVGPRs());
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
 
-  if (PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) > MaxVGPRs ||
-      PressureAfter.getArchVGPRNum() > MaxArchVGPRs ||
-      PressureAfter.getAGPRNum() > MaxArchVGPRs ||
+  if (PressureAfter.getVGPRNum(ST.hasGFX90AInsts(), AddressableArchVGPR) >
+          MaxVGPRs ||
+      PressureAfter.getArchVGPRNum(AddressableArchVGPR) > MaxArchVGPRs ||
+      PressureAfter.getAGPRNum(AddressableArchVGPR) > MaxArchVGPRs ||
       PressureAfter.getSGPRNum() > MaxSGPRs) {
     DAG.RegionsWithHighRP[RegionIdx] = true;
     DAG.RegionsWithExcessRP[RegionIdx] = true;
@@ -1471,12 +1477,13 @@ bool GCNSchedStage::shouldRevertScheduling(unsigned WavesAfter) {
 
   // For dynamic VGPR mode, we don't want to waste any VGPR blocks.
   if (DAG.MFI.isDynamicVGPREnabled()) {
+    unsigned AddressableArchVGPR = ST.getAddressableNumArchVGPRs();
     unsigned BlocksBefore = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
         &ST, DAG.MFI.getDynamicVGPRBlockSize(),
-        PressureBefore.getVGPRNum(false));
+        PressureBefore.getVGPRNum(false, AddressableArchVGPR));
     unsigned BlocksAfter = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
         &ST, DAG.MFI.getDynamicVGPRBlockSize(),
-        PressureAfter.getVGPRNum(false));
+        PressureAfter.getVGPRNum(false, AddressableArchVGPR));
     if (BlocksAfter > BlocksBefore)
       return true;
   }
