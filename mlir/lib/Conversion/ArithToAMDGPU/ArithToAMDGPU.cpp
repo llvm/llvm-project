@@ -49,8 +49,9 @@ struct ExtFOnFloat8RewritePattern final : OpRewritePattern<arith::ExtFOp> {
   using OpRewritePattern::OpRewritePattern;
 
   Chipset chipset;
-  ExtFOnFloat8RewritePattern(MLIRContext *ctx, Chipset chipset)
-      : OpRewritePattern::OpRewritePattern(ctx), chipset(chipset) {}
+  ExtFOnFloat8RewritePattern(MLIRContext *ctx, Chipset chipset,
+                             PatternBenefit benefit)
+      : OpRewritePattern::OpRewritePattern(ctx, benefit), chipset(chipset) {}
 
   LogicalResult matchAndRewrite(arith::ExtFOp op,
                                 PatternRewriter &rewriter) const override;
@@ -59,9 +60,9 @@ struct ExtFOnFloat8RewritePattern final : OpRewritePattern<arith::ExtFOp> {
 struct TruncFToFloat8RewritePattern final : OpRewritePattern<arith::TruncFOp> {
   bool saturateFP8 = false;
   TruncFToFloat8RewritePattern(MLIRContext *ctx, bool saturateFP8,
-                               Chipset chipset)
-      : OpRewritePattern::OpRewritePattern(ctx), saturateFP8(saturateFP8),
-        chipset(chipset) {}
+                               Chipset chipset, PatternBenefit benefit)
+      : OpRewritePattern::OpRewritePattern(ctx, benefit),
+        saturateFP8(saturateFP8), chipset(chipset) {}
   Chipset chipset;
 
   LogicalResult matchAndRewrite(arith::TruncFOp op,
@@ -81,9 +82,6 @@ struct ScalingExtFRewritePattern final
     : OpRewritePattern<arith::ScalingExtFOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  ScalingExtFRewritePattern(MLIRContext *ctx)
-      : OpRewritePattern::OpRewritePattern(ctx) {}
-
   LogicalResult matchAndRewrite(arith::ScalingExtFOp op,
                                 PatternRewriter &rewriter) const override;
 };
@@ -91,9 +89,6 @@ struct ScalingExtFRewritePattern final
 struct ScalingTruncFRewritePattern final
     : OpRewritePattern<arith::ScalingTruncFOp> {
   using OpRewritePattern::OpRewritePattern;
-
-  ScalingTruncFRewritePattern(MLIRContext *ctx)
-      : OpRewritePattern::OpRewritePattern(ctx) {}
 
   LogicalResult matchAndRewrite(arith::ScalingTruncFOp op,
                                 PatternRewriter &rewriter) const override;
@@ -667,19 +662,21 @@ ScalingTruncFRewritePattern::matchAndRewrite(arith::ScalingTruncFOp op,
 
 void mlir::arith::populateArithToAMDGPUConversionPatterns(
     RewritePatternSet &patterns, bool convertFP8Arithmetic,
-    bool saturateFP8Truncf, bool allowPackedF16Rtz, Chipset chipset) {
+    bool saturateFP8Truncf, bool allowPackedF16Rtz, Chipset chipset,
+    PatternBenefit benefit) {
 
   if (convertFP8Arithmetic) {
-    patterns.add<ExtFOnFloat8RewritePattern>(patterns.getContext(), chipset);
-    patterns.add<TruncFToFloat8RewritePattern>(patterns.getContext(),
-                                               saturateFP8Truncf, chipset);
+    patterns.add<ExtFOnFloat8RewritePattern>(patterns.getContext(), chipset,
+                                             benefit);
+    patterns.add<TruncFToFloat8RewritePattern>(
+        patterns.getContext(), saturateFP8Truncf, chipset, benefit);
   }
   if (allowPackedF16Rtz)
-    patterns.add<TruncfToFloat16RewritePattern>(patterns.getContext());
+    patterns.add<TruncfToFloat16RewritePattern>(patterns.getContext(), benefit);
 
   if (chipset >= kGfx950) {
-    patterns.add<ScalingExtFRewritePattern>(patterns.getContext());
-    patterns.add<ScalingTruncFRewritePattern>(patterns.getContext());
+    patterns.add<ScalingExtFRewritePattern>(patterns.getContext(), benefit);
+    patterns.add<ScalingTruncFRewritePattern>(patterns.getContext(), benefit);
   }
 }
 
