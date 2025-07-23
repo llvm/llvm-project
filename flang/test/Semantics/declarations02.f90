@@ -24,6 +24,9 @@ module m
   target x4
   volatile x4
 
+  !ERROR: 'sin' may not have both the INTRINSIC and PARAMETER attributes
+  real, parameter, intrinsic :: sin
+
   type :: my_type1
     integer :: x4
   end type
