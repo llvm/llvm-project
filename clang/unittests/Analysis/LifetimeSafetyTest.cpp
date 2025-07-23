@@ -33,8 +33,8 @@ public:
     )";
     FullCode += Code.str();
 
-    TestAST = std::make_unique<clang::TestAST>(FullCode);
-    ASTCtx = &TestAST->context();
+    AST = std::make_unique<clang::TestAST>(FullCode);
+    ASTCtx = &AST->context();
 
     // Find the target function using AST matchers.
     auto MatchResult =
@@ -67,7 +67,7 @@ public:
   }
 
 private:
-  std::unique_ptr<TestAST> TestAST;
+  std::unique_ptr<TestAST> AST;
   ASTContext *ASTCtx = nullptr;
   std::unique_ptr<AnalysisDeclContext> AnalysisCtx;
   std::unique_ptr<LifetimeSafetyAnalysis> Analysis;
