@@ -23,7 +23,6 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/IRMapping.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
@@ -32,7 +31,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include <iterator>
 #include <numeric>
 #include <optional>
 
