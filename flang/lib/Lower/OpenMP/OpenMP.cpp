@@ -31,6 +31,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Parser/characters.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/tools.h"
@@ -62,28 +63,6 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
                                    lower::StatementContext &stmtCtx,
                                    lower::pft::Evaluation &eval,
                                    mlir::Location loc);
-
-static llvm::omp::Directive
-getOpenMPDirectiveEnum(const parser::OmpLoopDirective &beginStatment) {
-  return beginStatment.v;
-}
-
-static llvm::omp::Directive getOpenMPDirectiveEnum(
-    const parser::OmpBeginLoopDirective &beginLoopDirective) {
-  return getOpenMPDirectiveEnum(
-      std::get<parser::OmpLoopDirective>(beginLoopDirective.t));
-}
-
-static llvm::omp::Directive
-getOpenMPDirectiveEnum(const parser::OpenMPLoopConstruct &ompLoopConstruct) {
-  return getOpenMPDirectiveEnum(
-      std::get<parser::OmpBeginLoopDirective>(ompLoopConstruct.t));
-}
-
-static llvm::omp::Directive getOpenMPDirectiveEnum(
-    const common::Indirection<parser::OpenMPLoopConstruct> &ompLoopConstruct) {
-  return getOpenMPDirectiveEnum(ompLoopConstruct.value());
-}
 
 namespace {
 /// Structure holding information that is needed to pass host-evaluated
@@ -468,7 +447,7 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
     llvm::omp::Directive dir;
     auto &nested = parent.getFirstNestedEvaluation();
     if (const auto *ompEval = nested.getIf<parser::OpenMPConstruct>())
-      dir = extractOmpDirective(*ompEval);
+      dir = parser::omp::GetOmpDirectiveName(*ompEval).v;
     else
       return std::nullopt;
 
@@ -508,7 +487,7 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
     HostEvalInfo *hostInfo = getHostEvalInfoStackTop(converter);
     assert(hostInfo && "expected HOST_EVAL info structure");
 
-    switch (extractOmpDirective(*ompEval)) {
+    switch (parser::omp::GetOmpDirectiveName(*ompEval).v) {
     case OMPD_teams_distribute_parallel_do:
     case OMPD_teams_distribute_parallel_do_simd:
       cp.processThreadLimit(stmtCtx, hostInfo->ops);
@@ -569,7 +548,8 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
 
   const auto *ompEval = eval.getIf<parser::OpenMPConstruct>();
   assert(ompEval &&
-         llvm::omp::allTargetSet.test(extractOmpDirective(*ompEval)) &&
+         llvm::omp::allTargetSet.test(
+             parser::omp::GetOmpDirectiveName(*ompEval).v) &&
          "expected TARGET construct evaluation");
   (void)ompEval;
 
@@ -3872,7 +3852,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
             std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
                 &*optLoopCons)}) {
       llvm::omp::Directive nestedDirective =
-          getOpenMPDirectiveEnum(*ompNestedLoopCons);
+          parser::omp::GetOmpDirectiveName(*ompNestedLoopCons).v;
       switch (nestedDirective) {
       case llvm::omp::Directive::OMPD_tile:
         // Emit the omp.loop_nest with annotation for tiling
@@ -3889,7 +3869,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     }
   }
 
-  llvm::omp::Directive directive = getOpenMPDirectiveEnum(beginLoopDirective);
+  llvm::omp::Directive directive =
+      parser::omp::GetOmpDirectiveName(beginLoopDirective).v;
   const parser::CharBlock &source =
       std::get<parser::OmpLoopDirective>(beginLoopDirective.t).source;
   ConstructQueue queue{
