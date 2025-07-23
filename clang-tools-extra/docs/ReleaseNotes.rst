@@ -110,6 +110,15 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-infinite-loop
+  <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
+  variables introduced by structured bindings.
+
+- Improved :doc:`bugprone-unhandled-self-assignment
+  <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
+  an additional matcher that generalizes the copy-and-swap idiom pattern
+  detection.
+  
 Removed checks
 ^^^^^^^^^^^^^^
 

@@ -410,6 +410,7 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
               II, Intrinsic::SPVIntrinsics::spv_lifetime_start, {1});
         } else {
           II->eraseFromParent();
+          Changed = true;
         }
         break;
       case Intrinsic::lifetime_end:
@@ -418,6 +419,7 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
               II, Intrinsic::SPVIntrinsics::spv_lifetime_end, {1});
         } else {
           II->eraseFromParent();
+          Changed = true;
         }
         break;
       case Intrinsic::ptr_annotation:
