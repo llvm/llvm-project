@@ -2,17 +2,17 @@
 // RUN: sed 's|$test_dir|%/S|g' %S/Inputs/basic-project/database_template.json > %t/build/compile_commands.json
 
 // RUN: clang-doc --format=mustache --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
-// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Shape.html -check-prefix=HTML-SHAPE
-// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Calculator.html -check-prefix=HTML-CALC
-// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Rectangle.html -check-prefix=HTML-RECTANGLE
-// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Circle.html -check-prefix=HTML-CIRCLE
+// RUN: FileCheck %s -input-file=%t/docs/_ZTV5Shape.html -check-prefix=HTML-SHAPE
+// RUN: FileCheck %s -input-file=%t/docs/_ZTV10Calculator.html -check-prefix=HTML-CALC
+// RUN: FileCheck %s -input-file=%t/docs/_ZTV9Rectangle.html -check-prefix=HTML-RECTANGLE
+// RUN: FileCheck %s -input-file=%t/docs/_ZTV6Circle.html -check-prefix=HTML-CIRCLE
 
 HTML-SHAPE: <html lang="en-US">
 HTML-SHAPE: <head>
 HTML-SHAPE:     <meta charset="utf-8"/>
 HTML-SHAPE:     <title>Shape</title>
-HTML-SHAPE:         <link rel="stylesheet" type="text/css" href="../clang-doc-mustache.css"/>
-HTML-SHAPE:         <script src="../mustache-index.js"></script>
+HTML-SHAPE:         <link rel="stylesheet" type="text/css" href="./clang-doc-mustache.css"/>
+HTML-SHAPE:         <script src="./mustache-index.js"></script>
 HTML-SHAPE:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
 HTML-SHAPE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 HTML-SHAPE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
@@ -106,8 +106,8 @@ HTML-CALC: <html lang="en-US">
 HTML-CALC: <head>
 HTML-CALC:     <meta charset="utf-8"/>
 HTML-CALC:     <title>Calculator</title>
-HTML-CALC:         <link rel="stylesheet" type="text/css" href="../clang-doc-mustache.css"/>
-HTML-CALC:         <script src="../mustache-index.js"></script>
+HTML-CALC:         <link rel="stylesheet" type="text/css" href="./clang-doc-mustache.css"/>
+HTML-CALC:         <script src="./mustache-index.js"></script>
 HTML-CALC:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
 HTML-CALC:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 HTML-CALC:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
@@ -135,7 +135,7 @@ HTML-CALC:         <div class="sidebar">
 HTML-CALC:             <h2>class Calculator</h2>
 HTML-CALC:             <ul>
 HTML-CALC:                 <li class="sidebar-section">
-HTML-CALC:                     <a class="sidebar-item" href="#PublicMethods">Public Members</a>
+HTML-CALC:                     <a class="sidebar-item" href="#PublicMembers">Public Members</a>
 HTML-CALC:                 </li>
 HTML-CALC:                 <ul>
 HTML-CALC:                     <li class="sidebar-item-container">
@@ -251,8 +251,8 @@ HTML-RECTANGLE: <html lang="en-US">
 HTML-RECTANGLE: <head>
 HTML-RECTANGLE:     <meta charset="utf-8"/>
 HTML-RECTANGLE:     <title>Rectangle</title>
-HTML-RECTANGLE:         <link rel="stylesheet" type="text/css" href="../clang-doc-mustache.css"/>
-HTML-RECTANGLE:         <script src="../mustache-index.js"></script>
+HTML-RECTANGLE:         <link rel="stylesheet" type="text/css" href="./clang-doc-mustache.css"/>
+HTML-RECTANGLE:         <script src="./mustache-index.js"></script>
 HTML-RECTANGLE:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
 HTML-RECTANGLE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 HTML-RECTANGLE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
@@ -279,17 +279,6 @@ HTML-RECTANGLE:     <div class="container">
 HTML-RECTANGLE:         <div class="sidebar">
 HTML-RECTANGLE:             <h2>class Rectangle</h2>
 HTML-RECTANGLE:             <ul>
-HTML-RECTANGLE:                     <li class="sidebar-section">
-HTML-RECTANGLE:                         <a class="sidebar-item" href="#PublicMethods">Protected Members</a>
-HTML-RECTANGLE:                     </li>
-HTML-RECTANGLE:                     <ul>
-HTML-RECTANGLE:                             <li class="sidebar-item-container">
-HTML-RECTANGLE:                                 <a class="sidebar-item" href="#width_">width_</a>
-HTML-RECTANGLE:                             </li>
-HTML-RECTANGLE:                             <li class="sidebar-item-container">
-HTML-RECTANGLE:                                 <a class="sidebar-item" href="#height_">height_</a>
-HTML-RECTANGLE:                             </li>
-HTML-RECTANGLE:                     </ul>
 HTML-RECTANGLE:                 <li class="sidebar-section">
 HTML-RECTANGLE:                     <a class="sidebar-item" href="#PublicMethods">Public Method</a>
 HTML-RECTANGLE:                 </li>
@@ -311,21 +300,6 @@ HTML-RECTANGLE:         <div class="content">
 HTML-RECTANGLE:             <section class="hero section-container">
 HTML-RECTANGLE:                 <div class="hero__title">
 HTML-RECTANGLE:                     <h1 class="hero__title-large">class Rectangle</h1>
-HTML-RECTANGLE:                 </div>
-HTML-RECTANGLE:             </section>
-HTML-RECTANGLE:             <section id="ProtectedMembers" class="section-container">
-HTML-RECTANGLE:                 <h2>Protected Members</h2>
-HTML-RECTANGLE:                 <div>
-HTML-RECTANGLE:                     <div id="width_" class="delimiter-container">
-HTML-RECTANGLE:                         <pre>
-HTML-RECTANGLE: <code class="language-cpp code-clang-doc" >double width_</code>
-HTML-RECTANGLE:                         </pre>
-HTML-RECTANGLE:                     </div>
-HTML-RECTANGLE:                     <div id="height_" class="delimiter-container">
-HTML-RECTANGLE:                         <pre>
-HTML-RECTANGLE: <code class="language-cpp code-clang-doc" >double height_</code>
-HTML-RECTANGLE:                         </pre>
-HTML-RECTANGLE:                     </div>
 HTML-RECTANGLE:                 </div>
 HTML-RECTANGLE:             </section>
 HTML-RECTANGLE:             <section id="PublicMethods" class="section-container">
@@ -372,8 +346,8 @@ HTML-CIRCLE: <html lang="en-US">
 HTML-CIRCLE: <head>
 HTML-CIRCLE:     <meta charset="utf-8"/>
 HTML-CIRCLE:     <title>Circle</title>
-HTML-CIRCLE:         <link rel="stylesheet" type="text/css" href="../clang-doc-mustache.css"/>
-HTML-CIRCLE:         <script src="../mustache-index.js"></script>
+HTML-CIRCLE:         <link rel="stylesheet" type="text/css" href="./clang-doc-mustache.css"/>
+HTML-CIRCLE:         <script src="./mustache-index.js"></script>
 HTML-CIRCLE:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
 HTML-CIRCLE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 HTML-CIRCLE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
@@ -400,14 +374,6 @@ HTML-CIRCLE:     <div class="container">
 HTML-CIRCLE:         <div class="sidebar">
 HTML-CIRCLE:             <h2>class Circle</h2>
 HTML-CIRCLE:             <ul>
-HTML-CIRCLE:                     <li class="sidebar-section">
-HTML-CIRCLE:                         <a class="sidebar-item" href="#PublicMethods">Protected Members</a>
-HTML-CIRCLE:                     </li>
-HTML-CIRCLE:                     <ul>
-HTML-CIRCLE:                             <li class="sidebar-item-container">
-HTML-CIRCLE:                                 <a class="sidebar-item" href="#radius_">radius_</a>
-HTML-CIRCLE:                             </li>
-HTML-CIRCLE:                     </ul>
 HTML-CIRCLE:                 <li class="sidebar-section">
 HTML-CIRCLE:                     <a class="sidebar-item" href="#PublicMethods">Public Method</a>
 HTML-CIRCLE:                 </li>
@@ -429,16 +395,6 @@ HTML-CIRCLE:         <div class="content">
 HTML-CIRCLE:             <section class="hero section-container">
 HTML-CIRCLE:                 <div class="hero__title">
 HTML-CIRCLE:                     <h1 class="hero__title-large">class Circle</h1>
-HTML-CIRCLE:                 </div>
-HTML-CIRCLE:             </section>
-HTML-CIRCLE:             <section id="ProtectedMembers" class="section-container">
-HTML-CIRCLE:                 <h2>Protected Members</h2>
-HTML-CIRCLE:                 <div>
-HTML-CIRCLE:                     <div id="radius_" class="delimiter-container">
-HTML-CIRCLE:                         <pre>
-HTML-CIRCLE: <code class="language-cpp code-clang-doc" >double radius_</code>
-HTML-CIRCLE:                         </pre>
-HTML-CIRCLE:                     </div>
 HTML-CIRCLE:                 </div>
 HTML-CIRCLE:             </section>
 HTML-CIRCLE:             <section id="PublicMethods" class="section-container">
