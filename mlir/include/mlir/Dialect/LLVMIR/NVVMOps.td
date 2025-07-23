@@ -2007,7 +2007,7 @@ def LdStMatrixEltType : I32EnumAttr<"LdStMatrixEltType", "Element type for ldmat
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
-def LdStMatrixEltTypeAttr : EnumAttr<NVVM_Dialect, LdStMatrixEltType, "ld_st_matrix_elttype"> {
+def LdStMatrixEltTypeAttr : EnumAttr<NVVM_Dialect, LdStMatrixEltType, "ld_st_matrix_elt_type"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
