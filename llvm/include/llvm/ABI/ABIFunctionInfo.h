@@ -17,6 +17,7 @@
 #include "llvm/ABI/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/TrailingObjects.h"
 
 namespace llvm {
@@ -30,6 +31,7 @@ public:
     Direct,
     Extend,
     Indirect,
+    IndirectAliased,
     Ignore,
     Expand,
     CoerceAndExpand,
@@ -39,12 +41,29 @@ public:
 private:
   Kind TheKind;
   const Type *CoercionType;
+  const Type *PaddingType;
+  struct DirectAttrInfo {
+    unsigned Offset;
+    unsigned Align;
+  };
+
+  struct IndirectAttrInfo {
+    unsigned Align;
+    unsigned AddrSpace;
+  };
+
+  union {
+    DirectAttrInfo DirectAttr;
+    IndirectAttrInfo IndirectAttr;
+  };
   bool InReg : 1;
   bool PaddingInReg : 1;
   bool SignExt : 1;
   bool ZeroExt : 1;
   unsigned IndirectAlign : 16;
   bool IndirectByVal : 1;
+  bool IndirectRealign : 1;
+  bool CanBeFlattened : 1;
 
   ABIArgInfo(Kind K = Direct)
       : TheKind(K), CoercionType(nullptr), InReg(false), PaddingInReg(false),
@@ -52,21 +71,50 @@ private:
   }
 
 public:
-  static ABIArgInfo getDirect(const Type *T = nullptr) {
+  static ABIArgInfo getDirect(const Type *T = nullptr, unsigned Offset = 0,
+                              const Type *Padding = nullptr,
+                              bool CanBeFlattened = true, unsigned Align = 0) {
     ABIArgInfo AI(Direct);
     AI.CoercionType = T;
+    AI.PaddingType = Padding;
+    AI.DirectAttr.Offset = Offset;
+    AI.DirectAttr.Align = Align;
+    AI.CanBeFlattened = CanBeFlattened;
     return AI;
   }
 
+  static ABIArgInfo getIndirectAliased(unsigned Align, unsigned AddrSpace = 0,
+                                       bool Realign = false,
+                                       const Type *Padding = nullptr) {
+    ABIArgInfo AI(IndirectAliased);
+    AI.IndirectAttr.Align = Align;
+    AI.IndirectAttr.AddrSpace = AddrSpace;
+    AI.IndirectRealign = Realign;
+    AI.PaddingType = Padding;
+    return AI;
+  }
   static ABIArgInfo getDirectInReg(const Type *T = nullptr) {
     ABIArgInfo AI = getDirect(T);
     AI.InReg = true;
     return AI;
   }
+  static ABIArgInfo getExtend(const Type *T) {
+    assert(T && "Type cannot be null");
+    assert(T->isInteger() && "Unexpected type - only integers can be extended");
 
-  static ABIArgInfo getExtend(const Type *T = nullptr) {
     ABIArgInfo AI(Extend);
     AI.CoercionType = T;
+    AI.DirectAttr.Offset = 0;
+    AI.DirectAttr.Align = 0;
+    AI.PaddingType = nullptr;
+
+    const IntegerType *IntTy = dyn_cast<IntegerType>(T);
+    if (IntTy->isSigned()) {
+      AI.setSignExt();
+    } else {
+      AI.setZeroExt();
+    }
+
     return AI;
   }
 
@@ -76,6 +124,21 @@ public:
       this->ZeroExt = false;
     return *this;
   }
+  //  static ABIArgInfo getSignExtend(ABIArgInfo AI) {
+  // AI.DirectAttr.Offset = 0;
+  // AI.DirectAttr.Align = 0;
+  // AI.ZeroExt = false;
+  //    AI.PaddingType = nullptr;
+  //    return AI;
+  //  }
+  //
+  //  static ABIArgInfo getZeroExtend(ABIArgInfo AI) {
+  // AI.DirectAttr.Offset = 0;
+  // AI.DirectAttr.Align = 0;
+  // AI.ZeroExt = true;
+  //    AI.PaddingType = nullptr;
+  //    return AI;
+  //  }
 
   ABIArgInfo &setZeroExt(bool ZeroExtend = true) {
     this->ZeroExt = ZeroExtend;
@@ -248,11 +311,11 @@ public:
   bool isVariadic() const { return Required.isVariadic(); }
 
   ArrayRef<ArgInfo> arguments() const {
-    return {getTrailingObjects<ArgInfo>(), NumArgs};
+    return {getTrailingObjects(), NumArgs};
   }
 
   MutableArrayRef<ArgInfo> arguments() {
-    return {getTrailingObjects<ArgInfo>(), NumArgs};
+    return {getTrailingObjects(), NumArgs};
   }
 
   ArgInfo &getArgInfo(unsigned Index) {

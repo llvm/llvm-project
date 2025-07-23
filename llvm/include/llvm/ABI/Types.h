@@ -337,24 +337,21 @@ public:
                 bool NonTrivialCopy = false, bool NonTrivialDtor = false,
                 bool FlexibleArray = false, bool UnalignedFields = false) {
     FieldInfo *FieldArray = Allocator.Allocate<FieldInfo>(Fields.size());
-    for (size_t I = 0; I < Fields.size(); ++I) {
+    for (size_t I = 0; I < Fields.size(); ++I)
       new (&FieldArray[I]) FieldInfo(Fields[I]);
-    }
 
     FieldInfo *BaseArray = nullptr;
     if (!BaseClasses.empty()) {
       BaseArray = Allocator.Allocate<FieldInfo>(BaseClasses.size());
-      for (size_t I = 0; I < BaseClasses.size(); ++I) {
+      for (size_t I = 0; I < BaseClasses.size(); ++I)
         new (&BaseArray[I]) FieldInfo(BaseClasses[I]);
-      }
     }
 
     FieldInfo *VBaseArray = nullptr;
     if (!VirtualBaseClasses.empty()) {
       VBaseArray = Allocator.Allocate<FieldInfo>(VirtualBaseClasses.size());
-      for (size_t I = 0; I < VirtualBaseClasses.size(); ++I) {
+      for (size_t I = 0; I < VirtualBaseClasses.size(); ++I)
         new (&VBaseArray[I]) FieldInfo(VirtualBaseClasses[I]);
-      }
     }
 
     return new (Allocator.Allocate<StructType>())

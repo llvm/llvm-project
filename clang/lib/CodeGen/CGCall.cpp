@@ -900,9 +900,8 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
                               info, paramInfos, resultType, argTypes, required);
 
   SmallVector<const llvm::abi::Type *, 8> MappedArgTypes;
-  for (CanQualType ArgType : argTypes) {
+  for (CanQualType ArgType : argTypes)
     MappedArgTypes.push_back(Mapper.convertType(ArgType));
-  }
   llvm::abi::ABIFunctionInfo *tempFI = llvm::abi::ABIFunctionInfo::create(
       CC, Mapper.convertType(resultType), MappedArgTypes);
   FunctionInfos.InsertNode(FI, insertPos);

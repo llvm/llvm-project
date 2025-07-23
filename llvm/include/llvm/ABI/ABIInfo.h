@@ -59,8 +59,11 @@ public:
   virtual void computeInfo(ABIFunctionInfo &FI) const = 0;
   virtual bool isPassByRef(const Type *Ty) const { return false; }
   const ABICompatInfo &getABICompatInfo() const { return CompatInfo; }
+  ABIArgInfo getNaturalAlignIndirect(const Type *Ty) const;
+  bool isAggregateTypeForABI(const Type *Ty) const;
+  bool isPromotableIntegerType(const IntegerType *Ty) const;
 
-  void setABICompatInfo(const struct ABICompatInfo &Info) { CompatInfo = Info; }
+  void setABICompatInfo(const ABICompatInfo &Info) { CompatInfo = Info; }
 };
 
 } // namespace abi
