@@ -98,6 +98,7 @@ enum class OffloadArch {
   GFX12_GENERIC,
   GFX1200,
   GFX1201,
+  GFX1250,
   AMDGCNSPIRV,
   Generic, // A processor model named 'generic' if the target backend defines a
            // public one.

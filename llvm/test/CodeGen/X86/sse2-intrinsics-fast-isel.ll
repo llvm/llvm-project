@@ -631,7 +631,7 @@ define <2 x double> @test_mm_cmpge_sd(<2 x double> %a0, <2 x double> %a1) nounwi
 ; AVX-LABEL: test_mm_cmpge_sd:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmplesd %xmm0, %xmm1, %xmm1 # encoding: [0xc5,0xf3,0xc2,0xc8,0x02]
-; AVX-NEXT:    vblendpd $1, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x0d,0xc1,0x01]
+; AVX-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xfb,0x10,0xc1]
 ; AVX-NEXT:    # xmm0 = xmm1[0],xmm0[1]
 ; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %cmp = call <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %a1, <2 x double> %a0, i8 2)
@@ -748,7 +748,7 @@ define <2 x double> @test_mm_cmpgt_sd(<2 x double> %a0, <2 x double> %a1) nounwi
 ; AVX-LABEL: test_mm_cmpgt_sd:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpltsd %xmm0, %xmm1, %xmm1 # encoding: [0xc5,0xf3,0xc2,0xc8,0x01]
-; AVX-NEXT:    vblendpd $1, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x0d,0xc1,0x01]
+; AVX-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xfb,0x10,0xc1]
 ; AVX-NEXT:    # xmm0 = xmm1[0],xmm0[1]
 ; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %cmp = call <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %a1, <2 x double> %a0, i8 1)
@@ -976,7 +976,7 @@ define <2 x double> @test_mm_cmpnge_sd(<2 x double> %a0, <2 x double> %a1) nounw
 ; AVX-LABEL: test_mm_cmpnge_sd:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpnlesd %xmm0, %xmm1, %xmm1 # encoding: [0xc5,0xf3,0xc2,0xc8,0x06]
-; AVX-NEXT:    vblendpd $1, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x0d,0xc1,0x01]
+; AVX-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xfb,0x10,0xc1]
 ; AVX-NEXT:    # xmm0 = xmm1[0],xmm0[1]
 ; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %cmp = call <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %a1, <2 x double> %a0, i8 6)
@@ -1021,7 +1021,7 @@ define <2 x double> @test_mm_cmpngt_sd(<2 x double> %a0, <2 x double> %a1) nounw
 ; AVX-LABEL: test_mm_cmpngt_sd:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpnltsd %xmm0, %xmm1, %xmm1 # encoding: [0xc5,0xf3,0xc2,0xc8,0x05]
-; AVX-NEXT:    vblendpd $1, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x0d,0xc1,0x01]
+; AVX-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xfb,0x10,0xc1]
 ; AVX-NEXT:    # xmm0 = xmm1[0],xmm0[1]
 ; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %cmp = call <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> %a1, <2 x double> %a0, i8 5)
@@ -3010,8 +3010,8 @@ define <2 x double> @test_mm_move_sd(<2 x double> %a0, <2 x double> %a1) nounwin
 ;
 ; AVX-LABEL: test_mm_move_sd:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps $3, %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x03]
-; AVX-NEXT:    # xmm0 = xmm1[0,1],xmm0[2,3]
+; AVX-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xfb,0x10,0xc1]
+; AVX-NEXT:    # xmm0 = xmm1[0],xmm0[1]
 ; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %ext0 = extractelement <2 x double> %a1, i32 0
   %res0 = insertelement <2 x double> undef, double %ext0, i32 0

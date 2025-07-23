@@ -986,6 +986,24 @@ MLIR_CAPI_EXPORTED MlirValue mlirBlockGetArgument(MlirBlock block,
 MLIR_CAPI_EXPORTED void
 mlirBlockPrint(MlirBlock block, MlirStringCallback callback, void *userData);
 
+/// Returns the number of successor blocks of the block.
+MLIR_CAPI_EXPORTED intptr_t mlirBlockGetNumSuccessors(MlirBlock block);
+
+/// Returns `pos`-th successor of the block.
+MLIR_CAPI_EXPORTED MlirBlock mlirBlockGetSuccessor(MlirBlock block,
+                                                   intptr_t pos);
+
+/// Returns the number of predecessor blocks of the block.
+MLIR_CAPI_EXPORTED intptr_t mlirBlockGetNumPredecessors(MlirBlock block);
+
+/// Returns `pos`-th predecessor of the block.
+///
+/// WARNING: This getter is more expensive than the others here because
+/// the impl actually iterates the use-def chain (of block operands) anew for
+/// each indexed access.
+MLIR_CAPI_EXPORTED MlirBlock mlirBlockGetPredecessor(MlirBlock block,
+                                                     intptr_t pos);
+
 //===----------------------------------------------------------------------===//
 // Value API.
 //===----------------------------------------------------------------------===//

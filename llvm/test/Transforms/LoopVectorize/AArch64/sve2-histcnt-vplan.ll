@@ -49,7 +49,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME:%.+]]> = resume-phi [[VTC]], ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME:%.+]]> = phi [ [[VTC]], middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
@@ -96,7 +96,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME:%.+]]> = resume-phi [[VTC]], ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME:%.+]]> = phi [ [[VTC]], middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:

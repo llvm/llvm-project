@@ -18,19 +18,19 @@ unsigned short si, sj, sk;
 // CHECKS-NEXT:    [[CONV:%.*]] = zext i16 [[TMP0]] to i32, !dbg [[DBG16]]
 // CHECKS-NEXT:    [[TMP1:%.*]] = load i16, ptr @sk, align 2, !dbg [[DBG21:![0-9]+]], !tbaa [[TBAA17]]
 // CHECKS-NEXT:    [[CONV1:%.*]] = zext i16 [[TMP1]] to i32, !dbg [[DBG21]]
-// CHECKS-NEXT:    [[TMP2:%.*]] = tail call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[CONV]], i32 [[CONV1]]), !dbg [[DBG22:![0-9]+]], !nosanitize [[META23:![0-9]+]]
-// CHECKS-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1, !dbg [[DBG22]], !nosanitize [[META23]]
-// CHECKS-NEXT:    br i1 [[TMP3]], label %[[HANDLER_MUL_OVERFLOW:.*]], label %[[CONT:.*]], !dbg [[DBG22]], !prof [[PROF24:![0-9]+]], !nosanitize [[META23]]
+// CHECKS-NEXT:    [[TMP2:%.*]] = tail call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[CONV]], i32 [[CONV1]]), !dbg [[DBG22:![0-9]+]], !nosanitize [[META26:![0-9]+]]
+// CHECKS-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1, !dbg [[DBG22]], !nosanitize [[META26]]
+// CHECKS-NEXT:    br i1 [[TMP3]], label %[[HANDLER_MUL_OVERFLOW:.*]], label %[[CONT:.*]], !dbg [[DBG22]], !prof [[PROF27:![0-9]+]], !nosanitize [[META26]]
 // CHECKS:       [[HANDLER_MUL_OVERFLOW]]:
 // CHECKS-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP0]] to i64, !dbg [[DBG22]]
 // CHECKS-NEXT:    [[TMP5:%.*]] = zext i16 [[TMP1]] to i64, !dbg [[DBG22]]
-// CHECKS-NEXT:    tail call void @__ubsan_handle_mul_overflow_abort(ptr nonnull @[[GLOB1:[0-9]+]], i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR3:[0-9]+]], !dbg [[DBG22]], !nosanitize [[META23]]
-// CHECKS-NEXT:    unreachable, !dbg [[DBG22]], !nosanitize [[META23]]
+// CHECKS-NEXT:    tail call void @__ubsan_handle_mul_overflow_abort(ptr nonnull @[[GLOB1:[0-9]+]], i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR3:[0-9]+]], !dbg [[DBG22]], !nosanitize [[META26]]
+// CHECKS-NEXT:    unreachable, !dbg [[DBG22]], !nosanitize [[META26]]
 // CHECKS:       [[CONT]]:
-// CHECKS-NEXT:    [[TMP6:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0, !dbg [[DBG22]], !nosanitize [[META23]]
+// CHECKS-NEXT:    [[TMP6:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0, !dbg [[DBG22]], !nosanitize [[META26]]
 // CHECKS-NEXT:    [[CONV2:%.*]] = trunc i32 [[TMP6]] to i16, !dbg [[DBG16]]
-// CHECKS-NEXT:    store i16 [[CONV2]], ptr @si, align 2, !dbg [[DBG25:![0-9]+]], !tbaa [[TBAA17]]
-// CHECKS-NEXT:    ret void, !dbg [[DBG26:![0-9]+]]
+// CHECKS-NEXT:    store i16 [[CONV2]], ptr @si, align 2, !dbg [[DBG28:![0-9]+]], !tbaa [[TBAA17]]
+// CHECKS-NEXT:    ret void, !dbg [[DBG29:![0-9]+]]
 //
 // CHECKU-LABEL: define dso_local void @testshortmul(
 // CHECKU-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] !dbg [[DBG13:![0-9]+]] {
@@ -67,11 +67,14 @@ void testshortmul(void) {
 // CHECKS: [[META19]] = !{!"omnipotent char", [[META20:![0-9]+]], i64 0}
 // CHECKS: [[META20]] = !{!"Simple C/C++ TBAA"}
 // CHECKS: [[DBG21]] = !DILocation(line: 47, column: 13, scope: [[DBG13]])
-// CHECKS: [[DBG22]] = !DILocation(line: 47, column: 11, scope: [[DBG13]])
-// CHECKS: [[META23]] = !{}
-// CHECKS: [[PROF24]] = !{!"branch_weights", i32 1, i32 1048575}
-// CHECKS: [[DBG25]] = !DILocation(line: 47, column: 6, scope: [[DBG13]])
-// CHECKS: [[DBG26]] = !DILocation(line: 48, column: 1, scope: [[DBG13]])
+// CHECKS: [[DBG22]] = !DILocation(line: 0, scope: [[META23:![0-9]+]], inlinedAt: [[META25:![0-9]+]])
+// CHECKS: [[META23]] = distinct !DISubprogram(name: "__ubsan_check_mul_overflow", scope: [[META7]], file: [[META7]], type: [[META24:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META2]])
+// CHECKS: [[META24]] = !DISubroutineType(types: null)
+// CHECKS: [[META25]] = !DILocation(line: 47, column: 11, scope: [[DBG13]])
+// CHECKS: [[META26]] = !{}
+// CHECKS: [[PROF27]] = !{!"branch_weights", i32 1, i32 1048575}
+// CHECKS: [[DBG28]] = !DILocation(line: 47, column: 6, scope: [[DBG13]])
+// CHECKS: [[DBG29]] = !DILocation(line: 48, column: 1, scope: [[DBG13]])
 //.
 // CHECKU: [[META0:![0-9]+]] = !DIGlobalVariableExpression(var: [[META1:![0-9]+]], expr: !DIExpression())
 // CHECKU: [[META1]] = distinct !DIGlobalVariable(name: "sj", scope: [[META2:![0-9]+]], file: [[META7:![0-9]+]], line: 12, type: [[META8:![0-9]+]], isLocal: false, isDefinition: true)

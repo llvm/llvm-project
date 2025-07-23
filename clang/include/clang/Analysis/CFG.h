@@ -1394,10 +1394,9 @@ public:
   //===--------------------------------------------------------------------===//
 
   template <typename Callback> void VisitBlockStmts(Callback &O) const {
-    for (const_iterator I = begin(), E = end(); I != E; ++I)
-      for (CFGBlock::const_iterator BI = (*I)->begin(), BE = (*I)->end();
-           BI != BE; ++BI) {
-        if (std::optional<CFGStmt> stmt = BI->getAs<CFGStmt>())
+    for (CFGBlock *BB : *this)
+      for (const CFGElement &Elem : *BB) {
+        if (std::optional<CFGStmt> stmt = Elem.getAs<CFGStmt>())
           O(const_cast<Stmt *>(stmt->getStmt()));
       }
   }

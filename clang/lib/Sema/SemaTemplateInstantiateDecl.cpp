@@ -12,7 +12,6 @@
 #include "TreeTransform.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DependentDiagnostic.h"
@@ -528,6 +527,7 @@ static void instantiateOMPDeclareVariantAttr(
 
   SmallVector<Expr *, 8> NothingExprs;
   SmallVector<Expr *, 8> NeedDevicePtrExprs;
+  SmallVector<Expr *, 8> NeedDeviceAddrExprs;
   SmallVector<OMPInteropInfo, 4> AppendArgs;
 
   for (Expr *E : Attr.adjustArgsNothing()) {
@@ -542,14 +542,20 @@ static void instantiateOMPDeclareVariantAttr(
       continue;
     NeedDevicePtrExprs.push_back(ER.get());
   }
+  for (Expr *E : Attr.adjustArgsNeedDeviceAddr()) {
+    ExprResult ER = Subst(E);
+    if (ER.isInvalid())
+      continue;
+    NeedDeviceAddrExprs.push_back(ER.get());
+  }
   for (OMPInteropInfo &II : Attr.appendArgs()) {
     // When prefer_type is implemented for append_args handle them here too.
     AppendArgs.emplace_back(II.IsTarget, II.IsTargetSync);
   }
 
   S.OpenMP().ActOnOpenMPDeclareVariantDirective(
-      FD, E, TI, NothingExprs, NeedDevicePtrExprs, AppendArgs, SourceLocation(),
-      SourceLocation(), Attr.getRange());
+      FD, E, TI, NothingExprs, NeedDevicePtrExprs, NeedDeviceAddrExprs,
+      AppendArgs, SourceLocation(), SourceLocation(), Attr.getRange());
 }
 
 static void instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
@@ -677,9 +683,9 @@ static void instantiateDependentAMDGPUMaxNumWorkGroupsAttr(
 // This doesn't take any template parameters, but we have a custom action that
 // needs to happen when the kernel itself is instantiated. We need to run the
 // ItaniumMangler to mark the names required to name this kernel.
-static void instantiateDependentSYCLKernelAttr(
+static void instantiateDependentDeviceKernelAttr(
     Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
-    const SYCLKernelAttr &Attr, Decl *New) {
+    const DeviceKernelAttr &Attr, Decl *New) {
   New->addAttr(Attr.clone(S.getASTContext()));
 }
 
@@ -921,8 +927,8 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       continue;
     }
 
-    if (auto *A = dyn_cast<SYCLKernelAttr>(TmplAttr)) {
-      instantiateDependentSYCLKernelAttr(*this, TemplateArgs, *A, New);
+    if (auto *A = dyn_cast<DeviceKernelAttr>(TmplAttr)) {
+      instantiateDependentDeviceKernelAttr(*this, TemplateArgs, *A, New);
       continue;
     }
 
@@ -1449,17 +1455,19 @@ Decl *TemplateDeclInstantiator::InstantiateTypedefNameDecl(TypedefNameDecl *D,
   // happen to be processing that implementation, fake up the g++ ?:
   // semantics. See LWG issue 2141 for more information on the bug.  The bugs
   // are fixed in g++ and libstdc++ 4.9.0 (2014-04-22).
-  const DecltypeType *DT = DI->getType()->getAs<DecltypeType>();
-  CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext());
-  if (DT && RD && isa<ConditionalOperator>(DT->getUnderlyingExpr()) &&
-      DT->isReferenceType() &&
-      RD->getEnclosingNamespaceContext() == SemaRef.getStdNamespace() &&
-      RD->getIdentifier() && RD->getIdentifier()->isStr("common_type") &&
-      D->getIdentifier() && D->getIdentifier()->isStr("type") &&
-      SemaRef.getSourceManager().isInSystemHeader(D->getBeginLoc()))
-    // Fold it to the (non-reference) type which g++ would have produced.
-    DI = SemaRef.Context.getTrivialTypeSourceInfo(
-      DI->getType().getNonReferenceType());
+  if (SemaRef.getPreprocessor().NeedsStdLibCxxWorkaroundBefore(2014'04'22)) {
+    const DecltypeType *DT = DI->getType()->getAs<DecltypeType>();
+    CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext());
+    if (DT && RD && isa<ConditionalOperator>(DT->getUnderlyingExpr()) &&
+        DT->isReferenceType() &&
+        RD->getEnclosingNamespaceContext() == SemaRef.getStdNamespace() &&
+        RD->getIdentifier() && RD->getIdentifier()->isStr("common_type") &&
+        D->getIdentifier() && D->getIdentifier()->isStr("type") &&
+        SemaRef.getSourceManager().isInSystemHeader(D->getBeginLoc()))
+      // Fold it to the (non-reference) type which g++ would have produced.
+      DI = SemaRef.Context.getTrivialTypeSourceInfo(
+          DI->getType().getNonReferenceType());
+  }
 
   // Create the new typedef
   TypedefNameDecl *Typedef;
@@ -2014,8 +2022,17 @@ Decl *TemplateDeclInstantiator::VisitEnumDecl(EnumDecl *D) {
                                                 DeclarationName());
       if (!NewTI || SemaRef.CheckEnumUnderlyingType(NewTI))
         Enum->setIntegerType(SemaRef.Context.IntTy);
-      else
-        Enum->setIntegerTypeSourceInfo(NewTI);
+      else {
+        // If the underlying type is atomic, we need to adjust the type before
+        // continuing. See C23 6.7.3.3p5 and Sema::ActOnTag(). FIXME: same as
+        // within ActOnTag(), it would be nice to have an easy way to get a
+        // derived TypeSourceInfo which strips qualifiers including the weird
+        // ones like _Atomic where it forms a different type.
+        if (NewTI->getType()->isAtomicType())
+          Enum->setIntegerType(NewTI->getType().getAtomicUnqualifiedType());
+        else
+          Enum->setIntegerTypeSourceInfo(NewTI);
+      }
 
       // C++23 [conv.prom]p4
       // if integral promotion can be applied to its underlying type, a prvalue
@@ -2393,7 +2410,7 @@ Decl *TemplateDeclInstantiator::VisitVarTemplateDecl(VarTemplateDecl *D) {
     // Queue up any out-of-line partial specializations of this member
     // variable template; the client will force their instantiation once
     // the enclosing class has been instantiated.
-    SmallVector<VarTemplatePartialSpecializationDecl *, 4> PartialSpecs;
+    SmallVector<VarTemplatePartialSpecializationDecl *, 1> PartialSpecs;
     D->getPartialSpecializations(PartialSpecs);
     for (unsigned I = 0, N = PartialSpecs.size(); I != N; ++I)
       if (PartialSpecs[I]->getFirstDecl()->isOutOfLine())
@@ -3021,7 +3038,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   LocalInstantiationScope Scope(SemaRef, MergeWithParentScope);
 
   Sema::LambdaScopeForCallOperatorInstantiationRAII LambdaScope(
-      SemaRef, const_cast<CXXMethodDecl *>(D), TemplateArgs, Scope);
+      SemaRef, D, TemplateArgs, Scope);
 
   // Instantiate enclosing template arguments for friends.
   SmallVector<TemplateParameterList *, 4> TempParamLists;
@@ -5844,8 +5861,24 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     savedContext.pop();
   }
 
-  DeclGroupRef DG(Function);
-  Consumer.HandleTopLevelDecl(DG);
+  // We never need to emit the code for a lambda in unevaluated context.
+  // We also can't mangle a lambda in the require clause of a function template
+  // during constraint checking as the MSI ABI would need to mangle the (not yet
+  // specialized) enclosing declaration
+  // FIXME: Should we try to skip this for non-lambda functions too?
+  bool ShouldSkipCG = [&] {
+    auto *RD = dyn_cast<CXXRecordDecl>(Function->getParent());
+    if (!RD || !RD->isLambda())
+      return false;
+
+    return llvm::any_of(ExprEvalContexts, [](auto &Context) {
+      return Context.isUnevaluated() || Context.isImmediateFunctionContext();
+    });
+  }();
+  if (!ShouldSkipCG) {
+    DeclGroupRef DG(Function);
+    Consumer.HandleTopLevelDecl(DG);
+  }
 
   // This class may have local implicit instantiations that need to be
   // instantiation within this scope.
@@ -6079,7 +6112,8 @@ void Sema::InstantiateVariableInitializer(
   ContextRAII SwitchContext(*this, Var->getDeclContext());
 
   EnterExpressionEvaluationContext Evaluated(
-      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var);
+      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var,
+      ExpressionEvaluationContextRecord::EK_VariableInit);
   currentEvaluationContext().InLifetimeExtendingContext =
       parentEvaluationContext().InLifetimeExtendingContext;
   currentEvaluationContext().RebuildDefaultArgOrDefaultInit =

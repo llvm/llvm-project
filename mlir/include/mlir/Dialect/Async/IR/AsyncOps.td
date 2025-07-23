@@ -288,7 +288,7 @@ def Async_ReturnOp : Async_Op<"return",
 
   let arguments = (ins Variadic<AnyType>:$operands);
 
-  let builders = [OpBuilder<(ins), [{build($_builder, $_state, std::nullopt);}]>];
+  let builders = [OpBuilder<(ins), [{build($_builder, $_state, {});}]>];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
   let hasVerifier = 1;
@@ -376,7 +376,7 @@ def Async_CreateGroupOp : Async_Op<"create_group", [Pure]> {
 }
 
 def Async_AddToGroupOp : Async_Op<"add_to_group", []> {
-  let summary = "adds and async token or value to the group";
+  let summary = "adds an async token or value to the group";
   let description = [{
     The `async.add_to_group` adds an async token or value to the async group.
     Returns the rank of the added element in the group. This rank is fixed
@@ -655,7 +655,7 @@ def Async_RuntimeLoadOp : Async_Op<"runtime.load",
 }
 
 def Async_RuntimeAddToGroupOp : Async_Op<"runtime.add_to_group", []> {
-  let summary = "adds and async token or value to the group";
+  let summary = "adds an async token or value to the group";
   let description = [{
     The `async.runtime.add_to_group` adds an async token or value to the async
     group. Returns the rank of the added element in the group.

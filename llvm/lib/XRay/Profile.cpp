@@ -16,7 +16,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/XRay/Trace.h"
-#include <deque>
 #include <memory>
 
 namespace llvm {

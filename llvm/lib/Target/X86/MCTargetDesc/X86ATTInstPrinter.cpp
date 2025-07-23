@@ -14,6 +14,8 @@
 #include "X86ATTInstPrinter.h"
 #include "X86BaseInfo.h"
 #include "X86InstComments.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -33,6 +35,21 @@ using namespace llvm;
 // Include the auto-generated portion of the assembly writer.
 #define PRINT_ALIAS_INSTR
 #include "X86GenAsmWriter.inc"
+
+// Print an MCExpr as an operand. Similar to GCC, wrap the output in parentheses
+// if it begins with '$', as '$' in an operand position indicates an immediate
+// value in the AT&T syntax.
+void X86ATTInstPrinter::printExprOperand(raw_ostream &OS, const MCExpr &E) {
+  SmallString<128> S;
+  {
+    raw_svector_ostream SOS(S);
+    MAI.printExpr(SOS, E);
+  }
+  if (S.starts_with("$"))
+    OS << '(' << S << ')';
+  else
+    OS << S;
+}
 
 void X86ATTInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   markup(OS, Markup::Register) << '%' << getRegisterName(Reg);
@@ -414,7 +431,7 @@ void X86ATTInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     assert(Op.isExpr() && "unknown operand kind in printOperand");
     WithMarkup M = markup(O, Markup::Immediate);
     O << '$';
-    Op.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *Op.getExpr());
   }
 }
 
@@ -445,7 +462,7 @@ void X86ATTInstPrinter::printMemReference(const MCInst *MI, unsigned Op,
       O << formatImm(DispVal);
   } else {
     assert(DispSpec.isExpr() && "non-immediate displacement for LEA?");
-    DispSpec.getExpr()->print(O, &MAI);
+    printExprOperand(O, *DispSpec.getExpr());
   }
 
   if (IndexReg.getReg() || BaseReg.getReg()) {
@@ -500,7 +517,7 @@ void X86ATTInstPrinter::printMemOffset(const MCInst *MI, unsigned Op,
     O << formatImm(DispSpec.getImm());
   } else {
     assert(DispSpec.isExpr() && "non-immediate displacement?");
-    DispSpec.getExpr()->print(O, &MAI);
+    printExprOperand(O, *DispSpec.getExpr());
   }
 }
 

@@ -8,7 +8,7 @@
 
 #include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/math/expm1f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -21,7 +21,7 @@ using LlvmLibcExpm1fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcExpm1fTest, SpecialNumbers) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::expm1f(aNaN));
   EXPECT_MATH_ERRNO(0);
@@ -40,7 +40,7 @@ TEST_F(LlvmLibcExpm1fTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcExpm1fTest, Overflow) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       inf, LIBC_NAMESPACE::expm1f(FPBits(0x7f7fffffU).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
@@ -55,7 +55,7 @@ TEST_F(LlvmLibcExpm1fTest, Overflow) {
 }
 
 TEST_F(LlvmLibcExpm1fTest, Underflow) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
   EXPECT_FP_EQ(-1.0f, LIBC_NAMESPACE::expm1f(FPBits(0xff7fffffU).get_val()));
 
   float x = FPBits(0xc2cffff8U).get_val();
@@ -70,7 +70,7 @@ TEST_F(LlvmLibcExpm1fTest, Underflow) {
 TEST_F(LlvmLibcExpm1fTest, Borderline) {
   float x;
 
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
   x = FPBits(0x42affff8U).get_val();
   ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, x,
                                  LIBC_NAMESPACE::expm1f(x), 0.5);
@@ -119,15 +119,14 @@ TEST_F(LlvmLibcExpm1fTest, InFloatRange) {
     float x = FPBits(v).get_val();
     if (FPBits(v).is_nan() || FPBits(v).is_inf())
       continue;
-    LIBC_NAMESPACE::libc_errno = 0;
+    libc_errno = 0;
     float result = LIBC_NAMESPACE::expm1f(x);
 
     // If the computation resulted in an error or did not produce valid result
     // in the single-precision floating point range, then ignore comparing with
     // MPFR result as MPFR can still produce valid results because of its
     // wider precision.
-    if (FPBits(result).is_nan() || FPBits(result).is_inf() ||
-        LIBC_NAMESPACE::libc_errno != 0)
+    if (FPBits(result).is_nan() || FPBits(result).is_inf() || libc_errno != 0)
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, x,
                                    LIBC_NAMESPACE::expm1f(x), 0.5);

@@ -20,7 +20,7 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:  N0 -> N2 [ label="F"]
 ; CHECK-NEXT:  N1 [label =
 ; CHECK-NEXT:    "scalar.ph:\l" +
-; CHECK-NEXT:    "  EMIT-SCALAR vp\<%bc.resume.val\> = resume-phi vp\<%2\>, ir\<0\>\l" +
+; CHECK-NEXT:    "  EMIT-SCALAR vp\<%bc.resume.val\> = phi [ vp\<%2\>, middle.block ], [ ir\<0\>, ir-bb\<for.body.preheader\> ]\l" +
 ; CHECK-NEXT:    "Successor(s): ir-bb\<for.body\>\l"
 ; CHECK-NEXT:  ]
 ; CHECK-NEXT:  N1 -> N3 [ label=""]

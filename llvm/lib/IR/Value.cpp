@@ -582,16 +582,11 @@ void Value::replaceUsesWithIf(Value *New,
   }
 }
 
-/// Replace llvm.dbg.* uses of MetadataAsValue(ValueAsMetadata(V)) outside BB
+/// Replace debug record uses of MetadataAsValue(ValueAsMetadata(V)) outside BB
 /// with New.
 static void replaceDbgUsesOutsideBlock(Value *V, Value *New, BasicBlock *BB) {
-  SmallVector<DbgVariableIntrinsic *> DbgUsers;
   SmallVector<DbgVariableRecord *> DPUsers;
-  findDbgUsers(DbgUsers, V, &DPUsers);
-  for (auto *DVI : DbgUsers) {
-    if (DVI->getParent() != BB)
-      DVI->replaceVariableLocationOp(V, New);
-  }
+  findDbgUsers(V, DPUsers);
   for (auto *DVR : DPUsers) {
     DbgMarker *Marker = DVR->getMarker();
     if (Marker->getParent() != BB)
@@ -752,28 +747,34 @@ const Value *Value::stripAndAccumulateConstantOffsets(
       // means when we construct GEPOffset, we need to use the size
       // of GEP's pointer type rather than the size of the original
       // pointer type.
-      APInt GEPOffset(DL.getIndexTypeSizeInBits(V->getType()), 0);
-      if (!GEP->accumulateConstantOffset(DL, GEPOffset, ExternalAnalysis))
-        return V;
-
-      // Stop traversal if the pointer offset wouldn't fit in the bit-width
-      // provided by the Offset argument. This can happen due to AddrSpaceCast
-      // stripping.
-      if (GEPOffset.getSignificantBits() > BitWidth)
-        return V;
-
-      // External Analysis can return a result higher/lower than the value
-      // represents. We need to detect overflow/underflow.
-      APInt GEPOffsetST = GEPOffset.sextOrTrunc(BitWidth);
-      if (!ExternalAnalysis) {
-        Offset += GEPOffsetST;
-      } else {
-        bool Overflow = false;
-        APInt OldOffset = Offset;
-        Offset = Offset.sadd_ov(GEPOffsetST, Overflow);
-        if (Overflow) {
-          Offset = OldOffset;
+      unsigned CurBitWidth = DL.getIndexTypeSizeInBits(V->getType());
+      if (CurBitWidth == BitWidth) {
+        if (!GEP->accumulateConstantOffset(DL, Offset, ExternalAnalysis))
           return V;
+      } else {
+        APInt GEPOffset(CurBitWidth, 0);
+        if (!GEP->accumulateConstantOffset(DL, GEPOffset, ExternalAnalysis))
+          return V;
+
+        // Stop traversal if the pointer offset wouldn't fit in the bit-width
+        // provided by the Offset argument. This can happen due to AddrSpaceCast
+        // stripping.
+        if (GEPOffset.getSignificantBits() > BitWidth)
+          return V;
+
+        // External Analysis can return a result higher/lower than the value
+        // represents. We need to detect overflow/underflow.
+        APInt GEPOffsetST = GEPOffset.sextOrTrunc(BitWidth);
+        if (!ExternalAnalysis) {
+          Offset += GEPOffsetST;
+        } else {
+          bool Overflow = false;
+          APInt OldOffset = Offset;
+          Offset = Offset.sadd_ov(GEPOffsetST, Overflow);
+          if (Overflow) {
+            Offset = OldOffset;
+            return V;
+          }
         }
       }
       V = GEP->getPointerOperand();
@@ -957,30 +958,27 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
 
 Align Value::getPointerAlignment(const DataLayout &DL) const {
   assert(getType()->isPointerTy() && "must be pointer");
-  if (auto *GO = dyn_cast<GlobalObject>(this)) {
-    if (isa<Function>(GO)) {
-      Align FunctionPtrAlign = DL.getFunctionPtrAlign().valueOrOne();
-      switch (DL.getFunctionPtrAlignType()) {
-      case DataLayout::FunctionPtrAlignType::Independent:
-        return FunctionPtrAlign;
-      case DataLayout::FunctionPtrAlignType::MultipleOfFunctionAlign:
-        return std::max(FunctionPtrAlign, GO->getAlign().valueOrOne());
-      }
-      llvm_unreachable("Unhandled FunctionPtrAlignType");
+  if (const Function *F = dyn_cast<Function>(this)) {
+    Align FunctionPtrAlign = DL.getFunctionPtrAlign().valueOrOne();
+    switch (DL.getFunctionPtrAlignType()) {
+    case DataLayout::FunctionPtrAlignType::Independent:
+      return FunctionPtrAlign;
+    case DataLayout::FunctionPtrAlignType::MultipleOfFunctionAlign:
+      return std::max(FunctionPtrAlign, F->getAlign().valueOrOne());
     }
-    const MaybeAlign Alignment(GO->getAlign());
+    llvm_unreachable("Unhandled FunctionPtrAlignType");
+  } else if (auto *GVar = dyn_cast<GlobalVariable>(this)) {
+    const MaybeAlign Alignment(GVar->getAlign());
     if (!Alignment) {
-      if (auto *GVar = dyn_cast<GlobalVariable>(GO)) {
-        Type *ObjectType = GVar->getValueType();
-        if (ObjectType->isSized()) {
-          // If the object is defined in the current Module, we'll be giving
-          // it the preferred alignment. Otherwise, we have to assume that it
-          // may only have the minimum ABI alignment.
-          if (GVar->isStrongDefinitionForLinker())
-            return DL.getPreferredAlign(GVar);
-          else
-            return DL.getABITypeAlign(ObjectType);
-        }
+      Type *ObjectType = GVar->getValueType();
+      if (ObjectType->isSized()) {
+        // If the object is defined in the current Module, we'll be giving
+        // it the preferred alignment. Otherwise, we have to assume that it
+        // may only have the minimum ABI alignment.
+        if (GVar->isStrongDefinitionForLinker())
+          return DL.getPreferredAlign(GVar);
+        else
+          return DL.getABITypeAlign(ObjectType);
       }
     }
     return Alignment.valueOrOne();

@@ -135,17 +135,17 @@ define weak_odr dllexport void @weak1() {
 ; CHECK-GCC: .ascii " -export:weak_alias"
 
 ; CHECK: .globl _alias
-; CHECK: .set _alias, _notExported
+; CHECK: _alias = _notExported
 @alias = dllexport alias void(), ptr @notExported
 
 ; CHECK: .globl _alias2
-; CHECK: .set _alias2, _f1
+; CHECK: _alias2 = _f1
 @alias2 = dllexport alias void(), ptr @f1
 
 ; CHECK: .globl _alias3
-; CHECK: .set _alias3, _notExported
+; CHECK: _alias3 = _notExported
 @alias3 = dllexport alias void(), ptr @notExported
 
 ; CHECK: .weak _weak_alias
-; CHECK: .set _weak_alias, _f1
+; CHECK: _weak_alias = _f1
 @weak_alias = weak_odr dllexport alias void(), ptr @f1

@@ -19,7 +19,7 @@
 #include "test_macros.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void test(S s) {
+TEST_CONSTEXPR_CXX20 void test(S& s) {
   typename S::size_type old_cap = s.capacity();
   S s0                          = s;
   s.shrink_to_fit();

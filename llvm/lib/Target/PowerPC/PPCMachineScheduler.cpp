@@ -100,12 +100,11 @@ bool PPCPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
   // This is a best effort to set things up for a post-RA pass. Optimizations
   // like generating loads of multiple registers should ideally be done within
   // the scheduler pass by combining the loads during DAG postprocessing.
-  const SUnit *CandNextClusterSU =
-      Cand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  const SUnit *TryCandNextClusterSU =
-      TryCand.AtTop ? DAG->getNextClusterSucc() : DAG->getNextClusterPred();
-  if (tryGreater(TryCand.SU == TryCandNextClusterSU,
-                 Cand.SU == CandNextClusterSU, TryCand, Cand, Cluster))
+  const ClusterInfo *CandCluster = Cand.AtTop ? TopCluster : BotCluster;
+  const ClusterInfo *TryCandCluster = TryCand.AtTop ? TopCluster : BotCluster;
+  if (tryGreater(TryCandCluster && TryCandCluster->contains(TryCand.SU),
+                 CandCluster && CandCluster->contains(Cand.SU), TryCand, Cand,
+                 Cluster))
     return TryCand.Reason != NoCand;
 
   if (SameBoundary) {
@@ -190,8 +189,11 @@ bool PPCPostRASchedStrategy::tryCandidate(SchedCandidate &Cand,
     return TryCand.Reason != NoCand;
 
   // Keep clustered nodes together.
-  if (tryGreater(TryCand.SU == DAG->getNextClusterSucc(),
-                 Cand.SU == DAG->getNextClusterSucc(), TryCand, Cand, Cluster))
+  const ClusterInfo *CandCluster = Cand.AtTop ? TopCluster : BotCluster;
+  const ClusterInfo *TryCandCluster = TryCand.AtTop ? TopCluster : BotCluster;
+  if (tryGreater(TryCandCluster && TryCandCluster->contains(TryCand.SU),
+                 CandCluster && CandCluster->contains(Cand.SU), TryCand, Cand,
+                 Cluster))
     return TryCand.Reason != NoCand;
 
   // Avoid critical resource consumption and balance the schedule.
