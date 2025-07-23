@@ -11,7 +11,9 @@
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/Affine/ViewLikeInterfaceUtils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir::amdgpu {
 #define GEN_PASS_DEF_AMDGPUFOLDSUBVIEWOPSPASS
@@ -33,28 +35,44 @@ struct AmdgpuFoldSubviewOpsPass
   }
 };
 
-struct FoldSubviewIntoGatherToLDSOp : public OpRewritePattern<GatherToLDSOp> {
-  using OpRewritePattern<GatherToLDSOp>::OpRewritePattern;
+struct FoldSubviewIntoGatherToLDSOp final : OpRewritePattern<GatherToLDSOp> {
+  using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(GatherToLDSOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
 
-    // Check if the source is a subview operation:
-    auto subviewOp = dyn_cast<memref::SubViewOp>(op.getSrc().getDefiningOp());
-    if (!subviewOp)
-      return rewriter.notifyMatchFailure(
-          loc, "GatherToLDSOp folding is currently supported only when the "
-               "source is a SubviewOp. This is one specific pattern, and other "
-               "scenarios may be added in the future.");
-
+    Value memrefSource;
     SmallVector<Value> sourceIndices;
-    mlir::affine::resolveIndicesIntoOpWithOffsetsAndStrides(
-        rewriter, loc, subviewOp.getMixedOffsets(), subviewOp.getMixedStrides(),
-        subviewOp.getDroppedDims(), op.getSrcIndices(), sourceIndices);
+    llvm::TypeSwitch<Operation *>(op.getSrc().getDefiningOp())
+        .Case<memref::SubViewOp>([&](memref::SubViewOp subviewOp) {
+          // If the source is a SubViewOp, we can directly rewrite the
+          // GatherToLDSOp.
+          mlir::affine::resolveIndicesIntoOpWithOffsetsAndStrides(
+              rewriter, loc, subviewOp.getMixedOffsets(),
+              subviewOp.getMixedStrides(), subviewOp.getDroppedDims(),
+              op.getSrcIndices(), sourceIndices);
+          memrefSource = subviewOp.getSource();
+        })
+        .Case<memref::ExpandShapeOp>([&](memref::ExpandShapeOp expandShapeOp) {
+          mlir::memref::resolveSourceIndicesExpandShape(
+              loc, rewriter, expandShapeOp, op.getSrcIndices(), sourceIndices,
+              false);
+          memrefSource = expandShapeOp.getViewSource();
+        })
+        .Case<memref::CollapseShapeOp>(
+            [&](memref::CollapseShapeOp collapseShapeOp) {
+              mlir::memref::resolveSourceIndicesCollapseShape(
+                  loc, rewriter, collapseShapeOp, op.getSrcIndices(),
+                  sourceIndices);
+              memrefSource = collapseShapeOp.getViewSource();
+            });
 
-    rewriter.replaceOpWithNewOp<GatherToLDSOp>(
-        op, subviewOp.getSource(), sourceIndices, op.getDst(),
-        op.getDstIndices(), op.getTransferType());
+    if (!memrefSource)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<GatherToLDSOp>(op, memrefSource, sourceIndices,
+                                               op.getDst(), op.getDstIndices(),
+                                               op.getTransferType());
 
     return success();
   }
