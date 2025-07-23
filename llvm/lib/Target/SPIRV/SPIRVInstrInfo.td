@@ -441,11 +441,11 @@ def OpBitcast : UnOp<"OpBitcast", 124>;
 def OpPtrCastToCrossWorkgroupINTEL : UnOp<"OpPtrCastToCrossWorkgroupINTEL", 5934>;
 def OpCrossWorkgroupCastToPtrINTEL : UnOp<"OpCrossWorkgroupCastToPtrINTEL", 5938>;
 
-// SPV_INTEL_tensor_float32_conversion
+// SPV_INTEL_bfloat16_conversion
 def OpConvertFToBF16INTEL : UnOp<"OpConvertFToBF16INTEL", 6116>;
 def OpConvertBF16ToFINTEL : UnOp<"OpConvertBF16ToFINTEL", 6117>;
 
-// SPV_INTEL_bfloat16_conversion
+// SPV_INTEL_tensor_float32_conversion
 def OpRoundFToTF32INTEL : UnOp<"OpRoundFToTF32INTEL", 6426>;
 
 // 3.42.12 Composite Instructions

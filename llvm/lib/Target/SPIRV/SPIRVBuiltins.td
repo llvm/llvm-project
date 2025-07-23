@@ -1557,6 +1557,24 @@ foreach conv = ["FToBF16INTEL", "BF16ToFINTEL"] in {
   def : ConvertBuiltin<!strconcat("__spirv_Convert", conv), OpenCL_std>;
 }
 
+// SPV_INTEL_tensor_float32_conversion
+multiclass DemangledTF32RoundBuiltin<string name1, string name2> {
+  // Create records for scalar and vector conversions.
+  foreach i = ["", "2", "3", "4", "8", "16"] in {
+    def : DemangledBuiltin<!strconcat("intel_round_", name1, i, name2, i), OpenCL_std, Convert, 1, 1>;
+    def : ConvertBuiltin<!strconcat("intel_round_", name1, i, name2, i), OpenCL_std>;
+  }
+}
+
+defm : DemangledFToTF32RoundBuiltin<"tensor_float32", "_as_float">;
+defm : DemangledFToTF32RoundBuiltin<"as_tensor_float32", "_float">;
+
+foreach conv = ["FToTF32INTEL"] in {
+  def : DemangledBuiltin<!strconcat("__spirv_Round", conv), OpenCL_std, Convert, 1, 1>;
+  def : ConvertBuiltin<!strconcat("__spirv_Round", conv), OpenCL_std>;
+}
+
+
 //===----------------------------------------------------------------------===//
 // Class defining a vector data load/store builtin record used for lowering
 // into OpExtInst instruction.
