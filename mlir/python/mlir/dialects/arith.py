@@ -90,3 +90,19 @@ def constant(
     result: Type, value: Union[int, float, Attribute, _array], *, loc=None, ip=None
 ) -> Value:
     return _get_op_result_or_op_results(ConstantOp(result, value, loc=loc, ip=ip))
+
+
+def index_cast(
+    in_: Value,
+    to: Type = None,
+    *,
+    out: Type = None,
+    loc: Location = None,
+    ip: InsertionPoint = None,
+) -> Value:
+    if bool(to) != bool(out):
+        raise ValueError("either `to` or `out` must be set but not both")
+    res_type = out or to
+    if res_type is None:
+        res_type = IndexType.get()
+    return _get_op_result_or_op_results(IndexCastOp(res_type, in_, loc=loc, ip=ip))
