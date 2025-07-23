@@ -161,10 +161,10 @@ Diagnostics
 
 Clang provides diagnostics to help developers manage overflow behavior types.
 
--Wimplicitly-discarded-overflow-behavior
-----------------------------------------
+-Woverflow-behavior-conversion
+------------------------------
 
-This warning is issued when an overflow behavior type is implicitly converted
+This warning group is issued when an overflow behavior type is implicitly converted
 to a standard integer type, which may lead to the loss of the specified
 overflow behavior.
 
@@ -192,14 +192,73 @@ integer type.
     some_function(static_cast<int>(w)); // OK
   }
 
-This warning acts as a group that includes
-``-Wimplicitly-discarded-overflow-behavior-pedantic`` and
-``-Wimplicitly-discarded-overflow-behavior-assignment``.
+This warning group includes
+``-Wimplicit-overflow-behavior-conversion`` and
+``-Wimplicit-overflow-behavior-conversion-pedantic``.
 
--Wimplicitly-discarded-overflow-behavior-pedantic
--------------------------------------------------
+.. note::
+   ``-Woverflow-behavior-conversion`` is implied by ``-Wconversion``.
 
-A less severe version of the warning, ``-Wimplicitly-discarded-overflow-behavior-pedantic``,
+-Wimplicit-overflow-behavior-conversion
+---------------------------------------
+
+This warning is issued when an overflow behavior type is implicitly converted
+to a standard integer type as part of most conversions, which may lead to the
+loss of the specified overflow behavior. This is the main warning in the
+``-Woverflow-behavior-conversion`` group.
+
+.. code-block:: c++
+
+  typedef int __attribute__((overflow_behavior(wrap))) wrapping_int;
+
+  void some_function() {
+    wrapping_int w = 1;
+    int i = w; // warning: implicit conversion from 'wrapping_int' to 'int'
+               // during assignment discards overflow behavior
+               // [-Wimplicit-overflow-behavior-conversion]
+  }
+
+Here's another example showing function parameter conversion with a ``no_wrap`` type:
+
+.. code-block:: c++
+
+  typedef int __attribute__((overflow_behavior(no_wrap))) safe_int;
+
+  void bar(int x); // Function expects standard int
+
+  void foo() {
+    safe_int s = 42;
+    bar(s); // warning: implicit conversion from 'safe_int' to 'int'
+                      // discards overflow behavior
+                      // [-Wimplicit-overflow-behavior-conversion]
+  }
+
+To fix this, you can explicitly cast the overflow behavior type to a standard
+integer type.
+
+.. code-block:: c++
+
+  typedef int __attribute__((overflow_behavior(wrap))) wrapping_int;
+  typedef int __attribute__((overflow_behavior(no_wrap))) safe_int;
+
+  void some_function() {
+    wrapping_int w = 1;
+    int i = static_cast<int>(w); // OK
+    int j = (int)w; // C-style OK
+  }
+
+  void bar(int x);
+
+  void foo() {
+    safe_int s = 42;
+    bar(static_cast<int>(s)); // OK
+  }
+
+
+-Wimplicit-overflow-behavior-conversion-pedantic
+------------------------------------------------
+
+A less severe version of the warning, ``-Wimplicit-overflow-behavior-conversion-pedantic``,
 is issued for implicit conversions from an unsigned wrapping type to a standard
 unsigned integer type. This is considered less problematic because both types
 have well-defined wrapping behavior, but the conversion still discards the
@@ -214,42 +273,8 @@ explicit ``overflow_behavior`` attribute.
   void another_function(wrapping_uint w) {
     some_function(w); // warning: implicit conversion from 'wrapping_uint' to
                       // 'unsigned int' discards overflow behavior
-                      // [-Wimplicitly-discarded-overflow-behavior-pedantic]
+                      // [-Wimplicit-overflow-behavior-conversion-pedantic]
   }
-
--Wimplicitly-discarded-overflow-behavior-assignment
----------------------------------------------------
-
-This warning is issued when an overflow behavior type is implicitly converted
-to a standard integer type as part of an assignment, which may lead to the
-loss of the specified overflow behavior. This is a more specific version of
-the ``-Wimplicitly-discarded-overflow-behavior`` warning, and it is off by
-default.
-
-.. code-block:: c++
-
-  typedef int __attribute__((overflow_behavior(wrap))) wrapping_int;
-
-  void some_function() {
-    wrapping_int w = 1;
-    int i = w; // warning: implicit conversion from 'wrapping_int' to 'int'
-               // discards overflow behavior
-               // [-Wimplicitly-discarded-overflow-behavior-assignment]
-  }
-
-To fix this, you can explicitly cast the overflow behavior type to a standard
-integer type.
-
-.. code-block:: c++
-
-  typedef int __attribute__((overflow_behavior(wrap))) wrapping_int;
-
-  void some_function() {
-    wrapping_int w = 1;
-    int i = static_cast<int>(w); // OK
-    int j = (int)w; // C-style OK
-  }
-
 
 -Woverflow-behavior-attribute-ignored
 -------------------------------------

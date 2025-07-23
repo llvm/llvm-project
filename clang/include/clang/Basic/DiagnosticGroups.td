@@ -117,18 +117,11 @@ def ObjCSignedCharBoolImplicitIntConversion :
   DiagGroup<"objc-signed-char-bool-implicit-int-conversion">;
 def Shorten64To32 : DiagGroup<"shorten-64-to-32">;
 def ImplicitIntConversionOnNegation : DiagGroup<"implicit-int-conversion-on-negation">;
-def ImplicitIntConversion : DiagGroup<"implicit-int-conversion",
-                                     [Shorten64To32,
+def ImplicitIntConversion
+    : DiagGroup<
+          "implicit-int-conversion", [Shorten64To32,
                                       ObjCSignedCharBoolImplicitIntConversion,
                                       ImplicitIntConversionOnNegation]>;
-def ImplicitlyDiscardedOverflowBehaviorPedantic
-    : DiagGroup<"implicitly-discarded-overflow-behavior-pedantic">;
-def ImplicitlyDiscardedOverflowBehaviorAssignment
-    : DiagGroup<"implicitly-discarded-overflow-behavior-assignment">;
-def ImplicitlyDiscardedOverflowBehavior
-    : DiagGroup<"implicitly-discarded-overflow-behavior",
-                [ImplicitlyDiscardedOverflowBehaviorPedantic,
-                 ImplicitlyDiscardedOverflowBehaviorAssignment]>;
 def ImplicitConstIntFloatConversion : DiagGroup<"implicit-const-int-float-conversion">;
 def ImplicitIntFloatConversion : DiagGroup<"implicit-int-float-conversion",
  [ImplicitConstIntFloatConversion]>;
@@ -138,6 +131,14 @@ def ImplicitFloatConversion : DiagGroup<"implicit-float-conversion",
   [ImplicitIntFloatConversion,
    ObjCSignedCharBoolImplicitFloatConversion]>;
 def ImplicitFixedPointConversion : DiagGroup<"implicit-fixed-point-conversion">;
+def ImplicitOverflowBehaviorConversion
+    : DiagGroup<"implicit-overflow-behavior-conversion">;
+def ImplicitOverflowBehaviorConversionPedantic
+    : DiagGroup<"implicit-overflow-behavior-conversion-pedantic">;
+def OverflowBehaviorConversion
+    : DiagGroup<"overflow-behavior-conversion",
+                [ImplicitOverflowBehaviorConversion,
+                 ImplicitOverflowBehaviorConversionPedantic]>;
 
 def FloatOverflowConversion : DiagGroup<"float-overflow-conversion">;
 def FloatZeroConversion : DiagGroup<"float-zero-conversion">;
@@ -1145,23 +1146,16 @@ def Parentheses : DiagGroup<"parentheses",
 //   - conversion warnings for literals are on by default
 //   - bool-to-pointer conversion warnings are on by default
 //   - __null-to-integer conversion warnings are on by default
-def Conversion : DiagGroup<"conversion",
-                           [BoolConversion,
-                            CharacterConversion,
-                            ConstantConversion,
-                            EnumConversion,
-                            BitFieldEnumConversion,
-                            FloatConversion,
-                            IntConversion,
-                            ImplicitIntConversion,
-                            ImplicitFloatConversion,
-                            LiteralConversion,
-                            NonLiteralNullConversion, // (1-1)->pointer (etc)
-                            NullConversion, // NULL->non-pointer
-                            ObjCLiteralConversion,
-                            SignConversion,
-                            StringConversion]>,
-                 DiagCategory<"Value Conversion Issue">;
+def Conversion
+    : DiagGroup<"conversion",
+                [BoolConversion, CharacterConversion, ConstantConversion,
+                 EnumConversion, BitFieldEnumConversion, FloatConversion,
+                 IntConversion, ImplicitIntConversion, ImplicitFloatConversion,
+                 OverflowBehaviorConversion, LiteralConversion,
+                 NonLiteralNullConversion, // (1-1)->pointer (etc)
+                 NullConversion,           // NULL->non-pointer
+                 ObjCLiteralConversion, SignConversion, StringConversion]>,
+      DiagCategory<"Value Conversion Issue">;
 
 def Unused : DiagGroup<"unused",
                        [UnusedArgument, UnusedFunction, UnusedLabel,
