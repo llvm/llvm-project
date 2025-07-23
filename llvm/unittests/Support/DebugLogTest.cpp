@@ -29,8 +29,7 @@ TEST(DebugLogTest, Basic) {
 
   setCurrentDebugType("A");
   // Just check that the macro doesn't result in dangling else.
-  int x = 0;
-  if (x == 0)
+  if (true)
     DEBUGLOG_WITH_STREAM_AND_TYPE(os2, "A") << "A";
   else
     DEBUGLOG_WITH_STREAM_AND_TYPE(os2, "A") << "B";
