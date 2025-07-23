@@ -1,6 +1,6 @@
 add_mlir_dialect_library(MLIRAMDGPUTransforms
   EmulateAtomics.cpp
-  FoldSubviewOps.cpp
+  FoldMemRefsOps.cpp
   MaskedloadToLoad.cpp
   ResolveStridedMetadata.cpp
 

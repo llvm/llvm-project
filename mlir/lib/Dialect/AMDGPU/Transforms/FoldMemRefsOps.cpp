@@ -1,4 +1,4 @@
-//===- FoldSubviewOps.cpp - AMDGPU fold subview ops ---------------------===//
+//===- FoldSubviewOps.cpp - AMDGPU fold subview ops -----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,9 +19,9 @@ namespace mlir::amdgpu {
 #define GEN_PASS_DEF_AMDGPUFOLDSUBVIEWOPSPASS
 #include "mlir/Dialect/AMDGPU/Transforms/Passes.h.inc"
 
-struct AmdgpuFoldSubviewOpsPass
+struct AmdgpuFoldMemRefOpsPass
     : public amdgpu::impl::AmdgpuFoldSubviewOpsPassBase<
-          AmdgpuFoldSubviewOpsPass> {
+          AmdgpuFoldMemRefOpsPass> {
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateAmdgpuFoldSubviewOpsPatterns(patterns);
@@ -30,7 +30,7 @@ struct AmdgpuFoldSubviewOpsPass
   }
 };
 
-struct FoldSubviewIntoGatherToLDSOp final : OpRewritePattern<GatherToLDSOp> {
+struct FoldMemRefOpsIntoGatherToLDSOp final : OpRewritePattern<GatherToLDSOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(GatherToLDSOp op,
                                 PatternRewriter &rewriter) const override {
@@ -94,6 +94,6 @@ struct FoldSubviewIntoGatherToLDSOp final : OpRewritePattern<GatherToLDSOp> {
 
 void populateAmdgpuFoldSubviewOpsPatterns(RewritePatternSet &patterns,
                                           PatternBenefit benefit) {
-  patterns.add<FoldSubviewIntoGatherToLDSOp>(patterns.getContext(), benefit);
+  patterns.add<FoldMemRefOpsIntoGatherToLDSOp>(patterns.getContext(), benefit);
 }
 } // namespace mlir::amdgpu

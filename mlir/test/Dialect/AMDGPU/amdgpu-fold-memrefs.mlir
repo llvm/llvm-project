@@ -1,4 +1,4 @@
-// RUN: mlir-opt --amdgpu-fold-subview-ops --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --amdgpu-fold-memrefs-ops --split-input-file %s | FileCheck %s
 
 #gpu_lds_addrspace = 3
 
