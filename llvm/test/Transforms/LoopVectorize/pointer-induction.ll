@@ -413,3 +413,88 @@ for.body:                                         ; preds = %for.body, %entry
 for.end:                                          ; preds = %for.body
   ret void
 }
+
+define i64 @ivopt_widen_ptr_indvar(ptr noalias %a, ptr noalias %b ,i64 %stride, i64 %n) {
+; DEFAULT-LABEL: @ivopt_widen_ptr_indvar(
+; DEFAULT-NEXT:  entry:
+; DEFAULT-NEXT:    br label [[FOR_BODY:%.*]]
+; DEFAULT:       for.body:
+; DEFAULT-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; DEFAULT-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[PTR_IV_NEXT:%.*]], [[FOR_BODY]] ], [ null, [[ENTRY]] ]
+; DEFAULT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i64, ptr [[A:%.*]], i64 [[INDVAR]]
+; DEFAULT-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
+; DEFAULT-NEXT:    [[PTR_IV_NEXT]] = getelementptr i64, ptr [[PTR_IV]], i64 [[STRIDE:%.*]]
+; DEFAULT-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
+; DEFAULT-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVAR]], [[N:%.*]]
+; DEFAULT-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[FOR_BODY]]
+; DEFAULT:       exit:
+; DEFAULT-NEXT:    [[PTR_IV_LCSSA:%.*]] = phi ptr [ [[PTR_IV]], [[FOR_BODY]] ]
+; DEFAULT-NEXT:    [[DOTLCSSA:%.*]] = phi i64 [ [[TMP0]], [[FOR_BODY]] ]
+; DEFAULT-NEXT:    [[CAST_PTR:%.*]] = ptrtoint ptr [[PTR_IV_LCSSA]] to i64
+; DEFAULT-NEXT:    [[RESULT:%.*]] = add i64 [[CAST_PTR]], [[DOTLCSSA]]
+; DEFAULT-NEXT:    ret i64 [[RESULT]]
+;
+; STRIDED-LABEL: @ivopt_widen_ptr_indvar(
+; STRIDED-NEXT:  entry:
+; STRIDED-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], 1
+; STRIDED-NEXT:    [[TMP1:%.*]] = shl i64 [[STRIDE:%.*]], 3
+; STRIDED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
+; STRIDED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; STRIDED:       vector.ph:
+; STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; STRIDED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; STRIDED-NEXT:    [[TMP2:%.*]] = mul i64 [[N_VEC]], [[TMP1]]
+; STRIDED-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr null, i64 [[TMP2]]
+; STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
+; STRIDED:       vector.body:
+; STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; STRIDED-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[A:%.*]], i64 [[INDEX]]
+; STRIDED-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[TMP4]], i32 0
+; STRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
+; STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; STRIDED-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; STRIDED-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; STRIDED:       middle.block:
+; STRIDED-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i32 3
+; STRIDED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; STRIDED-NEXT:    [[TMP8:%.*]] = sub i64 0, [[TMP1]]
+; STRIDED-NEXT:    [[IND_ESCAPE:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
+; STRIDED-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; STRIDED:       scalar.ph:
+; STRIDED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; STRIDED-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi ptr [ [[TMP3]], [[MIDDLE_BLOCK]] ], [ null, [[ENTRY]] ]
+; STRIDED-NEXT:    br label [[FOR_BODY:%.*]]
+; STRIDED:       for.body:
+; STRIDED-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; STRIDED-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[PTR_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
+; STRIDED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDVAR]]
+; STRIDED-NEXT:    [[TMP9:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
+; STRIDED-NEXT:    [[PTR_IV_NEXT]] = getelementptr i64, ptr [[PTR_IV]], i64 [[STRIDE]]
+; STRIDED-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
+; STRIDED-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVAR]], [[N]]
+; STRIDED-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; STRIDED:       exit:
+; STRIDED-NEXT:    [[PTR_IV_LCSSA:%.*]] = phi ptr [ [[PTR_IV]], [[FOR_BODY]] ], [ [[IND_ESCAPE]], [[MIDDLE_BLOCK]] ]
+; STRIDED-NEXT:    [[DOTLCSSA:%.*]] = phi i64 [ [[TMP9]], [[FOR_BODY]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
+; STRIDED-NEXT:    [[CAST_PTR:%.*]] = ptrtoint ptr [[PTR_IV_LCSSA]] to i64
+; STRIDED-NEXT:    [[RESULT:%.*]] = add i64 [[CAST_PTR]], [[DOTLCSSA]]
+; STRIDED-NEXT:    ret i64 [[RESULT]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvar = phi i64 [ %indvar.next, %for.body ], [ 0, %entry ]
+  %ptr.iv = phi ptr [ %ptr.iv.next, %for.body ], [ null, %entry ]
+  %arrayidx = getelementptr i64, ptr %a, i64 %indvar
+  %0 = load i64, ptr %arrayidx, align 8
+  %ptr.iv.next = getelementptr i64, ptr %ptr.iv, i64 %stride
+  %indvar.next = add i64 %indvar, 1
+  %exitcond.not = icmp eq i64 %indvar, %n
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  %cast.ptr = ptrtoint ptr %ptr.iv to i64
+  %result = add i64 %cast.ptr, %0
+  ret i64 %result
+}
