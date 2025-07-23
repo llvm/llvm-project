@@ -682,7 +682,7 @@ class AnyCoroEndInst : public IntrinsicInst {
   enum { FrameArg, UnwindArg, TokenArg };
 
 public:
-  bool isFallthrough() const { return !isUnwind(); }
+  bool isFallthrough() const { return !isUnwind() && user_empty(); }
   bool isUnwind() const {
     return cast<Constant>(getArgOperand(UnwindArg))->isOneValue();
   }

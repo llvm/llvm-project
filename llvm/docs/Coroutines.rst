@@ -1477,7 +1477,7 @@ The purpose of this intrinsic is to allow frontends to mark the cleanup and
 other code that is only relevant during the initial invocation of the coroutine
 and should not be present in resume and destroy parts.
 
-In returned-continuation lowering, ``llvm.coro.end`` fully destroys the
+* In returned-continuation lowering, ``llvm.coro.end`` fully destroys the
 coroutine frame.  If the second argument is `false`, it also returns from
 the coroutine with a null continuation pointer, and the next instruction
 will be unreachable.  If the second argument is `true`, it falls through
@@ -1485,13 +1485,12 @@ so that the following logic can resume unwinding.  In a yield-once
 coroutine, reaching a non-unwind ``llvm.coro.end`` without having first
 reached a ``llvm.coro.suspend.retcon`` has undefined behavior.
 
-The remainder of this section describes the behavior under switched-resume
-lowering.
-
-This intrinsic is lowered when a coroutine is split into
-the start, resume and destroy parts. In the start part, it is a no-op,
+* In switched-resume lowering, This intrinsic is lowered when a coroutine is
+split into the start, resume and destroy parts. In the start part, it is a no-op,
 in resume and destroy parts, it is replaced with `ret void` instruction and
-the rest of the block containing `coro.end` instruction is discarded.
+the rest of the block containing `coro.end` instruction is discarded if the
+return value of `coro.end` is unused.
+
 In landing pads it is replaced with an appropriate instruction to unwind to
 caller. The handling of coro.end differs depending on whether the target is
 using landingpad or WinEH exception model.
