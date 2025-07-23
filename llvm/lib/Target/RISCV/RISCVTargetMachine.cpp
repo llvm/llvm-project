@@ -94,26 +94,6 @@ static cl::opt<bool>
                            cl::desc("Enable the loop data prefetch pass"),
                            cl::init(true));
 
-static cl::opt<bool> EnableMISchedLoadClustering(
-    "riscv-misched-load-clustering", cl::Hidden,
-    cl::desc("Enable load clustering in the machine scheduler"),
-    cl::init(true));
-
-static cl::opt<bool> EnableMISchedStoreClustering(
-    "riscv-misched-store-clustering", cl::Hidden,
-    cl::desc("Enable store clustering in the machine scheduler"),
-    cl::init(true));
-
-static cl::opt<bool> EnablePostMISchedLoadClustering(
-    "riscv-postmisched-load-clustering", cl::Hidden,
-    cl::desc("Enable PostRA load clustering in the machine scheduler"),
-    cl::init(true));
-
-static cl::opt<bool> EnablePostMISchedStoreClustering(
-    "riscv-postmisched-store-clustering", cl::Hidden,
-    cl::desc("Enable PostRA store clustering in the machine scheduler"),
-    cl::init(true));
-
 static cl::opt<bool>
     EnableVLOptimizer("riscv-enable-vl-optimizer",
                       cl::desc("Enable the RISC-V VL Optimizer pass"),
@@ -309,17 +289,17 @@ bool RISCVTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
 
 ScheduleDAGInstrs *
 RISCVTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
   ScheduleDAGMILive *DAG = createSchedLive(C);
 
-  if (EnableMISchedLoadClustering)
+  if (!ST.disableMISchedLoadClustering())
     DAG->addMutation(createLoadClusterDAGMutation(
         DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
 
-  if (EnableMISchedStoreClustering)
+  if (!ST.disableMISchedStoreClustering())
     DAG->addMutation(createStoreClusterDAGMutation(
         DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
 
-  const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
   if (!DisableVectorMaskMutation && ST.hasVInstructions())
     DAG->addMutation(createRISCVVectorMaskDAGMutation(DAG->TRI));
 
@@ -328,13 +308,14 @@ RISCVTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
 
 ScheduleDAGInstrs *
 RISCVTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
   ScheduleDAGMI *DAG = createSchedPostRA(C);
 
-  if (EnablePostMISchedLoadClustering)
+  if (!ST.disablePostMISchedLoadClustering())
     DAG->addMutation(createLoadClusterDAGMutation(
         DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
 
-  if (EnablePostMISchedStoreClustering)
+  if (!ST.disablePostMISchedStoreClustering())
     DAG->addMutation(createStoreClusterDAGMutation(
         DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
 

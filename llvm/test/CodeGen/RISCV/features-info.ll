@@ -13,6 +13,10 @@
 ; CHECK-NEXT:   conditional-cmv-fusion           - Enable branch+c.mv fusion.
 ; CHECK-NEXT:   d                                - 'D' (Double-Precision Floating-Point).
 ; CHECK-NEXT:   disable-latency-sched-heuristic  - Disable latency scheduling heuristic.
+; CHECK-NEXT:   disable-misched-load-clustering  - Disable load clustering in the machine scheduler.
+; CHECK-NEXT:   disable-misched-store-clustering - Disable store clustering in the machine scheduler.
+; CHECK-NEXT:   disable-postmisched-load-clustering  - Disable PostRA load clustering in the machine scheduler.
+; CHECK-NEXT:   disable-postmisched-store-clustering - Disable PostRA store clustering in the machine scheduler.
 ; CHECK-NEXT:   dlen-factor-2                    - Vector unit DLEN(data path width) is half of VLEN.
 ; CHECK-NEXT:   e                                - 'E' (Embedded Instruction Set with 16 GPRs).
 ; CHECK-NEXT:   exact-asm                        - Enable Exact Assembly (Disables Compression and Relaxation).
