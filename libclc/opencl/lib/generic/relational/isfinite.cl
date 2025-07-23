@@ -12,4 +12,4 @@
 #define FUNCTION isfinite
 #define __CLC_BODY "unary_def.inc"
 
-#include <clc/relational/floatn.inc>
+#include <clc/math/gentype.inc>
