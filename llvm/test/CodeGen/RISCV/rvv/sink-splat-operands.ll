@@ -5472,9 +5472,8 @@ define void @sink_splat_select_op2(ptr nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:  .LBB118_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vle32.v v9, (a0)
-; CHECK-NEXT:    vmseq.vx v0, v9, a2
-; CHECK-NEXT:    vmerge.vvm v9, v8, v9, v0
-; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    vmsne.vx v0, v9, a2
+; CHECK-NEXT:    vse32.v v8, (a0), v0.t
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    bne a0, a1, .LBB118_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
