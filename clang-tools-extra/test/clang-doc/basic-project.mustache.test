@@ -259,7 +259,24 @@ HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                        <div>
 HTML-CALC:                        <p></p>
-HTML-CALC:                    </div>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    <h3>Parameters</h3>
+HTML-CALC-NOT:                    <div>
+HTML-CALC-NOT:                        <b>a</b>      <div>
+HTML-CALC-NOT:                        <p> First integer.</p>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    <div>
+HTML-CALC-NOT:                        <p></p>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    <div>
+HTML-CALC-NOT:                        <b>b</b>      <div>
+HTML-CALC-NOT:                        <p> Second integer.</p>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    <div>
+HTML-CALC-NOT:                        <p></p>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    </div>
 HTML-CALC:                        </div>
 HTML-CALC:     </div>
 HTML-CALC: </div>
@@ -299,7 +316,24 @@ HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                        <div>
 HTML-CALC:                        <p></p>
-HTML-CALC:                    </div>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    <h3>Parameters</h3>
+HTML-CALC-NOT:                    <div>
+HTML-CALC-NOT:                        <b>a</b>      <div>
+HTML-CALC-NOT:                        <p> First integer.</p>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    <div>
+HTML-CALC-NOT:                        <p></p>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    <div>
+HTML-CALC-NOT:                        <b>b</b>      <div>
+HTML-CALC-NOT:                        <p> Second integer.</p>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    <div>
+HTML-CALC-NOT:                        <p></p>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    </div>
 HTML-CALC:                        </div>
 HTML-CALC:     </div>
 HTML-CALC: </div>
@@ -319,6 +353,23 @@ HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                        <div>
 HTML-CALC:                        <p></p>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    <h3>Parameters</h3>
+HTML-CALC-NOT:                    <div>
+HTML-CALC-NOT:                        <b>a</b>      <div>
+HTML-CALC-NOT:                        <p> First integer.</p>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    <div>
+HTML-CALC-NOT:                        <p></p>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    <div>
+HTML-CALC-NOT:                        <b>b</b>      <div>
+HTML-CALC-NOT:                        <p> Second integer.</p>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    <div>
+HTML-CALC-NOT:                        <p></p>
+HTML-CALC-NOT:                    </div>
 HTML-CALC:                    </div>
 HTML-CALC:                        </div>
 HTML-CALC:     </div>
@@ -339,6 +390,23 @@ HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                        <div>
 HTML-CALC:                        <p></p>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    <h3>Parameters</h3>
+HTML-CALC-NOT:                    <div>
+HTML-CALC-NOT:                        <b>a</b>      <div>
+HTML-CALC-NOT:                        <p> First integer.</p>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    <div>
+HTML-CALC-NOT:                        <p></p>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    <div>
+HTML-CALC-NOT:                        <b>b</b>      <div>
+HTML-CALC-NOT:                        <p> Second integer.</p>
+HTML-CALC-NOT:                    </div>
+HTML-CALC-NOT:                    <div>
+HTML-CALC-NOT:                        <p></p>
+HTML-CALC-NOT:                    </div>
 HTML-CALC:                    </div>
 HTML-CALC:                        </div>
 HTML-CALC:     </div>
@@ -438,6 +506,20 @@ HTML-RECTANGLE:                        <p></p>
 HTML-RECTANGLE:                    </div>
 HTML-RECTANGLE:                        <div>
 HTML-RECTANGLE:                        <p></p>
+HTML-RECTANGLE-NOT:                    </div>
+HTML-RECTANGLE-NOT:                    <h3>Parameters</h3>
+HTML-RECTANGLE-NOT:                    <div>
+HTML-RECTANGLE-NOT:                        <b>width</b>      <div>
+HTML-RECTANGLE-NOT:                        <p> Width of the rectangle.</p>
+HTML-RECTANGLE-NOT:                    </div>
+HTML-RECTANGLE-NOT:                    <div>
+HTML-RECTANGLE-NOT:                        <p></p>
+HTML-RECTANGLE-NOT:                    </div>
+HTML-RECTANGLE-NOT:                    </div>
+HTML-RECTANGLE-NOT:                    <div>
+HTML-RECTANGLE-NOT:                        <b>height</b>      <div>
+HTML-RECTANGLE-NOT:                        <p> Height of the rectangle.</p>
+HTML-RECTANGLE-NOT:                    </div>
 HTML-RECTANGLE:                    </div>
 HTML-RECTANGLE:                        </div>
 HTML-RECTANGLE:     </div>
@@ -577,6 +659,12 @@ HTML-CIRCLE:                        <p></p>
 HTML-CIRCLE:                    </div>
 HTML-CIRCLE:                        <div>
 HTML-CIRCLE:                        <p></p>
+HTML-CIRCLE-NOT:                    </div>
+HTML-CIRCLE-NOT:                    <h3>Parameters</h3>
+HTML-CIRCLE-NOT:                    <div>
+HTML-CIRCLE-NOT:                        <b>radius</b>      <div>
+HTML-CIRCLE-NOT:                        <p> Radius of the circle.</p>
+HTML-CIRCLE-NOT:                    </div>
 HTML-CIRCLE:                    </div>
 HTML-CIRCLE:                        </div>
 HTML-CIRCLE:     </div>
