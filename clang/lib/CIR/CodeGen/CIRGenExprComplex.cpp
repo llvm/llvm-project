@@ -174,7 +174,7 @@ mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
                                          QualType destTy) {
   switch (ck) {
   case CK_Dependent:
-    llvm_unreachable("dependent cast kind in IR gen!");
+    llvm_unreachable("dependent type must be resolved before the CIR codegen");
 
   case CK_NoOp:
   case CK_LValueToRValue:
