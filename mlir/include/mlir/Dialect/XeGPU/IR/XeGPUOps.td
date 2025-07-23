@@ -1010,21 +1010,22 @@ def XeGPU_FenceOp: XeGPU_Op<"fence", []> {
 def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["source", "result"]>]> {
     let summary = "Convert the layout of the input operand";
     let description = [{
-      `convert_layout` adjusts the data distribution across subgroups and/or work-items by modifying
-      the `LayoutAttr`. Both `srcMap` and `resMap` must correspond to the same programming scope, such
-      as workgroup-level (wg) or subgroup-level (sg) code. This operation is not valid once the IR is
-      lowered to WI level because that is the end result of all distributions.
+      `convert_layout` redistribute data across subgroups and/or work-items from the `input_layout` to
+      the `target_layout`. Both `input_layout` and `target_layout` must correspond to the same programming
+      scope, such as workgroup-level (wg) or subgroup-level (sg) code. This operation is not valid once
+      the IR is lowered to WI level because that is the end result of all distributions.
     }];
-    let arguments = (ins XeGPU_Vector2DType: $source,
-                         XeGPU_LayoutAttr: $srcMap,
-                         XeGPU_LayoutAttr: $resMap
-                         );
-    let results = (outs XeGPU_Vector2DType: $result);
+    let arguments = (ins XeGPU_VectorType: $source,
+                         XeGPU_LayoutAttr: $input_layout,
+                         XeGPU_LayoutAttr: $target_layout);
+    let results = (outs XeGPU_VectorType: $result);
     let assemblyFormat = [{
-        $source attr-dict `:` type($source)
+        $source prop-dict attr-dict `:` type($source)
     }];
 
+    let hasFolder = 1;
     let hasVerifier = 1;
+    let hasCanonicalizer = 1;
 }
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUOPS_TD

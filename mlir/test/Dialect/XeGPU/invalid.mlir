@@ -549,18 +549,10 @@ func.func @tensor_desc_scatter_invalid_chunk_size_2D(%src: ui64, %offsets: vecto
 }
 
 // -----
-func.func @convert_layout_same_map(%a: vector<32x64xf16>) {
-  // expected-error@+1 {{expected different srcMap and resMap}}
-  %2 = xegpu.convert_layout %a {srcMap = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
-                                resMap = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<32x64xf16>
-  gpu.return
-}
-
-// -----
 func.func @convert_layout_unmatch(%a: vector<32x64xf16>) {
-  // expected-error@+1 {{expected srcMap and resMap be WgLayout or SgLayout at the same time}}
-  %2 = xegpu.convert_layout %a {srcMap = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>,
-                                resMap = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<32x64xf16>
+  // expected-error@+1 {{expected input layout and target layout be WgLayout or SgLayout at the same time}}
+  %2 = xegpu.convert_layout %a <{input_layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>,
+                                target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<32x64xf16>
   gpu.return
 }
 
