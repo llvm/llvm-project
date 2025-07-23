@@ -18,7 +18,7 @@ def test {
   dag undefBoth    = !con((?  1), (?  2));
   // CHECK: dag namedLHS = (op:$lhs 1, 2);
   dag namedLHS = !con((op:$lhs 1), (op 2));
-  // CHECK: dag namedRHS = (op 1, 2);
+  // CHECK: dag namedRHS = (op:$rhs 1, 2);
   dag namedRHS = !con((op 1), (op:$rhs 2));
   // CHECK: dag namedBoth = (op:$lhs 1, 2);
   dag namedBoth = !con((op:$lhs 1), (op:$rhs 2));

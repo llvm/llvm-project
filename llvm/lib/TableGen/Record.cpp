@@ -1319,7 +1319,11 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
       SmallVector<std::pair<const Init *, const StringInit *>, 8> Args;
       llvm::append_range(Args, LHSs->getArgAndNames());
       llvm::append_range(Args, RHSs->getArgAndNames());
-      return DagInit::get(Op, LHSs->getName(), Args);
+      // Use the name of the LHS DAG if it's set, otherwise the name of the RHS.
+      const auto *NameInit = LHSs->getName();
+      if (!NameInit)
+        NameInit = RHSs->getName();
+      return DagInit::get(Op, NameInit, Args);
     }
     break;
   }

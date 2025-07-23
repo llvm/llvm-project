@@ -1696,9 +1696,11 @@ and non-0 as true.
     This operator concatenates the DAG nodes *a*, *b*, etc. Their operations
     must equal.
 
-    ``!con((op a1:$name1, a2:$name2), (op b1:$name3))``
+    ``!con((op:$lhs a1:$name1, a2:$name2), (op:$rhs b1:$name3))``
 
-    results in the DAG node ``(op a1:$name1, a2:$name2, b1:$name3)``.
+    results in the DAG node ``(op:$lhs a1:$name1, a2:$name2, b1:$name3)``.
+    The name of the dag operator is derived from the LHS DAG node if it is
+    set, otherwise from the RHS DAG node.
 
 ``!cond(``\ *cond1* ``:`` *val1*\ ``,`` *cond2* ``:`` *val2*\ ``, ...,`` *condn* ``:`` *valn*\ ``)``
     This operator tests *cond1* and returns *val1* if the result is true.
