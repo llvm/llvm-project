@@ -255,66 +255,6 @@ struct BroadcastOpToArmSMELowering
   }
 };
 
-/// Conversion pattern for vector.splat.
-///
-/// Example:
-///
-///   %splat_to_tile = vector.splat %src : i32 to vector<[4]x[4]xi32>
-///
-/// is converted to:
-///
-///   %broadcast_to_1d = vector.broadcast %src : i32 to vector<[4]xi32>
-///   %broadcast_to_tile = scf.for %tile_slice_index = %c0 to %num_tile_slices
-///       step %c1 iter_args(%iter_tile = %init_tile) -> (vector<[4]x[4]xi32>)
-///   {
-///     %tile_update = arm_sme.insert_tile_slice
-///        %broadcast_to_1d, %iter_tile[%tile_slice_index] :
-///        vector<[4]xi32> into vector<[4]x[4]xi32>
-///     scf.yield %tile_update : vector<[4]x[4]xi32>
-///   }
-///
-/// This is identical to vector.broadcast of a scalar.
-struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
-  using OpRewritePattern<vector::SplatOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(vector::SplatOp splatOp,
-                                PatternRewriter &rewriter) const final {
-    auto tileType = splatOp.getResult().getType();
-    if (!tileType || !arm_sme::isValidSMETileVectorType(tileType))
-      return failure();
-
-    auto loc = splatOp.getLoc();
-    auto srcType = splatOp.getOperand().getType();
-
-    assert(srcType.isIntOrFloat() && "Invalid source type for vector.splat");
-    // Avoid unused-variable warning when building without assertions.
-    (void)srcType;
-
-    // First, broadcast the scalar to a 1-d vector.
-    VectorType tileSliceType = VectorType::Builder(tileType).dropDim(0);
-    Value broadcastOp1D = vector::BroadcastOp::create(
-        rewriter, loc, tileSliceType, splatOp.getInput());
-
-    auto initTile = arm_sme::GetTileOp::create(rewriter, loc, tileType);
-
-    auto makeLoopBody = [&](OpBuilder &b, Location loc, Value tileSliceIndex,
-                            Value currentTile) {
-      auto nextTile = arm_sme::InsertTileSliceOp::create(
-          b, loc, tileType, broadcastOp1D, currentTile, tileSliceIndex);
-      return nextTile.getResult();
-    };
-
-    // Next, create a loop over ZA tile slices and "move" the generated 1-d
-    // vector to each slice.
-    auto forOp =
-        createLoopOverTileSlices(rewriter, loc, initTile, makeLoopBody);
-
-    rewriter.replaceOp(splatOp, forOp.getResult(0));
-
-    return success();
-  }
-};
-
 /// Conversion pattern for vector.transpose.
 ///
 /// Stores the input tile to memory and reloads vertically.
@@ -791,11 +731,25 @@ struct ExtractFromCreateMaskToPselLowering
   }
 };
 
+// Convert all `vector.splat` to `vector.broadcast`. There is a path from
+// `vector.broadcast` to ArmSME via another pattern.
+struct ConvertSplatToBroadcast : public OpRewritePattern<vector::SplatOp> {
+  using OpRewritePattern<vector::SplatOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::SplatOp splatOp,
+                                PatternRewriter &rewriter) const final {
+
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(splatOp, splatOp.getType(),
+                                                     splatOp.getInput());
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
                                           MLIRContext &ctx) {
-  patterns.add<BroadcastOpToArmSMELowering, SplatOpToArmSMELowering,
+  patterns.add<BroadcastOpToArmSMELowering, ConvertSplatToBroadcast,
                TransferReadToArmSMELowering, TransferWriteToArmSMELowering,
                TransposeOpToArmSMELowering, VectorLoadToArmSMELowering,
                VectorStoreToArmSMELowering, VectorOuterProductToArmSMELowering,
