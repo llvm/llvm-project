@@ -16500,14 +16500,21 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
       return true;
   }
 
-  if (ParenExpr *PE = dyn_cast_or_null<ParenExpr>(Result.get()))
-    PE->setIsProducedByFoldExpansion();
-
   // If we had no init and an empty pack, and we're not retaining an expansion,
   // then produce a fallback value or error.
   if (Result.isUnset())
     return getDerived().RebuildEmptyCXXFoldExpr(E->getEllipsisLoc(),
                                                 E->getOperator());
+
+  // Wrap the result in a ParenExpr if it isn't already one (see CWG2611).
+  ParenExpr *PE = dyn_cast<ParenExpr>(Result.get());
+  if (!PE) {
+    PE = new (getSema().Context)
+        ParenExpr(E->getLParenLoc(), E->getRParenLoc(), Result.get());
+    Result = PE;
+  }
+  PE->setIsProducedByFoldExpansion();
+
   return Result;
 }
 
