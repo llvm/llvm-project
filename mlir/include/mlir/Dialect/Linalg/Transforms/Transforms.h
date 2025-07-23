@@ -542,14 +542,14 @@ struct DropUnitDimsResult {
   IndexingMapOpInterface resultOp;
   SmallVector<Value> replacements;
 };
-using DroppedUnitDimsBuilder = llvm::function_ref<IndexingMapOpInterface(
+using DroppedUnitDimsBuilder = std::function<IndexingMapOpInterface(
     Location loc, OpBuilder &, IndexingMapOpInterface,
     ArrayRef<Value> newOperands, ArrayRef<AffineMap> newIndexingMaps,
     const llvm::SmallDenseSet<unsigned> &droppedDims)>;
 
 FailureOr<DropUnitDimsResult>
 dropUnitDims(RewriterBase &rewriter, IndexingMapOpInterface op,
-             DroppedUnitDimsBuilder &droppedUnitDimsBuilder,
+             const DroppedUnitDimsBuilder &droppedUnitDimsBuilder,
              const ControlDropUnitDims &options);
 FailureOr<DropUnitDimsResult> dropUnitDims(RewriterBase &rewriter,
                                            GenericOp genericOp,

@@ -381,7 +381,7 @@ static UnitExtentReplacementInfo dropUnitExtentFromOperandMetadata(
 
 FailureOr<DropUnitDimsResult>
 linalg::dropUnitDims(RewriterBase &rewriter, IndexingMapOpInterface op,
-                     DroppedUnitDimsBuilder &droppedUnitDimsBuilder,
+                     const DroppedUnitDimsBuilder &droppedUnitDimsBuilder,
                      const ControlDropUnitDims &options) {
   auto dpsOp = dyn_cast<DestinationStyleOpInterface>(op.getOperation());
   if (!dpsOp) {
