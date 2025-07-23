@@ -89,35 +89,37 @@ class PLI_B_i<bits<8> funct8, string opcodestr>
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVPUnary<bits<3> f, string opcodestr, dag operands, string argstr>
-    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd), operands, opcodestr, argstr> {
+class RVPShift_ri<bits<3> f, bits<3> funct3, string opcodestr, Operand ImmType>
+    : RVInstIBase<funct3, OPC_OP_IMM_32, (outs GPR:$rd),
+                  (ins GPR:$rs1, ImmType:$shamt), opcodestr,
+                  "$rd, $rs1, $shamt"> {
   let Inst{31}    = 0b1;
   let Inst{30-28} = f;
   let Inst{27}    = 0b0;
 }
 
-class RVPUnaryImm5<bits<3> f, string opcodestr>
-    : RVPUnary<f, opcodestr, (ins GPR:$rs1, uimm5:$uimm5), "$rd, $rs1, $uimm5"> {
-  bits<5> uimm5;
+class RVPShiftW_ri<bits<3> f, bits<3> funct3, string opcodestr>
+    : RVPShift_ri<f, funct3, opcodestr, uimm5> {
+  bits<5> shamt;
 
   let Inst{26-25} = 0b01;
-  let Inst{24-20} = uimm5;
+  let Inst{24-20} = shamt;
 }
 
-class RVPUnaryImm4<bits<3> f, string opcodestr>
-    : RVPUnary<f, opcodestr, (ins GPR:$rs1, uimm4:$uimm4), "$rd, $rs1, $uimm4"> {
-  bits<4> uimm4;
+class RVPShiftH_ri<bits<3> f, bits<3> funct3, string opcodestr>
+    : RVPShift_ri<f, funct3, opcodestr, uimm4> {
+  bits<4> shamt;
 
   let Inst{26-24} = 0b001;
-  let Inst{23-20} = uimm4;
+  let Inst{23-20} = shamt;
 }
 
-class RVPUnaryImm3<bits<3> f, string opcodestr>
-    : RVPUnary<f, opcodestr, (ins GPR:$rs1, uimm3:$uimm3), "$rd, $rs1, $uimm3"> {
-  bits<3> uimm3;
+class RVPShiftB_ri<bits<3> f, bits<3> funct3, string opcodestr>
+    : RVPShift_ri<f, funct3, opcodestr, uimm3> {
+  bits<3> shamt;
 
   let Inst{26-23} = 0b0001;
-  let Inst{22-20} = uimm3;
+  let Inst{22-20} = shamt;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -149,16 +151,16 @@ def ABSW  : UnaryW_r<0b011000000111, 0b001, "absw">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in {
-def PSLLI_B  : RVPUnaryImm3<0b000, "pslli.b">;
-def PSLLI_H  : RVPUnaryImm4<0b000, "pslli.h">;
-def PSSLAI_H : RVPUnaryImm4<0b101, "psslai.h">;
+def PSLLI_B  : RVPShiftB_ri<0b000, 0b010, "pslli.b">;
+def PSLLI_H  : RVPShiftH_ri<0b000, 0b010, "pslli.h">;
+def PSSLAI_H : RVPShiftH_ri<0b101, 0b010, "psslai.h">;
 } // Predicates = [HasStdExtP]
 let DecoderNamespace = "RV32Only",
     Predicates = [HasStdExtP, IsRV32] in
-def SSLAI    : RVPUnaryImm5<0b101, "sslai">;
+def SSLAI    : RVPShiftW_ri<0b101, 0b010, "sslai">;
 let Predicates = [HasStdExtP, IsRV64] in {
-def PSLLI_W  : RVPUnaryImm5<0b000, "pslli.w">;
-def PSSLAI_W : RVPUnaryImm5<0b101, "psslai.w">;
+def PSLLI_W  : RVPShiftW_ri<0b000, 0b010, "pslli.w">;
+def PSSLAI_W : RVPShiftW_ri<0b101, 0b010, "psslai.w">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in
