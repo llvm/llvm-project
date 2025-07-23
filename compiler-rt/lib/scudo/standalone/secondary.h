@@ -269,7 +269,8 @@ public:
     Entry.MemMap = MemMap;
     Entry.Time = UINT64_MAX;
 
-    if (useMemoryTagging<Config>(Options)) {
+    bool MemoryTaggingEnabled = useMemoryTagging<Config>(Options);
+    if (MemoryTaggingEnabled) {
       if (Interval == 0 && !SCUDO_FUCHSIA) {
         // Release the memory and make it inaccessible at the same time by
         // creating a new MAP_NOACCESS mapping on top of the existing mapping.
@@ -302,28 +303,27 @@ public:
       if (Entry.Time != 0)
         Entry.Time = Time;
 
-      if (useMemoryTagging<Config>(Options)) {
-        if (Config::getQuarantineDisabled() || QuarantinePos == -1U) {
-          // If we get here then memory tagging was disabled in between when we
-          // read Options and when we locked Mutex. We can't insert our entry
-          // into the quarantine or the cache because the permissions would be
-          // wrong so just unmap it.
-          unmapCallBack(Entry.MemMap);
-          break;
-        }
-        if (!Config::getQuarantineDisabled() && Config::getQuarantineSize()) {
-          QuarantinePos =
-              (QuarantinePos + 1) % Max(Config::getQuarantineSize(), 1u);
-          if (!Quarantine[QuarantinePos].isValid()) {
-            Quarantine[QuarantinePos] = Entry;
-            return;
-          }
-          CachedBlock PrevEntry = Quarantine[QuarantinePos];
+      if (MemoryTaggingEnabled && !useMemoryTagging<Config>(Options)) {
+        // If we get here then memory tagging was disabled in between when we
+        // read Options and when we locked Mutex. We can't insert our entry into
+        // the quarantine or the cache because the permissions would be wrong so
+        // just unmap it.
+        unmapCallBack(Entry.MemMap);
+        break;
+      }
+
+      if (Config::getQuarantineSize()) {
+        QuarantinePos =
+            (QuarantinePos + 1) % Max(Config::getQuarantineSize(), 1u);
+        if (!Quarantine[QuarantinePos].isValid()) {
           Quarantine[QuarantinePos] = Entry;
-          if (OldestTime == 0)
-            OldestTime = Entry.Time;
-          Entry = PrevEntry;
+          return;
         }
+        CachedBlock PrevEntry = Quarantine[QuarantinePos];
+        Quarantine[QuarantinePos] = Entry;
+        if (OldestTime == 0)
+          OldestTime = Entry.Time;
+        Entry = PrevEntry;
       }
 
       // All excess entries are evicted from the cache. Note that when
@@ -508,16 +508,15 @@ public:
 
   void disableMemoryTagging() EXCLUDES(Mutex) {
     ScopedLock L(Mutex);
-    if (!Config::getQuarantineDisabled()) {
-      for (u32 I = 0; I != Config::getQuarantineSize(); ++I) {
-        if (Quarantine[I].isValid()) {
-          MemMapT &MemMap = Quarantine[I].MemMap;
-          unmapCallBack(MemMap);
-          Quarantine[I].invalidate();
-        }
+    for (u32 I = 0; I != Config::getQuarantineSize(); ++I) {
+      if (Quarantine[I].isValid()) {
+        MemMapT &MemMap = Quarantine[I].MemMap;
+        unmapCallBack(MemMap);
+        Quarantine[I].invalidate();
       }
-      QuarantinePos = -1U;
     }
+    QuarantinePos = -1U;
+
     for (CachedBlock &Entry : LRUEntries)
       Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize, 0);
   }
@@ -576,9 +575,8 @@ private:
     if (!LRUEntries.size() || OldestTime == 0 || OldestTime > Time)
       return;
     OldestTime = 0;
-    if (!Config::getQuarantineDisabled())
-      for (uptr I = 0; I < Config::getQuarantineSize(); I++)
-        releaseIfOlderThan(Quarantine[I], Time);
+    for (uptr I = 0; I < Config::getQuarantineSize(); I++)
+      releaseIfOlderThan(Quarantine[I], Time);
     for (uptr I = 0; I < Config::getEntriesArraySize(); I++)
       releaseIfOlderThan(Entries[I], Time);
   }
