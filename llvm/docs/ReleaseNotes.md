@@ -86,6 +86,8 @@ Changes to LLVM infrastructure
 * Added the support for ``fmaximum`` and ``fminimum`` in ``atomicrmw`` instruction. The
   comparison is expected to match the behavior of ``llvm.maximum.*`` and
   ``llvm.minimum.*`` respectively.
+* Removed the codegen pass ``finalize-mi-bundles``. The same functionality is
+  still available as an API function ``llvm::finalizeBundles``.
 
 Changes to building LLVM
 ------------------------

@@ -68,6 +68,7 @@
 #include "clang/Driver/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -907,7 +908,7 @@ getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
   StringRef Program = C.getArgs().getLastArgValue(
       options::OPT_offload_arch_tool_EQ, "offload-arch");
 
-  SmallVector<std::string, 1> GPUArchs;
+  SmallVector<std::string> GPUArchs;
   if (llvm::ErrorOr<std::string> Executable =
           llvm::sys::findProgramByName(Program)) {
     llvm::SmallVector<StringRef> Args{*Executable};
@@ -1012,6 +1013,7 @@ inferOffloadToolchains(Compilation &C, Action::OffloadKind Kind) {
                      C.getArgs().MakeArgString(Triple.split("-").first),
                      C.getArgs().MakeArgString("--offload-arch=" + Arch));
     C.getArgs().append(A);
+    C.getArgs().AddSynthesizedArg(A);
     Triples.insert(Triple);
   }
 
@@ -1062,7 +1064,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         (C.getInputArgs().hasArg(options::OPT_offload_arch_EQ) &&
          !(IsCuda || IsHIP))));
 
-  llvm::DenseSet<Action::OffloadKind> Kinds;
+  llvm::SmallSet<Action::OffloadKind, 4> Kinds;
   const std::pair<bool, Action::OffloadKind> ActiveKinds[] = {
       {IsCuda, Action::OFK_Cuda},
       {IsHIP, Action::OFK_HIP},

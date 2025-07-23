@@ -20,6 +20,11 @@
 
 // RUN: %clang --target=sparc -mvis2 %s -### 2>&1 | FileCheck -check-prefix=VIS2 %s
 // RUN: %clang --target=sparc -mno-vis2 %s -### 2>&1 | FileCheck -check-prefix=NO-VIS2 %s
+/// Solaris/SPARC defaults to -mvis2
+// RUN: %clang --target=sparc-sun-solaris2.11 %s -### 2>&1 | FileCheck -check-prefix=VIS2 %s
+// RUN: %clang --target=sparc-sun-solaris2.11 -mno-vis2 %s -### 2>&1 | FileCheck -check-prefix=NO-VIS2 %s
+// RUN: %clang --target=sparcv9-sun-solaris2.11 %s -### 2>&1 | FileCheck -check-prefix=VIS2 %s
+// RUN: %clang --target=sparcv9-sun-solaris2.11 -mno-vis2 %s -### 2>&1 | FileCheck -check-prefix=NO-VIS2 %s
 // VIS2: "-target-feature" "+vis2"
 // NO-VIS2: "-target-feature" "-vis2"
 

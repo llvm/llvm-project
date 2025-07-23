@@ -217,6 +217,18 @@ static void getAArch64MultilibFlags(const Driver &D,
     Result.push_back(ABIArg->getAsString(Args));
   }
 
+  if (const Arg *A = Args.getLastArg(options::OPT_O_Group);
+      A && A->getOption().matches(options::OPT_O)) {
+    switch (A->getValue()[0]) {
+    case 's':
+      Result.push_back("-Os");
+      break;
+    case 'z':
+      Result.push_back("-Oz");
+      break;
+    }
+  }
+
   processMultilibCustomFlags(Result, Args);
 }
 
@@ -294,6 +306,19 @@ static void getARMMultilibFlags(const Driver &D, const llvm::Triple &Triple,
     if (Endian->getOption().matches(options::OPT_mbig_endian))
       Result.push_back(Endian->getAsString(Args));
   }
+
+  if (const Arg *A = Args.getLastArg(options::OPT_O_Group);
+      A && A->getOption().matches(options::OPT_O)) {
+    switch (A->getValue()[0]) {
+    case 's':
+      Result.push_back("-Os");
+      break;
+    case 'z':
+      Result.push_back("-Oz");
+      break;
+    }
+  }
+
   processMultilibCustomFlags(Result, Args);
 }
 
@@ -1606,7 +1631,8 @@ void ToolChain::addSYCLIncludeArgs(const ArgList &DriverArgs,
                                    ArgStringList &CC1Args) const {}
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
-ToolChain::getDeviceLibs(const ArgList &DriverArgs) const {
+ToolChain::getDeviceLibs(const ArgList &DriverArgs,
+                         const Action::OffloadKind DeviceOffloadingKind) const {
   return {};
 }
 
