@@ -3218,7 +3218,8 @@ AArch64TargetLowering::tryRewritingPAC(MachineInstr &MI,
     return BB;
 
   unsigned NewOpcode;
-  if (AddrDefInstr->getOpcode() == AArch64::LOADgotAUTH)
+  if (AddrDefInstr->getOpcode() == AArch64::LOADgot ||
+      AddrDefInstr->getOpcode() == AArch64::LOADgotAUTH)
     NewOpcode = AArch64::LOADgotPAC;
   else if (AddrDefInstr->getOpcode() == AArch64::MOVaddr)
     NewOpcode = AArch64::MOVaddrPAC;
