@@ -3054,7 +3054,7 @@ static bool isRegRegScaleLoadOrStore(SDNode *User, SDValue Add,
 /// Is it profitable to fold this Add into RegRegScale load/store. If \p
 /// Shift is non-null, then we have matched a shl+add. We allow reassociating
 /// (add (add (shl A C2) B) C1) -> (add (add B C1) (shl A C2)) if there is a
-/// single addi and we don't have a SHXADD instruction we coudl use.
+/// single addi and we don't have a SHXADD instruction we could use.
 /// FIXME: May still need to check how many and what kind of users the SHL has.
 static bool isWorthFoldingIntoRegRegScale(const RISCVSubtarget &Subtarget,
                                           SDValue Add,
