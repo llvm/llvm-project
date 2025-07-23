@@ -14,6 +14,7 @@
 #include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanCFG.h"
+#include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -64,6 +65,10 @@ class VPPredicator {
     assert(!getEdgeMask(Src, Dst) && "Mask already set");
     return EdgeMaskCache[{Src, Dst}] = Mask;
   }
+
+  /// Given a widened phi \p PhiR, try to see if its incoming blocks all share a
+  /// common edge and return its mask.
+  VPValue *findCommonEdgeMask(const VPWidenPHIRecipe *PhiR) const;
 
 public:
   /// Returns the precomputed predicate of the edge from \p Src to \p Dst.
@@ -227,6 +232,20 @@ void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
   setEdgeMask(Src, DefaultDst, DefaultMask);
 }
 
+VPValue *VPPredicator::findCommonEdgeMask(const VPWidenPHIRecipe *PhiR) const {
+  using namespace llvm::VPlanPatternMatch;
+  VPValue *EdgeMask = getEdgeMask(PhiR->getIncomingBlock(0), PhiR->getParent());
+  VPValue *CommonEdgeMask;
+  if (!EdgeMask ||
+      !match(EdgeMask, m_LogicalAnd(m_VPValue(CommonEdgeMask), m_VPValue())))
+    return nullptr;
+  for (unsigned In = 1; In < PhiR->getNumIncoming(); In++)
+    if (!match(getEdgeMask(PhiR->getIncomingBlock(In), PhiR->getParent()),
+               m_LogicalAnd(m_Specific(CommonEdgeMask), m_VPValue())))
+      return nullptr;
+  return CommonEdgeMask;
+}
+
 void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
   SmallVector<VPWidenPHIRecipe *> Phis;
   for (VPRecipeBase &R : VPBB->phis())
@@ -238,6 +257,7 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     // be duplications since this is a simple recursive scan, but future
     // optimizations will clean it up.
 
+    VPValue *CommonEdgeMask = findCommonEdgeMask(PhiR);
     SmallVector<VPValue *, 2> OperandsWithMask;
     unsigned NumIncoming = PhiR->getNumIncoming();
     for (unsigned In = 0; In < NumIncoming; In++) {
@@ -250,6 +270,14 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
                "Distinct incoming values with one having a full mask");
         break;
       }
+
+      // If all incoming blocks share a common edge, remove it from the mask.
+      using namespace llvm::VPlanPatternMatch;
+      VPValue *X;
+      if (match(EdgeMask,
+                m_LogicalAnd(m_Specific(CommonEdgeMask), m_VPValue(X))))
+        EdgeMask = X;
+
       OperandsWithMask.push_back(EdgeMask);
     }
     PHINode *IRPhi = cast<PHINode>(PhiR->getUnderlyingValue());
