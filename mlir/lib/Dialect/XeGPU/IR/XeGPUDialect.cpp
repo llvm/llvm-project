@@ -217,7 +217,9 @@ LogicalResult
 RangeAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                   IntegerAttr startOfRange, IntegerAttr endOfRange) {
   if (startOfRange.getInt() >= endOfRange.getInt())
-    return emitError() << "EndOfRange must be greater than StartOfRange";
+    return emitError() << "'end' : " << endOfRange.getInt()
+                       << " must be greater than 'start' : "
+                       << startOfRange.getInt();
 
   return success();
 }

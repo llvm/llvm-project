@@ -326,7 +326,7 @@ def XeGPU_RangeAttr : XeGPUAttr<"Range", "range"> {
     ```mlir
     scf.if %cond {
       // some operations
-    }{sg_id_range = #xegpu.range<[2, 4]>}
+    } {sg_id_range = #xegpu.range<[2, 4]>}
     ```
     In this case, the scf.if op will only be executed for subgroup IDs 2 and 3.
   }];
@@ -340,7 +340,7 @@ def XeGPU_RangeAttr : XeGPUAttr<"Range", "range"> {
     AttrBuilder<(ins "int":$start, "int":$end)>
   ];
 
-  let assemblyFormat = "`<` `[`$start ```,` $end `]``>`";
+  let assemblyFormat = "`<` `[`$start `,` $end `]` `>`";
   let genVerifyDecl = 1;
 }
 
