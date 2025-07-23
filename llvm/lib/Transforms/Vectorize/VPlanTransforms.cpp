@@ -2278,11 +2278,10 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   // icmp ult step-vector, EVL
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     VPRecipeBase *EVLR = EVL.getDefiningRecipe();
-    VPBuilder Builder(Plan.getVectorPreheader());
-    VPValue *StepVector =
-        Builder.createNaryOp(VPInstruction::StepVector, {}, EVLType);
-    Builder.setInsertPoint(EVLR->getParent(), std::next(EVLR->getIterator()));
-    VPValue *EVLMask = Builder.createICmp(CmpInst::ICMP_ULT, StepVector, &EVL);
+    VPBuilder Builder(EVLR->getParent(), std::next(EVLR->getIterator()));
+    VPValue *EVLMask = Builder.createICmp(
+        CmpInst::ICMP_ULT,
+        Builder.createNaryOp(VPInstruction::StepVector, {}, EVLType), &EVL);
     HeaderMask->replaceAllUsesWith(EVLMask);
     HeaderMask->getDefiningRecipe()->eraseFromParent();
   }

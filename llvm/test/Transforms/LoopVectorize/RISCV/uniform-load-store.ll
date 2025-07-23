@@ -383,7 +383,6 @@ define void @conditional_uniform_load(ptr noalias nocapture %a, ptr noalias noca
 ; TF-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; TF-SCALABLE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; TF-SCALABLE-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 4
-; TF-SCALABLE-NEXT:    [[TMP16:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; TF-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[B]], i64 0
 ; TF-SCALABLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
 ; TF-SCALABLE-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
@@ -402,6 +401,7 @@ define void @conditional_uniform_load(ptr noalias nocapture %a, ptr noalias noca
 ; TF-SCALABLE-NEXT:    [[TMP8:%.*]] = mul i64 1, [[TMP11]]
 ; TF-SCALABLE-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP8]], i64 0
 ; TF-SCALABLE-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
+; TF-SCALABLE-NEXT:    [[TMP16:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; TF-SCALABLE-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = icmp ult <vscale x 4 x i32> [[TMP16]], [[BROADCAST_SPLAT4]]
 ; TF-SCALABLE-NEXT:    [[TMP10:%.*]] = icmp ugt <vscale x 4 x i64> [[VEC_IND]], splat (i64 10)
 ; TF-SCALABLE-NEXT:    [[TMP9:%.*]] = select <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x i1> [[TMP10]], <vscale x 4 x i1> zeroinitializer
