@@ -51,10 +51,10 @@ inline unsigned combineHashValue(unsigned a, unsigned b) {
 /// just be `void`.
 template<typename T, typename Enable = void>
 struct DenseMapInfo {
-  //static constexpr T getEmptyKey();
-  //static constexpr T getTombstoneKey();
-  //static unsigned getHashValue(const T &Val);
-  //static bool isEqual(const T &LHS, const T &RHS);
+  // static constexpr T getEmptyKey();
+  // static constexpr T getTombstoneKey();
+  // static unsigned getHashValue(const T &Val);
+  // static bool isEqual(const T &LHS, const T &RHS);
 };
 
 // Provide DenseMapInfo for all pointers. Come up with sentinel pointer values
@@ -70,13 +70,13 @@ struct DenseMapInfo<T*> {
   //               "Log2MaxAlign bits of alignment");
   static constexpr uintptr_t Log2MaxAlign = 12;
 
-  static constexpr T* getEmptyKey() {
+  static constexpr T *getEmptyKey() {
     uintptr_t Val = static_cast<uintptr_t>(-1);
     Val <<= Log2MaxAlign;
     return reinterpret_cast<T*>(Val);
   }
 
-  static constexpr T* getTombstoneKey() {
+  static constexpr T *getTombstoneKey() {
     uintptr_t Val = static_cast<uintptr_t>(-2);
     Val <<= Log2MaxAlign;
     return reinterpret_cast<T*>(Val);
@@ -205,7 +205,9 @@ template<> struct DenseMapInfo<long> {
 // Provide DenseMapInfo for long longs.
 template<> struct DenseMapInfo<long long> {
   static constexpr long long getEmptyKey() { return 0x7fffffffffffffffLL; }
-  static constexpr long long getTombstoneKey() { return -0x7fffffffffffffffLL-1; }
+  static constexpr long long getTombstoneKey() {
+    return -0x7fffffffffffffffLL - 1;
+  }
 
   static unsigned getHashValue(const long long& Val) {
     return (unsigned)(Val * 37ULL);
@@ -340,7 +342,9 @@ template <typename T> struct DenseMapInfo<std::optional<T>> {
 
   static constexpr Optional getEmptyKey() { return {Info::getEmptyKey()}; }
 
-  static constexpr Optional getTombstoneKey() { return {Info::getTombstoneKey()}; }
+  static constexpr Optional getTombstoneKey() {
+    return {Info::getTombstoneKey()};
+  }
 
   static unsigned getHashValue(const Optional &OptionalVal) {
     return detail::combineHashValue(
