@@ -114,9 +114,9 @@ static inline constexpr uint32_t get_chunk_size(uint32_t x) {
 
 // Converts a chunk size into an index suitable for a statically sized array.
 static inline constexpr uint32_t get_chunk_id(uint32_t x) {
-  uint32_t y = x >> 4;
   if (x <= MIN_SIZE)
     return 0;
+  uint32_t y = x >> 4;
   if (x < MIN_SIZE << 2)
     return cpp::popcount(y);
   return cpp::popcount(y) + 3 * (BITS_IN_WORD - cpp::countl_zero(y)) - 7;
