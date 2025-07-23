@@ -83,27 +83,6 @@ llvm::createUnpackMachineBundles(
   return new UnpackMachineBundles(std::move(Ftor));
 }
 
-namespace {
-  class FinalizeMachineBundles : public MachineFunctionPass {
-  public:
-    static char ID; // Pass identification
-    FinalizeMachineBundles() : MachineFunctionPass(ID) {
-      initializeFinalizeMachineBundlesPass(*PassRegistry::getPassRegistry());
-    }
-
-    bool runOnMachineFunction(MachineFunction &MF) override;
-  };
-} // end anonymous namespace
-
-char FinalizeMachineBundles::ID = 0;
-char &llvm::FinalizeMachineBundlesID = FinalizeMachineBundles::ID;
-INITIALIZE_PASS(FinalizeMachineBundles, "finalize-mi-bundles",
-                "Finalize machine instruction bundles", false, false)
-
-bool FinalizeMachineBundles::runOnMachineFunction(MachineFunction &MF) {
-  return llvm::finalizeBundles(MF);
-}
-
 /// Return the first found DebugLoc that has a DILocation, given a range of
 /// instructions. The search range is from FirstMI to LastMI (exclusive). If no
 /// DILocation is found, then an empty location is returned.
