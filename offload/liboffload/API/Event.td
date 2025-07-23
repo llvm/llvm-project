@@ -12,8 +12,10 @@
 
 def : Function {
     let name = "olCreateEvent";
-    let desc = "Create an event that will resolve when all current work in the queue is complete.";
-    let details = [];
+    let desc = "Enqueue an event to `Queue` and return it.";
+    let details = [
+      "This event can be used with `olSyncEvent` and `olWaitEvents` and will be complete once all enqueued work prior to the `olCreateEvent` call is complete.",
+    ];
     let params = [
         Param<"ol_queue_handle_t", "Queue", "queue to create the event for", PARAM_IN>,
         Param<"ol_event_handle_t*", "Event", "output pointer for the created event", PARAM_OUT>
