@@ -1,3 +1,4 @@
+// REQUIRES: x86-registered-target
 // RUN: %clang_cl -c --target=x86_64-windows-msvc -EHs-c- -O2 -GS- \
 // RUN:   -Xclang=-import-call-optimization \
 // RUN:   -clang:-S -clang:-o- -- %s 2>&1 \
