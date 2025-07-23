@@ -103,6 +103,12 @@ bool IsMsvcStlMapLike(ValueObject &valobj);
 lldb_private::SyntheticChildrenFrontEnd *
 MsvcStlMapLikeSyntheticFrontEndCreator(lldb::ValueObjectSP valobj_sp);
 
+// MSVC STL std::deque<>
+bool IsMsvcStlDeque(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlDequeSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                     lldb::ValueObjectSP valobj_sp);
+
 } // namespace formatters
 } // namespace lldb_private
 
