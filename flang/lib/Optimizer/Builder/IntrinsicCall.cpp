@@ -246,6 +246,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"abs", &I::genAbs},
     {"achar", &I::genChar},
     {"acosd", &I::genAcosd},
+    {"acospi", &I::genAcospi},
     {"adjustl",
      &I::genAdjustRtCall<fir::runtime::genAdjustL>,
      {{{"string", asAddr}}},
@@ -2674,6 +2675,21 @@ mlir::Value IntrinsicLibrary::genAcosd(mlir::Type resultType,
       loc, mlir::Float64Type::get(context), llvm::APFloat(180.0) / pi);
   mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
   return mlir::arith::MulFOp::create(builder, loc, result, factor);
+}
+
+// ACOSPI
+mlir::Value IntrinsicLibrary::genAcospi(mlir::Type resultType,
+                                        llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  mlir::MLIRContext *context = builder.getContext();
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  mlir::Value acos = getRuntimeCallGenerator("acos", ftype)(builder, loc, args);
+  llvm::APFloat inv_pi = llvm::APFloat(llvm::numbers::inv_pi);
+  mlir::Value dfactor =
+      builder.createRealConstant(loc, mlir::Float64Type::get(context), inv_pi);
+  mlir::Value factor = builder.createConvert(loc, resultType, dfactor);
+  return mlir::arith::MulFOp::create(builder, loc, acos, factor);
 }
 
 // ADJUSTL & ADJUSTR
