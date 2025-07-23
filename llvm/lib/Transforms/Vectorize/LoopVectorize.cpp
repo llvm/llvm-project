@@ -93,6 +93,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -155,6 +156,7 @@
 #include <utility>
 
 using namespace llvm;
+using namespace SCEVPatternMatch;
 
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
@@ -431,18 +433,11 @@ static ElementCount getSmallConstantTripCount(ScalarEvolution *SE,
   if (isa<SCEVVScale>(ExitCount))
     return ElementCount::getScalable(1);
 
-  if (auto *Mul = dyn_cast<SCEVMulExpr>(ExitCount)) {
-    if (!Mul->hasNoUnsignedWrap())
-      return ElementCount::getFixed(0);
-
-    if (Mul->getNumOperands() == 2 && isa<SCEVConstant>(Mul->getOperand(0)) &&
-        isa<SCEVVScale>(Mul->getOperand(1))) {
-      ConstantInt *Scale = cast<SCEVConstant>(Mul->getOperand(0))->getValue();
-      if (Scale->getValue().getActiveBits() > 32)
-        return ElementCount::getFixed(0);
-      return ElementCount::getScalable(Scale->getZExtValue());
-    }
-  }
+  const APInt *Scale;
+  if (match(ExitCount, m_scev_Mul(m_scev_APInt(Scale), m_SCEVVScale())))
+    if (cast<SCEVMulExpr>(ExitCount)->hasNoUnsignedWrap())
+      if (Scale->getActiveBits() <= 32)
+        return ElementCount::getScalable(Scale->getZExtValue());
 
   return ElementCount::getFixed(0);
 }
