@@ -76,8 +76,8 @@ namespace LIBC_NAMESPACE_DECL {
   // FIXME: set up the QEMU test environment
 
   // Perform the equivalent of scatterloading
-  memcpy(__data_start, __data_source, (uintptr_t)__data_size);
-  memset(__bss_start, '\0', (uintptr_t)__bss_size);
+  LIBC_NAMESPACE::memcpy(__data_start, __data_source, (uintptr_t)__data_size);
+  LIBC_NAMESPACE::memset(__bss_start, '\0', (uintptr_t)__bss_size);
   __libc_init_array();
 
   _platform_init();
