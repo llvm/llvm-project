@@ -2282,9 +2282,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     VPValue *StepVector =
         Builder.createNaryOp(VPInstruction::StepVector, {}, EVLType);
     Builder.setInsertPoint(EVLR->getParent(), std::next(EVLR->getIterator()));
-    VPValue *EVLMask = Builder.createICmp(
-        CmpInst::ICMP_ULT, StepVector,
-        Builder.createNaryOp(VPInstruction::Broadcast, {&EVL}));
+    VPValue *EVLMask = Builder.createICmp(CmpInst::ICMP_ULT, StepVector, &EVL);
     HeaderMask->replaceAllUsesWith(EVLMask);
     HeaderMask->getDefiningRecipe()->eraseFromParent();
   }

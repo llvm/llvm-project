@@ -171,10 +171,9 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
         .Case<VPInstructionWithType>(
             [&](const VPInstructionWithType *S) { return VerifyEVLUse(*S, 0); })
         .Case<VPInstruction>([&](const VPInstruction *I) {
-          if (I->getOpcode() == Instruction::PHI)
+          if (I->getOpcode() == Instruction::PHI ||
+              I->getOpcode() == Instruction::ICmp)
             return VerifyEVLUse(*I, 1);
-          if (I->getOpcode() == VPInstruction::Broadcast)
-            return VerifyEVLUse(*I, 0);
           switch (I->getOpcode()) {
           case Instruction::Add:
             break;
