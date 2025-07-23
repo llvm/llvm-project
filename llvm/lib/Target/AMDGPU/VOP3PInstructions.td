@@ -144,10 +144,17 @@ def : VOP3PSatPat<usubsat, V_PK_SUB_U16>;
 def : VOP3PSatPat<ssubsat, V_PK_SUB_I16>;
 } // End SubtargetPredicate = HasVOP3PInsts
 
-let SubtargetPredicate = HasMinimum3Maximum3PKF16, FPDPRounding = 1 in {
+let isCommutable = 1, FPDPRounding = 1 in {
+let SubtargetPredicate = HasMin3Max3PKF16 in {
+defm V_PK_MIN3_NUM_F16 : VOP3PInst<"v_pk_min3_num_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, AMDGPUfmin3>;
+defm V_PK_MAX3_NUM_F16 : VOP3PInst<"v_pk_max3_num_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, AMDGPUfmax3>;
+}
+
+let SubtargetPredicate = HasMinimum3Maximum3PKF16 in {
 defm V_PK_MINIMUM3_F16 : VOP3PInst<"v_pk_minimum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, AMDGPUfminimum3>;
 defm V_PK_MAXIMUM3_F16 : VOP3PInst<"v_pk_maximum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, AMDGPUfmaximum3>;
 }
+} // End isCommutable = 1, FPDPRounding = 1
 
 // TODO: Make sure we're doing the right thing with denormals. Note
 // that FMA and MAD will differ.
@@ -2237,6 +2244,8 @@ defm V_PK_MIN_NUM_BF16 : VOP3P_Real_gfx1250<0x2b>;
 defm V_PK_MAX_NUM_BF16 : VOP3P_Real_gfx1250<0x2c>;
 defm V_PK_MINIMUM3_F16 : VOP3P_Real_gfx1250<0x36>;
 defm V_PK_MAXIMUM3_F16 : VOP3P_Real_gfx1250<0x37>;
+defm V_PK_MIN3_NUM_F16 : VOP3P_Real_gfx1250<0x38>;
+defm V_PK_MAX3_NUM_F16 : VOP3P_Real_gfx1250<0x39>;
 
 defm V_PK_MINIMUM_F16 : VOP3P_Real_gfx12<0x1d>;
 defm V_PK_MAXIMUM_F16 : VOP3P_Real_gfx12<0x1e>;
