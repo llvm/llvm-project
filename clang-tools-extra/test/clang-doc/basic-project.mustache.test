@@ -93,6 +93,8 @@ HTML-SHAPE:                    </div>
 HTML-SHAPE:                        <div>
 HTML-SHAPE:                        <p></p>
 HTML-SHAPE:                    </div>
+HTML-SHAPE-NOT:                    <h3>Returns</h3>
+HTML-SHAPE-NOT:                        <p> double The area of the shape.</p>
 HTML-SHAPE:                        </div>
 HTML-SHAPE:     </div>
 HTML-SHAPE: </div>
@@ -113,6 +115,8 @@ HTML-SHAPE:                    </div>
 HTML-SHAPE:                        <div>
 HTML-SHAPE:                        <p></p>
 HTML-SHAPE:                    </div>
+HTML-SHAPE-NOT:                    <h3>Returns</h3>
+HTML-SHAPE-NOT:                        <p> double The perimeter of the shape.</p>
 HTML-SHAPE:                        </div>
 HTML-SHAPE:     </div>
 HTML-SHAPE: </div>
@@ -277,6 +281,8 @@ HTML-CALC:                    <div>
 HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                    </div>
+HTML-CALC-NOT:                    <h3>Returns</h3>
+HTML-CALC-NOT:                        <p> int The sum of a and b.</p>
 HTML-CALC:                        </div>
 HTML-CALC:     </div>
 HTML-CALC: </div>
@@ -297,6 +303,8 @@ HTML-CALC:                    </div>
 HTML-CALC:                        <div>
 HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
+HTML-CALC-NOT:                    <h3>Returns</h3>
+HTML-CALC-NOT:                        <p> int The result of a - b.</p>
 HTML-CALC:                        </div>
 HTML-CALC:     </div>
 HTML-CALC: </div>
@@ -334,6 +342,8 @@ HTML-CALC:                    <div>
 HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                    </div>
+HTML-CALC-NOT:                    <h3>Returns</h3>
+HTML-CALC-NOT:                        <p> int The product of a and b.</p>
 HTML-CALC:                        </div>
 HTML-CALC:     </div>
 HTML-CALC: </div>
@@ -371,6 +381,9 @@ HTML-CALC:                    <div>
 HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                    </div>
+HTML-CALC-NOT:                    <h3>Returns</h3>
+HTML-CALC-NOT:                        <p> double The result of a / b.</p>
+HTML-CALC-NOT:                        <p></p>
 HTML-CALC:                        </div>
 HTML-CALC:     </div>
 HTML-CALC: </div>
@@ -408,6 +421,8 @@ HTML-CALC:                    <div>
 HTML-CALC:                        <p></p>
 HTML-CALC:                    </div>
 HTML-CALC:                    </div>
+HTML-CALC-NOT:                    <h3>Returns</h3>
+HTML-CALC-NOT:                        <p> The result of a % b.</p>
 HTML-CALC:                        </div>
 HTML-CALC:     </div>
 HTML-CALC: </div>
@@ -541,6 +556,8 @@ HTML-RECTANGLE:                    </div>
 HTML-RECTANGLE:                        <div>
 HTML-RECTANGLE:                        <p></p>
 HTML-RECTANGLE:                    </div>
+HTML-RECTANGLE-NOT:                    <h3>Returns</h3>
+HTML-RECTANGLE-NOT:                        <p> double The area of the rectangle.</p>
 HTML-RECTANGLE:                        </div>
 HTML-RECTANGLE:     </div>
 HTML-RECTANGLE: </div>
@@ -561,6 +578,8 @@ HTML-RECTANGLE:                    </div>
 HTML-RECTANGLE:                        <div>
 HTML-RECTANGLE:                        <p></p>
 HTML-RECTANGLE:                    </div>
+HTML-RECTANGLE-NOT:                    <h3>Returns</h3>
+HTML-RECTANGLE-NOT:                        <p> double The perimeter of the rectangle.</p>
 HTML-RECTANGLE:                        </div>
 HTML-RECTANGLE:     </div>
 HTML-RECTANGLE: </div>
@@ -686,6 +705,8 @@ HTML-CIRCLE:                    </div>
 HTML-CIRCLE:                        <div>
 HTML-CIRCLE:                        <p></p>
 HTML-CIRCLE:                    </div>
+HTML-CIRCLE-NOT:                    <h3>Returns</h3>
+HTML-CIRCLE-NOT:                        <p> double The area of the circle.</p>
 HTML-CIRCLE:                        </div>
 HTML-CIRCLE:     </div>
 HTML-CIRCLE: </div>
@@ -706,6 +727,8 @@ HTML-CIRCLE:                    </div>
 HTML-CIRCLE:                        <div>
 HTML-CIRCLE:                        <p></p>
 HTML-CIRCLE:                    </div>
+HTML-CIRCLE-NOT:                    <h3>Returns</h3>
+HTML-CIRCLE-NOT:                        <p> double The perimeter of the circle.</p>
 HTML-CIRCLE:                        </div>
 HTML-CIRCLE:     </div>
 HTML-CIRCLE: </div>
