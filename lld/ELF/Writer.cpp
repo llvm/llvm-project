@@ -553,6 +553,27 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
   }
 }
 
+// Returns true if the section is a data section that's read only and
+// relocatable per its section name.
+static bool isRelRoDataSection(Ctx &ctx, StringRef secName) {
+  // The section name should start with ".data.rel.ro".
+  if (!secName.consume_front(".data.rel.ro"))
+    return false;
+
+  // If the section name is .data.rel.ro, it is a relocatable read-only data
+  // section.
+  if (secName.empty())
+    return true;
+  //  If  -z keep-data-section-prefix is given, '.data.rel.ro.hot' and
+  //  '.data.rel.ro.unlikely' are considered a split of '.data.rel.ro' based on
+  //  hotness.
+  if (ctx.arg.zKeepDataSectionPrefix) {
+    return secName == ".hot" || secName == ".unlikely";
+  }
+
+  return false;
+}
+
 // Today's loaders have a feature to make segments read-only after
 // processing dynamic relocations to enhance security. PT_GNU_RELRO
 // is defined for that.
@@ -629,7 +650,7 @@ static bool isRelroSection(Ctx &ctx, const OutputSection *sec) {
   // magic section names.
   StringRef s = sec->name;
 
-  bool abiAgnostic = s == ".data.rel.ro" || s == ".bss.rel.ro" ||
+  bool abiAgnostic = isRelRoDataSection(ctx, s) || s == ".bss.rel.ro" ||
                      s == ".ctors" || s == ".dtors" || s == ".jcr" ||
                      s == ".eh_frame" || s == ".fini_array" ||
                      s == ".init_array" || s == ".preinit_array";
