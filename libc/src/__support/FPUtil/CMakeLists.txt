@@ -210,6 +210,17 @@ add_header_library(
 )
 
 add_header_library(
+  comparison_operations
+  HDRS
+    comparison_operations.h
+  DEPENDS
+    .fenv_impl
+    .fp_bits
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   hypot
   HDRS
     Hypot.h
@@ -254,6 +265,19 @@ add_header_library(
     libc.hdr.fenv_macros
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  bfloat16
+  HDRS
+    bfloat16.h
+  DEPENDS
+    .cast
+    .dyadic_float
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
 )
 

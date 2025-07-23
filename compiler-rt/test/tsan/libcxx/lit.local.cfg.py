@@ -8,5 +8,5 @@ root = getRoot(config)
 
 # Only run if we have an instrumented libcxx.  On Darwin, run always (we have
 # interceptors to support the system-provided libcxx).
-if not root.has_libcxx and root.host_os != "Darwin":
+if not root.has_libcxx and root.target_os != "Darwin":
     config.unsupported = True

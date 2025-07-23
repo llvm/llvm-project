@@ -206,6 +206,16 @@ std::string BareMetal::computeSysRoot() const {
   return computeClangRuntimesSysRoot(D, /*IncludeTriple*/ true);
 }
 
+std::string BareMetal::getCompilerRTPath() const {
+  const Driver &D = getDriver();
+  if (IsGCCInstallationValid || detectGCCToolchainAdjacent(getDriver())) {
+    SmallString<128> Path(D.ResourceDir);
+    llvm::sys::path::append(Path, "lib");
+    return std::string(Path.str());
+  }
+  return ToolChain::getCompilerRTPath();
+}
+
 static void addMultilibsFilePaths(const Driver &D, const MultilibSet &Multilibs,
                                   const Multilib &Multilib,
                                   StringRef InstallPath,
@@ -683,9 +693,6 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if ((TC.hasValidGCCInstallation() || detectGCCToolchainAdjacent(D)) &&
       NeedCRTs)
     CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(CRTEnd)));
-
-  if (TC.getTriple().isRISCV())
-    CmdArgs.push_back("-X");
 
   // The R_ARM_TARGET2 relocation must be treated as R_ARM_REL32 on arm*-*-elf
   // and arm*-*-eabi (the default is R_ARM_GOT_PREL, used on arm*-*-linux and

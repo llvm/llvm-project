@@ -17,11 +17,6 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Pass/Pass.h"
-#include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SmallString.h"
 #include <optional>
 
 using namespace mlir;

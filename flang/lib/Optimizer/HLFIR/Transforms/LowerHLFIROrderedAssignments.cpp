@@ -405,7 +405,7 @@ void OrderedAssignmentRewriter::pre(hlfir::ForallMaskOp forallMaskOp) {
   mlir::Location loc = forallMaskOp.getLoc();
   mlir::Value mask = generateYieldedScalarValue(forallMaskOp.getMaskRegion(),
                                                 builder.getI1Type());
-  auto ifOp = builder.create<fir::IfOp>(loc, std::nullopt, mask, false);
+  auto ifOp = builder.create<fir::IfOp>(loc, mlir::TypeRange{}, mask, false);
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   constructStack.push_back(ifOp);
 }
@@ -530,7 +530,7 @@ void OrderedAssignmentRewriter::generateMaskIfOp(mlir::Value cdt) {
   mlir::Location loc = cdt.getLoc();
   cdt = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{cdt});
   cdt = builder.createConvert(loc, builder.getI1Type(), cdt);
-  auto ifOp = builder.create<fir::IfOp>(cdt.getLoc(), std::nullopt, cdt,
+  auto ifOp = builder.create<fir::IfOp>(cdt.getLoc(), mlir::TypeRange{}, cdt,
                                         /*withElseRegion=*/false);
   constructStack.push_back(ifOp.getOperation());
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());

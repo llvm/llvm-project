@@ -102,3 +102,30 @@ contains
     type(c_ptr), value :: v1, v2
   end
 end subroutine
+
+subroutine f
+  real :: x, y
+  y = 2
+  !omp simd
+  call f2(x, y)
+  !omp end simd 
+contains
+  subroutine f1 (x, y)
+    real :: x, y
+  end
+
+  subroutine f2 (x, y)
+    real :: x, y
+    !$omp declare variant (f1) match (construct={simd(uniform(y))})
+  end
+end subroutine
+!CHECK: !$OMP DECLARE VARIANT (f1) MATCH(CONSTRUCT={SIMD(UNIFORM(y))})
+!PARSE-TREE: | | | | DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareVariantDirective
+!PARSE-TREE-NEXT: | | | | | Verbatim
+!PARSE-TREE-NEXT: | | | | | Name = 'f1'
+!PARSE-TREE-NEXT: | | | | | OmpClauseList -> OmpClause -> Match -> OmpMatchClause -> OmpContextSelectorSpecification -> OmpTraitSetSelector
+!PARSE-TREE-NEXT: | | | | | | OmpTraitSetSelectorName -> Value = Construct
+!PARSE-TREE-NEXT: | | | | | | OmpTraitSelector
+!PARSE-TREE-NEXT: | | | | | | | OmpTraitSelectorName -> Value = Simd
+!PARSE-TREE-NEXT: | | | | | | | Properties
+!PARSE-TREE-NEXT: | | | | | | | | OmpTraitProperty -> OmpClause -> Uniform -> Name = 'y'

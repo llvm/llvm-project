@@ -63,7 +63,7 @@ cir::ConstantOp
 clang::CIRGen::CIRGenBuilderTy::getConstFP(mlir::Location loc, mlir::Type t,
                                            llvm::APFloat fpVal) {
   assert(mlir::isa<cir::FPTypeInterface>(t) && "expected floating point type");
-  return create<cir::ConstantOp>(loc, getAttr<cir::FPAttr>(t, fpVal));
+  return create<cir::ConstantOp>(loc, cir::FPAttr::get(t, fpVal));
 }
 
 // This can't be defined in Address.h because that file is included by
