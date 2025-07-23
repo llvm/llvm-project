@@ -697,6 +697,8 @@ void CheckHelper::CheckObjectEntity(
   CheckConflicting(symbol, Attr::SAVE, Attr::PARAMETER);
   CheckConflicting(symbol, Attr::TARGET, Attr::PARAMETER);
   CheckConflicting(symbol, Attr::VOLATILE, Attr::PARAMETER);
+  CheckConflicting(symbol, Attr::EXTERNAL, Attr::PARAMETER);
+  CheckConflicting(symbol, Attr::INTRINSIC, Attr::PARAMETER);
   Check(details.shape());
   Check(details.coshape());
   if (details.shape().Rank() > common::maxRank) {
@@ -2464,7 +2466,6 @@ void CheckHelper::CheckPointer(const Symbol &symbol) { // C852
 
 void CheckHelper::CheckExternalAttrConflicts(const Symbol &symbol) {
   CheckConflicting(symbol, Attr::EXTERNAL, Attr::INTRINSIC); // F'2023 C842
-  CheckConflicting(symbol, Attr::EXTERNAL, Attr::PARAMETER);
 }
 
 // C760 constraints on the passed-object dummy argument
