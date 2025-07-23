@@ -20,8 +20,7 @@ class RewritePatternSet;
 void populateArmSVELegalizeForLLVMExportPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns);
 
-void populateLowerContractionToSVEI8MMPatternPatterns(
-    RewritePatternSet &patterns);
+void populateLowerContractionToSVEI8MMPatterns(RewritePatternSet &patterns);
 
 void populateLowerContractionToSVEBFMMLAPatterns(RewritePatternSet &patterns);
 
