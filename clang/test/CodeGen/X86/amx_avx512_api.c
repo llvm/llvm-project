@@ -16,7 +16,6 @@ __m512 test_tile_cvtrowd2ps(__tile1024i a, unsigned b) {
  return __tile_cvtrowd2ps(a, b);
 }
 
-__attribute__((__target__("avx512bf16")))
 __m512bh test_tile_cvtrowps2bf16h(__tile1024i a, unsigned b) {
   //CHECK-LABEL: @test_tile_cvtrowps2bf16h
   //CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
@@ -24,7 +23,6 @@ __m512bh test_tile_cvtrowps2bf16h(__tile1024i a, unsigned b) {
  return __tile_cvtrowps2bf16h(a, b);
 }
 
-__attribute__((__target__("avx512bf16")))
 __m512bh test_tile_cvtrowps2bf16l(__tile1024i a, unsigned b) {
   //CHECK-LABEL: @test_tile_cvtrowps2bf16l
   //CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
@@ -32,7 +30,6 @@ __m512bh test_tile_cvtrowps2bf16l(__tile1024i a, unsigned b) {
  return __tile_cvtrowps2bf16l(a, b);
 }
 
-__attribute__((__target__("avx512fp16")))
 __m512h test_tile_cvtrowps2phh(__tile1024i a, unsigned b) {
   //CHECK-LABEL: @test_tile_cvtrowps2phh
   //CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
@@ -40,7 +37,6 @@ __m512h test_tile_cvtrowps2phh(__tile1024i a, unsigned b) {
  return __tile_cvtrowps2phh(a, b);
 }
 
-__attribute__((__target__("avx512fp16")))
 __m512h test_tile_cvtrowps2phl(__tile1024i a, unsigned b) {
   //CHECK-LABEL: @test_tile_cvtrowps2phl
   //CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})

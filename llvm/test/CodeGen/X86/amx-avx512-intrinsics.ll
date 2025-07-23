@@ -20,7 +20,7 @@ define <16 x float> @test_tcvtrowd2psi() {
 }
 declare <16 x float> @llvm.x86.tcvtrowd2ps(i8 %A, i32 %B)
 
-define <32 x bfloat> @test_tcvtrowps2bf16h(i32 %A) "target-features"="+avx512bf16" {
+define <32 x bfloat> @test_tcvtrowps2bf16h(i32 %A) {
 ; CHECK-LABEL: test_tcvtrowps2bf16h:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tcvtrowps2bf16h %edi, %tmm1, %zmm0 # encoding: [0x62,0xf2,0x47,0x48,0x6d,0xc1]
@@ -29,7 +29,7 @@ define <32 x bfloat> @test_tcvtrowps2bf16h(i32 %A) "target-features"="+avx512bf1
   ret <32 x bfloat> %ret
 }
 
-define <32 x bfloat> @test_tcvtrowps2bf16hi() "target-features"="+avx512bf16" {
+define <32 x bfloat> @test_tcvtrowps2bf16hi() {
 ; CHECK-LABEL: test_tcvtrowps2bf16hi:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tcvtrowps2bf16h $127, %tmm1, %zmm0 # encoding: [0x62,0xf3,0x7f,0x48,0x07,0xc1,0x7f]
@@ -39,7 +39,7 @@ define <32 x bfloat> @test_tcvtrowps2bf16hi() "target-features"="+avx512bf16" {
 }
 declare <32 x bfloat> @llvm.x86.tcvtrowps2bf16h(i8 %A, i32 %B)
 
-define <32 x bfloat> @test_tcvtrowps2bf16l(i32 %A) "target-features"="+avx512bf16" {
+define <32 x bfloat> @test_tcvtrowps2bf16l(i32 %A) {
 ; CHECK-LABEL: test_tcvtrowps2bf16l:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tcvtrowps2bf16l %edi, %tmm1, %zmm0 # encoding: [0x62,0xf2,0x46,0x48,0x6d,0xc1]
@@ -48,7 +48,7 @@ define <32 x bfloat> @test_tcvtrowps2bf16l(i32 %A) "target-features"="+avx512bf1
   ret <32 x bfloat> %ret
 }
 
-define <32 x bfloat> @test_tcvtrowps2bf16li() "target-features"="+avx512bf16" {
+define <32 x bfloat> @test_tcvtrowps2bf16li() {
 ; CHECK-LABEL: test_tcvtrowps2bf16li:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tcvtrowps2bf16l $127, %tmm1, %zmm0 # encoding: [0x62,0xf3,0x7e,0x48,0x77,0xc1,0x7f]
@@ -58,7 +58,7 @@ define <32 x bfloat> @test_tcvtrowps2bf16li() "target-features"="+avx512bf16" {
 }
 declare <32 x bfloat> @llvm.x86.tcvtrowps2bf16l(i8 %A, i32 %B)
 
-define <32 x half> @test_tcvtrowps2phh(i32 %A) "target-features"="+avx512fp16" {
+define <32 x half> @test_tcvtrowps2phh(i32 %A) {
 ; CHECK-LABEL: test_tcvtrowps2phh:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tcvtrowps2phh %edi, %tmm1, %zmm0 # encoding: [0x62,0xf2,0x44,0x48,0x6d,0xc1]
@@ -67,7 +67,7 @@ define <32 x half> @test_tcvtrowps2phh(i32 %A) "target-features"="+avx512fp16" {
   ret <32 x half> %ret
 }
 
-define <32 x half> @test_tcvtrowps2phhi() "target-features"="+avx512fp16" {
+define <32 x half> @test_tcvtrowps2phhi() {
 ; CHECK-LABEL: test_tcvtrowps2phhi:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tcvtrowps2phh $127, %tmm1, %zmm0 # encoding: [0x62,0xf3,0x7c,0x48,0x07,0xc1,0x7f]
@@ -77,7 +77,7 @@ define <32 x half> @test_tcvtrowps2phhi() "target-features"="+avx512fp16" {
 }
 declare <32 x half> @llvm.x86.tcvtrowps2phh(i8 %A, i32 %B)
 
-define <32 x half> @test_tcvtrowps2phl(i32 %A) "target-features"="+avx512fp16" {
+define <32 x half> @test_tcvtrowps2phl(i32 %A) {
 ; CHECK-LABEL: test_tcvtrowps2phl:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tcvtrowps2phl %edi, %tmm1, %zmm0 # encoding: [0x62,0xf2,0x45,0x48,0x6d,0xc1]
@@ -86,7 +86,7 @@ define <32 x half> @test_tcvtrowps2phl(i32 %A) "target-features"="+avx512fp16" {
   ret <32 x half> %ret
 }
 
-define <32 x half> @test_tcvtrowps2phli() "target-features"="+avx512fp16" {
+define <32 x half> @test_tcvtrowps2phli() {
 ; CHECK-LABEL: test_tcvtrowps2phli:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    tcvtrowps2phl $127, %tmm1, %zmm0 # encoding: [0x62,0xf3,0x7f,0x48,0x77,0xc1,0x7f]

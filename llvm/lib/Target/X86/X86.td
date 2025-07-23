@@ -278,7 +278,7 @@ def FeatureAMXAVX512 : SubtargetFeature<"amx-avx512",
                                         "HasAMXAVX512", "true",
                                         "Support AMX-AVX512 instructions",
                                         [FeatureAMXTILE, FeatureAVX512,
-                                         FeatureEVEX512]>;
+                                         FeatureEVEX512, FeatureBF16]>;
 def FeatureAMXTF32 : SubtargetFeature<"amx-tf32", "HasAMXTF32", "true",
                                       "Support AMX-TF32 instructions",
                                       [FeatureAMXTILE]>;
