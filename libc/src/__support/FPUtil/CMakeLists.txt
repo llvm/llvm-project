@@ -16,6 +16,7 @@ add_header_library(
     rounding_mode.h
   DEPENDS
     libc.hdr.fenv_macros
+    libc.src.__support.CPP.type_traits
     libc.src.__support.macros.attributes
     libc.src.__support.macros.properties.architectures
     libc.src.__support.macros.sanitizer
