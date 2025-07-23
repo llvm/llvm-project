@@ -2235,6 +2235,10 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   }
 
   // Try to optimize header mask recipes away to their EVL variants.
+  //
+  // TODO: Split this out and move into VPlanTransforms::optimize.
+  // transformRecipestoEVLRecipes should be run in tryToBuildVPlanWithVPRecipes
+  // beforehand.
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *CurRecipe = cast<VPRecipeBase>(U);
@@ -2264,6 +2268,27 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     R->eraseFromParent();
     for (VPValue *Op : PossiblyDead)
       recursivelyDeleteDeadRecipes(Op);
+  }
+
+  // Replace header masks with a mask equivalent to predicating by EVL:
+  //
+  // icmp ule widen-canonical-iv backedge-taken-count
+  // ->
+  // icmp ult step-vector, EVL
+  Type *EVLType = TypeInfo.inferScalarType(&EVL);
+  for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
+    if (HeaderMask->users().empty())
+      continue;
+    VPRecipeBase *EVLR = EVL.getDefiningRecipe();
+    VPBuilder Builder(Plan.getVectorPreheader());
+    VPValue *StepVector =
+        Builder.createNaryOp(VPInstruction::StepVector, {}, EVLType);
+    Builder.setInsertPoint(EVLR->getParent(), std::next(EVLR->getIterator()));
+    VPValue *EVLMask = Builder.createICmp(
+        CmpInst::ICMP_ULT, StepVector,
+        Builder.createNaryOp(VPInstruction::Broadcast, {&EVL}));
+    HeaderMask->replaceAllUsesWith(EVLMask);
+    HeaderMask->getDefiningRecipe()->eraseFromParent();
   }
 }
 
