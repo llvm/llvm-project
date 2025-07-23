@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace shared {
 
-using LIBC_NAMESPACE_DECL::Sign;
+using LIBC_NAMESPACE::Sign;
 
 } // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
