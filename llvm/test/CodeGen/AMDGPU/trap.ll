@@ -9,16 +9,16 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgcn--amdhsa -mattr=-trap-handler -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
 
 ; enable trap handler feature
-; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mattr=+trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=TRAP-BIT -check-prefix=MESA-TRAP %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-unknown-mesa3d -mattr=+trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=TRAP-BIT -check-prefix=MESA-TRAP %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mattr=+trap-handler -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=TRAP-BIT %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-unknown-mesa3d -mattr=+trap-handler -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=TRAP-BIT %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mcpu=gfx600 -mattr=+trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=TRAP-BIT -check-prefix=MESA-TRAP %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-unknown-mesa3d -mcpu=gfx600 -mattr=+trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=TRAP-BIT -check-prefix=MESA-TRAP %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mcpu=gfx600 -mattr=+trap-handler -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=TRAP-BIT %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-unknown-mesa3d -mcpu=gfx600 -mattr=+trap-handler -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=TRAP-BIT %s
 
 ; disable trap handler feature
-; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=NO-TRAP-BIT -check-prefix=NOMESA-TRAP %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=NO-TRAP-BIT -check-prefix=NOMESA-TRAP %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=NO-TRAP-BIT %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-unknown-mesa3d -mattr=-trap-handler -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=NO-TRAP-BIT %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mcpu=gfx600 -mattr=-trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=NO-TRAP-BIT -check-prefix=NOMESA-TRAP %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-unknown-mesa3d -mcpu=gfx600 -mattr=-trap-handler -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=NO-MESA-TRAP -check-prefix=NO-TRAP-BIT -check-prefix=NOMESA-TRAP %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-unknown-mesa3d -mcpu=gfx600 -mattr=-trap-handler -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=NO-TRAP-BIT %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-unknown-mesa3d -mcpu=gfx600 -mattr=-trap-handler -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING -check-prefix=NO-TRAP-BIT %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=GCN-WARNING %s
