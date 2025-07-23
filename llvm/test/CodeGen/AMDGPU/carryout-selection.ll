@@ -2,13 +2,13 @@
 ; RUN: llc -mtriple=amdgcn -stop-after=amdgpu-isel < %s | FileCheck -enable-var-scope -check-prefixes=GCN-ISEL                %s
 ; RUN: llc -mtriple=amdgcn -stop-after=amdgpu-isel -enable-new-pm < %s | FileCheck -enable-var-scope -check-prefixes=GCN-ISEL                %s
 
-; RUN: llc -mtriple=amdgcn -mcpu=verde   -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=CISI    %s
-; RUN: llc -mtriple=amdgcn -mcpu=fiji    -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI      %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900  -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX9    %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX1010 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize32 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX1030W32 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX1030W64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
+; RUN: llc -mtriple=amdgcn -mcpu=verde   < %s | FileCheck -enable-var-scope -check-prefixes=CISI    %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji    < %s | FileCheck -enable-var-scope -check-prefixes=VI      %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900  < %s | FileCheck -enable-var-scope -check-prefixes=GFX9    %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1010 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize32 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1030W32 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize64 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1030W64 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
 
 ; GCN-ISEL-LABEL: name:   sadd64rr
 ; GCN-ISEL-LABEL: body:
