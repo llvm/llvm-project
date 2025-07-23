@@ -477,27 +477,34 @@ private:
     auto loweredWhile = rewriter.create<emitc::WhileOp>(loc);
 
     // Lower before region to condition region.
-    rewriter.inlineRegionBefore(whileOp.getBefore(),
-                                loweredWhile.getConditionRegion(),
-                                loweredWhile.getConditionRegion().end());
+    Region &condRegion = loweredWhile.getConditionRegion();
+    Block *condBlock = rewriter.createBlock(&condRegion);
+    rewriter.setInsertionPointToStart(condBlock);
 
-    Block *condBlock = &loweredWhile.getConditionRegion().front();
-    replaceBlockArgsWithVarLoads(condBlock, vars, rewriter, loc);
+    Type i1Type = IntegerType::get(context, 1);
+    auto exprOp = rewriter.create<emitc::ExpressionOp>(loc, TypeRange{i1Type});
+    Region &exprRegion = exprOp.getBodyRegion();
 
-    Operation *condTerminator =
-        loweredWhile.getConditionRegion().back().getTerminator();
-    auto condOp = cast<scf::ConditionOp>(condTerminator);
-    rewriter.setInsertionPoint(condOp);
+    rewriter.inlineRegionBefore(whileOp.getBefore(), exprRegion,
+                                exprRegion.begin());
+
+    Block *exprBlock = &exprRegion.front();
+    replaceBlockArgsWithVarLoads(exprBlock, vars, rewriter, loc);
+
+    auto condOp = cast<scf::ConditionOp>(exprBlock->getTerminator());
     Value condition = rewriter.getRemappedValue(condOp.getCondition());
-    rewriter.create<emitc::YieldOp>(condOp.getLoc(), condition);
-    rewriter.eraseOp(condOp);
+    rewriter.setInsertionPointAfter(condOp);
+    rewriter.replaceOpWithNewOp<emitc::YieldOp>(condOp, condition);
+
+    rewriter.setInsertionPointToEnd(condBlock);
+    rewriter.create<emitc::YieldOp>(loc, exprOp);
 
     // Lower after region to body region.
-    rewriter.inlineRegionBefore(whileOp.getAfter(),
-                                loweredWhile.getBodyRegion(),
-                                loweredWhile.getBodyRegion().end());
+    Region &bodyRegion = loweredWhile.getBodyRegion();
+    rewriter.inlineRegionBefore(whileOp.getAfter(), bodyRegion,
+                                bodyRegion.end());
 
-    Block *bodyBlock = &loweredWhile.getBodyRegion().front();
+    Block *bodyBlock = &bodyRegion.front();
     replaceBlockArgsWithVarLoads(bodyBlock, vars, rewriter, loc);
 
     // Convert scf.yield to variable assignments for state updates.
@@ -559,10 +566,19 @@ private:
     rewriter.eraseOp(condOp);
 
     // Create condition region that loads from the flag variable.
-    Block *condBlock = rewriter.createBlock(&loweredDo.getConditionRegion());
+    Region &condRegion = loweredDo.getConditionRegion();
+    Block *condBlock = rewriter.createBlock(&condRegion);
     rewriter.setInsertionPointToStart(condBlock);
+
+    auto exprOp = rewriter.create<emitc::ExpressionOp>(loc, TypeRange{i1Type});
+    Block *exprBlock = rewriter.createBlock(&exprOp.getBodyRegion());
+    rewriter.setInsertionPointToStart(exprBlock);
+
     Value cond = rewriter.create<emitc::LoadOp>(loc, i1Type, conditionVal);
     rewriter.create<emitc::YieldOp>(loc, cond);
+
+    rewriter.setInsertionPointToEnd(condBlock);
+    rewriter.create<emitc::YieldOp>(loc, exprOp);
 
     return success();
   }
