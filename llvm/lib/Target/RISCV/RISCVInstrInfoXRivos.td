@@ -154,18 +154,17 @@ foreach m = MxList in {
   let VLMul = m.value in {
     let BaseInstr = RI_VEXTRACT in
     def PseudoRI_VEXTRACT_  # mx :
-      Pseudo<(outs GPR:$rd), (ins m.vrclass:$rs2, uimm5:$idx, ixlenimm:$sew),
-             []>,
-      RISCVVPseudo;
+      RISCVVPseudo<(outs GPR:$rd),
+                   (ins m.vrclass:$rs2, uimm5:$idx, ixlenimm:$sew),
+                   []>;
 
     let HasVLOp = 1, BaseInstr = RI_VINSERT, HasVecPolicyOp = 1,
         Constraints = "$rd = $rs1" in
     def PseudoRI_VINSERT_ # mx :
-      Pseudo<(outs m.vrclass:$rd),
-             (ins m.vrclass:$rs1, GPR:$rs2, uimm5:$idx, AVL:$vl,
-                  ixlenimm:$sew, ixlenimm:$policy),
-             []>,
-      RISCVVPseudo;
+      RISCVVPseudo<(outs m.vrclass:$rd),
+                   (ins m.vrclass:$rs1, GPR:$rs2, uimm5:$idx, AVL:$vl,
+                        ixlenimm:$sew, ixlenimm:$policy),
+                   []>;
   }
 }
 
