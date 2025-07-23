@@ -426,7 +426,6 @@ define amdgpu_ps void @llvm_exp2_bf16_s(ptr addrspace(1) %out, bfloat inreg %src
   ret void
 }
 
-
 declare <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b)
 declare <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b)
 declare <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat>, <2 x bfloat>, <2 x bfloat>)
