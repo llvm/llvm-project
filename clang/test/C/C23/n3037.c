@@ -404,14 +404,16 @@ _Static_assert(0 == _Generic(nontag_enum, enum { E_Untagged1 } : 1, default : 0)
 
 // Test that enumerations are compatible with their underlying type, but still
 // diagnose when "same type" is required rather than merely "compatible type".
+enum E1 : int { e1 }; // Fixed underlying type
+enum E2 { e2 };       // Unfixed underlying type, defaults to int or unsigned int
+
 struct GH149965_1 { int h; };
-struct GH149965_2 { int h; };
+// This typeof trick is used to get the underlying type of the enumeration in a
+// platform agnostic way.
+struct GH149965_2 { __typeof__(+(enum E2){}) h; };
 void gh149965(void) {
   extern struct GH149965_1 x1; // c17-note {{previous declaration is here}}
   extern struct GH149965_2 x2; // c17-note {{previous declaration is here}}
-
-  enum E1 : int { e1 }; // Fixed underlying type
-  enum E2 { e2 };       // Unfixed underlying type, defaults to int in Clang (unsigned in GCC)
 
   // Both the structure and the variable declarations are fine because only a
   // compatible type is required, not the same type, because the structures are
