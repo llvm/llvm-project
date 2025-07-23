@@ -583,6 +583,7 @@ SmallVector<Range> SliceFromCollapseHelper::getExtractSliceParams(
                            return {zeroAttr, collapseShapeInputShape[idx],
                                    oneAttr};
                          }));
+
       continue;
     }
 

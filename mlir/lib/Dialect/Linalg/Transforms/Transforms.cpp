@@ -219,6 +219,9 @@ private:
 FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
                                              linalg::PackOp packOp,
                                              bool lowerPadLikeWithInsertSlice) {
+  if (!packOp.hasPureTensorSemantics())
+    return failure();
+
   // 1. Filter out NYI cases.
   auto packedTensorType =
       cast<RankedTensorType>(packOp->getResultTypes().front());
@@ -264,6 +267,7 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
     highs[pos] = affine::makeComposedFoldedAffineApply(
         rewriter, loc, map, {outerSize, origSize, innerSize});
   }
+  // TODO: Need memref.pad operation to support memref operands
   RankedTensorType collapsed = tensor::CollapseShapeOp::inferCollapsedType(
       RankedTensorType::Builder(packedTensorType).setShape(stripMinedShape),
       packingMetadata.reassociations);
@@ -357,7 +361,7 @@ linalg::lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(unPackOp);
 
-  RankedTensorType packedTensorType = unPackOp.getSourceType();
+  auto packedTensorType = cast<RankedTensorType>(unPackOp.getSourceType());
   int64_t packedRank = packedTensorType.getRank();
 
   OpFoldResult zero = rewriter.getIndexAttr(0), one = rewriter.getIndexAttr(1);
@@ -1038,6 +1042,10 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
 static Value getPackOpSourceOrPaddedSource(OpBuilder &builder,
                                            linalg::PackOp packOp) {
   Value input = packOp.getSource();
+  // TODO: Support Memref PackOp. Temporarily return just Op Source.
+  if (!packOp.hasPureTensorSemantics())
+    return input;
+
   if (!packOp.getPaddingValue()) {
     return input;
   }
@@ -1154,6 +1162,9 @@ getPackUnpackRankReducedPerm(ArrayRef<int64_t> shape,
 
 LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
     linalg::PackOp packOp, PatternRewriter &rewriter) const {
+  if (!packOp.hasPureTensorSemantics())
+    return failure();
+
   // TODO: support the case that outer dimensions are not all 1s. A
   // tensor.expand_shape will be generated in this case.
   if (llvm::any_of(packOp.getAllOuterDims(),
@@ -1256,6 +1267,9 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
 
 LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
     linalg::UnPackOp unpackOp, PatternRewriter &rewriter) const {
+  if (!unpackOp.hasPureTensorSemantics())
+    return failure();
+
   int64_t srcRank = unpackOp.getSourceRank();
   int64_t destRank = unpackOp.getDestRank();
   ArrayRef<int64_t> srcShape = unpackOp.getSourceType().getShape();

@@ -498,6 +498,9 @@ public:
 
   LogicalResult matchAndRewrite(linalg::PackOp packOp,
                                 PatternRewriter &rewriter) const override {
+    if (!packOp.hasPureTensorSemantics())
+      return failure();
+
     auto genericOp =
         bubbleUpPackOpThroughGenericOp(rewriter, packOp, controlFn);
     if (failed(genericOp))
@@ -520,6 +523,9 @@ public:
 
   LogicalResult matchAndRewrite(linalg::PackOp packOp,
                                 PatternRewriter &rewriter) const override {
+    if (!packOp.hasPureTensorSemantics())
+      return failure();
+
     auto padOp = packOp.getSource().getDefiningOp<tensor::PadOp>();
     if (!padOp)
       return failure();
@@ -688,6 +694,9 @@ static LogicalResult
 bubbleUpPackOpThroughCollapseShape(tensor::CollapseShapeOp collapseOp,
                                    linalg::PackOp packOp,
                                    PatternRewriter &rewriter) {
+  if (!packOp.hasPureTensorSemantics())
+    return failure();
+
   SmallVector<int64_t> innerTileSizes = packOp.getStaticTiles();
   ArrayRef<int64_t> innerDimsPos = packOp.getInnerDimsPos();
   ArrayRef<int64_t> outerDimsPerm = packOp.getOuterDimsPerm();
@@ -791,6 +800,9 @@ static LogicalResult
 bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
                                  linalg::PackOp packOp,
                                  PatternRewriter &rewriter) {
+  if (!packOp.hasPureTensorSemantics())
+    return failure();
+
   // Outer dimensions permutation is not supported currently.
   // TODO: Handle outer_dims_perm variants.
   ArrayRef<int64_t> outerDimsPerm = packOp.getOuterDimsPerm();
@@ -841,7 +853,7 @@ bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
   // If reassociation is not possible, then reordering cannot happen.
   // This can be caused by pack padding affecting previously expanded
   // dimensions or packing extending dimensions.
-  RankedTensorType newPackType = linalg::PackOp::inferPackedType(
+  RankedTensorType newPackType = linalg::PackOp::inferPackedTensorType(
       expandOp.getSrcType(), packOp.getStaticInnerTiles(),
       projectedInnerDimsPos, /*outerDimsPerm=*/SmallVector<int64_t>{});
   auto reassocExpand =
@@ -873,6 +885,9 @@ public:
 
   LogicalResult matchAndRewrite(linalg::PackOp packOp,
                                 PatternRewriter &rewriter) const override {
+    if (!packOp.hasPureTensorSemantics())
+      return failure();
+
     Operation *srcOp = packOp.getSource().getDefiningOp();
     // Currently only support when the pack op is the only user.
     if (!srcOp || !(srcOp->getNumResults() == 1) ||
@@ -923,6 +938,9 @@ private:
 static LogicalResult pushDownUnPackOpThroughExpandShape(
     linalg::UnPackOp unPackOp, tensor::ExpandShapeOp expandOp,
     PatternRewriter &rewriter, ControlPropagationFn controlFn) {
+  if (!unPackOp.hasPureTensorSemantics())
+    return failure();
+
   // User controlled propagation function.
   if (!controlFn(&expandOp.getSrcMutable()))
     return failure();
@@ -970,7 +988,7 @@ static LogicalResult pushDownUnPackOpThroughExpandShape(
     nextPos += 1;
   }
 
-  RankedTensorType newExpandType = linalg::PackOp::inferPackedType(
+  RankedTensorType newExpandType = linalg::PackOp::inferPackedTensorType(
       expandTy, innerTileSizes, projectedInnerDimsPos, newOuterDimsPerm);
   auto newExpandOp = rewriter.create<tensor::ExpandShapeOp>(
       expandOp.getLoc(), newExpandType, unPackOp.getSource(),
@@ -997,6 +1015,9 @@ public:
 
   LogicalResult matchAndRewrite(linalg::UnPackOp unPackOp,
                                 PatternRewriter &rewriter) const override {
+    if (!unPackOp.hasPureTensorSemantics())
+      return failure();
+
     Value result = unPackOp.getResult();
     // Currently only support unpack op with the single user.
     if (!result.hasOneUse()) {
@@ -1177,9 +1198,14 @@ struct PushDownUnPackThroughPadOp : public OpRewritePattern<tensor::PadOp> {
 
   LogicalResult matchAndRewrite(tensor::PadOp padOp,
                                 PatternRewriter &rewriter) const override {
+
     linalg::UnPackOp unpackOp =
         padOp.getSource().getDefiningOp<linalg::UnPackOp>();
+
     if (!unpackOp)
+      return failure();
+
+    if (!unpackOp.hasPureTensorSemantics())
       return failure();
 
     if (!controlFn(&padOp.getSourceMutable()))
