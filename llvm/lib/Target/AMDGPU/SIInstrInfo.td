@@ -2873,10 +2873,12 @@ def VOP_I16_I32 : VOPProfile <[i16, i32, untyped, untyped]>;
 
 def VOP_V2F16_V2F16_V2F16 : VOPProfile <[v2f16, v2f16, v2f16, untyped]>;
 def VOP_V2I16_V2I16_V2I16 : VOPProfile <[v2i16, v2i16, v2i16, untyped]>;
+def VOP_V2BF16_V2BF16_V2BF16 : VOPProfile <[v2bf16, v2bf16, v2bf16, untyped]>;
 def VOP_B32_F16_F16 : VOPProfile <[i32, f16, f16, untyped]>;
 
 def VOP_V2F16_V2F16_V2F16_V2F16 : VOPProfile <[v2f16, v2f16, v2f16, v2f16]>;
 def VOP_V2I16_V2I16_V2I16_V2I16 : VOPProfile <[v2i16, v2i16, v2i16, v2i16]>;
+def VOP_V2BF16_V2BF16_V2BF16_V2BF16 : VOPProfile <[v2bf16, v2bf16, v2bf16, v2bf16]>;
 def VOP_V2I16_F32_F32 : VOPProfile <[v2i16, f32, f32, untyped]>;
 def VOP_V2I16_I32_I32 : VOPProfile <[v2i16, i32, i32, untyped]>;
 
