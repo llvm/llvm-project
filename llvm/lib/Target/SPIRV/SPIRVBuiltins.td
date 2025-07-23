@@ -1566,8 +1566,8 @@ multiclass DemangledTF32RoundBuiltin<string name1, string name2> {
   }
 }
 
-defm : DemangledFToTF32RoundBuiltin<"tensor_float32", "_as_float">;
-defm : DemangledFToTF32RoundBuiltin<"as_tensor_float32", "_float">;
+defm : DemangledTF32RoundBuiltin<"tensor_float32", "_as_float">;
+defm : DemangledTF32RoundBuiltin<"as_tensor_float32", "_float">;
 
 foreach conv = ["FToTF32INTEL"] in {
   def : DemangledBuiltin<!strconcat("__spirv_Round", conv), OpenCL_std, Convert, 1, 1>;
