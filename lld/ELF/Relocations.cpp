@@ -1654,10 +1654,8 @@ void RelocationScanner::scan(Relocs<RelTy> rels) {
   // For EhInputSection, OffsetGetter expects the relocations to be sorted by
   // r_offset. In rare cases (.eh_frame pieces are reordered by a linker
   // script), the relocations may be unordered.
-  // On SystemZ, all sections need to be sorted by r_offset, to allow TLS
-  // relaxation to be handled correctly - see SystemZ::getTlsGdRelaxSkip.
   SmallVector<RelTy, 0> storage;
-  if (isa<EhInputSection>(sec) || ctx.arg.emachine == EM_S390)
+  if (isa<EhInputSection>(sec))
     rels = sortRels(rels, storage);
 
   if constexpr (RelTy::IsCrel) {
