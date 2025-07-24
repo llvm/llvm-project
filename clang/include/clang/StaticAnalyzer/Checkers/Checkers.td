@@ -1656,8 +1656,8 @@ def CloneChecker : Checker<"CloneChecker">,
 let ParentPackage = PortabilityOptIn in {
 
 def UnixAPIPortabilityChecker : Checker<"UnixAPI">,
-  HelpText<"Finds implementation-defined behavior in UNIX/Posix functions">,
-  Documentation<NotDocumented>;
+  HelpText<"Finds dynamic memory allocation with size zero">,
+  Documentation<HasDocumentation>;
 
 } // end optin.portability
 
