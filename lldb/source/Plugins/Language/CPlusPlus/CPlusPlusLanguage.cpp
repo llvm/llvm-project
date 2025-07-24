@@ -1414,7 +1414,7 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           stl_synth_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider")));
   cpp_category_sp->AddTypeSynthetic(
-      "^std::(__debug)?deque<.+>(( )?&)?$", eFormatterMatchRegex,
+      "^std::__debug::deque<.+>(( )?&)?$", eFormatterMatchRegex,
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_deref_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdDequeSynthProvider")));
@@ -1472,10 +1472,9 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "libstdc++ debug std::set summary provider",
                 "^std::__debug::set<.+> >(( )?&)?$", stl_summary_flags, true);
 
-  AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
-      "libstdc++ std::deque summary provider",
-      "^std::(__debug::)?deque<.+>(( )?&)?$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "libstdc++ debug std::deque summary provider",
+                "^std::__debug::deque<.+>(( )?&)?$", stl_summary_flags, true);
 
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
@@ -1684,6 +1683,18 @@ GenericMapLikeSyntheticFrontEndCreator(CXXSyntheticChildren *children,
       "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider", *valobj_sp);
 }
 
+static SyntheticChildrenFrontEnd *
+GenericDequeSyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                     ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+
+  if (IsMsvcStlDeque(*valobj_sp))
+    return MsvcStlDequeSyntheticFrontEndCreator(children, valobj_sp);
+  return new ScriptedSyntheticChildren::FrontEnd(
+      "lldb.formatters.cpp.gnu_libstdcpp.StdDequeSynthProvider", *valobj_sp);
+}
+
 /// Load formatters that are formatting types from more than one STL
 static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   if (!cpp_category_sp)
@@ -1761,6 +1772,10 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(cpp_category_sp, GenericOptionalSyntheticFrontEndCreator,
                   "std::optional synthetic children",
                   "^std::optional<.+>(( )?&)?$", stl_deref_flags, true);
+  AddCXXSynthetic(cpp_category_sp, GenericDequeSyntheticFrontEndCreator,
+                  "std::deque container synthetic children",
+                  "^std::deque<.+>(( )?&)?$", stl_deref_flags, true);
+
   AddCXXSynthetic(cpp_category_sp, GenericMapLikeSyntheticFrontEndCreator,
                   "std::(multi)?map/set synthetic children",
                   "^std::(multi)?(map|set)<.+>(( )?&)?$", stl_synth_flags,
@@ -1806,6 +1821,9 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "MSVC STL/libstdc++ std::(multi)?map/set summary provider",
                 "^std::(multi)?(map|set)<.+>(( )?&)?$", stl_summary_flags,
                 true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "MSVC STL/libstd++ std::deque summary provider",
+                "^std::deque<.+>(( )?&)?$", stl_summary_flags, true);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {

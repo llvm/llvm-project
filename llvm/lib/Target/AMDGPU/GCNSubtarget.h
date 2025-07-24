@@ -265,8 +265,10 @@ protected:
   bool HasIEEEMinimumMaximumInsts = false;
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
+  bool HasMin3Max3PKF16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
   bool HasLshlAddU64Inst = false;
+  bool HasAddSubU64Insts = false;
   bool HasPointSampleAccel = false;
   bool HasLdsBarrierArriveAtomic = false;
   bool HasSetPrioIncWgInst = false;
@@ -1387,6 +1389,8 @@ public:
     return HasMinimum3Maximum3F16;
   }
 
+  bool hasMin3Max3PKF16() const { return HasMin3Max3PKF16; }
+
   bool hasTanhInsts() const { return HasTanhInsts; }
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
@@ -1499,6 +1503,12 @@ public:
   bool hasGFX1250Insts() const { return GFX1250Insts; }
 
   bool hasVOPD3() const { return GFX1250Insts; }
+
+  // \returns true if the target has V_ADD_U64/V_SUB_U64 instructions.
+  bool hasAddSubU64Insts() const { return HasAddSubU64Insts; }
+
+  // \returns true if the target has V_MUL_U64/V_MUL_I64 instructions.
+  bool hasVectorMulU64() const { return GFX1250Insts; }
 
   // \returns true if the target has V_PK_ADD_{MIN|MAX}_{I|U}16 instructions.
   bool hasPkAddMinMaxInsts() const { return GFX1250Insts; }
