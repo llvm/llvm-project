@@ -390,6 +390,20 @@ arithmetic operations on that type should wrap on overflow. This can be used to
 disable overflow sanitization for specific types, while leaving it enabled for
 all other types.
 
+The ``overflow_behavior`` attribute not only affects UBSan instrumentation
+but also changes the fundamental overflow behavior of arithmetic operations
+on the annotated type. Operations on types marked with ``wrap`` will have
+well-defined wrapping semantics, while operations on types marked with
+``no_wrap`` will be checked for overflow (regardless of global flags like
+``-fwrapv``).
+
+The attribute also affects implicit type promotion rules: when an overflow
+behavior type participates in arithmetic operations with standard integer
+types, the result maintains the overflow behavior type's characteristics,
+including its bit-width. This means annotated types can preserve narrower
+widths that would normally be promoted, allowing operations to stay within
+the constraints of the smallest annotated type in the expression.
+
 For more information, see :doc:`OverflowBehaviorTypes`.
 
 Enforcing Overflow Instrumentation with ``__attribute__((overflow_behavior(no_wrap)))``
