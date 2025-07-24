@@ -2898,11 +2898,13 @@ public:
     Put("\n");
     EndOpenMP();
     Walk(std::get<Block>(x.t), "");
-    BeginOpenMP();
-    Word("!$OMP END ");
-    Walk(std::get<OmpEndBlockDirective>(x.t));
-    Put("\n");
-    EndOpenMP();
+    if (auto &&end{std::get<std::optional<OmpEndBlockDirective>>(x.t)}) {
+      BeginOpenMP();
+      Word("!$OMP END ");
+      Walk(*end);
+      Put("\n");
+      EndOpenMP();
+    }
   }
   void Unparse(const OpenMPLoopConstruct &x) {
     BeginOpenMP();
