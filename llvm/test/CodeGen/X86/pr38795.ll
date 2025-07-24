@@ -128,7 +128,6 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    jne .LBB0_15
 ; CHECK-NEXT:  # %bb.14: # %if.then31
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %ebp, %ebp
 ; CHECK-NEXT:    jmp .LBB0_15
 ; CHECK-NEXT:    .p2align 4
