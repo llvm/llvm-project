@@ -58,7 +58,8 @@ define amdgpu_kernel void @foo(ptr noundef %fp) {
 ; OW-NEXT:  entry:
 ; OW-NEXT:    [[FP_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; OW-NEXT:    store ptr [[FP]], ptr addrspace(5) [[FP_ADDR]], align 8
-; OW-NEXT:    call void [[FP]]()
+; OW-NEXT:    [[LOAD:%.*]] = load ptr, ptr addrspace(5) [[FP_ADDR]], align 8
+; OW-NEXT:    call void [[LOAD]]()
 ; OW-NEXT:    ret void
 ;
 ; CW-LABEL: define {{[^@]+}}@foo
@@ -66,7 +67,8 @@ define amdgpu_kernel void @foo(ptr noundef %fp) {
 ; CW-NEXT:  entry:
 ; CW-NEXT:    [[FP_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; CW-NEXT:    store ptr [[FP]], ptr addrspace(5) [[FP_ADDR]], align 8
-; CW-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[FP]], @bar1
+; CW-NEXT:    [[LOAD:%.*]] = load ptr, ptr addrspace(5) [[FP_ADDR]], align 8
+; CW-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[LOAD]], @bar1
 ; CW-NEXT:    br i1 [[TMP0]], label [[TMP1:%.*]], label [[TMP2:%.*]]
 ; CW:       1:
 ; CW-NEXT:    call void @bar1()
@@ -86,7 +88,8 @@ define amdgpu_kernel void @foo(ptr noundef %fp) {
 ; NO-NEXT:  entry:
 ; NO-NEXT:    [[FP_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NO-NEXT:    store ptr [[FP]], ptr addrspace(5) [[FP_ADDR]], align 8
-; NO-NEXT:    call void [[FP]](), !callees [[META0:![0-9]+]]
+; NO-NEXT:    [[LOAD:%.*]] = load ptr, ptr addrspace(5) [[FP_ADDR]], align 8
+; NO-NEXT:    call void [[LOAD]](), !callees [[META0:![0-9]+]]
 ; NO-NEXT:    ret void
 ;
 entry:
