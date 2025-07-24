@@ -194,7 +194,6 @@ std::string lldb_rpc_gen::GetMangledName(ASTContext &Context,
   return Mangled;
 }
 
-static auto CheckTypeForLLDBPrivate = [](const Type *Ty) {};
 bool lldb_rpc_gen::TypeIsFromLLDBPrivate(QualType T) {
   auto CheckTypeForLLDBPrivate = [](const Type *Ty) {
     if (!Ty)
