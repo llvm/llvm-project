@@ -882,7 +882,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasMad64_32())
     setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, MVT::i32, Custom);
 
-  if (Subtarget->hasPrefetch() && Subtarget->hasSafeSmemPrefetch())
+  if (Subtarget->hasSafeSmemPrefetch() || Subtarget->hasVmemPrefInsts())
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
   if (Subtarget->hasIEEEMinimumMaximumInsts()) {
@@ -1061,10 +1061,12 @@ ArrayRef<MCPhysReg> SITargetLowering::getRoundingControlRegisters() const {
 // where this is OK to use.
 bool SITargetLowering::isFPExtFoldable(const SelectionDAG &DAG, unsigned Opcode,
                                        EVT DestVT, EVT SrcVT) const {
-  return ((Opcode == ISD::FMAD && Subtarget->hasMadMixInsts()) ||
-          (Opcode == ISD::FMA && Subtarget->hasFmaMixInsts())) &&
-         DestVT.getScalarType() == MVT::f32 &&
-         SrcVT.getScalarType() == MVT::f16 &&
+  return DestVT.getScalarType() == MVT::f32 &&
+         ((((Opcode == ISD::FMAD && Subtarget->hasMadMixInsts()) ||
+            (Opcode == ISD::FMA && Subtarget->hasFmaMixInsts())) &&
+           SrcVT.getScalarType() == MVT::f16) ||
+          (Opcode == ISD::FMA && Subtarget->hasFmaMixBF16Insts() &&
+           SrcVT.getScalarType() == MVT::bf16)) &&
          // TODO: This probably only requires no input flushing?
          denormalModeIsFlushAllF32(DAG.getMachineFunction());
 }
@@ -1548,7 +1550,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     return true;
   }
-  case Intrinsic::amdgcn_s_prefetch_data: {
+  case Intrinsic::amdgcn_s_prefetch_data:
+  case Intrinsic::amdgcn_flat_prefetch:
+  case Intrinsic::amdgcn_global_prefetch: {
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = EVT::getIntegerVT(CI.getContext(), 8);
     Info.ptrVal = CI.getArgOperand(0);
@@ -4440,18 +4444,27 @@ SDValue SITargetLowering::lowerSET_ROUNDING(SDValue Op,
 }
 
 SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
-  if (Op->isDivergent())
+  if (Op->isDivergent() &&
+      (!Subtarget->hasVmemPrefInsts() || !Op.getConstantOperandVal(4)))
+    // Cannot do I$ prefetch with divergent pointer.
     return SDValue();
 
   switch (cast<MemSDNode>(Op)->getAddressSpace()) {
   case AMDGPUAS::FLAT_ADDRESS:
   case AMDGPUAS::GLOBAL_ADDRESS:
   case AMDGPUAS::CONSTANT_ADDRESS:
-  case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
     break;
+  case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
+    if (Subtarget->hasSafeSmemPrefetch())
+      break;
+    [[fallthrough]];
   default:
     return SDValue();
   }
+
+  // I$ prefetch
+  if (!Subtarget->hasSafeSmemPrefetch() && !Op.getConstantOperandVal(4))
+    return SDValue();
 
   return Op;
 }
