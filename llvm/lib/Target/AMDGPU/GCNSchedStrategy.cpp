@@ -1130,6 +1130,15 @@ bool PreRARematStage::initGCNSchedStage() {
 }
 
 void GCNSchedStage::finalizeGCNSchedStage() {
+  unsigned MaxArchVGPR = 0;
+  for (auto P : DAG.Pressure) {
+    if (P.getArchVGPRNum() > MaxArchVGPR)
+      MaxArchVGPR = P.getArchVGPRNum();
+  }
+
+  MF.getInfo<SIMachineFunctionInfo>()->setMaxArchVGPRPressure(MaxArchVGPR);
+
+
   DAG.finishBlock();
   LLVM_DEBUG(dbgs() << "Ending scheduling stage: " << StageID << "\n");
 }
@@ -1262,14 +1271,6 @@ void GCNSchedStage::finalizeGCNRegion() {
   // Revert scheduling if we have dropped occupancy or there is some other
   // reason that the original schedule is better.
   checkScheduling();
-
-  unsigned MaxArchVGPR = 0;
-  for (auto P : DAG.Pressure) {
-    if (P.getArchVGPRNum() > MaxArchVGPR)
-      MaxArchVGPR = P.getArchVGPRNum();
-  }
-
-  MF.getInfo<SIMachineFunctionInfo>()->setMaxArchVGPRPressure(MaxArchVGPR);
 
   if (DAG.RegionsWithIGLPInstrs[RegionIdx] &&
       StageID != GCNSchedStageID::UnclusteredHighRPReschedule)
