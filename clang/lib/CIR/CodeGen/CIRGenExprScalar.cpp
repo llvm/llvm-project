@@ -233,6 +233,10 @@ public:
 
   mlir::Value VisitMemberExpr(MemberExpr *e);
 
+  mlir::Value VisitCompoundLiteralExpr(CompoundLiteralExpr *e) {
+    return emitLoadOfLValue(e);
+  }
+
   mlir::Value VisitInitListExpr(InitListExpr *e);
 
   mlir::Value VisitExplicitCastExpr(ExplicitCastExpr *e) {
