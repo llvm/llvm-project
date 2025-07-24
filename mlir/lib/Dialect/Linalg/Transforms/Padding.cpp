@@ -219,11 +219,11 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
   if (auto complexTy = dyn_cast<ComplexType>(
           getElementTypeOrSelf(opOperand->get().getType()))) {
     auto complexAttr = cast<ArrayAttr>(paddingAttr);
-    paddingValue = rewriter.create<complex::ConstantOp>(opToPad.getLoc(),
-                                                        complexTy, complexAttr);
+    paddingValue = complex::ConstantOp::create(rewriter, opToPad.getLoc(),
+                                               complexTy, complexAttr);
   } else {
-    paddingValue = rewriter.create<arith::ConstantOp>(
-        opToPad.getLoc(), cast<TypedAttr>(paddingAttr));
+    paddingValue = arith::ConstantOp::create(rewriter, opToPad.getLoc(),
+                                             cast<TypedAttr>(paddingAttr));
   }
 
   // Computes the padded shape.
@@ -313,8 +313,8 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
     int64_t rank = cast<RankedTensorType>(paddedResult.getType()).getRank();
     SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
     SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
-    paddedSubtensorResults.push_back(rewriter.create<tensor::ExtractSliceOp>(
-        loc, paddedResult, offsets, reifiedResultShapes[resultNumber],
+    paddedSubtensorResults.push_back(tensor::ExtractSliceOp::create(
+        rewriter, loc, paddedResult, offsets, reifiedResultShapes[resultNumber],
         strides));
   }
 
