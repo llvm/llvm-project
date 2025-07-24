@@ -7108,8 +7108,8 @@ private:
                             Address BP, Address LB, bool IsNonContiguous,
                             uint64_t DimSize)
         : CGF(CGF), CombinedInfo(CombinedInfo), Flags(Flags), MapDecl(MapDecl),
-          MapExpr(MapExpr), BP(BP), LB(LB), IsNonContiguous(IsNonContiguous),
-          DimSize(DimSize) {}
+          MapExpr(MapExpr), BP(BP), IsNonContiguous(IsNonContiguous),
+          DimSize(DimSize), LB(LB) {}
 
     void processField(
         const OMPClauseMappableExprCommon::MappableComponent &MC,
