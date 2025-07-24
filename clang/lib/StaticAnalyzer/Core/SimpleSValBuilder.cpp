@@ -217,8 +217,12 @@ SVal SimpleSValBuilder::MakeSymIntVal(const SymExpr *LHS,
     // Change a+(-N) into a-N, and a-(-N) into a+N
     // Adjust addition/subtraction of negative value, to
     // subtraction/addition of the negated value.
-    APSIntType resultIntTy = BasicVals.getAPSIntType(resultTy);
-    if (isNegationValuePreserving(RHS, resultIntTy)) {
+    // Check if resultTy is valid before using it
+    if (resultTy.isNull()) {
+      ConvertedRHS = BasicVals.Convert(resultTy, RHS);
+    } else {
+      APSIntType resultIntTy = BasicVals.getAPSIntType(resultTy);
+      if (isNegationValuePreserving(RHS, resultIntTy)) {
       // For large unsigned types, we need to be careful about the conversion
       // to avoid issues with very large intermediate values
       if (resultIntTy.isUnsigned() && resultIntTy.getBitWidth() > 64) {
@@ -230,9 +234,10 @@ SVal SimpleSValBuilder::MakeSymIntVal(const SymExpr *LHS,
       } else {
         ConvertedRHS = BasicVals.getValue(-resultIntTy.convert(RHS));
       }
-      op = (op == BO_Add) ? BO_Sub : BO_Add;
-    } else {
-      ConvertedRHS = BasicVals.Convert(resultTy, RHS);
+        op = (op == BO_Add) ? BO_Sub : BO_Add;
+      } else {
+        ConvertedRHS = BasicVals.Convert(resultTy, RHS);
+      }
     }
   } else
     ConvertedRHS = BasicVals.Convert(resultTy, RHS);
@@ -548,9 +553,12 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
           CompareType.apply(LHSValue);
           CompareType.apply(RHSValue);
         } else if (!BinaryOperator::isShiftOp(op)) {
-          APSIntType IntType = BasicVals.getAPSIntType(resultTy);
-          IntType.apply(LHSValue);
-          IntType.apply(RHSValue);
+          // Check if resultTy is valid before using it
+          if (!resultTy.isNull()) {
+            APSIntType IntType = BasicVals.getAPSIntType(resultTy);
+            IntType.apply(LHSValue);
+            IntType.apply(RHSValue);
+          }
         }
 
         std::optional<APSIntPtr> Result =
