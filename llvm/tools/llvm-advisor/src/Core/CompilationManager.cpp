@@ -1,13 +1,29 @@
+//===---------------- CompilationManager.cpp - LLVM Advisor ---------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This is the CompilationManager code generator driver. It provides a
+// convenient command-line interface for generating an assembly file or a
+// relocatable file, given LLVM bitcode.
+//
+//===----------------------------------------------------------------------===//
+
 #include "CompilationManager.h"
 #include "../Detection/UnitDetector.h"
 #include "../Utils/FileManager.h"
 #include "CommandAnalyzer.h"
 #include "DataExtractor.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include <chrono>
 #include <cstdlib>
-#include <set>
+#include <unordered_set>
 
 namespace llvm {
 namespace advisor {
@@ -16,48 +32,51 @@ CompilationManager::CompilationManager(const AdvisorConfig &config)
     : config_(config), buildExecutor_(config) {
 
   // Get current working directory first
-  SmallString<256> currentDir;
-  sys::fs::current_path(currentDir);
+  llvm::SmallString<256> currentDir;
+  llvm::sys::fs::current_path(currentDir);
   initialWorkingDir_ = currentDir.str().str();
 
   // Create temp directory with proper error handling
-  SmallString<128> tempDirPath;
-  if (auto EC = sys::fs::createUniqueDirectory("llvm-advisor", tempDirPath)) {
+  llvm::SmallString<128> tempDirPath;
+  if (auto EC =
+          llvm::sys::fs::createUniqueDirectory("llvm-advisor", tempDirPath)) {
     // Use timestamp for temp folder naming
     auto now = std::chrono::system_clock::now();
     auto timestamp =
         std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch())
             .count();
     tempDir_ = "/tmp/llvm-advisor-" + std::to_string(timestamp);
-    sys::fs::create_directories(tempDir_);
+    llvm::sys::fs::create_directories(tempDir_);
   } else {
     tempDir_ = tempDirPath.str().str();
   }
 
   // Ensure the directory actually exists
-  if (!sys::fs::exists(tempDir_)) {
-    sys::fs::create_directories(tempDir_);
+  if (!llvm::sys::fs::exists(tempDir_)) {
+    llvm::sys::fs::create_directories(tempDir_);
   }
 
   if (config_.getVerbose()) {
-    outs() << "Using temporary directory: " << tempDir_ << "\n";
+    llvm::outs() << "Using temporary directory: " << tempDir_ << "\n";
   }
 }
 
 CompilationManager::~CompilationManager() {
-  if (!config_.getKeepTemps() && sys::fs::exists(tempDir_)) {
-    sys::fs::remove_directories(tempDir_);
+  if (!config_.getKeepTemps() && llvm::sys::fs::exists(tempDir_)) {
+    llvm::sys::fs::remove_directories(tempDir_);
   }
 }
 
-Expected<int> CompilationManager::executeWithDataCollection(
-    const std::string &compiler, const std::vector<std::string> &args) {
+llvm::Expected<int> CompilationManager::executeWithDataCollection(
+    const std::string &compiler,
+    const llvm::SmallVectorImpl<std::string> &args) {
 
   // Analyze the build command
   BuildContext buildContext = CommandAnalyzer(compiler, args).analyze();
 
   if (config_.getVerbose()) {
-    outs() << "Build phase: " << static_cast<int>(buildContext.phase) << "\n";
+    llvm::outs() << "Build phase: " << static_cast<int>(buildContext.phase)
+                 << "\n";
   }
 
   // Skip data collection for linking/archiving phases
@@ -73,7 +92,7 @@ Expected<int> CompilationManager::executeWithDataCollection(
     return detectedUnits.takeError();
   }
 
-  std::vector<std::unique_ptr<CompilationUnit>> units;
+  llvm::SmallVector<std::unique_ptr<CompilationUnit>, 4> units;
   for (auto &unitInfo : *detectedUnits) {
     units.push_back(std::make_unique<CompilationUnit>(unitInfo, tempDir_));
   }
@@ -97,8 +116,8 @@ Expected<int> CompilationManager::executeWithDataCollection(
   for (auto &unit : units) {
     if (auto Err = extractor.extractAllData(*unit, tempDir_)) {
       if (config_.getVerbose()) {
-        errs() << "Data extraction failed: " << toString(std::move(Err))
-               << "\n";
+        llvm::errs() << "Data extraction failed: "
+                     << llvm::toString(std::move(Err)) << "\n";
       }
     }
   }
@@ -106,8 +125,8 @@ Expected<int> CompilationManager::executeWithDataCollection(
   // Organize output
   if (auto Err = organizeOutput(units)) {
     if (config_.getVerbose()) {
-      errs() << "Output organization failed: " << toString(std::move(Err))
-             << "\n";
+      llvm::errs() << "Output organization failed: "
+                   << llvm::toString(std::move(Err)) << "\n";
     }
   }
 
@@ -117,13 +136,13 @@ Expected<int> CompilationManager::executeWithDataCollection(
   return exitCode;
 }
 
-std::set<std::string>
-CompilationManager::scanDirectory(const std::string &dir) const {
-  std::set<std::string> files;
+std::unordered_set<std::string>
+CompilationManager::scanDirectory(llvm::StringRef dir) const {
+  std::unordered_set<std::string> files;
   std::error_code EC;
-  for (sys::fs::directory_iterator DI(dir, EC), DE; DI != DE && !EC;
+  for (llvm::sys::fs::directory_iterator DI(dir, EC), DE; DI != DE && !EC;
        DI.increment(EC)) {
-    if (DI->type() != sys::fs::file_type::directory_file) {
+    if (DI->type() != llvm::sys::fs::file_type::directory_file) {
       files.insert(DI->path());
     }
   }
@@ -131,15 +150,15 @@ CompilationManager::scanDirectory(const std::string &dir) const {
 }
 
 void CompilationManager::collectGeneratedFiles(
-    const std::set<std::string> &existingFiles,
-    std::vector<std::unique_ptr<CompilationUnit>> &units) {
+    const std::unordered_set<std::string> &existingFiles,
+    llvm::SmallVectorImpl<std::unique_ptr<CompilationUnit>> &units) {
   FileClassifier classifier;
 
   // Collect files from temp directory
   std::error_code EC;
-  for (sys::fs::recursive_directory_iterator DI(tempDir_, EC), DE;
+  for (llvm::sys::fs::recursive_directory_iterator DI(tempDir_, EC), DE;
        DI != DE && !EC; DI.increment(EC)) {
-    if (DI->type() != sys::fs::file_type::directory_file) {
+    if (DI->type() != llvm::sys::fs::file_type::directory_file) {
       std::string filePath = DI->path();
       if (classifier.shouldCollect(filePath)) {
         auto classification = classifier.classifyFile(filePath);
@@ -160,7 +179,8 @@ void CompilationManager::collectGeneratedFiles(
         auto classification = classifier.classifyFile(file);
 
         // Move leaked file to temp directory
-        std::string destPath = tempDir_ + "/" + sys::path::filename(file).str();
+        std::string destPath =
+            tempDir_ + "/" + llvm::sys::path::filename(file).str();
         if (!FileManager::moveFile(file, destPath)) {
           if (!units.empty()) {
             units[0]->addGeneratedFile(classification.category, destPath);
@@ -171,21 +191,21 @@ void CompilationManager::collectGeneratedFiles(
   }
 }
 
-Error CompilationManager::organizeOutput(
-    const std::vector<std::unique_ptr<CompilationUnit>> &units) {
+llvm::Error CompilationManager::organizeOutput(
+    const llvm::SmallVectorImpl<std::unique_ptr<CompilationUnit>> &units) {
   // Resolve output directory as absolute path from initial working directory
-  SmallString<256> outputDirPath;
-  if (sys::path::is_absolute(config_.getOutputDir())) {
+  llvm::SmallString<256> outputDirPath;
+  if (llvm::sys::path::is_absolute(config_.getOutputDir())) {
     outputDirPath = config_.getOutputDir();
   } else {
     outputDirPath = initialWorkingDir_;
-    sys::path::append(outputDirPath, config_.getOutputDir());
+    llvm::sys::path::append(outputDirPath, config_.getOutputDir());
   }
 
   std::string outputDir = outputDirPath.str().str();
 
   if (config_.getVerbose()) {
-    outs() << "Output directory: " << outputDir << "\n";
+    llvm::outs() << "Output directory: " << outputDir << "\n";
   }
 
   // Move collected files to organized structure
@@ -193,61 +213,60 @@ Error CompilationManager::organizeOutput(
     std::string unitDir = outputDir + "/" + unit->getName();
 
     // Remove existing unit directory if it exists
-    if (sys::fs::exists(unitDir)) {
-      if (auto EC = sys::fs::remove_directories(unitDir)) {
+    if (llvm::sys::fs::exists(unitDir)) {
+      if (auto EC = llvm::sys::fs::remove_directories(unitDir)) {
         if (config_.getVerbose()) {
-          errs() << "Warning: Could not remove existing unit directory: "
-                 << unitDir << "\n";
+          llvm::errs() << "Warning: Could not remove existing unit directory: "
+                       << unitDir << "\n";
         }
       }
     }
 
     // Create fresh unit directory
-    if (auto EC = sys::fs::create_directories(unitDir)) {
+    if (auto EC = llvm::sys::fs::create_directories(unitDir)) {
       continue; // Skip if we can't create the directory
     }
 
     const auto &generatedFiles = unit->getAllGeneratedFiles();
     for (const auto &category : generatedFiles) {
       std::string categoryDir = unitDir + "/" + category.first;
-      sys::fs::create_directories(categoryDir);
+      llvm::sys::fs::create_directories(categoryDir);
 
       for (const auto &file : category.second) {
         std::string destFile =
-            categoryDir + "/" + sys::path::filename(file).str();
+            categoryDir + "/" + llvm::sys::path::filename(file).str();
         if (auto Err = FileManager::copyFile(file, destFile)) {
           if (config_.getVerbose()) {
-            errs() << "Failed to copy " << file << " to " << destFile << "\n";
+            llvm::errs() << "Failed to copy " << file << " to " << destFile
+                         << "\n";
           }
         }
       }
     }
   }
 
-  return Error::success();
+  return llvm::Error::success();
 }
 
 void CompilationManager::cleanupLeakedFiles() {
-  FileClassifier classifier;
-
   // Clean up any remaining leaked files in source directory
   auto currentFiles = scanDirectory(initialWorkingDir_);
   for (const auto &file : currentFiles) {
-    StringRef filename = sys::path::filename(file);
+    llvm::StringRef filename = llvm::sys::path::filename(file);
 
     // Remove optimization remarks files that leaked
     if (filename.ends_with(".opt.yaml") || filename.ends_with(".opt.yml")) {
-      sys::fs::remove(file);
+      llvm::sys::fs::remove(file);
       if (config_.getVerbose()) {
-        outs() << "Cleaned up leaked file: " << file << "\n";
+        llvm::outs() << "Cleaned up leaked file: " << file << "\n";
       }
     }
 
     // Remove profile files that leaked
     if (filename.ends_with(".profraw") || filename.ends_with(".profdata")) {
-      sys::fs::remove(file);
+      llvm::sys::fs::remove(file);
       if (config_.getVerbose()) {
-        outs() << "Cleaned up leaked file: " << file << "\n";
+        llvm::outs() << "Cleaned up leaked file: " << file << "\n";
       }
     }
   }

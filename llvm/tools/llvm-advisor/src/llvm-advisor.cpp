@@ -1,40 +1,55 @@
+//===-------------- llvm-advisor.cpp - LLVM Advisor -----------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This is the llvm-advisor code generator driver. It provides a convenient
+// command-line interface for generating an assembly file or a relocatable file,
+// given LLVM bitcode.
+//
+//===----------------------------------------------------------------------===//
+
 #include "Config/AdvisorConfig.h"
 #include "Core/CompilationManager.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/raw_ostream.h"
 
-using namespace llvm;
-using namespace llvm::advisor;
-
-static cl::opt<std::string> ConfigFile("config", cl::desc("Configuration file"),
-                                       cl::value_desc("filename"));
-static cl::opt<std::string> OutputDir("output-dir",
-                                      cl::desc("Output directory"),
-                                      cl::value_desc("directory"));
-static cl::opt<bool> Verbose("verbose", cl::desc("Verbose output"));
-static cl::opt<bool> KeepTemps("keep-temps", cl::desc("Keep temporary files"));
-static cl::opt<bool> NoProfiler("no-profiler", cl::desc("Disable profiler"));
+static llvm::cl::opt<std::string>
+    ConfigFile("config", llvm::cl::desc("Configuration file"),
+               llvm::cl::value_desc("filename"));
+static llvm::cl::opt<std::string> OutputDir("output-dir",
+                                            llvm::cl::desc("Output directory"),
+                                            llvm::cl::value_desc("directory"));
+static llvm::cl::opt<bool> Verbose("verbose", llvm::cl::desc("Verbose output"));
+static llvm::cl::opt<bool> KeepTemps("keep-temps",
+                                     llvm::cl::desc("Keep temporary files"));
+static llvm::cl::opt<bool> NoProfiler("no-profiler",
+                                      llvm::cl::desc("Disable profiler"));
 
 int main(int argc, char **argv) {
-  InitLLVM X(argc, argv);
+  llvm::InitLLVM X(argc, argv);
 
   // Parse llvm-advisor options until we find the compiler
-  std::vector<const char *> advisorArgs;
+  llvm::SmallVector<const char *, 8> advisorArgs;
   advisorArgs.push_back(argv[0]);
 
   int compilerArgStart = 1;
   bool foundCompiler = false;
 
   for (int i = 1; i < argc; ++i) {
-    StringRef arg(argv[i]);
+    llvm::StringRef arg(argv[i]);
     if (arg.starts_with("--") ||
         (arg.starts_with("-") && arg.size() > 1 && arg != "-")) {
       advisorArgs.push_back(argv[i]);
       if (arg == "--config" || arg == "--output-dir") {
-        if (i + 1 < argc && !StringRef(argv[i + 1]).starts_with("-")) {
+        if (i + 1 < argc && !llvm::StringRef(argv[i + 1]).starts_with("-")) {
           advisorArgs.push_back(argv[++i]);
         }
       }
@@ -46,29 +61,31 @@ int main(int argc, char **argv) {
   }
 
   if (!foundCompiler) {
-    errs() << "Error: No compiler command provided.\n";
-    errs() << "Usage: llvm-advisor [options] <compiler> [compiler-args...]\n";
+    llvm::errs() << "Error: No compiler command provided.\n";
+    llvm::errs()
+        << "Usage: llvm-advisor [options] <compiler> [compiler-args...]\n";
     return 1;
   }
 
   // Parse llvm-advisor options
-  int advisorArgc = advisorArgs.size();
-  cl::ParseCommandLineOptions(advisorArgc,
-                              const_cast<char **>(advisorArgs.data()),
-                              "LLVM Compilation Advisor");
+  int advisorArgc = static_cast<int>(advisorArgs.size());
+  llvm::cl::ParseCommandLineOptions(advisorArgc,
+                                    const_cast<char **>(advisorArgs.data()),
+                                    "LLVM Compilation Advisor");
 
   // Extract compiler and arguments
   std::string compiler = argv[compilerArgStart];
-  std::vector<std::string> compilerArgs;
+  llvm::SmallVector<std::string, 8> compilerArgs;
   for (int i = compilerArgStart + 1; i < argc; ++i) {
     compilerArgs.push_back(argv[i]);
   }
 
   // Configure advisor
-  AdvisorConfig config;
+  llvm::advisor::AdvisorConfig config;
   if (!ConfigFile.empty()) {
     if (auto Err = config.loadFromFile(ConfigFile).takeError()) {
-      errs() << "Error loading config: " << toString(std::move(Err)) << "\n";
+      llvm::errs() << "Error loading config: " << llvm::toString(std::move(Err))
+                   << "\n";
       return 1;
     }
   }
@@ -84,28 +101,28 @@ int main(int argc, char **argv) {
   config.setRunProfiler(!NoProfiler);
 
   // Create output directory
-  if (auto EC = sys::fs::create_directories(config.getOutputDir())) {
-    errs() << "Error creating output directory: " << EC.message() << "\n";
+  if (auto EC = llvm::sys::fs::create_directories(config.getOutputDir())) {
+    llvm::errs() << "Error creating output directory: " << EC.message() << "\n";
     return 1;
   }
 
   if (config.getVerbose()) {
-    outs() << "LLVM Compilation Advisor\n";
-    outs() << "Compiler: " << compiler << "\n";
-    outs() << "Output: " << config.getOutputDir() << "\n";
+    llvm::outs() << "LLVM Compilation Advisor\n";
+    llvm::outs() << "Compiler: " << compiler << "\n";
+    llvm::outs() << "Output: " << config.getOutputDir() << "\n";
   }
 
   // Execute with data collection
-  CompilationManager manager(config);
+  llvm::advisor::CompilationManager manager(config);
   auto result = manager.executeWithDataCollection(compiler, compilerArgs);
 
   if (result) {
     if (config.getVerbose()) {
-      outs() << "Compilation completed (exit code: " << *result << ")\n";
+      llvm::outs() << "Compilation completed (exit code: " << *result << ")\n";
     }
     return *result;
   } else {
-    errs() << "Error: " << toString(result.takeError()) << "\n";
+    llvm::errs() << "Error: " << llvm::toString(result.takeError()) << "\n";
     return 1;
   }
 }

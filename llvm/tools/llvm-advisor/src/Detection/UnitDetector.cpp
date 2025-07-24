@@ -1,5 +1,20 @@
+//===--------------------- UnitDetector.cpp - LLVM Advisor ----------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This is the UnitDetector code generator driver. It provides a convenient
+// command-line interface for generating an assembly file or a relocatable file,
+// given LLVM bitcode.
+//
+//===----------------------------------------------------------------------===//
+
 #include "UnitDetector.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Path.h"
 
 namespace llvm {
@@ -7,14 +22,15 @@ namespace advisor {
 
 UnitDetector::UnitDetector(const AdvisorConfig &config) : config_(config) {}
 
-Expected<std::vector<CompilationUnitInfo>>
-UnitDetector::detectUnits(const std::string &compiler,
-                          const std::vector<std::string> &args) {
+llvm::Expected<llvm::SmallVector<CompilationUnitInfo, 4>>
+UnitDetector::detectUnits(llvm::StringRef compiler,
+                          const llvm::SmallVectorImpl<std::string> &args) {
 
   auto sources = findSourceFiles(args);
   if (sources.empty()) {
-    return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "No source files found");
+    return llvm::createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "No source files found");
   }
 
   CompilationUnitInfo unit;
@@ -24,7 +40,7 @@ UnitDetector::detectUnits(const std::string &compiler,
   // Store original args but filter out source files for the compile flags
   for (const auto &arg : args) {
     // Skip source files when adding to compile flags
-    StringRef extension = sys::path::extension(arg);
+    llvm::StringRef extension = llvm::sys::path::extension(arg);
     if (!arg.empty() && arg[0] != '-' &&
         (extension == ".c" || extension == ".cpp" || extension == ".cc" ||
          extension == ".cxx" || extension == ".C")) {
@@ -36,18 +52,18 @@ UnitDetector::detectUnits(const std::string &compiler,
   // Extract output files and features
   extractBuildInfo(args, unit);
 
-  return std::vector<CompilationUnitInfo>{unit};
+  return llvm::SmallVector<CompilationUnitInfo, 4>{unit};
 }
 
-std::vector<SourceFile>
-UnitDetector::findSourceFiles(const std::vector<std::string> &args) const {
-  std::vector<SourceFile> sources;
+llvm::SmallVector<SourceFile, 4> UnitDetector::findSourceFiles(
+    const llvm::SmallVectorImpl<std::string> &args) const {
+  llvm::SmallVector<SourceFile, 4> sources;
 
   for (const auto &arg : args) {
     if (arg.empty() || arg[0] == '-')
       continue;
 
-    StringRef extension = sys::path::extension(arg);
+    llvm::StringRef extension = llvm::sys::path::extension(arg);
     if (extension == ".c" || extension == ".cpp" || extension == ".cc" ||
         extension == ".cxx" || extension == ".C") {
 
@@ -62,14 +78,14 @@ UnitDetector::findSourceFiles(const std::vector<std::string> &args) const {
   return sources;
 }
 
-void UnitDetector::extractBuildInfo(const std::vector<std::string> &args,
-                                    CompilationUnitInfo &unit) {
+void UnitDetector::extractBuildInfo(
+    const llvm::SmallVectorImpl<std::string> &args, CompilationUnitInfo &unit) {
   for (size_t i = 0; i < args.size(); ++i) {
     const auto &arg = args[i];
 
     if (arg == "-o" && i + 1 < args.size()) {
-      StringRef output = args[i + 1];
-      StringRef ext = sys::path::extension(output);
+      llvm::StringRef output = args[i + 1];
+      llvm::StringRef ext = llvm::sys::path::extension(output);
       if (ext == ".o") {
         unit.outputObject = args[i + 1];
       } else {
@@ -77,25 +93,25 @@ void UnitDetector::extractBuildInfo(const std::vector<std::string> &args,
       }
     }
 
-    if (arg.find("openmp") != std::string::npos ||
-        arg.find("offload") != std::string::npos ||
-        arg.find("cuda") != std::string::npos) {
+    llvm::StringRef argRef(arg);
+    if (argRef.contains("openmp") || argRef.contains("offload") ||
+        argRef.contains("cuda")) {
       unit.hasOffloading = true;
     }
 
-    if (StringRef(arg).starts_with("-march=")) {
+    if (llvm::StringRef(arg).starts_with("-march=")) {
       unit.targetArch = arg.substr(7);
     }
   }
 }
 
-std::string
-UnitDetector::generateUnitName(const std::vector<SourceFile> &sources) const {
+std::string UnitDetector::generateUnitName(
+    const llvm::SmallVectorImpl<SourceFile> &sources) const {
   if (sources.empty())
     return "unknown";
 
   // Use first source file name as base
-  std::string baseName = sys::path::stem(sources[0].path).str();
+  std::string baseName = llvm::sys::path::stem(sources[0].path).str();
 
   // Add hash for uniqueness when multiple sources
   if (sources.size() > 1) {
@@ -103,7 +119,7 @@ UnitDetector::generateUnitName(const std::vector<SourceFile> &sources) const {
     for (const auto &source : sources) {
       combined += source.path;
     }
-    auto hash = hash_value(combined);
+    auto hash = llvm::hash_value(combined);
     baseName += "_" + std::to_string(static_cast<size_t>(hash) % 10000);
   }
 

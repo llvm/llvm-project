@@ -1,12 +1,26 @@
-#ifndef LLVM_ADVISOR_BUILD_EXECUTOR_H
-#define LLVM_ADVISOR_BUILD_EXECUTOR_H
+//===------------------- BuildExecutor.h - LLVM Advisor -------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This is the BuildExecutor code generator driver. It provides a convenient
+// command-line interface for generating an assembly file or a relocatable file,
+// given LLVM bitcode.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_ADVISOR_CORE_BUILDEXECUTOR_H
+#define LLVM_ADVISOR_CORE_BUILDEXECUTOR_H
 
 #include "../Config/AdvisorConfig.h"
 #include "BuildContext.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
-#include <set>
 #include <string>
-#include <vector>
 
 namespace llvm {
 namespace advisor {
@@ -15,15 +29,15 @@ class BuildExecutor {
 public:
   BuildExecutor(const AdvisorConfig &config);
 
-  Expected<int> execute(const std::string &compiler,
-                        const std::vector<std::string> &args,
-                        BuildContext &buildContext, const std::string &tempDir);
+  llvm::Expected<int> execute(llvm::StringRef compiler,
+                              const llvm::SmallVectorImpl<std::string> &args,
+                              BuildContext &buildContext,
+                              llvm::StringRef tempDir);
 
 private:
-  std::vector<std::string>
-  instrumentCompilerArgs(const std::vector<std::string> &args,
-                         BuildContext &buildContext,
-                         const std::string &tempDir);
+  llvm::SmallVector<std::string, 16>
+  instrumentCompilerArgs(const llvm::SmallVectorImpl<std::string> &args,
+                         BuildContext &buildContext, llvm::StringRef tempDir);
 
   const AdvisorConfig &config_;
 };
@@ -31,4 +45,4 @@ private:
 } // namespace advisor
 } // namespace llvm
 
-#endif
+#endif // LLVM_ADVISOR_CORE_BUILDEXECUTOR_H

@@ -1,3 +1,17 @@
+//===------------------ AdvisorConfig.cpp - LLVM Advisor ------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This is the AdvisorConfig code generator driver. It provides a convenient
+// command-line interface for generating an assembly file or a relocatable file,
+// given LLVM bitcode.
+//
+//===----------------------------------------------------------------------===//
+
 #include "AdvisorConfig.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
@@ -12,7 +26,7 @@ AdvisorConfig::AdvisorConfig() {
   OutputDir_ = ".llvm-advisor";
 }
 
-Expected<bool> AdvisorConfig::loadFromFile(const std::string &path) {
+Expected<bool> AdvisorConfig::loadFromFile(llvm::StringRef path) {
   auto BufferOrError = MemoryBuffer::getFile(path);
   if (!BufferOrError) {
     return createStringError(BufferOrError.getError(),
@@ -55,9 +69,9 @@ Expected<bool> AdvisorConfig::loadFromFile(const std::string &path) {
   return true;
 }
 
-std::string AdvisorConfig::getToolPath(const std::string &tool) const {
+std::string AdvisorConfig::getToolPath(llvm::StringRef tool) const {
   // For now, just return the tool name and rely on PATH
-  return tool;
+  return tool.str();
 }
 
 } // namespace advisor

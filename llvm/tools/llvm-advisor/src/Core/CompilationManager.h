@@ -1,14 +1,30 @@
-#ifndef LLVM_ADVISOR_COMPILATION_MANAGER_H
-#define LLVM_ADVISOR_COMPILATION_MANAGER_H
+//===---------------- CompilationManager.h - LLVM Advisor -----------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This is the CompilationManager code generator driver. It provides a
+// convenient command-line interface for generating an assembly file or a
+// relocatable file, given LLVM bitcode.
+//
+//===----------------------------------------------------------------------===//
+#ifndef LLVM_ADVISOR_CORE_COMPILATIONMANAGER_H
+#define LLVM_ADVISOR_CORE_COMPILATIONMANAGER_H
 
 #include "../Config/AdvisorConfig.h"
 #include "../Utils/FileClassifier.h"
 #include "BuildExecutor.h"
 #include "CompilationUnit.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include <memory>
-#include <set>
-#include <vector>
+#include <string>
+#include <unordered_set>
 
 namespace llvm {
 namespace advisor {
@@ -18,18 +34,19 @@ public:
   explicit CompilationManager(const AdvisorConfig &config);
   ~CompilationManager();
 
-  Expected<int> executeWithDataCollection(const std::string &compiler,
-                                          const std::vector<std::string> &args);
+  llvm::Expected<int>
+  executeWithDataCollection(const std::string &compiler,
+                            const llvm::SmallVectorImpl<std::string> &args);
 
 private:
-  std::set<std::string> scanDirectory(const std::string &dir) const;
+  std::unordered_set<std::string> scanDirectory(llvm::StringRef dir) const;
 
-  void
-  collectGeneratedFiles(const std::set<std::string> &existingFiles,
-                        std::vector<std::unique_ptr<CompilationUnit>> &units);
+  void collectGeneratedFiles(
+      const std::unordered_set<std::string> &existingFiles,
+      llvm::SmallVectorImpl<std::unique_ptr<CompilationUnit>> &units);
 
-  Error
-  organizeOutput(const std::vector<std::unique_ptr<CompilationUnit>> &units);
+  llvm::Error organizeOutput(
+      const llvm::SmallVectorImpl<std::unique_ptr<CompilationUnit>> &units);
 
   void cleanupLeakedFiles();
 
@@ -42,4 +59,4 @@ private:
 } // namespace advisor
 } // namespace llvm
 
-#endif
+#endif // LLVM_ADVISOR_CORE_COMPILATIONMANAGER_H

@@ -1,14 +1,31 @@
+//===-------------------- ProcessRunner.cpp - LLVM Advisor ----------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This is the ProcessRunner code generator driver. It provides a convenient
+// command-line interface for generating an assembly file or a relocatable file,
+// given LLVM bitcode.
+//
+//===----------------------------------------------------------------------===//
+
 #include "ProcessRunner.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
+#include <vector>
 
 namespace llvm {
 namespace advisor {
 
 Expected<ProcessRunner::ProcessResult>
-ProcessRunner::run(const std::string &program,
-                   const std::vector<std::string> &args, int timeoutSeconds) {
+ProcessRunner::run(llvm::StringRef program,
+                   const llvm::SmallVector<std::string, 8> &args,
+                   int timeoutSeconds) {
 
   auto programPath = sys::findProgramByName(program);
   if (!programPath) {
@@ -16,7 +33,7 @@ ProcessRunner::run(const std::string &program,
                              "Tool not found: " + program);
   }
 
-  std::vector<StringRef> execArgs;
+  llvm::SmallVector<StringRef, 8> execArgs;
   execArgs.push_back(program);
   for (const auto &arg : args) {
     execArgs.push_back(arg);
@@ -57,8 +74,8 @@ ProcessRunner::run(const std::string &program,
 }
 
 Expected<ProcessRunner::ProcessResult> ProcessRunner::runWithEnv(
-    const std::string &program, const std::vector<std::string> &args,
-    const std::vector<std::string> &env, int timeoutSeconds) {
+    llvm::StringRef program, const llvm::SmallVector<std::string, 8> &args,
+    const llvm::SmallVector<std::string, 8> &env, int timeoutSeconds) {
 
   // For simplicity, just use the regular run method
   // Environment variables can be added later if needed

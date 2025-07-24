@@ -1,3 +1,17 @@
+//===------------------- FileClassifier.cpp - LLVM Advisor ----------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This is the FileClassifier code generator driver. It provides a convenient
+// command-line interface for generating an assembly file or a relocatable file,
+// given LLVM bitcode.
+//
+//===----------------------------------------------------------------------===//
+
 #include "FileClassifier.h"
 #include "llvm/Support/Path.h"
 
@@ -5,7 +19,7 @@ namespace llvm {
 namespace advisor {
 
 FileClassification
-FileClassifier::classifyFile(const std::string &filePath) const {
+FileClassifier::classifyFile(llvm::StringRef filePath) const {
   StringRef filename = sys::path::filename(filePath);
   StringRef extension = sys::path::extension(filePath);
 
@@ -111,13 +125,13 @@ FileClassifier::classifyFile(const std::string &filePath) const {
   return classification;
 }
 
-bool FileClassifier::shouldCollect(const std::string &filePath) const {
+bool FileClassifier::shouldCollect(llvm::StringRef filePath) const {
   auto classification = classifyFile(filePath);
   return classification.category != "unknown" && classification.isGenerated &&
          !classification.isTemporary;
 }
 
-std::string FileClassifier::getLanguage(const std::string &filePath) const {
+std::string FileClassifier::getLanguage(llvm::StringRef filePath) const {
   StringRef extension = sys::path::extension(filePath);
 
   if (extension == ".c")
