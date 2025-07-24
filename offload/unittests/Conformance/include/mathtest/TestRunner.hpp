@@ -82,14 +82,18 @@ void printReport(const TestType &Test, const ResultType &Result,
                  const std::chrono::steady_clock::duration &Duration) noexcept {
   using FunctionConfig = typename TestType::FunctionConfig;
 
-  const bool Passed = Result.hasPassed();
+  const auto Context = Test.getContext();
   const auto ElapsedMilliseconds =
       std::chrono::duration_cast<std::chrono::milliseconds>(Duration).count();
+  const bool Passed = Result.hasPassed();
 
   llvm::errs() << llvm::formatv("=== Test Report for '{0}' === \n",
                                 FunctionConfig::Name);
-  llvm::errs() << llvm::formatv("{0,-17}: {1}\n", "Device",
-                                Test.getContext().getName());
+  llvm::errs() << llvm::formatv("{0,-17}: {1}\n", "Provider",
+                                Test.getProvider());
+  llvm::errs() << llvm::formatv("{0,-17}: {1}\n", "Platform",
+                                Context->getPlatform());
+  llvm::errs() << llvm::formatv("{0,-17}: {1}\n", "Device", Context->getName());
   llvm::errs() << llvm::formatv("{0,-17}: {1} ms\n", "Elapsed time",
                                 ElapsedMilliseconds);
   llvm::errs() << llvm::formatv("{0,-17}: {1}\n", "ULP tolerance",
