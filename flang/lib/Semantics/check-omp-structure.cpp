@@ -781,12 +781,15 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
 
 void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   const auto &beginBlockDir{std::get<parser::OmpBeginBlockDirective>(x.t)};
-  const auto &endBlockDir{std::get<parser::OmpEndBlockDirective>(x.t)};
+  const auto &endBlockDir{
+      std::get<std::optional<parser::OmpEndBlockDirective>>(x.t)};
   const auto &beginDir{std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
-  const auto &endDir{std::get<parser::OmpBlockDirective>(endBlockDir.t)};
   const parser::Block &block{std::get<parser::Block>(x.t)};
 
-  CheckMatching<parser::OmpBlockDirective>(beginDir, endDir);
+  if (endBlockDir) {
+    const auto &endDir{std::get<parser::OmpBlockDirective>(endBlockDir->t)};
+    CheckMatching<parser::OmpBlockDirective>(beginDir, endDir);
+  }
 
   PushContextAndClauseSets(beginDir.source, beginDir.v);
   if (llvm::omp::allTargetSet.test(GetContext().directive)) {
@@ -836,14 +839,14 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
     bool foundNowait{false};
     parser::CharBlock NowaitSource;
 
-    auto catchCopyPrivateNowaitClauses = [&](const auto &dir, bool endDir) {
+    auto catchCopyPrivateNowaitClauses = [&](const auto &dir, bool isEnd) {
       for (auto &clause : std::get<parser::OmpClauseList>(dir.t).v) {
         if (clause.Id() == llvm::omp::Clause::OMPC_copyprivate) {
           for (const auto &ompObject : GetOmpObjectList(clause)->v) {
             const auto *name{parser::Unwrap<parser::Name>(ompObject)};
             if (Symbol * symbol{name->symbol}) {
               if (singleCopyprivateSyms.count(symbol)) {
-                if (endDir) {
+                if (isEnd) {
                   context_.Warn(common::UsageWarning::OpenMPUsage, name->source,
                       "The COPYPRIVATE clause with '%s' is already used on the SINGLE directive"_warn_en_US,
                       name->ToString());
@@ -857,7 +860,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
                     "'%s' appears in more than one COPYPRIVATE clause on the END SINGLE directive"_err_en_US,
                     name->ToString());
               } else {
-                if (endDir) {
+                if (isEnd) {
                   endSingleCopyprivateSyms.insert(symbol);
                 } else {
                   singleCopyprivateSyms.insert(symbol);
@@ -870,7 +873,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
             context_.Say(clause.source,
                 "At most one NOWAIT clause can appear on the SINGLE directive"_err_en_US);
           } else {
-            foundNowait = !endDir;
+            foundNowait = !isEnd;
           }
           if (!NowaitSource.ToString().size()) {
             NowaitSource = clause.source;
@@ -879,7 +882,9 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
       }
     };
     catchCopyPrivateNowaitClauses(beginBlockDir, false);
-    catchCopyPrivateNowaitClauses(endBlockDir, true);
+    if (endBlockDir) {
+      catchCopyPrivateNowaitClauses(*endBlockDir, true);
+    }
     unsigned version{context_.langOptions().OpenMPVersion};
     if (version <= 52 && NowaitSource.ToString().size() &&
         (singleCopyprivateSyms.size() || endSingleCopyprivateSyms.size())) {
