@@ -109,6 +109,58 @@ scratch_store_b32 v2, v5, s1 scale_offset
 // GFX12-ERR-NEXT:{{^}}scratch_store_b32 v2, v5, s1 scale_offset
 // GFX12-ERR-NEXT:{{^}}                             ^
 
+flat_prefetch_b8 v[2:3]
+// GFX1250: flat_prefetch_b8 v[2:3]                 ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x00,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_prefetch_b8 v[2:3] offset:1024    ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x00,0x00,0x02,0x00,0xfc,0xff]
+// GFX1250: flat_prefetch_b8 v[2:3] offset:1024     ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x00,0x00,0x02,0x00,0x04,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_prefetch_b8 v[2:3] offset:-1024    ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x00,0x00,0x02,0x00,0xfc,0xff]
+// GFX1250: flat_prefetch_b8 v[2:3] offset:-1024    ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x00,0x00,0x02,0x00,0xfc,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_prefetch_b8 v[2:3] offset:-1024 th:TH_LOAD_NT scope:SCOPE_SE ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x14,0x00,0x02,0x00,0xfc,0xff]
+// GFX1250: flat_prefetch_b8 v[2:3] offset:-1024 th:TH_LOAD_NT scope:SCOPE_SE ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x14,0x00,0x02,0x00,0xfc,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_prefetch_b8 v[2:3] th:TH_LOAD_HT scope:SCOPE_CU ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x24,0x00,0x02,0x00,0xfc,0xff]
+// GFX1250: flat_prefetch_b8 v[2:3] th:TH_LOAD_HT   ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x20,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_prefetch_b8 v[2:3] offset:64 th:TH_LOAD_NT_RT scope:SCOPE_DEV ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x24,0x00,0x02,0x00,0xfc,0xff]
+// GFX1250: flat_prefetch_b8 v[2:3] offset:64 th:TH_LOAD_NT_RT scope:SCOPE_DEV ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x48,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_prefetch_b8 v[2:3] th:TH_LOAD_HT
+// GFX1250: flat_prefetch_b8 v[2:3] th:TH_LOAD_HT   ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x20,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+flat_prefetch_b8 v[2:3] th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: flat_prefetch_b8 v[2:3] th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0x40,0x17,0xec,0x00,0x00,0x3c,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_prefetch_b8 v[2:3], off offset:-1024 th:TH_LOAD_HT scope:SCOPE_SE
+// GFX1250: global_prefetch_b8 v[2:3], off offset:-1024 th:TH_LOAD_HT scope:SCOPE_SE ; encoding: [0x7c,0x40,0x17,0xee,0x00,0x00,0x24,0x00,0x02,0x00,0xfc,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_NT scope:SCOPE_DEV
+// GFX1250: global_prefetch_b8 v4, s[2:3] offset:-1024 th:TH_LOAD_NT scope:SCOPE_DEV ; encoding: [0x02,0x40,0x17,0xee,0x00,0x00,0x18,0x00,0x04,0x00,0xfc,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_prefetch_b8 v4, s[2:3] th:TH_LOAD_RT_NT scope:SCOPE_CU
+// GFX1250: global_prefetch_b8 v4, s[2:3] th:TH_LOAD_RT_NT ; encoding: [0x02,0x40,0x17,0xee,0x00,0x00,0x50,0x00,0x04,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_prefetch_b8 v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: global_prefetch_b8 v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0x40,0x17,0xee,0x00,0x00,0x3c,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+global_prefetch_b8 v[2:3], off offset:64 th:TH_LOAD_NT_RT scope:SCOPE_DEV
+// GFX1250: global_prefetch_b8 v[2:3], off offset:64 th:TH_LOAD_NT_RT scope:SCOPE_DEV ; encoding: [0x7c,0x40,0x17,0xee,0x00,0x00,0x48,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 tensor_save s[0:1]
 // GFX1250: tensor_save s[0:1] ; encoding: [0x00,0x80,0x1b,0xee,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
@@ -484,3 +536,7 @@ flat_store_d16_hi_b16 v2, v2, s[2:3] offset:64 scale_offset
 flat_store_d16_hi_b8 v2, v2, s[2:3] offset:64 scale_offset
 // GFX1250: flat_store_d16_hi_b8 v2, v2, s[2:3] offset:64 scale_offset ; encoding: [0x02,0x00,0x09,0xec,0x00,0x00,0x01,0x01,0x02,0x40,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
+
+flat_prefetch_b8 v3, s[2:3]
+// GFX1250: flat_prefetch_b8 v3, s[2:3]             ; encoding: [0x02,0x40,0x17,0xec,0x00,0x00,0x00,0x00,0x03,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
