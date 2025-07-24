@@ -46,7 +46,7 @@ bool DataSharingProcessor::OMPConstructSymbolVisitor::isSymbolDefineBy(
 static bool isConstructWithTopLevelTarget(lower::pft::Evaluation &eval) {
   const auto *ompEval = eval.getIf<parser::OpenMPConstruct>();
   if (ompEval) {
-    auto dir = extractOmpDirective(*ompEval);
+    auto dir = parser::omp::GetOmpDirectiveName(*ompEval).v;
     switch (dir) {
     case llvm::omp::Directive::OMPD_target:
     case llvm::omp::Directive::OMPD_target_loop:
