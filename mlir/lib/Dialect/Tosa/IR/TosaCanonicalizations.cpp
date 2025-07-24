@@ -1305,7 +1305,7 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
       // i1 types are boolean in TOSA
       if (trunc) {
         if (outETy.isInteger(1)) {
-          intVal = intVal.isZero() ? APInt(bitwidth, 0) : APInt(bitwidth, 1);
+          intVal = APInt(bitwidth, intVal.isZero() ? 0 : 1);
         } else {
           intVal = intVal.trunc(bitwidth);
         }
