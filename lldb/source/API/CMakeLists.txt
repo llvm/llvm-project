@@ -336,7 +336,7 @@ list(REMOVE_ITEM root_public_headers ${root_private_headers})
 
 find_program(unifdef_EXECUTABLE unifdef)
 
-add_custom_target(liblldb-header-staging DEPENDS ${lldb_staged_headers} ${lldb_header_staging_dir}/lldb-defines.h)
+add_custom_target(liblldb-header-staging)
 
 if (LLDB_BUILD_FRAMEWORK)
   add_custom_target(lldb-framework-fixup-all-headers)
