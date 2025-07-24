@@ -2001,10 +2001,11 @@ correctly.
 ## qWasmCallStack
 
 Get the Wasm callback for the given thread id. This returns a hex-encoding list
-of 64-bit addresses for the frame PCs.
+of 64-bit addresses for the frame PCs. To match the Wasm specification, the
+addresses are encoded in little endian byte order.
 
 ```
-send packet: $qWasmCallStack:202dbe040
+send packet: $qWasmCallStack:202dbe040#08
 read packet: $9c01000000000040e501000000000040fe01000000000040#
 ```
 

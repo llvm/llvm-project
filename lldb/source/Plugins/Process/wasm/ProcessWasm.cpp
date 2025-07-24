@@ -118,9 +118,12 @@ ProcessWasm::GetWasmCallStack(lldb::tid_t tid) {
   if (bytes == 0 || bytes % sizeof(uint64_t) != 0)
     return llvm::createStringError("invalid response for qWasmCallStack");
 
-  std::vector<lldb::addr_t> call_stack_pcs;
-  DataExtractor data(data_buffer_sp, GetByteOrder(), GetAddressByteSize());
+  // To match the Wasm specification, the addresses are encoded in little endian
+  // byte order.
+  DataExtractor data(data_buffer_sp, lldb::eByteOrderLittle,
+                     GetAddressByteSize());
   lldb::offset_t offset = 0;
+  std::vector<lldb::addr_t> call_stack_pcs;
   while (offset < bytes)
     call_stack_pcs.push_back(data.GetU64(&offset));
 
