@@ -113,6 +113,8 @@ class PassBuilder {
   std::optional<PGOOptions> PGOOpt;
   PassInstrumentationCallbacks *PIC;
 
+  friend class TargetPassBuilder;
+
 public:
   /// A struct to capture parsed pass pipeline names.
   ///
