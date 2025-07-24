@@ -16,6 +16,7 @@ class SILowerControlFlowPass : public PassInfoMixin<SILowerControlFlowPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
 };
 } // namespace llvm
 
