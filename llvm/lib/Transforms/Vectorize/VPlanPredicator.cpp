@@ -83,8 +83,8 @@ public:
   /// block of the loop is set to True, or to the loop mask when tail folding.
   VPValue *createBlockInMask(VPBasicBlock *VPBB);
 
-  /// Convert phi recipes in \p VPBB to VPBlendRecipes.
-  void convertPhisToBlends(VPBasicBlock *VPBB);
+  /// Convert phi recipes in \p VPBB to selects.
+  void convertPhisToSelects(VPBasicBlock *VPBB);
 
   const BlockMaskCacheTy getBlockMaskCache() const { return BlockMaskCache; }
 };
@@ -246,7 +246,7 @@ VPValue *VPPredicator::findCommonEdgeMask(const VPWidenPHIRecipe *PhiR) const {
   return CommonEdgeMask;
 }
 
-void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
+void VPPredicator::convertPhisToSelects(VPBasicBlock *VPBB) {
   SmallVector<VPWidenPHIRecipe *> Phis;
   for (VPRecipeBase &R : VPBB->phis())
     Phis.push_back(cast<VPWidenPHIRecipe>(&R));
@@ -258,18 +258,20 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     // optimizations will clean it up.
 
     VPValue *CommonEdgeMask = findCommonEdgeMask(PhiR);
-    SmallVector<VPValue *, 2> OperandsWithMask;
+    VPValue *Select = PhiR->getIncomingValue(0);
+    if (!getEdgeMask(PhiR->getIncomingBlock(0), VPBB)) {
+      assert(all_equal(PhiR->operands()) &&
+             "Distinct incoming values with one having a full mask");
+      PhiR->replaceAllUsesWith(Select);
+      PhiR->eraseFromParent();
+      continue;
+    }
+
     unsigned NumIncoming = PhiR->getNumIncoming();
-    for (unsigned In = 0; In < NumIncoming; In++) {
+    for (unsigned In = 1; In < NumIncoming; In++) {
       const VPBasicBlock *Pred = PhiR->getIncomingBlock(In);
-      OperandsWithMask.push_back(PhiR->getIncomingValue(In));
+      VPValue *Incoming = PhiR->getIncomingValue(In);
       VPValue *EdgeMask = getEdgeMask(Pred, VPBB);
-      if (!EdgeMask) {
-        assert(In == 0 && "Both null and non-null edge masks found");
-        assert(all_equal(PhiR->operands()) &&
-               "Distinct incoming values with one having a full mask");
-        break;
-      }
 
       // If all incoming blocks share a common edge, remove it from the mask.
       using namespace llvm::VPlanPatternMatch;
@@ -278,12 +280,11 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
                 m_LogicalAnd(m_Specific(CommonEdgeMask), m_VPValue(X))))
         EdgeMask = X;
 
-      OperandsWithMask.push_back(EdgeMask);
+      Select =
+          Builder.createSelect(EdgeMask, Incoming, Select, PhiR->getDebugLoc());
+      Select->setUnderlyingValue(PhiR->getUnderlyingValue());
     }
-    PHINode *IRPhi = cast<PHINode>(PhiR->getUnderlyingValue());
-    auto *Blend = new VPBlendRecipe(IRPhi, OperandsWithMask);
-    Builder.insert(Blend);
-    PhiR->replaceAllUsesWith(Blend);
+    PhiR->replaceAllUsesWith(Select);
     PhiR->eraseFromParent();
   }
 }
@@ -309,7 +310,7 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
     }
 
     Predicator.createBlockInMask(VPBB);
-    Predicator.convertPhisToBlends(VPBB);
+    Predicator.convertPhisToSelects(VPBB);
   }
 
   // Linearize the blocks of the loop into one serial chain.
