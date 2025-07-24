@@ -86,7 +86,7 @@ for.body:                                         ; preds = %for.body, %entry
   ; YAML-NEXT: Function:        foo
   ; YAML-NEXT: Args:
   ; YAML-NEXT:   - String:          'Stores SLP vectorized with cost '
-  ; YAML-NEXT:   - Cost:            '-5'
+  ; YAML-NEXT:   - Cost:            '-40'
   ; YAML-NEXT:   - String:          ' and with tree size '
   ; YAML-NEXT:   - TreeSize:        '4'
 
@@ -96,7 +96,7 @@ for.body:                                         ; preds = %for.body, %entry
   ; YAML-NEXT: Function:        foo
   ; YAML-NEXT: Args:
   ; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
-  ; YAML-NEXT:   - Cost:            '-7'
+  ; YAML-NEXT:   - Cost:            '-56'
   ; YAML-NEXT:   - String:          ' and with tree size '
   ; YAML-NEXT:   - TreeSize:        '1'
 
