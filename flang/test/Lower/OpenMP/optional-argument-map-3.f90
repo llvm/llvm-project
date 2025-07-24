@@ -2,24 +2,24 @@
 
 module mod
 contains
-      subroutine foo( dt, switch )
-        implicit none
-        real(4), dimension(:), INTENT(INOUT) :: dt
-        logical, INTENT(IN) :: switch
-        integer :: dim, idx
+   subroutine foo(dt, switch)
+      implicit none
+      real(4), dimension(:), intent(inout) :: dt
+      logical, intent(in) :: switch
+      integer :: dim, idx
 
-        if ( switch ) then
+      if (switch) then
 !$omp target teams distribute parallel do
-            do idx = 1, 100
+         do idx = 1, 100
             dt(idx) = 20
-            end do
-        else
+         end do
+      else
 !$omp target teams distribute parallel do
-            do idx = 1, 100
+         do idx = 1, 100
             dt(idx) = 30
-            end do
-        end if
-      end subroutine foo
+         end do
+      end if
+   end subroutine foo
 end module
 
 ! CHECK-LABEL:   func.func @{{.*}}(
