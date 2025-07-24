@@ -243,5 +243,14 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.offsetof_macro
 )
 
+# stdint.h header.
+add_proxy_header_library(
+  stdint_proxy
+  HDRS
+    stdint_proxy.h
+  FULL_BUILD_DEPENDS
+    libc.include.stdint
+)
+
 add_subdirectory(types)
 add_subdirectory(func)

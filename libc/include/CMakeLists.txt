@@ -102,6 +102,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  stdint
+  ../libc/include/stdint.yaml
+  stdint.h
+  DEPENDS
+    .llvm-libc-macros.stdint_macros
+)
+
+add_header_macro(
   inttypes
   ../libc/include/inttypes.yaml
   inttypes.h
@@ -109,6 +117,7 @@ add_header_macro(
     .llvm_libc_common_h
     .llvm-libc-types.imaxdiv_t
     .llvm-libc-macros.inttypes_macros
+    .stdint
 )
 
 add_header_macro(
@@ -117,14 +126,6 @@ add_header_macro(
   float.h
   DEPENDS
     .llvm-libc-macros.float_macros
-)
-
-add_header_macro(
-  stdint
-  ../libc/include/stdint.yaml
-  stdint.h
-  DEPENDS
-    .llvm-libc-macros.stdint_macros
 )
 
 add_header_macro(

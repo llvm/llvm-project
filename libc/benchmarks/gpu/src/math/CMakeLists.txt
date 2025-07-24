@@ -31,6 +31,7 @@ add_benchmark(
   SRCS
     sin_benchmark.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.math.sin
     libc.src.math.sinf
     libc.src.stdlib.srand
@@ -51,6 +52,7 @@ add_benchmark(
   SRCS
     atan2_benchmark.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.math.atan2
     libc.src.stdlib.srand
     libc.src.stdlib.rand

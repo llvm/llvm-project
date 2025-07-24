@@ -9,14 +9,13 @@
 #ifndef LLVM_LIBC_UTILS_MPFRWRAPPER_MPCOMMON_H
 #define LLVM_LIBC_UTILS_MPFRWRAPPER_MPCOMMON_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/RoundingModeUtils.h"
-
-#include <stdint.h>
 
 #include "mpfr_inc.h"
 

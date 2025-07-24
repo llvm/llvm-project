@@ -337,6 +337,7 @@ add_header_library(
   HDRS
     exp10_float16_constants.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.CPP.array
 )
 

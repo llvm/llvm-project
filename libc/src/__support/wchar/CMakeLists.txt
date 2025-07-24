@@ -3,7 +3,8 @@ add_header_library(
   HDRS
     mbstate.h
   DEPENDS
-    libc.hdr.types.char32_t    
+    libc.hdr.stdint_proxy
+    libc.hdr.types.char32_t
 )
 
 add_header_library(
