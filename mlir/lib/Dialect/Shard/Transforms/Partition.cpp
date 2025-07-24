@@ -575,9 +575,9 @@ partitionOperation(Operation &op, ArrayRef<Value> partitionedOperands,
                                       resultShardings, partitionMap,
                                       symbolTableCollection, builder);
   } else {
-    if (failed(shardingInterface.partition(partitionedOperands, operandShardings,
-                                           resultShardings, partitionMap,
-                                           symbolTableCollection, builder))) {
+    if (failed(shardingInterface.partition(
+            partitionedOperands, operandShardings, resultShardings,
+            partitionMap, symbolTableCollection, builder))) {
       return failure();
     }
   }
