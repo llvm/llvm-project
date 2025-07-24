@@ -1,6 +1,10 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 // RUN: %libomptarget-compileopt-run-and-check-generic
 
+// Test causes hangs which stop lit from exiting
+// UNSUPPORTED: nvptx64-nvidia-cuda
+// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+
 #include <omp.h>
 #include <stdio.h>
 

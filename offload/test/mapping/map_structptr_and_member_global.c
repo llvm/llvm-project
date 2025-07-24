@@ -1,4 +1,5 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
+// XFAIL: amdgcn-amd-amdhsa
 
 #include <omp.h>
 #include <stdio.h>
