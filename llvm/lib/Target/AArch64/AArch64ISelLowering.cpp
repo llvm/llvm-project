@@ -3540,7 +3540,8 @@ static SDValue emitStrictFPComparison(SDValue LHS, SDValue RHS, const SDLoc &DL,
 }
 
 static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
-                              const SDLoc &DL, SelectionDAG &DAG) {
+                              AArch64CC::CondCode &OutCC, const SDLoc &DL,
+                              SelectionDAG &DAG) {
   EVT VT = LHS.getValueType();
   const bool FullFP16 = DAG.getSubtarget<AArch64Subtarget>().hasFullFP16();
 
@@ -3563,12 +3564,12 @@ static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     // Can we combine a (CMP op1, (sub 0, op2) into a CMN instruction ?
     Opcode = AArch64ISD::ADDS;
     RHS = RHS.getOperand(1);
-  } else if (LHS.getOpcode() == ISD::SUB && isNullConstant(LHS.getOperand(0)) &&
-             isIntEqualitySetCC(CC)) {
+  } else if (isCMN(LHS, CC, DAG)) {
     // As we are looking for EQ/NE compares, the operands can be commuted ; can
     // we combine a (CMP (sub 0, op1), op2) into a CMN instruction ?
     Opcode = AArch64ISD::ADDS;
     LHS = LHS.getOperand(1);
+    OutCC = getSwappedCondition(OutCC);
   } else if (isNullConstant(RHS) && !isUnsignedIntSetCC(CC)) {
     if (LHS.getOpcode() == ISD::AND) {
       // Similarly, (CMP (and X, Y), 0) can be implemented with a TST
@@ -3646,7 +3647,7 @@ static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
 static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
                                          ISD::CondCode CC, SDValue CCOp,
                                          AArch64CC::CondCode Predicate,
-                                         AArch64CC::CondCode OutCC,
+                                         AArch64CC::CondCode &OutCC,
                                          const SDLoc &DL, SelectionDAG &DAG) {
   unsigned Opcode = 0;
   const bool FullFP16 = DAG.getSubtarget<AArch64Subtarget>().hasFullFP16();
@@ -3668,12 +3669,12 @@ static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
   } else if (isCMN(RHS, CC, DAG)) {
     Opcode = AArch64ISD::CCMN;
     RHS = RHS.getOperand(1);
-  } else if (LHS.getOpcode() == ISD::SUB && isNullConstant(LHS.getOperand(0)) &&
-             isIntEqualitySetCC(CC)) {
+  } else if (isCMN(LHS, CC, DAG)) {
     // As we are looking for EQ/NE compares, the operands can be commuted ; can
     // we combine a (CCMP (sub 0, op1), op2) into a CCMN instruction ?
     Opcode = AArch64ISD::CCMN;
     LHS = LHS.getOperand(1);
+    OutCC = getSwappedCondition(OutCC);
   }
   if (Opcode == 0)
     Opcode = AArch64ISD::CCMP;
@@ -3786,7 +3787,7 @@ static SDValue emitConjunctionRec(SelectionDAG &DAG, SDValue Val,
       if (ExtraCC != AArch64CC::AL) {
         SDValue ExtraCmp;
         if (!CCOp.getNode())
-          ExtraCmp = emitComparison(LHS, RHS, CC, DL, DAG);
+          ExtraCmp = emitComparison(LHS, RHS, CC, ExtraCC, DL, DAG);
         else
           ExtraCmp = emitConditionalComparison(LHS, RHS, CC, CCOp, Predicate,
                                                ExtraCC, DL, DAG);
@@ -3797,7 +3798,7 @@ static SDValue emitConjunctionRec(SelectionDAG &DAG, SDValue Val,
 
     // Produce a normal comparison if we are first in the chain
     if (!CCOp)
-      return emitComparison(LHS, RHS, CC, DL, DAG);
+      return emitComparison(LHS, RHS, CC, OutCC, DL, DAG);
     // Otherwise produce a ccmp.
     return emitConditionalComparison(LHS, RHS, CC, CCOp, Predicate, OutCC, DL,
                                      DAG);
@@ -4014,13 +4015,11 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   // can be turned into:
   //    cmp     w12, w11, lsl #1
   if (!isa<ConstantSDNode>(RHS) || !isLegalCmpImmed(RHS->getAsAPIntVal())) {
-    bool LHSIsCMN = isCMN(LHS, CC, DAG);
-    bool RHSIsCMN = isCMN(RHS, CC, DAG);
-    SDValue TheLHS = LHSIsCMN ? LHS.getOperand(1) : LHS;
-    SDValue TheRHS = RHSIsCMN ? RHS.getOperand(1) : RHS;
+    SDValue TheLHS = isCMN(LHS, CC, DAG) ? LHS.getOperand(1) : LHS;
+    SDValue TheRHS = isCMN(RHS, CC, DAG) ? RHS.getOperand(1) : RHS;
 
-    if (getCmpOperandFoldingProfit(TheLHS) + (LHSIsCMN ? 1 : 0) >
-        getCmpOperandFoldingProfit(TheRHS) + (RHSIsCMN ? 1 : 0)) {
+    if (getCmpOperandFoldingProfit(TheLHS) >
+        getCmpOperandFoldingProfit(TheRHS)) {
       std::swap(LHS, RHS);
       CC = ISD::getSetCCSwappedOperands(CC);
     }
@@ -4056,10 +4055,11 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
         SDValue SExt =
             DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, LHS.getValueType(), LHS,
                         DAG.getValueType(MVT::i16));
+
+        AArch64CC = changeIntCCToAArch64CC(CC);
         Cmp = emitComparison(
             SExt, DAG.getSignedConstant(ValueofRHS, DL, RHS.getValueType()), CC,
-            DL, DAG);
-        AArch64CC = changeIntCCToAArch64CC(CC);
+            AArch64CC, DL, DAG);
       }
     }
 
@@ -4072,8 +4072,8 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   }
 
   if (!Cmp) {
-    Cmp = emitComparison(LHS, RHS, CC, DL, DAG);
     AArch64CC = changeIntCCToAArch64CC(CC);
+    Cmp = emitComparison(LHS, RHS, CC, AArch64CC, DL, DAG);
   }
   AArch64cc = DAG.getConstant(AArch64CC, DL, MVT_CC);
   return Cmp;
@@ -10664,8 +10664,8 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
 
   // Unfortunately, the mapping of LLVM FP CC's onto AArch64 CC's isn't totally
   // clean.  Some of them require two branches to implement.
-  SDValue Cmp = emitComparison(LHS, RHS, CC, DL, DAG);
-  AArch64CC::CondCode CC1, CC2;
+  AArch64CC::CondCode CC1 = AArch64CC::AL, CC2;
+  SDValue Cmp = emitComparison(LHS, RHS, CC, CC1, DL, DAG);
   changeFPCCToAArch64CC(CC, CC1, CC2);
   SDValue CC1Val = DAG.getConstant(CC1, DL, MVT::i32);
   SDValue BR1 =
@@ -11149,12 +11149,12 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   // If that fails, we'll need to perform an FCMP + CSEL sequence.  Go ahead
   // and do the comparison.
   SDValue Cmp;
+  AArch64CC::CondCode CC1 = AArch64CC::AL, CC2;
   if (IsStrict)
     Cmp = emitStrictFPComparison(LHS, RHS, DL, DAG, Chain, IsSignaling);
   else
-    Cmp = emitComparison(LHS, RHS, CC, DL, DAG);
+    Cmp = emitComparison(LHS, RHS, CC, CC1, DL, DAG);
 
-  AArch64CC::CondCode CC1, CC2;
   changeFPCCToAArch64CC(CC, CC1, CC2);
   SDValue Res;
   if (CC2 == AArch64CC::AL) {
@@ -11550,12 +11550,11 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
     if (VectorCmp)
       return VectorCmp;
   }
-
-  SDValue Cmp = emitComparison(LHS, RHS, CC, DL, DAG);
+  AArch64CC::CondCode CC1 = AArch64CC::AL, CC2;
+  SDValue Cmp = emitComparison(LHS, RHS, CC, CC1, DL, DAG);
 
   // Unfortunately, the mapping of LLVM FP CC's onto AArch64 CC's isn't totally
   // clean.  Some of them require two CSELs to implement.
-  AArch64CC::CondCode CC1, CC2;
   changeFPCCToAArch64CC(CC, CC1, CC2);
 
   if (Flags.hasNoSignedZeros()) {
