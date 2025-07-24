@@ -213,7 +213,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     }
 
     auto deLinearizeSgId =
-        layout.delinearizeSubgroupId(adjustedSgId, loc, rewriter);
+        layout.delinearizeSubgroupId(rewriter, loc, adjustedSgId);
     if (failed(deLinearizeSgId))
       return failure();
     SmallVector<Value> sgIds = *deLinearizeSgId;

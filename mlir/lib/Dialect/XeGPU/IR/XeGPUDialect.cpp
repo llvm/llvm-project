@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPUTargetInfo.h"
@@ -213,15 +215,73 @@ LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
 }
 
 FailureOr<SmallVector<Value>>
-LayoutAttr::delinearizeSubgroupId(Value linearId, Location loc,
-                                  OpBuilder &builder) {
-  assert(isWgLayout() && "delinearizeSubgroupId is only available for "
-                         "workgroup-level layout attribute.");
+LayoutAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
+                                  Value linearId) {
+  // delinearizeSubgroupId is only available for workgroup-level layout
+  // attribute
+  if (!isWgLayout())
+    return failure();
+
   auto dims =
       llvm::map_to_vector(getSgLayout().asArrayRef(), [&](int32_t d) -> Value {
         return arith::ConstantIndexOp::create(builder, loc, d);
       });
+
   return affine::delinearizeIndex(builder, loc, linearId, dims);
+}
+
+FailureOr<SmallVector<SmallVector<Value>>>
+LayoutAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
+                       ArrayRef<int64_t> shape) {
+  if (!isWgLayout())
+    return failure();
+
+  auto sgLayout = getEffectiveSgLayout().value();
+  SmallVector<int64_t> sgShape;
+  if (auto maybeSgShape = getEffectiveSgData())
+    sgShape = maybeSgShape.value();
+  else if (auto ratio = computeShapeRatio(shape, sgLayout))
+    sgShape = ratio.value();
+  else
+    return failure();
+
+  // distUnit[i] is the minimum value between shape[i] and
+  // sgLayout[i] * sgShape[i]
+  SmallVector<int64_t> distUnit = llvm::map_to_vector(
+      llvm::zip_equal(shape, computeElementwiseMul(sgLayout, sgShape)),
+      [](const auto &t) { return std::min(std::get<0>(t), std::get<1>(t)); });
+
+  // delinearize Ids
+  auto maybeIds = delinearizeSubgroupId(builder, loc, linearId);
+  if (failed(maybeIds))
+    return failure();
+  SmallVector<Value> sgIds = *maybeIds;
+
+  // nd local offset, localOffset[i] = sgId[i] * sgShape[i]
+  SmallVector<Value> localOffsets = llvm::map_to_vector(
+      llvm::zip(sgIds, sgShape), [&](const auto &t) -> Value {
+        auto &[id, s] = t;
+        Value d = arith::ConstantIndexOp::create(builder, loc, s);
+        return index::MulOp::create(builder, loc, id, d);
+      });
+
+  SmallVector<SmallVector<Value>> offsets;
+  for (SmallVector<int64_t> unitOffs : StaticTileOffsetRange(shape, distUnit)) {
+    SmallVector<Value> base =
+        llvm::map_to_vector(unitOffs, [&](int64_t d) -> Value {
+          return arith::ConstantIndexOp::create(builder, loc, d);
+        });
+
+    SmallVector<Value> adds = llvm::map_to_vector(
+        llvm::zip_equal(base, localOffsets), [&](const auto &t) -> Value {
+          return arith::AddIOp::create(builder, loc, std::get<0>(t),
+                                       std::get<1>(t));
+        });
+
+    offsets.push_back(adds);
+  }
+
+  return offsets;
 }
 
 //===----------------------------------------------------------------------===//
@@ -246,9 +306,15 @@ SliceAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
 }
 
 FailureOr<SmallVector<Value>>
-SliceAttr::delinearizeSubgroupId(Value linearId, Location loc,
-                                 OpBuilder &builder) {
-  return getParent().delinearizeSubgroupId(linearId, loc, builder);
+SliceAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
+                                 Value linearId) {
+  return getParent().delinearizeSubgroupId(builder, loc, linearId);
+}
+
+FailureOr<SmallVector<SmallVector<Value>>>
+SliceAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
+                      ArrayRef<int64_t> shape) {
+  return failure();
 }
 
 //===----------------------------------------------------------------------===//

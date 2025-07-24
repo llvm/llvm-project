@@ -183,15 +183,20 @@ def LayoutTrait: AttrInterface<"LayoutTrait"> {
 
   let methods = [
     InterfaceMethod<"Get the effective sg layout",
-                    "std::optional<llvm::SmallVector<int>>",
+                    "std::optional<SmallVector<int64_t>>",
                     "getEffectiveSgLayout">,
     InterfaceMethod<"Get the effective sg data",
-                    "std::optional<llvm::SmallVector<int>>",
+                    "std::optional<SmallVector<int64_t>>",
                     "getEffectiveSgData">,
     InterfaceMethod<"Delinearize the Subgroup Id",
                     "FailureOr<SmallVector<Value>>",
                     "delinearizeSubgroupId",
-                    (ins "Value":$linearId, "Location":$loc, "OpBuilder &": $builder)>
+                    (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId)>,
+
+    InterfaceMethod<"Get the local offset to be accessed by the given subgroup Id",
+                    "FailureOr<SmallVector<SmallVector<Value>>>",
+                    "getOffsets",
+                    (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId, "ArrayRef<int64_t>":$shape)>
   ];
 }
 
@@ -351,20 +356,23 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [LayoutTrait]> {
                              getLaneLayout(), getLaneData(), getOrder());
     }
 
-    std::optional<llvm::SmallVector<int32_t>> getEffectiveSgLayout() const {
+    std::optional<SmallVector<int64_t>> getEffectiveSgLayout() const {
       if (DenseI32ArrayAttr layout = getSgLayout())
-        return llvm::to_vector(layout.asArrayRef());
+        return llvm::to_vector_of<int64_t>(layout.asArrayRef());
       return std::nullopt;
     }
 
-    std::optional<llvm::SmallVector<int32_t>> getEffectiveSgData() const {
+    std::optional<SmallVector<int64_t>> getEffectiveSgData() const {
       if (DenseI32ArrayAttr data = getSgData())
-        return llvm::to_vector(data.asArrayRef());
+        return llvm::to_vector_of<int64_t>(data.asArrayRef());
       return std::nullopt;
     }
 
     FailureOr<SmallVector<Value>>
-    delinearizeSubgroupId(Value linearId, Location loc, OpBuilder &builder);
+    delinearizeSubgroupId(OpBuilder &builder, Location loc, Value linearId);
+
+    FailureOr<SmallVector<SmallVector<Value>>>
+    getOffsets(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
 
   }];
 
@@ -401,24 +409,6 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
   );
 
   let extraClassDeclaration = [{
-    std::optional<llvm::SmallVector<int32_t>> getEffectiveSgLayout() const {
-      if (DenseI32ArrayAttr layout = getParent().getSgLayout()) {
-        llvm::ArrayRef<int64_t> dims = getDims().asArrayRef();
-        return XeGPUDialect::dropDims(layout.asArrayRef(), dims);
-      }
-      return std::nullopt;
-    }
-
-    std::optional<llvm::SmallVector<int32_t>> getEffectiveSgData() const {
-      if (DenseI32ArrayAttr data = getParent().getSgData()) {
-        llvm::ArrayRef<int64_t> dims = getDims().asArrayRef();
-        return XeGPUDialect::dropDims(data.asArrayRef(), dims);
-      }
-      return std::nullopt;
-    }
-
-    FailureOr<llvm::SmallVector<Value>>
-    delinearizeSubgroupId(Value linearId, Location loc, OpBuilder &builder);
 
     DenseI32ArrayAttr getOrder() const {
       return getParent().getOrder();
@@ -431,6 +421,29 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
     bool isSgLayout() const {
       return getParent().isSgLayout();
     }
+
+    std::optional<SmallVector<int64_t>> getEffectiveSgLayout() const {
+      if (auto layout = getParent().getEffectiveSgLayout()) {
+        ArrayRef<int64_t> dims = getDims().asArrayRef();
+        return XeGPUDialect::dropDims(llvm::ArrayRef<int64_t>(*layout), dims);
+      }
+      return std::nullopt;
+    }
+
+    std::optional<SmallVector<int64_t>> getEffectiveSgData() const {
+      if (auto data = getParent().getEffectiveSgData()) {
+        ArrayRef<int64_t> dims = getDims().asArrayRef();
+        return XeGPUDialect::dropDims(llvm::ArrayRef<int64_t>(*data), dims);
+      }
+      return std::nullopt;
+    }
+
+    FailureOr<SmallVector<Value>>
+    delinearizeSubgroupId(OpBuilder &builder, Location loc, Value linearId);
+
+    FailureOr<SmallVector<SmallVector<Value>>>
+    getOffsets(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
+
   }];
 
   let assemblyFormat = "`<` $parent `,` `dims` `=` $dims `>`";
