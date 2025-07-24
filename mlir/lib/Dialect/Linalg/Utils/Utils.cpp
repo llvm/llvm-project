@@ -92,7 +92,7 @@ static bool isTiled(AffineMap map, ArrayRef<OpFoldResult> tileSizes) {
 std::optional<RegionMatcher::BinaryOpKind>
 RegionMatcher::matchAsScalarBinaryOp(GenericOp op) {
   auto &region = op.getRegion();
-  if (!llvm::hasSingleElement(region))
+  if (!region.hasOneBlock())
     return std::nullopt;
 
   Block &block = region.front();
@@ -204,7 +204,7 @@ bool allIndexingsAreProjectedPermutation(LinalgOp op) {
 }
 
 bool hasOnlyScalarElementwiseOp(Region &r) {
-  if (!llvm::hasSingleElement(r))
+  if (!r.hasOneBlock())
     return false;
   for (Operation &op : r.front()) {
     if (!(isa<arith::ConstantOp, func::ConstantOp, tensor::ExtractOp,
