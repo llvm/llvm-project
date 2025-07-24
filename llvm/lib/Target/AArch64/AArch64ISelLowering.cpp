@@ -1884,6 +1884,29 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     for (auto VT : {MVT::v16i1, MVT::v8i1, MVT::v4i1, MVT::v2i1})
       setOperationAction(ISD::INTRINSIC_WO_CHAIN, VT, Custom);
+
+    if (Subtarget->hasSVE2p1() ||
+        (Subtarget->hasSME2() && Subtarget->isStreaming())) {
+      // 2x loads
+      setOperationAction(ISD::LOAD, MVT::nxv32i8, Custom);
+      setOperationAction(ISD::LOAD, MVT::nxv16i16, Custom);
+      setOperationAction(ISD::LOAD, MVT::nxv8i32, Custom);
+      setOperationAction(ISD::LOAD, MVT::nxv4i64, Custom);
+      setOperationAction(ISD::LOAD, MVT::nxv16f16, Custom);
+      setOperationAction(ISD::LOAD, MVT::nxv8f32, Custom);
+      setOperationAction(ISD::LOAD, MVT::nxv4f64, Custom);
+      setOperationAction(ISD::LOAD, MVT::nxv16bf16, Custom);
+
+      // 4x loads
+      setOperationAction(ISD::LOAD, MVT::nxv64i8, Custom);
+      setOperationAction(ISD::LOAD, MVT::nxv32i16, Custom);
+      setOperationAction(ISD::LOAD, MVT::nxv16i32, Custom);
+      setOperationAction(ISD::LOAD, MVT::nxv8i64, Custom);
+      setOperationAction(ISD::LOAD, MVT::nxv32f16, Custom);
+      setOperationAction(ISD::LOAD, MVT::nxv16f32, Custom);
+      setOperationAction(ISD::LOAD, MVT::nxv8f64, Custom);
+      setOperationAction(ISD::LOAD, MVT::nxv32bf16, Custom);
+    }
   }
 
   // Handle partial reduction operations
@@ -27906,6 +27929,106 @@ void AArch64TargetLowering::ReplaceNodeResults(
       SDValue Pair = DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), MemVT,
                                  Result.getValue(0), Result.getValue(1));
       Results.append({Pair, Result.getValue(2) /* Chain */});
+      return;
+    }
+
+    LSBaseSDNode *LSNode = dyn_cast<LSBaseSDNode>(N);
+    if (LSNode && LSNode->isSimple() && LSNode->isUnindexed() &&
+        LSNode->getValueType(0).isScalableVector() &&
+        N->getValueType(0).isSimple() && N->getValueType(0) == MemVT) {
+      MVT VT = N->getValueType(0).getSimpleVT();
+
+      unsigned IntID;
+      switch (VT.SimpleTy) {
+      default:
+        return;
+      case MVT::nxv32i8:
+      case MVT::nxv16i16:
+      case MVT::nxv8i32:
+      case MVT::nxv4i64:
+      case MVT::nxv16f16:
+      case MVT::nxv8f32:
+      case MVT::nxv4f64:
+      case MVT::nxv16bf16:
+        IntID = Intrinsic::aarch64_sve_ld1_pn_x2;
+        break;
+      case MVT::nxv64i8:
+      case MVT::nxv32i16:
+      case MVT::nxv16i32:
+      case MVT::nxv8i64:
+      case MVT::nxv32f16:
+      case MVT::nxv16f32:
+      case MVT::nxv8f64:
+      case MVT::nxv32bf16:
+        IntID = Intrinsic::aarch64_sve_ld1_pn_x4;
+        break;
+      }
+
+      unsigned PredIntID;
+      switch (VT.SimpleTy) {
+      default:
+        llvm_unreachable("covered by previous switch");
+
+      case MVT::nxv32i8:
+      case MVT::nxv64i8:
+        PredIntID = Intrinsic::aarch64_sve_ptrue_c8;
+        break;
+      case MVT::nxv16i16:
+      case MVT::nxv16f16:
+      case MVT::nxv16bf16:
+      case MVT::nxv32i16:
+      case MVT::nxv32f16:
+      case MVT::nxv32bf16:
+        PredIntID = Intrinsic::aarch64_sve_ptrue_c16;
+        break;
+      case MVT::nxv8i32:
+      case MVT::nxv8f32:
+      case MVT::nxv16i32:
+      case MVT::nxv16f32:
+        PredIntID = Intrinsic::aarch64_sve_ptrue_c32;
+        break;
+      case MVT::nxv4i64:
+      case MVT::nxv4f64:
+      case MVT::nxv8i64:
+      case MVT::nxv8f64:
+        PredIntID = Intrinsic::aarch64_sve_ptrue_c64;
+        break;
+      }
+
+      SDValue Chain = LSNode->getChain();
+      SDValue Addr = LSNode->getBasePtr();
+      SDValue Offset = LSNode->getOffset();
+
+      if (!Offset.isUndef())
+        return;
+
+      SDLoc DL(N);
+      SDValue PNg =
+          DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::aarch64svcount,
+                      DAG.getConstant(PredIntID, DL, MVT::i64));
+
+      if (IntID == Intrinsic::aarch64_sve_ld1_pn_x2) {
+        MVT RegVT = VT.getHalfNumVectorElementsVT();
+        SDValue NewLoad = DAG.getNode(
+            ISD::INTRINSIC_W_CHAIN, DL, {RegVT, RegVT, MVT::Other},
+            {Chain, DAG.getConstant(IntID, DL, MVT::i64), PNg, Addr});
+        Results.push_back(
+            DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
+                        {NewLoad.getValue(0), NewLoad.getValue(1)}));
+        Results.push_back(NewLoad.getValue(2) /* Chain */);
+        return;
+      }
+
+      assert(IntID == Intrinsic::aarch64_sve_ld1_pn_x4);
+      MVT RegVT = VT.getHalfNumVectorElementsVT().getHalfNumVectorElementsVT();
+      SDValue NewLoad = DAG.getNode(
+          ISD::INTRINSIC_W_CHAIN, DL, {RegVT, RegVT, RegVT, RegVT, MVT::Other},
+          {Chain, DAG.getConstant(IntID, DL, MVT::i64), PNg, Addr});
+      Results.push_back(
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
+                      {NewLoad.getValue(0), NewLoad.getValue(1),
+                       NewLoad.getValue(2), NewLoad.getValue(3)}));
+      Results.push_back(NewLoad.getValue(4) /* Chain */);
       return;
     }
 
