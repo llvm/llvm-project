@@ -1162,6 +1162,24 @@ func.func @dedup(%laneid: index, %v0: vector<4xf32>, %v1: vector<4xf32>)
 }
 
 // -----
+// CHECK-PROP:   func @dedup_used_and_unused_result
+func.func @dedup_used_and_unused_result(%laneid: index) -> (vector<1xf32>) {
+  // CHECK-PROP: %[[R:.*]]:2 = gpu.warp_execute_on_lane_0(%arg0)[32] -> (vector<2xf32>, vector<1xf32>)
+  %r:3 = gpu.warp_execute_on_lane_0(%laneid)[32] ->
+    (vector<1xf32>, vector<2xf32>, vector<1xf32>) {
+    // CHECK-PROP: %[[Y0:.*]] = "some_def"() : () -> vector<32xf32>
+    %2 = "some_def"() : () -> (vector<32xf32>)
+    // CHECK-PROP: %[[Y1:.*]] = "some_def"() : () -> vector<64xf32>
+    %3 = "some_def"() : () -> (vector<64xf32>)
+    // CHECK-PROP: gpu.yield %[[Y1]], %[[Y0]] : vector<64xf32>, vector<32xf32>
+    gpu.yield %2, %3, %2 : vector<32xf32>, vector<64xf32>, vector<32xf32>
+  }
+  // CHECK-PROP: "some_use"(%[[R]]#0, %[[R]]#1) : (vector<2xf32>, vector<1xf32>) -> vector<1xf32>
+  %r0 = "some_use"(%r#1, %r#2) : (vector<2xf32>, vector<1xf32>) -> (vector<1xf32>)
+  return %r0 : vector<1xf32>
+}
+
+// -----
 
 // CHECK-SCF-IF:   func @warp_execute_has_broadcast_semantics
 func.func @warp_execute_has_broadcast_semantics(%laneid: index, %s0: f32, %v0: vector<f32>, %v1: vector<1xf32>, %v2: vector<1x1xf32>)
