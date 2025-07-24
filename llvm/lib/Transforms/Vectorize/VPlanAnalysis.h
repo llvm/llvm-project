@@ -18,7 +18,6 @@ namespace llvm {
 
 class LLVMContext;
 class VPValue;
-class VPBlendRecipe;
 class VPInstruction;
 class VPWidenRecipe;
 class VPWidenCallRecipe;
@@ -48,7 +47,6 @@ class VPTypeAnalysis {
   Type *CanonicalIVTy;
   LLVMContext &Ctx;
 
-  Type *inferScalarTypeForRecipe(const VPBlendRecipe *R);
   Type *inferScalarTypeForRecipe(const VPInstruction *R);
   Type *inferScalarTypeForRecipe(const VPWidenCallRecipe *R);
   Type *inferScalarTypeForRecipe(const VPWidenRecipe *R);

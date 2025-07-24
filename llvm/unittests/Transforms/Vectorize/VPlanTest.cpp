@@ -1063,25 +1063,6 @@ TEST_F(VPRecipeTest, CastVPWidenGEPRecipeToVPUserAndVPDef) {
   delete GEP;
 }
 
-TEST_F(VPRecipeTest, CastVPBlendRecipeToVPUser) {
-  VPlan &Plan = getPlan();
-  IntegerType *Int32 = IntegerType::get(C, 32);
-  auto *Phi = PHINode::Create(Int32, 1);
-
-  VPValue *I1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPValue *I2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
-  VPValue *M2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
-  SmallVector<VPValue *, 4> Args;
-  Args.push_back(I1);
-  Args.push_back(I2);
-  Args.push_back(M2);
-  VPBlendRecipe Recipe(Phi, Args, {});
-  EXPECT_TRUE(isa<VPUser>(&Recipe));
-  VPRecipeBase *BaseR = &Recipe;
-  EXPECT_TRUE(isa<VPUser>(BaseR));
-  delete Phi;
-}
-
 TEST_F(VPRecipeTest, CastVPInterleaveRecipeToVPUser) {
   VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);

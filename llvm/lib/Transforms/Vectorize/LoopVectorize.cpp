@@ -4081,7 +4081,6 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPWidenIntrinsicSC:
       case VPDef::VPWidenSC:
       case VPDef::VPWidenSelectSC:
-      case VPDef::VPBlendSC:
       case VPDef::VPFirstOrderRecurrencePHISC:
       case VPDef::VPHistogramSC:
       case VPDef::VPWidenPHISC:
@@ -4203,10 +4202,13 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
           if (!VPI)
             continue;
           switch (VPI->getOpcode()) {
-          // Selects are only modelled in the legacy cost model for safe
-          // divisors.
           case Instruction::Select: {
             VPValue *VPV = VPI->getVPSingleValue();
+            // Blend selects are modelled in VPlan.
+            if (isa_and_nonnull<PHINode>(VPV->getUnderlyingValue()))
+              continue;
+            // Selects are only modelled in the legacy cost model for safe
+            // divisors.
             if (VPV->getNumUsers() == 1) {
               if (auto *WR = dyn_cast<VPWidenRecipe>(*VPV->user_begin())) {
                 switch (WR->getOpcode()) {
@@ -8656,9 +8658,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       // latter are added above for masking.
       // FIXME: Migrate code relying on the underlying instruction from VPlan0
       // to construct recipes below to not use the underlying instruction.
-      if (isa<VPCanonicalIVPHIRecipe, VPWidenCanonicalIVRecipe, VPBlendRecipe>(
-              &R) ||
-          (isa<VPInstruction>(&R) && !UnderlyingValue))
+      if (isa<VPCanonicalIVPHIRecipe, VPWidenCanonicalIVRecipe>(&R) ||
+          (isa<VPInstruction>(&R) && !UnderlyingValue) ||
+          (match(&R, m_VPInstruction<Instruction::Select>(
+                         m_VPValue(), m_VPValue(), m_VPValue())) &&
+           isa_and_nonnull<PHINode>(UnderlyingValue)))
         continue;
 
       // FIXME: VPlan0, which models a copy of the original scalar loop, should
@@ -8944,20 +8948,20 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // the phi until LoopExitValue. We keep track of the previous item
     // (PreviousLink) to tell which of the two operands of a Link will remain
     // scalar and which will be reduced. For minmax by select(cmp), Link will be
-    // the select instructions. Blend recipes of in-loop reduction phi's  will
+    // the select instructions. Blend selects of in-loop reduction phi's  will
     // get folded to their non-phi operand, as the reduction recipe handles the
     // condition directly.
     VPSingleDefRecipe *PreviousLink = PhiR; // Aka Worklist[0].
     for (VPSingleDefRecipe *CurrentLink : drop_begin(Worklist)) {
-      if (auto *Blend = dyn_cast<VPBlendRecipe>(CurrentLink)) {
-        assert(Blend->getNumIncomingValues() == 2 &&
-               "Blend must have 2 incoming values");
-        if (Blend->getIncomingValue(0) == PhiR) {
-          Blend->replaceAllUsesWith(Blend->getIncomingValue(1));
+      using namespace VPlanPatternMatch;
+      VPValue *T, *F;
+      if (match(CurrentLink, m_VPInstruction<Instruction::Select>(
+                                 m_VPValue(), m_VPValue(T), m_VPValue(F)))) {
+        if (T == PhiR) {
+          CurrentLink->replaceAllUsesWith(F);
         } else {
-          assert(Blend->getIncomingValue(1) == PhiR &&
-                 "PhiR must be an operand of the blend");
-          Blend->replaceAllUsesWith(Blend->getIncomingValue(0));
+          assert(F == PhiR && "PhiR must be an operand of the select");
+          CurrentLink->replaceAllUsesWith(T);
         }
         continue;
       }
