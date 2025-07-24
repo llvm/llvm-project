@@ -2277,6 +2277,9 @@ defm V_FMA_MIX_F32_BF16 : VOP3P_Realtriple<GFX1250Gen, 0x3d>;
 defm V_FMA_MIXLO_BF16   : VOP3P_Realtriple<GFX1250Gen, 0x3e>;
 defm V_FMA_MIXHI_BF16   : VOP3P_Realtriple<GFX1250Gen, 0x3f>;
 
+let AssemblerPredicate = isGFX1250Plus in
+def : AMDGPUMnemonicAlias<"v_fma_mix_f32_f16",  "v_fma_mix_f32">;
+
 defm V_PK_MINIMUM_F16 : VOP3P_Real_gfx12<0x1d>;
 defm V_PK_MAXIMUM_F16 : VOP3P_Real_gfx12<0x1e>;
 
