@@ -24,7 +24,6 @@
 
 #include <algorithm>
 #include <array>
-#include <atomic>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -66,30 +65,17 @@ public:
                        [&](std::size_t Size) { return Size == BufferSize; }) &&
            "All input buffers must have the same size");
 
-    uint64_t StartFlatIndex, BatchSize;
-    while (true) {
-      uint64_t CurrentFlatIndex =
-          FlatIndexGenerator.load(std::memory_order_relaxed);
-      if (CurrentFlatIndex >= Size)
-        return 0;
+    if (NextFlatIndex >= Size)
+      return 0;
 
-      BatchSize = std::min<uint64_t>(BufferSize, Size - CurrentFlatIndex);
-      uint64_t NextFlatIndex = CurrentFlatIndex + BatchSize;
-
-      if (FlatIndexGenerator.compare_exchange_weak(
-              CurrentFlatIndex, NextFlatIndex,
-              std::memory_order_acq_rel, // Success
-              std::memory_order_acquire  // Failure
-              )) {
-        StartFlatIndex = CurrentFlatIndex;
-        break;
-      }
-    }
+    const auto BatchSize = std::min<uint64_t>(BufferSize, Size - NextFlatIndex);
+    const auto CurrentFlatIndex = NextFlatIndex;
+    NextFlatIndex += BatchSize;
 
     auto BufferPtrsTuple = std::make_tuple(Buffers.data()...);
 
     llvm::parallelFor(0, BatchSize, [&](std::size_t Offset) {
-      writeInputs(StartFlatIndex, Offset, BufferPtrsTuple);
+      writeInputs(CurrentFlatIndex, Offset, BufferPtrsTuple);
     });
 
     return static_cast<std::size_t>(BatchSize);
@@ -115,9 +101,9 @@ private:
   }
 
   template <typename BufferPtrsTupleType>
-  void writeInputs(uint64_t StartFlatIndex, uint64_t Offset,
+  void writeInputs(uint64_t CurrentFlatIndex, uint64_t Offset,
                    BufferPtrsTupleType BufferPtrsTuple) const noexcept {
-    auto NDIndex = getNDIndex(StartFlatIndex + Offset);
+    auto NDIndex = getNDIndex(CurrentFlatIndex + Offset);
     writeInputsImpl<0>(NDIndex, Offset, BufferPtrsTuple);
   }
 
@@ -145,7 +131,7 @@ private:
   uint64_t Size = 1;
   RangesTupleType RangesTuple;
   IndexArrayType Strides = {};
-  std::atomic<uint64_t> FlatIndexGenerator = 0;
+  uint64_t NextFlatIndex = 0;
 };
 } // namespace mathtest
 
