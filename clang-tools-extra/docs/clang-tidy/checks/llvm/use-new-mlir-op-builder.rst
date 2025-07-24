@@ -3,8 +3,8 @@
 llvm-mlir-op-builder
 ====================
 
-Checks for uses of MLIR's old/to be deprecated `OpBuilder::create<T>` form
-and suggests using `T::create` instead.
+Checks for uses of MLIR's old/to be deprecated ``OpBuilder::create<T>`` form
+and suggests using ``T::create`` instead.
 
 Example
 -------
