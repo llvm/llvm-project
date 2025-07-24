@@ -1074,8 +1074,8 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
     // As the return value of malloc(0) is implementation defined, allocate one
     // byte to ensure the allocation status being true. This behavior aligns to
     // what the runtime has.
-    mlir::Value zero = genConstantIndex(loc, ity, rewriter, 0);
-    mlir::Value one = genConstantIndex(loc, ity, rewriter, 1);
+    mlir::Value zero = fir::genConstantIndex(loc, ity, rewriter, 0);
+    mlir::Value one = fir::genConstantIndex(loc, ity, rewriter, 1);
     mlir::Value cmp = rewriter.create<mlir::LLVM::ICmpOp>(
         loc, mlir::LLVM::ICmpPredicate::sgt, size, zero);
     size = rewriter.create<mlir::LLVM::SelectOp>(loc, cmp, size, one);
