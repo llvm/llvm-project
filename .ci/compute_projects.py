@@ -144,6 +144,21 @@ PROJECT_CHECK_TARGETS = {
 
 RUNTIMES = {"libcxx", "libcxxabi", "libunwind", "compiler-rt", "libc"}
 
+# Meta projects are projects that need explicit handling but do not reside
+# in their own top level folder. To add a meta project, the start of the path
+# for the metaproject should be mapped to the name of the project below.
+# Multiple paths can map to the same metaproject.
+META_PROJECTS = {
+    ("clang", "lib", "CIR"): "CIR",
+    ("clang", "test", "CIR"): "CIR",
+    ("clang", "include", "clang", "CIR"): "CIR",
+    ("*", "docs"): "docs",
+    ("llvm", "utils", "gn"): "gn",
+}
+
+# Projects that should not run any tests. These need to be metaprojects.
+SKIP_PROJECTS = ["docs", "gn"]
+
 
 def _add_dependencies(projects: Set[str], runtimes: Set[str]) -> Set[str]:
     projects_with_dependents = set(projects)
@@ -236,29 +251,34 @@ def _compute_runtimes_to_build(
     return _exclude_projects(runtimes_to_build, platform)
 
 
+def _path_matches(matcher: tuple[str], file_path: tuple[str]) -> bool:
+    if len(file_path) < len(matcher):
+        return False
+    for match_part, file_part in zip(matcher, file_path):
+        if match_part == "*" or file_part == "*":
+            continue
+        if match_part != file_part:
+            return False
+    return True
+
+
+def _get_modified_projects_for_file(modified_file: str) -> Set[str]:
+    modified_projects = set()
+    path_parts = pathlib.Path(modified_file).parts
+    for meta_project_files in META_PROJECTS.keys():
+        if _path_matches(meta_project_files, path_parts):
+            meta_project = META_PROJECTS[meta_project_files]
+            if meta_project in SKIP_PROJECTS:
+                return set()
+            modified_projects.add(meta_project)
+    modified_projects.add(pathlib.Path(modified_file).parts[0])
+    return modified_projects
+
+
 def _get_modified_projects(modified_files: list[str]) -> Set[str]:
     modified_projects = set()
     for modified_file in modified_files:
-        path_parts = pathlib.Path(modified_file).parts
-        # Exclude files in the docs directory. They do not impact an test
-        # targets and there is a separate workflow used for ensuring the
-        # documentation builds.
-        if len(path_parts) > 2 and path_parts[1] == "docs":
-            continue
-        # Exclude files for the gn build. We do not test it within premerge
-        # and changes occur often enough that they otherwise take up
-        # capacity.
-        if len(path_parts) > 3 and path_parts[:3] == ("llvm", "utils", "gn"):
-            continue
-        # If the file is in the clang/lib/CIR directory, add the CIR project.
-        if len(path_parts) > 3 and (
-            path_parts[:3] == ("clang", "lib", "CIR")
-            or path_parts[:3] == ("clang", "test", "CIR")
-            or path_parts[:4] == ("clang", "include", "clang", "CIR")
-        ):
-            modified_projects.add("CIR")
-            # Fall through to add clang.
-        modified_projects.add(pathlib.Path(modified_file).parts[0])
+        modified_projects.update(_get_modified_projects_for_file(modified_file))
     return modified_projects
 
 
