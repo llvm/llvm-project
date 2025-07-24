@@ -124,8 +124,6 @@ def FeatureFPCVT     : SubtargetFeature<"fpcvt", "HasFPCVT", "true",
                                         [FeatureFPU]>;
 def FeatureISEL      : SubtargetFeature<"isel","HasISEL", "true",
                                         "Enable the isel instruction">;
-def FeatureBPERMD    : SubtargetFeature<"bpermd", "HasBPERMD", "true",
-                                        "Enable the bpermd instruction">;
 def FeatureExtDiv    : SubtargetFeature<"extdiv", "HasExtDiv", "true",
                                         "Enable extended divide instructions">;
 def FeatureLDBRX     : SubtargetFeature<"ldbrx","HasLDBRX", "true",
@@ -394,7 +392,6 @@ def ProcessorFeatures {
                                                   FeatureLDBRX,
                                                   Feature64Bit,
                                                   /* Feature64BitRegs, */
-                                                  FeatureBPERMD,
                                                   FeatureExtDiv,
                                                   FeatureMFTB,
                                                   DeprecatedDST,

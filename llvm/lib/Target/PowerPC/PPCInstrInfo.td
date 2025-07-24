@@ -739,7 +739,7 @@ def NoNaNsFPMath
     : Predicate<"Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
 def NaNsFPMath
     : Predicate<"!Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
-def HasBPERMD : Predicate<"Subtarget->hasBPERMD()">;
+def HasBPERMD : Predicate<"Subtarget->getCPUDirective() >= PPC::DIR_PWR7">;
 def HasExtDiv : Predicate<"Subtarget->hasExtDiv()">;
 def IsISA2_06 : Predicate<"Subtarget->isISA2_06()">;
 def IsISA2_07 : Predicate<"Subtarget->isISA2_07()">;
