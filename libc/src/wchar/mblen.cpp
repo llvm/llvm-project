@@ -17,7 +17,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, mblen, (const char * s, size_t n)) {
+LLVM_LIBC_FUNCTION(int, mblen, (const char *s, size_t n)) {
   // returns 0 since UTF-8 encoding is not state-dependent
   if (s == nullptr)
     return 0;

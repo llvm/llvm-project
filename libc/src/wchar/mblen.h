@@ -14,7 +14,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-int mblen(const char * s, size_t n);
+int mblen(const char *s, size_t n);
 
 } // namespace LIBC_NAMESPACE_DECL
 
