@@ -51,6 +51,16 @@
 // RUN: not %clang -target powerpc64-ibm-aix-xcoff -gdwarf-5 -S -emit-llvm -o - %s 2>&1| \
 // RUN:   FileCheck %s --check-prefix=UNSUPPORTED-VER5
 
+// Check what version of dwarf is used to emit debug info when compiling ir with clang.
+// RUN: %clang -target x86_64-linux-gnu -g -S -emit-llvm -o - %s \
+// RUN:   | %clang -target x86_64-linux-gnu -gdwarf-4 -x ir -c -o - - \
+// RUN:   | llvm-dwarfdump -v - \
+// RUN:   | FileCheck %s --check-prefix=SINGLE-4
+// RUN: %clang -target x86_64-linux-gnu -gdwarf-4 -S -emit-llvm -o - %s \
+// RUN:   | %clang -target x86_64-linux-gnu -g -x ir -c -o - - \
+// RUN:   | llvm-dwarfdump -v - \
+// RUN:   | FileCheck %s --check-prefix=SINGLE-5
+
 int main (void) {
   return 0;
 }
@@ -67,3 +77,11 @@ int main (void) {
 // CODEVIEW: !{i32 2, !"CodeView", i32 1}
 // NOCODEVIEW-NOT: !"CodeView"
 // NODWARF-NOT: !"Dwarf Version"
+
+// SINGLE-4: .debug_info contents:
+// SINGLE-4: 0x00000000: Compile Unit: {{.*}} version = 0x0004, abbr_offset
+// SINGLE-4: 0x0000000b: DW_TAG_compile_unit
+
+// SINGLE-5: .debug_info contents:
+// SINGLE-5: 0x00000000: Compile Unit: {{.*}} version = 0x0005, unit_type = DW_UT_compile, abbr_offset
+// SINGLE-5: 0x0000000c: DW_TAG_compile_unit
