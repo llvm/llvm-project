@@ -146,15 +146,6 @@ std::string OpenMPCounterVisitor::getName(const OpenMPConstruct &c) {
             const CharBlock &source{std::get<0>(c.t).source};
             return normalize_construct_name(source.ToString());
           },
-          [&](const OpenMPAllocatorsConstruct &c) -> std::string {
-            const CharBlock &source{std::get<0>(c.t).source};
-            return normalize_construct_name(source.ToString());
-          },
-          [&](const OpenMPAtomicConstruct &c) -> std::string {
-            auto &dirSpec = std::get<OmpDirectiveSpecification>(c.t);
-            auto &dirName = std::get<OmpDirectiveName>(dirSpec.t);
-            return normalize_construct_name(dirName.source.ToString());
-          },
           [&](const OpenMPUtilityConstruct &c) -> std::string {
             const CharBlock &source{c.source};
             return normalize_construct_name(source.ToString());
@@ -162,13 +153,23 @@ std::string OpenMPCounterVisitor::getName(const OpenMPConstruct &c) {
           [&](const OpenMPSectionConstruct &c) -> std::string {
             return "section";
           },
-          // OpenMPSectionsConstruct, OpenMPLoopConstruct,
-          // OpenMPBlockConstruct, OpenMPCriticalConstruct Get the source from
-          // the directive field of the begin directive or from the verbatim
-          // field of the begin directive in Critical
-          [&](const auto &c) -> std::string {
+          [&](const OpenMPCriticalConstruct &c) -> std::string {
             const CharBlock &source{std::get<0>(std::get<0>(c.t).t).source};
             return normalize_construct_name(source.ToString());
+          },
+          [&](const OpenMPLoopConstruct &c) -> std::string {
+            const CharBlock &source{std::get<0>(std::get<0>(c.t).t).source};
+            return normalize_construct_name(source.ToString());
+          },
+          [&](const OpenMPSectionsConstruct &c) -> std::string {
+            const CharBlock &source{std::get<0>(std::get<0>(c.t).t).source};
+            return normalize_construct_name(source.ToString());
+          },
+          [&](const auto &c) -> std::string {
+            using T = llvm::remove_cvref_t<decltype(c)>;
+            static_assert(std::is_base_of_v<OmpBlockConstruct, T>);
+            return normalize_construct_name(
+                c.BeginDir().DirName().source.ToString());
           },
       },
       c.u);
