@@ -663,7 +663,8 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
   }
   case UO_PreInc:
   case UO_PreDec: {
-    bool isInc = e->isIncrementOp();
+    cir::UnaryOpKind kind =
+        e->isIncrementOp() ? cir::UnaryOpKind::Inc : cir::UnaryOpKind::Dec;
     LValue lv = emitLValue(e->getSubExpr());
 
     assert(e->isPrefix() && "Prefix operator in unexpected state!");
@@ -672,7 +673,7 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
       cgm.errorNYI(e->getSourceRange(), "UnaryOp complex inc/dec");
       lv = LValue();
     } else {
-      emitScalarPrePostIncDec(e, lv, isInc, /*isPre=*/true);
+      emitScalarPrePostIncDec(e, lv, kind, /*isPre=*/true);
     }
 
     return lv;
