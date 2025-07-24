@@ -45,7 +45,6 @@ static const std::set<SPIRV::Extension::Extension> ValidOpenCLExtensions = {
     SPIRV::Extension::SPV_EXT_shader_atomic_float16_add,
     SPIRV::Extension::SPV_EXT_shader_atomic_float_min_max,
     SPIRV::Extension::SPV_EXT_arithmetic_fence,
-    SPIRV::Extension::SPV_EXT_demote_to_helper_invocation,
     SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers,
     SPIRV::Extension::SPV_INTEL_cache_controls,
     SPIRV::Extension::SPV_INTEL_float_controls2,
