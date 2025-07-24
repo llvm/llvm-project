@@ -19,7 +19,7 @@ config.name = "cross-project-tests"
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
-config.suffixes = [".c", ".cl", ".cpp", ".m"]
+config.suffixes = [".c", ".cl", ".cpp", ".m", ".test"]
 
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
 # subdirectories contain auxiliary inputs for various tests in their parent
@@ -237,15 +237,6 @@ if can_target_host():
     dependencies = configure_dexter_substitutions()
     if all(d in config.available_features for d in dependencies):
         config.available_features.add("dexter")
-        llvm_config.with_environment(
-            "PATHTOCLANG", add_host_triple(llvm_config.config.clang)
-        )
-        llvm_config.with_environment(
-            "PATHTOCLANGPP", add_host_triple(llvm_config.use_llvm_tool("clang++"))
-        )
-        llvm_config.with_environment(
-            "PATHTOCLANGCL", add_host_triple(llvm_config.use_llvm_tool("clang-cl"))
-        )
 else:
     print(
         "Host triple {} not supported. Skipping dexter tests in the "

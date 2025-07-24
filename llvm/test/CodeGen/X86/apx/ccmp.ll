@@ -8,12 +8,12 @@ define void @ccmp8rr_zf(i8 noundef %a, i8 noundef %b, i8 noundef %c) {
 ; CHECK-NEXT:    cmpb %dl, %dil # encoding: [0x40,0x38,0xd7]
 ; CHECK-NEXT:    ccmpneb {dfv=zf} %dl, %sil # encoding: [0x62,0xf4,0x14,0x05,0x38,0xd6]
 ; CHECK-NEXT:    jne .LBB0_1 # encoding: [0x75,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB0_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB0_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB0_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -22,12 +22,12 @@ define void @ccmp8rr_zf(i8 noundef %a, i8 noundef %b, i8 noundef %c) {
 ; NDD-NEXT:    cmpb %dl, %dil # encoding: [0x40,0x38,0xd7]
 ; NDD-NEXT:    ccmpneb {dfv=zf} %dl, %sil # encoding: [0x62,0xf4,0x14,0x05,0x38,0xd6]
 ; NDD-NEXT:    jne .LBB0_1 # encoding: [0x75,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB0_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB0_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB0_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -50,12 +50,12 @@ define void @ccmp8rr_cf(i8 noundef %a, i8 noundef %b) {
 ; CHECK-NEXT:    cmpb $2, %dil # encoding: [0x40,0x80,0xff,0x02]
 ; CHECK-NEXT:    ccmpgeb {dfv=cf} $2, %sil # encoding: [0x62,0xf4,0x0c,0x0d,0x80,0xfe,0x02]
 ; CHECK-NEXT:    jb .LBB1_1 # encoding: [0x72,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB1_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB1_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB1_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -64,12 +64,12 @@ define void @ccmp8rr_cf(i8 noundef %a, i8 noundef %b) {
 ; NDD-NEXT:    cmpb $2, %dil # encoding: [0x40,0x80,0xff,0x02]
 ; NDD-NEXT:    ccmpgeb {dfv=cf} $2, %sil # encoding: [0x62,0xf4,0x0c,0x0d,0x80,0xfe,0x02]
 ; NDD-NEXT:    jb .LBB1_1 # encoding: [0x72,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB1_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB1_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB1_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -92,7 +92,7 @@ define i8 @ccmp8rr_sf(i8 %a, i8 %b, i8* nocapture %c)  {
 ; CHECK-NEXT:    testb %dil, %dil # encoding: [0x40,0x84,0xff]
 ; CHECK-NEXT:    ccmpneb {dfv=sf} $2, %sil # encoding: [0x62,0xf4,0x24,0x05,0x80,0xfe,0x02]
 ; CHECK-NEXT:    jl .LBB2_2 # encoding: [0x7c,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB2_2-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB2_2, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    movb %dil, (%rdx) # encoding: [0x40,0x88,0x3a]
 ; CHECK-NEXT:  .LBB2_2: # %if.end
@@ -104,7 +104,7 @@ define i8 @ccmp8rr_sf(i8 %a, i8 %b, i8* nocapture %c)  {
 ; NDD-NEXT:    testb %dil, %dil # encoding: [0x40,0x84,0xff]
 ; NDD-NEXT:    ccmpneb {dfv=sf} $2, %sil # encoding: [0x62,0xf4,0x24,0x05,0x80,0xfe,0x02]
 ; NDD-NEXT:    jl .LBB2_2 # encoding: [0x7c,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB2_2-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB2_2, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    movb %dil, (%rdx) # encoding: [0x40,0x88,0x3a]
 ; NDD-NEXT:  .LBB2_2: # %if.end
@@ -130,7 +130,7 @@ define i8 @ccmp8rr_none(i8 %a, i8 %b, i8* nocapture %c)  {
 ; CHECK-NEXT:    testb %dil, %dil # encoding: [0x40,0x84,0xff]
 ; CHECK-NEXT:    ccmpeb {dfv=} $2, %sil # encoding: [0x62,0xf4,0x04,0x04,0x80,0xfe,0x02]
 ; CHECK-NEXT:    jl .LBB3_2 # encoding: [0x7c,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB3_2-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB3_2, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    movb %dil, (%rdx) # encoding: [0x40,0x88,0x3a]
 ; CHECK-NEXT:  .LBB3_2: # %if.end
@@ -142,7 +142,7 @@ define i8 @ccmp8rr_none(i8 %a, i8 %b, i8* nocapture %c)  {
 ; NDD-NEXT:    testb %dil, %dil # encoding: [0x40,0x84,0xff]
 ; NDD-NEXT:    ccmpeb {dfv=} $2, %sil # encoding: [0x62,0xf4,0x04,0x04,0x80,0xfe,0x02]
 ; NDD-NEXT:    jl .LBB3_2 # encoding: [0x7c,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB3_2-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB3_2, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    movb %dil, (%rdx) # encoding: [0x40,0x88,0x3a]
 ; NDD-NEXT:  .LBB3_2: # %if.end
@@ -168,12 +168,12 @@ define void @ccmp16rr_sf(i16 noundef %a, i16 noundef %b, i16 noundef %c) {
 ; CHECK-NEXT:    cmpw %dx, %di # encoding: [0x66,0x39,0xd7]
 ; CHECK-NEXT:    ccmplew {dfv=sf} %dx, %si # encoding: [0x62,0xf4,0x25,0x0e,0x39,0xd6]
 ; CHECK-NEXT:    jge .LBB4_1 # encoding: [0x7d,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB4_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB4_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB4_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -182,12 +182,12 @@ define void @ccmp16rr_sf(i16 noundef %a, i16 noundef %b, i16 noundef %c) {
 ; NDD-NEXT:    cmpw %dx, %di # encoding: [0x66,0x39,0xd7]
 ; NDD-NEXT:    ccmplew {dfv=sf} %dx, %si # encoding: [0x62,0xf4,0x25,0x0e,0x39,0xd6]
 ; NDD-NEXT:    jge .LBB4_1 # encoding: [0x7d,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB4_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB4_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB4_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -210,12 +210,12 @@ define void @ccmp32rr_cf(i32 noundef %a, i32 noundef %b, i32 noundef %c) {
 ; CHECK-NEXT:    cmpl %edx, %edi # encoding: [0x39,0xd7]
 ; CHECK-NEXT:    ccmpbl {dfv=cf} %edx, %esi # encoding: [0x62,0xf4,0x0c,0x02,0x39,0xd6]
 ; CHECK-NEXT:    ja .LBB5_1 # encoding: [0x77,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB5_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB5_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB5_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -224,12 +224,12 @@ define void @ccmp32rr_cf(i32 noundef %a, i32 noundef %b, i32 noundef %c) {
 ; NDD-NEXT:    cmpl %edx, %edi # encoding: [0x39,0xd7]
 ; NDD-NEXT:    ccmpbl {dfv=cf} %edx, %esi # encoding: [0x62,0xf4,0x0c,0x02,0x39,0xd6]
 ; NDD-NEXT:    ja .LBB5_1 # encoding: [0x77,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB5_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB5_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB5_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -252,12 +252,12 @@ define void @ccmp64rr_of(i64 %a, i64 %b, i64 %c) {
 ; CHECK-NEXT:    cmpq %rdx, %rdi # encoding: [0x48,0x39,0xd7]
 ; CHECK-NEXT:    ccmpbq {dfv=of} %rsi, %rdi # encoding: [0x62,0xf4,0xc4,0x02,0x39,0xf7]
 ; CHECK-NEXT:    jno .LBB6_1 # encoding: [0x71,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB6_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB6_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB6_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -266,12 +266,12 @@ define void @ccmp64rr_of(i64 %a, i64 %b, i64 %c) {
 ; NDD-NEXT:    cmpq %rdx, %rdi # encoding: [0x48,0x39,0xd7]
 ; NDD-NEXT:    ccmpbq {dfv=of} %rsi, %rdi # encoding: [0x62,0xf4,0xc4,0x02,0x39,0xf7]
 ; NDD-NEXT:    jno .LBB6_1 # encoding: [0x71,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB6_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB6_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB6_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 bb:
@@ -294,7 +294,7 @@ define void @ccmp64rr_of_crossbb(i64 %a, i64 %b) {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    testq %rdi, %rdi # encoding: [0x48,0x85,0xff]
 ; CHECK-NEXT:    je .LBB7_2 # encoding: [0x74,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB7_2-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB7_2, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    cmpq %rsi, %rdi # encoding: [0x48,0x39,0xf7]
 ; CHECK-NEXT:  .LBB7_2: # %bb3
@@ -304,7 +304,7 @@ define void @ccmp64rr_of_crossbb(i64 %a, i64 %b) {
 ; NDD:       # %bb.0: # %bb
 ; NDD-NEXT:    testq %rdi, %rdi # encoding: [0x48,0x85,0xff]
 ; NDD-NEXT:    je .LBB7_2 # encoding: [0x74,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB7_2-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB7_2, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.1: # %bb1
 ; NDD-NEXT:    cmpq %rsi, %rdi # encoding: [0x48,0x39,0xf7]
 ; NDD-NEXT:  .LBB7_2: # %bb3
@@ -332,12 +332,12 @@ define void @ccmp8ri_zf(i8 noundef %a, i8 noundef %b, i8 noundef %c) {
 ; CHECK-NEXT:    cmpb %dl, %dil # encoding: [0x40,0x38,0xd7]
 ; CHECK-NEXT:    ccmpleb {dfv=zf} $123, %sil # encoding: [0x62,0xf4,0x14,0x0e,0x80,0xfe,0x7b]
 ; CHECK-NEXT:    jne .LBB8_1 # encoding: [0x75,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB8_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB8_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB8_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -346,12 +346,12 @@ define void @ccmp8ri_zf(i8 noundef %a, i8 noundef %b, i8 noundef %c) {
 ; NDD-NEXT:    cmpb %dl, %dil # encoding: [0x40,0x38,0xd7]
 ; NDD-NEXT:    ccmpleb {dfv=zf} $123, %sil # encoding: [0x62,0xf4,0x14,0x0e,0x80,0xfe,0x7b]
 ; NDD-NEXT:    jne .LBB8_1 # encoding: [0x75,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB8_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB8_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB8_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -375,7 +375,7 @@ define i8 @ccmp8ri_zf_double(i8 %a, double %b, i8* nocapture %c)  {
 ; CHECK-NEXT:    ucomisd %xmm1, %xmm0 # encoding: [0x66,0x0f,0x2e,0xc1]
 ; CHECK-NEXT:    ccmpeb {dfv=zf} $123, %dil # encoding: [0x62,0xf4,0x14,0x04,0x80,0xff,0x7b]
 ; CHECK-NEXT:    je .LBB9_2 # encoding: [0x74,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB9_2-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB9_2, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    movb %dil, (%rsi) # encoding: [0x40,0x88,0x3e]
 ; CHECK-NEXT:  .LBB9_2: # %if.end
@@ -388,7 +388,7 @@ define i8 @ccmp8ri_zf_double(i8 %a, double %b, i8* nocapture %c)  {
 ; NDD-NEXT:    ucomisd %xmm1, %xmm0 # encoding: [0x66,0x0f,0x2e,0xc1]
 ; NDD-NEXT:    ccmpeb {dfv=zf} $123, %dil # encoding: [0x62,0xf4,0x14,0x04,0x80,0xff,0x7b]
 ; NDD-NEXT:    je .LBB9_2 # encoding: [0x74,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB9_2-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB9_2, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    movb %dil, (%rsi) # encoding: [0x40,0x88,0x3e]
 ; NDD-NEXT:  .LBB9_2: # %if.end
@@ -418,7 +418,7 @@ define i8 @ccmp8ri_zf_double_p(i8 %a, double %b, i8* nocapture %c)  {
 ; CHECK-NEXT:    andb %al, %cl # encoding: [0x20,0xc1]
 ; CHECK-NEXT:    cmpb $1, %cl # encoding: [0x80,0xf9,0x01]
 ; CHECK-NEXT:    jne .LBB10_2 # encoding: [0x75,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB10_2-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB10_2, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    movb %dil, (%rsi) # encoding: [0x40,0x88,0x3e]
 ; CHECK-NEXT:  .LBB10_2: # %if.end
@@ -434,7 +434,7 @@ define i8 @ccmp8ri_zf_double_p(i8 %a, double %b, i8* nocapture %c)  {
 ; NDD-NEXT:    andb %cl, %al # EVEX TO LEGACY Compression encoding: [0x20,0xc8]
 ; NDD-NEXT:    cmpb $1, %al # encoding: [0x3c,0x01]
 ; NDD-NEXT:    jne .LBB10_2 # encoding: [0x75,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB10_2-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB10_2, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    movb %dil, (%rsi) # encoding: [0x40,0x88,0x3e]
 ; NDD-NEXT:  .LBB10_2: # %if.end
@@ -464,7 +464,7 @@ define i8 @ccmp8ri_zf_double_np(i8 %a, double %b, i8* nocapture %c)  {
 ; CHECK-NEXT:    andb %al, %cl # encoding: [0x20,0xc1]
 ; CHECK-NEXT:    cmpb $1, %cl # encoding: [0x80,0xf9,0x01]
 ; CHECK-NEXT:    jne .LBB11_2 # encoding: [0x75,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB11_2-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB11_2, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    movb %dil, (%rsi) # encoding: [0x40,0x88,0x3e]
 ; CHECK-NEXT:  .LBB11_2: # %if.end
@@ -480,7 +480,7 @@ define i8 @ccmp8ri_zf_double_np(i8 %a, double %b, i8* nocapture %c)  {
 ; NDD-NEXT:    andb %cl, %al # EVEX TO LEGACY Compression encoding: [0x20,0xc8]
 ; NDD-NEXT:    cmpb $1, %al # encoding: [0x3c,0x01]
 ; NDD-NEXT:    jne .LBB11_2 # encoding: [0x75,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB11_2-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB11_2, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    movb %dil, (%rsi) # encoding: [0x40,0x88,0x3e]
 ; NDD-NEXT:  .LBB11_2: # %if.end
@@ -508,12 +508,12 @@ define void @ccmp16ri_zf(i16 noundef %a, i16 noundef %b, i16 noundef %c) {
 ; CHECK-NEXT:    ccmpael {dfv=sf} $1234, %eax # encoding: [0x62,0xf4,0x24,0x03,0x81,0xf8,0xd2,0x04,0x00,0x00]
 ; CHECK-NEXT:    # imm = 0x4D2
 ; CHECK-NEXT:    jge .LBB12_1 # encoding: [0x7d,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB12_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB12_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB12_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -524,12 +524,12 @@ define void @ccmp16ri_zf(i16 noundef %a, i16 noundef %b, i16 noundef %c) {
 ; NDD-NEXT:    ccmpael {dfv=sf} $1234, %eax # encoding: [0x62,0xf4,0x24,0x03,0x81,0xf8,0xd2,0x04,0x00,0x00]
 ; NDD-NEXT:    # imm = 0x4D2
 ; NDD-NEXT:    jge .LBB12_1 # encoding: [0x7d,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB12_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB12_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB12_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -553,12 +553,12 @@ define void @ccmp32ri_cf(i32 noundef %a, i32 noundef %b, i32 noundef %c) {
 ; CHECK-NEXT:    ccmpbl {dfv=cf} $1048577, %esi # encoding: [0x62,0xf4,0x0c,0x02,0x81,0xfe,0x01,0x00,0x10,0x00]
 ; CHECK-NEXT:    # imm = 0x100001
 ; CHECK-NEXT:    jae .LBB13_1 # encoding: [0x73,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB13_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB13_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB13_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -568,12 +568,12 @@ define void @ccmp32ri_cf(i32 noundef %a, i32 noundef %b, i32 noundef %c) {
 ; NDD-NEXT:    ccmpbl {dfv=cf} $1048577, %esi # encoding: [0x62,0xf4,0x0c,0x02,0x81,0xfe,0x01,0x00,0x10,0x00]
 ; NDD-NEXT:    # imm = 0x100001
 ; NDD-NEXT:    jae .LBB13_1 # encoding: [0x73,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB13_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB13_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB13_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -597,12 +597,12 @@ define void @ccmp64ri32_zf(i64 noundef %a, i64 noundef %b, i64 noundef %c) {
 ; CHECK-NEXT:    ccmpbeq {dfv=sf} $123456, %rsi # encoding: [0x62,0xf4,0xa4,0x06,0x81,0xfe,0x40,0xe2,0x01,0x00]
 ; CHECK-NEXT:    # imm = 0x1E240
 ; CHECK-NEXT:    jge .LBB14_1 # encoding: [0x7d,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB14_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB14_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB14_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -612,12 +612,12 @@ define void @ccmp64ri32_zf(i64 noundef %a, i64 noundef %b, i64 noundef %c) {
 ; NDD-NEXT:    ccmpbeq {dfv=sf} $123456, %rsi # encoding: [0x62,0xf4,0xa4,0x06,0x81,0xfe,0x40,0xe2,0x01,0x00]
 ; NDD-NEXT:    # imm = 0x1E240
 ; NDD-NEXT:    jge .LBB14_1 # encoding: [0x7d,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB14_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB14_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB14_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -640,12 +640,12 @@ define void @ccmp8rm_zf(i8 noundef %a, i8 noundef %b, i8 noundef %c, ptr %ptr) {
 ; CHECK-NEXT:    cmpb %dl, %dil # encoding: [0x40,0x38,0xd7]
 ; CHECK-NEXT:    ccmpneb {dfv=zf} (%rcx), %sil # encoding: [0x62,0xf4,0x14,0x05,0x3a,0x31]
 ; CHECK-NEXT:    jne .LBB15_1 # encoding: [0x75,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB15_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB15_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB15_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -654,12 +654,12 @@ define void @ccmp8rm_zf(i8 noundef %a, i8 noundef %b, i8 noundef %c, ptr %ptr) {
 ; NDD-NEXT:    cmpb %dl, %dil # encoding: [0x40,0x38,0xd7]
 ; NDD-NEXT:    ccmpneb {dfv=zf} (%rcx), %sil # encoding: [0x62,0xf4,0x14,0x05,0x3a,0x31]
 ; NDD-NEXT:    jne .LBB15_1 # encoding: [0x75,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB15_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB15_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB15_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -683,12 +683,12 @@ define void @ccmp16rm_sf(i16 noundef %a, i16 noundef %b, i16 noundef %c, ptr %pt
 ; CHECK-NEXT:    cmpw %dx, %di # encoding: [0x66,0x39,0xd7]
 ; CHECK-NEXT:    ccmplew {dfv=sf} (%rcx), %si # encoding: [0x62,0xf4,0x25,0x0e,0x3b,0x31]
 ; CHECK-NEXT:    jge .LBB16_1 # encoding: [0x7d,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB16_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB16_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB16_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -697,12 +697,12 @@ define void @ccmp16rm_sf(i16 noundef %a, i16 noundef %b, i16 noundef %c, ptr %pt
 ; NDD-NEXT:    cmpw %dx, %di # encoding: [0x66,0x39,0xd7]
 ; NDD-NEXT:    ccmplew {dfv=sf} (%rcx), %si # encoding: [0x62,0xf4,0x25,0x0e,0x3b,0x31]
 ; NDD-NEXT:    jge .LBB16_1 # encoding: [0x7d,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB16_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB16_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB16_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -726,12 +726,12 @@ define void @ccmp32rm_cf(i32 noundef %a, i32 noundef %b, i32 noundef %c, ptr %pt
 ; CHECK-NEXT:    cmpl %edx, %edi # encoding: [0x39,0xd7]
 ; CHECK-NEXT:    ccmpgl {dfv=cf} (%rcx), %esi # encoding: [0x62,0xf4,0x0c,0x0f,0x3b,0x31]
 ; CHECK-NEXT:    ja .LBB17_1 # encoding: [0x77,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB17_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB17_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB17_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -740,12 +740,12 @@ define void @ccmp32rm_cf(i32 noundef %a, i32 noundef %b, i32 noundef %c, ptr %pt
 ; NDD-NEXT:    cmpl %edx, %edi # encoding: [0x39,0xd7]
 ; NDD-NEXT:    ccmpgl {dfv=cf} (%rcx), %esi # encoding: [0x62,0xf4,0x0c,0x0f,0x3b,0x31]
 ; NDD-NEXT:    ja .LBB17_1 # encoding: [0x77,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB17_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB17_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB17_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -769,12 +769,12 @@ define void @ccmp64rm_sf(i64 noundef %a, i64 noundef %b, i64 noundef %c, ptr %pt
 ; CHECK-NEXT:    cmpq %rdx, %rdi # encoding: [0x48,0x39,0xd7]
 ; CHECK-NEXT:    ccmpleq {dfv=sf} (%rcx), %rsi # encoding: [0x62,0xf4,0xa4,0x0e,0x3b,0x31]
 ; CHECK-NEXT:    jge .LBB18_1 # encoding: [0x7d,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB18_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB18_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB18_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -783,12 +783,12 @@ define void @ccmp64rm_sf(i64 noundef %a, i64 noundef %b, i64 noundef %c, ptr %pt
 ; NDD-NEXT:    cmpq %rdx, %rdi # encoding: [0x48,0x39,0xd7]
 ; NDD-NEXT:    ccmpleq {dfv=sf} (%rcx), %rsi # encoding: [0x62,0xf4,0xa4,0x0e,0x3b,0x31]
 ; NDD-NEXT:    jge .LBB18_1 # encoding: [0x7d,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB18_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB18_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB18_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -812,12 +812,12 @@ define void @ccmp8mr_zf(i8 noundef %a, i8 noundef %c, ptr %ptr) {
 ; CHECK-NEXT:    cmpb %sil, %dil # encoding: [0x40,0x38,0xf7]
 ; CHECK-NEXT:    ccmpgeb {dfv=zf} %sil, (%rdx) # encoding: [0x62,0xf4,0x14,0x0d,0x38,0x32]
 ; CHECK-NEXT:    jne .LBB19_1 # encoding: [0x75,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB19_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB19_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB19_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -826,12 +826,12 @@ define void @ccmp8mr_zf(i8 noundef %a, i8 noundef %c, ptr %ptr) {
 ; NDD-NEXT:    cmpb %sil, %dil # encoding: [0x40,0x38,0xf7]
 ; NDD-NEXT:    ccmpgeb {dfv=zf} %sil, (%rdx) # encoding: [0x62,0xf4,0x14,0x0d,0x38,0x32]
 ; NDD-NEXT:    jne .LBB19_1 # encoding: [0x75,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB19_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB19_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB19_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -855,12 +855,12 @@ define void @ccmp16mr_sf(i16 noundef %a, i16 noundef %c, ptr %ptr) {
 ; CHECK-NEXT:    cmpw %si, %di # encoding: [0x66,0x39,0xf7]
 ; CHECK-NEXT:    ccmplew {dfv=sf} %si, (%rdx) # encoding: [0x62,0xf4,0x25,0x0e,0x39,0x32]
 ; CHECK-NEXT:    jge .LBB20_1 # encoding: [0x7d,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB20_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB20_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB20_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -869,12 +869,12 @@ define void @ccmp16mr_sf(i16 noundef %a, i16 noundef %c, ptr %ptr) {
 ; NDD-NEXT:    cmpw %si, %di # encoding: [0x66,0x39,0xf7]
 ; NDD-NEXT:    ccmplew {dfv=sf} %si, (%rdx) # encoding: [0x62,0xf4,0x25,0x0e,0x39,0x32]
 ; NDD-NEXT:    jge .LBB20_1 # encoding: [0x7d,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB20_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB20_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB20_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -898,12 +898,12 @@ define void @ccmp32mr_cf(i32 noundef %a, i32 noundef %c, ptr %ptr) {
 ; CHECK-NEXT:    cmpl %esi, %edi # encoding: [0x39,0xf7]
 ; CHECK-NEXT:    ccmpll {dfv=cf} %esi, (%rdx) # encoding: [0x62,0xf4,0x0c,0x0c,0x39,0x32]
 ; CHECK-NEXT:    ja .LBB21_1 # encoding: [0x77,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB21_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB21_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB21_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -912,12 +912,12 @@ define void @ccmp32mr_cf(i32 noundef %a, i32 noundef %c, ptr %ptr) {
 ; NDD-NEXT:    cmpl %esi, %edi # encoding: [0x39,0xf7]
 ; NDD-NEXT:    ccmpll {dfv=cf} %esi, (%rdx) # encoding: [0x62,0xf4,0x0c,0x0c,0x39,0x32]
 ; NDD-NEXT:    ja .LBB21_1 # encoding: [0x77,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB21_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB21_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB21_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -941,12 +941,12 @@ define void @ccmp64mr_sf(i64 noundef %a, i64 noundef %c, ptr %ptr) {
 ; CHECK-NEXT:    cmpq %rsi, %rdi # encoding: [0x48,0x39,0xf7]
 ; CHECK-NEXT:    ccmpleq {dfv=sf} %rsi, (%rdx) # encoding: [0x62,0xf4,0xa4,0x0e,0x39,0x32]
 ; CHECK-NEXT:    jge .LBB22_1 # encoding: [0x7d,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB22_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB22_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB22_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -955,12 +955,12 @@ define void @ccmp64mr_sf(i64 noundef %a, i64 noundef %c, ptr %ptr) {
 ; NDD-NEXT:    cmpq %rsi, %rdi # encoding: [0x48,0x39,0xf7]
 ; NDD-NEXT:    ccmpleq {dfv=sf} %rsi, (%rdx) # encoding: [0x62,0xf4,0xa4,0x0e,0x39,0x32]
 ; NDD-NEXT:    jge .LBB22_1 # encoding: [0x7d,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB22_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB22_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB22_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -984,12 +984,12 @@ define void @ccmp8mi_zf(i8 noundef %a, i8 noundef %c, ptr %ptr) {
 ; CHECK-NEXT:    cmpb %sil, %dil # encoding: [0x40,0x38,0xf7]
 ; CHECK-NEXT:    ccmpneb {dfv=zf} $123, (%rdx) # encoding: [0x62,0xf4,0x14,0x05,0x80,0x3a,0x7b]
 ; CHECK-NEXT:    jne .LBB23_1 # encoding: [0x75,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB23_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB23_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB23_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -998,12 +998,12 @@ define void @ccmp8mi_zf(i8 noundef %a, i8 noundef %c, ptr %ptr) {
 ; NDD-NEXT:    cmpb %sil, %dil # encoding: [0x40,0x38,0xf7]
 ; NDD-NEXT:    ccmpneb {dfv=zf} $123, (%rdx) # encoding: [0x62,0xf4,0x14,0x05,0x80,0x3a,0x7b]
 ; NDD-NEXT:    jne .LBB23_1 # encoding: [0x75,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB23_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB23_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB23_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -1028,12 +1028,12 @@ define void @ccmp16mi_zf(i16 noundef %a, i16 noundef %c, ptr %ptr) {
 ; CHECK-NEXT:    ccmplew {dfv=sf} $1234, (%rdx) # encoding: [0x62,0xf4,0x25,0x0e,0x81,0x3a,0xd2,0x04]
 ; CHECK-NEXT:    # imm = 0x4D2
 ; CHECK-NEXT:    jge .LBB24_1 # encoding: [0x7d,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB24_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB24_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB24_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -1043,12 +1043,12 @@ define void @ccmp16mi_zf(i16 noundef %a, i16 noundef %c, ptr %ptr) {
 ; NDD-NEXT:    ccmplew {dfv=sf} $1234, (%rdx) # encoding: [0x62,0xf4,0x25,0x0e,0x81,0x3a,0xd2,0x04]
 ; NDD-NEXT:    # imm = 0x4D2
 ; NDD-NEXT:    jge .LBB24_1 # encoding: [0x7d,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB24_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB24_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB24_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -1073,12 +1073,12 @@ define void @ccmp32mi_cf(i32 noundef %a, i32 noundef %c, ptr %ptr) {
 ; CHECK-NEXT:    ccmpnel {dfv=cf} $123457, (%rdx) # encoding: [0x62,0xf4,0x0c,0x05,0x81,0x3a,0x41,0xe2,0x01,0x00]
 ; CHECK-NEXT:    # imm = 0x1E241
 ; CHECK-NEXT:    jae .LBB25_1 # encoding: [0x73,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB25_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB25_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB25_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -1088,12 +1088,12 @@ define void @ccmp32mi_cf(i32 noundef %a, i32 noundef %c, ptr %ptr) {
 ; NDD-NEXT:    ccmpnel {dfv=cf} $123457, (%rdx) # encoding: [0x62,0xf4,0x0c,0x05,0x81,0x3a,0x41,0xe2,0x01,0x00]
 ; NDD-NEXT:    # imm = 0x1E241
 ; NDD-NEXT:    jae .LBB25_1 # encoding: [0x73,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB25_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB25_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB25_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -1118,12 +1118,12 @@ define void @ccmp64mi32_zf(i64 noundef %a, i64 noundef %c, ptr %ptr) {
 ; CHECK-NEXT:    ccmpleq {dfv=sf} $123456, (%rdx) # encoding: [0x62,0xf4,0xa4,0x0e,0x81,0x3a,0x40,0xe2,0x01,0x00]
 ; CHECK-NEXT:    # imm = 0x1E240
 ; CHECK-NEXT:    jge .LBB26_1 # encoding: [0x7d,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB26_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB26_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB26_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -1133,12 +1133,12 @@ define void @ccmp64mi32_zf(i64 noundef %a, i64 noundef %c, ptr %ptr) {
 ; NDD-NEXT:    ccmpleq {dfv=sf} $123456, (%rdx) # encoding: [0x62,0xf4,0xa4,0x0e,0x81,0x3a,0x40,0xe2,0x01,0x00]
 ; NDD-NEXT:    # imm = 0x1E240
 ; NDD-NEXT:    jge .LBB26_1 # encoding: [0x7d,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB26_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB26_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB26_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -1163,12 +1163,12 @@ define void @ccmp_continous(i32 noundef %a, i32 noundef %b, i32 noundef %c) {
 ; CHECK-NEXT:    ccmplel {dfv=} $2, %esi # encoding: [0x62,0xf4,0x04,0x0e,0x83,0xfe,0x02]
 ; CHECK-NEXT:    ccmpll {dfv=} $3, %edx # encoding: [0x62,0xf4,0x04,0x0c,0x83,0xfa,0x03]
 ; CHECK-NEXT:    jge .LBB27_1 # encoding: [0x7d,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB27_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB27_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB27_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -1178,12 +1178,12 @@ define void @ccmp_continous(i32 noundef %a, i32 noundef %b, i32 noundef %c) {
 ; NDD-NEXT:    ccmplel {dfv=} $2, %esi # encoding: [0x62,0xf4,0x04,0x0e,0x83,0xfe,0x02]
 ; NDD-NEXT:    ccmpll {dfv=} $3, %edx # encoding: [0x62,0xf4,0x04,0x0c,0x83,0xfa,0x03]
 ; NDD-NEXT:    jge .LBB27_1 # encoding: [0x7d,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB27_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB27_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB27_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -1262,12 +1262,12 @@ define void @ccmp64ri64(i64 noundef %a, i64 noundef %b, i64 noundef %c) {
 ; CHECK-NEXT:    # imm = 0x9167A66BBFE
 ; CHECK-NEXT:    ccmpbeq {dfv=zf} %rax, %rsi # encoding: [0x62,0xf4,0x94,0x06,0x39,0xc6]
 ; CHECK-NEXT:    jg .LBB30_1 # encoding: [0x7f,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB30_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB30_1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    jmp foo # TAILCALL
 ; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; CHECK-NEXT:  .LBB30_1: # %if.end
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
@@ -1278,12 +1278,12 @@ define void @ccmp64ri64(i64 noundef %a, i64 noundef %b, i64 noundef %c) {
 ; NDD-NEXT:    # imm = 0x9167A66BBFE
 ; NDD-NEXT:    ccmpbeq {dfv=zf} %rax, %rsi # encoding: [0x62,0xf4,0x94,0x06,0x39,0xc6]
 ; NDD-NEXT:    jg .LBB30_1 # encoding: [0x7f,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB30_1-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB30_1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    jmp foo # TAILCALL
 ; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
 ; NDD-NEXT:  .LBB30_1: # %if.end
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:

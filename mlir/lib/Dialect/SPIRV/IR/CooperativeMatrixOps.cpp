@@ -15,7 +15,6 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "llvm/ADT/STLExtras.h"
-#include <cstdint>
 
 using namespace mlir::spirv::AttrNames;
 

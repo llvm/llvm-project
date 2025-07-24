@@ -15,14 +15,11 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/Dominance.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/TilingInterface.h"
@@ -681,7 +678,7 @@ getSplitReductionIvs(RewriterBase &rewriter, Location loc,
   splitReductionIvs.resize(reductionDims.size(), rewriter.getIndexAttr(0));
   AffineExpr s0, s1;
   bindSymbols(rewriter.getContext(), s0, s1);
-  AffineExpr divExpr = s0.ceilDiv(s1);
+  AffineExpr divExpr = s0.floorDiv(s1);
   int ivIndex = 0;
   if (reductionStrategy ==
       ReductionTilingStrategy::PartialReductionOuterParallel) {

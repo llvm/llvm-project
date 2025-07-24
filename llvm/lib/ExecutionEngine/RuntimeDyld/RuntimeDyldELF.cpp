@@ -738,6 +738,32 @@ static inline uint32_t extractBits(uint64_t Val, uint32_t Hi, uint32_t Lo) {
   return Hi == 63 ? Val >> Lo : (Val & (((1ULL << (Hi + 1)) - 1))) >> Lo;
 }
 
+// Calculate the adjusted page delta between dest and PC. The code is copied
+// from lld and see comments there for more details.
+static uint64_t getLoongArchPageDelta(uint64_t dest, uint64_t pc,
+                                      uint32_t type) {
+  uint64_t pcalau12i_pc;
+  switch (type) {
+  case ELF::R_LARCH_PCALA64_LO20:
+  case ELF::R_LARCH_GOT64_PC_LO20:
+    pcalau12i_pc = pc - 8;
+    break;
+  case ELF::R_LARCH_PCALA64_HI12:
+  case ELF::R_LARCH_GOT64_PC_HI12:
+    pcalau12i_pc = pc - 12;
+    break;
+  default:
+    pcalau12i_pc = pc;
+    break;
+  }
+  uint64_t result = (dest & ~0xfffULL) - (pcalau12i_pc & ~0xfffULL);
+  if (dest & 0x800)
+    result += 0x1000 - 0x1'0000'0000;
+  if (result & 0x8000'0000)
+    result += 0x1'0000'0000;
+  return result;
+}
+
 void RuntimeDyldELF::resolveLoongArch64Relocation(const SectionEntry &Section,
                                                   uint64_t Offset,
                                                   uint64_t Value, uint32_t Type,
@@ -789,10 +815,7 @@ void RuntimeDyldELF::resolveLoongArch64Relocation(const SectionEntry &Section,
   case ELF::R_LARCH_GOT_PC_HI20:
   case ELF::R_LARCH_PCALA_HI20: {
     uint64_t Target = Value + Addend;
-    uint64_t TargetPage =
-        (Target + (Target & 0x800)) & ~static_cast<uint64_t>(0xfff);
-    uint64_t PCPage = FinalAddress & ~static_cast<uint64_t>(0xfff);
-    int64_t PageDelta = TargetPage - PCPage;
+    int64_t PageDelta = getLoongArchPageDelta(Target, FinalAddress, Type);
     auto Instr = support::ulittle32_t::ref(TargetPtr);
     uint32_t Imm31_12 = extractBits(PageDelta, /*Hi=*/31, /*Lo=*/12) << 5;
     Instr = (Instr & 0xfe00001f) | Imm31_12;
@@ -804,6 +827,24 @@ void RuntimeDyldELF::resolveLoongArch64Relocation(const SectionEntry &Section,
     auto Instr = support::ulittle32_t::ref(TargetPtr);
     uint32_t Imm11_0 = TargetOffset << 10;
     Instr = (Instr & 0xffc003ff) | Imm11_0;
+    break;
+  }
+  case ELF::R_LARCH_GOT64_PC_LO20:
+  case ELF::R_LARCH_PCALA64_LO20: {
+    uint64_t Target = Value + Addend;
+    int64_t PageDelta = getLoongArchPageDelta(Target, FinalAddress, Type);
+    auto Instr = support::ulittle32_t::ref(TargetPtr);
+    uint32_t Imm51_32 = extractBits(PageDelta, /*Hi=*/51, /*Lo=*/32) << 5;
+    Instr = (Instr & 0xfe00001f) | Imm51_32;
+    break;
+  }
+  case ELF::R_LARCH_GOT64_PC_HI12:
+  case ELF::R_LARCH_PCALA64_HI12: {
+    uint64_t Target = Value + Addend;
+    int64_t PageDelta = getLoongArchPageDelta(Target, FinalAddress, Type);
+    auto Instr = support::ulittle32_t::ref(TargetPtr);
+    uint32_t Imm63_52 = extractBits(PageDelta, /*Hi=*/63, /*Lo=*/52) << 10;
+    Instr = (Instr & 0xffc003ff) | Imm63_52;
     break;
   }
   case ELF::R_LARCH_ABS_HI20: {
@@ -1758,7 +1799,9 @@ RuntimeDyldELF::processRelocationRef(
         MemMgr.allowStubAllocation()) {
       resolveLoongArch64Branch(SectionID, Value, RelI, Stubs);
     } else if (RelType == ELF::R_LARCH_GOT_PC_HI20 ||
-               RelType == ELF::R_LARCH_GOT_PC_LO12) {
+               RelType == ELF::R_LARCH_GOT_PC_LO12 ||
+               RelType == ELF::R_LARCH_GOT64_PC_HI12 ||
+               RelType == ELF::R_LARCH_GOT64_PC_LO20) {
       uint64_t GOTOffset = findOrAllocGOTEntry(Value, ELF::R_LARCH_64);
       resolveGOTOffsetRelocation(SectionID, Offset, GOTOffset + Addend,
                                  RelType);
@@ -2936,7 +2979,9 @@ bool RuntimeDyldELF::relocationNeedsGot(const RelocationRef &R) const {
 
   if (Arch == Triple::loongarch64)
     return RelTy == ELF::R_LARCH_GOT_PC_HI20 ||
-           RelTy == ELF::R_LARCH_GOT_PC_LO12;
+           RelTy == ELF::R_LARCH_GOT_PC_LO12 ||
+           RelTy == ELF::R_LARCH_GOT64_PC_HI12 ||
+           RelTy == ELF::R_LARCH_GOT64_PC_LO20;
 
   if (Arch == Triple::x86_64)
     return RelTy == ELF::R_X86_64_GOTPCREL ||

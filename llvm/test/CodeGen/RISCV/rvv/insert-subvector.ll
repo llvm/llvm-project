@@ -620,11 +620,8 @@ define <vscale x 8 x i32> @insert_splat_to_undef() {
 define <vscale x 8 x i32> @insert_splat_to_splat() {
 ; CHECK-LABEL: insert_splat_to_splat:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v12, 1
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 1
-; CHECK-NEXT:    vmv2r.v v8, v12
 ; CHECK-NEXT:    ret
   %v = call <vscale x 8 x i32> @llvm.vector.insert.nxv4i32.nxv8i32(<vscale x 8 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), i64 0)
   ret <vscale x 8 x i32> %v

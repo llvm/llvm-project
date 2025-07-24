@@ -3197,3 +3197,36 @@ func.func @omp_workshare_loop_wrapper_attrs(%idx : index) {
   }
   return
 }
+
+// CHECK-LABEL: func.func @omp_allocate_dir(
+// CHECK-SAME: %[[ARG0:.*]]: memref<i32>,
+// CHECK-SAME: %[[ARG1:.*]]: memref<i32>) {
+func.func @omp_allocate_dir(%arg0 : memref<i32>, %arg1 : memref<i32>) -> () {
+
+  // Test with one data var
+  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>)
+  omp.allocate_dir (%arg0 : memref<i32>)
+
+  // Test with two data vars
+  // CHECK: omp.allocate_dir(%[[ARG0]], %[[ARG1]] : memref<i32>, memref<i32>)
+  omp.allocate_dir (%arg0, %arg1: memref<i32>, memref<i32>)
+
+  // Test with one data var and align clause
+  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>) align(2)
+  omp.allocate_dir (%arg0 : memref<i32>) align(2)
+
+  // Test with one data var and allocator clause
+  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>) allocator(omp_pteam_mem_alloc)
+  omp.allocate_dir (%arg0 : memref<i32>) allocator(omp_pteam_mem_alloc)
+
+  // Test with one data var, align clause and allocator clause
+  // CHECK: omp.allocate_dir(%[[ARG0]] : memref<i32>) align(2) allocator(omp_thread_mem_alloc)
+  omp.allocate_dir (%arg0 : memref<i32>) align(2) allocator(omp_thread_mem_alloc)
+
+  // Test with two data vars, align clause and allocator clause
+  // CHECK: omp.allocate_dir(%[[ARG0]], %[[ARG1]] : memref<i32>, memref<i32>) align(2) allocator(omp_cgroup_mem_alloc)
+  omp.allocate_dir (%arg0, %arg1 : memref<i32>, memref<i32>) align(2) allocator(omp_cgroup_mem_alloc)
+
+  return
+}
+

@@ -1338,3 +1338,14 @@ func.func @no_fold_mul_result_exceeds_i32() -> tensor<i32> {
     %3 = tosa.mul %0, %1, %2 : (tensor<i32>, tensor<i32>, tensor<1xi8>) -> tensor<i32>
     return %3 : tensor<i32>
 }
+
+// -----
+
+// CHECK-LABEL: @test_fold_i1_to_i32_cast
+// CHECK: %[[OUT:.*]] = "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
+// CHECK: return %[[OUT]] : tensor<i32>
+func.func @test_fold_i1_to_i32_cast() -> tensor<i32> {
+  %0 = "tosa.const"() <{values = dense<1> : tensor<i1>}> : () -> tensor<i1>
+  %1 = "tosa.cast"(%0) : (tensor<i1>) -> tensor<i32>
+  return %1 : tensor<i32>
+}

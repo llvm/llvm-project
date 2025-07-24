@@ -4,6 +4,7 @@
 
 define i32 @trivially_free() {
 ; CHECK-SIZE-LABEL: 'trivially_free'
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %alloca = alloca i8, align 1
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = call i32 @llvm.annotation.i32.p0(i32 undef, ptr undef, ptr undef, i32 undef)
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.assume(i1 undef)
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.experimental.noalias.scope.decl(metadata !3)
@@ -13,14 +14,15 @@ define i32 @trivially_free() {
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a2 = call ptr @llvm.launder.invariant.group.p0(ptr undef)
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a3 = call ptr @llvm.strip.invariant.group.p0(ptr undef)
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a4 = call i1 @llvm.is.constant.i32(i32 undef)
-; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.lifetime.start.p0(i64 1, ptr undef)
-; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.lifetime.end.p0(i64 1, ptr undef)
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.lifetime.start.p0(i64 1, ptr %alloca)
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.lifetime.end.p0(i64 1, ptr %alloca)
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a5 = call i64 @llvm.objectsize.i64.p0(ptr undef, i1 true, i1 true, i1 true)
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a6 = call ptr @llvm.ptr.annotation.p0.p0(ptr undef, ptr undef, ptr undef, i32 undef, ptr undef)
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.var.annotation.p0.p0(ptr undef, ptr undef, ptr undef, i32 undef, ptr undef)
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; CHECK-THROUGHPUT-LABEL: 'trivially_free'
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %alloca = alloca i8, align 1
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = call i32 @llvm.annotation.i32.p0(i32 undef, ptr undef, ptr undef, i32 undef)
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.assume(i1 undef)
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.experimental.noalias.scope.decl(metadata !3)
@@ -30,13 +32,14 @@ define i32 @trivially_free() {
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a2 = call ptr @llvm.launder.invariant.group.p0(ptr undef)
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a3 = call ptr @llvm.strip.invariant.group.p0(ptr undef)
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a4 = call i1 @llvm.is.constant.i32(i32 undef)
-; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.lifetime.start.p0(i64 1, ptr undef)
-; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.lifetime.end.p0(i64 1, ptr undef)
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.lifetime.start.p0(i64 1, ptr %alloca)
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.lifetime.end.p0(i64 1, ptr %alloca)
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a5 = call i64 @llvm.objectsize.i64.p0(ptr undef, i1 true, i1 true, i1 true)
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a6 = call ptr @llvm.ptr.annotation.p0.p0(ptr undef, ptr undef, ptr undef, i32 undef, ptr undef)
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: call void @llvm.var.annotation.p0.p0(ptr undef, ptr undef, ptr undef, i32 undef, ptr undef)
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
+  %alloca = alloca i8
   %a0 = call i32 @llvm.annotation.i32(i32 undef, ptr undef, ptr undef, i32 undef)
   call void @llvm.assume(i1 undef)
   call void @llvm.experimental.noalias.scope.decl(metadata !4)
@@ -46,8 +49,8 @@ define i32 @trivially_free() {
   %a2 = call ptr @llvm.launder.invariant.group.p0(ptr undef)
   %a3 = call ptr @llvm.strip.invariant.group.p0(ptr undef)
   %a4 = call i1 @llvm.is.constant.i32(i32 undef)
-  call void @llvm.lifetime.start.p0(i64 1, ptr undef)
-  call void @llvm.lifetime.end.p0(i64 1, ptr undef)
+  call void @llvm.lifetime.start.p0(i64 1, ptr %alloca)
+  call void @llvm.lifetime.end.p0(i64 1, ptr %alloca)
   %a5 = call i64 @llvm.objectsize.i64.p0(ptr undef, i1 1, i1 1, i1 1)
   %a6 = call ptr @llvm.ptr.annotation.p0(ptr undef, ptr undef, ptr undef, i32 undef, ptr undef)
   call void @llvm.var.annotation(ptr undef, ptr undef, ptr undef, i32 undef, ptr undef)

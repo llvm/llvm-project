@@ -44,8 +44,7 @@ namespace clang {
   class TypeLoc;
   class LangOptions;
   class IdentifierInfo;
-  class NamespaceAliasDecl;
-  class NamespaceDecl;
+  class NamespaceBaseDecl;
   class ObjCDeclSpec;
   class Sema;
   class Declarator;
@@ -129,28 +128,14 @@ public:
   /// \param Context The AST context in which this nested-name-specifier
   /// resides.
   ///
-  /// \param Namespace The namespace.
+  /// \param Namespace The namespace or the namespace alias.
   ///
-  /// \param NamespaceLoc The location of the namespace name.
+  /// \param NamespaceLoc The location of the namespace name or the namespace
+  /// alias.
   ///
   /// \param ColonColonLoc The location of the trailing '::'.
-  void Extend(ASTContext &Context, NamespaceDecl *Namespace,
+  void Extend(ASTContext &Context, NamespaceBaseDecl *Namespace,
               SourceLocation NamespaceLoc, SourceLocation ColonColonLoc);
-
-  /// Extend the current nested-name-specifier by another
-  /// nested-name-specifier component of the form 'namespace-alias::'.
-  ///
-  /// \param Context The AST context in which this nested-name-specifier
-  /// resides.
-  ///
-  /// \param Alias The namespace alias.
-  ///
-  /// \param AliasLoc The location of the namespace alias
-  /// name.
-  ///
-  /// \param ColonColonLoc The location of the trailing '::'.
-  void Extend(ASTContext &Context, NamespaceAliasDecl *Alias,
-              SourceLocation AliasLoc, SourceLocation ColonColonLoc);
 
   /// Turn this (empty) nested-name-specifier into the global
   /// nested-name-specifier '::'.
@@ -1918,7 +1903,7 @@ private:
   /// parsed.  This is pushed from the identifier out, which means that element
   /// #0 will be the most closely bound to the identifier, and
   /// DeclTypeInfo.back() will be the least closely bound.
-  SmallVector<DeclaratorChunk, 8> DeclTypeInfo;
+  SmallVector<DeclaratorChunk, 4> DeclTypeInfo;
 
   /// InvalidType - Set by Sema::GetTypeForDeclarator().
   LLVM_PREFERRED_TYPE(bool)

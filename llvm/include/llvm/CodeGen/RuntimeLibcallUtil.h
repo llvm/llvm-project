@@ -68,6 +68,14 @@ LLVM_ABI Libcall getLDEXP(EVT RetVT);
 /// UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getFREXP(EVT RetVT);
 
+/// Return the SIN_* value for the given types, or UNKNOWN_LIBCALL if there is
+/// none.
+LLVM_ABI Libcall getSIN(EVT RetVT);
+
+/// Return the COS_* value for the given types, or UNKNOWN_LIBCALL if there is
+/// none.
+LLVM_ABI Libcall getCOS(EVT RetVT);
+
 /// getSINCOS - Return the SINCOS_* value for the given types, or
 /// UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getSINCOS(EVT RetVT);
@@ -108,9 +116,6 @@ LLVM_ABI Libcall getMEMMOVE_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize);
 /// MEMSET_ELEMENT_UNORDERED_ATOMIC_* value for the given element size or
 /// UNKNOW_LIBCALL if there is none.
 LLVM_ABI Libcall getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize);
-
-/// Initialize the default condition code on the libcalls.
-LLVM_ABI void initCmpLibcallCCs(ISD::CondCode *CmpLibcallCCs);
 
 } // namespace RTLIB
 } // namespace llvm

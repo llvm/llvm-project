@@ -2,6 +2,8 @@ add_header_library(
   futex_word_type
   HDRS
     futex_word.h
+  DEPENDS
+    libc.hdr.stdint_proxy
 )
 
 if(NOT TARGET libc.src.__support.OSUtil.osutil)
@@ -114,6 +116,7 @@ add_object_library(
   HDRS
     ../CndVar.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.__support.threads.linux.futex_word_type

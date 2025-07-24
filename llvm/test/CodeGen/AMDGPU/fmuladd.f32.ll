@@ -1,24 +1,24 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=tahiti -denormal-fp-math-f32=preserve-sign -mattr=+fast-fmaf -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-MAD,SI %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=tahiti -denormal-fp-math-f32=ieee -mattr=+fast-fmaf -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM-STRICT,SI-DENORM,GCN-DENORM-FASTFMA,SI %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=verde -denormal-fp-math-f32=preserve-sign -mattr=-fast-fmaf -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-MAD,SI-FLUSH,SI %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=verde -denormal-fp-math-f32=ieee -mattr=-fast-fmaf -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM-STRICT,SI-DENORM,GCN-DENORM-SLOWFMA,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=tahiti -denormal-fp-math-f32=preserve-sign -mattr=+fast-fmaf -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-MAD,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=tahiti -denormal-fp-math-f32=ieee -mattr=+fast-fmaf -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM-STRICT,SI-DENORM,GCN-DENORM-FASTFMA,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=verde -denormal-fp-math-f32=preserve-sign -mattr=-fast-fmaf -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-MAD,SI-FLUSH,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=verde -denormal-fp-math-f32=ieee -mattr=-fast-fmaf -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM-STRICT,SI-DENORM,GCN-DENORM-SLOWFMA,SI %s
 
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=tahiti -denormal-fp-math-f32=preserve-sign -mattr=+fast-fmaf -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-MAD,SI-FLUSH,SI %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=tahiti -denormal-fp-math-f32=ieee -mattr=+fast-fmaf -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI-DENORM,GCN-DENORM-FASTFMA,GCN-DENORM-FASTFMA-CONTRACT,SI %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=verde -denormal-fp-math-f32=preserve-sign -mattr=-fast-fmaf -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-MAD,SI-FLUSH,SI %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=verde -denormal-fp-math-f32=ieee -mattr=-fast-fmaf -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI-DENORM,GCN-DENORM-SLOWFMA,GCN-DENORM-SLOWFMA-CONTRACT,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=tahiti -denormal-fp-math-f32=preserve-sign -mattr=+fast-fmaf -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-MAD,SI-FLUSH,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=tahiti -denormal-fp-math-f32=ieee -mattr=+fast-fmaf -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI-DENORM,GCN-DENORM-FASTFMA,GCN-DENORM-FASTFMA-CONTRACT,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=verde -denormal-fp-math-f32=preserve-sign -mattr=-fast-fmaf -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-MAD,SI-FLUSH,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=verde -denormal-fp-math-f32=ieee -mattr=-fast-fmaf -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI-DENORM,GCN-DENORM-SLOWFMA,GCN-DENORM-SLOWFMA-CONTRACT,SI %s
 
 
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=gfx900 -denormal-fp-math-f32=preserve-sign -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-MAD %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=gfx900 -denormal-fp-math-f32=ieee -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM-STRICT,GCN-DENORM-FASTFMA %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=gfx900 -denormal-fp-math-f32=preserve-sign -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-MAD %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=gfx900 -denormal-fp-math-f32=ieee -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM-STRICT,GCN-DENORM-FASTFMA %s
 
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=gfx906 -denormal-fp-math-f32=preserve-sign -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-FMAC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=gfx906 -denormal-fp-math-f32=preserve-sign -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-FMAC %s
 
 ; FIXME: Should probably test this, but sometimes selecting fmac is painful to match.
-; XUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=gfx906 -denormal-fp-math-f32=ieee -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM-STRICT,GCN-DENORM-FASTFMA %s
+; XUN: llc -amdgpu-scalarize-global-loads=false -mcpu=gfx906 -denormal-fp-math-f32=ieee -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM-STRICT,GCN-DENORM-FASTFMA %s
 
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=gfx1030 -denormal-fp-math-f32=preserve-sign -mattr=+mad-mac-f32-insts -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-FMAC %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -verify-machineinstrs -mcpu=gfx1030 -denormal-fp-math-f32=ieee -mattr=+mad-mac-f32-insts -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM-STRICT %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=gfx1030 -denormal-fp-math-f32=preserve-sign -mattr=+mad-mac-f32-insts -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-FLUSH,GCN-FLUSH-FMAC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=gfx1030 -denormal-fp-math-f32=ieee -mattr=+mad-mac-f32-insts -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM-STRICT %s
 
 ; Test all permutations of: fp32 denormals, fast fp contract, fp contract enabled for fmuladd, fmaf fast/slow.
 

@@ -37,7 +37,7 @@ void genPointerAssociate(fir::FirOpBuilder &, mlir::Location,
                          mlir::Value pointer, mlir::Value target);
 void genPointerAssociateRemapping(fir::FirOpBuilder &, mlir::Location,
                                   mlir::Value pointer, mlir::Value target,
-                                  mlir::Value bounds);
+                                  mlir::Value bounds, bool isMonomorphic);
 
 mlir::Value genCpuTime(fir::FirOpBuilder &, mlir::Location);
 void genDateAndTime(fir::FirOpBuilder &, mlir::Location,

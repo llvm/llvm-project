@@ -47,3 +47,29 @@ namespace GH132562 {
     // expected-note@-2 {{value of type 'const J' is not implicitly convertible to 'int'}}
   } // namespace t3
 } // namespace GH132562
+
+namespace GH51866 {
+
+template <class> struct Trait;
+template <class T>
+    requires T::one
+struct Trait<T> {}; // #gh51866-one
+template <class T>
+    requires T::two
+struct Trait<T> {}; // #gh51866-two
+
+struct Y {
+    static constexpr bool one = true;
+    static constexpr bool two = true;
+};
+
+template <class T>
+concept C = sizeof(Trait<T>) != 0;
+
+static_assert(!C<Y>);
+
+Trait<Y> t;
+// expected-error@-1{{ambiguous partial specializations of 'Trait<GH51866::Y>'}}
+// expected-note@#gh51866-one{{partial specialization matches}}
+// expected-note@#gh51866-two{{partial specialization matches}}
+}

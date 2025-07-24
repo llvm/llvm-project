@@ -22,9 +22,7 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -1475,9 +1473,11 @@ public:
     SmallVector<MemRefDependenceGraph::Edge, 2> inEdges;
     mdg->forEachMemRefInputEdge(
         dstNode->id, [&](MemRefDependenceGraph::Edge inEdge) {
-          // Add 'inEdge' if it is a read-after-write dependence.
+          // Add 'inEdge' if it is a read-after-write dependence or an edge
+          // from a memref defining op (e.g. view-like op or alloc op).
           if (dstNode->getLoadOpCount(inEdge.value) > 0 &&
-              mdg->getNode(inEdge.id)->getStoreOpCount(inEdge.value) > 0)
+              (mdg->getNode(inEdge.id)->getStoreOpCount(inEdge.value) > 0 ||
+               inEdge.value.getDefiningOp() == mdg->getNode(inEdge.id)->op))
             inEdges.push_back(inEdge);
         });
 

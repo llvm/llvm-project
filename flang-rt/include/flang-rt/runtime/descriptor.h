@@ -20,13 +20,16 @@
 
 #include "memory.h"
 #include "type-code.h"
+#include "flang-rt/runtime/allocator-registry.h"
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
+#include "flang/Common/optional.h"
 #include "flang/Runtime/descriptor-consts.h"
 #include <algorithm>
 #include <cassert>
 #include <cinttypes>
 #include <cstddef>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 /// Value used for asyncObject when no specific stream is specified.
@@ -262,9 +265,20 @@ public:
 
   template <typename A>
   RT_API_ATTRS A *ZeroBasedIndexedElement(std::size_t n) const {
-    SubscriptValue at[maxRank];
-    if (SubscriptsForZeroBasedElementNumber(at, n)) {
-      return Element<A>(at);
+    if (raw_.rank == 0) {
+      if (n == 0) {
+        return OffsetElement<A>();
+      }
+    } else if (raw_.rank == 1) {
+      const auto &dim{GetDimension(0)};
+      if (n < static_cast<std::size_t>(dim.Extent())) {
+        return OffsetElement<A>(n * dim.ByteStride());
+      }
+    } else {
+      SubscriptValue at[maxRank];
+      if (SubscriptsForZeroBasedElementNumber(at, n)) {
+        return Element<A>(at);
+      }
     }
     return nullptr;
   }
@@ -366,6 +380,18 @@ public:
   RT_API_ATTRS std::size_t SizeInBytes() const;
 
   RT_API_ATTRS std::size_t Elements() const;
+  RT_API_ATTRS std::size_t InlineElements() const {
+    int n{rank()};
+    if (n == 0) {
+      return 1;
+    } else {
+      auto elements{static_cast<std::size_t>(GetDimension(0).Extent())};
+      for (int j{1}; j < n; ++j) {
+        elements *= GetDimension(j).Extent();
+      }
+      return elements;
+    }
+  }
 
   // Allocate() assumes Elements() and ElementBytes() work;
   // define the extents of the dimensions and the element length
@@ -377,7 +403,22 @@ public:
 
   // Deallocates storage; does not call FINAL subroutines or
   // deallocate allocatable/automatic components.
-  RT_API_ATTRS int Deallocate();
+  RT_API_ATTRS int Deallocate() {
+    ISO::CFI_cdesc_t &descriptor{raw()};
+    void *pointer{descriptor.base_addr};
+    if (!pointer) {
+      return CFI_ERROR_BASE_ADDR_NULL;
+    } else {
+      int allocIndex{MapAllocIdx()};
+      if (allocIndex == kDefaultAllocator) {
+        std::free(pointer);
+      } else {
+        allocatorRegistry.GetDeallocator(MapAllocIdx())(pointer);
+      }
+      descriptor.base_addr = nullptr;
+      return CFI_SUCCESS;
+    }
+  }
 
   // Deallocates storage, including allocatable and automatic
   // components.  Optionally invokes FINAL subroutines.
@@ -392,8 +433,7 @@ public:
     bool stridesAreContiguous{true};
     for (int j{0}; j < leadingDimensions; ++j) {
       const Dimension &dim{GetDimension(j)};
-      stridesAreContiguous &=
-          (bytes == dim.ByteStride()) || (dim.Extent() == 1);
+      stridesAreContiguous &= bytes == dim.ByteStride() || dim.Extent() == 1;
       bytes *= dim.Extent();
     }
     // One and zero element arrays are contiguous even if the descriptor
@@ -406,13 +446,40 @@ public:
     return stridesAreContiguous || bytes == 0;
   }
 
+  // The result, if any, is a fixed stride value that can be used to
+  // address all elements.  It generalizes contiguity by also allowing
+  // the case of an array with extent 1 on all but one dimension.
+  RT_API_ATTRS common::optional<SubscriptValue> FixedStride() const {
+    auto rank{static_cast<std::size_t>(raw_.rank)};
+    common::optional<SubscriptValue> stride;
+    for (std::size_t j{0}; j < rank; ++j) {
+      const Dimension &dim{GetDimension(j)};
+      auto extent{dim.Extent()};
+      if (extent == 0) {
+        break; // empty array
+      } else if (extent == 1) { // ok
+      } else if (stride) {
+        // Extent > 1 on multiple dimensions
+        if (IsContiguous()) {
+          return ElementBytes();
+        } else {
+          return common::nullopt;
+        }
+      } else {
+        stride = dim.ByteStride();
+      }
+    }
+    return stride.value_or(0); // 0 for scalars and empty arrays
+  }
+
   // Establishes a pointer to a section or element.
   RT_API_ATTRS bool EstablishPointerSection(const Descriptor &source,
       const SubscriptValue *lower = nullptr,
       const SubscriptValue *upper = nullptr,
       const SubscriptValue *stride = nullptr);
 
-  RT_API_ATTRS void ApplyMold(const Descriptor &, int rank);
+  RT_API_ATTRS void ApplyMold(
+      const Descriptor &, int rank, bool isMonomorphic = false);
 
   RT_API_ATTRS void Check() const;
 
@@ -426,6 +493,14 @@ public:
   }
   RT_API_ATTRS inline int GetAllocIdx() const {
     return (raw_.extra & _CFI_ALLOCATOR_IDX_MASK) >> _CFI_ALLOCATOR_IDX_SHIFT;
+  }
+  RT_API_ATTRS int MapAllocIdx() const {
+#ifdef RT_DEVICE_COMPILATION
+    // Force default allocator in device code.
+    return kDefaultAllocator;
+#else
+    return GetAllocIdx();
+#endif
   }
   RT_API_ATTRS inline void SetAllocIdx(int pos) {
     raw_.extra &= ~_CFI_ALLOCATOR_IDX_MASK; // Clear the allocator index bits.

@@ -135,7 +135,7 @@ rarely have to include this file directly).
       return !L->contains(cast<Instruction>(V)->getParent());
     }
 
-  Note that you should **not** use an ``isa<>`` test followed by a ``cast<>``,
+  Note that you should **not** use an ``isa<>`` test followed by a ``cast<>``;
   for that use the ``dyn_cast<>`` operator.
 
 ``dyn_cast<>``:
@@ -234,8 +234,8 @@ the ``str`` member function.  See ``llvm/ADT/StringRef.h`` (`doxygen
 <https://llvm.org/doxygen/StringRef_8h_source.html>`__) for more
 information.
 
-You should rarely use the ``StringRef`` class directly, because it contains
-pointers to external memory it is not generally safe to store an instance of the
+You should rarely use the ``StringRef`` class directly. Because it contains
+pointers to external memory, it is not generally safe to store an instance of the
 class (unless you know that the external storage will not be freed).
 ``StringRef`` is small and pervasive enough in LLVM that it should always be
 passed by value.
@@ -416,14 +416,14 @@ to abort quickly at the point of failure (providing some basic diagnostic) when
 invariants are broken at runtime.
 
 The fundamental tools for handling programmatic errors are assertions and the
-llvm_unreachable function. Assertions are used to express invariant conditions,
+``llvm_unreachable`` function. Assertions are used to express invariant conditions,
 and should include a message describing the invariant:
 
 .. code-block:: c++
 
   assert(isPhysReg(R) && "All virt regs should have been allocated already.");
 
-The llvm_unreachable function can be used to document areas of control flow
+The ``llvm_unreachable`` function can be used to document areas of control flow
 that should never be entered if the program invariants hold:
 
 .. code-block:: c++
@@ -598,7 +598,7 @@ semantics.  For example:
   }
 
 This third form works with any type that can be assigned to from ``T&&``. This
-can be useful if the ``Expected<T>`` value needs to be stored an already-declared
+can be useful if the ``Expected<T>`` value needs to be stored in an already-declared
 ``std::optional<T>``. For example:
 
 .. code-block:: c++
@@ -619,7 +619,7 @@ can be useful if the ``Expected<T>`` value needs to be stored an already-declare
 
 All ``Error`` instances, whether success or failure, must be either checked or
 moved from (via ``std::move`` or a return) before they are destructed.
-Accidentally discarding an unchecked error will cause a program abort at the
+Accidentally discarding an unchecked error will cause a program to abort at the
 point where the unchecked value's destructor is run, making it easy to identify
 and fix violations of this rule.
 
@@ -661,7 +661,7 @@ a variadic list of "handlers", each of which must be a callable type (a
 function, lambda, or class with a call operator) with one argument. The
 ``handleErrors`` function will visit each handler in the sequence and check its
 argument type against the dynamic type of the error, running the first handler
-that matches. This is the same decision process that is used decide which catch
+that matches. This is the same decision process that is used to decide which catch
 clause to run for a C++ exception.
 
 Since the list of handlers passed to ``handleErrors`` may not cover every error
@@ -869,10 +869,10 @@ T value:
   }
 
 Like the ExitOnError utility, cantFail simplifies control flow. Their treatment
-of error cases is very different however: Where ExitOnError is guaranteed to
+of error cases is very different, however: Where ExitOnError is guaranteed to
 terminate the program on an error input, cantFail simply asserts that the result
 is success. In debug builds this will result in an assertion failure if an error
-is encountered. In release builds the behavior of cantFail for failure values is
+is encountered. In release builds, the behavior of cantFail for failure values is
 undefined. As such, care must be taken in the use of cantFail: clients must be
 certain that a cantFail wrapped call really can not fail with the given
 arguments.
@@ -928,7 +928,7 @@ well-formed Foo or an Error, never an object in an invalid state.
 Propagating and consuming errors based on types
 """""""""""""""""""""""""""""""""""""""""""""""
 
-In some contexts, certain types of error are known to be benign. For example,
+In some contexts, certain types of errors are known to be benign. For example,
 when walking an archive, some clients may be happy to skip over badly formatted
 object files rather than terminating the walk immediately. Skipping badly
 formatted objects could be achieved using an elaborate handler method, but the
@@ -956,7 +956,7 @@ type inspection method, ``isA``, and the ``consumeError`` function:
 Concatenating Errors with joinErrors
 """"""""""""""""""""""""""""""""""""
 
-In the archive walking example above ``BadFileFormat`` errors are simply
+In the archive walking example above, ``BadFileFormat`` errors are simply
 consumed and ignored. If the client had wanted report these errors after
 completing the walk over the archive they could use the ``joinErrors`` utility:
 
@@ -982,13 +982,13 @@ The ``joinErrors`` routine builds a special error type called ``ErrorList``,
 which holds a list of user defined errors. The ``handleErrors`` routine
 recognizes this type and will attempt to handle each of the contained errors in
 order. If all contained errors can be handled, ``handleErrors`` will return
-``Error::success()``, otherwise ``handleErrors`` will concatenate the remaining
+``Error::success()``; otherwise, ``handleErrors`` will concatenate the remaining
 errors and return the resulting ``ErrorList``.
 
 Building fallible iterators and iterator ranges
 """""""""""""""""""""""""""""""""""""""""""""""
 
-The archive walking examples above retrieve archive members by index, however
+The archive walking examples above retrieve archive members by index; however,
 this requires considerable boiler-plate for iteration and error checking. We can
 clean this up by using the "fallible iterator" pattern, which supports the
 following natural iteration idiom for fallible containers like Archive:
@@ -1039,7 +1039,7 @@ fallible_iterator utility which provides ``operator++`` and ``operator--``,
 returning any errors via a reference passed in to the wrapper at construction
 time. The fallible_iterator wrapper takes care of (a) jumping to the end of the
 range on error, and (b) marking the error as checked whenever an iterator is
-compared to ``end`` and found to be inequal (in particular: this marks the
+compared to ``end`` and found to be inequal (in particular, this marks the
 error as checked throughout the body of a range-based for loop), enabling early
 exit from the loop without redundant error checking.
 
@@ -1068,7 +1068,7 @@ functions. E.g.:
 
 Using the fallible_iterator utility allows for both natural construction of
 fallible iterators (using failing ``inc`` and ``dec`` operations) and
-relatively natural use of c++ iterator/loop idioms.
+relatively natural use of C++ iterator/loop idioms.
 
 .. _function_apis:
 
@@ -1175,7 +1175,7 @@ Then you can run your pass like this:
   I am here!
 
 Using the ``LLVM_DEBUG()`` macro instead of a home-brewed solution allows you to not
-have to create "yet another" command line option for the debug output for your
+have to create "yet another" command-line option for the debug output for your
 pass.  Note that ``LLVM_DEBUG()`` macros are disabled for non-asserts builds, so they
 do not cause a performance impact at all (for the same reason, they should also
 not contain side-effects!).
@@ -1349,7 +1349,7 @@ certain number of times.
 The ``llvm/Support/DebugCounter.h`` (`doxygen
 <https://llvm.org/doxygen/DebugCounter_8h_source.html>`__) file
 provides a class named ``DebugCounter`` that can be used to create
-command line counter options that control execution of parts of your code.
+command-line counter options that control execution of parts of your code.
 
 Define your DebugCounter like this:
 
@@ -1364,7 +1364,7 @@ is specified by the first argument.  The name of the counter
 argument, and the description used in the help is specified by the
 third argument.
 
-Whatever code you want that control, use ``DebugCounter::shouldExecute`` to control it.
+Whatever code you want to control, use ``DebugCounter::shouldExecute`` to control it.
 
 .. code-block:: c++
 
