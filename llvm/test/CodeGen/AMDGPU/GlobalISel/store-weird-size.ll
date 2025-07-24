@@ -21,8 +21,8 @@ define void @store_i48(ptr addrspace(1) %ptr, i48 %arg) #0 {
   ; UNPACKED-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
   ; UNPACKED-NEXT:   G_STORE [[TRUNC]](s32), [[PTR_ADD]](p1) :: (store (s16) into %ir.ptr + 4, align 4, addrspace 1)
   ; UNPACKED-NEXT:   SI_RETURN
-    store i48 %arg, ptr addrspace(1) %ptr, align 4
-    ret void
+  store i48 %arg, ptr addrspace(1) %ptr, align 4
+  ret void
 }
 
 define void @store_i55(ptr addrspace(1) %ptr, i55 %arg) #0 {
@@ -110,8 +110,8 @@ define void @store_i65(ptr addrspace(1) %ptr, i65 %arg) #0 {
   ; UNPACKED-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND1]](s64)
   ; UNPACKED-NEXT:   G_STORE [[TRUNC]](s32), [[PTR_ADD]](p1) :: (store (s8) into %ir.ptr + 8, align 4, addrspace 1)
   ; UNPACKED-NEXT:   SI_RETURN
-    store i65 %arg, ptr addrspace(1) %ptr, align 4
-        ret void
+  store i65 %arg, ptr addrspace(1) %ptr, align 4
+  ret void
 }
 
 define void @store_i95(ptr addrspace(1) %ptr, i95 %arg) #0 {
@@ -138,8 +138,8 @@ define void @store_i95(ptr addrspace(1) %ptr, i95 %arg) #0 {
   ; UNPACKED-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND1]](s64)
   ; UNPACKED-NEXT:   G_STORE [[TRUNC]](s32), [[PTR_ADD]](p1) :: (store (s32) into %ir.ptr + 8, addrspace 1)
   ; UNPACKED-NEXT:   SI_RETURN
-    store i95 %arg, ptr addrspace(1) %ptr, align 4
-    ret void
+  store i95 %arg, ptr addrspace(1) %ptr, align 4
+  ret void
 }
 
 define void @store_i96(ptr addrspace(1) %ptr, i96 %arg) #0 {
@@ -217,8 +217,8 @@ define void @store_i127(ptr addrspace(1) %ptr, i127 %arg) #0 {
   ; UNPACKED-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[MV3]](s128)
   ; UNPACKED-NEXT:   G_STORE [[BITCAST]](<4 x s32>), [[MV]](p1) :: (store (<4 x s32>) into %ir.ptr, align 4, addrspace 1)
   ; UNPACKED-NEXT:   SI_RETURN
-    store i127 %arg, ptr addrspace(1) %ptr, align 4
-    ret void
+  store i127 %arg, ptr addrspace(1) %ptr, align 4
+  ret void
 }
 
 attributes #0 = { nounwind }
