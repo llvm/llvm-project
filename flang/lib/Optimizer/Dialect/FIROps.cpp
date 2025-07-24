@@ -782,8 +782,8 @@ private:
       return nullptr;
     mlir::OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPoint(shapeShiftOp);
-    return rewriter.create<fir::ShapeOp>(shapeShiftOp.getLoc(),
-                                         shapeShiftOp.getExtents());
+    return fir::ShapeOp::create(rewriter, shapeShiftOp.getLoc(),
+                                shapeShiftOp.getExtents());
   }
 
   static std::optional<IndicesVectorTy>
@@ -797,19 +797,19 @@ private:
       rewriter.setInsertionPoint(op);
       mlir::Location loc = op->getLoc();
       mlir::Type idxTy = rewriter.getIndexType();
-      mlir::Value one = rewriter.create<mlir::arith::ConstantOp>(
-          loc, idxTy, rewriter.getIndexAttr(1));
+      mlir::Value one = mlir::arith::ConstantOp::create(
+          rewriter, loc, idxTy, rewriter.getIndexAttr(1));
       rewriter.restoreInsertionPoint(savedIP);
       auto nsw = mlir::arith::IntegerOverflowFlags::nsw;
 
       IndicesVectorTy shiftedIndices;
       for (auto [lb, idx] : llvm::zip(lbs, indices)) {
-        mlir::Value extLb = rewriter.create<fir::ConvertOp>(loc, idxTy, lb);
-        mlir::Value extIdx = rewriter.create<fir::ConvertOp>(loc, idxTy, idx);
+        mlir::Value extLb = fir::ConvertOp::create(rewriter, loc, idxTy, lb);
+        mlir::Value extIdx = fir::ConvertOp::create(rewriter, loc, idxTy, idx);
         mlir::Value add =
-            rewriter.create<mlir::arith::AddIOp>(loc, extIdx, extLb, nsw);
+            mlir::arith::AddIOp::create(rewriter, loc, extIdx, extLb, nsw);
         mlir::Value sub =
-            rewriter.create<mlir::arith::SubIOp>(loc, add, one, nsw);
+            mlir::arith::SubIOp::create(rewriter, loc, add, one, nsw);
         shiftedIndices.push_back(sub);
       }
 
@@ -4711,7 +4711,7 @@ mlir::func::FuncOp fir::createFuncOp(mlir::Location loc, mlir::ModuleOp module,
     return f;
   mlir::OpBuilder modBuilder(module.getBodyRegion());
   modBuilder.setInsertionPointToEnd(module.getBody());
-  auto result = modBuilder.create<mlir::func::FuncOp>(loc, name, type, attrs);
+  auto result = mlir::func::FuncOp::create(modBuilder, loc, name, type, attrs);
   result.setVisibility(mlir::SymbolTable::Visibility::Private);
   return result;
 }
@@ -4731,7 +4731,7 @@ fir::GlobalOp fir::createGlobalOp(mlir::Location loc, mlir::ModuleOp module,
   if (auto g = module.lookupSymbol<fir::GlobalOp>(name))
     return g;
   mlir::OpBuilder modBuilder(module.getBodyRegion());
-  auto result = modBuilder.create<fir::GlobalOp>(loc, name, type, attrs);
+  auto result = fir::GlobalOp::create(modBuilder, loc, name, type, attrs);
   result.setVisibility(mlir::SymbolTable::Visibility::Private);
   return result;
 }
