@@ -399,7 +399,7 @@ public:
   bool enableInterleavedAccessVectorization() const override { return true; }
 
   bool enableMaskedInterleavedAccessVectorization() const override {
-    return true;
+    return ST->hasVInstructions();
   }
 
   unsigned getMinTripCountTailFoldingThreshold() const override;
