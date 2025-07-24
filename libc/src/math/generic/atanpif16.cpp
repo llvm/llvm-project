@@ -91,8 +91,8 @@ LLVM_LIBC_FUNCTION(float16, atanpif16, (float16 x)) {
 
   double x_abs = fputil::cast<double>(xbits.abs().get_val());
 
-  // Polynomial coefficients for atan(x)/pi Taylor series
-  // Generated using SymPy: series(atan(x)/pi, x, 0, 21)
+  // polynomial coefficients for atan(x)/pi taylor series
+  // generated using sympy: series(atan(x)/pi, x, 0, 21)
   constexpr double POLY_COEFFS[] = {
       0x1.45f306dc9c889p-2,  // x^1:   1/pi
       -0x1.b2995e7b7b60bp-4, // x^3:  -1/(3*pi)
@@ -121,9 +121,9 @@ LLVM_LIBC_FUNCTION(float16, atanpif16, (float16 x)) {
     return signed_result(result);
   }
 
-  // Case 2: 0.5 < |x| <= 1 - Use double-angle reduction
+  // case 2: 0.5 < |x| <= 1 - use double-angle reduction
   // atan(x) = 2 * atan(x / (1 + sqrt(1 + x^2)))
-  // So atanpi(x) = 2 * atanpi(x') where x' = x / (1 + sqrt(1 + x^2))
+  // so atanpi(x) = 2 * atanpi(x') where x' = x / (1 + sqrt(1 + x^2))
   if (x_abs <= 1.0) {
     double x2 = x_abs * x_abs;
     double sqrt_term = fputil::sqrt<double>(1.0 + x2);
@@ -132,16 +132,16 @@ LLVM_LIBC_FUNCTION(float16, atanpif16, (float16 x)) {
     return signed_result(result);
   }
 
-  // Case 3: |x| > 1 - Use reciprocal transformation
+  // case 3: |x| > 1 - use reciprocal transformation
   // atan(x) = pi/2 - atan(1/x) for x > 0
-  // So atanpi(x) = 1/2 - atanpi(1/x)
+  // so atanpi(x) = 1/2 - atanpi(1/x)
   double x_recip = 1.0 / x_abs;
   double result;
 
   // if 1/|x| > 0.5, we need to apply Case 2 transformation to 1/|x|
   if (x_recip > 0.5) {
-    double x_recip2 = x_recip * x_recip;
-    double sqrt_term = fputil::sqrt<double>(1.0 + x_recip2);
+    double xx_recip = x_recip * x_recip;
+    double sqrt_term = fputil::sqrt<double>(1.0 + xx_recip);
     double x_prime = x_recip / (1.0 + sqrt_term);
     result = fputil::multiply_add(-2.0, atanpi_eval(x_prime), 0.5);
   } else {
