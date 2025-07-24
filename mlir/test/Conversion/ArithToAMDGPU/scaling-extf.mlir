@@ -263,3 +263,15 @@ func.func @long_fp4_broadcast(%in: vector<32xf4E2M1FN>, %scale: f32) -> vector<3
     %ext = arith.scaling_extf %in, %splat : vector<32xf4E2M1FN>, vector<32xf32> to vector<32xf32>
     return %ext : vector<32xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @long_fp8_broadcast
+// CHECK-COUNT-8: amdgpu.scaled_ext_packed %{{.+}}[1]
+// CHECK-NOT: amdgpu.scaled_ext_packed
+// CHECK: return
+func.func @long_fp8_broadcast(%in: vector<32xf8E4M3FN>, %scale: f32) -> vector<32xf32> {
+    %splat = vector.broadcast %scale : f32 to vector<32xf32>
+    %ext = arith.scaling_extf %in, %splat : vector<32xf8E4M3FN>, vector<32xf32> to vector<32xf32>
+    return %ext : vector<32xf32>
+}

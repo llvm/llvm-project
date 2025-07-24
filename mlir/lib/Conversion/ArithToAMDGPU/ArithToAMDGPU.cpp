@@ -450,7 +450,6 @@ ScalingExtFRewritePattern::matchAndRewrite(arith::ScalingExtFOp op,
                                            PatternRewriter &rewriter) const {
   Location loc = op.getLoc();
   constexpr int64_t opOutWidth = 2;
-  constexpr int64_t opInWidth = 8;
 
   Value in = op.getIn();
   Value scale = op.getScale();
@@ -460,6 +459,8 @@ ScalingExtFRewritePattern::matchAndRewrite(arith::ScalingExtFOp op,
   Type inType = getElementTypeOrSelf(in);
   Type scaleType = getElementTypeOrSelf(scale);
   Type outType = getElementTypeOrSelf(out);
+
+  int64_t opInWidth = 32 / inType.getIntOrFloatBitWidth();
 
   VectorType outVecType = dyn_cast<VectorType>(out.getType());
   VectorType scaleVecType = dyn_cast<VectorType>(scale.getType());

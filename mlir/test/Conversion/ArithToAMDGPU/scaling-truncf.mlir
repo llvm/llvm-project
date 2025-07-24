@@ -185,3 +185,15 @@ func.func @long_fp4_broadcast(%in: vector<32xf32>, %scale: f32) -> vector<32xf4E
     %trunc = arith.scaling_truncf %in, %splat : vector<32xf32>, vector<32xf32> to vector<32xf4E2M1FN>
     return %trunc : vector<32xf4E2M1FN>
 }
+
+// -----
+
+// CHECK-LABEL: @long_fp8_broadcast
+// CHECK-COUNT-8: amdgpu.packed_scaled_trunc %{{.*}} into %{{.+}}[1]
+// CHECK-NOT: amdgpu.packed_scaled_trunc
+// CHECK: return
+func.func @long_fp8_broadcast(%in: vector<32xf32>, %scale: f32) -> vector<32xf8E4M3FN> {
+    %splat = vector.broadcast %scale : f32 to vector<32xf32>
+    %trunc = arith.scaling_truncf %in, %splat : vector<32xf32>, vector<32xf32> to vector<32xf8E4M3FN>
+    return %trunc : vector<32xf8E4M3FN>
+}
