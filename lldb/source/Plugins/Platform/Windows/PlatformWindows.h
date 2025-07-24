@@ -80,14 +80,6 @@ public:
   size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                          BreakpointSite *bp_site) override;
 
-  /// Set the current console's code page to UTF-8 and store the previous
-  /// codepage in \a g_prev_console_cp.
-  static void SetConsoleCodePage();
-
-  /// Reset the current console's code page to the value stored
-  /// in \a g_prev_console_cp if any.
-  static void ResetConsoleCodePage();
-
   std::vector<ArchSpec> m_supported_architectures;
 
 private:

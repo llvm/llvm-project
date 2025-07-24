@@ -41,10 +41,6 @@ LLDB_PLUGIN_DEFINE(PlatformWindows)
 
 static uint32_t g_initialize_count = 0;
 
-#if defined(_WIN32)
-std::optional<UINT> g_prev_console_cp = std::nullopt;
-#endif
-
 PlatformSP PlatformWindows::CreateInstance(bool force,
                                            const lldb_private::ArchSpec *arch) {
   // The only time we create an instance is when we are creating a remote
@@ -102,7 +98,6 @@ void PlatformWindows::Initialize() {
     default_platform_sp->SetSystemArchitecture(HostInfo::GetArchitecture());
     Platform::SetHostPlatform(default_platform_sp);
 #endif
-    SetConsoleCodePage();
     PluginManager::RegisterPlugin(
         PlatformWindows::GetPluginNameStatic(false),
         PlatformWindows::GetPluginDescriptionStatic(false),
@@ -113,7 +108,6 @@ void PlatformWindows::Initialize() {
 void PlatformWindows::Terminate() {
   if (g_initialize_count > 0) {
     if (--g_initialize_count == 0) {
-      ResetConsoleCodePage();
       PluginManager::UnregisterPlugin(PlatformWindows::CreateInstance);
     }
   }
@@ -813,18 +807,4 @@ extern "C" {
     return value->GetError().Clone();
 
   return Status();
-}
-
-void PlatformWindows::SetConsoleCodePage() {
-  #if defined(_WIN32)
-    g_prev_console_cp = GetConsoleOutputCP();
-    SetConsoleOutputCP(CP_UTF8);
-  #endif
-}
-
-void PlatformWindows::ResetConsoleCodePage() {
-  #if defined(_WIN32)
-  if (g_prev_console_cp)
-    SetConsoleOutputCP(*g_prev_console_cp);
-  #endif
 }
