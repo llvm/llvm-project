@@ -54,7 +54,6 @@ class MCObjectStreamer : public MCStreamer {
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &);
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
-  void emitInstructionImpl(const MCInst &Inst, const MCSubtargetInfo &STI);
 
 protected:
   MCObjectStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
@@ -73,13 +72,6 @@ public:
   MCSymbol *emitCFILabel() override;
   void emitCFISections(bool EH, bool Debug) override;
 
-  /// Get a data fragment to write into, creating a new one if the current
-  /// fragment is not FT_Data.
-  MCFragment *getOrCreateDataFragment();
-
-protected:
-  bool changeSectionImpl(MCSection *Section, uint32_t Subsection);
-
 public:
   void visitUsedSymbol(const MCSymbol &Sym) override;
 
@@ -87,6 +79,15 @@ public:
   MCAssembler *getAssemblerPtr() override;
   /// \name MCStreamer Interface
   /// @{
+
+  // Add a fragment with a variable-size tail and start a new empty fragment.
+  void insert(MCFragment *F);
+
+  // Add a new fragment to the current section without a variable-size tail.
+  void newFragment();
+
+  void appendContents(size_t Num, char Elt);
+  void addFixup(const MCExpr *Value, MCFixupKind Kind);
 
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   virtual void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment &F,
