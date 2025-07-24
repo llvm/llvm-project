@@ -15,7 +15,7 @@ endif()
 add_llvm_component_library(LLVMOrcTargetProcess
   ExecutorSharedMemoryMapperService.cpp
   DefaultHostBootstrapValues.cpp
-  DynamicLoader.cpp
+  LibraryResolver.cpp
   JITLoaderGDB.cpp
   JITLoaderPerf.cpp
   JITLoaderVTune.cpp
