@@ -60,7 +60,6 @@ TEST(DebugLogTest, Basic) {
     DEBUGLOG_WITH_STREAM_AND_TYPE(os, "B") << inc();
     EXPECT_THAT(count, Eq(1));
   }
-
 }
 #else
 TEST(DebugLogTest, Basic) {
