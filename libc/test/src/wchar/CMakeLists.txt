@@ -25,6 +25,17 @@ add_libc_test(
 )
 
 add_libc_test(
+  wcsdup_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcsdup_test.cpp
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.src.wchar.wcsdup
+)
+
+add_libc_test(
   btowc_test
   SUITE
     libc_wchar_unittests
