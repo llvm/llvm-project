@@ -1725,7 +1725,8 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
   }
   if (Previous && (Previous->isOneOf(TT_BinaryOperator, TT_ConditionalExpr) ||
                    (Previous->isOneOf(tok::l_paren, tok::comma, tok::colon) &&
-                    !Previous->isOneOf(TT_DictLiteral, TT_ObjCMethodExpr)))) {
+                    !Previous->isOneOf(TT_DictLiteral, TT_ObjCMethodExpr,
+                                       TT_CtorInitializerColon)))) {
     CurrentState.NestedBlockInlined =
         !Newline && hasNestedBlockInlined(Previous, Current, Style);
   }
