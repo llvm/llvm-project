@@ -39,147 +39,6 @@ class MCSubtargetInfo;
 class raw_ostream;
 class Triple;
 
-/// Instances of this class represent a uniqued identifier for a section in the
-/// current translation unit.  The MCContext class uniques and creates these.
-class LLVM_ABI MCSection {
-public:
-  friend MCAssembler;
-  friend MCObjectStreamer;
-  friend class MCFragment;
-  static constexpr unsigned NonUniqueID = ~0U;
-
-  enum SectionVariant {
-    SV_COFF = 0,
-    SV_ELF,
-    SV_GOFF,
-    SV_MachO,
-    SV_Wasm,
-    SV_XCOFF,
-    SV_SPIRV,
-    SV_DXContainer,
-  };
-
-  struct iterator {
-    MCFragment *F = nullptr;
-    iterator() = default;
-    explicit iterator(MCFragment *F) : F(F) {}
-    MCFragment &operator*() const { return *F; }
-    bool operator==(const iterator &O) const { return F == O.F; }
-    bool operator!=(const iterator &O) const { return F != O.F; }
-    iterator &operator++();
-  };
-
-  struct FragList {
-    MCFragment *Head = nullptr;
-    MCFragment *Tail = nullptr;
-  };
-
-private:
-  // At parse time, this holds the fragment list of the current subsection. At
-  // layout time, this holds the concatenated fragment lists of all subsections.
-  FragList *CurFragList;
-  MCSymbol *Begin;
-  MCSymbol *End = nullptr;
-  /// The alignment requirement of this section.
-  Align Alignment;
-  /// The section index in the assemblers section list.
-  unsigned Ordinal = 0;
-
-  /// Whether this section has had instructions emitted into it.
-  bool HasInstructions : 1;
-
-  bool IsRegistered : 1;
-
-  bool IsText : 1;
-  bool IsBss : 1;
-
-  /// Whether the section contains linker-relaxable fragments. If true, the
-  /// offset between two locations may not be fully resolved.
-  bool LinkerRelaxable : 1;
-
-  // Mapping from subsection number to fragment list. At layout time, the
-  // subsection 0 list is replaced with concatenated fragments from all
-  // subsections.
-  SmallVector<std::pair<unsigned, FragList>, 1> Subsections;
-
-  // Content and fixup storage for fragments
-  SmallVector<char, 0> ContentStorage;
-  SmallVector<MCFixup, 0> FixupStorage;
-  SmallVector<MCOperand, 0> MCOperandStorage;
-
-protected:
-  // TODO Make Name private when possible.
-  StringRef Name;
-  SectionVariant Variant;
-
-  MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsBss,
-            MCSymbol *Begin);
-  // Protected non-virtual dtor prevents destroy through a base class pointer.
-  ~MCSection() {}
-
-public:
-  MCSection(const MCSection &) = delete;
-  MCSection &operator=(const MCSection &) = delete;
-
-  StringRef getName() const { return Name; }
-  bool isText() const { return IsText; }
-
-  SectionVariant getVariant() const { return Variant; }
-
-  MCSymbol *getBeginSymbol() { return Begin; }
-  const MCSymbol *getBeginSymbol() const {
-    return const_cast<MCSection *>(this)->getBeginSymbol();
-  }
-  void setBeginSymbol(MCSymbol *Sym) {
-    assert(!Begin);
-    Begin = Sym;
-  }
-  MCSymbol *getEndSymbol(MCContext &Ctx);
-  bool hasEnded() const;
-
-  Align getAlign() const { return Alignment; }
-  void setAlignment(Align Value) { Alignment = Value; }
-
-  /// Makes sure that Alignment is at least MinAlignment.
-  void ensureMinAlignment(Align MinAlignment) {
-    if (Alignment < MinAlignment)
-      Alignment = MinAlignment;
-  }
-
-  unsigned getOrdinal() const { return Ordinal; }
-  void setOrdinal(unsigned Value) { Ordinal = Value; }
-
-  bool hasInstructions() const { return HasInstructions; }
-  void setHasInstructions(bool Value) { HasInstructions = Value; }
-
-  bool isRegistered() const { return IsRegistered; }
-  void setIsRegistered(bool Value) { IsRegistered = Value; }
-
-  bool isLinkerRelaxable() const { return LinkerRelaxable; }
-  void setLinkerRelaxable() { LinkerRelaxable = true; }
-
-  MCFragment &getDummyFragment() { return *Subsections[0].second.Head; }
-
-  FragList *curFragList() const { return CurFragList; }
-  iterator begin() const { return iterator(CurFragList->Head); }
-  iterator end() const { return {}; }
-
-  void dump(DenseMap<const MCFragment *, SmallVector<const MCSymbol *, 0>>
-                *FragToSyms = nullptr) const;
-
-  virtual void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
-                                    raw_ostream &OS,
-                                    uint32_t Subsection) const = 0;
-
-  /// Return true if a .align directive should use "optimized nops" to fill
-  /// instead of 0s.
-  virtual bool useCodeAlign() const = 0;
-
-  /// Check whether this section is "virtual", that is has no actual object
-  /// file contents.
-  bool isBssSection() const { return IsBss; }
-};
-
 // Represents a contiguous piece of code or data within a section. Its size is
 // determined by MCAssembler::layout. All subclasses must have trivial
 // destructors.
@@ -348,19 +207,8 @@ public:
 
   // Get a SmallVector reference. The caller should call doneAppending to update
   // `ContentEnd`.
-  SmallVectorImpl<char> &getContentsForAppending() {
-    SmallVectorImpl<char> &S = getParent()->ContentStorage;
-    if (LLVM_UNLIKELY(ContentEnd != S.size())) {
-      // Move the elements to the end. Reserve space to avoid invalidating
-      // S.begin()+I for `append`.
-      auto Size = ContentEnd - ContentStart;
-      auto I = std::exchange(ContentStart, S.size());
-      S.reserve(S.size() + Size);
-      S.append(S.begin() + I, S.begin() + I + Size);
-    }
-    return S;
-  }
-  void doneAppending() { ContentEnd = getParent()->ContentStorage.size(); }
+  SmallVectorImpl<char> &getContentsForAppending();
+  void doneAppending();
   void appendContents(ArrayRef<char> Contents) {
     getContentsForAppending().append(Contents.begin(), Contents.end());
     doneAppending();
@@ -369,25 +217,13 @@ public:
     getContentsForAppending().append(Num, Elt);
     doneAppending();
   }
-  MutableArrayRef<char> getContents() {
-    return MutableArrayRef(getParent()->ContentStorage)
-        .slice(ContentStart, ContentEnd - ContentStart);
-  }
-  ArrayRef<char> getContents() const {
-    return ArrayRef(getParent()->ContentStorage)
-        .slice(ContentStart, ContentEnd - ContentStart);
-  }
+  MutableArrayRef<char> getContents();
+  ArrayRef<char> getContents() const;
 
   void setVarContents(ArrayRef<char> Contents);
   void clearVarContents() { setVarContents({}); }
-  MutableArrayRef<char> getVarContents() {
-    return MutableArrayRef(getParent()->ContentStorage)
-        .slice(VarContentStart, VarContentEnd - VarContentStart);
-  }
-  ArrayRef<char> getVarContents() const {
-    return ArrayRef(getParent()->ContentStorage)
-        .slice(VarContentStart, VarContentEnd - VarContentStart);
-  }
+  MutableArrayRef<char> getVarContents();
+  ArrayRef<char> getVarContents() const;
 
   size_t getFixedSize() const { return ContentEnd - ContentStart; }
   size_t getVarSize() const { return VarContentEnd - VarContentStart; }
@@ -400,59 +236,24 @@ public:
   void clearFixups() { FixupEnd = FixupStart; }
   LLVM_ABI void addFixup(MCFixup Fixup);
   LLVM_ABI void appendFixups(ArrayRef<MCFixup> Fixups);
-  MutableArrayRef<MCFixup> getFixups() {
-    return MutableArrayRef(getParent()->FixupStorage)
-        .slice(FixupStart, FixupEnd - FixupStart);
-  }
-  ArrayRef<MCFixup> getFixups() const {
-    return ArrayRef(getParent()->FixupStorage)
-        .slice(FixupStart, FixupEnd - FixupStart);
-  }
+  MutableArrayRef<MCFixup> getFixups();
+  ArrayRef<MCFixup> getFixups() const;
 
   // Source fixup offsets are relative to the variable part's start.
   // Stored fixup offsets are relative to the fixed part's start.
   void setVarFixups(ArrayRef<MCFixup> Fixups);
   void clearVarFixups() { setVarFixups({}); }
-  MutableArrayRef<MCFixup> getVarFixups() {
-    return MutableArrayRef(getParent()->FixupStorage)
-        .slice(VarFixupStart, VarFixupEnd - VarFixupStart);
-  }
-  ArrayRef<MCFixup> getVarFixups() const {
-    return ArrayRef(getParent()->FixupStorage)
-        .slice(VarFixupStart, VarFixupEnd - VarFixupStart);
-  }
+  MutableArrayRef<MCFixup> getVarFixups();
+  ArrayRef<MCFixup> getVarFixups() const;
 
   //== FT_Relaxable functions
   unsigned getOpcode() const {
     assert(Kind == FT_Relaxable);
     return u.relax.Opcode;
   }
-  ArrayRef<MCOperand> getOperands() const {
-    assert(Kind == FT_Relaxable);
-    return MutableArrayRef(getParent()->MCOperandStorage)
-        .slice(u.relax.OperandStart, u.relax.OperandSize);
-  }
-  MCInst getInst() const {
-    assert(Kind == FT_Relaxable);
-    MCInst Inst;
-    Inst.setOpcode(u.relax.Opcode);
-    Inst.setFlags(u.relax.Flags);
-    Inst.setOperands(ArrayRef(getParent()->MCOperandStorage)
-                         .slice(u.relax.OperandStart, u.relax.OperandSize));
-    return Inst;
-  }
-  void setInst(const MCInst &Inst) {
-    assert(Kind == FT_Relaxable);
-    u.relax.Opcode = Inst.getOpcode();
-    u.relax.Flags = Inst.getFlags();
-    auto &S = getParent()->MCOperandStorage;
-    if (Inst.getNumOperands() > u.relax.OperandSize) {
-      u.relax.OperandStart = S.size();
-      S.resize_for_overwrite(S.size() + Inst.getNumOperands());
-    }
-    u.relax.OperandSize = Inst.getNumOperands();
-    llvm::copy(Inst, S.begin() + u.relax.OperandStart);
-  }
+  ArrayRef<MCOperand> getOperands() const;
+  MCInst getInst() const;
+  void setInst(const MCInst &Inst);
 
   //== FT_Align functions
   void makeAlign(Align Alignment, int64_t Fill, uint8_t FillLen,
@@ -729,6 +530,228 @@ public:
     return F->getKind() == MCFragment::FT_BoundaryAlign;
   }
 };
+
+/// Instances of this class represent a uniqued identifier for a section in the
+/// current translation unit.  The MCContext class uniques and creates these.
+class LLVM_ABI MCSection {
+public:
+  friend MCAssembler;
+  friend MCObjectStreamer;
+  friend class MCFragment;
+  static constexpr unsigned NonUniqueID = ~0U;
+
+  enum SectionVariant {
+    SV_COFF = 0,
+    SV_ELF,
+    SV_GOFF,
+    SV_MachO,
+    SV_Wasm,
+    SV_XCOFF,
+    SV_SPIRV,
+    SV_DXContainer,
+  };
+
+  struct iterator {
+    MCFragment *F = nullptr;
+    iterator() = default;
+    explicit iterator(MCFragment *F) : F(F) {}
+    MCFragment &operator*() const { return *F; }
+    bool operator==(const iterator &O) const { return F == O.F; }
+    bool operator!=(const iterator &O) const { return F != O.F; }
+    iterator &operator++();
+  };
+
+  struct FragList {
+    MCFragment *Head = nullptr;
+    MCFragment *Tail = nullptr;
+  };
+
+private:
+  // At parse time, this holds the fragment list of the current subsection. At
+  // layout time, this holds the concatenated fragment lists of all subsections.
+  FragList *CurFragList;
+  MCSymbol *Begin;
+  MCSymbol *End = nullptr;
+  /// The alignment requirement of this section.
+  Align Alignment;
+  /// The section index in the assemblers section list.
+  unsigned Ordinal = 0;
+
+  /// Whether this section has had instructions emitted into it.
+  bool HasInstructions : 1;
+
+  bool IsRegistered : 1;
+
+  bool IsText : 1;
+  bool IsBss : 1;
+
+  /// Whether the section contains linker-relaxable fragments. If true, the
+  /// offset between two locations may not be fully resolved.
+  bool LinkerRelaxable : 1;
+
+  // Mapping from subsection number to fragment list. At layout time, the
+  // subsection 0 list is replaced with concatenated fragments from all
+  // subsections.
+  SmallVector<std::pair<unsigned, FragList>, 1> Subsections;
+
+  // Content and fixup storage for fragments
+  SmallVector<char, 0> ContentStorage;
+  SmallVector<MCFixup, 0> FixupStorage;
+  SmallVector<MCOperand, 0> MCOperandStorage;
+
+protected:
+  // TODO Make Name private when possible.
+  StringRef Name;
+  SectionVariant Variant;
+
+  MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsBss,
+            MCSymbol *Begin);
+  // Protected non-virtual dtor prevents destroy through a base class pointer.
+  ~MCSection() {}
+
+public:
+  MCSection(const MCSection &) = delete;
+  MCSection &operator=(const MCSection &) = delete;
+
+  StringRef getName() const { return Name; }
+  bool isText() const { return IsText; }
+
+  SectionVariant getVariant() const { return Variant; }
+
+  MCSymbol *getBeginSymbol() { return Begin; }
+  const MCSymbol *getBeginSymbol() const {
+    return const_cast<MCSection *>(this)->getBeginSymbol();
+  }
+  void setBeginSymbol(MCSymbol *Sym) {
+    assert(!Begin);
+    Begin = Sym;
+  }
+  MCSymbol *getEndSymbol(MCContext &Ctx);
+  bool hasEnded() const;
+
+  Align getAlign() const { return Alignment; }
+  void setAlignment(Align Value) { Alignment = Value; }
+
+  /// Makes sure that Alignment is at least MinAlignment.
+  void ensureMinAlignment(Align MinAlignment) {
+    if (Alignment < MinAlignment)
+      Alignment = MinAlignment;
+  }
+
+  unsigned getOrdinal() const { return Ordinal; }
+  void setOrdinal(unsigned Value) { Ordinal = Value; }
+
+  bool hasInstructions() const { return HasInstructions; }
+  void setHasInstructions(bool Value) { HasInstructions = Value; }
+
+  bool isRegistered() const { return IsRegistered; }
+  void setIsRegistered(bool Value) { IsRegistered = Value; }
+
+  bool isLinkerRelaxable() const { return LinkerRelaxable; }
+  void setLinkerRelaxable() { LinkerRelaxable = true; }
+
+  MCFragment &getDummyFragment() { return *Subsections[0].second.Head; }
+
+  FragList *curFragList() const { return CurFragList; }
+  iterator begin() const { return iterator(CurFragList->Head); }
+  iterator end() const { return {}; }
+
+  void dump(DenseMap<const MCFragment *, SmallVector<const MCSymbol *, 0>>
+                *FragToSyms = nullptr) const;
+
+  virtual void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
+                                    raw_ostream &OS,
+                                    uint32_t Subsection) const = 0;
+
+  /// Return true if a .align directive should use "optimized nops" to fill
+  /// instead of 0s.
+  virtual bool useCodeAlign() const = 0;
+
+  /// Check whether this section is "virtual", that is has no actual object
+  /// file contents.
+  bool isBssSection() const { return IsBss; }
+};
+
+inline SmallVectorImpl<char> &MCFragment::getContentsForAppending() {
+  SmallVectorImpl<char> &S = getParent()->ContentStorage;
+  if (LLVM_UNLIKELY(ContentEnd != S.size())) {
+    // Move the elements to the end. Reserve space to avoid invalidating
+    // S.begin()+I for `append`.
+    auto Size = ContentEnd - ContentStart;
+    auto I = std::exchange(ContentStart, S.size());
+    S.reserve(S.size() + Size);
+    S.append(S.begin() + I, S.begin() + I + Size);
+  }
+  return S;
+}
+inline void MCFragment::doneAppending() {
+  ContentEnd = getParent()->ContentStorage.size();
+}
+inline MutableArrayRef<char> MCFragment::getContents() {
+  return MutableArrayRef(getParent()->ContentStorage)
+      .slice(ContentStart, ContentEnd - ContentStart);
+}
+inline ArrayRef<char> MCFragment::getContents() const {
+  return ArrayRef(getParent()->ContentStorage)
+      .slice(ContentStart, ContentEnd - ContentStart);
+}
+
+inline MutableArrayRef<char> MCFragment::getVarContents() {
+  return MutableArrayRef(getParent()->ContentStorage)
+      .slice(VarContentStart, VarContentEnd - VarContentStart);
+}
+inline ArrayRef<char> MCFragment::getVarContents() const {
+  return ArrayRef(getParent()->ContentStorage)
+      .slice(VarContentStart, VarContentEnd - VarContentStart);
+}
+
+//== Fixup-related functions manage parent's storage using FixupStart and
+// FixupSize.
+inline MutableArrayRef<MCFixup> MCFragment::getFixups() {
+  return MutableArrayRef(getParent()->FixupStorage)
+      .slice(FixupStart, FixupEnd - FixupStart);
+}
+inline ArrayRef<MCFixup> MCFragment::getFixups() const {
+  return ArrayRef(getParent()->FixupStorage)
+      .slice(FixupStart, FixupEnd - FixupStart);
+}
+
+inline MutableArrayRef<MCFixup> MCFragment::getVarFixups() {
+  return MutableArrayRef(getParent()->FixupStorage)
+      .slice(VarFixupStart, VarFixupEnd - VarFixupStart);
+}
+inline ArrayRef<MCFixup> MCFragment::getVarFixups() const {
+  return ArrayRef(getParent()->FixupStorage)
+      .slice(VarFixupStart, VarFixupEnd - VarFixupStart);
+}
+
+//== FT_Relaxable functions
+inline ArrayRef<MCOperand> MCFragment::getOperands() const {
+  assert(Kind == FT_Relaxable);
+  return MutableArrayRef(getParent()->MCOperandStorage)
+      .slice(u.relax.OperandStart, u.relax.OperandSize);
+}
+inline MCInst MCFragment::getInst() const {
+  assert(Kind == FT_Relaxable);
+  MCInst Inst;
+  Inst.setOpcode(u.relax.Opcode);
+  Inst.setFlags(u.relax.Flags);
+  Inst.setOperands(ArrayRef(getParent()->MCOperandStorage)
+                       .slice(u.relax.OperandStart, u.relax.OperandSize));
+  return Inst;
+}
+inline void MCFragment::setInst(const MCInst &Inst) {
+  assert(Kind == FT_Relaxable);
+  u.relax.Opcode = Inst.getOpcode();
+  u.relax.Flags = Inst.getFlags();
+  auto &S = getParent()->MCOperandStorage;
+  if (Inst.getNumOperands() > u.relax.OperandSize) {
+    u.relax.OperandStart = S.size();
+    S.resize_for_overwrite(S.size() + Inst.getNumOperands());
+  }
+  u.relax.OperandSize = Inst.getNumOperands();
+  llvm::copy(Inst, S.begin() + u.relax.OperandStart);
+}
 
 inline MCSection::iterator &MCSection::iterator::operator++() {
   F = F->Next;
