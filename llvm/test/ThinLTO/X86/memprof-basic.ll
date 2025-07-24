@@ -371,6 +371,8 @@ attributes #0 = { noinline optnone }
 ; DOTCLONED: 	Node[[BAR2]] [shape=record,tooltip="N[[BAR2]] ContextIds: 2",fillcolor="cyan",color="blue",style="filled,bold,dashed",label="{OrigId: Alloc0\n_Z3barv -\> alloc}"];
 ; DOTCLONED: }
 
+;; Here we are just ensuring that the post-function assign dot graph includes
+;; clone information for both the caller and callee in the node labels.
 ; DOTFUNCASSIGN: _Z3bazv.memprof.1 -\> _Z3barv.memprof.1
 ; DOTFUNCASSIGN: _Z3barv.memprof.1 -\> alloc
 
