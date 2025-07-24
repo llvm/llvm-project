@@ -91,32 +91,23 @@
 ; CHECK-O-NEXT: Running pass: EarlyCSEPass
 ; CHECK-O-NEXT: Running analysis: MemorySSAAnalysis
 ; CHECK-O-NEXT: Running analysis: AAManager
-; CHECK-O23SZ-NEXT: Running analysis: BasicAA on foo
-; CHECK-O23SZ-NEXT: Running analysis: ScopedNoAliasAA on foo
-; CHECK-O23SZ-NEXT: Running analysis: TypeBasedAA on foo
-; CHECK-O23SZ-NEXT: Running analysis: OuterAnalysisManagerProxy
+; CHECK-O-NEXT: Running analysis: BasicAA on foo
+; CHECK-O-NEXT: Running analysis: ScopedNoAliasAA on foo
+; CHECK-O-NEXT: Running analysis: TypeBasedAA on foo
+; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O23SZ-NEXT: Running pass: SpeculativeExecutionPass
 ; CHECK-O23SZ-NEXT: Running pass: JumpThreadingPass
 ; CHECK-O23SZ-NEXT: Running analysis: LazyValueAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: CorrelatedValuePropagationPass
 ; CHECK-O23SZ-NEXT: Invalidating analysis: LazyValueAnalysis
-; CHECK-O1-NEXT: Running analysis: BasicAA on foo
-; CHECK-O1-NEXT: Running analysis: ScopedNoAliasAA on foo
-; CHECK-O1-NEXT: Running analysis: TypeBasedAA on foo
-; CHECK-O1-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
-; CHECK-O23SZ-NEXT: Running analysis: LastRunTrackingAnalysis on foo
-; CHECK-O23SZ-NEXT: Running analysis: BlockFrequencyAnalysis on foo
-; CHECK-O23SZ-NEXT: Running analysis: BranchProbabilityAnalysis on foo
-; CHECK-O23SZ-NEXT: Running analysis: LoopAnalysis on foo
-; CHECK-O23SZ-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
+; CHECK-O-NEXT: Running analysis: LastRunTrackingAnalysis on foo
+; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis on foo
+; CHECK-O-NEXT: Running analysis: BranchProbabilityAnalysis on foo
+; CHECK-O-NEXT: Running analysis: LoopAnalysis on foo
+; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O23SZ-NEXT: Running pass: AggressiveInstCombinePass
-; CHECK-O1-NEXT: Running analysis: LastRunTrackingAnalysis on foo
-; CHECK-O1-NEXT: Running analysis: BlockFrequencyAnalysis on foo
-; CHECK-O1-NEXT: Running analysis: BranchProbabilityAnalysis on foo
-; CHECK-O1-NEXT: Running analysis: LoopAnalysis on foo
-; CHECK-O1-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O1-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O2-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O3-NEXT: Running pass: LibCallsShrinkWrapPass

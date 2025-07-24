@@ -5,6 +5,7 @@ add_entrypoint_object(
   HDRS
     ../sched_getaffinity.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.sched
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno

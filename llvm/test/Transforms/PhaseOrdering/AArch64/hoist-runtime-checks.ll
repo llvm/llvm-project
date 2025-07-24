@@ -54,7 +54,7 @@ define i32 @read_only_loop_with_runtime_check(ptr noundef %array, i32 noundef %c
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[TMP8]], [[SUM_07]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    tail call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -129,7 +129,7 @@ define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp ugt i64 [[S_COERCE1]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label [[FOR_BODY_PREHEADER8:%.*]], label [[COND_FALSE_I:%.*]], !prof [[PROF4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label [[FOR_BODY_PREHEADER8:%.*]], label [[COND_FALSE_I:%.*]], !prof [[PROF5:![0-9]+]]
 ; CHECK:       for.body.preheader8:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY_PREHEADER11:%.*]], label [[VECTOR_PH:%.*]]
@@ -148,7 +148,7 @@ define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1
 ; CHECK-NEXT:    [[TMP4]] = add <4 x i32> [[WIDE_LOAD10]], [[VEC_PHI9]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[SPAN_CHECKED_ACCESS_EXIT:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[SPAN_CHECKED_ACCESS_EXIT:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    [[ADD:%.*]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
@@ -169,7 +169,7 @@ define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1
 ; CHECK-NEXT:    [[ADD1]] = add nsw i32 [[TMP7]], [[RET_06]]
 ; CHECK-NEXT:    [[INC]] = add nuw i64 [[I_07]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY1]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY1]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       cond.false.i:
 ; CHECK-NEXT:    tail call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -228,7 +228,7 @@ define hidden noundef nonnull align 4 dereferenceable(4) ptr @span_checked_acces
 ; CHECK-NEXT:    [[__SIZE__I:%.*]] = getelementptr inbounds nuw i8, ptr [[THIS]], i64 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[__SIZE__I]], align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[__IDX]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]], !prof [[PROF4]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]], !prof [[PROF5]]
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    tail call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -289,11 +289,12 @@ declare void @llvm.trap()
 
 declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-; CHECK: [[PROF4]] = !{!"branch_weights", !"expected", i32 2000, i32 1}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
-; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META2]], [[META1]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.estimated_trip_count"}
+; CHECK: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META3]], [[META2]]}
+; CHECK: [[PROF5]] = !{!"branch_weights", !"expected", i32 2000, i32 1}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META3]], [[META2]]}
 ;.

@@ -911,8 +911,8 @@ public:
 
   // Check if MDOperand is of type MDString and equals `Str`.
   bool equalsStr(StringRef Str) const {
-    return isa<MDString>(this->get()) &&
-           cast<MDString>(this->get())->getString() == Str;
+    return isa_and_nonnull<MDString>(get()) &&
+           cast<MDString>(get())->getString() == Str;
   }
 
   ~MDOperand() { untrack(); }
@@ -1255,6 +1255,13 @@ public:
   bool isReplaceable() const { return isTemporary() || isAlwaysReplaceable(); }
   bool isAlwaysReplaceable() const { return getMetadataID() == DIAssignIDKind; }
 
+  /// Check if this is a valid generalized type metadata node.
+  bool hasGeneralizedMDString() {
+    if (getNumOperands() < 2 || !isa<MDString>(getOperand(1)))
+      return false;
+    return cast<MDString>(getOperand(1))->getString().ends_with(".generalized");
+  }
+
   unsigned getNumTemporaryUses() const {
     assert(isTemporary() && "Only for temporaries");
     return Context.getReplaceableUses()->getNumUses();
@@ -1467,6 +1474,8 @@ public:
                                                 const Instruction *BInstr);
   LLVM_ABI static MDNode *getMergedMemProfMetadata(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
+  LLVM_ABI static MDNode *getMergedCalleeTypeMetadata(const MDNode *A,
+                                                      const MDNode *B);
 };
 
 /// Tuple of metadata.

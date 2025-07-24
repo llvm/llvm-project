@@ -54,8 +54,6 @@ using namespace llvm::PatternMatch;
 
 static const char *LLVMLoopDisableNonforced = "llvm.loop.disable_nonforced";
 static const char *LLVMLoopDisableLICM = "llvm.licm.disable";
-static const char *LLVMLoopEstimatedTripCount =
-    "llvm.loop.estimated_trip_count";
 
 bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                    MemorySSAUpdater *MSSAU,
@@ -228,7 +226,7 @@ bool llvm::addStringMetadataToLoop(Loop *TheLoop, const char *StringMD,
       if (NumOps == 1 || NumOps == 2) {
         MDString *S = dyn_cast<MDString>(Node->getOperand(0));
         if (S && S->getString() == StringMD) {
-          // If it is already in place, do nothing.
+          // If the metadata and any value are already as specified, do nothing.
           if (NumOps == 2 && V) {
             ConstantInt *IntMD =
                 mdconst::extract_or_null<ConstantInt>(Node->getOperand(1));
@@ -881,7 +879,7 @@ std::optional<unsigned> llvm::getLoopEstimatedTripCount(
   // EstimatedLoopInvocationWeight parameter.
   if (EstimatedLoopInvocationWeight) {
     if (BranchInst *ExitingBranch = getExpectedExitLoopLatchBranch(L)) {
-      uint64_t LoopWeight, ExitWeight;
+      uint64_t LoopWeight = 0, ExitWeight = 0; // Inits expected to be unused.
       if (!extractBranchWeights(*ExitingBranch, LoopWeight, ExitWeight))
         return std::nullopt;
       if (L->contains(ExitingBranch->getSuccessor(1)))
@@ -894,7 +892,7 @@ std::optional<unsigned> llvm::getLoopEstimatedTripCount(
 
   // Return the estimated trip count from metadata unless the metadata is
   // missing or has no value.
-  bool Missing;
+  bool Missing = false; // Initialization is expected to be unused.
   if (auto TC = getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount,
                                             &Missing)) {
     LLVM_DEBUG(dbgs() << "getLoopEstimatedTripCount: "
@@ -953,7 +951,7 @@ bool llvm::setLoopEstimatedTripCount(
   unsigned LatchExitWeight = 0;
   unsigned BackedgeTakenWeight = 0;
 
-  if (*EstimatedTripCount > 0) {
+  if (*EstimatedTripCount != 0) {
     LatchExitWeight = *EstimatedloopInvocationWeight;
     BackedgeTakenWeight = (*EstimatedTripCount - 1) * LatchExitWeight;
   }
@@ -1022,8 +1020,10 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
   case RecurKind::UMin:
     return Intrinsic::vector_reduce_umin;
   case RecurKind::FMax:
+  case RecurKind::FMaxNum:
     return Intrinsic::vector_reduce_fmax;
   case RecurKind::FMin:
+  case RecurKind::FMinNum:
     return Intrinsic::vector_reduce_fmin;
   case RecurKind::FMaximum:
     return Intrinsic::vector_reduce_fmaximum;
@@ -1121,8 +1121,10 @@ Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(RecurKind RK) {
   case RecurKind::SMax:
     return Intrinsic::smax;
   case RecurKind::FMin:
+  case RecurKind::FMinNum:
     return Intrinsic::minnum;
   case RecurKind::FMax:
+  case RecurKind::FMaxNum:
     return Intrinsic::maxnum;
   case RecurKind::FMinimum:
     return Intrinsic::minimum;
@@ -1180,9 +1182,9 @@ Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
                             Value *Right) {
   Type *Ty = Left->getType();
   if (Ty->isIntOrIntVectorTy() ||
-      (RK == RecurKind::FMinimum || RK == RecurKind::FMaximum ||
+      (RK == RecurKind::FMinNum || RK == RecurKind::FMaxNum ||
+       RK == RecurKind::FMinimum || RK == RecurKind::FMaximum ||
        RK == RecurKind::FMinimumNum || RK == RecurKind::FMaximumNum)) {
-    // TODO: Add float minnum/maxnum support when FMF nnan is set.
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RK);
     return Builder.CreateIntrinsic(Ty, Id, {Left, Right}, nullptr,
                                    "rdx.minmax");
@@ -1392,6 +1394,8 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   case RecurKind::UMin:
   case RecurKind::FMax:
   case RecurKind::FMin:
+  case RecurKind::FMinNum:
+  case RecurKind::FMaxNum:
   case RecurKind::FMinimum:
   case RecurKind::FMaximum:
   case RecurKind::FMinimumNum:

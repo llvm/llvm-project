@@ -107,7 +107,7 @@ define void @cse_matching_load_from_previous_unrolled_iteration(i32 %N, ptr %src
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_1]] = add nuw nsw i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_LOOPEXIT_UNR_LCSSA]], label [[LOOP_LATCH]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_LOOPEXIT_UNR_LCSSA]], label [[LOOP_LATCH]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       exit.loopexit.unr-lcssa:
 ; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[LOOP_LATCH_PREHEADER]] ], [ [[INDVARS_IV_NEXT_1]], [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i64 [[XTRAITER]], 0
@@ -154,8 +154,9 @@ exit:
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.unroll.count", i32 2}
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.mustprogress"}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
+; CHECK: [[META2]] = !{!"llvm.loop.estimated_trip_count"}
+; CHECK: [[META3]] = !{!"llvm.loop.unroll.disable"}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]], [[META3]]}
 ;.

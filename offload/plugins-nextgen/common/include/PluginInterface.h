@@ -113,6 +113,12 @@ private:
   __tgt_async_info *AsyncInfoPtr;
 };
 
+enum class DeviceInfo {
+#define OFFLOAD_DEVINFO(Name, _, Value) Name = Value,
+#include "OffloadInfo.inc"
+#undef OFFLOAD_DEVINFO
+};
+
 /// Tree node for device information
 ///
 /// This information is either printed or used by liboffload to extract certain
@@ -133,6 +139,8 @@ struct InfoTreeNode {
   // * The same key can appear multiple times
   std::unique_ptr<llvm::SmallVector<InfoTreeNode, 8>> Children;
 
+  llvm::DenseMap<DeviceInfo, size_t> DeviceInfoMap;
+
   InfoTreeNode() : InfoTreeNode("", std::monostate{}, "") {}
   InfoTreeNode(std::string Key, VariantType Value, std::string Units)
       : Key(Key), Value(Value), Units(Units) {}
@@ -140,10 +148,12 @@ struct InfoTreeNode {
   /// Add a new info entry as a child of this node. The entry requires at least
   /// a key string in \p Key. The value in \p Value is optional and can be any
   /// type that is representable as a string. The units in \p Units is optional
-  /// and must be a string.
+  /// and must be a string. Providing a device info key allows liboffload to
+  /// use that value for an appropriate olGetDeviceInfo query
   template <typename T = std::monostate>
   InfoTreeNode *add(std::string Key, T Value = T(),
-                    const std::string &Units = std::string()) {
+                    const std::string &Units = std::string(),
+                    std::optional<DeviceInfo> DeviceInfoKey = std::nullopt) {
     assert(!Key.empty() && "Invalid info key");
 
     if (!Children)
@@ -157,7 +167,12 @@ struct InfoTreeNode {
     else
       ValueVariant = std::string{Value};
 
-    return &Children->emplace_back(Key, ValueVariant, Units);
+    auto Ptr = &Children->emplace_back(Key, ValueVariant, Units);
+
+    if (DeviceInfoKey)
+      DeviceInfoMap[*DeviceInfoKey] = Children->size() - 1;
+
+    return Ptr;
   }
 
   std::optional<InfoTreeNode *> get(StringRef Key) {
@@ -169,6 +184,13 @@ struct InfoTreeNode {
     if (It == Children->end())
       return std::nullopt;
     return It;
+  }
+
+  std::optional<InfoTreeNode *> get(DeviceInfo Info) {
+    auto Result = DeviceInfoMap.find(Info);
+    if (Result != DeviceInfoMap.end())
+      return &(*Children)[Result->second];
+    return std::nullopt;
   }
 
   /// Print all info entries in the tree

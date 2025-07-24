@@ -108,17 +108,12 @@
 ; CHECK-O23SZ-NEXT: Invalidating analysis: LazyValueAnalysis
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
-; CHECK-O23SZ-NEXT: Running analysis: LastRunTrackingAnalysis on foo
-; CHECK-O23SZ-NEXT: Running analysis: BlockFrequencyAnalysis on foo
-; CHECK-O23SZ-NEXT: Running analysis: BranchProbabilityAnalysis on foo
-; CHECK-O23SZ-NEXT: Running analysis: LoopAnalysis on foo
-; CHECK-O23SZ-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
+; CHECK-O-NEXT: Running analysis: LastRunTrackingAnalysis on foo
+; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis on foo
+; CHECK-O-NEXT: Running analysis: BranchProbabilityAnalysis on foo
+; CHECK-O-NEXT: Running analysis: LoopAnalysis on foo
+; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O23SZ-NEXT: Running pass: AggressiveInstCombinePass
-; CHECK-O1-NEXT: Running analysis: LastRunTrackingAnalysis on foo
-; CHECK-O1-NEXT: Running analysis: BlockFrequencyAnalysis on foo
-; CHECK-O1-NEXT: Running analysis: BranchProbabilityAnalysis on foo
-; CHECK-O1-NEXT: Running analysis: LoopAnalysis on foo
-; CHECK-O1-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O1-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O2-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O3-NEXT: Running pass: LibCallsShrinkWrapPass
