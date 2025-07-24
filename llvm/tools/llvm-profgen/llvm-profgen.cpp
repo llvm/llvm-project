@@ -21,6 +21,9 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
+using namespace llvm;
+using namespace sampleprof;
+
 static cl::OptionCategory ProfGenCategory("ProfGen Options");
 
 static cl::opt<std::string> PerfScriptFilename(
@@ -70,9 +73,6 @@ static cl::opt<std::string> DebugBinPath(
 extern cl::opt<bool> ShowDisassemblyOnly;
 extern cl::opt<bool> ShowSourceLocations;
 extern cl::opt<bool> SkipSymbolization;
-
-using namespace llvm;
-using namespace sampleprof;
 
 // Validate the command line input.
 static void validateCommandLine() {
