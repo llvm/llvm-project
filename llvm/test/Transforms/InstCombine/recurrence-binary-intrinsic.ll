@@ -319,33 +319,34 @@ exit:
 
 ; Negative tests.
 
-define float @simple_recurrence_intrinsic_copysign(i32 %n, float %a, float %b) {
-; CHECK-LABEL: define float @simple_recurrence_intrinsic_copysign(
-; CHECK-SAME: i32 [[N:%.*]], float [[A:%.*]], float [[B:%.*]]) {
+define i8 @simple_recurrence_intrinsic_uadd_sat(i8 %n, i8 %a, i8 %b) {
+; CHECK-LABEL: define i8 @simple_recurrence_intrinsic_uadd_sat(
+; CHECK-SAME: i8 [[N:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[MAG_ACC:%.*]] = phi float [ [[MAG:%.*]], %[[LOOP]] ], [ [[A]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[MAG]] = call nnan float @llvm.copysign.f32(float [[MAG_ACC]], float [[B]])
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[UADD_SAT_ACC:%.*]] = phi i8 [ [[UADD_SAT:%.*]], %[[LOOP]] ], [ [[A]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[UADD_SAT]] = call i8 @llvm.uadd.sat.i8(i8 [[UADD_SAT_ACC]], i8 [[B]])
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret float [[MAG]]
+; CHECK-NEXT:    ret i8 [[UADD_SAT]]
 ;
 entry:
   br label %loop
 
 loop:
-  %iv = phi i32  [ %iv.next, %loop ], [ 0, %entry ]
-  %mag.acc = phi float [ %mag, %loop ], [ %a, %entry ]
-  %mag = call nnan float @llvm.copysign.f32(float %mag.acc, float %b)
-  %iv.next = add nuw i32 %iv, 1
-  %cmp = icmp ult i32 %iv.next, %n
+  %iv = phi i8 [ %iv.next, %loop ], [ 0, %entry ]
+  %uadd.sat.acc = phi i8 [ %uadd.sat, %loop ], [ %a, %entry ]
+  %uadd.sat = call i8 @llvm.uadd.sat.i8(i8 %uadd.sat.acc, i8 %b)
+  %iv.next = add nuw i8 %iv, 1
+  %cmp = icmp ult i8 %iv.next, %n
   br i1 %cmp, label %loop, label %exit
+
 exit:
-  ret float %mag
+  ret i8 %uadd.sat
 }
 
 define i8 @simple_recurrence_intrinsic_arg_loop_variant(i8 %n, i8 %a) {
