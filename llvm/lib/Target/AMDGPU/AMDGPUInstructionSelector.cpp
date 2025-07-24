@@ -5774,6 +5774,16 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectGlobalSAddrCPol(MachineOperand &Root) const {
+  const MachineInstr &I = *Root.getParent();
+
+  // We are assuming CPol is always the last operand of the intrinsic.
+  auto PassedCPol =
+      I.getOperand(I.getNumOperands() - 1).getImm() & ~AMDGPU::CPol::SCAL;
+  return selectGlobalSAddr(Root, PassedCPol);
+}
+
+InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectGlobalSAddrGLC(MachineOperand &Root) const {
   return selectGlobalSAddr(Root, AMDGPU::CPol::GLC);
 }

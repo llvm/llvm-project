@@ -2020,6 +2020,22 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
   return true;
 }
 
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddrCPol(SDNode *N, SDValue Addr,
+                                               SDValue &SAddr, SDValue &VOffset,
+                                               SDValue &Offset,
+                                               SDValue &CPol) const {
+  bool ScaleOffset;
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, Offset, ScaleOffset))
+    return false;
+
+  // We are assuming CPol is always the last operand of the intrinsic.
+  auto PassedCPol =
+      N->getConstantOperandVal(N->getNumOperands() - 1) & ~AMDGPU::CPol::SCAL;
+  CPol = CurDAG->getTargetConstant(
+      (ScaleOffset ? AMDGPU::CPol::SCAL : 0) | PassedCPol, SDLoc(), MVT::i32);
+  return true;
+}
+
 bool AMDGPUDAGToDAGISel::SelectGlobalSAddrGLC(SDNode *N, SDValue Addr,
                                               SDValue &SAddr, SDValue &VOffset,
                                               SDValue &Offset,
