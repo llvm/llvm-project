@@ -37,14 +37,6 @@ public:
 
   virtual bool isRuler() const { return false; }
   virtual ~Block() = default;
-
-protected:
-  /// Estimated size of the string representation of this block.
-  /// Used to reserve space in the output string.
-  /// Each time block content is added, this value is updated.
-  /// This is an estimate, so it may not be accurate but can help
-  /// reducing dynamically reallocating string memory.
-  unsigned EstimatedStringSize = 0;
 };
 
 /// Represents parts of the markup that can contain strings, like inline code,
@@ -88,6 +80,13 @@ private:
     bool SpaceAfter = false;
   };
   std::vector<Chunk> Chunks;
+
+  /// Estimated size of the string representation of this paragraph.
+  /// Used to reserve space in the output string.
+  /// Each time paragraph content is added, this value is updated.
+  /// This is an estimate, so it may not be accurate but can help
+  /// reducing dynamically reallocating string memory.
+  unsigned EstimatedStringSize = 0;
 
   Paragraph &appendChunk(llvm::StringRef Contents, ChunkKind K);
 

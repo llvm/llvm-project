@@ -712,6 +712,7 @@ Paragraph &Paragraph::appendCode(llvm::StringRef Code, bool Preserve) {
   std::string Norm = canonicalizeSpaces(std::move(Code));
   if (Norm.empty())
     return *this;
+  EstimatedStringSize += Norm.size();
   Chunks.emplace_back();
   Chunk &C = Chunks.back();
   C.Contents = std::move(Norm);
@@ -720,7 +721,6 @@ Paragraph &Paragraph::appendCode(llvm::StringRef Code, bool Preserve) {
   // Disallow adjacent code spans without spaces, markdown can't render them.
   C.SpaceBefore = AdjacentCode;
 
-  EstimatedStringSize += Norm.size();
   return *this;
 }
 
