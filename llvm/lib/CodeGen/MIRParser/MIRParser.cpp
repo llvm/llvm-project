@@ -1108,13 +1108,12 @@ bool MIRParserImpl::initializeSaveRestorePoints(
     if (VectorRepr.empty())
       return false;
 
-    for (const auto &Entry : VectorRepr) {
-      const auto &MBBSource = Entry.Point;
-      if (parseMBBReference(PFS, MBB, MBBSource.Value))
+    for (const auto &[EntryMBB, EntryRegisters] : VectorRepr) {
+      if (parseMBBReference(PFS, MBB, EntryMBB.Value))
         return true;
 
       std::vector<CalleeSavedInfo> Registers;
-      for (auto &RegStr : Entry.Registers) {
+      for (auto &RegStr : EntryRegisters) {
         Register Reg;
         if (parseNamedRegisterReference(PFS, Reg, RegStr.Value, Error))
           return error(Error, RegStr.SourceRange);

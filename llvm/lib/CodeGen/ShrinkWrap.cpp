@@ -971,7 +971,7 @@ bool ShrinkWrapImpl::run(MachineFunction &MF) {
 
   std::vector<CalleeSavedInfo> CSIVec;
   SetOfRegs CSRSet = getCurrentCSRs(RS.get());
-  for (unsigned Reg : CSRSet)
+  for (Register Reg : CSRSet)
     CSIVec.push_back(CalleeSavedInfo(Reg));
 
   SaveRestorePoints::PointsMap SavePoints({{Save, CSIVec}});

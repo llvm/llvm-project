@@ -609,10 +609,11 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       // Prolog or at the start of Epilog SP has maximum offset
       uint64_t FirstSPAdjustAmount =
           getFrameLowering(MF)->getFirstSPAdjustAmount(MF);
-      if (FirstSPAdjustAmount && !SpilledRestoredInPrologEpilog)
+      if (FirstSPAdjustAmount && !SpilledRestoredInPrologEpilog) {
         Offset += StackOffset::getFixed(
             getFrameLowering(MF)->getStackSizeWithRVVPadding(MF) -
             FirstSPAdjustAmount);
+      }
     }
   }
 
