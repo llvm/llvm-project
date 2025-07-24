@@ -1,0 +1,10 @@
+RUN: mkdir -p %t/server
+RUN: mkdir -p %t/lib
+RUN: %lldb-rpc-gen --output-dir=%t %S/../../Inputs/Client/CheckNonConstSBRef.h
+
+RUN: cat %t/lib/CheckNonConstSBRef.cpp | FileCheck %s
+
+# Non-const references to SB classes will have an assert
+# added that trips if it has an invalid ObjectRef.
+CHECK: assert(debugger_ref.ObjectRefIsValid() && "SB object refs must be valid before encoding");
+CHECK-NEXT:   RPCValueEncoder(send, rpc_common::RPCPacket::ValueType::Argument, debugger_ref);
