@@ -133,16 +133,17 @@ static bool noDuplicateRulesAndIgnore(ArrayRef<RuleTy> Rules) {
 
 static void printDepMatrix(CharMatrix &DepMatrix) {
   for (auto &Row : DepMatrix) {
-    ArrayRef<char> RowRef(Row);
-
     // Drop the last element because it is a flag indicating whether this is
     // forward dependency or not, which doesn't affect the legality check.
-    for (auto D : RowRef.drop_back())
+    for (char D : drop_end(Row))
       LLVM_DEBUG(dbgs() << D << " ");
     LLVM_DEBUG(dbgs() << "\n");
   }
 }
 
+/// Return true if \p Src appears before \p Dst in the same basic block.
+/// Precondition: \p Src and \Dst are distinct instructions within the same
+/// basic block.
 static bool inThisOrder(const Instruction *Src, const Instruction *Dst) {
   assert(Src->getParent() == Dst->getParent() && Src != Dst &&
          "Expected Src and Dst to be different instructions in the same BB");
@@ -282,7 +283,8 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
             IsKnownForward = false;
         }
 
-        // Initialize the last element.
+        // Initialize the last element. Assume forward dependencies only; it
+        // will be updated later if there is any non-forward dependency.
         Dep.push_back('<');
 
         // The last element should express the "summary" among one or more
@@ -297,8 +299,9 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
           DepMatrix.push_back(Dep);
 
         // If we cannot prove that this dependency is forward, change the last
-        // element of the corresponding entry. Note that the existing entry in
-        // DepMatrix can be modified.
+        // element of the corresponding entry. Since a `[... *]` dependency
+        // includes a `[... <]` dependency, we do not need to keep both and
+        // change the existing entry instead.
         if (!IsKnownForward)
           DepMatrix[Ite->second].back() = '*';
       }
@@ -1432,8 +1435,8 @@ std::optional<bool> LoopInterchangeProfitability::isProfitableForVectorization(
   if (!canVectorize(DepMatrix, OuterLoopId))
     return false;
 
-  // If inner loop cannot be vectorized and outer loop can be then it is
-  // profitable to interchange to enable inner loop parallelism.
+  // If the inner loop cannot be vectorized but the outer loop can be, then it
+  // is profitable to interchange to enable inner loop parallelism.
   if (!canVectorize(DepMatrix, InnerLoopId))
     return true;
 
