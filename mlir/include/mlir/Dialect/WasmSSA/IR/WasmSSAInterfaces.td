@@ -20,7 +20,14 @@ def LabelLevelOpInterface : OpInterface<"LabelLevelOpInterface"> {
   let cppNamespace = "::mlir::wasmssa";
   let description = [{
     Operation that defines one level of nesting for wasm branching.
-    These operation region can be targeted by branch instructions.
+
+    These ops defines Wasm control flow nesting levels (Wasm Labels) that Wasm
+    branching operations can target.
+    The branching operations specify a number of nesting level they want to exit,
+    and are redirected to the target of the corresponding nesting LabelLevelOp.
+
+    As multiple level can be escaped at once, the level defining ops need themselves
+    to be `Terminator` ops.
   }];
   let methods = [
     InterfaceMethod<
@@ -30,6 +37,10 @@ def LabelLevelOpInterface : OpInterface<"LabelLevelOpInterface"> {
       /*args=*/        (ins)
     >
   ];
+
+  let verify = [{
+    return verifyLabelLevelInterface<ConcreteOp>();
+  }];
 }
 
 def LabelBranchingOpInterface : OpInterface<"LabelBranchingOpInterface"> {
@@ -65,6 +76,7 @@ def LabelBranchingOpInterface : OpInterface<"LabelBranchingOpInterface"> {
       }]
     >
   ];
+
   let extraClassDeclaration = [{
     static ::llvm::FailureOr<LabelLevelOpInterface> getTargetOpFromBlock(::mlir::Block *block, uint32_t level);
   }];

@@ -20,6 +20,12 @@ namespace mlir::wasmssa {
 namespace detail {
 LogicalResult verifyConstantExpressionInterface(Operation *op);
 LogicalResult verifyLabelBranchingOpInterface(Operation *op);
+template <typename OpType>
+LogicalResult verifyLabelLevelInterface() {
+  static_assert(OpType::template hasTrait<::mlir::OpTrait::IsTerminator>(),
+                "LabelLevelOp should be terminator ops");
+  return success();
+}
 } // namespace detail
 template <class OperationType>
 struct AlwaysValidConstantExprOpTrait
