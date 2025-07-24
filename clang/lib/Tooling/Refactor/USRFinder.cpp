@@ -368,8 +368,9 @@ public:
   // \returns false on success and sets Result.
   void handleNestedNameSpecifierLoc(NestedNameSpecifierLoc NameLoc) {
     while (NameLoc) {
-      const NamespaceDecl *Decl =
-          NameLoc.getNestedNameSpecifier()->getAsNamespace()->getNamespace();
+      const NamespaceDecl *Decl = nullptr;
+      if (auto *NS = NameLoc.getNestedNameSpecifier()->getAsNamespace())
+        Decl = NS->getNamespace();
       checkOccurrence(Decl, NameLoc.getLocalBeginLoc(),
                       NameLoc.getLocalEndLoc());
       NameLoc = NameLoc.getPrefix();
