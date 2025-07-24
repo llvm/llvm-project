@@ -1188,13 +1188,14 @@ spirv::Deserializer::processStructType(ArrayRef<uint32_t> operands) {
             }
             offsetInfo[memberIndex] = memberDecoration.second[0];
           } else {
+            auto intType = mlir::IntegerType::get(context, 32);
             if (!memberDecoration.second.empty()) {
-              memberDecorationsInfo.emplace_back(memberIndex, /*hasValue=*/1,
-                                                 memberDecoration.first,
-                                                 memberDecoration.second[0]);
+              memberDecorationsInfo.emplace_back(
+                  memberIndex, memberDecoration.first,
+                  IntegerAttr::get(intType, memberDecoration.second[0]));
             } else {
-              memberDecorationsInfo.emplace_back(memberIndex, /*hasValue=*/0,
-                                                 memberDecoration.first, 0);
+              memberDecorationsInfo.emplace_back(
+                  memberIndex, memberDecoration.first, UnitAttr::get(context));
             }
           }
         }
