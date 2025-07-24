@@ -1953,7 +1953,6 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
   // 2. if outer_dims_perms is present: do that permutation on writeVectorSizes.
   // 3. multiply all the locations in vectorSize pointed by innerDimPos by the
   //    innerTiles attribute value.
-  // SmallVector<int64_t> writeVectorSizes(inputVectorSizes);
   if (writeVectorSizes.empty()) {
     if (ShapedType::isDynamicShape(sourceShape))
       return failure();
@@ -2140,9 +2139,6 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
 static LogicalResult
 vectorizeUnPackOpPrecondition(linalg::UnPackOp unpackOp,
                               ArrayRef<int64_t> inputVectorSizes) {
-
-  // FIXME!!!
-  return success();
 
   if (llvm::any_of(unpackOp.getInnerTiles(), [](OpFoldResult res) {
         return !getConstantIntValue(res).has_value();
