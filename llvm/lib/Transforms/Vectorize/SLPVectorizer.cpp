@@ -110,10 +110,15 @@ using namespace std::placeholders;
 #define SV_NAME "slp-vectorizer"
 #define DEBUG_TYPE "SLP"
 
+STATISTIC(NumFaddVectorized, "Number of vectorized fadd reductions");
 STATISTIC(NumVectorInstructions, "Number of vector instructions generated");
 
 DEBUG_COUNTER(VectorizedGraphs, "slp-vectorized",
               "Controls which SLP graphs should be vectorized.");
+
+static cl::opt<bool> SLPEnableOrderedFPReductions(
+    "slp-ordered-fp-reds", cl::init(true), cl::Hidden,
+    cl::desc("Enable vectorization of ordered floating point reductions"));
 
 static cl::opt<bool>
     RunSLPVectorization("vectorize-slp", cl::init(true), cl::Hidden,
@@ -1950,6 +1955,11 @@ public:
   ArrayRef<Value *> getRootNodeScalars() const {
     assert(!VectorizableTree.empty() && "No graph to get the first node from");
     return VectorizableTree.front()->Scalars;
+  }
+
+  bool areAllEntriesIdentityOrdered() const {
+    return all_of(VectorizableTree,
+                  [&](auto &Entry) { return Entry->ReorderIndices.empty(); });
   }
 
   /// Returns the type/is-signed info for the root node in the graph without
@@ -22219,6 +22229,8 @@ class HorizontalReduction {
   /// signedness.
   SmallVector<std::tuple<Value *, unsigned, bool>> VectorValuesAndScales;
 
+  SmallVector<Value *, 2> InitialFAddValues;
+
   static bool isCmpSelMinMax(Instruction *I) {
     return match(I, m_Select(m_Cmp(), m_Value(), m_Value())) &&
            RecurrenceDescriptor::isMinMaxRecurrenceKind(getRdxKind(I));
@@ -22230,6 +22242,14 @@ class HorizontalReduction {
   static bool isBoolLogicOp(Instruction *I) {
     return isa<SelectInst>(I) &&
            (match(I, m_LogicalAnd()) || match(I, m_LogicalOr()));
+  }
+
+  bool isOrderedFaddReduction() const {
+    if (!isa<Instruction>(ReductionRoot))
+      return false;
+    auto *I = cast<Instruction>(ReductionRoot);
+    return (RdxKind == RecurKind::FAdd) &&
+           !I->getFastMathFlags().allowReassoc();
   }
 
   /// Checks if instruction is associative and can be vectorized.
@@ -22255,6 +22275,9 @@ class HorizontalReduction {
     }
 
     if (Kind == RecurKind::FMaximum || Kind == RecurKind::FMinimum)
+      return true;
+
+    if (Kind == RecurKind::FAdd && SLPEnableOrderedFPReductions)
       return true;
 
     return I->isAssociative();
@@ -22516,6 +22539,68 @@ private:
            (I && !isa<LoadInst>(I) && isValidForAlternation(I->getOpcode()));
   }
 
+  bool checkOperandsOrder() const {
+    auto OpsVec = reverse(ReductionOps[0]);
+    if (!isOrderedFaddReduction() || empty(OpsVec))
+      return false;
+    Value *PrevOperand = *OpsVec.begin();
+    for (auto *I : drop_begin(OpsVec)) {
+      Value *Op1 = cast<BinaryOperator>(I)->getOperand(0);
+      if (Op1 != PrevOperand)
+        return false;
+      PrevOperand = I;
+    }
+    return true;
+  }
+
+  bool checkFastMathFlags() const {
+    for (auto OpsVec : ReductionOps) {
+      if (OpsVec.size() <= 1)
+        continue;
+      Value *V = *OpsVec.begin();
+      if (!isa<FPMathOperator>(V))
+        continue;
+      bool Flag = cast<Instruction>(V)->getFastMathFlags().allowReassoc();
+      auto It = find_if(drop_begin(OpsVec), [&](Value *I) {
+        auto CurFlag = cast<Instruction>(I)->getFastMathFlags().allowReassoc();
+        return (Flag != CurFlag);
+      });
+      if (It != OpsVec.end())
+        return false;
+    }
+    return true;
+  }
+
+  // Checks if the operands of the \p TreeN instruction are also reduction
+  // operations or should be treated as reduced values or an extra argument,
+  // which is not part of the reduction.
+  void CheckOperands(BoUpSLP &R, Instruction *TreeN, Instruction *Root, SmallVectorImpl<Value *> &PossibleReducedVals,
+                             SmallVectorImpl<Instruction *> &ReductionOps,
+                             unsigned Level) {
+      bool IsCmpSelMinMax = isCmpSelMinMax(Root);
+      for (int I : reverse(seq<int>(getFirstOperandIndex(TreeN),
+                                    getNumberOfOperands(TreeN)))) {
+        Value *EdgeVal = getRdxOperand(TreeN, I);
+        ReducedValsToOps[EdgeVal].push_back(TreeN);
+        auto *EdgeInst = dyn_cast<Instruction>(EdgeVal);
+        // If the edge is not an instruction, or it is different from the main
+        // reduction opcode or has too many uses - possible reduced value.
+        // Also, do not try to reduce const values, if the operation is not
+        // foldable.
+        if (!EdgeInst || Level > RecursionMaxDepth ||
+            getRdxKind(EdgeInst) != RdxKind ||
+            IsCmpSelMinMax != isCmpSelMinMax(EdgeInst) ||
+            !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst) ||
+            !isVectorizable(RdxKind, EdgeInst) ||
+            (R.isAnalyzedReductionRoot(EdgeInst) &&
+             all_of(EdgeInst->operands(), IsaPred<Constant>))) {
+          PossibleReducedVals.push_back(EdgeVal);
+          continue;
+        }
+        ReductionOps.push_back(EdgeInst);
+      }
+    };
+
 public:
   HorizontalReduction() = default;
   HorizontalReduction(Instruction *I, ArrayRef<Value *> Ops)
@@ -22561,42 +22646,14 @@ public:
         return false;
 
     ReductionRoot = Root;
-
+    if (isOrderedFaddReduction())
+      return false;
     // Iterate through all the operands of the possible reduction tree and
     // gather all the reduced values, sorting them by their value id.
     BasicBlock *BB = Root->getParent();
     bool IsCmpSelMinMax = isCmpSelMinMax(Root);
     SmallVector<std::pair<Instruction *, unsigned>> Worklist(
         1, std::make_pair(Root, 0));
-    // Checks if the operands of the \p TreeN instruction are also reduction
-    // operations or should be treated as reduced values or an extra argument,
-    // which is not part of the reduction.
-    auto CheckOperands = [&](Instruction *TreeN,
-                             SmallVectorImpl<Value *> &PossibleReducedVals,
-                             SmallVectorImpl<Instruction *> &ReductionOps,
-                             unsigned Level) {
-      for (int I : reverse(seq<int>(getFirstOperandIndex(TreeN),
-                                    getNumberOfOperands(TreeN)))) {
-        Value *EdgeVal = getRdxOperand(TreeN, I);
-        ReducedValsToOps[EdgeVal].push_back(TreeN);
-        auto *EdgeInst = dyn_cast<Instruction>(EdgeVal);
-        // If the edge is not an instruction, or it is different from the main
-        // reduction opcode or has too many uses - possible reduced value.
-        // Also, do not try to reduce const values, if the operation is not
-        // foldable.
-        if (!EdgeInst || Level > RecursionMaxDepth ||
-            getRdxKind(EdgeInst) != RdxKind ||
-            IsCmpSelMinMax != isCmpSelMinMax(EdgeInst) ||
-            !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst) ||
-            !isVectorizable(RdxKind, EdgeInst) ||
-            (R.isAnalyzedReductionRoot(EdgeInst) &&
-             all_of(EdgeInst->operands(), IsaPred<Constant>))) {
-          PossibleReducedVals.push_back(EdgeVal);
-          continue;
-        }
-        ReductionOps.push_back(EdgeInst);
-      }
-    };
     // Try to regroup reduced values so that it gets more profitable to try to
     // reduce them. Values are grouped by their value ids, instructions - by
     // instruction op id and/or alternate op id, plus do extra analysis for
@@ -22646,14 +22703,14 @@ public:
       auto [TreeN, Level] = Worklist.pop_back_val();
       SmallVector<Value *> PossibleRedVals;
       SmallVector<Instruction *> PossibleReductionOps;
-      CheckOperands(TreeN, PossibleRedVals, PossibleReductionOps, Level);
+      CheckOperands(R, TreeN, Root, PossibleRedVals, PossibleReductionOps, Level);
       addReductionOps(TreeN);
       // Add reduction values. The values are sorted for better vectorization
       // results.
       for (Value *V : PossibleRedVals) {
-        size_t Key, Idx;
+        size_t Key = 0, Idx = 0;
         std::tie(Key, Idx) = generateKeySubkey(V, &TLI, GenerateLoadsSubkey,
-                                               /*AllowAlternate=*/false);
+                                              /*AllowAlternate=*/false);
         ++PossibleReducedVals[Key][Idx]
               .insert(std::make_pair(V, 0))
               .first->second;
@@ -22699,6 +22756,58 @@ public:
     stable_sort(ReducedVals, [](ArrayRef<Value *> P1, ArrayRef<Value *> P2) {
       return P1.size() > P2.size();
     });
+
+    if (!checkFastMathFlags())
+      return false;
+
+    return true;
+  }
+
+  bool matchNonAssociativeReduction(BoUpSLP &R, Instruction *Root,
+                                  ScalarEvolution &SE, const DataLayout &DL,
+                                  const TargetLibraryInfo &TLI) {
+    RdxKind = HorizontalReduction::getRdxKind(Root);
+    if (!isVectorizable(RdxKind, Root))
+      return false;
+
+    Type *Ty = Root->getType();
+    if (!isValidElementType(Ty) || Ty->isPointerTy())
+      return false;
+
+    if (auto *Sel = dyn_cast<SelectInst>(Root))
+      if (!Sel->getCondition()->hasOneUse())
+        return false;
+
+    ReductionRoot = Root;
+    if (!isOrderedFaddReduction())
+      return false;
+
+    BasicBlock *BB = Root->getParent();
+    SmallVector<std::pair<Instruction *, unsigned>> Worklist(
+        1, std::make_pair(Root, 0));
+    initReductionOps(Root);
+    ReducedVals.resize(1);
+    SmallMapVector<Value *, size_t, 2> ReusedVals;
+    while (!Worklist.empty()) {
+      auto [TreeN, Level] = Worklist.pop_back_val();
+      SmallVector<Value *> PossibleRedVals;
+      SmallVector<Instruction *> PossibleReductionOps;
+      CheckOperands(R, TreeN, Root, PossibleRedVals, PossibleReductionOps, Level);
+      addReductionOps(TreeN);
+      for (Value *V : PossibleRedVals)
+        ++ReusedVals.insert(std::make_pair(V, 0)).first->second;
+
+      for (Instruction *I : reverse(PossibleReductionOps))
+        Worklist.emplace_back(I, I->getParent() == BB ? 0 : Level + 1);
+    }
+    for (std::pair<Value *, size_t> V : ReusedVals.takeVector())
+      ReducedVals[0].append(V.second, V.first);
+
+    std::reverse(ReducedVals[0].begin(), ReducedVals[0].end());
+
+    if (ReducedVals[0].size() == 2 || !checkOperandsOrder() || !checkFastMathFlags())
+      return false;
+
     return true;
   }
 
@@ -22892,7 +23001,7 @@ public:
       // original scalar identity operations on matched horizontal reductions).
       IsSupportedHorRdxIdentityOp = RdxKind != RecurKind::Mul &&
                                     RdxKind != RecurKind::FMul &&
-                                    RdxKind != RecurKind::FMulAdd;
+                                    RdxKind != RecurKind::FMulAdd && !isOrderedFaddReduction();
       // Gather same values.
       SmallMapVector<Value *, unsigned, 16> SameValuesCounter;
       if (IsSupportedHorRdxIdentityOp)
@@ -22993,6 +23102,8 @@ public:
         return IsAnyRedOpGathered;
       };
       bool AnyVectorized = false;
+      Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);;
+      Instruction *InsertPt = RdxRootInst;
       SmallDenseSet<std::pair<unsigned, unsigned>, 8> IgnoredCandidates;
       while (Pos < NumReducedVals - ReduxWidth + 1 &&
              ReduxWidth >= ReductionLimit) {
@@ -23155,8 +23266,6 @@ public:
 
         // Emit a reduction. If the root is a select (min/max idiom), the insert
         // point is the compare condition of that select.
-        Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
-        Instruction *InsertPt = RdxRootInst;
         if (IsCmpSelMinMax)
           InsertPt = GetCmpForMinMaxReduction(RdxRootInst);
 
@@ -23209,6 +23318,41 @@ public:
           if (!V.isVectorized(RdxVal))
             RequiredExtract.insert(RdxVal);
         }
+
+        auto FirstIt = find_if(ReducedVals[0], [&](Value *RdxVal) {
+          return VectorizedVals.lookup(RdxVal);
+        });
+        auto LastIt = find_if(reverse(ReducedVals[0]), [&](Value *RdxVal) {
+          return VectorizedVals.lookup(RdxVal);
+        });
+        if (isOrderedFaddReduction()) {
+          //[FirstIt, LastIt] - range of vectorized Vals, we need it to get last
+          // non-vectorized Val at the beginning and it's ReductionOp and first
+          // non-vectorized Val at the end and it's ReductinoOp
+          // fadd - initial value for reduction
+          // fadd - v
+          // fadd - v
+          // fadd - v
+          // fadd - v
+          // fadd - scalar remainder
+          if (LastIt != ReducedVals[0].rend())
+            ReductionRoot =
+                cast<Instruction>(ReducedValsToOps.find(*LastIt)->second[0]);
+
+          if (InitialFAddValues.empty()) {
+            auto *FAddBinOp = cast<BinaryOperator>(
+                ReducedValsToOps.find(*FirstIt)->second[0]);
+            Value *InitialFAddValue = ConstantExpr::getBinOpIdentity(
+                FAddBinOp->getOpcode(), FAddBinOp->getType());
+            if (FirstIt != ReducedVals[0].end()) {
+              auto *Op1 = FAddBinOp->getOperand(0);
+              if (!isa<PoisonValue>(Op1))
+                InitialFAddValue = Op1;
+            }
+            InitialFAddValues.push_back(InitialFAddValue);
+          }
+        }
+
         Pos += ReduxWidth;
         Start = Pos;
         ReduxWidth = NumReducedVals - Pos;
@@ -23226,10 +23370,27 @@ public:
         continue;
       }
     }
-    if (!VectorValuesAndScales.empty())
-      VectorizedTree = GetNewVectorizedTree(
-          VectorizedTree,
-          emitReduction(Builder, *TTI, ReductionRoot->getType()));
+    if (!VectorValuesAndScales.empty()) {
+      if (!isOrderedFaddReduction()) {
+        VectorizedTree = GetNewVectorizedTree(
+            VectorizedTree,
+            emitReduction(Builder, *TTI, ReductionRoot->getType()));
+      } else {
+        for (auto V : VectorValuesAndScales) {
+          Value *InitialFAddValue = InitialFAddValues.back();
+          VectorizedTree = Builder.CreateFAddReduce(InitialFAddValue, std::get<0>(V));
+          InitialFAddValues.push_back(VectorizedTree);
+        }
+        auto LastIt = find_if(reverse(ReducedVals[0]), [&](Value *RdxVal) {
+          return VectorizedVals.lookup(RdxVal);
+        });
+        for_each(reverse(make_range(LastIt.base(), ReducedVals[0].end())),
+                   [&](Value *V) {
+                     ReducedValsToOps.find(V)->second[0]->moveAfter(
+                         cast<Instruction>(VectorizedTree));
+                   });
+      }
+    }
     if (VectorizedTree) {
       // Reorder operands of bool logical op in the natural order to avoid
       // possible problem with poison propagation. If not possible to reorder
@@ -23317,15 +23478,18 @@ public:
             ExtraReductions.emplace_back(RedOp, RdxVal);
         }
       }
-      // Iterate through all not-vectorized reduction values/extra arguments.
-      bool InitStep = true;
-      while (ExtraReductions.size() > 1) {
-        SmallVector<std::pair<Instruction *, Value *>> NewReds =
-            FinalGen(ExtraReductions, InitStep);
-        ExtraReductions.swap(NewReds);
-        InitStep = false;
+
+      if (!isOrderedFaddReduction()) {
+        // Iterate through all not-vectorized reduction values/extra arguments.
+        bool InitStep = true;
+        while (ExtraReductions.size() > 1) {
+          SmallVector<std::pair<Instruction *, Value *>> NewReds =
+              FinalGen(ExtraReductions, InitStep);
+          ExtraReductions.swap(NewReds);
+          InitStep = false;
+        }
+        VectorizedTree = ExtraReductions.front().second;
       }
-      VectorizedTree = ExtraReductions.front().second;
 
       ReductionRoot->replaceAllUsesWith(VectorizedTree);
 
@@ -23339,21 +23503,28 @@ public:
         IgnoreSet.insert_range(RdxOps);
 #endif
       for (ArrayRef<Value *> RdxOps : ReductionOps) {
+        SmallVector<Value *, 4> RdxOpsForDeletion;
         for (Value *Ignore : RdxOps) {
-          if (!Ignore)
+          if (!Ignore || (isOrderedFaddReduction() && !Ignore->use_empty() &&
+                          !any_of(cast<Instruction>(Ignore)->operands(),
+                                  [](const Value *Val) {
+                                    return isa<PoisonValue>(Val);
+                                  })))
             continue;
 #ifndef NDEBUG
           for (auto *U : Ignore->users()) {
-            assert(IgnoreSet.count(U) &&
-                   "All users must be either in the reduction ops list.");
+            assert((IgnoreSet.count(U) ||
+                   isOrderedFaddReduction()) &&
+                       "All users must be either in the reduction ops list.");
           }
 #endif
           if (!Ignore->use_empty()) {
             Value *P = PoisonValue::get(Ignore->getType());
             Ignore->replaceAllUsesWith(P);
           }
+          RdxOpsForDeletion.push_back(Ignore);
         }
-        V.removeInstructionsAndOperands(RdxOps, VectorValuesAndScales);
+        V.removeInstructionsAndOperands(ArrayRef(RdxOpsForDeletion), VectorValuesAndScales);
       }
     } else if (!CheckForReusedReductionOps) {
       for (ReductionOpsType &RdxOps : ReductionOps)
@@ -23432,6 +23603,8 @@ private:
           continue;
         }
         InstructionCost ScalarCost = 0;
+        if (RdxVal->use_empty())
+          continue;
         for (User *U : RdxVal->users()) {
           auto *RdxOp = cast<Instruction>(U);
           if (hasRequiredNumberOfUses(IsCmpSelMinMax, RdxOp)) {
@@ -24160,7 +24333,7 @@ bool SLPVectorizerPass::vectorizeHorReduction(
     if (!isReductionCandidate(Inst))
       return nullptr;
     HorizontalReduction HorRdx;
-    if (!HorRdx.matchAssociativeReduction(R, Inst, *SE, *DL, *TLI))
+    if (!HorRdx.matchAssociativeReduction(R, Inst, *SE, *DL, *TLI) && !HorRdx.matchNonAssociativeReduction(R, Inst, *SE, *DL, *TLI))
       return nullptr;
     return HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC);
   };
