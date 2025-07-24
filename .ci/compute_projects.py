@@ -155,6 +155,7 @@ META_PROJECTS = {
     ("*", "docs"): "docs",
     ("llvm", "utils", "gn"): "gn",
     (".github", "workflows", "premerge.yaml"): ".ci",
+    ("third-party",): ".ci",
 }
 
 # Projects that should not run any tests. These need to be metaprojects.
