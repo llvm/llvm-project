@@ -39,6 +39,8 @@ struct wasm_addr_t {
   operator lldb::addr_t() { return *(uint64_t *)this; }
 };
 
+static_assert(sizeof(wasm_addr_t) == 8, "");
+
 /// ProcessWasm provides the access to the Wasm program state
 /// retrieved from the Wasm engine.
 class ProcessWasm : public process_gdb_remote::ProcessGDBRemote {

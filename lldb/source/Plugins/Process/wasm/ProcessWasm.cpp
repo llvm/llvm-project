@@ -25,7 +25,7 @@ LLDB_PLUGIN_DEFINE(ProcessWasm)
 ProcessWasm::ProcessWasm(lldb::TargetSP target_sp, ListenerSP listener_sp)
     : ProcessGDBRemote(target_sp, listener_sp) {
   // Always use Linux signals for Wasm process.
-  m_unix_signals_sp = UnixSignals::Create(ArchSpec{"wasm32-Ant-wasi-wasm"});
+  m_unix_signals_sp = UnixSignals::Create(ArchSpec{"wasm32-unknown-wasi-wasm"});
 }
 
 void ProcessWasm::Initialize() {
@@ -73,6 +73,7 @@ bool ProcessWasm::CanDebug(lldb::TargetSP target_sp,
       return exe_objfile->GetArchitecture().GetMachine() ==
              llvm::Triple::wasm32;
   }
+
   // However, if there is no wasm module, we return false, otherwise,
   // we might use ProcessWasm to attach gdb remote.
   return false;

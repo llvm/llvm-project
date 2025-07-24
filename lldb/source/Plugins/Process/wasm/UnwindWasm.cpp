@@ -26,6 +26,9 @@ public:
                                uint64_t pc)
       : GDBRemoteRegisterContext(thread, concrete_frame_idx, reg_info_sp, false,
                                  false) {
+    // Wasm does not have a fixed set of registers but relies on a mechanism
+    // named local and global variables to store information such as the stack
+    // pointer.
     PrivateSetRegisterValue(0, pc);
   }
 };
@@ -46,21 +49,23 @@ UnwindWasm::DoCreateRegisterContextForFrame(lldb_private::StackFrame *frame) {
 }
 
 uint32_t UnwindWasm::DoGetFrameCount() {
-  if (!m_unwind_complete) {
-    m_unwind_complete = true;
-    m_frames.clear();
+  if (m_unwind_complete)
+    return m_frames.size();
 
-    ThreadWasm &wasm_thread = static_cast<ThreadWasm &>(GetThread());
-    llvm::Expected<std::vector<lldb::addr_t>> call_stack_pcs =
-        wasm_thread.GetWasmCallStack();
-    if (!call_stack_pcs) {
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Unwind), call_stack_pcs.takeError(),
-                     "Failed to get Wasm callstack: {0}");
-      m_frames.clear();
-      return 0;
-    }
-    m_frames = *call_stack_pcs;
+  m_unwind_complete = true;
+  m_frames.clear();
+
+  ThreadWasm &wasm_thread = static_cast<ThreadWasm &>(GetThread());
+  llvm::Expected<std::vector<lldb::addr_t>> call_stack_pcs =
+      wasm_thread.GetWasmCallStack();
+  if (!call_stack_pcs) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Unwind), call_stack_pcs.takeError(),
+                   "Failed to get Wasm callstack: {0}");
+    m_frames.clear();
+    return 0;
   }
+
+  m_frames = *call_stack_pcs;
   return m_frames.size();
 }
 
@@ -70,12 +75,11 @@ bool UnwindWasm::DoGetFrameInfoAtIndex(uint32_t frame_idx, lldb::addr_t &cfa,
   if (m_frames.size() == 0)
     DoGetFrameCount();
 
-  if (frame_idx < m_frames.size()) {
-    behaves_like_zeroth_frame = (frame_idx == 0);
-    cfa = 0;
-    pc = m_frames[frame_idx];
-    return true;
-  }
+  if (frame_idx >= m_frames.size())
+    return false;
 
-  return false;
+  behaves_like_zeroth_frame = (frame_idx == 0);
+  cfa = 0;
+  pc = m_frames[frame_idx];
+  return true;
 }

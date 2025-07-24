@@ -2077,7 +2077,8 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
   } break;
 
   case llvm::Triple::wasm32: {
-    static const uint8_t g_wasm_opcode[] = {0x00}; // unreachable
+    // Unreachable (0x00) triggers an unconditional trap.
+    static const uint8_t g_wasm_opcode[] = {0x00};
     trap_opcode = g_wasm_opcode;
     trap_opcode_size = sizeof(g_wasm_opcode);
   } break;

@@ -8,7 +8,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 LLDB_INVALID_ADDRESS = lldb.LLDB_INVALID_ADDRESS
 load_address = 0x400000000
 
-
 def format_register_value(val):
     """
     Encode each byte by two hex digits in little-endian order.
@@ -35,8 +34,8 @@ class MyResponder(MockGDBServerResponder):
     def respond(self, packet):
         if packet[0:13] == "qRegisterInfo":
             return self.qRegisterInfo(packet[13:])
-        if packet[0:14] == "qWasmCallStack":
-            return self.qWasmCallStack(packet[14:])
+        if packet.startswith("qWasmCallStack"):
+            return self.qWasmCallStack()
         return MockGDBServerResponder.respond(self, packet)
 
     def qSupported(self, client_supported):
@@ -91,7 +90,8 @@ class MyResponder(MockGDBServerResponder):
             file.close()
         return result
 
-    def qWasmCallStack(self, data):
+    def qWasmCallStack(self):
+        # Return two 64-bit addresses: 0x40000000000001B3, 0x40000000000001FE
         return "b301000000000040fe01000000000040"
 
 
