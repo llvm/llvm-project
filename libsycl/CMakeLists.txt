@@ -82,12 +82,12 @@ endif()
 #===============================================================================
 
 # Generate headers
-configure_file("${LIBSYCL_SOURCE_DIR}/src/version.hpp.in" "${LIBSYCL_BUILD_INCLUDE_DIR}/sycl/__detail/version.hpp")
+configure_file("${LIBSYCL_SOURCE_DIR}/src/version.hpp.in" "${LIBSYCL_BUILD_INCLUDE_DIR}/sycl/__impl/version.hpp")
 
 # Install generated headers.
 install(FILES
-  "${LIBSYCL_BUILD_INCLUDE_DIR}/sycl/__detail/version.hpp"
-  DESTINATION "${LIBSYCL_INCLUDE_DIR}/sycl/__detail"
+  "${LIBSYCL_BUILD_INCLUDE_DIR}/sycl/__impl/version.hpp"
+  DESTINATION "${LIBSYCL_INCLUDE_DIR}/sycl/__impl"
   COMPONENT sycl-headers)
 
 # This is a workaround to detect changes (add or modify) in subtree which
