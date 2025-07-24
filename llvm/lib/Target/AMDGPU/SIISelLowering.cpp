@@ -6843,7 +6843,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     assert(CalleeAddrDef->getOpcode() == AMDGPU::SI_PC_ADD_REL_OFFSET64);
     // Use s_add_pc_i64, bypass the address computation.
     BuildMI(*RankCallBB, RankCallBB->end(), DL, TII->get(AMDGPU::S_ADD_PC_I64))
-        .addGlobalAddress(CalleeAddrDef->getOperand(1).getGlobal(), 0,
+        .addGlobalAddress(CalleeAddrDef->getOperand(1).getGlobal(), -8,
                           SIInstrInfo::MO_REL64);
 
     // Update IDX0 for the next rank-call. Use the global address of the rank
