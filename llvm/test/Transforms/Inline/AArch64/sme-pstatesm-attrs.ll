@@ -690,7 +690,7 @@ define void @simple_streaming_function(ptr %ptr) #0 "aarch64_pstate_sm_enabled" 
 define void @non_streaming_caller_streaming_callee_dont_inline(ptr %ptr) #0 {
 ; CHECK-LABEL: define void @non_streaming_caller_streaming_callee_dont_inline
 ; CHECK-SAME: (ptr [[PTR:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr [[PTR]], align 16
+; CHECK-NEXT:    call void @simple_streaming_function(ptr [[PTR]])
 ; CHECK-NEXT:    ret void
 ;
   call void @simple_streaming_function(ptr %ptr)
@@ -711,7 +711,7 @@ define void @simple_locally_streaming_function(ptr %ptr) #0 "aarch64_pstate_sm_b
 define void @non_streaming_caller_locally_streaming_callee_dont_inline(ptr %ptr) #0 {
 ; CHECK-LABEL: define void @non_streaming_caller_locally_streaming_callee_dont_inline
 ; CHECK-SAME: (ptr [[PTR:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr [[PTR]], align 16
+; CHECK-NEXT:    call void @simple_locally_streaming_function(ptr [[PTR]])
 ; CHECK-NEXT:    ret void
 ;
   call void @simple_locally_streaming_function(ptr %ptr)
