@@ -31,6 +31,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <tuple>
 #include <utility>
 
@@ -63,7 +64,7 @@ public:
   explicit GpuMathTest(std::shared_ptr<DeviceContext> Context,
                        llvm::StringRef Provider,
                        llvm::StringRef DeviceBinaryDir)
-      : Context(std::move(Context)),
+      : Context(std::move(Context)), Provider(Provider),
         Kernel(getKernel(this->Context, Provider, DeviceBinaryDir)) {
     assert(this->Context && "Context must not be null");
   }
@@ -94,10 +95,11 @@ public:
     return FinalResult;
   }
 
-  [[nodiscard]] const DeviceContext &getContext() const noexcept {
-    assert(Context && "Context must not be null");
-    return *Context;
+  [[nodiscard]] std::shared_ptr<DeviceContext> getContext() const noexcept {
+    return Context;
   }
+
+  [[nodiscard]] std::string getProvider() const noexcept { return Provider; }
 
 private:
   static DeviceKernel<KernelSignature>
@@ -168,6 +170,7 @@ private:
   }
 
   std::shared_ptr<DeviceContext> Context;
+  std::string Provider;
   DeviceKernel<KernelSignature> Kernel;
 };
 } // namespace mathtest
