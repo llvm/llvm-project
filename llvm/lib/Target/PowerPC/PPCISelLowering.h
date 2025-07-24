@@ -938,7 +938,8 @@ namespace llvm {
     Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
                                    AtomicOrdering Ord) const override;
 
-    virtual MDNode *getTrueBranchHintWeightForAtomicCmpXchgg(LLVMContext &Ctx) const override;
+    virtual MDNode *
+    getTrueBranchHintWeightForAtomicCmpXchgg(LLVMContext &Ctx) const override;
     bool shouldInlineQuadwordAtomics() const;
 
     TargetLowering::AtomicExpansionKind
