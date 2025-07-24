@@ -618,6 +618,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                         ISD::FSIN, ISD::FROUND},
                        MVT::f16, Custom);
 
+    // BF16 - VOP1 Actions.
+    if (Subtarget->hasBF16TransInsts())
+      setOperationAction({ISD::FCOS, ISD::FSIN, ISD::FDIV}, MVT::bf16, Custom);
+
     setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::f16, Promote);
     setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::bf16, Promote);
 
@@ -870,7 +874,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction({ISD::SMULO, ISD::UMULO}, MVT::i64, Custom);
 
-  if (Subtarget->hasScalarSMulU64())
+  if (Subtarget->hasVectorMulU64())
+    setOperationAction(ISD::MUL, MVT::i64, Legal);
+  else if (Subtarget->hasScalarSMulU64())
     setOperationAction(ISD::MUL, MVT::i64, Custom);
 
   if (Subtarget->hasMad64_32())
@@ -938,6 +944,12 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasBF16ConversionInsts()) {
     setOperationAction(ISD::FP_ROUND, {MVT::bf16, MVT::v2bf16}, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
+  }
+
+  if (Subtarget->hasBF16PackedInsts()) {
+    setOperationAction(
+        {ISD::FADD, ISD::FMUL, ISD::FMINNUM, ISD::FMAXNUM, ISD::FMA},
+        MVT::v2bf16, Legal);
   }
 
   if (Subtarget->hasBF16TransInsts()) {
@@ -5410,6 +5422,19 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MachineOperand &Dest = MI.getOperand(0);
     MachineOperand &Src0 = MI.getOperand(1);
     MachineOperand &Src1 = MI.getOperand(2);
+
+    if (ST.hasAddSubU64Insts()) {
+      auto I = BuildMI(*BB, MI, DL,
+                       TII->get(IsAdd ? AMDGPU::V_ADD_U64_e64
+                                      : AMDGPU::V_SUB_U64_e64),
+                       Dest.getReg())
+                   .add(Src0)
+                   .add(Src1)
+                   .addImm(0); // clamp
+      TII->legalizeOperands(*I);
+      MI.eraseFromParent();
+      return BB;
+    }
 
     if (IsAdd && ST.hasLshlAddU64Inst()) {
       auto Add = BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_LSHL_ADD_U64_e64),
@@ -11200,7 +11225,7 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
     // Without !fpmath accuracy information, we can't do more because we don't
     // know exactly whether rcp is accurate enough to meet !fpmath requirement.
     // f16 is always accurate enough
-    if (!AllowInaccurateRcp && VT != MVT::f16)
+    if (!AllowInaccurateRcp && VT != MVT::f16 && VT != MVT::bf16)
       return SDValue();
 
     if (CLHS->isExactlyValue(1.0)) {
@@ -11227,9 +11252,10 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
     }
   }
 
-  // For f16 require afn or arcp.
+  // For f16 and bf16 require afn or arcp.
   // For f32 require afn.
-  if (!AllowInaccurateRcp && (VT != MVT::f16 || !Flags.hasAllowReciprocal()))
+  if (!AllowInaccurateRcp &&
+      ((VT != MVT::f16 && VT != MVT::bf16) || !Flags.hasAllowReciprocal()))
     return SDValue();
 
   // Turn into multiply by the reciprocal.
@@ -11620,7 +11646,7 @@ SDValue SITargetLowering::LowerFDIV(SDValue Op, SelectionDAG &DAG) const {
   if (VT == MVT::f64)
     return LowerFDIV64(Op, DAG);
 
-  if (VT == MVT::f16)
+  if (VT == MVT::f16 || VT == MVT::bf16)
     return LowerFDIV16(Op, DAG);
 
   llvm_unreachable("Unexpected type for fdiv");
@@ -13628,6 +13654,7 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     case Intrinsic::amdgcn_rcp_legacy:
     case Intrinsic::amdgcn_rsq_legacy:
     case Intrinsic::amdgcn_trig_preop:
+    case Intrinsic::amdgcn_tanh:
     case Intrinsic::amdgcn_log:
     case Intrinsic::amdgcn_exp2:
     case Intrinsic::amdgcn_sqrt:
@@ -14041,7 +14068,8 @@ static bool supportsMin3Max3(const GCNSubtarget &Subtarget, unsigned Opc,
   case ISD::FMAXIMUMNUM:
   case AMDGPUISD::FMIN_LEGACY:
   case AMDGPUISD::FMAX_LEGACY:
-    return (VT == MVT::f32) || (VT == MVT::f16 && Subtarget.hasMin3Max3_16());
+    return (VT == MVT::f32) || (VT == MVT::f16 && Subtarget.hasMin3Max3_16()) ||
+           (VT == MVT::v2f16 && Subtarget.hasMin3Max3PKF16());
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
     return (VT == MVT::f32 && Subtarget.hasMinimum3Maximum3F32()) ||

@@ -281,7 +281,7 @@ define nofpclass(nan inf) double @monte_exp(i32 noundef %nblocks, i32 noundef %R
 ; CHECK-NEXT:    tail call void @resample(i32 noundef [[RAND_BLOCK_LENGTH]], ptr noundef [[SAMPLES]])
 ; CHECK-NEXT:    [[INC9]] = add nuw nsw i32 [[BLOCK_017]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC9]], [[NBLOCKS]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END10]], label %[[FOR_BODY]], !llvm.loop [[LOOP7]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END10]], label %[[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[FOR_END10]]:
 ; CHECK-NEXT:    [[V0_0_LCSSA:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[V0_2_US_LCSSA]], %[[FOR_COND1_FOR_INC8_CRIT_EDGE_US]] ], [ 0.000000e+00, %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[V1_0_LCSSA:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[V1_2_US_LCSSA]], %[[FOR_COND1_FOR_INC8_CRIT_EDGE_US]] ], [ 0.000000e+00, %[[FOR_BODY]] ]
@@ -410,5 +410,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META3]], [[META2]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]], [[META3]]}
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META3]], [[META2]]}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META8:![0-9]+]]}
+; CHECK: [[META8]] = !{!"llvm.loop.unswitch.nontrivial.disable"}
+; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]]}
 ;.

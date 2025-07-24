@@ -333,11 +333,12 @@ private:
         if (details.numPrivatesNotOverridden() > 0)
           tbpName += "."s + std::to_string(details.numPrivatesNotOverridden());
         std::string bindingName = converter.mangleName(details.symbol());
-        builder.create<fir::DTEntryOp>(
-            info.loc, mlir::StringAttr::get(builder.getContext(), tbpName),
+        fir::DTEntryOp::create(
+            builder, info.loc,
+            mlir::StringAttr::get(builder.getContext(), tbpName),
             mlir::SymbolRefAttr::get(builder.getContext(), bindingName));
       }
-      builder.create<fir::FirEndOp>(info.loc);
+      fir::FirEndOp::create(builder, info.loc);
     }
     // Gather info about components that is not reflected in fir.type and may be
     // needed later: component initial values and array component non default
@@ -360,11 +361,11 @@ private:
           componentInfo = builder.createBlock(&dt.getComponentInfo());
         auto compName = mlir::StringAttr::get(builder.getContext(),
                                               toStringRef(component.name()));
-        builder.create<fir::DTComponentOp>(info.loc, compName, lbs, init_val);
+        fir::DTComponentOp::create(builder, info.loc, compName, lbs, init_val);
       }
     }
     if (componentInfo)
-      builder.create<fir::FirEndOp>(info.loc);
+      fir::FirEndOp::create(builder, info.loc);
     builder.restoreInsertionPoint(insertPointIfCreated);
   }
 
@@ -2124,9 +2125,11 @@ private:
 
     llvm::SmallVector<mlir::Value> reduceVars;
     Fortran::lower::omp::ReductionProcessor rp;
-    rp.processReductionArguments<fir::DeclareReductionOp>(
+    bool result = rp.processReductionArguments<fir::DeclareReductionOp>(
         toLocation(), *this, info.reduceOperatorList, reduceVars,
         reduceVarByRef, reductionDeclSymbols, info.reduceSymList);
+    assert(result && "Failed to process `do concurrent` reductions");
+    (void)result;
 
     doConcurrentLoopOp.getReduceVarsMutable().assign(reduceVars);
     doConcurrentLoopOp.setReduceSymsAttr(
@@ -4829,18 +4832,18 @@ private:
           base = convertOp.getValue();
         // Special case if the rhs is a constant.
         if (matchPattern(base.getDefiningOp(), mlir::m_Constant())) {
-          builder.create<cuf::DataTransferOp>(loc, base, lhsVal, shape,
-                                              transferKindAttr);
+          cuf::DataTransferOp::create(builder, loc, base, lhsVal, shape,
+                                      transferKindAttr);
         } else {
           auto associate = hlfir::genAssociateExpr(
               loc, builder, rhs, rhs.getType(), ".cuf_host_tmp");
-          builder.create<cuf::DataTransferOp>(loc, associate.getBase(), lhsVal,
-                                              shape, transferKindAttr);
-          builder.create<hlfir::EndAssociateOp>(loc, associate);
+          cuf::DataTransferOp::create(builder, loc, associate.getBase(), lhsVal,
+                                      shape, transferKindAttr);
+          hlfir::EndAssociateOp::create(builder, loc, associate);
         }
       } else {
-        builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal, shape,
-                                            transferKindAttr);
+        cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
+                                    transferKindAttr);
       }
       return;
     }
@@ -4849,8 +4852,8 @@ private:
     if (!lhsIsDevice && rhsIsDevice) {
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceHost);
-      builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal, shape,
-                                          transferKindAttr);
+      cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
+                                  transferKindAttr);
       return;
     }
 
@@ -4859,8 +4862,8 @@ private:
       assert(rhs.isVariable() && "CUDA Fortran assignment rhs is not legal");
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceDevice);
-      builder.create<cuf::DataTransferOp>(loc, rhsVal, lhsVal, shape,
-                                          transferKindAttr);
+      cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
+                                  transferKindAttr);
       return;
     }
     llvm_unreachable("Unhandled CUDA data transfer");
@@ -4906,8 +4909,9 @@ private:
           addSymbol(sym,
                     hlfir::translateToExtendedValue(loc, builder, temp).first,
                     /*forced=*/true);
-          builder.create<cuf::DataTransferOp>(
-              loc, addr, temp, /*shape=*/mlir::Value{}, transferKindAttr);
+          cuf::DataTransferOp::create(builder, loc, addr, temp,
+                                      /*shape=*/mlir::Value{},
+                                      transferKindAttr);
           ++nbDeviceResidentObject;
         }
       }
@@ -4996,13 +5000,13 @@ private:
       if (isCUDATransfer && !hasCUDAImplicitTransfer)
         genCUDADataTransfer(builder, loc, assign, lhs, rhs);
       else
-        builder.create<hlfir::AssignOp>(loc, rhs, lhs,
-                                        isWholeAllocatableAssignment,
-                                        keepLhsLengthInAllocatableAssignment);
+        hlfir::AssignOp::create(builder, loc, rhs, lhs,
+                                isWholeAllocatableAssignment,
+                                keepLhsLengthInAllocatableAssignment);
       if (hasCUDAImplicitTransfer && !isInDeviceContext) {
         localSymbols.popScope();
         for (mlir::Value temp : implicitTemps)
-          builder.create<fir::FreeMemOp>(loc, temp);
+          fir::FreeMemOp::create(builder, loc, temp);
       }
       return;
     }
@@ -5010,13 +5014,13 @@ private:
     // left-hand side requires using an hlfir.region_assign in HLFIR. The
     // right-hand side and left-hand side must be evaluated inside the
     // hlfir.region_assign regions.
-    auto regionAssignOp = builder.create<hlfir::RegionAssignOp>(loc);
+    auto regionAssignOp = hlfir::RegionAssignOp::create(builder, loc);
 
     // Lower RHS in its own region.
     builder.createBlock(&regionAssignOp.getRhsRegion());
     Fortran::lower::StatementContext rhsContext;
     hlfir::Entity rhs = evaluateRhs(rhsContext);
-    auto rhsYieldOp = builder.create<hlfir::YieldOp>(loc, rhs);
+    auto rhsYieldOp = hlfir::YieldOp::create(builder, loc, rhs);
     Fortran::lower::genCleanUpInRegionIfAny(
         loc, builder, rhsYieldOp.getCleanup(), rhsContext);
     // Lower LHS in its own region.
@@ -5025,7 +5029,7 @@ private:
     mlir::Value lhsYield = nullptr;
     if (!lhsHasVectorSubscripts) {
       hlfir::Entity lhs = evaluateLhs(lhsContext);
-      auto lhsYieldOp = builder.create<hlfir::YieldOp>(loc, lhs);
+      auto lhsYieldOp = hlfir::YieldOp::create(builder, loc, lhs);
       Fortran::lower::genCleanUpInRegionIfAny(
           loc, builder, lhsYieldOp.getCleanup(), lhsContext);
       lhsYield = lhs;
@@ -5054,7 +5058,7 @@ private:
       builder.createBlock(&regionAssignOp.getUserDefinedAssignment(),
                           mlir::Region::iterator{}, {rhsType, lhsType},
                           {loc, loc});
-      auto end = builder.create<fir::FirEndOp>(loc);
+      auto end = fir::FirEndOp::create(builder, loc);
       builder.setInsertionPoint(end);
       hlfir::Entity lhsBlockArg{regionAssignOp.getUserAssignmentLhs()};
       hlfir::Entity rhsBlockArg{regionAssignOp.getUserAssignmentRhs()};
@@ -5506,10 +5510,34 @@ private:
   void genFIR(const Fortran::parser::AssignStmt &stmt) {
     const Fortran::semantics::Symbol &symbol =
         *std::get<Fortran::parser::Name>(stmt.t).symbol;
+
     mlir::Location loc = toLocation();
+    mlir::Type symbolType = genType(symbol);
+    mlir::Value addr = getSymbolAddress(symbol);
+
+    // Handle the case where the assigned variable is declared as a pointer
+    if (auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(symbolType)) {
+      if (auto ptrType = mlir::dyn_cast<fir::PointerType>(eleTy)) {
+        symbolType = ptrType.getEleTy();
+      } else {
+        symbolType = eleTy;
+      }
+    } else if (auto ptrType = mlir::dyn_cast<fir::PointerType>(symbolType)) {
+      symbolType = ptrType.getEleTy();
+    }
+
     mlir::Value labelValue = builder->createIntegerConstant(
-        loc, genType(symbol), std::get<Fortran::parser::Label>(stmt.t));
-    builder->create<fir::StoreOp>(loc, labelValue, getSymbolAddress(symbol));
+        loc, symbolType, std::get<Fortran::parser::Label>(stmt.t));
+
+    // If the address points to a boxed pointer, we need to dereference it
+    if (auto refType = mlir::dyn_cast<fir::ReferenceType>(addr.getType())) {
+      if (auto boxType = mlir::dyn_cast<fir::BoxType>(refType.getEleTy())) {
+        mlir::Value boxValue = builder->create<fir::LoadOp>(loc, addr);
+        addr = builder->create<fir::BoxAddrOp>(loc, boxValue);
+      }
+    }
+
+    builder->create<fir::StoreOp>(loc, labelValue, addr);
   }
 
   void genFIR(const Fortran::parser::FormatStmt &) {

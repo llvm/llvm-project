@@ -79,6 +79,36 @@ SyntheticChildrenFrontEnd *
 MsvcStlVariantSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                        lldb::ValueObjectSP valobj_sp);
 
+// MSVC STL std::atomic<>
+bool MsvcStlAtomicSummaryProvider(ValueObject &valobj, Stream &stream,
+                                  const TypeSummaryOptions &options);
+SyntheticChildrenFrontEnd *
+MsvcStlAtomicSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                      lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::unordered_(multi){map|set}<>
+bool IsMsvcStlUnordered(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlUnorderedSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                         lldb::ValueObjectSP valobj_sp);
+bool IsMsvcStlTreeIter(ValueObject &valobj);
+bool MsvcStlTreeIterSummaryProvider(ValueObject &valobj, Stream &stream,
+                                    const TypeSummaryOptions &options);
+lldb_private::SyntheticChildrenFrontEnd *
+MsvcStlTreeIterSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                        lldb::ValueObjectSP valobj_sp);
+
+// std::map,set,multimap,multiset
+bool IsMsvcStlMapLike(ValueObject &valobj);
+lldb_private::SyntheticChildrenFrontEnd *
+MsvcStlMapLikeSyntheticFrontEndCreator(lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::deque<>
+bool IsMsvcStlDeque(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlDequeSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                     lldb::ValueObjectSP valobj_sp);
+
 } // namespace formatters
 } // namespace lldb_private
 

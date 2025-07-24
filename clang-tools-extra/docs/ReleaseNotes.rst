@@ -67,14 +67,6 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
-- New ``Override pure virtual methods`` code action. When invoked on a class
-  definition, this action automatically generates C++ ``override`` declarations
-  for all pure virtual methods inherited from its base classes that have not yet
-  been implemented. The generated method stubs prompts the user for the actual
-  implementation. The overrides are intelligently grouped under their original
-  access specifiers (e.g., ``public``, ``protected``), creating new access
-  specifier blocks if necessary.
-
 Signature help
 ^^^^^^^^^^^^^^
 
@@ -104,11 +96,37 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`llvm-mlir-op-builder
+  <clang-tidy/checks/llvm/use-new-mlir-op-builder>` check.
+
+  Checks for uses of MLIR's old/to be deprecated ``OpBuilder::create<T>`` form
+  and suggests using ``T::create`` instead.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Improved :doc:`bugprone-infinite-loop
+  <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
+  variables introduced by structured bindings.
+
+- Improved :doc:`bugprone-signed-char-misuse
+  <clang-tidy/checks/bugprone/signed-char-misuse>` check by fixing
+  false positives on C23 enums with the fixed underlying type of signed char.
+
+- Improved :doc:`bugprone-unhandled-self-assignment
+  <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
+  an additional matcher that generalizes the copy-and-swap idiom pattern
+  detection.
+
+- Improved :doc:`misc-header-include-cycle
+  <clang-tidy/checks/misc/header-include-cycle>` check performance.
+
+- Improved :doc:`portability-template-virtual-member-function
+  <clang-tidy/checks/portability/template-virtual-member-function>` check to
+  avoid false positives on pure virtual member functions.
 
 Removed checks
 ^^^^^^^^^^^^^^
@@ -136,4 +154,3 @@ Improvements to pp-trace
 
 Clang-tidy Visual Studio plugin
 -------------------------------
-
