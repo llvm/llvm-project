@@ -413,7 +413,7 @@ namespace DeriveFailures {
 
     constexpr Derived(int i) : OtherVal(i) {} // ref-error {{never produces a constant expression}} \
                                               // both-note {{non-constexpr constructor 'Base' cannot be used in a constant expression}} \
-                                              // ref-note {{non-constexpr constructor 'Base' cannot be used in a constant expression}} 
+                                              // ref-note {{non-constexpr constructor 'Base' cannot be used in a constant expression}}
   };
 
   constexpr Derived D(12); // both-error {{must be initialized by a constant expression}} \
@@ -1660,9 +1660,9 @@ namespace NullptrCast {
   constexpr A *na = nullptr;
   constexpr B *nb = nullptr;
   constexpr A &ra = *nb; // both-error {{constant expression}} \
-                         // both-note {{cannot access base class of null pointer}}
+                         // both-note {{dereferencing a null pointer}}
   constexpr B &rb = (B&)*na; // both-error {{constant expression}} \
-                             // both-note {{cannot access derived class of null pointer}}
+                             // both-note {{dereferencing a null pointer}}
   constexpr bool test() {
     auto a = (A*)(B*)nullptr;
 
@@ -1740,7 +1740,7 @@ namespace CtorOfInvalidClass {
 #if __cplusplus >= 202002L
   template <typename T, auto Q>
   concept ReferenceOf = Q;
-  /// This calls a valid and constexpr copy constructor of InvalidCtor, 
+  /// This calls a valid and constexpr copy constructor of InvalidCtor,
   /// but should still be rejected.
   template<ReferenceOf<InvalidCtor> auto R, typename Rep> int F; // both-error {{non-type template argument is not a constant expression}}
 #endif

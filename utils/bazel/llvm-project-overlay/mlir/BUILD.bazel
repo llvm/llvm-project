@@ -1620,6 +1620,7 @@ cc_library(
         ":AMDGPUIncGen",
         ":ArithDialect",
         ":BytecodeOpInterface",
+        ":DialectUtils",
         ":GPUDialect",
         ":IR",
         ":InferTypeOpInterface",
@@ -1656,6 +1657,7 @@ cc_library(
         ":AMDGPUPassIncGen",
         ":AMDGPUUtils",
         ":AffineDialect",
+        ":AffineUtils",
         ":ArithDialect",
         ":ArithUtils",
         ":ControlFlowDialect",
@@ -3958,6 +3960,7 @@ cc_library(
         ":BufferizationToMemRef",
         ":ComplexToLLVM",
         ":ComplexToLibm",
+        ":ComplexToROCDLLibraryCalls",
         ":ComplexToSPIRV",
         ":ComplexToStandard",
         ":ControlFlowToLLVM",
@@ -11901,6 +11904,25 @@ cc_library(
 )
 
 cc_library(
+    name = "ComplexToROCDLLibraryCalls",
+    srcs = glob([
+        "lib/Conversion/ComplexToROCDLLibraryCalls/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/ComplexToROCDLLibraryCalls/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ComplexDialect",
+        ":ConversionPassIncGen",
+        ":FuncDialect",
+        ":IR",
+        ":Pass",
+        ":TransformUtils",
+    ],
+)
+
+cc_library(
     name = "ComplexToSPIRV",
     srcs = glob([
         "lib/Conversion/ComplexToSPIRV/*.cpp",
@@ -13657,17 +13679,17 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
-        ":XeVMDialect",
         ":ConversionPassIncGen",
-	":ConvertToLLVMInterface",
-	":GPUDialect",
+        ":ConvertToLLVMInterface",
+        ":GPUDialect",
         ":IR",
-	":LLVMCommonConversion",
-	":LLVMDialect",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
         ":Pass",
-	":Support",
+        ":Support",
         ":TransformUtils",
         ":VectorDialect",
-	"//llvm:Support",
+        ":XeVMDialect",
+        "//llvm:Support",
     ],
 )
