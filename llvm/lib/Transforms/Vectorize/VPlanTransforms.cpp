@@ -1079,6 +1079,12 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  if (match(Def, m_Select(m_True(), m_VPValue(X), m_VPValue())))
+    return Def->replaceAllUsesWith(X);
+
+  if (match(Def, m_Select(m_False(), m_VPValue(), m_VPValue(X))))
+    return Def->replaceAllUsesWith(X);
+
   if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
     return Def->replaceAllUsesWith(X);
 
