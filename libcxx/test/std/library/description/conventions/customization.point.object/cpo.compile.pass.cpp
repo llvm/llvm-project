@@ -47,7 +47,9 @@ constexpr bool test(CPO& o, Args&&...) {
 int a[10];
 int arrays[10][10];
 std::pair<int, int> pairs[10];
+#ifndef TEST_HAS_NO_LOCALIZATION
 std::istringstream stream;
+#endif
 
 // [concept.swappable]
 static_assert(test(std::ranges::swap, a, a));
@@ -83,7 +85,9 @@ static_assert(test(std::ranges::ssize, a));
 // views::empty<T> is not a CPO
 static_assert(test(std::views::iota, 1));
 static_assert(test(std::views::iota, 1, 10));
+#ifndef TEST_HAS_NO_LOCALIZATION
 static_assert(test(std::views::istream<int>, stream));
+#endif
 static_assert(test(std::views::single, 4));
 
 #if TEST_STD_VER >= 23
