@@ -7950,8 +7950,8 @@ loop distribution pass. See
 
 This metadata records an estimated trip count for the loop.  The first operand
 is the string ``llvm.loop.estimated_trip_count``.  The second operand is an
-integer specifying the count, which might be omitted for the reasons described
-below.  For example:
+integer constant of type ``i32`` or smaller specifying the count, which might be
+omitted for the reasons described below.  For example:
 
 .. code-block:: llvm
 
