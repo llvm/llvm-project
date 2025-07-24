@@ -707,7 +707,7 @@ void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
   // Visit array element type.
   uint32_t ElemTypeId;
   const DIType *ElemType = CTy->getBaseType();
-  visitTypeEntry(ElemType, ElemTypeId, false, false);
+  visitTypeEntry(ElemType, ElemTypeId, false, false, false);
 
   // Visit array dimensions.
   DINodeArray Elements = CTy->getElements();
@@ -806,12 +806,13 @@ bool BTFDebug::IsForwardDeclCandidate(const DIType *Base) {
 
 /// Handle pointer, typedef, const, volatile, restrict and member types.
 void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
-                                bool CheckPointer, bool SeenPointer) {
+                                bool CheckPointer, bool SeenPointer,
+                                bool NestedMap) {
   unsigned Tag = DTy->getTag();
 
   if (Tag == dwarf::DW_TAG_atomic_type)
-    return visitTypeEntry(DTy->getBaseType(), TypeId, CheckPointer,
-                          SeenPointer);
+    return visitTypeEntry(DTy->getBaseType(), TypeId, CheckPointer, SeenPointer,
+                          NestedMap);
 
   /// Try to avoid chasing pointees, esp. structure pointees which may
   /// unnecessary bring in a lot of types.
@@ -859,10 +860,15 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
   // Visit base type of pointer, typedef, const, volatile, restrict or
   // struct/union member.
   uint32_t TempTypeId = 0;
-  if (Tag == dwarf::DW_TAG_member)
-    visitTypeEntry(DTy->getBaseType(), TempTypeId, true, false);
-  else
-    visitTypeEntry(DTy->getBaseType(), TempTypeId, CheckPointer, SeenPointer);
+  if (Tag == dwarf::DW_TAG_member) {
+    visitTypeEntry(DTy->getBaseType(), TempTypeId, true, false, NestedMap);
+  } else {
+    if (NestedMap)
+      visitMapDefType(DTy->getBaseType(), TempTypeId);
+    else
+      visitTypeEntry(DTy->getBaseType(), TempTypeId, CheckPointer, SeenPointer,
+                     NestedMap);
+  }
 }
 
 /// Visit a type entry. CheckPointer is true if the type has
@@ -873,7 +879,8 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
 /// will not be emitted in BTF and rather forward declarations
 /// will be generated.
 void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
-                              bool CheckPointer, bool SeenPointer) {
+                              bool CheckPointer, bool SeenPointer,
+                              bool NestedMap) {
   if (!Ty || DIToIdMap.find(Ty) != DIToIdMap.end()) {
     TypeId = DIToIdMap[Ty];
 
@@ -923,7 +930,8 @@ void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
                 break;
             }
             uint32_t TmpTypeId;
-            visitTypeEntry(BaseTy, TmpTypeId, CheckPointer, SeenPointer);
+            visitTypeEntry(BaseTy, TmpTypeId, CheckPointer, SeenPointer,
+                           NestedMap);
             break;
           }
         }
@@ -941,14 +949,14 @@ void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
   else if (const auto *CTy = dyn_cast<DICompositeType>(Ty))
     visitCompositeType(CTy, TypeId);
   else if (const auto *DTy = dyn_cast<DIDerivedType>(Ty))
-    visitDerivedType(DTy, TypeId, CheckPointer, SeenPointer);
+    visitDerivedType(DTy, TypeId, CheckPointer, SeenPointer, NestedMap);
   else
     llvm_unreachable("Unknown DIType");
 }
 
 void BTFDebug::visitTypeEntry(const DIType *Ty) {
   uint32_t TypeId;
-  visitTypeEntry(Ty, TypeId, false, false);
+  visitTypeEntry(Ty, TypeId, false, false, false);
 }
 
 void BTFDebug::visitMapDefType(const DIType *Ty, uint32_t &TypeId) {
@@ -973,31 +981,40 @@ void BTFDebug::visitMapDefType(const DIType *Ty, uint32_t &TypeId) {
     return;
 
   auto Tag = CTy->getTag();
-  if (Tag != dwarf::DW_TAG_structure_type || CTy->isForwardDecl())
+  if ((Tag != dwarf::DW_TAG_structure_type &&
+       Tag != dwarf::DW_TAG_array_type) ||
+      CTy->isForwardDecl())
     return;
 
-  // Visit all struct members to ensure their types are visited.
-  const DINodeArray Elements = CTy->getElements();
-  for (const auto *Element : Elements) {
-    const auto *MemberType = cast<DIDerivedType>(Element);
-    const DIType *MemberBaseType = MemberType->getBaseType();
+  // Visit potential nested map array
+  if (CTy->getTag() == dwarf::DW_TAG_array_type) {
+    // Jump to the element type of the array
+    const DIType *ElementType = CTy->getBaseType();
+    visitTypeEntry(ElementType, TypeId, false, false, true);
+  } else {
+    // Visit all struct members to ensure their types are visited.
+    const DINodeArray Elements = CTy->getElements();
+    for (const auto *Element : Elements) {
+      const auto *MemberType = cast<DIDerivedType>(Element);
+      const DIType *MemberBaseType = MemberType->getBaseType();
 
-    // If the member is a composite type, that may indicate the currently
-    // visited composite type is a wrapper, and the member represents the
-    // actual map definition.
-    // In that case, visit the member with `visitMapDefType` instead of
-    // `visitTypeEntry`, treating it specifically as a map definition rather
-    // than as a regular composite type.
-    const auto *MemberCTy = dyn_cast<DICompositeType>(MemberBaseType);
-    if (MemberCTy) {
-      visitMapDefType(MemberBaseType, TypeId);
-    } else {
-      visitTypeEntry(MemberBaseType);
+      // If the member is a composite type, that may indicate the currently
+      // visited composite type is a wrapper, and the member represents the
+      // actual map definition.
+      // In that case, visit the member with `visitMapDefType` instead of
+      // `visitTypeEntry`, treating it specifically as a map definition rather
+      // than as a regular composite type.
+      const auto *MemberCTy = dyn_cast<DICompositeType>(MemberBaseType);
+      if (MemberCTy) {
+        visitMapDefType(MemberBaseType, TypeId);
+      } else {
+        visitTypeEntry(MemberBaseType);
+      }
     }
   }
 
   // Visit this type, struct or a const/typedef/volatile/restrict type
-  visitTypeEntry(OrigTy, TypeId, false, false);
+  visitTypeEntry(OrigTy, TypeId, false, false, false);
 }
 
 /// Read file contents from the actual file or from the source
@@ -1275,7 +1292,7 @@ void BTFDebug::endFunctionImpl(const MachineFunction *MF) {
 /// accessing or preserve debuginfo type.
 unsigned BTFDebug::populateType(const DIType *Ty) {
   unsigned Id;
-  visitTypeEntry(Ty, Id, false, false);
+  visitTypeEntry(Ty, Id, false, false, false);
   for (const auto &TypeEntry : TypeEntries)
     TypeEntry->completeType(*this);
   return Id;
@@ -1474,7 +1491,7 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
         visitMapDefType(DIGlobal->getType(), GVTypeId);
       else {
         const DIType *Ty = tryRemoveAtomicType(DIGlobal->getType());
-        visitTypeEntry(Ty, GVTypeId, false, false);
+        visitTypeEntry(Ty, GVTypeId, false, false, false);
       }
       break;
     }
