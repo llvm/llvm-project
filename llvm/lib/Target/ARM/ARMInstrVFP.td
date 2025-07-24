@@ -485,25 +485,25 @@ def VSUBH  : AHbI<0b11100, 0b11, 1, 0,
                   [(set (f16 HPR:$Sd), (fsub (f16 HPR:$Sn), (f16 HPR:$Sm)))]>,
             Sched<[WriteFPALU32]>;
 
-let TwoOperandAliasConstraint = "$Dn = $Dd" in
+let TwoOperandAliasConstraint = "$Dn = $Dd", mayRaiseFPException = 1, Uses = [FPSCR] in
 def VDIVD  : ADbI<0b11101, 0b00, 0, 0,
                   (outs DPR:$Dd), (ins DPR:$Dn, DPR:$Dm),
                   IIC_fpDIV64, "vdiv", ".f64\t$Dd, $Dn, $Dm",
-                  [(set DPR:$Dd, (fdiv DPR:$Dn, (f64 DPR:$Dm)))]>,
+                  [(set DPR:$Dd, (any_fdiv DPR:$Dn, (f64 DPR:$Dm)))]>,
              Sched<[WriteFPDIV64]>;
 
-let TwoOperandAliasConstraint = "$Sn = $Sd" in
+let TwoOperandAliasConstraint = "$Sn = $Sd", mayRaiseFPException = 1, Uses = [FPSCR] in
 def VDIVS  : ASbI<0b11101, 0b00, 0, 0,
                   (outs SPR:$Sd), (ins SPR:$Sn, SPR:$Sm),
                   IIC_fpDIV32, "vdiv", ".f32\t$Sd, $Sn, $Sm",
-                  [(set SPR:$Sd, (fdiv SPR:$Sn, SPR:$Sm))]>,
+                  [(set SPR:$Sd, (any_fdiv SPR:$Sn, SPR:$Sm))]>,
              Sched<[WriteFPDIV32]>;
 
-let TwoOperandAliasConstraint = "$Sn = $Sd" in
+let TwoOperandAliasConstraint = "$Sn = $Sd", mayRaiseFPException = 1, Uses = [FPSCR]  in
 def VDIVH  : AHbI<0b11101, 0b00, 0, 0,
                   (outs HPR:$Sd), (ins HPR:$Sn, HPR:$Sm),
                   IIC_fpDIV16, "vdiv", ".f16\t$Sd, $Sn, $Sm",
-                  [(set (f16 HPR:$Sd), (fdiv (f16 HPR:$Sn), (f16 HPR:$Sm)))]>,
+                  [(set (f16 HPR:$Sd), (any_fdiv (f16 HPR:$Sn), (f16 HPR:$Sm)))]>,
              Sched<[WriteFPDIV32]>;
 
 let TwoOperandAliasConstraint = "$Dn = $Dd" in
