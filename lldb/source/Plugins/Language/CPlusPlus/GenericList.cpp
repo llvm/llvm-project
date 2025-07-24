@@ -526,9 +526,17 @@ ValueObjectSP MsvcStlForwardListFrontEnd::GetChildAtIndex(uint32_t idx) {
 lldb::ChildCacheState MsvcStlForwardListFrontEnd::Update() {
   AbstractListFrontEnd::Update();
 
-  if (auto head_sp =
-          m_backend.GetChildAtNamePath({"_Mypair", "_Myval2", "_Myhead"}))
-    m_head = head_sp.get();
+  auto head_sp =
+      m_backend.GetChildAtNamePath({"_Mypair", "_Myval2", "_Myhead"});
+  if (!head_sp)
+    return ChildCacheState::eRefetch;
+
+  m_head = head_sp.get();
+  if (!m_element_type) {
+    auto val_sp = head_sp->GetChildMemberWithName("_Myval");
+    if (val_sp)
+      m_element_type = val_sp->GetCompilerType();
+  }
 
   return ChildCacheState::eRefetch;
 }
@@ -605,6 +613,12 @@ lldb::ChildCacheState MsvcStlListFrontEnd::Update() {
 
   m_head = first.get();
   m_tail = last.get();
+
+  if (!m_element_type) {
+    auto val_sp = m_head->GetChildMemberWithName("_Myval");
+    if (val_sp)
+      m_element_type = val_sp->GetCompilerType();
+  }
 
   return lldb::ChildCacheState::eRefetch;
 }
