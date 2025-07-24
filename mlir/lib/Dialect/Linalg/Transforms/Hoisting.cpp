@@ -53,9 +53,9 @@ static scf::ForOp replaceWithDifferentYield(RewriterBase &rewriter,
   assert(index < inits.size());
   inits[index] = newInitOperand;
 
-  scf::ForOp newLoop = rewriter.create<scf::ForOp>(
-      loop.getLoc(), loop.getLowerBound(), loop.getUpperBound(), loop.getStep(),
-      inits, [](OpBuilder &, Location, Value, ValueRange) {});
+  scf::ForOp newLoop = scf::ForOp::create(
+      rewriter, loop.getLoc(), loop.getLowerBound(), loop.getUpperBound(),
+      loop.getStep(), inits, [](OpBuilder &, Location, Value, ValueRange) {});
 
   // Generate the new yield with the replaced operand.
   auto yieldOp = cast<scf::YieldOp>(loop.getBody()->getTerminator());

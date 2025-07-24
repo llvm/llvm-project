@@ -143,8 +143,8 @@ struct SimplifyUnPackToCollapseShape : public OpRewritePattern<UnPackOp> {
                        Type newOperandType, ArrayAttr reassociation) const {
     if (operand.getType() == newOperandType)
       return operand;
-    return rewriter.create<tensor::CollapseShapeOp>(loc, newOperandType,
-                                                    operand, reassociation);
+    return tensor::CollapseShapeOp::create(rewriter, loc, newOperandType,
+                                           operand, reassociation);
   }
 
   /// Returns success() if it is unpacking on the innermost dimension.
@@ -265,8 +265,8 @@ public:
 
     // Create a new empty output tensor.
     Type elementType = unpackOp.getDestType().getElementType();
-    Value output = rewriter.create<tensor::EmptyOp>(
-        sliceOp.getLoc(), sliceOp.getMixedSizes(), elementType);
+    Value output = tensor::EmptyOp::create(
+        rewriter, sliceOp.getLoc(), sliceOp.getMixedSizes(), elementType);
     rewriter.replaceOpWithNewOp<UnPackOp>(
         sliceOp, unpackOp.getSource(), output, unpackOp.getInnerDimsPos(),
         unpackOp.getMixedTiles(), unpackOp.getOuterDimsPerm());
@@ -529,8 +529,8 @@ public:
 
     auto elemType =
         cast<ShapedType>(unPackOp->getResultTypes()[0]).getElementType();
-    Value output = rewriter.create<tensor::EmptyOp>(
-        unPackOp->getLoc(), unpackOpResultDims[0], elemType);
+    Value output = tensor::EmptyOp::create(rewriter, unPackOp->getLoc(),
+                                           unpackOpResultDims[0], elemType);
 
     rewriter.replaceOpWithNewOp<UnPackOp>(
         unPackOp, linalgOp->getOperand(0), output, newInnerDimsPosVec,
