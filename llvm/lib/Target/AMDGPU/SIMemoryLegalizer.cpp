@@ -2594,7 +2594,8 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
   if (IsVolatile) {
     Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SYS);
 
-    if (Op == SIMemOp::STORE)
+    if (Op == SIMemOp::STORE && !ST.hasGFX1250Insts() &&
+        TII->getNamedOperand(*MI, OpName::cpol))
       Changed |= insertWaitsBeforeSystemScopeStore(MI);
 
     // Ensure operation has completed at system scope to cause all volatile
