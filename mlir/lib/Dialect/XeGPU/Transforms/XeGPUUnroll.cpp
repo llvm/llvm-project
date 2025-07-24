@@ -502,7 +502,7 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
     SmallVector<Type> convertedTdescTypes =
         getUnrolledTypes(tdescTy, *targetShape);
     SmallVector<Value> convertedTdescs = pack(
-        op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
+        op.getSource(), convertedTdescTypes, *targetShape, loc, rewriter);
 
     SmallVector<Type> convertedMaskTypes;
     SmallVector<Value> convertedMasks;
