@@ -2,6 +2,7 @@
 
 ; CHECK: .gs:
 ; CHECK: .entry_point_symbol: gs_shader_granularity_256DW
+; CHECK-NEXT: .forward_progress: true
 ; CHECK-NEXT: .lds_size:       0x5c00
 
 

@@ -531,6 +531,7 @@ private:
   void visitCallStackMetadata(MDNode *MD);
   void visitMemProfMetadata(Instruction &I, MDNode *MD);
   void visitCallsiteMetadata(Instruction &I, MDNode *MD);
+  void visitCalleeTypeMetadata(Instruction &I, MDNode *MD);
   void visitDIAssignIDMetadata(Instruction &I, MDNode *MD);
   void visitMMRAMetadata(Instruction &I, MDNode *MD);
   void visitAnnotationMetadata(MDNode *Annotation);
@@ -2978,6 +2979,16 @@ void Verifier::visitFunction(const Function &F) {
           "perfect forwarding!",
           &F);
     break;
+  case CallingConv::AMDGPU_Gfx_WholeWave:
+    Check(!F.arg_empty() && F.arg_begin()->getType()->isIntegerTy(1),
+          "Calling convention requires first argument to be i1", &F);
+    Check(!F.arg_begin()->hasInRegAttr(),
+          "Calling convention requires first argument to not be inreg", &F);
+    Check(!F.isVarArg(),
+          "Calling convention does not support varargs or "
+          "perfect forwarding!",
+          &F);
+    break;
   }
 
   // Check that the argument values match the function type for this function...
@@ -5193,6 +5204,33 @@ void Verifier::visitCallsiteMetadata(Instruction &I, MDNode *MD) {
   visitCallStackMetadata(MD);
 }
 
+static inline bool isConstantIntMetadataOperand(const Metadata *MD) {
+  if (auto *VAL = dyn_cast<ValueAsMetadata>(MD))
+    return isa<ConstantInt>(VAL->getValue());
+  return false;
+}
+
+void Verifier::visitCalleeTypeMetadata(Instruction &I, MDNode *MD) {
+  Check(isa<CallBase>(I), "!callee_type metadata should only exist on calls",
+        &I);
+  for (Metadata *Op : MD->operands()) {
+    Check(isa<MDNode>(Op),
+          "The callee_type metadata must be a list of type metadata nodes", Op);
+    auto *TypeMD = cast<MDNode>(Op);
+    Check(TypeMD->getNumOperands() == 2,
+          "Well-formed generalized type metadata must contain exactly two "
+          "operands",
+          Op);
+    Check(isConstantIntMetadataOperand(TypeMD->getOperand(0)) &&
+              mdconst::extract<ConstantInt>(TypeMD->getOperand(0))->isZero(),
+          "The first operand of type metadata for functions must be zero", Op);
+    Check(TypeMD->hasGeneralizedMDString(),
+          "Only generalized type metadata can be part of the callee_type "
+          "metadata list",
+          Op);
+  }
+}
+
 void Verifier::visitAnnotationMetadata(MDNode *Annotation) {
   Check(isa<MDTuple>(Annotation), "annotation must be a tuple");
   Check(Annotation->getNumOperands() >= 1,
@@ -5469,6 +5507,9 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_callsite))
     visitCallsiteMetadata(I, MD);
+
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_callee_type))
+    visitCalleeTypeMetadata(I, MD);
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_DIAssignID))
     visitDIAssignIDMetadata(I, MD);
@@ -6755,6 +6796,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "llvm.threadlocal.address operand isThreadLocal() must be true");
     break;
   }
+  case Intrinsic::lifetime_start:
+  case Intrinsic::lifetime_end:
+    Check(isa<AllocaInst>(Call.getArgOperand(1)),
+          "llvm.lifetime.start/end can only be used on alloca", &Call);
+    break;
   };
 
   // Verify that there aren't any unmediated control transfers between funclets.

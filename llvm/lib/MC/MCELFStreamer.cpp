@@ -88,7 +88,7 @@ void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   if (SectionELF->getFlags() & ELF::SHF_GNU_RETAIN)
     getWriter().markGnuAbi();
 
-  changeSectionImpl(Section, Subsection);
+  MCObjectStreamer::changeSection(Section, Subsection);
   Asm.registerSymbol(*Section->getBeginSymbol());
 }
 

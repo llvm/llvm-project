@@ -2032,7 +2032,8 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureImageInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
-   FeatureMemoryAtomicFAddF32DenormalSupport]>;
+   FeatureMemoryAtomicFAddF32DenormalSupport,
+   FeatureRealTrue16Insts]>;
 
 // There are few workarounds that need to be added to all targets. This
 // pessimizes codegen a bit on the generic GFX11 target. This generic target

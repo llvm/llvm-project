@@ -3290,7 +3290,7 @@ define amdgpu_kernel void @dyn_extract_v5f64_s_s(ptr addrspace(1) %out, i32 %sel
 ; GFX10-NEXT:     enable_ieee_mode = 1
 ; GFX10-NEXT:     enable_wgp_mode = 1
 ; GFX10-NEXT:     enable_mem_ordered = 1
-; GFX10-NEXT:     enable_fwd_progress = 0
+; GFX10-NEXT:     enable_fwd_progress = 1
 ; GFX10-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; GFX10-NEXT:     user_sgpr_count = 14
 ; GFX10-NEXT:     enable_trap_handler = 0
@@ -3382,7 +3382,7 @@ define amdgpu_kernel void @dyn_extract_v5f64_s_s(ptr addrspace(1) %out, i32 %sel
 ; GFX11-NEXT:     enable_ieee_mode = 1
 ; GFX11-NEXT:     enable_wgp_mode = 1
 ; GFX11-NEXT:     enable_mem_ordered = 1
-; GFX11-NEXT:     enable_fwd_progress = 0
+; GFX11-NEXT:     enable_fwd_progress = 1
 ; GFX11-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; GFX11-NEXT:     user_sgpr_count = 13
 ; GFX11-NEXT:     enable_trap_handler = 0
@@ -4294,7 +4294,7 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GFX10-NEXT:     enable_ieee_mode = 1
 ; GFX10-NEXT:     enable_wgp_mode = 1
 ; GFX10-NEXT:     enable_mem_ordered = 1
-; GFX10-NEXT:     enable_fwd_progress = 0
+; GFX10-NEXT:     enable_fwd_progress = 1
 ; GFX10-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; GFX10-NEXT:     user_sgpr_count = 14
 ; GFX10-NEXT:     enable_trap_handler = 0
@@ -4379,7 +4379,7 @@ define amdgpu_kernel void @dyn_extract_v4f32_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GFX11-NEXT:     enable_ieee_mode = 1
 ; GFX11-NEXT:     enable_wgp_mode = 1
 ; GFX11-NEXT:     enable_mem_ordered = 1
-; GFX11-NEXT:     enable_fwd_progress = 0
+; GFX11-NEXT:     enable_fwd_progress = 1
 ; GFX11-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; GFX11-NEXT:     user_sgpr_count = 13
 ; GFX11-NEXT:     enable_trap_handler = 0
@@ -4648,7 +4648,7 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GFX10-NEXT:     enable_ieee_mode = 1
 ; GFX10-NEXT:     enable_wgp_mode = 1
 ; GFX10-NEXT:     enable_mem_ordered = 1
-; GFX10-NEXT:     enable_fwd_progress = 0
+; GFX10-NEXT:     enable_fwd_progress = 1
 ; GFX10-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; GFX10-NEXT:     user_sgpr_count = 14
 ; GFX10-NEXT:     enable_trap_handler = 0
@@ -4736,7 +4736,7 @@ define amdgpu_kernel void @dyn_extract_v4f64_s_s_s(ptr addrspace(1) %out, i32 %s
 ; GFX11-NEXT:     enable_ieee_mode = 1
 ; GFX11-NEXT:     enable_wgp_mode = 1
 ; GFX11-NEXT:     enable_mem_ordered = 1
-; GFX11-NEXT:     enable_fwd_progress = 0
+; GFX11-NEXT:     enable_fwd_progress = 1
 ; GFX11-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; GFX11-NEXT:     user_sgpr_count = 13
 ; GFX11-NEXT:     enable_trap_handler = 0

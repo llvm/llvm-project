@@ -39,7 +39,7 @@ define amdgpu_kernel void @test_workgroup_max_flat_id(ptr addrspace(1) %out) #1 
 ; CHECK-MESA3D-NEXT:     enable_ieee_mode = 0
 ; CHECK-MESA3D-NEXT:     enable_wgp_mode = 0
 ; CHECK-MESA3D-NEXT:     enable_mem_ordered = 1
-; CHECK-MESA3D-NEXT:     enable_fwd_progress = 0
+; CHECK-MESA3D-NEXT:     enable_fwd_progress = 1
 ; CHECK-MESA3D-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; CHECK-MESA3D-NEXT:     user_sgpr_count = 8
 ; CHECK-MESA3D-NEXT:     enable_trap_handler = 0
@@ -127,7 +127,7 @@ define amdgpu_kernel void @test_workgroup_max_flat_id(ptr addrspace(1) %out) #1 
 ; CHECK-G-MESA3D-NEXT:     enable_ieee_mode = 0
 ; CHECK-G-MESA3D-NEXT:     enable_wgp_mode = 0
 ; CHECK-G-MESA3D-NEXT:     enable_mem_ordered = 1
-; CHECK-G-MESA3D-NEXT:     enable_fwd_progress = 0
+; CHECK-G-MESA3D-NEXT:     enable_fwd_progress = 1
 ; CHECK-G-MESA3D-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 0
 ; CHECK-G-MESA3D-NEXT:     user_sgpr_count = 8
 ; CHECK-G-MESA3D-NEXT:     enable_trap_handler = 0
@@ -192,7 +192,7 @@ define amdgpu_kernel void @test_workgroup_max_flat_id(ptr addrspace(1) %out) #1 
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX13-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
 ; GFX13-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-LABEL: test_workgroup_max_flat_id:
@@ -202,7 +202,7 @@ define amdgpu_kernel void @test_workgroup_max_flat_id(ptr addrspace(1) %out) #1 
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX13-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1] scope:SCOPE_SE
 ; GFX13-GISEL-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.cluster.workgroup.max.flat.id()
   store i32 %id, ptr addrspace(1) %out

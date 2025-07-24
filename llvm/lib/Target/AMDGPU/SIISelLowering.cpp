@@ -3544,11 +3544,14 @@ SDValue SITargetLowering::LowerFormalArguments(
     if (!Subtarget->enableFlatScratch())
       assert(!UserSGPRInfo.hasFlatScratchInit());
     if ((CallConv != CallingConv::AMDGPU_CS &&
-         CallConv != CallingConv::AMDGPU_Gfx) ||
+         CallConv != CallingConv::AMDGPU_Gfx &&
+         CallConv != CallingConv::AMDGPU_Gfx_WholeWave) ||
         !Subtarget->hasArchitectedSGPRs())
       assert(!Info->hasWorkGroupIDX() && !Info->hasWorkGroupIDY() &&
              !Info->hasWorkGroupIDZ());
   }
+
+  bool IsWholeWaveFunc = Info->isWholeWaveFunction();
 
   if (CallConv == CallingConv::AMDGPU_PS) {
     processPSInputArgs(Splits, CallConv, Ins, Skipped, FType, Info);
@@ -3590,7 +3593,8 @@ SDValue SITargetLowering::LowerFormalArguments(
   } else if (IsKernel) {
     assert(Info->hasWorkGroupIDX() && Info->hasWorkItemIDX());
   } else {
-    Splits.append(Ins.begin(), Ins.end());
+    Splits.append(IsWholeWaveFunc ? std::next(Ins.begin()) : Ins.begin(),
+                  Ins.end());
   }
 
   if (IsKernel)
@@ -3621,6 +3625,13 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   SmallVector<SDValue, 16> Chains;
 
+  if (IsWholeWaveFunc) {
+    SDValue Setup = DAG.getNode(AMDGPUISD::WHOLE_WAVE_SETUP, DL,
+                                {MVT::i1, MVT::Other}, Chain);
+    InVals.push_back(Setup.getValue(0));
+    Chains.push_back(Setup.getValue(1));
+  }
+
   // FIXME: This is the minimum kernel argument alignment. We should improve
   // this to the maximum alignment of the arguments.
   //
@@ -3628,7 +3639,8 @@ SDValue SITargetLowering::LowerFormalArguments(
   // kern arg offset.
   const Align KernelArgBaseAlign = Align(16);
 
-  for (unsigned i = 0, e = Ins.size(), ArgIdx = 0; i != e; ++i) {
+  for (unsigned i = IsWholeWaveFunc ? 1 : 0, e = Ins.size(), ArgIdx = 0; i != e;
+       ++i) {
     const ISD::InputArg &Arg = Ins[i];
     if ((Arg.isOrigArg() && Skipped[Arg.getOrigArgIndex()]) || IsError) {
       InVals.push_back(DAG.getPOISON(Arg.VT));
@@ -3976,7 +3988,9 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   unsigned Opc = AMDGPUISD::ENDPGM;
   if (!IsWaveEnd)
-    Opc = IsShader ? AMDGPUISD::RETURN_TO_EPILOG : AMDGPUISD::RET_GLUE;
+    Opc = Info->isWholeWaveFunction() ? AMDGPUISD::WHOLE_WAVE_RETURN
+          : IsShader                  ? AMDGPUISD::RETURN_TO_EPILOG
+                                      : AMDGPUISD::RET_GLUE;
   return DAG.getNode(Opc, DL, MVT::Other, RetOps);
 }
 
@@ -4480,7 +4494,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
   CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, IsVarArg);
 
-  if (CallConv != CallingConv::AMDGPU_Gfx && !AMDGPU::isChainCC(CallConv)) {
+  if (CallConv != CallingConv::AMDGPU_Gfx && !AMDGPU::isChainCC(CallConv) &&
+      CallConv != CallingConv::AMDGPU_Gfx_WholeWave) {
     // With a fixed ABI, allocate fixed registers before user arguments.
     passSpecialInputs(CLI, CCInfo, *Info, RegsToPass, MemOpChains, Chain);
   }
@@ -6803,6 +6818,18 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         TII->insertSimulatedTrap(MRI, *BB, MI, MI.getDebugLoc());
     MI.eraseFromParent();
     return SplitBB;
+  }
+  case AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN: {
+    assert(MFI->isWholeWaveFunction());
+
+    // During ISel, it's difficult to propagate the original EXEC mask to use as
+    // an input to SI_WHOLE_WAVE_FUNC_RETURN. Set it up here instead.
+    MachineInstr *Setup = TII->getWholeWaveFunctionSetup(*BB->getParent());
+    Register OriginalExec = Setup->getOperand(0).getReg();
+    assert(Setup && "Couldn't find SI_SETUP_WHOLE_WAVE_FUNC");
+    MF->getRegInfo().clearKillFlags(OriginalExec);
+    MI.getOperand(0).setReg(OriginalExec);
+    return BB;
   }
   case AMDGPU::WAVEGROUP_RANK_CALL: {
     const DebugLoc &DL = MI.getDebugLoc();
