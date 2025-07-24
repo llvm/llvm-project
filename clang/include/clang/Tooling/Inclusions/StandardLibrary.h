@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_TOOLING_INCLUSIONS_STANDARDLIBRARY_H
 #define LLVM_CLANG_TOOLING_INCLUSIONS_STANDARDLIBRARY_H
 
+#include "clang/Basic/LangStandard.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
@@ -29,7 +30,6 @@ class NamespaceDecl;
 class DeclContext;
 namespace tooling {
 namespace stdlib {
-
 class Symbol;
 enum class Lang { C = 0, CXX, LastValue = CXX };
 
@@ -85,6 +85,7 @@ public:
   std::optional<Header> header() const;
   // Some symbols may be provided by multiple headers.
   llvm::SmallVector<Header> headers() const;
+  std::optional<LangFeatures> version() const;
 
 private:
   Symbol(unsigned ID, Lang Language) : ID(ID), Language(Language) {}

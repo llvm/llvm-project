@@ -36,6 +36,9 @@ struct SymbolHeaderMapping {
     const char *Data;  // std::vector
     unsigned ScopeLen; // ~~~~~
     unsigned NameLen;  //      ~~~~~~
+    std::optional<LangFeatures> CurrentVersion;
+
+    std::optional<LangFeatures> version() const { return CurrentVersion; }
     StringRef scope() const { return StringRef(Data, ScopeLen); }
     StringRef name() const { return StringRef(Data + ScopeLen, NameLen); }
     StringRef qualifiedName() const {
@@ -57,6 +60,7 @@ static const SymbolHeaderMapping *getMappingPerLang(Lang L) {
 static int countSymbols(Lang Language) {
   ArrayRef<const char *> Symbols;
 #define SYMBOL(Name, NS, Header) #NS #Name,
+#define SYMBOL_VERSION(Name, NS, Header, Version) #NS #Name,
   switch (Language) {
   case Lang::C: {
     static constexpr const char *CSymbols[] = {
@@ -77,6 +81,7 @@ static int countSymbols(Lang Language) {
   }
   }
 #undef SYMBOL
+#undef SYMBOL_VERSION
   return llvm::DenseSet<StringRef>(llvm::from_range, Symbols).size();
 }
 
@@ -107,7 +112,8 @@ static int initialize(Lang Language) {
   };
 
   auto Add = [&, SymIndex(-1)](llvm::StringRef QName, unsigned NSLen,
-                               llvm::StringRef HeaderName) mutable {
+                               llvm::StringRef HeaderName,
+                               llvm::StringRef Ver) mutable {
     // Correct "Nonefoo" => foo.
     // FIXME: get rid of "None" from the generated mapping files.
     if (QName.take_front(NSLen) == "None") {
@@ -128,8 +134,22 @@ static int initialize(Lang Language) {
       // First symbol or new symbol, increment next available index.
       ++SymIndex;
     } // Else use the same index.
+
+    std::optional<LangFeatures> CurrentVersion =
+        llvm::StringSwitch<std::optional<LangFeatures>>(Ver)
+            .Case("c++11", std::make_optional(CPlusPlus11))
+            .Case("c++14", std::make_optional(CPlusPlus14))
+            .Case("c++17", std::make_optional(CPlusPlus17))
+            .Case("c++20", std::make_optional(CPlusPlus20))
+            .Case("c++23", std::make_optional(CPlusPlus23))
+            .Case("c++26", std::make_optional(CPlusPlus26))
+            .Case("c99", std::make_optional(C99))
+            .Case("c11", std::make_optional(C11))
+            .Default(std::nullopt);
+
     Mapping->SymbolNames[SymIndex] = {
-        QName.data(), NSLen, static_cast<unsigned int>(QName.size() - NSLen)};
+        QName.data(), NSLen, static_cast<unsigned int>(QName.size() - NSLen),
+        CurrentVersion};
     if (!HeaderName.empty())
       Mapping->SymbolHeaderIDs[SymIndex].push_back(AddHeader(HeaderName));
 
@@ -141,10 +161,14 @@ static int initialize(Lang Language) {
     const char *QName;
     unsigned NSLen;
     const char *HeaderName;
+    const char *Version = "unknown";
   };
 #define SYMBOL(Name, NS, Header)                                               \
   {#NS #Name, static_cast<decltype(Symbol::NSLen)>(StringRef(#NS).size()),     \
    #Header},
+#define SYMBOL_VERSION(Name, NS, Header, Version)                              \
+  {#NS #Name, static_cast<decltype(Symbol::NSLen)>(StringRef(#NS).size()),     \
+   #Header, Version},
   switch (Language) {
   case Lang::C: {
     static constexpr Symbol CSymbols[] = {
@@ -152,7 +176,7 @@ static int initialize(Lang Language) {
 #include "CSymbolMap.inc"
     };
     for (const Symbol &S : CSymbols)
-      Add(S.QName, S.NSLen, S.HeaderName);
+      Add(S.QName, S.NSLen, S.HeaderName, S.Version);
     break;
   }
   case Lang::CXX: {
@@ -162,11 +186,12 @@ static int initialize(Lang Language) {
 #include "StdTsSymbolMap.inc"
     };
     for (const Symbol &S : CXXSymbols)
-      Add(S.QName, S.NSLen, S.HeaderName);
+      Add(S.QName, S.NSLen, S.HeaderName, S.Version);
     break;
   }
   }
 #undef SYMBOL
+#undef SYMBOL_VERSION
 
   Mapping->HeaderNames = new llvm::StringRef[Mapping->HeaderIDs->size()];
   for (const auto &E : *Mapping->HeaderIDs)
@@ -222,6 +247,9 @@ llvm::StringRef Symbol::name() const {
 }
 llvm::StringRef Symbol::qualifiedName() const {
   return getMappingPerLang(Language)->SymbolNames[ID].qualifiedName();
+}
+std::optional<LangFeatures> Symbol::version() const {
+  return getMappingPerLang(Language)->SymbolNames[ID].version();
 }
 std::optional<Symbol> Symbol::named(llvm::StringRef Scope, llvm::StringRef Name,
                                     Lang L) {
@@ -319,7 +347,6 @@ std::optional<Symbol> Recognizer::operator()(const Decl *D) {
     return std::nullopt;
   return Symbol(It->second, L);
 }
-
 } // namespace stdlib
 } // namespace tooling
 } // namespace clang
