@@ -139,7 +139,20 @@ void MyExtension::init() {
 ```
 
 This type is now directly available in the Transform dialect and can be used in operations.
+We modify `$call` type must be `Transform_ConcreteOp<“func.call”>`, let it use the 
+`CallOpInterfaceHandle`.
 
+```tablegen
+def ChangeCallTargetOp : ... {
+    let arguments = (ins
+    // Specify the type constraint on the input accepting only `func.call` payload
+    // operations.
+    AnyTypeOf<[Transform_ConcreteOpType<"func.call">, CallOpInterfaceHandle]>:$call,
+    StrAttr:$new_target); 
+}
+```
+
+We can then add the following to `sequence.mlir` and run it with the interpreter.
 
 ```mlir
   // Cast to our new type.
@@ -172,7 +185,7 @@ def CallToOp : Op<Transform_Dialect, "my.call_to_op",
   let results = (outs TransformHandleTypeInterface:$transformed);
 
   // Provide nice syntax.
-  let assemblyFormat = "$call attr-dict `:` functional-type(inputs, outputs)";
+  let assemblyFormat = "$call attr-dict `:` functional-type(operands, results)";
 
   // Declare the function implementing the interface for a single payload operation.
   let extraClassDeclaration = [{

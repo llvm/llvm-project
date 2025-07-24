@@ -48,7 +48,7 @@ def ChangeCallTargetOp : Op<Transform_Dialect, "my.change_call_target",
   let arguments = (ins
     // Specify the type constraint on the input accepting only `func.call` payload
     // operations.
-    Transform_ConcreteOpType<"func.call">:$call,
+    AnyTypeOf<[Transform_ConcreteOpType<"func.call">, CallOpInterfaceHandle]>:$call,
     StrAttr:$new_target);
 
   // The results are empty as the transformation does not produce any new payload.
