@@ -280,7 +280,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.errno.errno
     libc.include.pthread
-    libc.src.__support.threads.barrier
+    libc.src.__support.threads.linux.barrier
 )
 
 add_entrypoint_object(
@@ -291,7 +291,7 @@ add_entrypoint_object(
     pthread_barrier_destroy.h
   DEPENDS
     libc.include.pthread
-    libc.src.__support.threads.barrier
+    libc.src.__support.threads.linux.barrier
 )
 
 add_entrypoint_object(
@@ -302,7 +302,7 @@ add_entrypoint_object(
     pthread_barrier_wait.h
   DEPENDS
     libc.include.pthread
-    libc.src.__support.threads.barrier
+    libc.src.__support.threads.linux.barrier
 )
 
 add_entrypoint_object(

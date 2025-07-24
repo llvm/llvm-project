@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/threads/barrier.h"
-#include "barrier.h"
+#include "src/__support/threads/linux/barrier.h"
 #include "hdr/errno_macros.h"
 #include "src/__support/threads/CndVar.h"
 #include "src/__support/threads/mutex.h"
