@@ -1746,10 +1746,10 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
       IID = Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmin;
       break;
     case AtomicRMWInst::USubCond:
-      IID = Intrinsic::amdgcn_raw_ptr_buffer_atomic_usub_cond;
+      IID = Intrinsic::amdgcn_raw_ptr_buffer_atomic_cond_sub_u32;
       break;
     case AtomicRMWInst::USubSat:
-      IID = Intrinsic::amdgcn_raw_ptr_buffer_atomic_usub_sat;
+      IID = Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub_clamp_u32;
       break;
     case AtomicRMWInst::FSub: {
       reportFatalUsageError(
