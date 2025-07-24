@@ -877,8 +877,9 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
       }
     };
     catchCopyPrivateNowaitClauses(beginSpec, false);
-    if (endSpec)
+    if (endSpec) {
       catchCopyPrivateNowaitClauses(*endSpec, true);
+    }
     unsigned version{context_.langOptions().OpenMPVersion};
     if (version <= 52 && NowaitSource.ToString().size() &&
         (singleCopyprivateSyms.size() || endSingleCopyprivateSyms.size())) {
