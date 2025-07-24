@@ -107,4 +107,8 @@
 #define DEMANGLE_NAMESPACE_BEGIN namespace { namespace itanium_demangle {
 #define DEMANGLE_NAMESPACE_END } }
 
+// The DEMANGLE_ABI macro resolves to nothing when building libc++abi. Only
+// the llvm copy defines DEMANGLE_ABI as a visibility attribute.
+#define DEMANGLE_ABI
+
 #endif // LIBCXXABI_DEMANGLE_DEMANGLE_CONFIG_H
