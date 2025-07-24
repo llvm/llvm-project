@@ -2147,10 +2147,7 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
   }
 
   // We might be deleting a pointer to array.
-  while (const ArrayType *Arr = getContext().getAsArrayType(DeleteTy)) {
-    // Unpeel the array type.
-    DeleteTy = Arr->getElementType();
-  }
+  DeleteTy = getContext().getBaseElementType(DeleteTy);
   Ptr = Ptr.withElementType(ConvertTypeForMem(DeleteTy));
 
   if (E->isArrayForm()) {
