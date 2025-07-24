@@ -34,6 +34,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/HexagonAttributes.h"
 #include "llvm/Support/raw_ostream.h"
@@ -251,8 +252,21 @@ public:
     std::string Buffer;
     {
       raw_string_ostream TempStream(Buffer);
-      InstPrinter.printInst(&Inst, Address, "", STI, TempStream);
+      for (auto &I : HexagonMCInstrInfo::bundleInstructions(Inst)) {
+        InstPrinter.printInst(I.getInst(), Address, "", STI, TempStream);
+        TempStream << "\n";
+      }
     }
+
+    std::string LoopString = "";
+    bool IsLoop0 = HexagonMCInstrInfo::isInnerLoop(Inst);
+    bool IsLoop1 = HexagonMCInstrInfo::isOuterLoop(Inst);
+    if (IsLoop0) {
+      LoopString += (IsLoop1 ? " :endloop01" : " :endloop0");
+    } else if (IsLoop1) {
+      LoopString += " :endloop1";
+    }
+
     StringRef Contents(Buffer);
     auto PacketBundle = Contents.rsplit('\n');
     auto HeadTail = PacketBundle.first.split('\n');
@@ -274,9 +288,9 @@ public:
     }
 
     if (HexagonMCInstrInfo::isMemReorderDisabled(Inst))
-      OS << "\n\t} :mem_noshuf" << PacketBundle.second;
+      OS << "\n\t} :mem_noshuf" << LoopString;
     else
-      OS << "\t}" << PacketBundle.second;
+      OS << "\t}" << LoopString;
   }
 
   void finish() override { finishAttributeSection(); }
@@ -775,7 +789,8 @@ static MCInstrAnalysis *createHexagonMCInstrAnalysis(const MCInstrInfo *Info) {
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeHexagonTargetMC() {
   // Register the MC asm info.
   RegisterMCAsmInfoFn X(getTheHexagonTarget(), createHexagonMCAsmInfo);
 

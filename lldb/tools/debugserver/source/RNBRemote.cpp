@@ -38,7 +38,6 @@
 #include "DNBThreadResumeActions.h"
 #include "JSON.h"
 #include "JSONGenerator.h"
-#include "JSONGenerator.h"
 #include "MacOSX/Genealogy.h"
 #include "OsLogger.h"
 #include "RNBContext.h"
@@ -1477,7 +1476,6 @@ bool RNBRemote::InitializeRegisters(bool force) {
 
 void RNBRemote::NotifyThatProcessStopped(void) {
   RNBRemote::HandlePacket_last_signal(NULL);
-  return;
 }
 
 /* 'A arglen,argnum,arg,...'
@@ -3477,7 +3475,7 @@ static bool GetProcessNameFrom_vAttach(const char *&p,
 }
 
 rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
-  uint32_t max_packet_size = 128 * 1024; // 128KBytes is a reasonable max packet
+  uint32_t max_packet_size = 128 * 1024; // 128 KiB is a reasonable max packet
                                          // size--debugger can always use less
   std::stringstream reply;
   reply << "qXfer:features:read+;PacketSize=" << std::hex << max_packet_size

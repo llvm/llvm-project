@@ -3,8 +3,7 @@
 
 define i1 @remove_shift_nuw_ab(i8 %a, i8 %b, i8 %s) {
 ; CHECK-LABEL: @remove_shift_nuw_ab(
-; CHECK-NEXT:    [[T:%.*]] = shl nuw i8 [[A:%.*]], [[S:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[T]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[T:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[IC:%.*]] = icmp eq i8 [[OR]], 0
 ; CHECK-NEXT:    ret i1 [[IC]]
 ;
@@ -16,8 +15,7 @@ define i1 @remove_shift_nuw_ab(i8 %a, i8 %b, i8 %s) {
 
 define i1 @remove_shift_nuw_ba(i8 %a, i8 %b, i8 %s) {
 ; CHECK-LABEL: @remove_shift_nuw_ba(
-; CHECK-NEXT:    [[T:%.*]] = shl nuw i8 [[A:%.*]], [[S:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[B:%.*]], [[T]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[B:%.*]], [[T:%.*]]
 ; CHECK-NEXT:    [[IC:%.*]] = icmp eq i8 [[OR]], 0
 ; CHECK-NEXT:    ret i1 [[IC]]
 ;
@@ -29,8 +27,7 @@ define i1 @remove_shift_nuw_ba(i8 %a, i8 %b, i8 %s) {
 
 define i1 @remove_shift_nsw(i8 %a, i8 %b, i8 %s) {
 ; CHECK-LABEL: @remove_shift_nsw(
-; CHECK-NEXT:    [[T:%.*]] = shl nsw i8 [[A:%.*]], [[S:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[T]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[T:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[IC:%.*]] = icmp eq i8 [[OR]], 0
 ; CHECK-NEXT:    ret i1 [[IC]]
 ;
@@ -42,8 +39,7 @@ define i1 @remove_shift_nsw(i8 %a, i8 %b, i8 %s) {
 
 define i1 @remove_shift_nuw_ne(i8 %a, i8 %b, i8 %s) {
 ; CHECK-LABEL: @remove_shift_nuw_ne(
-; CHECK-NEXT:    [[T:%.*]] = shl nuw i8 [[A:%.*]], [[S:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[T]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[T:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[IC:%.*]] = icmp eq i8 [[OR]], 0
 ; CHECK-NEXT:    ret i1 [[IC]]
 ;
@@ -55,8 +51,7 @@ define i1 @remove_shift_nuw_ne(i8 %a, i8 %b, i8 %s) {
 
 define i1 @remove_shift_nsw_ne(i8 %a, i8 %b, i8 %s) {
 ; CHECK-LABEL: @remove_shift_nsw_ne(
-; CHECK-NEXT:    [[T:%.*]] = shl nsw i8 [[A:%.*]], [[S:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[T]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[T:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[IC:%.*]] = icmp eq i8 [[OR]], 0
 ; CHECK-NEXT:    ret i1 [[IC]]
 ;
@@ -81,9 +76,8 @@ define i1 @remove_shift_wraps(i8 %a, i8 %b, i8 %s) {
 
 define i1 @remove_shift_chain_d(i8 %a, i8 %b, i8 %c, i8 %d, i8 %s) {
 ; CHECK-LABEL: @remove_shift_chain_d(
-; CHECK-NEXT:    [[DT:%.*]] = shl nuw i8 [[D:%.*]], [[S:%.*]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[C:%.*]], [[DT]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[C:%.*]], [[DT:%.*]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[OR1]], [[OR2]]
 ; CHECK-NEXT:    [[IC:%.*]] = icmp eq i8 [[OR]], 0
 ; CHECK-NEXT:    ret i1 [[IC]]
@@ -98,12 +92,8 @@ define i1 @remove_shift_chain_d(i8 %a, i8 %b, i8 %c, i8 %d, i8 %s) {
 
 define i1 @remove_shift_chain_abcd(i8 %a, i8 %b, i8 %c, i8 %d, i8 %s) {
 ; CHECK-LABEL: @remove_shift_chain_abcd(
-; CHECK-NEXT:    [[AT:%.*]] = shl nuw i8 [[A:%.*]], [[S:%.*]]
-; CHECK-NEXT:    [[BT:%.*]] = shl nuw i8 [[B:%.*]], 2
-; CHECK-NEXT:    [[CT:%.*]] = shl nuw i8 [[C:%.*]], 1
-; CHECK-NEXT:    [[DT:%.*]] = shl nuw i8 [[D:%.*]], [[S]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[AT]], [[BT]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[CT]], [[DT]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i8 [[AT:%.*]], [[BT:%.*]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i8 [[CT:%.*]], [[DT:%.*]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[OR1]], [[OR2]]
 ; CHECK-NEXT:    [[IC:%.*]] = icmp eq i8 [[OR]], 0
 ; CHECK-NEXT:    ret i1 [[IC]]

@@ -48,7 +48,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __always_false {
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator()(_Args&&...) const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI bool operator()(_Args&&...) const _NOEXCEPT {
     return false;
   }
 };
@@ -171,8 +171,7 @@ uninitialized_fill_n(_ForwardIterator __first, _Size __n, const _Tp& __x) {
 
 // Destroy all elements in [__first, __last) from left to right using allocator destruction.
 template <class _Alloc, class _Iter, class _Sent>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-__allocator_destroy(_Alloc& __alloc, _Iter __first, _Sent __last) {
+_LIBCPP_HIDE_FROM_ABI void __allocator_destroy(_Alloc& __alloc, _Iter __first, _Sent __last) {
   for (; __first != __last; ++__first)
     allocator_traits<_Alloc>::destroy(__alloc, std::__to_address(__first));
 }
@@ -180,11 +179,10 @@ __allocator_destroy(_Alloc& __alloc, _Iter __first, _Sent __last) {
 template <class _Alloc, class _Iter>
 class _AllocatorDestroyRangeReverse {
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
-  _AllocatorDestroyRangeReverse(_Alloc& __alloc, _Iter& __first, _Iter& __last)
+  _LIBCPP_HIDE_FROM_ABI _AllocatorDestroyRangeReverse(_Alloc& __alloc, _Iter& __first, _Iter& __last)
       : __alloc_(__alloc), __first_(__first), __last_(__last) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void operator()() const {
+  _LIBCPP_HIDE_FROM_ABI void operator()() const {
     std::__allocator_destroy(__alloc_, std::reverse_iterator<_Iter>(__last_), std::reverse_iterator<_Iter>(__first_));
   }
 
@@ -199,7 +197,7 @@ private:
 // The caller has to ensure that __first2 can hold at least N uninitialized elements. If an exception is thrown the
 // already copied elements are destroyed in reverse order of their construction.
 template <class _Alloc, class _Iter1, class _Sent1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter2
+_LIBCPP_HIDE_FROM_ABI _Iter2
 __uninitialized_allocator_copy_impl(_Alloc& __alloc, _Iter1 __first1, _Sent1 __last1, _Iter2 __first2) {
   auto __destruct_first = __first2;
   auto __guard =
@@ -229,8 +227,7 @@ template <class _Alloc,
                   is_same<__remove_const_t<_In>, __remove_const_t<_Out> >::value &&
                   __allocator_has_trivial_copy_construct<_Alloc, _RawTypeIn>::value,
               int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Out*
-__uninitialized_allocator_copy_impl(_Alloc&, _In* __first1, _In* __last1, _Out* __first2) {
+_LIBCPP_HIDE_FROM_ABI _Out* __uninitialized_allocator_copy_impl(_Alloc&, _In* __first1, _In* __last1, _Out* __first2) {
   // TODO: Remove the const_cast once we drop support for std::allocator<T const>
   if (__libcpp_is_constant_evaluated()) {
     while (__first1 != __last1) {
@@ -245,7 +242,7 @@ __uninitialized_allocator_copy_impl(_Alloc&, _In* __first1, _In* __last1, _Out* 
 }
 
 template <class _Alloc, class _Iter1, class _Sent1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter2
+_LIBCPP_HIDE_FROM_ABI _Iter2
 __uninitialized_allocator_copy(_Alloc& __alloc, _Iter1 __first1, _Sent1 __last1, _Iter2 __first2) {
   auto __unwrapped_range = std::__unwrap_range(__first1, __last1);
   auto __result          = std::__uninitialized_allocator_copy_impl(
@@ -278,7 +275,7 @@ struct __allocator_has_trivial_destroy<allocator<_Tp>, _Up> : true_type {};
 // - is_copy_constructible<_Tp>
 // - __libcpp_is_trivially_relocatable<_Tp>
 template <class _Alloc, class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+_LIBCPP_HIDE_FROM_ABI void
 __uninitialized_allocator_relocate(_Alloc& __alloc, _Tp* __first, _Tp* __last, _Tp* __result) {
   static_assert(__is_cpp17_move_insertable<_Alloc>::value,
                 "The specified type does not meet the requirements of Cpp17MoveInsertable");

@@ -347,9 +347,8 @@ define half @get_lane_64(<4 x half> %a) #0 {
 ; CHECK-LABEL: get_lane_64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w8, v0.h[2]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    mov h0, v0.h[2]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <4 x half> %a to <4 x i16>
@@ -362,9 +361,8 @@ entry:
 define half @get_lane_128(<8 x half> %a) #0 {
 ; CHECK-LABEL: get_lane_128:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    umov w8, v0.h[2]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-NEXT:    mov h0, v0.h[2]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <8 x half> %a to <8 x i16>

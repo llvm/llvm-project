@@ -8,9 +8,11 @@ body:             |
   bb.1:
   liveins: $w0
     ; CHECK-LABEL: name: test_combine_fabs_fabs
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[FABS:%[0-9]+]]:_(s32) = G_FABS [[COPY]]
-    ; CHECK: $w0 = COPY [[FABS]](s32)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[FABS:%[0-9]+]]:_(s32) = G_FABS [[COPY]]
+    ; CHECK-NEXT: $w0 = COPY [[FABS]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s32) = G_FABS %0(s32)
     %2:_(s32) = G_FABS %1(s32)
@@ -22,9 +24,11 @@ body:             |
   bb.1:
   liveins: $x0
     ; CHECK-LABEL: name: test_combine_fabs_fabs_vec
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $x0
-    ; CHECK: [[FABS:%[0-9]+]]:_(<2 x s32>) = G_FABS [[COPY]]
-    ; CHECK: $x0 = COPY [[FABS]](<2 x s32>)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $x0
+    ; CHECK-NEXT: [[FABS:%[0-9]+]]:_(<2 x s32>) = G_FABS [[COPY]]
+    ; CHECK-NEXT: $x0 = COPY [[FABS]](<2 x s32>)
     %0:_(<2 x s32>) = COPY $x0
     %1:_(<2 x s32>) = G_FABS %0(<2 x s32>)
     %2:_(<2 x s32>) = G_FABS %1(<2 x s32>)
@@ -36,7 +40,7 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_half_fabs_neg_constant
     ; CHECK: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH4580
-    ; CHECK: $h0 = COPY [[C]](s16)
+    ; CHECK-NEXT: $h0 = COPY [[C]](s16)
     %0:_(s16) = G_FCONSTANT half 0xHC580
     %1:_(s16) = G_FABS %0
     $h0 = COPY %1(s16)
@@ -47,7 +51,7 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_half_fabs_pos_constant
     ; CHECK: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH4580
-    ; CHECK: $h0 = COPY [[C]](s16)
+    ; CHECK-NEXT: $h0 = COPY [[C]](s16)
     %0:_(s16) = G_FCONSTANT half 0xH4580
     %1:_(s16) = G_FABS %0
     $h0 = COPY %1(s16)
@@ -58,8 +62,10 @@ body:             |
   bb.1:
     liveins: $w0
     ; CHECK-LABEL: name: test_combine_float_fabs_neg_constant
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 5.500000e+00
-    ; CHECK: $w0 = COPY [[C]](s32)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 5.500000e+00
+    ; CHECK-NEXT: $w0 = COPY [[C]](s32)
     %0:_(s32) = G_FCONSTANT float -5.500000e+00
     %1:_(s32) = G_FABS %0
     $w0 = COPY %1(s32)
@@ -70,8 +76,10 @@ body:             |
   bb.1:
     liveins: $w0
     ; CHECK-LABEL: name: test_combine_float_fabs_pos_constant
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 5.500000e+00
-    ; CHECK: $w0 = COPY [[C]](s32)
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 5.500000e+00
+    ; CHECK-NEXT: $w0 = COPY [[C]](s32)
     %0:_(s32) = G_FCONSTANT float -5.500000e+00
     %1:_(s32) = G_FABS %0
     $w0 = COPY %1(s32)
@@ -82,8 +90,10 @@ body:             |
   bb.1:
     liveins: $x0
     ; CHECK-LABEL: name: test_combine_double_fabs_neg_constant
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 4.200000e+00
-    ; CHECK: $x0 = COPY [[C]](s64)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 4.200000e+00
+    ; CHECK-NEXT: $x0 = COPY [[C]](s64)
     %0:_(s64) = G_FCONSTANT double -4.200000e+00
     %1:_(s64) = G_FABS %0
     $x0 = COPY %1(s64)
@@ -94,8 +104,10 @@ body:             |
   bb.1:
     liveins: $x0
     ; CHECK-LABEL: name: test_combine_double_fabs_pos_constant
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 4.200000e+00
-    ; CHECK: $x0 = COPY [[C]](s64)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 4.200000e+00
+    ; CHECK-NEXT: $x0 = COPY [[C]](s64)
     %0:_(s64) = G_FCONSTANT double 4.200000e+00
     %1:_(s64) = G_FABS %0
     $x0 = COPY %0(s64)

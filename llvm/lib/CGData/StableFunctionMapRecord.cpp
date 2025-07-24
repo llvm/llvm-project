@@ -56,8 +56,8 @@ getStableFunctionEntries(const StableFunctionMap &SFM) {
     for (auto &Func : P.second)
       FuncEntries.emplace_back(Func.get());
 
-  std::stable_sort(
-      FuncEntries.begin(), FuncEntries.end(), [&](auto &A, auto &B) {
+  llvm::stable_sort(
+      FuncEntries, [&](auto &A, auto &B) {
         return std::tuple(A->Hash, SFM.getNameForId(A->ModuleNameId),
                           SFM.getNameForId(A->FunctionNameId)) <
                std::tuple(B->Hash, SFM.getNameForId(B->ModuleNameId),
@@ -77,26 +77,32 @@ static IndexOperandHashVecType getStableIndexOperandHashes(
   return IndexOperandHashes;
 }
 
-void StableFunctionMapRecord::serialize(raw_ostream &OS) const {
-  serialize(OS, FunctionMap.get());
+void StableFunctionMapRecord::serialize(
+    raw_ostream &OS, std::vector<CGDataPatchItem> &PatchItems) const {
+  serialize(OS, FunctionMap.get(), PatchItems);
 }
 
-void StableFunctionMapRecord::serialize(raw_ostream &OS,
-                                        const StableFunctionMap *FunctionMap) {
+void StableFunctionMapRecord::serialize(
+    raw_ostream &OS, const StableFunctionMap *FunctionMap,
+    std::vector<CGDataPatchItem> &PatchItems) {
   support::endian::Writer Writer(OS, endianness::little);
 
   // Write Names.
-  auto &Names = FunctionMap->getNames();
-  uint32_t ByteSize = 4;
+  ArrayRef<std::string> Names = FunctionMap->getNames();
   Writer.write<uint32_t>(Names.size());
-  for (auto &Name : Names) {
+  // Remember the position, write back the total size of Names, so we can skip
+  // reading them if needed.
+  const uint64_t NamesByteSizeOffset = Writer.OS.tell();
+  Writer.write<uint64_t>(0);
+  for (auto &Name : Names)
     Writer.OS << Name << '\0';
-    ByteSize += Name.size() + 1;
-  }
-  // Align ByteSize to 4 bytes.
-  uint32_t Padding = offsetToAlignment(ByteSize, Align(4));
+  // Align current position to 4 bytes.
+  uint32_t Padding = offsetToAlignment(Writer.OS.tell(), Align(4));
   for (uint32_t I = 0; I < Padding; ++I)
     Writer.OS << '\0';
+  const auto NamesByteSize =
+      Writer.OS.tell() - NamesByteSizeOffset - sizeof(NamesByteSizeOffset);
+  PatchItems.emplace_back(NamesByteSizeOffset, &NamesByteSize, 1);
 
   // Write StableFunctionEntries whose pointers are sorted.
   auto FuncEntries = getStableFunctionEntries(*FunctionMap);
@@ -120,7 +126,8 @@ void StableFunctionMapRecord::serialize(raw_ostream &OS,
   }
 }
 
-void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr) {
+void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr,
+                                          bool ReadStableFunctionMapNames) {
   // Assert that Ptr is 4-byte aligned
   assert(((uintptr_t)Ptr % 4) == 0);
   // Read Names.
@@ -129,13 +136,23 @@ void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr) {
   // Early exit if there is no name.
   if (NumNames == 0)
     return;
-  for (unsigned I = 0; I < NumNames; ++I) {
-    StringRef Name(reinterpret_cast<const char *>(Ptr));
-    Ptr += Name.size() + 1;
-    FunctionMap->getIdOrCreateForName(Name);
+  const auto NamesByteSize =
+      endian::readNext<uint64_t, endianness::little, unaligned>(Ptr);
+  const auto NamesOffset = reinterpret_cast<uintptr_t>(Ptr);
+  if (ReadStableFunctionMapNames) {
+    for (unsigned I = 0; I < NumNames; ++I) {
+      StringRef Name(reinterpret_cast<const char *>(Ptr));
+      Ptr += Name.size() + 1;
+      FunctionMap->getIdOrCreateForName(Name);
+    }
+    // Align Ptr to 4 bytes.
+    Ptr = reinterpret_cast<const uint8_t *>(alignAddr(Ptr, Align(4)));
+    assert(reinterpret_cast<uintptr_t>(Ptr) - NamesOffset == NamesByteSize &&
+           "NamesByteSize does not match the actual size of names");
+  } else {
+    // skip reading Names by advancing the pointer.
+    Ptr = reinterpret_cast<const uint8_t *>(NamesOffset + NamesByteSize);
   }
-  // Align Ptr to 4 bytes.
-  Ptr = reinterpret_cast<const uint8_t *>(alignAddr(Ptr, Align(4)));
 
   // Read StableFunctionEntries.
   auto NumFuncs =

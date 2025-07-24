@@ -12,6 +12,7 @@
 
 #include "CoverageMappingGen.h"
 #include "CodeGenFunction.h"
+#include "CodeGenPGO.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Lex/Lexer.h"
@@ -1703,14 +1704,13 @@ struct CounterCoverageMappingBuilder
     if (!IsCounterEqual(OutCount, ParentCount)) {
       pushRegion(OutCount);
       GapRegionCounter = OutCount;
+      if (BodyHasTerminateStmt)
+        HasTerminateStmt = true;
     }
 
     // Create Branch Region around condition.
     if (!llvm::EnableSingleByteCoverage)
       createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
-
-    if (BodyHasTerminateStmt)
-      HasTerminateStmt = true;
   }
 
   void VisitForStmt(const ForStmt *S) {
@@ -2622,8 +2622,9 @@ void CoverageMappingModuleGen::emit() {
   CGM.addUsedGlobal(CovData);
   // Create the deferred function records array
   if (!FunctionNames.empty()) {
-    auto NamesArrTy = llvm::ArrayType::get(llvm::PointerType::getUnqual(Ctx),
-                                           FunctionNames.size());
+    auto AddrSpace = FunctionNames.front()->getType()->getPointerAddressSpace();
+    auto NamesArrTy = llvm::ArrayType::get(
+        llvm::PointerType::get(Ctx, AddrSpace), FunctionNames.size());
     auto NamesArrVal = llvm::ConstantArray::get(NamesArrTy, FunctionNames);
     // This variable will *NOT* be emitted to the object file. It is used
     // to pass the list of names referenced to codegen.

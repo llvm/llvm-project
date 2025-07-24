@@ -45,10 +45,6 @@ public:
     assert(Ptr != nullptr && "Invalid code pointer");
     return CodePtr(Ptr - RHS);
   }
-  CodePtr operator+(ssize_t RHS) const {
-    assert(Ptr != nullptr && "Invalid code pointer");
-    return CodePtr(Ptr + RHS);
-  }
 
   bool operator!=(const CodePtr &RHS) const { return Ptr != RHS.Ptr; }
   const std::byte *operator*() const { return Ptr; }

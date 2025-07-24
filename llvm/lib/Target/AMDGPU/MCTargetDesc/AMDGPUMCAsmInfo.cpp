@@ -16,7 +16,7 @@
 
 using namespace llvm;
 
-const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
+const MCAsmInfo::AtSpecifier atSpecifiers[] = {
     {AMDGPUMCExpr::S_GOTPCREL, "gotpcrel"},
     {AMDGPUMCExpr::S_GOTPCREL32_LO, "gotpcrel32@lo"},
     {AMDGPUMCExpr::S_GOTPCREL32_HI, "gotpcrel32@hi"},
@@ -25,6 +25,7 @@ const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
     {AMDGPUMCExpr::S_REL64, "rel64"},
     {AMDGPUMCExpr::S_ABS32_LO, "abs32@lo"},
     {AMDGPUMCExpr::S_ABS32_HI, "abs32@hi"},
+    {AMDGPUMCExpr::S_ABS64, "abs64"},
 };
 
 AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
@@ -42,6 +43,7 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
   CommentString = ";";
   InlineAsmStart = ";#ASMSTART";
   InlineAsmEnd = ";#ASMEND";
+  UsesSetToEquateSymbol = true;
 
   //===--- Data Emission Directives -------------------------------------===//
   UsesELFSectionDirectiveForBSS = true;
@@ -55,7 +57,7 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
   DwarfRegNumForCFI = true;
 
   UseIntegratedAssembler = false;
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 bool AMDGPUMCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {

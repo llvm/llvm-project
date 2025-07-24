@@ -186,8 +186,8 @@ void SourceCoverageViewText::renderLine(raw_ostream &OS, LineRef L,
     if (getOptions().Debug && Highlight)
       HighlightedRanges.push_back(std::make_pair(Col, End));
     Col = End;
-    if ((!S->IsGapRegion || (Highlight && *Highlight == raw_ostream::RED)) &&
-        S->HasCount && S->Count == 0)
+    if ((!S->IsGapRegion || Highlight == raw_ostream::RED) && S->HasCount &&
+        S->Count == 0)
       Highlight = raw_ostream::RED;
     else if (Col == ExpansionCol)
       Highlight = raw_ostream::CYAN;

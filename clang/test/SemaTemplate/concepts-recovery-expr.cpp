@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++20 -verify %s
 
-// expected-error@+1{{use of undeclared identifier 'b'}}
-constexpr bool CausesRecoveryExpr = b;
+// expected-error@+1 {{invalid operands to binary expression ('const char[5]' and 'float')}}
+constexpr bool CausesRecoveryExpr = "test" + 1.0f;
 
 template<typename T>
 concept ReferencesCRE = CausesRecoveryExpr;

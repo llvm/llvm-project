@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/CodeGen/FIROpPatterns.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/Support/Debug.h"
 
@@ -363,6 +364,15 @@ unsigned ConvertFIRToLLVMPattern::getProgramAddressSpace(
             mlir::DataLayout(module).getProgramMemorySpace())
       return llvm::cast<mlir::IntegerAttr>(addrSpace).getUInt();
   return defaultAddressSpace;
+}
+
+unsigned ConvertFIRToLLVMPattern::getGlobalAddressSpace(
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
+  assert(parentOp != nullptr &&
+         "expected insertion block to have parent operation");
+  auto dataLayout = mlir::DataLayout::closest(parentOp);
+  return fir::factory::getGlobalAddressSpace(&dataLayout);
 }
 
 } // namespace fir

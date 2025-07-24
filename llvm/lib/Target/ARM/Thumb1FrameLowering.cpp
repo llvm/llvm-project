@@ -32,7 +32,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/Compiler.h"
@@ -467,7 +466,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
 
   // In some cases, virtual registers have been introduced, e.g. by uses of
   // emitThumbRegPlusImmInReg.
-  MF.getProperties().reset(MachineFunctionProperties::Property::NoVRegs);
+  MF.getProperties().resetNoVRegs();
 }
 
 void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,

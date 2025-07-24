@@ -30,7 +30,6 @@
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
@@ -1658,7 +1657,7 @@ void HoistSpillHelper::hoistAllSpills() {
   for (unsigned i = 0, e = MRI.getNumVirtRegs(); i != e; ++i) {
     Register Reg = Register::index2VirtReg(i);
     Register Original = VRM.getPreSplitReg(Reg);
-    if (!MRI.def_empty(Reg))
+    if (!MRI.def_empty(Reg) && Original.isValid())
       Virt2SiblingsMap[Original].insert(Reg);
   }
 

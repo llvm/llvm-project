@@ -653,11 +653,7 @@ let HasOneUse = 1 in {
                                                node:$E),
                                           (riscv_or_vl node:$A, node:$B, node:$C,
                                                        node:$D, node:$E), [{
-    if (N->getFlags().hasDisjoint())
-      return true;
-    KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
-    KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
-    return KnownBits::haveNoCommonBitsSet(Known0, Known1);
+    return orDisjoint(N);
   }]>;
   def riscv_sub_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
                                          node:$E),
@@ -738,6 +734,7 @@ def SplatPat_simm5_plus1_nodec
     : ComplexPattern<vAny, 1, "selectVSplatSimm5Plus1NoDec", [], [], 3>;
 def SplatPat_simm5_plus1_nonzero
     : ComplexPattern<vAny, 1, "selectVSplatSimm5Plus1NonZero", [], [], 3>;
+def SplatPat_imm64_neg : ComplexPattern<vAny, 1, "selectVSplatImm64Neg", [], [], 3>;
 
 // Selects extends or truncates of splats where we only care about the lowest 8
 // bits of each element.
@@ -2122,6 +2119,19 @@ foreach vti = AllIntegerVectors in {
   }
 }
 
+// (add v, C) -> (sub v, -C) if -C cheaper to materialize
+foreach vti = I64IntegerVectors in {
+  let Predicates = [HasVInstructionsI64] in {
+    def : Pat<(riscv_add_vl (vti.Vector vti.RegClass:$rs1),
+                            (vti.Vector (SplatPat_imm64_neg i64:$rs2)),
+                            vti.RegClass:$passthru, (vti.Mask VMV0:$vm), VLOpFrag),
+              (!cast<Instruction>("PseudoVSUB_VX_"#vti.LMul.MX#"_MASK")
+                   vti.RegClass:$passthru, vti.RegClass:$rs1,
+                   negImm:$rs2, (vti.Mask VMV0:$vm),
+                   GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+  }
+}
+
 // 11.2. Vector Widening Integer Add/Subtract
 defm : VPatBinaryWVL_VV_VX_WV_WX<riscv_vwadd_vl,  riscv_vwadd_w_vl,  "PseudoVWADD">;
 defm : VPatBinaryWVL_VV_VX_WV_WX<riscv_vwaddu_vl, riscv_vwaddu_w_vl, "PseudoVWADDU">;
@@ -2570,7 +2580,7 @@ foreach vti = AllFloatVectors in {
   }
 }
 
-foreach fvti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
+foreach fvti = AllFloatVectors in {
   // Floating-point vselects:
   // 11.15. Vector Integer Merge Instructions
   // 13.15. Vector Floating-Point Merge Instruction
@@ -2620,7 +2630,7 @@ foreach fvti = AllFloatVectors in {
   }
 }
 
-foreach fvti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
+foreach fvti = AllFloatVectors in {
   defvar ivti = GetIntVTypeInfo<fvti>.Vti;
   let Predicates = GetVTypePredicates<ivti>.Predicates in {
     // 13.16. Vector Floating-Point Move Instruction
@@ -2673,9 +2683,9 @@ defm : VPatWConvertI2FPVL_V<any_riscv_sint_to_fp_vl, "PseudoVFWCVT_F_X_V">;
 foreach fvtiToFWti = AllWidenableFloatVectors in {
   defvar fvti = fvtiToFWti.Vti;
   defvar fwti = fvtiToFWti.Wti;
-  let Predicates = !if(!eq(fvti.Scalar, f16), [HasVInstructionsF16Minimal],
-                       !listconcat(GetVTypePredicates<fvti>.Predicates,
-                                   GetVTypePredicates<fwti>.Predicates)) in
+  // Define vfwcvt.f.f.v for f16 when Zvfhmin is enable.
+  let Predicates = !listconcat(GetVTypeMinimalPredicates<fvti>.Predicates,
+                               GetVTypeMinimalPredicates<fwti>.Predicates) in
   def : Pat<(fwti.Vector (any_riscv_fpextend_vl
                              (fvti.Vector fvti.RegClass:$rs1),
                              (fvti.Mask VMV0:$vm),
@@ -2716,10 +2726,9 @@ defm : VPatNConvertI2FP_RM_VL_W<riscv_vfcvt_rm_f_x_vl, "PseudoVFNCVT_F_X_W">;
 foreach fvtiToFWti = AllWidenableFloatVectors in {
   defvar fvti = fvtiToFWti.Vti;
   defvar fwti = fvtiToFWti.Wti;
-  // Define vfwcvt.f.f.v for f16 when Zvfhmin is enable.
-  let Predicates = !if(!eq(fvti.Scalar, f16), [HasVInstructionsF16Minimal],
-                       !listconcat(GetVTypePredicates<fvti>.Predicates,
-                                   GetVTypePredicates<fwti>.Predicates)) in {
+  // Define vfncvt.f.f.w for f16 when Zvfhmin is enable.
+  let Predicates = !listconcat(GetVTypeMinimalPredicates<fvti>.Predicates,
+                               GetVTypeMinimalPredicates<fwti>.Predicates) in {
     def : Pat<(fvti.Vector (any_riscv_fpround_vl
                                (fwti.Vector fwti.RegClass:$rs1),
                                (fwti.Mask VMV0:$vm), VLOpFrag)),
@@ -2945,7 +2954,7 @@ foreach vti = NoGroupFloatVectors in {
   }
 }
 
-foreach vti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
+foreach vti = AllFloatVectors in {
   defvar ivti = GetIntVTypeInfo<vti>.Vti;
   let Predicates = GetVTypePredicates<ivti>.Predicates in {
     def : Pat<(vti.Vector

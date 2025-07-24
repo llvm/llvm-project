@@ -12,7 +12,6 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/CastInterfaces.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/iterator.h"
@@ -807,8 +806,7 @@ void transform::TransformState::compactOpHandles() {
   for (Value handle : opHandlesToCompact) {
     Mappings &mappings = getMapping(handle, /*allowOutOfScope=*/true);
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    if (llvm::find(mappings.direct[handle], nullptr) !=
-        mappings.direct[handle].end())
+    if (llvm::is_contained(mappings.direct[handle], nullptr))
       // Payload IR is removed from the mapping. This invalidates the respective
       // iterators.
       mappings.incrementTimestamp(handle);

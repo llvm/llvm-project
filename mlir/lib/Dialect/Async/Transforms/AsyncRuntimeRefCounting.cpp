@@ -17,9 +17,6 @@
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallSet.h"
 
 namespace mlir {
@@ -534,15 +531,15 @@ void AsyncRuntimePolicyBasedRefCountingPass::initializeDefaultPolicy() {
     bool isValue = isa<ValueType>(type);
 
     // Drop reference after async token or group error check (coro await).
-    if (dyn_cast<RuntimeIsErrorOp>(op))
+    if (isa<RuntimeIsErrorOp>(op))
       return (isToken || isGroup) ? -1 : 0;
 
     // Drop reference after async value load.
-    if (dyn_cast<RuntimeLoadOp>(op))
+    if (isa<RuntimeLoadOp>(op))
       return isValue ? -1 : 0;
 
     // Drop reference after async token added to the group.
-    if (dyn_cast<RuntimeAddToGroupOp>(op))
+    if (isa<RuntimeAddToGroupOp>(op))
       return isToken ? -1 : 0;
 
     return 0;

@@ -9,6 +9,7 @@ add_libc_unittest(
     libc.include.sys_auxv
     libc.src.errno.errno
     libc.src.sys.auxv.getauxval
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
     libc.src.string.strstr
 )

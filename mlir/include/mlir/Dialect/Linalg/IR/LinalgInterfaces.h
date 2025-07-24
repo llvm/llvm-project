@@ -20,6 +20,7 @@
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
+#include "mlir/Interfaces/IndexingMapOpInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/RawOstreamExtras.h"
@@ -142,6 +143,9 @@ bool isaElemwiseSingleUnaryOpInterface(GenericOp genericOp);
 bool isaElemwiseSingleBinaryOpInterface(GenericOp genericOp);
 
 /// Checks whether `genericOp` is semantically equivalent to a `linalg.fill`.
+/// Supports two patterns:
+/// 1. External: linalg.generic ins(%scalar) outs(%tensor) { yield %scalar }
+/// 2. Inlined: linalg.generic outs(%tensor) { yield %constant }
 /// Returns the scalar fill value if true.
 std::optional<Value> isaFillOpInterface(GenericOp genericOp);
 

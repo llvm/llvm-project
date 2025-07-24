@@ -15,6 +15,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <map>
+#include <optional>
 #include <set>
 #include <utility>
 #include <variant>
@@ -86,6 +87,10 @@ struct CtorTesterMapInfo {
 CtorTester getTestKey(int i, CtorTester *) { return CtorTester(i); }
 CtorTester getTestValue(int i, CtorTester *) { return CtorTester(42 + i); }
 
+std::optional<uint32_t> getTestKey(int i, std::optional<uint32_t> *) {
+  return i;
+}
+
 // Test fixture, with helper functions implemented by forwarding to global
 // function overloads selected by component types of the type parameter. This
 // allows all of the map implementations to be tested with shared
@@ -117,11 +122,13 @@ typedef ::testing::Types<DenseMap<uint32_t, uint32_t>,
                          DenseMap<uint32_t *, uint32_t *>,
                          DenseMap<CtorTester, CtorTester, CtorTesterMapInfo>,
                          DenseMap<EnumClass, uint32_t>,
+                         DenseMap<std::optional<uint32_t>, uint32_t>,
                          SmallDenseMap<uint32_t, uint32_t>,
                          SmallDenseMap<uint32_t *, uint32_t *>,
                          SmallDenseMap<CtorTester, CtorTester, 4,
                                        CtorTesterMapInfo>,
-                         SmallDenseMap<EnumClass, uint32_t>
+                         SmallDenseMap<EnumClass, uint32_t>,
+                         SmallDenseMap<std::optional<uint32_t>, uint32_t>
                          > DenseMapTestTypes;
 // clang-format on
 
@@ -669,6 +676,13 @@ TEST(DenseMapCustomTest, LookupOr) {
   EXPECT_EQ(M.lookup_or(0, 4u), 3u);
   EXPECT_EQ(M.lookup_or(1, 4u), 0u);
   EXPECT_EQ(M.lookup_or(2, 4u), 4u);
+}
+
+TEST(DenseMapCustomTest, LookupOrConstness) {
+  DenseMap<int, unsigned *> M;
+  unsigned Default = 3u;
+  unsigned *Ret = M.lookup_or(0, &Default);
+  EXPECT_EQ(Ret, &Default);
 }
 
 // Key traits that allows lookup with either an unsigned or char* key;

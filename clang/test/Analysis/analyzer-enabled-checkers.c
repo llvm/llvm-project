@@ -34,7 +34,6 @@
 // CHECK-NEXT: core.uninitialized.CapturedBlockVariable
 // CHECK-NEXT: core.uninitialized.UndefReturn
 // CHECK-NEXT: deadcode.DeadStores
-// CHECK-NEXT: nullability.NullabilityBase
 // CHECK-NEXT: nullability.NullPassedToNonnull
 // CHECK-NEXT: nullability.NullReturnedFromNonnull
 // CHECK-NEXT: security.insecureAPI.SecuritySyntaxChecker

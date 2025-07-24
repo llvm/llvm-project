@@ -100,7 +100,7 @@ Windows
 * The Active Template Library (ATL).
 * `GnuWin32 <http://gnuwin32.sourceforge.net/>`_ for CoreUtils and Make.
 * `Python 3 <https://www.python.org/downloads/windows/>`_.  Make sure to (1) get
-  the x64 variant if that's what you're targetting and (2) install the debug
+  the x64 variant if that's what you're targeting and (2) install the debug
   library if you want to build a debug lldb. The standalone installer is the
   easiest way to get the debug library.
 * `Python Tools for Visual Studio
@@ -211,6 +211,7 @@ Clang. Then we build the ``ALL`` target with ninja:
 
   $ cmake -B /path/to/llvm-build -G Ninja \
           -DLLVM_ENABLE_PROJECTS=clang \
+          -DCMAKE_BUILD_TYPE=Release \
           [<more cmake options>] /path/to/llvm-project/llvm
   $ ninja
 
@@ -224,6 +225,7 @@ build directory for Clang, remember to pass its module path via ``Clang_DIR``
 ::
 
   $ cmake -B /path/to/lldb-build -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
           -DLLVM_DIR=/path/to/llvm-build/lib/cmake/llvm \
           [<more cmake options>] /path/to/llvm-project/lldb
   $ ninja lldb lldb-server
