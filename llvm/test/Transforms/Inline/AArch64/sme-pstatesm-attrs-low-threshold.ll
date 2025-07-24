@@ -25,8 +25,7 @@ define void @streaming_callee() #0 "aarch64_pstate_sm_enabled" {
 define void @non_streaming_caller_inline() #0 {
 ; CHECK-LABEL: define void @non_streaming_caller_inline
 ; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    call void @streaming_compatible_f()
-; CHECK-NEXT:    call void @streaming_compatible_f()
+; CHECK-NEXT:    call void @streaming_callee()
 ; CHECK-NEXT:    ret void
 ;
   call void @streaming_callee()
