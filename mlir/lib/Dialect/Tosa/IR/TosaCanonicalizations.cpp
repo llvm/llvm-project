@@ -1302,9 +1302,13 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
       auto intVal = operand.getSplatValue<APInt>();
       auto bitwidth = outETy.getIntOrFloatBitWidth();
 
+      // i1 types are boolean in TOSA
       if (trunc) {
-        intVal = intVal.trunc(bitwidth);
-        // i1 types are boolean in TOSA
+        if (outETy.isInteger(1)) {
+          intVal = intVal.isZero() ? APInt(bitwidth, 0) : APInt(bitwidth, 1);
+        } else {
+          intVal = intVal.trunc(bitwidth);
+        }
       } else if (unsignIn || inIntType.isInteger(1)) {
         intVal = intVal.zext(bitwidth);
       } else {
