@@ -414,6 +414,10 @@ private:
 
   void renderRoundMode(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
+
+  void renderPrefetchLoc(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                         int OpIdx) const;
+
   void renderScaledMAIIntrinsicOperand(MachineInstrBuilder &MIB,
                                        const MachineInstr &MI, int OpIdx) const;
 

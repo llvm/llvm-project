@@ -19,6 +19,7 @@
 #include "SIModeRegisterDefaults.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
