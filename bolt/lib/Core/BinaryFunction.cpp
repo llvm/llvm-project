@@ -1496,9 +1496,16 @@ Error BinaryFunction::disassemble() {
     }
 
 add_instruction:
-    if (getDWARFLineTable()) {
-      Instruction.setLoc(findDebugLineInformationForInstructionAt(
-          AbsoluteInstrAddr, getDWARFUnit(), getDWARFLineTable()));
+    // TODO: Handle multiple DWARF compilation units properly.
+    // For now, use the first unit if available.
+    if (!getDWARFUnits().empty()) {
+      DWARFUnit *FirstUnit = getDWARFUnits().front();
+      const DWARFDebugLine::LineTable *LineTable =
+          getDWARFLineTableForUnit(FirstUnit);
+      if (LineTable) {
+        Instruction.setLoc(findDebugLineInformationForInstructionAt(
+            AbsoluteInstrAddr, FirstUnit, LineTable));
+      }
     }
 
     // Record offset of the instruction for profile matching.
