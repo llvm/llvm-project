@@ -2174,6 +2174,25 @@ defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SHORT_D16, load_d16_lo_private, v2f
 
 } // End OtherPredicates = [HasFlatScratchInsts,EnableFlatScratch]
 
+multiclass FlatIntrPrefetchPats<string inst, SDPatternOperator intr> {
+  def : GCNPat <
+    (intr (FlatOffset i64:$vaddr, i32:$offset), timm:$cpol),
+    (!cast<FLAT_Pseudo>(inst) $vaddr, $offset, $cpol)
+  >;
+
+  def : GCNPat <
+    (intr (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), timm:$cpol),
+    (!cast<FLAT_Pseudo>(inst#"_SADDR") $saddr, $voffset, $offset, $cpol)> {
+      let AddedComplexity = 11;
+    }
+}
+
+let SubtargetPredicate = HasVmemPrefInsts in {
+  // Patterns for target intrinsics
+  defm : FlatIntrPrefetchPats<"FLAT_PREFETCH_B8", int_amdgcn_flat_prefetch>;
+  defm : FlatIntrPrefetchPats<"GLOBAL_PREFETCH_B8", int_amdgcn_global_prefetch>;
+} // End SubtargetPredicate = HasVmemPrefInsts
+
 //===----------------------------------------------------------------------===//
 // Target
 //===----------------------------------------------------------------------===//

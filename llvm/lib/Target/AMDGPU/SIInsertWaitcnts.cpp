@@ -2108,8 +2108,9 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
 bool SIInsertWaitcnts::mayAccessVMEMThroughFlat(const MachineInstr &MI) const {
   assert(TII->isFLAT(MI));
 
-  // All flat instructions use the VMEM counter.
-  assert(TII->usesVM_CNT(MI));
+  // All flat instructions use the VMEM counter except prefetch.
+  if (!TII->usesVM_CNT(MI))
+    return false;
 
   // If there are no memory operands then conservatively assume the flat
   // operation may access VMEM.
@@ -2294,9 +2295,6 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ++FlatASCount;
       ScoreBrackets->updateByEvent(TII, TRI, MRI, LDS_ACCESS, Inst);
     }
-
-    // A Flat memory operation must access at least one address space.
-    assert(FlatASCount);
 
     // This is a flat memory operation that access both VMEM and LDS, so note it
     // - it will require that both the VM and LGKM be flushed to zero if it is
