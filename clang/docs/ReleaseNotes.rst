@@ -1133,6 +1133,9 @@ RISC-V Support
 
 - Add support for the `__builtin_riscv_pause()` intrinsic from the `Zihintpause` extension.
 
+- Add support for `__attribute__((interrupt("rnmi")))` to be used with the `Smrnmi` extension.
+  With this the `Smrnmi` extension is fully supported.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
