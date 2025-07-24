@@ -20,7 +20,9 @@ using namespace parser::literals;
 void ImpliedSaveCheck::Enter(const parser::EntityDecl &entityDecl) {
   const auto &objectName = std::get<parser::ObjectName>(entityDecl.t);
   const auto *symbol = objectName.symbol;
+  const auto &scope{symbol->owner()};
   if (symbol && semantics::IsSaved(*symbol) &&
+      scope.kind() != semantics::Scope::Kind::Module &&
       !symbol->attrs().test(semantics::Attr::SAVE)) {
     Say(symbol->name(), "Implicit SAVE on symbol '%s'"_warn_en_US,
         symbol->name());
