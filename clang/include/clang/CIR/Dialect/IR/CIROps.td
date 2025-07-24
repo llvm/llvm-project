@@ -1946,6 +1946,10 @@ def CIR_FuncOp : CIR_Op<"func", [
     The function linkage information is specified by `linkage`, as defined by
     `GlobalLinkageKind` attribute.
 
+    The `no_proto` keyword is used to identify functions that were declared
+    without a prototype and, consequently, may contain calls with invalid
+    arguments and undefined behavior.
+
     Example:
 
     ```mlir
@@ -1964,6 +1968,7 @@ def CIR_FuncOp : CIR_Op<"func", [
   let arguments = (ins SymbolNameAttr:$sym_name,
                        CIR_VisibilityAttr:$global_visibility,
                        TypeAttrOf<CIR_FuncType>:$function_type,
+                       UnitAttr:$no_proto,
                        UnitAttr:$dso_local,
                        DefaultValuedAttr<CIR_GlobalLinkageKind,
                                          "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
@@ -2003,13 +2008,6 @@ def CIR_FuncOp : CIR_Op<"func", [
     /// returing void)
     llvm::ArrayRef<mlir::Type> getResultTypes() {
        return getFunctionType().getReturnTypes();
-    }
-
-    // TODO(cir): this should be an operand attribute, but for now we just hard-
-    // wire this as a function. Will later add a $no_proto argument to this op.
-    bool getNoProto() {
-      assert(!cir::MissingFeatures::opFuncNoProto());
-      return false;
     }
 
     //===------------------------------------------------------------------===//
