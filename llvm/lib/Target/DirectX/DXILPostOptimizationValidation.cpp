@@ -15,12 +15,14 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/DXILABI.h"
 
 #define DEBUG_TYPE "dxil-post-optimization-validation"
 
@@ -295,6 +297,105 @@ getRootSignature(RootSignatureBindingInfo &RSBI,
   return RootSigDesc;
 }
 
+static void
+reportOverlappingRegisters(Module &M,
+                           llvm::hlsl::rootsig::OverlappingRanges Overlap) {
+  const llvm::hlsl::rootsig::RangeInfo *Info = Overlap.A;
+  const llvm::hlsl::rootsig::RangeInfo *OInfo = Overlap.B;
+  SmallString<128> Message;
+  raw_svector_ostream OS(Message);
+  OS << "register " << ResourceClassToString(Info->Class)
+     << " (space=" << Info->Space << ", register=" << Info->LowerBound << ")"
+     << " is overlapping with"
+     << " register " << ResourceClassToString(OInfo->Class)
+     << " (space=" << OInfo->Space << ", register=" << OInfo->LowerBound << ")"
+     << ", verify your root signature definition.";
+
+  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
+}
+
+static bool reportOverlappingRanges(Module &M,
+                                    const mcdxbc::RootSignatureDesc &RSD) {
+  using namespace llvm::hlsl::rootsig;
+
+  llvm::SmallVector<RangeInfo> Infos;
+
+  for (size_t I = 0; I < RSD.ParametersContainer.size(); I++) {
+    const auto &[Type, Loc] =
+        RSD.ParametersContainer.getTypeAndLocForParameter(I);
+    const auto &Header = RSD.ParametersContainer.getHeader(I);
+    switch (Type) {
+    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
+      dxbc::RTS0::v1::RootConstants Const =
+          RSD.ParametersContainer.getConstant(Loc);
+
+      RangeInfo Info;
+      Info.Space = Const.RegisterSpace;
+      Info.LowerBound = Const.ShaderRegister;
+      Info.UpperBound = Info.LowerBound;
+      Info.Class = ParameterToResourceClass(Type);
+      Info.Visibility = (dxbc::ShaderVisibility)Header.ShaderVisibility;
+
+      Infos.push_back(Info);
+      break;
+    }
+    case llvm::to_underlying(dxbc::RootParameterType::SRV):
+    case llvm::to_underlying(dxbc::RootParameterType::UAV):
+    case llvm::to_underlying(dxbc::RootParameterType::CBV): {
+      dxbc::RTS0::v2::RootDescriptor Desc =
+          RSD.ParametersContainer.getRootDescriptor(Loc);
+
+      RangeInfo Info;
+      Info.Space = Desc.RegisterSpace;
+      Info.LowerBound = Desc.ShaderRegister;
+      Info.UpperBound = Info.LowerBound;
+      Info.Class = ParameterToResourceClass(Type);
+      Info.Visibility = (dxbc::ShaderVisibility)Header.ShaderVisibility;
+
+      Infos.push_back(Info);
+      break;
+    }
+    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+      const mcdxbc::DescriptorTable &Table =
+          RSD.ParametersContainer.getDescriptorTable(Loc);
+
+      for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
+        assert(Range.NumDescriptors > 0);
+        RangeInfo Info;
+        Info.Space = Range.RegisterSpace;
+        Info.LowerBound = Range.BaseShaderRegister;
+        Info.UpperBound = Info.LowerBound + ((Range.NumDescriptors == ~0U)
+                                                 ? Range.NumDescriptors
+                                                 : Range.NumDescriptors - 1);
+        Info.Class = RangeToResourceClass(Range.RangeType);
+        Info.Visibility = (dxbc::ShaderVisibility)Header.ShaderVisibility;
+
+        Infos.push_back(Info);
+      }
+      break;
+    }
+    }
+  }
+
+  for (const dxbc::RTS0::v1::StaticSampler &Sampler : RSD.StaticSamplers) {
+    RangeInfo Info;
+    Info.Space = Sampler.RegisterSpace;
+    Info.LowerBound = Sampler.ShaderRegister;
+    Info.UpperBound = Info.LowerBound;
+    Info.Class = ResourceClass::Sampler;
+    Info.Visibility = (dxbc::ShaderVisibility)Sampler.ShaderVisibility;
+
+    Infos.push_back(Info);
+  }
+
+  llvm::SmallVector<OverlappingRanges> Overlaps =
+      llvm::hlsl::rootsig::findOverlappingRanges(Infos);
+  for (OverlappingRanges Overlap : Overlaps)
+    reportOverlappingRegisters(M, Overlap);
+
+  return Overlaps.size() > 0;
+}
+
 static void reportInvalidHandleTy(
     Module &M, const llvm::ArrayRef<dxil::ResourceInfo::ResourceBinding> &RDs,
     const iterator_range<SmallVectorImpl<dxil::ResourceInfo>::iterator>
@@ -359,6 +460,8 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
                                        "DXILResourceImplicitBinding pass");
 
   if (auto RSD = getRootSignature(RSBI, MMI)) {
+    if (reportOverlappingRanges(M, *RSD))
+      return;
     dxbc::ShaderVisibility Visibility = tripleToVisibility(MMI.ShaderProfile);
     llvm::hlsl::rootsig::RootSignatureBindingValidation Validation =
         initRSBindingValidation(*RSD, Visibility);
