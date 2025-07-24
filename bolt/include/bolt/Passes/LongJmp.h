@@ -76,6 +76,39 @@ class LongJmpPass : public BinaryFunctionPass {
   /// 128MB of each other.
   void relaxLocalBranches(BinaryFunction &BF);
 
+  struct FunctionCluster {
+    // All functions in this cluster.
+    DenseSet<BinaryFunction *> Functions;
+
+    // Functions that this cluster of functions is calling. Note that it
+    // excludes all functions in the cluster itself.
+    DenseSet<BinaryFunction *> Callees;
+
+    // Estimated size of the cluster in bytes.
+    uint64_t Size{0};
+
+    // The index of the last function in the cluster. Used as an insertion point
+    // for adding thunks to the output function list.
+    size_t FirstFunctionIndex = -1;
+    size_t LastFunctionIndex = -1;
+
+    // Thunks located at the end of this cluster.
+    std::vector<BinaryFunction *> ThunkList;
+
+    // Thunks used by this cluster. Some could be in a ThunkList of the
+    // preceding cluster.
+    DenseMap<BinaryFunction *, BinaryFunction *> Thunks;
+  };
+
+  /// Maximum size of the function cluster. Note that it's less than 128MB
+  /// as the size of the cluster plus thunk island should be less than 128MB.
+  static constexpr uint64_t MaxClusterSize = 125 * 1024 * 1024;
+
+  /// Relax calls for medium code model where code is < 256MB.
+  /// A thunk island will be introduced between two clusters of functions to
+  /// enable calls over 128MB.
+  void relaxCalls(BinaryContext &BC);
+
   ///                 -- Layout estimation methods --
   /// Try to do layout before running the emitter, by looking at BinaryFunctions
   /// and MCInsts -- this is an estimation. To be correct for longjmp inserter

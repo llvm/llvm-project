@@ -591,8 +591,7 @@ bool Parser::ParseUsingDeclarator(DeclaratorContext Context,
        NextToken().isRegularKeywordAttribute() ||
        NextToken().is(tok::kw___attribute)) &&
       D.SS.isNotEmpty() && LastII == Tok.getIdentifierInfo() &&
-      !D.SS.getScopeRep()->getAsNamespace() &&
-      !D.SS.getScopeRep()->getAsNamespaceAlias()) {
+      D.SS.getScopeRep()->getKind() != NestedNameSpecifier::Namespace) {
     SourceLocation IdLoc = ConsumeToken();
     ParsedType Type =
         Actions.getInheritingConstructorName(D.SS, IdLoc, *LastII);
@@ -1133,13 +1132,6 @@ void Parser::AnnotateExistingDecltypeSpecifier(const DeclSpec &DS,
   // make sure we have a token we can turn into an annotation token
   if (PP.isBacktrackEnabled()) {
     PP.RevertCachedTokens(1);
-    if (DS.getTypeSpecType() == TST_error) {
-      // We encountered an error in parsing 'decltype(...)' so lets annotate all
-      // the tokens in the backtracking cache - that we likely had to skip over
-      // to get to a token that allows us to resume parsing, such as a
-      // semi-colon.
-      EndLoc = PP.getLastCachedTokenLocation();
-    }
   } else
     PP.EnterToken(Tok, /*IsReinject*/ true);
 

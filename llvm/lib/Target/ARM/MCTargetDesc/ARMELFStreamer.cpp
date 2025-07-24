@@ -638,7 +638,7 @@ private:
       Offset = 0;
     }
     bool hasInfo() { return F != nullptr; }
-    MCDataFragment *F = nullptr;
+    MCFragment *F = nullptr;
     uint64_t Offset = 0;
     ElfMappingSymbol State = EMS_None;
   };
@@ -650,11 +650,11 @@ private:
       // This is a tentative symbol, it won't really be emitted until it's
       // actually needed.
       ElfMappingSymbolInfo *EMS = LastEMSInfo.get();
-      auto *DF = dyn_cast_or_null<MCDataFragment>(getCurrentFragment());
-      if (!DF)
+      auto *DF = getCurrentFragment();
+      if (DF->getKind() != MCFragment::FT_Data)
         return;
       EMS->F = DF;
-      EMS->Offset = DF->getContents().size();
+      EMS->Offset = DF->getFixedSize();
       LastEMSInfo->State = EMS_Data;
       return;
     }
@@ -686,7 +686,7 @@ private:
     Symbol->setBinding(ELF::STB_LOCAL);
   }
 
-  void emitMappingSymbol(StringRef Name, MCDataFragment &F, uint64_t Offset) {
+  void emitMappingSymbol(StringRef Name, MCFragment &F, uint64_t Offset) {
     auto *Symbol = cast<MCSymbolELF>(getContext().createLocalSymbol(Name));
     emitLabelAtPos(Symbol, SMLoc(), F, Offset);
     Symbol->setType(ELF::STT_NOTYPE);
@@ -1145,9 +1145,8 @@ void ARMTargetELFStreamer::finish() {
     auto *Text =
         static_cast<MCSectionELF *>(Ctx.getObjectFileInfo()->getTextSection());
     for (auto &F : *Text)
-      if (auto *DF = dyn_cast<MCDataFragment>(&F))
-        if (!DF->getContents().empty())
-          return;
+      if (F.getSize())
+        return;
     Text->setFlags(Text->getFlags() | ELF::SHF_ARM_PURECODE);
   }
 }
@@ -1208,7 +1207,7 @@ inline void ARMELFStreamer::SwitchToExIdxSection(const MCSymbol &FnStart) {
 }
 
 void ARMELFStreamer::EmitFixup(const MCExpr *Expr, MCFixupKind Kind) {
-  MCDataFragment *Frag = getOrCreateDataFragment();
+  MCFragment *Frag = getOrCreateDataFragment();
   Frag->addFixup(MCFixup::create(Frag->getContents().size(), Expr, Kind));
 }
 
@@ -1296,7 +1295,7 @@ void ARMELFStreamer::EmitPersonalityFixup(StringRef Name) {
       MCSymbolRefExpr::create(PersonalitySym, ARM::S_ARM_NONE, getContext());
 
   visitUsedExpr(*PersonalityRef);
-  MCDataFragment *DF = getOrCreateDataFragment();
+  MCFragment *DF = getOrCreateDataFragment();
   DF->addFixup(
       MCFixup::create(DF->getContents().size(), PersonalityRef, FK_Data_4));
 }

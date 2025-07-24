@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++26    -fsized-deallocation    -faligned-allocation
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++26 -fno-sized-deallocation    -faligned-allocation
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++26 -fno-sized-deallocation -fno-aligned-allocation
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++26    -fsized-deallocation -fno-aligned-allocation
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -Wno-ext-cxx-type-aware-allocators -std=c++26    -fsized-deallocation    -faligned-allocation
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -Wno-ext-cxx-type-aware-allocators -std=c++26 -fno-sized-deallocation    -faligned-allocation
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -Wno-ext-cxx-type-aware-allocators -std=c++26 -fno-sized-deallocation -fno-aligned-allocation
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -Wno-ext-cxx-type-aware-allocators -std=c++26    -fsized-deallocation -fno-aligned-allocation
 
 namespace std {
   template <class T> struct type_identity {};

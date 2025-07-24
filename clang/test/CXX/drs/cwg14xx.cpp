@@ -107,6 +107,8 @@ void f() {
   constexpr int p = &*a;
   // since-cxx11-error@-1 {{cannot initialize a variable of type 'const int' with an rvalue of type 'A *'}}
   constexpr A *p2 = &*a;
+  // since-cxx11-error@-1 {{constexpr variable 'p2' must be initialized by a constant expression}}
+  // since-cxx11-note@-2 {{dereferencing a null pointer}}
 }
 
 struct A {

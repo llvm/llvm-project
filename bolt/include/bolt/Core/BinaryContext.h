@@ -225,6 +225,9 @@ class BinaryContext {
   /// Store all functions in the binary, sorted by original address.
   std::map<uint64_t, BinaryFunction> BinaryFunctions;
 
+  /// Functions to be included in the output in the sorted order.
+  std::vector<BinaryFunction *> OutputFunctions;
+
   /// A mutex that is used to control parallel accesses to BinaryFunctions
   mutable llvm::sys::RWMutex BinaryFunctionsMutex;
 
@@ -558,6 +561,8 @@ public:
   std::vector<BinaryFunction *> &getInjectedBinaryFunctions() {
     return InjectedBinaryFunctions;
   }
+
+  BinaryFunction *createThunkBinaryFunction(const std::string &Name);
 
   /// Return vector with all functions, i.e. include functions from the input
   /// binary and functions created by BOLT.
@@ -1356,8 +1361,12 @@ public:
   unsigned addDebugFilenameToUnit(const uint32_t DestCUID,
                                   const uint32_t SrcCUID, unsigned FileIndex);
 
-  /// Return functions in output layout order
-  std::vector<BinaryFunction *> getSortedFunctions();
+  /// Return a vector of functions in the order ready for code emission.
+  /// The vector will include functions added/injected by BOLT.
+  const std::vector<BinaryFunction *> &getOutputFunctions();
+
+  /// Update function list for the output.
+  void updateOutputFunctions(std::vector<BinaryFunction *> &Functions);
 
   /// Do the best effort to calculate the size of the function by emitting
   /// its code, and relaxing branch instructions. By default, branch
@@ -1378,6 +1387,10 @@ public:
   uint64_t
   computeInstructionSize(const MCInst &Inst,
                          const MCCodeEmitter *Emitter = nullptr) const {
+    // FIXME: hack for faster size computation on aarch64.
+    if (isAArch64())
+      return MIB->isPseudo(Inst) ? 0 : 4;
+
     if (std::optional<uint32_t> Size = MIB->getSize(Inst))
       return *Size;
 

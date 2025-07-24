@@ -2515,6 +2515,13 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
       exit(1);
     }
 
+    // Workaround for AArch64 issue with hot text.
+    if (BC->isAArch64() && (SymbolName == "__hot_start" ||
+          SymbolName == "__hot_end")) {
+      BC->addRelocation(Rel.getOffset(), Symbol, ELF::R_AARCH64_ABS64, Addend);
+      continue;
+    }
+
     BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, Addend);
   }
 }
@@ -3147,6 +3154,11 @@ void RewriteInstance::selectFunctionsToProcess() {
     if (mustSkip(Function))
       return false;
 
+    // Include veneer functions as we want to replace veneer calls with
+    // direct ones.
+    if (BC->isAArch64() && Function.getOneName().starts_with("__AArch64"))
+      return true;
+
     // If the list is not empty, only process functions from the list.
     if (!opts::ForceFunctionNames.empty() || !ForceFunctionsNR.empty()) {
       // Regex check (-funcs and -funcs-file options).
@@ -3748,7 +3760,7 @@ void RewriteInstance::emitAndLink() {
 
   if (opts::PrintCacheMetrics) {
     BC->outs() << "BOLT-INFO: cache metrics after emitting functions:\n";
-    CacheMetrics::printAll(BC->outs(), BC->getSortedFunctions());
+    CacheMetrics::printAll(BC->outs(), BC->getAllBinaryFunctions());
   }
 }
 

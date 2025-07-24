@@ -20,7 +20,7 @@
 # RUN:     2>&1 | FileCheck --check-prefix=MEDINCENTIVE %s
 # RUN: llvm-bolt %t.exe -o %t.bolt --split-functions --split-strategy=cdsplit \
 # RUN:         --call-scale=1000.0 --print-split --print-only=chain \
-# RUN:         --data=%t.fdata --reorder-blocks=ext-tsp \
+# RUN:         --data=%t.fdata --reorder-blocks=ext-tsp --force-patch \
 # RUN:     2>&1 | FileCheck --check-prefix=HIGHINCENTIVE %s
 
 # LOWINCENTIVE: Binary Function "chain" after split-functions
