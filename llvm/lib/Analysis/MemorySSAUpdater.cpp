@@ -238,7 +238,7 @@ MemoryAccess *MemorySSAUpdater::tryRemoveTrivialPhi(MemoryPhi *Phi,
       Worklist.push_back(TrackingVH<Value>(U));
   }
 
-  while (!Worklist.empty() || Worklist.size() > TrivialPhiProcessingLimit) {
+  while (!Worklist.empty() && Worklist.size() < TrivialPhiProcessingLimit) {
     MemoryPhi *RecPhi = dyn_cast<MemoryPhi>(&*(Worklist[Worklist.size() - 1]));
     Worklist.pop_back();
 
