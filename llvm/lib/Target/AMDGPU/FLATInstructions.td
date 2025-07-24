@@ -2172,8 +2172,7 @@ defm : FlatAtomicPat <"FLAT_ATOMIC_MAX_F64", "atomic_load_fmax_"#as, f64>;
 let SubtargetPredicate = isGFX12Plus in {
   defm : FlatAtomicRtnPat<"FLAT_ATOMIC_COND_SUB_U32", "atomic_load_usub_cond_"  #as, i32 >;
 
-  let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
-    defm : FlatAtomicNoRtnPat<"FLAT_ATOMIC_COND_SUB_U32", "atomic_load_usub_cond_"#as, i32>;
+  defm : FlatAtomicNoRtnPat<"FLAT_ATOMIC_COND_SUB_U32", "atomic_load_usub_cond_"#as, i32>;
 }
 } // end foreach as
 
