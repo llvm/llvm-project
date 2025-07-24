@@ -12,6 +12,6 @@ define ptr @undeclared_customalloc(i64 %size, i64 %align) {
   ret ptr %call
 }
 
-declare ptr @customalloc2(i64, i64) allockind("alloc") "alloc-family"="customalloc2" "alloc-variant-zeroed"="customalloc2_zeroed"
+declare ptr @customalloc2(i64, i64) allockind("alloc,uninitialized") "alloc-family"="customalloc2" "alloc-variant-zeroed"="customalloc2_zeroed"
 ; CHECK-DAG: declare ptr @customalloc2_zeroed(i64, i64) #[[CA2ATTR:[0-9]+]]
 ; CHECK-DAG: attributes #[[CA2ATTR]] = { allockind("alloc,zeroed") "alloc-family"="customalloc2" }

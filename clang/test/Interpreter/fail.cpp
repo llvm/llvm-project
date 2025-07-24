@@ -18,4 +18,11 @@ extern "C" int printf(const char *, ...);
 int i = 42;
 auto r1 = printf("i = %d\n", i);
 // CHECK: i = 42
+
+1aap = 42; // expected-error {{invalid digit 'a' in decimal constant}}
+1aap = 42; i = 5; // expected-error {{invalid digit 'a' in decimal constant}}
+
+printf("i = %d\n", i);
+// CHECK: i = 42
+
 %quit

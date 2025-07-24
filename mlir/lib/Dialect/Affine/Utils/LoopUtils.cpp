@@ -23,7 +23,6 @@
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -865,20 +864,6 @@ void mlir::affine::getPerfectlyNestedLoops(
     root = dyn_cast<AffineForOp>(&body.front());
     if (!root)
       return;
-  }
-}
-
-/// Identify valid and profitable bands of loops to tile. This is currently just
-/// a temporary placeholder to test the mechanics of tiled code generation.
-/// Returns all maximal outermost perfect loop nests to tile.
-void mlir::affine::getTileableBands(
-    func::FuncOp f, std::vector<SmallVector<AffineForOp, 6>> *bands) {
-  // Get maximal perfect nest of 'affine.for' insts starting from root
-  // (inclusive).
-  for (AffineForOp forOp : f.getOps<AffineForOp>()) {
-    SmallVector<AffineForOp, 6> band;
-    getPerfectlyNestedLoops(band, forOp);
-    bands->push_back(band);
   }
 }
 
