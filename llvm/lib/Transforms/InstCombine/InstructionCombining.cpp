@@ -3017,6 +3017,15 @@ static bool shouldCanonicalizeGEPToPtrAdd(GetElementPtrInst &GEP) {
                                  m_Shl(m_Value(), m_ConstantInt())))))
     return true;
 
+  // Flatten multidimensional GEPs with one variable index.
+  unsigned NumVarIndices = 0;
+  for (unsigned i = 1; i < GEP.getNumOperands(); ++i) {
+    if (!isa<ConstantInt>(GEP.getOperand(i)))
+      ++NumVarIndices;
+  }
+  if (NumVarIndices == 1)
+    return true;
+
   // gep (gep %p, C1), %x, C2 is expanded so the two constants can
   // possibly be merged together.
   auto PtrOpGep = dyn_cast<GEPOperator>(PtrOp);
