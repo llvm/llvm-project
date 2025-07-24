@@ -39,6 +39,9 @@ C/C++ Language Potentially Breaking Changes
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
+- For C++20 modules, the Reduced BMI mode will be the default option. This may introduce
+  regressions if your build system supports two-phase compilation model but haven't support
+  reduced BMI or it is a compiler bug or a bug in users code.
 
 ABI Changes in This Version
 ---------------------------
@@ -84,6 +87,8 @@ C23 Feature Support
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+- Added ``__builtin_elementwise_minnumnum`` and ``__builtin_elementwise_maxnumnum``.
+
 
 New Compiler Flags
 ------------------
@@ -102,6 +107,11 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Added a separate diagnostic group ``-Wfunction-effect-redeclarations``, for the more pedantic
+  diagnostics for function effects (``[[clang::nonblocking]]`` and ``[[clang::nonallocating]]``).
+  Moved the warning for a missing (though implied) attribute on a redeclaration into this group.
+  Added a new warning in this group for the case where the attribute is missing/implicit on
+  an override of a virtual method.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -111,6 +121,8 @@ Improvements to Coverage Mapping
 
 Bug Fixes in This Version
 -------------------------
+- Fix a crash when marco name is empty in ``#pragma push_macro("")`` or
+  ``#pragma pop_macro("")``. (#GH149762).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -120,6 +132,8 @@ Bug Fixes to Attribute Support
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
+- Diagnose binding a reference to ``*nullptr`` during constant evaluation. (#GH48665)
+- Suppress ``-Wdeprecated-declarations`` in implicitly generated functions. (#GH147293)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -189,6 +203,8 @@ Fixed Point Support in Clang
 
 AST Matchers
 ------------
+- Ensure ``hasBitWidth`` doesn't crash on bit widths that are dependent on template
+  parameters.
 
 clang-format
 ------------
@@ -201,6 +217,8 @@ Code Completion
 
 Static Analyzer
 ---------------
+- The Clang Static Analyzer now handles parenthesized initialization.
+  (#GH148875)
 
 New features
 ^^^^^^^^^^^^
@@ -224,6 +242,9 @@ Python Binding Changes
 
 OpenMP Support
 --------------
+- Added parsing and semantic analysis support for the ``need_device_addr``
+  modifier in the ``adjust_args`` clause.
+- Allow array length to be omitted in array section subscript expression.
 
 Improvements
 ^^^^^^^^^^^^
