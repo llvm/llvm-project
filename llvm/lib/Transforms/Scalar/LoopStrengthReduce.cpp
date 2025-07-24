@@ -3790,6 +3790,11 @@ LSRInstance::CollectLoopInvariantFixupsAndFormulae() {
             continue;
         }
 
+        // Do not consider uses inside lifetime intrinsics. These are not
+        // actually materialized.
+        if (UserInst->isLifetimeStartOrEnd())
+          continue;
+
         std::pair<size_t, Immediate> P =
             getUse(S, LSRUse::Basic, MemAccessTy());
         size_t LUIdx = P.first;
