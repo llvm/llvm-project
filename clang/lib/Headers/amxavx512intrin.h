@@ -249,15 +249,13 @@ _tile_cvtrowps2bf16l_internal(unsigned short m, unsigned short n,
   return __builtin_ia32_tcvtrowps2bf16l_internal(m, n, src, u);
 }
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS_AVX512
-_tile_cvtrowps2phh_internal(unsigned short m, unsigned short n,
-                            _tile1024i src, unsigned u) {
+static __inline__ __m512h __DEFAULT_FN_ATTRS_AVX512 _tile_cvtrowps2phh_internal(
+    unsigned short m, unsigned short n, _tile1024i src, unsigned u) {
   return __builtin_ia32_tcvtrowps2phh_internal(m, n, src, u);
 }
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS_AVX512
-_tile_cvtrowps2phl_internal(unsigned short m, unsigned short n,
-                            _tile1024i src, unsigned u) {
+static __inline__ __m512h __DEFAULT_FN_ATTRS_AVX512 _tile_cvtrowps2phl_internal(
+    unsigned short m, unsigned short n, _tile1024i src, unsigned u) {
   return __builtin_ia32_tcvtrowps2phl_internal(m, n, src, u);
 }
 
