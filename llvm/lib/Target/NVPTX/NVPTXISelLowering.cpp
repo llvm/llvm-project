@@ -1101,6 +1101,8 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::SETP_BF16X2)
     MAKE_CASE(NVPTXISD::MUL_WIDE_SIGNED)
     MAKE_CASE(NVPTXISD::MUL_WIDE_UNSIGNED)
+    MAKE_CASE(NVPTXISD::MAD_WIDE_UNSIGNED)
+    MAKE_CASE(NVPTXISD::MAD_WIDE_SIGNED)
     MAKE_CASE(NVPTXISD::BrxEnd)
     MAKE_CASE(NVPTXISD::BrxItem)
     MAKE_CASE(NVPTXISD::BrxStart)
@@ -4885,6 +4887,30 @@ static bool isConstZero(const SDValue &Operand) {
   return Const && Const->getZExtValue() == 0;
 }
 
+static SDValue
+PerformMADCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
+                              TargetLowering::DAGCombinerInfo &DCI) {
+  assert(N->getOpcode() == ISD::ADD);
+  if (!(N0.getOpcode() == ISD::ZERO_EXTEND ||
+        N0.getOpcode() == ISD::ANY_EXTEND ||
+        N0.getOpcode() == ISD::SIGN_EXTEND))
+    return SDValue();
+  if (N->getValueType(0) != MVT::i64)
+    return SDValue();
+  SDValue M = N0.getOperand(0);
+  if (M.getOpcode() != ISD::MUL)
+    return SDValue();
+  if (M.getValueType() != MVT::i32)
+    return SDValue();
+
+  unsigned Opcode = NVPTXISD::MAD_WIDE_UNSIGNED;
+  if (N0.getOpcode() == ISD::SIGN_EXTEND)
+    Opcode = NVPTXISD::MAD_WIDE_SIGNED;
+  SDValue Mul = N0.getOperand(0);
+  return DCI.DAG.getNode(Opcode, SDLoc(N), N->getValueType(0),
+                         Mul.getOperand(0), Mul.getOperand(1), N1);
+}
+
 /// PerformADDCombineWithOperands - Try DAG combinations for an ADD with
 /// operands N0 and N1.  This is a helper for PerformADDCombine that is
 /// called with the default operands, and if that fails, with commuted
@@ -4905,6 +4931,9 @@ PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   //   -> (select cond, c, (add (mul a, b), c))
   //
   if (N0.getOpcode() == ISD::SELECT) {
+    // Skip non-integer, non-scalar case
+    if (VT.isVector() || VT != MVT::i32)
+      return SDValue();
     unsigned ZeroOpNum;
     if (isConstZero(N0->getOperand(1)))
       ZeroOpNum = 1;
@@ -4925,6 +4954,9 @@ PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
                              ((ZeroOpNum == 1) ? N1 : MAD),
                              ((ZeroOpNum == 1) ? MAD : N1));
   }
+
+  if (SDValue V = PerformMADCombineWithOperands(N, N0, N1, DCI))
+    return V;
 
   return SDValue();
 }
@@ -5273,11 +5305,6 @@ static SDValue PerformADDCombine(SDNode *N,
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
-
-  // Skip non-integer, non-scalar case
-  EVT VT = N0.getValueType();
-  if (VT.isVector() || VT != MVT::i32)
-    return SDValue();
 
   // First try with the default operand order.
   if (SDValue Result = PerformADDCombineWithOperands(N, N0, N1, DCI))
