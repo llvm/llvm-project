@@ -5437,6 +5437,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       break;
     }
+    case Intrinsic::amdgcn_flat_prefetch:
+    case Intrinsic::amdgcn_global_prefetch:
+      return getDefaultMappingVOP(MI);
     default:
       return getInvalidInstructionMapping();
     }
