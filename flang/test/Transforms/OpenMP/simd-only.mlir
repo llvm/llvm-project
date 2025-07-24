@@ -1,4 +1,4 @@
-// RUN: fir-opt --split-input-file --omp-simd-only %s | FileCheck %s
+// RUN: fir-opt --split-input-file --verify-diagnostics --omp-simd-only %s | FileCheck %s
 
 // Check that simd operations are not removed and rewritten, but all the other OpenMP ops are.
 
