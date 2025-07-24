@@ -3217,7 +3217,7 @@ static bool feedsIntoVectorReduction(ShuffleVectorInst *SVI) {
       if (!isa<BinaryOperator>(UI) && !isa<ShuffleVectorInst>(UI))
         return false;
 
-      WorkList.emplace_back(UI);;
+      WorkList.emplace_back(UI);
     }
   }
   return FoundReduction;
