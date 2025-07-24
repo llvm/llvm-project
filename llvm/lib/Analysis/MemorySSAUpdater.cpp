@@ -18,11 +18,16 @@
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <algorithm>
 
 #define DEBUG_TYPE "memoryssa"
 using namespace llvm;
+
+static cl::opt<uint32_t> TrivialPhiProcessingLimit(
+    "mssaupdater-processing-limit", cl::Hidden, cl::init(20),
+    cl::desc("The worklist limit for trivial phi removal (default = 20)"));
 
 // This is the marker algorithm from "Simple and Efficient Construction of
 // Static Single Assignment Form"
@@ -181,18 +186,6 @@ MemoryAccess *MemorySSAUpdater::getPreviousDefFromEnd(
 
   return getPreviousDefRecursive(BB, CachedPreviousDef);
 }
-// Recurse over a set of phi uses to eliminate the trivial ones
-MemoryAccess *MemorySSAUpdater::recursePhi(MemoryAccess *Phi) {
-  if (!Phi)
-    return nullptr;
-  TrackingVH<MemoryAccess> Res(Phi);
-  SmallVector<TrackingVH<Value>, 8> Uses;
-  std::copy(Phi->user_begin(), Phi->user_end(), std::back_inserter(Uses));
-  for (auto &U : Uses)
-    if (MemoryPhi *UsePhi = dyn_cast<MemoryPhi>(&*U))
-      tryRemoveTrivialPhi(UsePhi);
-  return Res;
-}
 
 // Eliminate trivial phis
 // Phis are trivial if they are defined either by themselves, or all the same
@@ -230,9 +223,61 @@ MemoryAccess *MemorySSAUpdater::tryRemoveTrivialPhi(MemoryPhi *Phi,
     removeMemoryAccess(Phi);
   }
 
-  // We should only end up recursing in case we replaced something, in which
-  // case, we may have made other Phis trivial.
-  return recursePhi(Same);
+  // Continue traversal in a DFS worklist approach, in case we might find
+  // other trivial Phis.
+  if (!Same)
+    return nullptr;
+
+  TrackingVH<MemoryAccess> Result(Same);
+
+  // Worklist approach to recursively removing trivial Phis.
+  SmallVector<TrackingVH<Value>, 5> Worklist;
+
+  for (auto U : Same->users()) {
+    if (dyn_cast<MemoryPhi>(&*U))
+      Worklist.push_back(TrackingVH<Value>(U));
+  }
+
+  while (!Worklist.empty() || Worklist.size() > TrivialPhiProcessingLimit) {
+    MemoryPhi *RecPhi = dyn_cast<MemoryPhi>(&*(Worklist[Worklist.size() - 1]));
+    Worklist.pop_back();
+
+    if (!RecPhi)
+      continue;
+    auto RecOperands = RecPhi->operands();
+
+    // Repeat above algorithm.
+    if (NonOptPhis.count(RecPhi))
+      continue;
+
+    bool nextone = false;
+    MemoryAccess *RecSame = nullptr;
+    for (auto &Op : RecOperands) {
+      if (Op == RecPhi || Op == RecSame)
+        continue;
+      if (RecSame) {
+        nextone = true;
+        break;
+      }
+      RecSame = cast<MemoryAccess>(&*Op);
+    }
+
+    // Move on to the next Phi in the worklist.
+    if (nextone || RecSame == nullptr)
+      continue;
+
+    if (RecPhi) {
+      RecPhi->replaceAllUsesWith(RecSame);
+      removeMemoryAccess(RecPhi);
+    }
+
+    for (auto U : RecSame->users()) {
+      if (dyn_cast<MemoryPhi>(&*U))
+        Worklist.push_back(TrackingVH<Value>(U));
+    }
+  }
+
+  return Result;
 }
 
 void MemorySSAUpdater::insertUse(MemoryUse *MU, bool RenameUses) {
