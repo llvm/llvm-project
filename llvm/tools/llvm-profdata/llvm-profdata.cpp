@@ -720,7 +720,7 @@ static void
 loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
           const InstrProfCorrelator *Correlator, const StringRef ProfiledBinary,
           WriterContext *WC, const object::BuildIDFetcher *BIDFetcher = nullptr,
-          const ProfCorrelatorKind *BIDFetcherCorrelatorKind = nullptr, StringRef ObjectFilename = "") {
+          const ProfCorrelatorKind *BIDFetcherCorrelatorKind = nullptr, StringRef ObjectAwareHashing = "") {
   std::unique_lock<std::mutex> CtxGuard{WC->Lock};
 
   // Copy the filename, because llvm::ThreadPool copied the input "const
@@ -738,7 +738,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     // StringRef ExeRef, ProfRef;
     // std::tie(ExeRef, ProfRef) = FilenameRef.split(':');
     // if(!ExeRef.empty() && !ProfRef.empty()){
-    ObjectFilename = ObjectFilename.data();
+    ObjectFilename = ObjectAwareHashing.data();
       // ProfileFile = ProfRef.str();
     // }
     // Expected<std::string> ArchOrError = getArchitectureFromExecutable(ExeRef);
