@@ -233,7 +233,10 @@ def PrintSymbol(symbol):
     if len(symbol.headers) == 1:
         augmented_symbols = [symbol]
     else:
-        augmented_symbols = [cppreference_parser.Symbol(symbol.name, symbol.namespace, [header])
+        augmented_symbols = [cppreference_parser.Symbol(
+                                symbol.name,
+                                None if header.endswith(".h>") else symbol.namespace,
+                                [header])
                             for header in symbol.headers]
 
     # Add C compatibility symbols
