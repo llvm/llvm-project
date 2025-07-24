@@ -21,10 +21,10 @@ namespace clangd {
 std::optional<Path> getCorrespondingHeaderOrSource(
     PathRef OriginalFile, llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   llvm::StringRef SourceExtensions[] = {".cpp", ".c", ".cc", ".cxx",
-                                        ".c++", ".m", ".mm"};
+                                        ".c++", ".m", ".mm", ".cu", ".hip"};
   llvm::StringRef HeaderExtensions[] = {".h",    ".hh",   ".hpp", ".hxx",
                                         ".inc",  ".cppm", ".ccm", ".cxxm",
-                                        ".c++m", ".ixx"};
+                                        ".c++m", ".ixx", ".cuh", ".hiph"};
 
   llvm::StringRef PathExt = llvm::sys::path::extension(OriginalFile);
 

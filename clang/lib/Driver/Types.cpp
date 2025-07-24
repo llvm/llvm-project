@@ -329,6 +329,7 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
       .Case("clii", TY_PP_CLCXX)
       .Case("cp", TY_CXX)
       .Case("cu", TY_CUDA)
+      .Case("cuh", TY_CUDA_Header)
       .Case("hh", TY_CXXHeader)
       .Case("ii", TY_PP_CXX)
       .Case("ll", TY_LLVM_IR)
@@ -361,6 +362,7 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
       .Case("gch", TY_PCH)
       .Case("hip", TY_HIP)
       .Case("hipi", TY_PP_HIP)
+      .Case("hiph", TY_HIP_Header)
       .Case("hpp", TY_CXXHeader)
       .Case("hxx", TY_CXXHeader)
       .Case("iim", TY_PP_CXXModule)
@@ -443,5 +445,11 @@ ID types::lookupHeaderTypeForSourceType(ID Id) {
   case types::TY_CL:
   case types::TY_CLCXX:
     return types::TY_CLHeader;
+  case types::TY_CUDA:
+  case types::TY_CUDA_DEVICE:
+    return types::TY_CUDA_Header;
+  case types::TY_HIP:
+  case types::TY_HIP_DEVICE:
+    return types::TY_HIP_Header;
   }
 }
