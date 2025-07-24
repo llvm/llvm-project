@@ -151,6 +151,53 @@ nub_bool_t MachVMMemory::GetMemoryRegionInfo(task_t task, nub_addr_t address,
   return true;
 }
 
+// API availability:
+//  mach_vm_update_pointers_with_remote_tags() - 26.0
+//  VM_OFFSET_LIST_MAX macro - 26.1
+#ifndef VM_OFFSET_LIST_MAX
+#define VM_OFFSET_LIST_MAX 512
+#endif
+nub_bool_t MachVMMemory::GetMemoryTags(task_t task, nub_addr_t address,
+                                       nub_size_t size,
+                                       std::vector<uint8_t> &tags) {
+  // Max batch size supported by mach_vm_update_pointers_with_remote_tags()
+  constexpr uint32_t max_ptr_count = VM_OFFSET_LIST_MAX;
+
+  constexpr uint32_t tag_shift = 56;
+  constexpr nub_addr_t tag_mask =
+      ((nub_addr_t)0x0f << tag_shift); // Lower half of top byte
+  constexpr uint32_t tag_granule = 16;
+
+  mach_msg_type_number_t ptr_count =
+      (size / tag_granule) + ((size % tag_granule > 0) ? 1 : 0);
+  ptr_count = std::min(ptr_count, max_ptr_count);
+
+  auto ptr_arr = std::make_unique<nub_addr_t[]>(ptr_count);
+  for (size_t i = 0; i < ptr_count; i++) {
+    ptr_arr[i] = (address + i * tag_granule);
+  }
+
+  mach_msg_type_number_t ptr_count_out = ptr_count;
+  m_err = ::mach_vm_update_pointers_with_remote_tags(
+      task, ptr_arr.get(), ptr_count, ptr_arr.get(), &ptr_count_out);
+
+  const bool failed = (m_err.Fail() || (ptr_count != ptr_count_out));
+  if (failed || DNBLogCheckLogBit(LOG_MEMORY))
+    m_err.LogThreaded("::mach_vm_update_pointers_with_remote_tags ( task = "
+                      "0x%4.4x, ptr_count = %d ) => %i ( ptr_count_out = %d)",
+                      task, ptr_count, m_err.Status(), ptr_count_out);
+  if (failed)
+    return false;
+
+  tags.reserve(ptr_count);
+  for (size_t i = 0; i < ptr_count; i++) {
+    nub_addr_t tag = (ptr_arr[i] & tag_mask) >> tag_shift;
+    tags.push_back(tag);
+  }
+
+  return true;
+}
+
 static uint64_t GetPhysicalMemory() {
   // This doesn't change often at all. No need to poll each time.
   static uint64_t physical_memory = 0;

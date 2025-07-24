@@ -502,6 +502,8 @@ void RNBRemote::CreatePacketTable() {
       memory_region_info, &RNBRemote::HandlePacket_MemoryRegionInfo, NULL,
       "qMemoryRegionInfo", "Return size and attributes of a memory region that "
                            "contains the given address"));
+  t.push_back(Packet(get_memory_tags, &RNBRemote::HandlePacket_qMemTags, NULL,
+                     "qMemTags", "Return tags for a region of memory"));
   t.push_back(Packet(get_profile_data, &RNBRemote::HandlePacket_GetProfileData,
                      NULL, "qGetProfileData",
                      "Return profiling data of the current target."));
@@ -4333,6 +4335,62 @@ rnb_err_t RNBRemote::HandlePacket_MemoryRegionInfo(const char *p) {
       ostrm << ";";
     }
   }
+  return SendPacket(ostrm.str());
+}
+
+// qMemTags:<hex address>,<hex length>:<hex type>
+rnb_err_t RNBRemote::HandlePacket_qMemTags(const char *p) {
+  nub_process_t pid = m_ctx.ProcessID();
+  if (pid == INVALID_NUB_PROCESS)
+    return SendPacket("OK");
+
+  StdStringExtractor packet(p);
+  packet.SetFilePos(strlen("qMemTags:"));
+
+  // Address
+  nub_addr_t addr =
+      packet.GetHexMaxU64(StdStringExtractor::BigEndian, INVALID_NUB_ADDRESS);
+  if (addr == INVALID_NUB_ADDRESS)
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid/missing address in qMemTags packet");
+  // ,
+  if (packet.GetChar() != ',')
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid qMemTags packet format");
+  // Length
+  uint64_t length = packet.GetHexMaxU64(StdStringExtractor::BigEndian, 0);
+  if (length == 0)
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid/missing length in qMemTags packet");
+  // :
+  if (packet.GetChar() != ':')
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid qMemTags packet format");
+  // Type
+  // On the LLDB side this is a `int32_t` serialized as (unsigned) hex, which
+  // means negative values will show up as large positive values here.  Right
+  // now, we only support MTE (type 1), so we can ignore this complication.
+  uint32_t type = packet.GetHexMaxU32(StdStringExtractor::BigEndian, 0);
+  if (type != 1 /* MTE */)
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid/missing type in qMemTags packet, "
+                                  "only MTE (type 1) is supported");
+  // <EOF>
+  if (packet.GetBytesLeft() != 0)
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid qMemTags packet format");
+
+  std::vector<uint8_t> tags;
+  bool ok = DNBProcessGetMemoryTags(pid, addr, length, tags);
+  if (!ok)
+    return SendErrorPacket("E91");
+
+  std::ostringstream ostrm;
+  ostrm << "m"; // Multi part replies
+  for (uint8_t tag : tags) {
+    ostrm << RAWHEX8(tag); // 2 hex chars per tag
+  }
+
   return SendPacket(ostrm.str());
 }
 
