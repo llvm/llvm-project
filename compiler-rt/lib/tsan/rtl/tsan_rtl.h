@@ -420,6 +420,7 @@ class ScopedReportBase {
   void AddSleep(StackID stack_id);
   void SetCount(int count);
   void SetSigNum(int sig);
+  void SymbolizeStackElems(void);
 
   const ReportDesc *GetReport() const;
 
