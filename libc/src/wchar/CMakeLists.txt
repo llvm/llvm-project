@@ -1,3 +1,13 @@
+add_header_library(
+  wchar_utils
+  HDRS
+    wchar_utils.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.__support.common
+)
+
 add_entrypoint_object(
   wcslen
   SRCS
@@ -208,6 +218,78 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  wcstombs
+  SRCS
+    wcstombs.cpp
+  HDRS
+    wcstombs.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.wchar.wcsnrtombs
+    libc.src.__support.libc_errno
+)
+
+add_entrypoint_object(
+  wcsrtombs
+  SRCS
+    wcsrtombs.cpp
+  HDRS
+    wcsrtombs.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.hdr.types.mbstate_t
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.wchar.wcsnrtombs
+    libc.src.__support.libc_errno
+)
+
+add_entrypoint_object(
+  wcsnrtombs
+  SRCS
+    wcsnrtombs.cpp
+  HDRS
+    wcsnrtombs.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.hdr.types.mbstate_t
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.wchar.wcsnrtombs
+    libc.src.__support.libc_errno
+)
+
+add_entrypoint_object(
+  mblen
+  SRCS
+    mblen.cpp
+  HDRS
+    mblen.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbrtowc
+    libc.src.__support.wchar.mbstate
+)
+
+add_entrypoint_object(
+  mbrlen
+  SRCS
+    mbrlen.cpp
+  HDRS
+    mbrlen.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.mbstate_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.wchar.mbrtowc
+    libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbstate
+)
+
+add_entrypoint_object(
   wmemset
   SRCS
     wmemset.cpp
@@ -263,6 +345,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  wcsdup
+  SRCS
+    wcsdup.cpp
+  HDRS
+    wcsdup.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.string.allocating_string_utils
+)
+
+add_entrypoint_object(
   wcspbrk
   SRCS
     wcspbrk.cpp
@@ -303,6 +398,8 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.wchar_macros
     libc.hdr.types.size_t
+    libc.src.wchar.wchar_utils
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -314,6 +411,8 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.wchar_macros
     libc.hdr.types.size_t
+    libc.src.wchar.wchar_utils
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(

@@ -1,0 +1,39 @@
+//===- SFrameConstants.def --------------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#if !(defined(HANDLE_SFRAME_VERSION) || defined(HANDLE_SFRAME_FLAG) ||  \
+      defined(HANDLE_SFRAME_ABI))
+#error "Missing HANDLE_SFRAME definition"
+#endif
+
+#ifndef HANDLE_SFRAME_VERSION
+#define HANDLE_SFRAME_VERSION(CODE, NAME)
+#endif
+
+#ifndef HANDLE_SFRAME_FLAG
+#define HANDLE_SFRAME_FLAG(CODE, NAME)
+#endif
+
+#ifndef HANDLE_SFRAME_ABI
+#define HANDLE_SFRAME_ABI(CODE, NAME)
+#endif
+
+HANDLE_SFRAME_VERSION(0x01, V1)
+HANDLE_SFRAME_VERSION(0x02, V2)
+
+HANDLE_SFRAME_FLAG(0x01, FDESorted)
+HANDLE_SFRAME_FLAG(0x02, FramePointer)
+HANDLE_SFRAME_FLAG(0x04, FDEFuncStartPCRel)
+
+HANDLE_SFRAME_ABI(0x01, AArch64EndianBig)
+HANDLE_SFRAME_ABI(0x02, AArch64EndianLittle)
+HANDLE_SFRAME_ABI(0x03, AMD64EndianLittle)
+
+#undef HANDLE_SFRAME_VERSION
+#undef HANDLE_SFRAME_FLAG
+#undef HANDLE_SFRAME_ABI

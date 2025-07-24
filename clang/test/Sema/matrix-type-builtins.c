@@ -73,13 +73,13 @@ void column_major_load(float *p1, int *p2, _Bool *p3, struct Foo *p4) {
       10,         // expected-error {{1st argument must be a pointer to a valid matrix element type}}
       1ull << 21, // expected-error {{row dimension is outside the allowed range [1, 1048575]}}
       1ull << 21, // expected-error {{column dimension is outside the allowed range [1, 1048575]}}
-      "");        // expected-error {{incompatible pointer to integer conversion casting 'char[1]' to type 'unsigned long'}}
+      "");        // expected-error {{incompatible pointer to integer conversion casting 'char[1]' to type '__size_t' (aka 'unsigned long')}}
 
   sx5x10_t a13 = __builtin_matrix_column_major_load(
       10,  // expected-error {{1st argument must be a pointer to a valid matrix element type}}
-      *p4, // expected-error {{casting 'struct Foo' to incompatible type 'unsigned long'}}
+      *p4, // expected-error {{casting 'struct Foo' to incompatible type '__size_t' (aka 'unsigned long')}}
       "",  // expected-error {{column argument must be a constant unsigned integer expression}}
-           // expected-error@-1 {{incompatible pointer to integer conversion casting 'char[1]' to type 'unsigned long'}}
+           // expected-error@-1 {{incompatible pointer to integer conversion casting 'char[1]' to type '__size_t' (aka 'unsigned long')}}
       10);
 }
 
@@ -96,7 +96,7 @@ void column_major_store(sx5x10_t *m1, ix3x2_t *m2, float *p1, int *p2, struct Fo
   __builtin_matrix_column_major_store(
       "",   // expected-error {{1st argument must be a matrix}}
       10,   // expected-error {{2nd argument must be a pointer to a valid matrix element type}}
-      *p3); // expected-error {{casting 'struct Foo' to incompatible type 'unsigned long'}}
+      *p3); // expected-error {{casting 'struct Foo' to incompatible type '__size_t' (aka 'unsigned long')}}
 
   __builtin_matrix_column_major_store(
       *m1,
