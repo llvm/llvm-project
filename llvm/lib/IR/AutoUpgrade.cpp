@@ -1450,6 +1450,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                      .Case("popc.ll", true)
                      .Case("h2f", true)
                      .Case("swap.lo.hi.b64", true)
+                     .Case("tanh.approx.f32", true)
                      .Default(false);
 
       if (Expand) {
@@ -2543,6 +2544,12 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     MDNode *MD = MDNode::get(Builder.getContext(), {});
     LD->setMetadata(LLVMContext::MD_invariant_load, MD);
     return LD;
+  } else if (Name == "tanh.approx.f32") {
+    // nvvm.tanh.approx.f32 -> afn llvm.tanh.f32
+    FastMathFlags FMF;
+    FMF.setApproxFunc();
+    Rep = Builder.CreateUnaryIntrinsic(Intrinsic::tanh, CI->getArgOperand(0),
+                                       FMF);
   } else if (Name == "barrier0" || Name == "barrier.n" || Name == "bar.sync") {
     Value *Arg =
         Name.ends_with('0') ? Builder.getInt32(0) : CI->getArgOperand(0);
