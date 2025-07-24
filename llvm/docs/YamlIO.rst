@@ -92,7 +92,7 @@ corresponding denormalization step.
 YAML I/O uses a non-invasive, traits based design.  YAML I/O defines some
 abstract base templates.  You specialize those templates on your data types.
 For instance, if you have an enumerated type FooBar you could specialize
-ScalarEnumerationTraits on that type and define the enumeration() method:
+ScalarEnumerationTraits on that type and define the ``enumeration()`` method:
 
 .. code-block:: c++
 
@@ -113,7 +113,7 @@ values and the YAML string representation is only in one place.
 This assures that the code for writing and parsing of YAML stays in sync.
 
 To specify a YAML mappings, you define a specialization on
-llvm::yaml::MappingTraits.
+``llvm::yaml::MappingTraits``.
 If your native data structure happens to be a struct that is already normalized,
 then the specialization is simple.  For example:
 
@@ -131,9 +131,9 @@ then the specialization is simple.  For example:
     };
 
 
-A YAML sequence is automatically inferred if you data type has begin()/end()
-iterators and a push_back() method.  Therefore any of the STL containers
-(such as std::vector<>) will automatically translate to YAML sequences.
+A YAML sequence is automatically inferred if you data type has ``begin()``/``end()``
+iterators and a ``push_back()`` method.  Therefore any of the STL containers
+(such as ``std::vector<>``) will automatically translate to YAML sequences.
 
 Once you have defined specializations for your data types, you can
 programmatically use YAML I/O to write a YAML document:
@@ -195,8 +195,8 @@ Error Handling
 ==============
 
 When parsing a YAML document, if the input does not match your schema (as
-expressed in your XxxTraits<> specializations).  YAML I/O
-will print out an error message and your Input object's error() method will
+expressed in your ``XxxTraits<>`` specializations).  YAML I/O
+will print out an error message and your Input object's ``error()`` method will
 return true. For instance the following document:
 
 .. code-block:: yaml
@@ -265,8 +265,8 @@ operators to and from the base type.  For example:
     LLVM_YAML_STRONG_TYPEDEF(uint32_t, MyBarFlags)
 
 This generates two classes MyFooFlags and MyBarFlags which you can use in your
-native data structures instead of uint32_t. They are implicitly
-converted to and from uint32_t.  The point of creating these unique types
+native data structures instead of ``uint32_t``. They are implicitly
+converted to and from ``uint32_t``.  The point of creating these unique types
 is that you can now specify traits on them to get different YAML conversions.
 
 Hex types
@@ -280,15 +280,15 @@ format used by the built-in integer types:
 * Hex16
 * Hex8
 
-You can use llvm::yaml::Hex32 instead of uint32_t and the only different will
+You can use ``llvm::yaml::Hex32`` instead of ``uint32_t`` and the only different will
 be that when YAML I/O writes out that type it will be formatted in hexadecimal.
 
 
 ScalarEnumerationTraits
 -----------------------
 YAML I/O supports translating between in-memory enumerations and a set of string
-values in YAML documents. This is done by specializing ScalarEnumerationTraits<>
-on your enumeration type and define an enumeration() method.
+values in YAML documents. This is done by specializing ``ScalarEnumerationTraits<>``
+on your enumeration type and define an ``enumeration()`` method.
 For instance, suppose you had an enumeration of CPUs and a struct with it as
 a field:
 
@@ -333,9 +333,9 @@ as a field type:
     };
 
 When reading YAML, if the string found does not match any of the strings
-specified by enumCase() methods, an error is automatically generated.
+specified by ``enumCase()`` methods, an error is automatically generated.
 When writing YAML, if the value being written does not match any of the values
-specified by the enumCase() methods, a runtime assertion is triggered.
+specified by the ``enumCase()`` methods, a runtime assertion is triggered.
 
 
 BitValue
@@ -442,10 +442,10 @@ Sometimes for readability a scalar needs to be formatted in a custom way. For
 instance your internal data structure may use an integer for time (seconds since
 some epoch), but in YAML it would be much nicer to express that integer in
 some time format (e.g. 4-May-2012 10:30pm).  YAML I/O has a way to support
-custom formatting and parsing of scalar types by specializing ScalarTraits<> on
+custom formatting and parsing of scalar types by specializing ``ScalarTraits<>`` on
 your data type.  When writing, YAML I/O will provide the native type and
-your specialization must create a temporary llvm::StringRef.  When reading,
-YAML I/O will provide an llvm::StringRef of scalar and your specialization
+your specialization must create a temporary ``llvm::StringRef``.  When reading,
+YAML I/O will provide an ``llvm::StringRef`` of scalar and your specialization
 must convert that to your native data type.  An outline of a custom scalar type
 looks like:
 
@@ -482,15 +482,15 @@ literal block notation, just like the example shown below:
       Second line
 
 The YAML I/O library provides support for translating between YAML block scalars
-and specific C++ types by allowing you to specialize BlockScalarTraits<> on
+and specific C++ types by allowing you to specialize ``BlockScalarTraits<>`` on
 your data type. The library doesn't provide any built-in support for block
-scalar I/O for types like std::string and llvm::StringRef as they are already
+scalar I/O for types like ``std::string`` and ``llvm::StringRef`` as they are already
 supported by YAML I/O and use the ordinary scalar notation by default.
 
 BlockScalarTraits specializations are very similar to the
 ScalarTraits specialization - YAML I/O will provide the native type and your
-specialization must create a temporary llvm::StringRef when writing, and
-it will also provide an llvm::StringRef that has the value of that block scalar
+specialization must create a temporary ``llvm::StringRef`` when writing, and
+it will also provide an ``llvm::StringRef`` that has the value of that block scalar
 and your specialization must convert that to your native data type when reading.
 An example of a custom type with an appropriate specialization of
 BlockScalarTraits is shown below:
@@ -524,7 +524,7 @@ Mappings
 ========
 
 To be translated to or from a YAML mapping for your type T you must specialize
-llvm::yaml::MappingTraits on T and implement the "void mapping(IO &io, T&)"
+``llvm::yaml::MappingTraits`` on T and implement the "void mapping(IO &io, T&)"
 method. If your native data structures use pointers to a class everywhere,
 you can specialize on the class pointer.  Examples:
 
@@ -585,7 +585,7 @@ No Normalization
 
 The ``mapping()`` method is responsible, if needed, for normalizing and
 denormalizing. In a simple case where the native data structure requires no
-normalization, the mapping method just uses mapOptional() or mapRequired() to
+normalization, the mapping method just uses ``mapOptional()`` or ``mapRequired()`` to
 bind the struct's fields to YAML key names.  For example:
 
 .. code-block:: c++
@@ -605,11 +605,11 @@ bind the struct's fields to YAML key names.  For example:
 Normalization
 ----------------
 
-When [de]normalization is required, the mapping() method needs a way to access
+When [de]normalization is required, the ``mapping()`` method needs a way to access
 normalized values as fields. To help with this, there is
-a template MappingNormalization<> which you can then use to automatically
+a template ``MappingNormalization<>`` which you can then use to automatically
 do the normalization and denormalization.  The template is used to create
-a local variable in your mapping() method which contains the normalized keys.
+a local variable in your ``mapping()`` method which contains the normalized keys.
 
 Suppose you have native data type
 Polar which specifies a position in polar coordinates (distance, angle):
@@ -629,7 +629,7 @@ is, you want the yaml to look like:
     x:   10.3
     y:   -4.7
 
-You can support this by defining a MappingTraits that normalizes the polar
+You can support this by defining a ``MappingTraits`` that normalizes the polar
 coordinates to x,y coordinates when writing YAML and denormalizes x,y
 coordinates into polar when reading YAML.
 
@@ -667,47 +667,47 @@ coordinates into polar when reading YAML.
     };
 
 When writing YAML, the local variable "keys" will be a stack allocated
-instance of NormalizedPolar, constructed from the supplied polar object which
-initializes it x and y fields.  The mapRequired() methods then write out the x
+instance of ``NormalizedPolar``, constructed from the supplied polar object which
+initializes it x and y fields.  The ``mapRequired()`` methods then write out the x
 and y values as key/value pairs.
 
 When reading YAML, the local variable "keys" will be a stack allocated instance
-of NormalizedPolar, constructed by the empty constructor.  The mapRequired
+of ``NormalizedPolar``, constructed by the empty constructor.  The ``mapRequired()``
 methods will find the matching key in the YAML document and fill in the x and y
-fields of the NormalizedPolar object keys. At the end of the mapping() method
-when the local keys variable goes out of scope, the denormalize() method will
+fields of the ``NormalizedPolar`` object keys. At the end of the ``mapping()`` method
+when the local keys variable goes out of scope, the ``denormalize()`` method will
 automatically be called to convert the read values back to polar coordinates,
-and then assigned back to the second parameter to mapping().
+and then assigned back to the second parameter to ``mapping()``.
 
 In some cases, the normalized class may be a subclass of the native type and
-could be returned by the denormalize() method, except that the temporary
+could be returned by the ``denormalize()`` method, except that the temporary
 normalized instance is stack allocated.  In these cases, the utility template
-MappingNormalizationHeap<> can be used instead.  It just like
-MappingNormalization<> except that it heap allocates the normalized object
-when reading YAML.  It never destroys the normalized object.  The denormalize()
+``MappingNormalizationHeap<>`` can be used instead.  It just like
+``MappingNormalization<>`` except that it heap allocates the normalized object
+when reading YAML.  It never destroys the normalized object.  The ``denormalize()``
 method can this return "this".
 
 
 Default values
 --------------
-Within a mapping() method, calls to io.mapRequired() mean that that key is
+Within a ``mapping()`` method, calls to ``io.mapRequired()`` mean that that key is
 required to exist when parsing YAML documents, otherwise YAML I/O will issue an
 error.
 
-On the other hand, keys registered with io.mapOptional() are allowed to not
+On the other hand, keys registered with ``io.mapOptional()`` are allowed to not
 exist in the YAML document being read.  So what value is put in the field
 for those optional keys?
 There are two steps to how those optional fields are filled in. First, the
-second parameter to the mapping() method is a reference to a native class.  That
+second parameter to the ``mapping()`` method is a reference to a native class.  That
 native class must have a default constructor.  Whatever value the default
 constructor initially sets for an optional field will be that field's value.
-Second, the mapOptional() method has an optional third parameter.  If provided
-it is the value that mapOptional() should set that field to if the YAML document
+Second, the ``mapOptional()`` method has an optional third parameter.  If provided
+it is the value that ``mapOptional()`` should set that field to if the YAML document
 does not have that key.
 
 There is one important difference between those two ways (default constructor
-and third parameter to mapOptional). When YAML I/O generates a YAML document,
-if the mapOptional() third parameter is used, if the actual value being written
+and third parameter to ``mapOptional()``). When YAML I/O generates a YAML document,
+if the ``mapOptional()`` third parameter is used, if the actual value being written
 is the same as (using ==) the default value, then that key/value is not written.
 
 
@@ -715,14 +715,14 @@ Order of Keys
 --------------
 
 When writing out a YAML document, the keys are written in the order that the
-calls to mapRequired()/mapOptional() are made in the mapping() method. This
+calls to ``mapRequired()``/``mapOptional()`` are made in the ``mapping()`` method. This
 gives you a chance to write the fields in an order that a human reader of
 the YAML document would find natural.  This may be different that the order
 of the fields in the native class.
 
 When reading in a YAML document, the keys in the document can be in any order,
-but they are processed in the order that the calls to mapRequired()/mapOptional()
-are made in the mapping() method.  That enables some interesting
+but they are processed in the order that the calls to ``mapRequired()``/``mapOptional()``
+are made in the ``mapping()`` method.  That enables some interesting
 functionality.  For instance, if the first field bound is the cpu and the second
 field bound is flags, and the flags are cpu specific, you can programmatically
 switch how the flags are converted to and from YAML based on the cpu.
@@ -761,7 +761,7 @@ model. Recently, we added support to YAML I/O for checking/setting the optional
 tag on a map. Using this functionality it is even possible to support different
 mappings, as long as they are convertible.
 
-To check a tag, inside your mapping() method you can use io.mapTag() to specify
+To check a tag, inside your ``mapping()`` method you can use ``io.mapTag()`` to specify
 what the tag should be.  This will also add that tag when writing yaml.
 
 Validation
@@ -834,7 +834,7 @@ Sequence
 ========
 
 To be translated to or from a YAML sequence for your type T you must specialize
-llvm::yaml::SequenceTraits on T and implement two methods:
+``llvm::yaml::SequenceTraits`` on T and implement two methods:
 ``size_t size(IO &io, T&)`` and
 ``T::value_type& element(IO &io, T&, size_t indx)``.  For example:
 
@@ -846,10 +846,10 @@ llvm::yaml::SequenceTraits on T and implement two methods:
     static MySeqEl &element(IO &io, MySeq &list, size_t index) { ... }
   };
 
-The size() method returns how many elements are currently in your sequence.
-The element() method returns a reference to the i'th element in the sequence.
-When parsing YAML, the element() method may be called with an index one bigger
-than the current size.  Your element() method should allocate space for one
+The ``size()`` method returns how many elements are currently in your sequence.
+The ``element()`` method returns a reference to the i'th element in the sequence.
+When parsing YAML, the ``element()`` method may be called with an index one bigger
+than the current size.  Your ``element()`` method should allocate space for one
 more element (using default constructor if element is a C++ object) and returns
 a reference to that new allocated space.
 
@@ -881,10 +881,10 @@ configuration.
 
 Utility Macros
 --------------
-Since a common source of sequences is std::vector<>, YAML I/O provides macros:
-LLVM_YAML_IS_SEQUENCE_VECTOR() and LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR() which
-can be used to easily specify SequenceTraits<> on a std::vector type.  YAML
-I/O does not partial specialize SequenceTraits on std::vector<> because that
+Since a common source of sequences is ``std::vector<>``, YAML I/O provides macros:
+``LLVM_YAML_IS_SEQUENCE_VECTOR()`` and ``LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR()`` which
+can be used to easily specify ``SequenceTraits<>`` on a ``std::vector`` type.  YAML
+I/O does not partial specialize ``SequenceTraits`` on ``std::vector<>`` because that
 would force all vectors to be sequences.  An example use of the macros:
 
 .. code-block:: c++
@@ -906,7 +906,7 @@ have need for multiple documents.  The top level node in their YAML schema
 will be a mapping or sequence. For those cases, the following is not needed.
 But for cases where you do want multiple documents, you can specify a
 trait for you document list type.  The trait has the same methods as
-SequenceTraits but is named DocumentListTraits.  For example:
+``SequenceTraits`` but is named ``DocumentListTraits``.  For example:
 
 .. code-block:: c++
 
@@ -919,7 +919,7 @@ SequenceTraits but is named DocumentListTraits.  For example:
 
 User Context Data
 =================
-When an llvm::yaml::Input or llvm::yaml::Output object is created their
+When an ``llvm::yaml::Input`` or ``llvm::yaml::Output`` object is created their
 constructors take an optional "context" parameter.  This is a pointer to
 whatever state information you might need.
 
@@ -927,8 +927,8 @@ For instance, in a previous example we showed how the conversion type for a
 flags field could be determined at runtime based on the value of another field
 in the mapping. But what if an inner mapping needs to know some field value
 of an outer mapping?  That is where the "context" parameter comes in. You
-can set values in the context in the outer map's mapping() method and
-retrieve those values in the inner map's mapping() method.
+can set values in the context in the outer map's ``mapping()`` method and
+retrieve those values in the inner map's ``mapping()`` method.
 
 The context value is just a void*.  All your traits which use the context
 and operate on your native data types, need to agree what the context value
@@ -939,9 +939,9 @@ traits use to shared context sensitive information.
 Output
 ======
 
-The llvm::yaml::Output class is used to generate a YAML document from your
+The ``llvm::yaml::Output`` class is used to generate a YAML document from your
 in-memory data structures, using traits defined on your data types.
-To instantiate an Output object you need an llvm::raw_ostream, an optional
+To instantiate an Output object you need an ``llvm::raw_ostream``, an optional
 context pointer and an optional wrapping column:
 
 .. code-block:: c++
@@ -957,7 +957,7 @@ streaming as YAML is a mapping, scalar, or sequence, then Output assumes you
 are generating one document and wraps the mapping output
 with  "``---``" and trailing "``...``".
 
-The WrapColumn parameter will cause the flow mappings and sequences to
+The ``WrapColumn`` parameter will cause the flow mappings and sequences to
 line-wrap when they go over the supplied column. Pass 0 to completely
 suppress the wrapping.
 
@@ -980,7 +980,7 @@ The above could produce output like:
      ...
 
 On the other hand, if the top level data structure you are streaming as YAML
-has a DocumentListTraits specialization, then Output walks through each element
+has a ``DocumentListTraits`` specialization, then Output walks through each element
 of your DocumentList and generates a "---" before the start of each element
 and ends with a "...".
 
@@ -1008,9 +1008,9 @@ The above could produce output like:
 Input
 =====
 
-The llvm::yaml::Input class is used to parse YAML document(s) into your native
+The ``llvm::yaml::Input`` class is used to parse YAML document(s) into your native
 data structures. To instantiate an Input
-object you need a StringRef to the entire YAML file, and optionally a context
+object you need a ``StringRef`` to the entire YAML file, and optionally a context
 pointer:
 
 .. code-block:: c++
@@ -1024,7 +1024,7 @@ the document(s).  If you expect there might be multiple YAML documents in
 one file, you'll need to specialize DocumentListTraits on a list of your
 document type and stream in that document list type.  Otherwise you can
 just stream in the document type.  Also, you can check if there was
-any syntax errors in the YAML be calling the error() method on the Input
+any syntax errors in the YAML be calling the ``error()`` method on the Input
 object.  For example:
 
 .. code-block:: c++
