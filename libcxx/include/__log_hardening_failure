@@ -24,7 +24,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // This function should never be called directly from the code -- it should only be called through the
 // `_LIBCPP_LOG_HARDENING_FAILURE` macro.
-[[__gnu__::__cold__]] _LIBCPP_EXPORTED_FROM_ABI void __log_hardening_failure(const char* __message) _NOEXCEPT;
+[[__gnu__::__cold__]] _LIBCPP_EXPORTED_FROM_ABI void __log_hardening_failure(const char* __message) noexcept;
 
 // _LIBCPP_LOG_HARDENING_FAILURE(message)
 //
