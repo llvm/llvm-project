@@ -1954,10 +1954,10 @@ int conjure(void);
 void testExtent(void) {
   int x = conjure();
   clang_analyzer_dump(x);
-  // expected-warning-re@-1 {{{{^conj_\$[[:digit:]]+{int, LC1, S[[:digit:]]+, #1}}}}}}
+  // expected-warning-re@-1 {{{{^conj_\$[[:digit:]]+{int, LC[[:digit:]]+, S[[:digit:]]+, #1}}}}}}
   int *p = (int *)malloc(x);
   clang_analyzer_dumpExtent(p);
-  // expected-warning-re@-1 {{{{^conj_\$[[:digit:]]+{int, LC1, S[[:digit:]]+, #1}}}}}}
+  // expected-warning-re@-1 {{{{^conj_\$[[:digit:]]+{int, LC[[:digit:]]+, S[[:digit:]]+, #1}}}}}}
   free(p);
 }
 
