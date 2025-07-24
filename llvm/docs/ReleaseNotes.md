@@ -331,6 +331,13 @@ Changes to Sanitizers
 
 Other Changes
 -------------
+* A new ThinLTO backend has been added to implement the
+  [Integrated Distributed ThinLTO](https://llvm.org/docs/DTLTO.html) (DTLTO)
+  feature. This new backend delegates the ThinLTO backend compilation jobs to an
+  external process (the distributor), which in turn coordinates distribution
+  through a system such as Incredibuild. A JSON interface is used for
+  communication with the distributor.
+  ([#47468](https://github.com/llvm/llvm-project/issues/47468)).
 
 External Open Source Projects Using LLVM {{env.config.release}}
 ===============================================================
