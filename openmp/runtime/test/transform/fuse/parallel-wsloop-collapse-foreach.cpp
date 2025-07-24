@@ -205,4 +205,3 @@ int main() {
 // CHECK-NEXT: [range] dtor
 // CHECK-NEXT: [init-stmt] dtor
 // CHECK-NEXT: done
-
