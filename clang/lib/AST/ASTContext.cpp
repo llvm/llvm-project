@@ -1702,9 +1702,7 @@ void ASTContext::initSanitizers(const LangOptions &LangOpts,
                                 SourceManager &SM) {
   std::string Error;
   if (!NoSanitizeL->init(LangOpts.NoSanitizeFiles, Error)) {
-    auto &Diags = SM.getDiagnostics();
-    Diags.Report(Diags.getCustomDiagID(DiagnosticsEngine::Error, "%0"))
-        << Error;
+    SM.getDiagnostics().Report(diag::err_sanitize_ignorelist_failure) << Error;
   }
 }
 
