@@ -1183,17 +1183,16 @@ bool LoongArch::tryGotToPCRel(uint8_t *loc, const Relocation &rHi20,
   if (!isInt<20>(pageOffset >> 12))
     return false;
 
-  Relocation newRHi20 = {RE_LOONGARCH_PAGE_PC, R_LARCH_PCALA_HI20, rHi20.offset,
-                         rHi20.addend, &sym};
-  Relocation newRLo12 = {R_ABS, R_LARCH_PCALA_LO12, rLo12.offset, rLo12.addend,
-                         &sym};
-
   const uint32_t currInsn = read32le(loc);
   const uint32_t nextInsn = read32le(loc + 4);
   // Check if use the same register.
   if (getD5(currInsn) != getJ5(nextInsn) || getJ5(nextInsn) != getD5(nextInsn))
     return false;
 
+  Relocation newRHi20 = {RE_LOONGARCH_PAGE_PC, R_LARCH_PCALA_HI20, rHi20.offset,
+                         rHi20.addend, &sym};
+  Relocation newRLo12 = {R_ABS, R_LARCH_PCALA_LO12, rLo12.offset, rLo12.addend,
+                         &sym};
   uint64_t pageDelta =
       getLoongArchPageDelta(symLocal, secAddr + rHi20.offset, rHi20.type);
   // pcalau12i $a0, %pc_hi20
