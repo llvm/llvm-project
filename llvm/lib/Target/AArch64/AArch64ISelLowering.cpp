@@ -18022,11 +18022,14 @@ bool AArch64TargetLowering::shouldFoldConstantShiftPairToMask(
       unsigned ShlAmt = C2->getZExtValue();
       if (auto ShouldADD = *N->user_begin();
           ShouldADD->getOpcode() == ISD::ADD && ShouldADD->hasOneUse()) {
-        if (auto ShouldLOAD = dyn_cast<LoadSDNode>(*ShouldADD->user_begin())) {
-          unsigned ByteVT = ShouldLOAD->getMemoryVT().getSizeInBits() / 8;
-          if ((1ULL << ShlAmt) == ByteVT &&
-              isIndexedLoadLegal(ISD::PRE_INC, ShouldLOAD->getMemoryVT()))
-            return false;
+        if (auto Load = dyn_cast<LoadSDNode>(*ShouldADD->user_begin())) {
+          EVT MemVT = Load->getMemoryVT();
+
+          if (Load->getValueType(0).isScalableVector())
+            return (8ULL << ShlAmt) != MemVT.getScalarSizeInBits();
+
+          if (isIndexedLoadLegal(ISD::PRE_INC, MemVT))
+            return (8ULL << ShlAmt) != MemVT.getFixedSizeInBits();
         }
       }
     }
