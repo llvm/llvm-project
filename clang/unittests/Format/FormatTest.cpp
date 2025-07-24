@@ -7771,6 +7771,37 @@ TEST_F(FormatTest, ConstructorInitializers) {
                "Constructor() :\n"
                "    // Comment forcing unwanted break.\n"
                "    aaaa(aaaa) {}");
+
+  // Braced initializers with trailing commas.
+  verifyFormat("MyClass::MyClass()\n"
+               "    : aaaa{\n"
+               "          0,\n"
+               "      } {}",
+               "MyClass::MyClass():aaaa{0,}{}", getGoogleStyle());
+  verifyFormat("MyClass::MyClass()\n"
+               "    : aaaa(0),\n"
+               "      bbbb{\n"
+               "          0,\n"
+               "      } {}",
+               "MyClass::MyClass():aaaa(0),bbbb{0,}{}", getGoogleStyle());
+  verifyFormat("MyClass::MyClass()\n"
+               "    : aaaa(0),\n"
+               "      bbbb{\n"
+               "          0,\n"
+               "      },\n"
+               "      cccc{\n"
+               "          0,\n"
+               "      } {}",
+               "MyClass::MyClass():aaaa(0),bbbb{0,},cccc{0,}{}",
+               getGoogleStyle());
+  verifyFormat("MyClass::MyClass()\n"
+               "    : aaaa{\n"
+               "          0,\n"
+               "      },\n"
+               "      bbbb{\n"
+               "          0,\n"
+               "      } {}",
+               "MyClass::MyClass():aaaa{0,},bbbb{0,}{}", getGoogleStyle());
 }
 
 TEST_F(FormatTest, AllowAllConstructorInitializersOnNextLine) {
