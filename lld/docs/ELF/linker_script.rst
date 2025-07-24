@@ -79,7 +79,7 @@ The description of an output section looks like:
 
 ::
 
-  section [address] [(type)] : [AT(lma)] [ALIGN(section_align)] [SUBALIGN](subsection_align)] {
+  section [address] [(type)] : [AT(lma)] [ALIGN(section_align)] [SUBALIGN(subsection_align)] {
     output-section-command
     ...
   } [>region] [AT>lma_region] [:phdr ...] [=fillexp] [,]
