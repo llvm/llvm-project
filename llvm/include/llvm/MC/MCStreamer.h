@@ -259,6 +259,8 @@ class LLVM_ABI MCStreamer {
   bool AllowAutoPadding = false;
 
 protected:
+  bool IsObj = false;
+
   // Symbol of the current epilog for which we are processing SEH directives.
   WinEH::FrameInfo::Epilog *CurrentWinEpilog = nullptr;
 
@@ -269,6 +271,8 @@ protected:
   /// This is called by popSection and switchSection, if the current
   /// section changes.
   virtual void changeSection(MCSection *, uint32_t);
+
+  void addFragment(MCFragment *F);
 
   virtual void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame);
   virtual void emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame);
@@ -308,6 +312,7 @@ public:
   virtual void reset();
 
   MCContext &getContext() const { return Context; }
+  bool isObj() const { return IsObj; }
 
   // MCObjectStreamer has an MCAssembler and allows more expression folding at
   // parse time.
@@ -425,11 +430,15 @@ public:
   }
 
   MCFragment *getCurrentFragment() const {
+    // Ensure consistency with the section stack.
     assert(!getCurrentSection().first ||
            CurFrag->getParent() == getCurrentSection().first);
+    // Ensure we eagerly allocate an empty fragment after adding fragment with a
+    // variable-size tail.
+    assert(!CurFrag || CurFrag->getKind() == MCFragment::FT_Data);
     return CurFrag;
   }
-
+  size_t getCurFragOffset() const { return getCurrentFragment()->Offset; }
   /// Save the current and previous section on the section stack.
   void pushSection() {
     SectionStack.push_back(
@@ -1048,13 +1057,9 @@ public:
 
   virtual void emitSyntaxDirective();
 
-  /// Record a relocation described by the .reloc directive. Return std::nullopt
-  /// if succeeded. Otherwise, return a pair (Name is invalid, error message).
-  virtual std::optional<std::pair<bool, std::string>>
-  emitRelocDirective(const MCExpr &Offset, StringRef Name, const MCExpr *Expr,
-                     SMLoc Loc, const MCSubtargetInfo &STI) {
-    return std::nullopt;
-  }
+  /// Record a relocation described by the .reloc directive.
+  virtual void emitRelocDirective(const MCExpr &Offset, StringRef Name,
+                                  const MCExpr *Expr, SMLoc Loc = {}) {}
 
   virtual void emitAddrsig() {}
   virtual void emitAddrsigSym(const MCSymbol *Sym) {}

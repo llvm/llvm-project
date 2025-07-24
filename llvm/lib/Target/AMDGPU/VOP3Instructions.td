@@ -271,6 +271,16 @@ let SchedRW = [WriteDoubleAdd], FPDPRounding = 1 in {
 } // End SchedRW = [WriteDoubleAdd], FPDPRounding = 1
 } // End isReMaterializable = 1
 
+let SubtargetPredicate = isGFX9GFX10 in
+def : GCNPat <
+(i32 (int_amdgcn_alignbyte (i32 (VOP3OpSelMods i32:$src0, i32:$src0_modifiers)),
+                           (i32 (VOP3OpSelMods i32:$src1, i32:$src1_modifiers)),
+                           (i32 (VOP3OpSelMods i32:$src2, i32:$src2_modifiers)))),
+(V_ALIGNBYTE_B32_opsel_e64 i32:$src0_modifiers, VSrc_b32:$src0,
+                            i32:$src1_modifiers, VSrc_b32:$src1,
+                            i32:$src2_modifiers, VGPR_32:$src2)
+>;
+
 let True16Predicate = UseFakeTrue16Insts in
 def : GCNPat <
 (i32 (int_amdgcn_alignbyte (i32 (VOP3OpSelMods i32:$src0, i32:$src0_modifiers)),
@@ -1908,6 +1918,7 @@ let AssemblerPredicate = isGFX11Plus in {
 
 // These instructions differ from GFX12 variant by supporting DPP:
 defm V_LSHL_ADD_U64                  : VOP3Only_Realtriple_gfx1250<0x252>;
+defm V_CVT_PK_BF16_F32               : VOP3Only_Realtriple_gfx1250<0x36d>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.

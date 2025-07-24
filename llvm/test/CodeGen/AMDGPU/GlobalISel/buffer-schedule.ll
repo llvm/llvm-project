@@ -1,4 +1,4 @@
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN %s
 
 ; GCN-LABEL: {{^}}test1:
 ; GCN: buffer_store_dword
