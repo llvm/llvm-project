@@ -50,6 +50,15 @@ public:
 
   static void build(
       ::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState) {}
+
+  static FakeOp create(
+      ::mlir::OpBuilder &odsBuilder, ::mlir::Location location) {
+    ::mlir::OperationState state(location, getOperationName());
+    build(odsBuilder, state);
+    auto res = ::llvm::dyn_cast<FakeOp>(odsBuilder.create(state));
+    assert(res && "builder didn't return the right type");
+    return res;
+  }
 };
 } // namespace dummy
 } // namespace test
