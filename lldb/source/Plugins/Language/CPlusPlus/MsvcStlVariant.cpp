@@ -42,7 +42,11 @@ namespace {
 // }
 
 ValueObjectSP GetStorageMember(ValueObject &valobj, llvm::StringRef name) {
-  // Find the union
+  // DIA PDB flattens the union into the storage
+  if (valobj.GetNumChildrenIgnoringErrors(3) >= 2)
+    return valobj.GetChildMemberWithName(name);
+
+  // DWARF and NativePDB: Find the union
   ValueObjectSP union_sp = valobj.GetChildAtIndex(0);
   if (!union_sp)
     return nullptr;
@@ -119,8 +123,12 @@ bool formatters::MsvcStlVariantSummaryProvider(
     storage_type = storage_type.GetTypedefedType();
 
   CompilerType active_type = storage_type.GetTypeTemplateArgument(1, true);
-  if (!active_type)
-    return false;
+  if (!active_type) {
+    ValueObjectSP head = GetHead(*storage);
+    active_type = head->GetCompilerType();
+    if (!active_type)
+      return false;
+  }
 
   stream << " Active Type = " << active_type.GetDisplayTypeName() << " ";
   return true;
