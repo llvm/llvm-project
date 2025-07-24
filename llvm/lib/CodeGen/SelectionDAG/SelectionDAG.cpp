@@ -6028,6 +6028,8 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
     // TODO: There are a lot more cases we can prove for add.
     break;
 
+  // If X - Y != 0, then X ^ Y != 0
+  case ISD::XOR:
   case ISD::SUB: {
     if (isNullConstant(Op.getOperand(0)))
       return isKnownNeverZero(Op.getOperand(1), Depth + 1);
