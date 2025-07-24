@@ -54,10 +54,10 @@ define void @positive_gep_assume_uses() {
 ;
   %A = alloca {i8, i16}
   %B = getelementptr {i8, i16}, ptr %A, i32 0, i32 0
-  call void @llvm.lifetime.start.p0(i64 2, ptr %B)
+  call void @llvm.lifetime.start.p0(i64 2, ptr %A)
   call void @llvm.assume(i1 true) ["align"(ptr %B, i64 8), "align"(ptr %B, i64 16)]
   store {i8, i16} zeroinitializer, ptr %A
-  call void @llvm.lifetime.end.p0(i64 2, ptr %B)
+  call void @llvm.lifetime.end.p0(i64 2, ptr %A)
   call void @llvm.assume(i1 true) ["nonnull"(ptr %B), "align"(ptr %B, i64 2)]
   ret void
 }

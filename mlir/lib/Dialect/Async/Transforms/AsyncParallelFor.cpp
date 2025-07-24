@@ -19,7 +19,6 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/IRMapping.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
@@ -820,13 +819,13 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
     const float initialOvershardingFactor = 8.0f;
 
     Value scalingFactor = b.create<arith::ConstantFloatOp>(
-        llvm::APFloat(initialOvershardingFactor), b.getF32Type());
+        b.getF32Type(), llvm::APFloat(initialOvershardingFactor));
     for (const std::pair<int, float> &p : overshardingBrackets) {
       Value bracketBegin = b.create<arith::ConstantIndexOp>(p.first);
       Value inBracket = b.create<arith::CmpIOp>(
           arith::CmpIPredicate::sgt, numWorkerThreadsVal, bracketBegin);
       Value bracketScalingFactor = b.create<arith::ConstantFloatOp>(
-          llvm::APFloat(p.second), b.getF32Type());
+          b.getF32Type(), llvm::APFloat(p.second));
       scalingFactor = b.create<arith::SelectOp>(inBracket, bracketScalingFactor,
                                                 scalingFactor);
     }

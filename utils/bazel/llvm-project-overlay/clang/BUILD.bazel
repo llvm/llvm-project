@@ -271,6 +271,12 @@ td_library(
 )
 
 td_library(
+    name = "BuiltinsRISCVXAndesTdFiles",
+    srcs = ["include/clang/Basic/BuiltinsRISCVXAndes.td"],
+    includes = ["include"],
+)
+
+td_library(
     name = "BuiltinsX86BaseTdFiles",
     srcs = ["include/clang/Basic/BuiltinsX86Base.td"],
     includes = ["include"],
@@ -348,6 +354,7 @@ gentbl_cc_library(
     td_file = "include/clang/Basic/BuiltinsRISCV.td",
     deps = [
         ":BuiltinsBaseTdFiles",
+        ":BuiltinsRISCVXAndesTdFiles",
         ":BuiltinsRISCVXCVTdFiles",
     ],
 )
@@ -700,6 +707,7 @@ cc_library(
         ":diagnostic_defs_gen",
         ":sema_attr_gen",
         ":support",
+        "//llvm:BinaryFormat",
         "//llvm:Core",
         "//llvm:FrontendDebug",
         "//llvm:FrontendDriver",
@@ -1828,6 +1836,7 @@ cc_library(
         "//llvm:Target",
         "//llvm:TargetParser",
         "//llvm:TransformUtils",
+        "//llvm:config",
     ],
 )
 
@@ -2343,6 +2352,7 @@ cc_binary(
     stamp = 0,
     deps = [
         ":basic",
+        ":config",
         ":frontend",
         ":interpreter",
         ":lex",
@@ -2351,8 +2361,10 @@ cc_binary(
         "//llvm:Core",
         "//llvm:LineEditor",
         "//llvm:Option",
+        "//llvm:OrcDebugging",
         "//llvm:OrcJIT",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 

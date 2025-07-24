@@ -130,6 +130,48 @@ func.func @broadcast_vec1d_from_vec1d_scalable(%arg0: vector<[2]xf32>) -> vector
 
 // -----
 
+// CHECK-LABEL: @broadcast_vec0d_from_scalar
+// CHECK-SAME: %[[ELT:.*]]: f32
+func.func @broadcast_vec0d_from_scalar(%elt: f32) -> vector<f32> {
+  %v = vector.broadcast %elt : f32 to vector<f32>
+  return %v : vector<f32>
+}
+// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.poison : vector<1xf32>
+// CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ELT]], %[[UNDEF]][%[[ZERO]] : i32] : vector<1xf32>
+// CHECK-NEXT: %[[VCAST:[0-9]+]] = builtin.unrealized_conversion_cast %[[V]] : vector<1xf32> to vector<f32>
+// CHECK-NEXT: return %[[VCAST]] : vector<f32>
+
+// -----
+
+// CHECK-LABEL: @broadcast_vec1d_from_scalar
+// CHECK-SAME: %[[VEC:[0-9a-zA-Z]+]]: vector<4xf32>
+// CHECK-SAME: %[[ELT:[0-9a-zA-Z]+]]: f32
+func.func @broadcast_vec1d_from_scalar(%vec: vector<4xf32>, %elt: f32) -> vector<4xf32> {
+  %vb = vector.broadcast %elt : f32 to vector<4xf32>
+  return %vb : vector<4xf32>
+}
+// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.poison : vector<4xf32>
+// CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ELT]], %[[UNDEF]][%[[ZERO]] : i32] : vector<4xf32>
+// CHECK-NEXT: %[[SPLAT:[0-9]+]] = llvm.shufflevector %[[V]], %[[UNDEF]] [0, 0, 0, 0]
+// CHECK-NEXT: return %[[SPLAT]] : vector<4xf32>
+
+// -----
+
+// CHECK-LABEL: @broadcast_scalable_vec1d_from_scalar
+// CHECK-SAME: %[[VEC:[0-9a-zA-Z]+]]: vector<[4]xf32>
+// CHECK-SAME: %[[ELT:[0-9a-zA-Z]+]]: f32
+func.func @broadcast_scalable_vec1d_from_scalar(%vec: vector<[4]xf32>, %elt: f32) -> vector<[4]xf32> {
+  %vb = vector.broadcast %elt : f32 to vector<[4]xf32>
+  return %vb : vector<[4]xf32>
+}
+// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.poison : vector<[4]xf32>
+// CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ELT]], %[[UNDEF]][%[[ZERO]] : i32] : vector<[4]xf32>
+// CHECK-NEXT: %[[SPLAT:[0-9]+]] = llvm.shufflevector %[[V]], %[[UNDEF]] [0, 0, 0, 0]
+// CHECK-NEXT: return %[[SPLAT]] : vector<[4]xf32>
+
 //===----------------------------------------------------------------------===//
 // vector.shuffle
 //===----------------------------------------------------------------------===//
@@ -1875,7 +1917,7 @@ func.func @store_0d(%memref : memref<200x100xf32>, %i : index, %j : index) {
 // CHECK: %[[CAST_MEMREF:.*]] = builtin.unrealized_conversion_cast %{{.*}} : memref<200x100xf32> to !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[CST:.*]] = arith.constant dense<1.100000e+01> : vector<f32>
 // CHECK: %[[VAL:.*]] = builtin.unrealized_conversion_cast %[[CST]] : vector<f32> to vector<1xf32>
-// CHECK: %[[REF:.*]] = llvm.extractvalue %[[CAST_MEMREF]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)> 
+// CHECK: %[[REF:.*]] = llvm.extractvalue %[[CAST_MEMREF]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[C100:.*]] = llvm.mlir.constant(100 : index) : i64
 // CHECK: %[[MUL:.*]] = llvm.mul %[[I]], %[[C100]] : i64
 // CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %[[J]] : i64
@@ -2241,51 +2283,16 @@ func.func @compress_store_op_index(%arg0: memref<?xindex>, %arg1: vector<11xi1>,
 // vector.splat
 //===----------------------------------------------------------------------===//
 
+// vector.splat is converted to vector.broadcast. Then, vector.broadcast is converted to LLVM.
 // CHECK-LABEL: @splat_0d
-// CHECK-SAME: %[[ELT:.*]]: f32
-func.func @splat_0d(%elt: f32) -> vector<f32> {
-  %v = vector.splat %elt : vector<f32>
-  return %v : vector<f32>
+// CHECK-NOT: splat
+// CHECK: return
+func.func @splat_0d(%elt: f32) -> (vector<f32>, vector<4xf32>, vector<[4]xf32>) {
+  %a = vector.splat %elt : vector<f32>
+  %b = vector.splat %elt : vector<4xf32>
+  %c = vector.splat %elt : vector<[4]xf32>
+  return %a, %b, %c : vector<f32>, vector<4xf32>, vector<[4]xf32>
 }
-// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.poison : vector<1xf32>
-// CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ELT]], %[[UNDEF]][%[[ZERO]] : i32] : vector<1xf32>
-// CHECK-NEXT: %[[VCAST:[0-9]+]] = builtin.unrealized_conversion_cast %[[V]] : vector<1xf32> to vector<f32>
-// CHECK-NEXT: return %[[VCAST]] : vector<f32>
-
-// -----
-
-// CHECK-LABEL: @splat
-// CHECK-SAME: %[[VEC:[0-9a-zA-Z]+]]: vector<4xf32>
-// CHECK-SAME: %[[ELT:[0-9a-zA-Z]+]]: f32
-func.func @splat(%vec: vector<4xf32>, %elt: f32) -> vector<4xf32> {
-  %vb = vector.splat %elt : vector<4xf32>
-  %r = arith.mulf %vec, %vb : vector<4xf32>
-  return %r : vector<4xf32>
-}
-// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.poison : vector<4xf32>
-// CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ELT]], %[[UNDEF]][%[[ZERO]] : i32] : vector<4xf32>
-// CHECK-NEXT: %[[SPLAT:[0-9]+]] = llvm.shufflevector %[[V]], %[[UNDEF]] [0, 0, 0, 0]
-// CHECK-NEXT: %[[SCALE:[0-9]+]] = arith.mulf %[[VEC]], %[[SPLAT]] : vector<4xf32>
-// CHECK-NEXT: return %[[SCALE]] : vector<4xf32>
-
-// -----
-
-// CHECK-LABEL: @splat_scalable
-// CHECK-SAME: %[[VEC:[0-9a-zA-Z]+]]: vector<[4]xf32>
-// CHECK-SAME: %[[ELT:[0-9a-zA-Z]+]]: f32
-func.func @splat_scalable(%vec: vector<[4]xf32>, %elt: f32) -> vector<[4]xf32> {
-  %vb = vector.splat %elt : vector<[4]xf32>
-  %r = arith.mulf %vec, %vb : vector<[4]xf32>
-  return %r : vector<[4]xf32>
-}
-// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.poison : vector<[4]xf32>
-// CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ELT]], %[[UNDEF]][%[[ZERO]] : i32] : vector<[4]xf32>
-// CHECK-NEXT: %[[SPLAT:[0-9]+]] = llvm.shufflevector %[[V]], %[[UNDEF]] [0, 0, 0, 0]
-// CHECK-NEXT: %[[SCALE:[0-9]+]] = arith.mulf %[[VEC]], %[[SPLAT]] : vector<[4]xf32>
-// CHECK-NEXT: return %[[SCALE]] : vector<[4]xf32>
 
 // -----
 
@@ -2417,6 +2424,44 @@ func.func @from_elements_1d(%arg0: f32, %arg1: f32) -> vector<3xf32> {
 func.func @from_elements_0d(%arg0: f32) -> vector<f32> {
   %0 = vector.from_elements %arg0 : vector<f32>
   return %0 : vector<f32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// vector.to_elements
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func.func @to_elements_no_dead_elements
+ // CHECK-SAME:     %[[A:.*]]: vector<4xf32>)
+ //      CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
+ //      CHECK:   %[[ELEM0:.*]] = llvm.extractelement %[[A]][%[[C0]] : i64] : vector<4xf32>
+ //      CHECK:   %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
+ //      CHECK:   %[[ELEM1:.*]] = llvm.extractelement %[[A]][%[[C1]] : i64] : vector<4xf32>
+ //      CHECK:   %[[C2:.*]] = llvm.mlir.constant(2 : i64) : i64
+ //      CHECK:   %[[ELEM2:.*]] = llvm.extractelement %[[A]][%[[C2]] : i64] : vector<4xf32>
+ //      CHECK:   %[[C3:.*]] = llvm.mlir.constant(3 : i64) : i64
+ //      CHECK:   %[[ELEM3:.*]] = llvm.extractelement %[[A]][%[[C3]] : i64] : vector<4xf32>
+ //      CHECK:   return %[[ELEM0]], %[[ELEM1]], %[[ELEM2]], %[[ELEM3]] : f32, f32, f32, f32
+func.func @to_elements_no_dead_elements(%a: vector<4xf32>) -> (f32, f32, f32, f32) {
+  %0:4 = vector.to_elements %a : vector<4xf32>
+  return %0#0, %0#1, %0#2, %0#3 : f32, f32, f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @to_elements_dead_elements
+ // CHECK-SAME:     %[[A:.*]]: vector<4xf32>)
+ //  CHECK-NOT:   llvm.mlir.constant(0 : i64) : i64
+ //      CHECK:   %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
+ //      CHECK:   %[[ELEM1:.*]] = llvm.extractelement %[[A]][%[[C1]] : i64] : vector<4xf32>
+ //  CHECK-NOT:   llvm.mlir.constant(2 : i64) : i64
+ //      CHECK:   %[[C3:.*]] = llvm.mlir.constant(3 : i64) : i64
+ //      CHECK:   %[[ELEM3:.*]] = llvm.extractelement %[[A]][%[[C3]] : i64] : vector<4xf32>
+ //      CHECK:   return %[[ELEM1]], %[[ELEM3]] : f32, f32
+func.func @to_elements_dead_elements(%a: vector<4xf32>) -> (f32, f32) {
+  %0:4 = vector.to_elements %a : vector<4xf32>
+  return %0#1, %0#3 : f32, f32
 }
 
 // -----

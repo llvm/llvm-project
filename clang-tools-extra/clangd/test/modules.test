@@ -1,16 +1,16 @@
 # A smoke test to check the modules can work basically.
 #
+# Windows have different escaping modes.
+# FIXME: We should add one for windows.
+# UNSUPPORTED: system-windows
+#
 # RUN: rm -fr %t
 # RUN: mkdir -p %t
 # RUN: split-file %s %t
 #
 # RUN: sed -e "s|DIR|%/t|g" %t/compile_commands.json.tmpl > %t/compile_commands.json.tmp
 # RUN: sed -e "s|CLANG_CC|%clang|g" %t/compile_commands.json.tmp > %t/compile_commands.json
-# RUN: sed -e "s|DIR|%/t|g" %t/definition.jsonrpc.tmpl > %t/definition.jsonrpc.tmp
-#
-# On Windows, we need the URI in didOpen to look like "uri":"file:///C:/..."
-# (with the extra slash in the front), so we add it here.
-# RUN: sed -E -e 's|"file://([A-Z]):/|"file:///\1:/|g' %/t/definition.jsonrpc.tmp > %/t/definition.jsonrpc
+# RUN: sed -e "s|DIR|%/t|g" %t/definition.jsonrpc.tmpl > %t/definition.jsonrpc
 #
 # RUN: clangd -experimental-modules-support -lit-test < %t/definition.jsonrpc \
 # RUN:      | FileCheck -strict-whitespace %t/definition.jsonrpc

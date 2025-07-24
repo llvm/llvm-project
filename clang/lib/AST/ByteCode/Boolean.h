@@ -30,16 +30,10 @@ private:
 public:
   /// Zero-initializes a boolean.
   Boolean() : V(false) {}
-  Boolean(const llvm::APSInt &I) : V(!I.isZero()) {}
   explicit Boolean(bool V) : V(V) {}
 
   bool operator<(Boolean RHS) const { return V < RHS.V; }
   bool operator>(Boolean RHS) const { return V > RHS.V; }
-  bool operator<=(Boolean RHS) const { return V <= RHS.V; }
-  bool operator>=(Boolean RHS) const { return V >= RHS.V; }
-  bool operator==(Boolean RHS) const { return V == RHS.V; }
-  bool operator!=(Boolean RHS) const { return V != RHS.V; }
-
   bool operator>(unsigned RHS) const { return static_cast<unsigned>(V) > RHS; }
 
   Boolean operator-() const { return Boolean(V); }
