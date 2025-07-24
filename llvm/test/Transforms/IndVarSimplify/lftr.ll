@@ -43,7 +43,7 @@ define i32 @pre_to_post_sub() {
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 1000, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = sub nsw i32 [[I]], 1
 ; CHECK-NEXT:    store i32 [[I]], ptr @A, align 4
-; CHECK-NEXT:    [[C:%.*]] = icmp samesign ugt i32 [[I]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[I_NEXT]], -1
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
 ; CHECK-NEXT:    ret i32 0
