@@ -118,7 +118,8 @@ def CapabilityEntries : GenericTable {
 // Forward-declare classes used in ExtensionEntry
 class Environment;
 
-class EnvironmentEntry<OperandCategory category, bits<32> value, Environment allowedEnvironment> {
+class EnvironmentEntry<OperandCategory category, bits<32> value,
+                       Environment allowedEnvironment> {
   OperandCategory Category = category;
   bits<32> Value = value;
   Environment AllowedEnvironment = allowedEnvironment;
@@ -140,22 +141,27 @@ def EnvironmentEntries : GenericTable {
 // required extension and capabilities.
 //===----------------------------------------------------------------------===//
 
-multiclass SymbolicOperandWithRequirements<OperandCategory category, bits<32> value, string mnemonic, bits<32> minVersion, bits<32> maxVersion, list<Extension> reqExtensions, list<Capability> reqCapabilities, list<Environment> allowedEnvironments> {
-    assert !ge(!size(mnemonic), 1), "No mnemonic/string representation provided for symbolic operand with value " # value;
-    def : SymbolicOperand<category, value, mnemonic, minVersion, maxVersion>;
+multiclass SymbolicOperandWithRequirements<
+    OperandCategory category, bits<32> value, string mnemonic,
+    bits<32> minVersion, bits<32> maxVersion, list<Extension> reqExtensions,
+    list<Capability> reqCapabilities, list<Environment> allowedEnvironments> {
+  assert !ge(!size(mnemonic), 1), "No mnemonic/string representation provided "
+                                  "for symbolic operand with value "#value;
+  def : SymbolicOperand<category, value, mnemonic, minVersion, maxVersion>;
 
-    assert !le(!size(reqExtensions), 1), "Too many required extensions for a symbolic/named operand: " # mnemonic;
-    if !eq(!size(reqExtensions), 1) then {
-        def : ExtensionEntry<category, value, reqExtensions[0]>;
-    }
+  assert !le(!size(reqExtensions), 1),
+      "Too many required extensions for a symbolic/named operand: "#mnemonic;
+  if !eq(!size(reqExtensions), 1) then {
+    def : ExtensionEntry<category, value, reqExtensions[0]>;
+  }
 
-    foreach capability = reqCapabilities in {
-        def : CapabilityEntry<category, value, capability>;
-    }
+  foreach capability = reqCapabilities in {
+    def : CapabilityEntry<category, value, capability>;
+  }
 
-    foreach environment = allowedEnvironments in {
-        def : EnvironmentEntry<category, value, environment>;
-    }
+  foreach environment = allowedEnvironments in {
+    def : EnvironmentEntry<category, value, environment>;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -214,9 +220,7 @@ def Environment : GenericEnum, Operand<i32> {
   let ValueField = "Value";
 }
 
-class Environment<bits<32> value> {
-  bits<32> Value = value;
-}
+class Environment<bits<32> value> { bits<32> Value = value; }
 
 def EnvOpenCL : Environment<0>;
 def EnvVulkan : Environment<1>;
@@ -238,12 +242,15 @@ class Extension<string name, bits<32> value> {
   bits<32> Value = value;
 }
 
-multiclass ExtensionOperand<bits<32> value, list<Environment> allowedEnvironments> {
+multiclass ExtensionOperand<bits<32> value,
+                            list<Environment> allowedEnvironments> {
   def NAME : Extension<NAME, value>;
-  defm : SymbolicOperandWithRequirements<ExtensionOperand, value, NAME, 0, 0, [], [], allowedEnvironments>;
+  defm : SymbolicOperandWithRequirements<ExtensionOperand, value, NAME, 0,
+                                         0, [], [], allowedEnvironments>;
 }
 
-defm SPV_AMD_shader_explicit_vertex_parameter : ExtensionOperand<1, [EnvVulkan]>;
+defm SPV_AMD_shader_explicit_vertex_parameter
+    : ExtensionOperand<1, [EnvVulkan]>;
 defm SPV_AMD_shader_trinary_minmax_extension : ExtensionOperand<2, [EnvVulkan]>;
 defm SPV_AMD_gcn_shader : ExtensionOperand<3, [EnvVulkan]>;
 defm SPV_KHR_shader_ballot : ExtensionOperand<4, [EnvVulkan]>;
@@ -291,7 +298,8 @@ defm SPV_KHR_float_controls : ExtensionOperand<46, [EnvVulkan, EnvOpenCL]>;
 defm SPV_EXT_physical_storage_buffer : ExtensionOperand<47, [EnvVulkan]>;
 defm SPV_INTEL_fpga_memory_attributes : ExtensionOperand<48, [EnvOpenCL]>;
 defm SPV_NV_cooperative_matrix : ExtensionOperand<49, [EnvVulkan]>;
-defm SPV_INTEL_shader_integer_functions2 : ExtensionOperand<50, [EnvVulkan, EnvOpenCL]>;
+defm SPV_INTEL_shader_integer_functions2
+    : ExtensionOperand<50, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_fpga_loop_controls : ExtensionOperand<51, [EnvOpenCL]>;
 defm SPV_EXT_fragment_shader_interlock : ExtensionOperand<52, [EnvVulkan]>;
 defm SPV_NV_shader_sm_builtins : ExtensionOperand<53, [EnvVulkan]>;
@@ -309,24 +317,29 @@ defm SPV_KHR_ray_tracing : ExtensionOperand<64, [EnvVulkan]>;
 defm SPV_KHR_ray_query : ExtensionOperand<65, [EnvVulkan]>;
 defm SPV_INTEL_fpga_memory_accesses : ExtensionOperand<66, [EnvOpenCL]>;
 defm SPV_INTEL_arbitrary_precision_integers : ExtensionOperand<67, [EnvOpenCL]>;
-defm SPV_EXT_shader_atomic_float_add : ExtensionOperand<68, [EnvVulkan, EnvOpenCL]>;
+defm SPV_EXT_shader_atomic_float_add
+    : ExtensionOperand<68, [EnvVulkan, EnvOpenCL]>;
 defm SPV_KHR_terminate_invocation : ExtensionOperand<69, [EnvVulkan]>;
 defm SPV_KHR_fragment_shading_rate : ExtensionOperand<70, [EnvVulkan]>;
 defm SPV_EXT_shader_image_int64 : ExtensionOperand<71, [EnvVulkan]>;
 defm SPV_INTEL_fp_fast_math_mode : ExtensionOperand<72, [EnvOpenCL]>;
 defm SPV_INTEL_fpga_cluster_attributes : ExtensionOperand<73, [EnvOpenCL]>;
 defm SPV_INTEL_loop_fuse : ExtensionOperand<74, [EnvOpenCL]>;
-defm SPV_EXT_shader_atomic_float_min_max : ExtensionOperand<75, [EnvVulkan, EnvOpenCL]>;
-defm SPV_KHR_workgroup_memory_explicit_layout : ExtensionOperand<76, [EnvVulkan]>;
+defm SPV_EXT_shader_atomic_float_min_max
+    : ExtensionOperand<75, [EnvVulkan, EnvOpenCL]>;
+defm SPV_KHR_workgroup_memory_explicit_layout
+    : ExtensionOperand<76, [EnvVulkan]>;
 defm SPV_KHR_linkonce_odr : ExtensionOperand<77, [EnvOpenCL]>;
 defm SPV_KHR_expect_assume : ExtensionOperand<78, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_fpga_dsp_control : ExtensionOperand<79, [EnvOpenCL]>;
 defm SPV_NV_bindless_texture : ExtensionOperand<80, [EnvVulkan]>;
-defm SPV_INTEL_fpga_invocation_pipelining_attributes : ExtensionOperand<81, [EnvOpenCL]>;
+defm SPV_INTEL_fpga_invocation_pipelining_attributes
+    : ExtensionOperand<81, [EnvOpenCL]>;
 defm SPV_KHR_subgroup_uniform_control_flow : ExtensionOperand<82, [EnvVulkan]>;
 defm SPV_HUAWEI_subpass_shading : ExtensionOperand<83, [EnvVulkan]>;
 defm SPV_KHR_integer_dot_product : ExtensionOperand<84, [EnvVulkan, EnvOpenCL]>;
-defm SPV_EXT_shader_atomic_float16_add : ExtensionOperand<85, [EnvVulkan, EnvOpenCL]>;
+defm SPV_EXT_shader_atomic_float16_add
+    : ExtensionOperand<85, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_runtime_aligned : ExtensionOperand<86, [EnvOpenCL]>;
 defm SPV_KHR_bit_instructions : ExtensionOperand<87, [EnvOpenCL]>;
 defm SPV_NV_ray_tracing_motion_blur : ExtensionOperand<88, [EnvVulkan]>;
@@ -351,7 +364,8 @@ defm SPV_INTEL_bfloat16_conversion : ExtensionOperand<106, [EnvOpenCL]>;
 defm SPV_INTEL_inline_assembly : ExtensionOperand<107, [EnvOpenCL]>;
 defm SPV_INTEL_cache_controls : ExtensionOperand<108, [EnvOpenCL]>;
 defm SPV_INTEL_global_variable_host_access : ExtensionOperand<109, [EnvOpenCL]>;
-defm SPV_INTEL_global_variable_fpga_decorations : ExtensionOperand<110, [EnvOpenCL]>;
+defm SPV_INTEL_global_variable_fpga_decorations
+    : ExtensionOperand<110, [EnvOpenCL]>;
 defm SPV_KHR_cooperative_matrix : ExtensionOperand<111, [EnvVulkan, EnvOpenCL]>;
 defm SPV_EXT_arithmetic_fence : ExtensionOperand<112, [EnvOpenCL]>;
 defm SPV_EXT_optnone : ExtensionOperand<113, [EnvOpenCL]>;
@@ -362,7 +376,8 @@ defm SPV_INTEL_long_composites : ExtensionOperand<117, [EnvOpenCL]>;
 defm SPV_INTEL_memory_access_aliasing : ExtensionOperand<118, [EnvOpenCL]>;
 defm SPV_INTEL_fp_max_error : ExtensionOperand<119, [EnvOpenCL]>;
 defm SPV_INTEL_ternary_bitwise_function : ExtensionOperand<120, [EnvOpenCL]>;
-defm SPV_INTEL_subgroup_matrix_multiply_accumulate : ExtensionOperand<121, [EnvOpenCL]>;
+defm SPV_INTEL_subgroup_matrix_multiply_accumulate
+    : ExtensionOperand<121, [EnvOpenCL]>;
 defm SPV_INTEL_2d_block_io : ExtensionOperand<122, [EnvOpenCL]>;
 defm SPV_INTEL_int4 : ExtensionOperand<123, [EnvOpenCL]>;
 defm SPV_KHR_float_controls2 : ExtensionOperand<124, [EnvVulkan, EnvOpenCL]>;
@@ -387,7 +402,9 @@ class Capability<string name, bits<32> value> {
 
 multiclass CapabilityOperand<bits<32> value, bits<32> minVersion, bits<32> maxVersion, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
   def NAME : Capability<NAME, value>;
-  defm : SymbolicOperandWithRequirements<CapabilityOperand, value, NAME, minVersion, maxVersion, reqExtensions, reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<CapabilityOperand, value, NAME,
+                                         minVersion, maxVersion, reqExtensions,
+                                         reqCapabilities, []>;
 }
 
 defm Matrix : CapabilityOperand<0, 0, 0, [], []>;
@@ -595,7 +612,8 @@ class SourceLanguage<string name, bits<32> value> {
 
 multiclass SourceLanguageOperand<bits<32> value> {
   def : SourceLanguage<NAME, value>;
-  defm : SymbolicOperandWithRequirements<SourceLanguageOperand, value, NAME, 0, 0, [], [], []>;
+  defm : SymbolicOperandWithRequirements<SourceLanguageOperand, value, NAME, 0,
+                                         0, [], [], []>;
 }
 
 defm Unknown : SourceLanguageOperand<0>;
@@ -624,7 +642,8 @@ class AddressingModel<string name, bits<32> value> {
 
 multiclass AddressingModelOperand<bits<32> value, list<Capability> reqCapabilities> {
   def : AddressingModel<NAME, value>;
-  defm : SymbolicOperandWithRequirements<AddressingModelOperand, value, NAME, 0, 0, [], reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<AddressingModelOperand, value, NAME, 0,
+                                         0, [], reqCapabilities, []>;
 }
 
 defm Logical : AddressingModelOperand<0, []>;
@@ -651,7 +670,8 @@ class ExecutionModel<string name, bits<32> value> {
 
 multiclass ExecutionModelOperand<bits<32> value, list<Capability> reqCapabilities> {
   def : ExecutionModel<NAME, value>;
-  defm : SymbolicOperandWithRequirements<ExecutionModelOperand, value, NAME, 0, 0, [], reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<ExecutionModelOperand, value, NAME, 0,
+                                         0, [], reqCapabilities, []>;
 }
 
 defm Vertex : ExecutionModelOperand<0, [Shader]>;
@@ -689,7 +709,8 @@ class MemoryModel<string name, bits<32> value> {
 
 multiclass MemoryModelOperand<bits<32> value, list<Capability> reqCapabilities> {
   def : MemoryModel<NAME, value>;
-  defm : SymbolicOperandWithRequirements<MemoryModelOperand, value, NAME, 0, 0, [], reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<MemoryModelOperand, value, NAME, 0,
+                                         0, [], reqCapabilities, []>;
 }
 
 defm Simple : MemoryModelOperand<0, [Shader]>;
@@ -716,7 +737,8 @@ class ExecutionMode<string name, bits<32> value> {
 
 multiclass ExecutionModeOperand<bits<32> value, list<Capability> reqCapabilities> {
   def : ExecutionMode<NAME, value>;
-  defm : SymbolicOperandWithRequirements<ExecutionModeOperand, value, NAME, 0, 0, [], reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<ExecutionModeOperand, value, NAME, 0,
+                                         0, [], reqCapabilities, []>;
 }
 
 defm Invocations : ExecutionModeOperand<0, [Geometry]>;
@@ -792,7 +814,8 @@ class StorageClass<string name, bits<32> value> {
 
 multiclass StorageClassOperand<bits<32> value, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
   def : StorageClass<NAME, value>;
-  defm : SymbolicOperandWithRequirements<StorageClassOperand, value, NAME, 0, 0, reqExtensions, reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<StorageClassOperand, value, NAME, 0, 0,
+                                         reqExtensions, reqCapabilities, []>;
 }
 
 defm UniformConstant : StorageClassOperand<0, [], []>;
@@ -838,7 +861,8 @@ class Dim<string name, bits<32> value> {
 
 multiclass DimOperand<bits<32> value, string mnemonic, list<Capability> reqCapabilities> {
   def NAME : Dim<NAME, value>;
-  defm : SymbolicOperandWithRequirements<DimOperand, value, mnemonic, 0, 0, [], reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<DimOperand, value, mnemonic, 0, 0, [],
+                                         reqCapabilities, []>;
 }
 
 defm DIM_1D : DimOperand<0, "1D", [Sampled1D, Image1D]>;
@@ -868,7 +892,8 @@ class SamplerAddressingMode<string name, bits<32> value> {
 
 multiclass SamplerAddressingModeOperand<bits<32> value, list<Capability> reqCapabilities> {
   def : SamplerAddressingMode<NAME, value>;
-  defm : SymbolicOperandWithRequirements<SamplerAddressingModeOperand, value, NAME, 0, 0, [], reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<SamplerAddressingModeOperand, value,
+                                         NAME, 0, 0, [], reqCapabilities, []>;
 }
 
 defm None : SamplerAddressingModeOperand<0, [Kernel]>;
@@ -896,7 +921,8 @@ class SamplerFilterMode<string name, bits<32> value> {
 
 multiclass SamplerFilterModeOperand<bits<32> value, list<Capability> reqCapabilities> {
   def : SamplerFilterMode<NAME, value>;
-  defm : SymbolicOperandWithRequirements<SamplerFilterModeOperand, value, NAME, 0, 0, [], reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<SamplerFilterModeOperand, value, NAME,
+                                         0, 0, [], reqCapabilities, []>;
 }
 
 defm Nearest : SamplerFilterModeOperand<0, [Kernel]>;
@@ -921,7 +947,8 @@ class ImageFormat<string name, bits<32> value> {
 
 multiclass ImageFormatOperand<bits<32> value, list<Capability> reqCapabilities> {
   def NAME : ImageFormat<NAME, value>;
-  defm : SymbolicOperandWithRequirements<ImageFormatOperand, value, NAME, 0, 0, [], reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<ImageFormatOperand, value, NAME, 0,
+                                         0, [], reqCapabilities, []>;
 }
 
 defm Unknown : ImageFormatOperand<0, []>;
@@ -984,7 +1011,8 @@ class ImageChannelOrder<string name, bits<32> value> {
 
 multiclass ImageChannelOrderOperand<bits<32> value, list<Capability> reqCapabilities> {
   def : ImageChannelOrder<NAME, value>;
-  defm : SymbolicOperandWithRequirements<ImageChannelOrderOperand, value, NAME, 0, 0, [], reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<ImageChannelOrderOperand, value, NAME,
+                                         0, 0, [], reqCapabilities, []>;
 }
 
 defm R : ImageChannelOrderOperand<0, [Kernel]>;
@@ -1027,7 +1055,8 @@ class ImageChannelDataType<string name, bits<32> value> {
 
 multiclass ImageChannelDataTypeOperand<bits<32> value, list<Capability> reqCapabilities> {
   def : ImageChannelDataType<NAME, value>;
-  defm : SymbolicOperandWithRequirements<ImageChannelDataTypeOperand, value, NAME, 0, 0, [], reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<ImageChannelDataTypeOperand, value,
+                                         NAME, 0, 0, [], reqCapabilities, []>;
 }
 
 defm SnormInt8 : ImageChannelDataTypeOperand<0, []>;
@@ -1067,7 +1096,8 @@ class ImageOperand<string name, bits<32> value> {
 
 multiclass ImageOperandOperand<bits<32> value, list<Capability> reqCapabilities> {
   def : ImageOperand<NAME, value>;
-  defm : SymbolicOperandWithRequirements<ImageOperandOperand, value, NAME, 0, 0, [], reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<ImageOperandOperand, value, NAME, 0,
+                                         0, [], reqCapabilities, []>;
 }
 
 defm None : ImageOperandOperand<0x0, []>;
@@ -1105,7 +1135,8 @@ class FPFastMathMode<string name, bits<32> value> {
 
 multiclass FPFastMathModeOperand<bits<32> value, list<Capability> reqCapabilities> {
   def : FPFastMathMode<NAME, value>;
-  defm : SymbolicOperandWithRequirements<FPFastMathModeOperand, value, NAME, 0, 0, [], reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<FPFastMathModeOperand, value, NAME, 0,
+                                         0, [], reqCapabilities, []>;
 }
 
 defm None : FPFastMathModeOperand<0x0, []>;
@@ -1134,7 +1165,8 @@ class FPRoundingMode<string name, bits<32> value> {
 
 multiclass FPRoundingModeOperand<bits<32> value> {
   def NAME : FPRoundingMode<NAME, value>;
-  defm : SymbolicOperandWithRequirements<FPRoundingModeOperand, value, NAME, 0, 0, [], [], []>;
+  defm : SymbolicOperandWithRequirements<FPRoundingModeOperand, value, NAME, 0,
+                                         0, [], [], []>;
 }
 
 defm RTE : FPRoundingModeOperand<0>;
@@ -1161,7 +1193,8 @@ class LinkageType<string name, bits<32> value> {
 
 multiclass LinkageTypeOperand<bits<32> value, list<Capability> reqCapabilities> {
   def : LinkageType<NAME, value>;
-  defm : SymbolicOperandWithRequirements<LinkageTypeOperand, value, NAME, 0, 0, [], reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<LinkageTypeOperand, value, NAME, 0,
+                                         0, [], reqCapabilities, []>;
 }
 
 defm Export : LinkageTypeOperand<0, [Linkage]>;
@@ -1187,7 +1220,8 @@ class AccessQualifier<string name, bits<32> value> {
 
 multiclass AccessQualifierOperand<bits<32> value, list<Capability> reqCapabilities> {
   def NAME : AccessQualifier<NAME, value>;
-  defm : SymbolicOperandWithRequirements<AccessQualifierOperand, value, NAME, 0, 0, [], reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<AccessQualifierOperand, value, NAME, 0,
+                                         0, [], reqCapabilities, []>;
 }
 
 defm ReadOnly : AccessQualifierOperand<0, [Kernel]>;
@@ -1214,7 +1248,9 @@ class FunctionParameterAttribute<string name, bits<32> value> {
 
 multiclass FunctionParameterAttributeOperand<bits<32> value, list<Capability> reqCapabilities> {
   def : FunctionParameterAttribute<NAME, value>;
-  defm : SymbolicOperandWithRequirements<FunctionParameterAttributeOperand, value, NAME, 0, 0, [], reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<FunctionParameterAttributeOperand,
+                                         value, NAME, 0, 0, [],
+                                         reqCapabilities, []>;
 }
 
 defm Zext : FunctionParameterAttributeOperand<0, [Kernel]>;
@@ -1246,7 +1282,9 @@ class Decoration<string name, bits<32> value> {
 
 multiclass DecorationOperand<bits<32> value, bits<32> minVersion, bits<32> maxVersion, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
   def : Decoration<NAME, value>;
-  defm : SymbolicOperandWithRequirements<DecorationOperand, value, NAME, minVersion, maxVersion, reqExtensions, reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<DecorationOperand, value, NAME,
+                                         minVersion, maxVersion, reqExtensions,
+                                         reqCapabilities, []>;
 }
 
 defm RelaxedPrecision : DecorationOperand<0, 0, 0, [], [Shader]>;
@@ -1347,7 +1385,9 @@ class BuiltIn<string name, bits<32> value> {
 
 multiclass BuiltInOperand<bits<32> value, bits<32> minVersion, bits<32> maxVersion, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
   def NAME : BuiltIn<NAME, value>;
-  defm : SymbolicOperandWithRequirements<BuiltInOperand, value, NAME, minVersion, maxVersion, reqExtensions, reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<BuiltInOperand, value, NAME,
+                                         minVersion, maxVersion, reqExtensions,
+                                         reqCapabilities, []>;
 }
 
 defm Position : BuiltInOperand<0, 0, 0, [], [Shader]>;
@@ -1461,7 +1501,8 @@ class SelectionControl<string name, bits<32> value> {
 
 multiclass SelectionControlOperand<bits<32> value> {
   def : SelectionControl<NAME, value>;
-  defm : SymbolicOperandWithRequirements<SelectionControlOperand, value, NAME, 0, 0, [], [], []>;
+  defm : SymbolicOperandWithRequirements<SelectionControlOperand, value, NAME,
+                                         0, 0, [], [], []>;
 }
 
 defm None : SelectionControlOperand<0x0>;
@@ -1487,7 +1528,8 @@ class LoopControl<string name, bits<32> value> {
 
 multiclass LoopControlOperand<bits<32> value> {
   def : LoopControl<NAME, value>;
-  defm : SymbolicOperandWithRequirements<LoopControlOperand, value, NAME, 0, 0, [], [], []>;
+  defm : SymbolicOperandWithRequirements<LoopControlOperand, value, NAME, 0,
+                                         0, [], [], []>;
 }
 
 defm None : LoopControlOperand<0x0>;
@@ -1520,7 +1562,8 @@ class FunctionControl<string name, bits<32> value> {
 
 multiclass FunctionControlOperand<bits<32> value> {
   def : FunctionControl<NAME, value>;
-  defm : SymbolicOperandWithRequirements<FunctionControlOperand, value, NAME, 0, 0, [], [], []>;
+  defm : SymbolicOperandWithRequirements<FunctionControlOperand, value, NAME, 0,
+                                         0, [], [], []>;
 }
 
 defm None : FunctionControlOperand<0x0>;
@@ -1550,7 +1593,9 @@ class MemorySemantics<string name, bits<32> value> {
 
 multiclass MemorySemanticsOperand<bits<32> value, bits<32> minVersion, bits<32> maxVersion, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
   def : MemorySemantics<NAME, value>;
-  defm : SymbolicOperandWithRequirements<MemorySemanticsOperand, value, NAME, minVersion, maxVersion, reqExtensions, reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<MemorySemanticsOperand, value, NAME,
+                                         minVersion, maxVersion, reqExtensions,
+                                         reqCapabilities, []>;
 }
 
 defm None : MemorySemanticsOperand<0x0, 0, 0, [], []>;
@@ -1588,7 +1633,9 @@ class MemoryOperand<string name, bits<32> value> {
 
 multiclass MemoryOperandOperand<bits<32> value, bits<32> minVersion, bits<32> maxVersion, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
   def : MemoryOperand<NAME, value>;
-  defm : SymbolicOperandWithRequirements<MemoryOperandOperand, value, NAME, minVersion, maxVersion, reqExtensions, reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<MemoryOperandOperand, value, NAME,
+                                         minVersion, maxVersion, reqExtensions,
+                                         reqCapabilities, []>;
 }
 
 defm None : MemoryOperandOperand<0x0, 0, 0, [], []>;
@@ -1621,7 +1668,9 @@ class Scope<string name, bits<32> value> {
 
 multiclass ScopeOperand<bits<32> value, bits<32> minVersion, bits<32> maxVersion, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
   def : Scope<NAME, value>;
-  defm : SymbolicOperandWithRequirements<ScopeOperand, value, NAME, minVersion, maxVersion, reqExtensions, reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<ScopeOperand, value, NAME, minVersion,
+                                         maxVersion, reqExtensions,
+                                         reqCapabilities, []>;
 }
 
 defm CrossDevice : ScopeOperand<0, 0, 0, [], []>;
@@ -1651,7 +1700,9 @@ class GroupOperation<string name, bits<32> value> {
 
 multiclass GroupOperationOperand<bits<32> value, bits<32> minVersion, bits<32> maxVersion, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
   def NAME : GroupOperation<NAME, value>;
-  defm : SymbolicOperandWithRequirements<GroupOperationOperand, value, NAME, minVersion, maxVersion, reqExtensions, reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<GroupOperationOperand, value, NAME,
+                                         minVersion, maxVersion, reqExtensions,
+                                         reqCapabilities, []>;
 }
 
 defm Reduce : GroupOperationOperand<0, 0, 0, [], [Kernel, GroupNonUniformArithmetic, GroupNonUniformBallot]>;
@@ -1682,7 +1733,9 @@ class KernelEnqueueFlags<string name, bits<32> value> {
 
 multiclass KernelEnqueueFlagsOperand<bits<32> value, bits<32> minVersion, bits<32> maxVersion, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
   def : KernelEnqueueFlags<NAME, value>;
-  defm : SymbolicOperandWithRequirements<KernelEnqueueFlagsOperand, value, NAME, minVersion, maxVersion, reqExtensions, reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<KernelEnqueueFlagsOperand, value, NAME,
+                                         minVersion, maxVersion, reqExtensions,
+                                         reqCapabilities, []>;
 }
 
 defm NoWait : KernelEnqueueFlagsOperand<0, 0, 0, [], [Kernel]>;
@@ -1709,7 +1762,9 @@ class KernelProfilingInfo<string name, bits<32> value> {
 
 multiclass KernelProfilingInfoOperand<bits<32> value, bits<32> minVersion, bits<32> maxVersion, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
   def : KernelProfilingInfo<NAME, value>;
-  defm : SymbolicOperandWithRequirements<KernelProfilingInfoOperand, value, NAME, minVersion, maxVersion, reqExtensions, reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<KernelProfilingInfoOperand, value,
+                                         NAME, minVersion, maxVersion,
+                                         reqExtensions, reqCapabilities, []>;
 }
 
 defm None : KernelProfilingInfoOperand<0x0, 0, 0, [], []>;
@@ -1734,7 +1789,8 @@ class Opcode<string name, bits<32> value> {
 
 multiclass OpcodeOperand<bits<32> value> {
   def : Opcode<NAME, value>;
-  defm : SymbolicOperandWithRequirements<OpcodeOperand, value, NAME, 0, 0, [], [], []>;
+  defm : SymbolicOperandWithRequirements<OpcodeOperand, value, NAME, 0,
+                                         0, [], [], []>;
 }
 // TODO: implement other mnemonics.
 defm InBoundsAccessChain : OpcodeOperand<66>;
@@ -1764,7 +1820,9 @@ class CooperativeMatrixLayout<string name, bits<32> value> {
 
 multiclass CooperativeMatrixLayoutOperand<bits<32> value, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
   def : CooperativeMatrixLayout<NAME, value>;
-  defm : SymbolicOperandWithRequirements<CooperativeMatrixLayoutOperand, value, NAME, 0, 0, reqExtensions, reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<CooperativeMatrixLayoutOperand, value,
+                                         NAME, 0, 0, reqExtensions,
+                                         reqCapabilities, []>;
 }
 
 defm RowMajorKHR : CooperativeMatrixLayoutOperand<0x0, [SPV_KHR_cooperative_matrix], [CooperativeMatrixKHR]>;
@@ -1791,7 +1849,9 @@ class CooperativeMatrixOperands<string name, bits<32> value> {
 
 multiclass CooperativeMatrixOperandsOperand<bits<32> value, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
   def : CooperativeMatrixOperands<NAME, value>;
-  defm : SymbolicOperandWithRequirements<CooperativeMatrixOperandsOperand, value, NAME, 0, 0, reqExtensions, reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<CooperativeMatrixOperandsOperand,
+                                         value, NAME, 0, 0, reqExtensions,
+                                         reqCapabilities, []>;
 }
 
 defm NoneKHR : CooperativeMatrixOperandsOperand<0x0, [SPV_KHR_cooperative_matrix], [CooperativeMatrixKHR]>;
@@ -1824,7 +1884,9 @@ class SpecConstantOpOperands<string name, bits<32> value> {
 
 multiclass SpecConstantOpOperandsOperand<bits<32> value, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
   def : SpecConstantOpOperands<NAME, value>;
-  defm : SymbolicOperandWithRequirements<SpecConstantOpOperandsOperand, value, NAME, 0, 0, reqExtensions, reqCapabilities, []>;
+  defm : SymbolicOperandWithRequirements<SpecConstantOpOperandsOperand, value,
+                                         NAME, 0, 0, reqExtensions,
+                                         reqCapabilities, []>;
 }
 
 // Conversion
@@ -1912,7 +1974,9 @@ class MatrixMultiplyAccumulateOperands<string name, bits<32> value> {
 
 multiclass  MatrixMultiplyAccumulateOperandsOperand<bits<32> value, list<Extension> reqExtensions> {
   def : MatrixMultiplyAccumulateOperands<NAME, value>;
-  defm : SymbolicOperandWithRequirements<MatrixMultiplyAccumulateOperandsOperand, value, NAME, 0, 0, reqExtensions, [], []>;
+  defm : SymbolicOperandWithRequirements<
+             MatrixMultiplyAccumulateOperandsOperand, value, NAME, 0, 0,
+             reqExtensions, [], []>;
 }
 
 defm None :  MatrixMultiplyAccumulateOperandsOperand<0x0, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
