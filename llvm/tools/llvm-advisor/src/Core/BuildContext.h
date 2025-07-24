@@ -1,9 +1,25 @@
-#ifndef LLVM_ADVISOR_BUILD_CONTEXT_H
-#define LLVM_ADVISOR_BUILD_CONTEXT_H
+//===------------------- BuildContext.h - LLVM Advisor --------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This is the BuildContext code generator driver. It provides a convenient
+// command-line interface for generating an assembly file or a relocatable file,
+// given LLVM bitcode.
+//
+//===----------------------------------------------------------------------===//
 
-#include <map>
+#ifndef LLVM_ADVISOR_CORE_BUILDCONTEXT_H
+#define LLVM_ADVISOR_CORE_BUILDCONTEXT_H
+
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include <string>
-#include <vector>
+#include <unordered_map>
 
 namespace llvm {
 namespace advisor {
@@ -37,10 +53,10 @@ struct BuildContext {
   BuildTool tool;
   std::string workingDirectory;
   std::string outputDirectory;
-  std::vector<std::string> inputFiles;
-  std::vector<std::string> outputFiles;
-  std::vector<std::string> expectedGeneratedFiles;
-  std::map<std::string, std::string> metadata;
+  llvm::SmallVector<std::string, 8> inputFiles;
+  llvm::SmallVector<std::string, 8> outputFiles;
+  llvm::SmallVector<std::string, 8> expectedGeneratedFiles;
+  std::unordered_map<std::string, std::string> metadata;
   bool hasOffloading = false;
   bool hasDebugInfo = false;
   bool hasOptimization = false;
@@ -49,4 +65,4 @@ struct BuildContext {
 } // namespace advisor
 } // namespace llvm
 
-#endif
+#endif // LLVM_ADVISOR_CORE_BUILDCONTEXT_H

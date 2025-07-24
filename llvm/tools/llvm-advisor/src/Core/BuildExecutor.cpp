@@ -1,4 +1,21 @@
+//===---------------- BuildExecutor.cpp - LLVM Advisor --------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This is the BuildExecutor code generator driver. It provides a convenient
+// command-line interface for generating an assembly file or a relocatable file,
+// given LLVM bitcode.
+//
+//===----------------------------------------------------------------------===//
+
 #include "BuildExecutor.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -9,76 +26,76 @@ namespace advisor {
 
 BuildExecutor::BuildExecutor(const AdvisorConfig &config) : config_(config) {}
 
-Expected<int> BuildExecutor::execute(const std::string &compiler,
-                                     const std::vector<std::string> &args,
-                                     BuildContext &buildContext,
-                                     const std::string &tempDir) {
+llvm::Expected<int>
+BuildExecutor::execute(llvm::StringRef compiler,
+                       const llvm::SmallVectorImpl<std::string> &args,
+                       BuildContext &buildContext, llvm::StringRef tempDir) {
   auto instrumentedArgs = instrumentCompilerArgs(args, buildContext, tempDir);
 
-  auto compilerPath = sys::findProgramByName(compiler);
+  auto compilerPath = llvm::sys::findProgramByName(compiler);
   if (!compilerPath) {
-    return createStringError(
+    return llvm::createStringError(
         std::make_error_code(std::errc::no_such_file_or_directory),
-        "Compiler not found: " + compiler);
+        "Compiler not found: " + compiler.str());
   }
 
-  std::vector<StringRef> execArgs;
+  llvm::SmallVector<llvm::StringRef, 16> execArgs;
   execArgs.push_back(compiler);
   for (const auto &arg : instrumentedArgs) {
     execArgs.push_back(arg);
   }
 
   if (config_.getVerbose()) {
-    outs() << "Executing: " << compiler;
+    llvm::outs() << "Executing: " << compiler;
     for (const auto &arg : instrumentedArgs) {
-      outs() << " " << arg;
+      llvm::outs() << " " << arg;
     }
-    outs() << "\n";
+    llvm::outs() << "\n";
   }
 
-  return sys::ExecuteAndWait(*compilerPath, execArgs);
+  return llvm::sys::ExecuteAndWait(*compilerPath, execArgs);
 }
 
-std::vector<std::string>
-BuildExecutor::instrumentCompilerArgs(const std::vector<std::string> &args,
-                                      BuildContext &buildContext,
-                                      const std::string &tempDir) {
+llvm::SmallVector<std::string, 16> BuildExecutor::instrumentCompilerArgs(
+    const llvm::SmallVectorImpl<std::string> &args, BuildContext &buildContext,
+    llvm::StringRef tempDir) {
 
-  std::vector<std::string> result = args;
-  std::set<std::string> existingFlags;
+  llvm::SmallVector<std::string, 16> result(args.begin(), args.end());
+  llvm::DenseSet<llvm::StringRef> existingFlags;
 
   // Scan existing flags to avoid duplication
   for (const auto &arg : args) {
-    if (arg.find("-g") == 0)
+    if (llvm::StringRef(arg).starts_with("-g"))
       existingFlags.insert("debug");
-    if (arg.find("-fsave-optimization-record") != std::string::npos)
+    if (llvm::StringRef(arg).contains("-fsave-optimization-record"))
       existingFlags.insert("remarks");
-    if (arg.find("-fprofile-instr-generate") != std::string::npos)
+    if (llvm::StringRef(arg).contains("-fprofile-instr-generate"))
       existingFlags.insert("profile");
   }
 
   // Add debug info if not present
-  if (existingFlags.find("debug") == existingFlags.end()) {
+  if (!existingFlags.contains("debug")) {
     result.push_back("-g");
   }
 
   // Add optimization remarks with proper redirection
-  if (existingFlags.find("remarks") == existingFlags.end()) {
+  if (!existingFlags.contains("remarks")) {
     result.push_back("-fsave-optimization-record");
-    result.push_back("-foptimization-record-file=" + tempDir +
+    result.push_back("-foptimization-record-file=" + tempDir.str() +
                      "/remarks.opt.yaml");
-    buildContext.expectedGeneratedFiles.push_back(tempDir +
+    buildContext.expectedGeneratedFiles.push_back(tempDir.str() +
                                                   "/remarks.opt.yaml");
   } else {
     // If user already specified remarks, find and redirect the file
     bool foundFileFlag = false;
     for (auto &arg : result) {
-      if (arg.find("-foptimization-record-file=") != std::string::npos) {
+      if (llvm::StringRef(arg).contains("-foptimization-record-file=")) {
         // Extract filename and redirect to temp
-        StringRef existingPath = StringRef(arg).substr(26);
-        StringRef filename = sys::path::filename(existingPath);
-        arg = "-foptimization-record-file=" + tempDir + "/" + filename.str();
-        buildContext.expectedGeneratedFiles.push_back(tempDir + "/" +
+        llvm::StringRef existingPath = llvm::StringRef(arg).substr(26);
+        llvm::StringRef filename = llvm::sys::path::filename(existingPath);
+        arg = "-foptimization-record-file=" + tempDir.str() + "/" +
+              filename.str();
+        buildContext.expectedGeneratedFiles.push_back(tempDir.str() + "/" +
                                                       filename.str());
         foundFileFlag = true;
         break;
@@ -86,20 +103,34 @@ BuildExecutor::instrumentCompilerArgs(const std::vector<std::string> &args,
     }
     // If no explicit file specified, add our own
     if (!foundFileFlag) {
-      result.push_back("-foptimization-record-file=" + tempDir +
+      result.push_back("-foptimization-record-file=" + tempDir.str() +
                        "/remarks.opt.yaml");
-      buildContext.expectedGeneratedFiles.push_back(tempDir +
+      buildContext.expectedGeneratedFiles.push_back(tempDir.str() +
                                                     "/remarks.opt.yaml");
     }
   }
 
   // Add profiling if enabled and not present, redirect to temp directory
-  if (config_.getRunProfiler() &&
-      existingFlags.find("profile") == existingFlags.end()) {
-    result.push_back("-fprofile-instr-generate=" + tempDir +
+  if (config_.getRunProfiler() && !existingFlags.contains("profile")) {
+    result.push_back("-fprofile-instr-generate=" + tempDir.str() +
                      "/profile.profraw");
     result.push_back("-fcoverage-mapping");
-    buildContext.expectedGeneratedFiles.push_back(tempDir + "/profile.profraw");
+    buildContext.expectedGeneratedFiles.push_back(tempDir.str() +
+                                                  "/profile.profraw");
+  }
+
+  // Add remark extraction flags if none present
+  bool hasRpass = false;
+  for (const auto &arg : result) {
+    if (llvm::StringRef(arg).starts_with("-Rpass=")) {
+      hasRpass = true;
+      break;
+    }
+  }
+  if (!hasRpass) {
+    // For now we add offloading and general analysis passes
+    result.push_back("-Rpass=kernel-info");
+    result.push_back("-Rpass=analysis");
   }
 
   return result;

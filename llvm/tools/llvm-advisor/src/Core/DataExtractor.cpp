@@ -1,5 +1,20 @@
+//===------------------ DataExtractor.cpp - LLVM Advisor ------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This is the DataExtractor code generator driver. It provides a convenient
+// command-line interface for generating an assembly file or a relocatable file,
+// given LLVM bitcode.
+//
+//===----------------------------------------------------------------------===//
+
 #include "DataExtractor.h"
 #include "../Utils/ProcessRunner.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -11,7 +26,7 @@ namespace advisor {
 DataExtractor::DataExtractor(const AdvisorConfig &config) : config_(config) {}
 
 Error DataExtractor::extractAllData(CompilationUnit &unit,
-                                    const std::string &tempDir) {
+                                    llvm::StringRef tempDir) {
   if (config_.getVerbose()) {
     outs() << "Extracting data for unit: " << unit.getName() << "\n";
   }
@@ -47,9 +62,9 @@ Error DataExtractor::extractAllData(CompilationUnit &unit,
   return Error::success();
 }
 
-std::vector<std::string>
+llvm::SmallVector<std::string, 8>
 DataExtractor::getBaseCompilerArgs(const CompilationUnitInfo &unitInfo) const {
-  std::vector<std::string> baseArgs;
+  llvm::SmallVector<std::string, 8> baseArgs;
 
   // Copy include paths and defines
   for (const auto &arg : unitInfo.compileFlags) {
@@ -72,16 +87,16 @@ DataExtractor::getBaseCompilerArgs(const CompilationUnitInfo &unitInfo) const {
   return baseArgs;
 }
 
-Error DataExtractor::extractIR(CompilationUnit &unit,
-                               const std::string &tempDir) {
+Error DataExtractor::extractIR(CompilationUnit &unit, llvm::StringRef tempDir) {
   for (const auto &source : unit.getInfo().sources) {
     if (source.isHeader)
       continue;
 
     std::string outputFile =
-        tempDir + "/ir/" + sys::path::stem(source.path).str() + ".ll";
+        (tempDir + "/ir/" + sys::path::stem(source.path).str() + ".ll").str();
 
-    auto baseArgs = getBaseCompilerArgs(unit.getInfo());
+    llvm::SmallVector<std::string, 8> baseArgs =
+        getBaseCompilerArgs(unit.getInfo());
     baseArgs.push_back("-emit-llvm");
     baseArgs.push_back("-S");
     baseArgs.push_back("-o");
@@ -103,15 +118,17 @@ Error DataExtractor::extractIR(CompilationUnit &unit,
 }
 
 Error DataExtractor::extractAssembly(CompilationUnit &unit,
-                                     const std::string &tempDir) {
+                                     llvm::StringRef tempDir) {
   for (const auto &source : unit.getInfo().sources) {
     if (source.isHeader)
       continue;
 
     std::string outputFile =
-        tempDir + "/assembly/" + sys::path::stem(source.path).str() + ".s";
+        (tempDir + "/assembly/" + sys::path::stem(source.path).str() + ".s")
+            .str();
 
-    auto baseArgs = getBaseCompilerArgs(unit.getInfo());
+    llvm::SmallVector<std::string, 8> baseArgs =
+        getBaseCompilerArgs(unit.getInfo());
     baseArgs.push_back("-S");
     baseArgs.push_back("-o");
     baseArgs.push_back(outputFile);
@@ -132,15 +149,16 @@ Error DataExtractor::extractAssembly(CompilationUnit &unit,
 }
 
 Error DataExtractor::extractAST(CompilationUnit &unit,
-                                const std::string &tempDir) {
+                                llvm::StringRef tempDir) {
   for (const auto &source : unit.getInfo().sources) {
     if (source.isHeader)
       continue;
 
     std::string outputFile =
-        tempDir + "/ast/" + sys::path::stem(source.path).str() + ".ast";
+        (tempDir + "/ast/" + sys::path::stem(source.path).str() + ".ast").str();
 
-    auto baseArgs = getBaseCompilerArgs(unit.getInfo());
+    llvm::SmallVector<std::string, 8> baseArgs =
+        getBaseCompilerArgs(unit.getInfo());
     baseArgs.push_back("-ast-dump");
     baseArgs.push_back("-fsyntax-only");
     baseArgs.push_back(source.path);
@@ -160,16 +178,18 @@ Error DataExtractor::extractAST(CompilationUnit &unit,
 }
 
 Error DataExtractor::extractPreprocessed(CompilationUnit &unit,
-                                         const std::string &tempDir) {
+                                         llvm::StringRef tempDir) {
   for (const auto &source : unit.getInfo().sources) {
     if (source.isHeader)
       continue;
 
     std::string ext = (source.language == "C++") ? ".ii" : ".i";
     std::string outputFile =
-        tempDir + "/preprocessed/" + sys::path::stem(source.path).str() + ext;
+        (tempDir + "/preprocessed/" + sys::path::stem(source.path).str() + ext)
+            .str();
 
-    auto baseArgs = getBaseCompilerArgs(unit.getInfo());
+    llvm::SmallVector<std::string, 8> baseArgs =
+        getBaseCompilerArgs(unit.getInfo());
     baseArgs.push_back("-E");
     baseArgs.push_back("-o");
     baseArgs.push_back(outputFile);
@@ -190,16 +210,18 @@ Error DataExtractor::extractPreprocessed(CompilationUnit &unit,
 }
 
 Error DataExtractor::extractIncludeTree(CompilationUnit &unit,
-                                        const std::string &tempDir) {
+                                        llvm::StringRef tempDir) {
   for (const auto &source : unit.getInfo().sources) {
     if (source.isHeader)
       continue;
 
-    std::string outputFile = tempDir + "/include-tree/" +
-                             sys::path::stem(source.path).str() +
-                             ".include.txt";
+    std::string outputFile =
+        (tempDir + "/include-tree/" + sys::path::stem(source.path).str() +
+         ".include.txt")
+            .str();
 
-    auto baseArgs = getBaseCompilerArgs(unit.getInfo());
+    llvm::SmallVector<std::string, 8> baseArgs =
+        getBaseCompilerArgs(unit.getInfo());
     baseArgs.push_back("-H");
     baseArgs.push_back("-fsyntax-only");
     baseArgs.push_back(source.path);
@@ -219,17 +241,19 @@ Error DataExtractor::extractIncludeTree(CompilationUnit &unit,
 }
 
 Error DataExtractor::extractDebugInfo(CompilationUnit &unit,
-                                      const std::string &tempDir) {
+                                      llvm::StringRef tempDir) {
   for (const auto &source : unit.getInfo().sources) {
     if (source.isHeader)
       continue;
 
-    std::string outputFile =
-        tempDir + "/debug/" + sys::path::stem(source.path).str() + ".debug.txt";
+    std::string outputFile = (tempDir + "/debug/" +
+                              sys::path::stem(source.path).str() + ".debug.txt")
+                                 .str();
     std::string objectFile =
-        tempDir + "/debug/" + sys::path::stem(source.path).str() + ".o";
+        (tempDir + "/debug/" + sys::path::stem(source.path).str() + ".o").str();
 
-    auto baseArgs = getBaseCompilerArgs(unit.getInfo());
+    llvm::SmallVector<std::string, 8> baseArgs =
+        getBaseCompilerArgs(unit.getInfo());
     baseArgs.push_back("-g");
     baseArgs.push_back("-c");
     baseArgs.push_back("-o");
@@ -245,7 +269,7 @@ Error DataExtractor::extractDebugInfo(CompilationUnit &unit,
 
     // Extract DWARF info using llvm-dwarfdump
     if (sys::fs::exists(objectFile)) {
-      std::vector<std::string> dwarfArgs = {objectFile};
+      llvm::SmallVector<std::string, 8> dwarfArgs = {objectFile};
       auto result =
           ProcessRunner::run("llvm-dwarfdump", dwarfArgs, config_.getTimeout());
       if (result && result->exitCode == 0) {
@@ -262,16 +286,18 @@ Error DataExtractor::extractDebugInfo(CompilationUnit &unit,
 }
 
 Error DataExtractor::extractStaticAnalysis(CompilationUnit &unit,
-                                           const std::string &tempDir) {
+                                           llvm::StringRef tempDir) {
   for (const auto &source : unit.getInfo().sources) {
     if (source.isHeader)
       continue;
 
-    std::string outputFile = tempDir + "/static-analyzer/" +
-                             sys::path::stem(source.path).str() +
-                             ".analysis.txt";
+    std::string outputFile =
+        (tempDir + "/static-analyzer/" + sys::path::stem(source.path).str() +
+         ".analysis.txt")
+            .str();
 
-    auto baseArgs = getBaseCompilerArgs(unit.getInfo());
+    llvm::SmallVector<std::string, 8> baseArgs =
+        getBaseCompilerArgs(unit.getInfo());
     baseArgs.push_back("--analyze");
     baseArgs.push_back("-Xanalyzer");
     baseArgs.push_back("-analyzer-output=text");
@@ -292,16 +318,18 @@ Error DataExtractor::extractStaticAnalysis(CompilationUnit &unit,
 }
 
 Error DataExtractor::extractMacroExpansion(CompilationUnit &unit,
-                                           const std::string &tempDir) {
+                                           llvm::StringRef tempDir) {
   for (const auto &source : unit.getInfo().sources) {
     if (source.isHeader)
       continue;
 
     std::string outputFile =
-        tempDir + "/preprocessed/" + sys::path::stem(source.path).str() +
-        ".macro-expanded" + ((source.language == "C++") ? ".ii" : ".i");
+        (tempDir + "/preprocessed/" + sys::path::stem(source.path).str() +
+         ".macro-expanded" + ((source.language == "C++") ? ".ii" : ".i"))
+            .str();
 
-    auto baseArgs = getBaseCompilerArgs(unit.getInfo());
+    llvm::SmallVector<std::string, 8> baseArgs =
+        getBaseCompilerArgs(unit.getInfo());
     baseArgs.push_back("-E");
     baseArgs.push_back("-dM"); // Show macro definitions
     baseArgs.push_back("-o");
@@ -324,15 +352,18 @@ Error DataExtractor::extractMacroExpansion(CompilationUnit &unit,
 }
 
 Error DataExtractor::extractCompilationPhases(CompilationUnit &unit,
-                                              const std::string &tempDir) {
+                                              llvm::StringRef tempDir) {
   for (const auto &source : unit.getInfo().sources) {
     if (source.isHeader)
       continue;
 
-    std::string outputFile = tempDir + "/debug/" +
-                             sys::path::stem(source.path).str() + ".phases.txt";
+    std::string outputFile =
+        (tempDir + "/debug/" + sys::path::stem(source.path).str() +
+         ".phases.txt")
+            .str();
 
-    auto baseArgs = getBaseCompilerArgs(unit.getInfo());
+    llvm::SmallVector<std::string, 8> baseArgs =
+        getBaseCompilerArgs(unit.getInfo());
     baseArgs.push_back("-v"); // Verbose compilation phases
     baseArgs.push_back("-fsyntax-only");
     baseArgs.push_back(source.path);
@@ -353,7 +384,7 @@ Error DataExtractor::extractCompilationPhases(CompilationUnit &unit,
 }
 
 Error DataExtractor::runCompilerWithFlags(
-    const std::vector<std::string> &args) {
+    const llvm::SmallVector<std::string, 8> &args) {
   auto result = ProcessRunner::run(config_.getToolPath("clang"), args,
                                    config_.getTimeout());
   if (!result || result->exitCode != 0) {

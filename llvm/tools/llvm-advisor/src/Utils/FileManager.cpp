@@ -1,24 +1,37 @@
+//===------------------- FileManager.cpp - LLVM Advisor -------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This is the FileManager code generator driver. It provides a convenient
+// command-line interface for generating an assembly file or a relocatable file,
+// given LLVM bitcode.
+//
+//===----------------------------------------------------------------------===//
+
 #include "FileManager.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
-#include <system_error>
+#include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
 namespace advisor {
 
-Expected<std::string> FileManager::createTempDir(const std::string &prefix) {
+Expected<std::string> FileManager::createTempDir(llvm::StringRef prefix) {
   SmallString<128> tempDirPath;
   if (std::error_code ec =
           sys::fs::createUniqueDirectory(prefix, tempDirPath)) {
     return createStringError(ec, "Failed to create unique temporary directory");
   }
-  return std::string(tempDirPath.str());
+  return tempDirPath.str().str();
 }
 
-Error FileManager::copyDirectory(const std::string &source,
-                                 const std::string &dest) {
+Error FileManager::copyDirectory(llvm::StringRef source, llvm::StringRef dest) {
   std::error_code EC;
 
   SmallString<128> sourcePathNorm(source);
@@ -72,13 +85,13 @@ Error FileManager::copyDirectory(const std::string &source,
   return Error::success();
 }
 
-Error FileManager::removeDirectory(const std::string &path) {
+Error FileManager::removeDirectory(llvm::StringRef path) {
   if (!sys::fs::exists(path)) {
     return Error::success();
   }
 
   std::error_code EC;
-  std::vector<std::string> Dirs;
+  SmallVector<std::string, 8> Dirs;
   for (sys::fs::recursive_directory_iterator I(path, EC), E; I != E && !EC;
        I.increment(EC)) {
     if (I->type() == sys::fs::file_type::directory_file) {
@@ -108,9 +121,9 @@ Error FileManager::removeDirectory(const std::string &path) {
   return Error::success();
 }
 
-std::vector<std::string> FileManager::findFiles(const std::string &directory,
-                                                const std::string &pattern) {
-  std::vector<std::string> files;
+SmallVector<std::string, 8> FileManager::findFiles(llvm::StringRef directory,
+                                                   llvm::StringRef pattern) {
+  SmallVector<std::string, 8> files;
   std::error_code EC;
   for (sys::fs::recursive_directory_iterator I(directory, EC), E; I != E && !EC;
        I.increment(EC)) {
@@ -124,10 +137,9 @@ std::vector<std::string> FileManager::findFiles(const std::string &directory,
   return files;
 }
 
-std::vector<std::string>
-FileManager::findFilesByExtension(const std::string &directory,
-                                  const std::vector<std::string> &extensions) {
-  std::vector<std::string> files;
+SmallVector<std::string, 8> FileManager::findFilesByExtension(
+    llvm::StringRef directory, const SmallVector<std::string, 8> &extensions) {
+  SmallVector<std::string, 8> files;
   std::error_code EC;
   for (sys::fs::recursive_directory_iterator I(directory, EC), E; I != E && !EC;
        I.increment(EC)) {
@@ -144,8 +156,7 @@ FileManager::findFilesByExtension(const std::string &directory,
   return files;
 }
 
-Error FileManager::moveFile(const std::string &source,
-                            const std::string &dest) {
+Error FileManager::moveFile(llvm::StringRef source, llvm::StringRef dest) {
   if (source == dest) {
     return Error::success();
   }
@@ -172,8 +183,7 @@ Error FileManager::moveFile(const std::string &source,
   return Error::success();
 }
 
-Error FileManager::copyFile(const std::string &source,
-                            const std::string &dest) {
+Error FileManager::copyFile(llvm::StringRef source, llvm::StringRef dest) {
   if (source == dest) {
     return Error::success();
   }
@@ -192,7 +202,7 @@ Error FileManager::copyFile(const std::string &source,
   return Error::success();
 }
 
-Expected<size_t> FileManager::getFileSize(const std::string &path) {
+Expected<size_t> FileManager::getFileSize(llvm::StringRef path) {
   sys::fs::file_status status;
   if (auto EC = sys::fs::status(path, status)) {
     return createStringError(EC, "File not found: " + path);
