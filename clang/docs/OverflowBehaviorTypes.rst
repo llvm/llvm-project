@@ -43,6 +43,10 @@ Where ``behavior`` can be one of the following:
 
 This attribute can be applied to ``typedef`` declarations and to integer types directly.
 
+Arithmetic operations containing one or more overflow behavior types may have
+result types that do not match standard integer promotion rules. The
+characteristics of result types across all scenarios are described under `Promotion Rules`_.
+
 Examples
 ========
 
@@ -75,46 +79,6 @@ integral types.
 Note that C++ overload set formation rules treat promotions to and from
 overflow behavior types the same as normal integral promotions and conversions.
 
-Interaction with Command-Line Flags and Sanitizer Special Case Lists
-====================================================================
-
-The ``overflow_behavior`` attribute interacts with sanitizers, ``-ftrapv``,
-``-fwrapv``, and Sanitizer Special Case Lists (SSCL) by wholly overriding these
-global flags. The following table summarizes the interactions:
-
-.. list-table:: Overflow Behavior Precedence
-   :widths: 15 15 15 15 20 15
-   :header-rows: 1
-
-   * - Behavior
-     - Default(No Flags)
-     - -ftrapv
-     - -fwrapv
-     - Sanitizers
-     - SSCL
-   * - ``overflow_behavior(wrap)``
-     - Wraps
-     - No trap
-     - Wraps
-     - No report
-     - Overrides SSCL
-   * - ``overflow_behavior(no_wrap)``
-     - Traps
-     - Traps
-     - Traps
-     - Reports
-     - Overrides SSCL
-
-It is important to note the distinction between signed and unsigned types. For
-unsigned integers, which wrap on overflow by default, ``overflow_behavior(no_wrap)``
-is particularly useful for enabling overflow checks. For signed integers, whose
-overflow behavior is undefined by default, ``overflow_behavior(wrap)`` provides
-a guaranteed wrapping behavior.
-
-The ``overflow_behavior`` attribute can be used to override the behavior of
-entries from a :doc:`SanitizerSpecialCaseList`. This is useful for allowlisting
-specific types into overflow instrumentation.
-
 Promotion Rules
 ===============
 
@@ -122,6 +86,9 @@ The promotion rules for overflow behavior types are designed to preserve the
 specified overflow behavior throughout an arithmetic expression. They differ
 from standard C/C++ integer promotions but in a predictable way, similar to
 how ``_Complex`` and ``_BitInt`` have their own promotion rules.
+
+The resulting type characteristics for overflow behavior types (OBTs) across a
+variety of scenarios is detailed below.
 
 * **OBT and Standard Integer Type**: In an operation involving an overflow
   behavior type (OBT) and a standard integer type, the result will have the
@@ -155,6 +122,59 @@ how ``_Complex`` and ``_BitInt`` have their own promotion rules.
   operations, as Clang may emit a warning for such cases in the future.
   Regardless, the resulting type matches the bit-width, sign and behavior of
   the ``no_wrap`` type.
+
+.. list-table:: Promotion Rules Summary
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Operation Type
+     - Result Type
+   * - OBT + Standard Integer
+     - OBT type (preserves overflow behavior, sign, and bit-width)
+   * - Same Kind OBTs (both ``wrap`` or both ``no_wrap``)
+     - Larger bit-width; unsigned favored if same width
+   * - Different Kind OBTs (``wrap`` + ``no_wrap``)
+     - ``no_wrap`` type (matches ``no_wrap`` operand's characteristics)
+
+Interaction with Command-Line Flags and Sanitizer Special Case Lists
+====================================================================
+
+The ``overflow_behavior`` attribute interacts with sanitizers, ``-ftrapv``,
+``-fwrapv``, and Sanitizer Special Case Lists (SSCL) by wholly overriding these
+global flags. The following table summarizes the interactions:
+
+.. list-table:: Overflow Behavior Precedence
+   :widths: 15 15 15 15 20 15
+   :header-rows: 1
+
+   * - Behavior
+     - Default(No Flags)
+     - -ftrapv
+     - -fwrapv
+     - Sanitizers
+     - SSCL
+   * - ``overflow_behavior(wrap)``
+     - Wraps
+     - Wraps
+     - Wraps
+     - No report
+     - Overrides SSCL
+   * - ``overflow_behavior(no_wrap)``
+     - Traps
+     - Traps
+     - Traps
+     - Reports
+     - Overrides SSCL
+
+It is important to note the distinction between signed and unsigned types. For
+unsigned integers, which wrap on overflow by default, ``overflow_behavior(no_wrap)``
+is particularly useful for enabling overflow checks. For signed integers, whose
+overflow behavior is undefined by default, ``overflow_behavior(wrap)`` provides
+a guaranteed wrapping behavior.
+
+The ``overflow_behavior`` attribute can be used to override the behavior of
+entries from a :doc:`SanitizerSpecialCaseList`. This is useful for allowlisting
+specific types into overflow instrumentation.
 
 Diagnostics
 ===========
