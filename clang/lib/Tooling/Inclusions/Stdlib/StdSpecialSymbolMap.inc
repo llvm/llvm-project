@@ -8,6 +8,15 @@
 // Symbols that can be provided by any of the headers, ordered by the header
 // preference.
 
+// Add headers for generic integer-type abs.
+// Ignore other variants (std::complex, std::valarray, std::intmax_t)
+SYMBOL(abs, std::, <cstdlib>)
+SYMBOL(abs, std::, <cmath>)
+SYMBOL(abs, None, <cstdlib>)
+SYMBOL(abs, None, <stdlib.h>)
+SYMBOL(abs, None, <cmath>)
+SYMBOL(abs, None, <math.h>)
+
 // atomic_* family symbols.
 SYMBOL(atomic_bool, None, <atomic>)
 SYMBOL(atomic_char, None, <atomic>)

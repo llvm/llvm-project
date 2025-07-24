@@ -198,6 +198,9 @@ def _GetSymbols(pool, root_dir, index_page_name, namespace, variants_to_accept):
         symbol_headers = collections.defaultdict(list)
         for symbol_name, lazy_headers in results:
             headers = lazy_headers.get()
+            if symbol_name in symbol_headers and set(symbol_headers[symbol_name]) != set(headers):
+                symbol_headers[symbol_name] = []
+                continue
             for header in headers:
                 if header not in symbol_headers[symbol_name]:
                     symbol_headers[symbol_name].append(header)
