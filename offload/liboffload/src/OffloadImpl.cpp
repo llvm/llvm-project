@@ -483,7 +483,7 @@ Error olCreateQueue_impl(ol_device_handle_t Device, ol_queue_handle_t *Queue) {
 
 Error olDestroyQueue_impl(ol_queue_handle_t Queue) { return olDestroy(Queue); }
 
-Error olWaitQueue_impl(ol_queue_handle_t Queue) {
+Error olSyncQueue_impl(ol_queue_handle_t Queue) {
   // Host plugin doesn't have a queue set so it's not safe to call synchronize
   // on it, but we have nothing to synchronize in that situation anyway.
   if (Queue->AsyncInfo->Queue) {
@@ -496,6 +496,28 @@ Error olWaitQueue_impl(ol_queue_handle_t Queue) {
   // it to begin with.
   if (auto Res = Queue->Device->Device->initAsyncInfo(&Queue->AsyncInfo))
     return Res;
+
+  return Error::success();
+}
+
+Error olWaitEvents_impl(ol_queue_handle_t Queue, ol_event_handle_t *Events,
+                        size_t NumEvents) {
+  auto *Device = Queue->Device->Device;
+
+  for (size_t I = 0; I < NumEvents; I++) {
+    auto *Event = Events[I];
+
+    if (!Event)
+      return Plugin::error(ErrorCode::INVALID_NULL_HANDLE,
+                           "olWaitEvents asked to wait on a NULL event");
+
+    // Do nothing if the event is for this queue
+    if (Event->Queue == Queue)
+      continue;
+
+    if (auto Err = Device->waitEvent(Event->EventInfo, Queue->AsyncInfo))
+      return Err;
+  }
 
   return Error::success();
 }
@@ -527,7 +549,7 @@ Error olGetQueueInfoSize_impl(ol_queue_handle_t Queue, ol_queue_info_t PropName,
   return olGetQueueInfoImplDetail(Queue, PropName, 0, nullptr, PropSizeRet);
 }
 
-Error olWaitEvent_impl(ol_event_handle_t Event) {
+Error olSyncEvent_impl(ol_event_handle_t Event) {
   if (auto Res = Event->Queue->Device->Device->syncEvent(Event->EventInfo))
     return Res;
 
@@ -569,26 +591,21 @@ Error olGetEventInfoSize_impl(ol_event_handle_t Event, ol_event_info_t PropName,
   return olGetEventInfoImplDetail(Event, PropName, 0, nullptr, PropSizeRet);
 }
 
-ol_event_handle_t makeEvent(ol_queue_handle_t Queue) {
-  auto EventImpl = std::make_unique<ol_event_impl_t>(nullptr, Queue);
-  if (auto Res = Queue->Device->Device->createEvent(&EventImpl->EventInfo)) {
-    llvm::consumeError(std::move(Res));
-    return nullptr;
-  }
+Error olCreateEvent_impl(ol_queue_handle_t Queue, ol_event_handle_t *EventOut) {
+  *EventOut = new ol_event_impl_t(nullptr, Queue);
+  if (auto Res = Queue->Device->Device->createEvent(&(*EventOut)->EventInfo))
+    return Res;
 
-  if (auto Res = Queue->Device->Device->recordEvent(EventImpl->EventInfo,
-                                                    Queue->AsyncInfo)) {
-    llvm::consumeError(std::move(Res));
-    return nullptr;
-  }
+  if (auto Res = Queue->Device->Device->recordEvent((*EventOut)->EventInfo,
+                                                    Queue->AsyncInfo))
+    return Res;
 
-  return EventImpl.release();
+  return Plugin::success();
 }
 
 Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
                     ol_device_handle_t DstDevice, const void *SrcPtr,
-                    ol_device_handle_t SrcDevice, size_t Size,
-                    ol_event_handle_t *EventOut) {
+                    ol_device_handle_t SrcDevice, size_t Size) {
   auto Host = OffloadContext::get().HostDevice();
   if (DstDevice == Host && SrcDevice == Host) {
     if (!Queue) {
@@ -618,9 +635,6 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
                                                    DstPtr, Size, QueueImpl))
       return Res;
   }
-
-  if (EventOut)
-    *EventOut = makeEvent(Queue);
 
   return Error::success();
 }
@@ -668,8 +682,7 @@ Error olDestroyProgram_impl(ol_program_handle_t Program) {
 Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
                           ol_symbol_handle_t Kernel, const void *ArgumentsData,
                           size_t ArgumentsSize,
-                          const ol_kernel_launch_size_args_t *LaunchSizeArgs,
-                          ol_event_handle_t *EventOut) {
+                          const ol_kernel_launch_size_args_t *LaunchSizeArgs) {
   auto *DeviceImpl = Device->Device;
   if (Queue && Device != Queue->Device) {
     return createOffloadError(
@@ -706,9 +719,6 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   AsyncInfoWrapper.finalize(Err);
   if (Err)
     return Err;
-
-  if (EventOut)
-    *EventOut = makeEvent(Queue);
 
   return Error::success();
 }

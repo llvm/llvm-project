@@ -24,7 +24,7 @@ ExpressionOp createExpression(Operation *op, OpBuilder &builder) {
   Location loc = op->getLoc();
 
   builder.setInsertionPointAfter(op);
-  auto expressionOp = builder.create<emitc::ExpressionOp>(loc, resultType);
+  auto expressionOp = emitc::ExpressionOp::create(builder, loc, resultType);
 
   // Replace all op's uses with the new expression's result.
   result.replaceAllUsesWith(expressionOp.getResult());
@@ -33,7 +33,7 @@ ExpressionOp createExpression(Operation *op, OpBuilder &builder) {
   Region &region = expressionOp.getRegion();
   Block &block = region.emplaceBlock();
   builder.setInsertionPointToEnd(&block);
-  auto yieldOp = builder.create<emitc::YieldOp>(loc, result);
+  auto yieldOp = emitc::YieldOp::create(builder, loc, result);
 
   // Move op into the new expression.
   op->moveBefore(yieldOp);

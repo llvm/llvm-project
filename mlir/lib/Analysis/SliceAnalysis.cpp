@@ -137,7 +137,7 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
       // into us. For now, just bail.
       if (parentOp && backwardSlice->count(parentOp) == 0) {
         if (parentOp->getNumRegions() == 1 &&
-            llvm::hasSingleElement(parentOp->getRegion(0).getBlocks())) {
+            parentOp->getRegion(0).hasOneBlock()) {
           return getBackwardSliceImpl(parentOp, visited, backwardSlice,
                                       options);
         }
