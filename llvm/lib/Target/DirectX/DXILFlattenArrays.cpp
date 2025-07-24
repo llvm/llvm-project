@@ -266,7 +266,7 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
     // If the parent GEP was not processed, then we do not want to process its
     // descendants. This can happen if the GEP chain is for an unsupported type
-    // such as structs -- we do not flatten structs.
+    // such as a struct -- we do not flatten structs nor GEP chains for structs
     if (!GEPChainInfoMap.contains(PtrOpGEP))
       return false;
 
