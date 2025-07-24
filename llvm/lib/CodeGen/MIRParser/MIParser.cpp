@@ -1850,28 +1850,25 @@ bool MIParser::parseImmediateOperand(MachineOperand &Dest) {
   return false;
 }
 
+// The target mnemonic is an expression of the form:
+//
+//     Dot(IntegerLiteral|Identifier|Dot)+
+//
+// We could be stricter like not terminating in a dot, but that's note important
+// where this is being used.
 bool MIParser::parseTargetImmMnemonic(const unsigned OpCode,
                                       const unsigned OpIdx,
                                       MachineOperand &Dest,
                                       const MIRFormatter &MF) {
   assert(Token.is(MIToken::dot));
   auto Loc = Token.location(); // record start position
-  size_t Len = 1;              // for "."
-  lex();
-
-  // Handle the case that mnemonic starts with number.
-  if (Token.is(MIToken::IntegerLiteral)) {
+  size_t Len = 0;
+  while (Token.is(MIToken::IntegerLiteral) || Token.is(MIToken::dot) ||
+         Token.is(MIToken::Identifier)) {
     Len += Token.range().size();
     lex();
   }
-
-  StringRef Src;
-  if (Token.is(MIToken::comma))
-    Src = StringRef(Loc, Len);
-  else {
-    assert(Token.is(MIToken::Identifier));
-    Src = StringRef(Loc, Len + Token.stringValue().size());
-  }
+  StringRef Src(Loc, Len);
   int64_t Val;
   if (MF.parseImmMnemonic(OpCode, OpIdx, Src, Val,
                           [this](StringRef::iterator Loc, const Twine &Msg)
@@ -1879,8 +1876,6 @@ bool MIParser::parseTargetImmMnemonic(const unsigned OpCode,
     return true;
 
   Dest = MachineOperand::CreateImm(Val);
-  if (!Token.is(MIToken::comma))
-    lex();
   return false;
 }
 
