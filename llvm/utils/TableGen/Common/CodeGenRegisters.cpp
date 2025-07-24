@@ -30,6 +30,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/TGTimer.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -1130,7 +1131,7 @@ CodeGenRegisterCategory::CodeGenRegisterCategory(CodeGenRegBank &RegBank,
 
 CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
                                const CodeGenHwModes &Modes)
-    : CGH(Modes) {
+    : Records(Records), CGH(Modes) {
   // Configure register Sets to understand register classes and tuples.
   Sets.addFieldExpander("RegisterClass", "MemberList");
   Sets.addFieldExpander("CalleeSavedRegs", "SaveList");
@@ -2202,7 +2203,9 @@ void CodeGenRegBank::computeDerivedInfo() {
 
   // Compute a weight for each register unit created during getSubRegs.
   // This may create adopted register units (with unit # >= NumNativeRegUnits).
+  Records.getTimer().startTimer("Compute reg unit weights");
   computeRegUnitWeights();
+  Records.getTimer().stopTimer();
 
   // Compute a unique set of RegUnitSets. One for each RegClass and inferred
   // supersets for the union of overlapping sets.
@@ -2446,6 +2449,8 @@ void CodeGenRegBank::computeInferredRegisterClasses() {
   // and assigned EnumValues yet.  That means getSubClasses(),
   // getSuperClasses(), and hasSubClass() functions are defunct.
 
+  Records.getTimer().startTimer("Compute inferred register classes");
+
   // Use one-before-the-end so it doesn't move forward when new elements are
   // added.
   auto FirstNewRC = std::prev(RegClasses.end());
@@ -2481,6 +2486,8 @@ void CodeGenRegBank::computeInferredRegisterClasses() {
     }
   }
 
+  Records.getTimer().startTimer("Extend super-register classes");
+
   // Compute the transitive closure for super-register classes.
   //
   // By iterating over sub-register indices in topological order, we only ever
@@ -2491,6 +2498,8 @@ void CodeGenRegBank::computeInferredRegisterClasses() {
     for (CodeGenRegisterClass &SubRC : RegClasses)
       SubRC.extendSuperRegClasses(SubIdx);
   }
+
+  Records.getTimer().stopTimer();
 }
 
 /// getRegisterClassForRegister - Find the register class that contains the
