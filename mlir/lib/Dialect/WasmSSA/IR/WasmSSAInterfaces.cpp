@@ -15,6 +15,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/Support/LogicalResult.h"
 
 namespace mlir::wasmssa {
 #include "mlir/Dialect/WasmSSA/IR/WasmSSAInterfaces.cpp.inc"
@@ -44,6 +45,16 @@ LogicalResult verifyConstantExpressionInterface(Operation *op) {
         return WalkResult::interrupt();
       });
   return success(!resultState.wasInterrupted());
+}
+
+LogicalResult verifyLabelLevelInterface(Operation *op) {
+  Block* target = cast<LabelLevelOpInterface>(op).getLabelTarget();
+  Region* targetRegion = target->getParent();
+  if (targetRegion != op->getParentRegion() ||
+      targetRegion->getParentOp() != op)
+    return op->emitError("target should be a block defined in same level than "
+                         "operation or in its region.");
+  return success();
 }
 } // namespace detail
 

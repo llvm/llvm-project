@@ -21,16 +21,16 @@ namespace detail {
 LogicalResult verifyConstantExpressionInterface(Operation *op);
 LogicalResult verifyLabelBranchingOpInterface(Operation *op);
 template <typename OpType>
-LogicalResult verifyLabelLevelInterface() {
+LogicalResult verifyLabelLevelInterfaceIsTerminator() {
   static_assert(OpType::template hasTrait<::mlir::OpTrait::IsTerminator>(),
                 "LabelLevelOp should be terminator ops");
   return success();
 }
+LogicalResult verifyLabelLevelInterface(Operation *op);
 } // namespace detail
 template <class OperationType>
 struct AlwaysValidConstantExprOpTrait
     : public OpTrait::TraitBase<OperationType, AlwaysValidConstantExprOpTrait> {};
-
 
 template<typename OpType>
 struct ConstantExpressionInitializerOpTrait : public OpTrait::TraitBase<OpType, ConstantExpressionInitializerOpTrait>{

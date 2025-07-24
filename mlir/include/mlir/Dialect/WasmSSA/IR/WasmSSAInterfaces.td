@@ -39,7 +39,9 @@ def LabelLevelOpInterface : OpInterface<"LabelLevelOpInterface"> {
   ];
 
   let verify = [{
-    return verifyLabelLevelInterface<ConcreteOp>();
+    return success(
+      succeeded(verifyLabelLevelInterfaceIsTerminator<ConcreteOp>()) &&
+      succeeded(verifyLabelLevelInterface($_op)));
   }];
 }
 
