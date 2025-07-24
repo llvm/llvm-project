@@ -3178,21 +3178,21 @@ bool VectorCombine::foldCastFromReductions(Instruction &I) {
 /// vector reduction intrinsic (e.g., vector_reduce_add) by only following
 /// chains of shuffles and binary operators (in any combination/order).
 /// The search does not go deeper than the given Depth.
-static bool feedsIntoVectorReduction(ShuffleVectorInst *SVI, unsigned Depth) {
+static bool feedsIntoVectorReduction(ShuffleVectorInst *SVI) {
+  constexpr unsigned MaxVisited = 32;
   SmallPtrSet<Instruction *, 8> Visited;
-  SmallVector<std::pair<Instruction *, unsigned>, 4> WorkList;
+  SmallVector<Instruction *, 4> WorkList;
   bool FoundReduction = false;
 
-  WorkList.push_back({SVI, 0});
+  WorkList.push_back(SVI);
   while (!WorkList.empty()) {
-    auto [I, CurDepth] = WorkList.pop_back_val();
-    if (CurDepth > Depth)
-      return false;
-
+    Instruction *I = WorkList.pop_back_val();
     for (User *U : I->users()) {
-      auto *UI = dyn_cast<Instruction>(U);
+      auto *UI = cast<Instruction>(U);
       if (!UI || !Visited.insert(UI).second)
         continue;
+      if (Visited.size() > MaxVisited)
+        return false;
       if (auto *II = dyn_cast<IntrinsicInst>(UI)) {
         // More than one reduction reached
         if (FoundReduction)
@@ -3216,7 +3216,8 @@ static bool feedsIntoVectorReduction(ShuffleVectorInst *SVI, unsigned Depth) {
 
       if (!isa<BinaryOperator>(UI) && !isa<ShuffleVectorInst>(UI))
         return false;
-      WorkList.emplace_back(UI, CurDepth + 1);
+
+      WorkList.emplace_back(UI);;
     }
   }
   return FoundReduction;
@@ -3560,7 +3561,7 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   LLVM_DEBUG(dbgs() << "  CostBefore: " << CostBefore
                     << " vs CostAfter: " << CostAfter << "\n");
   if (CostBefore < CostAfter ||
-      (CostBefore == CostAfter && !feedsIntoVectorReduction(SVI, 8)))
+      (CostBefore == CostAfter && !feedsIntoVectorReduction(SVI)))
     return false;
 
   // The cost model has passed, create the new instructions.
