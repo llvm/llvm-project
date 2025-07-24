@@ -2760,9 +2760,17 @@ genStandaloneSimd(lower::AbstractConverter &converter, lower::SymMap &symTable,
   simdArgs.priv.vars = simdClauseOps.privateVars;
   simdArgs.reduction.syms = simdReductionSyms;
   simdArgs.reduction.vars = simdClauseOps.reductionVars;
+
+  for (auto &sym : simdArgs.priv.syms) {
+    if (sym->test(Fortran::semantics::Symbol::Flag::OmpLinear)) {
+      const mlir::Value variable = converter.getSymbolAddress(*sym);
+      simdClauseOps.linearVars.push_back(variable);
+      simdClauseOps.linearStepVars.push_back(loopNestClauseOps.loopSteps[0]);
+    }
+  }
+
   auto simdOp =
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
-
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, item,
                 loopNestClauseOps, iv, {{simdOp, simdArgs}},
                 llvm::omp::Directive::OMPD_simd, dsp);
