@@ -1970,6 +1970,13 @@ void clang::inferNoReturnAttr(Sema &S, const Decl *D) {
   if (!FD)
     return;
 
+  // Skip explicit specializations here as they may have
+  // a user-provided definition that may deliberately differ from the primary
+  // template. If an explicit specialization truly never returns, the user
+  // should explicitly mark it with [[noreturn]].
+  if (FD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
+    return;
+
   auto *NonConstFD = const_cast<FunctionDecl *>(FD);
   DiagnosticsEngine &Diags = S.getDiagnostics();
   if (Diags.isIgnored(diag::warn_falloff_nonvoid, FD->getLocation()) &&
