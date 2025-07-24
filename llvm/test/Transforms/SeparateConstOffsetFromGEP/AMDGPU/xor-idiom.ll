@@ -38,12 +38,12 @@ define amdgpu_kernel void @test1(i1 %0, ptr addrspace(3) %1) {
 ;
 entry:
   %2 = select i1 %0, i32 0, i32 288
-  %3 = xor i32 %2, 32 // Base
-  %4 = xor i32 %2, 2336 // Not disjoint
-  %5 = xor i32 %2, 4128 // Disjoint
-  %6 = xor i32 %2, 8224 // Disjoint
-  %7 = xor i32 %2, 8480 // Not disjoint
-  %8 = xor i32 %2, 12320 // Disjoint
+  %3 = xor i32 %2, 32 ; Base
+  %4 = xor i32 %2, 2336 ; Not disjoint
+  %5 = xor i32 %2, 4128 ; Disjoint
+  %6 = xor i32 %2, 8224 ; Disjoint
+  %7 = xor i32 %2, 8480 ; Not disjoint
+  %8 = xor i32 %2, 12320 ; Disjoint
   %9 = getelementptr half, ptr addrspace(3) %1, i32 %3
   %10 = getelementptr half, ptr addrspace(3) %1, i32 %4
   %11 = getelementptr half, ptr addrspace(3) %1, i32 %5
