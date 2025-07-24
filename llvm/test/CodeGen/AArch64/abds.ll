@@ -183,8 +183,7 @@ define i128 @abd_ext_i128(i128 %a, i128 %b) nounwind {
 ; CHECK-NEXT:    subs x8, x0, x2
 ; CHECK-NEXT:    sbc x9, x1, x3
 ; CHECK-NEXT:    subs x10, x2, x0
-; CHECK-NEXT:    sbc x11, x3, x1
-; CHECK-NEXT:    sbcs xzr, x3, x1
+; CHECK-NEXT:    sbcs x11, x3, x1
 ; CHECK-NEXT:    csel x0, x8, x10, lt
 ; CHECK-NEXT:    csel x1, x9, x11, lt
 ; CHECK-NEXT:    ret
@@ -202,8 +201,7 @@ define i128 @abd_ext_i128_undef(i128 %a, i128 %b) nounwind {
 ; CHECK-NEXT:    subs x8, x0, x2
 ; CHECK-NEXT:    sbc x9, x1, x3
 ; CHECK-NEXT:    subs x10, x2, x0
-; CHECK-NEXT:    sbc x11, x3, x1
-; CHECK-NEXT:    sbcs xzr, x3, x1
+; CHECK-NEXT:    sbcs x11, x3, x1
 ; CHECK-NEXT:    csel x0, x8, x10, lt
 ; CHECK-NEXT:    csel x1, x9, x11, lt
 ; CHECK-NEXT:    ret
@@ -279,8 +277,7 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; CHECK-NEXT:    subs x8, x0, x2
 ; CHECK-NEXT:    sbc x9, x1, x3
 ; CHECK-NEXT:    subs x10, x2, x0
-; CHECK-NEXT:    sbc x11, x3, x1
-; CHECK-NEXT:    sbcs xzr, x3, x1
+; CHECK-NEXT:    sbcs x11, x3, x1
 ; CHECK-NEXT:    csel x0, x8, x10, lt
 ; CHECK-NEXT:    csel x1, x9, x11, lt
 ; CHECK-NEXT:    ret
@@ -358,8 +355,7 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; CHECK-NEXT:    subs x8, x0, x2
 ; CHECK-NEXT:    sbc x9, x1, x3
 ; CHECK-NEXT:    subs x10, x2, x0
-; CHECK-NEXT:    sbc x11, x3, x1
-; CHECK-NEXT:    sbcs xzr, x3, x1
+; CHECK-NEXT:    sbcs x11, x3, x1
 ; CHECK-NEXT:    csel x0, x8, x10, lt
 ; CHECK-NEXT:    csel x1, x9, x11, lt
 ; CHECK-NEXT:    ret
@@ -607,8 +603,7 @@ define i128 @abd_select_i128(i128 %a, i128 %b) nounwind {
 ; CHECK-NEXT:    subs x8, x0, x2
 ; CHECK-NEXT:    sbc x9, x1, x3
 ; CHECK-NEXT:    subs x10, x2, x0
-; CHECK-NEXT:    sbc x11, x3, x1
-; CHECK-NEXT:    sbcs xzr, x3, x1
+; CHECK-NEXT:    sbcs x11, x3, x1
 ; CHECK-NEXT:    csel x0, x8, x10, lt
 ; CHECK-NEXT:    csel x1, x9, x11, lt
 ; CHECK-NEXT:    ret

@@ -32,10 +32,29 @@ AArch64SelectionDAGInfo::AArch64SelectionDAGInfo()
 
 void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
                                                const SDNode *N) const {
+  SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
+
 #ifndef NDEBUG
+  // Some additional checks not yet implemented by verifyTargetNode.
+  constexpr MVT FlagsVT = MVT::i32;
   switch (N->getOpcode()) {
-  default:
-    return SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
+  case AArch64ISD::SUBS:
+    assert(N->getValueType(1) == FlagsVT);
+    break;
+  case AArch64ISD::ADC:
+  case AArch64ISD::SBC:
+    assert(N->getOperand(2).getValueType() == FlagsVT);
+    break;
+  case AArch64ISD::ADCS:
+  case AArch64ISD::SBCS:
+    assert(N->getValueType(1) == FlagsVT);
+    assert(N->getOperand(2).getValueType() == FlagsVT);
+    break;
+  case AArch64ISD::CSEL:
+  case AArch64ISD::CSINC:
+  case AArch64ISD::BRCOND:
+    assert(N->getOperand(3).getValueType() == FlagsVT);
+    break;
   case AArch64ISD::SADDWT:
   case AArch64ISD::SADDWB:
   case AArch64ISD::UADDWT:
