@@ -633,6 +633,7 @@ def ForallOp : SCF_Op<"forall", [
 def InParallelOp : SCF_Op<"forall.in_parallel", [
        Pure,
        Terminator,
+       ReturnLike,
        DeclareOpInterfaceMethods<ParallelCombiningOpInterface>,
        HasParent<"ForallOp">,
       ] # GraphRegionNoTerminator.traits> {
