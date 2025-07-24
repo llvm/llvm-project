@@ -102,8 +102,6 @@ public:
           lldb_rpc_gen::GetMangledName(Context, MDecl);
       const bool IsDisallowed =
           lldb_rpc_gen::MethodIsDisallowed(Context, MDecl);
-      const bool HasCallbackParameter =
-          lldb_rpc_gen::HasCallbackParameter(MDecl);
       SupportLevel MethodSupportLevel = GetMethodSupportLevel(MDecl);
       if (MethodSupportLevel == eImplemented && !IsDisallowed) {
         const lldb_rpc_gen::Method Method(MDecl, Policy, Context);
