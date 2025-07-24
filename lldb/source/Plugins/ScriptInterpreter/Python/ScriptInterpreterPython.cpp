@@ -1565,6 +1565,11 @@ ScriptInterpreterPythonImpl::CreateOperatingSystemInterface() {
   return std::make_shared<OperatingSystemPythonInterface>(*this);
 }
 
+JITLoaderInterfaceSP ScriptInterpreterPythonImpl::CreateJITLoaderInterface() {
+  return std::make_shared<JITLoaderPythonInterface>(*this);
+}
+
+
 StructuredData::ObjectSP
 ScriptInterpreterPythonImpl::CreateStructuredDataFromScriptObject(
     ScriptObject obj) {
