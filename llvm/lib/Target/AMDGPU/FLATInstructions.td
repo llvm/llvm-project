@@ -14,7 +14,7 @@ let WantsRoot = true in {
   def GlobalSAddr : ComplexPattern<iPTR, 4, "SelectGlobalSAddr", [], [], -10>;
   def GlobalSAddrGLC : ComplexPattern<iPTR, 4, "SelectGlobalSAddrGLC", [], [], -10>;
   def ScratchSAddr : ComplexPattern<iPTR, 2, "SelectScratchSAddr", [], [], -10>;
-  def ScratchSVAddr : ComplexPattern<iPTR, 3, "SelectScratchSVAddr", [], [], -10>;
+  def ScratchSVAddr : ComplexPattern<iPTR, 4, "SelectScratchSVAddr", [], [], -10>;
 }
 
 class True16D16Table <string hiOp, string loOp> {
@@ -462,6 +462,37 @@ class FLAT_Global_Invalidate_Writeback<string opName, SDPatternOperator node = n
   let has_sve = 0;
   let lds = 0;
   let sve = 0;
+}
+
+class FLAT_Prefetch_Pseudo<string opName, dag addr = (ins VReg_64:$vaddr), string asm = " $vaddr"> :
+  FLAT_Pseudo<opName, (outs), !con(addr, (ins flat_offset:$offset, CPol_0:$cpol)), asm#"$offset$cpol"> {
+  let has_vdst = 0;
+  let has_data = 0;
+  let mayLoad = 1;
+  let mayStore = 1;
+  let VM_CNT = 0;
+  let LGKM_CNT = 0;
+}
+
+multiclass FLAT_Flat_Prefetch_Pseudo<string opName> {
+  def "" : FLAT_Prefetch_Pseudo<opName>,
+    GlobalSaddrTable<0, opName>;
+  def _SADDR : FLAT_Prefetch_Pseudo<opName, (ins SReg_64:$saddr, VGPR_32:$vaddr), " $vaddr, $saddr">,
+    GlobalSaddrTable<1, opName> {
+    let OtherPredicates = [HasFlatGVSMode];
+    let enabled_saddr = 1;
+  }
+}
+
+multiclass FLAT_Global_Prefetch_Pseudo<string opName> {
+  let is_flat_global = 1, has_saddr = 1 in {
+    def "" : FLAT_Prefetch_Pseudo<opName, (ins VReg_64:$vaddr), " $vaddr, off">,
+      GlobalSaddrTable<0, opName>;
+    def _SADDR : FLAT_Prefetch_Pseudo<opName, (ins SReg_64:$saddr, VGPR_32:$vaddr), " $vaddr, $saddr">,
+      GlobalSaddrTable<1, opName> {
+      let enabled_saddr = 1;
+    }
+  }
 }
 
 class FlatScratchInst <string sv_op, string mode> {
@@ -1218,6 +1249,11 @@ let OtherPredicates = [HasAtomicBufferGlobalPkAddF16Insts] in
     "global_atomic_pk_add_f16", VGPR_32, v2f16
   >;
 
+let SubtargetPredicate = HasVmemPrefInsts in {
+  defm FLAT_PREFETCH_B8   : FLAT_Flat_Prefetch_Pseudo<"flat_prefetch_b8">;
+  defm GLOBAL_PREFETCH_B8 : FLAT_Global_Prefetch_Pseudo<"global_prefetch_b8">;
+}
+
 //===----------------------------------------------------------------------===//
 // Flat Patterns
 //===----------------------------------------------------------------------===//
@@ -1443,19 +1479,19 @@ class ScratchStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
 >;
 
 class ScratchLoadSVaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset))),
-  (inst $vaddr, $saddr, $offset, 0)
+  (vt (node (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset, CPol:$cpol))),
+  (inst $vaddr, $saddr, $offset, $cpol)
 >;
 
 class ScratchStoreSVaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
                              ValueType vt> : GCNPat <
-  (node vt:$data, (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset)),
-  (inst getVregSrcForVT<vt>.ret:$data, $vaddr, $saddr, $offset)
+  (node vt:$data, (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset, CPol:$cpol)),
+  (inst getVregSrcForVT<vt>.ret:$data, $vaddr, $saddr, $offset, $cpol)
 >;
 
 class ScratchLoadSVaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset), vt:$in)),
-  (inst $vaddr, $saddr, $offset, 0, $in)
+  (vt (node (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset, CPol:$cpol), vt:$in)),
+  (inst $vaddr, $saddr, $offset, $cpol, $in)
 >;
 
 class ScratchLoadSVaddrPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
@@ -2941,6 +2977,7 @@ multiclass VFLAT_Real_gfx12 <bits<8> op, string name = get_FLAT_ps<NAME>.Mnemoni
     let DecoderNamespace = "GFX12";
 
     let Inst{25-24} = {ps.is_flat_global, ps.is_flat_scratch};
+    let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
   }
 }
 
@@ -3170,6 +3207,7 @@ multiclass VFLAT_Real_gfx1250<bits<8> op,
     let DecoderNamespace = "GFX1250";
 
     let Inst{25-24} = {ps.is_flat_global, ps.is_flat_scratch};
+    let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
   }
 }
 
@@ -3207,6 +3245,9 @@ multiclass VFLAT_Real_Atomics_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME
 
 defm TENSOR_SAVE                      : VFLAT_Real_gfx1250<0x06e>;
 defm TENSOR_STOP                      : VFLAT_Real_gfx1250<0x06f>;
+
+defm FLAT_PREFETCH_B8                 : VFLAT_Real_AllAddr_gfx1250<0x05d>;
+defm GLOBAL_PREFETCH_B8               : VFLAT_Real_AllAddr_gfx1250<0x05d>;
 
 defm GLOBAL_LOAD_TR_B128_w32          : VFLAT_Real_AllAddr_gfx1250<0x057, "global_load_tr16_b128">;
 defm GLOBAL_LOAD_TR_B64_w32           : VFLAT_Real_AllAddr_gfx1250<0x058, "global_load_tr8_b64">;
