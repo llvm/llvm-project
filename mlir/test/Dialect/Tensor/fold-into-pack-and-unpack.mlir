@@ -109,7 +109,7 @@ func.func @nofold_pad_pack_artificial_padding(%src: tensor<16641x16xf32>) -> ten
 
 // -----
 
-func.func @nofold_pad_pack(%src: tensor<16649x16xf32>) -> tensor<2082x1x8x32xf32> {
+func.func @nofold_pad_pack_with_nofold_attribute(%src: tensor<16649x16xf32>) -> tensor<2082x1x8x32xf32> {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %padded = tensor.pad %src nofold low[0, 0] high[7, 0] {
@@ -121,7 +121,7 @@ func.func @nofold_pad_pack(%src: tensor<16649x16xf32>) -> tensor<2082x1x8x32xf32
       : tensor<16656x16xf32> -> tensor<2082x1x8x32xf32>
   return %pack : tensor<2082x1x8x32xf32>
 }
-// CHECK-LABEL: func.func @nofold_pad_pack(
+// CHECK-LABEL: func.func @nofold_pad_pack_with_nofold_attribute(
 // CHECK:         tensor.pad
 // CHECK:         linalg.pack
 
