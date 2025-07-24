@@ -7068,6 +7068,17 @@ void AMDGPUInstructionSelector::renderRoundMode(MachineInstrBuilder &MIB,
   MIB.addImm((MI.getOperand(OpIdx).getImm() + 3) % 4);
 }
 
+void AMDGPUInstructionSelector::renderPrefetchLoc(MachineInstrBuilder &MIB,
+                                                  const MachineInstr &MI,
+                                                  int OpIdx) const {
+  uint32_t V = MI.getOperand(2).getImm();
+  V = (AMDGPU::CPol::SCOPE_MASK - (V & AMDGPU::CPol::SCOPE_MASK))
+      << AMDGPU::CPol::SCOPE_SHIFT;
+  if (!Subtarget->hasSafeCUPrefetch())
+    V = std::max(V, (uint32_t)AMDGPU::CPol::SCOPE_SE); // CU scope is unsafe
+  MIB.addImm(V);
+}
+
 /// Convert from 2-bit value to enum values used for op_sel* source modifiers.
 void AMDGPUInstructionSelector::renderScaledMAIIntrinsicOperand(
     MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {

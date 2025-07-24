@@ -280,6 +280,12 @@ def FeatureSafeSmemPrefetch : SubtargetFeature<"safe-smem-prefetch",
   "SMEM prefetches do not fail on illegal address"
 >;
 
+def FeatureSafeCUPrefetch : SubtargetFeature<"safe-cu-prefetch",
+  "HasSafeCUPrefetch",
+  "true",
+  "VMEM CU scope prefetches do not fail on illegal address"
+>;
+
 def FeatureVcmpxExecWARHazard : SubtargetFeature<"vcmpx-exec-war-hazard",
   "HasVcmpxExecWARHazard",
   "true",
