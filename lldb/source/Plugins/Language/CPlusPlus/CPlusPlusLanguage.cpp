@@ -1335,31 +1335,25 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
 static void RegisterStdStringSummaryProvider(
     const lldb::TypeCategoryImplSP &category_sp, llvm::StringRef string_ty,
     llvm::StringRef char_ty, lldb::TypeSummaryImplSP summary_sp) {
-  auto makeSpecifier = [](llvm::StringRef name) {
-    return std::make_shared<lldb_private::TypeNameSpecifierImpl>(
-        name, eFormatterMatchExact);
-  };
-
-  category_sp->AddTypeSummary(makeSpecifier(string_ty), summary_sp);
+  category_sp->AddTypeSummary(
+      std::make_shared<lldb_private::TypeNameSpecifierImpl>(
+          string_ty, eFormatterMatchExact),
+      summary_sp);
 
   // std::basic_string<char>
   category_sp->AddTypeSummary(
-      makeSpecifier(llvm::formatv("std::basic_string<{}>", char_ty).str()),
+      std::make_shared<lldb_private::TypeNameSpecifierImpl>(
+          llvm::formatv("std::basic_string<{}>", char_ty).str(),
+          eFormatterMatchExact),
       summary_sp);
-  // std::basic_string<char,std::char_traits<char>,std::allocator<char> >
+  // std::basic_string<char, std::char_traits<char>, std::allocator<char>>
   category_sp->AddTypeSummary(
-      makeSpecifier(llvm::formatv("std::basic_string<{0},std::char_traits<{0}>,"
-                                  "std::allocator<{0}> >",
-                                  char_ty)
-                        .str()),
-      summary_sp);
-  // std::basic_string<char, std::char_traits<char>, std::allocator<char> >
-  category_sp->AddTypeSummary(
-      makeSpecifier(
-          llvm::formatv("std::basic_string<{0}, std::char_traits<{0}>, "
-                        "std::allocator<{0}> >",
+      std::make_shared<lldb_private::TypeNameSpecifierImpl>(
+          llvm::formatv("std::basic_string<{0}, ?std::char_traits<{0}>, "
+                        "?std::allocator<{0}> ?>",
                         char_ty)
-              .str()),
+              .str(),
+          eFormatterMatchRegex),
       summary_sp);
 }
 
