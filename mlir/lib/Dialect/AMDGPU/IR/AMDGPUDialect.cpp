@@ -562,11 +562,7 @@ struct FoldGatherToLDSOfCast final : OpRewritePattern<GatherToLDSOp> {
 
     // Check source.
     if (auto castOp = gatherOp.getSrc().getDefiningOp<memref::CastOp>()) {
-      auto fromType = dyn_cast<MemRefType>(castOp.getSource().getType());
-      auto toType = dyn_cast<MemRefType>(castOp.getSource().getType());
-
-      if (memref::CastOp::canFoldIntoConsumerOp(castOp) && fromType && toType &&
-          fromType.getElementType() == toType.getElementType()) {
+      if (memref::CastOp::canFoldIntoConsumerOp(castOp)) {
         rewriter.modifyOpInPlace(gatherOp, [&] {
           gatherOp.getSrcMutable().assign(castOp.getSource());
         });
@@ -576,11 +572,7 @@ struct FoldGatherToLDSOfCast final : OpRewritePattern<GatherToLDSOp> {
 
     // Check target.
     if (auto castOp = gatherOp.getDst().getDefiningOp<memref::CastOp>()) {
-      auto fromType = dyn_cast<MemRefType>(castOp.getSource().getType());
-      auto toType = dyn_cast<MemRefType>(castOp.getSource().getType());
-
-      if (memref::CastOp::canFoldIntoConsumerOp(castOp) && fromType && toType &&
-          fromType.getElementType() == toType.getElementType()) {
+      if (memref::CastOp::canFoldIntoConsumerOp(castOp)) {
         rewriter.modifyOpInPlace(gatherOp, [&] {
           gatherOp.getDstMutable().assign(castOp.getSource());
         });
