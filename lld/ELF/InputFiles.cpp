@@ -543,7 +543,7 @@ static void
 handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx,
                                 const AArch64BuildAttrSubsections &baInfo) {
   if (file->aarch64PauthAbiCoreInfo) {
-    // Check for data mismatch
+    // Check for data mismatch.
     if (file->aarch64PauthAbiCoreInfo) {
       if (baInfo.Pauth.TagPlatform != file->aarch64PauthAbiCoreInfo->platform ||
           baInfo.Pauth.TagSchema != file->aarch64PauthAbiCoreInfo->version)
@@ -813,7 +813,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     // Input objects may contain both build Build Attributes and GNU
     // properties. We delay processing Build Attributes until we have finished
     // reading all sections so that we can check that these are consistent.
-    if (ctx.arg.emachine == EM_AARCH64 && type == SHT_AARCH64_ATTRIBUTES) {
+    if (type == SHT_AARCH64_ATTRIBUTES && ctx.arg.emachine == EM_AARCH64) {
       ArrayRef<uint8_t> contents = check(obj.getSectionContents(sec));
       AArch64AttributeParser attributes;
       if (Error e = attributes.parse(contents, ELFT::Endianness)) {
