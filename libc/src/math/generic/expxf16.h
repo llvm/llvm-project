@@ -9,14 +9,13 @@
 #ifndef LLVM_LIBC_SRC_MATH_GENERIC_EXPXF16_H
 #define LLVM_LIBC_SRC_MATH_GENERIC_EXPXF16_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
-#include <stdint.h>
-
 #include "src/__support/math/exp10_float16_constants.h"
 #include "src/__support/math/expf16_utils.h"
 

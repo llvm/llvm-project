@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_BFLOAT16_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_BFLOAT16_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/cast.h"
@@ -16,8 +17,6 @@
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
