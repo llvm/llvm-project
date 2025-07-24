@@ -4942,6 +4942,7 @@ add_header_library(
   HDRS
     expxf16.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.multiply_add
