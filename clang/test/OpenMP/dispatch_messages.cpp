@@ -64,6 +64,47 @@ void testit_one(int dnum) {
   // expected-error@+1 {{use of undeclared identifier 'x'}}
   #pragma omp dispatch nocontext(x)
   disp_call();
+
+  bool c1 = false;
+  bool c2 = true;
+  int a = 3, b=4;
+  int output;
+ 
+  // expected-error@+1 {{expected '(' after 'depend'}}
+  #pragma omp dispatch depend
+  disp_call();
+
+  // expected-error@+4 {{expected ')'}}
+  // expected-note@+3 {{to match this '('}}
+  // expected-error@+2 {{expected depend modifier(iterator) or 'in', 'out', 'inout', 'mutexinoutset', 'depobj' or 'inoutset' in OpenMP clause 'depend'}}
+  // expected-warning@+1 {{missing ':' after dependency type}}
+  #pragma omp dispatch depend(
+  disp_call();
+
+  // expected-error@+4 {{expected ')'}}
+  // expected-note@+3 {{to match this '('}}
+  // expected-error@+2 {{expected depend modifier(iterator) or 'in', 'out', 'inout', 'mutexinoutset', 'depobj' or 'inoutset' in OpenMP clause 'depend'}}
+  // expected-warning@+1 {{missing ':' after dependency type}}
+  #pragma omp dispatch depend(a
+  disp_call();
+
+  // expected-error@+2 {{expected depend modifier(iterator) or 'in', 'out', 'inout', 'mutexinoutset', 'depobj' or 'inoutset' in OpenMP clause 'depend'}}
+  // expected-warning@+1 {{missing ':' after dependency type}}
+  #pragma omp dispatch depend(a)
+  disp_call();
+
+  // expected-error@+1 {{use of undeclared identifier 'z'}}
+  #pragma omp dispatch depend(in:z)
+  disp_call();
+
+  #pragma omp dispatch depend(in:b)
+  output = disp_call();
+
+  #pragma omp dispatch depend(in:b) depend(in:a)
+  output = disp_call();
+
+  #pragma omp dispatch nocontext(c1) novariants(c2) depend(inout:a)
+  disp_call();
 }
 
 void testit_two() {

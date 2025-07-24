@@ -640,6 +640,11 @@ bool clang::isOpenMPParallelDirective(OpenMPDirectiveKind DKind) {
          llvm::is_contained(getLeafConstructs(DKind), OMPD_parallel);
 }
 
+bool clang::isOpenMPDispatchDirective(OpenMPDirectiveKind DKind) {
+  return DKind == OMPD_dispatch ||
+         llvm::is_contained(getLeafConstructs(DKind), OMPD_dispatch);
+}
+
 bool clang::isOpenMPTargetExecutionDirective(OpenMPDirectiveKind DKind) {
   return DKind == OMPD_target ||
          llvm::is_contained(getLeafConstructs(DKind), OMPD_target);
@@ -824,6 +829,10 @@ void clang::getOpenMPCaptureRegions(
       CaptureRegions.push_back(OMPD_task);
       CaptureRegions.push_back(OMPD_target);
       break;
+    case OMPD_dispatch:
+      CaptureRegions.push_back(OMPD_task);
+      CaptureRegions.push_back(OMPD_dispatch);
+      break;
     case OMPD_task:
     case OMPD_target_enter_data:
     case OMPD_target_exit_data:
@@ -847,7 +856,6 @@ void clang::getOpenMPCaptureRegions(
       else
         return true;
       break;
-    case OMPD_dispatch:
     case OMPD_distribute:
     case OMPD_for:
     case OMPD_ordered:

@@ -1291,6 +1291,7 @@ Python Binding Changes
 
 OpenMP Support
 --------------
+- Added support for 'omp dispatch' directive.
 - Added support 'no_openmp_constructs' assumption clause.
 - Added support for 'self_maps' in map and requirement clause.
 - Added support for 'omp stripe' directive.
