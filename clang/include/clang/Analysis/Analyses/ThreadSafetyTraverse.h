@@ -192,7 +192,6 @@ public:
   R_SExpr reduceUndefined(Undefined &Orig) { return true; }
   R_SExpr reduceWildcard(Wildcard &Orig) { return true; }
 
-  R_SExpr reduceLiteral(Literal &Orig) { return true; }
   template<class T>
   R_SExpr reduceLiteralT(LiteralT<T> &Orig) { return true; }
   R_SExpr reduceLiteralPtr(Literal &Orig) { return true; }
@@ -337,6 +336,9 @@ public:
   bool notTrue(CType ct) { return !ct; }
 
   bool compareIntegers(unsigned i, unsigned j) { return i == j; }
+  bool compareIntegers(const llvm::APInt &i, const llvm::APInt &j) {
+    return i == j;
+  }
   bool compareStrings (StringRef s, StringRef r) { return s == r; }
   bool comparePointers(const void* P, const void* Q) { return P == Q; }
 
@@ -365,6 +367,9 @@ public:
   bool notTrue(CType ct) { return !ct; }
 
   bool compareIntegers(unsigned i, unsigned j) { return i == j; }
+  bool compareIntegers(const llvm::APInt &i, const llvm::APInt &j) {
+    return i == j;
+  }
   bool compareStrings (StringRef s, StringRef r) { return s == r; }
   bool comparePointers(const void *P, const void *Q) { return P == Q; }
 
@@ -532,88 +537,46 @@ protected:
     SS << "*";
   }
 
-  template<class T>
-  void printLiteralT(const LiteralT<T> *E, StreamType &SS) {
-    SS << E->value();
-  }
-
-  void printLiteralT(const LiteralT<uint8_t> *E, StreamType &SS) {
-    SS << "'" << E->value() << "'";
-  }
-
   void printLiteral(const Literal *E, StreamType &SS) {
-    if (E->clangExpr()) {
-      SS << getSourceLiteralString(E->clangExpr());
+    ValueType VT = E->valueType();
+    switch (VT.Base) {
+    case ValueType::BT_Bool:
+      if (E->as<bool>().value())
+        SS << "true";
+      else
+        SS << "false";
+      return;
+    case ValueType::BT_AsciiChar:
+      CharacterLiteral::print(E->as<char>().value(),
+                              CharacterLiteralKind::Ascii, SS);
+      return;
+    case ValueType::BT_WideChar:
+      CharacterLiteral::print(E->as<wchar_t>().value(),
+                              CharacterLiteralKind::Wide, SS);
+      return;
+    case ValueType::BT_UTF16Char:
+      CharacterLiteral::print(E->as<char16_t>().value(),
+                              CharacterLiteralKind::UTF16, SS);
+      return;
+    case ValueType::BT_UTF32Char:
+      CharacterLiteral::print(E->as<char32_t>().value(),
+                              CharacterLiteralKind::UTF32, SS);
+      return;
+    case ValueType::BT_Int: {
+      SmallVector<char, 32> Str;
+      E->as<llvm::APInt>().value().toStringSigned(Str);
+      Str.push_back('\0');
+      SS << Str.data();
       return;
     }
-    else {
-      ValueType VT = E->valueType();
-      switch (VT.Base) {
-      case ValueType::BT_Void:
-        SS << "void";
-        return;
-      case ValueType::BT_Bool:
-        if (E->as<bool>().value())
-          SS << "true";
-        else
-          SS << "false";
-        return;
-      case ValueType::BT_Int:
-        switch (VT.Size) {
-        case ValueType::ST_8:
-          if (VT.Signed)
-            printLiteralT(&E->as<int8_t>(), SS);
-          else
-            printLiteralT(&E->as<uint8_t>(), SS);
-          return;
-        case ValueType::ST_16:
-          if (VT.Signed)
-            printLiteralT(&E->as<int16_t>(), SS);
-          else
-            printLiteralT(&E->as<uint16_t>(), SS);
-          return;
-        case ValueType::ST_32:
-          if (VT.Signed)
-            printLiteralT(&E->as<int32_t>(), SS);
-          else
-            printLiteralT(&E->as<uint32_t>(), SS);
-          return;
-        case ValueType::ST_64:
-          if (VT.Signed)
-            printLiteralT(&E->as<int64_t>(), SS);
-          else
-            printLiteralT(&E->as<uint64_t>(), SS);
-          return;
-        default:
-          break;
-        }
-        break;
-      case ValueType::BT_Float:
-        switch (VT.Size) {
-        case ValueType::ST_32:
-          printLiteralT(&E->as<float>(), SS);
-          return;
-        case ValueType::ST_64:
-          printLiteralT(&E->as<double>(), SS);
-          return;
-        default:
-          break;
-        }
-        break;
-      case ValueType::BT_String:
-        SS << "\"";
-        printLiteralT(&E->as<StringRef>(), SS);
-        SS << "\"";
-        return;
-      case ValueType::BT_Pointer:
-        SS << "#ptr";
-        return;
-      case ValueType::BT_ValueRef:
-        SS << "#vref";
-        return;
-      }
+    case ValueType::BT_String:
+      SS << '\"' << E->as<StringRef>().value() << '\"';
+      return;
+    case ValueType::BT_Pointer:
+      SS << "nullptr"; // currently the only supported pointer literal.
+      return;
     }
-    SS << "#lit";
+    llvm_unreachable("Invalid BaseType");
   }
 
   void printLiteralPtr(const LiteralPtr *E, StreamType &SS) {
@@ -919,7 +882,7 @@ protected:
   }
 };
 
-class StdPrinter : public PrettyPrinter<StdPrinter, std::ostream> {};
+class StdPrinter : public PrettyPrinter<StdPrinter, llvm::raw_ostream> {};
 
 } // namespace til
 } // namespace threadSafety
