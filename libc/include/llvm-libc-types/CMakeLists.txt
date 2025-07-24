@@ -83,6 +83,7 @@ add_header(siginfo_t HDR siginfo_t.h DEPENDS .union_sigval .pid_t .uid_t .clock_
 add_header(sig_atomic_t HDR sig_atomic_t.h)
 add_header(sigset_t HDR sigset_t.h DEPENDS libc.include.llvm-libc-macros.signal_macros)
 add_header(jmp_buf HDR jmp_buf.h DEPENDS .sigset_t)
+add_header(sigjmp_buf HDR sigjmp_buf.h)
 add_header(struct_sigaction HDR struct_sigaction.h DEPENDS .sigset_t .siginfo_t)
 add_header(struct_timespec HDR struct_timespec.h DEPENDS .time_t)
 add_header(
