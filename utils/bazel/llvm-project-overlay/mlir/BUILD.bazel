@@ -1657,6 +1657,7 @@ cc_library(
         ":AMDGPUPassIncGen",
         ":AMDGPUUtils",
         ":AffineDialect",
+        ":AffineUtils",
         ":ArithDialect",
         ":ArithUtils",
         ":ControlFlowDialect",
