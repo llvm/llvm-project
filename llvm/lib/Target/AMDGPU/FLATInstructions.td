@@ -2075,7 +2075,7 @@ multiclass GlobalFLATStorePats_D16_t16<string inst, SDPatternOperator node, Valu
     let AddedComplexity = 10;
   }
 
-  def : FlatStoreSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR_t16"), node, vt> {
+  def : FlatStoreSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR_t16"), node, vt> {
     let AddedComplexity = 11;
   }
 }
