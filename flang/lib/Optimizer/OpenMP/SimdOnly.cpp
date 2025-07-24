@@ -1,17 +1,24 @@
+//===-- SimdOnly.cpp ------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Transforms/Utils.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/IRMapping.h"
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include <llvm/Support/Debug.h>
-#include <mlir/IR/MLIRContext.h>
-#include <mlir/IR/Operation.h>
-#include <mlir/IR/PatternMatch.h>
-#include <mlir/Support/LLVM.h>
+#include "llvm/Support/Debug.h"
 
 namespace flangomp {
 #define GEN_PASS_DEF_SIMDONLYPASS
@@ -44,8 +51,15 @@ public:
       return rewriter.notifyMatchFailure(op, "Op is a plain SimdOp");
     }
 
-    if (op->getParentOfType<mlir::omp::SimdOp>())
-      return rewriter.notifyMatchFailure(op, "Op is nested under a SimdOp");
+    if (op->getParentOfType<mlir::omp::SimdOp>() &&
+        (mlir::isa<mlir::omp::YieldOp>(op) ||
+         mlir::isa<mlir::omp::LoopNestOp>(op) ||
+         mlir::isa<mlir::omp::WsloopOp>(op) ||
+         mlir::isa<mlir::omp::WorkshareLoopWrapperOp>(op) ||
+         mlir::isa<mlir::omp::DistributeOp>(op) ||
+         mlir::isa<mlir::omp::TaskloopOp>(op) ||
+         mlir::isa<mlir::omp::TerminatorOp>(op)))
+      return rewriter.notifyMatchFailure(op, "Op is part of a simd construct");
 
     if (!mlir::isa<mlir::func::FuncOp>(op->getParentOp()) &&
         (mlir::isa<mlir::omp::TerminatorOp>(op) ||
@@ -67,6 +81,28 @@ public:
     LLVM_DEBUG(llvm::dbgs() << "SimdOnlyPass matched OpenMP op:\n");
     LLVM_DEBUG(op->dump());
 
+    auto eraseUnlessUsedBySimd = [&](mlir::Operation *ompOp,
+                                     mlir::StringAttr name) {
+      if (auto uses =
+              mlir::SymbolTable::getSymbolUses(name, op->getParentOp())) {
+        for (auto &use : *uses)
+          if (mlir::isa<mlir::omp::SimdOp>(use.getUser()))
+            return rewriter.notifyMatchFailure(op,
+                                               "Op used by a simd construct");
+      }
+      rewriter.eraseOp(ompOp);
+      return mlir::success();
+    };
+
+    if (auto ompOp = mlir::dyn_cast<mlir::omp::PrivateClauseOp>(op))
+      return eraseUnlessUsedBySimd(ompOp, ompOp.getSymNameAttr());
+    if (auto ompOp = mlir::dyn_cast<mlir::omp::DeclareReductionOp>(op))
+      return eraseUnlessUsedBySimd(ompOp, ompOp.getSymNameAttr());
+    if (auto ompOp = mlir::dyn_cast<mlir::omp::CriticalDeclareOp>(op))
+      return eraseUnlessUsedBySimd(ompOp, ompOp.getSymNameAttr());
+    if (auto ompOp = mlir::dyn_cast<mlir::omp::DeclareMapperOp>(op))
+      return eraseUnlessUsedBySimd(ompOp, ompOp.getSymNameAttr());
+
     // Erase ops that don't need any special handling
     if (mlir::isa<mlir::omp::BarrierOp>(op) ||
         mlir::isa<mlir::omp::FlushOp>(op) ||
@@ -87,67 +123,11 @@ public:
     fir::FirOpBuilder builder(rewriter, op);
     mlir::Location loc = op->getLoc();
 
-    auto inlineSimpleOp = [&](mlir::Operation *ompOp) -> bool {
-      if (!ompOp)
-        return false;
-
-      llvm::SmallVector<std::pair<mlir::Value, mlir::BlockArgument>>
-          blockArgsPairs;
-      if (auto iface =
-              mlir::dyn_cast<mlir::omp::BlockArgOpenMPOpInterface>(op)) {
-        iface.getBlockArgsPairs(blockArgsPairs);
-        for (auto [value, argument] : blockArgsPairs)
-          rewriter.replaceAllUsesWith(argument, value);
-      }
-
-      if (ompOp->getRegion(0).getBlocks().size() == 1) {
-        auto &block = *ompOp->getRegion(0).getBlocks().begin();
-        // This block is about to be removed so any arguments should have been
-        // replaced by now.
-        block.eraseArguments(0, block.getNumArguments());
-        if (auto terminatorOp =
-                mlir::dyn_cast<mlir::omp::TerminatorOp>(block.back())) {
-          rewriter.eraseOp(terminatorOp);
-        }
-        rewriter.inlineBlockBefore(&block, op, {});
-      } else {
-        // When dealing with multi-block regions we need to fix up the control
-        // flow
-        auto *origBlock = ompOp->getBlock();
-        auto *newBlock = rewriter.splitBlock(origBlock, ompOp->getIterator());
-        auto *innerFrontBlock = &ompOp->getRegion(0).getBlocks().front();
-        builder.setInsertionPointToEnd(origBlock);
-        builder.create<mlir::cf::BranchOp>(loc, innerFrontBlock);
-        // We are no longer passing any arguments to the first block in the
-        // region, so this should be safe to erase.
-        innerFrontBlock->eraseArguments(0, innerFrontBlock->getNumArguments());
-
-        for (auto &innerBlock : ompOp->getRegion(0).getBlocks()) {
-          // Remove now-unused block arguments
-          for (auto arg : innerBlock.getArguments()) {
-            if (arg.getUses().empty())
-              innerBlock.eraseArgument(arg.getArgNumber());
-          }
-          if (auto terminatorOp =
-                  mlir::dyn_cast<mlir::omp::TerminatorOp>(innerBlock.back())) {
-            builder.setInsertionPointToEnd(&innerBlock);
-            builder.create<mlir::cf::BranchOp>(loc, newBlock);
-            rewriter.eraseOp(terminatorOp);
-          }
-        }
-
-        rewriter.inlineRegionBefore(ompOp->getRegion(0), newBlock);
-      }
-
-      rewriter.eraseOp(op);
-      return true;
-    };
-
     if (auto ompOp = mlir::dyn_cast<mlir::omp::LoopNestOp>(op)) {
       mlir::Type indexType = builder.getIndexType();
       mlir::Type oldIndexType = ompOp.getIVs().begin()->getType();
       builder.setInsertionPoint(op);
-      auto one = builder.create<mlir::arith::ConstantIndexOp>(loc, 1);
+      auto one = mlir::arith::ConstantIndexOp::create(builder, loc, 1);
 
       // Generate the new loop nest
       mlir::Block *nestBody = nullptr;
@@ -155,7 +135,7 @@ public:
       llvm::SmallVector<mlir::Value> loopIndArgs;
       for (auto extent : ompOp.getLoopUpperBounds()) {
         auto ub = builder.createConvert(loc, indexType, extent);
-        auto doLoop = builder.create<fir::DoLoopOp>(loc, one, ub, one, false);
+        auto doLoop = fir::DoLoopOp::create(builder, loc, one, ub, one, false);
         nestBody = doLoop.getBody();
         builder.setInsertionPointToStart(nestBody);
         // Convert the indices to the type used inside the loop if needed
@@ -185,11 +165,12 @@ public:
         }
 
         // Remove omp.yield at the end of the loop body
-        if (auto yieldOp = mlir::dyn_cast<mlir::omp::YieldOp>(nestBody->back()))
+        if (auto yieldOp =
+                mlir::dyn_cast<mlir::omp::YieldOp>(nestBody->back())) {
+          assert("omp.loop_nests's omp.yield has no operands" &&
+                 yieldOp->getNumOperands() == 0);
           rewriter.eraseOp(yieldOp);
-        // DoLoopOp does not support multi-block regions, thus if we're dealing
-        // with multiple blocks we need to convert it into basic control-flow
-        // operations.
+        }
       } else {
         rewriter.inlineRegionBefore(ompOp->getRegion(0), nestBody);
         auto indVarArg = outerLoop->getRegion(0).front().getArgument(0);
@@ -199,6 +180,9 @@ public:
         if (indVarArg.getType() != indexType)
           indVarArg.setType(indexType);
 
+        // fir.do_loop, unlike omp.loop_nest does not support multi-block
+        // regions. If we're dealing with multiple blocks inside omp.loop_nest,
+        // we need to convert it into basic control-flow operations instead.
         auto loopBlocks =
             fir::convertDoLoopToCFG(outerLoop, rewriter, false, false);
         auto *conditionalBlock = loopBlocks.first;
@@ -237,7 +221,9 @@ public:
           if (auto yieldOp =
                   mlir::dyn_cast<mlir::omp::YieldOp>(loopBlock->back())) {
             builder.setInsertionPointToEnd(loopBlock);
-            builder.create<mlir::cf::BranchOp>(loc, lastBlock);
+            mlir::cf::BranchOp::create(builder, loc, lastBlock);
+            assert("omp.loop_nests's omp.yield has no operands" &&
+                   yieldOp->getNumOperands() == 0);
             rewriter.eraseOp(yieldOp);
           }
         }
@@ -255,16 +241,16 @@ public:
 
     if (auto atomicReadOp = mlir::dyn_cast<mlir::omp::AtomicReadOp>(op)) {
       builder.setInsertionPoint(op);
-      auto loadOp = builder.create<fir::LoadOp>(loc, atomicReadOp.getX());
-      auto storeOp = builder.create<fir::StoreOp>(loc, loadOp.getResult(),
-                                                  atomicReadOp.getV());
+      auto loadOp = fir::LoadOp::create(builder, loc, atomicReadOp.getX());
+      auto storeOp = fir::StoreOp::create(builder, loc, loadOp.getResult(),
+                                          atomicReadOp.getV());
       rewriter.replaceOp(op, storeOp);
       return mlir::success();
     }
 
     if (auto atomicWriteOp = mlir::dyn_cast<mlir::omp::AtomicWriteOp>(op)) {
-      auto storeOp = builder.create<fir::StoreOp>(loc, atomicWriteOp.getExpr(),
-                                                  atomicWriteOp.getX());
+      auto storeOp = fir::StoreOp::create(builder, loc, atomicWriteOp.getExpr(),
+                                          atomicWriteOp.getX());
       rewriter.replaceOp(op, storeOp);
       return mlir::success();
     }
@@ -276,7 +262,7 @@ public:
       builder.setInsertionPointToStart(&block);
 
       // Load the update `x` operand and replace its uses within the block
-      auto loadOp = builder.create<fir::LoadOp>(loc, atomicUpdateOp.getX());
+      auto loadOp = fir::LoadOp::create(builder, loc, atomicUpdateOp.getX());
       rewriter.replaceUsesWithIf(
           block.getArgument(0), loadOp.getResult(),
           [&](auto &op) { return op.get().getParentBlock() == &block; });
@@ -286,14 +272,14 @@ public:
       auto yieldOp = mlir::cast<mlir::omp::YieldOp>(block.back());
       assert("only one yield operand" && yieldOp->getNumOperands() == 1);
       builder.setInsertionPointAfter(yieldOp);
-      builder.create<fir::StoreOp>(loc, yieldOp->getOperand(0),
-                                   atomicUpdateOp.getX());
+      fir::StoreOp::create(builder, loc, yieldOp->getOperand(0),
+                           atomicUpdateOp.getX());
       rewriter.eraseOp(yieldOp);
 
       // Inline the final block and remove the now-empty op
       assert("only one block argument" && block.getNumArguments() == 1);
       block.eraseArguments(0, block.getNumArguments());
-      rewriter.inlineBlockBefore(&block, op, {});
+      rewriter.inlineBlockBefore(&block, atomicUpdateOp, {});
       rewriter.eraseOp(op);
       return mlir::success();
     }
@@ -304,6 +290,64 @@ public:
       rewriter.eraseOp(threadPrivateOp);
       return mlir::success();
     }
+
+    auto inlineSimpleOp = [&](mlir::Operation *ompOp) -> bool {
+      if (!ompOp)
+        return false;
+
+      assert("OpenMP operation has one region" && ompOp->getNumRegions() == 1);
+
+      llvm::SmallVector<std::pair<mlir::Value, mlir::BlockArgument>>
+          blockArgsPairs;
+      if (auto iface =
+              mlir::dyn_cast<mlir::omp::BlockArgOpenMPOpInterface>(op)) {
+        iface.getBlockArgsPairs(blockArgsPairs);
+        for (auto [value, argument] : blockArgsPairs)
+          rewriter.replaceAllUsesWith(argument, value);
+      }
+
+      if (ompOp->getRegion(0).getBlocks().size() == 1) {
+        auto &block = *ompOp->getRegion(0).getBlocks().begin();
+        // This block is about to be removed so any arguments should have been
+        // replaced by now.
+        block.eraseArguments(0, block.getNumArguments());
+        if (auto terminatorOp =
+                mlir::dyn_cast<mlir::omp::TerminatorOp>(block.back())) {
+          rewriter.eraseOp(terminatorOp);
+        }
+        rewriter.inlineBlockBefore(&block, ompOp, {});
+      } else {
+        // When dealing with multi-block regions we need to fix up the control
+        // flow
+        auto *origBlock = ompOp->getBlock();
+        auto *newBlock = rewriter.splitBlock(origBlock, ompOp->getIterator());
+        auto *innerFrontBlock = &ompOp->getRegion(0).getBlocks().front();
+        builder.setInsertionPointToEnd(origBlock);
+        mlir::cf::BranchOp::create(builder, loc, innerFrontBlock);
+        // We are no longer passing any arguments to the first block in the
+        // region, so this should be safe to erase.
+        innerFrontBlock->eraseArguments(0, innerFrontBlock->getNumArguments());
+
+        for (auto &innerBlock : ompOp->getRegion(0).getBlocks()) {
+          // Remove now-unused block arguments
+          for (auto arg : innerBlock.getArguments()) {
+            if (arg.getUses().empty())
+              innerBlock.eraseArgument(arg.getArgNumber());
+          }
+          if (auto terminatorOp =
+                  mlir::dyn_cast<mlir::omp::TerminatorOp>(innerBlock.back())) {
+            builder.setInsertionPointToEnd(&innerBlock);
+            mlir::cf::BranchOp::create(builder, loc, newBlock);
+            rewriter.eraseOp(terminatorOp);
+          }
+        }
+
+        rewriter.inlineRegionBefore(ompOp->getRegion(0), newBlock);
+      }
+
+      rewriter.eraseOp(op);
+      return true;
+    };
 
     if (inlineSimpleOp(mlir::dyn_cast<mlir::omp::TeamsOp>(op)) ||
         inlineSimpleOp(mlir::dyn_cast<mlir::omp::ParallelOp>(op)) ||
@@ -324,7 +368,7 @@ public:
         inlineSimpleOp(mlir::dyn_cast<mlir::omp::MaskedOp>(op)))
       return mlir::success();
 
-    op->emitOpError("OpenMP operation left unhandled after SimdOnly pass.");
+    op->emitOpError("left unhandled after SimdOnly pass.");
     return mlir::failure();
   }
 };
@@ -335,10 +379,7 @@ public:
   SimdOnlyPass() = default;
 
   void runOnOperation() override {
-    mlir::func::FuncOp func = getOperation();
-
-    if (func.isDeclaration())
-      return;
+    mlir::ModuleOp module = getOperation();
 
     mlir::MLIRContext *context = &getContext();
     mlir::RewritePatternSet patterns(context);
@@ -350,8 +391,8 @@ public:
         mlir::GreedySimplifyRegionLevel::Disabled);
 
     if (mlir::failed(
-            mlir::applyPatternsGreedily(func, std::move(patterns), config))) {
-      mlir::emitError(func.getLoc(), "error in simd-only conversion pass");
+            mlir::applyPatternsGreedily(module, std::move(patterns), config))) {
+      mlir::emitError(module.getLoc(), "error in simd-only conversion pass");
       signalPassFailure();
     }
   }

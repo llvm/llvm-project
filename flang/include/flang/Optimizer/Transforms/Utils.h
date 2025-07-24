@@ -13,6 +13,8 @@
 #ifndef FORTRAN_OPTIMIZER_TRANSFORMS_UTILS_H
 #define FORTRAN_OPTIMIZER_TRANSFORMS_UTILS_H
 
+#include "flang/Optimizer/Dialect/FIROps.h"
+
 namespace fir {
 
 using MinlocBodyOpGeneratorTy = llvm::function_ref<mlir::Value(
