@@ -484,6 +484,9 @@ static cl::opt<bool> HasClosedWorldAssumption(
     cl::desc("Whether has closed-world assumption at link time"),
     cl::init(false), cl::Hidden);
 
+static cl::opt<bool> VerifyTarget("amdgpu-verify-tgt",
+                                  cl::desc("Enable the target verifier"));
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheR600Target());
@@ -1413,6 +1416,8 @@ bool AMDGPUPassConfig::addGCPasses() {
 //===----------------------------------------------------------------------===//
 
 bool GCNPassConfig::addPreISel() {
+  if (VerifyTarget)
+    addPass(createAMDGPUTargetVerifierLegacyPass(false));
   AMDGPUPassConfig::addPreISel();
 
   if (TM->getOptLevel() > CodeGenOptLevel::None)
@@ -2019,6 +2024,9 @@ AMDGPUCodeGenPassBuilder::AMDGPUCodeGenPassBuilder(
 }
 
 void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
+  if (VerifyTarget)
+    addPass(AMDGPUTargetVerifierPass());
+
   if (RemoveIncompatibleFunctions && TM.getTargetTriple().isAMDGCN())
     addPass(AMDGPURemoveIncompatibleFunctionsPass(TM));
 
