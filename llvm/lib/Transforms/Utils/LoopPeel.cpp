@@ -1221,15 +1221,6 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
   // analysis later needs to determine the trip count of the remaining loop
   // while examining it in isolation without considering the probability of
   // actually reaching it, we store the new trip count as separate metadata.
-  //
-  // TODO: getLoopEstimatedTripCount and setLoopEstimatedTripCount skip loops
-  // that don't match the restrictions of getExpectedExitLoopLatchBranch in
-  // LoopUtils.cpp.  For example,
-  // llvm/tests/Transforms/LoopUnroll/peel-branch-weights.ll (introduced by
-  // b43a4d0850d5) has multiple exits.  Should we try to extend them to handle
-  // such cases?  For now, we just don't try to record
-  // llvm.loop.estimated_trip_count for such cases, so the original branch
-  // weights will have to do.
   if (auto EstimatedTripCount = getLoopEstimatedTripCount(L)) {
     // FIXME: The previous updateBranchWeights implementation had this
     // comment:
@@ -1250,8 +1241,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
       EstimatedTripCountNew = 0;             // FIXME: = 2?
     else
       EstimatedTripCountNew -= TotalPeeled;
-    setLoopEstimatedTripCount(L, EstimatedTripCountNew,
-                              /*EstimatedLoopInvocationWeight=*/std::nullopt);
+    setLoopEstimatedTripCount(L, EstimatedTripCountNew);
   }
 
   if (Loop *ParentLoop = L->getParentLoop())
