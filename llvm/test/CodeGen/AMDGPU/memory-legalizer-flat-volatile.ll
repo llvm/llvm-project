@@ -1164,6 +1164,7 @@ define amdgpu_kernel void @flat_volatile_workgroup_release_store(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
