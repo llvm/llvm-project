@@ -55,3 +55,15 @@ add_fp_unittest(
   DEPENDS
     libc.src.__support.FPUtil.bfloat16
 )
+
+add_fp_unittest(
+  comparison_operations_test
+  SUITE
+    libc-fputil-tests
+  SRCS
+    comparison_operations_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.comparison_operations
+    libc.src.__support.macros.properties.types
+)

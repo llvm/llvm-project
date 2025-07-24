@@ -482,16 +482,11 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
 
     if (II->isLifetimeStartOrEnd()) {
       auto *Arg = II->getArgOperand(1);
-      // Lifetime intrinsics are dead when their right-hand is undef.
-      if (isa<UndefValue>(Arg))
-        return true;
-      // If the right-hand is an alloc, global, or argument and the only uses
-      // are lifetime intrinsics then the intrinsics are dead.
-      if (isa<AllocaInst>(Arg) || isa<GlobalValue>(Arg) || isa<Argument>(Arg))
-        return llvm::all_of(Arg->uses(), [](Use &Use) {
-          return isa<LifetimeIntrinsic>(Use.getUser());
-        });
-      return false;
+      // If the only uses of the alloca are lifetime intrinsics, then the
+      // intrinsics are dead.
+      return llvm::all_of(Arg->uses(), [](Use &Use) {
+        return isa<LifetimeIntrinsic>(Use.getUser());
+      });
     }
 
     // Assumptions are dead if their condition is trivially true.
@@ -610,10 +605,8 @@ void llvm::RecursivelyDeleteTriviallyDeadInstructions(
 }
 
 bool llvm::replaceDbgUsesWithUndef(Instruction *I) {
-  SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   SmallVector<DbgVariableRecord *, 1> DPUsers;
-  findDbgUsers(DbgUsers, I, &DPUsers);
-  assert(DbgUsers.empty());
+  findDbgUsers(I, DPUsers);
   for (auto *DVR : DPUsers)
     DVR->setKillLocation();
   return !DPUsers.empty();
@@ -1603,10 +1596,8 @@ static bool PhiHasDebugValue(DILocalVariable *DIVar,
   // Since we can't guarantee that the original dbg.declare intrinsic
   // is removed by LowerDbgDeclare(), we need to make sure that we are
   // not inserting the same dbg.value intrinsic over and over.
-  SmallVector<DbgValueInst *, 1> DbgValues;
   SmallVector<DbgVariableRecord *, 1> DbgVariableRecords;
-  findDbgValues(DbgValues, APN, &DbgVariableRecords);
-  assert(DbgValues.empty());
+  findDbgValues(APN, DbgVariableRecords);
   for (DbgVariableRecord *DVR : DbgVariableRecords) {
     assert(is_contained(DVR->location_ops(), APN));
     if ((DVR->getVariable() == DIVar) && (DVR->getExpression() == DIExpr))
@@ -1987,10 +1978,8 @@ static void updateOneDbgValueForAlloca(const DebugLoc &Loc,
 
 void llvm::replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                                     DIBuilder &Builder, int Offset) {
-  SmallVector<DbgValueInst *, 1> DbgUsers;
   SmallVector<DbgVariableRecord *, 1> DPUsers;
-  findDbgValues(DbgUsers, AI, &DPUsers);
-  assert(DbgUsers.empty());
+  findDbgValues(AI, DPUsers);
 
   // Replace any DbgVariableRecords that use this alloca.
   for (DbgVariableRecord *DVR : DPUsers)
@@ -2002,11 +1991,9 @@ void llvm::replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
 /// Where possible to salvage debug information for \p I do so.
 /// If not possible mark undef.
 void llvm::salvageDebugInfo(Instruction &I) {
-  SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   SmallVector<DbgVariableRecord *, 1> DPUsers;
-  findDbgUsers(DbgUsers, &I, &DPUsers);
-  assert(DbgUsers.empty());
-  salvageDebugInfoForDbgValues(I, DbgUsers, DPUsers);
+  findDbgUsers(&I, DPUsers);
+  salvageDebugInfoForDbgValues(I, DPUsers);
 }
 
 template <typename T> static void salvageDbgAssignAddress(T *Assign) {
@@ -2044,18 +2031,14 @@ template <typename T> static void salvageDbgAssignAddress(T *Assign) {
   }
 }
 
-void llvm::salvageDebugInfoForDbgValues(
-    Instruction &I, ArrayRef<DbgVariableIntrinsic *> DbgUsers,
-    ArrayRef<DbgVariableRecord *> DPUsers) {
+void llvm::salvageDebugInfoForDbgValues(Instruction &I,
+                                        ArrayRef<DbgVariableRecord *> DPUsers) {
   // These are arbitrary chosen limits on the maximum number of values and the
   // maximum size of a debug expression we can salvage up to, used for
   // performance reasons.
   const unsigned MaxDebugArgs = 16;
   const unsigned MaxExpressionSize = 128;
   bool Salvaged = false;
-
-  // We should never see debug intrinsics nowadays.
-  assert(DbgUsers.empty());
 
   for (auto *DVR : DPUsers) {
     if (DVR->isDbgAssign()) {
@@ -2343,15 +2326,10 @@ static bool rewriteDebugUsers(
     Instruction &From, Value &To, Instruction &DomPoint, DominatorTree &DT,
     function_ref<DbgValReplacement(DbgVariableRecord &DVR)> RewriteDVRExpr) {
   // Find debug users of From.
-  SmallVector<DbgVariableIntrinsic *, 1> Users;
   SmallVector<DbgVariableRecord *, 1> DPUsers;
-  findDbgUsers(Users, &From, &DPUsers);
-  if (Users.empty() && DPUsers.empty())
+  findDbgUsers(&From, DPUsers);
+  if (DPUsers.empty())
     return false;
-
-  // Ignore intrinsic-users: they are no longer supported and should never
-  // appear.
-  assert(Users.empty());
 
   // Prevent use-before-def of To.
   bool Changed = false;
@@ -3356,10 +3334,8 @@ void llvm::copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI,
 }
 
 void llvm::dropDebugUsers(Instruction &I) {
-  SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   SmallVector<DbgVariableRecord *, 1> DPUsers;
-  findDbgUsers(DbgUsers, &I, &DPUsers);
-  assert(DbgUsers.empty());
+  findDbgUsers(&I, DPUsers);
   for (auto *DVR : DPUsers)
     DVR->eraseFromParent();
 }
@@ -3874,6 +3850,10 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   // argument; swifterror pointers are not allowed to be used in select or phi
   // instructions.
   if (Op->isSwiftError())
+    return false;
+
+  // Cannot replace alloca argument with phi/select.
+  if (I->isLifetimeStartOrEnd())
     return false;
 
   // Early exit.

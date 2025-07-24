@@ -265,8 +265,10 @@ protected:
   bool HasIEEEMinimumMaximumInsts = false;
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
+  bool HasMin3Max3PKF16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
   bool HasLshlAddU64Inst = false;
+  bool HasAddSubU64Insts = false;
   bool HasPointSampleAccel = false;
   bool HasLdsBarrierArriveAtomic = false;
   bool HasSetPrioIncWgInst = false;
@@ -1022,7 +1024,7 @@ public:
   }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           unsigned NumRegionInstrs) const override;
+                           const SchedRegion &Region) const override;
 
   void mirFileLoaded(MachineFunction &MF) const override;
 
@@ -1162,7 +1164,13 @@ public:
 
   bool hasLshlAddU64Inst() const { return HasLshlAddU64Inst; }
 
+  // Scalar and global loads support scale_offset bit.
+  bool hasScaleOffset() const { return GFX1250Insts; }
+
   bool hasFlatGVSMode() const { return FlatGVSMode; }
+
+  // FLAT GLOBAL VOffset is signed
+  bool hasSignedGVSOffset() const { return GFX1250Insts; }
 
   bool enableSIScheduler() const {
     return EnableSIScheduler;
@@ -1300,7 +1308,7 @@ public:
 
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
-  bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
+  bool hasVALUReadSGPRHazard() const { return GFX12Insts && !GFX1250Insts; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts || GFX1250Insts; }
@@ -1380,6 +1388,8 @@ public:
   bool hasMinimum3Maximum3F16() const {
     return HasMinimum3Maximum3F16;
   }
+
+  bool hasMin3Max3PKF16() const { return HasMin3Max3PKF16; }
 
   bool hasTanhInsts() const { return HasTanhInsts; }
 
@@ -1493,6 +1503,18 @@ public:
   bool hasGFX1250Insts() const { return GFX1250Insts; }
 
   bool hasVOPD3() const { return GFX1250Insts; }
+
+  // \returns true if the target has V_ADD_U64/V_SUB_U64 instructions.
+  bool hasAddSubU64Insts() const { return HasAddSubU64Insts; }
+
+  // \returns true if the target has V_MUL_U64/V_MUL_I64 instructions.
+  bool hasVectorMulU64() const { return GFX1250Insts; }
+
+  // \returns true if the target has V_PK_ADD_{MIN|MAX}_{I|U}16 instructions.
+  bool hasPkAddMinMaxInsts() const { return GFX1250Insts; }
+
+  // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
+  bool hasPkMinMax3Insts() const { return GFX1250Insts; }
 
   // \returns true if target has S_SETPRIO_INC_WG instruction.
   bool hasSetPrioIncWgInst() const { return HasSetPrioIncWgInst; }

@@ -748,7 +748,7 @@ define signext i32 @ctpop_i32_load(ptr %p) nounwind {
 ;
 ; RV64ZBB-LABEL: ctpop_i32_load:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    lwu a0, 0(a0)
+; RV64ZBB-NEXT:    lw a0, 0(a0)
 ; RV64ZBB-NEXT:    cpopw a0, a0
 ; RV64ZBB-NEXT:    ret
   %a = load i32, ptr %p
@@ -1053,9 +1053,8 @@ define signext i32 @abs_i32_sext(i32 signext %x) {
 ; RV64I-LABEL: abs_i32_sext:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srai a1, a0, 31
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: abs_i32_sext:

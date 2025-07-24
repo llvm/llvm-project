@@ -159,9 +159,9 @@ func.func @conversion_broadcast_odd(%in: vector<6xf32>, %scale: vector<2xf8E8M0F
 
 // -----
 
-// CHECK-LABEL: @conversion_splat
+// CHECK-LABEL: @conversion_broadcast
 // CHECK-DAG:     %[[CST:.+]] = arith.constant dense<0.000000e+00> : vector<4xf8E5M2>
-// CHECK-DAG:     %[[SCALE_SPLAT:.+]] = vector.splat %arg1 : vector<4xf8E8M0FNU>
+// CHECK-DAG:     %[[SCALE_SPLAT:.+]] = vector.broadcast %arg1 : f8E8M0FNU to vector<4xf8E8M0FNU>
 // CHECK-DAG:     %[[SCALE_EXTF:.+]] = arith.extf %[[SCALE_SPLAT]] : vector<4xf8E8M0FNU> to vector<4xf32>
 // CHECK-DAG:     %[[SCALE_SCALAR:.+]] = vector.extract %[[SCALE_EXTF]][0] : f32 from vector<4xf32>
 // CHECK:         %[[IN_CHUNK0:.+]] = vector.extract_strided_slice %arg0 {offsets = [0], sizes = [2], strides = [1]} : vector<4xf32> to vector<2xf32>
@@ -173,8 +173,8 @@ func.func @conversion_broadcast_odd(%in: vector<6xf32>, %scale: vector<2xf8E8M0F
 // CHECK-NEXT:    %[[OUT_CHUNK1:.+]] = vector.extract_strided_slice %[[PACKED1]] {offsets = [0], sizes = [2], strides = [1]} : vector<4xf8E5M2> to vector<2xf8E5M2>
 // CHECK-NEXT:    %[[FINAL_RESULT:.+]] = vector.insert_strided_slice %[[OUT_CHUNK1]], %[[ACCUM_A]] {offsets = [2], strides = [1]} : vector<2xf8E5M2> into vector<4xf8E5M2>
 // CHECK-NEXT:    return %[[FINAL_RESULT]] : vector<4xf8E5M2>
-func.func @conversion_splat(%in: vector<4xf32>, %scale: f8E8M0FNU) -> vector<4xf8E5M2> {
-    %splat = vector.splat %scale : vector<4xf8E8M0FNU>
+func.func @conversion_broadcast(%in: vector<4xf32>, %scale: f8E8M0FNU) -> vector<4xf8E5M2> {
+    %splat = vector.broadcast %scale : f8E8M0FNU to vector<4xf8E8M0FNU>
     %ext = arith.scaling_truncf %in, %splat : vector<4xf32>, vector<4xf8E8M0FNU> to vector<4xf8E5M2>
     return %ext : vector<4xf8E5M2>
 }
@@ -183,7 +183,7 @@ func.func @conversion_splat(%in: vector<4xf32>, %scale: f8E8M0FNU) -> vector<4xf
 
 // CHECK-LABEL: @conversion_scalar
 // CHECK:         %[[SCALE_F32:.+]] = arith.extf %arg1 : f8E8M0FNU to f32
-// CHECK-NEXT:    %[[SPLAT_IN:.+]] = vector.splat %arg0 : vector<1xf32>
+// CHECK-NEXT:    %[[SPLAT_IN:.+]] = vector.broadcast %arg0 : f32 to vector<1xf32>
 // CHECK-NEXT:    %[[PACKED_TRUNC:.+]] = amdgpu.packed_scaled_trunc %[[SPLAT_IN]] into undef[0], %[[SCALE_F32]]
 // CHECK-NEXT:    %[[RESULT:.+]] = vector.extract %[[PACKED_TRUNC]][0]
 // CHECK-NEXT:    return %[[RESULT]] : f8E5M2

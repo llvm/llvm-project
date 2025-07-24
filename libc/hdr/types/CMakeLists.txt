@@ -26,6 +26,8 @@ add_proxy_header_library(
     mbstate_t.h
   DEPENDS
     libc.include.llvm-libc-types.mbstate_t
+  FULL_BUILD_DEPENDS
+    libc.include.uchar
 )
 
 add_proxy_header_library(
@@ -92,6 +94,7 @@ add_proxy_header_library(
   DEPENDS
     libc.hdr.fcntl_overlay
   FULL_BUILD_DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.llvm-libc-types.struct_flock
 )
 
@@ -102,6 +105,7 @@ add_proxy_header_library(
   DEPENDS
     libc.hdr.fcntl_overlay
   FULL_BUILD_DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.llvm-libc-types.struct_flock64
 )
 
