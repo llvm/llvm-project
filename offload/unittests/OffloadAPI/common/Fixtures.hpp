@@ -171,16 +171,8 @@ struct OffloadQueueTest : OffloadDeviceTest {
 struct OffloadEventTest : OffloadQueueTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
-    // Get an event from a memcpy. We can still use it in olGetEventInfo etc
-    // after it has been waited on.
-    void *Alloc;
-    uint32_t Value = 42;
-    ASSERT_SUCCESS(
-        olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, sizeof(Value), &Alloc));
-    ASSERT_SUCCESS(
-        olMemcpy(Queue, Alloc, Device, &Value, Host, sizeof(Value), &Event));
-    ASSERT_SUCCESS(olSyncEvent(Event));
-    ASSERT_SUCCESS(olMemFree(Alloc));
+    ASSERT_SUCCESS(olCreateEvent(Queue, &Event));
+    ASSERT_SUCCESS(olSyncQueue(Queue));
   }
 
   void TearDown() override {
