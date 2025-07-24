@@ -625,20 +625,29 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("AllowShortBlocksOnASingleLine: true",
               AllowShortBlocksOnASingleLine, FormatStyle::SBS_Always);
 
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: None",
-              AllowShortFunctionsOnASingleLine, FormatStyle::SFS_None);
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle({}));
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: Inline",
-              AllowShortFunctionsOnASingleLine, FormatStyle::SFS_Inline);
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle::setEmptyAndInline());
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: Empty",
-              AllowShortFunctionsOnASingleLine, FormatStyle::SFS_Empty);
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle::setEmptyOnly());
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: All",
-              AllowShortFunctionsOnASingleLine, FormatStyle::SFS_All);
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle::setAll());
+  CHECK_PARSE("AllowShortFunctionsOnASingleLine: InlineOnly",
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle::setInlineOnly());
+
   // For backward compatibility:
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: false",
-              AllowShortFunctionsOnASingleLine, FormatStyle::SFS_None);
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle({}));
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: true",
-              AllowShortFunctionsOnASingleLine, FormatStyle::SFS_All);
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle::setAll());
 
   Style.AllowShortLambdasOnASingleLine = FormatStyle::SLS_All;
   CHECK_PARSE("AllowShortLambdasOnASingleLine: None",

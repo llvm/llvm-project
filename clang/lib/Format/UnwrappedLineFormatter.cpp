@@ -290,15 +290,16 @@ private:
 
     auto ShouldMergeShortFunctions = [this, &I, &NextLine, PreviousLine,
                                       TheLine]() {
-      if (Style.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_All)
+      if (Style.AllowShortFunctionsOnASingleLine.isAll())
         return true;
-      if (Style.AllowShortFunctionsOnASingleLine >= FormatStyle::SFS_Empty &&
+
+      if (Style.AllowShortFunctionsOnASingleLine.Empty &&
           NextLine.First->is(tok::r_brace)) {
         return true;
       }
 
-      if (Style.AllowShortFunctionsOnASingleLine &
-          FormatStyle::SFS_InlineOnly) {
+      if (Style.AllowShortFunctionsOnASingleLine.Inline &&
+          !Style.AllowShortFunctionsOnASingleLine.Other) {
         // Just checking TheLine->Level != 0 is not enough, because it
         // provokes treating functions inside indented namespaces as short.
         if (Style.isJavaScript() && TheLine->Last->is(TT_FunctionLBrace))
@@ -521,7 +522,7 @@ private:
 
       unsigned MergedLines = 0;
       if (MergeShortFunctions ||
-          (Style.AllowShortFunctionsOnASingleLine >= FormatStyle::SFS_Empty &&
+          (Style.AllowShortFunctionsOnASingleLine.Empty &&
            NextLine.First == NextLine.Last && I + 2 != E &&
            I[2]->First->is(tok::r_brace))) {
         MergedLines = tryMergeSimpleBlock(I + 1, E, Limit);
