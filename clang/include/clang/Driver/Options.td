@@ -990,6 +990,13 @@ def Xlinker : Separate<["-"], "Xlinker">, Flags<[LinkerInput, RenderAsInput]>,
   Visibility<[ClangOption, CLOption, FlangOption]>,
   HelpText<"Pass <arg> to the linker">, MetaVarName<"<arg>">,
   Group<Link_Group>;
+def Xthinlto_distributor_EQ : CommaJoined<["-"], "Xthinlto-distributor=">,
+  Flags<[LinkOption]>,
+  Visibility<[ClangOption, CLOption]>,
+  HelpText<"Pass <arg> to the ThinLTO distributor process. Can be specified "
+           "multiple times or with comma-separated values.">,
+  MetaVarName<"<arg>">,
+  Group<Link_Group>;
 def Xoffload_linker : JoinedAndSeparate<["-"], "Xoffload-linker">,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Pass <arg> to the offload linkers or the ones identified by -<triple>">,
@@ -1414,19 +1421,6 @@ def fhip_emit_relocatable : Flag<["-"], "fhip-emit-relocatable">,
 def fno_hip_emit_relocatable : Flag<["-"], "fno-hip-emit-relocatable">,
   HelpText<"Do not override toolchain to compile HIP source to relocatable">;
 }
-
-// Clang specific/exclusive options for OpenACC.
-def openacc_macro_override
-    : Separate<["-"], "fexperimental-openacc-macro-override">,
-      Visibility<[ClangOption, CC1Option]>,
-      Group<f_Group>,
-      HelpText<"Overrides the _OPENACC macro value for experimental testing "
-               "during OpenACC support development">;
-def openacc_macro_override_EQ
-    : Joined<["-"], "fexperimental-openacc-macro-override=">,
-      Alias<openacc_macro_override>;
-
-// End Clang specific/exclusive options for OpenACC.
 
 def libomptarget_amdgpu_bc_path_EQ : Joined<["--"], "libomptarget-amdgpu-bc-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-amdgcn bitcode library">;
@@ -2169,10 +2163,10 @@ def fwasm_exceptions : Flag<["-"], "fwasm-exceptions">, Group<f_Group>,
   HelpText<"Use WebAssembly style exceptions">;
 def exception_model : Separate<["-"], "exception-model">,
   Visibility<[CC1Option]>, HelpText<"The exception model">,
-  Values<"dwarf,sjlj,seh,wasm">,
-  NormalizedValuesScope<"LangOptions::ExceptionHandlingKind">,
-  NormalizedValues<["DwarfCFI", "SjLj", "WinEH", "Wasm"]>,
-  MarshallingInfoEnum<LangOpts<"ExceptionHandling">, "None">;
+  Values<"dwarf,sjlj,seh,wasm,none">,
+  NormalizedValuesScope<"CodeGenOptions::ExceptionHandlingKind">,
+  NormalizedValues<["DwarfCFI", "SjLj", "WinEH", "Wasm", "None"]>,
+  MarshallingInfoEnum<CodeGenOpts<"ExceptionHandling">, "None">;
 def exception_model_EQ : Joined<["-"], "exception-model=">,
   Visibility<[CC1Option]>, Alias<exception_model>;
 def fignore_exceptions : Flag<["-"], "fignore-exceptions">, Group<f_Group>,
@@ -4249,7 +4243,12 @@ def ffinite_loops: Flag<["-"],  "ffinite-loops">, Group<f_Group>,
 def fno_finite_loops: Flag<["-"], "fno-finite-loops">, Group<f_Group>,
   HelpText<"Do not assume that any loop is finite.">,
   Visibility<[ClangOption, CC1Option]>;
-
+def fthinlto_distributor_EQ : Joined<["-"], "fthinlto-distributor=">,
+  Group<f_Group>,
+  HelpText<"Path to the ThinLTO distributor process. If specified, "
+           "ThinLTO backend compilations will be distributed by LLD">,
+  MetaVarName<"<path>">,
+  Visibility<[ClangOption, CLOption]>;
 def ftrigraphs : Flag<["-"], "ftrigraphs">, Group<f_Group>,
   HelpText<"Process trigraph sequences">, Visibility<[ClangOption, CC1Option]>;
 def fno_trigraphs : Flag<["-"], "fno-trigraphs">, Group<f_Group>,
@@ -4504,6 +4503,9 @@ defm ptrauth_init_fini_address_discrimination : OptInCC1FFlag<"ptrauth-init-fini
   "Enable address discrimination of function pointers in init/fini arrays">;
 defm ptrauth_elf_got : OptInCC1FFlag<"ptrauth-elf-got", "Enable authentication of pointers from GOT (ELF only)">;
 defm aarch64_jump_table_hardening: OptInCC1FFlag<"aarch64-jump-table-hardening", "Use hardened lowering for jump-table dispatch">;
+defm ptrauth_objc_isa : OptInCC1FFlag<"ptrauth-objc-isa", "Enable signing and authentication of Objective-C object's 'isa' field">;
+defm ptrauth_objc_interface_sel : OptInCC1FFlag<"ptrauth-objc-interface-sel", "Enable signing and authentication of Objective-C object's 'SEL' fields">;
+defm ptrauth_objc_class_ro : OptInCC1FFlag<"ptrauth-objc-class-ro", "Enable signing and authentication for ObjC class_ro pointers">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
@@ -5901,6 +5903,10 @@ def pg : Flag<["-"], "pg">, HelpText<"Enable mcount instrumentation">,
   MarshallingInfoFlag<CodeGenOpts<"InstrumentForProfiling">>;
 def pipe : Flag<["-", "--"], "pipe">,
   HelpText<"Use pipes between commands, when possible">;
+// Facebook T92898286
+def post_link_optimize : Flag<["--"], "post-link-optimize">,
+  HelpText<"Apply post-link optimizations using BOLT">;
+// End Facebook T92898286
 def prebind__all__twolevel__modules : Flag<["-"], "prebind_all_twolevel_modules">;
 def prebind : Flag<["-"], "prebind">;
 def preload : Flag<["-"], "preload">;

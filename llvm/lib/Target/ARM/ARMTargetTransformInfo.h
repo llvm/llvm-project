@@ -91,9 +91,9 @@ class ARMTTIImpl final : public BasicTTIImplBase<ARMTTIImpl> {
       ARM::FeatureAvoidMOVsShOp, ARM::FeatureHasRetAddrStack,
       ARM::FeatureHasNoBranchPredictor, ARM::FeatureDSP, ARM::FeatureMP,
       ARM::FeatureVirtualization, ARM::FeatureMClass, ARM::FeatureRClass,
-      ARM::FeatureAClass, ARM::FeatureNaClTrap, ARM::FeatureStrictAlign,
-      ARM::FeatureLongCalls, ARM::FeatureExecuteOnly, ARM::FeatureReserveR9,
-      ARM::FeatureNoMovt, ARM::FeatureNoNegativeImmediates
+      ARM::FeatureAClass, ARM::FeatureStrictAlign, ARM::FeatureLongCalls,
+      ARM::FeatureExecuteOnly, ARM::FeatureReserveR9, ARM::FeatureNoMovt,
+      ARM::FeatureNoNegativeImmediates
   };
 
   const ARMSubtarget *getST() const { return ST; }

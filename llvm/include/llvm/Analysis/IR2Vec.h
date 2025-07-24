@@ -162,15 +162,6 @@ class Vocabulary {
   static constexpr unsigned MaxOperandKinds =
       static_cast<unsigned>(OperandKind::MaxOperandKind);
 
-  /// Helper function to get vocabulary key for a given OperandKind
-  static StringRef getVocabKeyForOperandKind(OperandKind Kind);
-
-  /// Helper function to classify an operand into OperandKind
-  static OperandKind getOperandKind(const Value *Op);
-
-  /// Helper function to get vocabulary key for a given TypeID
-  static StringRef getVocabKeyForTypeID(Type::TypeID TypeID);
-
 public:
   Vocabulary() = default;
   Vocabulary(VocabVector &&Vocab);
@@ -178,6 +169,27 @@ public:
   bool isValid() const;
   unsigned getDimension() const;
   size_t size() const;
+
+  static size_t expectedSize() {
+    return MaxOpcodes + MaxTypeIDs + MaxOperandKinds;
+  }
+
+  /// Helper function to get vocabulary key for a given Opcode
+  static StringRef getVocabKeyForOpcode(unsigned Opcode);
+
+  /// Helper function to get vocabulary key for a given TypeID
+  static StringRef getVocabKeyForTypeID(Type::TypeID TypeID);
+
+  /// Helper function to get vocabulary key for a given OperandKind
+  static StringRef getVocabKeyForOperandKind(OperandKind Kind);
+
+  /// Helper function to classify an operand into OperandKind
+  static OperandKind getOperandKind(const Value *Op);
+
+  /// Helpers to return the IDs of a given Opcode, TypeID, or OperandKind
+  static unsigned getNumericID(unsigned Opcode);
+  static unsigned getNumericID(Type::TypeID TypeID);
+  static unsigned getNumericID(const Value *Op);
 
   /// Accessors to get the embedding for a given entity.
   const ir2vec::Embedding &operator[](unsigned Opcode) const;

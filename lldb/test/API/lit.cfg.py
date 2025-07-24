@@ -130,14 +130,14 @@ if is_configured("llvm_use_sanitizer"):
     config.environment["MallocNanoZone"] = "0"
     if "Address" in config.llvm_use_sanitizer:
         config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"
-        if "Darwin" in config.host_os:
+        if "Darwin" in config.target_os:
             config.environment["DYLD_INSERT_LIBRARIES"] = find_sanitizer_runtime(
                 "libclang_rt.asan_osx_dynamic.dylib"
             )
 
     if "Thread" in config.llvm_use_sanitizer:
         config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
-        if "Darwin" in config.host_os:
+        if "Darwin" in config.target_os:
             config.environment["DYLD_INSERT_LIBRARIES"] = find_sanitizer_runtime(
                 "libclang_rt.tsan_osx_dynamic.dylib"
             )
@@ -271,8 +271,14 @@ if is_configured("lldb_libs_dir"):
 if is_configured("lldb_framework_dir"):
     dotest_cmd += ["--framework", config.lldb_framework_dir]
 
+
 if is_configured("cmake_build_type"):
     dotest_cmd += ["--cmake-build-type", config.cmake_build_type]
+
+# Facebook T92898286
+if is_configured("llvm_test_bolt"):
+    dotest_cmd += ["-E", '"--post-link-optimize"']
+# End Facebook T92898286
 
 if "lldb-simulator-ios" in config.available_features:
     dotest_cmd += ["--apple-sdk", "iphonesimulator", "--platform-name", "ios-simulator"]

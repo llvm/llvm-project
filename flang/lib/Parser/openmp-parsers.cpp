@@ -912,7 +912,7 @@ TYPE_PARSER(construct<OmpNumTasksClause>(
     scalarIntExpr))
 
 TYPE_PARSER(
-    construct<OmpObject>(designator) || construct<OmpObject>("/" >> name / "/"))
+    construct<OmpObject>(designator) || "/" >> construct<OmpObject>(name) / "/")
 
 // OMP 5.0 2.19.4.5 LASTPRIVATE ([lastprivate-modifier :] list)
 TYPE_PARSER(construct<OmpLastprivateClause>(
@@ -1756,6 +1756,13 @@ TYPE_PARSER(maybe(startOmpLine >> "SECTION"_tok / endOmpLine) >>
 TYPE_PARSER(construct<OpenMPSectionsConstruct>(
     Parser<OmpBeginSectionsDirective>{} / endOmpLine,
     Parser<OmpSectionBlocks>{}, Parser<OmpEndSectionsDirective>{} / endOmpLine))
+
+static bool IsExecutionPart(const OmpDirectiveName &name) {
+  return name.IsExecutionPart();
+}
+
+TYPE_PARSER(construct<OpenMPExecDirective>(
+    startOmpLine >> predicated(Parser<OmpDirectiveName>{}, IsExecutionPart)))
 
 TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
     startOmpLine >>

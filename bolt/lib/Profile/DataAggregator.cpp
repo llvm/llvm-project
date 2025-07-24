@@ -906,10 +906,9 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
   if (BF.isPseudo())
     return Branches;
 
-  if (!BF.isSimple())
+  // Can only record traces in CFG state
+  if (!BF.hasCFG())
     return std::nullopt;
-
-  assert(BF.hasCFG() && "can only record traces in CFG state");
 
   const BinaryBasicBlock *FromBB = BF.getBasicBlockContainingOffset(From);
   const BinaryBasicBlock *ToBB = BF.getBasicBlockContainingOffset(To);
@@ -2321,12 +2320,11 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       const BoltAddressTranslation::BBHashMapTy &BlockMap =
           BAT->getBBHashMap(FuncAddress);
       YamlBF.Blocks.resize(YamlBF.NumBasicBlocks);
+      for (size_t Idx = 0; Idx != YamlBF.NumBasicBlocks; ++Idx)
+        YamlBF.Blocks[Idx].Index = Idx;
 
-      for (auto &&[Entry, YamlBB] : llvm::zip(BlockMap, YamlBF.Blocks)) {
-        const auto &Block = Entry.second;
-        YamlBB.Hash = Block.Hash;
-        YamlBB.Index = Block.Index;
-      }
+      for (const auto &Block : llvm::make_second_range(BlockMap))
+        YamlBF.Blocks[Block.Index].Hash = Block.Hash;
 
       // Lookup containing basic block offset and index
       auto getBlock = [&BlockMap](uint32_t Offset) {

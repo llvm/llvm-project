@@ -115,8 +115,7 @@ public:
   LLVM_ABI void processVariable(DILocalVariable *DVI);
   /// Process debug info location.
   LLVM_ABI void processLocation(const Module &M, const DILocation *Loc);
-  /// Process a DbgRecord (e.g, treat a DbgVariableRecord like a
-  /// DbgVariableIntrinsic).
+  /// Process a DbgRecord.
   LLVM_ABI void processDbgRecord(const Module &M, const DbgRecord &DR);
 
   /// Process subprogram.
@@ -290,8 +289,6 @@ struct VarRecord {
   DILocalVariable *Var;
   DILocation *DL;
 
-  VarRecord(DbgVariableIntrinsic *DVI)
-      : Var(DVI->getVariable()), DL(getDebugValueLoc(DVI)) {}
   VarRecord(DbgVariableRecord *DVR)
       : Var(DVR->getVariable()), DL(getDebugValueLoc(DVR)) {}
   VarRecord(DILocalVariable *Var, DILocation *DL) : Var(Var), DL(DL) {}

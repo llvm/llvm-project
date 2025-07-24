@@ -281,11 +281,7 @@ void BinaryEmitter::emitFunctions() {
   }
 
   // Emit functions in sorted order.
-  std::vector<BinaryFunction *> SortedFunctions = BC.getSortedFunctions();
-  emit(SortedFunctions);
-
-  // Emit functions added by BOLT.
-  emit(BC.getInjectedBinaryFunctions());
+  emit(BC.getOutputFunctions());
 
   // Mark the end of hot text.
   if (opts::HotText) {

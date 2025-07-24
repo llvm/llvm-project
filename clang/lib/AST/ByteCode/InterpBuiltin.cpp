@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 #include "../ExprConstShared.h"
 #include "Boolean.h"
-#include "Compiler.h"
 #include "EvalEmitter.h"
 #include "Interp.h"
 #include "InterpBuiltinBitCast.h"

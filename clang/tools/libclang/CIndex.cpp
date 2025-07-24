@@ -1438,10 +1438,6 @@ bool CursorVisitor::VisitNestedNameSpecifier(NestedNameSpecifier *NNS,
     return Visit(
         MakeCursorNamespaceRef(NNS->getAsNamespace(), Range.getBegin(), TU));
 
-  case NestedNameSpecifier::NamespaceAlias:
-    return Visit(MakeCursorNamespaceRef(NNS->getAsNamespaceAlias(),
-                                        Range.getBegin(), TU));
-
   case NestedNameSpecifier::TypeSpec: {
     // If the type has a form where we know that the beginning of the source
     // range matches up with a reference cursor. Visit the appropriate reference
@@ -1478,13 +1474,6 @@ bool CursorVisitor::VisitNestedNameSpecifierLoc(
     switch (NNS->getKind()) {
     case NestedNameSpecifier::Namespace:
       if (Visit(MakeCursorNamespaceRef(NNS->getAsNamespace(),
-                                       Q.getLocalBeginLoc(), TU)))
-        return true;
-
-      break;
-
-    case NestedNameSpecifier::NamespaceAlias:
-      if (Visit(MakeCursorNamespaceRef(NNS->getAsNamespaceAlias(),
                                        Q.getLocalBeginLoc(), TU)))
         return true;
 

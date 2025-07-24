@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <optional>
-#include <type_traits>
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -22,16 +21,10 @@
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "vector-transfer-split"
 
