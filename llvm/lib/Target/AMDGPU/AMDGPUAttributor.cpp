@@ -233,6 +233,16 @@ public:
     return ST.getMaxWavesPerEU();
   }
 
+
+  bool shouldTrackUse(const AbstractAttribute *QueryingAA,
+                      Value &AssociatedValue, const Use *U,
+                      const Instruction *I) const override {
+    if (const auto *II = dyn_cast<IntrinsicInst>(I)) {
+      if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc)
+        return true;
+    }
+    return false;
+
   unsigned getMaxAddrSpace() const override {
     return AMDGPUAS::MAX_AMDGPU_ADDRESS;
   }
@@ -1383,7 +1393,7 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
        &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID, &AAAMDGPUNoAGPR::ID,
        &AACallEdges::ID, &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
        &AAUnderlyingObjects::ID, &AANoAliasAddrSpace::ID, &AAAddressSpace::ID,
-       &AAIndirectCallInfo::ID, &AAInstanceInfo::ID});
+       &AAIndirectCallInfo::ID, &AAInstanceInfo::ID, &AAAlign::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
@@ -1431,10 +1441,32 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
         Ptr = RMW->getPointerOperand();
       else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I))
         Ptr = CmpX->getPointerOperand();
+      else if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+        if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc) {
+          IRPosition IRP = IRPosition::value(*II);
+
+          Attributor::AlignmentCallbackTy ACB =
+              [](const IRPosition &IRP, const AbstractAttribute *AA,
+                 SmallVectorImpl<AA::ValueAndContext> &Values) {
+                Instruction *I = IRP.getCtxI();
+                if (!I)
+                  return;
+                if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+                  if (II->getIntrinsicID() ==
+                      Intrinsic::amdgcn_make_buffer_rsrc)
+                    Values.push_back(
+                        AA::ValueAndContext{*I->getOperand(0), nullptr});
+                }
+              };
+          A.registerAlignmentCallback(IRP, ACB);
+
+          A.getOrCreateAAFor<AAAlign>(IRP);
+        }
 
       if (Ptr) {
         A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
         A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(*Ptr));
+
       }
     }
   }
