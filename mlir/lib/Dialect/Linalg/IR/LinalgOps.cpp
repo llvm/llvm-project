@@ -4492,6 +4492,29 @@ Speculation::Speculatability ElementwiseOp::getSpeculatability() {
 //===----------------------------------------------------------------------===//
 // PackOp/UnPackOp Common
 //===----------------------------------------------------------------------===//
+
+template <typename OpTy, typename>
+SmallVector<int64_t>
+getPackedOuterShapeWithoutTransposition(OpTy packOrUnPack) {
+  RankedTensorType packedType = (std::is_same<OpTy, PackOp>::value)
+                                    ? packOrUnPack.getDestType()
+                                    : packOrUnPack.getSourceType();
+  RankedTensorType unpackedType = (std::is_same<OpTy, PackOp>::value)
+                                      ? packOrUnPack.getSourceType()
+                                      : packOrUnPack.getDestType();
+  SmallVector<int64_t> result(
+      packedType.getShape().take_front(unpackedType.getRank()));
+  if (!packOrUnPack.getOuterDimsPerm().empty()) {
+    applyPermutationToVector(
+        result, invertPermutationVector(packOrUnPack.getOuterDimsPerm()));
+  }
+  return result;
+}
+template SmallVector<int64_t>
+    getPackedOuterShapeWithoutTransposition<PackOp>(PackOp);
+template SmallVector<int64_t>
+    getPackedOuterShapeWithoutTransposition<UnPackOp>(UnPackOp);
+
 // Given the (potentially) updated packed type, `newPackedTy`, generates an
 // updated mixed-tile-sizes attribute. A tile size is updated only
 // when:
@@ -5452,11 +5475,7 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
   if (unPackOp->hasOneUse()) {
     auto extractSliceUser =
         dyn_cast<tensor::ExtractSliceOp>(*unPackOp->getUsers().begin());
-    if (extractSliceUser &&
-        areAllConstantIntValue(extractSliceUser.getMixedOffsets(), 0) &&
-        areAllConstantIntValue(extractSliceUser.getMixedStrides(), 1) &&
-        extractSliceUser.getSourceType().getRank() ==
-            extractSliceUser.getResultType().getRank()) {
+    if (extractSliceUser && unPackOp.canFoldSliceOp(extractSliceUser)) {
       OpBuilder::InsertionGuard g(rewriter);
       rewriter.setInsertionPoint(unPackOp);
       auto newDest = tensor::ExtractSliceOp::create(
@@ -5497,6 +5516,32 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
   }
 
   return failure();
+}
+
+bool UnPackOp::canFoldSliceOp(tensor::ExtractSliceOp sliceOp) {
+  // Rank-reduced folding is not supported.
+  if (sliceOp.getResultType().getRank() != this->getDestType().getRank())
+    return false;
+  if (!areAllConstantIntValue(sliceOp.getMixedOffsets(), 0) ||
+      !areAllConstantIntValue(sliceOp.getMixedStrides(), 1))
+    return false;
+  RankedTensorType unpackedTypeAfterFold = sliceOp.getResultType();
+  SmallVector<int64_t> outerShapeWithoutTranspose =
+      getPackedOuterShapeWithoutTransposition(*this);
+  for (auto [pos, tileSize] :
+       llvm::zip_equal(this->getInnerDimsPos(), this->getStaticInnerTiles())) {
+    if (unpackedTypeAfterFold.isDynamicDim(pos))
+      return false;
+    if (ShapedType::isDynamic(outerShapeWithoutTranspose[pos]))
+      return false;
+    if (ShapedType::isDynamic(tileSize))
+      return false;
+    int64_t paddingSize = outerShapeWithoutTranspose[pos] * tileSize -
+                          unpackedTypeAfterFold.getDimSize(pos);
+    if (paddingSize >= tileSize)
+      return false;
+  }
+  return true;
 }
 
 bool UnPackOp::isLikeUnPad() {
