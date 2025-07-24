@@ -781,36 +781,22 @@ define i1 @almost_immediate_neg_ugt_64(i64 %x) {
 }
 
 define i1 @cmn_nsw(i32 %a, i32 %b) {
-; SDISEL-LABEL: cmn_nsw:
-; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    cmn w0, w1
-; SDISEL-NEXT:    cset w0, gt
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: cmn_nsw:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    neg w8, w1
-; GISEL-NEXT:    cmp w0, w8
-; GISEL-NEXT:    cset w0, gt
-; GISEL-NEXT:    ret
+; CHECK-LABEL: cmn_nsw:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn w0, w1
+; CHECK-NEXT:    cset w0, gt
+; CHECK-NEXT:    ret
   %sub = sub nsw i32 0, %b
   %cmp = icmp sgt i32 %a, %sub
   ret i1 %cmp
 }
 
 define i1 @cmn_nsw_64(i64 %a, i64 %b) {
-; SDISEL-LABEL: cmn_nsw_64:
-; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    cmn x0, x1
-; SDISEL-NEXT:    cset w0, gt
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: cmn_nsw_64:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    neg x8, x1
-; GISEL-NEXT:    cmp x0, x8
-; GISEL-NEXT:    cset w0, gt
-; GISEL-NEXT:    ret
+; CHECK-LABEL: cmn_nsw_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn x0, x1
+; CHECK-NEXT:    cset w0, gt
+; CHECK-NEXT:    ret
   %sub = sub nsw i64 0, %b
   %cmp = icmp sgt i64 %a, %sub
   ret i1 %cmp
@@ -827,6 +813,24 @@ define i1 @cmn_nsw_neg(i32 %a, i32 %b) {
   %cmp = icmp sgt i32 %a, %sub
   ret i1 %cmp
 }
+
+define i1 @cmn_swap(i32 %a, i32 %b) {
+; SDISEL-LABEL: cmn_swap:
+; SDISEL:       // %bb.0:
+; SDISEL-NEXT:    cmn w0, w1
+; SDISEL-NEXT:    cset w0, lt
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: cmn_swap:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    cmn w1, w0
+; GISEL-NEXT:    cset w0, lt
+; GISEL-NEXT:    ret
+  %sub = sub nsw i32 0, %b
+  %cmp = icmp sgt i32 %sub, %a
+  ret i1 %cmp
+}
+
 
 define i1 @cmn_nsw_neg_64(i64 %a, i64 %b) {
 ; CHECK-LABEL: cmn_nsw_neg_64:
