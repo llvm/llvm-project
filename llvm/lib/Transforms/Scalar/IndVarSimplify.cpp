@@ -1050,11 +1050,8 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
       bool Discard;
       L->makeLoopInvariant(ExitCnt, Discard);
     } else{
-      CmpIndVar = Builder.CreateTrunc(CmpIndVar, ExitCnt->getType(),
-                                      "lftr.wideiv");
-
-      // Set the correct wrap flag to avoid the masking issue.
-      Instruction *TruncInst = dyn_cast<Instruction>(CmpIndVar);
+CmpIndVar = Builder.CreateTrunc(CmpIndVar, ExitCnt->getType(),
+"lftr.wideiv", TruncAR->hasNoUnsignedWrap(), TruncAR->hasSignedWrap());
       
       // The TruncatedIV is incrementing.
       if (const SCEVAddRecExpr *TruncAR =
