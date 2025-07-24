@@ -816,15 +816,15 @@ extern "C" {
 }
 
 void PlatformWindows::SetConsoleCodePage() {
-#if defined(_WIN32)
-  g_prev_console_cp = GetConsoleOutputCP();
-  SetConsoleOutputCP(CP_UTF8);
-#endif
+  #if defined(_WIN32)
+    g_prev_console_cp = GetConsoleOutputCP();
+    SetConsoleOutputCP(CP_UTF8);
+  #endif
 }
 
 void PlatformWindows::ResetConsoleCodePage() {
-#if defined(_WIN32)
+  #if defined(_WIN32)
   if (g_prev_console_cp)
     SetConsoleOutputCP(*g_prev_console_cp);
-#endif
+  #endif
 }
