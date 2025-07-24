@@ -43,9 +43,14 @@ class NextUseResult {
 
     using Record = std::pair<LaneBitmask, unsigned>;
     struct CompareByDist {
-      bool operator()(const Record &LHS, const Record &RHS) {
-        return LHS.second > RHS.second;
-      };
+      bool operator()(const Record &LHS, const Record &RHS) const {
+        if (LHS.first ==
+            RHS.first) // Same LaneBitmask → prefer furthest distance
+          return LHS.second > RHS.second;
+        return LHS.first.getAsInteger() <
+               RHS.first.getAsInteger(); // Otherwise sort by LaneBitmask so
+                                         // that smaller Mask first
+      }
     };
 
     using SortedRecords = std::set<Record, CompareByDist>;
@@ -149,38 +154,27 @@ class NextUseResult {
     }
 
     void merge(const VRegDistances &Other, unsigned Weight = 0) {
-      for (auto P : Other) {
+      for (const auto &P : Other) {
         unsigned Key = P.getFirst();
-        auto Dists = P.getSecond();
-        
-        if (NextUseMap.contains(Key)) {
-          auto &MineDists = NextUseMap[Key];
-          // Merge it!
-          for (auto D : Dists) {
-            if (!MineDists.contains(D)) {
-              // We have a subreg use to merge in.
-              bool Exists = false;
-              for (auto D1 : MineDists) {
-                if (D1.first == D.first) {
-                  Exists = true;
-                  if (D1.second > D.second + Weight) {
-                    // We have a closer use of the same reg and mask.
-                    // Erase the existing one.
-                    MineDists.erase(D1);
-                    MineDists.insert({D.first, D.second + Weight});
-                  }
-                  break;
-                }
-              }
-              if (!Exists)
-                // Insert a new one.
-                MineDists.insert({D.first, D.second + Weight});
-            }
+        const auto &OtherDists = P.getSecond();
+        auto &MineDists = NextUseMap[Key]; // creates empty if not present
+
+        for (const auto &D : OtherDists) {
+          Record Adjusted = {D.first, D.second + Weight};
+
+          // Try to find existing record with the same LaneBitmask
+          auto It =
+              std::find_if(MineDists.begin(), MineDists.end(),
+                           [&](const Record &R) { return R.first == D.first; });
+
+          if (It == MineDists.end()) {
+            // No record → insert
+            MineDists.insert(Adjusted);
+          } else if (It->second > Adjusted.second) {
+            // Furthest wins (adjusted is more distant) → replace
+            MineDists.erase(It);
+            MineDists.insert(Adjusted);
           }
-        } else {
-          // Just add it!
-          for (auto D : Dists)
-            NextUseMap[Key].insert({D.first, D.second + Weight});
         }
       }
     }
@@ -206,15 +200,13 @@ private:
   LLVM_ATTRIBUTE_NOINLINE void
   printSortedRecords(VRegDistances::SortedRecords Records, unsigned VReg,
                      raw_ostream &O = dbgs()) const {
-    const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, VReg);
     for (auto X : Records) {
-      SmallVector<unsigned> Idxs;
-      bool HasSubReg = TRI->getCoveringSubRegIndexes(*MRI, RC, X.first, Idxs);
       O << "Vreg: ";
-      if (HasSubReg)
-        for (auto i : Idxs)
-          O << printReg(VReg, TRI, i, MRI) << "[ " << X.second << "]\n";
-      else
+      LaneBitmask FullMask = MRI->getMaxLaneMaskForVReg(VReg);
+      if (X.first != FullMask) {
+        unsigned SubRegIdx = getSubRegIndexForLaneMask(X.first, TRI);
+        O << printReg(VReg, TRI, SubRegIdx, MRI) << "[ " << X.second << "]\n";
+      } else
         O << printReg(VReg) << "[ " << X.second << "]\n";
     }
   }

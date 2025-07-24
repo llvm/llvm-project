@@ -40,8 +40,8 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
   DenseMap<VRegMaskPair, unsigned> Virt2StackSlotMap;
   DenseMap<VRegMaskPair, MachineInstr *> SpillPoints;
   DenseSet<unsigned> ProcessedBlocks;
-
-  LLVM_ATTRIBUTE_NOINLINE void dumpRegSet(SetVector<VRegMaskPair> VMPs);
+  using RegisterSet = VRegMaskPairSet;
+  LLVM_ATTRIBUTE_NOINLINE void dumpRegSet(RegisterSet VMPs);
 
   unsigned createSpillSlot(const TargetRegisterClass *RC) {
     unsigned Size = TRI->getSpillSize(*RC);
@@ -72,9 +72,6 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
   Timer *T2;
   Timer *T3;
   Timer *T4;
-
-  using RegisterSet = SetVector<VRegMaskPair>;
-
   struct SpillInfo {
     //MachineBasicBlock *Parent;
     RegisterSet ActiveSet;
@@ -170,9 +167,7 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
       return M[LHS] < M[RHS];
     };
 
-    SmallVector<VRegMaskPair> Tmp(VRegs.takeVector());
-    sort(Tmp, SortByDist);
-    VRegs.insert(Tmp.begin(), Tmp.end());
+    VRegs.sort(SortByDist);
     LLVM_DEBUG(dbgs() << "\nActive set sorted at ";
                if (BlockEnd) dbgs() << "end of MBB_" << MBB.getNumber() << "."
                                     << MBB.getName() << "\n";
@@ -186,8 +181,6 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
   // fills exactly this number of regs.
   unsigned fillActiveSet(MachineBasicBlock &MBB, RegisterSet S,
                          unsigned Capacity = 0);
-
-  bool isCoveredByRegSet(VRegMaskPair VMP, const RegisterSet Active);
 
 public:
   AMDGPUSSASpiller(LiveIntervals &LIS, MachineLoopInfo &LI,
@@ -212,7 +205,7 @@ public:
 };
 
 LLVM_ATTRIBUTE_NOINLINE void
-AMDGPUSSASpiller::dumpRegSet(SetVector<VRegMaskPair> VMPs) {
+AMDGPUSSASpiller::dumpRegSet(RegisterSet VMPs) {
   dbgs() << "\n";
   for (auto P : VMPs) {
     printVRegMaskPair(P);
@@ -295,45 +288,22 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
       VRegMaskPair VMP(U, TRI, MRI);
 
       // We don't need to make room for the PHI uses as they operands must
-      // already present in the corresponding predecessor Active set! Just
-      // make sure they really are.
-      if (I->isPHI()) {
-        auto OpNo = U.getOperandNo();
-        auto B = I->getOperand(++OpNo);
-        assert(B.isMBB());
-        MachineBasicBlock *ValueSrc = B.getMBB();
+      // already present in the corresponding predecessor Active set!
+      if (I->isPHI())
+        continue;
 
-        if (ProcessedBlocks.contains(ValueSrc->getNumber())) {
-          auto Info = getBlockInfo(*ValueSrc);
-          auto SrcActive = Info.ActiveSet;
-          auto SrcSpill = Info.SpillSet;
-          dumpRegSet(SrcActive);
-          dumpRegSet(SrcSpill);
-          assert((isCoveredByRegSet(VMP, SrcActive) ||
-                  isCoveredByRegSet(VMP, SrcSpill)) &&
-                 "PHI node input value is neither live out predecessor no "
-                 "spilled!");
-          if (isCoveredByRegSet(VMP, SrcSpill)) {
-            // reload it at the end of the source block
-            Register NewVreg = reloadAtEnd(*ValueSrc, VMP);
-            VRegMaskPair NewVMP(NewVreg, VMP.getLaneMask());
-            rewriteUses(VMP.getVReg(), NewVreg);
-            Active.insert(NewVMP);
+      LaneCoverageResult CR = Active.getCoverage(VMP);
+      if (!CR.isFullyCovered()) {
+        VRegMaskPair SpilledVMP(VMP.getVReg(), CR.getNotCovered());
+        assert(Spilled.getCoverage(SpilledVMP).isFullyCovered() &&
+               "Instruction register operand is neither live no "
+               "spilled!");
+        
+          if (!U.isUndef()) {
+            Reloads.insert(SpilledVMP);
           }
         }
-        continue;
       }
-
-      if (!isCoveredByRegSet(VMP, Active)) {
-        // Not in reg, hence, should have been spilled before
-        // FIXME: This is ODD as the Spilled set is a union among all
-        // predecessors and should already contain all spilled before!
-        // SPECIAL CASE: undef
-        if (!U.isUndef()) {
-          Reloads.insert(VMP);
-        }
-      }
-    }
 
     if (I->isPHI()) {
       // We don't need to make room for the PHI-defined values as they will be
@@ -375,6 +345,8 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
     unsigned NSpills = 0;
     limit(MBB, Active, Spilled, I, NumAvailableRegs);
     if (!I->isRegSequence()) {
+      // We don't need to make room for the REG_SEQUENCE defs as it is just
+      // combining the registers that are already in Active
       NSpills = limit(MBB, Active, Spilled, std::next(I),
                       NumAvailableRegs - getRegSetSizeInRegs(Defs));
     }
@@ -429,8 +401,31 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
           MachineBasicBlock *ValueSrc = B.getMBB();
           if (ValueSrc->getNumber() == MBB.getNumber()) {
             VRegMaskPair VMP(U, TRI, MRI);
-            if (!isCoveredByRegSet(VMP, Active)) {
-              Register NewVReg = reloadAtEnd(MBB, VMP);
+            LaneCoverageResult CR = Active.getCoverage(VMP);
+            if (!CR.isFullyCovered()) {
+              VRegMaskPair SpilledVMP(VMP.getVReg(), CR.getNotCovered());
+              assert(Spilled.getCoverage(SpilledVMP).isFullyCovered() &&
+                     "Instruction register operand is neither live no "
+                     "spilled!");
+              Register NewVReg = reloadAtEnd(MBB, SpilledVMP);
+              if (SpilledVMP != VMP) {
+                // insert REG_SEQUENCE(VMP.VReg, getSubreg(CR.getCovered(),
+                // NewVReg, getSubreg(CR.getNotCovered())
+                unsigned SpilledSubReg =
+                    getSubRegIndexForLaneMask(SpilledVMP.getLaneMask(), TRI);
+                unsigned ActiveSubReg =
+                    getSubRegIndexForLaneMask(CR.getCovered(), TRI);
+                auto *RC = VMP.getRegClass(MRI, TRI);
+                Register FullVReg = MRI->createVirtualRegister(RC);
+                BuildMI(MBB, MBB.getFirstInstrTerminator(),
+                                  MBB.getFirstInstrTerminator()->getDebugLoc(),
+                                  TII->get(AMDGPU::REG_SEQUENCE), FullVReg)
+                              .addReg(NewVReg, 0, SpilledSubReg)
+                              .addImm(SpilledSubReg)
+                              .addReg(VMP.getVReg(), 0, ActiveSubReg)
+                              .addImm(ActiveSubReg);
+                NewVReg = FullVReg;
+              }
               rewriteUses(VMP.getVReg(), NewVReg);
             }
           }
@@ -658,22 +653,22 @@ void AMDGPUSSASpiller::initActiveSetLoopHeader(MachineBasicBlock &MBB) {
     Tmp.remove_if([&](VRegMaskPair P) { return !takeReg(P.getVReg()); });
     LLVM_DEBUG(dbgs() << "\nBlock " << B->getName()
                       << " is part of the loop. Used in block: ";
-               dumpRegSet(Tmp));
+               Tmp.dump());
     UsedInLoop.set_union(Tmp);
   }
 
   LLVM_DEBUG(dbgs() << "Total used in loop: "; dumpRegSet(UsedInLoop));
 
   // Take - LiveIns used in Loop. Cand - LiveThrough
-  RegisterSet Take = set_intersection(LiveIn, UsedInLoop);
-  RegisterSet Cand = set_difference(LiveIn, UsedInLoop);
+  RegisterSet Take = LiveIn.set_intersection(UsedInLoop);
+  RegisterSet Cand = LiveIn.set_difference(UsedInLoop);
   // We don't want to reload those not used in the loop which have been already
   // spilled.
   Cand.set_subtract(Spilled);
 
   LLVM_DEBUG(dbgs() << "\nBlock " << MBB.getName() << "sets\n";
-             dbgs() << "Take : "; dumpRegSet(Take); dbgs() << "Cand : ";
-             dumpRegSet(Cand));
+             dbgs() << "Take : "; Take.dump(); dbgs() << "Cand : ";
+             Cand.dump());
 
   unsigned TakeSize = fillActiveSet(MBB, Take);
   if (TakeSize < NumAvailableRegs) {
@@ -689,7 +684,7 @@ void AMDGPUSSASpiller::initActiveSetLoopHeader(MachineBasicBlock &MBB) {
     assert(FullSize <= NumAvailableRegs);
   }
   LLVM_DEBUG(dbgs() << "\nFinal Loop header Active :";
-             dumpRegSet(getBlockInfo(MBB).ActiveSet));
+             getBlockInfo(MBB).ActiveSet.dump());
 }
 
 Register AMDGPUSSASpiller::reloadAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP) {
@@ -817,6 +812,7 @@ unsigned AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
       for (auto S : Sorted) {
         unsigned Size = S.getSizeInRegs(TRI);
         CurRP -= Size;
+        // TODO: Coverage!
         if (!Spilled.contains(S))
           ToSpill.insert(S);
         ActiveMask &= (~S.getLaneMask());
@@ -833,6 +829,7 @@ unsigned AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
 
     } else {
       CurRP -= RegSize;
+      // TODO: Coverage!
       if (!Spilled.contains(P))
         ToSpill.insert(P);
     }
@@ -869,7 +866,7 @@ unsigned AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
 
 unsigned AMDGPUSSASpiller::getRegSetSizeInRegs(const RegisterSet VRegs) {
   unsigned Size = 0;
-  for (auto &VMP : VRegs) {
+  for (auto VMP : VRegs) {
     printVRegMaskPair(VMP);
     dbgs() << "\n";
     Size += VMP.getSizeInRegs(TRI);
@@ -891,18 +888,6 @@ unsigned AMDGPUSSASpiller::fillActiveSet(MachineBasicBlock &MBB, RegisterSet S,
     Size += RSize;
   }
   return Size;
-}
-
-bool AMDGPUSSASpiller::isCoveredByRegSet(VRegMaskPair VMP,
-                                       const RegisterSet Active) {
-  // printVRegMaskPair(VMP);
-  // dumpRegSet(Active);
-  for (auto P : Active) {
-    if (P.getVReg() == VMP.getVReg()) {
-      return (P.getLaneMask() & VMP.getLaneMask()) == VMP.getLaneMask();
-    }
-  }
-  return false;
 }
 
 bool AMDGPUSSASpiller::run(MachineFunction &MF) {
