@@ -988,6 +988,7 @@ Bug Fixes to C++ Support
   non-empty initializer list. (#GH147949)
 - Fixed constant evaluation of equality comparisons of constexpr-unknown references. (#GH147663)
 - Diagnose binding a reference to ``*nullptr`` during constant evaluation. (#GH48665)
+- Suppress -Wdeprecated-declarations in implicitly generated functions. (#GH147293)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1314,6 +1315,9 @@ OpenMP Support
   mappers, by using compiler-generated default mappers for the outer structs for
   such maps.
 - Deprecation warning has been emitted for deprecated delimited form of ``declare target``.
+- Added parsing and semantic analysis support for the 'need_device_addr' 
+  modifier in the 'adjust_args' clause.
+- Allow array length to be omitted in array section subscript expression.
 
 Improvements
 ^^^^^^^^^^^^
