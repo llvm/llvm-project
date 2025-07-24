@@ -104,20 +104,20 @@ Note in the LLVM alias, the default value is `false`.
   the first type alias.
   Default value is `true`.
 
-.. code-block:: c++
+  .. code-block:: c++
 
-  using IntPtr = int*;
-  IntPtr foo();
+    using IntPtr = int*;
+    IntPtr foo();
 
-  auto bar = foo();
+    auto bar = foo();
 
-If :option:`IgnoreAliasing` is set to `true`, it will be transformed into:
+  If :option:`IgnoreAliasing` is set to `true`, it will be transformed into:
 
-.. code-block:: c++
+  .. code-block:: c++
 
-  auto *bar = foo();
+    auto *bar = foo();
 
-Otherwise no changes will occur.
+  Otherwise no changes will occur.
 
 Limitations
 -----------
