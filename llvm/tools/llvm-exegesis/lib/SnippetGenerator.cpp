@@ -276,6 +276,12 @@ static Error randomizeMCOperand(const LLVMState &State,
     AssignedValue = MCOperand::createReg(randomBit(AllowedRegs));
     break;
   }
+  /// Omit unknown and pc-relative operands to imm value based on the
+  /// instruction
+  case MCOI::OperandType::OPERAND_UNKNOWN:
+  case MCOI::OperandType::OPERAND_PCREL:
+    return State.getExegesisTarget().randomizeTargetMCOperand(
+        Instr, Var, AssignedValue, ForbiddenRegs);
   default:
     break;
   }
