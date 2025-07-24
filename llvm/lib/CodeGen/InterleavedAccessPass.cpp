@@ -588,12 +588,19 @@ static Value *getMask(Value *WideMask, unsigned Factor,
   }
 
   if (auto *SVI = dyn_cast<ShuffleVectorInst>(WideMask)) {
-    unsigned LeafMaskLen = LeafValueEC.getFixedValue();
-    if (SVI->isInterleave(Factor) &&
+    // Check that the shuffle mask is: a) an interleave, b) all of the same
+    // set of the elements, and c) contained by the first source.  (c) could
+    // be relaxed if desired.
+    unsigned NumSrcElts =
+        cast<FixedVectorType>(SVI->getOperand(1)->getType())->getNumElements();
+    SmallVector<unsigned> StartIndexes;
+    if (ShuffleVectorInst::isInterleaveMask(SVI->getShuffleMask(), Factor,
+                                            NumSrcElts * 2, StartIndexes) &&
+        llvm::all_of(StartIndexes, [](unsigned Start) { return Start == 0; }) &&
         llvm::all_of(SVI->getShuffleMask(),
-                     [&](int Idx) { return Idx < (int)LeafMaskLen; })) {
+                     [&](int Idx) { return Idx < (int)NumSrcElts; })) {
       auto *LeafMaskTy =
-          FixedVectorType::get(Type::getInt1Ty(SVI->getContext()), LeafMaskLen);
+          VectorType::get(Type::getInt1Ty(SVI->getContext()), LeafValueEC);
       IRBuilder<> Builder(SVI);
       return Builder.CreateExtractVector(LeafMaskTy, SVI->getOperand(0),
                                          uint64_t(0));
