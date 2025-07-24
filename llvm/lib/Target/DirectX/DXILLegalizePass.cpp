@@ -574,9 +574,10 @@ legalizeGetHighLowi64Bytes(Instruction &I,
   return false;
 }
 
-static bool legalizeScalarLoadStoreOnArrays(
-    Instruction &I, SmallVectorImpl<Instruction *> &ToRemove,
-    DenseMap<Value *, Value *> &) {
+static bool
+legalizeScalarLoadStoreOnArrays(Instruction &I,
+                                SmallVectorImpl<Instruction *> &ToRemove,
+                                DenseMap<Value *, Value *> &) {
 
   Value *PtrOp;
   unsigned PtrOpIndex;
@@ -636,7 +637,7 @@ public:
       ReplacedValues.clear();
       for (auto &I : instructions(F)) {
         for (auto &LegalizationFn : LegalizationPipeline[Stage])
-          MadeChange |=  LegalizationFn(I, ToRemove, ReplacedValues);
+          MadeChange |= LegalizationFn(I, ToRemove, ReplacedValues);
       }
 
       for (auto *Inst : reverse(ToRemove))
