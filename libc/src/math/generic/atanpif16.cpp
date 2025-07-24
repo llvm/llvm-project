@@ -23,13 +23,12 @@ namespace LIBC_NAMESPACE_DECL {
 //  >>> from sympy import *
 //  >>> import math
 //  >>> x = symbols('x')
-//  >>> print(series(atan(x)/math.pi, x, 0, 21))
+//  >>> print(series(atan(x)/math.pi, x, 0, 17))
 //
 // Output:
 // 0.318309886183791*x - 0.106103295394597*x**3 + 0.0636619772367581*x**5 -
 // 0.0454728408833987*x**7 + 0.0353677651315323*x**9 - 0.0289372623803446*x**11
-// + 0.0244853758602916*x**13 - 0.0212206590789194*x**15 +
-// 0.0187241109519877*x**17 - 0.01675315190441*x**19 + O(x**21)
+// + 0.0244853758602916*x**13 - 0.0212206590789194*x**15 + O(x**17)
 //
 // We will assign this 19-degree Taylor polynomial as g(x). This polynomial
 // approximation is accurate for arctan(x)/pi when |x| is in the range [0, 0.5].
@@ -86,13 +85,17 @@ LLVM_LIBC_FUNCTION(float16, atanpif16, (float16 x)) {
   }
 
   if (LIBC_UNLIKELY(xbits.is_zero())) {
-    return x; //
+    return x;
   }
 
   double x_abs = fputil::cast<double>(xbits.abs().get_val());
 
+  if (LIBC_UNLIKELY(x_abs == 1.0)) {
+    return signed_result(0.25);
+  }
+
   // polynomial coefficients for atan(x)/pi taylor series
-  // generated using sympy: series(atan(x)/pi, x, 0, 21)
+  // generated using sympy: series(atan(x)/pi, x, 0, 17)
   constexpr double POLY_COEFFS[] = {
       0x1.45f306dc9c889p-2,  // x^1:   1/pi
       -0x1.b2995e7b7b60bp-4, // x^3:  -1/(3*pi)
@@ -102,8 +105,6 @@ LLVM_LIBC_FUNCTION(float16, atanpif16, (float16 x)) {
       -0x1.da1bace3cc68ep-6, // x^11: -1/(11*pi)
       0x1.912b1c2336cf2p-6,  // x^13:  1/(13*pi)
       -0x1.5bade52f95e7p-6,  // x^15: -1/(15*pi)
-      0x1.32c69d0bde9e8p-6,  // x^17:  1/(17*pi)
-      -0x1.127bcfe232f8cp-6, // x^19: -1/(19*pi)
   };
 
   // evaluate atan(x)/pi using polynomial approximation, valid for |x| <= 0.5
@@ -111,8 +112,7 @@ LLVM_LIBC_FUNCTION(float16, atanpif16, (float16 x)) {
     double xx = x * x;
     return x * fputil::polyeval(xx, POLY_COEFFS[0], POLY_COEFFS[1],
                                 POLY_COEFFS[2], POLY_COEFFS[3], POLY_COEFFS[4],
-                                POLY_COEFFS[5], POLY_COEFFS[6], POLY_COEFFS[7],
-                                POLY_COEFFS[8], POLY_COEFFS[9]);
+                                POLY_COEFFS[5], POLY_COEFFS[6], POLY_COEFFS[7]);
   };
 
   // Case 1: |x| <= 0.5 - Direct polynomial evaluation
