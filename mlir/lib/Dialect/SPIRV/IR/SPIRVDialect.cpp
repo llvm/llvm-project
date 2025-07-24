@@ -781,14 +781,12 @@ static Type parseStructType(SPIRVDialect const &dialect,
     // Parse decoration value if it exists.
     if (succeeded(parser.parseOptionalEqual())) {
       Attribute decorationValue;
-
       if (failed(parser.parseAttribute(decorationValue)))
         return failure();
 
-      structDecorationInfo.emplace_back(true, decoration.value(),
-                                        decorationValue);
+      structDecorationInfo.emplace_back(decoration.value(), decorationValue);
     } else {
-      structDecorationInfo.emplace_back(false, decoration.value(),
+      structDecorationInfo.emplace_back(decoration.value(),
                                         UnitAttr::get(dialect.getContext()));
     }
     return success();
@@ -934,7 +932,7 @@ static void print(StructType type, DialectAsmPrinter &os) {
     os << ", ";
     auto eachFn = [&os](spirv::StructType::StructDecorationInfo decoration) {
       os << stringifyDecoration(decoration.decoration);
-      if (decoration.hasValue) {
+      if (decoration.hasValue()) {
         os << "=";
         os.printAttributeWithoutType(decoration.decorationValue);
       }

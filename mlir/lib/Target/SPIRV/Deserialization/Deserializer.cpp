@@ -1207,9 +1207,7 @@ spirv::Deserializer::processStructType(ArrayRef<uint32_t> operands) {
       std::optional<spirv::Decoration> decoration = spirv::symbolizeDecoration(
           llvm::convertToCamelFromSnakeCase(decorationAttr.getName(), true));
       assert(decoration.has_value());
-      bool hasValue =
-          (decorationAttr.getValue() != mlir::UnitAttr::get(context));
-      structDecorationsInfo.emplace_back(hasValue, decoration.value(),
+      structDecorationsInfo.emplace_back(decoration.value(),
                                          decorationAttr.getValue());
     }
   }

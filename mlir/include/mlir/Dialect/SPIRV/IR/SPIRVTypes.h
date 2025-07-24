@@ -332,24 +332,25 @@ public:
 
   // Type for specifying the decoration(s) on the struct itself.
   struct StructDecorationInfo {
-    bool hasValue;
     Decoration decoration;
     Attribute decorationValue;
 
-    StructDecorationInfo(bool hasValue, Decoration decoration,
-                         Attribute decorationValue)
-        : hasValue(hasValue), decoration(decoration),
-          decorationValue(decorationValue) {}
+    StructDecorationInfo(Decoration decoration, Attribute decorationValue)
+        : decoration(decoration), decorationValue(decorationValue) {}
 
-    bool operator==(const StructDecorationInfo &other) const {
-      return (this->decoration == other.decoration) &&
-             (this->decorationValue == other.decorationValue);
+    friend bool operator==(const StructDecorationInfo &lhs,
+                           const StructDecorationInfo &rhs) {
+      return lhs.decoration == rhs.decoration &&
+             lhs.decorationValue == rhs.decorationValue;
     }
 
-    bool operator<(const StructDecorationInfo &other) const {
-      return static_cast<uint32_t>(this->decoration) <
-             static_cast<uint32_t>(other.decoration);
+    friend bool operator<(const StructDecorationInfo &lhs,
+                          const StructDecorationInfo &rhs) {
+      return llvm::to_underlying(lhs.decoration) <
+             llvm::to_underlying(rhs.decoration);
     }
+
+    bool hasValue() const { return !isa<UnitAttr>(decorationValue); }
   };
 
   /// Construct a literal StructType with at least one member.
