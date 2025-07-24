@@ -33,7 +33,7 @@ void MCGOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
     Sections.push_back(S);
   while (!Sections.empty()) {
     auto *S = Sections.pop_back_val();
-    MCObjectStreamer::changeSection(S, 0);
+    MCObjectStreamer::changeSection(S, Sections.empty() ? Subsection : 0);
   }
 }
 
