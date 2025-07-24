@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/LibraryScanner.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcess/DynamicLoader.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/LibraryResolver.h"
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FileSystem.h"
@@ -1070,11 +1070,7 @@ void LibraryScanner::scanBaseDir(std::shared_ptr<LibraryUnit> unit) {
     if (sys::fs::is_regular_file(status) || sys::fs::is_symlink_file(status)) {
       // LLVM_DEBUG(
       dbgs() << "  Found file: " << entry.path() << "\n"; //);
-
-      // if (m_cache->hasSeen(entry.path()))
-      //   continue;
-      // std::string path = m_helper->resolvePath(entry.path(), ec);
-      // if (!sys::fs::is_director(path))
+      // async support ?
       handleLibrary(entry.path(), unit->kind);
     }
   }
