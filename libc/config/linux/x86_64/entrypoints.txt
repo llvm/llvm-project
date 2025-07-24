@@ -1268,6 +1268,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.wchar.mbtowc
     libc.src.wchar.wcrtomb
     libc.src.wchar.wctomb
+    libc.src.wchar.wcstombs
+    libc.src.wchar.wcsrtombs
+    libc.src.wchar.wcsnrtombs
   )
 endif()
 

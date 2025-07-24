@@ -2184,6 +2184,50 @@ defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SHORT_D16, load_d16_lo_private, v2f
 
 } // End OtherPredicates = [HasFlatScratchInsts,EnableFlatScratch]
 
+def PrefetchLoc: SDNodeXForm<timm, [{
+  uint32_t V = N->getZExtValue();
+  V = (AMDGPU::CPol::SCOPE_MASK - (V & AMDGPU::CPol::SCOPE_MASK)) << AMDGPU::CPol::SCOPE_SHIFT;
+  if (!Subtarget->hasSafeCUPrefetch())
+    V = std::max(V, (uint32_t)AMDGPU::CPol::SCOPE_SE); // CU scope is unsafe
+  return CurDAG->getTargetConstant(V, SDLoc(N), MVT::i32);
+}]>;
+
+def prefetch_flat : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
+                             (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
+                             [{ return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::FLAT_ADDRESS; }]> {
+  let GISelPredicateCode = [{
+    return (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS;
+  }];
+}
+
+def prefetch_global : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
+                               (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
+                               [{ return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
+                                         (cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS &&
+                                          !Subtarget->hasSafeSmemPrefetch()); }]> {
+  let GISelPredicateCode = [{
+    return (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
+            ((*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::CONSTANT_ADDRESS &&
+             !Subtarget->hasSafeSmemPrefetch());
+  }];
+}
+
+multiclass FlatPrefetchPats<string inst, SDPatternOperator prefetch_kind, SDPatternOperator rw> {
+  def : GCNPat <
+    (prefetch_kind (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), rw, (i32 timm:$loc), i32imm_one),
+    (!cast<FLAT_Pseudo>(inst) $vaddr, $offset, (i32 (PrefetchLoc $loc)))
+  > {
+    let AddedComplexity = !if(!eq(rw, i32imm_zero), 0, 25);
+  }
+
+  def : GCNPat <
+    (prefetch_kind (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), rw, (i32 timm:$loc), i32imm_one),
+    (!cast<FLAT_Pseudo>(inst#"_SADDR") $saddr, $voffset, $offset, (i32 (PrefetchLoc $loc)))
+  > {
+    let AddedComplexity = !if(!eq(rw, i32imm_zero), 11, 30);
+  }
+}
+
 multiclass FlatIntrPrefetchPats<string inst, SDPatternOperator intr> {
   def : GCNPat <
     (intr (FlatOffset i64:$vaddr, i32:$offset), timm:$cpol),
@@ -2198,6 +2242,14 @@ multiclass FlatIntrPrefetchPats<string inst, SDPatternOperator intr> {
 }
 
 let SubtargetPredicate = HasVmemPrefInsts in {
+  defm : FlatPrefetchPats<"FLAT_PREFETCH_B8", prefetch_flat, i32imm_zero>;
+  defm : FlatPrefetchPats<"GLOBAL_PREFETCH_B8", prefetch_global, i32imm_zero>;
+
+  // Patterns for forced vector prefetch with rw = 1.
+  defm : FlatPrefetchPats<"FLAT_PREFETCH_B8", prefetch_flat, i32imm_one>;
+  defm : FlatPrefetchPats<"GLOBAL_PREFETCH_B8", prefetch_global, i32imm_one>;
+
+
   // Patterns for target intrinsics
   defm : FlatIntrPrefetchPats<"FLAT_PREFETCH_B8", int_amdgcn_flat_prefetch>;
   defm : FlatIntrPrefetchPats<"GLOBAL_PREFETCH_B8", int_amdgcn_global_prefetch>;
