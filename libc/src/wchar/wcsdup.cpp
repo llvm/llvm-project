@@ -15,7 +15,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(wchar_t *, wcsdup, (const wchar_t * wcs)) {
+LLVM_LIBC_FUNCTION(wchar_t *, wcsdup, (const wchar_t *wcs)) {
   auto dup = internal::strdup(wcs);
   if (dup)
     return *dup;
