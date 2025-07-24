@@ -368,8 +368,10 @@ func.func @vector_gather_unroll(%mem : memref<?x?x?xf32>,
 
 // -----
 
-// Ensure that cases with mismatched target and source
-// shape ranks do not lead to a crash.
+// Ensure that cases with mismatched target and source shape ranks
+// do not lead to a crash.
+// Note: The vector unrolling target shape in `test-vector-transfer-unrolling-patterns`
+// is currently hard-coded to [2, 2].
 
 // CHECK-LABEL: func @negative_vector_transfer_write
 //   CHECK-NOT:   vector.extract_strided_slice
