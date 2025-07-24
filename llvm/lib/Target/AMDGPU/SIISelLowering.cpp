@@ -618,6 +618,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                         ISD::FSIN, ISD::FROUND},
                        MVT::f16, Custom);
 
+    // BF16 - VOP1 Actions.
+    if (Subtarget->hasBF16TransInsts())
+      setOperationAction({ISD::FCOS, ISD::FSIN, ISD::FDIV}, MVT::bf16, Custom);
+
     setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::f16, Promote);
     setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::bf16, Promote);
 
@@ -870,7 +874,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction({ISD::SMULO, ISD::UMULO}, MVT::i64, Custom);
 
-  if (Subtarget->hasScalarSMulU64())
+  if (Subtarget->hasVectorMulU64())
+    setOperationAction(ISD::MUL, MVT::i64, Legal);
+  else if (Subtarget->hasScalarSMulU64())
     setOperationAction(ISD::MUL, MVT::i64, Custom);
 
   if (Subtarget->hasMad64_32())
@@ -938,6 +944,12 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasBF16ConversionInsts()) {
     setOperationAction(ISD::FP_ROUND, {MVT::bf16, MVT::v2bf16}, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
+  }
+
+  if (Subtarget->hasBF16PackedInsts()) {
+    setOperationAction(
+        {ISD::FADD, ISD::FMUL, ISD::FMINNUM, ISD::FMAXNUM, ISD::FMA},
+        MVT::v2bf16, Legal);
   }
 
   if (Subtarget->hasBF16TransInsts()) {
@@ -2260,7 +2272,8 @@ SDValue SITargetLowering::getPreloadedValue(
   const ArgDescriptor WorkGroupIDZ =
       ArgDescriptor::createRegister(AMDGPU::TTMP7, 0xFFFF0000u);
   if (Subtarget->hasArchitectedSGPRs() &&
-      (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
+      (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx ||
+       CC == CallingConv::AMDGPU_Gfx_WholeWave)) {
     switch (PVID) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
       Reg = &WorkGroupIDX;
@@ -2942,11 +2955,14 @@ SDValue SITargetLowering::LowerFormalArguments(
     if (!Subtarget->enableFlatScratch())
       assert(!UserSGPRInfo.hasFlatScratchInit());
     if ((CallConv != CallingConv::AMDGPU_CS &&
-         CallConv != CallingConv::AMDGPU_Gfx) ||
+         CallConv != CallingConv::AMDGPU_Gfx &&
+         CallConv != CallingConv::AMDGPU_Gfx_WholeWave) ||
         !Subtarget->hasArchitectedSGPRs())
       assert(!Info->hasWorkGroupIDX() && !Info->hasWorkGroupIDY() &&
              !Info->hasWorkGroupIDZ());
   }
+
+  bool IsWholeWaveFunc = Info->isWholeWaveFunction();
 
   if (CallConv == CallingConv::AMDGPU_PS) {
     processPSInputArgs(Splits, CallConv, Ins, Skipped, FType, Info);
@@ -2988,7 +3004,8 @@ SDValue SITargetLowering::LowerFormalArguments(
   } else if (IsKernel) {
     assert(Info->hasWorkGroupIDX() && Info->hasWorkItemIDX());
   } else {
-    Splits.append(Ins.begin(), Ins.end());
+    Splits.append(IsWholeWaveFunc ? std::next(Ins.begin()) : Ins.begin(),
+                  Ins.end());
   }
 
   if (IsKernel)
@@ -3019,6 +3036,13 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   SmallVector<SDValue, 16> Chains;
 
+  if (IsWholeWaveFunc) {
+    SDValue Setup = DAG.getNode(AMDGPUISD::WHOLE_WAVE_SETUP, DL,
+                                {MVT::i1, MVT::Other}, Chain);
+    InVals.push_back(Setup.getValue(0));
+    Chains.push_back(Setup.getValue(1));
+  }
+
   // FIXME: This is the minimum kernel argument alignment. We should improve
   // this to the maximum alignment of the arguments.
   //
@@ -3026,7 +3050,8 @@ SDValue SITargetLowering::LowerFormalArguments(
   // kern arg offset.
   const Align KernelArgBaseAlign = Align(16);
 
-  for (unsigned i = 0, e = Ins.size(), ArgIdx = 0; i != e; ++i) {
+  for (unsigned i = IsWholeWaveFunc ? 1 : 0, e = Ins.size(), ArgIdx = 0; i != e;
+       ++i) {
     const ISD::InputArg &Arg = Ins[i];
     if ((Arg.isOrigArg() && Skipped[Arg.getOrigArgIndex()]) || IsError) {
       InVals.push_back(DAG.getPOISON(Arg.VT));
@@ -3374,7 +3399,9 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   unsigned Opc = AMDGPUISD::ENDPGM;
   if (!IsWaveEnd)
-    Opc = IsShader ? AMDGPUISD::RETURN_TO_EPILOG : AMDGPUISD::RET_GLUE;
+    Opc = Info->isWholeWaveFunction() ? AMDGPUISD::WHOLE_WAVE_RETURN
+          : IsShader                  ? AMDGPUISD::RETURN_TO_EPILOG
+                                      : AMDGPUISD::RET_GLUE;
   return DAG.getNode(Opc, DL, MVT::Other, RetOps);
 }
 
@@ -3876,7 +3903,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
   CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, IsVarArg);
 
-  if (CallConv != CallingConv::AMDGPU_Gfx && !AMDGPU::isChainCC(CallConv)) {
+  if (CallConv != CallingConv::AMDGPU_Gfx && !AMDGPU::isChainCC(CallConv) &&
+      CallConv != CallingConv::AMDGPU_Gfx_WholeWave) {
     // With a fixed ABI, allocate fixed registers before user arguments.
     passSpecialInputs(CLI, CCInfo, *Info, RegsToPass, MemOpChains, Chain);
   }
@@ -5395,6 +5423,19 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MachineOperand &Src0 = MI.getOperand(1);
     MachineOperand &Src1 = MI.getOperand(2);
 
+    if (ST.hasAddSubU64Insts()) {
+      auto I = BuildMI(*BB, MI, DL,
+                       TII->get(IsAdd ? AMDGPU::V_ADD_U64_e64
+                                      : AMDGPU::V_SUB_U64_e64),
+                       Dest.getReg())
+                   .add(Src0)
+                   .add(Src1)
+                   .addImm(0); // clamp
+      TII->legalizeOperands(*I);
+      MI.eraseFromParent();
+      return BB;
+    }
+
     if (IsAdd && ST.hasLshlAddU64Inst()) {
       auto Add = BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_LSHL_ADD_U64_e64),
                          Dest.getReg())
@@ -5889,6 +5930,18 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         TII->insertSimulatedTrap(MRI, *BB, MI, MI.getDebugLoc());
     MI.eraseFromParent();
     return SplitBB;
+  }
+  case AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN: {
+    assert(MFI->isWholeWaveFunction());
+
+    // During ISel, it's difficult to propagate the original EXEC mask to use as
+    // an input to SI_WHOLE_WAVE_FUNC_RETURN. Set it up here instead.
+    MachineInstr *Setup = TII->getWholeWaveFunctionSetup(*BB->getParent());
+    Register OriginalExec = Setup->getOperand(0).getReg();
+    assert(Setup && "Couldn't find SI_SETUP_WHOLE_WAVE_FUNC");
+    MF->getRegInfo().clearKillFlags(OriginalExec);
+    MI.getOperand(0).setReg(OriginalExec);
+    return BB;
   }
   default:
     if (TII->isImage(MI) || TII->isMUBUF(MI)) {
@@ -11172,7 +11225,7 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
     // Without !fpmath accuracy information, we can't do more because we don't
     // know exactly whether rcp is accurate enough to meet !fpmath requirement.
     // f16 is always accurate enough
-    if (!AllowInaccurateRcp && VT != MVT::f16)
+    if (!AllowInaccurateRcp && VT != MVT::f16 && VT != MVT::bf16)
       return SDValue();
 
     if (CLHS->isExactlyValue(1.0)) {
@@ -11199,9 +11252,10 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
     }
   }
 
-  // For f16 require afn or arcp.
+  // For f16 and bf16 require afn or arcp.
   // For f32 require afn.
-  if (!AllowInaccurateRcp && (VT != MVT::f16 || !Flags.hasAllowReciprocal()))
+  if (!AllowInaccurateRcp &&
+      ((VT != MVT::f16 && VT != MVT::bf16) || !Flags.hasAllowReciprocal()))
     return SDValue();
 
   // Turn into multiply by the reciprocal.
@@ -11592,7 +11646,7 @@ SDValue SITargetLowering::LowerFDIV(SDValue Op, SelectionDAG &DAG) const {
   if (VT == MVT::f64)
     return LowerFDIV64(Op, DAG);
 
-  if (VT == MVT::f16)
+  if (VT == MVT::f16 || VT == MVT::bf16)
     return LowerFDIV16(Op, DAG);
 
   llvm_unreachable("Unexpected type for fdiv");
@@ -13600,6 +13654,7 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     case Intrinsic::amdgcn_rcp_legacy:
     case Intrinsic::amdgcn_rsq_legacy:
     case Intrinsic::amdgcn_trig_preop:
+    case Intrinsic::amdgcn_tanh:
     case Intrinsic::amdgcn_log:
     case Intrinsic::amdgcn_exp2:
     case Intrinsic::amdgcn_sqrt:
@@ -14013,7 +14068,8 @@ static bool supportsMin3Max3(const GCNSubtarget &Subtarget, unsigned Opc,
   case ISD::FMAXIMUMNUM:
   case AMDGPUISD::FMIN_LEGACY:
   case AMDGPUISD::FMAX_LEGACY:
-    return (VT == MVT::f32) || (VT == MVT::f16 && Subtarget.hasMin3Max3_16());
+    return (VT == MVT::f32) || (VT == MVT::f16 && Subtarget.hasMin3Max3_16()) ||
+           (VT == MVT::v2f16 && Subtarget.hasMin3Max3PKF16());
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
     return (VT == MVT::f32 && Subtarget.hasMinimum3Maximum3F32()) ||

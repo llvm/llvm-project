@@ -766,6 +766,8 @@ public:
   /// even if no aggregate location is provided.
   RValue emitAnyExprToTemp(const clang::Expr *e);
 
+  mlir::Value emitArrayLength(const clang::ArrayType *arrayType,
+                              QualType &baseType, Address &addr);
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
 
   Address emitArrayToPointerDecay(const Expr *array);
@@ -843,6 +845,16 @@ public:
   void emitCXXConstructExpr(const clang::CXXConstructExpr *e,
                             AggValueSlot dest);
 
+  void emitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
+                                  const clang::ArrayType *arrayType,
+                                  Address arrayBegin, const CXXConstructExpr *e,
+                                  bool newPointerIsChecked,
+                                  bool zeroInitialize = false);
+  void emitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
+                                  mlir::Value numElements, Address arrayBase,
+                                  const CXXConstructExpr *e,
+                                  bool newPointerIsChecked,
+                                  bool zeroInitialize);
   void emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
                               clang::CXXCtorType type, bool forVirtualBase,
                               bool delegating, AggValueSlot thisAVS,
@@ -852,6 +864,15 @@ public:
                               clang::CXXCtorType type, bool forVirtualBase,
                               bool delegating, Address thisAddr,
                               CallArgList &args, clang::SourceLocation loc);
+
+  void emitCXXDestructorCall(const CXXDestructorDecl *dd, CXXDtorType type,
+                             bool forVirtualBase, bool delegating,
+                             Address thisAddr, QualType thisTy);
+
+  RValue emitCXXDestructorCall(GlobalDecl dtor, const CIRGenCallee &callee,
+                               mlir::Value thisVal, QualType thisTy,
+                               mlir::Value implicitParam,
+                               QualType implicitParamTy, const CallExpr *e);
 
   mlir::LogicalResult emitCXXForRangeStmt(const CXXForRangeStmt &s,
                                           llvm::ArrayRef<const Attr *> attrs);

@@ -19,7 +19,6 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
 using namespace llvm;
@@ -33,6 +32,7 @@ MCObjectStreamer::MCObjectStreamer(MCContext &Context,
           Context, std::move(TAB), std::move(Emitter), std::move(OW))),
       EmitEHFrame(true), EmitDebugFrame(false) {
   assert(Assembler->getBackendPtr() && Assembler->getEmitterPtr());
+  IsObj = true;
   setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
   if (Context.getTargetOptions() && Context.getTargetOptions()->MCRelaxAll)
     Assembler->setRelaxAll(true);
@@ -44,6 +44,25 @@ MCAssembler *MCObjectStreamer::getAssemblerPtr() {
   if (getUseAssemblerInfoForParsing())
     return Assembler.get();
   return nullptr;
+}
+
+void MCObjectStreamer::newFragment() {
+  addFragment(getContext().allocFragment<MCFragment>());
+}
+
+void MCObjectStreamer::insert(MCFragment *F) {
+  assert(F->getKind() != MCFragment::FT_Data &&
+         "F should have a variable-size tail");
+  addFragment(F);
+  newFragment();
+}
+
+void MCObjectStreamer::appendContents(size_t Num, char Elt) {
+  CurFrag->appendContents(Num, Elt);
+}
+
+void MCObjectStreamer::addFixup(const MCExpr *Value, MCFixupKind Kind) {
+  CurFrag->addFixup(MCFixup::create(CurFrag->getFixedSize(), Value, Kind));
 }
 
 // As a compile-time optimization, avoid allocating and evaluating an MCExpr

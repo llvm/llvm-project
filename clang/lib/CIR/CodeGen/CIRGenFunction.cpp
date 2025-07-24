@@ -593,11 +593,12 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
 
     assert(!cir::MissingFeatures::dtorCleanups());
 
-    // TODO(cir): A complete destructor is supposed to call the base destructor.
-    // Since we have to emit both dtor kinds we just fall through for now and.
-    // As long as we don't support virtual bases this should be functionally
-    // equivalent.
-    assert(!cir::MissingFeatures::completeDtors());
+    if (!isTryBody) {
+      QualType thisTy = dtor->getFunctionObjectParameterType();
+      emitCXXDestructorCall(dtor, Dtor_Base, /*forVirtualBase=*/false,
+                            /*delegating=*/false, loadCXXThisAddress(), thisTy);
+      break;
+    }
 
     // Fallthrough: act like we're in the base variant.
     [[fallthrough]];
@@ -805,6 +806,50 @@ bool CIRGenFunction::shouldNullCheckClassCastValue(const CastExpr *ce) {
   }
 
   return true;
+}
+
+/// Computes the length of an array in elements, as well as the base
+/// element type and a properly-typed first element pointer.
+mlir::Value
+CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
+                                QualType &baseType, Address &addr) {
+  const clang::ArrayType *arrayType = origArrayType;
+
+  // If it's a VLA, we have to load the stored size.  Note that
+  // this is the size of the VLA in bytes, not its size in elements.
+  if (isa<VariableArrayType>(arrayType)) {
+    assert(cir::MissingFeatures::vlas());
+    cgm.errorNYI(*currSrcLoc, "VLAs");
+    return builder.getConstInt(*currSrcLoc, SizeTy, 0);
+  }
+
+  uint64_t countFromCLAs = 1;
+  QualType eltType;
+
+  auto cirArrayType = mlir::dyn_cast<cir::ArrayType>(addr.getElementType());
+
+  while (cirArrayType) {
+    assert(isa<ConstantArrayType>(arrayType));
+    countFromCLAs *= cirArrayType.getSize();
+    eltType = arrayType->getElementType();
+
+    cirArrayType =
+        mlir::dyn_cast<cir::ArrayType>(cirArrayType.getElementType());
+
+    arrayType = getContext().getAsArrayType(arrayType->getElementType());
+    assert((!cirArrayType || arrayType) &&
+           "CIR and Clang types are out-of-sync");
+  }
+
+  if (arrayType) {
+    // From this point onwards, the Clang array type has been emitted
+    // as some other type (probably a packed struct). Compute the array
+    // size, and just emit the 'begin' expression as a bitcast.
+    cgm.errorNYI(*currSrcLoc, "length for non-array underlying types");
+  }
+
+  baseType = eltType;
+  return builder.getConstInt(*currSrcLoc, SizeTy, countFromCLAs);
 }
 
 } // namespace clang::CIRGen
