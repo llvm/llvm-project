@@ -1322,7 +1322,7 @@ static bool isNeutralElementConst(arith::AtomicRMWKind reductionKind,
     return false;
   Attribute valueAttr = getIdentityValueAttr(reductionKind, scalarTy,
                                              state.builder, value.getLoc());
-  if (auto constOp = dyn_cast_or_null<arith::ConstantOp>(value.getDefiningOp()))
+  if (auto constOp = value.getDefiningOp<arith::ConstantOp>())
     return constOp.getValue() == valueAttr;
   return false;
 }
@@ -1864,7 +1864,6 @@ verifyLoopNesting(const std::vector<SmallVector<AffineForOp, 2>> &loops) {
 
   return success();
 }
-
 
 /// External utility to vectorize affine loops in 'loops' using the n-D
 /// vectorization factors in 'vectorSizes'. By default, each vectorization
