@@ -58,7 +58,7 @@ functions:
       - stdc
     return_type: int
     arguments:
-      - type: const char *__restrict
+      - type: const char *
       - type: size_t
   - name: mbrlen
     standards:
