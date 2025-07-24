@@ -943,8 +943,10 @@ RISCVInsertVSETVLI::getInfoForVSETVLI(const MachineInstr &MI) const {
     NewInfo.setAVLImm(MI.getOperand(1).getImm());
   } else {
     assert(MI.getOpcode() == RISCV::PseudoVSETVLI ||
-           MI.getOpcode() == RISCV::PseudoVSETVLIX0);
-    if (MI.getOpcode() == RISCV::PseudoVSETVLIX0)
+           MI.getOpcode() == RISCV::PseudoVSETVLIX0 ||
+           MI.getOpcode() == RISCV::PseudoVSETVLIX0X0);
+    if (MI.getOpcode() == RISCV::PseudoVSETVLIX0 ||
+        MI.getOpcode() == RISCV::PseudoVSETVLIX0X0)
       NewInfo.setAVLVLMAX();
     else if (MI.getOperand(1).isUndef())
       // Otherwise use an AVL of 1 to avoid depending on previous vl.
@@ -1511,12 +1513,21 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
 /// this is geared to catch the common case of a fixed length vsetvl in a single
 /// block loop when it could execute once in the preheader instead.
 void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
+  // Only works for either one predecessor, or two predecessors if it's a loop
+  if (MBB.pred_empty() && MBB.pred_size() > 2)
+    return;
+
   if (!BlockInfo[MBB.getNumber()].Pred.isUnknown())
     return;
 
+  bool isLoop = false;
+
   MachineBasicBlock *UnavailablePred = nullptr;
   VSETVLIInfo AvailableInfo;
+  MachineBasicBlock *PreviousPred = nullptr;
   for (MachineBasicBlock *P : MBB.predecessors()) {
+    isLoop |= (P == &MBB);
+
     const VSETVLIInfo &PredInfo = BlockInfo[P->getNumber()].Exit;
     if (PredInfo.isUnknown()) {
       if (UnavailablePred)
@@ -1525,8 +1536,24 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
     } else if (!AvailableInfo.isValid()) {
       AvailableInfo = PredInfo;
     } else if (AvailableInfo != PredInfo) {
-      return;
+      if (!isLoop)
+        return;
+
+      DemandedFields PREDemands;
+      PREDemands.demandVTYPE();
+
+      if (!PredInfo.isCompatible(PREDemands, AvailableInfo, LIS))
+        return;
+
+      // States are VTYPE-compatible, prefer the more general state
+      // Choose VLMAX over immediate when both are tail-agnostic
+      if (PredInfo.hasAVLVLMAX() && AvailableInfo.hasAVLImm()) {
+        AvailableInfo = PredInfo;
+        UnavailablePred = PreviousPred;
+      }
     }
+
+    PreviousPred = P;
   }
 
   // Unreachable, single pred, or full redundancy. Note that FRE is handled by
@@ -1543,7 +1570,7 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
     return;
 
   // Critical edge - TODO: consider splitting?
-  if (UnavailablePred->succ_size() != 1)
+  if (UnavailablePred->succ_size() != 1 && !isLoop)
     return;
 
   // If the AVL value is a register (other than our VLMAX sentinel),
@@ -1571,21 +1598,49 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
   VSETVLIInfo OldInfo = BlockInfo[MBB.getNumber()].Pred;
   VSETVLIInfo CurInfo = AvailableInfo;
   int TransitionsRemoved = 0;
+
+  LLVM_DEBUG(dbgs() << "PRE VSETVLI from " << MBB.getName() << " to "
+                    << UnavailablePred->getName() << "\n"
+                    << "  Old state: " << OldInfo << "\n"
+                    << "  New state: " << CurInfo << "\n");
+
   for (const MachineInstr &MI : MBB) {
+    if (RISCVII::hasSEWOp(MI.getDesc().TSFlags))
+      if (!hasUndefinedPassthru(MI))
+        return; // Unsafe to change VL/VTYPE for this loop.
+
     const VSETVLIInfo LastInfo = CurInfo;
     const VSETVLIInfo LastOldInfo = OldInfo;
     transferBefore(CurInfo, MI);
     transferBefore(OldInfo, MI);
+
+    LLVM_DEBUG(dbgs() << "PRE VSETVLI 1 from " << MBB.getName() << " to "
+                      << UnavailablePred->getName() << "\n"
+                      << "  Old state: " << OldInfo << "\n"
+                      << "  New state: " << CurInfo << "\n");
+
     if (CurInfo == LastInfo)
       TransitionsRemoved++;
     if (LastOldInfo == OldInfo)
       TransitionsRemoved--;
     transferAfter(CurInfo, MI);
     transferAfter(OldInfo, MI);
+
+    LLVM_DEBUG(dbgs() << "PRE VSETVLI 2 from " << MBB.getName() << " to "
+                      << UnavailablePred->getName() << "\n"
+                      << "  Old state: " << OldInfo << "\n"
+                      << "  New state: " << CurInfo << "\n\n");
+
     if (CurInfo == OldInfo)
       // Convergence.  All transitions after this must match by construction.
       break;
   }
+
+  LLVM_DEBUG(dbgs() << "PRE VSETVLI 3 from " << MBB.getName() << " to "
+                  << UnavailablePred->getName() << "\n"
+                  << "  Old state: " << OldInfo << "\n"
+                  << "  New state: " << CurInfo << "\n");
+
   if (CurInfo != OldInfo || TransitionsRemoved <= 0)
     // Issues 1 and 2 above
     return;
