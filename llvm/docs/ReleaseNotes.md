@@ -68,6 +68,10 @@ Changes to TableGen
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
+Changes to Vectorizers
+----------------------------------------
+* SLP vectorizer supports initial recognition of FMA pattern
+
 Changes to the AArch64 Backend
 ------------------------------
 
