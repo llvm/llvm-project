@@ -1055,9 +1055,9 @@ private:
       case IES_RPAREN:
         State = IES_RPAREN;
         // In the case of a multiply, onRegister has already set IndexReg
-        // directly, with appropriate scale
+        // directly, with appropriate scale.
         // Otherwise if we just saw a register it has only been stored in
-        // TmpReg, so we need to store it into the state machine
+        // TmpReg, so we need to store it into the state machine.
         if (CurrState == IES_REGISTER && PrevState != IES_MULTIPLY) {
           // If we already have a BaseReg, then assume this is the IndexReg with
           // no explicit scale.
