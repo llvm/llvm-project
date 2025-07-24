@@ -88,6 +88,10 @@ Improvements and New Features
 
 - ``ctype::tolower`` and ``ctype::toupper`` have been optimized, resulting in a 2x performance improvement.
 
+- The ``std::{fill, fill_n}`` and ``std::ranges::{fill, fill_n}`` algorithms have been optimized for segmented iterators,
+  resulting in a performance improvement of at least 10x for ``std::deque<int>`` iterators and
+  ``std::join_view<std::vector<std::vector<int>>>`` iterators.
+
 Deprecations and Removals
 -------------------------
 
