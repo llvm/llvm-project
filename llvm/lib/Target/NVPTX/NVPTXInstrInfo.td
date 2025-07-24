@@ -1234,7 +1234,7 @@ defm FMA_F32    : FMA<F32RT,    allow_ftz = true>;
 defm FMA_F32x2  : FMA<F32X2RT,  allow_ftz = true, preds = [hasF32x2Instructions]>;
 defm FMA_F64    : FMA<F64RT,    allow_ftz = false>;
 
-// sin/cos
+// sin/cos/tanh
 
 class UnaryOpAllowsApproxFn<SDPatternOperator operator>
     : PatFrag<(ops node:$A),
@@ -1250,6 +1250,10 @@ def COS_APPROX_f32 :
   BasicFlagsNVPTXInst<(outs B32:$dst), (ins B32:$src), (ins FTZFlag:$ftz),
                       "cos.approx$ftz.f32",
                       [(set f32:$dst, (UnaryOpAllowsApproxFn<fcos> f32:$src))]>;
+def TANH_APPROX_f32 :
+  BasicNVPTXInst<(outs B32:$dst), (ins B32:$src), "tanh.approx.f32",
+                 [(set f32:$dst, (UnaryOpAllowsApproxFn<ftanh> f32:$src))]>,
+                 Requires<[hasPTX<70>, hasSM<75>]>;
 
 //-----------------------------------
 // Bitwise operations
