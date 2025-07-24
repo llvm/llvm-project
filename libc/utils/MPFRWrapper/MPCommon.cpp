@@ -106,6 +106,12 @@ MPFRNumber MPFRNumber::atanh() const {
   return result;
 }
 
+MPFRNumber MPFRNumber::atanpi() const {
+  MPFRNumber result(*this);
+  mpfr_atanpi(result.value, value, mpfr_rounding);
+  return result;
+}
+
 MPFRNumber MPFRNumber::cbrt() const {
   MPFRNumber result(*this);
   mpfr_cbrt(result.value, value, mpfr_rounding);
