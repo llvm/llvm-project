@@ -6440,9 +6440,9 @@ also uses more general registers to pass arguments. This attribute doesn't
 impact floating-point registers. ``preserve_none``'s ABI is still unstable, and
 may be changed in the future.
 
-- On X86, only ESP and EBP are preserved by the callee. Registers EDI, ESI, EDX,
-  ECX, and EAX now can be used to pass function arguments.
-- On X86-64, only RSP and RBP are preserved by the callee.
+- On X86, only ESP, EBP, and ESI are preserved by the callee. Registers EDI,
+  EDX, and EAX now can be used to pass function arguments.
+- On X86-64, only RSP, RBP, and RBX are preserved by the callee.
   Registers R12, R13, R14, R15, RDI, RSI, RDX, RCX, R8, R9, R11, and RAX now can
   be used to pass function arguments. Floating-point registers (XMMs/YMMs) still
   follow the C calling convention.

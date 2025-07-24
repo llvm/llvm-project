@@ -21,28 +21,32 @@ define preserve_nonecc void @entry6(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr 
 ;
 ; X86-LABEL: entry6:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; X86-NEXT:    movl %edx, %ebx
+; X86-NEXT:    movl %edx, (%esp) # 4-byte Spill
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    calll _boring
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %ebx, %edx
-; X86-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; X86-NEXT:    movl (%esp), %edx # 4-byte Reload
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    popl %ebp
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    jmp _continuation6 # TAILCALL
   call void @boring()
   musttail call preserve_nonecc void @continuation6(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f)
   ret void
 }
 
-declare preserve_nonecc void @continuation2(ptr, ptr)
-define preserve_nonecc void @entry2(ptr %a, ptr %b) {
-; X64-LABEL: entry2:
+declare preserve_nonecc void @continuation1(ptr)
+define preserve_nonecc void @entry1(ptr %a) {
+; X64-LABEL: entry1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    subq $40, %rsp
 ; X64-NEXT:    .seh_stackalloc 40
@@ -52,14 +56,14 @@ define preserve_nonecc void @entry2(ptr %a, ptr %b) {
 ; X64-NEXT:    .seh_startepilogue
 ; X64-NEXT:    addq $40, %rsp
 ; X64-NEXT:    .seh_endepilogue
-; X64-NEXT:    jmp continuation2 # TAILCALL
+; X64-NEXT:    jmp continuation1 # TAILCALL
 ; X64-NEXT:    .seh_endproc
 ;
-; X86-LABEL: entry2:
+; X86-LABEL: entry1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    calll _boring
-; X86-NEXT:    jmp _continuation2 # TAILCALL
+; X86-NEXT:    jmp _continuation1 # TAILCALL
   call void @boring()
-  musttail call preserve_nonecc void @continuation2(ptr %a, ptr %b)
+  musttail call preserve_nonecc void @continuation1(ptr %a)
   ret void
 }
