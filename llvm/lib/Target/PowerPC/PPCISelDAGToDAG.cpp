@@ -4569,7 +4569,14 @@ bool PPCDAGToDAGISel::trySETCC(SDNode *N) {
   if (!IsStrict && LHS.getValueType().isVector()) {
     if (Subtarget->hasSPE())
       return false;
-
+    // Check if RHS or LHS vector operands are 0 and change SETNE to either
+    // SETUGT or SETULT.
+    if (CC == ISD::SETNE) {
+      if (ISD::isBuildVectorAllZeros(RHS.getNode()))
+        CC = ISD::SETUGT;
+      else if (ISD::isBuildVectorAllZeros(LHS.getNode()))
+        CC = ISD::SETULT;
+    }
     EVT VecVT = LHS.getValueType();
     bool Swap, Negate;
     unsigned int VCmpInst =
