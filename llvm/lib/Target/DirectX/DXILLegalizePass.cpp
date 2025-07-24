@@ -26,7 +26,7 @@ using namespace llvm;
 
 static void legalizeFreeze(Instruction &I,
                            SmallVectorImpl<Instruction *> &ToRemove,
-                           DenseMap<Value *, Value *>) {
+                           DenseMap<Value *, Value *>, bool &) {
   auto *FI = dyn_cast<FreezeInst>(&I);
   if (!FI)
     return;
@@ -37,7 +37,7 @@ static void legalizeFreeze(Instruction &I,
 
 static void fixI8UseChain(Instruction &I,
                           SmallVectorImpl<Instruction *> &ToRemove,
-                          DenseMap<Value *, Value *> &ReplacedValues) {
+                          DenseMap<Value *, Value *> &ReplacedValues, bool &) {
 
   auto ProcessOperands = [&](SmallVector<Value *> &NewOperands) {
     Type *InstrType = IntegerType::get(I.getContext(), 32);
@@ -253,7 +253,8 @@ static void fixI8UseChain(Instruction &I,
 
 static void upcastI8AllocasAndUses(Instruction &I,
                                    SmallVectorImpl<Instruction *> &ToRemove,
-                                   DenseMap<Value *, Value *> &ReplacedValues) {
+                                   DenseMap<Value *, Value *> &ReplacedValues,
+                                   bool &) {
   auto *AI = dyn_cast<AllocaInst>(&I);
   if (!AI || !AI->getAllocatedType()->isIntegerTy(8))
     return;
@@ -303,7 +304,7 @@ static void upcastI8AllocasAndUses(Instruction &I,
 static void
 downcastI64toI32InsertExtractElements(Instruction &I,
                                       SmallVectorImpl<Instruction *> &ToRemove,
-                                      DenseMap<Value *, Value *> &) {
+                                      DenseMap<Value *, Value *> &, bool &) {
 
   if (auto *Extract = dyn_cast<ExtractElementInst>(&I)) {
     Value *Idx = Extract->getIndexOperand();
@@ -455,7 +456,7 @@ static void emitMemsetExpansion(IRBuilder<> &Builder, Value *Dst, Value *Val,
 // vector. `ReplacedValues` is unused.
 static void legalizeMemCpy(Instruction &I,
                            SmallVectorImpl<Instruction *> &ToRemove,
-                           DenseMap<Value *, Value *> &ReplacedValues) {
+                           DenseMap<Value *, Value *> &ReplacedValues, bool &) {
 
   CallInst *CI = dyn_cast<CallInst>(&I);
   if (!CI)
@@ -480,7 +481,7 @@ static void legalizeMemCpy(Instruction &I,
 
 static void legalizeMemSet(Instruction &I,
                            SmallVectorImpl<Instruction *> &ToRemove,
-                           DenseMap<Value *, Value *> &ReplacedValues) {
+                           DenseMap<Value *, Value *> &ReplacedValues, bool &) {
 
   CallInst *CI = dyn_cast<CallInst>(&I);
   if (!CI)
@@ -501,7 +502,7 @@ static void legalizeMemSet(Instruction &I,
 
 static void updateFnegToFsub(Instruction &I,
                              SmallVectorImpl<Instruction *> &ToRemove,
-                             DenseMap<Value *, Value *> &) {
+                             DenseMap<Value *, Value *> &, bool &) {
   const Intrinsic::ID ID = I.getOpcode();
   if (ID != Instruction::FNeg)
     return;
@@ -516,7 +517,7 @@ static void updateFnegToFsub(Instruction &I,
 static void
 legalizeGetHighLowi64Bytes(Instruction &I,
                            SmallVectorImpl<Instruction *> &ToRemove,
-                           DenseMap<Value *, Value *> &ReplacedValues) {
+                           DenseMap<Value *, Value *> &ReplacedValues, bool &) {
   if (auto *BitCast = dyn_cast<BitCastInst>(&I)) {
     if (BitCast->getDestTy() ==
             FixedVectorType::get(Type::getInt32Ty(I.getContext()), 2) &&
@@ -562,10 +563,9 @@ legalizeGetHighLowi64Bytes(Instruction &I,
   }
 }
 
-static void
-legalizeScalarLoadStoreOnArrays(Instruction &I,
-                                SmallVectorImpl<Instruction *> &ToRemove,
-                                DenseMap<Value *, Value *> &) {
+static void legalizeScalarLoadStoreOnArrays(
+    Instruction &I, SmallVectorImpl<Instruction *> &ToRemove,
+    DenseMap<Value *, Value *> &, bool &MadeChange) {
 
   Value *PtrOp;
   unsigned PtrOpIndex;
@@ -607,6 +607,7 @@ legalizeScalarLoadStoreOnArrays(Instruction &I,
   Value *GEP = GetElementPtrInst::Create(
       ArrayTy, PtrOp, {Zero, Zero}, GEPNoWrapFlags::all(), "", I.getIterator());
   I.setOperand(PtrOpIndex, GEP);
+  MadeChange = true;
 }
 
 namespace {
@@ -623,8 +624,11 @@ public:
       ToRemove.clear();
       ReplacedValues.clear();
       for (auto &I : instructions(F)) {
-        for (auto &LegalizationFn : LegalizationPipeline[Stage])
-          LegalizationFn(I, ToRemove, ReplacedValues);
+        for (auto &LegalizationFn : LegalizationPipeline[Stage]) {
+          bool PerLegalizationChange = false;
+          LegalizationFn(I, ToRemove, ReplacedValues, PerLegalizationChange);
+          MadeChange |= PerLegalizationChange;
+        }
       }
 
       for (auto *Inst : reverse(ToRemove))
@@ -640,7 +644,7 @@ private:
 
   using LegalizationFnTy =
       std::function<void(Instruction &, SmallVectorImpl<Instruction *> &,
-                         DenseMap<Value *, Value *> &)>;
+                         DenseMap<Value *, Value *> &, bool &)>;
 
   SmallVector<LegalizationFnTy> LegalizationPipeline[NumStages];
 
