@@ -22,7 +22,6 @@
 
 using namespace clang;
 using namespace clang::CIRGen;
-using namespace cir;
 
 //===----------------------------------------------------------------------===//
 // CIRGenFunction cleanup related
@@ -47,14 +46,13 @@ static mlir::Block *getCurCleanupBlock(CIRGenFunction &cgf) {
 void CIRGenFunction::popCleanupBlock() {
   assert(!ehStack.cleanupStack.empty() && "cleanup stack is empty!");
   mlir::OpBuilder::InsertionGuard guard(builder);
-  EHScopeStack::Cleanup *cleanup = ehStack.cleanupStack.pop_back_val();
+  std::unique_ptr<EHScopeStack::Cleanup> cleanup =
+      ehStack.cleanupStack.pop_back_val();
 
   assert(!cir::MissingFeatures::ehCleanupFlags());
   mlir::Block *cleanupEntry = getCurCleanupBlock(*this);
   builder.setInsertionPointToEnd(cleanupEntry);
   cleanup->emit(*this);
-
-  delete cleanup;
 }
 
 /// Pops cleanup blocks until the given savepoint is reached.

@@ -489,8 +489,8 @@ void CIRGenFunction::destroyCXXObject(CIRGenFunction &cgf, Address addr,
   // dtors which shall be removed on later CIR passes. However, only remove this
   // assertion after we have a test case to exercise this path.
   assert(!dtor->isTrivial());
-  cgf.emitCXXDestructorCall(dtor, Dtor_Complete, /*for vbase*/ false,
-                            /*Delegating=*/false, addr, type);
+  cgf.emitCXXDestructorCall(dtor, Dtor_Complete, /*forVirtualBase*/ false,
+                            /*delegating=*/false, addr, type);
 }
 
 void CIRGenFunction::emitDelegatingCXXConstructorCall(

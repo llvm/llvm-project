@@ -278,7 +278,7 @@ void CIRGenFunction::LexicalScope::cleanup() {
           // Thread return block via cleanup block.
           if (cleanupBlock) {
             for (mlir::BlockOperand &blockUse : returnBlock->getUses()) {
-              cir::BrOp brOp = cast<cir::BrOp>(blockUse.getOwner());
+              cir::BrOp brOp = mlir::cast<cir::BrOp>(blockUse.getOwner());
               brOp.setSuccessor(cleanupBlock);
             }
           }

@@ -15,8 +15,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_CIRGEN_EHSCOPESTACK_H
-#define LLVM_CLANG_LIB_CIRGEN_EHSCOPESTACK_H
+#ifndef CLANG_LIB_CIR_CODEGEN_EHSCOPESTACK_H
+#define CLANG_LIB_CIR_CODEGEN_EHSCOPESTACK_H
 
 #include "llvm/ADT/SmallVector.h"
 
@@ -74,7 +74,7 @@ public:
   // management scheme. We'll probably eventually want to find a way to share
   // that implementation. For now, we will use a very simplified implementation
   // to get cleanups working.
-  llvm::SmallVector<Cleanup *, 8> cleanupStack;
+  llvm::SmallVector<std::unique_ptr<Cleanup>, 8> cleanupStack;
 
 private:
   /// The CGF this Stack belong to
@@ -86,8 +86,7 @@ public:
 
   /// Push a lazily-created cleanup on the stack.
   template <class T, class... As> void pushCleanup(CleanupKind kind, As... a) {
-    Cleanup *obj = new T(a...);
-    cleanupStack.push_back(obj);
+    cleanupStack.push_back(std::make_unique<T>(a...));
   }
 
   void setCGF(CIRGenFunction *inCGF) { cgf = inCGF; }
@@ -97,4 +96,4 @@ public:
 
 } // namespace clang::CIRGen
 
-#endif
+#endif // CLANG_LIB_CIR_CODEGEN_EHSCOPESTACK_H
