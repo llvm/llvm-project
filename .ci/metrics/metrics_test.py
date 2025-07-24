@@ -13,6 +13,11 @@ import metrics
 
 class TestMetrics(unittest.TestCase):
     def test_upload_gauge_metric(self):
+        """Test that we can upload a gauge metric correctly.
+
+        Also verify that we pass around parameters like API keys and user IDs
+        correctly to the HTTP POST request.
+        """
         test_metrics = [metrics.GaugeMetric("gauge_test", 5, 1000)]
         return_value = requests.Response()
         return_value.status_code = 204
@@ -29,6 +34,7 @@ class TestMetrics(unittest.TestCase):
             )
 
     def test_upload_job_metric(self):
+        """Test that we can upload a job metric correctly."""
         test_metrics = [
             metrics.JobMetrics("test_job", 5, 10, 1, 1000, 7, "test_workflow")
         ]
@@ -44,6 +50,8 @@ class TestMetrics(unittest.TestCase):
             )
 
     def test_upload_unknown_metric(self):
+        """Test we report an error if we encounter an unknown metric type."""
+
         @dataclass
         class FakeMetric:
             fake_data: str
@@ -54,6 +62,7 @@ class TestMetrics(unittest.TestCase):
             metrics.upload_metrics(test_metrics, "test_userid", "test_api_key")
 
     def test_bad_response_code(self):
+        """Test that we gracefully handle HTTP response errors."""
         test_metrics = [metrics.GaugeMetric("gauge_test", 5, 1000)]
         return_value = requests.Response()
         return_value.status_code = 403
