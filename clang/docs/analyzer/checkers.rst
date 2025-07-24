@@ -2114,10 +2114,11 @@ unix.cstring.NotNullTerminated (C)
 Check for arguments which are not null-terminated strings;
 applies to the ``strlen``, ``strcpy``, ``strcat``, ``strcmp`` family of functions.
 
-Only very fundamental cases are detected where the passed memory block is
-absolutely different from a null-terminated string. This checker does not
-find if a memory buffer is passed where the terminating zero character
-is missing.
+The checker can detect if the passed memory block is not a string object at all,
+like address of a label or function. Additionally it can detect simple cases
+when the terminating zero is missing, for example if the data was initialized
+as array without terminating zero, or the terminating zero was overwritten by
+an assignment (with a value that is provably not zero).
 
 .. code-block:: c
 
@@ -2128,6 +2129,17 @@ is missing.
  void test2() {
  label:
    int l = strlen((char *)&&label); // warn
+ }
+
+ int test3() {
+   char buf[4] = {1, 2, 3, 4};
+   return strlen(buf); // warn
+ }
+
+ int test4() {
+   char buf[] = "abcd";
+   buf[4] = 'e';
+   return strlen(buf); // warn
  }
 
 .. _unix-cstring-NullArg:
