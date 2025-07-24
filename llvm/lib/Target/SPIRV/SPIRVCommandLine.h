@@ -46,7 +46,7 @@ public:
 
   /// Returns the list of extensions that are valid for a particular
   /// target environment (i.e., OpenCL or Vulkan).
-  static const std::set<SPIRV::Extension::Extension> &
+  static std::set<SPIRV::Extension::Extension>
   getValidExtensions(const Triple &TT);
 };
 

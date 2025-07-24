@@ -20,68 +20,6 @@
 
 using namespace llvm;
 
-// List of extensions allowed for Vulkan environment.
-// This should not contain an extension that is not listed in
-// https://github.com/KhronosGroup/Vulkan-Headers/blob/main/registry/vk.xml.
-static const std::set<SPIRV::Extension::Extension> ValidVulkanExtensions = {
-    SPIRV::Extension::SPV_EXT_demote_to_helper_invocation,
-    SPIRV::Extension::SPV_EXT_shader_atomic_float_add,
-    SPIRV::Extension::SPV_EXT_shader_atomic_float16_add,
-    SPIRV::Extension::SPV_EXT_shader_atomic_float_min_max,
-    SPIRV::Extension::SPV_KHR_cooperative_matrix,
-    SPIRV::Extension::SPV_KHR_expect_assume,
-    SPIRV::Extension::SPV_KHR_float_controls,
-    SPIRV::Extension::SPV_KHR_float_controls2,
-    SPIRV::Extension::SPV_KHR_integer_dot_product,
-    SPIRV::Extension::SPV_KHR_non_semantic_info,
-    SPIRV::Extension::SPV_KHR_shader_clock,
-    SPIRV::Extension::SPV_KHR_subgroup_rotate};
-
-// List of extensions allowed for OpenCL environment.
-// TODO: Remove extension not used by OpenCL. I do not know how to get that
-// information.
-static const std::set<SPIRV::Extension::Extension> ValidOpenCLExtensions = {
-    SPIRV::Extension::SPV_EXT_shader_atomic_float_add,
-    SPIRV::Extension::SPV_EXT_shader_atomic_float16_add,
-    SPIRV::Extension::SPV_EXT_shader_atomic_float_min_max,
-    SPIRV::Extension::SPV_EXT_arithmetic_fence,
-    SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers,
-    SPIRV::Extension::SPV_INTEL_cache_controls,
-    SPIRV::Extension::SPV_INTEL_float_controls2,
-    SPIRV::Extension::SPV_INTEL_global_variable_fpga_decorations,
-    SPIRV::Extension::SPV_INTEL_global_variable_host_access,
-    SPIRV::Extension::SPV_INTEL_optnone,
-    SPIRV::Extension::SPV_EXT_optnone,
-    SPIRV::Extension::SPV_INTEL_usm_storage_classes,
-    SPIRV::Extension::SPV_INTEL_split_barrier,
-    SPIRV::Extension::SPV_INTEL_subgroups,
-    SPIRV::Extension::SPV_INTEL_media_block_io,
-    SPIRV::Extension::SPV_INTEL_memory_access_aliasing,
-    SPIRV::Extension::SPV_INTEL_joint_matrix,
-    SPIRV::Extension::SPV_KHR_uniform_group_instructions,
-    SPIRV::Extension::SPV_KHR_no_integer_wrap_decoration,
-    SPIRV::Extension::SPV_KHR_float_controls,
-    SPIRV::Extension::SPV_KHR_expect_assume,
-    SPIRV::Extension::SPV_KHR_bit_instructions,
-    SPIRV::Extension::SPV_KHR_integer_dot_product,
-    SPIRV::Extension::SPV_KHR_linkonce_odr,
-    SPIRV::Extension::SPV_INTEL_inline_assembly,
-    SPIRV::Extension::SPV_INTEL_bindless_images,
-    SPIRV::Extension::SPV_INTEL_bfloat16_conversion,
-    SPIRV::Extension::SPV_KHR_subgroup_rotate,
-    SPIRV::Extension::SPV_INTEL_variable_length_array,
-    SPIRV::Extension::SPV_INTEL_function_pointers,
-    SPIRV::Extension::SPV_KHR_shader_clock,
-    SPIRV::Extension::SPV_KHR_cooperative_matrix,
-    SPIRV::Extension::SPV_KHR_non_semantic_info,
-    SPIRV::Extension::SPV_INTEL_long_composites,
-    SPIRV::Extension::SPV_INTEL_fp_max_error,
-    SPIRV::Extension::SPV_INTEL_subgroup_matrix_multiply_accumulate,
-    SPIRV::Extension::SPV_INTEL_ternary_bitwise_function,
-    SPIRV::Extension::SPV_INTEL_2d_block_io,
-    SPIRV::Extension::SPV_INTEL_int4,
-    SPIRV::Extension::SPV_KHR_float_controls2};
-
 static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
     SPIRVExtensionMap = {
         {"SPV_EXT_shader_atomic_float_add",
@@ -166,26 +104,6 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
         {"SPV_KHR_float_controls2",
          SPIRV::Extension::Extension::SPV_KHR_float_controls2}};
 
-/*
-
-TODO: std::set_union is not constexpr in c++17. I would still like a way to make
-sure the environment lists are added.
-
-// Check that every extension is in at least one of the two lists.
-constexpr bool AreAllExtensionsInAnEnvList() noexcept {
-      SPIRV::Extension::Extension ExtensionsInEnvList[100] = {};
-      constexpr auto* end = std::set_union(ValidVulkanExtensions.begin(),
-ValidVulkanExtensions.end(), ValidOpenCLExtensions.begin(),
-ValidOpenCLExtensions.end(), ExtensionsInEnvList); return
-(end-ExtensionsInEnvList) == SPIRVExtensionMap.size();
-}
-
-static_assert(
-    AreAllExtensionsInAnEnvList(),
-    "Not all extensions are in ValidVulkanExtensions or "
-    "ValidOpenCLExtensions");
-*/
-
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue,
                                   std::set<SPIRV::Extension::Extension> &Vals) {
@@ -252,8 +170,9 @@ StringRef SPIRVExtensionsParser::checkExtensions(
   return StringRef();
 }
 
-const std::set<SPIRV::Extension::Extension> &
+std::set<SPIRV::Extension::Extension>
 SPIRVExtensionsParser::getValidExtensions(const Triple &TT) {
+  // TODO: First build a set of all extensions in the SPIRVExtensionMap. Then if hte OS is Vulkan, then remove entries that are not allowed in the vulkan environment. Otherwise, remove the entries not allowed in the opencl environment.
   if (TT.getOS() == Triple::Vulkan)
     return ValidVulkanExtensions;
   return ValidOpenCLExtensions;
