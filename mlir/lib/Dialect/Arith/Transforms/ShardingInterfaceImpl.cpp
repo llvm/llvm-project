@@ -83,7 +83,7 @@ struct ConstantShardingInterface
           cOp.getType(), getMesh(op, sharding.getMeshAttr(), symbolTable),
           sharding));
       auto newValue = value.resizeSplat(newType);
-      auto newOp = builder.create<ConstantOp>(op->getLoc(), newType, newValue);
+      auto newOp = ConstantOp::create(builder, op->getLoc(), newType, newValue);
       spmdizationMap.map(op->getResult(0), newOp.getResult());
       spmdizationMap.map(op, newOp.getOperation());
     } else {
