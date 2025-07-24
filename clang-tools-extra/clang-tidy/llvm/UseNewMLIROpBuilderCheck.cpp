@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MLIROpBuilderCheck.h"
+#include "UseNewMLIROpBuilderCheck.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/Lexer.h"
@@ -110,7 +110,7 @@ EditGenerator rewrite(RangeSelector Call, RangeSelector Builder,
   };
 }
 
-RewriteRuleWith<std::string> mlirOpBuilderCheckRule() {
+RewriteRuleWith<std::string> useNewMlirOpBuilderCheckRule() {
   return makeRule(
       cxxMemberCallExpr(
           on(expr(hasType(
@@ -125,8 +125,9 @@ RewriteRuleWith<std::string> mlirOpBuilderCheckRule() {
 }
 } // namespace
 
-MlirOpBuilderCheck::MlirOpBuilderCheck(StringRef Name,
-                                       ClangTidyContext *Context)
-    : TransformerClangTidyCheck(mlirOpBuilderCheckRule(), Name, Context) {}
+UseNewMlirOpBuilderCheck::UseNewMlirOpBuilderCheck(StringRef Name,
+                                                   ClangTidyContext *Context)
+    : TransformerClangTidyCheck(useNewMlirOpBuilderCheckRule(), Name, Context) {
+}
 
 } // namespace clang::tidy::llvm_check

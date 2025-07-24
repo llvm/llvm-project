@@ -14,11 +14,11 @@
 #include "../readability/QualifiedAutoCheck.h"
 #include "HeaderGuardCheck.h"
 #include "IncludeOrderCheck.h"
-#include "MLIROpBuilderCheck.h"
 #include "PreferIsaOrDynCastInConditionalsCheck.h"
 #include "PreferRegisterOverUnsignedCheck.h"
 #include "PreferStaticOverAnonymousNamespaceCheck.h"
 #include "TwineLocalCheck.h"
+#include "UseNewMLIROpBuilderCheck.h"
 
 namespace clang::tidy {
 namespace llvm_check {
@@ -30,8 +30,6 @@ public:
         "llvm-else-after-return");
     CheckFactories.registerCheck<LLVMHeaderGuardCheck>("llvm-header-guard");
     CheckFactories.registerCheck<IncludeOrderCheck>("llvm-include-order");
-    CheckFactories.registerCheck<MlirOpBuilderCheck>(
-        "llvm-use-new-mlir-op-builder");
     CheckFactories.registerCheck<readability::NamespaceCommentCheck>(
         "llvm-namespace-comment");
     CheckFactories.registerCheck<PreferIsaOrDynCastInConditionalsCheck>(
@@ -43,6 +41,8 @@ public:
     CheckFactories.registerCheck<readability::QualifiedAutoCheck>(
         "llvm-qualified-auto");
     CheckFactories.registerCheck<TwineLocalCheck>("llvm-twine-local");
+    CheckFactories.registerCheck<UseNewMlirOpBuilderCheck>(
+        "llvm-use-new-mlir-op-builder");
   }
 
   ClangTidyOptions getModuleOptions() override {

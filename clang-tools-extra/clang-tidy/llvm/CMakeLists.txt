@@ -7,11 +7,11 @@ add_clang_library(clangTidyLLVMModule STATIC
   HeaderGuardCheck.cpp
   IncludeOrderCheck.cpp
   LLVMTidyModule.cpp
-  MLIROpBuilderCheck.cpp
   PreferIsaOrDynCastInConditionalsCheck.cpp
   PreferRegisterOverUnsignedCheck.cpp
   PreferStaticOverAnonymousNamespaceCheck.cpp
   TwineLocalCheck.cpp
+  UseNewMLIROpBuilderCheck.cpp
 
   LINK_LIBS
   clangTidy
