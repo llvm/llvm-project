@@ -415,7 +415,7 @@ void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 void MCStreamer::emitConditionalAssignment(MCSymbol *Symbol,
                                            const MCExpr *Value) {}
 
-void MCStreamer::emitCFISections(bool EH, bool Debug) {}
+void MCStreamer::emitCFISections(bool EH, bool Debug, bool SFrame) {}
 
 void MCStreamer::emitCFIStartProc(bool IsSimple, SMLoc Loc) {
   if (!FrameInfoStack.empty() &&
