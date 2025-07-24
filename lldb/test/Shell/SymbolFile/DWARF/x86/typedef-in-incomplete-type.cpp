@@ -10,7 +10,7 @@
 // to the incomplete type. Make sure that succeeds. Use the expression command
 // to make sure the resulting AST can be imported correctly.
 // CHECK: expr -- var
-// CHECK: (A::X) $0 = 0
+// CHECK: (X) $0 = 0
 
 struct A {
   // Declare the constructor, but don't define it to avoid emitting the

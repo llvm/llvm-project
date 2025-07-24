@@ -20,7 +20,7 @@ class TestCase(TestBase):
         # that the typedef is defined inside.
         self.expect_expr(
             "pull_in_classes",
-            result_type="StructWithMember::MemberTypedef",
+            result_type="MemberTypedef",
             result_value="0",
         )
 
@@ -31,7 +31,7 @@ class TestCase(TestBase):
             result_children=[
                 ValueCheck(
                     name="m",
-                    type="StructWithNested::Nested<int>::OtherTypedef",
+                    type="OtherTypedef",
                     children=[ValueCheck(name="i", value="0", type="int")],
                 )
             ],

@@ -28,11 +28,11 @@ expr b1
 
 target var c1
 # CHECK-LABEL: target var c1
-# CHECK: (C::C1) c1 = 424742
+# CHECK: (C1) c1 = 424742
 
 expr c1
 # CHECK-LABEL: expr c1
-# CHECK: (C::C1) $1 = 424742
+# CHECK: (C1) $1 = 424742
 #--- asm
         .text
 _ZN1AC2Ev:
