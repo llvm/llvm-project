@@ -38,6 +38,25 @@
 #    define _LIBCPP_FREESTANDING
 #  endif
 
+#  if __has_feature(experimental_library)
+#    ifndef _LIBCPP_ENABLE_EXPERIMENTAL
+#      define _LIBCPP_ENABLE_EXPERIMENTAL
+#    endif
+#  endif
+
+// Incomplete features get their own specific disabling flags. This makes it
+// easier to grep for target specific flags once the feature is complete.
+#  if defined(_LIBCPP_ENABLE_EXPERIMENTAL) || defined(_LIBCPP_BUILDING_LIBRARY)
+#    define _LIBCPP_HAS_EXPERIMENTAL_LIBRARY 1
+#  else
+#    define _LIBCPP_HAS_EXPERIMENTAL_LIBRARY 0
+#  endif
+
+#  define _LIBCPP_HAS_EXPERIMENTAL_PSTL _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
+#  define _LIBCPP_HAS_EXPERIMENTAL_TZDB _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
+#  define _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
+#  define _LIBCPP_HAS_EXPERIMENTAL_HARDENING_OBSERVE_SEMANTIC _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
+
 // HARDENING {
 
 // TODO: Remove in LLVM 21. We're making this an error to catch folks who might not have migrated.
@@ -231,25 +250,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #  if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_NO_VCRUNTIME)
 #    define _LIBCPP_ABI_VCRUNTIME
 #  endif
-
-#  if __has_feature(experimental_library)
-#    ifndef _LIBCPP_ENABLE_EXPERIMENTAL
-#      define _LIBCPP_ENABLE_EXPERIMENTAL
-#    endif
-#  endif
-
-// Incomplete features get their own specific disabling flags. This makes it
-// easier to grep for target specific flags once the feature is complete.
-#  if defined(_LIBCPP_ENABLE_EXPERIMENTAL) || defined(_LIBCPP_BUILDING_LIBRARY)
-#    define _LIBCPP_HAS_EXPERIMENTAL_LIBRARY 1
-#  else
-#    define _LIBCPP_HAS_EXPERIMENTAL_LIBRARY 0
-#  endif
-
-#  define _LIBCPP_HAS_EXPERIMENTAL_PSTL _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
-#  define _LIBCPP_HAS_EXPERIMENTAL_TZDB _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
-#  define _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
-#  define _LIBCPP_HAS_EXPERIMENTAL_HARDENING_OBSERVE_SEMANTIC _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
 
 #  if defined(__MVS__)
 #    include <features.h> // for __NATIVE_ASCII_F
