@@ -352,7 +352,7 @@ private:
   MachineInstr *emitConditionalComparison(Register LHS, Register RHS,
                                           CmpInst::Predicate CC,
                                           AArch64CC::CondCode Predicate,
-                                          AArch64CC::CondCode OutCC,
+                                          AArch64CC::CondCode &OutCC,
                                           MachineIRBuilder &MIB) const;
   MachineInstr *emitConjunctionRec(Register Val, AArch64CC::CondCode &OutCC,
                                    bool Negate, Register CCOp,
@@ -4869,7 +4869,7 @@ static bool canEmitConjunction(Register Val, bool &CanNegate, bool &MustBeFirst,
 
 MachineInstr *AArch64InstructionSelector::emitConditionalComparison(
     Register LHS, Register RHS, CmpInst::Predicate CC,
-    AArch64CC::CondCode Predicate, AArch64CC::CondCode OutCC,
+    AArch64CC::CondCode Predicate, AArch64CC::CondCode &OutCC,
     MachineIRBuilder &MIB) const {
   auto &MRI = *MIB.getMRI();
   LLT OpTy = MRI.getType(LHS);
@@ -4878,7 +4878,25 @@ MachineInstr *AArch64InstructionSelector::emitConditionalComparison(
   if (CmpInst::isIntPredicate(CC)) {
     assert(OpTy.getSizeInBits() == 32 || OpTy.getSizeInBits() == 64);
     C = getIConstantVRegValWithLookThrough(RHS, MRI);
-    if (!C || C->Value.sgt(31) || C->Value.slt(-31))
+    if (!C) {
+      MachineInstr *Def = getDefIgnoringCopies(RHS, MRI);
+      if (isCMN(Def, CC, MRI)) {
+        RHS = Def->getOperand(2).getReg();
+        CCmpOpc =
+            OpTy.getSizeInBits() == 32 ? AArch64::CCMNWr : AArch64::CCMNXr;
+      } else {
+        Def = getDefIgnoringCopies(LHS, MRI);
+        if (isCMN(Def, CC, MRI)) {
+          LHS = Def->getOperand(2).getReg();
+          OutCC = getSwappedCondition(OutCC);
+          CCmpOpc =
+              OpTy.getSizeInBits() == 32 ? AArch64::CCMNWr : AArch64::CCMNXr;
+        } else {
+          CCmpOpc =
+              OpTy.getSizeInBits() == 32 ? AArch64::CCMPWr : AArch64::CCMPXr;
+        }
+      }
+    } else if (C->Value.sgt(31) || C->Value.slt(-31))
       CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWr : AArch64::CCMPXr;
     else if (C->Value.ule(31))
       CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWi : AArch64::CCMPXi;
@@ -4904,8 +4922,7 @@ MachineInstr *AArch64InstructionSelector::emitConditionalComparison(
   }
   AArch64CC::CondCode InvOutCC = AArch64CC::getInvertedCondCode(OutCC);
   unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(InvOutCC);
-  auto CCmp =
-      MIB.buildInstr(CCmpOpc, {}, {LHS});
+  auto CCmp = MIB.buildInstr(CCmpOpc, {}, {LHS});
   if (CCmpOpc == AArch64::CCMPWi || CCmpOpc == AArch64::CCMPXi)
     CCmp.addImm(C->Value.getZExtValue());
   else if (CCmpOpc == AArch64::CCMNWi || CCmpOpc == AArch64::CCMNXi)
