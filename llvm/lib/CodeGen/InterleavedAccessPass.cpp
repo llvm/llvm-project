@@ -618,40 +618,18 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
   const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
   assert(Factor && "unexpected deinterleave intrinsic");
 
-  SmallVector<Value *, 8> DeinterleaveValues(Factor, nullptr);
-  Value *LastFactor = nullptr;
-  for (auto *User : DI->users()) {
-    auto *Extract = dyn_cast<ExtractValueInst>(User);
-    if (!Extract || Extract->getNumIndices() != 1)
-      return false;
-    unsigned Idx = Extract->getIndices()[0];
-    if (DeinterleaveValues[Idx])
-      return false;
-    DeinterleaveValues[Idx] = Extract;
-    LastFactor = Extract;
-  }
-
-  if (!LastFactor)
-    return false;
-
+  Value *Mask = nullptr;
   if (auto *VPLoad = dyn_cast<VPIntrinsic>(LoadedVal)) {
     if (VPLoad->getIntrinsicID() != Intrinsic::vp_load)
       return false;
     // Check mask operand. Handle both all-true/false and interleaved mask.
     Value *WideMask = VPLoad->getOperand(1);
-    Value *Mask =
-        getMask(WideMask, Factor, cast<VectorType>(LastFactor->getType()));
+    Mask = getMask(WideMask, Factor, getDeinterleavedVectorType(DI));
     if (!Mask)
       return false;
 
     LLVM_DEBUG(dbgs() << "IA: Found a vp.load with deinterleave intrinsic "
                       << *DI << " and factor = " << Factor << "\n");
-
-    // Since lowerInterleaveLoad expects Shuffles and LoadInst, use special
-    // TLI function to emit target-specific interleaved instruction.
-    if (!TLI->lowerInterleavedVPLoad(VPLoad, Mask, DeinterleaveValues))
-      return false;
-
   } else {
     auto *LI = cast<LoadInst>(LoadedVal);
     if (!LI->isSimple())
@@ -659,15 +637,13 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
 
     LLVM_DEBUG(dbgs() << "IA: Found a load with deinterleave intrinsic " << *DI
                       << " and factor = " << Factor << "\n");
-
-    // Try and match this with target specific intrinsics.
-    if (!TLI->lowerDeinterleaveIntrinsicToLoad(LI, DeinterleaveValues))
-      return false;
   }
 
-  for (Value *V : DeinterleaveValues)
-    if (V)
-      DeadInsts.insert(cast<Instruction>(V));
+  // Try and match this with target specific intrinsics.
+  if (!TLI->lowerDeinterleaveIntrinsicToLoad(cast<Instruction>(LoadedVal), Mask,
+                                             DI))
+    return false;
+
   DeadInsts.insert(DI);
   // We now have a target-specific load, so delete the old one.
   DeadInsts.insert(cast<Instruction>(LoadedVal));
@@ -686,23 +662,19 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
   const unsigned Factor = getInterleaveIntrinsicFactor(II->getIntrinsicID());
   assert(Factor && "unexpected interleave intrinsic");
 
+  Value *Mask = nullptr;
   if (auto *VPStore = dyn_cast<VPIntrinsic>(StoredBy)) {
     if (VPStore->getIntrinsicID() != Intrinsic::vp_store)
       return false;
 
     Value *WideMask = VPStore->getOperand(2);
-    Value *Mask = getMask(WideMask, Factor,
-                          cast<VectorType>(InterleaveValues[0]->getType()));
+    Mask = getMask(WideMask, Factor,
+                   cast<VectorType>(InterleaveValues[0]->getType()));
     if (!Mask)
       return false;
 
     LLVM_DEBUG(dbgs() << "IA: Found a vp.store with interleave intrinsic "
                       << *II << " and factor = " << Factor << "\n");
-
-    // Since lowerInterleavedStore expects Shuffle and StoreInst, use special
-    // TLI function to emit target-specific interleaved instruction.
-    if (!TLI->lowerInterleavedVPStore(VPStore, Mask, InterleaveValues))
-      return false;
   } else {
     auto *SI = cast<StoreInst>(StoredBy);
     if (!SI->isSimple())
@@ -710,11 +682,12 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
 
     LLVM_DEBUG(dbgs() << "IA: Found a store with interleave intrinsic " << *II
                       << " and factor = " << Factor << "\n");
-
-    // Try and match this with target specific intrinsics.
-    if (!TLI->lowerInterleaveIntrinsicToStore(SI, InterleaveValues))
-      return false;
   }
+
+  // Try and match this with target specific intrinsics.
+  if (!TLI->lowerInterleaveIntrinsicToStore(cast<Instruction>(StoredBy), Mask,
+                                            InterleaveValues))
+    return false;
 
   // We now have a target-specific store, so delete the old one.
   DeadInsts.insert(cast<Instruction>(StoredBy));

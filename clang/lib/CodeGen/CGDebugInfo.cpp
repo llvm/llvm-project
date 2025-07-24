@@ -170,6 +170,10 @@ void CGDebugInfo::addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction,
   if (!Group || !CGM.getCodeGenOpts().DebugKeyInstructions)
     return;
 
+  llvm::DISubprogram *SP = KeyInstruction->getFunction()->getSubprogram();
+  if (!SP || !SP->getKeyInstructionsEnabled())
+    return;
+
   addInstSourceAtomMetadata(KeyInstruction, Group, /*Rank=*/1);
 
   llvm::Instruction *BackupI =
@@ -6482,24 +6486,27 @@ SanitizerOrdinalToCheckLabel(SanitizerKind::SanitizerOrdinal Ordinal) {
 llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
     ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
     SanitizerHandler Handler) {
+  llvm::DILocation *CheckDebugLoc = Builder.getCurrentDebugLocation();
+  auto *DI = getDebugInfo();
+  if (!DI)
+    return CheckDebugLoc;
+
   std::string Label;
   if (Ordinals.size() == 1)
     Label = SanitizerOrdinalToCheckLabel(Ordinals[0]);
   else
     Label = SanitizerHandlerToCheckLabel(Handler);
 
-  llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
-
   for (auto Ord : Ordinals) {
     // TODO: deprecate ClArrayBoundsPseudoFn
     if (((ClArrayBoundsPseudoFn && Ord == SanitizerKind::SO_ArrayBounds) ||
          CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo.has(Ord)) &&
-        CheckDI) {
-      return getDebugInfo()->CreateSyntheticInlineAt(CheckDI, Label);
+        CheckDebugLoc) {
+      return DI->CreateSyntheticInlineAt(CheckDebugLoc, Label);
     }
   }
 
-  return CheckDI;
+  return CheckDebugLoc;
 }
 
 SanitizerDebugLocation::SanitizerDebugLocation(

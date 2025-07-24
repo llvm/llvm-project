@@ -3015,7 +3015,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
         //   %phi = phi ptr [ %0, %bb0 ], [ %2, %entry ]
         if (PredBB && PredBB->getSingleSuccessor() == BB)
           CI = dyn_cast_or_null<CallInst>(
-              PredBB->getTerminator()->getPrevNonDebugInstruction(true));
+              PredBB->getTerminator()->getPrevNode());
 
         if (CI && CI->use_empty() &&
             isIntrinsicOrLFToBeTailCalled(TLInfo, CI) &&
@@ -3032,7 +3032,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
     for (BasicBlock *Pred : predecessors(BB)) {
       if (!VisitedBBs.insert(Pred).second)
         continue;
-      if (Instruction *I = Pred->rbegin()->getPrevNonDebugInstruction(true)) {
+      if (Instruction *I = Pred->rbegin()->getPrevNode()) {
         CallInst *CI = dyn_cast<CallInst>(I);
         if (CI && CI->use_empty() && TLI->mayBeEmittedAsTailCall(CI) &&
             attributesPermitTailCall(F, CI, RetI, *TLI)) {
