@@ -9,7 +9,8 @@
 #ifndef LLVM_LIBC_TYPES_SIGJMP_BUF_H
 #define LLVM_LIBC_TYPES_SIGJMP_BUF_H
 
-// Intentionally left blank. sigjmp_buf is defined in jmp_buf.h, but due to the
-// way headergen works, this file is required.
+#include "__jmp_buf.h"
+
+typedef __jmp_buf sigjmp_buf[1];
 
 #endif // LLVM_LIBC_TYPES_SIGJMP_BUF_H
