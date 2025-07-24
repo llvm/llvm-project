@@ -67,14 +67,6 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
-- New ``Override pure virtual methods`` code action. When invoked on a class
-  definition, this action automatically generates C++ ``override`` declarations
-  for all pure virtual methods inherited from its base classes that have not yet
-  been implemented. The generated method stubs prompts the user for the actual
-  implementation. The overrides are intelligently grouped under their original
-  access specifiers (e.g., ``public``, ``protected``), creating new access
-  specifier blocks if necessary.
-
 Signature help
 ^^^^^^^^^^^^^^
 
@@ -93,11 +85,6 @@ Improvements to clang-doc
 Improvements to clang-query
 ---------------------------
 
-- Matcher queries interpreted by clang-query are now support trailing comma (,)
-  in matcher arguments. Note that C++ still doesn't allow this in function
-  arguments. So when porting a query to C++, remove all instances of trailing
-  comma (otherwise C++ compiler will just complain about "expected expression").
-
 Improvements to clang-tidy
 --------------------------
 
@@ -109,22 +96,6 @@ New check aliases
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-- Improved :doc:`bugprone-infinite-loop
-  <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
-  variables introduced by structured bindings.
-
-- Improved :doc:`bugprone-unhandled-self-assignment
-  <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
-  an additional matcher that generalizes the copy-and-swap idiom pattern
-  detection.
-
-- Improved :doc:`misc-header-include-cycle
-  <clang-tidy/checks/misc/header-include-cycle>` check performance.
-
-- Improved :doc:`portability-template-virtual-member-function
-  <clang-tidy/checks/portability/template-virtual-member-function>` check to
-  avoid false positives on pure virtual member functions.
 
 Removed checks
 ^^^^^^^^^^^^^^
@@ -152,4 +123,3 @@ Improvements to pp-trace
 
 Clang-tidy Visual Studio plugin
 -------------------------------
-
