@@ -144,3 +144,18 @@ func.func @fold_gather_to_lds_of_cast(%global: memref<128x72xf32, 1>, %lds: memr
     : f32, memref<?x?xf32, 1>, memref<64x64xf32, 3>
   func.return
 }
+
+// -----
+
+// CHECK-LABEL: func @fold_gather_to_lds_of_cast_dest
+func.func @fold_gather_to_lds_of_cast_dest(%global: memref<128x72xf32, 1>, %lds: memref<64x64xf32, 3>) {
+// CHECK-SAME: %[[GLOBAL:[A-Za-z0-9]+]]: memref<128x72xf32, 1>
+// CHECK-SAME: %[[LDS:[A-Za-z0-9]+]]: memref<64x64xf32, 3>
+  %c0 = arith.constant 0 : index
+  %0 = memref.cast %lds : memref<64x64xf32, 3> to memref<?x?xf32, 3>
+  // CHECK: amdgpu.gather_to_lds %[[GLOBAL]][{{.*}}], %[[LDS]]
+  // CHECK-SAME: : f32, memref<128x72xf32, 1>, memref<64x64xf32, 3>
+  amdgpu.gather_to_lds %global[%c0, %c0], %0[%c0, %c0]
+    : f32, memref<128x72xf32, 1>, memref<?x?xf32, 3>
+  func.return
+}

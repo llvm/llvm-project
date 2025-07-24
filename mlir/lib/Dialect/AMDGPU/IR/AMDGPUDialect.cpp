@@ -551,10 +551,9 @@ LogicalResult GatherToLDSOp::verify() {
 }
 
 namespace {
-/// If the source/target of a CopyOp is a CastOp that does not modify the shape
-/// and element type, the cast can be skipped. Such CastOps only cast the layout
-/// of the type.
-struct FoldGatherToLDSOfCast : public OpRewritePattern<GatherToLDSOp> {
+/// If the source/target of a GatherToLDSOp is a CastOp that only removes static
+/// information or changes layout, the cast can be skipped.
+struct FoldGatherToLDSOfCast final : OpRewritePattern<GatherToLDSOp> {
   using OpRewritePattern<GatherToLDSOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(GatherToLDSOp gatherOp,
@@ -563,10 +562,10 @@ struct FoldGatherToLDSOfCast : public OpRewritePattern<GatherToLDSOp> {
 
     // Check source.
     if (auto castOp = gatherOp.getSrc().getDefiningOp<memref::CastOp>()) {
-      auto fromType = llvm::dyn_cast<MemRefType>(castOp.getSource().getType());
-      auto toType = llvm::dyn_cast<MemRefType>(castOp.getSource().getType());
+      auto fromType = dyn_cast<MemRefType>(castOp.getSource().getType());
+      auto toType = dyn_cast<MemRefType>(castOp.getSource().getType());
 
-      if (fromType && toType &&
+      if (memref::CastOp::canFoldIntoConsumerOp(castOp) && fromType && toType &&
           fromType.getElementType() == toType.getElementType()) {
         rewriter.modifyOpInPlace(gatherOp, [&] {
           gatherOp.getSrcMutable().assign(castOp.getSource());
@@ -577,10 +576,10 @@ struct FoldGatherToLDSOfCast : public OpRewritePattern<GatherToLDSOp> {
 
     // Check target.
     if (auto castOp = gatherOp.getDst().getDefiningOp<memref::CastOp>()) {
-      auto fromType = llvm::dyn_cast<MemRefType>(castOp.getSource().getType());
-      auto toType = llvm::dyn_cast<MemRefType>(castOp.getSource().getType());
+      auto fromType = dyn_cast<MemRefType>(castOp.getSource().getType());
+      auto toType = dyn_cast<MemRefType>(castOp.getSource().getType());
 
-      if (fromType && toType &&
+      if (memref::CastOp::canFoldIntoConsumerOp(castOp) && fromType && toType &&
           fromType.getElementType() == toType.getElementType()) {
         rewriter.modifyOpInPlace(gatherOp, [&] {
           gatherOp.getDstMutable().assign(castOp.getSource());
