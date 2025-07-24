@@ -1085,6 +1085,14 @@ def double_icmp_zero_or_combine: GICombineRule<
          (G_ICMP $root, $p, $ordst, 0))
 >;
 
+// Transform ((X | (G_UBFX X, ...) | ...) == 0) (or != 0)
+// into a compare of a extract/mask of X
+def icmp_merged_bfx_combine: GICombineRule<
+  (defs root:$root),
+  (combine (G_ICMP $dst, $p, $src, 0):$root,
+           [{ return Helper.combineMergedBFXCompare(*${root}); }])
+>;
+
 def and_or_disjoint_mask : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
   (match (wip_match_opcode G_AND):$root,
@@ -2066,7 +2074,8 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
-    combine_use_vector_truncate, merge_combines, overflow_combines]>;
+    combine_use_vector_truncate, merge_combines, overflow_combines,
+    icmp_merged_bfx_combine]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and
