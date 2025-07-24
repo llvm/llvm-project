@@ -559,26 +559,18 @@ struct FoldGatherToLDSOfCast final : OpRewritePattern<GatherToLDSOp> {
   LogicalResult matchAndRewrite(GatherToLDSOp gatherOp,
                                 PatternRewriter &rewriter) const override {
     bool modified = false;
-
-    // Check source.
-    if (auto castOp = gatherOp.getSrc().getDefiningOp<memref::CastOp>()) {
-      if (memref::CastOp::canFoldIntoConsumerOp(castOp)) {
-        rewriter.modifyOpInPlace(gatherOp, [&] {
-          gatherOp.getSrcMutable().assign(castOp.getSource());
-        });
-        modified = true;
+    auto foldCast = [&](OpOperand &operand) {
+      if (auto castOp = operand.get().getDefiningOp<memref::CastOp>()) {
+        if (memref::CastOp::canFoldIntoConsumerOp(castOp)) {
+          rewriter.modifyOpInPlace(gatherOp,
+                                   [&] { operand.assign(castOp.getSource()); });
+          modified = true;
+        }
       }
-    }
+    };
 
-    // Check target.
-    if (auto castOp = gatherOp.getDst().getDefiningOp<memref::CastOp>()) {
-      if (memref::CastOp::canFoldIntoConsumerOp(castOp)) {
-        rewriter.modifyOpInPlace(gatherOp, [&] {
-          gatherOp.getDstMutable().assign(castOp.getSource());
-        });
-        modified = true;
-      }
-    }
+    foldCast(gatherOp.getSrcMutable());
+    foldCast(gatherOp.getDstMutable());
 
     return success(modified);
   }
