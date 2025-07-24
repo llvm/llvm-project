@@ -24,20 +24,21 @@
 
 using namespace llvm;
 
-static void legalizeFreeze(Instruction &I,
+static bool legalizeFreeze(Instruction &I,
                            SmallVectorImpl<Instruction *> &ToRemove,
-                           DenseMap<Value *, Value *>, bool &) {
+                           DenseMap<Value *, Value *>) {
   auto *FI = dyn_cast<FreezeInst>(&I);
   if (!FI)
-    return;
+    return false;
 
   FI->replaceAllUsesWith(FI->getOperand(0));
   ToRemove.push_back(FI);
+  return true;
 }
 
-static void fixI8UseChain(Instruction &I,
+static bool fixI8UseChain(Instruction &I,
                           SmallVectorImpl<Instruction *> &ToRemove,
-                          DenseMap<Value *, Value *> &ReplacedValues, bool &) {
+                          DenseMap<Value *, Value *> &ReplacedValues) {
 
   auto ProcessOperands = [&](SmallVector<Value *> &NewOperands) {
     Type *InstrType = IntegerType::get(I.getContext(), 32);
@@ -74,19 +75,19 @@ static void fixI8UseChain(Instruction &I,
     if (Trunc->getDestTy()->isIntegerTy(8)) {
       ReplacedValues[Trunc] = Trunc->getOperand(0);
       ToRemove.push_back(Trunc);
-      return;
+      return true;
     }
   }
 
   if (auto *Store = dyn_cast<StoreInst>(&I)) {
     if (!Store->getValueOperand()->getType()->isIntegerTy(8))
-      return;
+      return false;
     SmallVector<Value *> NewOperands;
     ProcessOperands(NewOperands);
     Value *NewStore = Builder.CreateStore(NewOperands[0], NewOperands[1]);
     ReplacedValues[Store] = NewStore;
     ToRemove.push_back(Store);
-    return;
+    return true;
   }
 
   if (auto *Load = dyn_cast<LoadInst>(&I);
@@ -104,17 +105,17 @@ static void fixI8UseChain(Instruction &I,
     LoadInst *NewLoad = Builder.CreateLoad(ElementType, NewOperands[0]);
     ReplacedValues[Load] = NewLoad;
     ToRemove.push_back(Load);
-    return;
+    return true;
   }
 
   if (auto *Load = dyn_cast<LoadInst>(&I);
       Load && isa<ConstantExpr>(Load->getPointerOperand())) {
     auto *CE = dyn_cast<ConstantExpr>(Load->getPointerOperand());
     if (!(CE->getOpcode() == Instruction::GetElementPtr))
-      return;
+      return false;
     auto *GEP = dyn_cast<GEPOperator>(CE);
     if (!GEP->getSourceElementType()->isIntegerTy(8))
-      return;
+      return false;
 
     Type *ElementType = Load->getType();
     ConstantInt *Offset = dyn_cast<ConstantInt>(GEP->getOperand(1));
@@ -143,12 +144,12 @@ static void fixI8UseChain(Instruction &I,
     ReplacedValues[Load] = NewLoad;
     Load->replaceAllUsesWith(NewLoad);
     ToRemove.push_back(Load);
-    return;
+    return true;
   }
 
   if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
     if (!I.getType()->isIntegerTy(8))
-      return;
+      return false;
     SmallVector<Value *> NewOperands;
     ProcessOperands(NewOperands);
     Value *NewInst =
@@ -162,24 +163,24 @@ static void fixI8UseChain(Instruction &I,
     }
     ReplacedValues[BO] = NewInst;
     ToRemove.push_back(BO);
-    return;
+    return true;
   }
 
   if (auto *Sel = dyn_cast<SelectInst>(&I)) {
     if (!I.getType()->isIntegerTy(8))
-      return;
+      return false;
     SmallVector<Value *> NewOperands;
     ProcessOperands(NewOperands);
     Value *NewInst = Builder.CreateSelect(Sel->getCondition(), NewOperands[1],
                                           NewOperands[2]);
     ReplacedValues[Sel] = NewInst;
     ToRemove.push_back(Sel);
-    return;
+    return true;
   }
 
   if (auto *Cmp = dyn_cast<CmpInst>(&I)) {
     if (!Cmp->getOperand(0)->getType()->isIntegerTy(8))
-      return;
+      return false;
     SmallVector<Value *> NewOperands;
     ProcessOperands(NewOperands);
     Value *NewInst =
@@ -187,18 +188,18 @@ static void fixI8UseChain(Instruction &I,
     Cmp->replaceAllUsesWith(NewInst);
     ReplacedValues[Cmp] = NewInst;
     ToRemove.push_back(Cmp);
-    return;
+    return true;
   }
 
   if (auto *Cast = dyn_cast<CastInst>(&I)) {
     if (!Cast->getSrcTy()->isIntegerTy(8))
-      return;
+      return false;
 
     ToRemove.push_back(Cast);
     auto *Replacement = ReplacedValues[Cast->getOperand(0)];
     if (Cast->getType() == Replacement->getType()) {
       Cast->replaceAllUsesWith(Replacement);
-      return;
+      return true;
     }
 
     Value *AdjustedCast = nullptr;
@@ -213,7 +214,7 @@ static void fixI8UseChain(Instruction &I,
   if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
     if (!GEP->getType()->isPointerTy() ||
         !GEP->getSourceElementType()->isIntegerTy(8))
-      return;
+      return false;
 
     Value *BasePtr = GEP->getPointerOperand();
     if (ReplacedValues.count(BasePtr))
@@ -248,16 +249,17 @@ static void fixI8UseChain(Instruction &I,
     ReplacedValues[GEP] = NewGEP;
     GEP->replaceAllUsesWith(NewGEP);
     ToRemove.push_back(GEP);
+    return true;
   }
+  return false;
 }
 
-static void upcastI8AllocasAndUses(Instruction &I,
+static bool upcastI8AllocasAndUses(Instruction &I,
                                    SmallVectorImpl<Instruction *> &ToRemove,
-                                   DenseMap<Value *, Value *> &ReplacedValues,
-                                   bool &) {
+                                   DenseMap<Value *, Value *> &ReplacedValues) {
   auto *AI = dyn_cast<AllocaInst>(&I);
   if (!AI || !AI->getAllocatedType()->isIntegerTy(8))
-    return;
+    return false;
 
   Type *SmallestType = nullptr;
 
@@ -292,19 +294,20 @@ static void upcastI8AllocasAndUses(Instruction &I,
   }
 
   if (!SmallestType)
-    return; // no valid casts found
+    return false; // no valid casts found
 
   // Replace alloca
   IRBuilder<> Builder(AI);
   auto *NewAlloca = Builder.CreateAlloca(SmallestType);
   ReplacedValues[AI] = NewAlloca;
   ToRemove.push_back(AI);
+  return true;
 }
 
-static void
+static bool
 downcastI64toI32InsertExtractElements(Instruction &I,
                                       SmallVectorImpl<Instruction *> &ToRemove,
-                                      DenseMap<Value *, Value *> &, bool &) {
+                                      DenseMap<Value *, Value *> &) {
 
   if (auto *Extract = dyn_cast<ExtractElementInst>(&I)) {
     Value *Idx = Extract->getIndexOperand();
@@ -319,6 +322,7 @@ downcastI64toI32InsertExtractElements(Instruction &I,
 
       Extract->replaceAllUsesWith(NewExtract);
       ToRemove.push_back(Extract);
+      return true;
     }
   }
 
@@ -336,8 +340,10 @@ downcastI64toI32InsertExtractElements(Instruction &I,
 
       Insert->replaceAllUsesWith(Insert32Index);
       ToRemove.push_back(Insert);
+      return true;
     }
   }
+  return false;
 }
 
 static void emitMemcpyExpansion(IRBuilder<> &Builder, Value *Dst, Value *Src,
@@ -454,17 +460,17 @@ static void emitMemsetExpansion(IRBuilder<> &Builder, Value *Dst, Value *Val,
 // Expands the instruction `I` into corresponding loads and stores if it is a
 // memcpy call. In that case, the call instruction is added to the `ToRemove`
 // vector. `ReplacedValues` is unused.
-static void legalizeMemCpy(Instruction &I,
+static bool legalizeMemCpy(Instruction &I,
                            SmallVectorImpl<Instruction *> &ToRemove,
-                           DenseMap<Value *, Value *> &ReplacedValues, bool &) {
+                           DenseMap<Value *, Value *> &ReplacedValues) {
 
   CallInst *CI = dyn_cast<CallInst>(&I);
   if (!CI)
-    return;
+    return false;
 
   Intrinsic::ID ID = CI->getIntrinsicID();
   if (ID != Intrinsic::memcpy)
-    return;
+    return false;
 
   IRBuilder<> Builder(&I);
   Value *Dst = CI->getArgOperand(0);
@@ -477,19 +483,20 @@ static void legalizeMemCpy(Instruction &I,
   assert(IsVolatile->getZExtValue() == 0 && "Expected IsVolatile to be false");
   emitMemcpyExpansion(Builder, Dst, Src, Length);
   ToRemove.push_back(CI);
+  return true;
 }
 
-static void legalizeMemSet(Instruction &I,
+static bool legalizeMemSet(Instruction &I,
                            SmallVectorImpl<Instruction *> &ToRemove,
-                           DenseMap<Value *, Value *> &ReplacedValues, bool &) {
+                           DenseMap<Value *, Value *> &ReplacedValues) {
 
   CallInst *CI = dyn_cast<CallInst>(&I);
   if (!CI)
-    return;
+    return false;
 
   Intrinsic::ID ID = CI->getIntrinsicID();
   if (ID != Intrinsic::memset)
-    return;
+    return false;
 
   IRBuilder<> Builder(&I);
   Value *Dst = CI->getArgOperand(0);
@@ -498,39 +505,41 @@ static void legalizeMemSet(Instruction &I,
   assert(Size && "Expected Size to be a ConstantInt");
   emitMemsetExpansion(Builder, Dst, Val, Size, ReplacedValues);
   ToRemove.push_back(CI);
+  return true;
 }
 
-static void updateFnegToFsub(Instruction &I,
+static bool updateFnegToFsub(Instruction &I,
                              SmallVectorImpl<Instruction *> &ToRemove,
-                             DenseMap<Value *, Value *> &, bool &) {
+                             DenseMap<Value *, Value *> &) {
   const Intrinsic::ID ID = I.getOpcode();
   if (ID != Instruction::FNeg)
-    return;
+    return false;
 
   IRBuilder<> Builder(&I);
   Value *In = I.getOperand(0);
   Value *Zero = ConstantFP::get(In->getType(), -0.0);
   I.replaceAllUsesWith(Builder.CreateFSub(Zero, In));
   ToRemove.push_back(&I);
+  return true;
 }
 
-static void
+static bool
 legalizeGetHighLowi64Bytes(Instruction &I,
                            SmallVectorImpl<Instruction *> &ToRemove,
-                           DenseMap<Value *, Value *> &ReplacedValues, bool &) {
+                           DenseMap<Value *, Value *> &ReplacedValues) {
   if (auto *BitCast = dyn_cast<BitCastInst>(&I)) {
     if (BitCast->getDestTy() ==
             FixedVectorType::get(Type::getInt32Ty(I.getContext()), 2) &&
         BitCast->getSrcTy()->isIntegerTy(64)) {
       ToRemove.push_back(BitCast);
       ReplacedValues[BitCast] = BitCast->getOperand(0);
-      return;
+      return true;
     }
   }
 
   if (auto *Extract = dyn_cast<ExtractElementInst>(&I)) {
     if (!dyn_cast<BitCastInst>(Extract->getVectorOperand()))
-      return;
+      return false;
     auto *VecTy = dyn_cast<FixedVectorType>(Extract->getVectorOperandType());
     if (VecTy && VecTy->getElementType()->isIntegerTy(32) &&
         VecTy->getNumElements() == 2) {
@@ -558,14 +567,16 @@ legalizeGetHighLowi64Bytes(Instruction &I,
         }
         ToRemove.push_back(Extract);
         Extract->replaceAllUsesWith(ReplacedValues[Extract]);
+        return true;
       }
     }
   }
+  return false;
 }
 
-static void legalizeScalarLoadStoreOnArrays(
+static bool legalizeScalarLoadStoreOnArrays(
     Instruction &I, SmallVectorImpl<Instruction *> &ToRemove,
-    DenseMap<Value *, Value *> &, bool &MadeChange) {
+    DenseMap<Value *, Value *> &) {
 
   Value *PtrOp;
   unsigned PtrOpIndex;
@@ -579,14 +590,14 @@ static void legalizeScalarLoadStoreOnArrays(
     PtrOpIndex = SI->getPointerOperandIndex();
     LoadStoreTy = SI->getValueOperand()->getType();
   } else
-    return;
+    return false;
 
   // If the load/store is not of a single-value type (i.e., scalar or vector)
   // then we do not modify it. It shouldn't be a vector either because the
   // dxil-data-scalarization pass is expected to run before this, but it's not
   // incorrect to apply this transformation to vector load/stores.
   if (!LoadStoreTy->isSingleValueType())
-    return;
+    return false;
 
   Type *ArrayTy;
   if (auto *GlobalVarPtrOp = dyn_cast<GlobalVariable>(PtrOp))
@@ -594,10 +605,10 @@ static void legalizeScalarLoadStoreOnArrays(
   else if (auto *AllocaPtrOp = dyn_cast<AllocaInst>(PtrOp))
     ArrayTy = AllocaPtrOp->getAllocatedType();
   else
-    return;
+    return false;
 
   if (!isa<ArrayType>(ArrayTy))
-    return;
+    return false;
 
   assert(ArrayTy->getArrayElementType() == LoadStoreTy &&
          "Expected array element type to be the same as to the scalar load or "
@@ -607,7 +618,7 @@ static void legalizeScalarLoadStoreOnArrays(
   Value *GEP = GetElementPtrInst::Create(
       ArrayTy, PtrOp, {Zero, Zero}, GEPNoWrapFlags::all(), "", I.getIterator());
   I.setOperand(PtrOpIndex, GEP);
-  MadeChange = true;
+  return true;
 }
 
 namespace {
@@ -624,17 +635,12 @@ public:
       ToRemove.clear();
       ReplacedValues.clear();
       for (auto &I : instructions(F)) {
-        for (auto &LegalizationFn : LegalizationPipeline[Stage]) {
-          bool PerLegalizationChange = false;
-          LegalizationFn(I, ToRemove, ReplacedValues, PerLegalizationChange);
-          MadeChange |= PerLegalizationChange;
-        }
+        for (auto &LegalizationFn : LegalizationPipeline[Stage])
+          MadeChange |=  LegalizationFn(I, ToRemove, ReplacedValues);
       }
 
       for (auto *Inst : reverse(ToRemove))
         Inst->eraseFromParent();
-
-      MadeChange |= !ToRemove.empty();
     }
     return MadeChange;
   }
@@ -643,8 +649,8 @@ private:
   enum LegalizationStage { Stage1 = 0, Stage2 = 1, NumStages };
 
   using LegalizationFnTy =
-      std::function<void(Instruction &, SmallVectorImpl<Instruction *> &,
-                         DenseMap<Value *, Value *> &, bool &)>;
+      std::function<bool(Instruction &, SmallVectorImpl<Instruction *> &,
+                         DenseMap<Value *, Value *> &)>;
 
   SmallVector<LegalizationFnTy> LegalizationPipeline[NumStages];
 
