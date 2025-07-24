@@ -17,11 +17,11 @@ namespace wasm {
 /// Each WebAssembly module has separated address spaces for Code and Memory.
 /// A WebAssembly module also has a Data section which, when the module is
 /// loaded, gets mapped into a region in the module Memory.
-/// For the purpose of debugging, we can represent all these separated 32-bit
-/// address spaces with a single virtual 64-bit address space.
-///
-/// Struct wasm_addr_t provides this encoding using bitfields
 enum WasmAddressType { Memory = 0x00, Object = 0x01, Invalid = 0x03 };
+
+/// For the purpose of debugging, we can represent all these separated 32-bit
+/// address spaces with a single virtual 64-bit address space. The
+/// wasm_addr_t provides this encoding using bitfields.
 struct wasm_addr_t {
   uint64_t offset : 32;
   uint64_t module_id : 30;
@@ -35,6 +35,7 @@ struct wasm_addr_t {
       : offset(offset), module_id(module_id), type(type) {}
 
   WasmAddressType GetType() { return static_cast<WasmAddressType>(type); }
+
   operator lldb::addr_t() { return *(uint64_t *)this; }
 };
 

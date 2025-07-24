@@ -24,7 +24,7 @@ LLDB_PLUGIN_DEFINE(ProcessWasm)
 
 ProcessWasm::ProcessWasm(lldb::TargetSP target_sp, ListenerSP listener_sp)
     : ProcessGDBRemote(target_sp, listener_sp) {
-  /* always use linux signals for wasm process */
+  // Always use Linux signals for Wasm process.
   m_unix_signals_sp = UnixSignals::Create(ArchSpec{"wasm32-Ant-wasi-wasm"});
 }
 
@@ -102,6 +102,7 @@ ProcessWasm::GetWasmCallStack(lldb::tid_t tid) {
   StreamString packet;
   packet.Printf("qWasmCallStack:");
   packet.Printf("%llx", tid);
+
   StringExtractorGDBRemote response;
   if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response) !=
       GDBRemoteCommunication::PacketResult::Success)
@@ -110,15 +111,17 @@ ProcessWasm::GetWasmCallStack(lldb::tid_t tid) {
   if (!response.IsNormalResponse())
     return llvm::createStringError("failed to get response for qWasmCallStack");
 
-  addr_t buf[1024 / sizeof(addr_t)];
-  size_t bytes = response.GetHexBytes(
-      llvm::MutableArrayRef<uint8_t>((uint8_t *)buf, sizeof(buf)), '\xdd');
-  if (bytes == 0)
+  WritableDataBufferSP data_buffer_sp =
+      std::make_shared<DataBufferHeap>(response.GetStringRef().size() / 2, 0);
+  const size_t bytes = response.GetHexBytes(data_buffer_sp->GetData(), '\xcc');
+  if (bytes == 0 || bytes % sizeof(uint64_t) != 0)
     return llvm::createStringError("invalid response for qWasmCallStack");
 
   std::vector<lldb::addr_t> call_stack_pcs;
-  for (size_t i = 0; i < bytes / sizeof(addr_t); i++)
-    call_stack_pcs.push_back(buf[i]);
+  DataExtractor data(data_buffer_sp, GetByteOrder(), GetAddressByteSize());
+  lldb::offset_t offset = 0;
+  while (offset < bytes)
+    call_stack_pcs.push_back(data.GetU64(&offset));
 
   return call_stack_pcs;
 }
