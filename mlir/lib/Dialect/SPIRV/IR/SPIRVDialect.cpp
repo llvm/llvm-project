@@ -665,19 +665,17 @@ static ParseResult parseStructMemberDecorations(
 
     // Parse member decoration value if it exists.
     if (succeeded(parser.parseOptionalEqual())) {
-      auto memberDecorationValue =
-          parseAndVerifyInteger<uint32_t>(dialect, parser);
-
-      if (!memberDecorationValue)
+      Attribute memberDecorationValue;
+      if (failed(parser.parseAttribute(memberDecorationValue)))
         return failure();
 
       memberDecorationInfo.emplace_back(
-          static_cast<uint32_t>(memberTypes.size() - 1), 1,
-          memberDecoration.value(), memberDecorationValue.value());
+          static_cast<uint32_t>(memberTypes.size() - 1),
+          memberDecoration.value(), memberDecorationValue);
     } else {
       memberDecorationInfo.emplace_back(
-          static_cast<uint32_t>(memberTypes.size() - 1), 0,
-          memberDecoration.value(), 0);
+          static_cast<uint32_t>(memberTypes.size() - 1),
+          memberDecoration.value(), UnitAttr::get(dialect.getContext()));
     }
     return success();
   };
@@ -882,8 +880,9 @@ static void print(StructType type, DialectAsmPrinter &os) {
       }
       auto eachFn = [&os](spirv::StructType::MemberDecorationInfo decoration) {
         os << stringifyDecoration(decoration.decoration);
-        if (decoration.hasValue) {
-          os << "=" << decoration.decorationValue;
+        if (decoration.hasValue()) {
+          os << "=";
+          os.printAttributeWithoutType(decoration.decorationValue);
         }
       };
       llvm::interleaveComma(decorations, os, eachFn);
