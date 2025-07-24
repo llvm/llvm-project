@@ -16,6 +16,7 @@ include "mlir/Dialect/XeGPU/IR/XeGPUTypes.td"
 include "mlir/Interfaces/ShapedOpInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
+include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 
 // Base class for dialect operations. This operation inherits from the base
 // `Op` class in OpBase.td, and provides:
@@ -638,18 +639,39 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
 
   }];
 
-  let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
+  let arguments = (ins XeGPU_TensorDesc_or_MemRef: $source,
+                       Optional<XeGPU_OffsetType>: $offsets,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
+    Type getSourceType() {
+      return getSource().getType();
+    }
+
+    Value getTensorDesc() {
+       return getSource();
+    }
+
     xegpu::TensorDescType getTensorDescType() {
-      return getTensorDesc().getType();
+      return dyn_cast<xegpu::TensorDescType>(getSourceType());
     }
   }];
 
-  let assemblyFormat = "$TensorDesc prop-dict attr-dict `:` qualified(type($TensorDesc))";
+  let assemblyFormat = [{
+    $source 
+    (`,` $offsets^)? 
+    prop-dict
+    attr-dict `:` type($source) (`,` type($offsets)^)?
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value": $source,
+                    "xegpu::CachePolicyAttr": $l1_hint, 
+                    "xegpu::CachePolicyAttr": $l2_hint, 
+                    "xegpu::CachePolicyAttr": $l3_hint)>
+  ];
 
   let hasVerifier = 1;
 }
@@ -702,6 +724,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
                        Variadic<Index>: $offsets,
                        OptionalAttr<DenseI64ArrayAttr>: $const_offsets,  
                        XeGPU_MaskType: $mask,
+                       OptionalAttr<I64Attr>: $chunk_size,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
@@ -711,6 +734,10 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
 
     Type getSourceType() {
       return getSource().getType();
+    }
+
+    Value getTensorDesc() {
+       return getSource();
     }
 
     xegpu::TensorDescType getTensorDescType() {
@@ -733,25 +760,24 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
   }];
 
   let assemblyFormat = [{
-    $source `,` 
-    custom<OptionalDynamicIndexList>($offsets, $const_offsets) 
+    $source `` 
+    custom<OptionalDynamicIndexList>($offsets, $const_offsets) `,`
     $mask prop-dict 
     attr-dict `:` qualified(type($source)) `,` type($mask) `->` type($value)
   }];
 
-//  let builders = [
-//    OpBuilder<(ins "Type": $value, "Value": $TensorDesc, 
-//                    "UnitAttr": $packed, "DenseI64ArrayAttr": $transpose,
-//                    "xegpu::CachePolicyAttr": $l1_hint, 
-//                    "xegpu::CachePolicyAttr": $l2_hint, 
-//                    "xegpu::CachePolicyAttr": $l3_hint)>
-//  ];
+  let builders = [
+    OpBuilder<(ins "Type": $value, "Value": $source, "Value": $mask,
+                    "xegpu::CachePolicyAttr": $l1_hint, 
+                    "xegpu::CachePolicyAttr": $l2_hint, 
+                    "xegpu::CachePolicyAttr": $l3_hint)>
+   ];
 
   let hasVerifier = 1;
 }
 
 def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
-  AllElementTypesMatch<["value", "TensorDesc"]>, MemoryEffects<[MemWrite]>
+  AllElementTypesMatch<["value", "dest"]>, MemoryEffects<[MemWrite]>
   ]> {
   let summary = "store data to scattered memory locations.";
   let description = [{ It (aka. store) stores data to scattered memory locations. The value is
@@ -791,15 +817,26 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
 
   let arguments = (ins
     XeGPU_ValueType: $value,
-    XeGPU_TensorDesc: $TensorDesc,
+    XeGPU_TensorDesc_or_MemRef: $dest,
+    Variadic<Index>: $offsets,
+    OptionalAttr<DenseI64ArrayAttr>: $const_offsets,
     XeGPU_MaskType: $mask,
+    OptionalAttr<I64Attr>: $chunk_size,
     OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
     OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
     OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
+    Type getDestType() {
+      return getDest().getType();
+    }
+
+    Value getTensorDesc() {
+       return getDest();
+    }
+
     xegpu::TensorDescType getTensorDescType() {
-      return getTensorDesc().getType();
+      return dyn_cast<xegpu::TensorDescType>(getDestType());
     }
 
     VectorType getValueType() {
@@ -811,8 +848,21 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
     }
   }];
 
-  let assemblyFormat = [{$value `,` $TensorDesc `,` $mask prop-dict attr-dict
-            `:` type($value) `,` qualified(type($TensorDesc)) `,` type($mask)}];
+  let assemblyFormat = [{
+    $value `,`
+    $dest `` 
+    custom<OptionalDynamicIndexList>($offsets, $const_offsets) `,`
+    $mask 
+    prop-dict 
+    attr-dict `:` type($value) `,` qualified(type($dest)) `,` type($mask)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value": $value, "Value": $dest, "Value": $mask,
+                    "xegpu::CachePolicyAttr": $l1_hint, 
+                    "xegpu::CachePolicyAttr": $l2_hint, 
+                    "xegpu::CachePolicyAttr": $l3_hint)>
+   ];
 
   let hasVerifier = 1;
 }

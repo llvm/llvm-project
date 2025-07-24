@@ -644,7 +644,7 @@ LogicalResult CreateDescOp::verify() {
 //===----------------------------------------------------------------------===//
 LogicalResult PrefetchOp::verify() {
   auto tdescTy = getTensorDescType();
-  if (!tdescTy.isScattered())
+  if (tdescTy && !tdescTy.isScattered())
     return emitOpError("Expects a scattered TensorDesc.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
@@ -657,6 +657,13 @@ LogicalResult PrefetchOp::verify() {
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   return success();
+}
+
+void PrefetchOp::build(OpBuilder &builder, OperationState &state, Value source,
+                       xegpu::CachePolicyAttr l1_hint,
+                       xegpu::CachePolicyAttr l2_hint,
+                       xegpu::CachePolicyAttr l3_hint) {
+  build(builder, state, source, Value(), l1_hint, l2_hint, l3_hint);
 }
 
 //===----------------------------------------------------------------------===//
@@ -680,6 +687,15 @@ LogicalResult LoadGatherOp::verify() {
                                     [&]() { return emitOpError(); });
 }
 
+void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
+                         Type valueType, Value source, Value mask,
+                         xegpu::CachePolicyAttr l1_hint,
+                         xegpu::CachePolicyAttr l2_hint,
+                         xegpu::CachePolicyAttr l3_hint) {
+  build(builder, state, valueType, source, ValueRange(), DenseI64ArrayAttr(),
+        mask, IntegerAttr(), l1_hint, l2_hint, l3_hint);
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_StoreScatterOp
 //===----------------------------------------------------------------------===//
@@ -699,6 +715,15 @@ LogicalResult StoreScatterOp::verify() {
 
   return isValidGatherScatterParams(maskTy, valueTy, tdescTy,
                                     [&]() { return emitOpError(); });
+}
+
+void StoreScatterOp::build(OpBuilder &builder, OperationState &state,
+                           Value value, Value dest, Value mask,
+                           xegpu::CachePolicyAttr l1_hint,
+                           xegpu::CachePolicyAttr l2_hint,
+                           xegpu::CachePolicyAttr l3_hint) {
+  build(builder, state, value, dest, ValueRange(), DenseI64ArrayAttr(), mask,
+        IntegerAttr(), l1_hint, l2_hint, l3_hint);
 }
 
 //===----------------------------------------------------------------------===//
