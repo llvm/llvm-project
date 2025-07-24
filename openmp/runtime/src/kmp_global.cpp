@@ -414,6 +414,10 @@ int __kmp_need_register_atfork =
     TRUE; /* At initialization, call pthread_atfork to install fork handler */
 int __kmp_need_register_atfork_specified = TRUE;
 
+/* We do not want to repeatedly register the atfork handler, because since we
+ * lock things (in __kmp_forkjoin_lock()) in the prepare handler, if the same
+ * prepare handler gets called multiple times, then it will always deadlock */
+int __kmp_already_registered_atfork = FALSE;
 int __kmp_in_atexit = FALSE; /*Denote that we are in the atexit handler*/
 
 int __kmp_env_stksize = FALSE; /* KMP_STACKSIZE specified? */

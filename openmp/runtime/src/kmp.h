@@ -3512,6 +3512,7 @@ extern int __kmp_abort_delay;
 extern int __kmp_need_register_atfork_specified;
 extern int __kmp_need_register_atfork; /* At initialization, call pthread_atfork
                                           to install fork handler */
+extern int __kmp_already_registered_atfork; /* Do not register atfork twice */
 extern int __kmp_in_atexit; /*Denote that we are in the atexit handler*/
 extern int __kmp_gtid_mode; /* Method of getting gtid, values:
                                0 - not set, will be set at runtime
