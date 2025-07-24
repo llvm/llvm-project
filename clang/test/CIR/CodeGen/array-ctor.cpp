@@ -40,7 +40,7 @@ void foo() {
 // CIR:     cir.yield
 // CIR:   } while {
 // CIR:     %[[CURRENT2:.*]] = cir.load %[[ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
-// CIR:     %[[CMP:.*]] = cir.cmp(eq, %[[CURRENT2]], %[[END_PTR]]) : !cir.ptr<!rec_S>, !cir.bool
+// CIR:     %[[CMP:.*]] = cir.cmp(ne, %[[CURRENT2]], %[[END_PTR]]) : !cir.ptr<!rec_S>, !cir.bool
 // CIR:     cir.condition(%[[CMP]])
 // CIR:   }
 // CIR:   cir.return
@@ -55,7 +55,7 @@ void foo() {
 // LLVM: br label %[[LOOP:.*]]
 // LLVM: [[COND:.*]]:
 // LLVM: %[[CURRENT_CHECK:.*]] = load ptr, ptr %[[ITER]]
-// LLVM: %[[DONE:.*]] = icmp eq ptr %[[CURRENT_CHECK]], %[[END]]
+// LLVM: %[[DONE:.*]] = icmp ne ptr %[[CURRENT_CHECK]], %[[END]]
 // LLVM: br i1 %[[DONE]], label %[[LOOP]], label %[[EXIT:.*]]
 // LLVM: [[LOOP]]:
 // LLVM: %[[CURRENT:.*]] = load ptr, ptr %[[ITER]]
