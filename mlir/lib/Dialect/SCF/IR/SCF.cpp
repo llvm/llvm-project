@@ -25,7 +25,6 @@
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::scf;
@@ -113,7 +112,7 @@ static TerminatorTy verifyAndGetTerminator(Operation *op, Region &region,
 /// using the operands of the block terminator to replace operation results.
 static void replaceOpWithRegion(PatternRewriter &rewriter, Operation *op,
                                 Region &region, ValueRange blockArgs = {}) {
-  assert(llvm::hasSingleElement(region) && "expected single-region block");
+  assert(region.hasOneBlock() && "expected single-block region");
   Block *block = &region.front();
   Operation *terminator = block->getTerminator();
   ValueRange results = terminator->getOperands();
@@ -185,7 +184,7 @@ struct SingleBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
 
   LogicalResult matchAndRewrite(ExecuteRegionOp op,
                                 PatternRewriter &rewriter) const override {
-    if (!llvm::hasSingleElement(op.getRegion()))
+    if (!op.getRegion().hasOneBlock())
       return failure();
     replaceOpWithRegion(rewriter, op, op.getRegion());
     return success();
@@ -1927,11 +1926,13 @@ void ForallOp::getCanonicalizationPatterns(RewritePatternSet &results,
 /// not a constant.
 void ForallOp::getSuccessorRegions(RegionBranchPoint point,
                                    SmallVectorImpl<RegionSuccessor> &regions) {
-  // Both the operation itself and the region may be branching into the body or
-  // back into the operation itself. It is possible for loop not to enter the
-  // body.
-  regions.push_back(RegionSuccessor(&getRegion()));
-  regions.push_back(RegionSuccessor());
+  // In accordance with the semantics of forall, its body is executed in
+  // parallel by multiple threads. We should not expect to branch back into
+  // the forall body after the region's execution is complete.
+  if (point.isParent())
+    regions.push_back(RegionSuccessor(&getRegion()));
+  else
+    regions.push_back(RegionSuccessor());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2413,65 +2414,6 @@ struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
   }
 };
 
-/// Allow the true region of an if to assume the condition is true
-/// and vice versa. For example:
-///
-///   scf.if %cmp {
-///      print(%cmp)
-///   }
-///
-///  becomes
-///
-///   scf.if %cmp {
-///      print(true)
-///   }
-///
-struct ConditionPropagation : public OpRewritePattern<IfOp> {
-  using OpRewritePattern<IfOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(IfOp op,
-                                PatternRewriter &rewriter) const override {
-    // Early exit if the condition is constant since replacing a constant
-    // in the body with another constant isn't a simplification.
-    if (matchPattern(op.getCondition(), m_Constant()))
-      return failure();
-
-    bool changed = false;
-    mlir::Type i1Ty = rewriter.getI1Type();
-
-    // These variables serve to prevent creating duplicate constants
-    // and hold constant true or false values.
-    Value constantTrue = nullptr;
-    Value constantFalse = nullptr;
-
-    for (OpOperand &use :
-         llvm::make_early_inc_range(op.getCondition().getUses())) {
-      if (op.getThenRegion().isAncestor(use.getOwner()->getParentRegion())) {
-        changed = true;
-
-        if (!constantTrue)
-          constantTrue = rewriter.create<arith::ConstantOp>(
-              op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 1));
-
-        rewriter.modifyOpInPlace(use.getOwner(),
-                                 [&]() { use.set(constantTrue); });
-      } else if (op.getElseRegion().isAncestor(
-                     use.getOwner()->getParentRegion())) {
-        changed = true;
-
-        if (!constantFalse)
-          constantFalse = rewriter.create<arith::ConstantOp>(
-              op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 0));
-
-        rewriter.modifyOpInPlace(use.getOwner(),
-                                 [&]() { use.set(constantFalse); });
-      }
-    }
-
-    return success(changed);
-  }
-};
-
 /// Remove any statements from an if that are equivalent to the condition
 /// or its negation. For example:
 ///
@@ -2853,9 +2795,8 @@ struct CombineNestedIfs : public OpRewritePattern<IfOp> {
 
 void IfOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                        MLIRContext *context) {
-  results.add<CombineIfs, CombineNestedIfs, ConditionPropagation,
-              ConvertTrivialIfToSelect, RemoveEmptyElseBranch,
-              RemoveStaticCondition, RemoveUnusedResults,
+  results.add<CombineIfs, CombineNestedIfs, ConvertTrivialIfToSelect,
+              RemoveEmptyElseBranch, RemoveStaticCondition, RemoveUnusedResults,
               ReplaceIfYieldWithConditionOrValue>(context);
 }
 

@@ -226,6 +226,15 @@ static void generateOpBuilderDeclarations(irdl::detail::dictionary &dict,
   stream << llvm::formatv(
       R"(static void build(::mlir::OpBuilder &opBuilder, ::mlir::OperationState &opState, {0} {1} ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {{});)",
       resultParams, operandParams);
+  stream << "\n";
+  stream << llvm::formatv(
+      R"(static {0} create(::mlir::OpBuilder &opBuilder, ::mlir::Location location, {1} {2} ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {{});)",
+      opStrings.opCppName, resultParams, operandParams);
+  stream << "\n";
+  stream << llvm::formatv(
+      R"(static {0} create(::mlir::ImplicitLocOpBuilder &opBuilder, {1} {2} ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {{});)",
+      opStrings.opCppName, resultParams, operandParams);
+  stream << "\n";
   dict["OP_BUILD_DECLS"] = buildDecls;
 }
 
@@ -339,9 +348,25 @@ void {0}::build(::mlir::OpBuilder &opBuilder, ::mlir::OperationState &opState, {
 {3}
 {4}
 }
+
+{0} {0}::create(::mlir::OpBuilder &opBuilder, ::mlir::Location location, {1} {2} ::llvm::ArrayRef<::mlir::NamedAttribute> attributes) {{
+  ::mlir::OperationState __state__(location, getOperationName());
+  build(opBuilder, __state__, {5} {6} attributes);
+  auto __res__ = ::llvm::dyn_cast<{0}>(opBuilder.create(__state__));
+  assert(__res__ && "builder didn't return the right type");
+  return __res__;
+}
+
+{0} {0}::create(::mlir::ImplicitLocOpBuilder &opBuilder, {1} {2} ::llvm::ArrayRef<::mlir::NamedAttribute> attributes) {{
+  return create(opBuilder, opBuilder.getLoc(), {5} {6} attributes);
+}
 )",
       opStrings.opCppName, std::move(resultTypes), std::move(operandTypes),
-      std::move(operandAdder), std::move(resultAdder));
+      std::move(operandAdder), std::move(resultAdder),
+      llvm::join(opStrings.opResultNames, ",") +
+          (!opStrings.opResultNames.empty() ? "," : ""),
+      llvm::join(opStrings.opOperandNames, ",") +
+          (!opStrings.opOperandNames.empty() ? "," : ""));
 
   dict["OP_BUILD_DEFS"] = buildDefinition;
 

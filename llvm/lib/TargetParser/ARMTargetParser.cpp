@@ -648,7 +648,6 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
     default:
       return "strongarm";
     }
-  case llvm::Triple::NaCl:
   case llvm::Triple::OpenBSD:
     return "cortex-a8";
   default:

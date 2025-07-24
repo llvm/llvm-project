@@ -43,8 +43,6 @@ class MeshSharding {
 private:
   ::mlir::FlatSymbolRefAttr mesh;
   SmallVector<MeshAxesAttr> split_axes;
-  SmallVector<MeshAxis> partial_axes;
-  ReductionKind partial_type = ReductionKind::Sum;
   SmallVector<int64_t> static_halo_sizes;
   SmallVector<int64_t> static_sharded_dims_offsets;
   SmallVector<Value> dynamic_halo_sizes;
@@ -55,8 +53,6 @@ public:
   MeshSharding(Value rhs);
   static MeshSharding get(::mlir::FlatSymbolRefAttr mesh_,
                           ArrayRef<MeshAxesAttr> split_axes_,
-                          ArrayRef<MeshAxis> partial_axes_ = {},
-                          ReductionKind partial_type_ = ReductionKind::Sum,
                           ArrayRef<int64_t> static_halo_sizes_ = {},
                           ArrayRef<int64_t> static_sharded_dims_offsets_ = {},
                           ArrayRef<Value> dynamic_halo_sizes_ = {},
@@ -64,8 +60,6 @@ public:
   ::mlir::FlatSymbolRefAttr getMeshAttr() const { return mesh; }
   ::llvm::StringRef getMesh() const { return mesh ? mesh.getValue() : ""; }
   ArrayRef<MeshAxesAttr> getSplitAxes() const { return split_axes; }
-  ArrayRef<MeshAxis> getPartialAxes() const { return partial_axes; }
-  ReductionKind getPartialType() const { return partial_type; }
   ArrayRef<int64_t> getStaticHaloSizes() const { return static_halo_sizes; }
   ArrayRef<int64_t> getStaticShardedDimsOffsets() const {
     return static_sharded_dims_offsets;
@@ -79,7 +73,7 @@ public:
   bool operator!=(Value rhs) const;
   bool operator==(const MeshSharding &rhs) const;
   bool operator!=(const MeshSharding &rhs) const;
-  bool equalSplitAndPartialAxes(const MeshSharding &rhs) const;
+  bool equalSplitAxes(const MeshSharding &rhs) const;
   bool equalHaloAndShardSizes(const MeshSharding &rhs) const;
   bool equalHaloSizes(const MeshSharding &rhs) const;
   bool equalShardSizes(const MeshSharding &rhs) const;
@@ -110,10 +104,9 @@ void removeTrailingEmptySubArray(SmallVector<SmallVector<T>> &array) {
 
 // Is the same tensor replicated on all processes.
 inline bool isFullReplication(MeshSharding sharding) {
-  return sharding.getPartialAxes().empty() &&
-         llvm::all_of(sharding.getSplitAxes(), [](MeshAxesAttr axes) {
-           return axes.asArrayRef().empty();
-         });
+  return llvm::all_of(sharding.getSplitAxes(), [](MeshAxesAttr axes) {
+    return axes.asArrayRef().empty();
+  });
 }
 
 inline mesh::MeshOp

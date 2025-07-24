@@ -74,6 +74,10 @@ struct VPlanTransforms {
   /// flat CFG into a hierarchical CFG.
   LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan);
 
+  /// Creates extracts for values in \p Plan defined in a loop region and used
+  /// outside a loop region.
+  LLVM_ABI_FOR_TEST static void createExtractsForLiveOuts(VPlan &Plan);
+
   /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
   /// VPValue and connect the block to \p Plan, using the VPValue as branch
   /// condition.
@@ -98,6 +102,12 @@ struct VPlanTransforms {
   /// as needed or false if it is not possible. In the latter case, \p Plan is
   /// not valid.
   static bool adjustFixedOrderRecurrences(VPlan &Plan, VPBuilder &Builder);
+
+  /// Check if \p Plan contains any FMaxNum or FMinNum reductions. If they do,
+  /// try to update the vector loop to exit early if any input is NaN and resume
+  /// executing in the scalar loop to handle the NaNs there. Return false if
+  /// this attempt was unsuccessful.
+  static bool handleMaxMinNumReductions(VPlan &Plan);
 
   /// Clear NSW/NUW flags from reduction instructions if necessary.
   static void clearReductionWrapFlags(VPlan &Plan);
