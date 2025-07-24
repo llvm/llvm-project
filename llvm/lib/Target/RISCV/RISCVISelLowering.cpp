@@ -16191,8 +16191,7 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
           Shift1 = DAG.getConstant(0, DL, VT);
         else
           Shift1 =
-            DAG.getNode(ISD::SHL, DL, VT, X,
-                        DAG.getConstant(ShAmt, DL, VT));
+              DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShAmt, DL, VT));
         SDValue Mul359 =
             DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
                         DAG.getConstant(Log2_64(Offset - 1), DL, VT), X);
