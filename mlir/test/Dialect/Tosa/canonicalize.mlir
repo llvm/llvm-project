@@ -1349,3 +1349,14 @@ func.func @test_fold_i1_to_i32_cast() -> tensor<i32> {
   %1 = "tosa.cast"(%0) : (tensor<i1>) -> tensor<i32>
   return %1 : tensor<i32>
 }
+
+// -----
+
+// CHECK-LABEL: @test_fold_i32_to_i1_cast
+// CHECK: %[[OUT:.*]] = "tosa.const"() <{values = dense<true> : tensor<i1>}> : () -> tensor<i1>
+// CHECK: return %[[OUT]] : tensor<i1>
+func.func @test_fold_i32_to_i1_cast() -> tensor<i1> {
+  %0 = "tosa.const"() <{values = dense<10> : tensor<i32>}> : () -> tensor<i32>
+  %1 = "tosa.cast"(%0) : (tensor<i32>) -> tensor<i1>
+  return %1 : tensor<i1>
+}
