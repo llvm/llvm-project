@@ -20347,6 +20347,13 @@ ARMTargetLowering::getSingleConstraintMatchWeight(
   return weight;
 }
 
+static bool isIncompatibleReg(const MCPhysReg &PR, MVT VT) {
+  if (PR == 0 || VT == MVT::Other)
+    return false;
+  return (ARM::SPRRegClass.contains(PR) && VT != MVT::f32 && VT != MVT::i32) ||
+         (ARM::DPRRegClass.contains(PR) && VT != MVT::f64);
+}
+
 using RCPair = std::pair<unsigned, const TargetRegisterClass *>;
 
 RCPair ARMTargetLowering::getRegForInlineAsmConstraint(
@@ -20420,7 +20427,10 @@ RCPair ARMTargetLowering::getRegForInlineAsmConstraint(
   if (StringRef("{cc}").equals_insensitive(Constraint))
     return std::make_pair(unsigned(ARM::CPSR), &ARM::CCRRegClass);
 
-  return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+  auto RCP = TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+  if (isIncompatibleReg(RCP.first, VT))
+    return {0, nullptr};
+  return RCP;
 }
 
 /// LowerAsmOperandForConstraint - Lower the specified operand into the Ops
