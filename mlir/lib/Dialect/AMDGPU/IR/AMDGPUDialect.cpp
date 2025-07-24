@@ -510,6 +510,10 @@ LogicalResult DPPOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// GatherToLDSOp
+//===----------------------------------------------------------------------===//
+
 LogicalResult GatherToLDSOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());
   MemRefType dstType = cast<MemRefType>(getDst().getType());
@@ -545,6 +549,59 @@ LogicalResult GatherToLDSOp::verify() {
 
   return success();
 }
+
+namespace {
+/// If the source/target of a CopyOp is a CastOp that does not modify the shape
+/// and element type, the cast can be skipped. Such CastOps only cast the layout
+/// of the type.
+struct FoldGatherToLDSOfCast : public OpRewritePattern<GatherToLDSOp> {
+  using OpRewritePattern<GatherToLDSOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(GatherToLDSOp gatherOp,
+                                PatternRewriter &rewriter) const override {
+    bool modified = false;
+
+    // Check source.
+    if (auto castOp = gatherOp.getSrc().getDefiningOp<memref::CastOp>()) {
+      auto fromType = llvm::dyn_cast<MemRefType>(castOp.getSource().getType());
+      auto toType = llvm::dyn_cast<MemRefType>(castOp.getSource().getType());
+
+      if (fromType && toType &&
+          fromType.getElementType() == toType.getElementType()) {
+        rewriter.modifyOpInPlace(gatherOp, [&] {
+          gatherOp.getSrcMutable().assign(castOp.getSource());
+        });
+        modified = true;
+      }
+    }
+
+    // Check target.
+    if (auto castOp = gatherOp.getDst().getDefiningOp<memref::CastOp>()) {
+      auto fromType = llvm::dyn_cast<MemRefType>(castOp.getSource().getType());
+      auto toType = llvm::dyn_cast<MemRefType>(castOp.getSource().getType());
+
+      if (fromType && toType &&
+          fromType.getElementType() == toType.getElementType()) {
+        rewriter.modifyOpInPlace(gatherOp, [&] {
+          gatherOp.getDstMutable().assign(castOp.getSource());
+        });
+        modified = true;
+      }
+    }
+
+    return success(modified);
+  }
+};
+} // namespace
+
+void GatherToLDSOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *context) {
+  results.add<FoldGatherToLDSOfCast>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// TransposeLoadOp
+//===----------------------------------------------------------------------===//
 
 LogicalResult TransposeLoadOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());
