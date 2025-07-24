@@ -554,7 +554,7 @@ namespace {
 /// If the source/target of a GatherToLDSOp is a CastOp that only removes static
 /// information or changes layout, the cast can be skipped.
 struct FoldGatherToLDSOfCast final : OpRewritePattern<GatherToLDSOp> {
-  using OpRewritePattern<GatherToLDSOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(GatherToLDSOp gatherOp,
                                 PatternRewriter &rewriter) const override {
