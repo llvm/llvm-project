@@ -144,10 +144,17 @@ def : VOP3PSatPat<usubsat, V_PK_SUB_U16>;
 def : VOP3PSatPat<ssubsat, V_PK_SUB_I16>;
 } // End SubtargetPredicate = HasVOP3PInsts
 
-let SubtargetPredicate = HasMinimum3Maximum3PKF16, FPDPRounding = 1 in {
+let isCommutable = 1, FPDPRounding = 1 in {
+let SubtargetPredicate = HasMin3Max3PKF16 in {
+defm V_PK_MIN3_NUM_F16 : VOP3PInst<"v_pk_min3_num_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, AMDGPUfmin3>;
+defm V_PK_MAX3_NUM_F16 : VOP3PInst<"v_pk_max3_num_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, AMDGPUfmax3>;
+}
+
+let SubtargetPredicate = HasMinimum3Maximum3PKF16 in {
 defm V_PK_MINIMUM3_F16 : VOP3PInst<"v_pk_minimum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, AMDGPUfminimum3>;
 defm V_PK_MAXIMUM3_F16 : VOP3PInst<"v_pk_maximum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, AMDGPUfmaximum3>;
 }
+} // End isCommutable = 1, FPDPRounding = 1
 
 // TODO: Make sure we're doing the right thing with denormals. Note
 // that FMA and MAD will differ.
@@ -351,6 +358,49 @@ defm V_FMA_MIXHI_F16 : VOP3_VOP3PInst<"v_fma_mixhi_f16", VOP3P_Mix_Profile<VOP_F
 }
 
 defm : MadFmaMixPats<fma, V_FMA_MIX_F32, V_FMA_MIXLO_F16, V_FMA_MIXHI_F16>;
+}
+
+def PK_ADD_MINMAX_Profile : VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16, VOP3_PACKED> {
+  let HasModifiers = 0;
+}
+
+let isCommutable = 1, isReMaterializable = 1 in {
+let SubtargetPredicate = HasPkAddMinMaxInsts in {
+defm V_PK_ADD_MAX_I16 : VOP3PInst<"v_pk_add_max_i16", PK_ADD_MINMAX_Profile>;
+defm V_PK_ADD_MAX_U16 : VOP3PInst<"v_pk_add_max_u16", PK_ADD_MINMAX_Profile>;
+defm V_PK_ADD_MIN_I16 : VOP3PInst<"v_pk_add_min_i16", PK_ADD_MINMAX_Profile>;
+defm V_PK_ADD_MIN_U16 : VOP3PInst<"v_pk_add_min_u16", PK_ADD_MINMAX_Profile>;
+}
+let SubtargetPredicate = HasPkMinMax3Insts in {
+defm V_PK_MAX3_I16 : VOP3PInst<"v_pk_max3_i16", PK_ADD_MINMAX_Profile>;
+defm V_PK_MAX3_U16 : VOP3PInst<"v_pk_max3_u16", PK_ADD_MINMAX_Profile>;
+defm V_PK_MIN3_I16 : VOP3PInst<"v_pk_min3_i16", PK_ADD_MINMAX_Profile>;
+defm V_PK_MIN3_U16 : VOP3PInst<"v_pk_min3_u16", PK_ADD_MINMAX_Profile>;
+}
+} // End isCommutable = 1, isReMaterializable = 1
+
+// TODO: Extend pattern to select op_sel and op_sel_hi.
+class ThreeOp_OpSelClampPats <SDPatternOperator op1, SDPatternOperator op2,
+                              VOP3P_Pseudo inst,
+                              ValueType vt = inst.Pfl.Src0VT,
+                              RegisterOperand RC = getVCSrcForVT<vt>.ret> : GCNPat <
+  (ThreeOpFrag<op1, op2> vt:$src0, vt:$src1, vt:$src2),
+  (inst SRCMODS.OP_SEL_1, RC:$src0, SRCMODS.OP_SEL_1, RC:$src1,
+        SRCMODS.OP_SEL_1, RC:$src2, DSTCLAMP.NONE, 0)
+>;
+
+let SubtargetPredicate = HasPkAddMinMaxInsts in {
+def : ThreeOp_OpSelClampPats<add, smax, V_PK_ADD_MAX_I16>;
+def : ThreeOp_OpSelClampPats<add, umax, V_PK_ADD_MAX_U16>;
+def : ThreeOp_OpSelClampPats<add, smin, V_PK_ADD_MIN_I16>;
+def : ThreeOp_OpSelClampPats<add, umin, V_PK_ADD_MIN_U16>;
+}
+
+let SubtargetPredicate = HasPkMinMax3Insts in {
+def : ThreeOp_OpSelClampPats<smax, smax, V_PK_MAX3_I16>;
+def : ThreeOp_OpSelClampPats<umax, umax, V_PK_MAX3_U16>;
+def : ThreeOp_OpSelClampPats<smin, smin, V_PK_MIN3_I16>;
+def : ThreeOp_OpSelClampPats<umin, umin, V_PK_MIN3_U16>;
 }
 
 // Defines patterns that extract signed 4bit from each Idx[0].
@@ -1153,6 +1203,14 @@ let isCommutable = 1, isReMaterializable = 1 in {
 
   let SubtargetPredicate = HasPkMovB32, isAsCheapAsAMove = 1 in
   defm V_PK_MOV_B32 : VOP3PInst<"v_pk_mov_b32", VOP3P_Profile<VOP_V2I32_V2I32_V2I32, VOP3_PACKED>>;
+
+  let SubtargetPredicate = HasBF16PackedInsts in {
+    defm V_PK_ADD_BF16     : VOP3PInst<"v_pk_add_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, any_fadd>;
+    defm V_PK_MUL_BF16     : VOP3PInst<"v_pk_mul_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, any_fmul>;
+    defm V_PK_MIN_NUM_BF16 : VOP3PInst<"v_pk_min_num_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, fminnum_like>;
+    defm V_PK_MAX_NUM_BF16 : VOP3PInst<"v_pk_max_num_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, fmaxnum_like>;
+    defm V_PK_FMA_BF16     : VOP3PInst<"v_pk_fma_bf16", VOP3P_Profile<VOP_V2BF16_V2BF16_V2BF16_V2BF16, VOP3_PACKED>, any_fma>;
+  }
 } // End isCommutable = 1, isReMaterializable = 1
 
 def : AMDGPUMnemonicAlias<"v_accvgpr_read",  "v_accvgpr_read_b32">;
@@ -2157,6 +2215,8 @@ multiclass VOP3P_Realtriple_gfx11_gfx12<bits<8> op>
 
 multiclass VOP3P_Real_gfx12<bits<8> op> : VOP3P_Real_Base<GFX12Gen, op>;
 
+multiclass VOP3P_Real_gfx1250<bits<8> op> : VOP3P_Real_Base<GFX1250Gen, op>;
+
 multiclass VOP3P_Real_with_name_gfx12<bits<8> op,
                           string backing_ps_name = NAME,
                           string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> :
@@ -2164,6 +2224,28 @@ multiclass VOP3P_Real_with_name_gfx12<bits<8> op,
 
 defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1b, "V_PK_MIN_F16", "v_pk_min_num_f16">;
 defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1c, "V_PK_MAX_F16", "v_pk_max_num_f16">;
+
+defm V_PK_FMA_F32 : VOP3P_Real_gfx12<0x1f>;
+defm V_PK_MUL_F32 : VOP3P_Real_gfx12<0x28>;
+defm V_PK_ADD_F32 : VOP3P_Real_gfx12<0x29>;
+
+defm V_PK_ADD_MAX_I16  : VOP3P_Real_gfx1250<0x14>;
+defm V_PK_ADD_MAX_U16  : VOP3P_Real_gfx1250<0x15>;
+defm V_PK_ADD_MIN_I16  : VOP3P_Real_gfx1250<0x2d>;
+defm V_PK_ADD_MIN_U16  : VOP3P_Real_gfx1250<0x2e>;
+defm V_PK_MAX3_I16     : VOP3P_Real_gfx1250<0x2f>;
+defm V_PK_MAX3_U16     : VOP3P_Real_gfx1250<0x30>;
+defm V_PK_MIN3_I16     : VOP3P_Real_gfx1250<0x31>;
+defm V_PK_MIN3_U16     : VOP3P_Real_gfx1250<0x32>;
+defm V_PK_FMA_BF16     : VOP3P_Real_gfx1250<0x11>;
+defm V_PK_ADD_BF16     : VOP3P_Real_gfx1250<0x23>;
+defm V_PK_MUL_BF16     : VOP3P_Real_gfx1250<0x2a>;
+defm V_PK_MIN_NUM_BF16 : VOP3P_Real_gfx1250<0x2b>;
+defm V_PK_MAX_NUM_BF16 : VOP3P_Real_gfx1250<0x2c>;
+defm V_PK_MINIMUM3_F16 : VOP3P_Real_gfx1250<0x36>;
+defm V_PK_MAXIMUM3_F16 : VOP3P_Real_gfx1250<0x37>;
+defm V_PK_MIN3_NUM_F16 : VOP3P_Real_gfx1250<0x38>;
+defm V_PK_MAX3_NUM_F16 : VOP3P_Real_gfx1250<0x39>;
 
 defm V_PK_MINIMUM_F16 : VOP3P_Real_gfx12<0x1d>;
 defm V_PK_MAXIMUM_F16 : VOP3P_Real_gfx12<0x1e>;
