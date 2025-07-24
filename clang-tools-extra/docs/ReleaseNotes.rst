@@ -106,6 +106,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
   variables introduced by structured bindings.
 
+- Improved :doc:`bugprone-signed-char-misuse
+  <clang-tidy/checks/bugprone/signed-char-misuse>` check by fixing
+  false positives on C23 enums with the fixed underlying type of signed char.
+
 - Improved :doc:`bugprone-unhandled-self-assignment
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
   an additional matcher that generalizes the copy-and-swap idiom pattern
