@@ -101,10 +101,11 @@ Sections:
 #  CASE1-NEXT:      Size: 0x1BE
 #  CASE1-NEXT:      Start FRE Offset: 0x10
 #  CASE1-NEXT:      Num FREs: 0
-#  CASE1-NEXT:      Info: 0x31
-#  CASE1-NEXT:      FRE Type: Addr2 (0x1)
-#  CASE1-NEXT:      FDE Type: PCMask (0x1)
-#  CASE1-NEXT:      PAuth Key (unused): 1
+#  CASE1-NEXT:      Info {
+#  CASE1-NEXT:        FRE Type: Addr2 (0x1)
+#  CASE1-NEXT:        FDE Type: PCMask (0x1)
+#  CASE1-NEXT:        Raw: 0x31
+#  CASE1-NEXT:      }
 #  CASE1-NEXT:      Repetitive block size: 0xDE
 #  CASE1-NEXT:      Padding2: 0xAD
 #  CASE1-NEXT:    }
@@ -160,10 +161,12 @@ Sections:
 #  CASE1-NEXT:      Size: 0x1BE
 #  CASE1-NEXT:      Start FRE Offset: 0x10
 #  CASE1-NEXT:      Num FREs: 0
-#  CASE1-NEXT:      Info: 0x2
-#  CASE1-NEXT:      FRE Type: Addr4 (0x2)
-#  CASE1-NEXT:      FDE Type: PCInc (0x0)
-#  CASE1-NEXT:      PAuth Key: A (0x0)
+#  CASE1-NEXT:      Info {
+#  CASE1-NEXT:        FRE Type: Addr4 (0x2)
+#  CASE1-NEXT:        FDE Type: PCInc (0x0)
+#  CASE1-NEXT:        PAuth Key: A (0x0)
+#  CASE1-NEXT:        Raw: 0x2
+#  CASE1-NEXT:      }
 #  CASE1-NEXT:      Repetitive block size (unused): 0xDE
 #  CASE1-NEXT:      Padding2: 0xAD
 #  CASE1-NEXT:    }
@@ -221,10 +224,12 @@ Sections:
 #  CASE2-NEXT:      Size: 0x1BE
 #  CASE2-NEXT:      Start FRE Offset: 0x10
 #  CASE2-NEXT:      Num FREs: 16
-#  CASE2-NEXT:      Info: 0x2
-#  CASE2-NEXT:      FRE Type: Addr4 (0x2)
-#  CASE2-NEXT:      FDE Type: PCInc (0x0)
-#  CASE2-NEXT:      PAuth Key: A (0x0)
+#  CASE2-NEXT:      Info {
+#  CASE2-NEXT:        FRE Type: Addr4 (0x2)
+#  CASE2-NEXT:        FDE Type: PCInc (0x0)
+#  CASE2-NEXT:        PAuth Key: A (0x0)
+#  CASE2-NEXT:        Raw: 0x2
+#  CASE2-NEXT:      }
 #  CASE2-NEXT:      Repetitive block size (unused): 0xDE
 #  CASE2-NEXT:      Padding2: 0xAD00
 #  CASE2-NEXT:    }

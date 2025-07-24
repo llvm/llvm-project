@@ -10,19 +10,21 @@
 #include "llvm/BinaryFormat/SFrame.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 using namespace llvm::object;
 
 static Expected<ArrayRef<uint8_t>>
 getDataSlice(ArrayRef<uint8_t> Data, uint64_t Offset, uint64_t Size) {
-  // Check for overflow.
-  if (Offset + Size < Offset || Offset + Size < Size ||
-      Offset + Size > Data.size()) {
+  uint64_t End = SaturatingAdd(Offset, Size);
+  // Data.size() cannot be UINT64_MAX, as it would occupy the whole address
+  // space.
+  if (End > Data.size()) {
     return createStringError(
         formatv("unexpected end of data at offset {0:x} while reading [{1:x}, "
                 "{2:x})",
-                Data.size(), Offset, Offset + Size)
+                Data.size(), Offset, End)
             .str(),
         object_error::unexpected_eof);
   }

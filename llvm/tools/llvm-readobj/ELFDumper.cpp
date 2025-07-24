@@ -6498,18 +6498,22 @@ void ELFDumper<ELFT>::printSFrameFDEs(
     W.printHex("Start FRE Offset", It->StartFREOff);
     W.printNumber("Num FREs", It->NumFREs);
 
-    W.printHex("Info", It->Info);
-    W.printEnum("FRE Type", It->getFREType(), sframe::getFRETypes());
-    W.printEnum("FDE Type", It->getFDEType(), sframe::getFDETypes());
-    switch (Parser.getHeader().ABIArch) {
-    case sframe::ABI::AArch64EndianBig:
-    case sframe::ABI::AArch64EndianLittle:
-      W.printEnum("PAuth Key", sframe::AArch64PAuthKey(It->getPAuthKey()),
-                  sframe::getAArch64PAuthKeys());
-      break;
-    default:
-      W.printNumber("PAuth Key (unused)", It->getPAuthKey());
-      break;
+    {
+      DictScope InfoScope(W, "Info");
+      W.printEnum("FRE Type", It->getFREType(), sframe::getFRETypes());
+      W.printEnum("FDE Type", It->getFDEType(), sframe::getFDETypes());
+      switch (Parser.getHeader().ABIArch) {
+      case sframe::ABI::AArch64EndianBig:
+      case sframe::ABI::AArch64EndianLittle:
+        W.printEnum("PAuth Key", sframe::AArch64PAuthKey(It->getPAuthKey()),
+                    sframe::getAArch64PAuthKeys());
+        break;
+      case sframe::ABI::AMD64EndianLittle:
+        // unused
+        break;
+      }
+
+      W.printHex("Raw", It->Info);
     }
 
     W.printHex(
