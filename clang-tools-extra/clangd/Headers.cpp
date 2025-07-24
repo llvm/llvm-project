@@ -306,14 +306,14 @@ IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader,
     return std::nullopt;
   bool IsAngled = false;
   for (auto &Filter : AngledHeaders) {
-    if (Filter(Suggested)) {
+    if (Filter(InsertedHeader.File)) {
       IsAngled = true;
       break;
     }
   }
   bool IsQuoted = false;
   for (auto &Filter : QuotedHeaders) {
-    if (Filter(Suggested)) {
+    if (Filter(InsertedHeader.File)) {
       IsQuoted = true;
       break;
     }
