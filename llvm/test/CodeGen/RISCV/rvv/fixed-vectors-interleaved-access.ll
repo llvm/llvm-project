@@ -1784,8 +1784,9 @@ define void @store_factor4_one_active(ptr %ptr, <4 x i32> %v) {
 define void @vpstore_factor4_one_active(ptr %ptr, <4 x i32> %v) {
 ; CHECK-LABEL: vpstore_factor4_one_active:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vsseg4e32.v v8, (a0)
+; CHECK-NEXT:    vsse32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
   %v0 = shufflevector <4 x i32> %v, <4 x i32> poison, <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3,  i32 undef, i32 undef, i32 undef>
   tail call void @llvm.vp.store.v16i32.p0(<16 x i32> %v0, ptr %ptr, <16 x i1> splat (i1 true), i32 16)
@@ -1809,7 +1810,7 @@ define void @store_factor4_one_active_fullwidth(ptr %ptr, <16 x i32> %v) {
 ; CHECK-LABEL: store_factor4_one_active_fullwidth:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 16
-; CHECK-NEXT:    vsetivli zero, 4, e32, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vsse32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
   %v0 = shufflevector <16 x i32> %v, <16 x i32> poison, <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3,  i32 undef, i32 undef, i32 undef>
@@ -2000,4 +2001,35 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @invalid_vp_evl(ptr %ptr) {
   %res1 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
   %res2 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} %res1, <4 x i32> %v2, 2
   ret {<4 x i32>, <4 x i32>, <4 x i32>} %res2
+}
+
+define {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor5(ptr %ptr) {
+; CHECK-LABEL: maskedload_factor5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg5e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %interleaved.vec = tail call <20 x i32> @llvm.masked.load(ptr %ptr, i32 4, <20 x i1> splat (i1 true), <20 x i32> poison)
+  %v0 = shufflevector <20 x i32> %interleaved.vec, <20 x i32> poison, <4 x i32> <i32 0, i32 5, i32 10, i32 15>
+  %v1 = shufflevector <20 x i32> %interleaved.vec, <20 x i32> poison, <4 x i32> <i32 1, i32 6, i32 11, i32 16>
+  %v2 = shufflevector <20 x i32> %interleaved.vec, <20 x i32> poison, <4 x i32> <i32 2, i32 7, i32 12, i32 17>
+  %v3 = shufflevector <20 x i32> %interleaved.vec, <20 x i32> poison, <4 x i32> <i32 3, i32 8, i32 13, i32 18>
+  %v4 = shufflevector <20 x i32> %interleaved.vec, <20 x i32> poison, <4 x i32> <i32 4, i32 9, i32 14, i32 19>
+  %res0 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} undef, <4 x i32> %v0, 0
+  %res1 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
+  %res2 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} %res1, <4 x i32> %v2, 2
+  %res3 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} %res2, <4 x i32> %v3, 3
+  %res4 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} %res3, <4 x i32> %v4, 4
+  ret {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} %res4
+}
+
+define void @maskedstore_factor2(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1) {
+; CHECK-LABEL: maskedstore_factor2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg2e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %interleaved.vec = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+  tail call void @llvm.masked.store(<8 x i32> %interleaved.vec, ptr %ptr, i32 4, <8 x i1> splat (i1 true))
+  ret void
 }

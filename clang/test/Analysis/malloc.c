@@ -1954,9 +1954,23 @@ int conjure(void);
 void testExtent(void) {
   int x = conjure();
   clang_analyzer_dump(x);
-  // expected-warning-re@-1 {{{{^conj_\$[[:digit:]]+{int, LC1, S[[:digit:]]+, #1}}}}}}
+  // expected-warning-re@-1 {{{{^conj_\$[[:digit:]]+{int, LC[[:digit:]]+, S[[:digit:]]+, #1}}}}}}
   int *p = (int *)malloc(x);
   clang_analyzer_dumpExtent(p);
-  // expected-warning-re@-1 {{{{^conj_\$[[:digit:]]+{int, LC1, S[[:digit:]]+, #1}}}}}}
+  // expected-warning-re@-1 {{{{^conj_\$[[:digit:]]+{int, LC[[:digit:]]+, S[[:digit:]]+, #1}}}}}}
   free(p);
+}
+
+void gh149754(void *p) {
+  // This testcase demonstrates an unusual situation where a certain symbol
+  // (the value of `p`) is released (more precisely, transitions from
+  // untracked state to Released state) twice within the same bug path because
+  // the `EvalAssume` callback resets it to untracked state after the first
+  // time when it is released. This caused the failure of an assertion, which
+  // was since then removed for the codebase.
+  if (!realloc(p, 8)) {
+    realloc(p, 8);
+    free(p); // expected-warning {{Attempt to free released memory}}
+  }
+  // expected-warning@+1 {{Potential memory leak}}
 }
