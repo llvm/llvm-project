@@ -474,8 +474,11 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
           Ty, IsNamedArg, NVec, NPred, UnpaddedCoerceToSeq, NSRN, NPRN);
   }
 
-  // Aggregates <= 16 bytes are passed directly in registers or on the stack.
-  if (Size <= 128) {
+  // Aggregates <= 16 bytes (8 bytes for variadic Arm64EC) are passed directly
+  // in registers or on the stack.
+  uint64_t MaxDirectSize =
+      (IsVariadicFn && getTarget().getTriple().isWindowsArm64EC()) ? 64 : 128;
+  if (Size <= MaxDirectSize) {
     unsigned Alignment;
     if (Kind == AArch64ABIKind::AAPCS) {
       Alignment = getContext().getTypeUnadjustedAlign(Ty);
@@ -1152,8 +1155,11 @@ RValue AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                    QualType Ty, AggValueSlot Slot) const {
   bool IsIndirect = false;
 
-  // Composites larger than 16 bytes are passed by reference.
-  if (isAggregateTypeForABI(Ty) && getContext().getTypeSize(Ty) > 128)
+  // Composites larger than 16 bytes (8 bytes on Arm64EC) are passed by
+  // reference.
+  uint64_t MaxDirectSize =
+      getTarget().getTriple().isWindowsArm64EC() ? 64 : 128;
+  if (isAggregateTypeForABI(Ty) && getContext().getTypeSize(Ty) > MaxDirectSize)
     IsIndirect = true;
 
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
