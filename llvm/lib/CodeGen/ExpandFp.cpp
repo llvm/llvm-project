@@ -103,10 +103,10 @@ static void expandFPToI(Instruction *FPToI) {
   Value *A1 = nullptr;
   if (FloatVal->getType()->isHalfTy()) {
     if (FPToI->getOpcode() == Instruction::FPToUI) {
-      Value *A0 = Builder.CreateFPToUI(FloatVal, Builder.getIntNTy(32));
+      Value *A0 = Builder.CreateFPToUI(FloatVal, Builder.getInt32Ty());
       A1 = Builder.CreateZExt(A0, IntTy);
     } else { // FPToSI
-      Value *A0 = Builder.CreateFPToSI(FloatVal, Builder.getIntNTy(32));
+      Value *A0 = Builder.CreateFPToSI(FloatVal, Builder.getInt32Ty());
       A1 = Builder.CreateSExt(A0, IntTy);
     }
     FPToI->replaceAllUsesWith(A1);
@@ -425,8 +425,8 @@ static void expandIToFP(Instruction *IToFP) {
   AAddr0->addIncoming(IsSigned ? Sub : IntVal, IfThen4);
   AAddr0->addIncoming(Shl, SwBB);
   Value *A0 = Builder.CreateTrunc(AAddr0, Builder.getInt32Ty());
-  Value *A1 = Builder.CreateLShr(A0, Builder.getIntN(32, 2));
-  Value *A2 = Builder.CreateAnd(A1, Builder.getIntN(32, 1));
+  Value *A1 = Builder.CreateLShr(A0, Builder.getInt32(2));
+  Value *A2 = Builder.CreateAnd(A1, Builder.getInt32(1));
   Value *Conv16 = Builder.CreateZExt(A2, IntTy);
   Value *Or17 = Builder.CreateOr(AAddr0, Conv16);
   Value *Inc = Builder.CreateAdd(Or17, Builder.getIntN(BitWidth, 1));
@@ -457,9 +457,9 @@ static void expandIToFP(Instruction *IToFP) {
   Value *Extract = Builder.CreateLShr(Shr21, Builder.getIntN(BitWidth, 32));
   Value *ExtractT62 = nullptr;
   if (FloatWidth > 80)
-    ExtractT62 = Builder.CreateTrunc(Sub1, Builder.getIntNTy(64));
+    ExtractT62 = Builder.CreateTrunc(Sub1, Builder.getInt64Ty());
   else
-    ExtractT62 = Builder.CreateTrunc(Extract, Builder.getIntNTy(32));
+    ExtractT62 = Builder.CreateTrunc(Extract, Builder.getInt32Ty());
   Builder.CreateBr(IfEnd26);
 
   // if.else:
@@ -475,7 +475,7 @@ static void expandIToFP(Instruction *IToFP) {
   Value *Extract65 = Builder.CreateLShr(Shl26, Builder.getIntN(BitWidth, 32));
   Value *ExtractT66 = nullptr;
   if (FloatWidth > 80)
-    ExtractT66 = Builder.CreateTrunc(Sub2, Builder.getIntNTy(64));
+    ExtractT66 = Builder.CreateTrunc(Sub2, Builder.getInt64Ty());
   else
     ExtractT66 = Builder.CreateTrunc(Extract65, Builder.getInt32Ty());
   Builder.CreateBr(IfEnd26);
@@ -507,30 +507,29 @@ static void expandIToFP(Instruction *IToFP) {
                                      Builder.getIntN(BitWidth, 63));
     And29 = Builder.CreateAnd(Shr, Temp2, "and29");
   } else {
-    Value *Conv28 = Builder.CreateTrunc(Shr, Builder.getIntNTy(32));
+    Value *Conv28 = Builder.CreateTrunc(Shr, Builder.getInt32Ty());
     And29 = Builder.CreateAnd(
-        Conv28, ConstantInt::getSigned(Builder.getIntNTy(32), 0x80000000));
+        Conv28, ConstantInt::getSigned(Builder.getInt32Ty(), 0x80000000));
   }
   unsigned TempMod = FPMantissaWidth % 32;
   Value *And34 = nullptr;
   Value *Shl30 = nullptr;
   if (FloatWidth > 80) {
     TempMod += 32;
-    Value *Add = Builder.CreateShl(AAddr1Off32, Builder.getIntN(64, TempMod));
+    Value *Add = Builder.CreateShl(AAddr1Off32, Builder.getInt64(TempMod));
     Shl30 = Builder.CreateAdd(
-        Add,
-        Builder.getIntN(64, ((1ull << (62ull - TempMod)) - 1ull) << TempMod));
-    And34 = Builder.CreateZExt(Shl30, Builder.getIntNTy(128));
+        Add, Builder.getInt64(((1ull << (62ull - TempMod)) - 1ull) << TempMod));
+    And34 = Builder.CreateZExt(Shl30, Builder.getInt128Ty());
   } else {
-    Value *Add = Builder.CreateShl(E0, Builder.getIntN(32, TempMod));
+    Value *Add = Builder.CreateShl(E0, Builder.getInt32(TempMod));
     Shl30 = Builder.CreateAdd(
-        Add, Builder.getIntN(32, ((1 << (30 - TempMod)) - 1) << TempMod));
+        Add, Builder.getInt32(((1 << (30 - TempMod)) - 1) << TempMod));
     And34 = Builder.CreateAnd(FloatWidth > 32 ? AAddr1Off32 : AAddr1Off0,
-                              Builder.getIntN(32, (1 << TempMod) - 1));
+                              Builder.getInt32((1 << TempMod) - 1));
   }
   Value *Or35 = nullptr;
   if (FloatWidth > 80) {
-    Value *And29Trunc = Builder.CreateTrunc(And29, Builder.getIntNTy(128));
+    Value *And29Trunc = Builder.CreateTrunc(And29, Builder.getInt128Ty());
     Value *Or31 = Builder.CreateOr(And29Trunc, And34);
     Value *Or34 = Builder.CreateShl(Or31, Builder.getIntN(128, 64));
     Value *Temp3 = Builder.CreateShl(Builder.getIntN(128, 1),
