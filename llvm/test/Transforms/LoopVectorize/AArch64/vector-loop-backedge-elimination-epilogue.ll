@@ -11,8 +11,7 @@ define void @test_remove_vector_loop_region_epilogue(ptr %dst, i1 %c)  {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TC]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
-; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TC]], 64
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 true, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TC]], 64
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TC]], [[N_MOD_VF]]

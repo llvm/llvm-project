@@ -333,6 +333,17 @@ func.func @test_dynamic_mixed_matmul(%arg0 : tensor<?x3x?xi32>, %arg1 : tensor<?
 
 // -----
 
+// CHECK-LABEL: @test_unranked_zero_points_matmul
+func.func @test_unranked_zero_points_matmul(%arg0: tensor<1x2x3xf32>, %arg1: tensor<1x3x4xf32>, %zero_point: tensor<1xf32>) -> tensor<1x2x4xf32> {
+    // CHECK: %[[ZP:.*]] = tosa.cast %arg2 : (tensor<1xf32>) -> tensor<1xf32>
+    %zero_point_unranked = "tosa.cast"(%zero_point) : (tensor<1xf32>) -> tensor<*xf32>
+    // CHECK: tosa.matmul %arg0, %arg1, %[[ZP]], %[[ZP]] : (tensor<1x2x3xf32>, tensor<1x3x4xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x2x4xf32>
+    %0 = tosa.matmul %arg0, %arg1, %zero_point_unranked, %zero_point_unranked : (tensor<1x2x3xf32>, tensor<1x3x4xf32>, tensor<*xf32>, tensor<*xf32>)  -> tensor<1x2x4xf32>
+    return %0 : tensor<1x2x4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @test_table_static
 func.func @test_table_static(%arg0 : tensor<4x5xi16>, %arg1 : tensor<513xi16>) -> () {
   // CHECK:tosa.table %arg0, %arg1 : (tensor<4x5xi16>, tensor<513xi16>) -> tensor<4x5xi16>
@@ -1021,6 +1032,15 @@ func.func @transpose_conv2d_strided(%arg0: tensor<1x5x7x1xf32>, %arg1: tensor<1x
 
 // -----
 
+// CHECK-LABEL: @transpose_conv2d_dynamic_out_channels
+func.func @transpose_conv2d_dynamic_out_channels(%arg0: tensor<2x1x1x3xf32>, %arg1: tensor<5x3x6x3xf32>, %arg2: tensor<5xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) {
+  // CHECK: -> tensor<2x3x6x5xf32>
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, out_pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} : (tensor<2x1x1x3xf32>, tensor<5x3x6x3xf32>, tensor<5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x3x6x?xf32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @resize_int_horizontal
 func.func @resize_int_horizontal(%arg0: tensor<1x15x13x1xi8>) {
   %scale = tosa.const_shape { values = dense<[11, 7, 89, 6]> : tensor<4xindex> } : () -> !tosa.shape<4>
@@ -1110,6 +1130,18 @@ func.func @resize_fp_power_of_two_upscale_offsetted(%arg0: tensor<1x50x48x1xf32>
   %border = tosa.const_shape { values = dense<[31, 31]> : tensor<2xindex> } : () -> !tosa.shape<2>
   // CHECK: -> tensor<1x1600x1536x1xf32>
   %0 = tosa.resize %arg0, %scale, %offset, %border {mode = "NEAREST_NEIGHBOR"} : (tensor<1x50x48x1xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @resize_negative_output_dim
+func.func @resize_negative_output_dim(%arg0: tensor<1x3x1x1xi8>) {
+  %scale = tosa.const_shape { values = dense<[1, 3, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<[6, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<[-15, 0]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{calculated output height and width must be non-negative, got height = -5, width = 0}}
+  %0 = tosa.resize %arg0, %scale, %offset, %border {mode = "NEAREST_NEIGHBOR"} : (tensor<1x3x1x1xi8>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<*xi8>
   return
 }
 

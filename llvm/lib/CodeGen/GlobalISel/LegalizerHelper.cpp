@@ -118,7 +118,7 @@ LegalizerHelper::LegalizerHelper(MachineFunction &MF, const LegalizerInfo &LI,
 LegalizerHelper::LegalizeResult
 LegalizerHelper::legalizeInstrStep(MachineInstr &MI,
                                    LostDebugLocObserver &LocObserver) {
-  LLVM_DEBUG(dbgs() << "Legalizing: " << MI);
+  LLVM_DEBUG(dbgs() << "\nLegalizing: " << MI);
 
   MIRBuilder.setInstrAndDebugLoc(MI);
 
@@ -469,6 +469,8 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(COSH_F);
   case TargetOpcode::G_FTANH:
     RTLIBCASE(TANH_F);
+  case TargetOpcode::G_FSINCOS:
+    RTLIBCASE(SINCOS_F);
   case TargetOpcode::G_FLOG10:
     RTLIBCASE(LOG10_F);
   case TargetOpcode::G_FLOG:
@@ -648,6 +650,54 @@ simpleLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, unsigned Size,
                        LocObserver, &MI);
 }
 
+LegalizerHelper::LegalizeResult LegalizerHelper::emitSincosLibcall(
+    MachineInstr &MI, MachineIRBuilder &MIRBuilder, unsigned Size, Type *OpType,
+    LostDebugLocObserver &LocObserver) {
+  MachineFunction &MF = *MI.getMF();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  Register DstSin = MI.getOperand(0).getReg();
+  Register DstCos = MI.getOperand(1).getReg();
+  Register Src = MI.getOperand(2).getReg();
+  LLT DstTy = MRI.getType(DstSin);
+
+  int MemSize = DstTy.getSizeInBytes();
+  Align Alignment = getStackTemporaryAlignment(DstTy);
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  unsigned AddrSpace = DL.getAllocaAddrSpace();
+  MachinePointerInfo PtrInfo;
+
+  Register StackPtrSin =
+      createStackTemporary(TypeSize::getFixed(MemSize), Alignment, PtrInfo)
+          .getReg(0);
+  Register StackPtrCos =
+      createStackTemporary(TypeSize::getFixed(MemSize), Alignment, PtrInfo)
+          .getReg(0);
+
+  auto &Ctx = MF.getFunction().getContext();
+  auto LibcallResult =
+      createLibcall(MIRBuilder, getRTLibDesc(MI.getOpcode(), Size),
+                    {{0}, Type::getVoidTy(Ctx), 0},
+                    {{Src, OpType, 0},
+                     {StackPtrSin, PointerType::get(Ctx, AddrSpace), 1},
+                     {StackPtrCos, PointerType::get(Ctx, AddrSpace), 2}},
+                    LocObserver, &MI);
+
+  if (LibcallResult != LegalizeResult::Legalized)
+    return LegalizerHelper::UnableToLegalize;
+
+  MachineMemOperand *LoadMMOSin = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOLoad, MemSize, Alignment);
+  MachineMemOperand *LoadMMOCos = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOLoad, MemSize, Alignment);
+
+  MIRBuilder.buildLoad(DstSin, StackPtrSin, *LoadMMOSin);
+  MIRBuilder.buildLoad(DstCos, StackPtrCos, *LoadMMOCos);
+  MI.eraseFromParent();
+
+  return LegalizerHelper::Legalized;
+}
+
 LegalizerHelper::LegalizeResult
 llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                        MachineInstr &MI, LostDebugLocObserver &LocObserver) {
@@ -672,26 +722,30 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
   auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
   RTLIB::Libcall RTLibcall;
   unsigned Opc = MI.getOpcode();
+  const char *Name;
   switch (Opc) {
   case TargetOpcode::G_BZERO:
     RTLibcall = RTLIB::BZERO;
+    Name = TLI.getLibcallName(RTLibcall);
     break;
   case TargetOpcode::G_MEMCPY:
     RTLibcall = RTLIB::MEMCPY;
+    Name = TLI.getMemcpyName();
     Args[0].Flags[0].setReturned();
     break;
   case TargetOpcode::G_MEMMOVE:
     RTLibcall = RTLIB::MEMMOVE;
+    Name = TLI.getLibcallName(RTLibcall);
     Args[0].Flags[0].setReturned();
     break;
   case TargetOpcode::G_MEMSET:
     RTLibcall = RTLIB::MEMSET;
+    Name = TLI.getLibcallName(RTLibcall);
     Args[0].Flags[0].setReturned();
     break;
   default:
     llvm_unreachable("unsupported opcode");
   }
-  const char *Name = TLI.getLibcallName(RTLibcall);
 
   // Unsupported libcall on the target.
   if (!Name) {
@@ -1270,6 +1324,16 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
     if (Status != Legalized)
       return Status;
     break;
+  }
+  case TargetOpcode::G_FSINCOS: {
+    LLT LLTy = MRI.getType(MI.getOperand(0).getReg());
+    unsigned Size = LLTy.getSizeInBits();
+    Type *HLTy = getFloatTypeForLLT(Ctx, LLTy);
+    if (!HLTy || (Size != 32 && Size != 64 && Size != 80 && Size != 128)) {
+      LLVM_DEBUG(dbgs() << "No libcall available for type " << LLTy << ".\n");
+      return UnableToLegalize;
+    }
+    return emitSincosLibcall(MI, MIRBuilder, Size, HLTy, LocObserver);
   }
   case TargetOpcode::G_LROUND:
   case TargetOpcode::G_LLROUND:
@@ -4071,6 +4135,21 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
     // TODO: Handle vector extloads
     if (MemTy != DstTy)
       return UnableToLegalize;
+
+    Align Alignment = LoadMI.getAlign();
+    // Given an alignment larger than the size of the memory, we can increase
+    // the size of the load without needing to scalarize it.
+    if (Alignment.value() * 8 > MemSizeInBits &&
+        isPowerOf2_64(DstTy.getScalarSizeInBits())) {
+      LLT MoreTy = LLT::fixed_vector(NextPowerOf2(DstTy.getNumElements()),
+                                     DstTy.getElementType());
+      MachineMemOperand *NewMMO = MF.getMachineMemOperand(&MMO, 0, MoreTy);
+      auto NewLoad = MIRBuilder.buildLoad(MoreTy, PtrReg, *NewMMO);
+      MIRBuilder.buildDeleteTrailingVectorElements(LoadMI.getReg(0),
+                                                   NewLoad.getReg(0));
+      LoadMI.eraseFromParent();
+      return Legalized;
+    }
 
     // TODO: We can do better than scalarizing the vector and at least split it
     // in half.
@@ -7616,6 +7695,22 @@ LegalizerHelper::lowerU64ToF64BitFloatOps(MachineInstr &MI) {
   return Legalized;
 }
 
+/// i64->fp16 itofp can be lowered to i64->f64,f64->f32,f32->f16. We cannot
+/// convert fpround f64->f16 without double-rounding, so we manually perform the
+/// lowering here where we know it is valid.
+static LegalizerHelper::LegalizeResult
+loweri64tof16ITOFP(MachineInstr &MI, Register Dst, LLT DstTy, Register Src,
+                   LLT SrcTy, MachineIRBuilder &MIRBuilder) {
+  auto M1 = MI.getOpcode() == TargetOpcode::G_UITOFP
+                ? MIRBuilder.buildUITOFP(SrcTy, Src)
+                : MIRBuilder.buildSITOFP(SrcTy, Src);
+  LLT S32Ty = SrcTy.changeElementSize(32);
+  auto M2 = MIRBuilder.buildFPTrunc(S32Ty, M1);
+  MIRBuilder.buildFPTrunc(Dst, M2);
+  MI.eraseFromParent();
+  return LegalizerHelper::Legalized;
+}
+
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerUITOFP(MachineInstr &MI) {
   auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
 
@@ -7626,6 +7721,9 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerUITOFP(MachineInstr &MI) {
     MI.eraseFromParent();
     return Legalized;
   }
+
+  if (DstTy.getScalarSizeInBits() == 16 && SrcTy.getScalarSizeInBits() == 64)
+    return loweri64tof16ITOFP(MI, Dst, DstTy, Src, SrcTy, MIRBuilder);
 
   if (SrcTy != LLT::scalar(64))
     return UnableToLegalize;
@@ -7657,6 +7755,9 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSITOFP(MachineInstr &MI) {
     MI.eraseFromParent();
     return Legalized;
   }
+
+  if (DstTy.getScalarSizeInBits() == 16 && SrcTy.getScalarSizeInBits() == 64)
+    return loweri64tof16ITOFP(MI, Dst, DstTy, Src, SrcTy, MIRBuilder);
 
   if (SrcTy != S64)
     return UnableToLegalize;
@@ -9092,8 +9193,18 @@ LegalizerHelper::lowerReadWriteRegister(MachineInstr &MI) {
     cast<MDNode>(MI.getOperand(NameOpIdx).getMetadata())->getOperand(0));
 
   Register PhysReg = TLI.getRegisterByName(RegStr->getString().data(), Ty, MF);
-  if (!PhysReg.isValid())
-    return UnableToLegalize;
+  if (!PhysReg) {
+    const Function &Fn = MF.getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoGenericWithLoc(
+        "invalid register \"" + Twine(RegStr->getString().data()) + "\" for " +
+            (IsRead ? "llvm.read_register" : "llvm.write_register"),
+        Fn, MI.getDebugLoc()));
+    if (IsRead)
+      MIRBuilder.buildUndef(ValReg);
+
+    MI.eraseFromParent();
+    return Legalized;
+  }
 
   if (IsRead)
     MIRBuilder.buildCopy(ValReg, PhysReg);
@@ -9161,7 +9272,7 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
   APInt AllOneMantissa = APFloat::getLargest(Semantics).bitcastToAPInt() & ~Inf;
   APInt QNaNBitMask =
       APInt::getOneBitSet(BitSize, AllOneMantissa.getActiveBits() - 1);
-  APInt InvertionMask = APInt::getAllOnes(DstTy.getScalarSizeInBits());
+  APInt InversionMask = APInt::getAllOnes(DstTy.getScalarSizeInBits());
 
   auto SignBitC = MIRBuilder.buildConstant(IntTy, SignBit);
   auto ValueMaskC = MIRBuilder.buildConstant(IntTy, ValueMask);
@@ -9289,7 +9400,7 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
       NormalRes = MIRBuilder.buildAnd(DstTy, NormalRes, Sign);
     else if (PartialCheck == fcPosNormal) {
       auto PosSign = MIRBuilder.buildXor(
-          DstTy, Sign, MIRBuilder.buildConstant(DstTy, InvertionMask));
+          DstTy, Sign, MIRBuilder.buildConstant(DstTy, InversionMask));
       NormalRes = MIRBuilder.buildAnd(DstTy, NormalRes, PosSign);
     }
     appendToRes(NormalRes);
@@ -10009,18 +10120,10 @@ LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
     return Legalized;
   }
 
-  bool IsVolatile = MemOp->isVolatile();
-  if (Opc == TargetOpcode::G_MEMCPY_INLINE)
-    return lowerMemcpyInline(MI, Dst, Src, KnownLen, DstAlign, SrcAlign,
-                             IsVolatile);
-
-  // Don't try to optimize volatile.
-  if (IsVolatile)
-    return UnableToLegalize;
-
   if (MaxLen && KnownLen > MaxLen)
     return UnableToLegalize;
 
+  bool IsVolatile = MemOp->isVolatile();
   if (Opc == TargetOpcode::G_MEMCPY) {
     auto &MF = *MI.getParent()->getParent();
     const auto &TLI = *MF.getSubtarget().getTargetLowering();

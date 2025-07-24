@@ -604,3 +604,15 @@ long long test_mixed_sign_mul_overflow_extend_unsigned(int x, unsigned y) {
     return LongLongErrorCode;
   return result;
 }
+
+_BitInt(65) test_mixed_sign_mul_overflow_bitint(unsigned _BitInt(65) y, _BitInt(119) a) {
+// CHECK: call { i119, i1 } @llvm.umul.with.overflow.i119
+// CHECK: select i1 %{{.*}}, i119 %{{.*}}, i119 %{{.*}}
+// CHECK: trunc i119
+// CHECK: zext i65
+// CHECK: store
+  unsigned _BitInt(65) result;
+  if (__builtin_mul_overflow(a, y, &result))
+    return LongLongErrorCode;
+  return result;
+}

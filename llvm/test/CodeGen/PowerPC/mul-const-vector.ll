@@ -271,8 +271,7 @@ define <2 x i64> @test1_v2i64(<2 x i64> %a) {
         ret <2 x i64> %tmp.1
 }
 ; CHECK-LABEL: test1_v2i64:
-; CHECK-P8: lxvd2x v[[REG1:[0-9]+]], 0, r{{[0-9]+}}
-; CHECK-P9: lxv v[[REG2:[0-9]+]], 0(r{{[0-9]+}})
+; CHECK: vupklsw v[[REG1:[0-9]+]], v{{[0-9]+}}
 ; CHECK-NOT: vmul
 ; CHECK-NEXT: vsld v{{[0-9]+}}, v2, v[[REG2]]
 
@@ -282,8 +281,7 @@ define <2 x i64> @test2_v2i64(<2 x i64> %a) {
 }
 
 ; CHECK-LABEL: test2_v2i64:
-; CHECK-P8: lxvd2x v[[REG1:[0-9]+]], 0, r{{[0-9]+}}
-; CHECK-P9: lxv v[[REG2:[0-9]+]], 0(r{{[0-9]+}})
+; CHECK: vupklsw v[[REG1:[0-9]+]], v{{[0-9]+}}
 ; CHECK-NOT: vmul
 ; CHECK-NEXT: vsld v[[REG3:[0-9]+]], v2, v[[REG2]]
 ; CHECK-NEXT: vaddudm v{{[0-9]+}}, v2, v[[REG3]]
@@ -294,8 +292,7 @@ define <2 x i64> @test3_v2i64(<2 x i64> %a) {
 }
 
 ; CHECK-LABEL: test3_v2i64:
-; CHECK-P8: lxvd2x v[[REG1:[0-9]+]], 0, r{{[0-9]+}}
-; CHECK-P9: lxv v[[REG2:[0-9]+]], 0(r{{[0-9]+}})
+; CHECK: vupklsw v[[REG1:[0-9]+]], v{{[0-9]+}}
 ; CHECK-NOT: vmul
 ; CHECK-NEXT: vsld v[[REG3:[0-9]+]], v2, v[[REG2]]
 ; CHECK-NEXT: vsubudm v{{[0-9]+}}, v[[REG3]], v2
@@ -308,8 +305,7 @@ define <2 x i64> @test4_v2i64(<2 x i64> %a) {
 }
 
 ; CHECK-LABEL: test4_v2i64:
-; CHECK-P8: lxvd2x v[[REG1:[0-9]+]], 0, r{{[0-9]+}}
-; CHECK-P9: lxv v[[REG2:[0-9]+]], 0(r{{[0-9]+}})
+; CHECK: vupklsw v[[REG1:[0-9]+]], v{{[0-9]+}}
 ; CHECK-NOT: vmul
 ; CHECK-NEXT: vsld v[[REG3:[0-9]+]], v2, v[[REG2]]
 ; CHECK-P8-NEXT: xxlxor v[[REG4:[0-9]+]],
@@ -322,8 +318,7 @@ define <2 x i64> @test5_v2i64(<2 x i64> %a) {
 }
 
 ; CHECK-LABEL: test5_v2i64:
-; CHECK-P8: lxvd2x v[[REG1:[0-9]+]], 0, r{{[0-9]+}}
-; CHECK-P9: lxv v[[REG2:[0-9]+]], 0(r{{[0-9]+}})
+; CHECK: vupklsw v[[REG1:[0-9]+]], v{{[0-9]+}}
 ; CHECK-NOT: vmul
 ; CHECK-NEXT: vsld v[[REG3:[0-9]+]], v2, v[[REG2]]
 ; CHECK-NEXT: vaddudm v[[REG4:[0-9]+]], v2, v[[REG3]]
@@ -337,8 +332,7 @@ define <2 x i64> @test6_v2i64(<2 x i64> %a) {
 }
 
 ; CHECK-LABEL: test6_v2i64:
-; CHECK-P8: lxvd2x v[[REG1:[0-9]+]], 0, r{{[0-9]+}}
-; CHECK-P9: lxv v[[REG2:[0-9]+]], 0(r{{[0-9]+}})
+; CHECK: vupklsw v[[REG1:[0-9]+]], v{{[0-9]+}}
 ; CHECK-NOT: vmul
 ; CHECK-NEXT: vsld v[[REG3:[0-9]+]], v2, v[[REG2]]
 ; CHECK-NEXT: vsubudm v{{[0-9]+}}, v2, v[[REG3]]

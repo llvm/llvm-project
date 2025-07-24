@@ -14,7 +14,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include <numeric>
 
@@ -216,7 +215,7 @@ static Value convertScalarToComplexDtype(ImplicitLocOpBuilder &b, Value operand,
       from = b.create<arith::TruncFOp>(toFpTy, from);
     }
     Value zero = b.create<mlir::arith::ConstantFloatOp>(
-        mlir::APFloat(toFpTy.getFloatSemantics(), 0), toFpTy);
+        toFpTy, mlir::APFloat(toFpTy.getFloatSemantics(), 0));
     return b.create<complex::CreateOp>(targetType, from, zero);
   }
 
@@ -229,7 +228,7 @@ static Value convertScalarToComplexDtype(ImplicitLocOpBuilder &b, Value operand,
       from = b.create<arith::SIToFPOp>(toFpTy, from);
     }
     Value zero = b.create<mlir::arith::ConstantFloatOp>(
-        mlir::APFloat(toFpTy.getFloatSemantics(), 0), toFpTy);
+        toFpTy, mlir::APFloat(toFpTy.getFloatSemantics(), 0));
     return b.create<complex::CreateOp>(targetType, from, zero);
   }
 

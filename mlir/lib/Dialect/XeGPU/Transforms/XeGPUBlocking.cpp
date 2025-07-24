@@ -8,13 +8,11 @@
 
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -78,6 +76,29 @@ resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
   }
 }
 
+// This pattern lowers ConvertLayoutOp by removing the inst_data field from the
+// layout attributes. Since both producer and consumer operations handle data
+// partitioning based on their own inst_data, while maintaining original input
+// and output shape, ConvertLayoutOp does not need to manage inst_data.
+struct ConvertLayoutOpPattern
+    : public OpRewritePattern<xegpu::ConvertLayoutOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
+                                PatternRewriter &rewriter) const override {
+    xegpu::LayoutAttr input_layout = op.getInputLayoutAttr();
+    xegpu::LayoutAttr target_layout = op.getTargetLayoutAttr();
+    if (!input_layout.getInstData() || !target_layout.getInstData())
+      return rewriter.notifyMatchFailure(op, "Not a target ConvertLayoutOp.");
+
+    input_layout = input_layout.dropInstData();
+    target_layout = target_layout.dropInstData();
+    auto newOp = rewriter.createOrFold<xegpu::ConvertLayoutOp>(
+        op.getLoc(), op.getType(), op.getSource(), input_layout, target_layout);
+    rewriter.replaceOp(op, newOp);
+    return success();
+  }
+};
+
 //===------------------------------------------------------------------------===//
 // The XeGPUBlockingPass leverages the unroll patterns for XeGPU and Vector ops
 // to partition operations that process large shapes into multiple operations on
@@ -134,11 +155,13 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
 
 std::optional<SmallVector<int64_t>>
 XeGPUBlockingPass::getTileShape(Operation *op) const {
-  if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp>(op))
+  if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp, xegpu::CreateDescOp,
+          xegpu::UpdateOffsetOp>(op))
     return getTileShape(op->getOpResult(0));
-  if (isa<xegpu::PrefetchNdOp, xegpu::LoadNdOp>(op))
+  if (isa<xegpu::PrefetchNdOp, xegpu::LoadNdOp, xegpu::PrefetchOp,
+          xegpu::LoadGatherOp>(op))
     return getTileShape(op->getOpOperand(0));
-  if (isa<xegpu::StoreNdOp>(op))
+  if (isa<xegpu::StoreNdOp, xegpu::StoreScatterOp>(op))
     return getTileShape(op->getOpOperand(1));
 
   if (isa<xegpu::DpasOp>(op)) {
@@ -167,6 +190,12 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
   }
 
   if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1)
+    return getTileShape(op->getOpResult(0));
+
+  if (isa<vector::MultiDimReductionOp>(op))
+    return getTileShape(op->getOpOperand(0));
+
+  if (isa<vector::TransposeOp, vector::BroadcastOp>(op))
     return getTileShape(op->getOpResult(0));
 
   return std::nullopt;
@@ -289,12 +318,34 @@ void XeGPUBlockingPass::runOnOperation() {
     Type elemTy = type.getElementType();
     Type newTy;
 
-    if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(type))
-      newTy = xegpu::TensorDescType::get(
-          ctx, tileShape, elemTy, tdescTy.getEncoding(),
-          tdescTy.getLayoutAttr().dropInstData());
-    else
+    if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(type)) {
+
+      Attribute encoding = tdescTy.getEncoding();
+      // If the encoding is a ScatterTensorDescAttr, we need to
+      // potentially adjust the chunk size based on the inst_data.
+      if (tdescTy.isScattered()) {
+        int64_t chunkSize = tdescTy.getChunkSizeAsInt();
+
+        if (chunkSize > 1) {
+          int64_t blockedChunkSize = chunkSize;
+          auto instData = tdescTy.getLayoutAttr().getInstData();
+          if (!instData.empty())
+            blockedChunkSize = instData.asArrayRef().back();
+
+          // To create a new attribute with a different chunk_size:
+          auto newEncoding = xegpu::ScatterTensorDescAttr::get(
+              ctx, tdescTy.getMemorySpace(), blockedChunkSize);
+
+          encoding = newEncoding;
+        }
+      }
+
+      newTy =
+          xegpu::TensorDescType::get(ctx, tileShape, elemTy, encoding,
+                                     tdescTy.getLayoutAttr().dropInstData());
+    } else {
       newTy = type.clone(tileShape, elemTy);
+    }
 
     std::optional<SmallVector<int64_t>> ratio =
         computeShapeRatio(type.getShape(), tileShape);
@@ -303,6 +354,7 @@ void XeGPUBlockingPass::runOnOperation() {
   });
 
   RewritePatternSet patterns(ctx);
+  patterns.add<ConvertLayoutOpPattern>(ctx);
 
   vector::UnrollVectorOptions vectorOptions;
   vectorOptions.setNativeShapeFn(options.nativeShape);

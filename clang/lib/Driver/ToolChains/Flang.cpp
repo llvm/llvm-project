@@ -8,9 +8,9 @@
 
 #include "Flang.h"
 #include "Arch/RISCV.h"
-#include "CommonArgs.h"
 
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Support/Path.h"
@@ -447,6 +447,7 @@ void Flang::addTargetOptions(const ArgList &Args,
   // Add the target features.
   switch (TC.getArch()) {
   default:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     break;
   case llvm::Triple::aarch64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
@@ -484,9 +485,16 @@ void Flang::addTargetOptions(const ArgList &Args,
           Triple.getArch() != llvm::Triple::x86_64)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Name << Triple.getArchName();
-    } else if (Name == "libmvec" || Name == "AMDLIBM") {
+    } else if (Name == "AMDLIBM") {
       if (Triple.getArch() != llvm::Triple::x86 &&
           Triple.getArch() != llvm::Triple::x86_64)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << Name << Triple.getArchName();
+    } else if (Name == "libmvec") {
+      if (Triple.getArch() != llvm::Triple::x86 &&
+          Triple.getArch() != llvm::Triple::x86_64 &&
+          Triple.getArch() != llvm::Triple::aarch64 &&
+          Triple.getArch() != llvm::Triple::aarch64_be)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Name << Triple.getArchName();
     } else if (Name == "SLEEF" || Name == "ArmPL") {
@@ -605,6 +613,8 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
   bool AssociativeMath = false;
   bool ReciprocalMath = false;
 
+  LangOptions::ComplexRangeKind Range = LangOptions::ComplexRangeKind::CX_None;
+
   if (const Arg *A = Args.getLastArg(options::OPT_ffp_contract)) {
     const StringRef Val = A->getValue();
     if (Val == "fast" || Val == "off") {
@@ -629,6 +639,20 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
     default:
       continue;
 
+    case options::OPT_fcomplex_arithmetic_EQ: {
+      StringRef Val = A->getValue();
+      if (Val == "full")
+        Range = LangOptions::ComplexRangeKind::CX_Full;
+      else if (Val == "improved")
+        Range = LangOptions::ComplexRangeKind::CX_Improved;
+      else if (Val == "basic")
+        Range = LangOptions::ComplexRangeKind::CX_Basic;
+      else {
+        D.Diag(diag::err_drv_unsupported_option_argument)
+            << A->getSpelling() << Val;
+      }
+      break;
+    }
     case options::OPT_fhonor_infinities:
       HonorINFs = true;
       break;
@@ -693,6 +717,17 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
 
     // If we handled this option claim it
     A->claim();
+  }
+
+  StringRef Recip = parseMRecipOption(D.getDiags(), Args);
+  if (!Recip.empty())
+    CmdArgs.push_back(Args.MakeArgString("-mrecip=" + Recip));
+
+  if (Range != LangOptions::ComplexRangeKind::CX_None) {
+    std::string ComplexRangeStr = renderComplexRangeOption(Range);
+    CmdArgs.push_back(Args.MakeArgString(ComplexRangeStr));
+    CmdArgs.push_back(Args.MakeArgString("-fcomplex-arithmetic=" +
+                                         complexRangeKindToStr(Range)));
   }
 
   if (!HonorINFs && !HonorNaNs && AssociativeMath && ReciprocalMath &&
@@ -883,6 +918,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // TODO: Handle interactions between -w, -pedantic, -Wall, -WOption
   Args.AddLastArg(CmdArgs, options::OPT_w);
 
+  // recognise options: fprofile-generate -fprofile-use=
+  Args.addAllArgs(
+      CmdArgs, {options::OPT_fprofile_generate, options::OPT_fprofile_use_EQ});
+
   // Forward flags for OpenMP. We don't do this if the current action is an
   // device offloading action other than OpenMP.
   if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
@@ -898,9 +937,6 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (Args.hasArg(options::OPT_fopenmp_force_usm))
         CmdArgs.push_back("-fopenmp-force-usm");
-      // TODO: OpenMP support isn't "done" yet, so for now we warn that it
-      // is experimental.
-      D.Diag(diag::warn_openmp_experimental);
 
       // FIXME: Clang supports a whole bunch more flags here.
       break;

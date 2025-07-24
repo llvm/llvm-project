@@ -1,5 +1,5 @@
 ; RUN: opt -passes=sroa -S %s -o - \
-; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: | FileCheck %s --implicit-check-not="#dbg_"
 
 ;; Check that sroa removes redundant debug intrinsics after it makes a
 ;; change. This has a significant positive impact on peak memory and compiler

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPC.h"
-#include "ToolChains/CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringSwitch.h"

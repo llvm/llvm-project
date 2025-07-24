@@ -175,6 +175,15 @@ bool ChainedASTReaderListener::ReadLanguageOptions(
                                      AllowCompatibleDifferences);
 }
 
+bool ChainedASTReaderListener::ReadCodeGenOptions(
+    const CodeGenOptions &CGOpts, StringRef ModuleFilename, bool Complain,
+    bool AllowCompatibleDifferences) {
+  return First->ReadCodeGenOptions(CGOpts, ModuleFilename, Complain,
+                                   AllowCompatibleDifferences) ||
+         Second->ReadCodeGenOptions(CGOpts, ModuleFilename, Complain,
+                                    AllowCompatibleDifferences);
+}
+
 bool ChainedASTReaderListener::ReadTargetOptions(
     const TargetOptions &TargetOpts, StringRef ModuleFilename, bool Complain,
     bool AllowCompatibleDifferences) {
@@ -278,51 +287,57 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
                                  StringRef ModuleFilename,
                                  DiagnosticsEngine *Diags,
                                  bool AllowCompatibleDifferences = true) {
-#define LANGOPT(Name, Bits, Default, Description)                              \
-  if (ExistingLangOpts.Name != LangOpts.Name) {                                \
-    if (Diags) {                                                               \
-      if (Bits == 1)                                                           \
-        Diags->Report(diag::err_ast_file_langopt_mismatch)                     \
-            << Description << LangOpts.Name << ExistingLangOpts.Name           \
-            << ModuleFilename;                                                 \
-      else                                                                     \
-        Diags->Report(diag::err_ast_file_langopt_value_mismatch)               \
-            << Description << ModuleFilename;                                  \
+  // FIXME: Replace with C++20 `using enum LangOptions::CompatibilityKind`.
+  using CK = LangOptions::CompatibilityKind;
+
+#define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
+  if constexpr (CK::Compatibility != CK::Benign) {                             \
+    if ((CK::Compatibility == CK::NotCompatible) ||                            \
+        (CK::Compatibility == CK::Compatible &&                                \
+         !AllowCompatibleDifferences)) {                                       \
+      if (ExistingLangOpts.Name != LangOpts.Name) {                            \
+        if (Diags) {                                                           \
+          if (Bits == 1)                                                       \
+            Diags->Report(diag::err_ast_file_langopt_mismatch)                 \
+                << Description << LangOpts.Name << ExistingLangOpts.Name       \
+                << ModuleFilename;                                             \
+          else                                                                 \
+            Diags->Report(diag::err_ast_file_langopt_value_mismatch)           \
+                << Description << ModuleFilename;                              \
+        }                                                                      \
+        return true;                                                           \
+      }                                                                        \
     }                                                                          \
-    return true;                                                               \
   }
 
-#define VALUE_LANGOPT(Name, Bits, Default, Description)                        \
-  if (ExistingLangOpts.Name != LangOpts.Name) {                                \
-    if (Diags)                                                                 \
-      Diags->Report(diag::err_ast_file_langopt_value_mismatch)                 \
-          << Description << ModuleFilename;                                    \
-    return true;                                                               \
+#define VALUE_LANGOPT(Name, Bits, Default, Compatibility, Description)         \
+  if constexpr (CK::Compatibility != CK::Benign) {                             \
+    if ((CK::Compatibility == CK::NotCompatible) ||                            \
+        (CK::Compatibility == CK::Compatible &&                                \
+         !AllowCompatibleDifferences)) {                                       \
+      if (ExistingLangOpts.Name != LangOpts.Name) {                            \
+        if (Diags)                                                             \
+          Diags->Report(diag::err_ast_file_langopt_value_mismatch)             \
+              << Description << ModuleFilename;                                \
+        return true;                                                           \
+      }                                                                        \
+    }                                                                          \
   }
 
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description)                   \
-  if (ExistingLangOpts.get##Name() != LangOpts.get##Name()) {                  \
-    if (Diags)                                                                 \
-      Diags->Report(diag::err_ast_file_langopt_value_mismatch)                 \
-          << Description << ModuleFilename;                                    \
-    return true;                                                               \
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
+  if constexpr (CK::Compatibility != CK::Benign) {                             \
+    if ((CK::Compatibility == CK::NotCompatible) ||                            \
+        (CK::Compatibility == CK::Compatible &&                                \
+         !AllowCompatibleDifferences)) {                                       \
+      if (ExistingLangOpts.get##Name() != LangOpts.get##Name()) {              \
+        if (Diags)                                                             \
+          Diags->Report(diag::err_ast_file_langopt_value_mismatch)             \
+              << Description << ModuleFilename;                                \
+        return true;                                                           \
+      }                                                                        \
+    }                                                                          \
   }
 
-#define COMPATIBLE_LANGOPT(Name, Bits, Default, Description)  \
-  if (!AllowCompatibleDifferences)                            \
-    LANGOPT(Name, Bits, Default, Description)
-
-#define COMPATIBLE_ENUM_LANGOPT(Name, Bits, Default, Description)  \
-  if (!AllowCompatibleDifferences)                                 \
-    ENUM_LANGOPT(Name, Bits, Default, Description)
-
-#define COMPATIBLE_VALUE_LANGOPT(Name, Bits, Default, Description) \
-  if (!AllowCompatibleDifferences)                                 \
-    VALUE_LANGOPT(Name, Bits, Default, Description)
-
-#define BENIGN_LANGOPT(Name, Bits, Default, Description)
-#define BENIGN_ENUM_LANGOPT(Name, Type, Bits, Default, Description)
-#define BENIGN_VALUE_LANGOPT(Name, Bits, Default, Description)
 #include "clang/Basic/LangOptions.def"
 
   if (ExistingLangOpts.ModuleFeatures != LangOpts.ModuleFeatures) {
@@ -373,6 +388,68 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
       return true;
     }
   }
+
+  return false;
+}
+
+static bool checkCodegenOptions(const CodeGenOptions &CGOpts,
+                                const CodeGenOptions &ExistingCGOpts,
+                                StringRef ModuleFilename,
+                                DiagnosticsEngine *Diags,
+                                bool AllowCompatibleDifferences = true) {
+  // FIXME: Specify and print a description for each option instead of the name.
+  // FIXME: Replace with C++20 `using enum CodeGenOptions::CompatibilityKind`.
+  using CK = CodeGenOptions::CompatibilityKind;
+#define CODEGENOPT(Name, Bits, Default, Compatibility)                         \
+  if constexpr (CK::Compatibility != CK::Benign) {                             \
+    if ((CK::Compatibility == CK::NotCompatible) ||                            \
+        (CK::Compatibility == CK::Compatible &&                                \
+         !AllowCompatibleDifferences)) {                                       \
+      if (ExistingCGOpts.Name != CGOpts.Name) {                                \
+        if (Diags) {                                                           \
+          if (Bits == 1)                                                       \
+            Diags->Report(diag::err_ast_file_codegenopt_mismatch)              \
+                << #Name << CGOpts.Name << ExistingCGOpts.Name                 \
+                << ModuleFilename;                                             \
+          else                                                                 \
+            Diags->Report(diag::err_ast_file_codegenopt_value_mismatch)        \
+                << #Name << ModuleFilename;                                    \
+        }                                                                      \
+        return true;                                                           \
+      }                                                                        \
+    }                                                                          \
+  }
+
+#define VALUE_CODEGENOPT(Name, Bits, Default, Compatibility)                   \
+  if constexpr (CK::Compatibility != CK::Benign) {                             \
+    if ((CK::Compatibility == CK::NotCompatible) ||                            \
+        (CK::Compatibility == CK::Compatible &&                                \
+         !AllowCompatibleDifferences)) {                                       \
+      if (ExistingCGOpts.Name != CGOpts.Name) {                                \
+        if (Diags)                                                             \
+          Diags->Report(diag::err_ast_file_codegenopt_value_mismatch)          \
+              << #Name << ModuleFilename;                                      \
+        return true;                                                           \
+      }                                                                        \
+    }                                                                          \
+  }
+#define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)              \
+  if constexpr (CK::Compatibility != CK::Benign) {                             \
+    if ((CK::Compatibility == CK::NotCompatible) ||                            \
+        (CK::Compatibility == CK::Compatible &&                                \
+         !AllowCompatibleDifferences)) {                                       \
+      if (ExistingCGOpts.get##Name() != CGOpts.get##Name()) {                  \
+        if (Diags)                                                             \
+          Diags->Report(diag::err_ast_file_codegenopt_value_mismatch)          \
+              << #Name << ModuleFilename;                                      \
+        return true;                                                           \
+      }                                                                        \
+    }                                                                          \
+  }
+#define DEBUGOPT(Name, Bits, Default, Compatibility)
+#define VALUE_DEBUGOPT(Name, Bits, Default, Compatibility)
+#define ENUM_DEBUGOPT(Name, Type, Bits, Default, Compatibility)
+#include "clang/Basic/CodeGenOptions.def"
 
   return false;
 }
@@ -454,6 +531,15 @@ bool PCHValidator::ReadLanguageOptions(const LangOptions &LangOpts,
   return checkLanguageOptions(LangOpts, ExistingLangOpts, ModuleFilename,
                               Complain ? &Reader.Diags : nullptr,
                               AllowCompatibleDifferences);
+}
+
+bool PCHValidator::ReadCodeGenOptions(const CodeGenOptions &CGOpts,
+                                      StringRef ModuleFilename, bool Complain,
+                                      bool AllowCompatibleDifferences) {
+  const CodeGenOptions &ExistingCGOpts = Reader.getCodeGenOpts();
+  return checkCodegenOptions(ExistingCGOpts, CGOpts, ModuleFilename,
+                             Complain ? &Reader.Diags : nullptr,
+                             AllowCompatibleDifferences);
 }
 
 bool PCHValidator::ReadTargetOptions(const TargetOptions &TargetOpts,
@@ -1914,10 +2000,9 @@ bool ASTReader::ReadSLocEntry(int ID) {
   }
 
   case SM_SLOC_EXPANSION_ENTRY: {
-    LocSeq::State Seq;
-    SourceLocation SpellingLoc = ReadSourceLocation(*F, Record[1], Seq);
-    SourceLocation ExpansionBegin = ReadSourceLocation(*F, Record[2], Seq);
-    SourceLocation ExpansionEnd = ReadSourceLocation(*F, Record[3], Seq);
+    SourceLocation SpellingLoc = ReadSourceLocation(*F, Record[1]);
+    SourceLocation ExpansionBegin = ReadSourceLocation(*F, Record[2]);
+    SourceLocation ExpansionEnd = ReadSourceLocation(*F, Record[3]);
     SourceMgr.createExpansionLoc(SpellingLoc, ExpansionBegin, ExpansionEnd,
                                  Record[5], Record[4], ID,
                                  BaseOffset + Record[0]);
@@ -2984,6 +3069,14 @@ ASTReader::ASTReadResult ASTReader::ReadOptionsBlock(
       bool Complain = (ClientLoadCapabilities & ARR_ConfigurationMismatch) == 0;
       if (ParseLanguageOptions(Record, Filename, Complain, Listener,
                                AllowCompatibleConfigurationMismatch))
+        Result = ConfigurationMismatch;
+      break;
+    }
+
+    case CODEGEN_OPTIONS: {
+      bool Complain = (ClientLoadCapabilities & ARR_ConfigurationMismatch) == 0;
+      if (ParseCodeGenOptions(Record, Filename, Complain, Listener,
+                              AllowCompatibleConfigurationMismatch))
         Result = ConfigurationMismatch;
       break;
     }
@@ -4097,8 +4190,8 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         uint64_t TULocalOffset =
             TULocalLocalOffset ? BaseOffset + TULocalLocalOffset : 0;
 
-        DelayedNamespaceOffsetMap[ID] = {LexicalOffset, VisibleOffset,
-                                         ModuleLocalOffset, TULocalOffset};
+        DelayedNamespaceOffsetMap[ID] = {
+            {VisibleOffset, TULocalOffset, ModuleLocalOffset}, LexicalOffset};
 
         assert(!GetExistingDecl(ID) &&
                "We shouldn't load the namespace in the front of delayed "
@@ -5634,6 +5727,7 @@ namespace {
 
   class SimplePCHValidator : public ASTReaderListener {
     const LangOptions &ExistingLangOpts;
+    const CodeGenOptions &ExistingCGOpts;
     const TargetOptions &ExistingTargetOpts;
     const PreprocessorOptions &ExistingPPOpts;
     std::string ExistingModuleCachePath;
@@ -5642,11 +5736,12 @@ namespace {
 
   public:
     SimplePCHValidator(const LangOptions &ExistingLangOpts,
+                       const CodeGenOptions &ExistingCGOpts,
                        const TargetOptions &ExistingTargetOpts,
                        const PreprocessorOptions &ExistingPPOpts,
                        StringRef ExistingModuleCachePath, FileManager &FileMgr,
                        bool StrictOptionMatches)
-        : ExistingLangOpts(ExistingLangOpts),
+        : ExistingLangOpts(ExistingLangOpts), ExistingCGOpts(ExistingCGOpts),
           ExistingTargetOpts(ExistingTargetOpts),
           ExistingPPOpts(ExistingPPOpts),
           ExistingModuleCachePath(ExistingModuleCachePath), FileMgr(FileMgr),
@@ -5657,6 +5752,13 @@ namespace {
                              bool AllowCompatibleDifferences) override {
       return checkLanguageOptions(ExistingLangOpts, LangOpts, ModuleFilename,
                                   nullptr, AllowCompatibleDifferences);
+    }
+
+    bool ReadCodeGenOptions(const CodeGenOptions &CGOpts,
+                            StringRef ModuleFilename, bool Complain,
+                            bool AllowCompatibleDifferences) override {
+      return checkCodegenOptions(ExistingCGOpts, CGOpts, ModuleFilename,
+                                 nullptr, AllowCompatibleDifferences);
     }
 
     bool ReadTargetOptions(const TargetOptions &TargetOpts,
@@ -6007,9 +6109,10 @@ bool ASTReader::readASTFileControlBlock(
 bool ASTReader::isAcceptableASTFile(
     StringRef Filename, FileManager &FileMgr, const ModuleCache &ModCache,
     const PCHContainerReader &PCHContainerRdr, const LangOptions &LangOpts,
-    const TargetOptions &TargetOpts, const PreprocessorOptions &PPOpts,
-    StringRef ExistingModuleCachePath, bool RequireStrictOptionMatches) {
-  SimplePCHValidator validator(LangOpts, TargetOpts, PPOpts,
+    const CodeGenOptions &CGOpts, const TargetOptions &TargetOpts,
+    const PreprocessorOptions &PPOpts, StringRef ExistingModuleCachePath,
+    bool RequireStrictOptionMatches) {
+  SimplePCHValidator validator(LangOpts, CGOpts, TargetOpts, PPOpts,
                                ExistingModuleCachePath, FileMgr,
                                RequireStrictOptionMatches);
   return !readASTFileControlBlock(Filename, FileMgr, ModCache, PCHContainerRdr,
@@ -6354,9 +6457,9 @@ bool ASTReader::ParseLanguageOptions(const RecordData &Record,
                                      bool AllowCompatibleDifferences) {
   LangOptions LangOpts;
   unsigned Idx = 0;
-#define LANGOPT(Name, Bits, Default, Description) \
+#define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
   LangOpts.Name = Record[Idx++];
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
   LangOpts.set##Name(static_cast<LangOptions::Type>(Record[Idx++]));
 #include "clang/Basic/LangOptions.def"
 #define SANITIZER(NAME, ID)                                                    \
@@ -6388,6 +6491,28 @@ bool ASTReader::ParseLanguageOptions(const RecordData &Record,
 
   return Listener.ReadLanguageOptions(LangOpts, ModuleFilename, Complain,
                                       AllowCompatibleDifferences);
+}
+
+bool ASTReader::ParseCodeGenOptions(const RecordData &Record,
+                                    StringRef ModuleFilename, bool Complain,
+                                    ASTReaderListener &Listener,
+                                    bool AllowCompatibleDifferences) {
+  unsigned Idx = 0;
+  CodeGenOptions CGOpts;
+  using CK = CodeGenOptions::CompatibilityKind;
+#define CODEGENOPT(Name, Bits, Default, Compatibility)                         \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
+    CGOpts.Name = static_cast<unsigned>(Record[Idx++]);
+#define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)              \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
+    CGOpts.set##Name(static_cast<clang::CodeGenOptions::Type>(Record[Idx++]));
+#define DEBUGOPT(Name, Bits, Default, Compatibility)
+#define VALUE_DEBUGOPT(Name, Bits, Default, Compatibility)
+#define ENUM_DEBUGOPT(Name, Type, Bits, Default, Compatibility)
+#include "clang/Basic/CodeGenOptions.def"
+
+  return Listener.ReadCodeGenOptions(CGOpts, ModuleFilename, Complain,
+                                     AllowCompatibleDifferences);
 }
 
 bool ASTReader::ParseTargetOptions(const RecordData &Record,
@@ -7072,13 +7197,10 @@ QualType ASTReader::readTypeRecord(TypeID ID) {
 namespace clang {
 
 class TypeLocReader : public TypeLocVisitor<TypeLocReader> {
-  using LocSeq = SourceLocationSequence;
-
   ASTRecordReader &Reader;
-  LocSeq *Seq;
 
-  SourceLocation readSourceLocation() { return Reader.readSourceLocation(Seq); }
-  SourceRange readSourceRange() { return Reader.readSourceRange(Seq); }
+  SourceLocation readSourceLocation() { return Reader.readSourceLocation(); }
+  SourceRange readSourceRange() { return Reader.readSourceRange(); }
 
   TypeSourceInfo *GetTypeSourceInfo() {
     return Reader.readTypeSourceInfo();
@@ -7093,8 +7215,7 @@ class TypeLocReader : public TypeLocVisitor<TypeLocReader> {
   }
 
 public:
-  TypeLocReader(ASTRecordReader &Reader, LocSeq *Seq)
-      : Reader(Reader), Seq(Seq) {}
+  TypeLocReader(ASTRecordReader &Reader) : Reader(Reader) {}
 
   // We want compile-time assurance that we've enumerated all of
   // these, so unfortunately we have to declare them first, then
@@ -7453,14 +7574,18 @@ void TypeLocReader::VisitPipeTypeLoc(PipeTypeLoc TL) {
 void TypeLocReader::VisitBitIntTypeLoc(clang::BitIntTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
 }
+
 void TypeLocReader::VisitDependentBitIntTypeLoc(
     clang::DependentBitIntTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
 }
 
-void ASTRecordReader::readTypeLoc(TypeLoc TL, LocSeq *ParentSeq) {
-  LocSeq::State Seq(ParentSeq);
-  TypeLocReader TLR(*this, Seq);
+void TypeLocReader::VisitPredefinedSugarTypeLoc(PredefinedSugarTypeLoc TL) {
+  // Nothing to do.
+}
+
+void ASTRecordReader::readTypeLoc(TypeLoc TL) {
+  TypeLocReader TLR(*this);
   for (; !TL.isNull(); TL = TL.getNextTypeLoc())
     TLR.Visit(TL);
 }
@@ -8381,6 +8506,15 @@ bool ASTReader::LoadExternalSpecializationsImpl(
   if (It == SpecLookups.end())
     return false;
 
+  llvm::TimeTraceScope TimeScope("Load External Specializations for ", [&] {
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+    auto *ND = cast<NamedDecl>(D);
+    ND->getNameForDiagnostic(OS, ND->getASTContext().getPrintingPolicy(),
+                             /*Qualified=*/true);
+    return Name;
+  });
+
   Deserializing LookupResults(this);
   auto HashValue = StableHashForTemplateArguments(TemplateArgs);
 
@@ -8544,39 +8678,43 @@ bool ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
   SmallVector<NamedDecl *, 64> Decls;
   llvm::SmallPtrSet<NamedDecl *, 8> Found;
 
+  auto Find = [&, this](auto &&Table, auto &&Key) {
+    for (GlobalDeclID ID : Table.find(Key)) {
+      NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
+      if (ND->getDeclName() == Name && Found.insert(ND).second)
+        Decls.push_back(ND);
+    }
+  };
+
   Deserializing LookupResults(this);
 
   // FIXME: Clear the redundancy with templated lambda in C++20 when that's
   // available.
   if (auto It = Lookups.find(DC); It != Lookups.end()) {
     ++NumVisibleDeclContextsRead;
-    for (GlobalDeclID ID : It->second.Table.find(Name)) {
-      NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
-      if (ND->getDeclName() == Name && Found.insert(ND).second)
-        Decls.push_back(ND);
-    }
+    Find(It->second.Table, Name);
   }
 
-  if (auto *NamedModule =
-          OriginalDC ? cast<Decl>(OriginalDC)->getTopLevelOwningNamedModule()
-                     : nullptr) {
+  auto FindModuleLocalLookup = [&, this](Module *NamedModule) {
     if (auto It = ModuleLocalLookups.find(DC); It != ModuleLocalLookups.end()) {
       ++NumModuleLocalVisibleDeclContexts;
-      for (GlobalDeclID ID : It->second.Table.find({Name, NamedModule})) {
-        NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
-        if (ND->getDeclName() == Name && Found.insert(ND).second)
-          Decls.push_back(ND);
-      }
+      Find(It->second.Table, std::make_pair(Name, NamedModule));
     }
-  }
+  };
+  if (auto *NamedModule =
+          OriginalDC ? cast<Decl>(OriginalDC)->getTopLevelOwningNamedModule()
+                     : nullptr)
+    FindModuleLocalLookup(NamedModule);
+  // See clang/test/Modules/ModulesLocalNamespace.cppm for the motiviation case.
+  // We're going to find a decl but the decl context of the lookup is
+  // unspecified. In this case, the OriginalDC may be the decl context in other
+  // module.
+  if (ContextObj && ContextObj->getCurrentNamedModule())
+    FindModuleLocalLookup(ContextObj->getCurrentNamedModule());
 
   if (auto It = TULocalLookups.find(DC); It != TULocalLookups.end()) {
     ++NumTULocalVisibleDeclContexts;
-    for (GlobalDeclID ID : It->second.Table.find(Name)) {
-      NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
-      if (ND->getDeclName() == Name && Found.insert(ND).second)
-        Decls.push_back(ND);
-    }
+    Find(It->second.Table, Name);
   }
 
   SetExternalVisibleDeclsForName(DC, Name, Decls);
@@ -9456,8 +9594,7 @@ void ASTReader::AssignedLambdaNumbering(CXXRecordDecl *Lambda) {
 
   // Keep track of this lambda so it can be merged with another lambda that
   // is loaded later.
-  LambdaDeclarationsForMerging.insert(
-      {LambdaInfo, const_cast<CXXRecordDecl *>(Lambda)});
+  LambdaDeclarationsForMerging.insert({LambdaInfo, Lambda});
 }
 
 void ASTReader::LoadSelector(Selector Sel) {
@@ -9676,7 +9813,7 @@ ModuleFile *ASTReader::getLocalModuleFile(ModuleFile &M, unsigned ID) const {
     // It's a prefix (preamble, PCH, ...). Look it up by index.
    int IndexFromEnd = static_cast<int>(ID >> 1);
     assert(IndexFromEnd && "got reference to unknown module file");
-    return getModuleManager().pch_modules().end()[-static_cast<int>(IndexFromEnd)];
+    return getModuleManager().pch_modules().end()[-IndexFromEnd];
   }
 }
 
@@ -9975,16 +10112,9 @@ ASTRecordReader::readNestedNameSpecifierLoc() {
     }
 
     case NestedNameSpecifier::Namespace: {
-      NamespaceDecl *NS = readDeclAs<NamespaceDecl>();
+      auto *NS = readDeclAs<NamespaceBaseDecl>();
       SourceRange Range = readSourceRange();
       Builder.Extend(Context, NS, Range.getBegin(), Range.getEnd());
-      break;
-    }
-
-    case NestedNameSpecifier::NamespaceAlias: {
-      NamespaceAliasDecl *Alias = readDeclAs<NamespaceAliasDecl>();
-      SourceRange Range = readSourceRange();
-      Builder.Extend(Context, Alias, Range.getBegin(), Range.getEnd());
       break;
     }
 
@@ -10016,9 +10146,9 @@ ASTRecordReader::readNestedNameSpecifierLoc() {
 }
 
 SourceRange ASTReader::ReadSourceRange(ModuleFile &F, const RecordData &Record,
-                                       unsigned &Idx, LocSeq *Seq) {
-  SourceLocation beg = ReadSourceLocation(F, Record, Idx, Seq);
-  SourceLocation end = ReadSourceLocation(F, Record, Idx, Seq);
+                                       unsigned &Idx) {
+  SourceLocation beg = ReadSourceLocation(F, Record, Idx);
+  SourceLocation end = ReadSourceLocation(F, Record, Idx);
   return SourceRange(beg, end);
 }
 
@@ -10196,8 +10326,7 @@ void ASTReader::ReadComments() {
     for (RawComment *C : Comments) {
       SourceLocation CommentLoc = C->getBeginLoc();
       if (CommentLoc.isValid()) {
-        std::pair<FileID, unsigned> Loc =
-            SourceMgr.getDecomposedLoc(CommentLoc);
+        FileIDAndOffset Loc = SourceMgr.getDecomposedLoc(CommentLoc);
         if (Loc.first.isValid())
           Context.Comments.OrderedComments[Loc.first].emplace(Loc.second, C);
       }
@@ -10974,6 +11103,7 @@ void ASTReader::pushExternalDeclIntoScope(NamedDecl *D, DeclarationName Name) {
 ASTReader::ASTReader(Preprocessor &PP, ModuleCache &ModCache,
                      ASTContext *Context,
                      const PCHContainerReader &PCHContainerRdr,
+                     const CodeGenOptions &CodeGenOpts,
                      ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                      StringRef isysroot,
                      DisableValidationForModuleKind DisableValidationKind,
@@ -10988,6 +11118,7 @@ ASTReader::ASTReader(Preprocessor &PP, ModuleCache &ModCache,
       SourceMgr(PP.getSourceManager()), FileMgr(PP.getFileManager()),
       PCHContainerRdr(PCHContainerRdr), Diags(PP.getDiagnostics()),
       StackHandler(Diags), PP(PP), ContextObj(Context),
+      CodeGenOpts(CodeGenOpts),
       ModuleMgr(PP.getFileManager(), ModCache, PCHContainerRdr,
                 PP.getHeaderSearchInfo()),
       DummyIdResolver(PP), ReadTimer(std::move(ReadTimer)), isysroot(isysroot),
@@ -11461,7 +11592,9 @@ void OMPClauseReader::VisitOMPFinalClause(OMPFinalClause *C) {
 
 void OMPClauseReader::VisitOMPNumThreadsClause(OMPNumThreadsClause *C) {
   VisitOMPClauseWithPreInit(C);
+  C->setModifier(Record.readEnum<OpenMPNumThreadsClauseModifier>());
   C->setNumThreads(Record.readSubExpr());
+  C->setModifierLoc(Record.readSourceLocation());
   C->setLParenLoc(Record.readSourceLocation());
 }
 

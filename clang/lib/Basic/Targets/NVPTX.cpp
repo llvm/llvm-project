@@ -238,6 +238,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::GFX12_GENERIC:
       case OffloadArch::GFX1200:
       case OffloadArch::GFX1201:
+      case OffloadArch::GFX1250:
       case OffloadArch::AMDGCNSPIRV:
       case OffloadArch::Generic:
       case OffloadArch::GRANITERAPIDS:

@@ -25,7 +25,6 @@
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::scf;
@@ -769,7 +768,7 @@ LoopNest mlir::scf::buildLoopNest(
     ValueRange steps,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
   // Delegate to the main function by wrapping the body builder.
-  return buildLoopNest(builder, loc, lbs, ubs, steps, std::nullopt,
+  return buildLoopNest(builder, loc, lbs, ubs, steps, {},
                        [&bodyBuilder](OpBuilder &nestedBuilder,
                                       Location nestedLoc, ValueRange ivs,
                                       ValueRange) -> ValueVector {
@@ -1175,13 +1174,11 @@ LogicalResult ForallOp::verify() {
       return emitOpError("type mismatch between ")
              << i << "-th output and corresponding block argument";
   if (getMapping().has_value() && !getMapping()->empty()) {
-    if (static_cast<int64_t>(getMapping()->size()) != numLoops)
+    if (getDeviceMappingAttrs().size() != numLoops)
       return emitOpError() << "mapping attribute size must match op rank";
-    for (auto map : getMapping()->getValue()) {
-      if (!isa<DeviceMappingAttrInterface>(map))
-        return emitOpError()
-               << getMappingAttrName() << " is not device mapping attribute";
-    }
+    if (failed(getDeviceMaskingAttr()))
+      return emitOpError() << getMappingAttrName()
+                           << " supports at most one device masking attribute";
   }
 
   // Verify mixed static/dynamic control variables.
@@ -1433,6 +1430,39 @@ SmallVector<Operation *> ForallOp::getCombiningOps(BlockArgument bbArg) {
     }
   }
   return storeOps;
+}
+
+SmallVector<DeviceMappingAttrInterface> ForallOp::getDeviceMappingAttrs() {
+  SmallVector<DeviceMappingAttrInterface> res;
+  if (!getMapping())
+    return res;
+  for (auto attr : getMapping()->getValue()) {
+    auto m = dyn_cast<DeviceMappingAttrInterface>(attr);
+    if (m)
+      res.push_back(m);
+  }
+  return res;
+}
+
+FailureOr<DeviceMaskingAttrInterface> ForallOp::getDeviceMaskingAttr() {
+  DeviceMaskingAttrInterface res;
+  if (!getMapping())
+    return res;
+  for (auto attr : getMapping()->getValue()) {
+    auto m = dyn_cast<DeviceMaskingAttrInterface>(attr);
+    if (m && res)
+      return failure();
+    if (m)
+      res = m;
+  }
+  return res;
+}
+
+bool ForallOp::usesLinearMapping() {
+  SmallVector<DeviceMappingAttrInterface> ifaces = getDeviceMappingAttrs();
+  if (ifaces.empty())
+    return false;
+  return ifaces.front().isLinearMapping();
 }
 
 std::optional<SmallVector<Value>> ForallOp::getLoopInductionVars() {
@@ -1896,11 +1926,13 @@ void ForallOp::getCanonicalizationPatterns(RewritePatternSet &results,
 /// not a constant.
 void ForallOp::getSuccessorRegions(RegionBranchPoint point,
                                    SmallVectorImpl<RegionSuccessor> &regions) {
-  // Both the operation itself and the region may be branching into the body or
-  // back into the operation itself. It is possible for loop not to enter the
-  // body.
-  regions.push_back(RegionSuccessor(&getRegion()));
-  regions.push_back(RegionSuccessor());
+  // In accordance with the semantics of forall, its body is executed in
+  // parallel by multiple threads. We should not expect to branch back into
+  // the forall body after the region's execution is complete.
+  if (point.isParent())
+    regions.push_back(RegionSuccessor(&getRegion()));
+  else
+    regions.push_back(RegionSuccessor());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2382,65 +2414,6 @@ struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
   }
 };
 
-/// Allow the true region of an if to assume the condition is true
-/// and vice versa. For example:
-///
-///   scf.if %cmp {
-///      print(%cmp)
-///   }
-///
-///  becomes
-///
-///   scf.if %cmp {
-///      print(true)
-///   }
-///
-struct ConditionPropagation : public OpRewritePattern<IfOp> {
-  using OpRewritePattern<IfOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(IfOp op,
-                                PatternRewriter &rewriter) const override {
-    // Early exit if the condition is constant since replacing a constant
-    // in the body with another constant isn't a simplification.
-    if (matchPattern(op.getCondition(), m_Constant()))
-      return failure();
-
-    bool changed = false;
-    mlir::Type i1Ty = rewriter.getI1Type();
-
-    // These variables serve to prevent creating duplicate constants
-    // and hold constant true or false values.
-    Value constantTrue = nullptr;
-    Value constantFalse = nullptr;
-
-    for (OpOperand &use :
-         llvm::make_early_inc_range(op.getCondition().getUses())) {
-      if (op.getThenRegion().isAncestor(use.getOwner()->getParentRegion())) {
-        changed = true;
-
-        if (!constantTrue)
-          constantTrue = rewriter.create<arith::ConstantOp>(
-              op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 1));
-
-        rewriter.modifyOpInPlace(use.getOwner(),
-                                 [&]() { use.set(constantTrue); });
-      } else if (op.getElseRegion().isAncestor(
-                     use.getOwner()->getParentRegion())) {
-        changed = true;
-
-        if (!constantFalse)
-          constantFalse = rewriter.create<arith::ConstantOp>(
-              op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 0));
-
-        rewriter.modifyOpInPlace(use.getOwner(),
-                                 [&]() { use.set(constantFalse); });
-      }
-    }
-
-    return success(changed);
-  }
-};
-
 /// Remove any statements from an if that are equivalent to the condition
 /// or its negation. For example:
 ///
@@ -2822,9 +2795,8 @@ struct CombineNestedIfs : public OpRewritePattern<IfOp> {
 
 void IfOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                        MLIRContext *context) {
-  results.add<CombineIfs, CombineNestedIfs, ConditionPropagation,
-              ConvertTrivialIfToSelect, RemoveEmptyElseBranch,
-              RemoveStaticCondition, RemoveUnusedResults,
+  results.add<CombineIfs, CombineNestedIfs, ConvertTrivialIfToSelect,
+              RemoveEmptyElseBranch, RemoveStaticCondition, RemoveUnusedResults,
               ReplaceIfYieldWithConditionOrValue>(context);
 }
 
@@ -3194,7 +3166,7 @@ struct MergeNestedParallelLoops : public OpRewritePattern<ParallelOp> {
     auto newSteps = concatValues(op.getStep(), innerOp.getStep());
 
     rewriter.replaceOpWithNewOp<ParallelOp>(op, newLowerBounds, newUpperBounds,
-                                            newSteps, std::nullopt,
+                                            newSteps, ValueRange(),
                                             bodyBuilder);
     return success();
   }

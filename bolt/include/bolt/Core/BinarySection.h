@@ -523,11 +523,6 @@ inline uint8_t *copyByteArray(const uint8_t *Data, uint64_t Size) {
   return Array;
 }
 
-inline uint8_t *copyByteArray(StringRef Buffer) {
-  return copyByteArray(reinterpret_cast<const uint8_t *>(Buffer.data()),
-                       Buffer.size());
-}
-
 inline uint8_t *copyByteArray(ArrayRef<char> Buffer) {
   return copyByteArray(reinterpret_cast<const uint8_t *>(Buffer.data()),
                        Buffer.size());

@@ -29,6 +29,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   BlockPackMatmul.cpp
   PackAndUnpackPatterns.cpp
   Padding.cpp
+  PadTilingInterface.cpp
   Promotion.cpp
   RuntimeOpVerification.cpp
   Specialize.cpp

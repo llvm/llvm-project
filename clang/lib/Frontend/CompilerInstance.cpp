@@ -148,7 +148,7 @@ bool CompilerInstance::createTarget() {
   // Inform the target of the language options.
   // FIXME: We shouldn't need to do this, the target should be immutable once
   // created. This complexity should be lifted elsewhere.
-  getTarget().adjust(getDiagnostics(), getLangOpts());
+  getTarget().adjust(getDiagnostics(), getLangOpts(), getAuxTarget());
 
   if (auto *Aux = getAuxTarget())
     getTarget().setAuxTarget(Aux);
@@ -454,7 +454,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
                                       getSourceManager(), *HeaderInfo, *this,
                                       /*IdentifierInfoLookup=*/nullptr,
                                       /*OwnsHeaderSearch=*/true, TUKind);
-  getTarget().adjust(getDiagnostics(), getLangOpts());
+  getTarget().adjust(getDiagnostics(), getLangOpts(), getAuxTarget());
   PP->Initialize(getTarget(), getAuxTarget());
 
   if (PPOpts.DetailedRecord)
@@ -614,7 +614,7 @@ void CompilerInstance::createPCHExternalASTSource(
   TheASTReader = createPCHExternalASTSource(
       Path, getHeaderSearchOpts().Sysroot, DisableValidation,
       AllowPCHWithCompilerErrors, getPreprocessor(), getModuleCache(),
-      getASTContext(), getPCHContainerReader(),
+      getASTContext(), getPCHContainerReader(), getCodeGenOpts(),
       getFrontendOpts().ModuleFileExtensions, DependencyCollectors,
       DeserializationListener, OwnDeserializationListener, Preamble,
       getFrontendOpts().UseGlobalModuleIndex);
@@ -625,6 +625,7 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
     DisableValidationForModuleKind DisableValidation,
     bool AllowPCHWithCompilerErrors, Preprocessor &PP, ModuleCache &ModCache,
     ASTContext &Context, const PCHContainerReader &PCHContainerRdr,
+    const CodeGenOptions &CodeGenOpts,
     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
     ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
     void *DeserializationListener, bool OwnDeserializationListener,
@@ -633,7 +634,7 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
       PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
   IntrusiveRefCntPtr<ASTReader> Reader(new ASTReader(
-      PP, ModCache, &Context, PCHContainerRdr, Extensions,
+      PP, ModCache, &Context, PCHContainerRdr, CodeGenOpts, Extensions,
       Sysroot.empty() ? "" : Sysroot.data(), DisableValidation,
       AllowPCHWithCompilerErrors, /*AllowConfigurationMismatch*/ false,
       HSOpts.ModulesValidateSystemHeaders,
@@ -1191,7 +1192,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   FrontendOpts.OriginalModuleMap = std::string(OriginalModuleMapFile);
   // Force implicitly-built modules to hash the content of the module file.
   HSOpts.ModulesHashContent = true;
-  FrontendOpts.Inputs = {Input};
+  FrontendOpts.Inputs = {std::move(Input)};
 
   // Don't free the remapped file buffers; they are owned by our caller.
   PPOpts.RetainRemappedFileBuffers = true;
@@ -1746,7 +1747,8 @@ void CompilerInstance::createASTReader() {
                                               "Reading modules", *timerGroup);
   TheASTReader = new ASTReader(
       getPreprocessor(), getModuleCache(), &getASTContext(),
-      getPCHContainerReader(), getFrontendOpts().ModuleFileExtensions,
+      getPCHContainerReader(), getCodeGenOpts(),
+      getFrontendOpts().ModuleFileExtensions,
       Sysroot.empty() ? "" : Sysroot.c_str(),
       PPOpts.DisablePCHOrModuleValidation,
       /*AllowASTWithCompilerErrors=*/FEOpts.AllowPCMWithCompilerErrors,

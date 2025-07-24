@@ -1497,6 +1497,14 @@ public:
     MMO->refineAlignment(NewMMO);
   }
 
+  void refineRanges(const MachineMemOperand *NewMMO) {
+    // If this node has range metadata that is different than NewMMO, clear the
+    // range metadata.
+    // FIXME: Union the ranges instead?
+    if (getRanges() && getRanges() != NewMMO->getRanges())
+      MMO->clearRanges();
+  }
+
   const SDValue &getChain() const { return getOperand(0); }
 
   const SDValue &getBasePtr() const {
@@ -1700,9 +1708,9 @@ public:
 
   static int getSplatMaskIndex(ArrayRef<int> Mask) {
     assert(isSplatMask(Mask) && "Cannot get splat index for non-splat!");
-    for (unsigned i = 0, e = Mask.size(); i != e; ++i)
-      if (Mask[i] >= 0)
-        return Mask[i];
+    for (int Elem : Mask)
+      if (Elem >= 0)
+        return Elem;
 
     // We can choose any index value here and be correct because all elements
     // are undefined. Return 0 for better potential for callers to simplify.
@@ -1929,6 +1937,16 @@ LLVM_ABI bool isOneOrOneSplat(SDValue V, bool AllowUndefs = false);
 /// Does not permit build vector implicit truncation.
 LLVM_ABI bool isAllOnesOrAllOnesSplat(SDValue V, bool AllowUndefs = false);
 
+/// Return true if the value is a constant 1 integer or a splatted vector of a
+/// constant 1 integer (with no undefs).
+/// Does not permit build vector implicit truncation.
+LLVM_ABI bool isOnesOrOnesSplat(SDValue N, bool AllowUndefs = false);
+
+/// Return true if the value is a constant 0 integer or a splatted vector of a
+/// constant 0 integer (with no undefs).
+/// Does not permit build vector implicit truncation.
+LLVM_ABI bool isZeroOrZeroSplat(SDValue N, bool AllowUndefs = false);
+
 /// Return true if \p V is either a integer or FP constant.
 inline bool isIntOrFPConstant(SDValue V) {
   return isa<ConstantSDNode>(V) || isa<ConstantFPSDNode>(V);
@@ -1986,25 +2004,17 @@ public:
 class LifetimeSDNode : public SDNode {
   friend class SelectionDAG;
   int64_t Size;
-  int64_t Offset; // -1 if offset is unknown.
 
   LifetimeSDNode(unsigned Opcode, unsigned Order, const DebugLoc &dl,
-                 SDVTList VTs, int64_t Size, int64_t Offset)
-      : SDNode(Opcode, Order, dl, VTs), Size(Size), Offset(Offset) {}
+                 SDVTList VTs, int64_t Size)
+      : SDNode(Opcode, Order, dl, VTs), Size(Size) {}
+
 public:
   int64_t getFrameIndex() const {
     return cast<FrameIndexSDNode>(getOperand(1))->getIndex();
   }
 
-  bool hasOffset() const { return Offset >= 0; }
-  int64_t getOffset() const {
-    assert(hasOffset() && "offset is unknown");
-    return Offset;
-  }
-  int64_t getSize() const {
-    assert(hasOffset() && "offset is unknown");
-    return Size;
-  }
+  int64_t getSize() const { return Size; }
 
   // Methods to support isa and dyn_cast
   static bool classof(const SDNode *N) {

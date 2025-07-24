@@ -11,14 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Tools/lsp-server-support/Protocol.h"
-#include "mlir/Tools/lsp-server-support/Logging.h"
-#include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -288,6 +283,11 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
     if (auto *codeAction = textDocument->getObject("codeAction")) {
       if (codeAction->getObject("codeActionLiteralSupport"))
         result.codeActionStructure = true;
+    }
+    if (auto *window = textDocument->getObject("window")) {
+      if (std::optional<bool> workDoneProgressSupport =
+              window->getBoolean("workDoneProgress"))
+        result.workDoneProgress = *workDoneProgressSupport;
     }
   }
   return true;

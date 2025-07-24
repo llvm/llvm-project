@@ -316,7 +316,6 @@ findReturnTypeAndCVSourceRange(const FunctionDecl &F, const TypeLoc &ReturnLoc,
     return {};
   }
 
-
   // If the return type has no local qualifiers, it's source range is accurate.
   if (!hasAnyNestedLocalQualifiers(F.getReturnType()))
     return ReturnTypeRange;

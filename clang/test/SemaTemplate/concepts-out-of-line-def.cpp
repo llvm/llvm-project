@@ -853,3 +853,43 @@ template <int... Ts>
 requires C<Ts...[0]>
 auto TplClass<int>::buggy() -> void {}
 }
+
+namespace GH139476 {
+
+namespace moo {
+  template <typename T>
+  constexpr bool baa = true;
+
+  template <typename T> requires baa<T>
+  void caw();
+}
+
+template <typename T> requires moo::baa<T>
+void moo::caw() {}
+
+}
+
+namespace GH145521 {
+
+template <typename X>
+concept is_valid = true;
+
+template<typename T>
+class Nesting
+{
+public:
+    template<typename Q> requires is_valid<Q>
+    class Inner;
+
+    template<typename Q> requires is_valid<Q>
+    friend class Inner2;
+};
+
+template<typename T>
+template<typename Q> requires is_valid<Q>
+class Nesting<T>::Inner {};
+
+template<typename Q> requires is_valid<Q>
+class Inner2 {};
+
+}

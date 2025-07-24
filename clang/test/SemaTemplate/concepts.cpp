@@ -814,11 +814,7 @@ static_assert(invalid<int> also here ; // expected-error{{use of undeclared iden
 
 int foo() {
     bool b;
-    b = invalid<int> not just in declarations; // expected-error{{expected ';' after expression}}
-                                               // expected-error@-1{{use of undeclared identifier 'invalid'}}
-                                               // expected-error@-2{{expected ';' after expression}}
-                                               // expected-error@-3{{use of undeclared identifier 'just'}}
-                                               // expected-error@-4{{unknown type name 'in'}}
+    b = invalid<int> not just in declarations; // expected-error{{use of undeclared identifier 'invalid'}}
     return b;
 }
 } // namespace GH48182
@@ -1253,4 +1249,12 @@ static_assert( D<Publ>::has, "Public should be visible.");
 static_assert(!D<Priv>::has, "Private should be invisible.");
 static_assert(!D<Prot>::has, "Protected should be invisible.");
 
+}
+
+
+namespace GH149986 {
+template <typename T> concept PerfectSquare = [](){} // expected-note 2{{here}}
+([](auto) { return true; }) < PerfectSquare <class T>;
+// expected-error@-1 {{declaration of 'T' shadows template parameter}} \
+// expected-error@-1 {{a concept definition cannot refer to itself}}
 }

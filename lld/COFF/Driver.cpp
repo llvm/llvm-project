@@ -274,8 +274,13 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
       make<std::unique_ptr<Archive>>(std::move(file)); // take ownership
 
       int memberIndex = 0;
-      for (MemoryBufferRef m : getArchiveMembers(ctx, archive))
-        addArchiveBuffer(m, "<whole-archive>", filename, memberIndex++);
+      for (MemoryBufferRef m : getArchiveMembers(ctx, archive)) {
+        if (!archive->isThin())
+          addArchiveBuffer(m, "<whole-archive>", filename, memberIndex++);
+        else
+          addThinArchiveBuffer(m, "<whole-archive>");
+      }
+
       return;
     }
     addFile(make<ArchiveFile>(ctx, mbref));
@@ -386,6 +391,14 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
   Log(ctx) << "Loaded " << obj << " for " << symName;
 }
 
+void LinkerDriver::addThinArchiveBuffer(MemoryBufferRef mb, StringRef symName) {
+  // Pass an empty string as the archive name and an offset of 0 so that
+  // the original filename is used as the buffer identifier. This is
+  // useful for DTLTO, where having the member identifier be the actual
+  // path on disk enables distribution of bitcode files during ThinLTO.
+  addArchiveBuffer(mb, symName, /*parentName=*/"", /*OffsetInArchive=*/0);
+}
+
 void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
                                         const Archive::Symbol &sym,
                                         StringRef parentName) {
@@ -422,11 +435,8 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
       reportBufferError(errorCodeToError(mbOrErr.second), childName);
     llvm::TimeTraceScope timeScope("Archive: ",
                                    mbOrErr.first->getBufferIdentifier());
-    // Pass empty string as archive name so that the original filename is
-    // used as the buffer identifier.
-    ctx.driver.addArchiveBuffer(takeBuffer(std::move(mbOrErr.first)),
-                                toCOFFString(ctx, sym), "",
-                                /*OffsetInArchive=*/0);
+    ctx.driver.addThinArchiveBuffer(takeBuffer(std::move(mbOrErr.first)),
+                                    toCOFFString(ctx, sym));
   });
 }
 
@@ -706,11 +716,12 @@ void LinkerDriver::detectWinSysRoot(const opt::InputArgList &Args) {
     if (A->getOption().getID() == OPT_winsysroot)
       path::append(diaPath, "DIA SDK");
   }
-  useWinSysRootLibPath = Args.hasArg(OPT_lldignoreenv) ||
-                         !Process::GetEnv("LIB") ||
-                         Args.getLastArg(OPT_vctoolsdir, OPT_winsysroot);
-  if (Args.hasArg(OPT_lldignoreenv) || !Process::GetEnv("LIB") ||
-      Args.getLastArg(OPT_winsdkdir, OPT_winsysroot)) {
+  useWinSysRootLibPath = !Process::GetEnv("LIB") ||
+                         Args.hasArg(OPT_lldignoreenv, OPT_vctoolsdir,
+                                     OPT_vctoolsversion, OPT_winsysroot);
+  if (!Process::GetEnv("LIB") ||
+      Args.hasArg(OPT_lldignoreenv, OPT_winsdkdir, OPT_winsdkversion,
+                  OPT_winsysroot)) {
     std::optional<StringRef> WinSdkDir, WinSdkVersion;
     if (auto *A = Args.getLastArg(OPT_winsdkdir))
       WinSdkDir = A->getValue();
@@ -1620,7 +1631,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       // installations when operating in mingw mode. (This also makes LLD ignore
       // winsysroot and vctoolsdir arguments.)
       detectWinSysRoot(args);
-      if (!args.hasArg(OPT_lldignoreenv) && !args.hasArg(OPT_winsysroot))
+      if (!args.hasArg(OPT_lldignoreenv, OPT_winsysroot, OPT_vctoolsdir,
+                       OPT_vctoolsversion, OPT_winsdkdir, OPT_winsdkversion))
         addLibSearchPaths();
     } else {
       if (args.hasArg(OPT_vctoolsdir, OPT_winsysroot))
@@ -1641,6 +1653,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         config->warnLocallyDefinedImported = false;
       else if (s == "longsections")
         config->warnLongSectionNames = false;
+      else if (s == "importeddllmain")
+        config->warnImportedDllMain = false;
       // Other warning numbers are ignored.
     }
   }
@@ -2083,6 +2097,23 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       config->manifest != Configuration::Embed) {
     Fatal(ctx) << "/manifestinput: requires /manifest:embed";
   }
+
+  // Handle /thinlto-distributor:<path>
+  config->dtltoDistributor = args.getLastArgValue(OPT_thinlto_distributor);
+
+  // Handle /thinlto-distributor-arg:<arg>
+  for (auto *arg : args.filtered(OPT_thinlto_distributor_arg))
+    config->dtltoDistributorArgs.push_back(arg->getValue());
+
+  // Handle /thinlto-remote-compiler:<path>
+  config->dtltoCompiler = args.getLastArgValue(OPT_thinlto_compiler);
+  if (!config->dtltoDistributor.empty() && config->dtltoCompiler.empty())
+    Err(ctx) << "A value must be specified for /thinlto-remote-compiler if "
+                "/thinlto-distributor is specified.";
+
+  // Handle /thinlto-remote-compiler-arg:<arg>
+  for (auto *arg : args.filtered(OPT_thinlto_compiler_arg))
+    config->dtltoCompilerArgs.push_back(arg->getValue());
 
   // Handle /dwodir
   config->dwoDir = args.getLastArgValue(OPT_dwodir);
