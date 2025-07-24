@@ -27,7 +27,7 @@ body:             |
   ; CHECK-NEXT:   SI_SPILL_AV128_SAVE $vgpr6_vgpr7_vgpr8_vgpr9, %stack.3, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.3, align 4, addrspace 5)
   ; CHECK-NEXT:   renamable $vgpr6 = V_FMA_F32_e64 0, killed $vgpr8, 0, $vgpr8, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   renamable $vgpr7 = IMPLICIT_DEF
-  ; CHECK-NEXT:   SI_SPILL_V128_SAVE killed $vgpr4_vgpr5_vgpr6_vgpr7, %stack.2, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.2, align 4, addrspace 5)
+  ; CHECK-NEXT:   SI_SPILL_AV128_SAVE killed $vgpr4_vgpr5_vgpr6_vgpr7, %stack.2, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.2, align 4, addrspace 5)
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:

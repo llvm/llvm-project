@@ -186,6 +186,9 @@ struct AMDGPURankSpecializationPass
   PreservedAnalyses run(Module &F, ModuleAnalysisManager &AM);
 };
 
+void initializeAMDGPUPrepareAGPRAllocLegacyPass(PassRegistry &);
+extern char &AMDGPUPrepareAGPRAllocLegacyID;
+
 void initializeAMDGPUReserveWWMRegsLegacyPass(PassRegistry &);
 extern char &AMDGPUReserveWWMRegsLegacyID;
 
