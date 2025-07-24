@@ -1123,6 +1123,9 @@ extern template semantics::UnorderedSymbolSet CollectCudaSymbols(
 // Predicate: does a variable contain a vector-valued subscript (not a triplet)?
 bool HasVectorSubscript(const Expr<SomeType> &);
 
+// Predicate: does a variable contain a triplet?
+bool HasTriplet(const Expr<SomeType> &);
+
 // Predicate: does an expression contain constant?
 bool HasConstant(const Expr<SomeType> &);
 
