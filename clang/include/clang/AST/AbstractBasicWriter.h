@@ -181,7 +181,7 @@ public:
         const Decl *baseOrMember = elem.getAsBaseOrMember().getPointer();
         if (const auto *recordDecl = dyn_cast<CXXRecordDecl>(baseOrMember)) {
           asImpl().writeDeclRef(recordDecl);
-          elemTy = ctx.getRecordType(recordDecl);
+          elemTy = ctx.getCanonicalTagType(recordDecl);
         } else {
           const auto *valueDecl = cast<ValueDecl>(baseOrMember);
           asImpl().writeDeclRef(valueDecl);

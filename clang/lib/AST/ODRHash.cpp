@@ -907,52 +907,33 @@ public:
     ID.AddInteger(Quals.getAsOpaqueValue());
   }
 
-  // Return the RecordType if the typedef only strips away a keyword.
-  // Otherwise, return the original type.
-  static const Type *RemoveTypedef(const Type *T) {
+  // Handle typedefs which only strip away a keyword.
+  bool handleTypedef(const Type *T) {
     const auto *TypedefT = dyn_cast<TypedefType>(T);
-    if (!TypedefT) {
-      return T;
-    }
+    if (!TypedefT)
+      return false;
 
-    const TypedefNameDecl *D = TypedefT->getDecl();
-    QualType UnderlyingType = D->getUnderlyingType();
+    QualType UnderlyingType = TypedefT->desugar();
 
-    if (UnderlyingType.hasLocalQualifiers()) {
-      return T;
-    }
+    if (UnderlyingType.hasLocalQualifiers())
+      return false;
 
-    const auto *ElaboratedT = dyn_cast<ElaboratedType>(UnderlyingType);
-    if (!ElaboratedT) {
-      return T;
-    }
+    const auto *TagT = dyn_cast<TagType>(UnderlyingType);
+    if (!TagT || TagT->getQualifier())
+      return false;
 
-    if (ElaboratedT->getQualifier() != nullptr) {
-      return T;
-    }
+    if (TypedefT->getDecl()->getIdentifier() !=
+        TagT->getOriginalDecl()->getIdentifier())
+      return false;
 
-    QualType NamedType = ElaboratedT->getNamedType();
-    if (NamedType.hasLocalQualifiers()) {
-      return T;
-    }
-
-    const auto *RecordT = dyn_cast<RecordType>(NamedType);
-    if (!RecordT) {
-      return T;
-    }
-
-    const IdentifierInfo *TypedefII = TypedefT->getDecl()->getIdentifier();
-    const IdentifierInfo *RecordII = RecordT->getDecl()->getIdentifier();
-    if (!TypedefII || !RecordII ||
-        TypedefII->getName() != RecordII->getName()) {
-      return T;
-    }
-
-    return RecordT;
+    ID.AddInteger(TagT->getTypeClass());
+    VisitTagType(TagT, /*ElaboratedOverride=*/TypedefT);
+    return true;
   }
 
   void Visit(const Type *T) {
-    T = RemoveTypedef(T);
+    if (handleTypedef(T))
+      return;
     ID.AddInteger(T->getTypeClass());
     Inherited::Visit(T);
   }
@@ -1186,13 +1167,16 @@ public:
     VisitType(T);
   }
 
-  void VisitTagType(const TagType *T) {
-    AddDecl(T->getDecl());
+  void VisitTagType(const TagType *T,
+                    const TypedefType *ElaboratedOverride = nullptr) {
+    ID.AddInteger(llvm::to_underlying(
+        ElaboratedOverride ? ElaboratedTypeKeyword::None : T->getKeyword()));
+    AddNestedNameSpecifier(ElaboratedOverride
+                               ? ElaboratedOverride->getQualifier()
+                               : T->getQualifier());
+    AddDecl(T->getOriginalDecl()->getDefinitionOrSelf());
     VisitType(T);
   }
-
-  void VisitRecordType(const RecordType *T) { VisitTagType(T); }
-  void VisitEnumType(const EnumType *T) { VisitTagType(T); }
 
   void VisitTemplateSpecializationType(const TemplateSpecializationType *T) {
     ID.AddInteger(T->template_arguments().size());
@@ -1211,6 +1195,8 @@ public:
   }
 
   void VisitTypedefType(const TypedefType *T) {
+    ID.AddInteger(llvm::to_underlying(T->getKeyword()));
+    AddNestedNameSpecifier(T->getQualifier());
     AddDecl(T->getDecl());
     VisitType(T);
   }
@@ -1244,12 +1230,6 @@ public:
     for (const auto &TA : T->template_arguments()) {
       Hash.AddTemplateArgument(TA);
     }
-    VisitTypeWithKeyword(T);
-  }
-
-  void VisitElaboratedType(const ElaboratedType *T) {
-    AddNestedNameSpecifier(T->getQualifier());
-    AddQualType(T->getNamedType());
     VisitTypeWithKeyword(T);
   }
 
@@ -1330,7 +1310,7 @@ void ODRHash::AddStructuralValue(const APValue &Value) {
             TypeSoFar = FD->getType();
           } else {
             TypeSoFar =
-                D->getASTContext().getRecordType(cast<CXXRecordDecl>(D));
+                D->getASTContext().getCanonicalTagType(cast<CXXRecordDecl>(D));
           }
         }
       }

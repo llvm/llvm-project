@@ -714,14 +714,15 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
         for (unsigned I = 0; I < NB; ++I) {
           const Record::Base *BD = Record->getBase(I);
-          QualType BaseTy = Ctx.getASTContext().getRecordType(BD->Decl);
+          QualType BaseTy = Ctx.getASTContext().getCanonicalTagType(BD->Decl);
           const Pointer &BP = Ptr.atField(BD->Offset);
           Ok &= Composite(BaseTy, BP, R.getStructBase(I));
         }
 
         for (unsigned I = 0; I < NV; ++I) {
           const Record::Base *VD = Record->getVirtualBase(I);
-          QualType VirtBaseTy = Ctx.getASTContext().getRecordType(VD->Decl);
+          QualType VirtBaseTy =
+              Ctx.getASTContext().getCanonicalTagType(VD->Decl);
           const Pointer &VP = Ptr.atField(VD->Offset);
           Ok &= Composite(VirtBaseTy, VP, R.getStructBase(NB + I));
         }

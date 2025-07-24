@@ -181,14 +181,14 @@ public:
   ///
   /// \returns false if the visitation was terminated early, true
   /// otherwise (including when the argument is a Null type).
-  virtual bool TraverseType(QualType T);
+  virtual bool TraverseType(QualType T, bool TraverseQualifier = true);
 
   /// Recursively visit a type with location, by dispatching to
   /// Traverse*TypeLoc() based on the argument type's getTypeClass() property.
   ///
   /// \returns false if the visitation was terminated early, true
   /// otherwise (including when the argument is a Null type location).
-  virtual bool TraverseTypeLoc(TypeLoc TL);
+  virtual bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true);
 
   /// Recursively visit an Objective-C protocol reference with location
   /// information.
@@ -273,7 +273,8 @@ public:
 #define ABSTRACT_TYPE(CLASS, BASE)
 #define TYPE(CLASS, BASE)                                                      \
   bool WalkUpFrom##CLASS##Type(MaybeConst<CLASS##Type> *T);                    \
-  virtual bool Traverse##CLASS##Type(MaybeConst<CLASS##Type> *T);
+  virtual bool Traverse##CLASS##Type(MaybeConst<CLASS##Type> *T,               \
+                                     bool TraverseQualifier = true);
 #include "clang/AST/TypeNodes.inc"
 
 #define TYPE(CLASS, BASE)                                                      \
@@ -283,7 +284,8 @@ public:
   // TypeLocs.
 #define ABSTRACT_TYPELOC(CLASS, BASE)
 #define TYPELOC(CLASS, BASE)                                                   \
-  virtual bool Traverse##CLASS##TypeLoc(CLASS##TypeLoc TL);
+  virtual bool Traverse##CLASS##TypeLoc(CLASS##TypeLoc TL,                     \
+                                        bool TraverseQualifier);
 #include "clang/AST/TypeLocNodes.def"
 
 #define TYPELOC(CLASS, BASE)                                                   \

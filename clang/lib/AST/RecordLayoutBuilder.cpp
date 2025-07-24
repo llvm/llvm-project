@@ -2128,7 +2128,8 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
           // TODO: Takes no account the alignment of the outer struct
           if (FieldOffset % OriginalFieldAlign != 0)
             Diag(D->getLocation(), diag::warn_unaligned_access)
-                << Context.getTypeDeclType(RD) << D->getName() << D->getType();
+                << Context.getCanonicalTagType(RD) << D->getName()
+                << D->getType();
         }
   }
 
@@ -2193,8 +2194,7 @@ void ItaniumRecordLayoutBuilder::FinishLayout(const NamedDecl *D) {
         InBits = false;
       }
       Diag(RD->getLocation(), diag::warn_padded_struct_size)
-          << Context.getTypeDeclType(RD)
-          << PadSize
+          << Context.getCanonicalTagType(RD) << PadSize
           << (InBits ? 1 : 0); // (byte|bit)
     }
 
@@ -2212,7 +2212,7 @@ void ItaniumRecordLayoutBuilder::FinishLayout(const NamedDecl *D) {
          Context.getLangOpts().getClangABICompat() <=
              LangOptions::ClangABI::Ver15))
       Diag(D->getLocation(), diag::warn_unnecessary_packed)
-          << Context.getTypeDeclType(RD);
+          << Context.getCanonicalTagType(RD);
   }
 }
 
@@ -2306,7 +2306,7 @@ static void CheckFieldPadding(const ASTContext &Context, bool IsUnion,
       Context.getDiagnostics().Report(D->getLocation(),
                                       Diagnostic)
           << getPaddingDiagFromTagKind(D->getParent()->getTagKind())
-          << Context.getTypeDeclType(D->getParent()) << PadSize
+          << Context.getCanonicalTagType(D->getParent()) << PadSize
           << (InBits ? 1 : 0) // (byte|bit)
           << D->getIdentifier();
     } else {
@@ -2315,7 +2315,7 @@ static void CheckFieldPadding(const ASTContext &Context, bool IsUnion,
       Context.getDiagnostics().Report(D->getLocation(),
                                       Diagnostic)
           << getPaddingDiagFromTagKind(D->getParent()->getTagKind())
-          << Context.getTypeDeclType(D->getParent()) << PadSize
+          << Context.getCanonicalTagType(D->getParent()) << PadSize
           << (InBits ? 1 : 0); // (byte|bit)
     }
   }
@@ -3273,7 +3273,7 @@ void MicrosoftRecordLayoutBuilder::finalizeLayout(const RecordDecl *RD) {
 
     Context.getDiagnostics().Report(RD->getLocation(),
                                     diag::warn_padded_struct_size)
-        << Context.getTypeDeclType(RD) << PadSize
+        << Context.getCanonicalTagType(RD) << PadSize
         << (InBits ? 1 : 0); // (byte|bit)
   }
 }
@@ -3631,7 +3631,7 @@ static void DumpRecordLayout(raw_ostream &OS, const RecordDecl *RD,
   auto CXXRD = dyn_cast<CXXRecordDecl>(RD);
 
   PrintOffset(OS, Offset, IndentLevel);
-  OS << C.getTypeDeclType(const_cast<RecordDecl *>(RD));
+  OS << C.getCanonicalTagType(const_cast<RecordDecl *>(RD));
   if (Description)
     OS << ' ' << Description;
   if (CXXRD && CXXRD->isEmpty())
@@ -3781,7 +3781,7 @@ void ASTContext::DumpRecordLayout(const RecordDecl *RD, raw_ostream &OS,
   // in libFrontend.
 
   const ASTRecordLayout &Info = getASTRecordLayout(RD);
-  OS << "Type: " << getTypeDeclType(RD) << "\n";
+  OS << "Type: " << getCanonicalTagType(RD) << "\n";
   OS << "\nLayout: ";
   OS << "<ASTRecordLayout\n";
   OS << "  Size:" << toBits(Info.getSize()) << "\n";

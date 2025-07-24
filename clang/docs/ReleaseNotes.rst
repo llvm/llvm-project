@@ -89,6 +89,7 @@ ABI Changes in This Version
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
+- How nested name specifiers are dumped and printed changes, keeping track of clang AST changes.
 - Added support for dumping template arguments of structural value kinds.
 
 Clang Frontend Potentially Breaking Changes
@@ -99,6 +100,9 @@ Clang Frontend Potentially Breaking Changes
 
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
+- TypeKind ``ELABORATED`` is not used anymore, per clang AST changes removing
+  ElaboratedTypes. The value becomes unused, and all the existing users should
+  expect the former underlying type to be reported instead.
 - ``Cursor.from_location`` now returns ``None`` instead of a null cursor.
   This eliminates the last known source of null cursors.
 - Almost all ``Cursor`` methods now assert that they are called on non-null cursors.
@@ -499,6 +503,7 @@ Improvements to Clang's diagnostics
   under the subgroup ``-Wunsafe-buffer-usage-in-libc-call``.
 - Diagnostics on chained comparisons (``a < b < c``) are now an error by default. This can be disabled with
   ``-Wno-error=parentheses``.
+- Fix duplicate diagnostics for incomplete type in nested name specifier. (#GH147000)
 - Similarly, fold expressions over a comparison operator are now an error by default.
 - Clang now better preserves the sugared types of pointers to member.
 - Clang now better preserves the presence of the template keyword with dependent
@@ -997,8 +1002,11 @@ Bug Fixes to AST Handling
 - Fixed a malformed printout of ``CXXParenListInitExpr`` in certain contexts.
 - Fixed a malformed printout of certain calling convention function attributes. (#GH143160)
 - Fixed dependency calculation for TypedefTypes (#GH89774)
+- Fix incorrect name qualifiers applied to alias CTAD. (#GH136624)
 - The ODR checker now correctly hashes the names of conversion operators. (#GH143152)
 - Fixed the right parenthesis source location of ``CXXTemporaryObjectExpr``. (#GH143711)
+- Fixed ElaboratedTypes appearing within NestedNameSpecifier, which was not a
+  legal representation. This is fixed because ElaboratedTypes don't exist anymore. (#GH43179) (#GH68670) (#GH92757)
 - Fixed a crash when performing an ``IgnoreUnlessSpelledInSource`` traversal of ASTs containing ``catch(...)`` statements. (#GH146103)
 
 Miscellaneous Bug Fixes
@@ -1168,6 +1176,8 @@ AST Matchers
 - Ensure ``hasBitWidth`` doesn't crash on bit widths that are dependent on template
   parameters.
 - Ensure ``isDerivedFrom`` matches the correct base in case more than one alias exists.
+- Removed elaboratedType matchers, and related nested name specifier changes,
+  following the corresponding changes in the clang AST.
 - Extend ``templateArgumentCountIs`` to support function and variable template
   specialization.
 

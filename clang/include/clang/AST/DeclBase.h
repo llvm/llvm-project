@@ -410,9 +410,6 @@ protected:
 
   virtual ~Decl();
 
-  /// Update a potentially out-of-date declaration.
-  void updateOutOfDate(IdentifierInfo &II) const;
-
   Linkage getCachedLinkage() const {
     return static_cast<Linkage>(CacheValidAndLinkage);
   }
@@ -1563,13 +1560,6 @@ protected:
     /// True if this tag is free standing, e.g. "struct foo;".
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsFreeStanding : 1;
-
-    /// Indicates whether it is possible for declarations of this kind
-    /// to have an out-of-date definition.
-    ///
-    /// This option is only enabled when modules are enabled.
-    LLVM_PREFERRED_TYPE(bool)
-    uint64_t MayHaveOutOfDateDef : 1;
 
     /// Has the full definition of this type been required by a use somewhere in
     /// the TU.

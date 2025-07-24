@@ -606,9 +606,8 @@ void JSONNodeDumper::VisitTypedefType(const TypedefType *TT) {
 }
 
 void JSONNodeDumper::VisitUsingType(const UsingType *TT) {
-  JOS.attribute("decl", createBareDeclRef(TT->getFoundDecl()));
-  if (!TT->typeMatchesDecl())
-    JOS.attribute("type", createQualType(TT->desugar()));
+  JOS.attribute("decl", createBareDeclRef(TT->getDecl()));
+  JOS.attribute("type", createQualType(TT->desugar()));
 }
 
 void JSONNodeDumper::VisitFunctionType(const FunctionType *T) {
@@ -759,7 +758,15 @@ void JSONNodeDumper::VisitUnaryTransformType(const UnaryTransformType *UTT) {
 }
 
 void JSONNodeDumper::VisitTagType(const TagType *TT) {
-  JOS.attribute("decl", createBareDeclRef(TT->getDecl()));
+  if (NestedNameSpecifier Qualifier = TT->getQualifier()) {
+    std::string Str;
+    llvm::raw_string_ostream OS(Str);
+    Qualifier.print(OS, PrintPolicy, /*ResolveTemplateArguments=*/true);
+    JOS.attribute("qualifier", Str);
+  }
+  JOS.attribute("decl", createBareDeclRef(TT->getOriginalDecl()));
+  if (TT->isTagOwned())
+    JOS.attribute("isTagOwned", true);
 }
 
 void JSONNodeDumper::VisitTemplateTypeParmType(
@@ -819,17 +826,6 @@ void JSONNodeDumper::VisitObjCInterfaceType(const ObjCInterfaceType *OIT) {
 void JSONNodeDumper::VisitPackExpansionType(const PackExpansionType *PET) {
   if (UnsignedOrNone N = PET->getNumExpansions())
     JOS.attribute("numExpansions", *N);
-}
-
-void JSONNodeDumper::VisitElaboratedType(const ElaboratedType *ET) {
-  if (const NestedNameSpecifier *NNS = ET->getQualifier()) {
-    std::string Str;
-    llvm::raw_string_ostream OS(Str);
-    NNS->print(OS, PrintPolicy, /*ResolveTemplateArgs*/ true);
-    JOS.attribute("qualifier", Str);
-  }
-  if (const TagDecl *TD = ET->getOwnedTagDecl())
-    JOS.attribute("ownedTagDecl", createBareDeclRef(TD));
 }
 
 void JSONNodeDumper::VisitMacroQualifiedType(const MacroQualifiedType *MQT) {
