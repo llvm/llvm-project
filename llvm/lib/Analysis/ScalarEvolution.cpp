@@ -11380,7 +11380,8 @@ bool ScalarEvolution::isKnownPredicateViaConstantRanges(CmpPredicate Pred,
   auto CheckRange = [&](bool IsSigned) {
     auto RangeLHS = IsSigned ? getSignedRange(LHS) : getUnsignedRange(LHS);
     auto RangeRHS = IsSigned ? getSignedRange(RHS) : getUnsignedRange(RHS);
-    return RangeLHS.icmp(Pred, RangeRHS);
+    return RangeLHS.getBitWidth() == RangeRHS.getBitWidth() &&
+           RangeLHS.icmp(Pred, RangeRHS);
   };
 
   // The check at the top of the function catches the case where the values are
