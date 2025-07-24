@@ -159,6 +159,9 @@ void NextUseResult::analyze(const MachineFunction &MF) {
       LLVM_DEBUG(dbgs() << "\nFinal distances for MBB_" << MBB->getNumber()
                         << "." << MBB->getName() << "\n";
                  printVregDistances(Curr));
+      LLVM_DEBUG(dbgs() << "\nPrevious distances for MBB_" << MBB->getNumber()
+                        << "." << MBB->getName() << "\n";
+                 printVregDistances(Prev));
       UpwardNextUses[MBBNum] = std::move(Curr);
 
       bool Changed4MBB = (Prev != UpwardNextUses[MBBNum]);

@@ -232,7 +232,10 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
       Register NewVReg = MRI->createVirtualRegister(RC);
       Op.setReg(NewVReg);
       Op.setSubReg(AMDGPU::NoRegister);
-      VregNames[Res].push_back({NewVReg, TRI->getSubRegIndexLaneMask(SubRegIdx),
+      VregNames[Res].push_back({NewVReg,
+                                SubRegIdx == AMDGPU::NoRegister
+                                    ? MRI->getMaxLaneMaskForVReg(Res)
+                                    : TRI->getSubRegIndexLaneMask(SubRegIdx),
                                 AMDGPU::NoRegister, &PHI});
       printVRegDefStack(VregNames[Res]);
       DefSeen.insert(NewVReg);
