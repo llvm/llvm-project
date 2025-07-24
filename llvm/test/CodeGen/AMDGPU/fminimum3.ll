@@ -3272,10 +3272,9 @@ define double @v_fminimum3_f64_fabs0(double %a, double %b, double %c) {
 ; GFX9-LABEL: v_fminimum3_f64_fabs0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
-; GFX9-NEXT:    v_min_f64 v[6:7], v[0:1], v[2:3]
+; GFX9-NEXT:    v_min_f64 v[6:7], |v[0:1]|, v[2:3]
 ; GFX9-NEXT:    v_mov_b32_e32 v8, 0x7ff80000
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_cmp_u_f64_e64 vcc, |v[0:1]|, v[2:3]
 ; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v7, v8, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
@@ -3307,10 +3306,9 @@ define double @v_fminimum3_f64_fabs1(double %a, double %b, double %c) {
 ; GFX9-LABEL: v_fminimum3_f64_fabs1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v3, 0x7fffffff, v3
-; GFX9-NEXT:    v_min_f64 v[6:7], v[0:1], v[2:3]
+; GFX9-NEXT:    v_min_f64 v[6:7], v[0:1], |v[2:3]|
 ; GFX9-NEXT:    v_mov_b32_e32 v8, 0x7ff80000
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_cmp_u_f64_e64 vcc, v[0:1], |v[2:3]|
 ; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v7, v8, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
@@ -3345,12 +3343,11 @@ define double @v_fminimum3_f64_fabs2(double %a, double %b, double %c) {
 ; GFX9-NEXT:    v_min_f64 v[6:7], v[0:1], v[2:3]
 ; GFX9-NEXT:    v_mov_b32_e32 v8, 0x7ff80000
 ; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
-; GFX9-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v5
-; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v7, v8, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
-; GFX9-NEXT:    v_min_f64 v[2:3], v[0:1], v[4:5]
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[4:5]
+; GFX9-NEXT:    v_min_f64 v[2:3], v[0:1], |v[4:5]|
+; GFX9-NEXT:    v_cmp_u_f64_e64 vcc, v[0:1], |v[4:5]|
 ; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v3, v8, vcc
@@ -3377,17 +3374,14 @@ define double @v_fminimum3_f64_fabs_all(double %a, double %b, double %c) {
 ; GFX9-LABEL: v_fminimum3_f64_fabs_all:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
-; GFX9-NEXT:    v_and_b32_e32 v3, 0x7fffffff, v3
-; GFX9-NEXT:    v_min_f64 v[6:7], v[0:1], v[2:3]
+; GFX9-NEXT:    v_min_f64 v[6:7], |v[0:1]|, |v[2:3]|
 ; GFX9-NEXT:    v_mov_b32_e32 v8, 0x7ff80000
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
-; GFX9-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v5
-; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    v_cmp_u_f64_e64 vcc, |v[0:1]|, |v[2:3]|
+; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v7, v8, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
-; GFX9-NEXT:    v_min_f64 v[2:3], v[0:1], v[4:5]
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[4:5]
+; GFX9-NEXT:    v_min_f64 v[2:3], v[0:1], |v[4:5]|
+; GFX9-NEXT:    v_cmp_u_f64_e64 vcc, v[0:1], |v[4:5]|
 ; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v3, v8, vcc
@@ -3452,17 +3446,14 @@ define double @v_fminimum3_f64_fneg_fabs_all(double %a, double %b, double %c) {
 ; GFX9-LABEL: v_fminimum3_f64_fneg_fabs_all:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
-; GFX9-NEXT:    v_and_b32_e32 v3, 0x7fffffff, v3
-; GFX9-NEXT:    v_min_f64 v[6:7], -v[0:1], -v[2:3]
+; GFX9-NEXT:    v_min_f64 v[6:7], -|v[0:1]|, -|v[2:3]|
 ; GFX9-NEXT:    v_mov_b32_e32 v8, 0x7ff80000
-; GFX9-NEXT:    v_cmp_u_f64_e64 vcc, -v[0:1], -v[2:3]
-; GFX9-NEXT:    v_and_b32_e32 v5, 0x7fffffff, v5
-; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    v_cmp_u_f64_e64 vcc, -|v[0:1]|, -|v[2:3]|
+; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v7, v8, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
-; GFX9-NEXT:    v_min_f64 v[2:3], v[0:1], -v[4:5]
-; GFX9-NEXT:    v_cmp_u_f64_e64 vcc, v[0:1], -v[4:5]
+; GFX9-NEXT:    v_min_f64 v[2:3], v[0:1], -|v[4:5]|
+; GFX9-NEXT:    v_cmp_u_f64_e64 vcc, v[0:1], -|v[4:5]|
 ; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v3, v8, vcc
