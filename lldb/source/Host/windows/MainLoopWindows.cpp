@@ -14,6 +14,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/WindowsError.h"
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <ctime>
 #include <io.h>
