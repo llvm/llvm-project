@@ -142,6 +142,23 @@ static void printDepMatrix(CharMatrix &DepMatrix) {
     LLVM_DEBUG(dbgs() << "\n");
   }
 }
+
+static bool inThisOrder(const Instruction *Src, const Instruction *Dst) {
+  assert(Src->getParent() == Dst->getParent() && Src != Dst &&
+         "Expected Src and Dst to be different instructions in the same BB");
+
+  bool FoundSrc = false;
+  for (const Instruction &I : *(Src->getParent())) {
+    if (&I == Src) {
+      FoundSrc = true;
+      continue;
+    }
+    if (&I == Dst)
+      return FoundSrc;
+  }
+
+  llvm_unreachable("Dst not found");
+}
 #endif
 
 static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
@@ -190,16 +207,6 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
   // to an index of DepMatrix at which it is stored.
   StringMap<unsigned> Seen;
 
-  // The i-th element is set iff all dependencies corresponding to the i-th
-  // direction vector in DepMatrix are "lexically forward". The notion
-  // "lexically forward" aligns with what is defined in LAA
-  // (LoopAccessAnalysis).
-  //
-  // We deem a dependence lexically forward if we can prove that the
-  // destination instruction is always executed after the source instruction
-  // within each iteration.
-  BitVector IsForwardFlags;
-
   for (I = MemInstr.begin(), IE = MemInstr.end(); I != IE; ++I) {
     for (J = I, JE = MemInstr.end(); J != JE; ++J) {
       std::vector<char> Dep;
@@ -211,22 +218,11 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
       // Track Output, Flow, and Anti dependencies.
       if (auto D = DI->depends(Src, Dst)) {
         assert(D->isOrdered() && "Expected an output, flow or anti dep.");
-        bool IsForward = true;
-
-        // If Src and Dst are in the same BB, Src is always executed before Dst
-        // in the same loop iteration. If not, we must check whether one BB
-        // dominates the other to determine if Src and Dst are executed in this
-        // order. At the moment, we don't perform such check.
-        if (Src->getParent() != Dst->getParent())
-          IsForward = false;
 
         // If the direction vector is negative, normalize it to
         // make it non-negative.
-        bool Normalized = D->normalize(SE);
-        if (Normalized) {
+        if (D->normalize(SE))
           LLVM_DEBUG(dbgs() << "Negative dependence vector normalized.\n");
-          IsForward = false;
-        }
         LLVM_DEBUG(StringRef DepType =
                        D->isFlow() ? "flow" : D->isAnti() ? "anti" : "output";
                    dbgs() << "Found " << DepType
@@ -264,27 +260,50 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
           Dep.push_back('I');
         }
 
+        // Test whether the dependency is forward or not.
+        bool IsKnownForward = true;
+        if (Src->getParent() != Dst->getParent()) {
+          // In general, when Src and Dst are in different BBs, the execution
+          // order of them within a single iteration is not guaranteed. Treat
+          // conservatively as not-forward dependency in this case.
+          IsKnownForward = false;
+        } else {
+          // Src and Dst are in the same BB. If they are the different
+          // instructions, Src should appear before Dst in the BB as they are
+          // stored to MemInstr in that order.
+          assert((Src == Dst || inThisOrder(Src, Dst)) &&
+                 "Unexpected instructions");
+
+          // If the Dependence object is reversed (due to normalization), it
+          // represents the dependency from Dst to Src, meaning it is a backward
+          // dependency. Otherwise it should be a forward dependency.
+          bool IsReversed = D->getSrc() != Src;
+          if (IsReversed)
+            IsKnownForward = false;
+        }
+
+        // Initialize the last element.
+        Dep.push_back('<');
+
+        // The last element should express the "summary" among one or more
+        // direction vectors whose first N elements are the same (where N is
+        // the depth of the loop nest). Hence we exclude the last element from
+        // the Seen map.
         auto [Ite, Inserted] = Seen.try_emplace(
-            StringRef(Dep.data(), Dep.size()), DepMatrix.size());
+            StringRef(Dep.data(), Dep.size() - 1), DepMatrix.size());
 
         // Make sure we only add unique entries to the dependency matrix.
-        if (Inserted) {
+        if (Inserted)
           DepMatrix.push_back(Dep);
-          IsForwardFlags.push_back(true);
-        }
-        if (!IsForward)
-          IsForwardFlags.reset(Ite->second);
+
+        // If we cannot prove that this dependency is forward, change the last
+        // element of the corresponding entry. Note that the existing entry in
+        // DepMatrix can be modified.
+        if (!IsKnownForward)
+          DepMatrix[Ite->second].back() = '*';
       }
     }
   }
-
-  assert(DepMatrix.size() == IsForwardFlags.size() &&
-         "Dependency matrix and IsForwardVec should have the same size.");
-
-  // If all dependencies corresponding to a direction vector are forward, encode
-  // it to '<', otherwise to '*'.
-  for (unsigned I = 0; I != DepMatrix.size(); I++)
-    DepMatrix[I].push_back(IsForwardFlags[I] ? '<' : '*');
 
   return true;
 }
