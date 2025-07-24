@@ -12091,6 +12091,8 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
   Prefix = "void a() const &;\n"
            "void b() const &;\n";
   verifyFormat(Prefix + "int *x;", Prefix + "int* x;", DerivePointerAlignment);
+
+  verifyGoogleFormat("MACRO(int*, std::function<void() &&>);");
 }
 
 TEST_F(FormatTest, PointerAlignmentFallback) {
