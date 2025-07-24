@@ -187,6 +187,7 @@ add_header_macro(
   arpa/inet.h
   DEPENDS
     .llvm_libc_common_h
+    .inttypes
 )
 
 add_header_macro(
