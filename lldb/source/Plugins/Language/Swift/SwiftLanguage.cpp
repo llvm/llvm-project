@@ -498,6 +498,10 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
                 "Swift.StaticString summary provider",
                 ConstString("Swift.StaticString"), summary_flags);
   AddCXXSummary(swift_category_sp,
+                lldb_private::formatters::NSStringSummaryProvider,
+                "Swift.__StringStorage summary provider",
+                "Swift.__StringStorage", summary_flags);
+  AddCXXSummary(swift_category_sp,
                 lldb_private::formatters::swift::TaskPriority_SummaryProvider,
                 "Swift TaskPriority summary provider", "Swift.TaskPriority",
                 summary_flags);
