@@ -1892,6 +1892,29 @@ cc_library(
 )
 
 cc_library(
+    name = "directory_watcher",
+    srcs = glob([
+        "lib/DirectoryWatcher/*.cpp",
+        "lib/DirectoryWatcher/*.h",
+    ]) + select({
+        "@platforms//os:windows": glob(["lib/DirectoryWatcher/windows/*.cpp"]),
+        "@platforms//os:macos": glob(["lib/DirectoryWatcher/mac/*.cpp"]),
+        "@platforms//os:linux": glob(["lib/DirectoryWatcher/linux/*.cpp"]),
+        "//conditions:default": glob(["lib/DirectoryWatcher/default/*.cpp"]),
+    }),
+    hdrs = glob([
+        "include/clang/DirectoryWatcher/*.h",
+    ]),
+    includes = [
+        "include",
+        "lib/DirectoryWatcher",
+    ],
+    deps = [
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "install_api",
     srcs = glob([
         "lib/InstallAPI/*.cpp",
