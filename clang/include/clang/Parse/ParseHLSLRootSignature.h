@@ -30,7 +30,6 @@ namespace hlsl {
 class RootSignatureParser {
 public:
   RootSignatureParser(llvm::dxbc::RootSignatureVersion Version,
-                      SmallVector<RootSignatureElement> &Elements,
                       StringLiteral *Signature, Preprocessor &PP);
 
   /// Consumes tokens from the Lexer and constructs the in-memory
@@ -39,6 +38,9 @@ public:
   ///
   /// Returns true if a parsing error is encountered.
   bool parse();
+
+  /// Return all elements that have been parsed.
+  ArrayRef<RootSignatureElement> getElements() { return Elements; }
 
 private:
   DiagnosticsEngine &getDiags() { return PP.getDiagnostics(); }
@@ -226,7 +228,7 @@ private:
 
 private:
   llvm::dxbc::RootSignatureVersion Version;
-  SmallVector<RootSignatureElement> &Elements;
+  SmallVector<RootSignatureElement> Elements;
   StringLiteral *Signature;
   RootSignatureLexer Lexer;
   Preprocessor &PP;
