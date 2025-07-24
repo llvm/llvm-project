@@ -5105,7 +5105,10 @@ Action *Driver::ConstructPhaseAction(
                         false) ||
            (Args.hasFlag(options::OPT_offload_new_driver,
                          options::OPT_no_offload_new_driver, false) &&
-            !offloadDeviceOnly())) ||
+            (!offloadDeviceOnly() ||
+             (Input->getOffloadingToolChain() &&
+              TargetDeviceOffloadKind == Action::OFK_HIP &&
+              Input->getOffloadingToolChain()->getTriple().isSPIRV())))) ||
           TargetDeviceOffloadKind == Action::OFK_OpenMP))) {
       types::ID Output =
           Args.hasArg(options::OPT_S) &&
