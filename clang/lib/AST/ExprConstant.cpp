@@ -14631,9 +14631,10 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     // - Otherwise pointer comparisons are unspecified.
     if (!LHSDesignator.Invalid && !RHSDesignator.Invalid && IsRelational) {
       bool WasArrayIndex;
-      unsigned Mismatch =
-          FindDesignatorMismatch(getType(LHSValue.Base).getNonReferenceType(),
-                                 LHSDesignator, RHSDesignator, WasArrayIndex);
+      unsigned Mismatch = FindDesignatorMismatch(
+          LHSValue.Base.isNull() ? QualType()
+                                 : getType(LHSValue.Base).getNonReferenceType(),
+          LHSDesignator, RHSDesignator, WasArrayIndex);
       // At the point where the designators diverge, the comparison has a
       // specified value if:
       //  - we are comparing array indices
