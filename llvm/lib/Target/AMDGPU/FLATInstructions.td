@@ -2368,7 +2368,7 @@ defm : FlatAtomicPat <"FLAT_ATOMIC_FMIN", "atomic_load_fmin_"#as, f32>;
 defm : FlatAtomicPat <"FLAT_ATOMIC_FMAX", "atomic_load_fmax_"#as, f32>;
 }
 
-let OtherPredicates = [HasAtomicFMinFMaxF64FlatInsts] in {
+let SubtargetPredicate = HasAtomicFMinFMaxF64FlatInsts in {
 defm : FlatAtomicPat <"FLAT_ATOMIC_MIN_F64", "atomic_load_fmin_"#as, f64>;
 defm : FlatAtomicPat <"FLAT_ATOMIC_MAX_F64", "atomic_load_fmax_"#as, f64>;
 }
