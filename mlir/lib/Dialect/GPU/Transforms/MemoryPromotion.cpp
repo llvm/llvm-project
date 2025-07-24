@@ -124,8 +124,7 @@ static void insertCopies(Region &region, Location loc, Value from, Value to) {
   (void)toType;
   assert(fromType.getShape() == toType.getShape());
   assert(fromType.getRank() != 0);
-  assert(llvm::hasSingleElement(region) &&
-         "unstructured control flow not supported");
+  assert(region.hasOneBlock() && "unstructured control flow not supported");
 
   auto b = ImplicitLocOpBuilder::atBlockBegin(loc, &region.front());
   insertCopyLoops(b, from, to);

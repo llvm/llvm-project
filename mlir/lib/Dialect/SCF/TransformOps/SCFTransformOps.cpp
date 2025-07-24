@@ -418,7 +418,7 @@ transform::LoopCoalesceOp::applyToOne(transform::TransformRewriter &rewriter,
 /// using the operands of the block terminator to replace operation results.
 static void replaceOpWithRegion(RewriterBase &rewriter, Operation *op,
                                 Region &region) {
-  assert(llvm::hasSingleElement(region) && "expected single-region block");
+  assert(region.hasOneBlock() && "expected single-block region");
   Block *block = &region.front();
   Operation *terminator = block->getTerminator();
   ValueRange results = terminator->getOperands();
@@ -434,7 +434,7 @@ DiagnosedSilenceableFailure transform::TakeAssumedBranchOp::applyToOne(
   rewriter.setInsertionPoint(ifOp);
   Region &region =
       getTakeElseBranch() ? ifOp.getElseRegion() : ifOp.getThenRegion();
-  if (!llvm::hasSingleElement(region)) {
+  if (!region.hasOneBlock()) {
     return emitDefiniteFailure()
            << "requires an scf.if op with a single-block "
            << ((getTakeElseBranch()) ? "`else`" : "`then`") << " region";
