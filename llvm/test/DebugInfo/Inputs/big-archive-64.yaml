@@ -1,26 +1,115 @@
 --- !XCOFF
 FileHeader:
-  Magic: 0x01F7        # XCOFF64 magic number
-  NumberOfSections: 1
-  TimeStamp: 0
-  SymbolTableOffset: 0
-  NumberOfSymTableEntries: 1
-OptionalHeader:
-  Flags: 0x0
+  MagicNumber:     0x1F7
+  NumberOfSections: 2
+  CreationTime:    0
+  OffsetToSymbolTable: 0xF8
+  EntriesInSymbolTable: 11
+  AuxiliaryHeaderSize: 0
+  Flags:           0x0
 Sections:
-  - Name: .text
-    Address: 0x0`
-    Size: 1
-    FileOffsetToRawData: 0x100
-    FileOffsetToRelocations: 0
-    FileOffsetToLineNumbers: 0
-    NumberOfRelocations: 0
-    NumberOfLineNumbers: 0
-    Flags: STYP_TEXT
-    SectionData: '00'
+  - Name:            .text
+    Address:         0x0
+    Size:            0x1C
+    FileOffsetToData: 0xA8
+    FileOffsetToRelocations: 0x0
+    FileOffsetToLineNumbers: 0x0
+    NumberOfRelocations: 0x0
+    NumberOfLineNumbers: 0x0
+    Flags:           [ STYP_TEXT ]
+    SectionData:     4E800020000000000009204000000001000000040003666F6F000000
+  - Name:            .data
+    Address:         0x20
+    Size:            0x18
+    FileOffsetToData: 0xC4
+    FileOffsetToRelocations: 0xDC
+    FileOffsetToLineNumbers: 0x0
+    NumberOfRelocations: 0x2
+    NumberOfLineNumbers: 0x0
+    Flags:           [ STYP_DATA ]
+    SectionData:     '000000000000000000000000000000380000000000000000'
+    Relocations:
+      - Address:         0x20
+        Symbol:          0x5
+        Info:            0x3F
+        Type:            0x0
+      - Address:         0x28
+        Symbol:          0x9
+        Info:            0x3F
+        Type:            0x0
 Symbols:
-  - Name: foo
-    Value: 0
-    SectionNumber: 1
-    StorageClass: C_EXT
-    NumberOfAuxEntries: 0
+  - Name:            .file
+    Value:           0x0
+    Section:         N_DEBUG
+    Type:            0x18
+    StorageClass:    C_FILE
+    NumberOfAuxEntries: 2
+    AuxEntries:
+      - Type:            AUX_FILE
+        FileNameOrString: foo.c
+        FileStringType:  XFT_FN
+      - Type:            AUX_FILE
+        FileNameOrString: 'IBM Open XL C/C++ for AIX 17.1.3 (5725-C72, 5765-J18), version 17.1.3.0, LLVM version 21.0.0git (5ca72bc8d2e87445649eab1825dffd2a047440ba)'
+        FileStringType:  XFT_CV
+  - Name:            ''
+    Value:           0x0
+    Section:         .text
+    Type:            0x0
+    StorageClass:    C_HIDEXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        ParameterHashIndex: 0
+        TypeChkSectNum:  0
+        SymbolType:      XTY_SD
+        SymbolAlignment: 5
+        StorageMappingClass: XMC_PR
+        SectionOrLengthLo: 25
+        SectionOrLengthHi: 0
+  - Name:            .foo
+    Value:           0x0
+    Section:         .text
+    Type:            0x0
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        ParameterHashIndex: 0
+        TypeChkSectNum:  0
+        SymbolType:      XTY_LD
+        SymbolAlignment: 0
+        StorageMappingClass: XMC_PR
+        SectionOrLengthLo: 3
+        SectionOrLengthHi: 0
+  - Name:            foo
+    Value:           0x20
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        ParameterHashIndex: 0
+        TypeChkSectNum:  0
+        SymbolType:      XTY_SD
+        SymbolAlignment: 3
+        StorageMappingClass: XMC_DS
+        SectionOrLengthLo: 24
+        SectionOrLengthHi: 0
+  - Name:            TOC
+    Value:           0x38
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_HIDEXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        ParameterHashIndex: 0
+        TypeChkSectNum:  0
+        SymbolType:      XTY_SD
+        SymbolAlignment: 2
+        StorageMappingClass: XMC_TC0
+        SectionOrLengthLo: 0
+        SectionOrLengthHi: 0
+StringTable:     {}
+...
