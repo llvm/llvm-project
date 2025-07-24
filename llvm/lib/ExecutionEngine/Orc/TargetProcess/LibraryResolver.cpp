@@ -1,12 +1,17 @@
-//===----- DynamicLoader.cpp - Defaults for host process -----===//
+//===----- LibraryResolver.cpp - Library Resolution of Unresolved Symbols
+//-----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Library resolution impl for unresolved symbols
+//
+//===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/TargetProcess/DynamicLoader.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/LibraryResolver.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/LibraryScanner.h"
 
 #include "llvm/ADT/StringSet.h"
@@ -26,7 +31,7 @@
 
 namespace llvm::orc {
 
-DynamicLoader::DynamicLoader(const DynamicLoader::Setup &setup)
+LibraryResolver::LibraryResolver(const LibraryResolver::Setup &setup)
     : m_cache(setup.cache ? setup.cache : std::make_shared<LibraryPathCache>()),
       m_PathResolver(setup.resolver ? setup.resolver
                                     : std::make_shared<PathResolver>(m_cache)),
@@ -41,18 +46,19 @@ DynamicLoader::DynamicLoader(const DynamicLoader::Setup &setup)
   }
 }
 
-std::unique_ptr<LoaderControllerImpl>
-LoaderControllerImpl::create(const DynamicLoader::Setup &setup) {
-  auto loader = std::make_unique<DynamicLoader>(setup);
-  return std::unique_ptr<LoaderControllerImpl>(
-      new LoaderControllerImpl(std::move(loader)));
+std::unique_ptr<LibraryResolutionDriver>
+LibraryResolutionDriver::create(const LibraryResolver::Setup &setup) {
+  auto loader = std::make_unique<LibraryResolver>(setup);
+  return std::unique_ptr<LibraryResolutionDriver>(
+      new LibraryResolutionDriver(std::move(loader)));
 }
 
-void LoaderControllerImpl::addScanPath(const std::string &path, PathType kind) {
+void LibraryResolutionDriver::addScanPath(const std::string &path,
+                                          PathType kind) {
   Loader->m_scanH.addBasePath(path, kind);
 }
 
-bool LoaderControllerImpl::markLibraryLoaded(StringRef path) {
+bool LibraryResolutionDriver::markLibraryLoaded(StringRef path) {
   auto lib = Loader->m_libMgr.getLibrary(path);
   if (!lib)
     return false;
@@ -65,7 +71,7 @@ bool LoaderControllerImpl::markLibraryLoaded(StringRef path) {
   return true;
 }
 
-bool LoaderControllerImpl::markLibraryUnLoaded(StringRef path) {
+bool LibraryResolutionDriver::markLibraryUnLoaded(StringRef path) {
   auto lib = Loader->m_libMgr.getLibrary(path);
   if (!lib)
     return false;
@@ -77,9 +83,10 @@ bool LoaderControllerImpl::markLibraryUnLoaded(StringRef path) {
   return true;
 }
 
-void LoaderControllerImpl::resolveSymbols(
+void LibraryResolutionDriver::resolveSymbols(
     std::vector<std::string> symbols,
-    DynamicLoader::OnSearchComplete OnCompletion, const SearchPolicy &policy) {
+    LibraryResolver::OnSearchComplete OnCompletion,
+    const SearchPolicy &policy) {
   Loader->searchSymbolsInLibraries(symbols, std::move(OnCompletion), policy);
 }
 
@@ -199,8 +206,8 @@ private:
   DenseSet<LibraryInfo *> m_searched;
 };
 
-void DynamicLoader::resolveSymbolsInLibrary(LibraryInfo &lib,
-                                            SymbolQuery &unresolvedSymbols) {
+void LibraryResolver::resolveSymbolsInLibrary(LibraryInfo &lib,
+                                              SymbolQuery &unresolvedSymbols) {
   // LLVM_DEBUG(
   dbgs() << "Checking unresolved symbols "
          << " in library : " << lib.getFileName() << "\n"; //);
@@ -282,7 +289,7 @@ void DynamicLoader::resolveSymbolsInLibrary(LibraryInfo &lib,
     lib.setState(LibraryState::Queried);
 }
 
-void DynamicLoader::searchSymbolsInLibraries(
+void LibraryResolver::searchSymbolsInLibraries(
     std::vector<std::string> &symbolList, OnSearchComplete onComplete,
     const SearchPolicy &policy) {
   SymbolQuery query(symbolList);
@@ -334,9 +341,9 @@ void DynamicLoader::searchSymbolsInLibraries(
   onComplete(query);
 }
 
-bool DynamicLoader::scanLibrariesIfNeeded(PathType PK) {
+bool LibraryResolver::scanLibrariesIfNeeded(PathType PK) {
   // LLVM_DEBUG(
-  dbgs() << "DynamicLoader::scanLibrariesIfNeeded: Scanning for "
+  dbgs() << "LibraryResolver::scanLibrariesIfNeeded: Scanning for "
          << (PK == PathType::User ? "User" : "System") << " libraries\n"; //);
   if (!m_scanH.leftToScan(PK))
     return false;
@@ -345,7 +352,7 @@ bool DynamicLoader::scanLibrariesIfNeeded(PathType PK) {
   return true;
 }
 
-bool DynamicLoader::symbolExistsInLibrary(
+bool LibraryResolver::symbolExistsInLibrary(
     const LibraryInfo &lib, StringRef symbolName,
     std::vector<std::string> *allSymbols) {
 
@@ -353,7 +360,7 @@ bool DynamicLoader::symbolExistsInLibrary(
   return symbolExistsInLibrary(lib, symbolName, allSymbols, opts);
 }
 
-bool DynamicLoader::symbolExistsInLibrary(
+bool LibraryResolver::symbolExistsInLibrary(
     const LibraryInfo &lib, StringRef symbolName,
     std::vector<std::string> *allSymbols,
     const SymbolEnumerator::Options &opts) {

@@ -1,4 +1,4 @@
-//===- LibraryScanner.h - Scan Library -*- C++
+//===- LibraryScanner.h - Scanner for Shared Libraries -*- C++
 //-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides support for scanning dynamic library.
+// This file provides functionality for scanning dynamic (shared) libraries.
 //
 //===----------------------------------------------------------------------===//
 

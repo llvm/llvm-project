@@ -1,4 +1,4 @@
-//===- DynamicLoader.h - Automatic Dynamic Library Symbol Resolution -*- C++
+//===- LibraryResolver.h - Automatic Dynamic Library Symbol Resolution -*- C++
 //-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -272,8 +272,8 @@ struct SearchPolicy {
 /// Supports symbol enumeration and filtering via SymbolEnumerator, and tracks
 /// symbol resolution results through SymbolQuery. Thread-safe and uses
 /// LibraryScanHelper for efficient path resolution and caching.
-class DynamicLoader {
-  friend class LoaderControllerImpl;
+class LibraryResolver {
+  friend class LibraryResolutionDriver;
 
 public:
   class SymbolEnumerator {
@@ -404,9 +404,9 @@ public:
     }
   };
 
-  DynamicLoader() = delete;
-  explicit DynamicLoader(const Setup &setup);
-  ~DynamicLoader() = default;
+  LibraryResolver() = delete;
+  explicit LibraryResolver(const Setup &setup);
+  ~LibraryResolver() = default;
 
   using OnSearchComplete = unique_function<void(SymbolQuery &)>;
 
@@ -448,14 +448,14 @@ private:
   bool includeSys;
 };
 
-using SymbolEnumerator = DynamicLoader::SymbolEnumerator;
-using SymbolQuery = DynamicLoader::SymbolQuery;
+using SymbolEnumerator = LibraryResolver::SymbolEnumerator;
+using SymbolQuery = LibraryResolver::SymbolQuery;
 using EnumerateResult = SymbolEnumerator::Result;
 
-class LoaderControllerImpl {
+class LibraryResolutionDriver {
 public:
-  static std::unique_ptr<LoaderControllerImpl>
-  create(const DynamicLoader::Setup &setup);
+  static std::unique_ptr<LibraryResolutionDriver>
+  create(const LibraryResolver::Setup &setup);
 
   void addScanPath(const std::string &path, PathType Kind);
   bool markLibraryLoaded(StringRef path);
@@ -464,16 +464,16 @@ public:
     return Loader->m_libMgr.isLoaded(path);
   }
   void resolveSymbols(std::vector<std::string> symbols,
-                      DynamicLoader::OnSearchComplete OnCompletion,
+                      LibraryResolver::OnSearchComplete OnCompletion,
                       const SearchPolicy &policy = SearchPolicy::defaultPlan());
 
-  ~LoaderControllerImpl() = default;
+  ~LibraryResolutionDriver() = default;
 
 private:
-  LoaderControllerImpl(std::unique_ptr<DynamicLoader> loader)
+  LibraryResolutionDriver(std::unique_ptr<LibraryResolver> loader)
       : Loader(std::move(loader)) {}
 
-  std::unique_ptr<DynamicLoader> Loader;
+  std::unique_ptr<LibraryResolver> Loader;
   // std::function<void(const std::string &, LibraryManager::State)>
   // onStateChange;
 };
