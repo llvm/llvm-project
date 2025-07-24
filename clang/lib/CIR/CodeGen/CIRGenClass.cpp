@@ -12,6 +12,7 @@
 
 #include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
+#include "CIRGenValue.h"
 
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
@@ -309,6 +310,116 @@ void CIRGenFunction::emitInitializerForField(FieldDecl *field, LValue lhs,
   QualType::DestructionKind dtorKind = fieldType.isDestructedType();
   (void)dtorKind;
   assert(!cir::MissingFeatures::requiresCleanups());
+}
+
+/// Emit a loop to call a particular constructor for each of several members
+/// of an array.
+///
+/// \param ctor the constructor to call for each element
+/// \param arrayType the type of the array to initialize
+/// \param arrayBegin an arrayType*
+/// \param zeroInitialize true if each element should be
+///   zero-initialized before it is constructed
+void CIRGenFunction::emitCXXAggrConstructorCall(
+    const CXXConstructorDecl *ctor, const clang::ArrayType *arrayType,
+    Address arrayBegin, const CXXConstructExpr *e, bool newPointerIsChecked,
+    bool zeroInitialize) {
+  QualType elementType;
+  mlir::Value numElements = emitArrayLength(arrayType, elementType, arrayBegin);
+  emitCXXAggrConstructorCall(ctor, numElements, arrayBegin, e,
+                             newPointerIsChecked, zeroInitialize);
+}
+
+/// Emit a loop to call a particular constructor for each of several members
+/// of an array.
+///
+/// \param ctor the constructor to call for each element
+/// \param numElements the number of elements in the array;
+///   may be zero
+/// \param arrayBase a T*, where T is the type constructed by ctor
+/// \param zeroInitialize true if each element should be
+///   zero-initialized before it is constructed
+void CIRGenFunction::emitCXXAggrConstructorCall(
+    const CXXConstructorDecl *ctor, mlir::Value numElements, Address arrayBase,
+    const CXXConstructExpr *e, bool newPointerIsChecked, bool zeroInitialize) {
+  // It's legal for numElements to be zero.  This can happen both
+  // dynamically, because x can be zero in 'new A[x]', and statically,
+  // because of GCC extensions that permit zero-length arrays.  There
+  // are probably legitimate places where we could assume that this
+  // doesn't happen, but it's not clear that it's worth it.
+
+  // Optimize for a constant count.
+  auto constantCount = dyn_cast<cir::ConstantOp>(numElements.getDefiningOp());
+  if (constantCount) {
+    auto constIntAttr = mlir::dyn_cast<cir::IntAttr>(constantCount.getValue());
+    // Just skip out if the constant count is zero.
+    if (constIntAttr && constIntAttr.getUInt() == 0)
+      return;
+  } else {
+    // Otherwise, emit the check.
+    cgm.errorNYI(e->getSourceRange(), "dynamic-length array expression");
+  }
+
+  auto arrayTy = mlir::cast<cir::ArrayType>(arrayBase.getElementType());
+  mlir::Type elementType = arrayTy.getElementType();
+  cir::PointerType ptrToElmType = builder.getPointerTo(elementType);
+
+  // Tradional LLVM codegen emits a loop here. CIR lowers to a loop as part of
+  // LoweringPrepare.
+
+  // The alignment of the base, adjusted by the size of a single element,
+  // provides a conservative estimate of the alignment of every element.
+  // (This assumes we never start tracking offsetted alignments.)
+  //
+  // Note that these are complete objects and so we don't need to
+  // use the non-virtual size or alignment.
+  QualType type = getContext().getTypeDeclType(ctor->getParent());
+  CharUnits eltAlignment = arrayBase.getAlignment().alignmentOfArrayElement(
+      getContext().getTypeSizeInChars(type));
+
+  // Zero initialize the storage, if requested.
+  if (zeroInitialize)
+    emitNullInitialization(*currSrcLoc, arrayBase, type);
+
+  // C++ [class.temporary]p4:
+  // There are two contexts in which temporaries are destroyed at a different
+  // point than the end of the full-expression. The first context is when a
+  // default constructor is called to initialize an element of an array.
+  // If the constructor has one or more default arguments, the destruction of
+  // every temporary created in a default argument expression is sequenced
+  // before the construction of the next array element, if any.
+  {
+    assert(!cir::MissingFeatures::runCleanupsScope());
+
+    // Evaluate the constructor and its arguments in a regular
+    // partial-destroy cleanup.
+    if (getLangOpts().Exceptions &&
+        !ctor->getParent()->hasTrivialDestructor()) {
+      cgm.errorNYI(e->getSourceRange(), "partial array cleanups");
+    }
+
+    // Emit the constructor call that will execute for every array element.
+    mlir::Value arrayOp =
+        builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
+    builder.create<cir::ArrayCtor>(
+        *currSrcLoc, arrayOp, [&](mlir::OpBuilder &b, mlir::Location loc) {
+          mlir::BlockArgument arg =
+              b.getInsertionBlock()->addArgument(ptrToElmType, loc);
+          Address curAddr = Address(arg, elementType, eltAlignment);
+          assert(!cir::MissingFeatures::sanitizers());
+          auto currAVS = AggValueSlot::forAddr(
+              curAddr, type.getQualifiers(), AggValueSlot::IsDestructed,
+              AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap,
+              AggValueSlot::IsNotZeroed);
+          emitCXXConstructorCall(ctor, Ctor_Complete,
+                                 /*ForVirtualBase=*/false,
+                                 /*Delegating=*/false, currAVS, e);
+          builder.create<cir::YieldOp>(loc);
+        });
+  }
+
+  if (constantCount.use_empty())
+    constantCount.erase();
 }
 
 void CIRGenFunction::emitDelegateCXXConstructorCall(
