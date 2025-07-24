@@ -1418,3 +1418,26 @@ __OMP_ASSUME_CLAUSE(llvm::StringLiteral("no_parallelism"), false, false, false)
 #undef __OMP_ASSUME_CLAUSE
 #undef OMP_ASSUME_CLAUSE
 ///}
+
+
+/// Callback specification
+///
+///{
+
+#ifndef OMP_CALLBACK
+#define OMP_CALLBACK(Enum, VarArgsArePassed, CallbackArgNo, ...)
+#endif
+
+#define __OMP_CALLBACK(Name, VarArgsArePassed, CallbackArgNo, ...)             \
+  OMP_CALLBACK(OMPRTL_##Name, VarArgsArePassed, CallbackArgNo, __VA_ARGS__)
+
+__OMP_CALLBACK(__kmpc_fork_call, true, 2, -1, -1)
+__OMP_CALLBACK(__kmpc_fork_call_if, false, 2, -1, -1)
+__OMP_CALLBACK(__kmpc_fork_teams, true, 2, -1, -1)
+__OMP_CALLBACK(__kmpc_omp_task_alloc, false, 5, -1, -1)
+
+#undef __OMP_PTR_TYPE
+
+#undef __OMP_TYPE
+#undef OMP_CALLBACK
+///}
