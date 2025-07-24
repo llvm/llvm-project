@@ -133,8 +133,8 @@ VPValue *VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   // load/store/gather/scatter. Initialize BlockMask to no-mask.
   VPValue *BlockMask = nullptr;
   // This is the block mask. We OR all unique incoming edges.
-  for (auto *Predecessor : make_range(VPBB->getPredecessors().begin(),
-                                      unique(VPBB->getPredecessors()))) {
+  for (auto *Predecessor : SetVector<VPBlockBase *>(
+           VPBB->getPredecessors().begin(), VPBB->getPredecessors().end())) {
     VPValue *EdgeMask = createEdgeMask(cast<VPBasicBlock>(Predecessor), VPBB);
     if (!EdgeMask) { // Mask of predecessor is all-one so mask of block is
                      // too.
