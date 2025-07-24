@@ -533,8 +533,9 @@ bool AArch64InstrInfo::analyzeBranchPredicate(MachineBasicBlock &MBB,
 
   MBP.LHS = LastInst->getOperand(0);
   MBP.RHS = MachineOperand::CreateImm(0);
-  MBP.Predicate = LastOpc == AArch64::CBNZX ? MachineBranchPredicate::PRED_NE
-                                            : MachineBranchPredicate::PRED_EQ;
+  MBP.Predicate = (LastOpc == AArch64::CBNZX || LastOpc == AArch64::CBNZW)
+                      ? MachineBranchPredicate::PRED_NE
+                      : MachineBranchPredicate::PRED_EQ;
   return false;
 }
 
