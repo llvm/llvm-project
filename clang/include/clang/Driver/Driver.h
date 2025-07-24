@@ -337,6 +337,10 @@ private:
   /// "clang" as it's first argument.
   const char *PrependArg;
 
+  /// The default value of -fuse-ld= option. An empty string means the default
+  /// system linker.
+  std::string PreferredLinker;
+
   /// Whether to check that input files exist when constructing compilation
   /// jobs.
   LLVM_PREFERRED_TYPE(bool)
@@ -447,6 +451,11 @@ public:
   /// Get the path to the main clang executable.
   const char *getClangProgramPath() const {
     return ClangExecutable.c_str();
+  }
+
+  StringRef getPreferredLinker() const { return PreferredLinker; }
+  void setPreferredLinker(std::string Value) {
+    PreferredLinker = std::move(Value);
   }
 
   bool isSaveTempsEnabled() const { return SaveTemps != SaveTempsNone; }
