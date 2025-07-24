@@ -1703,6 +1703,7 @@ def int_amdgcn_raw_buffer_atomic_xor : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_inc : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_dec : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_cond_sub_u32 : AMDGPURawBufferAtomic;
+def int_amdgcn_raw_buffer_atomic_sub_clamp_u32 : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_cmpswap : Intrinsic<
   [llvm_anyint_ty],
   [LLVMMatchType<0>,  // src(VGPR)
@@ -1739,9 +1740,8 @@ def int_amdgcn_raw_ptr_buffer_atomic_or : AMDGPURawPtrBufferAtomic;
 def int_amdgcn_raw_ptr_buffer_atomic_xor : AMDGPURawPtrBufferAtomic;
 def int_amdgcn_raw_ptr_buffer_atomic_inc : AMDGPURawPtrBufferAtomic;
 def int_amdgcn_raw_ptr_buffer_atomic_dec : AMDGPURawPtrBufferAtomic;
-def int_amdgcn_raw_ptr_buffer_atomic_usub_cond : AMDGPURawPtrBufferAtomic;
-def int_amdgcn_raw_ptr_buffer_atomic_usub_sat : AMDGPURawPtrBufferAtomic;
 def int_amdgcn_raw_ptr_buffer_atomic_cond_sub_u32 : AMDGPURawPtrBufferAtomic;
+def int_amdgcn_raw_ptr_buffer_atomic_sub_clamp_u32 : AMDGPURawPtrBufferAtomic;
 def int_amdgcn_raw_ptr_buffer_atomic_cmpswap : Intrinsic<
   [llvm_anyint_ty],
   [LLVMMatchType<0>,  // src(VGPR)
@@ -1783,6 +1783,7 @@ def int_amdgcn_struct_buffer_atomic_xor : AMDGPUStructBufferAtomic;
 def int_amdgcn_struct_buffer_atomic_inc : AMDGPUStructBufferAtomic;
 def int_amdgcn_struct_buffer_atomic_dec : AMDGPUStructBufferAtomic;
 def int_amdgcn_struct_buffer_atomic_cond_sub_u32 : AMDGPUStructBufferAtomic;
+def int_amdgcn_struct_buffer_atomic_sub_clamp_u32 : AMDGPUStructBufferAtomic;
 def int_amdgcn_struct_buffer_atomic_cmpswap : Intrinsic<
   [llvm_anyint_ty],
   [LLVMMatchType<0>,  // src(VGPR)
@@ -1819,6 +1820,7 @@ def int_amdgcn_struct_ptr_buffer_atomic_xor : AMDGPUStructPtrBufferAtomic;
 def int_amdgcn_struct_ptr_buffer_atomic_inc : AMDGPUStructPtrBufferAtomic;
 def int_amdgcn_struct_ptr_buffer_atomic_dec : AMDGPUStructPtrBufferAtomic;
 def int_amdgcn_struct_ptr_buffer_atomic_cond_sub_u32 : AMDGPUStructPtrBufferAtomic;
+def int_amdgcn_struct_ptr_buffer_atomic_sub_clamp_u32 : AMDGPUStructPtrBufferAtomic;
 def int_amdgcn_struct_ptr_buffer_atomic_cmpswap : Intrinsic<
   [llvm_anyint_ty],
   [LLVMMatchType<0>,  // src(VGPR)

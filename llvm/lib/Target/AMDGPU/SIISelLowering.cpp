@@ -10581,9 +10581,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_raw_buffer_atomic_dec:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_dec:
     return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_DEC);
-  case Intrinsic::amdgcn_raw_buffer_atomic_cond_sub_u32:
-    return lowerRawBufferAtomicIntrin(Op, DAG,
-                                      AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32);
   case Intrinsic::amdgcn_struct_buffer_atomic_swap:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_swap:
     return lowerStructBufferAtomicIntrin(Op, DAG,
@@ -10625,10 +10622,21 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_struct_buffer_atomic_dec:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_dec:
     return lowerStructBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_DEC);
+  case Intrinsic::amdgcn_raw_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub_clamp_u32:
+    return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_CSUB);
+  case Intrinsic::amdgcn_struct_buffer_atomic_sub_clamp_u32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_sub_clamp_u32:
+    return lowerStructBufferAtomicIntrin(Op, DAG,
+                                         AMDGPUISD::BUFFER_ATOMIC_CSUB);
+  case Intrinsic::amdgcn_raw_buffer_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cond_sub_u32:
+    return lowerRawBufferAtomicIntrin(Op, DAG,
+                                      AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32);
   case Intrinsic::amdgcn_struct_buffer_atomic_cond_sub_u32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_cond_sub_u32:
     return lowerStructBufferAtomicIntrin(Op, DAG,
                                          AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32);
-
   case Intrinsic::amdgcn_raw_buffer_atomic_cmpswap:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap: {
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(4), DAG);
@@ -18466,10 +18474,10 @@ static bool isV2BF16(Type *Ty) {
 }
 
 /// \return true if atomicrmw integer ops work for the type.
-static bool isAtomicRMWLegalIntTy(Type *Ty, bool Allow64 = true) {
+static bool isAtomicRMWLegalIntTy(Type *Ty) {
   if (auto *IT = dyn_cast<IntegerType>(Ty)) {
     unsigned BW = IT->getBitWidth();
-    return BW == 32 || (BW == 64 && Allow64);
+    return BW == 32 || BW == 64;
   }
 
   return false;
@@ -18524,7 +18532,14 @@ static bool globalMemoryFPAtomicIsLegal(const GCNSubtarget &Subtarget,
 /// \return Action to perform on AtomicRMWInsts for integer operations.
 static TargetLowering::AtomicExpansionKind
 atomicSupportedIfLegalIntType(const AtomicRMWInst *RMW, bool Allow64 = true) {
-  return isAtomicRMWLegalIntTy(RMW->getType(), Allow64)
+  if (!Allow64) {
+    if (auto *IT = dyn_cast<IntegerType>(RMW->getType())) {
+      if (IT->getBitWidth() == 32)
+        return TargetLowering::AtomicExpansionKind::None;
+    }
+    return TargetLowering::AtomicExpansionKind::CmpXChg;
+  }
+  return isAtomicRMWLegalIntTy(RMW->getType())
              ? TargetLowering::AtomicExpansionKind::None
              : TargetLowering::AtomicExpansionKind::CmpXChg;
 }
