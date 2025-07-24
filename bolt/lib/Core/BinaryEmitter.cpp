@@ -177,7 +177,8 @@ private:
   /// Note that it does not automatically result in the insertion of the EOS
   /// marker in the line table program, but provides one to the DWARF generator
   /// when it needs it.
-  void emitLineInfoEnd(const BinaryFunction &BF, MCSymbol *FunctionEndSymbol);
+  void emitLineInfoEnd(const BinaryFunction &BF, MCSymbol *FunctionEndSymbol,
+                       DWARFUnit *Unit);
 
   /// Emit debug line info for unprocessed functions from CUs that include
   /// emitted functions.
@@ -436,8 +437,9 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
     Streamer.emitELFSize(StartSymbol, SizeExpr);
   }
 
-  if (opts::UpdateDebugSections && Function.getDWARFUnit())
-    emitLineInfoEnd(Function, EndSymbol);
+  // TODO: Emit line info end for all the CUs that contain the function.
+  if (opts::UpdateDebugSections && !Function.getDWARFUnits().empty())
+    emitLineInfoEnd(Function, EndSymbol, Function.getDWARFUnits().front());
 
   // Exception handling info for the function.
   emitLSDA(Function, FF);
@@ -486,7 +488,7 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         // A symbol to be emitted before the instruction to mark its location.
         MCSymbol *InstrLabel = BC.MIB->getInstLabel(Instr);
 
-        if (opts::UpdateDebugSections && BF.getDWARFUnit()) {
+        if (opts::UpdateDebugSections && !BF.getDWARFUnits().empty()) {
           LastLocSeen = emitLineInfo(BF, Instr.getLoc(), LastLocSeen,
                                      FirstInstr, InstrLabel);
           FirstInstr = false;
@@ -679,8 +681,10 @@ void BinaryEmitter::emitConstantIslands(BinaryFunction &BF, bool EmitColdPart,
 SMLoc BinaryEmitter::emitLineInfo(const BinaryFunction &BF, SMLoc NewLoc,
                                   SMLoc PrevLoc, bool FirstInstr,
                                   MCSymbol *&InstrLabel) {
-  DWARFUnit *FunctionCU = BF.getDWARFUnit();
-  const DWARFDebugLine::LineTable *FunctionLineTable = BF.getDWARFLineTable();
+  // TODO: implment emitting into line tables corresponding to multiple CUs
+  DWARFUnit *FunctionCU = BF.getDWARFUnits().front();
+  const DWARFDebugLine::LineTable *FunctionLineTable =
+      BF.getDWARFLineTableForUnit(FunctionCU);
   assert(FunctionCU && "cannot emit line info for function without CU");
 
   DebugLineTableRowRef RowReference = DebugLineTableRowRef::fromSMLoc(NewLoc);
@@ -740,13 +744,13 @@ SMLoc BinaryEmitter::emitLineInfo(const BinaryFunction &BF, SMLoc NewLoc,
 }
 
 void BinaryEmitter::emitLineInfoEnd(const BinaryFunction &BF,
-                                    MCSymbol *FunctionEndLabel) {
-  DWARFUnit *FunctionCU = BF.getDWARFUnit();
-  assert(FunctionCU && "DWARF unit expected");
+                                    MCSymbol *FunctionEndLabel,
+                                    DWARFUnit *Unit) {
+  assert(Unit && "DWARF unit expected");
   BC.Ctx->setCurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_END_SEQUENCE, 0, 0);
   const MCDwarfLoc &DwarfLoc = BC.Ctx->getCurrentDwarfLoc();
   BC.Ctx->clearDwarfLocSeen();
-  BC.getDwarfLineTable(FunctionCU->getOffset())
+  BC.getDwarfLineTable(Unit->getOffset())
       .getMCLineSections()
       .addLineEntry(MCDwarfLineEntry(FunctionEndLabel, DwarfLoc),
                     Streamer.getCurrentSectionOnly());
@@ -1115,36 +1119,40 @@ void BinaryEmitter::emitDebugLineInfoForOriginalFunctions() {
     if (Function.isEmitted())
       continue;
 
-    const DWARFDebugLine::LineTable *LineTable = Function.getDWARFLineTable();
-    if (!LineTable)
-      continue; // nothing to update for this function
+    // Loop through all CUs in the function
+    for (DWARFUnit *Unit : Function.getDWARFUnits()) {
+      const DWARFDebugLine::LineTable *LineTable =
+          Function.getDWARFLineTableForUnit(Unit);
+      if (!LineTable)
+        continue; // nothing to update for this unit
 
-    const uint64_t Address = Function.getAddress();
-    std::vector<uint32_t> Results;
-    if (!LineTable->lookupAddressRange(
-            {Address, object::SectionedAddress::UndefSection},
-            Function.getSize(), Results))
-      continue;
+      const uint64_t Address = Function.getAddress();
+      std::vector<uint32_t> Results;
+      if (!LineTable->lookupAddressRange(
+              {Address, object::SectionedAddress::UndefSection},
+              Function.getSize(), Results))
+        continue;
 
-    if (Results.empty())
-      continue;
+      if (Results.empty())
+        continue;
 
-    // The first row returned could be the last row matching the start address.
-    // Find the first row with the same address that is not the end of the
-    // sequence.
-    uint64_t FirstRow = Results.front();
-    while (FirstRow > 0) {
-      const DWARFDebugLine::Row &PrevRow = LineTable->Rows[FirstRow - 1];
-      if (PrevRow.Address.Address != Address || PrevRow.EndSequence)
-        break;
-      --FirstRow;
+      // The first row returned could be the last row matching the start
+      // address. Find the first row with the same address that is not the end
+      // of the sequence.
+      uint64_t FirstRow = Results.front();
+      while (FirstRow > 0) {
+        const DWARFDebugLine::Row &PrevRow = LineTable->Rows[FirstRow - 1];
+        if (PrevRow.Address.Address != Address || PrevRow.EndSequence)
+          break;
+        --FirstRow;
+      }
+
+      const uint64_t EndOfSequenceAddress =
+          Function.getAddress() + Function.getMaxSize();
+      BC.getDwarfLineTable(Unit->getOffset())
+          .addLineTableSequence(LineTable, FirstRow, Results.back(),
+                                EndOfSequenceAddress);
     }
-
-    const uint64_t EndOfSequenceAddress =
-        Function.getAddress() + Function.getMaxSize();
-    BC.getDwarfLineTable(Function.getDWARFUnit()->getOffset())
-        .addLineTableSequence(LineTable, FirstRow, Results.back(),
-                              EndOfSequenceAddress);
   }
 
   // For units that are completely unprocessed, use original debug line contents
