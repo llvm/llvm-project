@@ -2041,7 +2041,8 @@ bool Sema::CheckAttrTarget(const ParsedAttr &AL) {
   // Check whether the attribute is valid on the current target.
   if (!AL.existsInTarget(Context.getTargetInfo())) {
     if (AL.isRegularKeywordAttribute())
-      Diag(AL.getLoc(), diag::err_keyword_not_supported_on_target);
+      Diag(AL.getLoc(), diag::err_keyword_not_supported_on_target)
+          << AL << AL.getRange();
     else
       DiagnoseUnknownAttribute(AL);
     AL.setInvalid();
