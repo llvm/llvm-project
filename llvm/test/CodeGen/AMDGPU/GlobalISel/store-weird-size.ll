@@ -139,7 +139,7 @@ define void @store_i95(ptr addrspace(1) %ptr, i95 %arg) #0 {
   ; UNPACKED-NEXT:   G_STORE [[TRUNC]](s32), [[PTR_ADD]](p1) :: (store (s32) into %ir.ptr + 8, addrspace 1)
   ; UNPACKED-NEXT:   SI_RETURN
     store i95 %arg, ptr addrspace(1) %ptr, align 4
-        ret void
+    ret void
 }
 
 define void @store_i96(ptr addrspace(1) %ptr, i96 %arg) #0 {
