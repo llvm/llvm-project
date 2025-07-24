@@ -34,14 +34,11 @@ void suppressCoroAllocs(CoroIdInst *CoroId);
 void suppressCoroAllocs(LLVMContext &Context,
                         ArrayRef<CoroAllocInst *> CoroAllocs);
 
-/// Attempts to rewrite the location operand of debug intrinsics in terms of
+/// Attempts to rewrite the location operand of debug records in terms of
 /// the coroutine frame pointer, folding pointer offsets into the DIExpression
 /// of the intrinsic.
 /// If the frame pointer is an Argument, store it into an alloca to enhance the
 /// debugability.
-void salvageDebugInfo(
-    SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
-    DbgVariableIntrinsic &DVI, bool IsEntryPoint);
 void salvageDebugInfo(
     SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
     DbgVariableRecord &DVR, bool UseEntryValue);

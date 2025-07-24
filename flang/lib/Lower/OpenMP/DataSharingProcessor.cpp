@@ -24,6 +24,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/Sequence.h"
@@ -291,7 +292,7 @@ void DataSharingProcessor::insertBarrier(
       clauseOps->privateNeedsBarrier =
           mlir::UnitAttr::get(&converter.getMLIRContext());
   } else {
-    firOpBuilder.create<mlir::omp::BarrierOp>(converter.getCurrentLocation());
+    mlir::omp::BarrierOp::create(firOpBuilder, converter.getCurrentLocation());
   }
 }
 
@@ -351,32 +352,32 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
              loopOp.getIVs(), result.loopUpperBounds, result.loopSteps)) {
       // v = iv + step
       // cmp = step < 0 ? v < ub : v > ub
-      mlir::Value v = firOpBuilder.create<mlir::arith::AddIOp>(loc, iv, step);
+      mlir::Value v = mlir::arith::AddIOp::create(firOpBuilder, loc, iv, step);
       vs.push_back(v);
       mlir::Value zero =
           firOpBuilder.createIntegerConstant(loc, step.getType(), 0);
-      mlir::Value negativeStep = firOpBuilder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::slt, step, zero);
-      mlir::Value vLT = firOpBuilder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::slt, v, ub);
-      mlir::Value vGT = firOpBuilder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::sgt, v, ub);
-      mlir::Value icmpOp = firOpBuilder.create<mlir::arith::SelectOp>(
-          loc, negativeStep, vLT, vGT);
+      mlir::Value negativeStep = mlir::arith::CmpIOp::create(
+          firOpBuilder, loc, mlir::arith::CmpIPredicate::slt, step, zero);
+      mlir::Value vLT = mlir::arith::CmpIOp::create(
+          firOpBuilder, loc, mlir::arith::CmpIPredicate::slt, v, ub);
+      mlir::Value vGT = mlir::arith::CmpIOp::create(
+          firOpBuilder, loc, mlir::arith::CmpIPredicate::sgt, v, ub);
+      mlir::Value icmpOp = mlir::arith::SelectOp::create(
+          firOpBuilder, loc, negativeStep, vLT, vGT);
 
       if (cmpOp)
-        cmpOp = firOpBuilder.create<mlir::arith::AndIOp>(loc, cmpOp, icmpOp);
+        cmpOp = mlir::arith::AndIOp::create(firOpBuilder, loc, cmpOp, icmpOp);
       else
         cmpOp = icmpOp;
     }
 
-    auto ifOp = firOpBuilder.create<fir::IfOp>(loc, cmpOp, /*else*/ false);
+    auto ifOp = fir::IfOp::create(firOpBuilder, loc, cmpOp, /*else*/ false);
     firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     for (auto [v, loopIV] : llvm::zip_equal(vs, loopIVs)) {
       hlfir::Entity loopIVEntity{loopIV};
       loopIVEntity =
           hlfir::derefPointersAndAllocatables(loc, firOpBuilder, loopIVEntity);
-      firOpBuilder.create<hlfir::AssignOp>(loc, v, loopIVEntity);
+      hlfir::AssignOp::create(firOpBuilder, loc, v, loopIVEntity);
     }
     lastPrivIP = firOpBuilder.saveInsertionPoint();
   } else if (mlir::isa<mlir::omp::SectionsOp>(op)) {
@@ -465,7 +466,8 @@ bool DataSharingProcessor::isOpenMPPrivatizingConstruct(
   // allow a privatizing clause) are: dispatch, distribute, do, for, loop,
   // parallel, scope, sections, simd, single, target, target_data, task,
   // taskgroup, taskloop, and teams.
-  return llvm::is_contained(privatizing, extractOmpDirective(omp));
+  return llvm::is_contained(privatizing,
+                            parser::omp::GetOmpDirectiveName(omp).v);
 }
 
 bool DataSharingProcessor::isOpenMPPrivatizingEvaluation(

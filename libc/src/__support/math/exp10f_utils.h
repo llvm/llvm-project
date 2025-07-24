@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXP_FLOAT_CONSTANTS_H
-#define LLVM_LIBC_SRC___SUPPORT_MATH_EXP_FLOAT_CONSTANTS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXP10F_UTILS_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_EXP10F_UTILS_H
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -154,4 +154,4 @@ LIBC_INLINE static constexpr exp_b_reduc_t exp_b_range_reduc(float x) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_MATH_EXP_FLOAT_CONSTANTS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_EXP10F_UTILS_H

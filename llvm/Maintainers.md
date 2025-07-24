@@ -263,6 +263,20 @@ amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitH
 
 #### PowerPC backend
 
+Amy Kwan (esp. release issues) \
+Amy.Kwan1@ibm.com (email), [amy-kwan](https://github.com/amy-kwan) (GitHub) \
+Lei Huang \
+lei@ca.ibm.com (email), [lei137](https://github.com/lei137) (GitHub) \
+Sean Fertile (esp. ABI/ELF/XCOFF) \
+sfertile@ca.ibm.com (email), [mandlebug](https://github.com/mandlebug) (GitHub) \
+Zhijian Lin \
+zhijian@ca.ibm.com (email), [diggerlin](https://github.com/diggerlin) (GitHub) \
+Maryam Moghadas \
+maryammo@ca.ibm.com (email), [maryammo](https://github.com/maryammo) (GitHub) \
+Roland Froese \
+froese@ca.ibm.com (email), [RolandF77](https://github.com/RolandF77) (GitHub) \
+llvmonpower \
+powerllvm@ca.ibm.com (email), [llvmonpower](https://github.com/llvmonpower) (GitHub)
 
 #### RISCV backend
 
