@@ -22,33 +22,40 @@ namespace {
 using namespace ::clang::ast_matchers;
 using namespace ::clang::transformer;
 
-class TypeAsWrittenStencil : public StencilInterface {
-public:
-  explicit TypeAsWrittenStencil(std::string S) : Id(std::move(S)) {}
-  std::string toString() const override {
-    return (llvm::Twine("TypeAsWritten(\"") + Id + "\")").str();
-  }
+EditGenerator rewrite(RangeSelector Call, RangeSelector Builder,
+                      RangeSelector CallArgs) {
+  return [Call = std::move(Call), Builder = std::move(Builder),
+          CallArgs =
+              std::move(CallArgs)](const MatchFinder::MatchResult &Result)
+             -> Expected<SmallVector<transformer::Edit, 1>> {
+    Expected<CharSourceRange> CallRange = Call(Result);
+    if (!CallRange)
+      return CallRange.takeError();
+    SourceManager &SM = *Result.SourceManager;
+    const LangOptions &LangOpts = Result.Context->getLangOpts();
 
-  llvm::Error eval(const MatchFinder::MatchResult &match,
-                   std::string *result) const override {
-    llvm::Expected<CharSourceRange> n = node(Id)(match);
-    if (!n)
-      return n.takeError();
-    const SourceRange SrcRange = n->getAsRange();
-    if (SrcRange.isInvalid()) {
-      return llvm::make_error<llvm::StringError>(llvm::errc::invalid_argument,
-                                                 "SrcRange is invalid");
+    // This will result in just a warning and no edit.
+    SourceLocation Begin = CallRange->getBegin();
+    bool InMacro = CallRange->getBegin().isMacroID();
+    if (InMacro) {
+      while (SM.isMacroArgExpansion(Begin))
+        Begin = SM.getImmediateExpansionRange(Begin).getBegin();
+      Edit WarnOnly;
+      WarnOnly.Kind = EditKind::Range;
+      WarnOnly.Range = CharSourceRange::getCharRange(Begin, Begin);
+      return SmallVector<Edit, 1>({WarnOnly});
     }
-    const CharSourceRange Range = n->getTokenRange(SrcRange);
-    auto NextToken = [&](std::optional<Token> Token) {
-      if (!Token)
-        return Token;
-      return clang::Lexer::findNextToken(Token->getLocation(),
-                                         *match.SourceManager,
-                                         match.Context->getLangOpts());
+
+    auto NextToken = [&](std::optional<Token> CurrentToken) {
+      if (!CurrentToken)
+        return CurrentToken;
+      if (CurrentToken->getEndLoc() >= CallRange->getEnd())
+        return std::optional<Token>();
+      return clang::Lexer::findNextToken(CurrentToken->getLocation(), SM,
+                                         LangOpts);
     };
-    std::optional<Token> LessToken = clang::Lexer::findNextToken(
-        Range.getBegin(), *match.SourceManager, match.Context->getLangOpts());
+    std::optional<Token> LessToken =
+        clang::Lexer::findNextToken(Begin, SM, LangOpts);
     while (LessToken && LessToken->getKind() != clang::tok::less) {
       LessToken = NextToken(LessToken);
     }
@@ -66,18 +73,34 @@ public:
       return llvm::make_error<llvm::StringError>(llvm::errc::invalid_argument,
                                                  "missing '>' token");
     }
-    *result += clang::tooling::getText(
-        CharSourceRange::getTokenRange(LessToken->getEndLoc(),
-                                       EndToken->getLastLoc()),
-        *match.Context);
-    return llvm::Error::success();
-  }
-  std::string Id;
-};
 
-Stencil typeAsWritten(StringRef Id) {
-  // Using this instead of `describe` so that we get the exact same spelling.
-  return std::make_shared<TypeAsWrittenStencil>(std::string(Id));
+    auto GetText = [&](const CharSourceRange &Range) {
+      return clang::Lexer::getSourceText(Range, SM, LangOpts);
+    };
+    Expected<CharSourceRange> BuilderRange = Builder(Result);
+    if (!BuilderRange)
+      return BuilderRange.takeError();
+    Expected<CharSourceRange> CallArgsRange = CallArgs(Result);
+    if (!CallArgsRange)
+      return CallArgsRange.takeError();
+
+    Edit Replace;
+    Replace.Kind = EditKind::Range;
+    Replace.Range = *CallRange;
+    Replace.Replacement = GetText(CharSourceRange::getTokenRange(
+        LessToken->getEndLoc(), EndToken->getLastLoc()));
+    Replace.Replacement += "::create(";
+    Replace.Replacement += GetText(*BuilderRange);
+    // Only emit args if there are any.
+    if (auto CallArgsText = GetText(*CallArgsRange).ltrim();
+        !CallArgsText.rtrim().empty()) {
+      Replace.Replacement += ", ";
+      Replace.Replacement += CallArgsText;
+    }
+    Replace.Replacement += ")";
+
+    return SmallVector<Edit, 1>({Replace});
+  };
 }
 
 RewriteRuleWith<std::string> mlirOpBuilderCheckRule() {
@@ -89,8 +112,7 @@ RewriteRuleWith<std::string> mlirOpBuilderCheckRule() {
           callee(cxxMethodDecl(hasTemplateArgument(0, templateArgument()))),
           callee(cxxMethodDecl(hasName("create"))))
           .bind("call"),
-      changeTo(cat(typeAsWritten("call"), "::create(", node("builder"), ", ",
-                   callArgs("call"), ")")),
+      rewrite(node("call"), node("builder"), callArgs("call")),
       cat("use 'OpType::create(builder, ...)' instead of "
           "'builder.create<OpType>(...)'"));
 }

@@ -31,27 +31,27 @@ struct NamedOp {
 };
 } // namespace mlir
 
-#define ASSIGN(A, B, C, D) A = B.create<C>(B.getUnknownLoc(), D)
+#define ASSIGN(A, B, C, D) C A = B.create<C>(B.getUnknownLoc(), D)
 
 template <typename T>
 void g(mlir::OpBuilder &b) {
-  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use OpType::create(builder, ...) instead of builder.create<OpType>(...) [llvm-use-new-mlir-op-builder]
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use 'OpType::create(builder, ...)' instead of 'builder.create<OpType>(...)' [llvm-use-new-mlir-op-builder]
   // CHECK-FIXES: T::create(b, b.getUnknownLoc(), "gaz")
   b.create<T>(b.getUnknownLoc(), "gaz");
 }
 
 void f() {
   mlir::OpBuilder builder;
-  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use OpType::create(builder, ...) instead of builder.create<OpType>(...) [llvm-use-new-mlir-op-builder]
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use 'OpType::create(builder, ...)' instead of 'builder.create<OpType>(...)' [llvm-use-new-mlir-op-builder]
   // CHECK-FIXES: mlir::  ModuleOp::create(builder, builder.getUnknownLoc())
   builder.create<mlir::  ModuleOp>(builder.getUnknownLoc());
 
   using mlir::NamedOp;
-  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use OpType::create(builder, ...) instead of builder.create<OpType>(...) [llvm-use-new-mlir-op-builder]
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use 'OpType::create(builder, ...)' instead of 'builder.create<OpType>(...)' [llvm-use-new-mlir-op-builder]
   // CHECK-FIXES: NamedOp::create(builder, builder.getUnknownLoc(), "baz")
   builder.create<NamedOp>(builder.getUnknownLoc(), "baz");
 
-  // CHECK-MESSAGES: :[[@LINE+4]]:3: warning: use OpType::create(builder, ...) instead of builder.create<OpType>(...) [llvm-use-new-mlir-op-builder]
+  // CHECK-MESSAGES: :[[@LINE+4]]:3: warning: use 'OpType::create(builder, ...)' instead of 'builder.create<OpType>(...)' [llvm-use-new-mlir-op-builder]
   // CHECK-FIXES: NamedOp::create(builder,
   // CHECK-FIXES:   builder.getUnknownLoc(),
   // CHECK-FIXES:   "caz")
@@ -60,16 +60,13 @@ void f() {
      builder.getUnknownLoc(),
      "caz");
 
-  NamedOp op("unused");
-  // FIXME: This is matching, but the changeTo not called.
+  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: use 'OpType::create(builder, ...)' instead of 'builder.create<OpType>(...)' [llvm-use-new-mlir-op-builder]
   ASSIGN(op, builder, NamedOp, "daz");
 
   g<NamedOp>(builder);
 
   mlir::ImplicitLocOpBuilder ib;
-  // Note: extra space in the case where there is no other arguments. Could be
-  // improved, but also clang-format will do that just post.
-  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use OpType::create(builder, ...) instead of builder.create<OpType>(...) [llvm-use-new-mlir-op-builder]
-  // CHECK-FIXES: mlir::ModuleOp::create(ib )
-  ib.create<mlir::ModuleOp>();
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use 'OpType::create(builder, ...)' instead of 'builder.create<OpType>(...)' [llvm-use-new-mlir-op-builder]
+  // CHECK-FIXES: mlir::ModuleOp::create(ib)
+  ib.create<mlir::ModuleOp>(   );
 }
