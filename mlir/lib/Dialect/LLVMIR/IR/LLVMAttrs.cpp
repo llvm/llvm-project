@@ -409,59 +409,18 @@ ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                      << key << "'";
 }
 
-FailureOr<Attribute> TargetFeaturesAttr::query(DataLayoutEntryKey key) {
-  if (auto stringKey = dyn_cast<StringAttr>(key))
-    if (contains(stringKey))
-      return UnitAttr::get(getContext());
-  return failure();
-}
-
 //===----------------------------------------------------------------------===//
 // LLVM_TargetAttr
 //===----------------------------------------------------------------------===//
 
-FailureOr<std::unique_ptr<llvm::TargetMachine>> TargetAttr::getTargetMachine() {
-  llvm::InitializeAllTargets();
-  llvm::InitializeAllTargetMCs();
-
-  std::string error;
-  const llvm::Target *target =
-      llvm::TargetRegistry::lookupTarget(getTriple(), error);
-  if (!target || !error.empty()) {
-    LLVM_DEBUG({
-      llvm::dbgs() << "Looking up target '" << getTriple()
-                   << "' failed: " << error << "\n";
-    });
-    return failure();
-  }
-
-  return std::unique_ptr<llvm::TargetMachine>(target->createTargetMachine(
-      llvm::Triple(getTriple().strref()), getChip().strref(),
-      getFeatures() ? getFeatures().strref() : "", {}, {}));
-}
-
-FailureOr<llvm::DataLayout> TargetAttr::getDataLayout() {
-  FailureOr<std::unique_ptr<llvm::TargetMachine>> targetMachine =
-      getTargetMachine();
-  if (failed(targetMachine)) {
-    LLVM_DEBUG({
-      llvm::dbgs()
-          << "Failed to retrieve the target machine for data layout.\n";
-    });
-    return failure();
-  }
-  return (targetMachine.value())->createDataLayout();
-}
-
 FailureOr<::mlir::Attribute> TargetAttr::query(DataLayoutEntryKey key) {
-  Attribute result;
   if (auto stringAttrKey = dyn_cast<StringAttr>(key)) {
     if (stringAttrKey.getValue() == "triple")
       return getTriple();
-    if (stringAttrKey.getValue() == "chip" && (result = getChip()))
-      return result;
-    if (stringAttrKey.getValue() == "features" && (result = getFeatures()))
-      return result;
+    if (stringAttrKey.getValue() == "chip")
+      return getChip();
+    if (stringAttrKey.getValue() == "features" && getFeatures())
+      return getFeatures();
   }
 
   return failure();

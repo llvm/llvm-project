@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_LLVMIR_LLVMINTERFACES_H_
 #define MLIR_DIALECT_LLVMIR_LLVMINTERFACES_H_
 
+#include "llvm/Target/TargetMachine.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 
 namespace mlir {

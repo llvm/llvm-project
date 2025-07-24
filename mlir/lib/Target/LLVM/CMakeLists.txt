@@ -1,5 +1,6 @@
-add_mlir_library(MLIRTargetLLVM
+add_mlir_dialect_library(MLIRTargetLLVM
   ModuleToObject.cpp
+  Target.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Target/LLVM
@@ -16,6 +17,12 @@ add_mlir_library(MLIRTargetLLVM
   Passes
   Support
   Target
+  TargetParser
+  AllTargetsAsmParsers
+  AllTargetsCodeGens
+  AllTargetsDescs
+  AllTargetsInfos
+
   LINK_LIBS PUBLIC
   MLIRExecutionEngineUtils
   MLIRTargetLLVMIRExport

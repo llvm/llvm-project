@@ -16,11 +16,12 @@
 
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
-#include "llvm/MC/TargetRegistry.h"
-#include "llvm/Target/TargetMachine.h"
 #include <optional>
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.h.inc"
+
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/IR/DataLayout.h"
 
 namespace mlir {
 namespace LLVM {
@@ -95,12 +96,6 @@ using linkage::Linkage;
 using tailcallkind::TailCallKind;
 } // namespace LLVM
 } // namespace mlir
-
-// First obtain TargetFeaturesAttr definitions as it is used both an LLVMIR
-// interface and that interface and this attribute are turn required by another
-// LLVMIR attribute.
-#define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/LLVMIR/LLVMTargetFeaturesAttrDefs.h.inc"
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrInterfaces.h.inc"
 

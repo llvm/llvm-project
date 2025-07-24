@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/LLVMIR/DataLayoutImporter.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Pass/Pass.h"
 
@@ -57,8 +56,7 @@ struct DataLayoutFromTargetPass
       }
     });
 
-    if (passFailed) {
+    if (passFailed)
       return signalPassFailure();
-    }
   }
 };

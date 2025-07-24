@@ -538,36 +538,33 @@ def LLVM_TargetAttrInterface
   let description = [{
     Interface for attributes that describe LLVM targets.
 
-    These attributes should be able to return the specified target
-    `triple`, `chip` and `features` and are expected to be able to
-    produce the corresponding `llvm::TargetMachine` and
-    `llvm::DataLayout`. These methods can fail in case the backend
-    is not available.
+    These attributes should be able to return the specified target `triple`,
+    `chip` and `features` and are expected to be able to produce the
+    corresponding `llvm::TargetMachine` and `llvm::DataLayout`. These methods
+    can fail in case the backend is not available.
 
-    Implementing attributes should provide a
-    `DLTIQueryInterface::query()` implementation which responds to
-    keys `"triple"`, `"chip"` and `"features"` by returning an
-    appropriate `StringAttr`, `StringAttr` and
-    `LLVM_TargetFeaturesAttr`.
+    Implementing attributes should provide a `DLTIQueryInterface::query()`
+    implementation which responds to keys `"triple"`, `"chip"` and `"features"`
+    by returning appropriate `StringAttr`s.
   }];
   let cppNamespace = "::mlir::LLVM";
   let methods = [
     InterfaceMethod<
       /*description=*/"Returns the target triple identifier.",
-      /*retTy=*/"::llvm::StringRef",
-      /*methodName=*/"getTriple",
+      /*retTy=*/"StringAttr",
+      /*methodName=*/"getTripleAttr",
       /*args=*/(ins)
     >,
     InterfaceMethod<
       /*description=*/"Returns the target chip (i.e. \"cpu\") identifier.",
-      /*retTy=*/"::llvm::StringRef",
-      /*methodName=*/"getChip",
+      /*retTy=*/"StringAttr",
+      /*methodName=*/"getChipAttr",
       /*args=*/(ins)
     >,
     InterfaceMethod<
       /*description=*/"Returns the target features as a string.",
-      /*retTy=*/"::llvm::StringRef",
-      /*methodName=*/"getFeatures",
+      /*retTy=*/"StringAttr",
+      /*methodName=*/"getFeaturesAttr",
       /*args=*/(ins)
     >,
     InterfaceMethod<

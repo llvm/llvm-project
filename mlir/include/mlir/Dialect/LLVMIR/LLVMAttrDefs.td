@@ -16,127 +16,6 @@ include "mlir/IR/CommonAttrConstraints.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 
 //===----------------------------------------------------------------------===//
-// LLVM_TargetAttr
-//===----------------------------------------------------------------------===//
-
-def LLVM_TargetAttr : LLVM_Attr<"Target", "target",
-                                [LLVM_TargetAttrInterface]> {
-  let summary = "LLVM target info: triple, chip, features";
-  let description = [{
-    An attribute to hold LLVM target information, specifying LLVM's target
-    `triple` string, the target `chip` string (i.e. the `cpu` string), and
-    target `features` string as an attribute. The latter two are optional.
-
-    Has facilities to obtain the corresponding `llvm::TargetMachine` and
-    `llvm::DataLayout`, given the relevant LLVM backend is loaded.
-
-    ---
-
-    Responds to DLTI-queries on the keys:
-       * A query for `"triple"` returns the `StringAttr` for the `triple`.
-       * A query for `"chip"` returns the `StringAttr` for the `chip`/`cpu`, if provided.
-       * A query for `"features"` returns the `TargetFeaturesAttr`, if provided.
-         * Individual features can be queried for on this attribute.
-  }];
-  let parameters = (ins "StringAttr":$triple,
-                        "StringAttr":$chip,
-                        OptionalParameter<"StringAttr">:$features);
-
-  let assemblyFormat = [{`<` struct($triple, $chip, $features) `>`}];
-
-  let extraClassDeclaration = [{
-    FailureOr<std::unique_ptr<llvm::TargetMachine>> getTargetMachine();
-    FailureOr<llvm::DataLayout> getDataLayout();
-    FailureOr<Attribute> query(DataLayoutEntryKey key);
-  }];
-}
-
-//===----------------------------------------------------------------------===//
-// LLVM_DataLayoutAttr
-//===----------------------------------------------------------------------===//
-
-def LLVM_DataLayoutAttr
-    : LLVM_Attr<"DataLayout", "data_layout", [DataLayoutSpecInterface]> {
-  let summary = "LLVM data layout string, exposed through DLTI";
-  let description = [{
-    An attribute to hold a LLVM data layout string.
-
-    The LLVM data layout string is parsed and mapped to the corresponding MLIR
-    data layout specification. The `#llvm.data_layout` attribute then serves as
-    a proxy, forwarding all DLTI queries to the underlying MLIR data layout
-    specification.
-  }];
-  let parameters = (ins "StringAttr":$data_layout_str,
-                         OptionalParameter<"DataLayoutSpecInterface", "{}">:$data_layout_spec);
-  let builders = [
-    AttrBuilder<(ins "llvm::StringRef":$data_layout_str), [{
-      auto importer = LLVM::DataLayoutImporter($_ctxt, data_layout_str);
-      auto dataLayoutSpec = importer.getDataLayout();
-      return $_get($_ctxt, mlir::StringAttr::get($_ctxt, data_layout_str), dataLayoutSpec);
-    }]>
-  ];
-  let assemblyFormat = "`<` $data_layout_str `>`";
-  let extraClassDeclaration = [{
-    template <typename Ty>
-    DataLayoutEntryList getSpecForType() {
-      return getDataLayoutSpec().getSpecForType(TypeID::get<Ty>());
-    }
-
-    void bucketEntriesByType(
-        ::llvm::MapVector<::mlir::TypeID, ::mlir::DataLayoutEntryList> &types,
-        ::llvm::MapVector<::mlir::StringAttr,
-                          ::mlir::DataLayoutEntryInterface> &ids) {
-      getDataLayoutSpec().bucketEntriesByType(types, ids);
-    };
-
-    ::mlir::DataLayoutSpecInterface
-    combineWith(ArrayRef<::mlir::DataLayoutSpecInterface> specs) const {
-      return getDataLayoutSpec().combineWith(specs);
-    }
-    DataLayoutEntryListRef getEntries() const { return getDataLayoutSpec().getEntries(); }
-    LogicalResult verifySpec(Location loc) {
-      return getDataLayoutSpec().verifySpec(loc);
-    }
-    StringAttr getEndiannessIdentifier(MLIRContext *context) const {
-      return getDataLayoutSpec().getEndiannessIdentifier(context);
-    }
-    StringAttr getDefaultMemorySpaceIdentifier(MLIRContext *context) const {
-      return getDataLayoutSpec().getDefaultMemorySpaceIdentifier(context);
-    }
-    StringAttr getAllocaMemorySpaceIdentifier(MLIRContext *context) const {
-      return getDataLayoutSpec().getAllocaMemorySpaceIdentifier(context);
-    }
-    StringAttr getManglingModeIdentifier(MLIRContext *context) const {
-      return getDataLayoutSpec().getManglingModeIdentifier(context);
-    }
-    StringAttr getProgramMemorySpaceIdentifier(MLIRContext *context) const {
-      return getDataLayoutSpec().getProgramMemorySpaceIdentifier(context);
-    }
-    StringAttr getGlobalMemorySpaceIdentifier(MLIRContext *context) const {
-      return getDataLayoutSpec().getGlobalMemorySpaceIdentifier(context);
-    }
-    StringAttr getStackAlignmentIdentifier(MLIRContext *context) const {
-      return getDataLayoutSpec().getStackAlignmentIdentifier(context);
-    }
-    StringAttr getFunctionPointerAlignmentIdentifier(MLIRContext *context) const {
-      return getDataLayoutSpec().getFunctionPointerAlignmentIdentifier(context);
-    }
-    StringAttr getLegalIntWidthsIdentifier(MLIRContext *context) const {
-      return getDataLayoutSpec().getLegalIntWidthsIdentifier(context);
-    }
-    ::mlir::DataLayoutEntryList getSpecForType(TypeID type) const {
-      return getDataLayoutSpec().getSpecForType(type);
-    }
-    ::mlir::DataLayoutEntryInterface getSpecForIdentifier(StringAttr identifier) const {
-      return getDataLayoutSpec().getSpecForIdentifier(identifier);
-    }
-    FailureOr<Attribute> query(DataLayoutEntryKey key) const {
-      return getDataLayoutSpec().query(key);
-    }
-  }];
-}
-
-//===----------------------------------------------------------------------===//
 // CConvAttr
 //===----------------------------------------------------------------------===//
 
@@ -1353,6 +1232,190 @@ def LLVM_VScaleRangeAttr : LLVM_Attr<"VScaleRange", "vscale_range"> {
     "IntegerAttr":$minRange,
     "IntegerAttr":$maxRange);
   let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// TargetFeaturesAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features"> {
+  let summary = "LLVM target features attribute";
+
+  let description = [{
+    Represents the LLVM target features as a list that can be checked within
+    passes/rewrites.
+
+    Example:
+    ```mlir
+    #llvm.target_features<["+sme", "+sve", "+sme-f64f64"]>
+    ```
+
+    Then within a pass or rewrite the features active at an op can be queried:
+
+    ```c++
+    auto targetFeatures = LLVM::TargetFeaturesAttr::featuresAt(op);
+
+    if (!targetFeatures.contains("+sme-f64f64"))
+      return failure();
+    ```
+  }];
+
+  let parameters = (ins OptionalArrayRefParameter<"StringAttr">:$features);
+
+  let builders = [
+    TypeBuilder<(ins "::llvm::StringRef":$features)>,
+    TypeBuilder<(ins "::llvm::ArrayRef<::llvm::StringRef>":$features)>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Checks if a feature is contained within the features list.
+    /// Note: Using a StringAttr allows doing pointer-comparisons.
+    bool contains(::mlir::StringAttr feature) const;
+    bool contains(::llvm::StringRef feature) const;
+
+    bool nullOrEmpty() const {
+      // Checks if this attribute is null, or the features are empty.
+      return !bool(*this) || getFeatures().empty();
+    }
+
+    /// Returns the list of features as an LLVM-compatible string.
+    std::string getFeaturesString() const;
+
+    /// Finds the target features on the parent FunctionOpInterface.
+    /// Note: This assumes the attribute name matches the return value of
+    /// `getAttributeName()`.
+    static TargetFeaturesAttr featuresAt(Operation* op);
+
+    /// Canonical name for this attribute within MLIR.
+    static constexpr StringLiteral getAttributeName() {
+      return StringLiteral("target_features");
+    }
+  }];
+
+  let assemblyFormat = "`<` `[` (`]`) : ($features^ `]`)? `>`";
+  let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// LLVM_TargetAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_TargetAttr : LLVM_Attr<"Target", "target",
+                                [DLTIQueryInterface]> {
+  let summary = "LLVM target info: triple, chip, features";
+  let description = [{
+    An attribute to hold LLVM target information, specifying LLVM's target
+    `triple` string, the target `chip` string (i.e. the `cpu` string), and
+    target `features` string as an attribute. The latter two are optional.
+
+    Has facilities to obtain the corresponding `llvm::TargetMachine` and
+    `llvm::DataLayout`, given the relevant LLVM backend is loaded.
+
+    ---
+
+    Responds to DLTI-queries on the keys:
+       * A query for `"triple"` returns the `StringAttr` for the `triple`.
+       * A query for `"chip"` returns the `StringAttr` for the `chip`/`cpu`.
+       * A query for `"features"` returns the `StringAttr`, if provided.
+  }];
+  let parameters = (ins "StringAttr":$triple,
+                        "StringAttr":$chip,
+                        OptionalParameter<"StringAttr", "">:$features);
+
+  let assemblyFormat = [{`<` struct($triple, $chip, $features) `>`}];
+
+  let extraClassDeclaration = [{
+    FailureOr<Attribute> query(DataLayoutEntryKey key);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// LLVM_DataLayoutAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DataLayoutAttr
+    : LLVM_Attr<"DataLayout", "data_layout", [DataLayoutSpecInterface]> {
+  let summary = "LLVM data layout string, exposed through DLTI";
+  let description = [{
+    An attribute to hold a LLVM data layout string.
+
+    The LLVM data layout string is parsed and mapped to the corresponding MLIR
+    data layout specification. The `#llvm.data_layout` attribute then serves as
+    a proxy, forwarding all DLTI queries to the underlying MLIR data layout
+    specification.
+
+    The default data layout string specified in the language reference
+    (https://llvm.org/docs/LangRef.html#data-layout) is used to derive
+    unspecified elements of the data layout string.
+  }];
+  let parameters = (ins OptionalParameter<"StringAttr", "\"\"">:$data_layout_str,
+                        OptionalParameter<"DataLayoutSpecInterface", "{}">:$data_layout_spec);
+  let builders = [
+    AttrBuilder<(ins "llvm::StringRef":$data_layout_str), [{
+      auto importer = LLVM::DataLayoutImporter($_ctxt, data_layout_str);
+      auto dataLayoutSpec = importer.getDataLayoutSpec();
+      return $_get($_ctxt, mlir::StringAttr::get($_ctxt, data_layout_str), dataLayoutSpec);
+    }]>
+  ];
+  let assemblyFormat = "(`<` $data_layout_str^ `>`)?";
+  let extraClassDeclaration = [{
+    // Forward all DataLayoutSpecInterface methods to the underlying
+    // DataLayoutSpecInterface.
+    template <typename Ty>
+    DataLayoutEntryList getSpecForType() {
+      return getDataLayoutSpec().getSpecForType(TypeID::get<Ty>());
+    }
+    void bucketEntriesByType(
+        ::llvm::MapVector<::mlir::TypeID, ::mlir::DataLayoutEntryList> &types,
+        ::llvm::MapVector<::mlir::StringAttr,
+                          ::mlir::DataLayoutEntryInterface> &ids) {
+      getDataLayoutSpec().bucketEntriesByType(types, ids);
+    }
+    ::mlir::DataLayoutSpecInterface
+    combineWith(ArrayRef<::mlir::DataLayoutSpecInterface> specs) const {
+      return getDataLayoutSpec().combineWith(specs);
+    }
+    DataLayoutEntryListRef getEntries() const { return getDataLayoutSpec().getEntries(); }
+    LogicalResult verifySpec(Location loc) {
+      return getDataLayoutSpec().verifySpec(loc);
+    }
+    StringAttr getEndiannessIdentifier(MLIRContext *context) const {
+      return getDataLayoutSpec().getEndiannessIdentifier(context);
+    }
+    StringAttr getDefaultMemorySpaceIdentifier(MLIRContext *context) const {
+      return getDataLayoutSpec().getDefaultMemorySpaceIdentifier(context);
+    }
+    StringAttr getAllocaMemorySpaceIdentifier(MLIRContext *context) const {
+      return getDataLayoutSpec().getAllocaMemorySpaceIdentifier(context);
+    }
+    StringAttr getManglingModeIdentifier(MLIRContext *context) const {
+      return getDataLayoutSpec().getManglingModeIdentifier(context);
+    }
+    StringAttr getProgramMemorySpaceIdentifier(MLIRContext *context) const {
+      return getDataLayoutSpec().getProgramMemorySpaceIdentifier(context);
+    }
+    StringAttr getGlobalMemorySpaceIdentifier(MLIRContext *context) const {
+      return getDataLayoutSpec().getGlobalMemorySpaceIdentifier(context);
+    }
+    StringAttr getStackAlignmentIdentifier(MLIRContext *context) const {
+      return getDataLayoutSpec().getStackAlignmentIdentifier(context);
+    }
+    StringAttr getFunctionPointerAlignmentIdentifier(MLIRContext *context) const {
+      return getDataLayoutSpec().getFunctionPointerAlignmentIdentifier(context);
+    }
+    StringAttr getLegalIntWidthsIdentifier(MLIRContext *context) const {
+      return getDataLayoutSpec().getLegalIntWidthsIdentifier(context);
+    }
+    ::mlir::DataLayoutEntryList getSpecForType(TypeID type) const {
+      return getDataLayoutSpec().getSpecForType(type);
+    }
+    ::mlir::DataLayoutEntryInterface getSpecForIdentifier(StringAttr identifier) const {
+      return getDataLayoutSpec().getSpecForIdentifier(identifier);
+    }
+    FailureOr<Attribute> query(DataLayoutEntryKey key) const {
+      return getDataLayoutSpec().query(key);
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//

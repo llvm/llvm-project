@@ -18,7 +18,6 @@ module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux", 
 // CHECK-SAME:   triple = "x86_64-unknown-linux"
 // CHECK-SAME:   chip = ""
 // CHECK-SAME:   features = "+mmx,+sse"
-// CHECK-NOT:    chip = "skylake"
 
 module attributes { llvm.target = #llvm.target<triple = "x86_64-unknown-linux",
                                                chip = "",
