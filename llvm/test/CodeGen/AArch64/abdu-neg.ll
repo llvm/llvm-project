@@ -391,14 +391,12 @@ define i64 @abd_cmp_i64(i64 %a, i64 %b) nounwind {
 define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; CHECK-LABEL: abd_cmp_i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, x2
-; CHECK-NEXT:    sbc x8, x1, x3
-; CHECK-NEXT:    subs x9, x2, x0
-; CHECK-NEXT:    sbc x10, x3, x1
-; CHECK-NEXT:    subs x11, x0, x2
-; CHECK-NEXT:    sbcs xzr, x1, x3
-; CHECK-NEXT:    csel x0, x11, x9, lo
-; CHECK-NEXT:    csel x1, x8, x10, lo
+; CHECK-NEXT:    subs x8, x2, x0
+; CHECK-NEXT:    sbc x9, x3, x1
+; CHECK-NEXT:    subs x10, x0, x2
+; CHECK-NEXT:    sbcs x11, x1, x3
+; CHECK-NEXT:    csel x0, x10, x8, lo
+; CHECK-NEXT:    csel x1, x11, x9, lo
 ; CHECK-NEXT:    ret
   %cmp = icmp ult i128 %a, %b
   %ab = sub i128 %a, %b
