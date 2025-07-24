@@ -70,6 +70,13 @@ namespace {
 
 using LoopVector = SmallVector<Loop *, 8>;
 
+/// A list of direction vectors. Each entry represents a direction vector
+/// corresponding to one or more dependencies existing in the loop nest. The
+/// length of all direction vectors is equal and is N + 1, where N is the depth
+/// of the loop nest. The first N elements correspond to the dependency
+/// direction of each N loops. The last one indicates whether this entry is
+/// forward dependency ('<') or not ('*'). The term "forward" aligns with what
+/// is defined in LoopAccessAnalysis.
 // TODO: Check if we can use a sparse matrix here.
 using CharMatrix = std::vector<std::vector<char>>;
 
@@ -128,8 +135,8 @@ static void printDepMatrix(CharMatrix &DepMatrix) {
   for (auto &Row : DepMatrix) {
     ArrayRef<char> RowRef(Row);
 
-    // Drop the last element because it is a flag indicating whether the row is
-    // "lexically forward", which doesn't affect the legality check.
+    // Drop the last element because it is a flag indicating whether this is
+    // forward dependency or not, which doesn't affect the legality check.
     for (auto D : RowRef.drop_back())
       LLVM_DEBUG(dbgs() << D << " ");
     LLVM_DEBUG(dbgs() << "\n");
@@ -1387,8 +1394,9 @@ static bool canVectorize(const CharMatrix &DepMatrix, unsigned LoopId) {
     if (Dir == '=' || Dir == 'I')
       continue;
 
-    // If both Dir and DepType are '<', it means that the all dependencies are
-    // lexically forward. Such dependencies don't prevent vectorization.
+    // DepType being '<' means that this direction vector represents a forward
+    // dependency. In principle, a loop with '<' direction can be vectorized in
+    // this case.
     if (Dir == '<' && DepType == '<')
       continue;
 
