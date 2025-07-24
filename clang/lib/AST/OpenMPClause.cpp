@@ -1024,7 +1024,7 @@ OMPLoopRangeClause *
 OMPLoopRangeClause::Create(const ASTContext &C, SourceLocation StartLoc,
                            SourceLocation LParenLoc, SourceLocation FirstLoc,
                            SourceLocation CountLoc, SourceLocation EndLoc,
-                           Expr *First, Expr* Count) {
+                           Expr *First, Expr *Count) {
   OMPLoopRangeClause *Clause = CreateEmpty(C);
   Clause->setLocStart(StartLoc);
   Clause->setLParenLoc(LParenLoc);

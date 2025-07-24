@@ -188,5 +188,4 @@ int main() {
 // CHECK-NEXT: [C] dtor
 // CHECK-NEXT: done
 
-
 #endif

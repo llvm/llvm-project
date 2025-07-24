@@ -1159,8 +1159,7 @@ public:
 ///   for(int j = 0; j < 256; j+=2)
 ///   for(int k = 127; k >= 0; --k)
 /// \endcode
-class OMPLoopRangeClause final
-    : public OMPClause {
+class OMPLoopRangeClause final : public OMPClause {
   friend class OMPClauseReader;
   /// Location of '('
   SourceLocation LParenLoc;
@@ -1187,7 +1186,7 @@ public:
   static OMPLoopRangeClause *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
          SourceLocation FirstLoc, SourceLocation CountLoc,
-         SourceLocation EndLoc, Expr* First, Expr* Count);
+         SourceLocation EndLoc, Expr *First, Expr *Count);
 
   /// Build an empty 'looprange' clause node.
   static OMPLoopRangeClause *CreateEmpty(const ASTContext &C);
@@ -1207,9 +1206,7 @@ public:
   /// Get looprange 'count' expression
   Expr *getCount() const { return cast_or_null<Expr>(Args[1]); }
 
-  child_range children() {
-    return child_range(Args, Args + NumArgs);
-  }
+  child_range children() { return child_range(Args, Args + NumArgs); }
   const_child_range children() const {
     return const_child_range(Args, Args + NumArgs);
   }
