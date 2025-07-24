@@ -1337,7 +1337,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp task' has simple 'threadset'
 /// clause with kind 'omp_pool'.
-class OMPThreadsetClause : public OMPClause {
+class OMPThreadsetClause final : public OMPClause {
   friend class OMPClauseReader;
 
   /// Location of '('.
