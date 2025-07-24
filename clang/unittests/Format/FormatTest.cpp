@@ -17674,6 +17674,12 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("int x = int (y);", SomeSpace2);
   verifyFormat("auto lambda = []() { return 0; };", SomeSpace2);
 
+  auto Style = getLLVMStyle();
+  Style.SpaceBeforeParens = FormatStyle::SBPO_Custom;
+  EXPECT_FALSE(Style.SpaceBeforeParensOptions.AfterNot);
+  Style.SpaceBeforeParensOptions.AfterNot = true;
+  verifyFormat("return not (a || b);", Style);
+
   FormatStyle SpaceAfterOverloadedOperator = getLLVMStyle();
   SpaceAfterOverloadedOperator.SpaceBeforeParens = FormatStyle::SBPO_Custom;
   SpaceAfterOverloadedOperator.SpaceBeforeParensOptions
