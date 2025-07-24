@@ -430,26 +430,27 @@ def UseWzrToVecMove : Predicate<"Subtarget->useWzrToVecMove()">;
 def SDTBinaryArithWithFlagsOut : SDTypeProfile<2, 2,
                                               [SDTCisSameAs<0, 2>,
                                                SDTCisSameAs<0, 3>,
-                                               SDTCisInt<0>, SDTCisVT<1, i32>]>;
+                                               SDTCisInt<0>,
+                                               SDTCisVT<1, FlagsVT>]>;
 
 // SDTBinaryArithWithFlagsIn - RES1, FLAGS = op LHS, RHS, FLAGS
 def SDTBinaryArithWithFlagsIn : SDTypeProfile<1, 3,
                                             [SDTCisSameAs<0, 1>,
                                              SDTCisSameAs<0, 2>,
                                              SDTCisInt<0>,
-                                             SDTCisVT<3, i32>]>;
+                                             SDTCisVT<3, FlagsVT>]>;
 
 // SDTBinaryArithWithFlagsInOut - RES1, FLAGS = op LHS, RHS, FLAGS
 def SDTBinaryArithWithFlagsInOut : SDTypeProfile<2, 3,
                                             [SDTCisSameAs<0, 2>,
                                              SDTCisSameAs<0, 3>,
                                              SDTCisInt<0>,
-                                             SDTCisVT<1, i32>,
-                                             SDTCisVT<4, i32>]>;
+                                             SDTCisVT<1, FlagsVT>,
+                                             SDTCisVT<4, FlagsVT>]>;
 
 def SDT_AArch64Brcond  : SDTypeProfile<0, 3,
                                      [SDTCisVT<0, OtherVT>, SDTCisVT<1, i32>,
-                                      SDTCisVT<2, i32>]>;
+                                      SDTCisVT<2, FlagsVT>]>;
 def SDT_AArch64cbz : SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisVT<1, OtherVT>]>;
 def SDT_AArch64tbz : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>,
                                         SDTCisVT<2, OtherVT>]>;
@@ -458,22 +459,22 @@ def SDT_AArch64CSel  : SDTypeProfile<1, 4,
                                    [SDTCisSameAs<0, 1>,
                                     SDTCisSameAs<0, 2>,
                                     SDTCisInt<3>,
-                                    SDTCisVT<4, i32>]>;
+                                    SDTCisVT<4, FlagsVT>]>;
 def SDT_AArch64CCMP : SDTypeProfile<1, 5,
-                                    [SDTCisVT<0, i32>,
+                                    [SDTCisVT<0, FlagsVT>,
                                      SDTCisInt<1>,
                                      SDTCisSameAs<1, 2>,
                                      SDTCisInt<3>,
                                      SDTCisInt<4>,
                                      SDTCisVT<5, i32>]>;
 def SDT_AArch64FCCMP : SDTypeProfile<1, 5,
-                                     [SDTCisVT<0, i32>,
+                                     [SDTCisVT<0, FlagsVT>,
                                       SDTCisFP<1>,
                                       SDTCisSameAs<1, 2>,
                                       SDTCisInt<3>,
                                       SDTCisInt<4>,
                                       SDTCisVT<5, i32>]>;
-def SDT_AArch64FCmp  : SDTypeProfile<1, 2, [SDTCisVT<0, i32>,
+def SDT_AArch64FCmp  : SDTypeProfile<1, 2, [SDTCisVT<0, FlagsVT>,
                                             SDTCisFP<1>,
                                             SDTCisSameAs<2, 1>]>;
 def SDT_AArch64Rev : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>]>;
@@ -1124,10 +1125,10 @@ def AArch64probedalloca
              SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>,
              [SDNPHasChain, SDNPMayStore]>;
 
-// MRS, also sets the flags via a glue.
+// MRS, also sets the flags.
 def AArch64mrs : SDNode<"AArch64ISD::MRS",
                         SDTypeProfile<2, 1, [SDTCisVT<0, i64>,
-                                             SDTCisVT<1, i32>,
+                                             SDTCisVT<1, FlagsVT>,
                                              SDTCisVT<2, i32>]>,
                         [SDNPHasChain]>;
 
