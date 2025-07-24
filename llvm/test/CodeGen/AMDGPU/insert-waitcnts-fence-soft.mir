@@ -16,7 +16,7 @@ body:             |
     ; GCN-NEXT: S_ENDPGM 0
     $m0 = S_MOV_B32 0
     BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison` + 4), (store (s32) into `ptr addrspace(3) poison` + 4)
-    S_WAITCNT_FENCE_soft 5, 3, 15
+    S_WAITCNT_FENCE_soft .release, .workgroup, .global.lds.scratch.gds
     $vgpr1 = V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     S_ENDPGM 0
 
@@ -39,7 +39,7 @@ body:             |
     $m0 = S_MOV_B32 0
     BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison` + 4), (store (s32) into `ptr addrspace(3) poison` + 4)
     $vgpr2 = GLOBAL_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec
-    S_WAITCNT_FENCE_soft 5, 3, 15
+    S_WAITCNT_FENCE_soft .release, .workgroup, .global.lds.scratch.gds
     $vgpr1 = V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     S_ENDPGM 0
 
@@ -57,7 +57,7 @@ body:             |
     ; GCN-NEXT: $vgpr1 = V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr2 = GLOBAL_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec
-    S_WAITCNT_FENCE_soft 5, 3, 15
+    S_WAITCNT_FENCE_soft .release, .workgroup, .global.lds.scratch.gds
     $vgpr1 = V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     S_ENDPGM 0
 
@@ -78,7 +78,7 @@ body:             |
     ; GCN-NEXT: S_ENDPGM 0
     BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison` + 4), (store (s32) into `ptr addrspace(3) poison` + 4)
     $vgpr2 = GLOBAL_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec
-    S_WAITCNT_FENCE_soft 5, 5, 15
+    S_WAITCNT_FENCE_soft .release, .system, .global.lds.scratch.gds
     $vgpr1 = V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     S_ENDPGM 0
 
@@ -98,7 +98,7 @@ body:             |
     ; GCN-NEXT: S_ENDPGM 0
     BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison` + 4), (store (s32) into `ptr addrspace(3) poison` + 4)
     $vgpr2 = GLOBAL_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec
-    S_WAITCNT_FENCE_soft 5, 5, 5
+    S_WAITCNT_FENCE_soft .release, .system, .global.scratch
     $vgpr1 = V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     S_ENDPGM 0
 
@@ -118,7 +118,7 @@ body:             |
     ; GCN-NEXT: S_ENDPGM 0
     BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison` + 4), (store (s32) into `ptr addrspace(3) poison` + 4)
     $vgpr2 = GLOBAL_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec
-    S_WAITCNT_FENCE_soft 4, 5, 15
+    S_WAITCNT_FENCE_soft .acquire, .system, .atomic
     $vgpr1 = V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     S_ENDPGM 0
 
@@ -138,7 +138,7 @@ body:             |
     ; GCN-NEXT: S_ENDPGM 0
     BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison` + 4), (store (s32) into `ptr addrspace(3) poison` + 4)
     $vgpr2 = GLOBAL_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec
-    S_WAITCNT_FENCE_soft 5, 2, 15
+    S_WAITCNT_FENCE_soft .release, .wavefront, .global.lds.scratch.gds
     $vgpr1 = V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     S_ENDPGM 0
 
@@ -162,7 +162,7 @@ body:             |
     BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison` + 4), (store (s32) into `ptr addrspace(3) poison` + 4)
     $vgpr2 = GLOBAL_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec
     S_WAITCNT 3952
-    S_WAITCNT_FENCE_soft 5, 3, 15
+    S_WAITCNT_FENCE_soft .release, .workgroup, .global.lds.scratch.gds
     $vgpr1 = V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     S_ENDPGM 0
 
@@ -185,7 +185,7 @@ body:             |
     $m0 = S_MOV_B32 0
     BUFFER_LOAD_DWORD_LDS_IDXEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(1) poison` + 4), (store (s32) into `ptr addrspace(3) poison` + 4)
     $vgpr2 = GLOBAL_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec
-    S_WAITCNT_FENCE_soft 5, 3, 15
+    S_WAITCNT_FENCE_soft .release, .workgroup, .global.lds.scratch.gds
     S_WAITCNT 3952
     $vgpr1 = V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     S_ENDPGM 0

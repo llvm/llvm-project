@@ -421,13 +421,16 @@ enum CPol {
 } // namespace CPol
 
 /// The atomic synchronization scopes supported by the AMDGPU target.
+//
+// Note: Update the strings in AMDGPUMIRFormatter.cpp to match this enum.
 enum class SIAtomicScope {
   NONE,
   SINGLETHREAD,
   WAVEFRONT,
   WORKGROUP,
   AGENT,
-  SYSTEM
+  SYSTEM,
+  NUM_SI_ATOMIC_SCOPES
 };
 
 /// The distinct address spaces supported by the AMDGPU target for
@@ -439,6 +442,7 @@ enum class SIAtomicAddrSpace {
   SCRATCH = 1u << 2,
   GDS = 1u << 3,
   OTHER = 1u << 4,
+  LAST = OTHER,
 
   /// The address spaces that can be accessed by a FLAT instruction.
   FLAT = GLOBAL | LDS | SCRATCH,
@@ -449,7 +453,7 @@ enum class SIAtomicAddrSpace {
   /// All address spaces.
   ALL = GLOBAL | LDS | SCRATCH | GDS | OTHER,
 
-  LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
+  LLVM_MARK_AS_BITMASK_ENUM(/* Highest bit defined = */ LAST)
 };
 
 namespace SendMsg { // Encoding of SIMM16 used in s_sendmsg* insns.

@@ -12,9 +12,134 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMIRFormatter.h"
+#include "SIDefines.h"
 #include "SIMachineFunctionInfo.h"
 
 using namespace llvm;
+
+bool parseAtomicOrdering(StringRef Src, unsigned &Order) {
+  Src.consume_front(".");
+  for (unsigned I = 0; I <= (unsigned)AtomicOrdering::LAST; ++I) {
+    if (Src == toIRString((AtomicOrdering)I)) {
+      Order = I;
+      return true;
+    }
+  }
+  Order = ~0u;
+  return false;
+}
+
+static const char *fmtScope(unsigned Scope) {
+  static const char *Names[] = {"none",      "singlethread", "wavefront",
+                                "workgroup", "agent",        "system"};
+  return Names[Scope];
+}
+
+bool parseAtomicScope(StringRef Src, unsigned &Scope) {
+  Src.consume_front(".");
+  for (unsigned I = 0;
+       I != (unsigned)AMDGPU::SIAtomicScope::NUM_SI_ATOMIC_SCOPES; ++I) {
+    if (Src == fmtScope(I)) {
+      Scope = I;
+      return true;
+    }
+  }
+  Scope = ~0u;
+  return false;
+}
+
+static const char *fmtAddrSpace(unsigned Space) {
+  static const char *Names[] = {"none",    "global", "lds",
+                                "scratch", "gds",    "other"};
+  return Names[Space];
+}
+
+bool parseOneAddrSpace(StringRef Src, unsigned &AddrSpace) {
+  if (Src == "none") {
+    AddrSpace = (unsigned)AMDGPU::SIAtomicAddrSpace::NONE;
+    return true;
+  }
+  if (Src == "flat") {
+    AddrSpace = (unsigned)AMDGPU::SIAtomicAddrSpace::FLAT;
+    return true;
+  }
+  if (Src == "atomic") {
+    AddrSpace = (unsigned)AMDGPU::SIAtomicAddrSpace::ATOMIC;
+    return true;
+  }
+  if (Src == "all") {
+    AddrSpace = (unsigned)AMDGPU::SIAtomicAddrSpace::ALL;
+    return true;
+  }
+  for (unsigned I = 1, A = 1; A <= (unsigned)AMDGPU::SIAtomicAddrSpace::LAST;
+       A <<= 1, ++I) {
+    if (Src == fmtAddrSpace(I)) {
+      AddrSpace = A;
+      return true;
+    }
+  }
+  AddrSpace = ~0u;
+  return false;
+}
+
+bool parseAddrSpace(StringRef Src, unsigned &AddrSpace) {
+  Src = Src.trim();
+  Src.consume_front(".");
+  while (!Src.empty()) {
+    auto [First, Rest] = Src.split('.');
+    unsigned OneSpace;
+    if (!parseOneAddrSpace(First, OneSpace))
+      return false;
+    AddrSpace |= OneSpace;
+    Src = Rest;
+  }
+  return true;
+}
+
+static void fmtAddrSpace(raw_ostream &OS, int64_t Imm) {
+  OS << '.';
+  if (Imm == (unsigned)AMDGPU::SIAtomicAddrSpace::NONE) {
+    OS << "none";
+    return;
+  }
+  if (Imm == (unsigned)AMDGPU::SIAtomicAddrSpace::FLAT) {
+    OS << "flat";
+    return;
+  }
+  if (Imm == (unsigned)AMDGPU::SIAtomicAddrSpace::ATOMIC) {
+    OS << "atomic";
+    return;
+  }
+  if (Imm == (unsigned)AMDGPU::SIAtomicAddrSpace::ALL) {
+    OS << "all";
+    return;
+  }
+
+  ListSeparator LS{"."};
+  auto AddrSpace = (AMDGPU::SIAtomicAddrSpace)Imm;
+  const auto LAST = (unsigned)AMDGPU::SIAtomicAddrSpace::LAST;
+
+  for (unsigned A = 1, I = 1; A <= LAST; A <<= 1, ++I) {
+    if (any(AddrSpace & (AMDGPU::SIAtomicAddrSpace)A))
+      OS << LS << StringRef(fmtAddrSpace(I));
+  }
+}
+
+static void printFenceOperand(raw_ostream &OS, const MachineInstr &MI,
+                              std::optional<unsigned int> OpIdx, int64_t Imm) {
+#define GET_IDX(Name)                                                          \
+  AMDGPU::getNamedOperandIdx(AMDGPU::S_WAITCNT_FENCE_soft, AMDGPU::OpName::Name)
+  if (OpIdx == GET_IDX(Ordering)) {
+    assert(Imm <= (unsigned)AtomicOrdering::LAST);
+    OS << '.' << StringRef(toIRString((AtomicOrdering)Imm));
+  } else if (OpIdx == GET_IDX(Scope)) {
+    assert(Imm < (unsigned)AMDGPU::SIAtomicScope::NUM_SI_ATOMIC_SCOPES);
+    OS << '.' << StringRef(fmtScope(Imm));
+  } else if (OpIdx == GET_IDX(AddrSpace)) {
+    fmtAddrSpace(OS, Imm);
+  }
+#undef GET_IDX
+}
 
 void AMDGPUMIRFormatter::printImm(raw_ostream &OS, const MachineInstr &MI,
                       std::optional<unsigned int> OpIdx, int64_t Imm) const {
@@ -24,10 +149,44 @@ void AMDGPUMIRFormatter::printImm(raw_ostream &OS, const MachineInstr &MI,
     assert(OpIdx == 0);
     printSDelayAluImm(Imm, OS);
     break;
+  case AMDGPU::S_WAITCNT_FENCE_soft:
+    printFenceOperand(OS, MI, OpIdx, Imm);
+    break;
   default:
     MIRFormatter::printImm(OS, MI, OpIdx, Imm);
     break;
   }
+}
+
+static bool
+parseFenceParameter(const unsigned int OpIdx, int64_t &Imm,
+                    llvm::StringRef &Src,
+                    llvm::MIRFormatter::ErrorCallbackType &ErrorCallback) {
+#define GET_IDX(Name)                                                          \
+  AMDGPU::getNamedOperandIdx(AMDGPU::S_WAITCNT_FENCE_soft, AMDGPU::OpName::Name)
+  if (OpIdx == (unsigned)GET_IDX(Ordering)) {
+    unsigned Order = 0;
+    if (!parseAtomicOrdering(Src, Order))
+      return ErrorCallback(Src.begin(), "Expected atomic ordering");
+    Imm = Order;
+    return false;
+  }
+  if (OpIdx == (unsigned)GET_IDX(Scope)) {
+    unsigned Scope = 0;
+    if (!parseAtomicScope(Src, Scope))
+      return ErrorCallback(Src.begin(), "Expected atomic scope");
+    Imm = Scope;
+    return false;
+  }
+  if (OpIdx == (unsigned)GET_IDX(AddrSpace)) {
+    unsigned AddrSpace = 0;
+    if (!parseAddrSpace(Src, AddrSpace))
+      return ErrorCallback(Src.begin(), "Expected address space");
+    Imm = AddrSpace;
+    return false;
+  }
+  return true;
+#undef GET_IDX
 }
 
 /// Implement target specific parsing of immediate mnemonics. The mnemonic is
@@ -41,6 +200,8 @@ bool AMDGPUMIRFormatter::parseImmMnemonic(const unsigned OpCode,
   switch (OpCode) {
   case AMDGPU::S_DELAY_ALU:
     return parseSDelayAluImmMnemonic(OpIdx, Imm, Src, ErrorCallback);
+  case AMDGPU::S_WAITCNT_FENCE_soft:
+    return parseFenceParameter(OpIdx, Imm, Src, ErrorCallback);
   default:
     break;
   }
