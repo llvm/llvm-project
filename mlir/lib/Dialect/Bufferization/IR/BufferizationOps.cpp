@@ -815,8 +815,8 @@ struct ToBufferOfCast : public OpRewritePattern<ToBufferOp> {
                                       currentOutputMemRefType.getLayout(),
                                       currentOutputMemRefType.getMemorySpace());
     Value memref = ToBufferOp::create(rewriter, toBuffer.getLoc(), memrefType,
-                                               tensorCastOperand.getOperand(),
-                                               toBuffer.getReadOnly());
+                                      tensorCastOperand.getOperand(),
+                                      toBuffer.getReadOnly());
     rewriter.replaceOpWithNewOp<memref::CastOp>(toBuffer, toBuffer.getType(),
                                                 memref);
     return success();
