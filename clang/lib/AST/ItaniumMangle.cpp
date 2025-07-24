@@ -4641,7 +4641,13 @@ void CXXNameMangler::mangleType(const PipeType *T) {
 }
 
 void CXXNameMangler::mangleType(const OverflowBehaviorType *T) {
-  Out << "U9Obt_";
+  // Vender-extended type mangling for OverflowBehaviorType
+  // <type> ::= U <behavior> <underlying_type>
+  if (T->isWrapKind()) {
+    Out << "U11ObtWrap_";
+  } else {
+    Out << "U13ObtNoWrap_";
+  }
   mangleType(T->getUnderlyingType());
 }
 

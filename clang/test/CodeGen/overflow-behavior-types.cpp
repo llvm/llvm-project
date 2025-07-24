@@ -49,7 +49,7 @@ void test_members(char some) {
   (void)(foo.getA() + 1);
 }
 
-// DEFAULT-LABEL: define {{.*}} @_Z9test_autoU9Obt_c
+// DEFAULT-LABEL: define {{.*}} @_Z9test_autoU11ObtWrap_c
 void test_auto(char __wrap a) {
   auto b = a;
 
