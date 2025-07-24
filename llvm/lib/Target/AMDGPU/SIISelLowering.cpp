@@ -18531,14 +18531,7 @@ static bool globalMemoryFPAtomicIsLegal(const GCNSubtarget &Subtarget,
 
 /// \return Action to perform on AtomicRMWInsts for integer operations.
 static TargetLowering::AtomicExpansionKind
-atomicSupportedIfLegalIntType(const AtomicRMWInst *RMW, bool Allow64 = true) {
-  if (!Allow64) {
-    if (auto *IT = dyn_cast<IntegerType>(RMW->getType())) {
-      if (IT->getBitWidth() == 32)
-        return TargetLowering::AtomicExpansionKind::None;
-    }
-    return TargetLowering::AtomicExpansionKind::CmpXChg;
-  }
+atomicSupportedIfLegalIntType(const AtomicRMWInst *RMW) {
   return isAtomicRMWLegalIntTy(RMW->getType())
              ? TargetLowering::AtomicExpansionKind::None
              : TargetLowering::AtomicExpansionKind::CmpXChg;
@@ -18600,8 +18593,21 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     // PCIe supports add and xchg for system atomics.
     return atomicSupportedIfLegalIntType(RMW);
   case AtomicRMWInst::USubCond:
+    if (Subtarget->hasCondSubInsts()) {
+      if (auto *IT = dyn_cast<IntegerType>(RMW->getType())) {
+        if (IT->getBitWidth() == 32)
+          return TargetLowering::AtomicExpansionKind::None;
+      }
+    }
+    return TargetLowering::AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::USubSat:
-    return atomicSupportedIfLegalIntType(RMW, false);
+    if (Subtarget->hasSubClampInsts()) {
+      if (auto *IT = dyn_cast<IntegerType>(RMW->getType())) {
+        if (IT->getBitWidth() == 32)
+          return TargetLowering::AtomicExpansionKind::None;
+      }
+    }
+    return TargetLowering::AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::Sub:
   case AtomicRMWInst::And:
   case AtomicRMWInst::Or:
