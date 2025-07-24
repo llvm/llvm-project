@@ -1411,6 +1411,53 @@ static MachineBasicBlock *insertDivByZeroTrap(MachineInstr &MI,
   return &MBB;
 }
 
+MachineBasicBlock::iterator
+MipsTargetLowering::emitRDDSP(MachineInstr &MI, MachineBasicBlock *BB) const {
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  unsigned DestReg = MI.getOperand(0).getReg();
+  unsigned Mask = MI.getOperand(1).getImm();
+  auto MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII.get(Mips::RDDSP), DestReg)
+                 .addImm(Mask);
+  if (Mask & 1)
+    MIB.addReg(Mips::DSPPos, RegState::Implicit);
+  if (Mask & 2)
+    MIB.addReg(Mips::DSPSCount, RegState::Implicit);
+  if (Mask & 4)
+    MIB.addReg(Mips::DSPCarry, RegState::Implicit);
+  if (Mask & 8)
+    MIB.addReg(Mips::DSPOutFlag, RegState::Implicit);
+  if (Mask & 16)
+    MIB.addReg(Mips::DSPCCond, RegState::Implicit);
+  if (Mask & 32)
+    MIB.addReg(Mips::DSPEFI, RegState::Implicit);
+  MI.eraseFromParent();
+  return MIB;
+}
+
+MachineBasicBlock::iterator
+MipsTargetLowering::emitWRDSP(MachineInstr &MI, MachineBasicBlock *BB) const {
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  unsigned SrcReg = MI.getOperand(0).getReg();
+  unsigned Mask = MI.getOperand(1).getImm();
+  auto MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII.get(Mips::WRDSP))
+                 .addReg(SrcReg)
+                 .addImm(Mask);
+  if (Mask & 1)
+    MIB.addReg(Mips::DSPPos, RegState::ImplicitDefine);
+  if (Mask & 2)
+    MIB.addReg(Mips::DSPSCount, RegState::ImplicitDefine);
+  if (Mask & 4)
+    MIB.addReg(Mips::DSPCarry, RegState::ImplicitDefine);
+  if (Mask & 8)
+    MIB.addReg(Mips::DSPOutFlag, RegState::ImplicitDefine);
+  if (Mask & 16)
+    MIB.addReg(Mips::DSPCCond, RegState::ImplicitDefine);
+  if (Mask & 32)
+    MIB.addReg(Mips::DSPEFI, RegState::ImplicitDefine);
+  MI.eraseFromParent();
+  return MIB;
+}
+
 MachineBasicBlock *
 MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                 MachineBasicBlock *BB) const {
@@ -1579,6 +1626,10 @@ MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitSTR_W(MI, BB);
   case Mips::STR_D:
     return emitSTR_D(MI, BB);
+  case Mips::RDDSP_Pseudo:
+    return emitRDDSP(MI, BB);
+  case Mips::WRDSP_Pseudo:
+    return emitWRDSP(MI, BB);
   }
 }
 
