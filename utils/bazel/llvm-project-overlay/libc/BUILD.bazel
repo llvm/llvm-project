@@ -550,7 +550,6 @@ libc_support_library(
     deps = [
         ":__support_macros_config",
         ":__support_macros_optimization",
-        ":__support_macros_sanitizer",
     ],
 )
 
