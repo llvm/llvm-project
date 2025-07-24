@@ -18,6 +18,7 @@
 #include "CIRGenModule.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenValue.h"
+#include "EHScopeStack.h"
 
 #include "Address.h"
 
@@ -60,6 +61,9 @@ public:
 
   /// The compiler-generated variable that holds the return value.
   std::optional<mlir::Value> fnRetAlloca;
+
+  /// Tracks function scope overall cleanup handling.
+  EHScopeStack ehStack;
 
   /// CXXThisDecl - When generating code for a C++ member function,
   /// this will hold the implicit 'this' declaration.
@@ -595,14 +599,65 @@ public:
                      FunctionArgList args, clang::SourceLocation loc,
                      clang::SourceLocation startLoc);
 
+  /// Takes the old cleanup stack size and emits the cleanup blocks
+  /// that have been added.
+  void popCleanupBlocks(size_t oldCleanupStackDepth);
+  void popCleanupBlock();
+
+  /// Enters a new scope for capturing cleanups, all of which
+  /// will be executed once the scope is exited.
+  class RunCleanupsScope {
+    size_t cleanupStackDepth, oldCleanupStackDepth;
+
+  protected:
+    bool performCleanup;
+
+  private:
+    RunCleanupsScope(const RunCleanupsScope &) = delete;
+    void operator=(const RunCleanupsScope &) = delete;
+
+  protected:
+    CIRGenFunction &cgf;
+
+    /// Enter a new cleanup scope.
+    explicit RunCleanupsScope(CIRGenFunction &cgf)
+        : performCleanup(true), cgf(cgf) {
+      cleanupStackDepth = cgf.ehStack.getStackDepth();
+      oldCleanupStackDepth = cgf.currentCleanupStackDepth;
+      cgf.currentCleanupStackDepth = cleanupStackDepth;
+    }
+
+    /// Exit this cleanup scope, emitting any accumulated cleanups.
+    ~RunCleanupsScope() {
+      if (performCleanup)
+        forceCleanup();
+    }
+
+    /// Force the emission of cleanups now, instead of waiting
+    /// until this object is destroyed.
+    void forceCleanup() {
+      assert(performCleanup && "Already forced cleanup");
+      {
+        mlir::OpBuilder::InsertionGuard guard(cgf.getBuilder());
+        cgf.popCleanupBlocks(cleanupStackDepth);
+        performCleanup = false;
+        cgf.currentCleanupStackDepth = oldCleanupStackDepth;
+      }
+    }
+  };
+
+  // Cleanup stack depth of the RunCleanupsScope that was pushed most recently.
+  size_t currentCleanupStackDepth;
+
+public:
   /// Represents a scope, including function bodies, compound statements, and
   /// the substatements of if/while/do/for/switch/try statements.  This class
   /// handles any automatic cleanup, along with the return value.
-  struct LexicalScope {
+  struct LexicalScope : public RunCleanupsScope {
   private:
-    // TODO(CIR): This will live in the base class RunCleanupScope once that
-    // class is upstreamed.
-    CIRGenFunction &cgf;
+    // Block containing cleanup code for things initialized in this
+    // lexical context (scope).
+    mlir::Block *cleanupBlock = nullptr;
 
     // Points to the scope entry block. This is useful, for instance, for
     // helping to insert allocas before finalizing any recursive CodeGen from
@@ -632,8 +687,8 @@ public:
     unsigned depth = 0;
 
     LexicalScope(CIRGenFunction &cgf, mlir::Location loc, mlir::Block *eb)
-        : cgf(cgf), entryBlock(eb), parentScope(cgf.curLexScope), beginLoc(loc),
-          endLoc(loc) {
+        : RunCleanupsScope(cgf), entryBlock(eb), parentScope(cgf.curLexScope),
+          beginLoc(loc), endLoc(loc) {
 
       assert(entryBlock && "LexicalScope requires an entry block");
       cgf.curLexScope = this;
@@ -670,6 +725,27 @@ public:
     void setAsGlobalInit() { scopeKind = Kind::GlobalInit; }
     void setAsSwitch() { scopeKind = Kind::Switch; }
     void setAsTernary() { scopeKind = Kind::Ternary; }
+
+    // Lazy create cleanup block or return what's available.
+    mlir::Block *getOrCreateCleanupBlock(mlir::OpBuilder &builder) {
+      if (cleanupBlock)
+        return cleanupBlock;
+      cleanupBlock = createCleanupBlock(builder);
+      return cleanupBlock;
+    }
+
+    mlir::Block *getCleanupBlock(mlir::OpBuilder &builder) {
+      return cleanupBlock;
+    }
+
+    mlir::Block *createCleanupBlock(mlir::OpBuilder &builder) {
+      // Create the cleanup block but dont hook it up around just yet.
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      mlir::Region *r = builder.getBlock() ? builder.getBlock()->getParent()
+                                           : &cgf.curFn->getRegion(0);
+      cleanupBlock = builder.createBlock(r);
+      return cleanupBlock;
+    }
 
     // ---
     // Return handling.
@@ -720,6 +796,12 @@ public:
   };
 
   LexicalScope *curLexScope = nullptr;
+
+  typedef void Destroyer(CIRGenFunction &cgf, Address addr, QualType ty);
+
+  static Destroyer destroyCXXObject;
+
+  Destroyer *getDestroyer(clang::QualType::DestructionKind kind);
 
   /// ----------------------
   /// CIR emit functions
@@ -781,6 +863,8 @@ public:
 
   void emitAutoVarCleanups(const AutoVarEmission &emission);
   void emitAutoVarInit(const AutoVarEmission &emission);
+  void emitAutoVarTypeCleanup(const AutoVarEmission &emission,
+                              clang::QualType::DestructionKind dtorKind);
 
   void emitBaseInitializer(mlir::Location loc, const CXXRecordDecl *classDecl,
                            CXXCtorInitializer *baseInit);
@@ -838,6 +922,9 @@ public:
   LValue emitCompoundLiteralLValue(const CompoundLiteralExpr *e);
 
   void emitConstructorBody(FunctionArgList &args);
+
+  void emitDestroy(Address addr, QualType type, Destroyer *destroyer);
+
   void emitDestructorBody(FunctionArgList &args);
 
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);

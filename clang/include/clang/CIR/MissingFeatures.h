@@ -196,6 +196,8 @@ struct MissingFeatures {
   static bool cxxRecordStaticMembers() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
+  static bool ehCleanupFlags() { return false; }
+  static bool ehstackBranches() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
   static bool emitLifetimeMarkers() { return false; }
