@@ -17,6 +17,8 @@
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/MC/DXContainerRootSignature.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/MC/DXContainerRootSignature.h"
 
 namespace llvm {
 class LLVMContext;

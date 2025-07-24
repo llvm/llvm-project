@@ -65,9 +65,11 @@ template <>
 struct type_caster<MlirAffineMap> {
   NB_TYPE_CASTER(MlirAffineMap, const_name("MlirAffineMap"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
-    if (auto capsule = mlirApiObjectToCapsule(src))
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToAffineMap(capsule->ptr());
-    return !mlirAffineMapIsNull(value);
+      return !mlirAffineMapIsNull(value);
+    }
+    return false;
   }
   static handle from_cpp(MlirAffineMap v, rv_policy,
                          cleanup_list *cleanup) noexcept {
@@ -85,9 +87,11 @@ template <>
 struct type_caster<MlirAttribute> {
   NB_TYPE_CASTER(MlirAttribute, const_name("MlirAttribute"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
-    if (auto capsule = mlirApiObjectToCapsule(src))
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToAttribute(capsule->ptr());
-    return !mlirAttributeIsNull(value);
+      return !mlirAttributeIsNull(value);
+    }
+    return false;
   }
   static handle from_cpp(MlirAttribute v, rv_policy,
                          cleanup_list *cleanup) noexcept {
@@ -106,9 +110,11 @@ template <>
 struct type_caster<MlirBlock> {
   NB_TYPE_CASTER(MlirBlock, const_name("MlirBlock"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
-    if (auto capsule = mlirApiObjectToCapsule(src))
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToBlock(capsule->ptr());
-    return !mlirBlockIsNull(value);
+      return !mlirBlockIsNull(value);
+    }
+    return false;
   }
 };
 
@@ -137,9 +143,11 @@ template <>
 struct type_caster<MlirDialectRegistry> {
   NB_TYPE_CASTER(MlirDialectRegistry, const_name("MlirDialectRegistry"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
-    if (auto capsule = mlirApiObjectToCapsule(src))
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToDialectRegistry(capsule->ptr());
-    return !mlirDialectRegistryIsNull(value);
+      return !mlirDialectRegistryIsNull(value);
+    }
+    return false;
   }
   static handle from_cpp(MlirDialectRegistry v, rv_policy,
                          cleanup_list *cleanup) noexcept {
@@ -163,9 +171,11 @@ struct type_caster<MlirLocation> {
                 .attr("Location")
                 .attr("current");
     }
-    if (auto capsule = mlirApiObjectToCapsule(src))
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToLocation(capsule->ptr());
-    return !mlirLocationIsNull(value);
+      return !mlirLocationIsNull(value);
+    }
+    return false;
   }
   static handle from_cpp(MlirLocation v, rv_policy,
                          cleanup_list *cleanup) noexcept {
@@ -183,9 +193,11 @@ template <>
 struct type_caster<MlirModule> {
   NB_TYPE_CASTER(MlirModule, const_name("MlirModule"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
-    if (auto capsule = mlirApiObjectToCapsule(src))
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToModule(capsule->ptr());
-    return !mlirModuleIsNull(value);
+      return !mlirModuleIsNull(value);
+    }
+    return false;
   }
   static handle from_cpp(MlirModule v, rv_policy,
                          cleanup_list *cleanup) noexcept {
@@ -204,9 +216,11 @@ struct type_caster<MlirFrozenRewritePatternSet> {
   NB_TYPE_CASTER(MlirFrozenRewritePatternSet,
                  const_name("MlirFrozenRewritePatternSet"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
-    if (auto capsule = mlirApiObjectToCapsule(src))
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToFrozenRewritePatternSet(capsule->ptr());
-    return value.ptr != nullptr;
+      return value.ptr != nullptr;
+    }
+    return false;
   }
   static handle from_cpp(MlirFrozenRewritePatternSet v, rv_policy,
                          handle) noexcept {
@@ -224,9 +238,11 @@ template <>
 struct type_caster<MlirOperation> {
   NB_TYPE_CASTER(MlirOperation, const_name("MlirOperation"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
-    if (auto capsule = mlirApiObjectToCapsule(src))
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToOperation(capsule->ptr());
-    return !mlirOperationIsNull(value);
+      return !mlirOperationIsNull(value);
+    }
+    return false;
   }
   static handle from_cpp(MlirOperation v, rv_policy,
                          cleanup_list *cleanup) noexcept {
@@ -246,9 +262,11 @@ template <>
 struct type_caster<MlirValue> {
   NB_TYPE_CASTER(MlirValue, const_name("MlirValue"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
-    if (auto capsule = mlirApiObjectToCapsule(src))
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToValue(capsule->ptr());
-    return !mlirValueIsNull(value);
+      return !mlirValueIsNull(value);
+    }
+    return false;
   }
   static handle from_cpp(MlirValue v, rv_policy,
                          cleanup_list *cleanup) noexcept {
@@ -269,9 +287,11 @@ template <>
 struct type_caster<MlirPassManager> {
   NB_TYPE_CASTER(MlirPassManager, const_name("MlirPassManager"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
-    if (auto capsule = mlirApiObjectToCapsule(src))
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToPassManager(capsule->ptr());
-    return !mlirPassManagerIsNull(value);
+      return !mlirPassManagerIsNull(value);
+    }
+    return false;
   }
 };
 
@@ -280,9 +300,11 @@ template <>
 struct type_caster<MlirTypeID> {
   NB_TYPE_CASTER(MlirTypeID, const_name("MlirTypeID"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
-    if (auto capsule = mlirApiObjectToCapsule(src))
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToTypeID(capsule->ptr());
-    return !mlirTypeIDIsNull(value);
+      return !mlirTypeIDIsNull(value);
+    }
+    return false;
   }
   static handle from_cpp(MlirTypeID v, rv_policy,
                          cleanup_list *cleanup) noexcept {
@@ -302,9 +324,11 @@ template <>
 struct type_caster<MlirType> {
   NB_TYPE_CASTER(MlirType, const_name("MlirType"))
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
-    if (auto capsule = mlirApiObjectToCapsule(src))
+    if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToType(capsule->ptr());
-    return !mlirTypeIsNull(value);
+      return !mlirTypeIsNull(value);
+    }
+    return false;
   }
   static handle from_cpp(MlirType t, rv_policy,
                          cleanup_list *cleanup) noexcept {

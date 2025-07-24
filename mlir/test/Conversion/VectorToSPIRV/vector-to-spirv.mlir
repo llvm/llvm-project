@@ -579,7 +579,7 @@ func.func @fma_size1_vector(%a: vector<1xf32>, %b: vector<1xf32>, %c: vector<1xf
 //       CHECK:   %[[VAL:.+]] = spirv.CompositeConstruct %[[A]], %[[A]], %[[A]], %[[A]]
 //       CHECK:   return %[[VAL]]
 func.func @splat(%f : f32) -> vector<4xf32> {
-  %splat = vector.splat %f : vector<4xf32>
+  %splat = vector.broadcast %f : f32 to vector<4xf32>
   return %splat : vector<4xf32>
 }
 
@@ -590,7 +590,7 @@ func.func @splat(%f : f32) -> vector<4xf32> {
 //       CHECK:   %[[VAL:.+]] = builtin.unrealized_conversion_cast %[[A]]
 //       CHECK:   return %[[VAL]]
 func.func @splat_size1_vector(%f : f32) -> vector<1xf32> {
-  %splat = vector.splat %f : vector<1xf32>
+  %splat = vector.broadcast %f : f32 to vector<1xf32>
   return %splat : vector<1xf32>
 }
 
@@ -1161,3 +1161,15 @@ func.func @vector_store_2d(%arg0 : memref<4x4xf32, #spirv.storage_class<StorageB
 }
 
 } // end module
+
+// -----
+
+// Ensure the case without module attributes not crash.
+
+// CHECK-LABEL: @vector_load
+//       CHECK:   vector.load
+func.func @vector_load(%arg0 : memref<4xf32, #spirv.storage_class<StorageBuffer>>) -> vector<4xf32> {
+  %idx = arith.constant 0 : index
+  %0 = vector.load %arg0[%idx] : memref<4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
+  return %0: vector<4xf32>
+}

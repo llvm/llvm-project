@@ -848,7 +848,7 @@ static DWARFExpression CreateDWARFExpression(ModuleSP module_sp,
   uint32_t byte_size = architecture.GetDataByteSize();
 
   StreamBuffer<32> stream(Stream::eBinary, address_size, byte_order);
-  stream.PutHex8(lldb_private::dwarf::DW_OP_addr);
+  stream.PutHex8(llvm::dwarf::DW_OP_addr);
   stream.PutMaxHex64(symbol.GetFileAddress(), address_size, byte_order);
 
   DataBufferSP buffer =

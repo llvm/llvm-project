@@ -3998,6 +3998,24 @@ void IndexCallsiteContextGraph::updateCall(CallInfo &CallerCall,
   CI->Clones[CallerCall.cloneNo()] = CalleeFunc.cloneNo();
 }
 
+// Update the debug information attached to NewFunc to use the clone Name. Note
+// this needs to be done for both any existing DISubprogram for the definition,
+// as well as any separate declaration DISubprogram.
+static void updateSubprogramLinkageName(Function *NewFunc, StringRef Name) {
+  assert(Name == NewFunc->getName());
+  auto *SP = NewFunc->getSubprogram();
+  if (!SP)
+    return;
+  auto *MDName = MDString::get(NewFunc->getParent()->getContext(), Name);
+  SP->replaceLinkageName(MDName);
+  DISubprogram *Decl = SP->getDeclaration();
+  if (!Decl)
+    return;
+  TempDISubprogram NewDecl = Decl->clone();
+  NewDecl->replaceLinkageName(MDName);
+  SP->replaceDeclaration(MDNode::replaceWithUniqued(std::move(NewDecl)));
+}
+
 CallsiteContextGraph<ModuleCallsiteContextGraph, Function,
                      Instruction *>::FuncInfo
 ModuleCallsiteContextGraph::cloneFunctionForCallsite(
@@ -4009,9 +4027,7 @@ ModuleCallsiteContextGraph::cloneFunctionForCallsite(
   std::string Name = getMemProfFuncName(Func.func()->getName(), CloneNo);
   assert(!Func.func()->getParent()->getFunction(Name));
   NewFunc->setName(Name);
-  if (auto *SP = NewFunc->getSubprogram())
-    SP->replaceLinkageName(
-        MDString::get(NewFunc->getParent()->getContext(), Name));
+  updateSubprogramLinkageName(NewFunc, Name);
   for (auto &Inst : CallsWithMetadataInFunc) {
     // This map always has the initial version in it.
     assert(Inst.cloneNo() == 0);
@@ -4950,9 +4966,7 @@ static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
       PrevF->eraseFromParent();
     } else
       NewF->setName(Name);
-    if (auto *SP = NewF->getSubprogram())
-      SP->replaceLinkageName(
-          MDString::get(NewF->getParent()->getContext(), Name));
+    updateSubprogramLinkageName(NewF, Name);
     ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofClone", &F)
              << "created clone " << ore::NV("NewFunction", NewF));
 
