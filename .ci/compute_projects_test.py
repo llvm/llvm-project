@@ -308,6 +308,41 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_check_targets"], "check-libc")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
 
+    def test_premerge_workflow(self):
+        env_variables = compute_projects.get_env_variables(
+            [".github/workflows/premerge.yaml"], "Linux"
+        )
+        self.assertEqual(
+            env_variables["projects_to_build"],
+            "bolt;clang;clang-tools-extra;flang;libclc;lld;lldb;llvm;mlir;polly",
+        )
+        self.assertEqual(
+            env_variables["project_check_targets"],
+            "check-bolt check-clang check-clang-cir check-clang-tools check-flang check-lld check-lldb check-llvm check-mlir check-polly",
+        )
+        self.assertEqual(
+            env_variables["runtimes_to_build"],
+            "compiler-rt;libc;libcxx;libcxxabi;libunwind",
+        )
+        self.assertEqual(
+            env_variables["runtimes_check_targets"],
+            "check-compiler-rt check-libc",
+        )
+        self.assertEqual(
+            env_variables["runtimes_check_targets_needs_reconfig"],
+            "check-cxx check-cxxabi check-unwind",
+        )
+
+    def test_other_github_workflow(self):
+        env_variables = compute_projects.get_env_variables(
+            [".github/workflows/docs.yml"], "Linux"
+        )
+        self.assertEqual(env_variables["projects_to_build"], "")
+        self.assertEqual(env_variables["project_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_to_build"], "")
+        self.assertEqual(env_variables["runtimes_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+
 
 if __name__ == "__main__":
     unittest.main()
