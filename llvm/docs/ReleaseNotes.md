@@ -86,6 +86,8 @@ Changes to LLVM infrastructure
 * Added the support for ``fmaximum`` and ``fminimum`` in ``atomicrmw`` instruction. The
   comparison is expected to match the behavior of ``llvm.maximum.*`` and
   ``llvm.minimum.*`` respectively.
+* Removed the codegen pass ``finalize-mi-bundles``. The same functionality is
+  still available as an API function ``llvm::finalizeBundles``.
 
 Changes to building LLVM
 ------------------------
@@ -95,6 +97,12 @@ Changes to TableGen
 
 Changes to Interprocedural Optimizations
 ----------------------------------------
+
+Changes to Vectorizers
+----------------------------------------
+
+* Added initial support for copyable elements in SLP, which models copyable
+  elements as add <element>, 0, i.e. uses identity constants for missing lanes.
 
 Changes to the AArch64 Backend
 ------------------------------
@@ -282,6 +290,9 @@ Changes to the LLVM tools
   ([#47468](https://github.com/llvm/llvm-project/issues/47468))
 * llvm-addr2line now supports a `+` prefix when specifying an address.
 * Support for `SHT_LLVM_BB_ADDR_MAP` versions 0 and 1 has been dropped.
+* llvm-objdump now supports the `--debug-inlined-funcs` flag, which prints the
+  locations of inlined functions alongside disassembly. The
+  `--debug-vars-indent` flag has also been renamed to `--debug-indent`.
 
 Changes to LLDB
 ---------------------------------
