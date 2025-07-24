@@ -135,9 +135,9 @@ void parallel_taskgroup() {
 // DEBUG1-NEXT:    call void @__kmpc_end_taskgroup(ptr @[[GLOB1]], i32 [[TMP0]]), !dbg [[DBG15:![0-9]+]]
 // DEBUG1-NEXT:    call void @__kmpc_taskgroup(ptr @[[GLOB3:[0-9]+]], i32 [[TMP0]]), !dbg [[DBG16:![0-9]+]]
 // DEBUG1-NEXT:    invoke void @_Z3foov()
-// DEBUG1-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]], !dbg [[DBG17:![0-9]+]]
+// DEBUG1-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]], !dbg [[DBG16:![0-9]+]]
 // DEBUG1:       invoke.cont:
-// DEBUG1-NEXT:    call void @__kmpc_end_taskgroup(ptr @[[GLOB3]], i32 [[TMP0]]), !dbg [[DBG17]]
+// DEBUG1-NEXT:    call void @__kmpc_end_taskgroup(ptr @[[GLOB3]], i32 [[TMP0]]), !dbg [[DBG17:![0-9]+]]
 // DEBUG1-NEXT:    [[TMP1:%.*]] = load i8, ptr [[A]], align 1, !dbg [[DBG18:![0-9]+]]
 // DEBUG1-NEXT:    [[CONV:%.*]] = sext i8 [[TMP1]] to i32, !dbg [[DBG18]]
 // DEBUG1-NEXT:    ret i32 [[CONV]], !dbg [[DBG19:![0-9]+]]
@@ -174,9 +174,9 @@ void parallel_taskgroup() {
 // DEBUG1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4, !dbg [[DBG24]]
 // DEBUG1-NEXT:    call void @__kmpc_taskgroup(ptr @[[GLOB5:[0-9]+]], i32 [[TMP1]]), !dbg [[DBG24]]
 // DEBUG1-NEXT:    invoke void @_Z3foov()
-// DEBUG1-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]], !dbg [[DBG25:![0-9]+]]
+// DEBUG1-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]], !dbg [[DBG24]]
 // DEBUG1:       invoke.cont:
-// DEBUG1-NEXT:    call void @__kmpc_end_taskgroup(ptr @[[GLOB5]], i32 [[TMP1]]), !dbg [[DBG25]]
+// DEBUG1-NEXT:    call void @__kmpc_end_taskgroup(ptr @[[GLOB5]], i32 [[TMP1]]), !dbg [[DBG25:![0-9]+]]
 // DEBUG1-NEXT:    ret void, !dbg [[DBG26:![0-9]+]]
 // DEBUG1:       terminate.lpad:
 // DEBUG1-NEXT:    [[TMP2:%.*]] = landingpad { ptr, i32 }
