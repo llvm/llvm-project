@@ -2853,8 +2853,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         Attrs.addAttribute(llvm::Attribute::InReg);
 
       // HLSL out and inout parameters must not be marked with ByVal or
-      // DeadOnReturn attributes because stores to these parameters are visible
-      // to the caller.
+      // DeadOnReturn attributes because stores to these parameters by the
+      // callee are visible to the caller.
       if (auto ParamABI = FI.getExtParameterInfo(ArgNo).getABI();
           ParamABI != ParameterABI::HLSLOut &&
           ParamABI != ParameterABI::HLSLInOut) {
