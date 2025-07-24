@@ -323,11 +323,8 @@ public:
 
     friend bool operator<(const MemberDecorationInfo &lhs,
                           const MemberDecorationInfo &rhs) {
-      return lhs.memberIndex < rhs.memberIndex ||
-             std::make_tuple(lhs.memberIndex,
-                             llvm::to_underlying(lhs.decoration)) <
-                 std::make_tuple(rhs.memberIndex,
-                                 llvm::to_underlying(rhs.decoration));
+      return std::tuple(lhs.memberIndex, llvm::to_underlying(lhs.decoration)) <
+             std::tuple(rhs.memberIndex, llvm::to_underlying(rhs.decoration));
     }
 
     bool hasValue() const { return !isa<UnitAttr>(decorationValue); }
