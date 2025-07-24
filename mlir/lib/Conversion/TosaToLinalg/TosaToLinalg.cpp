@@ -126,12 +126,12 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   if (isa<tosa::MulOp>(op)) {
     auto shiftVal = cast<tosa::MulOp>(op).getShift();
     DenseElementsAttr shiftElem;
-    if (!matchPattern(shiftVal, m_Constant(&shiftElem))) {
-      (void)rewriter.notifyMatchFailure(op, "shift value of mul not found");
-      return nullptr;
-    }
-
-    int32_t shift = shiftElem.getValues<IntegerAttr>()[0].getInt();
+    bool shiftIsConstant = true;
+    int32_t shift = 0;
+    if (matchPattern(shiftVal, m_Constant(&shiftElem)))
+      shift = shiftElem.getValues<IntegerAttr>()[0].getInt();
+    else
+      shiftIsConstant = false;
 
     if (isa<FloatType>(elementTy)) {
       if (shift != 0) {
@@ -147,23 +147,24 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       Value a = args[0];
       Value b = args[1];
 
-      if (shift > 0) {
-        auto shiftConst =
-            arith::ConstantIntOp::create(rewriter, loc, shift, /*bitwidth=*/8);
+      if (shift > 0 || !shiftIsConstant) {
+        Value shiftConst;
+        if (shiftIsConstant)
+          shiftConst =
+              rewriter.create<arith::ConstantIntOp>(loc, shift, /*bitwidth=*/8);
+
         if (!a.getType().isInteger(32))
           a = arith::ExtSIOp::create(rewriter, loc, rewriter.getI32Type(), a);
 
         if (!b.getType().isInteger(32))
           b = arith::ExtSIOp::create(rewriter, loc, rewriter.getI32Type(), b);
 
+        auto shiftAmount = shiftIsConstant ? shiftConst : args[2];
         auto result = tosa::ApplyScaleOp::create(
-            rewriter, loc, rewriter.getI32Type(), a, b, shiftConst,
+            rewriter, loc, rewriter.getI32Type(), a, b, shiftAmount,
             rewriter.getStringAttr("SINGLE_ROUND"));
 
-        if (elementTy.isInteger(32))
-          return result;
-
-        return arith::TruncIOp::create(rewriter, loc, elementTy, result);
+        return result;
       }
 
       int aWidth = a.getType().getIntOrFloatBitWidth();
@@ -909,6 +910,20 @@ static Value broadcastDynamicDimensions(PatternRewriter &rewriter, Location loc,
   return operand;
 }
 
+static bool hasDynamicDimensions(ValueRange operands) {
+  for (auto operand : operands) {
+    auto rankedTensorType = cast_or_null<RankedTensorType>(operand.getType());
+    if (!rankedTensorType)
+      continue;
+    int64_t rank = rankedTensorType.getRank();
+    for (auto dim : llvm::seq<int64_t>(0, rank)) {
+      if (rankedTensorType.isDynamicDim(dim))
+        return true;
+    }
+  }
+  return false;
+}
+
 static SmallVector<Value>
 broadcastDynamicDimensions(PatternRewriter &rewriter, Location loc,
                            IndexPool &indexPool, ValueRange operands,
@@ -916,6 +931,9 @@ broadcastDynamicDimensions(PatternRewriter &rewriter, Location loc,
                            ArrayRef<Value> masterOperands) {
   // No need to broadcast for unary operations
   if (operands.size() == 1)
+    return operands;
+
+  if (!hasDynamicDimensions(operands))
     return operands;
 
   // Broadcast dynamic dimensions operand by operand
@@ -990,8 +1008,14 @@ emitElementwiseComputation(ConversionPatternRewriter &rewriter, Location loc,
 static ValueRange getBroadcastableOperands(Operation *operation,
                                            ValueRange operands) {
   // Shift cannot broadcast
-  if (isa<tosa::MulOp>(operation))
-    return operands.take_front(2);
+  if (isa<tosa::MulOp>(operation)) {
+    DenseElementsAttr shiftElems;
+    // Shift cannot broadcast when it is constant
+    if (matchPattern(operation->getOperand(2), m_Constant(&shiftElems)))
+      return operands.take_front(2);
+    else
+      return operands.take_front(3);
+  }
   // Input1_zp and output_zp cannot broadcast
   if (isa<tosa::NegateOp>(operation))
     return operands.take_front(1);
