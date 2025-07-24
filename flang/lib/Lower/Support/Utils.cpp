@@ -12,6 +12,7 @@
 
 #include "flang/Lower/Support/Utils.h"
 
+#include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/ConvertVariable.h"
