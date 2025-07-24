@@ -2383,6 +2383,25 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
     return false;
   }
 
+  // C++11 [expr.add]p6:
+  //   Unless both pointers point to elements of the same array object, or
+  //   one past the last element of the array object, the behavior is
+  //   undefined.
+  if (!LHS.isRoot() && !RHS.isRoot() && LHS.isBlockPointer() &&
+      RHS.isBlockPointer()) {
+    Pointer A = LHS;
+    if (LHS.isArrayElement())
+      A = LHS.expand().getArray();
+
+    Pointer B = RHS;
+    if (RHS.isArrayElement())
+      B = RHS.expand().getArray();
+
+    if (A != B)
+      S.CCEDiag(S.Current->getSource(OpPC),
+                diag::note_constexpr_pointer_subtraction_not_same_array);
+  }
+
   if (LHS == RHS) {
     S.Stk.push<T>();
     return true;
