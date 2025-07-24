@@ -154,6 +154,7 @@ Changes to the MIPS Backend
 ---------------------------
 
 * `-mcpu=i6400` and `-mcpu=i6500` were added.
+* Added support for `mipsel-windows-gnu` and `mipsel-windows-msvc` targets.
 
 Changes to the PowerPC Backend
 ------------------------------
@@ -228,6 +229,7 @@ Changes to the Windows Target
 
 * `fp128` is now passed indirectly, meaning it uses the same calling convention
   as `i128`.
+* Added support for `mipsel-windows-gnu` and `mipsel-windows-msvc` targets.
 
 Changes to the X86 Backend
 --------------------------
