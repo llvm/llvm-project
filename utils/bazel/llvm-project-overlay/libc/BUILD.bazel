@@ -286,7 +286,6 @@ libc_support_library(
     hdrs = ["hdr/stdint_proxy.h"],
 )
 
-
 ############################ Type Proxy Header Files ###########################
 
 libc_support_library(
@@ -489,6 +488,7 @@ libc_support_library(
     hdrs = ["src/__support/macros/properties/complex_types.h"],
     deps = [
         ":__support_macros_properties_types",
+        ":hdr_stdint_proxy",
         ":llvm_libc_types_cfloat128",
         ":llvm_libc_types_cfloat16",
     ],
@@ -504,6 +504,7 @@ libc_support_library(
         ":__support_macros_properties_cpu_features",
         ":__support_macros_properties_os",
         ":hdr_float_macros",
+        ":hdr_stdint_proxy",
         ":llvm_libc_macros_float16_macros",
         ":llvm_libc_types_float128",
     ],
@@ -671,6 +672,7 @@ libc_support_library(
     hdrs = ["src/__support/CPP/optional.h"],
     deps = [
         ":__support_cpp_utility",
+        ":hdr_stdint_proxy",
     ],
 )
 
@@ -731,6 +733,7 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_macros_properties_complex_types",
         ":__support_macros_properties_types",
+        ":hdr_stdint_proxy",
         ":llvm_libc_macros_stdfix_macros",
     ],
 )
@@ -753,6 +756,7 @@ libc_support_library(
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_properties_architectures",
+        ":hdr_stdint_proxy",
     ],
 )
 
