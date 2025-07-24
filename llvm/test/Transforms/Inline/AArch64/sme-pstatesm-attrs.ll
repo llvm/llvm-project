@@ -676,4 +676,46 @@ define void @streaming_caller_multiple_streaming_compatible_callees_inline() #0 
   ret void
 }
 
+define void @simple_streaming_function(ptr %ptr) #0 "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define void @simple_streaming_function
+; CHECK-SAME: (ptr [[PTR:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr [[PTR]], align 16
+; CHECK-NEXT:    ret void
+;
+  store <vscale x 4 x i32> zeroinitializer, ptr %ptr
+  ret void
+}
+
+; Don't allow inlining a streaming function into a non-streaming function.
+define void @non_streaming_caller_streaming_callee_dont_inline(ptr %ptr) #0 {
+; CHECK-LABEL: define void @non_streaming_caller_streaming_callee_dont_inline
+; CHECK-SAME: (ptr [[PTR:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr [[PTR]], align 16
+; CHECK-NEXT:    ret void
+;
+  call void @simple_streaming_function(ptr %ptr)
+  ret void
+}
+
+define void @simple_locally_streaming_function(ptr %ptr) #0 "aarch64_pstate_sm_body" {
+; CHECK-LABEL: define void @simple_locally_streaming_function
+; CHECK-SAME: (ptr [[PTR:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr [[PTR]], align 16
+; CHECK-NEXT:    ret void
+;
+  store <vscale x 4 x i32> zeroinitializer, ptr %ptr
+  ret void
+}
+
+; Don't allow inlining a locally-streaming function into a non-streaming function.
+define void @non_streaming_caller_locally_streaming_callee_dont_inline(ptr %ptr) #0 {
+; CHECK-LABEL: define void @non_streaming_caller_locally_streaming_callee_dont_inline
+; CHECK-SAME: (ptr [[PTR:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr [[PTR]], align 16
+; CHECK-NEXT:    ret void
+;
+  call void @simple_locally_streaming_function(ptr %ptr)
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve,+sme" }
