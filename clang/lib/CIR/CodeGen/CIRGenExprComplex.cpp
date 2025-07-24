@@ -194,8 +194,12 @@ mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
   }
 
   case CK_LValueToRValueBitCast: {
-    cgf.cgm.errorNYI("ComplexExprEmitter::emitCast CK_LValueToRValueBitCast");
-    return {};
+    LValue sourceLVal = cgf.emitLValue(op);
+    Address addr = sourceLVal.getAddress().withElementType(
+        builder, cgf.convertTypeForMem(destTy));
+    LValue destLV = cgf.makeAddrLValue(addr, destTy);
+    assert(!cir::MissingFeatures::opTBAA());
+    return emitLoadOfLValue(destLV, op->getExprLoc());
   }
 
   case CK_BitCast:
