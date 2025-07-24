@@ -79,7 +79,7 @@ function(FixIncludePaths in subfolder out)
 
   add_custom_command(OUTPUT ${parked_header}
     COMMAND ${LLDB_SOURCE_DIR}/scripts/framework-header-fix.py
-            -f lldb_rpc -i ${in} -o ${parked_header} -p ${unifdef_EXECUTABLE} USWIG
+            -f lldb_rpc -i ${in} -o ${parked_header} -p ${unifdef_EXECUTABLE} --unifdef_guards USWIG
     DEPENDS ${in}
     COMMENT "Fixing includes in ${in}"
   )
