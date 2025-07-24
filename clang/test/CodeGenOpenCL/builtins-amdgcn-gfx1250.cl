@@ -440,6 +440,25 @@ void test_permlane16_swap(global uint2* out, uint old, uint src) {
   *out = __builtin_amdgcn_permlane16_swap(old, src, false, true);
 }
 
+// CHECK-LABEL: @test_prefetch(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[FPTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[GPTR_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[FPTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[FPTR_ADDR]] to ptr
+// CHECK-NEXT:    [[GPTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[GPTR_ADDR]] to ptr
+// CHECK-NEXT:    store ptr [[FPTR:%.*]], ptr [[FPTR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store ptr addrspace(1) [[GPTR:%.*]], ptr [[GPTR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[FPTR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    call void @llvm.amdgcn.flat.prefetch(ptr [[TMP0]], i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr [[GPTR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    call void @llvm.amdgcn.global.prefetch(ptr addrspace(1) [[TMP1]], i32 8)
+// CHECK-NEXT:    ret void
+//
+void test_prefetch(generic void *fptr, global void *gptr) {
+  __builtin_amdgcn_flat_prefetch(fptr, 0);
+  __builtin_amdgcn_global_prefetch(gptr, 8);
+}
+
 // CHECK-LABEL: @test_cvt_f32_fp8_e5m3(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
