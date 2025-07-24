@@ -547,6 +547,12 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     return;
   }
   case AR_Deprecated:
+    // Suppress -Wdeprecated-declarations in implicit
+    // functions.
+    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(S.getCurFunctionDecl());
+        FD && FD->isImplicit())
+      return;
+
     if (ObjCPropertyAccess)
       diag = diag::warn_property_method_deprecated;
     else if (S.currentEvaluationContext().IsCaseExpr)
