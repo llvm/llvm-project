@@ -10,7 +10,7 @@ typedef int __nowrap nowrap_int;
 typedef unsigned int __wrap u_wrap_int;
 typedef unsigned int __nowrap u_nowrap_int;
 
-// CHECK-LABEL: define {{.*}} @_Z30conditional_operator_promotionbU9Obt_cU9Obt_ii
+// CHECK-LABEL: define {{.*}} @_Z30conditional_operator_promotionbU11ObtWrap_cU13ObtNoWrap_ii
 void conditional_operator_promotion(bool cond, wrap_char w, nowrap_int nw, int i) {
   // OBT wins over regular integer.
   // CHECK: cond.end:
@@ -31,7 +31,7 @@ void conditional_operator_promotion(bool cond, wrap_char w, nowrap_int nw, int i
   (void)(r2 + 2147483647);
 }
 
-// CHECK-LABEL: define {{.*}} @_Z20promotion_rules_testU9Obt_iU9Obt_iU9Obt_jU9Obt_j
+// CHECK-LABEL: define {{.*}} @_Z20promotion_rules_testU11ObtWrap_iU13ObtNoWrap_iU11ObtWrap_jU13ObtNoWrap_j
 void promotion_rules_test(wrap_int sw, nowrap_int snw, u_wrap_int uw, u_nowrap_int unw) {
   // Unsigned is favored over signed for same-behavior OBTs.
   // CHECK: add i32
