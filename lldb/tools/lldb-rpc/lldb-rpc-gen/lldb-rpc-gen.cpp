@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "RPCCommon.h"
-#include "server/RPCServerHeaderEmitter.h"
-#include "server/RPCServerSourceEmitter.h"
+#include "RPCServerHeaderEmitter.h"
+#include "RPCServerSourceEmitter.h"
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
@@ -40,15 +40,15 @@ static llvm::cl::opt<std::string>
               llvm::cl::desc("Directory to output generated files to"),
               llvm::cl::init(""), llvm::cl::cat(RPCGenCategory));
 
-static std::string GetServerOutputDirectory() {
+static std::string GetLibraryOutputDirectory() {
   llvm::SmallString<128> Path(OutputDir.getValue());
-  llvm::sys::path::append(Path, "server");
+  llvm::sys::path::append(Path, "lib");
   return std::string(Path);
 }
 
 static std::unique_ptr<llvm::ToolOutputFile>
 CreateOutputFile(llvm::StringRef OutputDir, llvm::StringRef Filename) {
-  llvm::SmallString<256> Path(OutputDir);
+  llvm::SmallString<128> Path(OutputDir);
   llvm::sys::path::append(Path, Filename);
 
   std::error_code EC;
@@ -100,8 +100,7 @@ public:
     for (CXXMethodDecl *MDecl : RDecl->methods()) {
       const std::string MangledName =
           lldb_rpc_gen::GetMangledName(Context, MDecl);
-      const bool IsDisallowed =
-          lldb_rpc_gen::MethodIsDisallowed(Context, MDecl);
+      const bool IsDisallowed = lldb_rpc_gen::MethodIsDisallowed(MangledName);
       const bool HasCallbackParameter =
           lldb_rpc_gen::HasCallbackParameter(MDecl);
       SupportLevel MethodSupportLevel = GetMethodSupportLevel(MDecl);
@@ -315,9 +314,9 @@ bool EmitClassNamesFile(std::set<std::string> &ClassNames) {
   if (!ClassNamesFile)
     return false;
 
-  ClassNamesFile->os() << "#ifndef SBCLASS\n"
-                       << "#error \"SBClass must be defined\"\n"
-                       << "#endif\n";
+  ClassNamesFile->os() << "#ifndef SBCLASS\n";
+  ClassNamesFile->os() << "#error \"SBClass must be defined\"\n";
+  ClassNamesFile->os() << "#endif\n";
 
   for (const auto &ClassName : ClassNames) {
     if (ClassName == "SBStream" || ClassName == "SBProgress")
@@ -341,9 +340,9 @@ bool EmitMethodNamesFile(std::set<std::string> &MangledMethodNames) {
   if (!MethodNamesFile)
     return false;
 
-  MethodNamesFile->os() << "#ifndef GENERATE_SBAPI\n"
-                        << "#error \"GENERATE_SBAPI must be defined\"\n"
-                        << "#endif\n";
+  MethodNamesFile->os() << "#ifndef GENERATE_SBAPI\n";
+  MethodNamesFile->os() << "#error \"GENERATE_SBAPI must be defined\"\n";
+  MethodNamesFile->os() << "#endif\n";
 
   for (const auto &MangledName : MangledMethodNames) {
     MethodNamesFile->os() << "GENERATE_SBAPI(" << MangledName << ")\n";
@@ -359,8 +358,9 @@ bool EmitSkippedMethodsFile(std::set<std::string> &SkippedMethodNames) {
   if (!File)
     return false;
 
-  for (const auto &Skipped : SkippedMethodNames)
+  for (const auto &Skipped : SkippedMethodNames) {
     File->os() << Skipped << "\n";
+  }
   File->keep();
   return true;
 }
@@ -381,14 +381,6 @@ int main(int argc, const char *argv[]) {
     return 1;
   }
 
-  // Create the output directory if the user specified one does not exist.
-  if (!llvm::sys::fs::exists(OutputDir.getValue())) {
-    llvm::sys::fs::create_directory(OutputDir.getValue());
-  }
-
-  if (!llvm::sys::fs::exists(GetServerOutputDirectory())) {
-    llvm::sys::fs::create_directory(GetServerOutputDirectory());
-  }
   CommonOptionsParser &OP = ExpectedParser.get();
   auto PCHOpts = std::make_shared<PCHContainerOperations>();
   PCHOpts->registerWriter(std::make_unique<ObjectFilePCHContainerWriter>());
