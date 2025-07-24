@@ -113,6 +113,12 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: atanpif16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
   - name: canonicalize
     standards:
       - stdc
