@@ -1,24 +1,27 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj  --symbols -r --expand-relocs - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple x86_64 %s -o %t
+# RUN: llvm-readelf -Srs %t | FileCheck %s
 
-// Test that we can forward reference a section.
+## Test that we can forward reference a section.
 
 mov .rodata, %rsi
-.section .rodata
+mov .debug_info, %rsi
 
-// CHECK:Relocations [
-// CHECK:  Section {{.*}} .rela.text {
-// CHECK:    Relocation {
-// CHECK:      Offset: 0x4
-// CHECK:      Type: R_X86_64_32S (11)
-// CHECK:      Symbol: .rodata
-// CHECK:      Addend: 0x0
-// CHECK:    }
-// CHECK:  }
-// CHECK:]
+.section .rodata,"a"
+.section .debug_info,"G",@progbits,11,comdat; .long x1
+.section .debug_info,"G",@progbits,22,comdat; .long x2
+.section .debug_info,"",@progbits; .long x0
 
-// There is only one .rodata symbol
+# CHECK:      Relocation section '.rela.debug_info' at offset {{.*}} contains 1
+# CHECK:      Relocation section '.rela.debug_info' at offset {{.*}} contains 1
+# CHECK:      Relocation section '.rela.debug_info' at offset {{.*}} contains 1
 
-// CHECK:Symbols [
-// CHECK:   Type: Section (0x3)
-// CHECK:   Section: .rodata
-// CHECK-NOT:   Section: .rodata
+# CHECK:      Symbol table '.symtab' contains 8 entries:
+# CHECK-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
+# CHECK-NEXT:  0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND
+# CHECK-NEXT:  0000000000000000     0 SECTION LOCAL  DEFAULT     4 .rodata
+# CHECK-NEXT:  0000000000000000     0 SECTION LOCAL  DEFAULT    11 .debug_info
+# CHECK-NEXT:  0000000000000000     0 NOTYPE  LOCAL  DEFAULT     5 11
+# CHECK-NEXT:  0000000000000000     0 NOTYPE  LOCAL  DEFAULT     8 22
+# CHECK-NEXT:  0000000000000000     0 NOTYPE  GLOBAL DEFAULT   UND x1
+# CHECK-NEXT:  0000000000000000     0 NOTYPE  GLOBAL DEFAULT   UND x2
+# CHECK-NEXT:  0000000000000000     0 NOTYPE  GLOBAL DEFAULT   UND x0
