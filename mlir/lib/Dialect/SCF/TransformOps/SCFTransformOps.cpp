@@ -160,7 +160,7 @@ static scf::ExecuteRegionOp wrapInExecuteRegion(RewriterBase &b,
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(op);
   scf::ExecuteRegionOp executeRegionOp =
-      b.create<scf::ExecuteRegionOp>(op->getLoc(), op->getResultTypes());
+      scf::ExecuteRegionOp::create(b, op->getLoc(), op->getResultTypes());
   {
     OpBuilder::InsertionGuard g(b);
     b.setInsertionPointToStart(&executeRegionOp.getRegion().emplaceBlock());
@@ -169,7 +169,7 @@ static scf::ExecuteRegionOp wrapInExecuteRegion(RewriterBase &b,
     assert(clonedRegion.empty() && "expected empty region");
     b.inlineRegionBefore(op->getRegions().front(), clonedRegion,
                          clonedRegion.end());
-    b.create<scf::YieldOp>(op->getLoc(), clonedOp->getResults());
+    scf::YieldOp::create(b, op->getLoc(), clonedOp->getResults());
   }
   b.replaceOp(op, executeRegionOp.getResults());
   return executeRegionOp;
