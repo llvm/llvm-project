@@ -68,11 +68,19 @@ template class LLVM_EXPORT_TEMPLATE basic_parser<float>;
 template class LLVM_EXPORT_TEMPLATE basic_parser<std::string>;
 template class LLVM_EXPORT_TEMPLATE basic_parser<char>;
 
-template class opt<unsigned>;
-template class opt<int>;
-template class opt<std::string>;
-template class opt<char>;
-template class opt<bool>;
+#if !(defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS) && defined(_MSC_VER))
+// Only instantiate opt<std::string> when not building a Windows DLL. When
+// exporting opt<std::string>, MSVC implicitly exports symbols for
+// std::basic_string through transitive inheritance via std::string. These
+// symbols may appear in clients, leading to duplicate symbol conflicts.
+template class LLVM_EXPORT_TEMPLATE opt<std::string>;
+#endif
+
+template class LLVM_EXPORT_TEMPLATE opt<bool>;
+template class LLVM_EXPORT_TEMPLATE opt<char>;
+template class LLVM_EXPORT_TEMPLATE opt<int>;
+template class LLVM_EXPORT_TEMPLATE opt<unsigned>;
+
 } // namespace cl
 } // namespace llvm
 
@@ -94,6 +102,15 @@ void parser<double>::anchor() {}
 void parser<float>::anchor() {}
 void parser<std::string>::anchor() {}
 void parser<char>::anchor() {}
+
+// These anchor functions instantiate opt<T> and reference its virtual
+// destructor to ensure MSVC exports the corresponding vtable and typeinfo when
+// building a Windows DLL. Without an explicit reference, MSVC may omit the
+// instantiation at link time even if it is marked DLL-export.
+void opt_bool_anchor() { opt<bool> anchor{""}; }
+void opt_char_anchor() { opt<char> anchor{""}; }
+void opt_int_anchor() { opt<int> anchor{""}; }
+void opt_unsigned_anchor() { opt<unsigned> anchor{""}; }
 
 //===----------------------------------------------------------------------===//
 
