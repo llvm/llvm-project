@@ -113,8 +113,6 @@ static StructorCIRGen getCIRGenToUse(CIRGenModule &cgm,
 
   GlobalDecl aliasDecl;
   if (const auto *dd = dyn_cast<CXXDestructorDecl>(md)) {
-    // The assignment is correct here, but other support for this is NYI.
-    cgm.errorNYI(md->getSourceRange(), "getCIRGenToUse: dtor");
     aliasDecl = GlobalDecl(dd, Dtor_Complete);
   } else {
     const auto *cd = cast<CXXConstructorDecl>(md);
