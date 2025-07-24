@@ -45,7 +45,7 @@ static SmallVector<Value> getIndicesForAccess(OpBuilder &b, Location loc,
   for (auto result : indexingMap.getResults()) {
     AffineMap m = AffineMap::get(indexingMap.getNumDims(),
                                  indexingMap.getNumSymbols(), result);
-    Value v = b.create<affine::AffineApplyOp>(loc, m, ivs);
+    Value v = affine::AffineApplyOp::create(b, loc, m, ivs);
     indices.push_back(v);
   }
   return indices;
@@ -73,9 +73,9 @@ static LogicalResult inlinePayload(OpBuilder &b, LinalgOp linalgOp,
     OpOperand *storeInto = linalgOp.getDpsInitOperand(operand.index());
     auto indices = getIndicesForAccess(
         b, loc, linalgOp.getMatchingIndexingMap(storeInto), ivs);
-    b.create<memref::StoreOp>(
-        loc, toStore, linalgOp.getDpsInitOperand(operand.index())->get(),
-        indices);
+    memref::StoreOp::create(b, loc, toStore,
+                            linalgOp.getDpsInitOperand(operand.index())->get(),
+                            indices);
   }
   return success();
 }
@@ -352,7 +352,7 @@ struct LinalgOpTilingInterface
       SmallVector<Value> indices = getIndicesForAccess(
           builder, linalgOpLoc, linalgOp.getMatchingIndexingMap(&operand), ivs);
       Value load =
-          builder.create<memref::LoadOp>(linalgOpLoc, operand.get(), indices);
+          memref::LoadOp::create(builder, linalgOpLoc, operand.get(), indices);
       indexedValues.push_back(load);
     }
 
@@ -520,10 +520,10 @@ struct LinalgOpPartialReductionInterface
 
       Type elType = getElementTypeOrSelf(result.getType());
       Value emptyTensor =
-          b.create<tensor::EmptyOp>(loc, partialResultShape, elType);
-      Value constantOp = b.create<arith::ConstantOp>(loc, *identity);
+          tensor::EmptyOp::create(b, loc, partialResultShape, elType);
+      Value constantOp = arith::ConstantOp::create(b, loc, *identity);
       auto identityTensor =
-          b.create<linalg::FillOp>(loc, constantOp, emptyTensor);
+          linalg::FillOp::create(b, loc, constantOp, emptyTensor);
       inits.push_back(identityTensor.getResult(0));
     }
 
@@ -575,9 +575,9 @@ struct LinalgOpPartialReductionInterface
       RankedTensorType sliceResultType = RankedTensorType::get(
           sliceInfo.resultShape, valueToTileType.getElementType(),
           valueToTileType.getEncoding());
-      auto sliceOp = b.create<tensor::ExtractSliceOp>(
-          loc, sliceResultType, valueToTile, sliceInfo.offsets, sliceInfo.sizes,
-          sliceInfo.strides);
+      auto sliceOp = tensor::ExtractSliceOp::create(
+          b, loc, sliceResultType, valueToTile, sliceInfo.offsets,
+          sliceInfo.sizes, sliceInfo.strides);
       tiledInits.push_back(sliceOp.getResult());
       generatedSlices.push_back(sliceOp);
     }
@@ -604,8 +604,8 @@ struct LinalgOpPartialReductionInterface
     auto resultTypes = ValueRange(tiledInits).getTypes();
     if (tilingStrategy ==
         ReductionTilingStrategy::PartialReductionOuterReduction) {
-      auto genericOp = b.create<GenericOp>(
-          loc, resultTypes, tiledInputs, tiledInits, newMaps, newIteratorTypes);
+      auto genericOp = GenericOp::create(b, loc, resultTypes, tiledInputs,
+                                         tiledInits, newMaps, newIteratorTypes);
       IRMapping mapping;
       op->getRegion(0).cloneInto(&genericOp.getRegion(),
                                  genericOp.getRegion().begin(), mapping);
@@ -649,8 +649,8 @@ struct LinalgOpPartialReductionInterface
         }
       }
 
-      auto reduction = b.create<linalg::ReduceOp>(
-          loc, partialResult, init, partialReductionDims,
+      auto reduction = linalg::ReduceOp::create(
+          b, loc, partialResult, init, partialReductionDims,
           [&linalgOp, &initIdx](OpBuilder &b, Location loc, ValueRange inputs) {
             // Get the combiner op.
             SmallVector<Operation *, 4> combinerOps;
@@ -660,7 +660,7 @@ struct LinalgOpPartialReductionInterface
             // Combine the input at idx and output at numInits + idx.
             clonedReductionOp->setOperand(0, inputs[0]);
             clonedReductionOp->setOperand(1, inputs[1]);
-            b.create<linalg::YieldOp>(loc, clonedReductionOp->getResult(0));
+            linalg::YieldOp::create(b, loc, clonedReductionOp->getResult(0));
           });
 
       mergeOperations.push_back(reduction);
@@ -791,8 +791,8 @@ struct PackOpTiling
     SmallVector<OpFoldResult> strides(inputRank, oneAttr);
 
     SmallVector<Value> tiledOperands;
-    auto sourceSlice = b.create<tensor::ExtractSliceOp>(
-        loc, packOp.getSource(), inputIndices, inputSizes, strides);
+    auto sourceSlice = tensor::ExtractSliceOp::create(
+        b, loc, packOp.getSource(), inputIndices, inputSizes, strides);
     tiledOperands.push_back(sourceSlice);
 
     SmallVector<OpFoldResult> outputOffsets, outputSizes;
@@ -801,8 +801,8 @@ struct PackOpTiling
       return {};
 
     strides.append(packOp.getDestRank() - inputRank, oneAttr);
-    auto outSlice = b.create<tensor::ExtractSliceOp>(
-        loc, packOp.getDest(), outputOffsets, outputSizes, strides);
+    auto outSlice = tensor::ExtractSliceOp::create(
+        b, loc, packOp.getDest(), outputOffsets, outputSizes, strides);
     tiledOperands.push_back(outSlice);
 
     if (auto val = packOp.getPaddingValue())
@@ -810,8 +810,8 @@ struct PackOpTiling
     for (auto tile : packOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
-    Operation *tiledPackOp = b.create<PackOp>(
-        loc, TypeRange{outSlice.getType()}, tiledOperands, op->getAttrs());
+    Operation *tiledPackOp = PackOp::create(
+        b, loc, TypeRange{outSlice.getType()}, tiledOperands, op->getAttrs());
 
     return TilingResult{
         {tiledPackOp},
@@ -1007,8 +1007,8 @@ struct PackOpTiling
     SmallVector<OpFoldResult> strides(inputRank, oneAttr);
 
     SmallVector<Value> tiledOperands;
-    auto sourceSlice = b.create<tensor::ExtractSliceOp>(
-        loc, packOp.getSource(), offsets, sizes, strides);
+    auto sourceSlice = tensor::ExtractSliceOp::create(
+        b, loc, packOp.getSource(), offsets, sizes, strides);
     tiledOperands.push_back(sourceSlice);
 
     SmallVector<OpFoldResult> outerDimOffsets, outerDimSizes;
@@ -1023,8 +1023,8 @@ struct PackOpTiling
       return failure();
 
     strides.append(packOp.getDestRank() - inputRank, oneAttr);
-    auto outSlice = b.create<tensor::ExtractSliceOp>(
-        loc, packOp.getDest(), outputOffsets, outputSizes, strides);
+    auto outSlice = tensor::ExtractSliceOp::create(
+        b, loc, packOp.getDest(), outputOffsets, outputSizes, strides);
     tiledOperands.push_back(outSlice);
 
     if (auto val = packOp.getPaddingValue())
@@ -1032,8 +1032,8 @@ struct PackOpTiling
     for (auto tile : packOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
-    Operation *tiledPackOp = b.create<PackOp>(
-        loc, TypeRange{outSlice.getType()}, tiledOperands, op->getAttrs());
+    Operation *tiledPackOp = PackOp::create(
+        b, loc, TypeRange{outSlice.getType()}, tiledOperands, op->getAttrs());
 
     return TilingResult{
         {tiledPackOp},
@@ -1212,37 +1212,37 @@ struct UnPackOpTiling
     sliceSrcSizes.append(unpackOp.getMixedTiles());
     sliceSrcStrides.append(numInnerTiles, oneAttr);
     SmallVector<Operation *> generatedSlices;
-    tensor::ExtractSliceOp sliceSource = b.create<tensor::ExtractSliceOp>(
-        loc, unpackOp.getSource(), sliceSrcIndices, sliceSrcSizes,
+    tensor::ExtractSliceOp sliceSource = tensor::ExtractSliceOp::create(
+        b, loc, unpackOp.getSource(), sliceSrcIndices, sliceSrcSizes,
         sliceSrcStrides);
     generatedSlices.push_back(sliceSource);
 
     SmallVector<OpFoldResult> destStrides(destRank, oneAttr);
     Value sliceDest;
     if (isPerfectTilingCase) {
-      auto destSliceOp = b.create<tensor::ExtractSliceOp>(
-          loc, unpackOp.getDest(), offsets, sizes, destStrides);
+      auto destSliceOp = tensor::ExtractSliceOp::create(
+          b, loc, unpackOp.getDest(), offsets, sizes, destStrides);
       sliceDest = destSliceOp;
       generatedSlices.push_back(destSliceOp);
     } else {
-      sliceDest = b.create<tensor::EmptyOp>(
-          loc, destExpandedSizes, unpackOp.getDestType().getElementType());
+      sliceDest = tensor::EmptyOp::create(
+          b, loc, destExpandedSizes, unpackOp.getDestType().getElementType());
     }
 
     SmallVector<Value> tiledOperands = {sliceSource.getResult(), sliceDest};
     for (auto tile : unpackOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
-    Operation *tiledUnpackOp = b.create<UnPackOp>(
-        loc, TypeRange{sliceDest.getType()}, tiledOperands, op->getAttrs());
+    Operation *tiledUnpackOp = UnPackOp::create(
+        b, loc, TypeRange{sliceDest.getType()}, tiledOperands, op->getAttrs());
 
     if (isPerfectTilingCase)
       return TilingResult{{tiledUnpackOp},
                           SmallVector<Value>(tiledUnpackOp->getResults()),
                           generatedSlices};
 
-    auto extractSlice = b.create<tensor::ExtractSliceOp>(
-        loc, tiledUnpackOp->getResult(0), resultOffsetsFromDest, sizes,
+    auto extractSlice = tensor::ExtractSliceOp::create(
+        b, loc, tiledUnpackOp->getResult(0), resultOffsetsFromDest, sizes,
         destStrides);
     return TilingResult{
         {tiledUnpackOp}, {extractSlice.getResult()}, generatedSlices};
@@ -1377,22 +1377,22 @@ struct UnPackOpTiling
 
     SmallVector<Value> tiledOperands;
     // Create slice of the dest operand.
-    auto extractDestSlice = b.create<tensor::ExtractSliceOp>(
-        loc, unPackOp.getDest(), outputOffsets, outputSizes, strides);
+    auto extractDestSlice = tensor::ExtractSliceOp::create(
+        b, loc, unPackOp.getDest(), outputOffsets, outputSizes, strides);
     tiledOperands.push_back(extractDestSlice);
 
     strides.append(unPackOp.getSourceRank() - outputRank, oneAttr);
     // Create slice of the source operand.
-    auto extractSourceSlice = b.create<tensor::ExtractSliceOp>(
-        loc, unPackOp.getSource(), offsets, sizes, strides);
+    auto extractSourceSlice = tensor::ExtractSliceOp::create(
+        b, loc, unPackOp.getSource(), offsets, sizes, strides);
     tiledOperands.insert(tiledOperands.begin(), extractSourceSlice);
     for (auto tile : unPackOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
     // Create tiled unpack op.
     Operation *tiledUnPackOp =
-        b.create<UnPackOp>(loc, TypeRange{extractDestSlice.getType()},
-                           tiledOperands, op->getAttrs());
+        UnPackOp::create(b, loc, TypeRange{extractDestSlice.getType()},
+                         tiledOperands, op->getAttrs());
 
     return TilingResult{{tiledUnPackOp},
                         SmallVector<Value>(tiledUnPackOp->getResults()),
