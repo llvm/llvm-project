@@ -22,9 +22,19 @@
 
 namespace Fortran::semantics {
 
+static const Symbol &ResolveOriginalTypeSymbol(const Symbol *symbol) {
+  symbol = &symbol->GetUltimate();
+  if (const auto *generic{symbol->detailsIf<GenericDetails>()}) {
+    CHECK(generic->derivedType() != nullptr);
+    return generic->derivedType()->GetUltimate();
+  } else {
+    return *symbol;
+  }
+}
+
 DerivedTypeSpec::DerivedTypeSpec(SourceName name, const Symbol &typeSymbol)
     : name_{name}, originalTypeSymbol_{typeSymbol},
-      typeSymbol_{typeSymbol.GetUltimate()} {
+      typeSymbol_{ResolveOriginalTypeSymbol(&typeSymbol)} {
   CHECK(typeSymbol_.has<DerivedTypeDetails>());
 }
 DerivedTypeSpec::DerivedTypeSpec(const DerivedTypeSpec &that) = default;
@@ -252,16 +262,12 @@ static bool MatchKindParams(const Symbol &typeSymbol,
 }
 
 bool DerivedTypeSpec::MatchesOrExtends(const DerivedTypeSpec &that) const {
-  const Symbol *typeSymbol{&typeSymbol_};
-  while (typeSymbol != &that.typeSymbol_) {
-    if (const DerivedTypeSpec *
-        parent{typeSymbol->GetParentTypeSpec(typeSymbol->scope())}) {
-      typeSymbol = &parent->typeSymbol_;
-    } else {
-      return false;
-    }
+  const DerivedTypeSpec *type{this};
+  while (type &&
+      !evaluate::AreSameDerivedTypeIgnoringTypeParameters(*type, that)) {
+    type = type->typeSymbol_.GetParentTypeSpec(type->typeSymbol_.scope());
   }
-  return MatchKindParams(*typeSymbol, *this, that);
+  return type && MatchKindParams(type->typeSymbol_, *this, that);
 }
 
 class InstantiateHelper {
