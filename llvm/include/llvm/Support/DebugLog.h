@@ -59,7 +59,7 @@ private:
 #else
 // As others in Debug, When compiling without assertions, the -debug-* options
 // and all inputs too LDBG() are ignored.
-#define LDBG(...)                                                              \
+#define LDBG()                                                                 \
   for (bool _c = false; _c; _c = false)                                        \
   ::llvm::nulls()
 #endif
