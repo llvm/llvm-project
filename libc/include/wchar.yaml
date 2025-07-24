@@ -53,6 +53,21 @@ functions:
       - type: wchar_t *__restrict
       - type: const char *__restrict
       - type: size_t
+  - name: mblen
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: size_t
+  - name: mbrlen
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: const char *__restrict
+      - type: size_t
+      - type: mbstate_t *__restrict
   - name: wmemset
     standards:
       - stdc
