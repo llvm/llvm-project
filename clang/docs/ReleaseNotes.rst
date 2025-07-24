@@ -819,7 +819,7 @@ Bug Fixes in This Version
   in different locations (#GH134404, #GH146976).
 - Fix a crash when marco name is empty in ``#pragma push_macro("")`` or
   ``#pragma pop_macro("")``. (GH149762).
-- Fix a crash when deleting a pointer to an incomplete array.
+- Fix a crash when deleting a pointer to an incomplete array (#GH150359).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
