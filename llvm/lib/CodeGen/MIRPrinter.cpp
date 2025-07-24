@@ -647,6 +647,18 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
   }
 }
 
+struct MyStringValue {
+  SMRange SourceRange;
+  std::string Value;
+
+  MyStringValue() = default;
+  MyStringValue(std::string Value) : Value(std::move(Value)) {}
+  MyStringValue(const char Val[]) : Value(Val) {}
+
+  bool operator==(const MyStringValue &Other) const {
+    return Value == Other.Value;
+  }
+};
 void MIRPrinter::convert(ModuleSlotTracker &MST,
                          yaml::SaveRestorePoints &YamlSRPoints,
                          const llvm::SaveRestorePoints::PointsMap &SRPoints,

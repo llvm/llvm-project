@@ -699,10 +699,9 @@ static void fillCSInfoPerBB(MachineFrameInfo &MFI,
     }
     // We need to sort CSIV, because Aarch64 expect CSI list to come sorted by
     // frame index
-    std::sort(CSIV.begin(), CSIV.end(),
-              [](const CalleeSavedInfo &Lhs, const CalleeSavedInfo &Rhs) {
-                return Lhs.getFrameIdx() < Rhs.getFrameIdx();
-              });
+    sort(CSIV, [](const CalleeSavedInfo &Lhs, const CalleeSavedInfo &Rhs) {
+      return Lhs.getFrameIdx() < Rhs.getFrameIdx();
+    });
     Inner.try_emplace(BB, std::move(CSIV));
   }
 
@@ -712,23 +711,21 @@ static void fillCSInfoPerBB(MachineFrameInfo &MFI,
   // should add them to this list and spill/restore them in Prolog/Epilog.
   if (GCSIV.size() < RegToInfo.size()) {
     for (auto &RTI : RegToInfo) {
-      if (find_if(GCSIV, [&RTI](const CalleeSavedInfo &CSI) {
+      if (count_if(GCSIV, [&RTI](const CalleeSavedInfo &CSI) {
             return CSI.getReg() == RTI.first;
-          }) != std::end(GCSIV))
+          }))
         continue;
       for (MachineBasicBlock *BB : PrologEpilogBlocks) {
         if (auto Entry = Inner.find(BB); Entry != Inner.end()) {
           auto &CSI = Entry->second;
           CSI.push_back(*RTI.second);
-          std::sort(CSI.begin(), CSI.end(),
-                    [](const CalleeSavedInfo &Lhs, const CalleeSavedInfo &Rhs) {
-                      return Lhs.getFrameIdx() < Rhs.getFrameIdx();
-                    });
+          sort(CSI, [](const CalleeSavedInfo &Lhs, const CalleeSavedInfo &Rhs) {
+            return Lhs.getFrameIdx() < Rhs.getFrameIdx();
+          });
           continue;
         }
         // CalleeSavedInfo list for each point
-        std::vector<CalleeSavedInfo> CSIV;
-        CSIV.push_back(*RTI.second);
+        auto CSIV = std::vector<CalleeSavedInfo>({*RTI.second});
         Inner.try_emplace(BB, std::move(CSIV));
       }
     }
