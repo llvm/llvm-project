@@ -99,12 +99,12 @@ define void @test2(ptr addrspace(1) %this, i32 %0, ptr addrspace(1) %p0, ptr add
   ; CHECK-LV-NEXT:   successors: %bb.3(0x7ffff800), %bb.7(0x00000800)
   ; CHECK-LV-NEXT: {{  $}}
   ; CHECK-LV-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK-LV-NEXT:   [[COPY4:%[0-9]+]]:gr64 = STATEPOINT 2882400000, 0, 0, undef %11:gr64, 2, 0, 2, 0, 2, 0, 2, 1, [[COPY4]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
+  ; CHECK-LV-NEXT:   [[COPY4:%[0-9]+]]:gr64 = STATEPOINT 2882400000, 0, 0, undef %10:gr64, 2, 0, 2, 0, 2, 0, 2, 1, [[COPY4]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
   ; CHECK-LV-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-LV-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-LV-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-LV-NEXT:   [[COPY6:%[0-9]+]]:gr64 = COPY [[COPY4]]
-  ; CHECK-LV-NEXT:   [[COPY6:%[0-9]+]]:gr64 = STATEPOINT 2882400000, 0, 0, undef %13:gr64, 2, 0, 2, 0, 2, 0, 2, 1, [[COPY6]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
+  ; CHECK-LV-NEXT:   [[COPY6:%[0-9]+]]:gr64 = STATEPOINT 2882400000, 0, 0, undef %12:gr64, 2, 0, 2, 0, 2, 0, 2, 1, [[COPY6]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
   ; CHECK-LV-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-LV-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-LV-NEXT:   JMP_1 %bb.3
@@ -165,12 +165,12 @@ define void @test2(ptr addrspace(1) %this, i32 %0, ptr addrspace(1) %p0, ptr add
   ; CHECK-LIS-NEXT:   successors: %bb.3(0x7ffff800), %bb.7(0x00000800)
   ; CHECK-LIS-NEXT: {{  $}}
   ; CHECK-LIS-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK-LIS-NEXT:   [[COPY4:%[0-9]+]]:gr64 = STATEPOINT 2882400000, 0, 0, undef %11:gr64, 2, 0, 2, 0, 2, 0, 2, 1, [[COPY4]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
+  ; CHECK-LIS-NEXT:   [[COPY4:%[0-9]+]]:gr64 = STATEPOINT 2882400000, 0, 0, undef %10:gr64, 2, 0, 2, 0, 2, 0, 2, 1, [[COPY4]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
   ; CHECK-LIS-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-LIS-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-LIS-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-LIS-NEXT:   [[COPY6:%[0-9]+]]:gr64 = COPY [[COPY4]]
-  ; CHECK-LIS-NEXT:   [[COPY6:%[0-9]+]]:gr64 = STATEPOINT 2882400000, 0, 0, undef %13:gr64, 2, 0, 2, 0, 2, 0, 2, 1, [[COPY6]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
+  ; CHECK-LIS-NEXT:   [[COPY6:%[0-9]+]]:gr64 = STATEPOINT 2882400000, 0, 0, undef %12:gr64, 2, 0, 2, 0, 2, 0, 2, 1, [[COPY6]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
   ; CHECK-LIS-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-LIS-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-LIS-NEXT:   JMP_1 %bb.3

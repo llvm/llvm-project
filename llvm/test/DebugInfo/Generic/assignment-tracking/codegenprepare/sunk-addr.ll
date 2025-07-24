@@ -20,9 +20,8 @@ next:
 ; Address calcs should be duplicated into this block. One dbg.value should be
 ; updated, and the other should not.
 ; CHECK-LABEL: next:
-; CHECK:       %[[CASTVAR:[0-9a-zA-Z]+]] = bitcast ptr %p to ptr
 ; CHECK-NEXT:  #dbg_assign(ptr %arith, ![[DIVAR:[0-9]+]],
-; CHECK-NEXT:  %[[GEPVAR:[0-9a-zA-Z]+]] = getelementptr i8, ptr %[[CASTVAR]], i64 3
+; CHECK-NEXT:  %[[GEPVAR:[0-9a-zA-Z]+]] = getelementptr i8, ptr %p, i64 3
 ; CHECK-NEXT:  %loaded = load i8, ptr %[[GEPVAR]]
 ; CHECK-NEXT:  #dbg_assign(ptr %[[GEPVAR]], ![[DIVAR]],
   call void @llvm.dbg.assign(metadata ptr %arith, metadata !12, metadata !DIExpression(), metadata !21, metadata ptr undef, metadata !DIExpression()), !dbg !14
