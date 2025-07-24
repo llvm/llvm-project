@@ -635,9 +635,16 @@ genAtomicUpdate(lower::AbstractConverter &converter,
     }
   }
 
+  mlir::ModuleOp module = builder.getModule();
+  mlir::omp::AtomicControlAttr atomicControlAttr =
+      mlir::omp::AtomicControlAttr::get(
+          builder.getContext(), fir::getAtomicIgnoreDenormalMode(module),
+          fir::getAtomicFineGrainedMemory(module),
+          fir::getAtomicRemoteMemory(module));
   builder.restoreInsertionPoint(atomicAt);
   auto updateOp = mlir::omp::AtomicUpdateOp::create(
-      builder, loc, atomAddr, hint, makeMemOrderAttr(converter, memOrder));
+      builder, loc, atomAddr, atomicControlAttr, hint,
+      makeMemOrderAttr(converter, memOrder));
 
   mlir::Region &region = updateOp->getRegion(0);
   mlir::Block *block = builder.createBlock(&region, {}, {atomType}, {loc});
