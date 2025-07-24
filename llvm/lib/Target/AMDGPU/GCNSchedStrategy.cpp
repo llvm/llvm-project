@@ -941,12 +941,10 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
   Pressure.resize(Regions.size());
   RegionsWithHighRP.resize(Regions.size());
   RegionsWithExcessRP.resize(Regions.size());
-  RegionsWithExcessVGPRRP.resize(Regions.size());
   RegionsWithMinOcc.resize(Regions.size());
   RegionsWithIGLPInstrs.resize(Regions.size());
   RegionsWithHighRP.reset();
   RegionsWithExcessRP.reset();
-  RegionsWithExcessVGPRRP.reset();
   RegionsWithMinOcc.reset();
   RegionsWithIGLPInstrs.reset();
 
@@ -1340,9 +1338,6 @@ void GCNSchedStage::checkScheduling() {
   // file.
   unsigned MaxArchVGPRs = std::min(MaxVGPRs, ST.getAddressableNumArchVGPRs());
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
-
-  if (PressureAfter.getArchVGPRNum() > ST.getAddressableNumArchVGPRs())
-    DAG.RegionsWithExcessVGPRRP[RegionIdx] = true;
 
   if (PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) > MaxVGPRs ||
       PressureAfter.getArchVGPRNum() > MaxArchVGPRs ||
