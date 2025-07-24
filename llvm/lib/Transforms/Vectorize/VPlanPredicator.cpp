@@ -133,8 +133,8 @@ VPValue *VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   // load/store/gather/scatter. Initialize BlockMask to no-mask.
   VPValue *BlockMask = nullptr;
   // This is the block mask. We OR all unique incoming edges.
-  for (auto *Predecessor : SetVector<VPBlockBase *>(
-           VPBB->getPredecessors().begin(), VPBB->getPredecessors().end())) {
+  for (auto *Predecessor : make_range(VPBB->getPredecessors().begin(),
+                                      unique(VPBB->getPredecessors()))) {
     VPValue *EdgeMask = createEdgeMask(cast<VPBasicBlock>(Predecessor), VPBB);
     if (!EdgeMask) { // Mask of predecessor is all-one so mask of block is
                      // too.
@@ -184,8 +184,7 @@ void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
   VPValue *Cond = SI->getOperand(0);
   VPBasicBlock *DefaultDst = cast<VPBasicBlock>(Src->getSuccessors()[0]);
   MapVector<VPBasicBlock *, SmallVector<VPValue *>> Dst2Compares;
-  for (const auto &[Idx, Succ] :
-       enumerate(ArrayRef(Src->getSuccessors()).drop_front())) {
+  for (const auto &[Idx, Succ] : enumerate(drop_begin(Src->getSuccessors()))) {
     VPBasicBlock *Dst = cast<VPBasicBlock>(Succ);
     assert(!getEdgeMask(Src, Dst) && "Edge masks already created");
     //  Cases whose destination is the same as default are redundant and can
@@ -206,7 +205,7 @@ void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
     // cases with destination == Dst are taken. Join the conditions for each
     // case whose destination == Dst using an OR.
     VPValue *Mask = Conds[0];
-    for (VPValue *V : ArrayRef<VPValue *>(Conds).drop_front())
+    for (VPValue *V : drop_begin(Conds))
       Mask = Builder.createOr(Mask, V);
     if (SrcMask)
       Mask = Builder.createLogicalAnd(SrcMask, Mask);
