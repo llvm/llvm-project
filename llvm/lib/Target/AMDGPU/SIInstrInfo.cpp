@@ -7138,6 +7138,13 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
 
   if (mustHaveLanesharedResult(MI)) {
     switch (MI.getOpcode()) {
+    case AMDGPU::V_SEND_VGPR_NEXT_B32_LANESHARED:
+    case AMDGPU::V_SEND_VGPR_PREV_B32_LANESHARED: {
+      unsigned OpNoRefl =
+          AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::idx_refl);
+      legalizeOperandsVLdStIdx(MRI, MI, OpNoRefl);
+      [[fallthrough]];
+    }
     case AMDGPU::CLUSTER_LOAD_B32_LANESHARED:
     case AMDGPU::CLUSTER_LOAD_B64_LANESHARED:
     case AMDGPU::CLUSTER_LOAD_B128_LANESHARED:

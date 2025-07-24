@@ -944,7 +944,9 @@ public:
     case AMDGPU::DDS_LOAD_MCAST_B128_SADDR:
     case AMDGPU::DDS_LOAD_MCAST_B128_LANESHARED_SADDR:
     case AMDGPU::V_SEND_VGPR_NEXT_B32:
+    case AMDGPU::V_SEND_VGPR_NEXT_B32_LANESHARED:
     case AMDGPU::V_SEND_VGPR_PREV_B32:
+    case AMDGPU::V_SEND_VGPR_PREV_B32_LANESHARED:
       return true;
     default:
       return false;

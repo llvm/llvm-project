@@ -3,6 +3,9 @@
 
 declare void @llvm.amdgcn.load.mcast.b32.p10.p1(ptr addrspace(10), ptr addrspace(1), i32 %cpol, i32 %mask)
 
+@sem = internal addrspace(3) global target("amdgcn.semaphore", 1) poison
+@sem2 = internal addrspace(3) global target("amdgcn.semaphore", 1) poison
+
 define void @test(ptr addrspace(10) %itp, ptr addrspace(1) %p1) {
 ; GFX13-LABEL: test:
 ; GFX13:       ; %bb.0: ; %main_body
@@ -24,4 +27,29 @@ define void @test(ptr addrspace(10) %itp, ptr addrspace(1) %p1) {
 main_body:
   call void @llvm.amdgcn.load.mcast.b32.p10.p1(ptr addrspace(10) %itp, ptr addrspace(1) readonly %p1, i32 10, i32 983040)
   ret void
+}
+
+define void @vnbr(ptr addrspace(10) %itp, ptr addrspace(10) %itp_refl) {
+; GFX13-LABEL: vnbr:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_dual_lshrrev_b32 v1, 2, v1 :: v_dual_lshrrev_b32 v0, 2, v0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX13-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX13-NEXT:    v_mov_b32_e32 v0, 0
+; GFX13-NEXT:    s_set_gpr_idx_u32 idx2, s0
+; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, s1
+; GFX13-NEXT:    s_set_vgpr_frames 0x48 ; vsrc0_idx=0 vsrc1_idx=2 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; GFX13-NEXT:    v_send_vgpr_next_b32 v0, v0, v0 sema_id:2 sema_wave_id:1 sema_id_refl:1 sema_wave_id_refl:1 wait_va_vdst:0
+; GFX13-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
+main_body:
+  call void @llvm.amdgcn.spatial.cluster.send.next(i32 0, ptr addrspace(10) %itp, ptr addrspace(3) @sem,
+                                                ptr addrspace(10) %itp_refl, ptr addrspace(3) @sem2, i32 0);
+  ret void;
 }
