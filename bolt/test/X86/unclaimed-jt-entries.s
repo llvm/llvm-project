@@ -27,6 +27,8 @@
 # CHECK-P2B: PERF2BOLT: traces mismatching disassembled function contents: 0
 # CHECK-P2B: Binary Function "main"
 # CHECK-P2B: IsSimple : 0
+# RUN: FileCheck %s --input-file %t.fdata --check-prefix=CHECK-FDATA
+# CHECK-FDATA: 1 main 0 1 main 7 0 1
 
 # RUN: llvm-bolt %t.exe -v=1 -o %t.out 2>&1 | FileCheck %s
 
