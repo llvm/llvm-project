@@ -15,6 +15,7 @@
 #include "clang/Tooling/Transformer/SourceCode.h"
 #include "clang/Tooling/Transformer/Stencil.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace clang::tidy::llvm_check {
 namespace {
@@ -24,6 +25,8 @@ using namespace ::clang::transformer;
 
 EditGenerator rewrite(RangeSelector Call, RangeSelector Builder,
                       RangeSelector CallArgs) {
+  // This is using an EditGenerator rather than ASTEdit as we want to warn even
+  // if in macro.
   return [Call = std::move(Call), Builder = std::move(Builder),
           CallArgs =
               std::move(CallArgs)](const MatchFinder::MatchResult &Result)
@@ -33,9 +36,9 @@ EditGenerator rewrite(RangeSelector Call, RangeSelector Builder,
       return CallRange.takeError();
     SourceManager &SM = *Result.SourceManager;
     const LangOptions &LangOpts = Result.Context->getLangOpts();
+    SourceLocation Begin = CallRange->getBegin();
 
     // This will result in just a warning and no edit.
-    SourceLocation Begin = CallRange->getBegin();
     bool InMacro = CallRange->getBegin().isMacroID();
     if (InMacro) {
       while (SM.isMacroArgExpansion(Begin))
@@ -46,6 +49,8 @@ EditGenerator rewrite(RangeSelector Call, RangeSelector Builder,
       return SmallVector<Edit, 1>({WarnOnly});
     }
 
+    // This will try to extract the template argument as written so that the
+    // rewritten code looks closest to original.
     auto NextToken = [&](std::optional<Token> CurrentToken) {
       if (!CurrentToken)
         return CurrentToken;
@@ -74,9 +79,6 @@ EditGenerator rewrite(RangeSelector Call, RangeSelector Builder,
                                                  "missing '>' token");
     }
 
-    auto GetText = [&](const CharSourceRange &Range) {
-      return clang::Lexer::getSourceText(Range, SM, LangOpts);
-    };
     Expected<CharSourceRange> BuilderRange = Builder(Result);
     if (!BuilderRange)
       return BuilderRange.takeError();
@@ -84,20 +86,25 @@ EditGenerator rewrite(RangeSelector Call, RangeSelector Builder,
     if (!CallArgsRange)
       return CallArgsRange.takeError();
 
+    // Helper for concatting below.
+    auto GetText = [&](const CharSourceRange &Range) {
+      return clang::Lexer::getSourceText(Range, SM, LangOpts);
+    };
+
     Edit Replace;
     Replace.Kind = EditKind::Range;
     Replace.Range = *CallRange;
-    Replace.Replacement = GetText(CharSourceRange::getTokenRange(
-        LessToken->getEndLoc(), EndToken->getLastLoc()));
-    Replace.Replacement += "::create(";
-    Replace.Replacement += GetText(*BuilderRange);
+    std::string CallArgsStr;
     // Only emit args if there are any.
     if (auto CallArgsText = GetText(*CallArgsRange).ltrim();
         !CallArgsText.rtrim().empty()) {
-      Replace.Replacement += ", ";
-      Replace.Replacement += CallArgsText;
+      CallArgsStr = llvm::formatv(", {}", CallArgsText);
     }
-    Replace.Replacement += ")";
+    Replace.Replacement =
+        llvm::formatv("{}::create({}{})",
+                      GetText(CharSourceRange::getTokenRange(
+                          LessToken->getEndLoc(), EndToken->getLastLoc())),
+                      GetText(*BuilderRange), CallArgsStr);
 
     return SmallVector<Edit, 1>({Replace});
   };
