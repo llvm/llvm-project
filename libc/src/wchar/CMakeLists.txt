@@ -256,6 +256,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  wcsdup
+  SRCS
+    wcsdup.cpp
+  HDRS
+    wcsdup.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.string.allocating_string_utils
+)
+
+add_entrypoint_object(
   wcspbrk
   SRCS
     wcspbrk.cpp
