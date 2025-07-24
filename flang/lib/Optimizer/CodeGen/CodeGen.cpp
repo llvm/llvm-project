@@ -878,7 +878,8 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
       auto rc = convertFpToFp(rp, fromBits, toBits, nt);
       auto ic = convertFpToFp(ip, fromBits, toBits, nt);
       auto un = mlir::LLVM::UndefOp::create(rewriter, loc, toTy);
-      auto i1 = mlir::LLVM::InsertValueOp::create(rewriter, loc, un, rc, 0);
+      llvm::SmallVector<int64_t> pos{0};
+      auto i1 = mlir::LLVM::InsertValueOp::create(rewriter, loc, un, rc, pos);
       rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(convert, i1, ic,
                                                              1);
       return mlir::success();
@@ -1038,8 +1039,9 @@ struct EmboxCharOpConversion : public fir::FIROpConversion<fir::EmboxCharOp> {
       charBuffer =
           mlir::LLVM::BitcastOp::create(rewriter, loc, addrTy, charBuffer);
 
+    llvm::SmallVector<int64_t> pos{0};
     auto insertBufferOp = mlir::LLVM::InsertValueOp::create(
-        rewriter, loc, llvmStruct, charBuffer, 0);
+        rewriter, loc, llvmStruct, charBuffer, pos);
     rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
         emboxChar, insertBufferOp, lenAfterCast, 1);
 
@@ -3888,7 +3890,8 @@ complexSum(OPTY sumop, mlir::ValueRange opnds,
   auto rx = LLVMOP::create(rewriter, loc, eleTy, x0, x1, fmf);
   auto ry = LLVMOP::create(rewriter, loc, eleTy, y0, y1, fmf);
   auto r0 = mlir::LLVM::UndefOp::create(rewriter, loc, ty);
-  auto r1 = mlir::LLVM::InsertValueOp::create(rewriter, loc, r0, rx, 0);
+  llvm::SmallVector<int64_t> pos{0};
+  auto r1 = mlir::LLVM::InsertValueOp::create(rewriter, loc, r0, rx, pos);
   return mlir::LLVM::InsertValueOp::create(rewriter, loc, r1, ry, 1);
 }
 } // namespace
@@ -3951,7 +3954,8 @@ struct MulcOpConversion : public fir::FIROpConversion<fir::MulcOp> {
     auto yy = mlir::LLVM::FMulOp::create(rewriter, loc, eleTy, y0, y1, fmf);
     auto rr = mlir::LLVM::FSubOp::create(rewriter, loc, eleTy, xx, yy, fmf);
     auto ra = mlir::LLVM::UndefOp::create(rewriter, loc, ty);
-    auto r1 = mlir::LLVM::InsertValueOp::create(rewriter, loc, ra, rr, 0);
+    llvm::SmallVector<int64_t> pos{0};
+    auto r1 = mlir::LLVM::InsertValueOp::create(rewriter, loc, ra, rr, pos);
     auto r0 = mlir::LLVM::InsertValueOp::create(rewriter, loc, r1, ri, 1);
     rewriter.replaceOp(mulc, r0.getResult());
     return mlir::success();
@@ -3991,7 +3995,8 @@ struct DivcOpConversion : public fir::FIROpConversion<fir::DivcOp> {
     auto rr = mlir::LLVM::FDivOp::create(rewriter, loc, eleTy, rrn, d, fmf);
     auto ri = mlir::LLVM::FDivOp::create(rewriter, loc, eleTy, rin, d, fmf);
     auto ra = mlir::LLVM::UndefOp::create(rewriter, loc, ty);
-    auto r1 = mlir::LLVM::InsertValueOp::create(rewriter, loc, ra, rr, 0);
+    llvm::SmallVector<int64_t> pos{0};
+    auto r1 = mlir::LLVM::InsertValueOp::create(rewriter, loc, ra, rr, pos);
     auto r0 = mlir::LLVM::InsertValueOp::create(rewriter, loc, r1, ri, 1);
     rewriter.replaceOp(divc, r0.getResult());
     return mlir::success();
@@ -4014,7 +4019,8 @@ struct NegcOpConversion : public fir::FIROpConversion<fir::NegcOp> {
     auto ip = mlir::LLVM::ExtractValueOp::create(rewriter, loc, o0, 1);
     auto nrp = mlir::LLVM::FNegOp::create(rewriter, loc, eleTy, rp);
     auto nip = mlir::LLVM::FNegOp::create(rewriter, loc, eleTy, ip);
-    auto r = mlir::LLVM::InsertValueOp::create(rewriter, loc, o0, nrp, 0);
+    llvm::SmallVector<int64_t> pos{0};
+    auto r = mlir::LLVM::InsertValueOp::create(rewriter, loc, o0, nrp, pos);
     rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(neg, r, nip, 1);
     return mlir::success();
   }
