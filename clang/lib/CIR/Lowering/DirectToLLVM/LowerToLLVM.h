@@ -257,6 +257,11 @@ class CIRToLLVMFuncOpLowering : public mlir::OpConversionPattern<cir::FuncOp> {
       cir::FuncOp func, bool filterArgAndResAttrs,
       mlir::SmallVectorImpl<mlir::NamedAttribute> &result) const;
 
+  mlir::LogicalResult
+  matchAndRewriteAlias(cir::FuncOp op, mlir::FlatSymbolRefAttr aliasee,
+                       mlir::Type ty, OpAdaptor adaptor,
+                       mlir::ConversionPatternRewriter &rewriter) const;
+
 public:
   using mlir::OpConversionPattern<cir::FuncOp>::OpConversionPattern;
 
