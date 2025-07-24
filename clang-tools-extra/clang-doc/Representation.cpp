@@ -247,6 +247,8 @@ void Reference::merge(Reference &&Other) {
     Name = Other.Name;
   if (Path.empty())
     Path = Other.Path;
+  if (DocumentationFileName.empty())
+    DocumentationFileName = Other.DocumentationFileName;
 }
 
 bool FriendInfo::mergeable(const FriendInfo &Other) {
