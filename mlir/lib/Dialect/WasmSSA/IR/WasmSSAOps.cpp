@@ -161,10 +161,7 @@ Block *FuncOp::addEntryBlock() {
 void FuncOp::build(::mlir::OpBuilder &odsBuilder,
                    ::mlir::OperationState &odsState, llvm::StringRef symbol,
                    FunctionType funcType) {
-  odsState.addAttribute("sym_name", odsBuilder.getStringAttr(symbol));
-  odsState.addAttribute("sym_visibility", odsBuilder.getStringAttr("nested"));
-  odsState.addAttribute("functionType", TypeAttr::get(funcType));
-  odsState.addRegion();
+  FuncOp::build(odsBuilder, odsState, symbol, funcType, {}, {}, "nested");
 }
 
 ParseResult FuncOp::parse(::mlir::OpAsmParser &parser,
@@ -235,11 +232,8 @@ void FuncImportOp::build(::mlir::OpBuilder &odsBuilder,
                          ::mlir::OperationState &odsState, StringRef symbol,
                          StringRef moduleName, StringRef importName,
                          FunctionType type) {
-  odsState.addAttribute("sym_name", odsBuilder.getStringAttr(symbol));
-  odsState.addAttribute("sym_visibility", odsBuilder.getStringAttr("nested"));
-  odsState.addAttribute("moduleName", odsBuilder.getStringAttr(moduleName));
-  odsState.addAttribute("importName", odsBuilder.getStringAttr(importName));
-  odsState.addAttribute("type", TypeAttr::get(type));
+  FuncImportOp::build(odsBuilder, odsState, symbol, moduleName, importName,
+                      type, {}, {}, odsBuilder.getStringAttr("nested"));
 }
 
 //===----------------------------------------------------------------------===//
@@ -249,12 +243,8 @@ void FuncImportOp::build(::mlir::OpBuilder &odsBuilder,
 void GlobalOp::build(::mlir::OpBuilder &odsBuilder,
                      ::mlir::OperationState &odsState, llvm::StringRef symbol,
                      Type type, bool isMutable) {
-  odsState.addAttribute("sym_name", odsBuilder.getStringAttr(symbol));
-  odsState.addAttribute("sym_visibility", odsBuilder.getStringAttr("nested"));
-  odsState.addAttribute("type", TypeAttr::get(type));
-  if (isMutable)
-    odsState.addAttribute("isMutable", odsBuilder.getUnitAttr());
-  odsState.addRegion();
+  GlobalOp::build(odsBuilder, odsState, symbol, type, isMutable,
+                  odsBuilder.getStringAttr("nested"));
 }
 
 // Custom formats
@@ -326,13 +316,7 @@ void GlobalImportOp::build(::mlir::OpBuilder &odsBuilder,
                            ::mlir::OperationState &odsState, StringRef symbol,
                            StringRef moduleName, StringRef importName,
                            Type type, bool isMutable) {
-  odsState.addAttribute("sym_name", odsBuilder.getStringAttr(symbol));
-  odsState.addAttribute("sym_visibility", odsBuilder.getStringAttr("nested"));
-  odsState.addAttribute("moduleName", odsBuilder.getStringAttr(moduleName));
-  odsState.addAttribute("importName", odsBuilder.getStringAttr(importName));
-  odsState.addAttribute("type", TypeAttr::get(type));
-  if (isMutable)
-    odsState.addAttribute("isMutable", odsBuilder.getUnitAttr());
+  GlobalImportOp::build(odsBuilder, odsState, symbol, moduleName, importName, type, isMutable, odsBuilder.getStringAttr("nested"));
 }
 
 ParseResult GlobalImportOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -449,9 +433,7 @@ Block *LoopOp::getLabelTarget() { return &getBody().front(); }
 void MemOp::build(::mlir::OpBuilder &odsBuilder,
                   ::mlir::OperationState &odsState, llvm::StringRef symbol,
                   LimitType limit) {
-  odsState.addAttribute("sym_name", odsBuilder.getStringAttr(symbol));
-  odsState.addAttribute("sym_visibility", odsBuilder.getStringAttr("nested"));
-  odsState.addAttribute("limits", TypeAttr::get(limit));
+  MemOp::build(odsBuilder, odsState, symbol, limit, odsBuilder.getStringAttr("nested"));
 }
 
 //===----------------------------------------------------------------------===//
@@ -462,11 +444,8 @@ void MemImportOp::build(mlir::OpBuilder &odsBuilder,
                         ::mlir::OperationState &odsState,
                         llvm::StringRef symbol, llvm::StringRef moduleName,
                         llvm::StringRef importName, LimitType limits) {
-  odsState.addAttribute("sym_name", odsBuilder.getStringAttr(symbol));
-  odsState.addAttribute("sym_visibility", odsBuilder.getStringAttr("nested"));
-  odsState.addAttribute("moduleName", odsBuilder.getStringAttr(moduleName));
-  odsState.addAttribute("importName", odsBuilder.getStringAttr(importName));
-  odsState.addAttribute("limits", TypeAttr::get(limits));
+  MemImportOp::build(odsBuilder, odsState, symbol, moduleName, importName,
+                     limits, odsBuilder.getStringAttr("nested"));
 }
 
 //===----------------------------------------------------------------------===//
@@ -498,9 +477,7 @@ void ReturnOp::build(::mlir::OpBuilder &odsBuilder,
 void TableOp::build(::mlir::OpBuilder &odsBuilder,
                     ::mlir::OperationState &odsState, llvm::StringRef symbol,
                     TableType type) {
-  odsState.addAttribute("sym_name", odsBuilder.getStringAttr(symbol));
-  odsState.addAttribute("sym_visibility", odsBuilder.getStringAttr("nested"));
-  odsState.addAttribute("type", TypeAttr::get(type));
+  TableOp::build(odsBuilder, odsState, symbol, type, odsBuilder.getStringAttr("nested"));
 }
 
 //===----------------------------------------------------------------------===//
@@ -511,9 +488,6 @@ void TableImportOp::build(mlir::OpBuilder &odsBuilder,
                           ::mlir::OperationState &odsState,
                           llvm::StringRef symbol, llvm::StringRef moduleName,
                           llvm::StringRef importName, TableType type) {
-  odsState.addAttribute("sym_name", odsBuilder.getStringAttr(symbol));
-  odsState.addAttribute("sym_visibility", odsBuilder.getStringAttr("nested"));
-  odsState.addAttribute("moduleName", odsBuilder.getStringAttr(moduleName));
-  odsState.addAttribute("importName", odsBuilder.getStringAttr(importName));
-  odsState.addAttribute("type", TypeAttr::get(type));
+  TableImportOp::build(odsBuilder, odsState, symbol, moduleName, importName,
+                       type, odsBuilder.getStringAttr("nested"));
 }
