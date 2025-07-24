@@ -28,7 +28,7 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 97,
+// CHECK-NEXT:   "offset": 99,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 3,
 // CHECK-NEXT:   "col": 5,
@@ -36,12 +36,12 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 93,
+// CHECK-NEXT:    "offset": 95,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 3
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 97,
+// CHECK-NEXT:    "offset": 99,
 // CHECK-NEXT:    "col": 5,
 // CHECK-NEXT:    "tokLen": 11
 // CHECK-NEXT:   }
@@ -51,26 +51,39 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NEXT:  "mangledName": "global_decl",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
-// CHECK-NEXT:  }
+// CHECK-NEXT:  },
+// CHECK-NEXT:  "typeDetails": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "id": "0x{{.*}}",
+// CHECK-NEXT:    "kind": "BuiltinType",
+// CHECK-NEXT:    "type": {
+// CHECK-NEXT:     "qualType": "int"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   }
+// CHECK-NEXT:  ]
 // CHECK-NEXT: }
 
 
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 159,
+// CHECK-NEXT:   "offset": 162,
 // CHECK-NEXT:   "line": 4,
 // CHECK-NEXT:   "col": 50,
 // CHECK-NEXT:   "tokLen": 12
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 110,
+// CHECK-NEXT:    "offset": 113,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 159,
+// CHECK-NEXT:    "offset": 162,
 // CHECK-NEXT:    "col": 50,
 // CHECK-NEXT:    "tokLen": 12
 // CHECK-NEXT:   }
@@ -81,18 +94,29 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "storageClass": "extern",
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:  "typeDetails": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ],
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "refId": "0x{{.*}}"
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "AliasAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 132,
+// CHECK-NEXT:      "offset": 135,
 // CHECK-NEXT:      "col": 23,
 // CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 151,
+// CHECK-NEXT:      "offset": 154,
 // CHECK-NEXT:      "col": 42,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -106,18 +130,18 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 266,
+// CHECK-NEXT:   "offset": 273,
 // CHECK-NEXT:   "col": 50,
 // CHECK-NEXT:   "tokLen": 3
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 219,
+// CHECK-NEXT:    "offset": 226,
 // CHECK-NEXT:    "col": 3,
 // CHECK-NEXT:    "tokLen": 13
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 266,
+// CHECK-NEXT:    "offset": 273,
 // CHECK-NEXT:    "col": 50,
 // CHECK-NEXT:    "tokLen": 3
 // CHECK-NEXT:   }
@@ -126,18 +150,29 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:  "typeDetails": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ],
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "refId": "0x{{.*}}"
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CleanupAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 234,
+// CHECK-NEXT:      "offset": 241,
 // CHECK-NEXT:      "col": 18,
 // CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 258,
+// CHECK-NEXT:      "offset": 265,
 // CHECK-NEXT:      "col": 42,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -158,19 +193,19 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 306,
+// CHECK-NEXT:   "offset": 316,
 // CHECK-NEXT:   "line": 11,
 // CHECK-NEXT:   "col": 33,
 // CHECK-NEXT:   "tokLen": 15
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 274,
+// CHECK-NEXT:    "offset": 284,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 13
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 306,
+// CHECK-NEXT:    "offset": 316,
 // CHECK-NEXT:    "col": 33,
 // CHECK-NEXT:    "tokLen": 15
 // CHECK-NEXT:   }
@@ -180,18 +215,29 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:  "typeDetails": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ],
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "refId": "0x{{.*}}"
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "DeprecatedAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 289,
+// CHECK-NEXT:      "offset": 299,
 // CHECK-NEXT:      "col": 16,
 // CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 289,
+// CHECK-NEXT:      "offset": 299,
 // CHECK-NEXT:      "col": 16,
 // CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     }
@@ -204,19 +250,19 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 365,
+// CHECK-NEXT:   "offset": 376,
 // CHECK-NEXT:   "line": 12,
 // CHECK-NEXT:   "col": 43,
 // CHECK-NEXT:   "tokLen": 15
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 323,
+// CHECK-NEXT:    "offset": 334,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 13
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 365,
+// CHECK-NEXT:    "offset": 376,
 // CHECK-NEXT:    "col": 43,
 // CHECK-NEXT:    "tokLen": 15
 // CHECK-NEXT:   }
@@ -226,18 +272,29 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:  "typeDetails": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ],
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "refId": "0x{{.*}}"
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "DeprecatedAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 338,
+// CHECK-NEXT:      "offset": 349,
 // CHECK-NEXT:      "col": 16,
 // CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 357,
+// CHECK-NEXT:      "offset": 368,
 // CHECK-NEXT:      "col": 35,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -251,19 +308,19 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 439,
+// CHECK-NEXT:   "offset": 451,
 // CHECK-NEXT:   "line": 13,
 // CHECK-NEXT:   "col": 58,
 // CHECK-NEXT:   "tokLen": 15
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 382,
+// CHECK-NEXT:    "offset": 394,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 13
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 439,
+// CHECK-NEXT:    "offset": 451,
 // CHECK-NEXT:    "col": 58,
 // CHECK-NEXT:    "tokLen": 15
 // CHECK-NEXT:   }
@@ -273,18 +330,29 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:  "typeDetails": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ],
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "refId": "0x{{.*}}"
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "DeprecatedAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 397,
+// CHECK-NEXT:      "offset": 409,
 // CHECK-NEXT:      "col": 16,
 // CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 431,
+// CHECK-NEXT:      "offset": 443,
 // CHECK-NEXT:      "col": 50,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -299,19 +367,19 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 490,
+// CHECK-NEXT:   "offset": 504,
 // CHECK-NEXT:   "line": 15,
 // CHECK-NEXT:   "col": 34,
 // CHECK-NEXT:   "tokLen": 16
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 457,
+// CHECK-NEXT:    "offset": 471,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 13
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 490,
+// CHECK-NEXT:    "offset": 504,
 // CHECK-NEXT:    "col": 34,
 // CHECK-NEXT:    "tokLen": 16
 // CHECK-NEXT:   }
@@ -321,18 +389,29 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:  "typeDetails": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ],
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "refId": "0x{{.*}}"
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "UnavailableAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 472,
+// CHECK-NEXT:      "offset": 486,
 // CHECK-NEXT:      "col": 16,
 // CHECK-NEXT:      "tokLen": 11
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 472,
+// CHECK-NEXT:      "offset": 486,
 // CHECK-NEXT:      "col": 16,
 // CHECK-NEXT:      "tokLen": 11
 // CHECK-NEXT:     }
@@ -345,19 +424,19 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 551,
+// CHECK-NEXT:   "offset": 566,
 // CHECK-NEXT:   "line": 16,
 // CHECK-NEXT:   "col": 44,
 // CHECK-NEXT:   "tokLen": 16
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 508,
+// CHECK-NEXT:    "offset": 523,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 13
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 551,
+// CHECK-NEXT:    "offset": 566,
 // CHECK-NEXT:    "col": 44,
 // CHECK-NEXT:    "tokLen": 16
 // CHECK-NEXT:   }
@@ -367,18 +446,29 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:  "typeDetails": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ],
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "refId": "0x{{.*}}"
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "UnavailableAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 523,
+// CHECK-NEXT:      "offset": 538,
 // CHECK-NEXT:      "col": 16,
 // CHECK-NEXT:      "tokLen": 11
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 543,
+// CHECK-NEXT:      "offset": 558,
 // CHECK-NEXT:      "col": 36,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -392,19 +482,19 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 617,
+// CHECK-NEXT:   "offset": 634,
 // CHECK-NEXT:   "line": 18,
 // CHECK-NEXT:   "col": 48,
 // CHECK-NEXT:   "tokLen": 11
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 570,
+// CHECK-NEXT:    "offset": 587,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 13
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 617,
+// CHECK-NEXT:    "offset": 634,
 // CHECK-NEXT:    "col": 48,
 // CHECK-NEXT:    "tokLen": 11
 // CHECK-NEXT:   }
@@ -414,18 +504,29 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:  "typeDetails": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ],
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "refId": "0x{{.*}}"
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "SectionAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 586,
+// CHECK-NEXT:      "offset": 603,
 // CHECK-NEXT:      "col": 17,
 // CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 609,
+// CHECK-NEXT:      "offset": 626,
 // CHECK-NEXT:      "col": 40,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -439,19 +540,19 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 675,
+// CHECK-NEXT:   "offset": 694,
 // CHECK-NEXT:   "line": 20,
 // CHECK-NEXT:   "col": 45,
 // CHECK-NEXT:   "tokLen": 14
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 631,
+// CHECK-NEXT:    "offset": 650,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 13
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 675,
+// CHECK-NEXT:    "offset": 694,
 // CHECK-NEXT:    "col": 45,
 // CHECK-NEXT:    "tokLen": 14
 // CHECK-NEXT:   }
@@ -461,18 +562,29 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:  "typeDetails": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ],
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "refId": "0x{{.*}}"
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "VisibilityAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 647,
+// CHECK-NEXT:      "offset": 666,
 // CHECK-NEXT:      "col": 17,
 // CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 667,
+// CHECK-NEXT:      "offset": 686,
 // CHECK-NEXT:      "col": 37,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -486,19 +598,19 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 748,
+// CHECK-NEXT:   "offset": 769,
 // CHECK-NEXT:   "line": 22,
 // CHECK-NEXT:   "col": 57,
 // CHECK-NEXT:   "tokLen": 13
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 692,
+// CHECK-NEXT:    "offset": 713,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 8
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 748,
+// CHECK-NEXT:    "offset": 769,
 // CHECK-NEXT:    "col": 57,
 // CHECK-NEXT:    "tokLen": 13
 // CHECK-NEXT:   }
@@ -509,18 +621,29 @@ __thread __attribute__ ((tls_model ("local-exec"))) int tls_model_var;
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "tls": "static",
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:  "typeDetails": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ],
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "refId": "0x{{.*}}"
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "TLSModelAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 717,
+// CHECK-NEXT:      "offset": 738,
 // CHECK-NEXT:      "col": 26,
 // CHECK-NEXT:      "tokLen": 9
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 740,
+// CHECK-NEXT:      "offset": 761,
 // CHECK-NEXT:      "col": 49,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }

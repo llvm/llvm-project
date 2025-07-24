@@ -16,10 +16,10 @@ void not_pack() {
 // CHECK:      FunctionDecl {{.*}} not_pack 'void ()'
 // CHECK:           DeclStmt {{.*}}
 // CHECK:           DeclStmt {{.*}}
-// CHECK-NEXT:        VarDecl {{.*}} a 'NotAPack...{{.*}}'
-// CHECK-NEXT:      DeclStmt {{.*}}
-// CHECK-NEXT:        VarDecl {{.*}} 'T...{{.*}}'
-// CHECK-NEXT:       DeclStmt {{.*}}
-// CHECK-NEXT:        VarDecl {{.*}} c 'Tp...{{.*}}'
+// CHECK:             VarDecl {{.*}} a 'NotAPack...{{.*}}'
+// CHECK:           DeclStmt {{.*}}
+// CHECK:             VarDecl {{.*}} 'T...{{.*}}'
+// CHECK:            DeclStmt {{.*}}
+// CHECK:             VarDecl {{.*}} c 'Tp...{{.*}}'
 
 }

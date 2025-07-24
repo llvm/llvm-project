@@ -18,11 +18,11 @@
 // ensure the types are target-dependent.
 
 // CHECK: TypedefDecl {{.*}} implicit __dmr1024 '__dmr1024'
-// CHECK: `-BuiltinType {{.*}} '__dmr1024'
+// CHECK: `-typeDetails: BuiltinType {{.*}} '__dmr1024'
 // CHECK: TypedefDecl {{.*}} implicit __vector_quad '__vector_quad'
-// CHECK-NEXT: -BuiltinType {{.*}} '__vector_quad'
+// CHECK-NEXT: -typeDetails: BuiltinType {{.*}} '__vector_quad'
 // CHECK: TypedefDecl {{.*}} implicit __vector_pair '__vector_pair'
-// CHECK-NEXT: -BuiltinType {{.*}} '__vector_pair'
+// CHECK-NEXT: -typeDetails: BuiltinType {{.*}} '__vector_pair'
 
 // CHECK-X86_64-NOT: __dmr1024
 // CHECK-X86_64-NOT: __vector_quad

@@ -34,13 +34,17 @@ int e;
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "__int128"
 // CHECK-NEXT:    },
-// CHECK-NEXT:    "inner": [
+// CHECK-NEXT:    "typeDetails": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "BuiltinType",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "__int128"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   },
@@ -57,13 +61,17 @@ int e;
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "unsigned __int128"
 // CHECK-NEXT:    },
-// CHECK-NEXT:    "inner": [
+// CHECK-NEXT:    "typeDetails": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "BuiltinType",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "unsigned __int128"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "unsigned",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   },
@@ -80,7 +88,7 @@ int e;
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "struct __NSConstantString_tag"
 // CHECK-NEXT:    },
-// CHECK-NEXT:    "inner": [
+// CHECK-NEXT:    "typeDetails": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "RecordType",
@@ -91,7 +99,10 @@ int e;
 // CHECK-NEXT:       "id": "0x{{.*}}",
 // CHECK-NEXT:       "kind": "RecordDecl",
 // CHECK-NEXT:       "name": "__NSConstantString_tag"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "struct"
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   },
@@ -108,20 +119,27 @@ int e;
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "char *"
 // CHECK-NEXT:    },
-// CHECK-NEXT:    "inner": [
+// CHECK-NEXT:    "typeDetails": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "PointerType",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "char *"
 // CHECK-NEXT:      },
-// CHECK-NEXT:      "inner": [
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "ptr"
+// CHECK-NEXT:      ],
+// CHECK-NEXT:      "typeDetails": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:        "id": "0x{{.*}}",
 // CHECK-NEXT:        "kind": "BuiltinType",
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "char"
-// CHECK-NEXT:        }
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [
+// CHECK-NEXT:         "signed",
+// CHECK-NEXT:         "integer"
+// CHECK-NEXT:        ]
 // CHECK-NEXT:       }
 // CHECK-NEXT:      ]
 // CHECK-NEXT:     }
@@ -140,7 +158,7 @@ int e;
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "struct __va_list_tag[1]"
 // CHECK-NEXT:    },
-// CHECK-NEXT:    "inner": [
+// CHECK-NEXT:    "typeDetails": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "ConstantArrayType",
@@ -148,7 +166,10 @@ int e;
 // CHECK-NEXT:       "qualType": "struct __va_list_tag[1]"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "size": 1,
-// CHECK-NEXT:      "inner": [
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "array"
+// CHECK-NEXT:      ],
+// CHECK-NEXT:      "typeDetails": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:        "id": "0x{{.*}}",
 // CHECK-NEXT:        "kind": "RecordType",
@@ -159,7 +180,10 @@ int e;
 // CHECK-NEXT:         "id": "0x{{.*}}",
 // CHECK-NEXT:         "kind": "RecordDecl",
 // CHECK-NEXT:         "name": "__va_list_tag"
-// CHECK-NEXT:        }
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [
+// CHECK-NEXT:         "struct"
+// CHECK-NEXT:        ]
 // CHECK-NEXT:       }
 // CHECK-NEXT:      ]
 // CHECK-NEXT:     }
@@ -169,21 +193,21 @@ int e;
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "VarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 108,
 // CHECK-NEXT:     "file": "{{.*}}",
 // CHECK-NEXT:     "line": 4,
-// CHECK-NEXT:     "presumedFile": "{{.*}}",
+// CHECK-NEXT:     "presumedFile": "test.c",
 // CHECK-NEXT:     "col": 5,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 104,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 108,
 // CHECK-NEXT:      "col": 5,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -192,13 +216,26 @@ int e;
 // CHECK-NEXT:    "mangledName": "a",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "BuiltinType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "int"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "VarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 136,
 // CHECK-NEXT:     "line": 7,
 // CHECK-NEXT:     "presumedFile": "bar.h",
 // CHECK-NEXT:     "presumedLine": 32,
@@ -207,12 +244,12 @@ int e;
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 132,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 136,
 // CHECK-NEXT:      "col": 5,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -221,13 +258,26 @@ int e;
 // CHECK-NEXT:    "mangledName": "b",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ],
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "refId": "0x{{.*}}"
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "VarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 144,
 // CHECK-NEXT:     "line": 8,
 // CHECK-NEXT:     "presumedLine": 33,
 // CHECK-NEXT:     "col": 5,
@@ -235,12 +285,12 @@ int e;
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 140,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 144,
 // CHECK-NEXT:      "col": 5,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -249,26 +299,39 @@ int e;
 // CHECK-NEXT:    "mangledName": "c",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ],
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "refId": "0x{{.*}}"
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "VarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 173,
 // CHECK-NEXT:     "line": 11,
-// CHECK-NEXT:     "presumedFile": "{{.*}}",
+// CHECK-NEXT:     "presumedFile": "test.c",
 // CHECK-NEXT:     "col": 5,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 169,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 173,
 // CHECK-NEXT:      "col": 5,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -277,25 +340,38 @@ int e;
 // CHECK-NEXT:    "mangledName": "d",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ],
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "refId": "0x{{.*}}"
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "VarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 181,
 // CHECK-NEXT:     "line": 12,
 // CHECK-NEXT:     "col": 5,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 177,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 181,
 // CHECK-NEXT:      "col": 5,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -304,7 +380,20 @@ int e;
 // CHECK-NEXT:    "mangledName": "e",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ],
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "refId": "0x{{.*}}"
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }

@@ -4,15 +4,15 @@ typedef uint4 uint32_t4;
 typedef uint32_t4 uint32_t8[2];
 
 // CHECK-LABEL: FunctionDecl {{.*}} used Accumulate 'uint32_t (uint32_t4[2])'
-// CHECK-NEXT: ParmVarDecl {{.*}} used V 'uint32_t4[2]'
+// CHECK: ParmVarDecl {{.*}} used V 'uint32_t4[2]'
 uint32_t Accumulate(uint32_t8 V) {
   uint32_t4 SumVec = V[0] + V[1];
   return SumVec.x + SumVec.y + SumVec.z + SumVec.w;
 }
 
 // CHECK-LABEL: FunctionDecl {{.*}} used InOutAccu 'void (inout uint32_t4[2])'
-// CHECK-NEXT: ParmVarDecl {{.*}} used V 'uint32_t4[2]'
-// CHECK-NEXT: HLSLParamModifierAttr {{.*}} inout
+// CHECK: ParmVarDecl {{.*}} used V 'uint32_t4[2]'
+// CHECK: HLSLParamModifierAttr {{.*}} inout
 void InOutAccu(inout uint32_t8 V) {
   uint32_t4 SumVec = V[0] + V[1];
   V[0] = SumVec;

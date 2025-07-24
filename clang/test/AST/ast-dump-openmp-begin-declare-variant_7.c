@@ -39,7 +39,7 @@ int test(void) {
 // C-NEXT:             |-BinaryOperator [[ADDR_34:0x[a-z0-9]*]] <col:10, col:26> 'int' '+'
 // CXX:              `-BinaryOperator [[ADDR_33:0x[a-z0-9]*]] <col:10, col:35> '<dependent type>' contains-errors '+'
 // CXX-NEXT:           |-BinaryOperator [[ADDR_34:0x[a-z0-9]*]] <col:10, col:26> '<dependent type>' contains-errors '+'
-// CHECK-NEXT:         | |-CallExpr [[ADDR_35:0x[a-z0-9]*]] <col:10, col:15> 'int'
+// CHECK:         | |-CallExpr [[ADDR_35:0x[a-z0-9]*]] <col:10, col:15> 'int'
 // CHECK-NEXT:         | | `-ImplicitCastExpr [[ADDR_36:0x[a-z0-9]*]] <col:10> 'int (*)({{.*}})' <FunctionToPointerDecay>
 // CHECK-NEXT:         | |   `-DeclRefExpr [[ADDR_37:0x[a-z0-9]*]] <col:10> 'int ({{.*}})' {{.*}}Function [[ADDR_0]] 'OK_1' 'int ({{.*}})'
 // C:                  | `-CallExpr [[ADDR_38:0x[a-z0-9]*]] <col:19, col:26> 'int'
@@ -47,6 +47,6 @@ int test(void) {
 // C-NEXT:             |     `-DeclRefExpr [[ADDR_40:0x[a-z0-9]*]] <col:19> 'int ({{.*}})' {{.*}}Function {{.*}} 'not_OK' 'int ({{.*}})'
 // CXX:                | `-RecoveryExpr {{.*}} <col:19, col:26> '<dependent type>' contains-errors lvalue
 // CXX-NEXT:           |   `-UnresolvedLookupExpr {{.*}} <col:19> '<overloaded function type>' lvalue (ADL) = 'not_OK' empty
-// CHECK-NEXT:         `-CallExpr [[ADDR_41:0x[a-z0-9]*]] <col:30, col:35> 'int'
+// CHECK:         `-CallExpr [[ADDR_41:0x[a-z0-9]*]] <col:30, col:35> 'int'
 // CHECK-NEXT:           `-ImplicitCastExpr [[ADDR_42:0x[a-z0-9]*]] <col:30> 'int (*)({{.*}})' <FunctionToPointerDecay>
 // CHECK-NEXT:             `-DeclRefExpr [[ADDR_43:0x[a-z0-9]*]] <col:30> 'int ({{.*}})' {{.*}}Function [[ADDR_28]] 'OK_3' 'int ({{.*}})'

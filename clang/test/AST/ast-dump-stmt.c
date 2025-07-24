@@ -11,36 +11,43 @@
 int TestLocation = 0;
 // CHECK:      VarDecl{{.*}}TestLocation
 // CHECK-NEXT:   IntegerLiteral 0x{{[^ ]*}} <col:20> 'int' 0
+// CHECK-NEXT:   typeDetails: BuiltinType 0x{{[^ ]*}} 'int'
 
 int TestIndent = 1 + (1);
-// CHECK:      VarDecl{{.*}}TestIndent
-// CHECK-NEXT: {{^}}| `-BinaryOperator{{[^()]*$}}
-// CHECK-NEXT: {{^}}|   |-IntegerLiteral{{.*0[^()]*$}}
-// CHECK-NEXT: {{^}}|   `-ParenExpr{{.*0[^()]*$}}
-// CHECK-NEXT: {{^}}|     `-IntegerLiteral{{.*0[^()]*$}}
+// CHECK: |-VarDecl {{.*}} TestIndent 'int' cinit
+// CHECK: | |-BinaryOperator {{.*}} 'int' '+'
+// CHECK: | | |-IntegerLiteral {{.*}} 'int' 1
+// CHECK: | | `-ParenExpr {{.*}} 'int'
+// CHECK: | |   `-IntegerLiteral {{.*}} 'int' 1
+// CHECK: | `-typeDetails: BuiltinType {{.*}} 'int'
 
 void TestDeclStmt(void) {
   int x = 0;
   int y, z;
 }
-// CHECK:      FunctionDecl{{.*}}TestDeclStmt
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT:   DeclStmt
-// CHECK-NEXT:     VarDecl{{.*}}x
-// CHECK-NEXT:       IntegerLiteral
-// CHECK-NEXT:   DeclStmt
-// CHECK-NEXT:     VarDecl{{.*}}y
-// CHECK-NEXT:     VarDecl{{.*}}z
+
+// CHECK: |-FunctionDecl {{.*}} TestDeclStmt 'void (void)'
+// CHECK: | `-CompoundStmt {{.*}}
+// CHECK: |   |-DeclStmt {{.*}}
+// CHECK: |   | `-VarDecl {{.*}} x 'int' cinit
+// CHECK: |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK: |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK: |   `-DeclStmt {{.*}} 
+// CHECK: |     |-VarDecl {{.*}} y 'int'
+// CHECK: |     | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK: |     `-VarDecl {{.*}} z 'int'
+// CHECK: |       `-typeDetails: BuiltinType {{.*}} 'int'
 
 int TestOpaqueValueExpr = 0 ?: 1;
-// CHECK:      VarDecl{{.*}}TestOpaqueValueExpr
-// CHECK-NEXT: BinaryConditionalOperator
-// CHECK-NEXT:   IntegerLiteral
-// CHECK-NEXT:   OpaqueValueExpr
-// CHECK-NEXT:     IntegerLiteral
-// CHECK-NEXT:   OpaqueValueExpr
-// CHECK-NEXT:     IntegerLiteral
-// CHECK-NEXT:   IntegerLiteral
+// CHECK: |-VarDecl {{.*}} TestOpaqueValueExpr 'int' cinit
+// CHECK: | |-BinaryConditionalOperator {{.*}} 'int'
+// CHECK: | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK: | | |-OpaqueValueExpr {{.*}} 'int'
+// CHECK: | | | `-IntegerLiteral {{.*}} 'int' 0
+// CHECK: | | |-OpaqueValueExpr {{.*}} 'int'
+// CHECK: | | | `-IntegerLiteral {{.*}} 'int' 0
+// CHECK: | | `-IntegerLiteral {{.*}} 'int' 1
+// CHECK: | `-typeDetails: BuiltinType {{.*}} 'int'
 
 void TestUnaryOperatorExpr(void) {
   char T1 = 1;
@@ -48,31 +55,43 @@ void TestUnaryOperatorExpr(void) {
 
   T1++;
   T2++;
-  // CHECK:      UnaryOperator{{.*}}postfix '++' cannot overflow
-  // CHECK-NEXT:   DeclRefExpr{{.*}}'T1' 'char'
-  // CHECK-NOT:  UnaryOperator{{.*}}postfix '++' cannot overflow
-  // CHECK:        DeclRefExpr{{.*}}'T2' 'int'
 
   -T1;
   -T2;
-  // CHECK:      UnaryOperator{{.*}}prefix '-' cannot overflow
-  // CHECK-NEXT:   ImplicitCastExpr
-  // CHECK-NEXT:     ImplicitCastExpr
-  // CHECK-NEXT:       DeclRefExpr{{.*}}'T1' 'char'
-  // CHECK-NOT:  UnaryOperator{{.*}}prefix '-' cannot overflow
-  // CHECK:        ImplicitCastExpr
-  // CHECK:          DeclRefExpr{{.*}}'T2' 'int'
 
   ~T1;
   ~T2;
-  // CHECK:      UnaryOperator{{.*}}prefix '~' cannot overflow
-  // CHECK-NEXT:   ImplicitCastExpr
-  // CHECK-NEXT:     ImplicitCastExpr
-  // CHECK-NEXT:       DeclRefExpr{{.*}}'T1' 'char'
-  // CHECK:  	 UnaryOperator{{.*}}prefix '~' cannot overflow
-  // CHECK-NEXT:     ImplicitCastExpr
-  // CHECK-NEXT:       DeclRefExpr{{.*}}'T2' 'int'
 }
+
+// CHECK: |-FunctionDecl {{.*}} TestUnaryOperatorExpr 'void (void)'
+// CHECK: | `-CompoundStmt {{.*}}
+// CHECK: |   |-DeclStmt {{.*}}
+// CHECK: |   | `-VarDecl {{.*}} used T1 'char' cinit
+// CHECK: |   |   |-ImplicitCastExpr {{.*}} 'char' <IntegralCast>
+// CHECK: |   |   | `-IntegerLiteral {{.*}} 'int' 1
+// CHECK: |   |   `-typeDetails: BuiltinType {{.*}} 'char'
+// CHECK: |   |-DeclStmt {{.*}} 
+// CHECK: |   | `-VarDecl {{.*}} used T2 'int' cinit
+// CHECK: |   |   |-IntegerLiteral {{.*}} <col:12> 'int' 1
+// CHECK: |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK: |   |-UnaryOperator {{.*}} 'char' postfix '++' cannot overflow
+// CHECK: |   | `-DeclRefExpr {{.*}} 'char' lvalue Var {{.*}} 'T1' 'char'
+// CHECK: |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK: |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'T2' 'int'
+// CHECK: |   |-UnaryOperator {{.*}} 'int' prefix '-' cannot overflow
+// CHECK: |   | `-ImplicitCastExpr {{.*}} 'int' <IntegralCast>
+// CHECK: |   |   `-ImplicitCastExpr {{.*}} 'char' <LValueToRValue>
+// CHECK: |   |     `-DeclRefExpr {{.*}} 'char' lvalue Var {{.*}} 'T1' 'char'
+// CHECK: |   |-UnaryOperator {{.*}} 'int' prefix '-'
+// CHECK: |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK: |   |   `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'T2' 'int'
+// CHECK: |   |-UnaryOperator {{.*}} 'int' prefix '~' cannot overflow
+// CHECK: |   | `-ImplicitCastExpr {{.*}} 'int' <IntegralCast>
+// CHECK: |   |   `-ImplicitCastExpr {{.*}} 'char' <LValueToRValue>
+// CHECK: |   |     `-DeclRefExpr {{.*}} 'char' lvalue Var {{.*}} 'T1' 'char'
+// CHECK: |   `-UnaryOperator {{.*}} 'int' prefix '~' cannot overflow
+// CHECK: |     `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK: |       `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'T2' 'int'
 
 void TestGenericSelectionExpressions(int i) {
   _Generic(i, int : 12);
@@ -155,6 +174,8 @@ label2:
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl
   // CHECK-NEXT: AddrLabelExpr 0x{{[^ ]*}} <col:15, col:17> 'void *' label1 0x{{[^ ]*}}
+  // CHECK-NEXT: typeDetails: PointerType 0x{{[^ ]*}} 'void *' 
+  // CHECK-NEXT: typeDetails: BuiltinType 0x{{[^ ]*}} 'void'
 
   goto *ptr;
   // CHECK-NEXT: IndirectGotoStmt 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:9>
@@ -303,6 +324,7 @@ void TestIteration(_Bool b) {
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:8, col:16> col:12 used i 'int' cinit
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:16> 'int' 0
+  // CHECK-NEXT: typeDetails: BuiltinType 0x{{[^ ]*}} 'int'
   // CHECK-NEXT: <<<NULL>>>
   // CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <col:19, col:23> 'int' '<'
   // CHECK-NEXT: ImplicitCastExpr
@@ -397,15 +419,15 @@ void TestMiscStmts(void) {
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:5, col:13> col:9 used a 'int' cinit
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:13> 'int' 10
-  // CHECK-NEXT: ImplicitCastExpr
-  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:17> 'int' lvalue Var 0x{{[^ ]*}} 'a' 'int'
+  // CHECK: ImplicitCastExpr 0x{{[^ ]*}}
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:17> 'int' lvalue Var 0x{{[^ ]*}} 'a' 'int'  
   ({int a = 10; a;;; });
   // CHECK-NEXT: StmtExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:23> 'int'
   // CHECK-NEXT: CompoundStmt
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:5, col:13> col:9 used a 'int' cinit
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:13> 'int' 10
-  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:17> 'int' lvalue Var 0x{{[^ ]*}} 'a' 'int'
   // CHECK-NEXT: NullStmt
   // CHECK-NEXT: NullStmt

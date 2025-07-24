@@ -47,9 +47,9 @@
 }
 // CHECK:      ObjCMethodDecl{{.*}} - TestObjCMethodDecl: 'int' variadic
 // CHECK-NEXT:   ImplicitParamDecl{{.*}} self
-// CHECK-NEXT:   ImplicitParamDecl{{.*}} _cmd
-// CHECK-NEXT:   ParmVarDecl{{.*}} i 'int'
-// CHECK-NEXT:   CompoundStmt
+// CHECK:   ImplicitParamDecl{{.*}} _cmd
+// CHECK:   ParmVarDecl{{.*}} i 'int'
+// CHECK:   CompoundStmt
 @end
 
 @protocol TestObjCProtocolDecl
@@ -121,7 +121,7 @@
 // CHECK-NEXT:   ObjCMethodDecl{{.*}} getterFoo
 // CHECK-NEXT:   ObjCMethodDecl{{.*}} setterFoo:
 // CHECK-NEXT:     ParmVarDecl{{.*}} foo
-// CHECK-NEXT:   ObjCMethodDecl{{.*}} bar
+// CHECK:   ObjCMethodDecl{{.*}} bar
 // CHECK-NEXT:   ObjCMethodDecl{{.*}} setBar:
 // CHECK-NEXT:     ParmVarDecl{{.*}} bar
 
@@ -147,7 +147,7 @@ void TestBlockDecl(int x) {
 // CHECK:      FunctionDecl{{.*}}TestBlockDecl
 // CHECK:      BlockDecl {{.+}} <col:3, col:21> col:3 variadic
 // CHECK-NEXT:   ParmVarDecl{{.*}} y 'int'
-// CHECK-NEXT:   capture ParmVar{{.*}} 'x' 'int'
+// CHECK:   capture ParmVar{{.*}} 'x' 'int'
 // CHECK-NEXT:   CompoundStmt
 // CHECK-NEXT:     ImplicitCastExpr
 // CHECK-NEXT:       DeclRefExpr{{.*}} 'x'

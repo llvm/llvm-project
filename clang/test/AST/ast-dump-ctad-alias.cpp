@@ -31,28 +31,28 @@ Out2<double>::AInner t(1.0);
 // CHECK-NEXT: |     |-BinaryOperator {{.*}} '<dependent type>' '&&'
 // CHECK-NEXT: |     | |-UnresolvedLookupExpr {{.*}} '<dependent type>' lvalue (no ADL) = 'Concept'
 // CHECK-NEXT: |     | | |-TemplateArgument type 'int'
-// CHECK-NEXT: |     | | | `-BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |     | | | `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |     | | `-TemplateArgument type 'Y':'type-parameter-1-0'
-// CHECK-NEXT: |     | |   `-TemplateTypeParmType {{.*}} 'Y' dependent depth 1 index 0
+// CHECK-NEXT: |     | |   `-typeDetails: TemplateTypeParmType {{.*}} 'Y' dependent depth 1 index 0
 // CHECK-NEXT: |     | |     `-TemplateTypeParm {{.*}} 'Y'
 // CHECK-NEXT: |     | `-TypeTraitExpr {{.*}} 'bool' __is_deducible
-// CHECK-NEXT: |     |   |-DeducedTemplateSpecializationType {{.*}} 'Out2<double>::AInner' dependent
+// CHECK-NEXT: |     |   |-typeDetails: DeducedTemplateSpecializationType {{.*}} 'Out2<double>::AInner' dependent
 // CHECK-NEXT: |     |   | `-name: 'Out2<double>::AInner'
 // CHECK-NEXT: |     |   |   `-TypeAliasTemplateDecl {{.+}} AInner{{$}}
-// CHECK-NEXT: |     |   `-ElaboratedType {{.*}} 'Inner<Y>' sugar dependent
-// CHECK-NEXT: |     |     `-TemplateSpecializationType {{.*}} 'Inner<Y>' dependent
+// CHECK-NEXT: |     |   `-typeDetails: ElaboratedType {{.*}} 'Inner<Y>' sugar dependent
+// CHECK-NEXT: |     |     `-typeDetails: TemplateSpecializationType {{.*}} 'Inner<Y>' dependent
 // CHECK-NEXT: |     |       |-name: 'Inner':'Out<int>::Inner' qualified
 // CHECK-NEXT: |     |       | `-ClassTemplateDecl {{.+}} Inner{{$}}
 // CHECK-NEXT: |     |       `-TemplateArgument type 'Y'
-// CHECK-NEXT: |     |         `-SubstTemplateTypeParmType {{.*}} 'Y'
+// CHECK-NEXT: |     |         `-typeDetails: SubstTemplateTypeParmType {{.*}} 'Y'
 // CHECK-NEXT: |     |           |-FunctionTemplate {{.*}} '<deduction guide for Inner>'
-// CHECK-NEXT: |     |           `-TemplateTypeParmType {{.*}} 'Y' dependent depth 1 index 0
+// CHECK-NEXT: |     |           `-typeDetails: TemplateTypeParmType {{.*}} 'Y' dependent depth 1 index 0
 // CHECK-NEXT: |     |             `-TemplateTypeParm {{.*}} 'Y'
 // CHECK-NEXT: |     |-CXXDeductionGuideDecl {{.*}} <deduction guide for AInner> 'auto (Y) -> Inner<Y>'
 // CHECK-NEXT: |     | `-ParmVarDecl {{.*}} 'Y'
-// CHECK-NEXT: |     `-CXXDeductionGuideDecl {{.*}} used <deduction guide for AInner> 'auto (double) -> Inner<double>' implicit_instantiation
+// CHECK:      |     `-CXXDeductionGuideDecl {{.*}} used <deduction guide for AInner> 'auto (double) -> Inner<double>' implicit_instantiation
 // CHECK-NEXT: |       |-TemplateArgument type 'double'
-// CHECK-NEXT: |       | `-BuiltinType {{.*}} 'double'
+// CHECK-NEXT: |       | `-typeDetails: BuiltinType {{.*}} 'double'
 // CHECK-NEXT: |       `-ParmVarDecl {{.*}} 'double'
 
 // GH92596
@@ -78,9 +78,9 @@ AFoo3 afoo3{0, 1};
 // CHECK-NEXT: |-BinaryOperator {{.*}} '<dependent type>' '&&'
 // CHECK-NEXT: | |-UnresolvedLookupExpr {{.*}} '<dependent type>' lvalue (no ADL) = 'Concept'
 // CHECK-NEXT: | | |-TemplateArgument type 'int'
-// CHECK-NEXT: | | | `-BuiltinType {{.*}} 'int'
+// CHECK-NEXT: | | | `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: | | `-TemplateArgument type 'V'
-// CHECK-NEXT: | |   `-TemplateTypeParmType {{.*}} 'V' dependent depth 0 index 1
+// CHECK-NEXT: | |   `-typeDetails: TemplateTypeParmType {{.*}} 'V' dependent depth 0 index 1
 
 template <typename... T1>
 struct Foo {
@@ -92,15 +92,15 @@ using AFoo = Foo<T2...>;
 AFoo a(1, 2);
 // CHECK:      |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for AFoo> 'auto (T2...) -> Foo<T2...>'
 // CHECK-NEXT: | | `-ParmVarDecl {{.*}} 'T2...' pack
-// CHECK-NEXT: | `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for AFoo> 'auto (int, int) -> Foo<int, int>' implicit_instantiation
+// CHECK:      | `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for AFoo> 'auto (int, int) -> Foo<int, int>' implicit_instantiation
 
 template <typename T>
 using BFoo = Foo<T, T>;
 BFoo b2(1.0, 2.0);
 // CHECK:      |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for BFoo> 'auto (T, T) -> Foo<T, T>'
 // CHECK-NEXT: | | |-ParmVarDecl {{.*}} 'T'
-// CHECK-NEXT: | | `-ParmVarDecl {{.*}} 'T'
-// CHECK-NEXT: | `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for BFoo> 'auto (double, double) -> Foo<double, double>' implicit_instantiation
+// CHECK:      | | `-ParmVarDecl {{.*}} 'T'
+// CHECK:      | `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for BFoo> 'auto (double, double) -> Foo<double, double>' implicit_instantiation
 
 namespace GH90209 {
 // Case 1: type template parameter
@@ -187,18 +187,18 @@ void foo() {
 // CHECK-NEXT: | | |-ConceptSpecializationExpr {{.*}} 'bool' Concept {{.*}} 'invocable'
 // CHECK-NEXT: | | | |-ImplicitConceptSpecializationDecl {{.*}}
 // CHECK-NEXT: | | | | |-TemplateArgument type 'type-parameter-0-2'
-// CHECK-NEXT: | | | | | `-TemplateTypeParmType {{.*}} 'type-parameter-0-2' dependent depth 0 index 2
+// CHECK-NEXT: | | | | | `-typeDetails: TemplateTypeParmType {{.*}} 'type-parameter-0-2' dependent depth 0 index 2
 // CHECK-NEXT: | | | | `-TemplateArgument pack '<Packs<type-parameter-0-1...>>'
 // CHECK-NEXT: | | | |   `-TemplateArgument type 'Packs<type-parameter-0-1...>'
-// CHECK-NEXT: | | | |     `-TemplateSpecializationType {{.*}} 'Packs<type-parameter-0-1...>' dependent
+// CHECK-NEXT: | | | |     `-typeDetails: TemplateSpecializationType {{.*}} 'Packs<type-parameter-0-1...>' dependent
 // CHECK-NEXT: | | | |       |-name: 'GH124715::Packs'
 // CHECK-NEXT: | | | |       | `-ClassTemplateDecl {{.*}} Packs
 // CHECK-NEXT: | | | |       `-TemplateArgument pack '<type-parameter-0-1...>'
 // CHECK-NEXT: | | | |         `-TemplateArgument type 'type-parameter-0-1...'
-// CHECK-NEXT: | | | |           `-PackExpansionType {{.*}} 'type-parameter-0-1...' dependent
-// CHECK-NEXT: | | | |             `-TemplateTypeParmType {{.*}} 'type-parameter-0-1' dependent contains_unexpanded_pack depth 0 index 1 pack
+// CHECK-NEXT: | | | |           `-typeDetails: PackExpansionType {{.*}} 'type-parameter-0-1...' dependent
+// CHECK-NEXT: | | | |             `-typeDetails: TemplateTypeParmType {{.*}} 'type-parameter-0-1' dependent contains_unexpanded_pack depth 0 index 1 pack
 // CHECK-NEXT: | | | |-TemplateArgument {{.*}} type 'U':'type-parameter-0-2'
-// CHECK-NEXT: | | | | `-TemplateTypeParmType {{.*}} 'U' dependent depth 0 index 2
+// CHECK-NEXT: | | | | `-typeDetails: TemplateTypeParmType {{.*}} 'U' dependent depth 0 index 2
 // CHECK-NEXT: | | | |   `-TemplateTypeParm {{.*}} 'U'
 
 } // namespace GH124715

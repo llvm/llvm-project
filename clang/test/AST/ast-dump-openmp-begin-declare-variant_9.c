@@ -39,10 +39,10 @@ int main(void) {
 // C-NEXT: | |-CompoundStmt [[ADDR_1:0x[a-z0-9]*]] <col:23, line:7:1>
 // C-NEXT: | | `-ReturnStmt [[ADDR_2:0x[a-z0-9]*]] <line:6:3, col:10>
 // C-NEXT: | |   `-IntegerLiteral [[ADDR_3:0x[a-z0-9]*]] <col:10> 'int' 0
-// C-NEXT: | `-OMPDeclareVariantAttr [[ADDR_4:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
+// C-NEXT: | `-attrDetails: OMPDeclareVariantAttr [[ADDR_4:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
 // C-NEXT: |   `-DeclRefExpr [[ADDR_5:0x[a-z0-9]*]] <line:13:1> 'int ({{.*}})' Function [[ADDR_6:0x[a-z0-9]*]] 'also_before[implementation={vendor(llvm)}]' 'int ({{.*}})'
 // C-NEXT: |-FunctionDecl [[ADDR_7:0x[a-z0-9]*]] <line:10:1, col:20> col:5 implicit used also_after 'int ({{.*}})'
-// C-NEXT: | `-OMPDeclareVariantAttr [[ADDR_8:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
+// C-NEXT: | `-attrDetails: OMPDeclareVariantAttr [[ADDR_8:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
 // C-NEXT: |   `-DeclRefExpr [[ADDR_9:0x[a-z0-9]*]] <col:1> 'int ({{.*}})' Function [[ADDR_10:0x[a-z0-9]*]] 'also_after[implementation={vendor(llvm)}]' 'int ({{.*}})'
 // C-NEXT: |-FunctionDecl [[ADDR_10]] <col:1, line:12:1> line:10:1 also_after[implementation={vendor(llvm)}] 'int ({{.*}})'
 // C-NEXT: | `-CompoundStmt [[ADDR_11:0x[a-z0-9]*]] <col:22, line:12:1>
@@ -56,19 +56,19 @@ int main(void) {
 // C-NEXT: | |-CompoundStmt [[ADDR_18:0x[a-z0-9]*]] <col:22, line:20:1>
 // C-NEXT: | | `-ReturnStmt [[ADDR_19:0x[a-z0-9]*]] <line:19:3, col:10>
 // C-NEXT: | |   `-IntegerLiteral [[ADDR_20:0x[a-z0-9]*]] <col:10> 'int' 0
-// C-NEXT: | `-OMPDeclareVariantAttr [[ADDR_21:0x[a-z0-9]*]] <<invalid sloc>> Inherited Implicit implementation={vendor(llvm)}
+// C-NEXT: | `-attrDetails: OMPDeclareVariantAttr [[ADDR_21:0x[a-z0-9]*]] <<invalid sloc>> Inherited Implicit implementation={vendor(llvm)}
 // C-NEXT: |   `-DeclRefExpr [[ADDR_9]] <line:10:1> 'int ({{.*}})' Function [[ADDR_10]] 'also_after[implementation={vendor(llvm)}]' 'int ({{.*}})'
 // C-NEXT: |-FunctionDecl [[ADDR_22:0x[a-z0-9]*]] <line:22:1, col:14> col:6 used foo 'void ({{.*}})'
 // C-NEXT: |-TypedefDecl [[ADDR_23:0x[a-z0-9]*]] <line:23:1, col:22> col:14 referenced fd 'int (*)({{.*}})'
-// C-NEXT: | `-PointerType [[ADDR_24:0x[a-z0-9]*]] 'int (*)({{.*}})'
-// C-NEXT: |   `-ParenType [[ADDR_25:0x[a-z0-9]*]] 'int ({{.*}})' sugar
-// C-NEXT: |     `-FunctionProtoType [[ADDR_26:0x[a-z0-9]*]] 'int ({{.*}})' cdecl
-// C-NEXT: |       `-BuiltinType [[ADDR_27:0x[a-z0-9]*]] 'int'
+// C-NEXT: | `-typeDetails: PointerType [[ADDR_24:0x[a-z0-9]*]] 'int (*)({{.*}})'
+// C-NEXT: |   `-typeDetails: ParenType [[ADDR_25:0x[a-z0-9]*]] 'int ({{.*}})' sugar
+// C-NEXT: |     `-typeDetails: FunctionProtoType [[ADDR_26:0x[a-z0-9]*]] 'int ({{.*}})' cdecl
+// C:      |       `-functionDetails:  cdeclReturnType [[ADDR_27:0x[a-z0-9]*]] 'int'
 // C-NEXT: `-FunctionDecl [[ADDR_28:0x[a-z0-9]*]] <line:24:1, line:32:1> line:24:5 main 'int ({{.*}})'
 // C-NEXT:   `-CompoundStmt [[ADDR_29:0x[a-z0-9]*]] <col:16, line:32:1>
 // C-NEXT:     |-DeclStmt [[ADDR_30:0x[a-z0-9]*]] <line:26:3, col:12>
 // C-NEXT:     | `-VarDecl [[ADDR_31:0x[a-z0-9]*]] <col:3, col:11> col:6 used fns 'fd[2]'
-// C-NEXT:     |-BinaryOperator [[ADDR_32:0x[a-z0-9]*]] <line:27:3, col:13> 'fd':'int (*)({{.*}})' '='
+// C:          |-BinaryOperator [[ADDR_32:0x[a-z0-9]*]] <line:27:3, col:13> 'fd':'int (*)({{.*}})' '='
 // C-NEXT:     | |-ArraySubscriptExpr [[ADDR_33:0x[a-z0-9]*]] <col:3, col:8> 'fd':'int (*)({{.*}})' lvalue
 // C-NEXT:     | | |-ImplicitCastExpr [[ADDR_34:0x[a-z0-9]*]] <col:3> 'fd *' <ArrayToPointerDecay>
 // C-NEXT:     | | | `-DeclRefExpr [[ADDR_35:0x[a-z0-9]*]] <col:3> 'fd[2]' {{.*}}Var [[ADDR_31]] 'fns' 'fd[2]'
@@ -112,10 +112,10 @@ int main(void) {
 // CXX-NEXT: | |-CompoundStmt [[ADDR_1:0x[a-z0-9]*]] <col:23, line:7:1>
 // CXX-NEXT: | | `-ReturnStmt [[ADDR_2:0x[a-z0-9]*]] <line:6:3, col:10>
 // CXX-NEXT: | |   `-IntegerLiteral [[ADDR_3:0x[a-z0-9]*]] <col:10> 'int' 0
-// CXX-NEXT: | `-OMPDeclareVariantAttr [[ADDR_4:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
+// CXX-NEXT: | `-attrDetails: OMPDeclareVariantAttr [[ADDR_4:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
 // CXX-NEXT: |   `-DeclRefExpr [[ADDR_5:0x[a-z0-9]*]] <line:13:1> 'int ({{.*}})' Function [[ADDR_6:0x[a-z0-9]*]] 'also_before[implementation={vendor(llvm)}]' 'int ({{.*}})'
 // CXX-NEXT: |-FunctionDecl [[ADDR_7:0x[a-z0-9]*]] <line:10:1, col:20> col:5 implicit used also_after 'int ({{.*}})'
-// CXX-NEXT: | `-OMPDeclareVariantAttr [[ADDR_8:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
+// CXX-NEXT: | `-attrDetails: OMPDeclareVariantAttr [[ADDR_8:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
 // CXX-NEXT: |   `-DeclRefExpr [[ADDR_9:0x[a-z0-9]*]] <col:1> 'int ({{.*}})' Function [[ADDR_10:0x[a-z0-9]*]] 'also_after[implementation={vendor(llvm)}]' 'int ({{.*}})'
 // CXX-NEXT: |-FunctionDecl [[ADDR_10]] <col:1, line:12:1> line:10:1 also_after[implementation={vendor(llvm)}] 'int ({{.*}})'
 // CXX-NEXT: | `-CompoundStmt [[ADDR_11:0x[a-z0-9]*]] <col:22, line:12:1>
@@ -129,19 +129,19 @@ int main(void) {
 // CXX-NEXT: | |-CompoundStmt [[ADDR_18:0x[a-z0-9]*]] <col:22, line:20:1>
 // CXX-NEXT: | | `-ReturnStmt [[ADDR_19:0x[a-z0-9]*]] <line:19:3, col:10>
 // CXX-NEXT: | |   `-IntegerLiteral [[ADDR_20:0x[a-z0-9]*]] <col:10> 'int' 0
-// CXX-NEXT: | `-OMPDeclareVariantAttr [[ADDR_21:0x[a-z0-9]*]] <<invalid sloc>> Inherited Implicit implementation={vendor(llvm)}
+// CXX-NEXT: | `-attrDetails: OMPDeclareVariantAttr [[ADDR_21:0x[a-z0-9]*]] <<invalid sloc>> Inherited Implicit implementation={vendor(llvm)}
 // CXX-NEXT: |   `-DeclRefExpr [[ADDR_9]] <line:10:1> 'int ({{.*}})' Function [[ADDR_10]] 'also_after[implementation={vendor(llvm)}]' 'int ({{.*}})'
 // CXX-NEXT: |-FunctionDecl [[ADDR_22:0x[a-z0-9]*]] <line:22:1, col:14> col:6 used foo 'void ({{.*}})'
 // CXX-NEXT: |-TypedefDecl [[ADDR_23:0x[a-z0-9]*]] <line:23:1, col:22> col:14 referenced fd 'int (*)({{.*}})'
-// CXX-NEXT: | `-PointerType [[ADDR_24:0x[a-z0-9]*]] 'int (*)({{.*}})'
-// CXX-NEXT: |   `-ParenType [[ADDR_25:0x[a-z0-9]*]] 'int ({{.*}})' sugar
-// CXX-NEXT: |     `-FunctionProtoType [[ADDR_26:0x[a-z0-9]*]] 'int ({{.*}})' cdecl
-// CXX-NEXT: |       `-BuiltinType [[ADDR_27:0x[a-z0-9]*]] 'int'
+// CXX-NEXT: | `-typeDetails: PointerType [[ADDR_24:0x[a-z0-9]*]] 'int (*)({{.*}})'
+// CXX-NEXT: |   `-typeDetails: ParenType [[ADDR_25:0x[a-z0-9]*]] 'int ({{.*}})' sugar
+// CXX-NEXT: |     `-typeDetails: FunctionProtoType [[ADDR_26:0x[a-z0-9]*]] 'int ({{.*}})' cdecl
+// CXX: |       `-functionDetails: cdeclReturnType [[ADDR_27:0x[a-z0-9]*]] 'int'
 // CXX-NEXT: `-FunctionDecl [[ADDR_28:0x[a-z0-9]*]] <line:24:1, line:32:1> line:24:5 main 'int ({{.*}})'
 // CXX-NEXT:   `-CompoundStmt [[ADDR_29:0x[a-z0-9]*]] <col:16, line:32:1>
 // CXX-NEXT:     |-DeclStmt [[ADDR_30:0x[a-z0-9]*]] <line:26:3, col:12>
 // CXX-NEXT:     | `-VarDecl [[ADDR_31:0x[a-z0-9]*]] <col:3, col:11> col:6 used fns 'fd[2]'
-// CXX-NEXT:     |-BinaryOperator [[ADDR_32:0x[a-z0-9]*]] <line:27:3, col:13> 'fd':'int (*)({{.*}})' {{.*}}'='
+// CXX:     |-BinaryOperator [[ADDR_32:0x[a-z0-9]*]] <line:27:3, col:13> 'fd':'int (*)({{.*}})' {{.*}}'='
 // CXX-NEXT:     | |-ArraySubscriptExpr [[ADDR_33:0x[a-z0-9]*]] <col:3, col:8> 'fd':'int (*)({{.*}})' lvalue
 // CXX-NEXT:     | | |-ImplicitCastExpr [[ADDR_34:0x[a-z0-9]*]] <col:3> 'fd *' <ArrayToPointerDecay>
 // CXX-NEXT:     | | | `-DeclRefExpr [[ADDR_35:0x[a-z0-9]*]] <col:3> 'fd[2]' {{.*}}Var [[ADDR_31]] 'fns' 'fd[2]'

@@ -11,17 +11,17 @@
 /// Aaa
 int TestLocation;
 // CHECK: VarDecl{{.*}}TestLocation
-// CHECK-NEXT:   FullComment 0x{{[^ ]*}} <line:[[@LINE-3]]:4, col:7>
+// CHECK:   FullComment 0x{{[^ ]*}} <line:[[@LINE-3]]:4, col:7>
 
 ///
 int TestIndent;
 // CHECK:      {{^VarDecl.*TestIndent[^()]*$}}
-// CHECK-NEXT: {{^`-FullComment.*>$}}
+// CHECK: {{^`-FullComment.*>$}}
 
 /// Aaa
 int Test_TextComment;
 // CHECK:      VarDecl{{.*}}Test_TextComment
-// CHECK-NEXT:   FullComment
+// CHECK:   FullComment
 // CHECK-NEXT:     ParagraphComment
 // CHECK-NEXT:       TextComment{{.*}} Text=" Aaa"
 
@@ -82,7 +82,7 @@ int Test_InlineCommandCommentRelates;
 /// <br/>
 int Test_HTMLTagComment;
 // CHECK:      VarDecl{{.*}}Test_HTMLTagComment
-// CHECK-NEXT:   FullComment
+// CHECK:   FullComment
 // CHECK-NEXT:     ParagraphComment
 // CHECK-NEXT:       TextComment{{.*}} Text=" "
 // CHECK-NEXT:       HTMLStartTagComment{{.*}} Name="a"
@@ -96,7 +96,7 @@ int Test_HTMLTagComment;
 /// >Aaa</a>b
 int Test_HTMLTagMultilineBCPL;
 // CHECK:      VarDecl{{.*}}Test_HTMLTagMultilineBCPL
-// CHECK-NEXT:   FullComment
+// CHECK:   FullComment
 // CHECK-NEXT:     ParagraphComment
 // CHECK-NEXT:       TextComment{{.*}} Text=" "
 // CHECK-NEXT:       HTMLStartTagComment{{.*}} Name="a" Attrs:  "href="foo"

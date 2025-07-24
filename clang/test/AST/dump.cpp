@@ -18,26 +18,26 @@ int ga, gb;
 // CHECK-NEXT: | | |-DeclRefExpr {{.+}} <col:47> 'int' lvalue Var {{.+}} 'omp_out' 'int'
 // CHECK-NEXT: | | `-ImplicitCastExpr {{.+}} <col:58> 'int' <LValueToRValue>
 // CHECK-NEXT: | |   `-DeclRefExpr {{.+}} <col:58> 'int' lvalue Var {{.+}} 'omp_in' 'int'
-// CHECK-NEXT: | |-VarDecl {{.+}} <col:35> col:35 implicit used omp_in 'int'
-// CHECK-NEXT: | `-VarDecl {{.+}} <col:35> col:35 implicit used omp_out 'int'
-// CHECK-NEXT: |-OMPDeclareReductionDecl {{.+}} <col:40> col:40 operator+ 'char' combiner 0x{{.+}}
-// CHECK-NEXT: | |-CompoundAssignOperator {{.+}} <col:47, col:58> 'char' lvalue '*=' ComputeLHSTy='int' ComputeResultTy='int'
-// CHECK-NEXT: | | |-DeclRefExpr {{.+}} <col:47> 'char' lvalue Var {{.+}} 'omp_out' 'char'
-// CHECK-NEXT: | | `-ImplicitCastExpr {{.+}} <col:58> 'int' <IntegralCast>
-// CHECK-NEXT: | |   `-ImplicitCastExpr {{.+}} <col:58> 'char' <LValueToRValue>
-// CHECK-NEXT: | |     `-DeclRefExpr {{.+}} <col:58> 'char' lvalue Var {{.+}} 'omp_in' 'char'
-// CHECK-NEXT: | |-VarDecl {{.+}} <col:40> col:40 implicit used omp_in 'char'
-// CHECK-NEXT: | `-VarDecl {{.+}} <col:40> col:40 implicit used omp_out 'char'
-// CHECK-NEXT: |-OMPDeclareReductionDecl {{.+}} <line:[[@LINE-17]]:37> col:37 fun 'float' combiner 0x{{.+}} initializer 0x{{.+}}
-// CHECK-NEXT: | |-CompoundAssignOperator {{.+}} <col:45, col:56> 'float' lvalue '+=' ComputeLHSTy='float' ComputeResultTy='float'
-// CHECK-NEXT: | | |-DeclRefExpr {{.+}} <col:45> 'float' lvalue Var {{.+}} 'omp_out' 'float'
-// CHECK-NEXT: | | `-ImplicitCastExpr {{.+}} <col:56> 'float' <LValueToRValue>
-// CHECK-NEXT: | |   `-DeclRefExpr {{.+}} <col:56> 'float' lvalue Var {{.+}} 'omp_in' 'float'
-// CHECK-NEXT: | |-BinaryOperator {{.+}} <col:87, col:98> 'float' '+'
-// CHECK-NEXT: | | |-ImplicitCastExpr {{.+}} <col:87> 'float' <LValueToRValue>
-// CHECK-NEXT: | | | `-DeclRefExpr {{.+}} <col:87> 'float' lvalue Var {{.+}} 'omp_orig' 'float'
-// CHECK-NEXT: | | `-ImplicitCastExpr {{.+}} <col:98> 'float' <IntegralToFloating>
-// CHECK-NEXT: | |   `-IntegerLiteral {{.+}} <col:98> 'int' 15
+// CHECK: | |-VarDecl {{.+}} <col:35> col:35 implicit used omp_in 'int'
+// CHECK: | `-VarDecl {{.+}} <col:35> col:35 implicit used omp_out 'int'
+// CHECK: |-OMPDeclareReductionDecl {{.+}} <col:40> col:40 operator+ 'char' combiner 0x{{.+}}
+// CHECK: | |-CompoundAssignOperator {{.+}} <col:47, col:58> 'char' lvalue '*=' ComputeLHSTy='int' ComputeResultTy='int'
+// CHECK: | | |-DeclRefExpr {{.+}} <col:47> 'char' lvalue Var {{.+}} 'omp_out' 'char'
+// CHECK: | | `-ImplicitCastExpr {{.+}} <col:58> 'int' <IntegralCast>
+// CHECK: | |   `-ImplicitCastExpr {{.+}} <col:58> 'char' <LValueToRValue>
+// CHECK: | |     `-DeclRefExpr {{.+}} <col:58> 'char' lvalue Var {{.+}} 'omp_in' 'char'
+// CHECK: | |-VarDecl {{.+}} <col:40> col:40 implicit used omp_in 'char'
+// CHECK: | `-VarDecl {{.+}} <col:40> col:40 implicit used omp_out 'char'
+// CHECK: |-OMPDeclareReductionDecl {{.+}} <line:[[@LINE-17]]:37> col:37 fun 'float' combiner 0x{{.+}} initializer 0x{{.+}}
+// CHECK: | |-CompoundAssignOperator {{.+}} <col:45, col:56> 'float' lvalue '+=' ComputeLHSTy='float' ComputeResultTy='float'
+// CHECK: | | |-DeclRefExpr {{.+}} <col:45> 'float' lvalue Var {{.+}} 'omp_out' 'float'
+// CHECK: | | `-ImplicitCastExpr {{.+}} <col:56> 'float' <LValueToRValue>
+// CHECK: | |   `-DeclRefExpr {{.+}} <col:56> 'float' lvalue Var {{.+}} 'omp_in' 'float'
+// CHECK: | |-BinaryOperator {{.+}} <col:87, col:98> 'float' '+'
+// CHECK: | | |-ImplicitCastExpr {{.+}} <col:87> 'float' <LValueToRValue>
+// CHECK: | | | `-DeclRefExpr {{.+}} <col:87> 'float' lvalue Var {{.+}} 'omp_orig' 'float'
+// CHECK: | | `-ImplicitCastExpr {{.+}} <col:98> 'float' <IntegralToFloating>
+// CHECK: | |   `-IntegerLiteral {{.+}} <col:98> 'int' 15
 
 struct S {
   int a, b;
@@ -69,8 +69,8 @@ struct S {
 void foo();
 
 // CHECK:        |-FunctionDecl {{.+}} <line:[[@LINE-2]]:1, col:10> col:6 foo 'void ()'
-// CHECK-NEXT:   |-OMPDeclareSimdDeclAttr {{.+}} <line:[[@LINE-4]]:1, col:34> Implicit BS_Inbranch
-// CHECK:        `-OMPDeclareSimdDeclAttr {{.+}} <line:[[@LINE-6]]:1, col:25> Implicit BS_Undefined
+// CHECK-NEXT:   |-attrDetails: OMPDeclareSimdDeclAttr {{.+}} <line:[[@LINE-4]]:1, col:34> Implicit BS_Inbranch
+// CHECK:        `-attrDetails: OMPDeclareSimdDeclAttr {{.+}} <line:[[@LINE-6]]:1, col:25> Implicit BS_Undefined
 
 #pragma omp declare target
 int bar() {
@@ -83,7 +83,7 @@ int bar() {
 // CHECK-NEXT:  |-CompoundStmt {{.+}} <col:11, line:[[@LINE-4]]:1>
 // CHECK-NEXT:  | |-DeclStmt {{.+}} <line:[[@LINE-7]]:3, col:8>
 // CHECK-NEXT:  | | `-VarDecl {{.+}} <col:3, col:7> col:7 used f 'int'
-// CHECK-NEXT:  | `-ReturnStmt {{.+}} <line:[[@LINE-8]]:3, col:10>
-// CHECK-NEXT:  |   `-ImplicitCastExpr {{.+}} <col:10> 'int' <LValueToRValue>
-// CHECK-NEXT:  |     `-DeclRefExpr {{.+}} <col:10> 'int' lvalue Var {{.+}} 'f' 'int'
-// CHECK-NEXT:  `-OMPDeclareTargetDeclAttr {{.+}} <line:75:21> Implicit MT_To DT_Any 1
+// CHECK:  | `-ReturnStmt {{.+}} <line:[[@LINE-8]]:3, col:10>
+// CHECK:  |   `-ImplicitCastExpr {{.+}} <col:10> 'int' <LValueToRValue>
+// CHECK:  |     `-DeclRefExpr {{.+}} <col:10> 'int' lvalue Var {{.+}} 'f' 'int'
+// CHECK:  `-attrDetails: OMPDeclareTargetDeclAttr {{.+}} <line:75:21> Implicit MT_To DT_Any 1

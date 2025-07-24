@@ -143,18 +143,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 157,
+// CHECK-NEXT:   "offset": 160,
 // CHECK-NEXT:   "col": 29,
 // CHECK-NEXT:   "tokLen": 1
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 157,
+// CHECK-NEXT:    "offset": 160,
 // CHECK-NEXT:    "col": 29,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 157,
+// CHECK-NEXT:    "offset": 160,
 // CHECK-NEXT:    "col": 29,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -204,18 +204,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 157,
+// CHECK-NEXT:     "offset": 160,
 // CHECK-NEXT:     "col": 29,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 160,
+// CHECK-NEXT:      "offset": 163,
 // CHECK-NEXT:      "col": 32,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 162,
+// CHECK-NEXT:      "offset": 165,
 // CHECK-NEXT:      "col": 34,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -233,12 +233,12 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "CompoundStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 161,
+// CHECK-NEXT:        "offset": 164,
 // CHECK-NEXT:        "col": 33,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 162,
+// CHECK-NEXT:        "offset": 165,
 // CHECK-NEXT:        "col": 34,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -250,18 +250,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXConversionDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 157,
+// CHECK-NEXT:     "offset": 160,
 // CHECK-NEXT:     "col": 29,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 157,
+// CHECK-NEXT:      "offset": 160,
 // CHECK-NEXT:      "col": 29,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 162,
+// CHECK-NEXT:      "offset": 165,
 // CHECK-NEXT:      "col": 34,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -279,18 +279,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 157,
+// CHECK-NEXT:     "offset": 160,
 // CHECK-NEXT:     "col": 29,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 157,
+// CHECK-NEXT:      "offset": 160,
 // CHECK-NEXT:      "col": 29,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 162,
+// CHECK-NEXT:      "offset": 165,
 // CHECK-NEXT:      "col": 34,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -308,18 +308,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 157,
+// CHECK-NEXT:     "offset": 160,
 // CHECK-NEXT:     "col": 29,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 157,
+// CHECK-NEXT:      "offset": 160,
 // CHECK-NEXT:      "col": 29,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 157,
+// CHECK-NEXT:      "offset": 160,
 // CHECK-NEXT:      "col": 29,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -340,19 +340,25 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
+// CHECK-NEXT:  "name": ""
+// CHECK-NEXT: }
+
+
+// CHECK-NOT: {{^}}Dumping
+// CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 190,
+// CHECK-NEXT:   "offset": 194,
 // CHECK-NEXT:   "col": 26,
 // CHECK-NEXT:   "tokLen": 1
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 190,
+// CHECK-NEXT:    "offset": 194,
 // CHECK-NEXT:    "col": 26,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 190,
+// CHECK-NEXT:    "offset": 194,
 // CHECK-NEXT:    "col": 26,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -403,14 +409,14 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 190,
+// CHECK-NEXT:     "offset": 194,
 // CHECK-NEXT:     "col": 26,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {},
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 199,
+// CHECK-NEXT:      "offset": 203,
 // CHECK-NEXT:      "col": 35,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -421,18 +427,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 197,
+// CHECK-NEXT:       "offset": 201,
 // CHECK-NEXT:       "col": 33,
 // CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 193,
+// CHECK-NEXT:        "offset": 197,
 // CHECK-NEXT:        "col": 29,
 // CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 197,
+// CHECK-NEXT:        "offset": 201,
 // CHECK-NEXT:        "col": 33,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -447,18 +453,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "CXXMethodDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 190,
+// CHECK-NEXT:       "offset": 194,
 // CHECK-NEXT:       "col": 26,
 // CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 197,
+// CHECK-NEXT:        "offset": 201,
 // CHECK-NEXT:        "col": 33,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 199,
+// CHECK-NEXT:        "offset": 203,
 // CHECK-NEXT:        "col": 35,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -474,37 +480,56 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:        "id": "0x{{.*}}",
 // CHECK-NEXT:        "kind": "ParmVarDecl",
 // CHECK-NEXT:        "loc": {
-// CHECK-NEXT:         "offset": 197,
+// CHECK-NEXT:         "offset": 201,
 // CHECK-NEXT:         "col": 33,
 // CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
-// CHECK-NEXT:          "offset": 193,
+// CHECK-NEXT:          "offset": 197,
 // CHECK-NEXT:          "col": 29,
 // CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:          "offset": 193,
+// CHECK-NEXT:          "offset": 197,
 // CHECK-NEXT:          "col": 29,
 // CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "auto"
-// CHECK-NEXT:        }
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "typeDetails": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "TemplateTypeParmType",
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "auto"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "isDependent": true,
+// CHECK-NEXT:          "isInstantiationDependent": true,
+// CHECK-NEXT:          "depth": 0,
+// CHECK-NEXT:          "index": 0,
+// CHECK-NEXT:          "decl": {
+// CHECK-NEXT:           "id": "0x{{.*}}",
+// CHECK-NEXT:           "kind": "TemplateTypeParmDecl",
+// CHECK-NEXT:           "name": "auto:1"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "qualDetails": []
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
 // CHECK-NEXT:       },
 // CHECK-NEXT:       {
 // CHECK-NEXT:        "id": "0x{{.*}}",
 // CHECK-NEXT:        "kind": "CompoundStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
-// CHECK-NEXT:          "offset": 198,
+// CHECK-NEXT:          "offset": 202,
 // CHECK-NEXT:          "col": 34,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:          "offset": 199,
+// CHECK-NEXT:          "offset": 203,
 // CHECK-NEXT:          "col": 35,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -518,14 +543,14 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 190,
+// CHECK-NEXT:     "offset": 194,
 // CHECK-NEXT:     "col": 26,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {},
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 199,
+// CHECK-NEXT:      "offset": 203,
 // CHECK-NEXT:      "col": 35,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -537,18 +562,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 197,
+// CHECK-NEXT:       "offset": 201,
 // CHECK-NEXT:       "col": 33,
 // CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 193,
+// CHECK-NEXT:        "offset": 197,
 // CHECK-NEXT:        "col": 29,
 // CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 197,
+// CHECK-NEXT:        "offset": 201,
 // CHECK-NEXT:        "col": 33,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -563,18 +588,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "CXXConversionDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 190,
+// CHECK-NEXT:       "offset": 194,
 // CHECK-NEXT:       "col": 26,
 // CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 190,
+// CHECK-NEXT:        "offset": 194,
 // CHECK-NEXT:        "col": 26,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 199,
+// CHECK-NEXT:        "offset": 203,
 // CHECK-NEXT:        "col": 35,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -593,14 +618,14 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 190,
+// CHECK-NEXT:     "offset": 194,
 // CHECK-NEXT:     "col": 26,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {},
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 199,
+// CHECK-NEXT:      "offset": 203,
 // CHECK-NEXT:      "col": 35,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -612,18 +637,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 197,
+// CHECK-NEXT:       "offset": 201,
 // CHECK-NEXT:       "col": 33,
 // CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 193,
+// CHECK-NEXT:        "offset": 197,
 // CHECK-NEXT:        "col": 29,
 // CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 197,
+// CHECK-NEXT:        "offset": 201,
 // CHECK-NEXT:        "col": 33,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -638,18 +663,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "CXXMethodDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 190,
+// CHECK-NEXT:       "offset": 194,
 // CHECK-NEXT:       "col": 26,
 // CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 190,
+// CHECK-NEXT:        "offset": 194,
 // CHECK-NEXT:        "col": 26,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 199,
+// CHECK-NEXT:        "offset": 203,
 // CHECK-NEXT:        "col": 35,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -666,25 +691,42 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:        "id": "0x{{.*}}",
 // CHECK-NEXT:        "kind": "ParmVarDecl",
 // CHECK-NEXT:        "loc": {
-// CHECK-NEXT:         "offset": 197,
+// CHECK-NEXT:         "offset": 201,
 // CHECK-NEXT:         "col": 33,
 // CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
-// CHECK-NEXT:          "offset": 193,
+// CHECK-NEXT:          "offset": 197,
 // CHECK-NEXT:          "col": 29,
 // CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:          "offset": 193,
+// CHECK-NEXT:          "offset": 197,
 // CHECK-NEXT:          "col": 29,
 // CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "auto"
-// CHECK-NEXT:        }
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "typeDetails": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "depth": 0,
+// CHECK-NEXT:          "index": 0,
+// CHECK-NEXT:          "decl": {
+// CHECK-NEXT:           "id": "0x{{.*}}",
+// CHECK-NEXT:           "kind": "TemplateTypeParmDecl",
+// CHECK-NEXT:           "name": "auto:1"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "qualDetails": [],
+// CHECK-NEXT:          "typeDetails": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "refId": "0x{{.*}}"
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
 // CHECK-NEXT:       }
 // CHECK-NEXT:      ]
 // CHECK-NEXT:     }
@@ -694,18 +736,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 190,
+// CHECK-NEXT:     "offset": 194,
 // CHECK-NEXT:     "col": 26,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 190,
+// CHECK-NEXT:      "offset": 194,
 // CHECK-NEXT:      "col": 26,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 190,
+// CHECK-NEXT:      "offset": 194,
 // CHECK-NEXT:      "col": 26,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -726,20 +768,26 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
+// CHECK-NEXT:  "name": ""
+// CHECK-NEXT: }
+
+
+// CHECK-NOT: {{^}}Dumping
+// CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 212,
+// CHECK-NEXT:   "offset": 219,
 // CHECK-NEXT:   "line": 8,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 18
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 205,
+// CHECK-NEXT:    "offset": 212,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 292,
+// CHECK-NEXT:    "offset": 301,
 // CHECK-NEXT:    "line": 10,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -787,19 +835,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 212,
+// CHECK-NEXT:     "offset": 219,
 // CHECK-NEXT:     "line": 8,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 18
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 205,
+// CHECK-NEXT:      "offset": 212,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 212,
+// CHECK-NEXT:      "offset": 219,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 18
 // CHECK-NEXT:     }
@@ -813,19 +861,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXConstructorDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 235,
+// CHECK-NEXT:     "offset": 243,
 // CHECK-NEXT:     "line": 9,
 // CHECK-NEXT:     "col": 3,
 // CHECK-NEXT:     "tokLen": 18
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 235,
+// CHECK-NEXT:      "offset": 243,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 18
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 289,
+// CHECK-NEXT:      "offset": 297,
 // CHECK-NEXT:      "col": 57,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -842,25 +890,79 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 279,
+// CHECK-NEXT:       "offset": 287,
 // CHECK-NEXT:       "col": 47,
 // CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 254,
+// CHECK-NEXT:        "offset": 262,
 // CHECK-NEXT:        "col": 22,
 // CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 278,
+// CHECK-NEXT:        "offset": 286,
 // CHECK-NEXT:        "col": 46,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "const CanPassInRegisters &"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "LValueReferenceType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "const CanPassInRegisters &"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [],
+// CHECK-NEXT:        "qualTypeDetail": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "qualType": {
+// CHECK-NEXT:           "id": "0x{{.*}}",
+// CHECK-NEXT:           "kind": "QualType",
+// CHECK-NEXT:           "type": {
+// CHECK-NEXT:            "qualType": "const CanPassInRegisters"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "qualifiers": "const",
+// CHECK-NEXT:           "qualDetails": [
+// CHECK-NEXT:            "struct"
+// CHECK-NEXT:           ]
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "typeDetails": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "id": "0x{{.*}}",
+// CHECK-NEXT:            "kind": "ElaboratedType",
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "CanPassInRegisters"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "qualDetails": [
+// CHECK-NEXT:             "struct"
+// CHECK-NEXT:            ],
+// CHECK-NEXT:            "typeDetails": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "id": "0x{{.*}}",
+// CHECK-NEXT:              "kind": "RecordType",
+// CHECK-NEXT:              "type": {
+// CHECK-NEXT:               "qualType": "CanPassInRegisters"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "decl": {
+// CHECK-NEXT:               "id": "0x{{.*}}",
+// CHECK-NEXT:               "kind": "CXXRecordDecl",
+// CHECK-NEXT:               "name": "CanPassInRegisters"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "qualDetails": [
+// CHECK-NEXT:               "struct"
+// CHECK-NEXT:              ]
+// CHECK-NEXT:             }
+// CHECK-NEXT:            ]
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   }
@@ -871,19 +973,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 303,
+// CHECK-NEXT:   "offset": 314,
 // CHECK-NEXT:   "line": 12,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 19
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 296,
+// CHECK-NEXT:    "offset": 307,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 385,
+// CHECK-NEXT:    "offset": 398,
 // CHECK-NEXT:    "line": 14,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -930,19 +1032,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 303,
+// CHECK-NEXT:     "offset": 314,
 // CHECK-NEXT:     "line": 12,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 19
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 296,
+// CHECK-NEXT:      "offset": 307,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 303,
+// CHECK-NEXT:      "offset": 314,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     }
@@ -956,19 +1058,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXConstructorDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 327,
+// CHECK-NEXT:     "offset": 339,
 // CHECK-NEXT:     "line": 13,
 // CHECK-NEXT:     "col": 3,
 // CHECK-NEXT:     "tokLen": 19
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 327,
+// CHECK-NEXT:      "offset": 339,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 382,
+// CHECK-NEXT:      "offset": 394,
 // CHECK-NEXT:      "col": 58,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -984,25 +1086,79 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 373,
+// CHECK-NEXT:       "offset": 385,
 // CHECK-NEXT:       "col": 49,
 // CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 347,
+// CHECK-NEXT:        "offset": 359,
 // CHECK-NEXT:        "col": 23,
 // CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 372,
+// CHECK-NEXT:        "offset": 384,
 // CHECK-NEXT:        "col": 48,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "const CantPassInRegisters &"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "LValueReferenceType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "const CantPassInRegisters &"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [],
+// CHECK-NEXT:        "qualTypeDetail": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "qualType": {
+// CHECK-NEXT:           "id": "0x{{.*}}",
+// CHECK-NEXT:           "kind": "QualType",
+// CHECK-NEXT:           "type": {
+// CHECK-NEXT:            "qualType": "const CantPassInRegisters"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "qualifiers": "const",
+// CHECK-NEXT:           "qualDetails": [
+// CHECK-NEXT:            "struct"
+// CHECK-NEXT:           ]
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "typeDetails": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "id": "0x{{.*}}",
+// CHECK-NEXT:            "kind": "ElaboratedType",
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "CantPassInRegisters"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "qualDetails": [
+// CHECK-NEXT:             "struct"
+// CHECK-NEXT:            ],
+// CHECK-NEXT:            "typeDetails": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "id": "0x{{.*}}",
+// CHECK-NEXT:              "kind": "RecordType",
+// CHECK-NEXT:              "type": {
+// CHECK-NEXT:               "qualType": "CantPassInRegisters"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "decl": {
+// CHECK-NEXT:               "id": "0x{{.*}}",
+// CHECK-NEXT:               "kind": "CXXRecordDecl",
+// CHECK-NEXT:               "name": "CantPassInRegisters"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "qualDetails": [
+// CHECK-NEXT:               "struct"
+// CHECK-NEXT:              ]
+// CHECK-NEXT:             }
+// CHECK-NEXT:            ]
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   }
@@ -1013,19 +1169,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 396,
+// CHECK-NEXT:   "offset": 411,
 // CHECK-NEXT:   "line": 16,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 7
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 389,
+// CHECK-NEXT:    "offset": 404,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 406,
+// CHECK-NEXT:    "offset": 422,
 // CHECK-NEXT:    "line": 17,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -1090,19 +1246,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 396,
+// CHECK-NEXT:     "offset": 411,
 // CHECK-NEXT:     "line": 16,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 7
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 389,
+// CHECK-NEXT:      "offset": 404,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 396,
+// CHECK-NEXT:      "offset": 411,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     }
@@ -1118,19 +1274,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 417,
+// CHECK-NEXT:   "offset": 435,
 // CHECK-NEXT:   "line": 19,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 10
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 410,
+// CHECK-NEXT:    "offset": 428,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 439,
+// CHECK-NEXT:    "offset": 459,
 // CHECK-NEXT:    "line": 21,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -1190,19 +1346,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 417,
+// CHECK-NEXT:     "offset": 435,
 // CHECK-NEXT:     "line": 19,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 10
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 410,
+// CHECK-NEXT:      "offset": 428,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 417,
+// CHECK-NEXT:      "offset": 435,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     }
@@ -1215,19 +1371,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 436,
+// CHECK-NEXT:     "offset": 455,
 // CHECK-NEXT:     "line": 20,
 // CHECK-NEXT:     "col": 7,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 432,
+// CHECK-NEXT:      "offset": 451,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 436,
+// CHECK-NEXT:      "offset": 455,
 // CHECK-NEXT:      "col": 7,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -1235,6 +1391,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "name": "a",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualType": {
+// CHECK-NEXT:     "id": "0x{{.*}}",
+// CHECK-NEXT:     "kind": "QualType",
+// CHECK-NEXT:     "type": {
+// CHECK-NEXT:      "qualType": "int"
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "qualifiers": "",
+// CHECK-NEXT:     "qualDetails": [
+// CHECK-NEXT:      "signed",
+// CHECK-NEXT:      "integer"
+// CHECK-NEXT:     ]
 // CHECK-NEXT:    }
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
@@ -1244,19 +1412,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 450,
+// CHECK-NEXT:   "offset": 472,
 // CHECK-NEXT:   "line": 23,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 11
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 443,
+// CHECK-NEXT:    "offset": 465,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 473,
+// CHECK-NEXT:    "offset": 497,
 // CHECK-NEXT:    "line": 25,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -1316,19 +1484,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 450,
+// CHECK-NEXT:     "offset": 472,
 // CHECK-NEXT:     "line": 23,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 11
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 443,
+// CHECK-NEXT:      "offset": 465,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 450,
+// CHECK-NEXT:      "offset": 472,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 11
 // CHECK-NEXT:     }
@@ -1341,19 +1509,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 470,
+// CHECK-NEXT:     "offset": 493,
 // CHECK-NEXT:     "line": 24,
 // CHECK-NEXT:     "col": 7,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 466,
+// CHECK-NEXT:      "offset": 489,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 470,
+// CHECK-NEXT:      "offset": 493,
 // CHECK-NEXT:      "col": 7,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -1361,6 +1529,13 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "name": "a",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualType": {
+// CHECK-NEXT:     "refId": "0x{{.*}}",
+// CHECK-NEXT:     "qualDetails": [
+// CHECK-NEXT:      "signed",
+// CHECK-NEXT:      "integer"
+// CHECK-NEXT:     ]
 // CHECK-NEXT:    }
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
@@ -1370,19 +1545,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 484,
+// CHECK-NEXT:   "offset": 510,
 // CHECK-NEXT:   "line": 27,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 14
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 477,
+// CHECK-NEXT:    "offset": 503,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 519,
+// CHECK-NEXT:    "offset": 548,
 // CHECK-NEXT:    "line": 30,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -1440,19 +1615,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 484,
+// CHECK-NEXT:     "offset": 510,
 // CHECK-NEXT:     "line": 27,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 14
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 477,
+// CHECK-NEXT:      "offset": 503,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 484,
+// CHECK-NEXT:      "offset": 510,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 14
 // CHECK-NEXT:     }
@@ -1465,19 +1640,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "AccessSpecDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 501,
+// CHECK-NEXT:     "offset": 528,
 // CHECK-NEXT:     "line": 28,
 // CHECK-NEXT:     "col": 1,
 // CHECK-NEXT:     "tokLen": 7
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 501,
+// CHECK-NEXT:      "offset": 528,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 508,
+// CHECK-NEXT:      "offset": 535,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -1488,19 +1663,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 516,
+// CHECK-NEXT:     "offset": 544,
 // CHECK-NEXT:     "line": 29,
 // CHECK-NEXT:     "col": 7,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 512,
+// CHECK-NEXT:      "offset": 540,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 516,
+// CHECK-NEXT:      "offset": 544,
 // CHECK-NEXT:      "col": 7,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -1508,6 +1683,13 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "name": "a",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualType": {
+// CHECK-NEXT:     "refId": "0x{{.*}}",
+// CHECK-NEXT:     "qualDetails": [
+// CHECK-NEXT:      "signed",
+// CHECK-NEXT:      "integer"
+// CHECK-NEXT:     ]
 // CHECK-NEXT:    }
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
@@ -1517,19 +1699,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 530,
+// CHECK-NEXT:   "offset": 561,
 // CHECK-NEXT:   "line": 32,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 16
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 523,
+// CHECK-NEXT:    "offset": 554,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 561,
+// CHECK-NEXT:    "offset": 594,
 // CHECK-NEXT:    "line": 34,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -1594,19 +1776,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 530,
+// CHECK-NEXT:     "offset": 561,
 // CHECK-NEXT:     "line": 32,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 16
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 523,
+// CHECK-NEXT:      "offset": 554,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 530,
+// CHECK-NEXT:      "offset": 561,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 16
 // CHECK-NEXT:     }
@@ -1619,19 +1801,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 556,
+// CHECK-NEXT:     "offset": 588,
 // CHECK-NEXT:     "line": 33,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 551,
+// CHECK-NEXT:      "offset": 583,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 558,
+// CHECK-NEXT:      "offset": 590,
 // CHECK-NEXT:      "col": 10,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -1649,19 +1831,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 572,
+// CHECK-NEXT:   "offset": 607,
 // CHECK-NEXT:   "line": 36,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 19
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 565,
+// CHECK-NEXT:    "offset": 600,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 614,
+// CHECK-NEXT:    "offset": 651,
 // CHECK-NEXT:    "line": 38,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -1717,19 +1899,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 572,
+// CHECK-NEXT:     "offset": 607,
 // CHECK-NEXT:     "line": 36,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 19
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 565,
+// CHECK-NEXT:      "offset": 600,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 572,
+// CHECK-NEXT:      "offset": 607,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     }
@@ -1742,19 +1924,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 609,
+// CHECK-NEXT:     "offset": 645,
 // CHECK-NEXT:     "line": 37,
 // CHECK-NEXT:     "col": 16,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 596,
+// CHECK-NEXT:      "offset": 632,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 611,
+// CHECK-NEXT:      "offset": 647,
 // CHECK-NEXT:      "col": 18,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -1770,19 +1952,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 572,
+// CHECK-NEXT:     "offset": 607,
 // CHECK-NEXT:     "line": 36,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 19
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 572,
+// CHECK-NEXT:      "offset": 607,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 572,
+// CHECK-NEXT:      "offset": 607,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     }
@@ -1801,25 +1983,79 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 572,
+// CHECK-NEXT:       "offset": 607,
 // CHECK-NEXT:       "col": 8,
 // CHECK-NEXT:       "tokLen": 19
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 572,
+// CHECK-NEXT:        "offset": 607,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 19
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 572,
+// CHECK-NEXT:        "offset": 607,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 19
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "const IsNotStandardLayout &"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "LValueReferenceType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "const IsNotStandardLayout &"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [],
+// CHECK-NEXT:        "qualTypeDetail": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "qualType": {
+// CHECK-NEXT:           "id": "0x{{.*}}",
+// CHECK-NEXT:           "kind": "QualType",
+// CHECK-NEXT:           "type": {
+// CHECK-NEXT:            "qualType": "const IsNotStandardLayout"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "qualifiers": "const",
+// CHECK-NEXT:           "qualDetails": [
+// CHECK-NEXT:            "struct"
+// CHECK-NEXT:           ]
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "typeDetails": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "id": "0x{{.*}}",
+// CHECK-NEXT:            "kind": "ElaboratedType",
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "IsNotStandardLayout"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "qualDetails": [
+// CHECK-NEXT:             "struct"
+// CHECK-NEXT:            ],
+// CHECK-NEXT:            "typeDetails": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "id": "0x{{.*}}",
+// CHECK-NEXT:              "kind": "RecordType",
+// CHECK-NEXT:              "type": {
+// CHECK-NEXT:               "qualType": "IsNotStandardLayout"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "decl": {
+// CHECK-NEXT:               "id": "0x{{.*}}",
+// CHECK-NEXT:               "kind": "CXXRecordDecl",
+// CHECK-NEXT:               "name": "IsNotStandardLayout"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "qualDetails": [
+// CHECK-NEXT:               "struct"
+// CHECK-NEXT:              ]
+// CHECK-NEXT:             }
+// CHECK-NEXT:            ]
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   },
@@ -1827,18 +2063,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 572,
+// CHECK-NEXT:     "offset": 607,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 19
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 572,
+// CHECK-NEXT:      "offset": 607,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 572,
+// CHECK-NEXT:      "offset": 607,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     }
@@ -1857,25 +2093,62 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 572,
+// CHECK-NEXT:       "offset": 607,
 // CHECK-NEXT:       "col": 8,
 // CHECK-NEXT:       "tokLen": 19
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 572,
+// CHECK-NEXT:        "offset": 607,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 19
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 572,
+// CHECK-NEXT:        "offset": 607,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 19
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "IsNotStandardLayout &&"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "RValueReferenceType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "IsNotStandardLayout &&"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [],
+// CHECK-NEXT:        "typeDetails": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "qualDetails": [
+// CHECK-NEXT:           "struct"
+// CHECK-NEXT:          ],
+// CHECK-NEXT:          "typeDetails": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "refId": "0x{{.*}}"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "decl": {
+// CHECK-NEXT:             "id": "0x{{.*}}",
+// CHECK-NEXT:             "kind": "CXXRecordDecl",
+// CHECK-NEXT:             "name": "IsNotStandardLayout"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "qualDetails": [
+// CHECK-NEXT:             "struct"
+// CHECK-NEXT:            ],
+// CHECK-NEXT:            "typeDetails": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "refId": "0x{{.*}}"
+// CHECK-NEXT:             }
+// CHECK-NEXT:            ]
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   },
@@ -1883,18 +2156,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 572,
+// CHECK-NEXT:     "offset": 607,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 19
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 572,
+// CHECK-NEXT:      "offset": 607,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 572,
+// CHECK-NEXT:      "offset": 607,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     }
@@ -1915,19 +2188,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 625,
+// CHECK-NEXT:   "offset": 664,
 // CHECK-NEXT:   "line": 40,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 19
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 618,
+// CHECK-NEXT:    "offset": 657,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 647,
+// CHECK-NEXT:    "offset": 687,
 // CHECK-NEXT:    "line": 41,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -1992,19 +2265,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 625,
+// CHECK-NEXT:     "offset": 664,
 // CHECK-NEXT:     "line": 40,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 19
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 618,
+// CHECK-NEXT:      "offset": 657,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 625,
+// CHECK-NEXT:      "offset": 664,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     }
@@ -2020,19 +2293,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 658,
+// CHECK-NEXT:   "offset": 700,
 // CHECK-NEXT:   "line": 43,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 22
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 651,
+// CHECK-NEXT:    "offset": 693,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 742,
+// CHECK-NEXT:    "offset": 786,
 // CHECK-NEXT:    "line": 45,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -2076,19 +2349,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 658,
+// CHECK-NEXT:     "offset": 700,
 // CHECK-NEXT:     "line": 43,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 22
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 651,
+// CHECK-NEXT:      "offset": 693,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 658,
+// CHECK-NEXT:      "offset": 700,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 22
 // CHECK-NEXT:     }
@@ -2102,19 +2375,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXConstructorDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 685,
+// CHECK-NEXT:     "offset": 728,
 // CHECK-NEXT:     "line": 44,
 // CHECK-NEXT:     "col": 3,
 // CHECK-NEXT:     "tokLen": 22
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 685,
+// CHECK-NEXT:      "offset": 728,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 22
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 740,
+// CHECK-NEXT:      "offset": 783,
 // CHECK-NEXT:      "col": 58,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -2129,37 +2402,91 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 737,
+// CHECK-NEXT:       "offset": 780,
 // CHECK-NEXT:       "col": 55,
 // CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 708,
+// CHECK-NEXT:        "offset": 751,
 // CHECK-NEXT:        "col": 26,
 // CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 736,
+// CHECK-NEXT:        "offset": 779,
 // CHECK-NEXT:        "col": 54,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "const IsNotTriviallyCopyable &"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "LValueReferenceType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "const IsNotTriviallyCopyable &"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [],
+// CHECK-NEXT:        "qualTypeDetail": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "qualType": {
+// CHECK-NEXT:           "id": "0x{{.*}}",
+// CHECK-NEXT:           "kind": "QualType",
+// CHECK-NEXT:           "type": {
+// CHECK-NEXT:            "qualType": "const IsNotTriviallyCopyable"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "qualifiers": "const",
+// CHECK-NEXT:           "qualDetails": [
+// CHECK-NEXT:            "struct"
+// CHECK-NEXT:           ]
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "typeDetails": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "id": "0x{{.*}}",
+// CHECK-NEXT:            "kind": "ElaboratedType",
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "IsNotTriviallyCopyable"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "qualDetails": [
+// CHECK-NEXT:             "struct"
+// CHECK-NEXT:            ],
+// CHECK-NEXT:            "typeDetails": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "id": "0x{{.*}}",
+// CHECK-NEXT:              "kind": "RecordType",
+// CHECK-NEXT:              "type": {
+// CHECK-NEXT:               "qualType": "IsNotTriviallyCopyable"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "decl": {
+// CHECK-NEXT:               "id": "0x{{.*}}",
+// CHECK-NEXT:               "kind": "CXXRecordDecl",
+// CHECK-NEXT:               "name": "IsNotTriviallyCopyable"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "qualDetails": [
+// CHECK-NEXT:               "struct"
+// CHECK-NEXT:              ]
+// CHECK-NEXT:             }
+// CHECK-NEXT:            ]
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "CompoundStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 739,
+// CHECK-NEXT:        "offset": 782,
 // CHECK-NEXT:        "col": 57,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 740,
+// CHECK-NEXT:        "offset": 783,
 // CHECK-NEXT:        "col": 58,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -2174,19 +2501,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 753,
+// CHECK-NEXT:   "offset": 799,
 // CHECK-NEXT:   "line": 47,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 5
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 746,
+// CHECK-NEXT:    "offset": 792,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 770,
+// CHECK-NEXT:    "offset": 818,
 // CHECK-NEXT:    "line": 49,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -2246,19 +2573,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 753,
+// CHECK-NEXT:     "offset": 799,
 // CHECK-NEXT:     "line": 47,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 746,
+// CHECK-NEXT:      "offset": 792,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 753,
+// CHECK-NEXT:      "offset": 799,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
@@ -2271,19 +2598,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 767,
+// CHECK-NEXT:     "offset": 814,
 // CHECK-NEXT:     "line": 48,
 // CHECK-NEXT:     "col": 7,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 763,
+// CHECK-NEXT:      "offset": 810,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 767,
+// CHECK-NEXT:      "offset": 814,
 // CHECK-NEXT:      "col": 7,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -2291,6 +2618,13 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "name": "a",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualType": {
+// CHECK-NEXT:     "refId": "0x{{.*}}",
+// CHECK-NEXT:     "qualDetails": [
+// CHECK-NEXT:      "signed",
+// CHECK-NEXT:      "integer"
+// CHECK-NEXT:     ]
 // CHECK-NEXT:    }
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
@@ -2300,19 +2634,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 781,
+// CHECK-NEXT:   "offset": 831,
 // CHECK-NEXT:   "line": 51,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 8
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 774,
+// CHECK-NEXT:    "offset": 824,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 802,
+// CHECK-NEXT:    "offset": 854,
 // CHECK-NEXT:    "line": 53,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -2368,19 +2702,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 781,
+// CHECK-NEXT:     "offset": 831,
 // CHECK-NEXT:     "line": 51,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 8
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 774,
+// CHECK-NEXT:      "offset": 824,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 781,
+// CHECK-NEXT:      "offset": 831,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     }
@@ -2393,19 +2727,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 799,
+// CHECK-NEXT:     "offset": 850,
 // CHECK-NEXT:     "line": 52,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 794,
+// CHECK-NEXT:      "offset": 845,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 799,
+// CHECK-NEXT:      "offset": 850,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -2413,6 +2747,15 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "name": "a",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int &"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualType": {
+// CHECK-NEXT:     "id": "0x{{.*}}",
+// CHECK-NEXT:     "kind": "QualType",
+// CHECK-NEXT:     "type": {
+// CHECK-NEXT:      "qualType": "int &"
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "qualifiers": "",
+// CHECK-NEXT:     "qualDetails": []
 // CHECK-NEXT:    }
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
@@ -2422,19 +2765,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 813,
+// CHECK-NEXT:   "offset": 867,
 // CHECK-NEXT:   "line": 55,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 9
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 806,
+// CHECK-NEXT:    "offset": 860,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 850,
+// CHECK-NEXT:    "offset": 906,
 // CHECK-NEXT:    "line": 57,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -2498,19 +2841,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 813,
+// CHECK-NEXT:     "offset": 867,
 // CHECK-NEXT:     "line": 55,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 9
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 806,
+// CHECK-NEXT:      "offset": 860,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 813,
+// CHECK-NEXT:      "offset": 867,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 9
 // CHECK-NEXT:     }
@@ -2524,19 +2867,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXConstructorDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 827,
+// CHECK-NEXT:     "offset": 882,
 // CHECK-NEXT:     "line": 56,
 // CHECK-NEXT:     "col": 3,
 // CHECK-NEXT:     "tokLen": 9
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 827,
+// CHECK-NEXT:      "offset": 882,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 9
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 847,
+// CHECK-NEXT:      "offset": 902,
 // CHECK-NEXT:      "col": 23,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -2556,19 +2899,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 861,
+// CHECK-NEXT:   "offset": 919,
 // CHECK-NEXT:   "line": 59,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 12
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 854,
+// CHECK-NEXT:    "offset": 912,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 896,
+// CHECK-NEXT:    "offset": 956,
 // CHECK-NEXT:    "line": 61,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -2628,19 +2971,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 861,
+// CHECK-NEXT:     "offset": 919,
 // CHECK-NEXT:     "line": 59,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 12
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 854,
+// CHECK-NEXT:      "offset": 912,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 861,
+// CHECK-NEXT:      "offset": 919,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 12
 // CHECK-NEXT:     }
@@ -2654,19 +2997,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXConstructorDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 878,
+// CHECK-NEXT:     "offset": 937,
 // CHECK-NEXT:     "line": 60,
 // CHECK-NEXT:     "col": 3,
 // CHECK-NEXT:     "tokLen": 12
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 878,
+// CHECK-NEXT:      "offset": 937,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 12
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 894,
+// CHECK-NEXT:      "offset": 953,
 // CHECK-NEXT:      "col": 19,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -2682,12 +3025,12 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "CompoundStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 893,
+// CHECK-NEXT:        "offset": 952,
 // CHECK-NEXT:        "col": 18,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 894,
+// CHECK-NEXT:        "offset": 953,
 // CHECK-NEXT:        "col": 19,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -2702,19 +3045,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 907,
+// CHECK-NEXT:   "offset": 969,
 // CHECK-NEXT:   "line": 63,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 13
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 900,
+// CHECK-NEXT:    "offset": 962,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 943,
+// CHECK-NEXT:    "offset": 1007,
 // CHECK-NEXT:    "line": 65,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -2770,19 +3113,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 907,
+// CHECK-NEXT:     "offset": 969,
 // CHECK-NEXT:     "line": 63,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 13
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 900,
+// CHECK-NEXT:      "offset": 962,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 907,
+// CHECK-NEXT:      "offset": 969,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     }
@@ -2795,19 +3138,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 938,
+// CHECK-NEXT:     "offset": 1001,
 // CHECK-NEXT:     "line": 64,
 // CHECK-NEXT:     "col": 16,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 925,
+// CHECK-NEXT:      "offset": 988,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 940,
+// CHECK-NEXT:      "offset": 1003,
 // CHECK-NEXT:      "col": 18,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -2823,19 +3166,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 907,
+// CHECK-NEXT:     "offset": 969,
 // CHECK-NEXT:     "line": 63,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 13
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 907,
+// CHECK-NEXT:      "offset": 969,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 907,
+// CHECK-NEXT:      "offset": 969,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     }
@@ -2854,25 +3197,79 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 907,
+// CHECK-NEXT:       "offset": 969,
 // CHECK-NEXT:       "col": 8,
 // CHECK-NEXT:       "tokLen": 13
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 907,
+// CHECK-NEXT:        "offset": 969,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 13
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 907,
+// CHECK-NEXT:        "offset": 969,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 13
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "const IsPolymorphic &"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "LValueReferenceType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "const IsPolymorphic &"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [],
+// CHECK-NEXT:        "qualTypeDetail": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "qualType": {
+// CHECK-NEXT:           "id": "0x{{.*}}",
+// CHECK-NEXT:           "kind": "QualType",
+// CHECK-NEXT:           "type": {
+// CHECK-NEXT:            "qualType": "const IsPolymorphic"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "qualifiers": "const",
+// CHECK-NEXT:           "qualDetails": [
+// CHECK-NEXT:            "struct"
+// CHECK-NEXT:           ]
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "typeDetails": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "id": "0x{{.*}}",
+// CHECK-NEXT:            "kind": "ElaboratedType",
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "IsPolymorphic"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "qualDetails": [
+// CHECK-NEXT:             "struct"
+// CHECK-NEXT:            ],
+// CHECK-NEXT:            "typeDetails": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "id": "0x{{.*}}",
+// CHECK-NEXT:              "kind": "RecordType",
+// CHECK-NEXT:              "type": {
+// CHECK-NEXT:               "qualType": "IsPolymorphic"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "decl": {
+// CHECK-NEXT:               "id": "0x{{.*}}",
+// CHECK-NEXT:               "kind": "CXXRecordDecl",
+// CHECK-NEXT:               "name": "IsPolymorphic"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "qualDetails": [
+// CHECK-NEXT:               "struct"
+// CHECK-NEXT:              ]
+// CHECK-NEXT:             }
+// CHECK-NEXT:            ]
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   },
@@ -2880,18 +3277,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 907,
+// CHECK-NEXT:     "offset": 969,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 13
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 907,
+// CHECK-NEXT:      "offset": 969,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 907,
+// CHECK-NEXT:      "offset": 969,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     }
@@ -2910,25 +3307,62 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 907,
+// CHECK-NEXT:       "offset": 969,
 // CHECK-NEXT:       "col": 8,
 // CHECK-NEXT:       "tokLen": 13
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 907,
+// CHECK-NEXT:        "offset": 969,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 13
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 907,
+// CHECK-NEXT:        "offset": 969,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 13
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "IsPolymorphic &&"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "RValueReferenceType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "IsPolymorphic &&"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [],
+// CHECK-NEXT:        "typeDetails": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "qualDetails": [
+// CHECK-NEXT:           "struct"
+// CHECK-NEXT:          ],
+// CHECK-NEXT:          "typeDetails": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "refId": "0x{{.*}}"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "decl": {
+// CHECK-NEXT:             "id": "0x{{.*}}",
+// CHECK-NEXT:             "kind": "CXXRecordDecl",
+// CHECK-NEXT:             "name": "IsPolymorphic"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "qualDetails": [
+// CHECK-NEXT:             "struct"
+// CHECK-NEXT:            ],
+// CHECK-NEXT:            "typeDetails": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "refId": "0x{{.*}}"
+// CHECK-NEXT:             }
+// CHECK-NEXT:            ]
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   },
@@ -2936,18 +3370,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 907,
+// CHECK-NEXT:     "offset": 969,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 13
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 907,
+// CHECK-NEXT:      "offset": 969,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 907,
+// CHECK-NEXT:      "offset": 969,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     }
@@ -2968,19 +3402,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 954,
+// CHECK-NEXT:   "offset": 1020,
 // CHECK-NEXT:   "line": 67,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 16
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 947,
+// CHECK-NEXT:    "offset": 1013,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 985,
+// CHECK-NEXT:    "offset": 1053,
 // CHECK-NEXT:    "line": 69,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -3045,19 +3479,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 954,
+// CHECK-NEXT:     "offset": 1020,
 // CHECK-NEXT:     "line": 67,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 16
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 947,
+// CHECK-NEXT:      "offset": 1013,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 954,
+// CHECK-NEXT:      "offset": 1020,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 16
 // CHECK-NEXT:     }
@@ -3070,19 +3504,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 980,
+// CHECK-NEXT:     "offset": 1047,
 // CHECK-NEXT:     "line": 68,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 975,
+// CHECK-NEXT:      "offset": 1042,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 982,
+// CHECK-NEXT:      "offset": 1049,
 // CHECK-NEXT:      "col": 10,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -3100,19 +3534,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 996,
+// CHECK-NEXT:   "offset": 1066,
 // CHECK-NEXT:   "line": 71,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 10
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 989,
+// CHECK-NEXT:    "offset": 1059,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 1033,
+// CHECK-NEXT:    "offset": 1105,
 // CHECK-NEXT:    "line": 73,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -3169,19 +3603,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 996,
+// CHECK-NEXT:     "offset": 1066,
 // CHECK-NEXT:     "line": 71,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 10
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 989,
+// CHECK-NEXT:      "offset": 1059,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 996,
+// CHECK-NEXT:      "offset": 1066,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     }
@@ -3194,19 +3628,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1024,
+// CHECK-NEXT:     "offset": 1095,
 // CHECK-NEXT:     "line": 72,
 // CHECK-NEXT:     "col": 16,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1011,
+// CHECK-NEXT:      "offset": 1082,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1030,
+// CHECK-NEXT:      "offset": 1101,
 // CHECK-NEXT:      "col": 22,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -3223,19 +3657,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 996,
+// CHECK-NEXT:     "offset": 1066,
 // CHECK-NEXT:     "line": 71,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 10
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 996,
+// CHECK-NEXT:      "offset": 1066,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 996,
+// CHECK-NEXT:      "offset": 1066,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     }
@@ -3254,25 +3688,79 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 996,
+// CHECK-NEXT:       "offset": 1066,
 // CHECK-NEXT:       "col": 8,
 // CHECK-NEXT:       "tokLen": 10
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 996,
+// CHECK-NEXT:        "offset": 1066,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 10
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 996,
+// CHECK-NEXT:        "offset": 1066,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 10
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "const IsAbstract &"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "LValueReferenceType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "const IsAbstract &"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [],
+// CHECK-NEXT:        "qualTypeDetail": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "qualType": {
+// CHECK-NEXT:           "id": "0x{{.*}}",
+// CHECK-NEXT:           "kind": "QualType",
+// CHECK-NEXT:           "type": {
+// CHECK-NEXT:            "qualType": "const IsAbstract"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "qualifiers": "const",
+// CHECK-NEXT:           "qualDetails": [
+// CHECK-NEXT:            "struct"
+// CHECK-NEXT:           ]
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "typeDetails": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "id": "0x{{.*}}",
+// CHECK-NEXT:            "kind": "ElaboratedType",
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "IsAbstract"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "qualDetails": [
+// CHECK-NEXT:             "struct"
+// CHECK-NEXT:            ],
+// CHECK-NEXT:            "typeDetails": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "id": "0x{{.*}}",
+// CHECK-NEXT:              "kind": "RecordType",
+// CHECK-NEXT:              "type": {
+// CHECK-NEXT:               "qualType": "IsAbstract"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "decl": {
+// CHECK-NEXT:               "id": "0x{{.*}}",
+// CHECK-NEXT:               "kind": "CXXRecordDecl",
+// CHECK-NEXT:               "name": "IsAbstract"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "qualDetails": [
+// CHECK-NEXT:               "struct"
+// CHECK-NEXT:              ]
+// CHECK-NEXT:             }
+// CHECK-NEXT:            ]
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   },
@@ -3280,18 +3768,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 996,
+// CHECK-NEXT:     "offset": 1066,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 10
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 996,
+// CHECK-NEXT:      "offset": 1066,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 996,
+// CHECK-NEXT:      "offset": 1066,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     }
@@ -3310,25 +3798,62 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 996,
+// CHECK-NEXT:       "offset": 1066,
 // CHECK-NEXT:       "col": 8,
 // CHECK-NEXT:       "tokLen": 10
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 996,
+// CHECK-NEXT:        "offset": 1066,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 10
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 996,
+// CHECK-NEXT:        "offset": 1066,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 10
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "IsAbstract &&"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "RValueReferenceType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "IsAbstract &&"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [],
+// CHECK-NEXT:        "typeDetails": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "qualDetails": [
+// CHECK-NEXT:           "struct"
+// CHECK-NEXT:          ],
+// CHECK-NEXT:          "typeDetails": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "refId": "0x{{.*}}"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "decl": {
+// CHECK-NEXT:             "id": "0x{{.*}}",
+// CHECK-NEXT:             "kind": "CXXRecordDecl",
+// CHECK-NEXT:             "name": "IsAbstract"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "qualDetails": [
+// CHECK-NEXT:             "struct"
+// CHECK-NEXT:            ],
+// CHECK-NEXT:            "typeDetails": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "refId": "0x{{.*}}"
+// CHECK-NEXT:             }
+// CHECK-NEXT:            ]
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   },
@@ -3336,18 +3861,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 996,
+// CHECK-NEXT:     "offset": 1066,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 10
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 996,
+// CHECK-NEXT:      "offset": 1066,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 996,
+// CHECK-NEXT:      "offset": 1066,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     }
@@ -3368,19 +3893,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 1044,
+// CHECK-NEXT:   "offset": 1118,
 // CHECK-NEXT:   "line": 75,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 13
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 1037,
+// CHECK-NEXT:    "offset": 1111,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 1080,
+// CHECK-NEXT:    "offset": 1156,
 // CHECK-NEXT:    "line": 77,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -3436,19 +3961,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1044,
+// CHECK-NEXT:     "offset": 1118,
 // CHECK-NEXT:     "line": 75,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 13
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1037,
+// CHECK-NEXT:      "offset": 1111,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1044,
+// CHECK-NEXT:      "offset": 1118,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     }
@@ -3461,19 +3986,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1075,
+// CHECK-NEXT:     "offset": 1150,
 // CHECK-NEXT:     "line": 76,
 // CHECK-NEXT:     "col": 16,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1062,
+// CHECK-NEXT:      "offset": 1137,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1077,
+// CHECK-NEXT:      "offset": 1152,
 // CHECK-NEXT:      "col": 18,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -3489,19 +4014,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1044,
+// CHECK-NEXT:     "offset": 1118,
 // CHECK-NEXT:     "line": 75,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 13
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1044,
+// CHECK-NEXT:      "offset": 1118,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1044,
+// CHECK-NEXT:      "offset": 1118,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     }
@@ -3520,25 +4045,79 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 1044,
+// CHECK-NEXT:       "offset": 1118,
 // CHECK-NEXT:       "col": 8,
 // CHECK-NEXT:       "tokLen": 13
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 1044,
+// CHECK-NEXT:        "offset": 1118,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 13
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 1044,
+// CHECK-NEXT:        "offset": 1118,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 13
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "const IsNotAbstract &"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "LValueReferenceType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "const IsNotAbstract &"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [],
+// CHECK-NEXT:        "qualTypeDetail": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "qualType": {
+// CHECK-NEXT:           "id": "0x{{.*}}",
+// CHECK-NEXT:           "kind": "QualType",
+// CHECK-NEXT:           "type": {
+// CHECK-NEXT:            "qualType": "const IsNotAbstract"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "qualifiers": "const",
+// CHECK-NEXT:           "qualDetails": [
+// CHECK-NEXT:            "struct"
+// CHECK-NEXT:           ]
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "typeDetails": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "id": "0x{{.*}}",
+// CHECK-NEXT:            "kind": "ElaboratedType",
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "IsNotAbstract"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "qualDetails": [
+// CHECK-NEXT:             "struct"
+// CHECK-NEXT:            ],
+// CHECK-NEXT:            "typeDetails": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "id": "0x{{.*}}",
+// CHECK-NEXT:              "kind": "RecordType",
+// CHECK-NEXT:              "type": {
+// CHECK-NEXT:               "qualType": "IsNotAbstract"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "decl": {
+// CHECK-NEXT:               "id": "0x{{.*}}",
+// CHECK-NEXT:               "kind": "CXXRecordDecl",
+// CHECK-NEXT:               "name": "IsNotAbstract"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "qualDetails": [
+// CHECK-NEXT:               "struct"
+// CHECK-NEXT:              ]
+// CHECK-NEXT:             }
+// CHECK-NEXT:            ]
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   },
@@ -3546,18 +4125,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1044,
+// CHECK-NEXT:     "offset": 1118,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 13
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1044,
+// CHECK-NEXT:      "offset": 1118,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1044,
+// CHECK-NEXT:      "offset": 1118,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     }
@@ -3576,25 +4155,62 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 1044,
+// CHECK-NEXT:       "offset": 1118,
 // CHECK-NEXT:       "col": 8,
 // CHECK-NEXT:       "tokLen": 13
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 1044,
+// CHECK-NEXT:        "offset": 1118,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 13
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 1044,
+// CHECK-NEXT:        "offset": 1118,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 13
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "IsNotAbstract &&"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "RValueReferenceType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "IsNotAbstract &&"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [],
+// CHECK-NEXT:        "typeDetails": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "qualDetails": [
+// CHECK-NEXT:           "struct"
+// CHECK-NEXT:          ],
+// CHECK-NEXT:          "typeDetails": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "refId": "0x{{.*}}"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "decl": {
+// CHECK-NEXT:             "id": "0x{{.*}}",
+// CHECK-NEXT:             "kind": "CXXRecordDecl",
+// CHECK-NEXT:             "name": "IsNotAbstract"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "qualDetails": [
+// CHECK-NEXT:             "struct"
+// CHECK-NEXT:            ],
+// CHECK-NEXT:            "typeDetails": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "refId": "0x{{.*}}"
+// CHECK-NEXT:             }
+// CHECK-NEXT:            ]
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   },
@@ -3602,18 +4218,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1044,
+// CHECK-NEXT:     "offset": 1118,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 13
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1044,
+// CHECK-NEXT:      "offset": 1118,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1044,
+// CHECK-NEXT:      "offset": 1118,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     }
@@ -3634,19 +4250,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 1091,
+// CHECK-NEXT:   "offset": 1169,
 // CHECK-NEXT:   "line": 79,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 9
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 1084,
+// CHECK-NEXT:    "offset": 1162,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 1129,
+// CHECK-NEXT:    "offset": 1209,
 // CHECK-NEXT:    "line": 81,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -3699,19 +4315,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1091,
+// CHECK-NEXT:     "offset": 1169,
 // CHECK-NEXT:     "line": 79,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 9
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1084,
+// CHECK-NEXT:      "offset": 1162,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1091,
+// CHECK-NEXT:      "offset": 1169,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 9
 // CHECK-NEXT:     }
@@ -3725,19 +4341,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1105,
+// CHECK-NEXT:     "offset": 1184,
 // CHECK-NEXT:     "line": 80,
 // CHECK-NEXT:     "col": 3,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1105,
+// CHECK-NEXT:      "offset": 1184,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1126,
+// CHECK-NEXT:      "offset": 1205,
 // CHECK-NEXT:      "col": 24,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -3756,19 +4372,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 1140,
+// CHECK-NEXT:   "offset": 1222,
 // CHECK-NEXT:   "line": 83,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 12
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 1133,
+// CHECK-NEXT:    "offset": 1215,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 1176,
+// CHECK-NEXT:    "offset": 1260,
 // CHECK-NEXT:    "line": 85,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -3816,19 +4432,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1140,
+// CHECK-NEXT:     "offset": 1222,
 // CHECK-NEXT:     "line": 83,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 12
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1133,
+// CHECK-NEXT:      "offset": 1215,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1140,
+// CHECK-NEXT:      "offset": 1222,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 12
 // CHECK-NEXT:     }
@@ -3842,19 +4458,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1157,
+// CHECK-NEXT:     "offset": 1240,
 // CHECK-NEXT:     "line": 84,
 // CHECK-NEXT:     "col": 3,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1157,
+// CHECK-NEXT:      "offset": 1240,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1174,
+// CHECK-NEXT:      "offset": 1257,
 // CHECK-NEXT:      "col": 20,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -3870,12 +4486,12 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "CompoundStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 1173,
+// CHECK-NEXT:        "offset": 1256,
 // CHECK-NEXT:        "col": 19,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 1174,
+// CHECK-NEXT:        "offset": 1257,
 // CHECK-NEXT:        "col": 20,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -3890,19 +4506,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 1187,
+// CHECK-NEXT:   "offset": 1273,
 // CHECK-NEXT:   "line": 87,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 26
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 1180,
+// CHECK-NEXT:    "offset": 1266,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 1250,
+// CHECK-NEXT:    "offset": 1338,
 // CHECK-NEXT:    "line": 89,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -3962,19 +4578,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1187,
+// CHECK-NEXT:     "offset": 1273,
 // CHECK-NEXT:     "line": 87,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 26
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1180,
+// CHECK-NEXT:      "offset": 1266,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1187,
+// CHECK-NEXT:      "offset": 1273,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 26
 // CHECK-NEXT:     }
@@ -3988,19 +4604,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXConstructorDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1218,
+// CHECK-NEXT:     "offset": 1305,
 // CHECK-NEXT:     "line": 88,
 // CHECK-NEXT:     "col": 3,
 // CHECK-NEXT:     "tokLen": 26
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1218,
+// CHECK-NEXT:      "offset": 1305,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 26
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1248,
+// CHECK-NEXT:      "offset": 1335,
 // CHECK-NEXT:      "col": 33,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -4016,12 +4632,12 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "CompoundStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 1247,
+// CHECK-NEXT:        "offset": 1334,
 // CHECK-NEXT:        "col": 32,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 1248,
+// CHECK-NEXT:        "offset": 1335,
 // CHECK-NEXT:        "col": 33,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -4036,19 +4652,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 1261,
+// CHECK-NEXT:   "offset": 1351,
 // CHECK-NEXT:   "line": 91,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 28
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 1254,
+// CHECK-NEXT:    "offset": 1344,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 1292,
+// CHECK-NEXT:    "offset": 1383,
 // CHECK-NEXT:    "line": 92,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -4113,19 +4729,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1261,
+// CHECK-NEXT:     "offset": 1351,
 // CHECK-NEXT:     "line": 91,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 28
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1254,
+// CHECK-NEXT:      "offset": 1344,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1261,
+// CHECK-NEXT:      "offset": 1351,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 28
 // CHECK-NEXT:     }
@@ -4141,19 +4757,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 1303,
+// CHECK-NEXT:   "offset": 1396,
 // CHECK-NEXT:   "line": 94,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 34
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 1296,
+// CHECK-NEXT:    "offset": 1389,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 1392,
+// CHECK-NEXT:    "offset": 1487,
 // CHECK-NEXT:    "line": 96,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -4216,19 +4832,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1303,
+// CHECK-NEXT:     "offset": 1396,
 // CHECK-NEXT:     "line": 94,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 34
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1296,
+// CHECK-NEXT:      "offset": 1389,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1303,
+// CHECK-NEXT:      "offset": 1396,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 34
 // CHECK-NEXT:     }
@@ -4242,19 +4858,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXConstructorDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1352,
+// CHECK-NEXT:     "offset": 1446,
 // CHECK-NEXT:     "line": 95,
 // CHECK-NEXT:     "col": 13,
 // CHECK-NEXT:     "tokLen": 34
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1342,
+// CHECK-NEXT:      "offset": 1436,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 9
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1390,
+// CHECK-NEXT:      "offset": 1484,
 // CHECK-NEXT:      "col": 51,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -4271,12 +4887,12 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "CompoundStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 1389,
+// CHECK-NEXT:        "offset": 1483,
 // CHECK-NEXT:        "col": 50,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 1390,
+// CHECK-NEXT:        "offset": 1484,
 // CHECK-NEXT:        "col": 51,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -4291,19 +4907,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 1403,
+// CHECK-NEXT:   "offset": 1500,
 // CHECK-NEXT:   "line": 98,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 36
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 1396,
+// CHECK-NEXT:    "offset": 1493,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 1486,
+// CHECK-NEXT:    "offset": 1585,
 // CHECK-NEXT:    "line": 100,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -4363,19 +4979,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1403,
+// CHECK-NEXT:     "offset": 1500,
 // CHECK-NEXT:     "line": 98,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 36
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1396,
+// CHECK-NEXT:      "offset": 1493,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1403,
+// CHECK-NEXT:      "offset": 1500,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 36
 // CHECK-NEXT:     }
@@ -4389,19 +5005,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXConstructorDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1444,
+// CHECK-NEXT:     "offset": 1542,
 // CHECK-NEXT:     "line": 99,
 // CHECK-NEXT:     "col": 3,
 // CHECK-NEXT:     "tokLen": 36
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1444,
+// CHECK-NEXT:      "offset": 1542,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 36
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1484,
+// CHECK-NEXT:      "offset": 1582,
 // CHECK-NEXT:      "col": 43,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -4417,12 +5033,12 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "CompoundStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 1483,
+// CHECK-NEXT:        "offset": 1581,
 // CHECK-NEXT:        "col": 42,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 1484,
+// CHECK-NEXT:        "offset": 1582,
 // CHECK-NEXT:        "col": 43,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -4437,19 +5053,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 1497,
+// CHECK-NEXT:   "offset": 1598,
 // CHECK-NEXT:   "line": 102,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 16
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 1490,
+// CHECK-NEXT:    "offset": 1591,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 1533,
+// CHECK-NEXT:    "offset": 1636,
 // CHECK-NEXT:    "line": 104,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -4511,19 +5127,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1497,
+// CHECK-NEXT:     "offset": 1598,
 // CHECK-NEXT:     "line": 102,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 16
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1490,
+// CHECK-NEXT:      "offset": 1591,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1497,
+// CHECK-NEXT:      "offset": 1598,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 16
 // CHECK-NEXT:     }
@@ -4536,19 +5152,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1530,
+// CHECK-NEXT:     "offset": 1632,
 // CHECK-NEXT:     "line": 103,
 // CHECK-NEXT:     "col": 15,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1518,
+// CHECK-NEXT:      "offset": 1620,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1530,
+// CHECK-NEXT:      "offset": 1632,
 // CHECK-NEXT:      "col": 15,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -4557,7 +5173,14 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    },
-// CHECK-NEXT:    "mutable": true
+// CHECK-NEXT:    "mutable": true,
+// CHECK-NEXT:    "qualType": {
+// CHECK-NEXT:     "refId": "0x{{.*}}",
+// CHECK-NEXT:     "qualDetails": [
+// CHECK-NEXT:      "signed",
+// CHECK-NEXT:      "integer"
+// CHECK-NEXT:     ]
+// CHECK-NEXT:    }
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
@@ -4566,19 +5189,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 1544,
+// CHECK-NEXT:   "offset": 1649,
 // CHECK-NEXT:   "line": 106,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 18
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 1537,
+// CHECK-NEXT:    "offset": 1642,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 1574,
+// CHECK-NEXT:    "offset": 1681,
 // CHECK-NEXT:    "line": 108,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -4638,19 +5261,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1544,
+// CHECK-NEXT:     "offset": 1649,
 // CHECK-NEXT:     "line": 106,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 18
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1537,
+// CHECK-NEXT:      "offset": 1642,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1544,
+// CHECK-NEXT:      "offset": 1649,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 18
 // CHECK-NEXT:     }
@@ -4663,19 +5286,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1571,
+// CHECK-NEXT:     "offset": 1677,
 // CHECK-NEXT:     "line": 107,
 // CHECK-NEXT:     "col": 7,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1567,
+// CHECK-NEXT:      "offset": 1673,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1571,
+// CHECK-NEXT:      "offset": 1677,
 // CHECK-NEXT:      "col": 7,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -4683,6 +5306,13 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "name": "i",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualType": {
+// CHECK-NEXT:     "refId": "0x{{.*}}",
+// CHECK-NEXT:     "qualDetails": [
+// CHECK-NEXT:      "signed",
+// CHECK-NEXT:      "integer"
+// CHECK-NEXT:     ]
 // CHECK-NEXT:    }
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
@@ -4692,19 +5322,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 1585,
+// CHECK-NEXT:   "offset": 1694,
 // CHECK-NEXT:   "line": 110,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 17
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 1578,
+// CHECK-NEXT:    "offset": 1687,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 1631,
+// CHECK-NEXT:    "offset": 1744,
 // CHECK-NEXT:    "line": 114,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -4765,19 +5395,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1585,
+// CHECK-NEXT:     "offset": 1694,
 // CHECK-NEXT:     "line": 110,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 17
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1578,
+// CHECK-NEXT:      "offset": 1687,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1585,
+// CHECK-NEXT:      "offset": 1694,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 17
 // CHECK-NEXT:     }
@@ -4790,19 +5420,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1607,
+// CHECK-NEXT:     "offset": 1717,
 // CHECK-NEXT:     "line": 111,
 // CHECK-NEXT:     "col": 3,
 // CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1607,
+// CHECK-NEXT:      "offset": 1717,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1628,
+// CHECK-NEXT:      "offset": 1740,
 // CHECK-NEXT:      "line": 113,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 1
@@ -4862,19 +5492,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FieldDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 1623,
+// CHECK-NEXT:       "offset": 1734,
 // CHECK-NEXT:       "line": 112,
 // CHECK-NEXT:       "col": 9,
 // CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 1619,
+// CHECK-NEXT:        "offset": 1730,
 // CHECK-NEXT:        "col": 5,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 1623,
+// CHECK-NEXT:        "offset": 1734,
 // CHECK-NEXT:        "col": 9,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -4882,6 +5512,13 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "name": "i",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualType": {
+// CHECK-NEXT:       "refId": "0x{{.*}}",
+// CHECK-NEXT:       "qualDetails": [
+// CHECK-NEXT:        "signed",
+// CHECK-NEXT:        "integer"
+// CHECK-NEXT:       ]
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
@@ -4890,19 +5527,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1607,
+// CHECK-NEXT:     "offset": 1717,
 // CHECK-NEXT:     "line": 111,
 // CHECK-NEXT:     "col": 3,
 // CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1607,
+// CHECK-NEXT:      "offset": 1717,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1607,
+// CHECK-NEXT:      "offset": 1717,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
@@ -4910,25 +5547,36 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "HasVariantMembers::(anonymous union at {{.*}}:111:3)"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualType": {
+// CHECK-NEXT:     "id": "0x{{.*}}",
+// CHECK-NEXT:     "kind": "QualType",
+// CHECK-NEXT:     "type": {
+// CHECK-NEXT:      "qualType": "HasVariantMembers::(anonymous union at {{.*}}:111:3)"
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "qualifiers": "",
+// CHECK-NEXT:     "qualDetails": [
+// CHECK-NEXT:      "union"
+// CHECK-NEXT:     ]
 // CHECK-NEXT:    }
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "IndirectFieldDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1623,
+// CHECK-NEXT:     "offset": 1734,
 // CHECK-NEXT:     "line": 112,
 // CHECK-NEXT:     "col": 9,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1623,
+// CHECK-NEXT:      "offset": 1734,
 // CHECK-NEXT:      "col": 9,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1623,
+// CHECK-NEXT:      "offset": 1734,
 // CHECK-NEXT:      "col": 9,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -4943,19 +5591,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 1642,
+// CHECK-NEXT:   "offset": 1757,
 // CHECK-NEXT:   "line": 116,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 19
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 1635,
+// CHECK-NEXT:    "offset": 1750,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 1664,
+// CHECK-NEXT:    "offset": 1780,
 // CHECK-NEXT:    "line": 117,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -5020,19 +5668,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1642,
+// CHECK-NEXT:     "offset": 1757,
 // CHECK-NEXT:     "line": 116,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 19
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1635,
+// CHECK-NEXT:      "offset": 1750,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1642,
+// CHECK-NEXT:      "offset": 1757,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     }
@@ -5048,19 +5696,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 1675,
+// CHECK-NEXT:   "offset": 1793,
 // CHECK-NEXT:   "line": 119,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 22
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 1668,
+// CHECK-NEXT:    "offset": 1786,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 1714,
+// CHECK-NEXT:    "offset": 1834,
 // CHECK-NEXT:    "line": 121,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -5122,19 +5770,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1675,
+// CHECK-NEXT:     "offset": 1793,
 // CHECK-NEXT:     "line": 119,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 22
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1668,
+// CHECK-NEXT:      "offset": 1786,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1675,
+// CHECK-NEXT:      "offset": 1793,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 22
 // CHECK-NEXT:     }
@@ -5147,19 +5795,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1706,
+// CHECK-NEXT:     "offset": 1825,
 // CHECK-NEXT:     "line": 120,
 // CHECK-NEXT:     "col": 7,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1702,
+// CHECK-NEXT:      "offset": 1821,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1710,
+// CHECK-NEXT:      "offset": 1829,
 // CHECK-NEXT:      "col": 11,
 // CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     }
@@ -5169,18 +5817,25 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "hasInClassInitializer": true,
+// CHECK-NEXT:    "qualType": {
+// CHECK-NEXT:     "refId": "0x{{.*}}",
+// CHECK-NEXT:     "qualDetails": [
+// CHECK-NEXT:      "signed",
+// CHECK-NEXT:      "integer"
+// CHECK-NEXT:     ]
+// CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "IntegerLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 1710,
+// CHECK-NEXT:        "offset": 1829,
 // CHECK-NEXT:        "col": 11,
 // CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 1710,
+// CHECK-NEXT:        "offset": 1829,
 // CHECK-NEXT:        "col": 11,
 // CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
@@ -5200,19 +5855,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 1725,
+// CHECK-NEXT:   "offset": 1847,
 // CHECK-NEXT:   "line": 123,
 // CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "tokLen": 28
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 1718,
+// CHECK-NEXT:    "offset": 1840,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 1765,
+// CHECK-NEXT:    "offset": 1889,
 // CHECK-NEXT:    "line": 125,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -5272,19 +5927,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1725,
+// CHECK-NEXT:     "offset": 1847,
 // CHECK-NEXT:     "line": 123,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 28
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1718,
+// CHECK-NEXT:      "offset": 1840,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1725,
+// CHECK-NEXT:      "offset": 1847,
 // CHECK-NEXT:      "col": 8,
 // CHECK-NEXT:      "tokLen": 28
 // CHECK-NEXT:     }
@@ -5297,19 +5952,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 1762,
+// CHECK-NEXT:     "offset": 1885,
 // CHECK-NEXT:     "line": 124,
 // CHECK-NEXT:     "col": 7,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 1758,
+// CHECK-NEXT:      "offset": 1881,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 1762,
+// CHECK-NEXT:      "offset": 1885,
 // CHECK-NEXT:      "col": 7,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -5317,6 +5972,13 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "name": "i",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualType": {
+// CHECK-NEXT:     "refId": "0x{{.*}}",
+// CHECK-NEXT:     "qualDetails": [
+// CHECK-NEXT:      "signed",
+// CHECK-NEXT:      "integer"
+// CHECK-NEXT:     ]
 // CHECK-NEXT:    }
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]

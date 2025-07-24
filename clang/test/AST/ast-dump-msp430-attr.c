@@ -10,4 +10,4 @@
 
 __attribute__((interrupt(12))) void Test(void);
 // CHECK: FunctionDecl{{.*}}Test
-// CHECK-NEXT: MSP430InterruptAttr
+// CHECK-NEXT: attrDetails: MSP430InterruptAttr

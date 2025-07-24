@@ -19,8 +19,8 @@ using ns::S2;
 template<typename T>
 using A = S<T>;
 // CHECK:      TypeAliasDecl
-// CHECK-NEXT: `-ElaboratedType {{.*}} 'S<T>' sugar dependent
-// CHECK-NEXT:   `-TemplateSpecializationType {{.*}} 'S<T>' dependent
+// CHECK-NEXT: `-typeDetails: ElaboratedType {{.*}} 'S<T>' sugar dependent
+// CHECK-NEXT:   `-typeDetails: TemplateSpecializationType {{.*}} 'S<T>' dependent
 // CHECK-NEXT:     |-name: 'S':'ns::S' qualified
 // CHECK-NEXT:     | |-UsingShadowDecl {{.+}} ClassTemplate {{.+}} 'S'
 
@@ -28,14 +28,14 @@ using A = S<T>;
 template <template <typename> class T> class X {};
 using B = X<S>;
 // CHECK:      TypeAliasDecl
-// CHECK-NEXT: `-ElaboratedType {{.*}} 'X<S>' sugar
-// CHECK-NEXT:   `-TemplateSpecializationType {{.*}} 'X<S>' sugar
+// CHECK-NEXT: `-typeDetails: ElaboratedType {{.*}} 'X<S>' sugar
+// CHECK-NEXT:   `-typeDetails: TemplateSpecializationType {{.*}} 'X<S>' sugar
 // CHECK-NEXT:     |-name: 'X' qualified
 // CHECK-NEXT:     | `-ClassTemplateDecl {{.+}} X
 // CHECK-NEXT:     |-TemplateArgument template 'S':'ns::S' qualified
 // CHECK-NEXT:     | |-UsingShadowDecl {{.*}} implicit ClassTemplate {{.*}} 'S'
 // CHECK-NEXT:     | `-target: ClassTemplateDecl {{.*}} S
-// CHECK-NEXT:     `-RecordType {{.*}} 'X<ns::S>'
+// CHECK-NEXT:     `-typeDetails: RecordType {{.*}} 'X<ns::S>'
 // CHECK-NEXT:       `-ClassTemplateSpecialization {{.*}} 'X'
 
 // TemplateName in DeducedTemplateSpecializationType.
@@ -43,8 +43,8 @@ S DeducedTemplateSpecializationT(123);
 using C = decltype(DeducedTemplateSpecializationT);
 // CHECK:      DecltypeType {{.*}}
 // CHECK-NEXT:  |-DeclRefExpr {{.*}}
-// CHECK-NEXT:  `-ElaboratedType {{.*}} 'S<int>' sugar
-// CHECK-NEXT:    `-DeducedTemplateSpecializationType {{.*}} 'ns::S<int>' sugar
+// CHECK-NEXT:  `-typeDetails: ElaboratedType {{.*}} 'S<int>' sugar
+// CHECK-NEXT:    `-typeDetails: DeducedTemplateSpecializationType {{.*}} 'ns::S<int>' sugar
 // CHECK-NEXT:      |-name: 'S':'ns::S' qualified
 // CHECK-NEXT:      | |-UsingShadowDecl {{.+}} 'S'
 
@@ -52,7 +52,7 @@ S2 DeducedTemplateSpecializationT2(123);
 using D = decltype(DeducedTemplateSpecializationT2);
 // CHECK:      DecltypeType {{.*}}
 // CHECK-NEXT:  |-DeclRefExpr {{.*}}
-// CHECK-NEXT:  `-ElaboratedType {{.*}} 'S2<int>' sugar
-// CHECK-NEXT:    `-DeducedTemplateSpecializationType {{.*}} 'S2<int>' sugar
+// CHECK-NEXT:  `-typeDetails: ElaboratedType {{.*}} 'S2<int>' sugar
+// CHECK-NEXT:    `-typeDetails: DeducedTemplateSpecializationType {{.*}} 'S2<int>' sugar
 // CHECK-NEXT:      |-name: 'S2':'ns::S2' qualified
 // CHECK-NEXT:       | |-UsingShadowDecl {{.+}} ClassTemplate {{.+}} 'S2'

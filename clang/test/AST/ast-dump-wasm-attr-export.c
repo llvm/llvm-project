@@ -20,22 +20,22 @@ void yellow(void);
 
 // CHECK: |-FunctionDecl {{.+}} used red 'void (void)'
 // CHECK: | |-CompoundStmt {{.+}}
-// CHECK: | |-WebAssemblyExportNameAttr {{.+}} "export_red"
-// CHECK: | `-UsedAttr {{.+}} Implicit
+// CHECK: | |-attrDetails: WebAssemblyExportNameAttr {{.+}} "export_red"
+// CHECK: | `-attrDetails: UsedAttr {{.+}} Implicit
 // CHECK: |-FunctionDecl {{.+}} used orange 'void (void)'
 // CHECK: | |-CompoundStmt {{.+}}
-// CHECK: | |-WebAssemblyExportNameAttr {{.+}} "export_orange"
-// CHECK: | `-UsedAttr {{.+}} Implicit
+// CHECK: | |-attrDetails: WebAssemblyExportNameAttr {{.+}} "export_orange"
+// CHECK: | `-attrDetails: UsedAttr {{.+}} Implicit
 // CHECK: |-FunctionDecl {{.+}} used yellow 'void (void)'
 // CHECK: | |-CompoundStmt {{.+}}
-// CHECK: | |-WebAssemblyExportNameAttr {{.+}} "export_yellow"
-// CHECK: | `-UsedAttr {{.+}} Implicit
+// CHECK: | |-attrDetails: WebAssemblyExportNameAttr {{.+}} "export_yellow"
+// CHECK: | `-attrDetails: UsedAttr {{.+}} Implicit
 // CHECK: |-FunctionDecl {{.+}} used red 'void (void)'
-// CHECK: | |-UsedAttr {{.+}} Inherited Implicit
-// CHECK: | `-WebAssemblyExportNameAttr {{.+}} Inherited "export_red"
+// CHECK: | |-attrDetails: UsedAttr {{.+}} Inherited Implicit
+// CHECK: | `-attrDetails: WebAssemblyExportNameAttr {{.+}} Inherited "export_red"
 // CHECK: |-FunctionDecl {{.+}} used orange 'void (void)'
-// CHECK: | |-UsedAttr {{.+}} Inherited Implicit
-// CHECK: | `-WebAssemblyExportNameAttr {{.+}} Inherited "export_orange"
+// CHECK: | |-attrDetails: UsedAttr {{.+}} Inherited Implicit
+// CHECK: | `-attrDetails: WebAssemblyExportNameAttr {{.+}} Inherited "export_orange"
 // CHECK: `-FunctionDecl {{.+}} used yellow 'void (void)'
-// CHECK:   |-UsedAttr {{.+}} Inherited Implicit
-// CHECK:     `-WebAssemblyExportNameAttr {{.+}} Inherited "export_yellow"
+// CHECK:   |-attrDetails: UsedAttr {{.+}} Inherited Implicit
+// CHECK:     `-attrDetails: WebAssemblyExportNameAttr {{.+}} Inherited "export_yellow"

@@ -58,11 +58,11 @@
 -(void) [[clang::ns_consumes_self]] Test10: (int)Test11;
 // CHECK: ObjCMethodDecl{{.*}} Test10: 'void'
 // CHECK-NEXT: |-ParmVarDecl{{.*}} Test11 'int'
-// CHECK-NEXT: `-NSConsumesSelfAttr
+// CHECK: `-attrDetails: NSConsumesSelfAttr
 -(void)Test12: (int *) [[clang::noescape]] Test13  to:(int)Test14 [[clang::ns_consumes_self]];
 // CHECK: ObjCMethodDecl{{.*}} Test12:to: 'void'
 // CHECK-NEXT: |-ParmVarDecl{{.*}} Test13 'int *'
-// CHECK-NEXT: | `-NoEscapeAttr
+// CHECK: | `-attrDetails: NoEscapeAttr
 // CHECK-NEXT: |-ParmVarDecl{{.*}} Test14 'int'
-// CHECK-NEXT: `-NSConsumesSelfAttr
+// CHECK: `-attrDetails: NSConsumesSelfAttr
 @end

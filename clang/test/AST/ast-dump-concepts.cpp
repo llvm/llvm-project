@@ -21,14 +21,14 @@ struct Foo {
   // CHECK-NEXT: `-ConceptSpecializationExpr {{.*}} <col:13, col:31> 'bool' Concept {{.*}} 'binary_concept'
   // CHECK-NEXT:   |-ImplicitConceptSpecializationDecl {{.*}} <line:13:9> col:9
   // CHECK-NEXT:   | |-TemplateArgument type 'type-parameter-1-0'  
-  // CHECK-NEXT:   | | `-TemplateTypeParmType {{.*}} 'type-parameter-1-0' dependent {{.*}}depth 1 index 0
+  // CHECK-NEXT:   | | `-typeDetails: TemplateTypeParmType {{.*}} 'type-parameter-1-0' dependent {{.*}}depth 1 index 0
   // CHECK-NEXT:   | `-TemplateArgument type 'int'
-  // CHECK-NEXT:   |   `-BuiltinType {{.*}} 'int'
+  // CHECK-NEXT:   |   `-typeDetails: BuiltinType {{.*}} 'int'
   // CHECK-NEXT:   |-TemplateArgument {{.*}} type 'R'
-  // CHECK-NEXT:   | `-TemplateTypeParmType {{.*}} 'R'
+  // CHECK-NEXT:   | `-typeDetails: TemplateTypeParmType {{.*}} 'R'
   // CHECK-NEXT:   |   `-TemplateTypeParm {{.*}} 'R'
   // CHECK-NEXT:   `-TemplateArgument {{.*}} type 'int'
-  // CHECK-NEXT:     `-BuiltinType {{.*}} 'int'
+  // CHECK-NEXT:     `-typeDetails: BuiltinType {{.*}} 'int'
   template <binary_concept<int> R>
   Foo(R);
 
@@ -36,7 +36,7 @@ struct Foo {
   // CHECK-NEXT: `-ConceptSpecializationExpr {{.*}} <col:13> 'bool'
   // CHECK-NEXT:   |-ImplicitConceptSpecializationDecl {{.*}} <line:10:9> col:9
   // CHECK-NEXT:   | `-TemplateArgument type 'type-parameter-1-0'
-  // CHECK-NEXT:   |   `-TemplateTypeParmType {{.*}} 'type-parameter-1-0' dependent {{.*}}depth 1 index 0
+  // CHECK-NEXT:   |   `-typeDetails: TemplateTypeParmType {{.*}} 'type-parameter-1-0' dependent {{.*}}depth 1 index 0
   template <unary_concept R>
   Foo(R);
 
@@ -79,27 +79,27 @@ concept Foo = C<T>;
 
 // CHECK: TemplateTypeParmDecl {{.*}} Concept {{.*}} 'C' (UsingShadow {{.*}} 'C')
 // CHECK: QualType
-// CHECK-NEXT: `-BuiltinType {{.*}} 'bool'
+// CHECK-NEXT: `-typeDetails: BuiltinType {{.*}} 'bool'
 template <C T>
 constexpr bool FooVar = false;
 
 // CHECK: ConceptSpecializationExpr {{.*}} UsingShadow {{.*}} 'C'
 // CHECK: QualType
-// CHECK-NEXT: `-BuiltinType {{.*}} 'bool'
+// CHECK-NEXT: `-typeDetails: BuiltinType {{.*}} 'bool'
 template <typename T> requires C<T>
 constexpr bool FooVar2 = true;
 
 // CHECK: SimpleRequirement
 // CHECK-NEXT: `-ConceptSpecializationExpr {{.*}} UsingShadow {{.*}} 'C'
 // CHECK: QualType
-// CHECK-NEXT: `-BuiltinType {{.*}} 'bool'
+// CHECK-NEXT: `-typeDetails: BuiltinType {{.*}} 'bool'
 template <typename T> requires requires (T) { C<T>; }
 constexpr bool FooVar3 = true;
 
 // CHECK: NonTypeTemplateParmDecl
 // CHECK-NEXT: `-ConceptSpecializationExpr {{.*}} UsingShadow {{.*}} 'C'
 // CHECK: QualType
-// CHECK-NEXT: `-BuiltinType {{.*}} 'bool'
+// CHECK-NEXT: `-typeDetails: BuiltinType {{.*}} 'bool'
 template <C auto T>
 constexpr bool FooVar4 = bool(T());
 

@@ -63,62 +63,62 @@ int main(void) {
 // C-NEXT: | |-CompoundStmt [[ADDR_1:0x[a-z0-9]*]] <col:23, line:14:1>
 // C-NEXT: | | `-ReturnStmt [[ADDR_2:0x[a-z0-9]*]] <line:13:3, col:10>
 // C-NEXT: | |   `-IntegerLiteral [[ADDR_3:0x[a-z0-9]*]] <col:10> 'int' 1
-// C-NEXT: | |-OverloadableAttr [[ADDR_4:0x[a-z0-9]*]] <line:8:37>
-// C-NEXT: | `-OMPDeclareVariantAttr [[ADDR_5:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
+// C-NEXT: | |-attrDetails: OverloadableAttr [[ADDR_4:0x[a-z0-9]*]] <line:8:37>
+// C-NEXT: | `-attrDetails: OMPDeclareVariantAttr [[ADDR_5:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
 // C-NEXT: |   `-DeclRefExpr [[ADDR_6:0x[a-z0-9]*]] <col:22> 'int ({{.*}})' Function [[ADDR_7:0x[a-z0-9]*]] 'also_before[implementation={vendor(llvm)}]' 'int ({{.*}})'
 // C-NEXT: |-FunctionDecl [[ADDR_8:0x[a-z0-9]*]] <col:22, line:18:1> line:16:5 used also_before 'int (int)'
 // C-NEXT: | |-ParmVarDecl [[ADDR_9:0x[a-z0-9]*]] <col:17, col:21> col:21 i 'int'
-// C-NEXT: | |-CompoundStmt [[ADDR_10:0x[a-z0-9]*]] <col:24, line:18:1>
+// C:      | |-CompoundStmt [[ADDR_10:0x[a-z0-9]*]] <col:24, line:18:1>
 // C-NEXT: | | `-ReturnStmt [[ADDR_11:0x[a-z0-9]*]] <line:17:3, col:10>
 // C-NEXT: | |   `-IntegerLiteral [[ADDR_12:0x[a-z0-9]*]] <col:10> 'int' 2
-// C-NEXT: | |-OverloadableAttr [[ADDR_13:0x[a-z0-9]*]] <line:8:37>
-// C-NEXT: | `-OMPDeclareVariantAttr [[ADDR_14:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
+// C-NEXT: | |-attrDetails: OverloadableAttr [[ADDR_13:0x[a-z0-9]*]] <line:8:37>
+// C-NEXT: | `-attrDetails: OMPDeclareVariantAttr [[ADDR_14:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
 // C-NEXT: |   `-DeclRefExpr [[ADDR_15:0x[a-z0-9]*]] <col:22> 'int (int)' Function [[ADDR_16:0x[a-z0-9]*]] 'also_before[implementation={vendor(llvm)}]' 'int (int)'
 // C-NEXT: |-FunctionDecl [[ADDR_17:0x[a-z0-9]*]] <col:22, line:22:1> line:20:5 used also_before 'int (float)'
 // C-NEXT: | |-ParmVarDecl [[ADDR_18:0x[a-z0-9]*]] <col:17, col:23> col:23 f 'float'
-// C-NEXT: | |-CompoundStmt [[ADDR_19:0x[a-z0-9]*]] <col:26, line:22:1>
+// C:      | |-CompoundStmt [[ADDR_19:0x[a-z0-9]*]] <col:26, line:22:1>
 // C-NEXT: | | `-ReturnStmt [[ADDR_20:0x[a-z0-9]*]] <line:21:3, col:10>
 // C-NEXT: | |   `-IntegerLiteral [[ADDR_21:0x[a-z0-9]*]] <col:10> 'int' 0
-// C-NEXT: | `-OverloadableAttr [[ADDR_22:0x[a-z0-9]*]] <line:8:37>
+// C-NEXT: | `-attrDetails: OverloadableAttr [[ADDR_22:0x[a-z0-9]*]] <line:8:37>
 // C-NEXT: |-FunctionDecl [[ADDR_23:0x[a-z0-9]*]] <col:22, line:26:1> line:24:5 used also_before 'int (double)'
 // C-NEXT: | |-ParmVarDecl [[ADDR_24:0x[a-z0-9]*]] <col:17, col:24> col:24 d 'double'
-// C-NEXT: | |-CompoundStmt [[ADDR_25:0x[a-z0-9]*]] <col:27, line:26:1>
+// C:      | |-CompoundStmt [[ADDR_25:0x[a-z0-9]*]] <col:27, line:26:1>
 // C-NEXT: | | `-ReturnStmt [[ADDR_26:0x[a-z0-9]*]] <line:25:3, col:10>
 // C-NEXT: | |   `-IntegerLiteral [[ADDR_27:0x[a-z0-9]*]] <col:10> 'int' 3
-// C-NEXT: | |-OverloadableAttr [[ADDR_28:0x[a-z0-9]*]] <line:8:37>
-// C-NEXT: | `-OMPDeclareVariantAttr [[ADDR_29:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
+// C-NEXT: | |-attrDetails: OverloadableAttr [[ADDR_28:0x[a-z0-9]*]] <line:8:37>
+// C-NEXT: | `-attrDetails: OMPDeclareVariantAttr [[ADDR_29:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
 // C-NEXT: |   `-DeclRefExpr [[ADDR_30:0x[a-z0-9]*]] <col:22> 'int (double)' Function [[ADDR_31:0x[a-z0-9]*]] 'also_before[implementation={vendor(llvm)}]' 'int (double)'
 // C-NEXT: |-FunctionDecl [[ADDR_32:0x[a-z0-9]*]] <col:22, line:30:1> line:28:5 used also_before 'int (long)'
 // C-NEXT: | |-ParmVarDecl [[ADDR_33:0x[a-z0-9]*]] <col:17, col:22> col:22 l 'long'
-// C-NEXT: | |-CompoundStmt [[ADDR_34:0x[a-z0-9]*]] <col:25, line:30:1>
+// C:      | |-CompoundStmt [[ADDR_34:0x[a-z0-9]*]] <col:25, line:30:1>
 // C-NEXT: | | `-ReturnStmt [[ADDR_35:0x[a-z0-9]*]] <line:29:3, col:10>
 // C-NEXT: | |   `-IntegerLiteral [[ADDR_36:0x[a-z0-9]*]] <col:10> 'int' 4
-// C-NEXT: | |-OverloadableAttr [[ADDR_37:0x[a-z0-9]*]] <line:8:37>
-// C-NEXT: | `-OMPDeclareVariantAttr [[ADDR_38:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
+// C-NEXT: | |-attrDetails: OverloadableAttr [[ADDR_37:0x[a-z0-9]*]] <line:8:37>
+// C-NEXT: | `-attrDetails: OMPDeclareVariantAttr [[ADDR_38:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
 // C-NEXT: |   `-DeclRefExpr [[ADDR_39:0x[a-z0-9]*]] <col:22> 'int (long)' Function [[ADDR_40:0x[a-z0-9]*]] 'also_before[implementation={vendor(llvm)}]' 'int (long)'
 // C-NEXT: |-FunctionDecl [[ADDR_7]] <col:22, line:36:1> line:8:22 also_before[implementation={vendor(llvm)}] 'int ({{.*}})'
 // C-NEXT: | |-CompoundStmt [[ADDR_41:0x[a-z0-9]*]] <line:34:23, line:36:1>
 // C-NEXT: | | `-ReturnStmt [[ADDR_42:0x[a-z0-9]*]] <line:35:3, col:10>
 // C-NEXT: | |   `-IntegerLiteral [[ADDR_43:0x[a-z0-9]*]] <col:10> 'int' 0
-// C-NEXT: | `-OverloadableAttr [[ADDR_44:0x[a-z0-9]*]] <line:8:37>
+// C-NEXT: | `-attrDetails: OverloadableAttr [[ADDR_44:0x[a-z0-9]*]] <line:8:37>
 // C-NEXT: |-FunctionDecl [[ADDR_16]] <col:22, line:40:1> line:8:22 also_before[implementation={vendor(llvm)}] 'int (int)'
 // C-NEXT: | |-ParmVarDecl [[ADDR_45:0x[a-z0-9]*]] <line:38:17, col:21> col:21 i 'int'
-// C-NEXT: | |-CompoundStmt [[ADDR_46:0x[a-z0-9]*]] <col:24, line:40:1>
+// C:      | |-CompoundStmt [[ADDR_46:0x[a-z0-9]*]] <col:24, line:40:1>
 // C-NEXT: | | `-ReturnStmt [[ADDR_47:0x[a-z0-9]*]] <line:39:3, col:10>
 // C-NEXT: | |   `-IntegerLiteral [[ADDR_48:0x[a-z0-9]*]] <col:10> 'int' 0
-// C-NEXT: | `-OverloadableAttr [[ADDR_49:0x[a-z0-9]*]] <line:8:37>
+// C-NEXT: | `-attrDetails: OverloadableAttr [[ADDR_49:0x[a-z0-9]*]] <line:8:37>
 // C-NEXT: |-FunctionDecl [[ADDR_31]] <col:22, line:45:1> line:8:22 also_before[implementation={vendor(llvm)}] 'int (double)'
 // C-NEXT: | |-ParmVarDecl [[ADDR_50:0x[a-z0-9]*]] <line:43:17, col:24> col:24 d 'double'
-// C-NEXT: | |-CompoundStmt [[ADDR_51:0x[a-z0-9]*]] <col:27, line:45:1>
+// C:      | |-CompoundStmt [[ADDR_51:0x[a-z0-9]*]] <col:27, line:45:1>
 // C-NEXT: | | `-ReturnStmt [[ADDR_52:0x[a-z0-9]*]] <line:44:3, col:10>
 // C-NEXT: | |   `-IntegerLiteral [[ADDR_53:0x[a-z0-9]*]] <col:10> 'int' 0
-// C-NEXT: | `-OverloadableAttr [[ADDR_54:0x[a-z0-9]*]] <line:8:37>
+// C-NEXT: | `-attrDetails: OverloadableAttr [[ADDR_54:0x[a-z0-9]*]] <line:8:37>
 // C-NEXT: |-FunctionDecl [[ADDR_40]] <col:22, line:49:1> line:8:22 also_before[implementation={vendor(llvm)}] 'int (long)'
 // C-NEXT: | |-ParmVarDecl [[ADDR_55:0x[a-z0-9]*]] <line:47:17, col:22> col:22 l 'long'
-// C-NEXT: | |-CompoundStmt [[ADDR_56:0x[a-z0-9]*]] <col:25, line:49:1>
+// C:      | |-CompoundStmt [[ADDR_56:0x[a-z0-9]*]] <col:25, line:49:1>
 // C-NEXT: | | `-ReturnStmt [[ADDR_57:0x[a-z0-9]*]] <line:48:3, col:10>
 // C-NEXT: | |   `-IntegerLiteral [[ADDR_58:0x[a-z0-9]*]] <col:10> 'int' 0
-// C-NEXT: | `-OverloadableAttr [[ADDR_59:0x[a-z0-9]*]] <line:8:37>
+// C-NEXT: | `-attrDetails: OverloadableAttr [[ADDR_59:0x[a-z0-9]*]] <line:8:37>
 // C-NEXT: `-FunctionDecl [[ADDR_60:0x[a-z0-9]*]] <line:53:1, line:56:1> line:53:5 main 'int ({{.*}})'
 // C-NEXT:   `-CompoundStmt [[ADDR_61:0x[a-z0-9]*]] <col:16, line:56:1>
 // C-NEXT:     `-ReturnStmt [[ADDR_62:0x[a-z0-9]*]] <line:55:3, col:96>
@@ -169,33 +169,33 @@ int main(void) {
 // CXX-NEXT: | |-CompoundStmt [[ADDR_1:0x[a-z0-9]*]] <col:23, line:14:1>
 // CXX-NEXT: | | `-ReturnStmt [[ADDR_2:0x[a-z0-9]*]] <line:13:3, col:10>
 // CXX-NEXT: | |   `-IntegerLiteral [[ADDR_3:0x[a-z0-9]*]] <col:10> 'int' 1
-// CXX-NEXT: | `-OMPDeclareVariantAttr [[ADDR_4:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
+// CXX-NEXT: | `-attrDetails: OMPDeclareVariantAttr [[ADDR_4:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
 // CXX-NEXT: |   `-DeclRefExpr [[ADDR_5:0x[a-z0-9]*]] <line:34:1> 'int ({{.*}})' Function [[ADDR_6:0x[a-z0-9]*]] 'also_before[implementation={vendor(llvm)}]' 'int ({{.*}})'
 // CXX-NEXT: |-FunctionDecl [[ADDR_7:0x[a-z0-9]*]] <line:16:1, line:18:1> line:16:5 used also_before 'int (int)'
 // CXX-NEXT: | |-ParmVarDecl [[ADDR_8:0x[a-z0-9]*]] <col:17, col:21> col:21 i 'int'
-// CXX-NEXT: | |-CompoundStmt [[ADDR_9:0x[a-z0-9]*]] <col:24, line:18:1>
+// CXX: | |-CompoundStmt [[ADDR_9:0x[a-z0-9]*]] <col:24, line:18:1>
 // CXX-NEXT: | | `-ReturnStmt [[ADDR_10:0x[a-z0-9]*]] <line:17:3, col:10>
 // CXX-NEXT: | |   `-IntegerLiteral [[ADDR_11:0x[a-z0-9]*]] <col:10> 'int' 2
-// CXX-NEXT: | `-OMPDeclareVariantAttr [[ADDR_12:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
+// CXX-NEXT: | `-attrDetails: OMPDeclareVariantAttr [[ADDR_12:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
 // CXX-NEXT: |   `-DeclRefExpr [[ADDR_13:0x[a-z0-9]*]] <line:38:1> 'int (int)' Function [[ADDR_14:0x[a-z0-9]*]] 'also_before[implementation={vendor(llvm)}]' 'int (int)'
 // CXX-NEXT: |-FunctionDecl [[ADDR_15:0x[a-z0-9]*]] <line:20:1, line:22:1> line:20:5 used also_before 'int (float)'
 // CXX-NEXT: | |-ParmVarDecl [[ADDR_16:0x[a-z0-9]*]] <col:17, col:23> col:23 f 'float'
-// CXX-NEXT: | `-CompoundStmt [[ADDR_17:0x[a-z0-9]*]] <col:26, line:22:1>
+// CXX: | `-CompoundStmt [[ADDR_17:0x[a-z0-9]*]] <col:26, line:22:1>
 // CXX-NEXT: |   `-ReturnStmt [[ADDR_18:0x[a-z0-9]*]] <line:21:3, col:10>
 // CXX-NEXT: |     `-IntegerLiteral [[ADDR_19:0x[a-z0-9]*]] <col:10> 'int' 0
 // CXX-NEXT: |-FunctionDecl [[ADDR_20:0x[a-z0-9]*]] <line:24:1, line:26:1> line:24:5 used also_before 'int (double)'
 // CXX-NEXT: | |-ParmVarDecl [[ADDR_21:0x[a-z0-9]*]] <col:17, col:24> col:24 d 'double'
-// CXX-NEXT: | |-CompoundStmt [[ADDR_22:0x[a-z0-9]*]] <col:27, line:26:1>
+// CXX: | |-CompoundStmt [[ADDR_22:0x[a-z0-9]*]] <col:27, line:26:1>
 // CXX-NEXT: | | `-ReturnStmt [[ADDR_23:0x[a-z0-9]*]] <line:25:3, col:10>
 // CXX-NEXT: | |   `-IntegerLiteral [[ADDR_24:0x[a-z0-9]*]] <col:10> 'int' 3
-// CXX-NEXT: | `-OMPDeclareVariantAttr [[ADDR_25:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
+// CXX-NEXT: | `-attrDetails: OMPDeclareVariantAttr [[ADDR_25:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
 // CXX-NEXT: |   `-DeclRefExpr [[ADDR_26:0x[a-z0-9]*]] <line:43:1> 'int (double)' Function [[ADDR_27:0x[a-z0-9]*]] 'also_before[implementation={vendor(llvm)}]' 'int (double)'
 // CXX-NEXT: |-FunctionDecl [[ADDR_28:0x[a-z0-9]*]] <line:28:1, line:30:1> line:28:5 used also_before 'int (long)'
 // CXX-NEXT: | |-ParmVarDecl [[ADDR_29:0x[a-z0-9]*]] <col:17, col:22> col:22 l 'long'
-// CXX-NEXT: | |-CompoundStmt [[ADDR_30:0x[a-z0-9]*]] <col:25, line:30:1>
+// CXX: | |-CompoundStmt [[ADDR_30:0x[a-z0-9]*]] <col:25, line:30:1>
 // CXX-NEXT: | | `-ReturnStmt [[ADDR_31:0x[a-z0-9]*]] <line:29:3, col:10>
 // CXX-NEXT: | |   `-IntegerLiteral [[ADDR_32:0x[a-z0-9]*]] <col:10> 'int' 4
-// CXX-NEXT: | `-OMPDeclareVariantAttr [[ADDR_33:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
+// CXX-NEXT: | `-attrDetails: OMPDeclareVariantAttr [[ADDR_33:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
 // CXX-NEXT: |   `-DeclRefExpr [[ADDR_34:0x[a-z0-9]*]] <line:47:1> 'int (long)' Function [[ADDR_35:0x[a-z0-9]*]] 'also_before[implementation={vendor(llvm)}]' 'int (long)'
 // CXX-NEXT: |-FunctionDecl [[ADDR_6]] <line:34:1, line:36:1> line:34:1 also_before[implementation={vendor(llvm)}] 'int ({{.*}})'
 // CXX-NEXT: | `-CompoundStmt [[ADDR_36:0x[a-z0-9]*]] <col:23, line:36:1>
@@ -203,17 +203,17 @@ int main(void) {
 // CXX-NEXT: |     `-IntegerLiteral [[ADDR_38:0x[a-z0-9]*]] <col:10> 'int' 0
 // CXX-NEXT: |-FunctionDecl [[ADDR_14]] <line:38:1, line:40:1> line:38:1 also_before[implementation={vendor(llvm)}] 'int (int)'
 // CXX-NEXT: | |-ParmVarDecl [[ADDR_39:0x[a-z0-9]*]] <col:17, col:21> col:21 i 'int'
-// CXX-NEXT: | `-CompoundStmt [[ADDR_40:0x[a-z0-9]*]] <col:24, line:40:1>
+// CXX: | `-CompoundStmt [[ADDR_40:0x[a-z0-9]*]] <col:24, line:40:1>
 // CXX-NEXT: |   `-ReturnStmt [[ADDR_41:0x[a-z0-9]*]] <line:39:3, col:10>
 // CXX-NEXT: |     `-IntegerLiteral [[ADDR_42:0x[a-z0-9]*]] <col:10> 'int' 0
 // CXX-NEXT: |-FunctionDecl [[ADDR_27]] <line:43:1, line:45:1> line:43:1 also_before[implementation={vendor(llvm)}] 'int (double)'
 // CXX-NEXT: | |-ParmVarDecl [[ADDR_43:0x[a-z0-9]*]] <col:17, col:24> col:24 d 'double'
-// CXX-NEXT: | `-CompoundStmt [[ADDR_44:0x[a-z0-9]*]] <col:27, line:45:1>
+// CXX: | `-CompoundStmt [[ADDR_44:0x[a-z0-9]*]] <col:27, line:45:1>
 // CXX-NEXT: |   `-ReturnStmt [[ADDR_45:0x[a-z0-9]*]] <line:44:3, col:10>
 // CXX-NEXT: |     `-IntegerLiteral [[ADDR_46:0x[a-z0-9]*]] <col:10> 'int' 0
 // CXX-NEXT: |-FunctionDecl [[ADDR_35]] <line:47:1, line:49:1> line:47:1 also_before[implementation={vendor(llvm)}] 'int (long)'
 // CXX-NEXT: | |-ParmVarDecl [[ADDR_47:0x[a-z0-9]*]] <col:17, col:22> col:22 l 'long'
-// CXX-NEXT: | `-CompoundStmt [[ADDR_48:0x[a-z0-9]*]] <col:25, line:49:1>
+// CXX: | `-CompoundStmt [[ADDR_48:0x[a-z0-9]*]] <col:25, line:49:1>
 // CXX-NEXT: |   `-ReturnStmt [[ADDR_49:0x[a-z0-9]*]] <line:48:3, col:10>
 // CXX-NEXT: |     `-IntegerLiteral [[ADDR_50:0x[a-z0-9]*]] <col:10> 'int' 0
 // CXX-NEXT: `-FunctionDecl [[ADDR_51:0x[a-z0-9]*]] <line:53:1, line:56:1> line:53:5 main 'int ({{.*}})'

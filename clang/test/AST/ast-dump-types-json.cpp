@@ -31,7 +31,7 @@ using ::TestUsingShadowDeclType;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 204,
+// CHECK-NEXT:   "offset": 215,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 12,
 // CHECK-NEXT:   "col": 18,
@@ -39,12 +39,12 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 187,
+// CHECK-NEXT:    "offset": 198,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 204,
+// CHECK-NEXT:    "offset": 215,
 // CHECK-NEXT:    "col": 18,
 // CHECK-NEXT:    "tokLen": 19
 // CHECK-NEXT:   }
@@ -54,14 +54,17 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:   "desugaredQualType": "T",
 // CHECK-NEXT:   "qualType": "struct T"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:  "typeDetails": [
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ElaboratedType",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "struct T"
 // CHECK-NEXT:    },
-// CHECK-NEXT:    "inner": [
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "struct"
+// CHECK-NEXT:    ],
+// CHECK-NEXT:    "typeDetails": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "RecordType",
@@ -72,7 +75,10 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:       "id": "0x{{.*}}",
 // CHECK-NEXT:       "kind": "CXXRecordDecl",
 // CHECK-NEXT:       "name": "T"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "struct"
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   }
@@ -83,7 +89,7 @@ using ::TestUsingShadowDeclType;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 239,
+// CHECK-NEXT:   "offset": 251,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 13,
 // CHECK-NEXT:   "col": 15,
@@ -91,12 +97,12 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 225,
+// CHECK-NEXT:    "offset": 237,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 239,
+// CHECK-NEXT:    "offset": 251,
 // CHECK-NEXT:    "col": 15,
 // CHECK-NEXT:    "tokLen": 19
 // CHECK-NEXT:   }
@@ -105,7 +111,7 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "NS::S"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:  "typeDetails": [
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ElaboratedType",
@@ -113,7 +119,10 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:     "qualType": "NS::S"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "qualifier": "NS::",
-// CHECK-NEXT:    "inner": [
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "struct"
+// CHECK-NEXT:    ],
+// CHECK-NEXT:    "typeDetails": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "RecordType",
@@ -124,7 +133,10 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:       "id": "0x{{.*}}",
 // CHECK-NEXT:       "kind": "CXXRecordDecl",
 // CHECK-NEXT:       "name": "S"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "struct"
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   }
@@ -135,7 +147,7 @@ using ::TestUsingShadowDeclType;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 319,
+// CHECK-NEXT:   "offset": 334,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 16,
 // CHECK-NEXT:   "col": 22,
@@ -143,12 +155,12 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 298,
+// CHECK-NEXT:    "offset": 313,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 319,
+// CHECK-NEXT:    "offset": 334,
 // CHECK-NEXT:    "col": 22,
 // CHECK-NEXT:    "tokLen": 22
 // CHECK-NEXT:   }
@@ -157,14 +169,18 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "CDECL void (*)()"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:  "typeDetails": [
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "PointerType",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "CDECL void (*)()"
 // CHECK-NEXT:    },
-// CHECK-NEXT:    "inner": [
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "ptr",
+// CHECK-NEXT:     "func_ptr"
+// CHECK-NEXT:    ],
+// CHECK-NEXT:    "typeDetails": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "MacroQualifiedType",
@@ -172,21 +188,24 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:       "qualType": "CDECL void ()"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "macroName": "CDECL",
-// CHECK-NEXT:      "inner": [
+// CHECK-NEXT:      "qualDetails": [],
+// CHECK-NEXT:      "typeDetails": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:        "id": "0x{{.*}}",
 // CHECK-NEXT:        "kind": "AttributedType",
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "void () __attribute__((cdecl))"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "inner": [
+// CHECK-NEXT:        "qualDetails": [],
+// CHECK-NEXT:        "typeDetails": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
 // CHECK-NEXT:          "kind": "ParenType",
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "void ()"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "inner": [
+// CHECK-NEXT:          "qualDetails": [],
+// CHECK-NEXT:          "typeDetails": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:            "id": "0x{{.*}}",
 // CHECK-NEXT:            "kind": "FunctionProtoType",
@@ -194,12 +213,27 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:             "qualType": "void ()"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "cc": "cdecl",
-// CHECK-NEXT:            "inner": [
+// CHECK-NEXT:            "qualDetails": [],
+// CHECK-NEXT:            "typeDetails": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:              "id": "0x{{.*}}",
 // CHECK-NEXT:              "kind": "BuiltinType",
 // CHECK-NEXT:              "type": {
 // CHECK-NEXT:               "qualType": "void"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "qualDetails": [
+// CHECK-NEXT:               "void"
+// CHECK-NEXT:              ]
+// CHECK-NEXT:             },
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "cc": "cdecl",
+// CHECK-NEXT:              "returnTypeDetail": {
+// CHECK-NEXT:               "qualType": {
+// CHECK-NEXT:                "refId": "0x{{.*}}",
+// CHECK-NEXT:                "qualDetails": [
+// CHECK-NEXT:                 "void"
+// CHECK-NEXT:                ]
+// CHECK-NEXT:               }
 // CHECK-NEXT:              }
 // CHECK-NEXT:             }
 // CHECK-NEXT:            ]
@@ -219,7 +253,7 @@ using ::TestUsingShadowDeclType;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 366,
+// CHECK-NEXT:   "offset": 383,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 18,
 // CHECK-NEXT:   "col": 20,
@@ -227,12 +261,12 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 347,
+// CHECK-NEXT:    "offset": 364,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 397,
+// CHECK-NEXT:    "offset": 414,
 // CHECK-NEXT:    "col": 51,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -241,7 +275,7 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "void (T::*)()"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:  "typeDetails": [
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "MemberPointerType",
@@ -249,7 +283,8 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:     "qualType": "void (T::*)()"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isFunction": true,
-// CHECK-NEXT:    "inner": [
+// CHECK-NEXT:    "qualDetails": [],
+// CHECK-NEXT:    "typeDetails": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "RecordType",
@@ -260,7 +295,10 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:       "id": "0x{{.*}}",
 // CHECK-NEXT:       "kind": "CXXRecordDecl",
 // CHECK-NEXT:       "name": "T"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "struct"
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
@@ -268,7 +306,8 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "void ()"
 // CHECK-NEXT:      },
-// CHECK-NEXT:      "inner": [
+// CHECK-NEXT:      "qualDetails": [],
+// CHECK-NEXT:      "typeDetails": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:        "id": "0x{{.*}}",
 // CHECK-NEXT:        "kind": "FunctionProtoType",
@@ -276,12 +315,27 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:         "qualType": "void ()"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "cc": "cdecl",
-// CHECK-NEXT:        "inner": [
+// CHECK-NEXT:        "qualDetails": [],
+// CHECK-NEXT:        "typeDetails": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
 // CHECK-NEXT:          "kind": "BuiltinType",
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "void"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "qualDetails": [
+// CHECK-NEXT:           "void"
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         },
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "cc": "cdecl",
+// CHECK-NEXT:          "returnTypeDetail": {
+// CHECK-NEXT:           "qualType": {
+// CHECK-NEXT:            "refId": "0x{{.*}}",
+// CHECK-NEXT:            "qualDetails": [
+// CHECK-NEXT:             "void"
+// CHECK-NEXT:            ]
+// CHECK-NEXT:           }
 // CHECK-NEXT:          }
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]
@@ -297,7 +351,7 @@ using ::TestUsingShadowDeclType;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 416,
+// CHECK-NEXT:   "offset": 434,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 19,
 // CHECK-NEXT:   "col": 17,
@@ -305,12 +359,12 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 400,
+// CHECK-NEXT:    "offset": 418,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 416,
+// CHECK-NEXT:    "offset": 434,
 // CHECK-NEXT:    "col": 17,
 // CHECK-NEXT:    "tokLen": 25
 // CHECK-NEXT:   }
@@ -319,7 +373,7 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int T::*"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:  "typeDetails": [
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "MemberPointerType",
@@ -327,7 +381,8 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:     "qualType": "int T::*"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isData": true,
-// CHECK-NEXT:    "inner": [
+// CHECK-NEXT:    "qualDetails": [],
+// CHECK-NEXT:    "typeDetails": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "RecordType",
@@ -338,14 +393,21 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:       "id": "0x{{.*}}",
 // CHECK-NEXT:       "kind": "CXXRecordDecl",
 // CHECK-NEXT:       "name": "T"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "struct"
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "BuiltinType",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   }
@@ -356,7 +418,7 @@ using ::TestUsingShadowDeclType;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 456,
+// CHECK-NEXT:   "offset": 476,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 21,
 // CHECK-NEXT:   "col": 13,
@@ -364,12 +426,12 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 444,
+// CHECK-NEXT:    "offset": 464,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 490,
+// CHECK-NEXT:    "offset": 510,
 // CHECK-NEXT:    "col": 47,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -378,7 +440,7 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int (const char *)"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:  "typeDetails": [
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionProtoType",
@@ -386,12 +448,29 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:     "qualType": "int (const char *)"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "cc": "cdecl",
-// CHECK-NEXT:    "inner": [
+// CHECK-NEXT:    "qualDetails": [],
+// CHECK-NEXT:    "typeDetails": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "BuiltinType",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     },
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "cc": "cdecl",
+// CHECK-NEXT:      "returnTypeDetail": {
+// CHECK-NEXT:       "qualType": {
+// CHECK-NEXT:        "refId": "0x{{.*}}",
+// CHECK-NEXT:        "qualDetails": [
+// CHECK-NEXT:         "signed",
+// CHECK-NEXT:         "integer"
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -400,21 +479,34 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "const char *"
 // CHECK-NEXT:      },
-// CHECK-NEXT:      "inner": [
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "ptr"
+// CHECK-NEXT:      ],
+// CHECK-NEXT:      "qualTypeDetail": [
 // CHECK-NEXT:       {
-// CHECK-NEXT:        "id": "0x{{.*}}",
-// CHECK-NEXT:        "kind": "QualType",
-// CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "qualType": "const char"
+// CHECK-NEXT:        "qualType": {
+// CHECK-NEXT:         "id": "0x{{.*}}",
+// CHECK-NEXT:         "kind": "QualType",
+// CHECK-NEXT:         "type": {
+// CHECK-NEXT:          "qualType": "const char"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "qualifiers": "const",
+// CHECK-NEXT:         "qualDetails": [
+// CHECK-NEXT:          "signed",
+// CHECK-NEXT:          "integer"
+// CHECK-NEXT:         ]
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "qualifiers": "const",
-// CHECK-NEXT:        "inner": [
+// CHECK-NEXT:        "typeDetails": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
 // CHECK-NEXT:          "kind": "BuiltinType",
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "char"
-// CHECK-NEXT:          }
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "qualDetails": [
+// CHECK-NEXT:           "signed",
+// CHECK-NEXT:           "integer"
+// CHECK-NEXT:          ]
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:       }
@@ -429,7 +521,7 @@ using ::TestUsingShadowDeclType;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 506,
+// CHECK-NEXT:   "offset": 528,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 23,
 // CHECK-NEXT:   "col": 13,
@@ -437,12 +529,12 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 494,
+// CHECK-NEXT:    "offset": 516,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 506,
+// CHECK-NEXT:    "offset": 528,
 // CHECK-NEXT:    "col": 13,
 // CHECK-NEXT:    "tokLen": 23
 // CHECK-NEXT:   }
@@ -451,13 +543,17 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:  "typeDetails": [
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "BuiltinType",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
@@ -466,7 +562,7 @@ using ::TestUsingShadowDeclType;
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "NamespaceDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 541,
+// CHECK-NEXT:   "offset": 564,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 24,
 // CHECK-NEXT:   "col": 11,
@@ -474,12 +570,12 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 531,
+// CHECK-NEXT:    "offset": 554,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 9
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 609,
+// CHECK-NEXT:    "offset": 634,
 // CHECK-NEXT:    "line": 26,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -491,19 +587,19 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "UsingDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 584,
+// CHECK-NEXT:     "offset": 608,
 // CHECK-NEXT:     "line": 25,
 // CHECK-NEXT:     "col": 9,
 // CHECK-NEXT:     "tokLen": 23
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 576,
+// CHECK-NEXT:      "offset": 600,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 584,
+// CHECK-NEXT:      "offset": 608,
 // CHECK-NEXT:      "col": 9,
 // CHECK-NEXT:      "tokLen": 23
 // CHECK-NEXT:     }
@@ -514,18 +610,18 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "UsingShadowDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 584,
+// CHECK-NEXT:     "offset": 608,
 // CHECK-NEXT:     "col": 9,
 // CHECK-NEXT:     "tokLen": 23
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 584,
+// CHECK-NEXT:      "offset": 608,
 // CHECK-NEXT:      "col": 9,
 // CHECK-NEXT:      "tokLen": 23
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 584,
+// CHECK-NEXT:      "offset": 608,
 // CHECK-NEXT:      "col": 9,
 // CHECK-NEXT:      "tokLen": 23
 // CHECK-NEXT:     }
@@ -536,7 +632,7 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:     "kind": "TypedefDecl",
 // CHECK-NEXT:     "name": "TestUsingShadowDeclType"
 // CHECK-NEXT:    },
-// CHECK-NEXT:    "inner": [
+// CHECK-NEXT:    "typeDetails": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x0"
 // CHECK-NEXT:     }

@@ -37,9 +37,9 @@ int test() {
 // CHECK-NEXT: | |     `-IntegerLiteral [[ADDR_6:0x[a-z0-9]*]] <col:10> 'int' 0
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_7:0x[a-z0-9]*]] <line:6:1, line:8:1> line:6:5 used template_number_mismatch_1 'int ({{.*}})'
 // CHECK-NEXT: |   |-TemplateArgument type 'int'
-// CHECK-NEXT: |   | `-BuiltinType [[ADDR_8:0x[a-z0-9]*]] 'int'
+// CHECK-NEXT: |   | `-typeDetails: BuiltinType [[ADDR_8:0x[a-z0-9]*]] 'int'
 // CHECK-NEXT: |   |-TemplateArgument type 'float'
-// CHECK-NEXT: |   | `-BuiltinType [[ADDR_9:0x[a-z0-9]*]] 'float'
+// CHECK-NEXT: |   | `-typeDetails: BuiltinType [[ADDR_9:0x[a-z0-9]*]] 'float'
 // CHECK-NEXT: |   `-CompoundStmt [[ADDR_10:0x[a-z0-9]*]] <col:34, line:8:1>
 // CHECK-NEXT: |     `-ReturnStmt [[ADDR_11:0x[a-z0-9]*]] <line:7:3, col:10>
 // CHECK-NEXT: |       `-IntegerLiteral [[ADDR_6]] <col:10> 'int' 0
@@ -53,7 +53,7 @@ int test() {
 // CHECK-NEXT: |-FunctionTemplateDecl [[ADDR_19:0x[a-z0-9]*]] <line:16:1, line:17:32> col:5 implicit template_number_mismatch_1
 // CHECK-NEXT: | |-TemplateTypeParmDecl [[ADDR_20:0x[a-z0-9]*]] <line:16:11, col:20> col:20 typename depth 0 index 0 Q
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_21:0x[a-z0-9]*]] <line:17:1, col:32> col:5 template_number_mismatch_1 'int ({{.*}})'
-// CHECK-NEXT: |   `-OMPDeclareVariantAttr [[ADDR_22:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(allow_templates)}
+// CHECK-NEXT: |   `-attrDetails: OMPDeclareVariantAttr [[ADDR_22:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(allow_templates)}
 // CHECK-NEXT: |     `-DeclRefExpr [[ADDR_23:0x[a-z0-9]*]] <col:1> 'int ({{.*}})' {{.*}}Function [[ADDR_24:0x[a-z0-9]*]] 'template_number_mismatch_1[implementation={extension(allow_templates)}]' 'int ({{.*}})'
 // CHECK-NEXT: |-FunctionTemplateDecl [[ADDR_25:0x[a-z0-9]*]] <line:16:1, line:19:1> line:17:1 template_number_mismatch_1[implementation={extension(allow_templates)}]
 // CHECK-NEXT: | |-TemplateTypeParmDecl [[ADDR_20]] <line:16:11, col:20> col:20 typename depth 0 index 0 Q
@@ -64,12 +64,12 @@ int test() {
 // CHECK-NEXT: |-FunctionTemplateDecl [[ADDR_29:0x[a-z0-9]*]] <line:20:1, line:21:32> col:5 implicit template_number_mismatch_2
 // CHECK-NEXT: | |-TemplateTypeParmDecl [[ADDR_30:0x[a-z0-9]*]] <line:20:11, col:20> col:20 typename depth 0 index 0 Q
 // CHECK-NEXT: | |-FunctionDecl [[ADDR_31:0x[a-z0-9]*]] <line:21:1, col:32> col:5 template_number_mismatch_2 'int ({{.*}})'
-// CHECK-NEXT: | | `-OMPDeclareVariantAttr [[ADDR_32:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(allow_templates)}
+// CHECK-NEXT: | | `-attrDetails: OMPDeclareVariantAttr [[ADDR_32:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(allow_templates)}
 // CHECK-NEXT: | |   `-DeclRefExpr [[ADDR_33:0x[a-z0-9]*]] <col:1> 'int ({{.*}})' {{.*}}Function [[ADDR_34:0x[a-z0-9]*]] 'template_number_mismatch_2[implementation={extension(allow_templates)}]' 'int ({{.*}})'
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_35:0x[a-z0-9]*]] <col:1, col:32> col:5 used template_number_mismatch_2 'int ({{.*}})'
 // CHECK-NEXT: |   |-TemplateArgument type 'double'
-// CHECK-NEXT: |   | `-BuiltinType [[ADDR_36:0x[a-z0-9]*]] 'double'
-// CHECK-NEXT: |   `-OMPDeclareVariantAttr [[ADDR_37:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(allow_templates)}
+// CHECK-NEXT: |   | `-typeDetails: BuiltinType [[ADDR_36:0x[a-z0-9]*]] 'double'
+// CHECK-NEXT: |   `-attrDetails: OMPDeclareVariantAttr [[ADDR_37:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(allow_templates)}
 // CHECK-NEXT: |     `-DeclRefExpr [[ADDR_38:0x[a-z0-9]*]] <col:1> 'int ({{.*}})' {{.*}}Function [[ADDR_39:0x[a-z0-9]*]] 'template_number_mismatch_2[implementation={extension(allow_templates)}]' 'int ({{.*}})'
 // CHECK-NEXT: |-FunctionTemplateDecl [[ADDR_40:0x[a-z0-9]*]] <line:20:1, line:23:1> line:21:1 template_number_mismatch_2[implementation={extension(allow_templates)}]
 // CHECK-NEXT: | |-TemplateTypeParmDecl [[ADDR_30]] <line:20:11, col:20> col:20 typename depth 0 index 0 Q
@@ -79,7 +79,7 @@ int test() {
 // CHECK-NEXT: | |     `-IntegerLiteral [[ADDR_43:0x[a-z0-9]*]] <col:10> 'int' 0
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_39]] <line:21:1, line:23:1> line:21:1 template_number_mismatch_2[implementation={extension(allow_templates)}] 'int ({{.*}})'
 // CHECK-NEXT: |   |-TemplateArgument type 'double'
-// CHECK-NEXT: |   | `-BuiltinType [[ADDR_36]] 'double'
+// CHECK-NEXT: |   | `-typeDetails: BuiltinType [[ADDR_36]] 'double'
 // CHECK-NEXT: |   `-CompoundStmt [[ADDR_44:0x[a-z0-9]*]] <col:34, line:23:1>
 // CHECK-NEXT: |     `-ReturnStmt [[ADDR_45:0x[a-z0-9]*]] <line:22:3, col:10>
 // CHECK-NEXT: |       `-IntegerLiteral [[ADDR_43]] <col:10> 'int' 0

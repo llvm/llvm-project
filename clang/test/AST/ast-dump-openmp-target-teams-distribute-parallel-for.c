@@ -36,1925 +36,3684 @@ void test_five(int x, int y, int z) {
 }
 
 // CHECK: TranslationUnitDecl {{.*}} <<invalid sloc>> <invalid sloc>
-// CHECK: |-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:3:1, line:7:1> line:3:6 test_one 'void (int)'
-// CHECK-NEXT: | |-ParmVarDecl {{.*}} <col:15, col:19> col:19 used x 'int'
-// CHECK-NEXT: | `-CompoundStmt {{.*}} <col:22, line:7:1>
-// CHECK-NEXT: |   `-OMPTargetTeamsDistributeParallelForDirective {{.*}} <line:4:1, col:49>
+// CHECK-NEXT: |-TypedefDecl {{.*}} <<invalid sloc>> <invalid sloc> implicit __int128_t '__int128'
+// CHECK-NEXT: | `-typeDetails: BuiltinType {{.*}} '__int128'
+// CHECK-NEXT: |-TypedefDecl {{.*}} <<invalid sloc>> <invalid sloc> implicit __uint128_t 'unsigned __int128'
+// CHECK-NEXT: | `-typeDetails: BuiltinType {{.*}} 'unsigned __int128'
+// CHECK-NEXT: |-TypedefDecl {{.*}} <<invalid sloc>> <invalid sloc> implicit __NSConstantString 'struct __NSConstantString_tag'
+// CHECK-NEXT: | `-typeDetails: RecordType {{.*}} 'struct __NSConstantString_tag'
+// CHECK-NEXT: |   `-Record {{.*}} '__NSConstantString_tag'
+// CHECK-NEXT: |-TypedefDecl {{.*}} <<invalid sloc>> <invalid sloc> implicit __builtin_ms_va_list 'char *'
+// CHECK-NEXT: | `-typeDetails: PointerType {{.*}} 'char *'
+// CHECK-NEXT: |   `-typeDetails: BuiltinType {{.*}} 'char'
+// CHECK-NEXT: |-TypedefDecl {{.*}} <<invalid sloc>> <invalid sloc> implicit __builtin_va_list 'struct __va_list_tag[1]'
+// CHECK-NEXT: | `-typeDetails: ConstantArrayType {{.*}} 'struct __va_list_tag[1]' 1 
+// CHECK-NEXT: |   `-typeDetails: RecordType {{.*}} 'struct __va_list_tag'
+// CHECK-NEXT: |     `-Record {{.*}} '__va_list_tag'
+// CHECK-NEXT: |-FunctionDecl {{.*}} test_one 'void (int)'
+// CHECK-NEXT: | |-ParmVarDecl {{.*}} used x 'int'
+// CHECK-NEXT: | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: | `-CompoundStmt {{.*}} 
+// CHECK-NEXT: |   `-OMPTargetTeamsDistributeParallelForDirective {{.*}} 
 // CHECK-NEXT: |     |-OMPFirstprivateClause {{.*}} <<invalid sloc>> <implicit>
-// CHECK-NEXT: |     | `-DeclRefExpr {{.*}} <line:5:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |     `-CapturedStmt {{.*}} <col:3, line:6:5>
+// CHECK-NEXT: |     | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |     `-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | |-CapturedStmt {{.*}} <line:5:3, line:6:5>
+// CHECK-NEXT: |       | |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | | |-CapturedStmt {{.*}} <line:5:3, line:6:5>
+// CHECK-NEXT: |       | | | |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       | | | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | | | | |-CapturedStmt {{.*}} <line:5:3, line:6:5>
+// CHECK-NEXT: |       | | | | | |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       | | | | | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | | | | | | |-ForStmt {{.*}} <line:5:3, line:6:5>
-// CHECK-NEXT: |       | | | | | | | | |-DeclStmt {{.*}} <line:5:8, col:17>
-// CHECK-NEXT: |       | | | | | | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | | | | | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       | | | | | | | |-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | | | | | | | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | | | | | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | | | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | | | | | | | |-<<<NULL>>>
-// CHECK-NEXT: |       | | | | | | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       | | | | | | | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | | | | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | | | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | | | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | | | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       | | | | | | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | | | | | `-NullStmt {{.*}} <line:6:5>
-// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
-// CHECK-NEXT: |       | | | | | | | `-VarDecl {{.*}} <line:5:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | | | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | | | | | `-DeclRefExpr {{.*}} <col:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
-// CHECK-NEXT: |       | | | | | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       | | | | | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       | | | | | | `-FieldDecl {{.*}} <line:5:3> col:3 implicit 'int'
-// CHECK-NEXT: |       | | | | | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       | | | | | | | | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | | | | | | | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | | | | | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | | | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | | | | | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | | | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | | | | | `-NullStmt {{.*}} 
+// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | | | | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | | | | | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | | | | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | | | | | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
+// CHECK-NEXT: |       | | | | | | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *'
+// CHECK-NEXT: |       | | | | | | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       | | | | | | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | | | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       | | | | | | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
+// CHECK-NEXT: |       | | | | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *'
+// CHECK-NEXT: |       | | | | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       | | | | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       | | | | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | | |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       | | | | | | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       | | | | | | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | | | | |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       | | | | | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | | | |   |-ForStmt {{.*}} <col:3, line:6:5>
-// CHECK-NEXT: |       | | | | |   | |-DeclStmt {{.*}} <line:5:8, col:17>
-// CHECK-NEXT: |       | | | | |   | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | | | |   | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       | | | | |   |-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | | | |   | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | | | |   | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | |   | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | |   | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | | | |   | |-<<<NULL>>>
-// CHECK-NEXT: |       | | | | |   | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       | | | | |   | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | |   | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | |   | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | |   | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | |   | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       | | | | |   | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | |   | `-NullStmt {{.*}} <line:6:5>
-// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
-// CHECK-NEXT: |       | | | | |   `-VarDecl {{.*}} <line:5:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | | | |     `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | | | `-DeclRefExpr {{.*}} <col:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
-// CHECK-NEXT: |       | | | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       | | | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       | | | | `-FieldDecl {{.*}} <line:5:3> col:3 implicit 'int'
-// CHECK-NEXT: |       | | | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       | | | | |   | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | | | |   | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | |   | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | |   | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | |   | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | |   | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | |   | `-NullStmt {{.*}} 
+// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | | |   | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | | | |   |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | | | |   |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | | |   | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | | | |   |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | | | |   |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
+// CHECK-NEXT: |       | | | | |   | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | |   | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *'
+// CHECK-NEXT: |       | | | | |   | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       | | | | |   | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | |   | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       | | | | |   |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | |   `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | |     |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
+// CHECK-NEXT: |       | | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *'
+// CHECK-NEXT: |       | | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       | | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       | | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | | |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       | | | | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       | | | | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | | |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       | | | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | |   |-CapturedStmt {{.*}} <col:3, line:6:5>
+// CHECK-NEXT: |       | | |   |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       | | |   | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | |   | | |-ForStmt {{.*}} <line:5:3, line:6:5>
-// CHECK-NEXT: |       | | |   | | | |-DeclStmt {{.*}} <line:5:8, col:17>
-// CHECK-NEXT: |       | | |   | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | |   | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       | | |   | | |-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | |   | | | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | |   | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |   | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |   | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | |   | | | |-<<<NULL>>>
-// CHECK-NEXT: |       | | |   | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       | | |   | | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |   | | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |   | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |   | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |   | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       | | |   | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |   | | | `-NullStmt {{.*}} <line:6:5>
-// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
-// CHECK-NEXT: |       | | |   | | `-VarDecl {{.*}} <line:5:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | |   | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | |   | `-DeclRefExpr {{.*}} <col:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
-// CHECK-NEXT: |       | | |   |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       | | |   | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       | | |   | `-FieldDecl {{.*}} <line:5:3> col:3 implicit 'int'
-// CHECK-NEXT: |       | | |   |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       | | |   | | | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | |   | | | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |   | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |   | | | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |   | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |   | | | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | |   | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |   | | | `-NullStmt {{.*}} 
+// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |   | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |   | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |   | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |   | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | |   | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | |   | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | |   | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | |   | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | |   | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | |   | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
+// CHECK-NEXT: |       | | |   | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *'
+// CHECK-NEXT: |       | | |   | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       | | |   | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | |   | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       | | |   | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | |   | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |   | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |   | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
+// CHECK-NEXT: |       | | |   | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *'
+// CHECK-NEXT: |       | | |   | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       | | |   | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | |   | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       | | |   |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | |   |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       | | |   | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       | | |   | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | |   |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       | | |   `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | |     |-ForStmt {{.*}} <col:3, line:6:5>
-// CHECK-NEXT: |       | | |     | |-DeclStmt {{.*}} <line:5:8, col:17>
-// CHECK-NEXT: |       | | |     | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | |     | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       | | |     |-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | |     | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | |     | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |     | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |     | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | |     | |-<<<NULL>>>
-// CHECK-NEXT: |       | | |     | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       | | |     | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |     | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |     | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |     | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |     | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       | | |     | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |     | `-NullStmt {{.*}} <line:6:5>
-// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
-// CHECK-NEXT: |       | | |     `-VarDecl {{.*}} <line:5:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | |       `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | `-DeclRefExpr {{.*}} <col:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | |-AlwaysInlineAttr {{.*}} <<invalid sloc>> Implicit __forceinline
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit .global_tid. 'const int'
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .part_id. 'const int *const restrict'
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .privates. 'void *const restrict'
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .copy_fn. 'void (*const restrict)(void *const restrict, ...)'
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .task_t. 'void *const'
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
-// CHECK-NEXT: |       | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       | | `-FieldDecl {{.*}} <line:5:3> col:3 implicit 'int'
-// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       | | |     | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | |     | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |     | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |     | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |     | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |     | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | |     | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |     | `-NullStmt {{.*}} 
+// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |     | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |     | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |     | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |     | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |     | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |     |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |     | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |     | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |     | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |     | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |     | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |     |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | |     | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | |     |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | |     |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | |     | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | |     |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | |     |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
+// CHECK-NEXT: |       | | |     | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | |     | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *'
+// CHECK-NEXT: |       | | |     | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       | | |     | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | |     | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       | | |     |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | |     `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |       |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |       `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | |-attrDetails: AlwaysInlineAttr {{.*}} <<invalid sloc>> Implicit __forceinline
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int'
+// CHECK-NEXT: |       | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit .part_id. 'const int *const restrict'
+// CHECK-NEXT: |       | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit .privates. 'void *const restrict'
+// CHECK-NEXT: |       | | |-qualTypeDetail: QualType {{.*}} 'void *const restrict' const __restrict
+// CHECK-NEXT: |       | | | `-typeDetails: PointerType {{.*}} 'void *'
+// CHECK-NEXT: |       | | |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | | `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit .copy_fn. 'void (*const restrict)(void *const restrict, ...)'
+// CHECK-NEXT: |       | | |-qualTypeDetail: QualType {{.*}} 'void (*const restrict)(void *const restrict, ...)' const __restrict
+// CHECK-NEXT: |       | | | `-typeDetails: PointerType {{.*}} 'void (*)(void *const restrict, ...)'
+// CHECK-NEXT: |       | | |   `-typeDetails: FunctionProtoType {{.*}} 'void (void *const restrict, ...)' variadic cdecl
+// CHECK-NEXT: |       | | |     |-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | | |     |-functionDetails:  cdeclReturnType {{.*}} 'void' 
+// CHECK-NEXT: |       | | |     |-qualTypeDetail: QualType {{.*}} 'void *const restrict' const __restrict
+// CHECK-NEXT: |       | | |     | `-typeDetails: PointerType {{.*}} 'void *'
+// CHECK-NEXT: |       | | |     |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | | |     `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | | |-QualType {{.*}} 'void (void *const restrict, ...)' 
+// CHECK-NEXT: |       | | `-typeDetails: FunctionProtoType {{.*}} 'void (void *const restrict, ...)' variadic cdecl
+// CHECK-NEXT: |       | |   |-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | |   |-functionDetails:  cdeclReturnType {{.*}} 'void' 
+// CHECK-NEXT: |       | |   |-qualTypeDetail: QualType {{.*}} 'void *const restrict' const __restrict
+// CHECK-NEXT: |       | |   | `-typeDetails: PointerType {{.*}} 'void *'
+// CHECK-NEXT: |       | |   |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit .task_t. 'void *const'
+// CHECK-NEXT: |       | | |-qualTypeDetail: QualType {{.*}} 'void *const' const
+// CHECK-NEXT: |       | | | `-typeDetails: PointerType {{.*}} 'void *'
+// CHECK-NEXT: |       | | |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | | `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
+// CHECK-NEXT: |       | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *'
+// CHECK-NEXT: |       | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       | |   `-Record {{.*}} 
+// CHECK-NEXT: |       | |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       | | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       | | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |   |-CapturedStmt {{.*}} <col:3, line:6:5>
+// CHECK-NEXT: |       |   |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       |   | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |   | | |-CapturedStmt {{.*}} <line:5:3, line:6:5>
+// CHECK-NEXT: |       |   | | |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       |   | | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |   | | | | |-ForStmt {{.*}} <line:5:3, line:6:5>
-// CHECK-NEXT: |       |   | | | | | |-DeclStmt {{.*}} <line:5:8, col:17>
-// CHECK-NEXT: |       |   | | | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |   | | | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       |   | | | | |-ForStmt {{.*}} 
+// CHECK-NEXT: |       |   | | | | | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |   | | | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | | | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |   | | | | | |-<<<NULL>>>
-// CHECK-NEXT: |       |   | | | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       |   | | | | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | | | | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | | | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | | | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | | | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       |   | | | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | | | | | `-NullStmt {{.*}} <line:6:5>
-// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
-// CHECK-NEXT: |       |   | | | | `-VarDecl {{.*}} <line:5:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |   | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |   | | | `-DeclRefExpr {{.*}} <col:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
-// CHECK-NEXT: |       |   | | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       |   | | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       |   | | | `-FieldDecl {{.*}} <line:5:3> col:3 implicit 'int'
-// CHECK-NEXT: |       |   | | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       |   | | | | | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |   | | | | | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | | | | | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | | | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | | | | | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |   | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | | | | | `-NullStmt {{.*}} 
+// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   | | | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |   | | | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |   | | | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   | | | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |   | | | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |   | | | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
+// CHECK-NEXT: |       |   | | | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *'
+// CHECK-NEXT: |       |   | | | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       |   | | | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |   | | | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       |   | | | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       |   | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
+// CHECK-NEXT: |       |   | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *'
+// CHECK-NEXT: |       |   | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       |   | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |   | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       |   | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       |   | | |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       |   | | | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       |   | | | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |   | | |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       |   | | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |   | |   |-ForStmt {{.*}} <col:3, line:6:5>
-// CHECK-NEXT: |       |   | |   | |-DeclStmt {{.*}} <line:5:8, col:17>
-// CHECK-NEXT: |       |   | |   | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |   | |   | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       |   | |   |-ForStmt {{.*}} 
+// CHECK-NEXT: |       |   | |   | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |   | |   | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | |   | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | |   | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |   | |   | |-<<<NULL>>>
-// CHECK-NEXT: |       |   | |   | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       |   | |   | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | |   | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | |   | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | |   | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | |   | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       |   | |   | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | |   | `-NullStmt {{.*}} <line:6:5>
-// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
-// CHECK-NEXT: |       |   | |   `-VarDecl {{.*}} <line:5:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |   | |     `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |   | `-DeclRefExpr {{.*}} <col:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
-// CHECK-NEXT: |       |   |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       |   | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       |   | `-FieldDecl {{.*}} <line:5:3> col:3 implicit 'int'
-// CHECK-NEXT: |       |   |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       |   | |   | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |   | |   | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | |   | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | |   | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | |   | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | |   | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |   | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | |   | `-NullStmt {{.*}} 
+// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   | |   | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |   | |   |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |   | |   |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   | |   | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |   | |   |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |   | |   |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
+// CHECK-NEXT: |       |   | |   | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |   | |   | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *'
+// CHECK-NEXT: |       |   | |   | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       |   | |   | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |   | |   | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       |   | |   |   `-Record {{.*}} 
+// CHECK-NEXT: |       |   | |   `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | |     |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
+// CHECK-NEXT: |       |   | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *'
+// CHECK-NEXT: |       |   | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       |   | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |   | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       |   |   `-Record {{.*}} 
+// CHECK-NEXT: |       |   |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       |   | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       |   | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |   |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       |   `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |     |-CapturedStmt {{.*}} <col:3, line:6:5>
+// CHECK-NEXT: |       |     |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       |     | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |     | | |-ForStmt {{.*}} <line:5:3, line:6:5>
-// CHECK-NEXT: |       |     | | | |-DeclStmt {{.*}} <line:5:8, col:17>
-// CHECK-NEXT: |       |     | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |     | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       |     | | |-ForStmt {{.*}} 
+// CHECK-NEXT: |       |     | | | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |     | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |     | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |     | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |     | | | |-<<<NULL>>>
-// CHECK-NEXT: |       |     | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       |     | | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |     | | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |     | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |     | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |     | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       |     | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |     | | | `-NullStmt {{.*}} <line:6:5>
-// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
-// CHECK-NEXT: |       |     | | `-VarDecl {{.*}} <line:5:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |     | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |     | `-DeclRefExpr {{.*}} <col:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
-// CHECK-NEXT: |       |     |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       |     | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       |     | `-FieldDecl {{.*}} <line:5:3> col:3 implicit 'int'
-// CHECK-NEXT: |       |     |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       |     | | | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |     | | | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |     | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |     | | | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |     | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |     | | | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |     | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |     | | | `-NullStmt {{.*}} 
+// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |     | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |     | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |     | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |     | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |     | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |     | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |     | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |     | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |     | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |     | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
+// CHECK-NEXT: |       |     | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *'
+// CHECK-NEXT: |       |     | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       |     | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |     | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       |     | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       |     | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |     | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |     | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |     | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |     | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |     | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |     | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
+// CHECK-NEXT: |       |     | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *'
+// CHECK-NEXT: |       |     | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       |     | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |     | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       |     |   `-Record {{.*}} 
+// CHECK-NEXT: |       |     |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       |     | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       |     | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |     |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       |     `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |       |-ForStmt {{.*}} <col:3, line:6:5>
-// CHECK-NEXT: |       |       | |-DeclStmt {{.*}} <line:5:8, col:17>
-// CHECK-NEXT: |       |       | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |       | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       |       |-ForStmt {{.*}} 
+// CHECK-NEXT: |       |       | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |       | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |       | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |       | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |       | |-<<<NULL>>>
-// CHECK-NEXT: |       |       | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       |       | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |       | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |       | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |       | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |       | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       |       | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |       | `-NullStmt {{.*}} <line:6:5>
-// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
-// CHECK-NEXT: |       |       `-VarDecl {{.*}} <line:5:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |         `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       `-DeclRefExpr {{.*}} <col:3> 'int' lvalue ParmVar {{.*}} 'x' 'int'
-// CHECK-NEXT: |-FunctionDecl {{.*}} <line:9:1, line:14:1> line:9:6 test_two 'void (int, int)'
-// CHECK-NEXT: | |-ParmVarDecl {{.*}} <col:15, col:19> col:19 used x 'int'
-// CHECK-NEXT: | |-ParmVarDecl {{.*}} <col:22, col:26> col:26 used y 'int'
-// CHECK-NEXT: | `-CompoundStmt {{.*}} <col:29, line:14:1>
-// CHECK-NEXT: |   `-OMPTargetTeamsDistributeParallelForDirective {{.*}} <line:10:1, col:49>
+// CHECK-NEXT: |       |       | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |       | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |       | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |       | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |       | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |       | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |       | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |       | `-NullStmt {{.*}} 
+// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |       | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |       | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |       | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |       | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |       | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |       |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |       | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |       | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |       | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |       | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |       | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |       |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |       | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |       |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |       |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |       | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |       |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |       |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict'
+// CHECK-NEXT: |       |       | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |       | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1) *'
+// CHECK-NEXT: |       |       | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       |       | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |       | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:4:1)'
+// CHECK-NEXT: |       |       |   `-Record {{.*}} 
+// CHECK-NEXT: |       |       `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |         |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |         `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int'
+// CHECK-NEXT: |-FunctionDecl {{.*}} test_two 'void (int, int)'
+// CHECK-NEXT: | |-ParmVarDecl {{.*}} used x 'int'
+// CHECK-NEXT: | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: | |-ParmVarDecl {{.*}} used y 'int'
+// CHECK-NEXT: | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: | `-CompoundStmt {{.*}} 
+// CHECK-NEXT: |   `-OMPTargetTeamsDistributeParallelForDirective {{.*}} 
 // CHECK-NEXT: |     |-OMPFirstprivateClause {{.*}} <<invalid sloc>> <implicit>
-// CHECK-NEXT: |     | |-DeclRefExpr {{.*}} <line:11:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |     | `-DeclRefExpr {{.*}} <line:12:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |     `-CapturedStmt {{.*}} <line:11:3, line:13:7>
+// CHECK-NEXT: |     | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |     | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |     `-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | |-CapturedStmt {{.*}} <line:11:3, line:13:7>
+// CHECK-NEXT: |       | |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | | |-CapturedStmt {{.*}} <line:11:3, line:13:7>
+// CHECK-NEXT: |       | | | |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       | | | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | | | | |-CapturedStmt {{.*}} <line:11:3, line:13:7>
+// CHECK-NEXT: |       | | | | | |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       | | | | | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | | | | | | |-ForStmt {{.*}} <line:11:3, line:13:7>
-// CHECK-NEXT: |       | | | | | | | | |-DeclStmt {{.*}} <line:11:8, col:17>
-// CHECK-NEXT: |       | | | | | | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | | | | | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       | | | | | | | |-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | | | | | | | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | | | | | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | | | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | | | | | | | |-<<<NULL>>>
-// CHECK-NEXT: |       | | | | | | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       | | | | | | | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | | | | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | | | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | | | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | | | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       | | | | | | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | | | | | `-ForStmt {{.*}} <line:12:5, line:13:7>
-// CHECK-NEXT: |       | | | | | | | |   |-DeclStmt {{.*}} <line:12:10, col:19>
-// CHECK-NEXT: |       | | | | | | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | | | | | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       | | | | | | | | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | | | | | | | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | | | | | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | | | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | | | | | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | | | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | | | | | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | | | | | | |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | | | | | | |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | | | | |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | | | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | | | | | | |   |-<<<NULL>>>
-// CHECK-NEXT: |       | | | | | | | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       | | | | | | | |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | | | | |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | | | | |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | | | | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | | | | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       | | | | | | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | | | | |   `-NullStmt {{.*}} <line:13:7>
-// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} <line:10:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
-// CHECK-NEXT: |       | | | | | | | |-VarDecl {{.*}} <line:11:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | | | | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | | | | | | `-VarDecl {{.*}} <line:12:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | | | | | |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       | | | | | | |-DeclRefExpr {{.*}} <line:11:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | | | `-DeclRefExpr {{.*}} <line:12:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} <line:10:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
-// CHECK-NEXT: |       | | | | | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       | | | | | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       | | | | | | |-FieldDecl {{.*}} <line:11:3> col:3 implicit 'int'
-// CHECK-NEXT: |       | | | | | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       | | | | | | `-FieldDecl {{.*}} <line:12:25> col:25 implicit 'int'
-// CHECK-NEXT: |       | | | | | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       | | | | | | | |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | | | | | | |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | | | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | | | | |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | | | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | | | | |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | | | | | | |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | | | | |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | | | | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | | | | | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | | | | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | | | | | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
+// CHECK-NEXT: |       | | | | | | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *'
+// CHECK-NEXT: |       | | | | | | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       | | | | | | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | | | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       | | | | | | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | | | | |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | | | | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | | | | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
+// CHECK-NEXT: |       | | | | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *'
+// CHECK-NEXT: |       | | | | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       | | | | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       | | | | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | | |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       | | | | | | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       | | | | | | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | | | | | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       | | | | | | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | | | | |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       | | | | | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | | | |   |-ForStmt {{.*}} <line:11:3, line:13:7>
-// CHECK-NEXT: |       | | | | |   | |-DeclStmt {{.*}} <line:11:8, col:17>
-// CHECK-NEXT: |       | | | | |   | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | | | |   | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       | | | | |   |-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | | | |   | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | | | |   | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | |   | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | |   | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | | | |   | |-<<<NULL>>>
-// CHECK-NEXT: |       | | | | |   | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       | | | | |   | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | |   | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | |   | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | |   | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | |   | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       | | | | |   | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | |   | `-ForStmt {{.*}} <line:12:5, line:13:7>
-// CHECK-NEXT: |       | | | | |   |   |-DeclStmt {{.*}} <line:12:10, col:19>
-// CHECK-NEXT: |       | | | | |   |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | | | |   |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       | | | | |   | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | | | |   | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | |   | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | |   | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | |   | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | |   | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | |   | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | | | |   |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | | | |   |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | |   |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | |   |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | | | |   |   |-<<<NULL>>>
-// CHECK-NEXT: |       | | | | |   |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       | | | | |   |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | |   |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | |   |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | |   |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | |   |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       | | | | |   |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | |   |   `-NullStmt {{.*}} <line:13:7>
-// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} <line:10:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
-// CHECK-NEXT: |       | | | | |   |-VarDecl {{.*}} <line:11:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | | | |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | | | |   `-VarDecl {{.*}} <line:12:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | | | |     `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       | | | | |-DeclRefExpr {{.*}} <line:11:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | `-DeclRefExpr {{.*}} <line:12:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | |-ImplicitParamDecl {{.*}} <line:10:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
-// CHECK-NEXT: |       | | | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       | | | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       | | | | |-FieldDecl {{.*}} <line:11:3> col:3 implicit 'int'
-// CHECK-NEXT: |       | | | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       | | | | `-FieldDecl {{.*}} <line:12:25> col:25 implicit 'int'
-// CHECK-NEXT: |       | | | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       | | | | |   |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | | | |   |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | |   |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | |   |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | |   |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | |   |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | | | |   |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | |   |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | | |   | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | | | |   |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | | | |   |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | | |   | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | | | |   |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | | | |   |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
+// CHECK-NEXT: |       | | | | |   | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | |   | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *'
+// CHECK-NEXT: |       | | | | |   | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       | | | | |   | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | |   | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       | | | | |   |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | |   |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | |   | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | |   | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |   `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | |     |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
+// CHECK-NEXT: |       | | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *'
+// CHECK-NEXT: |       | | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       | | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       | | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | | |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       | | | | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       | | | | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | | | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       | | | | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | | |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       | | | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | |   |-CapturedStmt {{.*}} <line:11:3, line:13:7>
+// CHECK-NEXT: |       | | |   |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       | | |   | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | |   | | |-ForStmt {{.*}} <line:11:3, line:13:7>
-// CHECK-NEXT: |       | | |   | | | |-DeclStmt {{.*}} <line:11:8, col:17>
-// CHECK-NEXT: |       | | |   | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | |   | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       | | |   | | |-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | |   | | | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | |   | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |   | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |   | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | |   | | | |-<<<NULL>>>
-// CHECK-NEXT: |       | | |   | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       | | |   | | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |   | | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |   | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |   | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |   | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       | | |   | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |   | | | `-ForStmt {{.*}} <line:12:5, line:13:7>
-// CHECK-NEXT: |       | | |   | | |   |-DeclStmt {{.*}} <line:12:10, col:19>
-// CHECK-NEXT: |       | | |   | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | |   | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       | | |   | | | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | |   | | | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |   | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |   | | | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |   | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |   | | | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | |   | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |   | | | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | |   | | |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | |   | | |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |   | | |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |   | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | |   | | |   |-<<<NULL>>>
-// CHECK-NEXT: |       | | |   | | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       | | |   | | |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |   | | |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |   | | |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |   | | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |   | | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       | | |   | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |   | | |   `-NullStmt {{.*}} <line:13:7>
-// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} <line:10:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
-// CHECK-NEXT: |       | | |   | | |-VarDecl {{.*}} <line:11:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | |   | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | |   | | `-VarDecl {{.*}} <line:12:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | |   | |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       | | |   | |-DeclRefExpr {{.*}} <line:11:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |   | `-DeclRefExpr {{.*}} <line:12:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} <line:10:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
-// CHECK-NEXT: |       | | |   |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       | | |   | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       | | |   | |-FieldDecl {{.*}} <line:11:3> col:3 implicit 'int'
-// CHECK-NEXT: |       | | |   | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       | | |   | `-FieldDecl {{.*}} <line:12:25> col:25 implicit 'int'
-// CHECK-NEXT: |       | | |   |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       | | |   | | |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | |   | | |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |   | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |   | | |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |   | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |   | | |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | |   | | |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |   | | |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |   | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |   | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |   | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |   | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | |   | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | |   | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | |   | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | |   | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | |   | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | |   | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
+// CHECK-NEXT: |       | | |   | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *'
+// CHECK-NEXT: |       | | |   | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       | | |   | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | |   | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       | | |   | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | |   | | |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |   | | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |   | | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |   | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |   | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |   | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
+// CHECK-NEXT: |       | | |   | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *'
+// CHECK-NEXT: |       | | |   | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       | | |   | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | |   | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       | | |   |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | |   |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       | | |   | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       | | |   | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | |   | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       | | |   | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | |   |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       | | |   `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | |     |-ForStmt {{.*}} <line:11:3, line:13:7>
-// CHECK-NEXT: |       | | |     | |-DeclStmt {{.*}} <line:11:8, col:17>
-// CHECK-NEXT: |       | | |     | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | |     | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       | | |     |-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | |     | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | |     | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |     | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |     | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | |     | |-<<<NULL>>>
-// CHECK-NEXT: |       | | |     | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       | | |     | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |     | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |     | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |     | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |     | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       | | |     | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |     | `-ForStmt {{.*}} <line:12:5, line:13:7>
-// CHECK-NEXT: |       | | |     |   |-DeclStmt {{.*}} <line:12:10, col:19>
-// CHECK-NEXT: |       | | |     |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | |     |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       | | |     | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | |     | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |     | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |     | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |     | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |     | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | |     | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |     | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | |     |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | |     |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |     |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |     |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | |     |   |-<<<NULL>>>
-// CHECK-NEXT: |       | | |     |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       | | |     |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |     |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |     |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |     |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |     |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       | | |     |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |     |   `-NullStmt {{.*}} <line:13:7>
-// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} <line:10:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
-// CHECK-NEXT: |       | | |     |-VarDecl {{.*}} <line:11:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | |     | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | |     `-VarDecl {{.*}} <line:12:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | |       `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       | | |-DeclRefExpr {{.*}} <line:11:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | `-DeclRefExpr {{.*}} <line:12:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | |-AlwaysInlineAttr {{.*}} <<invalid sloc>> Implicit __forceinline
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <line:10:1> col:1 implicit .global_tid. 'const int'
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .part_id. 'const int *const restrict'
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .privates. 'void *const restrict'
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .copy_fn. 'void (*const restrict)(void *const restrict, ...)'
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .task_t. 'void *const'
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
-// CHECK-NEXT: |       | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       | | |-FieldDecl {{.*}} <line:11:3> col:3 implicit 'int'
-// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       | | `-FieldDecl {{.*}} <line:12:25> col:25 implicit 'int'
-// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       | | |     |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | |     |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |     |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |     |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |     |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |     |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | |     |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |     |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |     | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |     | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |     | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |     | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |     | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |     |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |     | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |     | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |     | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |     | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |     | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |     |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | |     | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | |     |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | |     |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | |     | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | |     |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | |     |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
+// CHECK-NEXT: |       | | |     | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | |     | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *'
+// CHECK-NEXT: |       | | |     | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       | | |     | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | |     | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       | | |     |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | |     |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |     | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |     | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |     `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |       |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |       `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | |-attrDetails: AlwaysInlineAttr {{.*}} <<invalid sloc>> Implicit __forceinline
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int'
+// CHECK-NEXT: |       | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit .part_id. 'const int *const restrict'
+// CHECK-NEXT: |       | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit .privates. 'void *const restrict'
+// CHECK-NEXT: |       | | |-qualTypeDetail: QualType {{.*}} 'void *const restrict' const __restrict
+// CHECK-NEXT: |       | | | `-typeDetails: PointerType {{.*}} 'void *'
+// CHECK-NEXT: |       | | |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | | `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit .copy_fn. 'void (*const restrict)(void *const restrict, ...)'
+// CHECK-NEXT: |       | | |-qualTypeDetail: QualType {{.*}} 'void (*const restrict)(void *const restrict, ...)' const __restrict
+// CHECK-NEXT: |       | | | `-typeDetails: PointerType {{.*}} 'void (*)(void *const restrict, ...)'
+// CHECK-NEXT: |       | | |   `-typeDetails: FunctionProtoType {{.*}} 'void (void *const restrict, ...)' variadic cdecl
+// CHECK-NEXT: |       | | |     |-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | | |     |-functionDetails:  cdeclReturnType {{.*}} 'void' 
+// CHECK-NEXT: |       | | |     |-qualTypeDetail: QualType {{.*}} 'void *const restrict' const __restrict
+// CHECK-NEXT: |       | | |     | `-typeDetails: PointerType {{.*}} 'void *'
+// CHECK-NEXT: |       | | |     |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | | |     `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | | |-QualType {{.*}} 'void (void *const restrict, ...)' 
+// CHECK-NEXT: |       | | `-typeDetails: FunctionProtoType {{.*}} 'void (void *const restrict, ...)' variadic cdecl
+// CHECK-NEXT: |       | |   |-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | |   |-functionDetails:  cdeclReturnType {{.*}} 'void' 
+// CHECK-NEXT: |       | |   |-qualTypeDetail: QualType {{.*}} 'void *const restrict' const __restrict
+// CHECK-NEXT: |       | |   | `-typeDetails: PointerType {{.*}} 'void *'
+// CHECK-NEXT: |       | |   |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit .task_t. 'void *const'
+// CHECK-NEXT: |       | | |-qualTypeDetail: QualType {{.*}} 'void *const' const
+// CHECK-NEXT: |       | | | `-typeDetails: PointerType {{.*}} 'void *'
+// CHECK-NEXT: |       | | |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | | `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
+// CHECK-NEXT: |       | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *'
+// CHECK-NEXT: |       | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       | |   `-Record {{.*}} 
+// CHECK-NEXT: |       | |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       | | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       | | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       | | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |   |-CapturedStmt {{.*}} <line:11:3, line:13:7>
+// CHECK-NEXT: |       |   |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       |   | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |   | | |-CapturedStmt {{.*}} <line:11:3, line:13:7>
+// CHECK-NEXT: |       |   | | |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       |   | | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |   | | | | |-ForStmt {{.*}} <line:11:3, line:13:7>
-// CHECK-NEXT: |       |   | | | | | |-DeclStmt {{.*}} <line:11:8, col:17>
-// CHECK-NEXT: |       |   | | | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |   | | | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       |   | | | | |-ForStmt {{.*}} 
+// CHECK-NEXT: |       |   | | | | | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |   | | | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | | | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |   | | | | | |-<<<NULL>>>
-// CHECK-NEXT: |       |   | | | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       |   | | | | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | | | | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | | | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | | | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | | | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       |   | | | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | | | | | `-ForStmt {{.*}} <line:12:5, line:13:7>
-// CHECK-NEXT: |       |   | | | | |   |-DeclStmt {{.*}} <line:12:10, col:19>
-// CHECK-NEXT: |       |   | | | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |   | | | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       |   | | | | | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |   | | | | | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | | | | | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | | | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | | | | | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |   | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | | | | | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       |   | | | | |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |   | | | | |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | | | | |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | | | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |   | | | | |   |-<<<NULL>>>
-// CHECK-NEXT: |       |   | | | | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       |   | | | | |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | | | | |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | | | | |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | | | | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | | | | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       |   | | | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | | | | |   `-NullStmt {{.*}} <line:13:7>
-// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} <line:10:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
-// CHECK-NEXT: |       |   | | | | |-VarDecl {{.*}} <line:11:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |   | | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |   | | | | `-VarDecl {{.*}} <line:12:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |   | | | |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       |   | | | |-DeclRefExpr {{.*}} <line:11:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | | | `-DeclRefExpr {{.*}} <line:12:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} <line:10:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
-// CHECK-NEXT: |       |   | | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       |   | | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       |   | | | |-FieldDecl {{.*}} <line:11:3> col:3 implicit 'int'
-// CHECK-NEXT: |       |   | | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       |   | | | `-FieldDecl {{.*}} <line:12:25> col:25 implicit 'int'
-// CHECK-NEXT: |       |   | | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       |   | | | | |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |   | | | | |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | | | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | | | | |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | | | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | | | | |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |   | | | | |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | | | | |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   | | | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |   | | | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |   | | | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   | | | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |   | | | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |   | | | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
+// CHECK-NEXT: |       |   | | | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *'
+// CHECK-NEXT: |       |   | | | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       |   | | | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |   | | | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       |   | | | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       |   | | | | |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | | | | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | | | | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | | | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
+// CHECK-NEXT: |       |   | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *'
+// CHECK-NEXT: |       |   | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       |   | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |   | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       |   | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       |   | | |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       |   | | | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       |   | | | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |   | | | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       |   | | | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |   | | |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       |   | | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |   | |   |-ForStmt {{.*}} <line:11:3, line:13:7>
-// CHECK-NEXT: |       |   | |   | |-DeclStmt {{.*}} <line:11:8, col:17>
-// CHECK-NEXT: |       |   | |   | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |   | |   | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       |   | |   |-ForStmt {{.*}} 
+// CHECK-NEXT: |       |   | |   | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |   | |   | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | |   | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | |   | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |   | |   | |-<<<NULL>>>
-// CHECK-NEXT: |       |   | |   | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       |   | |   | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | |   | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | |   | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | |   | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | |   | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       |   | |   | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | |   | `-ForStmt {{.*}} <line:12:5, line:13:7>
-// CHECK-NEXT: |       |   | |   |   |-DeclStmt {{.*}} <line:12:10, col:19>
-// CHECK-NEXT: |       |   | |   |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |   | |   |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       |   | |   | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |   | |   | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | |   | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | |   | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | |   | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | |   | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |   | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | |   | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       |   | |   |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |   | |   |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | |   |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | |   |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |   | |   |   |-<<<NULL>>>
-// CHECK-NEXT: |       |   | |   |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       |   | |   |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | |   |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | |   |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | |   |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | |   |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       |   | |   |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | |   |   `-NullStmt {{.*}} <line:13:7>
-// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} <line:10:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
-// CHECK-NEXT: |       |   | |   |-VarDecl {{.*}} <line:11:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |   | |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |   | |   `-VarDecl {{.*}} <line:12:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |   | |     `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       |   | |-DeclRefExpr {{.*}} <line:11:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | `-DeclRefExpr {{.*}} <line:12:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   |-ImplicitParamDecl {{.*}} <line:10:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
-// CHECK-NEXT: |       |   |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       |   | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       |   | |-FieldDecl {{.*}} <line:11:3> col:3 implicit 'int'
-// CHECK-NEXT: |       |   | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       |   | `-FieldDecl {{.*}} <line:12:25> col:25 implicit 'int'
-// CHECK-NEXT: |       |   |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       |   | |   |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |   | |   |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | |   |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | |   |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | |   |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | |   |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |   | |   |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | |   |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   | |   | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |   | |   |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |   | |   |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   | |   | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |   | |   |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |   | |   |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
+// CHECK-NEXT: |       |   | |   | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |   | |   | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *'
+// CHECK-NEXT: |       |   | |   | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       |   | |   | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |   | |   | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       |   | |   |   `-Record {{.*}} 
+// CHECK-NEXT: |       |   | |   |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | |   | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | |   | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |   `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | |     |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
+// CHECK-NEXT: |       |   | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *'
+// CHECK-NEXT: |       |   | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       |   | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |   | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       |   |   `-Record {{.*}} 
+// CHECK-NEXT: |       |   |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       |   | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       |   | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |   | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       |   | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |   |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       |   `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |     |-CapturedStmt {{.*}} <line:11:3, line:13:7>
+// CHECK-NEXT: |       |     |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       |     | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |     | | |-ForStmt {{.*}} <line:11:3, line:13:7>
-// CHECK-NEXT: |       |     | | | |-DeclStmt {{.*}} <line:11:8, col:17>
-// CHECK-NEXT: |       |     | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |     | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       |     | | |-ForStmt {{.*}} 
+// CHECK-NEXT: |       |     | | | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |     | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |     | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |     | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |     | | | |-<<<NULL>>>
-// CHECK-NEXT: |       |     | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       |     | | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |     | | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |     | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |     | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |     | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       |     | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |     | | | `-ForStmt {{.*}} <line:12:5, line:13:7>
-// CHECK-NEXT: |       |     | | |   |-DeclStmt {{.*}} <line:12:10, col:19>
-// CHECK-NEXT: |       |     | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |     | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       |     | | | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |     | | | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |     | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |     | | | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |     | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |     | | | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |     | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |     | | | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       |     | | |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |     | | |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |     | | |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |     | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |     | | |   |-<<<NULL>>>
-// CHECK-NEXT: |       |     | | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       |     | | |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |     | | |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |     | | |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |     | | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |     | | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       |     | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |     | | |   `-NullStmt {{.*}} <line:13:7>
-// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} <line:10:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
-// CHECK-NEXT: |       |     | | |-VarDecl {{.*}} <line:11:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |     | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |     | | `-VarDecl {{.*}} <line:12:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |     | |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       |     | |-DeclRefExpr {{.*}} <line:11:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |     | `-DeclRefExpr {{.*}} <line:12:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} <line:10:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
-// CHECK-NEXT: |       |     |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       |     | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       |     | |-FieldDecl {{.*}} <line:11:3> col:3 implicit 'int'
-// CHECK-NEXT: |       |     | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       |     | `-FieldDecl {{.*}} <line:12:25> col:25 implicit 'int'
-// CHECK-NEXT: |       |     |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       |     | | |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |     | | |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |     | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |     | | |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |     | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |     | | |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |     | | |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |     | | |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |     | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |     | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |     | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |     | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |     | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |     | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |     | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |     | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |     | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |     | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
+// CHECK-NEXT: |       |     | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *'
+// CHECK-NEXT: |       |     | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       |     | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |     | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       |     | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       |     | | |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |     | | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |     | | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |     | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |     | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |     | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |     | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |     | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |     | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |     | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
+// CHECK-NEXT: |       |     | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *'
+// CHECK-NEXT: |       |     | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       |     | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |     | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       |     |   `-Record {{.*}} 
+// CHECK-NEXT: |       |     |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       |     | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       |     | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |     | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       |     | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |     |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       |     `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |       |-ForStmt {{.*}} <line:11:3, line:13:7>
-// CHECK-NEXT: |       |       | |-DeclStmt {{.*}} <line:11:8, col:17>
-// CHECK-NEXT: |       |       | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |       | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       |       |-ForStmt {{.*}} 
+// CHECK-NEXT: |       |       | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |       | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |       | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |       | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |       | |-<<<NULL>>>
-// CHECK-NEXT: |       |       | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       |       | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |       | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |       | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |       | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |       | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       |       | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |       | `-ForStmt {{.*}} <line:12:5, line:13:7>
-// CHECK-NEXT: |       |       |   |-DeclStmt {{.*}} <line:12:10, col:19>
-// CHECK-NEXT: |       |       |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |       |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       |       | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |       | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |       | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |       | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |       | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |       | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |       | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |       | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       |       |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |       |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |       |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |       |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |       |   |-<<<NULL>>>
-// CHECK-NEXT: |       |       |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       |       |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |       |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |       |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |       |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |       |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       |       |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |       |   `-NullStmt {{.*}} <line:13:7>
-// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} <line:10:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
-// CHECK-NEXT: |       |       |-VarDecl {{.*}} <line:11:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |       | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |       `-VarDecl {{.*}} <line:12:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |         `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       |-DeclRefExpr {{.*}} <line:11:3> 'int' lvalue ParmVar {{.*}} 'x' 'int'
-// CHECK-NEXT: |       `-DeclRefExpr {{.*}} <line:12:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
-// CHECK-NEXT: |-FunctionDecl {{.*}} <line:16:1, line:21:1> line:16:6 test_three 'void (int, int)'
-// CHECK-NEXT: | |-ParmVarDecl {{.*}} <col:17, col:21> col:21 used x 'int'
-// CHECK-NEXT: | |-ParmVarDecl {{.*}} <col:24, col:28> col:28 used y 'int'
-// CHECK-NEXT: | `-CompoundStmt {{.*}} <col:31, line:21:1>
-// CHECK-NEXT: |   `-OMPTargetTeamsDistributeParallelForDirective {{.*}} <line:17:1, col:61>
-// CHECK-NEXT: |     |-OMPCollapseClause {{.*}} <col:50, col:60>
-// CHECK-NEXT: |     | `-ConstantExpr {{.*}} <col:59> 'int'
-// CHECK-NEXT: |     | |-value: Int 1
-// CHECK-NEXT: |     |   `-IntegerLiteral {{.*}} <col:59> 'int' 1
+// CHECK-NEXT: |       |       |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |       |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |       |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |       |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |       |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |       |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |       |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |       |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |       | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |       | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |       | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |       | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |       | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |       |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |       | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |       | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |       | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |       | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |       | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |       |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |       | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |       |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |       |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |       | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |       |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |       |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict'
+// CHECK-NEXT: |       |       | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |       | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1) *'
+// CHECK-NEXT: |       |       | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       |       | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |       | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:10:1)'
+// CHECK-NEXT: |       |       |   `-Record {{.*}} 
+// CHECK-NEXT: |       |       |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |       | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |       | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |       `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |         |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |         `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int'
+// CHECK-NEXT: |       `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int'
+// CHECK-NEXT: |-FunctionDecl {{.*}} test_three 'void (int, int)'
+// CHECK-NEXT: | |-ParmVarDecl {{.*}} used x 'int'
+// CHECK-NEXT: | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: | |-ParmVarDecl {{.*}} used y 'int'
+// CHECK-NEXT: | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: | `-CompoundStmt {{.*}} 
+// CHECK-NEXT: |   `-OMPTargetTeamsDistributeParallelForDirective {{.*}} 
+// CHECK-NEXT: |     |-OMPCollapseClause {{.*}} 
+// CHECK-NEXT: |     | `-ConstantExpr {{.*}} 'int'
+// CHECK-NEXT: |     |   |-value: Int 1
+// CHECK-NEXT: |     |   `-IntegerLiteral {{.*}} 'int' 1
 // CHECK-NEXT: |     |-OMPFirstprivateClause {{.*}} <<invalid sloc>> <implicit>
-// CHECK-NEXT: |     | |-DeclRefExpr {{.*}} <line:18:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |     | `-DeclRefExpr {{.*}} <line:19:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |     `-CapturedStmt {{.*}} <line:18:3, line:20:7>
+// CHECK-NEXT: |     | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |     | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |     `-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | |-CapturedStmt {{.*}} <line:18:3, line:20:7>
+// CHECK-NEXT: |       | |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | | |-CapturedStmt {{.*}} <line:18:3, line:20:7>
+// CHECK-NEXT: |       | | | |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       | | | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | | | | |-CapturedStmt {{.*}} <line:18:3, line:20:7>
+// CHECK-NEXT: |       | | | | | |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       | | | | | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | | | | | | |-ForStmt {{.*}} <line:18:3, line:20:7>
-// CHECK-NEXT: |       | | | | | | | | |-DeclStmt {{.*}} <line:18:8, col:17>
-// CHECK-NEXT: |       | | | | | | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | | | | | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       | | | | | | | |-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | | | | | | | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | | | | | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | | | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | | | | | | | |-<<<NULL>>>
-// CHECK-NEXT: |       | | | | | | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       | | | | | | | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | | | | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | | | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | | | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | | | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       | | | | | | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | | | | | `-ForStmt {{.*}} <line:19:5, line:20:7>
-// CHECK-NEXT: |       | | | | | | | |   |-DeclStmt {{.*}} <line:19:10, col:19>
-// CHECK-NEXT: |       | | | | | | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | | | | | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       | | | | | | | | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | | | | | | | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | | | | | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | | | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | | | | | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | | | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | | | | | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | | | | | | |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | | | | | | |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | | | | |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | | | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | | | | | | |   |-<<<NULL>>>
-// CHECK-NEXT: |       | | | | | | | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       | | | | | | | |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | | | | |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | | | | |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | | | | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | | | | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       | | | | | | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | | | | |   `-NullStmt {{.*}} <line:20:7>
-// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} <line:17:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
-// CHECK-NEXT: |       | | | | | | | |-VarDecl {{.*}} <line:18:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | | | | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | | | | | | `-VarDecl {{.*}} <line:19:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | | | | | |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       | | | | | | |-DeclRefExpr {{.*}} <line:18:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | | | `-DeclRefExpr {{.*}} <line:19:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} <line:17:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
-// CHECK-NEXT: |       | | | | | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       | | | | | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       | | | | | | |-FieldDecl {{.*}} <line:18:3> col:3 implicit 'int'
-// CHECK-NEXT: |       | | | | | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       | | | | | | `-FieldDecl {{.*}} <line:19:25> col:25 implicit 'int'
-// CHECK-NEXT: |       | | | | | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       | | | | | | | |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | | | | | | |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | | | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | | | | |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | | | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | | | | |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | | | | | | |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | | | | |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | | | | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | | | | | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | | | | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | | | | | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
+// CHECK-NEXT: |       | | | | | | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *'
+// CHECK-NEXT: |       | | | | | | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       | | | | | | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | | | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       | | | | | | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | | | | |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | | | | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | | | | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
+// CHECK-NEXT: |       | | | | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *'
+// CHECK-NEXT: |       | | | | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       | | | | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       | | | | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | | |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       | | | | | | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       | | | | | | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | | | | | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       | | | | | | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | | | | |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       | | | | | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | | | |   |-ForStmt {{.*}} <line:18:3, line:20:7>
-// CHECK-NEXT: |       | | | | |   | |-DeclStmt {{.*}} <line:18:8, col:17>
-// CHECK-NEXT: |       | | | | |   | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | | | |   | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       | | | | |   |-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | | | |   | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | | | |   | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | |   | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | |   | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | | | |   | |-<<<NULL>>>
-// CHECK-NEXT: |       | | | | |   | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       | | | | |   | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | |   | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | |   | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | |   | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | |   | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       | | | | |   | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | |   | `-ForStmt {{.*}} <line:19:5, line:20:7>
-// CHECK-NEXT: |       | | | | |   |   |-DeclStmt {{.*}} <line:19:10, col:19>
-// CHECK-NEXT: |       | | | | |   |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | | | |   |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       | | | | |   | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | | | |   | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | |   | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | |   | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | |   | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | |   | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | |   | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | | | |   |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | | | |   |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | |   |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | |   |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | | | |   |   |-<<<NULL>>>
-// CHECK-NEXT: |       | | | | |   |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       | | | | |   |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | |   |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | |   |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | |   |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | |   |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       | | | | |   |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | |   |   `-NullStmt {{.*}} <line:20:7>
-// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} <line:17:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
-// CHECK-NEXT: |       | | | | |   |-VarDecl {{.*}} <line:18:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | | | |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | | | |   `-VarDecl {{.*}} <line:19:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | | | |     `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       | | | | |-DeclRefExpr {{.*}} <line:18:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | `-DeclRefExpr {{.*}} <line:19:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | |-ImplicitParamDecl {{.*}} <line:17:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
-// CHECK-NEXT: |       | | | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       | | | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       | | | | |-FieldDecl {{.*}} <line:18:3> col:3 implicit 'int'
-// CHECK-NEXT: |       | | | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       | | | | `-FieldDecl {{.*}} <line:19:25> col:25 implicit 'int'
-// CHECK-NEXT: |       | | | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       | | | | |   |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | | | |   |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | |   |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | |   |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | |   |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | |   |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | | | |   |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | |   |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | | |   | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | | | |   |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | | | |   |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | | |   | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | | | |   |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | | | |   |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
+// CHECK-NEXT: |       | | | | |   | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | |   | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *'
+// CHECK-NEXT: |       | | | | |   | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       | | | | |   | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | |   | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       | | | | |   |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | |   |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | |   | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | |   | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |   `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | |     |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
+// CHECK-NEXT: |       | | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *'
+// CHECK-NEXT: |       | | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       | | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       | | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | | |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       | | | | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       | | | | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | | | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       | | | | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | | |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       | | | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | |   |-CapturedStmt {{.*}} <line:18:3, line:20:7>
+// CHECK-NEXT: |       | | |   |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       | | |   | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | |   | | |-ForStmt {{.*}} <line:18:3, line:20:7>
-// CHECK-NEXT: |       | | |   | | | |-DeclStmt {{.*}} <line:18:8, col:17>
-// CHECK-NEXT: |       | | |   | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | |   | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       | | |   | | |-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | |   | | | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | |   | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |   | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |   | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | |   | | | |-<<<NULL>>>
-// CHECK-NEXT: |       | | |   | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       | | |   | | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |   | | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |   | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |   | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |   | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       | | |   | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |   | | | `-ForStmt {{.*}} <line:19:5, line:20:7>
-// CHECK-NEXT: |       | | |   | | |   |-DeclStmt {{.*}} <line:19:10, col:19>
-// CHECK-NEXT: |       | | |   | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | |   | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       | | |   | | | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | |   | | | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |   | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |   | | | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |   | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |   | | | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | |   | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |   | | | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | |   | | |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | |   | | |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |   | | |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |   | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | |   | | |   |-<<<NULL>>>
-// CHECK-NEXT: |       | | |   | | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       | | |   | | |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |   | | |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |   | | |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |   | | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |   | | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       | | |   | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |   | | |   `-NullStmt {{.*}} <line:20:7>
-// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} <line:17:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
-// CHECK-NEXT: |       | | |   | | |-VarDecl {{.*}} <line:18:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | |   | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | |   | | `-VarDecl {{.*}} <line:19:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | |   | |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       | | |   | |-DeclRefExpr {{.*}} <line:18:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |   | `-DeclRefExpr {{.*}} <line:19:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} <line:17:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
-// CHECK-NEXT: |       | | |   |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       | | |   | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       | | |   | |-FieldDecl {{.*}} <line:18:3> col:3 implicit 'int'
-// CHECK-NEXT: |       | | |   | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       | | |   | `-FieldDecl {{.*}} <line:19:25> col:25 implicit 'int'
-// CHECK-NEXT: |       | | |   |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       | | |   | | |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | |   | | |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |   | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |   | | |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |   | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |   | | |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | |   | | |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |   | | |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |   | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |   | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |   | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |   | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | |   | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | |   | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | |   | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | |   | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | |   | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | |   | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
+// CHECK-NEXT: |       | | |   | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *'
+// CHECK-NEXT: |       | | |   | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       | | |   | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | |   | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       | | |   | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | |   | | |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |   | | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |   | | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |   | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |   | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |   | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
+// CHECK-NEXT: |       | | |   | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *'
+// CHECK-NEXT: |       | | |   | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       | | |   | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | |   | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       | | |   |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | |   |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       | | |   | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       | | |   | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | |   | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       | | |   | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | |   |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       | | |   `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | |     |-ForStmt {{.*}} <line:18:3, line:20:7>
-// CHECK-NEXT: |       | | |     | |-DeclStmt {{.*}} <line:18:8, col:17>
-// CHECK-NEXT: |       | | |     | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | |     | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       | | |     |-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | |     | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | |     | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |     | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |     | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | |     | |-<<<NULL>>>
-// CHECK-NEXT: |       | | |     | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       | | |     | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |     | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |     | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |     | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |     | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       | | |     | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |     | `-ForStmt {{.*}} <line:19:5, line:20:7>
-// CHECK-NEXT: |       | | |     |   |-DeclStmt {{.*}} <line:19:10, col:19>
-// CHECK-NEXT: |       | | |     |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | |     |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       | | |     | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | |     | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |     | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |     | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |     | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |     | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | |     | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |     | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | |     |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | |     |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |     |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |     |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | |     |   |-<<<NULL>>>
-// CHECK-NEXT: |       | | |     |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       | | |     |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |     |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |     |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |     |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |     |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       | | |     |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |     |   `-NullStmt {{.*}} <line:20:7>
-// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} <line:17:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
-// CHECK-NEXT: |       | | |     |-VarDecl {{.*}} <line:18:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | |     | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | |     `-VarDecl {{.*}} <line:19:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | |       `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       | | |-DeclRefExpr {{.*}} <line:18:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | `-DeclRefExpr {{.*}} <line:19:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | |-AlwaysInlineAttr {{.*}} <<invalid sloc>> Implicit __forceinline
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <line:17:1> col:1 implicit .global_tid. 'const int'
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .part_id. 'const int *const restrict'
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .privates. 'void *const restrict'
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .copy_fn. 'void (*const restrict)(void *const restrict, ...)'
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .task_t. 'void *const'
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
-// CHECK-NEXT: |       | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       | | |-FieldDecl {{.*}} <line:18:3> col:3 implicit 'int'
-// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       | | `-FieldDecl {{.*}} <line:19:25> col:25 implicit 'int'
-// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       | | |     |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | |     |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |     |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |     |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |     |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |     |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | |     |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |     |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |     | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |     | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |     | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |     | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |     | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |     |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |     | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |     | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |     | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |     | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |     | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |     |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | |     | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | |     |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | |     |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | |     | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | |     |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | |     |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
+// CHECK-NEXT: |       | | |     | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | |     | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *'
+// CHECK-NEXT: |       | | |     | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       | | |     | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | |     | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       | | |     |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | |     |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |     | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |     | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |     `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |       |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |       `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | |-attrDetails: AlwaysInlineAttr {{.*}} <<invalid sloc>> Implicit __forceinline
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int'
+// CHECK-NEXT: |       | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit .part_id. 'const int *const restrict'
+// CHECK-NEXT: |       | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit .privates. 'void *const restrict'
+// CHECK-NEXT: |       | | |-qualTypeDetail: QualType {{.*}} 'void *const restrict' const __restrict
+// CHECK-NEXT: |       | | | `-typeDetails: PointerType {{.*}} 'void *'
+// CHECK-NEXT: |       | | |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | | `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit .copy_fn. 'void (*const restrict)(void *const restrict, ...)'
+// CHECK-NEXT: |       | | |-qualTypeDetail: QualType {{.*}} 'void (*const restrict)(void *const restrict, ...)' const __restrict
+// CHECK-NEXT: |       | | | `-typeDetails: PointerType {{.*}} 'void (*)(void *const restrict, ...)'
+// CHECK-NEXT: |       | | |   `-typeDetails: FunctionProtoType {{.*}} 'void (void *const restrict, ...)' variadic cdecl
+// CHECK-NEXT: |       | | |     |-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | | |     |-functionDetails:  cdeclReturnType {{.*}} 'void' 
+// CHECK-NEXT: |       | | |     |-qualTypeDetail: QualType {{.*}} 'void *const restrict' const __restrict
+// CHECK-NEXT: |       | | |     | `-typeDetails: PointerType {{.*}} 'void *'
+// CHECK-NEXT: |       | | |     |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | | |     `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | | |-QualType {{.*}} 'void (void *const restrict, ...)' 
+// CHECK-NEXT: |       | | `-typeDetails: FunctionProtoType {{.*}} 'void (void *const restrict, ...)' variadic cdecl
+// CHECK-NEXT: |       | |   |-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | |   |-functionDetails:  cdeclReturnType {{.*}} 'void' 
+// CHECK-NEXT: |       | |   |-qualTypeDetail: QualType {{.*}} 'void *const restrict' const __restrict
+// CHECK-NEXT: |       | |   | `-typeDetails: PointerType {{.*}} 'void *'
+// CHECK-NEXT: |       | |   |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit .task_t. 'void *const'
+// CHECK-NEXT: |       | | |-qualTypeDetail: QualType {{.*}} 'void *const' const
+// CHECK-NEXT: |       | | | `-typeDetails: PointerType {{.*}} 'void *'
+// CHECK-NEXT: |       | | |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | | `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
+// CHECK-NEXT: |       | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *'
+// CHECK-NEXT: |       | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       | |   `-Record {{.*}} 
+// CHECK-NEXT: |       | |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       | | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       | | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       | | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |   |-CapturedStmt {{.*}} <line:18:3, line:20:7>
+// CHECK-NEXT: |       |   |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       |   | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |   | | |-CapturedStmt {{.*}} <line:18:3, line:20:7>
+// CHECK-NEXT: |       |   | | |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       |   | | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |   | | | | |-ForStmt {{.*}} <line:18:3, line:20:7>
-// CHECK-NEXT: |       |   | | | | | |-DeclStmt {{.*}} <line:18:8, col:17>
-// CHECK-NEXT: |       |   | | | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |   | | | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       |   | | | | |-ForStmt {{.*}} 
+// CHECK-NEXT: |       |   | | | | | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |   | | | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | | | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |   | | | | | |-<<<NULL>>>
-// CHECK-NEXT: |       |   | | | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       |   | | | | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | | | | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | | | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | | | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | | | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       |   | | | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | | | | | `-ForStmt {{.*}} <line:19:5, line:20:7>
-// CHECK-NEXT: |       |   | | | | |   |-DeclStmt {{.*}} <line:19:10, col:19>
-// CHECK-NEXT: |       |   | | | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |   | | | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       |   | | | | | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |   | | | | | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | | | | | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | | | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | | | | | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |   | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | | | | | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       |   | | | | |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |   | | | | |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | | | | |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | | | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |   | | | | |   |-<<<NULL>>>
-// CHECK-NEXT: |       |   | | | | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       |   | | | | |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | | | | |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | | | | |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | | | | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | | | | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       |   | | | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | | | | |   `-NullStmt {{.*}} <line:20:7>
-// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} <line:17:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
-// CHECK-NEXT: |       |   | | | | |-VarDecl {{.*}} <line:18:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |   | | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |   | | | | `-VarDecl {{.*}} <line:19:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |   | | | |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       |   | | | |-DeclRefExpr {{.*}} <line:18:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | | | `-DeclRefExpr {{.*}} <line:19:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} <line:17:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
-// CHECK-NEXT: |       |   | | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       |   | | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       |   | | | |-FieldDecl {{.*}} <line:18:3> col:3 implicit 'int'
-// CHECK-NEXT: |       |   | | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       |   | | | `-FieldDecl {{.*}} <line:19:25> col:25 implicit 'int'
-// CHECK-NEXT: |       |   | | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       |   | | | | |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |   | | | | |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | | | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | | | | |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | | | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | | | | |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |   | | | | |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | | | | |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   | | | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |   | | | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |   | | | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   | | | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |   | | | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |   | | | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
+// CHECK-NEXT: |       |   | | | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *'
+// CHECK-NEXT: |       |   | | | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       |   | | | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |   | | | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       |   | | | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       |   | | | | |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | | | | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | | | | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | | | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
+// CHECK-NEXT: |       |   | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *'
+// CHECK-NEXT: |       |   | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       |   | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |   | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       |   | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       |   | | |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       |   | | | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       |   | | | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |   | | | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       |   | | | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |   | | |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       |   | | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |   | |   |-ForStmt {{.*}} <line:18:3, line:20:7>
-// CHECK-NEXT: |       |   | |   | |-DeclStmt {{.*}} <line:18:8, col:17>
-// CHECK-NEXT: |       |   | |   | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |   | |   | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       |   | |   |-ForStmt {{.*}} 
+// CHECK-NEXT: |       |   | |   | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |   | |   | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | |   | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | |   | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |   | |   | |-<<<NULL>>>
-// CHECK-NEXT: |       |   | |   | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       |   | |   | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | |   | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | |   | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | |   | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | |   | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       |   | |   | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | |   | `-ForStmt {{.*}} <line:19:5, line:20:7>
-// CHECK-NEXT: |       |   | |   |   |-DeclStmt {{.*}} <line:19:10, col:19>
-// CHECK-NEXT: |       |   | |   |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |   | |   |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       |   | |   | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |   | |   | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | |   | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | |   | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | |   | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | |   | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |   | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | |   | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       |   | |   |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |   | |   |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | |   |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | |   |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |   | |   |   |-<<<NULL>>>
-// CHECK-NEXT: |       |   | |   |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       |   | |   |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | |   |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | |   |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | |   |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | |   |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       |   | |   |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | |   |   `-NullStmt {{.*}} <line:20:7>
-// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} <line:17:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
-// CHECK-NEXT: |       |   | |   |-VarDecl {{.*}} <line:18:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |   | |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |   | |   `-VarDecl {{.*}} <line:19:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |   | |     `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       |   | |-DeclRefExpr {{.*}} <line:18:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | `-DeclRefExpr {{.*}} <line:19:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   |-ImplicitParamDecl {{.*}} <line:17:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
-// CHECK-NEXT: |       |   |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       |   | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       |   | |-FieldDecl {{.*}} <line:18:3> col:3 implicit 'int'
-// CHECK-NEXT: |       |   | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       |   | `-FieldDecl {{.*}} <line:19:25> col:25 implicit 'int'
-// CHECK-NEXT: |       |   |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       |   | |   |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |   | |   |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | |   |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | |   |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | |   |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | |   |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |   | |   |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | |   |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   | |   | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |   | |   |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |   | |   |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   | |   | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |   | |   |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |   | |   |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
+// CHECK-NEXT: |       |   | |   | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |   | |   | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *'
+// CHECK-NEXT: |       |   | |   | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       |   | |   | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |   | |   | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       |   | |   |   `-Record {{.*}} 
+// CHECK-NEXT: |       |   | |   |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | |   | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | |   | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |   `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | |     |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
+// CHECK-NEXT: |       |   | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *'
+// CHECK-NEXT: |       |   | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       |   | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |   | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       |   |   `-Record {{.*}} 
+// CHECK-NEXT: |       |   |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       |   | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       |   | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |   | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       |   | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |   |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       |   `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |     |-CapturedStmt {{.*}} <line:18:3, line:20:7>
+// CHECK-NEXT: |       |     |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       |     | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |     | | |-ForStmt {{.*}} <line:18:3, line:20:7>
-// CHECK-NEXT: |       |     | | | |-DeclStmt {{.*}} <line:18:8, col:17>
-// CHECK-NEXT: |       |     | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |     | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       |     | | |-ForStmt {{.*}} 
+// CHECK-NEXT: |       |     | | | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |     | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |     | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |     | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |     | | | |-<<<NULL>>>
-// CHECK-NEXT: |       |     | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       |     | | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |     | | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |     | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |     | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |     | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       |     | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |     | | | `-ForStmt {{.*}} <line:19:5, line:20:7>
-// CHECK-NEXT: |       |     | | |   |-DeclStmt {{.*}} <line:19:10, col:19>
-// CHECK-NEXT: |       |     | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |     | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       |     | | | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |     | | | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |     | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |     | | | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |     | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |     | | | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |     | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |     | | | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       |     | | |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |     | | |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |     | | |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |     | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |     | | |   |-<<<NULL>>>
-// CHECK-NEXT: |       |     | | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       |     | | |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |     | | |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |     | | |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |     | | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |     | | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       |     | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |     | | |   `-NullStmt {{.*}} <line:20:7>
-// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} <line:17:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
-// CHECK-NEXT: |       |     | | |-VarDecl {{.*}} <line:18:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |     | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |     | | `-VarDecl {{.*}} <line:19:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |     | |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       |     | |-DeclRefExpr {{.*}} <line:18:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |     | `-DeclRefExpr {{.*}} <line:19:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} <line:17:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
-// CHECK-NEXT: |       |     |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       |     | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       |     | |-FieldDecl {{.*}} <line:18:3> col:3 implicit 'int'
-// CHECK-NEXT: |       |     | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       |     | `-FieldDecl {{.*}} <line:19:25> col:25 implicit 'int'
-// CHECK-NEXT: |       |     |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       |     | | |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |     | | |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |     | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |     | | |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |     | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |     | | |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |     | | |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |     | | |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |     | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |     | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |     | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |     | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |     | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |     | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |     | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |     | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |     | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |     | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
+// CHECK-NEXT: |       |     | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *'
+// CHECK-NEXT: |       |     | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       |     | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |     | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       |     | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       |     | | |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |     | | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |     | | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |     | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |     | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |     | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |     | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |     | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |     | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |     | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
+// CHECK-NEXT: |       |     | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *'
+// CHECK-NEXT: |       |     | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       |     | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |     | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       |     |   `-Record {{.*}} 
+// CHECK-NEXT: |       |     |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       |     | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       |     | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |     | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       |     | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |     |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       |     `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |       |-ForStmt {{.*}} <line:18:3, line:20:7>
-// CHECK-NEXT: |       |       | |-DeclStmt {{.*}} <line:18:8, col:17>
-// CHECK-NEXT: |       |       | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |       | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       |       |-ForStmt {{.*}} 
+// CHECK-NEXT: |       |       | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |       | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |       | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |       | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |       | |-<<<NULL>>>
-// CHECK-NEXT: |       |       | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       |       | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |       | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |       | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |       | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |       | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       |       | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |       | `-ForStmt {{.*}} <line:19:5, line:20:7>
-// CHECK-NEXT: |       |       |   |-DeclStmt {{.*}} <line:19:10, col:19>
-// CHECK-NEXT: |       |       |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |       |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       |       | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |       | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |       | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |       | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |       | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |       | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |       | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |       | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       |       |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |       |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |       |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |       |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |       |   |-<<<NULL>>>
-// CHECK-NEXT: |       |       |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       |       |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |       |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |       |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |       |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |       |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       |       |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |       |   `-NullStmt {{.*}} <line:20:7>
-// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} <line:17:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
-// CHECK-NEXT: |       |       |-VarDecl {{.*}} <line:18:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |       | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |       `-VarDecl {{.*}} <line:19:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |         `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       |-DeclRefExpr {{.*}} <line:18:3> 'int' lvalue ParmVar {{.*}} 'x' 'int'
-// CHECK-NEXT: |       `-DeclRefExpr {{.*}} <line:19:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
-// CHECK-NEXT: |-FunctionDecl {{.*}} <line:23:1, line:28:1> line:23:6 test_four 'void (int, int)'
-// CHECK-NEXT: | |-ParmVarDecl {{.*}} <col:16, col:20> col:20 used x 'int'
-// CHECK-NEXT: | |-ParmVarDecl {{.*}} <col:23, col:27> col:27 used y 'int'
-// CHECK-NEXT: | `-CompoundStmt {{.*}} <col:30, line:28:1>
-// CHECK-NEXT: |   `-OMPTargetTeamsDistributeParallelForDirective {{.*}} <line:24:1, col:61>
-// CHECK-NEXT: |     |-OMPCollapseClause {{.*}} <col:50, col:60>
-// CHECK-NEXT: |     | `-ConstantExpr {{.*}} <col:59> 'int'
-// CHECK-NEXT: |     | |-value: Int 2
-// CHECK-NEXT: |     |   `-IntegerLiteral {{.*}} <col:59> 'int' 2
+// CHECK-NEXT: |       |       |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |       |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |       |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |       |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |       |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |       |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |       |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |       |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |       | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |       | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |       | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |       | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |       | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |       |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |       | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |       | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |       | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |       | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |       | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |       |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |       | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |       |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |       |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |       | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |       |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |       |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict'
+// CHECK-NEXT: |       |       | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |       | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1) *'
+// CHECK-NEXT: |       |       | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       |       | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |       | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:17:1)'
+// CHECK-NEXT: |       |       |   `-Record {{.*}} 
+// CHECK-NEXT: |       |       |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |       | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |       | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |       `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |         |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |         `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int'
+// CHECK-NEXT: |       `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int'
+// CHECK-NEXT: |-FunctionDecl {{.*}} test_four 'void (int, int)'
+// CHECK-NEXT: | |-ParmVarDecl {{.*}} used x 'int'
+// CHECK-NEXT: | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: | |-ParmVarDecl {{.*}} used y 'int'
+// CHECK-NEXT: | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: | `-CompoundStmt {{.*}} 
+// CHECK-NEXT: |   `-OMPTargetTeamsDistributeParallelForDirective {{.*}} 
+// CHECK-NEXT: |     |-OMPCollapseClause {{.*}} 
+// CHECK-NEXT: |     | `-ConstantExpr {{.*}} 'int'
+// CHECK-NEXT: |     |   |-value: Int 2
+// CHECK-NEXT: |     |   `-IntegerLiteral {{.*}} 'int' 2
 // CHECK-NEXT: |     |-OMPFirstprivateClause {{.*}} <<invalid sloc>> <implicit>
-// CHECK-NEXT: |     | |-DeclRefExpr {{.*}} <line:25:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |     | `-DeclRefExpr {{.*}} <line:26:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |     `-CapturedStmt {{.*}} <line:25:3, line:27:7>
+// CHECK-NEXT: |     | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |     | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |     `-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | |-CapturedStmt {{.*}} <line:25:3, line:27:7>
+// CHECK-NEXT: |       | |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | | |-CapturedStmt {{.*}} <line:25:3, line:27:7>
+// CHECK-NEXT: |       | | | |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       | | | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | | | | |-CapturedStmt {{.*}} <line:25:3, line:27:7>
+// CHECK-NEXT: |       | | | | | |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       | | | | | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | | | | | | |-ForStmt {{.*}} <line:25:3, line:27:7>
-// CHECK-NEXT: |       | | | | | | | | |-DeclStmt {{.*}} <line:25:8, col:17>
-// CHECK-NEXT: |       | | | | | | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | | | | | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       | | | | | | | |-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | | | | | | | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | | | | | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | | | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | | | | | | | |-<<<NULL>>>
-// CHECK-NEXT: |       | | | | | | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       | | | | | | | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | | | | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | | | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | | | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | | | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       | | | | | | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | | | | | `-ForStmt {{.*}} <line:26:5, line:27:7>
-// CHECK-NEXT: |       | | | | | | | |   |-DeclStmt {{.*}} <line:26:10, col:19>
-// CHECK-NEXT: |       | | | | | | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | | | | | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       | | | | | | | | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | | | | | | | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | | | | | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | | | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | | | | | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | | | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | | | | | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | | | | | | |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | | | | | | |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | | | | |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | | | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | | | | | | |   |-<<<NULL>>>
-// CHECK-NEXT: |       | | | | | | | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       | | | | | | | |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | | | | |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | | | | |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | | | | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | | | | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       | | | | | | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | | | | |   `-NullStmt {{.*}} <line:27:7>
-// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} <line:24:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
-// CHECK-NEXT: |       | | | | | | | |-VarDecl {{.*}} <line:25:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | | | | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | | | | | | `-VarDecl {{.*}} <line:26:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | | | | | |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       | | | | | | |-DeclRefExpr {{.*}} <line:25:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | | | `-DeclRefExpr {{.*}} <line:26:5> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} <line:24:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
-// CHECK-NEXT: |       | | | | | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       | | | | | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       | | | | | | |-FieldDecl {{.*}} <line:25:3> col:3 implicit 'int'
-// CHECK-NEXT: |       | | | | | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       | | | | | | `-FieldDecl {{.*}} <line:26:5> col:5 implicit 'int'
-// CHECK-NEXT: |       | | | | | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       | | | | | | | |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | | | | | | |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | | | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | | | | |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | | | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | | | | |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | | | | | | |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | | | | |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | | | | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | | | | | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | | | | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | | | | | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | | | | | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
+// CHECK-NEXT: |       | | | | | | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *'
+// CHECK-NEXT: |       | | | | | | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       | | | | | | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | | | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       | | | | | | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | | | | |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | | | | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | | | | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
+// CHECK-NEXT: |       | | | | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *'
+// CHECK-NEXT: |       | | | | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       | | | | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       | | | | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | | |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       | | | | | | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       | | | | | | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | | | | | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       | | | | | | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | | | | |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       | | | | | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | | | |   |-ForStmt {{.*}} <line:25:3, line:27:7>
-// CHECK-NEXT: |       | | | | |   | |-DeclStmt {{.*}} <line:25:8, col:17>
-// CHECK-NEXT: |       | | | | |   | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | | | |   | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       | | | | |   |-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | | | |   | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | | | |   | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | |   | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | |   | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | | | |   | |-<<<NULL>>>
-// CHECK-NEXT: |       | | | | |   | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       | | | | |   | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | |   | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | |   | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | |   | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | |   | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       | | | | |   | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | |   | `-ForStmt {{.*}} <line:26:5, line:27:7>
-// CHECK-NEXT: |       | | | | |   |   |-DeclStmt {{.*}} <line:26:10, col:19>
-// CHECK-NEXT: |       | | | | |   |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | | | |   |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       | | | | |   | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | | | |   | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | |   | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | |   | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | |   | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | |   | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | |   | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | | | |   |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | | | |   |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | |   |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | |   |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | | | |   |   |-<<<NULL>>>
-// CHECK-NEXT: |       | | | | |   |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       | | | | |   |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | |   |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | |   |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | | | |   |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | |   |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       | | | | |   |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | | | |   |   `-NullStmt {{.*}} <line:27:7>
-// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} <line:24:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
-// CHECK-NEXT: |       | | | | |   |-VarDecl {{.*}} <line:25:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | | | |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | | | |   `-VarDecl {{.*}} <line:26:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | | | |     `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       | | | | |-DeclRefExpr {{.*}} <line:25:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | | `-DeclRefExpr {{.*}} <line:26:5> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | | |-ImplicitParamDecl {{.*}} <line:24:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
-// CHECK-NEXT: |       | | | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       | | | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       | | | | |-FieldDecl {{.*}} <line:25:3> col:3 implicit 'int'
-// CHECK-NEXT: |       | | | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       | | | | `-FieldDecl {{.*}} <line:26:5> col:5 implicit 'int'
-// CHECK-NEXT: |       | | | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       | | | | |   |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | | | |   |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | |   |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | |   |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | | | |   |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | |   |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | | | |   |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | | | |   |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | | | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | | | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | | |   | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | | | |   |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | | | |   |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | | | |   | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | | | |   |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | | | |   |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | | | |   |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
+// CHECK-NEXT: |       | | | | |   | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | |   | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *'
+// CHECK-NEXT: |       | | | | |   | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       | | | | |   | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | |   | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       | | | | |   |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | |   |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | |   | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | |   | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |   `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | | | |     |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | | | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
+// CHECK-NEXT: |       | | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *'
+// CHECK-NEXT: |       | | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       | | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       | | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | | |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       | | | | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       | | | | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | | | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       | | | | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | | |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       | | | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | |   |-CapturedStmt {{.*}} <line:25:3, line:27:7>
+// CHECK-NEXT: |       | | |   |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       | | |   | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | |   | | |-ForStmt {{.*}} <line:25:3, line:27:7>
-// CHECK-NEXT: |       | | |   | | | |-DeclStmt {{.*}} <line:25:8, col:17>
-// CHECK-NEXT: |       | | |   | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | |   | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       | | |   | | |-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | |   | | | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | |   | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |   | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |   | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | |   | | | |-<<<NULL>>>
-// CHECK-NEXT: |       | | |   | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       | | |   | | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |   | | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |   | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |   | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |   | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       | | |   | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |   | | | `-ForStmt {{.*}} <line:26:5, line:27:7>
-// CHECK-NEXT: |       | | |   | | |   |-DeclStmt {{.*}} <line:26:10, col:19>
-// CHECK-NEXT: |       | | |   | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | |   | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       | | |   | | | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | |   | | | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |   | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |   | | | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |   | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |   | | | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | |   | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |   | | | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | |   | | |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | |   | | |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |   | | |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |   | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | |   | | |   |-<<<NULL>>>
-// CHECK-NEXT: |       | | |   | | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       | | |   | | |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |   | | |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |   | | |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |   | | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |   | | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       | | |   | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |   | | |   `-NullStmt {{.*}} <line:27:7>
-// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} <line:24:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
-// CHECK-NEXT: |       | | |   | | |-VarDecl {{.*}} <line:25:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | |   | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | |   | | `-VarDecl {{.*}} <line:26:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | |   | |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       | | |   | |-DeclRefExpr {{.*}} <line:25:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |   | `-DeclRefExpr {{.*}} <line:26:5> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} <line:24:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
-// CHECK-NEXT: |       | | |   |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       | | |   | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       | | |   | |-FieldDecl {{.*}} <line:25:3> col:3 implicit 'int'
-// CHECK-NEXT: |       | | |   | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       | | |   | `-FieldDecl {{.*}} <line:26:5> col:5 implicit 'int'
-// CHECK-NEXT: |       | | |   |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       | | |   | | |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | |   | | |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |   | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |   | | |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |   | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |   | | |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | |   | | |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |   | | |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |   | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |   | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |   | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |   | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | |   | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | |   | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | |   | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | |   | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | |   | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | |   | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | |   | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
+// CHECK-NEXT: |       | | |   | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *'
+// CHECK-NEXT: |       | | |   | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       | | |   | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | |   | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       | | |   | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | |   | | |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |   | | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |   | | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |   | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |   | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |   | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |   |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
+// CHECK-NEXT: |       | | |   | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | |   | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *'
+// CHECK-NEXT: |       | | |   | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       | | |   | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | |   | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       | | |   |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | |   |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       | | |   | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       | | |   | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | |   | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       | | |   | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | |   |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       | | |   `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       | | |     |-ForStmt {{.*}} <line:25:3, line:27:7>
-// CHECK-NEXT: |       | | |     | |-DeclStmt {{.*}} <line:25:8, col:17>
-// CHECK-NEXT: |       | | |     | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | |     | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       | | |     |-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | |     | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | |     | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |     | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |     | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | |     | |-<<<NULL>>>
-// CHECK-NEXT: |       | | |     | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       | | |     | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |     | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |     | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |     | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |     | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       | | |     | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |     | `-ForStmt {{.*}} <line:26:5, line:27:7>
-// CHECK-NEXT: |       | | |     |   |-DeclStmt {{.*}} <line:26:10, col:19>
-// CHECK-NEXT: |       | | |     |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | |     |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       | | |     | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | |     | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |     | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |     | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |     | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |     | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | |     | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |     | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       | | |     |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       | | |     |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |     |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |     |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       | | |     |   |-<<<NULL>>>
-// CHECK-NEXT: |       | | |     |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       | | |     |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |     |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |     |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |     |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | |     |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       | | |     |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       | | |     |   `-NullStmt {{.*}} <line:27:7>
-// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} <line:24:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
-// CHECK-NEXT: |       | | |     |-VarDecl {{.*}} <line:25:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       | | |     | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | |     `-VarDecl {{.*}} <line:26:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       | | |       `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       | | |-DeclRefExpr {{.*}} <line:25:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | | `-DeclRefExpr {{.*}} <line:26:5> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       | |-AlwaysInlineAttr {{.*}} <<invalid sloc>> Implicit __forceinline
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <line:24:1> col:1 implicit .global_tid. 'const int'
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .part_id. 'const int *const restrict'
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .privates. 'void *const restrict'
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .copy_fn. 'void (*const restrict)(void *const restrict, ...)'
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .task_t. 'void *const'
-// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
-// CHECK-NEXT: |       | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       | | |-FieldDecl {{.*}} <line:25:3> col:3 implicit 'int'
-// CHECK-NEXT: |       | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       | | `-FieldDecl {{.*}} <line:26:5> col:5 implicit 'int'
-// CHECK-NEXT: |       | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       | | |     |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       | | |     |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |     |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |     |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       | | |     |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | |     |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       | | |     |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       | | |     |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |     | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |     | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |     | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |     | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |     | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |     |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       | | |     | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | |     | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |     | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |     | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |     | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |     |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | |     | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | |     |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | |     |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       | | |     | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       | | |     |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       | | |     |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       | | |     |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
+// CHECK-NEXT: |       | | |     | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | |     | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *'
+// CHECK-NEXT: |       | | |     | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       | | |     | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | |     | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       | | |     |   `-Record {{.*}} 
+// CHECK-NEXT: |       | | |     |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |     | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |     | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |     `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       | | |       |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       | | |       `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       | |-attrDetails: AlwaysInlineAttr {{.*}} <<invalid sloc>> Implicit __forceinline
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int'
+// CHECK-NEXT: |       | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit .part_id. 'const int *const restrict'
+// CHECK-NEXT: |       | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit .privates. 'void *const restrict'
+// CHECK-NEXT: |       | | |-qualTypeDetail: QualType {{.*}} 'void *const restrict' const __restrict
+// CHECK-NEXT: |       | | | `-typeDetails: PointerType {{.*}} 'void *'
+// CHECK-NEXT: |       | | |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | | `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit .copy_fn. 'void (*const restrict)(void *const restrict, ...)'
+// CHECK-NEXT: |       | | |-qualTypeDetail: QualType {{.*}} 'void (*const restrict)(void *const restrict, ...)' const __restrict
+// CHECK-NEXT: |       | | | `-typeDetails: PointerType {{.*}} 'void (*)(void *const restrict, ...)'
+// CHECK-NEXT: |       | | |   `-typeDetails: FunctionProtoType {{.*}} 'void (void *const restrict, ...)' variadic cdecl
+// CHECK-NEXT: |       | | |     |-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | | |     |-functionDetails:  cdeclReturnType {{.*}} 'void' 
+// CHECK-NEXT: |       | | |     |-qualTypeDetail: QualType {{.*}} 'void *const restrict' const __restrict
+// CHECK-NEXT: |       | | |     | `-typeDetails: PointerType {{.*}} 'void *'
+// CHECK-NEXT: |       | | |     |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | | |     `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | | |-QualType {{.*}} 'void (void *const restrict, ...)' 
+// CHECK-NEXT: |       | | `-typeDetails: FunctionProtoType {{.*}} 'void (void *const restrict, ...)' variadic cdecl
+// CHECK-NEXT: |       | |   |-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | |   |-functionDetails:  cdeclReturnType {{.*}} 'void' 
+// CHECK-NEXT: |       | |   |-qualTypeDetail: QualType {{.*}} 'void *const restrict' const __restrict
+// CHECK-NEXT: |       | |   | `-typeDetails: PointerType {{.*}} 'void *'
+// CHECK-NEXT: |       | |   |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit .task_t. 'void *const'
+// CHECK-NEXT: |       | | |-qualTypeDetail: QualType {{.*}} 'void *const' const
+// CHECK-NEXT: |       | | | `-typeDetails: PointerType {{.*}} 'void *'
+// CHECK-NEXT: |       | | |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | | `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT: |       | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
+// CHECK-NEXT: |       | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict' const __restrict
+// CHECK-NEXT: |       | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *'
+// CHECK-NEXT: |       | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       | |   `-Record {{.*}} 
+// CHECK-NEXT: |       | |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       | | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       | | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       | | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       | |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |   |-CapturedStmt {{.*}} <line:25:3, line:27:7>
+// CHECK-NEXT: |       |   |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       |   | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |   | | |-CapturedStmt {{.*}} <line:25:3, line:27:7>
+// CHECK-NEXT: |       |   | | |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       |   | | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |   | | | | |-ForStmt {{.*}} <line:25:3, line:27:7>
-// CHECK-NEXT: |       |   | | | | | |-DeclStmt {{.*}} <line:25:8, col:17>
-// CHECK-NEXT: |       |   | | | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |   | | | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       |   | | | | |-ForStmt {{.*}} 
+// CHECK-NEXT: |       |   | | | | | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |   | | | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | | | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |   | | | | | |-<<<NULL>>>
-// CHECK-NEXT: |       |   | | | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       |   | | | | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | | | | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | | | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | | | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | | | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       |   | | | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | | | | | `-ForStmt {{.*}} <line:26:5, line:27:7>
-// CHECK-NEXT: |       |   | | | | |   |-DeclStmt {{.*}} <line:26:10, col:19>
-// CHECK-NEXT: |       |   | | | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |   | | | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       |   | | | | | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |   | | | | | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | | | | | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | | | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | | | | | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |   | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | | | | | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       |   | | | | |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |   | | | | |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | | | | |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | | | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |   | | | | |   |-<<<NULL>>>
-// CHECK-NEXT: |       |   | | | | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       |   | | | | |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | | | | |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | | | | |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | | | | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | | | | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       |   | | | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | | | | |   `-NullStmt {{.*}} <line:27:7>
-// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} <line:24:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
-// CHECK-NEXT: |       |   | | | | |-VarDecl {{.*}} <line:25:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |   | | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |   | | | | `-VarDecl {{.*}} <line:26:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |   | | | |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       |   | | | |-DeclRefExpr {{.*}} <line:25:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | | | `-DeclRefExpr {{.*}} <line:26:5> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} <line:24:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
-// CHECK-NEXT: |       |   | | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       |   | | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       |   | | | |-FieldDecl {{.*}} <line:25:3> col:3 implicit 'int'
-// CHECK-NEXT: |       |   | | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       |   | | | `-FieldDecl {{.*}} <line:26:5> col:5 implicit 'int'
-// CHECK-NEXT: |       |   | | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       |   | | | | |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |   | | | | |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | | | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | | | | |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | | | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | | | | |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |   | | | | |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | | | | |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   | | | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |   | | | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |   | | | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   | | | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |   | | | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |   | | | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |   | | | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
+// CHECK-NEXT: |       |   | | | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *'
+// CHECK-NEXT: |       |   | | | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       |   | | | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |   | | | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       |   | | | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       |   | | | | |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | | | | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | | | | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | | | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
+// CHECK-NEXT: |       |   | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *'
+// CHECK-NEXT: |       |   | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       |   | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |   | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       |   | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       |   | | |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       |   | | | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       |   | | | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |   | | | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       |   | | | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |   | | |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       |   | | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |   | |   |-ForStmt {{.*}} <line:25:3, line:27:7>
-// CHECK-NEXT: |       |   | |   | |-DeclStmt {{.*}} <line:25:8, col:17>
-// CHECK-NEXT: |       |   | |   | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |   | |   | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       |   | |   |-ForStmt {{.*}} 
+// CHECK-NEXT: |       |   | |   | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |   | |   | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | |   | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | |   | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |   | |   | |-<<<NULL>>>
-// CHECK-NEXT: |       |   | |   | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       |   | |   | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | |   | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | |   | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | |   | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | |   | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       |   | |   | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | |   | `-ForStmt {{.*}} <line:26:5, line:27:7>
-// CHECK-NEXT: |       |   | |   |   |-DeclStmt {{.*}} <line:26:10, col:19>
-// CHECK-NEXT: |       |   | |   |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |   | |   |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       |   | |   | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |   | |   | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | |   | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | |   | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | |   | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | |   | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |   | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | |   | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       |   | |   |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |   | |   |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | |   |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | |   |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |   | |   |   |-<<<NULL>>>
-// CHECK-NEXT: |       |   | |   |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       |   | |   |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | |   |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | |   |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |   | |   |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | |   |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       |   | |   |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |   | |   |   `-NullStmt {{.*}} <line:27:7>
-// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} <line:24:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
-// CHECK-NEXT: |       |   | |   |-VarDecl {{.*}} <line:25:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |   | |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |   | |   `-VarDecl {{.*}} <line:26:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |   | |     `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       |   | |-DeclRefExpr {{.*}} <line:25:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   | `-DeclRefExpr {{.*}} <line:26:5> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |   |-ImplicitParamDecl {{.*}} <line:24:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
-// CHECK-NEXT: |       |   |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       |   | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       |   | |-FieldDecl {{.*}} <line:25:3> col:3 implicit 'int'
-// CHECK-NEXT: |       |   | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       |   | `-FieldDecl {{.*}} <line:26:5> col:5 implicit 'int'
-// CHECK-NEXT: |       |   |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       |   | |   |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |   | |   |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | |   |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | |   |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |   | |   |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | |   |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |   | |   |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |   | |   |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |   | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |   | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |   | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |   | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   | |   | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |   | |   |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |   | |   |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |   | |   | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |   | |   |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |   | |   |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |   | |   |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
+// CHECK-NEXT: |       |   | |   | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |   | |   | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *'
+// CHECK-NEXT: |       |   | |   | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       |   | |   | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |   | |   | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       |   | |   |   `-Record {{.*}} 
+// CHECK-NEXT: |       |   | |   |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | |   | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | |   | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |   `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |   | |     |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |   | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |   |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
+// CHECK-NEXT: |       |   | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |   | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *'
+// CHECK-NEXT: |       |   | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       |   | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |   | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       |   |   `-Record {{.*}} 
+// CHECK-NEXT: |       |   |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       |   | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       |   | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |   | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       |   | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |   |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       |   `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |     |-CapturedStmt {{.*}} <line:25:3, line:27:7>
+// CHECK-NEXT: |       |     |-CapturedStmt {{.*}} 
 // CHECK-NEXT: |       |     | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |     | | |-ForStmt {{.*}} <line:25:3, line:27:7>
-// CHECK-NEXT: |       |     | | | |-DeclStmt {{.*}} <line:25:8, col:17>
-// CHECK-NEXT: |       |     | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |     | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       |     | | |-ForStmt {{.*}} 
+// CHECK-NEXT: |       |     | | | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |     | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |     | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |     | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |     | | | |-<<<NULL>>>
-// CHECK-NEXT: |       |     | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       |     | | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |     | | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |     | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |     | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |     | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       |     | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |     | | | `-ForStmt {{.*}} <line:26:5, line:27:7>
-// CHECK-NEXT: |       |     | | |   |-DeclStmt {{.*}} <line:26:10, col:19>
-// CHECK-NEXT: |       |     | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |     | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       |     | | | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |     | | | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |     | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |     | | | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |     | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |     | | | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |     | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |     | | | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       |     | | |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |     | | |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |     | | |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |     | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |     | | |   |-<<<NULL>>>
-// CHECK-NEXT: |       |     | | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       |     | | |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |     | | |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |     | | |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |     | | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |     | | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       |     | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |     | | |   `-NullStmt {{.*}} <line:27:7>
-// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} <line:24:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
-// CHECK-NEXT: |       |     | | |-VarDecl {{.*}} <line:25:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |     | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |     | | `-VarDecl {{.*}} <line:26:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |     | |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       |     | |-DeclRefExpr {{.*}} <line:25:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |     | `-DeclRefExpr {{.*}} <line:26:5> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} <line:24:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
-// CHECK-NEXT: |       |     |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT: |       |     | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT: |       |     | |-FieldDecl {{.*}} <line:25:3> col:3 implicit 'int'
-// CHECK-NEXT: |       |     | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT: |       |     | `-FieldDecl {{.*}} <line:26:5> col:5 implicit 'int'
-// CHECK-NEXT: |       |     |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT: |       |     | | |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |     | | |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |     | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |     | | |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |     | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |     | | |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |     | | |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |     | | |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |     | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |     | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |     | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |     | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |     | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |     | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |     | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |     | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |     | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |     | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |     | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
+// CHECK-NEXT: |       |     | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *'
+// CHECK-NEXT: |       |     | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       |     | | | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |     | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       |     | | |   `-Record {{.*}} 
+// CHECK-NEXT: |       |     | | |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |     | | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |     | | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |     | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |     | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |     | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |     | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |     | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |     | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |     | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |     |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |     |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
+// CHECK-NEXT: |       |     | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |     | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *'
+// CHECK-NEXT: |       |     | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       |     | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |     | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       |     |   `-Record {{.*}} 
+// CHECK-NEXT: |       |     |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT: |       |     | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT: |       |     | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |     | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT: |       |     | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT: |       |     |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT: |       |     `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT: |       |       |-ForStmt {{.*}} <line:25:3, line:27:7>
-// CHECK-NEXT: |       |       | |-DeclStmt {{.*}} <line:25:8, col:17>
-// CHECK-NEXT: |       |       | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |       | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT: |       |       |-ForStmt {{.*}} 
+// CHECK-NEXT: |       |       | |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |       | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |       | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |       | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |       | |-<<<NULL>>>
-// CHECK-NEXT: |       |       | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT: |       |       | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |       | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |       | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |       | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |       | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT: |       |       | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |       | `-ForStmt {{.*}} <line:26:5, line:27:7>
-// CHECK-NEXT: |       |       |   |-DeclStmt {{.*}} <line:26:10, col:19>
-// CHECK-NEXT: |       |       |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |       |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT: |       |       | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |       | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |       | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |       | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |       | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |       | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |       | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |       | `-ForStmt {{.*}} 
+// CHECK-NEXT: |       |       |   |-DeclStmt {{.*}} 
+// CHECK-NEXT: |       |       |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |       |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |       |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |       |       |   |-<<<NULL>>>
-// CHECK-NEXT: |       |       |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT: |       |       |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |       |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |       |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       |       |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT: |       |       |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT: |       |       |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT: |       |       |   `-NullStmt {{.*}} <line:27:7>
-// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} <line:24:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
-// CHECK-NEXT: |       |       |-VarDecl {{.*}} <line:25:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT: |       |       | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |       `-VarDecl {{.*}} <line:26:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT: |       |         `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT: |       |-DeclRefExpr {{.*}} <line:25:3> 'int' lvalue ParmVar {{.*}} 'x' 'int'
-// CHECK-NEXT: |       `-DeclRefExpr {{.*}} <line:26:5> 'int' lvalue ParmVar {{.*}} 'y' 'int'
-// CHECK-NEXT: `-FunctionDecl {{.*}} <line:30:1, line:36:1> line:30:6 test_five 'void (int, int, int)'
-// CHECK-NEXT:   |-ParmVarDecl {{.*}} <col:16, col:20> col:20 used x 'int'
-// CHECK-NEXT:   |-ParmVarDecl {{.*}} <col:23, col:27> col:27 used y 'int'
-// CHECK-NEXT:   |-ParmVarDecl {{.*}} <col:30, col:34> col:34 used z 'int'
-// CHECK-NEXT:   `-CompoundStmt {{.*}} <col:37, line:36:1>
-// CHECK-NEXT:     `-OMPTargetTeamsDistributeParallelForDirective {{.*}} <line:31:1, col:61>
-// CHECK-NEXT:       |-OMPCollapseClause {{.*}} <col:50, col:60>
-// CHECK-NEXT:       | `-ConstantExpr {{.*}} <col:59> 'int'
-// CHECK-NEXT:       | |-value: Int 2
-// CHECK-NEXT:       |   `-IntegerLiteral {{.*}} <col:59> 'int' 2
+// CHECK-NEXT: |       |       |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT: |       |       |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |       |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |       |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: |       |       |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT: |       |       |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT: |       |       |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT: |       |       |   `-NullStmt {{.*}} 
+// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |       | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |       | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |       | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |       | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |       | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |       |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT: |       |       | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT: |       |       | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT: |       |       | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |       | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |       | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT: |       |       |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |       | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |       |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |       |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT: |       |       | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT: |       |       |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT: |       |       |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT: |       |       |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict'
+// CHECK-NEXT: |       |       | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *const restrict' const __restrict
+// CHECK-NEXT: |       |       | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1) *'
+// CHECK-NEXT: |       |       | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       |       | |     `-Record {{.*}} 
+// CHECK-NEXT: |       |       | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:24:1)'
+// CHECK-NEXT: |       |       |   `-Record {{.*}} 
+// CHECK-NEXT: |       |       |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |       | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |       | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |       `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT: |       |         |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |       |         `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |       |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int'
+// CHECK-NEXT: |       `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int'
+// CHECK-NEXT: `-FunctionDecl {{.*}} test_five 'void (int, int, int)'
+// CHECK-NEXT:   |-ParmVarDecl {{.*}} used x 'int'
+// CHECK-NEXT:   | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:   |-ParmVarDecl {{.*}} used y 'int'
+// CHECK-NEXT:   | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:   |-ParmVarDecl {{.*}} used z 'int'
+// CHECK-NEXT:   | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:   `-CompoundStmt {{.*}} 
+// CHECK-NEXT:     `-OMPTargetTeamsDistributeParallelForDirective {{.*}} 
+// CHECK-NEXT:       |-OMPCollapseClause {{.*}} 
+// CHECK-NEXT:       | `-ConstantExpr {{.*}} 'int'
+// CHECK-NEXT:       |   |-value: Int 2
+// CHECK-NEXT:       |   `-IntegerLiteral {{.*}} 'int' 2
 // CHECK-NEXT:       |-OMPFirstprivateClause {{.*}} <<invalid sloc>> <implicit>
-// CHECK-NEXT:       | |-DeclRefExpr {{.*}} <line:32:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:       | |-DeclRefExpr {{.*}} <line:33:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:       | `-DeclRefExpr {{.*}} <line:34:27> 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:       `-CapturedStmt {{.*}} <line:32:3, line:35:9>
+// CHECK-NEXT:       | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:       | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:       | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:       `-CapturedStmt {{.*}} 
 // CHECK-NEXT:         |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:         | |-CapturedStmt {{.*}} <line:32:3, line:35:9>
+// CHECK-NEXT:         | |-CapturedStmt {{.*}} 
 // CHECK-NEXT:         | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:         | | | |-CapturedStmt {{.*}} <line:32:3, line:35:9>
+// CHECK-NEXT:         | | | |-CapturedStmt {{.*}} 
 // CHECK-NEXT:         | | | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:         | | | | | |-CapturedStmt {{.*}} <line:32:3, line:35:9>
+// CHECK-NEXT:         | | | | | |-CapturedStmt {{.*}} 
 // CHECK-NEXT:         | | | | | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:         | | | | | | | |-ForStmt {{.*}} <line:32:3, line:35:9>
-// CHECK-NEXT:         | | | | | | | | |-DeclStmt {{.*}} <line:32:8, col:17>
-// CHECK-NEXT:         | | | | | | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT:         | | | | | | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT:         | | | | | | | |-ForStmt {{.*}} 
+// CHECK-NEXT:         | | | | | | | | |-DeclStmt {{.*}} 
+// CHECK-NEXT:         | | | | | | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | | | | | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | | | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         | | | | | | | | |-<<<NULL>>>
-// CHECK-NEXT:         | | | | | | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT:         | | | | | | | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | | | | | | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | | | | | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | | | | | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | | | | | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT:         | | | | | | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | | | | | | | `-ForStmt {{.*}} <line:33:5, line:35:9>
-// CHECK-NEXT:         | | | | | | | |   |-DeclStmt {{.*}} <line:33:10, col:19>
-// CHECK-NEXT:         | | | | | | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT:         | | | | | | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT:         | | | | | | | | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         | | | | | | | | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | | | | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | | | | | | | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | | | | | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | | | | | | | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         | | | | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | | | | | | | `-ForStmt {{.*}} 
+// CHECK-NEXT:         | | | | | | | |   |-DeclStmt {{.*}} 
+// CHECK-NEXT:         | | | | | | | |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | | | | | | |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | | | | | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         | | | | | | | |   |-<<<NULL>>>
-// CHECK-NEXT:         | | | | | | | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT:         | | | | | | | |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | | | | | | |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | | | | | | |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | | | | | | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | | | | | | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT:         | | | | | | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | | | | | | |   `-ForStmt {{.*}} <line:34:7, line:35:9>
-// CHECK-NEXT:         | | | | | | | |     |-DeclStmt {{.*}} <line:34:12, col:21>
-// CHECK-NEXT:         | | | | | | | |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit
-// CHECK-NEXT:         | | | | | | | |     |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
+// CHECK-NEXT:         | | | | | | | |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         | | | | | | | |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | | | | | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | | | | | | |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | | | | | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | | | | | | |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         | | | | | | | |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | | | | | | |   `-ForStmt {{.*}} 
+// CHECK-NEXT:         | | | | | | | |     |-DeclStmt {{.*}} 
+// CHECK-NEXT:         | | | | | | | |     | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | | | | | | |     |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | | | | | | |     |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         | | | | | | | |     |-<<<NULL>>>
-// CHECK-NEXT:         | | | | | | | |     |-BinaryOperator {{.*}} <col:23, col:27> 'int' '<'
-// CHECK-NEXT:         | | | | | | | |     | |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | | | | | | |     | | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | | | | | | |     | `-ImplicitCastExpr {{.*}} <col:27> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | | | | | | |     |   `-DeclRefExpr {{.*}} <col:27> 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | | | | | | |     |-UnaryOperator {{.*}} <col:30, col:31> 'int' postfix '++'
-// CHECK-NEXT:         | | | | | | | |     | `-DeclRefExpr {{.*}} <col:30> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | | | | | | |     `-NullStmt {{.*}} <line:35:9>
-// CHECK-NEXT:         | | | | | | | |-ImplicitParamDecl {{.*}} <line:31:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT:         | | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:         | | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT:         | | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT:         | | | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
-// CHECK-NEXT:         | | | | | | | |-VarDecl {{.*}} <line:32:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT:         | | | | | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT:         | | | | | | | |-VarDecl {{.*}} <line:33:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT:         | | | | | | | | `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT:         | | | | | | | `-VarDecl {{.*}} <line:34:12, col:20> col:16 used i 'int' cinit
-// CHECK-NEXT:         | | | | | | |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
-// CHECK-NEXT:         | | | | | | |-DeclRefExpr {{.*}} <line:32:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | | | | | |-DeclRefExpr {{.*}} <line:33:5> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | | | | | `-DeclRefExpr {{.*}} <line:34:27> 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | | | | |-ImplicitParamDecl {{.*}} <line:31:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT:         | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:         | | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
-// CHECK-NEXT:         | | | | | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT:         | | | | | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT:         | | | | | | |-FieldDecl {{.*}} <line:32:3> col:3 implicit 'int'
-// CHECK-NEXT:         | | | | | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT:         | | | | | | |-FieldDecl {{.*}} <line:33:5> col:5 implicit 'int'
-// CHECK-NEXT:         | | | | | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT:         | | | | | | `-FieldDecl {{.*}} <line:34:27> col:27 implicit 'int'
-// CHECK-NEXT:         | | | | | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT:         | | | | | | | |     |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         | | | | | | | |     | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | | | | | | |     | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | | | | | | |     | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | | | | | | |     |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | | | | | | |     |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         | | | | | | | |     | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | | | | | | |     `-NullStmt {{.*}} 
+// CHECK-NEXT:         | | | | | | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT:         | | | | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         | | | | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         | | | | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | | | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | | | | | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT:         | | | | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         | | | | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         | | | | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | | | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | | | | | | |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         | | | | | | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT:         | | | | | | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT:         | | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT:         | | | | | | | |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         | | | | | | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT:         | | | | | | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT:         | | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT:         | | | | | | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
+// CHECK-NEXT:         | | | | | | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict' const __restrict
+// CHECK-NEXT:         | | | | | | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *'
+// CHECK-NEXT:         | | | | | | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         | | | | | | | | |     `-Record {{.*}} 
+// CHECK-NEXT:         | | | | | | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         | | | | | | | |   `-Record {{.*}} 
+// CHECK-NEXT:         | | | | | | | |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | | | | | | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | | | | | | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | | | | | | |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | | | | | | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | | | | | | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | | | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | | | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | | | | | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | | | | | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | | | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT:         | | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         | | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         | | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | | | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT:         | | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         | | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         | | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | | | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
+// CHECK-NEXT:         | | | | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict' const __restrict
+// CHECK-NEXT:         | | | | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *'
+// CHECK-NEXT:         | | | | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         | | | | | | |     `-Record {{.*}} 
+// CHECK-NEXT:         | | | | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         | | | | | |   `-Record {{.*}} 
+// CHECK-NEXT:         | | | | | |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT:         | | | | | | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT:         | | | | | | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         | | | | | | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT:         | | | | | | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         | | | | | | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT:         | | | | | | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         | | | | | |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT:         | | | | | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:         | | | | |   |-ForStmt {{.*}} <line:32:3, line:35:9>
-// CHECK-NEXT:         | | | | |   | |-DeclStmt {{.*}} <line:32:8, col:17>
-// CHECK-NEXT:         | | | | |   | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT:         | | | | |   | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT:         | | | | |   |-ForStmt {{.*}} 
+// CHECK-NEXT:         | | | | |   | |-DeclStmt {{.*}} 
+// CHECK-NEXT:         | | | | |   | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | | | |   | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | | | |   | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         | | | | |   | |-<<<NULL>>>
-// CHECK-NEXT:         | | | | |   | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT:         | | | | |   | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | | | |   | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | | | |   | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | | | |   | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | | | |   | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT:         | | | | |   | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | | | |   | `-ForStmt {{.*}} <line:33:5, line:35:9>
-// CHECK-NEXT:         | | | | |   |   |-DeclStmt {{.*}} <line:33:10, col:19>
-// CHECK-NEXT:         | | | | |   |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT:         | | | | |   |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT:         | | | | |   | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         | | | | |   | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | | | |   | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | | | |   | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | | | |   | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | | | |   | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         | | | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | | | |   | `-ForStmt {{.*}} 
+// CHECK-NEXT:         | | | | |   |   |-DeclStmt {{.*}} 
+// CHECK-NEXT:         | | | | |   |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | | | |   |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | | | |   |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         | | | | |   |   |-<<<NULL>>>
-// CHECK-NEXT:         | | | | |   |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT:         | | | | |   |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | | | |   |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | | | |   |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | | | |   |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | | | |   |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT:         | | | | |   |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | | | |   |   `-ForStmt {{.*}} <line:34:7, line:35:9>
-// CHECK-NEXT:         | | | | |   |     |-DeclStmt {{.*}} <line:34:12, col:21>
-// CHECK-NEXT:         | | | | |   |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit
-// CHECK-NEXT:         | | | | |   |     |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
+// CHECK-NEXT:         | | | | |   |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         | | | | |   |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | | | |   |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | | | |   |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | | | |   |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | | | |   |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         | | | | |   |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | | | |   |   `-ForStmt {{.*}} 
+// CHECK-NEXT:         | | | | |   |     |-DeclStmt {{.*}} 
+// CHECK-NEXT:         | | | | |   |     | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | | | |   |     |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | | | |   |     |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         | | | | |   |     |-<<<NULL>>>
-// CHECK-NEXT:         | | | | |   |     |-BinaryOperator {{.*}} <col:23, col:27> 'int' '<'
-// CHECK-NEXT:         | | | | |   |     | |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | | | |   |     | | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | | | |   |     | `-ImplicitCastExpr {{.*}} <col:27> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | | | |   |     |   `-DeclRefExpr {{.*}} <col:27> 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | | | |   |     |-UnaryOperator {{.*}} <col:30, col:31> 'int' postfix '++'
-// CHECK-NEXT:         | | | | |   |     | `-DeclRefExpr {{.*}} <col:30> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | | | |   |     `-NullStmt {{.*}} <line:35:9>
-// CHECK-NEXT:         | | | | |   |-ImplicitParamDecl {{.*}} <line:31:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT:         | | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:         | | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT:         | | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT:         | | | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
-// CHECK-NEXT:         | | | | |   |-VarDecl {{.*}} <line:32:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT:         | | | | |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT:         | | | | |   |-VarDecl {{.*}} <line:33:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT:         | | | | |   | `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT:         | | | | |   `-VarDecl {{.*}} <line:34:12, col:20> col:16 used i 'int' cinit
-// CHECK-NEXT:         | | | | |     `-IntegerLiteral {{.*}} <col:20> 'int' 0
-// CHECK-NEXT:         | | | | |-DeclRefExpr {{.*}} <line:32:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | | | |-DeclRefExpr {{.*}} <line:33:5> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | | | `-DeclRefExpr {{.*}} <line:34:27> 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | | |-ImplicitParamDecl {{.*}} <line:31:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
-// CHECK-NEXT:         | | | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT:         | | | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT:         | | | | |-FieldDecl {{.*}} <line:32:3> col:3 implicit 'int'
-// CHECK-NEXT:         | | | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT:         | | | | |-FieldDecl {{.*}} <line:33:5> col:5 implicit 'int'
-// CHECK-NEXT:         | | | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT:         | | | | `-FieldDecl {{.*}} <line:34:27> col:27 implicit 'int'
-// CHECK-NEXT:         | | | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT:         | | | | |   |     |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         | | | | |   |     | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | | | |   |     | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | | | |   |     | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | | | |   |     |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | | | |   |     |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         | | | | |   |     | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | | | |   |     `-NullStmt {{.*}} 
+// CHECK-NEXT:         | | | | |   |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT:         | | | | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         | | | | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         | | | | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | | | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | | | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | | | |   |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT:         | | | | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         | | | | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         | | | | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | | | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | | | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | | | |   |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         | | | | |   | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT:         | | | | |   |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT:         | | | | |   |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT:         | | | | |   |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         | | | | |   | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT:         | | | | |   |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT:         | | | | |   |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT:         | | | | |   |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
+// CHECK-NEXT:         | | | | |   | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict' const __restrict
+// CHECK-NEXT:         | | | | |   | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *'
+// CHECK-NEXT:         | | | | |   | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         | | | | |   | |     `-Record {{.*}} 
+// CHECK-NEXT:         | | | | |   | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         | | | | |   |   `-Record {{.*}} 
+// CHECK-NEXT:         | | | | |   |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | | | |   | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | | | |   | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | | | |   |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | | | |   | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | | | |   | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | | | |   `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | | | |     |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | | | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | | | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | | | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
+// CHECK-NEXT:         | | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict' const __restrict
+// CHECK-NEXT:         | | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *'
+// CHECK-NEXT:         | | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         | | | | |     `-Record {{.*}} 
+// CHECK-NEXT:         | | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         | | | |   `-Record {{.*}} 
+// CHECK-NEXT:         | | | |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT:         | | | | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT:         | | | | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         | | | | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT:         | | | | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         | | | | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT:         | | | | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         | | | |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT:         | | | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:         | | |   |-CapturedStmt {{.*}} <line:32:3, line:35:9>
+// CHECK-NEXT:         | | |   |-CapturedStmt {{.*}} 
 // CHECK-NEXT:         | | |   | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:         | | |   | | |-ForStmt {{.*}} <line:32:3, line:35:9>
-// CHECK-NEXT:         | | |   | | | |-DeclStmt {{.*}} <line:32:8, col:17>
-// CHECK-NEXT:         | | |   | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT:         | | |   | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT:         | | |   | | |-ForStmt {{.*}} 
+// CHECK-NEXT:         | | |   | | | |-DeclStmt {{.*}} 
+// CHECK-NEXT:         | | |   | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | |   | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | |   | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         | | |   | | | |-<<<NULL>>>
-// CHECK-NEXT:         | | |   | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT:         | | |   | | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | |   | | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | |   | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | |   | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | |   | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT:         | | |   | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | |   | | | `-ForStmt {{.*}} <line:33:5, line:35:9>
-// CHECK-NEXT:         | | |   | | |   |-DeclStmt {{.*}} <line:33:10, col:19>
-// CHECK-NEXT:         | | |   | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT:         | | |   | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT:         | | |   | | | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         | | |   | | | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | |   | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | |   | | | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | |   | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | |   | | | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         | | |   | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | |   | | | `-ForStmt {{.*}} 
+// CHECK-NEXT:         | | |   | | |   |-DeclStmt {{.*}} 
+// CHECK-NEXT:         | | |   | | |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | |   | | |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | |   | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         | | |   | | |   |-<<<NULL>>>
-// CHECK-NEXT:         | | |   | | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT:         | | |   | | |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | |   | | |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | |   | | |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | |   | | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | |   | | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT:         | | |   | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | |   | | |   `-ForStmt {{.*}} <line:34:7, line:35:9>
-// CHECK-NEXT:         | | |   | | |     |-DeclStmt {{.*}} <line:34:12, col:21>
-// CHECK-NEXT:         | | |   | | |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit
-// CHECK-NEXT:         | | |   | | |     |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
+// CHECK-NEXT:         | | |   | | |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         | | |   | | |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | |   | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | |   | | |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | |   | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | |   | | |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         | | |   | | |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | |   | | |   `-ForStmt {{.*}} 
+// CHECK-NEXT:         | | |   | | |     |-DeclStmt {{.*}} 
+// CHECK-NEXT:         | | |   | | |     | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | |   | | |     |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | |   | | |     |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         | | |   | | |     |-<<<NULL>>>
-// CHECK-NEXT:         | | |   | | |     |-BinaryOperator {{.*}} <col:23, col:27> 'int' '<'
-// CHECK-NEXT:         | | |   | | |     | |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | |   | | |     | | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | |   | | |     | `-ImplicitCastExpr {{.*}} <col:27> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | |   | | |     |   `-DeclRefExpr {{.*}} <col:27> 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | |   | | |     |-UnaryOperator {{.*}} <col:30, col:31> 'int' postfix '++'
-// CHECK-NEXT:         | | |   | | |     | `-DeclRefExpr {{.*}} <col:30> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | |   | | |     `-NullStmt {{.*}} <line:35:9>
-// CHECK-NEXT:         | | |   | | |-ImplicitParamDecl {{.*}} <line:31:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT:         | | |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:         | | |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT:         | | |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT:         | | |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
-// CHECK-NEXT:         | | |   | | |-VarDecl {{.*}} <line:32:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT:         | | |   | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT:         | | |   | | |-VarDecl {{.*}} <line:33:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT:         | | |   | | | `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT:         | | |   | | `-VarDecl {{.*}} <line:34:12, col:20> col:16 used i 'int' cinit
-// CHECK-NEXT:         | | |   | |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
-// CHECK-NEXT:         | | |   | |-DeclRefExpr {{.*}} <line:32:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | |   | |-DeclRefExpr {{.*}} <line:33:5> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | |   | `-DeclRefExpr {{.*}} <line:34:27> 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | |   |-ImplicitParamDecl {{.*}} <line:31:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT:         | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:         | | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
-// CHECK-NEXT:         | | |   |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT:         | | |   | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT:         | | |   | |-FieldDecl {{.*}} <line:32:3> col:3 implicit 'int'
-// CHECK-NEXT:         | | |   | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT:         | | |   | |-FieldDecl {{.*}} <line:33:5> col:5 implicit 'int'
-// CHECK-NEXT:         | | |   | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT:         | | |   | `-FieldDecl {{.*}} <line:34:27> col:27 implicit 'int'
-// CHECK-NEXT:         | | |   |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT:         | | |   | | |     |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         | | |   | | |     | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | |   | | |     | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | |   | | |     | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | |   | | |     |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | |   | | |     |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         | | |   | | |     | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | |   | | |     `-NullStmt {{.*}} 
+// CHECK-NEXT:         | | |   | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT:         | | |   | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         | | |   | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         | | |   | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | |   | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | |   | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | |   | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | |   | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT:         | | |   | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         | | |   | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         | | |   | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | |   | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | |   | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | |   | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | |   | | |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         | | |   | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT:         | | |   | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT:         | | |   | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT:         | | |   | | |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         | | |   | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT:         | | |   | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT:         | | |   | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT:         | | |   | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
+// CHECK-NEXT:         | | |   | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict' const __restrict
+// CHECK-NEXT:         | | |   | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *'
+// CHECK-NEXT:         | | |   | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         | | |   | | | |     `-Record {{.*}} 
+// CHECK-NEXT:         | | |   | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         | | |   | | |   `-Record {{.*}} 
+// CHECK-NEXT:         | | |   | | |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | |   | | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | |   | | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | |   | | |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | |   | | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | |   | | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | |   | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | |   | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | |   | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | |   | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | |   | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | |   | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | |   |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT:         | | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         | | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         | | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | |   |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT:         | | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         | | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         | | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | |   |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
+// CHECK-NEXT:         | | |   | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict' const __restrict
+// CHECK-NEXT:         | | |   | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *'
+// CHECK-NEXT:         | | |   | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         | | |   | |     `-Record {{.*}} 
+// CHECK-NEXT:         | | |   | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         | | |   |   `-Record {{.*}} 
+// CHECK-NEXT:         | | |   |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT:         | | |   | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT:         | | |   | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         | | |   | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT:         | | |   | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         | | |   | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT:         | | |   | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         | | |   |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT:         | | |   `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:         | | |     |-ForStmt {{.*}} <line:32:3, line:35:9>
-// CHECK-NEXT:         | | |     | |-DeclStmt {{.*}} <line:32:8, col:17>
-// CHECK-NEXT:         | | |     | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT:         | | |     | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT:         | | |     |-ForStmt {{.*}} 
+// CHECK-NEXT:         | | |     | |-DeclStmt {{.*}} 
+// CHECK-NEXT:         | | |     | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | |     | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | |     | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         | | |     | |-<<<NULL>>>
-// CHECK-NEXT:         | | |     | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT:         | | |     | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | |     | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | |     | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | |     | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | |     | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT:         | | |     | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | |     | `-ForStmt {{.*}} <line:33:5, line:35:9>
-// CHECK-NEXT:         | | |     |   |-DeclStmt {{.*}} <line:33:10, col:19>
-// CHECK-NEXT:         | | |     |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT:         | | |     |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT:         | | |     | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         | | |     | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | |     | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | |     | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | |     | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | |     | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         | | |     | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | |     | `-ForStmt {{.*}} 
+// CHECK-NEXT:         | | |     |   |-DeclStmt {{.*}} 
+// CHECK-NEXT:         | | |     |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | |     |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | |     |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         | | |     |   |-<<<NULL>>>
-// CHECK-NEXT:         | | |     |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT:         | | |     |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | |     |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | |     |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | |     |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | |     |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT:         | | |     |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | |     |   `-ForStmt {{.*}} <line:34:7, line:35:9>
-// CHECK-NEXT:         | | |     |     |-DeclStmt {{.*}} <line:34:12, col:21>
-// CHECK-NEXT:         | | |     |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit
-// CHECK-NEXT:         | | |     |     |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
+// CHECK-NEXT:         | | |     |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         | | |     |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | |     |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | |     |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | |     |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | |     |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         | | |     |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | |     |   `-ForStmt {{.*}} 
+// CHECK-NEXT:         | | |     |     |-DeclStmt {{.*}} 
+// CHECK-NEXT:         | | |     |     | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | |     |     |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | |     |     |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         | | |     |     |-<<<NULL>>>
-// CHECK-NEXT:         | | |     |     |-BinaryOperator {{.*}} <col:23, col:27> 'int' '<'
-// CHECK-NEXT:         | | |     |     | |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | |     |     | | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | |     |     | `-ImplicitCastExpr {{.*}} <col:27> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | |     |     |   `-DeclRefExpr {{.*}} <col:27> 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | |     |     |-UnaryOperator {{.*}} <col:30, col:31> 'int' postfix '++'
-// CHECK-NEXT:         | | |     |     | `-DeclRefExpr {{.*}} <col:30> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         | | |     |     `-NullStmt {{.*}} <line:35:9>
-// CHECK-NEXT:         | | |     |-ImplicitParamDecl {{.*}} <line:31:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT:         | | |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:         | | |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT:         | | |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT:         | | |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
-// CHECK-NEXT:         | | |     |-VarDecl {{.*}} <line:32:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT:         | | |     | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT:         | | |     |-VarDecl {{.*}} <line:33:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT:         | | |     | `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT:         | | |     `-VarDecl {{.*}} <line:34:12, col:20> col:16 used i 'int' cinit
-// CHECK-NEXT:         | | |       `-IntegerLiteral {{.*}} <col:20> 'int' 0
-// CHECK-NEXT:         | | |-DeclRefExpr {{.*}} <line:32:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | |-DeclRefExpr {{.*}} <line:33:5> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | | `-DeclRefExpr {{.*}} <line:34:27> 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         | |-AlwaysInlineAttr {{.*}} <<invalid sloc>> Implicit __forceinline
-// CHECK-NEXT:         | |-ImplicitParamDecl {{.*}} <line:31:1> col:1 implicit .global_tid. 'const int'
-// CHECK-NEXT:         | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .part_id. 'const int *const restrict'
-// CHECK-NEXT:         | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .privates. 'void *const restrict'
-// CHECK-NEXT:         | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .copy_fn. 'void (*const restrict)(void *const restrict, ...)'
-// CHECK-NEXT:         | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .task_t. 'void *const'
-// CHECK-NEXT:         | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
-// CHECK-NEXT:         | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT:         | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT:         | | |-FieldDecl {{.*}} <line:32:3> col:3 implicit 'int'
-// CHECK-NEXT:         | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT:         | | |-FieldDecl {{.*}} <line:33:5> col:5 implicit 'int'
-// CHECK-NEXT:         | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT:         | | `-FieldDecl {{.*}} <line:34:27> col:27 implicit 'int'
-// CHECK-NEXT:         | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT:         | | |     |     |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         | | |     |     | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | |     |     | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | |     |     | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         | | |     |     |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | |     |     |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         | | |     |     | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         | | |     |     `-NullStmt {{.*}} 
+// CHECK-NEXT:         | | |     |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT:         | | |     | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         | | |     | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         | | |     | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | |     | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | |     | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | |     |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | |     |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT:         | | |     | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         | | |     | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         | | |     | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | |     | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | |     | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | |     |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | |     |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         | | |     | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT:         | | |     |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT:         | | |     |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT:         | | |     |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         | | |     | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT:         | | |     |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT:         | | |     |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT:         | | |     |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
+// CHECK-NEXT:         | | |     | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict' const __restrict
+// CHECK-NEXT:         | | |     | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *'
+// CHECK-NEXT:         | | |     | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         | | |     | |     `-Record {{.*}} 
+// CHECK-NEXT:         | | |     | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         | | |     |   `-Record {{.*}} 
+// CHECK-NEXT:         | | |     |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | |     | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | |     | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | |     |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | |     | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | |     | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | |     `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         | | |       |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         | | |       `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         | |-attrDetails: AlwaysInlineAttr {{.*}} <<invalid sloc>> Implicit __forceinline
+// CHECK-NEXT:         | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int'
+// CHECK-NEXT:         | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | |-ImplicitParamDecl {{.*}} implicit .part_id. 'const int *const restrict'
+// CHECK-NEXT:         | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         | |-ImplicitParamDecl {{.*}} implicit .privates. 'void *const restrict'
+// CHECK-NEXT:         | | |-qualTypeDetail: QualType {{.*}} 'void *const restrict' const __restrict
+// CHECK-NEXT:         | | | `-typeDetails: PointerType {{.*}} 'void *'
+// CHECK-NEXT:         | | |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT:         | | `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT:         | |-ImplicitParamDecl {{.*}} implicit .copy_fn. 'void (*const restrict)(void *const restrict, ...)'
+// CHECK-NEXT:         | | |-qualTypeDetail: QualType {{.*}} 'void (*const restrict)(void *const restrict, ...)' const __restrict
+// CHECK-NEXT:         | | | `-typeDetails: PointerType {{.*}} 'void (*)(void *const restrict, ...)'
+// CHECK-NEXT:         | | |   `-typeDetails: FunctionProtoType {{.*}} 'void (void *const restrict, ...)' variadic cdecl
+// CHECK-NEXT:         | | |     |-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT:         | | |     |-functionDetails:  cdeclReturnType {{.*}} 'void' 
+// CHECK-NEXT:         | | |     |-qualTypeDetail: QualType {{.*}} 'void *const restrict' const __restrict
+// CHECK-NEXT:         | | |     | `-typeDetails: PointerType {{.*}} 'void *'
+// CHECK-NEXT:         | | |     |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT:         | | |     `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT:         | | |-QualType {{.*}} 'void (void *const restrict, ...)' 
+// CHECK-NEXT:         | | `-typeDetails: FunctionProtoType {{.*}} 'void (void *const restrict, ...)' variadic cdecl
+// CHECK-NEXT:         | |   |-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT:         | |   |-functionDetails:  cdeclReturnType {{.*}} 'void' 
+// CHECK-NEXT:         | |   |-qualTypeDetail: QualType {{.*}} 'void *const restrict' const __restrict
+// CHECK-NEXT:         | |   | `-typeDetails: PointerType {{.*}} 'void *'
+// CHECK-NEXT:         | |   |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT:         | |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT:         | |-ImplicitParamDecl {{.*}} implicit .task_t. 'void *const'
+// CHECK-NEXT:         | | |-qualTypeDetail: QualType {{.*}} 'void *const' const
+// CHECK-NEXT:         | | | `-typeDetails: PointerType {{.*}} 'void *'
+// CHECK-NEXT:         | | |   `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT:         | | `-typeDetails: BuiltinType {{.*}} 'void'
+// CHECK-NEXT:         | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
+// CHECK-NEXT:         | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict' const __restrict
+// CHECK-NEXT:         | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *'
+// CHECK-NEXT:         | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         | | |     `-Record {{.*}} 
+// CHECK-NEXT:         | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         | |   `-Record {{.*}} 
+// CHECK-NEXT:         | |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT:         | | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT:         | | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         | | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT:         | | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         | | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT:         | | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         | |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT:         | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:         |   |-CapturedStmt {{.*}} <line:32:3, line:35:9>
+// CHECK-NEXT:         |   |-CapturedStmt {{.*}} 
 // CHECK-NEXT:         |   | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:         |   | | |-CapturedStmt {{.*}} <line:32:3, line:35:9>
+// CHECK-NEXT:         |   | | |-CapturedStmt {{.*}} 
 // CHECK-NEXT:         |   | | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:         |   | | | | |-ForStmt {{.*}} <line:32:3, line:35:9>
-// CHECK-NEXT:         |   | | | | | |-DeclStmt {{.*}} <line:32:8, col:17>
-// CHECK-NEXT:         |   | | | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT:         |   | | | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT:         |   | | | | |-ForStmt {{.*}} 
+// CHECK-NEXT:         |   | | | | | |-DeclStmt {{.*}} 
+// CHECK-NEXT:         |   | | | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |   | | | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |   | | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         |   | | | | | |-<<<NULL>>>
-// CHECK-NEXT:         |   | | | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT:         |   | | | | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT:         |   | | | | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |   | | | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         |   | | | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |   | | | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT:         |   | | | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |   | | | | | `-ForStmt {{.*}} <line:33:5, line:35:9>
-// CHECK-NEXT:         |   | | | | |   |-DeclStmt {{.*}} <line:33:10, col:19>
-// CHECK-NEXT:         |   | | | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT:         |   | | | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT:         |   | | | | | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         |   | | | | | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |   | | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |   | | | | | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |   | | | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |   | | | | | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         |   | | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |   | | | | | `-ForStmt {{.*}} 
+// CHECK-NEXT:         |   | | | | |   |-DeclStmt {{.*}} 
+// CHECK-NEXT:         |   | | | | |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |   | | | | |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |   | | | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         |   | | | | |   |-<<<NULL>>>
-// CHECK-NEXT:         |   | | | | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT:         |   | | | | |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT:         |   | | | | |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |   | | | | |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT:         |   | | | | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |   | | | | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT:         |   | | | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |   | | | | |   `-ForStmt {{.*}} <line:34:7, line:35:9>
-// CHECK-NEXT:         |   | | | | |     |-DeclStmt {{.*}} <line:34:12, col:21>
-// CHECK-NEXT:         |   | | | | |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit
-// CHECK-NEXT:         |   | | | | |     |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
+// CHECK-NEXT:         |   | | | | |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         |   | | | | |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |   | | | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |   | | | | |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |   | | | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |   | | | | |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         |   | | | | |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |   | | | | |   `-ForStmt {{.*}} 
+// CHECK-NEXT:         |   | | | | |     |-DeclStmt {{.*}} 
+// CHECK-NEXT:         |   | | | | |     | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |   | | | | |     |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |   | | | | |     |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         |   | | | | |     |-<<<NULL>>>
-// CHECK-NEXT:         |   | | | | |     |-BinaryOperator {{.*}} <col:23, col:27> 'int' '<'
-// CHECK-NEXT:         |   | | | | |     | |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         |   | | | | |     | | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |   | | | | |     | `-ImplicitCastExpr {{.*}} <col:27> 'int' <LValueToRValue>
-// CHECK-NEXT:         |   | | | | |     |   `-DeclRefExpr {{.*}} <col:27> 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |   | | | | |     |-UnaryOperator {{.*}} <col:30, col:31> 'int' postfix '++'
-// CHECK-NEXT:         |   | | | | |     | `-DeclRefExpr {{.*}} <col:30> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |   | | | | |     `-NullStmt {{.*}} <line:35:9>
-// CHECK-NEXT:         |   | | | | |-ImplicitParamDecl {{.*}} <line:31:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT:         |   | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:         |   | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT:         |   | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT:         |   | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
-// CHECK-NEXT:         |   | | | | |-VarDecl {{.*}} <line:32:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT:         |   | | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT:         |   | | | | |-VarDecl {{.*}} <line:33:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT:         |   | | | | | `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT:         |   | | | | `-VarDecl {{.*}} <line:34:12, col:20> col:16 used i 'int' cinit
-// CHECK-NEXT:         |   | | | |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
-// CHECK-NEXT:         |   | | | |-DeclRefExpr {{.*}} <line:32:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |   | | | |-DeclRefExpr {{.*}} <line:33:5> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |   | | | `-DeclRefExpr {{.*}} <line:34:27> 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |   | | |-ImplicitParamDecl {{.*}} <line:31:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT:         |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:         |   | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
-// CHECK-NEXT:         |   | | |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT:         |   | | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT:         |   | | | |-FieldDecl {{.*}} <line:32:3> col:3 implicit 'int'
-// CHECK-NEXT:         |   | | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT:         |   | | | |-FieldDecl {{.*}} <line:33:5> col:5 implicit 'int'
-// CHECK-NEXT:         |   | | | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT:         |   | | | `-FieldDecl {{.*}} <line:34:27> col:27 implicit 'int'
-// CHECK-NEXT:         |   | | |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT:         |   | | | | |     |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         |   | | | | |     | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |   | | | | |     | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |   | | | | |     | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |   | | | | |     |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |   | | | | |     |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         |   | | | | |     | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |   | | | | |     `-NullStmt {{.*}} 
+// CHECK-NEXT:         |   | | | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT:         |   | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         |   | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         |   | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |   | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |   | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |   | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |   | | | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT:         |   | | | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         |   | | | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         |   | | | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |   | | | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |   | | | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |   | | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |   | | | | |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         |   | | | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT:         |   | | | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT:         |   | | | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT:         |   | | | | |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         |   | | | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT:         |   | | | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT:         |   | | | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT:         |   | | | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
+// CHECK-NEXT:         |   | | | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict' const __restrict
+// CHECK-NEXT:         |   | | | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *'
+// CHECK-NEXT:         |   | | | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         |   | | | | | |     `-Record {{.*}} 
+// CHECK-NEXT:         |   | | | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         |   | | | | |   `-Record {{.*}} 
+// CHECK-NEXT:         |   | | | | |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |   | | | | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |   | | | | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |   | | | | |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |   | | | | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |   | | | | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |   | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |   | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |   | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |   | | | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |   | | | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |   | | | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |   | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT:         |   | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         |   | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         |   | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |   | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |   | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |   | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |   | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT:         |   | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         |   | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         |   | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |   | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |   | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |   | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |   | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
+// CHECK-NEXT:         |   | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict' const __restrict
+// CHECK-NEXT:         |   | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *'
+// CHECK-NEXT:         |   | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         |   | | | |     `-Record {{.*}} 
+// CHECK-NEXT:         |   | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         |   | | |   `-Record {{.*}} 
+// CHECK-NEXT:         |   | | |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT:         |   | | | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT:         |   | | | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         |   | | | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT:         |   | | | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         |   | | | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT:         |   | | | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         |   | | |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT:         |   | | `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:         |   | |   |-ForStmt {{.*}} <line:32:3, line:35:9>
-// CHECK-NEXT:         |   | |   | |-DeclStmt {{.*}} <line:32:8, col:17>
-// CHECK-NEXT:         |   | |   | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT:         |   | |   | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT:         |   | |   |-ForStmt {{.*}} 
+// CHECK-NEXT:         |   | |   | |-DeclStmt {{.*}} 
+// CHECK-NEXT:         |   | |   | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |   | |   | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |   | |   | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         |   | |   | |-<<<NULL>>>
-// CHECK-NEXT:         |   | |   | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT:         |   | |   | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT:         |   | |   | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |   | |   | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         |   | |   | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |   | |   | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT:         |   | |   | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |   | |   | `-ForStmt {{.*}} <line:33:5, line:35:9>
-// CHECK-NEXT:         |   | |   |   |-DeclStmt {{.*}} <line:33:10, col:19>
-// CHECK-NEXT:         |   | |   |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT:         |   | |   |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT:         |   | |   | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         |   | |   | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |   | |   | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |   | |   | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |   | |   | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |   | |   | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         |   | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |   | |   | `-ForStmt {{.*}} 
+// CHECK-NEXT:         |   | |   |   |-DeclStmt {{.*}} 
+// CHECK-NEXT:         |   | |   |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |   | |   |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |   | |   |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         |   | |   |   |-<<<NULL>>>
-// CHECK-NEXT:         |   | |   |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT:         |   | |   |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT:         |   | |   |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |   | |   |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT:         |   | |   |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |   | |   |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT:         |   | |   |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |   | |   |   `-ForStmt {{.*}} <line:34:7, line:35:9>
-// CHECK-NEXT:         |   | |   |     |-DeclStmt {{.*}} <line:34:12, col:21>
-// CHECK-NEXT:         |   | |   |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit
-// CHECK-NEXT:         |   | |   |     |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
+// CHECK-NEXT:         |   | |   |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         |   | |   |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |   | |   |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |   | |   |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |   | |   |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |   | |   |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         |   | |   |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |   | |   |   `-ForStmt {{.*}} 
+// CHECK-NEXT:         |   | |   |     |-DeclStmt {{.*}} 
+// CHECK-NEXT:         |   | |   |     | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |   | |   |     |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |   | |   |     |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         |   | |   |     |-<<<NULL>>>
-// CHECK-NEXT:         |   | |   |     |-BinaryOperator {{.*}} <col:23, col:27> 'int' '<'
-// CHECK-NEXT:         |   | |   |     | |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         |   | |   |     | | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |   | |   |     | `-ImplicitCastExpr {{.*}} <col:27> 'int' <LValueToRValue>
-// CHECK-NEXT:         |   | |   |     |   `-DeclRefExpr {{.*}} <col:27> 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |   | |   |     |-UnaryOperator {{.*}} <col:30, col:31> 'int' postfix '++'
-// CHECK-NEXT:         |   | |   |     | `-DeclRefExpr {{.*}} <col:30> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |   | |   |     `-NullStmt {{.*}} <line:35:9>
-// CHECK-NEXT:         |   | |   |-ImplicitParamDecl {{.*}} <line:31:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT:         |   | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:         |   | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT:         |   | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT:         |   | |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
-// CHECK-NEXT:         |   | |   |-VarDecl {{.*}} <line:32:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT:         |   | |   | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT:         |   | |   |-VarDecl {{.*}} <line:33:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT:         |   | |   | `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT:         |   | |   `-VarDecl {{.*}} <line:34:12, col:20> col:16 used i 'int' cinit
-// CHECK-NEXT:         |   | |     `-IntegerLiteral {{.*}} <col:20> 'int' 0
-// CHECK-NEXT:         |   | |-DeclRefExpr {{.*}} <line:32:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |   | |-DeclRefExpr {{.*}} <line:33:5> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |   | `-DeclRefExpr {{.*}} <line:34:27> 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |   |-ImplicitParamDecl {{.*}} <line:31:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
-// CHECK-NEXT:         |   |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT:         |   | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT:         |   | |-FieldDecl {{.*}} <line:32:3> col:3 implicit 'int'
-// CHECK-NEXT:         |   | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT:         |   | |-FieldDecl {{.*}} <line:33:5> col:5 implicit 'int'
-// CHECK-NEXT:         |   | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT:         |   | `-FieldDecl {{.*}} <line:34:27> col:27 implicit 'int'
-// CHECK-NEXT:         |   |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT:         |   | |   |     |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         |   | |   |     | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |   | |   |     | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |   | |   |     | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |   | |   |     |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |   | |   |     |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         |   | |   |     | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |   | |   |     `-NullStmt {{.*}} 
+// CHECK-NEXT:         |   | |   |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT:         |   | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         |   | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         |   | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |   | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |   | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |   | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |   | |   |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT:         |   | |   | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         |   | |   | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         |   | |   | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |   | |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |   | |   | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |   | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |   | |   |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         |   | |   | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT:         |   | |   |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT:         |   | |   |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT:         |   | |   |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         |   | |   | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT:         |   | |   |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT:         |   | |   |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT:         |   | |   |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
+// CHECK-NEXT:         |   | |   | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict' const __restrict
+// CHECK-NEXT:         |   | |   | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *'
+// CHECK-NEXT:         |   | |   | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         |   | |   | |     `-Record {{.*}} 
+// CHECK-NEXT:         |   | |   | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         |   | |   |   `-Record {{.*}} 
+// CHECK-NEXT:         |   | |   |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |   | |   | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |   | |   | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |   | |   |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |   | |   | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |   | |   | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |   | |   `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |   | |     |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |   | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |   | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |   | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |   | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |   |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
+// CHECK-NEXT:         |   | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict' const __restrict
+// CHECK-NEXT:         |   | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *'
+// CHECK-NEXT:         |   | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         |   | |     `-Record {{.*}} 
+// CHECK-NEXT:         |   | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         |   |   `-Record {{.*}} 
+// CHECK-NEXT:         |   |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT:         |   | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT:         |   | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         |   | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT:         |   | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         |   | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT:         |   | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         |   |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT:         |   `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:         |     |-CapturedStmt {{.*}} <line:32:3, line:35:9>
+// CHECK-NEXT:         |     |-CapturedStmt {{.*}} 
 // CHECK-NEXT:         |     | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:         |     | | |-ForStmt {{.*}} <line:32:3, line:35:9>
-// CHECK-NEXT:         |     | | | |-DeclStmt {{.*}} <line:32:8, col:17>
-// CHECK-NEXT:         |     | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT:         |     | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT:         |     | | |-ForStmt {{.*}} 
+// CHECK-NEXT:         |     | | | |-DeclStmt {{.*}} 
+// CHECK-NEXT:         |     | | | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |     | | | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |     | | | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         |     | | | |-<<<NULL>>>
-// CHECK-NEXT:         |     | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT:         |     | | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT:         |     | | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |     | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         |     | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |     | | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT:         |     | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |     | | | `-ForStmt {{.*}} <line:33:5, line:35:9>
-// CHECK-NEXT:         |     | | |   |-DeclStmt {{.*}} <line:33:10, col:19>
-// CHECK-NEXT:         |     | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT:         |     | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT:         |     | | | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         |     | | | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |     | | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |     | | | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |     | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |     | | | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         |     | | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |     | | | `-ForStmt {{.*}} 
+// CHECK-NEXT:         |     | | |   |-DeclStmt {{.*}} 
+// CHECK-NEXT:         |     | | |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |     | | |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |     | | |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         |     | | |   |-<<<NULL>>>
-// CHECK-NEXT:         |     | | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT:         |     | | |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT:         |     | | |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |     | | |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT:         |     | | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |     | | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT:         |     | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |     | | |   `-ForStmt {{.*}} <line:34:7, line:35:9>
-// CHECK-NEXT:         |     | | |     |-DeclStmt {{.*}} <line:34:12, col:21>
-// CHECK-NEXT:         |     | | |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit
-// CHECK-NEXT:         |     | | |     |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
+// CHECK-NEXT:         |     | | |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         |     | | |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |     | | |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |     | | |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |     | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |     | | |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         |     | | |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |     | | |   `-ForStmt {{.*}} 
+// CHECK-NEXT:         |     | | |     |-DeclStmt {{.*}} 
+// CHECK-NEXT:         |     | | |     | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |     | | |     |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |     | | |     |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         |     | | |     |-<<<NULL>>>
-// CHECK-NEXT:         |     | | |     |-BinaryOperator {{.*}} <col:23, col:27> 'int' '<'
-// CHECK-NEXT:         |     | | |     | |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         |     | | |     | | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |     | | |     | `-ImplicitCastExpr {{.*}} <col:27> 'int' <LValueToRValue>
-// CHECK-NEXT:         |     | | |     |   `-DeclRefExpr {{.*}} <col:27> 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |     | | |     |-UnaryOperator {{.*}} <col:30, col:31> 'int' postfix '++'
-// CHECK-NEXT:         |     | | |     | `-DeclRefExpr {{.*}} <col:30> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |     | | |     `-NullStmt {{.*}} <line:35:9>
-// CHECK-NEXT:         |     | | |-ImplicitParamDecl {{.*}} <line:31:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT:         |     | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:         |     | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT:         |     | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT:         |     | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
-// CHECK-NEXT:         |     | | |-VarDecl {{.*}} <line:32:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT:         |     | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT:         |     | | |-VarDecl {{.*}} <line:33:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT:         |     | | | `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT:         |     | | `-VarDecl {{.*}} <line:34:12, col:20> col:16 used i 'int' cinit
-// CHECK-NEXT:         |     | |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
-// CHECK-NEXT:         |     | |-DeclRefExpr {{.*}} <line:32:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |     | |-DeclRefExpr {{.*}} <line:33:5> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |     | `-DeclRefExpr {{.*}} <line:34:27> 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |     |-ImplicitParamDecl {{.*}} <line:31:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT:         |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:         |     |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
-// CHECK-NEXT:         |     |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
-// CHECK-NEXT:         |     | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT:         |     | |-FieldDecl {{.*}} <line:32:3> col:3 implicit 'int'
-// CHECK-NEXT:         |     | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT:         |     | |-FieldDecl {{.*}} <line:33:5> col:5 implicit 'int'
-// CHECK-NEXT:         |     | | `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
-// CHECK-NEXT:         |     | `-FieldDecl {{.*}} <line:34:27> col:27 implicit 'int'
-// CHECK-NEXT:         |     |   `-OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit {{.*}}
+// CHECK-NEXT:         |     | | |     |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         |     | | |     | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |     | | |     | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |     | | |     | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |     | | |     |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |     | | |     |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         |     | | |     | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |     | | |     `-NullStmt {{.*}} 
+// CHECK-NEXT:         |     | | |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT:         |     | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         |     | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         |     | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |     | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |     | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |     | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |     | | |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT:         |     | | | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         |     | | | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         |     | | | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |     | | | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |     | | | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |     | | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |     | | |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         |     | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT:         |     | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT:         |     | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT:         |     | | |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         |     | | | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT:         |     | | |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT:         |     | | |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT:         |     | | |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
+// CHECK-NEXT:         |     | | | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict' const __restrict
+// CHECK-NEXT:         |     | | | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *'
+// CHECK-NEXT:         |     | | | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         |     | | | |     `-Record {{.*}} 
+// CHECK-NEXT:         |     | | | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         |     | | |   `-Record {{.*}} 
+// CHECK-NEXT:         |     | | |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |     | | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |     | | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |     | | |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |     | | | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |     | | | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |     | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |     | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |     | |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |     | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |     | |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |     | `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |     |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT:         |     | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         |     | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         |     | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |     | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |     | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |     |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |     |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT:         |     | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         |     | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         |     | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |     | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |     | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |     |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |     |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
+// CHECK-NEXT:         |     | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict' const __restrict
+// CHECK-NEXT:         |     | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *'
+// CHECK-NEXT:         |     | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         |     | |     `-Record {{.*}} 
+// CHECK-NEXT:         |     | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         |     |   `-Record {{.*}} 
+// CHECK-NEXT:         |     |-RecordDecl {{.*}} implicit struct definition
+// CHECK-NEXT:         |     | |-attrDetails: CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
+// CHECK-NEXT:         |     | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         |     | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT:         |     | |-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         |     | | `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
+// CHECK-NEXT:         |     | `-FieldDecl {{.*}} implicit 'int'
+// CHECK-NEXT:         |     |   `-attrDetails: OMPCaptureKindAttr {{.*}} <<invalid sloc>> Implicit 36
 // CHECK-NEXT:         |     `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
-// CHECK-NEXT:         |       |-ForStmt {{.*}} <line:32:3, line:35:9>
-// CHECK-NEXT:         |       | |-DeclStmt {{.*}} <line:32:8, col:17>
-// CHECK-NEXT:         |       | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT:         |       | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+// CHECK-NEXT:         |       |-ForStmt {{.*}} 
+// CHECK-NEXT:         |       | |-DeclStmt {{.*}} 
+// CHECK-NEXT:         |       | | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |       | |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |       | |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         |       | |-<<<NULL>>>
-// CHECK-NEXT:         |       | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
-// CHECK-NEXT:         |       | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
-// CHECK-NEXT:         |       | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |       | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         |       | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |       | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
-// CHECK-NEXT:         |       | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |       | `-ForStmt {{.*}} <line:33:5, line:35:9>
-// CHECK-NEXT:         |       |   |-DeclStmt {{.*}} <line:33:10, col:19>
-// CHECK-NEXT:         |       |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT:         |       |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
+// CHECK-NEXT:         |       | |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         |       | | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |       | | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |       | | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |       | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |       | |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         |       | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |       | `-ForStmt {{.*}} 
+// CHECK-NEXT:         |       |   |-DeclStmt {{.*}} 
+// CHECK-NEXT:         |       |   | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |       |   |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |       |   |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         |       |   |-<<<NULL>>>
-// CHECK-NEXT:         |       |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
-// CHECK-NEXT:         |       |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
-// CHECK-NEXT:         |       |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |       |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT:         |       |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |       |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
-// CHECK-NEXT:         |       |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |       |   `-ForStmt {{.*}} <line:34:7, line:35:9>
-// CHECK-NEXT:         |       |     |-DeclStmt {{.*}} <line:34:12, col:21>
-// CHECK-NEXT:         |       |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit
-// CHECK-NEXT:         |       |     |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
+// CHECK-NEXT:         |       |   |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         |       |   | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |       |   | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |       |   | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |       |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |       |   |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         |       |   | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |       |   `-ForStmt {{.*}} 
+// CHECK-NEXT:         |       |     |-DeclStmt {{.*}} 
+// CHECK-NEXT:         |       |     | `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |       |     |   |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |       |     |   `-typeDetails: BuiltinType {{.*}} 'int'
 // CHECK-NEXT:         |       |     |-<<<NULL>>>
-// CHECK-NEXT:         |       |     |-BinaryOperator {{.*}} <col:23, col:27> 'int' '<'
-// CHECK-NEXT:         |       |     | |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         |       |     | | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |       |     | `-ImplicitCastExpr {{.*}} <col:27> 'int' <LValueToRValue>
-// CHECK-NEXT:         |       |     |   `-DeclRefExpr {{.*}} <col:27> 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
-// CHECK-NEXT:         |       |     |-UnaryOperator {{.*}} <col:30, col:31> 'int' postfix '++'
-// CHECK-NEXT:         |       |     | `-DeclRefExpr {{.*}} <col:30> 'int' lvalue Var {{.*}} 'i' 'int'
-// CHECK-NEXT:         |       |     `-NullStmt {{.*}} <line:35:9>
-// CHECK-NEXT:         |       |-ImplicitParamDecl {{.*}} <line:31:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT:         |       |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:         |       |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.lb. 'const __size_t':'const unsigned long'
-// CHECK-NEXT:         |       |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit used .previous.ub. 'const __size_t':'const unsigned long'
-// CHECK-NEXT:         |       |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
-// CHECK-NEXT:         |       |-VarDecl {{.*}} <line:32:8, col:16> col:12 used i 'int' cinit
-// CHECK-NEXT:         |       | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT:         |       |-VarDecl {{.*}} <line:33:10, col:18> col:14 used i 'int' cinit
-// CHECK-NEXT:         |       | `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT:         |       `-VarDecl {{.*}} <line:34:12, col:20> col:16 used i 'int' cinit
-// CHECK-NEXT:         |         `-IntegerLiteral {{.*}} <col:20> 'int' 0
-// CHECK-NEXT:         |-DeclRefExpr {{.*}} <line:32:3> 'int' lvalue ParmVar {{.*}} 'x' 'int'
-// CHECK-NEXT:         |-DeclRefExpr {{.*}} <line:33:5> 'int' lvalue ParmVar {{.*}} 'y' 'int'
-// CHECK-NEXT:         `-DeclRefExpr {{.*}} <line:34:27> 'int' lvalue ParmVar {{.*}} 'z' 'int'
+// CHECK-NEXT:         |       |     |-BinaryOperator {{.*}} 'int' '<'
+// CHECK-NEXT:         |       |     | |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |       |     | | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |       |     | `-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT:         |       |     |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
+// CHECK-NEXT:         |       |     |-UnaryOperator {{.*}} 'int' postfix '++'
+// CHECK-NEXT:         |       |     | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+// CHECK-NEXT:         |       |     `-NullStmt {{.*}} 
+// CHECK-NEXT:         |       |-ImplicitParamDecl {{.*}} implicit .global_tid. 'const int *const restrict'
+// CHECK-NEXT:         |       | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         |       | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         |       | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |       | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |       | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |       |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |       |-ImplicitParamDecl {{.*}} implicit .bound_tid. 'const int *const restrict'
+// CHECK-NEXT:         |       | |-qualTypeDetail: QualType {{.*}} 'const int *const restrict' const __restrict
+// CHECK-NEXT:         |       | | `-typeDetails: PointerType {{.*}} 'const int *'
+// CHECK-NEXT:         |       | |   `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |       | |     `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |       | `-qualTypeDetail: QualType {{.*}} 'const int' const
+// CHECK-NEXT:         |       |   `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |       |-ImplicitParamDecl {{.*}} implicit used .previous.lb. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         |       | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT:         |       |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT:         |       |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT:         |       |-ImplicitParamDecl {{.*}} implicit used .previous.ub. 'const __size_t':'const unsigned long'
+// CHECK-NEXT:         |       | `-qualTypeDetail: QualType {{.*}} 'const __size_t' const
+// CHECK-NEXT:         |       |   `-typeDetails: PredefinedSugarType {{.*}} '__size_t' sugar
+// CHECK-NEXT:         |       |     `-typeDetails: BuiltinType {{.*}} 'unsigned long'
+// CHECK-NEXT:         |       |-ImplicitParamDecl {{.*}} implicit __context 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict'
+// CHECK-NEXT:         |       | |-qualTypeDetail: QualType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *const restrict' const __restrict
+// CHECK-NEXT:         |       | | `-typeDetails: PointerType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1) *'
+// CHECK-NEXT:         |       | |   `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         |       | |     `-Record {{.*}} 
+// CHECK-NEXT:         |       | `-typeDetails: RecordType {{.*}} 'struct (unnamed at C:\Precision\sei\llvm-patch\llvm-project\clang\test\AST\ast-dump-openmp-target-teams-distribute-parallel-for.c:31:1)'
+// CHECK-NEXT:         |       |   `-Record {{.*}} 
+// CHECK-NEXT:         |       |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |       | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |       | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |       |-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |       | |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |       | `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |       `-VarDecl {{.*}} used i 'int' cinit
+// CHECK-NEXT:         |         |-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT:         |         `-typeDetails: BuiltinType {{.*}} 'int'
+// CHECK-NEXT:         |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'x' 'int'
+// CHECK-NEXT:         |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'y' 'int'
+// CHECK-NEXT:         `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'z' 'int'

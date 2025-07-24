@@ -21,5 +21,5 @@ void test_one(void) {
 // CHECK-NEXT:           |-CompoundStmt {{.*}} <col:3, col:7>
 // CHECK-NEXT:           | `-NullStmt {{.*}} <col:5>
 // CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <line:9:1> col:1 implicit .global_tid. 'const int *const restrict'
-// CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
-// CHECK-NEXT:           `-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-parallel-sections.c:9:1) *const restrict'
+// CHECK:           |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
+// CHECK:           `-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-parallel-sections.c:9:1) *const restrict'

@@ -11,8 +11,8 @@ namespace qualified {
 
 // CHECK:      Dumping qualified::TestQualified:
 // CHECK-NEXT: TypeAliasDecl
-// CHECK-NEXT: `-ElaboratedType
-// CHECK-NEXT:   `-TemplateSpecializationType
+// CHECK-NEXT: `-typeDetails: ElaboratedType
+// CHECK-NEXT:   `-typeDetails: TemplateSpecializationType
 // CHECK-NEXT:     |-name: 'N' qualified
 // CHECK-NEXT:     | `-TypeAliasTemplateDecl {{.+}} N{{$}}
 // CHECK-NEXT:     |-TemplateArgument template 'foo::A':'qualified::foo::A' qualified{{$}}
@@ -27,8 +27,8 @@ namespace dependent {
 
 // CHECK:      Dumping dependent::B::TestDependent:
 // CHECK-NEXT: TypeAliasDecl
-// CHECK-NEXT: `-ElaboratedType
-// CHECK-NEXT:   `-TemplateSpecializationType
+// CHECK-NEXT: `-typeDetails: ElaboratedType
+// CHECK-NEXT:   `-typeDetails: TemplateSpecializationType
 // CHECK-NEXT:     |-name: 'N' qualified
 // CHECK-NEXT:     | `-TypeAliasTemplateDecl
 // CHECK-NEXT:     |-TemplateArgument template 'T::template X':'type-parameter-0-0::template X' dependent{{$}}
@@ -46,11 +46,11 @@ namespace subst {
 
 // CHECK:      Dumping subst::TestSubst:
 // CHECK-NEXT: TypeAliasDecl
-// CHECK-NEXT: `-ElaboratedType
-// CHECK-NEXT:   `-TypedefType
+// CHECK-NEXT: `-typeDetails: ElaboratedType
+// CHECK-NEXT:   `-typeDetails: TypedefType
 // CHECK-NEXT:     |-TypeAlias
-// CHECK-NEXT:     `-ElaboratedType
-// CHECK-NEXT:       `-TemplateSpecializationType
+// CHECK-NEXT:     `-typeDetails: ElaboratedType
+// CHECK-NEXT:       `-typeDetails: TemplateSpecializationType
 // CHECK-NEXT:         |-name: 'C':'subst::B<subst::A>::C' qualified
 // CHECK-NEXT:         | `-ClassTemplateDecl {{.+}} C
 // CHECK-NEXT:         |-TemplateArgument template 'subst::A' subst index 0

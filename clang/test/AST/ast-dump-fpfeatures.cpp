@@ -36,16 +36,16 @@ float func_03(float x) {
 // CHECK:        FunctionDecl {{.*}} func_02 'float (float)'
 // CHECK-NEXT:     TemplateArgument type 'float'
 // CHECK-NEXT:       BuiltinType {{.*}} 'float'
-// CHECK-NEXT:     ParmVarDecl {{.*}} x 'float'
-// CHECK-NEXT:     CompoundStmt
-// CHECK-NEXT:       ReturnStmt
-// CHECK-NEXT:         CallExpr {{.*}} FPContractMode=1
+// CHECK:     ParmVarDecl {{.*}} x 'float'
+// CHECK:     CompoundStmt
+// CHECK:       ReturnStmt
+// CHECK:         CallExpr {{.*}} FPContractMode=1
 
 // CHECK:      FunctionDecl {{.*}} func_03 'float (float)'
 // CHECK-NEXT:   ParmVarDecl {{.*}} x 'float'
-// CHECK-NEXT:     CompoundStmt
-// CHECK-NEXT:       ReturnStmt
-// CHECK-NEXT:         CallExpr {{.*}} FPContractMode=0
+// CHECK:     CompoundStmt
+// CHECK:       ReturnStmt
+// CHECK:         CallExpr {{.*}} FPContractMode=0
 
 int func_04(float x) {
 #pragma STDC FP_CONTRACT ON
@@ -54,9 +54,9 @@ int func_04(float x) {
 
 // CHECK:      FunctionDecl {{.*}} func_04 'int (float)'
 // CHECK-NEXT:   ParmVarDecl {{.*}} x 'float'
-// CHECK-NEXT:   CompoundStmt
-// CHECK-NEXT:     ReturnStmt
-// CHECK-NEXT:       ImplicitCastExpr {{.*}} 'int' <FloatingToIntegral> FPContractMode=1
+// CHECK:   CompoundStmt
+// CHECK:     ReturnStmt
+// CHECK:       ImplicitCastExpr {{.*}} 'int' <FloatingToIntegral> FPContractMode=1
 
 float func_05(double x) {
 #pragma STDC FP_CONTRACT ON
@@ -65,9 +65,9 @@ float func_05(double x) {
 
 // CHECK:      FunctionDecl {{.*}} func_05 'float (double)'
 // CHECK-NEXT:   ParmVarDecl {{.*}} x 'double'
-// CHECK-NEXT:   CompoundStmt
-// CHECK-NEXT:     ReturnStmt
-// CHECK-NEXT:       CStyleCastExpr {{.*}} FPContractMode=1
+// CHECK:   CompoundStmt
+// CHECK:     ReturnStmt
+// CHECK:       CStyleCastExpr {{.*}} FPContractMode=1
 
 float func_06(double x) {
 #pragma STDC FP_CONTRACT ON
@@ -76,9 +76,9 @@ float func_06(double x) {
 
 // CHECK:      FunctionDecl {{.*}} func_06 'float (double)'
 // CHECK-NEXT:   ParmVarDecl {{.*}} x 'double'
-// CHECK-NEXT:   CompoundStmt
-// CHECK-NEXT:     ReturnStmt
-// CHECK-NEXT:       CXXFunctionalCastExpr {{.*}} FPContractMode=1
+// CHECK:   CompoundStmt
+// CHECK:     ReturnStmt
+// CHECK:       CXXFunctionalCastExpr {{.*}} FPContractMode=1
 
 float func_07(double x) {
 #pragma STDC FP_CONTRACT ON
@@ -87,9 +87,9 @@ float func_07(double x) {
 
 // CHECK:      FunctionDecl {{.*}} func_07 'float (double)'
 // CHECK-NEXT:   ParmVarDecl {{.*}} x 'double'
-// CHECK-NEXT:   CompoundStmt
-// CHECK-NEXT:     ReturnStmt
-// CHECK-NEXT:       CXXStaticCastExpr {{.*}} FPContractMode=1
+// CHECK:   CompoundStmt
+// CHECK:     ReturnStmt
+// CHECK:       CXXStaticCastExpr {{.*}} FPContractMode=1
 
 #pragma STDC FENV_ROUND FE_DOWNWARD
 

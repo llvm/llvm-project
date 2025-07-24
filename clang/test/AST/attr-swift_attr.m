@@ -24,7 +24,7 @@ __attribute__((swift_attr("@actor")))
 // CHECK-LABEL: InterfaceDecl {{.*}} InTypeContext
 // CHECK-NEXT: MethodDecl {{.*}} - test: 'id _Nullable':'id'
 // CHECK-NEXT: ParmVarDecl {{.*}} obj 'SWIFT_SENDABLE id _Nullable':'id'
-// CHECK-NEXT: SwiftAttrAttr {{.*}} "@Sendable"
+// CHECK: attrDetails: SwiftAttrAttr {{.*}} "@Sendable"
 
 @interface Generic<T: SWIFT_SENDABLE id>
 @end

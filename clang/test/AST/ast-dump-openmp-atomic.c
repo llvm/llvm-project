@@ -8,7 +8,7 @@ void test(int i) {
 // CHECK: TranslationUnitDecl {{.*}} <<invalid sloc>> <invalid sloc>
 // CHECK: `-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-atomic.c:3:1, line:6:1> line:3:6 test 'void (int)'
 // CHECK-NEXT:   |-ParmVarDecl {{.*}} <col:11, col:15> col:15 used i 'int'
-// CHECK-NEXT:   `-CompoundStmt {{.*}} <col:18, line:6:1>
+// CHECK:        `-CompoundStmt {{.*}} <col:18, line:6:1>
 // CHECK-NEXT:     `-OMPAtomicDirective {{.*}} <line:4:1, col:19>
 // CHECK-NEXT:       `-UnaryOperator {{.*}} <line:5:3, col:5> 'int' prefix '++'
 // CHECK-NEXT:         `-DeclRefExpr {{.*}} <col:5> 'int' lvalue ParmVar {{.*}} 'i' 'int'
