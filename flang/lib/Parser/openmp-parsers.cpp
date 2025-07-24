@@ -1618,6 +1618,9 @@ TYPE_PARSER(
             Parser<OpenMPInteropConstruct>{})) /
     endOfLine)
 
+// Directive names (of non-block constructs) whose prefix is a name of
+// a block-associated construct. We need to exclude them from the block
+// directive parser below to avoid parsing parts of them.
 static constexpr auto StandaloneDirectiveLookahead{//
     "TARGET ENTER DATA"_sptok || "TARGET_ENTER_DATA"_sptok || //
     "TARGET EXIT DATA"_sptok || "TARGET_EXIT"_sptok || //
@@ -1625,9 +1628,6 @@ static constexpr auto StandaloneDirectiveLookahead{//
 
 // Directives enclosing structured-block
 TYPE_PARSER(
-    // In this context "TARGET UPDATE" can be parsed as a TARGET directive
-    // followed by an UPDATE clause. This is the only combination at the
-    // moment, exclude it explicitly.
     (!StandaloneDirectiveLookahead) >=
     construct<OmpBlockDirective>(first(
         "MASKED" >> pure(llvm::omp::Directive::OMPD_masked),
