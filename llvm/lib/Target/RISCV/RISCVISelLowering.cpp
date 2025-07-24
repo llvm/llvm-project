@@ -16185,13 +16185,11 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     for (uint64_t Offset : {3, 5, 9}) {
       if (isPowerOf2_64(MulAmt + Offset)) {
         unsigned ShAmt = Log2_64(MulAmt + Offset);
-        SDLoc DL(N);
-        SDValue Shift1;
         if (ShAmt >= VT.getSizeInBits())
-          Shift1 = DAG.getConstant(0, DL, VT);
-        else
-          Shift1 =
-              DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShAmt, DL, VT));
+          continue;
+        SDLoc DL(N);
+        SDValue Shift1 =
+            DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShAmt, DL, VT));
         SDValue Mul359 =
             DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
                         DAG.getConstant(Log2_64(Offset - 1), DL, VT), X);
