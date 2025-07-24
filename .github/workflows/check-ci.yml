@@ -1,4 +1,4 @@
-name: Check CI
+name: Check CI Scripts
 
 permissions:
   contents: read
