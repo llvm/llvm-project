@@ -226,7 +226,7 @@ bool llvm::addStringMetadataToLoop(Loop *TheLoop, const char *StringMD,
       if (NumOps == 1 || NumOps == 2) {
         MDString *S = dyn_cast<MDString>(Node->getOperand(0));
         if (S && S->getString() == StringMD) {
-          // If it is already in place, do nothing.
+          // If the metadata and any value are already as specified, do nothing.
           if (NumOps == 2 && V) {
             ConstantInt *IntMD =
                 mdconst::extract_or_null<ConstantInt>(Node->getOperand(1));
@@ -879,7 +879,7 @@ std::optional<unsigned> llvm::getLoopEstimatedTripCount(
   // EstimatedLoopInvocationWeight parameter.
   if (EstimatedLoopInvocationWeight) {
     if (BranchInst *ExitingBranch = getExpectedExitLoopLatchBranch(L)) {
-      uint64_t LoopWeight, ExitWeight;
+      uint64_t LoopWeight = 0, ExitWeight = 0; // Inits expected to be unused.
       if (!extractBranchWeights(*ExitingBranch, LoopWeight, ExitWeight))
         return std::nullopt;
       if (L->contains(ExitingBranch->getSuccessor(1)))
@@ -951,7 +951,7 @@ bool llvm::setLoopEstimatedTripCount(
   unsigned LatchExitWeight = 0;
   unsigned BackedgeTakenWeight = 0;
 
-  if (*EstimatedTripCount > 0) {
+  if (*EstimatedTripCount != 0) {
     LatchExitWeight = *EstimatedloopInvocationWeight;
     BackedgeTakenWeight = (*EstimatedTripCount - 1) * LatchExitWeight;
   }

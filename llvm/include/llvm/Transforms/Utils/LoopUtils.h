@@ -355,6 +355,14 @@ LLVM_ABI bool addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
 /// TODO: Eventually, once all passes have migrated away from setting branch
 /// weights to indicate estimated trip counts, this function will drop the
 /// \p EstimatedLoopInvocationWeight parameter.
+///
+/// TODO: There are also passes that currently do not consider estimated trip
+/// counts at all but that, for example, affect whether trip counts can be
+/// estimated from branch weights.  Once all such passes have been adjusted to
+/// update this metadata, this function might stop estimating trip counts from
+/// branch weights and instead simply get the \c llvm.loop_estimated_trip_count
+/// metadata.  See also the \c llvm.loop.estimated_trip_count entry in
+/// \c LangRef.rst.
 LLVM_ABI std::optional<unsigned>
 getLoopEstimatedTripCount(Loop *L,
                           unsigned *EstimatedLoopInvocationWeight = nullptr,
