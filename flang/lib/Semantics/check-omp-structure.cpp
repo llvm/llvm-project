@@ -774,8 +774,7 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
       },
       c.u);
   if (!eligibleTarget) {
-    context_.Warn(common::UsageWarning::OpenMPUsage,
-        source,
+    context_.Warn(common::UsageWarning::OpenMPUsage, source,
         "If %s directive is nested inside TARGET region, the behaviour is unspecified"_port_en_US,
         parser::ToUpperCaseLetters(
             getDirectiveName(ineligibleTargetDir).str()));
