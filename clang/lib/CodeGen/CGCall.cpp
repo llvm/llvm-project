@@ -2866,8 +2866,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         } else {
           // Add dead_on_return when the object's lifetime ends in the callee.
           // This includes trivially-destructible objects, as well as objects
-          // whose destruction / clean-up is carried out within the callee (e.g.,
-          // Obj-C ARC-managed structs, MSVC callee-destroyed objects).
+          // whose destruction / clean-up is carried out within the callee
+          // (e.g., Obj-C ARC-managed structs, MSVC callee-destroyed objects).
           if (!ParamType.isDestructedType() || !ParamType->isRecordType() ||
               ParamType->castAs<RecordType>()
                   ->getDecl()
