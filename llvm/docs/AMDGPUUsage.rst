@@ -6358,10 +6358,13 @@ also have to wait on all global memory operations, which is unnecessary.
 
 :doc:`Memory Model Relaxation Annotations <MemoryModelRelaxationAnnotations>` can
 be used as an optimization hint for fences to solve this problem.
-The AMDGPU backend recognizes the following tags on fences:
+The AMDGPU backend recognizes the following tags on fences to control which address
+space a fence can synchronize:
 
-- ``amdgpu-as:local`` - fence only the local address space
-- ``amdgpu-as:global``- fence only the global address space
+- ``amdgpu-synchronize-as:local`` - for the local address space
+- ``amdgpu-synchronize-as:global``- for the global address space
+
+Multiple tags can be used at the same time to synchronize with more than one address space.
 
 .. note::
 
