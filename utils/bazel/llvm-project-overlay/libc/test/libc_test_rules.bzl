@@ -44,6 +44,7 @@ def libc_test(
       **kwargs: Attributes relevant for a cc_test.
     """
     deps = deps + [
+        "//libc:hdr_stdint_proxy",
         "//libc:__support_macros_config",
         "//libc:__support_libc_errno",
         "//libc:errno",

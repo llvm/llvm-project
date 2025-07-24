@@ -12,7 +12,7 @@
 #include "test/src/math/sdcomp26094.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <stdint.h>
+#include "hdr/stdint_proxy.h"
 
 using LlvmLibcSinpifTest = LIBC_NAMESPACE::testing::FPTest<float>;
 

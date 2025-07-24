@@ -1277,8 +1277,7 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
     return op->emitOpError("expected the shape-to-loops map to be non-null");
 
   // Check the region has exactly one block.
-  if (linalgOp->getNumRegions() != 1 ||
-      !llvm::hasSingleElement(linalgOp->getRegion(0)))
+  if (linalgOp->getNumRegions() != 1 || !linalgOp->getRegion(0).hasOneBlock())
     return op->emitOpError("expects to have 1 region with 1 block");
 
   // Simplifying assumption: bbargs match 1-1 with shape operands elemental

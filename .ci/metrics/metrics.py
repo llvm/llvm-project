@@ -1,3 +1,13 @@
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+"""Collects Github metrics and uploads them to Grafana.
+
+This script contains machinery that will pull metrics periodically from Github
+about workflow runs. It will upload the collected metrics to the specified
+Grafana instance.
+"""
+
 import collections
 import datetime
 import github

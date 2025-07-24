@@ -41,7 +41,7 @@ class ThreadContext final : public ThreadContextLsanBase {
   DTLS *dtls_ = nullptr;
 };
 
-void ThreadStart(u32 tid, tid_t os_id,
+void ThreadStart(u32 tid, ThreadID os_id,
                  ThreadType thread_type = ThreadType::Regular);
 
 }  // namespace __lsan

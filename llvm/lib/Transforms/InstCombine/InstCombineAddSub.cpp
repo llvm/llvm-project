@@ -1355,9 +1355,9 @@ Instruction *InstCombinerImpl::
   // right-shift of X and a "select".
   Value *X, *Select;
   Instruction *LowBitsToSkip, *Extract;
-  if (!match(&I, m_c_BinOp(m_TruncOrSelf(m_CombineAnd(
-                               m_LShr(m_Value(X), m_Instruction(LowBitsToSkip)),
-                               m_Instruction(Extract))),
+  if (!match(&I, m_c_BinOp(m_TruncOrSelf(m_Instruction(
+                               Extract, m_LShr(m_Value(X),
+                                               m_Instruction(LowBitsToSkip)))),
                            m_Value(Select))))
     return nullptr;
 
@@ -1763,13 +1763,12 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     Constant *C;
     // (add X, (sext/zext (icmp eq X, C)))
     //    -> (select (icmp eq X, C), (add C, (sext/zext 1)), X)
-    auto CondMatcher = m_CombineAnd(
-        m_Value(Cond),
-        m_SpecificICmp(ICmpInst::ICMP_EQ, m_Deferred(A), m_ImmConstant(C)));
+    auto CondMatcher =
+        m_Value(Cond, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Deferred(A),
+                                     m_ImmConstant(C)));
 
     if (match(&I,
-              m_c_Add(m_Value(A),
-                      m_CombineAnd(m_Value(Ext), m_ZExtOrSExt(CondMatcher)))) &&
+              m_c_Add(m_Value(A), m_Value(Ext, m_ZExtOrSExt(CondMatcher)))) &&
         Ext->hasOneUse()) {
       Value *Add = isa<ZExtInst>(Ext) ? InstCombiner::AddOne(C)
                                       : InstCombiner::SubOne(C);
@@ -2146,13 +2145,33 @@ CommonPointerBase CommonPointerBase::compute(Value *LHS, Value *RHS) {
   return Base;
 }
 
+bool CommonPointerBase::isExpensive() const {
+  unsigned NumGEPs = 0;
+  auto ProcessGEPs = [&NumGEPs](ArrayRef<GEPOperator *> GEPs) {
+    bool SeenMultiUse = false;
+    for (GEPOperator *GEP : GEPs) {
+      // Only count multi-use GEPs, excluding the first one. For the first one,
+      // we will directly reuse the offset. For one-use GEPs, their offset will
+      // be folded into a multi-use GEP.
+      if (!GEP->hasOneUse()) {
+        if (SeenMultiUse)
+          ++NumGEPs;
+        SeenMultiUse = true;
+      }
+    }
+  };
+  ProcessGEPs(LHSGEPs);
+  ProcessGEPs(RHSGEPs);
+  return NumGEPs > 2;
+}
+
 /// Optimize pointer differences into the same array into a size.  Consider:
 ///  &A[10] - &A[0]: we should compile this to "10".  LHS/RHS are the pointer
 /// operands to the ptrtoint instructions for the LHS/RHS of the subtract.
 Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
                                                    Type *Ty, bool IsNUW) {
   CommonPointerBase Base = CommonPointerBase::compute(LHS, RHS);
-  if (!Base.Ptr)
+  if (!Base.Ptr || Base.isExpensive())
     return nullptr;
 
   // To avoid duplicating the offset arithmetic, rewrite the GEP to use the

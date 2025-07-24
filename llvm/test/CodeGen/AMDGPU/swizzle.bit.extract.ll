@@ -1,7 +1,7 @@
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=tahiti -verify-machineinstrs -stop-after=amdgpu-isel -o - %s | FileCheck %s --check-prefixes=GCN,PREGFX12-SDAG
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=tahiti -verify-machineinstrs -stop-after=instruction-select -o - %s | FileCheck %s --check-prefixes=GCN,PREGFX12-GISEL
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs -stop-after=amdgpu-isel -o - %s | FileCheck %s --check-prefixes=GCN,GFX12PLUS-SDAG
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs -stop-after=instruction-select -o - %s | FileCheck %s --check-prefixes=GCN,GFX12PLUS-GISEL
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=tahiti -stop-after=amdgpu-isel -o - %s | FileCheck %s --check-prefixes=GCN,PREGFX12-SDAG
+; RUN: llc -global-isel=1 -new-reg-bank-select -march=amdgcn -mcpu=tahiti -stop-after=instruction-select -o - %s | FileCheck %s --check-prefixes=GCN,PREGFX12-GISEL
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1200 -stop-after=amdgpu-isel -o - %s | FileCheck %s --check-prefixes=GCN,GFX12PLUS-SDAG
+; RUN: llc -global-isel=1 -new-reg-bank-select -march=amdgcn -mcpu=gfx1200 -stop-after=instruction-select -o - %s | FileCheck %s --check-prefixes=GCN,GFX12PLUS-GISEL
 
 ; GCN-LABEL: name: buffer_swizzle_bit_pregfx12
 ; PREGFX12-SDAG: {{%[0-9]+}}:vreg_128 = BUFFER_LOAD_DWORDX4_IDXEN {{%[0-9]+}}, killed {{%[0-9]+}}, {{%[0-9]+}}, 0, 0, 1, implicit $exec

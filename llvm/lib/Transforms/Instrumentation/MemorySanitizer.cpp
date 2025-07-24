@@ -158,7 +158,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/bit.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -1216,7 +1215,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   };
   SmallVector<ShadowOriginAndInsertPoint, 16> InstrumentationList;
   DenseMap<const DILocation *, int> LazyWarningDebugLocationCount;
-  bool InstrumentLifetimeStart = ClHandleLifetimeIntrinsics;
   SmallSetVector<AllocaInst *, 16> AllocaSet;
   SmallVector<std::pair<IntrinsicInst *, AllocaInst *>, 16> LifetimeStartList;
   SmallVector<StoreInst *, 16> StoreList;
@@ -1623,7 +1621,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // Poison llvm.lifetime.start intrinsics, if we haven't fallen back to
     // instrumenting only allocas.
-    if (InstrumentLifetimeStart) {
+    if (ClHandleLifetimeIntrinsics) {
       for (auto Item : LifetimeStartList) {
         instrumentAlloca(*Item.second, Item.first);
         AllocaSet.remove(Item.second);
@@ -3303,9 +3301,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handleLifetimeStart(IntrinsicInst &I) {
     if (!PoisonStack)
       return;
-    AllocaInst *AI = llvm::findAllocaForValue(I.getArgOperand(1));
-    if (!AI)
-      InstrumentLifetimeStart = false;
+    AllocaInst *AI = cast<AllocaInst>(I.getArgOperand(1));
     LifetimeStartList.push_back(std::make_pair(&I, AI));
   }
 

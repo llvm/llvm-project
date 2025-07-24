@@ -1314,6 +1314,9 @@ OpenMP Support
   mappers, by using compiler-generated default mappers for the outer structs for
   such maps.
 - Deprecation warning has been emitted for deprecated delimited form of ``declare target``.
+- Added parsing and semantic analysis support for the 'need_device_addr' 
+  modifier in the 'adjust_args' clause.
+- Allow array length to be omitted in array section subscript expression.
 
 Improvements
 ^^^^^^^^^^^^

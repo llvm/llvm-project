@@ -5695,10 +5695,9 @@ Parser::DeclGroupPtrTy Parser::ParseTopLevelStmtDecl() {
                                Scope::CompoundStmtScope);
   TopLevelStmtDecl *TLSD = Actions.ActOnStartTopLevelStmtDecl(getCurScope());
   StmtResult R = ParseStatementOrDeclaration(Stmts, SubStmtCtx);
+  Actions.ActOnFinishTopLevelStmtDecl(TLSD, R.get());
   if (!R.isUsable())
     R = Actions.ActOnNullStmt(Tok.getLocation());
-
-  Actions.ActOnFinishTopLevelStmtDecl(TLSD, R.get());
 
   if (Tok.is(tok::annot_repl_input_end) &&
       Tok.getAnnotationValue() != nullptr) {

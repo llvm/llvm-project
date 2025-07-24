@@ -1,4 +1,4 @@
-; RUN: llc -mtriple amdgcn--amdhsa -mcpu=fiji -amdgpu-scalarize-global-loads=true -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple amdgcn--amdhsa -mcpu=fiji -amdgpu-scalarize-global-loads=true < %s | FileCheck %s
 
 ; uniform loads
 ; CHECK-LABEL: @uniform_load

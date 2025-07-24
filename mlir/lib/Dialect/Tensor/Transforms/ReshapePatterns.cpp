@@ -76,8 +76,8 @@ struct FoldUnPaddingCollapseIntoExtract
       return rewriter.notifyMatchFailure(collapseShapeOp,
                                          "expected unpadding collapse");
 
-    Value unPaddedExtractSlice = rewriter.create<tensor::ExtractSliceOp>(
-        extractSliceOp.getLoc(), collapseShapeOp.getResultType(),
+    Value unPaddedExtractSlice = tensor::ExtractSliceOp::create(
+        rewriter, extractSliceOp.getLoc(), collapseShapeOp.getResultType(),
         extractSliceOp.getSource(), extractSliceOp.getMixedOffsets(),
         extractSliceOp.getMixedSizes(), extractSliceOp.getMixedStrides());
     rewriter.replaceOp(collapseShapeOp, unPaddedExtractSlice);
@@ -270,8 +270,8 @@ struct BubbleUpExpandThroughParallelCollapse
     // matches the number of dimensions of the result, then the expand_shape
     // is a no-op.
     if (newExpandReInds.size() != newExpandSizes.size()) {
-      newCollapseSrc = rewriter.create<tensor::ExpandShapeOp>(
-          loc, expandResultType, newCollapseSrc, newExpandReInds,
+      newCollapseSrc = tensor::ExpandShapeOp::create(
+          rewriter, loc, expandResultType, newCollapseSrc, newExpandReInds,
           newExpandSizes);
     }
 
@@ -280,8 +280,8 @@ struct BubbleUpExpandThroughParallelCollapse
     // is a no-op.
     Value replacement = newCollapseSrc;
     if (newCollapseReInds.size() != newExpandSizes.size()) {
-      replacement = rewriter.create<tensor::CollapseShapeOp>(
-          loc, newCollapseSrc, newCollapseReInds);
+      replacement = tensor::CollapseShapeOp::create(
+          rewriter, loc, newCollapseSrc, newCollapseReInds);
     }
     rewriter.replaceOp(expandOp, replacement);
     return success();
@@ -405,8 +405,8 @@ struct BubbleUpExpandShapeThroughExtractSlice
         shape, expandShapeOp.getResultType().getElementType());
 
     // Create a new ExtractSliceOp and ExpandShapeOp.
-    Value newSliceOp = rewriter.create<tensor::ExtractSliceOp>(
-        loc, expandShapeOp.getSrc(), collapsedOffsets, collapsedSizes,
+    Value newSliceOp = tensor::ExtractSliceOp::create(
+        rewriter, loc, expandShapeOp.getSrc(), collapsedOffsets, collapsedSizes,
         collapsedStrides);
     rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
         sliceOp, resultType, newSliceOp,
@@ -735,9 +735,9 @@ struct BubbleUpCollapseShapeThroughExtractSlice
                              groupExpandedOffsets.rend());
     }
 
-    Value newSliceOp = rewriter.create<tensor::ExtractSliceOp>(
-        collapseShapeOp->getLoc(), collapseShapeOp.getSrc(), expandedOffsets,
-        expandedSizes, expandedStrides);
+    Value newSliceOp = tensor::ExtractSliceOp::create(
+        rewriter, collapseShapeOp->getLoc(), collapseShapeOp.getSrc(),
+        expandedOffsets, expandedSizes, expandedStrides);
     rewriter.replaceOpWithNewOp<tensor::CollapseShapeOp>(
         sliceOp, sliceOp.getResultType(), newSliceOp,
         collapseShapeOp.getReassociationIndices());

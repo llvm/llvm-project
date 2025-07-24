@@ -149,7 +149,7 @@ struct OnStartedArgs {
   uptr tls_size;
 };
 
-void ThreadStart(ThreadState *thr, Tid tid, tid_t os_id,
+void ThreadStart(ThreadState *thr, Tid tid, ThreadID os_id,
                  ThreadType thread_type) {
   ctx->thread_registry.StartThread(tid, os_id, thread_type, thr);
   if (!thr->ignore_sync) {

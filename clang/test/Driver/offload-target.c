@@ -10,7 +10,7 @@
 // RUN: | FileCheck %s -check-prefix=CUDA
 // CUDA: "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[NV_OBJ:.+]]"
 
-// RUN: %clang -### --offload-targets=amdgcn-amd-amdhsa,nvptx64-nvidia-cuda -fopenmp \
+// RUN: %clang -### --offload-targets=amdgcn-amd-amdhsa,nvptx64-nvidia-cuda -fopenmp=libomp \
 // RUN:   -Xarch_amdgcn --offload-arch=gfx90a -Xarch_nvptx64 --offload-arch=sm_89 \
 // RUN:   -nogpulib -nogpuinc %s -ccc-print-bindings 2>&1 \
 // RUN: | FileCheck %s -check-prefix=OPENMP

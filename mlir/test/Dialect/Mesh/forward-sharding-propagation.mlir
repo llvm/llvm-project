@@ -33,7 +33,7 @@ module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "mpich", "MPI:com
     %6 = tensor.empty() : tensor<i32>
     %7 = linalg.fill ins(%c0_i32 : i32) outs(%6 : tensor<i32>) -> tensor<i32>
     // CHECK: [[vreduced:%.*]] = linalg.reduce ins
-    // CHECK: [[vsharding_12:%.*]] = mesh.sharding @mesh split_axes = [] partial =  sum [0] : !mesh.sharding
+    // CHECK: [[vsharding_12:%.*]] = mesh.sharding @mesh split_axes = [] : !mesh.sharding
     // CHECK: [[vsharding_annotated_13:%.*]] = mesh.shard [[vreduced]] to [[vsharding_12]] : tensor<i32>
     %reduced = linalg.reduce ins(%4 : tensor<6x6xi32>) outs(%7 : tensor<i32>) dimensions = [0, 1] 
       (%in: i32, %init: i32) {

@@ -8585,7 +8585,7 @@ uint32x2_t test_vqshrun_n_s64(int64x2_t a) {
 // CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[VQSHRUN_N3]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    ret <16 x i8> [[SHUFFLE_I]]
 //
-int8x16_t test_vqshrun_high_n_s16(int8x8_t a, int16x8_t b) {
+uint8x16_t test_vqshrun_high_n_s16(uint8x8_t a, int16x8_t b) {
   return vqshrun_high_n_s16(a, b, 3);
 }
 
@@ -8598,7 +8598,7 @@ int8x16_t test_vqshrun_high_n_s16(int8x8_t a, int16x8_t b) {
 // CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i16> [[A]], <4 x i16> [[VQSHRUN_N3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 // CHECK-NEXT:    ret <8 x i16> [[SHUFFLE_I]]
 //
-int16x8_t test_vqshrun_high_n_s32(int16x4_t a, int32x4_t b) {
+uint16x8_t test_vqshrun_high_n_s32(uint16x4_t a, int32x4_t b) {
   return vqshrun_high_n_s32(a, b, 9);
 }
 
@@ -8611,7 +8611,7 @@ int16x8_t test_vqshrun_high_n_s32(int16x4_t a, int32x4_t b) {
 // CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i32> [[A]], <2 x i32> [[VQSHRUN_N3]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 // CHECK-NEXT:    ret <4 x i32> [[SHUFFLE_I]]
 //
-int32x4_t test_vqshrun_high_n_s64(int32x2_t a, int64x2_t b) {
+uint32x4_t test_vqshrun_high_n_s64(uint32x2_t a, int64x2_t b) {
   return vqshrun_high_n_s64(a, b, 19);
 }
 
@@ -8810,7 +8810,7 @@ uint32x2_t test_vqrshrun_n_s64(int64x2_t a) {
 // CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> [[VQRSHRUN_N3]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK-NEXT:    ret <16 x i8> [[SHUFFLE_I]]
 //
-int8x16_t test_vqrshrun_high_n_s16(int8x8_t a, int16x8_t b) {
+uint8x16_t test_vqrshrun_high_n_s16(uint8x8_t a, int16x8_t b) {
   return vqrshrun_high_n_s16(a, b, 3);
 }
 
@@ -8823,7 +8823,7 @@ int8x16_t test_vqrshrun_high_n_s16(int8x8_t a, int16x8_t b) {
 // CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i16> [[A]], <4 x i16> [[VQRSHRUN_N3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 // CHECK-NEXT:    ret <8 x i16> [[SHUFFLE_I]]
 //
-int16x8_t test_vqrshrun_high_n_s32(int16x4_t a, int32x4_t b) {
+uint16x8_t test_vqrshrun_high_n_s32(uint16x4_t a, int32x4_t b) {
   return vqrshrun_high_n_s32(a, b, 9);
 }
 
@@ -8836,7 +8836,7 @@ int16x8_t test_vqrshrun_high_n_s32(int16x4_t a, int32x4_t b) {
 // CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i32> [[A]], <2 x i32> [[VQRSHRUN_N3]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 // CHECK-NEXT:    ret <4 x i32> [[SHUFFLE_I]]
 //
-int32x4_t test_vqrshrun_high_n_s64(int32x2_t a, int64x2_t b) {
+uint32x4_t test_vqrshrun_high_n_s64(uint32x2_t a, int64x2_t b) {
   return vqrshrun_high_n_s64(a, b, 19);
 }
 

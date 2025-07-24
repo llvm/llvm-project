@@ -29,6 +29,7 @@ add_integration_test(
   DEPENDS
     libc_posix_spawn_test_binary
     libc.test.integration.src.spawn.test_binary_properties
+    libc.hdr.stdint_proxy
     libc.include.fcntl
     libc.include.signal
     libc.include.spawn

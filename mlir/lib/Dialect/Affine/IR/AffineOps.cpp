@@ -169,7 +169,7 @@ struct AffineInlinerInterface : public DialectInlinerInterface {
 
     // Multi-block regions cannot be inlined into affine constructs, all of
     // which require single-block regions.
-    if (!llvm::hasSingleElement(*src))
+    if (!src->hasOneBlock())
       return false;
 
     // Side-effecting operations that the affine dialect cannot understand

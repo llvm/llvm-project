@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/qsort_r.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/stdlib/qsort_util.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

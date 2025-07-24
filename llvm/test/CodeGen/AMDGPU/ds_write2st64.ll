@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire -mattr=+load-store-opt < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+load-store-opt < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
 @lds = addrspace(3) global [512 x float] poison, align 4
 

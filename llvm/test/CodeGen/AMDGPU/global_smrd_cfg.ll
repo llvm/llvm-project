@@ -1,4 +1,4 @@
-; RUN: llc -mtriple amdgcn--amdhsa -mcpu=fiji -amdgpu-scalarize-global-loads=true -verify-machineinstrs  < %s | FileCheck %s
+; RUN: llc -mtriple amdgcn--amdhsa -mcpu=fiji -amdgpu-scalarize-global-loads=true  < %s | FileCheck %s
 
 ; CHECK-LABEL: %bb22
 
@@ -75,12 +75,12 @@ bb22:                                             ; preds = %bb20, %bb11
 }
 
 ; one more test to ensure that aliasing store after the load
-; is considered clobbering if load parent block is the same 
+; is considered clobbering if load parent block is the same
 ; as a loop header block.
 
 ; CHECK-LABEL: %bb1
 
-; Load from %arg has alias store that is after the load 
+; Load from %arg has alias store that is after the load
 ; but is considered clobbering because of the loop.
 
 ; CHECK: flat_load_dword

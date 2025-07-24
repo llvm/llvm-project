@@ -978,8 +978,12 @@ def testModuleMerge():
         foo = m1.body.operations[0]
         bar = m2.body.operations[0]
         qux = m2.body.operations[1]
+        assert bar.is_before_in_block(qux)
         bar.move_before(foo)
+        assert bar.is_before_in_block(foo)
         qux.move_after(foo)
+        assert bar.is_before_in_block(qux)
+        assert foo.is_before_in_block(qux)
 
         # CHECK: module
         # CHECK: func private @bar

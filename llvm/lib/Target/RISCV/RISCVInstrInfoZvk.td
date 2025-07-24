@@ -230,9 +230,8 @@ class ZvkMxSet<string vd_lmul> {
 }
 
 class VPseudoBinaryNoMask_Zvk<DAGOperand RetClass, VReg OpClass> :
-      Pseudo<(outs RetClass:$rd_wb),
-        (ins RetClass:$rd, OpClass:$rs2, AVL:$vl, sew:$sew, vec_policy:$policy), []>,
-        RISCVVPseudo {
+      RISCVVPseudo<(outs RetClass:$rd_wb),
+        (ins RetClass:$rd, OpClass:$rs2, AVL:$vl, sew:$sew, vec_policy:$policy), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -246,10 +245,9 @@ class VPseudoBinaryNoMask_Zvk<DAGOperand RetClass, VReg OpClass> :
 class VPseudoTernaryNoMask_Zvk<VReg RetClass,
                                VReg Op1Class,
                                DAGOperand Op2Class> :
-        Pseudo<(outs RetClass:$rd_wb),
+        RISCVVPseudo<(outs RetClass:$rd_wb),
                (ins RetClass:$rd, Op1Class:$rs2, Op2Class:$rs1,
-                    AVL:$vl, sew:$sew, vec_policy:$policy), []>,
-        RISCVVPseudo {
+                    AVL:$vl, sew:$sew, vec_policy:$policy), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;

@@ -36,34 +36,10 @@ func.func @mesh_axis_duplicated_same_subarray(
 
 mesh.mesh @mesh0(shape = 2x4)
 
-func.func @mesh_axis_duplicated_bewteen_split_and_partial(
-    %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
-  // expected-error@+1 {{mesh axis duplicated}}
-  %s = mesh.sharding @mesh0 split_axes = [[0]] partial=max[0] : !mesh.sharding
-  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
-  return %0 : tensor<4x8xf32>
-}
-
-// -----
-
-mesh.mesh @mesh0(shape = 2x4)
-
 func.func @mesh_axis_negtive_in_split_part(
     %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
   // expected-error@+1 {{mesh axis is expected to be non-negative}}
   %s = mesh.sharding @mesh0 split_axes = [[-1]] : !mesh.sharding
-  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
-  return %0 : tensor<4x8xf32>
-}
-
-// -----
-
-mesh.mesh @mesh0(shape = 2x4)
-
-func.func @mesh_axis_negtive_in_partial(
-    %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
-  // expected-error@+1 {{mesh axis is expected to be non-negative}}
-  %s = mesh.sharding @mesh0 split_axes = [[0]] partial=max[-1] : !mesh.sharding
   %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
   return %0 : tensor<4x8xf32>
 }

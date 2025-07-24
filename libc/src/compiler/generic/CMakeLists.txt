@@ -5,6 +5,7 @@ add_entrypoint_object(
   HDRS
     ../__stack_chk_fail.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.OSUtil.osutil
     libc.src.stdlib.abort
 )

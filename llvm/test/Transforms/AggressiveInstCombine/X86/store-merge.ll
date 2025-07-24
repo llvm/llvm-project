@@ -359,13 +359,8 @@ define void @test_aliasing_store(i16 %x, ptr %p, ptr %p2) {
 define void @test_non_aliasing_store(i16 %x, ptr noalias %p, ptr noalias %p2) {
 ; CHECK-LABEL: define void @test_non_aliasing_store(
 ; CHECK-SAME: i16 [[X:%.*]], ptr noalias [[P:%.*]], ptr noalias [[P2:%.*]]) {
-; CHECK-NEXT:    [[X_0:%.*]] = trunc i16 [[X]] to i8
-; CHECK-NEXT:    store i8 [[X_0]], ptr [[P]], align 1
+; CHECK-NEXT:    store i16 [[X]], ptr [[P]], align 1
 ; CHECK-NEXT:    store i8 0, ptr [[P2]], align 1
-; CHECK-NEXT:    [[SHR_1:%.*]] = lshr i16 [[X]], 8
-; CHECK-NEXT:    [[X_1:%.*]] = trunc i16 [[SHR_1]] to i8
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[P]], i64 1
-; CHECK-NEXT:    store i8 [[X_1]], ptr [[GEP_1]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %x.0 = trunc i16 %x to i8
@@ -403,13 +398,8 @@ define i8 @test_aliasing_load(i16 %x, ptr %p, ptr %p2) {
 define i8 @test_non_aliasing_load(i16 %x, ptr noalias %p, ptr noalias %p2) {
 ; CHECK-LABEL: define i8 @test_non_aliasing_load(
 ; CHECK-SAME: i16 [[X:%.*]], ptr noalias [[P:%.*]], ptr noalias [[P2:%.*]]) {
-; CHECK-NEXT:    [[X_0:%.*]] = trunc i16 [[X]] to i8
-; CHECK-NEXT:    store i8 [[X_0]], ptr [[P]], align 1
+; CHECK-NEXT:    store i16 [[X]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[P2]], align 1
-; CHECK-NEXT:    [[SHR_1:%.*]] = lshr i16 [[X]], 8
-; CHECK-NEXT:    [[X_1:%.*]] = trunc i16 [[SHR_1]] to i8
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[P]], i64 1
-; CHECK-NEXT:    store i8 [[X_1]], ptr [[GEP_1]], align 1
 ; CHECK-NEXT:    ret i8 [[V]]
 ;
   %x.0 = trunc i16 %x to i8

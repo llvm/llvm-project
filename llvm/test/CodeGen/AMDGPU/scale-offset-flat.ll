@@ -369,7 +369,7 @@ define amdgpu_ps <2 x float> @flat_atomicrmw_b64_rtn_idxprom(ptr align 8 inreg %
 ; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; SDAG-NEXT:    scratch_load_b64 v[0:1], v4, off
 ; SDAG-NEXT:    s_wait_loadcnt 0x0
-; SDAG-NEXT:    v_lshl_add_u64 v[2:3], v[0:1], 0, 1
+; SDAG-NEXT:    v_add_nc_u64_e32 v[2:3], 1, v[0:1]
 ; SDAG-NEXT:    scratch_store_b64 v4, v[2:3], off
 ; SDAG-NEXT:    s_wait_xcnt 0x0
 ; SDAG-NEXT:    s_wait_alu 0xfffe
@@ -418,7 +418,7 @@ define amdgpu_ps <2 x float> @flat_atomicrmw_b64_rtn_idxprom(ptr align 8 inreg %
 ; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GISEL-NEXT:    scratch_load_b64 v[0:1], v4, off
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_lshl_add_u64 v[2:3], v[0:1], 0, 1
+; GISEL-NEXT:    v_add_nc_u64_e32 v[2:3], 1, v[0:1]
 ; GISEL-NEXT:    scratch_store_b64 v4, v[2:3], off
 ; GISEL-NEXT:    s_wait_xcnt 0x0
 ; GISEL-NEXT:    s_wait_alu 0xfffe

@@ -271,3 +271,47 @@ func.func @test_shard_update_halo2d(%arg0: tensor<1200x1200xi64>) -> tensor<1200
   // CHECK: return %[[UH]] : tensor<303x307xi64>
   return %sharding_annotated_3 : tensor<1200x1200xi64>
 }
+
+mesh.mesh @mesh(shape = 2)
+// CHECK-LABEL: func.func @test_reduce_0d(
+// CHECK-SAME: %[[ARG0:[A-Za-z0-9_]+]]: tensor<3x6xi32>
+func.func @test_reduce_0d(%arg0: tensor<6x6xi32>) -> (tensor<i32>) {
+  %sharding = mesh.sharding @mesh split_axes = [[0]] : !mesh.sharding
+  %sharded = mesh.shard %arg0 to %sharding annotate_for_users : tensor<6x6xi32>
+  %4 = tensor.empty() : tensor<i32>
+  %sharding_out = mesh.sharding @mesh split_axes = [[]] : !mesh.sharding
+  %sharded_out = mesh.shard %4 to %sharding_out : tensor<i32>
+  %sharded_in = mesh.shard %sharded to %sharding annotate_for_users : tensor<6x6xi32>
+  // CHECK: %[[reduced:.*]] = linalg.reduce ins(%arg0 : tensor<3x6xi32>)
+  %reduced = linalg.reduce ins(%sharded_in : tensor<6x6xi32>) outs(%sharded_out : tensor<i32>) dimensions = [0, 1] 
+    (%in: i32, %init: i32) {
+      %6 = arith.addi %in, %init : i32
+      linalg.yield %6 : i32
+    }
+  // CHECK: %[[all_reduce:.*]] = mesh.all_reduce %[[reduced]] on @mesh mesh_axes = [0] : tensor<i32> -> tensor<i32>
+  %sharded_red = mesh.shard %reduced to %sharding_out : tensor<i32>
+  %sharded_ret = mesh.shard %sharded_red to %sharding_out annotate_for_users : tensor<i32>
+  // CHECK: return %[[all_reduce]] : tensor<i32>
+  return %sharded_ret : tensor<i32>
+}
+
+// CHECK-LABEL: func.func @test_reduce_1d(
+// CHECK-SAME: %[[ARG0:[A-Za-z0-9_]+]]: tensor<3x6xi32>
+func.func @test_reduce_1d(%arg0: tensor<6x6xi32>) -> (tensor<6xi32>) {
+  %sharding = mesh.sharding @mesh split_axes = [[0]] : !mesh.sharding
+  %sharded = mesh.shard %arg0 to %sharding annotate_for_users : tensor<6x6xi32>
+  %4 = tensor.empty() : tensor<6xi32>
+  %sharded_out = mesh.shard %4 to %sharding : tensor<6xi32>
+  %sharded_in = mesh.shard %sharded to %sharding annotate_for_users : tensor<6x6xi32>
+  // CHECK: %[[reduced:.*]] = linalg.reduce ins(%arg0 : tensor<3x6xi32>)
+  %reduced = linalg.reduce ins(%sharded_in : tensor<6x6xi32>) outs(%sharded_out : tensor<6xi32>) dimensions = [1] 
+    (%in: i32, %init: i32) {
+      %6 = arith.addi %in, %init : i32
+      linalg.yield %6 : i32
+    }
+  // CHECK-NOT: mesh.all_reduce
+  %sharded_red = mesh.shard %reduced to %sharding : tensor<6xi32>
+  %sharded_ret = mesh.shard %sharded_red to %sharding annotate_for_users : tensor<6xi32>
+  // CHECK: return %[[reduced]] : tensor<3xi32>
+  return %sharded_ret : tensor<6xi32>
+}

@@ -68,7 +68,7 @@ int internal_dlinfo(void *handle, int request, void *p) { UNIMPLEMENTED(); }
 
 uptr GetThreadSelf() { return reinterpret_cast<uptr>(thrd_current()); }
 
-tid_t GetTid() { return GetThreadSelf(); }
+ThreadID GetTid() { return GetThreadSelf(); }
 
 void Abort() { abort(); }
 

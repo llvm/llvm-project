@@ -253,6 +253,21 @@ static bool isReInterleaveMask(ShuffleVectorInst *SVI, unsigned &Factor,
   return false;
 }
 
+static Value *getMaskOperand(IntrinsicInst *II) {
+  switch (II->getIntrinsicID()) {
+  default:
+    llvm_unreachable("Unexpected intrinsic");
+  case Intrinsic::vp_load:
+    return II->getOperand(1);
+  case Intrinsic::masked_load:
+    return II->getOperand(2);
+  case Intrinsic::vp_store:
+    return II->getOperand(2);
+  case Intrinsic::masked_store:
+    return II->getOperand(3);
+  }
+}
+
 // Return the corresponded deinterleaved mask, or nullptr if there is no valid
 // mask.
 static Value *getMask(Value *WideMask, unsigned Factor,
@@ -268,8 +283,12 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   if (isa<ScalableVectorType>(Load->getType()))
     return false;
 
-  if (auto *LI = dyn_cast<LoadInst>(Load);
-      LI && !LI->isSimple())
+  auto *LI = dyn_cast<LoadInst>(Load);
+  auto *II = dyn_cast<IntrinsicInst>(Load);
+  if (!LI && !II)
+    return false;
+
+  if (LI && !LI->isSimple())
     return false;
 
   // Check if all users of this load are shufflevectors. If we encounter any
@@ -322,7 +341,7 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   // Holds the corresponding index for each DE-interleave shuffle.
   SmallVector<unsigned, 4> Indices;
 
-  Type *VecTy = FirstSVI->getType();
+  VectorType *VecTy = cast<VectorType>(FirstSVI->getType());
 
   // Check if other shufflevectors are also DE-interleaved of the same type
   // and factor as the first shufflevector.
@@ -360,13 +379,16 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
       replaceBinOpShuffles(BinOpShuffles.getArrayRef(), Shuffles, Load);
 
   Value *Mask = nullptr;
-  if (auto *VPLoad = dyn_cast<VPIntrinsic>(Load)) {
-    Mask = getMask(VPLoad->getMaskParam(), Factor, cast<VectorType>(VecTy));
+  if (LI) {
+    LLVM_DEBUG(dbgs() << "IA: Found an interleaved load: " << *Load << "\n");
+  } else {
+    // Check mask operand. Handle both all-true/false and interleaved mask.
+    Mask = getMask(getMaskOperand(II), Factor, VecTy);
     if (!Mask)
       return false;
-    LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.load: " << *Load << "\n");
-  } else {
-    LLVM_DEBUG(dbgs() << "IA: Found an interleaved load: " << *Load << "\n");
+
+    LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.load or masked.load: "
+                      << *Load << "\n");
   }
 
   // Try to create target specific intrinsics to replace the load and
@@ -483,15 +505,16 @@ bool InterleavedAccessImpl::tryReplaceExtracts(
 bool InterleavedAccessImpl::lowerInterleavedStore(
     Instruction *Store, SmallSetVector<Instruction *, 32> &DeadInsts) {
   Value *StoredValue;
-  if (auto *SI = dyn_cast<StoreInst>(Store)) {
+  auto *SI = dyn_cast<StoreInst>(Store);
+  auto *II = dyn_cast<IntrinsicInst>(Store);
+  if (SI) {
     if (!SI->isSimple())
       return false;
     StoredValue = SI->getValueOperand();
-  } else if (auto *VPStore = dyn_cast<VPIntrinsic>(Store)) {
-    assert(VPStore->getIntrinsicID() == Intrinsic::vp_store);
-    StoredValue = VPStore->getArgOperand(0);
   } else {
-    llvm_unreachable("unsupported store operation");
+    assert(II->getIntrinsicID() == Intrinsic::vp_store ||
+           II->getIntrinsicID() == Intrinsic::masked_store);
+    StoredValue = II->getArgOperand(0);
   }
 
   auto *SVI = dyn_cast<ShuffleVectorInst>(StoredValue);
@@ -508,18 +531,18 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
          "number of stored element should be a multiple of Factor");
 
   Value *Mask = nullptr;
-  if (auto *VPStore = dyn_cast<VPIntrinsic>(Store)) {
+  if (SI) {
+    LLVM_DEBUG(dbgs() << "IA: Found an interleaved store: " << *Store << "\n");
+  } else {
+    // Check mask operand. Handle both all-true/false and interleaved mask.
     unsigned LaneMaskLen = NumStoredElements / Factor;
-    Mask = getMask(VPStore->getMaskParam(), Factor,
+    Mask = getMask(getMaskOperand(II), Factor,
                    ElementCount::getFixed(LaneMaskLen));
     if (!Mask)
       return false;
 
-    LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.store: " << *Store
-                      << "\n");
-
-  } else {
-    LLVM_DEBUG(dbgs() << "IA: Found an interleaved store: " << *Store << "\n");
+    LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.store or masked.store: "
+                      << *Store << "\n");
   }
 
   // Try to create target specific intrinsics to replace the store and
@@ -592,19 +615,7 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
     assert(II);
 
     // Check mask operand. Handle both all-true/false and interleaved mask.
-    Value *WideMask;
-    switch (II->getIntrinsicID()) {
-    default:
-      return false;
-    case Intrinsic::vp_load:
-      WideMask = II->getOperand(1);
-      break;
-    case  Intrinsic::masked_load:
-      WideMask = II->getOperand(2);
-      break;
-    }
-
-    Mask = getMask(WideMask, Factor, getDeinterleavedVectorType(DI));
+    Mask = getMask(getMaskOperand(II), Factor, getDeinterleavedVectorType(DI));
     if (!Mask)
       return false;
 
@@ -642,18 +653,7 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
   Value *Mask = nullptr;
   if (II) {
     // Check mask operand. Handle both all-true/false and interleaved mask.
-    Value *WideMask;
-    switch (II->getIntrinsicID()) {
-    default:
-      return false;
-    case Intrinsic::vp_store:
-      WideMask = II->getOperand(2);
-      break;
-    case Intrinsic::masked_store:
-      WideMask = II->getOperand(3);
-      break;
-    }
-    Mask = getMask(WideMask, Factor,
+    Mask = getMask(getMaskOperand(II), Factor,
                    cast<VectorType>(InterleaveValues[0]->getType()));
     if (!Mask)
       return false;
@@ -687,11 +687,13 @@ bool InterleavedAccessImpl::runOnFunction(Function &F) {
   using namespace PatternMatch;
   for (auto &I : instructions(F)) {
     if (match(&I, m_CombineOr(m_Load(m_Value()),
-                              m_Intrinsic<Intrinsic::vp_load>())))
+                              m_Intrinsic<Intrinsic::vp_load>())) ||
+        match(&I, m_Intrinsic<Intrinsic::masked_load>()))
       Changed |= lowerInterleavedLoad(&I, DeadInsts);
 
     if (match(&I, m_CombineOr(m_Store(m_Value(), m_Value()),
-                              m_Intrinsic<Intrinsic::vp_store>())))
+                              m_Intrinsic<Intrinsic::vp_store>())) ||
+        match(&I, m_Intrinsic<Intrinsic::masked_store>()))
       Changed |= lowerInterleavedStore(&I, DeadInsts);
 
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {

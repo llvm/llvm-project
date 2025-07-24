@@ -3,6 +3,7 @@
 
 #include "benchmarks/gpu/BenchmarkLogger.h"
 #include "benchmarks/gpu/timing/timing.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/limits.h"
@@ -12,8 +13,6 @@
 #include "src/__support/macros/config.h"
 #include "src/stdlib/rand.h"
 #include "src/time/clock.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

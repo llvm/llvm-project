@@ -167,8 +167,6 @@ bool collectLoopRelatedInfo(
     mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv);
 
-llvm::omp::Directive
-extractOmpDirective(const parser::OpenMPConstruct &ompConstruct);
 } // namespace omp
 } // namespace lower
 } // namespace Fortran

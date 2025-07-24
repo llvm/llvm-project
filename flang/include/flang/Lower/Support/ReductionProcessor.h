@@ -124,7 +124,7 @@ public:
   /// Creates a reduction declaration and associates it with an OpenMP block
   /// directive.
   template <typename OpType, typename RedOperatorListTy>
-  static void processReductionArguments(
+  static bool processReductionArguments(
       mlir::Location currentLocation, lower::AbstractConverter &converter,
       const RedOperatorListTy &redOperatorList,
       llvm::SmallVectorImpl<mlir::Value> &reductionVars,

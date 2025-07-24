@@ -8112,7 +8112,7 @@ Value *CodeGenFunction::EmitAArch64CpuSupports(const CallExpr *E) {
 
 llvm::Value *
 CodeGenFunction::EmitAArch64CpuSupports(ArrayRef<StringRef> FeaturesStrs) {
-  uint64_t FeaturesMask = llvm::AArch64::getCpuSupportsMask(FeaturesStrs);
+  llvm::APInt FeaturesMask = llvm::AArch64::getCpuSupportsMask(FeaturesStrs);
   Value *Result = Builder.getTrue();
   if (FeaturesMask != 0) {
     // Get features from structure in runtime library
@@ -8128,7 +8128,7 @@ CodeGenFunction::EmitAArch64CpuSupports(ArrayRef<StringRef> FeaturesStrs) {
         {ConstantInt::get(Int32Ty, 0), ConstantInt::get(Int32Ty, 0)});
     Value *Features = Builder.CreateAlignedLoad(Int64Ty, CpuFeatures,
                                                 CharUnits::fromQuantity(8));
-    Value *Mask = Builder.getInt64(FeaturesMask);
+    Value *Mask = Builder.getInt(FeaturesMask.trunc(64));
     Value *Bitset = Builder.CreateAnd(Features, Mask);
     Value *Cmp = Builder.CreateICmpEQ(Bitset, Mask);
     Result = Builder.CreateAnd(Result, Cmp);

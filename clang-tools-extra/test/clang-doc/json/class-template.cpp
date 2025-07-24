@@ -11,6 +11,7 @@ template<typename T> struct MyClass {
 // CHECK:         "Name": "method",
 // CHECK:         "Params": [
 // CHECK-NEXT:      {
+// CHECK-NEXT:        "End": true,
 // CHECK-NEXT:        "Name": "Param",
 // CHECK-NEXT:        "Type": "T"
 // CHECK-NEXT:      } 

@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_MC_DXCONTAINERROOTSIGNATURE_H
+#define LLVM_MC_DXCONTAINERROOTSIGNATURE_H
+
 #include "llvm/BinaryFormat/DXContainer.h"
 #include <cstdint>
 #include <limits>
@@ -116,3 +119,5 @@ struct RootSignatureDesc {
 };
 } // namespace mcdxbc
 } // namespace llvm
+
+#endif // LLVM_MC_DXCONTAINERROOTSIGNATURE_H
