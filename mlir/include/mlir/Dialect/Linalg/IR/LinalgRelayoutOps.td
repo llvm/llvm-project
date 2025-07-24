@@ -106,7 +106,9 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
      result tensor in the order in which they appear, i.e.
      `shape(result)[rank(result) + i] = inner_tiles[i]` for `0 <= i < k`.
      - The following relationship for the tiled dimensions holds:
-     `shape(result)[inner_dims_pos[i]] = shape(source)[inner_dims_pos[i]] / inner_tiles[i]`.
+     `shape(result)[inner_dims_pos[i]] = shape(source)[inner_dims_pos[i]] / inner_tiles[i]`,
+     where (⌈/⌉ indicates CeilDiv).
+
 
     Example: If `inner_tiles = [16, 32]`, the result tensor has a shape of
     `...x16x32`. If `inner_dims_pos = [0, 1]`, the 0th source dimension is tiled
@@ -153,12 +155,14 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     - If absent, it is assumed that for all inner tiles,
       `shape(source)[inner_dims_pos[i]] % inner_tiles[i] == 0`, i.e. all inner
       tiles divide perfectly the corresponding outer dimension in the result
-      tensor.
+      tensor. It is UB if the tile does not perfectly divide the dimension.
     - If present, it will pad along high dimensions (high-padding) to make the
       tile complete. Note that it is not allowed to have artificial padding that
       is not strictly required by linalg.pack (i.e., padding past what is needed
       to complete the last tile along each packed dimension). It is UB if extra
       padding is requested.
+    It is not possible to verify the requirements statically with dynamic
+    shapes, so they are treated as UB.
 
     Example:
     ```mlir
