@@ -674,12 +674,8 @@ void SBModule::GarbageCollectAllocatedModules() {
 
 const char *SBModule::GetName() const {
   LLDB_INSTRUMENT_VA(this);
-  if (!m_opaque_sp) {
-    return nullptr;
-  }
-  auto mod_name = m_opaque_sp->GetObjectName();
-  if (!mod_name) {
-    return nullptr;
-  }
-  return mod_name.AsCString();
+
+  if (!m_opaque_sp)
+    return nullptr; 
+  return m_opaque_sp->GetObjectName().AsCString();
 }

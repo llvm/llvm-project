@@ -20,6 +20,17 @@ class SBModuleAPICase(TestBase):
 
     @skipUnlessDarwin
     @skipIfRemote
+    def test_getname(self):
+        """Test the SBModule::GetName() method"""
+        self.build()
+        target, _, _, _ = lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.c")
+        )
+
+        self.assertGreater(target.GetNumModules(), 0)
+        module_names = {target.GetModuleAtIndex(i).GetName() for i in range(target.GetNumModules())}
+        self.assertIn("a.out", module_names)
+
     def test_module_is_file_backed(self):
         """Test the SBModule::IsFileBacked() method"""
         self.build()
