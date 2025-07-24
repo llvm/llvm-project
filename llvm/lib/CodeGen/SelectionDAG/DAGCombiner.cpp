@@ -15285,7 +15285,7 @@ SDValue DAGCombiner::visitAssertExt(SDNode *N) {
 
     // Remove AssertZext entirely if the mask guarantees the assertion cannot
     // fail.
-    if (Mask.isMask() && Mask.countr_one() <= AssertVT.getScalarSizeInBits())
+    if (Mask.isIntN(AssertVT.getScalarSizeInBits()))
       return N0;
   }
 
