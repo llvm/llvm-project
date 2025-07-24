@@ -105,6 +105,10 @@ Improvements to clang-tidy
   now run checks in parallel by default using all available hardware threads.
   Both scripts display the number of threads being used in their output.
 
+- :program:`clang-tidy` no longer attemps to analyze code from system headers
+  by default, greatly improving performance. This behavior is disabled if the
+  `SystemHeaders` option is enabled.
+
 New checks
 ^^^^^^^^^^
 
