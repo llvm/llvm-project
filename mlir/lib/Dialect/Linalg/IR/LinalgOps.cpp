@@ -4700,7 +4700,7 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
   if (failed(verifyCompatibleShape(expectedPackedType.getShape(),
                                    packedType.getShape()))) {
     return op->emitError("expected ")
-           << expectedPackedType << " for the unpacked domain value, got "
+           << expectedPackedType << " for the packed domain value, got "
            << packedType;
   }
   return success();
