@@ -920,9 +920,8 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
     }
 
     if (!SrcReg.isVirtual() || TRI->getRegSizeInBits(SrcReg, *MRI) !=
-                                   TRI->getRegSizeInBits(DstReg, *MRI)) {
+                                   TRI->getRegSizeInBits(DstReg, *MRI))
       return true;
-    }
   }
   if (!SrcReg.isVirtual() || TRI->isAGPR(*MRI, SrcReg)) {
     SIInstrWorklist worklist;

@@ -7618,11 +7618,10 @@ void SIInstrInfo::moveToVALU(SIInstrWorklist &Worklist,
            "Deferred MachineInstr are not supposed to re-populate worklist");
   }
 
-  for (auto &Entry : Worklist.WaterFalls) {
+  for (std::pair<MachineInstr *, V2PhysSCopyInfo> &Entry : Worklist.WaterFalls)
     createWaterFall(Entry.first, MDT, Entry.second.MOs, Entry.second.SGPRs);
-  }
 
-  for (auto &Entry : Worklist.V2PhySCopiesToErase)
+  for (std::pair<MachineInstr *, bool> &Entry : Worklist.V2PhySCopiesToErase)
     if (Entry.second == true)
       Entry.first->eraseFromParent();
 }
@@ -8107,8 +8106,8 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
         RI.isVGPR(MRI, Inst.getOperand(1).getReg())) {
       const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
       Register SrcReg = Inst.getOperand(1).getReg();
-      auto I = Inst.getIterator();
-      auto E = Inst.getParent()->end();
+      MachineBasicBlock::iterator I = Inst.getIterator();
+      MachineBasicBlock::iterator E = Inst.getParent()->end();
       // Only search current block since phyreg's def & use cannot cross
       // blocks when MF.NoPhi = false.
       while (++I != E) {
