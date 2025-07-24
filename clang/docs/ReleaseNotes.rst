@@ -46,6 +46,7 @@ Potentially Breaking Changes
   ``endbr64`` instruction at the labels named as possible branch
   destinations, so it is not safe to use a register-controlled branch
   instruction to branch to one. (In line with gcc.)
+- Added a sugar type `PredefinedSugarType` to improve diagnostic messages. (#GH143653)
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -75,6 +76,10 @@ C++ Specific Potentially Breaking Changes
   `"struct hack" <https://wg21.link/CWG400>`_. Invalid member using-declaration
   whose nested-name-specifier doesn't refer to a base class such as
   ``using CurrentClass::Foo;`` is now rejected in C++98 mode.
+
+- For C++20 modules, the Reduced BMI mode will be the default option. This may introduce
+  regressions if your build system supports two-phase compilation model but haven't support
+  reduced BMI or it is a compiler bug or a bug in users code.
 
 ABI Changes in This Version
 ---------------------------
@@ -339,6 +344,7 @@ Non-comprehensive list of changes in this release
 - Added `__builtin_elementwise_exp10`.
 - For AMDPGU targets, added `__builtin_v_cvt_off_f32_i4` that maps to the `v_cvt_off_f32_i4` instruction.
 - Added `__builtin_elementwise_minnum` and `__builtin_elementwise_maxnum`.
+- Added `__builtin_elementwise_minnumnum` and `__builtin_elementwise_maxnumnum`.
 - No longer crashing on invalid Objective-C categories and extensions when
   dumping the AST as JSON. (#GH137320)
 - Clang itself now uses split stacks instead of threads for allocating more
@@ -808,6 +814,11 @@ Bug Fixes in This Version
   nested scopes. (#GH147495)
 - Fixed a failed assertion with an operator call expression which comes from a
   macro expansion when performing analysis for nullability attributes. (#GH138371)
+- Fixed a concept equivalent checking crash due to untransformed constraint expressions. (#GH146614)
+- Fixed a crash in `clang-scan-deps` when a module with the same name is found
+  in different locations (#GH134404, #GH146976).
+- Fix a crash when marco name is empty in ``#pragma push_macro("")`` or
+  ``#pragma pop_macro("")``. (GH149762).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1206,6 +1217,8 @@ Static Analyzer
 ---------------
 - Fixed a crash when C++20 parenthesized initializer lists are used. This issue
   was causing a crash in clang-tidy. (#GH136041)
+- The Clang Static Analyzer now handles parenthesized initialization.
+  (#GH148875)
 
 New features
 ^^^^^^^^^^^^
@@ -1301,6 +1314,9 @@ OpenMP Support
   mappers, by using compiler-generated default mappers for the outer structs for
   such maps.
 - Deprecation warning has been emitted for deprecated delimited form of ``declare target``.
+- Added parsing and semantic analysis support for the 'need_device_addr' 
+  modifier in the 'adjust_args' clause.
+- Allow array length to be omitted in array section subscript expression.
 
 Improvements
 ^^^^^^^^^^^^

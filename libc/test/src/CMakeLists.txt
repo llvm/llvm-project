@@ -70,6 +70,7 @@ add_subdirectory(stdlib)
 add_subdirectory(string)
 add_subdirectory(strings)
 add_subdirectory(wchar)
+add_subdirectory(wctype)
 add_subdirectory(time)
 add_subdirectory(unistd)
 

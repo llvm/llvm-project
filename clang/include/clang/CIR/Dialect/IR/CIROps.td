@@ -128,12 +128,12 @@ def CIR_CastKind : CIR_I32EnumAttr<"CastKind", "cast kind", [
   // CK_BlockPointerToObjCPointerCast
   // CK_AnyPointerToBlockPointerCast
   // CK_ObjCObjectLValueCast
-  // I32EnumAttrCase<"float_to_complex", 44>,
-  // I32EnumAttrCase<"float_complex_to_real", 45>,
-  // I32EnumAttrCase<"float_complex_to_bool", 46>,
+  I32EnumAttrCase<"float_to_complex", 44>,
+  I32EnumAttrCase<"float_complex_to_real", 45>,
+  I32EnumAttrCase<"float_complex_to_bool", 46>,
   I32EnumAttrCase<"float_complex", 47>,
-  // I32EnumAttrCase<"float_complex_to_int_complex", 48>,
-  // I32EnumAttrCase<"int_to_complex", 49>,
+  I32EnumAttrCase<"float_complex_to_int_complex", 48>,
+  I32EnumAttrCase<"int_to_complex", 49>,
   I32EnumAttrCase<"int_complex_to_real", 50>,
   I32EnumAttrCase<"int_complex_to_bool", 51>,
   I32EnumAttrCase<"int_complex", 52>,
@@ -1739,7 +1739,8 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
     %2 = cir.load %0 : !cir.ptr<!cir.ptr<!record_type>>, !cir.ptr<!record_type>
     %3 = cir.get_member %2[1] {name = "e"} : !cir.ptr<!record_type>
                                                              -> !cir.ptr<!u16i>
-    %4 = cir.set_bitfield(#bfi_e, %3 : !cir.ptr<!u16i>, %1 : !s32i) -> !s32i
+    %4 = cir.set_bitfield align(4) (#bfi_e, %3 : !cir.ptr<!u16i>, %1 : !s32i)
+                                                                       -> !s32i
     ```
    }];
 
@@ -1747,12 +1748,15 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
     Arg<CIR_PointerType, "the address to store the value", [MemWrite]>:$addr,
     CIR_AnyType:$src,
     BitfieldInfoAttr:$bitfield_info,
+    DefaultValuedOptionalAttr<I64Attr, "0">:$alignment,
     UnitAttr:$is_volatile
   );
 
   let results = (outs CIR_IntType:$result);
 
-  let assemblyFormat = [{ `(`$bitfield_info`,` $addr`:`qualified(type($addr))`,`
+  let assemblyFormat = [{
+    (`align` `(` $alignment^ `)`)?
+    `(`$bitfield_info`,` $addr`:`qualified(type($addr))`,`
     $src`:`type($src) `)`  attr-dict `->` type($result) }];
 
   let builders = [
@@ -1764,14 +1768,15 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
                    "unsigned":$size,
                    "unsigned":$offset,
                    "bool":$is_signed,
-                   "bool":$is_volatile
+                   "bool":$is_volatile,
+                   CArg<"unsigned", "0">:$alignment
                    ),
    [{
       BitfieldInfoAttr info =
         BitfieldInfoAttr::get($_builder.getContext(),
                               name, storage_type,
                               size, offset, is_signed);
-      build($_builder, $_state, type, addr, src, info, is_volatile);
+      build($_builder, $_state, type, addr, src, info, alignment, is_volatile);
     }]>
   ];
 }
@@ -1823,20 +1828,23 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
     %2 = cir.load %0 : !cir.ptr<!cir.ptr<!record_type>>, !cir.ptr<!record_type>
     %3 = cir.get_member %2[1] {name = "e"} : !cir.ptr<!record_type>
                                                              -> !cir.ptr<!u16i>
-    %4 = cir.get_bitfield(#bfi_e, %3 : !cir.ptr<!u16i>) -> !s32i
+    %4 = cir.get_bitfield align(4) (#bfi_e, %3 : !cir.ptr<!u16i>) -> !s32i
     ```
     }];
 
   let arguments = (ins
     Arg<CIR_PointerType, "the address to load from", [MemRead]>:$addr,
     BitfieldInfoAttr:$bitfield_info,
+    DefaultValuedOptionalAttr<I64Attr, "0">:$alignment,
     UnitAttr:$is_volatile
     );
 
   let results = (outs CIR_IntType:$result);
 
-  let assemblyFormat = [{ `(`$bitfield_info `,` $addr attr-dict `:`
-   qualified(type($addr)) `)` `->` type($result) }];
+  let assemblyFormat = [{
+    (`align` `(` $alignment^ `)`)?
+    `(`$bitfield_info `,` $addr attr-dict `:`
+    qualified(type($addr)) `)` `->` type($result) }];
 
   let builders = [
     OpBuilder<(ins "mlir::Type":$type,
@@ -1846,14 +1854,15 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
                    "unsigned":$size,
                    "unsigned":$offset,
                    "bool":$is_signed,
-                   "bool":$is_volatile
+                   "bool":$is_volatile,
+                   CArg<"unsigned", "0">:$alignment
                    ),
    [{
       BitfieldInfoAttr info =
         BitfieldInfoAttr::get($_builder.getContext(),
                               name, storage_type,
                               size, offset, is_signed);
-      build($_builder, $_state, type, addr, info, is_volatile);
+      build($_builder, $_state, type, addr, info, alignment, is_volatile);
     }]>
   ];
 }
@@ -2992,6 +3001,27 @@ def CIR_AssumeOp : CIR_Op<"assume"> {
 
   let assemblyFormat = [{
     $predicate `:` type($predicate) attr-dict
+  }];
+}
+
+def CIR_AssumeSepStorageOp : CIR_Op<"assume_separate_storage", [
+  SameTypeOperands
+]> {
+  let summary =
+      "Tell the optimizer that two pointers point to different allocations";
+  let description = [{
+    The `cir.assume_separate_storage` operation takes two pointers as arguments,
+    and the operation tells the optimizer that these two pointers point to
+    different allocations.
+
+    This operation corresponds to the `__builtin_assume_separate_storage`
+    builtin function.
+  }];
+
+  let arguments = (ins CIR_VoidPtrType:$ptr1, CIR_VoidPtrType:$ptr2);
+
+  let assemblyFormat = [{
+    $ptr1 `,` $ptr2 `:` qualified(type($ptr1)) attr-dict
   }];
 }
 
