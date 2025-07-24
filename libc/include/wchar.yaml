@@ -226,6 +226,12 @@ functions:
     arguments:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
+  - name: wcsdup
+    standards:
+      - stdc
+    return_type: wchar_t *
+    arguments:
+      - type: const wchar_t *
   - name: wcslcpy
     standards:
       - stdc
