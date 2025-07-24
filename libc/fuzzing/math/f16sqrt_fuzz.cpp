@@ -22,7 +22,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   mpfr_t input;
   mpfr_t out;
   mpfr_init2(input, 53);
-  mpfr_init2(out, 53);
+  mpfr_init2(out, 128);
   for (size_t i = 0; i < size / sizeof(double); ++i) {
     double x;
     std::memcpy(&x, data, sizeof(double));
@@ -37,7 +37,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
     mpfr_set_d(input, x, MPFR_RNDN);
     mpfr_sqrt(out, input, MPFR_RNDN);
-    float16 to_compare = mpfr_get_flt(out, MPFR_RNDN);
+    float16 to_compare = mpfr_get_d(out, MPFR_RNDN);
 
     float16 result = LIBC_NAMESPACE::f16sqrt(x);
 
