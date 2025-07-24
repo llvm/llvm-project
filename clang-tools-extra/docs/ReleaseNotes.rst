@@ -144,4 +144,3 @@ Improvements to pp-trace
 
 Clang-tidy Visual Studio plugin
 -------------------------------
-
