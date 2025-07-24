@@ -5,17 +5,11 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "arm64"
 
 define i1 @test_EQ_IllEbT(i64 %a, i64 %b) {
-; SDISEL-LABEL: test_EQ_IllEbT:
-; SDISEL:       // %bb.0: // %entry
-; SDISEL-NEXT:    cmn x0, x1
-; SDISEL-NEXT:    cset w0, eq
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: test_EQ_IllEbT:
-; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    cmn x1, x0
-; GISEL-NEXT:    cset w0, eq
-; GISEL-NEXT:    ret
+; CHECK-LABEL: test_EQ_IllEbT:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmn x1, x0
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
 entry:
   %add = sub i64 0, %b
   %cmp = icmp eq i64 %add, %a
@@ -91,17 +85,11 @@ entry:
 }
 
 define i1 @test_EQ_IiiEbT(i32 %a, i32 %b) {
-; SDISEL-LABEL: test_EQ_IiiEbT:
-; SDISEL:       // %bb.0: // %entry
-; SDISEL-NEXT:    cmn w0, w1
-; SDISEL-NEXT:    cset w0, eq
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: test_EQ_IiiEbT:
-; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    cmn w1, w0
-; GISEL-NEXT:    cset w0, eq
-; GISEL-NEXT:    ret
+; CHECK-LABEL: test_EQ_IiiEbT:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmn w1, w0
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
 entry:
   %add = sub i32 0, %b
   %cmp = icmp eq i32 %add, %a
@@ -247,17 +235,11 @@ entry:
 }
 
 define i1 @test_NE_IllEbT(i64 %a, i64 %b) {
-; SDISEL-LABEL: test_NE_IllEbT:
-; SDISEL:       // %bb.0: // %entry
-; SDISEL-NEXT:    cmn x0, x1
-; SDISEL-NEXT:    cset w0, ne
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: test_NE_IllEbT:
-; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    cmn x1, x0
-; GISEL-NEXT:    cset w0, ne
-; GISEL-NEXT:    ret
+; CHECK-LABEL: test_NE_IllEbT:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmn x1, x0
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    ret
 entry:
   %add = sub i64 0, %b
   %cmp = icmp ne i64 %add, %a
@@ -333,17 +315,11 @@ entry:
 }
 
 define i1 @test_NE_IiiEbT(i32 %a, i32 %b) {
-; SDISEL-LABEL: test_NE_IiiEbT:
-; SDISEL:       // %bb.0: // %entry
-; SDISEL-NEXT:    cmn w0, w1
-; SDISEL-NEXT:    cset w0, ne
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: test_NE_IiiEbT:
-; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    cmn w1, w0
-; GISEL-NEXT:    cset w0, ne
-; GISEL-NEXT:    ret
+; CHECK-LABEL: test_NE_IiiEbT:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmn w1, w0
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    ret
 entry:
   %add = sub i32 0, %b
   %cmp = icmp ne i32 %add, %a
@@ -815,17 +791,11 @@ define i1 @cmn_nsw_neg(i32 %a, i32 %b) {
 }
 
 define i1 @cmn_swap(i32 %a, i32 %b) {
-; SDISEL-LABEL: cmn_swap:
-; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    cmn w0, w1
-; SDISEL-NEXT:    cset w0, lt
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: cmn_swap:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    cmn w1, w0
-; GISEL-NEXT:    cset w0, lt
-; GISEL-NEXT:    ret
+; CHECK-LABEL: cmn_swap:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmn w1, w0
+; CHECK-NEXT:    cset w0, lt
+; CHECK-NEXT:    ret
   %sub = sub nsw i32 0, %b
   %cmp = icmp sgt i32 %sub, %a
   ret i1 %cmp
