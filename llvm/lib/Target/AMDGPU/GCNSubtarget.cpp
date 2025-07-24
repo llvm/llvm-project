@@ -324,7 +324,7 @@ bool GCNSubtarget::zeroesHigh16BitsOfDest(unsigned Opcode) const {
 }
 
 void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                       unsigned NumRegionInstrs) const {
+                                       const SchedRegion &Region) const {
   // Track register pressure so the scheduler can try to decrease
   // pressure once register usage is above the threshold defined by
   // SIRegisterInfo::getRegPressureSetLimit()
