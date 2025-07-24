@@ -11,7 +11,6 @@
 
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
-#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
@@ -57,7 +56,7 @@ mapForallToBlocksImpl(RewriterBase &rewriter, TransformOpInterface transformOp,
 DiagnosedSilenceableFailure
 mapOneForallToThreadsImpl(RewriterBase &rewriter,
                           std::optional<TransformOpInterface> transformOp,
-                          scf::ForallOp forallOp, ArrayRef<int64_t> blockDims,
+                          scf::ForallOp forallOp, ArrayRef<int64_t> blockSizes,
                           int64_t warpSize, bool syncAfterDistribute);
 
 /// Search `scf.forall` ops nested under `target` and map each such op to an

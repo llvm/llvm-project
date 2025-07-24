@@ -6,9 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_MATH_FMA_H__
+#define __CLC_OPENCL_MATH_FMA_H__
+
 #define __CLC_BODY <clc/shared/ternary_decl.inc>
 #define FUNCTION fma
 
 #include <clc/math/gentype.inc>
 
 #undef FUNCTION
+
+#endif // __CLC_OPENCL_MATH_FMA_H__

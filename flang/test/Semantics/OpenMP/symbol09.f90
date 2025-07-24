@@ -30,8 +30,8 @@ subroutine function_call_in_region
   !REF: /function_call_in_region/b
   print *, a, b
 end subroutine function_call_in_region
-!DEF: /mm MainProgram
-program mm
+!DEF: /MM MainProgram
+program MM
   !REF: /function_call_in_region
   call function_call_in_region
-end program mm
+end program MM

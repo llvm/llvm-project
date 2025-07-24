@@ -3,12 +3,8 @@
 #include "src/math/atan2.h"
 #include "src/stdlib/rand.h"
 
-#ifdef NVPTX_MATH_FOUND
-#include "src/math/nvptx/declarations.h"
-#endif
-
-#ifdef AMDGPU_MATH_FOUND
-#include "src/math/amdgpu/declarations.h"
+#if defined(NVPTX_MATH_FOUND) || defined(AMDGPU_MATH_FOUND)
+#include "platform.h"
 #endif
 
 #define BM_TWO_RANDOM_INPUT(T, Func, MIN_EXP, MAX_EXP, N)                      \
@@ -33,15 +29,15 @@ BENCH(double, Atan2TwoPow30, LIBC_NAMESPACE::atan2, 0, 30);
 BENCH(double, Atan2Large, LIBC_NAMESPACE::atan2, 30, 1000);
 
 #ifdef NVPTX_MATH_FOUND
-BENCH(double, NvAtan2, LIBC_NAMESPACE::__nv_atan2, -1023, 1023);
-BENCH(double, NvAtan2TwoPi, LIBC_NAMESPACE::__nv_atan2, -10, 3);
-BENCH(double, NvAtan2TwoPow30, LIBC_NAMESPACE::__nv_atan2, 0, 30);
-BENCH(double, NvAtan2Large, LIBC_NAMESPACE::__nv_atan2, 30, 1000);
+BENCH(double, NvAtan2, __nv_atan2, -1023, 1023);
+BENCH(double, NvAtan2TwoPi, __nv_atan2, -10, 3);
+BENCH(double, NvAtan2TwoPow30, __nv_atan2, 0, 30);
+BENCH(double, NvAtan2Large, __nv_atan2, 30, 1000);
 #endif
 
 #ifdef AMDGPU_MATH_FOUND
-BENCH(double, AmdAtan2, LIBC_NAMESPACE::__ocml_atan2_f64, -1023, 1023);
-BENCH(double, AmdAtan2TwoPi, LIBC_NAMESPACE::__ocml_atan2_f64, -10, 3);
-BENCH(double, AmdAtan2TwoPow30, LIBC_NAMESPACE::__ocml_atan2_f64, 0, 30);
-BENCH(double, AmdAtan2Large, LIBC_NAMESPACE::__ocml_atan2_f64, 30, 1000);
+BENCH(double, AmdAtan2, __ocml_atan2_f64, -1023, 1023);
+BENCH(double, AmdAtan2TwoPi, __ocml_atan2_f64, -10, 3);
+BENCH(double, AmdAtan2TwoPow30, __ocml_atan2_f64, 0, 30);
+BENCH(double, AmdAtan2Large, __ocml_atan2_f64, 30, 1000);
 #endif

@@ -451,6 +451,448 @@ define i32 @and_mul_non_disjoint(i32 %in) {
   ret i32 %out
 }
 
+define i32 @unrelated_ops(i32 %in, i32 %in2) {
+; CHECK-LABEL: @unrelated_ops(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP2]], [[IN2:%.*]]
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or disjoint i32 %in2, %temp2
+  %out = or disjoint i32 %temp, %temp3
+  ret i32 %out
+}
+
+define i32 @unrelated_ops1(i32 %in, i32 %in2) {
+; CHECK-LABEL: @unrelated_ops1(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP2]], [[IN2:%.*]]
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or disjoint i32 %in2, %temp
+  %out = or disjoint i32 %temp3, %temp2
+  ret i32 %out
+}
+
+define i32 @unrelated_ops2(i32 %in, i32 %in2, i32 %in3) {
+; CHECK-LABEL: @unrelated_ops2(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[TEMP3:%.*]] = or disjoint i32 [[TMP2]], [[IN4:%.*]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[IN]], 12
+; CHECK-NEXT:    [[IN2:%.*]] = mul nuw nsw i32 [[AND1]], 72
+; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i32 [[IN3:%.*]], [[IN2]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TEMP3]], [[TMP3]]
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %temp3 = or disjoint i32 %temp, %in3
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp4 = or disjoint i32 %in2, %temp2
+  %out = or disjoint i32 %temp3, %temp4
+  ret i32 %out
+}
+
+define i32 @unrelated_ops3(i32 %in, i32 %in2, i32 %in3) {
+; CHECK-LABEL: @unrelated_ops3(
+; CHECK-NEXT:    [[AND0:%.*]] = and i32 [[IN:%.*]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND0]], 0
+; CHECK-NEXT:    [[TEMP:%.*]] = select i1 [[CMP]], i32 0, i32 144
+; CHECK-NEXT:    [[TEMP3:%.*]] = or disjoint i32 [[TEMP]], [[IN3:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[IN]], 12
+; CHECK-NEXT:    [[TEMP2:%.*]] = mul nuw nsw i32 [[TMP2]], 72
+; CHECK-NEXT:    [[TEMP4:%.*]] = or disjoint i32 [[IN2:%.*]], [[TEMP2]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TEMP3]], [[TEMP4]]
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 2
+  %cmp = icmp eq i32 %and0, 0
+  %temp = select i1 %cmp, i32 0, i32 144
+  %temp3 = or disjoint i32 %temp, %in3
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp4 = or disjoint i32 %in2, %temp2
+  %out = or disjoint i32 %temp3, %temp4
+  ret i32 %out
+}
+
+define i32 @unrelated_ops4(i32 %in, i32 %in2, i32 %in3) {
+; CHECK-LABEL: @unrelated_ops4(
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[IN:%.*]], 12
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw nsw i32 [[TMP2]], 72
+; CHECK-NEXT:    [[TEMP3:%.*]] = or disjoint i32 [[IN4:%.*]], [[TMP3]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[IN]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND1]], 0
+; CHECK-NEXT:    [[IN3:%.*]] = select i1 [[CMP]], i32 0, i32 144
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i32 [[IN3]], [[IN2:%.*]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TEMP3]], [[TMP4]]
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 12
+  %temp = mul nuw nsw i32 %and0, 72
+  %temp3 = or disjoint i32 %in2, %temp
+  %and1 = and i32 %in, 2
+  %cmp = icmp eq i32 %and1, 0
+  %temp2 = select i1 %cmp, i32 0, i32 144
+  %temp4 = or disjoint i32 %temp2, %in3
+  %out = or disjoint i32 %temp3, %temp4
+  ret i32 %out
+}
+
+define i32 @unrelated_ops5(i32 %in, i32 %in2, i32 %in3) {
+; CHECK-LABEL: @unrelated_ops5(
+; CHECK-NEXT:    [[AND0:%.*]] = and i32 [[IN:%.*]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND0]], 0
+; CHECK-NEXT:    [[IN3:%.*]] = select i1 [[CMP]], i32 0, i32 144
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i32 [[IN3]], [[IN2:%.*]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[IN]], 4
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[AND1]], 0
+; CHECK-NEXT:    [[TEMP2:%.*]] = select i1 [[CMP2]], i32 0, i32 288
+; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i32 [[IN4:%.*]], [[TEMP2]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 2
+  %cmp = icmp eq i32 %and0, 0
+  %temp = select i1 %cmp, i32 0, i32 144
+  %temp3 = or disjoint i32 %temp, %in3
+  %and1 = and i32 %in, 4
+  %cmp2 = icmp eq i32 %and1, 0
+  %temp2 = select i1 %cmp2, i32 0, i32 288
+  %temp4 = or disjoint i32 %in2, %temp2
+  %out = or disjoint i32 %temp3, %temp4
+  ret i32 %out
+}
+
+define i32 @unrelated_ops6(i32 %in, i32 %in2, i32 %in3) {
+; CHECK-LABEL: @unrelated_ops6(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[TEMP3:%.*]] = or disjoint i32 [[IN4:%.*]], [[TMP2]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[IN]], 12
+; CHECK-NEXT:    [[IN2:%.*]] = mul nuw nsw i32 [[AND1]], 72
+; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i32 [[IN3:%.*]], [[IN2]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TEMP3]], [[TMP3]]
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %temp3 = or disjoint i32 %in3, %temp
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp4 = or disjoint i32 %in2, %temp2
+  %out = or disjoint i32 %temp3, %temp4
+  ret i32 %out
+}
+
+define i32 @unrelated_ops7(i32 %in, i32 %in2, i32 %in3) {
+; CHECK-LABEL: @unrelated_ops7(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[TEMP3:%.*]] = or disjoint i32 [[IN4:%.*]], [[TMP2]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[IN]], 12
+; CHECK-NEXT:    [[IN3:%.*]] = mul nuw nsw i32 [[AND1]], 72
+; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i32 [[IN3]], [[IN2:%.*]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TEMP3]], [[TMP3]]
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %temp3 = or disjoint i32 %in3, %temp
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp4 = or disjoint i32 %temp2, %in2
+  %out = or disjoint i32 %temp3, %temp4
+  ret i32 %out
+}
+
+define i32 @unrelated_ops8(i32 %in, i32 %in2, i32 %in3) {
+; CHECK-LABEL: @unrelated_ops8(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[TEMP3:%.*]] = or disjoint i32 [[TMP2]], [[IN4:%.*]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[IN]], 12
+; CHECK-NEXT:    [[IN3:%.*]] = mul nuw nsw i32 [[AND1]], 72
+; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i32 [[IN3]], [[IN2:%.*]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TEMP3]], [[TMP3]]
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %temp3 = or disjoint i32 %temp, %in3
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp4 = or disjoint i32 %temp2, %in2
+  %out = or disjoint i32 %temp3, %temp4
+  ret i32 %out
+}
+
+define i32 @unrelated_ops_nocombine(i32 %in, i32 %in2, i32 %in3) {
+; CHECK-LABEL: @unrelated_ops_nocombine(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TEMP:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i32 [[TEMP]], [[IN3:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[IN]], 7
+; CHECK-NEXT:    [[TEMP2:%.*]] = mul nuw nsw i32 [[TMP2]], 72
+; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i32 [[IN2:%.*]], [[TEMP2]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %temp3 = or disjoint i32 %temp, %in3
+  %and1 = and i32 %in, 7
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp4 = or disjoint i32 %in2, %temp2
+  %out = or disjoint i32 %temp3, %temp4
+  ret i32 %out
+}
+
+define i32 @unrelated_ops_nocombine1(i32 %in, i32 %in2, i32 %in3) {
+; CHECK-LABEL: @unrelated_ops_nocombine1(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TEMP:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i32 [[TEMP]], [[IN3:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[IN]], 12
+; CHECK-NEXT:    [[TEMP2:%.*]] = mul nuw nsw i32 [[TMP2]], 36
+; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i32 [[IN2:%.*]], [[TEMP2]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %temp3 = or disjoint i32 %temp, %in3
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 36
+  %temp4 = or disjoint i32 %in2, %temp2
+  %out = or disjoint i32 %temp3, %temp4
+  ret i32 %out
+}
+
+define i32 @unrelated_nondisjoint(i32 %in, i32 %in2) {
+; CHECK-LABEL: @unrelated_nondisjoint(
+; CHECK-NEXT:    [[AND0:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TEMP:%.*]] = mul nuw nsw i32 [[AND0]], 72
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[IN]], 12
+; CHECK-NEXT:    [[TEMP2:%.*]] = mul nuw nsw i32 [[AND1]], 72
+; CHECK-NEXT:    [[TEMP3:%.*]] = or disjoint i32 [[IN2:%.*]], [[TEMP]]
+; CHECK-NEXT:    [[OUT:%.*]] = or i32 [[TEMP3]], [[TEMP2]]
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or disjoint i32 %in2, %temp
+  %out = or i32 %temp3, %temp2
+  ret i32 %out
+}
+
+define i32 @unrelated_nondisjoint1(i32 %in, i32 %in2) {
+; CHECK-LABEL: @unrelated_nondisjoint1(
+; CHECK-NEXT:    [[AND0:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TEMP:%.*]] = mul nuw nsw i32 [[AND0]], 72
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[IN]], 12
+; CHECK-NEXT:    [[TEMP2:%.*]] = mul nuw nsw i32 [[AND1]], 72
+; CHECK-NEXT:    [[TEMP3:%.*]] = or i32 [[IN2:%.*]], [[TEMP]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TEMP3]], [[TEMP2]]
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or i32 %in2, %temp
+  %out = or disjoint i32 %temp3, %temp2
+  ret i32 %out
+}
+
+declare void @use(i32)
+
+define i32 @multi_use(i32 %in, i32 %in2) {
+; CHECK-LABEL: @multi_use(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP2]], [[IN2:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[OUT]])
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or disjoint i32 %in2, %temp
+  %out = or disjoint i32 %temp3, %temp2
+  call void @use(i32 %out)
+  ret i32 %out
+}
+
+define i32 @multi_use1(i32 %in, i32 %in2) {
+; CHECK-LABEL: @multi_use1(
+; CHECK-NEXT:    [[AND0:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TEMP:%.*]] = mul nuw nsw i32 [[AND0]], 72
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[IN]], 12
+; CHECK-NEXT:    [[TEMP2:%.*]] = mul nuw nsw i32 [[AND1]], 72
+; CHECK-NEXT:    [[TEMP3:%.*]] = or disjoint i32 [[IN2:%.*]], [[TEMP]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TEMP3]], [[TEMP2]]
+; CHECK-NEXT:    call void @use(i32 [[TEMP3]])
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or disjoint i32 %in2, %temp
+  %out = or disjoint i32 %temp3, %temp2
+  call void @use(i32 %temp3)
+  ret i32 %out
+}
+
+define i32 @multi_use2(i32 %in, i32 %in2) {
+; CHECK-LABEL: @multi_use2(
+; CHECK-NEXT:    [[AND0:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TEMP:%.*]] = mul nuw nsw i32 [[AND0]], 72
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[IN]], 12
+; CHECK-NEXT:    [[TEMP2:%.*]] = mul nuw nsw i32 [[AND1]], 72
+; CHECK-NEXT:    [[TEMP3:%.*]] = or disjoint i32 [[IN2:%.*]], [[TEMP]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TEMP3]], [[TEMP2]]
+; CHECK-NEXT:    call void @use(i32 [[TEMP3]])
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or disjoint i32 %in2, %temp
+  %out = or disjoint i32 %temp3, %temp2
+  call void @use(i32 %temp3)
+  ret i32 %out
+}
+
+define i32 @multi_use3(i32 %in, i32 %in2) {
+; CHECK-LABEL: @multi_use3(
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[IN:%.*]], 12
+; CHECK-NEXT:    [[TEMP2:%.*]] = mul nuw nsw i32 [[AND1]], 72
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP2]], [[IN2:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[TEMP2]])
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or disjoint i32 %in2, %temp
+  %out = or disjoint i32 %temp3, %temp2
+  call void @use(i32 %temp2)
+  ret i32 %out
+}
+
+define i32 @multi_use4(i32 %in, i32 %in2) {
+; CHECK-LABEL: @multi_use4(
+; CHECK-NEXT:    [[AND0:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TEMP:%.*]] = mul nuw nsw i32 [[AND0]], 72
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP2]], [[IN2:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[TEMP]])
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or disjoint i32 %in2, %temp
+  %out = or disjoint i32 %temp3, %temp2
+  call void @use(i32 %temp)
+  ret i32 %out
+}
+
+define i32 @multi_use5(i32 %in, i32 %in2) {
+; CHECK-LABEL: @multi_use5(
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[IN:%.*]], 12
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP2]], [[IN2:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[AND1]])
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or disjoint i32 %in2, %temp
+  %out = or disjoint i32 %temp3, %temp2
+  call void @use(i32 %and1)
+  ret i32 %out
+}
+
+define i32 @multi_use6(i32 %in, i32 %in2) {
+; CHECK-LABEL: @multi_use6(
+; CHECK-NEXT:    [[AND0:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TEMP:%.*]] = mul nuw nsw i32 [[AND0]], 72
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP2]], [[IN2:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[TEMP]])
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or disjoint i32 %in2, %temp
+  %out = or disjoint i32 %temp3, %temp2
+  call void @use(i32 %temp)
+  ret i32 %out
+}
+
+define i32 @multi_use7(i32 %in, i32 %in2) {
+; CHECK-LABEL: @multi_use7(
+; CHECK-NEXT:    [[AND0:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP2]], [[IN2:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[AND0]])
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or disjoint i32 %in2, %temp
+  %out = or disjoint i32 %temp3, %temp2
+  call void @use(i32 %and0)
+  ret i32 %out
+}
+
+define i32 @no_chain(i32 %in, i32 %in2, i32 %in3) {
+; CHECK-LABEL: @no_chain(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TEMP:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[TEMP3:%.*]] = or disjoint i32 [[TEMP]], [[IN3:%.*]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TEMP3]], [[IN2:%.*]]
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %temp3 = or disjoint i32 %temp, %in3
+  %out = or disjoint i32 %temp3, %in2
+  ret i32 %out
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CONSTSPLAT: {{.*}}
 ; CONSTVEC: {{.*}}

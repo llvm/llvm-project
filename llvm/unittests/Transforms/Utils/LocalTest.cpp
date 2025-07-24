@@ -633,62 +633,6 @@ TEST(Local, ChangeToUnreachable) {
   EXPECT_EQ(DLA, DLB);
 }
 
-TEST(Local, FindDbgUsers) {
-  LLVMContext Ctx;
-  std::unique_ptr<Module> M = parseIR(Ctx,
-                                      R"(
-  define dso_local void @fun(ptr %a) #0 !dbg !11 {
-  entry:
-      #dbg_assign(ptr %a, !16, !DIExpression(), !15, ptr %a, !DIExpression(), !19)
-    ret void
-  }
-
-  !llvm.dbg.cu = !{!0}
-  !llvm.module.flags = !{!2, !3, !9}
-  !llvm.ident = !{!10}
-
-  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 17.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-  !1 = !DIFile(filename: "test.cpp", directory: "/")
-  !2 = !{i32 7, !"Dwarf Version", i32 5}
-  !3 = !{i32 2, !"Debug Info Version", i32 3}
-  !4 = !{i32 1, !"wchar_size", i32 4}
-  !9 = !{i32 7, !"debug-info-assignment-tracking", i1 true}
-  !10 = !{!"clang version 17.0.0"}
-  !11 = distinct !DISubprogram(name: "fun", linkageName: "fun", scope: !1, file: !1, line: 1, type: !12, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !14)
-  !12 = !DISubroutineType(types: !13)
-  !13 = !{null}
-  !14 = !{}
-  !15 = distinct !DIAssignID()
-  !16 = !DILocalVariable(name: "x", scope: !11, file: !1, line: 2, type: !17)
-  !17 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !18, size: 64)
-  !18 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-  !19 = !DILocation(line: 0, scope: !11)
-  )");
-
-  bool BrokenDebugInfo = true;
-  verifyModule(*M, &errs(), &BrokenDebugInfo);
-  ASSERT_FALSE(BrokenDebugInfo);
-
-  // Convert to debug intrinsics as we want to test findDbgUsers and
-  // findDbgValue's debug-intrinsic-finding code here.
-  // TODO: Remove this test when debug intrinsics are removed.
-  M->convertFromNewDbgValues();
-
-  Function &Fun = *cast<Function>(M->getNamedValue("fun"));
-  Value *Arg = Fun.getArg(0);
-  SmallVector<DbgVariableIntrinsic *> Users;
-  // Arg (%a) is used twice by a single dbg.assign. Check findDbgUsers returns
-  // only 1 pointer to it rather than 2.
-  findDbgUsers(Users, Arg);
-  EXPECT_EQ(Users.size(), 1u);
-
-  SmallVector<DbgValueInst *> Vals;
-  // Arg (%a) is used twice by a single dbg.assign. Check findDbgValues returns
-  // only 1 pointer to it rather than 2.
-  findDbgValues(Vals, Arg);
-  EXPECT_EQ(Vals.size(), 1u);
-}
-
 TEST(Local, FindDbgRecords) {
   // DbgRecord copy of the FindDbgUsers test above.
   LLVMContext Ctx;
@@ -729,20 +673,17 @@ TEST(Local, FindDbgRecords) {
   Function &Fun = *cast<Function>(M->getNamedValue("fun"));
   Value *Arg = Fun.getArg(0);
 
-  SmallVector<DbgVariableIntrinsic *> Users;
   SmallVector<DbgVariableRecord *> Records;
   // Arg (%a) is used twice by a single dbg_assign. Check findDbgUsers returns
   // only 1 pointer to it rather than 2.
-  findDbgUsers(Users, Arg, &Records);
-  EXPECT_EQ(Users.size(), 0u);
+  findDbgUsers(Arg, Records);
   EXPECT_EQ(Records.size(), 1u);
 
   SmallVector<DbgValueInst *> Vals;
   Records.clear();
   // Arg (%a) is used twice by a single dbg_assign. Check findDbgValues returns
   // only 1 pointer to it rather than 2.
-  findDbgValues(Vals, Arg, &Records);
-  EXPECT_EQ(Vals.size(), 0u);
+  findDbgValues(Arg, Records);
   EXPECT_EQ(Records.size(), 1u);
 }
 
@@ -823,13 +764,13 @@ TEST(Local, ReplaceAllDbgUsesWith) {
 
   BasicBlock &BB = F.front();
   Instruction &A = BB.front();
-  Instruction &B = *A.getNextNonDebugInstruction();
-  Instruction &C = *B.getNextNonDebugInstruction();
-  Instruction &D = *C.getNextNonDebugInstruction();
-  Instruction &E = *D.getNextNonDebugInstruction();
-  Instruction &F_ = *E.getNextNonDebugInstruction();
-  Instruction &Barrier = *F_.getNextNonDebugInstruction();
-  Instruction &G = *Barrier.getNextNonDebugInstruction();
+  Instruction &B = *A.getNextNode();
+  Instruction &C = *B.getNextNode();
+  Instruction &D = *C.getNextNode();
+  Instruction &E = *D.getNextNode();
+  Instruction &F_ = *E.getNextNode();
+  Instruction &Barrier = *F_.getNextNode();
+  Instruction &G = *Barrier.getNextNode();
 
   // Simulate i32 <-> i64* conversion. Expect no updates: the datalayout says
   // pointers are 64 bits, so the conversion would be lossy.
@@ -843,20 +784,16 @@ TEST(Local, ReplaceAllDbgUsesWith) {
   // Simulate i32* <-> i64* conversion.
   EXPECT_TRUE(replaceAllDbgUsesWith(D, C, C, DT));
 
-  SmallVector<DbgVariableIntrinsic *, 2> CDbgVals;
   SmallVector<DbgVariableRecord *, 2> CDbgRecords;
-  findDbgUsers(CDbgVals, &C, &CDbgRecords);
-  EXPECT_EQ(0U, CDbgVals.size());
+  findDbgUsers(&C, CDbgRecords);
   EXPECT_EQ(2U, CDbgRecords.size());
   EXPECT_TRUE(all_of(
       CDbgRecords, [](DbgVariableRecord *DVR) { return DVR->isDbgDeclare(); }));
 
   EXPECT_TRUE(replaceAllDbgUsesWith(C, D, D, DT));
 
-  SmallVector<DbgVariableIntrinsic *, 2> DDbgVals;
   SmallVector<DbgVariableRecord *, 2> DDbgRecords;
-  findDbgUsers(DDbgVals, &D, &DDbgRecords);
-  EXPECT_EQ(0U, DDbgVals.size());
+  findDbgUsers(&D, DDbgRecords);
   EXPECT_EQ(2U, DDbgRecords.size());
   EXPECT_TRUE(all_of(
       DDbgRecords, [](DbgVariableRecord *DVR) { return DVR->isDbgDeclare(); }));
@@ -880,10 +817,8 @@ TEST(Local, ReplaceAllDbgUsesWith) {
   EXPECT_EQ(BarrierDbgVal->getNumVariableLocationOps(), 1u);
   EXPECT_TRUE(BarrierDbgVal->isKillLocation());
 
-  SmallVector<DbgValueInst *, 1> BarrierDbgVals;
   SmallVector<DbgVariableRecord *, 8> BarrierDbgRecs;
-  findDbgValues(BarrierDbgVals, &F_, &BarrierDbgRecs);
-  EXPECT_EQ(0U, BarrierDbgVals.size());
+  findDbgValues(&F_, BarrierDbgRecs);
   EXPECT_EQ(0U, BarrierDbgRecs.size());
 
   // Simulate i32 -> i64 conversion to test sign-extension. Here are some
@@ -894,10 +829,8 @@ TEST(Local, ReplaceAllDbgUsesWith) {
   //  4-6) like (1-3), but with a fragment
   EXPECT_TRUE(replaceAllDbgUsesWith(B, A, A, DT));
 
-  SmallVector<DbgValueInst *, 8> BDbgVals;
   SmallVector<DbgVariableRecord *, 8> BDbgRecs;
-  findDbgValues(BDbgVals, &A, &BDbgRecs);
-  EXPECT_EQ(0U, BDbgVals.size());
+  findDbgValues(&A, BDbgRecs);
   EXPECT_EQ(6U, BDbgRecs.size());
 
   // Check that %a has a dbg.value with a DIExpression matching \p Ops.

@@ -6,7 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_COMMON_SIGN_H__
+#define __CLC_OPENCL_COMMON_SIGN_H__
+
 #define FUNCTION sign
 #define __CLC_BODY <clc/math/unary_decl.inc>
 #include <clc/math/gentype.inc>
 #undef FUNCTION
+
+#endif // __CLC_OPENCL_COMMON_SIGN_H__

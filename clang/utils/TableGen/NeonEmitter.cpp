@@ -2417,7 +2417,11 @@ void NeonEmitter::run(raw_ostream &OS) {
   OS << "#ifndef __ARM_NEON_H\n";
   OS << "#define __ARM_NEON_H\n\n";
 
-  OS << "#ifndef __ARM_FP\n";
+  OS << "#if !defined(__arm__) && !defined(__aarch64__) && "
+        "!defined(__arm64ec__)\n";
+  OS << "#error \"<arm_neon.h> is intended only for ARM and AArch64 "
+        "targets\"\n";
+  OS << "#elif !defined(__ARM_FP)\n";
   OS << "#error \"NEON intrinsics not available with the soft-float ABI. "
         "Please use -mfloat-abi=softfp or -mfloat-abi=hard\"\n";
   OS << "#else\n\n";

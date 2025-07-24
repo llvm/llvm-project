@@ -98,8 +98,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 LLDB_PLUGIN_DEFINE(SymbolFileDWARF)
 
@@ -4139,7 +4139,8 @@ void SymbolFileDWARF::DumpClangAST(Stream &s, llvm::StringRef filter) {
 }
 
 bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d,
-                                           bool errors_only) {
+                                           bool errors_only,
+                                           bool load_all_debug_info) {
   StructuredData::Array separate_debug_info_files;
   DWARFDebugInfo &info = DebugInfo();
   const size_t num_cus = info.GetNumUnits();
@@ -4182,7 +4183,7 @@ bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d,
 
     // If we have a DWO symbol file, that means we were able to successfully
     // load it.
-    SymbolFile *dwo_symfile = dwarf_cu->GetDwoSymbolFile();
+    SymbolFile *dwo_symfile = dwarf_cu->GetDwoSymbolFile(load_all_debug_info);
     if (dwo_symfile) {
       dwo_data->AddStringItem(
           "resolved_dwo_path",
@@ -4329,13 +4330,16 @@ SymbolFileDWARF::GetContainingDeclContext(const DWARFDIE &die) {
 }
 
 LanguageType SymbolFileDWARF::LanguageTypeFromDWARF(uint64_t val) {
+  if (val <= eLanguageTypeLastStandardLanguage)
+    return static_cast<LanguageType>(val);
+
   // Note: user languages between lo_user and hi_user must be handled
   // explicitly here.
   switch (val) {
   case DW_LANG_Mips_Assembler:
     return eLanguageTypeMipsAssembler;
   default:
-    return static_cast<LanguageType>(val);
+    return eLanguageTypeUnknown;
   }
 }
 

@@ -529,11 +529,9 @@ void AArch64TargetELFStreamer::finish() {
         static_cast<MCSectionELF *>(Ctx.getObjectFileInfo()->getTextSection());
     bool Empty = true;
     for (auto &F : *Text) {
-      if (auto *DF = dyn_cast<MCDataFragment>(&F)) {
-        if (!DF->getContents().empty()) {
-          Empty = false;
-          break;
-        }
+      if (F.getSize()) {
+        Empty = false;
+        break;
       }
     }
     if (Empty)
@@ -561,8 +559,7 @@ void AArch64TargetELFStreamer::finish() {
     if (!Sym.isMemtag())
       continue;
     auto *SRE = MCSymbolRefExpr::create(&Sym, Ctx);
-    (void)S.emitRelocDirective(*Zero, "BFD_RELOC_NONE", SRE, SMLoc(),
-                               *Ctx.getSubtargetInfo());
+    S.emitRelocDirective(*Zero, "BFD_RELOC_NONE", SRE);
   }
 }
 

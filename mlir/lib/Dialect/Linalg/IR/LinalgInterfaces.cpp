@@ -68,8 +68,14 @@ bool linalg::isaCopyOpInterface(LinalgOp op) {
       !mapRange.back().isIdentity()) {
     return false;
   }
-  // Region.
-  return llvm::hasSingleElement(op.getBlock()->getOperations());
+  // Check yield first block argument.
+  Block *body = op.getBlock();
+  if (body->getOperations().size() != 1)
+    return false;
+  auto yieldOp = dyn_cast<linalg::YieldOp>(body->back());
+  if (!yieldOp || yieldOp.getNumOperands() != 1)
+    return false;
+  return yieldOp->getOperand(0) == body->getArgument(0);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1271,8 +1277,7 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
     return op->emitOpError("expected the shape-to-loops map to be non-null");
 
   // Check the region has exactly one block.
-  if (linalgOp->getNumRegions() != 1 ||
-      !llvm::hasSingleElement(linalgOp->getRegion(0)))
+  if (linalgOp->getNumRegions() != 1 || !linalgOp->getRegion(0).hasOneBlock())
     return op->emitOpError("expects to have 1 region with 1 block");
 
   // Simplifying assumption: bbargs match 1-1 with shape operands elemental

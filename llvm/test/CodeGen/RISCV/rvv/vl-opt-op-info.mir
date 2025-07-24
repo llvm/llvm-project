@@ -1801,4 +1801,63 @@ body: |
     ; CHECK-NEXT: %y:vr = PseudoVMAND_MM_B16 $noreg, %x, 1, 0 /* e8 */
     %x:vr = PseudoVMSET_M_B8 -1, 0
     %y:vr = PseudoVMAND_MM_B16  $noreg, %x, 1, 0
+...
 ---
+name: vrgatherei16_vv
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vrgatherei16_vv
+    ; CHECK: early-clobber %x:vr = PseudoVRGATHEREI16_VV_M1_E32_MF2 $noreg, $noreg, $noreg, 1, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 5 /* e32 */, 0 /* tu, mu */
+    %x:vr = PseudoVRGATHEREI16_VV_M1_E32_MF2 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 5 /* e32 */, 0
+...
+---
+name: vrgatherei16_vv_incompatible_data_eew
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vrgatherei16_vv_incompatible_data_eew
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
+    ; CHECK-NEXT: early-clobber %y:vr = PseudoVRGATHEREI16_VV_M1_E32_MF2 $noreg, %x, $noreg, 1, 5 /* e32 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
+    %y:vr = PseudoVRGATHEREI16_VV_M1_E32_MF2 $noreg, %x, $noreg, 1, 5 /* e32 */, 0
+...
+---
+name: vrgatherei16_vv_incompatible_index_eew
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vrgatherei16_vv_incompatible_index_eew
+    ; CHECK: %x:vr = PseudoVADD_VV_MF2 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
+    ; CHECK-NEXT: early-clobber %y:vr = PseudoVRGATHEREI16_VV_M1_E32_MF2 $noreg, $noreg, %x, 1, 5 /* e32 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VV_MF2 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
+    %y:vr = PseudoVRGATHEREI16_VV_M1_E32_MF2 $noreg, $noreg, %x, 1, 5 /* e32 */, 0
+...
+---
+name: vrgatherei16_vv_incompatible_dest_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vrgatherei16_vv_incompatible_dest_emul
+    ; CHECK: early-clobber %x:vr = PseudoVRGATHEREI16_VV_M1_E32_MF2 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_MF2 $noreg, %x, $noreg, 1, 5 /* e32 */, 0 /* tu, mu */
+    %x:vr = PseudoVRGATHEREI16_VV_M1_E32_MF2 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0
+    %y:vr = PseudoVADD_VV_MF2 $noreg, %x, $noreg, 1, 5 /* e32 */, 0
+...
+---
+name: vrgatherei16_vv_incompatible_source_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vrgatherei16_vv_incompatible_source_emul
+    ; CHECK: %x:vr = PseudoVADD_VV_MF2 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: early-clobber %y:vr = PseudoVRGATHEREI16_VV_M1_E32_MF2 $noreg, %x, $noreg, 1, 5 /* e32 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VV_MF2 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0
+    %y:vr = PseudoVRGATHEREI16_VV_M1_E32_MF2 $noreg, %x, $noreg, 1, 5 /* e32 */, 0
+...
+---
+name: vrgatherei16_vv_incompatible_index_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vrgatherei16_vv_incompatible_index_emul
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
+    ; CHECK-NEXT: early-clobber %y:vr = PseudoVRGATHEREI16_VV_M1_E32_MF2 $noreg, $noreg, %x, 1, 5 /* e32 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
+    %y:vr = PseudoVRGATHEREI16_VV_M1_E32_MF2 $noreg, $noreg, %x, 1, 5 /* e32 */, 0

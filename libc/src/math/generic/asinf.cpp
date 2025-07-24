@@ -17,7 +17,7 @@
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
-#include "inv_trigf_utils.h"
+#include "src/__support/math/inv_trigf_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -44,6 +44,7 @@ static constexpr fputil::ExceptValues<float, N_EXCEPTS> ASINF_EXCEPTS_HI = {{
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
+  using namespace inv_trigf_utils_internal;
   using FPBits = typename fputil::FPBits<float>;
 
   FPBits xbits(x);

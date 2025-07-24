@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_hypot.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/hypot.h>
 
 #define FUNCTION hypot
 #define __CLC_BODY <clc/shared/binary_def.inc>

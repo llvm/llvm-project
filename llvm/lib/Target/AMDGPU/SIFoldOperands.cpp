@@ -1209,17 +1209,23 @@ void SIFoldOperandsImpl::foldOperand(
         return;
     }
 
-    // A frame index will resolve to a positive constant, so it should always be
-    // safe to fold the addressing mode, even pre-GFX9.
-    UseMI->getOperand(UseOpIdx).ChangeToFrameIndex(OpToFold.getFI());
-
     const unsigned Opc = UseMI->getOpcode();
     if (TII->isFLATScratch(*UseMI) &&
         AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vaddr) &&
         !AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::saddr)) {
       unsigned NewOpc = AMDGPU::getFlatScratchInstSSfromSV(Opc);
+      unsigned CPol =
+          TII->getNamedOperand(*UseMI, AMDGPU::OpName::cpol)->getImm();
+      if ((CPol & AMDGPU::CPol::SCAL) &&
+          !AMDGPU::supportsScaleOffset(*TII, NewOpc))
+        return;
+
       UseMI->setDesc(TII->get(NewOpc));
     }
+
+    // A frame index will resolve to a positive constant, so it should always be
+    // safe to fold the addressing mode, even pre-GFX9.
+    UseMI->getOperand(UseOpIdx).ChangeToFrameIndex(OpToFold.getFI());
 
     return;
   }
@@ -1761,6 +1767,7 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
   for (MachineInstr *Copy : CopiesToReplace)
     Copy->addImplicitDefUseOperands(*MF);
 
+  SetVector<MachineInstr *> ConstantFoldCandidates;
   for (FoldCandidate &Fold : FoldList) {
     assert(!Fold.isReg() || Fold.Def.OpToFold);
     if (Fold.isReg() && Fold.getReg().isVirtual()) {
@@ -1783,14 +1790,19 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
                         << static_cast<int>(Fold.UseOpNo) << " of "
                         << *Fold.UseMI);
 
-      if (Fold.isImm() && tryConstantFoldOp(Fold.UseMI)) {
-        LLVM_DEBUG(dbgs() << "Constant folded " << *Fold.UseMI);
-        Changed = true;
-      }
+      if (Fold.isImm())
+        ConstantFoldCandidates.insert(Fold.UseMI);
 
     } else if (Fold.Commuted) {
       // Restoring instruction's original operand order if fold has failed.
       TII->commuteInstruction(*Fold.UseMI, false);
+    }
+  }
+
+  for (MachineInstr *MI : ConstantFoldCandidates) {
+    if (tryConstantFoldOp(MI)) {
+      LLVM_DEBUG(dbgs() << "Constant folded " << *MI);
+      Changed = true;
     }
   }
   return true;

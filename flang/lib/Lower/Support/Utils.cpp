@@ -668,9 +668,7 @@ void privatizeSymbol(
 
   const semantics::Symbol *sym =
       isDoConcurrent ? &symToPrivatize->GetUltimate() : symToPrivatize;
-  const lower::SymbolBox hsb = isDoConcurrent
-                                   ? converter.shallowLookupSymbol(*sym)
-                                   : converter.lookupOneLevelUpSymbol(*sym);
+  const lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
   assert(hsb && "Host symbol box not found");
 
   mlir::Location symLoc = hsb.getAddr().getLoc();
@@ -704,9 +702,10 @@ void privatizeSymbol(
     // Boxes should be passed by reference into nested regions:
     auto oldIP = firOpBuilder.saveInsertionPoint();
     firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
-    auto alloca = firOpBuilder.create<fir::AllocaOp>(symLoc, privVal.getType());
+    auto alloca =
+        fir::AllocaOp::create(firOpBuilder, symLoc, privVal.getType());
     firOpBuilder.restoreInsertionPoint(oldIP);
-    firOpBuilder.create<fir::StoreOp>(symLoc, privVal, alloca);
+    fir::StoreOp::create(firOpBuilder, symLoc, privVal, alloca);
     privVal = alloca;
   }
 
@@ -728,15 +727,15 @@ void privatizeSymbol(
     OpType result;
 
     if constexpr (std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) {
-      result = firOpBuilder.create<OpType>(
-          symLoc, uniquePrivatizerName, allocType,
+      result = OpType::create(
+          firOpBuilder, symLoc, uniquePrivatizerName, allocType,
           emitCopyRegion ? mlir::omp::DataSharingClauseType::FirstPrivate
                          : mlir::omp::DataSharingClauseType::Private);
     } else {
-      result = firOpBuilder.create<OpType>(
-          symLoc, uniquePrivatizerName, allocType,
-          emitCopyRegion ? fir::LocalitySpecifierType::LocalInit
-                         : fir::LocalitySpecifierType::Local);
+      result =
+          OpType::create(firOpBuilder, symLoc, uniquePrivatizerName, allocType,
+                         emitCopyRegion ? fir::LocalitySpecifierType::LocalInit
+                                        : fir::LocalitySpecifierType::Local);
     }
 
     fir::ExtendedValue symExV = converter.getSymbolExtendedValue(*sym);
@@ -817,12 +816,12 @@ void privatizeSymbol(
       copyFirstPrivateSymbol(converter, symToPrivatize, &ip);
 
       if constexpr (std::is_same_v<OpType, mlir::omp::PrivateClauseOp>) {
-        firOpBuilder.create<mlir::omp::YieldOp>(
-            hsb.getAddr().getLoc(),
+        mlir::omp::YieldOp::create(
+            firOpBuilder, hsb.getAddr().getLoc(),
             symTable.shallowLookupSymbol(*symToPrivatize).getAddr());
       } else {
-        firOpBuilder.create<fir::YieldOp>(
-            hsb.getAddr().getLoc(),
+        fir::YieldOp::create(
+            firOpBuilder, hsb.getAddr().getLoc(),
             symTable.shallowLookupSymbol(*symToPrivatize).getAddr());
       }
     }

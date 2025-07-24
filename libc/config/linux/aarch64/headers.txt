@@ -57,4 +57,5 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.uchar
     libc.include.unistd
     libc.include.wchar
+    libc.include.wctype
 )

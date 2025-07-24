@@ -815,6 +815,9 @@ static void printMI(raw_ostream &OS, MFPrintState &State,
   if (MI.getFlag(MachineInstr::SameSign))
     OS << "samesign ";
 
+  // NOTE: Please add new MIFlags also to the MI_FLAGS_STR in
+  // llvm/utils/update_mir_test_checks.py.
+
   OS << TII->getName(MI.getOpcode());
 
   LS = ListSeparator();

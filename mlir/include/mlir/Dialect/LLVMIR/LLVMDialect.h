@@ -223,6 +223,9 @@ Value createGlobalString(Location loc, OpBuilder &builder, StringRef name,
 /// function confirms that the Operation has the desired properties.
 bool satisfiesLLVMModule(Operation *op);
 
+/// Lookup parent Module satisfying LLVM conditions on the Module Operation.
+Operation *parentLLVMModule(Operation *op);
+
 /// Convert an array of integer attributes to a vector of integers that can be
 /// used as indices in LLVM operations.
 template <typename IntT = int64_t>

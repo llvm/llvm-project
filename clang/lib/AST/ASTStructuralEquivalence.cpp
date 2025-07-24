@@ -598,9 +598,6 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   case NestedNameSpecifier::Namespace:
     return IsStructurallyEquivalent(Context, NNS1->getAsNamespace(),
                                     NNS2->getAsNamespace());
-  case NestedNameSpecifier::NamespaceAlias:
-    return IsStructurallyEquivalent(Context, NNS1->getAsNamespaceAlias(),
-                                    NNS2->getAsNamespaceAlias());
   case NestedNameSpecifier::TypeSpec:
     return IsStructurallyEquivalent(Context, QualType(NNS1->getAsType(), 0),
                                     QualType(NNS2->getAsType(), 0));
@@ -1480,6 +1477,13 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
     break;
   }
+  case Type::PredefinedSugar: {
+    const auto *TP1 = cast<PredefinedSugarType>(T1);
+    const auto *TP2 = cast<PredefinedSugarType>(T2);
+    if (TP1->getKind() != TP2->getKind())
+      return false;
+    break;
+  }
   } // end switch
 
   return true;
@@ -1609,6 +1613,11 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      CXXMethodDecl *Method1,
                                      CXXMethodDecl *Method2) {
+  if (!Method1 && !Method2)
+    return true;
+  if (!Method1 || !Method2)
+    return false;
+
   bool PropertiesEqual =
       Method1->getDeclKind() == Method2->getDeclKind() &&
       Method1->getRefQualifier() == Method2->getRefQualifier() &&

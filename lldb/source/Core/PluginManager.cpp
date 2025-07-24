@@ -18,6 +18,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringList.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -951,27 +952,26 @@ PluginManager::GetObjectFileCreateMemoryCallbackForPluginName(
   return nullptr;
 }
 
-Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
-                               lldb_private::SaveCoreOptions &options) {
+Status PluginManager::SaveCore(lldb_private::SaveCoreOptions &options) {
   Status error;
   if (!options.GetOutputFile()) {
     error = Status::FromErrorString("No output file specified");
     return error;
   }
 
-  if (!process_sp) {
+  if (!options.GetProcess()) {
     error = Status::FromErrorString("Invalid process");
     return error;
   }
 
-  error = options.EnsureValidConfiguration(process_sp);
+  error = options.EnsureValidConfiguration();
   if (error.Fail())
     return error;
 
   if (!options.GetPluginName().has_value()) {
     // Try saving core directly from the process plugin first.
     llvm::Expected<bool> ret =
-        process_sp->SaveCore(options.GetOutputFile()->GetPath());
+        options.GetProcess()->SaveCore(options.GetOutputFile()->GetPath());
     if (!ret)
       return Status::FromError(ret.takeError());
     if (ret.get())
@@ -983,7 +983,10 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
   auto instances = GetObjectFileInstances().GetSnapshot();
   for (auto &instance : instances) {
     if (plugin_name.empty() || instance.name == plugin_name) {
-      if (instance.save_core && instance.save_core(process_sp, options, error))
+      // TODO: Refactor the instance.save_core() to not require a process and
+      // get it from options instead.
+      if (instance.save_core &&
+          instance.save_core(options.GetProcess(), options, error))
         return error;
     }
   }
@@ -2472,4 +2475,35 @@ std::vector<RegisteredPluginInfo> PluginManager::GetUnwindAssemblyPluginInfo() {
 bool PluginManager::SetUnwindAssemblyPluginEnabled(llvm::StringRef name,
                                                    bool enable) {
   return GetUnwindAssemblyInstances().SetInstanceEnabled(name, enable);
+}
+
+void PluginManager::AutoCompletePluginName(llvm::StringRef name,
+                                           CompletionRequest &request) {
+  // Split the name into the namespace and the plugin name.
+  // If there is no dot then the ns_name will be equal to name and
+  // plugin_prefix will be empty.
+  llvm::StringRef ns_name, plugin_prefix;
+  std::tie(ns_name, plugin_prefix) = name.split('.');
+
+  for (const PluginNamespace &plugin_ns : GetPluginNamespaces()) {
+    // If the plugin namespace matches exactly then
+    // add all the plugins in this namespace as completions if the
+    // plugin names starts with the plugin_prefix. If the plugin_prefix
+    // is empty then it will match all the plugins (empty string is a
+    // prefix of everything).
+    if (plugin_ns.name == ns_name) {
+      for (const RegisteredPluginInfo &plugin : plugin_ns.get_info()) {
+        llvm::SmallString<128> buf;
+        if (plugin.name.starts_with(plugin_prefix))
+          request.AddCompletion(
+              (plugin_ns.name + "." + plugin.name).toStringRef(buf));
+      }
+    } else if (plugin_ns.name.starts_with(name) &&
+               !plugin_ns.get_info().empty()) {
+      // Otherwise check if the namespace is a prefix of the full name.
+      // Use a partial completion here so that we can either operate on the full
+      // namespace or tab-complete to the next level.
+      request.AddCompletion(plugin_ns.name, "", CompletionMode::Partial);
+    }
+  }
 }

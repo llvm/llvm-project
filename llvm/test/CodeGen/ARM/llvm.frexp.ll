@@ -141,8 +141,8 @@ define <2 x i32> @test_frexp_v2f16_v2i32_only_use_exp(<2 x half> %a) {
   ret <2 x i32> %result.1
 }
 
-define { <3 x float>, <3 x i32> } @test_frexp_v3f16_v3i32(<3 x float> %a) {
-; CHECK-LABEL: test_frexp_v3f16_v3i32:
+define { <3 x float>, <3 x i32> } @test_frexp_v3f32_v3i32(<3 x float> %a) {
+; CHECK-LABEL: test_frexp_v3f32_v3i32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
 ; CHECK-NEXT:    vpush {d8, d9}
@@ -174,7 +174,7 @@ define { <3 x float>, <3 x i32> } @test_frexp_v3f16_v3i32(<3 x float> %a) {
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
-  %result = call { <3 x float>, <3 x i32> } @llvm.frexp.v3float.v3i32(<3 x float> %a)
+  %result = call { <3 x float>, <3 x i32> } @llvm.frexp.v3f32.v3i32(<3 x float> %a)
   ret { <3 x float>, <3 x i32> } %result
 }
 
@@ -542,6 +542,59 @@ define <2 x i32> @test_frexp_v2f64_v2i32_only_use_exp(<2 x double> %a) {
   %result = call { <2 x double>, <2 x i32> } @llvm.frexp.v2f64.v2i32(<2 x double> %a)
   %result.1 = extractvalue { <2 x double>, <2 x i32> } %result, 1
   ret <2 x i32> %result.1
+}
+
+define { fp128, i32 } @test_frexp_f128_i32(fp128 %a) nounwind {
+; CHECK-LABEL: test_frexp_f128_i32:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    sub sp, #8
+; CHECK-NEXT:    mov r12, r3
+; CHECK-NEXT:    ldr r3, [sp, #16]
+; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    add r0, sp, #4
+; CHECK-NEXT:    str r0, [sp]
+; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    mov r1, r2
+; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    bl frexpl
+; CHECK-NEXT:    ldr.w r12, [sp, #4]
+; CHECK-NEXT:    stm.w r4, {r0, r1, r2, r3, r12}
+; CHECK-NEXT:    add sp, #8
+; CHECK-NEXT:    pop {r4, pc}
+  %result = call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %a)
+  ret { fp128, i32 } %result
+}
+
+define fp128 @test_frexp_f128_i32_only_use_fract(fp128 %a) nounwind {
+; CHECK-LABEL: test_frexp_f128_i32_only_use_fract:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    sub sp, #8
+; CHECK-NEXT:    add.w r12, sp, #4
+; CHECK-NEXT:    str.w r12, [sp]
+; CHECK-NEXT:    bl frexpl
+; CHECK-NEXT:    add sp, #8
+; CHECK-NEXT:    pop {r7, pc}
+  %result = call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %a)
+  %result.0 = extractvalue { fp128, i32 } %result, 0
+  ret fp128 %result.0
+}
+
+define i32 @test_frexp_f128_i32_only_use_exp(fp128 %a) nounwind {
+; CHECK-LABEL: test_frexp_f128_i32_only_use_exp:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    sub sp, #8
+; CHECK-NEXT:    add.w r12, sp, #4
+; CHECK-NEXT:    str.w r12, [sp]
+; CHECK-NEXT:    bl frexpl
+; CHECK-NEXT:    ldr r0, [sp, #4]
+; CHECK-NEXT:    add sp, #8
+; CHECK-NEXT:    pop {r7, pc}
+  %result = call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %a)
+  %result.0 = extractvalue { fp128, i32 } %result, 1
+  ret i32 %result.0
 }
 
 declare { float, i32 } @llvm.frexp.f32.i32(float) #0

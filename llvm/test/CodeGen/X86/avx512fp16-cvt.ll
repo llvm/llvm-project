@@ -628,13 +628,19 @@ define half @s128_to_half(i128 %x) {
 ;
 ; X86-LABEL: s128_to_half:
 ; X86:       # %bb.0:
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 20
-; X86-NEXT:    vmovups {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $32, %esp
+; X86-NEXT:    vmovups 8(%ebp), %xmm0
 ; X86-NEXT:    vmovups %xmm0, (%esp)
 ; X86-NEXT:    calll __floattihf
-; X86-NEXT:    addl $16, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl
   %a = sitofp i128 %x to half
   ret half %a
@@ -713,13 +719,19 @@ define half @u128_to_half(i128 %x) {
 ;
 ; X86-LABEL: u128_to_half:
 ; X86:       # %bb.0:
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 20
-; X86-NEXT:    vmovups {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $32, %esp
+; X86-NEXT:    vmovups 8(%ebp), %xmm0
 ; X86-NEXT:    vmovups %xmm0, (%esp)
 ; X86-NEXT:    calll __floatuntihf
-; X86-NEXT:    addl $16, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl
   %a = uitofp i128 %x to half
   ret half %a
@@ -1020,11 +1032,15 @@ define half @f128_to_half(fp128 %x) nounwind {
 ;
 ; X86-LABEL: f128_to_half:
 ; X86:       # %bb.0:
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    vmovups {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $32, %esp
+; X86-NEXT:    vmovups 8(%ebp), %xmm0
 ; X86-NEXT:    vmovups %xmm0, (%esp)
 ; X86-NEXT:    calll __trunctfhf2
-; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
   %a = fptrunc fp128 %x to half
   ret half %a
