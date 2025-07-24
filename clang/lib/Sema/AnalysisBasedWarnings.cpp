@@ -522,8 +522,7 @@ static bool areAllValuesNoReturn(const VarDecl *VD, const CFGBlock &VarBlk,
     }
 
     // If all checked blocks satisfy the condition, the check is finished.
-    if (std::all_of(BlocksToCheck.begin(), BlocksToCheck.end(),
-                    BlockSatisfiesCondition))
+    if (llvm::all_of(BlocksToCheck, BlockSatisfiesCondition))
       return true;
 
     // If this block does not contain the variable definition, check
