@@ -8,6 +8,9 @@ extern "C" int printf(const char*,...);
 "ab"
 // CHECK: (const char[3]) "ab"
 
+123456
+// CHECK-NEXT: (int) 123456
+
 char ch[2] = {'1','a'}; ch
 // CHECK-NEXT: (char[2]) { '1', 'a' }
 
@@ -28,15 +31,15 @@ S4{}
 // CHECK-NEXT: (S4) @0x{{[0-9a-f]+}}
 // TODO-CHECK-NEXT: ~S4()
 
-enum Enum : int { e1 = -12, e2, e3=33, e4, e5 = 33};
+enum Enum{ e1 = -12, e2, e3=33, e4, e5 = 33};
 e2
 // CHECK-NEXT: (Enum) (e2) : int -11
 ::e1
 // CHECK-NEXT: (Enum) (e1) : int -12
 
-enum class Color : unsigned int { R = 0, G, B };
+enum class Color { R = 0, G, B };
 Color::R
-// CHECK-NEXT: (Color) (Color::R) : unsigned int 0
+// CHECK-NEXT: (Color) (Color::R) : int 0
 
 
 // Lambdas.
