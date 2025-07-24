@@ -1177,40 +1177,67 @@ ObjectFile *Module::GetObjectFile() {
     if (!m_did_load_objfile.load()) {
       LLDB_SCOPED_TIMERF("Module::GetObjectFile () module = %s",
                          GetFileSpec().GetFilename().AsCString(""));
-      lldb::offset_t data_offset = 0;
-      lldb::offset_t file_size = 0;
-
-      if (m_data_sp)
-        file_size = m_data_sp->GetByteSize();
-      else if (m_file)
-        file_size = FileSystem::Instance().GetByteSize(m_file);
-
-      if (file_size > m_object_offset) {
-        m_did_load_objfile = true;
-        // FindPlugin will modify its data_sp argument. Do not let it
-        // modify our m_data_sp member.
-        auto data_sp = m_data_sp;
-        m_objfile_sp = ObjectFile::FindPlugin(
-            shared_from_this(), &m_file, m_object_offset,
-            file_size - m_object_offset, data_sp, data_offset);
-        if (m_objfile_sp) {
-          // Once we get the object file, update our module with the object
-          // file's architecture since it might differ in vendor/os if some
-          // parts were unknown.  But since the matching arch might already be
-          // more specific than the generic COFF architecture, only merge in
-          // those values that overwrite unspecified unknown values.
-          m_arch.MergeFrom(m_objfile_sp->GetArchitecture());
-
-          m_unwind_table.ModuleWasUpdated();
-        } else {
-          ReportError("failed to load objfile for {0}\nDebugging will be "
-                      "degraded for this module.",
-                      GetFileSpec().GetPath().c_str());
-        }
-      }
+      LoadObjectFile();
     }
   }
   return m_objfile_sp.get();
+}
+
+void Module::LoadObjectFile() {
+  lldb::offset_t data_offset = 0;
+  lldb::offset_t file_size = 0;
+
+  if (m_data_sp)
+    file_size = m_data_sp->GetByteSize();
+  else if (m_file)
+    file_size = FileSystem::Instance().GetByteSize(m_file);
+
+  if (file_size <= m_object_offset)
+    return;
+
+  m_did_load_objfile = true;
+  // FindPlugin will modify its data_sp argument. Do not let it
+  // modify our m_data_sp member.
+  auto data_sp = m_data_sp;
+  m_objfile_sp =
+      ObjectFile::FindPlugin(shared_from_this(), &m_file, m_object_offset,
+                             file_size - m_object_offset, data_sp, data_offset);
+  if (m_objfile_sp) {
+    // Once we get the object file, update our module with the object
+    // file's architecture since it might differ in vendor/os if some
+    // parts were unknown.  But since the matching arch might already be
+    // more specific than the generic COFF architecture, only merge in
+    // those values that overwrite unspecified unknown values.
+    m_arch.MergeFrom(m_objfile_sp->GetArchitecture());
+    m_unwind_table.ModuleWasUpdated();
+  } else {
+    ReportError("failed to load objfile for {0}",
+                GetFileSpec().GetPath().c_str());
+  }
+}
+
+void Module::ReplaceObjectFile(Target &target, FileSpec object_file,
+                               uint64_t object_offset) {
+  m_old_objfile_sp = m_objfile_sp;
+  m_file = object_file;
+  m_object_offset = object_offset;
+  lldb::addr_t load_address =
+      GetObjectFile()->GetBaseAddress().GetLoadAddress(&target);
+
+  // Scope locking.
+  {
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    LLDB_SCOPED_TIMERF("Module::ReplaceObjectFile () module = %s",
+                       GetFileSpec().GetFilename().AsCString(""));
+    LoadObjectFile();
+  }
+
+  bool changed = false;
+  SetLoadAddress(target, load_address, false, changed);
+
+  // Force reparsing UUID and symbol files.
+  m_did_set_uuid = false;
+  m_did_load_symfile = false;
 }
 
 SectionList *Module::GetSectionList() {
