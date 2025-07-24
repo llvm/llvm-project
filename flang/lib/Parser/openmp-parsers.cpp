@@ -1208,6 +1208,54 @@ TYPE_PARSER(sourced(
         maybe(Parser<OmpClauseList>{}),
         pure(OmpDirectiveSpecification::Flags::None))))
 
+static bool IsFortranBlockConstruct(const ExecutionPartConstruct &epc) {
+  // ExecutionPartConstruct -> ExecutableConstruct
+  //   -> Indirection<BlockConstruct>
+  if (auto *ec{std::get_if<ExecutableConstruct>(&epc.u)}) {
+    return std::holds_alternative<common::Indirection<BlockConstruct>>(ec->u);
+  } else {
+    return false;
+  }
+}
+
+struct StrictlyStructuredBlockParser {
+  using resultType = Block;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    if (auto epc{Parser<ExecutionPartConstruct>{}.Parse(state)}) {
+      if (IsFortranBlockConstruct(*epc)) {
+        Block block;
+        block.emplace_back(std::move(*epc));
+        return std::move(block);
+      }
+    }
+    return std::nullopt;
+  }
+};
+
+struct LooselyStructuredBlockParser {
+  using resultType = Block;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    Block body;
+    if (auto epc{attempt(Parser<ExecutionPartConstruct>{}).Parse(state)}) {
+      if (!IsFortranBlockConstruct(*epc)) {
+        body.emplace_back(std::move(*epc));
+        if (auto &&blk{attempt(block).Parse(state)}) {
+          for (auto &&s : *blk) {
+            body.emplace_back(std::move(s));
+          }
+        }
+      } else {
+        // Fail if the first construct is BLOCK.
+        return std::nullopt;
+      }
+    }
+    // Empty body is ok.
+    return std::move(body);
+  }
+};
+
 TYPE_PARSER(sourced(construct<OmpNothingDirective>("NOTHING" >> ok)))
 
 TYPE_PARSER(sourced(construct<OpenMPUtilityConstruct>(
@@ -1570,12 +1618,16 @@ TYPE_PARSER(
             Parser<OpenMPInteropConstruct>{})) /
     endOfLine)
 
+// Directive names (of non-block constructs) whose prefix is a name of
+// a block-associated construct. We need to exclude them from the block
+// directive parser below to avoid parsing parts of them.
+static constexpr auto StandaloneDirectiveLookahead{//
+    "TARGET ENTER DATA"_sptok || "TARGET_ENTER_DATA"_sptok || //
+    "TARGET EXIT DATA"_sptok || "TARGET_EXIT"_sptok || //
+    "TARGET UPDATE"_sptok || "TARGET_UPDATE"_sptok};
+
 // Directives enclosing structured-block
-TYPE_PARSER(
-    // In this context "TARGET UPDATE" can be parsed as a TARGET directive
-    // followed by an UPDATE clause. This is the only combination at the
-    // moment, exclude it explicitly.
-    (!("TARGET UPDATE"_sptok || "TARGET_UPDATE"_sptok)) >=
+TYPE_PARSER(!StandaloneDirectiveLookahead >=
     construct<OmpBlockDirective>(first(
         "MASKED" >> pure(llvm::omp::Directive::OMPD_masked),
         "MASTER" >> pure(llvm::omp::Directive::OMPD_master),
@@ -1749,9 +1801,12 @@ TYPE_PARSER(sourced(
         block, maybe(Parser<OmpEndAssumeDirective>{} / endOmpLine))))
 
 // Block Construct
-TYPE_PARSER(construct<OpenMPBlockConstruct>(
-    Parser<OmpBeginBlockDirective>{} / endOmpLine, block,
-    Parser<OmpEndBlockDirective>{} / endOmpLine))
+TYPE_PARSER( //
+    construct<OpenMPBlockConstruct>(Parser<OmpBeginBlockDirective>{},
+        StrictlyStructuredBlockParser{},
+        maybe(Parser<OmpEndBlockDirective>{})) ||
+    construct<OpenMPBlockConstruct>(Parser<OmpBeginBlockDirective>{},
+        LooselyStructuredBlockParser{}, Parser<OmpEndBlockDirective>{}))
 
 // OMP SECTIONS Directive
 TYPE_PARSER(construct<OmpSectionsDirective>(first(
