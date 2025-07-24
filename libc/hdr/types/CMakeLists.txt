@@ -320,6 +320,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  sigjmp_buf
+  HDRS
+    sigjmp_buf.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.sigjmp_buf
+    libc.include.setjmp
+)
+
+add_proxy_header_library(
   struct_msghdr
   HDRS
     struct_msghdr.h
