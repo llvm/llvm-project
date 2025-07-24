@@ -361,6 +361,7 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
                  dbgs() << "\n");
       Register NewVReg = reloadBefore(I, R);
       rewriteUses(R.getVReg(), NewVReg);
+      LIS.createAndComputeVirtRegInterval(NewVReg);
     }
 
     std::advance(I, NSpills);
@@ -427,6 +428,7 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
                 NewVReg = FullVReg;
               }
               rewriteUses(VMP.getVReg(), NewVReg);
+              LIS.createAndComputeVirtRegInterval(NewVReg);
             }
           }
         }
@@ -577,6 +579,7 @@ void AMDGPUSSASpiller::connectToPredecessors(MachineBasicBlock &MBB,
       for (auto R : ReloadInPred) {
         Register NewVReg = reloadAtEnd(*Pred, R);
         rewriteUses(R.getVReg(), NewVReg);
+        LIS.createAndComputeVirtRegInterval(NewVReg);
       }
     }
   }
@@ -705,8 +708,6 @@ AMDGPUSSASpiller::reloadBefore(MachineBasicBlock::iterator InsertBefore,
   TII->loadRegFromStackSlot(*MBB, InsertBefore, NewVReg, FI, RC, TRI, NewVReg);
   MachineInstr *ReloadMI = MRI->getVRegDef(NewVReg);
   LIS.InsertMachineInstrInMaps(*ReloadMI);
-
-  LIS.createAndComputeVirtRegInterval(NewVReg);
   auto &Entry = getBlockInfo(*MBB);
   Entry.ActiveSet.insert({NewVReg, MRI->getMaxLaneMaskForVReg(NewVReg)});
   return NewVReg;
@@ -715,11 +716,16 @@ AMDGPUSSASpiller::reloadBefore(MachineBasicBlock::iterator InsertBefore,
 void AMDGPUSSASpiller::spillBefore(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator InsertBefore,
                                    VRegMaskPair VMP) {
-  const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, VMP.getVReg());
   unsigned SubRegIdx = VMP.getSubReg(MRI, TRI);
+  const TargetRegisterClass *RC =
+      SubRegIdx == AMDGPU::NoRegister
+          ? TRI->getRegClassForReg(*MRI, VMP.getVReg())
+          : TRI->getSubRegisterClass(
+                TRI->getRegClassForReg(*MRI, VMP.getVReg()), SubRegIdx);
   int FI = assignVirt2StackSlot(VMP);
-  TII->storeRegToStackSlot(MBB, InsertBefore, VMP.getVReg(), true, FI, RC, TRI,
-                           VMP.getVReg(), SubRegIdx);
+  TII->storeRegToStackSlot(MBB, InsertBefore, VMP.getVReg(),
+                           SubRegIdx == AMDGPU::NoRegister ? true : false, FI,
+                           RC, TRI, VMP.getVReg(), SubRegIdx);
   // FIXME: dirty hack! To avoid further changing the TargetInstrInfo interface.
   MachineInstr &Spill = *(--InsertBefore);
   LIS.InsertMachineInstrInMaps(Spill);
