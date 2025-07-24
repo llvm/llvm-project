@@ -1,8 +1,10 @@
 # 'shard' Dialect
 
-The `shard` dialect contains a set of attributes, operations and interfaces that
-are useful for representing sharding and communication on a device grid
-cluster.
+This dialect contains a set of attributes, operations and interfaces that
+are useful for representing sharding and communication on a device grid.
+
+It was originally introduced under the name 'mesh' but was later renamed
+to better reflect its purpose.
 
 [TOC]
 
