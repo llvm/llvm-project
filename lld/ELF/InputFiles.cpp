@@ -807,14 +807,12 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       continue;
     }
 
+    // Processor-specific types that do not use the following switch statement.
+    //
     // Extract Build Attributes section contents into aarch64BAsubSections.
     // Input objects may contain both build Build Attributes and GNU
     // properties. We delay processing Build Attributes until we have finished
     // reading all sections so that we can check that these are consistent.
-    //
-    // Ideally this belongs in the following switch, but due to the
-    // combination of enum constant reuse and fallthrough it has to be
-    // here.
     if (ctx.arg.emachine == EM_AARCH64 && type == SHT_AARCH64_ATTRIBUTES) {
       ArrayRef<uint8_t> contents = check(obj.getSectionContents(sec));
       AArch64AttributeParser attributes;
