@@ -36,6 +36,8 @@ end
 
 !Expect: m3.mod
 !module m3
+!use m2,only:bar
+!private::bar
 !contains
 !subroutine sub(x)
 !use m2,only:bar
