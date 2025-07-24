@@ -352,6 +352,81 @@ entry:
   ret void
 }
 
+define void @buildvector_v32i8_partial(ptr %dst, i8 %a0, i8 %a1, i8 %a2, i8 %a5, i8 %a7, i8 %a8, i8 %a15, i8 %a17, i8 %a18, i8 %a20, i8 %a22, i8 %a23, i8 %a27, i8 %a28, i8 %a31) nounwind {
+; CHECK-LABEL: buildvector_v32i8_partial:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi.d $sp, $sp, -96
+; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
+; CHECK-NEXT:    addi.d $fp, $sp, 96
+; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
+; CHECK-NEXT:    ld.b $t0, $fp, 0
+; CHECK-NEXT:    ld.b $t1, $fp, 8
+; CHECK-NEXT:    ld.b $t2, $fp, 16
+; CHECK-NEXT:    ld.b $t3, $fp, 24
+; CHECK-NEXT:    ld.b $t4, $fp, 56
+; CHECK-NEXT:    ld.b $t5, $fp, 48
+; CHECK-NEXT:    ld.b $t6, $fp, 40
+; CHECK-NEXT:    ld.b $t7, $fp, 32
+; CHECK-NEXT:    st.b $t4, $sp, 63
+; CHECK-NEXT:    st.b $t5, $sp, 60
+; CHECK-NEXT:    st.b $t6, $sp, 59
+; CHECK-NEXT:    st.b $t7, $sp, 55
+; CHECK-NEXT:    st.b $t3, $sp, 54
+; CHECK-NEXT:    st.b $t2, $sp, 52
+; CHECK-NEXT:    st.b $t1, $sp, 50
+; CHECK-NEXT:    st.b $t0, $sp, 49
+; CHECK-NEXT:    st.b $a7, $sp, 47
+; CHECK-NEXT:    st.b $a6, $sp, 40
+; CHECK-NEXT:    st.b $a5, $sp, 39
+; CHECK-NEXT:    st.b $a4, $sp, 37
+; CHECK-NEXT:    st.b $a3, $sp, 34
+; CHECK-NEXT:    st.b $a2, $sp, 33
+; CHECK-NEXT:    st.b $a1, $sp, 32
+; CHECK-NEXT:    xvld $xr0, $sp, 32
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    addi.d $sp, $fp, -96
+; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
+; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    ret
+entry:
+  %ins0  = insertelement <32 x i8> undef,  i8   %a0,  i32 0
+  %ins1  = insertelement <32 x i8> %ins0,  i8   %a1,  i32 1
+  %ins2  = insertelement <32 x i8> %ins1,  i8   %a2,  i32 2
+  %ins3  = insertelement <32 x i8> %ins2,  i8 undef,  i32 3
+  %ins4  = insertelement <32 x i8> %ins3,  i8 undef,  i32 4
+  %ins5  = insertelement <32 x i8> %ins4,  i8   %a5,  i32 5
+  %ins6  = insertelement <32 x i8> %ins5,  i8 undef,  i32 6
+  %ins7  = insertelement <32 x i8> %ins6,  i8   %a7,  i32 7
+  %ins8  = insertelement <32 x i8> %ins7,  i8   %a8,  i32 8
+  %ins9  = insertelement <32 x i8> %ins8,  i8 undef,  i32 9
+  %ins10 = insertelement <32 x i8> %ins9,  i8 undef, i32 10
+  %ins11 = insertelement <32 x i8> %ins10, i8 undef, i32 11
+  %ins12 = insertelement <32 x i8> %ins11, i8 undef, i32 12
+  %ins13 = insertelement <32 x i8> %ins12, i8 undef, i32 13
+  %ins14 = insertelement <32 x i8> %ins13, i8 undef, i32 14
+  %ins15 = insertelement <32 x i8> %ins14, i8  %a15, i32 15
+  %ins16 = insertelement <32 x i8> %ins15, i8 undef, i32 16
+  %ins17 = insertelement <32 x i8> %ins16, i8  %a17, i32 17
+  %ins18 = insertelement <32 x i8> %ins17, i8  %a18, i32 18
+  %ins19 = insertelement <32 x i8> %ins18, i8 undef, i32 19
+  %ins20 = insertelement <32 x i8> %ins19, i8  %a20, i32 20
+  %ins21 = insertelement <32 x i8> %ins20, i8 undef, i32 21
+  %ins22 = insertelement <32 x i8> %ins21, i8  %a22, i32 22
+  %ins23 = insertelement <32 x i8> %ins22, i8  %a23, i32 23
+  %ins24 = insertelement <32 x i8> %ins23, i8 undef, i32 24
+  %ins25 = insertelement <32 x i8> %ins24, i8 undef, i32 25
+  %ins26 = insertelement <32 x i8> %ins25, i8 undef, i32 26
+  %ins27 = insertelement <32 x i8> %ins26, i8  %a27, i32 27
+  %ins28 = insertelement <32 x i8> %ins27, i8  %a28, i32 28
+  %ins29 = insertelement <32 x i8> %ins28, i8 undef, i32 29
+  %ins30 = insertelement <32 x i8> %ins29, i8 undef, i32 30
+  %ins31 = insertelement <32 x i8> %ins30, i8  %a31, i32 31
+  store <32 x i8> %ins31, ptr %dst
+  ret void
+}
+
 define void @buildvector_v16i16(ptr %dst, i16 %a0, i16 %a1, i16 %a2, i16 %a3, i16 %a4, i16 %a5, i16 %a6, i16 %a7, i16 %a8, i16 %a9, i16 %a10, i16 %a11, i16 %a12, i16 %a13, i16 %a14, i16 %a15) nounwind {
 ; CHECK-LABEL: buildvector_v16i16:
 ; CHECK:       # %bb.0: # %entry
@@ -419,6 +494,49 @@ entry:
   ret void
 }
 
+define void @buildvector_v16i16_partial(ptr %dst, i16 %a0, i16 %a2, i16 %a5, i16 %a6, i16 %a7, i16 %a12, i16 %a13) nounwind {
+; CHECK-LABEL: buildvector_v16i16_partial:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi.d $sp, $sp, -96
+; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
+; CHECK-NEXT:    addi.d $fp, $sp, 96
+; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
+; CHECK-NEXT:    st.h $a7, $sp, 58
+; CHECK-NEXT:    st.h $a6, $sp, 56
+; CHECK-NEXT:    st.h $a5, $sp, 46
+; CHECK-NEXT:    st.h $a4, $sp, 44
+; CHECK-NEXT:    st.h $a3, $sp, 42
+; CHECK-NEXT:    st.h $a2, $sp, 36
+; CHECK-NEXT:    st.h $a1, $sp, 32
+; CHECK-NEXT:    xvld $xr0, $sp, 32
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    addi.d $sp, $fp, -96
+; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
+; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    ret
+entry:
+  %ins0  = insertelement <16 x i16> undef,  i16   %a0,  i32 0
+  %ins1  = insertelement <16 x i16> %ins0,  i16 undef,  i32 1
+  %ins2  = insertelement <16 x i16> %ins1,  i16   %a2,  i32 2
+  %ins3  = insertelement <16 x i16> %ins2,  i16 undef,  i32 3
+  %ins4  = insertelement <16 x i16> %ins3,  i16 undef,  i32 4
+  %ins5  = insertelement <16 x i16> %ins4,  i16   %a5,  i32 5
+  %ins6  = insertelement <16 x i16> %ins5,  i16   %a6,  i32 6
+  %ins7  = insertelement <16 x i16> %ins6,  i16   %a7,  i32 7
+  %ins8  = insertelement <16 x i16> %ins7,  i16 undef,  i32 8
+  %ins9  = insertelement <16 x i16> %ins8,  i16 undef,  i32 9
+  %ins10 = insertelement <16 x i16> %ins9,  i16 undef, i32 10
+  %ins11 = insertelement <16 x i16> %ins10, i16 undef, i32 11
+  %ins12 = insertelement <16 x i16> %ins11, i16  %a12, i32 12
+  %ins13 = insertelement <16 x i16> %ins12, i16  %a13, i32 13
+  %ins14 = insertelement <16 x i16> %ins13, i16 undef, i32 14
+  %ins15 = insertelement <16 x i16> %ins14, i16 undef, i32 15
+  store <16 x i16> %ins15, ptr %dst
+  ret void
+}
+
 define void @buildvector_v8i32(ptr %dst, i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7) nounwind {
 ; CHECK-LABEL: buildvector_v8i32:
 ; CHECK:       # %bb.0: # %entry
@@ -446,6 +564,38 @@ entry:
   ret void
 }
 
+define void @buildvector_v8i32_partial(ptr %dst, i32 %a2, i32 %a4, i32 %a5, i32 %a6) nounwind {
+; CHECK-LABEL: buildvector_v8i32_partial:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi.d $sp, $sp, -96
+; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
+; CHECK-NEXT:    addi.d $fp, $sp, 96
+; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
+; CHECK-NEXT:    st.w $a4, $sp, 56
+; CHECK-NEXT:    st.w $a3, $sp, 52
+; CHECK-NEXT:    st.w $a2, $sp, 48
+; CHECK-NEXT:    st.w $a1, $sp, 40
+; CHECK-NEXT:    xvld $xr0, $sp, 32
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    addi.d $sp, $fp, -96
+; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
+; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    ret
+entry:
+  %ins0 = insertelement <8 x i32> undef, i32 undef, i32 0
+  %ins1 = insertelement <8 x i32> %ins0, i32 undef, i32 1
+  %ins2 = insertelement <8 x i32> %ins1, i32   %a2, i32 2
+  %ins3 = insertelement <8 x i32> %ins2, i32 undef, i32 3
+  %ins4 = insertelement <8 x i32> %ins3, i32   %a4, i32 4
+  %ins5 = insertelement <8 x i32> %ins4, i32   %a5, i32 5
+  %ins6 = insertelement <8 x i32> %ins5, i32   %a6, i32 6
+  %ins7 = insertelement <8 x i32> %ins6, i32 undef, i32 7
+  store <8 x i32> %ins7, ptr %dst
+  ret void
+}
+
 define void @buildvector_v4i64(ptr %dst, i64 %a0, i64 %a1, i64 %a2, i64 %a3) nounwind {
 ; CHECK-LABEL: buildvector_v4i64:
 ; CHECK:       # %bb.0: # %entry
@@ -460,6 +610,25 @@ entry:
   %ins1 = insertelement <4 x i64> %ins0, i64 %a1, i32 1
   %ins2 = insertelement <4 x i64> %ins1, i64 %a2, i32 2
   %ins3 = insertelement <4 x i64> %ins2, i64 %a3, i32 3
+  store <4 x i64> %ins3, ptr %dst
+  ret void
+}
+
+define void @buildvector_v4i64_partial(ptr %dst, i64 %a1, i64 %a2) nounwind {
+; CHECK-LABEL: buildvector_v4i64_partial:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvinsgr2vr.d $xr0, $a2, 0
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 68
+; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a1, 0
+; CHECK-NEXT:    xvpermi.d $xr1, $xr1, 68
+; CHECK-NEXT:    xvpackev.d $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
+entry:
+  %ins0 = insertelement <4 x i64> undef, i64 undef, i32 0
+  %ins1 = insertelement <4 x i64> %ins0, i64   %a1, i32 1
+  %ins2 = insertelement <4 x i64> %ins1, i64   %a2, i32 2
+  %ins3 = insertelement <4 x i64> %ins2, i64 undef, i32 3
   store <4 x i64> %ins3, ptr %dst
   ret void
 }
@@ -497,6 +666,38 @@ entry:
   ret void
 }
 
+define void @buildvector_v8f32_partial(ptr %dst, float %a1, float %a2, float %a5, float %a7) nounwind {
+; CHECK-LABEL: buildvector_v8f32_partial:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi.d $sp, $sp, -96
+; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
+; CHECK-NEXT:    addi.d $fp, $sp, 96
+; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
+; CHECK-NEXT:    fst.s $fa3, $sp, 60
+; CHECK-NEXT:    fst.s $fa2, $sp, 52
+; CHECK-NEXT:    fst.s $fa1, $sp, 40
+; CHECK-NEXT:    fst.s $fa0, $sp, 36
+; CHECK-NEXT:    xvld $xr0, $sp, 32
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    addi.d $sp, $fp, -96
+; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
+; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    ret
+entry:
+  %ins0 = insertelement <8 x float> undef, float undef, i32 0
+  %ins1 = insertelement <8 x float> %ins0, float   %a1, i32 1
+  %ins2 = insertelement <8 x float> %ins1, float   %a2, i32 2
+  %ins3 = insertelement <8 x float> %ins2, float undef, i32 3
+  %ins4 = insertelement <8 x float> %ins3, float undef, i32 4
+  %ins5 = insertelement <8 x float> %ins4, float   %a5, i32 5
+  %ins6 = insertelement <8 x float> %ins5, float undef, i32 6
+  %ins7 = insertelement <8 x float> %ins6, float   %a7, i32 7
+  store <8 x float> %ins7, ptr %dst
+  ret void
+}
+
 define void @buildvector_v4f64(ptr %dst, double %a0, double %a1, double %a2, double %a3) nounwind {
 ; CHECK-LABEL: buildvector_v4f64:
 ; CHECK:       # %bb.0: # %entry
@@ -514,6 +715,25 @@ entry:
   %ins1 = insertelement <4 x double> %ins0, double %a1, i32 1
   %ins2 = insertelement <4 x double> %ins1, double %a2, i32 2
   %ins3 = insertelement <4 x double> %ins2, double %a3, i32 3
+  store <4 x double> %ins3, ptr %dst
+  ret void
+}
+
+define void @buildvector_v4f64_partial(ptr %dst, double %a0, double %a3) nounwind {
+; CHECK-LABEL: buildvector_v4f64_partial:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    # kill: def $f1_64 killed $f1_64 def $xr1
+; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 68
+; CHECK-NEXT:    xvpermi.d $xr1, $xr1, 68
+; CHECK-NEXT:    xvpackev.d $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
+entry:
+  %ins0 = insertelement <4 x double> undef, double   %a0, i32 0
+  %ins1 = insertelement <4 x double> %ins0, double undef, i32 1
+  %ins2 = insertelement <4 x double> %ins1, double undef, i32 2
+  %ins3 = insertelement <4 x double> %ins2, double   %a3, i32 3
   store <4 x double> %ins3, ptr %dst
   ret void
 }
