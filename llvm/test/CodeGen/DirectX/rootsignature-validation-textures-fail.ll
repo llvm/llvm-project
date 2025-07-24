@@ -9,7 +9,9 @@
 
 define void @CSMain() "hlsl.shader"="compute" {
 entry:
+
   %TB =  tail call target("dx.Texture", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @TB.str)
+
   ret void
 }
 
