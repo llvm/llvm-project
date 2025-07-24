@@ -12,6 +12,7 @@
 #include "NanobindUtils.h"
 #include "Pass.h"
 #include "Rewrite.h"
+#include "Traceback.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 
 namespace nb = nanobind;
@@ -105,6 +106,7 @@ NB_MODULE(_mlir, m) {
       "typeid"_a, nb::kw_only(), "replace"_a = false,
       "Register a value caster for casting MLIR values to custom user values.");
 
+  BuildTracebackSubmodule(m);
   // Define and populate IR submodule.
   auto irModule = m.def_submodule("ir", "MLIR IR Bindings");
   populateIRCore(irModule);
