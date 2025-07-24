@@ -69,39 +69,37 @@ func.func @nofold_unpack_slice_rank_reduced(%arg0 : tensor<?x?x8x4xf32>, %arg1 :
 
 // -----
 
-func.func @pad_pack(%src: tensor<16649x16xf32>) -> tensor<2082x1x8x32xf32> {
-  %c0 = arith.constant 0 : index
+func.func @fold_pad_pack(%src: tensor<9x16xf32>) -> tensor<2x1x8x32xf32> {
   %cst = arith.constant 0.000000e+00 : f32
   %padded = tensor.pad %src low[0, 0] high[7, 0] {
   ^bb0(%arg0: index, %arg1: index):
     tensor.yield %cst : f32
-  } : tensor<16649x16xf32> to tensor<16656x16xf32>
-  %empty = tensor.empty() : tensor<2082x1x8x32xf32>
+  } : tensor<9x16xf32> to tensor<16x16xf32>
+  %empty = tensor.empty() : tensor<2x1x8x32xf32>
   %pack = linalg.pack %padded padding_value(%cst : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %empty
-      : tensor<16656x16xf32> -> tensor<2082x1x8x32xf32>
-  return %pack : tensor<2082x1x8x32xf32>
+      : tensor<16x16xf32> -> tensor<2x1x8x32xf32>
+  return %pack : tensor<2x1x8x32xf32>
 }
-// CHECK-LABEL: func.func @pad_pack
+// CHECK-LABEL: func.func @fold_pad_pack
 // CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]
 // CHECK:         %[[PAD_VAL:.+]] = arith.constant 0.000000e+00 : f32
-// CHECK:         %[[DEST:.+]] = tensor.empty() : tensor<2082x1x8x32xf32>
+// CHECK:         %[[DEST:.+]] = tensor.empty() : tensor<2x1x8x32xf32>
 // CHECK:         %[[PACK:.+]] = linalg.pack %[[SRC]]
 // CHECK-SAME:      padding_value(%[[PAD_VAL]] : f32)
 // CHECK-SAME:      inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %[[DEST]]
 
 // -----
 
-func.func @nofold_pad_pack_artificial_padding(%src: tensor<16641x16xf32>) -> tensor<2082x1x8x32xf32> {
-  %c0 = arith.constant 0 : index
+func.func @nofold_pad_pack_artificial_padding(%src: tensor<9x16xf32>) -> tensor<3x1x8x32xf32> {
   %cst = arith.constant 0.000000e+00 : f32
-  %padded = tensor.pad %src low[0, 0] high[15, 0] {
+  %padded = tensor.pad %src low[0, 0] high[8, 0] {
   ^bb0(%arg0: index, %arg1: index):
     tensor.yield %cst : f32
-  } : tensor<16641x16xf32> to tensor<16656x16xf32>
-  %empty = tensor.empty() : tensor<2082x1x8x32xf32>
+  } : tensor<9x16xf32> to tensor<17x16xf32>
+  %empty = tensor.empty() : tensor<3x1x8x32xf32>
   %pack = linalg.pack %padded padding_value(%cst : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %empty
-      : tensor<16656x16xf32> -> tensor<2082x1x8x32xf32>
-  return %pack : tensor<2082x1x8x32xf32>
+      : tensor<17x16xf32> -> tensor<3x1x8x32xf32>
+  return %pack : tensor<3x1x8x32xf32>
 }
 // CHECK-LABLE: func.func @nofold_pad_pack_artificial_padding(
 // CHECK:         tensor.pad
@@ -110,7 +108,6 @@ func.func @nofold_pad_pack_artificial_padding(%src: tensor<16641x16xf32>) -> ten
 // -----
 
 func.func @nofold_pad_pack_with_nofold_attribute(%src: tensor<16649x16xf32>) -> tensor<2082x1x8x32xf32> {
-  %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %padded = tensor.pad %src nofold low[0, 0] high[7, 0] {
   ^bb0(%arg0: index, %arg1: index):
@@ -128,7 +125,6 @@ func.func @nofold_pad_pack_with_nofold_attribute(%src: tensor<16649x16xf32>) -> 
 // -----
 
 func.func @pad_pack_different_padding_value(%src: tensor<16641x16xf32>) -> tensor<2082x1x8x32xf32> {
-  %c0 = arith.constant 0 : index
   %cst0 = arith.constant 0.000000e+00 : f32
   %cst1 = arith.constant 1.000000e+00 : f32
   %padded = tensor.pad %src low[0, 0] high[15, 0] {

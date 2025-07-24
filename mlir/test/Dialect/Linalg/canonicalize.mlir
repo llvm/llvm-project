@@ -1889,7 +1889,7 @@ func.func @fold_cast_unpack_dynamic_tile_size(
 // linalg.unpack + tensor.extract_slice
 //===----------------------------------------------------------------------===//
 
-func.func @fold_extract_slice_into_unpack(
+func.func @fold_extract_slice_into_unpack_slicing_trailing_dim(
     %src : tensor<28x2x1x16x16xf32>, %dest : tensor<28x28x15xf32>, %size : index
 ) -> tensor<28x28x10xf32> {
   %unpack = linalg.unpack %src
@@ -1901,7 +1901,7 @@ func.func @fold_extract_slice_into_unpack(
       [0, 0, 0] [28, 28, 10] [1, 1, 1] : tensor<28x28x15xf32> to tensor<28x28x10xf32>
   return %extracted_slice : tensor<28x28x10xf32>
 }
-// CHECK-LABEL: func @fold_extract_slice_into_unpack
+// CHECK-LABEL: func @fold_extract_slice_into_unpack_slicing_trailing_dim
 //  CHECK-SAME:     %[[SRC:[a-zA-Z0-9]+]]
 //  CHECK-SAME:     %[[DEST:[a-zA-Z0-9]+]]
 //  CHECK-SAME:     %[[SIZE:[a-zA-Z0-9]+]]
@@ -1910,6 +1910,51 @@ func.func @fold_extract_slice_into_unpack(
 //       CHECK:   %[[UNPACK:.+]] = linalg.unpack %[[SRC]]
 //  CHECK-SAME:       into %[[DEST_SLICE]]
 //       CHECK:   return %[[UNPACK]]
+
+// -----
+
+// The available dimension size is [17, 32], because CeilDiv(%d1, 16) == 2.
+
+
+func.func @fold_extract_slice_into_unpack_slicing_dim_1(
+    %src : tensor<28x2x1x16x16xf32>, %dest : tensor<28x28x15xf32>, %size : index
+) -> tensor<28x17x15xf32> {
+  %unpack = linalg.unpack %src
+      inner_dims_pos = [1, 2]
+      inner_tiles = [16, 16]
+      into %dest : tensor<28x2x1x16x16xf32> -> tensor<28x28x15xf32>
+  %extracted_slice = tensor.extract_slice %unpack
+      [0, 0, 0] [28, 17, 15] [1, 1, 1] : tensor<28x28x15xf32> to tensor<28x17x15xf32>
+  return %extracted_slice : tensor<28x17x15xf32>
+}
+// CHECK-LABEL: func @fold_extract_slice_into_unpack_slicing_dim_1(
+//  CHECK-SAME:     %[[SRC:[a-zA-Z0-9]+]]
+//  CHECK-SAME:     %[[DEST:[a-zA-Z0-9]+]]
+//  CHECK-SAME:     %[[SIZE:[a-zA-Z0-9]+]]
+//       CHECK:   %[[DEST_SLICE:.+]] = tensor.extract_slice %[[DEST]]
+//  CHECK-SAME:     [0, 0, 0] [28, 17, 15] [1, 1, 1]
+//       CHECK:   %[[UNPACK:.+]] = linalg.unpack %[[SRC]]
+//  CHECK-SAME:       into %[[DEST_SLICE]]
+//       CHECK:   return %[[UNPACK]]
+
+// -----
+
+// The available dimension size is [17, 32], because CeilDiv(%d1, 16) == 2.
+
+func.func @no_fold_extract_slice_into_unpack_artificial_padding(
+    %src : tensor<28x2x1x16x16xf32>, %dest : tensor<28x28x15xf32>, %size : index
+) -> tensor<28x16x15xf32> {
+  %unpack = linalg.unpack %src
+      inner_dims_pos = [1, 2]
+      inner_tiles = [16, 16]
+      into %dest : tensor<28x2x1x16x16xf32> -> tensor<28x28x15xf32>
+  %extracted_slice = tensor.extract_slice %unpack
+      [0, 0, 0] [28, 16, 15] [1, 1, 1] : tensor<28x28x15xf32> to tensor<28x16x15xf32>
+  return %extracted_slice : tensor<28x16x15xf32>
+}
+// CHECK-LABEL: func @no_fold_extract_slice_into_unpack_artificial_padding
+//       CHECK:   linalg.unpack
+//       CHECK:   tensor.extract_slice
 
 // -----
 

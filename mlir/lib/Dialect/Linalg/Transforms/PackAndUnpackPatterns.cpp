@@ -220,9 +220,11 @@ public:
       if (!isEqualConstantIntOrValue(paddingValue, constantPaddingValue))
         return failure();
 
-    // Folding is not allowed if it introduces artificial padding. It is not
-    // safe to fold the ops if any dynamic dimension or tile size is present,
-    // because we can not infer the padding size.
+    // Folding is not allowed if it were to introduce artificial padding.
+    // Folding is also disabled in the case of dynamic dimensions and/or tile
+    // sizes - that is because it would be impossible to compute the padding
+    // size and hence to establish whether "artificial" padding would be
+    // created.
     RankedTensorType unpackedType = packOp.getSourceType();
     SmallVector<int64_t> outerShapeWithoutTranspose =
         getPackedOuterShapeWithoutTransposition(packOp);

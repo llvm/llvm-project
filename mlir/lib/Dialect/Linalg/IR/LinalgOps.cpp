@@ -4491,7 +4491,7 @@ Speculation::Speculatability ElementwiseOp::getSpeculatability() {
 // PackOp/UnPackOp Common
 //===----------------------------------------------------------------------===//
 
-template <typename OpTy>
+template <typename OpTy, typename>
 SmallVector<int64_t>
 getPackedOuterShapeWithoutTransposition(OpTy packOrUnPack) {
   RankedTensorType packedType = (std::is_same<OpTy, PackOp>::value)
@@ -5520,19 +5520,19 @@ bool UnPackOp::canFoldSliceOp(tensor::ExtractSliceOp sliceOp) {
   if (!areAllConstantIntValue(sliceOp.getMixedOffsets(), 0) ||
       !areAllConstantIntValue(sliceOp.getMixedStrides(), 1))
     return false;
-  RankedTensorType unpackedType = sliceOp.getResultType();
+  RankedTensorType unpackedTypeAfterFold = sliceOp.getResultType();
   SmallVector<int64_t> outerShapeWithoutTranspose =
       getPackedOuterShapeWithoutTransposition(*this);
   for (auto [pos, tileSize] :
        llvm::zip_equal(this->getInnerDimsPos(), this->getStaticInnerTiles())) {
-    if (unpackedType.isDynamicDim(pos))
+    if (unpackedTypeAfterFold.isDynamicDim(pos))
       return false;
     if (ShapedType::isDynamic(outerShapeWithoutTranspose[pos]))
       return false;
     if (ShapedType::isDynamic(tileSize))
       return false;
     int64_t paddingSize = outerShapeWithoutTranspose[pos] * tileSize -
-                          unpackedType.getDimSize(pos);
+                          unpackedTypeAfterFold.getDimSize(pos);
     if (paddingSize >= tileSize)
       return false;
   }
