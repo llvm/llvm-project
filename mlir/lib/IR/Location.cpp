@@ -18,13 +18,9 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
-#include <iterator>
-#include <memory>
-#include <optional>
 #include <tuple>
 #include <utility>
 
