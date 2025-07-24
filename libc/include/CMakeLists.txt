@@ -215,6 +215,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.jmp_buf
+    .llvm-libc-types.sigjmp_buf
 )
 
 add_header_macro(
