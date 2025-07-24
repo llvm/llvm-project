@@ -1344,6 +1344,43 @@ void SymbolTable::parseAlternateName(StringRef s) {
   alternateNames.insert(it, std::make_pair(from, to));
 }
 
+void SymbolTable::resolveAlternateNames() {
+  // Add weak aliases. Weak aliases is a mechanism to give remaining
+  // undefined symbols final chance to be resolved successfully.
+  for (auto pair : alternateNames) {
+    StringRef from = pair.first;
+    StringRef to = pair.second;
+    Symbol *sym = find(from);
+    if (!sym)
+      continue;
+    if (auto *u = dyn_cast<Undefined>(sym)) {
+      if (u->weakAlias) {
+        // On ARM64EC, anti-dependency aliases are treated as undefined
+        // symbols unless a demangled symbol aliases a defined one, which
+        // is part of the implementation.
+        if (!isEC() || !u->isAntiDep)
+          continue;
+        if (!isa<Undefined>(u->weakAlias) &&
+            !isArm64ECMangledFunctionName(u->getName()))
+          continue;
+      }
+
+      // Check if the destination symbol is defined. If not, skip it.
+      // It may still be resolved later if more input files are added.
+      // Also skip anti-dependency targets, as they can't be chained anyway.
+      Symbol *toSym = find(to);
+      if (!toSym)
+        continue;
+      auto toUndef = dyn_cast<Undefined>(toSym);
+      if (toUndef && (!toUndef->weakAlias || toUndef->isAntiDep))
+        continue;
+      if (toSym->isLazy())
+        forceLazy(toSym);
+      u->setWeakAlias(toSym);
+    }
+  }
+}
+
 // Parses /aligncomm option argument.
 void SymbolTable::parseAligncomm(StringRef s) {
   auto [name, align] = s.split(',');
