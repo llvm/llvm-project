@@ -1071,6 +1071,17 @@ public:
   /// as Custom Datapath.
   uint32_t getARMCDECoprocMask() const { return ARMCDECoprocMask; }
 
+  /// For ARM targets returns a mask defining which data sizes are suitable for
+  /// __builtin_arm_ldrex and __builtin_arm_strex.
+  enum {
+    ARM_LDREX_B = (1 << 0), /// byte (8-bit)
+    ARM_LDREX_H = (1 << 1), /// half (16-bit)
+    ARM_LDREX_W = (1 << 2), /// word (32-bit)
+    ARM_LDREX_D = (1 << 3), /// double (64-bit)
+  };
+
+  virtual unsigned getARMLDREXMask() const { return 0; }
+
   /// Returns whether the passed in string is a valid clobber in an
   /// inline asm statement.
   ///
