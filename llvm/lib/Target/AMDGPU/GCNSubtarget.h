@@ -1308,7 +1308,7 @@ public:
 
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
-  bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
+  bool hasVALUReadSGPRHazard() const { return GFX12Insts && !GFX1250Insts; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts || GFX1250Insts; }

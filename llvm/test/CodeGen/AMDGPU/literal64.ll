@@ -72,15 +72,15 @@ define void @v_mov_b64_double(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:  .LBB6_1: ; %atomicrmw.start
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GCN-NEXT:    v_add_f64_e32 v[2:3], lit64(0x4063233333333333), v[4:5]
 ; GCN-NEXT:    global_atomic_cmpswap_b64 v[2:3], v[0:1], v[2:5], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[2:3], v[4:5]
 ; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    v_mov_b64_e32 v[4:5], v[2:3]
-; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GCN-NEXT:    s_wait_alu 0xfffe
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GCN-NEXT:    s_cbranch_execnz .LBB6_1
 ; GCN-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -121,9 +121,7 @@ define i1 @class_f64() noinline optnone {
 ; GCN-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GCN-SDAG-NEXT:    s_mov_b32 s2, 1
 ; GCN-SDAG-NEXT:    s_mov_b64 s[0:1], lit64(0x4063233333333333)
-; GCN-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GCN-SDAG-NEXT:    v_cmp_class_f64_e64 s0, s[0:1], s2
-; GCN-SDAG-NEXT:    s_wait_alu 0xf1ff
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -133,13 +131,11 @@ define i1 @class_f64() noinline optnone {
 ; GCN-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GCN-GISEL-NEXT:    s_mov_b32 s2, 1
 ; GCN-GISEL-NEXT:    s_mov_b64 s[0:1], lit64(0x4063233333333333)
-; GCN-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GCN-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN-GISEL-NEXT:    v_cmp_class_f64_e64 s0, v[0:1], v2
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, 1
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-GISEL-NEXT:    s_wait_alu 0xf1ff
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s0
 ; GCN-GISEL-NEXT:    s_set_pc_i64 s[30:31]
   %result = call i1 @llvm.amdgcn.class.f64(double 153.1, i32 1) nounwind readnone
