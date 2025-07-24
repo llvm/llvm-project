@@ -281,6 +281,12 @@ libc_support_library(
     hdrs = ["hdr/wchar_overlay.h"],
 )
 
+libc_support_library(
+    name = "hdr_stdint_proxy",
+    hdrs = ["hdr/stdint_proxy.h"],
+)
+
+
 ############################ Type Proxy Header Files ###########################
 
 libc_support_library(
@@ -557,6 +563,7 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_properties_architectures",
+        ":hdr_stdint_proxy",
     ],
 )
 
