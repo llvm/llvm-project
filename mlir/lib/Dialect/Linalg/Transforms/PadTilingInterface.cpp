@@ -192,11 +192,11 @@ static Value padOperand(RewriterBase &rewriter, TilingInterface opToPad,
   if (auto complexTy =
           dyn_cast<ComplexType>(getElementTypeOrSelf(v.getType()))) {
     auto complexAttr = cast<ArrayAttr>(paddingValueAttr);
-    paddingValue = rewriter.create<complex::ConstantOp>(opToPad.getLoc(),
-                                                        complexTy, complexAttr);
+    paddingValue = complex::ConstantOp::create(rewriter, opToPad.getLoc(),
+                                               complexTy, complexAttr);
   } else {
-    paddingValue = rewriter.create<arith::ConstantOp>(
-        opToPad.getLoc(), cast<TypedAttr>(paddingValueAttr));
+    paddingValue = arith::ConstantOp::create(rewriter, opToPad.getLoc(),
+                                             cast<TypedAttr>(paddingValueAttr));
   }
 
   // Pad the operand to the bounding box defined by `paddedShape`.
@@ -261,9 +261,8 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, TilingInterface opToPad,
     // 2.a. Skip scalar-like operands.
     Type operandType = operand.getType();
     if (!isa<RankedTensorType>(operandType)) {
-      assert(!isa<ShapedType>(operandType) ||
-             isa<VectorType>(operandType) &&
-                 "Unexpected non-vector ShapedType");
+      assert((!isa<ShapedType>(operandType) || isa<VectorType>(operandType)) &&
+             "Unexpected non-vector ShapedType");
       newOperands.push_back(operand);
       continue;
     }
@@ -324,8 +323,8 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, TilingInterface opToPad,
     int64_t rank = cast<RankedTensorType>(paddedResult.getType()).getRank();
     SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
     SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
-    paddedSubtensorResults.push_back(rewriter.create<tensor::ExtractSliceOp>(
-        loc, paddedResult, offsets, reifiedResultShapes[resultNumber],
+    paddedSubtensorResults.push_back(tensor::ExtractSliceOp::create(
+        rewriter, loc, paddedResult, offsets, reifiedResultShapes[resultNumber],
         strides));
   }
 

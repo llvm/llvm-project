@@ -8,15 +8,12 @@
 
 #include "mlir/Dialect/Mesh/Transforms/Passes.h"
 
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Mesh/IR/MeshDialect.h"
 #include "mlir/Dialect/Mesh/IR/MeshOps.h"
 #include "mlir/Dialect/Mesh/Interfaces/ShardingInterface.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
-#include "mlir/Pass/Pass.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -56,10 +53,10 @@ static llvm::raw_ostream &operator<<(llvm::raw_ostream &stream,
 template <typename Stream, typename Range>
 static Stream &printRange(Stream &stream, Range &&range) {
   stream << "[";
-  llvm::for_each(range, [&stream](auto &v) {
+  for (auto &v : range) {
     stream << v;
     stream << ", ";
-  });
+  }
   return stream << "]";
 }
 
@@ -170,7 +167,7 @@ ReshardingRquirementKind getReshardingRquirementKind(
 
   for (auto [operand, sharding] :
        llvm::zip_equal(op->getOperands(), operandShardings)) {
-    ShardOp shardOp = llvm::dyn_cast_or_null<ShardOp>(operand.getDefiningOp());
+    ShardOp shardOp = operand.getDefiningOp<ShardOp>();
     if (!shardOp) {
       continue;
     }
@@ -379,8 +376,7 @@ struct ShardingPropagation
     LLVM_DEBUG(
         DBGS() << "print all the ops' iterator types and indexing maps in the "
                   "block.\n";
-        for (Operation &op
-             : block.getOperations()) {
+        for (Operation &op : block.getOperations()) {
           if (auto shardingOp = llvm::dyn_cast<ShardingInterface>(&op))
             shardingOp.printLoopTypesAndIndexingMaps(llvm::dbgs());
         });

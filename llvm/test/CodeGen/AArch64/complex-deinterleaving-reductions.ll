@@ -25,14 +25,14 @@ define dso_local %"struct.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldp q3, q2, [x9]
 ; CHECK-NEXT:    cmp x8, #1600
 ; CHECK-NEXT:    ldp q5, q4, [x10]
-; CHECK-NEXT:    fcmla v1.2d, v5.2d, v3.2d, #0
-; CHECK-NEXT:    fcmla v0.2d, v4.2d, v2.2d, #0
-; CHECK-NEXT:    fcmla v1.2d, v5.2d, v3.2d, #90
-; CHECK-NEXT:    fcmla v0.2d, v4.2d, v2.2d, #90
+; CHECK-NEXT:    fcmla v0.2d, v5.2d, v3.2d, #0
+; CHECK-NEXT:    fcmla v1.2d, v4.2d, v2.2d, #0
+; CHECK-NEXT:    fcmla v0.2d, v5.2d, v3.2d, #90
+; CHECK-NEXT:    fcmla v1.2d, v4.2d, v2.2d, #90
 ; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %middle.block
-; CHECK-NEXT:    zip2 v2.2d, v1.2d, v0.2d
-; CHECK-NEXT:    zip1 v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    zip2 v2.2d, v0.2d, v1.2d
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    faddp d0, v0.2d
 ; CHECK-NEXT:    faddp d1, v2.2d
 ; CHECK-NEXT:    ret

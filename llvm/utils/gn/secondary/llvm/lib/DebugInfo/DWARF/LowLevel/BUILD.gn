@@ -8,5 +8,6 @@ static_library("LowLevel") {
   sources = [
     "DWARFCFIProgram.cpp",
     "DWARFExpression.cpp",
+    "DWARFUnwindTable.cpp",
   ]
 }

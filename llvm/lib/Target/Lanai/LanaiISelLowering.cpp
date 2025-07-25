@@ -150,10 +150,6 @@ LanaiTargetLowering::LanaiTargetLowering(const TargetMachine &TM,
   // statements. Re-evaluate this on new benchmarks.
   setMinimumJumpTableEntries(100);
 
-  // Use fast calling convention for library functions.
-  for (RTLIB::Libcall LC : RTLIB::libcalls())
-    setLibcallCallingConv(LC, CallingConv::Fast);
-
   MaxStoresPerMemset = 16; // For @llvm.memset -> sequence of stores
   MaxStoresPerMemsetOptSize = 8;
   MaxStoresPerMemcpy = 16; // For @llvm.memcpy -> sequence of stores
@@ -712,7 +708,7 @@ SDValue LanaiTargetLowering::LowerCCCCallTo(
   // Build a sequence of copy-to-reg nodes chained together with token chain and
   // flag operands which copy the outgoing args into registers.  The InGlue in
   // necessary since all emitted instructions must be stuck together.
-  for (const auto [Reg, N] : RegsToPass) {
+  for (const auto &[Reg, N] : RegsToPass) {
     Chain = DAG.getCopyToReg(Chain, DL, Reg, N, InGlue);
     InGlue = Chain.getValue(1);
   }
@@ -744,7 +740,7 @@ SDValue LanaiTargetLowering::LowerCCCCallTo(
 
   // Add argument registers to the end of the list so that they are
   // known live into the call.
-  for (const auto [Reg, N] : RegsToPass)
+  for (const auto &[Reg, N] : RegsToPass)
     Ops.push_back(DAG.getRegister(Reg, N.getValueType()));
 
   if (InGlue.getNode())

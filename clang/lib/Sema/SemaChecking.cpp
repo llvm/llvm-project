@@ -1012,7 +1012,10 @@ public:
       break;
     }
 
-    Size += FS.hasPlusPrefix() || FS.hasSpacePrefix();
+    // If field width is specified, the sign/space is already accounted for
+    // within the field width, so no additional size is needed.
+    if ((FS.hasPlusPrefix() || FS.hasSpacePrefix()) && FieldWidth == 0)
+      Size += 1;
 
     if (FS.hasAlternativeForm()) {
       switch (FS.getConversionSpecifier().getKind()) {
@@ -3010,6 +3013,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_maxnum:
   case Builtin::BI__builtin_elementwise_minimum:
   case Builtin::BI__builtin_elementwise_maximum:
+  case Builtin::BI__builtin_elementwise_minimumnum:
+  case Builtin::BI__builtin_elementwise_maximumnum:
   case Builtin::BI__builtin_elementwise_atan2:
   case Builtin::BI__builtin_elementwise_fmod:
   case Builtin::BI__builtin_elementwise_pow:
@@ -5236,7 +5241,9 @@ bool Sema::BuiltinVAStartARMMicrosoft(CallExpr *Call) {
         << 2 << Arg1->getType() << ConstCharPtrTy;
 
   const QualType SizeTy = Context.getSizeType();
-  if (Arg2Ty->getCanonicalTypeInternal().withoutLocalFastQualifiers() != SizeTy)
+  if (!Context.hasSameType(
+          Arg2Ty->getCanonicalTypeInternal().withoutLocalFastQualifiers(),
+          SizeTy))
     Diag(Arg2->getBeginLoc(), diag::err_typecheck_convert_incompatible)
         << Arg2->getType() << SizeTy << 1 /* different class */
         << 0                              /* qualifier difference */

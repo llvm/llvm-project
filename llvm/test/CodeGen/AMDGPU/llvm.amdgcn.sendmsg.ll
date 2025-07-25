@@ -1,6 +1,6 @@
-;RUN: llc -mtriple=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,SIVI %s
-;RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,VIPLUS,SIVI %s
-;RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,VIPLUS,GFX9 %s
+;RUN: llc -mtriple=amdgcn -mcpu=verde < %s | FileCheck --check-prefixes=GCN,SIVI %s
+;RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck --check-prefixes=GCN,VIPLUS,SIVI %s
+;RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck --check-prefixes=GCN,VIPLUS,GFX9 %s
 
 ; GCN-LABEL: {{^}}test_interrupt:
 ; GCN: s_mov_b32 m0, 0

@@ -212,9 +212,9 @@ define ptr @test(ptr nocapture readonly %input_row, ptr nocapture readonly %inpu
 ; CHECK-NEXT:    beq .LBB2_8
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.lr.ph
 ; CHECK-NEXT:    ldr r3, [sp, #64]
-; CHECK-NEXT:    mov.w r11, #0
+; CHECK-NEXT:    mov.w r9, #0
 ; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
-; CHECK-NEXT:    ldr.w r9, [sp, #56]
+; CHECK-NEXT:    ldr.w r11, [sp, #56]
 ; CHECK-NEXT:    add.w r0, r1, r3, lsl #1
 ; CHECK-NEXT:    str r0, [sp, #8] @ 4-byte Spill
 ; CHECK-NEXT:    adds r0, r1, r3
@@ -235,15 +235,15 @@ define ptr @test(ptr nocapture readonly %input_row, ptr nocapture readonly %inpu
 ; CHECK-NEXT:    add.w r1, r8, r10
 ; CHECK-NEXT:    add r1, r6
 ; CHECK-NEXT:    add r1, r12
-; CHECK-NEXT:    strb.w r1, [r3, r11]
-; CHECK-NEXT:    add.w r11, r11, #1
-; CHECK-NEXT:    cmp r11, r2
+; CHECK-NEXT:    strb.w r1, [r3, r9]
+; CHECK-NEXT:    add.w r9, r9, #1
+; CHECK-NEXT:    cmp r9, r2
 ; CHECK-NEXT:    beq .LBB2_8
 ; CHECK-NEXT:  .LBB2_5: @ %for.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB2_7 Depth 2
 ; CHECK-NEXT:    ldr r1, [sp, #68]
-; CHECK-NEXT:    ldr.w r12, [r1, r11, lsl #2]
+; CHECK-NEXT:    ldr.w r12, [r1, r9, lsl #2]
 ; CHECK-NEXT:    subs r1, r0, r0
 ; CHECK-NEXT:    ble .LBB2_3
 ; CHECK-NEXT:  @ %bb.6: @ %for.body24.preheader
@@ -254,7 +254,7 @@ define ptr @test(ptr nocapture readonly %input_row, ptr nocapture readonly %inpu
 ; CHECK-NEXT:    dls lr, r1
 ; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    mov r8, r12
-; CHECK-NEXT:    mla r7, r11, r7, r3
+; CHECK-NEXT:    mla r7, r9, r7, r3
 ; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    ldrd r4, r3, [sp] @ 8-byte Folded Reload
 ; CHECK-NEXT:    mov r10, r12
@@ -262,17 +262,17 @@ define ptr @test(ptr nocapture readonly %input_row, ptr nocapture readonly %inpu
 ; CHECK-NEXT:    @ Parent Loop BB2_5 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    vldrb.s16 q0, [r4], #8
-; CHECK-NEXT:    vadd.i16 q1, q0, r9
+; CHECK-NEXT:    vadd.i16 q1, q0, r11
 ; CHECK-NEXT:    vldrb.s16 q0, [r7], #8
 ; CHECK-NEXT:    vmlava.s16 r12, q0, q1
 ; CHECK-NEXT:    vldrb.s16 q1, [r5], #8
-; CHECK-NEXT:    vadd.i16 q1, q1, r9
+; CHECK-NEXT:    vadd.i16 q1, q1, r11
 ; CHECK-NEXT:    vmlava.s16 r6, q0, q1
 ; CHECK-NEXT:    vldrb.s16 q1, [r3], #8
-; CHECK-NEXT:    vadd.i16 q1, q1, r9
+; CHECK-NEXT:    vadd.i16 q1, q1, r11
 ; CHECK-NEXT:    vmlava.s16 r8, q0, q1
 ; CHECK-NEXT:    vldrb.s16 q1, [r1], #8
-; CHECK-NEXT:    vadd.i16 q1, q1, r9
+; CHECK-NEXT:    vadd.i16 q1, q1, r11
 ; CHECK-NEXT:    vmlava.s16 r10, q0, q1
 ; CHECK-NEXT:    le lr, .LBB2_7
 ; CHECK-NEXT:    b .LBB2_4
@@ -395,9 +395,9 @@ define ptr @test_optsize(ptr nocapture readonly %input_row, ptr nocapture readon
 ; CHECK-NEXT:    beq .LBB3_8
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.lr.ph
 ; CHECK-NEXT:    ldr r3, [sp, #64]
-; CHECK-NEXT:    mov.w r11, #0
+; CHECK-NEXT:    mov.w r9, #0
 ; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
-; CHECK-NEXT:    ldr.w r9, [sp, #56]
+; CHECK-NEXT:    ldr.w r11, [sp, #56]
 ; CHECK-NEXT:    add.w r0, r1, r3, lsl #1
 ; CHECK-NEXT:    str r0, [sp, #8] @ 4-byte Spill
 ; CHECK-NEXT:    adds r0, r1, r3
@@ -411,7 +411,7 @@ define ptr @test_optsize(ptr nocapture readonly %input_row, ptr nocapture readon
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB3_5 Depth 2
 ; CHECK-NEXT:    ldr r1, [sp, #68]
-; CHECK-NEXT:    ldr.w r12, [r1, r11, lsl #2]
+; CHECK-NEXT:    ldr.w r12, [r1, r9, lsl #2]
 ; CHECK-NEXT:    subs r1, r0, r0
 ; CHECK-NEXT:    ble .LBB3_6
 ; CHECK-NEXT:  @ %bb.4: @ %for.body24.preheader
@@ -422,7 +422,7 @@ define ptr @test_optsize(ptr nocapture readonly %input_row, ptr nocapture readon
 ; CHECK-NEXT:    dls lr, r1
 ; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    mov r8, r12
-; CHECK-NEXT:    mla r7, r11, r7, r3
+; CHECK-NEXT:    mla r7, r9, r7, r3
 ; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    ldrd r4, r3, [sp] @ 8-byte Folded Reload
 ; CHECK-NEXT:    mov r10, r12
@@ -430,17 +430,17 @@ define ptr @test_optsize(ptr nocapture readonly %input_row, ptr nocapture readon
 ; CHECK-NEXT:    @ Parent Loop BB3_3 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    vldrb.s16 q0, [r4], #8
-; CHECK-NEXT:    vadd.i16 q1, q0, r9
+; CHECK-NEXT:    vadd.i16 q1, q0, r11
 ; CHECK-NEXT:    vldrb.s16 q0, [r7], #8
 ; CHECK-NEXT:    vmlava.s16 r12, q0, q1
 ; CHECK-NEXT:    vldrb.s16 q1, [r5], #8
-; CHECK-NEXT:    vadd.i16 q1, q1, r9
+; CHECK-NEXT:    vadd.i16 q1, q1, r11
 ; CHECK-NEXT:    vmlava.s16 r6, q0, q1
 ; CHECK-NEXT:    vldrb.s16 q1, [r3], #8
-; CHECK-NEXT:    vadd.i16 q1, q1, r9
+; CHECK-NEXT:    vadd.i16 q1, q1, r11
 ; CHECK-NEXT:    vmlava.s16 r8, q0, q1
 ; CHECK-NEXT:    vldrb.s16 q1, [r1], #8
-; CHECK-NEXT:    vadd.i16 q1, q1, r9
+; CHECK-NEXT:    vadd.i16 q1, q1, r11
 ; CHECK-NEXT:    vmlava.s16 r10, q0, q1
 ; CHECK-NEXT:    le lr, .LBB3_5
 ; CHECK-NEXT:    b .LBB3_7
@@ -454,9 +454,9 @@ define ptr @test_optsize(ptr nocapture readonly %input_row, ptr nocapture readon
 ; CHECK-NEXT:    add.w r1, r8, r10
 ; CHECK-NEXT:    add r1, r6
 ; CHECK-NEXT:    add r1, r12
-; CHECK-NEXT:    strb.w r1, [r3, r11]
-; CHECK-NEXT:    add.w r11, r11, #1
-; CHECK-NEXT:    cmp r11, r2
+; CHECK-NEXT:    strb.w r1, [r3, r9]
+; CHECK-NEXT:    add.w r9, r9, #1
+; CHECK-NEXT:    cmp r9, r2
 ; CHECK-NEXT:    bne .LBB3_3
 ; CHECK-NEXT:  .LBB3_8: @ %if.end
 ; CHECK-NEXT:    ldr r0, [sp, #72]

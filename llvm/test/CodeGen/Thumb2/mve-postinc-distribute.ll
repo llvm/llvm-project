@@ -8,24 +8,23 @@ define i32 @vaddv(ptr nocapture readonly %data, i32 %N) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    mov lr, r1
 ; CHECK-NEXT:    cmp r1, #1
 ; CHECK-NEXT:    blt .LBB0_4
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
-; CHECK-NEXT:    dls lr, r1
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:  .LBB0_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q0, [r0], #32
-; CHECK-NEXT:    vaddva.s32 r2, q0
-; CHECK-NEXT:    vldrw.u32 q0, [r0, #-16]
-; CHECK-NEXT:    vaddva.s32 r2, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r1], #32
+; CHECK-NEXT:    vaddva.s32 r0, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r1, #-16]
+; CHECK-NEXT:    vaddva.s32 r0, q0
 ; CHECK-NEXT:    le lr, .LBB0_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
-; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp11 = icmp sgt i32 %N, 0
