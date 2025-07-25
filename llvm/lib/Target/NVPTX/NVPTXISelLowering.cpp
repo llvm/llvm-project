@@ -5411,6 +5411,7 @@ static SDValue PerformREMCombine(SDNode *N,
 // (any_extend|sign_extend|zero_extend (mul|shl) x, y) -> (mul.wide x, y)
 static SDValue
 PerformExtendMULWIDECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+  return SDValue();
   unsigned ExtOpcode = N->getOpcode();
   assert(ExtOpcode == ISD::ANY_EXTEND || ExtOpcode == ISD::SIGN_EXTEND ||
          ExtOpcode == ISD::ZERO_EXTEND);
