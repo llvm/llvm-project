@@ -29,43 +29,57 @@ class raw_ostream;
 class SlotIndex;
 
 struct GCNRegPressure {
-  enum RegKind { SGPR, VGPR, AGPR, TOTAL_KINDS };
+  enum RegKind { SGPR, VGPR, AGPR, AVGPR, TOTAL_KINDS };
 
   GCNRegPressure() {
     clear();
   }
 
-  bool empty() const { return !Value[SGPR] && !Value[VGPR] && !Value[AGPR]; }
+  bool empty() const {
+    return !Value[SGPR] && !Value[VGPR] && !Value[AGPR] && !Value[AVGPR];
+  }
 
   void clear() { std::fill(&Value[0], &Value[ValueArraySize], 0); }
 
   /// \returns the SGPR32 pressure
   unsigned getSGPRNum() const { return Value[SGPR]; }
-  /// \returns the aggregated ArchVGPR32, AccVGPR32 pressure dependent upon \p
-  /// UnifiedVGPRFile
+  /// \returns the aggregated ArchVGPR32, AccVGPR32, and Pseudo AVGPR pressure
+  /// dependent upon \p UnifiedVGPRFile
   unsigned getVGPRNum(bool UnifiedVGPRFile) const {
     if (UnifiedVGPRFile) {
-      return Value[AGPR] ? getUnifiedVGPRNum(Value[VGPR], Value[AGPR])
-                         : Value[VGPR];
+      return Value[AGPR]
+                 ? getUnifiedVGPRNum(Value[VGPR], Value[AGPR], Value[AVGPR])
+                 : Value[VGPR] + Value[AVGPR];
     }
-    return std::max(Value[VGPR], Value[AGPR]);
+    // AVGPR assignment priority is based on the width of the register. Account
+    // AVGPR pressure as VGPR.
+    return std::max(Value[VGPR] + Value[AVGPR], Value[AGPR]);
   }
 
   /// Returns the aggregated VGPR pressure, assuming \p NumArchVGPRs ArchVGPRs
-  /// and \p NumAGPRs AGPRS, for a target with a unified VGPR file.
+  /// \p NumAGPRs AGPRS, and \p NumAVGPRs AVGPRs for a target with a unified
+  /// VGPR file.
   inline static unsigned getUnifiedVGPRNum(unsigned NumArchVGPRs,
-                                           unsigned NumAGPRs) {
-    return alignTo(NumArchVGPRs, AMDGPU::IsaInfo::getArchVGPRAllocGranule()) +
+                                           unsigned NumAGPRs,
+                                           unsigned NumAVGPRs) {
+
+    // Assume AVGPRs will be assigned as VGPRs.
+    return alignTo(NumArchVGPRs + NumAVGPRs,
+                   AMDGPU::IsaInfo::getArchVGPRAllocGranule()) +
            NumAGPRs;
   }
 
-  /// \returns the ArchVGPR32 pressure
-  unsigned getArchVGPRNum() const { return Value[VGPR]; }
+  /// \returns the ArchVGPR32 pressure, plus the AVGPRS which we assume will be
+  /// allocated as VGPR
+  unsigned getArchVGPRNum() const { return Value[VGPR] + Value[AVGPR]; }
   /// \returns the AccVGPR32 pressure
   unsigned getAGPRNum() const { return Value[AGPR]; }
+  /// \returns the AVGPR32 pressure
+  unsigned getAVGPRNum() const { return Value[AVGPR]; }
 
   unsigned getVGPRTuplesWeight() const {
-    return std::max(Value[TOTAL_KINDS + VGPR], Value[TOTAL_KINDS + AGPR]);
+    return std::max(Value[TOTAL_KINDS + VGPR] + Value[TOTAL_KINDS + AVGPR],
+                    Value[TOTAL_KINDS + AGPR]);
   }
   unsigned getSGPRTuplesWeight() const { return Value[TOTAL_KINDS + SGPR]; }
 
