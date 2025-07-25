@@ -519,10 +519,10 @@ def SDT_AArch64uaddlp : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 
 def SDT_AArch64ldp : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64ldiapp : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
-def SDT_AArch64ldnp : SDTypeProfile<2, 1, [SDTCisVT<0, v4i32>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
+def SDT_AArch64ldnp : SDTypeProfile<2, 1, [SDTCisVT<0, v2i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64stp : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64stilp : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
-def SDT_AArch64stnp : SDTypeProfile<0, 3, [SDTCisVT<0, v4i32>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
+def SDT_AArch64stnp : SDTypeProfile<0, 3, [SDTCisVT<0, v2i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 
 // Generates the general dynamic sequences, i.e.
 //  adrp  x0, :tlsdesc:var
