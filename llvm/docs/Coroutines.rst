@@ -1863,7 +1863,7 @@ executes a call to ``llvm.coro.suspend.retcon`` after resuming in any way.
 ::
 
   declare void @llvm.coro.await.suspend.void(
-                ptr <awaiter>,
+                ptr captures(none) <awaiter>,
                 ptr <handle>,
                 ptr <await_suspend_function>)
 
@@ -1945,7 +1945,7 @@ Example:
 ::
 
   declare i1 @llvm.coro.await.suspend.bool(
-                ptr <awaiter>,
+                ptr captures(none) <awaiter>,
                 ptr <handle>,
                 ptr <await_suspend_function>)
 
@@ -2035,7 +2035,7 @@ Example:
 ::
 
   declare void @llvm.coro.await.suspend.handle(
-                ptr <awaiter>,
+                ptr captures(none) <awaiter>,
                 ptr <handle>,
                 ptr <await_suspend_function>)
 
