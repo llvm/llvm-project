@@ -7571,7 +7571,7 @@ static bool programUndefinedIfUndefOrPoison(const Value *V, bool PoisonOnly);
 
 Use *llvm::canFoldFreezeIntoRecurrence(
     PHINode *PN, DominatorTree *DT, bool &StartNeedsFreeze,
-    SmallVectorImpl<Instruction *> *DropFlags) {
+    SmallVectorImpl<Instruction *> *DropFlags, unsigned Depth) {
   // Detect whether this is a recurrence with a start value and some number of
   // backedge values. We'll check whether we can push the freeze through the
   // backedge values (possibly dropping poison flags along the way) until we
@@ -7597,7 +7597,8 @@ Use *llvm::canFoldFreezeIntoRecurrence(
 
   Value *StartV = StartU->get();
   BasicBlock *StartBB = PN->getIncomingBlock(*StartU);
-  StartNeedsFreeze = !isGuaranteedNotToBeUndefOrPoison(StartV);
+  StartNeedsFreeze = !isGuaranteedNotToBeUndefOrPoison(
+      StartV, /*AC=*/nullptr, /*CtxI=*/nullptr, /*DT=*/nullptr, Depth);
   // We can't insert freeze if the start value is the result of the
   // terminator (e.g. an invoke).
   if (StartNeedsFreeze && StartBB->getTerminator() == StartV)
@@ -7609,11 +7610,13 @@ Use *llvm::canFoldFreezeIntoRecurrence(
     if (!Visited.insert(V).second)
       continue;
 
-    if (Visited.size() > 32)
+    if (Visited.size() > MaxRecurrenceSearchDepth)
       return nullptr; // Limit the total number of values we inspect.
 
     // Assume that PN is non-poison, because it will be after the transform.
-    if (V == PN || isGuaranteedNotToBeUndefOrPoison(V))
+    if (V == PN ||
+        isGuaranteedNotToBeUndefOrPoison(V, /*AC=*/nullptr, /*CtxI=*/nullptr,
+                                         /*DT=*/nullptr, Depth))
       continue;
 
     Instruction *I = dyn_cast<Instruction>(V);
@@ -7719,9 +7722,9 @@ static bool isGuaranteedNotToBeUndefOrPoison(
         return true;
 
       bool StartNeedsFreeze;
-      if (canFoldFreezeIntoRecurrence(const_cast<PHINode *>(PN),
-                                      const_cast<DominatorTree *>(DT),
-                                      StartNeedsFreeze) &&
+      if (canFoldFreezeIntoRecurrence(
+              const_cast<PHINode *>(PN), const_cast<DominatorTree *>(DT),
+              StartNeedsFreeze, /*DropFlags=*/nullptr, Depth) &&
           !StartNeedsFreeze)
         return true;
     } else if (!::canCreateUndefOrPoison(Opr, Kind,

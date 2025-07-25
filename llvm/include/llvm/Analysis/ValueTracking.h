@@ -50,6 +50,9 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
 /// getUnderlyingObject().
 constexpr unsigned MaxLookupSearchDepth = 10;
 
+/// The max limit of the search depth in canFoldFreezeIntoRecurrence().
+constexpr unsigned MaxRecurrenceSearchDepth = 32;
+
 /// Determine which bits of V are known to be either zero or one and return
 /// them in the KnownZero/KnownOne bit sets.
 ///
@@ -779,7 +782,7 @@ LLVM_ABI bool impliesPoison(const Value *ValAssumedPoison, const Value *V);
 /// phi again. In that case, we can move the freeze to the start value.
 LLVM_ABI Use *canFoldFreezeIntoRecurrence(
     PHINode *PN, DominatorTree *DT, bool &StartNeedsFreeze,
-    SmallVectorImpl<Instruction *> *DropFlags = nullptr);
+    SmallVectorImpl<Instruction *> *DropFlags = nullptr, unsigned Depth = 0);
 
 /// Return true if this function can prove that V does not have undef bits
 /// and is never poison. If V is an aggregate value or vector, check whether
