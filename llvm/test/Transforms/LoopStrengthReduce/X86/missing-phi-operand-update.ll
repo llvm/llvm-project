@@ -19,24 +19,24 @@ define i32 @foo(ptr %A, i32 %t) {
 ; CHECK-NEXT:    br label [[LOOP_32:%.*]]
 ; CHECK:       loop.exit.loopexitsplitsplitsplit:
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV1:%.*]], [[IFMERGE_34:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[LSR_IV]], -1
 ; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXITSPLITSPLIT:%.*]]
-; CHECK:       ifmerge.38.loop.exit.loopexitsplitsplit_crit_edge:
+; CHECK:       then.34.loop.exit.loopexitsplitsplit_crit_edge:
 ; CHECK-NEXT:    [[LSR_IV_LCSSA10:%.*]] = phi i64 [ [[LSR_IV1]], [[IFMERGE_38:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[LSR_IV_LCSSA10]], -2
 ; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXITSPLITSPLIT]]
 ; CHECK:       loop.exit.loopexitsplitsplit:
-; CHECK-NEXT:    [[INDVARS_IV_LCSSA_PH_PH_PH:%.*]] = phi i64 [ [[LSR_IV_LCSSA10]], [[IFMERGE_38_LOOP_EXIT_LOOPEXITSPLITSPLIT_CRIT_EDGE:%.*]] ], [ [[TMP0]], [[LOOP_EXIT_LOOPEXITSPLITSPLITSPLIT:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV_LCSSA_PH_PH_PH:%.*]] = phi i64 [ [[TMP0]], [[THEN_34_LOOP_EXIT_LOOPEXITSPLITSPLIT_CRIT_EDGE:%.*]] ], [ [[LSR_IV]], [[LOOP_EXIT_LOOPEXITSPLITSPLITSPLIT:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXITSPLIT:%.*]]
-; CHECK:       ifmerge.42.loop.exit.loopexitsplit_crit_edge:
+; CHECK:       ifmerge.34.loop.exit.loopexitsplit_crit_edge:
 ; CHECK-NEXT:    [[LSR_IV_LCSSA11:%.*]] = phi i64 [ [[LSR_IV1]], [[IFMERGE_42:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[LSR_IV_LCSSA11]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[LSR_IV_LCSSA11]], -1
 ; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXITSPLIT]]
 ; CHECK:       loop.exit.loopexitsplit:
 ; CHECK-NEXT:    [[INDVARS_IV_LCSSA_PH_PH:%.*]] = phi i64 [ [[TMP1]], [[IFMERGE_42_LOOP_EXIT_LOOPEXITSPLIT_CRIT_EDGE:%.*]] ], [ [[INDVARS_IV_LCSSA_PH_PH_PH]], [[LOOP_EXIT_LOOPEXITSPLITSPLIT]] ]
 ; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXIT:%.*]]
-; CHECK:       then.34.loop.exit.loopexit_crit_edge:
+; CHECK:       ifmerge.42.loop.exit.loopexit_crit_edge:
 ; CHECK-NEXT:    [[LSR_IV_LCSSA:%.*]] = phi i64 [ [[LSR_IV1]], [[THEN_34:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[LSR_IV_LCSSA]], -2
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[LSR_IV_LCSSA]], 1
 ; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXIT]]
 ; CHECK:       loop.exit.loopexit:
 ; CHECK-NEXT:    [[INDVARS_IV_LCSSA_PH:%.*]] = phi i64 [ [[TMP2]], [[THEN_34_LOOP_EXIT_LOOPEXIT_CRIT_EDGE:%.*]] ], [ [[INDVARS_IV_LCSSA_PH_PH]], [[LOOP_EXIT_LOOPEXITSPLIT]] ]
@@ -56,14 +56,14 @@ define i32 @foo(ptr %A, i32 %t) {
 ; CHECK-NEXT:    [[SCEVGEP8:%.*]] = getelementptr i8, ptr [[SCEVGEP7]], i64 -4
 ; CHECK-NEXT:    [[GEPLOAD:%.*]] = load i32, ptr [[SCEVGEP8]], align 4
 ; CHECK-NEXT:    [[CMP_34:%.*]] = icmp sgt i32 [[GEPLOAD]], [[T]]
-; CHECK-NEXT:    br i1 [[CMP_34]], label [[THEN_34]], label [[IFMERGE_34]]
+; CHECK-NEXT:    br i1 [[CMP_34]], label [[IFMERGE_38]], label [[IFMERGE_42]]
 ; CHECK:       then.34:
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[LSR_IV1]], 2
 ; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[SCEVGEP5]], i64 -8
 ; CHECK-NEXT:    [[GEPLOAD18:%.*]] = load i32, ptr [[SCEVGEP6]], align 4
 ; CHECK-NEXT:    [[CMP_35:%.*]] = icmp slt i32 [[GEPLOAD18]], [[T]]
-; CHECK-NEXT:    br i1 [[CMP_35]], label [[THEN_34_LOOP_EXIT_LOOPEXIT_CRIT_EDGE]], label [[IFMERGE_34]]
+; CHECK-NEXT:    br i1 [[CMP_35]], label [[THEN_34_LOOP_EXIT_LOOPEXITSPLITSPLIT_CRIT_EDGE]], label [[IFMERGE_42]]
 ; CHECK:       ifmerge.34:
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[LSR_IV1]], 2
 ; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP5]]
@@ -71,7 +71,7 @@ define i32 @foo(ptr %A, i32 %t) {
 ; CHECK-NEXT:    [[CMP_38:%.*]] = icmp sgt i32 [[GEPLOAD20]], [[T]]
 ; CHECK-NEXT:    [[CMP_39:%.*]] = icmp slt i32 [[GEPLOAD]], [[T]]
 ; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP_38]], [[CMP_39]]
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[LOOP_EXIT_LOOPEXITSPLITSPLITSPLIT]], label [[IFMERGE_38]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IFMERGE_42_LOOP_EXIT_LOOPEXITSPLIT_CRIT_EDGE]], label [[IFMERGE_34]]
 ; CHECK:       ifmerge.38:
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[LSR_IV1]], 2
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP6]]
@@ -80,7 +80,7 @@ define i32 @foo(ptr %A, i32 %t) {
 ; CHECK-NEXT:    [[CMP_42:%.*]] = icmp sgt i32 [[GEPLOAD24]], [[T]]
 ; CHECK-NEXT:    [[CMP_43:%.*]] = icmp slt i32 [[GEPLOAD20]], [[T]]
 ; CHECK-NEXT:    [[OR_COND55:%.*]] = and i1 [[CMP_42]], [[CMP_43]]
-; CHECK-NEXT:    br i1 [[OR_COND55]], label [[IFMERGE_38_LOOP_EXIT_LOOPEXITSPLITSPLIT_CRIT_EDGE]], label [[IFMERGE_42]]
+; CHECK-NEXT:    br i1 [[OR_COND55]], label [[LOOP_EXIT_LOOPEXITSPLITSPLITSPLIT]], label [[THEN_34]]
 ; CHECK:       ifmerge.42:
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[LSR_IV1]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP7]]
@@ -89,7 +89,7 @@ define i32 @foo(ptr %A, i32 %t) {
 ; CHECK-NEXT:    [[CMP_46:%.*]] = icmp sgt i32 [[GEPLOAD28]], [[T]]
 ; CHECK-NEXT:    [[CMP_47:%.*]] = icmp slt i32 [[GEPLOAD24]], [[T]]
 ; CHECK-NEXT:    [[OR_COND56:%.*]] = and i1 [[CMP_46]], [[CMP_47]]
-; CHECK-NEXT:    br i1 [[OR_COND56]], label [[IFMERGE_42_LOOP_EXIT_LOOPEXITSPLIT_CRIT_EDGE]], label [[IFMERGE_46]]
+; CHECK-NEXT:    br i1 [[OR_COND56]], label [[THEN_34_LOOP_EXIT_LOOPEXIT_CRIT_EDGE]], label [[IFMERGE_46]]
 ; CHECK:       ifmerge.46:
 ; CHECK-NEXT:    [[NEXTIVLOOP_32]] = add nuw nsw i64 [[I1_I64_0]], 1
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV1]], 4
