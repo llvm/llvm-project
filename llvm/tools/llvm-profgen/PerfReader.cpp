@@ -385,7 +385,7 @@ Error PerfReaderBase::parseDataAccessPerfTraces(
       "([0-9]+)\\/[0-9]+: (0x[0-9a-fA-F]+) period: [0-9]+ addr: "
       "(0x[0-9a-fA-F]+)";
 
-  llvm::Regex logRegex(DataAccessSamplePattern);
+  llvm::Regex LogRegex(DataAccessSamplePattern);
 
   auto BufferOrErr = MemoryBuffer::getFile(DataAccessPerfTraceFile);
   std::error_code EC = BufferOrErr.getError();
