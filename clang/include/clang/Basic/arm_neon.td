@@ -964,11 +964,11 @@ def SLI_N : WInst<"vsli_n", "...I", "PlQPl", [ImmCheck<2, ImmCheckShiftLeft, 0>]
 // Right shift narrow high
 def SHRN_HIGH_N    : IOpInst<"vshrn_high_n", "<(<q).I",
                              "HsHiHlHUsHUiHUl", OP_NARROW_HI>;
-def QSHRUN_HIGH_N  : SOpInst<"vqshrun_high_n", "<(<q).I",
+def QSHRUN_HIGH_N  : SOpInst<"vqshrun_high_n", "(<U)(<Uq).I",
                              "HsHiHl", OP_NARROW_HI>;
 def RSHRN_HIGH_N   : IOpInst<"vrshrn_high_n", "<(<q).I",
                              "HsHiHlHUsHUiHUl", OP_NARROW_HI>;
-def QRSHRUN_HIGH_N : SOpInst<"vqrshrun_high_n", "<(<q).I",
+def QRSHRUN_HIGH_N : SOpInst<"vqrshrun_high_n", "(<U)(<Uq).I",
                              "HsHiHl", OP_NARROW_HI>;
 def QSHRN_HIGH_N   : SOpInst<"vqshrn_high_n", "<(<q).I",
                              "HsHiHlHUsHUiHUl", OP_NARROW_HI>;

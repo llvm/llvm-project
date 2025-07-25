@@ -49,19 +49,10 @@ uint32_t DIType::getAlignInBits() const {
 const DIExpression::FragmentInfo DebugVariable::DefaultFragment = {
     std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::min()};
 
-DebugVariable::DebugVariable(const DbgVariableIntrinsic *DII)
-    : Variable(DII->getVariable()),
-      Fragment(DII->getExpression()->getFragmentInfo()),
-      InlinedAt(DII->getDebugLoc().getInlinedAt()) {}
-
 DebugVariable::DebugVariable(const DbgVariableRecord *DVR)
     : Variable(DVR->getVariable()),
       Fragment(DVR->getExpression()->getFragmentInfo()),
       InlinedAt(DVR->getDebugLoc().getInlinedAt()) {}
-
-DebugVariableAggregate::DebugVariableAggregate(const DbgVariableIntrinsic *DVI)
-    : DebugVariable(DVI->getVariable(), std::nullopt,
-                    DVI->getDebugLoc()->getInlinedAt()) {}
 
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
                        unsigned Column, uint64_t AtomGroup, uint8_t AtomRank,
