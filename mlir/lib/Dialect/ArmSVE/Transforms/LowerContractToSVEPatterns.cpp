@@ -50,7 +50,7 @@ std::optional<Value> getExtOperand(Value v) {
 
   // If the operand is not defined by an explicit extend operation of the
   // accepted operation type allow for an implicit sign-extension.
-  auto extOp = dyn_cast_or_null<Op>(v.getDefiningOp());
+  auto extOp = v.getDefiningOp<Op>();
   if (!extOp) {
     if constexpr (std::is_same<Op, arith::ExtSIOp>::value) {
       auto vTy = cast<VectorType>(v.getType());
