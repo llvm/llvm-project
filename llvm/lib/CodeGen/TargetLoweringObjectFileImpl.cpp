@@ -995,7 +995,7 @@ MCSection *TargetLoweringObjectFileELF::getSectionForLSDA(
   if (!LSDASection || (!F.hasComdat() && !TM.getFunctionSections()))
     return LSDASection;
 
-  const auto *LSDA = cast<MCSectionELF>(LSDASection);
+  const auto *LSDA = static_cast<const MCSectionELF *>(LSDASection);
   unsigned Flags = LSDA->getFlags();
   const MCSymbolELF *LinkedToSym = nullptr;
   StringRef Group;
