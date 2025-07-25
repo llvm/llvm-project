@@ -1496,7 +1496,7 @@ lldb::ValueObjectListSP ScriptInterpreterPythonImpl::GetRecognizedArguments(
   }
   if (py_return.get()) {
     PythonList result_list(PyRefType::Borrowed, py_return.get());
-    ValueObjectListSP result = ValueObjectListSP(new ValueObjectList());
+    ValueObjectListSP result = std::make_shared<ValueObjectList>();
     for (size_t i = 0; i < result_list.GetSize(); i++) {
       PyObject *item = result_list.GetItemAtIndex(i).get();
       lldb::SBValue *sb_value_ptr =
@@ -3047,7 +3047,7 @@ bool ScriptInterpreterPythonImpl::SetOptionValueForCommandObject(
 
   lldb::ExecutionContextRefSP exe_ctx_ref_sp;
   if (exe_ctx)
-    exe_ctx_ref_sp.reset(new ExecutionContextRef(exe_ctx));
+    exe_ctx_ref_sp = std::make_shared<ExecutionContextRef>(exe_ctx);
   PythonObject ctx_ref_obj = SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp);
 
   bool py_return = unwrapOrSetPythonException(As<bool>(
