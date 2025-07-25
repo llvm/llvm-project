@@ -859,7 +859,7 @@ def MULWIDEU32Imm :
 def MULWIDEU32Imm32 :
   BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, i32imm:$b), "mul.wide.u16">;
 
-def SDTMulWide : SDTypeProfile<1, 2, [SDTCisSameAs<1, 2>]>;
+def SDTMulWide : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>, SDTCisSameAs<1, 2>]>;
 def mul_wide_signed : SDNode<"NVPTXISD::MUL_WIDE_SIGNED", SDTMulWide>;
 def mul_wide_unsigned : SDNode<"NVPTXISD::MUL_WIDE_UNSIGNED", SDTMulWide>;
 
@@ -990,25 +990,33 @@ defm MAD32 : MAD<"mad.lo.s32", i32, B32, i32imm>;
 defm MAD64 : MAD<"mad.lo.s64", i64, B64, i64imm>;
 }
 
-def SDTMadWide : SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisSameAs<0, 3>, SDTCisInt<1>, SDTCisSameAs<1, 2>]>;
-def mad_wide_signed : SDNode<"NVPTXISD::MAD_WIDE_SIGNED", SDTMadWide>;
-def mad_wide_unsigned : SDNode<"NVPTXISD::MAD_WIDE_UNSIGNED", SDTMadWide>;
-
-multiclass MAD_WIDE<string PtxSuffix, SDNode Op, ValueType BigVT, NVPTXRegClass BigReg, ValueType SmallVT, NVPTXRegClass SmallReg, Operand SmallImm> {
+multiclass MAD_WIDE<string PtxSuffix, SDNode Op, ValueType BigVT, NVPTXRegClass BigReg, Operand BigImm, ValueType SmallVT, NVPTXRegClass SmallReg, Operand SmallImm> {
   def rrr:
     BasicNVPTXInst<(outs BigReg:$dst),
               (ins SmallReg:$a, SmallReg:$b, BigReg:$c),
               "mad.wide." # PtxSuffix,
-              [(set BigVT:$dst, (Op SmallVT:$a, SmallVT:$b, BigVT:$c))]>;
+              [(set BigVT:$dst, (add (Op SmallVT:$a, SmallVT:$b), BigVT:$c))]>;
+  def rri:
+    BasicNVPTXInst<(outs BigReg:$dst),
+              (ins SmallReg:$a, SmallReg:$b, BigImm:$c),
+              "mad.wide." # PtxSuffix,
+              [(set BigVT:$dst, (add (Op SmallVT:$a, SmallVT:$b), imm:$c))]>;
   def rir:
     BasicNVPTXInst<(outs BigReg:$dst),
               (ins SmallReg:$a, SmallImm:$b, BigReg:$c),
               "mad.wide." # PtxSuffix,
-              [(set BigVT:$dst, (Op SmallVT:$a, imm:$b, BigVT:$c))]>;
+              [(set BigVT:$dst, (add (Op SmallVT:$a, imm:$b), BigVT:$c))]>;
+  def rii:
+    BasicNVPTXInst<(outs BigReg:$dst),
+              (ins SmallReg:$a, SmallImm:$b, BigImm:$c),
+              "mad.wide." # PtxSuffix,
+              [(set BigVT:$dst, (add (Op SmallVT:$a, imm:$b), imm:$c))]>;
 }
 
-defm MAD_WIDE_UNSIGNED_32 : MAD_WIDE<"u32", mad_wide_unsigned, i64, Int64Regs, i32, Int32Regs, i32imm>;
-defm MAD_WIDE_SIGNED_32 : MAD_WIDE<"s32", mad_wide_signed, i64, Int64Regs, i32, Int32Regs, i32imm>;
+defm MAD_WIDE_U16 : MAD_WIDE<"u16", mul_wide_unsigned, i32, B32, i32imm, i16, B16, i16imm>;
+defm MAD_WIDE_S16 : MAD_WIDE<"s16", mul_wide_signed, i32, B32, i32imm, i16, B16, i16imm>;
+defm MAD_WIDE_U32 : MAD_WIDE<"u32", mul_wide_unsigned, i64, B64, i64imm, i32, B32, i32imm>;
+defm MAD_WIDE_S32 : MAD_WIDE<"s32", mul_wide_signed, i64, B64, i64imm, i32, B32, i32imm>;
 
 foreach t = [I16RT, I32RT, I64RT] in {
   def NEG_S # t.Size :
