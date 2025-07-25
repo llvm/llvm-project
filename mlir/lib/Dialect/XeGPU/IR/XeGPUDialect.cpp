@@ -296,7 +296,7 @@ LayoutAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
 // XeGPU_SliceAttr
 //===----------------------------------------------------------------------===//
 LogicalResult
-SliceAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+SliceAttr::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
                   xegpu::LayoutAttr parent, DenseI64ArrayAttr dims) {
   if (!parent || !dims)
     return emitError() << "expected parent layout and dims attribute";
@@ -322,7 +322,68 @@ SliceAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
 FailureOr<SmallVector<SmallVector<Value>>>
 SliceAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
                       ArrayRef<int64_t> shape) {
-  return failure();
+  assert(getRank() == static_cast<int64_t>(shape.size()) && "invalid shape.");
+  if (!isWgLayout())
+    return failure();
+
+  auto sgLayout = getEffectiveSgLayout().value();
+
+  SmallVector<int64_t> sgShape;
+  if (auto maybeSgShape = getEffectiveSgData())
+    sgShape = maybeSgShape.value();
+  else if (auto ratio = computeShapeRatio(shape, sgLayout))
+    sgShape = ratio.value();
+  else
+    return failure();
+
+  // distUnit[i] is the minimum value between shape[i] and
+  // sgLayout[i] * sgShape[i]
+  SmallVector<int64_t> distUnit = llvm::map_to_vector(
+      llvm::zip_equal(shape, computeElementwiseMul(sgLayout, sgShape)),
+      [](const auto &t) { return std::min(std::get<0>(t), std::get<1>(t)); });
+
+  // delinearize Ids
+  auto maybeIds = delinearizeSubgroupId(builder, loc, linearId);
+  if (failed(maybeIds))
+    return failure();
+  // The effective sgIds for offsets computing correspond
+  // to the dims that are not sliced.
+  ArrayRef<int64_t> dims = getDims().asArrayRef();
+  SmallVector<Value> sgIds =
+      XeGPUDialect::dropDims(ArrayRef<Value>(*maybeIds), dims);
+
+  // nd local offset, localOffset[i] = sgId[i] * sgShape[i]
+  SmallVector<Value> localOffsets = llvm::map_to_vector(
+      llvm::zip(sgIds, sgShape), [&](const auto &t) -> Value {
+        return builder.createOrFold<index::MulOp>(
+            loc, std::get<0>(t),
+            builder.createOrFold<arith::ConstantIndexOp>(loc, std::get<1>(t)));
+      });
+
+  SmallVector<SmallVector<Value>> offsets;
+  for (SmallVector<int64_t> unitOffs : StaticTileOffsetRange(shape, distUnit)) {
+    SmallVector<Value> base =
+        llvm::map_to_vector(unitOffs, [&](int64_t d) -> Value {
+          return builder.create<arith::ConstantIndexOp>(loc, d);
+        });
+
+    SmallVector<Value> adds = llvm::map_to_vector(
+        llvm::zip_equal(base, localOffsets), [&](const auto &t) -> Value {
+          return builder.createOrFold<arith::AddIOp>(loc, std::get<0>(t),
+                                                     std::get<1>(t));
+        });
+
+    SmallVector<Value> mods = llvm::map_to_vector(
+        llvm::zip_equal(adds, distUnit), [&](const auto &t) -> Value {
+          return builder.createOrFold<index::RemUOp>(
+              loc, std::get<0>(t),
+              builder.create<arith::ConstantIndexOp>(loc, std::get<1>(t)));
+        });
+
+    offsets.push_back(mods);
+  }
+
+  return offsets;
 }
 
 //===----------------------------------------------------------------------===//

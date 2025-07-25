@@ -50,4 +50,10 @@ gpu.func @convert_layout_wg(%a: vector<32x64xf16>) {
   gpu.return
 }
 
+gpu.func @slice_attr_repeat_dim() {
+  //CHECK: arith.constant {layout_result_0 = #xegpu.slice<<sg_layout = [16, 1, 1], sg_data = [1, 8, 2]>, dims = [2]>} dense<8> : vector<16x8xindex>
+  %cst = arith.constant {layout_result_0 = #xegpu.slice<<sg_layout = [16, 1, 1], sg_data = [1, 8, 2]>, dims = [2]>} dense<8> : vector<16x8xindex>
+  gpu.return
+}
+
 }

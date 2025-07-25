@@ -410,6 +410,10 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
 
   let extraClassDeclaration = [{
 
+    int64_t getRank() const {
+      return getParent().getRank() - getDims().size();
+    }
+
     DenseI32ArrayAttr getOrder() const {
       return getParent().getOrder();
     }
