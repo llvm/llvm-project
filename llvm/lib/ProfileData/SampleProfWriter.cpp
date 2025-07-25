@@ -855,8 +855,9 @@ std::error_code SampleProfileWriterExtBinaryBase::writeHeader(
 
 std::error_code SampleProfileWriterBinary::writeCallsiteVTableProf(
     const CallsiteTypeMap &CallsiteTypeMap, raw_ostream &OS) {
-  if (!WriteVTableProf)
-    return sampleprof_error::success;
+  assert(WriteVTableProf &&
+         "writeCallsiteVTableProf should not be called if WriteVTableProf is "
+         "false");
 
   encodeULEB128(CallsiteTypeMap.size(), OS);
   for (const auto &[Loc, TypeMap] : CallsiteTypeMap) {
@@ -912,7 +913,10 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
         return EC;
     }
 
-  return writeCallsiteVTableProf(S.getCallsiteTypeCounts(), OS);
+  if (WriteVTableProf)
+    return writeCallsiteVTableProf(S.getCallsiteTypeCounts(), OS);
+
+  return sampleprof_error::success;
 }
 
 /// Write samples of a top-level function to a binary file.

@@ -63,7 +63,6 @@ enum class sampleprof_error {
   zlib_unavailable,
   hash_mismatch,
   illegal_line_offset,
-  duplicate_vtable_type
 };
 
 inline std::error_code make_error_code(sampleprof_error E) {
@@ -1023,14 +1022,17 @@ public:
     return VirtualCallsiteTypeCounts;
   }
 
-  /// Returns the vtable access samples for the C++ types at the un-drifted
-  /// location of \p Loc.
+  /// Returns the vtable access samples for the C++ types for \p Loc.
+  /// Under the hood, the caller-specified \p Loc will be un-drifted before the
+  /// type sample lookup if possible.
   TypeCountMap &getTypeSamplesAt(const LineLocation &Loc) {
     return VirtualCallsiteTypeCounts[mapIRLocToProfileLoc(Loc)];
   }
 
   /// Scale \p Other sample counts by \p Weight and add the scaled result to the
-  /// type samples for the undrifted location of \p Loc.
+  /// type samples for \p Loc. Under the hoold, the caller-provided \p Loc will
+  /// be un-drifted before the type sample lookup if possible.
+  /// typename T is either a std::map or a DenseMap.
   template <typename T>
   sampleprof_error addCallsiteVTableTypeProfAt(const LineLocation &Loc,
                                                const T &Other,

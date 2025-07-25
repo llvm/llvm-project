@@ -111,8 +111,6 @@ class SampleProfErrorCategoryType : public std::error_category {
       return "Function hash mismatch";
     case sampleprof_error::illegal_line_offset:
       return "Illegal line offset in sample profile data";
-    case sampleprof_error::duplicate_vtable_type:
-      return "Duplicate vtable type in one map";
     }
     llvm_unreachable("A value of sampleprof_error has no message.");
   }

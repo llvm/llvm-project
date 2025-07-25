@@ -200,6 +200,8 @@ enum class LineType {
   VirtualCallTypeProfile,
 };
 
+// Parse `Input` as a white-space separated list of `vtable:count` pairs. An
+// example input line is `_ZTVbar:1471 _ZTVfoo:630`.
 static bool parseTypeCountMap(StringRef Input,
                               DenseMap<StringRef, uint64_t> &TypeCountMap) {
   for (size_t Index = Input.find_first_not_of(' '); Index != StringRef::npos;) {
@@ -312,7 +314,6 @@ static bool ParseLine(const StringRef &Input, LineType &LineTy, uint32_t &Depth,
         n4 = AfterColon.find_first_of(' ');
         n4 = (n4 != StringRef::npos) ? n3 + n4 + 1 : Rest.size();
         StringRef WordAfterColon = Rest.substr(n3 + 1, n4 - n3 - 1);
-        // Break the loop if parsing integer succeeded.
         if (!WordAfterColon.getAsInteger(10, count))
           break;
 
@@ -642,17 +643,25 @@ SampleProfileReaderBinary::readVTableTypeCountMap(TypeCountMap &M) {
     auto VTableSamples = readNumber<uint64_t>();
     if (std::error_code EC = VTableSamples.getError())
       return EC;
-
-    if (!M.insert(std::make_pair(*VTableType, *VTableSamples)).second)
-      return sampleprof_error::duplicate_vtable_type;
+    // The source profile should not have duplicate vtable records at the same
+    // location. In case duplicate vtables are found, reader can emit a warning
+    // but continue processing the profile.
+    if (!M.insert(std::make_pair(*VTableType, *VTableSamples)).second) {
+      Ctx.diagnose(DiagnosticInfoSampleProfile(
+          Buffer->getBufferIdentifier(), 0,
+          "Duplicate vtable type " + VTableType->str() +
+              " at the same location. Additional counters will be ignored.",
+          DS_Warning));
+      continue;
+    }
   }
   return sampleprof_error::success;
 }
 
 std::error_code
 SampleProfileReaderBinary::readCallsiteVTableProf(FunctionSamples &FProfile) {
-  if (!ReadVTableProf)
-    return sampleprof_error::success;
+  assert(ReadVTableProf &&
+         "Cannot read vtable profiles if ReadVTableProf is false");
 
   // Read the vtable type profile for the callsite.
   auto NumCallsites = readNumber<uint32_t>();
@@ -761,7 +770,10 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
       return EC;
   }
 
-  return readCallsiteVTableProf(FProfile);
+  if (ReadVTableProf)
+    return readCallsiteVTableProf(FProfile);
+
+  return sampleprof_error::success;
 }
 
 std::error_code
