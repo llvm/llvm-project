@@ -19,7 +19,6 @@
 #define MATHTEST_DEVICECONTEXT_HPP
 
 #include "mathtest/DeviceResources.hpp"
-#include "mathtest/Dim.hpp"
 #include "mathtest/ErrorHandling.hpp"
 #include "mathtest/Support.hpp"
 
@@ -29,6 +28,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <tuple>
@@ -111,8 +111,8 @@ public:
   }
 
   template <typename KernelSignature, typename... ArgTypes>
-  void launchKernel(DeviceKernel<KernelSignature> Kernel, Dim NumGroups,
-                    Dim GroupSize, ArgTypes &&...Args) const noexcept {
+  void launchKernel(DeviceKernel<KernelSignature> Kernel, uint32_t NumGroups,
+                    uint32_t GroupSize, ArgTypes &&...Args) const noexcept {
     using ExpectedTypes =
         typename FunctionTypeTraits<KernelSignature>::ArgTypesTuple;
     using ProvidedTypes = std::tuple<std::decay_t<ArgTypes>...>;
@@ -151,8 +151,8 @@ private:
   getKernelImpl(ol_program_handle_t ProgramHandle,
                 llvm::StringRef KernelName) const noexcept;
 
-  void launchKernelImpl(ol_symbol_handle_t KernelHandle, const Dim &NumGroups,
-                        const Dim &GroupSize, const void *KernelArgs,
+  void launchKernelImpl(ol_symbol_handle_t KernelHandle, uint32_t NumGroups,
+                        uint32_t GroupSize, const void *KernelArgs,
                         std::size_t KernelArgsSize) const noexcept;
 
   std::size_t GlobalDeviceId;
