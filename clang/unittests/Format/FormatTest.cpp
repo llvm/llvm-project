@@ -8571,10 +8571,10 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
                "operator<<(const SomeLooooooooooooooooooooooooogType &other);");
   verifyGoogleFormat(
       "SomeLoooooooooooooooooooooooooooooogType operator>>(\n"
-      "    const SomeLooooooooogType &a, const SomeLooooooooogType &b);");
+      "    const SomeLooooooooogType& a, const SomeLooooooooogType& b);");
   verifyGoogleFormat(
       "SomeLoooooooooooooooooooooooooooooogType operator<<(\n"
-      "    const SomeLooooooooogType &a, const SomeLooooooooogType &b);");
+      "    const SomeLooooooooogType& a, const SomeLooooooooogType& b);");
 
   verifyFormat("void aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "    int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa = 1);");
@@ -8583,7 +8583,7 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
   verifyGoogleFormat(
       "typename aaaaaaaaaa<aaaaaa>::aaaaaaaaaaa\n"
       "aaaaaaaaaa<aaaaaa>::aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
-      "    bool *aaaaaaaaaaaaaaaaaa, bool *aa) {}");
+      "    bool* aaaaaaaaaaaaaaaaaa, bool* aa) {}");
   verifyGoogleFormat("template <typename T>\n"
                      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                      "aaaaaaaaaaaaaaaaaaaaaaa<T>::aaaaaaaaaaaaa(\n"
@@ -12891,27 +12891,31 @@ TEST_F(FormatTest, UnderstandsEllipsis) {
 }
 
 TEST_F(FormatTest, AdaptivelyFormatsPointersAndReferences) {
+  auto Style = getGoogleStyle();
+  EXPECT_FALSE(Style.DerivePointerAlignment);
+  Style.DerivePointerAlignment = true;
+
   verifyFormat("int *a;\n"
                "int *a;\n"
                "int *a;",
                "int *a;\n"
                "int* a;\n"
                "int *a;",
-               getGoogleStyle());
+               Style);
   verifyFormat("int* a;\n"
                "int* a;\n"
                "int* a;",
                "int* a;\n"
                "int* a;\n"
                "int *a;",
-               getGoogleStyle());
+               Style);
   verifyFormat("int *a;\n"
                "int *a;\n"
                "int *a;",
                "int *a;\n"
                "int * a;\n"
                "int *  a;",
-               getGoogleStyle());
+               Style);
   verifyFormat("auto x = [] {\n"
                "  int *a;\n"
                "  int *a;\n"
@@ -12920,7 +12924,7 @@ TEST_F(FormatTest, AdaptivelyFormatsPointersAndReferences) {
                "auto x=[]{int *a;\n"
                "int * a;\n"
                "int *  a;};",
-               getGoogleStyle());
+               Style);
 }
 
 TEST_F(FormatTest, UnderstandsRvalueReferences) {
@@ -13056,7 +13060,7 @@ TEST_F(FormatTest, FormatsCasts) {
   verifyFormat("virtual void foo(char &) const;");
   verifyFormat("virtual void foo(int *a, char *) const;");
   verifyFormat("int a = sizeof(int *) + b;");
-  verifyGoogleFormat("int a = alignof(int *) + b;");
+  verifyGoogleFormat("int a = alignof(int*) + b;");
   verifyFormat("bool b = f(g<int>) && c;");
   verifyFormat("typedef void (*f)(int i) func;");
   verifyFormat("void operator++(int) noexcept;");
@@ -25425,7 +25429,7 @@ TEST_F(FormatTest, AtomicQualifier) {
   verifyFormat("struct foo {\n"
                "  int a1;\n"
                "  _Atomic(a) a2;\n"
-               "  _Atomic(_Atomic(int) *const) a3;\n"
+               "  _Atomic(_Atomic(int)* const) a3;\n"
                "};",
                Google);
   verifyFormat("_Atomic(uint64_t) a;");
