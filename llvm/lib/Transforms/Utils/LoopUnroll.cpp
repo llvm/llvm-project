@@ -109,6 +109,9 @@ UnrollVerifyLoopInfo("unroll-verify-loopinfo", cl::Hidden,
 #endif
                     );
 
+static cl::opt<bool> UnrollAddParallelReductions(
+    "unroll-add-parallel-reductions", cl::init(false), cl::Hidden,
+    cl::desc("Allow unrolling to add parallel reduction phis."));
 
 /// Check if unrolling created a situation where we need to insert phi nodes to
 /// preserve LCSSA form.
@@ -668,7 +671,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // to not exit.
   DenseMap<PHINode *, RecurrenceDescriptor> Reductions;
   bool CanAddAdditionalAccumulators =
-      !CompletelyUnroll && L->getNumBlocks() == 1 &&
+      UnrollAddParallelReductions && !CompletelyUnroll &&
+      L->getNumBlocks() == 1 &&
       (ULO.Runtime ||
        (ExitInfos.contains(Header) && ((ExitInfos[Header].TripCount != 0 &&
                                         ExitInfos[Header].BreakoutTrip == 0))));
