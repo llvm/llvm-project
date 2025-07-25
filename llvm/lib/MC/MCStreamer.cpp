@@ -415,7 +415,7 @@ void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 void MCStreamer::emitConditionalAssignment(MCSymbol *Symbol,
                                            const MCExpr *Value) {}
 
-void MCStreamer::emitCFISections(bool EH, bool Debug) {}
+void MCStreamer::emitCFISections(bool EH, bool Debug, bool SFrame) {}
 
 void MCStreamer::emitCFIStartProc(bool IsSimple, SMLoc Loc) {
   if (!FrameInfoStack.empty() &&
@@ -1314,8 +1314,10 @@ void MCStreamer::emitZerofill(MCSection *, MCSymbol *, uint64_t, Align, SMLoc) {
 }
 void MCStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                 uint64_t Size, Align ByteAlignment) {}
-void MCStreamer::changeSection(MCSection *Section, uint32_t) {
-  CurFrag = &Section->getDummyFragment();
+void MCStreamer::changeSection(MCSection *Sec, uint32_t) {
+  CurFrag = &Sec->getDummyFragment();
+  if (auto *Sym = Sec->getBeginSymbol())
+    Sym->setFragment(&Sec->getDummyFragment());
 }
 void MCStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {}
 void MCStreamer::emitBytes(StringRef Data) {}
@@ -1358,9 +1360,6 @@ void MCStreamer::switchSection(MCSection *Section, uint32_t Subsection) {
     changeSection(Section, Subsection);
     SectionStack.back().first = MCSectionSubPair(Section, Subsection);
     assert(!Section->hasEnded() && "Section already ended");
-    MCSymbol *Sym = Section->getBeginSymbol();
-    if (Sym && !Sym->isInSection())
-      emitLabel(Sym);
   }
 }
 
@@ -1387,9 +1386,6 @@ void MCStreamer::switchSectionNoPrint(MCSection *Section) {
   SectionStack.back().second = SectionStack.back().first;
   SectionStack.back().first = MCSectionSubPair(Section, 0);
   changeSection(Section, 0);
-  MCSymbol *Sym = Section->getBeginSymbol();
-  if (Sym && !Sym->isInSection())
-    emitLabel(Sym);
 }
 
 MCSymbol *MCStreamer::endSection(MCSection *Section) {
@@ -1402,6 +1398,15 @@ MCSymbol *MCStreamer::endSection(MCSection *Section) {
   switchSection(Section);
   emitLabel(Sym);
   return Sym;
+}
+
+void MCStreamer::addFragment(MCFragment *F) {
+  auto *Sec = CurFrag->getParent();
+  F->setParent(Sec);
+  F->setLayoutOrder(CurFrag->getLayoutOrder() + 1);
+  CurFrag->Next = F;
+  CurFrag = F;
+  Sec->curFragList()->Tail = F;
 }
 
 static VersionTuple

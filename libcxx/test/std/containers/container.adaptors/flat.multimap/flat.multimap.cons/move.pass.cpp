@@ -16,6 +16,7 @@
 #include <deque>
 #include <flat_map>
 #include <functional>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -25,11 +26,12 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+template <template <class...> class KeyContainer, template <class...> class ValueContainer>
+constexpr void test() {
   {
     using C = test_less<int>;
     using A = test_allocator<int>;
-    using M = std::flat_multimap<int, int, C, std::vector<int, A>, std::deque<int, A>>;
+    using M = std::flat_multimap<int, int, C, KeyContainer<int, A>, ValueContainer<int, A>>;
     M mo    = M({{1, 1}, {1, 2}, {3, 1}}, C(5), A(7));
     M m     = std::move(mo);
     assert((m == M{{1, 1}, {1, 2}, {3, 1}}));
@@ -45,7 +47,7 @@ int main(int, char**) {
   {
     using C = test_less<int>;
     using A = min_allocator<int>;
-    using M = std::flat_multimap<int, int, C, std::vector<int, A>, std::deque<int, A>>;
+    using M = std::flat_multimap<int, int, C, KeyContainer<int, A>, ValueContainer<int, A>>;
     M mo    = M({{1, 1}, {1, 2}, {3, 1}}, C(5), A());
     M m     = std::move(mo);
     assert((m == M{{1, 1}, {1, 2}, {3, 1}}));
@@ -58,9 +60,9 @@ int main(int, char**) {
     assert(m.keys().get_allocator() == A());
     assert(m.values().get_allocator() == A());
   }
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     // A moved-from flat_multimap maintains its class invariant in the presence of moved-from comparators.
-    using M = std::flat_multimap<int, int, std::function<bool(int, int)>>;
+    using M = std::flat_multimap<int, int, std::function<bool(int, int)>, KeyContainer<int>, ValueContainer<int>>;
     M mo    = M({{1, 1}, {1, 2}, {3, 1}}, std::less<int>());
     M m     = std::move(mo);
     assert(m.size() == 3);
@@ -75,7 +77,7 @@ int main(int, char**) {
   }
   {
     // moved-from object maintains invariant if one of underlying container does not clear after move
-    using M = std::flat_multimap<int, int, std::less<>, std::vector<int>, CopyOnlyVector<int>>;
+    using M = std::flat_multimap<int, int, std::less<>, KeyContainer<int>, CopyOnlyVector<int>>;
     M m1    = M({1, 1, 3}, {1, 2, 3});
     M m2    = std::move(m1);
     assert(m2.size() == 3);
@@ -84,6 +86,26 @@ int main(int, char**) {
     LIBCPP_ASSERT(m1.keys().size() == 0);
     LIBCPP_ASSERT(m1.values().size() == 0);
   }
+}
+
+constexpr bool test() {
+  test<std::vector, std::vector>();
+
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+  {
+    test<std::deque, std::deque>();
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

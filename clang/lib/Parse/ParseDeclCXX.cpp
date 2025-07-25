@@ -591,8 +591,7 @@ bool Parser::ParseUsingDeclarator(DeclaratorContext Context,
        NextToken().isRegularKeywordAttribute() ||
        NextToken().is(tok::kw___attribute)) &&
       D.SS.isNotEmpty() && LastII == Tok.getIdentifierInfo() &&
-      !D.SS.getScopeRep()->getAsNamespace() &&
-      !D.SS.getScopeRep()->getAsNamespaceAlias()) {
+      D.SS.getScopeRep()->getKind() != NestedNameSpecifier::Namespace) {
     SourceLocation IdLoc = ConsumeToken();
     ParsedType Type =
         Actions.getInheritingConstructorName(D.SS, IdLoc, *LastII);
@@ -4962,9 +4961,8 @@ void Parser::ParseHLSLRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
   // signature string and construct the in-memory elements
   if (!Found) {
     // Invoke the root signature parser to construct the in-memory constructs
-    SmallVector<hlsl::RootSignatureElement> RootElements;
-    hlsl::RootSignatureParser Parser(getLangOpts().HLSLRootSigVer, RootElements,
-                                     Signature, PP);
+    hlsl::RootSignatureParser Parser(getLangOpts().HLSLRootSigVer, Signature,
+                                     PP);
     if (Parser.parse()) {
       T.consumeClose();
       return;
@@ -4972,7 +4970,7 @@ void Parser::ParseHLSLRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
 
     // Construct the declaration.
     Actions.HLSL().ActOnFinishRootSignatureDecl(RootSignatureLoc, DeclIdent,
-                                                RootElements);
+                                                Parser.getElements());
   }
 
   // Create the arg for the ParsedAttr

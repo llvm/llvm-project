@@ -65,26 +65,27 @@ struct VectorMaskedLoadOpConverter final
     Value base = maskedLoadOp.getBase();
     Value iValue = maskedLoadOp.getPassThru();
     auto indices = llvm::to_vector_of<Value>(maskedLoadOp.getIndices());
-    Value one = rewriter.create<arith::ConstantOp>(
-        loc, indexType, IntegerAttr::get(indexType, 1));
+    Value one = arith::ConstantOp::create(rewriter, loc, indexType,
+                                          IntegerAttr::get(indexType, 1));
     for (int64_t i = 0; i < maskLength; ++i) {
-      auto maskBit = rewriter.create<vector::ExtractOp>(loc, mask, i);
+      auto maskBit = vector::ExtractOp::create(rewriter, loc, mask, i);
 
-      auto ifOp = rewriter.create<scf::IfOp>(
-          loc, maskBit,
+      auto ifOp = scf::IfOp::create(
+          rewriter, loc, maskBit,
           [&](OpBuilder &builder, Location loc) {
             auto loadedValue =
-                builder.create<memref::LoadOp>(loc, base, indices);
+                memref::LoadOp::create(builder, loc, base, indices);
             auto combinedValue =
-                builder.create<vector::InsertOp>(loc, loadedValue, iValue, i);
-            builder.create<scf::YieldOp>(loc, combinedValue.getResult());
+                vector::InsertOp::create(builder, loc, loadedValue, iValue, i);
+            scf::YieldOp::create(builder, loc, combinedValue.getResult());
           },
           [&](OpBuilder &builder, Location loc) {
-            builder.create<scf::YieldOp>(loc, iValue);
+            scf::YieldOp::create(builder, loc, iValue);
           });
       iValue = ifOp.getResult(0);
 
-      indices.back() = rewriter.create<arith::AddIOp>(loc, indices.back(), one);
+      indices.back() =
+          arith::AddIOp::create(rewriter, loc, indices.back(), one);
     }
 
     rewriter.replaceOp(maskedLoadOp, iValue);
@@ -132,18 +133,19 @@ struct VectorMaskedStoreOpConverter final
     Value base = maskedStoreOp.getBase();
     Value value = maskedStoreOp.getValueToStore();
     auto indices = llvm::to_vector_of<Value>(maskedStoreOp.getIndices());
-    Value one = rewriter.create<arith::ConstantOp>(
-        loc, indexType, IntegerAttr::get(indexType, 1));
+    Value one = arith::ConstantOp::create(rewriter, loc, indexType,
+                                          IntegerAttr::get(indexType, 1));
     for (int64_t i = 0; i < maskLength; ++i) {
-      auto maskBit = rewriter.create<vector::ExtractOp>(loc, mask, i);
+      auto maskBit = vector::ExtractOp::create(rewriter, loc, mask, i);
 
-      auto ifOp = rewriter.create<scf::IfOp>(loc, maskBit, /*else=*/false);
+      auto ifOp = scf::IfOp::create(rewriter, loc, maskBit, /*else=*/false);
       rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      auto extractedValue = rewriter.create<vector::ExtractOp>(loc, value, i);
-      rewriter.create<memref::StoreOp>(loc, extractedValue, base, indices);
+      auto extractedValue = vector::ExtractOp::create(rewriter, loc, value, i);
+      memref::StoreOp::create(rewriter, loc, extractedValue, base, indices);
 
       rewriter.setInsertionPointAfter(ifOp);
-      indices.back() = rewriter.create<arith::AddIOp>(loc, indices.back(), one);
+      indices.back() =
+          arith::AddIOp::create(rewriter, loc, indices.back(), one);
     }
 
     rewriter.eraseOp(maskedStoreOp);
