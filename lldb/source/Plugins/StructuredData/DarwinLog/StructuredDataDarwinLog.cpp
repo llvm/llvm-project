@@ -574,8 +574,7 @@ public:
       return config_sp;
 
     // Handle source stream flags.
-    auto source_flags_sp =
-        StructuredData::DictionarySP(new StructuredData::Dictionary());
+    auto source_flags_sp = std::make_shared<StructuredData::Dictionary>();
     config_sp->AddItem("source-flags", source_flags_sp);
 
     source_flags_sp->AddBooleanItem("any-process", m_include_any_process);
@@ -591,8 +590,7 @@ public:
 
     // Handle filter rules
     if (!m_filter_rules.empty()) {
-      auto json_filter_rules_sp =
-          StructuredData::ArraySP(new StructuredData::Array);
+      auto json_filter_rules_sp = std::make_shared<StructuredData::Array>();
       config_sp->AddItem("filter-rules", json_filter_rules_sp);
       for (auto &rule_sp : m_filter_rules) {
         if (!rule_sp)

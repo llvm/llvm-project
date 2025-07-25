@@ -73,5 +73,5 @@ void InstrumentationRuntime::ModulesDidLoad(
 lldb::ThreadCollectionSP
 InstrumentationRuntime::GetBacktracesFromExtendedStopInfo(
     StructuredData::ObjectSP info) {
-  return ThreadCollectionSP(new ThreadCollection());
+  return std::make_shared<ThreadCollection>();
 }
