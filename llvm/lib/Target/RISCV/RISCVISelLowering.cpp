@@ -16079,7 +16079,7 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   uint64_t MulAmt = CNode->getZExtValue();
 
   // Don't do this if the Xqciac extension is enabled and the MulAmt in simm12.
-  if (Subtarget.hasVendorXqciac() && isInt<12>(MulAmt))
+  if (Subtarget.hasVendorXqciac() && isInt<12>(CNode->getSExtValue()))
     return SDValue();
 
   const bool HasShlAdd = Subtarget.hasStdExtZba() ||
