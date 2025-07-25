@@ -597,8 +597,9 @@ static Value *getMask(Value *WideMask, unsigned Factor,
     if (ShuffleVectorInst::isInterleaveMask(SVI->getShuffleMask(), Factor,
                                             NumSrcElts * 2, StartIndexes) &&
         llvm::all_of(StartIndexes, [](unsigned Start) { return Start == 0; }) &&
-        llvm::all_of(SVI->getShuffleMask(),
-                     [&NumSrcElts](int Idx) { return Idx < (int)NumSrcElts; })) {
+        llvm::all_of(SVI->getShuffleMask(), [&NumSrcElts](int Idx) {
+          return Idx < (int)NumSrcElts;
+        })) {
       auto *LeafMaskTy =
           VectorType::get(Type::getInt1Ty(SVI->getContext()), LeafValueEC);
       IRBuilder<> Builder(SVI);
