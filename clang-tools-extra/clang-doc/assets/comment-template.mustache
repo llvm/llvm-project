@@ -24,6 +24,14 @@
     {{>Comments}}
     {{/Children}}
 {{/ParagraphComment}}
+{{#HasParamComments}}
+    <h3>Parameters</h3>
+    {{#ParamComments}}
+    <div>
+        <b>{{ParamName}}</b> {{#Explicit}}{{Direction}}{{/Explicit}} {{#Children}}{{>Comments}}{{/Children}}
+    </div> 
+    {{/ParamComments}}
+{{/HasParamComments}}
 {{#BlockCommandComment}}
     <div class="block-command-comment__command">
         <div class="block-command-command">
