@@ -20831,42 +20831,50 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
     unsigned NF = 0;
     switch (Tuple.getConstantOperandVal(1)) {
-    default: break;
-    case Intrinsic::riscv_vlseg2_mask: NF = 2; break;
-    case Intrinsic::riscv_vlseg3_mask: NF = 3; break;
-    case Intrinsic::riscv_vlseg4_mask: NF = 4; break;
-    case Intrinsic::riscv_vlseg5_mask: NF = 5; break;
-    case Intrinsic::riscv_vlseg6_mask: NF = 6; break;
-    case Intrinsic::riscv_vlseg7_mask: NF = 7; break;
-    case Intrinsic::riscv_vlseg8_mask: NF = 8; break;
+    default:
+      break;
+    case Intrinsic::riscv_vlseg2_mask:
+    case Intrinsic::riscv_vlseg3_mask:
+    case Intrinsic::riscv_vlseg4_mask:
+    case Intrinsic::riscv_vlseg5_mask:
+    case Intrinsic::riscv_vlseg6_mask:
+    case Intrinsic::riscv_vlseg7_mask:
+    case Intrinsic::riscv_vlseg8_mask:
+      NF = Tuple.getValueType().getRISCVVectorTupleNumFields();
+      break;
     }
+
     if (!NF || Subtarget.hasOptimizedSegmentLoadStore(NF))
       break;
 
-    // @REVIEWERS - What's the right value to use for the mem size here?
     unsigned SEW = VT.getScalarSizeInBits();
     if (Log2_64(SEW) != Tuple.getConstantOperandVal(7))
       break;
-    unsigned Stride = SEW/8 * NF;
-    SDValue Offset = DAG.getConstant(SEW/8 * Idx, DL, XLenVT);
+    unsigned Stride = SEW / 8 * NF;
+    unsigned Offset = SEW / 8 * Idx;
 
     SDValue Ops[] = {
-      /*Chain=*/Tuple.getOperand(0),
-      /*IntID=*/DAG.getTargetConstant(Intrinsic::riscv_vlse_mask, DL, XLenVT),
-      /*Passthru=*/Tuple.getOperand(2),
-      /*Ptr=*/DAG.getNode(ISD::ADD, DL, XLenVT, Tuple.getOperand(3), Offset),
-      /*Stride=*/DAG.getConstant(Stride, DL, XLenVT),
-      /*Mask=*/Tuple.getOperand(4),
-      /*VL=*/Tuple.getOperand(5),
-      /*Policy=*/Tuple.getOperand(6)
-    };
+        /*Chain=*/Tuple.getOperand(0),
+        /*IntID=*/DAG.getTargetConstant(Intrinsic::riscv_vlse_mask, DL, XLenVT),
+        /*Passthru=*/Tuple.getOperand(2),
+        /*Ptr=*/
+        DAG.getNode(ISD::ADD, DL, XLenVT, Tuple.getOperand(3),
+                    DAG.getConstant(Offset, DL, XLenVT)),
+        /*Stride=*/DAG.getConstant(Stride, DL, XLenVT),
+        /*Mask=*/Tuple.getOperand(4),
+        /*VL=*/Tuple.getOperand(5),
+        /*Policy=*/Tuple.getOperand(6)};
+
+    auto TupleMemSD = cast<MemIntrinsicSDNode>(Tuple);
+    // Match getTgtMemIntrinsic for non-unit stride case
+    EVT MemVT = TupleMemSD->getMemoryVT().getScalarType();
+    MachineFunction &MF = DAG.getMachineFunction();
+    MachineMemOperand *MMO = MF.getMachineMemOperand(
+        TupleMemSD->getMemOperand(), Offset, MemoryLocation::UnknownSize);
 
     SDVTList VTs = DAG.getVTList({VT, MVT::Other});
-    // @REVIEWERS - What's the right MemVT and MMO to use here?
-    SDValue Result =
-      DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops,
-                              cast<MemIntrinsicSDNode>(Tuple)->getMemoryVT(),
-                              cast<MemIntrinsicSDNode>(Tuple)->getMemOperand());
+    SDValue Result = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs,
+                                             Ops, MemVT, MMO);
     DAG.ReplaceAllUsesOfValueWith(Tuple.getValue(1), Result.getValue(1));
     return Result.getValue(0);
   }
