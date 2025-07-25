@@ -12,12 +12,45 @@
 
 #include <__config>
 #include <__iterator/concepts.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/remove_cvref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+inline constexpr struct __unreachable_sentinel_t {} __unreachable_sentinel;
+
+template <class _UnreachableSentinel,
+          class _Iter,
+          __enable_if_t<is_same<__remove_cvref_t<_UnreachableSentinel>, __unreachable_sentinel_t>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI constexpr bool operator==(_UnreachableSentinel&&, _Iter&&) {
+  return false;
+}
+
+template <class _UnreachableSentinel,
+          class _Iter,
+          __enable_if_t<is_same<__remove_cvref_t<_UnreachableSentinel>, __unreachable_sentinel_t>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI constexpr bool operator==(_Iter&&, _UnreachableSentinel&&) {
+  return false;
+}
+
+template <class _UnreachableSentinel,
+          class _Iter,
+          __enable_if_t<is_same<__remove_cvref_t<_UnreachableSentinel>, __unreachable_sentinel_t>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI constexpr bool operator!=(_UnreachableSentinel&&, _Iter&&) {
+  return true;
+}
+
+template <class _UnreachableSentinel,
+          class _Iter,
+          __enable_if_t<is_same<__remove_cvref_t<_UnreachableSentinel>, __unreachable_sentinel_t>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI constexpr bool operator!=(_Iter&&, _UnreachableSentinel&&) {
+  return true;
+}
 
 #if _LIBCPP_STD_VER >= 20
 
