@@ -34,6 +34,7 @@ unittest("SupportTests") {
     "DJBTest.cpp",
     "DataExtractorTest.cpp",
     "DebugCounterTest.cpp",
+    "DebugLogTest.cpp",
     "DebugTest.cpp",
     "DivisionByConstantTest.cpp",
     "ELFAttributeParserTest.cpp",
