@@ -2176,6 +2176,52 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
       .Default([&](VPRecipeBase *R) { return nullptr; });
 }
 
+/// Try to optimize safe divisors away by converting their users to VP
+/// intrinsics:
+///
+/// udiv x, (vp.merge allones, y, 1, evl) -> vp.udiv x, y, allones, evl
+///
+/// Note the lanes past EVL will be changed from x to poison. This only works
+/// for the EVL-based IV and not any arbitrary EVL, because we know nothing
+/// will read the lanes past the EVL-based IV.
+static void
+optimizeSafeDivisorsToEVL(VPTypeAnalysis &TypeInfo, VPValue &AllOneMask,
+                          VPValue &EVL,
+                          SmallVectorImpl<VPRecipeBase *> &ToErase) {
+  using namespace VPlanPatternMatch;
+  for (VPUser *U : to_vector(EVL.users())) {
+    VPValue *Y;
+    if (!match(U, m_Intrinsic<Intrinsic::vp_merge>(m_AllOnes(), m_VPValue(Y),
+                                                   m_SpecificInt(1),
+                                                   m_Specific(&EVL))))
+      continue;
+    auto *Merge = cast<VPSingleDefRecipe>(U);
+
+    for (VPUser *User : to_vector(Merge->users())) {
+      auto *WidenR = dyn_cast<VPWidenRecipe>(User);
+      if (!WidenR || WidenR->getOperand(1) != Merge)
+        continue;
+      switch (WidenR->getOpcode()) {
+      case Instruction::UDiv:
+      case Instruction::SDiv:
+      case Instruction::URem:
+      case Instruction::SRem:
+        break;
+      default:
+        continue;
+      }
+      VPValue *X = WidenR->getOperand(0);
+
+      auto *VPUDiv = new VPWidenIntrinsicRecipe(
+          VPIntrinsic::getForOpcode(WidenR->getOpcode()),
+          {X, Y, &AllOneMask, &EVL}, TypeInfo.inferScalarType(Merge));
+      VPUDiv->insertBefore(WidenR);
+      WidenR->replaceAllUsesWith(VPUDiv);
+      ToErase.push_back(WidenR);
+    }
+  }
+}
+
 /// Replace recipes with their EVL variants.
 static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
@@ -2258,6 +2304,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
       ToErase.push_back(CurRecipe);
     }
   }
+
+  optimizeSafeDivisorsToEVL(TypeInfo, *AllOneMask, EVL, ToErase);
 
   for (VPRecipeBase *R : reverse(ToErase)) {
     SmallVector<VPValue *> PossiblyDead(R->operands());
