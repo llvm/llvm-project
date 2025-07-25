@@ -366,7 +366,7 @@ private:
   void instrumentStack(memtag::StackInfo &Info, Value *StackTag, Value *UARTag,
                        const DominatorTree &DT, const PostDominatorTree &PDT,
                        const LoopInfo &LI);
-  bool instrumentLandingPads(SmallVectorImpl<Instruction *> &RetVec);
+  void instrumentLandingPads(SmallVectorImpl<Instruction *> &RetVec);
   Value *getNextTagWithCall(IRBuilder<> &IRB);
   Value *getStackBaseTag(IRBuilder<> &IRB);
   Value *getAllocaTag(IRBuilder<> &IRB, Value *StackTag, unsigned AllocaNo);
@@ -1418,7 +1418,7 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
   }
 }
 
-bool HWAddressSanitizer::instrumentLandingPads(
+void HWAddressSanitizer::instrumentLandingPads(
     SmallVectorImpl<Instruction *> &LandingPadVec) {
   for (auto *LP : LandingPadVec) {
     IRBuilder<> IRB(LP->getNextNode());
@@ -1427,7 +1427,6 @@ bool HWAddressSanitizer::instrumentLandingPads(
         {memtag::readRegister(
             IRB, (TargetTriple.getArch() == Triple::x86_64) ? "rsp" : "sp")});
   }
-  return true;
 }
 
 void HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,

@@ -234,7 +234,7 @@ static double set_exceptional(double x) {
 
 namespace math {
 
-static double exp(double x) {
+static constexpr double exp(double x) {
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 

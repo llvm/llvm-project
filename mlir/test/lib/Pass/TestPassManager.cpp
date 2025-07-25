@@ -217,8 +217,8 @@ struct TestInvalidParentPass
   void runOnOperation() final {
     FunctionOpInterface op = getOperation();
     OpBuilder b(op.getFunctionBody());
-    b.create<test::TestCallOp>(op.getLoc(), TypeRange(), "some_unknown_func",
-                               ValueRange());
+    test::TestCallOp::create(b, op.getLoc(), TypeRange(), "some_unknown_func",
+                             ValueRange());
   }
 };
 
