@@ -17,13 +17,10 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-// returns true if the character exists in the string
-LIBC_INLINE static bool wcschr(wchar_t c, const wchar_t *str) {
-  for (int n = 0; str[n]; ++n) {
-    if (str[n] == c)
-      return true;
-  }
-  return false;
+LIBC_INLINE static wchar_t *wcschr(const wchar_t *s, wchar_t c) {
+  for (; *s && *s != c; ++s)
+    ;
+  return (*s == c) ? s : nullptr;
 }
 
 // bool should be true for wcscspn for complimentary span
