@@ -15,12 +15,14 @@ using namespace clang::ast_matchers;
 using namespace clang;
 
 namespace {
+
 AST_MATCHER(NamedDecl, isOperatorDecl) {
   DeclarationName::NameKind NK = Node.getDeclName().getNameKind();
   return NK != DeclarationName::Identifier &&
          NK != DeclarationName::CXXConstructorName &&
          NK != DeclarationName::CXXDestructorName;
 }
+
 } // namespace
 
 namespace clang::tidy {
@@ -94,16 +96,16 @@ void VisibilityChangeToVirtualFunctionCheck::check(
     return;
 
   const auto *ParentClass = Result.Nodes.getNodeAs<CXXRecordDecl>("class");
-  const auto *OverriddenFunction =
-      Result.Nodes.getNodeAs<FunctionDecl>("base_func");
   const auto *BaseClass = Result.Nodes.getNodeAs<CXXRecordDecl>("base");
-
-  AccessSpecifier ActualAccess = MatchedFunction->getAccess();
-  AccessSpecifier OverriddenAccess = OverriddenFunction->getAccess();
-
   CXXBasePaths Paths;
   if (!ParentClass->isDerivedFrom(BaseClass, Paths))
     return;
+
+  const auto *OverriddenFunction =
+      Result.Nodes.getNodeAs<FunctionDecl>("base_func");
+  AccessSpecifier ActualAccess = MatchedFunction->getAccess();
+  AccessSpecifier OverriddenAccess = OverriddenFunction->getAccess();
+
   const CXXBaseSpecifier *InheritanceWithStrictVisibility = nullptr;
   for (const CXXBasePath &Path : Paths) {
     for (const CXXBasePathElement &Elem : Path) {
