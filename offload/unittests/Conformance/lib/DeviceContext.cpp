@@ -29,6 +29,7 @@
 
 #include <OffloadAPI.h>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -299,13 +300,12 @@ DeviceContext::getKernelImpl(ol_program_handle_t ProgramHandle,
 }
 
 void DeviceContext::launchKernelImpl(
-    ol_symbol_handle_t KernelHandle, const Dim &NumGroups, const Dim &GroupSize,
+    ol_symbol_handle_t KernelHandle, uint32_t NumGroups, uint32_t GroupSize,
     const void *KernelArgs, std::size_t KernelArgsSize) const noexcept {
   ol_kernel_launch_size_args_t LaunchArgs;
-  LaunchArgs.Dimensions = 3; // It seems this field is not used anywhere.
-                             // Defaulting to the safest value.
-  LaunchArgs.NumGroups = {NumGroups[0], NumGroups[1], NumGroups[2]};
-  LaunchArgs.GroupSize = {GroupSize[0], GroupSize[1], GroupSize[2]};
+  LaunchArgs.Dimensions = 1;
+  LaunchArgs.NumGroups = {NumGroups, 1, 1};
+  LaunchArgs.GroupSize = {GroupSize, 1, 1};
   LaunchArgs.DynSharedMemory = 0;
 
   OL_CHECK(olLaunchKernel(nullptr, DeviceHandle, KernelHandle, KernelArgs,
