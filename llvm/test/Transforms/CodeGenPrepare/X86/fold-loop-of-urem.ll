@@ -1065,3 +1065,21 @@ for.body:
   %exitcond.not = icmp eq i32 %inc, %N
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
+
+define i64 @pr150611_add_offset_is_not_loop_invariant(i1 %cond) {
+entry:
+  %remamt = select i1 %cond, i64 2, i64 0
+  br label %for.body
+
+for.body:
+  %indvars = phi i64 [ 0, %entry ], [ %indvars.next, %for.body ]
+  %add.offset = zext i1 %cond to i64
+  %add = add nuw i64 %indvars, %add.offset
+  %rem = urem i64 %add, %remamt
+  %indvars.next = add nuw i64 %indvars, 1
+  %exitcond = icmp eq i64 %indvars.next, 3
+  br i1 %exitcond, label %for.exit, label %for.body
+
+for.exit:
+  ret i64 %rem
+}
