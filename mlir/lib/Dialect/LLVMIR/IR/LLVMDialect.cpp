@@ -26,8 +26,7 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Type.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Error.h"
 
 #include <numeric>
@@ -4064,28 +4063,9 @@ void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
 }
 
 void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
-                           Value cond,
-                           ArrayRef<llvm::OperandBundleDefT<Value>> opBundles) {
-  SmallVector<ValueRange> opBundleOperands;
-  SmallVector<Attribute> opBundleTags;
-  opBundleOperands.reserve(opBundles.size());
-  opBundleTags.reserve(opBundles.size());
-
-  for (const llvm::OperandBundleDefT<Value> &bundle : opBundles) {
-    opBundleOperands.emplace_back(bundle.inputs());
-    opBundleTags.push_back(
-        StringAttr::get(builder.getContext(), bundle.getTag()));
-  }
-
-  auto opBundleTagsAttr = ArrayAttr::get(builder.getContext(), opBundleTags);
-  return build(builder, state, cond, opBundleOperands, opBundleTagsAttr);
-}
-
-void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
                            Value cond, llvm::StringRef tag, ValueRange args) {
-  llvm::OperandBundleDefT<Value> opBundle(
-      tag.str(), SmallVector<Value>(args.begin(), args.end()));
-  return build(builder, state, cond, opBundle);
+  return build(builder, state, cond, ArrayRef<ValueRange>(args),
+               builder.getStrArrayAttr(tag));
 }
 
 void LLVM::AssumeOp::build(OpBuilder &builder, OperationState &state,
