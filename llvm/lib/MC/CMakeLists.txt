@@ -1,3 +1,7 @@
+if (LLVM_ENABLE_MCCAS)
+  add_definitions(-DLLVM_ENABLE_MCCAS=1)
+endif()
+
 add_llvm_component_library(LLVMMC
   ConstantPools.cpp
   DXContainerPSVInfo.cpp

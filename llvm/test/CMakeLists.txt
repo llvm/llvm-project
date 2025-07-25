@@ -26,6 +26,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_INCLUDE_DXIL_TESTS
   LLVM_ENABLE_ONDISK_CAS
   LLVM_CAS_ENABLE_REMOTE_CACHE
+  LLVM_ENABLE_MCCAS
   LLVM_TOOL_LLVM_DRIVER_BUILD
   LLVM_INCLUDE_SPIRV_SIMULATOR_TESTS
   LLVM_INCLUDE_SPIRV_TOOLS_TESTS
@@ -59,6 +60,13 @@ configure_lit_site_cfg(
   "SHLIBDIR"
   )
 
+if (LLVM_ENABLE_MCCAS)
+  set(MCCAS_DEPS
+    llvm-cas-object-format
+    llvm-cas-dump
+  )
+endif()
+
 # Set the depends list as a variable so that it can grow conditionally.
 # NOTE: Sync the substitutions in test/lit.cfg when adding to this list.
 set(LLVM_TEST_DEPENDS
@@ -79,8 +87,7 @@ set(LLVM_TEST_DEPENDS
           llvm-bitcode-strip
           llvm-c-test
           llvm-cas
-          llvm-cas-dump
-          llvm-cas-object-format
+          ${MCCAS_DEPS}
           llvm-cas-test
           llvm-cat
           llvm-cfi-verify
