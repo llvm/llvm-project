@@ -30,7 +30,6 @@ source_set("tweaks") {
     "MemberwiseConstructor.cpp",
     "ObjCLocalizeStringLiteral.cpp",
     "ObjCMemberwiseInitializer.cpp",
-    "OverridePureVirtuals.cpp",
     "PopulateSwitch.cpp",
     "RawStringLiteral.cpp",
     "RemoveUsingNamespace.cpp",

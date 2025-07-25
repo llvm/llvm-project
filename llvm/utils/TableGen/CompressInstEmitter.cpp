@@ -217,12 +217,8 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
         Inst.Operands.back().MIOperandNo + Inst.Operands.back().MINumOperands;
   OperandMap.grow(NumMIOperands);
 
-  // TiedCount keeps track of the number of operands skipped in Inst
-  // operands list to get to the corresponding Dag operand. This is
-  // necessary because the number of operands in Inst might be greater
-  // than number of operands in the Dag due to how tied operands
-  // are represented.
-  unsigned TiedCount = 0;
+  // Tied operands are not represented in the DAG so we count them separately.
+  unsigned DAGOpNo = 0;
   unsigned OpNo = 0;
   for (const auto &Opnd : Inst.Operands) {
     int TiedOpIdx = Opnd.getTiedRegister();
@@ -231,14 +227,24 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
       // Set the entry in OperandMap for the tied operand we're skipping.
       OperandMap[OpNo] = OperandMap[TiedOpIdx];
       ++OpNo;
-      ++TiedCount;
+
+      // Source instructions can have at most 1 tied operand.
+      if (IsSourceInst && (OpNo - DAGOpNo > 1))
+        PrintFatalError(Rec->getLoc(),
+                        "Input operands for Inst '" + Inst.TheDef->getName() +
+                            "' and input Dag operand count mismatch");
+
       continue;
     }
-    for (unsigned SubOp = 0; SubOp != Opnd.MINumOperands; ++SubOp, ++OpNo) {
-      unsigned DAGOpNo = OpNo - TiedCount;
+    for (unsigned SubOp = 0; SubOp != Opnd.MINumOperands;
+         ++SubOp, ++OpNo, ++DAGOpNo) {
       const Record *OpndRec = Opnd.Rec;
       if (Opnd.MINumOperands > 1)
         OpndRec = cast<DefInit>(Opnd.MIOperandInfo->getArg(SubOp))->getDef();
+
+      if (DAGOpNo >= Dag->getNumArgs())
+        PrintFatalError(Rec->getLoc(), "Inst '" + Inst.TheDef->getName() +
+                                           "' and Dag operand count mismatch");
 
       if (const auto *DI = dyn_cast<DefInit>(Dag->getArg(DAGOpNo))) {
         if (DI->getDef()->isSubClassOf("Register")) {
@@ -269,7 +275,7 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
         OperandMap[OpNo].Kind = OpData::Operand;
       } else if (const auto *II = dyn_cast<IntInit>(Dag->getArg(DAGOpNo))) {
         // Validate that corresponding instruction operand expects an immediate.
-        if (OpndRec->isSubClassOf("RegisterClass"))
+        if (!OpndRec->isSubClassOf("Operand"))
           PrintFatalError(Rec->getLoc(), "Error in Dag '" + Dag->getAsString() +
                                              "' Found immediate: '" +
                                              II->getAsString() +
@@ -312,43 +318,11 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
       Operands[ArgName] = {DAGOpNo, OpNo};
     }
   }
-}
 
-// Verify the Dag operand count is enough to build an instruction.
-static bool verifyDagOpCount(const CodeGenInstruction &Inst, const DagInit *Dag,
-                             bool IsSource) {
-  unsigned NumMIOperands = 0;
-
-  unsigned TiedOpCount = 0;
-  for (const auto &Op : Inst.Operands) {
-    NumMIOperands += Op.MINumOperands;
-    if (Op.getTiedRegister() != -1)
-      TiedOpCount++;
-  }
-
-  if (Dag->getNumArgs() == NumMIOperands)
-    return true;
-
-  // Source instructions are non compressed instructions and have at most one
-  // tied operand.
-  if (IsSource && (TiedOpCount > 1))
-    PrintFatalError(Inst.TheDef->getLoc(),
-                    "Input operands for Inst '" + Inst.TheDef->getName() +
-                        "' and input Dag operand count mismatch");
-
-  // The Dag can't have more arguments than the Instruction.
-  if (Dag->getNumArgs() > NumMIOperands)
-    PrintFatalError(Inst.TheDef->getLoc(),
-                    "Inst '" + Inst.TheDef->getName() +
-                        "' and Dag operand count mismatch");
-
-  // The Instruction might have tied operands so the Dag might have
-  // a fewer operand count.
-  if (Dag->getNumArgs() != (NumMIOperands - TiedOpCount))
-    PrintFatalError(Inst.TheDef->getLoc(),
-                    "Inst '" + Inst.TheDef->getName() +
-                        "' and Dag operand count mismatch");
-  return true;
+  // We shouldn't have extra Dag operands.
+  if (DAGOpNo != Dag->getNumArgs())
+    PrintFatalError(Rec->getLoc(), "Inst '" + Inst.TheDef->getName() +
+                                       "' and Dag operand count mismatch");
 }
 
 // Check that all names in the source DAG appear in the destionation DAG.
@@ -463,7 +437,6 @@ void CompressInstEmitter::evaluateCompressPat(const Record *Rec) {
   // Checking we are transforming from compressed to uncompressed instructions.
   const Record *SourceOperator = SourceDag->getOperatorAsDef(Rec->getLoc());
   CodeGenInstruction SourceInst(SourceOperator);
-  verifyDagOpCount(SourceInst, SourceDag, true);
 
   // Validate output Dag operands.
   const DagInit *DestDag = Rec->getValueAsDag("Output");
@@ -472,7 +445,6 @@ void CompressInstEmitter::evaluateCompressPat(const Record *Rec) {
 
   const Record *DestOperator = DestDag->getOperatorAsDef(Rec->getLoc());
   CodeGenInstruction DestInst(DestOperator);
-  verifyDagOpCount(DestInst, DestDag, false);
 
   if (SourceOperator->getValueAsInt("Size") <=
       DestOperator->getValueAsInt("Size"))
@@ -855,7 +827,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
                                            DestRec, "MCOperandPredicate");
             CondStream.indent(8)
                 << ValidatorName << "("
-                << "MCOperand::createImm(" << DestOperandMap[OpNo].Imm
+                << "MCOperand::createImm(" << DestOperandMap[OpNo].ImmVal
                 << "), STI, " << Entry << ") &&\n";
           } else {
             unsigned Entry =

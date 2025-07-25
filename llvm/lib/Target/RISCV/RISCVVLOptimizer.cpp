@@ -114,14 +114,6 @@ FunctionPass *llvm::createRISCVVLOptimizerPass() {
   return new RISCVVLOptimizer();
 }
 
-/// Return true if R is a physical or virtual vector register, false otherwise.
-static bool isVectorRegClass(Register R, const MachineRegisterInfo *MRI) {
-  if (R.isPhysical())
-    return RISCV::VRRegClass.contains(R);
-  const TargetRegisterClass *RC = MRI->getRegClass(R);
-  return RISCVRI::isVRegClass(RC->TSFlags);
-}
-
 LLVM_ATTRIBUTE_UNUSED
 static raw_ostream &operator<<(raw_ostream &OS, const OperandInfo &OI) {
   OI.print(OS);
@@ -183,37 +175,28 @@ static unsigned getIntegerExtensionOperandEEW(unsigned Factor,
   return Log2EEW;
 }
 
-/// Check whether MO is a mask operand of MI.
-static bool isMaskOperand(const MachineInstr &MI, const MachineOperand &MO,
-                          const MachineRegisterInfo *MRI) {
-
-  if (!MO.isReg() || !isVectorRegClass(MO.getReg(), MRI))
-    return false;
-
-  const MCInstrDesc &Desc = MI.getDesc();
-  return Desc.operands()[MO.getOperandNo()].RegClass == RISCV::VMV0RegClassID;
-}
-
 static std::optional<unsigned>
 getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   const MachineInstr &MI = *MO.getParent();
+  const MCInstrDesc &Desc = MI.getDesc();
   const RISCVVPseudosTable::PseudoInfo *RVV =
       RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
   assert(RVV && "Could not find MI in PseudoTable");
 
   // MI has a SEW associated with it. The RVV specification defines
   // the EEW of each operand and definition in relation to MI.SEW.
-  unsigned MILog2SEW =
-      MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+  unsigned MILog2SEW = MI.getOperand(RISCVII::getSEWOpNum(Desc)).getImm();
 
-  const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MI.getDesc());
-  const bool IsTied = RISCVII::isTiedPseudo(MI.getDesc().TSFlags);
+  const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(Desc);
+  const bool IsTied = RISCVII::isTiedPseudo(Desc.TSFlags);
 
   bool IsMODef = MO.getOperandNo() == 0 ||
                  (HasPassthru && MO.getOperandNo() == MI.getNumExplicitDefs());
 
   // All mask operands have EEW=1
-  if (isMaskOperand(MI, MO, MRI))
+  const MCOperandInfo &Info = Desc.operands()[MO.getOperandNo()];
+  if (Info.OperandType == MCOI::OPERAND_REGISTER &&
+      Info.RegClass == RISCV::VMV0RegClassID)
     return 0;
 
   // switch against BaseInstr to reduce number of cases that need to be
@@ -1296,8 +1279,8 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
              TII->get(RISCV::getRVVMCOpcode(MI.getOpcode())).TSFlags) &&
          "Instruction shouldn't be supported if elements depend on VL");
 
-  assert(MI.getOperand(0).isReg() &&
-         isVectorRegClass(MI.getOperand(0).getReg(), MRI) &&
+  assert(RISCVRI::isVRegClass(
+             MRI->getRegClass(MI.getOperand(0).getReg())->TSFlags) &&
          "All supported instructions produce a vector register result");
 
   LLVM_DEBUG(dbgs() << "Found a candidate for VL reduction: " << MI << "\n");

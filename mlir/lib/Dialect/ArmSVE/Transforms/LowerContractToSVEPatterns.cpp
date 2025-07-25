@@ -12,7 +12,7 @@
 // TODO: There may be opportunities to unify this with a similar pattern
 // for Neon. See:
 //   https://github.com/llvm/llvm-project/issues/145559
-//   LowerContractionToNeonI8MMPattern.cpp
+//   LowerContractToNeonPatterns.cpp
 //
 //===----------------------------------------------------------------------===//
 
@@ -50,7 +50,7 @@ std::optional<Value> getExtOperand(Value v) {
 
   // If the operand is not defined by an explicit extend operation of the
   // accepted operation type allow for an implicit sign-extension.
-  auto extOp = dyn_cast_or_null<Op>(v.getDefiningOp());
+  auto extOp = v.getDefiningOp<Op>();
   if (!extOp) {
     if constexpr (std::is_same<Op, arith::ExtSIOp>::value) {
       auto vTy = cast<VectorType>(v.getType());
@@ -580,7 +580,7 @@ public:
 
 } // namespace
 
-void mlir::populateLowerContractionToSVEI8MMPatternPatterns(
+void mlir::populateLowerContractionToSVEI8MMPatterns(
     RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
   patterns.add<LowerContractionToSVEI8MMPattern>(context, /*benefit=*/2);
