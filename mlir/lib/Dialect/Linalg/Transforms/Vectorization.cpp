@@ -1973,7 +1973,7 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
   // 1.2 Infer vector sizes for the read operation.
   //
   // The steps are:
-  //  1. readVectorSizes = vectorInputSizes
+  //  1. readVectorSizes = writeVectorSizes
   //  2. Take readVectorSizes from 1. and divide all locations pointed by
   //     the inner_dims_pos attribyte by the `inner_tiles` attribute value.
   //  3. If outer_dims_perms is present, permutate readVectorSizes accordingly.
