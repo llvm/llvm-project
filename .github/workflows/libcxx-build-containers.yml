@@ -36,7 +36,9 @@ jobs:
 
     - name: Build the Linux builder image
       working-directory: libcxx/utils/ci
-      run: docker compose build actions-builder
+      run: |
+        docker compose build builder-base
+        docker compose build actions-builder
       env:
         TAG: ${{ github.sha }}
 
@@ -57,6 +59,7 @@ jobs:
       if: github.event_name == 'push'
       working-directory: libcxx/utils/ci
       run: |
+        docker compose push builder-base
         docker compose push actions-builder
       env:
         TAG: ${{ github.sha }}

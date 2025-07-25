@@ -38,6 +38,7 @@
 # If you're only looking to run the Docker image locally for debugging a
 # build bot, see the `run-buildbot-container` script located in this directory.
 
+ARG ACTIONS_BASE_IMAGE
 
 # HACK: We set the base image in the docker-compose file depending on the final target (buildkite vs github actions).
 # This means we have a much slower container build, but we can use the same Dockerfile for both targets.
@@ -309,7 +310,7 @@ CMD /opt/android/container-setup.sh && buildkite-agent start
 #
 # IMAGE: ghcr.io/libcxx/actions-builder.
 #
-FROM builder-base AS actions-builder
+FROM $ACTIONS_BASE_IMAGE AS actions-builder
 
 ARG GITHUB_RUNNER_VERSION
 
