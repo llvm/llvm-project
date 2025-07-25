@@ -203,7 +203,7 @@ public:
   /// Check file paths of default bitcode libraries common to AMDGPU based
   /// toolchains. \returns false if there are invalid or missing files.
   bool checkCommonBitcodeLibs(StringRef GPUArch, StringRef LibDeviceFile,
-                              DeviceLibABIVersion ABIVer, bool noGPULib) const;
+                              DeviceLibABIVersion ABIVer) const;
 
   /// Check whether we detected a valid HIP runtime.
   bool hasHIPRuntime() const { return HasHIPRuntime; }

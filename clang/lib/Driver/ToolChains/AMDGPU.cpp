@@ -720,46 +720,21 @@ llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 amdgpu::dlr::getCommonDeviceLibNames(
     const llvm::opt::ArgList &DriverArgs, const SanitizerArgs &SanArgs,
     const Driver &D, const std::string &GPUArch, bool isOpenMP,
-    const RocmInstallationDetector &RocmInstallation) {
+    const RocmInstallationDetector &RocmInstallation,
+    const clang::driver::Action::OffloadKind DeviceOffloadingKind) {
   auto Kind = llvm::AMDGPU::parseArchAMDGCN(GPUArch);
   const StringRef CanonArch = llvm::AMDGPU::getArchNameAMDGCN(Kind);
 
   StringRef LibDeviceFile = RocmInstallation.getLibDeviceFile(CanonArch);
   auto ABIVer = DeviceLibABIVersion::fromCodeObjectVersion(
       getAMDGPUCodeObjectVersion(D, DriverArgs));
-  bool noGPULib = DriverArgs.hasArg(options::OPT_offloadlib);
-  if (!RocmInstallation.checkCommonBitcodeLibs(CanonArch, LibDeviceFile, ABIVer,
-                                               noGPULib))
+  if (!RocmInstallation.checkCommonBitcodeLibs(CanonArch, LibDeviceFile,
+                                               ABIVer))
     return {};
-
-  // If --hip-device-lib is not set, add the default bitcode libraries.
-  // TODO: There are way too many flags that change this. Do we need to check
-  // them all?
-  bool DAZ = DriverArgs.hasFlag(
-      options::OPT_fgpu_flush_denormals_to_zero,
-      options::OPT_fno_gpu_flush_denormals_to_zero,
-      toolchains::AMDGPUToolChain::getDefaultDenormsAreZeroForTarget(Kind));
-  bool FiniteOnly = DriverArgs.hasFlag(
-      options::OPT_ffinite_math_only, options::OPT_fno_finite_math_only, false);
-  bool UnsafeMathOpt =
-      DriverArgs.hasFlag(options::OPT_funsafe_math_optimizations,
-                         options::OPT_fno_unsafe_math_optimizations, false);
-  bool FastRelaxedMath = DriverArgs.hasFlag(options::OPT_ffast_math,
-                                            options::OPT_fno_fast_math, false);
-  bool CorrectSqrt = DriverArgs.hasFlag(
-      options::OPT_fhip_fp32_correctly_rounded_divide_sqrt,
-      options::OPT_fno_hip_fp32_correctly_rounded_divide_sqrt, true);
-  bool Wave64 = toolchains::AMDGPUToolChain::isWave64(DriverArgs, Kind);
-
-  // GPU Sanitizer currently only supports ASan and is enabled through host
-  // ASan.
-  bool GPUSan = DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                                   options::OPT_fno_gpu_sanitize, true) &&
-                SanArgs.needsAsanRt();
-
+  
   return RocmInstallation.getCommonBitcodeLibs(
-      DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
-      FastRelaxedMath, CorrectSqrt, ABIVer, GPUSan, isOpenMP);
+      DriverArgs, LibDeviceFile, GPUArch, DeviceOffloadingKind,
+      SanArgs.needsAsanRt());
 }
 
 /// AMDGPU Toolchain
@@ -1001,9 +976,8 @@ void ROCMToolChain::addClangTargetOptions(
   StringRef LibDeviceFile = RocmInstallation->getLibDeviceFile(CanonArch);
   auto ABIVer = DeviceLibABIVersion::fromCodeObjectVersion(
       getAMDGPUCodeObjectVersion(getDriver(), DriverArgs));
-  bool noGPULib = DriverArgs.hasArg(options::OPT_offloadlib);
   if (!RocmInstallation->checkCommonBitcodeLibs(CanonArch, LibDeviceFile,
-                                                ABIVer, noGPULib))
+                                                ABIVer))
     return;
 
   // Add the OpenCL specific bitcode library.
@@ -1026,15 +1000,13 @@ void ROCMToolChain::addClangTargetOptions(
 
 bool RocmInstallationDetector::checkCommonBitcodeLibs(
     StringRef GPUArch, StringRef LibDeviceFile,
-    DeviceLibABIVersion ABIVer, bool noGPULib) const {
+    DeviceLibABIVersion ABIVer) const {
   if (!hasDeviceLibrary()) {
-    if (!noGPULib)
-      D.Diag(diag::err_drv_no_rocm_device_lib) << 0;
+    D.Diag(diag::err_drv_no_rocm_device_lib) << 0;
     return false;
   }
   if (LibDeviceFile.empty()) {
-    if (!noGPULib)
-      D.Diag(diag::err_drv_no_rocm_device_lib) << 1 << GPUArch;
+    D.Diag(diag::err_drv_no_rocm_device_lib) << 1 << GPUArch;
     return false;
   }
   if (ABIVer.requiresLibrary() && getABIVersionPath(ABIVer).empty()) {
