@@ -87,6 +87,66 @@ struct ConvertAlloca final : public OpConversionPattern<memref::AllocaOp> {
   }
 };
 
+struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::CopyOp copyOp, OpAdaptor operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = copyOp.getLoc();
+    auto srcMemrefType = dyn_cast<MemRefType>(copyOp.getSource().getType());
+    auto targetMemrefType = dyn_cast<MemRefType>(copyOp.getTarget().getType());
+
+    if (!srcMemrefType || !targetMemrefType) {
+      return failure();
+    }
+
+    // 1. Cast source memref to a pointer.
+    auto srcPtrType = emitc::PointerType::get(srcMemrefType.getElementType());
+    auto srcArrayValue =
+        dyn_cast<TypedValue<emitc::ArrayType>>(operands.getSource());
+    auto stcArrayPtr =
+        emitc::PointerType::get(srcArrayValue.getType().getElementType());
+    auto srcPtr = rewriter.create<emitc::CastOp>(loc, srcPtrType,
+                                                 stcArrayPtr.getPointee());
+
+    // 2. Cast target memref to a pointer.
+    auto targetPtrType =
+        emitc::PointerType::get(targetMemrefType.getElementType());
+
+    auto arrayValue =
+        dyn_cast<TypedValue<emitc::ArrayType>>(operands.getTarget());
+
+    // Cast the target memref value to a pointer type.
+    auto targetPtr =
+        rewriter.create<emitc::CastOp>(loc, targetPtrType, arrayValue);
+
+    // 3. Calculate the size in bytes of the memref.
+    auto elementSize = rewriter.create<emitc::CallOpaqueOp>(
+        loc, rewriter.getIndexType(), rewriter.getStringAttr("sizeof"),
+        mlir::ValueRange{},
+        mlir::ArrayAttr::get(
+            rewriter.getContext(),
+            {mlir::TypeAttr::get(srcMemrefType.getElementType())}));
+
+    auto numElements = rewriter.create<emitc::ConstantOp>(
+        loc, rewriter.getIndexType(),
+        rewriter.getIntegerAttr(rewriter.getIndexType(),
+                                srcMemrefType.getNumElements()));
+    auto byteSize = rewriter.create<emitc::MulOp>(loc, rewriter.getIndexType(),
+                                                  elementSize.getResult(0),
+                                                  numElements.getResult());
+
+    // 4. Emit the memcpy call.
+    rewriter.create<emitc::CallOpaqueOp>(loc, TypeRange{}, "memcpy",
+                                         ValueRange{targetPtr.getResult(),
+                                                    srcPtr.getResult(),
+                                                    byteSize.getResult()});
+
+    return success();
+  }
+};
+
 Type convertMemRefType(MemRefType opTy, const TypeConverter *typeConverter) {
   Type resultTy;
   if (opTy.getRank() == 0) {
