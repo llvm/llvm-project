@@ -16,7 +16,6 @@ include "mlir/Dialect/XeGPU/IR/XeGPUTypes.td"
 include "mlir/Interfaces/ShapedOpInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
-include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 
 // Base class for dialect operations. This operation inherits from the base
 // `Op` class in OpBase.td, and provides:
@@ -639,7 +638,7 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
 
   }];
 
-  let arguments = (ins XeGPU_TensorDesc_or_MemRef: $source,
+  let arguments = (ins XeGPU_TensorDescOrMemRef: $source,
                        Optional<XeGPU_OffsetType>: $offsets,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
@@ -718,7 +717,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
 
   }];
 
-  let arguments = (ins XeGPU_TensorDesc_or_MemRef: $source,
+  let arguments = (ins XeGPU_TensorDescOrMemRef: $source,
                        Optional<XeGPU_OffsetType>: $offsets,
                        XeGPU_MaskType: $mask,
                        OptionalAttr<I64Attr>: $chunk_size,
@@ -812,7 +811,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
 
   let arguments = (ins
     XeGPU_ValueType: $value,
-    XeGPU_TensorDesc_or_MemRef: $dest,
+    XeGPU_TensorDescOrMemRef: $dest,
     Optional<XeGPU_OffsetType>: $offsets,
     XeGPU_MaskType: $mask,
     OptionalAttr<I64Attr>: $chunk_size,

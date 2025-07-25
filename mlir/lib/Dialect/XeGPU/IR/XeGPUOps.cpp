@@ -120,7 +120,6 @@ isValidGatherScatterMemRefParams(Type maskTy, VectorType valueTy,
 
   auto maskShape = getShapeOf(maskTy);
   auto valueShape = getShapeOf(valueTy);
-  auto memShape = getShapeOf(memTy);
 
   if (valueTy.getElementType() != memTy.getElementType())
     return emitError() << "Value should have the same element type as MemRef.";
