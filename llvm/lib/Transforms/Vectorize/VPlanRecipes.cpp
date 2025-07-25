@@ -413,14 +413,14 @@ void VPSingleDefRecipe::dump() const { VPDef::dump(); }
 
 template <unsigned PartOpIdx>
 VPValue *
-VPUnrollPartAccessor<PartOpIdx>::getUnrollPartOperand(VPUser &U) const {
+VPUnrollPartAccessor<PartOpIdx>::getUnrollPartOperand(const VPUser &U) const {
   if (U.getNumOperands() == PartOpIdx + 1)
     return U.getOperand(PartOpIdx);
   return nullptr;
 }
 
 template <unsigned PartOpIdx>
-unsigned VPUnrollPartAccessor<PartOpIdx>::getUnrollPart(VPUser &U) const {
+unsigned VPUnrollPartAccessor<PartOpIdx>::getUnrollPart(const VPUser &U) const {
   if (auto *UnrollPartOp = getUnrollPartOperand(U))
     return cast<ConstantInt>(UnrollPartOp->getLiveInIRValue())->getZExtValue();
   return 0;
