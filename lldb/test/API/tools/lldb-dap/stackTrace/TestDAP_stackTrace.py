@@ -242,3 +242,29 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
 
         frame = self.get_stackFrames(format={"parameters": False, "module": True})[0]
         self.assertEqual(frame["name"], "a.out recurse")
+
+    def test_stackFrameModuleIdUUID(self):
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.c"
+
+        self.set_source_breakpoints(source, [line_number(source, "recurse end")])
+        self.continue_to_next_stop()
+
+        modules = self.dap_server.get_modules()
+        name_to_id = {
+            name: info["id"] for name, info in modules.items() if "id" in info
+        }
+
+        stackFrames = self.get_stackFrames()
+        for frame in stackFrames:
+            module_id = frame.get("moduleId")
+            source_name = frame.get("source", {}).get("name")
+
+            if source_name in name_to_id:
+                expected_id = name_to_id[source_name]
+                self.assertEqual(
+                    module_id,
+                    expected_id,
+                    f"Expected moduleId '{expected_id}' for {source_name}, got: {module_id}",
+                )
