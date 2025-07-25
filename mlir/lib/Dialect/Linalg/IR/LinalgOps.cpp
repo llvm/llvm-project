@@ -3917,7 +3917,8 @@ Speculation::Speculatability MatmulOp::getSpeculatability() {
   return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
 }
 
-SmallVector<AffineMap> MatmulTransposeAOp::getDefaultIndexingMaps(OpBuilder &builder) {
+SmallVector<AffineMap>
+MatmulTransposeAOp::getDefaultIndexingMaps(OpBuilder &builder) {
   AffineExpr d0, d1, d2;
   MLIRContext *context = builder.getContext();
   bindDims(context, d0, d1, d2);
@@ -4006,10 +4007,12 @@ MatmulTransposeAOp::create(OpBuilder &builder, Location location,
 
 bool MatmulTransposeAOp::classof(Operation *op) {
   return dyn_cast_or_null<linalg::MatmulOp>(op) &&
-         MatmulTransposeAOp::isDefaultIndexingMaps(op->getAttr("indexing_maps"));
+         MatmulTransposeAOp::isDefaultIndexingMaps(
+             op->getAttr("indexing_maps"));
 }
 
-SmallVector<AffineMap> MatmulTransposeBOp::getDefaultIndexingMaps(OpBuilder &builder) {
+SmallVector<AffineMap>
+MatmulTransposeBOp::getDefaultIndexingMaps(OpBuilder &builder) {
   AffineExpr d0, d1, d2;
   MLIRContext *context = builder.getContext();
   bindDims(context, d0, d1, d2);
@@ -4098,7 +4101,8 @@ MatmulTransposeBOp::create(OpBuilder &builder, Location location,
 
 bool MatmulTransposeBOp::classof(Operation *op) {
   return dyn_cast_or_null<linalg::MatmulOp>(op) &&
-         MatmulTransposeBOp::isDefaultIndexingMaps(op->getAttr("indexing_maps"));
+         MatmulTransposeBOp::isDefaultIndexingMaps(
+             op->getAttr("indexing_maps"));
 }
 
 SmallVector<AffineMap>
@@ -4130,7 +4134,8 @@ void linalg::BatchMatmulTransposeAOp::build(
     OpBuilder &builder, OperationState &result, ValueRange inputs,
     ValueRange outputs, ArrayRef<NamedAttribute> attributes) {
   buildMatmulOp(builder, result, std::nullopt, inputs, outputs, attributes,
-                BatchMatmulOp::getRegionBuilder(), getDefaultIndexingMaps(builder));
+                BatchMatmulOp::getRegionBuilder(),
+                getDefaultIndexingMaps(builder));
 }
 
 BatchMatmulTransposeAOp
@@ -4149,7 +4154,8 @@ void linalg::BatchMatmulTransposeAOp::build(
     ValueRange inputs, ValueRange outputs,
     ArrayRef<NamedAttribute> attributes) {
   buildMatmulOp(builder, result, resultTensorTypes, inputs, outputs, attributes,
-                BatchMatmulOp::getRegionBuilder(), getDefaultIndexingMaps(builder));
+                BatchMatmulOp::getRegionBuilder(),
+                getDefaultIndexingMaps(builder));
 }
 
 BatchMatmulTransposeAOp
@@ -4170,7 +4176,8 @@ void linalg::BatchMatmulTransposeAOp::build(
     ArrayRef<NamedAttribute> attributes) {
   result.addAttribute("cast", cast);
   buildMatmulOp(builder, result, resultTensorTypes, inputs, outputs, attributes,
-                BatchMatmulOp::getRegionBuilder(), getDefaultIndexingMaps(builder));
+                BatchMatmulOp::getRegionBuilder(),
+                getDefaultIndexingMaps(builder));
 }
 
 BatchMatmulTransposeAOp
@@ -4220,7 +4227,8 @@ void linalg::BatchMatmulTransposeBOp::build(
     OpBuilder &builder, OperationState &result, ValueRange inputs,
     ValueRange outputs, ArrayRef<NamedAttribute> attributes) {
   buildMatmulOp(builder, result, std::nullopt, inputs, outputs, attributes,
-                BatchMatmulOp::getRegionBuilder(), getDefaultIndexingMaps(builder));
+                BatchMatmulOp::getRegionBuilder(),
+                getDefaultIndexingMaps(builder));
 }
 
 BatchMatmulTransposeBOp
@@ -4239,7 +4247,8 @@ void linalg::BatchMatmulTransposeBOp::build(
     ValueRange inputs, ValueRange outputs,
     ArrayRef<NamedAttribute> attributes) {
   buildMatmulOp(builder, result, resultTensorTypes, inputs, outputs, attributes,
-                BatchMatmulOp::getRegionBuilder(), getDefaultIndexingMaps(builder));
+                BatchMatmulOp::getRegionBuilder(),
+                getDefaultIndexingMaps(builder));
 }
 
 BatchMatmulTransposeBOp
@@ -4260,7 +4269,8 @@ void linalg::BatchMatmulTransposeBOp::build(
     ArrayRef<NamedAttribute> attributes) {
   result.addAttribute("cast", cast);
   buildMatmulOp(builder, result, resultTensorTypes, inputs, outputs, attributes,
-                BatchMatmulOp::getRegionBuilder(), getDefaultIndexingMaps(builder));
+                BatchMatmulOp::getRegionBuilder(),
+                getDefaultIndexingMaps(builder));
 }
 
 BatchMatmulTransposeBOp
