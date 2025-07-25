@@ -280,7 +280,7 @@ LayoutAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
         });
 
     SmallVector<Value> mods = llvm::map_to_vector(
-        llvm::zip_equal(adds, distUnit), [&](const auto &t) -> Value {
+        llvm::zip_equal(adds, shape), [&](const auto &t) -> Value {
           return builder.createOrFold<index::RemUOp>(
               loc, std::get<0>(t),
               builder.create<arith::ConstantIndexOp>(loc, std::get<1>(t)));
@@ -374,7 +374,7 @@ SliceAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
         });
 
     SmallVector<Value> mods = llvm::map_to_vector(
-        llvm::zip_equal(adds, distUnit), [&](const auto &t) -> Value {
+        llvm::zip_equal(adds, shape), [&](const auto &t) -> Value {
           return builder.createOrFold<index::RemUOp>(
               loc, std::get<0>(t),
               builder.create<arith::ConstantIndexOp>(loc, std::get<1>(t)));
