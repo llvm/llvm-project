@@ -1486,7 +1486,6 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) const {
 }
 
 bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
-  assert(DemandedVLs.size() == 0);
   if (skipFunction(MF.getFunction()))
     return false;
 
@@ -1498,6 +1497,8 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   TII = ST.getInstrInfo();
+
+  assert(DemandedVLs.empty());
 
   // For each instruction that defines a vector, compute what VL its
   // downstream users demand.
