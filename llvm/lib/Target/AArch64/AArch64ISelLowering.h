@@ -182,6 +182,13 @@ public:
   MachineBasicBlock *EmitGetSMESaveSize(MachineInstr &MI,
                                         MachineBasicBlock *BB) const;
 
+  /// Replace (0, vreg) discriminator components with the operands of blend
+  /// or with (immediate, NoRegister) when possible.
+  void fixupPtrauthDiscriminator(MachineInstr &MI, MachineBasicBlock *BB,
+                                 MachineOperand &IntDiscOp,
+                                 MachineOperand &AddrDiscOp,
+                                 const TargetRegisterClass *AddrDiscRC) const;
+
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;
