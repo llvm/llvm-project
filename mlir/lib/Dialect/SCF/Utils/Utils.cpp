@@ -525,13 +525,13 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
   // If any control operand of any inner loop of `forOp` is defined within
   // `forOp`, no unroll jam.
   if (!areInnerBoundsInvariant(forOp)) {
-    LDBG("failed to unroll and jam: inner bounds are not invariant");
+    LDBG() << "failed to unroll and jam: inner bounds are not invariant";
     return failure();
   }
 
   // Currently, for operations with results are not supported.
   if (forOp->getNumResults() > 0) {
-    LDBG("failed to unroll and jam: unsupported loop with results");
+    LDBG() << "failed to unroll and jam: unsupported loop with results";
     return failure();
   }
 
@@ -540,16 +540,17 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
   std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
   if (!tripCount.has_value()) {
     // If the trip count is dynamic, do not unroll & jam.
-    LDBG("failed to unroll and jam: trip count could not be determined");
+    LDBG() << "failed to unroll and jam: trip count could not be determined";
     return failure();
   }
   if (unrollJamFactor > *tripCount) {
-    LDBG("unroll and jam factor is greater than trip count, set factor to trip "
-         "count");
+    LDBG() << "unroll and jam factor is greater than trip count, set factor to "
+              "trip "
+              "count";
     unrollJamFactor = *tripCount;
   } else if (*tripCount % unrollJamFactor != 0) {
-    LDBG("failed to unroll and jam: unsupported trip count that is not a "
-         "multiple of unroll jam factor");
+    LDBG() << "failed to unroll and jam: unsupported trip count that is not a "
+              "multiple of unroll jam factor";
     return failure();
   }
 

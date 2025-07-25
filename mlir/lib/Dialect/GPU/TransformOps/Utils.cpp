@@ -36,10 +36,6 @@ using namespace mlir::transform::gpu;
 
 #define DEBUG_TYPE "gpu-transforms"
 
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
-#define DBGS_ALIAS() (llvm::dbgs() << '[' << DEBUG_TYPE_ALIAS << "] ")
-
 /// Build predicates to filter execution by only the activeIds. Along each
 /// dimension, 3 cases appear:
 ///   1. activeMappingSize > availableMappingSize: this is an unsupported case
@@ -54,15 +50,9 @@ buildPredicates(RewriterBase &rewriter, Location loc, ArrayRef<Value> activeIds,
                 ArrayRef<int64_t> activeMappingSizes,
                 ArrayRef<int64_t> availableMappingSizes,
                 std::string &errorMsg) {
-  // clang-format off
-  LLVM_DEBUG(
-    llvm::interleaveComma(
-      activeMappingSizes, DBGS() << "----activeMappingSizes: ");
-    DBGS() << "\n";
-    llvm::interleaveComma(
-      availableMappingSizes, DBGS() << "----availableMappingSizes: ");
-    DBGS() << "\n";);
-  // clang-format on
+  LDBG() << "----activeMappingSizes: " << llvm::interleaved(activeMappingSizes);
+  LDBG() << "----availableMappingSizes: "
+         << llvm::interleaved(availableMappingSizes);
 
   SmallVector<Value> predicateOps;
   for (auto [activeId, activeMappingSize, availableMappingSize] :
@@ -88,10 +78,8 @@ buildPredicates(RewriterBase &rewriter, Location loc, ArrayRef<Value> activeIds,
 template <typename ThreadOrBlockIdOp>
 static Value buildLinearId(RewriterBase &rewriter, Location loc,
                            ArrayRef<OpFoldResult> originalBasisOfr) {
-  LLVM_DEBUG(llvm::interleaveComma(
-                 originalBasisOfr,
-                 DBGS() << "----buildLinearId with originalBasisOfr:  ");
-             llvm::dbgs() << "\n");
+  LDBG() << "----buildLinearId with originalBasisOfr:  "
+         << llvm::interleaved(originalBasisOfr);
   assert(originalBasisOfr.size() == 3 && "expected 3 sizes");
   IndexType indexType = rewriter.getIndexType();
   AffineExpr tx, ty, tz, bdx, bdy;
@@ -179,7 +167,7 @@ commonLinearIdBuilderFn(int64_t multiplicity = 1,
     if (mask) {
       Value isActiveIdPredicate =
           mask.createIsActiveIdPredicate(rewriter, scaledLinearIdI64);
-      LDBG("------adjusting predicate with mask: " << isActiveIdPredicate);
+      LDBG() << "------adjusting predicate with mask: " << isActiveIdPredicate;
       predicateOps.push_back(isActiveIdPredicate);
     } else {
       // 4.b. Otherwise, handle predicates using physicalLinearId.
