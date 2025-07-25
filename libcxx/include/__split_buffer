@@ -637,12 +637,13 @@ struct __maybe_update_sentinel;
 template <>
 struct __maybe_update_sentinel<true> {
   template <class _SplitBuffer, class _DifferenceType>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 static void __update_size(_SplitBuffer& __data, _DifferenceType __d) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI static void
+  __update_size(_SplitBuffer& __data, _DifferenceType __d) {
     __data.__update_sentinel(__data.size() + __d);
   }
 
   template <class _SplitBuffer>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 static void __update_end(_SplitBuffer& __data) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI static void __update_end(_SplitBuffer& __data) {
     __data.update_sentinel(__data.end() + 1);
   }
 };
@@ -650,10 +651,10 @@ struct __maybe_update_sentinel<true> {
 template <>
 struct __maybe_update_sentinel<false> {
   template <class _SplitBuffer, class _DifferenceType>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 static void __update_size(_SplitBuffer&, _DifferenceType) {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI static void __update_size(_SplitBuffer&, _DifferenceType) {}
 
   template <class _SplitBuffer>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 static void __update_end(_SplitBuffer&) {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI static void __update_end(_SplitBuffer&) {}
 };
 
 template <class _Tp, class _Allocator, template <class> class _Layout>
