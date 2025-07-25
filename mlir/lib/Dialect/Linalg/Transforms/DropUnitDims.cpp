@@ -267,8 +267,8 @@ expandValue(RewriterBase &rewriter, Location loc, Value result, Value origDest,
   assert(rankReductionStrategy ==
              ControlDropUnitDims::RankReductionStrategy::ReassociativeReshape &&
          "unknown rank reduction strategy");
-  return rewriter
-      .create<tensor::ExpandShapeOp>(loc, origResultType, result, reassociation)
+  return tensor::ExpandShapeOp::create(rewriter, loc, origResultType, result,
+                                       reassociation)
       .getResult();
 }
 

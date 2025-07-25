@@ -947,9 +947,9 @@ DecomposePadOpPattern::matchAndRewrite(tensor::PadOp padOp,
   auto getIdxValue = [&](OpFoldResult ofr) {
     if (auto val = llvm::dyn_cast_if_present<Value>(ofr))
       return val;
-    return rewriter
-        .create<arith::ConstantIndexOp>(
-            padOp.getLoc(), cast<IntegerAttr>(cast<Attribute>(ofr)).getInt())
+    return arith::ConstantIndexOp::create(
+               rewriter, padOp.getLoc(),
+               cast<IntegerAttr>(cast<Attribute>(ofr)).getInt())
         .getResult();
   };
 

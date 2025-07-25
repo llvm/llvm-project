@@ -1572,12 +1572,12 @@ static Value getCollapsedOpOperand(Location loc, LinalgOp op,
 
   // Insert a reshape to collapse the dimensions.
   if (isa<MemRefType>(operand.getType())) {
-    return builder
-        .create<memref::CollapseShapeOp>(loc, operand, operandReassociation)
+    return memref::CollapseShapeOp::create(builder, loc, operand,
+                                           operandReassociation)
         .getResult();
   }
-  return builder
-      .create<tensor::CollapseShapeOp>(loc, operand, operandReassociation)
+  return tensor::CollapseShapeOp::create(builder, loc, operand,
+                                         operandReassociation)
       .getResult();
 }
 
