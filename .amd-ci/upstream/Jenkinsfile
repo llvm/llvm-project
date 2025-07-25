@@ -24,6 +24,15 @@ if (postsub && env.BRANCH_NAME != upstreamBranch) {
     return this
 }
 
+if (actualTarget == stagingBranch &&
+    !currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause') &&
+    !currentBuild.getBuildCauses('hudson.triggers.TimerTrigger$TimerTriggerCause')) {
+    String cause = currentBuild.getBuildCauses().shortDescription // groovylint-disable-line UnnecessaryGetter
+    echo 'Pipeline for base ' + actualTarget + ' skipped for cause ' + cause
+    echo 'Pipeline only runs if manually or timer triggered.'
+    return this
+}
+
 /**
  * Coerce Result enums to String, seems to
  * be required by CatchErrorStep.setStageResult()
@@ -219,6 +228,31 @@ try {
                             hasSourceChanges = false
                             return // From stage
                         }
+
+                        String mstat
+                        withEnv([gitPathEnv, 'GIT_COMMIT=' + gitVars.GIT_COMMIT]) {
+                            withCredentials([
+                                usernamePassword(
+                                    credentialsId: gitHubAppCredsId,
+                                    usernameVariable: 'GH_APP_USR_NOTREQUIRED',
+                                    passwordVariable: 'GH_ENTERPRISE_TOKEN'
+                                )
+                            ]) {
+                                mstat = sh(
+                                    label: 'merge-stat',
+                                    script: (
+                                        'bash ../aocc-essentials/build_essentials/merge_commit_status.sh' + space +
+                                            gitVars.GIT_COMMIT
+                                    ),
+                                    returnStdout: true
+                                ).trim()
+                            }
+                        }
+                        if (mstat && mstat != 'None') {
+                            echo('Skipping build, merge status is ' + mstat)
+                            hasSourceChanges = false
+                            return // From stage
+                        }
                     }
                 }
             }
@@ -257,22 +291,24 @@ try {
                 }
             }
         }
-        build(
-            propagate: true,
-            wait: true,
-            job: 'AOCC-Workloads/TestSuites/NAGLLVM',
-            parameters: [
-                // Use the name of build tar as defined in the run script:
-                string(
-                    name: 'CUT',
-                    value: (
-                        env.BUILD_URL + 'artifact/' +
-                            jobName + '-' + env.BUILD_NUMBER + '.tar.xz'
-                    )
-                ),
-                string(name: 'CHANGE_ID', value: env.CHANGE_ID)
-            ]
-        )
+        stage ('downstream-tasks') {
+            build(
+                propagate: true,
+                wait: true,
+                job: 'AOCC-Workloads/TestSuites/NAGLLVM',
+                parameters: [
+                    // Use the name of build tar as defined in the run script:
+                    string(
+                        name: 'CUT',
+                        value: (
+                            env.BUILD_URL + 'artifact/' +
+                                jobName + '-' + env.BUILD_NUMBER + '.tar.xz'
+                        )
+                    ),
+                    string(name: 'CHANGE_ID', value: env.CHANGE_ID)
+                ]
+            )
+        }
     }
 } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
     /*
