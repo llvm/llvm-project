@@ -60,6 +60,9 @@ static int countSymbols(Lang Language) {
   switch (Language) {
   case Lang::C: {
     static constexpr const char *CSymbols[] = {
+#if __has_include(<unistd.h>)
+#include "CPosixSymbolMap.inc"
+#endif
 #include "CSpecialSymbolMap.inc"
 #include "CSymbolMap.inc"
     };
@@ -68,6 +71,9 @@ static int countSymbols(Lang Language) {
   }
   case Lang::CXX: {
     static constexpr const char *CXXSymbols[] = {
+#if __has_include(<unistd.h>)
+#include "CxxPosixSymbolMap.inc"
+#endif
 #include "StdSpecialSymbolMap.inc"
 #include "StdSymbolMap.inc"
 #include "StdTsSymbolMap.inc"
@@ -148,6 +154,9 @@ static int initialize(Lang Language) {
   switch (Language) {
   case Lang::C: {
     static constexpr Symbol CSymbols[] = {
+#if __has_include(<unistd.h>)
+#include "CPosixSymbolMap.inc"
+#endif
 #include "CSpecialSymbolMap.inc"
 #include "CSymbolMap.inc"
     };
@@ -157,6 +166,9 @@ static int initialize(Lang Language) {
   }
   case Lang::CXX: {
     static constexpr Symbol CXXSymbols[] = {
+#if __has_include(<unistd.h>)
+#include "CxxPosixSymbolMap.inc"
+#endif
 #include "StdSpecialSymbolMap.inc"
 #include "StdSymbolMap.inc"
 #include "StdTsSymbolMap.inc"
