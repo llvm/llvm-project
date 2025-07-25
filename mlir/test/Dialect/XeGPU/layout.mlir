@@ -56,4 +56,15 @@ gpu.func @slice_attr_repeat_dim() {
   gpu.return
 }
 
+gpu.func @softmax_dim_0(%arg0: vector<256x128xf32>) -> vector<256x128xf32> {
+  %cst = arith.constant dense<0.000000e+00> : vector<128xf32>
+  %0 = math.exp %arg0 {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>} : vector<256x128xf32>
+  //CHECK: vector.multi_reduction <add>, {{.*}} {layout_result_0 = #xegpu.slice<<sg_layout = [8, 4], sg_data = [32, 32]>, dims = [0]>} [0] : vector<256x128xf32> to vector<128xf32>
+  %1 = vector.multi_reduction <add>, %0, %cst {layout_result_0 = #xegpu.slice<<sg_layout = [8, 4], sg_data = [32, 32]>, dims = [0]>} [0] : vector<256x128xf32> to vector<128xf32>
+  //CHECK: vector.broadcast {{.*}} {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>} : vector<128xf32> to vector<256x128xf32>
+  %2 = vector.broadcast %1 {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>} : vector<128xf32> to vector<256x128xf32>
+  %3 = arith.divf %0, %2 {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>} : vector<256x128xf32>
+  gpu.return %3 : vector<256x128xf32>
+}
+
 }
