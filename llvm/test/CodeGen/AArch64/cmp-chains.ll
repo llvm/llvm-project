@@ -503,21 +503,12 @@ entry:
 }
 
 define i32 @compare_with_neg_32(i32 %a, i32 %b, i32 %c) {
-; SDISEL-LABEL: compare_with_neg_32:
-; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    cmp w0, w2
-; SDISEL-NEXT:    mov w8, #-32 // =0xffffffe0
-; SDISEL-NEXT:    ccmp w1, w8, #4, lt
-; SDISEL-NEXT:    csel w0, w1, w0, gt
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: compare_with_neg_32:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #-32 // =0xffffffe0
-; GISEL-NEXT:    cmp w0, w2
-; GISEL-NEXT:    ccmp w1, w8, #4, lt
-; GISEL-NEXT:    csel w0, w1, w0, gt
-; GISEL-NEXT:    ret
+; CHECK-LABEL: compare_with_neg_32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp w0, w2
+; CHECK-NEXT:    ccmn w1, #31, #8, lt
+; CHECK-NEXT:    csel w0, w1, w0, ge
+; CHECK-NEXT:    ret
   %cmp = icmp sgt i32 %b, -32
   %cmp1 = icmp slt i32 %a, %c
   %or.cond = and i1 %cmp, %cmp1
@@ -526,21 +517,12 @@ define i32 @compare_with_neg_32(i32 %a, i32 %b, i32 %c) {
 }
 
 define i32 @compare_with_32(i32 %a, i32 %b, i32 %c) {
-; SDISEL-LABEL: compare_with_32:
-; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    cmp w0, w2
-; SDISEL-NEXT:    mov w8, #32 // =0x20
-; SDISEL-NEXT:    ccmp w1, w8, #0, lt
-; SDISEL-NEXT:    csel w0, w1, w0, lt
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: compare_with_32:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #32 // =0x20
-; GISEL-NEXT:    cmp w0, w2
-; GISEL-NEXT:    ccmp w1, w8, #0, lt
-; GISEL-NEXT:    csel w0, w1, w0, lt
-; GISEL-NEXT:    ret
+; CHECK-LABEL: compare_with_32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp w0, w2
+; CHECK-NEXT:    ccmp w1, #31, #0, lt
+; CHECK-NEXT:    csel w0, w1, w0, le
+; CHECK-NEXT:    ret
   %cmp = icmp slt i32 %b, 32
   %cmp1 = icmp slt i32 %a, %c
   %or.cond = and i1 %cmp, %cmp1
@@ -549,21 +531,12 @@ define i32 @compare_with_32(i32 %a, i32 %b, i32 %c) {
 }
 
 define i32 @compare_with_neg_32_unsigned(i32 %a, i32 %b, i32 %c) {
-; SDISEL-LABEL: compare_with_neg_32_unsigned:
-; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    cmp w0, w2
-; SDISEL-NEXT:    mov w8, #-32 // =0xffffffe0
-; SDISEL-NEXT:    ccmp w1, w8, #0, lo
-; SDISEL-NEXT:    csel w0, w1, w0, hi
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: compare_with_neg_32_unsigned:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #-32 // =0xffffffe0
-; GISEL-NEXT:    cmp w0, w2
-; GISEL-NEXT:    ccmp w1, w8, #0, lo
-; GISEL-NEXT:    csel w0, w1, w0, hi
-; GISEL-NEXT:    ret
+; CHECK-LABEL: compare_with_neg_32_unsigned:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp w0, w2
+; CHECK-NEXT:    ccmn w1, #31, #0, lo
+; CHECK-NEXT:    csel w0, w1, w0, hs
+; CHECK-NEXT:    ret
   %cmp = icmp ugt i32 %b, -32
   %cmp1 = icmp ult i32 %a, %c
   %or.cond = and i1 %cmp, %cmp1
@@ -572,21 +545,12 @@ define i32 @compare_with_neg_32_unsigned(i32 %a, i32 %b, i32 %c) {
 }
 
 define i32 @compare_with_32_unsigned(i32 %a, i32 %b, i32 %c) {
-; SDISEL-LABEL: compare_with_32_unsigned:
-; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    cmp w0, w2
-; SDISEL-NEXT:    mov w8, #32 // =0x20
-; SDISEL-NEXT:    ccmp w1, w8, #2, lo
-; SDISEL-NEXT:    csel w0, w1, w0, lo
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: compare_with_32_unsigned:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #32 // =0x20
-; GISEL-NEXT:    cmp w0, w2
-; GISEL-NEXT:    ccmp w1, w8, #2, lo
-; GISEL-NEXT:    csel w0, w1, w0, lo
-; GISEL-NEXT:    ret
+; CHECK-LABEL: compare_with_32_unsigned:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp w0, w2
+; CHECK-NEXT:    ccmp w1, #31, #2, lo
+; CHECK-NEXT:    csel w0, w1, w0, ls
+; CHECK-NEXT:    ret
   %cmp = icmp ult i32 %b, 32
   %cmp1 = icmp ult i32 %a, %c
   %or.cond = and i1 %cmp, %cmp1
