@@ -21,10 +21,7 @@ if (NOT DEFINED LLVM_LIT_PATH)
 endif()
 message("-- LLVM_LIT_PATH: ${LLVM_LIT_PATH}")
 
-# TODO: Re-enable target once nPSDB issue with llvm-lit is fixed
-#add_custom_target(test-lit COMMAND "${LLVM_LIT_PATH}"
-#                  "${CMAKE_CURRENT_BINARY_DIR}" -v)
-add_custom_target(test-lit COMMAND echo "${LLVM_LIT_PATH}"
+add_custom_target(test-lit COMMAND "${LLVM_LIT_PATH}"
                   "${CMAKE_CURRENT_BINARY_DIR}" -v)
 
 macro(add_comgr_lit_binary name lang)
