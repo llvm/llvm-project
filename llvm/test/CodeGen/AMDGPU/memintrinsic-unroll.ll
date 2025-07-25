@@ -9851,8 +9851,8 @@ define void @memmove_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; CHECK-NEXT:    s_cbranch_execz .LBB8_6
 ; CHECK-NEXT:  ; %bb.4: ; %memmove_bwd_loop.preheader
-; CHECK-NEXT:    v_add_nc_u32_e32 v0, 0x700, v0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v1, 0x700, v1
+; CHECK-NEXT:    v_add_nc_u32_e32 v0, 0x700, v0
 ; CHECK-NEXT:    s_movk_i32 s4, 0xf800
 ; CHECK-NEXT:    s_mov_b32 s5, -1
 ; CHECK-NEXT:  .LBB8_5: ; %memmove_bwd_loop
@@ -11167,8 +11167,8 @@ define void @memmove_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; ALIGNED-NEXT:    s_cbranch_execz .LBB8_6
 ; ALIGNED-NEXT:  ; %bb.4: ; %memmove_bwd_loop.preheader
-; ALIGNED-NEXT:    v_add_nc_u32_e32 v0, 0x700, v0
 ; ALIGNED-NEXT:    v_add_nc_u32_e32 v1, 0x700, v1
+; ALIGNED-NEXT:    v_add_nc_u32_e32 v0, 0x700, v0
 ; ALIGNED-NEXT:    s_movk_i32 s4, 0xf800
 ; ALIGNED-NEXT:    s_mov_b32 s5, -1
 ; ALIGNED-NEXT:  .LBB8_5: ; %memmove_bwd_loop
@@ -12381,8 +12381,8 @@ define void @memmove_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5
 ; UNROLL3-NEXT:    buffer_load_dword v4, v1, s[0:3], 0 offen offset:2024
 ; UNROLL3-NEXT:    buffer_load_dword v5, v1, s[0:3], 0 offen offset:2020
 ; UNROLL3-NEXT:    buffer_load_dword v6, v1, s[0:3], 0 offen offset:2016
-; UNROLL3-NEXT:    v_add_nc_u32_e32 v2, 0x7b0, v0
 ; UNROLL3-NEXT:    v_add_nc_u32_e32 v1, 0x7b0, v1
+; UNROLL3-NEXT:    v_add_nc_u32_e32 v2, 0x7b0, v0
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(3)
 ; UNROLL3-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen offset:2028
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(2)
