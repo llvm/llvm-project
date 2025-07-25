@@ -31,6 +31,9 @@ void populateExpressionPatterns(RewritePatternSet &patterns);
 /// Populates 'patterns' with func-related patterns.
 void populateFuncPatterns(RewritePatternSet &patterns,
                           StringRef namedAttribute);
+/// Populates `patterns` with patterns to add reflection map for EmitC classes.
+void populateAddReflectionMapPatterns(RewritePatternSet &patterns,
+                                      StringRef namedAttribute);
 
 } // namespace emitc
 } // namespace mlir
