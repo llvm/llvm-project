@@ -59,7 +59,7 @@ def AddReflectionMapPass : Pass<"add-reflection-map", "ModuleOp"> {
   let description = [{
         This pass adds a `getBufferForName` function to EmitC classes that enables 
         runtime lookup of field buffers by their string names. 
-        This would require that the class has fields with attributes and a function named `execute`.
+        This requires that the class has fields with attributes and a function named `execute`.
         The `fieldop` attribute is expected to be a dictionary where:
         - The keys are `namedAttribute`.
         - The values are arrays containing a single string attribute.
