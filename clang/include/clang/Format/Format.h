@@ -4385,8 +4385,18 @@ struct FormatStyle {
     ///    #include "B/a.h"           #include "a/b.h"
     /// \endcode
     bool IgnoreCase;
+    /// When sorting includes in each block, only take file extensions into
+    /// account if two includes compare equal otherwise.
+    /// \code
+    ///    true:                          false:
+    ///    # include "A.h"         vs.    # include "A-util.h"
+    ///    # include "A.inc"              # include "A.h"
+    ///    # include "A-util.h"           # include "A.inc"
+    /// \endcode
+    bool IgnoreExtension;
     bool operator==(const SortIncludesOptions &R) const {
-      return Enabled == R.Enabled && IgnoreCase == R.IgnoreCase;
+      return Enabled == R.Enabled && IgnoreCase == R.IgnoreCase &&
+             IgnoreExtension == R.IgnoreExtension;
     }
     bool operator!=(const SortIncludesOptions &R) const {
       return !(*this == R);
@@ -4694,6 +4704,13 @@ struct FormatStyle {
     ///      <conditional-body>                     <conditional-body>
     /// \endcode
     bool AfterIfMacros;
+    /// If ``true``, put a space between alternative operator ``not`` and the
+    /// opening parenthesis.
+    /// \code
+    ///    true:                                  false:
+    ///    return not (a || b);            vs.    return not(a || b);
+    /// \endcode
+    bool AfterNot;
     /// If ``true``, put a space between operator overloading and opening
     /// parentheses.
     /// \code
@@ -4742,9 +4759,9 @@ struct FormatStyle {
         : AfterControlStatements(false), AfterForeachMacros(false),
           AfterFunctionDeclarationName(false),
           AfterFunctionDefinitionName(false), AfterIfMacros(false),
-          AfterOverloadedOperator(false), AfterPlacementOperator(true),
-          AfterRequiresInClause(false), AfterRequiresInExpression(false),
-          BeforeNonEmptyParentheses(false) {}
+          AfterNot(false), AfterOverloadedOperator(false),
+          AfterPlacementOperator(true), AfterRequiresInClause(false),
+          AfterRequiresInExpression(false), BeforeNonEmptyParentheses(false) {}
 
     bool operator==(const SpaceBeforeParensCustom &Other) const {
       return AfterControlStatements == Other.AfterControlStatements &&
@@ -4753,6 +4770,7 @@ struct FormatStyle {
                  Other.AfterFunctionDeclarationName &&
              AfterFunctionDefinitionName == Other.AfterFunctionDefinitionName &&
              AfterIfMacros == Other.AfterIfMacros &&
+             AfterNot == Other.AfterNot &&
              AfterOverloadedOperator == Other.AfterOverloadedOperator &&
              AfterPlacementOperator == Other.AfterPlacementOperator &&
              AfterRequiresInClause == Other.AfterRequiresInClause &&

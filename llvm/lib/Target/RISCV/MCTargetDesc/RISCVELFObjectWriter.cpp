@@ -48,7 +48,7 @@ RISCVELFObjectWriter::~RISCVELFObjectWriter() = default;
 unsigned RISCVELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                             const MCValue &Target,
                                             bool IsPCRel) const {
-  unsigned Kind = Fixup.getTargetKind();
+  auto Kind = Fixup.getKind();
   auto Spec = Target.getSpecifier();
   switch (Spec) {
   case ELF::R_RISCV_TPREL_HI20:

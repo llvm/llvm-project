@@ -11,7 +11,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Mesh/IR/MeshOps.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/STLExtras.h"
@@ -91,15 +90,15 @@ struct MeshShapeFolder
         newShapeOpMeshAxes.push_back(opMeshAxes[i]);
       } else {
         // Fold static mesh axes.
-        newResults[i] = builder.create<arith::ConstantOp>(
-            builder.getIndexAttr(meshAxisSize));
+        newResults[i] = arith::ConstantOp::create(
+            builder, builder.getIndexAttr(meshAxisSize));
       }
     }
 
     // Leave only the dynamic mesh axes to be queried.
     if (!newShapeOpMeshAxes.empty()) {
       MeshShapeOp newShapeOp =
-          builder.create<MeshShapeOp>(mesh.getSymName(), newShapeOpMeshAxes);
+          MeshShapeOp::create(builder, mesh.getSymName(), newShapeOpMeshAxes);
       for (size_t i = 0; i < newShapeOp->getResults().size(); ++i) {
         newResults[newToOldResultsIndexMap[i]] = newShapeOp->getResults()[i];
       }

@@ -11530,17 +11530,28 @@ def note_in_evaluating_default_argument : Note<
 def warn_invalid_add_func_effects : Warning<
   "attribute '%0' should not be added via type conversion">,
   InGroup<FunctionEffects>, DefaultIgnore;
-def warn_mismatched_func_effect_override : Warning<
-  "attribute '%0' on overriding function does not match base declaration">,
-  InGroup<FunctionEffects>, DefaultIgnore;
-def warn_mismatched_func_effect_redeclaration : Warning<
-  "attribute '%0' on function does not match previous declaration">,
-  InGroup<FunctionEffects>, DefaultIgnore;
+def warn_conflicting_func_effect_override
+    : Warning<"attribute '%0' on overriding function conflicts with base "
+              "declaration">,
+      InGroup<FunctionEffects>,
+      DefaultIgnore;
 def warn_conflicting_func_effects : Warning<
   "effects conflict when merging declarations; kept '%0', discarded '%1'">,
   InGroup<FunctionEffects>, DefaultIgnore;
 def err_func_with_effects_no_prototype : Error<
   "'%0' function must have a prototype">;
+// These are more pedantic: in redeclarations and virtual method overrides,
+// the effect attribute(s) should be restated.
+def warn_mismatched_func_effect_override
+    : Warning<"overriding function is missing '%0' attribute from base "
+              "declaration">,
+      InGroup<FunctionEffectRedeclarations>,
+      DefaultIgnore;
+def warn_mismatched_func_effect_redeclaration
+    : Warning<
+          "redeclaration is missing '%0' attribute from previous declaration">,
+      InGroup<FunctionEffectRedeclarations>,
+      DefaultIgnore;
 
 } // end of sema category
 
@@ -12357,7 +12368,7 @@ def err_export_using_internal : Error<
   "using declaration referring to %1 with %select{internal|module|unknown}0 "
   "linkage cannot be exported">;
 def err_export_not_in_module_interface : Error<
-  "export declaration can only be used within a module purview">;
+  "export declaration can only be used within a module interface">;
 def err_export_inline_not_defined : Error<
   "inline function not defined%select{| before the private module fragment}0">;
 def err_export_partition_impl : Error<
@@ -13427,13 +13438,13 @@ def note_acc_atomic_mismatch_operand
     : Note<"left hand side of assignment operation(%0) must match one side "
            "of the sub-operation on the right hand side(%1 and %2)">;
 def note_acc_atomic_mismatch_compound_operand
-    : Note<"variable %select{|in unary expression|on right hand side of "
+    : Note<"sub-expression %select{|in unary expression|on right hand side of "
            "assignment|on left hand side of assignment|on left hand side of "
            "compound assignment|on left hand side of assignment}2(%3) must "
-           "match variable used %select{|in unary expression|on right hand "
-           "side of assignment|<not possible>|on left hand side of compound "
-           "assignment|on left hand side of assignment}0(%1) from the first "
-           "statement">;
+           "match sub-expression used %select{|in unary expression|on right "
+           "hand side of assignment|<not possible>|on left hand side of "
+           "compound assignment|on left hand side of assignment}0(%1) from the "
+           "first statement">;
 def err_acc_declare_required_clauses
     : Error<"no valid clauses specified in OpenACC 'declare' directive">;
 def err_acc_declare_clause_at_global
@@ -13478,6 +13489,12 @@ def err_acc_invalid_default_type
 def err_acc_device_type_multiple_archs
     : Error<"OpenACC 'device_type' clause on a 'set' construct only permits "
             "one architecture">;
+def warn_acc_var_referenced_lacks_op
+    : Warning<"variable of type %0 referenced in OpenACC '%1' clause does not "
+              "have a %enum_select<AccVarReferencedReason>{%DefCtor{default "
+              "constructor}|%Dtor{destructor}}2; reference has no effect">,
+      InGroup<DiagGroup<"openacc-var-lacks-operation">>,
+      DefaultError;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;

@@ -519,14 +519,44 @@ TEST_F(OpenACCOpsTest, routineOpTest) {
   op->removeGangDimDeviceTypeAttr();
   op->removeGangDimAttr();
 
-  op->setBindNameDeviceTypeAttr(b.getArrayAttr({dtypeNone}));
-  op->setBindNameAttr(b.getArrayAttr({b.getStringAttr("fname")}));
+  op->setBindIdNameDeviceTypeAttr(
+      b.getArrayAttr({DeviceTypeAttr::get(&context, DeviceType::Host)}));
+  op->setBindStrNameDeviceTypeAttr(b.getArrayAttr({dtypeNone}));
+  op->setBindIdNameAttr(
+      b.getArrayAttr({SymbolRefAttr::get(&context, "test_symbol")}));
+  op->setBindStrNameAttr(b.getArrayAttr({b.getStringAttr("fname")}));
   EXPECT_TRUE(op->getBindNameValue().has_value());
-  EXPECT_EQ(op->getBindNameValue().value(), "fname");
-  for (auto d : dtypesWithoutNone)
-    EXPECT_FALSE(op->getBindNameValue(d).has_value());
-  op->removeBindNameDeviceTypeAttr();
-  op->removeBindNameAttr();
+  EXPECT_TRUE(op->getBindNameValue(DeviceType::Host).has_value());
+  EXPECT_EQ(std::visit(
+                [](const auto &attr) -> std::string {
+                  if constexpr (std::is_same_v<std::decay_t<decltype(attr)>,
+                                               mlir::StringAttr>) {
+                    return attr.str();
+                  } else {
+                    return attr.getLeafReference().str();
+                  }
+                },
+                op->getBindNameValue().value()),
+            "fname");
+  EXPECT_EQ(std::visit(
+                [](const auto &attr) -> std::string {
+                  if constexpr (std::is_same_v<std::decay_t<decltype(attr)>,
+                                               mlir::StringAttr>) {
+                    return attr.str();
+                  } else {
+                    return attr.getLeafReference().str();
+                  }
+                },
+                op->getBindNameValue(DeviceType::Host).value()),
+            "test_symbol");
+  for (auto d : dtypesWithoutNone) {
+    if (d != DeviceType::Host)
+      EXPECT_FALSE(op->getBindNameValue(d).has_value());
+  }
+  op->removeBindIdNameDeviceTypeAttr();
+  op->removeBindStrNameDeviceTypeAttr();
+  op->removeBindIdNameAttr();
+  op->removeBindStrNameAttr();
 }
 
 template <typename Op>

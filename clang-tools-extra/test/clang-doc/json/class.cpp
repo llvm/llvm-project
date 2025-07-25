@@ -33,35 +33,35 @@ protected:
 };
 
 // CHECK:       {
-// CHECK-NEXT:    "Description": [
-// CHECK-NEXT:      {
-// CHECK-NEXT:       "FullComment": {
-// CHECK-NEXT:         "Children": [
-// CHECK-NEXT:           {
-// CHECK-NEXT:             "ParagraphComment": {
-// CHECK-NEXT:               "Children": [
-// CHECK-NEXT:                 {
-// CHECK-NEXT:                   "TextComment": " This is a nice class."
-// CHECK-NEXT:                 },
-// CHECK-NEXT:                 {
-// CHECK-NEXT:                   "TextComment": " It has some nice methods and fields."
-// CHECK-NEXT:                 },
-// CHECK-NEXT:                 {
-// CHECK-NEXT:                   "TextComment": ""
-// CHECK-NEXT:                 }
-// CHECK-NEXT:               ]
-// CHECK:               {
-// CHECK-NEXT:             "BlockCommandComment": {
-// CHECK-NEXT:               "Children": [
-// CHECK-NEXT:                 {
-// CHECK-NEXT:                   "ParagraphComment": {
-// CHECK-NEXT:                     "Children": [
-// CHECK-NEXT:                       { 
-// CHECK-NEXT:                         "TextComment": " This is a brief description." 
-// CHECK-NEXT:                       }
-// CHECK:                   "Command": "brief"
+// CHECK-NEXT:    "Description": {
+// CHECK-NEXT:      "BriefComments": [
+// CHECK-NEXT:        {
+// CHECK-NEXT:          "Children": [
+// CHECK-NEXT:            {
+// CHECK-NEXT:              "ParagraphComment": {
+// CHECK-NEXT:                "Children": [
+// CHECK-NEXT:                  {
+// CHECK-NEXT:                    "TextComment": " This is a brief description."
+// CHECK:               "Command": "brief"
+// CHECK:           "HasBriefComments": true,
+// CHECK-NEXT:      "HasParagraphComments": true,
+// CHECK-NEXT:      "ParagraphComments": [
+// CHECK-NEXT:        {
+// CHECK-NEXT:          "Children": [
+// CHECK-NEXT:            {
+// CHECK-NEXT:              "TextComment": " This is a nice class."
+// CHECK-NEXT:            },
+// CHECK-NEXT:            {
+// CHECK-NEXT:              "TextComment": " It has some nice methods and fields."
+// CHECK-NEXT:            },
+// CHECK-NEXT:            {
+// CHECK-NEXT:              "TextComment": ""
+// CHECK-NEXT:            }
+// CHECK:         "DocumentationFileName": "_ZTV7MyClass",
 // CHECK:         "Enums": [
 // CHECK-NEXT:      {
+// CHECK-NEXT:        "End": true,
+// CHECK-NEXT:        "InfoType": "enum",
 // CHECK-NEXT:        "Location": {
 // CHECK-NEXT:          "Filename": "{{.*}}class.cpp",
 // CHECK-NEXT:          "LineNumber": 17
@@ -76,6 +76,7 @@ protected:
 // CHECK-NEXT:            "Value": "1"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          {
+// CHECK-NEXT:            "End": true,
 // CHECK-NEXT:            "Name": "BLUE",
 // CHECK-NEXT:            "ValueExpr": "5"
 // CHECK-NEXT:          }
@@ -94,6 +95,7 @@ protected:
 // CHECK-NEXT:        "IsClass": false,
 // CHECK-NEXT:        "Params": [
 // CHECK-NEXT:          {
+// CHECK-NEXT:            "End": true,
 // CHECK-NEXT:            "Name": "",
 // CHECK-NEXT:            "Type": "int"
 // CHECK-NEXT:          }
@@ -118,6 +120,7 @@ protected:
 // CHECK-NEXT:        }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      {
+// CHECK-NEXT:        "End": true,
 // CHECK-NEXT:        "IsClass": true,
 // CHECK-NEXT:        "Reference": {
 // CHECK-NEXT:          "Name": "Foo",
@@ -129,6 +132,11 @@ protected:
 // CHECK-NEXT:    ],
 // COM:           FIXME: FullName is not emitted correctly.
 // CHECK-NEXT:    "FullName": "",
+// CHECK-NEXT:    "HasEnums": true,
+// CHECK-NEXT:    "HasPublicFunctions": true,
+// CHECK-NEXT:    "HasPublicMembers": true,
+// CHECK-NEXT:    "HasRecords": true,
+// CHECK-NEXT:    "InfoType": "record",
 // CHECK-NEXT:    "IsTypedef": false,
 // CHECK-NEXT:    "Location": {
 // CHECK-NEXT:      "Filename": "{{.*}}class.cpp",
@@ -142,6 +150,7 @@ protected:
 // CHECK-NEXT:   "Path": "GlobalNamespace",
 // CHECK-NEXT:   "ProtectedFunctions": [
 // CHECK-NEXT:     {
+// CHECK-NEXT:       "InfoType": "function",
 // CHECK-NEXT:       "IsStatic": false,
 // CHECK-NEXT:       "Name": "protectedMethod",
 // CHECK-NEXT:       "Namespace": [
@@ -166,6 +175,7 @@ protected:
 // CHECK-NEXT:    ],
 // CHECK-NEXT:    "PublicFunctions": [
 // CHECK-NEXT:      {
+// CHECK-NEXT:        "InfoType": "function",
 // CHECK-NEXT:        "IsStatic": false,
 // CHECK-NEXT:        "Name": "myMethod",
 // CHECK-NEXT:        "Namespace": [
@@ -174,6 +184,7 @@ protected:
 // CHECK-NEXT:        ],
 // CHECK-NEXT:        "Params": [
 // CHECK-NEXT:          {
+// CHECK-NEXT:            "End": true,
 // CHECK-NEXT:            "Name": "MyParam",
 // CHECK-NEXT:            "Type": "int"
 // CHECK-NEXT:          }
@@ -204,6 +215,8 @@ protected:
 // CHECK-NEXT:    ],
 // CHECK-NEXT:    "Records": [
 // CHECK-NEXT:      {
+// CHECK-NEXT:        "DocumentationFileName": "_ZTVN7MyClass11NestedClassE",
+// CHECK-NEXT:        "End": true,
 // CHECK-NEXT:        "Name": "NestedClass",
 // CHECK-NEXT:        "Path": "GlobalNamespace{{[\/]+}}MyClass",
 // CHECK-NEXT:        "QualName": "NestedClass",
@@ -213,6 +226,8 @@ protected:
 // CHECK-NEXT:    "TagType": "struct",
 // CHECK-NEXT:    "Typedefs": [
 // CHECK-NEXT:      {
+// CHECK-NEXT:        "End": true,
+// CHECK-NEXT:        "InfoType": "typedef",
 // CHECK-NEXT:        "IsUsing": false,
 // CHECK-NEXT:        "Location": {
 // CHECK-NEXT:          "Filename": "{{.*}}class.cpp",

@@ -34,10 +34,19 @@ public:
   }
 
   mlir::Value emitLoadOfLValue(LValue lv, SourceLocation loc);
+
   /// Store the specified real/imag parts into the
   /// specified value pointer.
   void emitStoreOfComplex(mlir::Location loc, mlir::Value val, LValue lv,
                           bool isInit);
+
+  /// Emit a cast from complex value Val to DestType.
+  mlir::Value emitComplexToComplexCast(mlir::Value value, QualType srcType,
+                                       QualType destType, SourceLocation loc);
+
+  /// Emit a cast from scalar value Val to DestType.
+  mlir::Value emitScalarToComplexCast(mlir::Value value, QualType srcType,
+                                      QualType destType, SourceLocation loc);
 
   mlir::Value
   VisitAbstractConditionalOperator(const AbstractConditionalOperator *e);
@@ -52,11 +61,37 @@ public:
   mlir::Value VisitGenericSelectionExpr(GenericSelectionExpr *e);
   mlir::Value VisitImplicitCastExpr(ImplicitCastExpr *e);
   mlir::Value VisitInitListExpr(const InitListExpr *e);
+
+  mlir::Value VisitCompoundLiteralExpr(CompoundLiteralExpr *e) {
+    return emitLoadOfLValue(e);
+  }
+
   mlir::Value VisitImaginaryLiteral(const ImaginaryLiteral *il);
   mlir::Value VisitParenExpr(ParenExpr *e);
   mlir::Value
   VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *e);
+
+  mlir::Value VisitPrePostIncDec(const UnaryOperator *e, cir::UnaryOpKind op,
+                                 bool isPre);
+
+  mlir::Value VisitUnaryPostDec(const UnaryOperator *e) {
+    return VisitPrePostIncDec(e, cir::UnaryOpKind::Dec, false);
+  }
+
+  mlir::Value VisitUnaryPostInc(const UnaryOperator *e) {
+    return VisitPrePostIncDec(e, cir::UnaryOpKind::Inc, false);
+  }
+
+  mlir::Value VisitUnaryPreDec(const UnaryOperator *e) {
+    return VisitPrePostIncDec(e, cir::UnaryOpKind::Dec, true);
+  }
+
+  mlir::Value VisitUnaryPreInc(const UnaryOperator *e) {
+    return VisitPrePostIncDec(e, cir::UnaryOpKind::Inc, true);
+  }
+
   mlir::Value VisitUnaryDeref(const Expr *e);
+  mlir::Value VisitUnaryNot(const UnaryOperator *e);
 
   struct BinOpInfo {
     mlir::Location loc;
@@ -138,14 +173,110 @@ LValue ComplexExprEmitter::emitBinAssignLValue(const BinaryOperator *e,
 mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
                                          QualType destTy) {
   switch (ck) {
+  case CK_Dependent:
+    llvm_unreachable("dependent type must be resolved before the CIR codegen");
+
   case CK_NoOp:
   case CK_LValueToRValue:
     return Visit(op);
-  default:
-    break;
+
+  case CK_AtomicToNonAtomic:
+  case CK_NonAtomicToAtomic:
+  case CK_UserDefinedConversion: {
+    cgf.cgm.errorNYI(
+        "ComplexExprEmitter::emitCast Atmoic & UserDefinedConversion");
+    return {};
   }
-  cgf.cgm.errorNYI("ComplexType Cast");
-  return {};
+
+  case CK_LValueBitCast: {
+    cgf.cgm.errorNYI("ComplexExprEmitter::emitCast CK_LValueBitCast");
+    return {};
+  }
+
+  case CK_LValueToRValueBitCast: {
+    LValue sourceLVal = cgf.emitLValue(op);
+    Address addr = sourceLVal.getAddress().withElementType(
+        builder, cgf.convertTypeForMem(destTy));
+    LValue destLV = cgf.makeAddrLValue(addr, destTy);
+    assert(!cir::MissingFeatures::opTBAA());
+    return emitLoadOfLValue(destLV, op->getExprLoc());
+  }
+
+  case CK_BitCast:
+  case CK_BaseToDerived:
+  case CK_DerivedToBase:
+  case CK_UncheckedDerivedToBase:
+  case CK_Dynamic:
+  case CK_ToUnion:
+  case CK_ArrayToPointerDecay:
+  case CK_FunctionToPointerDecay:
+  case CK_NullToPointer:
+  case CK_NullToMemberPointer:
+  case CK_BaseToDerivedMemberPointer:
+  case CK_DerivedToBaseMemberPointer:
+  case CK_MemberPointerToBoolean:
+  case CK_ReinterpretMemberPointer:
+  case CK_ConstructorConversion:
+  case CK_IntegralToPointer:
+  case CK_PointerToIntegral:
+  case CK_PointerToBoolean:
+  case CK_ToVoid:
+  case CK_VectorSplat:
+  case CK_IntegralCast:
+  case CK_BooleanToSignedIntegral:
+  case CK_IntegralToBoolean:
+  case CK_IntegralToFloating:
+  case CK_FloatingToIntegral:
+  case CK_FloatingToBoolean:
+  case CK_FloatingCast:
+  case CK_CPointerToObjCPointerCast:
+  case CK_BlockPointerToObjCPointerCast:
+  case CK_AnyPointerToBlockPointerCast:
+  case CK_ObjCObjectLValueCast:
+  case CK_FloatingComplexToReal:
+  case CK_FloatingComplexToBoolean:
+  case CK_IntegralComplexToReal:
+  case CK_IntegralComplexToBoolean:
+  case CK_ARCProduceObject:
+  case CK_ARCConsumeObject:
+  case CK_ARCReclaimReturnedObject:
+  case CK_ARCExtendBlockObject:
+  case CK_CopyAndAutoreleaseBlockObject:
+  case CK_BuiltinFnToFnPtr:
+  case CK_ZeroToOCLOpaqueType:
+  case CK_AddressSpaceConversion:
+  case CK_IntToOCLSampler:
+  case CK_FloatingToFixedPoint:
+  case CK_FixedPointToFloating:
+  case CK_FixedPointCast:
+  case CK_FixedPointToBoolean:
+  case CK_FixedPointToIntegral:
+  case CK_IntegralToFixedPoint:
+  case CK_MatrixCast:
+  case CK_HLSLVectorTruncation:
+  case CK_HLSLArrayRValue:
+  case CK_HLSLElementwiseCast:
+  case CK_HLSLAggregateSplatCast:
+    llvm_unreachable("invalid cast kind for complex value");
+
+  case CK_FloatingRealToComplex:
+  case CK_IntegralRealToComplex: {
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
+    return emitScalarToComplexCast(cgf.emitScalarExpr(op), op->getType(),
+                                   destTy, op->getExprLoc());
+  }
+
+  case CK_FloatingComplexCast:
+  case CK_FloatingComplexToIntegralComplex:
+  case CK_IntegralComplexCast:
+  case CK_IntegralComplexToFloatingComplex: {
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
+    return emitComplexToComplexCast(Visit(op), op->getType(), destTy,
+                                    op->getExprLoc());
+  }
+  }
+
+  llvm_unreachable("unknown cast resulting in complex value");
 }
 
 mlir::Value ComplexExprEmitter::emitConstant(
@@ -179,6 +310,49 @@ void ComplexExprEmitter::emitStoreOfComplex(mlir::Location loc, mlir::Value val,
 
   const Address destAddr = lv.getAddress();
   builder.createStore(loc, val, destAddr);
+}
+
+mlir::Value ComplexExprEmitter::emitComplexToComplexCast(mlir::Value val,
+                                                         QualType srcType,
+                                                         QualType destType,
+                                                         SourceLocation loc) {
+  if (srcType == destType)
+    return val;
+
+  // Get the src/dest element type.
+  QualType srcElemTy = srcType->castAs<ComplexType>()->getElementType();
+  QualType destElemTy = destType->castAs<ComplexType>()->getElementType();
+
+  cir::CastKind castOpKind;
+  if (srcElemTy->isFloatingType() && destElemTy->isFloatingType())
+    castOpKind = cir::CastKind::float_complex;
+  else if (srcElemTy->isFloatingType() && destElemTy->isIntegerType())
+    castOpKind = cir::CastKind::float_complex_to_int_complex;
+  else if (srcElemTy->isIntegerType() && destElemTy->isFloatingType())
+    castOpKind = cir::CastKind::int_complex_to_float_complex;
+  else if (srcElemTy->isIntegerType() && destElemTy->isIntegerType())
+    castOpKind = cir::CastKind::int_complex;
+  else
+    llvm_unreachable("unexpected src type or dest type");
+
+  return builder.createCast(cgf.getLoc(loc), castOpKind, val,
+                            cgf.convertType(destType));
+}
+
+mlir::Value ComplexExprEmitter::emitScalarToComplexCast(mlir::Value val,
+                                                        QualType srcType,
+                                                        QualType destType,
+                                                        SourceLocation loc) {
+  cir::CastKind castOpKind;
+  if (srcType->isFloatingType())
+    castOpKind = cir::CastKind::float_to_complex;
+  else if (srcType->isIntegerType())
+    castOpKind = cir::CastKind::int_to_complex;
+  else
+    llvm_unreachable("unexpected src type");
+
+  return builder.createCast(cgf.getLoc(loc), castOpKind, val,
+                            cgf.convertType(destType));
 }
 
 mlir::Value ComplexExprEmitter::VisitAbstractConditionalOperator(
@@ -230,8 +404,7 @@ mlir::Value ComplexExprEmitter::VisitBinComma(const BinaryOperator *e) {
 mlir::Value ComplexExprEmitter::VisitCallExpr(const CallExpr *e) {
   if (e->getCallReturnType(cgf.getContext())->isReferenceType())
     return emitLoadOfLValue(e);
-
-  return cgf.emitCallExpr(e).getValue();
+  return cgf.emitCallExpr(e).getComplexValue();
 }
 
 mlir::Value ComplexExprEmitter::VisitCastExpr(CastExpr *e) {
@@ -334,8 +507,20 @@ mlir::Value ComplexExprEmitter::VisitSubstNonTypeTemplateParmExpr(
   return Visit(e->getReplacement());
 }
 
+mlir::Value ComplexExprEmitter::VisitPrePostIncDec(const UnaryOperator *e,
+                                                   cir::UnaryOpKind op,
+                                                   bool isPre) {
+  LValue lv = cgf.emitLValue(e->getSubExpr());
+  return cgf.emitComplexPrePostIncDec(e, lv, op, isPre);
+}
+
 mlir::Value ComplexExprEmitter::VisitUnaryDeref(const Expr *e) {
   return emitLoadOfLValue(e);
+}
+
+mlir::Value ComplexExprEmitter::VisitUnaryNot(const UnaryOperator *e) {
+  mlir::Value op = Visit(e->getSubExpr());
+  return builder.createNot(op);
 }
 
 mlir::Value ComplexExprEmitter::emitPromoted(const Expr *e,
@@ -415,6 +600,41 @@ mlir::Value CIRGenFunction::emitComplexExpr(const Expr *e) {
          "Invalid complex expression to emit");
 
   return ComplexExprEmitter(*this).Visit(const_cast<Expr *>(e));
+}
+
+mlir::Value CIRGenFunction::emitComplexPrePostIncDec(const UnaryOperator *e,
+                                                     LValue lv,
+                                                     cir::UnaryOpKind op,
+                                                     bool isPre) {
+  assert(op == cir::UnaryOpKind::Inc ||
+         op == cir::UnaryOpKind::Dec && "Invalid UnaryOp kind for ComplexType");
+
+  mlir::Value inVal = emitLoadOfComplex(lv, e->getExprLoc());
+  mlir::Location loc = getLoc(e->getExprLoc());
+  mlir::Value incVal = builder.createUnaryOp(loc, op, inVal);
+
+  // Store the updated result through the lvalue.
+  emitStoreOfComplex(loc, incVal, lv, /*isInit=*/false);
+
+  if (getLangOpts().OpenMP)
+    cgm.errorNYI(loc, "emitComplexPrePostIncDec OpenMP");
+
+  // If this is a postinc, return the value read from memory, otherwise use the
+  // updated value.
+  return isPre ? incVal : inVal;
+}
+
+void CIRGenFunction::emitComplexExprIntoLValue(const Expr *e, LValue dest,
+                                               bool isInit) {
+  assert(e && getComplexType(e->getType()) &&
+         "Invalid complex expression to emit");
+  ComplexExprEmitter emitter(*this);
+  mlir::Value value = emitter.Visit(const_cast<Expr *>(e));
+  emitter.emitStoreOfComplex(getLoc(e->getExprLoc()), value, dest, isInit);
+}
+
+mlir::Value CIRGenFunction::emitLoadOfComplex(LValue src, SourceLocation loc) {
+  return ComplexExprEmitter(*this).emitLoadOfLValue(src, loc);
 }
 
 void CIRGenFunction::emitStoreOfComplex(mlir::Location loc, mlir::Value v,
