@@ -47,7 +47,7 @@ using Matcher     = std::function<MatchResult(const std::string& /*text*/)>;
 MatchResult MatchAssertionMessage(const std::string& text, std::string_view expected_message) {
   // Extract information from the error message. This has to stay synchronized with how we format assertions in the
   // library.
-  std::regex assertion_format(".*###\\n(.*):(\\d+): assertion (.*) failed: (.*)\\n###");
+  std::regex assertion_format(".*###\\n(.*):(\\d+): libc\\+\\+ Hardening assertion (.*) failed: (.*)\\n###");
 
   std::smatch match_result;
   bool has_match = std::regex_match(text, match_result, assertion_format);
