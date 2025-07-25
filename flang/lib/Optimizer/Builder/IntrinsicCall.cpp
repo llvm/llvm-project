@@ -371,7 +371,8 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genCFPointer,
      {{{"cptr", asValue},
        {"fptr", asInquired},
-       {"shape", asAddr, handleDynamicOptional}}},
+       {"shape", asAddr, handleDynamicOptional},
+       {"lower", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"c_f_procpointer",
      &I::genCFProcPointer,
@@ -3438,7 +3439,7 @@ IntrinsicLibrary::genCDevLoc(mlir::Type resultType,
 
 // C_F_POINTER
 void IntrinsicLibrary::genCFPointer(llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 3);
+  assert(args.size() == 4);
   // Handle CPTR argument
   // Get the value of the C address or the result of a reference to C_LOC.
   mlir::Value cPtr = fir::getBase(args[0]);
@@ -3453,9 +3454,12 @@ void IntrinsicLibrary::genCFPointer(llvm::ArrayRef<fir::ExtendedValue> args) {
     mlir::Value addr =
         builder.createConvert(loc, fPtr->getMemTy(), cPtrAddrVal);
     mlir::SmallVector<mlir::Value> extents;
+    mlir::SmallVector<mlir::Value> lbounds;
     if (box.hasRank()) {
       assert(isStaticallyPresent(args[2]) &&
              "FPTR argument must be an array if SHAPE argument exists");
+
+      // Handle and unpack SHAPE argument
       mlir::Value shape = fir::getBase(args[2]);
       int arrayRank = box.rank();
       mlir::Type shapeElementType =
@@ -3468,17 +3472,31 @@ void IntrinsicLibrary::genCFPointer(llvm::ArrayRef<fir::ExtendedValue> args) {
         mlir::Value load = fir::LoadOp::create(builder, loc, var);
         extents.push_back(builder.createConvert(loc, idxType, load));
       }
+
+      // Handle and unpack LOWER argument if present
+      if (isStaticallyPresent(args[3])) {
+        mlir::Value lower = fir::getBase(args[3]);
+        mlir::Type lowerElementType =
+            fir::unwrapSequenceType(fir::unwrapPassByRefType(lower.getType()));
+        for (int i = 0; i < arrayRank; ++i) {
+          mlir::Value index = builder.createIntegerConstant(loc, idxType, i);
+          mlir::Value var = builder.create<fir::CoordinateOp>(
+              loc, builder.getRefType(lowerElementType), lower, index);
+          mlir::Value load = builder.create<fir::LoadOp>(loc, var);
+          lbounds.push_back(builder.createConvert(loc, idxType, load));
+        }
+      }
     }
     if (box.isCharacter()) {
       mlir::Value len = box.nonDeferredLenParams()[0];
       if (box.hasRank())
-        return fir::CharArrayBoxValue{addr, len, extents};
+        return fir::CharArrayBoxValue{addr, len, extents, lbounds};
       return fir::CharBoxValue{addr, len};
     }
     if (box.isDerivedWithLenParameters())
       TODO(loc, "get length parameters of derived type");
     if (box.hasRank())
-      return fir::ArrayBoxValue{addr, extents};
+      return fir::ArrayBoxValue{addr, extents, lbounds};
     return addr;
   };
 
