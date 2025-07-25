@@ -350,7 +350,9 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
   static const size_t largeArchive = 10 * 1024 * 1024;
   static std::atomic_uint64_t totalBytes = 0;
   std::atomic_int index = 0, included = 0;
+#ifndef NDEBUG
   auto t0 = high_resolution_clock::now();
+#endif
 
   parallelFor(0, config->readThreads, [&](size_t I) {
     while (true) {
@@ -371,11 +373,13 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
     }
   });
 
-  LLVM_ATTRIBUTE_UNUSED auto dt = high_resolution_clock::now() - t0;
-  LLVM_DEBUG(if (Process::GetEnv("LLD_MULTI_THREAD_PAGE")) std::cerr
-             << "multiThreadedPageIn " << totalBytes << "/" << included << "/"
-             << deferred.size() << "/" << std::setprecision(4)
-             << duration_cast<milliseconds>(dt).count() / 1000. << "\n");
+#ifndef NDEBUG
+  auto dt = high_resolution_clock::now() - t0;
+  if (Process::GetEnv("LLD_MULTI_THREAD_PAGE"))
+    std::cerr << "multiThreadedPageIn " << totalBytes << "/" << included << "/"
+              << deferred.size() << "/" << std::setprecision(4)
+              << duration_cast<milliseconds>(dt).count() / 1000. << "\n";
+#endif
 }
 
 static void multiThreadedPageIn(const DeferredFiles &deferred,
