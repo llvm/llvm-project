@@ -225,3 +225,20 @@ extern void abc_02(func_type *);
   abc_02(&func_ptr);
   func_ptr();
 } // expected-warning {{function declared 'noreturn' should not return}}
+
+namespace Issue150336 {
+void free(void *);
+typedef void (*sel_freefunc)(void *);
+struct gmx_ana_selmethod_t {
+  sel_freefunc free;
+  int nparams;
+  int *param;
+};
+void gmx_selelem_free_method(struct gmx_ana_selmethod_t* method, void* mdata) {
+    sel_freefunc free_func = 0;
+    for (int i = 0; i < method->nparams; ++i)
+        free(&method->param[i]);
+    if (mdata && free_func)
+        free_func(mdata);
+}
+}
