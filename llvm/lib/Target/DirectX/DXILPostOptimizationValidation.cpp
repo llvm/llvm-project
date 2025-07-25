@@ -11,6 +11,7 @@
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
@@ -26,19 +27,6 @@ using namespace llvm;
 using namespace llvm::dxil;
 
 namespace {
-static const char *ResourceClassToString(llvm::dxil::ResourceClass Class) {
-  switch (Class) {
-  case ResourceClass::SRV:
-    return "SRV";
-  case ResourceClass::UAV:
-    return "UAV";
-  case ResourceClass::CBuffer:
-    return "CBuffer";
-  case ResourceClass::Sampler:
-    return "Sampler";
-  }
-}
-
 static ResourceClass RangeToResourceClass(uint32_t RangeType) {
   using namespace dxbc;
   switch (static_cast<DescriptorRangeType>(RangeType)) {
@@ -132,7 +120,7 @@ static void reportRegNotBound(Module &M,
                               llvm::hlsl::rootsig::RangeInfo Unbound) {
   SmallString<128> Message;
   raw_svector_ostream OS(Message);
-  OS << "register " << ResourceClassToString(Unbound.Class)
+  OS << "register " << getResourceClassName(Unbound.Class)
      << " (space=" << Unbound.Space << ", register=" << Unbound.LowerBound
      << ")"
      << " does not have a binding in the Root Signature";

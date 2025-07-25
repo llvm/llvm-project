@@ -153,17 +153,17 @@ public:
       uint32_t InsertPos = Bindings.size();
       Bindings.push_back(Binding);
       Ranges[Type] = {InsertPos, InsertPos + 1};
-    } else {
-      uint32_t InsertPos = It->second.End;
-      Bindings.insert(Bindings.begin() + InsertPos, Binding);
+      return;
+    } 
+    uint32_t InsertPos = It->second.End;
+    Bindings.insert(Bindings.begin() + InsertPos, Binding);
 
-      It->second.End++;
+    It->second.End++;
 
-      for (auto &[Type, Range] : Ranges) {
-        if (Range.Start > InsertPos) {
-          Range.Start++;
-          Range.End++;
-        }
+    for (auto &[Type, Range] : Ranges) {
+      if (Range.Start > InsertPos) {
+        Range.Start++;
+        Range.End++;
       }
     }
   }
@@ -171,9 +171,8 @@ public:
   llvm::ArrayRef<RangeInfo>
   getBindingsOfType(const dxil::ResourceClass &Type) const {
     auto It = Ranges.find(Type);
-    if (It == Ranges.end()) {
+    if (It == Ranges.end()) 
       return {};
-    }
     return llvm::ArrayRef<RangeInfo>(Bindings.data() + It->second.Start,
                                      It->second.End - It->second.Start);
   }

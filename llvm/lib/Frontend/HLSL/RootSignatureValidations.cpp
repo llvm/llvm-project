@@ -335,9 +335,8 @@ findUnboundRanges(const llvm::ArrayRef<RangeInfo> &Ranges,
         break;
       }
     }
-    if (!Bound) {
+    if (!Bound) 
       Unbounds.push_back(Range);
-    }
   }
   return Unbounds;
 }
