@@ -620,7 +620,9 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
 
 StringRef ELFObjectFileBase::getNVPTXCPUName() const {
   assert(getEMachine() == ELF::EM_CUDA);
-  unsigned SM = getPlatformFlags() & ELF::EF_CUDA_SM;
+  unsigned SM = getEIdentABIVersion() == ELF::ELFABIVERSION_CUDA_V1
+                    ? getPlatformFlags() & ELF::EF_CUDA_SM
+                    : getPlatformFlags() & ELF::EF_CUDA_SM_MASK;
 
   switch (SM) {
   // Fermi architecture.
@@ -679,7 +681,18 @@ StringRef ELFObjectFileBase::getNVPTXCPUName() const {
 
   // Hopper architecture.
   case ELF::EF_CUDA_SM90:
-    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_90a" : "sm_90";
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS_V1 ? "sm_90a"
+                                                             : "sm_90";
+
+  // Blackwell architecture.
+  case ELF::EF_CUDA_SM100:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_100a"
+                                                          : "sm_100";
+
+  // Rubin architecture.
+  case ELF::EF_CUDA_SM120:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_120a"
+                                                          : "sm_120";
   default:
     llvm_unreachable("Unknown EF_CUDA_SM value");
   }

@@ -1592,46 +1592,14 @@ unsigned BinaryContext::addDebugFilenameToUnit(const uint32_t DestCUID,
                                DestCUID, DstUnit->getVersion()));
 }
 
-const std::vector<BinaryFunction *> &BinaryContext::getOutputFunctions() {
-  assert((!HasRelocations || HasFinalizedFunctionOrder) &&
-         "Output function order not finalized");
-
-  if (!OutputFunctions.empty())
-    return OutputFunctions;
-
-  OutputFunctions.reserve(BinaryFunctions.size() +
-                          InjectedBinaryFunctions.size());
+std::vector<BinaryFunction *> BinaryContext::getSortedFunctions() {
+  std::vector<BinaryFunction *> SortedFunctions(BinaryFunctions.size());
   llvm::transform(llvm::make_second_range(BinaryFunctions),
-                  std::back_inserter(OutputFunctions),
+                  SortedFunctions.begin(),
                   [](BinaryFunction &BF) { return &BF; });
 
-  llvm::erase_if(OutputFunctions,
-                 [this](BinaryFunction *BF) { return !shouldEmit(*BF); });
-
-  llvm::stable_sort(OutputFunctions,
-                    [](const BinaryFunction *A, const BinaryFunction *B) {
-                      // Place hot text movers at the start.
-                      if (A->isHotTextMover() && !B->isHotTextMover())
-                        return true;
-                      if (!A->isHotTextMover() && B->isHotTextMover())
-                        return false;
-                      if (A->hasValidIndex() && B->hasValidIndex()) {
-                        return A->getIndex() < B->getIndex();
-                      }
-                      if (opts::HotFunctionsAtEnd)
-                        return B->hasValidIndex();
-                      else
-                        return A->hasValidIndex();
-                    });
-
-  llvm::copy(InjectedBinaryFunctions, std::back_inserter(OutputFunctions));
-
-  return OutputFunctions;
-}
-
-void BinaryContext::updateOutputFunctions(
-    std::vector<BinaryFunction *> &Functions) {
-  OutputFunctions.swap(Functions);
+  llvm::stable_sort(SortedFunctions, compareBinaryFunctionByIndex);
+  return SortedFunctions;
 }
 
 std::vector<BinaryFunction *> BinaryContext::getAllBinaryFunctions() {
@@ -2417,10 +2385,6 @@ BinaryContext::createInjectedBinaryFunction(const std::string &Name,
   BinaryFunction *BF = InjectedBinaryFunctions.back();
   setSymbolToFunctionMap(BF->getSymbol(), BF);
   BF->CurrentState = BinaryFunction::State::CFG;
-
-  if (!OutputFunctions.empty())
-    OutputFunctions.push_back(BF);
-
   return BF;
 }
 
@@ -2455,12 +2419,6 @@ BinaryContext::createInstructionPatch(uint64_t Address,
     PBF->setAnonymous(true);
 
   return PBF;
-}
-
-BinaryFunction *
-BinaryContext::createThunkBinaryFunction(const std::string &Name) {
-  static NameResolver NR;
-  return createInjectedBinaryFunction(NR.uniquify(Name));
 }
 
 std::pair<size_t, size_t>

@@ -88,7 +88,6 @@
 #include <cassert>
 #include <cstdint>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 using namespace SCEVPatternMatch;
