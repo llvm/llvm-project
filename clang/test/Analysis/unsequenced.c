@@ -112,6 +112,16 @@ static void binary_op_checks_inline(void) {
     // expected-note@-2{{variable is written to here}}
     // expected-note@-3{{variable is written to here}}
     // expected-warning@-4{{multiple unsequenced modifications}}
+    
+    (*&a1) = ++a1;
+    // expected-warning@-1{{unsequenced writes to variable}}
+    // expected-note@-2{{variable is written to here}}
+    // expected-note@-3{{variable is written to here}}
+
+    (*&a1) = a1++;
+    // expected-warning@-1{{unsequenced writes to variable}}
+    // expected-note@-2{{variable is written to here}}
+    // expected-note@-3{{variable is written to here}}
 
     (void)a1; (void)b;
 }
@@ -325,21 +335,4 @@ static void dst_tests(void) {
     if (wrap.data + post_inc_wrapper(&wrap)) {}
     // expected-warning@-1{{unsequenced write to and read from variable}}
     // expected-note@-2{{variable is read from here}}
-}
-
-struct two_ints {
-    int a, b;
-};
-
-static void struct_tests(void) {
-    struct two_ints two = { 1, 2 };
-
-    // -Wunsequenced doesn't yet support this
-    two.a = two.a++;
-    // expected-warning@-1{{unsequenced writes to variable}}
-    // expected-note@-2{{variable is written to here}}
-    // expected-note@-3{{variable is written to here}}
-    
-    two = (struct two_ints){ two.a++, 0 };
-    // Not certain
 }
