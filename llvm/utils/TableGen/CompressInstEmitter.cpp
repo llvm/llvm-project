@@ -275,7 +275,7 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
         OperandMap[OpNo].Kind = OpData::Operand;
       } else if (const auto *II = dyn_cast<IntInit>(Dag->getArg(DAGOpNo))) {
         // Validate that corresponding instruction operand expects an immediate.
-        if (OpndRec->isSubClassOf("RegisterClass"))
+        if (!OpndRec->isSubClassOf("Operand"))
           PrintFatalError(Rec->getLoc(), "Error in Dag '" + Dag->getAsString() +
                                              "' Found immediate: '" +
                                              II->getAsString() +
