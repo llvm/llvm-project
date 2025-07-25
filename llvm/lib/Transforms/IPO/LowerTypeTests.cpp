@@ -349,6 +349,7 @@ private:
 
 struct ScopedSaveAliaseesAndUsed {
   Module &M;
+  std::set<GlobalAlias *> *ExcludedAliases;
   SmallVector<GlobalValue *, 4> Used, CompilerUsed;
   std::vector<std::pair<GlobalAlias *, Function *>> FunctionAliases;
   std::vector<std::pair<GlobalIFunc *, Function *>> ResolverIFuncs;
@@ -377,7 +378,9 @@ struct ScopedSaveAliaseesAndUsed {
     Vec.resize(NonFuncBegin - Vec.begin());
   }
 
-  ScopedSaveAliaseesAndUsed(Module &M) : M(M) {
+  ScopedSaveAliaseesAndUsed(Module &M,
+                            std::set<GlobalAlias *> *ExcludedAliases = nullptr)
+      : M(M), ExcludedAliases(ExcludedAliases) {
     // The users of this class want to replace all function references except
     // for aliases and llvm.used/llvm.compiler.used with references to a jump
     // table. We avoid replacing aliases in order to avoid introducing a double
@@ -396,8 +399,9 @@ struct ScopedSaveAliaseesAndUsed {
     for (auto &GA : M.aliases()) {
       // FIXME: This should look past all aliases not just interposable ones,
       // see discussion on D65118.
-      if (auto *F = dyn_cast<Function>(GA.getAliasee()->stripPointerCasts()))
-        FunctionAliases.push_back({&GA, F});
+      if (!ExcludedAliases || !ExcludedAliases->count(&GA))
+        if (auto *F = dyn_cast<Function>(GA.getAliasee()->stripPointerCasts()))
+          FunctionAliases.push_back({&GA, F});
     }
 
     for (auto &GI : M.ifuncs())
@@ -2137,6 +2141,18 @@ bool LowerTypeTestsModule::lower() {
                 if (auto Alias = dyn_cast<AliasSummary>(RefGVS.get()))
                   AddressTaken.insert(Alias->getAliaseeGUID());
             }
+      auto IsAddressTaken = [&](GlobalValue::GUID GUID) {
+        if (AddressTaken.count(GUID))
+          return true;
+        auto VI = ExportSummary->getValueInfo(GUID);
+        if (!VI)
+          return false;
+        for (auto &I : VI.getSummaryList())
+          if (auto Alias = dyn_cast<AliasSummary>(I.get()))
+            if (AddressTaken.count(Alias->getAliaseeGUID()))
+              return true;
+        return false;
+      };
       for (auto *FuncMD : CfiFunctionsMD->operands()) {
         assert(FuncMD->getNumOperands() >= 2);
         StringRef FunctionName =
@@ -2153,7 +2169,7 @@ bool LowerTypeTestsModule::lower() {
         // have no live references (and are not exported with cross-DSO CFI.)
         if (!ExportSummary->isGUIDLive(GUID))
           continue;
-        if (!AddressTaken.count(GUID)) {
+        if (!IsAddressTaken(GUID)) {
           if (!CrossDsoCfi || Linkage != CFL_Definition)
             continue;
 
@@ -2222,6 +2238,44 @@ bool LowerTypeTestsModule::lower() {
           for (unsigned I = 2; I < FuncMD->getNumOperands(); ++I)
             F->addMetadata(LLVMContext::MD_type,
                            *cast<MDNode>(FuncMD->getOperand(I).get()));
+        }
+      }
+    }
+  }
+
+  struct AliasToCreate {
+    Function *Alias;
+    std::string TargetName;
+  };
+  std::vector<AliasToCreate> AliasesToCreate;
+  
+  // Parse alias data to replace stand-in function declarations for aliases
+  // with an alias to the intended target.
+  std::set<GlobalAlias *> ExcludedAliases;
+  if (ExportSummary) {
+    if (NamedMDNode *AliasesMD = M.getNamedMetadata("aliases")) {
+      for (auto *AliasMD : AliasesMD->operands()) {
+        std::vector<Function *> Aliases;
+        for (Metadata *MD : AliasMD->operands()) {
+          auto *MDS = dyn_cast<MDString>(MD);
+          if (!MDS)
+            continue;
+          StringRef AliasName = MDS->getString();
+          if (!ExportedFunctions.count(AliasName))
+            continue;
+          auto *AliasF = M.getFunction(AliasName);
+          if (AliasF)
+            Aliases.push_back(AliasF);
+        }
+
+        if (Aliases.empty())
+          continue;
+
+        for (unsigned I = 1; I != Aliases.size(); ++I) {
+          auto *AliasF = Aliases[I];
+          ExportedFunctions.erase(AliasF->getName());
+          AliasesToCreate.push_back(
+              {AliasF, std::string(Aliases[0]->getName())});
         }
       }
     }
@@ -2374,7 +2428,7 @@ bool LowerTypeTestsModule::lower() {
     return false;
 
   {
-    ScopedSaveAliaseesAndUsed S(M);
+    ScopedSaveAliaseesAndUsed S(M, &ExcludedAliases);
     // For each disjoint set we found...
     for (const auto &C : GlobalClasses) {
       if (!C->isLeader())
@@ -2414,49 +2468,18 @@ bool LowerTypeTestsModule::lower() {
 
   allocateByteArrays();
 
-  // Parse alias data to replace stand-in function declarations for aliases
-  // with an alias to the intended target.
-  if (ExportSummary) {
-    if (NamedMDNode *AliasesMD = M.getNamedMetadata("aliases")) {
-      for (auto *AliasMD : AliasesMD->operands()) {
-        assert(AliasMD->getNumOperands() >= 4);
-        StringRef AliasName =
-            cast<MDString>(AliasMD->getOperand(0))->getString();
-        StringRef Aliasee = cast<MDString>(AliasMD->getOperand(1))->getString();
-
-        if (auto It = ExportedFunctions.find(Aliasee);
-            It == ExportedFunctions.end() ||
-            It->second.Linkage != CFL_Definition || !M.getNamedAlias(Aliasee))
-          continue;
-
-        GlobalValue::VisibilityTypes Visibility =
-            static_cast<GlobalValue::VisibilityTypes>(
-                cast<ConstantAsMetadata>(AliasMD->getOperand(2))
-                    ->getValue()
-                    ->getUniqueInteger()
-                    .getZExtValue());
-        bool Weak =
-            static_cast<bool>(cast<ConstantAsMetadata>(AliasMD->getOperand(3))
-                                  ->getValue()
-                                  ->getUniqueInteger()
-                                  .getZExtValue());
-
-        auto *Alias = GlobalAlias::create("", M.getNamedAlias(Aliasee));
-        Alias->setVisibility(Visibility);
-        if (Weak)
-          Alias->setLinkage(GlobalValue::WeakAnyLinkage);
-
-        if (auto *F = M.getFunction(AliasName)) {
-          Alias->takeName(F);
-          F->replaceAllUsesWith(Alias);
-          F->eraseFromParent();
-        } else {
-          Alias->setName(AliasName);
-        }
-      }
-    }
+  for (auto A : AliasesToCreate) {
+    auto *Target = M.getNamedValue(A.TargetName);
+    if (!isa<GlobalAlias>(Target))
+      continue;
+    auto *AliasGA = GlobalAlias::create("", Target);
+    AliasGA->setVisibility(A.Alias->getVisibility());
+    AliasGA->setLinkage(A.Alias->getLinkage());
+    AliasGA->takeName(A.Alias);
+    A.Alias->replaceAllUsesWith(AliasGA);
+    A.Alias->eraseFromParent();
   }
-
+  
   // Emit .symver directives for exported functions, if they exist.
   if (ExportSummary) {
     if (NamedMDNode *SymversMD = M.getNamedMetadata("symvers")) {
