@@ -3,26 +3,26 @@
 
 ; Check for a variant part where a variant has multiple members.
 
-; CHECK: DW_AT_name [DW_FORM_str{{[a-z]+}}]  ({{.*}} = "Discr")
+; CHECK: DW_AT_name [DW_FORM_str{{[a-z]+}}]  ({{(.* = )?}}"Discr")
 ; CHECK: DW_TAG_variant_part
 ;   CHECK-NOT: TAG
 ;     CHECK: DW_AT_discr [DW_FORM_ref4] (cu + {{0x[0-9a-fA-F]+}} => {[[OFFSET:0x[0-9a-fA-F]+]]})
 ;     CHECK: DW_TAG_variant
 ;       CHECK: DW_AT_discr_value [DW_FORM_data1] (0x4a)
 ;       CHECK: DW_TAG_member
-;         CHECK: DW_AT_name [DW_FORM_str{{[a-z]+}}]  ({{.*}} = "field0")
+;         CHECK: DW_AT_name [DW_FORM_str{{[a-z]+}}]  ({{(.* = )?}}"field0")
 ;         CHECK: DW_AT_type
 ;         CHECK: DW_AT_alignment
 ;         CHECK: DW_AT_data_member_location [DW_FORM_data1]	(0x00)
 ;       CHECK: DW_TAG_member
-;         CHECK: DW_AT_name [DW_FORM_str{{[a-z]+}}]  ({{.*}} = "field1")
+;         CHECK: DW_AT_name [DW_FORM_str{{[a-z]+}}]  ({{(.* = )?}}"field1")
 ;         CHECK: DW_AT_type
 ;         CHECK: DW_AT_alignment
 ;         CHECK: DW_AT_data_member_location [DW_FORM_data1]	(0x08)
 ;     CHECK: DW_TAG_variant
 ;       CHECK: DW_AT_discr_value [DW_FORM_data1] (0x4b)
 ;       CHECK: DW_TAG_member
-;         CHECK: DW_AT_name [DW_FORM_str{{[a-z]+}}]  ({{.*}} = "field2")
+;         CHECK: DW_AT_name [DW_FORM_str{{[a-z]+}}]  ({{(.* = )?}}"field2")
 ;         CHECK: DW_AT_type
 ;         CHECK: DW_AT_alignment
 ;         CHECK: DW_AT_data_member_location [DW_FORM_data1]	(0x00)

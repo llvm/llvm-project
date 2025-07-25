@@ -10,7 +10,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
-#include <string>
 #include <vector>
 
 using namespace clang::ast_matchers;

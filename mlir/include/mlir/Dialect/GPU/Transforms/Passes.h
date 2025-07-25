@@ -113,6 +113,9 @@ void populateGpuDecomposeMemrefsPatterns(RewritePatternSet &patterns);
 /// Erase barriers that do not enforce conflicting memory side effects.
 void populateGpuEliminateBarriersPatterns(RewritePatternSet &patterns);
 
+/// Tries to promote `gpu.shuffle`s to specialized AMDGPU intrinsics.
+void populateGpuPromoteShuffleToAMDGPUPatterns(RewritePatternSet &patterns);
+
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/GPU/Transforms/Passes.h.inc"

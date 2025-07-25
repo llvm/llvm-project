@@ -26,8 +26,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _Function>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Function
-for_each(_InputIterator __first, _InputIterator __last, _Function __f) {
+_LIBCPP_HIDE_FROM_ABI _Function for_each(_InputIterator __first, _InputIterator __last, _Function __f) {
   for (; __first != __last; ++__first)
     __f(*__first);
   return __f;

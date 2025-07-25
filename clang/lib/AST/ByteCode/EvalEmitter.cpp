@@ -20,7 +20,7 @@ EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
     : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {}
 
 EvalEmitter::~EvalEmitter() {
-  for (auto &[K, V] : Locals) {
+  for (auto &V : Locals) {
     Block *B = reinterpret_cast<Block *>(V.get());
     if (B->isInitialized())
       B->invokeDtor();
@@ -90,6 +90,19 @@ EvaluationResult EvalEmitter::interpretAsPointer(const Expr *E,
   return std::move(this->EvalResult);
 }
 
+bool EvalEmitter::interpretCall(const FunctionDecl *FD, const Expr *E) {
+  // Add parameters to the parameter map. The values in the ParamOffset don't
+  // matter in this case as reading from them can't ever work.
+  for (const ParmVarDecl *PD : FD->parameters()) {
+    this->Params.insert({PD, {0, false}});
+  }
+
+  if (!this->visit(E))
+    return false;
+  PrimType T = Ctx.classify(E).value_or(PT_Ptr);
+  return this->emitPop(T, E);
+}
+
 void EvalEmitter::emitLabel(LabelTy Label) { CurrentLabel = Label; }
 
 EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
@@ -112,7 +125,7 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
 
   // Register the local.
   unsigned Off = Locals.size();
-  Locals.insert({Off, std::move(Memory)});
+  Locals.push_back(std::move(Memory));
   return {Off, D};
 }
 
@@ -311,7 +324,7 @@ void EvalEmitter::updateGlobalTemporaries() {
       const Pointer &Ptr = P.getPtrGlobal(*GlobalIndex);
       APValue *Cached = Temp->getOrCreateValue(true);
 
-      if (std::optional<PrimType> T = Ctx.classify(E->getType())) {
+      if (OptPrimType T = Ctx.classify(E->getType())) {
         TYPE_SWITCH(
             *T, { *Cached = Ptr.deref<T>().toAPValue(Ctx.getASTContext()); });
       } else {

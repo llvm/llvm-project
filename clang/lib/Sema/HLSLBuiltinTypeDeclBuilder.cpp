@@ -120,7 +120,7 @@ private:
   //   LastStmt - refers to the last statement in the method body; referencing
   //              LastStmt will remove the statement from the method body since
   //              it will be linked from the new expression being constructed.
-  enum class PlaceHolder { _0, _1, _2, _3, Handle = 128, LastStmt };
+  enum class PlaceHolder { _0, _1, _2, _3, _4, Handle = 128, LastStmt };
 
   Expr *convertPlaceholder(PlaceHolder PH);
   Expr *convertPlaceholder(Expr *E) { return E; }
@@ -662,8 +662,31 @@ BuiltinTypeDeclBuilder::addHandleConstructorFromBinding() {
       .addParam("spaceNo", AST.UnsignedIntTy)
       .addParam("range", AST.IntTy)
       .addParam("index", AST.UnsignedIntTy)
+      .addParam("name", AST.getPointerType(AST.CharTy.withConst()))
       .callBuiltin("__builtin_hlsl_resource_handlefrombinding", HandleType,
-                   PH::Handle, PH::_0, PH::_1, PH::_2, PH::_3)
+                   PH::Handle, PH::_0, PH::_1, PH::_2, PH::_3, PH::_4)
+      .assign(PH::Handle, PH::LastStmt)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addHandleConstructorFromImplicitBinding() {
+  if (Record->isCompleteDefinition())
+    return *this;
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType HandleType = getResourceHandleField()->getType();
+
+  return BuiltinTypeMethodBuilder(*this, "", AST.VoidTy, false, true)
+      .addParam("spaceNo", AST.UnsignedIntTy)
+      .addParam("range", AST.IntTy)
+      .addParam("index", AST.UnsignedIntTy)
+      .addParam("orderId", AST.UnsignedIntTy)
+      .addParam("name", AST.getPointerType(AST.CharTy.withConst()))
+      .callBuiltin("__builtin_hlsl_resource_handlefromimplicitbinding",
+                   HandleType, PH::Handle, PH::_0, PH::_1, PH::_2, PH::_3,
+                   PH::_4)
       .assign(PH::Handle, PH::LastStmt)
       .finalize();
 }
@@ -674,7 +697,9 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addArraySubscriptOperators() {
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
 
   addHandleAccessFunction(Subscript, /*IsConst=*/true, /*IsRef=*/true);
-  addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true);
+  if (getResourceAttrs().ResourceClass == llvm::dxil::ResourceClass::UAV)
+    addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true);
+
   return *this;
 }
 
@@ -691,7 +716,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
   return *this;
 }
 
-FieldDecl *BuiltinTypeDeclBuilder::getResourceHandleField() {
+FieldDecl *BuiltinTypeDeclBuilder::getResourceHandleField() const {
   auto I = Fields.find("__handle");
   assert(I != Fields.end() &&
          I->second->getType()->isHLSLAttributedResourceType() &&
@@ -713,6 +738,12 @@ QualType BuiltinTypeDeclBuilder::getHandleElementType() {
     return getFirstTemplateTypeParam();
   // TODO: Should we default to VoidTy? Using `i8` is arguably ambiguous.
   return SemaRef.getASTContext().Char8Ty;
+}
+
+HLSLAttributedResourceType::Attributes
+BuiltinTypeDeclBuilder::getResourceAttrs() const {
+  QualType HandleType = getResourceHandleField()->getType();
+  return cast<HLSLAttributedResourceType>(HandleType)->getAttrs();
 }
 
 // BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::startDefinition() {

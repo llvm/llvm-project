@@ -561,7 +561,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             "Coindexed scalar actual argument must be associated with a scalar %s"_err_en_US,
             dummyName);
       }
-      bool actualIsArrayElement{IsArrayElement(actual)};
+      bool actualIsArrayElement{IsArrayElement(actual) != nullptr};
       bool actualIsCKindCharacter{
           actualType.type().category() == TypeCategory::Character &&
           actualType.type().kind() == 1};
@@ -1031,6 +1031,13 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       if ((!actualDataAttr && FindCUDADeviceContext(scope)) ||
           (actualDataAttr &&
               *actualDataAttr == common::CUDADataAttr::Managed)) {
+        actualDataAttr = common::CUDADataAttr::Device;
+      }
+      // For device procedures, treat actual arguments with VALUE attribute as
+      // device data
+      if (!actualDataAttr && actualLastSymbol && IsValue(*actualLastSymbol) &&
+          (*procedure.cudaSubprogramAttrs ==
+              common::CUDASubprogramAttrs::Device)) {
         actualDataAttr = common::CUDADataAttr::Device;
       }
     }

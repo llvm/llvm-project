@@ -12,8 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceAliases.h"
-#include "Utils.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 

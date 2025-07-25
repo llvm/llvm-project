@@ -12,7 +12,6 @@
 #include "mlir/IR/Region.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iterator>
-#include <sstream>
 
 using namespace mlir;
 

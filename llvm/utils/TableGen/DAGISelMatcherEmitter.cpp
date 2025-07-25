@@ -151,7 +151,7 @@ public:
         Uses += PredicateUsage[TP];
 
       // We only add the first predicate here since they are with the same code.
-      PredicateList.push_back({TPs[0], Uses});
+      PredicateList.emplace_back(TPs[0], Uses);
     }
 
     stable_sort(PredicateList, [](const auto &A, const auto &B) {
@@ -1158,7 +1158,7 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
   EmitNodePredicatesFunction(
       NodePredicatesWithOperands,
       "CheckNodePredicateWithOperands(SDValue Op, unsigned PredNo, "
-      "const SmallVectorImpl<SDValue> &Operands) const",
+      "ArrayRef<SDValue> Operands) const",
       OS);
 
   // Emit CompletePattern matchers.
@@ -1241,8 +1241,7 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
         OS << "// " << NodeXForms[i]->getName();
       OS << '\n';
 
-      std::string ClassName =
-          std::string(CGP.getSDNodeInfo(SDNode).getSDClassName());
+      std::string ClassName = CGP.getSDNodeInfo(SDNode).getSDClassName().str();
       if (ClassName == "SDNode")
         OS << "    SDNode *N = V.getNode();\n";
       else

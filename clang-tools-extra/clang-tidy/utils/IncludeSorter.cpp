@@ -48,8 +48,7 @@ StringRef makeCanonicalName(StringRef Str, IncludeSorter::IncludeStyle Style) {
     if (StartIndex == StringRef::npos) {
       StartIndex = 0;
     }
-    return Canonical.substr(
-        0, Canonical.find_first_of('+', StartIndex));
+    return Canonical.substr(0, Canonical.find_first_of('+', StartIndex));
   }
   return removeFirstSuffix(
       removeFirstSuffix(Str, {".cc", ".cpp", ".c", ".h", ".hpp"}),
