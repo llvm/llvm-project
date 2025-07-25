@@ -97,6 +97,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       setOperationAction(ISD::LOAD, T, Custom);
       setOperationAction(ISD::STORE, T, Custom);
     }
+
+    setOperationAction(ISD::LOAD, MVT::i128, Custom);
   }
   if (Subtarget->hasFP16()) {
     setOperationAction(ISD::LOAD, MVT::v8f16, Custom);
@@ -1614,6 +1616,19 @@ void WebAssemblyTargetLowering::ReplaceNodeResults(
   case ISD::SUB:
     Results.push_back(Replace128Op(N, DAG));
     break;
+  case ISD::STORE:
+    // TODO: I think i can get away with just LOAD for now
+    break;
+  case ISD::LOAD: {
+    LoadSDNode *LD = cast<LoadSDNode>(N);
+    EVT VT = LD->getValueType(0);
+    assert(VT == MVT::i128);
+    SDValue Pair = DAG.getLoad(MVT::v2i64, SDLoc(LD), LD->getChain(),
+                               LD->getBasePtr(), LD->getMemOperand());
+    Results.push_back(Pair.getValue(0));
+    Results.push_back(Pair.getValue(1));
+    break;
+  }
   default:
     llvm_unreachable(
         "ReplaceNodeResults not implemented for this op for WebAssembly!");
