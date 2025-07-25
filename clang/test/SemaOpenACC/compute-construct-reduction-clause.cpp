@@ -70,7 +70,6 @@ void uses(unsigned Parm) {
   // expected-note@#COS_FIELD{{invalid field is here}}
 #pragma acc parallel reduction(&: ChC)
   while (1);
-  // expected-error@+1{{OpenACC 'reduction' variable must be of scalar type, sub-array, or a composite of scalar types; type is 'int[5]'}}
 #pragma acc parallel reduction(&: Array)
   while (1);
 
@@ -140,10 +139,8 @@ void TemplUses(T Parm, U CoS, V ChC) {
   // expected-note@#COS_FIELD{{invalid field is here}}
 #pragma acc parallel reduction(&: ChC)
   while (1);
-  // expected-error@+1{{OpenACC 'reduction' variable must be of scalar type, sub-array, or a composite of scalar types; type is 'int[5]'}}
 #pragma acc parallel reduction(&: Array)
   while (1);
-  // expected-error@+1{{OpenACC 'reduction' variable must be of scalar type, sub-array, or a composite of scalar types; type is 'int[5]'}}
 #pragma acc parallel reduction(&: NonDepArray)
   while (1);
 
