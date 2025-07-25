@@ -211,8 +211,9 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
       CCLogDiagnostics(false), CCGenDiagnostics(false),
       CCPrintProcessStats(false), CCPrintInternalStats(false),
       TargetTriple(TargetTriple), Saver(Alloc), PrependArg(nullptr),
-      CheckInputsExist(true), ProbePrecompiled(true),
-      SuppressMissingInputWarning(false), NumParallelJobs(1) {
+      PreferredLinker(CLANG_DEFAULT_LINKER), CheckInputsExist(true),
+      ProbePrecompiled(true), SuppressMissingInputWarning(false),
+      NumParallelJobs(1) {
   // Provide a sane fallback if no VFS is specified.
   if (!this->VFS)
     this->VFS = llvm::vfs::getRealFileSystem();
