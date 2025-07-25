@@ -13318,8 +13318,9 @@ def err_acc_reduction_num_gangs_conflict
             "appear on a '%2' construct "
             "with a '%3' clause%select{ with more than 1 argument|}0">;
 def err_acc_reduction_type
-    : Error<"OpenACC 'reduction' variable must be of scalar type, sub-array, or a "
-            "composite of scalar types;%select{| sub-array base}1 type is %0">;
+    : Error<"OpenACC 'reduction' variable must be of scalar type, aggregate, "
+            "sub-array, or a composite of scalar types;%select{| sub-array "
+            "base}1 type is %0">;
 def err_acc_reduction_composite_type
     : Error<"OpenACC 'reduction' variable must be a composite of scalar types; "
             "%1 %select{is not a class or struct|is incomplete|is not an "
@@ -13438,13 +13439,13 @@ def note_acc_atomic_mismatch_operand
     : Note<"left hand side of assignment operation(%0) must match one side "
            "of the sub-operation on the right hand side(%1 and %2)">;
 def note_acc_atomic_mismatch_compound_operand
-    : Note<"variable %select{|in unary expression|on right hand side of "
+    : Note<"sub-expression %select{|in unary expression|on right hand side of "
            "assignment|on left hand side of assignment|on left hand side of "
            "compound assignment|on left hand side of assignment}2(%3) must "
-           "match variable used %select{|in unary expression|on right hand "
-           "side of assignment|<not possible>|on left hand side of compound "
-           "assignment|on left hand side of assignment}0(%1) from the first "
-           "statement">;
+           "match sub-expression used %select{|in unary expression|on right "
+           "hand side of assignment|<not possible>|on left hand side of "
+           "compound assignment|on left hand side of assignment}0(%1) from the "
+           "first statement">;
 def err_acc_declare_required_clauses
     : Error<"no valid clauses specified in OpenACC 'declare' directive">;
 def err_acc_declare_clause_at_global

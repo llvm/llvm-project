@@ -32,7 +32,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -41,9 +41,6 @@
 using namespace mlir;
 
 #define DEBUG_TYPE "vector-narrow-type-emulation"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
-#define DBGSNL() (llvm::dbgs() << "\n")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 using VectorValue = TypedValue<VectorType>;
 using MemRefValue = TypedValue<MemRefType>;
@@ -1526,11 +1523,11 @@ BitCastBitsEnumerator::BitCastBitsEnumerator(VectorType sourceVectorType,
          "requires -D non-scalable vector type");
   int64_t sourceBitWidth = sourceVectorType.getElementTypeBitWidth();
   int64_t mostMinorSourceDim = sourceVectorType.getShape().back();
-  LDBG("sourceVectorType: " << sourceVectorType);
+  LDBG() << "sourceVectorType: " << sourceVectorType;
 
   int64_t targetBitWidth = targetVectorType.getElementTypeBitWidth();
   int64_t mostMinorTargetDim = targetVectorType.getShape().back();
-  LDBG("targetVectorType: " << targetVectorType);
+  LDBG() << "targetVectorType: " << targetVectorType;
 
   int64_t bitwidth = targetBitWidth * mostMinorTargetDim;
   (void)mostMinorSourceDim;
@@ -1555,7 +1552,7 @@ BitCastBitsEnumerator::BitCastBitsEnumerator(VectorType sourceVectorType,
 BitCastRewriter::BitCastRewriter(VectorType sourceVectorType,
                                  VectorType targetVectorType)
     : enumerator(BitCastBitsEnumerator(sourceVectorType, targetVectorType)) {
-  LDBG("\n" << enumerator.sourceElementRanges);
+  LDBG() << "\n" << enumerator.sourceElementRanges;
 }
 
 /// Verify that the precondition type meets the common preconditions for any

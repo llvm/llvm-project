@@ -337,6 +337,7 @@ add_header_library(
   HDRS
     exp10_float16_constants.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.CPP.array
 )
 
@@ -357,11 +358,10 @@ add_header_library(
   DEPENDS
     .exp10f16_utils
     libc.src.__support.FPUtil.fp_bits
-    src.__support.FPUtil.FEnvImpl
-    src.__support.FPUtil.FPBits
-    src.__support.FPUtil.cast
-    src.__support.FPUtil.rounding_mode
-    src.__support.FPUtil.except_value_utils
-    src.__support.macros.optimization
-    src.__support.macros.properties.cpu_features
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
 )
