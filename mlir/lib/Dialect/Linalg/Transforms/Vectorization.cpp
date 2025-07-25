@@ -38,7 +38,8 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -47,9 +48,6 @@ using namespace mlir;
 using namespace mlir::linalg;
 
 #define DEBUG_TYPE "linalg-vectorization"
-
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 /// Try to vectorize `convOp` as a convolution.
 static FailureOr<Operation *>
@@ -403,12 +401,8 @@ LogicalResult VectorizationState::initState(RewriterBase &rewriter,
     scalableVecDims.append(linalgOp.getNumLoops(), false);
   }
 
-  LDBG("Canonical vector shape: ");
-  LLVM_DEBUG(llvm::interleaveComma(canonicalVecShape, llvm::dbgs()));
-  LLVM_DEBUG(llvm::dbgs() << "\n");
-  LDBG("Scalable vector dims: ");
-  LLVM_DEBUG(llvm::interleaveComma(scalableVecDims, llvm::dbgs()));
-  LLVM_DEBUG(llvm::dbgs() << "\n");
+  LDBG() << "Canonical vector shape: " << llvm::interleaved(canonicalVecShape);
+  LDBG() << "Scalable vector dims: " << llvm::interleaved(scalableVecDims);
 
   if (ShapedType::isDynamicShape(canonicalVecShape))
     return failure();
@@ -452,14 +446,14 @@ Value VectorizationState::getOrCreateMaskFor(
                       : AffineMap::getMultiDimIdentityMap(
                             linalgOp.getNumLoops(), rewriter.getContext());
 
-  LDBG("Masking map: " << maskingMap << "\n");
+  LDBG() << "Masking map: " << maskingMap;
 
   // Return the active mask for the masking map of this operation if it was
   // already created.
   auto activeMaskIt = activeMaskCache.find(maskingMap);
   if (activeMaskIt != activeMaskCache.end()) {
     Value mask = activeMaskIt->second;
-    LDBG("Reusing mask: " << mask << "\n");
+    LDBG() << "Reusing mask: " << mask;
     return mask;
   }
 
@@ -474,12 +468,10 @@ Value VectorizationState::getOrCreateMaskFor(
   auto maskType = getCanonicalVecType(rewriter.getI1Type(), maskingMap);
   auto maskShape = maskType.getShape();
 
-  LDBG("Mask shape: ");
-  LLVM_DEBUG(llvm::interleaveComma(maskShape, llvm::dbgs()));
-  LLVM_DEBUG(llvm::dbgs() << "\n");
+  LDBG() << "Mask shape: " << llvm::interleaved(maskShape);
 
   if (permutedStaticSizes == maskShape) {
-    LDBG("Masking is not needed for masking map: " << maskingMap << "\n");
+    LDBG() << "Masking is not needed for masking map: " << maskingMap;
     activeMaskCache[maskingMap] = Value();
     return Value();
   }
@@ -494,8 +486,9 @@ Value VectorizationState::getOrCreateMaskFor(
                                   ? true
                                   : std::get<0>(it) == std::get<1>(it);
                      })) {
-      LDBG("Dynamic + static dimensions match vector sizes, masking is not "
-           "required.\n");
+      LDBG()
+          << "Dynamic + static dimensions match vector sizes, masking is not "
+             "required.";
       activeMaskCache[maskingMap] = Value();
       return Value();
     }
@@ -510,7 +503,7 @@ Value VectorizationState::getOrCreateMaskFor(
   // Create the mask based on the dimension values.
   Value mask = vector::CreateMaskOp::create(rewriter, linalgOp.getLoc(),
                                             maskType, upperBounds);
-  LDBG("Creating new mask: " << mask << "\n");
+  LDBG() << "Creating new mask: " << mask;
   activeMaskCache[maskingMap] = mask;
   return mask;
 }
@@ -519,7 +512,7 @@ Operation *
 VectorizationState::maskOperation(RewriterBase &rewriter, Operation *opToMask,
                                   LinalgOp linalgOp,
                                   std::optional<AffineMap> maybeIndexingMap) {
-  LDBG("Trying to mask: " << *opToMask << "\n");
+  LDBG() << "Trying to mask: " << *opToMask;
 
   std::optional<AffineMap> maybeMaskingMap = std::nullopt;
   if (maybeIndexingMap)
@@ -530,7 +523,7 @@ VectorizationState::maskOperation(RewriterBase &rewriter, Operation *opToMask,
       getOrCreateMaskFor(rewriter, opToMask, linalgOp, maybeMaskingMap);
 
   if (!mask) {
-    LDBG("No mask required\n");
+    LDBG() << "No mask required";
     return opToMask;
   }
 
@@ -544,7 +537,7 @@ VectorizationState::maskOperation(RewriterBase &rewriter, Operation *opToMask,
     rewriter.replaceAllUsesExcept(resVal, maskOp.getResult(resIdx),
                                   maskOpTerminator);
 
-  LDBG("Masked operation: " << *maskOp << "\n");
+  LDBG() << "Masked operation: " << *maskOp;
   return maskOp;
 }
 
@@ -748,7 +741,7 @@ static Value buildVectorWrite(RewriterBase &rewriter, Value value,
     maskedWriteOp.setInBoundsAttr(rewriter.getBoolArrayAttr(inBounds));
   }
 
-  LDBG("vectorized op: " << *write << "\n");
+  LDBG() << "vectorized op: " << *write;
   if (!write->getResults().empty())
     return write->getResult(0);
   return Value();
@@ -1090,7 +1083,7 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
   }
 
   if (!leadingIdxsLoopInvariant) {
-    LDBG("Found gather load: " << extractOp);
+    LDBG() << "Found gather load: " << extractOp;
     return VectorMemoryAccessKind::Gather;
   }
 
@@ -1104,7 +1097,7 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
   // If the trailing index is loop invariant then this is a scalar load.
   if (leadingIdxsLoopInvariant &&
       isLoopInvariantIdx(linalgOp, extractOpTrailingIdx, resType)) {
-    LDBG("Found scalar broadcast load: " << extractOp);
+    LDBG() << "Found scalar broadcast load: " << extractOp;
 
     return VectorMemoryAccessKind::ScalarBroadcast;
   }
@@ -1122,12 +1115,12 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
   isContiguousLoad &= (foundIndexOp && isRowVector);
 
   if (isContiguousLoad) {
-    LDBG("Found contigous load: " << extractOp);
+    LDBG() << "Found contigous load: " << extractOp;
     return VectorMemoryAccessKind::Contiguous;
   }
 
   // 4. Fallback case - gather load.
-  LDBG("Found gather load: " << extractOp);
+  LDBG() << "Found gather load: " << extractOp;
   return VectorMemoryAccessKind::Gather;
 }
 
@@ -1171,7 +1164,7 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
         maskConstantOp, passThruConstantOp);
     gatherOp = state.maskOperation(rewriter, gatherOp, linalgOp);
 
-    LDBG("Vectorised as gather load: " << extractOp << "\n");
+    LDBG() << "Vectorised as gather load: " << extractOp;
     return VectorizationHookResult{VectorizationHookStatus::NewOp, gatherOp};
   }
 
@@ -1235,7 +1228,7 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
     auto *maskedReadOp =
         mlir::vector::maskOperation(rewriter, transferReadOp, allTrue);
 
-    LDBG("Vectorised as scalar broadcast load: " << extractOp << "\n");
+    LDBG() << "Vectorised as scalar broadcast load: " << extractOp;
     return VectorizationHookResult{VectorizationHookStatus::NewOp,
                                    maskedReadOp};
   }
@@ -1262,7 +1255,7 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
       rewriter, loc, resultType, extractOp.getTensor(), transferReadIdxs,
       /*padding=*/std::nullopt, permutationMap, inBounds);
 
-  LDBG("Vectorised as contiguous load: " << extractOp);
+  LDBG() << "Vectorised as contiguous load: " << extractOp;
   return VectorizationHookResult{VectorizationHookStatus::NewOp,
                                  transferReadOp};
 }
@@ -1310,7 +1303,7 @@ static VectorizationHookResult
 vectorizeOneOp(RewriterBase &rewriter, VectorizationState &state,
                LinalgOp linalgOp, Operation *op, const IRMapping &bvm,
                ArrayRef<CustomVectorizationHook> customVectorizationHooks) {
-  LDBG("vectorize op " << *op << "\n");
+  LDBG() << "vectorize op " << *op;
 
   // 1. Try to apply any CustomVectorizationHook.
   if (!customVectorizationHooks.empty()) {
@@ -1425,7 +1418,7 @@ static LogicalResult
 vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
                          LinalgOp linalgOp,
                          SmallVectorImpl<Value> &newResults) {
-  LDBG("Vectorizing operation as linalg generic\n");
+  LDBG() << "Vectorizing operation as linalg generic/n";
   Block *block = linalgOp.getBlock();
 
   // 2. Values defined above the region can only be broadcast for now. Make them
@@ -1490,8 +1483,8 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
       readValue = vector::ExtractOp::create(rewriter, loc, readValue,
                                             ArrayRef<int64_t>());
 
-    LDBG("New vectorized bbarg(" << bbarg.getArgNumber() << "): " << readValue
-                                 << "\n");
+    LDBG() << "New vectorized bbarg(" << bbarg.getArgNumber()
+           << "): " << readValue;
     bvm.map(bbarg, readValue);
     bvm.map(opOperand->get(), readValue);
   }
@@ -1523,13 +1516,13 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
     VectorizationHookResult result =
         vectorizeOneOp(rewriter, state, linalgOp, &op, bvm, hooks);
     if (result.status == VectorizationHookStatus::Failure) {
-      LDBG("failed to vectorize: " << op << "\n");
+      LDBG() << "failed to vectorize: " << op;
       return failure();
     }
     if (result.status == VectorizationHookStatus::NewOp) {
       Operation *maybeMaskedOp =
           state.maskOperation(rewriter, result.newOp, linalgOp);
-      LDBG("New vector op: " << *maybeMaskedOp << "\n");
+      LDBG() << "New vector op: " << *maybeMaskedOp;
       bvm.map(op.getResults(), maybeMaskedOp->getResults());
     }
   }
@@ -1925,7 +1918,7 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
       cast<ReifyRankedShapedTypeOpInterface>(unpackOp.getOperation())
           .reifyResultShapes(rewriter, reifiedRetShapes);
   if (status.failed()) {
-    LDBG("Unable to reify result shapes of " << unpackOp);
+    LDBG() << "Unable to reify result shapes of " << unpackOp;
     return failure();
   }
   Location loc = unpackOp->getLoc();
@@ -2010,7 +2003,7 @@ vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
 // ops that may not commute (e.g. linear reduction + non-linear instructions).
 static LogicalResult reductionPreconditions(LinalgOp op) {
   if (llvm::none_of(op.getIteratorTypesArray(), isReductionIterator)) {
-    LDBG("reduction precondition failed: no reduction iterator\n");
+    LDBG() << "reduction precondition failed: no reduction iterator";
     return failure();
   }
   for (OpOperand &opOperand : op.getDpsInitsMutable()) {
@@ -2020,7 +2013,7 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
 
     Operation *reduceOp = matchLinalgReduction(&opOperand);
     if (!reduceOp || !getCombinerOpKind(reduceOp)) {
-      LDBG("reduction precondition failed: reduction detection failed\n");
+      LDBG() << "reduction precondition failed: reduction detection failed";
       return failure();
     }
   }
@@ -2031,13 +2024,13 @@ static LogicalResult
 vectorizeDynamicConvOpPrecondition(linalg::LinalgOp conv,
                                    bool flatten1DDepthwiseConv) {
   if (flatten1DDepthwiseConv) {
-    LDBG("Vectorization of flattened convs with dynamic shapes is not "
-         "supported\n");
+    LDBG() << "Vectorization of flattened convs with dynamic shapes is not "
+              "supported";
     return failure();
   }
 
   if (!isa<linalg::DepthwiseConv1DNwcWcOp>(conv)) {
-    LDBG("Not a 1D depth-wise WC conv, dynamic shapes are not supported\n");
+    LDBG() << "Not a 1D depth-wise WC conv, dynamic shapes are not supported";
     return failure();
   }
 
@@ -2047,8 +2040,8 @@ vectorizeDynamicConvOpPrecondition(linalg::LinalgOp conv,
   ArrayRef<int64_t> lhsShape = cast<ShapedType>(lhs.getType()).getShape();
   auto shapeWithoutCh = lhsShape.drop_back(1);
   if (ShapedType::isDynamicShape(shapeWithoutCh)) {
-    LDBG("Dynamically-shaped op vectorization precondition failed: only "
-         "channel dim can be dynamic\n");
+    LDBG() << "Dynamically-shaped op vectorization precondition failed: only "
+              "channel dim can be dynamic";
     return failure();
   }
 
@@ -2071,7 +2064,7 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
           op.getOperation()))
     return failure();
 
-  LDBG("Dynamically-shaped op meets vectorization pre-conditions\n");
+  LDBG() << "Dynamically-shaped op meets vectorization pre-conditions";
   return success();
 }
 
@@ -2083,7 +2076,7 @@ vectorizeUnPackOpPrecondition(linalg::UnPackOp unpackOp,
   if (llvm::any_of(unpackOp.getInnerTiles(), [](OpFoldResult res) {
         return !getConstantIntValue(res).has_value();
       })) {
-    LDBG("Inner-tiles must be constant: " << unpackOp << "\n");
+    LDBG() << "Inner-tiles must be constant: " << unpackOp;
     return failure();
   }
   ArrayRef<int64_t> resultShape = unpackOp.getDestType().getShape();
@@ -2123,7 +2116,7 @@ vectorizeInsertSliceOpPrecondition(tensor::InsertSliceOp sliceOp,
       !sourceType.hasStaticShape() && inputVectorSizes.empty();
 
   if (!padValue && isOutOfBoundsRead) {
-    LDBG("Failed to get a pad value for out-of-bounds read access\n");
+    LDBG() << "Failed to get a pad value for out-of-bounds read access";
     return failure();
   }
   return success();
@@ -2153,7 +2146,7 @@ vectorizeAsLinalgContraction(RewriterBase &rewriter, VectorizationState &state,
   Operation *reduceOp = matchLinalgReduction(outOperand);
   auto maybeKind = getCombinerOpKind(reduceOp);
   if (!maybeKind) {
-    LDBG("Failed to determine contraction combining kind.\n");
+    LDBG() << "Failed to determine contraction combining kind.";
     return failure();
   }
 
@@ -2163,7 +2156,7 @@ vectorizeAsLinalgContraction(RewriterBase &rewriter, VectorizationState &state,
   AffineMap lhsMap = linalgOp.getIndexingMapsArray()[0];
   AffineMap rhsMap = linalgOp.getIndexingMapsArray()[1];
   if (getUnusedDimsBitVector({lhsMap, rhsMap}).any()) {
-    LDBG("Contractions with broadcasts are not supported.\n");
+    LDBG() << "Contractions with broadcasts are not supported.";
     return failure();
   }
 
@@ -2355,7 +2348,7 @@ static LogicalResult vectorizeLinalgOpPrecondition(
 
   if (linalgOp.hasDynamicShape() && failed(vectorizeDynamicLinalgOpPrecondition(
                                         linalgOp, flatten1DDepthwiseConv))) {
-    LDBG("Dynamically-shaped op failed vectorization pre-conditions\n");
+    LDBG() << "Dynamically-shaped op failed vectorization pre-conditions";
     return failure();
   }
 
@@ -2397,11 +2390,11 @@ static LogicalResult vectorizeLinalgOpPrecondition(
   // all indexing maps are projected permutations. For convs and stencils the
   // logic will need to evolve.
   if (!allIndexingsAreProjectedPermutation(linalgOp)) {
-    LDBG("precondition failed: not projected permutations\n");
+    LDBG() << "precondition failed: not projected permutations";
     return failure();
   }
   if (failed(reductionPreconditions(linalgOp))) {
-    LDBG("precondition failed: reduction preconditions\n");
+    LDBG() << "precondition failed: reduction preconditions";
     return failure();
   }
   return success();
@@ -2413,7 +2406,7 @@ vectorizePackOpPrecondition(linalg::PackOp packOp,
   auto padValue = packOp.getPaddingValue();
   Attribute cstAttr;
   if (padValue && !matchPattern(padValue, m_Constant(&cstAttr))) {
-    LDBG("pad value is not constant: " << packOp << "\n");
+    LDBG() << "pad value is not constant: " << packOp;
     return failure();
   }
   ArrayRef<int64_t> resultTensorShape = packOp.getDestType().getShape();
@@ -2433,7 +2426,7 @@ vectorizePackOpPrecondition(linalg::PackOp packOp,
   if (llvm::any_of(packOp.getInnerTiles(), [](OpFoldResult v) {
         return !getConstantIntValue(v).has_value();
       })) {
-    LDBG("inner_tiles must be constant: " << packOp << "\n");
+    LDBG() << "inner_tiles must be constant: " << packOp;
     return failure();
   }
 
@@ -2445,7 +2438,7 @@ vectorizePadOpPrecondition(tensor::PadOp padOp,
                            ArrayRef<int64_t> inputVectorSizes) {
   auto padValue = padOp.getConstantPaddingValue();
   if (!padValue) {
-    LDBG("pad value is not constant: " << padOp << "\n");
+    LDBG() << "pad value is not constant: " << padOp;
     return failure();
   }
 
@@ -2472,7 +2465,7 @@ vectorizePadOpPrecondition(tensor::PadOp padOp,
         return (!pad.has_value() || pad.value() != 0) &&
                resultTensorShape[pos] != 1;
       })) {
-    LDBG("low pad must all be zero for all non unit dims: " << padOp << "\n");
+    LDBG() << "low pad must all be zero for all non unit dims: " << padOp;
     return failure();
   }
 
@@ -2541,13 +2534,14 @@ vectorizeScalableVectorPrecondition(Operation *op,
   case utils::IteratorType::reduction: {
     // Check 3. above is met.
     if (iterators.size() != inputVectorSizes.size()) {
-      LDBG("Non-trailing reduction dim requested for scalable "
-           "vectorization\n");
+      LDBG() << "Non-trailing reduction dim requested for scalable "
+                "vectorization";
       return failure();
     }
     if (isa<linalg::MatmulOp>(op) || isa<linalg::MatmulTransposeAOp>(op)) {
-      LDBG("Scalable vectorization of the reduction dim in Matmul-like ops "
-           "is not supported\n");
+      LDBG()
+          << "Scalable vectorization of the reduction dim in Matmul-like ops "
+             "is not supported";
       return failure();
     }
     break;
@@ -2555,8 +2549,8 @@ vectorizeScalableVectorPrecondition(Operation *op,
   case utils::IteratorType::parallel: {
     // Check 1. and 2. above are met.
     if (seenNonUnitParallel) {
-      LDBG("Inner parallel dim not requested for scalable "
-           "vectorization\n");
+      LDBG() << "Inner parallel dim not requested for scalable "
+                "vectorization";
       return failure();
     }
     break;
@@ -2572,8 +2566,9 @@ vectorizeScalableVectorPrecondition(Operation *op,
     //    * iterators = [..., parallel, reduction]
     //    * scalable flags = [..., true, true]
     if (iterators.back() == utils::IteratorType::reduction) {
-      LDBG("Higher dim than the trailing reduction dim requested for scalable "
-           "vectorization\n");
+      LDBG() << "Higher dim than the trailing reduction dim requested for "
+                "scalable "
+                "vectorizatio";
       return failure();
     }
     scalableFlags.pop_back();
@@ -2656,18 +2651,15 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
     ArrayRef<bool> inputScalableVecDims, bool vectorizeNDExtract,
     bool flatten1DDepthwiseConv, bool assumeDynamicDimsMatchVecSizes,
     bool createNamedContraction) {
-  LDBG("Attempting to vectorize:\n" << *op << "\n");
-  LDBG("Input vector sizes: ");
-  LLVM_DEBUG(llvm::interleaveComma(inputVectorSizes, llvm::dbgs()));
-  LLVM_DEBUG(llvm::dbgs() << "\n");
-  LDBG("Input scalable vector dims: ");
-  LLVM_DEBUG(llvm::interleaveComma(inputScalableVecDims, llvm::dbgs()));
-  LLVM_DEBUG(llvm::dbgs() << "\n");
+  LDBG() << "Attempting to vectorize: " << *op;
+  LDBG() << "Input vector sizes: " << llvm::interleaved(inputVectorSizes);
+  LDBG() << "Input scalable vector dims: "
+         << llvm::interleaved(inputScalableVecDims);
 
   if (failed(vectorizeOpPrecondition(op, inputVectorSizes, inputScalableVecDims,
                                      vectorizeNDExtract,
                                      flatten1DDepthwiseConv))) {
-    LDBG("Vectorization pre-conditions failed\n");
+    LDBG() << "Vectorization pre-conditions failed";
     return failure();
   }
 
@@ -2677,7 +2669,7 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
     if (failed(state.initState(rewriter, linalgOp, inputVectorSizes,
                                inputScalableVecDims,
                                assumeDynamicDimsMatchVecSizes))) {
-      LDBG("Vectorization state couldn't be initialized\n");
+      LDBG() << "Vectorization state couldn't be initialized";
       return failure();
     }
   }
@@ -2698,7 +2690,7 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
                 return success();
               }
 
-              LDBG("Unsupported convolution can't be vectorized.\n");
+              LDBG() << "Unsupported convolution can't be vectorized.";
               return failure();
             }
 
@@ -2707,8 +2699,9 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
               return vectorizeAsLinalgContraction(rewriter, state, linalgOp,
                                                   results);
 
-            LDBG("Vectorize generic by broadcasting to the canonical vector "
-                 "shape\n");
+            LDBG()
+                << "Vectorize generic by broadcasting to the canonical vector "
+                   "shape";
 
             // Pre-process before proceeding.
             convertAffineApply(rewriter, linalgOp);
@@ -2739,7 +2732,7 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
           .Default([](auto) { return failure(); });
 
   if (failed(vectorizeResult)) {
-    LDBG("Vectorization failed\n");
+    LDBG() << "Vectorization failed";
     return failure();
   }
 
@@ -3244,8 +3237,8 @@ static bool mayExistInterleavedUses(Operation *firstOp, Operation *secondOp,
                                     ValueRange values) {
   if (firstOp->getBlock() != secondOp->getBlock() ||
       !firstOp->isBeforeInBlock(secondOp)) {
-    LDBG("interleavedUses precondition failed, firstOp: "
-         << *firstOp << ", second op: " << *secondOp << "\n");
+    LDBG() << "interleavedUses precondition failed, firstOp: " << *firstOp
+           << ", second op: " << *secondOp;
     return true;
   }
   for (auto v : values) {
@@ -3257,8 +3250,8 @@ static bool mayExistInterleavedUses(Operation *firstOp, Operation *secondOp,
       if (owner->getBlock() == firstOp->getBlock() &&
           (owner->isBeforeInBlock(firstOp) || secondOp->isBeforeInBlock(owner)))
         continue;
-      LDBG(" found interleaved op " << *owner << ", firstOp: " << *firstOp
-                                    << ", second op: " << *secondOp << "\n");
+      LDBG() << " found interleaved op " << *owner << ", firstOp: " << *firstOp
+             << ", second op: " << *secondOp;
       return true;
     }
   }
