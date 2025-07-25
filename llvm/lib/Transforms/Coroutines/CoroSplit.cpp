@@ -79,6 +79,18 @@ using namespace llvm;
 
 #define DEBUG_TYPE "coro-split"
 
+/// If set, ensures that all metadata from CoroSuspendInst's is preserved in the
+/// containing function.
+static cl::opt<bool> CoroSplitPreservesSuspendMD(
+    "coro-split-preserves-suspend-md", cl::Hidden,
+    cl::desc(
+        "llvm.coro.suspend_md metadata from all suspend point instructions "
+        "will be preserved inside llvm.coro.suspend_md_table metadata on the "
+        "containing coroutine"));
+
+static StringRef CoroSuspendMDName = "llvm.coro.suspend_md";
+static StringRef CoroSuspendMDTableName = "llvm.coro.suspend_md_table";
+
 // FIXME:
 // Lower the intrinisc in CoroEarly phase if coroutine frame doesn't escape
 // and it is known that other transformations, for example, sanitizers
@@ -1503,10 +1515,18 @@ private:
     Shape.SwitchLowering.ResumeSwitch = Switch;
 
     // Split all coro.suspend calls
+    SmallVector<Metadata *> SuspendMdEntries;
     size_t SuspendIndex = 0;
     for (auto *AnyS : Shape.CoroSuspends) {
       auto *S = cast<CoroSuspendInst>(AnyS);
       ConstantInt *IndexVal = Shape.getIndex(SuspendIndex);
+      if (CoroSplitPreservesSuspendMD) {
+        MDNode *SuspendMD = S->getMetadata(CoroSuspendMDName);
+        if (SuspendMD) {
+          Metadata *KeyMD = ConstantAsMetadata::get(IndexVal);
+          SuspendMdEntries.push_back(MDNode::get(C, {KeyMD, SuspendMD}));
+        }
+      }
 
       // Replace CoroSave with a store to Index:
       //    %index.addr = getelementptr %f.frame... (index field number)
@@ -1581,6 +1601,10 @@ private:
 
       ++SuspendIndex;
     }
+
+    if (CoroSplitPreservesSuspendMD)
+      if (!SuspendMdEntries.empty())
+        F.setMetadata(CoroSuspendMDTableName, MDNode::get(C, SuspendMdEntries));
 
     Builder.SetInsertPoint(UnreachBB);
     Builder.CreateUnreachable();
