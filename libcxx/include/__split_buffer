@@ -631,28 +631,28 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::shr
 }
 
 // Need to use this because C++03 doesn't permit constexpr if :(
-template<bool>
+template <bool>
 struct __maybe_update_sentinel;
 
-template<>
+template <>
 struct __maybe_update_sentinel<true> {
-  template<class _SplitBuffer, class _DifferenceType>
+  template <class _SplitBuffer, class _DifferenceType>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 static void __update_size(_SplitBuffer& __data, _DifferenceType __d) {
     __data.__update_sentinel(__data.size() + __d);
   }
 
-  template<class _SplitBuffer>
+  template <class _SplitBuffer>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 static void __update_end(_SplitBuffer& __data) {
     __data.update_sentinel(__data.end() + 1);
   }
 };
 
-template<>
+template <>
 struct __maybe_update_sentinel<false> {
-  template<class _SplitBuffer, class _DifferenceType>
+  template <class _SplitBuffer, class _DifferenceType>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 static void __update_size(_SplitBuffer&, _DifferenceType) {}
 
-  template<class _SplitBuffer>
+  template <class _SplitBuffer>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 static void __update_end(_SplitBuffer&) {}
 };
 
@@ -687,7 +687,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::emp
   // layout's size. We don't need to do anything for the pointer-based layout here, because the end
   // pointer was never updated.
   __maybe_update_sentinel<_Layout<__split_buffer>::__is_size_based>::__update_end(__data_);
-  }
+}
 
 template <class _Tp, class _Allocator, template <class> class _Layout>
 template <class... _Args>
