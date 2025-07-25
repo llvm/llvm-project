@@ -6,6 +6,7 @@ set(LIBCXX_SOURCES
   call_once.cpp
   charconv.cpp
   chrono.cpp
+  debugging.cpp
   error_category.cpp
   exception.cpp
   expected.cpp
