@@ -243,9 +243,33 @@ Python Binding Changes
 
 OpenMP Support
 --------------
+- Added support 'no_openmp_constructs' assumption clause.
+- Added support for 'self_maps' in map and requirement clause.
+- Added support for 'omp stripe' directive.
+- Added support for threadset clause in task and taskloop directives.
+- Fixed a crashing bug with ``omp unroll partial`` if the argument to
+  ``partial`` was an invalid expression. (#GH139267)
+- Fixed a crashing bug with ``omp tile sizes`` if the argument to ``sizes`` was
+  an invalid expression. (#GH139073)
+- Fixed a crashing bug with ``omp simd collapse`` if the argument to
+  ``collapse`` was an invalid expression. (#GH138493)
+- Fixed a crashing bug with a malformed ``cancel`` directive. (#GH139360)
+- Fixed a crashing bug with ``omp distribute dist_schedule`` if the argument to
+  ``dist_schedule`` was not strictly positive. (#GH139266)
+- Fixed two crashing bugs with a malformed ``metadirective`` directive. One was
+  a crash if the next token after ``metadirective`` was a paren, bracket, or
+  brace. The other was if the next token after the meta directive was not an
+  open parenthesis. (#GH139665)
+- An error is now emitted when OpenMP ``collapse`` and ``ordered`` clauses have
+  an argument larger than what can fit within a 64-bit integer.
+- Added support for private variable reduction.
+- Fixed mapping of arrays of structs containing nested structs with user defined
+  mappers, by using compiler-generated default mappers for the outer structs for
+  such maps.
 - Added parsing and semantic analysis support for the ``need_device_addr``
   modifier in the ``adjust_args`` clause.
 - Allow array length to be omitted in array section subscript expression.
+
 
 Improvements
 ^^^^^^^^^^^^
