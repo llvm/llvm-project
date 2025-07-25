@@ -3968,18 +3968,6 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.sqrt
 )
 
-add_object_library(
-  inv_trigf_utils
-  HDRS
-    inv_trigf_utils.h
-  SRCS
-    inv_trigf_utils.cpp
-  DEPENDS
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.common
-)
-
 add_entrypoint_object(
   asinf
   SRCS
