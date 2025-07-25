@@ -862,12 +862,12 @@ void TargetLoweringBase::initActions() {
 
     // These operations default to expand for vector types.
     if (VT.isVector())
-      setOperationAction(
-          {ISD::FCOPYSIGN, ISD::SIGN_EXTEND_INREG, ISD::ANY_EXTEND_VECTOR_INREG,
-           ISD::SIGN_EXTEND_VECTOR_INREG, ISD::ZERO_EXTEND_VECTOR_INREG,
-           ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT, ISD::LROUND,
-           ISD::LLROUND},
-          VT, Expand);
+      setOperationAction({ISD::FCOPYSIGN, ISD::SIGN_EXTEND_INREG,
+                          ISD::ANY_EXTEND_VECTOR_INREG,
+                          ISD::SIGN_EXTEND_VECTOR_INREG,
+                          ISD::ZERO_EXTEND_VECTOR_INREG, ISD::SPLAT_VECTOR,
+                          ISD::LRINT, ISD::LLRINT, ISD::LROUND, ISD::LLROUND},
+                         VT, Expand);
 
       // Constrained floating-point operations default to expand.
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
