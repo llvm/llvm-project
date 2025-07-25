@@ -136,7 +136,7 @@ struct TransposeOpLowering : public mlir::ConversionPattern {
           // Transpose the elements by generating a load from the reverse
           // indices.
           SmallVector<mlir::Value, 2> reverseIvs(llvm::reverse(loopIvs));
-          return rewriter.create<mlir::AffineLoadOp>(loc, input, reverseIvs);
+          return mlir::AffineLoadOp::create(rewriter, loc, input, reverseIvs);
         });
     return success();
   }
