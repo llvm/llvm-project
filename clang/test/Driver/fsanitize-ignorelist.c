@@ -50,7 +50,7 @@
 
 // Driver properly reports malformed ignorelist files.
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-ignorelist=%t.second -fsanitize-ignorelist=%t.bad -fsanitize-ignorelist=%t.good %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-BAD-IGNORELIST
-// CHECK-BAD-IGNORELIST: error: malformed sanitizer ignorelist: 'error parsing file '{{.*}}.bad': malformed line 1: 'badline''
+// CHECK-BAD-IGNORELIST: error: failed to parse malformed sanitizer ignorelist: ''{{.*}}.bad': malformed line 1: 'badline'
 
 // -fno-sanitize-ignorelist disables all ignorelists specified earlier.
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-ignorelist=%t.good -fno-sanitize-ignorelist -fsanitize-ignorelist=%t.second %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ONLY-FIRST-DISABLED --implicit-check-not=-fsanitize-ignorelist=
@@ -71,3 +71,10 @@
 // CHECK-MISSING-CFI-NO-IGNORELIST-NOT: error: no such file or directory: '{{.*}}cfi_ignorelist.txt'
 
 // DELIMITERS: {{^ *"}}
+
+// Check that a missing file passed to -fsanitize-system-ignorelist triggers a clean error without crashing.
+// RUN: not %clang --target=x86_64-linux-gnu  -Xclang -fsanitize-system-ignorelist=%t.nonexistent %s  -c -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-SYSTEM-IGNORELIST-NOFILE
+// CHECK-SYSTEM-IGNORELIST-NOFILE: error: failed to load sanitizer ignorelist file: ''{{.*[\\/]fsanitize-ignorelist\.c\.tmp\.nonexistent}}': {{[Nn]o such file or directory}}
+// CHECK-SYSTEM-IGNORELIST-NOFILE-NOT: Stack dump:
+// CHECK-SYSTEM-IGNORELIST-NOFILE-NOT: PLEASE submit a bug report
+// CHECK-SYSTEM-IGNORELIST-NOFILE-NOT: diagnostic msg:

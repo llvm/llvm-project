@@ -19,11 +19,7 @@
 
 using namespace clang;
 
-NoSanitizeList::NoSanitizeList(const std::vector<std::string> &NoSanitizePaths,
-                               SourceManager &SM)
-    : SSCL(SanitizerSpecialCaseList::createOrDie(
-          NoSanitizePaths, SM.getFileManager().getVirtualFileSystem())),
-      SM(SM) {}
+NoSanitizeList::NoSanitizeList(SourceManager &SM) : SM(SM) {}
 
 NoSanitizeList::~NoSanitizeList() = default;
 
@@ -40,6 +36,13 @@ bool NoSanitizeList::containsPrefix(SanitizerMask Mask, StringRef Prefix,
   // 2. If "prefix:*=sanitize" is present, its (File Index, Line Number) is less
   // than that of "prefix:*".
   return San == llvm::SpecialCaseList::NotFound || NoSan > San;
+}
+
+bool NoSanitizeList::init(const std::vector<std::string> &Paths,
+                          std::pair<unsigned, std::string> &Error) {
+  SSCL = SanitizerSpecialCaseList::create(
+      Paths, SM.getFileManager().getVirtualFileSystem(), Error);
+  return SSCL != nullptr;
 }
 
 bool NoSanitizeList::containsGlobal(SanitizerMask Mask, StringRef GlobalName,
