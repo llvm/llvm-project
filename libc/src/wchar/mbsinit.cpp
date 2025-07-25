@@ -20,9 +20,7 @@ LLVM_LIBC_FUNCTION(int, mbsinit, (mbstate_t * ps)) {
   if (ps == nullptr)
     return true;
   internal::CharacterConverter cr(reinterpret_cast<internal::mbstate *>(ps));
-  if (cr.isValidState() && cr.isEmpty())
-    return true;
-  return false;
+  return cr.isValidState() && cr.isEmpty();
 }
 
 } // namespace LIBC_NAMESPACE_DECL
