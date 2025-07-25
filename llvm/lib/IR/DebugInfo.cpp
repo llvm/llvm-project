@@ -199,9 +199,6 @@ void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
 
 void DebugInfoFinder::processInstruction(const Module &M,
                                          const Instruction &I) {
-  if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
-    processVariable(DVI->getVariable());
-
   if (auto DbgLoc = I.getDebugLoc())
     processLocation(M, DbgLoc.get());
 

@@ -236,16 +236,14 @@ TEST(MetadataTest, GlobalConstantMetadataUsedByDbgRecord) {
   EXPECT_FALSE(isa<UndefValue>(DVRs[0]->getValue(0)));
 }
 
-TEST(DbgVariableIntrinsic, EmptyMDIsKillLocation) {
+TEST(MetadataTest, EmptyMDIsKillLocation) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M = parseIR(Ctx, R"(
     define dso_local void @fun() local_unnamed_addr #0 !dbg !9 {
     entry:
-      call void @llvm.dbg.declare(metadata !{}, metadata !13, metadata !DIExpression()), !dbg !16
+        #dbg_declare(!{}, !13, !DIExpression(), !16)
       ret void, !dbg !16
     }
-
-    declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
     !llvm.dbg.cu = !{!0}
     !llvm.module.flags = !{!2, !3}

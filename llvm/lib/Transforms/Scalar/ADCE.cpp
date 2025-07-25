@@ -517,18 +517,18 @@ ADCEChanged AggressiveDeadCodeElimination::removeDeadInstructions() {
       if (isLive(&I))
         continue;
 
-      if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
+      for (DbgVariableRecord &DV : llvm::filterDbgVars(I.getDbgRecordRange())) {
         // Check if the scope of this variable location is alive.
-        if (AliveScopes.count(DII->getDebugLoc()->getScope()))
+        if (AliveScopes.count(DV.getDebugLoc()->getScope()))
           continue;
 
         // If intrinsic is pointing at a live SSA value, there may be an
         // earlier optimization bug: if we know the location of the variable,
         // why isn't the scope of the location alive?
-        for (Value *V : DII->location_ops()) {
+        for (Value *V : DV.location_ops()) {
           if (Instruction *II = dyn_cast<Instruction>(V)) {
             if (isLive(II)) {
-              dbgs() << "Dropping debug info for " << *DII << "\n";
+              dbgs() << "Dropping debug info for " << DV << "\n";
               break;
             }
           }

@@ -6940,7 +6940,7 @@ static void FixupDebugInfoForOutlinedFunction(
     return NewVar;
   };
 
-  auto UpdateDebugRecord = [&](auto *DR) {
+  auto UpdateDebugRecord = [&](DbgVariableRecord *DR) {
     DILocalVariable *OldVar = DR->getVariable();
     unsigned ArgNo = 0;
     for (auto Loc : DR->location_ops()) {
@@ -6957,9 +6957,6 @@ static void FixupDebugInfoForOutlinedFunction(
   // The location and scope of variable intrinsics and records still point to
   // the parent function of the target region. Update them.
   for (Instruction &I : instructions(Func)) {
-    if (auto *DDI = dyn_cast<llvm::DbgVariableIntrinsic>(&I))
-      UpdateDebugRecord(DDI);
-
     for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
       UpdateDebugRecord(&DVR);
   }
