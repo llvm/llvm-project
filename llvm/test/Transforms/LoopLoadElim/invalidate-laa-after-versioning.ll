@@ -66,9 +66,7 @@ define void @test(ptr %arg, i64 %arg1) {
 ; CHECK-NEXT:    [[LCSSA_PTR_IV_2:%.*]] = phi ptr [ [[PTR_IV_2]], [[INNER_2]] ]
 ; CHECK-NEXT:    [[GEP_6:%.*]] = getelementptr inbounds double, ptr [[PTR_PHI]], i64 1
 ; CHECK-NEXT:    [[GEP_7:%.*]] = getelementptr inbounds double, ptr [[LCSSA_PTR_IV_2]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[LCSSA_PTR_IV_2]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 16
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = inttoptr i64 [[TMP1]] to ptr
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[LCSSA_PTR_IV_2]], i64 16
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[GEP_7]], [[GEP_1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[PTR_PHI]], [[SCEVGEP3]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]

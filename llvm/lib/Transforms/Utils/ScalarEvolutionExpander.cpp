@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
@@ -42,6 +43,7 @@ cl::opt<unsigned> llvm::SCEVCheapExpansionBudget(
              "controls the budget that is considered cheap (default = 4)"));
 
 using namespace PatternMatch;
+using namespace SCEVPatternMatch;
 
 PoisonFlags::PoisonFlags(const Instruction *I) {
   NUW = false;
@@ -1242,18 +1244,18 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
       continue;
 
     // Check if we can re-use the existing PN, by adjusting it with an expanded
-    // offset, if the offset is simpler (for now just checks if it is
-    // AddRec-free).
+    // offset, if the offset is simpler.
     const SCEV *Diff = SE.getMinusSCEV(S, ExitSCEV);
-    if (isa<SCEVCouldNotCompute>(Diff) ||
-        SCEVExprContains(Diff,
-                         [](const SCEV *S) { return isa<SCEVAddRecExpr>(S); }))
+    const SCEV *Op = Diff;
+    match(Diff, m_scev_Mul(m_scev_AllOnes(), m_SCEV(Op)));
+    match(Op, m_scev_PtrToInt(m_SCEV(Op)));
+    if (!isa<SCEVConstant, SCEVUnknown>(Op))
       continue;
 
     Value *DiffV = expand(Diff);
     Value *BaseV = &PN;
     if (DiffV->getType()->isIntegerTy() && PhiTy->isPointerTy())
-      BaseV = Builder.CreatePtrToInt(BaseV, DiffV->getType());
+      return Builder.CreatePtrAdd(BaseV, DiffV);
     return Builder.CreateAdd(BaseV, DiffV);
   }
 
