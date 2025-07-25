@@ -806,7 +806,17 @@ void TargetLoweringBase::initActions() {
                         ISD::SDIVFIX,        ISD::SDIVFIXSAT,
                         ISD::UDIVFIX,        ISD::UDIVFIXSAT,
                         ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT,
-                        ISD::IS_FPCLASS},
+                        ISD::IS_FPCLASS,     ISD::FCBRT,
+                        ISD::FLOG,           ISD::FLOG2,
+                        ISD::FLOG10,         ISD::FEXP,
+                        ISD::FEXP2,          ISD::FEXP10,
+                        ISD::FFLOOR,         ISD::FNEARBYINT,
+                        ISD::FCEIL,          ISD::FRINT,
+                        ISD::FTRUNC,         ISD::FROUNDEVEN,
+                        ISD::FTAN,           ISD::FACOS,
+                        ISD::FASIN,          ISD::FATAN,
+                        ISD::FCOSH,          ISD::FSINH,
+                        ISD::FTANH,          ISD::FATAN2},
                        VT, Expand);
 
     // Overflow operations default to expand
@@ -856,8 +866,7 @@ void TargetLoweringBase::initActions() {
           {ISD::FCOPYSIGN, ISD::SIGN_EXTEND_INREG, ISD::ANY_EXTEND_VECTOR_INREG,
            ISD::SIGN_EXTEND_VECTOR_INREG, ISD::ZERO_EXTEND_VECTOR_INREG,
            ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT, ISD::LROUND,
-           ISD::LLROUND, ISD::FTAN, ISD::FACOS, ISD::FASIN, ISD::FATAN,
-           ISD::FCOSH, ISD::FSINH, ISD::FTANH, ISD::FATAN2},
+           ISD::LLROUND},
           VT, Expand);
 
       // Constrained floating-point operations default to expand.
@@ -913,15 +922,6 @@ void TargetLoweringBase::initActions() {
   setOperationAction(ISD::ConstantFP,
                      {MVT::bf16, MVT::f16, MVT::f32, MVT::f64, MVT::f80, MVT::f128},
                      Expand);
-
-  // These library functions default to expand.
-  setOperationAction({ISD::FCBRT,      ISD::FLOG,  ISD::FLOG2,  ISD::FLOG10,
-                      ISD::FEXP,       ISD::FEXP2, ISD::FEXP10, ISD::FFLOOR,
-                      ISD::FNEARBYINT, ISD::FCEIL, ISD::FRINT,  ISD::FTRUNC,
-                      ISD::FROUNDEVEN, ISD::FTAN,  ISD::FACOS,  ISD::FASIN,
-                      ISD::FATAN,      ISD::FCOSH, ISD::FSINH,  ISD::FTANH,
-                      ISD::FATAN2},
-                     {MVT::f32, MVT::f64, MVT::f128}, Expand);
 
   // Insert custom handling default for llvm.canonicalize.*.
   setOperationAction(ISD::FCANONICALIZE,
