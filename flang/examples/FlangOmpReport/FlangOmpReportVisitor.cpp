@@ -119,8 +119,12 @@ std::string OpenMPCounterVisitor::getName(const OpenMPDeclarativeConstruct &c) {
       c.u);
 }
 std::string OpenMPCounterVisitor::getName(const OpenMPConstruct &c) {
-  return normalize_construct_name(
-      omp::GetOmpDirectiveName(c).source.ToString());
+  if (std::holds_alternative<OpenMPSectionConstruct>(c.u)) {
+    return "section";
+  } else {
+    return normalize_construct_name(
+        omp::GetOmpDirectiveName(c).source.ToString());
+  }
 }
 
 bool OpenMPCounterVisitor::Pre(const OpenMPDeclarativeConstruct &c) {
