@@ -35,28 +35,22 @@ protected:
 // CHECK:       {
 // CHECK-NEXT:    "Description": {
 // CHECK-NEXT:      "BriefComments": [
-// CHECK-NEXT:        {
-// CHECK-NEXT:          "Children": [
-// CHECK-NEXT:            {
-// CHECK-NEXT:              "ParagraphComment": {
-// CHECK-NEXT:                "Children": [
-// CHECK-NEXT:                  {
-// CHECK-NEXT:                    "TextComment": " This is a brief description."
-// CHECK:               "Command": "brief"
+// CHECK-NEXT:        [
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "TextComment": " This is a brief description."
 // CHECK:           "HasBriefComments": true,
 // CHECK-NEXT:      "HasParagraphComments": true,
 // CHECK-NEXT:      "ParagraphComments": [
-// CHECK-NEXT:        {
-// CHECK-NEXT:          "Children": [
-// CHECK-NEXT:            {
-// CHECK-NEXT:              "TextComment": " This is a nice class."
-// CHECK-NEXT:            },
-// CHECK-NEXT:            {
-// CHECK-NEXT:              "TextComment": " It has some nice methods and fields."
-// CHECK-NEXT:            },
-// CHECK-NEXT:            {
-// CHECK-NEXT:              "TextComment": ""
-// CHECK-NEXT:            }
+// CHECK-NEXT:        [
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "TextComment": " This is a nice class."
+// CHECK-NEXT:          },
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "TextComment": " It has some nice methods and fields."
+// CHECK-NEXT:          },
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "TextComment": ""
+// CHECK-NEXT:          }
 // CHECK:         "DocumentationFileName": "_ZTV7MyClass",
 // CHECK:         "Enums": [
 // CHECK-NEXT:      {
