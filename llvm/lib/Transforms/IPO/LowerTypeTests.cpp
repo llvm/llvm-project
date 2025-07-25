@@ -349,7 +349,6 @@ private:
 
 struct ScopedSaveAliaseesAndUsed {
   Module &M;
-  std::set<GlobalAlias *> *ExcludedAliases;
   SmallVector<GlobalValue *, 4> Used, CompilerUsed;
   std::vector<std::pair<GlobalAlias *, Function *>> FunctionAliases;
   std::vector<std::pair<GlobalIFunc *, Function *>> ResolverIFuncs;
@@ -378,9 +377,7 @@ struct ScopedSaveAliaseesAndUsed {
     Vec.resize(NonFuncBegin - Vec.begin());
   }
 
-  ScopedSaveAliaseesAndUsed(Module &M,
-                            std::set<GlobalAlias *> *ExcludedAliases = nullptr)
-      : M(M), ExcludedAliases(ExcludedAliases) {
+  ScopedSaveAliaseesAndUsed(Module &M) : M(M) {
     // The users of this class want to replace all function references except
     // for aliases and llvm.used/llvm.compiler.used with references to a jump
     // table. We avoid replacing aliases in order to avoid introducing a double
@@ -399,9 +396,8 @@ struct ScopedSaveAliaseesAndUsed {
     for (auto &GA : M.aliases()) {
       // FIXME: This should look past all aliases not just interposable ones,
       // see discussion on D65118.
-      if (!ExcludedAliases || !ExcludedAliases->count(&GA))
-        if (auto *F = dyn_cast<Function>(GA.getAliasee()->stripPointerCasts()))
-          FunctionAliases.push_back({&GA, F});
+      if (auto *F = dyn_cast<Function>(GA.getAliasee()->stripPointerCasts()))
+        FunctionAliases.push_back({&GA, F});
     }
 
     for (auto &GI : M.ifuncs())
@@ -2251,7 +2247,6 @@ bool LowerTypeTestsModule::lower() {
   
   // Parse alias data to replace stand-in function declarations for aliases
   // with an alias to the intended target.
-  std::set<GlobalAlias *> ExcludedAliases;
   if (ExportSummary) {
     if (NamedMDNode *AliasesMD = M.getNamedMetadata("aliases")) {
       for (auto *AliasMD : AliasesMD->operands()) {
@@ -2428,7 +2423,7 @@ bool LowerTypeTestsModule::lower() {
     return false;
 
   {
-    ScopedSaveAliaseesAndUsed S(M, &ExcludedAliases);
+    ScopedSaveAliaseesAndUsed S(M);
     // For each disjoint set we found...
     for (const auto &C : GlobalClasses) {
       if (!C->isLeader())
