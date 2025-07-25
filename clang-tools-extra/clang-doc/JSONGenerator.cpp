@@ -103,6 +103,18 @@ static json::Value extractTextComments(Object *ParagraphComment) {
   return *ParagraphComment->get("Children");
 }
 
+static json::Value extractVerbatimComments(json::Array VerbatimLines) {
+  json::Value TextArray = json::Array();
+  auto &TextArrayRef = *TextArray.getAsArray();
+  for (auto &Line : VerbatimLines)
+    TextArrayRef.push_back(*Line.getAsObject()
+                                ->get("VerbatimBlockLineComment")
+                                ->getAsObject()
+                                ->get("Text"));
+
+  return TextArray;
+}
+
 static Object serializeComment(const CommentInfo &I, Object &Description) {
   // taken from PR #142273
   Object Obj = Object();
@@ -157,13 +169,11 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
   }
 
   case CommentKind::CK_VerbatimBlockComment: {
-    Child.insert({"Text", I.Text});
-    if (!I.CloseName.empty())
-      Child.insert({"CloseName", I.CloseName});
-    Child.insert({"Children", ChildArr});
-    if (I.CloseName == "endcode")
-      insertComment(Description, ChildVal, "CodeComments");
-    else if (I.CloseName == "endverbatim")
+    if (I.CloseName == "endcode") {
+      // We don't support \code language specification
+      auto TextCommentsArray = extractVerbatimComments(CARef);
+      insertComment(Description, TextCommentsArray, "CodeComments");
+    } else if (I.CloseName == "endverbatim")
       insertComment(Description, ChildVal, "VerbatimComments");
     return Obj;
   }
