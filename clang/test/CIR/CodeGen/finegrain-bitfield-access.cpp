@@ -60,7 +60,7 @@ unsigned read8_1() {
 // LLVM:  ret i32 [[RET]]
 
 // OGCG-LABEL: @_Z7read8_1v
-// OGCG: [[BFLOAD:%.*]] = load i8, ptr getelementptr inbounds nuw (%struct.S1, ptr @a1, i32 0, i32 1), align 1
+// OGCG: [[BFLOAD:%.*]] = load i8, ptr getelementptr inbounds nuw (%struct.S1, ptr {{.*}}, i32 0, i32 1), align 1
 // OGCG-NEXT: [[BFCAST:%.*]] = zext i8 [[BFLOAD]] to i32
 // OGCG-NEXT: ret i32 [[BFCAST]]
 
@@ -104,7 +104,7 @@ unsigned read8_2() {
 // LLVM:  ret i32 [[RET]]
 
 // OGCG-LABEL: @_Z7read8_2v
-// OGCG: [[BFLOAD:%.*]] = load i16, ptr getelementptr inbounds nuw (%struct.S1, ptr @a1, i32 0, i32 2), align 2
+// OGCG: [[BFLOAD:%.*]] = load i16, ptr getelementptr inbounds nuw (%struct.S1, ptr {{.*}}, i32 0, i32 2), align 2
 // OGCG-NEXT: [[BFLSHR:%.*]] = lshr i16 [[BFLOAD]], 4
 // OGCG-NEXT: [[BFCLEAR:%.*]] = and i16 [[BFLSHR]], 255
 // OGCG-NEXT: [[BFCAST:%.*]] = zext i16 [[BFCLEAR]] to i32
@@ -118,7 +118,7 @@ void write8_2() {
 // CIR: [[CONST3:%.*]] = cir.const #cir.int<3> : !s32i
 // CIR: [[INT3:%.*]] = cir.cast(integral, [[CONST3]] : !s32i), !u32i
 // CIR: [[MEMBER:%.*]] = cir.get_member {{.*}}[2] {name = "f5"} : !cir.ptr<!rec_S1> -> !cir.ptr<!u16i>
-// CIR: cir.set_bitfield align(2) (#bfi_f5, %3 : !cir.ptr<!u16i>, %1 : !u32i) -> !u32i
+// CIR: cir.set_bitfield align(2) (#bfi_f5, %3 : !cir.ptr<!u16i>, {{.*}} : !u32i) -> !u32i
 
 // LLVM-LABEL: @_Z8write8_2v
 // LLVM:  [[BFLOAD:%.*]] = load i16, ptr getelementptr inbounds nuw (i8, ptr {{.*}}, i64 2), align 2
@@ -131,7 +131,7 @@ void write8_2() {
 // OGCG: [[BFLOAD:%.*]] = load i16, ptr getelementptr inbounds nuw (%struct.S1, ptr {{.*}}, i32 0, i32 2), align 2
 // OGCG-NEXT: [[BFCLEAR:%.*]] = and i16 [[BFLOAD]], -4081
 // OGCG-NEXT: [[BFSET:%.*]] = or i16 [[BFCLEAR]], 48
-// OGCG-NEXT: store i16 [[BFSET]], ptr getelementptr inbounds nuw (%struct.S1, ptr @a1, i32 0, i32 2), align 2
+// OGCG-NEXT: store i16 [[BFSET]], ptr getelementptr inbounds nuw (%struct.S1, ptr {{.*}}, i32 0, i32 2), align 2
 // OGCG-NEXT: ret void
 
 unsigned read16_1() {
@@ -214,7 +214,7 @@ void write16_2() {
 // CIR: [[CONST5:%.*]] = cir.const #cir.int<5> : !s32i
 // CIR: [[INT5:%.*]] = cir.cast(integral, [[CONST5]] : !s32i), !u64i
 // CIR: [[MEMBER:%.*]] = cir.get_member {{.*}}[1] {name = "f2"} : !cir.ptr<!rec_S2> -> !cir.ptr<!u16i>
-// CIR: cir.set_bitfield align(2) (#bfi_f2, [[MEMBER]] : !cir.ptr<!u16i>, %1 : !u64i) -> !u64i
+// CIR: cir.set_bitfield align(2) (#bfi_f2, [[MEMBER]] : !cir.ptr<!u16i>, {{.*}} : !u64i) -> !u64i
 // CIR: cir.return
 
 // LLVM-LABEL: @_Z9write16_2v
