@@ -964,6 +964,7 @@ TEST(IOApiTests, EditDoubleInputValues) {
       {"(RU,E9.1)", " 1.0E-325", 0x1, 0},
       {"(E9.1)", "-1.0E-325", 0x8000000000000000, 0},
       {"(RD,E9.1)", "-1.0E-325", 0x8000000000000001, 0},
+      {"(F7.0))", "+NaN(q)", 0x7ff8000000000000, 0},
   };
   for (auto const &[format, data, want, iostat] : testCases) {
     auto cookie{IONAME(BeginInternalFormattedInput)(
