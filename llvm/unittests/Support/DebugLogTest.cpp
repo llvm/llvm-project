@@ -27,7 +27,7 @@ TEST(DebugLogTest, Basic) {
     std::string str;
     raw_string_ostream os(str);
     DEBUGLOG_WITH_STREAM_AND_TYPE(os, nullptr) << "NoType";
-    EXPECT_TRUE(StringRef(os.str()).starts_with('['));
+    EXPECT_FALSE(StringRef(os.str()).starts_with('['));
     EXPECT_TRUE(StringRef(os.str()).ends_with("NoType\n"));
   }
 
@@ -37,6 +37,7 @@ TEST(DebugLogTest, Basic) {
     raw_string_ostream os(str);
     DEBUGLOG_WITH_STREAM_AND_TYPE(os, "A") << "A";
     DEBUGLOG_WITH_STREAM_AND_TYPE(os, "B") << "B";
+    EXPECT_TRUE(StringRef(os.str()).starts_with('['));
     EXPECT_THAT(os.str(), AllOf(HasSubstr("A\n"), HasSubstr("B\n")));
   }
 
