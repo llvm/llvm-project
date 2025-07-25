@@ -3705,7 +3705,15 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // For large transfers use synchronous behavior.
     // If OMPT is enabled or synchronous behavior is explicitly requested:
+    // FIXME: Currently hsa async copy fails to see completion signal for
+    //        non-x86 dataSubmit/Retrieve. Other non-x86 calls to asyncMemCopy
+    //        work. So for now, skip async copy for non-x86 for dataSubmit
+    //        and dataRetrive only.
+#if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86)
     if (OMPX_ForceSyncRegions || Size >= OMPX_MaxAsyncCopyBytes) {
+#else
+    if (false) {
+#endif
       if (AsyncInfoWrapper.hasQueue())
         if (auto Err = synchronize(AsyncInfoWrapper))
           return Err;
@@ -3792,7 +3800,15 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // For large transfers use synchronous behavior.
     // If OMPT is enabled or synchronous behavior is explicitly requested:
+    // FIXME: Currently hsa async copy fails to see completion signal for
+    //        non-x86 dataSubmit/Retrieve. Other non-x86 calls to asyncMemCopy
+    //        work. So for now, skip async copy for non-x86 for dataSubmit
+    //        and dataRetrive only.
+#if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86)
     if (OMPX_ForceSyncRegions || Size >= OMPX_MaxAsyncCopyBytes) {
+#else
+    if (false) {
+#endif
       if (AsyncInfoWrapper.hasQueue())
         if (auto Err = synchronize(AsyncInfoWrapper))
           return Err;
