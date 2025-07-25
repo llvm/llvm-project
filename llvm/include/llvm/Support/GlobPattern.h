@@ -35,6 +35,7 @@ namespace llvm {
 ///   expansions are not supported. If \p MaxSubPatterns is empty then
 ///   brace expansions are not supported and characters `{,}` are treated as
 ///   literals.
+/// * `/` matches both unix and windows path separators: `/` and `\`.
 /// * `\` escapes the next character so it is treated as a literal.
 ///
 /// Some known edge cases are:
@@ -55,8 +56,10 @@ public:
   /// \param MaxSubPatterns if provided limit the number of allowed subpatterns
   ///                       created from expanding braces otherwise disable
   ///                       brace expansion
+  /// \param IsSlashAgnostic whether to treat '/' as matching '\\' as well
   LLVM_ABI static Expected<GlobPattern>
-  create(StringRef Pat, std::optional<size_t> MaxSubPatterns = {});
+  create(StringRef Pat, std::optional<size_t> MaxSubPatterns = {},
+         bool IsSlashAgnostic = false);
   /// \returns \p true if \p S matches this glob pattern
   LLVM_ABI bool match(StringRef S) const;
 
@@ -75,7 +78,9 @@ private:
 
   struct SubGlobPattern {
     /// \param Pat the pattern to match against
-    LLVM_ABI static Expected<SubGlobPattern> create(StringRef Pat);
+    /// \param SlashAgnostic whether to treat '/' as matching '\\' as well
+    LLVM_ABI static Expected<SubGlobPattern> create(StringRef Pat,
+                                                    bool SlashAgnostic);
     /// \returns \p true if \p S matches this glob pattern
     LLVM_ABI bool match(StringRef S) const;
     StringRef getPat() const { return StringRef(Pat.data(), Pat.size()); }
@@ -87,6 +92,7 @@ private:
     };
     SmallVector<Bracket, 0> Brackets;
     SmallVector<char, 0> Pat;
+    bool IsSlashAgnostic;
   };
   SmallVector<SubGlobPattern, 1> SubGlobs;
 };
