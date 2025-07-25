@@ -25,7 +25,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-static constexpr double asin(double x) {
+LIBC_INLINE static constexpr double asin(double x) {
   using namespace asin_internal;
   using Float128 = fputil::DyadicFloat<128>;
   using DoubleDouble = fputil::DoubleDouble;
