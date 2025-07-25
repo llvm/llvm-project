@@ -35,6 +35,7 @@ class raw_ostream;
 class Value;
 class VPDef;
 struct VPDoubleValueDef;
+struct VPWidenFFLoadRecipe;
 class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
@@ -48,6 +49,7 @@ class VPPhiAccessors;
 class LLVM_ABI_FOR_TEST VPValue {
   friend class VPDef;
   friend struct VPDoubleValueDef;
+  friend struct VPWidenFFLoadRecipe;
   friend class VPInterleaveBase;
   friend class VPlan;
   friend class VPExpressionRecipe;
@@ -351,6 +353,7 @@ public:
     VPWidenCastSC,
     VPWidenGEPSC,
     VPWidenIntrinsicSC,
+    VPWidenFFLoadSC,
     VPWidenLoadEVLSC,
     VPWidenLoadSC,
     VPWidenStoreEVLSC,
