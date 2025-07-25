@@ -26,8 +26,8 @@ c.jalr  zero # CHECK: :[[@LINE]]:9: error: register must be a GPR excluding zero
 c.mv  ra, x0 # CHECK: :[[@LINE]]:11: error: register must be a GPR excluding zero (x0)
 c.add  ra, ra, x0 # CHECK: :[[@LINE]]:16: error: invalid operand for instruction
 
-## GPRNoX0X2
-c.lui x2, 4 # CHECK: :[[@LINE]]:7: error: register must be a GPR excluding zero (x0) and sp (x2){{$}}
+## GPRNoX2
+c.lui x2, 4 # CHECK: :[[@LINE]]:7: error: register must be a GPR excluding sp (x2){{$}}
 
 ## SP
 c.addi4spn  a0, a0, 12 # CHECK: :[[@LINE]]:17: error: register must be sp (x2)
