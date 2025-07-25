@@ -45,6 +45,20 @@ multiclass XOForm_RTAB5_L1r<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
   }
 }
 
+class VXForm_VRTAB5<bits<11> xo, dag OOL, dag IOL, string asmstr,
+                    list<dag> pattern> : I<4, OOL, IOL, asmstr, NoItinerary> {
+  bits<5> VRT;
+  bits<5> VRA;
+  bits<5> VRB;
+
+  let Pattern = pattern;
+
+  let Inst{6-10}  = VRT;
+  let Inst{11-15} = VRA;
+  let Inst{16-20} = VRB;
+  let Inst{21-31} = xo;
+}
+
 let Predicates = [IsISAFuture] in {
   defm SUBFUS : XOForm_RTAB5_L1r<31, 72, (outs g8rc:$RT),
                                  (ins g8rc:$RA, g8rc:$RB, u1imm:$L),
@@ -85,4 +99,17 @@ let Predicates = [HasVSX, IsISAFuture] in {
                                    (ins vsrprc:$XTp, memr:$RA, g8rc:$RB),
                                    "stxvprll $XTp, $RA, $RB", IIC_LdStLFD, []>;
   }
+
+  def VUCMPRHN : VXForm_VRTAB5<3, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
+                               "vucmprhn $VRT, $VRA, $VRB", []>;
+  def VUCMPRLN : VXForm_VRTAB5<67, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
+                               "vucmprln $VRT, $VRA, $VRB", []>;
+  def VUCMPRHB : VXForm_VRTAB5<131, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
+                               "vucmprhb $VRT, $VRA, $VRB", []>;
+  def VUCMPRLB : VXForm_VRTAB5<195, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
+                               "vucmprlb $VRT, $VRA, $VRB", []>;
+  def VUCMPRHH : VXForm_VRTAB5<295, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
+                               "vucmprhh $VRT, $VRA, $VRB", []>;
+  def VUCMPRLH : VXForm_VRTAB5<323, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
+                               "vucmprlh $VRT, $VRA, $VRB", []>;
 }
