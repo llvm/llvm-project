@@ -983,9 +983,7 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
   // with an adjacent appropriate memory to vlseg/vsseg intrinsics. vlseg/vsseg
   // only support masking per-iteration (i.e. condition), not per-segment (i.e.
   // gap).
-  // TODO: Support masked interleaved access for fixed length vector.
-  if ((isa<ScalableVectorType>(VecTy) || !UseMaskForCond) && !UseMaskForGaps &&
-      Factor <= TLI->getMaxSupportedInterleaveFactor()) {
+  if (!UseMaskForGaps && Factor <= TLI->getMaxSupportedInterleaveFactor()) {
     auto *VTy = cast<VectorType>(VecTy);
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VTy);
     // Need to make sure type has't been scalarized
