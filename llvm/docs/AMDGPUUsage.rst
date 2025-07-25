@@ -18999,7 +18999,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                   GFX942)
      ``.amdhsa_user_sgpr_private_segment_size``               0                   GFX6-GFX12   Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-     ``.amdhsa_user_sgpr_private_segment_size``               0                   GFX1250+     Controls USES_CU_STORES in
+     ``.amdhsa_uses_cu_stores``                               0                   GFX1250+     Controls USES_CU_STORES in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_wavefront_size32``                             Target              GFX10-GFX12  Controls ENABLE_WAVEFRONT_SIZE32 in
                                                               Feature                          :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
