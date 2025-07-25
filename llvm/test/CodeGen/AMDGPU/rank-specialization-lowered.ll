@@ -15,11 +15,6 @@ define void @dummy_store() #5 {
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
-; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    s_wait_samplecnt 0x0
-; CHECK-NEXT:    s_wait_rtscnt 0x0
-; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
@@ -39,11 +34,6 @@ define void @dummy_rank1a() #5 {
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
-; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    s_wait_samplecnt 0x0
-; CHECK-NEXT:    s_wait_rtscnt 0x0
-; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
@@ -63,11 +53,6 @@ define void @dummy_rank1b() #5 {
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
-; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    s_wait_samplecnt 0x0
-; CHECK-NEXT:    s_wait_rtscnt 0x0
-; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
