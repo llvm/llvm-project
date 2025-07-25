@@ -559,20 +559,7 @@ void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
     } else {
       const MCSectionELF &Section =
           static_cast<const MCSectionELF &>(Symbol.getSection());
-
-      // We may end up with a situation when section symbol is technically
-      // defined, but should not be. That happens because we explicitly
-      // pre-create few .debug_* sections to have accessors.
-      // And if these sections were not really defined in the code, but were
-      // referenced, we simply error out.
-      if (!Section.isRegistered()) {
-        assert(static_cast<const MCSymbolELF &>(Symbol).getType() ==
-               ELF::STT_SECTION);
-        Ctx.reportError(SMLoc(),
-                        "Undefined section reference: " + Symbol.getName());
-        continue;
-      }
-
+      assert(Section.isRegistered());
       if (Mode == NonDwoOnly && isDwoSection(Section))
         continue;
       MSD.SectionIndex = Section.getOrdinal();

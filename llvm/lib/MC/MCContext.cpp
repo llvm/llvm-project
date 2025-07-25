@@ -443,17 +443,19 @@ MCSymbol *MCContext::getDirectionalLocalSymbol(unsigned LocalLabelVal,
   return getOrCreateDirectionalLocalSymbol(LocalLabelVal, Instance);
 }
 
+// Create a section symbol, with a distinct one for each section of the same.
+// The first symbol is used for assembly code references.
 template <typename Symbol>
 Symbol *MCContext::getOrCreateSectionSymbol(StringRef Section) {
   Symbol *R;
   auto &SymEntry = getSymbolTableEntry(Section);
   MCSymbol *Sym = SymEntry.second.Symbol;
-  // A section symbol can not redefine regular symbols. There may be multiple
-  // sections with the same name, in which case the first such section wins.
   if (Sym && Sym->isDefined() &&
       (!Sym->isInSection() || Sym->getSection().getBeginSymbol() != Sym))
     reportError(SMLoc(), "invalid symbol redefinition");
-  if (Sym && Sym->isUndefined()) {
+  // Use the symbol's index to track if it has been used as a section symbol.
+  // Set to -1 to catch potential bugs if misused as a symbol index.
+  if (Sym && Sym->getIndex() != -1u) {
     R = cast<Symbol>(Sym);
   } else {
     SymEntry.second.Used = true;
@@ -461,6 +463,8 @@ Symbol *MCContext::getOrCreateSectionSymbol(StringRef Section) {
     if (!Sym)
       SymEntry.second.Symbol = R;
   }
+  // Mark as section symbol.
+  R->setIndex(-1u);
   return R;
 }
 
@@ -568,7 +572,6 @@ MCSectionMachO *MCContext::getMachOSection(StringRef Segment, StringRef Section,
       MCSectionMachO(Segment, Name.substr(Name.size() - Section.size()),
                      TypeAndAttributes, Reserved2, Kind, Begin);
   R.first->second = Ret;
-  allocInitialFragment(*Ret);
   return Ret;
 }
 
@@ -579,15 +582,8 @@ MCSectionELF *MCContext::createELFSectionImpl(StringRef Section, unsigned Type,
                                               bool Comdat, unsigned UniqueID,
                                               const MCSymbolELF *LinkedToSym) {
   auto *R = getOrCreateSectionSymbol<MCSymbolELF>(Section);
-  R->setBinding(ELF::STB_LOCAL);
-  R->setType(ELF::STT_SECTION);
-
-  auto *Ret = new (ELFAllocator.Allocate()) MCSectionELF(
+  return new (ELFAllocator.Allocate()) MCSectionELF(
       Section, Type, Flags, EntrySize, Group, Comdat, UniqueID, R, LinkedToSym);
-
-  auto *F = allocInitialFragment(*Ret);
-  R->setFragment(F);
-  return Ret;
 }
 
 MCSectionELF *
@@ -743,7 +739,6 @@ MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
       MCSectionGOFF(CachedName, Kind, IsVirtual, Attributes,
                     static_cast<MCSectionGOFF *>(Parent));
   Iter->second = GOFFSection;
-  allocInitialFragment(*GOFFSection);
   return GOFFSection;
 }
 
@@ -798,8 +793,7 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
   MCSectionCOFF *Result = new (COFFAllocator.Allocate()) MCSectionCOFF(
       CachedName, Characteristics, COMDATSymbol, Selection, UniqueID, Begin);
   Iter->second = Result;
-  auto *F = allocInitialFragment(*Result);
-  Begin->setFragment(F);
+  Begin->setFragment(&Result->getDummyFragment());
   return Result;
 }
 
@@ -870,8 +864,6 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
       MCSectionWasm(CachedName, Kind, Flags, GroupSym, UniqueID, Begin);
   Entry.second = Result;
 
-  auto *F = allocInitialFragment(*Result);
-  Begin->setFragment(F);
   return Result;
 }
 
@@ -927,24 +919,11 @@ MCSectionXCOFF *MCContext::getXCOFFSection(
                        MultiSymbolsAllowed);
 
   Entry.second = Result;
-
-  auto *F = allocInitialFragment(*Result);
-
-  // We might miss calculating the symbols difference as absolute value before
-  // adding fixups when symbol_A without the fragment set is the csect itself
-  // and symbol_B is in it.
-  // TODO: Currently we only set the fragment for XMC_PR csects and DWARF
-  // sections because we don't have other cases that hit this problem yet.
-  if (IsDwarfSec || CsectProp->MappingClass == XCOFF::XMC_PR)
-    QualName->setFragment(F);
-
   return Result;
 }
 
 MCSectionSPIRV *MCContext::getSPIRVSection() {
   MCSectionSPIRV *Result = new (SPIRVAllocator.Allocate()) MCSectionSPIRV();
-
-  allocInitialFragment(*Result);
   return Result;
 }
 
@@ -964,7 +943,6 @@ MCSectionDXContainer *MCContext::getDXContainerSection(StringRef Section,
       new (DXCAllocator.Allocate()) MCSectionDXContainer(Name, K, nullptr);
 
   // The first fragment will store the header
-  allocInitialFragment(*MapIt->second);
   return MapIt->second;
 }
 
