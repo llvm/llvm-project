@@ -140,13 +140,14 @@ void MyExtension::init() {
 
 This type is now directly available in the Transform dialect and can be used in operations.
 In the previous tablegen definition, the type of `$call` must be `Transform_ConcreteOp<“func.call”>`,
-now we make it possible to use `CallOpInterfaceHandle`.
+By adding `CallOpInterfaceHandle` as an allowed type for `$call`, the corresponding handle
+is allowed to be to any op implementing the interface.
 
 ```tablegen
 def ChangeCallTargetOp : ... {
     let arguments = (ins
-    // Specify the type constraint on the input accepting `func.call` and `CallOpInterface`
-    // payload operations.
+    // Allow the handle to be to concrete func.call ops as well as any op implementing
+    // the CallOpInterface.
     AnyTypeOf<[Transform_ConcreteOpType<"func.call">, CallOpInterfaceHandle]>:$call,
     StrAttr:$new_target); 
 }
