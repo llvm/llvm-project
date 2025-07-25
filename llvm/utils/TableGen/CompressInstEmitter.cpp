@@ -653,7 +653,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
                 .str()
           : "";
 
-  for (auto &CompressPat : CompressPatterns) {
+  for (const auto &CompressPat : CompressPatterns) {
     if (EType == EmitterType::Uncompress && CompressPat.IsCompressOnly)
       continue;
 
@@ -661,16 +661,16 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
     std::string CodeString;
     raw_string_ostream CondStream(CondString);
     raw_string_ostream CodeStream(CodeString);
-    CodeGenInstruction &Source =
+    const CodeGenInstruction &Source =
         CompressOrCheck ? CompressPat.Source : CompressPat.Dest;
-    CodeGenInstruction &Dest =
+    const CodeGenInstruction &Dest =
         CompressOrCheck ? CompressPat.Dest : CompressPat.Source;
-    IndexedMap<OpData> SourceOperandMap = CompressOrCheck
-                                              ? CompressPat.SourceOperandMap
-                                              : CompressPat.DestOperandMap;
-    IndexedMap<OpData> &DestOperandMap = CompressOrCheck
-                                             ? CompressPat.DestOperandMap
-                                             : CompressPat.SourceOperandMap;
+    const IndexedMap<OpData> &SourceOperandMap =
+        CompressOrCheck ? CompressPat.SourceOperandMap
+                        : CompressPat.DestOperandMap;
+    const IndexedMap<OpData> &DestOperandMap =
+        CompressOrCheck ? CompressPat.DestOperandMap
+                        : CompressPat.SourceOperandMap;
 
     CurOp = Source.TheDef->getName();
     // Check current and previous opcode to decide to continue or end a case.
