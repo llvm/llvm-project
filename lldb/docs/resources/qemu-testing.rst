@@ -167,3 +167,50 @@ The result of this is that:
 
 Your VM configuration should have ports ``54321`` and ``49140`` forwarded for
 this to work.
+
+QEMU user mode emulation
+------------------------
+
+Serious testing of LLDB should be done using system mode emulation. The following
+is presented for information only and is not a supported testing configuration
+supported by the LLDB project.
+
+However, it is possible to run the test suite against user mode QEMU if you just
+want to test a specific aspect of ``lldb`` and are ok ignoring a lot of expected
+failures. This method can also be adapted for simulators with a qemu-like command
+line interface.
+
+(``lldb-server`` cannot be tested using user mode QEMU because that does not
+emulate the debugging system calls that ``lldb-server`` tries to make)
+
+Change ``LLDB_TEST_USER_ARGS`` to choose the ``qemu-user`` platform and
+configure it for your architecture. The example below is for AArch64 and assumes
+that ``qemu-aarch64`` is installed and on your path.
+
+If you need to override how the ``qemu-user`` platform finds the QEMU binary,
+look up the rest of the platform's settings in LLDB.
+
+::
+
+  -DLLDB_TEST_USER_ARGS="--platform-name;qemu-user;--setting;platform.plugin.qemu-user.architecture=aarch64;--arch;aarch64"
+
+Also set ``LLDB_TEST_COMPILER`` to something that can target the emulated
+architecture. Then you should be able to run ``ninja check-lldb`` and it will
+run the tests on QEMU user automatically.
+
+You will see a number of failures compared to a normal test run. Reasons for
+this can be, but are not limited to:
+
+* QEMU's built-in debug stub acting differently and supporting different
+  features to different extents, when compared to ``lldb-server``. We try to
+  be compatible but LLDB is not regularly tested with QEMU user.
+
+* Tests that spawn new processes to attach to. QEMU user only emulates a single
+  process.
+
+* Watchpoints. Either these are not emulated or behave differently to real
+  hardware. Add ``--skip-category;watchpoint`` to ``-DLLDB_TEST_USER_ARGS`` to
+  skip those.
+
+* Lack of memory region information due to QEMU communicating this in the
+  GDB server format which LLDB does not use.

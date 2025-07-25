@@ -56,13 +56,11 @@ public:
     return UnwindTableLevel::None;
   }
 
-  RuntimeLibType GetDefaultRuntimeLibType() const override {
-    return ToolChain::RLT_CompilerRT;
-  }
+  CXXStdlibType GetDefaultCXXStdlibType() const override;
 
-  CXXStdlibType GetDefaultCXXStdlibType() const override {
-    return ToolChain::CST_Libcxx;
-  }
+  RuntimeLibType GetDefaultRuntimeLibType() const override;
+
+  UnwindLibType GetUnwindLibType(const llvm::opt::ArgList &Args) const override;
 
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
@@ -78,6 +76,7 @@ public:
   addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                            llvm::opt::ArgStringList &CC1Args) const override;
   std::string computeSysRoot() const override;
+  std::string getCompilerRTPath() const override;
   SanitizerMask getSupportedSanitizers() const override;
 
   SmallVector<std::string>

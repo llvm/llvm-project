@@ -257,7 +257,7 @@ updateDeclaredInputTypeWithVolatility(mlir::Type inputType, mlir::Value memref,
   llvm::TypeSwitch<mlir::Type>(inputType)
       .Case<fir::ReferenceType, fir::BoxType, fir::ClassType>(updateType);
   memref =
-      builder.create<fir::VolatileCastOp>(memref.getLoc(), inputType, memref);
+      fir::VolatileCastOp::create(builder, memref.getLoc(), inputType, memref);
   return std::make_pair(inputType, memref);
 }
 
@@ -1293,8 +1293,8 @@ hlfir::MatmulOp::canonicalize(MatmulOp matmulOp,
     if (isOtherwiseUnused(transposeOp)) {
       mlir::Location loc = matmulOp.getLoc();
       mlir::Type resultTy = matmulOp.getResult().getType();
-      auto matmulTransposeOp = rewriter.create<hlfir::MatmulTransposeOp>(
-          loc, resultTy, transposeOp.getArray(), matmulOp.getRhs(),
+      auto matmulTransposeOp = hlfir::MatmulTransposeOp::create(
+          rewriter, loc, resultTy, transposeOp.getArray(), matmulOp.getRhs(),
           matmulOp.getFastmathAttr());
 
       // we don't need to remove any hlfir.destroy because it will be needed for
@@ -2271,8 +2271,8 @@ hlfir::GetLengthOp::canonicalize(GetLengthOp getLength,
     return mlir::failure();
 
   mlir::Type indexTy = rewriter.getIndexType();
-  auto cstLen = rewriter.create<mlir::arith::ConstantOp>(
-      loc, indexTy, mlir::IntegerAttr::get(indexTy, charTy.getLen()));
+  auto cstLen = mlir::arith::ConstantOp::create(
+      rewriter, loc, indexTy, mlir::IntegerAttr::get(indexTy, charTy.getLen()));
   rewriter.replaceOp(getLength, cstLen);
   return mlir::success();
 }

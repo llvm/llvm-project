@@ -24,9 +24,6 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SCF/Transforms/TileUsingInterface.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Tensor/Utils/Utils.h"
-#include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/Utils/Utils.h"
@@ -39,7 +36,6 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/TypeID.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -676,9 +672,10 @@ static Operation *replaceForAllWithNewSignature(
   newOuts.push_back(outputs[resultNumber]);
 
   // Create new scf.forall op
-  auto newforallOp = rewriter.create<scf::ForallOp>(
-      loc, forallOp.getMixedLowerBound(), forallOp.getMixedUpperBound(),
-      forallOp.getMixedStep(), newOuts, forallOp.getMapping());
+  auto newforallOp = scf::ForallOp::create(
+      rewriter, loc, forallOp.getMixedLowerBound(),
+      forallOp.getMixedUpperBound(), forallOp.getMixedStep(), newOuts,
+      forallOp.getMapping());
   rewriter.eraseBlock(newforallOp.getBody());
   newforallOp.getRegion().takeBody(forallOp.getRegion());
 
@@ -703,8 +700,8 @@ static Operation *replaceForAllWithNewSignature(
   Value src = tileAndFuseResult.tiledValues[0];
   Value dst = newforallOp.getRegionIterArgs().back();
   SmallVector<OpFoldResult> strides(offsets.size(), rewriter.getIndexAttr(1));
-  rewriter.create<tensor::ParallelInsertSliceOp>(firstYieldOp->getLoc(), src,
-                                                 dst, offsets, sizes, strides);
+  tensor::ParallelInsertSliceOp::create(rewriter, firstYieldOp->getLoc(), src,
+                                        dst, offsets, sizes, strides);
 
   for (auto result : llvm::enumerate(forallOp.getResults())) {
     rewriter.replaceAllUsesWith(result.value(),
@@ -1855,7 +1852,7 @@ transform::PackTransposeOp::apply(transform::TransformRewriter &rewriter,
     assert(!packOp && "packOp must be null on entry when unPackOp is not null");
     OpOperand *packUse = linalgOp.getDpsInitOperand(
         cast<OpResult>(unPackOp.getSource()).getResultNumber());
-    packOp = dyn_cast_or_null<linalg::PackOp>(packUse->get().getDefiningOp());
+    packOp = packUse->get().getDefiningOp<linalg::PackOp>();
     if (!packOp || !packOp.getResult().hasOneUse())
       return emitSilenceableError() << "could not find matching pack op";
   }
@@ -2065,7 +2062,7 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
       rewriter.setInsertionPoint(linalgTarget);
       for (OpOperand &operand : linalgTarget->getOpOperands()) {
         for (auto [i, dim] : llvm::enumerate(linalgTarget.getShape(&operand))) {
-          if (!ShapedType::isDynamic(dim))
+          if (ShapedType::isStatic(dim))
             continue;
           options.setSizeToPadTo(operand.getOperandNumber(), i,
                                  tensor::getMixedSize(rewriter,
@@ -2408,6 +2405,9 @@ transform::PromoteOp::applyToOne(transform::TransformRewriter &rewriter,
   if (getUseFullTilesByDefault())
     promotionOptions = promotionOptions.setUseFullTileBuffersByDefault(
         getUseFullTilesByDefault());
+  if (getUseOriginalSubviewSize())
+    promotionOptions =
+        promotionOptions.setUseOriginalSubviewSize(getUseOriginalSubviewSize());
   if (getUseAlloca())
     promotionOptions = promotionOptions.setUseAlloca(getUseAlloca());
   if (!getUseFullTileBuffers().empty())
@@ -3411,12 +3411,12 @@ transform::TileUsingForOp::apply(transform::TransformRewriter &rewriter,
         for (auto [ofrIdx, ofr] : llvm::enumerate(getMixedSizes())) {
           if (auto attr = llvm::dyn_cast_if_present<Attribute>(ofr)) {
             if (scalableSizes[ofrIdx]) {
-              auto val = b.create<arith::ConstantIndexOp>(
-                  getLoc(), cast<IntegerAttr>(attr).getInt());
+              auto val = arith::ConstantIndexOp::create(
+                  b, getLoc(), cast<IntegerAttr>(attr).getInt());
               Value vscale =
-                  b.create<vector::VectorScaleOp>(getLoc(), b.getIndexType());
+                  vector::VectorScaleOp::create(b, getLoc(), b.getIndexType());
               sizes.push_back(
-                  b.create<arith::MulIOp>(getLoc(), val, vscale).getResult());
+                  arith::MulIOp::create(b, getLoc(), val, vscale).getResult());
             } else {
               sizes.push_back(attr);
             }
@@ -3627,9 +3627,10 @@ static scf::ForallOp normalizeForallLoopOp(RewriterBase &rewriter,
   SmallVector<OpFoldResult> normalizedSteps(normalizedUbs.size(),
                                             rewriter.getIndexAttr(1));
 
-  auto normalizedForallOp = rewriter.create<scf::ForallOp>(
-      loc, normalizedLbs, normalizedUbs, normalizedSteps, loop.getOutputs(),
-      loop.getMapping(), [](OpBuilder &, Location, ValueRange) {});
+  auto normalizedForallOp = scf::ForallOp::create(
+      rewriter, loc, normalizedLbs, normalizedUbs, normalizedSteps,
+      loop.getOutputs(), loop.getMapping(),
+      [](OpBuilder &, Location, ValueRange) {});
 
   auto normalizedLoopIvs = normalizedForallOp.getInductionVars();
   OpBuilder::InsertionGuard g(rewriter);
@@ -3921,7 +3922,10 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
     }
     FailureOr<VectorizationResult> vectorResults =
         linalg::vectorize(rewriter, target, vectorSizes, getScalableSizes(),
-                          getVectorizeNdExtract().value_or(false));
+                          getVectorizeNdExtract().value_or(false),
+                          /*flatten1DDepthwiseConv=*/false,
+                          getAssumeDynamicDimsMatchVecSizes().value_or(false),
+                          getCreateNamedContraction().value_or(false));
     if (failed(vectorResults)) {
       return mlir::emitSilenceableFailure(target->getLoc())
              << "Attempted to vectorize, but failed";
@@ -4129,8 +4133,8 @@ DiagnosedSilenceableFailure doit(RewriterBase &rewriter, OpTy target,
         target->template getParentOfType<scf::InParallelOp>());
   }
 
-  Value extracted = rewriter.create<tensor::ExtractSliceOp>(
-      target.getLoc(), target.getDest(), target.getMixedOffsets(),
+  Value extracted = tensor::ExtractSliceOp::create(
+      rewriter, target.getLoc(), target.getDest(), target.getMixedOffsets(),
       target.getMixedSizes(), target.getMixedStrides());
   Value copied = rewriter
                      .create<linalg::CopyOp>(target.getLoc(),

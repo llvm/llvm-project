@@ -180,6 +180,7 @@ struct MissingFeatures {
   static bool builtinCall() { return false; }
   static bool builtinCallF128() { return false; }
   static bool builtinCallMathErrno() { return false; }
+  static bool builtinCheckKind() { return false; }
   static bool cgFPOptionsRAII() { return false; }
   static bool cirgenABIInfo() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
@@ -195,6 +196,8 @@ struct MissingFeatures {
   static bool cxxRecordStaticMembers() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
+  static bool ehCleanupFlags() { return false; }
+  static bool ehstackBranches() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
   static bool emitLifetimeMarkers() { return false; }
@@ -249,6 +252,11 @@ struct MissingFeatures {
   static bool typeChecks() { return false; }
   static bool weakRefReference() { return false; }
   static bool writebacks() { return false; }
+  static bool appleKext() { return false; }
+  static bool dtorCleanups() { return false; }
+  static bool vtableInitialization() { return false; }
+  static bool msvcBuiltins() { return false; }
+  static bool vlas() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

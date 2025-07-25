@@ -36,16 +36,6 @@ private:
   };
 
 public:
-  // RAII based lock for ThreadSafeContext.
-  class [[nodiscard]] Lock {
-  public:
-    Lock(std::shared_ptr<State> S) : S(std::move(S)), L(this->S->Mutex) {}
-
-  private:
-    std::shared_ptr<State> S;
-    std::unique_lock<std::recursive_mutex> L;
-  };
-
   /// Construct a null context.
   ThreadSafeContext() = default;
 
@@ -56,17 +46,20 @@ public:
            "Can not construct a ThreadSafeContext from a nullptr");
   }
 
-  /// Returns a pointer to the LLVMContext that was used to construct this
-  /// instance, or null if the instance was default constructed.
-  LLVMContext *getContext() { return S ? S->Ctx.get() : nullptr; }
+  template <typename Func> decltype(auto) withContextDo(Func &&F) {
+    if (auto TmpS = S) {
+      std::lock_guard<std::recursive_mutex> Lock(TmpS->Mutex);
+      return F(TmpS->Ctx.get());
+    } else
+      return F((LLVMContext *)nullptr);
+  }
 
-  /// Returns a pointer to the LLVMContext that was used to construct this
-  /// instance, or null if the instance was default constructed.
-  const LLVMContext *getContext() const { return S ? S->Ctx.get() : nullptr; }
-
-  Lock getLock() const {
-    assert(S && "Can not lock an empty ThreadSafeContext");
-    return Lock(S);
+  template <typename Func> decltype(auto) withContextDo(Func &&F) const {
+    if (auto TmpS = S) {
+      std::lock_guard<std::recursive_mutex> Lock(TmpS->Mutex);
+      return F(const_cast<const LLVMContext *>(TmpS->Ctx.get()));
+    } else
+      return F((const LLVMContext *)nullptr);
   }
 
 private:
@@ -89,10 +82,7 @@ public:
     // *before* the context that it depends on.
     // We also need to lock the context to make sure the module tear-down
     // does not overlap any other work on the context.
-    if (M) {
-      auto L = TSCtx.getLock();
-      M = nullptr;
-    }
+    TSCtx.withContextDo([this](LLVMContext *Ctx) { M = nullptr; });
     M = std::move(Other.M);
     TSCtx = std::move(Other.TSCtx);
     return *this;
@@ -111,45 +101,39 @@ public:
 
   ~ThreadSafeModule() {
     // We need to lock the context while we destruct the module.
-    if (M) {
-      auto L = TSCtx.getLock();
-      M = nullptr;
-    }
+    TSCtx.withContextDo([this](LLVMContext *Ctx) { M = nullptr; });
   }
 
   /// Boolean conversion: This ThreadSafeModule will evaluate to true if it
   /// wraps a non-null module.
-  explicit operator bool() const {
-    if (M) {
-      assert(TSCtx.getContext() &&
-             "Non-null module must have non-null context");
-      return true;
-    }
-    return false;
-  }
+  explicit operator bool() const { return !!M; }
 
   /// Locks the associated ThreadSafeContext and calls the given function
   /// on the contained Module.
   template <typename Func> decltype(auto) withModuleDo(Func &&F) {
-    assert(M && "Can not call on null module");
-    auto Lock = TSCtx.getLock();
-    return F(*M);
+    return TSCtx.withContextDo([&](LLVMContext *) {
+      assert(M && "Can not call on null module");
+      return F(*M);
+    });
   }
 
   /// Locks the associated ThreadSafeContext and calls the given function
   /// on the contained Module.
   template <typename Func> decltype(auto) withModuleDo(Func &&F) const {
-    assert(M && "Can not call on null module");
-    auto Lock = TSCtx.getLock();
-    return F(*M);
+    return TSCtx.withContextDo([&](const LLVMContext *) {
+      assert(M && "Can not call on null module");
+      return F(*M);
+    });
   }
 
   /// Locks the associated ThreadSafeContext and calls the given function,
   /// passing the contained std::unique_ptr<Module>. The given function should
   /// consume the Module.
   template <typename Func> decltype(auto) consumingModuleDo(Func &&F) {
-    auto Lock = TSCtx.getLock();
-    return F(std::move(M));
+    return TSCtx.withContextDo([&](LLVMContext *) {
+      assert(M && "Can not call on null module");
+      return F(std::move(M));
+    });
   }
 
   /// Get a raw pointer to the contained module without locking the context.
@@ -168,6 +152,12 @@ private:
 
 using GVPredicate = std::function<bool(const GlobalValue &)>;
 using GVModifier = std::function<void(GlobalValue &)>;
+
+/// Clones teh given module onto the given context.
+LLVM_ABI ThreadSafeModule
+cloneToContext(const ThreadSafeModule &TSMW, ThreadSafeContext TSCtx,
+               GVPredicate ShouldCloneDef = GVPredicate(),
+               GVModifier UpdateClonedDefSource = GVModifier());
 
 /// Clones the given module on to a new context.
 LLVM_ABI ThreadSafeModule cloneToNewContext(

@@ -203,10 +203,10 @@ private:
   std::optional<std::size_t> IsIncludeLine(const char *) const;
   void FortranInclude(const char *quote);
   const char *IsPreprocessorDirectiveLine(const char *) const;
-  const char *FixedFormContinuationLine(bool mightNeedSpace);
+  const char *FixedFormContinuationLine(bool atNewline);
   const char *FreeFormContinuationLine(bool ampersand);
   bool IsImplicitContinuation() const;
-  bool FixedFormContinuation(bool mightNeedSpace);
+  bool FixedFormContinuation(bool atNewline);
   bool FreeFormContinuation();
   bool Continuation(bool mightNeedFixedFormSpace);
   std::optional<LineClassification> IsFixedFormCompilerDirectiveLine(
@@ -256,10 +256,15 @@ private:
   bool continuationInCharLiteral_{false};
   bool inPreprocessorDirective_{false};
 
-  // In some edge cases of compiler directive continuation lines, it
-  // is necessary to treat the line break as a space character by
-  // setting this flag, which is cleared by EmitChar().
-  bool insertASpace_{false};
+  // True after processing a continuation that can't be allowed
+  // to appear in the middle of an identifier token, but is fixed form,
+  // or is free form and doesn't have a space character handy to use as
+  // a separator when:
+  // a) (standard) doesn't begin with a leading '&' on the continuation
+  //     line, but has a non-blank in column 1, or
+  // b) (extension) does have a leading '&', but didn't have one
+  //    on the continued line.
+  bool brokenToken_{false};
 
   // When a free form continuation marker (&) appears at the end of a line
   // before a INCLUDE or #include, we delete it and omit the newline, so
