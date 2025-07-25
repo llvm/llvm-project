@@ -370,6 +370,8 @@ def warn_profile_data_misexpect : Warning<
   "potential performance regression from use of __builtin_expect(): "
   "annotation was correct on %0 of profiled executions">,
   BackendInfo, InGroup<MisExpect>;
+def err_sanitize_ignorelist_failure : Error<
+  "failed to %select{load|parse}0 sanitizer ignorelist file: '%1'">;
 } // end of instrumentation issue category
 
 def err_extract_api_ignores_file_not_found :

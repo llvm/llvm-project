@@ -181,11 +181,11 @@ static void validateSpecialCaseListFormat(const Driver &D,
   if (SCLFiles.empty())
     return;
 
-  std::string BLError;
+  std::pair<unsigned, std::string> BLError;
   std::unique_ptr<llvm::SpecialCaseList> SCL(
       llvm::SpecialCaseList::create(SCLFiles, D.getVFS(), BLError));
   if (!SCL && DiagnoseErrors)
-    D.Diag(MalformedSCLErrorDiagID) << BLError;
+    D.Diag(MalformedSCLErrorDiagID) << BLError.first << BLError.second;
 }
 
 static void addDefaultIgnorelists(const Driver &D, SanitizerMask Kinds,

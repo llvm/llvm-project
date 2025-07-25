@@ -33,9 +33,10 @@ class NoSanitizeList {
                       StringRef Category) const;
 
 public:
-  NoSanitizeList(const std::vector<std::string> &NoSanitizeListPaths,
-                 SourceManager &SM);
+  NoSanitizeList(SourceManager &SM);
   ~NoSanitizeList();
+  bool init(const std::vector<std::string> &Paths,
+            std::pair<unsigned, std::string> &Error);
   bool containsGlobal(SanitizerMask Mask, StringRef GlobalName,
                       StringRef Category = StringRef()) const;
   bool containsType(SanitizerMask Mask, StringRef MangledTypeName,

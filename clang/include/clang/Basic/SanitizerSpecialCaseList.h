@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_BASIC_SANITIZERSPECIALCASELIST_H
 #define LLVM_CLANG_BASIC_SANITIZERSPECIALCASELIST_H
 
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Sanitizers.h"
 #include "llvm/ADT/StringRef.h"
@@ -34,11 +35,7 @@ class SanitizerSpecialCaseList : public llvm::SpecialCaseList {
 public:
   static std::unique_ptr<SanitizerSpecialCaseList>
   create(const std::vector<std::string> &Paths, llvm::vfs::FileSystem &VFS,
-         std::string &Error);
-
-  static std::unique_ptr<SanitizerSpecialCaseList>
-  createOrDie(const std::vector<std::string> &Paths,
-              llvm::vfs::FileSystem &VFS);
+         std::pair<unsigned, std::string> &Error);
 
   // Query ignorelisted entries if any bit in Mask matches the entry's section.
   bool inSection(SanitizerMask Mask, StringRef Prefix, StringRef Query,
