@@ -3958,13 +3958,7 @@ add_entrypoint_object(
   HDRS
     ../asinf.h
   DEPENDS
-    libc.src.__support.FPUtil.except_value_utils
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.FPUtil.sqrt
-    libc.src.__support.macros.optimization
-    libc.src.__support.math.inv_trigf_utils
+    libc.src.__support.math.asinf
 )
 
 add_entrypoint_object(
