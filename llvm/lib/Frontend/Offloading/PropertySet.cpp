@@ -37,15 +37,18 @@ void llvm::offloading::writePropertiesToJSON(
   });
 }
 
+// note: createStringError has an overload that takes a format string,
+// but it uses llvm::format instead of llvm::formatv, which does
+// not work with json::Value. This is a helper function to use
+// llvm::formatv with createStringError.
 template <typename... Ts> auto createStringErrorV(Ts &&...Args) {
-  return createStringError(formatv(Args...));
+  return createStringError(formatv(std::forward<Ts>(Args)...));
 }
 
 Expected<PropertyValue>
 readPropertyValueFromJSON(const json::Value &PropValueVal) {
-  if (std::optional<uint64_t> Val = PropValueVal.getAsUINT64()) {
+  if (std::optional<uint64_t> Val = PropValueVal.getAsUINT64())
     return PropertyValue(static_cast<uint32_t>(*Val));
-  }
 
   if (std::optional<StringRef> Val = PropValueVal.getAsString()) {
     std::vector<char> Decoded;
