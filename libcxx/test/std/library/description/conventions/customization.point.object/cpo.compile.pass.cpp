@@ -120,7 +120,7 @@ static_assert(test(std::views::as_rvalue, a));
 // static_assert(test(std::views::cartesian_product, a, a, a));
 static_assert(test(std::views::chunk_by, a, [](int x, int y) { return x < y; }));
 // static_assert(test(std::views::chunk, a, 1));
-// static_assert(test(std::views::enumerate, a));
+static_assert(test(std::views::enumerate, a));
 static_assert(test(std::views::join_with, 1));
 // static_assert(test(std::views::stride, a, 1));
 static_assert(test(std::views::zip_transform, [](int x, int y) { return x + y; }, a, a));
