@@ -204,7 +204,7 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
 
   const DataLayout &DL = Load->getDataLayout();
   auto *VTy = cast<FixedVectorType>(Shuffles[0]->getType());
-  auto *XLenTy = Type::getIntNTy(Load->getContext(), Subtarget.getXLen());
+  auto *XLenTy = Builder.getIntNTy(Subtarget.getXLen());
 
   Value *Ptr, *VL;
   Align Alignment;
@@ -224,10 +224,10 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
     Value *Stride = ConstantInt::get(XLenTy, Factor * ScalarSizeInBytes);
     Value *Offset = ConstantInt::get(XLenTy, Indices[0] * ScalarSizeInBytes);
     Value *BasePtr = Builder.CreatePtrAdd(Ptr, Offset);
-    // Note: Same VL as above, but i32 not xlen due to signature of
-    // vp.strided.load
-    VL = Builder.CreateElementCount(Builder.getInt32Ty(),
-                                    VTy->getElementCount());
+    // For rv64, need to truncate i64 to i32 to match signature.  As VL is at most
+    // the number of active lanes (which is bounded by i32) this is safe.
+    VL = Builder.CreateTrunc(VL, Builder.getInt32Ty());
+
     CallInst *CI =
         Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_load,
                                 {VTy, BasePtr->getType(), Stride->getType()},
@@ -277,7 +277,7 @@ bool RISCVTargetLowering::lowerInterleavedStore(Instruction *Store,
   // Given SVI : <n*factor x ty>, then VTy : <n x ty>
   auto *VTy = FixedVectorType::get(ShuffleVTy->getElementType(),
                                    ShuffleVTy->getNumElements() / Factor);
-  auto *XLenTy = Type::getIntNTy(Store->getContext(), Subtarget.getXLen());
+  auto *XLenTy = Builder.getIntNTy(Subtarget.getXLen());
 
   Value *Ptr, *VL;
   Align Alignment;
@@ -302,10 +302,9 @@ bool RISCVTargetLowering::lowerInterleavedStore(Instruction *Store,
     Value *Stride = ConstantInt::get(XLenTy, Factor * ScalarSizeInBytes);
     Value *Offset = ConstantInt::get(XLenTy, Index * ScalarSizeInBytes);
     Value *BasePtr = Builder.CreatePtrAdd(Ptr, Offset);
-    // Note: Same VL as above, but i32 not xlen due to signature of
-    // vp.strided.store
-    VL = Builder.CreateElementCount(Builder.getInt32Ty(),
-                                    VTy->getElementCount());
+    // For rv64, need to truncate i64 to i32 to match signature.  As VL is at
+    // most the number of active lanes (which is bounded by i32) this is safe.
+    VL = Builder.CreateTrunc(VL, Builder.getInt32Ty());
 
     CallInst *CI =
         Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_store,
@@ -351,7 +350,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
   VectorType *ResVTy = getDeinterleavedVectorType(DI);
 
   const DataLayout &DL = Load->getDataLayout();
-  auto *XLenTy = Type::getIntNTy(Load->getContext(), Subtarget.getXLen());
+  auto *XLenTy = Builder.getIntNTy(Subtarget.getXLen());
 
   Value *Ptr, *VL;
   Align Alignment;
@@ -372,8 +371,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
     unsigned NumElts = ResVTy->getElementCount().getKnownMinValue();
     Type *VecTupTy = TargetExtType::get(
         Load->getContext(), "riscv.vector.tuple",
-        ScalableVectorType::get(Type::getInt8Ty(Load->getContext()),
-                                NumElts * SEW / 8),
+        ScalableVectorType::get(Builder.getInt8Ty(), NumElts * SEW / 8),
         Factor);
     Function *VlsegNFunc = Intrinsic::getOrInsertDeclaration(
         Load->getModule(), ScalableVlsegIntrIds[Factor - 2],
@@ -414,7 +412,7 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
 
   auto *InVTy = cast<VectorType>(InterleaveValues[0]->getType());
   const DataLayout &DL = Store->getDataLayout();
-  Type *XLenTy = Type::getIntNTy(Store->getContext(), Subtarget.getXLen());
+  Type *XLenTy = Builder.getIntNTy(Subtarget.getXLen());
 
   Value *Ptr, *VL;
   Align Alignment;
@@ -438,9 +436,7 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
   unsigned NumElts = InVTy->getElementCount().getKnownMinValue();
   Type *VecTupTy = TargetExtType::get(
       Store->getContext(), "riscv.vector.tuple",
-      ScalableVectorType::get(Type::getInt8Ty(Store->getContext()),
-                              NumElts * SEW / 8),
-      Factor);
+      ScalableVectorType::get(Builder.getInt8Ty(), NumElts * SEW / 8), Factor);
 
   Value *StoredVal = PoisonValue::get(VecTupTy);
   for (unsigned i = 0; i < Factor; ++i)

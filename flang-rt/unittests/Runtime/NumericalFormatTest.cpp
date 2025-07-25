@@ -921,6 +921,7 @@ TEST(IOApiTests, EditDoubleInputValues) {
       {"(BZ,F18.0)", "           .      ", 0x0, 0},
       {"(BZ,F18.0)", "           . e +1 ", 0x0, 0},
       {"(DC,F18.0)", "              12,5", 0x4029000000000000, 0},
+      {"(DC,F18.0)", "             12,5;", 0x4029000000000000, 0},
       {"(EX22.0)", "0X0P0                 ", 0x0, 0}, // +0.
       {"(EX22.0)", "-0X0P0                ", 0x8000000000000000, 0}, // -0.
       {"(EX22.0)", "0X.8P1                ", 0x3ff0000000000000, 0}, // 1.0
@@ -964,6 +965,7 @@ TEST(IOApiTests, EditDoubleInputValues) {
       {"(RU,E9.1)", " 1.0E-325", 0x1, 0},
       {"(E9.1)", "-1.0E-325", 0x8000000000000000, 0},
       {"(RD,E9.1)", "-1.0E-325", 0x8000000000000001, 0},
+      {"(F7.0))", "+NaN(q)", 0x7ff8000000000000, 0},
   };
   for (auto const &[format, data, want, iostat] : testCases) {
     auto cookie{IONAME(BeginInternalFormattedInput)(
