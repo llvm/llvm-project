@@ -25,7 +25,7 @@
 #  pragma GCC system_header
 #endif
 
-#if defined(_LIBCPP_CXX03_LANG) && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 // Keep the old implementation that doesn't support assertion semantics for backward compatibility with the frozen C++03
 // mode.
@@ -59,6 +59,6 @@ _LIBCPP_ASSERTION_SEMANTIC_ENFORCE
 
 #  endif // _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_IGNORE
 
-#endif // defined(_LIBCPP_CXX03_LANG) && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP___ASSERTION_HANDLER
