@@ -219,7 +219,6 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
       // Track Output, Flow, and Anti dependencies.
       if (auto D = DI->depends(Src, Dst)) {
         assert(D->isOrdered() && "Expected an output, flow or anti dep.");
-
         // If the direction vector is negative, normalize it to
         // make it non-negative.
         if (D->normalize(SE))
