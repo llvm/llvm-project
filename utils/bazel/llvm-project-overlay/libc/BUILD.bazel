@@ -19,6 +19,7 @@ load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_X86_64")
 package(
     default_visibility = ["//visibility:public"],
     features = [
+        "parse_headers",
         "-use_header_modules",
         "-layering_check",
     ],
