@@ -179,26 +179,20 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     SmallVector<OpFoldResult> offset = op.getMixedOffsets();
 
     for (auto tdescOffset : *maybeTdescOffsets) {
-      SmallVector<OpFoldResult> newOffsets = llvm::map_to_vector(
-          llvm::zip_longest(tdescOffset, offset),
-          [&](const auto &t) -> OpFoldResult {
-            std::optional<Value> off = std::get<0>(t);
-            std::optional<OpFoldResult> old = std::get<1>(t);
-            if (!off.has_value())
-              return *old;
+      SmallVector<OpFoldResult> newOffsets;
+      size_t rank = tdescOffset.size();
+      for (size_t i = 0; i < rank; i++) {
+        size_t idx = offset.size() - rank + i;
+        Value newOff = rewriter.createOrFold<index::AddOp>(
+            loc, tdescOffset[i],
+            getValueOrCreateConstantIndexOp(rewriter, loc, offset[idx]));
+        newOffsets.push_back(newOff);
+      }
 
-            if (!old.has_value() || isZeroInteger(*old))
-              return *off;
-
-            return rewriter.createOrFold<index::AddOp>(
-                loc, *off,
-                getValueOrCreateConstantIndexOp(rewriter, loc, *old));
-          });
-
-      auto newCreateNdOp = xegpu::CreateNdDescOp::create(
+      auto newOp = xegpu::CreateNdDescOp::create(
           rewriter, loc, newTdescTy, op.getSource(), newOffsets,
           op.getMixedSizes(), op.getMixedStrides());
-      newCreateNdOps.push_back(newCreateNdOp);
+      newCreateNdOps.push_back(newOp);
     }
     rewriter.replaceOpWithMultiple(op, {newCreateNdOps});
     return success();
