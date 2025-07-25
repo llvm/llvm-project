@@ -801,33 +801,27 @@ define i32 @test_add_reduction_unroll_partial(ptr %a, i64 noundef %n) {
 ; OTHER-NEXT:    br label %[[LOOP:.*]]
 ; OTHER:       [[LOOP]]:
 ; OTHER-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT_3:%.*]], %[[LOOP]] ]
-; OTHER-NEXT:    [[RDX_1:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_NEXT_1:%.*]], %[[LOOP]] ]
-; OTHER-NEXT:    [[RDX_2:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_NEXT_2:%.*]], %[[LOOP]] ]
-; OTHER-NEXT:    [[RDX_3:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_NEXT_3:%.*]], %[[LOOP]] ]
-; OTHER-NEXT:    [[RDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_NEXT:%.*]], %[[LOOP]] ]
+; OTHER-NEXT:    [[RDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_NEXT_3:%.*]], %[[LOOP]] ]
 ; OTHER-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV]]
 ; OTHER-NEXT:    [[TMP0:%.*]] = load i32, ptr [[GEP_A]], align 2
-; OTHER-NEXT:    [[RDX_NEXT]] = add i32 [[RDX]], [[TMP0]]
+; OTHER-NEXT:    [[RDX_NEXT:%.*]] = add nuw nsw i32 [[RDX]], [[TMP0]]
 ; OTHER-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
 ; OTHER-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV_NEXT]]
 ; OTHER-NEXT:    [[TMP1:%.*]] = load i32, ptr [[GEP_A_1]], align 2
-; OTHER-NEXT:    [[RDX_NEXT_1]] = add i32 [[RDX_1]], [[TMP1]]
+; OTHER-NEXT:    [[RDX_2:%.*]] = add nuw nsw i32 [[RDX_NEXT]], [[TMP1]]
 ; OTHER-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV]], 2
 ; OTHER-NEXT:    [[GEP_A_2:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV_NEXT_1]]
 ; OTHER-NEXT:    [[TMP2:%.*]] = load i32, ptr [[GEP_A_2]], align 2
-; OTHER-NEXT:    [[RDX_NEXT_2]] = add i32 [[RDX_2]], [[TMP2]]
+; OTHER-NEXT:    [[RDX_NEXT_2:%.*]] = add nuw nsw i32 [[RDX_2]], [[TMP2]]
 ; OTHER-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV]], 3
 ; OTHER-NEXT:    [[GEP_A_3:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV_NEXT_2]]
 ; OTHER-NEXT:    [[TMP3:%.*]] = load i32, ptr [[GEP_A_3]], align 2
-; OTHER-NEXT:    [[RDX_NEXT_3]] = add i32 [[RDX_3]], [[TMP3]]
+; OTHER-NEXT:    [[RDX_NEXT_3]] = add nuw nsw i32 [[RDX_NEXT_2]], [[TMP3]]
 ; OTHER-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
 ; OTHER-NEXT:    [[EC_3:%.*]] = icmp eq i64 [[IV_NEXT_3]], 1024
 ; OTHER-NEXT:    br i1 [[EC_3]], label %[[EXIT:.*]], label %[[LOOP]]
 ; OTHER:       [[EXIT]]:
-; OTHER-NEXT:    [[RES:%.*]] = phi i32 [ [[RDX_NEXT_3]], %[[LOOP]] ]
-; OTHER-NEXT:    [[BIN_RDX:%.*]] = add i32 [[RDX_NEXT_1]], [[RDX_NEXT]]
-; OTHER-NEXT:    [[BIN_RDX1:%.*]] = add i32 [[RDX_NEXT_2]], [[BIN_RDX]]
-; OTHER-NEXT:    [[BIN_RDX2:%.*]] = add i32 [[RDX_NEXT_3]], [[BIN_RDX1]]
+; OTHER-NEXT:    [[BIN_RDX2:%.*]] = phi i32 [ [[RDX_NEXT_3]], %[[LOOP]] ]
 ; OTHER-NEXT:    ret i32 [[BIN_RDX2]]
 ;
 entry:
@@ -951,25 +945,23 @@ define i32 @test_add_and_mul_reduction_unroll_partial(ptr %a, i64 noundef %n) {
 ; OTHER-NEXT:    br label %[[LOOP:.*]]
 ; OTHER:       [[LOOP]]:
 ; OTHER-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT_1:%.*]], %[[LOOP]] ]
-; OTHER-NEXT:    [[RDX_1:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_NEXT_1:%.*]], %[[LOOP]] ]
-; OTHER-NEXT:    [[RDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_NEXT:%.*]], %[[LOOP]] ]
+; OTHER-NEXT:    [[RDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_NEXT_1:%.*]], %[[LOOP]] ]
 ; OTHER-NEXT:    [[RDX_2:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_2_NEXT_1:%.*]], %[[LOOP]] ]
 ; OTHER-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV]]
 ; OTHER-NEXT:    [[TMP0:%.*]] = load i32, ptr [[GEP_A]], align 2
-; OTHER-NEXT:    [[RDX_NEXT]] = add i32 [[RDX]], [[TMP0]]
+; OTHER-NEXT:    [[RDX_NEXT:%.*]] = add nuw nsw i32 [[RDX]], [[TMP0]]
 ; OTHER-NEXT:    [[RDX_2_NEXT:%.*]] = mul i32 [[RDX_2]], [[TMP0]]
 ; OTHER-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
 ; OTHER-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV_NEXT]]
 ; OTHER-NEXT:    [[TMP1:%.*]] = load i32, ptr [[GEP_A_1]], align 2
-; OTHER-NEXT:    [[RDX_NEXT_1]] = add i32 [[RDX_1]], [[TMP1]]
+; OTHER-NEXT:    [[RDX_NEXT_1]] = add nuw nsw i32 [[RDX_NEXT]], [[TMP1]]
 ; OTHER-NEXT:    [[RDX_2_NEXT_1]] = mul i32 [[RDX_2_NEXT]], [[TMP1]]
 ; OTHER-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
 ; OTHER-NEXT:    [[EC_1:%.*]] = icmp eq i64 [[IV_NEXT_1]], 1024
 ; OTHER-NEXT:    br i1 [[EC_1]], label %[[EXIT:.*]], label %[[LOOP]]
 ; OTHER:       [[EXIT]]:
-; OTHER-NEXT:    [[RES_1:%.*]] = phi i32 [ [[RDX_NEXT_1]], %[[LOOP]] ]
+; OTHER-NEXT:    [[BIN_RDX:%.*]] = phi i32 [ [[RDX_NEXT_1]], %[[LOOP]] ]
 ; OTHER-NEXT:    [[RES_2:%.*]] = phi i32 [ [[RDX_2_NEXT_1]], %[[LOOP]] ]
-; OTHER-NEXT:    [[BIN_RDX:%.*]] = add i32 [[RDX_NEXT_1]], [[RDX_NEXT]]
 ; OTHER-NEXT:    [[SUM:%.*]] = add i32 [[BIN_RDX]], [[RES_2]]
 ; OTHER-NEXT:    ret i32 [[SUM]]
 ;
@@ -1026,26 +1018,23 @@ define i32 @test_add_reduction_runtime(ptr %a, i64 noundef %n) {
 ; OTHER-NEXT:    br label %[[LOOP:.*]]
 ; OTHER:       [[LOOP]]:
 ; OTHER-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[IV_NEXT_3:%.*]], %[[LOOP]] ]
-; OTHER-NEXT:    [[RDX_1:%.*]] = phi i32 [ 0, %[[ENTRY_NEW]] ], [ [[RDX_NEXT_1:%.*]], %[[LOOP]] ]
-; OTHER-NEXT:    [[RDX_2:%.*]] = phi i32 [ 0, %[[ENTRY_NEW]] ], [ [[RDX_NEXT_2:%.*]], %[[LOOP]] ]
-; OTHER-NEXT:    [[RDX_3:%.*]] = phi i32 [ 0, %[[ENTRY_NEW]] ], [ [[RDX_NEXT_3:%.*]], %[[LOOP]] ]
-; OTHER-NEXT:    [[RDX:%.*]] = phi i32 [ 0, %[[ENTRY_NEW]] ], [ [[RDX_NEXT:%.*]], %[[LOOP]] ]
+; OTHER-NEXT:    [[RDX:%.*]] = phi i32 [ 0, %[[ENTRY_NEW]] ], [ [[RDX_NEXT_3:%.*]], %[[LOOP]] ]
 ; OTHER-NEXT:    [[NITER:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[NITER_NEXT_3:%.*]], %[[LOOP]] ]
 ; OTHER-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV]]
 ; OTHER-NEXT:    [[TMP2:%.*]] = load i32, ptr [[GEP_A]], align 2
-; OTHER-NEXT:    [[RDX_NEXT]] = add i32 [[RDX]], [[TMP2]]
+; OTHER-NEXT:    [[RDX_NEXT:%.*]] = add nuw nsw i32 [[RDX]], [[TMP2]]
 ; OTHER-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
 ; OTHER-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV_NEXT]]
 ; OTHER-NEXT:    [[TMP3:%.*]] = load i32, ptr [[GEP_A_1]], align 2
-; OTHER-NEXT:    [[RDX_NEXT_1]] = add i32 [[RDX_1]], [[TMP3]]
+; OTHER-NEXT:    [[RDX_2:%.*]] = add nuw nsw i32 [[RDX_NEXT]], [[TMP3]]
 ; OTHER-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV]], 2
 ; OTHER-NEXT:    [[GEP_A_2:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV_NEXT_1]]
 ; OTHER-NEXT:    [[TMP4:%.*]] = load i32, ptr [[GEP_A_2]], align 2
-; OTHER-NEXT:    [[RDX_NEXT_2]] = add i32 [[RDX_2]], [[TMP4]]
+; OTHER-NEXT:    [[RDX_NEXT_2:%.*]] = add nuw nsw i32 [[RDX_2]], [[TMP4]]
 ; OTHER-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV]], 3
 ; OTHER-NEXT:    [[GEP_A_3:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV_NEXT_2]]
 ; OTHER-NEXT:    [[TMP5:%.*]] = load i32, ptr [[GEP_A_3]], align 2
-; OTHER-NEXT:    [[RDX_NEXT_3]] = add i32 [[RDX_3]], [[TMP5]]
+; OTHER-NEXT:    [[RDX_NEXT_3]] = add nuw nsw i32 [[RDX_NEXT_2]], [[TMP5]]
 ; OTHER-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
 ; OTHER-NEXT:    [[NITER_NEXT_3]] = add i64 [[NITER]], 4
 ; OTHER-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i64 [[NITER_NEXT_3]], [[UNROLL_ITER]]
@@ -1054,14 +1043,11 @@ define i32 @test_add_reduction_runtime(ptr %a, i64 noundef %n) {
 ; OTHER-NEXT:    [[RES_PH_PH:%.*]] = phi i32 [ [[RDX_NEXT_3]], %[[LOOP]] ]
 ; OTHER-NEXT:    [[IV_UNR_PH:%.*]] = phi i64 [ [[IV_NEXT_3]], %[[LOOP]] ]
 ; OTHER-NEXT:    [[RDX_UNR_PH:%.*]] = phi i32 [ [[RDX_NEXT_3]], %[[LOOP]] ]
-; OTHER-NEXT:    [[BIN_RDX:%.*]] = add i32 [[RDX_NEXT_1]], [[RDX_NEXT]]
-; OTHER-NEXT:    [[BIN_RDX2:%.*]] = add i32 [[RDX_NEXT_2]], [[BIN_RDX]]
-; OTHER-NEXT:    [[BIN_RDX3:%.*]] = add i32 [[RDX_NEXT_3]], [[BIN_RDX2]]
 ; OTHER-NEXT:    br label %[[EXIT_UNR_LCSSA]]
 ; OTHER:       [[EXIT_UNR_LCSSA]]:
-; OTHER-NEXT:    [[RES_PH:%.*]] = phi i32 [ poison, %[[ENTRY]] ], [ [[BIN_RDX3]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ]
+; OTHER-NEXT:    [[RES_PH:%.*]] = phi i32 [ poison, %[[ENTRY]] ], [ [[RES_PH_PH]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; OTHER-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_UNR_PH]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ]
-; OTHER-NEXT:    [[RDX_UNR:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[BIN_RDX3]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ]
+; OTHER-NEXT:    [[RDX_UNR:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RDX_UNR_PH]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; OTHER-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
 ; OTHER-NEXT:    br i1 [[LCMP_MOD]], label %[[LOOP_EPIL_PREHEADER:.*]], label %[[EXIT:.*]]
 ; OTHER:       [[LOOP_EPIL_PREHEADER]]:
