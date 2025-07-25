@@ -58,19 +58,19 @@ define internal void @spmd_callees__debug(i1 %c) {
 ; AMDGPU:       common.ret:
 ; AMDGPU-NEXT:    ret void
 ; AMDGPU:       user_code.entry:
-; AMDGPU-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR10:[0-9]+]]
+; AMDGPU-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR9:[0-9]+]]
 ; AMDGPU-NEXT:    store i32 0, ptr addrspace(5) [[DOTZERO_ADDR]], align 4
 ; AMDGPU-NEXT:    store i32 [[TMP1]], ptr addrspace(5) [[DOTTHREADID_TEMP_]], align 4, !tbaa [[TBAA12:![0-9]+]]
 ; AMDGPU-NEXT:    [[FP:%.*]] = select i1 [[C]], ptr @__omp_outlined_spmd_amenable1, ptr @__omp_outlined_spmd_amenable2
 ; AMDGPU-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[FP]], @__omp_outlined_spmd_amenable2
 ; AMDGPU-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP4:%.*]]
 ; AMDGPU:       3:
-; AMDGPU-NEXT:    call void @__omp_outlined_spmd_amenable2(ptr [[DOTTHREADID_TEMP__CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR10]]
+; AMDGPU-NEXT:    call void @__omp_outlined_spmd_amenable2(ptr [[DOTTHREADID_TEMP__CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR9]]
 ; AMDGPU-NEXT:    br label [[TMP7:%.*]]
 ; AMDGPU:       4:
 ; AMDGPU-NEXT:    br i1 true, label [[TMP5:%.*]], label [[TMP6:%.*]]
 ; AMDGPU:       5:
-; AMDGPU-NEXT:    call void @__omp_outlined_spmd_amenable1(ptr [[DOTTHREADID_TEMP__CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR10]]
+; AMDGPU-NEXT:    call void @__omp_outlined_spmd_amenable1(ptr [[DOTTHREADID_TEMP__CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR9]]
 ; AMDGPU-NEXT:    br label [[TMP7]]
 ; AMDGPU:       6:
 ; AMDGPU-NEXT:    unreachable
@@ -91,19 +91,19 @@ define internal void @spmd_callees__debug(i1 %c) {
 ; NVPTX:       common.ret:
 ; NVPTX-NEXT:    ret void
 ; NVPTX:       user_code.entry:
-; NVPTX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR10:[0-9]+]]
+; NVPTX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR9:[0-9]+]]
 ; NVPTX-NEXT:    store i32 0, ptr addrspace(5) [[DOTZERO_ADDR]], align 4
 ; NVPTX-NEXT:    store i32 [[TMP1]], ptr addrspace(5) [[DOTTHREADID_TEMP_]], align 4, !tbaa [[TBAA12:![0-9]+]]
 ; NVPTX-NEXT:    [[FP:%.*]] = select i1 [[C]], ptr @__omp_outlined_spmd_amenable1, ptr @__omp_outlined_spmd_amenable2
 ; NVPTX-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[FP]], @__omp_outlined_spmd_amenable2
 ; NVPTX-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP4:%.*]]
 ; NVPTX:       3:
-; NVPTX-NEXT:    call void @__omp_outlined_spmd_amenable2(ptr [[DOTTHREADID_TEMP__CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR10]]
+; NVPTX-NEXT:    call void @__omp_outlined_spmd_amenable2(ptr [[DOTTHREADID_TEMP__CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR9]]
 ; NVPTX-NEXT:    br label [[TMP7:%.*]]
 ; NVPTX:       4:
 ; NVPTX-NEXT:    br i1 true, label [[TMP5:%.*]], label [[TMP6:%.*]]
 ; NVPTX:       5:
-; NVPTX-NEXT:    call void @__omp_outlined_spmd_amenable1(ptr [[DOTTHREADID_TEMP__CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR10]]
+; NVPTX-NEXT:    call void @__omp_outlined_spmd_amenable1(ptr [[DOTTHREADID_TEMP__CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR9]]
 ; NVPTX-NEXT:    br label [[TMP7]]
 ; NVPTX:       6:
 ; NVPTX-NEXT:    unreachable
@@ -223,7 +223,7 @@ define internal void @__omp_outlined__1_wrapper(i16 zeroext %0, i32 %1) #1 {
 ; AMDGPU-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-NEXT:    [[GLOBAL_ARGS_CAST:%.*]] = addrspacecast ptr addrspace(5) [[GLOBAL_ARGS]] to ptr
 ; AMDGPU-NEXT:    call void @__kmpc_get_shared_variables(ptr [[GLOBAL_ARGS_CAST]])
-; AMDGPU-NEXT:    call void @__omp_outlined__1(ptr [[DOTADDR1_CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR10]]
+; AMDGPU-NEXT:    call void @__omp_outlined__1(ptr [[DOTADDR1_CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR9]]
 ; AMDGPU-NEXT:    ret void
 ;
 ; NVPTX-LABEL: define {{[^@]+}}@__omp_outlined__1_wrapper
@@ -236,7 +236,7 @@ define internal void @__omp_outlined__1_wrapper(i16 zeroext %0, i32 %1) #1 {
 ; NVPTX-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-NEXT:    [[GLOBAL_ARGS_CAST:%.*]] = addrspacecast ptr addrspace(5) [[GLOBAL_ARGS]] to ptr
 ; NVPTX-NEXT:    call void @__kmpc_get_shared_variables(ptr [[GLOBAL_ARGS_CAST]])
-; NVPTX-NEXT:    call void @__omp_outlined__1(ptr [[DOTADDR1_CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR10]]
+; NVPTX-NEXT:    call void @__omp_outlined__1(ptr [[DOTADDR1_CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR9]]
 ; NVPTX-NEXT:    ret void
 ;
 entry:
@@ -351,7 +351,7 @@ define internal void @__omp_outlined__3_wrapper(i16 zeroext %0, i32 %1) #1 {
 ; AMDGPU-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-NEXT:    [[GLOBAL_ARGS_CAST:%.*]] = addrspacecast ptr addrspace(5) [[GLOBAL_ARGS]] to ptr
 ; AMDGPU-NEXT:    call void @__kmpc_get_shared_variables(ptr [[GLOBAL_ARGS_CAST]])
-; AMDGPU-NEXT:    call void @__omp_outlined__3(ptr [[DOTADDR1_CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR10]]
+; AMDGPU-NEXT:    call void @__omp_outlined__3(ptr [[DOTADDR1_CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR9]]
 ; AMDGPU-NEXT:    ret void
 ;
 ; NVPTX-LABEL: define {{[^@]+}}@__omp_outlined__3_wrapper
@@ -364,7 +364,7 @@ define internal void @__omp_outlined__3_wrapper(i16 zeroext %0, i32 %1) #1 {
 ; NVPTX-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-NEXT:    [[GLOBAL_ARGS_CAST:%.*]] = addrspacecast ptr addrspace(5) [[GLOBAL_ARGS]] to ptr
 ; NVPTX-NEXT:    call void @__kmpc_get_shared_variables(ptr [[GLOBAL_ARGS_CAST]])
-; NVPTX-NEXT:    call void @__omp_outlined__3(ptr [[DOTADDR1_CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR10]]
+; NVPTX-NEXT:    call void @__omp_outlined__3(ptr [[DOTADDR1_CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR9]]
 ; NVPTX-NEXT:    ret void
 ;
 entry:
@@ -426,19 +426,19 @@ define weak ptx_kernel void @spmd_and_non_spmd_callee(i1 %c) #0 {
 ; AMDGPU:       common.ret:
 ; AMDGPU-NEXT:    ret void
 ; AMDGPU:       user_code.entry:
-; AMDGPU-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR10]]
+; AMDGPU-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR9]]
 ; AMDGPU-NEXT:    store i32 0, ptr addrspace(5) [[DOTZERO_ADDR]], align 4
 ; AMDGPU-NEXT:    store i32 [[TMP1]], ptr addrspace(5) [[DOTTHREADID_TEMP_]], align 4, !tbaa [[TBAA12]]
 ; AMDGPU-NEXT:    [[FP:%.*]] = select i1 [[C]], ptr @__omp_outlined_spmd_amenable3, ptr @__omp_outlined_not_spmd_amenable
 ; AMDGPU-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[FP]], @__omp_outlined_not_spmd_amenable
 ; AMDGPU-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP4:%.*]]
 ; AMDGPU:       3:
-; AMDGPU-NEXT:    call void @__omp_outlined_not_spmd_amenable(ptr [[DOTTHREADID_TEMP__CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR10]]
+; AMDGPU-NEXT:    call void @__omp_outlined_not_spmd_amenable(ptr [[DOTTHREADID_TEMP__CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR9]]
 ; AMDGPU-NEXT:    br label [[TMP7:%.*]]
 ; AMDGPU:       4:
 ; AMDGPU-NEXT:    br i1 true, label [[TMP5:%.*]], label [[TMP6:%.*]]
 ; AMDGPU:       5:
-; AMDGPU-NEXT:    call void @__omp_outlined_spmd_amenable3(ptr [[DOTTHREADID_TEMP__CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR10]]
+; AMDGPU-NEXT:    call void @__omp_outlined_spmd_amenable3(ptr [[DOTTHREADID_TEMP__CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR9]]
 ; AMDGPU-NEXT:    br label [[TMP7]]
 ; AMDGPU:       6:
 ; AMDGPU-NEXT:    unreachable
@@ -488,19 +488,19 @@ define weak ptx_kernel void @spmd_and_non_spmd_callee(i1 %c) #0 {
 ; NVPTX:       common.ret:
 ; NVPTX-NEXT:    ret void
 ; NVPTX:       user_code.entry:
-; NVPTX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR10]]
+; NVPTX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR9]]
 ; NVPTX-NEXT:    store i32 0, ptr addrspace(5) [[DOTZERO_ADDR]], align 4
 ; NVPTX-NEXT:    store i32 [[TMP1]], ptr addrspace(5) [[DOTTHREADID_TEMP_]], align 4, !tbaa [[TBAA12]]
 ; NVPTX-NEXT:    [[FP:%.*]] = select i1 [[C]], ptr @__omp_outlined_spmd_amenable3, ptr @__omp_outlined_not_spmd_amenable
 ; NVPTX-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[FP]], @__omp_outlined_not_spmd_amenable
 ; NVPTX-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP4:%.*]]
 ; NVPTX:       3:
-; NVPTX-NEXT:    call void @__omp_outlined_not_spmd_amenable(ptr [[DOTTHREADID_TEMP__CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR10]]
+; NVPTX-NEXT:    call void @__omp_outlined_not_spmd_amenable(ptr [[DOTTHREADID_TEMP__CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR9]]
 ; NVPTX-NEXT:    br label [[TMP7:%.*]]
 ; NVPTX:       4:
 ; NVPTX-NEXT:    br i1 true, label [[TMP5:%.*]], label [[TMP6:%.*]]
 ; NVPTX:       5:
-; NVPTX-NEXT:    call void @__omp_outlined_spmd_amenable3(ptr [[DOTTHREADID_TEMP__CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR10]]
+; NVPTX-NEXT:    call void @__omp_outlined_spmd_amenable3(ptr [[DOTTHREADID_TEMP__CAST]], ptr [[DOTZERO_ADDR_CAST]]) #[[ATTR9]]
 ; NVPTX-NEXT:    br label [[TMP7]]
 ; NVPTX:       6:
 ; NVPTX-NEXT:    unreachable
@@ -536,7 +536,7 @@ define internal void @__omp_outlined_spmd_amenable3(ptr noalias %.global_tid., p
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS_CAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS]] to ptr
-; AMDGPU-NEXT:    [[X:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4) #[[ATTR10]]
+; AMDGPU-NEXT:    [[X:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4) #[[ATTR9]]
 ; AMDGPU-NEXT:    br label [[FOR_COND:%.*]]
 ; AMDGPU:       for.cond:
 ; AMDGPU-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
@@ -544,7 +544,7 @@ define internal void @__omp_outlined_spmd_amenable3(ptr noalias %.global_tid., p
 ; AMDGPU-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
 ; AMDGPU:       for.cond.cleanup:
 ; AMDGPU-NEXT:    call void @spmd_amenable() #[[ATTR6]]
-; AMDGPU-NEXT:    call void @__kmpc_free_shared(ptr [[X]], i64 4) #[[ATTR10]]
+; AMDGPU-NEXT:    call void @__kmpc_free_shared(ptr [[X]], i64 4) #[[ATTR9]]
 ; AMDGPU-NEXT:    ret void
 ; AMDGPU:       for.body:
 ; AMDGPU-NEXT:    store ptr [[X]], ptr addrspace(5) [[CAPTURED_VARS_ADDRS]], align 8, !tbaa [[TBAA20:![0-9]+]]
@@ -558,7 +558,7 @@ define internal void @__omp_outlined_spmd_amenable3(ptr noalias %.global_tid., p
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca ptr, align 8, addrspace(5)
 ; NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS_CAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS]] to ptr
-; NVPTX-NEXT:    [[X:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4) #[[ATTR10]]
+; NVPTX-NEXT:    [[X:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4) #[[ATTR9]]
 ; NVPTX-NEXT:    br label [[FOR_COND:%.*]]
 ; NVPTX:       for.cond:
 ; NVPTX-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
@@ -566,7 +566,7 @@ define internal void @__omp_outlined_spmd_amenable3(ptr noalias %.global_tid., p
 ; NVPTX-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
 ; NVPTX:       for.cond.cleanup:
 ; NVPTX-NEXT:    call void @spmd_amenable() #[[ATTR6]]
-; NVPTX-NEXT:    call void @__kmpc_free_shared(ptr [[X]], i64 4) #[[ATTR10]]
+; NVPTX-NEXT:    call void @__kmpc_free_shared(ptr [[X]], i64 4) #[[ATTR9]]
 ; NVPTX-NEXT:    ret void
 ; NVPTX:       for.body:
 ; NVPTX-NEXT:    store ptr [[X]], ptr addrspace(5) [[CAPTURED_VARS_ADDRS]], align 8, !tbaa [[TBAA20:![0-9]+]]
@@ -640,7 +640,7 @@ define internal void @__omp_outlined__5_wrapper(i16 zeroext %0, i32 %1) #1 {
 ; AMDGPU-NEXT:    call void @__kmpc_get_shared_variables(ptr [[GLOBAL_ARGS_CAST]])
 ; AMDGPU-NEXT:    [[TMP2:%.*]] = load ptr, ptr addrspace(5) [[GLOBAL_ARGS]], align 8
 ; AMDGPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 8, !tbaa [[TBAA20]]
-; AMDGPU-NEXT:    call void @__omp_outlined__5(ptr [[DOTADDR1_CAST]], ptr [[DOTZERO_ADDR_CAST]], ptr [[TMP3]]) #[[ATTR10]]
+; AMDGPU-NEXT:    call void @__omp_outlined__5(ptr [[DOTADDR1_CAST]], ptr [[DOTZERO_ADDR_CAST]], ptr [[TMP3]]) #[[ATTR9]]
 ; AMDGPU-NEXT:    ret void
 ;
 ; NVPTX-LABEL: define {{[^@]+}}@__omp_outlined__5_wrapper
@@ -655,7 +655,7 @@ define internal void @__omp_outlined__5_wrapper(i16 zeroext %0, i32 %1) #1 {
 ; NVPTX-NEXT:    call void @__kmpc_get_shared_variables(ptr [[GLOBAL_ARGS_CAST]])
 ; NVPTX-NEXT:    [[TMP2:%.*]] = load ptr, ptr addrspace(5) [[GLOBAL_ARGS]], align 8
 ; NVPTX-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 8, !tbaa [[TBAA20]]
-; NVPTX-NEXT:    call void @__omp_outlined__5(ptr [[DOTADDR1_CAST]], ptr [[DOTZERO_ADDR_CAST]], ptr [[TMP3]]) #[[ATTR10]]
+; NVPTX-NEXT:    call void @__omp_outlined__5(ptr [[DOTADDR1_CAST]], ptr [[DOTZERO_ADDR_CAST]], ptr [[TMP3]]) #[[ATTR9]]
 ; NVPTX-NEXT:    ret void
 ;
 entry:
@@ -689,7 +689,7 @@ define weak ptx_kernel void @spmd_callees_metadata(ptr %fp) #0 {
 ; AMDGPU:       common.ret:
 ; AMDGPU-NEXT:    ret void
 ; AMDGPU:       user_code.entry:
-; AMDGPU-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR10]]
+; AMDGPU-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR9]]
 ; AMDGPU-NEXT:    store i32 0, ptr addrspace(5) [[DOTZERO_ADDR]], align 4
 ; AMDGPU-NEXT:    store i32 [[TMP1]], ptr addrspace(5) [[DOTTHREADID_TEMP_]], align 4, !tbaa [[TBAA12]]
 ; AMDGPU-NEXT:    call void @__omp_outlined_spmd_amenable_external(ptr [[DOTTHREADID_TEMP__CAST]], ptr [[DOTZERO_ADDR_CAST]])
@@ -709,7 +709,7 @@ define weak ptx_kernel void @spmd_callees_metadata(ptr %fp) #0 {
 ; NVPTX:       common.ret:
 ; NVPTX-NEXT:    ret void
 ; NVPTX:       user_code.entry:
-; NVPTX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR10]]
+; NVPTX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR9]]
 ; NVPTX-NEXT:    store i32 0, ptr addrspace(5) [[DOTZERO_ADDR]], align 4
 ; NVPTX-NEXT:    store i32 [[TMP1]], ptr addrspace(5) [[DOTTHREADID_TEMP_]], align 4, !tbaa [[TBAA12]]
 ; NVPTX-NEXT:    call void @__omp_outlined_spmd_amenable_external(ptr [[DOTTHREADID_TEMP__CAST]], ptr [[DOTZERO_ADDR_CAST]])
@@ -782,7 +782,7 @@ define weak ptx_kernel void @spmd_and_non_spmd_callees_metadata(ptr %fp) #0 {
 ; AMDGPU:       common.ret:
 ; AMDGPU-NEXT:    ret void
 ; AMDGPU:       user_code.entry:
-; AMDGPU-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR10]]
+; AMDGPU-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR9]]
 ; AMDGPU-NEXT:    store i32 0, ptr addrspace(5) [[DOTZERO_ADDR]], align 4
 ; AMDGPU-NEXT:    store i32 [[TMP1]], ptr addrspace(5) [[DOTTHREADID_TEMP_]], align 4, !tbaa [[TBAA12]]
 ; AMDGPU-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[FP]], @__omp_outlined_spmd_amenable_external
@@ -843,7 +843,7 @@ define weak ptx_kernel void @spmd_and_non_spmd_callees_metadata(ptr %fp) #0 {
 ; NVPTX:       common.ret:
 ; NVPTX-NEXT:    ret void
 ; NVPTX:       user_code.entry:
-; NVPTX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR10]]
+; NVPTX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]]) #[[ATTR9]]
 ; NVPTX-NEXT:    store i32 0, ptr addrspace(5) [[DOTZERO_ADDR]], align 4
 ; NVPTX-NEXT:    store i32 [[TMP1]], ptr addrspace(5) [[DOTTHREADID_TEMP_]], align 4, !tbaa [[TBAA12]]
 ; NVPTX-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[FP]], @__omp_outlined_spmd_amenable_external
@@ -1017,7 +1017,7 @@ declare void @unknown() #5
 declare void @unknowni32p(ptr) #5
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr captures(none)) #6
+declare void @llvm.lifetime.start.p0(ptr captures(none)) #6
 
 define weak i32 @__kmpc_target_init(ptr %0, ptr %1) {
 ; AMDGPU-LABEL: define {{[^@]+}}@__kmpc_target_init
@@ -1037,7 +1037,7 @@ declare void @__kmpc_get_shared_variables(ptr)
 declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64) #7
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr captures(none)) #6
+declare void @llvm.lifetime.end.p0(ptr captures(none)) #6
 
 ; Function Attrs: convergent
 declare void @spmd_amenable() #4
@@ -1120,10 +1120,9 @@ attributes #8 = { nounwind }
 ; AMDGPU: attributes #[[ATTR5:[0-9]+]] = { nofree nosync nounwind allocsize(0) }
 ; AMDGPU: attributes #[[ATTR6]] = { convergent "llvm.assume"="ompx_spmd_amenable" }
 ; AMDGPU: attributes #[[ATTR7]] = { convergent }
-; AMDGPU: attributes #[[ATTR8:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; AMDGPU: attributes #[[ATTR9:[0-9]+]] = { alwaysinline }
-; AMDGPU: attributes #[[ATTR10]] = { nounwind }
-; AMDGPU: attributes #[[ATTR11:[0-9]+]] = { convergent nounwind }
+; AMDGPU: attributes #[[ATTR8:[0-9]+]] = { alwaysinline }
+; AMDGPU: attributes #[[ATTR9]] = { nounwind }
+; AMDGPU: attributes #[[ATTR10:[0-9]+]] = { convergent nounwind }
 ;.
 ; NVPTX: attributes #[[ATTR0]] = { alwaysinline convergent norecurse nounwind "kernel" }
 ; NVPTX: attributes #[[ATTR1]] = { norecurse }
@@ -1133,10 +1132,9 @@ attributes #8 = { nounwind }
 ; NVPTX: attributes #[[ATTR5:[0-9]+]] = { nofree nosync nounwind allocsize(0) }
 ; NVPTX: attributes #[[ATTR6]] = { convergent "llvm.assume"="ompx_spmd_amenable" }
 ; NVPTX: attributes #[[ATTR7]] = { convergent }
-; NVPTX: attributes #[[ATTR8:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; NVPTX: attributes #[[ATTR9:[0-9]+]] = { alwaysinline }
-; NVPTX: attributes #[[ATTR10]] = { nounwind }
-; NVPTX: attributes #[[ATTR11:[0-9]+]] = { convergent nounwind }
+; NVPTX: attributes #[[ATTR8:[0-9]+]] = { alwaysinline }
+; NVPTX: attributes #[[ATTR9]] = { nounwind }
+; NVPTX: attributes #[[ATTR10:[0-9]+]] = { convergent nounwind }
 ;.
 ; AMDGPU: [[META0:![0-9]+]] = !{i32 0, i32 64770, i32 541341486, !"", i32 74, i32 5}
 ; AMDGPU: [[META1:![0-9]+]] = !{i32 0, i32 64770, i32 541341486, !"sequential_loop_to_stack_var", i32 20, i32 1}

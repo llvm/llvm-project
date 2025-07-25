@@ -29,7 +29,7 @@ entry:
 define dso_local i32 @sum(i32 %n, ...) local_unnamed_addr #0 {
 entry:
   %args = alloca [1 x %struct.__va_list_tag], align 16
-  call void @llvm.lifetime.start.p0(i64 24, ptr nonnull %args) #2
+  call void @llvm.lifetime.start.p0(ptr nonnull %args) #2
   call void @llvm.va_start(ptr nonnull %args)
   %cmp9 = icmp sgt i32 %n, 0
   br i1 %cmp9, label %for.body.lr.ph, label %for.end
@@ -85,13 +85,13 @@ vaarg.end:                                        ; preds = %vaarg.in_mem, %vaar
 for.end:                                          ; preds = %vaarg.end, %entry
   %sum.0.lcssa = phi i32 [ 0, %entry ], [ %add, %vaarg.end ]
   call void @llvm.va_end(ptr nonnull %args)
-  call void @llvm.lifetime.end.p0(i64 24, ptr nonnull %args) #2
+  call void @llvm.lifetime.end.p0(ptr nonnull %args) #2
   ret i32 %sum.0.lcssa
 }
 
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 ; Function Attrs: nounwind
 declare void @llvm.va_start(ptr) #2
@@ -100,7 +100,7 @@ declare void @llvm.va_start(ptr) #2
 declare void @llvm.va_end(ptr) #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 declare dso_local i80 @sum_i80(i32, ...) local_unnamed_addr
 

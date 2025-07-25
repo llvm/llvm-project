@@ -359,18 +359,15 @@ static void lowerExpectAssume(IntrinsicInst *II) {
   }
 }
 
-static bool toSpvOverloadedIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID,
-                                     ArrayRef<unsigned> OpNos) {
-  Function *F = nullptr;
-  if (OpNos.empty()) {
-    F = Intrinsic::getOrInsertDeclaration(II->getModule(), NewID);
-  } else {
-    SmallVector<Type *, 4> Tys;
-    for (unsigned OpNo : OpNos)
-      Tys.push_back(II->getOperand(OpNo)->getType());
-    F = Intrinsic::getOrInsertDeclaration(II->getModule(), NewID, Tys);
-  }
-  II->setCalledFunction(F);
+static bool toSpvLifetimeIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID) {
+  IRBuilder<> Builder(II);
+  auto *Alloca = cast<AllocaInst>(II->getArgOperand(0));
+  std::optional<TypeSize> Size =
+      Alloca->getAllocationSize(Alloca->getDataLayout());
+  Value *SizeVal = Builder.getInt64(Size ? *Size : -1);
+  Builder.CreateIntrinsic(NewID, Alloca->getType(),
+                          {SizeVal, II->getArgOperand(0)});
+  II->eraseFromParent();
   return true;
 }
 
@@ -406,8 +403,8 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         break;
       case Intrinsic::lifetime_start:
         if (!STI.isShader()) {
-          Changed |= toSpvOverloadedIntrinsic(
-              II, Intrinsic::SPVIntrinsics::spv_lifetime_start, {1});
+          Changed |= toSpvLifetimeIntrinsic(
+              II, Intrinsic::SPVIntrinsics::spv_lifetime_start);
         } else {
           II->eraseFromParent();
           Changed = true;
@@ -415,8 +412,8 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         break;
       case Intrinsic::lifetime_end:
         if (!STI.isShader()) {
-          Changed |= toSpvOverloadedIntrinsic(
-              II, Intrinsic::SPVIntrinsics::spv_lifetime_end, {1});
+          Changed |= toSpvLifetimeIntrinsic(
+              II, Intrinsic::SPVIntrinsics::spv_lifetime_end);
         } else {
           II->eraseFromParent();
           Changed = true;

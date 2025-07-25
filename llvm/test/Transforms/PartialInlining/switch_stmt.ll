@@ -8,10 +8,10 @@ define dso_local signext i32 @callee(i32 signext %c1, i32 signext %c2) !prof !30
 ; CHECK-NEXT:    [[RC:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 0, ptr [[RC]], align 4
 ; CHECK-NEXT:    switch i32 [[C1:%.*]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[SW_BB:%.*]]
-; CHECK-NEXT:    i32 1, label [[SW_BB1:%.*]]
-; CHECK-NEXT:    i32 2, label [[SW_BB2:%.*]]
-; CHECK-NEXT:    ], !prof !31
+; CHECK-NEXT:      i32 0, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 1, label [[SW_BB1:%.*]]
+; CHECK-NEXT:      i32 2, label [[SW_BB2:%.*]]
+; CHECK-NEXT:    ], !prof [[PROF31:![0-9]+]]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    store i32 1, ptr [[RC]], align 4
 ; CHECK-NEXT:    br label [[SW_EPILOG:%.*]]
@@ -62,13 +62,13 @@ define dso_local signext i32 @caller(i32 signext %c) !prof !30 {
 ; CHECK-LABEL: @caller(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RC_I:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[RC_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[RC_I]])
 ; CHECK-NEXT:    store i32 0, ptr [[RC_I]], align 4
 ; CHECK-NEXT:    switch i32 [[C:%.*]], label [[SW_DEFAULT_I:%.*]] [
-; CHECK-NEXT:    i32 0, label [[CODEREPL_I:%.*]]
-; CHECK-NEXT:    i32 1, label [[SW_BB1_I:%.*]]
-; CHECK-NEXT:    i32 2, label [[CODEREPL1_I:%.*]]
-; CHECK-NEXT:    ], !prof !31
+; CHECK-NEXT:      i32 0, label [[CODEREPL_I:%.*]]
+; CHECK-NEXT:      i32 1, label [[SW_BB1_I:%.*]]
+; CHECK-NEXT:      i32 2, label [[CODEREPL1_I:%.*]]
+; CHECK-NEXT:    ], !prof [[PROF31]]
 ; CHECK:       codeRepl.i:
 ; CHECK-NEXT:    call void @callee.1.sw.bb(ptr [[RC_I]])
 ; CHECK-NEXT:    br label [[CALLEE_1_EXIT:%.*]]
@@ -83,7 +83,8 @@ define dso_local signext i32 @caller(i32 signext %c) !prof !30 {
 ; CHECK-NEXT:    br label [[CALLEE_1_EXIT]]
 ; CHECK:       callee.1.exit:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[RC_I]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[RC_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[RC_I]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
   %0 = call signext i32 @callee(i32 signext %c, i32 signext %c)

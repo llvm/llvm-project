@@ -550,13 +550,13 @@ define internal i32 @ret(ptr %arg) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; TUNIT-LABEL: define {{[^@]+}}@ret
 ; TUNIT-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[ARG:%.*]]) #[[ATTR6:[0-9]+]] {
-; TUNIT-NEXT:    [[L:%.*]] = load i32, ptr [[ARG]], align 4
+; TUNIT-NEXT:    [[L:%.*]] = load i32, ptr [[ARG]], align 4, !invariant.load [[META0:![0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[L]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@ret
 ; CGSCC-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[ARG:%.*]]) #[[ATTR7:[0-9]+]] {
-; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr [[ARG]], align 4
+; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr [[ARG]], align 4, !invariant.load [[META0:![0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[L]]
 ;
   %l = load i32, ptr %arg
@@ -577,31 +577,31 @@ define internal fastcc double @strtox(ptr %s, ptr %p, i32 %prec) unnamed_addr {
 ; TUNIT-SAME: (ptr [[S:%.*]]) unnamed_addr {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[F:%.*]] = alloca [[STRUCT__IO_FILE:%.*]], align 8
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 144, ptr nofree noundef nonnull align 8 captures(none) dereferenceable(240) [[F]]) #[[ATTR13:[0-9]+]]
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(ptr nofree noundef nonnull align 8 captures(none) dereferenceable(240) [[F]]) #[[ATTR13:[0-9]+]]
 ; TUNIT-NEXT:    [[CALL:%.*]] = call i32 @sh_fromstring(ptr noundef nonnull align 8 dereferenceable(240) [[F]], ptr [[S]])
 ; TUNIT-NEXT:    call void @__shlim(ptr noundef nonnull align 8 dereferenceable(240) [[F]], i64 noundef 0)
 ; TUNIT-NEXT:    [[CALL1:%.*]] = call double @__floatscan(ptr noundef nonnull align 8 dereferenceable(240) [[F]], i32 noundef 1, i32 noundef 1)
-; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 144, ptr nofree noundef nonnull align 8 captures(none) dereferenceable(240) [[F]])
+; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(ptr nofree noundef nonnull align 8 captures(none) dereferenceable(240) [[F]])
 ; TUNIT-NEXT:    ret double [[CALL1]]
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@strtox
 ; CGSCC-SAME: (ptr [[S:%.*]]) unnamed_addr {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[F:%.*]] = alloca [[STRUCT__IO_FILE:%.*]], align 8
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 144, ptr nofree noundef nonnull align 8 captures(none) dereferenceable(240) [[F]]) #[[ATTR14:[0-9]+]]
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(ptr nofree noundef nonnull align 8 captures(none) dereferenceable(240) [[F]]) #[[ATTR14:[0-9]+]]
 ; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @sh_fromstring(ptr noundef nonnull align 8 dereferenceable(240) [[F]], ptr [[S]])
 ; CGSCC-NEXT:    call void @__shlim(ptr noundef nonnull align 8 dereferenceable(240) [[F]], i64 noundef 0)
 ; CGSCC-NEXT:    [[CALL1:%.*]] = call double @__floatscan(ptr noundef nonnull align 8 dereferenceable(240) [[F]], i32 noundef 1, i32 noundef 1)
-; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 144, ptr nofree noundef nonnull align 8 captures(none) dereferenceable(240) [[F]])
+; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(ptr nofree noundef nonnull align 8 captures(none) dereferenceable(240) [[F]])
 ; CGSCC-NEXT:    ret double [[CALL1]]
 ;
 entry:
   %f = alloca %struct._IO_FILE, align 8
-  call void @llvm.lifetime.start.p0(i64 144, ptr nonnull %f)
+  call void @llvm.lifetime.start.p0(ptr nonnull %f)
   %call = call i32 @sh_fromstring(ptr nonnull %f, ptr %s)
   call void @__shlim(ptr nonnull %f, i64 0)
   %call1 = call double @__floatscan(ptr nonnull %f, i32 %prec, i32 1)
-  call void @llvm.lifetime.end.p0(i64 144, ptr nonnull %f)
+  call void @llvm.lifetime.end.p0(ptr nonnull %f)
 
   ret double %call1
 }
@@ -620,7 +620,7 @@ entry:
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 ; Function Attrs: optsize
 declare dso_local i32 @sh_fromstring(...) local_unnamed_addr
@@ -632,7 +632,7 @@ declare dso_local void @__shlim(ptr, i64) local_unnamed_addr
 declare dso_local double @__floatscan(ptr, i32, i32) local_unnamed_addr
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 ; Test 15
 ; propagate noalias to some callsite arguments that there is no possibly reachable capture before it
@@ -969,4 +969,8 @@ l2:
 ; CGSCC: attributes #[[ATTR13]] = { nofree willreturn memory(read) }
 ; CGSCC: attributes #[[ATTR14]] = { nofree willreturn memory(readwrite) }
 ; CGSCC: attributes #[[ATTR15]] = { nofree nounwind willreturn memory(write) }
+;.
+; TUNIT: [[META0]] = !{}
+;.
+; CGSCC: [[META0]] = !{}
 ;.

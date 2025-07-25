@@ -56,6 +56,10 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
+* The size argument of the `llvm.lifetime.start` and `llvm.lifetime.end`
+  intrinsics has been removed. Additionally, the pointer argument is now
+  required to be an `alloca` instruction.
+
 Changes to LLVM infrastructure
 ------------------------------
 

@@ -1462,6 +1462,7 @@ void HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     Value *AICast = IRB.CreatePointerCast(AI, PtrTy);
 
     auto HandleLifetime = [&](IntrinsicInst *II) {
+      // FIXME: Remove this code entirely.
       // Set the lifetime intrinsic to cover the whole alloca. This reduces the
       // set of assumptions we need to make about the lifetime. Without this we
       // would need to ensure that we can track the lifetime pointer to a
@@ -1472,8 +1473,7 @@ void HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
       // The check for standard lifetime below makes sure that we have exactly
       // one set of start / end in any execution (i.e. the ends are not
       // reachable from each other), so this will not cause any problems.
-      II->setArgOperand(0, ConstantInt::get(Int64Ty, AlignedSize));
-      II->setArgOperand(1, AICast);
+      II->setArgOperand(0, AICast);
     };
     llvm::for_each(Info.LifetimeStart, HandleLifetime);
     llvm::for_each(Info.LifetimeEnd, HandleLifetime);

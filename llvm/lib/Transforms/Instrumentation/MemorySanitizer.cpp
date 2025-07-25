@@ -3301,7 +3301,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handleLifetimeStart(IntrinsicInst &I) {
     if (!PoisonStack)
       return;
-    AllocaInst *AI = cast<AllocaInst>(I.getArgOperand(1));
+    AllocaInst *AI = cast<AllocaInst>(I.getArgOperand(0));
     LifetimeStartList.push_back(std::make_pair(&I, AI));
   }
 
