@@ -47,7 +47,8 @@ llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
                         const SanitizerArgs &SanArgs, const Driver &D,
                         const std::string &GPUArch, bool isOpenMP,
-                        const RocmInstallationDetector &RocmInstallation);
+                        const RocmInstallationDetector &RocmInstallation,
+                        const clang::driver::Action::OffloadKind DeviceOffloadingKind = Action::OFK_OpenMP);
 
 const char *
 getCbslCommandArgs(Compilation &C, const llvm::opt::ArgList &Args,
@@ -194,7 +195,7 @@ public:
   llvm::SmallVector<BitCodeLibraryInfo, 12>
   getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
                           const std::string &GPUArch,
-                          bool isOpenMP = false) const;
+                          Action::OffloadKind DeviceOffloadingKind) const;
 
   SanitizerMask getSupportedSanitizers() const override {
     return SanitizerKind::Address;
