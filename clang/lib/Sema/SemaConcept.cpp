@@ -805,10 +805,10 @@ static bool CheckConstraintSatisfaction(
               S, *C, Template, TemplateIDRange.getBegin(), TemplateArgsLists,
               Satisfaction, S.ArgPackSubstIndex);
 
-  if (ConvertedExpr)
+  if (Res.isUsable() && ConvertedExpr)
     *ConvertedExpr = Res.get();
 
-  return !Res.isUsable();
+  return false;
 }
 
 bool Sema::CheckConstraintSatisfaction(
