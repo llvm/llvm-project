@@ -31,7 +31,7 @@ struct WrapFuncInClassPass
     Operation *rootOp = getOperation();
 
     RewritePatternSet patterns(&getContext());
-    populateFuncPatterns(patterns, namedAttribute);
+    populateFuncPatterns(patterns);
 
     walkAndApplyPatterns(rootOp, std::move(patterns));
   }
@@ -43,8 +43,8 @@ struct WrapFuncInClassPass
 
 class WrapFuncInClass : public OpRewritePattern<emitc::FuncOp> {
 public:
-  WrapFuncInClass(MLIRContext *context, StringRef attrName)
-      : OpRewritePattern<emitc::FuncOp>(context), attributeName(attrName) {}
+  WrapFuncInClass(MLIRContext *context)
+      : OpRewritePattern<emitc::FuncOp>(context) {}
 
   LogicalResult matchAndRewrite(emitc::FuncOp funcOp,
                                 PatternRewriter &rewriter) const override {
@@ -101,12 +101,8 @@ public:
     rewriter.replaceOp(funcOp, newClassOp);
     return success();
   }
-
-private:
-  StringRef attributeName;
 };
 
-void mlir::emitc::populateFuncPatterns(RewritePatternSet &patterns,
-                                       StringRef namedAttribute) {
-  patterns.add<WrapFuncInClass>(patterns.getContext(), namedAttribute);
+void mlir::emitc::populateFuncPatterns(RewritePatternSet &patterns) {
+  patterns.add<WrapFuncInClass>(patterns.getContext());
 }
