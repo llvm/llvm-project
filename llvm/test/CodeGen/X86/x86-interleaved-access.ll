@@ -1897,3 +1897,15 @@ define <2 x i64> @PR37616(ptr %a0) nounwind {
   %shuffle = shufflevector <16 x i64> %load, <16 x i64> undef, <2 x i32> <i32 2, i32 6>
   ret <2 x i64> %shuffle
 }
+
+define { <8 x float>, <8 x float> } @interleave_deinterleave2() {
+; AVX-LABEL: interleave_deinterleave2:
+; AVX:       # %bb.0: # %.entry
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    retq
+.entry:
+  %0 = call <16 x float> @llvm.vector.interleave2.v16f32(<8 x float> zeroinitializer, <8 x float> zeroinitializer)
+  %1 = call { <8 x float>, <8 x float> } @llvm.vector.deinterleave2.v16f32(<16 x float> %0)
+  ret { <8 x float>, <8 x float> } %1
+}
