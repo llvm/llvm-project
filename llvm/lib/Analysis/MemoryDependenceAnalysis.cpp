@@ -984,10 +984,6 @@ static void
 SortNonLocalDepInfoCache(MemoryDependenceResults::NonLocalDepInfo &Cache,
                          unsigned NumSortedEntries) {
 
-  // Output number of sorted entries and size of cache for each sort.
-  LLVM_DEBUG(dbgs() << "NumSortedEntries: " << NumSortedEntries
-                    << ", Cache.size: " << Cache.size() << "\n");
-
   // If only one entry, don't sort.
   if (Cache.size() < 2)
     return;
@@ -1004,7 +1000,7 @@ SortNonLocalDepInfoCache(MemoryDependenceResults::NonLocalDepInfo &Cache,
     return;
   }
 
-  // If the number of unsorted entires is small and the cache size is big, use
+  // If the number of unsorted entires is small and the cache size is big, using
   // insertion sort is faster. Here use Log2_32 to quickly choose the sort
   // method.
   if (s < Log2_32(Cache.size())) {
