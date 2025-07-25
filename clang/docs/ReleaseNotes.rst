@@ -246,6 +246,7 @@ OpenMP Support
 - Added parsing and semantic analysis support for the ``need_device_addr``
   modifier in the ``adjust_args`` clause.
 - Allow array length to be omitted in array section subscript expression.
+- Added support for 'omp fuse' directive.
 
 Improvements
 ^^^^^^^^^^^^
