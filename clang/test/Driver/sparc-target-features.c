@@ -39,4 +39,8 @@
 // SOFT-QUAD-FLOAT: "-target-feature" "-hard-quad-float"
 
 // RUN: %clang --target=sparc -mv8plus %s -### 2>&1 | FileCheck -check-prefix=V8PLUS %s
+/// 32-bit Solaris/SPARC defaults to -mv8plus
+// RUN: %clang --target=sparc-sun-solaris2.11 %s -### 2>&1 | FileCheck -check-prefix=V8PLUS %s
+// RUN: %clang --target=sparc-sun-solaris2.11 -mno-v8plus %s -### 2>&1 | FileCheck -check-prefix=NO-V8PLUS %s
 // V8PLUS: "-target-feature" "+v8plus"
+// NO-V8PLUS-NOT: "-target-feature" "+v8plus"

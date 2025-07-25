@@ -124,6 +124,10 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(const Value value) {
     Operation *defOp = result.getDefiningOp();
     assert(defOp && "result must have a defining op");
 
+    // For ConvertLayoutOp, the layout is stored in the targetLayoutAttr
+    if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(defOp))
+      return convertOp.getTargetLayoutAttr();
+
     // for LoadNdOp, the layout is stored in the tensor descriptor
     if (auto loadNd = dyn_cast<xegpu::LoadNdOp>(defOp))
       return getLayoutAttr(loadNd.getTensorDesc());
@@ -137,7 +141,8 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(const Value value) {
     auto parentOp = arg.getOwner()->getParentOp();
     if (auto loop = dyn_cast<LoopLikeOpInterface>(parentOp)) {
       OpOperand *tiedInit = loop.getTiedLoopInit(arg);
-      return getLayoutAttr(tiedInit->get());
+      if (tiedInit)
+        return getLayoutAttr(tiedInit->get());
     }
   }
 
