@@ -517,7 +517,9 @@ public:
   /// ops must match. The original op is erased.
   template <typename OpTy, typename... Args>
   OpTy replaceOpWithNewOp(Operation *op, Args &&...args) {
-    auto newOp = create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
+    auto builder = static_cast<OpBuilder *>(this);
+    auto newOp =
+        OpTy::create(*builder, op->getLoc(), std::forward<Args>(args)...);
     replaceOp(op, newOp.getOperation());
     return newOp;
   }

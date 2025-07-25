@@ -318,15 +318,13 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
 
   // Emit the epilog instructions.
   if (EnableUnwindV2) {
-    MCFragment *DF = OS->getOrCreateDataFragment();
-
     bool IsLast = true;
     for (const auto &Epilog : llvm::reverse(info->EpilogMap)) {
       if (IsLast) {
         IsLast = false;
         uint8_t Flags = LastEpilogIsAtEnd ? 0x01 : 0;
-        streamer.emitInt8(EpilogSize);
-        streamer.emitInt8((Flags << 4) | Win64EH::UOP_Epilog);
+        OS->emitInt8(EpilogSize);
+        OS->emitInt8((Flags << 4) | Win64EH::UOP_Epilog);
 
         if (LastEpilogIsAtEnd)
           continue;
@@ -337,9 +335,8 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
       // layout has been completed.
       auto *MCE = MCUnwindV2EpilogTargetExpr::create(*info, Epilog.second,
                                                      EpilogSize, context);
-      MCFixup Fixup = MCFixup::create(DF->getContents().size(), MCE, FK_Data_2);
-      DF->addFixup(Fixup);
-      DF->appendContents(2, 0);
+      OS->addFixup(MCE, FK_Data_2);
+      OS->appendContents(2, 0);
     }
   }
   if (AddPaddingEpilogCode)

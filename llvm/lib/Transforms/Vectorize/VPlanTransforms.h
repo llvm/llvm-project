@@ -107,7 +107,7 @@ struct VPlanTransforms {
   /// try to update the vector loop to exit early if any input is NaN and resume
   /// executing in the scalar loop to handle the NaNs there. Return false if
   /// this attempt was unsuccessful.
-  static bool handleMaxMinNumReductionsWithoutFastMath(VPlan &Plan);
+  static bool handleMaxMinNumReductions(VPlan &Plan);
 
   /// Clear NSW/NUW flags from reduction instructions if necessary.
   static void clearReductionWrapFlags(VPlan &Plan);

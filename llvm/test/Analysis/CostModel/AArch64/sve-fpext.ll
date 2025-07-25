@@ -31,3 +31,24 @@ define void @sve_fpext() {
 
   ret void
 }
+
+define void @sve_fpext_bf16() {
+; CHECK-LABEL: 'sve_fpext_bf16'
+; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %nxv2_f16_to_f32 = fpext <vscale x 2 x bfloat> undef to <vscale x 2 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %nxv4_f16_to_f32 = fpext <vscale x 4 x bfloat> undef to <vscale x 4 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %nxv8_f16_to_f32 = fpext <vscale x 8 x bfloat> undef to <vscale x 8 x float>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %nxv2_f16_to_f64 = fpext <vscale x 2 x bfloat> undef to <vscale x 2 x double>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %nxv4_f16_to_f64 = fpext <vscale x 4 x bfloat> undef to <vscale x 4 x double>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %nxv8_f16_to_f64 = fpext <vscale x 8 x bfloat> undef to <vscale x 8 x double>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %nxv2_f16_to_f32 = fpext <vscale x 2 x bfloat> undef to <vscale x 2 x float>
+  %nxv4_f16_to_f32 = fpext <vscale x 4 x bfloat> undef to <vscale x 4 x float>
+  %nxv8_f16_to_f32 = fpext <vscale x 8 x bfloat> undef to <vscale x 8 x float>
+
+  %nxv2_f16_to_f64 = fpext <vscale x 2 x bfloat> undef to <vscale x 2 x double>
+  %nxv4_f16_to_f64 = fpext <vscale x 4 x bfloat> undef to <vscale x 4 x double>
+  %nxv8_f16_to_f64 = fpext <vscale x 8 x bfloat> undef to <vscale x 8 x double>
+
+  ret void
+}

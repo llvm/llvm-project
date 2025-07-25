@@ -27,12 +27,10 @@
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/InterleavedRange.h"
 
 #define DEBUG_TYPE "vector-utils"
-
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 using namespace mlir;
 
@@ -320,18 +318,20 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
                                      Value source,
                                      ArrayRef<int64_t> inputVectorSizes,
                                      Value padValue,
-                                     bool useInBoundsInsteadOfMasking) {
+                                     bool useInBoundsInsteadOfMasking,
+                                     ArrayRef<bool> scalableDims) {
   assert(!llvm::is_contained(inputVectorSizes, ShapedType::kDynamic) &&
          "invalid input vector sizes");
   auto sourceShapedType = cast<ShapedType>(source.getType());
   auto sourceShape = sourceShapedType.getShape();
   assert(sourceShape.size() == inputVectorSizes.size() &&
          "expected same ranks.");
-  auto vectorType = VectorType::get(inputVectorSizes, padValue.getType());
+  auto vectorType =
+      VectorType::get(inputVectorSizes, padValue.getType(), scalableDims);
   assert(padValue.getType() == sourceShapedType.getElementType() &&
          "expected same pad element type to match source element type");
   int64_t readRank = inputVectorSizes.size();
-  auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+  auto zero = arith::ConstantIndexOp::create(builder, loc, 0);
   SmallVector<bool> inBoundsVal(readRank, true);
 
   if (useInBoundsInsteadOfMasking) {
@@ -341,8 +341,8 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
       inBoundsVal[i] = (sourceShape[i] == inputVectorSizes[i]) &&
                        ShapedType::isStatic(sourceShape[i]);
   }
-  auto transferReadOp = builder.create<vector::TransferReadOp>(
-      loc,
+  auto transferReadOp = vector::TransferReadOp::create(
+      builder, loc,
       /*vectorType=*/vectorType,
       /*source=*/source,
       /*indices=*/SmallVector<Value>(readRank, zero),
@@ -352,11 +352,14 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
   if (llvm::equal(inputVectorSizes, sourceShape) || useInBoundsInsteadOfMasking)
     return transferReadOp;
   SmallVector<OpFoldResult> mixedSourceDims =
-      tensor::getMixedSizes(builder, loc, source);
+      isa<MemRefType>(source.getType())
+          ? memref::getMixedSizes(builder, loc, source)
+          : tensor::getMixedSizes(builder, loc, source);
 
-  auto maskType = VectorType::get(inputVectorSizes, builder.getI1Type());
+  auto maskType =
+      VectorType::get(inputVectorSizes, builder.getI1Type(), scalableDims);
   Value mask =
-      builder.create<vector::CreateMaskOp>(loc, maskType, mixedSourceDims);
+      vector::CreateMaskOp::create(builder, loc, maskType, mixedSourceDims);
   return mlir::vector::maskOperation(builder, transferReadOp, mask)
       ->getResult(0);
 }
@@ -364,14 +367,14 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
 LogicalResult
 vector::isValidMaskedInputVector(ArrayRef<int64_t> shape,
                                  ArrayRef<int64_t> inputVectorSizes) {
-  LDBG("Iteration space static sizes:" << llvm::interleaved(shape));
+  LDBG() << "Iteration space static sizes:" << llvm::interleaved(shape);
 
   if (inputVectorSizes.size() != shape.size()) {
-    LDBG("Input vector sizes don't match the number of loops");
+    LDBG() << "Input vector sizes don't match the number of loops";
     return failure();
   }
   if (ShapedType::isDynamicShape(inputVectorSizes)) {
-    LDBG("Input vector sizes can't have dynamic dimensions");
+    LDBG() << "Input vector sizes can't have dynamic dimensions";
     return failure();
   }
   if (!llvm::all_of(llvm::zip(shape, inputVectorSizes),
@@ -381,8 +384,9 @@ vector::isValidMaskedInputVector(ArrayRef<int64_t> shape,
                       return ShapedType::isDynamic(staticSize) ||
                              staticSize <= inputSize;
                     })) {
-    LDBG("Input vector sizes must be greater than or equal to iteration space "
-         "static sizes");
+    LDBG() << "Input vector sizes must be greater than or equal to iteration "
+              "space "
+              "static sizes";
     return failure();
   }
   return success();
