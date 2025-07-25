@@ -951,7 +951,7 @@ mlir::Value genLifetimeStart(mlir::OpBuilder &builder, mlir::Location loc,
 /// Generate an LLVM dialect lifetime end marker at the current insertion point
 /// given an llvm.ptr value.
 void genLifetimeEnd(mlir::OpBuilder &builder, mlir::Location loc,
-                    mlir::Value mem, int64_t size);
+                    mlir::Value mem);
 
 } // namespace fir::factory
 
