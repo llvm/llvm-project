@@ -27,6 +27,11 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
+constexpr const char *kAlignedAllocFunctionName = "aligned_alloc";
+constexpr const char *kMallocFunctionName = "malloc";
+constexpr const char *kCppStandardLibraryHeader = "cstdlib";
+constexpr const char *kCStandardLibraryHeader = "stdlib.h";
+
 struct ConvertMemRefToEmitCPass
     : public impl::ConvertMemRefToEmitCBase<ConvertMemRefToEmitCPass> {
   using Base::Base;
@@ -56,8 +61,8 @@ struct ConvertMemRefToEmitCPass
 
     mlir::ModuleOp module = getOperation();
     module.walk([&](mlir::emitc::CallOpaqueOp callOp) {
-      if (callOp.getCallee() != "aligned_alloc" &&
-          callOp.getCallee() != "malloc") {
+      if (callOp.getCallee() != kAlignedAllocFunctionName &&
+          callOp.getCallee() != kMallocFunctionName) {
         return mlir::WalkResult::advance();
       }
 
@@ -67,15 +72,18 @@ struct ConvertMemRefToEmitCPass
           continue;
         }
         if (includeOp.getIsStandardInclude() &&
-            ((options.lowerToCpp && includeOp.getInclude() == "cstdlib") ||
-             (!options.lowerToCpp && includeOp.getInclude() == "stdlib.h"))) {
+            ((options.lowerToCpp &&
+              includeOp.getInclude() == kCppStandardLibraryHeader) ||
+             (!options.lowerToCpp &&
+              includeOp.getInclude() == kCStandardLibraryHeader))) {
           return mlir::WalkResult::interrupt();
         }
       }
 
       mlir::OpBuilder builder(module.getBody(), module.getBody()->begin());
       StringAttr includeAttr =
-          builder.getStringAttr(options.lowerToCpp ? "cstdlib" : "stdlib.h");
+          builder.getStringAttr(options.lowerToCpp ? kCppStandardLibraryHeader
+                                                   : kCStandardLibraryHeader);
       builder.create<mlir::emitc::IncludeOp>(
           module.getLoc(), includeAttr,
           /*is_standard_include=*/builder.getUnitAttr());

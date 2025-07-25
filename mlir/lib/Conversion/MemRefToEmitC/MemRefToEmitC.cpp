@@ -119,31 +119,29 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
                                  {mlir::TypeAttr::get(elementType)}));
     mlir::Value sizeofElement = sizeofElementOp.getResult(0);
 
-    unsigned int elementWidth = elementType.getIntOrFloatBitWidth();
-    IntegerAttr indexAttr = rewriter.getIndexAttr(elementWidth);
+    long val = memrefType.getShape().front();
+    IntegerAttr valAttr = rewriter.getIntegerAttr(rewriter.getIndexType(), val);
 
-    mlir::Value numElements;
-    numElements = rewriter.create<emitc::ConstantOp>(
-        loc, rewriter.getIndexType(), indexAttr);
+    mlir::Value numElements = rewriter.create<emitc::ConstantOp>(
+        loc, rewriter.getIndexType(), valAttr);
     mlir::Value totalSizeBytes = rewriter.create<emitc::MulOp>(
         loc, sizeTType, sizeofElement, numElements);
 
     emitc::CallOpaqueOp allocCall;
-    StringAttr allocFunctionName = allocOp.getAlignment()
-                                       ? rewriter.getStringAttr("aligned_alloc")
-                                       : rewriter.getStringAttr("malloc");
+    StringAttr allocFunctionName;
     mlir::Value alignmentValue;
+    SmallVector<mlir::Value, 2> argsVec;
     if (allocOp.getAlignment()) {
+      allocFunctionName = rewriter.getStringAttr(kAlignedAllocFunctionName);
       alignmentValue = rewriter.create<emitc::ConstantOp>(
           loc, sizeTType,
-          rewriter.getIntegerAttr(
-              rewriter.getIndexType(),
-              alignedAllocationGetAlignment(allocOp, elementWidth)));
+          rewriter.getIntegerAttr(rewriter.getIndexType(),
+                                  allocOp.getAlignment().value_or(0)));
+      argsVec.push_back(alignmentValue);
+    } else {
+      allocFunctionName = rewriter.getStringAttr(kMallocFunctionName);
     }
 
-    SmallVector<mlir::Value, 2> argsVec;
-    if (allocOp.getAlignment())
-      argsVec.push_back(alignmentValue);
     argsVec.push_back(totalSizeBytes);
     mlir::ValueRange args(argsVec);
 
@@ -160,26 +158,8 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
     rewriter.replaceOp(allocOp, castOp);
     return success();
   }
-
-  /// The minimum alignment to use with aligned_alloc (has to be a power of 2).
-  static constexpr uint64_t kMinAlignedAllocAlignment = 16UL;
-
-  /// Computes the alignment for aligned_alloc used to allocate the buffer for
-  /// the memory allocation op.
-  ///
-  /// Aligned_alloc requires the allocation size to be a power of two, and the
-  /// allocation size to be a multiple of the alignment.
-  int64_t alignedAllocationGetAlignment(memref::AllocOp op,
-                                        unsigned int elementWidth) const {
-    if (std::optional<uint64_t> alignment = op.getAlignment())
-      return *alignment;
-
-    // Whenever we don't have alignment set, we will use an alignment
-    // consistent with the element type; since the allocation size has to be a
-    // power of two, we will bump to the next power of two if it isn't.
-    return std::max(kMinAlignedAllocAlignment,
-                    llvm::PowerOf2Ceil(elementWidth));
-  }
+  static constexpr const char *kAlignedAllocFunctionName = "aligned_alloc";
+  static constexpr const char *kMallocFunctionName = "malloc";
 };
 
 struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
