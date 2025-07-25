@@ -137,6 +137,9 @@ def gi_global_offset :
 def gi_global_saddr :
     GIComplexOperandMatcher<s64, "selectGlobalSAddr">,
     GIComplexPatternEquiv<GlobalSAddr>;
+def gi_global_saddr_cpol :
+    GIComplexOperandMatcher<s64, "selectGlobalSAddrCPol">,
+    GIComplexPatternEquiv<GlobalSAddrCPol>;
 def gi_global_saddr_glc :
     GIComplexOperandMatcher<s64, "selectGlobalSAddrGLC">,
     GIComplexPatternEquiv<GlobalSAddrGLC>;
