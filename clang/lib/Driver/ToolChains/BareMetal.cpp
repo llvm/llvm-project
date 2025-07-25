@@ -427,10 +427,20 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   const SmallString<128> SysRootDir(computeSysRoot());
   if (!SysRootDir.empty()) {
     for (const Multilib &M : getOrderedMultilibs()) {
-      SmallString<128> Dir(SysRootDir);
-      llvm::sys::path::append(Dir, M.includeSuffix());
-      llvm::sys::path::append(Dir, "include");
-      addSystemInclude(DriverArgs, CC1Args, Dir.str());
+      if (!M.includePath().empty()) {
+        // Add include paths specified in multilib.yaml under the 'IncludePath'
+        // field
+        for (const std::string &Path : M.includePath()) {
+          SmallString<128> Dir(SysRoot);
+          llvm::sys::path::append(Dir, Path);
+          addSystemInclude(DriverArgs, CC1Args, Dir.str());
+        }
+      } else {
+        SmallString<128> Dir(SysRootDir);
+        llvm::sys::path::append(Dir, M.includeSuffix());
+        llvm::sys::path::append(Dir, "include");
+        addSystemInclude(DriverArgs, CC1Args, Dir.str());
+      }
     }
   }
 }
@@ -509,6 +519,16 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
       llvm::sys::path::append(TargetDir, "usr", "include", "c++", "v1");
       if (D.getVFS().exists(TargetDir)) {
         addSystemInclude(DriverArgs, CC1Args, TargetDir.str());
+        break;
+      }
+      if (!M.includePath().empty()) {
+        // Add include paths specified in multilib.yaml under the 'IncludePath'
+        // field
+        for (const std::string &Path : M.includePath()) {
+          Dir = SysRoot;
+          llvm::sys::path::append(Dir, Path, "c++", "v1");
+          addSystemInclude(DriverArgs, CC1Args, Dir.str());
+        }
         break;
       }
       // Add generic path if nothing else succeeded so far.
