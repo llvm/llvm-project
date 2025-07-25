@@ -6,17 +6,15 @@ target triple = "nvptx64-nvidia-cuda"
 define i64 @t1(i32 %a, i32 %b, i64 %c) {
 ; CHECK-LABEL: t1(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<4>;
-; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [t1_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [t1_param_1];
-; CHECK-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; CHECK-NEXT:    cvt.s64.s32 %rd1, %r3;
-; CHECK-NEXT:    ld.param.b64 %rd2, [t1_param_2];
-; CHECK-NEXT:    add.s64 %rd3, %rd2, %rd1;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-NEXT:    ld.param.b64 %rd1, [t1_param_2];
+; CHECK-NEXT:    mad.wide.s32 %rd2, %r1, %r2, %rd1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %mul = mul nsw i32 %a, %b
   %sext = sext i32 %mul to i64
@@ -27,17 +25,15 @@ define i64 @t1(i32 %a, i32 %b, i64 %c) {
 define i64 @t2(i32 %a, i32 %b, i64 %c) {
 ; CHECK-LABEL: t2(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<4>;
-; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [t2_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [t2_param_1];
-; CHECK-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; CHECK-NEXT:    cvt.s64.s32 %rd1, %r3;
-; CHECK-NEXT:    ld.param.b64 %rd2, [t2_param_2];
-; CHECK-NEXT:    add.s64 %rd3, %rd1, %rd2;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-NEXT:    ld.param.b64 %rd1, [t2_param_2];
+; CHECK-NEXT:    mad.wide.s32 %rd2, %r1, %r2, %rd1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %mul = mul nsw i32 %a, %b
   %sext = sext i32 %mul to i64
@@ -48,16 +44,14 @@ define i64 @t2(i32 %a, i32 %b, i64 %c) {
 define i64 @t3(i32 %a, i32 %b) {
 ; CHECK-LABEL: t3(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<4>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [t3_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [t3_param_1];
-; CHECK-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; CHECK-NEXT:    cvt.s64.s32 %rd1, %r3;
-; CHECK-NEXT:    add.s64 %rd2, %rd1, 1;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    mad.wide.s32 %rd1, %r1, %r2, 1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
 ; CHECK-NEXT:    ret;
   %mul = mul nsw i32 %a, %b
   %sext = sext i32 %mul to i64
@@ -68,16 +62,14 @@ define i64 @t3(i32 %a, i32 %b) {
 define i64 @t4(i32 %a, i64 %c) {
 ; CHECK-LABEL: t4(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [t4_param_0];
-; CHECK-NEXT:    mul.lo.s32 %r2, %r1, 3;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [t4_param_1];
-; CHECK-NEXT:    cvt.s64.s32 %rd2, %r2;
-; CHECK-NEXT:    add.s64 %rd3, %rd1, %rd2;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-NEXT:    mad.wide.s32 %rd2, %r1, 3, %rd1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %mul = mul nsw i32 %a, 3
   %sext = sext i32 %mul to i64
@@ -88,15 +80,13 @@ define i64 @t4(i32 %a, i64 %c) {
 define i64 @t4_1(i32 %a, i64 %c) {
 ; CHECK-LABEL: t4_1(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [t4_1_param_0];
-; CHECK-NEXT:    mul.lo.s32 %r2, %r1, 3;
-; CHECK-NEXT:    cvt.s64.s32 %rd1, %r2;
-; CHECK-NEXT:    add.s64 %rd2, %rd1, 5;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    mad.wide.s32 %rd1, %r1, 3, 5;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
 ; CHECK-NEXT:    ret;
   %mul = mul nsw i32 %a, 3
   %sext = sext i32 %mul to i64
@@ -107,17 +97,15 @@ define i64 @t4_1(i32 %a, i64 %c) {
 define i64 @t5(i32 %a, i32 %b, i64 %c) {
 ; CHECK-LABEL: t5(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<4>;
-; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [t5_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [t5_param_1];
-; CHECK-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; CHECK-NEXT:    cvt.u64.u32 %rd1, %r3;
-; CHECK-NEXT:    ld.param.b64 %rd2, [t5_param_2];
-; CHECK-NEXT:    add.s64 %rd3, %rd2, %rd1;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-NEXT:    ld.param.b64 %rd1, [t5_param_2];
+; CHECK-NEXT:    mad.wide.u32 %rd2, %r1, %r2, %rd1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %mul = mul nuw i32 %a, %b
   %zext = zext i32 %mul to i64
@@ -128,17 +116,15 @@ define i64 @t5(i32 %a, i32 %b, i64 %c) {
 define i64 @t6(i32 %a, i32 %b, i64 %c) {
 ; CHECK-LABEL: t6(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<4>;
-; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [t6_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [t6_param_1];
-; CHECK-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; CHECK-NEXT:    cvt.u64.u32 %rd1, %r3;
-; CHECK-NEXT:    ld.param.b64 %rd2, [t6_param_2];
-; CHECK-NEXT:    add.s64 %rd3, %rd1, %rd2;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-NEXT:    ld.param.b64 %rd1, [t6_param_2];
+; CHECK-NEXT:    mad.wide.u32 %rd2, %r1, %r2, %rd1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %mul = mul nuw i32 %a, %b
   %zext = zext i32 %mul to i64
@@ -239,14 +225,13 @@ define i32 @t11(i16 %a, i16 %b) {
 define i32 @t12(i16 %a, i16 %b) {
 ; CHECK-LABEL: t12(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [t12_param_0];
 ; CHECK-NEXT:    ld.param.b16 %rs2, [t12_param_1];
-; CHECK-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; CHECK-NEXT:    cvt.s32.s16 %r1, %rs3;
+; CHECK-NEXT:    mul.wide.s16 %r1, %rs1, %rs2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %mul = mul nsw i16 %a, %b
@@ -275,14 +260,13 @@ define i64 @t13(i32 %a, i32 %b) {
 define i64 @t14(i32 %a, i32 %b) {
 ; CHECK-LABEL: t14(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [t14_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [t14_param_1];
-; CHECK-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; CHECK-NEXT:    cvt.s64.s32 %rd1, %r3;
+; CHECK-NEXT:    mul.wide.s32 %rd1, %r1, %r2;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
 ; CHECK-NEXT:    ret;
   %mul = mul nsw i32 %a, %b
@@ -293,14 +277,13 @@ define i64 @t14(i32 %a, i32 %b) {
 define i32 @t15(i16 %a, i16 %b) {
 ; CHECK-LABEL: t15(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<4>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [t15_param_0];
 ; CHECK-NEXT:    ld.param.b16 %rs2, [t15_param_1];
-; CHECK-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs3;
+; CHECK-NEXT:    mul.wide.u16 %r1, %rs1, %rs2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %mul = mul nuw i16 %a, %b
@@ -329,14 +312,13 @@ define i32 @t16(i16 %a, i16 %b) {
 define i64 @t17(i32 %a, i32 %b) {
 ; CHECK-LABEL: t17(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [t17_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [t17_param_1];
-; CHECK-NEXT:    mul.lo.s32 %r3, %r1, %r2;
-; CHECK-NEXT:    cvt.u64.u32 %rd1, %r3;
+; CHECK-NEXT:    mul.wide.u32 %rd1, %r1, %r2;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
 ; CHECK-NEXT:    ret;
   %mul = mul nuw i32 %a, %b
@@ -451,13 +433,12 @@ define i32 @t23(i16 %a, i16 %b) {
 define i32 @t24(i16 %a, i16 %b) {
 ; CHECK-LABEL: t24(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [t24_param_0];
-; CHECK-NEXT:    shl.b16 %rs2, %rs1, 4;
-; CHECK-NEXT:    cvt.s32.s16 %r1, %rs2;
+; CHECK-NEXT:    mul.wide.s16 %r1, %rs1, 16;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %mul = shl nsw i16 %a, 4
@@ -485,13 +466,12 @@ define i64 @t25(i32 %a) {
 define i64 @t26(i32 %a) {
 ; CHECK-LABEL: t26(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [t26_param_0];
-; CHECK-NEXT:    shl.b32 %r2, %r1, 4;
-; CHECK-NEXT:    cvt.s64.s32 %rd1, %r2;
+; CHECK-NEXT:    mul.wide.s32 %rd1, %r1, 16;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
 ; CHECK-NEXT:    ret;
   %mul = shl nsw i32 %a, 4
@@ -502,13 +482,12 @@ define i64 @t26(i32 %a) {
 define i32 @t27(i16 %a, i16 %b) {
 ; CHECK-LABEL: t27(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [t27_param_0];
-; CHECK-NEXT:    shl.b16 %rs2, %rs1, 4;
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs2;
+; CHECK-NEXT:    mul.wide.u16 %r1, %rs1, 16;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %mul = shl nuw i16 %a, 4
@@ -536,13 +515,12 @@ define i32 @t28(i16 %a, i16 %b) {
 define i64 @t29(i32 %a) {
 ; CHECK-LABEL: t29(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [t29_param_0];
-; CHECK-NEXT:    shl.b32 %r2, %r1, 4;
-; CHECK-NEXT:    cvt.u64.u32 %rd1, %r2;
+; CHECK-NEXT:    mul.wide.u32 %rd1, %r1, 16;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
 ; CHECK-NEXT:    ret;
   %mul = shl nuw i32 %a, 4
@@ -588,17 +566,15 @@ define i64 @t31(i32 %a, i32 %b) {
 define i32 @t32(i16 %a, i16 %b, i32 %c) {
 ; CHECK-LABEL: t32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<4>;
-; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [t32_param_0];
 ; CHECK-NEXT:    ld.param.b16 %rs2, [t32_param_1];
-; CHECK-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; CHECK-NEXT:    cvt.s32.s16 %r1, %rs3;
-; CHECK-NEXT:    ld.param.b32 %r2, [t32_param_2];
-; CHECK-NEXT:    add.s32 %r3, %r2, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ld.param.b32 %r1, [t32_param_2];
+; CHECK-NEXT:    mad.wide.s16 %r2, %rs1, %rs2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %mul = mul nsw i16 %a, %b
   %sext = sext i16 %mul to i32
@@ -609,17 +585,15 @@ define i32 @t32(i16 %a, i16 %b, i32 %c) {
 define i32 @t33(i16 %a, i16 %b, i32 %c) {
 ; CHECK-LABEL: t33(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<4>;
-; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [t33_param_0];
 ; CHECK-NEXT:    ld.param.b16 %rs2, [t33_param_1];
-; CHECK-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; CHECK-NEXT:    cvt.s32.s16 %r1, %rs3;
-; CHECK-NEXT:    ld.param.b32 %r2, [t33_param_2];
-; CHECK-NEXT:    add.s32 %r3, %r2, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ld.param.b32 %r1, [t33_param_2];
+; CHECK-NEXT:    mad.wide.s16 %r2, %rs1, %rs2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %mul = mul nsw i16 %a, %b
   %sext = sext i16 %mul to i32
@@ -630,16 +604,14 @@ define i32 @t33(i16 %a, i16 %b, i32 %c) {
 define i32 @t34(i16 %a, i16 %b) {
 ; CHECK-LABEL: t34(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<4>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [t34_param_0];
 ; CHECK-NEXT:    ld.param.b16 %rs2, [t34_param_1];
-; CHECK-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; CHECK-NEXT:    cvt.s32.s16 %r1, %rs3;
-; CHECK-NEXT:    add.s32 %r2, %r1, 1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    mad.wide.s16 %r1, %rs1, %rs2, 1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %mul = mul nsw i16 %a, %b
   %sext = sext i16 %mul to i32
@@ -650,16 +622,14 @@ define i32 @t34(i16 %a, i16 %b) {
 define i32 @t35(i16 %a, i32 %c) {
 ; CHECK-LABEL: t35(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b16 %rs<2>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [t35_param_0];
-; CHECK-NEXT:    mul.lo.s16 %rs2, %rs1, 3;
 ; CHECK-NEXT:    ld.param.b32 %r1, [t35_param_1];
-; CHECK-NEXT:    cvt.s32.s16 %r2, %rs2;
-; CHECK-NEXT:    add.s32 %r3, %r1, %r2;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    mad.wide.s16 %r2, %rs1, 3, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %mul = mul nsw i16 %a, 3
   %sext = sext i16 %mul to i32
@@ -670,15 +640,13 @@ define i32 @t35(i16 %a, i32 %c) {
 define i32 @t36(i16 %a, i32 %c) {
 ; CHECK-LABEL: t36(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b16 %rs<2>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [t36_param_0];
-; CHECK-NEXT:    mul.lo.s16 %rs2, %rs1, 3;
-; CHECK-NEXT:    cvt.s32.s16 %r1, %rs2;
-; CHECK-NEXT:    add.s32 %r2, %r1, 5;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    mad.wide.s16 %r1, %rs1, 3, 5;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %mul = mul nsw i16 %a, 3
   %sext = sext i16 %mul to i32
@@ -689,17 +657,15 @@ define i32 @t36(i16 %a, i32 %c) {
 define i32 @t37(i16 %a, i16 %b, i32 %c) {
 ; CHECK-LABEL: t37(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<4>;
-; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [t37_param_0];
 ; CHECK-NEXT:    ld.param.b16 %rs2, [t37_param_1];
-; CHECK-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs3;
-; CHECK-NEXT:    ld.param.b32 %r2, [t37_param_2];
-; CHECK-NEXT:    add.s32 %r3, %r2, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ld.param.b32 %r1, [t37_param_2];
+; CHECK-NEXT:    mad.wide.u16 %r2, %rs1, %rs2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %mul = mul nuw i16 %a, %b
   %zext = zext i16 %mul to i32
@@ -710,17 +676,15 @@ define i32 @t37(i16 %a, i16 %b, i32 %c) {
 define i32 @t38(i16 %a, i16 %b, i32 %c) {
 ; CHECK-LABEL: t38(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<4>;
-; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [t38_param_0];
 ; CHECK-NEXT:    ld.param.b16 %rs2, [t38_param_1];
-; CHECK-NEXT:    mul.lo.s16 %rs3, %rs1, %rs2;
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs3;
-; CHECK-NEXT:    ld.param.b32 %r2, [t38_param_2];
-; CHECK-NEXT:    add.s32 %r3, %r1, %r2;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ld.param.b32 %r1, [t38_param_2];
+; CHECK-NEXT:    mad.wide.u16 %r2, %rs1, %rs2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %mul = mul nuw i16 %a, %b
   %zext = zext i16 %mul to i32
