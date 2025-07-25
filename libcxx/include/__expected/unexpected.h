@@ -17,6 +17,7 @@
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_specialization.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_volatile.h>
 #include <__type_traits/negation.h>
@@ -42,23 +43,15 @@ template <class _Err>
 class unexpected;
 
 template <class _Tp>
-struct __is_std_unexpected : false_type {};
-
-template <class _Err>
-struct __is_std_unexpected<unexpected<_Err>> : true_type {};
+concept __is_std_unexpected_v = __is_specialization_v<_Tp, unexpected>;
 
 template <class _Tp>
-using __valid_std_unexpected _LIBCPP_NODEBUG = _BoolConstant< //
-    is_object_v<_Tp> &&                                       //
-    !is_array_v<_Tp> &&                                       //
-    !__is_std_unexpected<_Tp>::value &&                       //
-    !is_const_v<_Tp> &&                                       //
-    !is_volatile_v<_Tp>                                       //
-    >;
+concept __valid_std_unexpected =
+    is_object_v<_Tp> && !is_array_v<_Tp> && !__is_std_unexpected_v<_Tp> && !is_const_v<_Tp> && !is_volatile_v<_Tp>;
 
 template <class _Err>
 class unexpected {
-  static_assert(__valid_std_unexpected<_Err>::value,
+  static_assert(__valid_std_unexpected<_Err>,
                 "[expected.un.general] states a program that instantiates std::unexpected for a non-object type, an "
                 "array type, a specialization of unexpected, or a cv-qualified type is ill-formed.");
 
