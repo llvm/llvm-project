@@ -484,7 +484,7 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
     VectorType valueTy = llvm::dyn_cast<VectorType>(op.getValue().getType());
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
 
-    if (!tdescTy.isScattered())
+    if (!tdescTy || !tdescTy.isScattered())
       return failure();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
@@ -546,7 +546,7 @@ struct UnrollPrefetchOp : public UnrollPattern<xegpu::PrefetchOp> {
     Location loc = op.getLoc();
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
 
-    if (!tdescTy.isScattered())
+    if (!tdescTy || !tdescTy.isScattered())
       return failure();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
@@ -575,7 +575,7 @@ struct UnrollStoreScatterOp : public UnrollPattern<xegpu::StoreScatterOp> {
     VectorType valueTy = llvm::dyn_cast<VectorType>(op.getValue().getType());
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
 
-    if (!tdescTy.isScattered())
+    if (!tdescTy || !tdescTy.isScattered())
       return failure();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);

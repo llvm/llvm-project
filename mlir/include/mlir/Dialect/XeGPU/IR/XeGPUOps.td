@@ -661,11 +661,12 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
 
   let assemblyFormat = [{
     $source 
-    (`,` $offsets^)? 
+    (`[` $offsets^ `]`)?
     prop-dict
-    attr-dict `:` type($source) (`,` type($offsets)^)?
+    attr-dict `:` type(operands) 
   }];
-
+    // type($source) (type($offsets)^)?
+    
   let builders = [
     OpBuilder<(ins "Value": $source,
                     "xegpu::CachePolicyAttr": $l1_hint, 
