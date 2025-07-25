@@ -150,7 +150,7 @@ extern "C" int printf(const char *format, ...);
 // CHECK: |   | `-typeDetails: PointerType {{.*}} 'const char *'
 // CHECK: |   |   `-qualTypeDetail: QualType {{.*}} 'const char' const
 // CHECK: |   |     `-typeDetails: BuiltinType {{.*}} 'char'
-// CHECK: |   |-attrDetails: BuiltinAttr {{.*}} <<invalid sloc>> Implicit 1057
+// CHECK: |   |-attrDetails: BuiltinAttr {{.*}} <<invalid sloc>> Implicit 1059
 // CHECK: |   `-attrDetails: FormatAttr {{.*}} Implicit printf 1 2
 
 alignas(8) extern int x;
