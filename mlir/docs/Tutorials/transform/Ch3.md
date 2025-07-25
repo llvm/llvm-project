@@ -139,8 +139,8 @@ void MyExtension::init() {
 ```
 
 This type is now directly available in the Transform dialect and can be used in operations.
-We modify `$call` type must be `Transform_ConcreteOp<“func.call”>`, let it use the 
-`CallOpInterfaceHandle`.
+In the previous tablegen definition, the type of `$call` must be `Transform_ConcreteOp<“func.call”>`,
+now we make it can to use `CallOpInterfaceHandle`.
 
 ```tablegen
 def ChangeCallTargetOp : ... {
@@ -152,7 +152,7 @@ def ChangeCallTargetOp : ... {
 }
 ```
 
-We can then add the following to `sequence.mlir` and run it with the interpreter.
+We can then add the following code to `sequence.mlir` and run it with the interpreter.
 
 ```mlir
   // Cast to our new type.
