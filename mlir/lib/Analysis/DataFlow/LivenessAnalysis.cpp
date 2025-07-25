@@ -21,7 +21,6 @@
 #include <mlir/Support/LLVM.h>
 
 #define DEBUG_TYPE "liveness-analysis"
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 
 using namespace mlir;
 using namespace mlir::dataflow;
