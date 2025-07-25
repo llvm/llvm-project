@@ -321,7 +321,8 @@ public:
                                               bool IsNonTemporal,
                                               bool IsLastUse = false) const = 0;
 
-  virtual bool finalizeStore(MachineBasicBlock::iterator &MI, bool Atomic) const {
+  virtual bool finalizeStore(MachineBasicBlock::iterator &MI,
+                             bool Atomic) const {
     return false;
   };
 
@@ -602,7 +603,8 @@ public:
                                       bool IsVolatile, bool IsNonTemporal,
                                       bool IsLastUse) const override;
 
-  bool finalizeStore(MachineBasicBlock::iterator &MI, bool Atomic) const override;
+  bool finalizeStore(MachineBasicBlock::iterator &MI,
+                     bool Atomic) const override;
 
   bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
