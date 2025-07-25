@@ -1,0 +1,108 @@
+## Test that BOLT correctly handles debug line information for functions
+## that belong to multiple compilation units (e.g., inline functions in
+## common header files). The test covers two scenarios:
+## 1. Normal processing: .debug_line section shows lines for the function 
+##    in all CUs where it was compiled, with no duplicate rows within CUs
+## 2. Functions not processed: When BOLT doesn't process functions (using 
+##    --funcs with nonexistent function), original debug info is preserved
+
+# REQUIRES: system-linux
+
+## Compile test files with debug info
+# RUN: %clang %cflags -O0 -g %S/../Inputs/multi-cu-file1.c %S/../Inputs/multi-cu-file2.c \
+# RUN:   -I%S/../Inputs -o %t.exe -Wl,-q
+
+## Test 1: Normal BOLT processing (functions are processed/optimized)
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-dwarfdump --debug-line %t.bolt > %t.debug-line.txt
+# RUN: FileCheck %s --check-prefix=BASIC --input-file %t.debug-line.txt
+
+## Check that debug line information is present for both compilation units
+# BASIC: debug_line[{{.*}}]
+# BASIC: file_names[{{.*}}]:
+# BASIC: name: "{{.*}}multi-cu-file1.c"
+# BASIC: debug_line[{{.*}}]
+# BASIC: file_names[{{.*}}]:
+# BASIC: name: "{{.*}}multi-cu-file2.c"
+
+## Use our helper script to create a normalized table without addresses
+# RUN: %S/../Inputs/process-debug-line.sh %t.debug-line.txt > %t.normalized-debug-line.txt
+# RUN: FileCheck %s --check-prefix=NORMALIZED --input-file %t.normalized-debug-line.txt
+
+## Check that we have line entries for the inline function (lines 5, 6, 7) from multi-cu-common.h
+## in both compilation units
+# NORMALIZED: multi-cu-file1.c 5 {{[0-9]+}} multi-cu-common.h
+# NORMALIZED: multi-cu-file1.c 6 {{[0-9]+}} multi-cu-common.h
+# NORMALIZED: multi-cu-file1.c 7 {{[0-9]+}} multi-cu-common.h
+# NORMALIZED: multi-cu-file2.c 5 {{[0-9]+}} multi-cu-common.h
+# NORMALIZED: multi-cu-file2.c 6 {{[0-9]+}} multi-cu-common.h
+# NORMALIZED: multi-cu-file2.c 7 {{[0-9]+}} multi-cu-common.h
+
+## Verify that we have line entries for the inline function in multiple CUs
+## by checking that the header file appears multiple times in different contexts
+# RUN: grep -c "multi-cu-common.h" %t.debug-line.txt > %t.header-count.txt
+# RUN: FileCheck %s --check-prefix=MULTI-CU --input-file %t.header-count.txt
+
+## The header should appear in debug line info for multiple CUs
+# MULTI-CU: {{[2-9]|[1-9][0-9]+}}
+
+## Check that there are no duplicate line table rows within the same CU
+## This verifies the fix for the bug where duplicate entries were created
+# RUN: sort %t.normalized-debug-line.txt | uniq -c | \
+# RUN:   awk '$1 > 1 {print "DUPLICATE_ROW: " $0}' > %t.duplicates.txt
+# RUN: FileCheck %s --check-prefix=NO-DUPLICATES --input-file %t.duplicates.txt --allow-empty
+
+## Should have no duplicate normalized rows (file should be empty)
+## Note: Cross-CU duplicates are expected and valid (same function in different CUs)
+## but within-CU duplicates would indicate a bug
+# NO-DUPLICATES-NOT: DUPLICATE_ROW
+
+## Test 2: Functions not processed by BOLT (using --funcs with nonexistent function)
+## This tests the code path where BOLT preserves original debug info
+# RUN: llvm-bolt %t.exe -o %t.not-emitted.bolt --update-debug-sections --funcs=nonexistent_function
+# RUN: llvm-dwarfdump --debug-line %t.not-emitted.bolt > %t.not-emitted.debug-line.txt
+# RUN: FileCheck %s --check-prefix=PRESERVED-BASIC --input-file %t.not-emitted.debug-line.txt
+
+## Check that debug line information is still present for both compilation units when functions aren't processed
+# PRESERVED-BASIC: debug_line[{{.*}}]
+# PRESERVED-BASIC: file_names[{{.*}}]:
+# PRESERVED-BASIC: name: "{{.*}}multi-cu-file1.c"
+# PRESERVED-BASIC: debug_line[{{.*}}]
+# PRESERVED-BASIC: file_names[{{.*}}]:
+# PRESERVED-BASIC: name: "{{.*}}multi-cu-file2.c"
+
+## Create normalized output for the not-emitted case
+# RUN: %S/../Inputs/process-debug-line.sh %t.not-emitted.debug-line.txt > %t.not-emitted.normalized.txt
+# RUN: FileCheck %s --check-prefix=PRESERVED-NORMALIZED --input-file %t.not-emitted.normalized.txt
+
+## Check that we have line entries for the inline function (lines 5, 6, 7) from multi-cu-common.h
+## in both compilation units (preserved from original)
+# PRESERVED-NORMALIZED: multi-cu-file1.c 5 {{[0-9]+}} multi-cu-common.h
+# PRESERVED-NORMALIZED: multi-cu-file1.c 6 {{[0-9]+}} multi-cu-common.h
+# PRESERVED-NORMALIZED: multi-cu-file1.c 7 {{[0-9]+}} multi-cu-common.h
+# PRESERVED-NORMALIZED: multi-cu-file2.c 5 {{[0-9]+}} multi-cu-common.h
+# PRESERVED-NORMALIZED: multi-cu-file2.c 6 {{[0-9]+}} multi-cu-common.h
+# PRESERVED-NORMALIZED: multi-cu-file2.c 7 {{[0-9]+}} multi-cu-common.h
+
+## Verify that we have line entries for the inline function in multiple CUs (preserved)
+## by checking that the header file appears multiple times in different contexts
+# RUN: grep -c "multi-cu-common.h" %t.not-emitted.debug-line.txt > %t.preserved-header-count.txt
+# RUN: FileCheck %s --check-prefix=PRESERVED-MULTI-CU --input-file %t.preserved-header-count.txt
+
+## The header should appear in debug line info for multiple CUs (preserved from original)
+# PRESERVED-MULTI-CU: {{[2-9]|[1-9][0-9]+}}
+
+## Check that original debug info is preserved for main functions
+# RUN: grep "multi-cu-file1.c.*multi-cu-file1.c" %t.not-emitted.normalized.txt > %t.preserved-main.txt
+# RUN: FileCheck %s --check-prefix=PRESERVED-MAIN --input-file %t.preserved-main.txt
+
+# PRESERVED-MAIN: multi-cu-file1.c {{[0-9]+}} {{[0-9]+}} multi-cu-file1.c
+
+## Check that original debug info is preserved for file2 functions
+# RUN: grep "multi-cu-file2.c.*multi-cu-file2.c" %t.not-emitted.normalized.txt > %t.preserved-file2.txt
+# RUN: FileCheck %s --check-prefix=PRESERVED-FILE2 --input-file %t.preserved-file2.txt
+
+# PRESERVED-FILE2: multi-cu-file2.c {{[0-9]+}} {{[0-9]+}} multi-cu-file2.c
+
+## Note: We do not check for duplicates in Test 2 since we are preserving original debug info as-is
+## and the original may contain patterns that would be flagged as duplicates by our normalization

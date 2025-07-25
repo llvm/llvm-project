@@ -437,9 +437,9 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
     Streamer.emitELFSize(StartSymbol, SizeExpr);
   }
 
-  // TODO: Emit line info end for all the CUs that contain the function.
   if (opts::UpdateDebugSections && !Function.getDWARFUnits().empty())
-    emitLineInfoEnd(Function, EndSymbol, Function.getDWARFUnits().front());
+    for (DWARFUnit *Unit : Function.getDWARFUnits())
+      emitLineInfoEnd(Function, EndSymbol, Unit);
 
   // Exception handling info for the function.
   emitLSDA(Function, FF);
@@ -681,64 +681,92 @@ void BinaryEmitter::emitConstantIslands(BinaryFunction &BF, bool EmitColdPart,
 SMLoc BinaryEmitter::emitLineInfo(const BinaryFunction &BF, SMLoc NewLoc,
                                   SMLoc PrevLoc, bool FirstInstr,
                                   MCSymbol *&InstrLabel) {
-  // TODO: implment emitting into line tables corresponding to multiple CUs
-  DWARFUnit *FunctionCU = BF.getDWARFUnits().front();
-  const DWARFDebugLine::LineTable *FunctionLineTable =
-      BF.getDWARFLineTableForUnit(FunctionCU);
-  assert(FunctionCU && "cannot emit line info for function without CU");
-
-  DebugLineTableRowRef RowReference = DebugLineTableRowRef::fromSMLoc(NewLoc);
-
-  // Check if no new line info needs to be emitted.
-  if (RowReference == DebugLineTableRowRef::NULL_ROW ||
+  if (NewLoc.getPointer() == nullptr ||
       NewLoc.getPointer() == PrevLoc.getPointer())
     return PrevLoc;
+  const ClusteredRows *Cluster = ClusteredRows::fromSMLoc(NewLoc);
 
-  unsigned CurrentFilenum = 0;
-  const DWARFDebugLine::LineTable *CurrentLineTable = FunctionLineTable;
+  auto addToLineTable = [&](DebugLineTableRowRef RowReference,
+                            const DWARFUnit *TargetCU, unsigned Flags,
+                            MCSymbol *InstrLabel,
+                            const DWARFDebugLine::Row &CurrentRow) {
+    const uint64_t TargetUnitIndex = TargetCU->getOffset();
+    unsigned TargetFilenum = CurrentRow.File;
+    const uint32_t CurrentUnitIndex = RowReference.DwCompileUnitIndex;
+    // If the CU id from the current instruction location does not
+    // match the target CU id, it means that we have come across some
+    // inlined code (by BOLT).  We must look up the CU for the instruction's
+    // original function and get the line table from that.
+    if (TargetUnitIndex != CurrentUnitIndex) {
+      // Add filename from the inlined function to the current CU.
+      TargetFilenum = BC.addDebugFilenameToUnit(
+          TargetUnitIndex, CurrentUnitIndex, CurrentRow.File);
+    }
+    BC.Ctx->setCurrentDwarfLoc(TargetFilenum, CurrentRow.Line,
+                               CurrentRow.Column, Flags, CurrentRow.Isa,
+                               CurrentRow.Discriminator);
+    const MCDwarfLoc &DwarfLoc = BC.Ctx->getCurrentDwarfLoc();
+    BC.Ctx->clearDwarfLocSeen();
+    auto &MapLineEntries = BC.getDwarfLineTable(TargetUnitIndex)
+                               .getMCLineSections()
+                               .getMCLineEntries();
+    const auto *It = MapLineEntries.find(Streamer.getCurrentSectionOnly());
+    auto NewLineEntry = MCDwarfLineEntry(InstrLabel, DwarfLoc);
 
-  // If the CU id from the current instruction location does not
-  // match the CU id from the current function, it means that we
-  // have come across some inlined code.  We must look up the CU
-  // for the instruction's original function and get the line table
-  // from that.
-  const uint64_t FunctionUnitIndex = FunctionCU->getOffset();
-  const uint32_t CurrentUnitIndex = RowReference.DwCompileUnitIndex;
-  if (CurrentUnitIndex != FunctionUnitIndex) {
-    CurrentLineTable = BC.DwCtx->getLineTableForUnit(
-        BC.DwCtx->getCompileUnitForOffset(CurrentUnitIndex));
-    // Add filename from the inlined function to the current CU.
-    CurrentFilenum = BC.addDebugFilenameToUnit(
-        FunctionUnitIndex, CurrentUnitIndex,
-        CurrentLineTable->Rows[RowReference.RowIndex - 1].File);
-  }
+    // Check if line table exists and has entries before doing comparison
+    if (It != MapLineEntries.end() && !It->second.empty()) {
+      // Check if the new line entry has the same debug info as the last one
+      // to avoid duplicates. We don't compare labels since different
+      // instructions can have the same line info.
+      const auto &LastEntry = It->second.back();
+      if (LastEntry.getFileNum() == NewLineEntry.getFileNum() &&
+          LastEntry.getLine() == NewLineEntry.getLine() &&
+          LastEntry.getColumn() == NewLineEntry.getColumn() &&
+          LastEntry.getFlags() == NewLineEntry.getFlags() &&
+          LastEntry.getIsa() == NewLineEntry.getIsa() &&
+          LastEntry.getDiscriminator() == NewLineEntry.getDiscriminator())
+        return;
+    }
 
-  const DWARFDebugLine::Row &CurrentRow =
-      CurrentLineTable->Rows[RowReference.RowIndex - 1];
-  if (!CurrentFilenum)
-    CurrentFilenum = CurrentRow.File;
-
-  unsigned Flags = (DWARF2_FLAG_IS_STMT * CurrentRow.IsStmt) |
-                   (DWARF2_FLAG_BASIC_BLOCK * CurrentRow.BasicBlock) |
-                   (DWARF2_FLAG_PROLOGUE_END * CurrentRow.PrologueEnd) |
-                   (DWARF2_FLAG_EPILOGUE_BEGIN * CurrentRow.EpilogueBegin);
-
-  // Always emit is_stmt at the beginning of function fragment.
-  if (FirstInstr)
-    Flags |= DWARF2_FLAG_IS_STMT;
-
-  BC.Ctx->setCurrentDwarfLoc(CurrentFilenum, CurrentRow.Line, CurrentRow.Column,
-                             Flags, CurrentRow.Isa, CurrentRow.Discriminator);
-  const MCDwarfLoc &DwarfLoc = BC.Ctx->getCurrentDwarfLoc();
-  BC.Ctx->clearDwarfLocSeen();
+    BC.getDwarfLineTable(TargetUnitIndex)
+        .getMCLineSections()
+        .addLineEntry(NewLineEntry, Streamer.getCurrentSectionOnly());
+  };
 
   if (!InstrLabel)
     InstrLabel = BC.Ctx->createTempSymbol();
+  for (DebugLineTableRowRef RowReference : Cluster->getRows()) {
+    const DWARFDebugLine::LineTable *CurrentLineTable =
+        BC.DwCtx->getLineTableForUnit(
+            BC.DwCtx->getCompileUnitForOffset(RowReference.DwCompileUnitIndex));
+    const DWARFDebugLine::Row &CurrentRow =
+        CurrentLineTable->Rows[RowReference.RowIndex - 1];
+    unsigned Flags = (DWARF2_FLAG_IS_STMT * CurrentRow.IsStmt) |
+                     (DWARF2_FLAG_BASIC_BLOCK * CurrentRow.BasicBlock) |
+                     (DWARF2_FLAG_PROLOGUE_END * CurrentRow.PrologueEnd) |
+                     (DWARF2_FLAG_EPILOGUE_BEGIN * CurrentRow.EpilogueBegin);
 
-  BC.getDwarfLineTable(FunctionUnitIndex)
-      .getMCLineSections()
-      .addLineEntry(MCDwarfLineEntry(InstrLabel, DwarfLoc),
-                    Streamer.getCurrentSectionOnly());
+    // Always emit is_stmt at the beginning of function fragment.
+    if (FirstInstr)
+      Flags |= DWARF2_FLAG_IS_STMT;
+    const auto &FunctionDwarfUnits = BF.getDWARFUnits();
+    const auto *It = std::find_if(
+        FunctionDwarfUnits.begin(), FunctionDwarfUnits.end(),
+        [RowReference](const DWARFUnit *Unit) {
+          return Unit->getOffset() == RowReference.DwCompileUnitIndex;
+        });
+    if (It != FunctionDwarfUnits.end()) {
+      addToLineTable(RowReference, *It, Flags, InstrLabel, CurrentRow);
+      continue;
+    }
+    // This rows is from CU that did not contain the original function.
+    // This might happen if BOLT moved/inlined that instruction from other CUs.
+    // In this case, we need to insert it to all CUs that the function
+    // originally beloned to.
+    for (const DWARFUnit *Unit : BF.getDWARFUnits()) {
+      addToLineTable(RowReference, Unit, Flags, InstrLabel, CurrentRow);
+    }
+  }
 
   return NewLoc;
 }

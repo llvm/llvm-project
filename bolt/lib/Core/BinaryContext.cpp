@@ -1568,23 +1568,21 @@ unsigned BinaryContext::addDebugFilenameToUnit(const uint32_t DestCUID,
   DWARFCompileUnit *SrcUnit = DwCtx->getCompileUnitForOffset(SrcCUID);
   const DWARFDebugLine::LineTable *LineTable =
       DwCtx->getLineTableForUnit(SrcUnit);
-  const std::vector<DWARFDebugLine::FileNameEntry> &FileNames =
-      LineTable->Prologue.FileNames;
+  const DWARFDebugLine::FileNameEntry &FileNameEntry =
+      LineTable->Prologue.getFileNameEntry(FileIndex);
   // Dir indexes start at 1, as DWARF file numbers, and a dir index 0
   // means empty dir.
-  assert(FileIndex > 0 && FileIndex <= FileNames.size() &&
-         "FileIndex out of range for the compilation unit.");
   StringRef Dir = "";
-  if (FileNames[FileIndex - 1].DirIdx != 0) {
+  if (FileNameEntry.DirIdx != 0) {
     if (std::optional<const char *> DirName = dwarf::toString(
             LineTable->Prologue
-                .IncludeDirectories[FileNames[FileIndex - 1].DirIdx - 1])) {
+                .IncludeDirectories[FileNameEntry.DirIdx - 1])) {
       Dir = *DirName;
     }
   }
   StringRef FileName = "";
   if (std::optional<const char *> FName =
-          dwarf::toString(FileNames[FileIndex - 1].Name))
+          dwarf::toString(FileNameEntry.Name))
     FileName = *FName;
   assert(FileName != "");
   DWARFCompileUnit *DstUnit = DwCtx->getCompileUnitForOffset(DestCUID);
@@ -1920,20 +1918,25 @@ bool BinaryContext::isMarker(const SymbolRef &Symbol) const {
 static void printDebugInfo(raw_ostream &OS, const MCInst &Instruction,
                            const BinaryFunction *Function,
                            DWARFContext *DwCtx) {
-  DebugLineTableRowRef RowRef =
-      DebugLineTableRowRef::fromSMLoc(Instruction.getLoc());
-  if (RowRef == DebugLineTableRowRef::NULL_ROW)
+  const ClusteredRows *LineTableRows =
+      ClusteredRows::fromSMLoc(Instruction.getLoc());
+  if (LineTableRows == nullptr)
     return;
 
+  // File name and line number should be the same for all CUs.
+  // So it is sufficient to check the first one.
+  DebugLineTableRowRef RowRef = LineTableRows->getRows().front();
   const DWARFDebugLine::LineTable *LineTable = DwCtx->getLineTableForUnit(
       DwCtx->getCompileUnitForOffset(RowRef.DwCompileUnitIndex));
 
-  assert(LineTable && "line table expected for instruction with debug info");
+  if (!LineTable)
+    return;
 
   const DWARFDebugLine::Row &Row = LineTable->Rows[RowRef.RowIndex - 1];
   StringRef FileName = "";
+
   if (std::optional<const char *> FName =
-          dwarf::toString(LineTable->Prologue.FileNames[Row.File - 1].Name))
+          dwarf::toString(LineTable->Prologue.getFileNameEntry(Row.File).Name))
     FileName = *FName;
   OS << " # debug line " << FileName << ":" << Row.Line;
   if (Row.Column)
