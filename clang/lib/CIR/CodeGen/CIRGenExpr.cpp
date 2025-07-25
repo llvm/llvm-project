@@ -333,13 +333,12 @@ mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
   Address ptr = dst.getBitFieldAddress();
 
   assert(!cir::MissingFeatures::armComputeVolatileBitfields());
-  const bool useVolatile = false;
 
   mlir::Value dstAddr = dst.getAddress().getPointer();
 
-  return builder.createSetBitfield(dstAddr.getLoc(), resLTy, dstAddr,
+  return builder.createSetBitfield(dstAddr.getLoc(), resLTy, ptr,
                                    ptr.getElementType(), src.getValue(), info,
-                                   dst.isVolatileQualified(), useVolatile);
+                                   dst.isVolatileQualified());
 }
 
 RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
@@ -352,8 +351,7 @@ RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
   assert(!cir::MissingFeatures::armComputeVolatileBitfields());
 
   mlir::Value field = builder.createGetBitfield(
-      getLoc(loc), resLTy, ptr.getPointer(), ptr.getElementType(), info,
-      lv.isVolatile(), false);
+      getLoc(loc), resLTy, ptr, ptr.getElementType(), info, lv.isVolatile());
   assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck() && "NYI");
   return RValue::get(field);
 }
@@ -366,7 +364,10 @@ Address CIRGenFunction::getAddrOfBitFieldStorage(LValue base,
   cir::PointerType fieldPtr = cir::PointerType::get(fieldType);
   cir::GetMemberOp sea = getBuilder().createGetMember(
       loc, fieldPtr, base.getPointer(), field->getName(), index);
-  return Address(sea, CharUnits::One());
+  auto rec = cast<cir::RecordType>(base.getAddress().getElementType());
+  CharUnits offset = CharUnits::fromQuantity(
+      rec.getElementOffset(cgm.getDataLayout().layout, index));
+  return Address(sea, base.getAlignment().alignmentAtOffset(offset));
 }
 
 LValue CIRGenFunction::emitLValueForBitField(LValue base,
@@ -662,7 +663,8 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
   }
   case UO_PreInc:
   case UO_PreDec: {
-    bool isInc = e->isIncrementOp();
+    cir::UnaryOpKind kind =
+        e->isIncrementOp() ? cir::UnaryOpKind::Inc : cir::UnaryOpKind::Dec;
     LValue lv = emitLValue(e->getSubExpr());
 
     assert(e->isPrefix() && "Prefix operator in unexpected state!");
@@ -671,7 +673,7 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
       cgm.errorNYI(e->getSourceRange(), "UnaryOp complex inc/dec");
       lv = LValue();
     } else {
-      emitScalarPrePostIncDec(e, lv, isInc, /*isPre=*/true);
+      emitScalarPrePostIncDec(e, lv, kind, /*isPre=*/true);
     }
 
     return lv;
@@ -1051,6 +1053,67 @@ LValue CIRGenFunction::emitMemberExpr(const MemberExpr *e) {
   }
 
   llvm_unreachable("Unhandled member declaration!");
+}
+
+/// Evaluate an expression into a given memory location.
+void CIRGenFunction::emitAnyExprToMem(const Expr *e, Address location,
+                                      Qualifiers quals, bool isInit) {
+  // FIXME: This function should take an LValue as an argument.
+  switch (getEvaluationKind(e->getType())) {
+  case cir::TEK_Complex: {
+    LValue lv = makeAddrLValue(location, e->getType());
+    emitComplexExprIntoLValue(e, lv, isInit);
+    return;
+  }
+
+  case cir::TEK_Aggregate: {
+    emitAggExpr(e, AggValueSlot::forAddr(location, quals,
+                                         AggValueSlot::IsDestructed_t(isInit),
+                                         AggValueSlot::IsAliased_t(!isInit),
+                                         AggValueSlot::MayOverlap));
+    return;
+  }
+
+  case cir::TEK_Scalar: {
+    RValue rv = RValue::get(emitScalarExpr(e));
+    LValue lv = makeAddrLValue(location, e->getType());
+    emitStoreThroughLValue(rv, lv);
+    return;
+  }
+  }
+
+  llvm_unreachable("bad evaluation kind");
+}
+
+LValue CIRGenFunction::emitCompoundLiteralLValue(const CompoundLiteralExpr *e) {
+  if (e->isFileScope()) {
+    cgm.errorNYI(e->getSourceRange(), "emitCompoundLiteralLValue: FileScope");
+    return {};
+  }
+
+  if (e->getType()->isVariablyModifiedType()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCompoundLiteralLValue: VariablyModifiedType");
+    return {};
+  }
+
+  Address declPtr = createMemTemp(e->getType(), getLoc(e->getSourceRange()),
+                                  ".compoundliteral");
+  const Expr *initExpr = e->getInitializer();
+  LValue result = makeAddrLValue(declPtr, e->getType(), AlignmentSource::Decl);
+
+  emitAnyExprToMem(initExpr, declPtr, e->getType().getQualifiers(),
+                   /*Init*/ true);
+
+  // Block-scope compound literals are destroyed at the end of the enclosing
+  // scope in C.
+  if (!getLangOpts().CPlusPlus && e->getType().isDestructedType()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCompoundLiteralLValue: non C++ DestructedType");
+    return {};
+  }
+
+  return result;
 }
 
 LValue CIRGenFunction::emitCallExprLValue(const CallExpr *e) {
@@ -1594,37 +1657,38 @@ void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
     return;
   }
 
-  if (getContext().getAsArrayType(e->getType())) {
-    cgm.errorNYI(e->getSourceRange(), "emitCXXConstructExpr: array type");
-    return;
+  if (const ArrayType *arrayType = getContext().getAsArrayType(e->getType())) {
+    assert(!cir::MissingFeatures::sanitizers());
+    emitCXXAggrConstructorCall(cd, arrayType, dest.getAddress(), e, false);
+  } else {
+
+    clang::CXXCtorType type = Ctor_Complete;
+    bool forVirtualBase = false;
+    bool delegating = false;
+
+    switch (e->getConstructionKind()) {
+    case CXXConstructionKind::Complete:
+      type = Ctor_Complete;
+      break;
+    case CXXConstructionKind::Delegating:
+      // We should be emitting a constructor; GlobalDecl will assert this
+      type = curGD.getCtorType();
+      delegating = true;
+      break;
+    case CXXConstructionKind::VirtualBase:
+      // This should just set 'forVirtualBase' to true and fall through, but
+      // virtual base class support is otherwise missing, so this needs to wait
+      // until it can be tested.
+      cgm.errorNYI(e->getSourceRange(),
+                   "emitCXXConstructExpr: virtual base constructor");
+      return;
+    case CXXConstructionKind::NonVirtualBase:
+      type = Ctor_Base;
+      break;
+    }
+
+    emitCXXConstructorCall(cd, type, forVirtualBase, delegating, dest, e);
   }
-
-  clang::CXXCtorType type = Ctor_Complete;
-  bool forVirtualBase = false;
-  bool delegating = false;
-
-  switch (e->getConstructionKind()) {
-  case CXXConstructionKind::Complete:
-    type = Ctor_Complete;
-    break;
-  case CXXConstructionKind::Delegating:
-    // We should be emitting a constructor; GlobalDecl will assert this
-    type = curGD.getCtorType();
-    delegating = true;
-    break;
-  case CXXConstructionKind::VirtualBase:
-    // This should just set 'forVirtualBase' to true and fall through, but
-    // virtual base class support is otherwise missing, so this needs to wait
-    // until it can be tested.
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitCXXConstructExpr: virtual base constructor");
-    return;
-  case CXXConstructionKind::NonVirtualBase:
-    type = Ctor_Base;
-    break;
-  }
-
-  emitCXXConstructorCall(cd, type, forVirtualBase, delegating, dest, e);
 }
 
 RValue CIRGenFunction::emitReferenceBindingToExpr(const Expr *e) {

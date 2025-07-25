@@ -377,7 +377,7 @@ void OrderedAssignmentRewriter::pre(hlfir::ForallOp forallOp) {
   } else {
     step = generateYieldedScalarValue(forallOp.getStepRegion(), idxTy);
   }
-  auto doLoop = builder.create<fir::DoLoopOp>(loc, lb, ub, step);
+  auto doLoop = fir::DoLoopOp::create(builder, loc, lb, ub, step);
   builder.setInsertionPointToStart(doLoop.getBody());
   mlir::Value oldIndex = forallOp.getForallIndexValue();
   mlir::Value newIndex =
@@ -405,7 +405,7 @@ void OrderedAssignmentRewriter::pre(hlfir::ForallMaskOp forallMaskOp) {
   mlir::Location loc = forallMaskOp.getLoc();
   mlir::Value mask = generateYieldedScalarValue(forallMaskOp.getMaskRegion(),
                                                 builder.getI1Type());
-  auto ifOp = builder.create<fir::IfOp>(loc, std::nullopt, mask, false);
+  auto ifOp = fir::IfOp::create(builder, loc, mlir::TypeRange{}, mask, false);
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   constructStack.push_back(ifOp);
 }
@@ -431,11 +431,11 @@ convertToMoldType(mlir::Location loc, fir::FirOpBuilder &builder,
   if (input.isVariable() && mold.isValue()) {
     if (fir::isa_trivial(mold.getType())) {
       // fir.ref<T> to T.
-      mlir::Value load = builder.create<fir::LoadOp>(loc, input);
+      mlir::Value load = fir::LoadOp::create(builder, loc, input);
       return hlfir::Entity{builder.createConvert(loc, mold.getType(), load)};
     }
     // fir.ref<T> to hlfir.expr<T>.
-    mlir::Value asExpr = builder.create<hlfir::AsExprOp>(loc, input);
+    mlir::Value asExpr = hlfir::AsExprOp::create(builder, loc, input);
     if (asExpr.getType() != mold.getType())
       TODO(loc, "hlfir.expr conversion");
     cleanups.emplace_back([=]() { b->create<hlfir::DestroyOp>(loc, asExpr); });
@@ -517,7 +517,7 @@ void OrderedAssignmentRewriter::pre(hlfir::RegionAssignOp regionAssignOp) {
   } else {
     // TODO: preserve allocatable assignment aspects for forall once
     // they are conveyed in hlfir.region_assign.
-    builder.create<hlfir::AssignOp>(loc, rhsEntity, lhsEntity);
+    hlfir::AssignOp::create(builder, loc, rhsEntity, lhsEntity);
   }
   generateCleanupIfAny(loweredLhs.elementalCleanup);
   if (loweredLhs.vectorSubscriptLoopNest)
@@ -530,8 +530,8 @@ void OrderedAssignmentRewriter::generateMaskIfOp(mlir::Value cdt) {
   mlir::Location loc = cdt.getLoc();
   cdt = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{cdt});
   cdt = builder.createConvert(loc, builder.getI1Type(), cdt);
-  auto ifOp = builder.create<fir::IfOp>(cdt.getLoc(), std::nullopt, cdt,
-                                        /*withElseRegion=*/false);
+  auto ifOp = fir::IfOp::create(builder, cdt.getLoc(), mlir::TypeRange{}, cdt,
+                                /*withElseRegion=*/false);
   constructStack.push_back(ifOp.getOperation());
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
 }
@@ -604,7 +604,7 @@ void OrderedAssignmentRewriter::enterElsewhere(hlfir::ElseWhereOp elseWhereOp) {
   if (ifOp.getElseRegion().empty()) {
     mlir::Location loc = elseWhereOp.getLoc();
     builder.createBlock(&ifOp.getElseRegion());
-    auto end = builder.create<fir::ResultOp>(loc);
+    auto end = fir::ResultOp::create(builder, loc);
     builder.setInsertionPoint(end);
   } else {
     builder.setInsertionPoint(&ifOp.getElseRegion().back().back());
@@ -1150,7 +1150,8 @@ computeLoopNestIterationNumber(mlir::Location loc, fir::FirOpBuilder &builder,
     if (!loopExtent)
       loopExtent = extent;
     else
-      loopExtent = builder.create<mlir::arith::MulIOp>(loc, loopExtent, extent);
+      loopExtent =
+          mlir::arith::MulIOp::create(builder, loc, loopExtent, extent);
   }
   assert(loopExtent && "loopNest must not be empty");
   return loopExtent;
