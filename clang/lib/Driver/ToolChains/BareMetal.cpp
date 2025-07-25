@@ -613,8 +613,8 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     return;
   }
 
+  CmdArgs.push_back("-X");
   if (Triple.isRISCV()) {
-    CmdArgs.push_back("-X");
     if (Args.hasArg(options::OPT_mno_relax))
       CmdArgs.push_back("--no-relax");
   }
