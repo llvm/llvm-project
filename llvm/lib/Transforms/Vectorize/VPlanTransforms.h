@@ -214,8 +214,8 @@ struct VPlanTransforms {
   ///
   /// Once loop regions are replaced with explicit CFG, EVL loops can step with
   /// variable vector lengths instead of fixed lengths. This transformation:
-  ///  * Make EVL-Phi concrete.
-  //   * Remove CanonicalIV and increment.
+  ///  * Makes EVL-Phi concrete.
+  //   * Removes CanonicalIV and increment.
   ///  * Replaces fixed-length stepping (branch-on-cond CanonicalIVInc,
   ///    VectorTripCount) with variable-length stepping (branch-on-cond
   ///    EVLIVInc, TripCount).
