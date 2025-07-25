@@ -2946,18 +2946,19 @@ struct FoldBroadcastOfShapeCast : public OpRewritePattern<BroadcastOp> {
 
   LogicalResult matchAndRewrite(BroadcastOp broadcastOp,
                                 PatternRewriter &rewriter) const override {
-    if (auto srcShapeCast =
-            broadcastOp.getSource().getDefiningOp<ShapeCastOp>()) {
-      VectorType srcType = srcShapeCast.getSourceVectorType();
-      VectorType destType = broadcastOp.getResultVectorType();
-      if (vector::isBroadcastableTo(srcType, destType) ==
-          BroadcastableToResult::Success) {
-        rewriter.replaceOpWithNewOp<BroadcastOp>(broadcastOp, destType,
-                                                 srcShapeCast.getSource());
-        return success();
-      }
-    }
-    return failure();
+    auto srcShapeCast = broadcastOp.getSource().getDefiningOp<ShapeCastOp>();
+    if (!srcShapeCast)
+      return failure();
+
+    VectorType srcType = srcShapeCast.getSourceVectorType();
+    VectorType destType = broadcastOp.getResultVectorType();
+    if (vector::isBroadcastableTo(srcType, destType) !=
+        BroadcastableToResult::Success)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<BroadcastOp>(broadcastOp, destType,
+                                             srcShapeCast.getSource());
+    return success();
   }
 };
 } // namespace
