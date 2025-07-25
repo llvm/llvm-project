@@ -302,3 +302,7 @@
            vucmprlh 2, 4, 5
 #CHECK-BE: vucmprlh 2, 4, 5               # encoding: [0x10,0x44,0x29,0x43]
 #CHECK-LE: vucmprlh 2, 4, 5               # encoding: [0x43,0x29,0x44,0x10]
+
+           vucmprhh 1, 3, 6
+#CHECK-BE: vucmprhh 1, 3, 6               # encoding: [0x10,0x23,0x31,0x03]
+#CHECK-LE: vucmprhh 1, 3, 6               # encoding: [0x03,0x31,0x23,0x10]
