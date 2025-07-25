@@ -232,8 +232,8 @@ struct FatRawBufferCastLowering
     Value result = MemRefDescriptor::poison(
         rewriter, loc,
         getTypeConverter()->convertType(op.getResult().getType()));
-    result = LLVM::InsertValueOp::create(rewriter, loc, result, fatPtr,
-                                         kAllocatedPtrPosInMemRefDescriptor);
+    SmallVector<int64_t> pos{kAllocatedPtrPosInMemRefDescriptor};
+    result = LLVM::InsertValueOp::create(rewriter, loc, result, fatPtr, pos);
     result = LLVM::InsertValueOp::create(rewriter, loc, result, fatPtr,
                                          kAlignedPtrPosInMemRefDescriptor);
     result = LLVM::InsertValueOp::create(rewriter, loc, result, offset,
