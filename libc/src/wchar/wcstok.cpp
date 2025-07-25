@@ -24,14 +24,13 @@ LLVM_LIBC_FUNCTION(wchar_t *, wcstok,
     str = *context;
   }
 
-  wchar_t *tok_start, *tok_end;
-  for (tok_start = str; *tok_start != L'\0' && internal::wcschr(delims, *tok_start);
-       ++tok_start)
-    ;
+  wchar_t *tok_start = str;
+  while (*tok_start != L'\0' && internal::wcschr(delims, *tok_start))
+    ++tok_start;
 
-  for (tok_end = tok_start; *tok_end != L'\0' && !internal::wcschr(delims, *tok_end);
-       ++tok_end)
-    ;
+  wchar_t *tok_end = tok_start;
+  while (*tok_end != L'\0' && !internal::wcschr(delims, *tok_end))
+    ++tok_end;
 
   if (*tok_end != L'\0') {
     *tok_end = L'\0';
