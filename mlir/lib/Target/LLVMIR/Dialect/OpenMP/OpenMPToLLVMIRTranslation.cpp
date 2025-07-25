@@ -5835,6 +5835,10 @@ static bool isTargetDeviceOp(Operation *op) {
   if (mlir::isa<omp::ThreadprivateOp>(op))
     return true;
 
+  if (mlir::isa<omp::TargetAllocMemOp>(op) ||
+      mlir::isa<mp::TargetFreeMemOp>(op))
+    return true;
+
   if (auto parentFn = op->getParentOfType<LLVM::LLVMFuncOp>())
     if (auto declareTargetIface =
             llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(
