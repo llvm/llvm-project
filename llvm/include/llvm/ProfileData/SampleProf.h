@@ -1018,7 +1018,7 @@ public:
     return CallsiteSamples;
   }
 
-  /// Returns vtable access samples for the C++ types collcted in this function.
+  /// Returns vtable access samples for the C++ types collected in this function.
   const CallsiteTypeMap &getCallsiteTypeCounts() const {
     return VirtualCallsiteTypeCounts;
   }
