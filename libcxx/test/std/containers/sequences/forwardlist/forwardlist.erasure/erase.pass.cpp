@@ -70,6 +70,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
   test<std::forward_list<double>>();
 
   { // Ensure that the result of operator== is converted to bool
+    // See LWG4135.
     struct Bool {
       Bool()            = default;
       Bool(const Bool&) = delete;
