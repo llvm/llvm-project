@@ -27,7 +27,8 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
+#include "llvm/Support/InterleavedRange.h"
 
 using namespace mlir;
 using namespace mlir::gpu;
@@ -145,7 +146,7 @@ commonLinearIdBuilderFn(int64_t multiplicity = 1,
           mask.createLogicalLinearMappingId(rewriter, scaledLinearIdI64);
       scaledLinearId = arith::IndexCastUIOp::create(
           rewriter, loc, rewriter.getIndexType(), logicalLinearIdI64);
-      LDBG("------adjusting linearId with mask: " << scaledLinearId);
+      LDBG() << "------adjusting linearId with mask: " << scaledLinearId;
     }
 
     // 3. Compute remapped indices.

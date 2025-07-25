@@ -486,8 +486,9 @@ Value VectorizationState::getOrCreateMaskFor(
                                   ? true
                                   : std::get<0>(it) == std::get<1>(it);
                      })) {
-      LDBG("Dynamic + static dimensions match vector sizes, masking is not "
-           "required.\n");
+      LDBG()
+          << "Dynamic + static dimensions match vector sizes, masking is not "
+             "required.";
       activeMaskCache[maskingMap] = Value();
       return Value();
     }
@@ -502,7 +503,7 @@ Value VectorizationState::getOrCreateMaskFor(
   // Create the mask based on the dimension values.
   Value mask = vector::CreateMaskOp::create(rewriter, linalgOp.getLoc(),
                                             maskType, upperBounds);
-  LDBG("Creating new mask: " << mask << "\n");
+  LDBG() << "Creating new mask: " << mask;
   activeMaskCache[maskingMap] = mask;
   return mask;
 }
@@ -2145,7 +2146,7 @@ vectorizeAsLinalgContraction(RewriterBase &rewriter, VectorizationState &state,
   Operation *reduceOp = matchLinalgReduction(outOperand);
   auto maybeKind = getCombinerOpKind(reduceOp);
   if (!maybeKind) {
-    LDBG("Failed to determine contraction combining kind.\n");
+    LDBG() << "Failed to determine contraction combining kind.";
     return failure();
   }
 
@@ -2155,7 +2156,7 @@ vectorizeAsLinalgContraction(RewriterBase &rewriter, VectorizationState &state,
   AffineMap lhsMap = linalgOp.getIndexingMapsArray()[0];
   AffineMap rhsMap = linalgOp.getIndexingMapsArray()[1];
   if (getUnusedDimsBitVector({lhsMap, rhsMap}).any()) {
-    LDBG("Contractions with broadcasts are not supported.\n");
+    LDBG() << "Contractions with broadcasts are not supported.";
     return failure();
   }
 
@@ -2650,18 +2651,15 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
     ArrayRef<bool> inputScalableVecDims, bool vectorizeNDExtract,
     bool flatten1DDepthwiseConv, bool assumeDynamicDimsMatchVecSizes,
     bool createNamedContraction) {
-  LDBG("Attempting to vectorize:\n" << *op << "\n");
-  LDBG("Input vector sizes: ");
-  LLVM_DEBUG(llvm::interleaveComma(inputVectorSizes, llvm::dbgs()));
-  LLVM_DEBUG(llvm::dbgs() << "\n");
-  LDBG("Input scalable vector dims: ");
-  LLVM_DEBUG(llvm::interleaveComma(inputScalableVecDims, llvm::dbgs()));
-  LLVM_DEBUG(llvm::dbgs() << "\n");
+  LDBG() << "Attempting to vectorize: " << *op;
+  LDBG() << "Input vector sizes: " << llvm::interleaved(inputVectorSizes);
+  LDBG() << "Input scalable vector dims: "
+         << llvm::interleaved(inputScalableVecDims);
 
   if (failed(vectorizeOpPrecondition(op, inputVectorSizes, inputScalableVecDims,
                                      vectorizeNDExtract,
                                      flatten1DDepthwiseConv))) {
-    LDBG("Vectorization pre-conditions failed\n");
+    LDBG() << "Vectorization pre-conditions failed";
     return failure();
   }
 
@@ -2671,7 +2669,7 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
     if (failed(state.initState(rewriter, linalgOp, inputVectorSizes,
                                inputScalableVecDims,
                                assumeDynamicDimsMatchVecSizes))) {
-      LDBG("Vectorization state couldn't be initialized\n");
+      LDBG() << "Vectorization state couldn't be initialized";
       return failure();
     }
   }
@@ -2692,7 +2690,7 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
                 return success();
               }
 
-              LDBG("Unsupported convolution can't be vectorized.\n");
+              LDBG() << "Unsupported convolution can't be vectorized.";
               return failure();
             }
 
@@ -2701,8 +2699,9 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
               return vectorizeAsLinalgContraction(rewriter, state, linalgOp,
                                                   results);
 
-            LDBG("Vectorize generic by broadcasting to the canonical vector "
-                 "shape\n");
+            LDBG()
+                << "Vectorize generic by broadcasting to the canonical vector "
+                   "shape";
 
             // Pre-process before proceeding.
             convertAffineApply(rewriter, linalgOp);
