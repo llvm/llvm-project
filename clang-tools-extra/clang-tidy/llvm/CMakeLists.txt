@@ -11,13 +11,11 @@ add_clang_library(clangTidyLLVMModule STATIC
   PreferRegisterOverUnsignedCheck.cpp
   PreferStaticOverAnonymousNamespaceCheck.cpp
   TwineLocalCheck.cpp
-  UseNewMLIROpBuilderCheck.cpp
 
   LINK_LIBS
   clangTidy
   clangTidyReadabilityModule
   clangTidyUtils
-  clangTransformer
 
   DEPENDS
   omp_gen
