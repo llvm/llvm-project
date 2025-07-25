@@ -2,6 +2,7 @@
 
 // Check that simd operations are not removed and rewritten, but all the other OpenMP ops are.
 
+// CHECK: omp.private
 // CHECK-LABEL: func.func @simd
 omp.private {type = private} @_QFEi_private_i32 : i32
 func.func @simd(%arg0: i32, %arg1: !fir.ref<i32>, %arg2: !fir.ref<i32>) {
@@ -49,6 +50,7 @@ func.func @simd_composite(%arg0: i32, %arg1: !fir.ref<i32>) {
 
 // -----
 
+// CHECK-NOT: omp.private
 // CHECK-LABEL: func.func @parallel
 omp.private {type = private} @_QFEi_private_i32 : i32
 func.func @parallel(%arg0: i32, %arg1: !fir.ref<i32>) {
@@ -326,6 +328,7 @@ func.func @sections(%funcArg0: i32, %funcArg1: !fir.ref<i32>, %funcArg2: !fir.re
 
 // -----
 
+// CHECK-NOT: omp.declare_reduction
 omp.declare_reduction @add_reduction_i32 : i32 init {
 ^bb0(%arg0: i32):
   %c0_i32 = arith.constant 0 : i32
@@ -615,6 +618,27 @@ func.func @do_multi_block(%funcArg0: i32, %funcArg1: !fir.ref<i32>, %6: i1) {
     // CHECK: ^[[EBB:.*]]
     ^bb3:  // pred: ^bb1
       // CHECK-NOT: omp.yield
+      omp.yield
+    }
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @simd_nested_atomic(
+// CHECK-SAME: %[[ARG_0:.*]]: i32, %[[ARG_1:.*]]: !fir.ref<i32>, %[[ARG_2:.*]]: !fir.ref<i32>
+func.func @simd_nested_atomic(%arg0: i32, %arg1: !fir.ref<i32>, %arg2: !fir.ref<i32>) {
+  %c1_i32 = arith.constant 1 : i32
+  %c100000_i32 = arith.constant 100000 : i32
+  // CHECK: omp.simd
+  omp.simd {
+    // CHECK: omp.loop_nest
+    omp.loop_nest (%arg3) : i32 = (%c1_i32) to (%c100000_i32) inclusive step (%c1_i32) {
+      // CHECK-NOT: omp.atomic.write
+      // CHECK: fir.store %[[ARG_0]] to %[[ARG_2]]
+      omp.atomic.write %arg2 = %arg0 : !fir.ref<i32>, i32
+      // CHECK: omp.yield
       omp.yield
     }
   }

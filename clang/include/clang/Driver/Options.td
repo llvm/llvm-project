@@ -3743,7 +3743,8 @@ def fno_openmp_simd
     : Flag<["-"], "fno-openmp-simd">,
       Group<f_Group>,
       Flags<[NoArgumentUnused]>,
-      Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
+      Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+      HelpText<"Do not emit code for any OpenMP constructs.">;
 def fopenmp_cuda_mode : Flag<["-"], "fopenmp-cuda-mode">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 def fno_openmp_cuda_mode : Flag<["-"], "fno-openmp-cuda-mode">, Group<f_Group>,
