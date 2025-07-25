@@ -1618,6 +1618,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     }
   }
 
+  // Customize load and store operation for bf16 if zfh isn't enabled.
+  if (Subtarget.hasVendorXAndesBFHCvt() && !Subtarget.hasStdExtZfh()) {
+    setOperationAction(ISD::LOAD, MVT::bf16, Custom);
+    setOperationAction(ISD::STORE, MVT::bf16, Custom);
+  }
+
   // Function alignments.
   const Align FunctionAlignment(Subtarget.hasStdExtZca() ? 2 : 4);
   setMinFunctionAlignment(FunctionAlignment);
@@ -7216,6 +7222,47 @@ static SDValue SplitStrictFPVectorOp(SDValue Op, SelectionDAG &DAG) {
   return DAG.getMergeValues({V, HiRes.getValue(1)}, DL);
 }
 
+SDValue
+RISCVTargetLowering::lowerXAndesBfHCvtBFloat16Load(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  assert(Subtarget.hasVendorXAndesBFHCvt() && !Subtarget.hasStdExtZfh() &&
+         "Unexpected bfloat16 load lowering");
+
+  SDLoc DL(Op);
+  LoadSDNode *LD = cast<LoadSDNode>(Op.getNode());
+  EVT MemVT = LD->getMemoryVT();
+  SDValue Load = DAG.getExtLoad(
+      ISD::ZEXTLOAD, DL, Subtarget.getXLenVT(), LD->getChain(),
+      LD->getBasePtr(),
+      EVT::getIntegerVT(*DAG.getContext(), MemVT.getSizeInBits()),
+      LD->getMemOperand());
+  // Using mask to make bf16 nan-boxing valid when we don't have flh
+  // instruction. -65536 would be treat as a small number and thus it can be
+  // directly used lui to get the constant.
+  SDValue mask = DAG.getSignedConstant(-65536, DL, Subtarget.getXLenVT());
+  SDValue OrSixteenOne =
+      DAG.getNode(ISD::OR, DL, Load.getValueType(), {Load, mask});
+  SDValue ConvertedResult =
+      DAG.getNode(RISCVISD::NDS_FMV_BF16_X, DL, MVT::bf16, OrSixteenOne);
+  return DAG.getMergeValues({ConvertedResult, Load.getValue(1)}, DL);
+}
+
+SDValue
+RISCVTargetLowering::lowerXAndesBfHCvtBFloat16Store(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  assert(Subtarget.hasVendorXAndesBFHCvt() && !Subtarget.hasStdExtZfh() &&
+         "Unexpected bfloat16 store lowering");
+
+  StoreSDNode *ST = cast<StoreSDNode>(Op.getNode());
+  SDLoc DL(Op);
+  SDValue FMV = DAG.getNode(RISCVISD::NDS_FMV_X_ANYEXTBF16, DL,
+                            Subtarget.getXLenVT(), ST->getValue());
+  return DAG.getTruncStore(
+      ST->getChain(), DL, FMV, ST->getBasePtr(),
+      EVT::getIntegerVT(*DAG.getContext(), ST->getMemoryVT().getSizeInBits()),
+      ST->getMemOperand());
+}
+
 SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
                                             SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -7914,6 +7961,9 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return DAG.getMergeValues({Pair, Chain}, DL);
     }
 
+    if (VT == MVT::bf16)
+      return lowerXAndesBfHCvtBFloat16Load(Op, DAG);
+
     // Handle normal vector tuple load.
     if (VT.isRISCVVectorTuple()) {
       SDLoc DL(Op);
@@ -7998,6 +8048,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
           {Store->getChain(), Lo, Hi, Store->getBasePtr()}, MVT::i64,
           Store->getMemOperand());
     }
+
+    if (VT == MVT::bf16)
+      return lowerXAndesBfHCvtBFloat16Store(Op, DAG);
+
     // Handle normal vector tuple store.
     if (VT.isRISCVVectorTuple()) {
       SDLoc DL(Op);
