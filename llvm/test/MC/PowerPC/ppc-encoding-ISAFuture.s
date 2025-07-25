@@ -298,3 +298,7 @@
            vucmprlb 2, 4, 5
 #CHECK-BE: vucmprlb 2, 4, 5                # encoding: [0x10,0x44,0x28,0xc3]
 #CHECK-LE: vucmprlb 2, 4, 5                # encoding: [0xc3,0x28,0x44,0x10]
+
+           vucmprlh 2, 4, 5
+#CHECK-BE: vucmprlh 2, 4, 5               # encoding: [0x10,0x44,0x29,0x43]
+#CHECK-LE: vucmprlh 2, 4, 5               # encoding: [0x43,0x29,0x44,0x10]
