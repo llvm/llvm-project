@@ -1,4 +1,4 @@
-//===-- Double-precision asin function ------------------------------------===//
+//===-- Implementation header for asin --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/asin.h"
-#include "src/__support/math/asin.h"
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ASIN_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_ASIN_H
+
+#include "asin_utils.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/double_double.h"
+#include "src/__support/FPUtil/dyadic_float.h"
+#include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/sqrt.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
+#include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
+#include "src/__support/math/asin_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(double, asin, (double x)) {
+namespace math {
+
+static constexpr double asin(double x) {
   using namespace asin_internal;
+  using Float128 = fputil::DyadicFloat<128>;
+  using DoubleDouble = fputil::DoubleDouble;
   using FPBits = fputil::FPBits<double>;
 
   FPBits xbits(x);
@@ -60,7 +76,7 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     return x * asin_eval(x * x);
 #else
-    unsigned idx;
+    unsigned idx = 0;
     DoubleDouble x_sq = fputil::exact_mult(x, x);
     double err = xbits.abs().get_val() * 0x1.0p-51;
     // Polynomial approximation:
@@ -192,7 +208,7 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
 
   // Polynomial approximation:
   //   p ~ asin(sqrt(u))/sqrt(u)
-  unsigned idx;
+  unsigned idx = 0;
   double err = vh * 0x1.0p-51;
 
   DoubleDouble p = asin_eval(DoubleDouble{0.0, u}, idx, err);
@@ -273,4 +289,8 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 }
 
+} // namespace math
+
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_ASIN_H
