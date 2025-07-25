@@ -17,6 +17,8 @@ declare float @llvm.nvvm.fabs.f(float)
 declare float @llvm.nvvm.fabs.ftz.f(float)
 declare double @llvm.nvvm.fabs.d(double)
 
+declare float @llvm.nvvm.tanh.approx.f32(float)
+
 declare i16 @llvm.nvvm.max.s(i16, i16)
 declare i32 @llvm.nvvm.max.i(i32, i32)
 declare i64 @llvm.nvvm.max.ll(i64, i64)
@@ -135,6 +137,13 @@ define void @fabs(float %a, double %b) {
   %r1 = call float @llvm.nvvm.fabs.f(float %a)
   %r2 = call float @llvm.nvvm.fabs.ftz.f(float %a)
   %r3 = call double @llvm.nvvm.fabs.d(double %b)
+  ret void
+}
+
+; CHECK-LABEL: @tanh
+define void @tanh(float %a) {
+; CHECK: call afn float @llvm.tanh.f32(float %a)
+  %r1 = call float @llvm.nvvm.tanh.approx.f32(float %a)
   ret void
 }
 

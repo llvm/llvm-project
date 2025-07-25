@@ -548,7 +548,7 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
     getFilePaths().push_back(Base + "lib");
 
   NativeLLVMSupport =
-      Args.getLastArgValue(options::OPT_fuse_ld_EQ, CLANG_DEFAULT_LINKER)
+      Args.getLastArgValue(options::OPT_fuse_ld_EQ, D.getPreferredLinker())
           .equals_insensitive("lld");
 }
 

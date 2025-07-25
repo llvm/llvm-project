@@ -19,7 +19,6 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/RecyclingAllocator.h"

@@ -277,7 +277,7 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
   // mismatches. Insert a `tensor.cast` op to propagate the transformation
   // invariant that types are compatible.
   if (consumerType != def.getType())
-    def = b.create<tensor::CastOp>(fusedProducer.getLoc(), consumerType, def);
+    def = tensor::CastOp::create(b, fusedProducer.getLoc(), consumerType, def);
   consumerOpOperand.set(def);
   return FusionInfo{cast<LinalgOp>(producerOpResult.getOwner()), fusedProducer};
 }

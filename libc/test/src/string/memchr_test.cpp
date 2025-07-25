@@ -122,11 +122,11 @@ TEST(LlvmLibcMemChrTest, SignedCharacterFound) {
   ASSERT_EQ(actual[0], c);
 }
 
-#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#if defined(LIBC_ADD_NULL_CHECKS)
 
 TEST(LlvmLibcMemChrTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::memchr(nullptr, 1, 1); },
                WITH_SIGNAL(-1));
 }
 
-#endif // defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#endif // defined(LIBC_ADD_NULL_CHECKS)

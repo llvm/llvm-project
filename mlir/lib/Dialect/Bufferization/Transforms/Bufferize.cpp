@@ -434,8 +434,8 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
     // Replace all uses of the original tensor bbArg.
     rewriter.setInsertionPointToStart(block);
     if (!bbArgUses.empty()) {
-      Value toTensorOp = rewriter.create<bufferization::ToTensorOp>(
-          bbArg.getLoc(), tensorType, bbArg);
+      Value toTensorOp = bufferization::ToTensorOp::create(
+          rewriter, bbArg.getLoc(), tensorType, bbArg);
       for (OpOperand *use : bbArgUses)
         use->set(toTensorOp);
     }
@@ -466,13 +466,13 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
       if (failed(operandBufferType))
         return failure();
       rewriter.setInsertionPointAfterValue(operand);
-      Value bufferizedOperand = rewriter.create<bufferization::ToBufferOp>(
-          operand.getLoc(), *operandBufferType, operand);
+      Value bufferizedOperand = bufferization::ToBufferOp::create(
+          rewriter, operand.getLoc(), *operandBufferType, operand);
       // A cast is needed if the operand and the block argument have different
       // bufferized types.
       if (type != *operandBufferType)
-        bufferizedOperand = rewriter.create<memref::CastOp>(
-            operand.getLoc(), type, bufferizedOperand);
+        bufferizedOperand = memref::CastOp::create(rewriter, operand.getLoc(),
+                                                   type, bufferizedOperand);
       newOperands.push_back(bufferizedOperand);
     }
     operands.getMutableForwardedOperands().assign(newOperands);

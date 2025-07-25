@@ -114,11 +114,11 @@ TEST(LlvmLibcMemRChrTest, ZeroLengthShouldReturnNullptr) {
   ASSERT_STREQ(call_memrchr(src, 'd', 0), nullptr);
 }
 
-#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#if defined(LIBC_ADD_NULL_CHECKS)
 
 TEST(LlvmLibcMemRChrTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::memrchr(nullptr, 'd', 1); },
                WITH_SIGNAL(-1));
 }
 
-#endif // defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#endif // defined(LIBC_ADD_NULL_CHECKS)

@@ -411,8 +411,12 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
                   std::get<parser::OmpBeginBlockDirective>(ompConstruct.t);
               beginClauseList =
                   &std::get<parser::OmpClauseList>(beginDirective.t);
-              endClauseList = &std::get<parser::OmpClauseList>(
-                  std::get<parser::OmpEndBlockDirective>(ompConstruct.t).t);
+              if (auto &endDirective =
+                      std::get<std::optional<parser::OmpEndBlockDirective>>(
+                          ompConstruct.t)) {
+                endClauseList =
+                    &std::get<parser::OmpClauseList>(endDirective->t);
+              }
             },
             [&](const parser::OpenMPLoopConstruct &ompConstruct) {
               const auto &beginDirective =
@@ -422,9 +426,10 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
 
               if (auto &endDirective =
                       std::get<std::optional<parser::OmpEndLoopDirective>>(
-                          ompConstruct.t))
+                          ompConstruct.t)) {
                 endClauseList =
                     &std::get<parser::OmpClauseList>(endDirective->t);
+              }
             },
             [&](const auto &) {}},
         ompEval->u);
@@ -3713,16 +3718,19 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    const parser::OpenMPBlockConstruct &blockConstruct) {
   const auto &beginBlockDirective =
       std::get<parser::OmpBeginBlockDirective>(blockConstruct.t);
-  const auto &endBlockDirective =
-      std::get<parser::OmpEndBlockDirective>(blockConstruct.t);
   mlir::Location currentLocation =
       converter.genLocation(beginBlockDirective.source);
   const auto origDirective =
       std::get<parser::OmpBlockDirective>(beginBlockDirective.t).v;
   List<Clause> clauses = makeClauses(
       std::get<parser::OmpClauseList>(beginBlockDirective.t), semaCtx);
-  clauses.append(makeClauses(
-      std::get<parser::OmpClauseList>(endBlockDirective.t), semaCtx));
+
+  if (const auto &endBlockDirective =
+          std::get<std::optional<parser::OmpEndBlockDirective>>(
+              blockConstruct.t)) {
+    clauses.append(makeClauses(
+        std::get<parser::OmpClauseList>(endBlockDirective->t), semaCtx));
+  }
 
   assert(llvm::omp::blockConstructSet.test(origDirective) &&
          "Expected block construct");

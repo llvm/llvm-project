@@ -1317,7 +1317,7 @@ public:
 
     Value n = op.getN() ? op.getN() : constantIndex(rewriter, loc, 1);
     Value newSize = arith::AddIOp::create(rewriter, loc, size, n);
-    auto nValue = dyn_cast_or_null<arith::ConstantIndexOp>(n.getDefiningOp());
+    auto nValue = n.getDefiningOp<arith::ConstantIndexOp>();
     bool nIsOne = (nValue && nValue.value() == 1);
 
     if (!op.getInbounds()) {

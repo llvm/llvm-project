@@ -241,7 +241,6 @@ static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
 }
 
 static bool transformResourcePointers(Function &F, DXILResourceTypeMap &DRTM) {
-  bool Changed = false;
   SmallVector<std::pair<IntrinsicInst *, dxil::ResourceTypeInfo>> Resources;
   for (BasicBlock &BB : F)
     for (Instruction &I : BB)
@@ -254,7 +253,7 @@ static bool transformResourcePointers(Function &F, DXILResourceTypeMap &DRTM) {
   for (auto &[II, RI] : Resources)
     replaceAccess(II, RI);
 
-  return Changed;
+  return !Resources.empty();
 }
 
 PreservedAnalyses DXILResourceAccess::run(Function &F,

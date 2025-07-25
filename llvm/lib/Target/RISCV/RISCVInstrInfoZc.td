@@ -291,31 +291,31 @@ def : CompressPat<(MUL GPRC:$rs1, GPRC:$rs2, GPRC:$rs1),
 
 let Predicates = [HasStdExtZcb, HasStdExtZbb] in{
 def : CompressPat<(SEXT_B GPRC:$rs1, GPRC:$rs1),
-                  (C_SEXT_B GPRC:$rs1, GPRC:$rs1)>;
+                  (C_SEXT_B GPRC:$rs1)>;
 def : CompressPat<(SEXT_H GPRC:$rs1, GPRC:$rs1),
-                  (C_SEXT_H GPRC:$rs1, GPRC:$rs1)>;
+                  (C_SEXT_H GPRC:$rs1)>;
 } // Predicates = [HasStdExtZcb, HasStdExtZbb]
 
 let Predicates = [HasStdExtZcb, HasStdExtZbb] in{
 def : CompressPat<(ZEXT_H_RV32 GPRC:$rs1, GPRC:$rs1),
-                  (C_ZEXT_H GPRC:$rs1, GPRC:$rs1)>;
+                  (C_ZEXT_H GPRC:$rs1)>;
 def : CompressPat<(ZEXT_H_RV64 GPRC:$rs1, GPRC:$rs1),
-                  (C_ZEXT_H GPRC:$rs1, GPRC:$rs1)>;
+                  (C_ZEXT_H GPRC:$rs1)>;
 } // Predicates = [HasStdExtZcb, HasStdExtZbb]
 
 let Predicates = [HasStdExtZcb] in{
 def : CompressPat<(ANDI GPRC:$rs1, GPRC:$rs1, 255),
-                  (C_ZEXT_B GPRC:$rs1, GPRC:$rs1)>;
+                  (C_ZEXT_B GPRC:$rs1)>;
 } // Predicates = [HasStdExtZcb]
 
 let Predicates = [HasStdExtZcb, HasStdExtZba, IsRV64] in{
 def : CompressPat<(ADD_UW GPRC:$rs1, GPRC:$rs1, X0),
-                  (C_ZEXT_W GPRC:$rs1, GPRC:$rs1)>;
+                  (C_ZEXT_W GPRC:$rs1)>;
 } // Predicates = [HasStdExtZcb, HasStdExtZba, IsRV64]
 
 let Predicates = [HasStdExtZcb] in{
 def : CompressPat<(XORI GPRC:$rs1, GPRC:$rs1, -1),
-                  (C_NOT GPRC:$rs1, GPRC:$rs1)>;
+                  (C_NOT GPRC:$rs1)>;
 }
 
 let Predicates = [HasStdExtZcb] in{

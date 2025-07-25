@@ -393,6 +393,17 @@ struct Fragment {
     std::vector<Located<std::string>> DisabledModifiers;
   };
   SemanticTokensBlock SemanticTokens;
+
+  /// Configures documentation style and behaviour.
+  struct DocumentationBlock {
+    /// Specifies the format of comments in the code.
+    /// Valid values are enum Config::CommentFormatPolicy values:
+    /// - Plaintext: Treat comments as plain text.
+    /// - Markdown: Treat comments as Markdown.
+    /// - Doxygen: Treat comments as doxygen.
+    std::optional<Located<std::string>> CommentFormat;
+  };
+  DocumentationBlock Documentation;
 };
 
 } // namespace config

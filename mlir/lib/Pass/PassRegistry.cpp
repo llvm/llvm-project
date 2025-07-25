@@ -10,7 +10,6 @@
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Format.h"

@@ -88,7 +88,8 @@ mlir::linalg::interchangeGenericOp(RewriterBase &rewriter, GenericOp genericOp,
       allIndices.reserve(genericOp.getNumLoops());
       llvm::transform(llvm::seq<uint64_t>(0, genericOp.getNumLoops()),
                       std::back_inserter(allIndices), [&](uint64_t dim) {
-                        return rewriter.create<IndexOp>(indexOp->getLoc(), dim);
+                        return IndexOp::create(rewriter, indexOp->getLoc(),
+                                               dim);
                       });
       rewriter.replaceOpWithNewOp<affine::AffineApplyOp>(
           indexOp, permutationMap.getSubMap(indexOp.getDim()), allIndices);

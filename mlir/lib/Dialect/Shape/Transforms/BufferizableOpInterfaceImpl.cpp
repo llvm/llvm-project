@@ -55,8 +55,8 @@ struct AssumingOpInterface
 
     // Create new op and move over region.
     TypeRange newResultTypes(yieldOp.getOperands());
-    auto newOp = rewriter.create<shape::AssumingOp>(
-        op->getLoc(), newResultTypes, assumingOp.getWitness());
+    auto newOp = shape::AssumingOp::create(
+        rewriter, op->getLoc(), newResultTypes, assumingOp.getWitness());
     newOp.getDoRegion().takeBody(assumingOp.getRegion());
 
     // Update all uses of the old op.
@@ -64,8 +64,9 @@ struct AssumingOpInterface
     SmallVector<Value> newResults;
     for (const auto &it : llvm::enumerate(assumingOp->getResultTypes())) {
       if (isa<TensorType>(it.value())) {
-        newResults.push_back(rewriter.create<bufferization::ToTensorOp>(
-            assumingOp.getLoc(), it.value(), newOp->getResult(it.index())));
+        newResults.push_back(bufferization::ToTensorOp::create(
+            rewriter, assumingOp.getLoc(), it.value(),
+            newOp->getResult(it.index())));
       } else {
         newResults.push_back(newOp->getResult(it.index()));
       }

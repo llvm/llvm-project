@@ -856,9 +856,9 @@ def smrd_sextloadi16 : SMRDLoadPat<sextloadi16>;
 
 def smrd_prefetch : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
                              (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
-                             [{ return !N->getOperand(1)->isDivergent();}]> {
+                             [{ return !N->getOperand(1)->isDivergent() && Subtarget->hasSafeSmemPrefetch();}]> {
   let GISelPredicateCode = [{
-    return isInstrUniform(MI);
+    return isInstrUniform(MI) && Subtarget->hasSafeSmemPrefetch();
   }];
 }
 
@@ -1152,6 +1152,7 @@ multiclass SMPrefetchPat<string type, TImmLeaf cache_type> {
 }
 
 defm : SMPrefetchPat<"INST", i32imm_zero>;
+let AddedComplexity = 12 in // Prefer scalar prefetch over global for r/o case.
 defm : SMPrefetchPat<"DATA", i32imm_one>;
 
 let SubtargetPredicate = isGFX12Plus in {

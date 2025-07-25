@@ -196,6 +196,19 @@ struct Config {
     /// Controls highlighting modifiers that are disabled.
     std::vector<std::string> DisabledModifiers;
   } SemanticTokens;
+
+  enum class CommentFormatPolicy {
+    /// Treat comments as plain text.
+    PlainText,
+    /// Treat comments as Markdown.
+    Markdown,
+    /// Treat comments as doxygen.
+    Doxygen,
+  };
+
+  struct {
+    CommentFormatPolicy CommentFormat = CommentFormatPolicy::PlainText;
+  } Documentation;
 };
 
 } // namespace clangd

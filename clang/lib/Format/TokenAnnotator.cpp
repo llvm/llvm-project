@@ -5478,7 +5478,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Left.TokenText == "!")
       return Style.SpaceAfterLogicalNot;
     assert(Left.TokenText == "not");
-    return Right.isOneOf(tok::coloncolon, TT_UnaryOperator);
+    return Right.isOneOf(tok::coloncolon, TT_UnaryOperator) ||
+           (Right.is(tok::l_paren) && Style.SpaceBeforeParensOptions.AfterNot);
   }
 
   // If the next token is a binary operator or a selector name, we have

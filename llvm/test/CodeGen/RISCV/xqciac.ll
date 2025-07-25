@@ -463,3 +463,30 @@ entry:
   %add = add nsw i32 %shlc1, %shlc2
   ret i32 %add
 }
+
+define i32 @testmuliaddnegimm(i32 %a) {
+; RV32IM-LABEL: testmuliaddnegimm:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    slli a1, a0, 1
+; RV32IM-NEXT:    add a0, a1, a0
+; RV32IM-NEXT:    li a1, 3
+; RV32IM-NEXT:    sub a0, a1, a0
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: testmuliaddnegimm:
+; RV32IMXQCIAC:       # %bb.0:
+; RV32IMXQCIAC-NEXT:    li a1, 3
+; RV32IMXQCIAC-NEXT:    qc.muliadd a1, a0, -3
+; RV32IMXQCIAC-NEXT:    mv a0, a1
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: testmuliaddnegimm:
+; RV32IZBAMXQCIAC:       # %bb.0:
+; RV32IZBAMXQCIAC-NEXT:    li a1, 3
+; RV32IZBAMXQCIAC-NEXT:    qc.muliadd a1, a0, -3
+; RV32IZBAMXQCIAC-NEXT:    mv a0, a1
+; RV32IZBAMXQCIAC-NEXT:    ret
+  %mul = mul i32 %a, -3
+  %add = add i32 %mul, 3
+  ret i32 %add
+}

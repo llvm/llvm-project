@@ -665,10 +665,10 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       auto *HandleType = cast<TargetExtType>(II->getOperand(0)->getType());
       if (HandleType->getTargetExtName() == "spirv.Image" ||
           HandleType->getTargetExtName() == "spirv.SignedImage") {
-        if (II->hasOneUse()) {
-          auto *U = *II->users().begin();
+        for (User *U : II->users()) {
           Ty = cast<Instruction>(U)->getAccessType();
-          assert(Ty && "Unable to get type for resource pointer.");
+          if (Ty)
+            break;
         }
       } else if (HandleType->getTargetExtName() == "spirv.VulkanBuffer") {
         // This call is supposed to index into an array

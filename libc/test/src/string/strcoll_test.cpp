@@ -30,11 +30,11 @@ TEST(LlvmLibcStrcollTest, SimpleTest) {
   ASSERT_GT(result, 0);
 }
 
-#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#if defined(LIBC_ADD_NULL_CHECKS)
 
 TEST(LlvmLibcStrcollTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::strcoll(nullptr, nullptr); },
                WITH_SIGNAL(-1));
 }
 
-#endif // defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#endif // defined(LIBC_ADD_NULL_CHECKS)

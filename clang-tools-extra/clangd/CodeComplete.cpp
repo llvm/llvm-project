@@ -193,7 +193,11 @@ MarkupContent renderDoc(const markup::Document &Doc, MarkupKind Kind) {
     Result.value.append(Doc.asPlainText());
     break;
   case MarkupKind::Markdown:
-    Result.value.append(Doc.asMarkdown());
+    if (Config::current().Documentation.CommentFormat ==
+        Config::CommentFormatPolicy::PlainText)
+      Result.value.append(Doc.asEscapedMarkdown());
+    else
+      Result.value.append(Doc.asMarkdown());
     break;
   }
   return Result;

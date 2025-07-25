@@ -6400,6 +6400,14 @@ the configuration (without a prefix: ``Auto``).
        IF (...)                        vs.    IF(...)
          <conditional-body>                     <conditional-body>
 
+  * ``bool AfterNot`` If ``true``, put a space between alternative operator ``not`` and the
+    opening parenthesis.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       return not (a || b);            vs.    return not(a || b);
+
   * ``bool AfterOverloadedOperator`` If ``true``, put a space between operator overloading and opening
     parentheses.
 

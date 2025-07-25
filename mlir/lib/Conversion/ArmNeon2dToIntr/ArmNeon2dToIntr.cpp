@@ -12,7 +12,6 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {

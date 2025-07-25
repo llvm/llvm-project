@@ -3388,8 +3388,7 @@ define amdgpu_kernel void @fadd_fadd_fsub(<2 x float> %arg, <2 x float> %arg1, p
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[0:1], s[0:1], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_sub_f32 s0, s0, s2
-; GFX1250-GISEL-NEXT:    s_wait_alu 0xfffe
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_2)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_3)
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v2, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[0:1], s[2:3], v[0:1]

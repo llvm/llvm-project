@@ -169,8 +169,8 @@ protected:
     }
 
     if (resultEntity->isVariable()) {
-      hlfir::AsExprOp asExpr = builder.create<hlfir::AsExprOp>(
-          loc, *resultEntity, builder.createBool(loc, mustBeFreed));
+      hlfir::AsExprOp asExpr = hlfir::AsExprOp::create(
+          builder, loc, *resultEntity, builder.createBool(loc, mustBeFreed));
       resultEntity = hlfir::EntityWithAttributes{asExpr.getResult()};
     }
 
