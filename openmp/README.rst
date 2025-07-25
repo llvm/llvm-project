@@ -121,6 +121,10 @@ Options for all Libraries
 
 **OPENMP_TEST_Fortran_COMPILER** = ``${CMAKE_Fortran_COMPILER}``
   Compiler to use for testing. Defaults to the compiler that was also used for
+  building.
+
+**OPENMP_TEST_Fortran_COMPILER** = ``${CMAKE_Fortran_COMPILER}``
+  Compiler to use for testing. Defaults to the compiler that was also used for
   building. Will default to flang if build is in-tree.
 
 **OPENMP_LLVM_TOOLS_DIR** = ``/path/to/built/llvm/tools``
