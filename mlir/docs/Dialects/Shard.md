@@ -1,75 +1,87 @@
 # 'shard' Dialect
 
-This dialect contains a set of attributes, operations and interfaces that
-are useful for representing sharding of tensors and communication between
-devices.
+The 'shard' dialect defines a set of attributes, operations, and interfaces for
+working with tensor sharding and device communication.
 
-The Shard dialect was inspired by GSPMD (GSPMD: General and Scalable
-Parallelization for ML Computation Graphs).
+It’s inspired by [GSPMD](*General and Scalable Parallelization for ML Computation Graphs*).
 
-It was originally introduced under the name 'mesh' but was later renamed
-to better reflect its purpose.
+Originally, the dialect was called `mesh`, but it was renamed to better reflect
+what it actually does.
 
 [TOC]
 
 ## Collective Communication Operations
-There are a number of operations in the Shard dialect to facilitate
-communication between devices in a grid.
-It is assumed that the user is familiar with collective operations.
-[Wikipedia](https://en.wikipedia.org/wiki/Collective_operation) has a good
-explanation.
-The main addition is that the collectives in this dialect have grid
-semantics.
 
-### Device groups
-The operation attributes `grid` and `grid_axes` specifies a list of device grid
-axes that partition the devices into disjoint groups.
-The collective operation is performed between devices in the same group.
-Devices that have the same coordinates outside of axes `grid_axes` are in the
-same group.
-A group is described by its multi-index along the axes outside of `grid_axes`.
-For example if we have a device grid of size `2x3x4x5` and the partition grid
-axes list is `[0, 1]` then devices are partitioned into the groups
-`{ { (i, j, k, m) | 0<=i<2, 0<=j<3 } | 0<=k<4, 0<=m<5 }`.
-The device groups would be `{ (k, m) | 0<=k<4, 0<=m<5 }`.
-Devices (1, 0, 2, 3) and (1, 1, 2, 3) will be in the same group.
-Device (1, 0, 2, 4) will be in another group.
-Some collective operations like all-to-all and all-gather care about the
-order of devices.
-The order of device in a device group is induced by the order of axes in
-`grid_axes`.
-The axes are ordered from outer to inner.
-If we have an axis list `[3, 1]` then device `(i, 1, k, 0)` will precede
-both devices `(i, 0, k, 1)` and `(i, 2, k, 0)`.
+The 'shard' dialect includes several collective operations that help coordinate
+communication between devices arranged in a grid.
 
-### In-group Device
-Some operations like `broadcast`, `scatter` and `send` specify devices in each
-device-group.
-These devices are represented with their multi-index over the grid axes that
-are not constant within a device group.
-These are the axes specified by `grid_axes` attribute.
+If you’re not already familiar with collective operations, [this Wikipedia
+article](https://en.wikipedia.org/wiki/Collective_operation) is a good starting
+point.
 
-For Example on a 3D grid an operation with `grid_axes = [0, 2]` would specify
-an in-group device with `(i, j)`. Then for each group with index `g` on the
-second axis, the in-group device would be `(i, g, j)`.
-### Purity
-Collectives that involve the whole device group to perform a single operation
-are pure. The exceptions are `send` and `recv`.
+Unlike traditional collectives that are defined in terms of message-passing
+between explicit buffers on each process, the collectives in this dialect work
+at a higher level. They’re defined in terms of how data moves across the
+dimensions of a tensor, and the participating processes are inferred from how
+the tensor is sharded - not specified manually.
 
-There is an assumption that the execution is SPMD.
-Not only that each process runs the same program, but that at the point of
-execution of a collective operation, all processes are in a coherent state.
-All compiler transformations must be consistent.
-Collective operations in the IR that may correspond to the same runtime
-collective operation must be transformed in a consistent manner.
-For example if a collective operation is optimized out, than it must also
-not appear in any path of execution on any process.
+### Device Groups
 
-Having the operations as `Pure` implies that if an interpreter is to execute
-the IR containing the `grid` collectives, all processes would execute the same
-line when they reach a pure collective operation.
-This requirement stems from the need to be compatible with general optimization
-passes like dead code and common sub-expression elimination.
+Each collective operation runs within a group of devices. You define groups
+using the `grid` and `grid_axes` attributes, which describe how to slice the
+full device grid into smaller groups.
+
+Devices that have the same coordinates *outside* the listed `grid_axes` belong
+to the same group.
+
+Example: Say your device grid is shaped `2×3×4×5`, and you set
+`grid_axes = [0, 1]`. This splits the grid into groups by fixing axes 2 and 3. You’d get groups like:
+
+```
+{ { (i, j, k, m) | 0 ≤ i < 2, 0 ≤ j < 3 } | 0 ≤ k < 4, 0 ≤ m < 5 }
+```
+
+So the groups are identified by the coordinates `(k, m)`, and devices like
+`(1, 0, 2, 3)` and `(1, 1, 2, 3)` are in the same group. But `(1, 0, 2, 4)`
+is in a different group.
+
+For some collectives (like `all-to-all`), the order of devices in the group
+matters. The device order is based on the order of axes in `grid_axes`, from
+outermost to innermost.
+
+Example: If `grid_axes = [3, 1]`, then device `(i, 1, k, 0)` comes before
+`(i, 0, k, 1)` and `(i, 2, k, 0)`.
+
+### In-group Devices
+
+Some operations (like `broadcast`, `scatter`, and `send`) refer to a specific
+device within each group. These in-group devices are identified using their
+coordinates over the axes listed in `grid_axes`.
+
+Example: In a 3D grid with `grid_axes = [0, 2]`, an in-group device is specified
+as `(i, j)`. If a group is fixed at coordinate `g` on axis 1, then the full
+device index would be `(i, g, j)`.
+
+### Purity and Execution Model
+
+Collective operations involve all devices in a group (e.g. `all-gather`,
+`all-to-all`) and are considered pure. Operations like `send` and `recv` are not
+collective and are not pure.
+
+The execution model assumes SPMD (Single Program, Multiple Data):
+
+* Every process runs the same program.
+* At any collective operation, all processes are in sync.
+
+This means compiler optimizations must treat collective ops carefully. For
+example, if a collective is removed during optimization, it must be removed from
+*every* path and *every* process that would have participated - otherwise, you’ll
+get undefined behavior at runtime.
+
+Marking these ops as pure also helps with standard compiler passes like dead
+code elimination and common subexpression elimination. It ensures that when the
+program is executed, all devices hit the same line of code at the same time
+during collectives and so avoid dead-locks.
 
 ## Operations
 
