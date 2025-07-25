@@ -27,12 +27,10 @@
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/InterleavedRange.h"
 
 #define DEBUG_TYPE "vector-utils"
-
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 using namespace mlir;
 
@@ -369,14 +367,14 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
 LogicalResult
 vector::isValidMaskedInputVector(ArrayRef<int64_t> shape,
                                  ArrayRef<int64_t> inputVectorSizes) {
-  LDBG("Iteration space static sizes:" << llvm::interleaved(shape));
+  LDBG() << "Iteration space static sizes:" << llvm::interleaved(shape);
 
   if (inputVectorSizes.size() != shape.size()) {
-    LDBG("Input vector sizes don't match the number of loops");
+    LDBG() << "Input vector sizes don't match the number of loops";
     return failure();
   }
   if (ShapedType::isDynamicShape(inputVectorSizes)) {
-    LDBG("Input vector sizes can't have dynamic dimensions");
+    LDBG() << "Input vector sizes can't have dynamic dimensions";
     return failure();
   }
   if (!llvm::all_of(llvm::zip(shape, inputVectorSizes),
@@ -386,8 +384,9 @@ vector::isValidMaskedInputVector(ArrayRef<int64_t> shape,
                       return ShapedType::isDynamic(staticSize) ||
                              staticSize <= inputSize;
                     })) {
-    LDBG("Input vector sizes must be greater than or equal to iteration space "
-         "static sizes");
+    LDBG() << "Input vector sizes must be greater than or equal to iteration "
+              "space "
+              "static sizes";
     return failure();
   }
   return success();
