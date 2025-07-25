@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -198,46 +199,18 @@ DeviceContext::DeviceContext(llvm::StringRef Platform, std::size_t DeviceId)
     }
   }
 
-  if (!FoundGlobalDeviceId.has_value())
+  if (!FoundGlobalDeviceId)
     FATAL_ERROR("Invalid DeviceId: " + llvm::Twine(DeviceId) +
                 ", but the number of available devices on '" + Platform +
                 "' is " + llvm::Twine(MatchCount));
 
-  GlobalDeviceId = FoundGlobalDeviceId.value();
+  GlobalDeviceId = *FoundGlobalDeviceId;
   DeviceHandle = Devices[GlobalDeviceId].Handle;
 }
 
-[[nodiscard]] std::shared_ptr<DeviceImage>
-DeviceContext::loadBinary(llvm::StringRef Directory, llvm::StringRef BinaryName,
-                          llvm::StringRef Extension) const {
-  llvm::SmallString<128> FullPath(Directory);
-  llvm::sys::path::append(FullPath, llvm::Twine(BinaryName) + Extension);
-
-  // For simplicity, this implementation intentionally reads the binary from
-  // disk on every call.
-  //
-  // Other use cases could benefit from a global, thread-safe cache to avoid
-  // redundant file I/O and GPU program creation.
-
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileOrErr =
-      llvm::MemoryBuffer::getFile(FullPath);
-  if (std::error_code ErrorCode = FileOrErr.getError())
-    FATAL_ERROR(llvm::Twine("Failed to read device binary file '") + FullPath +
-                "': " + ErrorCode.message());
-
-  std::unique_ptr<llvm::MemoryBuffer> &BinaryData = *FileOrErr;
-
-  ol_program_handle_t ProgramHandle = nullptr;
-  OL_CHECK(olCreateProgram(DeviceHandle, BinaryData->getBufferStart(),
-                           BinaryData->getBufferSize(), &ProgramHandle));
-
-  return std::shared_ptr<DeviceImage>(
-      new DeviceImage(DeviceHandle, ProgramHandle));
-}
-
-[[nodiscard]] std::shared_ptr<DeviceImage>
-DeviceContext::loadBinary(llvm::StringRef Directory,
-                          llvm::StringRef BinaryName) const {
+[[nodiscard]] llvm::Expected<std::shared_ptr<DeviceImage>>
+DeviceContext::loadBinaryImpl(llvm::StringRef Directory,
+                              llvm::StringRef BinaryName) const {
   auto Backend = getDevices()[GlobalDeviceId].Backend;
   llvm::StringRef Extension;
 
@@ -252,15 +225,77 @@ DeviceContext::loadBinary(llvm::StringRef Directory,
     llvm_unreachable("Unsupported backend to infer binary extension");
   }
 
-  return loadBinary(Directory, BinaryName, Extension);
+  llvm::SmallString<128> FullPath(Directory);
+  llvm::sys::path::append(FullPath, llvm::Twine(BinaryName) + Extension);
+
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileOrErr =
+      llvm::MemoryBuffer::getFile(FullPath);
+
+  if (std::error_code ErrorCode = FileOrErr.getError())
+    return llvm::errorCodeToError(ErrorCode);
+
+  std::unique_ptr<llvm::MemoryBuffer> &BinaryData = *FileOrErr;
+
+  ol_program_handle_t ProgramHandle = nullptr;
+  const ol_result_t OlResult =
+      olCreateProgram(DeviceHandle, BinaryData->getBufferStart(),
+                      BinaryData->getBufferSize(), &ProgramHandle);
+
+  if (OlResult != OL_SUCCESS) {
+    llvm::StringRef Details =
+        OlResult->Details ? OlResult->Details : "No details provided";
+
+    return llvm::createStringError(llvm::Twine(Details) + " (Code " +
+                                   llvm::Twine(OlResult->Code) + ")");
+  }
+
+  return std::shared_ptr<DeviceImage>(
+      new DeviceImage(DeviceHandle, ProgramHandle));
 }
 
-void DeviceContext::getKernelImpl(
-    ol_program_handle_t ProgramHandle, llvm::StringRef KernelName,
-    ol_symbol_handle_t *KernelHandle) const noexcept {
+[[nodiscard]] std::shared_ptr<DeviceImage>
+DeviceContext::loadBinary(llvm::StringRef Directory,
+                          llvm::StringRef BinaryName) const {
+  auto ImageOrErr = loadBinaryImpl(Directory, BinaryName);
+
+  if (auto Err = ImageOrErr.takeError())
+    FATAL_ERROR(llvm::toString(std::move(Err)));
+
+  return std::move(*ImageOrErr);
+}
+
+[[nodiscard]] std::optional<std::shared_ptr<DeviceImage>>
+DeviceContext::tryLoadBinary(llvm::StringRef Directory,
+                             llvm::StringRef BinaryName) const {
+  auto ImageOrErr = loadBinaryImpl(Directory, BinaryName);
+
+  if (auto Err = ImageOrErr.takeError()) {
+    llvm::consumeError(std::move(Err));
+    return std::nullopt;
+  }
+
+  return std::move(*ImageOrErr);
+}
+
+[[nodiscard]] llvm::Expected<ol_symbol_handle_t>
+DeviceContext::getKernelImpl(ol_program_handle_t ProgramHandle,
+                             llvm::StringRef KernelName) const noexcept {
+  ol_symbol_handle_t KernelHandle = nullptr;
   llvm::SmallString<32> KernelNameBuffer(KernelName);
-  OL_CHECK(olGetSymbol(ProgramHandle, KernelNameBuffer.c_str(),
-                       OL_SYMBOL_KIND_KERNEL, KernelHandle));
+
+  const ol_result_t OlResult =
+      olGetSymbol(ProgramHandle, KernelNameBuffer.c_str(),
+                  OL_SYMBOL_KIND_KERNEL, &KernelHandle);
+
+  if (OlResult != OL_SUCCESS) {
+    llvm::StringRef Details =
+        OlResult->Details ? OlResult->Details : "No details provided";
+
+    return llvm::createStringError(llvm::Twine(Details) + " (Code " +
+                                   llvm::Twine(OlResult->Code) + ")");
+  }
+
+  return KernelHandle;
 }
 
 void DeviceContext::launchKernelImpl(
@@ -277,10 +312,10 @@ void DeviceContext::launchKernelImpl(
                           KernelArgsSize, &LaunchArgs, nullptr));
 }
 
-[[nodiscard]] llvm::StringRef DeviceContext::getName() const {
+[[nodiscard]] llvm::StringRef DeviceContext::getName() const noexcept {
   return getDevices()[GlobalDeviceId].Name;
 }
 
-[[nodiscard]] llvm::StringRef DeviceContext::getPlatform() const {
+[[nodiscard]] llvm::StringRef DeviceContext::getPlatform() const noexcept {
   return getDevices()[GlobalDeviceId].Platform;
 }
