@@ -20848,8 +20848,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       break;
 
     unsigned SEW = VT.getScalarSizeInBits();
-    if (Log2_64(SEW) != Tuple.getConstantOperandVal(7))
-      break;
+    assert(Log2_64(SEW) == Tuple.getConstantOperandVal(7) &&
+           "Type mismatch without bitcast?");
     unsigned Stride = SEW / 8 * NF;
     unsigned Offset = SEW / 8 * Idx;
 
