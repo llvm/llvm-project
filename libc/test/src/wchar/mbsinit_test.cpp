@@ -30,5 +30,5 @@ TEST(LlvmLibcMBSInitTest, ConversionTest) {
   LIBC_NAMESPACE::mbrtowc(dest, src, 2, &ps); // partial conversion
   ASSERT_EQ(LIBC_NAMESPACE::mbsinit(&ps), 0);
   LIBC_NAMESPACE::mbrtowc(dest, src + 2, 2, &ps); // complete conversion
-  ASSERT_NE(LIBC_NAMESPACE::mbsinit(&ps), 0); // state should be reset now
+  ASSERT_NE(LIBC_NAMESPACE::mbsinit(&ps), 0);     // state should be reset now
 }
