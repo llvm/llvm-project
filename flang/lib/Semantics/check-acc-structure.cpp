@@ -7,8 +7,13 @@
 //===----------------------------------------------------------------------===//
 #include "check-acc-structure.h"
 #include "flang/Common/enum-set.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Fortran.h"
+#include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 #define CHECK_SIMPLE_CLAUSE(X, Y) \
   void AccStructureChecker::Enter(const parser::AccClause::X &) { \
@@ -342,21 +347,149 @@ void AccStructureChecker::Leave(const parser::OpenACCAtomicConstruct &x) {
   dirContext_.pop_back();
 }
 
-void AccStructureChecker::Enter(const parser::AccAtomicUpdate &x) {
-  const parser::AssignmentStmt &assignment{
-      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement};
-  const auto &var{std::get<parser::Variable>(assignment.t)};
-  const auto &expr{std::get<parser::Expr>(assignment.t)};
+void AccStructureChecker::CheckAtomicStmt(
+    const parser::AssignmentStmt &assign, std::string &construct) {
+  const auto &var{std::get<parser::Variable>(assign.t)};
+  const auto &expr{std::get<parser::Expr>(assign.t)};
   const auto *rhs{GetExpr(context_, expr)};
   const auto *lhs{GetExpr(context_, var)};
-  if (lhs && rhs) {
-    if (lhs->Rank() != 0)
+
+  if (lhs) {
+    if (lhs->Rank() != 0) {
       context_.Say(expr.source,
-          "LHS of atomic update statement must be scalar"_err_en_US);
-    if (rhs->Rank() != 0)
-      context_.Say(var.GetSource(),
-          "RHS of atomic update statement must be scalar"_err_en_US);
+          "LHS of atomic %s statement must be scalar"_err_en_US, construct);
+    }
+    // TODO: Check if lhs is intrinsic type
   }
+  if (rhs) {
+    if (rhs->Rank() != 0) {
+      context_.Say(var.GetSource(),
+          "RHS of atomic %s statement must be scalar"_err_en_US, construct);
+    }
+    // TODO: Check if lhs is intrinsic type
+  }
+}
+
+void AccStructureChecker::CheckAtomicUpdateStmt(
+    const parser::AssignmentStmt &assign) {
+  static std::string construct{"update"};
+  CheckAtomicStmt(assign, construct);
+}
+
+void AccStructureChecker::CheckAtomicWriteStmt(
+    const parser::AssignmentStmt &assign) {
+  static std::string construct{"write"};
+  CheckAtomicStmt(assign, construct);
+}
+
+void AccStructureChecker::CheckAtomicCaptureStmt(
+    const parser::AssignmentStmt &assign) {
+  static std::string construct{"capture"};
+  CheckAtomicStmt(assign, construct);
+}
+
+const parser::Variable *AccStructureChecker::GetIfAtomicUpdateVar(
+    const parser::AssignmentStmt &assign) const {
+  // OpenACC 3.4, 2893-2898
+  const auto &updatedVar{std::get<parser::Variable>(assign.t)};
+  const auto &rhs{std::get<parser::Expr>(assign.t)};
+
+  // Is the rhs something a valid operations that references the updatedVar?
+  const auto expr{GetExpr(context_, rhs)};
+  if (!expr) {
+    llvm::errs() << "IsAtomicUpdateStmt: no expr\n";
+    return nullptr;
+  }
+  const auto [op, args] = evaluate::GetTopLevelOperation(*expr);
+  switch (op) {
+  // 2909-2910 operator is one of +, *, -, /, .and., .or., .eqv., or .neqv..
+  case evaluate::operation::Operator::Add:
+  case evaluate::operation::Operator::Mul:
+  case evaluate::operation::Operator::Sub:
+  case evaluate::operation::Operator::Div:
+  case evaluate::operation::Operator::And:
+  case evaluate::operation::Operator::Or:
+  case evaluate::operation::Operator::Eqv:
+  case evaluate::operation::Operator::Neqv:
+  // 2909 intrinsic-procedure name is one of max, min, iand, ior, or ieor.
+  case evaluate::operation::Operator::Max:
+  case evaluate::operation::Operator::Min:
+    // case evaluate::operation::Operator::Iand:
+    // case evaluate::operation::Operator::Ior:
+    // case evaluate::operation::Operator::Ieor:
+    break;
+  // x = (x) is not allowed.
+  case evaluate::operation::Operator::Identity:
+  default:
+    return nullptr;
+  }
+  const auto &updatedExpr{GetExpr(context_, updatedVar)};
+  if (!updatedExpr) {
+    return nullptr;
+  }
+  for (const auto &arg : args) {
+    if (*updatedExpr == arg) {
+      return &updatedVar;
+    }
+  }
+  return nullptr;
+}
+
+bool AccStructureChecker::IsAtomicCaptureStmt(
+    const parser::AssignmentStmt &assign,
+    const parser::Variable &updatedVar) const {
+  const auto &var{std::get<parser::Variable>(assign.t)};
+  const auto &expr{std::get<parser::Expr>(assign.t)};
+  const auto *varExpr{GetExpr(context_, var)};
+  const auto *updatedVarExpr{GetExpr(context_, updatedVar)};
+  const auto *exprExpr{GetExpr(context_, expr)};
+  if (!varExpr || !updatedVarExpr || !exprExpr) {
+    return false;
+  }
+  return updatedVarExpr == exprExpr && !(updatedVarExpr == varExpr);
+}
+
+void AccStructureChecker::Enter(const parser::AccAtomicCapture &capture) {
+  const Fortran::parser::AssignmentStmt &stmt1 =
+      std::get<Fortran::parser::AccAtomicCapture::Stmt1>(capture.t).v.statement;
+  const Fortran::parser::AssignmentStmt &stmt2 =
+      std::get<Fortran::parser::AccAtomicCapture::Stmt2>(capture.t).v.statement;
+  if (const parser::Variable *updatedVar{GetIfAtomicUpdateVar(stmt1)};
+      updatedVar && IsAtomicCaptureStmt(stmt2, *updatedVar)) {
+    CheckAtomicUpdateStmt(stmt1);
+    CheckAtomicCaptureStmt(stmt2);
+  } else if (const parser::Variable *updatedVar{GetIfAtomicUpdateVar(stmt2)};
+      updatedVar && IsAtomicCaptureStmt(stmt1, *updatedVar)) {
+    CheckAtomicCaptureStmt(stmt1);
+    CheckAtomicUpdateStmt(stmt2);
+  } else {
+    // Note, the write-statement when unified with is just an assignment
+    // statement x is unconstrained. This is moral equivalent of `if (...
+    // updatedVar{IsAtomicWriteStmt(stmt2)}; updatedVar && ...)`
+    const auto &updatedVarV{std::get<parser::Variable>(stmt2.t)};
+    if (IsAtomicCaptureStmt(stmt1, updatedVarV)) {
+      CheckAtomicCaptureStmt(stmt1);
+      CheckAtomicWriteStmt(stmt2);
+    } else {
+      context_.Say(std::get<parser::Verbatim>(capture.t).source,
+          "The assignments in this atomic capture construct do not update a variable and capture either its initial or final value"_err_en_US);
+    }
+  }
+}
+
+void AccStructureChecker::Enter(const parser::AccAtomicUpdate &x) {
+  CheckAtomicUpdateStmt(
+      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement);
+}
+
+void AccStructureChecker::Enter(const parser::AccAtomicWrite &x) {
+  CheckAtomicWriteStmt(
+      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement);
+}
+
+void AccStructureChecker::Enter(const parser::AccAtomicRead &x) {
+  CheckAtomicCaptureStmt(
+      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement);
 }
 
 void AccStructureChecker::Enter(const parser::OpenACCCacheConstruct &x) {
