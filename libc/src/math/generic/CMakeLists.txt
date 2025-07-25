@@ -3931,7 +3931,7 @@ add_entrypoint_object(
     libc.src.__support.macros.optimization
 )
 
-add_object_library(
+add_entrypoint_object(
   atanhf16
   SRCS
     atanhf16.cpp
