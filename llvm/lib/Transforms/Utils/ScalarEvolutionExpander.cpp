@@ -1237,6 +1237,8 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
     if (!SE.isSCEVable(PN.getType()))
       continue;
     auto *ExitSCEV = SE.getSCEV(&PN);
+    if (!isa<SCEVAddRecExpr>(ExitSCEV))
+      continue;
     Type *PhiTy = PN.getType();
     if (STy->isIntegerTy() && PhiTy->isPointerTy())
       ExitSCEV = SE.getPtrToIntExpr(ExitSCEV, STy);
@@ -1252,10 +1254,14 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
     if (!isa<SCEVConstant, SCEVUnknown>(Op))
       continue;
 
+    assert(Diff->getType()->isIntegerTy() && "difference must be of integer type");
     Value *DiffV = expand(Diff);
     Value *BaseV = &PN;
-    if (DiffV->getType()->isIntegerTy() && PhiTy->isPointerTy())
-      return Builder.CreatePtrAdd(BaseV, DiffV);
+    if (PhiTy->isPointerTy()) {
+      if (STy->isPointerTy())
+        return Builder.CreatePtrAdd(BaseV, DiffV);
+      BaseV = Builder.CreatePtrToInt(BaseV, DiffV->getType());
+    }
     return Builder.CreateAdd(BaseV, DiffV);
   }
 
