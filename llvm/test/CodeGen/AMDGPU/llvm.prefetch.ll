@@ -4,17 +4,17 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GCN,GFX1250,GL2-ONLY %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 -mattr=+safe-smem-prefetch < %s | FileCheck --check-prefixes=GCN,SPREFETCH,GFX1250-SPREFETCH,GFX13-SPREFETCH-SDAG %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 -mattr=+safe-cu-prefetch < %s | FileCheck --check-prefixes=GCN,GFX1250,SAFE-CU %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,NOSPREFETCH %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -mattr=+safe-smem-prefetch -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,SPREFETCH,GFX12-SPREFETCH,SPREFETCH-SDAG %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,NOSPREFETCH %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GCN,NOSPREFETCH %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -mattr=+safe-smem-prefetch < %s | FileCheck --check-prefixes=GCN,SPREFETCH,GFX12-SPREFETCH,SPREFETCH-SDAG %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GCN,NOSPREFETCH %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1300 < %s | FileCheck --check-prefixes=GCN,NOSPREFETCH %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1300 -mattr=+safe-smem-prefetch < %s | FileCheck --check-prefixes=GCN,SPREFETCH,GFX12-SPREFETCH,GFX13-SPREFETCH,GFX13-SPREFETCH-GISEL %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GCN,GFX1250,GL2-ONLY %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 -mattr=+safe-smem-prefetch < %s | FileCheck --check-prefixes=GCN,SPREFETCH,GFX1250-SPREFETCH,GFX1250-SPREFETCH-GISEL %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 -mattr=+safe-cu-prefetch < %s | FileCheck --check-prefixes=GCN,GFX1250,SAFE-CU %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,NOSPREFETCH %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -mattr=+safe-smem-prefetch -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,SPREFETCH,GFX12-SPREFETCH,SPREFETCH-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,NOSPREFETCH %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GCN,NOSPREFETCH %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -mattr=+safe-smem-prefetch < %s | FileCheck --check-prefixes=GCN,SPREFETCH,GFX12-SPREFETCH,SPREFETCH-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GCN,NOSPREFETCH %s
 
 ; Scalar data prefetch
 
