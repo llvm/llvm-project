@@ -226,8 +226,7 @@ class ELFAMDGPUAsmBackend : public AMDGPUAsmBackend {
 public:
   ELFAMDGPUAsmBackend(const Target &T, const Triple &TT)
       : AMDGPUAsmBackend(T), Is64Bit(TT.isAMDGCN()),
-        HasRelocationAddend(TT.getOS() == Triple::AMDHSA ||
-                            TT.getOS() == Triple::AMDPAL) {
+        HasRelocationAddend(TT.getOS() == Triple::AMDHSA) {
     switch (TT.getOS()) {
     case Triple::AMDHSA:
       OSABI = ELF::ELFOSABI_AMDGPU_HSA;

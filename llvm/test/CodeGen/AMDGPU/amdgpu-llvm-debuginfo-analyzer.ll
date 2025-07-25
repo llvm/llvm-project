@@ -2,11 +2,14 @@
 ; RUN: llvm-debuginfo-analyzer %t.o --print=all --attribute=all | FileCheck %s
 
 ; This test compiles this module with AMDGPU backend under -O0,
-; and makes sure llvm-debuginfo-analzyer works for it.
+; and makes sure llvm-debuginfo-analyzer works for it.
 
 ; Simple checks to make sure llvm-debuginfo-analzyer didn't fail early.
 ; CHECK: Logical View:
 ; CHECK: {CompileUnit}
+; CHECK-DAG: {Parameter} 'dtid' -> [0x{{[a-f0-9]+}}]'uint3'
+; CHECK-DAG: {Variable} 'my_var2' -> [0x{{[a-f0-9]+}}]'float'
+; CHECK-DAG: {Line} {{.+}}basic_var.hlsl
 ; CHECK: {Code} 's_endpgm'
 
 source_filename = "module"
@@ -15,7 +18,6 @@ target triple = "amdgcn-amd-amdpal"
 
 %dx.types.ResRet.f32 = type { float, float, float, float, i32 }
 
-; Function Attrs: memory(readwrite)
 define dllexport amdgpu_cs void @_amdgpu_cs_main(i32 inreg noundef %globalTable, i32 inreg noundef %userdata4, <3 x i32> inreg noundef %WorkgroupId, i32 inreg noundef %MultiDispatchInfo, <3 x i32> noundef %LocalInvocationId) #0 !dbg !14 {
   %LocalInvocationId.i0 = extractelement <3 x i32> %LocalInvocationId, i64 0, !dbg !28
   %WorkgroupId.i0 = extractelement <3 x i32> %WorkgroupId, i64 0, !dbg !28
@@ -42,16 +44,12 @@ define dllexport amdgpu_cs void @_amdgpu_cs_main(i32 inreg noundef %globalTable,
   ret void, !dbg !37
 }
 
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare noundef i64 @llvm.amdgcn.s.getpc() #1
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write)
 declare void @llvm.assume(i1 noundef) #2
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(write)
 declare void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32 immarg) #3
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(read)
 declare float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32>, i32, i32, i32, i32 immarg) #4
 
 attributes #0 = { memory(readwrite) "amdgpu-flat-work-group-size"="64,64" "amdgpu-memory-bound"="false" "amdgpu-num-sgpr"="4294967295" "amdgpu-num-vgpr"="4294967295" "amdgpu-prealloc-sgpr-spill-vgprs" "amdgpu-unroll-threshold"="1200" "amdgpu-wave-limiter"="false" "amdgpu-work-group-info-arg-no"="3" "denormal-fp-math"="ieee" "denormal-fp-math-f32"="preserve-sign" "target-features"=",+wavefrontsize64,+cumode,+enable-flat-scratch" }

@@ -276,7 +276,7 @@ void LVBinaryReader::mapVirtualAddress(const object::COFFObjectFile &COFFObj) {
 
 Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
                                             StringRef TheFeatures,
-                                            StringRef CPU) {
+                                            StringRef TheCPU) {
   std::string TargetLookupError;
   const Target *TheTarget =
       TargetRegistry::lookupTarget(TheTriple, TargetLookupError);
@@ -300,7 +300,7 @@ Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
 
   // Target subtargets.
   MCSubtargetInfo *SubtargetInfo(
-      TheTarget->createMCSubtargetInfo(TheTriple, CPU, TheFeatures));
+      TheTarget->createMCSubtargetInfo(TheTriple, TheCPU, TheFeatures));
   if (!SubtargetInfo)
     return createStringError(errc::invalid_argument,
                              "no subtarget info for target " + TheTriple);
