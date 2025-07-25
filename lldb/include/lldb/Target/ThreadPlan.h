@@ -536,7 +536,9 @@ protected:
   // This is mostly a formal requirement, it allows us to make the Thread's
   // GetPreviousPlan protected, but only friend ThreadPlan to thread.
 
-  ThreadPlan *GetPreviousPlan() { return GetThread().GetPreviousPlan(this); }
+  lldb::ThreadPlanSP GetPreviousPlan() {
+    return GetThread().GetPreviousPlan(this);
+  }
 
   // This forwards the private Thread::GetPrivateStopInfo which is generally
   // what ThreadPlan's need to know.
