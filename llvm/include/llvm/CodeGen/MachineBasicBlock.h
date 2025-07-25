@@ -326,7 +326,7 @@ public:
   /// Returns true if the original IR terminator is an `indirectbr`. This
   /// typically corresponds to a `goto` in C, rather than jump tables.
   bool terminatorIsComputedGoto() const {
-    return back().isIndirectBranch() &&
+    return back().isIndirectBranch() && !succ_empty() &&
            llvm::all_of(successors(), [](const MachineBasicBlock *Succ) {
              return Succ->isIRBlockAddressTaken();
            });
