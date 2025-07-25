@@ -1095,10 +1095,11 @@ TEST(CompletionTest, Documentation) {
 
       int x = ^
      )cpp");
-  EXPECT_THAT(Results.Completions,
-              Contains(AllOf(
-                  named("foo"),
-                  doc("Annotation: custom_annotation\nNon-doxygen comment."))));
+  EXPECT_THAT(
+      Results.Completions,
+      Contains(
+          AllOf(named("foo"),
+                doc("Annotation: custom_annotation\n\nNon-doxygen comment."))));
   EXPECT_THAT(
       Results.Completions,
       Contains(AllOf(named("bar"), doc("Doxygen comment.\n\\param int a"))));
@@ -2297,7 +2298,7 @@ TEST(CompletionTest, Render) {
   EXPECT_EQ(R.insertTextFormat, InsertTextFormat::PlainText);
   EXPECT_EQ(R.filterText, "x");
   EXPECT_EQ(R.detail, "int");
-  EXPECT_EQ(R.documentation->value, "From \"foo.h\"\nThis is x()");
+  EXPECT_EQ(R.documentation->value, "From \"foo.h\"\n\nThis is x()");
   EXPECT_THAT(R.additionalTextEdits, IsEmpty());
   EXPECT_EQ(R.sortText, sortText(1.0, "x"));
   EXPECT_FALSE(R.deprecated);
@@ -2332,7 +2333,7 @@ TEST(CompletionTest, Render) {
   C.BundleSize = 2;
   R = C.render(Opts);
   EXPECT_EQ(R.detail, "[2 overloads]");
-  EXPECT_EQ(R.documentation->value, "From \"foo.h\"\nThis is x()");
+  EXPECT_EQ(R.documentation->value, "From \"foo.h\"\n\nThis is x()");
 
   C.Deprecated = true;
   R = C.render(Opts);
@@ -2340,7 +2341,7 @@ TEST(CompletionTest, Render) {
 
   Opts.DocumentationFormat = MarkupKind::Markdown;
   R = C.render(Opts);
-  EXPECT_EQ(R.documentation->value, "From `\"foo.h\"`  \nThis is `x()`");
+  EXPECT_EQ(R.documentation->value, "From `\"foo.h\"`\n\nThis is `x()`");
 }
 
 TEST(CompletionTest, IgnoreRecoveryResults) {
@@ -3324,6 +3325,40 @@ TEST(CompletionTest, AllScopesCompletion) {
                                  kind(CompletionItemKind::Class)),
                            AllOf(qualifier("C::"), named("Clangd5"),
                                  kind(CompletionItemKind::EnumMember))));
+}
+
+TEST(CompletionTest, NoCodePatternsIfDisabled) {
+  clangd::CodeCompleteOptions Opts = {};
+  Opts.EnableSnippets = true;
+  Opts.CodePatterns = Config::CodePatternsPolicy::None;
+
+  auto Results = completions(R"cpp(
+    void function() {
+      /// Trying to trigger "for (init-statement; condition; inc-expression)
+      /// {statements}~" code pattern
+      for^
+    }
+  )cpp",
+                             {}, Opts);
+
+  EXPECT_THAT(Results.Completions,
+              Not(Contains(kind(CompletionItemKind::Snippet))));
+}
+
+TEST(CompletionTest, CompleteIncludeIfCodePatternsNone) {
+  clangd::CodeCompleteOptions Opts = {};
+  Opts.EnableSnippets = true;
+  Opts.CodePatterns = Config::CodePatternsPolicy::None;
+
+  Annotations Test(R"cpp(#include "^)cpp");
+  auto TU = TestTU::withCode(Test.code());
+  TU.AdditionalFiles["foo/bar.h"] = "";
+  TU.ExtraArgs.push_back("-I" + testPath("foo"));
+
+  auto Results = completions(TU, Test.point(), {}, Opts);
+  EXPECT_THAT(Results.Completions,
+              AllOf(has("foo/", CompletionItemKind::Folder),
+                    has("bar.h\"", CompletionItemKind::File)));
 }
 
 TEST(CompletionTest, NoQualifierIfShadowed) {
@@ -4328,6 +4363,36 @@ TEST(CompletionTest, PreambleFromDifferentTarget) {
   // Make sure we don't crash.
   EXPECT_THAT(Result.Completions, Not(testing::IsEmpty()));
   EXPECT_THAT(Signatures.signatures, Not(testing::IsEmpty()));
+}
+
+TEST(CompletionTest, SkipExplicitObjectParameter) {
+  Annotations Code(R"cpp(
+    struct A {
+      void foo(this auto&& self, int arg); 
+    };
+
+    int main() {
+      A a {};
+      a.^
+    }
+  )cpp");
+
+  auto TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs = {"-std=c++23"};
+
+  auto Preamble = TU.preamble();
+  ASSERT_TRUE(Preamble);
+
+  CodeCompleteOptions Opts{};
+
+  MockFS FS;
+  auto Inputs = TU.inputs(FS);
+  auto Result = codeComplete(testPath(TU.Filename), Code.point(),
+                             Preamble.get(), Inputs, Opts);
+
+  EXPECT_THAT(Result.Completions,
+              ElementsAre(AllOf(named("foo"), signature("(int arg)"),
+                                snippetSuffix("(${1:int arg})"))));
 }
 } // namespace
 } // namespace clangd

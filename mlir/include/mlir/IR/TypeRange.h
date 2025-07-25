@@ -37,7 +37,7 @@ class TypeRange : public llvm::detail::indexed_accessor_range_base<
                       Type, Type, Type> {
 public:
   using RangeBaseT::RangeBaseT;
-  TypeRange(ArrayRef<Type> types = std::nullopt);
+  TypeRange(ArrayRef<Type> types = {});
   explicit TypeRange(OperandRange values);
   explicit TypeRange(ResultRange values);
   explicit TypeRange(ValueRange values);
@@ -72,7 +72,7 @@ private:
 
 /// Make TypeRange hashable.
 inline ::llvm::hash_code hash_value(TypeRange arg) {
-  return ::llvm::hash_combine_range(arg.begin(), arg.end());
+  return ::llvm::hash_combine_range(arg);
 }
 
 /// Emit a type range to the given output stream.

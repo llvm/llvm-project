@@ -13,7 +13,7 @@ entry:
 	call void asm sideeffect "int $$1", "~{dirflag},~{fpsr},~{flags},~{memory}"( )
 	call void asm sideeffect ".file \22block12.c\22", "~{dirflag},~{fpsr},~{flags}"( )
 	call void asm sideeffect ".line 2", "~{dirflag},~{fpsr},~{flags}"( )
-	call void asm sideeffect "brl ${0:l}", "X,~{dirflag},~{fpsr},~{flags},~{memory}"( label %"LASM$foo" )
+	call void asm sideeffect "brl ${0:l}", "X,~{dirflag},~{fpsr},~{flags},~{memory}"(ptr blockaddress(@bar, %"LASM$foo"))
 	br label %return
 
 return:		; preds = %"LASM$foo"
@@ -24,7 +24,7 @@ define void @baz() {
 entry:
 	call void asm sideeffect ".file \22block12.c\22", "~{dirflag},~{fpsr},~{flags}"( )
 	call void asm sideeffect ".line 3", "~{dirflag},~{fpsr},~{flags}"( )
-	call void asm sideeffect "brl ${0:l}", "X,~{dirflag},~{fpsr},~{flags},~{memory}"( label %"LASM$foo" )
+	call void asm sideeffect "brl ${0:l}", "X,~{dirflag},~{fpsr},~{flags},~{memory}"(ptr blockaddress(@baz, %"LASM$foo"))
 	call void asm sideeffect ".file \22block12.c\22", "~{dirflag},~{fpsr},~{flags}"( )
 	call void asm sideeffect ".line 4", "~{dirflag},~{fpsr},~{flags}"( )
 	call void asm sideeffect "int $$1", "~{dirflag},~{fpsr},~{flags},~{memory}"( )
@@ -42,7 +42,7 @@ return:		; preds = %"LASM$foo"
 
 define void @quux() {
 entry:
-	call void asm sideeffect inteldialect "brl ${0:l}", "X,~{dirflag},~{fpsr},~{flags},~{memory}"( label %"LASM$foo" )
+	call void asm sideeffect inteldialect "brl ${0:l}", "X,~{dirflag},~{fpsr},~{flags},~{memory}"(ptr blockaddress(@quux, %"LASM$foo"))
 	br label %"LASM$foo"
 
 "LASM$foo":		; preds = %entry

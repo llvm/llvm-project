@@ -45,18 +45,18 @@ define dso_local void @g1(i32 %a1, i32 %a2) {
 ;CHECK-WIN32:	.lcomm	.L_MergedGlobals,12,4
 
 ;CHECK-MERGE:	.globl	x
-;CHECK-MERGE: .set x, .L_MergedGlobals
+;CHECK-MERGE: x = .L_MergedGlobals
 ;CHECK-MERGE: .size x, 4
 ;CHECK-MERGE:	.globl	y
-;CHECK-MERGE: .set y, .L_MergedGlobals+4
+;CHECK-MERGE: y = .L_MergedGlobals+4
 ;CHECK-MERGE: .size y, 4
 ;CHECK-MERGE:	.globl	z
-;CHECK-MERGE: .set z, .L_MergedGlobals+8
+;CHECK-MERGE: z = .L_MergedGlobals+8
 ;CHECK-MERGE: .size z, 4
 
 ;CHECK-WIN32:	.globl	x
-;CHECK-WIN32: .set x, .L_MergedGlobals
+;CHECK-WIN32: x = .L_MergedGlobals
 ;CHECK-WIN32:	.globl	y
-;CHECK-WIN32: .set y, .L_MergedGlobals+4
+;CHECK-WIN32: y = .L_MergedGlobals+4
 ;CHECK-WIN32:	.globl	z
-;CHECK-WIN32: .set z, .L_MergedGlobals+8
+;CHECK-WIN32: z = .L_MergedGlobals+8

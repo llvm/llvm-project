@@ -329,13 +329,17 @@ namespace call_with_adopt_ref {
   }
 }
 
+#define YES 1
+
 namespace call_with_cf_constant {
   void bar(const NSArray *);
   void baz(const NSDictionary *);
+  void boo(NSNumber *);
   void foo() {
     CFArrayCreateMutable(kCFAllocatorDefault, 10);
     bar(@[@"hello"]);
     baz(@{@"hello": @3});
+    boo(@YES);
   }
 }
 
@@ -414,6 +418,25 @@ void idcf(CFTypeRef obj) {
 }
 
 } // ptr_conversion
+
+namespace const_global {
+
+extern NSString * const SomeConstant;
+extern CFDictionaryRef const SomeDictionary;
+void doWork(NSString *str, CFDictionaryRef dict);
+void use_const_global() {
+  doWork(SomeConstant, SomeDictionary);
+}
+
+NSString *provide_str();
+CFDictionaryRef provide_dict();
+void use_const_local() {
+  doWork(provide_str(), provide_dict());
+  // expected-warning@-1{{Call argument for parameter 'str' is unretained and unsafe}}
+  // expected-warning@-2{{Call argument for parameter 'dict' is unretained and unsafe}}
+}
+
+} // namespace const_global
 
 @interface TestObject : NSObject
 - (void)doWork:(NSString *)msg, ...;

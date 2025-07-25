@@ -273,17 +273,13 @@ private:
   template <typename T>
   using detect_has_initialize = llvm::is_detected<has_initialize, T>;
 
-  /// Initialize the derived pattern by calling its `initialize` method.
+  /// Initialize the derived pattern by calling its `initialize` method if
+  /// available.
   template <typename T>
-  static std::enable_if_t<detect_has_initialize<T>::value>
-  initializePattern(T &pattern) {
-    pattern.initialize();
+  static void initializePattern(T &pattern) {
+    if constexpr (detect_has_initialize<T>::value)
+      pattern.initialize();
   }
-  /// Empty derived pattern initializer for patterns that do not have an
-  /// initialize method.
-  template <typename T>
-  static std::enable_if_t<!detect_has_initialize<T>::value>
-  initializePattern(T &) {}
 
   /// An anchor for the virtual table.
   virtual void anchor();
@@ -479,6 +475,25 @@ public:
     RewriterBase::Listener *rewriteListener;
   };
 
+  /// A listener that logs notification events to llvm::dbgs() before
+  /// forwarding to the base listener.
+  struct PatternLoggingListener : public RewriterBase::ForwardingListener {
+    PatternLoggingListener(OpBuilder::Listener *listener, StringRef patternName)
+        : RewriterBase::ForwardingListener(listener), patternName(patternName) {
+    }
+
+    void notifyOperationInserted(Operation *op, InsertPoint previous) override;
+    void notifyOperationModified(Operation *op) override;
+    void notifyOperationReplaced(Operation *op, Operation *newOp) override;
+    void notifyOperationReplaced(Operation *op,
+                                 ValueRange replacement) override;
+    void notifyOperationErased(Operation *op) override;
+    void notifyPatternBegin(const Pattern &pattern, Operation *op) override;
+
+  private:
+    StringRef patternName;
+  };
+
   /// Move the blocks that belong to "region" before the given position in
   /// another region "parent". The two regions must be different. The caller
   /// is responsible for creating or updating the operation transferring flow
@@ -502,7 +517,9 @@ public:
   /// ops must match. The original op is erased.
   template <typename OpTy, typename... Args>
   OpTy replaceOpWithNewOp(Operation *op, Args &&...args) {
-    auto newOp = create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
+    auto builder = static_cast<OpBuilder *>(this);
+    auto newOp =
+        OpTy::create(*builder, op->getLoc(), std::forward<Args>(args)...);
     replaceOp(op, newOp.getOperation());
     return newOp;
   }
@@ -524,7 +541,7 @@ public:
   /// unreachable operations.
   virtual void inlineBlockBefore(Block *source, Block *dest,
                                  Block::iterator before,
-                                 ValueRange argValues = std::nullopt);
+                                 ValueRange argValues = {});
 
   /// Inline the operations of block 'source' before the operation 'op'. The
   /// source block will be deleted and must have no uses. 'argValues' is used to
@@ -533,7 +550,7 @@ public:
   /// The source block must have no successors. Otherwise, the resulting IR
   /// would have unreachable operations.
   void inlineBlockBefore(Block *source, Operation *op,
-                         ValueRange argValues = std::nullopt);
+                         ValueRange argValues = {});
 
   /// Inline the operations of block 'source' into the end of block 'dest'. The
   /// source block will be deleted and must have no uses. 'argValues' is used to
@@ -541,8 +558,7 @@ public:
   ///
   /// The dest block must have no successors. Otherwise, the resulting IR would
   /// have unreachable operation.
-  void mergeBlocks(Block *source, Block *dest,
-                   ValueRange argValues = std::nullopt);
+  void mergeBlocks(Block *source, Block *dest, ValueRange argValues = {});
 
   /// Split the operations starting at "before" (inclusive) out of the given
   /// block into a new block, and return it.
@@ -815,8 +831,7 @@ public:
   RewritePatternSet &add(ConstructorArg &&arg, ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'.
-    (addImpl<Ts>(/*debugLabels=*/std::nullopt,
-                 std::forward<ConstructorArg>(arg),
+    (addImpl<Ts>(/*debugLabels=*/{}, std::forward<ConstructorArg>(arg),
                  std::forward<ConstructorArgs>(args)...),
      ...);
     return *this;
@@ -899,7 +914,7 @@ public:
   RewritePatternSet &insert(ConstructorArg &&arg, ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'.
-    (addImpl<Ts>(/*debugLabels=*/std::nullopt, arg, args...), ...);
+    (addImpl<Ts>(/*debugLabels=*/{}, arg, args...), ...);
     return *this;
   }
 

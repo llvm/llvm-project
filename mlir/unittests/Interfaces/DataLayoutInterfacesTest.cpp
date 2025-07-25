@@ -35,6 +35,10 @@ constexpr static llvm::StringLiteral kGlobalKeyName =
     "dltest.global_memory_space";
 constexpr static llvm::StringLiteral kStackAlignmentKeyName =
     "dltest.stack_alignment";
+constexpr static llvm::StringLiteral kFunctionPointerAlignmentKeyName =
+    "dltest.function_pointer_alignment";
+constexpr static llvm::StringLiteral kLegalIntWidthsKeyName =
+    "dltest.legal_int_widths";
 
 constexpr static llvm::StringLiteral kTargetSystemDescAttrName =
     "dl_target_sys_desc_test.target_system_spec";
@@ -101,6 +105,12 @@ struct CustomDataLayoutSpec
   }
   StringAttr getStackAlignmentIdentifier(MLIRContext *context) const {
     return Builder(context).getStringAttr(kStackAlignmentKeyName);
+  }
+  StringAttr getFunctionPointerAlignmentIdentifier(MLIRContext *context) const {
+    return Builder(context).getStringAttr(kFunctionPointerAlignmentKeyName);
+  }
+  StringAttr getLegalIntWidthsIdentifier(MLIRContext *context) const {
+    return Builder(context).getStringAttr(kLegalIntWidthsKeyName);
   }
   FailureOr<Attribute> query(DataLayoutEntryKey key) const {
     return llvm::cast<mlir::DataLayoutSpecInterface>(*this).queryHelper(key);
@@ -494,6 +504,8 @@ module {}
   EXPECT_EQ(layout.getProgramMemorySpace(), Attribute());
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
   EXPECT_EQ(layout.getStackAlignment(), 0u);
+  EXPECT_EQ(layout.getFunctionPointerAlignment(), Attribute());
+  EXPECT_EQ(layout.getLegalIntWidths(), Attribute());
   EXPECT_EQ(layout.getManglingMode(), Attribute());
 }
 
@@ -571,6 +583,8 @@ TEST(DataLayout, EmptySpec) {
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
   EXPECT_EQ(layout.getStackAlignment(), 0u);
   EXPECT_EQ(layout.getManglingMode(), Attribute());
+  EXPECT_EQ(layout.getFunctionPointerAlignment(), Attribute());
+  EXPECT_EQ(layout.getLegalIntWidths(), Attribute());
 
   EXPECT_EQ(layout.getDevicePropertyValue(
                 Builder(&ctx).getStringAttr("CPU" /* device ID*/),
@@ -594,7 +608,10 @@ TEST(DataLayout, SpecWithEntries) {
   #dlti.dl_entry<"dltest.program_memory_space", 3 : i32>,
   #dlti.dl_entry<"dltest.global_memory_space", 2 : i32>,
   #dlti.dl_entry<"dltest.stack_alignment", 128 : i32>,
-  #dlti.dl_entry<"dltest.mangling_mode", "o">
+  #dlti.dl_entry<"dltest.mangling_mode", "o">,
+  #dlti.dl_entry<"dltest.function_pointer_alignment",
+                 #dlti.function_pointer_alignment<64, function_dependent = true>>,
+  #dlti.dl_entry<"dltest.legal_int_widths", array<i32: 64>>
 > } : () -> ()
   )MLIR";
 
@@ -633,6 +650,11 @@ TEST(DataLayout, SpecWithEntries) {
   EXPECT_EQ(layout.getGlobalMemorySpace(), Builder(&ctx).getI32IntegerAttr(2));
   EXPECT_EQ(layout.getStackAlignment(), 128u);
   EXPECT_EQ(layout.getManglingMode(), Builder(&ctx).getStringAttr("o"));
+  EXPECT_EQ(
+      layout.getFunctionPointerAlignment(),
+      FunctionPointerAlignmentAttr::get(&ctx, 64, /*function_dependent=*/true));
+  EXPECT_EQ(layout.getLegalIntWidths(),
+            Builder(&ctx).getDenseI32ArrayAttr({64}));
 }
 
 TEST(DataLayout, SpecWithTargetSystemDescEntries) {

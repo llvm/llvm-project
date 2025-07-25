@@ -1590,8 +1590,6 @@ TEST_F(CoreAPIsStandardTest, TestGetRequestedSymbolsAndReplace) {
   // have pending queries, and test that MaterializationResponsibility's
   // replace method can be used to return definitions to the JITDylib in a new
   // MaterializationUnit.
-  SymbolNameSet Names({Foo, Bar});
-
   bool FooMaterialized = false;
   bool BarMaterialized = false;
 

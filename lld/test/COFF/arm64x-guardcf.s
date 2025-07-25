@@ -16,7 +16,7 @@
 
 // RUN: lld-link -dll -noentry -machine:arm64x func-gfids-arm64.obj func-gfids-arm64ec.obj func-amd64.obj -guard:cf -out:out.dll \
 // RUN:          loadconfig-arm64ec.obj loadconfig-arm64.obj
-// RUN: llvm-readobj --coff-load-config out.dll | FileCheck --check-prefix=LOADCFG %s
+// RUN: llvm-readobj --coff-load-config out.dll | FileCheck --check-prefixes=LOADCFG,LOADCFGX %s
 
 // LOADCFG:      LoadConfig [
 // LOADCFG:        GuardCFFunctionCount: 3
@@ -31,28 +31,36 @@
 // LOADCFG-NEXT:   0x180002000
 // LOADCFG-NEXT:   0x180003000
 // LOADCFG-NEXT: ]
-// LOADCFG:      HybridObject {
-// LOADCFG:        LoadConfig [
-// LOADCFG:          GuardCFFunctionCount: 3
-// LOADCFG-NEXT:     GuardFlags [ (0x10500)
-// LOADCFG-NEXT:       CF_FUNCTION_TABLE_PRESENT (0x400)
-// LOADCFG-NEXT:       CF_INSTRUMENTED (0x100)
-// LOADCFG-NEXT:       CF_LONGJUMP_TABLE_PRESENT (0x10000)
-// LOADCFG-NEXT:     ]
-// LOADCFG:        ]
-// LOADCFG:        GuardFidTable [
-// LOADCFG-NEXT:     0x180001000
-// LOADCFG-NEXT:     0x180002000
-// LOADCFG-NEXT:     0x180003000
-// LOADCFG-NEXT:   ]
-// LOADCFG:      ]
+// LOADCFGX:     HybridObject {
+// LOADCFGX:       LoadConfig [
+// LOADCFGX:         GuardCFFunctionCount: 3
+// LOADCFG-NEXTX:    GuardFlags [ (0x10500)
+// LOADCFG-NEXTX:      CF_FUNCTION_TABLE_PRESENT (0x400)
+// LOADCFG-NEXTX:      CF_INSTRUMENTED (0x100)
+// LOADCFG-NEXTX:      CF_LONGJUMP_TABLE_PRESENT (0x10000)
+// LOADCFG-NEXTX:    ]
+// LOADCFGX:       ]
+// LOADCFGX:       GuardFidTable [
+// LOADCFG-NEXTX:    0x180001000
+// LOADCFG-NEXTX:    0x180002000
+// LOADCFG-NEXTX:    0x180003000
+// LOADCFG-NEXTX:  ]
+// LOADCFGX:     ]
+
+// RUN: lld-link -dll -noentry -machine:arm64ec func-gfids-arm64.obj func-gfids-arm64ec.obj func-amd64.obj -guard:cf -out:out-ec.dll \
+// RUN:          loadconfig-arm64ec.obj loadconfig-arm64.obj
+// RUN: llvm-readobj --coff-load-config out-ec.dll | FileCheck --check-prefix=LOADCFG %s
 
 
 // Check that exports from both views are present in CF guard tables.
 
 // RUN: lld-link -dll -noentry -machine:arm64x func-exp-arm64.obj func-exp-arm64ec.obj -guard:cf -out:out-exp.dll \
 // RUN:          loadconfig-arm64ec.obj loadconfig-arm64.obj
-// RUN: llvm-readobj --coff-load-config out-exp.dll | FileCheck --check-prefix=LOADCFG %s
+// RUN: llvm-readobj --coff-load-config out-exp.dll | FileCheck --check-prefixes=LOADCFG,LOADCFGX %s
+
+// RUN: lld-link -dll -noentry -machine:arm64ec func-exp-arm64.obj func-exp-arm64ec.obj -guard:cf -out:out-exp-ec.dll \
+// RUN:          loadconfig-arm64ec.obj loadconfig-arm64.obj
+// RUN: llvm-readobj --coff-load-config out-exp-ec.dll | FileCheck --check-prefixes=LOADCFG %s
 
 
 // Check that entry points from both views are present in CF guard tables.

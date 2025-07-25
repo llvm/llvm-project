@@ -229,6 +229,11 @@ ParseResult LoopOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parseControlAttribute<spirv::LoopControlAttr, spirv::LoopControl>(parser,
                                                                         result))
     return failure();
+
+  if (succeeded(parser.parseOptionalArrow()))
+    if (parser.parseTypeList(result.types))
+      return failure();
+
   return parser.parseRegion(*result.addRegion(), /*arguments=*/{});
 }
 
@@ -236,6 +241,10 @@ void LoopOp::print(OpAsmPrinter &printer) {
   auto control = getLoopControl();
   if (control != spirv::LoopControl::None)
     printer << " control(" << spirv::stringifyLoopControl(control) << ")";
+  if (getNumResults() > 0) {
+    printer << " -> ";
+    printer << getResultTypes();
+  }
   printer << ' ';
   printer.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                       /*printBlockTerminators=*/true);
@@ -382,7 +391,7 @@ void LoopOp::addEntryAndMergeBlock(OpBuilder &builder) {
   builder.createBlock(&getBody());
 
   // Add a spirv.mlir.merge op into the merge block.
-  builder.create<spirv::MergeOp>(getLoc());
+  spirv::MergeOp::create(builder, getLoc());
 }
 
 //===----------------------------------------------------------------------===//
@@ -534,7 +543,7 @@ void SelectionOp::addMergeBlock(OpBuilder &builder) {
   builder.createBlock(&getBody());
 
   // Add a spirv.mlir.merge op into the merge block.
-  builder.create<spirv::MergeOp>(getLoc());
+  spirv::MergeOp::create(builder, getLoc());
 }
 
 SelectionOp
@@ -542,7 +551,7 @@ SelectionOp::createIfThen(Location loc, Value condition,
                           function_ref<void(OpBuilder &builder)> thenBody,
                           OpBuilder &builder) {
   auto selectionOp =
-      builder.create<spirv::SelectionOp>(loc, spirv::SelectionControl::None);
+      spirv::SelectionOp::create(builder, loc, spirv::SelectionControl::None);
 
   selectionOp.addMergeBlock(builder);
   Block *mergeBlock = selectionOp.getMergeBlock();
@@ -553,17 +562,17 @@ SelectionOp::createIfThen(Location loc, Value condition,
     OpBuilder::InsertionGuard guard(builder);
     thenBlock = builder.createBlock(mergeBlock);
     thenBody(builder);
-    builder.create<spirv::BranchOp>(loc, mergeBlock);
+    spirv::BranchOp::create(builder, loc, mergeBlock);
   }
 
   // Build the header block.
   {
     OpBuilder::InsertionGuard guard(builder);
     builder.createBlock(thenBlock);
-    builder.create<spirv::BranchConditionalOp>(
-        loc, condition, thenBlock,
-        /*trueArguments=*/ArrayRef<Value>(), mergeBlock,
-        /*falseArguments=*/ArrayRef<Value>());
+    spirv::BranchConditionalOp::create(builder, loc, condition, thenBlock,
+                                       /*trueArguments=*/ArrayRef<Value>(),
+                                       mergeBlock,
+                                       /*falseArguments=*/ArrayRef<Value>());
   }
 
   return selectionOp;

@@ -307,7 +307,7 @@
 // DRIVER_EMBEDDING: -fembed-offload-object={{.*}}.out
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
-// RUN:     --offload-host-only -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-HOST-ONLY
+// RUN:     -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_52 --offload-host-only -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-HOST-ONLY
 // CHECK-HOST-ONLY: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT:.*]]"], output: "[[OUTPUT:.*]]"
 // CHECK-HOST-ONLY: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[OUTPUT]]"], output: "a.out"
 
@@ -388,8 +388,19 @@
 // THINLTO-GFX906: --device-compiler=amdgcn-amd-amdhsa=-flto=thin
 // THINLTO-GFX906-SAME: --device-linker=amdgcn-amd-amdhsa=-plugin-opt=-force-import-all
 // THINLTO-GFX906-SAME: --device-linker=amdgcn-amd-amdhsa=-plugin-opt=-avail-extern-to-local
+// THINLTO-GFX906-SAME: --device-linker=amdgcn-amd-amdhsa=-plugin-opt=-avail-extern-gv-in-addrspace-to-local=3
+// THINLTO-GFX906-SAME: --device-linker=amdgcn-amd-amdhsa=-plugin-opt=-amdgpu-internalize-symbols
 //
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
 // RUN:     --offload-arch=sm_52 -foffload-lto=thin -nogpulib -nogpuinc %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=THINLTO-SM52 %s
 // THINLTO-SM52: --device-compiler=nvptx64-nvidia-cuda=-flto=thin
+
+//
+// Check the requested architecture is passed if provided.
+//
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     --offload-arch=gfx906 -foffload-lto=thin -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=SHOULD-EXTRACT %s
+//
+// SHOULD-EXTRACT: clang-linker-wrapper{{.*}}"--should-extract=gfx906"

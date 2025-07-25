@@ -239,8 +239,7 @@ template <> struct DenseMapInfo<DriverArgs> {
         Val.Stdlib,
     });
 
-    unsigned SpecsHash =
-        llvm::hash_combine_range(Val.Specs.begin(), Val.Specs.end());
+    unsigned SpecsHash = llvm::hash_combine_range(Val.Specs);
 
     return llvm::hash_combine(FixedFieldsHash, SpecsHash);
   }
@@ -254,10 +253,11 @@ namespace {
 bool isValidTarget(llvm::StringRef Triple) {
   std::shared_ptr<TargetOptions> TargetOpts(new TargetOptions);
   TargetOpts->Triple = Triple.str();
-  DiagnosticsEngine Diags(new DiagnosticIDs, new DiagnosticOptions,
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(new DiagnosticIDs, DiagOpts,
                           new IgnoringDiagConsumer);
   llvm::IntrusiveRefCntPtr<TargetInfo> Target =
-      TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+      TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   return bool(Target);
 }
 

@@ -97,6 +97,9 @@ protected:
   SDValue LowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerF64ToF16Safe(SDValue Src, const SDLoc &DL,
+                            SelectionDAG &DAG) const;
+
   SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
 
 protected:
@@ -215,9 +218,8 @@ public:
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
   bool ShouldShrinkFPConstant(EVT VT) const override;
-  bool shouldReduceLoadWidth(SDNode *Load,
-                             ISD::LoadExtType ExtType,
-                             EVT ExtVT) const override;
+  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtType, EVT ExtVT,
+                             std::optional<unsigned> ByteOffset) const override;
 
   bool isLoadBitCastBeneficial(EVT, EVT, const SelectionDAG &DAG,
                                const MachineMemOperand &MMO) const final;
@@ -543,6 +545,7 @@ enum NodeType : unsigned {
   /// Pointer to the start of the shader's constant data.
   CONST_DATA_PTR,
   PC_ADD_REL_OFFSET,
+  PC_ADD_REL_OFFSET64,
   LDS,
 
   DUMMY_CHAIN,
@@ -605,6 +608,12 @@ enum NodeType : unsigned {
   BUFFER_ATOMIC_FMAX,
   BUFFER_ATOMIC_COND_SUB_U32,
   LAST_MEMORY_OPCODE = BUFFER_ATOMIC_COND_SUB_U32,
+
+  // Set up a whole wave function.
+  WHOLE_WAVE_SETUP,
+
+  // Return from a whole wave function.
+  WHOLE_WAVE_RETURN,
 };
 
 } // End namespace AMDGPUISD

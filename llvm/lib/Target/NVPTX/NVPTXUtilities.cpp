@@ -16,11 +16,13 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Argument.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/Mutex.h"
 #include <cstdint>
 #include <cstring>
@@ -228,17 +230,30 @@ static std::optional<uint64_t> getVectorProduct(ArrayRef<unsigned> V) {
   return std::accumulate(V.begin(), V.end(), 1, std::multiplies<uint64_t>{});
 }
 
-bool isParamGridConstant(const Value &V) {
-  if (const Argument *Arg = dyn_cast<Argument>(&V)) {
-    // "grid_constant" counts argument indices starting from 1
-    if (Arg->hasByValAttr() &&
-        argHasNVVMAnnotation(*Arg, "grid_constant",
-                             /*StartArgIndexAtOne*/ true)) {
-      assert(isKernelFunction(*Arg->getParent()) &&
-             "only kernel arguments can be grid_constant");
+bool isParamGridConstant(const Argument &Arg) {
+  assert(isKernelFunction(*Arg.getParent()) &&
+         "only kernel arguments can be grid_constant");
+
+  if (!Arg.hasByValAttr())
+    return false;
+
+  // Lowering an argument as a grid_constant violates the byval semantics (and
+  // the C++ API) by reusing the same memory location for the argument across
+  // multiple threads. If an argument doesn't read memory and its address is not
+  // captured (its address is not compared with any value), then the tweak of
+  // the C++ API and byval semantics is unobservable by the program and we can
+  // lower the arg as a grid_constant.
+  if (Arg.onlyReadsMemory()) {
+    const auto CI = Arg.getAttributes().getCaptureInfo();
+    if (!capturesAddress(CI) && !capturesFullProvenance(CI))
       return true;
-    }
   }
+
+  // "grid_constant" counts argument indices starting from 1
+  if (argHasNVVMAnnotation(Arg, "grid_constant",
+                           /*StartArgIndexAtOne*/ true))
+    return true;
+
   return false;
 }
 
@@ -313,6 +328,16 @@ std::optional<uint64_t> getOverallReqNTID(const Function &F) {
   // Note: The semantics here are a bit strange. See getMaxNTID.
   const auto ReqNTID = getReqNTID(F);
   return getVectorProduct(ReqNTID);
+}
+
+std::optional<uint64_t> getOverallClusterRank(const Function &F) {
+  // maxclusterrank and cluster_dim are mutually exclusive.
+  if (const auto ClusterRank = getMaxClusterRank(F))
+    return ClusterRank;
+
+  // Note: The semantics here are a bit strange. See getMaxNTID.
+  const auto ClusterDim = getClusterDim(F);
+  return getVectorProduct(ClusterDim);
 }
 
 std::optional<unsigned> getMaxClusterRank(const Function &F) {

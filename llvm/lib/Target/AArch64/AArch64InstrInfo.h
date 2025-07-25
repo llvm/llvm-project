@@ -172,6 +172,10 @@ enum AArch64MachineCombinerPattern : unsigned {
   FMULv8i16_indexed_OP2,
 
   FNMADD,
+
+  GATHER_LANE_i32,
+  GATHER_LANE_i16,
+  GATHER_LANE_i8
 };
 class AArch64InstrInfo final : public AArch64GenInstrInfo {
   const AArch64RegisterInfo RI;
@@ -519,7 +523,7 @@ public:
   /// Returns true if the instruction has a shift by immediate that can be
   /// executed in one cycle less.
   static bool isFalkorShiftExtFast(const MachineInstr &MI);
-  /// Return true if the instructions is a SEH instruciton used for unwinding
+  /// Return true if the instructions is a SEH instruction used for unwinding
   /// on Windows.
   static bool isSEHInstruction(const MachineInstr &MI);
 

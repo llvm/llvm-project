@@ -1,4 +1,4 @@
-// RUN: fir-opt %s --bufferize-hlfir --convert-hlfir-to-fir | FileCheck %s
+// RUN: fir-opt --strict-fir-volatile-verifier %s --bufferize-hlfir --convert-hlfir-to-fir | FileCheck %s
 func.func @_QQmain() attributes {fir.bindc_name = "p"} {
   %0 = fir.address_of(@_QFEarr) : !fir.ref<!fir.array<10xi32>>
   %c10 = arith.constant 10 : index

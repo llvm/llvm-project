@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "clang/Driver/XRayArgs.h"
-#include "ToolChains/CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/ToolChain.h"
@@ -174,7 +174,7 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
 
   // Then we want to sort and unique the modes we've collected.
   llvm::sort(Modes);
-  Modes.erase(std::unique(Modes.begin(), Modes.end()), Modes.end());
+  Modes.erase(llvm::unique(Modes), Modes.end());
 }
 
 void XRayArgs::addArgs(const ToolChain &TC, const ArgList &Args,

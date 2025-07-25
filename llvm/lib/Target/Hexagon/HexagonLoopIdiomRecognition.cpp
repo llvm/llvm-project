@@ -38,7 +38,6 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/IR/Module.h"
@@ -1079,9 +1078,7 @@ bool PolynomialMultiplyRecognize::promoteTypes(BasicBlock *LoopB,
       return false;
 
   // Perform the promotion.
-  std::vector<Instruction*> LoopIns;
-  std::transform(LoopB->begin(), LoopB->end(), std::back_inserter(LoopIns),
-                 [](Instruction &In) { return &In; });
+  SmallVector<Instruction *> LoopIns(llvm::make_pointer_range(*LoopB));
   for (Instruction *In : LoopIns)
     if (!In->isTerminator())
       promoteTo(In, DestTy, LoopB);
@@ -2320,7 +2317,7 @@ bool HexagonLoopIdiomRecognize::coverLoop(Loop *L,
   // instructions in it that are not involved in the original set Insts.
   for (auto *B : L->blocks()) {
     for (auto &In : *B) {
-      if (isa<BranchInst>(In) || isa<DbgInfoIntrinsic>(In))
+      if (isa<BranchInst>(In))
         continue;
       if (!Worklist.count(&In) && In.mayHaveSideEffects())
         return false;

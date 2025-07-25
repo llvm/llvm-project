@@ -96,7 +96,7 @@ namespace cwg108 { // cwg108: 2.9
   template<typename T> struct A {
     struct B { typedef int X; };
     B::X x;
-    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'B::X'; implicit 'typename' is a C++20 extension}}
+    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'B::X' is a C++20 extension}}
     struct C : B { X x; };
     // expected-error@-1 {{unknown type name 'X'}}
   };
@@ -321,7 +321,7 @@ namespace cwg121 { // cwg121: 2.7
     X::Y<T> x;
     T::Y<T> y;
     // expected-error@-1 {{use 'template' keyword to treat 'Y' as a dependent template name}}
-    // cxx98-17-error@-2 {{missing 'typename' prior to dependent type name 'T::Y'; implicit 'typename' is a C++20 extension}}
+    // cxx98-17-error@-2 {{missing 'typename' prior to dependent type name 'T::Y' is a C++20 extension}}
   };
   Z<X> z;
 } // namespace cwg121
@@ -702,8 +702,7 @@ namespace cwg141 { // cwg141: 3.1
     // cxx98-error@#cwg141-a {{lookup of 'S' in member access expression is ambiguous; using member of 'struct A'}}
     //   cxx98-note@#cwg141-A-S {{lookup in the object type 'struct A' refers here}}
     //   cxx98-note@#cwg141-S {{lookup from the current scope refers here}}
-    // expected-error@#cwg141-a {{no member named 'n' in 'cwg141::A::S<int>'; did you mean '::cwg141::S<int>::n'?}}
-    //   expected-note@#cwg141-S {{'::cwg141::S<int>::n' declared here}}
+    // expected-error@#cwg141-a {{no member named 'n' in 'cwg141::A::S<int>'}}
     // FIXME: we issue a useful diagnostic first, then some bogus ones.
     b.f<int>();
     // expected-error@-1 {{no member named 'f' in 'cwg141::B'}}

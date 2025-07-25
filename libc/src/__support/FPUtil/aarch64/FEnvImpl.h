@@ -18,9 +18,9 @@
 #endif
 
 #include <arm_acle.h>
-#include <stdint.h>
 
 #include "hdr/fenv_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FPBits.h"
 

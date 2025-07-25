@@ -43,17 +43,6 @@ public:
   DecoderUInt128() = default;
   DecoderUInt128(uint64_t Lo, uint64_t Hi = 0) : Lo(Lo), Hi(Hi) {}
   operator bool() const { return Lo || Hi; }
-  void insertBits(uint64_t SubBits, unsigned BitPosition, unsigned NumBits) {
-    assert(NumBits && NumBits <= 64);
-    assert(SubBits >> 1 >> (NumBits - 1) == 0);
-    assert(BitPosition < 128);
-    if (BitPosition < 64) {
-      Lo |= SubBits << BitPosition;
-      Hi |= SubBits >> 1 >> (63 - BitPosition);
-    } else {
-      Hi |= SubBits << (BitPosition - 64);
-    }
-  }
   uint64_t extractBitsAsZExtValue(unsigned NumBits,
                                   unsigned BitPosition) const {
     assert(NumBits && NumBits <= 64);
@@ -78,12 +67,7 @@ public:
   bool operator!=(const DecoderUInt128 &RHS) {
     return Lo != RHS.Lo || Hi != RHS.Hi;
   }
-  bool operator!=(const int &RHS) {
-    return *this != DecoderUInt128(RHS);
-  }
-  friend raw_ostream &operator<<(raw_ostream &OS, const DecoderUInt128 &RHS) {
-    return OS << APInt(128, {RHS.Lo, RHS.Hi});
-  }
+  bool operator!=(const int &RHS) { return *this != DecoderUInt128(RHS); }
 };
 
 //===----------------------------------------------------------------------===//
@@ -107,6 +91,8 @@ private:
   const MCExpr *UCVersionMDPExpr;
 
   const MCExpr *createConstantSymbolExpr(StringRef Id, int64_t Val);
+
+  void decodeImmOperands(MCInst &MI, const MCInstrInfo &MCII) const;
 
 public:
   AMDGPUDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
@@ -172,9 +158,10 @@ public:
 
   void convertEXPInst(MCInst &MI) const;
   void convertVINTERPInst(MCInst &MI) const;
-  void convertFMAanyK(MCInst &MI, int ImmLitIdx) const;
+  void convertFMAanyK(MCInst &MI) const;
   void convertSDWAInst(MCInst &MI) const;
   void convertMAIInst(MCInst &MI) const;
+  void convertWMMAInst(MCInst &MI) const;
   void convertDPP8Inst(MCInst &MI) const;
   void convertMIMGInst(MCInst &MI) const;
   void convertVOP3DPPInst(MCInst &MI) const;
@@ -184,57 +171,28 @@ public:
   void convertMacDPPInst(MCInst &MI) const;
   void convertTrue16OpSel(MCInst &MI) const;
 
-  enum OpWidthTy {
-    OPW32,
-    OPW64,
-    OPW96,
-    OPW128,
-    OPW160,
-    OPW192,
-    OPW256,
-    OPW288,
-    OPW320,
-    OPW352,
-    OPW384,
-    OPW512,
-    OPW1024,
-    OPW16,
-    OPWV216,
-    OPWV232,
-    OPW_LAST_,
-    OPW_FIRST_ = OPW32
-  };
-
-  unsigned getVgprClassId(const OpWidthTy Width) const;
-  unsigned getAgprClassId(const OpWidthTy Width) const;
-  unsigned getSgprClassId(const OpWidthTy Width) const;
-  unsigned getTtmpClassId(const OpWidthTy Width) const;
+  unsigned getVgprClassId(unsigned Width) const;
+  unsigned getAgprClassId(unsigned Width) const;
+  unsigned getSgprClassId(unsigned Width) const;
+  unsigned getTtmpClassId(unsigned Width) const;
 
   static MCOperand decodeIntImmed(unsigned Imm);
-  static MCOperand decodeFPImmed(unsigned ImmWidth, unsigned Imm,
-                                 AMDGPU::OperandSemantics Sema);
 
   MCOperand decodeMandatoryLiteralConstant(unsigned Imm) const;
+  MCOperand decodeMandatoryLiteral64Constant(uint64_t Imm) const;
   MCOperand decodeLiteralConstant(bool ExtendFP64) const;
+  MCOperand decodeLiteral64Constant() const;
 
-  MCOperand decodeSrcOp(
-      const OpWidthTy Width, unsigned Val, bool MandatoryLiteral = false,
-      unsigned ImmWidth = 0,
-      AMDGPU::OperandSemantics Sema = AMDGPU::OperandSemantics::INT) const;
+  MCOperand decodeSrcOp(unsigned Width, unsigned Val) const;
 
-  MCOperand decodeNonVGPRSrcOp(
-      const OpWidthTy Width, unsigned Val, bool MandatoryLiteral = false,
-      unsigned ImmWidth = 0,
-      AMDGPU::OperandSemantics Sema = AMDGPU::OperandSemantics::INT) const;
+  MCOperand decodeNonVGPRSrcOp(unsigned Width, unsigned Val) const;
 
   MCOperand decodeVOPDDstYOp(MCInst &Inst, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;
   MCOperand decodeSpecialReg64(unsigned Val) const;
   MCOperand decodeSpecialReg96Plus(unsigned Val) const;
 
-  MCOperand decodeSDWASrc(const OpWidthTy Width, unsigned Val,
-                          unsigned ImmWidth,
-                          AMDGPU::OperandSemantics Sema) const;
+  MCOperand decodeSDWASrc(unsigned Width, unsigned Val) const;
   MCOperand decodeSDWASrc16(unsigned Val) const;
   MCOperand decodeSDWASrc32(unsigned Val) const;
   MCOperand decodeSDWAVopcDst(unsigned Val) const;
@@ -259,6 +217,7 @@ public:
   bool isGFX11Plus() const;
   bool isGFX12() const;
   bool isGFX12Plus() const;
+  bool isGFX1250() const;
 
   bool hasArchitectedFlatScratch() const;
   bool hasKernargPreload() const;

@@ -58,6 +58,10 @@ bool isCheckedPtr(const clang::CXXRecordDecl *Class);
 /// \returns true if \p Class is a RetainPtr, false if not.
 bool isRetainPtr(const clang::CXXRecordDecl *Class);
 
+/// \returns true if \p Class is a smart pointer (RefPtr, WeakPtr, etc...),
+/// false if not.
+bool isSmartPtr(const clang::CXXRecordDecl *Class);
+
 /// \returns true if \p Class is ref-countable AND not ref-counted, false if
 /// not, std::nullopt if inconclusive.
 std::optional<bool> isUncounted(const clang::QualType T);
@@ -72,12 +76,14 @@ class RetainTypeChecker {
   llvm::DenseSet<const RecordType *> CFPointees;
   llvm::DenseSet<const Type *> RecordlessTypes;
   bool IsARCEnabled{false};
+  bool DefaultSynthProperties{true};
 
 public:
   void visitTranslationUnitDecl(const TranslationUnitDecl *);
   void visitTypedef(const TypedefDecl *);
   bool isUnretained(const QualType, bool ignoreARC = false);
   bool isARCEnabled() const { return IsARCEnabled; }
+  bool defaultSynthProperties() const { return DefaultSynthProperties; }
 };
 
 /// \returns true if \p Class is NS or CF objects AND not retained, false if

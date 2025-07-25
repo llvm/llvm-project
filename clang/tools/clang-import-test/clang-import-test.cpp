@@ -162,18 +162,18 @@ private:
 };
 
 std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
-  auto Ins = std::make_unique<CompilerInstance>();
+  DiagnosticOptions DiagOpts;
   auto DC = std::make_unique<TestDiagnosticConsumer>();
-  const bool ShouldOwnClient = true;
-  Ins->createDiagnostics(*llvm::vfs::getRealFileSystem(), DC.release(),
-                         ShouldOwnClient);
+  auto Diags = CompilerInstance::createDiagnostics(
+      *llvm::vfs::getRealFileSystem(), DiagOpts, DC.get(),
+      /*ShouldOwnClient=*/false);
 
   auto Inv = std::make_unique<CompilerInvocation>();
 
   std::vector<const char *> ClangArgv(ClangArgs.size());
   std::transform(ClangArgs.begin(), ClangArgs.end(), ClangArgv.begin(),
                  [](const std::string &s) -> const char * { return s.data(); });
-  CompilerInvocation::CreateFromArgs(*Inv, ClangArgv, Ins->getDiagnostics());
+  CompilerInvocation::CreateFromArgs(*Inv, ClangArgv, *Diags);
 
   {
     using namespace driver::types;
@@ -205,12 +205,16 @@ std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
   Inv->getCodeGenOpts().setDebugInfo(llvm::codegenoptions::FullDebugInfo);
   Inv->getTargetOpts().Triple = llvm::sys::getDefaultTargetTriple();
 
-  Ins->setInvocation(std::move(Inv));
+  auto Ins = std::make_unique<CompilerInstance>(std::move(Inv));
+
+  Ins->createDiagnostics(*llvm::vfs::getRealFileSystem(), DC.release(),
+                         /*ShouldOwnClient=*/true);
 
   TargetInfo *TI = TargetInfo::CreateTargetInfo(
-      Ins->getDiagnostics(), Ins->getInvocation().TargetOpts);
+      Ins->getDiagnostics(), Ins->getInvocation().getTargetOpts());
   Ins->setTarget(TI);
-  Ins->getTarget().adjust(Ins->getDiagnostics(), Ins->getLangOpts());
+  Ins->getTarget().adjust(Ins->getDiagnostics(), Ins->getLangOpts(),
+                          /*AuxTarget=*/nullptr);
   Ins->createFileManager();
   Ins->createSourceManager(Ins->getFileManager());
   Ins->createPreprocessor(TU_Complete);

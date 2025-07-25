@@ -14,7 +14,7 @@
 ; CHECK-LABEL: yes:
 ; CHECK:          br i1 %t3, label %yes1, label %yes2, !prof ![[C1]]
 ; CHECK-NOT:   !prof
-; CHECK: ![[C1]] = !{!"branch_weights", i32 6, i32 0}
+; CHECK: ![[C1]] = !{!"branch_weights", i32 72, i32 0}
 
 ;--- 1234.ll
 define void @f1(i32 %cond) !guid !0 {

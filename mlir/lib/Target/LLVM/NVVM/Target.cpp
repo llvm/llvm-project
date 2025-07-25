@@ -16,10 +16,7 @@
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/IR/BuiltinAttributeInterfaces.h"
-#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/Target/LLVM/NVVM/Utils.h"
 #include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
@@ -606,9 +603,10 @@ NVPTXSerializer::compileToBinaryNVPTX(const std::string &ptxCode) {
           nvPTXCompilerGetErrorLog(compiler, log.data()));
       emitError(loc) << "NVPTX compiler invocation failed, error log: "
                      << log.data();
-    } else
+    } else {
       emitError(loc) << "NVPTX compiler invocation failed with error code: "
                      << status;
+    }
     return std::nullopt;
   }
 

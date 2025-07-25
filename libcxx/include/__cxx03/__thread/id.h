@@ -54,11 +54,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void __reset() { __id_ = 0; }
 
   friend _LIBCPP_HIDE_FROM_ABI bool operator==(__thread_id __x, __thread_id __y) _NOEXCEPT;
-#  if _LIBCPP_STD_VER <= 17
   friend _LIBCPP_HIDE_FROM_ABI bool operator<(__thread_id __x, __thread_id __y) _NOEXCEPT;
-#  else  // _LIBCPP_STD_VER <= 17
-  friend _LIBCPP_HIDE_FROM_ABI strong_ordering operator<=>(__thread_id __x, __thread_id __y) noexcept;
-#  endif // _LIBCPP_STD_VER <= 17
 
   template <class _CharT, class _Traits>
   friend _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
@@ -83,8 +79,6 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator==(__thread_id __x, __thread_id __y) _
   return __libcpp_thread_id_equal(__x.__id_, __y.__id_);
 }
 
-#  if _LIBCPP_STD_VER <= 17
-
 inline _LIBCPP_HIDE_FROM_ABI bool operator!=(__thread_id __x, __thread_id __y) _NOEXCEPT { return !(__x == __y); }
 
 inline _LIBCPP_HIDE_FROM_ABI bool operator<(__thread_id __x, __thread_id __y) _NOEXCEPT {
@@ -94,18 +88,6 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator<(__thread_id __x, __thread_id __y) _N
 inline _LIBCPP_HIDE_FROM_ABI bool operator<=(__thread_id __x, __thread_id __y) _NOEXCEPT { return !(__y < __x); }
 inline _LIBCPP_HIDE_FROM_ABI bool operator>(__thread_id __x, __thread_id __y) _NOEXCEPT { return __y < __x; }
 inline _LIBCPP_HIDE_FROM_ABI bool operator>=(__thread_id __x, __thread_id __y) _NOEXCEPT { return !(__x < __y); }
-
-#  else // _LIBCPP_STD_VER <= 17
-
-inline _LIBCPP_HIDE_FROM_ABI strong_ordering operator<=>(__thread_id __x, __thread_id __y) noexcept {
-  if (__x == __y)
-    return strong_ordering::equal;
-  if (__thread_id::__lt_impl(__x, __y))
-    return strong_ordering::less;
-  return strong_ordering::greater;
-}
-
-#  endif // _LIBCPP_STD_VER <= 17
 
 namespace this_thread {
 
