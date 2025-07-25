@@ -18,8 +18,6 @@
 #define LLVM_LIB_TARGET_AMDGPU_GCNREGPRESSURE_H
 
 #include "GCNSubtarget.h"
-#include "SIMachineFunctionInfo.h"
-#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include <algorithm>
@@ -85,12 +83,12 @@ struct GCNRegPressure {
   }
   unsigned getSGPRTuplesWeight() const { return Value[TOTAL_KINDS + SGPR]; }
 
-  /// Determines the occupancy achievable with the current RP, when \p
-  /// BalanceVGPRUsage is true on subtargets with non-unified RFs, the
-  /// occupancy w.r.t. the number of VGPRs is computed as if we will later be
-  /// able to evenly balance out VGPR usage among ArchVGPR and AGPR banks.
-  unsigned getOccupancy(const GCNSubtarget &ST, unsigned DynamicVGPRBlockSize,
-                        bool BalanceVGPRUsage = false) const;
+  unsigned getOccupancy(const GCNSubtarget &ST,
+                        unsigned DynamicVGPRBlockSize) const {
+    return std::min(ST.getOccupancyWithNumSGPRs(getSGPRNum()),
+                    ST.getOccupancyWithNumVGPRs(getVGPRNum(ST.hasGFX90AInsts()),
+                                                DynamicVGPRBlockSize));
+  }
 
   void inc(unsigned Reg,
            LaneBitmask PrevMask,
@@ -188,24 +186,22 @@ public:
   /// Sets up the target such that the register pressure starting at \p RP does
   /// not show register spilling on function \p MF (w.r.t. the function's
   /// mininum target occupancy).
-  GCNRPTarget(const MachineFunction &MF, const GCNRegPressure &RP,
-              bool CombineVGPRSavings = false);
+  GCNRPTarget(const MachineFunction &MF, const GCNRegPressure &RP);
 
   /// Sets up the target such that the register pressure starting at \p RP does
   /// not use more than \p NumSGPRs SGPRs and \p NumVGPRs VGPRs on function \p
   /// MF.
   GCNRPTarget(unsigned NumSGPRs, unsigned NumVGPRs, const MachineFunction &MF,
-              const GCNRegPressure &RP, bool CombineVGPRSavings = false);
+              const GCNRegPressure &RP);
 
   /// Sets up the target such that the register pressure starting at \p RP does
   /// not prevent achieving an occupancy of at least \p Occupancy on function
   /// \p MF.
   GCNRPTarget(unsigned Occupancy, const MachineFunction &MF,
-              const GCNRegPressure &RP, bool CombineVGPRSavings = false);
+              const GCNRegPressure &RP);
 
   /// Changes the target (same semantics as constructor).
-  void setTarget(unsigned NumSGPRs, unsigned NumVGPRs,
-                 bool CombineVGPRSavings = false);
+  void setTarget(unsigned NumSGPRs, unsigned NumVGPRs);
 
   const GCNRegPressure &getCurrentRP() const { return RP; }
 
@@ -216,21 +212,12 @@ public:
   bool isSaveBeneficial(Register Reg) const;
 
   /// Saves virtual register \p Reg with lanemask \p Mask.
-  void saveReg(Register Reg, LaneBitmask Mask) {
-    RP.inc(Reg, Mask, LaneBitmask::getNone(), MF.getRegInfo());
+  void saveReg(Register Reg, LaneBitmask Mask, const MachineRegisterInfo &MRI) {
+    RP.inc(Reg, Mask, LaneBitmask::getNone(), MRI);
   }
 
   /// Whether the current RP is at or below the defined pressure target.
   bool satisfied() const;
-
-  /// Computes achievable occupancy with the currently tracked register
-  /// pressure.
-  unsigned getOccupancy() const {
-    return RP.getOccupancy(
-        MF.getSubtarget<GCNSubtarget>(),
-        MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize(),
-        /*BalanceVGPRUsage=*/CombineVGPRSavings);
-  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   friend raw_ostream &operator<<(raw_ostream &OS, const GCNRPTarget &Target) {
@@ -242,9 +229,6 @@ public:
     if (Target.MaxUnifiedVGPRs) {
       OS << ", " << Target.RP.getVGPRNum(true) << '/' << Target.MaxUnifiedVGPRs
          << " VGPRs (unified)";
-    } else if (Target.CombineVGPRSavings) {
-      OS << ", " << Target.RP.getArchVGPRNum() + Target.RP.getAGPRNum() << '/'
-         << 2 * Target.MaxVGPRs << " VGPRs (combined target)";
     }
     return OS;
   }
@@ -252,6 +236,7 @@ public:
 
 private:
   const MachineFunction &MF;
+  const bool UnifiedRF;
 
   /// Current register pressure.
   GCNRegPressure RP;
@@ -263,26 +248,15 @@ private:
   /// Target number of overall VGPRs for subtargets with unified RFs. Always 0
   /// for subtargets with non-unified RFs.
   unsigned MaxUnifiedVGPRs;
-  /// Whether we consider that the register allocator will be able to swap
-  /// between ArchVGPRs and AGPRs by copying them to a super register class.
-  /// Concretely, this allows free registers in one VGPR bank to help toward
-  /// savings in the other VGPR bank.
-  bool CombineVGPRSavings;
 
-  inline bool satisifiesVGPRBanksTarget() const {
-    assert(CombineVGPRSavings && "only makes sense with combined savings");
-    return RP.getArchVGPRNum() + RP.getAGPRNum() <= 2 * MaxVGPRs;
-  }
+  GCNRPTarget(const GCNRegPressure &RP, const MachineFunction & MF)
+      : MF(MF), UnifiedRF(MF.getSubtarget<GCNSubtarget>().hasGFX90AInsts()), RP(RP) {}
 
-  /// Always satisified when the subtarget doesn't have a unified RF.
-  inline bool satisfiesUnifiedTarget() const {
-    return !MaxUnifiedVGPRs || RP.getVGPRNum(true) <= MaxUnifiedVGPRs;
-  }
-
-  inline bool isVGPRBankSaveBeneficial(unsigned NumVGPRs) const {
-    return NumVGPRs > MaxVGPRs || !satisfiesUnifiedTarget() ||
-           (CombineVGPRSavings && !satisifiesVGPRBanksTarget());
-  }
+  /// Determines whether saving a VGPR from a VGPR RC (ArchVGPR or AGPR) where
+  /// \p NumRegsInRC VGPRs are used is beneficial. \p NumRegsInOtherRC is the
+  /// number of VGPRs in the other VGPR RC.
+  bool isVGPRSaveBeneficial(unsigned NumRegsInRC,
+                            unsigned NumRegsInOtherRC) const;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
