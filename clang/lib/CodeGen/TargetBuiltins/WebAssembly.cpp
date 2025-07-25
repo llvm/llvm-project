@@ -248,7 +248,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
 
     uint NParams = LLVMFuncTy->getNumParams();
     std::vector<Value *> Args;
-    Args.reserve(NParams + 2);
+    Args.reserve(NParams + 3);
     // The only real argument is the FuncRef
     Args.push_back(FuncRef);
 
