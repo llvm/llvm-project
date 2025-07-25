@@ -379,9 +379,9 @@ private:
   genParallelOp(mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
                 looputils::InductionVariableInfos &ivInfos,
                 mlir::IRMapping &mapper) const {
-    auto parallelOp = rewriter.create<mlir::omp::ParallelOp>(loc);
+    auto parallelOp = mlir::omp::ParallelOp::create(rewriter, loc);
     rewriter.createBlock(&parallelOp.getRegion());
-    rewriter.setInsertionPoint(rewriter.create<mlir::omp::TerminatorOp>(loc));
+    rewriter.setInsertionPoint(mlir::omp::TerminatorOp::create(rewriter, loc));
 
     genLoopNestIndVarAllocs(rewriter, ivInfos, mapper);
     return parallelOp;
@@ -460,8 +460,8 @@ private:
         auto firYield =
             mlir::cast<fir::YieldOp>(ompRegion.back().getTerminator());
         rewriter.setInsertionPoint(firYield);
-        rewriter.create<mlir::omp::YieldOp>(firYield.getLoc(),
-                                            firYield.getOperands());
+        mlir::omp::YieldOp::create(rewriter, firYield.getLoc(),
+                                   firYield.getOperands());
         rewriter.eraseOp(firYield);
       }
     };
@@ -483,8 +483,8 @@ private:
         mlir::OpBuilder::InsertionGuard guard(rewriter);
         rewriter.setInsertionPointAfter(localizer);
 
-        auto privatizer = rewriter.create<mlir::omp::PrivateClauseOp>(
-            localizer.getLoc(), sym.getLeafReference().str() + ".omp",
+        auto privatizer = mlir::omp::PrivateClauseOp::create(
+            rewriter, localizer.getLoc(), sym.getLeafReference().str() + ".omp",
             localizer.getTypeAttr().getValue(),
             mlir::omp::DataSharingClauseType::Private);
 
@@ -510,8 +510,9 @@ private:
         mlir::OpBuilder::InsertionGuard guard(rewriter);
         rewriter.setInsertionPointAfter(firReducer);
 
-        auto ompReducer = rewriter.create<mlir::omp::DeclareReductionOp>(
-            firReducer.getLoc(), sym.getLeafReference().str() + ".omp",
+        auto ompReducer = mlir::omp::DeclareReductionOp::create(
+            rewriter, firReducer.getLoc(),
+            sym.getLeafReference().str() + ".omp",
             firReducer.getTypeAttr().getValue());
 
         cloneFIRRegionToOMP(firReducer.getAllocRegion(),
@@ -533,7 +534,7 @@ private:
     }
 
     auto wsloopOp =
-        rewriter.create<mlir::omp::WsloopOp>(loop.getLoc(), wsloopClauseOps);
+        mlir::omp::WsloopOp::create(rewriter, loop.getLoc(), wsloopClauseOps);
     wsloopOp.setComposite(isComposite);
 
     Fortran::common::openmp::EntryBlockArgs wsloopArgs;
@@ -543,7 +544,7 @@ private:
                                            wsloopOp.getRegion());
 
     auto loopNestOp =
-        rewriter.create<mlir::omp::LoopNestOp>(loop.getLoc(), clauseOps);
+        mlir::omp::LoopNestOp::create(rewriter, loop.getLoc(), clauseOps);
 
     // Clone the loop's body inside the loop nest construct using the
     // mapped values.
@@ -551,7 +552,7 @@ private:
                                loopNestOp.getRegion().begin(), mapper);
 
     rewriter.setInsertionPointToEnd(&loopNestOp.getRegion().back());
-    rewriter.create<mlir::omp::YieldOp>(loop->getLoc());
+    mlir::omp::YieldOp::create(rewriter, loop->getLoc());
 
     // `local` region arguments are transferred/cloned from the `do concurrent`
     // loop to the loopnest op when the region is cloned above. Instead, these
