@@ -979,10 +979,12 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) const {
 
-  // The interleaved memory access pass will lower interleaved memory ops (i.e
-  // a load and store followed by a specific shuffle) to vlseg/vsseg
-  // intrinsics.
-  if (!UseMaskForCond && !UseMaskForGaps &&
+  // The interleaved memory access pass will lower (de)interleave ops combined
+  // with an adjacent appropriate memory to vlseg/vsseg intrinsics. vlseg/vsseg
+  // only support masking per-iteration (i.e. condition), not per-segment (i.e.
+  // gap).
+  // TODO: Support masked interleaved access for fixed length vector.
+  if ((isa<ScalableVectorType>(VecTy) || !UseMaskForCond) && !UseMaskForGaps &&
       Factor <= TLI->getMaxSupportedInterleaveFactor()) {
     auto *VTy = cast<VectorType>(VecTy);
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VTy);
@@ -1488,6 +1490,34 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return getShuffleCost(TTI::SK_Splice, cast<VectorType>(ICA.getReturnType()),
                           cast<VectorType>(ICA.getArgTypes()[0]), {}, CostKind,
                           0, cast<VectorType>(ICA.getReturnType()));
+  }
+  case Intrinsic::fptoui_sat:
+  case Intrinsic::fptosi_sat: {
+    InstructionCost Cost = 0;
+    bool IsSigned = ICA.getID() == Intrinsic::fptosi_sat;
+    Type *SrcTy = ICA.getArgTypes()[0];
+
+    auto SrcLT = getTypeLegalizationCost(SrcTy);
+    auto DstLT = getTypeLegalizationCost(RetTy);
+    if (!SrcTy->isVectorTy())
+      break;
+
+    if (!SrcLT.first.isValid() || !DstLT.first.isValid())
+      return InstructionCost::getInvalid();
+
+    Cost +=
+        getCastInstrCost(IsSigned ? Instruction::FPToSI : Instruction::FPToUI,
+                         RetTy, SrcTy, TTI::CastContextHint::None, CostKind);
+
+    // Handle NaN.
+    // vmfne v0, v8, v8         # If v8[i] is NaN set v0[i] to 1.
+    // vmerge.vim v8, v8, 0, v0 # Convert NaN to 0.
+    Type *CondTy = RetTy->getWithNewBitWidth(1);
+    Cost += getCmpSelInstrCost(BinaryOperator::FCmp, SrcTy, CondTy,
+                               CmpInst::FCMP_UNO, CostKind);
+    Cost += getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                               CmpInst::FCMP_UNO, CostKind);
+    return Cost;
   }
   }
 

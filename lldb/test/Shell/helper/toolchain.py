@@ -156,6 +156,16 @@ def use_lldb_substitutions(config):
             extra_args=["platform"],
             unresolved="ignore",
         ),
+        ToolSubst(
+            "%lldb-rpc-gen",
+            command=FindTool("lldb-rpc-gen"),
+            # We need the LLDB build directory root to pass into the tool, not the test build root.
+            extra_args=[
+                "-p " + config.lldb_build_directory + "/..",
+                '--extra-arg="-resource-dir=' + config.clang_resource_dir + '"',
+            ],
+            unresolved="ignore",
+        ),
         "lldb-test",
         "lldb-dap",
         ToolSubst(
@@ -240,11 +250,6 @@ def use_support_substitutions(config):
             "-L{}".format(config.libcxx_libs_dir),
             "-lc++",
         ]
-
-    # Facebook T92898286
-    if config.llvm_test_bolt:
-        host_flags += ["--post-link-optimize"]
-    # End Facebook T92898286
 
     host_flags = " ".join(host_flags)
     config.substitutions.append(("%clang_host", "%clang " + host_flags))

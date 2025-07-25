@@ -183,8 +183,8 @@ void CIRGenFunction::emitAutoVarCleanups(
   const VarDecl &d = *emission.Variable;
 
   // Check the type for a cleanup.
-  if (d.needsDestruction(getContext()))
-    cgm.errorNYI(d.getSourceRange(), "emitAutoVarCleanups: type cleanup");
+  if (QualType::DestructionKind dtorKind = d.needsDestruction(getContext()))
+    emitAutoVarTypeCleanup(emission, dtorKind);
 
   assert(!cir::MissingFeatures::opAllocaPreciseLifetime());
 
@@ -647,4 +647,97 @@ void CIRGenFunction::emitNullabilityCheck(LValue lhs, mlir::Value rhs,
     return;
 
   assert(!cir::MissingFeatures::sanitizers());
+}
+
+/// Immediately perform the destruction of the given object.
+///
+/// \param addr - the address of the object; a type*
+/// \param type - the type of the object; if an array type, all
+///   objects are destroyed in reverse order
+/// \param destroyer - the function to call to destroy individual
+///   elements
+void CIRGenFunction::emitDestroy(Address addr, QualType type,
+                                 Destroyer *destroyer) {
+  if (getContext().getAsArrayType(type))
+    cgm.errorNYI("emitDestroy: array type");
+
+  return destroyer(*this, addr, type);
+}
+
+CIRGenFunction::Destroyer *
+CIRGenFunction::getDestroyer(QualType::DestructionKind kind) {
+  switch (kind) {
+  case QualType::DK_none:
+    llvm_unreachable("no destroyer for trivial dtor");
+  case QualType::DK_cxx_destructor:
+    return destroyCXXObject;
+  case QualType::DK_objc_strong_lifetime:
+  case QualType::DK_objc_weak_lifetime:
+  case QualType::DK_nontrivial_c_struct:
+    cgm.errorNYI("getDestroyer: other destruction kind");
+    return nullptr;
+  }
+  llvm_unreachable("Unknown DestructionKind");
+}
+
+namespace {
+struct DestroyObject final : EHScopeStack::Cleanup {
+  DestroyObject(Address addr, QualType type,
+                CIRGenFunction::Destroyer *destroyer)
+      : addr(addr), type(type), destroyer(destroyer) {}
+
+  Address addr;
+  QualType type;
+  CIRGenFunction::Destroyer *destroyer;
+
+  void emit(CIRGenFunction &cgf) override {
+    cgf.emitDestroy(addr, type, destroyer);
+  }
+};
+} // namespace
+
+/// Enter a destroy cleanup for the given local variable.
+void CIRGenFunction::emitAutoVarTypeCleanup(
+    const CIRGenFunction::AutoVarEmission &emission,
+    QualType::DestructionKind dtorKind) {
+  assert(dtorKind != QualType::DK_none);
+
+  // Note that for __block variables, we want to destroy the
+  // original stack object, not the possibly forwarded object.
+  Address addr = emission.getObjectAddress(*this);
+
+  const VarDecl *var = emission.Variable;
+  QualType type = var->getType();
+
+  CleanupKind cleanupKind = NormalAndEHCleanup;
+  CIRGenFunction::Destroyer *destroyer = nullptr;
+
+  switch (dtorKind) {
+  case QualType::DK_none:
+    llvm_unreachable("no cleanup for trivially-destructible variable");
+
+  case QualType::DK_cxx_destructor:
+    // If there's an NRVO flag on the emission, we need a different
+    // cleanup.
+    if (emission.NRVOFlag) {
+      cgm.errorNYI(var->getSourceRange(), "emitAutoVarTypeCleanup: NRVO");
+      return;
+    }
+    // Otherwise, this is handled below.
+    break;
+
+  case QualType::DK_objc_strong_lifetime:
+  case QualType::DK_objc_weak_lifetime:
+  case QualType::DK_nontrivial_c_struct:
+    cgm.errorNYI(var->getSourceRange(),
+                 "emitAutoVarTypeCleanup: other dtor kind");
+    return;
+  }
+
+  // If we haven't chosen a more specific destroyer, use the default.
+  if (!destroyer)
+    destroyer = getDestroyer(dtorKind);
+
+  assert(!cir::MissingFeatures::ehCleanupFlags());
+  ehStack.pushCleanup<DestroyObject>(cleanupKind, addr, type, destroyer);
 }

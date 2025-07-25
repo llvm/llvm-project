@@ -46,6 +46,11 @@ public:
   void emitCXXDestructors(const clang::CXXDestructorDecl *d) override;
   void emitCXXStructor(clang::GlobalDecl gd) override;
 
+  void emitDestructorCall(CIRGenFunction &cgf, const CXXDestructorDecl *dd,
+                          CXXDtorType type, bool forVirtualBase,
+                          bool delegating, Address thisAddr,
+                          QualType thisTy) override;
+
   bool useThunkForDtorVariant(const CXXDestructorDecl *dtor,
                               CXXDtorType dt) const override {
     // Itanium does not emit any destructor variant as an inline thunk.
@@ -108,8 +113,6 @@ static StructorCIRGen getCIRGenToUse(CIRGenModule &cgm,
 
   GlobalDecl aliasDecl;
   if (const auto *dd = dyn_cast<CXXDestructorDecl>(md)) {
-    // The assignment is correct here, but other support for this is NYI.
-    cgm.errorNYI(md->getSourceRange(), "getCIRGenToUse: dtor");
     aliasDecl = GlobalDecl(dd, Dtor_Complete);
   } else {
     const auto *cd = cast<CXXConstructorDecl>(md);
@@ -238,6 +241,25 @@ bool CIRGenItaniumCXXABI::needsVTTParameter(GlobalDecl gd) {
     return true;
 
   return false;
+}
+
+void CIRGenItaniumCXXABI::emitDestructorCall(
+    CIRGenFunction &cgf, const CXXDestructorDecl *dd, CXXDtorType type,
+    bool forVirtualBase, bool delegating, Address thisAddr, QualType thisTy) {
+  GlobalDecl gd(dd, type);
+  if (needsVTTParameter(gd)) {
+    cgm.errorNYI(dd->getSourceRange(), "emitDestructorCall: VTT");
+  }
+
+  mlir::Value vtt = nullptr;
+  ASTContext &astContext = cgm.getASTContext();
+  QualType vttTy = astContext.getPointerType(astContext.VoidPtrTy);
+  assert(!cir::MissingFeatures::appleKext());
+  CIRGenCallee callee =
+      CIRGenCallee::forDirect(cgm.getAddrOfCXXStructor(gd), gd);
+
+  cgf.emitCXXDestructorCall(gd, callee, thisAddr.getPointer(), thisTy, vtt,
+                            vttTy, nullptr);
 }
 
 CIRGenCXXABI *clang::CIRGen::CreateCIRGenItaniumCXXABI(CIRGenModule &cgm) {
