@@ -434,7 +434,7 @@ std::optional<SplitTargetResult> splitTargetData(omp::TargetOp targetOp,
   rewriter.inlineRegionBefore(targetOp.getRegion(), newTargetOp.getRegion(),
                               newTargetOp.getRegion().begin());
 
-  rewriter.replaceOp(targetOp, newTargetOp);
+  rewriter.replaceOp(targetOp, targetDataOp);
   return SplitTargetResult{cast<omp::TargetOp>(newTargetOp), targetDataOp};
 }
 
@@ -807,11 +807,30 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter) {
       rewriter.eraseOp(tmpCall);
     } else {
       Operation *clonedOp = rewriter.clone(*op, mapping);
-      if (isa<fir::AllocMemOp>(clonedOp) || isa<fir::FreeMemOp>(clonedOp))
-        opsToReplace.push_back(clonedOp);
       for (unsigned i = 0; i < op->getNumResults(); ++i) {
         mapping.map(op->getResult(i), clonedOp->getResult(i));
       }
+      // fir.declare changes its type when hoisting it out of omp.target to
+      // omp.target_data Introduce a load, if original declareOp input is not of
+      // reference type, but cloned delcareOp input is reference type.
+      if (fir::DeclareOp clonedDeclareOp = dyn_cast<fir::DeclareOp>(clonedOp)) {
+        auto originalDeclareOp = cast<fir::DeclareOp>(op);
+        Type originalInType = originalDeclareOp.getMemref().getType();
+        Type clonedInType = clonedDeclareOp.getMemref().getType();
+
+        fir::ReferenceType originalRefType =
+            dyn_cast<fir::ReferenceType>(originalInType);
+        fir::ReferenceType clonedRefType =
+            dyn_cast<fir::ReferenceType>(clonedInType);
+        if (!originalRefType && clonedRefType) {
+          Type clonedEleTy = clonedRefType.getElementType();
+          if (clonedEleTy == originalDeclareOp.getType()) {
+            opsToReplace.push_back(clonedOp);
+          }
+        }
+      }
+      if (isa<fir::AllocMemOp>(clonedOp) || isa<fir::FreeMemOp>(clonedOp))
+        opsToReplace.push_back(clonedOp);
     }
   }
   for (Operation *op : opsToReplace) {
@@ -833,6 +852,15 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter) {
       rewriter.create<omp::TargetFreeMemOp>(freeOp.getLoc(), device,
                                             firConvertOp.getResult());
       rewriter.eraseOp(freeOp);
+    } else if (fir::DeclareOp clonedDeclareOp = dyn_cast<fir::DeclareOp>(op)) {
+      Type clonedInType = clonedDeclareOp.getMemref().getType();
+      fir::ReferenceType clonedRefType =
+          dyn_cast<fir::ReferenceType>(clonedInType);
+      Type clonedEleTy = clonedRefType.getElementType();
+      rewriter.setInsertionPoint(op);
+      Value loadedValue = rewriter.create<fir::LoadOp>(
+          clonedDeclareOp.getLoc(), clonedEleTy, clonedDeclareOp.getMemref());
+      clonedDeclareOp.getResult().replaceAllUsesWith(loadedValue);
     }
   }
   rewriter.eraseOp(targetOp);
