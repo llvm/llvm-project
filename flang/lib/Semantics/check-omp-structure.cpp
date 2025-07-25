@@ -1057,10 +1057,11 @@ void OmpStructureChecker::Enter(const parser::OpenMPSectionsConstruct &x) {
   PushContextAndClauseSets(beginDir.source, beginDir.v);
   AddEndDirectiveClauses(std::get<parser::OmpClauseList>(endSectionsDir.t));
 
-  const auto &sectionBlocks{std::get<parser::OmpSectionBlocks>(x.t)};
-  for (const parser::OpenMPConstruct &block : sectionBlocks.v) {
-    CheckNoBranching(std::get<parser::OpenMPSectionConstruct>(block.u).v,
-        beginDir.v, beginDir.source);
+  const auto &sectionBlocks{std::get<std::list<parser::OpenMPConstruct>>(x.t)};
+  for (const parser::OpenMPConstruct &construct : sectionBlocks) {
+    auto &section{std::get<parser::OpenMPSectionConstruct>(construct.u)};
+    CheckNoBranching(
+        std::get<parser::Block>(section.t), beginDir.v, beginDir.source);
   }
   HasInvalidWorksharingNesting(
       beginDir.source, llvm::omp::nestedWorkshareErrSet);
