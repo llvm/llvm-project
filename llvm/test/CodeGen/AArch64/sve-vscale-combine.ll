@@ -120,10 +120,8 @@ define i32 @combine_shl_vscale_i32() nounwind {
 define i64 @combine_shl_mul_vscale(i64 %a) nounwind {
 ; CHECK-LABEL: combine_shl_mul_vscale:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    mul x8, x0, x8
-; CHECK-NEXT:    lsl x0, x8, #3
+; CHECK-NEXT:    cnth x8
+; CHECK-NEXT:    mul x0, x0, x8
 ; CHECK-NEXT:    ret
   %vscale = tail call i64 @llvm.vscale.i64()
   %mul = mul i64 %a, %vscale
@@ -134,10 +132,8 @@ define i64 @combine_shl_mul_vscale(i64 %a) nounwind {
 define i64 @combine_shl_mul_vscale_commuted(i64 %a) nounwind {
 ; CHECK-LABEL: combine_shl_mul_vscale_commuted:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    mul x8, x8, x0
-; CHECK-NEXT:    lsl x0, x8, #3
+; CHECK-NEXT:    cnth x8
+; CHECK-NEXT:    mul x0, x0, x8
 ; CHECK-NEXT:    ret
   %vscale = tail call i64 @llvm.vscale.i64()
   %mul = mul i64 %vscale, %a
