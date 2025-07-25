@@ -6,48 +6,48 @@
 
 ; FIXME: We can reuse/delete llvm/test/CodeGen/X86/is_fpclass.ll when all patches are included.
 
-define i1 @is_fcNone_f32(float %x) nounwind {
-; X86-SDAGISEL-LABEL: is_fcNone_f32:
+define i1 @isnone_f(float %x) {
+; X86-SDAGISEL-LABEL: isnone_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    xorl %eax, %eax
 ; X86-SDAGISEL-NEXT:    retl
 ;
-; X64-LABEL: is_fcNone_f32:
+; X64-LABEL: isnone_f:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
 ;
-; X86-FASTISEL-LABEL: is_fcNone_f32:
+; X86-FASTISEL-LABEL: isnone_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstp %st(0)
 ; X86-FASTISEL-NEXT:    xorl %eax, %eax
 ; X86-FASTISEL-NEXT:    retl
 entry:
-    %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 0)
-    ret i1 %0
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 0)
+  ret i1 %0
 }
 
-define i1 @is_fcAllFlags_f32(float %x) nounwind {
-; X86-SDAGISEL-LABEL: is_fcAllFlags_f32:
+define i1 @isany_f(float %x) {
+; X86-SDAGISEL-LABEL: isany_f:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    movb $1, %al
 ; X86-SDAGISEL-NEXT:    retl
 ;
-; X64-LABEL: is_fcAllFlags_f32:
+; X64-LABEL: isany_f:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movb $1, %al
 ; X64-NEXT:    retq
 ;
-; X86-FASTISEL-LABEL: is_fcAllFlags_f32:
+; X86-FASTISEL-LABEL: isany_f:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstp %st(0)
 ; X86-FASTISEL-NEXT:    movb $1, %al
 ; X86-FASTISEL-NEXT:    retl
 entry:
-    %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1023)
-    ret i1 %0
+  %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 1023)
+  ret i1 %0
 }
 
 define i1 @issignaling_f(float %x) {
@@ -423,18 +423,18 @@ entry:
   ret i1 %0
 }
 
-define i1 @is_fcNone_f64(double %x) nounwind {
-; X86-SDAGISEL-LABEL: is_fcNone_f64:
+define i1 @isnone_d(double %x) nounwind {
+; X86-SDAGISEL-LABEL: isnone_d:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    xorl %eax, %eax
 ; X86-SDAGISEL-NEXT:    retl
 ;
-; X64-LABEL: is_fcNone_f64:
+; X64-LABEL: isnone_d:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
 ;
-; X86-FASTISEL-LABEL: is_fcNone_f64:
+; X86-FASTISEL-LABEL: isnone_d:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstp %st(0)
@@ -445,18 +445,18 @@ entry:
     ret i1 %0
 }
 
-define i1 @is_fcAllFlags_f64(double %x) nounwind {
-; X86-SDAGISEL-LABEL: is_fcAllFlags_f64:
+define i1 @isany_d(double %x) nounwind {
+; X86-SDAGISEL-LABEL: isany_d:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    movb $1, %al
 ; X86-SDAGISEL-NEXT:    retl
 ;
-; X64-LABEL: is_fcAllFlags_f64:
+; X64-LABEL: isany_d:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movb $1, %al
 ; X64-NEXT:    retq
 ;
-; X86-FASTISEL-LABEL: is_fcAllFlags_f64:
+; X86-FASTISEL-LABEL: isany_d:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstp %st(0)
@@ -467,25 +467,25 @@ entry:
     ret i1 %0
 }
 
-define i1 @is_fcNone_f80(x86_fp80 %x) nounwind {
-; X86-SDAGISEL-LABEL: is_fcNone_f80:
+define i1 @isnone_f80(x86_fp80 %x) nounwind {
+; X86-SDAGISEL-LABEL: isnone_f80:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    xorl %eax, %eax
 ; X86-SDAGISEL-NEXT:    retl
 ;
-; X64-SDAGISEL-LABEL: is_fcNone_f80:
+; X64-SDAGISEL-LABEL: isnone_f80:
 ; X64-SDAGISEL:       # %bb.0: # %entry
 ; X64-SDAGISEL-NEXT:    xorl %eax, %eax
 ; X64-SDAGISEL-NEXT:    retq
 ;
-; X86-FASTISEL-LABEL: is_fcNone_f80:
+; X86-FASTISEL-LABEL: isnone_f80:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstp %st(0)
 ; X86-FASTISEL-NEXT:    xorl %eax, %eax
 ; X86-FASTISEL-NEXT:    retl
 ;
-; X64-FASTISEL-LABEL: is_fcNone_f80:
+; X64-FASTISEL-LABEL: isnone_f80:
 ; X64-FASTISEL:       # %bb.0: # %entry
 ; X64-FASTISEL-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-FASTISEL-NEXT:    fstp %st(0)
@@ -496,25 +496,25 @@ entry:
 ret i1 %0
 }
 
-define i1 @is_fcAllFlags_f80(x86_fp80 %x) nounwind {
-; X86-SDAGISEL-LABEL: is_fcAllFlags_f80:
+define i1 @isany_f80(x86_fp80 %x) nounwind {
+; X86-SDAGISEL-LABEL: isany_f80:
 ; X86-SDAGISEL:       # %bb.0: # %entry
 ; X86-SDAGISEL-NEXT:    movb $1, %al
 ; X86-SDAGISEL-NEXT:    retl
 ;
-; X64-SDAGISEL-LABEL: is_fcAllFlags_f80:
+; X64-SDAGISEL-LABEL: isany_f80:
 ; X64-SDAGISEL:       # %bb.0: # %entry
 ; X64-SDAGISEL-NEXT:    movb $1, %al
 ; X64-SDAGISEL-NEXT:    retq
 ;
-; X86-FASTISEL-LABEL: is_fcAllFlags_f80:
+; X86-FASTISEL-LABEL: isany_f80:
 ; X86-FASTISEL:       # %bb.0: # %entry
 ; X86-FASTISEL-NEXT:    fldt {{[0-9]+}}(%esp)
 ; X86-FASTISEL-NEXT:    fstp %st(0)
 ; X86-FASTISEL-NEXT:    movb $1, %al
 ; X86-FASTISEL-NEXT:    retl
 ;
-; X64-FASTISEL-LABEL: is_fcAllFlags_f80:
+; X64-FASTISEL-LABEL: isany_f80:
 ; X64-FASTISEL:       # %bb.0: # %entry
 ; X64-FASTISEL-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-FASTISEL-NEXT:    fstp %st(0)
