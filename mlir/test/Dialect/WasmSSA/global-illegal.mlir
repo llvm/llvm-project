@@ -21,3 +21,14 @@ module {
     wasmssa.return %0 : i32
   }
 }
+
+// -----
+
+module {
+  // expected-error@+1 {{expected a constant initializer for this operator}}
+  wasmssa.global @global_1 i32 : {
+  // expected-error@+1 {{symbol @glarble is undefined}}
+    %0 = wasmssa.global_get @glarble : i32
+    wasmssa.return %0 : i32
+  }
+}

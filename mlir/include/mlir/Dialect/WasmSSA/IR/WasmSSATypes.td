@@ -51,7 +51,7 @@ def WasmSSA_FuncType : TypeAlias<FunctionType>;
 
 def WasmSSA_LimitType : WasmSSA_Type<"Limit", "limit"> {
   let summary = "Wasm limit type";
-  let parameters = (ins  "uint32_t":$min,
+  let parameters = (ins "uint32_t":$min,
                         "std::optional<uint32_t>":$max);
   let hasCustomAssemblyFormat = 1;
 }

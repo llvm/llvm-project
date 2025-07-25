@@ -97,39 +97,6 @@ Block *BlockReturnOp::getTarget() {
 // ExtendLowBitsSOp
 //===----------------------------------------------------------------------===//
 
-ParseResult ExtendLowBitsSOp::parse(::mlir::OpAsmParser &parser,
-                                    ::mlir::OperationState &result) {
-  OpAsmParser::UnresolvedOperand operand;
-  uint64_t nBits;
-  ParseResult parseRes = parser.parseInteger(nBits);
-  parseRes = parser.parseKeyword("low");
-  parseRes = parser.parseKeyword("bits");
-  parseRes = parser.parseKeyword("from");
-  parseRes = parser.parseOperand(operand);
-  parseRes = parser.parseColon();
-  Type inType;
-  parseRes = parser.parseType(inType);
-  if (!inType.isInteger())
-    return failure();
-  llvm::SmallVector<Value, 1> opVal;
-  parseRes = parser.resolveOperand(operand, inType, opVal);
-  if (parseRes.failed())
-    return failure();
-  result.addOperands(opVal);
-  result.addAttribute(
-      ExtendLowBitsSOp::getBitsToTakeAttrName(OperationName{
-          ExtendLowBitsSOp::getOperationName(), parser.getContext()}),
-      parser.getBuilder().getI64IntegerAttr(nBits));
-  result.addTypes(inType);
-  return success();
-}
-
-void ExtendLowBitsSOp::print(OpAsmPrinter &p) {
-  p << " " << getBitsToTake().getUInt() << " low bits from ";
-  p.printOperand(getInput());
-  p << ": " << getInput().getType();
-}
-
 LogicalResult ExtendLowBitsSOp::verify() {
   auto bitsToTake = getBitsToTake().getValue().getLimitedValue();
   if (bitsToTake != 32 && bitsToTake != 16 && bitsToTake != 8)
@@ -139,7 +106,7 @@ LogicalResult ExtendLowBitsSOp::verify() {
   if (bitsToTake >= getInput().getType().getIntOrFloatBitWidth())
     return emitError("trying to extend the ")
            << bitsToTake << " low bits from a " << getInput().getType()
-           << " value";
+           << " value is illegal";
   return success();
 }
 
@@ -292,14 +259,20 @@ void GlobalOp::print(OpAsmPrinter &printer) {
 //===----------------------------------------------------------------------===//
 
 // Custom interface overrides
-LogicalResult GlobalGetOp::isValidInConstantExpr() {
+LogicalResult GlobalGetOp::CheckValidInConstantExpr() {
   StringRef referencedSymbol = getGlobal();
   Operation *symTableOp =
       getOperation()->getParentWithTrait<OpTrait::SymbolTable>();
+  if (!symTableOp)
+    return emitError(
+        "cannot find the symbol table associated with this operation");
+  // NOTE: Having to lookup the symbol inside the symbol table anytime the verifier
+  // is called can be costly. This may be improved with caching or another architecture
+  // for the constant checking mechanism.
   Operation *definitionOp =
       SymbolTable::lookupSymbolIn(symTableOp, referencedSymbol);
   if (!definitionOp)
-    return failure();
+    return emitError() << "symbol @" << referencedSymbol << " is undefined";
   auto definitionImport = llvm::dyn_cast<GlobalImportOp>(definitionOp);
   if (!definitionImport || definitionImport.getIsMutable()) {
     return emitError("global.get op is considered constant if it's referring "
@@ -389,18 +362,14 @@ LogicalResult LocalGetOp::inferReturnTypes(
   return inferTeeGetResType(operands, inferredReturnTypes);
 }
 
-LogicalResult LocalGetOp::verify() {
-  return success(getLocalVar().getType().getElementType() ==
-                 getResult().getType());
-}
-
 //===----------------------------------------------------------------------===//
 // LocalSetOp
 //===----------------------------------------------------------------------===//
 
 LogicalResult LocalSetOp::verify() {
-  return success(getLocalVar().getType().getElementType() ==
-                 getValue().getType());
+  if (getLocalVar().getType().getElementType() != getValue().getType())
+    return emitError("input type and result type of local.set do not match");
+  return llvm::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -415,9 +384,11 @@ LogicalResult LocalTeeOp::inferReturnTypes(
 }
 
 LogicalResult LocalTeeOp::verify() {
-  return success(getLocalVar().getType().getElementType() ==
-                     getValue().getType() &&
-                 getValue().getType() == getResult().getType());
+ if (getLocalVar().getType().getElementType() !=
+                     getValue().getType() ||
+                 getValue().getType() != getResult().getType())
+    return emitError("input type and output type of local.tee do not match");
+  return llvm::success();
 }
 
 //===----------------------------------------------------------------------===//

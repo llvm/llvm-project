@@ -37,7 +37,7 @@ LogicalResult verifyConstantExpressionInterface(Operation *op) {
           return WalkResult::advance();
         if (auto interfaceOp =
                 dyn_cast<ConstantExprCheckOpInterface>(currentOp)) {
-          if (interfaceOp.isValidInConstantExpr().succeeded())
+          if (interfaceOp.CheckValidInConstantExpr().succeeded())
             return WalkResult::advance();
         }
         op->emitError("expected a constant initializer for this operator, got ")

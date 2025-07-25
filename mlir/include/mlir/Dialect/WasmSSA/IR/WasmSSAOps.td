@@ -218,6 +218,7 @@ def WasmSSA_GlobalImportOp : WasmSSA_Op<"import_global", [
                    "bool": $isMutable)>
   ];
   let hasCustomAssemblyFormat = 1;
+  //let assemblyFormat = "$importName `from` $moduleName `as` $sym_name oilist (`mutable` $isMutable | `vis` $sym_visibility) `:` $type attr-dict";
 }
 
 def WasmSSA_GlobalGetOp : WasmSSA_Op<"global_get", [DeclareOpInterfaceMethods<ConstantExprCheckOpInterface>]> {
@@ -269,7 +270,6 @@ def WasmSSA_LocalGetOp : WasmSSA_Op<"local_get", [
   let arguments = (ins WasmSSA_LocalRef: $localVar);
   let results = (outs WasmSSA_ValType: $result);
   let assemblyFormat = "$localVar `:` type($localVar) attr-dict";
-  let hasVerifier = 1;
 }
 
 def WasmSSA_LocalSetOp : WasmSSA_Op<"local_set"> {
@@ -598,7 +598,7 @@ def WasmSSA_ExtendLowBitsSOp : WasmSSA_Op<"extend", [AllTypesMatch<["input", "re
   let arguments = (ins WasmSSA_IntegerType:$input, Builtin_IntegerAttr: $bitsToTake);
   let results = (outs WasmSSA_IntegerType: $result);
   let hasVerifier = 1;
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = "$bitsToTake `low` `bits` `from` $input `:` type($input) attr-dict";
 }
 
 def WasmSSA_PromoteOp : WasmSSA_ConversionOp<"promote",
