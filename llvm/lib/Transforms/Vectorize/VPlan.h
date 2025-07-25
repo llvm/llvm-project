@@ -1662,6 +1662,8 @@ struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
              VPSlotTracker &SlotTracker) const override;
 #endif
 
+  unsigned getOpcode() const { return Instruction::Select; }
+
   VPValue *getCond() const {
     return getOperand(0);
   }
