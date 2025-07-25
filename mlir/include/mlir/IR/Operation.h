@@ -1102,6 +1102,29 @@ inline raw_ostream &operator<<(raw_ostream &os, const Operation &op) {
   return os;
 }
 
+/// A wrapper class that allows for printing an operation with a set of flags,
+/// useful to act as a "stream modifier" to customize printing an operation
+/// with a stream using the operator<< overload, e.g.:
+///   llvm::dbgs() << OpWithFlags(op, OpPrintingFlags().skipRegions());
+class OpWithFlags {
+public:
+  OpWithFlags(Operation *op, OpPrintingFlags flags = {})
+      : op(op), theFlags(flags) {}
+  OpPrintingFlags &flags() { return theFlags; }
+  const OpPrintingFlags &flags() const { return theFlags; }
+
+private:
+  Operation *op;
+  OpPrintingFlags theFlags;
+  friend raw_ostream &operator<<(raw_ostream &os, const OpWithFlags &op);
+};
+
+inline raw_ostream &operator<<(raw_ostream &os,
+                               const OpWithFlags &opWithFlags) {
+  opWithFlags.op->print(os, opWithFlags.flags());
+  return os;
+}
+
 } // namespace mlir
 
 namespace llvm {
