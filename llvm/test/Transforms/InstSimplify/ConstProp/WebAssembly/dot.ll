@@ -41,11 +41,22 @@ define <4 x i32> @dot_doubly_negative() {
 ;   subsequent modulo of 2^32 of imul and iadd
 ;   should return the same result
 ; 2*(2^15 - 1)^2 % 2^32 == 2*(2^15 - 1)^2
-define <4 x i32> @dot_follow_modulo_spec() {
-; CHECK-LABEL: define <4 x i32> @dot_follow_modulo_spec() {
+define <4 x i32> @dot_follow_modulo_spec_1() {
+; CHECK-LABEL: define <4 x i32> @dot_follow_modulo_spec_1() {
 ; CHECK-NEXT:    ret <4 x i32> <i32 2147352578, i32 0, i32 0, i32 0>
 ;
   %res = tail call <4 x i32> @llvm.wasm.dot(<8 x i16> <i16 32767, i16 32767, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>, <8 x i16> <i16 32767, i16 32767, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>)
+  ret <4 x i32> %res
+}
+
+; This test checks for llvm's compliance on spec's wasm.dot's imul and iadd
+; 2*(- 2^15)^2 == 2^31, doesn't exceed 2^32 so we don't have to mod
+; wrapping around is -(2^31), still doesn't exceed 2^32
+define <4 x i32> @dot_follow_modulo_spec_2() {
+; CHECK-LABEL: define <4 x i32> @dot_follow_modulo_spec_2() {
+; CHECK-NEXT:    ret <4 x i32> <i32 -2147483648, i32 0, i32 0, i32 0>
+;
+  %res = tail call <4 x i32> @llvm.wasm.dot(<8 x i16> <i16 -32768, i16 -32768, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>, <8 x i16> <i16 -32768, i16 -32768, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>)
   ret <4 x i32> %res
 }
 
