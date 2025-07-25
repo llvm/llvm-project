@@ -651,38 +651,18 @@ amd_comgr_status_t getElfIsaNameFromElfHeader(const ELFObjectFile<ELFT> *Obj,
                                               std::string &ElfIsaName) {
   auto ElfHeader = Obj->getELFFile().getHeader();
 
-  switch (ElfHeader.e_ident[ELF::EI_CLASS]) {
-  case ELF::ELFCLASSNONE:
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-  case ELF::ELFCLASS32:
-    ElfIsaName += "r600";
-    break;
-  case ELF::ELFCLASS64:
+  if (ElfHeader.e_ident[ELF::EI_CLASS] == ELF::ELFCLASS64)
     ElfIsaName += "amdgcn";
-    break;
-  }
 
   if (ElfHeader.e_machine != ELF::EM_AMDGPU) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
   ElfIsaName += "-amd-";
 
-  switch (ElfHeader.e_ident[ELF::EI_OSABI]) {
-  case ELF::ELFOSABI_NONE:
-    ElfIsaName += "unknown";
-    break;
-  case ELF::ELFOSABI_AMDGPU_HSA:
+  if (ElfHeader.e_ident[ELF::EI_OSABI] == ELF::ELFOSABI_AMDGPU_HSA)
     ElfIsaName += "amdhsa";
-    break;
-  case ELF::ELFOSABI_AMDGPU_PAL:
-    ElfIsaName += "amdpal";
-    break;
-  case ELF::ELFOSABI_AMDGPU_MESA3D:
-    ElfIsaName += "mesa3d";
-    break;
-  default:
+  else
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-  }
 
   ElfIsaName += "--";
 
@@ -770,17 +750,10 @@ amd_comgr_status_t getElfIsaName(DataObject *DataP, std::string &IsaName) {
   }
   auto *Obj = ObjOrErr->get();
 
-  if (auto *ELF32LE = dyn_cast<ELF32LEObjectFile>(Obj)) {
-    return getElfIsaNameImpl(ELF32LE, IsaName);
-  }
-  if (auto *ELF64LE = dyn_cast<ELF64LEObjectFile>(Obj)) {
+  if (auto *ELF64LE = dyn_cast<ELF64LEObjectFile>(Obj))
     return getElfIsaNameImpl(ELF64LE, IsaName);
-  }
-  if (auto *ELF32BE = dyn_cast<ELF32BEObjectFile>(Obj)) {
-    return getElfIsaNameImpl(ELF32BE, IsaName);
-  }
-  auto *ELF64BE = dyn_cast<ELF64BEObjectFile>(Obj);
-  return getElfIsaNameImpl(ELF64BE, IsaName);
+  else
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 }
 
 amd_comgr_status_t getIsaIndex(StringRef IsaString, size_t &Index) {
