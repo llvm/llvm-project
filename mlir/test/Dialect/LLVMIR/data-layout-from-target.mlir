@@ -1,3 +1,4 @@
+// REQUIRES: target=x86{{.*}}
 // RUN: mlir-opt -llvm-data-layout-from-target -split-input-file %s | FileCheck %s
 
 // CHECK: module attributes

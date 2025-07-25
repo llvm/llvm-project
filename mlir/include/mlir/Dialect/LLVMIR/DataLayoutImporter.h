@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LLVMIR_DATALAYOUTIMPORTER_H_
-#define MLIR_DIALECT_LLVMIR_DATALAYOUTIMPORTER_H_
+#ifndef MLIR_DIALECT_LLVMIR_DATALAYOUTIMPORTER_H
+#define MLIR_DIALECT_LLVMIR_DATALAYOUTIMPORTER_H
 
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -37,8 +37,6 @@ namespace detail {
 /// Returns a supported MLIR floating point type of the given bit width or
 /// null if the bit width is not supported.
 FloatType getFloatType(MLIRContext *context, unsigned width);
-
-} // namespace detail
 
 /// Helper class that translates an LLVM data layout string to an MLIR data
 /// layout specification. Only integer, float, pointer, alloca memory space,
@@ -135,7 +133,8 @@ private:
   MLIRContext *context;
 };
 
+} // namespace detail
 } // namespace LLVM
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LLVMIR_DATALAYOUTIMPORTER_H_
+#endif // MLIR_DIALECT_LLVMIR_DATALAYOUTIMPORTER_H

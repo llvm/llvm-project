@@ -19,7 +19,6 @@
 using namespace mlir;
 
 namespace {
-// Implementation of the `LLVM::TargetAttrInterface` model.
 class LLVMTargetAttrImpl
     : public LLVM::TargetAttrInterface::FallbackModel<LLVMTargetAttrImpl> {
 public:

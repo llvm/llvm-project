@@ -10,7 +10,6 @@
 #define LLVMIR_DIALECT
 
 include "mlir/IR/DialectBase.td"
-include "mlir/IR/AttrTypeBase.td"
 
 def LLVM_Dialect : Dialect {
   let name = "llvm";
@@ -122,13 +121,6 @@ def LLVM_Dialect : Dialect {
     /// Register the attributes of this dialect.
     void registerAttributes();
   }];
-}
-
-class LLVM_Attr<string name, string attrMnemonic,
-                list<Trait> traits = [],
-                string baseCppClass = "::mlir::Attribute">
-    : AttrDef<LLVM_Dialect, name, traits, baseCppClass> {
-  let mnemonic = attrMnemonic;
 }
 
 #endif  // LLVMIR_DIALECT

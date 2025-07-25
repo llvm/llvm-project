@@ -46,10 +46,13 @@ def LLVMRequestCWrappersPass
 }
 
 def LLVMDataLayoutFromTarget : Pass<"llvm-data-layout-from-target", "::mlir::ModuleOp"> {
-  let summary = "TODO";
+  let summary = "Derive data layout attributes from LLVM target attributes";
   let dependentDialects = ["mlir::DLTIDialect"];
   let description = [{
-  TODO
+    Checks modules for LLVM-dialect's `TargetAttrInterface`-implementing
+    attributes and derives `DataLayoutSpecInterface`-implementing data layout
+    attributes from the specified target by querying the corresponding
+    LLVM-backend.
   }];
 }
 

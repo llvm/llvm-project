@@ -1,3 +1,4 @@
+// REQUIRES: target=x86{{.*}}
 // RUN: mlir-opt %s -llvm-data-layout-from-target --split-input-file --verify-diagnostics
 
 // expected-error @+1 {{failed to obtain llvm::DataLayout from #llvm.target}}

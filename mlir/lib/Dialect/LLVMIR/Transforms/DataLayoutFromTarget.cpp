@@ -18,7 +18,6 @@ namespace LLVM {
 } // namespace mlir
 
 using namespace mlir;
-using namespace mlir::LLVM;
 
 struct DataLayoutFromTargetPass
     : public LLVM::impl::LLVMDataLayoutFromTargetBase<
@@ -41,7 +40,7 @@ struct DataLayoutFromTargetPass
         passFailed = true;
         return;
       }
-      auto dataLayoutAttr = DataLayoutAttr::get(
+      auto dataLayoutAttr = LLVM::DataLayoutAttr::get(
           &getContext(), dataLayout->getStringRepresentation());
 
       StringRef dlSpecIdentifier = "dlti.dl_spec";

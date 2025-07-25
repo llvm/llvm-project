@@ -21,9 +21,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/Support/TargetSelect.h"
-
-#define DEBUG_TYPE "llvm-attrs"
+//#include "llvm/Support/TargetSelect.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;

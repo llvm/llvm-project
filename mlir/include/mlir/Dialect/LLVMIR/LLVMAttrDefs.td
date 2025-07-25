@@ -15,6 +15,14 @@ include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/CommonAttrConstraints.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 
+// All of the attributes will extend this class.
+class LLVM_Attr<string name, string attrMnemonic,
+                list<Trait> traits = [],
+                string baseCppClass = "::mlir::Attribute">
+    : AttrDef<LLVM_Dialect, name, traits, baseCppClass> {
+  let mnemonic = attrMnemonic;
+}
+
 //===----------------------------------------------------------------------===//
 // CConvAttr
 //===----------------------------------------------------------------------===//
@@ -1238,7 +1246,8 @@ def LLVM_VScaleRangeAttr : LLVM_Attr<"VScaleRange", "vscale_range"> {
 // TargetFeaturesAttr
 //===----------------------------------------------------------------------===//
 
-def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features"> {
+def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
+{
   let summary = "LLVM target features attribute";
 
   let description = [{
@@ -1352,7 +1361,7 @@ def LLVM_DataLayoutAttr
                         OptionalParameter<"DataLayoutSpecInterface", "{}">:$data_layout_spec);
   let builders = [
     AttrBuilder<(ins "llvm::StringRef":$data_layout_str), [{
-      auto importer = LLVM::DataLayoutImporter($_ctxt, data_layout_str);
+      auto importer = LLVM::detail::DataLayoutImporter($_ctxt, data_layout_str);
       auto dataLayoutSpec = importer.getDataLayoutSpec();
       return $_get($_ctxt, mlir::StringAttr::get($_ctxt, data_layout_str), dataLayoutSpec);
     }]>
