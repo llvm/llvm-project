@@ -47,7 +47,7 @@ struct Symbol {
   llvm::StringRef Scope;
   /// The location of the symbol's definition, if one was found.
   /// This just covers the symbol name (e.g. without class/function body).
-  SymbolLocation Definition;
+  SymbolDeclDefLocation Definition;
   /// The location of the preferred declaration of the symbol.
   /// This just covers the symbol name.
   /// This may be the same as Definition.
@@ -56,7 +56,7 @@ struct Symbol {
   ///   * For classes, the canonical declaration should be the definition.
   ///   * For non-inline functions, the canonical declaration typically appears
   ///     in the ".h" file corresponding to the definition.
-  SymbolLocation CanonicalDeclaration;
+  SymbolDeclDefLocation CanonicalDeclaration;
   /// The number of translation units that reference this symbol from their main
   /// file. This number is only meaningful if aggregated in an index.
   unsigned References = 0;
@@ -183,8 +183,8 @@ template <typename Callback> void visitStrings(Symbol &S, const Callback &CB) {
     assert(!S.data()[S.size()] && "Visited StringRef must be null-terminated");
     P = S.data();
   };
-  RawCharPointerCB(S.CanonicalDeclaration.FileURI);
-  RawCharPointerCB(S.Definition.FileURI);
+  RawCharPointerCB(S.CanonicalDeclaration.NameLocation.FileURI);
+  RawCharPointerCB(S.Definition.NameLocation.FileURI);
 
   for (auto &Include : S.IncludeHeaders)
     CB(Include.IncludeHeader);
