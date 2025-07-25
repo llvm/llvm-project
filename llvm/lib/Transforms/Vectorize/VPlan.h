@@ -559,6 +559,7 @@ public:
     case VPRecipeBase::VPInterleaveEVLSC:
     case VPRecipeBase::VPInterleaveSC:
     case VPRecipeBase::VPIRInstructionSC:
+    case VPRecipeBase::VPWidenFFLoadSC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
     case VPRecipeBase::VPWidenStoreEVLSC:
@@ -2836,6 +2837,13 @@ public:
             ArrayRef<VPValue *>({R.getChainOp(), R.getVecOp(), &EVL}), CondOp,
             R.isOrdered(), DL) {}
 
+  VPReductionEVLRecipe(RecurKind RdxKind, FastMathFlags FMFs, VPValue *ChainOp,
+                       VPValue *VecOp, VPValue &EVL, VPValue *CondOp,
+                       bool IsOrdered, DebugLoc DL = DebugLoc::getUnknown())
+      : VPReductionRecipe(VPDef::VPReductionEVLSC, RdxKind, FMFs, nullptr,
+                          ArrayRef<VPValue *>({ChainOp, VecOp, &EVL}), CondOp,
+                          IsOrdered, DL) {}
+
   ~VPReductionEVLRecipe() override = default;
 
   VPReductionEVLRecipe *clone() override {
@@ -3213,6 +3221,7 @@ public:
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPRecipeBase::VPWidenLoadSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenStoreSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenFFLoadSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenLoadEVLSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenStoreEVLSC;
   }
@@ -3291,6 +3300,42 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPWidenMemoryRecipe,
     // Widened, consecutive loads operations only demand the first lane of
     // their address.
     return Op == getAddr() && isConsecutive();
+  }
+};
+
+/// A recipe for widening loads using fault-only-first intrinsics.
+/// Produces two results: (1) the loaded data, and (2) the index of the first
+/// non-dereferenceable lane, or VF if all lanes are successfully read.
+struct VPWidenFFLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
+  VPWidenFFLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *VF, VPValue *Mask,
+                      const VPIRMetadata &Metadata, DebugLoc DL)
+      : VPWidenMemoryRecipe(VPDef::VPWidenFFLoadSC, Load, {Addr, VF},
+                            /*Consecutive*/ true, /*Reverse*/ false, Metadata,
+                            DL),
+        VPValue(this, &Load) {
+    new VPValue(nullptr, this); // Index of the first lane that faults.
+    setMask(Mask);
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenFFLoadSC);
+
+  /// Return the VF operand.
+  VPValue *getVF() const { return getOperand(1); }
+  void setVF(VPValue *V) { setOperand(1, V); }
+
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return Op == getVF() || Op == getAddr();
   }
 };
 

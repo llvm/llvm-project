@@ -74,6 +74,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPReductionPHISC:
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
+  case VPWidenFFLoadSC:
     return false;
   case VPBlendSC:
   case VPReductionEVLSC:
@@ -108,6 +109,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
     return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
+  case VPWidenFFLoadSC:
     return true;
   case VPReplicateSC:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
@@ -3612,6 +3614,47 @@ void VPWidenLoadRecipe::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "WIDEN ";
   printAsOperand(O, SlotTracker);
   O << " = load ";
+  printOperands(O, SlotTracker);
+}
+#endif
+
+void VPWidenFFLoadRecipe::execute(VPTransformState &State) {
+  Type *ScalarDataTy = getLoadStoreType(&Ingredient);
+  auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
+
+  auto &Builder = State.Builder;
+  State.setDebugLocFrom(getDebugLoc());
+
+  Value *VL = State.get(getVF(), VPLane(0));
+  Type *I32Ty = Builder.getInt32Ty();
+  VL = Builder.CreateZExtOrTrunc(VL, I32Ty);
+  Value *Addr = State.get(getAddr(), true);
+  Value *Mask = nullptr;
+  if (VPValue *VPMask = getMask())
+    Mask = State.get(VPMask);
+  else
+    Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  CallInst *NewLI =
+      Builder.CreateIntrinsic(Intrinsic::vp_load_ff, {DataTy, Addr->getType()},
+                              {Addr, Mask, VL}, nullptr, "vp.op.load.ff");
+  NewLI->addParamAttr(
+      0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
+  applyMetadata(*NewLI);
+  Value *V = cast<Instruction>(Builder.CreateExtractValue(NewLI, 0));
+  Value *NewVL = Builder.CreateExtractValue(NewLI, 1);
+  State.set(getVPValue(0), V);
+  State.set(getVPValue(1), NewVL, /*NeedsScalar=*/true);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPWidenFFLoadRecipe::print(raw_ostream &O, const Twine &Indent,
+                                VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN ";
+  printAsOperand(O, SlotTracker);
+  O << ", ";
+  getVPValue(1)->printAsOperand(O, SlotTracker);
+  O << " = vp.load.ff ";
   printOperands(O, SlotTracker);
 }
 #endif
