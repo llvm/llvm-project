@@ -61,9 +61,11 @@ public:
       return Visit(DesT);
     return false;
   }
-  bool VisitArrayType(const ArrayType *T) { return Visit(T->getElementType()); }
+  bool VisitArrayType(const ArrayType *T) {
+    return Visit(T->getElementType().getTypePtr());
+  }
   bool VisitConstantArrayType(const ConstantArrayType *T) {
-    return Visit(T->getElementType());
+    return Visit(T->getElementType().getTypePtr());
   }
   bool VisitEnumType(const EnumType *T) {
     if (isCompleteAndHasNoZeroValue(T->getDecl())) {
@@ -77,7 +79,7 @@ public:
     if (RD->isUnion())
       return false;
     auto VisitField = [this](const FieldDecl *F) {
-      return Visit(F->getType());
+      return Visit(F->getType().getTypePtr());
     };
     return llvm::any_of(RD->fields(), VisitField);
   }
