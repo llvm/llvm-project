@@ -1007,9 +1007,8 @@ struct TestPassthroughInvalidOp : public ConversionPattern {
       // This is a 1:N replacement. Insert a test.cast op. (That's what the
       // argument materialization used to do.)
       flattened.push_back(
-          rewriter
-              .create<TestCastOp>(op->getLoc(),
-                                  op->getOperand(it.index()).getType(), range)
+          TestCastOp::create(rewriter, op->getLoc(),
+                             op->getOperand(it.index()).getType(), range)
               .getResult());
     }
     rewriter.replaceOpWithNewOp<TestValidOp>(op, TypeRange(), flattened,

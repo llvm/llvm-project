@@ -559,8 +559,8 @@ static Value createGroupReduceOpImpl(OpBuilder &builder, Location loc,
         builder, loc, builder.getI32Type(),
         builder.getIntegerAttr(builder.getI32Type(), *clusterSize));
 
-  return builder
-      .create<NonUniformOp>(loc, type, scope, groupOp, arg, clusterSizeValue)
+  return NonUniformOp::create(builder, loc, type, scope, groupOp, arg,
+                              clusterSizeValue)
       .getResult();
 }
 
