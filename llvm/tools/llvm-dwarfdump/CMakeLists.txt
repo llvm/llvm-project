@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
   Object
   Support
   TargetParser
+  BinaryFormat
   )
 
 add_llvm_tool(llvm-dwarfdump
