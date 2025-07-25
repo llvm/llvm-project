@@ -22,7 +22,12 @@ jobs:
     runs-on: ubuntu-24.04
     if: github.repository == 'llvm/llvm-project'
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 #v4.1.6
+      - name: Checkout LLVM
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          sparse-checkout: |
+            .github/workflows/release-asset-audit.py
+            llvm/utils/git/requirements.txt
       - name: "Run Audit Script"
         env:
           GITHUB_TOKEN: ${{ github.token }}
