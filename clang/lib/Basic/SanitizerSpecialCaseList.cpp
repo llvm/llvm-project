@@ -18,7 +18,7 @@ using namespace clang;
 std::unique_ptr<SanitizerSpecialCaseList>
 SanitizerSpecialCaseList::create(const std::vector<std::string> &Paths,
                                  llvm::vfs::FileSystem &VFS,
-                                 std::string &Error) {
+                                 std::pair<unsigned, std::string> &Error) {
   std::unique_ptr<clang::SanitizerSpecialCaseList> SSCL(
       new SanitizerSpecialCaseList());
   if (SSCL->createInternal(Paths, VFS, Error)) {

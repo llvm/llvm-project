@@ -1700,9 +1700,10 @@ ASTContext::getRelocationInfoForCXXRecord(const CXXRecordDecl *RD) const {
 
 void ASTContext::initSanitizers(const LangOptions &LangOpts,
                                 SourceManager &SM) {
-  std::string Error;
+  std::pair<unsigned, std::string> Error;
   if (!NoSanitizeL->init(LangOpts.NoSanitizeFiles, Error)) {
-    SM.getDiagnostics().Report(diag::err_sanitize_ignorelist_failure) << Error;
+    SM.getDiagnostics().Report(diag::err_sanitize_ignorelist_failure)
+        << Error.first << Error.second;
   }
 }
 

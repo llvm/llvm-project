@@ -79,7 +79,8 @@ unsigned SpecialCaseList::Matcher::match(StringRef Query) const {
 // TODO: Refactor this to return Expected<...>
 std::unique_ptr<SpecialCaseList>
 SpecialCaseList::create(const std::vector<std::string> &Paths,
-                        llvm::vfs::FileSystem &FS, std::string &Error) {
+                        llvm::vfs::FileSystem &FS,
+                        std::pair<unsigned, std::string> &Error) {
   std::unique_ptr<SpecialCaseList> SCL(new SpecialCaseList());
   if (SCL->createInternal(Paths, FS, Error))
     return SCL;
@@ -97,25 +98,28 @@ std::unique_ptr<SpecialCaseList> SpecialCaseList::create(const MemoryBuffer *MB,
 std::unique_ptr<SpecialCaseList>
 SpecialCaseList::createOrDie(const std::vector<std::string> &Paths,
                              llvm::vfs::FileSystem &FS) {
-  std::string Error;
+  std::pair<unsigned, std::string> Error;
   if (auto SCL = create(Paths, FS, Error))
     return SCL;
-  report_fatal_error(Twine(Error));
+  report_fatal_error(Twine(Error.second));
 }
 
 bool SpecialCaseList::createInternal(const std::vector<std::string> &Paths,
-                                     vfs::FileSystem &VFS, std::string &Error) {
+                                     vfs::FileSystem &VFS,
+                                     std::pair<unsigned, std::string> &Error) {
   for (size_t i = 0; i < Paths.size(); ++i) {
     const auto &Path = Paths[i];
     ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
         VFS.getBufferForFile(Path);
     if (std::error_code EC = FileOrErr.getError()) {
-      Error = (Twine("can't open file '") + Path + "': " + EC.message()).str();
+      Error.first = 0 /* open failure */;
+      Error.second = (Twine(Path) + "': " + EC.message()).str();
       return false;
     }
     std::string ParseError;
     if (!parse(i, FileOrErr.get().get(), ParseError)) {
-      Error = (Twine("error parsing file '") + Path + "': " + ParseError).str();
+      Error.first = 1 /* parse failure */;
+      Error.second = (Twine(Path) + "': " + ParseError).str();
       return false;
     }
   }

@@ -39,7 +39,7 @@ bool NoSanitizeList::containsPrefix(SanitizerMask Mask, StringRef Prefix,
 }
 
 bool NoSanitizeList::init(const std::vector<std::string> &Paths,
-                          std::string &Error) {
+                          std::pair<unsigned, std::string> &Error) {
   SSCL = SanitizerSpecialCaseList::create(
       Paths, SM.getFileManager().getVirtualFileSystem(), Error);
   return SSCL != nullptr;
