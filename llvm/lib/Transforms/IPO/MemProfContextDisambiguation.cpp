@@ -2073,7 +2073,7 @@ std::string IndexCallsiteContextGraph::getLabel(const FunctionSummary *Func,
                                                 unsigned CloneNo) const {
   auto VI = FSToVIMap.find(Func);
   assert(VI != FSToVIMap.end());
-  auto CallerName = getMemProfFuncName(VI->second.name(), CloneNo);
+  std::string CallerName = getMemProfFuncName(VI->second.name(), CloneNo);
   if (isa<AllocInfo *>(Call))
     return CallerName + " -> alloc";
   else {
