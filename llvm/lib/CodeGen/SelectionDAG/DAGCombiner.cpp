@@ -13597,13 +13597,7 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
 
     // If the comparison result is known, replace with constant
     if (KnownVal) {
-      if (*KnownVal) {
-        // Use the target's true value for comparisons
-        return DAG.getBoolConstant(true, DL, VT, VT);
-      } else {
-        // False is always 0
-        return DAG.getConstant(0, DL, VT);
-      }
+      return DAG.getBoolConstant(*KnownVal, DL, VT, VT);
     }
   }
 
