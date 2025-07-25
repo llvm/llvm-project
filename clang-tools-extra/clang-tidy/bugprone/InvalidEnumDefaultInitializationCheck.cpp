@@ -36,9 +36,7 @@ AST_MATCHER(EnumDecl, isCompleteAndHasNoZeroValue) {
 // Find an initialization which initializes the value (if it has enum type) to a
 // default zero value.
 AST_MATCHER(Expr, isEmptyInit) {
-  if (isa<CXXScalarValueInitExpr>(&Node))
-    return true;
-  if (isa<ImplicitValueInitExpr>(&Node))
+  if (isa<CXXScalarValueInitExpr, ImplicitValueInitExpr>(&Node))
     return true;
   if (const auto *Init = dyn_cast<InitListExpr>(&Node)) {
     if (Init->getNumInits() == 0)
@@ -63,11 +61,9 @@ public:
       return Visit(DesT);
     return false;
   }
-  bool VisitArrayType(const ArrayType *T) {
-    return Visit(T->getElementType()->getUnqualifiedDesugaredType());
-  }
+  bool VisitArrayType(const ArrayType *T) { return Visit(T->getElementType()); }
   bool VisitConstantArrayType(const ConstantArrayType *T) {
-    return Visit(T->getElementType()->getUnqualifiedDesugaredType());
+    return Visit(T->getElementType());
   }
   bool VisitEnumType(const EnumType *T) {
     if (isCompleteAndHasNoZeroValue(T->getDecl())) {
@@ -81,7 +77,7 @@ public:
     if (RD->isUnion())
       return false;
     auto VisitField = [this](const FieldDecl *F) {
-      return Visit(F->getType()->getUnqualifiedDesugaredType());
+      return Visit(F->getType());
     };
     return llvm::any_of(RD->fields(), VisitField);
   }
@@ -137,7 +133,7 @@ void InvalidEnumDefaultInitializationCheck::check(
   ASTContext &ACtx = Enum->getASTContext();
   SourceLocation Loc = InitExpr->getExprLoc();
   if (Loc.isInvalid()) {
-    if (isa<ImplicitValueInitExpr>(InitExpr) || isa<InitListExpr>(InitExpr)) {
+    if (isa<ImplicitValueInitExpr, InitListExpr>(InitExpr)) {
       DynTypedNodeList Parents = ACtx.getParents(*InitExpr);
       if (Parents.empty())
         return;
