@@ -1701,16 +1701,16 @@ def TunePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
 
 def TuneDisableMISchedLoadClustering : SubtargetFeature<"disable-misched-load-clustering",
-    "MISchedLoadClustering", "false", "Disable load clustering in the machine scheduler">;
+    "EnableMISchedLoadClustering", "false", "Disable load clustering in the machine scheduler">;
 
 def TuneDisableMISchedStoreClustering : SubtargetFeature<"disable-misched-store-clustering",
-    "MISchedStoreClustering", "false", "Disable store clustering in the machine scheduler">;
+    "EnableMISchedStoreClustering", "false", "Disable store clustering in the machine scheduler">;
 
 def TuneDisablePostMISchedLoadClustering : SubtargetFeature<"disable-postmisched-load-clustering",
-    "PostMISchedLoadClustering", "false", "Disable PostRA load clustering in the machine scheduler">;
+    "EnablePostMISchedLoadClustering", "false", "Disable PostRA load clustering in the machine scheduler">;
 
 def TuneDisablePostMISchedStoreClustering : SubtargetFeature<"disable-postmisched-store-clustering",
-    "PostMISchedStoreClustering", "false", "Disable PostRA store clustering in the machine scheduler">;
+    "EnablePostMISchedStoreClustering", "false", "Disable PostRA store clustering in the machine scheduler">;
 
 def TuneDisableLatencySchedHeuristic
     : SubtargetFeature<"disable-latency-sched-heuristic", "DisableLatencySchedHeuristic", "true",
