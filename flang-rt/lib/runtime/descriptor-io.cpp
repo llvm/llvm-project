@@ -47,15 +47,19 @@ static RT_API_ATTRS Fortran::common::optional<bool> DefinedFormattedIo(
     const typeInfo::DerivedType &derived,
     const typeInfo::SpecialBinding &special,
     const SubscriptValue subscripts[]) {
-  Fortran::common::optional<DataEdit> peek{
-      io.GetNextDataEdit(0 /*to peek at it*/)};
+  // Look at the next data edit descriptor.  If this is list-directed I/O, the
+  // "maxRepeat=0" argument will prevent the input from advancing over an
+  // initial '(' that shouldn't be consumed now as the start of a real part.
+  Fortran::common::optional<DataEdit> peek{io.GetNextDataEdit(/*maxRepeat=*/0)};
   if (peek &&
       (peek->descriptor == DataEdit::DefinedDerivedType ||
-          peek->descriptor == DataEdit::ListDirected)) {
+          peek->descriptor == DataEdit::ListDirected ||
+          peek->descriptor == DataEdit::ListDirectedRealPart)) {
     // Defined formatting
     IoErrorHandler &handler{io.GetIoErrorHandler()};
-    DataEdit edit{*io.GetNextDataEdit(1)}; // now consume it; no repeats
-    RUNTIME_CHECK(handler, edit.descriptor == peek->descriptor);
+    DataEdit edit{peek->descriptor == DataEdit::ListDirectedRealPart
+            ? *peek
+            : *io.GetNextDataEdit(1)};
     char ioType[2 + edit.maxIoTypeChars];
     auto ioTypeLen{std::size_t{2} /*"DT"*/ + edit.ioTypeChars};
     if (edit.descriptor == DataEdit::DefinedDerivedType) {
@@ -836,12 +840,22 @@ template RT_API_ATTRS int DescriptorIoTicket<Direction::Input>::Continue(
 
 template <Direction DIR>
 RT_API_ATTRS bool DescriptorIO(IoStatementState &io,
-    const Descriptor &descriptor, const NonTbpDefinedIoTable *table) {
+    const Descriptor &descriptor, const NonTbpDefinedIoTable *originalTable) {
   bool anyIoTookPlace{false};
+  const NonTbpDefinedIoTable *defaultTable{io.nonTbpDefinedIoTable()};
+  const NonTbpDefinedIoTable *table{originalTable};
+  if (!table) {
+    table = defaultTable;
+  } else if (table != defaultTable) {
+    io.set_nonTbpDefinedIoTable(table); // for nested I/O
+  }
   WorkQueue workQueue{io.GetIoErrorHandler()};
   if (workQueue.BeginDescriptorIo<DIR>(io, descriptor, table, anyIoTookPlace) ==
       StatContinue) {
     workQueue.Run();
+  }
+  if (defaultTable != table) {
+    io.set_nonTbpDefinedIoTable(defaultTable);
   }
   return anyIoTookPlace;
 }
