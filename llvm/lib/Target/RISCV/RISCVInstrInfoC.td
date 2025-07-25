@@ -664,31 +664,35 @@ def C_SLLI_HINT : RVInst16CI<0b000, 0b10, (outs GPRX0:$rd_wb),
   let DecoderMethod = "decodeRVCInstrRdRs1UImmLog2XLenNonZero";
 }
 
-def C_SLLI64_HINT : RVInst16CI<0b000, 0b10, (outs GPR:$rd_wb), (ins GPR:$rd),
-                               "c.slli64", "$rd">,
+def C_SLLI64_HINT : RVInst16CI<0b000, 0b10, (outs GPR:$rd_wb),
+                               (ins GPR:$rd, immzero:$imm),
+                               "c.slli", "$rd, $imm">,
                     Sched<[WriteShiftImm, ReadShiftImm]> {
   let Constraints = "$rd = $rd_wb";
   let imm = 0;
+  let DecoderMethod = "decodeRVCInstrShiftLeftHint";
 }
 
 def C_SRLI64_HINT : RVInst16CB<0b100, 0b01, (outs GPRC:$rd),
-                               (ins GPRC:$rs1),
-                               "c.srli64", "$rs1">,
+                               (ins GPRC:$rs1, immzero:$imm),
+                               "c.srli", "$rs1, $imm">,
                     Sched<[WriteShiftImm, ReadShiftImm]> {
   let Constraints = "$rs1 = $rd";
   let Inst{6-2} = 0;
   let Inst{11-10} = 0b00;
   let Inst{12} = 0;
+  let DecoderMethod = "decodeRVCInstrShiftRightHint";
 }
 
 def C_SRAI64_HINT : RVInst16CB<0b100, 0b01, (outs GPRC:$rd),
-                               (ins GPRC:$rs1),
-                               "c.srai64", "$rs1">,
+                               (ins GPRC:$rs1, immzero:$imm),
+                               "c.srai", "$rs1, $imm">,
                     Sched<[WriteShiftImm, ReadShiftImm]> {
   let Constraints = "$rs1 = $rd";
   let Inst{6-2} = 0;
   let Inst{11-10} = 0b01;
   let Inst{12} = 0;
+  let DecoderMethod = "decodeRVCInstrShiftRightHint";
 }
 
 } // Predicates = [HasStdExtZca], hasSideEffects = 0, mayLoad = 0,
@@ -701,6 +705,11 @@ def C_SRAI64_HINT : RVInst16CB<0b100, 0b01, (outs GPRC:$rd),
 let Predicates = [HasStdExtZca] in {
 // Just a different syntax for the c.nop hint: c.addi x0, simm6 vs c.nop simm6.
 def : InstAlias<"c.addi x0, $imm", (C_NOP_HINT simm6nonzero:$imm), 0>;
+
+// Legacy aliases.
+def : InstAlias<"c.slli64 $rd", (C_SLLI64_HINT GPR:$rd, 0), 0>;
+def : InstAlias<"c.srli64 $rs1", (C_SRLI64_HINT GPRC:$rs1, 0), 0>;
+def : InstAlias<"c.srai64 $rs1", (C_SRAI64_HINT GPRC:$rs1, 0), 0>;
 }
 
 let Predicates = [HasStdExtC, HasStdExtZihintntl] in {

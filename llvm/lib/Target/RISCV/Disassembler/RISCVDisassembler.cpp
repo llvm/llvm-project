@@ -540,6 +540,14 @@ static DecodeStatus decodeRVCInstrRdRs1ImmZero(MCInst &Inst, uint32_t Insn,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder);
 
+static DecodeStatus decodeRVCInstrShiftLeftHint(MCInst &Inst, uint32_t Insn,
+                                                uint64_t Address,
+                                                const MCDisassembler *Decoder);
+
+static DecodeStatus decodeRVCInstrShiftRightHint(MCInst &Inst, uint32_t Insn,
+                                                 uint64_t Address,
+                                                 const MCDisassembler *Decoder);
+
 static DecodeStatus decodeRVCInstrRdSImm6(MCInst &Inst, uint32_t Insn,
                                           uint64_t Address,
                                           const MCDisassembler *Decoder);
@@ -585,6 +593,30 @@ static DecodeStatus decodeRVCInstrRdRs1ImmZero(MCInst &Inst, uint32_t Insn,
   DecodeStatus S = MCDisassembler::Success;
   uint32_t Rd = fieldFromInstruction(Insn, 7, 5);
   if (!Check(S, DecodeGPRNoX0RegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(Inst.getOperand(0));
+  Inst.addOperand(MCOperand::createImm(0));
+  return S;
+}
+
+static DecodeStatus decodeRVCInstrShiftLeftHint(MCInst &Inst, uint32_t Insn,
+                                                uint64_t Address,
+                                                const MCDisassembler *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+  uint32_t Rd = fieldFromInstruction(Insn, 7, 5);
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rd, Address, Decoder)))
+    return MCDisassembler::Fail;
+  Inst.addOperand(Inst.getOperand(0));
+  Inst.addOperand(MCOperand::createImm(0));
+  return S;
+}
+
+static DecodeStatus
+decodeRVCInstrShiftRightHint(MCInst &Inst, uint32_t Insn, uint64_t Address,
+                             const MCDisassembler *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+  uint32_t Rd = fieldFromInstruction(Insn, 7, 3);
+  if (!Check(S, DecodeGPRCRegisterClass(Inst, Rd, Address, Decoder)))
     return MCDisassembler::Fail;
   Inst.addOperand(Inst.getOperand(0));
   Inst.addOperand(MCOperand::createImm(0));
