@@ -2185,6 +2185,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_acospif16",
+    hdrs = ["src/__support/math/acospif16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_sqrt",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_types",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_asin_utils",
     hdrs = ["src/__support/math/asin_utils.h"],
     deps = [
@@ -2731,6 +2746,14 @@ libc_math_function(
     name = "acoshf16",
     additional_deps = [
         ":__support_math_acoshf16",
+        ":errno",
+    ],
+)
+
+libc_math_function(
+    name = "acospif16",
+    additional_deps = [
+        ":__support_math_acospif16",
         ":errno",
     ],
 )

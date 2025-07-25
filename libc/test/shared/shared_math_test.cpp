@@ -8,6 +8,7 @@
 
 #include "shared/math.h"
 #include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
@@ -15,6 +16,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   int exponent;
 
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::acoshf16(1.0f16));
+  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::acospif16(1.0f16));
 
   EXPECT_FP_EQ(0x1p+0f16, LIBC_NAMESPACE::shared::exp10f16(0.0f16));
 
