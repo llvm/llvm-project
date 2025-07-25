@@ -306,7 +306,7 @@ static PrimType integralTypeToPrimTypeU(unsigned BitWidth) {
   llvm_unreachable("Unhandled BitWidth");
 }
 
-std::optional<PrimType> Context::classify(QualType T) const {
+OptPrimType Context::classify(QualType T) const {
 
   if (const auto *BT = dyn_cast<BuiltinType>(T.getCanonicalType())) {
     auto Kind = BT->getKind();
@@ -542,7 +542,7 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
   for (const ParmVarDecl *PD : FuncDecl->parameters()) {
-    std::optional<PrimType> T = classify(PD->getType());
+    OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);
     Descriptor *Desc = P->createDescriptor(PD, PT);
     ParamDescriptors.insert({ParamOffset, {PT, Desc}});
@@ -570,7 +570,7 @@ const Function *Context::getOrCreateObjCBlock(const BlockExpr *E) {
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
   for (const ParmVarDecl *PD : BD->parameters()) {
-    std::optional<PrimType> T = classify(PD->getType());
+    OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);
     Descriptor *Desc = P->createDescriptor(PD, PT);
     ParamDescriptors.insert({ParamOffset, {PT, Desc}});

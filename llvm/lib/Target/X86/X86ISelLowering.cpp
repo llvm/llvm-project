@@ -5001,8 +5001,11 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
 
   EVT VT = Op.getValueType();
   unsigned SizeInBits = VT.getSizeInBits();
-  assert((SizeInBits % EltSizeInBits) == 0 && "Can't split constant!");
   unsigned NumElts = SizeInBits / EltSizeInBits;
+
+  // Can't split constant.
+  if ((SizeInBits % EltSizeInBits) != 0)
+    return false;
 
   // Bitcast a source array of element bits to the target size.
   auto CastBitData = [&](APInt &UndefSrcElts, ArrayRef<APInt> SrcEltBits) {
@@ -45059,6 +45062,10 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   unsigned NumElts = DemandedElts.getBitWidth();
 
   switch (Op.getOpcode()) {
+  case X86ISD::GlobalBaseReg:
+  case X86ISD::Wrapper:
+  case X86ISD::WrapperRIP:
+    return true;
   case X86ISD::BLENDI:
   case X86ISD::PSHUFD:
   case X86ISD::UNPCKL:
@@ -45098,27 +45105,34 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
     bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
 
   switch (Op.getOpcode()) {
+  // SSE vector insert/extracts use modulo indices.
+  case X86ISD::PINSRB:
+  case X86ISD::PINSRW:
+  case X86ISD::PEXTRB:
+  case X86ISD::PEXTRW:
+    return false;
   // SSE vector multiplies are either inbounds or saturate.
   case X86ISD::VPMADDUBSW:
   case X86ISD::VPMADDWD:
+    return false;
   // SSE vector shifts handle out of bounds shift amounts.
   case X86ISD::VSHLI:
   case X86ISD::VSRLI:
   case X86ISD::VSRAI:
     return false;
-    // SSE blends.
+  // SSE blends.
   case X86ISD::BLENDI:
   case X86ISD::BLENDV:
     return false;
-    // SSE target shuffles.
+  // SSE target shuffles.
   case X86ISD::PSHUFD:
   case X86ISD::UNPCKL:
   case X86ISD::UNPCKH:
   case X86ISD::VPERMILPI:
   case X86ISD::VPERMV3:
     return false;
-    // SSE comparisons handle all icmp/fcmp cases.
-    // TODO: Add CMPM/MM with test coverage.
+  // SSE comparisons handle all icmp/fcmp cases.
+  // TODO: Add CMPM/MM with test coverage.
   case X86ISD::CMPP:
   case X86ISD::PCMPEQ:
   case X86ISD::PCMPGT:
