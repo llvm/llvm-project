@@ -18,7 +18,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/IRMapping.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/SymbolTable.h"
@@ -27,14 +26,12 @@
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include <iterator>
 #include <optional>
 #include <tuple>
-#include <type_traits>
 
 namespace mlir::mesh {
 
@@ -663,8 +660,7 @@ spmdizeOperation(ShardOp shardOp, IRMapping &spmdizationMap,
 
   // Check if 2 shard ops are chained. If not there is no need for resharding
   // as the source and target shared the same sharding.
-  ShardOp srcShardOp =
-      dyn_cast_or_null<ShardOp>(shardOp.getSrc().getDefiningOp());
+  ShardOp srcShardOp = shardOp.getSrc().getDefiningOp<ShardOp>();
   if (!srcShardOp) {
     targetSpmdValue = spmdizationMap.lookup(shardOp.getSrc());
   } else {
