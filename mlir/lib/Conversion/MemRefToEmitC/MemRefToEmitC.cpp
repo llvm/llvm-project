@@ -27,6 +27,12 @@
 
 using namespace mlir;
 
+static bool isMemRefTypeLegalForEmitC(MemRefType memRefType) {
+  return memRefType.hasStaticShape() && memRefType.getLayout().isIdentity() &&
+         memRefType.getRank() != 0 &&
+         !llvm::is_contained(memRefType.getShape(), 0);
+}
+
 namespace {
 /// Implement the interface to convert MemRef to EmitC.
 struct MemRefToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
@@ -98,57 +104,52 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
   LogicalResult
   matchAndRewrite(memref::AllocOp allocOp, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
-    mlir::Location loc = allocOp.getLoc();
+    Location loc = allocOp.getLoc();
     MemRefType memrefType = allocOp.getType();
-    if (!memrefType.hasStaticShape()) {
-      // TODO: Handle Dynamic shapes in the future. If the size
-      // of the allocation is the result of some function, we could
-      // potentially evaluate the function and use the result in the call to
-      // allocate.
+    if (!isMemRefTypeLegalForEmitC(memrefType)) {
       return rewriter.notifyMatchFailure(
-          loc, "cannot transform alloc with dynamic shape");
+          loc, "incompatible memref type for EmitC conversion");
     }
 
-    mlir::Type sizeTType = mlir::emitc::SizeTType::get(rewriter.getContext());
+    Type sizeTType = emitc::SizeTType::get(rewriter.getContext());
     Type elementType = memrefType.getElementType();
-    mlir::emitc::CallOpaqueOp sizeofElementOp =
-        rewriter.create<mlir::emitc::CallOpaqueOp>(
-            loc, sizeTType, rewriter.getStringAttr("sizeof"),
-            mlir::ValueRange{},
-            mlir::ArrayAttr::get(rewriter.getContext(),
-                                 {mlir::TypeAttr::get(elementType)}));
-    mlir::Value sizeofElement = sizeofElementOp.getResult(0);
+    IndexType indexType = rewriter.getIndexType();
+    emitc::CallOpaqueOp sizeofElementOp = rewriter.create<emitc::CallOpaqueOp>(
+        loc, sizeTType, rewriter.getStringAttr("sizeof"), ValueRange{},
+        ArrayAttr::get(rewriter.getContext(), {TypeAttr::get(elementType)}));
 
-    long val = memrefType.getShape().front();
-    IntegerAttr valAttr = rewriter.getIntegerAttr(rewriter.getIndexType(), val);
+    int64_t numElements = 1;
+    for (int64_t dimSize : memrefType.getShape()) {
+      numElements *= dimSize;
+    }
+    Value numElementsValue = rewriter.create<emitc::ConstantOp>(
+        loc, indexType, rewriter.getIndexAttr(numElements));
 
-    mlir::Value numElements = rewriter.create<emitc::ConstantOp>(
-        loc, rewriter.getIndexType(), valAttr);
-    mlir::Value totalSizeBytes = rewriter.create<emitc::MulOp>(
-        loc, sizeTType, sizeofElement, numElements);
+    Value totalSizeBytes = rewriter.create<emitc::MulOp>(
+        loc, sizeTType, sizeofElementOp.getResult(0), numElementsValue);
 
     emitc::CallOpaqueOp allocCall;
     StringAttr allocFunctionName;
-    mlir::Value alignmentValue;
-    SmallVector<mlir::Value, 2> argsVec;
+    Value alignmentValue;
+    SmallVector<Value, 2> argsVec;
     if (allocOp.getAlignment()) {
-      allocFunctionName = rewriter.getStringAttr(kAlignedAllocFunctionName);
+      allocFunctionName = rewriter.getStringAttr(alignedAllocFunctionName);
       alignmentValue = rewriter.create<emitc::ConstantOp>(
           loc, sizeTType,
-          rewriter.getIntegerAttr(rewriter.getIndexType(),
+          rewriter.getIntegerAttr(indexType,
                                   allocOp.getAlignment().value_or(0)));
       argsVec.push_back(alignmentValue);
     } else {
-      allocFunctionName = rewriter.getStringAttr(kMallocFunctionName);
+      allocFunctionName = rewriter.getStringAttr(mallocFunctionName);
     }
 
     argsVec.push_back(totalSizeBytes);
-    mlir::ValueRange args(argsVec);
+    ValueRange args(argsVec);
 
     allocCall = rewriter.create<emitc::CallOpaqueOp>(
         loc,
         emitc::PointerType::get(
-            mlir::emitc::OpaqueType::get(rewriter.getContext(), "void")),
+            emitc::OpaqueType::get(rewriter.getContext(), "void")),
         allocFunctionName, args);
 
     emitc::PointerType targetPointerType = emitc::PointerType::get(elementType);
@@ -158,8 +159,6 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
     rewriter.replaceOp(allocOp, castOp);
     return success();
   }
-  static constexpr const char *kAlignedAllocFunctionName = "aligned_alloc";
-  static constexpr const char *kMallocFunctionName = "malloc";
 };
 
 struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
@@ -296,9 +295,7 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
 void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
   typeConverter.addConversion(
       [&](MemRefType memRefType) -> std::optional<Type> {
-        if (!memRefType.hasStaticShape() ||
-            !memRefType.getLayout().isIdentity() || memRefType.getRank() == 0 ||
-            llvm::is_contained(memRefType.getShape(), 0)) {
+        if (!isMemRefTypeLegalForEmitC(memRefType)) {
           return {};
         }
         Type convertedElementType =
