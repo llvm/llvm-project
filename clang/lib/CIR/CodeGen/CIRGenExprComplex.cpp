@@ -83,13 +83,11 @@ public:
 
   mlir::Value VisitUnaryDeref(const Expr *e);
 
-  mlir::Value VisitUnaryPlus(const UnaryOperator *e,
-                             QualType promotionType = QualType());
+  mlir::Value VisitUnaryPlus(const UnaryOperator *e);
 
   mlir::Value VisitPlus(const UnaryOperator *e, QualType promotionType);
 
-  mlir::Value VisitUnaryMinus(const UnaryOperator *e,
-                              QualType promotionType = QualType());
+  mlir::Value VisitUnaryMinus(const UnaryOperator *e);
 
   mlir::Value VisitMinus(const UnaryOperator *e, QualType promotionType);
 
@@ -185,17 +183,13 @@ mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
   return {};
 }
 
-mlir::Value ComplexExprEmitter::VisitUnaryPlus(const UnaryOperator *e,
-                                               QualType promotionType) {
-  QualType promotionTy = promotionType.isNull()
-                             ? getPromotionType(e->getSubExpr()->getType())
-                             : promotionType;
+mlir::Value ComplexExprEmitter::VisitUnaryPlus(const UnaryOperator *e) {
+  QualType promotionTy = getPromotionType(e->getSubExpr()->getType());
   mlir::Value result = VisitPlus(e, promotionTy);
   if (!promotionTy.isNull()) {
     cgf.cgm.errorNYI("ComplexExprEmitter::VisitUnaryPlus emitUnPromotedValue");
     return {};
   }
-
   return result;
 }
 
@@ -211,17 +205,13 @@ mlir::Value ComplexExprEmitter::VisitPlus(const UnaryOperator *e,
                                cir::UnaryOpKind::Plus, op);
 }
 
-mlir::Value ComplexExprEmitter::VisitUnaryMinus(const UnaryOperator *e,
-                                                QualType promotionType) {
-  QualType promotionTy = promotionType.isNull()
-                             ? getPromotionType(e->getSubExpr()->getType())
-                             : promotionType;
+mlir::Value ComplexExprEmitter::VisitUnaryMinus(const UnaryOperator *e) {
+  QualType promotionTy = getPromotionType(e->getSubExpr()->getType());
   mlir::Value result = VisitMinus(e, promotionTy);
   if (!promotionTy.isNull()) {
     cgf.cgm.errorNYI("ComplexExprEmitter::VisitUnaryMinus emitUnPromotedValue");
     return {};
   }
-
   return result;
 }
 
