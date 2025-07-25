@@ -22,7 +22,7 @@ class Block;
 class DeadBlock;
 class InterpState;
 class Pointer;
-enum PrimType : unsigned;
+enum PrimType : uint8_t;
 
 /// A memory block, either on the stack or in the heap.
 ///
