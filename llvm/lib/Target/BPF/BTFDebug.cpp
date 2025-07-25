@@ -1255,10 +1255,8 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   FuncInfo.Label = FuncLabel;
   FuncInfo.TypeId = FuncTypeId;
   if (FuncLabel->isInSection()) {
-    MCSection &Section = FuncLabel->getSection();
-    const MCSectionELF *SectionELF = dyn_cast<MCSectionELF>(&Section);
-    assert(SectionELF && "Null section for Function Label");
-    SecNameOff = addString(SectionELF->getName());
+    auto &Sec = static_cast<const MCSectionELF &>(FuncLabel->getSection());
+    SecNameOff = addString(Sec.getName());
   } else {
     SecNameOff = addString(".text");
   }

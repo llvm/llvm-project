@@ -100,10 +100,6 @@ public:
   std::pair<uint64_t, uint64_t> getOffsets() const {
     return std::make_pair(StartOffset, EndOffset);
   }
-
-  static bool classof(const MCSection *S) {
-    return S->getVariant() == SV_ELF;
-  }
 };
 
 } // end namespace llvm

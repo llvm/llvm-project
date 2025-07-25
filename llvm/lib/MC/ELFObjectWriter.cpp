@@ -1087,7 +1087,8 @@ uint64_t ELFWriter::writeObject() {
       // Remember the offset into the file for this section.
       const uint64_t SecStart = align(RelSection->getAlign());
 
-      writeRelocations(cast<MCSectionELF>(*RelSection->getLinkedToSection()));
+      writeRelocations(
+          static_cast<const MCSectionELF &>(*RelSection->getLinkedToSection()));
 
       uint64_t SecEnd = W.OS.tell();
       RelSection->setOffsets(SecStart, SecEnd);
@@ -1260,7 +1261,7 @@ bool ELFObjectWriter::useSectionSymbol(const MCValue &Val,
   // that it pointed to another string and subtracting 42 at runtime will
   // produce the wrong value.
   if (Sym->isInSection()) {
-    auto &Sec = cast<MCSectionELF>(Sym->getSection());
+    auto &Sec = static_cast<const MCSectionELF &>(Sym->getSection());
     unsigned Flags = Sec.getFlags();
     if (Flags & ELF::SHF_MERGE) {
       if (C != 0)
@@ -1312,13 +1313,14 @@ bool ELFObjectWriter::checkRelocation(SMLoc Loc, const MCSectionELF *From,
 void ELFObjectWriter::recordRelocation(const MCFragment &F,
                                        const MCFixup &Fixup, MCValue Target,
                                        uint64_t &FixedValue) {
-  const MCSectionELF &Section = cast<MCSectionELF>(*F.getParent());
+  auto &Section = static_cast<const MCSectionELF &>(*F.getParent());
   MCContext &Ctx = getContext();
 
   const auto *SymA = cast_or_null<MCSymbolELF>(Target.getAddSym());
-  const MCSectionELF *SecA = (SymA && SymA->isInSection())
-                                 ? cast<MCSectionELF>(&SymA->getSection())
-                                 : nullptr;
+  const MCSectionELF *SecA =
+      (SymA && SymA->isInSection())
+          ? static_cast<const MCSectionELF *>(&SymA->getSection())
+          : nullptr;
   if (DwoOS && !checkRelocation(Fixup.getLoc(), &Section, SecA))
     return;
 

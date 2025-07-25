@@ -1138,7 +1138,8 @@ void ARMTargetELFStreamer::finish() {
   MCContext &Ctx = getContext();
   auto &Asm = getStreamer().getAssembler();
   if (any_of(Asm, [](const MCSection &Sec) {
-        return cast<MCSectionELF>(Sec).getFlags() & ELF::SHF_ARM_PURECODE;
+        return static_cast<const MCSectionELF &>(Sec).getFlags() &
+               ELF::SHF_ARM_PURECODE;
       })) {
     auto *Text =
         static_cast<MCSectionELF *>(Ctx.getObjectFileInfo()->getTextSection());
