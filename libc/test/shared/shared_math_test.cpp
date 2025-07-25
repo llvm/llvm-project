@@ -14,24 +14,24 @@
 TEST(LlvmLibcSharedMathTest, AllFloat16) {
   int exponent;
 
-  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::acoshf16(1.0f));
+  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::acoshf16(1.0f16));
 
   EXPECT_FP_EQ(0x1p+0f16, LIBC_NAMESPACE::shared::exp10f16(0.0f16));
 
   EXPECT_FP_EQ(0x1p+0f16, LIBC_NAMESPACE::shared::expf16(0.0f16));
 
-  ASSERT_FP_EQ(float16(8 << 5), LIBC_NAMESPACE::shared::ldexpf16(float(8), 5));
+  ASSERT_FP_EQ(float16(8 << 5), LIBC_NAMESPACE::shared::ldexpf16(8.0f16, 5));
   ASSERT_FP_EQ(float16(-1 * (8 << 5)),
-               LIBC_NAMESPACE::shared::ldexpf16(float(-8), 5));
+               LIBC_NAMESPACE::shared::ldexpf16(-8.0f16, 5));
 
-  EXPECT_FP_EQ_ALL_ROUNDING(0.75f16,
-                            LIBC_NAMESPACE::shared::frexpf16(24.0f, &exponent));
+  EXPECT_FP_EQ_ALL_ROUNDING(
+      0.75f16, LIBC_NAMESPACE::shared::frexpf16(24.0f16, &exponent));
   EXPECT_EQ(exponent, 5);
 
   EXPECT_FP_EQ(0x1.921fb6p+0f16, LIBC_NAMESPACE::shared::acosf16(0.0f16));
 }
 
-#endif
+#endif // LIBC_TYPES_HAS_FLOAT16
 
 TEST(LlvmLibcSharedMathTest, AllFloat) {
   int exponent;
@@ -46,9 +46,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
                             LIBC_NAMESPACE::shared::frexpf(24.0f, &exponent));
   EXPECT_EQ(exponent, 5);
 
-  ASSERT_FP_EQ(float(8 << 5), LIBC_NAMESPACE::shared::ldexpf(float(8), 5));
-  ASSERT_FP_EQ(float(-1 * (8 << 5)),
-               LIBC_NAMESPACE::shared::ldexpf(float(-8), 5));
+  ASSERT_FP_EQ(float(8 << 5), LIBC_NAMESPACE::shared::ldexpf(8.0f, 5));
+  ASSERT_FP_EQ(float(-1 * (8 << 5)), LIBC_NAMESPACE::shared::ldexpf(-8.0f, 5));
 }
 
 TEST(LlvmLibcSharedMathTest, AllDouble) {
@@ -57,15 +56,19 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0x1p+0, LIBC_NAMESPACE::shared::exp10(0.0));
 }
 
+#ifdef LIBC_TYPES_HAS_FLOAT128
+
 TEST(LlvmLibcSharedMathTest, AllFloat128) {
   int exponent;
 
-  EXPECT_FP_EQ_ALL_ROUNDING(
-      float128(0.75), LIBC_NAMESPACE::shared::frexpf128(24.0f, &exponent));
+  EXPECT_FP_EQ_ALL_ROUNDING(float128(0.75), LIBC_NAMESPACE::shared::frexpf128(
+                                                float128(24), &exponent));
   EXPECT_EQ(exponent, 5);
 
   ASSERT_FP_EQ(float128(8 << 5),
-               LIBC_NAMESPACE::shared::ldexpf128(float(8), 5));
+               LIBC_NAMESPACE::shared::ldexpf128(float128(8), 5));
   ASSERT_FP_EQ(float128(-1 * (8 << 5)),
-               LIBC_NAMESPACE::shared::ldexpf128(float(-8), 5));
+               LIBC_NAMESPACE::shared::ldexpf128(float128(-8), 5));
 }
+
+#endif // LIBC_TYPES_HAS_FLOAT128
