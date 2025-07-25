@@ -287,7 +287,7 @@ bool VPRecipeBase::isPhi() const {
   return (getVPDefID() >= VPFirstPHISC && getVPDefID() <= VPLastPHISC) ||
          (isa<VPInstruction>(this) &&
           cast<VPInstruction>(this)->getOpcode() == Instruction::PHI) ||
-         isa<VPIRPhi>(this);
+         isa<VPPhi>(this) || isa<VPIRPhi>(this);
 }
 
 bool VPRecipeBase::isScalarCast() const {

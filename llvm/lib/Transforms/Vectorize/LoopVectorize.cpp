@@ -400,6 +400,10 @@ static cl::opt<bool> EnableEarlyExitVectorization(
     cl::desc(
         "Enable vectorization of early exit loops with uncountable exits."));
 
+static cl::opt<bool> HandleEarlyExitsInScalarTail(
+    "handle-early-exits-in-scalar-tail", cl::init(false), cl::Hidden,
+    cl::desc("Use the scalar tail to deal with early exit logic"));
+
 // Likelyhood of bypassing the vectorized loop because there are zero trips left
 // after prolog. See `emitIterationCountCheck`.
 static constexpr uint32_t MinItersBypassWeights[] = {1, 127};
@@ -491,8 +495,8 @@ public:
         AC(AC), ORE(ORE), VF(VecWidth),
         MinProfitableTripCount(MinProfitableTripCount), UF(UnrollFactor),
         Builder(PSE.getSE()->getContext()), Cost(CM), BFI(BFI), PSI(PSI),
-        RTChecks(RTChecks), Plan(Plan),
-        VectorPHVPB(Plan.getVectorLoopRegion()->getSinglePredecessor()) {}
+        RTChecks(RTChecks), Plan(Plan), VectorPHVPB(Plan.getVectorPreheader()) {
+  }
 
   virtual ~InnerLoopVectorizer() = default;
 
@@ -8371,6 +8375,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
 
   auto MaxVFTimes2 = MaxVF * 2;
   auto VPlan0 = VPlanTransforms::buildPlainCFG(OrigLoop, *LI);
+  VPlan0->setEarlyExitContinuesInScalarLoop(HandleEarlyExitsInScalarTail);
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
     if (auto Plan = tryToBuildVPlanWithVPRecipes(
@@ -8386,6 +8391,14 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       if (CM.foldTailWithEVL() && !HasScalarVF &&
           !VPlanTransforms::runPass(VPlanTransforms::tryAddExplicitVectorLength,
                                     *Plan, CM.getMaxSafeElements()))
+        break;
+      // See if we can convert an early exit vplan to bail out to a scalar
+      // loop if state-changing operations (like stores) are present and
+      // an exit will be taken in the next vector iteration.
+      // If not, discard the plan.
+      if (HandleEarlyExitsInScalarTail && !HasScalarVF &&
+          !VPlanTransforms::runPass(VPlanTransforms::handleExitsInScalarLoop,
+                                    *Plan))
         break;
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
@@ -8440,8 +8453,7 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
   auto *ScalarPH = Plan.getScalarPreheader();
   auto *MiddleVPBB = cast<VPBasicBlock>(ScalarPH->getPredecessors()[0]);
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
-  VPBuilder VectorPHBuilder(
-      cast<VPBasicBlock>(VectorRegion->getSinglePredecessor()));
+  VPBuilder VectorPHBuilder(cast<VPBasicBlock>(Plan.getVectorPreheader()));
   VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
   VPBuilder ScalarPHBuilder(ScalarPH);
   for (VPRecipeBase &ScalarPhiR : Plan.getScalarHeader()->phis()) {
@@ -8847,8 +8859,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   auto CanUseVersionedStride = [&Plan](VPUser &U, unsigned) {
     auto *R = cast<VPRecipeBase>(&U);
     return R->getParent()->getParent() ||
-           R->getParent() ==
-               Plan->getVectorLoopRegion()->getSinglePredecessor();
+           R->getParent() == Plan->getVectorPreheader();
   };
   for (auto [_, Stride] : Legal->getLAI()->getSymbolicStrides()) {
     auto *StrideV = cast<SCEVUnknown>(Stride)->getValue();
@@ -8914,6 +8925,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   assert(EnableVPlanNativePath && "VPlan-native path is not enabled.");
 
   auto Plan = VPlanTransforms::buildPlainCFG(OrigLoop, *LI);
+  Plan->setEarlyExitContinuesInScalarLoop(HandleEarlyExitsInScalarTail);
   VPlanTransforms::prepareForVectorization(
       *Plan, Legal->getWidestInductionType(), PSE, true, false, OrigLoop,
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), false,

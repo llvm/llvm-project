@@ -502,6 +502,9 @@ void VPlanTransforms::prepareForVectorization(
                                    cast<VPBasicBlock>(HeaderVPB),
                                    cast<VPBasicBlock>(LatchVPB), Range);
         HandledUncountableEarlyExit = true;
+        if (Plan.shouldEarlyExitContinueInScalarLoop())
+          for (VPRecipeBase &R : EB->phis())
+            cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
       } else {
         for (VPRecipeBase &R : EB->phis())
           cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
