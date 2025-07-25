@@ -18,8 +18,6 @@ on:
       - 'libcxx/utils/ci/**'
       - '.github/workflows/libcxx-build-containers.yml'
   pull_request:
-    branches:
-      - main
     paths:
       - 'libcxx/utils/ci/**'
       - '.github/workflows/libcxx-build-containers.yml'
