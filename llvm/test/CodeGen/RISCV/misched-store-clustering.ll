@@ -38,49 +38,46 @@
 ; RUN:     -debug-only=machine-scheduler -o - 2>&1 < %s \
 ; RUN:   | FileCheck -check-prefix=DEFAULTCLUSTER %s
 
-define i32 @load_clustering_1(ptr nocapture %p) {
+define i32 @store_clustering_1(ptr nocapture %p, i32 %v) {
 ; NOCLUSTER: ********** MI Scheduling **********
-; NOCLUSTER-LABEL: load_clustering_1:%bb.0
+; NOCLUSTER-LABEL: store_clustering_1:%bb.0
 ; NOCLUSTER: *** Final schedule for %bb.0 ***
-; NOCLUSTER: SU(1): %1:gpr = LW %0:gpr, 12
-; NOCLUSTER: SU(2): %2:gpr = LW %0:gpr, 8
-; NOCLUSTER: SU(4): %4:gpr = LW %0:gpr, 4
-; NOCLUSTER: SU(5): %6:gpr = LW %0:gpr, 16
+; NOCLUSTER: SU(2):   SW %1:gpr, %0:gpr, 12 :: (store (s32) into %ir.arrayidx0)
+; NOCLUSTER: SU(3):   SW %1:gpr, %0:gpr, 8 :: (store (s32) into %ir.arrayidx1)
+; NOCLUSTER: SU(4):   SW %1:gpr, %0:gpr, 4 :: (store (s32) into %ir.arrayidx2)
+; NOCLUSTER: SU(5):   SW %1:gpr, %0:gpr, 16 :: (store (s32) into %ir.arrayidx3)
 ;
 ; STCLUSTER: ********** MI Scheduling **********
-; STCLUSTER-LABEL: load_clustering_1:%bb.0
+; STCLUSTER-LABEL: store_clustering_1:%bb.0
 ; STCLUSTER: *** Final schedule for %bb.0 ***
-; STCLUSTER: SU(1): %1:gpr = LW %0:gpr, 12
-; STCLUSTER: SU(2): %2:gpr = LW %0:gpr, 8
-; STCLUSTER: SU(4): %4:gpr = LW %0:gpr, 4
-; STCLUSTER: SU(5): %6:gpr = LW %0:gpr, 16
+; STCLUSTER: SU(4):   SW %1:gpr, %0:gpr, 4 :: (store (s32) into %ir.arrayidx2)
+; STCLUSTER: SU(3):   SW %1:gpr, %0:gpr, 8 :: (store (s32) into %ir.arrayidx1)
+; STCLUSTER: SU(2):   SW %1:gpr, %0:gpr, 12 :: (store (s32) into %ir.arrayidx0)
+; STCLUSTER: SU(5):   SW %1:gpr, %0:gpr, 16 :: (store (s32) into %ir.arrayidx3)
 ;
 ; LDCLUSTER: ********** MI Scheduling **********
-; LDCLUSTER-LABEL: load_clustering_1:%bb.0
+; LDCLUSTER-LABEL: store_clustering_1:%bb.0
 ; LDCLUSTER: *** Final schedule for %bb.0 ***
-; LDCLUSTER: SU(4): %4:gpr = LW %0:gpr, 4
-; LDCLUSTER: SU(2): %2:gpr = LW %0:gpr, 8
-; LDCLUSTER: SU(1): %1:gpr = LW %0:gpr, 12
-; LDCLUSTER: SU(5): %6:gpr = LW %0:gpr, 16
+; LDCLUSTER: SU(2):   SW %1:gpr, %0:gpr, 12 :: (store (s32) into %ir.arrayidx0)
+; LDCLUSTER: SU(3):   SW %1:gpr, %0:gpr, 8 :: (store (s32) into %ir.arrayidx1)
+; LDCLUSTER: SU(4):   SW %1:gpr, %0:gpr, 4 :: (store (s32) into %ir.arrayidx2)
+; LDCLUSTER: SU(5):   SW %1:gpr, %0:gpr, 16 :: (store (s32) into %ir.arrayidx3)
 ;
 ; DEFAULTCLUSTER: ********** MI Scheduling **********
-; DEFAULTCLUSTER-LABEL: load_clustering_1:%bb.0
+; DEFAULTCLUSTER-LABEL: store_clustering_1:%bb.0
 ; DEFAULTCLUSTER: *** Final schedule for %bb.0 ***
-; DEFAULTCLUSTER: SU(4): %4:gpr = LW %0:gpr, 4
-; DEFAULTCLUSTER: SU(2): %2:gpr = LW %0:gpr, 8
-; DEFAULTCLUSTER: SU(1): %1:gpr = LW %0:gpr, 12
-; DEFAULTCLUSTER: SU(5): %6:gpr = LW %0:gpr, 16
+; DEFAULTCLUSTER: SU(4):   SW %1:gpr, %0:gpr, 4 :: (store (s32) into %ir.arrayidx2)
+; DEFAULTCLUSTER: SU(3):   SW %1:gpr, %0:gpr, 8 :: (store (s32) into %ir.arrayidx1)
+; DEFAULTCLUSTER: SU(2):   SW %1:gpr, %0:gpr, 12 :: (store (s32) into %ir.arrayidx0)
+; DEFAULTCLUSTER: SU(5):   SW %1:gpr, %0:gpr, 16 :: (store (s32) into %ir.arrayidx3)
 entry:
   %arrayidx0 = getelementptr inbounds i32, ptr %p, i32 3
-  %val0 = load i32, ptr %arrayidx0
+  store i32 %v, ptr %arrayidx0
   %arrayidx1 = getelementptr inbounds i32, ptr %p, i32 2
-  %val1 = load i32, ptr %arrayidx1
-  %tmp0 = add i32 %val0, %val1
+  store i32 %v, ptr %arrayidx1
   %arrayidx2 = getelementptr inbounds i32, ptr %p, i32 1
-  %val2 = load i32, ptr %arrayidx2
-  %tmp1 = add i32 %tmp0, %val2
+  store i32 %v, ptr %arrayidx2
   %arrayidx3 = getelementptr inbounds i32, ptr %p, i32 4
-  %val3 = load i32, ptr %arrayidx3
-  %tmp2 = add i32 %tmp1, %val3
-  ret i32 %tmp2
+  store i32 %v, ptr %arrayidx3
+  ret i32 %v
 }
