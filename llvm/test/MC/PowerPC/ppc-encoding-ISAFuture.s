@@ -291,6 +291,10 @@
 #CHECK-BE: vucmprln 3, 5, 6                # encoding: [0x10,0x65,0x30,0x43]
 #CHECK-LE: vucmprln 3, 5, 6                # encoding: [0x43,0x30,0x65,0x10]
 
-        vucmprhb 1, 3, 6
+           vucmprhb 1, 3, 6
 #CHECK-BE: vucmprhb 1, 3, 6                # encoding: [0x10,0x23,0x30,0x83]
 #CHECK-LE: vucmprhb 1, 3, 6                # encoding: [0x83,0x30,0x23,0x10]
+
+           vucmprlb 2, 4, 5
+#CHECK-BE: vucmprlb 2, 4, 5                # encoding: [0x10,0x44,0x28,0xc3]
+#CHECK-LE: vucmprlb 2, 4, 5                # encoding: [0xc3,0x28,0x44,0x10]
