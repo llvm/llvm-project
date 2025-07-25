@@ -634,8 +634,6 @@ public:
   void setRelocationInfoForCXXRecord(const CXXRecordDecl *,
                                      CXXRecordDeclRelocationInfo);
 
-  void initSanitizers(const LangOptions &LangOpts, SourceManager &SM);
-
   /// Examines a given type, and returns whether the type itself
   /// is address discriminated, or any transitively embedded types
   /// contain data that is address discriminated. This includes

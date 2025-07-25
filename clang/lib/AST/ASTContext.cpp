@@ -50,7 +50,6 @@
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CommentOptions.h"
-#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
@@ -945,7 +944,7 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       DependentBitIntTypes(this_()), SubstTemplateTemplateParmPacks(this_()),
       DeducedTemplates(this_()), ArrayParameterTypes(this_()),
       CanonTemplateTemplateParms(this_()), SourceMgr(SM), LangOpts(LOpts),
-      NoSanitizeL(new NoSanitizeList(SM)),
+      NoSanitizeL(new NoSanitizeList(LangOpts.NoSanitizeFiles, SM)),
       XRayFilter(new XRayFunctionFilter(LangOpts.XRayAlwaysInstrumentFiles,
                                         LangOpts.XRayNeverInstrumentFiles,
                                         LangOpts.XRayAttrListFiles, SM)),
@@ -1696,15 +1695,6 @@ ASTContext::getRelocationInfoForCXXRecord(const CXXRecordDecl *RD) const {
   if (it != RelocatableClasses.end())
     return it->getSecond();
   return std::nullopt;
-}
-
-void ASTContext::initSanitizers(const LangOptions &LangOpts,
-                                SourceManager &SM) {
-  std::pair<unsigned, std::string> Error;
-  if (!NoSanitizeL->init(LangOpts.NoSanitizeFiles, Error)) {
-    SM.getDiagnostics().Report(diag::err_sanitize_ignorelist_failure)
-        << Error.first << Error.second;
-  }
 }
 
 void ASTContext::setRelocationInfoForCXXRecord(
