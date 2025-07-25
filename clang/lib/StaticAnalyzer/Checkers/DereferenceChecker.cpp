@@ -30,9 +30,9 @@ class DerefBugType : public BugType {
   StringRef ArrayMsg, FieldMsg;
 
 public:
-  DerefBugType(CheckerFrontend *FE, StringRef Desc, const char *RMsg,
+  DerefBugType(CheckerFrontend *FE, StringRef Desc, const char *AMsg,
                const char *FMsg = nullptr)
-      : BugType(FE, Desc), ArrayMsg(RMsg), FieldMsg(FMsg ? FMsg : RMsg) {}
+      : BugType(FE, Desc), ArrayMsg(AMsg), FieldMsg(FMsg ? FMsg : AMsg) {}
   StringRef getArrayMsg() const { return ArrayMsg; }
   StringRef getFieldMsg() const { return FieldMsg; }
 };
