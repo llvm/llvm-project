@@ -249,8 +249,9 @@ private:
   /// for subtargets with non-unified RFs.
   unsigned MaxUnifiedVGPRs;
 
-  GCNRPTarget(const GCNRegPressure &RP, const MachineFunction & MF)
-      : MF(MF), UnifiedRF(MF.getSubtarget<GCNSubtarget>().hasGFX90AInsts()), RP(RP) {}
+  GCNRPTarget(const GCNRegPressure &RP, const MachineFunction &MF)
+      : MF(MF), UnifiedRF(MF.getSubtarget<GCNSubtarget>().hasGFX90AInsts()),
+        RP(RP) {}
 
   /// Determines whether saving a VGPR from a VGPR RC (ArchVGPR or AGPR) where
   /// \p NumRegsInRC VGPRs are used is beneficial. \p NumRegsInOtherRC is the

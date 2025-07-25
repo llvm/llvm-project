@@ -432,7 +432,7 @@ bool GCNRPTarget::isVGPRSaveBeneficial(unsigned NumRegsInRC,
   if (NumRegsInRC > MaxVGPRs)
     return true;
   if (UnifiedRF) {
-    // Combined VGPR usage must be respected in unified RFs. .
+    // Combined VGPR usage must be respected in unified RFs.
     if (RP.getVGPRNum(true) > MaxUnifiedVGPRs)
       return true;
     // When the other VGPR RC is above its addressable limit and there is not
