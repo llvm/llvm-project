@@ -202,9 +202,9 @@ define i32 @test_call_omit_extra_moves(ptr %objptr) #0 {
 ; DARWIN-NEXT:   mov     x17, x0
 ; DARWIN-NEXT:   movk    x17, #6503, lsl #48
 ; DARWIN-NEXT:   autda   x16, x17
-; DARWIN-NEXT:   ldr     x8, [x16]
+; DARWIN-NEXT:   ldr     x9, [x16]
 ; DARWIN-NEXT:   movk    x16, #34646, lsl #48
-; DARWIN-NEXT:   blraa   x8, x16
+; DARWIN-NEXT:   blraa   x9, x16
 ; DARWIN-NEXT:   mov     w0, #42
 ; DARWIN-NEXT:   ldp     x29, x30, [sp], #16
 ; ELF-NEXT:      str     x30, [sp, #-16]!
