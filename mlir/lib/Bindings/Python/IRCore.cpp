@@ -1454,6 +1454,14 @@ void PyOperationBase::moveBefore(PyOperationBase &other) {
   operation.parentKeepAlive = otherOp.parentKeepAlive;
 }
 
+bool PyOperationBase::isBeforeInBlock(PyOperationBase &other) {
+  PyOperation &operation = getOperation();
+  PyOperation &otherOp = other.getOperation();
+  operation.checkValid();
+  otherOp.checkValid();
+  return mlirOperationIsBeforeInBlock(operation, otherOp);
+}
+
 bool PyOperationBase::verify() {
   PyOperation &op = getOperation();
   PyMlirContext::ErrorCapture errors(op.getContext());
@@ -3409,6 +3417,13 @@ void mlir::python::populateIRCore(nb::module_ &m) {
       .def("move_before", &PyOperationBase::moveBefore, nb::arg("other"),
            "Puts self immediately before the other operation in its parent "
            "block.")
+      .def("is_before_in_block", &PyOperationBase::isBeforeInBlock,
+           nb::arg("other"),
+           "Given an operation 'other' that is within the same parent block, "
+           "return"
+           "whether the current operation is before 'other' in the operation "
+           "list"
+           "of the parent block.")
       .def(
           "clone",
           [](PyOperationBase &self, nb::object ip) {
