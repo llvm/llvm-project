@@ -21,6 +21,8 @@ emitc.class @mainClass {
 }
 
 // CHECK: module {
+// CHECK-NEXT:   emitc.include <"map">
+// CHECK-NEXT:   emitc.include <"string">
 // CHECK-NEXT:   emitc.class @mainClass {
 // CHECK-NEXT:     emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
 // CHECK-NEXT:     emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.field_ref = ["some_feature"]}

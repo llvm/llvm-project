@@ -53,33 +53,41 @@ def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class"> {
   let dependentDialects = ["emitc::EmitCDialect"];
 }
 
-def AddReflectionMapPass : Pass<"add-reflection-map"> {
+def AddReflectionMapPass : Pass<"add-reflection-map", "ModuleOp"> {
   let summary =
       "Add a reflection map function to EmitC classes for runtime field lookup";
   let description = [{
         This pass adds a `getBufferForName` function to EmitC classes that enables 
         runtime lookup of field buffers by their string names. 
-        This enables runtime introspection and dynamic access to class fields by name,
-        which is useful for interfacing with external systems that need to access 
-        tensors/buffers by their semantic names.
+        This would require that the class has fields with attributes and a function named `execute`.
+        The `fieldop` attribute is expected to be a dictionary where:
+        - The keys are `namedAttribute`.
+        - The values are arrays containing a single string attribute.
 
-        Example transformation:
+
+        Example:
+
         ```mlir
         emitc.class @MyClass {
           emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
           emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.field_ref = ["some_feature"]}
           emitc.func @execute() { ... }
         }
-        ```
 
-        Becomes:
-        ```mlir
+        // becomes:
+        
         emitc.class @MyClass {
           emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
           emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.field_ref = ["some_feature"]}
           emitc.func @getBufferForName(%name : !emitc.opaque<"std::string_view">) -> !emitc.opaque<"char*"> {
-            %map = "emitc.constant"(){value = #emitc.opaque<"{"another_feature", reinterpret_cast<char*>(&another_feature)}, {"some_feature", reinterpret_cast<char*>(&some_feature)}">} : () -> !emitc.opaque<"std::map<std::string, char*>">
-            return %null : !emitc.opaque<"char*">
+            %0 = "emitc.constant"() <{value = #emitc.opaque<"{  { \22another_feature\22, reinterpret_cast<char*>(&fieldName0) },  { \22some_feature\22, reinterpret_cast<char*>(&fieldName1) } }">}> : () -> !emitc.opaque<"const std::map<std::string, char*>">
+            %1 = call_opaque "find"(%0, %arg0) : (!emitc.opaque<"const std::map<std::string, char*>">, !emitc.opaque<"std::string_view">) -> !emitc.opaque<"std::map<std::string, char*>::const_iterator">
+            %2 = call_opaque "end"(%0) : (!emitc.opaque<"const std::map<std::string, char*>">) -> !emitc.opaque<"std::map<std::string, char*>::const_iterator">
+            %3 = call_opaque "operator=="(%1, %2) : (!emitc.opaque<"std::map<std::string, char*>::const_iterator">, !emitc.opaque<"std::map<std::string, char*>::const_iterator">) -> i1
+            %4 = "emitc.constant"() <{value = #emitc.opaque<"nullptr">}> : () -> !emitc.opaque<"char">
+            %5 = call_opaque "second"(%1) : (!emitc.opaque<"std::map<std::string, char*>::const_iterator">) -> !emitc.opaque<"char">
+            %6 = conditional %3, %4, %5 : !emitc.opaque<"char">
+            return %6 : !emitc.opaque<"char">
           }
           emitc.func @execute() { ... }
         }
