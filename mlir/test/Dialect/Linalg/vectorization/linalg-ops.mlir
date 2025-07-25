@@ -943,23 +943,22 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:      %[[DEST:.*]]: tensor<?x?xf32>,
 // CHECK-SAME:      %[[SRC:.*]]: tensor<?x?x16x2xf32>
 func.func @test_vectorize_dynamic_shapes_unpack(%dest: tensor<?x?xf32>, %src: tensor<?x?x16x2xf32>) -> tensor<?x?xf32> {
-// CHECK: %[[C0:.*]] = arith.constant 0
-// CHECK: %[[C01:.*]] = arith.constant 0
-// CHECK: %[[C02:.*]] = arith.constant 0
-// CHECK: %[[DIM_0:.*]] = tensor.dim %[[ARG_1]], %[[C02]] : tensor<?x?x16x2xf32>
-// CHECK: %[[C1:.*]] = arith.constant 1
-// CHECK: %[[DIM6:.*]] = tensor.dim %[[ARG_1]], %[[C1]] : tensor<?x?x16x2xf32>
-// CHECK: %[[CNST16:.*]] = arith.constant 16 : index
-// CHECK: %[[CNST2:.*]] = arith.constant 2 : index
-// CHECK: %[[readMsk0:.*]] = vector.create_mask %[[DIM_0]], %[[DIM6]], %[[CNST16]], %[[CNST2]] : vector<2x1x16x2xi1>
-// CHECK: %[[read0:.*]] = vector.mask %[[readMsk0]] {{.*}} vector.transfer_read %{{.*}} : tensor<?x?x16x2xf32>, vector<2x1x16x2xf32> } : vector<2x1x16x2xi1> -> vector<2x1x16x2xf32>
-// CHECK: %[[trans0:.*]] = vector.transpose %[[read0]], [0, 3, 1, 2] : vector<2x1x16x2xf32> to vector<2x2x1x16xf32>
-// CHECK: %[[sc0:.*]] = vector.shape_cast %[[trans0]] : vector<2x2x1x16xf32> to vector<4x16xf32>
-// CHECK: %[[writeMsk0:.*]] = vector.create_mask {{.*}} : vector<4x16xi1>
-// CHECK: %[[write0:.*]] = vector.mask %[[writeMsk0:.*]] {{.*}} vector.transfer_write %[[sc0]], %[[SRC]]
-// CHECK: return %[[write0]]
- %ret = linalg.unpack %src inner_dims_pos = [1, 0] inner_tiles = [16, 2] into %dest : tensor<?x?x16x2xf32> -> tensor<?x?xf32>
- return %ret : tensor<?x?xf32>
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: %[[C0_1:.*]] = arith.constant 0 : index
+  // CHECK: %[[DIM_0:.*]] = tensor.dim %[[SRC]], %[[C0_1]] : tensor<?x?x16x2xf32>
+  // CHECK: %[[C1:.*]] = arith.constant 1
+  // CHECK: %[[DIM6:.*]] = tensor.dim %[[SRC]], %[[C1]] : tensor<?x?x16x2xf32>
+  // CHECK: %[[CNST16:.*]] = arith.constant 16 : index
+  // CHECK: %[[CNST2:.*]] = arith.constant 2 : index
+  // CHECK: %[[MASK_READ:.*]] = vector.create_mask %[[DIM_0]], %[[DIM6]], %[[CNST16]], %[[CNST2]] : vector<2x1x16x2xi1>
+  // CHECK: %[[READ:.*]] = vector.mask %[[MASK_READ]] {{.*}} vector.transfer_read %{{.*}} : tensor<?x?x16x2xf32>, vector<2x1x16x2xf32> } : vector<2x1x16x2xi1> -> vector<2x1x16x2xf32>
+  // CHECK: %[[TR:.*]] = vector.transpose %[[READ]], [0, 3, 1, 2] : vector<2x1x16x2xf32> to vector<2x2x1x16xf32>
+  // CHECK: %[[SC:.*]] = vector.shape_cast %[[TR]] : vector<2x2x1x16xf32> to vector<4x16xf32>
+  // CHECK: %[[MASK_WRITE:.*]] = vector.create_mask {{.*}} : vector<4x16xi1>
+  // CHECK: %[[WRITE:.*]] = vector.mask %[[MASK_WRITE:.*]] {{.*}} vector.transfer_write %[[SC]], %[[DEST]]
+  // CHECK: return %[[WRITE]]
+  %ret = linalg.unpack %src inner_dims_pos = [1, 0] inner_tiles = [16, 2] into %dest : tensor<?x?x16x2xf32> -> tensor<?x?xf32>
+  return %ret : tensor<?x?xf32>
 }
 module attributes {transform.with_named_sequence} {
  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
@@ -975,10 +974,6 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:      %[[DEST:.*]]: tensor<?x?xf32>,
 // CHECK-SAME:      %[[SRC:.*]]: tensor<?x?x16x2xf32>
 func.func @test_vectorize_dynamic_shapes_unpack_scalable_vec(%dest: tensor<?x?xf32>, %src: tensor<?x?x16x2xf32>) -> tensor<?x?xf32> {
-  // CHECK: %[[C0:.*]] = arith.constant 0
-  // CHECK: %[[DIM:.*]] = tensor.dim %[[DEST]], %[[C0]] : tensor<?x?xf32>
-  // CHECK: %[[C1:.*]] = arith.constant 1 : index
-  // CHECK: %[[DIM0:.*]] = tensor.dim %[[DEST]], %[[C1]] : tensor<?x?xf32>
   // CHECK: %[[CST:.*]] = arith.constant 0.000000e+00
   // CHECK: %[[C01:.*]] = arith.constant 0
   // CHECK: %[[C02:.*]] = arith.constant 0
@@ -1011,10 +1006,6 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:      %[[DEST:.*]]: tensor<?x?xf32>,
 // CHECK-SAME:      %[[SRC:.*]]: tensor<?x?x?x2xf32>
 func.func @test_vectorize_dynamic_shapes_unpack_scalable_vec_and_tile_size(%dest: tensor<?x?xf32>, %src: tensor<?x?x?x2xf32>) -> tensor<?x?xf32> {
-  // CHECK: %[[C0:.*]] = arith.constant 0
-  // CHECK: %[[DIM:.*]] = tensor.dim %[[DEST]], %[[C0]] : tensor<?x?xf32>
-  // CHECK: %[[C1:.*]] = arith.constant 1 : index
-  // CHECK: %[[DIM0:.*]] = tensor.dim %[[DEST]], %[[C1]] : tensor<?x?xf32>
   // CHECK: %[[CST:.*]] = arith.constant 0.000000e+00
   // CHECK: %[[C01:.*]] = arith.constant 0
   // CHECK: %[[C02:.*]] = arith.constant 0
