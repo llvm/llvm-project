@@ -1030,6 +1030,43 @@ Error WasmObjectFile::parseTargetFeaturesSection(ReadContext &Ctx) {
   return Error::success();
 }
 
+Error WasmObjectFile::parseCodeMetadataSection(StringRef Name,
+                                               ReadContext &Ctx) {
+  const auto HintTypeName = Name.substr(14 /* "code_metadata." */);
+  if (HintTypeName == "branch_hint") {
+    return parseBranchHintSection(Ctx);
+  } else {
+    return make_error<GenericBinaryError>(
+        "invalid code metadata section: " + Name, object_error::parse_failed);
+  }
+}
+
+Error WasmObjectFile::parseBranchHintSection(ReadContext &Ctx) {
+  const uint32_t NumFuncs = readVaruint32(Ctx);
+  BranchHints.reserve(NumFuncs);
+  for (size_t i = 0; i < NumFuncs; ++i) {
+    wasm::WasmCodeMetadataFuncEntry<wasm::WasmCodeMetadataBranchHint> FuncEntry;
+    FuncEntry.FuncIdx = readVaruint32(Ctx);
+    const uint32_t NumHints = readVaruint32(Ctx);
+    for (size_t j = 0; j < NumHints; ++j) {
+      wasm::WasmCodeMetadataItemEntry<wasm::WasmCodeMetadataBranchHint> Hint;
+      Hint.Offset = readVaruint32(Ctx);
+      Hint.Size = readVaruint32(Ctx);
+      uint8_t Data = readUint8(Ctx);
+      if (Data > 0x1)
+        return make_error<GenericBinaryError>("invalid branch hint data",
+                                              object_error::parse_failed);
+      Hint.Data = static_cast<wasm::WasmCodeMetadataBranchHint>(Data);
+      FuncEntry.Hints.push_back(Hint);
+    }
+    BranchHints.push_back(std::move(FuncEntry));
+  }
+  if (Ctx.Ptr != Ctx.End)
+    return make_error<GenericBinaryError>(
+        "branch hint section ended prematurely", object_error::parse_failed);
+  return Error::success();
+}
+
 Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
   uint32_t SectionIndex = readVaruint32(Ctx);
   if (SectionIndex >= Sections.size())
@@ -1182,6 +1219,9 @@ Error WasmObjectFile::parseCustomSection(WasmSection &Sec, ReadContext &Ctx) {
       return Err;
   } else if (Sec.Name == "target_features") {
     if (Error Err = parseTargetFeaturesSection(Ctx))
+      return Err;
+  } else if (Sec.Name.starts_with("metadata.code.")) {
+    if (Error Err = parseCodeMetadataSection(Sec.Name, Ctx))
       return Err;
   } else if (Sec.Name.starts_with("reloc.")) {
     if (Error Err = parseRelocSection(Sec.Name, Ctx))
