@@ -708,8 +708,6 @@ private:
   void SwitchToExTabSection(const MCSymbol &FnStart);
   void SwitchToExIdxSection(const MCSymbol &FnStart);
 
-  void EmitFixup(const MCExpr *Expr, MCFixupKind Kind);
-
   bool IsThumb;
   bool IsAndroid;
 
@@ -1096,8 +1094,8 @@ void ARMTargetELFStreamer::emitLabel(MCSymbol *Symbol) {
 }
 
 void ARMTargetELFStreamer::annotateTLSDescriptorSequence(
-    const MCSymbolRefExpr *S) {
-  getStreamer().EmitFixup(S, FK_Data_4);
+    const MCSymbolRefExpr *Expr) {
+  getStreamer().addFixup(Expr, FK_Data_4);
 }
 
 void ARMTargetELFStreamer::emitCode16() { getStreamer().setIsThumb(true); }
@@ -1204,11 +1202,6 @@ inline void ARMELFStreamer::SwitchToExIdxSection(const MCSymbol &FnStart) {
   SwitchToEHSection(".ARM.exidx", ELF::SHT_ARM_EXIDX,
                     ELF::SHF_ALLOC | ELF::SHF_LINK_ORDER,
                     SectionKind::getData(), FnStart);
-}
-
-void ARMELFStreamer::EmitFixup(const MCExpr *Expr, MCFixupKind Kind) {
-  MCFragment *Frag = getCurrentFragment();
-  Frag->addFixup(MCFixup::create(Frag->getContents().size(), Expr, Kind));
 }
 
 void ARMELFStreamer::EHReset() {
