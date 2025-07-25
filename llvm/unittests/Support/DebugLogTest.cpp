@@ -66,7 +66,7 @@ TEST(DebugLogTest, Basic) {
   // LDBG should be compiled out in NDEBUG, so just check it compiles and has
   // no effect.
   llvm::DebugFlag = true;
-  static const char *DT[] = {};
+  static const char *DT[] = {"A"};
   setCurrentDebugTypes(DT, 0);
   int count = 0;
   auto inc = [&]() { return ++count; };
