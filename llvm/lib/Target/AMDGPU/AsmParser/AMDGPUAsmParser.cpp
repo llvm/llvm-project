@@ -9213,6 +9213,26 @@ void AMDGPUAsmParser::cvtVOP3Interp(MCInst &Inst, const OperandVector &Operands)
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::omod))
     addOptionalImmOperand(Inst, Operands, OptionalIdx,
                           AMDGPUOperand::ImmTyOModSI);
+
+  // Some v_interp instrutions use op_sel[3] for dst.
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::op_sel)) {
+    addOptionalImmOperand(Inst, Operands, OptionalIdx,
+                          AMDGPUOperand::ImmTyOpSel);
+
+    int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
+    unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
+
+    // Check if op_sel[3] is set, which is meant for dst.
+    if ((OpSel & (1 << 3)) != 0) {
+      int ModIdx =
+          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers);
+      uint32_t ModVal = Inst.getOperand(ModIdx).getImm();
+
+      ModVal |= SISrcMods::DST_OP_SEL;
+
+      Inst.getOperand(ModIdx).setImm(ModVal);
+    }
+  }
 }
 
 void AMDGPUAsmParser::cvtVINTERP(MCInst &Inst, const OperandVector &Operands)

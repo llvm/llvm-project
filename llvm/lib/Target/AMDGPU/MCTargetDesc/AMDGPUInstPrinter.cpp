@@ -1349,6 +1349,14 @@ void AMDGPUInstPrinter::printOpSel(const MCInst *MI, unsigned,
       O << " op_sel:[" << FI << ',' << BC << ']';
     return;
   }
+  if (Opc == AMDGPU::V_INTERP_P2_F16_opsel_gfx9) {
+    int ModIdx =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers);
+    uint32_t ModVal = MI->getOperand(ModIdx).getImm();
+    if (ModVal & SISrcMods::DST_OP_SEL)
+      O << " op_sel:[0,0,0,1]";
+    return;
+  }
 
   printPackedModifier(MI, " op_sel:[", SISrcMods::OP_SEL_0, O);
 }
