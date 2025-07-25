@@ -2190,11 +2190,6 @@ std::optional<SVal> RegionStoreManager::getBindingForDerivedDefaultValue(
     if (isa<nonloc::LazyCompoundVal, nonloc::CompoundVal>(val))
       return val;
 
-    // 'nonloc::ConcreteInt' values can arise from e.g. compound literals in
-    // designated initializers for bitfields in unions.
-    if (isa<nonloc::ConcreteInt>(val))
-      return val;
-
     llvm_unreachable("Unknown default value");
   }
 
@@ -2763,7 +2758,19 @@ RegionStoreManager::getUniqueDefaultBinding(RegionBindingsConstRef B,
     return std::nullopt;
 
   const auto [Key, Value] = *Cluster->begin();
-  return Key.isDirect() ? std::optional<SVal>{} : Value;
+  if (Key.isDirect())
+    return std::nullopt;
+
+  // Preserve the invariant that default bindings should only be one of:
+  // Symbol, Zero, Unknown, LazyCompoundVal, CompoundVal
+  // This prevents over-collapsing of CompoundVals e.g.
+  // CompoundVal{CompoundVal{1}} -> 1
+  if (Value.isUnknownOrUndef() || Value.isZeroConstant() ||
+      isa<nonloc::SymbolVal>(Value) ||
+      isa<nonloc::LazyCompoundVal, nonloc::CompoundVal>(Value))
+    return Value;
+
+  return std::nullopt;
 }
 
 std::optional<SVal>

@@ -180,7 +180,7 @@ struct UnionContainerBitfields processUnionContainer(struct UnionContainerBitfie
 
 void testUnionContainerBitfields(void) {
   struct UnionContainerBitfields c1 = processUnionContainer((struct UnionContainerBitfields){.u.val = 100});
-  clang_analyzer_eval(c1.u.x == 101); // expected-warning{{FALSE}} // expected-warning{{TRUE}}
+  clang_analyzer_eval(c1.u.x == 101); // expected-warning{{TRUE}}
   
   struct UnionContainerBitfields c2 = processUnionContainer((struct UnionContainerBitfields){.u.x = 100});
   clang_analyzer_eval(c2.u.x == 101); // expected-warning{{TRUE}}
