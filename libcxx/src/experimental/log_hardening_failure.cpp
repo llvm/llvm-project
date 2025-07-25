@@ -18,7 +18,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 void __log_hardening_failure(const char* message) noexcept {
   // Always log the message to `stderr` in case the platform-specific system calls fail.
+#ifndef __Fuchsia__ // `fputs` is not available on Fuchsia.
   std::fputs(message, stderr);
+#endif
 
 #if defined(__BIONIC__)
   // Show error in logcat. The latter two arguments are ignored on Android.
