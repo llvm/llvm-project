@@ -2335,8 +2335,7 @@ bool AMDGPUDAGToDAGISel::isSOffsetLegalWithImmOffset(SDValue *SOffset,
 // Given \p Offset and load node \p N check if an \p Offset is a multiple of
 // the load byte size. If it is update \p Offset to a pre-scaled value and
 // return true.
-bool AMDGPUDAGToDAGISel::SelectScaleOffset(SDNode *N,
-                                           SDValue &Offset,
+bool AMDGPUDAGToDAGISel::SelectScaleOffset(SDNode *N, SDValue &Offset,
                                            bool IsSigned) const {
   bool ScaleOffset = false;
   if (!Subtarget->hasScaleOffset() || !Offset)
