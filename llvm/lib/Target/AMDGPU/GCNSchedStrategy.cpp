@@ -1914,8 +1914,8 @@ void PreRARematStage::rematerialize() {
     unsigned DefRegion = MIRegion.at(DefMI);
 
     // Rematerialize DefMI to its use block.
-    TII->reMaterialize(*InsertPos->getParent(), InsertPos, Reg, 0, *DefMI,
-                       *DAG.TRI);
+    TII->reMaterialize(*InsertPos->getParent(), InsertPos, Reg,
+                       AMDGPU::NoSubRegister, *DefMI, *DAG.TRI);
     Remat.RematMI = &*std::prev(InsertPos);
     DAG.LIS->InsertMachineInstrInMaps(*Remat.RematMI);
 
@@ -2066,7 +2066,8 @@ void PreRARematStage::finalizeGCNSchedStage() {
     // Re-rematerialize MI at the end of its original region. Note that it may
     // not be rematerialized exactly in the same position as originally within
     // the region, but it should not matter much.
-    TII->reMaterialize(*MBB, InsertPos, Reg, 0, RematMI, *DAG.TRI);
+    TII->reMaterialize(*MBB, InsertPos, Reg, AMDGPU::NoSubRegister, RematMI,
+                       *DAG.TRI);
     MachineInstr *NewMI = &*std::prev(InsertPos);
     DAG.LIS->InsertMachineInstrInMaps(*NewMI);
 
