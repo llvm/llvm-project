@@ -56,19 +56,21 @@ def CSR_XLEN_F32_Interrupt: CalleeSavedRegs<(add CSR_Interrupt,
 def CSR_XLEN_F64_Interrupt: CalleeSavedRegs<(add CSR_Interrupt,
                                              (sequence "F%u_D", 0, 31))>;
 
+defvar VREGS = (add (sequence "V%u", 0, 31),
+                    (sequence "V%uM2", 0, 31, 2),
+                    (sequence "V%uM4", 0, 31, 4),
+                    (sequence "V%uM8", 0, 31, 8));
+
 // Same as CSR_Interrupt, but including all vector registers.
-def CSR_XLEN_V_Interrupt: CalleeSavedRegs<(add CSR_Interrupt,
-                                           (sequence "V%u", 0, 31))>;
+def CSR_XLEN_V_Interrupt: CalleeSavedRegs<(add CSR_Interrupt, VREGS)>;
 
 // Same as CSR_Interrupt, but including all 32-bit FP registers and all vector
 // registers.
-def CSR_XLEN_F32_V_Interrupt: CalleeSavedRegs<(add CSR_XLEN_F32_Interrupt,
-                                               (sequence "V%u", 0, 31))>;
+def CSR_XLEN_F32_V_Interrupt: CalleeSavedRegs<(add CSR_XLEN_F32_Interrupt, VREGS)>;
 
 // Same as CSR_Interrupt, but including all 64-bit FP registers and all vector
 // registers.
-def CSR_XLEN_F64_V_Interrupt: CalleeSavedRegs<(add CSR_XLEN_F64_Interrupt,
-                                               (sequence "V%u", 0, 31))>;
+def CSR_XLEN_F64_V_Interrupt: CalleeSavedRegs<(add CSR_XLEN_F64_Interrupt, VREGS)>;
 
 // Same as CSR_Interrupt, but excluding X16-X31.
 def CSR_Interrupt_RVE : CalleeSavedRegs<(sub CSR_Interrupt,
