@@ -185,17 +185,15 @@ private:
 
 using AddressRange = std::pair<uint64_t, uint64_t>;
 
-// The parsed MMap event
-struct MMapEvent {
-  int64_t PID = 0;
-  uint64_t Address = 0;
-  uint64_t Size = 0;
-  uint64_t Offset = 0;
-  StringRef MemProtectionFlag;
-  StringRef BinaryPath;
-};
-
 class ProfiledBinary {
+  struct MMapInfo {
+    uint64_t StartAddr;
+    uint64_t Size;
+    uint64_t FileOffset;
+    MMapInfo(uint64_t Start, uint64_t Size, uint64_t FileOffset)
+        : StartAddr(Start), Size(Size), FileOffset(FileOffset) {}
+    MMapInfo() : StartAddr(0), Size(0), FileOffset(0) {}
+  };
   // Absolute path of the executable binary.
   std::string Path;
   // Path of the debug info binary.
@@ -287,7 +285,7 @@ class ProfiledBinary {
   std::unordered_set<std::string> NameStrings;
 
   // MMap events for PT_LOAD segments without 'x' memory protection flag.
-  SmallVector<MMapEvent> MMapNonTextEvents;
+  std::map<uint64_t, MMapInfo, std::greater<uint64_t>> NonTextMMapInfo;
 
   // Records the file offset, file size and virtual address of program headers.
   struct PhdrInfo {
@@ -538,7 +536,7 @@ public:
   void setProfiledFunctions(std::unordered_set<const BinaryFunction *> &Funcs) {
     ProfiledFunctions = Funcs;
   }
-  
+
   BinaryFunction *getBinaryFunction(FunctionId FName) {
     if (FName.isStringRef()) {
       auto I = BinaryFunctions.find(FName.str());
@@ -640,8 +638,32 @@ public:
     return ProbeDecoder.getInlinerDescForProbe(Probe);
   }
 
-  void addMMapNonTextEvent(MMapEvent MMap) {
-    MMapNonTextEvents.push_back(MMap);
+  bool isNonOverlappingAddressInterval(std::pair<uint64_t, uint64_t> LHS,
+                                       std::pair<uint64_t, uint64_t> RHS) {
+    if (LHS.second <= RHS.first || RHS.second <= LHS.first)
+      return true;
+    return false;
+  }
+
+  Error addMMapNonTextEvent(uint64_t Address, uint64_t Size,
+                            uint64_t FileOffset) {
+    for (const auto &ExistingMMap : NonTextMMapInfo) {
+      if (isNonOverlappingAddressInterval(
+              {ExistingMMap.second.StartAddr,
+               ExistingMMap.second.StartAddr + ExistingMMap.second.Size},
+              {Address, Address + Size})) {
+        continue;
+      }
+      return createStringError(
+          inconvertibleErrorCode(),
+          "Non-text mmap event overlaps with existing event at address: %lx",
+          Address);
+    }
+    MMapInfo &MMap = NonTextMMapInfo[Address];
+    MMap.StartAddr = Address;
+    MMap.Size = Size;
+    MMap.FileOffset = FileOffset;
+    return Error::success();
   }
 
   // Given a non-text runtime address, canonicalize it to the virtual address in

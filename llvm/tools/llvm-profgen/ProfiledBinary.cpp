@@ -352,25 +352,29 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
 
 uint64_t ProfiledBinary::CanonicalizeNonTextAddress(uint64_t Address) {
   uint64_t FileOffset = 0;
-  for (const auto &MMapEvent : MMapNonTextEvents) {
-    if (MMapEvent.Address <= Address &&
-        Address < MMapEvent.Address + MMapEvent.Size) {
-      // If the address is within the mmap event, return the file offset.
-      FileOffset = Address - MMapEvent.Address + MMapEvent.Offset;
-      break;
-    }
-  }
-  if (FileOffset == 0) {
-    // If the address is not within any mmap event, return the address as is.
+  auto MMapIter = NonTextMMapInfo.lower_bound(Address);
+  if (MMapIter == NonTextMMapInfo.end())
+    return Address; // No non-text mmap event found, return the address as is.
+
+  const auto &MMapInfo = MMapIter->second;
+
+  // If the address is within the non-text mmap event, calculates its file
+  // offset in the binary.
+  if (MMapInfo.StartAddr <= Address &&
+      Address < MMapInfo.StartAddr + MMapInfo.Size)
+    FileOffset = Address - MMapInfo.StartAddr + MMapInfo.FileOffset;
+
+  // If the address is not within the non-text mmap event, return the address
+  // as is.
+  if (FileOffset == 0)
     return Address;
-  }
+
   for (const auto &PhdrInfo : NonTextPhdrInfo) {
-    // Check if the file offset is within the non-text segment.
+    // Find the program section that contains the file offset and map the
+    // file offset to the virtual address.
     if (PhdrInfo.FileOffset <= FileOffset &&
-        FileOffset < PhdrInfo.FileOffset + PhdrInfo.FileSz) {
-      // If it is, return the virtual address of the segment.
+        FileOffset < PhdrInfo.FileOffset + PhdrInfo.FileSz)
       return PhdrInfo.VirtualAddr + (FileOffset - PhdrInfo.FileOffset);
-    }
   }
 
   return Address;
