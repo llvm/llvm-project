@@ -171,10 +171,9 @@ static LogicalResult verifyInitializationAttribute(Operation *op,
 /// In the format string, all `{}` are replaced by Placeholders, except if the
 /// `{` is escaped by `{{` - then it doesn't start a placeholder.
 template <class ArgType>
-FailureOr<SmallVector<ReplacementItem>>
-parseFormatString(StringRef toParse, ArgType fmtArgs,
-                  std::optional<llvm::function_ref<mlir::InFlightDiagnostic()>>
-                      emitError = {}) {
+FailureOr<SmallVector<ReplacementItem>> parseFormatString(
+    StringRef toParse, ArgType fmtArgs,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError = {}) {
   SmallVector<ReplacementItem> items;
 
   // If there are not operands, the format string is not interpreted.
@@ -197,8 +196,7 @@ parseFormatString(StringRef toParse, ArgType fmtArgs,
       continue;
     }
     if (toParse.size() < 2) {
-      return (*emitError)()
-             << "expected '}' after unescaped '{' at end of string";
+      return emitError() << "expected '}' after unescaped '{' at end of string";
     }
     // toParse contains at least two characters and starts with `{`.
     char nextChar = toParse[1];
@@ -214,8 +212,8 @@ parseFormatString(StringRef toParse, ArgType fmtArgs,
       continue;
     }
 
-    if (emitError.has_value()) {
-      return (*emitError)() << "expected '}' after unescaped '{'";
+    if (emitError) {
+      return emitError() << "expected '}' after unescaped '{'";
     }
     return failure();
   }
