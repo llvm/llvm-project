@@ -29,7 +29,6 @@ TEST_F(LlvmLibcAtanpif16Test, SpecialNumbers) {
   EXPECT_FP_EQ(-0.5f16, LIBC_NAMESPACE::atanpif16(neg_inf));
 }
 
-
 TEST_F(LlvmLibcAtanpif16Test, SymmetryProperty) {
   // Test that atanpi(-x) = -atanpi(x)
   constexpr float16 TEST_VALS[] = {0.1f16,  0.25f16, 0.5f16,   0.75f16,

@@ -19,4 +19,3 @@ float16 atanpif16(float16 x);
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_ASINF16_H
-
