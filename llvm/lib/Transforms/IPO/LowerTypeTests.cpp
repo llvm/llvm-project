@@ -2239,7 +2239,7 @@ bool LowerTypeTestsModule::lower() {
     std::string TargetName;
   };
   std::vector<AliasToCreate> AliasesToCreate;
-  
+
   // Parse alias data to replace stand-in function declarations for aliases
   // with an alias to the intended target.
   if (ExportSummary) {
@@ -2469,7 +2469,7 @@ bool LowerTypeTestsModule::lower() {
     A.Alias->replaceAllUsesWith(AliasGA);
     A.Alias->eraseFromParent();
   }
-  
+
   // Emit .symver directives for exported functions, if they exist.
   if (ExportSummary) {
     if (NamedMDNode *SymversMD = M.getNamedMetadata("symvers")) {
