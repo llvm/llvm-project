@@ -246,7 +246,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     llvm::FunctionType *LLVMFuncTy =
         cast<llvm::FunctionType>(ConvertType(QualType(FuncTy, 0)));
 
-    uint NParams = LLVMFuncTy->getNumParams();
+    unsigned NParams = LLVMFuncTy->getNumParams();
     std::vector<Value *> Args;
     Args.reserve(NParams + 3);
     // The only real argument is the FuncRef
@@ -273,7 +273,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     // The token type indicates the boundary between return types and param
     // types.
     Args.push_back(PoisonValue::get(llvm::Type::getTokenTy(getLLVMContext())));
-    for (uint i = 0; i < NParams; i++) {
+    for (unsigned i = 0; i < NParams; i++) {
       addType(LLVMFuncTy->getParamType(i));
     }
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_ref_test_func);
