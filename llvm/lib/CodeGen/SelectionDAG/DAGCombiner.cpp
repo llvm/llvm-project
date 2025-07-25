@@ -13550,8 +13550,8 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
         KnownVal = false;
     }
 
-    // If not handled by special cases, use ICmpInst::compare
     if (!KnownVal) {
+      bool SupportedPredicate = true;
       KnownBits KnownLHS = DAG.computeKnownBits(N0);
 
       // Convert ISD::CondCode to CmpInst::Predicate
@@ -13588,17 +13588,17 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
         Pred = CmpInst::ICMP_SGE;
         break;
       default:
-        return SDValue(); // Unsupported predicate
+        SupportedPredicate = false;
+        break;
       }
 
-      // Use the same logic as GlobalISel: ICmpInst::compare
-      KnownVal = ICmpInst::compare(KnownLHS, KnownRHS, Pred);
+      if (SupportedPredicate)
+        KnownVal = ICmpInst::compare(KnownLHS, KnownRHS, Pred);
     }
 
     // If the comparison result is known, replace with constant
-    if (KnownVal) {
+    if (KnownVal)
       return DAG.getBoolConstant(*KnownVal, DL, VT, N1.getValueType());
-    }
   }
 
   if (SDValue Combined = SimplifySetCC(VT, N0, N1, Cond, DL, !PreferSetCC)) {
