@@ -676,9 +676,7 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
   let hasVerifier = 1;
 }
 
-def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
-  AllElementTypesMatch<["value", "source"]>, MemoryEffects<[MemRead]>
-  ]> {
+def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
   let summary = "load a set of scattered data points from memory.";
 
   let description = [{ It (aka. load) load data per each work-item. The output
@@ -721,8 +719,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
   }];
 
   let arguments = (ins XeGPU_TensorDesc_or_MemRef: $source,
-                       Variadic<Index>: $offsets,
-                       OptionalAttr<DenseI64ArrayAttr>: $const_offsets,  
+                       Optional<XeGPU_OffsetType>: $offsets,
                        XeGPU_MaskType: $mask,
                        OptionalAttr<I64Attr>: $chunk_size,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
@@ -760,11 +757,15 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
   }];
 
   let assemblyFormat = [{
-    $source `` 
-    custom<OptionalDynamicIndexList>($offsets, $const_offsets) `,`
+    $source
+    (`[` $offsets^ `]`)? `,`
     $mask prop-dict 
-    attr-dict `:` qualified(type($source)) `,` type($mask) `->` type($value)
+    attr-dict `:` type(operands) `->` type($value)
   }];
+  
+  //    functional-type(operands, results)
+  // type($source) (type($offsets)^ )? `,` type($mask) `->` type($value)
+  
 
   let builders = [
     OpBuilder<(ins "Type": $value, "Value": $source, "Value": $mask,
@@ -776,9 +777,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
   let hasVerifier = 1;
 }
 
-def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
-  AllElementTypesMatch<["value", "dest"]>, MemoryEffects<[MemWrite]>
-  ]> {
+def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
   let summary = "store data to scattered memory locations.";
   let description = [{ It (aka. store) stores data to scattered memory locations. The value is
   typically a 1D vector. But when the chunk size of the TensorDesc is larger than 1, it will be
@@ -818,8 +817,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
   let arguments = (ins
     XeGPU_ValueType: $value,
     XeGPU_TensorDesc_or_MemRef: $dest,
-    Variadic<Index>: $offsets,
-    OptionalAttr<DenseI64ArrayAttr>: $const_offsets,
+    Optional<XeGPU_OffsetType>: $offsets,
     XeGPU_MaskType: $mask,
     OptionalAttr<I64Attr>: $chunk_size,
     OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
@@ -850,12 +848,13 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
 
   let assemblyFormat = [{
     $value `,`
-    $dest `` 
-    custom<OptionalDynamicIndexList>($offsets, $const_offsets) `,`
+    $dest
+    (`[` $offsets^ `]`)? `,`
     $mask 
     prop-dict 
-    attr-dict `:` type($value) `,` qualified(type($dest)) `,` type($mask)
+    attr-dict `:`  type(operands)
   }];
+//    type($value) `,` qualified(type($dest)) (type($offsets)^)? `,` type($mask)
 
   let builders = [
     OpBuilder<(ins "Value": $value, "Value": $dest, "Value": $mask,

@@ -110,6 +110,66 @@ isValidGatherScatterParams(Type maskTy, VectorType valueTy,
   return success();
 }
 
+static LogicalResult
+isValidGatherScatterMemRefParams(Type maskTy, VectorType valueTy,
+                                 MemRefType memTy, int64_t chunkSize,
+                                 function_ref<InFlightDiagnostic()> emitError) {
+
+  if (!valueTy)
+    return emitError() << "Expecting a vector type result.";
+
+  auto maskShape = getShapeOf(maskTy);
+  auto valueShape = getShapeOf(valueTy);
+  auto memShape = getShapeOf(memTy);
+
+  if (valueTy.getElementType() != memTy.getElementType())
+    return emitError() << "Value should have the same element type as MemRef.";
+
+  // a valid shape for SIMT case
+  if (valueTy.getRank() == 1) {
+    if (valueTy.getNumElements() != chunkSize)
+      return emitError() << "value elements must match chunk size " << chunkSize
+                         << " for SIMT code.";
+    return success();
+  }
+
+  llvm::SmallVector<int64_t> expectedMaskShape(valueShape);
+  if (chunkSize > 1)
+    expectedMaskShape.pop_back();
+  if (expectedMaskShape != maskShape)
+    return emitError() << "Mask should match value except the chunk size dim.";
+
+  return success();
+}
+
+static LogicalResult
+isValidGatherScatterRawptrParams(Type maskTy, VectorType valueTy,
+                                 int64_t chunkSize,
+                                 function_ref<InFlightDiagnostic()> emitError) {
+
+  if (!valueTy)
+    return emitError() << "Expecting a vector type result.";
+
+  auto maskShape = getShapeOf(maskTy);
+  auto valueShape = getShapeOf(valueTy);
+
+  // a valid shape for SIMT case
+  if (valueTy.getRank() == 1) {
+    if (valueTy.getNumElements() != chunkSize)
+      return emitError() << "value elements must match chunk size " << chunkSize
+                         << " for SIMT code.";
+    return success();
+  }
+
+  llvm::SmallVector<int64_t> expectedMaskShape(valueShape);
+  if (chunkSize > 1)
+    expectedMaskShape.pop_back();
+  if (expectedMaskShape != maskShape)
+    return emitError() << "Mask should match value except the chunk size dim.";
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_CreateNdDescOp
 //===----------------------------------------------------------------------===//
@@ -683,8 +743,18 @@ LogicalResult LoadGatherOp::verify() {
   if (!isReadHintOrNone(getL3HintAttr()))
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
-  return isValidGatherScatterParams(maskTy, valueTy, tdescTy,
-                                    [&]() { return emitOpError(); });
+  if (tdescTy)
+    return isValidGatherScatterParams(maskTy, valueTy, tdescTy,
+                                      [&]() { return emitOpError(); });
+  auto srcTy = getSourceType();
+  uint64_t chunkSize = static_cast<int64_t>(getChunkSize().value_or(1));
+  auto memTy = dyn_cast<MemRefType>(srcTy);
+
+  if (memTy)
+    return isValidGatherScatterMemRefParams(maskTy, valueTy, memTy, chunkSize,
+                                            [&]() { return emitOpError(); });
+  return isValidGatherScatterRawptrParams(maskTy, valueTy, chunkSize,
+                                          [&]() { return emitOpError(); });
 }
 
 void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
@@ -692,8 +762,8 @@ void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
                          xegpu::CachePolicyAttr l1_hint,
                          xegpu::CachePolicyAttr l2_hint,
                          xegpu::CachePolicyAttr l3_hint) {
-  build(builder, state, valueType, source, ValueRange(), DenseI64ArrayAttr(),
-        mask, IntegerAttr(), l1_hint, l2_hint, l3_hint);
+  build(builder, state, valueType, source, Value(), mask, IntegerAttr(),
+        l1_hint, l2_hint, l3_hint);
 }
 
 //===----------------------------------------------------------------------===//
@@ -713,8 +783,19 @@ LogicalResult StoreScatterOp::verify() {
   if (!isWriteHintOrNone(getL3HintAttr()))
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
-  return isValidGatherScatterParams(maskTy, valueTy, tdescTy,
-                                    [&]() { return emitOpError(); });
+  if (tdescTy)
+    return isValidGatherScatterParams(maskTy, valueTy, tdescTy,
+                                      [&]() { return emitOpError(); });
+
+  auto destTy = getDestType();
+  uint64_t chunkSize = static_cast<int64_t>(getChunkSize().value_or(1));
+  auto memTy = dyn_cast<MemRefType>(destTy);
+
+  if (memTy)
+    return isValidGatherScatterMemRefParams(maskTy, valueTy, memTy, chunkSize,
+                                            [&]() { return emitOpError(); });
+  return isValidGatherScatterRawptrParams(maskTy, valueTy, chunkSize,
+                                          [&]() { return emitOpError(); });
 }
 
 void StoreScatterOp::build(OpBuilder &builder, OperationState &state,
@@ -722,8 +803,8 @@ void StoreScatterOp::build(OpBuilder &builder, OperationState &state,
                            xegpu::CachePolicyAttr l1_hint,
                            xegpu::CachePolicyAttr l2_hint,
                            xegpu::CachePolicyAttr l3_hint) {
-  build(builder, state, value, dest, ValueRange(), DenseI64ArrayAttr(), mask,
-        IntegerAttr(), l1_hint, l2_hint, l3_hint);
+  build(builder, state, value, dest, Value(), mask, IntegerAttr(), l1_hint,
+        l2_hint, l3_hint);
 }
 
 //===----------------------------------------------------------------------===//

@@ -385,6 +385,28 @@ func.func @load_gather_vc_3(%src: ui64) {
 }
 
 // -----
+func.func @load_offset(%src: ui64) {
+  %offsets = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %mask = arith.constant dense<1>: vector<8xi1>
+  // expected-error@+1 {{Mask should match value except the chunk size dim}}
+  %2 = xegpu.load %src[%offsets], %mask
+        : ui64, vector<4xindex>, vector<8xi1>
+          -> vector<4x2xf32>
+  return
+}
+
+// -----
+func.func @store_offset(%src: ui64) {
+  %val = arith.constant dense<2.9>: vector<4x2xf16>
+  %offsets = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %mask = arith.constant dense<1>: vector<8xi1>
+  // expected-error@+1 {{Mask should match value except the chunk size dim}}
+  xegpu.store %val, %src[%offsets], %mask
+        : vector<4x2xf16>, ui64, vector<4xindex>, vector<8xi1>
+  return
+}
+
+// -----
 func.func @store_scatter_vc_1(%src: memref<24x32xf32>) {
   %0 = arith.constant dense<1>: vector<4xi1>
   %1 = arith.constant dense<2.9>: vector<4x2xf32>
