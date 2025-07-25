@@ -58,6 +58,7 @@ constexpr bool test() {
 #if TEST_STD_VER >= 23
   testOne<std::ranges::chunk_by_view<View, Pred>>();
   testOne<std::ranges::repeat_view<Pred>>();
+  testOne<std::ranges::zip_transform_view<Pred, View>>();
 #endif
   return true;
 }
