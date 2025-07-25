@@ -54,3 +54,27 @@ void test_table_copy(int dst_idx, int src_idx, int nelem) {
   __builtin_wasm_table_copy(table, table, dst_idx, src_idx, table);    // expected-error {{5th argument must be an integer}}
   __builtin_wasm_table_copy(table, table, dst_idx, src_idx, nelem);
 }
+
+typedef void (*F1)(void);
+typedef int (*F2)(int);
+typedef int (*F3)(__externref_t);
+typedef __externref_t (*F4)(int);
+
+void test_function_pointer_signature() {
+  // Test argument count validation
+  (void)__builtin_wasm_test_function_pointer_signature(); // expected-error {{too few arguments to function call, expected 1, have 0}}
+  (void)__builtin_wasm_test_function_pointer_signature((F1)0, (F2)0); // expected-error {{too many arguments to function call, expected 1, have 2}}
+
+  // // Test argument type validation - should require function pointer
+  (void)__builtin_wasm_test_function_pointer_signature((void*)0); // expected-error {{used type 'void *' where function pointer is required}}
+  (void)__builtin_wasm_test_function_pointer_signature((int)0);   // expected-error {{used type 'int' where function pointer is required}}
+  (void)__builtin_wasm_test_function_pointer_signature((F3)0);   // expected-error {{not supported for function pointers with a reference type parameter}}
+  (void)__builtin_wasm_test_function_pointer_signature((F4)0);   // expected-error {{not supported for function pointers with a reference type return value}}
+
+  // // Test valid usage
+  int res = __builtin_wasm_test_function_pointer_signature((F1)0);
+  res = __builtin_wasm_test_function_pointer_signature((F2)0);
+
+  // Test return type
+  _Static_assert(EXPR_HAS_TYPE(__builtin_wasm_test_function_pointer_signature((F1)0), int), "");
+}
