@@ -326,3 +326,33 @@ void complex_to_complex_cast() {
 // OGCG: store i32 %[[REAL_INT_CAST]], ptr {{.*}}, align 4
 // OGCG: store i32 %[[IMAG_INT_CAST]], ptr getelementptr inbounds nuw ({ i32, i32 }, ptr {{.*}}, i32 0, i32 1), align 4
 
+struct CX {
+  double real;
+  double imag;
+};
+
+void lvalue_to_rvalue_bitcast() {
+   CX a;
+   double _Complex b = __builtin_bit_cast(double _Complex, a);
+}
+
+
+// CIR-BEFORE: %{{.*}} = cir.cast(bitcast, %{{.*}} : !cir.ptr<!rec_CX>), !cir.ptr<!cir.complex<!cir.double>>
+
+// CIR-AFTER: %{{.*}} = cir.cast(bitcast, %{{.*}} : !cir.ptr<!rec_CX>), !cir.ptr<!cir.complex<!cir.double>>
+
+// LLVM: %[[PTR_ADDR:.*]] = alloca %struct.CX, i64 1, align 8
+// LLVM: %[[COMPLEX_ADDR:.*]] = alloca { double, double }, i64 1, align 8
+// LLVM: %[[PTR_TO_COMPLEX:.*]] = load { double, double }, ptr %[[PTR_ADDR]], align 8
+// LLVM: store { double, double } %[[PTR_TO_COMPLEX]], ptr %[[COMPLEX_ADDR]], align 8
+
+// OGCG: %[[A_ADDR:.*]] = alloca %struct.CX, align 8
+// OGCG: %[[B_ADDR:.*]] = alloca { double, double }, align 8
+// OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG: %[[A_REAL:.*]] = load double, ptr %[[A_REAL_PTR]], align 8
+// OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG: %[[A_IMAG:.*]] = load double, ptr %[[A_IMAG_PTR]], align 8
+// OGCG: %[[B_REAL_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[B_ADDR]], i32 0, i32 0
+// OGCG: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[B_ADDR]], i32 0, i32 1
+// OGCG: store double %[[A_REAL]], ptr %[[B_REAL_PTR]], align 8
+// OGCG: store double %[[A_IMAG]], ptr %[[B_IMAG_PTR]], align 8
