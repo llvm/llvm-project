@@ -3057,14 +3057,14 @@ cc_library(
 )
 
 ##---------------------------------------------------------------------------##
-# Mesh Dialect
+# Shard Dialect
 ##---------------------------------------------------------------------------##
 
 td_library(
-    name = "MeshTdFiles",
+    name = "ShardTdFiles",
     srcs = [
-        "include/mlir/Dialect/Mesh/IR/MeshBase.td",
-        "include/mlir/Dialect/Mesh/IR/MeshOps.td",
+        "include/mlir/Dialect/Shard/IR/ShardBase.td",
+        "include/mlir/Dialect/Shard/IR/ShardOps.td",
     ],
     includes = ["include"],
     deps = [
@@ -3076,92 +3076,92 @@ td_library(
 )
 
 gentbl_cc_library(
-    name = "MeshIncGen",
+    name = "ShardIncGen",
     tbl_outs = {
-        "include/mlir/Dialect/Mesh/IR/MeshOps.h.inc": [
+        "include/mlir/Dialect/Shard/IR/ShardOps.h.inc": [
             "-gen-op-decls",
-            "-dialect=mesh",
+            "-dialect=shard",
         ],
-        "include/mlir/Dialect/Mesh/IR/MeshOps.cpp.inc": [
+        "include/mlir/Dialect/Shard/IR/ShardOps.cpp.inc": [
             "-gen-op-defs",
-            "-dialect=mesh",
+            "-dialect=shard",
         ],
-        "include/mlir/Dialect/Mesh/IR/MeshDialect.h.inc": [
+        "include/mlir/Dialect/Shard/IR/ShardDialect.h.inc": [
             "-gen-dialect-decls",
-            "-dialect=mesh",
+            "-dialect=shard",
         ],
-        "include/mlir/Dialect/Mesh/IR/MeshDialect.cpp.inc": [
+        "include/mlir/Dialect/Shard/IR/ShardDialect.cpp.inc": [
             "-gen-dialect-defs",
-            "-dialect=mesh",
+            "-dialect=shard",
         ],
-        "include/mlir/Dialect/Mesh/IR/MeshEnums.h.inc": [
+        "include/mlir/Dialect/Shard/IR/ShardEnums.h.inc": [
             "-gen-enum-decls",
-            "-dialect=mesh",
+            "-dialect=shard",
         ],
-        "include/mlir/Dialect/Mesh/IR/MeshEnums.cpp.inc": [
+        "include/mlir/Dialect/Shard/IR/ShardEnums.cpp.inc": [
             "-gen-enum-defs",
-            "-dialect=mesh",
+            "-dialect=shard",
         ],
-        "include/mlir/Dialect/Mesh/IR/MeshAttributes.h.inc": [
+        "include/mlir/Dialect/Shard/IR/ShardAttributes.h.inc": [
             "-gen-attrdef-decls",
-            "-dialect=mesh",
+            "-dialect=shard",
         ],
-        "include/mlir/Dialect/Mesh/IR/MeshAttributes.cpp.inc": [
+        "include/mlir/Dialect/Shard/IR/ShardAttributes.cpp.inc": [
             "-gen-attrdef-defs",
-            "-dialect=mesh",
+            "-dialect=shard",
         ],
-        "include/mlir/Dialect/Mesh/IR/MeshTypes.h.inc": [
+        "include/mlir/Dialect/Shard/IR/ShardTypes.h.inc": [
             "-gen-typedef-decls",
-            "-typedefs-dialect=mesh",
+            "-typedefs-dialect=shard",
         ],
-        "include/mlir/Dialect/Mesh/IR/MeshTypes.cpp.inc": [
+        "include/mlir/Dialect/Shard/IR/ShardTypes.cpp.inc": [
             "-gen-typedef-defs",
-            "-typedefs-dialect=mesh",
+            "-typedefs-dialect=shard",
         ],
     },
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Mesh/IR/MeshOps.td",
+    td_file = "include/mlir/Dialect/Shard/IR/ShardOps.td",
     deps = [
-        ":MeshTdFiles",
+        ":ShardTdFiles",
         ":ShapeOpsTdFiles",
     ],
 )
 
 gentbl_cc_library(
-    name = "MeshShardingInterfaceIncGen",
+    name = "ShardingInterfaceIncGen",
     tbl_outs = {
-        "include/mlir/Dialect/Mesh/Interfaces/ShardingInterface.h.inc": ["-gen-op-interface-decls"],
-        "include/mlir/Dialect/Mesh/Interfaces/ShardingInterface.cpp.inc": ["-gen-op-interface-defs"],
+        "include/mlir/Dialect/Shard/Interfaces/ShardingInterface.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Dialect/Shard/Interfaces/ShardingInterface.cpp.inc": ["-gen-op-interface-defs"],
     },
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Mesh/Interfaces/ShardingInterface.td",
+    td_file = "include/mlir/Dialect/Shard/Interfaces/ShardingInterface.td",
     deps = [":OpBaseTdFiles"],
 )
 
 cc_library(
-    name = "MeshShardingInterface",
-    srcs = ["lib/Dialect/Mesh/Interfaces/ShardingInterface.cpp"],
+    name = "ShardingInterface",
+    srcs = ["lib/Dialect/Shard/Interfaces/ShardingInterface.cpp"],
     hdrs = [
-        "include/mlir/Dialect/Mesh/Interfaces/ShardingInterface.h",
-        "include/mlir/Dialect/Mesh/Interfaces/ShardingInterfaceImpl.h",
+        "include/mlir/Dialect/Shard/Interfaces/ShardingInterface.h",
+        "include/mlir/Dialect/Shard/Interfaces/ShardingInterfaceImpl.h",
     ],
     includes = ["include"],
     deps = [
         ":DialectUtils",
         ":IR",
-        ":MeshDialect",
-        ":MeshShardingInterfaceIncGen",
+        ":ShardDialect",
+        ":ShardingInterfaceIncGen",
         ":Support",
         "//llvm:Support",
     ],
 )
 
 cc_library(
-    name = "MeshDialect",
-    srcs = ["lib/Dialect/Mesh/IR/MeshOps.cpp"],
+    name = "ShardDialect",
+    srcs = ["lib/Dialect/Shard/IR/ShardOps.cpp"],
     hdrs = [
-        "include/mlir/Dialect/Mesh/IR/MeshDialect.h",
-        "include/mlir/Dialect/Mesh/IR/MeshOps.h",
+        "include/mlir/Dialect/Shard/IR/ShardDialect.h",
+        "include/mlir/Dialect/Shard/IR/ShardOps.h",
     ],
     includes = ["include"],
     deps = [
@@ -3172,7 +3172,7 @@ cc_library(
         ":IR",
         ":InferTypeOpInterface",
         ":InliningUtils",
-        ":MeshIncGen",
+        ":ShardIncGen",
         ":SideEffectInterfaces",
         ":Support",
         ":ViewLikeInterface",
@@ -3181,23 +3181,23 @@ cc_library(
 )
 
 gentbl_cc_library(
-    name = "MeshTransformsPassIncGen",
-    tbl_outs = {"include/mlir/Dialect/Mesh/Transforms/Passes.h.inc": [
+    name = "ShardTransformsPassIncGen",
+    tbl_outs = {"include/mlir/Dialect/Shard/Transforms/Passes.h.inc": [
         "-gen-pass-decls",
-        "-name=Mesh",
+        "-name=Shard",
     ]},
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Mesh/Transforms/Passes.td",
+    td_file = "include/mlir/Dialect/Shard/Transforms/Passes.td",
     deps = [":PassBaseTdFiles"],
 )
 
 cc_library(
-    name = "MeshTransforms",
+    name = "ShardTransforms",
     srcs = glob([
-        "lib/Dialect/Mesh/Transforms/*.cpp",
-        "lib/Dialect/Mesh/Transforms/*.h",
+        "lib/Dialect/Shard/Transforms/*.cpp",
+        "lib/Dialect/Shard/Transforms/*.h",
     ]),
-    hdrs = glob(["include/mlir/Dialect/Mesh/Transforms/*.h"]),
+    hdrs = glob(["include/mlir/Dialect/Shard/Transforms/*.h"]),
     includes = ["include"],
     deps = [
         ":AffineDialect",
@@ -3210,9 +3210,9 @@ cc_library(
         ":FuncDialect",
         ":FunctionInterfaces",
         ":IR",
-        ":MeshDialect",
-        ":MeshShardingInterface",
-        ":MeshTransformsPassIncGen",
+        ":ShardDialect",
+        ":ShardingInterface",
+        ":ShardTransformsPassIncGen",
         ":Pass",
         ":Support",
         ":TensorDialect",
@@ -3222,11 +3222,11 @@ cc_library(
 )
 
 cc_library(
-    name = "MeshToMPIConversion",
+    name = "ShardToMPIConversion",
     srcs = glob([
-        "lib/Conversion/MeshToMPI/*.cpp",
+        "lib/Conversion/ShardToMPI/*.cpp",
     ]),
-    hdrs = glob(["include/mlir/Conversion/MeshToMPI/*.h"]),
+    hdrs = glob(["include/mlir/Conversion/ShardToMPI/*.h"]),
     includes = ["include"],
     deps = [
         ":AffineDialect",
@@ -3241,8 +3241,8 @@ cc_library(
         ":LinalgDialect",
         ":MPIDialect",
         ":MemRefDialect",
-        ":MeshDialect",
-        ":MeshTransforms",
+        ":ShardDialect",
+        ":ShardTransforms",
         ":Pass",
         ":SCFDialect",
         ":Support",
@@ -3989,7 +3989,7 @@ cc_library(
         ":MemRefToEmitC",
         ":MemRefToLLVM",
         ":MemRefToSPIRV",
-        ":MeshToMPIConversion",
+        ":ShardToMPIConversion",
         ":NVGPUToNVVM",
         ":NVVMToLLVM",
         ":OpenACCToSCF",
@@ -4523,7 +4523,7 @@ cc_library(
         ":FuncDialect",
         ":IR",
         ":InliningUtils",
-        ":MeshShardingInterface",
+        ":ShardingInterface",
     ],
 )
 
@@ -4622,7 +4622,7 @@ cc_library(
         ":MemRefToEmitC",
         ":MemRefToLLVM",
         ":MemRefTransformOps",
-        ":MeshDialect",
+        ":ShardDialect",
         ":NVGPUTransformOps",
         ":NVVMTarget",
         ":NVVMToLLVM",
@@ -7195,7 +7195,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":IR",
-        ":MeshShardingInterface",
+        ":ShardingInterface",
         ":TensorDialect",
         "//llvm:Support",
     ],
@@ -9020,8 +9020,8 @@ cc_library(
         ":MemRefToSPIRV",
         ":MemRefTransformOps",
         ":MemRefTransforms",
-        ":MeshDialect",
-        ":MeshTransforms",
+        ":ShardDialect",
+        ":ShardTransforms",
         ":NVGPUDialect",
         ":NVGPUPassIncGen",
         ":NVGPUToNVVM",
@@ -9121,7 +9121,7 @@ cc_binary(
         "//mlir/test:TestMath",
         "//mlir/test:TestMathToVCIX",
         "//mlir/test:TestMemRef",
-        "//mlir/test:TestMesh",
+        "//mlir/test:TestShard",
         "//mlir/test:TestNVGPU",
         "//mlir/test:TestPDLL",
         "//mlir/test:TestPass",
@@ -9183,7 +9183,7 @@ cc_binary(
         "//mlir/test:TestMathToVCIX",
         "//mlir/test:TestMemRef",
         "//mlir/test:TestMemRefToLLVMWithTransforms",
-        "//mlir/test:TestMesh",
+        "//mlir/test:TestShard",
         "//mlir/test:TestNVGPU",
         "//mlir/test:TestPDLL",
         "//mlir/test:TestPass",
@@ -10549,7 +10549,7 @@ cc_library(
         ":LinalgStructuredOpsIncGen",
         ":MathDialect",
         ":MemRefDialect",
-        ":MeshShardingInterface",
+        ":ShardingInterface",
         ":Parser",
         ":SCFDialect",
         ":SideEffectInterfaces",
@@ -10700,9 +10700,9 @@ cc_library(
         ":MathDialect",
         ":MemRefDialect",
         ":MemRefTransforms",
-        ":MeshDialect",
-        ":MeshShardingInterface",
-        ":MeshTransforms",
+        ":ShardDialect",
+        ":ShardingInterface",
+        ":ShardTransforms",
         ":Pass",
         ":RuntimeVerifiableOpInterface",
         ":SCFDialect",
@@ -11199,8 +11199,8 @@ cc_library(
         ":InferTypeOpInterface",
         ":InliningUtils",
         ":LoopLikeInterface",
-        ":MeshDialect",
-        ":MeshShardingInterface",
+        ":ShardDialect",
+        ":ShardingInterface",
         ":Pass",
         ":QuantOps",
         ":SideEffectInterfaces",
@@ -12142,7 +12142,7 @@ cc_library(
         ":FuncTransforms",
         ":IR",
         ":MemRefDialect",
-        ":MeshShardingInterface",
+        ":ShardingInterface",
         ":Pass",
         ":SideEffectInterfaces",
         ":TensorDialect",
