@@ -1239,7 +1239,7 @@ module attributes {transform.with_named_sequence} {
 
 func.func @test_vectorize_padded_pack(%arg0: tensor<32x7x15xf32>, %arg1: tensor<32x4x1x16x2xf32>) -> tensor<32x4x1x16x2xf32> {
   %pad = arith.constant 0.000000e+00 : f32
-  %pack = linalg.pack %arg0 padding_value(%pad : f32) inner_dims_pos = [2, 1] inner_tiles = [16, [2]] into %arg1 : tensor<32x7x15xf32> -> tensor<32x4x1x16x2xf32>
+  %pack = linalg.pack %arg0 padding_value(%pad : f32) inner_dims_pos = [2, 1] inner_tiles = [16, 2] into %arg1 : tensor<32x7x15xf32> -> tensor<32x4x1x16x2xf32>
   return %pack : tensor<32x4x1x16x2xf32>
 }
 //  CHECK-DAG: %[[cst:.*]] = arith.constant 0.000000e+00 : f32
