@@ -3,8 +3,8 @@
 // RUN: %clang_cc1 -x c -fsyntax-only %s -verify=c -std=c11 -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -x c -fsyntax-only %s -pedantic -verify=c-pedantic -std=c11 -fexperimental-new-constant-interpreter
 //
-// RUN: %clang_cc1 -x c++ -fsyntax-only %s -verify=cxx
-// RUN: %clang_cc1 -x c++ -fsyntax-only %s -pedantic -verify=cxx-pedantic
+// RUN: %clang_cc1 -x c++ -fsyntax-only %s -verify=cxx-nointerpreter
+// RUN: %clang_cc1 -x c++ -fsyntax-only %s -pedantic -verify=cxx-pedantic,cxx-nointerpreter
 // RUN: %clang_cc1 -x c++ -fsyntax-only %s -verify=cxx -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -x c++ -fsyntax-only %s -pedantic -verify=cxx-pedantic -fexperimental-new-constant-interpreter
 
@@ -15,4 +15,6 @@ void f(void);
 struct S {char c;} s;
 _Static_assert(&s != (void *)&f, ""); // c-pedantic-warning {{not an integer constant expression}} \
                                       // c-pedantic-note {{this conversion is not allowed in a constant expression}} \
+                                      // cxx-nointerpreter-error {{static assertion expression is not an integral constant expression}} \
+                                      // cxx-nointerpreter-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}} \
                                       // cxx-pedantic-warning {{'_Static_assert' is a C11 extension}}
