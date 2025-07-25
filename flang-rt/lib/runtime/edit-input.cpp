@@ -37,9 +37,7 @@ static RT_API_ATTRS bool CheckCompleteListDirectedField(
   if (edit.IsListDirected()) {
     std::size_t byteCount;
     if (auto ch{io.GetCurrentChar(byteCount)}) {
-      if (IsCharValueSeparator(edit, *ch)) {
-        return true;
-      } else {
+      if (!IsCharValueSeparator(edit, *ch)) {
         const auto &connection{io.GetConnectionState()};
         io.GetIoErrorHandler().SignalError(IostatBadListDirectedInputSeparator,
             "invalid character (0x%x) after list-directed input value, "
@@ -49,12 +47,9 @@ static RT_API_ATTRS bool CheckCompleteListDirectedField(
             static_cast<int>(connection.currentRecordNumber));
         return false;
       }
-    } else {
-      return true; // end of record: ok
     }
-  } else {
-    return true;
   }
+  return true;
 }
 
 template <int LOG2_BASE>
@@ -537,9 +532,11 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
       io.SkipSpaces(remaining);
       next = io.NextInField(remaining, edit);
     }
-    if (!next) { // NextInField fails on separators like ')'
+    if (!next || *next == ')') { // NextInField fails on separators like ')'
       std::size_t byteCount{0};
-      next = io.GetCurrentChar(byteCount);
+      if (!next) {
+        next = io.GetCurrentChar(byteCount);
+      }
       if (next && *next == ')') {
         io.HandleRelativePosition(byteCount);
       }
