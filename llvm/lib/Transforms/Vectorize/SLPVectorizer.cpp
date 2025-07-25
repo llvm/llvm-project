@@ -7175,7 +7175,8 @@ bool BoUpSLP::isProfitableToReorder() const {
     // other nodes are phis or geps/binops, combined with phis, and/or single
     // gather load node
     bool HasPhis = false;
-    if (VectorizableTree.front()->getOpcode() == Instruction::PHI &&
+    if (VectorizableTree.front()->hasState() &&
+        VectorizableTree.front()->getOpcode() == Instruction::PHI &&
         VectorizableTree.front()->Scalars.size() == TinyVF &&
         VectorizableTree.front()->getNumOperands() > PhiOpsLimit)
       return false;
@@ -7999,7 +8000,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
 }
 
 Instruction *BoUpSLP::getRootEntryInstruction(const TreeEntry &Entry) const {
-  if ((Entry.getOpcode() == Instruction::Store ||
+  if (Entry.hasState() &&
+      (Entry.getOpcode() == Instruction::Store ||
        Entry.getOpcode() == Instruction::Load) &&
       Entry.State == TreeEntry::StridedVectorize &&
       !Entry.ReorderIndices.empty() && isReverseOrder(Entry.ReorderIndices))
@@ -10231,6 +10233,15 @@ public:
         count_if(VL, [&](Value *V) { return S.isCopyableElement(V); });
     if (CopyableNum < VL.size() / 2)
       return S;
+    // Too many phi copyables - exit.
+    const unsigned Limit = VL.size() / 24;
+    if ((CopyableNum >= VL.size() - Limit ||
+         (CopyableNum >= VL.size() - 1 && VL.size() > 4) ||
+         CopyableNum >= MaxPHINumOperands) &&
+        all_of(VL, [&](Value *V) {
+          return isa<PHINode>(V) || !S.isCopyableElement(V);
+        }))
+      return InstructionsState::invalid();
     // Check profitability if number of copyables > VL.size() / 2.
     // 1. Reorder operands for better matching.
     if (isCommutative(MainOp)) {
@@ -14483,7 +14494,8 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
 
   // If the tree contains only phis, buildvectors, split nodes and
   // small nodes with reuses, we can skip it.
-  unsigned SingleStoreLoadNode = 0;
+  SmallVector<const TreeEntry *> StoreLoadNodes;
+  unsigned NumGathers = 0;
   constexpr int LimitTreeSize = 36;
   if (!ForReduction && !SLPCostThreshold.getNumOccurrences() &&
       all_of(VectorizableTree,
@@ -14491,9 +14503,11 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
                if (!TE->isGather() && TE->hasState() &&
                    (TE->getOpcode() == Instruction::Load ||
                     TE->getOpcode() == Instruction::Store)) {
-                 ++SingleStoreLoadNode;
+                 StoreLoadNodes.push_back(TE.get());
                  return true;
                }
+               if (TE->isGather())
+                 ++NumGathers;
                return TE->State == TreeEntry::SplitVectorize ||
                       (TE->Idx == 0 && TE->Scalars.size() == 2 &&
                        TE->hasState() && TE->getOpcode() == Instruction::ICmp &&
@@ -14510,8 +14524,15 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
                           !TE->ReorderIndices.empty() || TE->isAltShuffle()) &&
                          TE->Scalars.size() == 2)));
              }) &&
-      (!SingleStoreLoadNode ||
-       VectorizableTree.size() > LimitTreeSize * SingleStoreLoadNode))
+      (StoreLoadNodes.empty() ||
+       (VectorizableTree.size() > LimitTreeSize * StoreLoadNodes.size() &&
+        (NumGathers > 0 || none_of(StoreLoadNodes, [&](const TreeEntry *TE) {
+           return TE->getOpcode() == Instruction::Store ||
+                  all_of(TE->Scalars, [&](Value *V) {
+                    return !isa<LoadInst>(V) ||
+                           areAllUsersVectorized(cast<Instruction>(V));
+                  });
+         })))))
     return true;
 
   // We can vectorize the tree if its size is greater than or equal to the
@@ -15254,6 +15275,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
         bool IsProfitablePHIUser =
             (KeepScalar || (ScalarCost - ExtraCost <= TTI::TCC_Basic &&
                             VectorizableTree.front()->Scalars.size() > 2)) &&
+            VectorizableTree.front()->hasState() &&
             VectorizableTree.front()->getOpcode() == Instruction::PHI &&
             !Inst->hasNUsesOrMore(UsesLimit) &&
             none_of(Inst->users(),
