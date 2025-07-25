@@ -22,8 +22,7 @@ MCSection::MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsBss,
                      MCSymbol *Begin)
     : Begin(Begin), HasInstructions(false), IsRegistered(false), IsText(IsText),
       IsBss(IsBss), LinkerRelaxable(false), Name(Name), Variant(V) {
-  // The initial subsection number is 0. Create a fragment list.
-  CurFragList = &Subsections.emplace_back(0u, FragList{}).second;
+  DummyFragment.setParent(this);
 }
 
 MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
