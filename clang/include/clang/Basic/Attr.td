@@ -1642,7 +1642,7 @@ def DeviceKernel : DeclOrTypeAttr {
 }
 
 def SYCLExternal : InheritableAttr {
-  let Spellings = [Clang<"sycl_external">];
+  let Spellings = [CXX11<"clang", "sycl_external">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let LangOpts = [SYCLHost, SYCLDevice];
   let Documentation = [SYCLExternalDocs];

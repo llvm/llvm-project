@@ -12945,22 +12945,20 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
   if (D->hasAttr<AliasAttr>() || D->hasAttr<UsedAttr>())
     return true;
 
+  // SYCL device compilation emits code only for functions defined with either
+  // sycl_kernel_entry_point or sycl_external attributes are emitted.
+  // Function definitions with the sycl_kernel_entry_point attribute are
+  // required during device compilation so that SYCL kernel caller offload
+  // entry points are emitted and those with sycl_external attribute are
+  // required regardless of whether they are reachable from a SYCL kernel.
+  if (LangOpts.SYCLIsDevice)
+    return isa<FunctionDecl>(D) && (D->hasAttr<SYCLKernelEntryPointAttr>() ||
+                                    D->hasAttr<SYCLExternalAttr>());
+
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     // Forward declarations aren't required.
     if (!FD->doesThisDeclarationHaveABody())
       return FD->doesDeclarationForceExternallyVisibleDefinition();
-
-    // Function definitions with the sycl_kernel_entry_point attribute are
-    // required during device compilation so that SYCL kernel caller offload
-    // entry points are emitted.
-    if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLKernelEntryPointAttr>())
-      return true;
-
-    // Function definitions with the sycl_external attribute are required
-    // during device compilation regardless of whether they are reachable from
-    // a SYCL kernel.
-    if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLExternalAttr>())
-      return true;
 
     // Constructors and destructors are required.
     if (FD->hasAttr<ConstructorAttr>() || FD->hasAttr<DestructorAttr>())

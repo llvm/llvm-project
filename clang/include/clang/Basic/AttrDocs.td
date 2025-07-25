@@ -489,11 +489,11 @@ macro as specified in section 5.10.1, "SYCL functions and member functions
 linkage", of the SYCL 2020 specification.
 
 The attribute only appertains to functions and only those that meet the
-following requirements.
+following requirements:
 
-* Has external linkage.
+* Has external linkage
 * Is not explicitly defined as deleted (the function may be an explicitly
-  defaulted function that is defined as deleted).
+  defaulted function that is defined as deleted)
 
 The attribute shall be present on the first declaration of a function and
 may optionally be present on subsequent declarations.

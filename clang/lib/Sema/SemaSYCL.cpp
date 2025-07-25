@@ -249,17 +249,18 @@ static bool CheckSYCLKernelName(Sema &S, SourceLocation Loc,
 
   return false;
 }
+
 void SemaSYCL::CheckSYCLExternalFunctionDecl(FunctionDecl *FD) {
-  for (auto *SEAttr : FD->specific_attrs<SYCLExternalAttr>()) {
-    if (!FD->isExternallyVisible()) {
-      Diag(SEAttr->getLocation(), diag::err_sycl_attribute_invalid_linkage);
-      return;
-    }
-    if (FD->isDeletedAsWritten()) {
-      Diag(SEAttr->getLocation(),
-           diag::err_sycl_attribute_invalid_deleted_function);
-      return;
-    }
+  const auto *SEAttr = FD->getAttr<SYCLExternalAttr>();
+  assert(SEAttr && "Missing sycl_external attribute");
+  if (!FD->isExternallyVisible()) {
+    Diag(SEAttr->getLocation(), diag::err_sycl_attribute_invalid_linkage);
+    return;
+  }
+  if (FD->isDeletedAsWritten()) {
+    Diag(SEAttr->getLocation(),
+         diag::err_sycl_attribute_invalid_deleted_function);
+    return;
   }
 }
 

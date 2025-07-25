@@ -1,25 +1,25 @@
-// RUN: %clang_cc1 -fsycl-is-host -std=c++17 -fsyntax-only -verify -DCPP17 %s
-// RUN: %clang_cc1 -fsycl-is-device -std=c++17 -fsyntax-only -verify -DCPP17 %s
+// RUN: %clang_cc1 -fsycl-is-host -std=c++17 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsycl-is-device -std=c++17 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsycl-is-host -std=c++20 -fsyntax-only -verify -DCPP20 %s
 // RUN: %clang_cc1 -fsycl-is-device -std=c++20 -fsyntax-only -verify -DCPP20 %s
 
 // Semantic tests for the sycl_external attribute.
 
-// expected-error@+1{{'sycl_external' can only be applied to functions with external linkage}}
+// expected-error@+1{{'clang::sycl_external' can only be applied to functions with external linkage}}
 [[clang::sycl_external]]
 static void func1() {}
 
-// expected-error@+2{{'sycl_external' can only be applied to functions with external linkage}}
+// expected-error@+2{{'clang::sycl_external' can only be applied to functions with external linkage}}
 namespace {
   [[clang::sycl_external]]
   void func2() {}
 }
 
-// expected-error@+2{{'sycl_external' can only be applied to functions with external linkage}}
+// expected-error@+2{{'clang::sycl_external' can only be applied to functions with external linkage}}
 namespace { struct S4 {}; }
 [[clang::sycl_external]] void func4(S4) {}
 
-// expected-error@+3{{'sycl_external' can only be applied to functions with external linkage}}
+// expected-error@+3{{'clang::sycl_external' can only be applied to functions with external linkage}}
 namespace { struct S6 {}; }
 template<typename>
 [[clang::sycl_external]] void func6() {}
@@ -32,7 +32,7 @@ template void func6<S6>();
 // Clang currently instantiates and propagates attributes from a function
 // template to its explicit specializations resulting in the following
 // spurious error.
-// expected-error@+3 2{{'sycl_external' can only be applied to functions with external linkage}}
+// expected-error@+3 2{{'clang::sycl_external' can only be applied to functions with external linkage}}
 namespace { struct S7 {}; }
 template<typename>
 [[clang::sycl_external]] void func7();
@@ -50,13 +50,29 @@ template<> [[clang::sycl_external]] void func8<S8>() {}
 // expected-error@-1{{'clang::sycl_external' attribute does not appear on the first declaration}}
 // expected-note@-2{{previous declaration is here}}
 
+// FIXME: The implicit instantiation of func9<S9>() is valid.
+namespace { struct S9 {}; }
+struct T9 {
+  using type = S9;
+};
+// expected-error@+2{{'clang::sycl_external' can only be applied to functions with external linkage}}
+template<typename>
+[[clang::sycl_external]] void func9() {}
+// expected-note@+3{{in instantiation of function template specialization 'func9<(anonymous namespace)::S9>' requested here}}
+template<typename T>
+[[clang::sycl_external]] void test_func9() {
+  func9<typename T::type>();
+}
+// expected-note@+1{{in instantiation of function template specialization 'test_func9<T9>' requested here}}
+template void test_func9<T9>(); // FIXME: don't diagnose implicit instantiation of func9<S9>().
+
 // The first declaration of a SYCL external function is required to have this attribute.
 // expected-note@+1{{previous declaration is here}}
 int foo();
 // expected-error@+1{{'clang::sycl_external' attribute does not appear on the first declaration}}
 [[clang::sycl_external]] int foo();
 
-// Subsequent declrations of a SYCL external function may optionally specify this attribute.
+// Subsequent declarations of a SYCL external function may optionally specify this attribute.
 [[clang::sycl_external]] int boo();
 [[clang::sycl_external]] int boo(); // OK
 int boo(); // OK
@@ -65,18 +81,18 @@ class C {
   [[clang::sycl_external]] void member();
 };
 
-// expected-error@+1{{'sycl_external' cannot be applied to the 'main' function}}
+// expected-error@+1{{'clang::sycl_external' cannot be applied to the 'main' function}}
 [[clang::sycl_external]] int main()
 {
   return 0;
 }
 
-// expected-error@+2{{'sycl_external' cannot be applied to an explicitly deleted function}}
+// expected-error@+2{{'clang::sycl_external' cannot be applied to an explicitly deleted function}}
 class D {
   [[clang::sycl_external]] void mdel() = delete;
 };
 
-// expected-error@+1{{'sycl_external' cannot be applied to an explicitly deleted function}}
+// expected-error@+1{{'clang::sycl_external' cannot be applied to an explicitly deleted function}}
 [[clang::sycl_external]] void del() = delete;
 
 struct NonCopyable {
