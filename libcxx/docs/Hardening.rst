@@ -74,18 +74,9 @@ to control the level by passing **one** of the following options to the compiler
    pre-built components. Most libc++ code is header-based, so a user-provided
    value for ``_LIBCPP_HARDENING_MODE`` will be mostly respected.
 
-.. warning::
-
-Assertion semantics are currently an experimental feature.
-
-.. note::
-
-Assertion semantics are not available in the C++03 mode.
-
 In some cases, users might want to override the assertion semantic used by the
 library. This can be done similarly to setting the hardening mode; please refer
-to the :ref:`relevant section <assertion-semantics>`. Note that this feature is
-currently experimental.
+to the :ref:`relevant section <assertion-semantics>`.
 
 Notes for vendors
 -----------------
@@ -275,17 +266,9 @@ output. This is less secure and increases the size of the binary (among other
 things, it has to store the error message strings) but makes the failure easier
 to debug. It also allows testing the error messages in our test suite.
 
-.. warning::
-
-Assertion semantics are currently an experimental feature.
-
-.. note::
-
-Assertion semantics are not available in the C++03 mode.
-
-Experimentally, this default behavior can be customized by users via
-:ref:`assertion semantics <assertion-semantics>`; it can also be completely
-overridden by vendors by providing a :ref:`custom assertion failure handler
+This default behavior can be customized by users via :ref:`assertion semantics
+<assertion-semantics>`; it can also be completely overridden by vendors by
+providing a :ref:`custom assertion failure handler
 <override-assertion-handler>`.
 
 .. _assertion-semantics:
@@ -295,11 +278,11 @@ Assertion semantics
 
 .. warning::
 
-Assertion semantics are currently an experimental feature.
+  Assertion semantics are currently an experimental feature.
 
 .. note::
 
-Assertion semantics are not available in the C++03 mode.
+  Assertion semantics are not available in the C++03 mode.
 
 What happens when an assertion fails depends on the assertion semantic being
 used. Four assertion semantics are available, based on C++26 Contracts
