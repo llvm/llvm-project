@@ -44,16 +44,14 @@ int Barrier::wait() {
   m.lock();
 
   // if the barrier is emptying out threads, wait until it finishes
-  while (!blocking) {
+  while (!blocking)
     entering.wait(&m);
-  }
   waiting++;
 
   if (waiting < expected) {
     // block threads until waiting = expected
-    while (blocking) {
+    while (blocking)
       exiting.wait(&m);
-    }
   } else {
     // this is the last thread to call wait(), so lets wake everyone up
     blocking = false;
