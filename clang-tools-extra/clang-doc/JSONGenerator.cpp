@@ -147,8 +147,10 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
     Child.insert({"ParamName", I.ParamName});
     Child.insert({"Direction", I.Direction});
     Child.insert({"Explicit", I.Explicit});
-    Child.insert({"Children", ChildArr});
-    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    auto TextCommentsArray = extractTextComments(CARef.front().getAsObject());
+    Child.insert({"Children", TextCommentsArray});
+    if (I.Kind == CommentKind::CK_ParamCommandComment)
+      insertComment(Description, ChildVal, "ParamComments");
     return Obj;
   }
 
