@@ -2997,6 +2997,43 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
   return nullptr;
 }
 
+/// Return true if we should lower multi-dimensional geps
+static bool ismultiDimGep(GetElementPtrInst &GEP) {
+  // Limit handling to only 3D and 4D arrays with integer types.
+  // getelementptr [9 x [9 x [9 x i32]]], ptr @arr, i64 0, i64 %i, i64 2, i64 3
+  unsigned NumOps = GEP.getNumOperands();
+
+  // First index must be constant zero (array base)
+  if (!isa<ConstantInt>(GEP.getOperand(1)) ||
+      !cast<ConstantInt>(GEP.getOperand(1))->isZero())
+    return false;
+
+  // Limit lowering for arrays with 3 or more dimensions
+  if (NumOps < 5)
+    return false;
+
+  // Check that it's arrays all the way
+  Type *CurTy = GEP.getSourceElementType();
+  unsigned NumVar = 0;
+  for (unsigned I = 2; I < NumOps; ++I) {
+    auto *ArrTy = dyn_cast<ArrayType>(CurTy);
+    if (!ArrTy)
+      return false;
+    if (!isa<ConstantInt>(GEP.getOperand(I)))
+      ++NumVar;
+    CurTy = ArrTy->getElementType();
+  }
+
+  // Limit lowering only for one variable index
+  if (NumVar != 1)
+    return false;
+
+  if (!CurTy->isIntegerTy() || CurTy->getIntegerBitWidth() > 128)
+    return false;
+
+  return true;
+}
+
 /// Return true if we should canonicalize the gep to an i8 ptradd.
 static bool shouldCanonicalizeGEPToPtrAdd(GetElementPtrInst &GEP) {
   Value *PtrOp = GEP.getOperand(0);
@@ -3017,13 +3054,7 @@ static bool shouldCanonicalizeGEPToPtrAdd(GetElementPtrInst &GEP) {
                                  m_Shl(m_Value(), m_ConstantInt())))))
     return true;
 
-  // Flatten multidimensional GEPs with one variable index.
-  unsigned NumVarIndices = 0;
-  for (unsigned i = 1; i < GEP.getNumOperands(); ++i) {
-    if (!isa<ConstantInt>(GEP.getOperand(i)))
-      ++NumVarIndices;
-  }
-  if (NumVarIndices == 1)
+  if (ismultiDimGep(GEP))
     return true;
 
   // gep (gep %p, C1), %x, C2 is expanded so the two constants can

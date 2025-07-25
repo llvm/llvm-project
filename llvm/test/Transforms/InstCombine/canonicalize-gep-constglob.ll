@@ -2,6 +2,9 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 @glob = internal global [10 x [10 x [10 x i32]]] zeroinitializer
+@glob_i8 = internal global [10 x [10 x [10 x i8]]] zeroinitializer
+@glob_i16 = internal global [10 x [10 x [10 x i16]]] zeroinitializer
+@glob_i64 = internal global [10 x [10 x [10 x i64]]] zeroinitializer
 
 define ptr @x12(i64 %x) {
 ; CHECK-LABEL: define ptr @x12(
@@ -78,3 +81,61 @@ entry:
   %c = add i32 %a, %b
   ret i32 %c
 }
+
+define i8* @flat_gep8(i64 %x) {
+; CHECK-LABEL: define ptr @flat_gep8(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP_IDX:%.*]] = mul i64 [[X]], 100
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr @glob_i8, i64 [[GEP_IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP0]], i64 35
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+entry:
+  %gep = getelementptr [10 x [10 x [10 x i8]]], ptr @glob_i8, i64 0, i64 %x, i64 3, i64 5
+  ret ptr %gep
+}
+
+define i16* @flat_gep16(i64 %x) {
+; CHECK-LABEL: define ptr @flat_gep16(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP_IDX:%.*]] = mul i64 [[X]], 200
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr @glob_i16, i64 [[GEP_IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP0]], i64 46
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+entry:
+  %gep = getelementptr [10 x [10 x [10 x i16]]], ptr @glob_i16, i64 0, i64 %x, i64 2, i64 3
+  ret ptr %gep
+}
+
+define i32* @flat_gep(i64 %x) {
+; CHECK-LABEL: define ptr @flat_gep(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP_IDX:%.*]] = mul i64 [[X]], 400
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr @glob, i64 [[GEP_IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP0]], i64 100
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+entry:
+  %gep = getelementptr [10 x [10 x [10 x i32]]], ptr @glob, i64 0, i64 %x, i64 2, i64 5
+  ret ptr %gep
+}
+
+define i64* @flat_gep64(i64 %x) {
+; CHECK-LABEL: define ptr @flat_gep64(
+; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP_IDX:%.*]] = mul i64 [[X]], 800
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr @glob_i64, i64 [[GEP_IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP0]], i64 288
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+entry:
+  %gep = getelementptr [10 x [10 x [10 x i64]]], ptr @glob_i64, i64 0, i64 %x, i64 3, i64 6
+  ret ptr %gep
+}
+
+
