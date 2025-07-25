@@ -498,7 +498,7 @@ def C_BNEZ : Bcz<0b111, "c.bnez">, Sched<[WriteJmp, ReadJmp]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_SLLI : RVInst16CI<0b000, 0b10, (outs GPR:$rd_wb),
-                        (ins GPRNoX0:$rd, uimmlog2xlennonzero:$imm),
+                        (ins GPR:$rd, uimmlog2xlennonzero:$imm),
                         "c.slli", "$rd, $imm">,
              Sched<[WriteShiftImm, ReadShiftImm]> {
   let Constraints = "$rd = $rd_wb";
