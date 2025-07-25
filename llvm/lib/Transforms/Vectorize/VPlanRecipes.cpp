@@ -1101,7 +1101,6 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   default:
     return false;
   case Instruction::ExtractElement:
-  case VPInstruction::ExtractLane:
     return Op == getOperand(1);
   case Instruction::PHI:
     return true;
@@ -1126,6 +1125,8 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::ComputeAnyOfResult:
   case VPInstruction::ComputeFindIVResult:
     return Op == getOperand(1);
+  case VPInstruction::ExtractLane:
+    return Op == getOperand(0);
   };
   llvm_unreachable("switch should return");
 }
