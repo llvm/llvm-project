@@ -82,8 +82,7 @@ class StdStringViewDataFormatterTestCase(TestBase):
         # GetSummary returns None so can't be checked by expect_var_path, so we
         # use the str representation instead
         null_obj = self.frame().GetValueForVariablePath("null_str")
-        null_summary = null_obj.GetSummary()
-        self.assertTrue(null_summary == "Summary Unavailable" or null_summary is None)
+        self.assertEqual(null_obj.GetSummary(), "Summary Unavailable")
         self.assertEqual(str(null_obj), "(std::string_view *) null_str = nullptr")
 
         self.runCmd("n")
@@ -149,10 +148,7 @@ class StdStringViewDataFormatterTestCase(TestBase):
         )
 
         broken_obj = self.frame().GetValueForVariablePath("in_str_view")
-        broken_summary = broken_obj.GetSummary()
-        self.assertTrue(
-            broken_summary == "Summary Unavailable" or broken_summary is None
-        )
+        self.assertEqual(broken_obj.GetSummary(), "Summary Unavailable")
 
     @expectedFailureAll(
         bugnumber="llvm.org/pr36109", debug_info="gmodules", triple=".*-android"

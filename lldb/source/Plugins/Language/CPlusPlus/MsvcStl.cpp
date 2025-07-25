@@ -123,8 +123,10 @@ static bool formatStringViewImpl(ValueObject &valobj, Stream &stream,
 
   bool success = false;
   uint64_t size = size_sp->GetValueAsUnsigned(0, &success);
-  if (!success)
-    return false;
+  if (!success) {
+    stream << "Summary Unavailable";
+    return true;
+  }
 
   StreamString scratch_stream;
   success = StringBufferSummaryProvider<element_type>(
