@@ -222,6 +222,7 @@ LayoutAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
   if (!isWgLayout())
     return failure();
 
+  // TODO: handle order attribute
   auto dims =
       llvm::map_to_vector(*getEffectiveSgLayout(), [&](int64_t d) -> Value {
         return builder.createOrFold<arith::ConstantIndexOp>(loc, d);

@@ -125,39 +125,6 @@ getSgShapeAndCount(ArrayRef<int64_t> shape, xegpu::LayoutAttr layout) {
 struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
   using OpConversionPattern<xegpu::CreateNdDescOp>::OpConversionPattern;
 
-  // Calculate offset for each subgroup
-  static SmallVector<OpFoldResult>
-  calculateGlobalOffsets(ConversionPatternRewriter &rewriter, Location loc,
-                         const SmallVector<OpFoldResult> &originalOffsets,
-                         const SmallVector<Value> &localOffset,
-                         const SmallVector<int64_t> &distUnitBaseAddr,
-                         const SmallVector<int64_t> &distUnitShape) {
-    assert(localOffset.size() == distUnitBaseAddr.size() &&
-           "localOffset and distUnitBaseAddr must have the same rank");
-
-    SmallVector<OpFoldResult> globalOffsets(originalOffsets.begin(),
-                                            originalOffsets.end());
-    size_t rank = localOffset.size();
-    for (size_t i = 0; i < rank; ++i) {
-      size_t dimIdx = originalOffsets.size() - rank + i;
-      Value constOffset =
-          arith::ConstantIndexOp::create(rewriter, loc, distUnitBaseAddr[i]);
-      Value offset =
-          rewriter.createOrFold<index::AddOp>(loc, localOffset[i], constOffset);
-      Value modValue =
-          arith::ConstantIndexOp::create(rewriter, loc, distUnitShape[i]);
-      Value offsetMod =
-          rewriter.createOrFold<index::RemUOp>(loc, offset, modValue);
-      Value origOffset = getValueOrCreateConstantIndexOp(
-          rewriter, loc, originalOffsets[dimIdx]);
-      Value globalOffset =
-          rewriter.createOrFold<index::AddOp>(loc, origOffset, offsetMod);
-      globalOffsets[dimIdx] = globalOffset;
-    }
-
-    return globalOffsets;
-  }
-
   LogicalResult
   matchAndRewrite(xegpu::CreateNdDescOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -177,28 +144,14 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
       return rewriter.notifyMatchFailure(
           op, "sgLayout attribute is required in layout");
 
-    SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
-
-    // TODO : Handle order attribute
     // Get the subgroup ID
-    auto linearSgId =
+    Value linearSgId =
         gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
-
-    // Create constants for layout dimensions
-    SmallVector<Value> sgLayoutDim(sgLayout.size());
-    SmallVector<Value> sgDataDim(sgShape.size());
-
-    for (size_t i = 0; i < sgLayout.size(); i++) {
-      sgLayoutDim[i] =
-          arith::ConstantIndexOp::create(rewriter, loc, sgLayout[i]);
-      sgDataDim[i] = arith::ConstantIndexOp::create(rewriter, loc, sgShape[i]);
-    }
 
     int64_t startOfRange = -1, endOfRange = -1;
     bool sgIdRangeSpecified =
         isSgIdRangeSpecified(op, startOfRange, endOfRange);
 
-    Value adjustedSgId = linearSgId;
     if (sgIdRangeSpecified) {
       int64_t sgCount = endOfRange - startOfRange;
       if (computeProduct(sgLayout) != sgCount)
@@ -208,14 +161,16 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
       // sg id
       Value startOfRangeVal =
           rewriter.create<arith::ConstantIndexOp>(loc, startOfRange);
-      adjustedSgId =
+      linearSgId =
           rewriter.createOrFold<index::SubOp>(loc, linearSgId, startOfRangeVal);
     }
 
-    auto tdescOffsets = layout.getOffsets(rewriter, loc, adjustedSgId, wgShape);
-    if (failed(tdescOffsets))
+    auto maybeTdescOffsets =
+        layout.getOffsets(rewriter, loc, linearSgId, wgShape);
+    if (failed(maybeTdescOffsets))
       return failure();
 
+    SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
     xegpu::TensorDescType newTdescTy =
         xegpu::TensorDescType::get(ctx, sgShape, elemTy, tdescTy.getEncoding(),
                                    layout.dropSgLayoutAndData());
@@ -223,7 +178,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     SmallVector<Value> newCreateNdOps;
     SmallVector<OpFoldResult> offset = op.getMixedOffsets();
 
-    for (auto tdescOffset : *tdescOffsets) {
+    for (auto tdescOffset : *maybeTdescOffsets) {
       SmallVector<OpFoldResult> newOffsets = llvm::map_to_vector(
           llvm::zip_longest(tdescOffset, offset),
           [&](const auto &t) -> OpFoldResult {
