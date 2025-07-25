@@ -1457,12 +1457,42 @@ Error BinaryFunction::disassemble() {
         if (BC.isAArch64())
           handleAArch64IndirectCall(Instruction, Offset);
       }
-    } else if (BC.isRISCV()) {
-      // Check if there's a relocation associated with this instruction.
-      for (auto Itr = Relocations.lower_bound(Offset),
-                ItrE = Relocations.lower_bound(Offset + Size);
+    } 
+
+add_instruction:
+    if (getDWARFLineTable()) {
+      Instruction.setLoc(findDebugLineInformationForInstructionAt(
+          AbsoluteInstrAddr, getDWARFUnit(), getDWARFLineTable()));
+    }
+
+    // Record offset of the instruction for profile matching.
+    if (BC.keepOffsetForInstruction(Instruction))
+      MIB->setOffset(Instruction, static_cast<uint32_t>(Offset));
+
+    if (BC.isX86() && BC.MIB->isNoop(Instruction)) {
+      // NOTE: disassembly loses the correct size information for noops on x86.
+      //       E.g. nopw 0x0(%rax,%rax,1) is 9 bytes, but re-encoded it's only
+      //       5 bytes. Preserve the size info using annotations.
+      MIB->setSize(Instruction, Size);
+    }
+
+    addInstruction(Offset, std::move(Instruction));
+  }
+    if(BC.isRISCV()){
+    for (auto CurInstrIt = Instructions.begin(); CurInstrIt != Instructions.end(); ++CurInstrIt) {
+      uint64_t CurOffset = CurInstrIt->first; 
+      if (const size_t DataInCodeSize = getSizeOfDataInCodeAt(CurOffset)) continue;
+      
+      if(MIB->isBranch(CurInstrIt->second) || MIB->isCall(CurInstrIt->second)) continue;
+      if (MIB->isPseudo(CurInstrIt->second)) continue;
+      if (isZeroPaddingAt(CurInstrIt->first)) continue;
+
+      auto NextInstrIt = std::next(CurInstrIt);
+      uint64_t NextOffset = (NextInstrIt != Instructions.end()) ? NextInstrIt->first : getSize();
+      for (auto Itr = Relocations.lower_bound(CurOffset),
+                ItrE = Relocations.lower_bound(NextOffset);
            Itr != ItrE; ++Itr) {
-        const Relocation &Relocation = Itr->second;
+        Relocation &Relocation = Itr->second;
         MCSymbol *Symbol = Relocation.Symbol;
 
         if (Relocation::isInstructionReference(Relocation.Type)) {
@@ -1484,35 +1514,51 @@ Error BinaryFunction::disassemble() {
         if (Relocation::isGOT(Relocation.Type)) {
           assert(Relocation::isPCRelative(Relocation.Type) &&
                  "GOT relocation must be PC-relative on RISC-V");
+          // For RISC-V, we need to find the next instruction
+          // that matches the current instruction's base register.
+          auto NextInstrIt = std::next(CurInstrIt);
+          unsigned CurReg = BC.MIB->getBaseReg(CurInstrIt->second);
+          while (NextInstrIt != Instructions.end()) {
+              MCInst &NextInst = NextInstrIt->second;
+              unsigned NextReg = BC.MIB->getBaseReg(NextInst);
+              // some case there exit extra auipc instruction
+              // like auipc+auipc+ld instruction,so we need skip it
+              if(CurReg == NextReg && !BC.MIB->matchGotAuipcPair(NextInst)) {
+                break;
+              }
+              if(CurReg == NextReg && BC.MIB->matchGotAuipcPair(NextInst)){
+
+                int64_t CurImm = 0;
+                for (const MCOperand &Op : CurInstrIt->second) {
+                    if (Op.isImm()) {
+                        CurImm = Op.getImm();
+                        break; 
+                    }
+                }
+                int64_t NextImm = 0;
+                for (const MCOperand &Op : NextInstrIt->second) {
+                    if (Op.isImm()) {
+                        NextImm = Op.getImm();
+                        break; 
+                    }
+                }
+                Relocation.Value = (CurImm << 12) + NextImm;
+                break; 
+              }
+              NextInstrIt = std::next(NextInstrIt);
+          }
           Symbol = BC.registerNameAtAddress("__BOLT_got_zero", 0, 0, 0);
           Addend = Relocation.Value + Relocation.Offset + getAddress();
+
         }
-        int64_t Value = Relocation.Value;
-        const bool Result = BC.MIB->replaceImmWithSymbolRef(
-            Instruction, Symbol, Addend, Ctx.get(), Value, Relocation.Type);
-        (void)Result;
-        assert(Result && "cannot replace immediate with relocation");
-      }
+          int64_t Value = Relocation.Value;
+          const bool Result = BC.MIB->replaceImmWithSymbolRef(
+              CurInstrIt->second, Symbol, Addend, Ctx.get(), Value, Relocation.Type);
+          (void)Result;
+          assert(Result && "cannot replace immediate with relocation");
+
+      }  
     }
-
-add_instruction:
-    if (getDWARFLineTable()) {
-      Instruction.setLoc(findDebugLineInformationForInstructionAt(
-          AbsoluteInstrAddr, getDWARFUnit(), getDWARFLineTable()));
-    }
-
-    // Record offset of the instruction for profile matching.
-    if (BC.keepOffsetForInstruction(Instruction))
-      MIB->setOffset(Instruction, static_cast<uint32_t>(Offset));
-
-    if (BC.isX86() && BC.MIB->isNoop(Instruction)) {
-      // NOTE: disassembly loses the correct size information for noops on x86.
-      //       E.g. nopw 0x0(%rax,%rax,1) is 9 bytes, but re-encoded it's only
-      //       5 bytes. Preserve the size info using annotations.
-      MIB->setSize(Instruction, Size);
-    }
-
-    addInstruction(Offset, std::move(Instruction));
   }
 
   for (auto [Offset, Label] : InstructionLabels) {

@@ -20,6 +20,40 @@ void FixRISCVCallsPass::runOnFunction(BinaryFunction &BF) {
   auto &BC = BF.getBinaryContext();
   auto &MIB = BC.MIB;
   auto *Ctx = BC.Ctx.get();
+  // Since JitLink currently only supports adjacent AUIPC/LO12 pairs,
+  // we must guarantee that the label for the AUIPC is
+  // immediately before the LO12 instruction. 
+  for (auto &BB : BF) {
+      for (auto II = BB.begin(); II != BB.end(); ) {
+          const MCInst &AInst = *II;
+          const MCSymbol *TargetSym = nullptr;
+          if (MIB->isPseudo(*II)) {
+              ++II;
+              continue;
+          }
+          TargetSym = MIB->getPCRelLoSymbol(AInst);
+          if (TargetSym) {
+              auto BI = II;
+              bool foundSymbol = false;
+              while(BI != BB.begin()){
+                  auto *Label = MIB->getInstLabel(*BI);
+                  if (Label && Label == TargetSym) {
+                      foundSymbol = true;
+                      break;
+                  }
+                  BI--;
+              }
+              if (foundSymbol && std::next(BI) != II) {
+                MCInst SavedInst = *BI;
+                MIB->copyAnnotations(*BI, SavedInst);
+                BB.eraseInstruction(BI);
+                II = BB.insertInstruction(--II, std::move(SavedInst));
+                II++;
+              }
+          }
+          ++II;
+    }
+  }
 
   for (auto &BB : BF) {
     for (auto II = BB.begin(); II != BB.end();) {
