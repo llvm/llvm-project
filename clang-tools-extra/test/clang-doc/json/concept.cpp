@@ -13,16 +13,13 @@ concept Incrementable = requires(T x) {
 // CHECK-NEXT:    "Concepts": [
 // CHECK-NEXT:      {
 // CHECK-NEXT:        "ConstraintExpression": "requires (T x) { ++x; x++; }",
-// CHECK-NEXT:        "Description": [
+// CHECK-NEXT:        "Description": {
+// CHECK-NEXT:        "HasParagraphComments": true,
+// CHECK-NEXT:        "ParagraphComments": [
 // CHECK-NEXT:          {
-// CHECK-NEXT:            "FullComment": {
-// CHECK-NEXT:              "Children": [
-// CHECK-NEXT:                {
-// CHECK-NEXT:                  "ParagraphComment": {
-// CHECK-NEXT:                    "Children": [
-// CHECK-NEXT:                      {
-// CHECK-NEXT:                        "TextComment": " Requires that T suports post and pre-incrementing."
-// CHECK:             ],
+// CHECK-NEXT:            "Children": [
+// CHECK-NEXT:              {
+// CHECK-NEXT:                "TextComment": " Requires that T suports post and pre-incrementing."
 // CHECK:             "End": true,
 // CHECK-NEXT:        "InfoType": "concept",
 // CHECK-NEXT:        "IsType": true,
