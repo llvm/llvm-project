@@ -38,8 +38,8 @@ public:
                  raw_ostream &os)
       : os(os) {
     if (debug_type)
-      os << "[" << debug_type << "] ";
-    os << file << ":" << line << " ";
+      os << debug_type << " ";
+    os << "[" << file << ":" << line << "] ";
   }
   ~LogWithNewline() { os << '\n'; }
   template <typename T> raw_ostream &operator<<(const T &t) && {
