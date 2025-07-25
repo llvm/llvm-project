@@ -33,14 +33,14 @@ static Value chooseOperand(Value input1, Value input2, BoolAttr choice) {
 }
 
 static void createOpI(PatternRewriter &rewriter, Location loc, Value input) {
-  rewriter.create<OpI>(loc, input);
+  OpI::create(rewriter, loc, input);
 }
 
 static void handleNoResultOp(PatternRewriter &rewriter,
                              OpSymbolBindingNoResult op) {
   // Turn the no result op to a one-result op.
-  rewriter.create<OpSymbolBindingB>(op.getLoc(), op.getOperand().getType(),
-                                    op.getOperand());
+  OpSymbolBindingB::create(rewriter, op.getLoc(), op.getOperand().getType(),
+                           op.getOperand());
 }
 
 static bool getFirstI32Result(Operation *op, Value &value) {
@@ -120,8 +120,8 @@ public:
       return failure();
     rewriter.setInsertionPointToStart(op->getBlock());
 
-    auto constOp = rewriter.create<arith::ConstantOp>(
-        op.getLoc(), rewriter.getBoolAttr(true));
+    auto constOp = arith::ConstantOp::create(rewriter, op.getLoc(),
+                                             rewriter.getBoolAttr(true));
     rewriter.replaceOpWithNewOp<TestCastOp>(op, rewriter.getI32Type(),
                                             Value(constOp));
     return success();
@@ -844,8 +844,8 @@ struct TestRegionRewriteUndo : public RewritePattern {
                             rewriter.getUnknownLoc());
 
     // Add an explicitly illegal operation to ensure the conversion fails.
-    rewriter.create<ILLegalOpF>(op->getLoc(), rewriter.getIntegerType(32));
-    rewriter.create<TestValidOp>(op->getLoc(), ArrayRef<Value>());
+    ILLegalOpF::create(rewriter, op->getLoc(), rewriter.getIntegerType(32));
+    TestValidOp::create(rewriter, op->getLoc(), ArrayRef<Value>());
 
     // Drop this operation.
     rewriter.eraseOp(op);
@@ -864,7 +864,7 @@ struct TestCreateBlock : public RewritePattern {
     Type i32Type = rewriter.getIntegerType(32);
     Location loc = op->getLoc();
     rewriter.createBlock(&region, region.end(), {i32Type, i32Type}, {loc, loc});
-    rewriter.create<TerminatorOp>(loc);
+    TerminatorOp::create(rewriter, loc);
     rewriter.eraseOp(op);
     return success();
   }
@@ -883,8 +883,8 @@ struct TestCreateIllegalBlock : public RewritePattern {
     Location loc = op->getLoc();
     rewriter.createBlock(&region, region.end(), {i32Type, i32Type}, {loc, loc});
     // Create an illegal op to ensure the conversion fails.
-    rewriter.create<ILLegalOpF>(loc, i32Type);
-    rewriter.create<TerminatorOp>(loc);
+    ILLegalOpF::create(rewriter, loc, i32Type);
+    TerminatorOp::create(rewriter, loc);
     rewriter.eraseOp(op);
     return success();
   }
@@ -939,7 +939,7 @@ struct TestUndoBlockErase : public ConversionPattern {
                   ConversionPatternRewriter &rewriter) const final {
     Block *secondBlock = &*std::next(op->getRegion(0).begin());
     rewriter.setInsertionPointToStart(secondBlock);
-    rewriter.create<ILLegalOpF>(op->getLoc(), rewriter.getF32Type());
+    ILLegalOpF::create(rewriter, op->getLoc(), rewriter.getF32Type());
     rewriter.eraseBlock(secondBlock);
     rewriter.modifyOpInPlace(op, [] {});
     return success();
@@ -1114,8 +1114,8 @@ struct TestNonRootReplacement : public RewritePattern {
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const final {
     auto resultType = *op->result_type_begin();
-    auto illegalOp = rewriter.create<ILLegalOpF>(op->getLoc(), resultType);
-    auto legalOp = rewriter.create<LegalOpB>(op->getLoc(), resultType);
+    auto illegalOp = ILLegalOpF::create(rewriter, op->getLoc(), resultType);
+    auto legalOp = LegalOpB::create(rewriter, op->getLoc(), resultType);
 
     rewriter.replaceOp(illegalOp, legalOp);
     rewriter.replaceOp(op, illegalOp);
@@ -1181,7 +1181,7 @@ struct TestCreateUnregisteredOp : public OpRewritePattern<ILLegalOpG> {
   LogicalResult matchAndRewrite(ILLegalOpG op,
                                 PatternRewriter &rewriter) const final {
     IntegerAttr attr = rewriter.getI32IntegerAttr(0);
-    Value val = rewriter.create<arith::ConstantOp>(op->getLoc(), attr);
+    Value val = arith::ConstantOp::create(rewriter, op->getLoc(), attr);
     rewriter.replaceOpWithNewOp<LegalOpC>(op, val);
     return success();
   };
@@ -1354,7 +1354,7 @@ struct TestTypeConverter : public TypeConverter {
   /// 1->N type mappings.
   static Value materializeCast(OpBuilder &builder, Type resultType,
                                ValueRange inputs, Location loc) {
-    return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
+    return TestCastOp::create(builder, loc, resultType, inputs).getResult();
   }
 };
 
@@ -1916,15 +1916,15 @@ struct TestTypeConversionDriver
       // Allow casting from F64 back to F32.
       if (!resultType.isF16() && inputs.size() == 1 &&
           inputs[0].getType().isF64())
-        return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
+        return TestCastOp::create(builder, loc, resultType, inputs).getResult();
       // Allow producing an i32 or i64 from nothing.
       if ((resultType.isInteger(32) || resultType.isInteger(64)) &&
           inputs.empty())
-        return builder.create<TestTypeProducerOp>(loc, resultType);
+        return TestTypeProducerOp::create(builder, loc, resultType);
       // Allow producing an i64 from an integer.
       if (isa<IntegerType>(resultType) && inputs.size() == 1 &&
           isa<IntegerType>(inputs[0].getType()))
-        return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
+        return TestCastOp::create(builder, loc, resultType, inputs).getResult();
       // Otherwise, fail.
       return nullptr;
     });
@@ -2007,7 +2007,7 @@ struct TestTargetMaterializationWithNoUses
     });
     converter.addTargetMaterialization(
         [](OpBuilder &builder, Type type, ValueRange inputs, Location loc) {
-          return builder.create<TestCastOp>(loc, type, inputs).getResult();
+          return TestCastOp::create(builder, loc, type, inputs).getResult();
         });
 
     ConversionTarget target(getContext());
@@ -2058,7 +2058,7 @@ struct TestUndoBlocksMerge : public ConversionPattern {
     Operation *branchOp = firstBlock.getTerminator();
     Block *secondBlock = &*(std::next(op->getRegion(0).begin()));
     rewriter.setInsertionPointToStart(secondBlock);
-    rewriter.create<ILLegalOpF>(op->getLoc(), rewriter.getF32Type());
+    ILLegalOpF::create(rewriter, op->getLoc(), rewriter.getF32Type());
     auto succOperands = branchOp->getOperands();
     SmallVector<Value, 2> replacements(succOperands);
     rewriter.eraseOp(branchOp);
