@@ -185,17 +185,11 @@ private:
 
 using AddressRange = std::pair<uint64_t, uint64_t>;
 
-// The parsed MMap event
-struct MMapEvent {
-  int64_t PID = 0;
-  uint64_t Address = 0;
-  uint64_t Size = 0;
-  uint64_t Offset = 0;
-  StringRef MemProtectionFlag;
-  StringRef BinaryPath;
-};
-
 class ProfiledBinary {
+  struct MMapInfo {
+    uint64_t Size;
+    uint64_t FileOffset;
+  };
   // Absolute path of the executable binary.
   std::string Path;
   // Path of the debug info binary.
@@ -287,7 +281,9 @@ class ProfiledBinary {
   std::unordered_set<std::string> NameStrings;
 
   // MMap events for PT_LOAD segments without 'x' memory protection flag.
-  SmallVector<MMapEvent> MMapNonTextEvents;
+  // Sort keys in descending order to look up the first segment for an address
+  // using lower_bound.
+  std::map<uint64_t, MMapInfo, std::greater<int>> NonTextMMapInfo;
 
   // Records the file offset, file size and virtual address of program headers.
   struct PhdrInfo {
@@ -538,7 +534,7 @@ public:
   void setProfiledFunctions(std::unordered_set<const BinaryFunction *> &Funcs) {
     ProfiledFunctions = Funcs;
   }
-  
+
   BinaryFunction *getBinaryFunction(FunctionId FName) {
     if (FName.isStringRef()) {
       auto I = BinaryFunctions.find(FName.str());
@@ -640,8 +636,11 @@ public:
     return ProbeDecoder.getInlinerDescForProbe(Probe);
   }
 
-  void addMMapNonTextEvent(MMapEvent MMap) {
-    MMapNonTextEvents.push_back(MMap);
+  void addMMapNonTextEvent(uint64_t Address, uint64_t Size,
+                           uint64_t FileOffset) {
+    MMapInfo &MMapEntry = NonTextMMapInfo[Address];
+    MMapEntry.Size = Size;
+    MMapEntry.FileOffset = FileOffset;
   }
 
   // Given a non-text runtime address, canonicalize it to the virtual address in

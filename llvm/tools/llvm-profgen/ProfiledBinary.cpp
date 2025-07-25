@@ -352,13 +352,11 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
 
 uint64_t ProfiledBinary::CanonicalizeNonTextAddress(uint64_t Address) {
   uint64_t FileOffset = 0;
-  for (const auto &MMapEvent : MMapNonTextEvents) {
-    if (MMapEvent.Address <= Address &&
-        Address < MMapEvent.Address + MMapEvent.Size) {
-      // If the address is within the mmap event, return the file offset.
-      FileOffset = Address - MMapEvent.Address + MMapEvent.Offset;
-      break;
-    }
+  auto MMapIt = NonTextMMapInfo.lower_bound(Address);
+  if (MMapIt != NonTextMMapInfo.end() &&
+      Address < MMapIt->first + MMapIt->second.Size) {
+    // If the address is within the mmap event, return the file offset.
+    FileOffset = Address - MMapIt->first + MMapIt->second.FileOffset;
   }
   if (FileOffset == 0) {
     // If the address is not within any mmap event, return the address as is.

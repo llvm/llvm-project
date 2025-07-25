@@ -1027,10 +1027,10 @@ public:
     return VirtualCallsiteTypeCounts[mapIRLocToProfileLoc(Loc)];
   }
 
-  // At location \p Loc, add a type sample for the given \p Type with
-  // \p Count. This function uses saturating arithmetic to clamp the result to
-  // maximum uint64_t (the counter type) and returns counter_overflow to caller
-  // if the actual result is larger than maximum uint64_t.
+  /// At location \p Loc, add a type sample for the given \p Type with
+  /// \p Count. This function uses saturating arithmetic to clamp the result to
+  /// maximum uint64_t (the counter type) and returns counter_overflow to caller
+  /// if the actual result is larger than maximum uint64_t.
   sampleprof_error addTypeSamplesAt(const LineLocation &Loc, FunctionId Type,
                                     uint64_t Count) {
     auto &TypeCounts = getTypeSamplesAt(Loc);
