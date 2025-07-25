@@ -2540,7 +2540,6 @@ vectorizeScalableVectorPrecondition(Operation *op,
   if (numOfScalableDims == 0)
     return success();
 
-  // TODO: Check the following!
   auto linalgOp = dyn_cast<LinalgOp>(op);
 
   // Cond 1: Reject Ops that don't implement the LinalgOp interface, with the
