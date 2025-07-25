@@ -58,10 +58,8 @@ RUN apt-get update && \
     python3-psutil \
     sudo \
     # These are needed by the premerge pipeline. Pip is used to install
-    # dependent python packages and ccache is used for build caching. File and
-    # tzdata are used for tests.
+    # dependent python packages. File and tzdata are used for tests.
     python3-pip \
-    ccache \
     file \
     tzdata && \
     apt-get clean && \
