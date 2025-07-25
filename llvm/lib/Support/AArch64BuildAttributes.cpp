@@ -10,9 +10,9 @@
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace llvm;
-using namespace llvm::AArch64BuildAttrs;
+using namespace llvm::AArch64BuildAttributes;
 
-StringRef AArch64BuildAttrs::getVendorName(unsigned Vendor) {
+StringRef AArch64BuildAttributes::getVendorName(unsigned Vendor) {
   switch (Vendor) {
   case AEABI_FEATURE_AND_BITS:
     return "aeabi_feature_and_bits";
@@ -25,14 +25,14 @@ StringRef AArch64BuildAttrs::getVendorName(unsigned Vendor) {
     return "";
   }
 }
-VendorID AArch64BuildAttrs::getVendorID(StringRef Vendor) {
+VendorID AArch64BuildAttributes::getVendorID(StringRef Vendor) {
   return StringSwitch<VendorID>(Vendor)
       .Case("aeabi_feature_and_bits", AEABI_FEATURE_AND_BITS)
       .Case("aeabi_pauthabi", AEABI_PAUTHABI)
       .Default(VENDOR_UNKNOWN);
 }
 
-StringRef AArch64BuildAttrs::getOptionalStr(unsigned Optional) {
+StringRef AArch64BuildAttributes::getOptionalStr(unsigned Optional) {
   switch (Optional) {
   case REQUIRED:
     return "required";
@@ -43,18 +43,18 @@ StringRef AArch64BuildAttrs::getOptionalStr(unsigned Optional) {
     return "";
   }
 }
-SubsectionOptional AArch64BuildAttrs::getOptionalID(StringRef Optional) {
+SubsectionOptional AArch64BuildAttributes::getOptionalID(StringRef Optional) {
   return StringSwitch<SubsectionOptional>(Optional)
       .Case("required", REQUIRED)
       .Case("optional", OPTIONAL)
       .Default(OPTIONAL_NOT_FOUND);
 }
-StringRef AArch64BuildAttrs::getSubsectionOptionalUnknownError() {
+StringRef AArch64BuildAttributes::getSubsectionOptionalUnknownError() {
   return "unknown AArch64 build attributes optionality, expected "
          "required|optional";
 }
 
-StringRef AArch64BuildAttrs::getTypeStr(unsigned Type) {
+StringRef AArch64BuildAttributes::getTypeStr(unsigned Type) {
   switch (Type) {
   case ULEB128:
     return "uleb128";
@@ -65,17 +65,17 @@ StringRef AArch64BuildAttrs::getTypeStr(unsigned Type) {
     return "";
   }
 }
-SubsectionType AArch64BuildAttrs::getTypeID(StringRef Type) {
+SubsectionType AArch64BuildAttributes::getTypeID(StringRef Type) {
   return StringSwitch<SubsectionType>(Type)
       .Cases("uleb128", "ULEB128", ULEB128)
       .Cases("ntbs", "NTBS", NTBS)
       .Default(TYPE_NOT_FOUND);
 }
-StringRef AArch64BuildAttrs::getSubsectionTypeUnknownError() {
+StringRef AArch64BuildAttributes::getSubsectionTypeUnknownError() {
   return "unknown AArch64 build attributes type, expected uleb128|ntbs";
 }
 
-StringRef AArch64BuildAttrs::getPauthABITagsStr(unsigned PauthABITag) {
+StringRef AArch64BuildAttributes::getPauthABITagsStr(unsigned PauthABITag) {
   switch (PauthABITag) {
   case TAG_PAUTH_PLATFORM:
     return "Tag_PAuth_Platform";
@@ -87,7 +87,7 @@ StringRef AArch64BuildAttrs::getPauthABITagsStr(unsigned PauthABITag) {
   }
 }
 
-PauthABITags AArch64BuildAttrs::getPauthABITagsID(StringRef PauthABITag) {
+PauthABITags AArch64BuildAttributes::getPauthABITagsID(StringRef PauthABITag) {
   return StringSwitch<PauthABITags>(PauthABITag)
       .Case("Tag_PAuth_Platform", TAG_PAUTH_PLATFORM)
       .Case("Tag_PAuth_Schema", TAG_PAUTH_SCHEMA)
@@ -95,7 +95,7 @@ PauthABITags AArch64BuildAttrs::getPauthABITagsID(StringRef PauthABITag) {
 }
 
 StringRef
-AArch64BuildAttrs::getFeatureAndBitsTagsStr(unsigned FeatureAndBitsTag) {
+AArch64BuildAttributes::getFeatureAndBitsTagsStr(unsigned FeatureAndBitsTag) {
   switch (FeatureAndBitsTag) {
   case TAG_FEATURE_BTI:
     return "Tag_Feature_BTI";
@@ -110,7 +110,7 @@ AArch64BuildAttrs::getFeatureAndBitsTagsStr(unsigned FeatureAndBitsTag) {
 }
 
 FeatureAndBitsTags
-AArch64BuildAttrs::getFeatureAndBitsTagsID(StringRef FeatureAndBitsTag) {
+AArch64BuildAttributes::getFeatureAndBitsTagsID(StringRef FeatureAndBitsTag) {
   return StringSwitch<FeatureAndBitsTags>(FeatureAndBitsTag)
       .Case("Tag_Feature_BTI", TAG_FEATURE_BTI)
       .Case("Tag_Feature_PAC", TAG_FEATURE_PAC)

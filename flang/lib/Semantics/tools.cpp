@@ -311,69 +311,6 @@ bool IsBindCProcedure(const Scope &scope) {
   }
 }
 
-static const Symbol *FindPointerComponent(
-    const Scope &scope, std::set<const Scope *> &visited) {
-  if (!scope.IsDerivedType()) {
-    return nullptr;
-  }
-  if (!visited.insert(&scope).second) {
-    return nullptr;
-  }
-  // If there's a top-level pointer component, return it for clearer error
-  // messaging.
-  for (const auto &pair : scope) {
-    const Symbol &symbol{*pair.second};
-    if (IsPointer(symbol)) {
-      return &symbol;
-    }
-  }
-  for (const auto &pair : scope) {
-    const Symbol &symbol{*pair.second};
-    if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
-      if (const DeclTypeSpec * type{details->type()}) {
-        if (const DerivedTypeSpec * derived{type->AsDerived()}) {
-          if (const Scope * nested{derived->scope()}) {
-            if (const Symbol *
-                pointer{FindPointerComponent(*nested, visited)}) {
-              return pointer;
-            }
-          }
-        }
-      }
-    }
-  }
-  return nullptr;
-}
-
-const Symbol *FindPointerComponent(const Scope &scope) {
-  std::set<const Scope *> visited;
-  return FindPointerComponent(scope, visited);
-}
-
-const Symbol *FindPointerComponent(const DerivedTypeSpec &derived) {
-  if (const Scope * scope{derived.scope()}) {
-    return FindPointerComponent(*scope);
-  } else {
-    return nullptr;
-  }
-}
-
-const Symbol *FindPointerComponent(const DeclTypeSpec &type) {
-  if (const DerivedTypeSpec * derived{type.AsDerived()}) {
-    return FindPointerComponent(*derived);
-  } else {
-    return nullptr;
-  }
-}
-
-const Symbol *FindPointerComponent(const DeclTypeSpec *type) {
-  return type ? FindPointerComponent(*type) : nullptr;
-}
-
-const Symbol *FindPointerComponent(const Symbol &symbol) {
-  return IsPointer(symbol) ? &symbol : FindPointerComponent(symbol.GetType());
-}
-
 // C1594 specifies several ways by which an object might be globally visible.
 const Symbol *FindExternallyVisibleObject(
     const Symbol &object, const Scope &scope, bool isPointerDefinition) {
@@ -411,9 +348,9 @@ const Symbol &BypassGeneric(const Symbol &symbol) {
 
 const Symbol &GetCrayPointer(const Symbol &crayPointee) {
   const Symbol *found{nullptr};
-  for (const auto &[pointee, pointer] :
-      crayPointee.GetUltimate().owner().crayPointers()) {
-    if (pointee == crayPointee.name()) {
+  const Symbol &ultimate{crayPointee.GetUltimate()};
+  for (const auto &[pointee, pointer] : ultimate.owner().crayPointers()) {
+    if (pointee == ultimate.name()) {
       found = &pointer.get();
       break;
     }
@@ -876,6 +813,38 @@ bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived) {
   return std::any_of(directs.begin(), directs.end(), IsAllocatable);
 }
 
+static bool MayHaveDefinedAssignment(
+    const DerivedTypeSpec &derived, std::set<const Scope *> &checked) {
+  if (const Scope *scope{derived.GetScope()};
+      scope && checked.find(scope) == checked.end()) {
+    checked.insert(scope);
+    for (const auto &[_, symbolRef] : *scope) {
+      if (const auto *generic{symbolRef->detailsIf<GenericDetails>()}) {
+        if (generic->kind().IsAssignment()) {
+          return true;
+        }
+      } else if (symbolRef->has<ObjectEntityDetails>() &&
+          !IsPointer(*symbolRef)) {
+        if (const DeclTypeSpec *type{symbolRef->GetType()}) {
+          if (type->IsPolymorphic()) {
+            return true;
+          } else if (const DerivedTypeSpec *derived{type->AsDerived()}) {
+            if (MayHaveDefinedAssignment(*derived, checked)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
+bool MayHaveDefinedAssignment(const DerivedTypeSpec &derived) {
+  std::set<const Scope *> checked;
+  return MayHaveDefinedAssignment(derived, checked);
+}
+
 bool IsAssumedLengthCharacter(const Symbol &symbol) {
   if (const DeclTypeSpec * type{symbol.GetType()}) {
     return type->category() == DeclTypeSpec::Character &&
@@ -1112,10 +1081,67 @@ const Scope *FindCUDADeviceContext(const Scope *scope) {
   });
 }
 
+bool IsDeviceAllocatable(const Symbol &symbol) {
+  if (IsAllocatable(symbol)) {
+    if (const auto *details{
+            symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
+      if (details->cudaDataAttr() &&
+          *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+UltimateComponentIterator::const_iterator
+FindCUDADeviceAllocatableUltimateComponent(const DerivedTypeSpec &derived) {
+  UltimateComponentIterator ultimates{derived};
+  return std::find_if(ultimates.begin(), ultimates.end(), IsDeviceAllocatable);
+}
+
+bool CanCUDASymbolBeGlobal(const Symbol &sym) {
+  const Symbol &symbol{GetAssociationRoot(sym)};
+  const Scope &scope{symbol.owner()};
+  auto scopeKind{scope.kind()};
+  const common::LanguageFeatureControl &features{
+      scope.context().languageFeatures()};
+  if (features.IsEnabled(common::LanguageFeature::CUDA) &&
+      scopeKind == Scope::Kind::MainProgram) {
+    if (const auto *details{
+            sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
+      const Fortran::semantics::DeclTypeSpec *type{details->type()};
+      const Fortran::semantics::DerivedTypeSpec *derived{
+          type ? type->AsDerived() : nullptr};
+      if (derived) {
+        if (FindCUDADeviceAllocatableUltimateComponent(*derived)) {
+          return false;
+        }
+      }
+      if (details->cudaDataAttr() &&
+          *details->cudaDataAttr() != common::CUDADataAttr::Unified) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *symbol) {
-  const auto *object{
+  const auto *details{
       symbol ? symbol->detailsIf<ObjectEntityDetails>() : nullptr};
-  return object ? object->cudaDataAttr() : std::nullopt;
+  if (details) {
+    const Fortran::semantics::DeclTypeSpec *type{details->type()};
+    const Fortran::semantics::DerivedTypeSpec *derived{
+        type ? type->AsDerived() : nullptr};
+    if (derived) {
+      if (FindCUDADeviceAllocatableUltimateComponent(*derived)) {
+        return common::CUDADataAttr::Managed;
+      }
+    }
+    return details->cudaDataAttr();
+  }
+  return std::nullopt;
 }
 
 bool IsAccessible(const Symbol &original, const Scope &scope) {
@@ -1139,7 +1165,7 @@ std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
     return std::nullopt;
   } else {
     return parser::MessageFormattedText{
-        "PRIVATE name '%s' is only accessible within module '%s'"_err_en_US,
+        "PRIVATE name '%s' is accessible only within module '%s'"_err_en_US,
         symbol.name(),
         DEREF(FindModuleContaining(symbol.owner())).GetName().value()};
   }
@@ -1391,6 +1417,12 @@ PotentialComponentIterator::const_iterator FindCoarrayPotentialComponent(
   PotentialComponentIterator potentials{derived};
   return std::find_if(potentials.begin(), potentials.end(),
       [](const Symbol &symbol) { return evaluate::IsCoarray(symbol); });
+}
+
+PotentialAndPointerComponentIterator::const_iterator
+FindPointerPotentialComponent(const DerivedTypeSpec &derived) {
+  PotentialAndPointerComponentIterator potentials{derived};
+  return std::find_if(potentials.begin(), potentials.end(), IsPointer);
 }
 
 UltimateComponentIterator::const_iterator FindCoarrayUltimateComponent(
@@ -1708,7 +1740,7 @@ std::forward_list<std::string> GetOperatorNames(
 std::forward_list<std::string> GetAllNames(
     const SemanticsContext &context, const SourceName &name) {
   std::string str{name.ToString()};
-  if (!name.empty() && name.end()[-1] == ')' &&
+  if (!name.empty() && name.back() == ')' &&
       name.ToString().rfind("operator(", 0) == 0) {
     for (int i{0}; i != common::LogicalOperator_enumSize; ++i) {
       auto names{GetOperatorNames(context, common::LogicalOperator{i})};
@@ -1790,16 +1822,20 @@ bool HadUseError(
         at, "Reference to '%s' is ambiguous"_err_en_US, symbol->name())};
     for (const auto &[location, sym] : details->occurrences()) {
       const Symbol &ultimate{sym->GetUltimate()};
-      auto &attachment{
-          msg.Attach(location, "'%s' was use-associated from module '%s'"_en_US,
-              at, sym->owner().GetName().value())};
-      if (&*sym != &ultimate) {
-        // For incompatible definitions where one comes from a hermetic
-        // module file's incorporated dependences and the other from another
-        // module of the same name.
-        attachment.Attach(ultimate.name(),
-            "ultimately from '%s' in module '%s'"_en_US, ultimate.name(),
-            ultimate.owner().GetName().value());
+      if (sym->owner().IsModule()) {
+        auto &attachment{msg.Attach(location,
+            "'%s' was use-associated from module '%s'"_en_US, at,
+            sym->owner().GetName().value())};
+        if (&*sym != &ultimate) {
+          // For incompatible definitions where one comes from a hermetic
+          // module file's incorporated dependences and the other from another
+          // module of the same name.
+          attachment.Attach(ultimate.name(),
+              "ultimately from '%s' in module '%s'"_en_US, ultimate.name(),
+              ultimate.owner().GetName().value());
+        }
+      } else {
+        msg.Attach(sym->name(), "declared here"_en_US);
       }
     }
     context.SetError(*symbol);

@@ -91,13 +91,12 @@ void l4_to_i2() {
 
 // CHECK-LABEL: i2_to_b2
 // CHECK: [[l2:%.*]] = alloca <2 x i32>
-// CHECK: [[b2:%.*]] = alloca i8
+// CHECK: [[b2:%.*]] = alloca <2 x i32>
 // CHECK: store <2 x i32> splat (i32 8), ptr [[i2]]
 // CHECK: [[veci2:%.*]] = load <2 x i32>, ptr [[i2]]
 // CHECK: [[vecb2:%.*]] = icmp ne <2 x i32> [[veci2]], zeroinitializer
-// CHECK: [[vecb8:%.*]] = shufflevector <2 x i1> [[vecb2]], <2 x i1> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-// CHECK: [[i8:%.*]] = bitcast <8 x i1> [[vecb8]] to i8
-// CHECK: store i8 [[i8]], ptr [[b2]]
+// CHECK: [[vecb8:%.*]] = zext <2 x i1> [[vecb2]] to <2 x i32>
+// CHECK: store <2 x i32> [[vecb8]], ptr [[b2]]
 void i2_to_b2() {
   vector<int, 2> i2 = 8;
   vector<bool, 2> b2 = i2;
@@ -105,14 +104,13 @@ void i2_to_b2() {
 
 // CHECK-LABEL: d4_to_b2
 // CHECK: [[d4:%.*]] = alloca <4 x double>
-// CHECK: [[b2:%.*]] = alloca i8
+// CHECK: [[b2:%.*]] = alloca <2 x i32>
 // CHECK: store <4 x double> splat (double 9.000000e+00), ptr [[d4]]
 // CHECK: [[vecd4:%.*]] = load <4 x double>, ptr [[d4]]
 // CHECK: [[vecb4:%.*]] = fcmp reassoc nnan ninf nsz arcp afn une <4 x double> [[vecd4]], zeroinitializer
 // CHECK: [[vecd2:%.*]] = shufflevector <4 x i1> [[vecb4]], <4 x i1> poison, <2 x i32> <i32 0, i32 1>
-// CHECK: [[vecb8:%.*]] = shufflevector <2 x i1> [[vecd2]], <2 x i1> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-// CHECK: [[i8:%.*]] = bitcast <8 x i1> [[vecb8]] to i8
-// CHECK: store i8 [[i8]], ptr [[b2]]
+// CHECK: [[vecb8:%.*]] = zext <2 x i1> [[vecd2]] to <2 x i32>
+// CHECK: store <2 x i32> [[vecb8]], ptr [[b2]]
 void d4_to_b2() {
   vector<double,4> d4 = 9.0;
   vector<bool, 2> b2 = d4;

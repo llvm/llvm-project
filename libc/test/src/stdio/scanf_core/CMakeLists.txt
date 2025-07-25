@@ -32,7 +32,7 @@ add_libc_unittest(
   SRCS
     reader_test.cpp
   DEPENDS
-    libc.src.stdio.scanf_core.reader
+    libc.src.stdio.scanf_core.string_reader
     libc.src.__support.CPP.string_view
   COMPILE_OPTIONS
     ${use_system_file}
@@ -45,8 +45,8 @@ add_libc_unittest(
   SRCS
     converter_test.cpp
   DEPENDS
-    libc.src.stdio.scanf_core.reader
     libc.src.stdio.scanf_core.converter
+    libc.src.stdio.scanf_core.string_reader
     libc.src.__support.CPP.string_view
   COMPILE_OPTIONS
     ${use_system_file}

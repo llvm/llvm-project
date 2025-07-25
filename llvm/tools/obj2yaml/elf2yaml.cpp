@@ -899,7 +899,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
   while (Cur && Cur.tell() < Content.size()) {
     if (Shdr->sh_type == ELF::SHT_LLVM_BB_ADDR_MAP) {
       Version = Data.getU8(Cur);
-      if (Cur && Version > 2)
+      if (Cur && Version > 3)
         return createStringError(
             errc::invalid_argument,
             "invalid SHT_LLVM_BB_ADDR_MAP section version: " +
@@ -934,9 +934,19 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
            ++BlockIndex) {
         uint32_t ID = Version >= 2 ? Data.getULEB128(Cur) : BlockIndex;
         uint64_t Offset = Data.getULEB128(Cur);
+        std::optional<std::vector<llvm::yaml::Hex64>> CallsiteOffsets;
+        if (FeatureOrErr->CallsiteOffsets) {
+          uint32_t NumCallsites = Data.getULEB128(Cur);
+          CallsiteOffsets = std::vector<llvm::yaml::Hex64>(NumCallsites, 0);
+          for (uint32_t CallsiteIndex = 0; Cur && CallsiteIndex < NumCallsites;
+               ++CallsiteIndex) {
+            (*CallsiteOffsets)[CallsiteIndex] = Data.getULEB128(Cur);
+          }
+        }
         uint64_t Size = Data.getULEB128(Cur);
         uint64_t Metadata = Data.getULEB128(Cur);
-        BBEntries.push_back({ID, Offset, Size, Metadata});
+        BBEntries.push_back(
+            {ID, Offset, Size, Metadata, std::move(CallsiteOffsets)});
       }
       TotalNumBlocks += BBEntries.size();
       BBRanges.push_back({BaseAddress, /*NumBlocks=*/{}, BBEntries});
@@ -1266,8 +1276,7 @@ ELFDumper<ELFT>::dumpSymtabShndxSection(const Elf_Shdr *Shdr) {
     return EntriesOrErr.takeError();
 
   S->Entries.emplace();
-  for (const Elf_Word &E : *EntriesOrErr)
-    S->Entries->push_back(E);
+  llvm::append_range(*S->Entries, *EntriesOrErr);
   return S.release();
 }
 
@@ -1490,8 +1499,7 @@ ELFDumper<ELFT>::dumpSymverSection(const Elf_Shdr *Shdr) {
     return VersionsOrErr.takeError();
 
   S->Entries.emplace();
-  for (const Elf_Half &E : *VersionsOrErr)
-    S->Entries->push_back(E);
+  llvm::append_range(*S->Entries, *VersionsOrErr);
 
   return S.release();
 }

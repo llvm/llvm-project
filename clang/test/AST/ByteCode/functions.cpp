@@ -637,7 +637,7 @@ namespace {
 
 namespace {
   /// The InitListExpr here is of void type.
-  void bir [[clang::annotate("B", {1, 2, 3, 4})]] (); // both-error {{'annotate' attribute requires parameter 1 to be a constant expression}} \
+  void bir [[clang::annotate("B", {1, 2, 3, 4})]] (); // both-error {{'clang::annotate' attribute requires parameter 1 to be a constant expression}} \
                                                       // both-note {{subexpression not valid in a constant expression}}
 }
 
@@ -681,3 +681,16 @@ namespace StableAddress {
   static_assert(sum<str{"$hello $world."}>() == 1234, "");
 }
 #endif
+
+namespace NoDiags {
+  void huh();
+  template <unsigned>
+  constexpr void hd_fun() {
+    huh();
+  }
+
+  constexpr bool foo() {
+    hd_fun<1>();
+    return true;
+  }
+}

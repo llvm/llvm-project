@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX908 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX90A %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx908 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX908 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX90A %s
 
 ; GCN-LABEL: {{^}}max_12regs_13a_used:
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
@@ -111,7 +111,7 @@ define amdgpu_kernel void @max_6regs_used_8a(ptr addrspace(1) %arg) #4 {
   %mai.in = load <4 x float>, ptr addrspace(1) %gep
   %mai.out = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float 1.0, float 1.0, <4 x float> %mai.in, i32 0, i32 0, i32 0)
   store <4 x float> %mai.out, ptr addrspace(1) %gep
-  store volatile <4 x float> %a4, ptr addrspace(1) undef
+  store volatile <4 x float> %a4, ptr addrspace(1) poison
   call void asm sideeffect "; use $0", "v"(float %v0);
   ret void
 }

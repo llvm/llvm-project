@@ -79,6 +79,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
+    libc.src.stdlib.memalignment
     libc.src.stdlib.qsort
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
@@ -104,6 +105,9 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # unistd.h entrypoints
     libc.src.unistd.getentropy
+
+    # wctype.h entrypoints
+    libc.src.wctype.iswalpha
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
@@ -126,12 +130,15 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.fenv.feupdateenv
 
     # math.h entrypoints
+    libc.src.math.acos
     libc.src.math.acosf
     libc.src.math.acoshf
+    libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
     libc.src.math.atan2
     libc.src.math.atan2f
+    libc.src.math.atan
     libc.src.math.atanf
     libc.src.math.atanhf
     libc.src.math.cbrt
@@ -291,6 +298,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.tanpif
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl

@@ -1,4 +1,6 @@
 add_subdirectory(Cpp)
+add_subdirectory(IRDLToCpp)
 add_subdirectory(SPIRV)
 add_subdirectory(LLVMIR)
 add_subdirectory(LLVM)
+add_subdirectory(SMTLIB)

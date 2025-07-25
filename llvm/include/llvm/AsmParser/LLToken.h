@@ -181,6 +181,7 @@ enum Kind {
   kw_amdgpu_cs_chain_preserve,
   kw_amdgpu_kernel,
   kw_amdgpu_gfx,
+  kw_amdgpu_gfx_whole_wave,
   kw_tailcc,
   kw_m68k_rtdcc,
   kw_graalcc,
@@ -276,6 +277,8 @@ enum Kind {
   kw_umin,
   kw_fmax,
   kw_fmin,
+  kw_fmaximum,
+  kw_fminimum,
   kw_uinc_wrap,
   kw_udec_wrap,
   kw_usub_cond,
@@ -494,6 +497,7 @@ enum Kind {
   DwarfCC,          // DW_CC_foo
   EmissionKind,     // lineTablesOnly
   NameTableKind,    // GNU
+  FixedPointKind,   // Fixed point
   DwarfOp,          // DW_OP_foo
   DIFlag,           // DIFlagFoo
   DISPFlag,         // DISPFlagFoo

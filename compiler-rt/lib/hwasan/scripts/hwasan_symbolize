@@ -16,6 +16,7 @@ from __future__ import unicode_literals
 
 import argparse
 import glob
+import hashlib
 import html
 import json
 import mmap
@@ -37,8 +38,9 @@ if sys.version_info.major < 3:
 Ehdr_size = 64
 e_shnum_offset = 60
 e_shoff_offset = 40
-
+e_shstrndx_offset = 62
 Shdr_size = 64
+sh_name_offset = 0
 sh_type_offset = 4
 sh_offset_offset = 24
 sh_size_offset = 32
@@ -62,13 +64,32 @@ def handle_Nhdr(mv, sh_size):
     offset += Nhdr_size + align_up(n_namesz, 4) + align_up(n_descsz, 4)
   return None
 
-def handle_Shdr(mv):
+def handle_shstrtab(mv, e_shoff):
+  e_shstrndx, = struct.unpack_from('<H', buffer=mv, offset=e_shstrndx_offset)
+  
+  start_shstrndx = e_shoff + e_shstrndx * Shdr_size
+  shstrndx_sh = mv[start_shstrndx: start_shstrndx + Shdr_size]
+  _, shstrndx_sh_offset, shstrndx_sh_size = handle_Shdr(shstrndx_sh)
+  return mv[shstrndx_sh_offset:shstrndx_sh_offset + shstrndx_sh_size]
+
+def read_string(mv):
+  name = ""
+  for byte in mv:
+    char = chr(byte)
+    if char == '\x00':
+      break
+    name += char
+  return name
+
+def unpack_sh_type(mv):
   sh_type, = struct.unpack_from('<I', buffer=mv, offset=sh_type_offset)
-  if sh_type != SHT_NOTE:
-    return None, None
+  return sh_type
+
+def handle_Shdr(mv):
+  name_offset, = struct.unpack_from('<I', buffer=mv, offset=sh_name_offset)
   sh_offset, = struct.unpack_from('<Q', buffer=mv, offset=sh_offset_offset)
   sh_size, = struct.unpack_from('<Q', buffer=mv, offset=sh_size_offset)
-  return sh_offset, sh_size
+  return name_offset, sh_offset, sh_size
 
 def handle_elf(mv):
   # \x02 is ELFCLASS64, \x01 is ELFDATA2LSB. HWASan currently only works on
@@ -76,19 +97,37 @@ def handle_elf(mv):
   # have to extend the parsing code.
   if mv[:6] != b'\x7fELF\x02\x01':
     return None
+  found_symbols = False
+  bid = None
   e_shnum, = struct.unpack_from('<H', buffer=mv, offset=e_shnum_offset)
   e_shoff, = struct.unpack_from('<Q', buffer=mv, offset=e_shoff_offset)
+
+  # Section where all the section header names are stored.
+  shstr = handle_shstrtab(mv, e_shoff)
+
   for i in range(0, e_shnum):
     start = e_shoff + i * Shdr_size
-    sh_offset, sh_size = handle_Shdr(mv[start: start + Shdr_size])
-    if sh_offset is None:
-      continue
-    note_hdr = mv[sh_offset: sh_offset + sh_size]
-    result = handle_Nhdr(note_hdr, sh_size)
-    if result is not None:
-      return result
+    sh = mv[start: start + Shdr_size]
+    sh_name_offset, sh_offset, sh_size = handle_Shdr(sh)
+    sh_name = read_string(shstr[sh_name_offset:])
+    sh_type = unpack_sh_type(sh)
 
-def get_buildid(filename):
+    if sh_name == ".debug_info":
+      found_symbols = True
+    if sh_type == SHT_NOTE:
+      if sh_offset is None:
+        continue
+      note_hdr = mv[sh_offset: sh_offset + sh_size]
+      result = handle_Nhdr(note_hdr, sh_size)
+      if result is not None:
+        bid = result
+
+  if found_symbols:
+    return bid
+  else:
+    return None
+
+def read_elf(filename):
   with open(filename, "r") as fd:
     if os.fstat(fd.fileno()).st_size < Ehdr_size:
       return None
@@ -200,7 +239,7 @@ class Symbolizer:
       if os.path.exists(full_path):
         return full_path
     if name not in self.__warnings:
-      print("Could not find symbols for", name, file=sys.stderr)
+      print("Could not find symbols for {} (Build ID: {})".format(name, buildid), file=sys.stderr)
       self.__warnings.add(name)
     return None
 
@@ -268,13 +307,30 @@ class Symbolizer:
         for fn in fnames:
           filename = os.path.join(dname, fn)
           try:
-            bid = get_buildid(filename)
+            bid = read_elf(filename)
           except FileNotFoundError:
             continue
           except Exception as e:
             print("Failed to parse {}: {}".format(filename, e), file=sys.stderr)
             continue
-          if bid is not None:
+          if bid is None:
+            continue
+
+          if bid in self.__index:
+            index_filename = self.__index[bid]
+
+            if os.path.samefile(index_filename, filename):
+              continue
+
+            with open(filename, "rb") as f:
+              file_hash = hashlib.file_digest(f, "sha256")
+
+            with open(index_filename, "rb") as f:
+              index_file_hash = hashlib.file_digest(f, "sha256")
+
+            if index_file_hash.digest() != file_hash.digest():
+              print("Build ID collision! Files share the same BuildId ({}) but their contents differ. Files {} and {} ".format(bid, filename, index_filename), file=sys.stderr)
+          else:
             self.__index[bid] = filename
 
   def symbolize_line(self, line):

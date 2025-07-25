@@ -75,6 +75,22 @@ define float @test_finite_assumed(float %x, float %y) {
   ret float %call
 }
 
+define float @test_poison_var(float %x) {
+; CHECK-LABEL: @test_poison_var(
+; CHECK-NEXT:    ret float poison
+;
+  %call = call float @llvm.amdgcn.fmul.legacy(float poison, float %x)
+  ret float %call
+}
+
+define float @test_var_poison(float %x) {
+; CHECK-LABEL: @test_var_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %call = call float @llvm.amdgcn.fmul.legacy(float %x, float poison)
+  ret float %call
+}
+
 declare float @llvm.amdgcn.fmul.legacy(float, float)
 declare float @llvm.fabs.f32(float)
 declare void @llvm.assume(i1 noundef)

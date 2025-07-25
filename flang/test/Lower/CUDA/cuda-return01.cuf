@@ -9,7 +9,7 @@ end
 
 ! CHECK: func.func @_QPsub1()
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare
-! CHECK: cuf.free %[[DECL]]#1 : !fir.ref<!fir.array<10xi32>>
+! CHECK: cuf.free %[[DECL]]#0 : !fir.ref<!fir.array<10xi32>>
 ! CHECK: return
 ! CHECK: }
 
@@ -28,6 +28,6 @@ program main
   return
 end
 
-! CHECK-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "main"}
+! CHECK-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "MAIN"}
 ! CHECK: cuf.alloc !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK-NOT: cuf.free

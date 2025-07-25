@@ -348,8 +348,8 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
               implicitCastExpr().bind("implicitCastFromBool"),
               unless(hasParent(BitfieldConstruct)),
               // Check also for nested casts, for example: bool -> int -> float.
-              anyOf(hasParent(implicitCastExpr().bind("furtherImplicitCast")),
-                    anything()),
+              optionally(
+                  hasParent(implicitCastExpr().bind("furtherImplicitCast"))),
               unless(isInTemplateInstantiation()),
               unless(IsInCompilerGeneratedFunction))),
       this);

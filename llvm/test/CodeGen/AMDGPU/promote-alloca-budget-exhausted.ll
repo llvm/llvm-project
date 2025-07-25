@@ -9,6 +9,8 @@ define amdgpu_kernel void @simple_users_scores() {
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[MANYUSERS:%.*]] = alloca [64 x i64], align 4, addrspace(5)
+; CHECK-NEXT:    [[SIMPLEUSER:%.*]] = freeze <4 x i64> poison
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> [[SIMPLEUSER]], i64 42, i32 0
 ; CHECK-NEXT:    [[MANYUSERS_1:%.*]] = getelementptr i8, ptr addrspace(5) [[MANYUSERS]], i64 2
 ; CHECK-NEXT:    [[V0:%.*]] = load i8, ptr addrspace(5) [[MANYUSERS_1]], align 1
 ; CHECK-NEXT:    [[V0_EXT:%.*]] = zext i8 [[V0]] to i64

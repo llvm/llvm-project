@@ -668,7 +668,7 @@ define amdgpu_kernel void @scalar_xor_literal_multi_use_i64(ptr addrspace(1) %ou
   store i64 %or, ptr addrspace(1) %out
 
   %foo = add i64 %b, 4261135838621753
-  store volatile i64 %foo, ptr addrspace(1) undef
+  store volatile i64 %foo, ptr addrspace(1) poison
   ret void
 }
 

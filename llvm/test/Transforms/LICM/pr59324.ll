@@ -6,7 +6,10 @@ define void @test(ptr %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr null, align 4
+; CHECK-NEXT:    store ptr null, ptr null, align 8
+; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr null, align 8
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    store i32 [[V]], ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
@@ -15,6 +18,28 @@ entry:
 loop:
   store ptr null, ptr null
   %p = load ptr, ptr null
+  %v = load i32, ptr %p
+  store i32 %v, ptr %a
+  br label %loop
+}
+
+define void @test_inttoptr(ptr %a) {
+; CHECK-LABEL: @test_inttoptr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    store ptr null, ptr inttoptr (i64 128 to ptr), align 8
+; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr inttoptr (i64 128 to ptr), align 8
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    store i32 [[V]], ptr [[A:%.*]], align 4
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  store ptr null, ptr inttoptr (i64 128 to ptr)
+  %p = load ptr, ptr inttoptr (i64 128 to ptr)
   %v = load i32, ptr %p
   store i32 %v, ptr %a
   br label %loop

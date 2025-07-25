@@ -27,7 +27,6 @@ namespace {
 
 using testing::IsEmpty;
 using testing::Not;
-using testing::NotNull;
 
 class RISCVTargetTest : public RISCVTestBase {
 protected:

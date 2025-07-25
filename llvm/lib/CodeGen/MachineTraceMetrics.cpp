@@ -1071,7 +1071,7 @@ computeInstrHeights(const MachineBasicBlock *MBB) {
       } else {
         // For register units, the def latency is not included because we don't
         // know the def yet.
-        RegUnits[LI.Reg].Cycle = LI.Height;
+        RegUnits[LI.Reg.id()].Cycle = LI.Height;
       }
     }
   }

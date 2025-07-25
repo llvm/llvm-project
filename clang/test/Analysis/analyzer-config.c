@@ -79,6 +79,7 @@
 // CHECK-NEXT: debug.AnalysisOrder:RegionChanges = false
 // CHECK-NEXT: display-checker-name = true
 // CHECK-NEXT: display-ctu-progress = false
+// CHECK-NEXT: dump-entry-point-stats-to-csv = ""
 // CHECK-NEXT: eagerly-assume = true
 // CHECK-NEXT: elide-constructors = true
 // CHECK-NEXT: expand-macros = false
@@ -88,6 +89,7 @@
 // CHECK-NEXT: graph-trim-interval = 1000
 // CHECK-NEXT: ignore-bison-generated-files = true
 // CHECK-NEXT: ignore-flex-generated-files = true
+// CHECK-NEXT: inline-functions-with-ambiguous-loops = false
 // CHECK-NEXT: inline-lambdas = true
 // CHECK-NEXT: ipa = dynamic-bifurcate
 // CHECK-NEXT: ipa-always-inline-size = 3
@@ -107,7 +109,6 @@
 // CHECK-NEXT: optin.cplusplus.UninitializedObject:IgnoreRecordsWithField = ""
 // CHECK-NEXT: optin.cplusplus.UninitializedObject:NotesAsWarnings = false
 // CHECK-NEXT: optin.cplusplus.UninitializedObject:Pedantic = false
-// CHECK-NEXT: optin.cplusplus.VirtualCall:PureOnly = false
 // CHECK-NEXT: optin.cplusplus.VirtualCall:ShowFixIts = false
 // CHECK-NEXT: optin.osx.cocoa.localizability.NonLocalizedStringChecker:AggressiveReport = false
 // CHECK-NEXT: optin.performance.Padding:AllowedPad = 24

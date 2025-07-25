@@ -17,6 +17,6 @@ define void @no_free_vgprs_at_agpr_to_agpr_copy(float %v0, float %v1) #0 {
 declare <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float, float, <16 x float>, i32 immarg, i32 immarg, i32 immarg) #1
 declare noundef i32 @llvm.amdgcn.workitem.id.x() #2
 
-attributes #0 = { "amdgpu-no-agpr" "amdgpu-waves-per-eu"="6,6" }
+attributes #0 = { "amdgpu-agpr-alloc"="0" "amdgpu-waves-per-eu"="6,6" }
 attributes #1 = { convergent nocallback nofree nosync nounwind willreturn memory(none) }
 attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

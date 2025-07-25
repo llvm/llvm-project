@@ -28,29 +28,80 @@
 
 using namespace llvm;
 
-static cl::opt<TargetTransformInfo::TargetCostKind> CostKind(
+enum class OutputCostKind {
+  RecipThroughput,
+  Latency,
+  CodeSize,
+  SizeAndLatency,
+  All,
+};
+
+static cl::opt<OutputCostKind> CostKind(
     "cost-kind", cl::desc("Target cost kind"),
-    cl::init(TargetTransformInfo::TCK_RecipThroughput),
-    cl::values(clEnumValN(TargetTransformInfo::TCK_RecipThroughput,
-                          "throughput", "Reciprocal throughput"),
-               clEnumValN(TargetTransformInfo::TCK_Latency,
-                          "latency", "Instruction latency"),
-               clEnumValN(TargetTransformInfo::TCK_CodeSize,
-                          "code-size", "Code size"),
-               clEnumValN(TargetTransformInfo::TCK_SizeAndLatency,
-                          "size-latency", "Code size and latency")));
+    cl::init(OutputCostKind::RecipThroughput),
+    cl::values(clEnumValN(OutputCostKind::RecipThroughput, "throughput",
+                          "Reciprocal throughput"),
+               clEnumValN(OutputCostKind::Latency, "latency",
+                          "Instruction latency"),
+               clEnumValN(OutputCostKind::CodeSize, "code-size", "Code size"),
+               clEnumValN(OutputCostKind::SizeAndLatency, "size-latency",
+                          "Code size and latency"),
+               clEnumValN(OutputCostKind::All, "all", "Print all cost kinds")));
 
-static cl::opt<bool> TypeBasedIntrinsicCost("type-based-intrinsic-cost",
-    cl::desc("Calculate intrinsics cost based only on argument types"),
-    cl::init(false));
+enum class IntrinsicCostStrategy {
+  InstructionCost,
+  IntrinsicCost,
+  TypeBasedIntrinsicCost,
+};
 
-static cl::opt<bool> PreferIntrinsicCost(
-    "prefer-intrinsic-cost",
-    cl::desc("Prefer using getIntrinsicInstrCost over getInstructionCost"),
-    cl::init(false));
+static cl::opt<IntrinsicCostStrategy> IntrinsicCost(
+    "intrinsic-cost-strategy",
+    cl::desc("Costing strategy for intrinsic instructions"),
+    cl::init(IntrinsicCostStrategy::InstructionCost),
+    cl::values(
+        clEnumValN(IntrinsicCostStrategy::InstructionCost, "instruction-cost",
+                   "Use TargetTransformInfo::getInstructionCost"),
+        clEnumValN(IntrinsicCostStrategy::IntrinsicCost, "intrinsic-cost",
+                   "Use TargetTransformInfo::getIntrinsicInstrCost"),
+        clEnumValN(
+            IntrinsicCostStrategy::TypeBasedIntrinsicCost,
+            "type-based-intrinsic-cost",
+            "Calculate the intrinsic cost based only on argument types")));
 
 #define CM_NAME "cost-model"
 #define DEBUG_TYPE CM_NAME
+
+static InstructionCost getCost(Instruction &Inst, TTI::TargetCostKind CostKind,
+                               TargetTransformInfo &TTI,
+                               TargetLibraryInfo &TLI) {
+  auto *II = dyn_cast<IntrinsicInst>(&Inst);
+  if (II && IntrinsicCost != IntrinsicCostStrategy::InstructionCost) {
+    IntrinsicCostAttributes ICA(
+        II->getIntrinsicID(), *II, InstructionCost::getInvalid(),
+        /*TypeBasedOnly=*/IntrinsicCost ==
+            IntrinsicCostStrategy::TypeBasedIntrinsicCost,
+        &TLI);
+    return TTI.getIntrinsicInstrCost(ICA, CostKind);
+  }
+
+  return TTI.getInstructionCost(&Inst, CostKind);
+}
+
+static TTI::TargetCostKind
+OutputCostKindToTargetCostKind(OutputCostKind CostKind) {
+  switch (CostKind) {
+  case OutputCostKind::RecipThroughput:
+    return TTI::TCK_RecipThroughput;
+  case OutputCostKind::Latency:
+    return TTI::TCK_Latency;
+  case OutputCostKind::CodeSize:
+    return TTI::TCK_CodeSize;
+  case OutputCostKind::SizeAndLatency:
+    return TTI::TCK_SizeAndLatency;
+  default:
+    llvm_unreachable("Unexpected OutputCostKind!");
+  };
+}
 
 PreservedAnalyses CostModelPrinterPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
@@ -59,25 +110,30 @@ PreservedAnalyses CostModelPrinterPass::run(Function &F,
   OS << "Printing analysis 'Cost Model Analysis' for function '" << F.getName() << "':\n";
   for (BasicBlock &B : F) {
     for (Instruction &Inst : B) {
-      // TODO: Use a pass parameter instead of cl::opt CostKind to determine
-      // which cost kind to print.
-      InstructionCost Cost;
-      auto *II = dyn_cast<IntrinsicInst>(&Inst);
-      if (II && (PreferIntrinsicCost || TypeBasedIntrinsicCost)) {
-        IntrinsicCostAttributes ICA(
-            II->getIntrinsicID(), *II, InstructionCost::getInvalid(),
-            /*TypeBasedOnly=*/TypeBasedIntrinsicCost, &TLI);
-        Cost = TTI.getIntrinsicInstrCost(ICA, CostKind);
+      OS << "Cost Model: ";
+      if (CostKind == OutputCostKind::All) {
+        OS << "Found costs of ";
+        InstructionCost RThru =
+            getCost(Inst, TTI::TCK_RecipThroughput, TTI, TLI);
+        InstructionCost CodeSize = getCost(Inst, TTI::TCK_CodeSize, TTI, TLI);
+        InstructionCost Lat = getCost(Inst, TTI::TCK_Latency, TTI, TLI);
+        InstructionCost SizeLat =
+            getCost(Inst, TTI::TCK_SizeAndLatency, TTI, TLI);
+        if (RThru == CodeSize && RThru == Lat && RThru == SizeLat)
+          OS << RThru;
+        else
+          OS << "RThru:" << RThru << " CodeSize:" << CodeSize << " Lat:" << Lat
+             << " SizeLat:" << SizeLat;
+        OS << " for: " << Inst << "\n";
       } else {
-        Cost = TTI.getInstructionCost(&Inst, CostKind);
+        InstructionCost Cost =
+            getCost(Inst, OutputCostKindToTargetCostKind(CostKind), TTI, TLI);
+        if (Cost.isValid())
+          OS << "Found an estimated cost of " << Cost.getValue();
+        else
+          OS << "Invalid cost";
+        OS << " for instruction: " << Inst << "\n";
       }
-
-      if (auto CostVal = Cost.getValue())
-        OS << "Cost Model: Found an estimated cost of " << *CostVal;
-      else
-        OS << "Cost Model: Invalid cost";
-
-      OS << " for instruction: " << Inst << "\n";
     }
   }
   return PreservedAnalyses::all();

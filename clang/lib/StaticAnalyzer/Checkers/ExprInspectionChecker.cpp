@@ -430,9 +430,8 @@ void ExprInspectionChecker::analyzerHashDump(const CallExpr *CE,
   const LangOptions &Opts = C.getLangOpts();
   const SourceManager &SM = C.getSourceManager();
   FullSourceLoc FL(CE->getArg(0)->getBeginLoc(), SM);
-  std::string HashContent =
-      getIssueString(FL, getCheckerName().getName(), "Category",
-                     C.getLocationContext()->getDecl(), Opts);
+  std::string HashContent = getIssueString(
+      FL, getName(), "Category", C.getLocationContext()->getDecl(), Opts);
 
   reportBug(HashContent, C);
 }

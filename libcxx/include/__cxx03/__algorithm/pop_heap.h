@@ -31,7 +31,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+inline _LIBCPP_HIDE_FROM_ABI void
 __pop_heap(_RandomAccessIterator __first,
            _RandomAccessIterator __last,
            _Compare& __comp,
@@ -59,7 +59,7 @@ __pop_heap(_RandomAccessIterator __first,
 }
 
 template <class _RandomAccessIterator, class _Compare>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+inline _LIBCPP_HIDE_FROM_ABI void
 pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp) {
   static_assert(std::is_copy_constructible<_RandomAccessIterator>::value, "Iterators must be copy constructible.");
   static_assert(std::is_copy_assignable<_RandomAccessIterator>::value, "Iterators must be copy assignable.");
@@ -69,8 +69,7 @@ pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare _
 }
 
 template <class _RandomAccessIterator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last) {
+inline _LIBCPP_HIDE_FROM_ABI void pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last) {
   std::pop_heap(std::move(__first), std::move(__last), __less<>());
 }
 

@@ -11,10 +11,6 @@
 #include "mlir/Dialect/Tensor/IR/ShardingInterfaceImpl.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/DialectRegistry.h"
-#include "llvm/Support/Debug.h"
-
-#define DEBUG_TYPE "tensor-sharding-impl"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE << "]: ")
 
 using namespace mlir;
 using namespace mlir::tensor;
@@ -50,34 +46,41 @@ struct CreatorOpShardingInterface
                         IRMapping &spmdizationMap,
                         SymbolTableCollection &symbolTable,
                         OpBuilder &builder) const {
-    auto shardType = cast<ShapedType>(mesh::shardType(
-        op->getResult(0).getType(),
-        mesh::getMesh(op, resultShardings[0].getMeshAttr(), symbolTable),
-        resultShardings[0]));
+    assert(resultShardings.size() == 1);
+    auto resType = cast<RankedTensorType>(op->getResult(0).getType());
+    mlir::mesh::MeshOp mesh;
+    ShapedType shardType;
+    if (resType.getRank() > 0) {
+      mesh = mesh::getMesh(op, resultShardings[0].getMeshAttr(), symbolTable);
+      shardType =
+          cast<ShapedType>(mesh::shardType(resType, mesh, resultShardings[0]));
+    } else {
+      shardType = resType;
+    }
     Operation *newOp = nullptr;
     // if the sharding introduces a new dynamic dimension, we take it from
     // the dynamic sharding info. For now bail out if it's not
     // provided.
-    assert(resultShardings.size() == 1);
     if (!shardType.hasStaticShape()) {
       assert(op->getResult(0).hasOneUse());
       SmallVector<Value> newOperands;
-      auto oldType = cast<ShapedType>(op->getResult(0).getType());
+      auto oldType = cast<ShapedType>(resType);
       assert(oldType.getRank() == shardType.getRank());
       int currOldOprndNum = -1;
       mesh::ShardShapeOp shapeForDevice;
-      Value device;
+      ValueRange device;
       Operation *newSharding = nullptr;
       for (auto i = 0; i < oldType.getRank(); ++i) {
         if (!oldType.isDynamicDim(i) && shardType.isDynamicDim(i)) {
           if (!newSharding) {
             newSharding =
-                builder.create<ShardingOp>(op->getLoc(), resultShardings[0]);
-            device = builder.create<mesh::ProcessLinearIndexOp>(
-                op->getLoc(), resultShardings[0].getMesh());
-            shapeForDevice = builder.create<mesh::ShardShapeOp>(
-                op->getLoc(), oldType.getShape(), newSharding->getResult(0),
-                device);
+                ShardingOp::create(builder, op->getLoc(), resultShardings[0]);
+            device =
+                mesh::ProcessMultiIndexOp::create(builder, op->getLoc(), mesh)
+                    .getResults();
+            shapeForDevice = mesh::ShardShapeOp::create(
+                builder, op->getLoc(), oldType.getShape(), spmdizedOperands,
+                newSharding->getResult(0), device);
           }
           newOperands.emplace_back(shapeForDevice.getResult()[i]);
         } else if (oldType.isDynamicDim(i)) {
@@ -85,7 +88,7 @@ struct CreatorOpShardingInterface
           newOperands.emplace_back(spmdizedOperands[++currOldOprndNum]);
         }
       }
-      newOp = builder.create<OpTy>(op->getLoc(), shardType, newOperands);
+      newOp = OpTy::create(builder, op->getLoc(), shardType, newOperands);
       spmdizationMap.map(op->getResult(0), newOp->getResult(0));
     } else {
       // `clone` will populate the mapping of old to new results.

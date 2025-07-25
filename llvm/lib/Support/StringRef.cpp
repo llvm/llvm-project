@@ -24,10 +24,10 @@ constexpr size_t StringRef::npos;
 
 // strncasecmp() is not available on non-POSIX systems, so define an
 // alternative function here.
-static int ascii_strncasecmp(const char *LHS, const char *RHS, size_t Length) {
-  for (size_t I = 0; I < Length; ++I) {
-    unsigned char LHC = toLower(LHS[I]);
-    unsigned char RHC = toLower(RHS[I]);
+static int ascii_strncasecmp(StringRef LHS, StringRef RHS) {
+  for (auto [LC, RC] : zip_equal(LHS, RHS)) {
+    unsigned char LHC = toLower(LC);
+    unsigned char RHC = toLower(RC);
     if (LHC != RHC)
       return LHC < RHC ? -1 : 1;
   }
@@ -35,8 +35,8 @@ static int ascii_strncasecmp(const char *LHS, const char *RHS, size_t Length) {
 }
 
 int StringRef::compare_insensitive(StringRef RHS) const {
-  if (int Res =
-          ascii_strncasecmp(data(), RHS.data(), std::min(size(), RHS.size())))
+  size_t Min = std::min(size(), RHS.size());
+  if (int Res = ascii_strncasecmp(take_front(Min), RHS.take_front(Min)))
     return Res;
   if (size() == RHS.size())
     return 0;
@@ -45,13 +45,12 @@ int StringRef::compare_insensitive(StringRef RHS) const {
 
 bool StringRef::starts_with_insensitive(StringRef Prefix) const {
   return size() >= Prefix.size() &&
-         ascii_strncasecmp(data(), Prefix.data(), Prefix.size()) == 0;
+         ascii_strncasecmp(take_front(Prefix.size()), Prefix) == 0;
 }
 
 bool StringRef::ends_with_insensitive(StringRef Suffix) const {
   return size() >= Suffix.size() &&
-         ascii_strncasecmp(end() - Suffix.size(), Suffix.data(),
-                           Suffix.size()) == 0;
+         ascii_strncasecmp(take_back(Suffix.size()), Suffix) == 0;
 }
 
 size_t StringRef::find_insensitive(char C, size_t From) const {
@@ -613,9 +612,7 @@ bool StringRef::getAsDouble(double &Result, bool AllowInexact) const {
 }
 
 // Implementation of StringRef hashing.
-hash_code llvm::hash_value(StringRef S) {
-  return hash_combine_range(S.begin(), S.end());
-}
+hash_code llvm::hash_value(StringRef S) { return hash_combine_range(S); }
 
 unsigned DenseMapInfo<StringRef, void>::getHashValue(StringRef Val) {
   assert(Val.data() != getEmptyKey().data() &&

@@ -6,8 +6,6 @@
 ; because all functions involving convergence tokens will fail the
 ; machine verifier after register allocation.
 
-target triple = "amdgcn-amd-amdhsa"
-
 define void @tail_call_uniform_vgpr_value_convergence_tokens() #0 {
   ; CHECK-LABEL: name: tail_call_uniform_vgpr_value_convergence_tokens
   ; CHECK: bb.0 (%ir-block.0):

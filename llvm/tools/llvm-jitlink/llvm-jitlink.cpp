@@ -17,7 +17,6 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
-#include "llvm/ExecutionEngine/Orc/COFFVCRuntimeSupport.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
@@ -27,7 +26,6 @@
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
-#include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/GetDylibInterface.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
@@ -40,6 +38,7 @@
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/SectCreate.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
@@ -337,8 +336,8 @@ static ExitOnError ExitOnErr;
 
 static LLVM_ATTRIBUTE_USED void linkComponents() {
   errs() << "Linking in runtime functions\n"
-         << (void *)&llvm_orc_registerEHFrameSectionWrapper << '\n'
-         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper << '\n'
+         << (void *)&llvm_orc_registerEHFrameSectionAllocAction << '\n'
+         << (void *)&llvm_orc_deregisterEHFrameSectionAllocAction << '\n'
          << (void *)&llvm_orc_registerJITLoaderGDBWrapper << '\n'
          << (void *)&llvm_orc_registerJITLoaderGDBAllocAction << '\n'
          << (void *)&llvm_orc_registerJITLoaderPerfStart << '\n'
@@ -449,7 +448,7 @@ static Error applyLibraryLinkModifiers(Session &S, LinkGraph &G) {
   if (!S.HiddenArchives.empty()) {
     StringRef ObjName(G.getName());
     if (ObjName.ends_with(')')) {
-      auto LibName = ObjName.split('(').first;
+      auto LibName = ObjName.split('[').first;
       if (S.HiddenArchives.count(LibName)) {
         for (auto *Sym : G.defined_symbols())
           Sym->setScope(std::max(Sym->getScope(), Scope::Hidden));
@@ -1244,17 +1243,15 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
       if ((Err = ES.getBootstrapMapValue<bool, bool>("darwin-use-ehframes-only",
                                                      ForceEHFrames)))
         return;
-      bool UseEHFrames = ForceEHFrames ? *ForceEHFrames : false;
+      bool UseEHFrames = ForceEHFrames.value_or(false);
       if (!UseEHFrames)
         ObjLayer.addPlugin(ExitOnErr(UnwindInfoRegistrationPlugin::Create(ES)));
       else
-        ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-            ES, ExitOnErr(EPCEHFrameRegistrar::Create(ES))));
+        ObjLayer.addPlugin(ExitOnErr(EHFrameRegistrationPlugin::Create(ES)));
     }
   } else if (TT.isOSBinFormatELF()) {
     if (!NoExec)
-      ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-          ES, ExitOnErr(EPCEHFrameRegistrar::Create(this->ES))));
+      ObjLayer.addPlugin(ExitOnErr(EHFrameRegistrationPlugin::Create(ES)));
     if (DebuggerSupport)
       ObjLayer.addPlugin(std::make_unique<DebugObjectManagerPlugin>(
           ES, ExitOnErr(createJITLoaderGDBRegistrar(this->ES)), true, true));
@@ -2282,8 +2279,26 @@ static Error addLibraries(Session &S,
 
     auto &LinkLayer = S.getLinkLayer(LazyLinkIdxs.count(LL.Position));
 
+    std::set<std::string> ImportedDynamicLibraries;
     StaticLibraryDefinitionGenerator::VisitMembersFunction VisitMembers;
-    if (AllLoad)
+
+    // COFF gets special handling due to import libraries.
+    if (S.ES.getTargetTriple().isOSBinFormatCOFF()) {
+      if (AllLoad) {
+        VisitMembers =
+            [ImportScanner = COFFImportFileScanner(ImportedDynamicLibraries),
+             LoadAll =
+                 StaticLibraryDefinitionGenerator::loadAllObjectFileMembers(
+                     LinkLayer, JD)](object::Archive &A,
+                                     MemoryBufferRef MemberBuf,
+                                     size_t Index) mutable -> Expected<bool> {
+          if (!ImportScanner(A, MemberBuf, Index))
+            return false;
+          return LoadAll(A, MemberBuf, Index);
+        };
+      } else
+        VisitMembers = COFFImportFileScanner(ImportedDynamicLibraries);
+    } else if (AllLoad)
       VisitMembers = StaticLibraryDefinitionGenerator::loadAllObjectFileMembers(
           LinkLayer, JD);
     else if (S.ES.getTargetTriple().isOSBinFormatMachO() && ForceLoadObjC)
@@ -2297,7 +2312,7 @@ static Error addLibraries(Session &S,
 
     // Push additional dynamic libraries to search.
     // Note that this mechanism only happens in COFF.
-    for (auto FileName : (*G)->getImportedDynamicLibraries()) {
+    for (auto FileName : ImportedDynamicLibraries) {
       LibraryLoad NewLL;
       auto FileNameRef = StringRef(FileName);
       if (!FileNameRef.ends_with_insensitive(".dll"))
@@ -2363,7 +2378,7 @@ static Error addLibraries(Session &S,
         SmallVector<char, 256> LibPath;
         LibPath.reserve(SearchPath.size() + strlen("lib") + LL.LibName.size() +
                         LibExt.size() + 2); // +2 for pathsep, null term.
-        llvm::copy(SearchPath, std::back_inserter(LibPath));
+        llvm::append_range(LibPath, SearchPath);
         if (LibExt != ".lib" && LibExt != ".dll")
           sys::path::append(LibPath, "lib" + LL.LibName + LibExt);
         else

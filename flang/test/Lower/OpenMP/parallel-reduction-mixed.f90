@@ -36,7 +36,7 @@ end subroutine proc
 
 !CHECK: [[MALLOC_BB]]:
 !CHECK-NOT: omp.par.{{.*}}:
-!CHECK: call ptr @malloc(i64 80)
+!CHECK: call ptr @malloc(i{{(32)|(64)}} 80)
 
 !CHECK: %[[RED_ARR_0:.*]] = getelementptr inbounds [2 x ptr], ptr %red.array, i64 0, i64 0
 !CHECK: store ptr %[[F_priv]], ptr %[[RED_ARR_0:.*]]

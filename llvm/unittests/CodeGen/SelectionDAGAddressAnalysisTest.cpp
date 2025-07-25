@@ -9,6 +9,7 @@
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -48,7 +49,7 @@ protected:
 
     TargetOptions Options;
     TM = std::unique_ptr<TargetMachine>(
-        T->createTargetMachine("AArch64", "", "+sve", Options, std::nullopt,
+        T->createTargetMachine(TargetTriple, "", "+sve", Options, std::nullopt,
                                std::nullopt, CodeGenOptLevel::Aggressive));
     if (!TM)
       GTEST_SKIP();
@@ -78,8 +79,12 @@ protected:
     if (!DAG)
       report_fatal_error("DAG?");
     OptimizationRemarkEmitter ORE(F);
+    FunctionAnalysisManager FAM;
+    FAM.registerPass([&] { return TM->getTargetIRAnalysis(); });
+
+    TargetTransformInfo TTI = TM->getTargetIRAnalysis().run(*F, FAM);
     DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, MMI,
-              nullptr);
+              nullptr, TTI.hasBranchDivergence(F));
   }
 
   TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {

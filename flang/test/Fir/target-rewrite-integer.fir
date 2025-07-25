@@ -1,6 +1,8 @@
 // RUN: fir-opt --split-input-file --target-rewrite="target=i386-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=I32,ALL
 // RUN: fir-opt --split-input-file --target-rewrite="target=x86_64-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=X64,ALL
+// RUN: fir-opt --split-input-file --target-rewrite="target=x86_64-apple-darwin" %s | FileCheck %s --check-prefixes=X64,ALL
 // RUN: fir-opt --split-input-file --target-rewrite="target=aarch64-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=AARCH64,ALL
+// RUN: fir-opt --split-input-file --target-rewrite="target=aarch64-apple-darwin" %s | FileCheck %s --check-prefixes=AARCH64DARWIN,ALL
 // RUN: fir-opt --split-input-file --target-rewrite="target=powerpc64le-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=PPC,ALL
 // RUN: fir-opt --split-input-file --target-rewrite="target=sparc64-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=SPARCV9,ALL
 // RUN: fir-opt --split-input-file --target-rewrite="target=sparcv9-sun-solaris2.11" %s | FileCheck %s --check-prefixes=SPARCV9,ALL
@@ -17,6 +19,7 @@
 // I32: func.func{{.*}}@_FortranAioOutputLogical({{.*}}i1 {llvm.zeroext}) -> (i1 {llvm.zeroext})
 // X64: func.func{{.*}}@_FortranAioOutputLogical({{.*}}i1 {llvm.zeroext}) -> (i1 {llvm.zeroext})
 // AARCH64: func.func{{.*}}@_FortranAioOutputLogical({{.*}}i1 {llvm.zeroext}) -> (i1 {llvm.zeroext})
+// AARCH64DARWIN: func.func{{.*}}@_FortranAioOutputLogical({{.*}}i1 {llvm.zeroext}) -> (i1 {llvm.zeroext})
 // PPC: func.func{{.*}}@_FortranAioOutputLogical({{.*}}i1 {llvm.zeroext}) -> (i1 {llvm.zeroext})
 // SPARCV9: func.func{{.*}}@_FortranAioOutputLogical({{.*}}i1 {llvm.zeroext}) -> (i1 {llvm.zeroext})
 // LOONGARCH64: func.func{{.*}}@_FortranAioOutputLogical({{.*}}i1 {llvm.zeroext}) -> (i1 {llvm.zeroext})
@@ -49,6 +52,7 @@ func.func private @_FortranAioEndIoStatement(!fir.ref<i8>) -> i32 attributes {fi
 // I32: func.func{{.*}}@_SomeFunc_si1(si1 {llvm.signext}) -> (si1 {llvm.signext})
 // X64: func.func{{.*}}@_SomeFunc_si1(si1 {llvm.signext}) -> (si1 {llvm.signext})
 // AARCH64: func.func{{.*}}@_SomeFunc_si1(si1 {llvm.signext}) -> (si1 {llvm.signext})
+// AARCH64DARWIN: func.func{{.*}}@_SomeFunc_si1(si1 {llvm.signext}) -> (si1 {llvm.signext})
 // PPC: func.func{{.*}}@_SomeFunc_si1(si1 {llvm.signext}) -> (si1 {llvm.signext})
 // SPARCV9: func.func{{.*}}@_SomeFunc_si1(si1 {llvm.signext}) -> (si1 {llvm.signext})
 // LOONGARCH64: func.func{{.*}}@_SomeFunc_si1(si1 {llvm.signext}) -> (si1 {llvm.signext})
@@ -69,6 +73,7 @@ func.func private @_SomeFunc_si1(si1) -> si1 attributes {fir.runtime}
 // I32: func.func{{.*}}@_SomeFunc_ui1(ui1 {llvm.zeroext}) -> (ui1 {llvm.zeroext})
 // X64: func.func{{.*}}@_SomeFunc_ui1(ui1 {llvm.zeroext}) -> (ui1 {llvm.zeroext})
 // AARCH64: func.func{{.*}}@_SomeFunc_ui1(ui1 {llvm.zeroext}) -> (ui1 {llvm.zeroext})
+// AARCH64DARWIN: func.func{{.*}}@_SomeFunc_ui1(ui1 {llvm.zeroext}) -> (ui1 {llvm.zeroext})
 // PPC: func.func{{.*}}@_SomeFunc_ui1(ui1 {llvm.zeroext}) -> (ui1 {llvm.zeroext})
 // SPARCV9: func.func{{.*}}@_SomeFunc_ui1(ui1 {llvm.zeroext}) -> (ui1 {llvm.zeroext})
 // LOONGARCH64: func.func{{.*}}@_SomeFunc_ui1(ui1 {llvm.zeroext}) -> (ui1 {llvm.zeroext})
@@ -99,8 +104,20 @@ func.func private @_SomeFunc_ui1(ui1) -> ui1 attributes {fir.runtime}
 // end subroutine test
 
 // ALL-LABEL: @_QPtest_bindc
-// ALL: func.func private @cfun8(i8 {llvm.signext}) -> (i8 {llvm.signext}) attributes {fir.bindc_name = "cfun8"}
-// ALL: func.func private @cfun16(i16 {llvm.signext}) -> (i16 {llvm.signext}) attributes {fir.bindc_name = "cfun16"}
+// I32: func.func private @cfun8(i8 {llvm.signext}) -> (i8 {llvm.signext}) attributes {fir.bindc_name = "cfun8"}
+// I32: func.func private @cfun16(i16 {llvm.signext}) -> (i16 {llvm.signext}) attributes {fir.bindc_name = "cfun16"}
+// X64: func.func private @cfun8(i8 {llvm.signext}) -> (i8 {llvm.signext}) attributes {fir.bindc_name = "cfun8"}
+// X64: func.func private @cfun16(i16 {llvm.signext}) -> (i16 {llvm.signext}) attributes {fir.bindc_name = "cfun16"}
+// AARCH64: func.func private @cfun8(i8) -> i8 attributes {fir.bindc_name = "cfun8"}
+// AARCH64: func.func private @cfun16(i16) -> i16 attributes {fir.bindc_name = "cfun16"}
+// AARCH64DARWIN: func.func private @cfun8(i8 {llvm.signext}) -> (i8 {llvm.signext}) attributes {fir.bindc_name = "cfun8"}
+// AARCH64DARWIN: func.func private @cfun16(i16 {llvm.signext}) -> (i16 {llvm.signext}) attributes {fir.bindc_name = "cfun16"}
+// PPC: func.func private @cfun8(i8 {llvm.signext}) -> (i8 {llvm.signext}) attributes {fir.bindc_name = "cfun8"}
+// PPC: func.func private @cfun16(i16 {llvm.signext}) -> (i16 {llvm.signext}) attributes {fir.bindc_name = "cfun16"}
+// SPARCV9: func.func private @cfun8(i8 {llvm.signext}) -> (i8 {llvm.signext}) attributes {fir.bindc_name = "cfun8"}
+// SPARCV9: func.func private @cfun16(i16 {llvm.signext}) -> (i16 {llvm.signext}) attributes {fir.bindc_name = "cfun16"}
+// LOONGARCH64: func.func private @cfun8(i8 {llvm.signext}) -> (i8 {llvm.signext}) attributes {fir.bindc_name = "cfun8"}
+// LOONGARCH64: func.func private @cfun16(i16 {llvm.signext}) -> (i16 {llvm.signext}) attributes {fir.bindc_name = "cfun16"}
 func.func @_QPtest_bindc(%arg0: !fir.ref<i8> {fir.bindc_name = "x"}, %arg1: !fir.ref<i16> {fir.bindc_name = "y"}) {
   %0 = fir.load %arg0 : !fir.ref<i8>
   %1 = fir.call @cfun8(%0) fastmath<contract> : (i8) -> i8

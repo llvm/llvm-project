@@ -219,5 +219,5 @@ end subroutine
 !                [var extent was non-zero: malloc a private array]
 ! CHECK:         br label %omp.private.init5
 
-! CHECK:       omp.par.outlined.exit.exitStub:                   ; preds = %omp.region.cont52
+! CHECK:       omp.par.exit.exitStub:                           ; preds = %omp.region.cont52
 ! CHECK-NEXT:    ret void

@@ -8,6 +8,10 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
   list(APPEND LLDB_PLUGINS lldbPluginProcessLinux)
 endif()
 
+if(CMAKE_SYSTEM_NAME MATCHES "AIX")
+    list(APPEND LLDB_PLUGINS lldbPluginProcessAIX)
+endif()
+
 if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
   list(APPEND LLDB_PLUGINS lldbPluginProcessFreeBSD)
 endif()
@@ -45,6 +49,9 @@ add_lldb_tool(lldb-server
     LLDBServerUtilities.cpp
     SystemInitializerLLGS.cpp
 
+    LINK_COMPONENTS
+      Option
+      Support
     LINK_LIBS
       lldbHost
       lldbInitialization
@@ -56,10 +63,6 @@ add_lldb_tool(lldb-server
       lldbPluginInstructionMIPS64
       lldbPluginInstructionRISCV
       ${LLDB_SYSTEM_LIBS}
-
-    LINK_COMPONENTS
-      Option
-      Support
 )
 
 add_dependencies(lldb-server

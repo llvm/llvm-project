@@ -28,7 +28,7 @@ extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> InferStaleProfile;
 extern cl::opt<bool> Lite;
 
-cl::opt<unsigned> NameSimilarityFunctionMatchingThreshold(
+static cl::opt<unsigned> NameSimilarityFunctionMatchingThreshold(
     "name-similarity-function-matching-threshold",
     cl::desc("Match functions using namespace and edit distance"), cl::init(0),
     cl::Hidden, cl::cat(BoltOptCategory));
@@ -38,11 +38,11 @@ static llvm::cl::opt<bool>
                cl::desc("ignore hash while reading function profile"),
                cl::Hidden, cl::cat(BoltOptCategory));
 
-llvm::cl::opt<bool>
+static llvm::cl::opt<bool>
     MatchProfileWithFunctionHash("match-profile-with-function-hash",
                                  cl::desc("Match profile with function hash"),
                                  cl::Hidden, cl::cat(BoltOptCategory));
-llvm::cl::opt<bool>
+static llvm::cl::opt<bool>
     MatchWithCallGraph("match-with-call-graph",
                        cl::desc("Match functions with call graph"), cl::Hidden,
                        cl::cat(BoltOptCategory));
@@ -176,12 +176,13 @@ bool YAMLProfileReader::parseFunctionProfile(
   uint64_t FunctionExecutionCount = 0;
 
   BF.setExecutionCount(YamlBF.ExecCount);
+  BF.setExternEntryCount(YamlBF.ExternEntryCount);
 
   uint64_t FuncRawBranchCount = 0;
   for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks)
     for (const yaml::bolt::SuccessorInfo &YamlSI : YamlBB.Successors)
       FuncRawBranchCount += YamlSI.Count;
-  BF.setRawBranchCount(FuncRawBranchCount);
+  BF.setRawSampleCount(FuncRawBranchCount);
 
   if (BF.empty())
     return true;
@@ -221,7 +222,7 @@ bool YAMLProfileReader::parseFunctionProfile(
 
     // Basic samples profile (without LBR) does not have branches information
     // and needs a special processing.
-    if (YamlBP.Header.Flags & BinaryFunction::PF_SAMPLE) {
+    if (YamlBP.Header.Flags & BinaryFunction::PF_BASIC) {
       if (!YamlBB.EventCount) {
         BB.setExecutionCount(0);
         continue;
@@ -338,7 +339,7 @@ bool YAMLProfileReader::parseFunctionProfile(
     if (BB.getExecutionCount() == BinaryBasicBlock::COUNT_NO_PROFILE)
       BB.setExecutionCount(0);
 
-  if (YamlBP.Header.Flags & BinaryFunction::PF_SAMPLE)
+  if (YamlBP.Header.Flags & BinaryFunction::PF_BASIC)
     BF.setExecutionCount(FunctionExecutionCount);
 
   ProfileMatched &= !MismatchedBlocks && !MismatchedCalls && !MismatchedEdges;
@@ -887,7 +888,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
 }
 
 bool YAMLProfileReader::usesEvent(StringRef Name) const {
-  return YamlBP.Header.EventNames.find(std::string(Name)) != StringRef::npos;
+  return StringRef(YamlBP.Header.EventNames).contains(Name);
 }
 
 } // end namespace bolt

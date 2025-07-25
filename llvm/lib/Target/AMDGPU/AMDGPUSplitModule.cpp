@@ -205,8 +205,9 @@ static CostType calculateFunctionCosts(GetTTIFn GetTTI, Module &M,
             TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
         assert(Cost != InstructionCost::getMax());
         // Assume expensive if we can't tell the cost of an instruction.
-        CostType CostVal =
-            Cost.getValue().value_or(TargetTransformInfo::TCC_Expensive);
+        CostType CostVal = Cost.isValid()
+                               ? Cost.getValue()
+                               : (CostType)TargetTransformInfo::TCC_Expensive;
         assert((FnCost + CostVal) >= FnCost && "Overflow!");
         FnCost += CostVal;
       }
@@ -569,7 +570,7 @@ void SplitGraph::buildGraph(CallGraph &CG) {
         LLVM_DEBUG(dbgs() << "    indirect call found\n");
         FnsWithIndirectCalls.push_back(&Fn);
       } else if (!KnownCallees.empty())
-        DirectCallees.insert(KnownCallees.begin(), KnownCallees.end());
+        DirectCallees.insert_range(KnownCallees);
     }
 
     Node &N = getNode(Cache, Fn);
@@ -1016,13 +1017,13 @@ void RecursiveSearchSplitting::setupWorkList() {
     });
   }
 
-  for (auto I = NodeEC.begin(), E = NodeEC.end(); I != E; ++I) {
-    if (!I->isLeader())
+  for (const auto &Node : NodeEC) {
+    if (!Node->isLeader())
       continue;
 
     BitVector Cluster = SG.createNodesBitVector();
-    for (auto MI = NodeEC.member_begin(I); MI != NodeEC.member_end(); ++MI) {
-      const SplitGraph::Node &N = SG.getNode(*MI);
+    for (unsigned M : NodeEC.members(*Node)) {
+      const SplitGraph::Node &N = SG.getNode(M);
       if (N.isGraphEntryPoint())
         N.getDependencies(Cluster);
     }
@@ -1478,6 +1479,10 @@ static void splitAMDGPUModule(
              << "' - Partition summaries will not be printed\n";
   }
 
+  // One module will import all GlobalValues that are not Functions
+  // and are not subject to conservative import.
+  bool ImportAllGVs = true;
+
   for (unsigned PID = 0; PID < NumParts; ++PID) {
     SplitModuleTimer SMT2("modules_creation",
                           "creating modules for each partition");
@@ -1486,6 +1491,13 @@ static void splitAMDGPUModule(
     DenseSet<const Function *> FnsInPart;
     for (unsigned NodeID : (*Proposal)[PID].set_bits())
       FnsInPart.insert(&SG.getNode(NodeID).getFunction());
+
+    // Don't create empty modules.
+    if (FnsInPart.empty()) {
+      LLVM_DEBUG(dbgs() << "[split] P" << PID
+                        << " is empty, not creating module\n");
+      continue;
+    }
 
     ValueToValueMapTy VMap;
     CostType PartCost = 0;
@@ -1500,9 +1512,11 @@ static void splitAMDGPUModule(
             return false;
           }
 
-          // Everything else goes in the first partition.
-          return needsConservativeImport(GV) || PID == 0;
+          // Everything else goes in the first non-empty module we create.
+          return ImportAllGVs || needsConservativeImport(GV);
         }));
+
+    ImportAllGVs = false;
 
     // FIXME: Aliases aren't seen often, and their handling isn't perfect so
     // bugs are possible.
@@ -1545,32 +1559,27 @@ PreservedAnalyses AMDGPUSplitModulePass::run(Module &M,
                       << "'\n");
 
     while (true) {
-      llvm::LockFileManager Locked(LockFilePath.str());
-      switch (Locked) {
-      case LockFileManager::LFS_Error:
+      llvm::LockFileManager Lock(LockFilePath.str());
+      bool Owned;
+      if (Error Err = Lock.tryLock().moveInto(Owned)) {
+        consumeError(std::move(Err));
         LLVM_DEBUG(
             dbgs() << "[amdgpu-split-module] unable to acquire lockfile, debug "
                       "output may be mangled by other processes\n");
-        Locked.unsafeRemoveLockFile();
-        break;
-      case LockFileManager::LFS_Owned:
-        break;
-      case LockFileManager::LFS_Shared: {
-        switch (Locked.waitForUnlock()) {
-        case LockFileManager::Res_Success:
+      } else if (!Owned) {
+        switch (Lock.waitForUnlockFor(std::chrono::seconds(90))) {
+        case WaitForUnlockResult::Success:
           break;
-        case LockFileManager::Res_OwnerDied:
+        case WaitForUnlockResult::OwnerDied:
           continue; // try again to get the lock.
-        case LockFileManager::Res_Timeout:
+        case WaitForUnlockResult::Timeout:
           LLVM_DEBUG(
               dbgs()
               << "[amdgpu-split-module] unable to acquire lockfile, debug "
                  "output may be mangled by other processes\n");
-          Locked.unsafeRemoveLockFile();
+          Lock.unsafeMaybeUnlock();
           break; // give up
         }
-        break;
-      }
       }
 
       splitAMDGPUModule(TTIGetter, M, N, ModuleCallback);

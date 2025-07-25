@@ -9,14 +9,14 @@
 // Create two DSOs and a driver program that uses them.
 // RUN: echo "void dso1(void) {}" > dso1.c
 // RUN: echo "void dso2(void) {}" > dso2.c
-// RUN: %clang_pgogen_cont %shared_lib_flag -o %t.dir/dso1.dylib dso1.c -fprofile-update=atomic
-// RUN: %clang_pgogen_cont %shared_lib_flag -o %t.dir/dso2.dylib dso2.c -fprofile-update=atomic
-// RUN: %clang_pgogen_cont -o main.exe %s %t.dir/dso1.dylib %t.dir/dso2.dylib -fprofile-update=atomic
+// RUN: %clang_pgogen=%t.dir/profdir -fprofile-continuous -fprofile-update=atomic %shared_lib_flag -o %t.dir/dso1.dylib dso1.c
+// RUN: %clang_pgogen=%t.dir/profdir -fprofile-continuous -fprofile-update=atomic %shared_lib_flag -o %t.dir/dso2.dylib dso2.c
+// RUN: %clang_pgogen=%t.dir/profdir -fprofile-continuous -fprofile-update=atomic -o main.exe %s %t.dir/dso1.dylib %t.dir/dso2.dylib
 //
 // === Round 1 ===
 // Test merging+continuous mode without any file contention.
 //
-// RUN: env LLVM_PROFILE_FILE="%t.dir/profdir/%m%c.profraw" %run %t.dir/main.exe nospawn
+// RUN: %run %t.dir/main.exe nospawn
 // RUN: llvm-profdata merge -o %t.profdata %t.dir/profdir
 // RUN: llvm-profdata show --counts --all-functions %t.profdata | FileCheck %s -check-prefix=ROUND1
 
@@ -40,7 +40,7 @@
 // === Round 2 ===
 // Test merging+continuous mode with some file contention.
 //
-// RUN: env LLVM_PROFILE_FILE="%t.dir/profdir/%m%c.profraw" %run %t.dir/main.exe spawn 'LLVM_PROFILE_FILE=%t.dir/profdir/%m%c.profraw'
+// RUN: %run %t.dir/main.exe spawn 'LLVM_PROFILE_FILE=%t.dir/profdir/%m%c.profraw'
 // RUN: llvm-profdata merge -o %t.profdata %t.dir/profdir
 // RUN: llvm-profdata show --counts --all-functions %t.profdata | FileCheck %s -check-prefix=ROUND2
 

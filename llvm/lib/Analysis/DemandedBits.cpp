@@ -46,8 +46,7 @@ using namespace llvm::PatternMatch;
 #define DEBUG_TYPE "demanded-bits"
 
 static bool isAlwaysLive(Instruction *I) {
-  return I->isTerminator() || isa<DbgInfoIntrinsic>(I) || I->isEHPad() ||
-         I->mayHaveSideEffects();
+  return I->isTerminator() || I->isEHPad() || I->mayHaveSideEffects();
 }
 
 void DemandedBits::determineLiveOperandBits(
@@ -70,11 +69,11 @@ void DemandedBits::determineLiveOperandBits(
 
         const DataLayout &DL = UserI->getDataLayout();
         Known = KnownBits(BitWidth);
-        computeKnownBits(V1, Known, DL, 0, &AC, UserI, &DT);
+        computeKnownBits(V1, Known, DL, &AC, UserI, &DT);
 
         if (V2) {
           Known2 = KnownBits(BitWidth);
-          computeKnownBits(V2, Known2, DL, 0, &AC, UserI, &DT);
+          computeKnownBits(V2, Known2, DL, &AC, UserI, &DT);
         }
       };
 

@@ -8,6 +8,7 @@ define amdgpu_kernel void @non_constant_index(i32 %arg) {
 ; CHECK-LABEL: define amdgpu_kernel void @non_constant_index(
 ; CHECK-SAME: i32 [[ARG:%.*]]) {
 ; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I:%.*]] = freeze <2 x float> poison
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB1]]

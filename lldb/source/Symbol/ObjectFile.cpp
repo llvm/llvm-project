@@ -635,6 +635,41 @@ ObjectFile::GetSymbolTypeFromName(llvm::StringRef name,
   return symbol_type_hint;
 }
 
+lldb::SectionType
+ObjectFile::GetDWARFSectionTypeFromName(llvm::StringRef name) {
+  return llvm::StringSwitch<SectionType>(name)
+      .Case("abbrev", eSectionTypeDWARFDebugAbbrev)
+      .Case("abbrev.dwo", eSectionTypeDWARFDebugAbbrevDwo)
+      .Case("addr", eSectionTypeDWARFDebugAddr)
+      .Case("aranges", eSectionTypeDWARFDebugAranges)
+      .Case("cu_index", eSectionTypeDWARFDebugCuIndex)
+      .Case("frame", eSectionTypeDWARFDebugFrame)
+      .Case("info", eSectionTypeDWARFDebugInfo)
+      .Case("info.dwo", eSectionTypeDWARFDebugInfoDwo)
+      .Cases("line", "line.dwo", eSectionTypeDWARFDebugLine)
+      .Cases("line_str", "line_str.dwo", eSectionTypeDWARFDebugLineStr)
+      .Case("loc", eSectionTypeDWARFDebugLoc)
+      .Case("loc.dwo", eSectionTypeDWARFDebugLocDwo)
+      .Case("loclists", eSectionTypeDWARFDebugLocLists)
+      .Case("loclists.dwo", eSectionTypeDWARFDebugLocListsDwo)
+      .Case("macinfo", eSectionTypeDWARFDebugMacInfo)
+      .Cases("macro", "macro.dwo", eSectionTypeDWARFDebugMacro)
+      .Case("names", eSectionTypeDWARFDebugNames)
+      .Case("pubnames", eSectionTypeDWARFDebugPubNames)
+      .Case("pubtypes", eSectionTypeDWARFDebugPubTypes)
+      .Case("ranges", eSectionTypeDWARFDebugRanges)
+      .Case("rnglists", eSectionTypeDWARFDebugRngLists)
+      .Case("rnglists.dwo", eSectionTypeDWARFDebugRngListsDwo)
+      .Case("str", eSectionTypeDWARFDebugStr)
+      .Case("str.dwo", eSectionTypeDWARFDebugStrDwo)
+      .Case("str_offsets", eSectionTypeDWARFDebugStrOffsets)
+      .Case("str_offsets.dwo", eSectionTypeDWARFDebugStrOffsetsDwo)
+      .Case("tu_index", eSectionTypeDWARFDebugTuIndex)
+      .Case("types", eSectionTypeDWARFDebugTypes)
+      .Case("types.dwo", eSectionTypeDWARFDebugTypesDwo)
+      .Default(eSectionTypeOther);
+}
+
 std::vector<ObjectFile::LoadableData>
 ObjectFile::GetLoadableData(Target &target) {
   std::vector<LoadableData> loadables;
@@ -734,10 +769,9 @@ void llvm::format_provider<ObjectFile::Strata>::format(
   }
 }
 
-
-Symtab *ObjectFile::GetSymtab() {
+Symtab *ObjectFile::GetSymtab(bool can_create) {
   ModuleSP module_sp(GetModule());
-  if (module_sp) {
+  if (module_sp && can_create) {
     // We can't take the module lock in ObjectFile::GetSymtab() or we can
     // deadlock in DWARF indexing when any file asks for the symbol table from
     // an object file. This currently happens in the preloading of symbols in
@@ -773,6 +807,15 @@ uint32_t ObjectFile::GetCacheHash() {
   strm.Format("{0}-{1}-{2}", m_file, GetType(), GetStrata());
   m_cache_hash = llvm::djbHash(strm.GetString());
   return *m_cache_hash;
+}
+
+std::string ObjectFile::GetObjectName() const {
+  if (ModuleSP module_sp = GetModule())
+    if (ConstString object_name = module_sp->GetObjectName())
+      return llvm::formatv("{0}({1})", GetFileSpec().GetFilename().GetString(),
+                           object_name.GetString())
+          .str();
+  return GetFileSpec().GetFilename().GetString();
 }
 
 namespace llvm {

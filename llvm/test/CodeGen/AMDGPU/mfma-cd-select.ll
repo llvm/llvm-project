@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck --enable-var-scope --check-prefixes=GCN,GFX908 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck --enable-var-scope --check-prefixes=GCN,GFX90A %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck --enable-var-scope --check-prefixes=GCN,GFX90A %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -verify-machineinstrs < %s | FileCheck --enable-var-scope --check-prefixes=GCN,GFX90A %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx942 -verify-machineinstrs < %s | FileCheck --enable-var-scope --check-prefixes=GCN,GFX90A %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx908 < %s | FileCheck --enable-var-scope --check-prefixes=GCN,GFX908 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck --enable-var-scope --check-prefixes=GCN,GFX90A %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck --enable-var-scope --check-prefixes=GCN,GFX90A %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck --enable-var-scope --check-prefixes=GCN,GFX90A %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck --enable-var-scope --check-prefixes=GCN,GFX90A %s
 
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32, i32, i32)
 
@@ -42,7 +42,7 @@ bb:
 ; GCN: v_mfma_f32_32x32x1{{.*}} a[{{[0-9:]+}}], v{{[0-9]+}}, v{{[0-9:]+}}, a[{{[0-9:]+}}]
 define amdgpu_kernel void @test_mfma_f32_32x32x1f32_inline_asm_phys_agpr(ptr addrspace(1) %arg) {
 bb:
-  call void asm sideeffect "; use $0", "{a[100:131]}"(<32 x float> undef)
+  call void asm sideeffect "; use $0", "{a[100:131]}"(<32 x float> poison)
   %in.1 = load <32 x float>, ptr addrspace(1) %arg
   %mai.1 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %in.1, i32 0, i32 0, i32 0)
   store <32 x float> %mai.1, ptr addrspace(1) %arg
@@ -117,7 +117,7 @@ bb:
 
 declare void @foo()
 
-attributes #0 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2" "amdgpu-no-agpr" }
+attributes #0 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2" "amdgpu-agpr-alloc"="0" }
 attributes #1 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2" }
-attributes #2 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-no-agpr" }
+attributes #2 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-agpr-alloc"="0" }
 attributes #3 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2" }

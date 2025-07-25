@@ -13,7 +13,6 @@
 #include "SymbolTable.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/Object/COFF.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -47,12 +46,19 @@ AutoExporter::AutoExporter(
       "libclang_rt.profile-arm",
       "libclang_rt.profile-i386",
       "libclang_rt.profile-x86_64",
+      "libcygwin",
+      "libmsys-2.0",
       "libc++",
       "libc++abi",
       "libflang_rt.runtime",
       "libunwind",
       "libmsvcrt",
+      "libmsvcrt-os",
       "libucrtbase",
+      "libucrt",
+      "libucrtapp",
+      "libpthread",
+      "libwinpthread",
   };
 
   excludeObjects = {

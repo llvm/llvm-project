@@ -203,9 +203,9 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
   }
 
   // With -flat_namespace, all extern symbols in dylibs are interposable.
-  // FIXME: Add support for `-interposable` (PR53680).
-  bool interposable = config->namespaceKind == NamespaceKind::flat &&
-                      config->outputType != MachO::MH_EXECUTE &&
+  bool interposable = ((config->namespaceKind == NamespaceKind::flat &&
+                        config->outputType != MachO::MH_EXECUTE) ||
+                       config->interposable) &&
                       !isPrivateExtern;
   Defined *defined = replaceSymbol<Defined>(
       s, name, file, isec, value, size, isWeakDef, /*isExternal=*/true,
@@ -518,7 +518,7 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
 
     // If in the symbol table and not undefined.
     if (const Symbol *s = symtab->find(newName))
-      if (dyn_cast<Undefined>(s) == nullptr)
+      if (!isa<Undefined>(s))
         return s;
 
     return nullptr;
@@ -567,8 +567,7 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
     if (name.equals_insensitive(it.first))
       return it.second;
   for (Symbol *sym : symtab->getSymbols())
-    if (dyn_cast<Undefined>(sym) == nullptr &&
-        name.equals_insensitive(sym->getName()))
+    if (!isa<Undefined>(sym) && name.equals_insensitive(sym->getName()))
       return sym;
 
   // The reference may be a mangled name while the definition is not. Suggest a

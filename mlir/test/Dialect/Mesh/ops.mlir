@@ -58,61 +58,6 @@ func.func @mesh_shard_op_1st_and_3rd_dim(
   return %0 : tensor<4x8x16xf32>
 }
 
-// CHECK-LABEL: func @mesh_shard_op_partial_max
-func.func @mesh_shard_op_partial_max(
-    // CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32>
-    %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
-  // CHECK-NEXT: %[[S:.*]] = mesh.sharding @mesh3 split_axes = {{\[\[}}0]] partial = max [1] : !mesh.sharding
-  %s = mesh.sharding @mesh3 split_axes = [[0]] partial = max[1] : !mesh.sharding
-  // CHECK-NEXT: mesh.shard %[[ARG]] to %[[S]] : tensor<4x8xf32>
-  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
-  return %0 : tensor<4x8xf32>
-}
-
-// CHECK-LABEL: func @mesh_shard_op_partial_min
-func.func @mesh_shard_op_partial_min(
-    // CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32>
-    %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
-  // CHECK-NEXT: %[[S:.*]] = mesh.sharding @mesh3 split_axes = {{\[\[}}0]] partial = min [1] : !mesh.sharding
-  %s = mesh.sharding @mesh3 split_axes = [[0]] partial = min[1] : !mesh.sharding
-  // CHECK-NEXT: mesh.shard %[[ARG]] to %[[S]] : tensor<4x8xf32>
-  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
-  return %0 : tensor<4x8xf32>
-}
-
-// CHECK-LABEL: func @mesh_shard_op_partial_generic
-func.func @mesh_shard_op_partial_generic(
-    // CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32>
-    %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
-  // CHECK-NEXT: %[[S:.*]] = mesh.sharding @mesh3 split_axes = {{\[\[}}0]] partial = generic [1] : !mesh.sharding
-  %s = mesh.sharding @mesh3 split_axes = [[0]] partial = generic[1] : !mesh.sharding
-  // CHECK-NEXT: mesh.shard %[[ARG]] to %[[S]] : tensor<4x8xf32>
-  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
-  return %0 : tensor<4x8xf32>
-}
-
-// CHECK-LABEL: func @mesh_shard_op_partial_sum
-func.func @mesh_shard_op_partial_sum(
-    // CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32>
-    %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
-  // CHECK-NEXT: %[[S:.*]] = mesh.sharding @mesh3 split_axes = {{\[\[}}0]] partial = sum [1] : !mesh.sharding
-  %s = mesh.sharding @mesh3 split_axes = [[0]] partial = sum[1] : !mesh.sharding
-  // CHECK-NEXT: mesh.shard %[[ARG]] to %[[S]] : tensor<4x8xf32>
-  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
-  return %0 : tensor<4x8xf32>
-}
-
-// CHECK-LABEL: func @mesh_shard_op_partial_sum_multi_axes
-func.func @mesh_shard_op_partial_sum_multi_axes(
-    // CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32>
-    %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
-  // CHECK-NEXT: %[[S:.*]] = mesh.sharding @mesh3 split_axes = {{\[\[}}0]] partial = sum [1, 2] : !mesh.sharding
-  %s = mesh.sharding @mesh3 split_axes = [[0]] partial = sum[1, 2] : !mesh.sharding
-  // CHECK-NEXT: mesh.shard %[[ARG]] to %[[S]] : tensor<4x8xf32>
-  %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
-  return %0 : tensor<4x8xf32>
-}
-
 // CHECK-LABEL: func @mesh_shard_op_two_users
 // CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32>
 func.func @mesh_shard_op_two_users(%arg0 : tensor<4x8xf32>) ->
@@ -157,10 +102,12 @@ func.func @mesh_shard_shape() {
   %c3 = arith.constant 3 : index
   // CHECK-NEXT: %[[S:.*]] = mesh.sharding @mesh0 split_axes = {{\[\[}}]] : !mesh.sharding
   %s = mesh.sharding @mesh0 split_axes = [[]] : !mesh.sharding
-  // CHECK-NEXT: mesh.shard_shape 8x? %[[S]] %[[C3]] : index, index
-  %shp:2 = mesh.shard_shape 8x? %s %c3 : index, index
-  // CHECK-NEXT: mesh.shard_shape 8x4 %[[S]] %[[C3]] : index, index
-  %shp1:2 = mesh.shard_shape 8x4 %s %c3 : index, index
+  // CHECK-NEXT: mesh.shard_shape dims = [8, %[[C3]]
+  // CHECK-SAME: ] sharding = %[[S]] device = [%[[C3]]
+  // CHECK-SAME: ] : index, index
+  %shp:2 = mesh.shard_shape dims = [8, %c3] sharding = %s device = [%c3] : index, index
+  // CHECK-NEXT: mesh.shard_shape dims = [8, 4] sharding = %[[S]] device = [3] : index, index
+  %shp1:2 = mesh.shard_shape dims = [8, 4] sharding = %s device = [3] : index, index
   return
 }
 

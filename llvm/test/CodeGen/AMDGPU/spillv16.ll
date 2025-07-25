@@ -61,8 +61,8 @@ define void @spill_i16_alu_two_vals() {
 ; GCN-TRUE16-NEXT:    scratch_load_d16_b16 v0, off, s32 offset:4 glc dlc
 ; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-TRUE16-NEXT:    scratch_load_d16_hi_b16 v0, off, s32 offset:6 ; 2-byte Folded Reload
-; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-TRUE16-NEXT:    v_add_nc_u16 v0.l, 0x7b, v0.l
+; GCN-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-TRUE16-NEXT:    scratch_store_d16_hi_b16 off, v0, s32 dlc
 ; GCN-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-TRUE16-NEXT:    scratch_store_b16 off, v0, s32 offset:4 dlc

@@ -51,7 +51,7 @@ if(TARGET nvptx-arch)
   get_property(LIBOMPTARGET_NVPTX_ARCH TARGET nvptx-arch PROPERTY LOCATION)
 else()
   find_program(LIBOMPTARGET_NVPTX_ARCH NAMES nvptx-arch
-               PATHS ${LLVM_TOOLS_BINARY_DIR}/bin)
+               PATHS ${LLVM_TOOLS_BINARY_DIR})
 endif()
 
 if(LIBOMPTARGET_NVPTX_ARCH)
@@ -75,7 +75,7 @@ if(TARGET amdgpu-arch)
   get_property(LIBOMPTARGET_AMDGPU_ARCH TARGET amdgpu-arch PROPERTY LOCATION)
 else()
   find_program(LIBOMPTARGET_AMDGPU_ARCH NAMES amdgpu-arch
-               PATHS ${LLVM_TOOLS_BINARY_DIR}/bin)
+               PATHS ${LLVM_TOOLS_BINARY_DIR})
 endif()
 
 if(LIBOMPTARGET_AMDGPU_ARCH)

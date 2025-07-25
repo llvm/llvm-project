@@ -18,6 +18,7 @@ unittest("ObjectTests") {
     "GOFFObjectFileTest.cpp",
     "MinidumpTest.cpp",
     "ObjectFileTest.cpp",
+    "OffloadingBundleTest.cpp",
     "OffloadingTest.cpp",
     "SymbolSizeTest.cpp",
     "SymbolicFileTest.cpp",

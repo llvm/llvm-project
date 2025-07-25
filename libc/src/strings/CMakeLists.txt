@@ -8,7 +8,7 @@ function(add_bcmp bcmp_name)
   )
 endfunction()
 
-if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
+if(${LIBC_TARGET_ARCHITECTURE_IS_X86_64})
   add_bcmp(bcmp_x86_64_opt_sse2   COMPILE_OPTIONS -march=k8             REQUIRE SSE2)
   add_bcmp(bcmp_x86_64_opt_sse4   COMPILE_OPTIONS -march=nehalem        REQUIRE SSE4_2)
   add_bcmp(bcmp_x86_64_opt_avx2   COMPILE_OPTIONS -march=haswell        REQUIRE AVX2)
@@ -32,7 +32,7 @@ function(add_bzero bzero_name)
   )
 endfunction()
 
-if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
+if(${LIBC_TARGET_ARCHITECTURE_IS_X86_64})
   add_bzero(bzero_x86_64_opt_sse2   COMPILE_OPTIONS -march=k8             REQUIRE SSE2)
   add_bzero(bzero_x86_64_opt_sse4   COMPILE_OPTIONS -march=nehalem        REQUIRE SSE4_2)
   add_bzero(bzero_x86_64_opt_avx2   COMPILE_OPTIONS -march=haswell        REQUIRE AVX2)
@@ -52,6 +52,36 @@ add_entrypoint_object(
     bcopy.cpp
   HDRS
     bcopy.h
+)
+
+add_entrypoint_object(
+  ffs
+  SRCS
+    ffs.cpp
+  HDRS
+    ffs.h
+  DEPENDS
+    libc.src.__support.math_extras
+)
+
+add_entrypoint_object(
+  ffsl
+  SRCS
+    ffsl.cpp
+  HDRS
+    ffsl.h
+  DEPENDS
+    libc.src.__support.math_extras
+)
+
+add_entrypoint_object(
+  ffsll
+  SRCS
+    ffsll.cpp
+  HDRS
+    ffsll.h
+  DEPENDS
+    libc.src.__support.math_extras
 )
 
 add_entrypoint_object(
@@ -86,12 +116,36 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strcasecmp_l
+  SRCS
+    strcasecmp_l.cpp
+  HDRS
+    strcasecmp_l.h
+  DEPENDS
+    libc.hdr.types.locale_t
+    libc.src.__support.ctype_utils
+    libc.src.string.memory_utils.inline_strcmp
+)
+
+add_entrypoint_object(
   strncasecmp
   SRCS
     strncasecmp.cpp
   HDRS
     strncasecmp.h
   DEPENDS
+    libc.src.__support.ctype_utils
+    libc.src.string.memory_utils.inline_strcmp
+)
+
+add_entrypoint_object(
+  strncasecmp_l
+  SRCS
+    strncasecmp_l.cpp
+  HDRS
+    strncasecmp_l.h
+  DEPENDS
+    libc.hdr.types.locale_t
     libc.src.__support.ctype_utils
     libc.src.string.memory_utils.inline_strcmp
 )

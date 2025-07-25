@@ -43,8 +43,8 @@ class LLVM_LIBRARY_VISIBILITY NVPTXDAGToDAGISel : public SelectionDAGISel {
   // If true, generate mul.wide from sext and mul
   bool doMulWide;
 
-  int getDivF32Level() const;
-  bool usePrecSqrtF32() const;
+  NVPTX::DivPrecisionLevel getDivF32Level(const SDNode *N) const;
+  bool usePrecSqrtF32(const SDNode *N) const;
   bool useF32FTZ() const;
   bool allowFMA() const;
   bool allowUnsafeFPMath() const;
@@ -69,17 +69,16 @@ private:
 #include "NVPTXGenDAGISel.inc"
 
   void Select(SDNode *N) override;
-  bool tryIntrinsicNoChain(SDNode *N);
   bool tryIntrinsicChain(SDNode *N);
   bool tryIntrinsicVoid(SDNode *N);
   void SelectTexSurfHandle(SDNode *N);
   bool tryLoad(SDNode *N);
   bool tryLoadVector(SDNode *N);
-  bool tryLDGLDU(SDNode *N);
+  bool tryLDU(SDNode *N);
+  bool tryLDG(MemSDNode *N);
   bool tryStore(SDNode *N);
   bool tryStoreVector(SDNode *N);
   bool tryLoadParam(SDNode *N);
-  bool tryStoreRetval(SDNode *N);
   bool tryStoreParam(SDNode *N);
   bool tryFence(SDNode *N);
   void SelectAddrSpaceCast(SDNode *N);
@@ -88,15 +87,11 @@ private:
   bool tryConstantFP(SDNode *N);
   bool SelectSETP_F16X2(SDNode *N);
   bool SelectSETP_BF16X2(SDNode *N);
+  bool tryUNPACK_VECTOR(SDNode *N);
   bool tryEXTRACT_VECTOR_ELEMENT(SDNode *N);
   void SelectV2I64toI128(SDNode *N);
   void SelectI128toV2I64(SDNode *N);
-  void SelectCpAsyncBulkG2S(SDNode *N);
-  void SelectCpAsyncBulkS2G(SDNode *N);
-  void SelectCpAsyncBulkPrefetchL2(SDNode *N);
   void SelectCpAsyncBulkTensorG2SCommon(SDNode *N, bool IsIm2Col = false);
-  void SelectCpAsyncBulkTensorS2GCommon(SDNode *N, bool IsIm2Col = false);
-  void SelectCpAsyncBulkTensorPrefetchCommon(SDNode *N, bool IsIm2Col = false);
   void SelectCpAsyncBulkTensorReduceCommon(SDNode *N, unsigned RedOp,
                                            bool IsIm2Col = false);
   void SelectTcgen05Ld(SDNode *N, bool hasOffset = false);
@@ -105,12 +100,14 @@ private:
   inline SDValue getI32Imm(unsigned Imm, const SDLoc &DL) {
     return CurDAG->getTargetConstant(Imm, DL, MVT::i32);
   }
+  NVPTX::Ordering getMemOrder(const MemSDNode *N) const;
+  NVPTX::Scope getAtomicScope(const MemSDNode *N) const;
 
   bool SelectADDR(SDValue Addr, SDValue &Base, SDValue &Offset);
+  SDValue getPTXCmpMode(const CondCodeSDNode &CondCode);
+  SDValue selectPossiblyImm(SDValue V);
 
   bool ChkMemSDNodeAddressSpace(SDNode *N, unsigned int spN) const;
-
-  static unsigned GetConvertOpcode(MVT DestTy, MVT SrcTy, LoadSDNode *N);
 
   // Returns the Memory Order and Scope that the PTX memory instruction should
   // use, and inserts appropriate fence instruction before the memory
@@ -119,6 +116,9 @@ private:
   std::pair<NVPTX::Ordering, NVPTX::Scope>
   insertMemoryInstructionFence(SDLoc DL, SDValue &Chain, MemSDNode *N);
   NVPTX::Scope getOperationScope(MemSDNode *N, NVPTX::Ordering O) const;
+
+public:
+  static NVPTX::AddressSpace getAddrSpace(const MemSDNode *N);
 };
 
 class NVPTXDAGToDAGISelLegacy : public SelectionDAGISelLegacy {

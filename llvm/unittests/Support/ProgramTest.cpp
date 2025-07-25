@@ -422,10 +422,13 @@ TEST(ProgramTest, TestExecuteNegative) {
     bool ExecutionFailed;
     int RetCode = ExecuteAndWait(Executable, argv, std::nullopt, {}, 0, 0,
                                  &Error, &ExecutionFailed);
+
     EXPECT_LT(RetCode, 0) << "On error ExecuteAndWait should return 0 or "
                              "positive value indicating the result code";
-    EXPECT_TRUE(ExecutionFailed);
     EXPECT_FALSE(Error.empty());
+
+    // Note ExecutionFailed may or may not be false. When using fork, the error
+    // is produced on the wait for the child, not the execution point.
   }
 
   {
@@ -433,10 +436,19 @@ TEST(ProgramTest, TestExecuteNegative) {
     bool ExecutionFailed;
     ProcessInfo PI = ExecuteNoWait(Executable, argv, std::nullopt, {}, 0,
                                    &Error, &ExecutionFailed);
-    EXPECT_EQ(PI.Pid, ProcessInfo::InvalidPid)
-        << "On error ExecuteNoWait should return an invalid ProcessInfo";
-    EXPECT_TRUE(ExecutionFailed);
-    EXPECT_FALSE(Error.empty());
+
+    if (ExecutionFailed) {
+      EXPECT_EQ(PI.Pid, ProcessInfo::InvalidPid)
+          << "On error ExecuteNoWait should return an invalid ProcessInfo";
+      EXPECT_FALSE(Error.empty());
+    } else {
+      std::string WaitErrMsg;
+      EXPECT_NE(PI.Pid, ProcessInfo::InvalidPid);
+      ProcessInfo WaitPI = Wait(PI, std::nullopt, &WaitErrMsg);
+      EXPECT_EQ(WaitPI.Pid, PI.Pid);
+      EXPECT_LT(WaitPI.ReturnCode, 0);
+      EXPECT_FALSE(WaitErrMsg.empty());
+    }
   }
 
 }

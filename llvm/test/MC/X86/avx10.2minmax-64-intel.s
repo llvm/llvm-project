@@ -140,17 +140,9 @@
 // CHECK: encoding: [0x62,0x83,0xc5,0x20,0x52,0xf0,0x7b]
           vminmaxpd ymm22, ymm23, ymm24, 123
 
-// CHECK: vminmaxpd ymm22, ymm23, ymm24, {sae}, 123
-// CHECK: encoding: [0x62,0x83,0xc1,0x10,0x52,0xf0,0x7b]
-          vminmaxpd ymm22, ymm23, ymm24, {sae}, 123
-
 // CHECK: vminmaxpd ymm22 {k7}, ymm23, ymm24, 123
 // CHECK: encoding: [0x62,0x83,0xc5,0x27,0x52,0xf0,0x7b]
           vminmaxpd ymm22 {k7}, ymm23, ymm24, 123
-
-// CHECK: vminmaxpd ymm22 {k7} {z}, ymm23, ymm24, {sae}, 123
-// CHECK: encoding: [0x62,0x83,0xc1,0x97,0x52,0xf0,0x7b]
-          vminmaxpd ymm22 {k7} {z}, ymm23, ymm24, {sae}, 123
 
 // CHECK: vminmaxpd ymm22, ymm23, ymmword ptr [rbp + 8*r14 + 268435456], 123
 // CHECK: encoding: [0x62,0xa3,0xc5,0x20,0x52,0xb4,0xf5,0x00,0x00,0x00,0x10,0x7b]
@@ -256,17 +248,9 @@
 // CHECK: encoding: [0x62,0x83,0x44,0x20,0x52,0xf0,0x7b]
           vminmaxph ymm22, ymm23, ymm24, 123
 
-// CHECK: vminmaxph ymm22, ymm23, ymm24, {sae}, 123
-// CHECK: encoding: [0x62,0x83,0x40,0x10,0x52,0xf0,0x7b]
-          vminmaxph ymm22, ymm23, ymm24, {sae}, 123
-
 // CHECK: vminmaxph ymm22 {k7}, ymm23, ymm24, 123
 // CHECK: encoding: [0x62,0x83,0x44,0x27,0x52,0xf0,0x7b]
           vminmaxph ymm22 {k7}, ymm23, ymm24, 123
-
-// CHECK: vminmaxph ymm22 {k7} {z}, ymm23, ymm24, {sae}, 123
-// CHECK: encoding: [0x62,0x83,0x40,0x97,0x52,0xf0,0x7b]
-          vminmaxph ymm22 {k7} {z}, ymm23, ymm24, {sae}, 123
 
 // CHECK: vminmaxph ymm22, ymm23, ymmword ptr [rbp + 8*r14 + 268435456], 123
 // CHECK: encoding: [0x62,0xa3,0x44,0x20,0x52,0xb4,0xf5,0x00,0x00,0x00,0x10,0x7b]
@@ -372,17 +356,9 @@
 // CHECK: encoding: [0x62,0x83,0x45,0x20,0x52,0xf0,0x7b]
           vminmaxps ymm22, ymm23, ymm24, 123
 
-// CHECK: vminmaxps ymm22, ymm23, ymm24, {sae}, 123
-// CHECK: encoding: [0x62,0x83,0x41,0x10,0x52,0xf0,0x7b]
-          vminmaxps ymm22, ymm23, ymm24, {sae}, 123
-
 // CHECK: vminmaxps ymm22 {k7}, ymm23, ymm24, 123
 // CHECK: encoding: [0x62,0x83,0x45,0x27,0x52,0xf0,0x7b]
           vminmaxps ymm22 {k7}, ymm23, ymm24, 123
-
-// CHECK: vminmaxps ymm22 {k7} {z}, ymm23, ymm24, {sae}, 123
-// CHECK: encoding: [0x62,0x83,0x41,0x97,0x52,0xf0,0x7b]
-          vminmaxps ymm22 {k7} {z}, ymm23, ymm24, {sae}, 123
 
 // CHECK: vminmaxps ymm22, ymm23, ymmword ptr [rbp + 8*r14 + 268435456], 123
 // CHECK: encoding: [0x62,0xa3,0x45,0x20,0x52,0xb4,0xf5,0x00,0x00,0x00,0x10,0x7b]

@@ -12,11 +12,10 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/Pass/Pass.h"
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_BUFFERRESULTSTOOUTPARAMS
+#define GEN_PASS_DEF_BUFFERRESULTSTOOUTPARAMSPASS
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
@@ -33,7 +32,7 @@ static bool hasFullyDynamicLayoutMap(MemRefType type) {
     return false;
   if (!llvm::all_of(strides, ShapedType::isDynamic))
     return false;
-  if (!ShapedType::isDynamic(offset))
+  if (ShapedType::isStatic(offset))
     return false;
   return true;
 }
@@ -92,7 +91,8 @@ updateFuncOp(func::FuncOp func,
   }
 
   // Erase the results.
-  func.eraseResults(erasedResultIndices);
+  if (failed(func.eraseResults(erasedResultIndices)))
+    return failure();
 
   // Add the new arguments to the entry block if the function is not external.
   if (func.isExternal())
@@ -132,7 +132,7 @@ updateReturnOps(func::FuncOp func, ArrayRef<BlockArgument> appendedEntryArgs,
           return WalkResult::interrupt();
       }
     }
-    builder.create<func::ReturnOp>(op.getLoc(), keepAsReturnOperands);
+    func::ReturnOp::create(builder, op.getLoc(), keepAsReturnOperands);
     op.erase();
     return WalkResult::advance();
   });
@@ -190,7 +190,7 @@ updateCalls(ModuleOp module,
         assert(hasFullyDynamicLayoutMap(memrefType) &&
                "layout map not supported");
         outParam =
-            builder.create<memref::CastOp>(op.getLoc(), memrefType, outParam);
+            memref::CastOp::create(builder, op.getLoc(), memrefType, outParam);
       }
       memref.replaceAllUsesWith(outParam);
       outParams.push_back(outParam);
@@ -200,8 +200,8 @@ updateCalls(ModuleOp module,
     newOperands.append(outParams.begin(), outParams.end());
     auto newResultTypes = llvm::to_vector<6>(llvm::map_range(
         replaceWithNewCallResults, [](Value v) { return v.getType(); }));
-    auto newCall = builder.create<func::CallOp>(op.getLoc(), op.getCalleeAttr(),
-                                                newResultTypes, newOperands);
+    auto newCall = func::CallOp::create(
+        builder, op.getLoc(), op.getCalleeAttr(), newResultTypes, newOperands);
     for (auto t : llvm::zip(replaceWithNewCallResults, newCall.getResults()))
       std::get<0>(t).replaceAllUsesWith(std::get<1>(t));
     op.erase();
@@ -233,11 +233,9 @@ LogicalResult mlir::bufferization::promoteBufferResultsToOutParams(
 
 namespace {
 struct BufferResultsToOutParamsPass
-    : bufferization::impl::BufferResultsToOutParamsBase<
+    : bufferization::impl::BufferResultsToOutParamsPassBase<
           BufferResultsToOutParamsPass> {
-  explicit BufferResultsToOutParamsPass(
-      const bufferization::BufferResultsToOutParamsOpts &options)
-      : options(options) {}
+  using Base::Base;
 
   void runOnOperation() override {
     // Convert from pass options in tablegen to BufferResultsToOutParamsOpts.
@@ -255,8 +253,3 @@ private:
   bufferization::BufferResultsToOutParamsOpts options;
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::bufferization::createBufferResultsToOutParamsPass(
-    const bufferization::BufferResultsToOutParamsOpts &options) {
-  return std::make_unique<BufferResultsToOutParamsPass>(options);
-}

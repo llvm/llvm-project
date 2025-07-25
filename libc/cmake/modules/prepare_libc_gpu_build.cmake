@@ -104,7 +104,7 @@ if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
   # The AMDGPU environment uses different code objects to encode the ABI for
   # kernel calls and intrinsic functions. We want to specify this manually to
   # conform to whatever the test suite was built to handle.
-  set(LIBC_GPU_CODE_OBJECT_VERSION 5)
+  set(LIBC_GPU_CODE_OBJECT_VERSION 6)
 endif()
 
 if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)

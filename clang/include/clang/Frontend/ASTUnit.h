@@ -62,6 +62,7 @@ class ASTContext;
 class ASTDeserializationListener;
 class ASTMutationListener;
 class ASTReader;
+class CodeGenOptions;
 class CompilerInstance;
 class CompilerInvocation;
 class Decl;
@@ -70,7 +71,7 @@ class FileManager;
 class FrontendAction;
 class HeaderSearch;
 class InputKind;
-class InMemoryModuleCache;
+class ModuleCache;
 class PCHContainerOperations;
 class PCHContainerReader;
 class Preprocessor;
@@ -106,17 +107,23 @@ public:
   };
 
 private:
-  std::shared_ptr<LangOptions>            LangOpts;
+  std::unique_ptr<LangOptions> LangOpts;
+  std::unique_ptr<CodeGenOptions> CodeGenOpts;
+  // FIXME: The documentation on \c LoadFrom* member functions states that the
+  // DiagnosticsEngine (and therefore DiagnosticOptions) must outlive the
+  // returned ASTUnit. This is not the case. Enfore it by storing non-owning
+  // pointers here.
+  std::shared_ptr<DiagnosticOptions> DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine>   Diagnostics;
   IntrusiveRefCntPtr<FileManager>         FileMgr;
   IntrusiveRefCntPtr<SourceManager>       SourceMgr;
-  IntrusiveRefCntPtr<InMemoryModuleCache> ModuleCache;
+  IntrusiveRefCntPtr<ModuleCache> ModCache;
   std::unique_ptr<HeaderSearch>           HeaderInfo;
   IntrusiveRefCntPtr<TargetInfo>          Target;
   std::shared_ptr<Preprocessor>           PP;
   IntrusiveRefCntPtr<ASTContext>          Ctx;
   std::shared_ptr<TargetOptions>          TargetOpts;
-  std::shared_ptr<HeaderSearchOptions>    HSOpts;
+  std::unique_ptr<HeaderSearchOptions> HSOpts;
   std::shared_ptr<PreprocessorOptions>    PPOpts;
   IntrusiveRefCntPtr<ASTReader> Reader;
   bool HadModuleLoaderFatalFailure = false;
@@ -139,6 +146,13 @@ private:
   /// Optional owned invocation, just used to make the invocation used in
   /// LoadFromCommandLine available.
   std::shared_ptr<CompilerInvocation> Invocation;
+  /// Optional owned invocation, just used to make the invocation used in
+  /// Parse available.
+  std::shared_ptr<CompilerInvocation> CCInvocation;
+
+  /// Optional owned invocation, just used to keep the invocation alive for the
+  /// members initialized in transferASTDataFromCompilerInstance.
+  std::shared_ptr<CompilerInvocation> ModifiedInvocation;
 
   /// Fake module loader: the AST unit doesn't need to load any modules.
   TrivialModuleLoader ModuleLoader;
@@ -667,6 +681,7 @@ public:
   /// Create a ASTUnit. Gets ownership of the passed CompilerInvocation.
   static std::unique_ptr<ASTUnit>
   create(std::shared_ptr<CompilerInvocation> CI,
+         std::shared_ptr<DiagnosticOptions> DiagOpts,
          IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
          CaptureDiagsKind CaptureDiagnostics, bool UserFilesAreVolatile);
 
@@ -691,19 +706,18 @@ public:
   /// lifetime is expected to extend past that of the returned ASTUnit.
   ///
   /// \returns - The initialized ASTUnit or null if the AST failed to load.
-  static std::unique_ptr<ASTUnit>
-  LoadFromASTFile(StringRef Filename, const PCHContainerReader &PCHContainerRdr,
-                  WhatToLoad ToLoad,
-                  IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
-                  const FileSystemOptions &FileSystemOpts,
-                  std::shared_ptr<HeaderSearchOptions> HSOpts,
-                  std::shared_ptr<LangOptions> LangOpts = nullptr,
-                  bool OnlyLocalDecls = false,
-                  CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
-                  bool AllowASTWithCompilerErrors = false,
-                  bool UserFilesAreVolatile = false,
-                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
-                      llvm::vfs::getRealFileSystem());
+  static std::unique_ptr<ASTUnit> LoadFromASTFile(
+      StringRef Filename, const PCHContainerReader &PCHContainerRdr,
+      WhatToLoad ToLoad, std::shared_ptr<DiagnosticOptions> DiagOpts,
+      IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
+      const FileSystemOptions &FileSystemOpts,
+      const HeaderSearchOptions &HSOpts, const LangOptions *LangOpts = nullptr,
+      bool OnlyLocalDecls = false,
+      CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
+      bool AllowASTWithCompilerErrors = false,
+      bool UserFilesAreVolatile = false,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
+          llvm::vfs::getRealFileSystem());
 
 private:
   /// Helper function for \c LoadFromCompilerInvocation() and
@@ -757,6 +771,7 @@ public:
   static ASTUnit *LoadFromCompilerInvocationAction(
       std::shared_ptr<CompilerInvocation> CI,
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
+      std::shared_ptr<DiagnosticOptions> DiagOpts,
       IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
       FrontendAction *Action = nullptr, ASTUnit *Unit = nullptr,
       bool Persistent = true, StringRef ResourceFilesPath = StringRef(),
@@ -784,6 +799,7 @@ public:
   static std::unique_ptr<ASTUnit> LoadFromCompilerInvocation(
       std::shared_ptr<CompilerInvocation> CI,
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
+      std::shared_ptr<DiagnosticOptions> DiagOpts,
       IntrusiveRefCntPtr<DiagnosticsEngine> Diags, FileManager *FileMgr,
       bool OnlyLocalDecls = false,
       CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
@@ -832,6 +848,7 @@ public:
   static std::unique_ptr<ASTUnit> LoadFromCommandLine(
       const char **ArgBegin, const char **ArgEnd,
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
+      std::shared_ptr<DiagnosticOptions> DiagOpts,
       IntrusiveRefCntPtr<DiagnosticsEngine> Diags, StringRef ResourceFilesPath,
       bool StorePreamblesInMemory = false,
       StringRef PreambleStoragePath = StringRef(), bool OnlyLocalDecls = false,
