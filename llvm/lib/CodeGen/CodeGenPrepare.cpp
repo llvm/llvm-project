@@ -2096,6 +2096,10 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
   if (!L->isLoopInvariant(RemAmt))
     return false;
 
+  // Only works if the AddOffset is a loop invaraint
+  if (AddOffset && !L->isLoopInvariant(AddOffset))
+    return false;
+
   // Is the PHI a loop increment?
   auto LoopIncrInfo = getIVIncrement(PN, LI);
   if (!LoopIncrInfo)
