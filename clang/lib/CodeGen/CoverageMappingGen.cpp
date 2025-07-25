@@ -2269,6 +2269,11 @@ struct CounterCoverageMappingBuilder
     // Track LHS True/False Decision.
     const auto DecisionLHS = MCDCBuilder.pop();
 
+    if (auto Gap =
+            findGapAreaBetween(getEnd(E->getLHS()), getStart(E->getRHS()))) {
+      fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), getRegionCounter(E));
+    }
+
     // Counter tracks the right hand side of a logical and operator.
     extendRegion(E->getRHS());
     propagateCounts(getRegionCounter(E), E->getRHS());
@@ -2329,6 +2334,11 @@ struct CounterCoverageMappingBuilder
 
     // Track LHS True/False Decision.
     const auto DecisionLHS = MCDCBuilder.pop();
+
+    if (auto Gap =
+            findGapAreaBetween(getEnd(E->getLHS()), getStart(E->getRHS()))) {
+      fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), getRegionCounter(E));
+    }
 
     // Counter tracks the right hand side of a logical or operator.
     extendRegion(E->getRHS());
