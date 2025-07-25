@@ -2707,7 +2707,7 @@ LogicalResult IFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   while (alias) {
     Block &initBlock = alias.getInitializerBlock();
     auto returnOp = cast<ReturnOp>(initBlock.getTerminator());
-    auto addrOp = dyn_cast<AddressOfOp>(returnOp.getArg().getDefiningOp());
+    auto addrOp = returnOp.getArg().getDefiningOp<AddressOfOp>();
     // FIXME: This is a best effort solution. The AliasOp body might be more
     // complex and in that case we bail out with success. To completely match
     // the LLVM IR logic it would be necessary to implement proper alias and

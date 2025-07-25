@@ -1852,7 +1852,7 @@ transform::PackTransposeOp::apply(transform::TransformRewriter &rewriter,
     assert(!packOp && "packOp must be null on entry when unPackOp is not null");
     OpOperand *packUse = linalgOp.getDpsInitOperand(
         cast<OpResult>(unPackOp.getSource()).getResultNumber());
-    packOp = dyn_cast_or_null<linalg::PackOp>(packUse->get().getDefiningOp());
+    packOp = packUse->get().getDefiningOp<linalg::PackOp>();
     if (!packOp || !packOp.getResult().hasOneUse())
       return emitSilenceableError() << "could not find matching pack op";
   }
