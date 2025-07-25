@@ -126,6 +126,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
   setOperationAction(ISD::BR_CC, GRLenVT, Expand);
+  setOperationAction(ISD::BRCOND, MVT::Other, Custom);
   setOperationAction(ISD::SELECT_CC, GRLenVT, Expand);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
   setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, GRLenVT, Expand);
@@ -513,6 +514,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerPREFETCH(Op, DAG);
   case ISD::SELECT:
     return lowerSELECT(Op, DAG);
+  case ISD::BRCOND:
+    return lowerBRCOND(Op, DAG);
   case ISD::FP_TO_FP16:
     return lowerFP_TO_FP16(Op, DAG);
   case ISD::FP16_TO_FP:
@@ -856,6 +859,35 @@ SDValue LoongArchTargetLowering::lowerSELECT(SDValue Op,
 
   SDValue Ops[] = {LHS, RHS, TargetCC, TrueV, FalseV};
   return DAG.getNode(LoongArchISD::SELECT_CC, DL, VT, Ops);
+}
+
+SDValue LoongArchTargetLowering::lowerBRCOND(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDValue CondV = Op.getOperand(1);
+  SDLoc DL(Op);
+  MVT GRLenVT = Subtarget.getGRLenVT();
+
+  if (CondV.getOpcode() == ISD::SETCC) {
+    if (CondV.getOperand(0).getValueType() == GRLenVT) {
+      SDValue LHS = CondV.getOperand(0);
+      SDValue RHS = CondV.getOperand(1);
+      ISD::CondCode CCVal = cast<CondCodeSDNode>(CondV.getOperand(2))->get();
+
+      translateSetCCForBranch(DL, LHS, RHS, CCVal, DAG);
+
+      SDValue TargetCC = DAG.getCondCode(CCVal);
+      return DAG.getNode(LoongArchISD::BR_CC, DL, Op.getValueType(),
+                         Op.getOperand(0), LHS, RHS, TargetCC,
+                         Op.getOperand(2));
+    } else if (CondV.getOperand(0).getValueType().isFloatingPoint()) {
+      return DAG.getNode(LoongArchISD::BRCOND, DL, Op.getValueType(),
+                         Op.getOperand(0), CondV, Op.getOperand(2));
+    }
+  }
+
+  return DAG.getNode(LoongArchISD::BR_CC, DL, Op.getValueType(),
+                     Op.getOperand(0), CondV, DAG.getConstant(0, DL, GRLenVT),
+                     DAG.getCondCode(ISD::SETNE), Op.getOperand(2));
 }
 
 SDValue
@@ -5115,6 +5147,145 @@ static SDValue performBITREV_WCombine(SDNode *N, SelectionDAG &DAG,
                      Src.getOperand(0));
 }
 
+// Perform common combines for BR_CC and SELECT_CC conditions.
+static bool combine_CC(SDValue &LHS, SDValue &RHS, SDValue &CC, const SDLoc &DL,
+                       SelectionDAG &DAG, const LoongArchSubtarget &Subtarget) {
+  ISD::CondCode CCVal = cast<CondCodeSDNode>(CC)->get();
+
+  // As far as arithmetic right shift always saves the sign,
+  // shift can be omitted.
+  // Fold setlt (sra X, N), 0 -> setlt X, 0 and
+  // setge (sra X, N), 0 -> setge X, 0
+  if (isNullConstant(RHS) && (CCVal == ISD::SETGE || CCVal == ISD::SETLT) &&
+      LHS.getOpcode() == ISD::SRA) {
+    LHS = LHS.getOperand(0);
+    return true;
+  }
+
+  if (!ISD::isIntEqualitySetCC(CCVal))
+    return false;
+
+  // Fold ((setlt X, Y), 0, ne) -> (X, Y, lt)
+  // Sometimes the setcc is introduced after br_cc/select_cc has been formed.
+  if (LHS.getOpcode() == ISD::SETCC && isNullConstant(RHS) &&
+      LHS.getOperand(0).getValueType() == Subtarget.getGRLenVT()) {
+    // If we're looking for eq 0 instead of ne 0, we need to invert the
+    // condition.
+    bool Invert = CCVal == ISD::SETEQ;
+    CCVal = cast<CondCodeSDNode>(LHS.getOperand(2))->get();
+    if (Invert)
+      CCVal = ISD::getSetCCInverse(CCVal, LHS.getValueType());
+
+    RHS = LHS.getOperand(1);
+    LHS = LHS.getOperand(0);
+    translateSetCCForBranch(DL, LHS, RHS, CCVal, DAG);
+
+    CC = DAG.getCondCode(CCVal);
+    return true;
+  }
+
+  // If XOR is reused and has an immediate that will fit in XORI,
+  // do not fold.
+  auto isXorImmediate = [](const SDValue &Op) -> bool {
+    if (const auto *XorCnst = dyn_cast<ConstantSDNode>(Op))
+      return isInt<12>(XorCnst->getSExtValue());
+    return false;
+  };
+  // Fold (X(i1) ^ 1) == 0 -> X != 0
+  auto singleBitOp = [&DAG](const SDValue &VarOp,
+                            const SDValue &ConstOp) -> bool {
+    if (const auto *XorCnst = dyn_cast<ConstantSDNode>(ConstOp)) {
+      const APInt Mask = APInt::getBitsSetFrom(VarOp.getValueSizeInBits(), 1);
+      return (XorCnst->getSExtValue() == 1) &&
+             DAG.MaskedValueIsZero(VarOp, Mask);
+    }
+    return false;
+  };
+  auto onlyUsedBySelectOrBR = [](const SDValue &Op) -> bool {
+    for (const SDNode *UserNode : Op->users()) {
+      const unsigned Opcode = UserNode->getOpcode();
+      if (Opcode != LoongArchISD::SELECT_CC && Opcode != LoongArchISD::BR_CC)
+        return false;
+    }
+    return true;
+  };
+  auto isFoldableXorEq = [isXorImmediate, singleBitOp, onlyUsedBySelectOrBR](
+                             const SDValue &LHS, const SDValue &RHS) -> bool {
+    return LHS.getOpcode() == ISD::XOR && isNullConstant(RHS) &&
+           (!isXorImmediate(LHS.getOperand(1)) ||
+            singleBitOp(LHS.getOperand(0), LHS.getOperand(1)) ||
+            onlyUsedBySelectOrBR(LHS));
+  };
+  // Fold ((xor X, Y), 0, eq/ne) -> (X, Y, eq/ne)
+  if (isFoldableXorEq(LHS, RHS)) {
+    RHS = LHS.getOperand(1);
+    LHS = LHS.getOperand(0);
+    return true;
+  }
+  // Fold ((sext (xor X, C)), 0, eq/ne) -> ((sext(X), C, eq/ne)
+  if (LHS.getOpcode() == ISD::SIGN_EXTEND_INREG) {
+    const SDValue LHS0 = LHS.getOperand(0);
+    if (isFoldableXorEq(LHS0, RHS) && isa<ConstantSDNode>(LHS0.getOperand(1))) {
+      // SEXT(XOR(X, Y)) -> XOR(SEXT(X), SEXT(Y)))
+      RHS = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, LHS.getValueType(),
+                        LHS0.getOperand(1), LHS.getOperand(1));
+      LHS = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, LHS.getValueType(),
+                        LHS0.getOperand(0), LHS.getOperand(1));
+      return true;
+    }
+  }
+
+  // Fold ((srl (and X, 1<<C), C), 0, eq/ne) -> ((shl X, GRLen-1-C), 0, ge/lt)
+  if (isNullConstant(RHS) && LHS.getOpcode() == ISD::SRL && LHS.hasOneUse() &&
+      LHS.getOperand(1).getOpcode() == ISD::Constant) {
+    SDValue LHS0 = LHS.getOperand(0);
+    if (LHS0.getOpcode() == ISD::AND &&
+        LHS0.getOperand(1).getOpcode() == ISD::Constant) {
+      uint64_t Mask = LHS0.getConstantOperandVal(1);
+      uint64_t ShAmt = LHS.getConstantOperandVal(1);
+      if (isPowerOf2_64(Mask) && Log2_64(Mask) == ShAmt) {
+        CCVal = CCVal == ISD::SETEQ ? ISD::SETGE : ISD::SETLT;
+        CC = DAG.getCondCode(CCVal);
+
+        ShAmt = LHS.getValueSizeInBits() - 1 - ShAmt;
+        LHS = LHS0.getOperand(0);
+        if (ShAmt != 0)
+          LHS =
+              DAG.getNode(ISD::SHL, DL, LHS.getValueType(), LHS0.getOperand(0),
+                          DAG.getConstant(ShAmt, DL, LHS.getValueType()));
+        return true;
+      }
+    }
+  }
+
+  // (X, 1, setne) -> (X, 0, seteq) if we can prove X is 0/1.
+  // This can occur when legalizing some floating point comparisons.
+  APInt Mask = APInt::getBitsSetFrom(LHS.getValueSizeInBits(), 1);
+  if (isOneConstant(RHS) && DAG.MaskedValueIsZero(LHS, Mask)) {
+    CCVal = ISD::getSetCCInverse(CCVal, LHS.getValueType());
+    CC = DAG.getCondCode(CCVal);
+    RHS = DAG.getConstant(0, DL, LHS.getValueType());
+    return true;
+  }
+
+  return false;
+}
+
+static SDValue performBR_CCCombine(SDNode *N, SelectionDAG &DAG,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   const LoongArchSubtarget &Subtarget) {
+  SDValue LHS = N->getOperand(1);
+  SDValue RHS = N->getOperand(2);
+  SDValue CC = N->getOperand(3);
+  SDLoc DL(N);
+
+  if (combine_CC(LHS, RHS, CC, DL, DAG, Subtarget))
+    return DAG.getNode(LoongArchISD::BR_CC, DL, N->getValueType(0),
+                       N->getOperand(0), LHS, RHS, CC, N->getOperand(4));
+
+  return SDValue();
+}
+
 template <unsigned N>
 static SDValue legalizeIntrinsicImmArg(SDNode *Node, unsigned ImmOp,
                                        SelectionDAG &DAG,
@@ -5807,6 +5978,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performBITCASTCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::BITREV_W:
     return performBITREV_WCombine(N, DAG, DCI, Subtarget);
+  case LoongArchISD::BR_CC:
+    return performBR_CCCombine(N, DAG, DCI, Subtarget);
   case ISD::INTRINSIC_WO_CHAIN:
     return performINTRINSIC_WO_CHAINCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::MOVGR2FR_W_LA64:
@@ -6529,6 +6702,8 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(TAIL_MEDIUM)
     NODE_NAME_CASE(TAIL_LARGE)
     NODE_NAME_CASE(SELECT_CC)
+    NODE_NAME_CASE(BR_CC)
+    NODE_NAME_CASE(BRCOND)
     NODE_NAME_CASE(SLL_W)
     NODE_NAME_CASE(SRA_W)
     NODE_NAME_CASE(SRL_W)
