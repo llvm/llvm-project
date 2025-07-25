@@ -735,6 +735,8 @@ def PtrPtrCast : Opcode {
 
 }
 
+def FnPtrCast : Opcode;
+
 def DecayPtr : Opcode {
   let Types = [PtrTypeClass, PtrTypeClass];
   let HasGroup = 1;
