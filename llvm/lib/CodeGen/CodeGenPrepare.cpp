@@ -444,6 +444,7 @@ private:
   bool optimizeSwitchPhiConstants(SwitchInst *SI);
   bool optimizeSwitchInst(SwitchInst *SI);
   bool optimizeExtractElementInst(Instruction *Inst);
+  bool optimizePtrauthInst(Instruction *Inst, Value *Disc);
   bool dupRetToEnableTailCallOpts(BasicBlock *BB, ModifyDT &ModifiedDT);
   bool fixupDbgVariableRecord(DbgVariableRecord &I);
   bool fixupDbgVariableRecordsOnInst(Instruction &I);
@@ -2765,6 +2766,12 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
       return optimizeGatherScatterInst(II, II->getArgOperand(0));
     case Intrinsic::masked_scatter:
       return optimizeGatherScatterInst(II, II->getArgOperand(1));
+    case Intrinsic::ptrauth_auth:
+    case Intrinsic::ptrauth_sign:
+      return optimizePtrauthInst(II, II->getArgOperand(2));
+    case Intrinsic::ptrauth_resign:
+      return optimizePtrauthInst(II, II->getArgOperand(2)) ||
+             optimizePtrauthInst(II, II->getArgOperand(4));
     }
 
     SmallVector<Value *, 2> PtrOps;
@@ -8307,6 +8314,74 @@ bool CodeGenPrepare::optimizeExtractElementInst(Instruction *Inst) {
     Inst = ToBePromoted;
   }
   return false;
+}
+
+// Given the instruction Inst, rewrite its discriminator operand Disc if it is
+// a PHI node with all incoming values being @llvm.ptrauth.blend(addr, imm)
+// with the same immediate modifier.
+bool CodeGenPrepare::optimizePtrauthInst(Instruction *Inst, Value *Disc) {
+  // GVN PRE, SimplifyCFG and possibly other passes may hoist or sink the call
+  // to @llvm.ptrauth.blend intrinsic, introducing multiple duplicate call
+  // instructions hidden behind a PHI node.
+  //
+  // To enforce the specific immediate modifier being blended into the
+  // discriminator even if the other, address component was reloaded from the
+  // stack, the AArch64 backend defines a number of pseudo instructions
+  // representing auth, sign and other operations. These pseudo instructions
+  // have separate register and immediate operands absorbing the arguments of
+  // blend intrinsic in case of a common `op(ptr, key_id, blend(addr, imm))`
+  // code pattern.
+  //
+  // To help the instruction selector, this function detects the discriminators
+  // represented by a PHI node with all incoming values being `blend`s with
+  // the same integer operand - each such discriminator is rewritten as a single
+  // blend, whose address operand is a PHI node.
+
+  PHINode *P = dyn_cast<PHINode>(Disc);
+  if (!P)
+    return false;
+
+  // Checks if V is blend(something, imm), returns imm if it is.
+  auto GetImmModifier = [](Value *V) -> std::optional<uint64_t> {
+    auto *II = dyn_cast<IntrinsicInst>(V);
+    if (!II || II->getIntrinsicID() != Intrinsic::ptrauth_blend)
+      return std::nullopt;
+    auto *ImmModifier = dyn_cast<ConstantInt>(II->getArgOperand(1));
+    if (!ImmModifier)
+      return std::nullopt;
+    return ImmModifier->getZExtValue();
+  };
+
+  // Check that all incoming values of P are blends with the same immediate
+  // modifier.
+  std::optional<uint64_t> ImmModifier = GetImmModifier(*P->op_begin());
+  if (!ImmModifier ||
+      !llvm::all_of(P->operands(), [&ImmModifier, GetImmModifier](Value *V) {
+        return ImmModifier == GetImmModifier(V);
+      }))
+    return false;
+
+  // At this point, P is a PHI node, with all the incoming values being a blend
+  // operations with the same immediate modifier, but possibly different address
+  // modifiers. Replace Disc argument of Inst with a single ptrauth_blend
+  // whose address modifier if provided by a PHI node.
+
+  IRBuilder<> Builder(Inst->getContext());
+  Type *Int64Ty = Builder.getInt64Ty();
+
+  Builder.SetInsertPoint(P);
+  PHINode *AddrDiscPhi = Builder.CreatePHI(Int64Ty, P->getNumIncomingValues());
+  for (auto [Val, BB] : llvm::zip_equal(P->operands(), P->blocks())) {
+    Value *AddrDisc = cast<IntrinsicInst>(Val)->getArgOperand(0);
+    AddrDiscPhi->addIncoming(AddrDisc, BB);
+  }
+
+  Builder.SetInsertPoint(Inst);
+  Value *ImmModifValue = ConstantInt::get(Int64Ty, *ImmModifier);
+  Value *Blend = Builder.CreateIntrinsic(Intrinsic::ptrauth_blend,
+                                         {AddrDiscPhi, ImmModifValue});
+  Inst->replaceUsesOfWith(Disc, Blend);
+  return true;
 }
 
 /// For the instruction sequence of store below, F and I values
