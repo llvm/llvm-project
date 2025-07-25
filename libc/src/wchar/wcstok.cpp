@@ -10,6 +10,7 @@
 
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
+#include "wchar_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
