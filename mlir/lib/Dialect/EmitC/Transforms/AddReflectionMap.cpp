@@ -23,8 +23,16 @@ namespace emitc {
 #include "mlir/Dialect/EmitC/Transforms/Passes.h.inc"
 
 namespace {
-constexpr const char *kMapLibraryHeader = "map";
-constexpr const char *kStringLibraryHeader = "string";
+constexpr const char *mapLibraryHeader = "map";
+constexpr const char *stringLibraryHeader = "string";
+
+IncludeOp addHeader(OpBuilder &builder, ModuleOp module, StringRef headerName) {
+  StringAttr includeAttr = builder.getStringAttr(headerName);
+  return builder.create<emitc::IncludeOp>(
+      module.getLoc(), includeAttr,
+      /*is_standard_include=*/builder.getUnitAttr());
+}
+
 class AddReflectionMapPass
     : public impl::AddReflectionMapPassBase<AddReflectionMapPass> {
   using AddReflectionMapPassBase::AddReflectionMapPassBase;
@@ -35,35 +43,28 @@ class AddReflectionMapPass
     populateAddReflectionMapPatterns(patterns, namedAttribute);
 
     walkAndApplyPatterns(module, std::move(patterns));
-    bool hasMap = false;
-    bool hasString = false;
+    bool hasMapHdr = false;
+    bool hasStringHdr = false;
     for (auto &op : *module.getBody()) {
       emitc::IncludeOp includeOp = llvm::dyn_cast<mlir::emitc::IncludeOp>(op);
       if (!includeOp)
         continue;
       if (includeOp.getIsStandardInclude()) {
-        if (includeOp.getInclude() == kMapLibraryHeader)
-          hasMap = true;
-        if (includeOp.getInclude() == kStringLibraryHeader)
-          hasString = true;
+        if (includeOp.getInclude() == mapLibraryHeader)
+          hasMapHdr = true;
+        if (includeOp.getInclude() == stringLibraryHeader)
+          hasStringHdr = true;
       }
+      if (hasMapHdr && hasStringHdr)
+        return;
     }
-
-    if (hasMap && hasString)
-      return;
 
     mlir::OpBuilder builder(module.getBody(), module.getBody()->begin());
-    if (!hasMap) {
-      StringAttr includeAttr = builder.getStringAttr(kMapLibraryHeader);
-      builder.create<mlir::emitc::IncludeOp>(
-          module.getLoc(), includeAttr,
-          /*is_standard_include=*/builder.getUnitAttr());
+    if (!hasMapHdr) {
+      addHeader(builder, module, mapLibraryHeader);
     }
-    if (!hasString) {
-      StringAttr includeAttr = builder.getStringAttr(kStringLibraryHeader);
-      builder.create<emitc::IncludeOp>(
-          module.getLoc(), includeAttr,
-          /*is_standard_include=*/builder.getUnitAttr());
+    if (!hasStringHdr) {
+      addHeader(builder, module, stringLibraryHeader);
     }
   }
 };
