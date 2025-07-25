@@ -207,7 +207,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
       // Subtract startOfRange from the original subgroup id to get the adjusted
       // sg id
       Value startOfRangeVal =
-          rewriter.create<arith::ConstantIndexOp>(loc, startOfRange);
+          arith::ConstantIndexOp::create(rewriter, loc, startOfRange);
       adjustedSgId =
           rewriter.createOrFold<index::SubOp>(loc, linearSgId, startOfRangeVal);
     }
@@ -431,8 +431,8 @@ struct WgToSgVectorBroadcastOp
 
     SmallVector<Value> newBroadcastOps;
     for (auto operand : adaptor.getOperands().front()) {
-      auto newBroadcast = rewriter.create<vector::BroadcastOp>(
-          op.getLoc(), newResultType, operand);
+      auto newBroadcast = vector::BroadcastOp::create(rewriter, op.getLoc(),
+                                                      newResultType, operand);
       xegpu::setLayoutAttr(newBroadcast->getResult(0),
                            layout.dropSgLayoutAndData());
       newBroadcastOps.push_back(newBroadcast.getResult());
@@ -563,8 +563,8 @@ struct WgToSgConvertLayoutOp
     if (input && target) {
       // keep the ConvertLayoutOp for rest fields, e.g., inst_data.
       for (auto [i, src] : llvm::enumerate(adaptor.getSource())) {
-        auto newOp = rewriter.create<xegpu::ConvertLayoutOp>(
-            op.getLoc(), src.getType(), src, input, target);
+        auto newOp = xegpu::ConvertLayoutOp::create(
+            rewriter, op.getLoc(), src.getType(), src, input, target);
         newOps[i] = newOp;
       }
     }

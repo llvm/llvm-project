@@ -100,12 +100,10 @@ define fastcc i32 @test(i32 %0, i32 %add111.i.i, <4 x i32> %PredPel.i.sroa.86.72
 ; THRESH-NEXT:  [[ENTRY:.*:]]
 ; THRESH-NEXT:    [[LOOPARRAY_SROA_24_0_I_I3:%.*]] = ashr i32 [[TMP0]], 1
 ; THRESH-NEXT:    [[SHR143_5_I_I9:%.*]] = ashr i32 [[TMP0]], 1
-; THRESH-NEXT:    [[ADD1392_I:%.*]] = add i32 [[TMP0]], 1
+; THRESH-NEXT:    [[TMP11:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i32 0
+; THRESH-NEXT:    [[TMP21:%.*]] = shufflevector <2 x i32> [[TMP11]], <2 x i32> poison, <2 x i32> zeroinitializer
+; THRESH-NEXT:    [[TMP17:%.*]] = add <2 x i32> [[TMP21]], splat (i32 1)
 ; THRESH-NEXT:    [[MUL1445_I:%.*]] = shl i32 [[TMP0]], 1
-; THRESH-NEXT:    [[ADD2174_I:%.*]] = add i32 [[MUL1445_I]], 2
-; THRESH-NEXT:    [[SHR2175_I:%.*]] = lshr i32 [[ADD2174_I]], 2
-; THRESH-NEXT:    [[ADD2190_I:%.*]] = or i32 [[ADD1392_I]], 1
-; THRESH-NEXT:    [[ADD2191_I:%.*]] = add i32 [[ADD2190_I]], [[TMP0]]
 ; THRESH-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <2 x i32> <i32 poison, i32 0>
 ; THRESH-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[LOOPARRAY_SROA_24_0_I_I3]], i32 0
 ; THRESH-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP3]], splat (i32 1)
@@ -115,14 +113,7 @@ define fastcc i32 @test(i32 %0, i32 %add111.i.i, <4 x i32> %PredPel.i.sroa.86.72
 ; THRESH-NEXT:    [[SHR2237_I:%.*]] = lshr i32 [[ADD2236_I]], 1
 ; THRESH-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[ADD111_I_I]], i32 0
 ; THRESH-NEXT:    [[TMP19:%.*]] = insertelement <2 x i32> [[TMP6]], i32 [[LOOPARRAY_SROA_24_0_I_I3]], i32 1
-; THRESH-NEXT:    [[TMP20:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i32 0
-; THRESH-NEXT:    [[TMP21:%.*]] = shufflevector <2 x i32> [[TMP20]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; THRESH-NEXT:    [[TMP22:%.*]] = or <2 x i32> [[TMP19]], [[TMP21]]
-; THRESH-NEXT:    [[ADD2302_I:%.*]] = add i32 [[TMP0]], 1
-; THRESH-NEXT:    [[SHR2303_I:%.*]] = lshr i32 [[ADD2302_I]], 1
-; THRESH-NEXT:    [[ADD2323_I:%.*]] = add i32 [[TMP0]], 1
-; THRESH-NEXT:    [[ADD2324_I:%.*]] = or i32 [[ADD2323_I]], [[TMP0]]
-; THRESH-NEXT:    [[SHR2325_I:%.*]] = lshr i32 [[ADD2324_I]], 1
 ; THRESH-NEXT:    [[TMP25:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i32 1
 ; THRESH-NEXT:    [[TMP12:%.*]] = insertelement <2 x i32> [[TMP25]], i32 [[SHR143_5_I_I9]], i32 0
 ; THRESH-NEXT:    [[TMP13:%.*]] = add <2 x i32> [[TMP12]], splat (i32 1)
@@ -135,44 +126,49 @@ define fastcc i32 @test(i32 %0, i32 %add111.i.i, <4 x i32> %PredPel.i.sroa.86.72
 ; THRESH-NEXT:    [[ADD2393_I:%.*]] = or i32 [[LOOPARRAY_SROA_24_0_I_I3]], 1
 ; THRESH-NEXT:    [[ADD2394_I:%.*]] = add i32 [[ADD2393_I]], [[TMP0]]
 ; THRESH-NEXT:    [[TMP16:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; THRESH-NEXT:    [[TMP17:%.*]] = insertelement <8 x i32> [[TMP16]], i32 [[SHR2303_I]], i32 2
-; THRESH-NEXT:    [[TMP18:%.*]] = insertelement <8 x i32> [[TMP17]], i32 [[SHR2175_I]], i32 3
-; THRESH-NEXT:    [[CONV2176_I:%.*]] = trunc i32 [[SHR2175_I]] to i16
-; THRESH-NEXT:    [[CONV2238_I:%.*]] = trunc i32 [[SHR2237_I]] to i16
-; THRESH-NEXT:    store i16 [[CONV2238_I]], ptr getelementptr inbounds nuw (i8, ptr @images, i64 8196), align 4
 ; THRESH-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[PREDPEL_I_SROA_86_72_VEC_EXTRACT]], <4 x i32> poison, <2 x i32> <i32 poison, i32 0>
 ; THRESH-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP7]], i32 [[ADD111_I_I]], i32 0
 ; THRESH-NEXT:    [[TMP9:%.*]] = add <2 x i32> [[TMP8]], splat (i32 1)
 ; THRESH-NEXT:    [[TMP10:%.*]] = lshr <2 x i32> [[TMP9]], splat (i32 1)
-; THRESH-NEXT:    [[TMP23:%.*]] = shufflevector <2 x i32> [[TMP10]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; THRESH-NEXT:    [[TMP24:%.*]] = shufflevector <8 x i32> [[TMP18]], <8 x i32> [[TMP23]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 poison, i32 poison>
-; THRESH-NEXT:    [[TMP11:%.*]] = trunc <2 x i32> [[TMP10]] to <2 x i16>
 ; THRESH-NEXT:    [[TMP26:%.*]] = shufflevector <2 x i32> [[TMP10]], <2 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; THRESH-NEXT:    [[TMP27:%.*]] = trunc <2 x i32> [[TMP10]] to <2 x i16>
 ; THRESH-NEXT:    store <2 x i16> [[TMP27]], ptr getelementptr inbounds nuw (i8, ptr @images, i64 8228), align 4
-; THRESH-NEXT:    store <2 x i16> [[TMP11]], ptr getelementptr inbounds nuw (i8, ptr @images, i64 8208), align 8
-; THRESH-NEXT:    store i16 [[CONV2176_I]], ptr getelementptr inbounds nuw (i8, ptr @images, i64 8226), align 2
-; THRESH-NEXT:    store i16 [[CONV2176_I]], ptr getelementptr inbounds nuw (i8, ptr @images, i64 8206), align 2
-; THRESH-NEXT:    [[CONV2304_I:%.*]] = trunc i32 [[SHR2303_I]] to i16
-; THRESH-NEXT:    [[TMP28:%.*]] = insertelement <4 x i32> poison, i32 [[ADD2394_I]], i32 0
-; THRESH-NEXT:    [[TMP29:%.*]] = insertelement <4 x i32> [[TMP28]], i32 [[SHR2325_I]], i32 1
-; THRESH-NEXT:    [[TMP30:%.*]] = insertelement <4 x i32> [[TMP29]], i32 [[ADD2191_I]], i32 2
-; THRESH-NEXT:    [[TMP31:%.*]] = insertelement <4 x i32> [[TMP30]], i32 [[SHR2303_I]], i32 3
-; THRESH-NEXT:    [[TMP32:%.*]] = trunc <4 x i32> [[TMP31]] to <4 x i16>
-; THRESH-NEXT:    [[CONV2193_I:%.*]] = trunc i32 [[ADD2191_I]] to i16
-; THRESH-NEXT:    [[CONV2326_I:%.*]] = trunc i32 [[SHR2325_I]] to i16
+; THRESH-NEXT:    [[TMP52:%.*]] = insertelement <4 x i32> poison, i32 [[SHR2237_I]], i32 0
+; THRESH-NEXT:    [[TMP53:%.*]] = insertelement <4 x i32> [[TMP52]], i32 [[ADD2394_I]], i32 1
 ; THRESH-NEXT:    [[CONV2396_I:%.*]] = trunc i32 [[ADD2394_I]] to i16
-; THRESH-NEXT:    store i16 [[CONV2326_I]], ptr getelementptr inbounds nuw (i8, ptr @images, i64 8220), align 4
 ; THRESH-NEXT:    store i16 [[CONV2396_I]], ptr getelementptr inbounds nuw (i8, ptr @images, i64 8178), align 2
-; THRESH-NEXT:    store i16 [[CONV2304_I]], ptr getelementptr inbounds nuw (i8, ptr @images, i64 8224), align 8
-; THRESH-NEXT:    store i16 [[CONV2193_I]], ptr getelementptr inbounds nuw (i8, ptr @images, i64 8222), align 2
-; THRESH-NEXT:    store <4 x i16> [[TMP32]], ptr getelementptr inbounds nuw (i8, ptr @images, i64 8198), align 2
-; THRESH-NEXT:    [[TMP33:%.*]] = shufflevector <2 x i32> [[TMP22]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; THRESH-NEXT:    [[TMP34:%.*]] = shufflevector <2 x i32> [[TMP15]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; THRESH-NEXT:    [[TMP54:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i32 2
+; THRESH-NEXT:    [[TMP55:%.*]] = insertelement <4 x i32> [[TMP54]], i32 [[MUL1445_I]], i32 3
+; THRESH-NEXT:    [[TMP28:%.*]] = shufflevector <2 x i32> [[TMP17]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; THRESH-NEXT:    [[TMP29:%.*]] = shufflevector <4 x i32> [[TMP55]], <4 x i32> [[TMP28]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; THRESH-NEXT:    [[TMP30:%.*]] = insertelement <4 x i32> <i32 poison, i32 1, i32 1, i32 2>, i32 [[TMP0]], i32 0
+; THRESH-NEXT:    [[TMP31:%.*]] = or <4 x i32> [[TMP29]], [[TMP30]]
+; THRESH-NEXT:    [[TMP32:%.*]] = add <4 x i32> [[TMP29]], [[TMP30]]
+; THRESH-NEXT:    [[TMP56:%.*]] = shufflevector <4 x i32> [[TMP31]], <4 x i32> [[TMP32]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; THRESH-NEXT:    [[TMP57:%.*]] = insertelement <4 x i32> <i32 1, i32 poison, i32 1, i32 2>, i32 [[TMP0]], i32 1
+; THRESH-NEXT:    [[TMP58:%.*]] = lshr <4 x i32> [[TMP56]], [[TMP57]]
+; THRESH-NEXT:    [[TMP59:%.*]] = add <4 x i32> [[TMP56]], [[TMP57]]
+; THRESH-NEXT:    [[TMP60:%.*]] = shufflevector <4 x i32> [[TMP58]], <4 x i32> [[TMP59]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+; THRESH-NEXT:    [[TMP61:%.*]] = shufflevector <4 x i32> [[TMP60]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; THRESH-NEXT:    [[TMP62:%.*]] = shufflevector <8 x i32> [[TMP16]], <8 x i32> [[TMP61]], <8 x i32> <i32 0, i32 1, i32 10, i32 11, i32 poison, i32 poison, i32 poison, i32 poison>
+; THRESH-NEXT:    [[TMP63:%.*]] = shufflevector <2 x i32> [[TMP10]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; THRESH-NEXT:    [[TMP24:%.*]] = shufflevector <8 x i32> [[TMP62]], <8 x i32> [[TMP63]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 poison, i32 poison>
+; THRESH-NEXT:    [[TMP33:%.*]] = shufflevector <4 x i32> [[TMP60]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; THRESH-NEXT:    [[TMP34:%.*]] = shufflevector <2 x i32> [[TMP10]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; THRESH-NEXT:    [[TMP35:%.*]] = shufflevector <4 x i32> [[TMP33]], <4 x i32> [[TMP34]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; THRESH-NEXT:    [[TMP64:%.*]] = trunc <4 x i32> [[TMP35]] to <4 x i16>
+; THRESH-NEXT:    store <4 x i16> [[TMP64]], ptr getelementptr inbounds nuw (i8, ptr @images, i64 8204), align 4
+; THRESH-NEXT:    [[TMP65:%.*]] = shufflevector <4 x i32> [[TMP53]], <4 x i32> [[TMP60]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; THRESH-NEXT:    [[TMP47:%.*]] = trunc <4 x i32> [[TMP65]] to <4 x i16>
+; THRESH-NEXT:    [[TMP48:%.*]] = trunc <4 x i32> [[TMP60]] to <4 x i16>
+; THRESH-NEXT:    store <4 x i16> [[TMP48]], ptr getelementptr inbounds nuw (i8, ptr @images, i64 8220), align 4
+; THRESH-NEXT:    store <4 x i16> [[TMP47]], ptr getelementptr inbounds nuw (i8, ptr @images, i64 8196), align 4
+; THRESH-NEXT:    [[TMP49:%.*]] = shufflevector <2 x i32> [[TMP22]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; THRESH-NEXT:    [[TMP50:%.*]] = shufflevector <2 x i32> [[TMP15]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; THRESH-NEXT:    [[TMP51:%.*]] = shufflevector <4 x i32> [[TMP49]], <4 x i32> [[TMP50]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; THRESH-NEXT:    [[TMP36:%.*]] = insertelement <4 x i32> <i32 1, i32 1, i32 1, i32 poison>, i32 [[TMP0]], i32 3
-; THRESH-NEXT:    [[TMP37:%.*]] = lshr <4 x i32> [[TMP35]], [[TMP36]]
-; THRESH-NEXT:    [[TMP38:%.*]] = add <4 x i32> [[TMP35]], [[TMP36]]
+; THRESH-NEXT:    [[TMP37:%.*]] = lshr <4 x i32> [[TMP51]], [[TMP36]]
+; THRESH-NEXT:    [[TMP38:%.*]] = add <4 x i32> [[TMP51]], [[TMP36]]
 ; THRESH-NEXT:    [[TMP39:%.*]] = shufflevector <4 x i32> [[TMP37]], <4 x i32> [[TMP38]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; THRESH-NEXT:    [[TMP40:%.*]] = shufflevector <4 x i32> [[TMP39]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; THRESH-NEXT:    [[TMP41:%.*]] = shufflevector <8 x i32> [[TMP24]], <8 x i32> [[TMP40]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>

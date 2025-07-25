@@ -13,7 +13,6 @@
 #include "mlir/Conversion/TosaToMLProgram/TosaToMLProgram.h"
 #include "mlir/Dialect/MLProgram/IR/MLProgram.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 
 using namespace mlir;
