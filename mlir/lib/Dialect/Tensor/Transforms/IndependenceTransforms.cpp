@@ -130,8 +130,7 @@ FailureOr<Value> tensor::buildIndependentOp(OpBuilder &b,
   // Create a tensor::ExtractSliceOp.
   SmallVector<OpFoldResult> offsets(newSizes.size(), b.getIndexAttr(0));
   SmallVector<OpFoldResult> strides(newSizes.size(), b.getIndexAttr(1));
-  return b
-      .create<ExtractSliceOp>(loc, newEmptyOp, offsets, emptyOp.getMixedSizes(),
-                              strides)
+  return ExtractSliceOp::create(b, loc, newEmptyOp, offsets,
+                                emptyOp.getMixedSizes(), strides)
       .getResult();
 }

@@ -56,9 +56,8 @@ FailureOr<Value> memref::buildIndependentOp(OpBuilder &b,
   // Create a memref::SubViewOp.
   SmallVector<OpFoldResult> offsets(newSizes.size(), b.getIndexAttr(0));
   SmallVector<OpFoldResult> strides(newSizes.size(), b.getIndexAttr(1));
-  return b
-      .create<SubViewOp>(loc, newAllocaOp, offsets, allocaOp.getMixedSizes(),
-                         strides)
+  return SubViewOp::create(b, loc, newAllocaOp, offsets,
+                           allocaOp.getMixedSizes(), strides)
       .getResult();
 }
 

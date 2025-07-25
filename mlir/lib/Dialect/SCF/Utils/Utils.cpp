@@ -827,9 +827,8 @@ static Value getProductOfIntsOrIndexes(RewriterBase &rewriter, Location loc,
       productOf = v;
   }
   if (!productOf) {
-    productOf = rewriter
-                    .create<arith::ConstantOp>(
-                        loc, rewriter.getOneAttr(getType(values.front())))
+    productOf = arith::ConstantOp::create(
+                    rewriter, loc, rewriter.getOneAttr(getType(values.front())))
                     .getResult();
   }
   return productOf.value();

@@ -70,10 +70,8 @@ splitLastAxisInResharding(ImplicitLocOpBuilder &builder,
                           TypedValue<ShapedType> sourceShard, GridOp grid,
                           int64_t splitTensorAxis, GridAxis splitGridAxis) {
   TypedValue<ShapedType> targetShard = cast<TypedValue<ShapedType>>(
-      builder
-          .create<AllSliceOp>(sourceShard, grid,
-                              ArrayRef<GridAxis>(splitGridAxis),
-                              splitTensorAxis)
+      AllSliceOp::create(builder, sourceShard, grid,
+                         ArrayRef<GridAxis>(splitGridAxis), splitTensorAxis)
           .getResult());
   Sharding targetSharding = targetShardingInSplitLastAxis(
       builder.getContext(), sourceSharding, splitTensorAxis, splitGridAxis);
@@ -420,16 +418,15 @@ tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
 
   // Finally update the halo.
   auto updateHaloResult =
-      builder
-          .create<UpdateHaloOp>(
-              sourceShard.getLoc(),
-              RankedTensorType::get(outShape,
-                                    sourceShard.getType().getElementType()),
-              initOprnd, grid.getSymName(),
-              GridAxesArrayAttr::get(builder.getContext(),
-                                     sourceSharding.getSplitAxes()),
-              targetSharding.getDynamicHaloSizes(),
-              targetSharding.getStaticHaloSizes())
+      UpdateHaloOp::create(
+          builder, sourceShard.getLoc(),
+          RankedTensorType::get(outShape,
+                                sourceShard.getType().getElementType()),
+          initOprnd, grid.getSymName(),
+          GridAxesArrayAttr::get(builder.getContext(),
+                                 sourceSharding.getSplitAxes()),
+          targetSharding.getDynamicHaloSizes(),
+          targetSharding.getStaticHaloSizes())
           .getResult();
   return std::make_tuple(cast<TypedValue<ShapedType>>(updateHaloResult),
                          targetSharding);
