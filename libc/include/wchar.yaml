@@ -53,6 +53,12 @@ functions:
       - type: wchar_t *__restrict
       - type: const char *__restrict
       - type: size_t
+  - name: mbsinit
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: mbstate_t *
   - name: mblen
     standards:
       - stdc
