@@ -2508,7 +2508,6 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           .addReg(DstHi);
     }
     break;
-  }
 
   case AMDGPU::V_MAX_BF16_PSEUDO_e64:
     assert(ST.hasBF16PackedInsts());
