@@ -46,8 +46,8 @@ def ChangeCallTargetOp : Op<Transform_Dialect, "my.change_call_target",
   // We use a string attribute as the symbol may not exist in the transform IR so the 
   // verification may fail. 
   let arguments = (ins
-    // Specify the type constraint on the input accepting only `func.call` payload
-    // operations.
+    // Specify the type constraint on the input accepting `func.call` and `CallOpInterface`
+    // payload operations.
     AnyTypeOf<[Transform_ConcreteOpType<"func.call">, CallOpInterfaceHandle]>:$call,
     StrAttr:$new_target);
 
