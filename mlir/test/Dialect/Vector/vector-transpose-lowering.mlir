@@ -365,3 +365,66 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// CHECK-LABEL:   func.func @transpose_of_broadcast(
+// CHECK-SAME:      %[[ARG0:.*]]: vector<2xf32>) -> vector<2x32xf32> {
+// CHECK:           %[[VAL_0:.*]] = arith.constant dense<0.000000e+00> : vector<2x32xf32>
+// CHECK:           %[[VAL_1:.*]] = vector.shuffle %[[ARG0]], %[[ARG0]] [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] : vector<2xf32>, vector<2xf32>
+// CHECK:           %[[VAL_2:.*]] = vector.insert %[[VAL_1]], %[[VAL_0]] [0] : vector<32xf32> into vector<2x32xf32>
+// CHECK:           %[[VAL_3:.*]] = vector.shuffle %[[ARG0]], %[[ARG0]] [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] : vector<2xf32>, vector<2xf32>
+// CHECK:           %[[VAL_4:.*]] = vector.insert %[[VAL_3]], %[[VAL_2]] [1] : vector<32xf32> into vector<2x32xf32>
+// CHECK:           return %[[VAL_4]] : vector<2x32xf32>
+// CHECK:         }
+func.func @transpose_of_broadcast(%arg0 : vector<2xf32>) -> vector<2x32xf32> {
+  %b = vector.broadcast %arg0 : vector<2xf32> to vector<32x2xf32>
+  %t = vector.transpose %b, [1, 0] : vector<32x2xf32> to vector<2x32xf32>
+  return %t : vector<2x32xf32>
+}
+
+// CHECK-LABEL:   func.func @transpose_of_broadcast2(
+// CHECK-SAME:      %[[ARG0:.*]]: vector<4xf32>) -> vector<4x32xf32> {
+// CHECK:           %[[VAL_0:.*]] = arith.constant dense<0.000000e+00> : vector<4x32xf32>
+// CHECK:           %[[VAL_1:.*]] = vector.shuffle %[[ARG0]], %[[ARG0]] [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] : vector<4xf32>, vector<4xf32>
+// CHECK:           %[[VAL_2:.*]] = vector.insert %[[VAL_1]], %[[VAL_0]] [0] : vector<32xf32> into vector<4x32xf32>
+// CHECK:           %[[VAL_3:.*]] = vector.shuffle %[[ARG0]], %[[ARG0]] [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] : vector<4xf32>, vector<4xf32>
+// CHECK:           %[[VAL_4:.*]] = vector.insert %[[VAL_3]], %[[VAL_2]] [1] : vector<32xf32> into vector<4x32xf32>
+// CHECK:           %[[VAL_5:.*]] = vector.shuffle %[[ARG0]], %[[ARG0]] [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2] : vector<4xf32>, vector<4xf32>
+// CHECK:           %[[VAL_6:.*]] = vector.insert %[[VAL_5]], %[[VAL_4]] [2] : vector<32xf32> into vector<4x32xf32>
+// CHECK:           %[[VAL_7:.*]] = vector.shuffle %[[ARG0]], %[[ARG0]] [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3] : vector<4xf32>, vector<4xf32>
+// CHECK:           %[[VAL_8:.*]] = vector.insert %[[VAL_7]], %[[VAL_6]] [3] : vector<32xf32> into vector<4x32xf32>
+// CHECK:           return %[[VAL_8]] : vector<4x32xf32>
+// CHECK:         }
+func.func @transpose_of_broadcast2(%arg0 : vector<4xf32>) -> vector<4x32xf32> {
+  %b = vector.broadcast %arg0 : vector<4xf32> to vector<32x4xf32>
+  %t = vector.transpose %b, [1, 0] : vector<32x4xf32> to vector<4x32xf32>
+  return %t : vector<4x32xf32>
+}
+
+// CHECK-LABEL:   func.func @transpose_of_broadcast_odd_shape(
+// CHECK-SAME:      %[[ARG0:.*]]: vector<1x2xf32>) -> vector<2x1x32xf32> {
+// CHECK:           %[[VAL_0:.*]] = arith.constant dense<0.000000e+00> : vector<2x32xf32>
+// CHECK:           %[[VAL_1:.*]] = vector.shape_cast %[[ARG0]] : vector<1x2xf32> to vector<2xf32>
+// CHECK:           %[[VAL_2:.*]] = vector.shuffle %[[VAL_1]], %[[VAL_1]] [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] : vector<2xf32>, vector<2xf32>
+// CHECK:           %[[VAL_3:.*]] = vector.insert %[[VAL_2]], %[[VAL_0]] [0] : vector<32xf32> into vector<2x32xf32>
+// CHECK:           %[[VAL_4:.*]] = vector.shuffle %[[VAL_1]], %[[VAL_1]] [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] : vector<2xf32>, vector<2xf32>
+// CHECK:           %[[VAL_5:.*]] = vector.insert %[[VAL_4]], %[[VAL_3]] [1] : vector<32xf32> into vector<2x32xf32>
+// CHECK:           %[[VAL_6:.*]] = vector.shape_cast %[[VAL_5]] : vector<2x32xf32> to vector<2x1x32xf32>
+// CHECK:           return %[[VAL_6]] : vector<2x1x32xf32>
+// CHECK:         }
+func.func @transpose_of_broadcast_odd_shape(%arg0 : vector<1x2xf32>) -> vector<2x1x32xf32> {
+  %b = vector.broadcast %arg0 : vector<1x2xf32> to vector<32x1x2xf32>
+  %t = vector.transpose %b, [2, 1, 0] : vector<32x1x2xf32> to vector<2x1x32xf32>
+  return %t : vector<2x1x32xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.lower_transpose lowering_strategy = "shuffle_1d"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
+}
