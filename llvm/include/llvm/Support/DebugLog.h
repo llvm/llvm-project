@@ -29,7 +29,15 @@ namespace llvm {
 #define DEBUGLOG_WITH_STREAM_AND_TYPE(STREAM, TYPE)                            \
   for (bool _c = (::llvm::DebugFlag && ::llvm::isCurrentDebugType(TYPE)); _c;  \
        _c = false)                                                             \
-  ::llvm::impl::LogWithNewline(TYPE, __FILE__, __LINE__, (STREAM))
+  ::llvm::impl::LogWithNewline(                                                \
+      TYPE,                                                                    \
+      [] {                                                                     \
+        /* Force constexpr eval */                                             \
+        constexpr const char *filename =                                       \
+            ::llvm::impl::LogWithNewline::getFileName(__FILE__);               \
+        return filename;                                                       \
+      }(),                                                                     \
+      __LINE__, (STREAM))
 
 namespace impl {
 class LogWithNewline {
@@ -51,6 +59,16 @@ public:
   LogWithNewline(const LogWithNewline &) = delete;
   LogWithNewline &operator=(const LogWithNewline &) = delete;
   LogWithNewline &operator=(LogWithNewline &&) = delete;
+  static constexpr const char *getFileName(const char *path) {
+    // Remove the path prefix from the file name.
+    const char *filename = path;
+    for (const char *p = path; *p != '\0'; ++p) {
+      if (*p == '/' || *p == '\\') {
+        filename = p + 1;
+      }
+    }
+    return filename;
+  }
 
 private:
   raw_ostream &os;
