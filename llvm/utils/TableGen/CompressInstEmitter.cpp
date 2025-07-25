@@ -827,7 +827,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
                                            DestRec, "MCOperandPredicate");
             CondStream.indent(8)
                 << ValidatorName << "("
-                << "MCOperand::createImm(" << DestOperandMap[OpNo].Imm
+                << "MCOperand::createImm(" << DestOperandMap[OpNo].ImmVal
                 << "), STI, " << Entry << ") &&\n";
           } else {
             unsigned Entry =
