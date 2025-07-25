@@ -72,10 +72,15 @@ class SpecialCaseList {
 public:
   static constexpr std::pair<unsigned, unsigned> NotFound = {0, 0};
   /// Parses the special case list entries from files. On failure, returns
-  /// 0 and writes an error message to string.
+  /// std::pair Error, Error.first is error enum, Error.second is error message.
   LLVM_ABI static std::unique_ptr<SpecialCaseList>
   create(const std::vector<std::string> &Paths, llvm::vfs::FileSystem &FS,
          std::pair<unsigned, std::string> &Error);
+  /// Parses the special case list entries from files. On failure, returns
+  /// 0 and writes an error message to string.
+  LLVM_ABI static std::unique_ptr<SpecialCaseList>
+  create(const std::vector<std::string> &Paths, llvm::vfs::FileSystem &FS,
+         std::string &Error);
   /// Parses the special case list from a memory buffer. On failure, returns
   /// 0 and writes an error message to string.
   LLVM_ABI static std::unique_ptr<SpecialCaseList>

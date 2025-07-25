@@ -87,6 +87,20 @@ SpecialCaseList::create(const std::vector<std::string> &Paths,
   return nullptr;
 }
 
+std::unique_ptr<SpecialCaseList>
+SpecialCaseList::create(const std::vector<std::string> &Paths,
+                        llvm::vfs::FileSystem &FS, std::string &Error) {
+  std::pair<unsigned, std::string> Err;
+  std::unique_ptr<SpecialCaseList> SCL = create(Paths, FS, Err);
+  if (!SCL) {
+    assert(Err.first == 0 || Err.first == 1 && "Unexpected error kind");
+    const char *Prefix =
+        Err.first == 0 ? "can't open file " : "error parsing file ";
+    Error = (Twine(Prefix) + Err.second).str();
+  }
+  return SCL;
+}
+
 std::unique_ptr<SpecialCaseList> SpecialCaseList::create(const MemoryBuffer *MB,
                                                          std::string &Error) {
   std::unique_ptr<SpecialCaseList> SCL(new SpecialCaseList());
@@ -113,13 +127,13 @@ bool SpecialCaseList::createInternal(const std::vector<std::string> &Paths,
         VFS.getBufferForFile(Path);
     if (std::error_code EC = FileOrErr.getError()) {
       Error.first = 0 /* open failure */;
-      Error.second = (Twine(Path) + "': " + EC.message()).str();
+      Error.second = (Twine("'") + Path + "': " + EC.message()).str();
       return false;
     }
     std::string ParseError;
     if (!parse(i, FileOrErr.get().get(), ParseError)) {
       Error.first = 1 /* parse failure */;
-      Error.second = (Twine(Path) + "': " + ParseError).str();
+      Error.second = (Twine("'") + Path + "': " + ParseError).str();
       return false;
     }
   }
