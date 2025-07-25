@@ -20,7 +20,7 @@ define void @zext_postinc_constant_start(ptr %A) {
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ugt i64 [[INDVARS_IV_NEXT]], 6
+; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 6
 ; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -51,7 +51,7 @@ define void @zext_preinc_constant_start(ptr %A) {
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ugt i64 [[INDVARS_IV]], 6
+; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 5
 ; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -119,13 +119,16 @@ define void @zext_preinc(ptr %A, i32 %start) {
 ; CHECK-NEXT:    br i1 [[NONPOS]], label [[EXIT:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[START]] to i64
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[START:%.*]], i32 6)
+; CHECK-NEXT:    [[UMIN_1:%.*]] = add nsw i32 [[UMIN]], -1
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
-; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ugt i64 [[INDVARS_IV]], 6
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ne i32 [[TRUNC]], [[UMIN_1]]
 ; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -158,7 +161,7 @@ define void @sext_postinc_constant_start(ptr %A) {
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ugt i64 [[INDVARS_IV_NEXT]], 6
+; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 6
 ; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -189,7 +192,7 @@ define void @sext_preinc_constant_start(ptr %A) {
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ugt i64 [[INDVARS_IV]], 6
+; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 5
 ; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -300,7 +303,7 @@ define void @zext_postinc_constant_start_offset_constant_one(ptr %A) {
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ugt i64 [[INDVARS_IV_NEXT]], 6
+; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 6
 ; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -333,7 +336,7 @@ define void @zext_preinc_constant_start_offset_constant_one(ptr %A) {
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ugt i64 [[INDVARS_IV]], 6
+; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 5
 ; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -406,14 +409,17 @@ define void @zext_preinc_offset_constant_one(ptr %A, i32 %start) {
 ; CHECK-NEXT:    br i1 [[NONPOS]], label [[EXIT:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[START]] to i64
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[START:%.*]], i32 6)
+; CHECK-NEXT:    [[UMIN_1:%.*]] = add nsw i32 [[UMIN]], -1
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
-; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ugt i64 [[INDVARS_IV]], 6
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ne i32 [[TRUNC]], [[UMIN_1]]
 ; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -448,7 +454,7 @@ define void @sext_postinc_constant_start_offset_constant_one(ptr %A) {
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ugt i64 [[INDVARS_IV_NEXT]], 6
+; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 6
 ; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -481,7 +487,7 @@ define void @sext_preinc_constant_start_offset_constant_one(ptr %A) {
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ugt i64 [[INDVARS_IV]], 6
+; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 5
 ; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -600,7 +606,7 @@ define void @zext_postinc_constant_start_offset_constant_minus_one(ptr %A) {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
-; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ugt i64 [[INDVARS_IV_NEXT]], 6
+; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 6
 ; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -632,7 +638,7 @@ define void @zext_preinc_constant_start_offset_constant_minus_one(ptr %A) {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
-; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ugt i64 [[INDVARS_IV]], 6
+; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 5
 ; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -703,14 +709,17 @@ define void @zext_preinc_offset_constant_minus_one(ptr %A, i32 %start) {
 ; CHECK-NEXT:    br i1 [[NONPOS]], label [[EXIT:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[START]] to i64
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[START:%.*]], i32 6)
+; CHECK-NEXT:    [[UMIN_1:%.*]] = add nsw i32 [[UMIN]], -1
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
-; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ugt i64 [[INDVARS_IV]], 6
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ne i32 [[TRUNC]], [[UMIN_1]]
 ; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -744,7 +753,7 @@ define void @sext_postinc_constant_start_offset_constant_minus_one(ptr %A) {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
-; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ugt i64 [[INDVARS_IV_NEXT]], 6
+; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 6
 ; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -776,7 +785,7 @@ define void @sext_preinc_constant_start_offset_constant_minus_one(ptr %A) {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    tail call void @use_ptr(ptr [[ARRAYIDX_US]])
-; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ugt i64 [[INDVARS_IV]], 6
+; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 5
 ; CHECK-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
