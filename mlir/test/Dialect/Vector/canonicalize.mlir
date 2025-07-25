@@ -1179,7 +1179,7 @@ func.func @canonicalize_shapecast_broadcast_to_broadcast(%arg0 : vector<2xf32>) 
 
 // -----
 
-// CHECK-LABEL: func @canonicalize_shapecast_broadcast_invalid_shape
+// CHECK-LABEL: func @negative_canonicalize_shapecast_broadcast_invalid_shape
 //       CHECK:   vector.shape_cast {{.+}} : vector<64xf32> to vector<4x16xf32
 //       CHECK:   vector.broadcast {{.+}} : vector<4x16xf32> to vector<2x4x16xf32>
 func.func @negative_canonicalize_shapecast_broadcast_invalid_shape(%arg0 : vector<64xf32>) -> vector<2x4x16xf32> {
