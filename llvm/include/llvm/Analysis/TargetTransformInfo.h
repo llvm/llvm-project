@@ -495,6 +495,9 @@ public:
 
   LLVM_ABI bool isNoopAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;
 
+  LLVM_ABI KnownBits computeKnownBitsAddrSpaceCast(unsigned FromAS,
+                                                   unsigned ToAS) const;
+
   /// Return true if globals in this address space can have initializers other
   /// than `undef`.
   LLVM_ABI bool
