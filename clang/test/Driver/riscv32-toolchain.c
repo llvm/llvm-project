@@ -247,6 +247,19 @@
 // RUN:   | FileCheck -check-prefix=CHECK-RV32-GNU-RELAX %s
 // CHECK-RV32-GNU-RELAX-NOT: "--no-relax"
 
+// Check that "-static -pie" is forwarded to linker when "-static-pie" is used
+// RUN: %clang -static-pie -### %s -fuse-ld= \
+// RUN:   --target=riscv32-unknown-elf -rtlib=platform --unwindlib=platform \
+// RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree \
+// RUN:   --sysroot=%S/Inputs/basic_riscv32_tree/riscv32-unknown-elf 2>&1 \
+// RUN:   | FileCheck -check-prefix=C-RV32-STATIC-PIE %s
+
+// C-RV32-STATIC-PIE: "-Bstatic" "-pie" "--no-dynamic-linker" "-z" "text" "-m" "elf32lriscv" "-X"
+// C-RV32-STATIC-PIE: "{{.*}}rcrt1.o"
+// C-RV32-STATIC-PIE: "{{.*}}crtbeginS.o"
+// C-RV32-STATIC-PIE: "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
+// C-RV32-STATIC-PIE: "{{.*}}crtendS.o"
+
 typedef __builtin_va_list va_list;
 typedef __SIZE_TYPE__ size_t;
 typedef __PTRDIFF_TYPE__ ptrdiff_t;

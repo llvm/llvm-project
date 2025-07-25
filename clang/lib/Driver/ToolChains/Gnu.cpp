@@ -219,18 +219,6 @@ void tools::gcc::Linker::RenderExtraToolArgs(const JobAction &JA,
   // The types are (hopefully) good enough.
 }
 
-static bool getStaticPIE(const ArgList &Args, const ToolChain &TC) {
-  bool HasStaticPIE = Args.hasArg(options::OPT_static_pie);
-  if (HasStaticPIE && Args.hasArg(options::OPT_no_pie)) {
-    const Driver &D = TC.getDriver();
-    const llvm::opt::OptTable &Opts = D.getOpts();
-    StringRef StaticPIEName = Opts.getOptionName(options::OPT_static_pie);
-    StringRef NoPIEName = Opts.getOptionName(options::OPT_nopie);
-    D.Diag(diag::err_drv_cannot_mix_options) << StaticPIEName << NoPIEName;
-  }
-  return HasStaticPIE;
-}
-
 static bool getStatic(const ArgList &Args) {
   return Args.hasArg(options::OPT_static) &&
       !Args.hasArg(options::OPT_static_pie);
