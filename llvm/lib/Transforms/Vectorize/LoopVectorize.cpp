@@ -1359,9 +1359,7 @@ public:
       return;
     // Override EVL styles if needed.
     // FIXME: Investigate opportunity for fixed vector factor.
-    // FIXME: Support interleave accesses.
     bool EVLIsLegal = UserIC <= 1 && IsScalableVF &&
-                      !InterleaveInfo.hasGroups() &&
                       TTI.hasActiveVectorLength() && !EnableVPlanNativePath;
     if (EVLIsLegal)
       return;
