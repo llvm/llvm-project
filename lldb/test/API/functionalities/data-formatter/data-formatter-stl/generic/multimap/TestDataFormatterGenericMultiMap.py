@@ -9,9 +9,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-USE_LIBSTDCPP = "USE_LIBSTDCPP"
-USE_LIBCPP = "USE_LIBCPP"
-
 
 class GenericMultiMapDataFormatterTestCase(TestBase):
     def setUp(self):
@@ -38,9 +35,8 @@ class GenericMultiMapDataFormatterTestCase(TestBase):
             var_name, type=self.getVariableType(var_name), children=children
         )
 
-    def do_test_with_run_command(self, stdlib_type):
+    def do_test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
-        self.build(dictionary={stdlib_type: "1"})
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         bkpt = self.target().FindBreakpointByID(
@@ -331,9 +327,17 @@ class GenericMultiMapDataFormatterTestCase(TestBase):
     @add_test_categories(["libstdcxx"])
     @skipIf(compiler="clang", compiler_version=["<", "9.0"])
     def test_with_run_command_libstdcpp(self):
-        self.do_test_with_run_command(USE_LIBSTDCPP)
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test_with_run_command()
 
     @skipIf(compiler="clang", compiler_version=["<", "9.0"])
     @add_test_categories(["libc++"])
     def test_with_run_command_libcpp(self):
-        self.do_test_with_run_command(USE_LIBCPP)
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_with_run_command()
+
+    @add_test_categories(["msvcstl"])
+    def test_with_run_command_msvcstl(self):
+        # No flags, because the "msvcstl" category checks that the MSVC STL is used by default.
+        self.build()
+        self.do_test_with_run_command()

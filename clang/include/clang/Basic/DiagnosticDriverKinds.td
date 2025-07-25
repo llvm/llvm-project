@@ -116,6 +116,8 @@ def err_drv_cuda_host_arch : Error<
   "unsupported architecture '%0' for host compilation">;
 def err_drv_mix_cuda_hip : Error<
   "mixed CUDA and HIP compilation is not supported">;
+def err_drv_mix_offload : Error<
+  "mixed %0 and %1 offloading compilation is not supported">;
 def err_drv_bad_target_id : Error<
   "invalid target ID '%0'; format is a processor name followed by an optional "
   "colon-delimited list of features followed by an enable/disable sign (e.g., "
@@ -250,13 +252,13 @@ def err_drv_invalid_argument_to_option : Error<
 def err_drv_missing_sanitizer_ignorelist : Error<
   "missing sanitizer ignorelist: '%0'">;
 def err_drv_malformed_sanitizer_ignorelist : Error<
-  "malformed sanitizer ignorelist: '%0'">;
+  "failed to %select{load|parse}0 malformed sanitizer ignorelist: '%1'">;
 def err_drv_malformed_sanitizer_coverage_allowlist : Error<
-  "malformed sanitizer coverage allowlist: '%0'">;
+  "failed to %select{load|parse}0 malformed sanitizer coverage allowlist: '%1'">;
 def err_drv_malformed_sanitizer_coverage_ignorelist : Error<
-  "malformed sanitizer coverage ignorelist: '%0'">;
+  "failed to %select{load|parse}0 malformed sanitizer coverage ignorelist: '%1'">;
 def err_drv_malformed_sanitizer_metadata_ignorelist : Error<
-  "malformed sanitizer metadata ignorelist: '%0'">;
+  "failed to %select{load|parse}0 malformed sanitizer metadata ignorelist: '%1'">;
 def err_drv_unsupported_static_sanitizer_darwin : Error<
   "static %0 runtime is not supported on darwin">;
 def err_drv_duplicate_config : Error<

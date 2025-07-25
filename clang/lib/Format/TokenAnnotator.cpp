@@ -2996,14 +2996,18 @@ private:
     const FormatToken *PrevToken = Tok.getPreviousNonComment();
     if (!PrevToken)
       return TT_UnaryOperator;
-    if (PrevToken->is(TT_TypeName))
+    if (PrevToken->isTypeName(LangOpts))
       return TT_PointerOrReference;
     if (PrevToken->isPlacementOperator() && Tok.is(tok::ampamp))
       return TT_BinaryOperator;
 
-    const FormatToken *NextToken = Tok.getNextNonComment();
+    auto *NextToken = Tok.getNextNonComment();
     if (!NextToken)
       return TT_PointerOrReference;
+    if (NextToken->is(tok::greater)) {
+      NextToken->setFinalizedType(TT_TemplateCloser);
+      return TT_PointerOrReference;
+    }
 
     if (InTemplateArgument && NextToken->is(tok::kw_noexcept))
       return TT_BinaryOperator;
@@ -3112,7 +3116,7 @@ private:
 
     // It's more likely that & represents operator& than an uninitialized
     // reference.
-    if (Tok.is(tok::amp) && PrevToken && PrevToken->Tok.isAnyIdentifier() &&
+    if (Tok.is(tok::amp) && PrevToken->Tok.isAnyIdentifier() &&
         IsChainedOperatorAmpOrMember(PrevToken->getPreviousNonComment()) &&
         NextToken && NextToken->Tok.isAnyIdentifier()) {
       if (auto NextNext = NextToken->getNextNonComment();
@@ -5474,7 +5478,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Left.TokenText == "!")
       return Style.SpaceAfterLogicalNot;
     assert(Left.TokenText == "not");
-    return Right.isOneOf(tok::coloncolon, TT_UnaryOperator);
+    return Right.isOneOf(tok::coloncolon, TT_UnaryOperator) ||
+           (Right.is(tok::l_paren) && Style.SpaceBeforeParensOptions.AfterNot);
   }
 
   // If the next token is a binary operator or a selector name, we have

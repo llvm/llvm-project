@@ -593,7 +593,7 @@ public:
         getContext().reportError(Loc, "relocated expression must be 32-bit");
         return;
       }
-      getOrCreateDataFragment();
+      getCurrentFragment();
     }
 
     emitDataMappingSymbol();
@@ -707,8 +707,6 @@ private:
                          SectionKind Kind, const MCSymbol &Fn);
   void SwitchToExTabSection(const MCSymbol &FnStart);
   void SwitchToExIdxSection(const MCSymbol &FnStart);
-
-  void EmitFixup(const MCExpr *Expr, MCFixupKind Kind);
 
   bool IsThumb;
   bool IsAndroid;
@@ -1096,8 +1094,8 @@ void ARMTargetELFStreamer::emitLabel(MCSymbol *Symbol) {
 }
 
 void ARMTargetELFStreamer::annotateTLSDescriptorSequence(
-    const MCSymbolRefExpr *S) {
-  getStreamer().EmitFixup(S, FK_Data_4);
+    const MCSymbolRefExpr *Expr) {
+  getStreamer().addFixup(Expr, FK_Data_4);
 }
 
 void ARMTargetELFStreamer::emitCode16() { getStreamer().setIsThumb(true); }
@@ -1206,11 +1204,6 @@ inline void ARMELFStreamer::SwitchToExIdxSection(const MCSymbol &FnStart) {
                     SectionKind::getData(), FnStart);
 }
 
-void ARMELFStreamer::EmitFixup(const MCExpr *Expr, MCFixupKind Kind) {
-  MCFragment *Frag = getOrCreateDataFragment();
-  Frag->addFixup(MCFixup::create(Frag->getContents().size(), Expr, Kind));
-}
-
 void ARMELFStreamer::EHReset() {
   ExTab = nullptr;
   FnStart = nullptr;
@@ -1295,7 +1288,7 @@ void ARMELFStreamer::EmitPersonalityFixup(StringRef Name) {
       MCSymbolRefExpr::create(PersonalitySym, ARM::S_ARM_NONE, getContext());
 
   visitUsedExpr(*PersonalityRef);
-  MCFragment *DF = getOrCreateDataFragment();
+  MCFragment *DF = getCurrentFragment();
   DF->addFixup(
       MCFixup::create(DF->getContents().size(), PersonalityRef, FK_Data_4));
 }
