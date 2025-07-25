@@ -1716,19 +1716,14 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
     TargetOcc = std::nullopt;
   } else {
     // There is no spilling and room to improve occupancy; set up "increased
-    // occupancy targets" for all regions. We further restrict the SGPR/VGPR
-    // limits for increasing occupancy by the "spilling limits" since the latter
-    // may end up smaller due to "amdgpu-num-sgpr" / "amdgpu-num-vgpr"
-    // attributes.
+    // occupancy targets" for all regions.
     TargetOcc = DAG.MinOccupancy + 1;
     unsigned VGPRBlockSize =
         MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
-    MaxSGPRs = std::min(MaxSGPRs, ST.getMaxNumSGPRs(*TargetOcc, false));
-    MaxVGPRs = std::min(MaxVGPRs, ST.getMaxNumVGPRs(*TargetOcc, VGPRBlockSize));
+    MaxSGPRs = ST.getMaxNumSGPRs(*TargetOcc, false);
+    MaxVGPRs = ST.getMaxNumVGPRs(*TargetOcc, VGPRBlockSize);
     ResetTargetRegions();
-    assert(!OptRegions.empty() && "there should be at least one target region");
   }
-
   REMAT_DEBUG({
     dbgs() << "Analyzing ";
     MF.getFunction().printAsOperand(dbgs(), false);
