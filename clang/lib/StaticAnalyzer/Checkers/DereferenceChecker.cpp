@@ -177,6 +177,8 @@ void DereferenceChecker::reportBug(const DerefBugType &BT,
                                    CheckerContext &C) const {
   if (&BT == &FixedAddressBug) {
     if (!FixedDerefChecker.isEnabled())
+      // Deliberately don't add a sink node if check is disabled.
+      // This situation may be valid in special cases.
       return;
   } else {
     if (!NullDerefChecker.isEnabled()) {
