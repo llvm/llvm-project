@@ -7036,6 +7036,8 @@ private:
       Bits |= OpenMPOffloadMappingFlags::OMP_MAP_PRESENT;
     if (llvm::is_contained(MapModifiers, OMPC_MAP_MODIFIER_ompx_hold))
       Bits |= OpenMPOffloadMappingFlags::OMP_MAP_OMPX_HOLD;
+    if (llvm::is_contained(MapModifiers, OMPC_MAP_MODIFIER_self))
+      Bits |= OpenMPOffloadMappingFlags::OMP_MAP_SELF;
     if (IsNonContiguous)
       Bits |= OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG;
     return Bits;
@@ -10209,7 +10211,8 @@ void CGOpenMPRuntime::adjustTargetSpecificDataForLambdas(
 
 void CGOpenMPRuntime::processRequiresDirective(const OMPRequiresDecl *D) {
   for (const OMPClause *Clause : D->clauselists()) {
-    if (Clause->getClauseKind() == OMPC_unified_shared_memory) {
+    if (Clause->getClauseKind() == OMPC_unified_shared_memory ||
+        Clause->getClauseKind() == OMPC_self_maps) {
       HasRequiresUnifiedSharedMemory = true;
       OMPBuilder.Config.setHasRequiresUnifiedSharedMemory(true);
     } else if (const auto *AC =
