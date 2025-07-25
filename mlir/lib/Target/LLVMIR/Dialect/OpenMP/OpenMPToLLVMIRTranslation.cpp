@@ -3359,12 +3359,8 @@ getDeclareTargetRefPtrSuffix(LLVM::GlobalOp globalOp,
   return suffix;
 }
 
-static bool isDeclareTargetLink(Value value) {
-  Operation *op = value.getDefiningOp();
-  if (auto addrCast = llvm::dyn_cast_if_present<LLVM::AddrSpaceCastOp>(op))
-    op = addrCast->getOperand(0).getDefiningOp();
-
-  if (auto addressOfOp = llvm::dyn_cast_if_present<LLVM::AddressOfOp>(op)) {
+static bool isDeclareTargetLink(mlir::Value value) {
+  if (auto addressOfOp = value.getDefiningOp<LLVM::AddressOfOp>()) {
     auto modOp = addressOfOp->getParentOfType<mlir::ModuleOp>();
     Operation *gOp = modOp.lookupSymbol(addressOfOp.getGlobalName());
     if (auto declareTargetGlobal =
@@ -4560,8 +4556,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
               ifCond = moduleTranslation.lookupValue(ifVar);
 
             if (auto devId = dataOp.getDevice())
-              if (auto constOp =
-                      dyn_cast<LLVM::ConstantOp>(devId.getDefiningOp()))
+              if (auto constOp = devId.getDefiningOp<LLVM::ConstantOp>())
                 if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
                   deviceID = intAttr.getInt();
 
@@ -4578,8 +4573,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
               ifCond = moduleTranslation.lookupValue(ifVar);
 
             if (auto devId = enterDataOp.getDevice())
-              if (auto constOp =
-                      dyn_cast<LLVM::ConstantOp>(devId.getDefiningOp()))
+              if (auto constOp = devId.getDefiningOp<LLVM::ConstantOp>())
                 if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
                   deviceID = intAttr.getInt();
             RTLFn =
@@ -4598,8 +4592,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
               ifCond = moduleTranslation.lookupValue(ifVar);
 
             if (auto devId = exitDataOp.getDevice())
-              if (auto constOp =
-                      dyn_cast<LLVM::ConstantOp>(devId.getDefiningOp()))
+              if (auto constOp = devId.getDefiningOp<LLVM::ConstantOp>())
                 if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
                   deviceID = intAttr.getInt();
 
@@ -4618,8 +4611,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
               ifCond = moduleTranslation.lookupValue(ifVar);
 
             if (auto devId = updateDataOp.getDevice())
-              if (auto constOp =
-                      dyn_cast<LLVM::ConstantOp>(devId.getDefiningOp()))
+              if (auto constOp = devId.getDefiningOp<LLVM::ConstantOp>())
                 if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
                   deviceID = intAttr.getInt();
 
@@ -5277,8 +5269,7 @@ static std::optional<int64_t> extractConstInteger(Value value) {
   if (!value)
     return std::nullopt;
 
-  if (auto constOp =
-          dyn_cast_if_present<LLVM::ConstantOp>(value.getDefiningOp()))
+  if (auto constOp = value.getDefiningOp<LLVM::ConstantOp>())
     if (auto constAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
       return constAttr.getInt();
 

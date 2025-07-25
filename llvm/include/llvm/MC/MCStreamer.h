@@ -438,7 +438,7 @@ public:
     assert(!CurFrag || CurFrag->getKind() == MCFragment::FT_Data);
     return CurFrag;
   }
-  size_t getCurFragOffset() const { return getCurrentFragment()->Offset; }
+  size_t getCurFragSize() const { return getCurrentFragment()->getFixedSize(); }
   /// Save the current and previous section on the section stack.
   void pushSection() {
     SectionStack.push_back(
