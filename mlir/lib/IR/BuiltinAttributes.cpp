@@ -1241,8 +1241,10 @@ ArrayRef<StringRef> DenseElementsAttr::getRawStringData() const {
 /// Return a new DenseElementsAttr that has the same data as the current
 /// attribute, but has been reshaped to 'newType'. The new type must have the
 /// same total number of elements as well as element type.
-DenseElementsAttr DenseElementsAttr::reshape(ShapedType newType) {
+DenseElementsAttr DenseElementsAttr::reshape(ArrayRef<int64_t> newShape) {
+
   ShapedType curType = getType();
+  auto newType = curType.cloneWith(newShape, curType.getElementType());
   if (curType == newType)
     return *this;
 

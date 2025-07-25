@@ -6029,12 +6029,11 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
   // shape_cast(constant) -> constant
   if (auto splatAttr =
           llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource()))
-    return splatAttr.reshape(getType());
+    return splatAttr.reshape(getType().getShape());
 
   // shape_cast(poison) -> poison
-  if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getSource())) {
+  if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getSource()))
     return ub::PoisonAttr::get(getContext());
-  }
 
   return {};
 }
@@ -6375,7 +6374,8 @@ OpFoldResult vector::TransposeOp::fold(FoldAdaptor adaptor) {
   // Eliminate splat constant transpose ops.
   if (auto splat =
           llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getVector()))
-    return splat.reshape(getResultVectorType());
+    return DenseElementsAttr::get(getResultVectorType(),
+                                  splat.getSplatValue<Attribute>());
 
   // Eliminate poison transpose ops.
   if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getVector()))
