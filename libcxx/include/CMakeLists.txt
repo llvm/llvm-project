@@ -740,6 +740,10 @@ set(files
   __ranges/views.h
   __ranges/zip_transform_view.h
   __ranges/zip_view.h
+  __simd/abi.h
+  __simd/basic_simd.h
+  __simd/basic_simd_mask.h
+  __simd/simd_flags.h
   __split_buffer
   __std_mbstate_t.h
   __stop_token/atomic_unique_lock.h
@@ -886,6 +890,7 @@ set(files
   __type_traits/maybe_const.h
   __type_traits/nat.h
   __type_traits/negation.h
+  __type_traits/pack_utils.h
   __type_traits/promote.h
   __type_traits/rank.h
   __type_traits/reference_constructs_from_temporary.h
@@ -900,6 +905,7 @@ set(files
   __type_traits/remove_reference.h
   __type_traits/remove_volatile.h
   __type_traits/result_of.h
+  __type_traits/standard_types.h
   __type_traits/strip_signature.h
   __type_traits/type_identity.h
   __type_traits/type_list.h
@@ -1055,6 +1061,7 @@ set(files
   semaphore
   set
   shared_mutex
+  simd
   source_location
   span
   sstream
