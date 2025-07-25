@@ -432,21 +432,18 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
             bestEnd = field;
             bestClipped = false;
           }
-          if (barrier) {
+          if (barrier)
             // The next field is a barrier that we cannot merge across.
             installBest = true;
-          } else if (cirGenTypes.getCGModule()
-                         .getCodeGenOpts()
-                         .FineGrainedBitfieldAccesses) {
-            assert(!cir::MissingFeatures::nonFineGrainedBitfields());
-            cirGenTypes.getCGModule().errorNYI(field->getSourceRange(),
-                                               "NYI FineGrainedBitfield");
-          } else {
+          else if (cirGenTypes.getCGModule()
+                       .getCodeGenOpts()
+                       .FineGrainedBitfieldAccesses)
+            installBest = true;
+          else
             // Otherwise, we're not installing. Update the bit size
             // of the current span to go all the way to limitOffset, which is
             // the (aligned) offset of next bitfield to consider.
             bitSizeSinceBegin = astContext.toBits(limitOffset - beginOffset);
-          }
         }
       }
     }
