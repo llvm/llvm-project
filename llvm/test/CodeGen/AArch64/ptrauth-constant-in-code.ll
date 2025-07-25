@@ -69,6 +69,172 @@ define ptr @foo() {
   ret ptr ptrauth (ptr @g, i32 0)
 }
 
+;--- finalize-isel.ll
+
+; RUN: llc < finalize-isel.ll -mtriple aarch64-elf -mattr=+pauth -global-isel=0 \
+; RUN:   -verify-machineinstrs -stop-after=finalize-isel | FileCheck --check-prefixes=ISEL-MIR,ISEL-MIR-ELF %s
+; RUN: llc < finalize-isel.ll -mtriple arm64-apple-ios -mattr=+pauth -global-isel=0 \
+; RUN:   -verify-machineinstrs -stop-after=finalize-isel | FileCheck --check-prefixes=ISEL-MIR %s
+; RUN: llc < finalize-isel.ll -mtriple aarch64-elf -mattr=+pauth -global-isel=0 \
+; RUN:   -verify-machineinstrs -asm-verbose=0 | FileCheck --check-prefixes=ISEL-ASM,ISEL-ASM-ELF %s
+; RUN: llc < finalize-isel.ll -mtriple arm64-apple-ios -mattr=+pauth -global-isel=0 \
+; RUN:   -verify-machineinstrs -asm-verbose=0 | FileCheck --check-prefixes=ISEL-ASM,ISEL-ASM-MACHO %s
+
+@const_table_local = dso_local constant [3 x ptr] [ptr null, ptr null, ptr null]
+@const_table_got = constant [3 x ptr] [ptr null, ptr null, ptr null]
+
+; Test that after post-processing in finalize-isel, MOVaddrPAC (or LOADgotPAC,
+; respectively) has both $AddrDisc and $Disc operands set. MOVaddr (or LOADgotAUTH,
+; respectively) and MOVKXi are not used anymore and are dead-code-eliminated
+; by the later passes.
+
+define void @store_signed_const_local(ptr %dest) {
+; ISEL-MIR-LABEL: name: store_signed_const_local
+; ISEL-MIR:       body:
+; ISEL-MIR:         %0:gpr64common = COPY $x0
+; ISEL-MIR-NEXT:    %1:gpr64noip = MOVKXi %0, 1234, 48
+; ISEL-MIR-NEXT:    %2:gpr64common = MOVaddr target-flags(aarch64-page) @const_table_local + 8, target-flags(aarch64-pageoff, aarch64-nc) @const_table_local + 8
+; ISEL-MIR-NEXT:    %4:gpr64noip = COPY %0
+; ISEL-MIR-NEXT:    MOVaddrPAC @const_table_local + 8, 2, %4, 1234, implicit-def $x16, implicit-def $x17
+; ISEL-MIR-NEXT:    %3:gpr64 = COPY $x16
+; ISEL-MIR-NEXT:    STRXui killed %3, %0, 0 :: (store (s64) into %ir.dest)
+; ISEL-MIR-NEXT:    RET_ReallyLR
+;
+; ISEL-ASM-LABEL: store_signed_const_local:
+; ISEL-ASM-NEXT:    .cfi_startproc
+; ISEL-ASM-ELF-NEXT:   adrp    x16, const_table_local
+; ISEL-ASM-ELF-NEXT:   add     x16, x16, :lo12:const_table_local
+; ISEL-ASM-MACHO-NEXT: adrp    x16, _const_table_local@PAGE
+; ISEL-ASM-MACHO-NEXT: add     x16, x16, _const_table_local@PAGEOFF
+; ISEL-ASM-NEXT:    add     x16, x16, #8
+; ISEL-ASM-NEXT:    mov     x17, x0
+; ISEL-ASM-NEXT:    movk    x17, #1234, lsl #48
+; ISEL-ASM-NEXT:    pacda   x16, x17
+; ISEL-ASM-NEXT:    str     x16, [x0]
+; ISEL-ASM-NEXT:    ret
+  %dest.i = ptrtoint ptr %dest to i64
+  %discr = call i64 @llvm.ptrauth.blend(i64 %dest.i, i64 1234)
+  %signed.i = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr getelementptr ([2 x ptr], ptr @const_table_local, i32 0, i32 1) to i64), i32 2, i64 %discr)
+  %signed.ptr = inttoptr i64 %signed.i to ptr
+  store ptr %signed.ptr, ptr %dest
+  ret void
+}
+
+define void @store_signed_const_got(ptr %dest) {
+; ISEL-MIR-ELF-LABEL: name: store_signed_const_got
+; ISEL-MIR-ELF:       body:
+; ISEL-MIR-ELF:         %0:gpr64common = COPY $x0
+; ISEL-MIR-ELF-NEXT:    %1:gpr64noip = MOVKXi %0, 1234, 48
+; ISEL-MIR-ELF-NEXT:    %2:gpr64common = LOADgot target-flags(aarch64-got) @const_table_got
+; ISEL-MIR-ELF-NEXT:    %3:gpr64common = ADDXri killed %2, 8, 0
+; ISEL-MIR-ELF-NEXT:    %5:gpr64noip = COPY %0
+; ISEL-MIR-ELF-NEXT:    LOADgotPAC target-flags(aarch64-got) @const_table_got + 8, 2, %5, 1234, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
+; ISEL-MIR-ELF-NEXT:    %4:gpr64 = COPY $x16
+; ISEL-MIR-ELF-NEXT:    STRXui killed %4, %0, 0 :: (store (s64) into %ir.dest)
+; ISEL-MIR-ELF-NEXT:    RET_ReallyLR
+;
+; ISEL-ASM-ELF-LABEL: store_signed_const_got:
+; ISEL-ASM-ELF-NEXT:    .cfi_startproc
+; ISEL-ASM-ELF-NEXT:    adrp    x16, :got:const_table_got
+; ISEL-ASM-ELF-NEXT:    ldr     x16, [x16, :got_lo12:const_table_got]
+; ISEL-ASM-ELF-NEXT:    add     x16, x16, #8
+; ISEL-ASM-ELF-NEXT:    mov     x17, x0
+; ISEL-ASM-ELF-NEXT:    movk    x17, #1234, lsl #48
+; ISEL-ASM-ELF-NEXT:    pacda   x16, x17
+; ISEL-ASM-ELF-NEXT:    str     x16, [x0]
+; ISEL-ASM-ELF-NEXT:    ret
+  %dest.i = ptrtoint ptr %dest to i64
+  %discr = call i64 @llvm.ptrauth.blend(i64 %dest.i, i64 1234)
+  %signed.i = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr getelementptr ([2 x ptr], ptr @const_table_got, i32 0, i32 1) to i64), i32 2, i64 %discr)
+  %signed.ptr = inttoptr i64 %signed.i to ptr
+  store ptr %signed.ptr, ptr %dest
+  ret void
+}
+
+define void @store_signed_arg(ptr %dest, ptr %p) {
+; ISEL-MIR-LABEL: name: store_signed_arg
+; ISEL-MIR:       body:
+; ISEL-MIR:         %1:gpr64common = COPY $x1
+; ISEL-MIR-NEXT:    %0:gpr64common = COPY $x0
+; ISEL-MIR-NEXT:    %2:gpr64noip = MOVKXi %0, 1234, 48
+; ISEL-MIR-NEXT:    %3:gpr64common = ADDXri %1, 8, 0
+; ISEL-MIR-NEXT:    %5:gpr64noip = COPY %0
+; ISEL-MIR-NEXT:    %4:gpr64 = PAC %3, 2, 1234, killed %5, implicit-def dead $x16, implicit-def dead $x17
+; ISEL-MIR-NEXT:    STRXui killed %4, %0, 0 :: (store (s64) into %ir.dest)
+; ISEL-MIR-NEXT:    RET_ReallyLR
+;
+; ISEL-ASM-LABEL: store_signed_arg:
+; ISEL-ASM-NEXT:    .cfi_startproc
+; ISEL-ASM-NEXT:    add     x8, x1, #8
+; ISEL-ASM-NEXT:    mov     x16, x0
+; ISEL-ASM-NEXT:    movk    x16, #1234, lsl #48
+; ISEL-ASM-NEXT:    pacda   x8, x16
+; ISEL-ASM-NEXT:    str     x8, [x0]
+; ISEL-ASM-NEXT:    ret
+  %dest.i = ptrtoint ptr %dest to i64
+  %discr = call i64 @llvm.ptrauth.blend(i64 %dest.i, i64 1234)
+  %p.offset = getelementptr [2 x ptr], ptr %p, i32 0, i32 1
+  %p.offset.i = ptrtoint ptr %p.offset to i64
+  %signed.i = call i64 @llvm.ptrauth.sign(i64 %p.offset.i, i32 2, i64 %discr)
+  %signed.ptr = inttoptr i64 %signed.i to ptr
+  store ptr %signed.ptr, ptr %dest
+  ret void
+}
+
+;--- finalize-isel-elf-got.ll
+
+; RUN: llc < finalize-isel-elf-got.ll -mtriple aarch64-elf -mattr=+pauth -global-isel=0 \
+; RUN:   -verify-machineinstrs -stop-after=finalize-isel | FileCheck --check-prefixes=ISEL-ELF-GOT-MIR %s
+; RUN: llc < finalize-isel-elf-got.ll -mtriple aarch64-elf -mattr=+pauth -global-isel=0 \
+; RUN:   -verify-machineinstrs -asm-verbose=0 | FileCheck --check-prefixes=ISEL-ELF-GOT-ASM %s
+
+@const_table_got = constant [3 x ptr] [ptr null, ptr null, ptr null]
+
+; Similar to finalize-isel.ll, but tests conversion of LOADgotAUTH to LOADgotPAC.
+; This requires module-level attribute, thus a separate sub-file.
+
+define void @store_signed_const_got(ptr %dest) {
+; ISEL-ELF-GOT-MIR-LABEL: name: store_signed_const_got
+; ISEL-ELF-GOT-MIR:       body:
+; ISEL-ELF-GOT-MIR:         %0:gpr64common = COPY $x0
+; ISEL-ELF-GOT-MIR-NEXT:    %1:gpr64noip = MOVKXi %0, 1234, 48
+; ISEL-ELF-GOT-MIR-NEXT:    %2:gpr64common = LOADgotAUTH target-flags(aarch64-got) @const_table_got, implicit-def dead $x16, implicit-def dead $x17, implicit-def dead $nzcv
+; ISEL-ELF-GOT-MIR-NEXT:    %3:gpr64common = ADDXri killed %2, 8, 0
+; ISEL-ELF-GOT-MIR-NEXT:    %5:gpr64noip = COPY %0
+; ISEL-ELF-GOT-MIR-NEXT:    LOADgotPAC target-flags(aarch64-got) @const_table_got + 8, 2, %5, 1234, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
+; ISEL-ELF-GOT-MIR-NEXT:    %4:gpr64 = COPY $x16
+; ISEL-ELF-GOT-MIR-NEXT:    STRXui killed %4, %0, 0 :: (store (s64) into %ir.dest)
+; ISEL-ELF-GOT-MIR-NEXT:    RET_ReallyLR
+;
+; ISEL-ELF-GOT-ASM-LABEL: store_signed_const_got:
+; ISEL-ELF-GOT-ASM-NEXT:    .cfi_startproc
+; ISEL-ELF-GOT-ASM-NEXT:    adrp    x17, :got_auth:const_table_got
+; ISEL-ELF-GOT-ASM-NEXT:    add     x17, x17, :got_auth_lo12:const_table_got
+; ISEL-ELF-GOT-ASM-NEXT:    ldr     x16, [x17]
+; ISEL-ELF-GOT-ASM-NEXT:    autda   x16, x17
+; ISEL-ELF-GOT-ASM-NEXT:    mov     x17, x16
+; ISEL-ELF-GOT-ASM-NEXT:    xpacd   x17
+; ISEL-ELF-GOT-ASM-NEXT:    cmp     x16, x17
+; ISEL-ELF-GOT-ASM-NEXT:    b.eq    .Lauth_success_0
+; ISEL-ELF-GOT-ASM-NEXT:    brk     #0xc472
+; ISEL-ELF-GOT-ASM-NEXT: .Lauth_success_0:
+; ISEL-ELF-GOT-ASM-NEXT:    add     x16, x16, #8
+; ISEL-ELF-GOT-ASM-NEXT:    mov     x17, x0
+; ISEL-ELF-GOT-ASM-NEXT:    movk    x17, #1234, lsl #48
+; ISEL-ELF-GOT-ASM-NEXT:    pacda   x16, x17
+; ISEL-ELF-GOT-ASM-NEXT:    str     x16, [x0]
+; ISEL-ELF-GOT-ASM-NEXT:    ret
+  %dest.i = ptrtoint ptr %dest to i64
+  %discr = call i64 @llvm.ptrauth.blend(i64 %dest.i, i64 1234)
+  %signed.i = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr getelementptr ([2 x ptr], ptr @const_table_got, i32 0, i32 1) to i64), i32 2, i64 %discr)
+  %signed.ptr = inttoptr i64 %signed.i to ptr
+  store ptr %signed.ptr, ptr %dest
+  ret void
+}
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 8, !"ptrauth-elf-got", i32 1}
+
 ;--- ok.ll
 
 ; RUN: llc < ok.ll -mtriple aarch64-elf -mattr=+pauth -global-isel=0 \
