@@ -22,7 +22,7 @@ class Block;
 class DeadBlock;
 class InterpState;
 class Pointer;
-enum PrimType : unsigned;
+enum PrimType : uint8_t;
 
 /// A memory block, either on the stack or in the heap.
 ///
@@ -126,7 +126,7 @@ public:
   void dump() const { dump(llvm::errs()); }
   void dump(llvm::raw_ostream &OS) const;
 
-private:
+public:
   friend class Pointer;
   friend class DeadBlock;
   friend class InterpState;
