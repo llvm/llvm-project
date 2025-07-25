@@ -1254,7 +1254,8 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
     if (!isa<SCEVConstant, SCEVUnknown>(Op))
       continue;
 
-    assert(Diff->getType()->isIntegerTy() && "difference must be of integer type");
+    assert(Diff->getType()->isIntegerTy() &&
+           "difference must be of integer type");
     Value *DiffV = expand(Diff);
     Value *BaseV = &PN;
     if (PhiTy->isPointerTy()) {
