@@ -10,6 +10,7 @@
 
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/ABI.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -60,6 +61,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
+#include "lldb/Expression/Expression.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -2137,7 +2139,8 @@ std::string TypeSystemClang::GetTypeNameForDecl(const NamedDecl *named_decl,
 FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
     llvm::StringRef name, const CompilerType &function_clang_type,
-    clang::StorageClass storage, bool is_inline) {
+    clang::StorageClass storage, bool is_inline,
+    std::optional<std::string> asm_label) {
   FunctionDecl *func_decl = nullptr;
   ASTContext &ast = getASTContext();
   if (!decl_ctx)
@@ -2158,6 +2161,21 @@ FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
   func_decl->setConstexprKind(isConstexprSpecified
                                   ? ConstexprSpecKind::Constexpr
                                   : ConstexprSpecKind::Unspecified);
+
+  // Attach an asm(<mangled_name>) label to the FunctionDecl.
+  // This ensures that clang::CodeGen emits function calls
+  // using symbols that are mangled according to the DW_AT_linkage_name.
+  // If we didn't do this, the external symbols wouldn't exactly
+  // match the mangled name LLDB knows about and the IRExecutionUnit
+  // would have to fall back to searching object files for
+  // approximately matching function names. The motivating
+  // example is generating calls to ABI-tagged template functions.
+  // This is done separately for member functions in
+  // AddMethodToCXXRecordType.
+  if (asm_label)
+    func_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(ast, *asm_label,
+                                                           /*literal=*/false));
+
   SetOwningModule(func_decl, owning_module);
   decl_ctx->addDecl(func_decl);
 
@@ -7651,7 +7669,7 @@ TypeSystemClang::CreateParameterDeclarations(
 
 clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     lldb::opaque_compiler_type_t type, llvm::StringRef name,
-    const char *mangled_name, const CompilerType &method_clang_type,
+    std::optional<std::string> asm_label, const CompilerType &method_clang_type,
     lldb::AccessType access, bool is_virtual, bool is_static, bool is_inline,
     bool is_explicit, bool is_attr_used, bool is_artificial) {
   if (!type || !method_clang_type.IsValid() || name.empty())
@@ -7784,10 +7802,9 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
   if (is_attr_used)
     cxx_method_decl->addAttr(clang::UsedAttr::CreateImplicit(getASTContext()));
 
-  if (mangled_name != nullptr) {
+  if (asm_label)
     cxx_method_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(
-        getASTContext(), mangled_name, /*literal=*/false));
-  }
+        getASTContext(), *asm_label, /*literal=*/false));
 
   // Parameters on member function declarations in DWARF generally don't
   // have names, so we omit them when creating the ParmVarDecls.
@@ -9041,6 +9058,13 @@ ConstString TypeSystemClang::DeclGetMangledName(void *opaque_decl) {
   if (!mc || !mc->shouldMangleCXXName(nd))
     return {};
 
+  if (const auto *label = nd->getAttr<AsmLabelAttr>()) {
+    if (auto components_or_err = splitFunctionCallLabel(label->getLabel()))
+      return ConstString((*components_or_err)[0]);
+    else
+      llvm::consumeError(components_or_err.takeError());
+  }
+
   llvm::SmallVector<char, 1024> buf;
   llvm::raw_svector_ostream llvm_ostrm(buf);
   if (llvm::isa<clang::CXXConstructorDecl>(nd)) {
@@ -9762,4 +9786,131 @@ void TypeSystemClang::LogCreation() const {
   if (auto *log = GetLog(LLDBLog::Expressions))
     LLDB_LOG(log, "Created new TypeSystem for (ASTContext*){0:x} '{1}'",
              &getASTContext(), getDisplayName());
+}
+
+static llvm::Expected<
+    std::variant<std::monostate, clang::CXXCtorType, clang::CXXDtorType>>
+ParseStructorType(llvm::StringRef label) {
+  if (label.empty())
+    return std::monostate{};
+
+  bool is_ctor = label.consume_front("C");
+  if (!is_ctor && label.starts_with("D"))
+    return llvm::createStringError("invalid structor type prefix in %s",
+                                   label.data());
+
+  uint8_t type;
+  if (label.consumeInteger(0, type))
+    return llvm::createStringError("failed to parse structor type value %s",
+                                   label.data());
+
+  if (is_ctor) {
+    if (type > clang::CXXCtorType::Ctor_DefaultClosure)
+      return llvm::createStringError("C++ constructor type %d out of range",
+                                     type);
+
+    return static_cast<CXXCtorType>(type);
+  }
+
+  if (type > clang::CXXDtorType::Dtor_Deleting)
+    return llvm::createStringError("C++ destructor type %d out of range", type);
+
+  return static_cast<CXXDtorType>(type);
+}
+
+// clang-format off
+// Expected format is:
+// $__lldb_func:<mangled name>:<module id>:<definition/declaration DIE id>:[<structor variant>]
+// clang-format on
+llvm::Expected<llvm::SmallVector<llvm::StringRef, 3>>
+TypeSystemClang::splitFunctionCallLabel(llvm::StringRef label) const {
+  if (!consumeFunctionCallLabelPrefix(label))
+    return llvm::createStringError(
+        "expected function call label prefix not found in %s", label.data());
+  if (!label.consume_front(":"))
+    return llvm::createStringError(
+        "incorrect format: expected ':' as the first character.");
+
+  llvm::SmallVector<llvm::StringRef, 4> components;
+  label.split(components, ":");
+
+  if (components.size() != 4)
+    return llvm::createStringError(
+        "incorrect format: too many label subcomponents.");
+
+  return components;
+}
+
+llvm::Expected<std::unique_ptr<FunctionCallLabel>>
+TypeSystemClang::makeFunctionCallLabel(llvm::StringRef label) const {
+  auto components_or_err = splitFunctionCallLabel(label);
+  if (!components_or_err)
+    return llvm::joinErrors(
+        llvm::createStringError("Failed to decode function call label"),
+        components_or_err.takeError());
+
+  const auto &components = *components_or_err;
+
+  llvm::StringRef module_label = components[1];
+  llvm::StringRef die_label = components[2];
+  llvm::StringRef structor_variant = components[3];
+
+  lldb::user_id_t module_id = 0;
+  if (module_label.consumeInteger(0, module_id))
+    return llvm::createStringError(
+        llvm::formatv("failed to parse module ID from '{0}'.", components[1]));
+
+  lldb::user_id_t die_id;
+  if (die_label.consumeInteger(/*Radix=*/0, die_id))
+    return llvm::createStringError(
+        llvm::formatv("failed to parse DIE ID from '{0}'.", components[2]));
+
+  auto structor_type_or_err = ParseStructorType(structor_variant);
+  if (!structor_type_or_err)
+    return llvm::joinErrors(
+        llvm::createStringError(llvm::formatv(
+            "failed to parse structor kind from '{0}'.", components[2])),
+        structor_type_or_err.takeError());
+
+  auto ret = std::make_unique<ClangFunctionCallLabel>();
+  ret->m_lookup_name = components[0];
+  ret->m_module_id = module_id;
+  ret->m_die_id = die_id;
+  ret->m_structor_type = std::move(*structor_type_or_err);
+
+  return ret;
+}
+
+std::optional<uint8_t>
+TypeSystemClang::ClangFunctionCallLabel::getItaniumStructorVariant() const {
+  if (m_structor_type.index() == 0)
+    return std::nullopt;
+
+  if (auto *ctor = std::get_if<clang::CXXCtorType>(&m_structor_type)) {
+    switch (*ctor) {
+    case clang::CXXCtorType::Ctor_Complete:
+      return 1;
+    case clang::CXXCtorType::Ctor_Base:
+      return 2;
+    case clang::CXXCtorType::Ctor_Comdat:
+    case clang::CXXCtorType::Ctor_CopyingClosure:
+    case clang::CXXCtorType::Ctor_DefaultClosure:
+      // No Itanium equivalent
+      return std::nullopt;
+    }
+  } else if (auto *dtor = std::get_if<clang::CXXDtorType>(&m_structor_type)) {
+    switch (*dtor) {
+    case clang::CXXDtorType::Dtor_Deleting:
+      return 0;
+    case clang::CXXDtorType::Dtor_Complete:
+      return 1;
+    case clang::CXXDtorType::Dtor_Base:
+      return 2;
+    case clang::CXXDtorType::Dtor_Comdat:
+      // No Itanium equivalent
+      return std::nullopt;
+    }
+  }
+
+  return std::nullopt;
 }

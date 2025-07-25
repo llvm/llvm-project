@@ -18,6 +18,7 @@
 #include <set>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "clang/AST/ASTContext.h"
@@ -26,6 +27,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/ABI.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
@@ -477,7 +479,8 @@ public:
   clang::FunctionDecl *CreateFunctionDeclaration(
       clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
       llvm::StringRef name, const CompilerType &function_Type,
-      clang::StorageClass storage, bool is_inline);
+      clang::StorageClass storage, bool is_inline,
+      std::optional<std::string> asm_label);
 
   CompilerType
   CreateFunctionType(const CompilerType &result_type,
@@ -1001,7 +1004,7 @@ public:
 
   clang::CXXMethodDecl *AddMethodToCXXRecordType(
       lldb::opaque_compiler_type_t type, llvm::StringRef name,
-      const char *mangled_name, const CompilerType &method_type,
+      std::optional<std::string> mangled_name, const CompilerType &method_type,
       lldb::AccessType access, bool is_virtual, bool is_static, bool is_inline,
       bool is_explicit, bool is_attr_used, bool is_artificial);
 
@@ -1097,6 +1100,20 @@ public:
   void DumpTypeDescription(
       lldb::opaque_compiler_type_t type, Stream &s,
       lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
+
+  llvm::Expected<llvm::SmallVector<llvm::StringRef, 3>>
+  splitFunctionCallLabel(llvm::StringRef label) const override;
+
+  struct ClangFunctionCallLabel : public FunctionCallLabel {
+    /// Structor kind according to the Itanium ABI.
+    std::variant<std::monostate, clang::CXXCtorType, clang::CXXDtorType>
+        m_structor_type;
+
+    std::optional<uint8_t> getItaniumStructorVariant() const override;
+  };
+
+  llvm::Expected<std::unique_ptr<FunctionCallLabel>>
+  makeFunctionCallLabel(llvm::StringRef label) const override;
 
   static void DumpTypeName(const CompilerType &type);
 

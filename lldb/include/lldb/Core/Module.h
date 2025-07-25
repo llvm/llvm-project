@@ -86,7 +86,8 @@ struct ModuleFunctionSearchOptions {
 ///
 /// The module will parse more detailed information as more queries are made.
 class Module : public std::enable_shared_from_this<Module>,
-               public SymbolContextScope {
+               public SymbolContextScope,
+               public UserID {
 public:
   class LookupInfo;
   // Static functions that can track the lifetime of module objects. This is
@@ -97,6 +98,7 @@ public:
   // using the "--global" (-g for short).
   static size_t GetNumberAllocatedModules();
 
+  static Module *GetAllocatedModuleWithUID(lldb::user_id_t uid);
   static Module *GetAllocatedModuleAtIndex(size_t idx);
 
   static std::recursive_mutex &GetAllocationModuleCollectionMutex();

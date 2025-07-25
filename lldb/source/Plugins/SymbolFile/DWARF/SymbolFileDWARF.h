@@ -434,6 +434,11 @@ protected:
   DIEArray MergeBlockAbstractParameters(const DWARFDIE &block_die,
                                         DIEArray &&variable_dies);
 
+  llvm::Error
+  FindAndResolveFunction(SymbolContextList &sc_list,
+                         llvm::StringRef lookup_name, lldb::user_id_t spec,
+                         std::optional<uint8_t> structor_variant) override;
+
   // Given a die_offset, figure out the symbol context representing that die.
   bool ResolveFunction(const DWARFDIE &die, bool include_inlines,
                        SymbolContextList &sc_list);
