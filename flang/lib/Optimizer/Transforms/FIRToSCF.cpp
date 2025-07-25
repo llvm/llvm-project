@@ -87,13 +87,52 @@ struct DoLoopConversion : public OpRewritePattern<fir::DoLoopOp> {
     return success();
   }
 };
+
+void copyBlockAndTransformResult(PatternRewriter &rewriter, Block &srcBlock,
+                                 Block &dstBlock) {
+  Operation *srcTerminator = srcBlock.getTerminator();
+  auto resultOp = cast<fir::ResultOp>(srcTerminator);
+
+  dstBlock.getOperations().splice(dstBlock.begin(), srcBlock.getOperations(),
+                                  srcBlock.begin(), std::prev(srcBlock.end()));
+
+  if (!resultOp->getOperands().empty()) {
+    rewriter.setInsertionPointToEnd(&dstBlock);
+    scf::YieldOp::create(rewriter, resultOp->getLoc(), resultOp->getOperands());
+  }
+
+  rewriter.eraseOp(srcTerminator);
+}
+
+struct IfConversion : public OpRewritePattern<fir::IfOp> {
+  using OpRewritePattern<fir::IfOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(fir::IfOp ifOp,
+                                PatternRewriter &rewriter) const override {
+    bool hasElse = !ifOp.getElseRegion().empty();
+    auto scfIfOp =
+        scf::IfOp::create(rewriter, ifOp.getLoc(), ifOp.getResultTypes(),
+                          ifOp.getCondition(), hasElse);
+
+    copyBlockAndTransformResult(rewriter, ifOp.getThenRegion().front(),
+                                scfIfOp.getThenRegion().front());
+
+    if (hasElse) {
+      copyBlockAndTransformResult(rewriter, ifOp.getElseRegion().front(),
+                                  scfIfOp.getElseRegion().front());
+    }
+
+    scfIfOp->setAttrs(ifOp->getAttrs());
+    rewriter.replaceOp(ifOp, scfIfOp);
+    return success();
+  }
+};
 } // namespace
 
 void FIRToSCFPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
-  patterns.add<DoLoopConversion>(patterns.getContext());
+  patterns.add<DoLoopConversion, IfConversion>(patterns.getContext());
   ConversionTarget target(getContext());
-  target.addIllegalOp<fir::DoLoopOp>();
+  target.addIllegalOp<fir::DoLoopOp, fir::IfOp>();
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
