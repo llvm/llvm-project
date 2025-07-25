@@ -94,6 +94,7 @@ add_proxy_header_library(
   DEPENDS
     libc.hdr.fcntl_overlay
   FULL_BUILD_DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.llvm-libc-types.struct_flock
 )
 
@@ -104,6 +105,7 @@ add_proxy_header_library(
   DEPENDS
     libc.hdr.fcntl_overlay
   FULL_BUILD_DEPENDS
+    libc.hdr.stdint_proxy
     libc.include.llvm-libc-types.struct_flock64
 )
 
@@ -314,6 +316,15 @@ add_proxy_header_library(
     jmp_buf.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.jmp_buf
+    libc.include.setjmp
+)
+
+add_proxy_header_library(
+  sigjmp_buf
+  HDRS
+    sigjmp_buf.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.sigjmp_buf
     libc.include.setjmp
 )
 

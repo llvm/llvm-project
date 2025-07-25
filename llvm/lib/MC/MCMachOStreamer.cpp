@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -141,6 +140,8 @@ void MCMachOStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
     MCSymbol *Label = getContext().createLinkerPrivateTempSymbol();
     Section->setBeginSymbol(Label);
     HasSectionLabel[Section] = true;
+    if (!Label->isInSection())
+      emitLabel(Label);
   }
 }
 

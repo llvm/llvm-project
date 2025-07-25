@@ -28,7 +28,6 @@ def Canonicalizer : Pass<"canonicalize"> {
     details.
   }];
   let constructor = "mlir::createCanonicalizerPass()";
-  let dependentDialects = ["ub::UBDialect"];
   let options = [
     Option<"topDownProcessingEnabled", "top-down", "bool",
            /*default=*/"true",
