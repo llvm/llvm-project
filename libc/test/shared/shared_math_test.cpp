@@ -61,8 +61,8 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
 TEST(LlvmLibcSharedMathTest, AllFloat128) {
   int exponent;
 
-  EXPECT_FP_EQ_ALL_ROUNDING(
-      float128(0.75), LIBC_NAMESPACE::shared::frexpf128(24.0f, &exponent));
+  EXPECT_FP_EQ_ALL_ROUNDING(float128(0.75), LIBC_NAMESPACE::shared::frexpf128(
+                                                float128(24), &exponent));
   EXPECT_EQ(exponent, 5);
 
   ASSERT_FP_EQ(float128(8 << 5),
