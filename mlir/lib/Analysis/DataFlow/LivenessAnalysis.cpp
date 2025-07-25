@@ -80,9 +80,8 @@ ChangeResult Liveness::meet(const AbstractSparseLattice &other) {
 LogicalResult
 LivenessAnalysis::visitOperation(Operation *op, ArrayRef<Liveness *> operands,
                                  ArrayRef<const Liveness *> results) {
-  LLVM_DEBUG(DBGS() << "[visitOperation] Enter: ";
-             op->print(llvm::dbgs(), OpPrintingFlags().skipRegions());
-             llvm::dbgs() << "\n");
+  LDBG() << "[visitOperation] Enter: "
+         << OpWithFlags(op, OpPrintingFlags().skipRegions());
   // This marks values of type (1.a) and (4) liveness as "live".
   if (!isMemoryEffectFree(op) || op->hasTrait<OpTrait::ReturnLike>()) {
     LDBG() << "[visitOperation] Operation has memory effects or is "
