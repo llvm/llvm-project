@@ -3045,6 +3045,7 @@ std::pair<unsigned, unsigned> NewGVN::assignDFSNumbers(BasicBlock *B,
     if (isInstructionTriviallyDead(&I, TLI)) {
       InstrDFS[&I] = 0;
       LLVM_DEBUG(dbgs() << "Skipping trivially dead instruction " << I << "\n");
+      salvageDebugInfo(I);
       markInstructionForDeletion(&I);
       continue;
     }
