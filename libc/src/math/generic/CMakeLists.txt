@@ -1894,6 +1894,7 @@ add_object_library(
     common_constants.cpp
   DEPENDS
     libc.src.__support.math.exp_constants
+    libc.src.__support.math.acosh_float_constants
     libc.src.__support.number_pair
 )
 
@@ -3757,7 +3758,7 @@ add_header_library(
   DEPENDS
     .common_constants
     libc.src.__support.math.exp_utils
-    libc.src.__support.math.exp10f_utils
+    libc.src.__support.math.acoshf_utils
     libc.src.__support.macros.properties.cpu_features
     libc.src.errno.errno
 )
@@ -3867,12 +3868,7 @@ add_entrypoint_object(
     ../acoshf.h
   DEPENDS
     .explogxf
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.FPUtil.sqrt
-    libc.src.__support.macros.optimization
+    libc.src.__support.math.acoshf
 )
 
 add_entrypoint_object(
