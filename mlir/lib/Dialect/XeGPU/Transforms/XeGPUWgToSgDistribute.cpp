@@ -157,8 +157,8 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
       if (computeProduct(sgLayout) != sgCount)
         return rewriter.notifyMatchFailure(
             op, "sg_layout size must match the sg_id_range");
-      // Subtract startOfRange from the original subgroup id to get the adjusted
-      // sg id
+      // Subtract startOfRange from the original subgroup id to get
+      // the adjusted sg id
       Value startOfRangeVal =
           rewriter.create<arith::ConstantIndexOp>(loc, startOfRange);
       linearSgId =
@@ -176,17 +176,17 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
                                    layout.dropSgLayoutAndData());
 
     SmallVector<Value> newCreateNdOps;
-    SmallVector<OpFoldResult> offset = op.getMixedOffsets();
+    SmallVector<OpFoldResult> oldOffsets = op.getMixedOffsets();
 
-    for (auto tdescOffset : *maybeTdescOffsets) {
+    for (auto tdescOffsets : *maybeTdescOffsets) {
       SmallVector<OpFoldResult> newOffsets;
-      size_t rank = tdescOffset.size();
+      size_t rank = tdescOffsets.size();
       for (size_t i = 0; i < rank; i++) {
-        size_t idx = offset.size() - rank + i;
-        Value newOff = rewriter.createOrFold<index::AddOp>(
-            loc, tdescOffset[i],
-            getValueOrCreateConstantIndexOp(rewriter, loc, offset[idx]));
-        newOffsets.push_back(newOff);
+        size_t idx = oldOffsets.size() - rank + i;
+        Value add = rewriter.createOrFold<index::AddOp>(
+            loc, tdescOffsets[i],
+            getValueOrCreateConstantIndexOp(rewriter, loc, oldOffsets[idx]));
+        newOffsets.push_back(add);
       }
 
       auto newOp = xegpu::CreateNdDescOp::create(
