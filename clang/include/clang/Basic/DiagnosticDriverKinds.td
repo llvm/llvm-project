@@ -252,13 +252,13 @@ def err_drv_invalid_argument_to_option : Error<
 def err_drv_missing_sanitizer_ignorelist : Error<
   "missing sanitizer ignorelist: '%0'">;
 def err_drv_malformed_sanitizer_ignorelist : Error<
-  "failed to %select{load|parse}0 malformed sanitizer ignorelist: '%1'">;
+  "malformed sanitizer ignorelist: '%0'">;
 def err_drv_malformed_sanitizer_coverage_allowlist : Error<
-  "failed to %select{load|parse}0 malformed sanitizer coverage allowlist: '%1'">;
+  "malformed sanitizer coverage allowlist: '%0'">;
 def err_drv_malformed_sanitizer_coverage_ignorelist : Error<
-  "failed to %select{load|parse}0 malformed sanitizer coverage ignorelist: '%1'">;
+  "malformed sanitizer coverage ignorelist: '%0'">;
 def err_drv_malformed_sanitizer_metadata_ignorelist : Error<
-  "failed to %select{load|parse}0 malformed sanitizer metadata ignorelist: '%1'">;
+  "malformed sanitizer metadata ignorelist: '%0'">;
 def err_drv_unsupported_static_sanitizer_darwin : Error<
   "static %0 runtime is not supported on darwin">;
 def err_drv_duplicate_config : Error<

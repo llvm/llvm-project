@@ -554,7 +554,6 @@ void CompilerInstance::createASTContext() {
                                  PP.getBuiltinInfo(), PP.TUKind);
   Context->InitBuiltinTypes(getTarget(), getAuxTarget());
   setASTContext(Context);
-  Context->initSanitizers(getLangOpts(), PP.getSourceManager());
 }
 
 // ExternalASTSource

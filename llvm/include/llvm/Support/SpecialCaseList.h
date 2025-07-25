@@ -72,11 +72,6 @@ class SpecialCaseList {
 public:
   static constexpr std::pair<unsigned, unsigned> NotFound = {0, 0};
   /// Parses the special case list entries from files. On failure, returns
-  /// std::pair Error, Error.first is error enum, Error.second is error message.
-  LLVM_ABI static std::unique_ptr<SpecialCaseList>
-  create(const std::vector<std::string> &Paths, llvm::vfs::FileSystem &FS,
-         std::pair<unsigned, std::string> &Error);
-  /// Parses the special case list entries from files. On failure, returns
   /// 0 and writes an error message to string.
   LLVM_ABI static std::unique_ptr<SpecialCaseList>
   create(const std::vector<std::string> &Paths, llvm::vfs::FileSystem &FS,
@@ -116,8 +111,7 @@ protected:
   // Implementations of the create*() functions that can also be used by derived
   // classes.
   LLVM_ABI bool createInternal(const std::vector<std::string> &Paths,
-                               vfs::FileSystem &VFS,
-                               std::pair<unsigned, std::string> &Error);
+                               vfs::FileSystem &VFS, std::string &Error);
   LLVM_ABI bool createInternal(const MemoryBuffer *MB, std::string &Error);
 
   SpecialCaseList() = default;

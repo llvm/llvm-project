@@ -26,7 +26,7 @@ class ProfileSpecialCaseList : public llvm::SpecialCaseList {
 public:
   static std::unique_ptr<ProfileSpecialCaseList>
   create(const std::vector<std::string> &Paths, llvm::vfs::FileSystem &VFS,
-         std::pair<unsigned, std::string> &Error);
+         std::string &Error);
 
   static std::unique_ptr<ProfileSpecialCaseList>
   createOrDie(const std::vector<std::string> &Paths,
@@ -44,8 +44,7 @@ public:
 
 std::unique_ptr<ProfileSpecialCaseList>
 ProfileSpecialCaseList::create(const std::vector<std::string> &Paths,
-                               llvm::vfs::FileSystem &VFS,
-                               std::pair<unsigned, std::string> &Error) {
+                               llvm::vfs::FileSystem &VFS, std::string &Error) {
   auto PSCL = std::make_unique<ProfileSpecialCaseList>();
   if (PSCL->createInternal(Paths, VFS, Error))
     return PSCL;
@@ -55,11 +54,10 @@ ProfileSpecialCaseList::create(const std::vector<std::string> &Paths,
 std::unique_ptr<ProfileSpecialCaseList>
 ProfileSpecialCaseList::createOrDie(const std::vector<std::string> &Paths,
                                     llvm::vfs::FileSystem &VFS) {
-  std::pair<unsigned, std::string> Error;
+  std::string Error;
   if (auto PSCL = create(Paths, VFS, Error))
     return PSCL;
-  // TODO: add init function and use diagnose instead fo report_fatal_error
-  llvm::report_fatal_error(llvm::Twine(Error.second));
+  llvm::report_fatal_error(llvm::Twine(Error));
 }
 
 } // namespace clang
