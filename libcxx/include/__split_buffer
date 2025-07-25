@@ -630,6 +630,32 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::shr
   }
 }
 
+// Need to use this because C++03 doesn't permit constexpr if :(
+template<bool>
+struct __maybe_update_sentinel;
+
+template<>
+struct __maybe_update_sentinel<true> {
+  template<class _SplitBuffer, class _DifferenceType>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 static void __update_size(_SplitBuffer& __data, _DifferenceType __d) {
+    __data.__update_sentinel(__data.size() + __d);
+  }
+
+  template<class _SplitBuffer>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 static void __update_end(_SplitBuffer& __data) {
+    __data.update_sentinel(__data.end() + 1);
+  }
+};
+
+template<>
+struct __maybe_update_sentinel<false> {
+  template<class _SplitBuffer, class _DifferenceType>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 static void __update_size(_SplitBuffer&, _DifferenceType) {}
+
+  template<class _SplitBuffer>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 static void __update_end(_SplitBuffer&) {}
+};
+
 template <class _Tp, class _Allocator, template <class> class _Layout>
 template <class... _Args>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::emplace_front(_Args&&... __args) {
@@ -645,9 +671,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::emp
       // `__data_.begin()` was moved further into the buffer, so we need to update the pointer-based
       // layout's end with it. We don't need to do anything for the size-based layout here, because
       // the number of elements hasn't changed yet.
-      if constexpr (!_Layout<__split_buffer>::__is_size_based) {
-        __data_.__update_sentinel(__data_.size() + __d);
-      }
+      __maybe_update_sentinel<!_Layout<__split_buffer>::__is_size_based>::__update_size(__data_, __d);
     } else {
       size_type __c = std::max<size_type>(2 * capacity(), 1);
       __split_buffer<value_type, __alloc_rr&> __t(__c, (__c + 3) / 4, __data_.__alloc_);
@@ -662,10 +686,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::emp
   // Now that we've added an element to the front of the buffer, we need to update the size-based
   // layout's size. We don't need to do anything for the pointer-based layout here, because the end
   // pointer was never updated.
-  if constexpr (_Layout<__split_buffer>::__is_size_based) {
-    __data_.__update_sentinel(__data_.end() + 1);
+  __maybe_update_sentinel<_Layout<__split_buffer>::__is_size_based>::__update_end(__data_);
   }
-}
 
 template <class _Tp, class _Allocator, template <class> class _Layout>
 template <class... _Args>
