@@ -3649,17 +3649,22 @@ std::optional<SmallVector<int64_t, 4>> ApplyScaleOp::getShapeForUnroll() {
 
 // parse and print of IfOp refer to the implementation of SCF dialect.
 ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
+  OpAsmParser::UnresolvedOperand cond;
+  // Fallback to generic IfOp parser when no immediate conditional
+  // operand is provided.
+  if (!parser.parseOptionalOperand(cond).has_value()) {
+    return parser.parseGenericOperationAfterOpName(result);
+  }
+
   // Create the regions for 'then'.
   result.regions.reserve(2);
   Region *thenRegion = result.addRegion();
   Region *elseRegion = result.addRegion();
 
   auto &builder = parser.getBuilder();
-  OpAsmParser::UnresolvedOperand cond;
   // Create a i1 tensor type for the boolean condition.
   Type i1Type = RankedTensorType::get({}, builder.getIntegerType(1));
-  if (parser.parseOperand(cond) ||
-      parser.resolveOperand(cond, i1Type, result.operands))
+  if (parser.resolveOperand(cond, i1Type, result.operands))
     return failure();
   // Parse optional results type list.
   if (parser.parseOptionalArrowTypeList(result.types))
@@ -3681,6 +3686,17 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void IfOp::print(OpAsmPrinter &p) {
+  // The simplified syntax drops block-level arguments
+  // to the then/else regions. Fallback to the generic
+  // parser if these are found
+  Region &thenRegion = getThenGraph();
+  Region &elseRegion = getElseGraph();
+  if (!thenRegion.empty() && thenRegion.front().getNumArguments() > 0 &&
+      !elseRegion.empty() && elseRegion.front().getNumArguments() > 0) {
+    p.printGenericOp(*this, false);
+    return;
+  }
+
   bool printBlockTerminators = false;
 
   p << " " << getCondition();
@@ -3690,12 +3706,11 @@ void IfOp::print(OpAsmPrinter &p) {
     printBlockTerminators = true;
   }
   p << ' ';
-  p.printRegion(getThenGraph(),
+  p.printRegion(thenRegion,
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/printBlockTerminators);
 
   // Print the 'else' regions if it exists and has a block.
-  auto &elseRegion = getElseGraph();
   if (!elseRegion.empty()) {
     p << " else ";
     p.printRegion(elseRegion,
