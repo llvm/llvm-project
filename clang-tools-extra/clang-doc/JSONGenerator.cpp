@@ -126,6 +126,8 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
     auto TextCommentsArray = extractTextComments(CARef.front().getAsObject());
     if (I.Name == "brief")
       insertComment(Description, TextCommentsArray, "BriefComments");
+    else if (I.Name == "return")
+      insertComment(Description, TextCommentsArray, "ReturnComments");
     return Obj;
   }
 
