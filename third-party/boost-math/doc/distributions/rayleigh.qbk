@@ -1,0 +1,126 @@
+[section:rayleigh Rayleigh Distribution]
+
+
+``#include <boost/math/distributions/rayleigh.hpp>``
+
+   namespace boost{ namespace math{
+
+   template <class RealType = double,
+             class ``__Policy``   = ``__policy_class`` >
+   class rayleigh_distribution;
+
+   typedef rayleigh_distribution<> rayleigh;
+
+   template <class RealType, class ``__Policy``>
+   class rayleigh_distribution
+   {
+   public:
+      typedef RealType value_type;
+      typedef Policy   policy_type;
+      // Construct:
+      BOOST_MATH_GPU_ENABLED rayleigh_distribution(RealType sigma = 1)
+      // Accessors:
+      BOOST_MATH_GPU_ENABLED RealType sigma()const;
+   };
+
+   }} // namespaces
+
+The [@http://en.wikipedia.org/wiki/Rayleigh_distribution Rayleigh distribution]
+is a continuous distribution with the
+[@http://en.wikipedia.org/wiki/Probability_density_function probability density function]:
+
+[expression f(x; sigma) = x * exp(-x[super 2]/2 [sigma][super 2]) / [sigma][super 2]]
+
+For sigma parameter ['[sigma]] > 0, and /x/ > 0.
+
+The Rayleigh distribution is often used where two orthogonal components
+have an absolute value,
+for example, wind velocity and direction may be combined to yield a wind speed,
+or real and imaginary components may have absolute values that are Rayleigh distributed.
+
+The following graph illustrates how the Probability density Function(pdf) varies with the shape parameter [sigma]:
+
+[graph rayleigh_pdf]
+
+and the Cumulative Distribution Function (cdf)
+
+[graph rayleigh_cdf]
+
+[h4 Related distributions]
+
+The absolute value of two independent normal distributions X and Y, [radic] (X[super 2] + Y[super 2])
+is a Rayleigh distribution.
+
+The [@http://en.wikipedia.org/wiki/Chi_distribution Chi],
+[@http://en.wikipedia.org/wiki/Rice_distribution Rice]
+and [@http://en.wikipedia.org/wiki/Weibull_distribution Weibull] distributions are generalizations of the
+[@http://en.wikipedia.org/wiki/Rayleigh_distribution Rayleigh distribution].
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED rayleigh_distribution(RealType sigma = 1);
+
+Constructs a [@http://en.wikipedia.org/wiki/Rayleigh_distribution
+Rayleigh distribution] with [sigma] /sigma/.
+
+Requires that the [sigma] parameter is greater than zero,
+otherwise calls __domain_error.
+
+   BOOST_MATH_GPU_ENABLED RealType sigma()const;
+
+Returns the /sigma/ parameter of this distribution.
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions] that are generic to all
+distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The domain of the random variable is \[0, max_value\].
+
+In this distribution the implementation of both `logcdf`, and `logpdf` are specialized
+to improve numerical accuracy.
+
+[h4 Accuracy]
+
+The Rayleigh distribution is implemented in terms of the
+standard library `sqrt` and `exp` and as such should have very low error rates.
+Some constants such as skewness and kurtosis were calculated using
+NTL RR type with 150-bit accuracy, about 50 decimal digits.
+
+[h4 Implementation]
+
+In the following table [sigma] is the sigma parameter of the distribution,
+/x/ is the random variate, /p/ is the probability and /q = 1-p/.
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][Using the relation: pdf = x * exp(-x[super 2])/2 [sigma][super 2] ]]
+[[logpdf][log(pdf) = -(x[super 2])/(2*[sigma][super 2]) - 2*log([sigma]) + log(x) ]]
+[[cdf][Using the relation: p = 1 - exp(-x[super 2]/2) [sigma][super 2]= -__expm1(-x[super 2]/2) [sigma][super 2]]]
+[[logcdf][log(cdf) = log1p(-exp(-x[super 2] / (2*[sigma][super 2]))) ]]
+[[cdf complement][Using the relation: q =  exp(-x[super 2]/ 2) * [sigma][super 2] ]]
+[[quantile][Using the relation: x = sqrt(-2 * [sigma] [super 2]) * log(1 - p)) = sqrt(-2 * [sigma] [super 2]) * __log1p(-p))]]
+[[quantile from the complement][Using the relation: x = sqrt(-2 * [sigma] [super 2]) * log(q)) ]]
+[[mean][[sigma] * sqrt([pi]/2) ]]
+[[variance][[sigma][super 2] * (4 - [pi]/2) ]]
+[[mode][[sigma] ]]
+[[skewness][Constant from [@http://mathworld.wolfram.com/RayleighDistribution.html Weisstein, Eric W. "Weibull Distribution." From MathWorld--A Wolfram Web Resource.] ]]
+[[kurtosis][Constant from [@http://mathworld.wolfram.com/RayleighDistribution.html Weisstein, Eric W. "Weibull Distribution." From MathWorld--A Wolfram Web Resource.] ]]
+[[kurtosis excess][Constant from [@http://mathworld.wolfram.com/RayleighDistribution.html Weisstein, Eric W. "Weibull Distribution." From MathWorld--A Wolfram Web Resource.] ]]
+]
+
+[h4 References]
+* [@http://en.wikipedia.org/wiki/Rayleigh_distribution ]
+* [@http://mathworld.wolfram.com/RayleighDistribution.html Weisstein, Eric W. "Rayleigh Distribution." From MathWorld--A Wolfram Web Resource.]
+
+[endsect] [/section:Rayleigh Rayleigh]
+
+[/
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

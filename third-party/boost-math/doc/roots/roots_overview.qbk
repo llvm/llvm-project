@@ -1,0 +1,31 @@
+
+Several tools are provided to aid finding minima and roots of functions.
+
+Some  __root_finding_without_derivatives methods are __bisection,
+__bracket_solve, including use of __root_finding_TOMS748.
+
+For __root_finding_with_derivatives the methods of
+__newton, __halley, and __schroder are implemented.
+
+For locating minima of a function,  a __brent_minima_example is provided.
+
+There are several fully-worked __root_finding_examples, including:
+
+* __root_finding_example_cbrt_without_derivatives
+* __root_finding_example_cbrt_with_1_derivative
+* __root_finding_example_cbrt_with_2_derivatives
+
+[include roots_without_derivatives.qbk]
+[include roots.qbk]
+[include cubic_roots.qbk]
+[include quartic_roots.qbk]
+[include root_finding_examples.qbk]
+[include minima.qbk]
+[include root_comparison.qbk]
+
+[/ roots_overview.qbk
+  Copyright 2015 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

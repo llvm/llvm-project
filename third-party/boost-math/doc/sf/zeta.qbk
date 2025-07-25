@@ -1,0 +1,129 @@
+[section:zeta Riemann Zeta Function]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/special_functions/zeta.hpp>
+``
+
+   namespace boost{ namespace math{
+   
+   template <class T>
+   ``__sf_result`` zeta(T z);
+   
+   template <class T, class ``__Policy``>
+   ``__sf_result`` zeta(T z, const ``__Policy``&);
+   
+   }} // namespaces
+   
+The return type of these functions is computed using the __arg_promotion_rules:
+the return type is `double` if T is an integer type, and T otherwise.
+
+[optional_policy]
+
+[h4 Description]
+
+   template <class T>
+   ``__sf_result`` zeta(T z);
+   
+   template <class T, class ``__Policy``>
+   ``__sf_result`` zeta(T z, const ``__Policy``&);
+   
+Returns the [@http://mathworld.wolfram.com/RiemannZetaFunction.html zeta function]
+of z:
+
+[equation zeta1]
+
+[graph zeta1]
+
+[graph zeta2]
+
+[h4 Accuracy]
+
+The following table shows the peak errors (in units of epsilon) 
+found on various platforms with various floating point types, 
+along with comparisons to the __gsl and __cephes libraries.
+Unless otherwise specified any floating point type that is narrower
+than the one shown will have __zero_error.
+
+[table_zeta]
+
+The following error plot are based on an exhaustive search of the functions domain, MSVC-15.5 at `double` precision, 
+and GCC-7.1/Ubuntu for `long double` and `__float128`.
+
+[graph zeta__double]
+
+[graph zeta__80_bit_long_double]
+
+[graph zeta____float128]
+
+[h4 Testing]
+
+The tests for these functions come in two parts:
+basic sanity checks use spot values calculated using
+[@http://functions.wolfram.com/webMathematica/FunctionEvaluation.jsp?name=Zeta Mathworld's online evaluator],
+while accuracy checks use high-precision test values calculated at 1000-bit precision with
+[@http://shoup.net/ntl/doc/RR.txt NTL::RR] and this implementation. 
+Note that the generic and type-specific
+versions of these functions use differing implementations internally, so this
+gives us reasonably independent test data.  Using our test data to test other
+"known good" implementations also provides an additional sanity check. 
+
+[h4 Implementation]
+
+All versions of these functions first use the usual reflection formulas
+to make their arguments positive:
+
+[equation zeta3]
+
+The generic versions of these functions are implemented using the series:
+
+[equation zeta6]
+
+When the significand (mantissa) size is recognised
+(currently for 53, 64 and 113-bit reals, plus single-precision 24-bit handled via promotion to double)
+then a series of rational approximations [jm_rationals] are used.
+
+For 0 < z < 1 the approximating form is:
+
+[equation zeta4]
+
+For a rational approximation /R(1-z)/ and a constant /C/:
+
+For 1 < z < 4 the approximating form is:
+
+[equation zeta5]
+
+For a rational approximation /R(n-z)/ and a constant /C/ and integer /n/:
+
+For z > 4 the approximating form is:
+
+[expression [zeta](z) = 1 + e[super R(z - n)]]
+
+For a rational approximation /R(z-n)/ and integer /n/, note that the accuracy 
+required for /R(z-n)/ is not full machine-precision, but an absolute error
+of: /[epsilon]/R(0)/.  This saves us quite a few digits when dealing with large 
+/z/, especially when [epsilon] is small.
+
+Finally, there are some special cases for integer arguments, there are
+closed forms for negative or even integers:
+
+[equation zeta7]
+
+[equation zeta8]
+
+[equation zeta9]
+
+and for positive odd integers we simply cache pre-computed values as these are of great
+benefit to some infinite series calculations.
+
+[endsect] [/section:zeta Riemann Zeta Function]
+
+[/ :error_function The Error Functions]
+
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

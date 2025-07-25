@@ -1,0 +1,110 @@
+[section:logistic_dist Logistic Distribution]
+
+``#include <boost/math/distributions/logistic.hpp>``
+
+   namespace boost{ namespace math{ 
+      
+   template <class RealType = double, 
+             class ``__Policy``   = ``__policy_class`` >
+   class logistic_distribution;
+
+   template <class RealType, class Policy>
+   class logistic_distribution
+   {
+   public:
+      typedef RealType value_type;
+      typedef Policy   policy_type;
+      // Construct:
+      BOOST_MATH_GPU_ENABLED logistic_distribution(RealType location = 0, RealType scale = 1);
+      // Accessors:
+      BOOST_MATH_GPU_ENABLED RealType location()const; // location.
+      BOOST_MATH_GPU_ENABLED RealType scale()const; // scale.
+      
+   };
+
+   typedef logistic_distribution<> logistic;
+
+   }} // namespaces
+   
+The logistic distribution is a continuous probability distribution. 
+It has two parameters - location and scale.  The cumulative distribution 
+function of the logistic distribution appears in logistic regression 
+and feedforward neural networks. Among other applications, 
+United State Chess Federation and FIDE use it to calculate chess ratings.
+
+The following graph shows how the distribution changes as the
+parameters change:
+
+[graph logistic_pdf]
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED logistic_distribution(RealType u = 0, RealType s = 1);
+
+Constructs a logistic distribution with location /u/ and scale /s/.
+
+Requires `scale > 0`, otherwise a __domain_error is raised.
+
+   BOOST_MATH_GPU_ENABLED RealType location()const;   
+
+Returns the location of this distribution.
+
+   BOOST_MATH_GPU_ENABLED RealType scale()const;
+
+Returns the scale of this distribution. 
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions]
+that are generic to all distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The domain of the random variable is \[-\[max_value\], +\[min_value\]\]. 
+However, the pdf and cdf support inputs of +[infin] and -[infin]
+as special cases if RealType permits.
+
+At `p=1` and `p=0`, the quantile function returns the result of 
++__overflow_error and -__overflow_error, while the complement 
+quantile function returns the result of -__overflow_error and 
++__overflow_error respectively. 
+
+In this distribution the implementation of `logcdf` is specialized
+to improve numerical accuracy.
+
+[h4 Accuracy]
+
+The logistic distribution is implemented in terms of the `std::exp` 
+and the `std::log` functions, so its accuracy is related to the 
+accurate implementations of those functions on a given platform. 
+When calculating the quantile with a non-zero /position/ parameter 
+catastrophic cancellation errors can occur: 
+in such cases, only a low /absolute error/ can be guaranteed.
+
+[h4 Implementation]
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][Using the relation: pdf = e[super -(x-u)/s] / (s*(1+e[super -(x-u)/s])[super 2])]]
+[[cdf][Using the relation: p = 1/(1+e[super -(x-u)/s])]]
+[[logcdf][log(cdf) = -log1p(exp((u-x)/s)) ]]
+[[cdf complement][Using the relation: q = 1/(1+e[super (x-u)/s])]]
+[[quantile][Using the relation: x = u - s*log(1/p-1)]]
+[[quantile from the complement][Using the relation: x = u + s*log(p/1-p)]]
+[[mean][u]]
+[[mode][The same as the mean.]]
+[[skewness][0]]
+[[kurtosis excess][6/5]]
+[[variance][ ([pi]*s)[super 2] / 3]]
+]
+
+[endsect] [/section:logistic_dist Logistic Distribution]
+
+
+[/ logistic.qbk
+  Copyright 2006, 2007 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

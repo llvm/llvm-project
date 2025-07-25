@@ -1,0 +1,89 @@
+<?xml version='1.0'?>
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN'
+  'http://www.w3.org/TR/MathML2/dtd/xhtml-math11-f.dtd'
+  [<!ENTITY mathml 'http://www.w3.org/1998/Math/MathML'>]>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head><title>skew_normal_pdf</title>
+<!-- MathML created with MathCast Equation Editor version 0.9 -->
+</head>
+<body>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <mfrac>
+      <mn>1</mn>
+      <mfenced>
+        <mrow>
+          <mi>&#x3C9;</mi>
+          <mi>&#x3C0;</mi>
+        </mrow>
+      </mfenced>
+    </mfrac>
+    <msup>
+      <mi>e</mi>
+      <mo>&#x2212;</mo>
+    </msup>
+    <mfrac>
+      <msup>
+        <mfenced>
+          <mrow>
+            <mi>x</mi>
+            <mo>&#x2212;</mo>
+            <mi>&#x3BE;</mi>
+          </mrow>
+        </mfenced>
+        <mn>2</mn>
+      </msup>
+      <mfenced>
+        <mrow>
+          <mn>2</mn>
+          <msup>
+            <mi>&#x3C9;</mi>
+            <mn>2</mn>
+          </msup>
+        </mrow>
+      </mfenced>
+    </mfrac>
+    <msubsup>
+      <mo>&#x222B;</mo>
+      <mrow>
+        <mo>&#x2212;</mo>
+        <mi>&#x221E;</mi>
+      </mrow>
+      <mfenced>
+        <mrow>
+          <mi>&#x3B1;</mi>
+          <mfenced>
+            <mrow>
+              <mfrac>
+                <mfenced>
+                  <mrow>
+                    <mi>x</mi>
+                    <mo>&#x2212;</mo>
+                    <mi>&#x3BE;</mi>
+                  </mrow>
+                </mfenced>
+                <mi>&#x3C9;</mi>
+              </mfrac>
+            </mrow>
+          </mfenced>
+        </mrow>
+      </mfenced>
+    </msubsup>
+    <msup>
+      <mi>e</mi>
+      <mo>&#x2212;</mo>
+    </msup>
+    <mfrac>
+      <msup>
+        <mi>t</mi>
+        <mn>2</mn>
+      </msup>
+      <mn>2</mn>
+    </mfrac>
+    <mspace width="1em"/>
+    <mi>d</mi>
+    <mi>t</mi>
+  </mrow>
+</math>
+</body>
+</html>

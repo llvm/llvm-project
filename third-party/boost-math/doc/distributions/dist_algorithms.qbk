@@ -1,0 +1,78 @@
+[section:dist_algorithms Distribution Algorithms]
+
+[h4 Finding the Location and Scale for Normal and similar distributions]
+
+Two functions aid finding location and scale of random variable z
+to give probability p (given a scale or location).
+Only applies to distributions like normal, lognormal, extreme value, Cauchy, (and symmetrical triangular),
+that have scale and location properties.
+
+These functions are useful to predict the mean and/or standard deviation that will be needed to meet a specified minimum weight or maximum dose.
+
+Complement versions are also provided, both with explicit and implicit (default) policy.
+
+  using boost::math::policies::policy; // May be needed by users defining their own policies.
+  using boost::math::complement; // Will be needed by users who want to use complements.
+
+[h4 find_location function]
+
+``#include <boost/math/distributions/find_location.hpp>``
+
+ namespace boost{ namespace math{
+
+ template <class Dist, class ``__Policy``> // explicit error handling policy
+   typename Dist::value_type find_location( // For example, normal mean.
+   typename Dist::value_type z, // location of random variable z to give probability, P(X > z) == p.
+   // For example, a nominal minimum acceptable z, so that p * 100 % are > z
+   typename Dist::value_type p, // probability value desired at x, say 0.95 for 95% > z.
+   typename Dist::value_type scale, // scale parameter, for example, normal standard deviation.
+   const ``__Policy``& pol);
+
+ template <class Dist>  // with default policy.
+   typename Dist::value_type find_location( // For example, normal mean.
+   typename Dist::value_type z, // location of random variable z to give probability, P(X > z) == p.
+   // For example, a nominal minimum acceptable z, so that p * 100 % are > z
+   typename Dist::value_type p, // probability value desired at x, say 0.95 for 95% > z.
+   typename Dist::value_type scale); // scale parameter, for example, normal standard deviation.
+
+   }} // namespaces
+
+[h4 find_scale function]
+
+``#include <boost/math/distributions/find_scale.hpp>``
+
+ namespace boost{ namespace math{ 
+
+ template <class Dist, class ``__Policy``>
+   typename Dist::value_type find_scale( // For example, normal mean.
+   typename Dist::value_type z, // location of random variable z to give probability, P(X > z) == p.
+   // For example, a nominal minimum acceptable weight z, so that p * 100 % are > z
+   typename Dist::value_type p, // probability value desired at x, say 0.95 for 95% > z.
+   typename Dist::value_type location, // location parameter, for example, normal distribution mean.
+   const ``__Policy``& pol);
+
+  template <class Dist> // with default policy.
+    typename Dist::value_type find_scale( // For example, normal mean.
+    typename Dist::value_type z, // location of random variable z to give probability, P(X > z) == p.
+    // For example, a nominal minimum acceptable z, so that p * 100 % are > z
+    typename Dist::value_type p, // probability value desired at x, say 0.95 for 95% > z.
+    typename Dist::value_type location) // location parameter, for example, normal distribution mean.
+ }} // namespaces
+    
+All argument must be finite, otherwise __domain_error is called.
+
+Probability arguments must be [0, 1], otherwise __domain_error is called.
+
+If the choice of arguments would give a negative scale, __domain_error is called, unless the policy is to ignore, when the negative (impossible) value of scale is returned.    
+    
+[link math_toolkit.stat_tut.weg.find_eg Find Mean and standard deviation examples]
+gives simple examples of use of both find_scale and find_location, and a longer example finding means and standard deviations of normally distributed weights to meet a specification.
+
+[endsect] [/section:dist_algorithms dist_algorithms]
+
+[/ dist_algorithms.qbk
+  Copyright 2007 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]

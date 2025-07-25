@@ -1,0 +1,249 @@
+[book Standardized Floating-Point typedefs for C and C++
+
+    [quickbook 1.7]
+    [copyright 2014  Christopher Kormanyos, John Maddock, Paul A. Bristow]
+    [license
+        Distributed under the Boost Software License, Version 1.0.
+        (See accompanying file LICENSE_1_0.txt or copy at
+        [@http://www.boost.org/LICENSE_1_0.txt])
+    ]
+    [authors [Kormanyos, Christopher],  [Maddock, John], [Bristow, Paul A.] ]
+    [last-revision $Date$]
+    [/version 1.8.3]
+]
+
+[template tr1[] [@http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1836.pdf Technical Report on C++ Library Extensions]]
+[template C99[] [@http://www.open-std.org/JTC1/SC22/WG14/www/docs/n1256.pdf C99 Standard ISO/IEC 9899:1999]]
+
+[def __gsl [@http://www.gnu.org/software/gsl/ GSL-1.9]]
+[def __glibc [@http://www.gnu.org/software/libc/ GNU C Lib]]
+[def __hpc [@http://docs.hp.com/en/B9106-90010/index.html HP-UX C Library]]
+[def __cephes [@http://www.netlib.org/cephes/ Cephes]]
+[def __NTL [@http://www.shoup.net/ntl/ NTL A Library for doing Number Theory]]
+[def __NTL_RR [@http://shoup.net/ntl/doc/RR.txt NTL::RR]]
+[def __NTL_quad_float [@http://shoup.net/ntl/doc/quad_float.txt NTL::quad_float]]
+[def __MPFR [@http://www.mpfr.org/ GNU MPFR library]]
+[def __GMP [@http://gmplib.org/ GNU Multiple Precision Arithmetic Library]]
+[def __multiprecision [@http://www.boost.org/doc/libs/1_53_0_beta1/libs/multiprecision/doc/html/index.html Boost.Multiprecision]]
+[def __cpp_dec_float [@http://www.boost.org/doc/libs/1_53_0_beta1/libs/multiprecision/doc/html/boost_multiprecision/tut/floats/cpp_dec_float.html cpp_dec_float]]
+[def __R [@http://www.r-project.org/ The R Project for Statistical Computing]]
+[def __godfrey [link godfrey Godfrey]]
+[def __pugh [link pugh Pugh]]
+[def __NaN [@http://en.wikipedia.org/wiki/NaN NaN]]
+[def __errno [@http://en.wikipedia.org/wiki/Errno `::errno`]]
+[def __Mathworld [@http://mathworld.wolfram.com Wolfram MathWorld]]
+[def __Mathematica [@http://www.wolfram.com/products/mathematica/index.html Wolfram Mathematica]]
+[def __WolframAlpha [@http://www.wolframalpha.com/ Wolfram Alpha]]
+[def __TOMS748 [@http://portal.acm.org/citation.cfm?id=210111 TOMS Algorithm 748: enclosing zeros of continuous functions]]
+[def __TOMS910 [@http://portal.acm.org/citation.cfm?id=1916469 TOMS Algorithm 910: A Portable C++ Multiple-Precision System for Special-Function Calculations]]
+[def __why_complements [link why_complements why complements?]]
+[def __complements [link math_toolkit.stat_tut.overview.complements complements]]
+[def __performance [link perf performance]]
+[def __building [link math_toolkit.building building libraries]]
+[def __e_float [@http://calgo.acm.org/910.zip e_float (TOMS Algorithm 910)]]
+[def __Abramowitz_Stegun M. Abramowitz and I. A. Stegun, Handbook of Mathematical Functions, NBS  (1964)]
+[def __DMLF [@http://dlmf.nist.gov/ NIST Digital Library of Mathematical Functions]]
+[def __IEEE754  [@http://en.wikipedia.org/wiki/IEEE_floating_point IEEE_floating_point]]
+[def __N3626  [@http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3626.pdf N3626]]
+[def __N1703 [@http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1703.pdf N1703]]
+
+[/ Some composite templates]
+[template super[x]'''<superscript>'''[x]'''</superscript>''']
+[template sub[x]'''<subscript>'''[x]'''</subscript>''']
+[template floor[x]'''&#x230A;'''[x]'''&#x230B;''']
+[template floorlr[x][lfloor][x][rfloor]]
+[template ceil[x] '''&#x2308;'''[x]'''&#x2309;''']
+
+[/template header_file[file] [@../../../../[file] [file]]]
+
+[note A printer-friendly PDF version of this manual is also available.]
+
+[section:overview Overview]
+
+The header `<boost/cstdfloat.hpp>` provides optional standardized
+floating-point `typedef`s having specified widths.
+These are useful for writing portable code because they
+should behave identically on all platforms.
+All `typedef`s are in `namespace boost`.
+
+The `typedef`s include `float16_t, float32_t, float64_t, float128_t`,
+their corresponding least and fast types,
+and the corresponding maximum-width type.
+The `typedef`s are based on underlying built-in types
+such as `float`, `double`, or `long double`, or based on other compiler-specific
+non-standardized types such as `__float128`.
+The underlying types of these typedef's must conform with
+the corresponding specifications of binary16, binary32, binary64,
+and binary128 in __IEEE754 floating-point format
+[@http://en.wikipedia.org/wiki/IEEE_floating_point].
+
+The typedef's are based on __N3626
+proposed for a new C++14 standard header `<cstdfloat>` and
+__N1703 proposed for a new C language standard header `<stdfloat.h>`.
+
+The 128-bit floating-point type, of great interest in scientific and
+numeric programming, is not required in the boost header,
+and may not be supplied for all platforms/compilers, because compiler
+support for a 128-bit floating-point type is not mandated by either
+the C standard or the C++ standard.
+
+The following code uses `<boost/cstdfloat.hpp>` in combination with
+`<boost/math/special_functions.hpp>` to compute a simplified
+version of the Jahnke-Emden-Lambda function. Here, we use
+a floating-point type with exactly 64 bits (i.e., `float64_t`).
+If we were to use, for instance, built-in `double`,
+then there would be no guarantee that the code would
+behave identically on all platforms. With `float64_t` from
+`<boost/cstdfloat.hpp>`, however, this is very likely.
+Using `float64_t`, we know that
+this code is portable and uses a floating-point type
+with approximately 15 decimal digits of precision.
+
+  #include <cmath>
+  #include <boost/cstdfloat.hpp>
+  #include <boost/math/special_functions.hpp>
+
+  boost::float64_t jahnke_emden_lambda(boost::float64_t v, boost::float64_t x)
+  {
+    const boost::float64_t gamma_v_plus_one = boost::math::tgamma(v + 1);
+    const boost::float64_t x_half_pow_v     = std::pow(x / 2, v);
+
+    return gamma_v_plus_one * boost::math::cyl_bessel_j(x, v) / x_half_pow_v;
+  }
+
+See `cstdfloat_test.cpp` for a more detailed test program.
+
+[endsect] [/section:overview Overview]
+
+[section:rationale Rationale]
+
+The implementation of `<boost/cstdfloat.hpp>` is designed to utilize `<float.h>`,
+defined in the 1989 C standard. The preprocessor is used to query certain
+preprocessor definitions in `<float.h>` such as FLT_MAX, DBL_MAX, etc.
+Based on the results of these queries, an attempt is made to automatically
+detect the presence of built-in floating-point types having specified widths.
+An unequivocal test regarding conformance with __IEEE754 (IEC599) based on
+[@ http://en.cppreference.com/w/cpp/types/numeric_limits/is_iec559 `std::numeric_limits<>::is_iec559`]
+is performed with `static_assert`.
+
+The header `<boost/cstdfloat.hpp>` makes the standardized floating-point
+`typedef`s safely available in `namespace boost` without placing any names
+in `namespace std`. The intention is to complement rather than compete
+with a potential future C++ Standard Library that may contain these `typedef`s.
+Should some future C++ standard include `<stdfloat.h>` and `<cstdfloat>`,
+then `<boost/cstdfloat.hpp>` will continue to function, but will become redundant
+and may be safely deprecated.
+
+Because `<boost/cstdfloat.hpp>` is a boost header, its name conforms to the
+boost header naming conventions, not the C++ Standard Library header
+naming conventions.
+
+[note
+<boost/cstdfloat.hpp> [*cannot synthesize or create
+a `typedef` if the underlying type is not provided by the compiler].
+For example, if a compiler does not have an underlying floating-point
+type with 128 bits (highly sought-after in scientific and numeric programming),
+then `float128_t` and its corresponding least and fast types are not
+provided by `<boost/cstdfloat.hpp`>.]
+
+[warning
+As an implementation artifact, certain C macro names from `<float.h>`
+may possibly be visible to users of `<boost/cstdfloat.hpp>`.
+Don't rely on using these macros; they are not part of any Boost-specified interface.
+Use `std::numeric_limits<>` for floating-point ranges, etc. instead.]
+
+[endsect] [/section:rationale Rationale]
+
+[section:exact_typdefs Exact-Width Floating-Point `typedef`s]
+
+The `typedef float#_t`, with # replaced by the width, designates a
+floating-point type of exactly # bits. For example `float32_t` denotes
+a single-precision floating-point type with approximately
+7 decimal digits of precision (equivalent to binary32 in __IEEE754).
+
+Floating-point types specified in C and C++ are allowed to have
+implementation-specific widths and formats.
+However, if a platform supports underlying floating-point types
+(conformant with __IEEE754) with widths of 16, 32, 64, 128 bits,
+or any combination thereof,
+then `<boost/cstdfloat.hpp>` does provide the corresponding `typedef`s
+`float16_t, float32_t, float64_t, float128_t,`
+their corresponding least and fast types,
+and the corresponding maximum-width type
+
+The absence of `float128_t` is indicated by the macro `BOOST_NO_FLOAT128_T`.
+
+[endsect] [/section:exact_typdefs Exact-Width Floating-Point `typedef`s]
+
+
+[section:fastest_typdefs Fastest minimum-width floating-point `typedef`s]
+
+The `typedef float_least#_t`, with # replaced by the width, designates a
+floating-point type with a [*width of at least # bits], such that no
+floating-point type with lesser size has at least the specified width.
+Thus, `float_least32_t` denotes the smallest floating-point type with
+a width of at least 32 bits.
+
+Minimum-width floating-point types are provided for all existing
+exact-width floating-point types on a given platform.
+
+For example, if a platform supports `float32_t` and `float64_t`,
+then `float_least32_t` and `float_least64_t` will also be supported, etc.
+
+[endsect] [/section:fastest_typdefs Fastest minimum-width floating-point `typedef`s]
+
+[section:fastest_typdefs Fastest minimum-width floating-point `typedef`s]
+
+The typedef `float_fast#_t`, with # replaced by the width, designates
+the [*fastest] floating-point type with a width of at least # bits.
+
+There is no absolute guarantee that these types are the fastest for all purposes.
+In any case, however, they satisfy the precision and width requirements.
+
+Fastest minimum-width floating-point types are provided for all existing
+exact-width floating-point types on a given platform.
+
+For example, if a platform supports `float32_t` and `float64_t`,
+then `float_fast32_t` and `float_fast64_t` will also be supported, etc.
+
+[endsect] [/section:fastest_typdefs Fastest minimum-width floating-point `typedef`s]
+
+[section:greatest_typdefs Greatest-width floating-point typedef]
+
+The `typedef floatmax_t` designates a floating-point type capable of representing
+any value of any floating-point type in a given platform.
+
+The greatest-width typedef is provided for all platforms.
+
+[endsect] [/section:greatest_typdefs Greatest-width floating-point typedef]
+
+[section:macros Floating-Point Constant Macros]
+
+All macros of the type `BOOST_FLOAT16_C, BOOST_FLOAT32_C, BOOST_FLOAT64_C,
+BOOST_FLOAT128_C, BOOST_FLOATMAX_C` are always defined after inclusion of
+`<boost/cstdfloat.hpp>`. These allow floating-point constants of at
+least the specified width to be declared.
+
+For example:
+
+  #include <boost/cstdfloat.hpp>
+
+  // Declare Pythagoras' constant with approximately 7 decimal digits of precision.
+  static const boost::float32_t pi = BOOST_FLOAT32_C(3.1415926536);
+
+  // Declare the Euler-gamma constant with approximately 34 decimal digits of precision.
+  static const boost::float128_t euler = BOOST_FLOAT128_C(0.57721566490153286060651209008240243104216);
+
+[endsect] [/section:macros Floating-Point Constant Macros]
+
+
+[/ cstdfloat.qbk
+  Copyright 2014 Christopher Kormanyos, John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
+
+
+

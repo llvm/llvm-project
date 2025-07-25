@@ -1,0 +1,37 @@
+[/i:/modular-boost/libs/math/doc/roots/roots_table_75_gcc_SEE SEE2 X64 .qbk
+Copyright 2015 Paul A. Bristow.
+Copyright 2015 John Maddock.
+Distributed under the Boost Software License, Version 1.0.
+(See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt).
+]
+
+
+[h6 Program i:/modular-boost/libs/math/example/root_n_finding_algorithms.cpp,
+ GNU C++ version 4.9.1, GNU libstdc++ version 20140716, Win32
+Compiled in optimise mode.]
+Fraction of full accuracy 0.75
+[table:root_5 5th root(28) for float, double, long double and cpp_bin_float_50 types.
+[[][float][][][] [][double][][][] [][long d][][][] [][cpp50][][]]
+[[Algo     ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ]]
+[[TOMS748  ][  7][  312][2.50][  0][ ][ 11][  484][3.46][  1][ ][  9][ 1625][4.17][  0][ ][ 11][67718][6.46][  0][ ]]
+[[Newton   ][  3][  125][1.00][  0][ ][  5][  140][1.00][ -1][ ][  4][  390][1.00][  0][ ][  6][10484][1.00][  0][ ]]
+[[Halley   ][  2][  125][1.00][  0][ ][  3][  156][1.11][  0][ ][  3][  453][1.16][  0][ ][  4][17359][1.66][  0][ ]]
+[[Schr'''&#xf6;'''der][  6][  203][1.62][  0][ ][  7][  234][1.67][ -1][ ][  7][  625][1.60][  0][ ][  8][35203][3.36][  0][ ]]
+] [/end of table root]
+[table:root_7 7th root(28) for float, double, long double and cpp_bin_float_50 types.
+[[][float][][][] [][double][][][] [][long d][][][] [][cpp50][][]]
+[[Algo     ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ]]
+[[TOMS748  ][ 12][  531][3.40][  1][ ][ 15][  734][4.29][  2][ ][ 13][ 2437][5.04][  0][ ][ 14][105421][6.48][  0][ ]]
+[[Newton   ][  5][  156][1.00][  0][ ][  7][  171][1.00][  0][ ][  6][  484][1.00][  0][ ][  8][16281][1.00][  0][ ]]
+[[Halley   ][  5][  187][1.20][  0][ ][  6][  234][1.37][  0][ ][  5][  796][1.64][  0][ ][  6][30781][1.89][  0][ ]]
+[[Schr'''&#xf6;'''der][  5][  187][1.20][  0][ ][  6][  218][1.27][  0][ ][  6][  546][1.13][  0][ ][  7][30640][1.88][  0][ ]]
+] [/end of table root]
+[table:root_11 11th root(28) for float, double, long double and cpp_bin_float_50 types.
+[[][float][][][] [][double][][][] [][long d][][][] [][cpp50][][]]
+[[Algo     ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ][Its][Times][Norm][Dis][ ]]
+[[TOMS748  ][ 11][  546][3.19][  0][ ][ 14][  750][4.01][  2][ ][ 14][ 2828][5.33][  1][ ][ 17][153093][7.82][  2][ ]]
+[[Newton   ][  6][  171][1.00][  0][ ][  7][  187][1.00][  0][ ][  8][  531][1.00][  0][ ][  9][19578][1.00][  0][ ]]
+[[Halley   ][  5][  203][1.19][  0][ ][  6][  234][1.25][  0][ ][  6][  703][1.32][  0][ ][  7][36296][1.85][  0][ ]]
+[[Schr'''&#xf6;'''der][  6][  203][1.19][  0][ ][  7][  250][1.34][  0][ ][  7][  578][1.09][  0][ ][  8][38046][1.94][  0][ ]]
+] [/end of table root]

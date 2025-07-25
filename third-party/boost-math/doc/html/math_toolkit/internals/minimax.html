@@ -1,0 +1,283 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Minimax Approximations and the Remez Algorithm</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../internals.html" title="Internal tools">
+<link rel="prev" href="tuples.html" title="Tuples">
+<link rel="next" href="error_test.html" title="Relative Error and Testing">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="tuples.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../internals.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="error_test.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.internals.minimax"></a><a class="link" href="minimax.html" title="Minimax Approximations and the Remez Algorithm">Minimax Approximations
+      and the Remez Algorithm</a>
+</h3></div></div></div>
+<p>
+        The directory <code class="computeroutput"><span class="identifier">libs</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">minimax</span></code>
+        contains an interactive command-line driven program for the generation of
+        minimax approximations using the Remez algorithm. Both polynomial and rational
+        approximations are supported, although the latter are tricky to converge:
+        it is not uncommon for convergence of rational forms to fail. No such limitations
+        are present for polynomial approximations which should always converge smoothly.
+      </p>
+<p>
+        It's worth stressing that developing rational approximations to functions
+        is often not an easy task, and one to which many books have been devoted.
+        To use this tool, you will need to have a reasonable grasp of what the Remez
+        algorithm is, and the general form of the approximation you want to achieve.
+      </p>
+<p>
+        Unless you already familiar with the Remez method, you should first read
+        the <a class="link" href="../remez.html" title="The Remez Method">brief background article explaining
+        the principles behind the Remez algorithm</a>.
+      </p>
+<p>
+        The program consists of two parts:
+      </p>
+<div class="variablelist">
+<p class="title"><b></b></p>
+<dl class="variablelist">
+<dt><span class="term">main.cpp</span></dt>
+<dd><p>
+              Contains the command line parser, and all the calls to the Remez code.
+            </p></dd>
+<dt><span class="term">f.cpp</span></dt>
+<dd><p>
+              Contains the function to approximate.
+            </p></dd>
+</dl>
+</div>
+<p>
+        Therefore to use this tool, you must modify f.cpp to return the function
+        to approximate. The tools supports multiple function approximations within
+        the same compiled program: each as a separate variant:
+      </p>
+<pre class="programlisting"><span class="identifier">NTL</span><span class="special">::</span><span class="identifier">RR</span> <span class="identifier">f</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">NTL</span><span class="special">::</span><span class="identifier">RR</span><span class="special">&amp;</span> <span class="identifier">x</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">variant</span><span class="special">);</span>
+</pre>
+<p>
+        Returns the value of the function <span class="emphasis"><em>variant</em></span> at point
+        <span class="emphasis"><em>x</em></span>. So if you wish you can just add the function to approximate
+        as a new variant after the existing examples.
+      </p>
+<p>
+        In addition to those two files, the program needs to be linked to a <a class="link" href="../high_precision/use_ntl.html" title="Using NTL Library">patched NTL library to compile</a>.
+      </p>
+<p>
+        Note that the function <span class="emphasis"><em>f</em></span> must return the rational part
+        of the approximation: for example if you are approximating a function <span class="emphasis"><em>f(x)</em></span>
+        then it is quite common to use:
+      </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+          <span class="serif_italic">f(x) = g(x)(Y + R(x))</span>
+        </p></blockquote></div>
+<p>
+        where <span class="emphasis"><em>g(x)</em></span> is the dominant part of <span class="emphasis"><em>f(x)</em></span>,
+        <span class="emphasis"><em>Y</em></span> is some constant, and <span class="emphasis"><em>R(x)</em></span> is
+        the rational approximation part, usually optimised for a low absolute error
+        compared to |Y|.
+      </p>
+<p>
+        In this case you would define <span class="emphasis"><em>f</em></span> to return <span class="serif-italic">f(x)/g(x)</span>
+        and then set the y-offset of the approximation to <span class="emphasis"><em>Y</em></span>
+        (see command line options below).
+      </p>
+<p>
+        Many other forms are possible, but in all cases the objective is to split
+        <span class="emphasis"><em>f(x)</em></span> into a dominant part that you can evaluate easily
+        using standard math functions, and a smooth and slowly changing rational
+        approximation part. Refer to your favourite textbook for more examples.
+      </p>
+<p>
+        Command line options for the program are as follows:
+      </p>
+<div class="variablelist">
+<p class="title"><b></b></p>
+<dl class="variablelist">
+<dt><span class="term">variant N</span></dt>
+<dd><p>
+              Sets the current function variant to N. This allows multiple functions
+              that are to be approximated to be compiled into the same executable.
+              Defaults to 0.
+            </p></dd>
+<dt><span class="term">range a b</span></dt>
+<dd><p>
+              Sets the domain for the approximation to the range [a,b], defaults
+              to [0,1].
+            </p></dd>
+<dt><span class="term">relative</span></dt>
+<dd><p>
+              Sets the Remez code to optimise for relative error. This is the default
+              at program startup. Note that relative error can only be used if f(x)
+              has no roots over the range being optimised.
+            </p></dd>
+<dt><span class="term">absolute</span></dt>
+<dd><p>
+              Sets the Remez code to optimise for absolute error.
+            </p></dd>
+<dt><span class="term">pin [true|false]</span></dt>
+<dd><p>
+              "Pins" the code so that the rational approximation passes
+              through the origin. Obviously only set this to <span class="emphasis"><em>true</em></span>
+              if R(0) must be zero. This is typically used when trying to preserve
+              a root at [0,0] while also optimising for relative error.
+            </p></dd>
+<dt><span class="term">order N D</span></dt>
+<dd><p>
+              Sets the order of the approximation to <span class="emphasis"><em>N</em></span> in the
+              numerator and <span class="emphasis"><em>D</em></span> in the denominator. If <span class="emphasis"><em>D</em></span>
+              is zero then the result will be a polynomial approximation. There will
+              be N+D+2 coefficients in total, the first coefficient of the numerator
+              is zero if <span class="emphasis"><em>pin</em></span> was set to true, and the first
+              coefficient of the denominator is always one.
+            </p></dd>
+<dt><span class="term">working-precision N</span></dt>
+<dd><p>
+              Sets the working precision of NTL::RR to <span class="emphasis"><em>N</em></span> binary
+              digits. Defaults to 250.
+            </p></dd>
+<dt><span class="term">target-precision N</span></dt>
+<dd><p>
+              Sets the precision of printed output to <span class="emphasis"><em>N</em></span> binary
+              digits: set to the same number of digits as the type that will be used
+              to evaluate the approximation. Defaults to 53 (for double precision).
+            </p></dd>
+<dt><span class="term">skew val</span></dt>
+<dd><p>
+              "Skews" the initial interpolated control points towards one
+              end or the other of the range. Positive values skew the initial control
+              points towards the left hand side of the range, and negative values
+              towards the right hand side. If an approximation won't converge (a
+              common situation) try adjusting the skew parameter until the first
+              step yields the smallest possible error. <span class="emphasis"><em>val</em></span> should
+              be in the range [-100,+100], the default is zero.
+            </p></dd>
+<dt><span class="term">brake val</span></dt>
+<dd><p>
+              Sets a brake on each step so that the change in the control points
+              is braked by <span class="emphasis"><em>val%</em></span>. Defaults to 50, try a higher
+              value if an approximation won't converge, or a lower value to get speedier
+              convergence.
+            </p></dd>
+<dt><span class="term">x-offset val</span></dt>
+<dd><p>
+              Sets the x-offset to <span class="emphasis"><em>val</em></span>: the approximation will
+              be generated for <code class="computeroutput"><span class="identifier">f</span><span class="special">(</span><span class="identifier">S</span> <span class="special">*</span> <span class="special">(</span><span class="identifier">x</span> <span class="special">+</span> <span class="identifier">X</span><span class="special">))</span> <span class="special">+</span> <span class="identifier">Y</span></code>
+              where <span class="emphasis"><em>X</em></span> is the x-offset, <span class="emphasis"><em>S</em></span>
+              is the x-scale and <span class="emphasis"><em>Y</em></span> is the y-offset. Defaults
+              to zero. To avoid rounding errors, take care to specify a value that
+              can be exactly represented as a floating point number.
+            </p></dd>
+<dt><span class="term">x-scale val</span></dt>
+<dd><p>
+              Sets the x-scale to <span class="emphasis"><em>val</em></span>: the approximation will
+              be generated for <code class="computeroutput"><span class="identifier">f</span><span class="special">(</span><span class="identifier">S</span> <span class="special">*</span> <span class="special">(</span><span class="identifier">x</span> <span class="special">+</span> <span class="identifier">X</span><span class="special">))</span> <span class="special">+</span> <span class="identifier">Y</span></code>
+              where <span class="emphasis"><em>S</em></span> is the x-scale, <span class="emphasis"><em>X</em></span>
+              is the x-offset and <span class="emphasis"><em>Y</em></span> is the y-offset. Defaults
+              to one. To avoid rounding errors, take care to specify a value that
+              can be exactly represented as a floating point number.
+            </p></dd>
+<dt><span class="term">y-offset val</span></dt>
+<dd><p>
+              Sets the y-offset to <span class="emphasis"><em>val</em></span>: the approximation will
+              be generated for <code class="computeroutput"><span class="identifier">f</span><span class="special">(</span><span class="identifier">S</span> <span class="special">*</span> <span class="special">(</span><span class="identifier">x</span> <span class="special">+</span> <span class="identifier">X</span><span class="special">))</span> <span class="special">+</span> <span class="identifier">Y</span></code>
+              where <span class="emphasis"><em>X</em></span> is the x-offset, <span class="emphasis"><em>S</em></span>
+              is the x-scale and <span class="emphasis"><em>Y</em></span> is the y-offset. Defaults
+              to zero. To avoid rounding errors, take care to specify a value that
+              can be exactly represented as a floating point number.
+            </p></dd>
+<dt><span class="term">y-offset auto</span></dt>
+<dd><p>
+              Sets the y-offset to the average value of f(x) evaluated at the two
+              endpoints of the range plus the midpoint of the range. The calculated
+              value is deliberately truncated to <span class="emphasis"><em>float</em></span> precision
+              (and should be stored as a <span class="emphasis"><em>float</em></span> in your code).
+              The approximation will be generated for <code class="computeroutput"><span class="identifier">f</span><span class="special">(</span><span class="identifier">x</span> <span class="special">+</span> <span class="identifier">X</span><span class="special">)</span> <span class="special">+</span> <span class="identifier">Y</span></code> where <span class="emphasis"><em>X</em></span> is
+              the x-offset and <span class="emphasis"><em>Y</em></span> is the y-offset. Defaults to
+              zero.
+            </p></dd>
+<dt><span class="term">graph N</span></dt>
+<dd><p>
+              Prints N evaluations of f(x) at evenly spaced points over the range
+              being optimised. If unspecified then <span class="emphasis"><em>N</em></span> defaults
+              to 3. Use to check that f(x) is indeed smooth over the range of interest.
+            </p></dd>
+<dt><span class="term">step N</span></dt>
+<dd><p>
+              Performs <span class="emphasis"><em>N</em></span> steps, or one step if <span class="emphasis"><em>N</em></span>
+              is unspecified. After each step prints: the peek error at the extrema
+              of the error function of the approximation, the theoretical error term
+              solved for on the last step, and the maximum relative change in the
+              location of the Chebyshev control points. The approximation is converged
+              on the minimax solution when the two error terms are (approximately)
+              equal, and the change in the control points has decreased to a suitably
+              small value.
+            </p></dd>
+<dt><span class="term">test [float|double|long]</span></dt>
+<dd><p>
+              Tests the current approximation at float, double, or long double precision.
+              Useful to check for rounding errors in evaluating the approximation
+              at fixed precision. Tests are conducted at the extrema of the error
+              function of the approximation, and at the zeros of the error function.
+            </p></dd>
+<dt><span class="term">test [float|double|long] N</span></dt>
+<dd><p>
+              Tests the current approximation at float, double, or long double precision.
+              Useful to check for rounding errors in evaluating the approximation
+              at fixed precision. Tests are conducted at N evenly spaced points over
+              the range of the approximation. If none of [float|double|long] are
+              specified then tests using NTL::RR, this can be used to obtain the
+              error function of the approximation.
+            </p></dd>
+<dt><span class="term">rescale a b</span></dt>
+<dd><p>
+              Takes the current Chebeshev control points, and rescales them over
+              a new interval [a,b]. Sometimes this can be used to obtain starting
+              control points for an approximation that can not otherwise be converged.
+            </p></dd>
+<dt><span class="term">rotate</span></dt>
+<dd><p>
+              Moves one term from the numerator to the denominator, but keeps the
+              Chebyshev control points the same. Sometimes this can be used to obtain
+              starting control points for an approximation that can not otherwise
+              be converged.
+            </p></dd>
+<dt><span class="term">info</span></dt>
+<dd><p>
+              Prints out the current approximation: the location of the zeros of
+              the error function, the location of the Chebyshev control points, the
+              x and y offsets, and of course the coefficients of the polynomials.
+            </p></dd>
+</dl>
+</div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="tuples.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../internals.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="error_test.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

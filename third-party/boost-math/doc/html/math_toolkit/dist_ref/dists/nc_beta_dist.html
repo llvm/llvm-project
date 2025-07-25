@@ -1,0 +1,494 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Noncentral Beta Distribution</title>
+<link rel="stylesheet" href="../../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../dists.html" title="Distributions">
+<link rel="prev" href="negative_binomial_dist.html" title="Negative Binomial Distribution">
+<link rel="next" href="nc_chi_squared_dist.html" title="Noncentral Chi-Squared Distribution">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="negative_binomial_dist.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../dists.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="nc_chi_squared_dist.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="math_toolkit.dist_ref.dists.nc_beta_dist"></a><a class="link" href="nc_beta_dist.html" title="Noncentral Beta Distribution">Noncentral
+        Beta Distribution</a>
+</h4></div></div></div>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">non_central_beta</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span></pre>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span><span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">RealType</span> <span class="special">=</span> <span class="keyword">double</span><span class="special">,</span>
+          <span class="keyword">class</span> <a class="link" href="../../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a>   <span class="special">=</span> <a class="link" href="../../pol_ref/pol_ref_ref.html" title="Policy Class Reference">policies::policy&lt;&gt;</a> <span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">non_central_beta_distribution</span><span class="special">;</span>
+
+<span class="keyword">typedef</span> <span class="identifier">non_central_beta_distribution</span><span class="special">&lt;&gt;</span> <span class="identifier">non_central_beta</span><span class="special">;</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">RealType</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">non_central_beta_distribution</span>
+<span class="special">{</span>
+<span class="keyword">public</span><span class="special">:</span>
+   <span class="keyword">typedef</span> <span class="identifier">RealType</span>  <span class="identifier">value_type</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">Policy</span>    <span class="identifier">policy_type</span><span class="special">;</span>
+
+   <span class="comment">// Constructor:</span>
+   <span class="identifier">non_central_beta_distribution</span><span class="special">(</span><span class="identifier">RealType</span> <span class="identifier">alpha</span><span class="special">,</span> <span class="identifier">RealType</span> <span class="identifier">beta</span><span class="special">,</span> <span class="identifier">RealType</span> <span class="identifier">lambda</span><span class="special">);</span>
+
+   <span class="comment">// Accessor to shape parameters:</span>
+   <span class="identifier">RealType</span> <span class="identifier">alpha</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+   <span class="identifier">RealType</span> <span class="identifier">beta</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+
+   <span class="comment">// Accessor to non-centrality parameter lambda:</span>
+   <span class="identifier">RealType</span> <span class="identifier">non_centrality</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+<span class="special">};</span>
+
+<span class="special">}}</span> <span class="comment">// namespaces</span>
+</pre>
+<p>
+          The noncentral beta distribution is a generalization of the <a class="link" href="beta_dist.html" title="Beta Distribution">Beta
+          Distribution</a>.
+        </p>
+<p>
+          It is defined as the ratio
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="serif_italic">X = χ<sub>m</sub><sup>2</sup>(λ) / (χ<sub>m</sub><sup>2</sup>(λ) + χ<sub>n</sub><sup>2</sup>)</span>
+          </p></blockquote></div>
+<p>
+          where <span class="serif_italic">χ<sub>m</sub><sup>2</sup>(λ)</span> is a noncentral <span class="serif_italic">χ<sup>2</sup></span> random variable with <span class="emphasis"><em>m</em></span>
+          degrees of freedom, and χ<sub>n</sub><sup>2</sup>
+is a central <span class="serif_italic">χ<sup>2</sup> </span>
+          random variable with <span class="emphasis"><em>n</em></span> degrees of freedom.
+        </p>
+<p>
+          This gives a PDF that can be expressed as a Poisson mixture of beta distribution
+          PDFs:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../equations/nc_beta_ref1.svg"></span>
+
+          </p></blockquote></div>
+<p>
+          where P(i;λ/2) is the discrete Poisson probability at <span class="emphasis"><em>i</em></span>,
+          with mean λ/2, and I<sub>x</sub><sup>'</sup>(α, β) is the derivative of the incomplete beta function.
+          This leads to the usual form of the CDF as:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../equations/nc_beta_ref2.svg"></span>
+
+          </p></blockquote></div>
+<p>
+          The following graph illustrates how the distribution changes for different
+          values of λ:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../graphs/nc_beta_pdf.svg" align="middle"></span>
+
+          </p></blockquote></div>
+<h5>
+<a name="math_toolkit.dist_ref.dists.nc_beta_dist.h0"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.nc_beta_dist.member_functions"></a></span><a class="link" href="nc_beta_dist.html#math_toolkit.dist_ref.dists.nc_beta_dist.member_functions">Member
+          Functions</a>
+        </h5>
+<pre class="programlisting"><span class="identifier">non_central_beta_distribution</span><span class="special">(</span><span class="identifier">RealType</span> <span class="identifier">a</span><span class="special">,</span> <span class="identifier">RealType</span> <span class="identifier">b</span><span class="special">,</span> <span class="identifier">RealType</span> <span class="identifier">lambda</span><span class="special">);</span>
+</pre>
+<p>
+          Constructs a noncentral beta distribution with shape parameters <span class="emphasis"><em>a</em></span>
+          and <span class="emphasis"><em>b</em></span> and non-centrality parameter <span class="emphasis"><em>lambda</em></span>.
+        </p>
+<p>
+          Requires a &gt; 0, b &gt; 0 and lambda &gt;= 0, otherwise calls <a class="link" href="../../error_handling.html#math_toolkit.error_handling.domain_error">domain_error</a>.
+        </p>
+<pre class="programlisting"><span class="identifier">RealType</span> <span class="identifier">alpha</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+</pre>
+<p>
+          Returns the parameter <span class="emphasis"><em>a</em></span> from which this object was
+          constructed.
+        </p>
+<pre class="programlisting"><span class="identifier">RealType</span> <span class="identifier">beta</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+</pre>
+<p>
+          Returns the parameter <span class="emphasis"><em>b</em></span> from which this object was
+          constructed.
+        </p>
+<pre class="programlisting"><span class="identifier">RealType</span> <span class="identifier">non_centrality</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+</pre>
+<p>
+          Returns the parameter <span class="emphasis"><em>lambda</em></span> from which this object
+          was constructed.
+        </p>
+<h5>
+<a name="math_toolkit.dist_ref.dists.nc_beta_dist.h1"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.nc_beta_dist.non_member_accessors"></a></span><a class="link" href="nc_beta_dist.html#math_toolkit.dist_ref.dists.nc_beta_dist.non_member_accessors">Non-member
+          Accessors</a>
+        </h5>
+<p>
+          Most of the <a class="link" href="../nmp.html" title="Non-Member Properties">usual non-member
+          accessor functions</a> are supported: <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.cdf">Cumulative
+          Distribution Function</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.pdf">Probability
+          Density Function</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.quantile">Quantile</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.mean">mean</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.variance">variance</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.sd">standard deviation</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.median">median</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.mode">mode</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.hazard">Hazard Function</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.chf">Cumulative Hazard Function</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.range">range</a> and <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.support">support</a>.
+        </p>
+<p>
+          Mean and variance are implemented using hypergeometric pfq functions and
+          relations given in <a href="http://reference.wolfram.com/mathematica/ref/NoncentralBetaDistribution.html" target="_top">Wolfram
+          Noncentral Beta Distribution</a>.
+        </p>
+<p>
+          However, the following are not currently implemented: <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.skewness">skewness</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.kurtosis">kurtosis</a> and
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.kurtosis_excess">kurtosis_excess</a>.
+        </p>
+<p>
+          The domain of the random variable is [0, 1].
+        </p>
+<h5>
+<a name="math_toolkit.dist_ref.dists.nc_beta_dist.h2"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.nc_beta_dist.accuracy"></a></span><a class="link" href="nc_beta_dist.html#math_toolkit.dist_ref.dists.nc_beta_dist.accuracy">Accuracy</a>
+        </h5>
+<p>
+          The following table shows the peak errors (in units of <a href="http://en.wikipedia.org/wiki/Machine_epsilon" target="_top">epsilon</a>)
+          found on various platforms with various floating point types. The failures
+          in the comparison to the <a href="http://www.r-project.org/" target="_top">R Math
+          library</a>, seem to be mostly in the corner cases when the probability
+          would be very small. Unless otherwise specified any floating-point type
+          that is narrower than the one shown will have <a class="link" href="../../relative_error.html#math_toolkit.relative_error.zero_error">effectively
+          zero error</a>.
+        </p>
+<div class="table">
+<a name="math_toolkit.dist_ref.dists.nc_beta_dist.table_non_central_beta_CDF"></a><p class="title"><b>Table 5.4. Error rates for non central beta CDF</b></p>
+<div class="table-contents"><table class="table" summary="Error rates for non central beta CDF">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+                </th>
+<th>
+                  <p>
+                    GNU C++ version 7.1.0<br> linux<br> double
+                  </p>
+                </th>
+<th>
+                  <p>
+                    GNU C++ version 7.1.0<br> linux<br> long double
+                  </p>
+                </th>
+<th>
+                  <p>
+                    Sun compiler version 0x5150<br> Sun Solaris<br> long double
+                  </p>
+                </th>
+<th>
+                  <p>
+                    Microsoft Visual C++ version 14.1<br> Win32<br> double
+                  </p>
+                </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                  <p>
+                    Non Central Beta, medium parameters
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 0.998ε (Mean = 0.0649ε)</span><br>
+                    <br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span> <span class="red">Max
+                    = 1.46e+26ε (Mean = 3.5e+24ε) <a class="link" href="../../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_non_central_beta_CDF_Rmath_3_2_3_Non_Central_Beta_medium_parameters">And
+                    other failures.</a>)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 824ε (Mean = 27.4ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 832ε (Mean = 38.1ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 242ε (Mean = 31ε)</span>
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    Non Central Beta, large parameters
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 1.18ε (Mean = 0.175ε)</span><br>
+                    <br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span> <span class="red">Max
+                    = 1.01e+36ε (Mean = 1.19e+35ε) <a class="link" href="../../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_non_central_beta_CDF_Rmath_3_2_3_Non_Central_Beta_large_parameters">And
+                    other failures.</a>)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 2.5e+04ε (Mean = 3.78e+03ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 2.57e+04ε (Mean = 4.45e+03ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 3.66e+03ε (Mean = 500ε)</span>
+                  </p>
+                </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.dist_ref.dists.nc_beta_dist.table_non_central_beta_CDF_complement"></a><p class="title"><b>Table 5.5. Error rates for non central beta CDF complement</b></p>
+<div class="table-contents"><table class="table" summary="Error rates for non central beta CDF complement">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+                </th>
+<th>
+                  <p>
+                    GNU C++ version 7.1.0<br> linux<br> double
+                  </p>
+                </th>
+<th>
+                  <p>
+                    GNU C++ version 7.1.0<br> linux<br> long double
+                  </p>
+                </th>
+<th>
+                  <p>
+                    Sun compiler version 0x5150<br> Sun Solaris<br> long double
+                  </p>
+                </th>
+<th>
+                  <p>
+                    Microsoft Visual C++ version 14.1<br> Win32<br> double
+                  </p>
+                </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                  <p>
+                    Non Central Beta, medium parameters
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 0.998ε (Mean = 0.0936ε)</span><br>
+                    <br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span> <span class="red">Max
+                    = 7.5e+97ε (Mean = 1.37e+96ε) <a class="link" href="../../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_non_central_beta_CDF_complement_Rmath_3_2_3_Non_Central_Beta_medium_parameters">And
+                    other failures.</a>)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 396ε (Mean = 50.7ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 554ε (Mean = 57.2ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 624ε (Mean = 62.7ε)</span>
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    Non Central Beta, large parameters
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 0.986ε (Mean = 0.188ε)</span><br>
+                    <br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span> <span class="red">Max
+                    = +INFε (Mean = +INFε) <a class="link" href="../../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_non_central_beta_CDF_complement_Rmath_3_2_3_Non_Central_Beta_large_parameters">And
+                    other failures.</a>)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 6.83e+03ε (Mean = 993ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 3.56e+03ε (Mean = 707ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 1.25e+04ε (Mean = 1.49e+03ε)</span>
+                  </p>
+                </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><p>
+          Error rates for the PDF, the complement of the CDF and for the quantile
+          functions are broadly similar.
+        </p>
+<h5>
+<a name="math_toolkit.dist_ref.dists.nc_beta_dist.h3"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.nc_beta_dist.tests"></a></span><a class="link" href="nc_beta_dist.html#math_toolkit.dist_ref.dists.nc_beta_dist.tests">Tests</a>
+        </h5>
+<p>
+          There are two sets of test data used to verify this implementation: firstly
+          we can compare with a few sample values generated by the <a href="http://www.r-project.org/" target="_top">R
+          library</a>. Secondly, we have tables of test data, computed with this
+          implementation and using interval arithmetic - this data should be accurate
+          to at least 50 decimal digits - and is the used for our accuracy tests.
+        </p>
+<h5>
+<a name="math_toolkit.dist_ref.dists.nc_beta_dist.h4"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.nc_beta_dist.implementation"></a></span><a class="link" href="nc_beta_dist.html#math_toolkit.dist_ref.dists.nc_beta_dist.implementation">Implementation</a>
+        </h5>
+<p>
+          The CDF and its complement are evaluated as follows:
+        </p>
+<p>
+          First we determine which of the two values (the CDF or its complement)
+          is likely to be the smaller, the crossover point is taken to be the mean
+          of the distribution: for this we use the approximation due to: R. Chattamvelli
+          and R. Shanmugam, "Algorithm AS 310: Computing the Non-Central Beta
+          Distribution Function", Applied Statistics, Vol. 46, No. 1. (1997),
+          pp. 146-156.
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../equations/nc_beta_ref3.svg"></span>
+
+          </p></blockquote></div>
+<p>
+          Then either the CDF or its complement is computed using the relations:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../equations/nc_beta_ref4.svg"></span>
+
+          </p></blockquote></div>
+<p>
+          The summation is performed by starting at i = λ/2, and then recursing in
+          both directions, using the usual recurrence relations for the Poisson PDF
+          and incomplete beta functions. This is the "Method 2" described
+          by:
+        </p>
+<p>
+          Denise Benton and K. Krishnamoorthy, "Computing discrete mixtures
+          of continuous distributions: noncentral chisquare, noncentral t and the
+          distribution of the square of the sample multiple correlation coefficient",
+          Computational Statistics &amp; Data Analysis 43 (2003) 249-267.
+        </p>
+<p>
+          Specific applications of the above formulae to the noncentral beta distribution
+          can be found in:
+        </p>
+<p>
+          Russell V. Lenth, "Algorithm AS 226: Computing Noncentral Beta Probabilities",
+          Applied Statistics, Vol. 36, No. 2. (1987), pp. 241-244.
+        </p>
+<p>
+          H. Frick, "Algorithm AS R84: A Remark on Algorithm AS 226: Computing
+          Non-Central Beta Probabilities", Applied Statistics, Vol. 39, No.
+          2. (1990), pp. 311-312.
+        </p>
+<p>
+          Ming Long Lam, "Remark AS R95: A Remark on Algorithm AS 226: Computing
+          Non-Central Beta Probabilities", Applied Statistics, Vol. 44, No.
+          4. (1995), pp. 551-552.
+        </p>
+<p>
+          Harry O. Posten, "An Effective Algorithm for the Noncentral Beta Distribution
+          Function", The American Statistician, Vol. 47, No. 2. (May, 1993),
+          pp. 129-131.
+        </p>
+<p>
+          R. Chattamvelli, "A Note on the Noncentral Beta Distribution Function",
+          The American Statistician, Vol. 49, No. 2. (May, 1995), pp. 231-234.
+        </p>
+<p>
+          Of these, the Posten reference provides the most complete overview, and
+          includes the modification starting iteration at λ/2.
+        </p>
+<p>
+          The main difference between this implementation and the above references
+          is the direct computation of the complement when most efficient to do so,
+          and the accumulation of the sum to -1 rather than subtracting the result
+          from 1 at the end: this can substantially reduce the number of iterations
+          required when the result is near 1.
+        </p>
+<p>
+          The PDF is computed using the methodology of Benton and Krishnamoorthy
+          and the relation:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../equations/nc_beta_ref1.svg"></span>
+
+          </p></blockquote></div>
+<p>
+          Quantiles are computed using a specially modified version of <a class="link" href="../../roots_noderiv/bracket_solve.html" title="Bracket and Solve Root">bracket
+          and solve</a>, starting the search for the root at the mean of the distribution.
+          (A Cornish-Fisher type expansion was also tried, but while this gets quite
+          close to the root in many cases, when it is wrong it tends to introduce
+          quite pathological behaviour: more investigation in this area is probably
+          warranted).
+        </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="negative_binomial_dist.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../dists.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="nc_chi_squared_dist.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

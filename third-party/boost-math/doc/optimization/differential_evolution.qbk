@@ -1,0 +1,129 @@
+[/
+Copyright (c) 2023 Nick Thompson
+Use, modification and distribution are subject to the
+Boost Software License, Version 1.0. (See accompanying file
+LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:differential_evolution Differential Evolution]
+
+[heading Synopsis]
+
+``
+    #include <boost/math/optimization/differential_evolution.hpp>
+    
+    namespace boost::math::optimization {
+
+    template <typename ArgumentContainer> struct differential_evolution_parameters {
+        using Real = typename ArgumentContainer::value_type;
+        ArgumentContainer lower_bounds;
+        ArgumentContainer upper_bounds;
+        Real mutation_factor = static_cast<Real>(0.65);
+        double crossover_probability = 0.5;
+        // Population in each generation:
+        size_t NP = 200;
+        size_t max_generations = 1000;
+        size_t threads = std::thread::hardware_concurrency();
+        ArgumentContainer const * initial_guess = nullptr;
+    };
+
+    template <typename ArgumentContainer, class Func, class URBG>
+    ArgumentContainer differential_evolution(
+        const Func cost_function, differential_evolution_parameters<ArgumentContainer> const &de_params, URBG &g,
+        std::invoke_result_t<Func, ArgumentContainer> target_value = std::numeric_limits<std::invoke_result_t<Func, ArgumentContainer>>::quiet_NaN(),
+        std::atomic<bool> *cancellation = nullptr,
+        std::vector<std::pair<ArgumentContainer, std::invoke_result_t<Func, ArgumentContainer>>> *queries = nullptr,
+        std::atomic<std::invoke_result_t<Func, ArgumentContainer>> *current_minimum_cost = nullptr);
+
+    } // namespaces
+``
+
+The `differential_evolution` function provides an implementation of the (classical) differential evolution optimization algorithm, often going by the label `de/rand/bin/1`.
+It is capable of minimizing a cost function defined on a continuous space represented by a set of bounds.
+This function has been designed more for progress observability, graceful cancellation, and post-hoc data analysis than for speed of convergence.
+We justify this design choice by reference to the "No free lunch" theorem of Wolpert and Macready, which establishes "that for any algorithm, any elevated performance over one class of problems is offset by performance over another class".
+
+[heading Parameters]
+
+* `lower_bounds`: A container representing the lower bounds of the optimization space along each dimension.
+    The `.size()` of the bounds should return the dimension of the problem.
+* `upper_bounds`: A container representing the upper bounds of the optimization space along each dimension.
+    It should have the same size of `lower_bounds`, and each element should be >= the corresponding element of `lower_bounds`.
+* `mutation_factor`: Also known as `F` or scale factor in the literature.
+    It controls the rate at which the population evolves (default is 0.65).
+* `crossover_probability`: The crossover probability determining the trade-off between exploration and exploitation (default is 0.5).
+* `NP`: The population size (default is 200).
+    Parallelization occurs over the population, so this should be "large".
+* `max_generations`: The maximum number of generations for the optimization (default is 1000).
+* `threads`: The number of threads to use for parallelization (default is the hardware concurrency).
+    If the objective function is already multithreaded, then this should be set to 1 to prevent oversubscription.
+* `initial_guess`: An optional guess for where we should start looking for solutions.
+
+The defaults were chosen by a reading of Price, Storn, and Lampinen, chapter 3, with the exception of the population size, which we have chosen a bit larger than they found as core counts have increased since publication of this reference and parallelization occurs within each generation.
+Note that there is a tradeoff between finding global minima and convergence speed.
+The most robust way of decreasing the probability of getting stuck in a local minima is to increase the population size.
+
+[heading The function]
+
+``
+template <typename ArgumentContainer, class Func, class URBG>
+ArgumentContainer differential_evolution(const Func cost_function,
+                                         differential_evolution_parameters<ArgumentContainer> const &de_params,
+                                         URBG &gen,
+                                         std::invoke_result_t<Func, ArgumentContainer> value_to_reach
+                                           = std::numeric_limits<std::invoke_result_t<Func, ArgumentContainer>>::quiet_NaN(),
+                                         std::atomic<bool> *cancellation = nullptr,
+                                         std::vector<std::pair<ArgumentContainer, std::invoke_result_t<Func, ArgumentContainer>>> *queries = nullptr,
+                                         std::atomic<std::invoke_result_t<Func, ArgumentContainer>> *current_minimum_cost = nullptr)
+``
+
+Parameters:
+
+* `cost_function`: The cost function to be minimized.
+* `de_params`: The parameters to the algorithm as described above.
+* `rng`: A uniform random bit generator, like `std::mt19937_64`.
+* `value_to_reach`: An optional value that, if reached, stops the optimization.
+    This is the most robust way to terminate the calculation, but in most cases the optimal value of the cost function is unknown.
+    If it is, use it!
+    See the referenced book for clear examples of when target values can be deduced. 
+* `cancellation`: An optional atomic boolean to allow the user to stop the computation and gracefully return the best result found up to that point.
+    N.B.: Cancellation is not immediate; the in-progress generation finishes.
+* `queries`: An optional vector to store intermediate results during optimization.
+    This is useful for debugging and perhaps volume rendering of the objective function after the calculation is complete.
+* `current_minimum_cost`: An optional atomic variable to store the current minimum cost during optimization.
+    This allows developers to (e.g.) plot the progress of the minimization over time and in conjunction with the cancellation argument allow halting the computation when the progress stagnates.
+    Refer to Price, Storn, and Lampinen, Section 3.2 for caveats with this approach.
+
+Returns:
+
+The `ArgumentContainer` corresponding to the minimum cost found by the optimization.
+
+N.B.: The termination criteria is an "OR", not an "AND".
+So if the maximum generations is hit, the iteration stops, even if (say) a `value_to_reach` has not been attained.
+
+[h4:examples Examples]
+
+An example use can be found [@../../example/differential_evolution.cpp here].
+More examples and API use cases can be studied in [@../../test/differential_evolution_test.cpp differential_evolution_test.cpp].
+
+[h5:caveats Caveats]
+
+We have decided to only support classic `de/rand/1/bin` because there are too many parameters for this class as it stands, and we have not seen benchmarks that indicate that other variants of the algorithm perform better.
+If a compelling usecase is provided, support for the `de/x/y/z` variants can be added.
+
+Supported termination criteria are explicit requests for termination, value-to-reach, and max generations.
+Price, Storn, and Lampinen, Section 2.8 also list population statistics and lack of accepted trials over many generations as sensible termination criteria.
+These could be supported if there is demand.
+
+Parallelization with `std::thread` does have overhead-especially for very fast function calls.
+We found that the function call needs to be roughly a microsecond for unambigous parallelization wins.
+However, we have not provided conditional parallelization as computationally inexpensive cost functions are the exception; not the rule.
+If there is a clear use case for conditional parallelization (cheap cost function in very high dimensions is a good example),
+we can provide it.
+
+[h4:references References]
+
+* Price, Kenneth, Rainer M. Storn, and Jouni A. Lampinen. ['Differential evolution: a practical approach to global optimization.] Springer Science & Business Media, 2006.
+* D. H. Wolpert and W. G. Macready, ['No free lunch theorems for optimization.] IEEE Transactions on Evolutionary Computation, vol. 1, no. 1, pp. 67-82, April 1997, doi: 10.1109/4235.585893.
+
+[endsect] [/section:differential_evolution Differential Evolution]

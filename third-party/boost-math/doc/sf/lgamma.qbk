@@ -1,0 +1,161 @@
+[section:lgamma Log Gamma]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/special_functions/gamma.hpp>
+``
+
+   namespace boost{ namespace math{
+   
+   template <class T>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` lgamma(T z);
+   
+   template <class T, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` lgamma(T z, const ``__Policy``&);
+   
+   template <class T>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` lgamma(T z, int* sign);
+   
+   template <class T, class ``__Policy``>
+   BOOST_MATH_GPU_ENABLED ``__sf_result`` lgamma(T z, int* sign, const ``__Policy``&);
+   
+   }} // namespaces
+
+[h4 Description]
+
+The [@http://en.wikipedia.org/wiki/Gamma_function lgamma function] is defined by:
+
+[equation lgamm1]
+
+The second form of the function takes a pointer to an integer,
+which if non-null is set on output to the sign of tgamma(z).
+
+[optional_policy]
+
+[graph lgamma]
+
+The return type of these functions is computed using the __arg_promotion_rules:
+the result is of type `double` if T is an integer type, or type T otherwise.
+
+[h4 Accuracy]
+
+The following table shows the peak errors (in units of epsilon) 
+found on various platforms
+with various floating point types, along with comparisons to 
+various other libraries. Unless otherwise specified any
+floating point type that is narrower than the one shown will have
+__zero_error.
+
+Note that while the relative errors near the positive roots of lgamma
+are very low, the lgamma function has an infinite number of irrational
+roots for negative arguments: very close to these negative roots only
+a low absolute error can be guaranteed.
+
+[table_lgamma]
+
+The following error plot are based on an exhaustive search of the functions domain, MSVC-15.5 at `double` precision, 
+and GCC-7.1/Ubuntu for `long double` and `__float128`.
+
+[graph lgamma__double]
+
+[graph lgamma__80_bit_long_double]
+
+[graph lgamma____float128]
+
+[h4 Testing]
+
+The main tests for this function involve comparisons against the logs of 
+the factorials which can be independently calculated to very high accuracy.
+
+Random tests in key problem areas are also used.
+
+[h4 Implementation]
+
+The generic version of this function is implemented using Sterling's approximation
+for large arguments:
+
+[equation gamma6]
+
+For small arguments, the logarithm of tgamma is used.
+
+For negative /z/ the logarithm version of the 
+reflection formula is used:
+
+[equation lgamm3]
+
+For types of known precision, the __lanczos is used, a traits class 
+`boost::math::lanczos::lanczos_traits` maps type T to an appropriate
+approximation.  The logarithmic version of the __lanczos is:
+
+[equation lgamm4]
+
+Where L[sub e,g] is the Lanczos sum, scaled by e[super g].
+
+As before the reflection formula is used for /z < 0/.
+
+When z is very near 1 or 2, then the logarithmic version of the __lanczos
+suffers very badly from cancellation error: indeed for values sufficiently
+close to 1 or 2, arbitrarily large relative errors can be obtained (even though
+the absolute error is tiny).  
+
+For types with up to 113 bits of precision
+(up to and including 128-bit long doubles), root-preserving 
+rational approximations [jm_rationals] are used
+over the intervals [1,2] and [2,3].  Over the interval [2,3] the approximation
+form used is:
+
+   lgamma(z) = (z-2)(z+1)(Y + R(z-2));
+   
+Where Y is a constant, and R(z-2) is the rational approximation: optimised
+so that its absolute error is tiny compared to Y.  In addition, small values of z greater
+than 3 can handled by argument reduction using the recurrence relation:
+
+   lgamma(z+1) = log(z) + lgamma(z);
+   
+Over the interval [1,2] two approximations have to be used, one for small z uses:
+
+   lgamma(z) = (z-1)(z-2)(Y + R(z-1));
+   
+Once again Y is a constant, and R(z-1) is optimised for low absolute error
+compared to Y.  For z > 1.5 the above form wouldn't converge to a 
+minimax solution but this similar form does:
+
+   lgamma(z) = (2-z)(1-z)(Y + R(2-z));
+   
+Finally for z < 1 the recurrence relation can be used to move to z > 1:
+
+   lgamma(z) = lgamma(z+1) - log(z);
+   
+Note that while this involves a subtraction, it appears not
+to suffer from cancellation error: as z decreases from 1 
+the `-log(z)` term grows positive much more
+rapidly than the `lgamma(z+1)` term becomes negative.  So in this
+specific case, significant digits are preserved, rather than cancelled.
+
+For other types which do have a __lanczos defined for them 
+the current solution is as follows: imagine we
+balance the two terms in the __lanczos by dividing the power term by its value
+at /z = 1/, and then multiplying the Lanczos coefficients by the same value.
+Now each term will take the value 1 at /z = 1/ and we can rearrange the power terms
+in terms of log1p.  Likewise if we subtract 1 from the Lanczos sum part 
+(algebraically, by subtracting the value of each term at /z = 1/), we obtain
+a new summation that can be also be fed into log1p.  Crucially, all of the 
+terms tend to zero, as /z -> 1/:
+
+[equation lgamm5]
+
+The C[sub k] terms in the above are the same as in the __lanczos.
+
+A similar rearrangement can be performed at /z = 2/:
+
+[equation lgamm6]
+
+[endsect] [/section:lgamma The Log Gamma Function]
+
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
