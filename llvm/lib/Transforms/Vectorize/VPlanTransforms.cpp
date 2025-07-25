@@ -997,7 +997,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   // InstSimplifyFolder.
   if (TypeSwitch<VPRecipeBase *, bool>(&R)
           .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
-                VPReplicateRecipe>([&](auto *I) {
+                VPReplicateRecipe, VPWidenSelectRecipe>([&](auto *I) {
             const DataLayout &DL =
                 Plan->getScalarHeader()->getIRBasicBlock()->getDataLayout();
             Value *V = tryToFoldLiveIns(*I, I->getOpcode(), I->operands(), DL,
