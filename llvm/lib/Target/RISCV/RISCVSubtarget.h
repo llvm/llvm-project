@@ -150,13 +150,13 @@ public:
 
   bool enablePostRAScheduler() const override { return UsePostRAScheduler; }
 
-  bool disableMISchedLoadClustering() const { return NoMISchedLoadClustering; }
+  bool enableMISchedLoadClustering() const { return MISchedLoadClustering; }
 
-  bool disableMISchedStoreClustering() const { return NoMISchedStoreClustering; }
+  bool enableMISchedStoreClustering() const { return MISchedStoreClustering; }
 
-  bool disablePostMISchedLoadClustering() const { return NoPostMISchedLoadClustering; }
+  bool enablePostMISchedLoadClustering() const { return PostMISchedLoadClustering; }
 
-  bool disablePostMISchedStoreClustering() const { return NoPostMISchedStoreClustering; }
+  bool enablePostMISchedStoreClustering() const { return PostMISchedStoreClustering; }
 
   Align getPrefFunctionAlignment() const {
     return Align(TuneInfo->PrefFunctionAlignment);
