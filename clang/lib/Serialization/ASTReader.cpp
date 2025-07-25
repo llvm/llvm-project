@@ -11679,7 +11679,10 @@ void OMPClauseReader::VisitOMPDetachClause(OMPDetachClause *C) {
   C->setLParenLoc(Record.readSourceLocation());
 }
 
-void OMPClauseReader::VisitOMPNowaitClause(OMPNowaitClause *) {}
+void OMPClauseReader::VisitOMPNowaitClause(OMPNowaitClause *C) {
+  C->setCondition(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
 
 void OMPClauseReader::VisitOMPUntiedClause(OMPUntiedClause *) {}
 
