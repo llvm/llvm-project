@@ -2391,6 +2391,11 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     // Return whether this LoopOp has a gang, worker, or vector applying to the
     // 'default'/None device-type.
     bool hasDefaultGangWorkerVector();
+
+    // Used to obtain the parallelism mode for the requested device type.
+    // This first checks if the mode is set for the device_type requested.
+    // And if not, it returns the non-device_type mode.
+    LoopParMode getDefaultOrDeviceTypeParallelism(DeviceType);
   }];
 
   let hasCustomAssemblyFormat = 1;
