@@ -13529,6 +13529,84 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
   SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
   SDLoc DL(N);
 
+  // Detect impossible conditions using known bits analysis.
+  if (ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1)) {
+    const APInt &C1 = N1C->getAPIntValue();
+    KnownBits KnownRHS = KnownBits::makeConstant(C1);
+
+    // Bail out early if RHS is unknown (shouldn't happen for constants)
+    if (KnownRHS.isUnknown())
+      return SDValue();
+
+    std::optional<bool> KnownVal;
+
+    // Handle special cases first (like GlobalISel does)
+    if (KnownRHS.isZero()) {
+      // x >=u 0 -> always true
+      // x <u 0 -> always false
+      if (Cond == ISD::SETUGE)
+        KnownVal = true;
+      else if (Cond == ISD::SETULT)
+        KnownVal = false;
+    }
+
+    // If not handled by special cases, use ICmpInst::compare
+    if (!KnownVal) {
+      KnownBits KnownLHS = DAG.computeKnownBits(N0);
+
+      // Convert ISD::CondCode to CmpInst::Predicate
+      CmpInst::Predicate Pred;
+      switch (Cond) {
+      case ISD::SETEQ:
+        Pred = CmpInst::ICMP_EQ;
+        break;
+      case ISD::SETNE:
+        Pred = CmpInst::ICMP_NE;
+        break;
+      case ISD::SETULT:
+        Pred = CmpInst::ICMP_ULT;
+        break;
+      case ISD::SETULE:
+        Pred = CmpInst::ICMP_ULE;
+        break;
+      case ISD::SETUGT:
+        Pred = CmpInst::ICMP_UGT;
+        break;
+      case ISD::SETUGE:
+        Pred = CmpInst::ICMP_UGE;
+        break;
+      case ISD::SETLT:
+        Pred = CmpInst::ICMP_SLT;
+        break;
+      case ISD::SETLE:
+        Pred = CmpInst::ICMP_SLE;
+        break;
+      case ISD::SETGT:
+        Pred = CmpInst::ICMP_SGT;
+        break;
+      case ISD::SETGE:
+        Pred = CmpInst::ICMP_SGE;
+        break;
+      default:
+        return SDValue(); // Unsupported predicate
+      }
+
+      // Use the same logic as GlobalISel: ICmpInst::compare
+      KnownVal = ICmpInst::compare(KnownLHS, KnownRHS, Pred);
+    }
+
+    // If the comparison result is known, replace with constant
+    if (KnownVal) {
+      if (*KnownVal) {
+        // Use the target's true value for comparisons
+        return DAG.getBoolConstant(true, DL, VT, VT);
+      } else {
+        // False is always 0
+        return DAG.getConstant(0, DL, VT);
+      }
+    }
+  }
+
   if (SDValue Combined = SimplifySetCC(VT, N0, N1, Cond, DL, !PreferSetCC)) {
     // If we prefer to have a setcc, and we don't, we'll try our best to
     // recreate one using rebuildSetCC.
