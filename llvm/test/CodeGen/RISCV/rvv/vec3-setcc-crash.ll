@@ -50,9 +50,9 @@ define void @vec3_setcc_crash(ptr %in, ptr %out) {
 ; RV64-NEXT:    sgtz a5, a5
 ; RV64-NEXT:    sgtz a4, a4
 ; RV64-NEXT:    sgtz a3, a3
-; RV64-NEXT:    negw a3, a3
-; RV64-NEXT:    negw a4, a4
-; RV64-NEXT:    negw a5, a5
+; RV64-NEXT:    neg a3, a3
+; RV64-NEXT:    neg a4, a4
+; RV64-NEXT:    neg a5, a5
 ; RV64-NEXT:    and a3, a3, a6
 ; RV64-NEXT:    and a0, a4, a0
 ; RV64-NEXT:    and a2, a5, a2

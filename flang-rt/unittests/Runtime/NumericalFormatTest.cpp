@@ -213,6 +213,37 @@ TEST(IOApiTests, ListInputTest) {
       << "', but got '" << output << "'";
 }
 
+TEST(IOApiTests, ListInputComplexRegressionTest) {
+  static const char input[]{"(1,;2, );(3,;4,)"};
+  auto cookie{IONAME(BeginInternalListInput)(input, sizeof input - 1)};
+  static constexpr int numRealValues{4};
+  float z[numRealValues];
+  ASSERT_TRUE(IONAME(SetDecimal)(cookie, "COMMA", 5));
+  for (int j{0}; j < numRealValues; j += 2) {
+    ASSERT_TRUE(IONAME(InputComplex32)(cookie, &z[j]))
+        << "InputComplex32 failed with value " << z[j];
+  }
+  auto status{IONAME(EndIoStatement)(cookie)};
+  ASSERT_EQ(status, 0) << "Failed complex list-directed input, status "
+                       << static_cast<int>(status);
+  static constexpr int bufferSize{18};
+  char output[bufferSize];
+  output[bufferSize - 1] = '\0';
+  cookie = IONAME(BeginInternalListOutput)(output, bufferSize - 1);
+  for (int j{0}; j < numRealValues; j += 2) {
+    ASSERT_TRUE(IONAME(OutputComplex32)(cookie, z[j], z[j + 1]))
+        << "OutputComplex32 failed when outputting value " << z[j] << ", "
+        << z[j + 1];
+  }
+  status = IONAME(EndIoStatement)(cookie);
+  ASSERT_EQ(status, 0) << "Failed complex list-directed output, status "
+                       << static_cast<int>(status);
+  static const char expect[bufferSize]{" (1.,2.) (3.,4.) "};
+  ASSERT_EQ(std::strncmp(output, expect, bufferSize), 0)
+      << "Failed complex list-directed output, expected '" << expect
+      << "', but got '" << output << "'";
+}
+
 TEST(IOApiTests, DescriptorOutputTest) {
   static constexpr int bufferSize{10};
   char buffer[bufferSize];

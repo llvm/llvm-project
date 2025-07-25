@@ -52,7 +52,7 @@ public:
 
     // Stretching scalar inside vector (e.g. vector<1xf32>) can use splat.
     if (srcRank <= 1 && dstRank == 1) {
-      Value ext = rewriter.create<vector::ExtractOp>(loc, op.getSource());
+      Value ext = vector::ExtractOp::create(rewriter, loc, op.getSource());
       rewriter.replaceOpWithNewOp<vector::SplatOp>(op, dstType, ext);
       return success();
     }
@@ -70,10 +70,10 @@ public:
       // Duplication.
       VectorType resType = VectorType::Builder(dstType).dropDim(0);
       Value bcst =
-          rewriter.create<vector::BroadcastOp>(loc, resType, op.getSource());
-      Value result = rewriter.create<ub::PoisonOp>(loc, dstType);
+          vector::BroadcastOp::create(rewriter, loc, resType, op.getSource());
+      Value result = ub::PoisonOp::create(rewriter, loc, dstType);
       for (int64_t d = 0, dim = dstType.getDimSize(0); d < dim; ++d)
-        result = rewriter.create<vector::InsertOp>(loc, bcst, result, d);
+        result = vector::InsertOp::create(rewriter, loc, bcst, result, d);
       rewriter.replaceOp(op, result);
       return success();
     }
@@ -111,13 +111,13 @@ public:
     VectorType resType =
         VectorType::get(dstType.getShape().drop_front(), eltType,
                         dstType.getScalableDims().drop_front());
-    Value result = rewriter.create<ub::PoisonOp>(loc, dstType);
+    Value result = ub::PoisonOp::create(rewriter, loc, dstType);
     if (m == 0) {
       // Stetch at start.
-      Value ext = rewriter.create<vector::ExtractOp>(loc, op.getSource(), 0);
-      Value bcst = rewriter.create<vector::BroadcastOp>(loc, resType, ext);
+      Value ext = vector::ExtractOp::create(rewriter, loc, op.getSource(), 0);
+      Value bcst = vector::BroadcastOp::create(rewriter, loc, resType, ext);
       for (int64_t d = 0, dim = dstType.getDimSize(0); d < dim; ++d)
-        result = rewriter.create<vector::InsertOp>(loc, bcst, result, d);
+        result = vector::InsertOp::create(rewriter, loc, bcst, result, d);
     } else {
       // Stetch not at start.
       if (dstType.getScalableDims()[0]) {
@@ -125,9 +125,9 @@ public:
         return failure();
       }
       for (int64_t d = 0, dim = dstType.getDimSize(0); d < dim; ++d) {
-        Value ext = rewriter.create<vector::ExtractOp>(loc, op.getSource(), d);
-        Value bcst = rewriter.create<vector::BroadcastOp>(loc, resType, ext);
-        result = rewriter.create<vector::InsertOp>(loc, bcst, result, d);
+        Value ext = vector::ExtractOp::create(rewriter, loc, op.getSource(), d);
+        Value bcst = vector::BroadcastOp::create(rewriter, loc, resType, ext);
+        result = vector::InsertOp::create(rewriter, loc, bcst, result, d);
       }
     }
     rewriter.replaceOp(op, result);

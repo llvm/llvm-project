@@ -906,10 +906,10 @@ template <unsigned PartOpIdx> class LLVM_ABI_FOR_TEST VPUnrollPartAccessor {
 protected:
   /// Return the VPValue operand containing the unroll part or null if there is
   /// no such operand.
-  VPValue *getUnrollPartOperand(VPUser &U) const;
+  VPValue *getUnrollPartOperand(const VPUser &U) const;
 
   /// Return the unroll part.
-  unsigned getUnrollPart(VPUser &U) const;
+  unsigned getUnrollPart(const VPUser &U) const;
 };
 
 /// Helper to manage IR metadata for recipes. It filters out metadata that
@@ -1357,9 +1357,10 @@ class LLVM_ABI_FOR_TEST VPWidenRecipe : public VPRecipeWithIRFlags,
 
 public:
   VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                const VPIRFlags &Flags, DebugLoc DL)
+                const VPIRFlags &Flags, const VPIRMetadata &Metadata,
+                DebugLoc DL)
       : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, Flags, DL),
-        Opcode(Opcode) {}
+        VPIRMetadata(Metadata), Opcode(Opcode) {}
 
   VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands)
       : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, I), VPIRMetadata(I),
@@ -1368,8 +1369,9 @@ public:
   ~VPWidenRecipe() override = default;
 
   VPWidenRecipe *clone() override {
-    auto *R = new VPWidenRecipe(*getUnderlyingInstr(), operands());
-    R->transferFlags(*this);
+    auto *R =
+        new VPWidenRecipe(getOpcode(), operands(), *this, *this, getDebugLoc());
+    R->setUnderlyingValue(getUnderlyingValue());
     return R;
   }
 
@@ -1659,6 +1661,8 @@ struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+  unsigned getOpcode() const { return Instruction::Select; }
 
   VPValue *getCond() const {
     return getOperand(0);
@@ -2333,8 +2337,9 @@ public:
     return Idx == 0 ? getOperand(1) : getOperand(Idx * 2 + !isNormalized());
   }
 
-  /// Generate the phi/select nodes.
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("VPBlendRecipe should be expanded by simplifyBlends");
+  }
 
   /// Return the cost of this VPWidenMemoryRecipe.
   InstructionCost computeCost(ElementCount VF,
@@ -3481,7 +3486,7 @@ public:
 
   /// Return true if this VPScalarIVStepsRecipe corresponds to part 0. Note that
   /// this is only accurate after the VPlan has been unrolled.
-  bool isPart0() { return getUnrollPart(*this) == 0; }
+  bool isPart0() const { return getUnrollPart(*this) == 0; }
 
   VP_CLASSOF_IMPL(VPDef::VPScalarIVStepsSC)
 
@@ -4186,13 +4191,11 @@ public:
     return VPB;
   }
 
-  /// Create a new VPRegionBlock with \p Name and entry and exiting blocks set
-  /// to nullptr. If \p IsReplicator is true, the region is a replicate region.
-  /// The returned block is owned by the VPlan and deleted once the VPlan is
-  /// destroyed.
-  VPRegionBlock *createVPRegionBlock(const std::string &Name = "",
-                                     bool IsReplicator = false) {
-    auto *VPB = new VPRegionBlock(Name, IsReplicator);
+  /// Create a new loop VPRegionBlock with \p Name and entry and exiting blocks set
+  /// to nullptr. The returned block is owned by the VPlan and deleted once the
+  /// VPlan is destroyed.
+  VPRegionBlock *createVPRegionBlock(const std::string &Name = "") {
+    auto *VPB = new VPRegionBlock(Name);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }

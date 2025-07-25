@@ -4418,8 +4418,9 @@ void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {
 static void ReplaceUsesOfNonProtoTypeWithRealFunction(llvm::GlobalValue *Old,
                                                       llvm::Function *NewFn);
 
-static uint64_t getFMVPriority(const TargetInfo &TI,
-                               const CodeGenFunction::FMVResolverOption &RO) {
+static llvm::APInt
+getFMVPriority(const TargetInfo &TI,
+               const CodeGenFunction::FMVResolverOption &RO) {
   llvm::SmallVector<StringRef, 8> Features{RO.Features};
   if (RO.Architecture)
     Features.push_back(*RO.Architecture);
@@ -4544,7 +4545,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
     llvm::stable_sort(
         Options, [&TI](const CodeGenFunction::FMVResolverOption &LHS,
                        const CodeGenFunction::FMVResolverOption &RHS) {
-          return getFMVPriority(TI, LHS) > getFMVPriority(TI, RHS);
+          return getFMVPriority(TI, LHS).ugt(getFMVPriority(TI, RHS));
         });
     CodeGenFunction CGF(*this);
     CGF.EmitMultiVersionResolver(ResolverFunc, Options);

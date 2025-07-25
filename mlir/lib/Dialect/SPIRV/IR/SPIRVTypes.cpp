@@ -17,9 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
-#include <algorithm>
 #include <cstdint>
-#include <numeric>
 
 using namespace mlir;
 using namespace mlir::spirv;

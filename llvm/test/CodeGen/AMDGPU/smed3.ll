@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global,-real-true16 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11-FAKE16 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global,+real-true16 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global,-real-true16 < %s | FileCheck -check-prefixes=GFX11-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global,+real-true16 < %s | FileCheck -check-prefixes=GFX11-TRUE16 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 

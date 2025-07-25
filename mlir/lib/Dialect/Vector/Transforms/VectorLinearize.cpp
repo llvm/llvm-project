@@ -658,7 +658,7 @@ struct LinearizeVectorCreateMask final
     // The result of the comparison is then multiplied with
     // the second operand of create_mask to get the 1D mask.
     auto firstOperand = adaptor.getOperands().front();
-    auto zero = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 0);
+    auto zero = mlir::arith::ConstantIndexOp::create(rewriter, loc, 0);
     auto isNonZero = rewriter.createOrFold<mlir::arith::CmpIOp>(
         loc, mlir::arith::CmpIPredicate::sgt, firstOperand, zero);
     auto isNonZeroIndex = rewriter.createOrFold<mlir::arith::IndexCastOp>(
@@ -668,7 +668,7 @@ struct LinearizeVectorCreateMask final
         loc, rewriter.getIndexType(), isNonZeroIndex, secondOperand);
 
     auto newMask =
-        rewriter.create<mlir::vector::CreateMaskOp>(loc, dstTy, maskSize);
+        mlir::vector::CreateMaskOp::create(rewriter, loc, dstTy, maskSize);
     rewriter.replaceOp(createMaskOp, newMask);
     return success();
   }
@@ -710,8 +710,9 @@ struct LinearizeVectorLoad final : public OpConversionPattern<vector::LoadOp> {
 
     auto linearTy = typeConverter->convertType<VectorType>(vecTy);
 
-    auto newLoad = rewriter.create<vector::LoadOp>(
-        loadOp.getLoc(), linearTy, adaptor.getBase(), adaptor.getIndices());
+    auto newLoad =
+        vector::LoadOp::create(rewriter, loadOp.getLoc(), linearTy,
+                               adaptor.getBase(), adaptor.getIndices());
     rewriter.replaceOp(loadOp, newLoad.getResult());
     return success();
   }
@@ -832,7 +833,7 @@ void mlir::vector::populateForVectorLinearize(TypeConverter &typeConverter,
     if (!isa<VectorType>(type) || !isa<VectorType>(value.getType()))
       return nullptr;
 
-    return builder.create<vector::ShapeCastOp>(loc, type, value);
+    return vector::ShapeCastOp::create(builder, loc, type, value);
   };
   typeConverter.addSourceMaterialization(materializeCast);
   typeConverter.addTargetMaterialization(materializeCast);

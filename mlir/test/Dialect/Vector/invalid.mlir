@@ -1321,13 +1321,6 @@ func.func @transpose_dim_size_mismatch(%arg0: vector<11x7x3x2xi32>) {
 
 // -----
 
-func.func @flat_transpose_type_mismatch(%arg0: vector<16xf32>) {
-  // expected-error@+1 {{'vector.flat_transpose' op failed to verify that source operand and result have same element type}}
-  %0 = vector.flat_transpose %arg0 { rows = 4: i32, columns = 4: i32 } : vector<16xf32> -> vector<16xf64>
-}
-
-// -----
-
 func.func @type_cast_layout(%arg0: memref<4x3xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s0 + d1 * s1 + s2)>>) {
   // expected-error@+1 {{expects operand to be a memref with identity layout}}
   %0 = vector.type_cast %arg0: memref<4x3xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s0 + d1 * s1 + s2)>> to memref<vector<4x3xf32>>
@@ -1939,26 +1932,6 @@ func.func @invalid_step_2d() {
 
 // -----
 
-func.func @matrix_multiply_scalable(%a: vector<[4]xf64>, %b: vector<4xf64>) {
-  // expected-error @+1 {{'vector.matrix_multiply' op operand #0 must be fixed-length vector of signless integer or signed integer or index or floating-point values of ranks 1, but got 'vector<[4]xf64>'}}
-  %c = vector.matrix_multiply %a, %b {
-    lhs_rows = 2: i32,
-    lhs_columns = 2: i32 ,
-    rhs_columns = 2: i32 }
-  : (vector<[4]xf64>, vector<4xf64>) -> vector<4xf64>
-
-  return
-}
-
-// -----
-
-func.func @flat_transpose_scalable(%arg0: vector<[16]xf32>) -> vector<[16]xf32> {
-  // expected-error @+1 {{'vector.flat_transpose' op operand #0 must be fixed-length vector of signless integer or signed integer or index or floating-point values of ranks 1, but got 'vector<[16]xf32>'}}
-  %0 = vector.flat_transpose %arg0 { rows = 4: i32, columns = 4: i32 }
-     : vector<[16]xf32> -> vector<[16]xf32>
-  return %0 : vector<[16]xf32>
-}
-
 //===----------------------------------------------------------------------===//
 // vector.splat
 //===----------------------------------------------------------------------===//
@@ -1995,6 +1968,15 @@ func.func @vector_load(%src : memref<?xi8>) {
 
 // -----
 
+func.func @invalid_load_alignment(%memref: memref<4xi32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error @below {{'vector.load' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  %val = vector.load %memref[%c0] { alignment = -1 } : memref<4xi32>, vector<4xi32>
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // vector.store
 //===----------------------------------------------------------------------===//
@@ -2003,5 +1985,14 @@ func.func @vector_store(%dest : memref<?xi8>, %vec : vector<16x16xi8>) {
   %c0 = arith.constant 0 : index
   // expected-error @+1 {{'vector.store' op source memref has lower rank than the vector to store}}
   vector.store %vec, %dest[%c0] : memref<?xi8>, vector<16x16xi8>
+  return
+}
+
+// -----
+
+func.func @invalid_store_alignment(%memref: memref<4xi32>, %val: vector<4xi32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error @below {{'vector.store' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  vector.store %val, %memref[%c0] { alignment = 3 } : memref<4xi32>, vector<4xi32>
   return
 }

@@ -132,6 +132,10 @@ struct RuntimeLibcallsInfo {
     return ImplToLibcall[Impl];
   }
 
+  /// Check if this is valid libcall for the current module, otherwise
+  /// RTLIB::Unsupported.
+  RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const;
+
 private:
   static const RTLIB::LibcallImpl
       DefaultLibcallImpls[RTLIB::UNKNOWN_LIBCALL + 1];
@@ -155,6 +159,14 @@ private:
 
   /// Map from a concrete LibcallImpl implementation to its RTLIB::Libcall kind.
   LLVM_ABI static const RTLIB::Libcall ImplToLibcall[RTLIB::NumLibcallImpls];
+
+  /// Check if a function name is a recognized runtime call of any kind. This
+  /// does not consider if this call is available for any current compilation,
+  /// just that it is a known call somewhere. This returns the set of all
+  /// LibcallImpls which match the name; multiple implementations with the same
+  /// name may exist but differ in interpretation based on the target context.
+  LLVM_ABI static iterator_range<ArrayRef<uint16_t>::const_iterator>
+  getRecognizedLibcallImpls(StringRef FuncName);
 
   static bool darwinHasSinCosStret(const Triple &TT) {
     if (!TT.isOSDarwin())

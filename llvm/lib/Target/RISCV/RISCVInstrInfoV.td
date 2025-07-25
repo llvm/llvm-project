@@ -1642,7 +1642,7 @@ def VFIRST_M : RVInstV<0b010000, 0b10001, OPMVV, (outs GPR:$vd),
 
 def : MnemonicAlias<"vpopc.m", "vcpop.m">;
 
-let Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ElementsDependOn = EltDepsVLMask in {
+let Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ElementsDependOn = EltDepsMask in {
 
 let DestEEW = EEW1 in {
 // vmsbf.m set-before-first mask bit
@@ -1655,7 +1655,7 @@ defm VMSOF_M : VMSFS_MV_V<"vmsof.m", 0b010100, 0b00010>;
 // Vector Iota Instruction
 defm VIOTA_M : VIOTA_MV_V<"viota.m", 0b010100, 0b10000>;
 
-} // Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ElementsDependOn = EltDepsVLMask
+} // Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ElementsDependOn = EltDepsMask
 
 // Vector Element Index Instruction
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {

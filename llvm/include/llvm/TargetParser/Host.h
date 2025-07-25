@@ -53,7 +53,7 @@ LLVM_ABI StringRef getHostCPUName();
 /// which features may appear in this map, except that they are all valid LLVM
 /// feature names. The map can be empty, for example if feature detection
 /// fails.
-LLVM_ABI const StringMap<bool, MallocAllocator> getHostCPUFeatures();
+LLVM_ABI StringMap<bool, MallocAllocator> getHostCPUFeatures();
 
 /// This is a function compatible with cl::AddExtraVersionPrinter, which adds
 /// info about the current target triple and detected CPU.

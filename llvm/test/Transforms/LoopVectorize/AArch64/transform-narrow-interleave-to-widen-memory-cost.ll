@@ -386,8 +386,7 @@ define void @single_fmul_used_by_each_member(ptr noalias %A, ptr noalias %B, ptr
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX24:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT25:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr double, ptr [[A]], i64 [[INDEX24]]
-; CHECK-NEXT:    [[TMP46:%.*]] = getelementptr double, ptr [[TMP45]], i32 0
-; CHECK-NEXT:    [[TMP47:%.*]] = load double, ptr [[TMP46]], align 8
+; CHECK-NEXT:    [[TMP47:%.*]] = load double, ptr [[TMP45]], align 8
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP47]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP48:%.*]] = fmul <2 x double> [[BROADCAST_SPLAT]], splat (double 5.000000e+00)

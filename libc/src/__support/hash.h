@@ -9,12 +9,12 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_HASH_H
 #define LLVM_LIBC_SRC___SUPPORT_HASH_H
 
+#include "hdr/stdint_proxy.h"                // For uint64_t
 #include "src/__support/CPP/bit.h"           // rotl
 #include "src/__support/CPP/limits.h"        // numeric_limits
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 #include "src/__support/uint128.h" // UInt128
-#include <stdint.h>                // For uint64_t
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {

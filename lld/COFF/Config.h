@@ -192,6 +192,18 @@ struct Configuration {
   // Used for /lldltocachepolicy=policy
   llvm::CachePruningPolicy ltoCachePolicy;
 
+  // Used for /thinlto-distributor:<path>
+  StringRef dtltoDistributor;
+
+  // Used for /thinlto-distributor-arg:<arg>
+  llvm::SmallVector<llvm::StringRef, 0> dtltoDistributorArgs;
+
+  // Used for /thinlto-remote-compiler:<path>
+  StringRef dtltoCompiler;
+
+  // Used for /thinlto-remote-compiler-arg:<arg>
+  llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerArgs;
+
   // Used for /opt:[no]ltodebugpassmanager
   bool ltoDebugPassManager = false;
 
@@ -307,7 +319,7 @@ struct Configuration {
   bool warnDebugInfoUnusable = true;
   bool warnLongSectionNames = true;
   bool warnStdcallFixup = true;
-  bool warnExportedDllMain = true;
+  bool warnImportedDllMain = true;
   bool incremental = true;
   bool integrityCheck = false;
   bool killAt = false;

@@ -834,6 +834,13 @@ enum class CCEKind {
                            ///< message.
 };
 
+/// Enums for the diagnostics of target, target_version and target_clones.
+namespace DiagAttrParams {
+enum DiagType { Unsupported, Duplicate, Unknown };
+enum Specifier { None, CPU, Tune };
+enum AttrName { Target, TargetClones, TargetVersion };
+} // end namespace DiagAttrParams
+
 void inferNoReturnAttr(Sema &S, const Decl *D);
 
 /// Sema - This implements semantic analysis and AST building for C.
@@ -4921,13 +4928,6 @@ public:
   // Check for things we'd like to warn about. Multiversioning issues are
   // handled later in the process, once we know how many exist.
   bool checkTargetAttr(SourceLocation LiteralLoc, StringRef Str);
-
-  /// Check Target Version attrs
-  bool checkTargetVersionAttr(SourceLocation Loc, Decl *D, StringRef Str);
-  bool checkTargetClonesAttrString(
-      SourceLocation LiteralLoc, StringRef Str, const StringLiteral *Literal,
-      Decl *D, bool &HasDefault, bool &HasCommas, bool &HasNotDefault,
-      SmallVectorImpl<SmallString<64>> &StringsBuffer);
 
   ErrorAttr *mergeErrorAttr(Decl *D, const AttributeCommonInfo &CI,
                             StringRef NewUserDiagnostic);

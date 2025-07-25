@@ -17,6 +17,7 @@
 
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
+#include "mlir/Support/LLVM.h"
 
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
@@ -487,6 +488,104 @@ LogicalResult cir::CastOp::verify() {
       return emitOpError() << "requires !cir.ptr type for source and result";
     if (srcPtrTy.getPointee() != resPtrTy.getPointee())
       return emitOpError() << "requires two types differ in addrspace only";
+    return success();
+  }
+  case cir::CastKind::float_to_complex: {
+    if (!mlir::isa<cir::FPTypeInterface>(srcType))
+      return emitOpError() << "requires !cir.float type for source";
+    auto resComplexTy = mlir::dyn_cast<cir::ComplexType>(resType);
+    if (!resComplexTy)
+      return emitOpError() << "requires !cir.complex type for result";
+    if (srcType != resComplexTy.getElementType())
+      return emitOpError() << "requires source type match result element type";
+    return success();
+  }
+  case cir::CastKind::int_to_complex: {
+    if (!mlir::isa<cir::IntType>(srcType))
+      return emitOpError() << "requires !cir.int type for source";
+    auto resComplexTy = mlir::dyn_cast<cir::ComplexType>(resType);
+    if (!resComplexTy)
+      return emitOpError() << "requires !cir.complex type for result";
+    if (srcType != resComplexTy.getElementType())
+      return emitOpError() << "requires source type match result element type";
+    return success();
+  }
+  case cir::CastKind::float_complex_to_real: {
+    auto srcComplexTy = mlir::dyn_cast<cir::ComplexType>(srcType);
+    if (!srcComplexTy)
+      return emitOpError() << "requires !cir.complex type for source";
+    if (!mlir::isa<cir::FPTypeInterface>(resType))
+      return emitOpError() << "requires !cir.float type for result";
+    if (srcComplexTy.getElementType() != resType)
+      return emitOpError() << "requires source element type match result type";
+    return success();
+  }
+  case cir::CastKind::int_complex_to_real: {
+    auto srcComplexTy = mlir::dyn_cast<cir::ComplexType>(srcType);
+    if (!srcComplexTy)
+      return emitOpError() << "requires !cir.complex type for source";
+    if (!mlir::isa<cir::IntType>(resType))
+      return emitOpError() << "requires !cir.int type for result";
+    if (srcComplexTy.getElementType() != resType)
+      return emitOpError() << "requires source element type match result type";
+    return success();
+  }
+  case cir::CastKind::float_complex_to_bool: {
+    auto srcComplexTy = mlir::dyn_cast<cir::ComplexType>(srcType);
+    if (!srcComplexTy || !srcComplexTy.isFloatingPointComplex())
+      return emitOpError()
+             << "requires floating point !cir.complex type for source";
+    if (!mlir::isa<cir::BoolType>(resType))
+      return emitOpError() << "requires !cir.bool type for result";
+    return success();
+  }
+  case cir::CastKind::int_complex_to_bool: {
+    auto srcComplexTy = mlir::dyn_cast<cir::ComplexType>(srcType);
+    if (!srcComplexTy || !srcComplexTy.isIntegerComplex())
+      return emitOpError()
+             << "requires floating point !cir.complex type for source";
+    if (!mlir::isa<cir::BoolType>(resType))
+      return emitOpError() << "requires !cir.bool type for result";
+    return success();
+  }
+  case cir::CastKind::float_complex: {
+    auto srcComplexTy = mlir::dyn_cast<cir::ComplexType>(srcType);
+    if (!srcComplexTy || !srcComplexTy.isFloatingPointComplex())
+      return emitOpError()
+             << "requires floating point !cir.complex type for source";
+    auto resComplexTy = mlir::dyn_cast<cir::ComplexType>(resType);
+    if (!resComplexTy || !resComplexTy.isFloatingPointComplex())
+      return emitOpError()
+             << "requires floating point !cir.complex type for result";
+    return success();
+  }
+  case cir::CastKind::float_complex_to_int_complex: {
+    auto srcComplexTy = mlir::dyn_cast<cir::ComplexType>(srcType);
+    if (!srcComplexTy || !srcComplexTy.isFloatingPointComplex())
+      return emitOpError()
+             << "requires floating point !cir.complex type for source";
+    auto resComplexTy = mlir::dyn_cast<cir::ComplexType>(resType);
+    if (!resComplexTy || !resComplexTy.isIntegerComplex())
+      return emitOpError() << "requires integer !cir.complex type for result";
+    return success();
+  }
+  case cir::CastKind::int_complex: {
+    auto srcComplexTy = mlir::dyn_cast<cir::ComplexType>(srcType);
+    if (!srcComplexTy || !srcComplexTy.isIntegerComplex())
+      return emitOpError() << "requires integer !cir.complex type for source";
+    auto resComplexTy = mlir::dyn_cast<cir::ComplexType>(resType);
+    if (!resComplexTy || !resComplexTy.isIntegerComplex())
+      return emitOpError() << "requires integer !cir.complex type for result";
+    return success();
+  }
+  case cir::CastKind::int_complex_to_float_complex: {
+    auto srcComplexTy = mlir::dyn_cast<cir::ComplexType>(srcType);
+    if (!srcComplexTy || !srcComplexTy.isIntegerComplex())
+      return emitOpError() << "requires integer !cir.complex type for source";
+    auto resComplexTy = mlir::dyn_cast<cir::ComplexType>(resType);
+    if (!resComplexTy || !resComplexTy.isFloatingPointComplex())
+      return emitOpError()
+             << "requires floating point !cir.complex type for result";
     return success();
   }
   default:
@@ -2130,6 +2229,126 @@ LogicalResult cir::ComplexImagPtrOp::verify() {
            << "cir.complex.imag_ptr result type does not match operand type";
   }
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Bit manipulation operations
+//===----------------------------------------------------------------------===//
+
+static OpFoldResult
+foldUnaryBitOp(mlir::Attribute inputAttr,
+               llvm::function_ref<llvm::APInt(const llvm::APInt &)> func,
+               bool poisonZero = false) {
+  auto input = mlir::dyn_cast_if_present<IntAttr>(inputAttr);
+  if (!input)
+    return nullptr;
+
+  llvm::APInt inputValue = input.getValue();
+  if (poisonZero && inputValue.isZero()) {
+    // TODO(cir): maybe we should return a poison value here?
+    assert(!MissingFeatures::poisonAttr());
+    return nullptr;
+  }
+
+  llvm::APInt resultValue = func(inputValue);
+  return IntAttr::get(input.getType(), resultValue);
+}
+
+OpFoldResult BitClrsbOp::fold(FoldAdaptor adaptor) {
+  return foldUnaryBitOp(adaptor.getInput(), [](const llvm::APInt &inputValue) {
+    unsigned resultValue =
+        inputValue.getBitWidth() - inputValue.getSignificantBits();
+    return llvm::APInt(inputValue.getBitWidth(), resultValue);
+  });
+}
+
+OpFoldResult BitClzOp::fold(FoldAdaptor adaptor) {
+  return foldUnaryBitOp(
+      adaptor.getInput(),
+      [](const llvm::APInt &inputValue) {
+        unsigned resultValue = inputValue.countLeadingZeros();
+        return llvm::APInt(inputValue.getBitWidth(), resultValue);
+      },
+      getPoisonZero());
+}
+
+OpFoldResult BitCtzOp::fold(FoldAdaptor adaptor) {
+  return foldUnaryBitOp(
+      adaptor.getInput(),
+      [](const llvm::APInt &inputValue) {
+        return llvm::APInt(inputValue.getBitWidth(),
+                           inputValue.countTrailingZeros());
+      },
+      getPoisonZero());
+}
+
+OpFoldResult BitParityOp::fold(FoldAdaptor adaptor) {
+  return foldUnaryBitOp(adaptor.getInput(), [](const llvm::APInt &inputValue) {
+    return llvm::APInt(inputValue.getBitWidth(), inputValue.popcount() % 2);
+  });
+}
+
+OpFoldResult BitPopcountOp::fold(FoldAdaptor adaptor) {
+  return foldUnaryBitOp(adaptor.getInput(), [](const llvm::APInt &inputValue) {
+    return llvm::APInt(inputValue.getBitWidth(), inputValue.popcount());
+  });
+}
+
+OpFoldResult BitReverseOp::fold(FoldAdaptor adaptor) {
+  return foldUnaryBitOp(adaptor.getInput(), [](const llvm::APInt &inputValue) {
+    return inputValue.reverseBits();
+  });
+}
+
+OpFoldResult ByteSwapOp::fold(FoldAdaptor adaptor) {
+  return foldUnaryBitOp(adaptor.getInput(), [](const llvm::APInt &inputValue) {
+    return inputValue.byteSwap();
+  });
+}
+
+OpFoldResult RotateOp::fold(FoldAdaptor adaptor) {
+  auto input = mlir::dyn_cast_if_present<IntAttr>(adaptor.getInput());
+  auto amount = mlir::dyn_cast_if_present<IntAttr>(adaptor.getAmount());
+  if (!input && !amount)
+    return nullptr;
+
+  // We could fold cir.rotate even if one of its two operands is not a constant:
+  //   - `cir.rotate left/right %0, 0` could be folded into just %0 even if %0
+  //     is not a constant.
+  //   - `cir.rotate left/right 0/0b111...111, %0` could be folded into 0 or
+  //     0b111...111 even if %0 is not a constant.
+
+  llvm::APInt inputValue;
+  if (input) {
+    inputValue = input.getValue();
+    if (inputValue.isZero() || inputValue.isAllOnes()) {
+      // An input value of all 0s or all 1s will not change after rotation
+      return input;
+    }
+  }
+
+  uint64_t amountValue;
+  if (amount) {
+    amountValue = amount.getValue().urem(getInput().getType().getWidth());
+    if (amountValue == 0) {
+      // A shift amount of 0 will not change the input value
+      return getInput();
+    }
+  }
+
+  if (!input || !amount)
+    return nullptr;
+
+  assert(inputValue.getBitWidth() == getInput().getType().getWidth() &&
+         "input value must have the same bit width as the input type");
+
+  llvm::APInt resultValue;
+  if (isRotateLeft())
+    resultValue = inputValue.rotl(amountValue);
+  else
+    resultValue = inputValue.rotr(amountValue);
+
+  return IntAttr::get(input.getContext(), input.getType(), resultValue);
 }
 
 //===----------------------------------------------------------------------===//

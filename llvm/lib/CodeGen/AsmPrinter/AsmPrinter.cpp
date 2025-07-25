@@ -809,7 +809,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   // If we have a bss global going to a section that supports the
   // zerofill directive, do so here.
-  if (GVKind.isBSS() && MAI->isMachO() && TheSection->isVirtualSection()) {
+  if (GVKind.isBSS() && MAI->isMachO() && TheSection->isBssSection()) {
     if (Size == 0)
       Size = 1; // zerofill of 0 bytes is undefined.
     emitLinkage(GV, GVSym);
@@ -1868,6 +1868,7 @@ void AsmPrinter::emitFunctionBody() {
         OutStreamer->emitLabel(MI.getOperand(0).getMCSymbol());
         break;
       case TargetOpcode::EH_LABEL:
+        OutStreamer->AddComment("EH_LABEL");
         OutStreamer->emitLabel(MI.getOperand(0).getMCSymbol());
         // For AsynchEH, insert a Nop if followed by a trap inst
         //   Or the exception won't be caught.

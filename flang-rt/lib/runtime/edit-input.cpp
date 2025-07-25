@@ -19,16 +19,19 @@
 namespace Fortran::runtime::io {
 RT_OFFLOAD_API_GROUP_BEGIN
 
-// Checks that a list-directed input value has been entirely consumed and
-// doesn't contain unparsed characters before the next value separator.
+// Handle DC or DECIMAL='COMMA' and determine the active separator character
+static inline RT_API_ATTRS char32_t GetSeparatorChar(const DataEdit &edit) {
+  return edit.modes.editingFlags & decimalComma ? char32_t{';'} : char32_t{','};
+}
+
 static inline RT_API_ATTRS bool IsCharValueSeparator(
     const DataEdit &edit, char32_t ch) {
-  char32_t comma{
-      edit.modes.editingFlags & decimalComma ? char32_t{';'} : char32_t{','}};
-  return ch == ' ' || ch == '\t' || ch == comma || ch == '/' ||
+  return ch == ' ' || ch == '\t' || ch == '/' || ch == GetSeparatorChar(edit) ||
       (edit.IsNamelist() && (ch == '&' || ch == '$'));
 }
 
+// Checks that a list-directed input value has been entirely consumed and
+// doesn't contain unparsed characters before the next value separator.
 static RT_API_ATTRS bool CheckCompleteListDirectedField(
     IoStatementState &io, const DataEdit &edit) {
   if (edit.IsListDirected()) {
@@ -52,10 +55,6 @@ static RT_API_ATTRS bool CheckCompleteListDirectedField(
   } else {
     return true;
   }
-}
-
-static inline RT_API_ATTRS char32_t GetSeparatorChar(const DataEdit &edit) {
-  return edit.modes.editingFlags & decimalComma ? char32_t{';'} : char32_t{','};
 }
 
 template <int LOG2_BASE>
@@ -518,7 +517,7 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
   // Consume the trailing ')' of a list-directed or NAMELIST complex
   // input value.
   if (edit.descriptor == DataEdit::ListDirectedImaginaryPart) {
-    if (next && (*next == ' ' || *next == '\t')) {
+    if (!next || *next == ' ' || *next == '\t') {
       io.SkipSpaces(remaining);
       next = io.NextInField(remaining, edit);
     }
@@ -1006,27 +1005,7 @@ static RT_API_ATTRS bool EditListDirectedCharacterInput(
   // Undelimited list-directed character input: stop at a value separator
   // or the end of the current record.
   while (auto ch{io.GetCurrentChar(byteCount)}) {
-    bool isSep{false};
-    switch (*ch) {
-    case ' ':
-    case '\t':
-    case '/':
-      isSep = true;
-      break;
-    case '&':
-    case '$':
-      isSep = edit.IsNamelist();
-      break;
-    case ',':
-      isSep = !(edit.modes.editingFlags & decimalComma);
-      break;
-    case ';':
-      isSep = !!(edit.modes.editingFlags & decimalComma);
-      break;
-    default:
-      break;
-    }
-    if (isSep) {
+    if (IsCharValueSeparator(edit, *ch)) {
       break;
     }
     if (length > 0) {

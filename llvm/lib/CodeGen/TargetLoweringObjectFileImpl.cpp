@@ -42,7 +42,6 @@
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/PseudoProbe.h"
 #include "llvm/IR/Type.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAsmInfoDarwin.h"
@@ -996,7 +995,7 @@ MCSection *TargetLoweringObjectFileELF::getSectionForLSDA(
   if (!LSDASection || (!F.hasComdat() && !TM.getFunctionSections()))
     return LSDASection;
 
-  const auto *LSDA = cast<MCSectionELF>(LSDASection);
+  const auto *LSDA = static_cast<const MCSectionELF *>(LSDASection);
   unsigned Flags = LSDA->getFlags();
   const MCSymbolELF *LinkedToSym = nullptr;
   StringRef Group;

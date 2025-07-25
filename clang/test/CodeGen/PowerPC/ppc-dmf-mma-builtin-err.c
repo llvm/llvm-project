@@ -1,3 +1,5 @@
+// RUN: not %clang_cc1 -triple powerpc64le-unknown-linux-gnu -target-cpu pwr10 \
+// RUN:   %s -emit-llvm-only 2>&1 | FileCheck %s
 // RUN: not %clang_cc1 -triple powerpc64le-unknown-linux-gnu -target-cpu future \
 // RUN:   %s -emit-llvm-only 2>&1 | FileCheck %s
 

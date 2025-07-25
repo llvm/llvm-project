@@ -21,7 +21,7 @@ config.substitutions.append(
     ("%clang ", " " + config.clang + " " + " ".join(extra_flags) + " ")
 )
 
-if config.host_os == "Darwin":
+if config.target_os == "Darwin":
     config.substitutions.append(
         ("%macos_version_major", str(config.darwin_osx_version[0]))
     )

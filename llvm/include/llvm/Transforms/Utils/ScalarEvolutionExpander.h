@@ -530,6 +530,7 @@ private:
 
   bool isExpandedAddRecExprPHI(PHINode *PN, Instruction *IncV, const Loop *L);
 
+  Value *tryToReuseLCSSAPhi(const SCEVAddRecExpr *S);
   Value *expandAddRecExprLiterally(const SCEVAddRecExpr *);
   PHINode *getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
                                      const Loop *L, Type *&TruncTy,

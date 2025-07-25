@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/sinhf.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/config.h"

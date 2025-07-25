@@ -24,8 +24,8 @@
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 static llvm::Expected<Scalar> Evaluate(llvm::ArrayRef<uint8_t> expr,
                                        lldb::ModuleSP module_sp = {},
@@ -111,7 +111,8 @@ public:
 
   size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
                     Status &error, bool force_live_memory = false,
-                    lldb::addr_t *load_addr_ptr = nullptr) /*override*/ {
+                    lldb::addr_t *load_addr_ptr = nullptr,
+                    bool *did_read_live_memory = nullptr) /*override*/ {
     auto expected_memory = this->ReadMemory(addr.GetOffset(), dst_len);
     if (!expected_memory) {
       llvm::consumeError(expected_memory.takeError());

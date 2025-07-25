@@ -1,9 +1,9 @@
-<!--===- docs/Extensions.md 
-  
+<!--===- docs/Extensions.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # Fortran Extensions supported by Flang
@@ -170,6 +170,18 @@ end
   In the case of `DEFERRED` bindings in an `ABSTRACT` derived type,
   however, overrides are necessary, so they are permitted for inaccessible
   bindings with an optional warning.
+* Main program name is allowed to be the same as the other symbols used
+  in the main program, for example:
+```
+module m
+end
+program m
+use m
+end
+```
+  Note that internally the main program symbol name is all uppercase, unlike
+  the names of all other symbols, which are usually all lowercase. This
+  may make a difference in testing/debugging.
 
 ## Extensions, deletions, and legacy features supported by default
 

@@ -25,6 +25,7 @@
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUPreloadKernArgProlog.h"
+#include "AMDGPUPrepareAGPRAlloc.h"
 #include "AMDGPURemoveIncompatibleFunctions.h"
 #include "AMDGPUReserveWWMRegs.h"
 #include "AMDGPUResourceUsageAnalysis.h"
@@ -499,6 +500,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGlobalISel(*PR);
   initializeAMDGPUAsmPrinterPass(*PR);
   initializeAMDGPUDAGToDAGISelLegacyPass(*PR);
+  initializeAMDGPUPrepareAGPRAllocLegacyPass(*PR);
   initializeGCNDPPCombineLegacyPass(*PR);
   initializeSILowerI1CopiesLegacyPass(*PR);
   initializeAMDGPUGlobalISelDivergenceLoweringPass(*PR);
@@ -1196,6 +1198,7 @@ public:
   bool addRegBankSelect() override;
   void addPreGlobalInstructionSelect() override;
   bool addGlobalInstructionSelect() override;
+  void addPreRegAlloc() override;
   void addFastRegAlloc() override;
   void addOptimizedRegAlloc() override;
 
@@ -1537,6 +1540,11 @@ void GCNPassConfig::addFastRegAlloc() {
   insertPass(&TwoAddressInstructionPassID, &SIWholeQuadModeID);
 
   TargetPassConfig::addFastRegAlloc();
+}
+
+void GCNPassConfig::addPreRegAlloc() {
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(&AMDGPUPrepareAGPRAllocLegacyID);
 }
 
 void GCNPassConfig::addOptimizedRegAlloc() {
@@ -2233,6 +2241,11 @@ void AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
     insertPass<MachineSchedulerPass>(SIFormMemoryClausesPass());
 
   Base::addOptimizedRegAlloc(addPass);
+}
+
+void AMDGPUCodeGenPassBuilder::addPreRegAlloc(AddMachinePass &addPass) const {
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(AMDGPUPrepareAGPRAllocPass());
 }
 
 Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(

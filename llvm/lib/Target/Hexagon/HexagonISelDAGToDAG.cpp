@@ -1640,6 +1640,15 @@ bool HexagonDAGToDAGISel::DetectUseSxtw(SDValue &N, SDValue &R) {
       R = N;
       break;
     }
+    case ISD::AssertSext: {
+      EVT T = cast<VTSDNode>(N.getOperand(1))->getVT();
+      if (T.getSizeInBits() == 32)
+        R = N.getOperand(0);
+      else
+        return false;
+      break;
+    }
+
     default:
       return false;
   }

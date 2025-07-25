@@ -11930,7 +11930,7 @@ Decl *Sema::ActOnStartNamespaceDef(Scope *NamespcScope,
 
 /// getNamespaceDecl - Returns the namespace a decl represents. If the decl
 /// is a namespace alias, returns the namespace it points to.
-static inline NamespaceDecl *getNamespaceDecl(NamedDecl *D) {
+static inline NamespaceDecl *getNamespaceDecl(NamespaceBaseDecl *D) {
   if (NamespaceAliasDecl *AD = dyn_cast_or_null<NamespaceAliasDecl>(D))
     return AD->getNamespace();
   return dyn_cast_or_null<NamespaceDecl>(D);
@@ -13829,7 +13829,7 @@ Decl *Sema::ActOnNamespaceAliasDef(Scope *S, SourceLocation NamespaceLoc,
     }
   }
   assert(!R.isAmbiguous() && !R.empty());
-  NamedDecl *ND = R.getRepresentativeDecl();
+  auto *ND = cast<NamespaceBaseDecl>(R.getRepresentativeDecl());
 
   // Check if we have a previous declaration with the same name.
   LookupResult PrevR(*this, Alias, AliasLoc, LookupOrdinaryName,

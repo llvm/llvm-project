@@ -36,8 +36,6 @@ class MCCVDefRangeFragment;
 class MCCVInlineLineTableFragment;
 class MCFragment;
 class MCFixup;
-class MCLEBFragment;
-class MCPseudoProbeAddrFragment;
 class MCSymbolRefExpr;
 class raw_ostream;
 class MCAsmBackend;
@@ -123,7 +121,6 @@ private:
   bool relaxCVInlineLineTable(MCCVInlineLineTableFragment &DF);
   bool relaxCVDefRange(MCCVDefRangeFragment &DF);
   bool relaxFill(MCFillFragment &F);
-  bool relaxPseudoProbeAddr(MCPseudoProbeAddrFragment &DF);
 
 public:
   /// Construct a new assembler instance.

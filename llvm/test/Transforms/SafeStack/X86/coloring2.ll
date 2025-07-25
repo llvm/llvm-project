@@ -478,43 +478,6 @@ l2:
   br label %l2
 }
 
-; This test checks for a bug where the stack coloring algorithm was not tracking
-; the live range of allocas through phi instructions, so it did not consider
-; alloca and alloca2 to be live at the same time.  As a result it was using
-; the same stack slot for both allocas.  To ensure this bug isn't present, we
-; check that there are 64 bytes allocated for the unsafe stack which is enough
-; space for both allocas.
-; CHECK-LABEL: @stack_coloring_liveness_bug
-define void @stack_coloring_liveness_bug(i32 %arg0) #0 {
-entry:
-; CHECK:        %[[USP:.*]] = load ptr, ptr @__safestack_unsafe_stack_ptr
-; CHECK-NEXT:   getelementptr i8, ptr %[[USP]], i32 -64
-  %alloca = alloca [32 x i8], align 16
-  %alloca2 = alloca [32 x i8], align 16
-  %cond = icmp eq i32 %arg0, 0
-  br i1 %cond, label %if, label %else
-
-if:
-  br label %end
-
-else:
-; CHECK:   getelementptr i8, ptr %[[USP]], i32 -32
-  call void @llvm.lifetime.start.p0(i64 32, ptr nonnull %alloca)
-  call void @capture8(ptr %alloca)
-  call void @llvm.lifetime.end.p0(i64 32, ptr nonnull %alloca)
-  br label %end
-
-end:
-; CHECK:   getelementptr i8, ptr %[[USP]], i32 -64
-  %alloca.end = phi ptr [ %alloca, %if], [%alloca, %else]
-  call void @llvm.lifetime.start.p0(i64 32, ptr nonnull %alloca2)
-  call void @llvm.lifetime.start.p0(i64 32, ptr nonnull %alloca.end)
-  call void @capture2_8(ptr %alloca2, ptr %alloca.end)
-  call void @llvm.lifetime.end.p0(i64 32, ptr nonnull %alloca2)
-  call void @llvm.lifetime.end.p0(i64 32, ptr nonnull %alloca.end)
-  ret void
-}
-
 attributes #0 = { safestack }
 
 declare void @llvm.lifetime.start.p0(i64, ptr nocapture)

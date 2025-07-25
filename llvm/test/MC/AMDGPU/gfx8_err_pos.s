@@ -49,3 +49,13 @@ v_cndmask_b32_sdwa v5, v1, sext(v2), vcc dst_sel:DWORD dst_unused:UNUSED_PRESERV
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 // CHECK-NEXT:{{^}}v_cndmask_b32_sdwa v5, v1, sext(v2), vcc dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:BYTE_0 src1_sel:WORD_0
 // CHECK-NEXT:{{^}}                           ^
+
+v_alignbit_b32 v5, v1, v2, v3 op_sel:[1,1,1,1]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// CHECK-NEXT:{{^}}v_alignbit_b32 v5, v1, v2, v3 op_sel:[1,1,1,1]
+// CHECK-NEXT:{{^}}                              ^
+
+v_alignbyte_b32 v5, v1, v2, v3 op_sel:[1,1,1,1]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// CHECK-NEXT:{{^}}v_alignbyte_b32 v5, v1, v2, v3 op_sel:[1,1,1,1]
+// CHECK-NEXT:{{^}}                               ^
