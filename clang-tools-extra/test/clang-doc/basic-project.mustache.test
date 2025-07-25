@@ -83,6 +83,17 @@ HTML-SHAPE:             <code class="language-cpp code-clang-doc">
 HTML-SHAPE: double area ()
 HTML-SHAPE:             </code>
 HTML-SHAPE:         </pre>
+HTML-SHAPE:        <div>
+HTML-SHAPE:                        <div>
+HTML-SHAPE:                            <p> Calculates the area of the shape.</p>
+HTML-SHAPE:                        </div>
+HTML-SHAPE:                            <div>
+HTML-SHAPE:                        <p></p>
+HTML-SHAPE:                    </div>
+HTML-SHAPE:                        <div>
+HTML-SHAPE:                        <p></p>
+HTML-SHAPE:                    </div>
+HTML-SHAPE:                        </div>
 HTML-SHAPE:     </div>
 HTML-SHAPE: </div>
 HTML-SHAPE: <div class="delimiter-container">
@@ -92,6 +103,17 @@ HTML-SHAPE:             <code class="language-cpp code-clang-doc">
 HTML-SHAPE: double perimeter ()
 HTML-SHAPE:             </code>
 HTML-SHAPE:         </pre>
+HTML-SHAPE:        <div>
+HTML-SHAPE:                        <div>
+HTML-SHAPE:                            <p> Calculates the perimeter of the shape.</p>
+HTML-SHAPE:                        </div>
+HTML-SHAPE:                            <div>
+HTML-SHAPE:                        <p></p>
+HTML-SHAPE:                    </div>
+HTML-SHAPE:                        <div>
+HTML-SHAPE:                        <p></p>
+HTML-SHAPE:                    </div>
+HTML-SHAPE:                        </div>
 HTML-SHAPE:     </div>
 HTML-SHAPE: </div>
 HTML-SHAPE: <div class="delimiter-container">
@@ -101,6 +123,14 @@ HTML-SHAPE:             <code class="language-cpp code-clang-doc">
 HTML-SHAPE: void ~Shape ()
 HTML-SHAPE:             </code>
 HTML-SHAPE:         </pre>
+HTML-SHAPE:        <div>
+HTML-SHAPE:                        <div>
+HTML-SHAPE:                            <p> Virtual destructor.</p>
+HTML-SHAPE:                        </div>
+HTML-SHAPE:                            <div>
+HTML-SHAPE:                        <p></p>
+HTML-SHAPE:                    </div>
+HTML-SHAPE:                        </div>
 HTML-SHAPE:     </div>
 HTML-SHAPE: </div>
 HTML-SHAPE: </div>
@@ -220,6 +250,17 @@ HTML-CALC:             <code class="language-cpp code-clang-doc">
 HTML-CALC: int add (int a, int b)
 HTML-CALC:             </code>
 HTML-CALC:         </pre>
+HTML-CALC:        <div>
+HTML-CALC:                        <div>
+HTML-CALC:                            <p> Adds two integers.</p>
+HTML-CALC:                        </div>
+HTML-CALC:                            <div>
+HTML-CALC:                        <p></p>
+HTML-CALC:                    </div>
+HTML-CALC:                        <div>
+HTML-CALC:                        <p></p>
+HTML-CALC:                    </div>
+HTML-CALC:                        </div>
 HTML-CALC:     </div>
 HTML-CALC: </div>
 HTML-CALC: <div class="delimiter-container">
@@ -229,6 +270,17 @@ HTML-CALC:             <code class="language-cpp code-clang-doc">
 HTML-CALC: int subtract (int a, int b)
 HTML-CALC:             </code>
 HTML-CALC:         </pre>
+HTML-CALC:        <div>
+HTML-CALC:                        <div>
+HTML-CALC:                            <p> Subtracts the second integer from the first.</p>
+HTML-CALC:                        </div>
+HTML-CALC:                            <div>
+HTML-CALC:                        <p></p>
+HTML-CALC:                    </div>
+HTML-CALC:                        <div>
+HTML-CALC:                        <p></p>
+HTML-CALC:                    </div>
+HTML-CALC:                        </div>
 HTML-CALC:     </div>
 HTML-CALC: </div>
 HTML-CALC: <div class="delimiter-container">
@@ -238,6 +290,17 @@ HTML-CALC:             <code class="language-cpp code-clang-doc">
 HTML-CALC: int multiply (int a, int b)
 HTML-CALC:             </code>
 HTML-CALC:         </pre>
+HTML-CALC:        <div>
+HTML-CALC:                        <div>
+HTML-CALC:                            <p> Multiplies two integers.</p>
+HTML-CALC:                        </div>
+HTML-CALC:                            <div>
+HTML-CALC:                        <p></p>
+HTML-CALC:                    </div>
+HTML-CALC:                        <div>
+HTML-CALC:                        <p></p>
+HTML-CALC:                    </div>
+HTML-CALC:                        </div>
 HTML-CALC:     </div>
 HTML-CALC: </div>
 HTML-CALC: <div class="delimiter-container">
@@ -247,6 +310,17 @@ HTML-CALC:             <code class="language-cpp code-clang-doc">
 HTML-CALC: double divide (int a, int b)
 HTML-CALC:             </code>
 HTML-CALC:         </pre>
+HTML-CALC:        <div>
+HTML-CALC:                        <div>
+HTML-CALC:                            <p> Divides the first integer by the second.</p>
+HTML-CALC:                        </div>
+HTML-CALC:                            <div>
+HTML-CALC:                        <p></p>
+HTML-CALC:                    </div>
+HTML-CALC:                        <div>
+HTML-CALC:                        <p></p>
+HTML-CALC:                    </div>
+HTML-CALC:                        </div>
 HTML-CALC:     </div>
 HTML-CALC: </div>
 HTML-CALC: <div class="delimiter-container">
@@ -256,6 +330,17 @@ HTML-CALC:             <code class="language-cpp code-clang-doc">
 HTML-CALC: int mod (int a, int b)
 HTML-CALC:             </code>
 HTML-CALC:         </pre>
+HTML-CALC:        <div>
+HTML-CALC:                        <div>
+HTML-CALC:                            <p> Performs the mod operation on integers.</p>
+HTML-CALC:                        </div>
+HTML-CALC:                            <div>
+HTML-CALC:                        <p></p>
+HTML-CALC:                    </div>
+HTML-CALC:                        <div>
+HTML-CALC:                        <p></p>
+HTML-CALC:                    </div>
+HTML-CALC:                        </div>
 HTML-CALC:     </div>
 HTML-CALC: </div>
 HTML-CALC: </div>
@@ -344,6 +429,17 @@ HTML-RECTANGLE:             <code class="language-cpp code-clang-doc">
 HTML-RECTANGLE: void Rectangle (double width, double height)
 HTML-RECTANGLE:             </code>
 HTML-RECTANGLE:         </pre>
+HTML-RECTANGLE:        <div>
+HTML-RECTANGLE:                        <div>
+HTML-RECTANGLE:                            <p> Constructs a new Rectangle object.</p>
+HTML-RECTANGLE:                        </div>
+HTML-RECTANGLE:                            <div>
+HTML-RECTANGLE:                        <p></p>
+HTML-RECTANGLE:                    </div>
+HTML-RECTANGLE:                        <div>
+HTML-RECTANGLE:                        <p></p>
+HTML-RECTANGLE:                    </div>
+HTML-RECTANGLE:                        </div>
 HTML-RECTANGLE:     </div>
 HTML-RECTANGLE: </div>
 HTML-RECTANGLE: <div class="delimiter-container">
@@ -353,6 +449,17 @@ HTML-RECTANGLE:             <code class="language-cpp code-clang-doc">
 HTML-RECTANGLE: double area ()
 HTML-RECTANGLE:             </code>
 HTML-RECTANGLE:         </pre>
+HTML-RECTANGLE:        <div>
+HTML-RECTANGLE:                        <div>
+HTML-RECTANGLE:                            <p> Calculates the area of the rectangle.</p>
+HTML-RECTANGLE:                        </div>
+HTML-RECTANGLE:                            <div>
+HTML-RECTANGLE:                        <p></p>
+HTML-RECTANGLE:                    </div>
+HTML-RECTANGLE:                        <div>
+HTML-RECTANGLE:                        <p></p>
+HTML-RECTANGLE:                    </div>
+HTML-RECTANGLE:                        </div>
 HTML-RECTANGLE:     </div>
 HTML-RECTANGLE: </div>
 HTML-RECTANGLE: <div class="delimiter-container">
@@ -362,6 +469,17 @@ HTML-RECTANGLE:             <code class="language-cpp code-clang-doc">
 HTML-RECTANGLE: double perimeter ()
 HTML-RECTANGLE:             </code>
 HTML-RECTANGLE:         </pre>
+HTML-RECTANGLE:        <div>
+HTML-RECTANGLE:                        <div>
+HTML-RECTANGLE:                            <p> Calculates the perimeter of the rectangle.</p>
+HTML-RECTANGLE:                        </div>
+HTML-RECTANGLE:                            <div>
+HTML-RECTANGLE:                        <p></p>
+HTML-RECTANGLE:                    </div>
+HTML-RECTANGLE:                        <div>
+HTML-RECTANGLE:                        <p></p>
+HTML-RECTANGLE:                    </div>
+HTML-RECTANGLE:                        </div>
 HTML-RECTANGLE:     </div>
 HTML-RECTANGLE: </div>
 HTML-RECTANGLE: </div>
@@ -450,6 +568,17 @@ HTML-CIRCLE:             <code class="language-cpp code-clang-doc">
 HTML-CIRCLE: void Circle (double radius)
 HTML-CIRCLE:             </code>
 HTML-CIRCLE:         </pre>
+HTML-CIRCLE:        <div>
+HTML-CIRCLE:                        <div>
+HTML-CIRCLE:                            <p> Constructs a new Circle object.</p>
+HTML-CIRCLE:                        </div>
+HTML-CIRCLE:                            <div>
+HTML-CIRCLE:                        <p></p>
+HTML-CIRCLE:                    </div>
+HTML-CIRCLE:                        <div>
+HTML-CIRCLE:                        <p></p>
+HTML-CIRCLE:                    </div>
+HTML-CIRCLE:                        </div>
 HTML-CIRCLE:     </div>
 HTML-CIRCLE: </div>
 HTML-CIRCLE: <div class="delimiter-container">
@@ -459,6 +588,17 @@ HTML-CIRCLE:             <code class="language-cpp code-clang-doc">
 HTML-CIRCLE: double area ()
 HTML-CIRCLE:             </code>
 HTML-CIRCLE:         </pre>
+HTML-CIRCLE:        <div>
+HTML-CIRCLE:                        <div>
+HTML-CIRCLE:                            <p> Calculates the area of the circle.</p>
+HTML-CIRCLE:                        </div>
+HTML-CIRCLE:                            <div>
+HTML-CIRCLE:                        <p></p>
+HTML-CIRCLE:                    </div>
+HTML-CIRCLE:                        <div>
+HTML-CIRCLE:                        <p></p>
+HTML-CIRCLE:                    </div>
+HTML-CIRCLE:                        </div>
 HTML-CIRCLE:     </div>
 HTML-CIRCLE: </div>
 HTML-CIRCLE: <div class="delimiter-container">
@@ -468,6 +608,17 @@ HTML-CIRCLE:             <code class="language-cpp code-clang-doc">
 HTML-CIRCLE: double perimeter ()
 HTML-CIRCLE:             </code>
 HTML-CIRCLE:         </pre>
+HTML-CIRCLE:        <div>
+HTML-CIRCLE:                        <div>
+HTML-CIRCLE:                            <p> Calculates the perimeter of the circle.</p>
+HTML-CIRCLE:                        </div>
+HTML-CIRCLE:                            <div>
+HTML-CIRCLE:                        <p></p>
+HTML-CIRCLE:                    </div>
+HTML-CIRCLE:                        <div>
+HTML-CIRCLE:                        <p></p>
+HTML-CIRCLE:                    </div>
+HTML-CIRCLE:                        </div>
 HTML-CIRCLE:     </div>
 HTML-CIRCLE: </div>
 HTML-CIRCLE: </div>
