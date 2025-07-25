@@ -714,21 +714,6 @@ Error RewriteInstance::run() {
 
   preprocessProfileData();
 
-  // Skip disassembling if we have a translation table and we are running an
-  // aggregation job.
-  if (opts::AggregateOnly && BAT->enabledFor(InputFile)) {
-    // YAML profile in BAT mode requires CFG for .bolt.org.text functions
-    if (!opts::SaveProfile.empty() ||
-        opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML) {
-      selectFunctionsToProcess();
-      disassembleFunctions();
-      processMetadataPreCFG();
-      buildFunctionsCFG();
-    }
-    processProfileData();
-    return Error::success();
-  }
-
   selectFunctionsToProcess();
 
   readDebugInfo();
