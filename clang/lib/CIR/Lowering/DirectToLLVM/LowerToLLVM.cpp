@@ -927,10 +927,11 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
   if (calleeAttr) { // direct call
     mlir::Operation *callee =
         mlir::SymbolTable::lookupNearestSymbolFrom(op, calleeAttr);
-    if (auto fn = dyn_cast<mlir::FunctionOpInterface>(callee)) {
-      llvmFnTy = cast<mlir::LLVM::LLVMFunctionType>(
-          converter->convertType(fn.getFunctionType()));
-    } else if (auto alias = cast<mlir::LLVM::AliasOp>(callee)) {
+    if (auto fn = mlir::dyn_cast<mlir::FunctionOpInterface>(callee)) {
+      llvmFnTy = converter->convertType<mlir::LLVM::LLVMFunctionType>(
+          fn.getFunctionType());
+      assert(llvmFnTy && "Failed to convert function type");
+    } else if (auto alias = mlir::cast<mlir::LLVM::AliasOp>(callee)) {
       // If the callee wasan alias. In that case,
       // we need to prepend the address of the alias to the operands. The
       // way aliases work in the LLVM dialect is a little counter-intuitive.
@@ -938,13 +939,11 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
       // the global value being aliased, but when we generate the call we
       // need to insert an operation that gets the address of the AliasOp.
       // This all gets sorted out when the LLVM dialect is lowered to LLVM IR.
-      auto symAttr = cast<mlir::FlatSymbolRefAttr>(calleeAttr);
+      auto symAttr = mlir::cast<mlir::FlatSymbolRefAttr>(calleeAttr);
       auto addrOfAlias =
-          rewriter
-              .create<mlir::LLVM::AddressOfOp>(
-                  op->getLoc(),
-                  mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
-                  symAttr)
+          mlir::LLVM::AddressOfOp::create(
+              rewriter, op->getLoc(),
+              mlir::LLVM::LLVMPointerType::get(rewriter.getContext()), symAttr)
               .getResult();
       adjustedCallOperands.push_back(addrOfAlias);
 
@@ -954,7 +953,7 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
 
       // Clear the callee attribute because we're calling an alias.
       calleeAttr = {};
-      llvmFnTy = cast<mlir::LLVM::LLVMFunctionType>(alias.getType());
+      llvmFnTy = mlir::cast<mlir::LLVM::LLVMFunctionType>(alias.getType());
     } else {
       // Was this an ifunc?
       return op->emitError("Unexpected callee type!");
@@ -1200,8 +1199,8 @@ void CIRToLLVMFuncOpLowering::lowerFuncAttributes(
 }
 
 mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewriteAlias(
-    cir::FuncOp op, mlir::FlatSymbolRefAttr aliasee, mlir::Type ty,
-    OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) const {
+    cir::FuncOp op, llvm::StringRef aliasee, mlir::Type ty, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
   SmallVector<mlir::NamedAttribute, 4> attributes;
   lowerFuncAttributes(op, /*filterArgAndResAttrs=*/false, attributes);
 
@@ -1217,9 +1216,8 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewriteAlias(
   // The type of AddressOfOp is always a pointer.
   assert(!cir::MissingFeatures::addressSpace());
   mlir::Type ptrTy = mlir::LLVM::LLVMPointerType::get(ty.getContext());
-  auto addrOp =
-      builder.create<mlir::LLVM::AddressOfOp>(loc, ptrTy, aliasee.getValue());
-  builder.create<mlir::LLVM::ReturnOp>(loc, addrOp);
+  auto addrOp = mlir::LLVM::AddressOfOp::create(builder, loc, ptrTy, aliasee);
+  mlir::LLVM::ReturnOp::create(builder, loc, addrOp);
 
   return mlir::success();
 }
@@ -1250,8 +1248,7 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
       /*isVarArg=*/fnType.isVarArg());
 
   // If this is an alias, it needs to be lowered to llvm::AliasOp.
-  std::optional<mlir::FlatSymbolRefAttr> aliasee = op.getAliaseeAttr();
-  if (aliasee && *aliasee)
+  if (std::optional<llvm::StringRef> aliasee = op.getAliasee())
     return matchAndRewriteAlias(op, *aliasee, llvmFnTy, adaptor, rewriter);
 
   // LLVMFuncOp expects a single FileLine Location instead of a fused
