@@ -282,3 +282,15 @@
             dmxxsha224256pad 0, 1
 #CHECK-BE:  dmxxsha224256pad 0, 1          # encoding: [0xf0,0x18,0x0e,0x94]
 #CHECK-LE:  dmxxsha224256pad 0, 1          # encoding: [0x94,0x0e,0x18,0xf0]
+
+           vucmprhn 0, 2, 3
+#CHECK-BE: vucmprhn 0, 2, 3                # encoding: [0x10,0x02,0x18,0x03]
+#CHECK-LE: vucmprhn 0, 2, 3                # encoding: [0x03,0x18,0x02,0x10]
+
+           vucmprln 3, 5, 6
+#CHECK-BE: vucmprln 3, 5, 6                # encoding: [0x10,0x65,0x30,0x43]
+#CHECK-LE: vucmprln 3, 5, 6                # encoding: [0x43,0x30,0x65,0x10]
+
+        vucmprhb 1, 3, 6
+#CHECK-BE: vucmprhb 1, 3, 6                # encoding: [0x10,0x23,0x30,0x83]
+#CHECK-LE: vucmprhb 1, 3, 6                # encoding: [0x83,0x30,0x23,0x10]
