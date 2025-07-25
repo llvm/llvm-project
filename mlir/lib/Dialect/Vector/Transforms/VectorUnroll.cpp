@@ -169,7 +169,7 @@ struct UnrollTransferReadPattern
     auto sourceVectorType = readOp.getVectorType();
     SmallVector<int64_t> strides(targetShape->size(), 1);
     Location loc = readOp.getLoc();
-    ArrayRef<int64_t> originalSize = readOp.getVectorType().getShape();
+    ArrayRef<int64_t> originalSize = sourceVectorType.getShape();
 
     // Prepare the result vector;
     Value result =
@@ -225,6 +225,14 @@ struct UnrollTransferWritePattern
     SmallVector<int64_t> strides(targetShape->size(), 1);
     Location loc = writeOp.getLoc();
     ArrayRef<int64_t> originalSize = sourceVectorType.getShape();
+    // Bail-out if rank(source) != rank(target). The main limitation here is the
+    // fact that `ExtractStridedSlice` requires the rank for the input and
+    // output to match. If needed, we can relax this later.
+    if (originalSize.size() != targetShape->size())
+      return rewriter.notifyMatchFailure(
+          writeOp,
+          "expected source input vector rank to match target shape rank");
+
     SmallVector<Value> originalIndices(writeOp.getIndices().begin(),
                                        writeOp.getIndices().end());
     SmallVector<int64_t> loopOrder =
