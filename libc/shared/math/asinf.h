@@ -1,4 +1,4 @@
-//===-- Single-precision asin function ------------------------------------===//
+//===-- Shared asinf function -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/asinf.h"
+#ifndef LLVM_LIBC_SHARED_MATH_ASINF_H
+#define LLVM_LIBC_SHARED_MATH_ASINF_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/asinf.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float, asinf, (float x)) { return math::asinf(x); }
+using math::asinf;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_ASINF_H
