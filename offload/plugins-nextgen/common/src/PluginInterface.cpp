@@ -2231,3 +2231,14 @@ int32_t GenericPluginTy::get_function(__tgt_device_binary Binary,
   *KernelPtr = &Kernel;
   return OFFLOAD_SUCCESS;
 }
+
+int32_t GenericPluginTy::data_fence(int32_t DeviceId, __tgt_async_info *AsyncInfo ) {
+  auto Err = getDevice(DeviceId).dataFence(AsyncInfo);
+  if (Err) {
+    REPORT("Failure to place data fence on device %d: %s\n",
+           DeviceId, toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
+
+  return OFFLOAD_SUCCESS;
+}
