@@ -8,16 +8,14 @@ define i32 @icmp_and(i64 %x, i64 %y) {
 ; RV32ZICOND:       # %bb.0:
 ; RV32ZICOND-NEXT:    or a2, a2, a3
 ; RV32ZICOND-NEXT:    or a0, a0, a1
-; RV32ZICOND-NEXT:    snez a1, a2
 ; RV32ZICOND-NEXT:    snez a0, a0
-; RV32ZICOND-NEXT:    and a0, a0, a1
+; RV32ZICOND-NEXT:    czero.eqz a0, a0, a2
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: icmp_and:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    snez a1, a1
 ; RV64ZICOND-NEXT:    snez a0, a0
-; RV64ZICOND-NEXT:    and a0, a0, a1
+; RV64ZICOND-NEXT:    czero.eqz a0, a0, a1
 ; RV64ZICOND-NEXT:    ret
   %3 = icmp ne i64 %y, 0
   %4 = icmp ne i64 %x, 0
@@ -32,21 +30,17 @@ define i32 @icmp_and_and(i64 %x, i64 %y, i64 %z) {
 ; RV32ZICOND:       # %bb.0:
 ; RV32ZICOND-NEXT:    or a2, a2, a3
 ; RV32ZICOND-NEXT:    or a0, a0, a1
-; RV32ZICOND-NEXT:    or a4, a4, a5
 ; RV32ZICOND-NEXT:    snez a1, a2
-; RV32ZICOND-NEXT:    snez a0, a0
-; RV32ZICOND-NEXT:    and a0, a1, a0
-; RV32ZICOND-NEXT:    snez a1, a4
-; RV32ZICOND-NEXT:    and a0, a1, a0
+; RV32ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV32ZICOND-NEXT:    or a4, a4, a5
+; RV32ZICOND-NEXT:    czero.eqz a0, a0, a4
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: icmp_and_and:
 ; RV64ZICOND:       # %bb.0:
 ; RV64ZICOND-NEXT:    snez a1, a1
-; RV64ZICOND-NEXT:    snez a0, a0
-; RV64ZICOND-NEXT:    and a0, a1, a0
-; RV64ZICOND-NEXT:    snez a1, a2
-; RV64ZICOND-NEXT:    and a0, a1, a0
+; RV64ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV64ZICOND-NEXT:    czero.eqz a0, a0, a2
 ; RV64ZICOND-NEXT:    ret
   %4 = icmp ne i64 %y, 0
   %5 = icmp ne i64 %x, 0
