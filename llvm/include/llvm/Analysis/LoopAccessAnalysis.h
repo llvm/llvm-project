@@ -236,8 +236,8 @@ public:
 
   /// In same cases when the dependency check fails we can still
   /// vectorize the loop with a dynamic array access check.
-  bool shouldRetryWithRuntimeCheck() const {
-    return FoundNonConstantDistanceDependence &&
+  bool shouldRetryWithRuntimeChecks() const {
+    return ShouldRetryWithRuntimeChecks &&
            Status == VectorizationSafetyStatus::PossiblySafeWithRtChecks;
   }
 
@@ -327,9 +327,9 @@ private:
   uint64_t MaxStoreLoadForwardSafeDistanceInBits =
       std::numeric_limits<uint64_t>::max();
 
-  /// If we see a non-constant dependence distance we can still try to
-  /// vectorize this loop with runtime checks.
-  bool FoundNonConstantDistanceDependence = false;
+  /// Whether we should try to vectorize the loop with runtime checks, if the
+  /// dependencies are not safe.
+  bool ShouldRetryWithRuntimeChecks = false;
 
   /// Result of the dependence checks, indicating whether the checked
   /// dependences are safe for vectorization, require RT checks or are known to
@@ -423,6 +423,11 @@ private:
   getDependenceDistanceStrideAndSize(const MemAccessInfo &A, Instruction *AInst,
                                      const MemAccessInfo &B,
                                      Instruction *BInst);
+
+  // Return true if we can prove that \p Sink only accesses memory after \p
+  // Src's end or vice versa.
+  bool areAccessesCompletelyBeforeOrAfter(const SCEV *Src, Type *SrcTy,
+                                          const SCEV *Sink, Type *SinkTy);
 };
 
 class RuntimePointerChecking;

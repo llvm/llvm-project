@@ -16,7 +16,6 @@
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/visit.h"
-#include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/char-block.h"
@@ -37,6 +36,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 
@@ -495,6 +495,12 @@ template <typename Checker> struct DirectiveSpellingVisitor {
   template <typename T> bool Pre(const T &) { return true; }
   template <typename T> void Post(const T &) {}
 
+  template <typename... Ts>
+  static const parser::OmpDirectiveName &GetDirName(
+      const std::tuple<Ts...> &t) {
+    return std::get<parser::OmpDirectiveSpecification>(t).DirName();
+  }
+
   bool Pre(const parser::OmpSectionsDirective &x) {
     checker_(x.source, x.v);
     return false;
@@ -503,8 +509,8 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_allocate);
     return false;
   }
-  bool Pre(const parser::OmpDispatchDirective &x) {
-    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_dispatch);
+  bool Pre(const parser::OpenMPDispatchConstruct &x) {
+    checker_(GetDirName(x.t).source, Directive::OMPD_dispatch);
     return false;
   }
   bool Pre(const parser::OmpErrorDirective &x) {
@@ -520,8 +526,7 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     return false;
   }
   bool Pre(const parser::OpenMPAllocatorsConstruct &x) {
-    checker_(
-        std::get<parser::Verbatim>(x.t).source, Directive::OMPD_allocators);
+    checker_(GetDirName(x.t).source, Directive::OMPD_allocators);
     return false;
   }
   bool Pre(const parser::OmpAssumeDirective &x) {
@@ -776,12 +781,15 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
 
 void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   const auto &beginBlockDir{std::get<parser::OmpBeginBlockDirective>(x.t)};
-  const auto &endBlockDir{std::get<parser::OmpEndBlockDirective>(x.t)};
+  const auto &endBlockDir{
+      std::get<std::optional<parser::OmpEndBlockDirective>>(x.t)};
   const auto &beginDir{std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
-  const auto &endDir{std::get<parser::OmpBlockDirective>(endBlockDir.t)};
   const parser::Block &block{std::get<parser::Block>(x.t)};
 
-  CheckMatching<parser::OmpBlockDirective>(beginDir, endDir);
+  if (endBlockDir) {
+    const auto &endDir{std::get<parser::OmpBlockDirective>(endBlockDir->t)};
+    CheckMatching<parser::OmpBlockDirective>(beginDir, endDir);
+  }
 
   PushContextAndClauseSets(beginDir.source, beginDir.v);
   if (llvm::omp::allTargetSet.test(GetContext().directive)) {
@@ -831,14 +839,14 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
     bool foundNowait{false};
     parser::CharBlock NowaitSource;
 
-    auto catchCopyPrivateNowaitClauses = [&](const auto &dir, bool endDir) {
+    auto catchCopyPrivateNowaitClauses = [&](const auto &dir, bool isEnd) {
       for (auto &clause : std::get<parser::OmpClauseList>(dir.t).v) {
         if (clause.Id() == llvm::omp::Clause::OMPC_copyprivate) {
           for (const auto &ompObject : GetOmpObjectList(clause)->v) {
             const auto *name{parser::Unwrap<parser::Name>(ompObject)};
             if (Symbol * symbol{name->symbol}) {
               if (singleCopyprivateSyms.count(symbol)) {
-                if (endDir) {
+                if (isEnd) {
                   context_.Warn(common::UsageWarning::OpenMPUsage, name->source,
                       "The COPYPRIVATE clause with '%s' is already used on the SINGLE directive"_warn_en_US,
                       name->ToString());
@@ -852,7 +860,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
                     "'%s' appears in more than one COPYPRIVATE clause on the END SINGLE directive"_err_en_US,
                     name->ToString());
               } else {
-                if (endDir) {
+                if (isEnd) {
                   endSingleCopyprivateSyms.insert(symbol);
                 } else {
                   singleCopyprivateSyms.insert(symbol);
@@ -865,7 +873,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
             context_.Say(clause.source,
                 "At most one NOWAIT clause can appear on the SINGLE directive"_err_en_US);
           } else {
-            foundNowait = !endDir;
+            foundNowait = !isEnd;
           }
           if (!NowaitSource.ToString().size()) {
             NowaitSource = clause.source;
@@ -874,7 +882,9 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
       }
     };
     catchCopyPrivateNowaitClauses(beginBlockDir, false);
-    catchCopyPrivateNowaitClauses(endBlockDir, true);
+    if (endBlockDir) {
+      catchCopyPrivateNowaitClauses(*endBlockDir, true);
+    }
     unsigned version{context_.langOptions().OpenMPVersion};
     if (version <= 52 && NowaitSource.ToString().size() &&
         (singleCopyprivateSyms.size() || endSingleCopyprivateSyms.size())) {
@@ -1151,8 +1161,7 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
                         (sym->has<MainProgramDetails>() ||
                             sym->has<ModuleDetails>())) {
                       context_.Say(name->source,
-                          "The module name or main program name cannot be in a "
-                          "%s "
+                          "The module name cannot be in a %s "
                           "directive"_err_en_US,
                           ContextDirectiveAsFortran());
                     } else if (!IsSaved(*name->symbol) &&
@@ -1590,28 +1599,31 @@ void OmpStructureChecker::Enter(const parser::OmpErrorDirective &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPDispatchConstruct &x) {
-  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_dispatch);
+  auto &dirSpec{std::get<parser::OmpDirectiveSpecification>(x.t)};
   const auto &block{std::get<parser::Block>(x.t)};
-  if (block.empty() || block.size() > 1) {
+  PushContextAndClauseSets(
+      dirSpec.DirName().source, llvm::omp::Directive::OMPD_dispatch);
+
+  if (block.empty()) {
     context_.Say(x.source,
-        "The DISPATCH construct is empty or contains more than one statement"_err_en_US);
+        "The DISPATCH construct should contain a single function or subroutine call"_err_en_US);
     return;
   }
 
-  auto it{block.begin()};
   bool passChecks{false};
-  if (const parser::AssignmentStmt *
-      assignStmt{parser::Unwrap<parser::AssignmentStmt>(*it)}) {
+  omp::SourcedActionStmt action{omp::GetActionStmt(block)};
+  if (const auto *assignStmt{
+          parser::Unwrap<parser::AssignmentStmt>(*action.stmt)}) {
     if (parser::Unwrap<parser::FunctionReference>(assignStmt->t)) {
       passChecks = true;
     }
-  } else if (parser::Unwrap<parser::CallStmt>(*it)) {
+  } else if (parser::Unwrap<parser::CallStmt>(*action.stmt)) {
     passChecks = true;
   }
 
   if (!passChecks) {
-    context_.Say(x.source,
-        "The DISPATCH construct does not contain a SUBROUTINE or FUNCTION"_err_en_US);
+    context_.Say(action.source,
+        "The body of the DISPATCH construct should be a function or a subroutine call"_err_en_US);
   }
 }
 
@@ -1657,26 +1669,45 @@ void OmpStructureChecker::Leave(const parser::OpenMPExecutableAllocate &x) {
 
 void OmpStructureChecker::Enter(const parser::OpenMPAllocatorsConstruct &x) {
   isPredefinedAllocator = true;
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_allocators);
-  const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
-  for (const auto &clause : clauseList.v) {
+
+  auto &dirSpec{std::get<parser::OmpDirectiveSpecification>(x.t)};
+  auto &block{std::get<parser::Block>(x.t)};
+  PushContextAndClauseSets(
+      dirSpec.DirName().source, llvm::omp::Directive::OMPD_allocators);
+
+  if (block.empty()) {
+    context_.Say(dirSpec.source,
+        "The ALLOCATORS construct should contain a single ALLOCATE statement"_err_en_US);
+    return;
+  }
+
+  omp::SourcedActionStmt action{omp::GetActionStmt(block)};
+  const auto *allocate{
+      action ? parser::Unwrap<parser::AllocateStmt>(action.stmt) : nullptr};
+
+  if (!allocate) {
+    const parser::CharBlock &source = action ? action.source : x.source;
+    context_.Say(source,
+        "The body of the ALLOCATORS construct should be an ALLOCATE statement"_err_en_US);
+  }
+
+  for (const auto &clause : dirSpec.Clauses().v) {
     if (const auto *allocClause{
             parser::Unwrap<parser::OmpClause::Allocate>(clause)}) {
       CheckVarIsNotPartOfAnotherVar(
-          dir.source, std::get<parser::OmpObjectList>(allocClause->v.t));
+          dirSpec.source, std::get<parser::OmpObjectList>(allocClause->v.t));
     }
   }
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPAllocatorsConstruct &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
-  for (const auto &clause : clauseList.v) {
+  auto &dirSpec{std::get<parser::OmpDirectiveSpecification>(x.t)};
+
+  for (const auto &clause : dirSpec.Clauses().v) {
     if (const auto *allocClause{
             std::get_if<parser::OmpClause::Allocate>(&clause.u)}) {
       CheckPredefinedAllocatorRestriction(
-          dir.source, std::get<parser::OmpObjectList>(allocClause->v.t));
+          dirSpec.source, std::get<parser::OmpObjectList>(allocClause->v.t));
     }
   }
   dirContext_.pop_back();
@@ -3372,23 +3403,22 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Detach &x) {
   }
 }
 
-void OmpStructureChecker::CheckAllowedMapTypes(
-    const parser::OmpMapType::Value &type,
-    const std::list<parser::OmpMapType::Value> &allowedMapTypeList) {
-  if (!llvm::is_contained(allowedMapTypeList, type)) {
-    std::string commaSeparatedMapTypes;
-    llvm::interleave(
-        allowedMapTypeList.begin(), allowedMapTypeList.end(),
-        [&](const parser::OmpMapType::Value &mapType) {
-          commaSeparatedMapTypes.append(parser::ToUpperCaseLetters(
-              parser::OmpMapType::EnumToString(mapType)));
-        },
-        [&] { commaSeparatedMapTypes.append(", "); });
-    context_.Say(GetContext().clauseSource,
-        "Only the %s map types are permitted "
-        "for MAP clauses on the %s directive"_err_en_US,
-        commaSeparatedMapTypes, ContextDirectiveAsFortran());
+void OmpStructureChecker::CheckAllowedMapTypes(parser::OmpMapType::Value type,
+    llvm::ArrayRef<parser::OmpMapType::Value> allowed) {
+  if (llvm::is_contained(allowed, type)) {
+    return;
   }
+
+  llvm::SmallVector<std::string> names;
+  llvm::transform(
+      allowed, std::back_inserter(names), [](parser::OmpMapType::Value val) {
+        return parser::ToUpperCaseLetters(
+            parser::OmpMapType::EnumToString(val));
+      });
+  llvm::sort(names);
+  context_.Say(GetContext().clauseSource,
+      "Only the %s map types are permitted for MAP clauses on the %s directive"_err_en_US,
+      llvm::join(names, ", "), ContextDirectiveAsFortran());
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
@@ -3409,27 +3439,62 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
     CheckIteratorModifier(*iter);
   }
   if (auto *type{OmpGetUniqueModifier<parser::OmpMapType>(modifiers)}) {
+    using Directive = llvm::omp::Directive;
     using Value = parser::OmpMapType::Value;
-    switch (GetContext().directive) {
-    case llvm::omp::Directive::OMPD_target:
-    case llvm::omp::Directive::OMPD_target_teams:
-    case llvm::omp::Directive::OMPD_target_teams_distribute:
-    case llvm::omp::Directive::OMPD_target_teams_distribute_simd:
-    case llvm::omp::Directive::OMPD_target_teams_distribute_parallel_do:
-    case llvm::omp::Directive::OMPD_target_teams_distribute_parallel_do_simd:
-    case llvm::omp::Directive::OMPD_target_data:
-      CheckAllowedMapTypes(
-          type->v, {Value::To, Value::From, Value::Tofrom, Value::Alloc});
-      break;
-    case llvm::omp::Directive::OMPD_target_enter_data:
-      CheckAllowedMapTypes(type->v, {Value::To, Value::Alloc});
-      break;
-    case llvm::omp::Directive::OMPD_target_exit_data:
-      CheckAllowedMapTypes(
-          type->v, {Value::From, Value::Release, Value::Delete});
-      break;
-    default:
-      break;
+
+    static auto isValidForVersion{
+        [](parser::OmpMapType::Value t, unsigned version) {
+          switch (t) {
+          case parser::OmpMapType::Value::Alloc:
+          case parser::OmpMapType::Value::Delete:
+          case parser::OmpMapType::Value::Release:
+            return version < 60;
+          case parser::OmpMapType::Value::Storage:
+            return version >= 60;
+          default:
+            return true;
+          }
+        }};
+
+    llvm::SmallVector<parser::OmpMapType::Value> mapEnteringTypes{[&]() {
+      llvm::SmallVector<parser::OmpMapType::Value> result;
+      for (size_t i{0}; i != parser::OmpMapType::Value_enumSize; ++i) {
+        auto t{static_cast<parser::OmpMapType::Value>(i)};
+        if (isValidForVersion(t, version) && IsMapEnteringType(t)) {
+          result.push_back(t);
+        }
+      }
+      return result;
+    }()};
+    llvm::SmallVector<parser::OmpMapType::Value> mapExitingTypes{[&]() {
+      llvm::SmallVector<parser::OmpMapType::Value> result;
+      for (size_t i{0}; i != parser::OmpMapType::Value_enumSize; ++i) {
+        auto t{static_cast<parser::OmpMapType::Value>(i)};
+        if (isValidForVersion(t, version) && IsMapExitingType(t)) {
+          result.push_back(t);
+        }
+      }
+      return result;
+    }()};
+
+    llvm::omp::Directive dir{GetContext().directive};
+    llvm::ArrayRef<llvm::omp::Directive> leafs{
+        llvm::omp::getLeafConstructsOrSelf(dir)};
+
+    if (llvm::is_contained(leafs, Directive::OMPD_target) ||
+        llvm::is_contained(leafs, Directive::OMPD_target_data)) {
+      if (version >= 60) {
+        // Map types listed in the decay table. [6.0:276]
+        CheckAllowedMapTypes(
+            type->v, {Value::Storage, Value::From, Value::To, Value::Tofrom});
+      } else {
+        CheckAllowedMapTypes(
+            type->v, {Value::Alloc, Value::From, Value::To, Value::Tofrom});
+      }
+    } else if (llvm::is_contained(leafs, Directive::OMPD_target_enter_data)) {
+      CheckAllowedMapTypes(type->v, mapEnteringTypes);
+    } else if (llvm::is_contained(leafs, Directive::OMPD_target_exit_data)) {
+      CheckAllowedMapTypes(type->v, mapExitingTypes);
     }
   }
 
@@ -4090,21 +4155,26 @@ void OmpStructureChecker::CheckArraySection(
   // Detect this by looking for array accesses on character variables which are
   // not arrays.
   bool isSubstring{false};
-  evaluate::ExpressionAnalyzer ea{context_};
-  if (MaybeExpr expr = ea.Analyze(arrayElement.base)) {
-    std::optional<evaluate::Shape> shape = evaluate::GetShape(expr);
-    // Not an array: rank 0
-    if (shape && shape->size() == 0) {
-      if (std::optional<evaluate::DynamicType> type = expr->GetType()) {
-        if (type->category() == evaluate::TypeCategory::Character) {
-          // Substrings are explicitly denied by the standard [6.0:163:9-11].
-          // This is supported as an extension. This restriction was added in
-          // OpenMP 5.2.
-          isSubstring = true;
-          context_.Say(GetContext().clauseSource,
-              "The use of substrings in OpenMP argument lists has been disallowed since OpenMP 5.2."_port_en_US);
-        } else {
-          llvm_unreachable("Array indexing on a variable that isn't an array");
+  // Cannot analyze a base of an assumed-size array on its own. If we know
+  // this is an array (assumed-size or not) we can ignore it, since we're
+  // looking for strings.
+  if (!IsAssumedSizeArray(*name.symbol)) {
+    evaluate::ExpressionAnalyzer ea{context_};
+    if (MaybeExpr expr = ea.Analyze(arrayElement.base)) {
+      if (expr->Rank() == 0) {
+        // Not an array: rank 0
+        if (std::optional<evaluate::DynamicType> type = expr->GetType()) {
+          if (type->category() == evaluate::TypeCategory::Character) {
+            // Substrings are explicitly denied by the standard [6.0:163:9-11].
+            // This is supported as an extension. This restriction was added in
+            // OpenMP 5.2.
+            isSubstring = true;
+            context_.Say(GetContext().clauseSource,
+                "The use of substrings in OpenMP argument lists has been disallowed since OpenMP 5.2."_port_en_US);
+          } else {
+            llvm_unreachable(
+                "Array indexing on a variable that isn't an array");
+          }
         }
       }
     }
