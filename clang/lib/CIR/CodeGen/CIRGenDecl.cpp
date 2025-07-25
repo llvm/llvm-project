@@ -659,11 +659,8 @@ void CIRGenFunction::emitNullabilityCheck(LValue lhs, mlir::Value rhs,
 void CIRGenFunction::emitArrayDestroy(mlir::Value begin, mlir::Value end,
                                       QualType elementType,
                                       CharUnits elementAlign,
-                                      Destroyer *destroyer,
-                                      bool checkZeroLength) {
+                                      Destroyer *destroyer) {
   assert(!elementType->isArrayType());
-  if (checkZeroLength)
-    cgm.errorNYI("emitArrayDestroy: check for zero length");
 
   // Differently from LLVM traditional codegen, use a higher level
   // representation instead of lowering directly to a loop.
@@ -671,8 +668,8 @@ void CIRGenFunction::emitArrayDestroy(mlir::Value begin, mlir::Value end,
   cir::PointerType ptrToElmType = builder.getPointerTo(cirElementType);
 
   // Emit the dtor call that will execute for every array element.
-  builder.create<cir::ArrayDtor>(
-      *currSrcLoc, begin, [&](mlir::OpBuilder &b, mlir::Location loc) {
+  cir::ArrayDtor::create(
+      builder, *currSrcLoc, begin, [&](mlir::OpBuilder &b, mlir::Location loc) {
         auto arg = b.getInsertionBlock()->addArgument(ptrToElmType, loc);
         Address curAddr = Address(arg, cirElementType, elementAlign);
         assert(!cir::MissingFeatures::dtorCleanups());
@@ -680,7 +677,7 @@ void CIRGenFunction::emitArrayDestroy(mlir::Value begin, mlir::Value end,
         // Perform the actual destruction there.
         destroyer(*this, curAddr, elementType);
 
-        builder.create<cir::YieldOp>(loc);
+        cir::YieldOp::create(builder, loc);
       });
 }
 
@@ -702,25 +699,21 @@ void CIRGenFunction::emitDestroy(Address addr, QualType type,
   CharUnits elementAlign = addr.getAlignment().alignmentOfArrayElement(
       getContext().getTypeSizeInChars(type));
 
-  // Normally we have to check whether the array is zero-length.
-  bool checkZeroLength = true;
-
-  // But if the array length is constant, we can suppress that.
-  auto constantCount = dyn_cast<cir::ConstantOp>(length.getDefiningOp());
-  if (constantCount) {
-    auto constIntAttr = mlir::dyn_cast<cir::IntAttr>(constantCount.getValue());
-    // ...and if it's constant zero, we can just skip the entire thing.
-    if (constIntAttr && constIntAttr.getUInt() == 0)
-      return;
-    checkZeroLength = false;
-  } else {
+  auto constantCount = length.getDefiningOp<cir::ConstantOp>();
+  if (!constantCount) {
+    assert(!cir::MissingFeatures::vlas());
     cgm.errorNYI("emitDestroy: variable length array");
     return;
   }
 
+  auto constIntAttr = mlir::dyn_cast<cir::IntAttr>(constantCount.getValue());
+  // If it's constant zero, we can just skip the entire thing.
+  if (constIntAttr && constIntAttr.getUInt() == 0)
+    return;
+
   mlir::Value begin = addr.getPointer();
   mlir::Value end; // This will be used for future non-constant counts.
-  emitArrayDestroy(begin, end, type, elementAlign, destroyer, checkZeroLength);
+  emitArrayDestroy(begin, end, type, elementAlign, destroyer);
 
   // If the array destroy didn't use the length op, we can erase it.
   if (constantCount.use_empty())

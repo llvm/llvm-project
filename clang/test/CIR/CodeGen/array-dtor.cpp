@@ -25,16 +25,16 @@ void test_cleanup_array() {
 
 // CIR: cir.func{{.*}} @_Z18test_cleanup_arrayv()
 // CIR:   %[[S:.*]] = cir.alloca !cir.array<!rec_S x 42>, !cir.ptr<!cir.array<!rec_S x 42>>, ["s"]
-// CIR:   %[[CONST42:.*]] = cir.const #cir.int<42> : !u64i
+// CIR:   %[[CONST41:.*]] = cir.const #cir.int<41> : !u64i
 // CIR:   %[[DECAY:.*]] = cir.cast(array_to_ptrdecay, %[[S]] : !cir.ptr<!cir.array<!rec_S x 42>>), !cir.ptr<!rec_S>
-// CIR:   %[[END_PTR:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_S>, %[[CONST42]] : !u64i), !cir.ptr<!rec_S>
+// CIR:   %[[END_PTR:.*]] = cir.ptr_stride(%[[DECAY]] : !cir.ptr<!rec_S>, %[[CONST41]] : !u64i), !cir.ptr<!rec_S>
 // CIR:   %[[ITER:.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["__array_idx"]
 // CIR:   cir.store %[[END_PTR]], %[[ITER]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:   cir.do {
 // CIR:     %[[CURRENT:.*]] = cir.load %[[ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR:     cir.call @_ZN1SD1Ev(%[[CURRENT]]) nothrow : (!cir.ptr<!rec_S>) -> ()
 // CIR:     %[[CONST_MINUS1:.*]] = cir.const #cir.int<-1> : !s64i
 // CIR:     %[[NEXT:.*]] = cir.ptr_stride(%[[CURRENT]] : !cir.ptr<!rec_S>, %[[CONST_MINUS1]] : !s64i), !cir.ptr<!rec_S>
-// CIR:     cir.call @_ZN1SD1Ev(%[[NEXT]]) nothrow : (!cir.ptr<!rec_S>) -> ()
 // CIR:     cir.store %[[NEXT]], %[[ITER]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:     cir.yield
 // CIR:   } while {
@@ -47,7 +47,7 @@ void test_cleanup_array() {
 // LLVM: define{{.*}} void @_Z18test_cleanup_arrayv()
 // LLVM:   %[[ARRAY:.*]] = alloca [42 x %struct.S]
 // LLVM:   %[[START:.*]] = getelementptr %struct.S, ptr %[[ARRAY]], i32 0
-// LLVM:   %[[END:.*]] = getelementptr %struct.S, ptr %[[START]], i64 42
+// LLVM:   %[[END:.*]] = getelementptr %struct.S, ptr %[[START]], i64 41
 // LLVM:   %[[ITER:.*]] = alloca ptr
 // LLVM:   store ptr %[[END]], ptr %[[ITER]]
 // LLVM:   br label %[[LOOP:.*]]
@@ -57,9 +57,9 @@ void test_cleanup_array() {
 // LLVM:   br i1 %[[DONE]], label %[[LOOP]], label %[[EXIT:.*]]
 // LLVM: [[LOOP]]:
 // LLVM:   %[[CURRENT:.*]] = load ptr, ptr %[[ITER]]
-// LLVM:   %[[LAST:.*]] = getelementptr %struct.S, ptr %[[CURRENT]], i64 -1
-// LLVM:   call void @_ZN1SD1Ev(ptr %[[LAST]])
-// LLVM:   store ptr %[[LAST]], ptr %[[ITER]]
+// LLVM:   call void @_ZN1SD1Ev(ptr %[[CURRENT]])
+// LLVM:   %[[NEXT:.*]] = getelementptr %struct.S, ptr %[[CURRENT]], i64 -1
+// LLVM:   store ptr %[[NEXT]], ptr %[[ITER]]
 // LLVM:   br label %[[COND]]
 // LLVM: [[EXIT]]:
 // LLVM:   ret void

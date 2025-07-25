@@ -850,7 +850,7 @@ public:
 
   void emitArrayDestroy(mlir::Value begin, mlir::Value end,
                         QualType elementType, CharUnits elementAlign,
-                        Destroyer *destroyer, bool checkZeroLength);
+                        Destroyer *destroyer);
 
   mlir::Value emitArrayLength(const clang::ArrayType *arrayType,
                               QualType &baseType, Address &addr);

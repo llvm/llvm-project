@@ -2260,7 +2260,9 @@ def CIR_ArrayCtor : CIR_ArrayInitDestroy<"array.ctor"> {
   let description = [{
     Initialize each array element using the same C++ constructor. This
     operation has one region, with one single block. The block has an
-    incoming argument for the current array index to initialize.
+    incoming argument for the current array element to initialize.
+
+    Example:
 
     ```mlir
     cir.array.ctor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
@@ -2277,7 +2279,9 @@ def CIR_ArrayDtor : CIR_ArrayInitDestroy<"array.dtor"> {
   let description = [{
     Destroy each array element using the same C++ destructor. This
     operation has one region, with one single block. The block has an
-    incoming argument for the current array index to initialize.
+    incoming argument for the current array element to destruct.
+
+    Example:
 
     ```mlir
     cir.array.dtor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {

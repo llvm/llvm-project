@@ -29,8 +29,8 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   void runOnOp(mlir::Operation *op);
   void lowerCastOp(cir::CastOp op);
   void lowerUnaryOp(cir::UnaryOp op);
-  void lowerArrayDtor(ArrayDtor op);
-  void lowerArrayCtor(ArrayCtor op);
+  void lowerArrayDtor(cir::ArrayDtor op);
+  void lowerArrayCtor(cir::ArrayCtor op);
 
   ///
   /// AST related
@@ -182,13 +182,14 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
   // PtrDiffTy and unify with CIRGen stuff.
   const unsigned sizeTypeSize =
       astCtx->getTypeSize(astCtx->getSignedSizeType());
-  mlir::Value numArrayElementsConst =
-      builder.getUnsignedInt(loc, arrayLen, sizeTypeSize);
+  uint64_t endOffset = isCtor ? arrayLen : arrayLen - 1;
+  mlir::Value endOffsetVal =
+      builder.getUnsignedInt(loc, endOffset, sizeTypeSize);
 
-  auto begin = builder.create<cir::CastOp>(
-      loc, eltTy, cir::CastKind::array_to_ptrdecay, arrayAddr);
-  mlir::Value end = builder.create<cir::PtrStrideOp>(loc, eltTy, begin,
-                                                     numArrayElementsConst);
+  auto begin = cir::CastOp::create(builder, loc, eltTy,
+                                   cir::CastKind::array_to_ptrdecay, arrayAddr);
+  mlir::Value end =
+      cir::PtrStrideOp::create(builder, loc, eltTy, begin, endOffsetVal);
   mlir::Value start = isCtor ? begin : end;
   mlir::Value stop = isCtor ? end : begin;
 
@@ -216,20 +217,16 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
         assert(ctorCall && "expected ctor call");
 
         // Array elements get constructed in order but destructed in reverse.
-        cir::PtrStrideOp nextElement;
-        if (isCtor) {
-          mlir::Value stride = builder.getUnsignedInt(loc, 1, sizeTypeSize);
-          ctorCall->moveBefore(stride.getDefiningOp());
-          ctorCall->setOperand(0, currentElement);
-          nextElement = builder.create<cir::PtrStrideOp>(
-              loc, eltTy, currentElement, stride);
-        } else {
-          mlir::Value stride = builder.getSignedInt(loc, -1, sizeTypeSize);
-          nextElement = builder.create<cir::PtrStrideOp>(
-              loc, eltTy, currentElement, stride);
-          ctorCall->moveAfter(nextElement);
-          ctorCall->setOperand(0, nextElement);
-        }
+        mlir::Value stride;
+        if (isCtor)
+          stride = builder.getUnsignedInt(loc, 1, sizeTypeSize);
+        else
+          stride = builder.getSignedInt(loc, -1, sizeTypeSize);
+
+        ctorCall->moveBefore(stride.getDefiningOp());
+        ctorCall->setOperand(0, currentElement);
+        auto nextElement = cir::PtrStrideOp::create(builder, loc, eltTy,
+                                                    currentElement, stride);
 
         // Store the element pointer to the temporary variable
         builder.createStore(loc, nextElement, tmpAddr);
@@ -240,11 +237,12 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
   op->erase();
 }
 
-void LoweringPreparePass::lowerArrayDtor(ArrayDtor op) {
+void LoweringPreparePass::lowerArrayDtor(cir::ArrayDtor op) {
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op.getOperation());
 
   mlir::Type eltTy = op->getRegion(0).getArgument(0).getType();
+  assert(!cir::MissingFeatures::vlas());
   auto arrayLen =
       mlir::cast<cir::ArrayType>(op.getAddr().getType().getPointee()).getSize();
   lowerArrayDtorCtorIntoLoop(builder, astCtx, op, eltTy, op.getAddr(), arrayLen,
@@ -266,12 +264,12 @@ void LoweringPreparePass::lowerArrayCtor(cir::ArrayCtor op) {
 void LoweringPreparePass::runOnOp(mlir::Operation *op) {
   if (auto arrayCtor = dyn_cast<ArrayCtor>(op))
     lowerArrayCtor(arrayCtor);
+  else if (auto arrayDtor = dyn_cast<cir::ArrayDtor>(op))
+    lowerArrayDtor(arrayDtor);
   else if (auto cast = mlir::dyn_cast<cir::CastOp>(op))
     lowerCastOp(cast);
   else if (auto unary = mlir::dyn_cast<cir::UnaryOp>(op))
     lowerUnaryOp(unary);
-  else if (auto arrayDtor = dyn_cast<ArrayDtor>(op))
-    lowerArrayDtor(arrayDtor);
 }
 
 void LoweringPreparePass::runOnOperation() {
