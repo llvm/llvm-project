@@ -92,6 +92,14 @@ include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 
+
+# Determine whether we are in the runtimes/runtimes-bins directory of a
+# bootstrap build.
+set(LLVM_TREE_AVAILABLE OFF)
+if (LLVM_LIBRARY_OUTPUT_INTDIR AND LLVM_RUNTIME_OUTPUT_INTDIR AND PACKAGE_VERSION)
+  set(LLVM_TREE_AVAILABLE ON)
+endif()
+
 # CMake omits default compiler include paths, but in runtimes build, we use
 # -nostdinc and -nostdinc++ and control include paths manually so this behavior
 # is undesirable. Filtering CMAKE_{LANG}_IMPLICIT_INCLUDE_DIRECTORIES to remove
