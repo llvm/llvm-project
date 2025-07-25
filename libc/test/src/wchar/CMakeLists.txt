@@ -99,7 +99,22 @@ add_libc_test(
     libc.src.string.memset
     libc.src.wchar.mbrlen
     libc.hdr.types.mbstate_t
+    libc.hdr.types.wchar_t
     libc.test.UnitTest.ErrnoCheckingTest
+)   
+
+add_libc_test(
+  mbsinit_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    mbsinit_test.cpp
+  DEPENDS
+    libc.src.string.memset
+    libc.src.wchar.mbsinit
+    libc.src.wchar.mbrtowc
+    libc.hdr.types.mbstate_t
+    libc.hdr.types.wchar_t
 )
 
 add_libc_test(
