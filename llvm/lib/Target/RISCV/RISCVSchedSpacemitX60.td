@@ -75,6 +75,29 @@ class Get461018Latency<string mx> {
   );
 }
 
+
+// Used for: FP reductions
+class Get15213357Latency<string mx> {
+  int c = !cond(
+    !eq(mx, "M1") : 15,
+    !eq(mx, "M2") : 21,
+    !eq(mx, "M4") : 33,
+    !eq(mx, "M8") : 57,
+    true: 12
+  );
+}
+
+// Used for: integer reductions
+class Get7111935Latency<string mx> {
+  int c = !cond(
+    !eq(mx, "M1") : 7,
+    !eq(mx, "M2") : 11,
+    !eq(mx, "M4") : 19,
+    !eq(mx, "M8") : 35,
+    true: 5
+  );
+}
+
 // Used for: e64 multiply pattern, complex ops
 class Get781632Latency<string mx> {
   int c = !cond(
@@ -614,8 +637,15 @@ foreach mx = SchedMxList in {
   foreach sew = SchedSEWSet<mx>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
 
-    defm "" : LMULSEWWriteResMXSEW<"WriteVIRedV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVIRedMinMaxV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    let Latency = Get7111935Latency<mx>.c, ReleaseAtCycles = [5] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVIRedMinMaxV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
+
+      // Pattern for vredsum:                  5/5/5/7/11/19/35
+      // Pattern for vredand, vredor, vredxor: 4/4/4/6/10/18/34
+      // They are grouped together, so we use the worst-case vredsum latency.
+      // TODO: split vredand, vredor, vredxor into separate scheduling classe.
+      defm "" : LMULSEWWriteResMXSEW<"WriteVIRedV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    }
   }
 }
 
@@ -623,7 +653,22 @@ foreach mx = SchedMxListWRed in {
   foreach sew = SchedSEWSet<mx, 0, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListWRed>.c;
 
-    defm "" : LMULSEWWriteResMXSEW<"WriteVIWRedV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    let Latency = Get7111935Latency<mx>.c, ReleaseAtCycles = [5] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVIWRedV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
+    }
+  }
+}
+
+foreach mx = SchedMxListF in {
+  foreach sew = SchedSEWSet<mx, 1>.val in {
+    defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
+    // Pattern for vfredmax.vs, vfredmin.vs: 12,12,15,21,33,57
+    // Pattern for vfredusum.vs is slightly lower for e16/e32
+    // We use the worst-case for simplificity
+    let Latency = Get15213357Latency<mx>.c, ReleaseAtCycles = [12] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFRedV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFRedMinMaxV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
+    }
   }
 }
 
@@ -631,9 +676,23 @@ foreach mx = SchedMxListF in {
   foreach sew = SchedSEWSet<mx, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
 
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFRedV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFRedOV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFRedMinMaxV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
+    // Compute latency based on SEW and LMUL combination
+    defvar SEWLatencyFactor = !cond(
+      !eq(sew, 16) : 48,  // e16: 48*LMUL
+      !eq(sew, 32) : 24,  // e32: 24*LMUL
+      !eq(sew, 64) : 12   // e64: 12*LMUL
+    );
+
+    // Slightly increased latencies for e32mf2=24 (should be 12)
+    defvar Lat = !cond(
+      !eq(mx, "MF4") : 12,
+      !eq(mx, "MF2") : 24,
+      true: !mul(Get1248Latency<mx>.c, SEWLatencyFactor)
+    );
+
+    let Latency = Lat, ReleaseAtCycles = [12] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFRedOV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
+    }
   }
 }
 
@@ -641,8 +700,23 @@ foreach mx = SchedMxListFWRed in {
   foreach sew = SchedSEWSet<mx, 1, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListFWRed, 1>.c;
 
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFWRedV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
-    defm "" : LMULSEWWriteResMXSEW<"WriteVFWRedOV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
+    // Compute latency based on SEW and LMUL combination
+    defvar SEWLatencyFactor = !cond(
+      !eq(sew, 16) : 64,  // e16: 64*LMUL
+      !eq(sew, 32) : 32   // e32: 32*LMUL
+    );
+
+    // Slightly increased latencies for e32mf2=32 (should be 16)
+    defvar Lat = !cond(
+      !eq(mx, "MF4") : 16,
+      !eq(mx, "MF2") : 32,
+      true: !mul(Get1248Latency<mx>.c, SEWLatencyFactor)
+    );
+
+    let Latency = Lat, ReleaseAtCycles = [16] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWRedV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFWRedOV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
+    }
   }
 }
 
