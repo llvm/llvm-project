@@ -1439,6 +1439,52 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 //===----------------------------------------------------------------------===//
+// VTableAddrPointOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+cir::VTableAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // vtable ptr is not coming from a symbol.
+  if (!getName())
+    return success();
+  StringRef name = *getName();
+
+  // Verify that the result type underlying pointer type matches the type of
+  // the referenced cir.global or cir.func op.
+  auto op = dyn_cast_or_null<GlobalOp>(
+      symbolTable.lookupNearestSymbolFrom(*this, getNameAttr()));
+  if (!op)
+    return emitOpError("'")
+           << name << "' does not reference a valid cir.global";
+  std::optional<mlir::Attribute> init = op.getInitialValue();
+  if (!init)
+    return success();
+  assert(!cir::MissingFeatures::vtableInitializer());
+  return success();
+}
+
+LogicalResult cir::VTableAddrPointOp::verify() {
+  // The operation uses either a symbol or a value to operate, but not both
+  if (getName() && getSymAddr())
+    return emitOpError("should use either a symbol or value, but not both");
+
+  // If not a symbol, stick with the concrete type used for getSymAddr.
+  if (getSymAddr())
+    return success();
+
+  mlir::Type resultType = getAddr().getType();
+  auto intTy = cir::IntType::get(getContext(), 32, /*isSigned=*/false);
+  auto fnTy = cir::FuncType::get({}, intTy);
+
+  auto resTy = cir::PointerType::get(cir::PointerType::get(fnTy));
+
+  if (resultType != resTy)
+    return emitOpError("result type must be ")
+           << resTy << ", but provided result type is " << resultType << "";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 
