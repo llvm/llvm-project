@@ -2040,6 +2040,16 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   // Replace the original terminator with BranchOnCond. We have to invert the
   // mask here because a true condition means jumping to the exit block.
   auto *NotMask = Builder.createNot(ALM, DL);
+  using namespace VPlanPatternMatch;
+  if (VPValue *IsEarlyExitTaken = nullptr; match(
+          OriginalTerminator, m_BranchOnCond(m_BinaryOr(
+                                  m_VPValue(IsEarlyExitTaken), m_VPValue())))) {
+    auto *AnyExitTaken =
+        Builder.createNaryOp(Instruction::Or, {IsEarlyExitTaken, NotMask});
+    OriginalTerminator->setOperand(0, AnyExitTaken);
+    return LaneMaskPhi;
+  }
+
   Builder.createNaryOp(VPInstruction::BranchOnCond, {NotMask}, DL);
   OriginalTerminator->eraseFromParent();
   return LaneMaskPhi;
@@ -2480,6 +2490,21 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
   // Skip single-iteration loop region
   if (match(LatchExitingBr, m_BranchOnCond(m_True())))
     return;
+
+  // Replace VectorTripCount used in loop with early-exits
+  if (VPValue *VPMainExitCond = nullptr;
+      match(LatchExitingBr, m_BranchOnCond(m_BinaryOr(
+                                m_VPValue(), m_VPValue(VPMainExitCond)))) &&
+      match(VPMainExitCond, m_VPInstruction<Instruction::ICmp>(
+                                m_Specific(EVLIncrement),
+                                m_Specific(&Plan.getVectorTripCount())))) {
+    // Expected pattern here is:
+    //   EMIT vp<%main.exit.cond> = icmp eq vp<%evl.next>, vp<%vtc>
+    //   EMIT vp<%exit.cond> = or vp<%alt.exit.cond>, vp<%main.exit.cond>
+    //   EMIT branch-on-cond vp<%exit.cond>
+    VPMainExitCond->getDefiningRecipe()->setOperand(1, Plan.getTripCount());
+    return;
+  }
   assert(LatchExitingBr &&
          match(LatchExitingBr,
                m_BranchOnCount(m_VPValue(EVLIncrement),

@@ -8668,10 +8668,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // count is >= increment and a multiple of the increment.
   bool HasNUW = !IVUpdateMayOverflow || Style == TailFoldingStyle::None;
   if (!HasNUW) {
-    auto *IVInc = Plan->getVectorLoopRegion()
-                      ->getExitingBasicBlock()
-                      ->getTerminator()
-                      ->getOperand(0);
+    auto *IVInc = Plan->getCanonicalIV()->getBackedgeValue();
     assert(match(IVInc, m_VPInstruction<Instruction::Add>(
                             m_Specific(Plan->getCanonicalIV()), m_VPValue())) &&
            "Did not find the canonical IV increment");
