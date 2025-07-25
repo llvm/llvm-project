@@ -92,11 +92,13 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
   /// as necessary.
   void handleTerminator(Operation *op, Block *newDest) const final {
     if (auto returnOp = dyn_cast<spirv::ReturnOp>(op)) {
-      OpBuilder(op).create<spirv::BranchOp>(op->getLoc(), newDest);
+      auto builder = OpBuilder(op);
+      spirv::BranchOp::create(builder, op->getLoc(), newDest);
       op->erase();
     } else if (auto retValOp = dyn_cast<spirv::ReturnValueOp>(op)) {
-      OpBuilder(op).create<spirv::BranchOp>(retValOp->getLoc(), newDest,
-                                            retValOp->getOperands());
+      auto builder = OpBuilder(op);
+      spirv::BranchOp::create(builder, retValOp->getLoc(), newDest,
+                              retValOp->getOperands());
       op->erase();
     }
   }
