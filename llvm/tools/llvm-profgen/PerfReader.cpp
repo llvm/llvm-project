@@ -380,7 +380,7 @@ Error PerfReaderBase::parseDataAccessPerfTraces(
   // A perf_record_sample line is like
   // . 1282514022939813 0x87b0 [0x60]: PERF_RECORD_SAMPLE(IP, 0x4002):
   // 3446532/3446532: 0x2608a2 period: 233 addr: 0x3b3fb0
-  constexpr static const char *const DataAccessSamplePattern =
+  constexpr static StringRef DataAccessSamplePattern =
       "PERF_RECORD_SAMPLE\\([A-Za-z]+, 0x[0-9a-fA-F]+\\): "
       "([0-9]+)\\/[0-9]+: (0x[0-9a-fA-F]+) period: [0-9]+ addr: "
       "(0x[0-9a-fA-F]+)";
@@ -397,6 +397,10 @@ Error PerfReaderBase::parseDataAccessPerfTraces(
   assert(!SampleCounters.empty() && "Sample counters should not be empty!");
   SampleCounter &Counter = SampleCounters.begin()->second;
   line_iterator LineIt(*BufferOrErr.get(), true);
+
+  std::set<std::pair<uint64_t, uint64_t>> IPDataPair;
+  std::map<uint64_t, uint64_t> DataAddrMap;
+  std::map<uint64_t, uint64_t> IpAddrMap;
   for (; !LineIt.is_at_eof(); ++LineIt) {
     StringRef Line = *LineIt;
 
@@ -411,16 +415,25 @@ Error PerfReaderBase::parseDataAccessPerfTraces(
     }
 
     SmallVector<StringRef> Fields;
-    if (logRegex.match(Line, &Fields)) {
+    if (LogRegex.match(Line, &Fields)) {
       int32_t PID = 0;
-      Fields[1].getAsInteger(0, PID);
+      if (Fields[1].getAsInteger(10, PID))
+        return make_error<StringError>(
+            "Failed to parse PID from perf trace line: " + Line,
+            inconvertibleErrorCode());
+
       if (PIDFilter.has_value() && *PIDFilter != PID) {
         continue;
       }
 
       uint64_t DataAddress = 0;
-      Fields[3].getAsInteger(0, DataAddress);
-
+      if (Fields[3].getAsInteger(0, DataAddress))
+        return make_error<StringError>(
+            "Failed to parse data address from perf trace line: " + Line,
+            inconvertibleErrorCode());
+      // Out of all the memory access events, the vtable accesses are used to
+      // construct type profiles. We assume that this is under the Itanium
+      // C++ ABI so we can use `_ZTV` prefix to identify vtable.
       StringRef DataSymbol = Binary->symbolizeDataAddress(
           Binary->CanonicalizeNonTextAddress(DataAddress));
       if (DataSymbol.starts_with("_ZTV")) {
@@ -428,8 +441,26 @@ Error PerfReaderBase::parseDataAccessPerfTraces(
         Fields[2].getAsInteger(0, IP);
         Counter.recordDataAccessCount(Binary->canonicalizeVirtualAddress(IP),
                                       DataSymbol, 1);
+        uint64_t StaticDataAddr =
+            Binary->CanonicalizeNonTextAddress(DataAddress);
+        uint64_t IPAddr = Binary->canonicalizeVirtualAddress(IP);
+        DataAddrMap[StaticDataAddr] = DataAddress;
+        IpAddrMap[IPAddr] = IP;
+        IPDataPair.insert({IPAddr, StaticDataAddr});
       }
     }
+  }
+  for (const auto [IP, DataAddr] : IPDataPair) {
+    errs() << "data access: " << format("0x%08" PRIx64, IP) << " -> "
+           << format("0x%08" PRIx64, DataAddr) << "\n";
+  }
+  for (const auto [StaticIP, IP] : IpAddrMap) {
+    errs() << "IP map: " << format("0x%08" PRIx64, StaticIP) << " -> "
+           << format("0x%08" PRIx64, IP) << "\n";
+  }
+  for (const auto [StaticDataAddr, DataAddr] : DataAddrMap) {
+    errs() << "data addr map: " << format("0x%08" PRIx64, StaticDataAddr)
+           << " -> " << format("0x%08" PRIx64, DataAddr) << "\n";
   }
   return Error::success();
 }
