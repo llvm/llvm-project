@@ -201,10 +201,10 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #  else
 #    if !_LIBCPP_HAS_EXPERIMENTAL_LIBRARY
 #      error "Assertion semantics are an experimental feature."
-#    endif // ! _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
+#    endif
 #    if defined(_LIBCPP_CXX03_LANG)
 #      error "Assertion semantics are not available in the C++03 mode."
-#    endif // defined(_LIBCPP_CXX03_LANG)
+#    endif
 
 #  endif // _LIBCPP_ASSERTION_SEMANTIC
 
