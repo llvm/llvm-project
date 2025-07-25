@@ -22,6 +22,7 @@
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/threads/sleep.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -33,12 +34,11 @@ constexpr static uint32_t BITS_IN_WORD = sizeof(uint32_t) * 8;
 constexpr static uint32_t MIN_SIZE = 16;
 constexpr static uint32_t MIN_ALIGNMENT = MIN_SIZE - 1;
 
+// The number of times to attempt claiming an in-progress slab allocation.
+constexpr static uint32_t MAX_TRIES = 128;
+
 // A sentinel used to indicate an invalid but non-null pointer value.
 constexpr static uint64_t SENTINEL = cpp::numeric_limits<uint64_t>::max();
-
-// The number of times we will try starting on a single index before skipping
-// past it.
-constexpr static uint32_t MAX_TRIES = 512;
 
 static_assert(!(ARRAY_SIZE & (ARRAY_SIZE - 1)), "Must be a power of two");
 
@@ -91,20 +91,10 @@ static inline uint32_t xorshift32(uint32_t &state) {
   return state * 0x9e3779bb;
 }
 
-// Final stage of murmurhash used to get a unique index for the global array
-static inline uint32_t hash(uint32_t x) {
-  x ^= x >> 16;
-  x *= 0x85ebca6b;
-  x ^= x >> 13;
-  x *= 0xc2b2ae35;
-  x ^= x >> 16;
-  return x;
-}
-
 // Rounds the input value to the closest permitted chunk size. Here we accept
 // the sum of the closest three powers of two. For a 2MiB slab size this is 48
 // different chunk sizes. This gives us average internal fragmentation of 87.5%.
-static inline uint32_t get_chunk_size(uint32_t x) {
+static inline constexpr uint32_t get_chunk_size(uint32_t x) {
   uint32_t y = x < MIN_SIZE ? MIN_SIZE : x;
   uint32_t pow2 = BITS_IN_WORD - cpp::countl_zero(y - 1);
 
@@ -122,6 +112,16 @@ static inline uint32_t get_chunk_size(uint32_t x) {
   return (s3 + MIN_ALIGNMENT) & ~MIN_ALIGNMENT;
 }
 
+// Converts a chunk size into an index suitable for a statically sized array.
+static inline constexpr uint32_t get_chunk_id(uint32_t x) {
+  if (x <= MIN_SIZE)
+    return 0;
+  uint32_t y = x >> 4;
+  if (x < MIN_SIZE << 2)
+    return cpp::popcount(y);
+  return cpp::popcount(y) + 3 * (BITS_IN_WORD - cpp::countl_zero(y)) - 7;
+}
+
 // Rounds to the nearest power of two.
 template <uint32_t N, typename T>
 static inline constexpr T round_up(const T x) {
@@ -135,6 +135,17 @@ void uniform_memset(uint32_t *s, uint32_t c, uint32_t n, uint64_t uniform) {
   uint32_t workers = cpp::popcount(uniform);
   for (uint32_t i = impl::lane_count(mask & uniform); i < n; i += workers)
     s[i] = c;
+}
+
+// Indicates that the provided value is a power of two.
+static inline constexpr bool is_pow2(uint64_t x) {
+  return x && (x & (x - 1)) == 0;
+}
+
+// Where this chunk size should start looking in the global array.
+static inline constexpr uint32_t start_index(uint32_t chunk_index) {
+  return (ARRAY_SIZE * impl::get_chunk_id(chunk_index)) /
+         impl::get_chunk_id(SLAB_SIZE / 2);
 }
 
 } // namespace impl
@@ -183,7 +194,9 @@ struct Slab {
 
   // Get the number of bytes needed to contain the bitfield bits.
   constexpr static uint32_t bitfield_bytes(uint32_t chunk_size) {
-    return ((num_chunks(chunk_size) + BITS_IN_WORD - 1) / BITS_IN_WORD) * 8;
+    return __builtin_align_up(
+        ((num_chunks(chunk_size) + BITS_IN_WORD - 1) / BITS_IN_WORD) * 8,
+        MIN_ALIGNMENT + 1);
   }
 
   // The actual amount of memory available excluding the bitfield and metadata.
@@ -243,12 +256,18 @@ struct Slab {
     // The uniform mask represents which lanes contain a uniform target pointer.
     // We attempt to place these next to each other.
     void *result = nullptr;
+    uint32_t after = ~0u;
+    uint32_t old_index = 0;
     for (uint64_t mask = lane_mask; mask;
          mask = gpu::ballot(lane_mask, !result)) {
       if (result)
         continue;
 
-      uint32_t start = gpu::broadcast_value(lane_mask, impl::xorshift32(state));
+      // We try using any known empty bits from the previous attempt first.
+      uint32_t start = gpu::shuffle(mask, cpp::countr_zero(uniform & mask),
+                                    ~after ? (old_index & ~(BITS_IN_WORD - 1)) +
+                                                 cpp::countr_zero(~after)
+                                           : impl::xorshift32(state));
 
       uint32_t id = impl::lane_count(uniform & mask);
       uint32_t index = (start + id) % usable_bits(chunk_size);
@@ -258,8 +277,9 @@ struct Slab {
       // Get the mask of bits destined for the same slot and coalesce it.
       uint64_t match = uniform & gpu::match_any(mask, slot);
       uint32_t length = cpp::popcount(match);
-      uint32_t bitmask = static_cast<uint32_t>((uint64_t(1) << length) - 1)
-                         << bit;
+      uint32_t bitmask = gpu::shuffle(
+          mask, cpp::countr_zero(match),
+          static_cast<uint32_t>((uint64_t(1) << length) - 1) << bit);
 
       uint32_t before = 0;
       if (gpu::get_lane_id() == static_cast<uint32_t>(cpp::countr_zero(match)))
@@ -270,6 +290,9 @@ struct Slab {
         result = ptr_from_index(index, chunk_size);
       else
         sleep_briefly();
+
+      after = before | bitmask;
+      old_index = index;
     }
 
     cpp::atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
@@ -443,66 +466,65 @@ public:
 // The global array used to search for a valid slab to allocate from.
 static GuardPtr slots[ARRAY_SIZE] = {};
 
+// Keep a cache of the last successful slot for each chunk size. Initialize it
+// to an even spread of the total size. Must be updated if the chunking scheme
+// changes.
+#define S(X) (impl::start_index(X))
+static cpp::Atomic<uint32_t> indices[] = {
+    S(16),     S(32),     S(48),     S(64),     S(96),     S(112),    S(128),
+    S(192),    S(224),    S(256),    S(384),    S(448),    S(512),    S(768),
+    S(896),    S(1024),   S(1536),   S(1792),   S(2048),   S(3072),   S(3584),
+    S(4096),   S(6144),   S(7168),   S(8192),   S(12288),  S(14336),  S(16384),
+    S(24576),  S(28672),  S(32768),  S(49152),  S(57344),  S(65536),  S(98304),
+    S(114688), S(131072), S(196608), S(229376), S(262144), S(393216), S(458752),
+    S(524288), S(786432), S(917504), S(1048576)};
+#undef S
+
 // Tries to find a slab in the table that can support the given chunk size.
 static Slab *find_slab(uint32_t chunk_size) {
-  // We start at a hashed value to spread out different chunk sizes.
-  uint32_t start = impl::hash(chunk_size);
-  uint64_t lane_mask = gpu::get_lane_mask();
-  uint64_t uniform = gpu::match_any(lane_mask, chunk_size);
+  // We start at the index of the last successful allocation for this kind.
+  uint32_t chunk_id = impl::get_chunk_id(chunk_size);
+  uint32_t start = indices[chunk_id].load(cpp::MemoryOrder::RELAXED);
+  uint64_t uniform = gpu::match_any(gpu::get_lane_mask(), chunk_size);
 
-  Slab *result = nullptr;
-  uint32_t nudge = 0;
-  for (uint64_t mask = lane_mask; mask;
-       mask = gpu::ballot(lane_mask, !result), ++nudge) {
-    uint32_t index = cpp::numeric_limits<uint32_t>::max();
-    for (uint32_t offset = nudge / MAX_TRIES;
-         gpu::ballot(lane_mask, index == cpp::numeric_limits<uint32_t>::max());
-         offset += cpp::popcount(uniform & lane_mask)) {
-      uint32_t candidate =
-          (start + offset + impl::lane_count(uniform & lane_mask)) % ARRAY_SIZE;
-      uint64_t available =
-          gpu::ballot(lane_mask, slots[candidate].use_count() <
-                                     Slab::available_chunks(chunk_size));
-      uint32_t new_index = gpu::shuffle(
-          lane_mask, cpp::countr_zero(available & uniform), candidate);
+  for (uint32_t offset = 0; offset < ARRAY_SIZE; ++offset) {
+    uint32_t index =
+        !offset ? start : (impl::start_index(chunk_size) + offset) % ARRAY_SIZE;
 
-      // Each uniform group will use the first empty slot they find.
-      if ((index == cpp::numeric_limits<uint32_t>::max() &&
-           (available & uniform)))
-        index = new_index;
-
-      // Guaruntees that this loop will eventuall exit if there is no space.
-      if (offset >= ARRAY_SIZE) {
-        result = reinterpret_cast<Slab *>(SENTINEL);
-        index = 0;
-      }
-    }
-
-    // Try to claim a slot for the found slot.
-    if (!result) {
+    if (slots[index].use_count() < Slab::available_chunks(chunk_size)) {
+      uint64_t lane_mask = gpu::get_lane_mask();
       uint64_t reserved = 0;
-      Slab *slab = slots[index].try_lock(lane_mask & mask, uniform & mask,
+
+      Slab *slab = slots[index].try_lock(lane_mask, uniform & lane_mask,
                                          reserved, chunk_size, index);
+
+      // If there is a slab allocation in progress we retry a few times.
+      for (uint32_t retries = 0;
+           retries < MAX_TRIES && !slab && reserved != SENTINEL; retries++) {
+        uint64_t lane_mask = gpu::get_lane_mask();
+        slab = slots[index].try_lock(lane_mask, uniform & lane_mask, reserved,
+                                     chunk_size, index);
+        sleep_briefly();
+      }
+
       // If we find a slab with a matching chunk size then we store the result.
       // Otherwise, we need to free the claimed lock and continue. In the case
-      // of out-of-memory we return a sentinel value.
+      // of out-of-memory we receive a sentinel value and return a failure.
       if (slab && reserved <= Slab::available_chunks(chunk_size) &&
           slab->get_chunk_size() == chunk_size) {
-        result = slab;
+        if (index != start)
+          indices[chunk_id].store(index, cpp::MemoryOrder::RELAXED);
+        return slab;
       } else if (slab && (reserved > Slab::available_chunks(chunk_size) ||
                           slab->get_chunk_size() != chunk_size)) {
-        if (slab->get_chunk_size() != chunk_size)
-          start = index + 1;
         slots[index].unlock(gpu::get_lane_mask(),
                             gpu::get_lane_mask() & uniform);
-      } else if (!slab && reserved == cpp::numeric_limits<uint64_t>::max()) {
-        result = reinterpret_cast<Slab *>(SENTINEL);
-      } else {
-        sleep_briefly();
+      } else if (!slab && reserved == SENTINEL) {
+        return nullptr;
       }
     }
   }
-  return result;
+  return nullptr;
 }
 
 // Release the lock associated with a given slab.
@@ -540,14 +562,57 @@ void deallocate(void *ptr) {
     return;
 
   // All non-slab allocations will be aligned on a 2MiB boundary.
-  if ((reinterpret_cast<uintptr_t>(ptr) & SLAB_ALIGNMENT) == 0)
+  if (__builtin_is_aligned(ptr, SLAB_ALIGNMENT + 1))
     return impl::rpc_free(ptr);
 
   // The original slab pointer is the 2MiB boundary using the given pointer.
-  Slab *slab = reinterpret_cast<Slab *>(
-      (reinterpret_cast<uintptr_t>(ptr) & ~SLAB_ALIGNMENT));
+  Slab *slab = cpp::launder(reinterpret_cast<Slab *>(
+      (reinterpret_cast<uintptr_t>(ptr) & ~SLAB_ALIGNMENT)));
   slab->deallocate(ptr);
   release_slab(slab);
+}
+
+void *reallocate(void *ptr, uint64_t size) {
+  if (ptr == nullptr)
+    return gpu::allocate(size);
+
+  // Non-slab allocations are considered foreign pointers so we fail.
+  if (__builtin_is_aligned(ptr, SLAB_ALIGNMENT + 1))
+    return nullptr;
+
+  // The original slab pointer is the 2MiB boundary using the given pointer.
+  Slab *slab = cpp::launder(reinterpret_cast<Slab *>(
+      (reinterpret_cast<uintptr_t>(ptr) & ~SLAB_ALIGNMENT)));
+  if (slab->get_chunk_size() >= size)
+    return ptr;
+
+  // If we need a new chunk we reallocate and copy it over.
+  void *new_ptr = gpu::allocate(size);
+  inline_memcpy(new_ptr, ptr, slab->get_chunk_size());
+  gpu::deallocate(ptr);
+  return new_ptr;
+}
+
+void *aligned_allocate(uint32_t alignment, uint64_t size) {
+  // All alignment values must be a non-zero power of two.
+  if (!impl::is_pow2(alignment))
+    return nullptr;
+
+  // If the requested alignment is less than what we already provide this is
+  // just a normal allocation.
+  if (alignment <= MIN_ALIGNMENT + 1)
+    return gpu::allocate(size);
+
+  // We can't handle alignments greater than 2MiB so we simply fail.
+  if (alignment > SLAB_ALIGNMENT + 1)
+    return nullptr;
+
+  // Trying to handle allocation internally would break the assumption that each
+  // chunk is identical to eachother. Allocate enough memory with worst-case
+  // alignment and then round up. The index logic will round down properly.
+  uint64_t rounded = size + alignment - MIN_ALIGNMENT;
+  void *ptr = gpu::allocate(rounded);
+  return __builtin_align_up(ptr, alignment);
 }
 
 } // namespace gpu

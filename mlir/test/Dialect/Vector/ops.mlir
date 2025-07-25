@@ -300,12 +300,10 @@ func.func @insert_val_idx(%a: f32, %b: vector<16xf32>, %c: vector<8x16xf32>,
 }
 
 // CHECK-LABEL: @insert_0d
-func.func @insert_0d(%a: f32, %b: vector<f32>, %c: vector<2x3xf32>) -> (vector<f32>, vector<2x3xf32>) {
+func.func @insert_0d(%a: f32, %b: vector<f32>) -> vector<f32> {
   // CHECK-NEXT: vector.insert %{{.*}}, %{{.*}}[] : f32 into vector<f32>
   %1 = vector.insert %a,  %b[] : f32 into vector<f32>
-  // CHECK-NEXT: vector.insert %{{.*}}, %{{.*}}[0, 1] : vector<f32> into vector<2x3xf32>
-  %2 = vector.insert %b,  %c[0, 1] : vector<f32> into vector<2x3xf32>
-  return %1, %2 : vector<f32>, vector<2x3xf32>
+  return %1 : vector<f32>
 }
 
 // CHECK-LABEL: @insert_poison_idx
@@ -740,22 +738,6 @@ func.func @transpose_int_0d(%arg0: vector<i32>) -> vector<i32> {
   return %0 : vector<i32>
 }
 
-// CHECK-LABEL: @flat_transpose_fp
-func.func @flat_transpose_fp(%arg0: vector<16xf32>) -> vector<16xf32> {
-  // CHECK: %[[X:.*]] = vector.flat_transpose %{{.*}} {columns = 4 : i32, rows = 4 : i32} : vector<16xf32> -> vector<16xf32>
-  %0 = vector.flat_transpose %arg0 { rows = 4: i32, columns = 4: i32 } : vector<16xf32> -> vector<16xf32>
-  // CHECK: return %[[X]] : vector<16xf32>
-  return %0 : vector<16xf32>
-}
-
-// CHECK-LABEL: @flat_transpose_int
-func.func @flat_transpose_int(%arg0: vector<16xi32>) -> vector<16xi32> {
-  // CHECK: %[[X:.*]] = vector.flat_transpose %{{.*}} {columns = 8 : i32, rows = 2 : i32} : vector<16xi32> -> vector<16xi32>
-  %0 = vector.flat_transpose %arg0 { rows = 2: i32, columns = 8: i32 } : vector<16xi32> -> vector<16xi32>
-  // CHECK: return %[[X]] : vector<16xi32>
-  return %0 : vector<16xi32>
-}
-
 // CHECK-LABEL: @vector_load_and_store_0d_scalar_memref
 func.func @vector_load_and_store_0d_scalar_memref(%memref : memref<200x100xf32>,
                                                   %i : index, %j : index) {
@@ -852,6 +834,16 @@ func.func @vector_load_and_store_2d_vector_memref(%memref : memref<200x100xvecto
   %0 = vector.load %memref[%i, %j] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
   // CHECK: vector.store %[[ld]], %{{.*}}[%{{.*}}] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
   vector.store %0, %memref[%i, %j] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
+  return
+}
+
+// CHECK-LABEL: func @load_store_alignment
+func.func @load_store_alignment(%memref: memref<4xi32>) {
+  %c0 = arith.constant 0 : index
+  // CHECK: vector.load {{.*}} {alignment = 16 : i64}
+  %val = vector.load %memref[%c0] { alignment = 16 } : memref<4xi32>, vector<4xi32>
+  // CHECK: vector.store {{.*}} {alignment = 16 : i64}
+  vector.store %val, %memref[%c0] { alignment = 16 } : memref<4xi32>, vector<4xi32>
   return
 }
 

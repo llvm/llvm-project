@@ -173,3 +173,8 @@ Attribute mlir::convertToAttribute(MLIRContext *ctx,
                                    ArrayRef<int64_t> storage) {
   return DenseI64ArrayAttr::get(ctx, storage);
 }
+
+Attribute mlir::convertToAttribute(MLIRContext *ctx,
+                                   ArrayRef<int32_t> storage) {
+  return DenseI32ArrayAttr::get(ctx, storage);
+}

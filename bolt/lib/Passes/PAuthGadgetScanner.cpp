@@ -737,18 +737,13 @@ protected:
 //
 // Then, a function can be split into a number of disjoint contiguous sequences
 // of instructions without labels in between. These sequences can be processed
-// the same way basic blocks are processed by data-flow analysis, assuming
-// pessimistically that all registers are unsafe at the start of each sequence.
+// the same way basic blocks are processed by data-flow analysis, with the same
+// pessimistic estimation of the initial state at the start of each sequence
+// (except the first instruction of the function).
 class CFGUnawareSrcSafetyAnalysis : public SrcSafetyAnalysis,
                                     public CFGUnawareAnalysis<SrcState> {
   using SrcSafetyAnalysis::BC;
   BinaryFunction &BF;
-
-  /// Creates a state with all registers marked unsafe (not to be confused
-  /// with empty state).
-  SrcState createUnsafeState() const {
-    return SrcState(NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
-  }
 
 public:
   CFGUnawareSrcSafetyAnalysis(BinaryFunction &BF,
@@ -759,6 +754,7 @@ public:
   }
 
   void run() override {
+    const SrcState DefaultState = computePessimisticState(BF);
     SrcState S = createEntryState();
     for (auto &I : BF.instrs()) {
       MCInst &Inst = I.second;
@@ -773,7 +769,7 @@ public:
         LLVM_DEBUG({
           traceInst(BC, "Due to label, resetting the state before", Inst);
         });
-        S = createUnsafeState();
+        S = DefaultState;
       }
 
       // Attach the state *before* this instruction executes.
@@ -1323,6 +1319,90 @@ shouldReportReturnGadget(const BinaryContext &BC, const MCInstReference &Inst,
   return make_gadget_report(RetKind, Inst, *RetReg);
 }
 
+/// While BOLT already marks some of the branch instructions as tail calls,
+/// this function tries to detect less obvious cases, assuming false positives
+/// are acceptable as long as there are not too many of them.
+///
+/// It is possible that not all the instructions classified as tail calls by
+/// this function are safe to be considered as such for the purpose of code
+/// transformations performed by BOLT. The intention of this function is to
+/// spot some of actually missed tail calls (and likely a number of unrelated
+/// indirect branch instructions) as long as this doesn't increase the amount
+/// of false positive reports unacceptably.
+static bool shouldAnalyzeTailCallInst(const BinaryContext &BC,
+                                      const BinaryFunction &BF,
+                                      const MCInstReference &Inst) {
+  // Some BC.MIB->isXYZ(Inst) methods simply delegate to MCInstrDesc::isXYZ()
+  // (such as isBranch at the time of writing this comment), some don't (such
+  // as isCall). For that reason, call MCInstrDesc's methods explicitly when
+  // it is important.
+  const MCInstrDesc &Desc =
+      BC.MII->get(static_cast<const MCInst &>(Inst).getOpcode());
+  // Tail call should be a branch (but not necessarily an indirect one).
+  if (!Desc.isBranch())
+    return false;
+
+  // Always analyze the branches already marked as tail calls by BOLT.
+  if (BC.MIB->isTailCall(Inst))
+    return true;
+
+  // Try to also check the branches marked as "UNKNOWN CONTROL FLOW" - the
+  // below is a simplified condition from BinaryContext::printInstruction.
+  bool IsUnknownControlFlow =
+      BC.MIB->isIndirectBranch(Inst) && !BC.MIB->getJumpTable(Inst);
+
+  if (BF.hasCFG() && IsUnknownControlFlow)
+    return true;
+
+  return false;
+}
+
+static std::optional<PartialReport<MCPhysReg>>
+shouldReportUnsafeTailCall(const BinaryContext &BC, const BinaryFunction &BF,
+                           const MCInstReference &Inst, const SrcState &S) {
+  static const GadgetKind UntrustedLRKind(
+      "untrusted link register found before tail call");
+
+  if (!shouldAnalyzeTailCallInst(BC, BF, Inst))
+    return std::nullopt;
+
+  // Not only the set of registers returned by getTrustedLiveInRegs() can be
+  // seen as a reasonable target-independent _approximation_ of "the LR", these
+  // are *exactly* those registers used by SrcSafetyAnalysis to initialize the
+  // set of trusted registers on function entry.
+  // Thus, this function basically checks that the precondition expected to be
+  // imposed by a function call instruction (which is hardcoded into the target-
+  // specific getTrustedLiveInRegs() function) is also respected on tail calls.
+  SmallVector<MCPhysReg> RegsToCheck = BC.MIB->getTrustedLiveInRegs();
+  LLVM_DEBUG({
+    traceInst(BC, "Found tail call inst", Inst);
+    traceRegMask(BC, "Trusted regs", S.TrustedRegs);
+  });
+
+  // In musl on AArch64, the _start function sets LR to zero and calls the next
+  // stage initialization function at the end, something along these lines:
+  //
+  //   _start:
+  //     mov     x30, #0
+  //     ; ... other initialization ...
+  //     b       _start_c ; performs "exit" system call at some point
+  //
+  // As this would produce a false positive for every executable linked with
+  // such libc, ignore tail calls performed by ELF entry function.
+  if (BC.StartFunctionAddress &&
+      *BC.StartFunctionAddress == Inst.getFunction()->getAddress()) {
+    LLVM_DEBUG({ dbgs() << "  Skipping tail call in ELF entry function.\n"; });
+    return std::nullopt;
+  }
+
+  // Returns at most one report per instruction - this is probably OK...
+  for (auto Reg : RegsToCheck)
+    if (!S.TrustedRegs[Reg])
+      return make_gadget_report(UntrustedLRKind, Inst, Reg);
+
+  return std::nullopt;
+}
+
 static std::optional<PartialReport<MCPhysReg>>
 shouldReportCallGadget(const BinaryContext &BC, const MCInstReference &Inst,
                        const SrcState &S) {
@@ -1481,6 +1561,9 @@ void FunctionAnalysisContext::findUnsafeUses(
 
     if (PacRetGadgetsOnly)
       return;
+
+    if (auto Report = shouldReportUnsafeTailCall(BC, BF, Inst, S))
+      Reports.push_back(*Report);
 
     if (auto Report = shouldReportCallGadget(BC, Inst, S))
       Reports.push_back(*Report);

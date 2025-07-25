@@ -593,6 +593,7 @@ def get_run_handler(triple):
         "riscv64": (scrub_asm_riscv, ASM_FUNCTION_RISCV_RE),
         "lanai": (scrub_asm_lanai, ASM_FUNCTION_LANAI_RE),
         "sparc": (scrub_asm_sparc, ASM_FUNCTION_SPARC_RE),
+        "spirv": (scrub_asm_spirv, ASM_FUNCTION_SPIRV_RE),
         "spirv32": (scrub_asm_spirv, ASM_FUNCTION_SPIRV_RE),
         "spirv64": (scrub_asm_spirv, ASM_FUNCTION_SPIRV_RE),
         "s390x": (scrub_asm_systemz, ASM_FUNCTION_SYSTEMZ_RE),

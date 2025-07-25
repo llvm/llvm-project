@@ -104,7 +104,7 @@ making sense for the particular pair of plugins). Unfortunately, due to historic
 reasons, not all plugin dependencies follow this rule, which is why we have
 another category called `LLDB_TOLERATED_PLUGIN_DEPENDENCIES`. New dependencies
 are forbidden (even though they are accepted by CMake) and existing ones should
-be removed whereever possible.
+be removed wherever possible.
 
 .. _Error handling:
 

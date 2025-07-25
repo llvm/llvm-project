@@ -125,10 +125,13 @@ void safe_examples(std::string s1, int *p) {
   fprintf((FILE*)0, s1.c_str(), __PRETTY_FUNCTION__, *p, "hello", s1.c_str());        // no warn
 
   char a[10];
+  char c = 'c';
 
   snprintf(a, sizeof a, "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", s1.c_str());         // no warn
   snprintf(a, sizeof(decltype(a)), "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", s1.c_str());          // no warn
   snprintf(a, 10, "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", s1.c_str());                // no warn
+  snprintf(&c, 1, "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", s1.c_str());                // no warn
+  snprintf(nullptr, 0, "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", s1.c_str());           // no warn
 }
 
 

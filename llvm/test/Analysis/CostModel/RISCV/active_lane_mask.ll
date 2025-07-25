@@ -57,26 +57,3 @@ define void @get_lane_mask() {
 
   ret void
 }
-
-declare <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64, i64)
-declare <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64, i64)
-declare <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64, i64)
-declare <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64, i64)
-declare <vscale x 1 x i1> @llvm.get.active.lane.mask.nxv1i1.i64(i64, i64)
-declare <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32, i32)
-declare <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i32(i32, i32)
-declare <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32, i32)
-declare <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i32(i32, i32)
-declare <vscale x 1 x i1> @llvm.get.active.lane.mask.nxv1i1.i32(i32, i32)
-declare <vscale x 32 x i1> @llvm.get.active.lane.mask.nxv32i1.i64(i64, i64)
-declare <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i16(i16, i16)
-declare <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64, i64)
-declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64, i64)
-declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64, i64)
-declare <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64, i64)
-declare <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32, i32)
-declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32, i32)
-declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
-declare <2 x i1> @llvm.get.active.lane.mask.v2i1.i32(i32, i32)
-declare <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64, i64)
-declare <16 x i1> @llvm.get.active.lane.mask.v16i1.i16(i16, i16)

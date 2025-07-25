@@ -34,7 +34,7 @@ namespace dxil {
 
 // Returns the resource name from dx_resource_handlefrombinding or
 // dx_resource_handlefromimplicitbinding call
-StringRef getResourceNameFromBindingCall(CallInst *CI);
+LLVM_ABI StringRef getResourceNameFromBindingCall(CallInst *CI);
 
 /// The dx.RawBuffer target extension type
 ///
@@ -359,6 +359,8 @@ public:
              std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHS.Size);
     }
     bool overlapsWith(const ResourceBinding &RHS) const {
+      if (Size == UINT32_MAX)
+        return LowerBound < RHS.LowerBound;
       return Space == RHS.Space && LowerBound + Size - 1 >= RHS.LowerBound;
     }
   };
@@ -387,7 +389,7 @@ public:
 
   const ResourceBinding &getBinding() const { return Binding; }
   TargetExtType *getHandleTy() const { return HandleTy; }
-  const StringRef getName() const { return Name; }
+  StringRef getName() const { return Name; }
 
   bool hasSymbol() const { return Symbol; }
   LLVM_ABI GlobalVariable *createSymbol(Module &M, StructType *Ty);

@@ -537,14 +537,14 @@ public:
   /// Create an IfOp with no "else" region, and no result values.
   /// Usage: genIfThen(loc, cdt).genThen(lambda).end();
   IfBuilder genIfThen(mlir::Location loc, mlir::Value cdt) {
-    auto op = create<fir::IfOp>(loc, std::nullopt, cdt, false);
+    auto op = create<fir::IfOp>(loc, mlir::TypeRange(), cdt, false);
     return IfBuilder(op, *this);
   }
 
   /// Create an IfOp with an "else" region, and no result values.
   /// Usage: genIfThenElse(loc, cdt).genThen(lambda).genElse(lambda).end();
   IfBuilder genIfThenElse(mlir::Location loc, mlir::Value cdt) {
-    auto op = create<fir::IfOp>(loc, std::nullopt, cdt, true);
+    auto op = create<fir::IfOp>(loc, mlir::TypeRange(), cdt, true);
     return IfBuilder(op, *this);
   }
 
@@ -607,6 +607,17 @@ public:
   /// Get current IntegerOverflowFlags value.
   mlir::arith::IntegerOverflowFlags getIntegerOverflowFlags() const {
     return integerOverflowFlags;
+  }
+
+  /// Set ComplexDivisionToRuntimeFlag value. If set to true, complex number
+  /// division is lowered to a runtime function by this builder.
+  void setComplexDivisionToRuntimeFlag(bool flag) {
+    complexDivisionToRuntimeFlag = flag;
+  }
+
+  /// Get current ComplexDivisionToRuntimeFlag value.
+  bool getComplexDivisionToRuntimeFlag() const {
+    return complexDivisionToRuntimeFlag;
   }
 
   /// Dump the current function. (debug)
@@ -672,6 +683,10 @@ private:
   /// IntegerOverflowFlags that need to be set for operations that support
   /// mlir::arith::IntegerOverflowFlagsAttr.
   mlir::arith::IntegerOverflowFlags integerOverflowFlags{};
+
+  /// Flag to control whether complex number division is lowered to a runtime
+  /// function or to the MLIR complex dialect.
+  bool complexDivisionToRuntimeFlag = true;
 
   /// fir::GlobalOp and func::FuncOp symbol table to speed-up
   /// lookups.
@@ -899,6 +914,10 @@ uint64_t getAllocaAddressSpace(const mlir::DataLayout *dataLayout);
 /// and extents2[j] is not, then result[j] is the MLIR value extents1[j].
 llvm::SmallVector<mlir::Value> deduceOptimalExtents(mlir::ValueRange extents1,
                                                     mlir::ValueRange extents2);
+
+uint64_t getGlobalAddressSpace(mlir::DataLayout *dataLayout);
+
+uint64_t getProgramAddressSpace(mlir::DataLayout *dataLayout);
 
 /// Given array extents generate code that sets them all to zeroes,
 /// if the array is empty, e.g.:

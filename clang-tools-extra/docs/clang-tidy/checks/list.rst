@@ -247,9 +247,11 @@ Clang-Tidy Checks
    :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
    :doc:`llvm-header-guard <llvm/header-guard>`,
    :doc:`llvm-include-order <llvm/include-order>`, "Yes"
+   :doc:`llvm-use-new-mlir-op-builder <llvm/use-new-mlir-op-builder>`, "Yes"
    :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
    :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals <llvm/prefer-isa-or-dyn-cast-in-conditionals>`, "Yes"
    :doc:`llvm-prefer-register-over-unsigned <llvm/prefer-register-over-unsigned>`, "Yes"
+   :doc:`llvm-prefer-static-over-anonymous-namespace <llvm/prefer-static-over-anonymous-namespace>`,
    :doc:`llvm-twine-local <llvm/twine-local>`, "Yes"
    :doc:`llvmlibc-callee-namespace <llvmlibc/callee-namespace>`,
    :doc:`llvmlibc-implementation-in-namespace <llvmlibc/implementation-in-namespace>`,
@@ -312,6 +314,7 @@ Clang-Tidy Checks
    :doc:`modernize-use-nullptr <modernize/use-nullptr>`, "Yes"
    :doc:`modernize-use-override <modernize/use-override>`, "Yes"
    :doc:`modernize-use-ranges <modernize/use-ranges>`, "Yes"
+   :doc:`modernize-use-scoped-lock <modernize/use-scoped-lock>`, "Yes"
    :doc:`modernize-use-starts-ends-with <modernize/use-starts-ends-with>`, "Yes"
    :doc:`modernize-use-std-format <modernize/use-std-format>`, "Yes"
    :doc:`modernize-use-std-numbers <modernize/use-std-numbers>`, "Yes"
@@ -409,6 +412,7 @@ Clang-Tidy Checks
    :doc:`readability-uniqueptr-delete-release <readability/uniqueptr-delete-release>`, "Yes"
    :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
    :doc:`readability-use-anyofallof <readability/use-anyofallof>`,
+   :doc:`readability-use-concise-preprocessor-directives <readability/use-concise-preprocessor-directives>`, "Yes"
    :doc:`readability-use-std-min-max <readability/use-std-min-max>`, "Yes"
    :doc:`zircon-temporary-objects <zircon/temporary-objects>`,
 

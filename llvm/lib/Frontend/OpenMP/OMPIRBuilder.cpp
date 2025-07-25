@@ -824,7 +824,11 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
         M.getGlobalVariable("__openmp_nvptx_data_transfer_temporary_storage")};
     emitUsed("llvm.compiler.used", LLVMCompilerUsed);
   }
+
+  IsFinalized = true;
 }
+
+bool OpenMPIRBuilder::isFinalized() { return IsFinalized; }
 
 OpenMPIRBuilder::~OpenMPIRBuilder() {
   assert(OutlineInfos.empty() && "There must be no outstanding outlinings");
@@ -2613,7 +2617,7 @@ void OpenMPIRBuilder::emitReductionListCopy(
 Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
     const LocationDescription &Loc, ArrayRef<ReductionInfo> ReductionInfos,
     AttributeList FuncAttrs) {
-  InsertPointTy SavedIP = Builder.saveIP();
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   LLVMContext &Ctx = M.getContext();
   FunctionType *FuncTy = FunctionType::get(
       Builder.getVoidTy(), {Builder.getPtrTy(), Builder.getInt32Ty()},
@@ -2626,6 +2630,7 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
   WcFunc->addParamAttr(1, Attribute::NoUndef);
   BasicBlock *EntryBB = BasicBlock::Create(M.getContext(), "entry", WcFunc);
   Builder.SetInsertPoint(EntryBB);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   // ReduceList: thread local Reduce list.
   // At the stage of the computation when this function is called, partially
@@ -2840,7 +2845,6 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
   }
 
   Builder.CreateRetVoid();
-  Builder.restoreIP(SavedIP);
 
   return WcFunc;
 }
@@ -2849,6 +2853,7 @@ Function *OpenMPIRBuilder::emitShuffleAndReduceFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Function *ReduceFn,
     AttributeList FuncAttrs) {
   LLVMContext &Ctx = M.getContext();
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   FunctionType *FuncTy =
       FunctionType::get(Builder.getVoidTy(),
                         {Builder.getPtrTy(), Builder.getInt16Ty(),
@@ -2867,6 +2872,7 @@ Function *OpenMPIRBuilder::emitShuffleAndReduceFunction(
   SarFunc->addParamAttr(3, Attribute::SExt);
   BasicBlock *EntryBB = BasicBlock::Create(M.getContext(), "entry", SarFunc);
   Builder.SetInsertPoint(EntryBB);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   // Thread local Reduce list used to host the values of data to be reduced.
   Argument *ReduceListArg = SarFunc->getArg(0);
@@ -3013,7 +3019,7 @@ Function *OpenMPIRBuilder::emitShuffleAndReduceFunction(
 Function *OpenMPIRBuilder::emitListToGlobalCopyFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Type *ReductionsBufferTy,
     AttributeList FuncAttrs) {
-  OpenMPIRBuilder::InsertPointTy OldIP = Builder.saveIP();
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   LLVMContext &Ctx = M.getContext();
   FunctionType *FuncTy = FunctionType::get(
       Builder.getVoidTy(),
@@ -3029,6 +3035,7 @@ Function *OpenMPIRBuilder::emitListToGlobalCopyFunction(
 
   BasicBlock *EntryBlock = BasicBlock::Create(Ctx, "entry", LtGCFunc);
   Builder.SetInsertPoint(EntryBlock);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   // Buffer: global reduction buffer.
   Argument *BufferArg = LtGCFunc->getArg(0);
@@ -3116,14 +3123,13 @@ Function *OpenMPIRBuilder::emitListToGlobalCopyFunction(
   }
 
   Builder.CreateRetVoid();
-  Builder.restoreIP(OldIP);
   return LtGCFunc;
 }
 
 Function *OpenMPIRBuilder::emitListToGlobalReduceFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Function *ReduceFn,
     Type *ReductionsBufferTy, AttributeList FuncAttrs) {
-  OpenMPIRBuilder::InsertPointTy OldIP = Builder.saveIP();
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   LLVMContext &Ctx = M.getContext();
   FunctionType *FuncTy = FunctionType::get(
       Builder.getVoidTy(),
@@ -3139,6 +3145,7 @@ Function *OpenMPIRBuilder::emitListToGlobalReduceFunction(
 
   BasicBlock *EntryBlock = BasicBlock::Create(Ctx, "entry", LtGRFunc);
   Builder.SetInsertPoint(EntryBlock);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   // Buffer: global reduction buffer.
   Argument *BufferArg = LtGRFunc->getArg(0);
@@ -3199,14 +3206,13 @@ Function *OpenMPIRBuilder::emitListToGlobalReduceFunction(
   Builder.CreateCall(ReduceFn, {LocalReduceListAddrCast, ReduceList})
       ->addFnAttr(Attribute::NoUnwind);
   Builder.CreateRetVoid();
-  Builder.restoreIP(OldIP);
   return LtGRFunc;
 }
 
 Function *OpenMPIRBuilder::emitGlobalToListCopyFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Type *ReductionsBufferTy,
     AttributeList FuncAttrs) {
-  OpenMPIRBuilder::InsertPointTy OldIP = Builder.saveIP();
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   LLVMContext &Ctx = M.getContext();
   FunctionType *FuncTy = FunctionType::get(
       Builder.getVoidTy(),
@@ -3222,6 +3228,7 @@ Function *OpenMPIRBuilder::emitGlobalToListCopyFunction(
 
   BasicBlock *EntryBlock = BasicBlock::Create(Ctx, "entry", LtGCFunc);
   Builder.SetInsertPoint(EntryBlock);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   // Buffer: global reduction buffer.
   Argument *BufferArg = LtGCFunc->getArg(0);
@@ -3307,14 +3314,13 @@ Function *OpenMPIRBuilder::emitGlobalToListCopyFunction(
   }
 
   Builder.CreateRetVoid();
-  Builder.restoreIP(OldIP);
   return LtGCFunc;
 }
 
 Function *OpenMPIRBuilder::emitGlobalToListReduceFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Function *ReduceFn,
     Type *ReductionsBufferTy, AttributeList FuncAttrs) {
-  OpenMPIRBuilder::InsertPointTy OldIP = Builder.saveIP();
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   LLVMContext &Ctx = M.getContext();
   auto *FuncTy = FunctionType::get(
       Builder.getVoidTy(),
@@ -3330,6 +3336,7 @@ Function *OpenMPIRBuilder::emitGlobalToListReduceFunction(
 
   BasicBlock *EntryBlock = BasicBlock::Create(Ctx, "entry", LtGRFunc);
   Builder.SetInsertPoint(EntryBlock);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   // Buffer: global reduction buffer.
   Argument *BufferArg = LtGRFunc->getArg(0);
@@ -3390,7 +3397,6 @@ Function *OpenMPIRBuilder::emitGlobalToListReduceFunction(
   Builder.CreateCall(ReduceFn, {ReduceList, ReductionList})
       ->addFnAttr(Attribute::NoUnwind);
   Builder.CreateRetVoid();
-  Builder.restoreIP(OldIP);
   return LtGRFunc;
 }
 
@@ -3403,6 +3409,7 @@ std::string OpenMPIRBuilder::getReductionFuncName(StringRef Name) const {
 Expected<Function *> OpenMPIRBuilder::createReductionFunction(
     StringRef ReducerName, ArrayRef<ReductionInfo> ReductionInfos,
     ReductionGenCBKind ReductionGenCBKind, AttributeList FuncAttrs) {
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   auto *FuncTy = FunctionType::get(Builder.getVoidTy(),
                                    {Builder.getPtrTy(), Builder.getPtrTy()},
                                    /* IsVarArg */ false);
@@ -3415,6 +3422,7 @@ Expected<Function *> OpenMPIRBuilder::createReductionFunction(
   BasicBlock *EntryBB =
       BasicBlock::Create(M.getContext(), "entry", ReductionFunc);
   Builder.SetInsertPoint(EntryBB);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   // Need to alloca memory here and deal with the pointers before getting
   // LHS/RHS pointers out
@@ -3742,10 +3750,12 @@ static Error populateReductionFunction(
     Function *ReductionFunc,
     ArrayRef<OpenMPIRBuilder::ReductionInfo> ReductionInfos,
     IRBuilder<> &Builder, ArrayRef<bool> IsByRef, bool IsGPU) {
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   Module *Module = ReductionFunc->getParent();
   BasicBlock *ReductionFuncBlock =
       BasicBlock::Create(Module->getContext(), "", ReductionFunc);
   Builder.SetInsertPoint(ReductionFuncBlock);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
   Value *LHSArrayPtr = nullptr;
   Value *RHSArrayPtr = nullptr;
   if (IsGPU) {
@@ -5366,58 +5376,90 @@ void OpenMPIRBuilder::unrollLoopHeuristic(DebugLoc, CanonicalLoopInfo *Loop) {
 
 void OpenMPIRBuilder::createIfVersion(CanonicalLoopInfo *CanonicalLoop,
                                       Value *IfCond, ValueToValueMapTy &VMap,
+                                      LoopAnalysis &LIA, LoopInfo &LI, Loop *L,
                                       const Twine &NamePrefix) {
   Function *F = CanonicalLoop->getFunction();
 
+  // We can't do
+  // if (cond) {
+  //   simd_loop;
+  // } else {
+  //   non_simd_loop;
+  // }
+  // because then the CanonicalLoopInfo would only point to one of the loops:
+  // leading to other constructs operating on the same loop to malfunction.
+  // Instead generate
+  // while (...) {
+  //   if (cond) {
+  //     simd_body;
+  //   } else {
+  //     not_simd_body;
+  //   }
+  // }
+  // At least for simple loops, LLVM seems able to hoist the if out of the loop
+  // body at -O3
+
   // Define where if branch should be inserted
-  Instruction *SplitBefore = CanonicalLoop->getPreheader()->getTerminator();
-
-  // TODO: We should not rely on pass manager. Currently we use pass manager
-  // only for getting llvm::Loop which corresponds to given CanonicalLoopInfo
-  // object. We should have a method  which returns all blocks between
-  // CanonicalLoopInfo::getHeader() and CanonicalLoopInfo::getAfter()
-  FunctionAnalysisManager FAM;
-  FAM.registerPass([]() { return DominatorTreeAnalysis(); });
-  FAM.registerPass([]() { return LoopAnalysis(); });
-  FAM.registerPass([]() { return PassInstrumentationAnalysis(); });
-
-  // Get the loop which needs to be cloned
-  LoopAnalysis LIA;
-  LoopInfo &&LI = LIA.run(*F, FAM);
-  Loop *L = LI.getLoopFor(CanonicalLoop->getHeader());
+  auto SplitBeforeIt = CanonicalLoop->getBody()->getFirstNonPHIIt();
 
   // Create additional blocks for the if statement
-  BasicBlock *Head = SplitBefore->getParent();
-  Instruction *HeadOldTerm = Head->getTerminator();
-  llvm::LLVMContext &C = Head->getContext();
+  BasicBlock *Cond = SplitBeforeIt->getParent();
+  llvm::LLVMContext &C = Cond->getContext();
   llvm::BasicBlock *ThenBlock = llvm::BasicBlock::Create(
-      C, NamePrefix + ".if.then", Head->getParent(), Head->getNextNode());
+      C, NamePrefix + ".if.then", Cond->getParent(), Cond->getNextNode());
   llvm::BasicBlock *ElseBlock = llvm::BasicBlock::Create(
-      C, NamePrefix + ".if.else", Head->getParent(), CanonicalLoop->getExit());
+      C, NamePrefix + ".if.else", Cond->getParent(), CanonicalLoop->getExit());
 
   // Create if condition branch.
-  Builder.SetInsertPoint(HeadOldTerm);
+  Builder.SetInsertPoint(SplitBeforeIt);
   Instruction *BrInstr =
       Builder.CreateCondBr(IfCond, ThenBlock, /*ifFalse*/ ElseBlock);
   InsertPointTy IP{BrInstr->getParent(), ++BrInstr->getIterator()};
-  // Then block contains branch to omp loop which needs to be vectorized
+  // Then block contains branch to omp loop body which needs to be vectorized
   spliceBB(IP, ThenBlock, false, Builder.getCurrentDebugLocation());
-  ThenBlock->replaceSuccessorsPhiUsesWith(Head, ThenBlock);
+  ThenBlock->replaceSuccessorsPhiUsesWith(Cond, ThenBlock);
 
   Builder.SetInsertPoint(ElseBlock);
 
   // Clone loop for the else branch
   SmallVector<BasicBlock *, 8> NewBlocks;
 
-  VMap[CanonicalLoop->getPreheader()] = ElseBlock;
-  for (BasicBlock *Block : L->getBlocks()) {
+  SmallVector<BasicBlock *, 8> ExistingBlocks;
+  ExistingBlocks.reserve(L->getNumBlocks() + 1);
+  ExistingBlocks.push_back(ThenBlock);
+  ExistingBlocks.append(L->block_begin(), L->block_end());
+  // Cond is the block that has the if clause condition
+  // LoopCond is omp_loop.cond
+  // LoopHeader is omp_loop.header
+  BasicBlock *LoopCond = Cond->getUniquePredecessor();
+  BasicBlock *LoopHeader = LoopCond->getUniquePredecessor();
+  assert(LoopCond && LoopHeader && "Invalid loop structure");
+  for (BasicBlock *Block : ExistingBlocks) {
+    if (Block == L->getLoopPreheader() || Block == L->getLoopLatch() ||
+        Block == LoopHeader || Block == LoopCond || Block == Cond) {
+      continue;
+    }
     BasicBlock *NewBB = CloneBasicBlock(Block, VMap, "", F);
+
+    // fix name not to be omp.if.then
+    if (Block == ThenBlock)
+      NewBB->setName(NamePrefix + ".if.else");
+
     NewBB->moveBefore(CanonicalLoop->getExit());
     VMap[Block] = NewBB;
     NewBlocks.push_back(NewBB);
   }
   remapInstructionsInBlocks(NewBlocks, VMap);
   Builder.CreateBr(NewBlocks.front());
+
+  // The loop latch must have only one predecessor. Currently it is branched to
+  // from both the 'then' and 'else' branches.
+  L->getLoopLatch()->splitBasicBlock(
+      L->getLoopLatch()->begin(), NamePrefix + ".pre_latch", /*Before=*/true);
+
+  // Ensure that the then block is added to the loop so we add the attributes in
+  // the next step
+  L->addBasicBlockToLoop(ThenBlock, LI);
 }
 
 unsigned
@@ -5473,20 +5515,7 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
 
   if (IfCond) {
     ValueToValueMapTy VMap;
-    createIfVersion(CanonicalLoop, IfCond, VMap, "simd");
-    // Add metadata to the cloned loop which disables vectorization
-    Value *MappedLatch = VMap.lookup(CanonicalLoop->getLatch());
-    assert(MappedLatch &&
-           "Cannot find value which corresponds to original loop latch");
-    assert(isa<BasicBlock>(MappedLatch) &&
-           "Cannot cast mapped latch block value to BasicBlock");
-    BasicBlock *NewLatchBlock = dyn_cast<BasicBlock>(MappedLatch);
-    ConstantAsMetadata *BoolConst =
-        ConstantAsMetadata::get(ConstantInt::getFalse(Type::getInt1Ty(Ctx)));
-    addBasicBlockMetadata(
-        NewLatchBlock,
-        {MDNode::get(Ctx, {MDString::get(Ctx, "llvm.loop.vectorize.enable"),
-                           BoolConst})});
+    createIfVersion(CanonicalLoop, IfCond, VMap, LIA, LI, L, "simd");
   }
 
   SmallSet<BasicBlock *, 8> Reachable;
@@ -5518,6 +5547,14 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
     // to combine two lists.
     LoopMDList.push_back(MDNode::get(
         Ctx, {MDString::get(Ctx, "llvm.loop.parallel_accesses"), AccessGroup}));
+  }
+
+  // FIXME: the IF clause shares a loop backedge for the SIMD and non-SIMD
+  // versions so we can't add the loop attributes in that case.
+  if (IfCond) {
+    // we can still add llvm.loop.parallel_access
+    addLoopMetadata(CanonicalLoop, LoopMDList);
+    return;
   }
 
   // Use the above access group metadata to create loop level
@@ -6887,23 +6924,19 @@ static void FixupDebugInfoForOutlinedFunction(
   if (!NewSP)
     return;
 
-  DenseMap<const MDNode *, MDNode *> Cache;
   SmallDenseMap<DILocalVariable *, DILocalVariable *> RemappedVariables;
 
   auto GetUpdatedDIVariable = [&](DILocalVariable *OldVar, unsigned arg) {
-    auto NewSP = Func->getSubprogram();
     DILocalVariable *&NewVar = RemappedVariables[OldVar];
     // Only use cached variable if the arg number matches. This is important
     // so that DIVariable created for privatized variables are not discarded.
     if (NewVar && (arg == NewVar->getArg()))
       return NewVar;
 
-    DILocalScope *NewScope = DILocalScope::cloneScopeForSubprogram(
-        *OldVar->getScope(), *NewSP, Builder.getContext(), Cache);
     NewVar = llvm::DILocalVariable::get(
-        Builder.getContext(), NewScope, OldVar->getName(), OldVar->getFile(),
-        OldVar->getLine(), OldVar->getType(), arg, OldVar->getFlags(),
-        OldVar->getAlignInBits(), OldVar->getAnnotations());
+        Builder.getContext(), OldVar->getScope(), OldVar->getName(),
+        OldVar->getFile(), OldVar->getLine(), OldVar->getType(), arg,
+        OldVar->getFlags(), OldVar->getAlignInBits(), OldVar->getAnnotations());
     return NewVar;
   };
 
@@ -6917,7 +6950,8 @@ static void FixupDebugInfoForOutlinedFunction(
         ArgNo = std::get<1>(Iter->second) + 1;
       }
     }
-    DR->setVariable(GetUpdatedDIVariable(OldVar, ArgNo));
+    if (ArgNo != 0)
+      DR->setVariable(GetUpdatedDIVariable(OldVar, ArgNo));
   };
 
   // The location and scope of variable intrinsics and records still point to
@@ -6996,36 +7030,9 @@ static Expected<Function *> createOutlinedFunction(
 
   // Save insert point.
   IRBuilder<>::InsertPointGuard IPG(Builder);
-  // If there's a DISubprogram associated with current function, then
-  // generate one for the outlined function.
-  if (Function *ParentFunc = BB->getParent()) {
-    if (DISubprogram *SP = ParentFunc->getSubprogram()) {
-      DICompileUnit *CU = SP->getUnit();
-      DIBuilder DB(*M, true, CU);
-      DebugLoc DL = Builder.getCurrentDebugLocation();
-      if (DL) {
-        // TODO: We are using nullopt for arguments at the moment. This will
-        // need to be updated when debug data is being generated for variables.
-        DISubroutineType *Ty =
-            DB.createSubroutineType(DB.getOrCreateTypeArray({}));
-        DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagDefinition |
-                                          DISubprogram::SPFlagOptimized |
-                                          DISubprogram::SPFlagLocalToUnit;
-
-        DISubprogram *OutlinedSP = DB.createFunction(
-            CU, FuncName, FuncName, SP->getFile(), DL.getLine(), Ty,
-            DL.getLine(), DINode::DIFlags::FlagArtificial, SPFlags);
-
-        // Attach subprogram to the function.
-        Func->setSubprogram(OutlinedSP);
-        // Update the CurrentDebugLocation in the builder so that right scope
-        // is used for things inside outlined function.
-        Builder.SetCurrentDebugLocation(
-            DILocation::get(Func->getContext(), DL.getLine(), DL.getCol(),
-                            OutlinedSP, DL.getInlinedAt()));
-      }
-    }
-  }
+  // We will generate the entries in the outlined function but the debug
+  // location may still be pointing to the parent function. Reset it now.
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   // Generate the region into the function.
   BasicBlock *EntryBB = BasicBlock::Create(Builder.getContext(), "entry", Func);
@@ -9842,7 +9849,7 @@ void OffloadEntriesInfoManager::getTargetRegionEntryFnName(
 TargetRegionEntryInfo
 OpenMPIRBuilder::getTargetEntryUniqueInfo(FileIdentifierInfoCallbackTy CallBack,
                                           StringRef ParentName) {
-  sys::fs::UniqueID ID;
+  sys::fs::UniqueID ID(0xdeadf17e, 0);
   auto FileIDInfo = CallBack();
   uint64_t FileID = 0;
   std::error_code EC = sys::fs::getUniqueID(std::get<0>(FileIDInfo), ID);
