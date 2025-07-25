@@ -14,9 +14,9 @@
 #ifndef LLVM_FRONTEND_HLSL_ROOTSIGNATUREMETADATA_H
 #define LLVM_FRONTEND_HLSL_ROOTSIGNATUREMETADATA_H
 
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/MC/DXContainerRootSignature.h"
 
@@ -51,11 +51,19 @@ public:
 class GenericRSMetadataError : public ErrorInfo<GenericRSMetadataError> {
 public:
   static char ID;
-  std::string Message;
+  Twine Message;
+  MDNode *MD;
 
-  GenericRSMetadataError(Twine Message) : Message(Message.str()) {}
+  GenericRSMetadataError(Twine Message, MDNode *MD)
+      : Message(Message), MD(MD) {}
 
-  void log(raw_ostream &OS) const override { OS << Message; }
+  void log(raw_ostream &OS) const override {
+    OS << Message;
+    if (MD) {
+      OS << "\n";
+      MD->printTree(OS);
+    }
+  }
 
   std::error_code convertToErrorCode() const override {
     return llvm::inconvertibleErrorCode();
@@ -65,10 +73,9 @@ public:
 class InvalidRSMetadataFormat : public ErrorInfo<InvalidRSMetadataFormat> {
 public:
   static char ID;
-  std::string ElementName;
+  StringRef ElementName;
 
-  InvalidRSMetadataFormat(StringRef ElementName)
-      : ElementName(ElementName.str()) {}
+  InvalidRSMetadataFormat(StringRef ElementName) : ElementName(ElementName) {}
 
   void log(raw_ostream &OS) const override {
     OS << "Invalid format for  " << ElementName;

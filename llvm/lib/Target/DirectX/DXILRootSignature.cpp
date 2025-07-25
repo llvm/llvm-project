@@ -120,8 +120,10 @@ analyzeModule(Module &M) {
     llvm::Expected<mcdxbc::RootSignatureDesc> RSDOrErr =
         MDParser.ParseRootSignature(V.value());
 
-    if (auto Err = RSDOrErr.takeError()) {
-      reportError(Ctx, toString(std::move(Err)));
+    if (!RSDOrErr) {
+      handleAllErrors(RSDOrErr.takeError(), [&](ErrorInfoBase &EIB) {
+        Ctx->emitError(EIB.message());
+      });
       continue;
     }
 
