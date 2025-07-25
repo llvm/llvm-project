@@ -640,7 +640,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
   StringRef PrevOp;
   StringRef CurOp;
   CaseStream << "  switch (MI.getOpcode()) {\n";
-  CaseStream << "    default: return false;\n";
+  CaseStream << "  default: return false;\n";
 
   bool CompressOrCheck =
       EType == EmitterType::Compress || EType == EmitterType::CheckCompress;
@@ -675,9 +675,11 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
     CurOp = Source.TheDef->getName();
     // Check current and previous opcode to decide to continue or end a case.
     if (CurOp != PrevOp) {
-      if (!PrevOp.empty())
-        CaseStream.indent(6) << "break;\n    } // case " + PrevOp + "\n";
-      CaseStream.indent(4) << "case " + TargetName + "::" + CurOp + ": {\n";
+      if (!PrevOp.empty()) {
+        CaseStream.indent(4) << "break;\n";
+        CaseStream.indent(2) << "} // case " + PrevOp + "\n";
+      }
+      CaseStream.indent(2) << "case " + TargetName + "::" + CurOp + ": {\n";
     }
 
     std::set<std::pair<bool, StringRef>> FeaturesSet;
@@ -861,9 +863,10 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
     mergeCondAndCode(CaseStream, CondString, CodeString);
     PrevOp = CurOp;
   }
-  Func << CaseString << "\n";
+  Func << CaseString;
+  Func.indent(4) << "break;\n";
   // Close brace for the last case.
-  Func.indent(4) << "} // case " << CurOp << "\n";
+  Func.indent(2) << "} // case " << CurOp << "\n";
   Func.indent(2) << "} // switch\n";
   Func.indent(2) << "return false;\n}\n";
 
