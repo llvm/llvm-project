@@ -326,21 +326,12 @@ static bool verifyDagOpCount(const CodeGenInstruction &Inst, const DagInit *Dag,
       TiedOpCount++;
   }
 
-  if (Dag->getNumArgs() == NumMIOperands)
-    return true;
-
   // Source instructions are non compressed instructions and have at most one
   // tied operand.
   if (IsSource && (TiedOpCount > 1))
     PrintFatalError(Inst.TheDef->getLoc(),
                     "Input operands for Inst '" + Inst.TheDef->getName() +
                         "' and input Dag operand count mismatch");
-
-  // The Dag can't have more arguments than the Instruction.
-  if (Dag->getNumArgs() > NumMIOperands)
-    PrintFatalError(Inst.TheDef->getLoc(),
-                    "Inst '" + Inst.TheDef->getName() +
-                        "' and Dag operand count mismatch");
 
   // The Instruction might have tied operands so the Dag might have
   // a fewer operand count.

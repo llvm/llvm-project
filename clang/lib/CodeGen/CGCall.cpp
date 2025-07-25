@@ -2852,20 +2852,28 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       if (AI.getInReg())
         Attrs.addAttribute(llvm::Attribute::InReg);
 
-      // Depending on the ABI, this may be either a byval or a dead_on_return
-      // argument.
-      if (AI.getIndirectByVal()) {
-        Attrs.addByValAttr(getTypes().ConvertTypeForMem(ParamType));
-      } else {
-        // Add dead_on_return when the object's lifetime ends in the callee.
-        // This includes trivially-destructible objects, as well as objects
-        // whose destruction / clean-up is carried out within the callee (e.g.,
-        // Obj-C ARC-managed structs, MSVC callee-destroyed objects).
-        if (!ParamType.isDestructedType() || !ParamType->isRecordType() ||
-            ParamType->castAs<RecordType>()
-                ->getDecl()
-                ->isParamDestroyedInCallee())
-          Attrs.addAttribute(llvm::Attribute::DeadOnReturn);
+      // HLSL out and inout parameters must not be marked with ByVal or
+      // DeadOnReturn attributes because stores to these parameters by the
+      // callee are visible to the caller.
+      if (auto ParamABI = FI.getExtParameterInfo(ArgNo).getABI();
+          ParamABI != ParameterABI::HLSLOut &&
+          ParamABI != ParameterABI::HLSLInOut) {
+
+        // Depending on the ABI, this may be either a byval or a dead_on_return
+        // argument.
+        if (AI.getIndirectByVal()) {
+          Attrs.addByValAttr(getTypes().ConvertTypeForMem(ParamType));
+        } else {
+          // Add dead_on_return when the object's lifetime ends in the callee.
+          // This includes trivially-destructible objects, as well as objects
+          // whose destruction / clean-up is carried out within the callee
+          // (e.g., Obj-C ARC-managed structs, MSVC callee-destroyed objects).
+          if (!ParamType.isDestructedType() || !ParamType->isRecordType() ||
+              ParamType->castAs<RecordType>()
+                  ->getDecl()
+                  ->isParamDestroyedInCallee())
+            Attrs.addAttribute(llvm::Attribute::DeadOnReturn);
+        }
       }
 
       auto *Decl = ParamType->getAsRecordDecl();

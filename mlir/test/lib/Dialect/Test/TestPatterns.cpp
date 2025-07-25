@@ -139,8 +139,7 @@ public:
 
   LogicalResult matchAndRewrite(TestCommutative2Op op,
                                 PatternRewriter &rewriter) const override {
-    auto operand =
-        dyn_cast_or_null<TestCommutative2Op>(op->getOperand(0).getDefiningOp());
+    auto operand = op->getOperand(0).getDefiningOp<TestCommutative2Op>();
     if (!operand)
       return failure();
     Attribute constInput;
@@ -2114,7 +2113,7 @@ struct TestMergeBlocksPatternDriver
     /// Expect the op to have a single block after legalization.
     target.addDynamicallyLegalOp<TestMergeBlocksOp>(
         [&](TestMergeBlocksOp op) -> bool {
-          return llvm::hasSingleElement(op.getBody());
+          return op.getBody().hasOneBlock();
         });
 
     /// Only allow `test.br` within test.merge_blocks op.

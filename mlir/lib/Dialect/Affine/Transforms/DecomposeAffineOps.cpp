@@ -88,8 +88,8 @@ static AffineApplyOp createSubApply(RewriterBase &rewriter,
   auto rhsMap = AffineMap::get(m.getNumDims(), m.getNumSymbols(), expr, ctx);
   SmallVector<Value> rhsOperands = originalOp->getOperands();
   canonicalizeMapAndOperands(&rhsMap, &rhsOperands);
-  return rewriter.create<AffineApplyOp>(originalOp.getLoc(), rhsMap,
-                                        rhsOperands);
+  return AffineApplyOp::create(rewriter, originalOp.getLoc(), rhsMap,
+                               rhsOperands);
 }
 
 FailureOr<AffineApplyOp> mlir::affine::decompose(RewriterBase &rewriter,
@@ -160,8 +160,8 @@ FailureOr<AffineApplyOp> mlir::affine::decompose(RewriterBase &rewriter,
   auto current = createSubApply(rewriter, op, subExpressions[0]);
   for (int64_t i = 1, e = subExpressions.size(); i < e; ++i) {
     Value tmp = createSubApply(rewriter, op, subExpressions[i]);
-    current = rewriter.create<AffineApplyOp>(op.getLoc(), binMap,
-                                             ValueRange{current, tmp});
+    current = AffineApplyOp::create(rewriter, op.getLoc(), binMap,
+                                    ValueRange{current, tmp});
     LLVM_DEBUG(DBGS() << "--reassociate into: " << current << "\n");
   }
 

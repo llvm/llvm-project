@@ -443,12 +443,6 @@ public:
 template <class... _Tp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __swallow(_Tp&&...) _NOEXCEPT {}
 
-template <class _Tp>
-struct __all_default_constructible;
-
-template <class... _Tp>
-struct __all_default_constructible<__tuple_types<_Tp...>> : __all<is_default_constructible<_Tp>::value...> {};
-
 // __tuple_impl
 
 template <class _Indx, class... _Tp>

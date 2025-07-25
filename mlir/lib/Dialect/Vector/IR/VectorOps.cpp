@@ -2591,8 +2591,7 @@ class FromElementsToShapeCast : public OpRewritePattern<FromElementsOp> {
          llvm::enumerate(fromElements.getElements())) {
 
       // Check that the element is from a vector.extract operation.
-      auto extractOp =
-          dyn_cast_if_present<vector::ExtractOp>(element.getDefiningOp());
+      auto extractOp = element.getDefiningOp<vector::ExtractOp>();
       if (!extractOp) {
         return rewriter.notifyMatchFailure(fromElements,
                                            "element not from vector.extract");

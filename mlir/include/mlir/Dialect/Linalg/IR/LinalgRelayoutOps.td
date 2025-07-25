@@ -360,6 +360,10 @@ def Linalg_UnPackOp : Linalg_RelayoutOp<"unpack"> {
                                    ArrayRef<int64_t> innerPermutation,
                                    ArrayRef<int64_t> outerPermutation);
 
+    /// Returns true if it is statically known that the `sliceOp` result shape
+    /// is compatible with the `unPackOp`. I.e., it does not drop any tile.
+    bool canFoldSliceOp(tensor::ExtractSliceOp sliceOp);
+
     /// Check if this UnPackOp is like a simple unpad operation.
     /// In other words, this operation:
     /// 1. drops useless dimensions (dimension of size 1), and

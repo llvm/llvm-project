@@ -5119,7 +5119,8 @@ struct OmpEndBlockDirective {
 
 struct OpenMPBlockConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPBlockConstruct);
-  std::tuple<OmpBeginBlockDirective, Block, OmpEndBlockDirective> t;
+  std::tuple<OmpBeginBlockDirective, Block, std::optional<OmpEndBlockDirective>>
+      t;
 };
 
 // OpenMP directives enclosing do loop
