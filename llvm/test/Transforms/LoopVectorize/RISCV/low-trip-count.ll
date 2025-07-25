@@ -133,6 +133,12 @@ define void @trip8_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture 
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 4
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 8, i32 4, i1 true)
+; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i8> @llvm.vp.load.nxv4i8.p0(ptr align 1 [[TMP9:%.*]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = shl <vscale x 4 x i8> [[VP_OP_LOAD]], splat (i8 1)
+; CHECK-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 4 x i8> @llvm.vp.load.nxv4i8.p0(ptr align 1 [[TMP12:%.*]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = add <vscale x 4 x i8> [[TMP6]], [[VP_OP_LOAD1]]
+; CHECK-NEXT:    call void @llvm.vp.store.nxv4i8.p0(<vscale x 4 x i8> [[TMP7]], ptr align 1 [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP5]])
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
@@ -360,8 +366,7 @@ define i8 @mul_non_pow_2_low_trip_count(ptr noalias %a) {
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = add <16 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = icmp ule <16 x i64> [[VEC_IV]], splat (i64 9)
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr [[TMP1]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr [[TMP0]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
 ; CHECK-NEXT:    [[TMP2]] = mul <16 x i8> [[WIDE_MASKED_LOAD]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> [[TMP2]], <16 x i8> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
