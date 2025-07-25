@@ -185,6 +185,16 @@ private:
 
 using AddressRange = std::pair<uint64_t, uint64_t>;
 
+// The parsed MMap event
+struct MMapEvent {
+  int64_t PID = 0;
+  uint64_t Address = 0;
+  uint64_t Size = 0;
+  uint64_t Offset = 0;
+  StringRef MemProtectionFlag;
+  StringRef BinaryPath;
+};
+
 class ProfiledBinary {
   // Absolute path of the executable binary.
   std::string Path;
@@ -276,6 +286,19 @@ class ProfiledBinary {
   // String table owning function name strings created from the symbolizer.
   std::unordered_set<std::string> NameStrings;
 
+  // MMap events for PT_LOAD segments without 'x' memory protection flag.
+  SmallVector<MMapEvent> MMapNonTextEvents;
+
+  // Records the file offset, file size and virtual address of program headers.
+  struct PhdrInfo {
+    uint64_t FileOffset;
+    uint64_t FileSz;
+    uint64_t VirtualAddr;
+  };
+
+  // Program header information for non-text PT_LOAD segments.
+  SmallVector<PhdrInfo> NonTextPhdrInfo;
+
   // A collection of functions to print disassembly for.
   StringSet<> DisassembleFunctionSet;
 
@@ -304,6 +327,16 @@ class ProfiledBinary {
   bool IsCOFF = false;
 
   void setPreferredTextSegmentAddresses(const ObjectFile *O);
+
+  // LLVMSymbolizer's symbolize{Code, Data} interfaces requires a section index
+  // for each address to be symbolized. This is a helper function to
+  // construct a SectionedAddress object with the given address and section
+  // index. The section index is set to UndefSection by default.
+  static object::SectionedAddress getSectionedAddress(
+      uint64_t Address,
+      uint64_t SectionIndex = object::SectionedAddress::UndefSection) {
+    return object::SectionedAddress{Address, SectionIndex};
+  }
 
   template <class ELFT>
   void setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
@@ -362,6 +395,10 @@ class ProfiledBinary {
 public:
   ProfiledBinary(const StringRef ExeBinPath, const StringRef DebugBinPath);
   ~ProfiledBinary();
+
+  /// Symbolize an address and return the symbol name. The returned StringRef is
+  /// owned by this ProfiledBinary object.
+  StringRef symbolizeDataAddress(uint64_t Address);
 
   void decodePseudoProbe();
 
@@ -602,6 +639,16 @@ public:
   getInlinerDescForProbe(const MCDecodedPseudoProbe *Probe) {
     return ProbeDecoder.getInlinerDescForProbe(Probe);
   }
+
+  void addMMapNonTextEvent(MMapEvent MMap) {
+    MMapNonTextEvents.push_back(MMap);
+  }
+
+  // Given a non-text runtime address, canonicalize it to the virtual address in
+  // the binary.
+  // TODO: Consider unifying the canonicalization of text and non-text addresses
+  // in the ProfiledBinary class.
+  uint64_t CanonicalizeNonTextAddress(uint64_t Address);
 
   bool getTrackFuncContextSize() { return TrackFuncContextSize; }
 
