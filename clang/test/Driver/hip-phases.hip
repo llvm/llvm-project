@@ -677,7 +677,7 @@
 // DEVICE-ONLY-NEXT: 4: offload, "device-hip (amdgcn-amd-amdhsa:gfx90a)" {3}, none
 
 //
-// Test the new driver when not bundling
+// Test the new driver bundling SPIR-V targets.
 //
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-phases \
 // RUN:        --offload-device-only --offload-arch=amdgcnspirv,gfx1030 %s 2>&1 \
@@ -692,9 +692,8 @@
 // SPIRV-ONLY-NEXT: 7: input, "[[INPUT]]", hip, (device-hip, amdgcnspirv)
 // SPIRV-ONLY-NEXT: 8: preprocessor, {7}, hip-cpp-output, (device-hip, amdgcnspirv)
 // SPIRV-ONLY-NEXT: 9: compiler, {8}, ir, (device-hip, amdgcnspirv)
-// SPIRV-ONLY-NEXT: 10: backend, {9}, assembler, (device-hip, amdgcnspirv)
-// SPIRV-ONLY-NEXT: 11: assembler, {10}, object, (device-hip, amdgcnspirv)
-// SPIRV-ONLY-NEXT: 12: linker, {11}, image, (device-hip, amdgcnspirv)
-// SPIRV-ONLY-NEXT: 13: offload, "device-hip (spirv64-amd-amdhsa:amdgcnspirv)" {12}, image
-// SPIRV-ONLY-NEXT: 14: linker, {6, 13}, hip-fatbin, (device-hip)
-// SPIRV-ONLY-NEXT: 15: offload, "device-hip (amdgcn-amd-amdhsa)" {14}, none
+// SPIRV-ONLY-NEXT: 10: backend, {9}, ir, (device-hip, amdgcnspirv)
+// SPIRV-ONLY-NEXT: 11: linker, {10}, image, (device-hip, amdgcnspirv)
+// SPIRV-ONLY-NEXT: 12: offload, "device-hip (spirv64-amd-amdhsa:amdgcnspirv)" {11}, image
+// SPIRV-ONLY-NEXT: 13: linker, {6, 12}, hip-fatbin, (device-hip)
+// SPIRV-ONLY-NEXT: 14: offload, "device-hip (amdgcn-amd-amdhsa)" {13}, none
