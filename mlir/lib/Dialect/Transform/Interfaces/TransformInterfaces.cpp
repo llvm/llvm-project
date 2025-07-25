@@ -24,8 +24,12 @@
 #define DEBUG_TYPE_FULL "transform-dialect-full"
 #define DEBUG_PRINT_AFTER_ALL "transform-dialect-print-top-level-after-all"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "] ")
+#ifndef NDEBUG
 #define FULL_LDBG(X)                                                           \
   DEBUGLOG_WITH_STREAM_AND_TYPE(llvm::dbgs(), DEBUG_TYPE_FULL)
+#else
+#define FULL_LDBG(X)
+#endif
 
 using namespace mlir;
 
