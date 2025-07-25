@@ -159,6 +159,7 @@ libc_support_library(
     hdrs = ["include/llvm-libc-types/float128.h"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
+        "@platforms//os:windows": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [":llvm_libc_macros_float_macros"],
