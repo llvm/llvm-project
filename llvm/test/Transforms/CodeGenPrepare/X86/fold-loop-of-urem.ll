@@ -1067,6 +1067,22 @@ for.body:
 }
 
 define i64 @pr150611_add_offset_is_not_loop_invariant(i1 %cond) {
+; CHECK-LABEL: define i64 @pr150611_add_offset_is_not_loop_invariant(
+; CHECK-SAME: i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[REMAMT:%.*]] = select i1 [[COND]], i64 2, i64 0
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[INDVARS:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[ADD_OFFSET:%.*]] = zext i1 [[COND]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i64 [[INDVARS]], [[ADD_OFFSET]]
+; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[ADD]], [[REMAMT]]
+; CHECK-NEXT:    [[INDVARS_NEXT]] = add nuw i64 [[INDVARS]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_NEXT]], 3
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_EXIT:.*]], label %[[FOR_BODY]]
+; CHECK:       [[FOR_EXIT]]:
+; CHECK-NEXT:    ret i64 [[REM]]
+;
 entry:
   %remamt = select i1 %cond, i64 2, i64 0
   br label %for.body
