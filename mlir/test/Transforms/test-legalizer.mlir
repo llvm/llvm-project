@@ -1,10 +1,18 @@
-// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns -verify-diagnostics -profile-actions-to=- %s | FileCheck %s
 
+//      CHECK: "name": "pass-execution", "cat": "PERF", "ph": "B"
+//      CHECK: "name": "apply-conversion", "cat": "PERF", "ph": "B"
+//      CHECK: "name": "apply-pattern", "cat": "PERF", "ph": "B"
+//      CHECK: "name": "apply-pattern", "cat": "PERF", "ph": "E"
+// Note: Listener notifications appear after the pattern application because
+// the conversion driver sends all notifications at the end of the conversion
+// in bulk.
 //      CHECK: notifyOperationInserted: test.legal_op_a, was unlinked
 // CHECK-NEXT: notifyOperationReplaced: test.illegal_op_a
 // CHECK-NEXT: notifyOperationModified: func.return
 // CHECK-NEXT: notifyOperationErased: test.illegal_op_a
-
+//      CHECK: "name": "apply-conversion", "cat": "PERF", "ph": "E"
+//      CHECK: "name": "pass-execution", "cat": "PERF", "ph": "E"
 // CHECK-LABEL: verifyDirectPattern
 func.func @verifyDirectPattern() -> i32 {
   // CHECK-NEXT:  "test.legal_op_a"() <{status = "Success"}
@@ -300,17 +308,34 @@ func.func @create_illegal_block() {
 // -----
 
 // CHECK-LABEL: @undo_block_arg_replace
+// expected-remark@+1{{applyPartialConversion failed}}
+module {
 func.func @undo_block_arg_replace() {
-  // expected-remark@+1 {{op 'test.undo_block_arg_replace' is not legalizable}}
-  "test.undo_block_arg_replace"() ({
-  ^bb0(%arg0: i32):
-    // CHECK: ^bb0(%[[ARG:.*]]: i32):
-    // CHECK-NEXT: "test.return"(%[[ARG]]) : (i32)
+  // expected-error@+1{{failed to legalize operation 'test.block_arg_replace' that was explicitly marked illegal}}
+  "test.block_arg_replace"() ({
+  ^bb0(%arg0: i32, %arg1: i16):
+    // CHECK: ^bb0(%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i16):
+    // CHECK-NEXT: "test.return"(%[[ARG0]]) : (i32)
 
     "test.return"(%arg0) : (i32) -> ()
-  }) : () -> ()
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
+  }) {trigger_rollback} : () -> ()
   return
+}
+}
+
+// -----
+
+// CHECK-LABEL: @replace_block_arg_1_to_n
+func.func @replace_block_arg_1_to_n() {
+  // CHECK: "test.block_arg_replace"
+  "test.block_arg_replace"() ({
+  ^bb0(%arg0: i32, %arg1: i16):
+    // CHECK: ^bb0(%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i16):
+    // CHECK: %[[cast:.*]] = "test.cast"(%[[ARG1]], %[[ARG1]]) : (i16, i16) -> i32
+    // CHECK-NEXT: "test.return"(%[[cast]]) : (i32)
+    "test.return"(%arg0) : (i32) -> ()
+  }) : () -> ()
+  "test.return"() : () -> ()
 }
 
 // -----
@@ -417,7 +442,7 @@ func.func @test_properties_rollback() {
   // CHECK: test.with_properties a = 32,
   // expected-remark @below{{op 'test.with_properties' is not legalizable}}
   test.with_properties
-      a = 32, b = "foo", c = "bar", flag = true, array = [1, 2, 3, 4]
+      a = 32, b = "foo", c = "bar", flag = true, array = [1, 2, 3, 4], array32 = [5, 6]
       {modify_inplace}
   "test.return"() : () -> ()
 }

@@ -514,6 +514,18 @@ func.func @negative_extract_vec_fma(%arg0: vector<4xf32>, %arg1: vector<4xf32>, 
   return %1 : f32
 }
 
+// CHECK-LABEL: @negative_extract_dynamic_pos
+func.func @negative_extract_dynamic_pos(%arg0: vector<4xf32>, %arg1 : vector<4xf32>, %idx : vector<4xindex>) -> f32 {
+  // CHECK-NOT: vector.extract
+  // CHECK: arith.addf %{{.*}}, %{{.*}} : vector<4xf32>
+  // CHECK: vector.extract
+  // CHECK: vector.extract
+  %0 = arith.addf %arg0, %arg1 : vector<4xf32>
+  %1 = vector.extract %idx[0] : index from vector<4xindex>
+  %2 = vector.extract %0[%1] : f32 from vector<4xf32>
+  return %2 : f32
+}
+
 //-----------------------------------------------------------------------------
 // [Pattern: ExtractOpFromLoad]
 //-----------------------------------------------------------------------------

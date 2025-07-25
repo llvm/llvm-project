@@ -136,3 +136,18 @@ entry:
   %0 = load i64, ptr %arrayidx, align 8
   ret i64 %0
 }
+
+define <2 x i64> @loadv2i64_shr1(i64 %a, i64 %b, ptr %table) {
+; CHECK-LABEL: loadv2i64_shr1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mul x8, x1, x0
+; CHECK-NEXT:    lsr x8, x8, #1
+; CHECK-NEXT:    ldr q0, [x2, x8, lsl #4]
+; CHECK-NEXT:    ret
+entry:
+  %mul = mul i64 %b, %a
+  %shr = lshr i64 %mul, 1
+  %arrayidx = getelementptr inbounds <2 x i64>, ptr %table, i64 %shr
+  %0 = load <2 x i64>, ptr %arrayidx, align 16
+  ret <2 x i64> %0
+}

@@ -9,20 +9,17 @@
 #include "src/math/powf.h"
 #include "common_constants.h" // Lookup tables EXP_M1 and EXP_M2.
 #include "src/__support/CPP/bit.h"
-#include "src/__support/CPP/optional.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
-#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
-#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/sqrt.h" // Speedup for powf(x, 1/2) = sqrtf(x)
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/math/exp10f.h" // Speedup for powf(10, y) = exp10f(y)
 
-#include "exp10f_impl.h" // Speedup for powf(10, y) = exp10f(y)
 #include "exp2f_impl.h"  // Speedup for powf(2, y) = exp2f(y)
 
 namespace LIBC_NAMESPACE_DECL {
@@ -781,7 +778,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
       return generic::exp2f(y);
     case 0x4120'0000: // x = 10.0f
       // pow(10, y) = exp10(y)
-      return generic::exp10f(y);
+      return math::exp10f(y);
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     }
 

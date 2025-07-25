@@ -137,6 +137,7 @@ static bool NeededLibraries;
 static bool Notes;
 static bool ProgramHeaders;
 static bool SectionGroups;
+static std::vector<std::string> SFrame;
 static bool VersionInfo;
 
 // Mach-O specific options.
@@ -275,6 +276,7 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::PrettyPrint = Args.hasArg(OPT_pretty_print);
   opts::ProgramHeaders = Args.hasArg(OPT_program_headers);
   opts::SectionGroups = Args.hasArg(OPT_section_groups);
+  opts::SFrame = Args.getAllArgValues(OPT_sframe_EQ);
   if (Arg *A = Args.getLastArg(OPT_sort_symbols_EQ)) {
     for (StringRef KeyStr : llvm::split(A->getValue(), ",")) {
       SortSymbolKeyTy KeyType = StringSwitch<SortSymbolKeyTy>(KeyStr)
@@ -478,6 +480,8 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
       Dumper->printNotes();
     if (opts::Memtag)
       Dumper->printMemtag();
+    if (!opts::SFrame.empty())
+      Dumper->printSectionsAsSFrame(opts::SFrame);
   }
   if (Obj.isCOFF()) {
     if (opts::COFFImports)

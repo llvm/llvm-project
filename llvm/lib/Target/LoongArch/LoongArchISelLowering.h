@@ -60,6 +60,10 @@ enum NodeType : unsigned {
 
   FTINT,
 
+  // Build and split F64 pair
+  BUILD_PAIR_F64,
+  SPLIT_PAIR_F64,
+
   // Bit counting operations
   CLZ_W,
   CTZ_W,
@@ -372,6 +376,7 @@ private:
   SDValue lowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBITREVERSE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSCALAR_TO_VECTOR(SDValue Op, SelectionDAG &DAG) const;

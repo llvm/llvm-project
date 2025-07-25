@@ -22,7 +22,6 @@ defm module_files_dir : Eq<"module-files-dir",
 
 def optimize_args_EQ : CommaJoined<["-", "--"], "optimize-args=">, HelpText<"Which command-line arguments of modules to optimize">;
 def eager_load_pcm : F<"eager-load-pcm", "Load PCM files eagerly (instead of lazily on import)">;
-def no_cache_negative_stats : F<"no-cache-negative-stats", "Don't cache stat failures">;
 
 def j : Arg<"j", "Number of worker threads to use (default: use all concurrent threads)">;
 
@@ -37,6 +36,9 @@ def deprecated_driver_command : F<"deprecated-driver-command", "use a single dri
 defm resource_dir_recipe : Eq<"resource-dir-recipe", "How to produce missing '-resource-dir' argument">;
 
 def print_timing : F<"print-timing", "Print timing information">;
+
+def emit_visible_modules
+    : F<"emit-visible-modules", "emit visible modules in primary output">;
 
 def verbose : F<"v", "Use verbose output">;
 

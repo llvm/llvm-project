@@ -33,11 +33,9 @@
 
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/LivenessAnalysis.h"
-#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
@@ -347,8 +345,6 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // since it forwards only to non-live value(s) (%1#1).
   Operation *lastReturnOp = funcOp.back().getTerminator();
   size_t numReturns = lastReturnOp->getNumOperands();
-  if (numReturns == 0)
-    return;
   BitVector nonLiveRets(numReturns, true);
   for (SymbolTable::SymbolUse use : uses) {
     Operation *callOp = use.getUser();
@@ -370,6 +366,8 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   cl.functions.push_back({funcOp, nonLiveArgs, nonLiveRets});
 
   // Do (5) and (6).
+  if (numReturns == 0)
+    return;
   for (SymbolTable::SymbolUse use : uses) {
     Operation *callOp = use.getUser();
     assert(isa<CallOpInterface>(callOp) && "expected a call-like user");

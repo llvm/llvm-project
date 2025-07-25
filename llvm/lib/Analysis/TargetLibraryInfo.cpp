@@ -814,6 +814,7 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_pclose);
     TLI.setUnavailable(LibFunc_popen);
     TLI.setUnavailable(LibFunc_pread);
+    TLI.setUnavailable(LibFunc_pvalloc);
     TLI.setUnavailable(LibFunc_pwrite);
     TLI.setUnavailable(LibFunc_read);
     TLI.setUnavailable(LibFunc_readlink);
@@ -926,12 +927,6 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
                        ArrayRef<StringLiteral> StandardNames) {
   initializeBase(TLI, T);
   initializeLibCalls(TLI, T, StandardNames);
-}
-
-TargetLibraryInfoImpl::TargetLibraryInfoImpl() {
-  // Default to nothing being available.
-  memset(AvailableArray, 0, sizeof(AvailableArray));
-  initializeBase(*this, Triple());
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T) {
@@ -1127,7 +1122,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_cabsf:
   case LibFunc_cabsl: {
     Type *RetTy = FTy.getReturnType();
-    if (!RetTy->isFloatingPointTy())
+    if (!RetTy->isFloatingPointTy() || NumParams == 0)
       return false;
 
     Type *ParamTy = FTy.getParamType(0);
@@ -1498,7 +1493,7 @@ unsigned TargetLibraryInfoImpl::getSizeTSize(const Module &M) const {
 }
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass()
-    : ImmutablePass(ID), TLA(TargetLibraryInfoImpl()) {}
+    : ImmutablePass(ID), TLA(TargetLibraryInfoImpl(Triple())) {}
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass(const Triple &T)
     : ImmutablePass(ID), TLA(TargetLibraryInfoImpl(T)) {}

@@ -22,7 +22,6 @@
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegister.h"
@@ -1081,7 +1080,7 @@ public:
 
     if (isADR(Inst) || RelType == ELF::R_AARCH64_ADR_PREL_LO21 ||
         RelType == ELF::R_AARCH64_TLSDESC_ADR_PREL21) {
-      return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_ABS, Ctx);
+      return MCSpecifierExpr::create(Expr, AArch64::S_ABS, Ctx);
     } else if (isADRP(Inst) || RelType == ELF::R_AARCH64_ADR_PREL_PG_HI21 ||
                RelType == ELF::R_AARCH64_ADR_PREL_PG_HI21_NC ||
                RelType == ELF::R_AARCH64_TLSDESC_ADR_PAGE21 ||
@@ -1089,7 +1088,7 @@ public:
                RelType == ELF::R_AARCH64_ADR_GOT_PAGE) {
       // Never emit a GOT reloc, we handled this in
       // RewriteInstance::readRelocations().
-      return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_ABS_PAGE, Ctx);
+      return MCSpecifierExpr::create(Expr, AArch64::S_ABS_PAGE, Ctx);
     } else {
       switch (RelType) {
       case ELF::R_AARCH64_ADD_ABS_LO12_NC:
@@ -1103,18 +1102,18 @@ public:
       case ELF::R_AARCH64_TLSDESC_LD64_LO12:
       case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
       case ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
-        return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_LO12, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64::S_LO12, Ctx);
       case ELF::R_AARCH64_MOVW_UABS_G3:
-        return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_ABS_G3, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64::S_ABS_G3, Ctx);
       case ELF::R_AARCH64_MOVW_UABS_G2:
       case ELF::R_AARCH64_MOVW_UABS_G2_NC:
-        return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_ABS_G2_NC, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64::S_ABS_G2_NC, Ctx);
       case ELF::R_AARCH64_MOVW_UABS_G1:
       case ELF::R_AARCH64_MOVW_UABS_G1_NC:
-        return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_ABS_G1_NC, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64::S_ABS_G1_NC, Ctx);
       case ELF::R_AARCH64_MOVW_UABS_G0:
       case ELF::R_AARCH64_MOVW_UABS_G0_NC:
-        return MCSpecifierExpr::create(Expr, AArch64MCExpr::VK_ABS_G0_NC, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64::S_ABS_G0_NC, Ctx);
       default:
         break;
       }
@@ -1206,8 +1205,7 @@ public:
       OI = Inst.begin() + 2;
     }
 
-    *OI = MCOperand::createExpr(
-        MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
+    *OI = MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx));
   }
 
   /// Matches indirect branch patterns in AArch64 related to a jump table (JT),
@@ -1633,8 +1631,7 @@ public:
                           .addImm(0));
     Code.emplace_back(MCInstBuilder(AArch64::Bcc)
                           .addImm(AArch64CC::EQ)
-                          .addExpr(MCSymbolRefExpr::create(
-                              Target, MCSymbolRefExpr::VK_None, *Ctx)));
+                          .addExpr(MCSymbolRefExpr::create(Target, *Ctx)));
     return Code;
   }
 
@@ -1656,8 +1653,7 @@ public:
                           .addImm(0));
     Code.emplace_back(MCInstBuilder(AArch64::Bcc)
                           .addImm(AArch64CC::NE)
-                          .addExpr(MCSymbolRefExpr::create(
-                              Target, MCSymbolRefExpr::VK_None, *Ctx)));
+                          .addExpr(MCSymbolRefExpr::create(Target, *Ctx)));
     return Code;
   }
 
@@ -1957,8 +1953,7 @@ public:
     Inst.setOpcode(IsTailCall ? AArch64::B : AArch64::BL);
     Inst.clear();
     Inst.addOperand(MCOperand::createExpr(getTargetExprFor(
-        Inst, MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        *Ctx, 0)));
+        Inst, MCSymbolRefExpr::create(Target, *Ctx), *Ctx, 0)));
     if (IsTailCall)
       convertJmpToTailCall(Inst);
   }
@@ -2028,7 +2023,7 @@ public:
     Inst.setOpcode(AArch64::MOVZXi);
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createExpr(
-        MCSpecifierExpr::create(Target, AArch64MCExpr::VK_ABS_G3, *Ctx)));
+        MCSpecifierExpr::create(Target, AArch64::S_ABS_G3, *Ctx)));
     Inst.addOperand(MCOperand::createImm(0x30));
     Seq.emplace_back(Inst);
 
@@ -2037,7 +2032,7 @@ public:
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createExpr(
-        MCSpecifierExpr::create(Target, AArch64MCExpr::VK_ABS_G2_NC, *Ctx)));
+        MCSpecifierExpr::create(Target, AArch64::S_ABS_G2_NC, *Ctx)));
     Inst.addOperand(MCOperand::createImm(0x20));
     Seq.emplace_back(Inst);
 
@@ -2046,7 +2041,7 @@ public:
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createExpr(
-        MCSpecifierExpr::create(Target, AArch64MCExpr::VK_ABS_G1_NC, *Ctx)));
+        MCSpecifierExpr::create(Target, AArch64::S_ABS_G1_NC, *Ctx)));
     Inst.addOperand(MCOperand::createImm(0x10));
     Seq.emplace_back(Inst);
 
@@ -2055,7 +2050,7 @@ public:
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createExpr(
-        MCSpecifierExpr::create(Target, AArch64MCExpr::VK_ABS_G0_NC, *Ctx)));
+        MCSpecifierExpr::create(Target, AArch64::S_ABS_G0_NC, *Ctx)));
     Inst.addOperand(MCOperand::createImm(0));
     Seq.emplace_back(Inst);
 
@@ -2228,9 +2223,8 @@ public:
                           MCContext *Ctx) const override {
     Inst.setOpcode(AArch64::B);
     Inst.clear();
-    Inst.addOperand(MCOperand::createExpr(getTargetExprFor(
-        Inst, MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx),
-        *Ctx, 0)));
+    Inst.addOperand(MCOperand::createExpr(
+        getTargetExprFor(Inst, MCSymbolRefExpr::create(TBB, *Ctx), *Ctx, 0)));
   }
 
   bool shouldRecordCodeRelocation(uint32_t RelType) const override {
@@ -2562,7 +2556,7 @@ public:
     else if (Fixup.getKind() ==
              MCFixupKind(AArch64::fixup_aarch64_pcrel_branch26))
       RelType = ELF::R_AARCH64_JUMP26;
-    else if (FKI.Flags & MCFixupKindInfo::FKF_IsPCRel) {
+    else if (Fixup.isPCRel()) {
       switch (FKI.TargetSize) {
       default:
         return std::nullopt;

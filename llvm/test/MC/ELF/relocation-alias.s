@@ -2,8 +2,8 @@
 # RUN: llvm-objdump --no-print-imm-hex -dr %t | FileCheck %s
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYM
 
-# RUN: not llvm-mc -filetype=obj -triple x86_64 --defsym ERR0=1 %s 2>&1 | FileCheck %s --check-prefix=ERR0 --implicit-check-not=error:
-# RUN: not llvm-mc -filetype=obj -triple x86_64 --defsym ERR=1 %s 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not llvm-mc -filetype=obj -triple x86_64 --defsym ERR0=1 %s -o %t 2>&1 | FileCheck %s --check-prefix=ERR0 --implicit-check-not=error:
+# RUN: not llvm-mc -filetype=obj -triple x86_64 --defsym ERR=1 %s -o %t 2>&1 | FileCheck %s --check-prefix=ERR
 
 ## If a fixup symbol is equated to an undefined symbol, convert the fixup
 ## to be against the target symbol, even if there is a variant (@PLT).
@@ -51,7 +51,7 @@ memcpy_spec1 = __GI_memcpy@PLT+1
 .ifdef ERR
 .text
 ## Note, GNU as emits a relocation for this erroneous fixup.
-# ERR: {{.*}}.s:[[#@LINE+2]]:1: error: expected relocatable expression
+# ERR: {{.*}}.s:[[#@LINE+2]]:6: error: expected relocatable expression
 memcpy_plus_1 = __GI_memcpy+1
 call memcpy_plus_1@PLT
 .endif
