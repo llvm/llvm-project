@@ -1,7 +1,11 @@
 # 'shard' Dialect
 
 This dialect contains a set of attributes, operations and interfaces that
-are useful for representing sharding and communication on a device grid.
+are useful for representing sharding of tensors and communication between
+devices.
+
+The Shard dialect was inspired by GSPMD (GSPMD: General and Scalable
+Parallelization for ML Computation Graphs).
 
 It was originally introduced under the name 'mesh' but was later renamed
 to better reflect its purpose.
