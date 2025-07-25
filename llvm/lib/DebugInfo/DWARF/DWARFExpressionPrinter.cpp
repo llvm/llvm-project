@@ -80,7 +80,7 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
     unsigned Size = Op->getDescription().Op[Operand];
     unsigned Signed = Size & DWARFExpression::Operation::SignBit;
 
-    if (Size ==  DWARFExpression::Operation::SizeSubOpLEB) {
+    if (Size == DWARFExpression::Operation::SizeSubOpLEB) {
       assert(Operand == 0);
       assert(SubOpcode);
     } else if (Size == DWARFExpression::Operation::BaseTypeRef && U) {

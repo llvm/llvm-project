@@ -6942,8 +6942,8 @@ static void FixupDebugInfoForOutlinedFunction(
     NewVar = llvm::DILocalVariable::get(
         Builder.getContext(), OldVar->getScope(), OldVar->getName(),
         OldVar->getFile(), OldVar->getLine(), OldVar->getType(), arg,
-        OldVar->getFlags(), OldVar->getDWARFMemorySpace(), OldVar->getAlignInBits(),
-        OldVar->getAnnotations());
+        OldVar->getFlags(), OldVar->getDWARFMemorySpace(),
+        OldVar->getAlignInBits(), OldVar->getAnnotations());
     return NewVar;
   };
 

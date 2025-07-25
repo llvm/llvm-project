@@ -757,6 +757,11 @@ public:
   RValue emitAnyExpr(const clang::Expr *e,
                      AggValueSlot aggSlot = AggValueSlot::ignored());
 
+  /// Emits the code necessary to evaluate an arbitrary expression into the
+  /// given memory location.
+  void emitAnyExprToMem(const Expr *e, Address location, Qualifiers quals,
+                        bool isInitializer);
+
   /// Similarly to emitAnyExpr(), however, the result will always be accessible
   /// even if no aggregate location is provided.
   RValue emitAnyExprToTemp(const clang::Expr *e);
@@ -828,6 +833,7 @@ public:
   mlir::Value emitCheckedArgForAssume(const Expr *e);
 
   LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
+  LValue emitCompoundLiteralLValue(const CompoundLiteralExpr *e);
 
   void emitConstructorBody(FunctionArgList &args);
   void emitDestructorBody(FunctionArgList &args);
@@ -911,7 +917,7 @@ public:
   mlir::Value emitScalarExpr(const clang::Expr *e);
 
   mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
-                                      bool isInc, bool isPre);
+                                      cir::UnaryOpKind kind, bool isPre);
 
   /// Build a debug stoppoint if we are emitting debug info.
   void emitStopPoint(const Stmt *s);
@@ -929,6 +935,11 @@ public:
   /// Emit the computation of the specified expression of complex type,
   /// returning the result.
   mlir::Value emitComplexExpr(const Expr *e);
+
+  void emitComplexExprIntoLValue(const Expr *e, LValue dest, bool isInit);
+
+  mlir::Value emitComplexPrePostIncDec(const UnaryOperator *e, LValue lv,
+                                       cir::UnaryOpKind op, bool isPre);
 
   LValue emitComplexAssignmentLValue(const BinaryOperator *e);
 
@@ -980,6 +991,9 @@ public:
 
   RValue emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc);
 
+  /// Load a complex number from the specified l-value.
+  mlir::Value emitLoadOfComplex(LValue src, SourceLocation loc);
+
   /// Given an expression that represents a value lvalue, this method emits
   /// the address of the lvalue, then loads the result as an rvalue,
   /// returning the rvalue.
@@ -1029,6 +1043,8 @@ public:
   RValue emitReferenceBindingToExpr(const Expr *e);
 
   mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
+
+  RValue emitRotate(const CallExpr *e, bool isRotateLeft);
 
   mlir::Value emitScalarConstant(const ConstantEmission &constant, Expr *e);
 
