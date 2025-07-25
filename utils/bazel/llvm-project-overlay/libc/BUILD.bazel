@@ -2232,6 +2232,22 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_asinf",
+    hdrs = ["src/__support/math/asinf.h"],
+    deps = [
+        ":__support_math_inv_trigf_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_erff",
     hdrs = ["src/__support/math/erff.h"],
     deps = [
@@ -2786,14 +2802,7 @@ libc_math_function(
 libc_math_function(
     name = "asinf",
     additional_deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_fputil_sqrt",
-        ":__support_macros_optimization",
-        ":__support_macros_properties_cpu_features",
-        ":__support_math_inv_trigf_utils",
+        ":__support_math_asinf",
     ],
 )
 
