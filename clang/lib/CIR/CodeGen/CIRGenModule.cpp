@@ -1210,7 +1210,6 @@ cir::GlobalOp CIRGenModule::getGlobalForStringLiteral(const StringLiteral *s,
 
 void CIRGenModule::emitExplicitCastExprType(const ExplicitCastExpr *e,
                                             CIRGenFunction *cgf) {
-  // Bind VLAs in the cast type.
   if (cgf && e->getType()->isVariablyModifiedType())
     cgf->emitVariablyModifiedType(e->getType());
 

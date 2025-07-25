@@ -923,7 +923,7 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   return builder.getConstInt(*currSrcLoc, SizeTy, countFromCLAs);
 }
 
-// TODO(cir): most part of this function can be shared between CIRGen
+// TODO(cir): Most of this function can be shared between CIRGen
 // and traditional LLVM codegen
 void CIRGenFunction::emitVariablyModifiedType(QualType type) {
   assert(type->isVariablyModifiedType() &&
@@ -942,7 +942,7 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
     case Type::HLSLAttributedResource:
     case Type::HLSLInlineSpirv:
     case Type::PredefinedSugar:
-      llvm_unreachable("NYI");
+      cgm.errorNYI("CIRGenFunction::emitVariablyModifiedType");
 
 #define TYPE(Class, Base)
 #define ABSTRACT_TYPE(Class, Base)
@@ -950,7 +950,8 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
 #define DEPENDENT_TYPE(Class, Base) case Type::Class:
 #define NON_CANONICAL_UNLESS_DEPENDENT_TYPE(Class, Base)
 #include "clang/AST/TypeNodes.inc"
-      llvm_unreachable("unexpected dependent type!");
+      llvm_unreachable(
+          "dependent type must be resolved before the CIR codegen");
 
     // These types are never variably-modified.
     case Type::Builtin:
