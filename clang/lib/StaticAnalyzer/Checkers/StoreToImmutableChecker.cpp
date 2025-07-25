@@ -1,5 +1,4 @@
-//=== StoreToImmutableChecker.cpp - Store to immutable memory checker -*- C++
-//-*-===//
+//=== StoreToImmutableChecker.cpp - Store to immutable memory ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -49,23 +48,12 @@ bool StoreToImmutableChecker::isConstVariable(const MemRegion *MR,
       return true;
   }
 
-  // Check if this is a ParamVarRegion with a const-qualified type
-  if (const ParamVarRegion *PVR = dyn_cast<ParamVarRegion>(MR)) {
-    const ParmVarDecl *PVD = PVR->getDecl();
-    if (PVD && PVD->getType().isConstQualified())
-      return true;
-  }
-
   // Check if this is a FieldRegion with a const-qualified type
   if (const FieldRegion *FR = dyn_cast<FieldRegion>(MR)) {
     const FieldDecl *FD = FR->getDecl();
     if (FD && FD->getType().isConstQualified())
       return true;
   }
-
-  // Check if this is a StringRegion (string literals are const)
-  if (isa<StringRegion>(MR))
-    return true;
 
   // Check if this is a SymbolicRegion with a const-qualified pointee type
   if (const SymbolicRegion *SR = dyn_cast<SymbolicRegion>(MR)) {
@@ -101,7 +89,7 @@ void StoreToImmutableChecker::checkBind(SVal Loc, SVal Val, const Stmt *S,
 
   // Skip variable declarations and initializations - we only want to catch
   // actual writes
-  if (isa<DeclStmt>(S) || isa<DeclRefExpr>(S))
+  if (isa<DeclStmt, DeclRefExpr>(S))
     return;
 
   // Check if the region corresponds to a const variable

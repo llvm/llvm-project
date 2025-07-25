@@ -819,7 +819,7 @@ class SymbolicRegion : public SubRegion {
            s->getType()->isReferenceType() ||
            s->getType()->isBlockPointerType());
     assert(isa<UnknownSpaceRegion>(sreg) || isa<HeapSpaceRegion>(sreg) ||
-           isa<GlobalSystemSpaceRegion>(sreg) || isa<GlobalImmutableSpaceRegion>(sreg));
+           isa<GlobalSystemSpaceRegion>(sreg));
   }
 
 public:
