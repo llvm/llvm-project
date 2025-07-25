@@ -200,11 +200,6 @@ std::optional<llvm::ArrayRef<int64_t>> getComponentLowerBoundsIfNonDefault(
     fir::RecordType recordType, llvm::StringRef component,
     mlir::ModuleOp module, const mlir::SymbolTable *symbolTable = nullptr);
 
-// Convert FIR type to LLVM without turning fir.box<T> into memory
-// reference.
-mlir::Type convertObjectType(const fir::LLVMTypeConverter &converter,
-                             mlir::Type firType);
-
 /// Generate a LLVM constant value of type `ity`, using the provided offset.
 mlir::LLVM::ConstantOp
 genConstantIndex(mlir::Location loc, mlir::Type ity,

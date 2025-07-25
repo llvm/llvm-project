@@ -51,13 +51,6 @@ std::optional<llvm::ArrayRef<int64_t>> fir::getComponentLowerBoundsIfNonDefault(
   return std::nullopt;
 }
 
-mlir::Type fir::convertObjectType(const fir::LLVMTypeConverter &converter,
-                                  mlir::Type firType) {
-  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(firType))
-    return converter.convertBoxTypeAsStruct(boxTy);
-  return converter.convertType(firType);
-}
-
 mlir::LLVM::ConstantOp
 fir::genConstantIndex(mlir::Location loc, mlir::Type ity,
                       mlir::ConversionPatternRewriter &rewriter,
