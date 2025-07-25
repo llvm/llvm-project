@@ -47,9 +47,8 @@ define amdgpu_kernel void @barrier_release(<4 x i32> inreg %rsrc,
 ; GFX90A-NEXT:    buffer_load_dword v0, s[8:11], 0 offen lds
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, s13
 ; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x3c
-; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_barrier
-; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    ds_read_b32 v0, v0
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
@@ -93,9 +92,8 @@ define amdgpu_kernel void @barrier_release(<4 x i32> inreg %rsrc,
 ; GFX942-NEXT:    buffer_load_dword v0, s[8:11], 0 offen lds
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s13
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x3c
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    s_barrier
-; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    ds_read_b32 v0, v0
 ; GFX942-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
@@ -151,8 +149,8 @@ define amdgpu_kernel void @barrier_release(<4 x i32> inreg %rsrc,
 ; GFX10CU-NEXT:    s_mov_b32 m0, s12
 ; GFX10CU-NEXT:    buffer_load_dword v0, s[8:11], 0 offen lds
 ; GFX10CU-NEXT:    v_mov_b32_e32 v0, s13
-; GFX10CU-NEXT:    s_barrier
 ; GFX10CU-NEXT:    s_waitcnt vmcnt(0)
+; GFX10CU-NEXT:    s_barrier
 ; GFX10CU-NEXT:    ds_read_b32 v0, v0
 ; GFX10CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10CU-NEXT:    global_store_dword v1, v0, s[14:15]
@@ -183,6 +181,7 @@ define amdgpu_kernel void @fence_fence(<4 x i32> inreg %rsrc,
 ; GFX900-NEXT:    s_nop 0
 ; GFX900-NEXT:    buffer_load_dword v1, s[0:3], 0 offen lds
 ; GFX900-NEXT:    v_mov_b32_e32 v1, 1
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    global_store_dword v0, v1, s[8:9]
 ; GFX900-NEXT:    global_load_dword v1, v0, s[8:9]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
@@ -207,7 +206,7 @@ define amdgpu_kernel void @fence_fence(<4 x i32> inreg %rsrc,
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-NEXT:    buffer_load_dword v1, s[8:11], 0 offen lds
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, 1
-; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90A-NEXT:    global_load_dword v1, v0, s[0:1]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
@@ -258,7 +257,7 @@ define amdgpu_kernel void @fence_fence(<4 x i32> inreg %rsrc,
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    buffer_load_dword v1, s[8:11], 0 offen lds
 ; GFX942-NEXT:    v_mov_b32_e32 v1, 1
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    global_store_dword v0, v1, s[0:1] sc0
 ; GFX942-NEXT:    global_load_dword v1, v0, s[0:1] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -330,6 +329,7 @@ define amdgpu_kernel void @fence_fence(<4 x i32> inreg %rsrc,
 ; GFX10CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10CU-NEXT:    s_mov_b32 m0, s6
 ; GFX10CU-NEXT:    buffer_load_dword v0, s[0:3], 0 offen lds
+; GFX10CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10CU-NEXT:    global_store_dword v1, v2, s[8:9]
 ; GFX10CU-NEXT:    global_load_dword v0, v1, s[8:9]
 ; GFX10CU-NEXT:    s_waitcnt vmcnt(0)
@@ -366,6 +366,7 @@ define amdgpu_kernel void @release_acquire(<4 x i32> inreg %rsrc,
 ; GFX900-NEXT:    s_nop 0
 ; GFX900-NEXT:    buffer_load_dword v1, s[0:3], 0 offen lds
 ; GFX900-NEXT:    v_mov_b32_e32 v1, 1
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    global_store_dword v0, v1, s[8:9]
 ; GFX900-NEXT:    global_load_dword v1, v0, s[8:9]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
@@ -390,7 +391,7 @@ define amdgpu_kernel void @release_acquire(<4 x i32> inreg %rsrc,
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-NEXT:    buffer_load_dword v1, s[8:11], 0 offen lds
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, 1
-; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90A-NEXT:    global_load_dword v1, v0, s[0:1]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
@@ -441,7 +442,7 @@ define amdgpu_kernel void @release_acquire(<4 x i32> inreg %rsrc,
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    buffer_load_dword v1, s[8:11], 0 offen lds
 ; GFX942-NEXT:    v_mov_b32_e32 v1, 1
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    global_store_dword v0, v1, s[0:1] sc0
 ; GFX942-NEXT:    global_load_dword v1, v0, s[0:1] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -512,6 +513,7 @@ define amdgpu_kernel void @release_acquire(<4 x i32> inreg %rsrc,
 ; GFX10CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10CU-NEXT:    s_mov_b32 m0, s6
 ; GFX10CU-NEXT:    buffer_load_dword v1, s[0:3], 0 offen lds
+; GFX10CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10CU-NEXT:    global_store_dword v0, v2, s[8:9]
 ; GFX10CU-NEXT:    global_load_dword v1, v0, s[8:9]
 ; GFX10CU-NEXT:    s_waitcnt vmcnt(0)
