@@ -7296,17 +7296,15 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
       if (!ArgVT.isVector() && !ValVT.isVector() && ArgVT.isInteger() &&
           ValVT.isInteger() &&
           ArgVT.getScalarSizeInBits() < ValVT.getScalarSizeInBits()) {
-        // It is possible to have either real integer values that aren't
-        // the power of two sizes, or integers that were not originally
-        // integers. In the latter case, these could have came from structs,
+        // It is possible to have either real integer values
+        // or integers that were not originally integers.
+        // In the latter case, these could have came from structs,
         // and these integers would not have an extend on the parameter.
         // Since these types of integers do not have an extend specified
         // in the first place, the type of extend that we do should not matter.
-        EVT TruncatedArgVT;
-        if (ArgVT.isSimple())
-          TruncatedArgVT = ArgVT.getSimpleVT() == MVT::i1 ? MVT::i8 : ArgVT;
-        else
-          TruncatedArgVT = ArgVT;
+        EVT TruncatedArgVT = ArgVT.isSimple() && ArgVT.getSimpleVT() == MVT::i1
+                                 ? MVT::i8
+                                 : ArgVT;
         SDValue ArgValueTrunc =
             DAG.getNode(ISD::TRUNCATE, dl, TruncatedArgVT, ArgValue);
         SDValue ArgValueExt =
