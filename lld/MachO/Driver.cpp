@@ -296,19 +296,50 @@ public:
 };
 using DeferredFiles = std::vector<DeferredFile>;
 
-class BackgroundQueue {
+class SerialBackgroundQueue {
   std::deque<std::function<void()>> queue;
   std::thread *running;
   std::mutex mutex;
 
 public:
-  void queueWork(std::function<void()> work, bool reap);
+  void queueWork(std::function<void()> work, bool reap) {
+    mutex.lock();
+    if (running && (queue.empty() || reap)) {
+      mutex.unlock();
+      running->join();
+      mutex.lock();
+      delete running;
+      running = nullptr;
+    }
+
+    if (!reap) {
+      queue.emplace_back(std::move(work));
+      if (!running)
+        running = new std::thread([&]() {
+          bool shouldPop = false;
+          while (true) {
+            mutex.lock();
+            if (shouldPop)
+              queue.pop_front();
+            if (queue.empty()) {
+              mutex.unlock();
+              break;
+            }
+            auto work = std::move(queue.front());
+            shouldPop = true;
+            mutex.unlock();
+            work();
+          }
+        });
+    }
+    mutex.unlock();
+  }
 };
 
-// #ifndef NDEBUG
+#ifndef NDEBUG
 #include <iomanip>
 #include <iostream>
-// #endif
+#endif
 
 // Most input files have been mapped but not yet paged in.
 // This code forces the page-ins on multiple threads so
@@ -341,50 +372,15 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
   });
 
   LLVM_ATTRIBUTE_UNUSED auto dt = high_resolution_clock::now() - t0;
-  //  LLVM_DEBUG(;
-  if (Process::GetEnv("LLD_MULTI_THREAD_PAGE"))
-    std::cerr << "multiThreadedPageIn " << totalBytes << "/" << included << "/"
-              << deferred.size() << "/" << std::setprecision(4)
-              << duration_cast<milliseconds>(dt).count() / 1000. << "\n";
-  //  );
-}
-
-void BackgroundQueue::queueWork(std::function<void()> work, bool reap) {
-  mutex.lock();
-  if (running && (queue.empty() || reap)) {
-    mutex.unlock();
-    running->join();
-    mutex.lock();
-    delete running;
-    running = nullptr;
-  }
-
-  if (!reap) {
-    queue.emplace_back(work);
-    if (!running)
-      running = new std::thread([&]() {
-        bool shouldPop = false;
-        while (true) {
-          mutex.lock();
-          if (shouldPop)
-            queue.pop_front();
-          if (queue.empty()) {
-            mutex.unlock();
-            break;
-          }
-          auto work = std::move(queue.front());
-          shouldPop = true;
-          mutex.unlock();
-          work();
-        }
-      });
-  }
-  mutex.unlock();
+  LLVM_DEBUG(if (Process::GetEnv("LLD_MULTI_THREAD_PAGE")) std::cerr
+             << "multiThreadedPageIn " << totalBytes << "/" << included << "/"
+             << deferred.size() << "/" << std::setprecision(4)
+             << duration_cast<milliseconds>(dt).count() / 1000. << "\n");
 }
 
 static void multiThreadedPageIn(const DeferredFiles &deferred,
                                 bool reap = false) {
-  static BackgroundQueue pageInQueue;
+  static SerialBackgroundQueue pageInQueue;
   pageInQueue.queueWork(
       [=]() {
         DeferredFiles files = deferred;
