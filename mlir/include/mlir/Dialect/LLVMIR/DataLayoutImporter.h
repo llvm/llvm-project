@@ -58,7 +58,7 @@ public:
     // - non-default address space pointer specifications default to the default
     //   address space pointer specification
     // - the alloca address space defaults to the default address space.
-    dataLayoutSpec = dataLayoutSpecFromDataLayoutStr(dataLayoutStr);
+    dataLayoutSpec = dataLayoutSpecFromDataLayoutStr();
   }
 
   /// Returns the MLIR data layout specification translated from the LLVM
@@ -75,8 +75,7 @@ public:
 
 private:
   /// Translates the LLVM `dataLayout` to an MLIR data layout specification.
-  DataLayoutSpecInterface
-  dataLayoutSpecFromDataLayoutStr(StringRef dataLayoutStr);
+  DataLayoutSpecInterface dataLayoutSpecFromDataLayoutStr();
 
   /// Tries to parse the letter only prefix that identifies the specification
   /// and removes the consumed characters from the beginning of the string.

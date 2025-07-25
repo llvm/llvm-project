@@ -1033,8 +1033,9 @@ LogicalResult ModuleImport::convertAliases() {
 
 LogicalResult ModuleImport::convertDataLayout() {
   Location loc = mlirModule.getLoc();
-  DataLayoutImporter dataLayoutImporter(context, llvmModule->getDataLayout());
-  if (!dataLayoutImporter.getDataLayout())
+  DataLayoutImporter dataLayoutImporter(
+      context, llvmModule->getDataLayout().getStringRepresentation());
+  if (!dataLayoutImporter.getDataLayoutSpec())
     return emitError(loc, "cannot translate data layout: ")
            << dataLayoutImporter.getLastToken();
 
@@ -1042,7 +1043,7 @@ LogicalResult ModuleImport::convertDataLayout() {
     emitWarning(loc, "unhandled data layout token: ") << token;
 
   mlirModule->setAttr(DLTIDialect::kDataLayoutAttrName,
-                      dataLayoutImporter.getDataLayout());
+                      dataLayoutImporter.getDataLayoutSpec());
   return success();
 }
 

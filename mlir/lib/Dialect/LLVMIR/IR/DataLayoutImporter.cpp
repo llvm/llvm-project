@@ -274,15 +274,14 @@ DataLayoutImporter::tryToEmplaceLegalIntWidthsEntry(StringRef token) {
 }
 
 DataLayoutSpecInterface
-DataLayoutImporter::dataLayoutSpecFromDataLayoutStr(StringRef dataLayoutStr) {
-  std::string dataLayoutStrToParse(dataLayoutStr);
-  if (!dataLayoutStrToParse.empty())
-    dataLayoutStrToParse += "-";
-  dataLayoutStrToParse += kDefaultDataLayout;
+DataLayoutImporter::dataLayoutSpecFromDataLayoutStr() {
+  if (!dataLayoutStr.empty())
+    dataLayoutStr += "-";
+  dataLayoutStr += kDefaultDataLayout;
 
   // Split the data layout string into tokens separated by a dash.
   SmallVector<StringRef> tokens;
-  StringRef(dataLayoutStrToParse).split(tokens, '-');
+  StringRef(dataLayoutStr).split(tokens, '-');
 
   for (StringRef token : tokens) {
     lastToken = token;
