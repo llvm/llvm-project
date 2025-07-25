@@ -3714,8 +3714,8 @@ struct Conv1DGenerator
     }
     }
 
-    return rewriter
-        .create<vector::TransferWriteOp>(loc, res, resShaped, resPadding)
+    return vector::TransferWriteOp::create(rewriter, loc, res, resShaped,
+                                           resPadding)
         .getOperation();
   }
 

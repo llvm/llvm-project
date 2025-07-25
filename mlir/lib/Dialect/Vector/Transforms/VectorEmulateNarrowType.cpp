@@ -132,17 +132,16 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
                 return vector::CreateMaskOp::create(rewriter, loc, newMaskType,
                                                     newMaskOperands);
               })
-          .Case<vector::ConstantMaskOp>(
-              [&](auto constantMaskOp) -> std::optional<Operation *> {
-                // Take the shape of mask, compress its trailing dimension:
-                SmallVector<int64_t> maskDimSizes(
-                    constantMaskOp.getMaskDimSizes());
-                int64_t &maskIndex = maskDimSizes.back();
-                maskIndex = llvm::divideCeil(numFrontPadElems + maskIndex,
-                                             numSrcElemsPerDest);
-                return vector::ConstantMaskOp::create(
-                    rewriter, loc, newMaskType, maskDimSizes);
-              })
+          .Case<vector::ConstantMaskOp>([&](auto constantMaskOp)
+                                            -> std::optional<Operation *> {
+            // Take the shape of mask, compress its trailing dimension:
+            SmallVector<int64_t> maskDimSizes(constantMaskOp.getMaskDimSizes());
+            int64_t &maskIndex = maskDimSizes.back();
+            maskIndex = llvm::divideCeil(numFrontPadElems + maskIndex,
+                                         numSrcElemsPerDest);
+            return vector::ConstantMaskOp::create(rewriter, loc, newMaskType,
+                                                  maskDimSizes);
+          })
           .Case<arith::ConstantOp>([&](auto constantOp)
                                        -> std::optional<Operation *> {
             // TODO: Support multiple dimensions.
@@ -229,9 +228,8 @@ static Value staticallyExtractSubvector(OpBuilder &rewriter, Location loc,
 
   auto resultVectorType =
       VectorType::get({numElemsToExtract}, vectorType.getElementType());
-  return rewriter
-      .create<vector::ExtractStridedSliceOp>(loc, resultVectorType, src,
-                                             offsets, sizes, strides)
+  return vector::ExtractStridedSliceOp::create(rewriter, loc, resultVectorType,
+                                               src, offsets, sizes, strides)
       ->getResult(0);
 }
 

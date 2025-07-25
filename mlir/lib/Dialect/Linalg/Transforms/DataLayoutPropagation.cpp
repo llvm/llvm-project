@@ -1143,10 +1143,9 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp,
 
   // Insert an unPackOp right after the packed generic.
   Value unPackOpRes =
-      rewriter
-          .create<linalg::UnPackOp>(genericOp.getLoc(), newResult,
-                                    destPack.getSource(), innerDimsPos,
-                                    mixedTiles, outerDimsPerm)
+      linalg::UnPackOp::create(rewriter, genericOp.getLoc(), newResult,
+                               destPack.getSource(), innerDimsPos, mixedTiles,
+                               outerDimsPerm)
           .getResult();
 
   return std::make_tuple(newGenericOp, unPackOpRes);
