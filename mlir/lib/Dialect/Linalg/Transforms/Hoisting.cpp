@@ -165,7 +165,8 @@ static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
   Value source = transferRead.getBase();
 
   // Skip view-like Ops and retrive the actual soruce Operation
-  while (auto srcOp = source.getDefiningOp<ViewLikeOpInterface>())
+  while (auto srcOp =
+             dyn_cast_or_null<ViewLikeOpInterface>(source.getDefiningOp()))
     source = srcOp.getViewSource();
 
   llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),

@@ -2498,7 +2498,7 @@ OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {
       matchPattern(adaptor.getFalseValue(), m_Zero()))
     return condition;
 
-  if (auto cmp = condition.getDefiningOp<arith::CmpIOp>()) {
+  if (auto cmp = dyn_cast_or_null<arith::CmpIOp>(condition.getDefiningOp())) {
     auto pred = cmp.getPredicate();
     if (pred == arith::CmpIPredicate::eq || pred == arith::CmpIPredicate::ne) {
       auto cmpLhs = cmp.getLhs();

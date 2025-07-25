@@ -1322,7 +1322,7 @@ static bool isNeutralElementConst(arith::AtomicRMWKind reductionKind,
     return false;
   Attribute valueAttr = getIdentityValueAttr(reductionKind, scalarTy,
                                              state.builder, value.getLoc());
-  if (auto constOp = value.getDefiningOp<arith::ConstantOp>())
+  if (auto constOp = dyn_cast_or_null<arith::ConstantOp>(value.getDefiningOp()))
     return constOp.getValue() == valueAttr;
   return false;
 }

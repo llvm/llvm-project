@@ -62,7 +62,9 @@ struct FoldExpressionOp : public OpRewritePattern<ExpressionOp> {
         continue;
 
       for (Value operand : op.getOperands()) {
-        auto usedExpression = operand.getDefiningOp<ExpressionOp>();
+        auto usedExpression =
+            dyn_cast_if_present<ExpressionOp>(operand.getDefiningOp());
+
         if (!usedExpression)
           continue;
 

@@ -755,7 +755,7 @@ bool MeshSharding::operator!=(const MeshSharding &rhs) const {
 MeshSharding::MeshSharding(::mlir::FlatSymbolRefAttr mesh_) : mesh(mesh_) {}
 
 MeshSharding::MeshSharding(Value rhs) {
-  auto shardingOp = rhs.getDefiningOp<ShardingOp>();
+  auto shardingOp = mlir::dyn_cast<ShardingOp>(rhs.getDefiningOp());
   assert(shardingOp && "expected sharding op");
   auto splitAxes = shardingOp.getSplitAxes().getAxes();
   // If splitAxes are empty, use "empty" constructor.

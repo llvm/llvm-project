@@ -554,7 +554,7 @@ struct ClampClampOptimization : public OpRewritePattern<tosa::ClampOp> {
     Value input = op.getInput();
 
     // Check the input to the CLAMP op is itself a CLAMP.
-    auto clampOp = input.getDefiningOp<tosa::ClampOp>();
+    auto clampOp = dyn_cast_if_present<tosa::ClampOp>(input.getDefiningOp());
     if (!clampOp)
       return failure();
 
@@ -1636,7 +1636,7 @@ OpFoldResult ConcatOp::fold(FoldAdaptor adaptor) {
   for (Value operand : getOperands()) {
     concatOperands.emplace_back(operand);
 
-    auto producer = operand.getDefiningOp<ConcatOp>();
+    auto producer = dyn_cast_or_null<ConcatOp>(operand.getDefiningOp());
     if (!producer)
       continue;
 
