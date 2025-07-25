@@ -2135,24 +2135,45 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
   return success();
 }
 
-/// Need to check if the inner-tiles are static/constant.
+//// This hook considers two cases:
+///   (1) If the input-vector-sizes are empty, then the vector sizes will be
+///       infered. This is only possible when all shapes are static.
+///   (2) If the input-vector-sizes are non-empty (i.e. user provided), then
+///       carry out basic sanity-checking.
 static LogicalResult
 vectorizeUnPackOpPrecondition(linalg::UnPackOp unpackOp,
                               ArrayRef<int64_t> inputVectorSizes) {
+  // If there are no input vector sizes and all shapes are static, there is
+  // nothing left to check.
+  if (inputVectorSizes.empty() && unpackOp.getDestType().hasStaticShape() &&
+      unpackOp.getSourceType().hasStaticShape())
+    return success();
 
-  if (llvm::any_of(unpackOp.getInnerTiles(), [](OpFoldResult res) {
-        return !getConstantIntValue(res).has_value();
-      })) {
-    LDBG() << "Inner-tiles must be constant: " << unpackOp;
+  // The input vector sizes must be equal to:
+  //  * read-vector-rank + write-vector-rank
+  if (!inputVectorSizes.empty()) {
+    if (inputVectorSizes.size() !=
+        unpackOp.getDestRank() + unpackOp.getSourceRank()) {
+      LDBG("Incorrect number of input vector sizes");
+      return failure();
+    }
+  }
+
+  // Check the vector sizes for the write operation.
+  if (failed(vector::isValidMaskedInputVector(
+          unpackOp.getDestType().getShape(),
+          inputVectorSizes.take_back(unpackOp.getDestRank())))) {
+    LDBG("Incorrect number of input vector sizes");
     return failure();
   }
-  ArrayRef<int64_t> resultShape = unpackOp.getDestType().getShape();
-  bool satisfyEmptyCond = inputVectorSizes.empty() &&
-                          unpackOp.getDestType().hasStaticShape() &&
-                          unpackOp.getSourceType().hasStaticShape();
-  if (!satisfyEmptyCond &&
-      failed(vector::isValidMaskedInputVector(resultShape, inputVectorSizes)))
+
+  // Check the vector sizes for the read operation.
+  if (failed(vector::isValidMaskedInputVector(
+          unpackOp.getSourceType().getShape(),
+          inputVectorSizes.take_front(unpackOp.getSourceRank())))) {
+    LDBG("Incorrect number of input vector sizes");
     return failure();
+  }
 
   return success();
 }
