@@ -63,3 +63,4 @@ TEST_F(LlvmLibcAtanpif16Test, MonotonicityProperty) {
     EXPECT_TRUE(result1 < result2);
   }
 }
+
