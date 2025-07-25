@@ -6814,7 +6814,8 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
                       DAG.getConstant(EC.getKnownMinValue() / 2, Dl, MVT::i64));
       SDValue Result = DAG.getMemIntrinsicNode(
           AArch64ISD::STNP, Dl, DAG.getVTList(MVT::Other),
-          {StoreNode->getChain(), Lo, Hi, StoreNode->getBasePtr()},
+          {StoreNode->getChain(), DAG.getBitcast(MVT::v2i64, Lo),
+           DAG.getBitcast(MVT::v2i64, Hi), StoreNode->getBasePtr()},
           StoreNode->getMemoryVT(), StoreNode->getMemOperand());
       return Result;
     }
@@ -27911,16 +27912,16 @@ void AArch64TargetLowering::ReplaceNodeResults(
          MemVT.getScalarSizeInBits() == 32u ||
          MemVT.getScalarSizeInBits() == 64u)) {
 
+      EVT HalfVT = MemVT.getHalfNumVectorElementsVT(*DAG.getContext());
       SDValue Result = DAG.getMemIntrinsicNode(
           AArch64ISD::LDNP, SDLoc(N),
-          DAG.getVTList({MemVT.getHalfNumVectorElementsVT(*DAG.getContext()),
-                         MemVT.getHalfNumVectorElementsVT(*DAG.getContext()),
-                         MVT::Other}),
+          DAG.getVTList({MVT::v2i64, MVT::v2i64, MVT::Other}),
           {LoadNode->getChain(), LoadNode->getBasePtr()},
           LoadNode->getMemoryVT(), LoadNode->getMemOperand());
 
       SDValue Pair = DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), MemVT,
-                                 Result.getValue(0), Result.getValue(1));
+                                 DAG.getBitcast(HalfVT, Result.getValue(0)),
+                                 DAG.getBitcast(HalfVT, Result.getValue(1)));
       Results.append({Pair, Result.getValue(2) /* Chain */});
       return;
     }
