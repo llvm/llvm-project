@@ -45,9 +45,10 @@ protected:
     delete Context;
   }
 
-  void checkExpectedSpaceAndFreeRanges(
-      DXILResourceBindingInfo::RegisterSpace &RegSpace, uint32_t ExpSpace,
-      ArrayRef<uint32_t> ExpValues) {
+  void
+  checkExpectedSpaceAndFreeRanges(hlsl::BindingInfo::RegisterSpace &RegSpace,
+                                  uint32_t ExpSpace,
+                                  ArrayRef<uint32_t> ExpValues) {
     EXPECT_EQ(RegSpace.Space, ExpSpace);
     EXPECT_EQ(RegSpace.FreeRanges.size() * 2, ExpValues.size());
     unsigned I = 0;
@@ -78,7 +79,7 @@ entry:
   EXPECT_EQ(false, DRBI.hasOverlappingBinding());
 
   // check that UAV has exactly one gap
-  DXILResourceBindingInfo::BindingSpaces &UAVSpaces =
+  hlsl::BindingInfo::BindingSpaces &UAVSpaces =
       DRBI.getBindingSpaces(ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.RC, ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.Spaces.size(), 1u);
@@ -88,7 +89,7 @@ entry:
   // check that other kinds of register spaces are all available
   for (auto RC :
        {ResourceClass::SRV, ResourceClass::CBuffer, ResourceClass::Sampler}) {
-    DXILResourceBindingInfo::BindingSpaces &Spaces = DRBI.getBindingSpaces(RC);
+    hlsl::BindingInfo::BindingSpaces &Spaces = DRBI.getBindingSpaces(RC);
     EXPECT_EQ(Spaces.RC, RC);
     EXPECT_EQ(Spaces.Spaces.size(), 0u);
   }
@@ -129,7 +130,7 @@ entry:
   EXPECT_EQ(false, DRBI.hasImplicitBinding());
   EXPECT_EQ(false, DRBI.hasOverlappingBinding());
 
-  DXILResourceBindingInfo::BindingSpaces &SRVSpaces =
+  hlsl::BindingInfo::BindingSpaces &SRVSpaces =
       DRBI.getBindingSpaces(ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.RC, ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.Spaces.size(), 1u);
@@ -137,7 +138,7 @@ entry:
   // (SRVSpaces has only one free space range {6, UINT32_MAX}).
   checkExpectedSpaceAndFreeRanges(SRVSpaces.Spaces[0], 0, {6, UINT32_MAX});
 
-  DXILResourceBindingInfo::BindingSpaces &UAVSpaces =
+  hlsl::BindingInfo::BindingSpaces &UAVSpaces =
       DRBI.getBindingSpaces(ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.RC, ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.Spaces.size(), 2u);
@@ -146,14 +147,14 @@ entry:
   checkExpectedSpaceAndFreeRanges(UAVSpaces.Spaces[1], 20,
                                   {0, 9, 15, UINT32_MAX});
 
-  DXILResourceBindingInfo::BindingSpaces &CBufferSpaces =
+  hlsl::BindingInfo::BindingSpaces &CBufferSpaces =
       DRBI.getBindingSpaces(ResourceClass::CBuffer);
   EXPECT_EQ(CBufferSpaces.RC, ResourceClass::CBuffer);
   EXPECT_EQ(CBufferSpaces.Spaces.size(), 1u);
   checkExpectedSpaceAndFreeRanges(CBufferSpaces.Spaces[0], 0,
                                   {0, 2, 4, UINT32_MAX});
 
-  DXILResourceBindingInfo::BindingSpaces &SamplerSpaces =
+  hlsl::BindingInfo::BindingSpaces &SamplerSpaces =
       DRBI.getBindingSpaces(ResourceClass::Sampler);
   EXPECT_EQ(SamplerSpaces.RC, ResourceClass::Sampler);
   EXPECT_EQ(SamplerSpaces.Spaces.size(), 1u);
@@ -185,7 +186,7 @@ entry:
   EXPECT_EQ(false, DRBI.hasImplicitBinding());
   EXPECT_EQ(true, DRBI.hasOverlappingBinding());
 
-  DXILResourceBindingInfo::BindingSpaces &SRVSpaces =
+  hlsl::BindingInfo::BindingSpaces &SRVSpaces =
       DRBI.getBindingSpaces(ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.RC, ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.Spaces.size(), 2u);
@@ -215,7 +216,7 @@ entry:
   EXPECT_EQ(false, DRBI.hasImplicitBinding());
   EXPECT_EQ(true, DRBI.hasOverlappingBinding());
 
-  DXILResourceBindingInfo::BindingSpaces &SRVSpaces =
+  hlsl::BindingInfo::BindingSpaces &SRVSpaces =
       DRBI.getBindingSpaces(ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.RC, ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.Spaces.size(), 1u);
@@ -248,7 +249,7 @@ entry:
   EXPECT_EQ(false, DRBI.hasImplicitBinding());
   EXPECT_EQ(false, DRBI.hasOverlappingBinding());
 
-  DXILResourceBindingInfo::BindingSpaces &UAVSpaces =
+  hlsl::BindingInfo::BindingSpaces &UAVSpaces =
       DRBI.getBindingSpaces(ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.RC, ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.Spaces.size(), 3u);
@@ -278,7 +279,7 @@ entry:
   EXPECT_EQ(true, DRBI.hasImplicitBinding());
   EXPECT_EQ(false, DRBI.hasOverlappingBinding());
 
-  DXILResourceBindingInfo::BindingSpaces &UAVSpaces =
+  hlsl::BindingInfo::BindingSpaces &UAVSpaces =
       DRBI.getBindingSpaces(ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.RC, ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.Spaces.size(), 1u);
