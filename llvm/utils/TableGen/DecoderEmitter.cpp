@@ -1105,11 +1105,11 @@ std::string CPPType::getParamDecl() const {
   switch (Kind) {
   case TemplateTy:
   case BitsetTy:
-    return "const " + getName() + " &insn";
+    return "const " + getName() + " &Insn";
   case UIntTy:
-    return getName() + " insn";
+    return getName() + " Insn";
   case APIntTy:
-    return "APInt &insn";
+    return "APInt &Insn";
   }
   llvm_unreachable("Unexpected kind");
 }
@@ -1187,7 +1187,7 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
     OS << "  };\n";
     OS << "  if (Idx >= " << Decoders.size() << ")\n";
     OS << "    llvm_unreachable(\"Invalid index!\");\n";
-    OS << "  return decodeFnTable[Idx](S, insn, MI, Address, Decoder, "
+    OS << "  return decodeFnTable[Idx](S, Insn, MI, Address, Decoder, "
           "DecodeComplete);\n";
   } else {
     emitTmpTypeDec();
@@ -1313,7 +1313,7 @@ bool FilterChooser::emitBinaryParser(raw_ostream &OS, indent Indent,
       OS << "insertBits(tmp, ";
     else
       OS << "tmp = ";
-    OS << "fieldFromInstruction(insn, " << EF.Base << ", " << EF.Width << ')';
+    OS << "fieldFromInstruction(Insn, " << EF.Base << ", " << EF.Width << ')';
     if (UseInsertBits)
       OS << ", " << EF.Offset << ", " << EF.Width << ')';
     else if (EF.Offset != 0)
@@ -1344,7 +1344,7 @@ bool FilterChooser::emitDecoder(raw_ostream &OS, indent Indent,
     if (Op.numFields() == 0 && !Op.Decoder.empty()) {
       HasCompleteDecoder = Op.HasCompleteDecoder;
       OS << Indent << "if (!Check(S, " << Op.Decoder
-         << "(MI, insn, Address, Decoder))) { "
+         << "(MI, Insn, Address, Decoder))) { "
          << (HasCompleteDecoder ? "" : "DecodeComplete = false; ")
          << "return MCDisassembler::Fail; }\n";
       break;
@@ -2357,32 +2357,36 @@ static void emitDecodeInstructionAsCallToImpl(formatted_raw_ostream &OS,
                                               const CPPType &Type,
                                               const CPPType &MaxType,
                                               StringRef Suffix) {
-  OS << formatv(
-      "static DecodeStatus decodeInstruction(const uint8_t "
-      "DecodeTable[], MCInst &MI, {}, uint64_t Address, "
-      "const MCDisassembler *DisAsm, const MCSubtargetInfo &STI) {{\n",
-      Type.getParamDecl());
-  // Convert `insn` to max bitwidth type.
+  OS << formatv(R"(
+static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
+    {}, uint64_t Address, const MCDisassembler *DisAsm,
+    const MCSubtargetInfo &STI) {{
+)",
+                Type.getParamDecl());
+
+  // Convert `Insn` to max bitwidth type.
   bool UseAssignment = MaxType.Kind == CPPType::UIntTy ||
                        Type.Kind == CPPType::UIntTy ||
                        Type.Bitwidth == MaxType.Bitwidth;
   if (UseAssignment) {
-    OS << formatv("  {} InsnMaxWidth = insn;", MaxType.getName());
+    OS << formatv("  {} InsnMaxWidth = Insn;", MaxType.getName());
   } else {
     // Expand from smaller bitset type to larger bitset type.
     OS << formatv("  const {} Mask(maskTrailingOnes<uint64_t>(64));\n",
                   Type.getName());
-    OS << formatv("  {} InsnMaxWidth((insn & Mask).to_ulong());\n",
+    OS << formatv("  {} InsnMaxWidth((Insn & Mask).to_ulong());\n",
                   MaxType.getName());
     for (unsigned I = 64; I < Type.Bitwidth; I += 64)
       OS << formatv(
-          "  InsnMaxWidth |= {0}(((insn >> {1}) & Mask).to_ulong()) << {1};\n",
+          "  InsnMaxWidth |= {0}(((Insn >> {1}) & Mask).to_ulong()) << {1};\n",
           MaxType.getName(), I);
   }
 
   OS << formatv(R"(
-  auto DecodeToMCInst = [{}insn](unsigned DecodeIdx, DecodeStatus S, MCInst &MI, uint64_t Address, const MCDisassembler *DisAsm, bool &DecodeComplete) {{
-    return decodeToMCInst{}(DecodeIdx, S, insn, MI, Address, DisAsm, DecodeComplete);
+  auto DecodeToMCInst = [{}Insn](unsigned DecodeIdx, DecodeStatus S, MCInst &MI,
+                                 uint64_t Address, const MCDisassembler *DisAsm,
+                                 bool &DecodeComplete) {{
+    return decodeToMCInst{}(DecodeIdx, S, Insn, MI, Address, DisAsm, DecodeComplete);
   };
   return decodeInstructionImpl(DecodeTable, MI, InsnMaxWidth, Address, DisAsm, STI, DecodeToMCInst);
 }
@@ -2426,7 +2430,7 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
 
   std::string DecodeToMCInstDirectCall =
       "decodeToMCInst" + Suffix.str() +
-      "(DecodeIdx, S, insn, MI, Address, DisAsm, DecodeComplete)";
+      "(DecodeIdx, S, Insn, MI, Address, DisAsm, DecodeComplete)";
   StringRef DecodeToMCInstCall = DecodeToMCInstDirectCall;
   if (IsImplFunction)
     DecodeToMCInstCall =
@@ -2449,9 +2453,9 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
       unsigned Start = decodeULEB128AndIncUnsafe(Ptr);
       unsigned Len = *Ptr++;)";
   if (IsVarLenInst)
-    OS << "\n      makeUp(insn, Start + Len);";
+    OS << "\n      makeUp(Insn, Start + Len);";
   OS << R"(
-      CurFieldValue = fieldFromInstruction(insn, Start, Len);
+      CurFieldValue = fieldFromInstruction(Insn, Start, Len);
       LLVM_DEBUG(dbgs() << Loc << ": OPC_ExtractField(" << Start << ", "
                    << Len << "): " << CurFieldValue << "\n");
       break;
@@ -2488,9 +2492,9 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
       unsigned Start = decodeULEB128AndIncUnsafe(Ptr);
       unsigned Len = *Ptr;)";
   if (IsVarLenInst)
-    OS << "\n      makeUp(insn, Start + Len);";
+    OS << "\n      makeUp(Insn, Start + Len);";
   OS << R"(
-      uint64_t FieldValue = fieldFromInstruction(insn, Start, Len);
+      uint64_t FieldValue = fieldFromInstruction(Insn, Start, Len);
       // Decode the field value.
       unsigned PtrLen = 0;
       uint64_t ExpectedValue = decodeULEB128(++Ptr, &PtrLen);
@@ -2550,7 +2554,7 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
       bool DecodeComplete;)";
   if (IsVarLenInst) {
     OS << "\n      unsigned Len = InstrLenTable[Opc];\n"
-       << "      makeUp(insn, Len);";
+       << "      makeUp(Insn, Len);";
   }
 
   OS << formatv(R"(
@@ -2608,7 +2612,7 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
         // Decode the mask values.
         uint64_t PositiveMask = decodeULEB128AndIncUnsafe(Ptr);
         uint64_t NegativeMask = decodeULEB128AndIncUnsafe(Ptr);
-        bool Failed = (insn & PositiveMask) != 0 || (~insn & NegativeMask) != 0;
+        bool Failed = (Insn & PositiveMask) != 0 || (~Insn & NegativeMask) != 0;
         if (Failed)
           S = MCDisassembler::SoftFail;
         LLVM_DEBUG(dbgs() << Loc << ": OPC_SoftFail: " << (Failed ? "FAIL\n" : "PASS\n"));
