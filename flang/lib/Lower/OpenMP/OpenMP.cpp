@@ -1138,6 +1138,11 @@ struct OpWithBodyGenInfo {
     return *this;
   }
 
+  OpWithBodyGenInfo &setPrivatize(bool value) {
+    privatize = value;
+    return *this;
+  }
+
   /// [inout] converter to use for the clauses.
   lower::AbstractConverter &converter;
   /// [in] Symbol table
@@ -1164,6 +1169,8 @@ struct OpWithBodyGenInfo {
   /// [in] if set to `true`, skip generating nested evaluations and dispatching
   /// any further leaf constructs.
   bool genSkeletonOnly = false;
+  /// [in] enables handling of privatized variable unless set to `false`.
+  bool privatize = true;
 };
 
 /// Create the body (block) for an OpenMP Operation.
@@ -1224,7 +1231,7 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
   // code will use the right symbols.
   bool isLoop = llvm::omp::getDirectiveAssociation(info.dir) ==
                 llvm::omp::Association::Loop;
-  bool privatize = info.clauses;
+  bool privatize = info.clauses && info.privatize;
 
   firOpBuilder.setInsertionPoint(marker);
   std::optional<DataSharingProcessor> tempDsp;
@@ -2098,7 +2105,7 @@ genCanonicalLoopOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    const ConstructQueue &queue,
                    ConstructQueue::const_iterator item,
                    llvm::ArrayRef<const semantics::Symbol *> ivs,
-                   llvm::omp::Directive directive, DataSharingProcessor &dsp) {
+                   llvm::omp::Directive directive) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   assert(ivs.size() == 1 && "Nested loops not yet implemented");
@@ -2191,10 +2198,17 @@ genCanonicalLoopOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     mlir::Value userVal =
         firOpBuilder.create<mlir::arith::AddIOp>(loc, loopLBVar, scaled);
 
-    // The argument is not currently in memory, so make a temporary for the
-    // argument, and store it there, then bind that location to the argument.
+    mlir::OpBuilder::InsertPoint insPt = firOpBuilder.saveInsertionPoint();
+    firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
+    mlir::Type tempTy = converter.genType(*iv);
+    firOpBuilder.restoreInsertionPoint(insPt);
+
+    // Write loop value to loop variable
+    mlir::Value cvtVal = firOpBuilder.createConvert(loc, tempTy, userVal);
+    hlfir::Entity lhs{converter.getSymbolAddress(*iv)};
+    lhs = hlfir::derefPointersAndAllocatables(loc, firOpBuilder, lhs);
     mlir::Operation *storeOp =
-        createAndSetPrivatizedLoopVar(converter, loc, userVal, iv);
+        hlfir::AssignOp::create(firOpBuilder, loc, cvtVal, lhs);
 
     firOpBuilder.setInsertionPointAfter(storeOp);
     return {iv};
@@ -2205,7 +2219,7 @@ genCanonicalLoopOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, nestedEval,
                         directive)
           .setClauses(&item->clauses)
-          .setDataSharingProcessor(&dsp)
+          .setPrivatize(false)
           .setGenRegionEntryCb(ivCallback),
       queue, item, tripcount, cli);
 
@@ -2231,17 +2245,10 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
   cp.processTODO<clause::Partial, clause::Full>(
       loc, llvm::omp::Directive::OMPD_unroll);
 
-  // Even though unroll does not support data-sharing clauses, but this is
-  // required to fill the symbol table.
-  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
-                           /*shouldCollectPreDeterminedSymbols=*/true,
-                           /*useDelayedPrivatization=*/false, symTable);
-  dsp.processStep1();
-
   // Emit the associated loop
   auto canonLoop =
       genCanonicalLoopOp(converter, symTable, semaCtx, eval, loc, queue, item,
-                         iv, llvm::omp::Directive::OMPD_unroll, dsp);
+                         iv, llvm::omp::Directive::OMPD_unroll);
 
   // Apply unrolling to it
   auto cli = canonLoop.getCli();
