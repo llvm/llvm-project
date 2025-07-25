@@ -1,26 +1,21 @@
 # RUN: llc %s --start-before=branch-folder --stop-after=branch-folder -o - \
 # RUN: | FileCheck %s --implicit-check-not=DBG_PHI
 
-## Check that common instructions hoisted from `if.then` and `if.else` into
-## common pred `entry` get merged debug locations. The debug instructions from
-## both branches should get hoisted and killed.
+## Common instructions are hoisted. Check that trailing debug instructions in
+## the range are also hoisted, and don't cause a crash.
 ##
-## The MIR debug instructions have been modified by hand in order to check they
-## can be killed.
-##
-## Check DBG_PHIs are deleted rather than hoisted (implicit-check-not).
+## Note the MIR doesn't match the IR as it's modified from:
+## /home/och/dev/llvm-project/llvm/test/DebugInfo/X86/branch-folder-dbg.mir
 
 # CHECK: bb.0
 # CHECK:      CALL64pcrel32 @f, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
 ## --- Start splice from bb.2.if.else (and debug instructions from bb.1.if.then) ---
-# CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[#]], !DIExpression(),  debug-location ![[#]]
-# CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[#]], !DIExpression(),  debug-location ![[#]]
-# CHECK-NEXT: $edi = MOV32r0 implicit-def dead $eflags, debug-instr-number 2, debug-location !DILocation(line: 0, scope: ![[#]])
-# CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[#]], !DIExpression(DW_OP_LLVM_arg, 0),  debug-location ![[#]]
-# CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[#]], !DIExpression(DW_OP_LLVM_arg, 0),  debug-location ![[#]]
+# CHECK-NEXT: $edi = MOV32r0 implicit-def dead $eflags, debug-location !DILocation(line: 0, scope: ![[#]])
+# CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[#]], !DIExpression(),  debug-location
+# CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[#]], !DIExpression(),  debug-location
 ## --- End splice ------------------------------------------------------------------
 # CHECK-NEXT: TEST64rr killed renamable $rax, renamable $rax, implicit-def $eflags
-# CHECK-NEXT: JCC_1 %bb.2, 9, implicit killed $eflags
+# CHECK-NEXT: JCC_1 %bb.2, 8, implicit $eflags
 # CHECK: bb.1
 
 --- |
@@ -36,15 +31,11 @@
     br i1 %cmp1, label %if.then, label %if.else
 
   if.then:                                          ; preds = %0
-      #dbg_value(i64 0, !11, !DIExpression(), !13)
     tail call void @_Z3fooii(i32 noundef %conv2, i32 noundef 0), !dbg !14
-      #dbg_value(i64 1, !11, !DIExpression(), !13)
     br label %if.end, !dbg !15
 
   if.else:                                          ; preds = %0
-      #dbg_value(i64 2, !11, !DIExpression(), !13)
     tail call void @_Z3barii(i32 noundef %conv2, i32 noundef 1), !dbg !16
-      #dbg_value(i64 3, !11, !DIExpression(), !13)
     br label %if.end, !dbg !17
 
   if.end:                                           ; preds = %if.else, %if.then
@@ -97,27 +88,21 @@ body:             |
   bb.1.if.then:
     successors: %bb.3(0x80000000)
 
-    DBG_PHI $esp, 3
-    DBG_VALUE $esi, $noreg, !11, !DIExpression(),  debug-location !13
-    $edi = MOV32r0 implicit-def dead $eflags, debug-instr-number 1, debug-location !14
-    DBG_INSTR_REF !11, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0),  debug-location !13
-    $esi = MOV32r0 implicit-def dead $eflags,  debug-location !14
-    CALL64pcrel32 target-flags(x86-plt) @_Z3fooii, csr_64, implicit $rsp, implicit $ssp, implicit killed $edi, implicit killed $esi, implicit-def $rsp, implicit-def $ssp,  debug-location !14
-    JMP_1 %bb.3,  debug-location !15
-
-  bb.2.if.else:
-    successors: %bb.3(0x80000000)
-
-    DBG_PHI $esp, 4
-    DBG_VALUE $esp, $noreg, !11, !DIExpression(), debug-location !13
-    $edi = MOV32r0 implicit-def dead $eflags, debug-instr-number 2, debug-location !16
-    DBG_INSTR_REF !11, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 0),  debug-location !13
-    $esi = MOV32ri 1,  debug-location !16
-    CALL64pcrel32 target-flags(x86-plt) @_Z3barii, csr_64, implicit $rsp, implicit $ssp, implicit killed $edi, implicit killed $esi, implicit-def $rsp, implicit-def $ssp,  debug-location !16
+    $edi = MOV32r0 implicit-def dead $eflags, debug-location !14
+    DBG_VALUE $edi, $noreg, !11, !DIExpression(),  debug-location !13
 
   bb.3.if.end:
     $eax = MOV32ri 2
     $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     frame-destroy CFI_INSTRUCTION def_cfa_offset 8
     RET 0, $eax
+
+  bb.2.if.else:
+    successors: %bb.3(0x80000000)
+
+    $edi = MOV32r0 implicit-def dead $eflags, debug-location !16
+    DBG_VALUE $edi, $noreg, !11, !DIExpression(),  debug-location !13
+    CALL64pcrel32 target-flags(x86-plt) @_Z3barii, csr_64, implicit $rsp, implicit $ssp, implicit killed $edi, implicit killed $edi, implicit-def $rsp, implicit-def $ssp,  debug-location !16
+    JMP_1 %bb.3,  debug-location !15
+
 ...
