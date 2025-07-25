@@ -665,7 +665,6 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
     prop-dict
     attr-dict `:` type(operands) 
   }];
-    // type($source) (type($offsets)^)?
     
   let builders = [
     OpBuilder<(ins "Value": $source,
@@ -763,10 +762,6 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
     $mask prop-dict 
     attr-dict `:` type(operands) `->` type($value)
   }];
-  
-  //    functional-type(operands, results)
-  // type($source) (type($offsets)^ )? `,` type($mask) `->` type($value)
-  
 
   let builders = [
     OpBuilder<(ins "Type": $value, "Value": $source, "Value": $mask,
@@ -855,7 +850,6 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
     prop-dict 
     attr-dict `:`  type(operands)
   }];
-//    type($value) `,` qualified(type($dest)) (type($offsets)^)? `,` type($mask)
 
   let builders = [
     OpBuilder<(ins "Value": $value, "Value": $dest, "Value": $mask,
