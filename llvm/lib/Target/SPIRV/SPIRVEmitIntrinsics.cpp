@@ -17,11 +17,13 @@
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/TypedPointerType.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 #include <queue>
 #include <unordered_set>
@@ -2384,13 +2386,33 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   AggrConstTypes.clear();
   AggrStores.clear();
 
-  // fix GEP result types ahead of inference
+  // Fix GEP result types ahead of inference, and simplify if possible.
+  // Data structure for dead instructions that were simplified and replaced.
+  SmallPtrSet<Instruction *, 4> DeadInsts;
   for (auto &I : instructions(Func)) {
     auto *Ref = dyn_cast<GetElementPtrInst>(&I);
     if (!Ref || GR->findDeducedElementType(Ref))
       continue;
+    SmallVector<Value *, 8> Indices(Ref->indices());
+    Value *NewGEP = llvm::simplifyGEPInst(
+        Ref->getSourceElementType(), Ref->getPointerOperand(), Indices,
+        Ref->getNoWrapFlags(), llvm::SimplifyQuery(Func.getDataLayout(), Ref));
+    if (NewGEP) {
+      Ref->replaceAllUsesWith(NewGEP);
+      if (isInstructionTriviallyDead(Ref))
+        DeadInsts.insert(Ref);
+      if (GetElementPtrInst *NewGEPInst = dyn_cast<GetElementPtrInst>(NewGEP))
+        Ref = NewGEPInst;
+      else
+        GR->addDeducedElementType(NewGEP, normalizeType(NewGEP->getType()));
+    }
     if (Type *GepTy = getGEPType(Ref))
       GR->addDeducedElementType(Ref, normalizeType(GepTy));
+  }
+  // Remove dead instructions that were simplified and replaced.
+  for (auto *I : DeadInsts) {
+    assert(I->use_empty() && "Dead instruction should not have any uses left");
+    I->eraseFromParent();
   }
 
   processParamTypesByFunHeader(CurrF, B);

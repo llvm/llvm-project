@@ -830,7 +830,7 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
   SPIRVType *ArrayType = nullptr;
   const SPIRVSubtarget &ST =
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
-  if (NumElems != 0 || !ST.isShader()) {
+  if (NumElems != 0) {
     Register NumElementsVReg = buildConstantInt(
         NumElems ? NumElems : 1, MIRBuilder, SpvTypeInt32, EmitIR);
     ArrayType = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
@@ -840,6 +840,8 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
           .addUse(NumElementsVReg);
     });
   } else {
+    if (!ST.isShader())
+      return nullptr;
     ArrayType = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
       return MIRBuilder.buildInstr(SPIRV::OpTypeRuntimeArray)
           .addDef(createTypeVReg(MIRBuilder))
