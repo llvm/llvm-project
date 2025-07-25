@@ -18,6 +18,7 @@
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBSymbolContext.h"
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SearchFilter.h"
@@ -25,6 +26,7 @@
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/Interfaces/OperatingSystemInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedFrameInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedPlatformInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
@@ -549,6 +551,10 @@ public:
     return {};
   }
 
+  virtual lldb::ScriptedFrameInterfaceSP CreateScriptedFrameInterface() {
+    return {};
+  }
+
   virtual lldb::ScriptedThreadPlanInterfaceSP
   CreateScriptedThreadPlanInterface() {
     return {};
@@ -591,6 +597,9 @@ public:
 
   std::optional<MemoryRegionInfo> GetOpaqueTypeFromSBMemoryRegionInfo(
       const lldb::SBMemoryRegionInfo &mem_region) const;
+
+  std::optional<SymbolContext>
+  GetOpaqueTypeFromSBSymbolContext(const lldb::SBSymbolContext &sym_ctx) const;
 
   lldb::ExecutionContextRefSP GetOpaqueTypeFromSBExecutionContext(
       const lldb::SBExecutionContext &exe_ctx) const;

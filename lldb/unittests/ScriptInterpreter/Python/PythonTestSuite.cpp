@@ -154,6 +154,11 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(
   return nullptr;
 }
 
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBSymbolContext(
+    PyObject *data) {
+  return nullptr;
+}
+
 void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBExecutionContext(
     PyObject *data) {
   return nullptr;

@@ -152,11 +152,29 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
 
   if (!sb_mem_reg_info) {
     error = Status::FromErrorStringWithFormat(
-        "Couldn't cast lldb::SBMemoryRegionInfo to lldb::MemoryRegionInfoSP.");
+        "Couldn't cast lldb::SBMemoryRegionInfo to "
+        "lldb_private::MemoryRegionInfo.");
     return {};
   }
 
   return m_interpreter.GetOpaqueTypeFromSBMemoryRegionInfo(*sb_mem_reg_info);
+}
+
+template <>
+std::optional<SymbolContext>
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    std::optional<SymbolContext>>(python::PythonObject &p, Status &error) {
+
+  lldb::SBSymbolContext *sb_sym_ctx = reinterpret_cast<lldb::SBSymbolContext *>(
+      python::LLDBSWIGPython_CastPyObjectToSBSymbolContext(p.get()));
+
+  if (!sb_sym_ctx) {
+    error = Status::FromErrorStringWithFormat(
+        "Couldn't cast lldb::SBSymbolContext to lldb_private::SymbolContext.");
+    return {};
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBSymbolContext(*sb_sym_ctx);
 }
 
 template <>

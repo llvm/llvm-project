@@ -579,6 +579,19 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyOb
   return sb_ptr;
 }
 
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBSymbolContext(PyObject *
+                                                                    data) {
+  lldb::SBSymbolContext *sb_ptr = NULL;
+
+  int valid_cast = SWIG_ConvertPtr(data, (void **)&sb_ptr,
+                                   SWIGTYPE_p_lldb__SBSymbolContext, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
 void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBExecutionContext(PyObject *
                                                                     data) {
   lldb::SBExecutionContext *sb_ptr = NULL;

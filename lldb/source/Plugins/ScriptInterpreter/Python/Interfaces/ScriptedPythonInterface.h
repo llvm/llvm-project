@@ -584,6 +584,11 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
     std::optional<MemoryRegionInfo>>(python::PythonObject &p, Status &error);
 
 template <>
+std::optional<SymbolContext>
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    std::optional<SymbolContext>>(python::PythonObject &p, Status &error);
+
+template <>
 lldb::ExecutionContextRefSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<
     lldb::ExecutionContextRefSP>(python::PythonObject &p, Status &error);
