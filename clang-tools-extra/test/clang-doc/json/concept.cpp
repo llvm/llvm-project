@@ -16,10 +16,9 @@ concept Incrementable = requires(T x) {
 // CHECK-NEXT:        "Description": {
 // CHECK-NEXT:        "HasParagraphComments": true,
 // CHECK-NEXT:        "ParagraphComments": [
-// CHECK-NEXT:          {
-// CHECK-NEXT:            "Children": [
-// CHECK-NEXT:              {
-// CHECK-NEXT:                "TextComment": " Requires that T suports post and pre-incrementing."
+// CHECK-NEXT:          [
+// CHECK-NEXT:            {
+// CHECK-NEXT:              "TextComment": " Requires that T suports post and pre-incrementing."
 // CHECK:             "End": true,
 // CHECK-NEXT:        "InfoType": "concept",
 // CHECK-NEXT:        "IsType": true,
