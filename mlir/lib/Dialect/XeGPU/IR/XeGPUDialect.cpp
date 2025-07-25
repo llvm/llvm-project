@@ -217,14 +217,14 @@ LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
 FailureOr<SmallVector<Value>>
 LayoutAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
                                   Value linearId) {
-  // delinearizeSubgroupId is only available for workgroup-level layout
-  // attribute
+  // delinearizeSubgroupId is only available for
+  // workgroup-level layout attribute
   if (!isWgLayout())
     return failure();
 
   auto dims =
-      llvm::map_to_vector(getSgLayout().asArrayRef(), [&](int32_t d) -> Value {
-        return arith::ConstantIndexOp::create(builder, loc, d);
+      llvm::map_to_vector(*getEffectiveSgLayout(), [&](int64_t d) -> Value {
+        return builder.createOrFold<arith::ConstantIndexOp>(loc, d);
       });
 
   return affine::delinearizeIndex(builder, loc, linearId, dims);
@@ -260,25 +260,32 @@ LayoutAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
   // nd local offset, localOffset[i] = sgId[i] * sgShape[i]
   SmallVector<Value> localOffsets = llvm::map_to_vector(
       llvm::zip(sgIds, sgShape), [&](const auto &t) -> Value {
-        auto &[id, s] = t;
-        Value d = arith::ConstantIndexOp::create(builder, loc, s);
-        return index::MulOp::create(builder, loc, id, d);
+        return builder.createOrFold<index::MulOp>(
+            loc, std::get<0>(t),
+            builder.createOrFold<arith::ConstantIndexOp>(loc, std::get<1>(t)));
       });
 
   SmallVector<SmallVector<Value>> offsets;
   for (SmallVector<int64_t> unitOffs : StaticTileOffsetRange(shape, distUnit)) {
     SmallVector<Value> base =
         llvm::map_to_vector(unitOffs, [&](int64_t d) -> Value {
-          return arith::ConstantIndexOp::create(builder, loc, d);
+          return builder.create<arith::ConstantIndexOp>(loc, d);
         });
 
     SmallVector<Value> adds = llvm::map_to_vector(
         llvm::zip_equal(base, localOffsets), [&](const auto &t) -> Value {
-          return arith::AddIOp::create(builder, loc, std::get<0>(t),
-                                       std::get<1>(t));
+          return builder.createOrFold<arith::AddIOp>(loc, std::get<0>(t),
+                                                     std::get<1>(t));
         });
 
-    offsets.push_back(adds);
+    SmallVector<Value> mods = llvm::map_to_vector(
+        llvm::zip_equal(adds, distUnit), [&](const auto &t) -> Value {
+          return builder.createOrFold<index::RemUOp>(
+              loc, std::get<0>(t),
+              builder.create<arith::ConstantIndexOp>(loc, std::get<1>(t)));
+        });
+
+    offsets.push_back(mods);
   }
 
   return offsets;

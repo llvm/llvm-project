@@ -212,39 +212,39 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
           rewriter.createOrFold<index::SubOp>(loc, linearSgId, startOfRangeVal);
     }
 
-    auto deLinearizeSgId =
-        layout.delinearizeSubgroupId(rewriter, loc, adjustedSgId);
-    if (failed(deLinearizeSgId))
+    auto tdescOffsets = layout.getOffsets(rewriter, loc, adjustedSgId, wgShape);
+    if (failed(tdescOffsets))
       return failure();
-    SmallVector<Value> sgIds = *deLinearizeSgId;
-
-    // Calculate distribution unit shape and local offsets for subgroup
-    SmallVector<int64_t> distUnitShape(sgLayout.size());
-    SmallVector<Value> localOffset(sgLayout.size());
-    for (size_t i = 0; i < sgLayout.size(); i++) {
-      distUnitShape[i] = std::min(sgLayout[i] * sgShape[i], wgShape[i]);
-      localOffset[i] =
-          rewriter.createOrFold<index::MulOp>(loc, sgIds[i], sgDataDim[i]);
-    }
-
-    SmallVector<OpFoldResult> originalOffsets = op.getMixedOffsets();
 
     xegpu::TensorDescType newTdescTy =
         xegpu::TensorDescType::get(ctx, sgShape, elemTy, tdescTy.getEncoding(),
                                    layout.dropSgLayoutAndData());
+
     SmallVector<Value> newCreateNdOps;
-    for (SmallVector<int64_t> distUnitBaseAddr :
-         StaticTileOffsetRange(wgShape, distUnitShape)) {
-      SmallVector<OpFoldResult> globalOffsets =
-          calculateGlobalOffsets(rewriter, loc, originalOffsets, localOffset,
-                                 distUnitBaseAddr, distUnitShape);
+    SmallVector<OpFoldResult> offset = op.getMixedOffsets();
+
+    for (auto tdescOffset : *tdescOffsets) {
+      SmallVector<OpFoldResult> newOffsets = llvm::map_to_vector(
+          llvm::zip_longest(tdescOffset, offset),
+          [&](const auto &t) -> OpFoldResult {
+            std::optional<Value> off = std::get<0>(t);
+            std::optional<OpFoldResult> old = std::get<1>(t);
+            if (!off.has_value())
+              return *old;
+
+            if (!old.has_value() || isZeroInteger(*old))
+              return *off;
+
+            return rewriter.createOrFold<index::AddOp>(
+                loc, *off,
+                getValueOrCreateConstantIndexOp(rewriter, loc, *old));
+          });
 
       auto newCreateNdOp = xegpu::CreateNdDescOp::create(
-          rewriter, loc, newTdescTy, op.getSource(), globalOffsets,
+          rewriter, loc, newTdescTy, op.getSource(), newOffsets,
           op.getMixedSizes(), op.getMixedStrides());
       newCreateNdOps.push_back(newCreateNdOp);
     }
-
     rewriter.replaceOpWithMultiple(op, {newCreateNdOps});
     return success();
   }
