@@ -29,7 +29,9 @@
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Casting.h"
+
 #include <optional>
 
 using namespace mlir;
