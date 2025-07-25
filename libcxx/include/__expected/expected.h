@@ -32,6 +32,7 @@
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_replaceable.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_specialization.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_constructible.h>
 #include <__type_traits/is_trivially_destructible.h>
@@ -65,10 +66,7 @@ template <class _Tp, class _Err>
 class expected;
 
 template <class _Tp>
-struct __is_std_expected : false_type {};
-
-template <class _Tp, class _Err>
-struct __is_std_expected<expected<_Tp, _Err>> : true_type {};
+concept __is_std_expected_v = __is_specialization_v<_Tp, expected>;
 
 struct __expected_construct_in_place_from_invoke_tag {};
 struct __expected_construct_unexpected_from_invoke_tag {};
@@ -450,8 +448,8 @@ private:
 template <class _Tp, class _Err>
 class expected : private __expected_base<_Tp, _Err> {
   static_assert(!is_reference_v<_Tp> && !is_function_v<_Tp> && !is_same_v<remove_cv_t<_Tp>, in_place_t> &&
-                    !is_same_v<remove_cv_t<_Tp>, unexpect_t> && !__is_std_unexpected<remove_cv_t<_Tp>>::value &&
-                    __valid_std_unexpected<_Err>::value,
+                    !is_same_v<remove_cv_t<_Tp>, unexpect_t> && !__is_std_unexpected_v<remove_cv_t<_Tp>> &&
+                    __is_std_unexpected_v<_Err>,
                 "[expected.object.general] A program that instantiates the definition of template expected<T, E> for a "
                 "reference type, a function type, or for possibly cv-qualified types in_place_t, unexpect_t, or a "
                 "specialization of unexpected for the T parameter is ill-formed. A program that instantiates the "
@@ -557,8 +555,8 @@ public:
 
   template <class _Up = _Tp>
     requires(!is_same_v<remove_cvref_t<_Up>, in_place_t> && !is_same_v<expected, remove_cvref_t<_Up>> &&
-             is_constructible_v<_Tp, _Up> && !__is_std_unexpected<remove_cvref_t<_Up>>::value &&
-             (!is_same_v<remove_cv_t<_Tp>, bool> || !__is_std_expected<remove_cvref_t<_Up>>::value))
+             is_constructible_v<_Tp, _Up> && !__is_std_unexpected_v<remove_cvref_t<_Up>> &&
+             (!is_same_v<remove_cv_t<_Tp>, bool> || !__is_std_expected_v<remove_cvref_t<_Up>>))
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_Up, _Tp>)
       expected(_Up&& __u) noexcept(is_nothrow_constructible_v<_Tp, _Up>) // strengthened
       : __base(in_place, std::forward<_Up>(__u)) {}
@@ -670,7 +668,7 @@ public:
 
   template <class _Up = _Tp>
   _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(_Up&& __v)
-    requires(!is_same_v<expected, remove_cvref_t<_Up>> && !__is_std_unexpected<remove_cvref_t<_Up>>::value &&
+    requires(!is_same_v<expected, remove_cvref_t<_Up>> && !__is_std_unexpected_v<remove_cvref_t<_Up>> &&
              is_constructible_v<_Tp, _Up> && is_assignable_v<_Tp&, _Up> &&
              (is_nothrow_constructible_v<_Tp, _Up> || is_nothrow_move_constructible_v<_Tp> ||
               is_nothrow_move_constructible_v<_Err>))
@@ -923,7 +921,7 @@ public:
     requires is_constructible_v<_Err, _Err&>
   _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) & {
     using _Up = remove_cvref_t<invoke_result_t<_Func, _Tp&>>;
-    static_assert(__is_std_expected<_Up>::value, "The result of f(value()) must be a specialization of std::expected");
+    static_assert(__is_std_expected_v<_Up>, "The result of f(value()) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Up::error_type, _Err>,
                   "The result of f(value()) must have the same error_type as this expected");
     if (has_value()) {
@@ -936,7 +934,7 @@ public:
     requires is_constructible_v<_Err, const _Err&>
   _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const& {
     using _Up = remove_cvref_t<invoke_result_t<_Func, const _Tp&>>;
-    static_assert(__is_std_expected<_Up>::value, "The result of f(value()) must be a specialization of std::expected");
+    static_assert(__is_std_expected_v<_Up>, "The result of f(value()) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Up::error_type, _Err>,
                   "The result of f(value()) must have the same error_type as this expected");
     if (has_value()) {
@@ -950,7 +948,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) && {
     using _Up = remove_cvref_t<invoke_result_t<_Func, _Tp&&>>;
     static_assert(
-        __is_std_expected<_Up>::value, "The result of f(std::move(value())) must be a specialization of std::expected");
+        __is_std_expected_v<_Up>, "The result of f(std::move(value())) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Up::error_type, _Err>,
                   "The result of f(std::move(value())) must have the same error_type as this expected");
     if (has_value()) {
@@ -964,7 +962,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const&& {
     using _Up = remove_cvref_t<invoke_result_t<_Func, const _Tp&&>>;
     static_assert(
-        __is_std_expected<_Up>::value, "The result of f(std::move(value())) must be a specialization of std::expected");
+        __is_std_expected_v<_Up>, "The result of f(std::move(value())) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Up::error_type, _Err>,
                   "The result of f(std::move(value())) must have the same error_type as this expected");
     if (has_value()) {
@@ -977,7 +975,7 @@ public:
     requires is_constructible_v<_Tp, _Tp&>
   _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) & {
     using _Gp = remove_cvref_t<invoke_result_t<_Func, _Err&>>;
-    static_assert(__is_std_expected<_Gp>::value, "The result of f(error()) must be a specialization of std::expected");
+    static_assert(__is_std_expected_v<_Gp>, "The result of f(error()) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Gp::value_type, _Tp>,
                   "The result of f(error()) must have the same value_type as this expected");
     if (has_value()) {
@@ -990,7 +988,7 @@ public:
     requires is_constructible_v<_Tp, const _Tp&>
   _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) const& {
     using _Gp = remove_cvref_t<invoke_result_t<_Func, const _Err&>>;
-    static_assert(__is_std_expected<_Gp>::value, "The result of f(error()) must be a specialization of std::expected");
+    static_assert(__is_std_expected_v<_Gp>, "The result of f(error()) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Gp::value_type, _Tp>,
                   "The result of f(error()) must have the same value_type as this expected");
     if (has_value()) {
@@ -1004,7 +1002,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) && {
     using _Gp = remove_cvref_t<invoke_result_t<_Func, _Err&&>>;
     static_assert(
-        __is_std_expected<_Gp>::value, "The result of f(std::move(error())) must be a specialization of std::expected");
+        __is_std_expected_v<_Gp>, "The result of f(std::move(error())) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Gp::value_type, _Tp>,
                   "The result of f(std::move(error())) must have the same value_type as this expected");
     if (has_value()) {
@@ -1018,7 +1016,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) const&& {
     using _Gp = remove_cvref_t<invoke_result_t<_Func, const _Err&&>>;
     static_assert(
-        __is_std_expected<_Gp>::value, "The result of f(std::move(error())) must be a specialization of std::expected");
+        __is_std_expected_v<_Gp>, "The result of f(std::move(error())) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Gp::value_type, _Tp>,
                   "The result of f(std::move(error())) must have the same value_type as this expected");
     if (has_value()) {
@@ -1166,7 +1164,7 @@ public:
   template <class _T2>
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const _T2& __v)
 #  if _LIBCPP_STD_VER >= 26
-    requires(!__is_std_expected<_T2>::value) && requires {
+    requires(!__is_std_expected_v<_T2>) && requires {
       { *__x == __v } -> __core_convertible_to<bool>;
     }
 #  endif
@@ -1667,7 +1665,7 @@ public:
     requires is_constructible_v<_Err, _Err&>
   _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) & {
     using _Up = remove_cvref_t<invoke_result_t<_Func>>;
-    static_assert(__is_std_expected<_Up>::value, "The result of f() must be a specialization of std::expected");
+    static_assert(__is_std_expected_v<_Up>, "The result of f() must be a specialization of std::expected");
     static_assert(
         is_same_v<typename _Up::error_type, _Err>, "The result of f() must have the same error_type as this expected");
     if (has_value()) {
@@ -1680,7 +1678,7 @@ public:
     requires is_constructible_v<_Err, const _Err&>
   _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const& {
     using _Up = remove_cvref_t<invoke_result_t<_Func>>;
-    static_assert(__is_std_expected<_Up>::value, "The result of f() must be a specialization of std::expected");
+    static_assert(__is_std_expected_v<_Up>, "The result of f() must be a specialization of std::expected");
     static_assert(
         is_same_v<typename _Up::error_type, _Err>, "The result of f() must have the same error_type as this expected");
     if (has_value()) {
@@ -1693,7 +1691,7 @@ public:
     requires is_constructible_v<_Err, _Err&&>
   _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) && {
     using _Up = remove_cvref_t<invoke_result_t<_Func>>;
-    static_assert(__is_std_expected<_Up>::value, "The result of f() must be a specialization of std::expected");
+    static_assert(__is_std_expected_v<_Up>, "The result of f() must be a specialization of std::expected");
     static_assert(
         is_same_v<typename _Up::error_type, _Err>, "The result of f() must have the same error_type as this expected");
     if (has_value()) {
@@ -1706,7 +1704,7 @@ public:
     requires is_constructible_v<_Err, const _Err&&>
   _LIBCPP_HIDE_FROM_ABI constexpr auto and_then(_Func&& __f) const&& {
     using _Up = remove_cvref_t<invoke_result_t<_Func>>;
-    static_assert(__is_std_expected<_Up>::value, "The result of f() must be a specialization of std::expected");
+    static_assert(__is_std_expected_v<_Up>, "The result of f() must be a specialization of std::expected");
     static_assert(
         is_same_v<typename _Up::error_type, _Err>, "The result of f() must have the same error_type as this expected");
     if (has_value()) {
@@ -1718,7 +1716,7 @@ public:
   template <class _Func>
   _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) & {
     using _Gp = remove_cvref_t<invoke_result_t<_Func, _Err&>>;
-    static_assert(__is_std_expected<_Gp>::value, "The result of f(error()) must be a specialization of std::expected");
+    static_assert(__is_std_expected_v<_Gp>, "The result of f(error()) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Gp::value_type, _Tp>,
                   "The result of f(error()) must have the same value_type as this expected");
     if (has_value()) {
@@ -1730,7 +1728,7 @@ public:
   template <class _Func>
   _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) const& {
     using _Gp = remove_cvref_t<invoke_result_t<_Func, const _Err&>>;
-    static_assert(__is_std_expected<_Gp>::value, "The result of f(error()) must be a specialization of std::expected");
+    static_assert(__is_std_expected_v<_Gp>, "The result of f(error()) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Gp::value_type, _Tp>,
                   "The result of f(error()) must have the same value_type as this expected");
     if (has_value()) {
@@ -1743,7 +1741,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) && {
     using _Gp = remove_cvref_t<invoke_result_t<_Func, _Err&&>>;
     static_assert(
-        __is_std_expected<_Gp>::value, "The result of f(std::move(error())) must be a specialization of std::expected");
+        __is_std_expected_v<_Gp>, "The result of f(std::move(error())) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Gp::value_type, _Tp>,
                   "The result of f(std::move(error())) must have the same value_type as this expected");
     if (has_value()) {
@@ -1756,7 +1754,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto or_else(_Func&& __f) const&& {
     using _Gp = remove_cvref_t<invoke_result_t<_Func, const _Err&&>>;
     static_assert(
-        __is_std_expected<_Gp>::value, "The result of f(std::move(error())) must be a specialization of std::expected");
+        __is_std_expected_v<_Gp>, "The result of f(std::move(error())) must be a specialization of std::expected");
     static_assert(is_same_v<typename _Gp::value_type, _Tp>,
                   "The result of f(std::move(error())) must have the same value_type as this expected");
     if (has_value()) {
