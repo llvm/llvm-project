@@ -1127,7 +1127,7 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
              "replaceUsesOfNonProtoTypeWithRealFunction: Attribute forwarding");
 
   // Mark new function as originated from a no-proto declaration.
-  newFn.setNoProtoAttr(oldFn.getNoProtoAttr());
+  newFn.setNoProto(oldFn.getNoProto());
 
   // Iterate through all calls of the no-proto function.
   std::optional<mlir::SymbolTable::UseRange> symUses =
@@ -1746,8 +1746,7 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
   // Lookup the entry, lazily creating it if necessary.
   mlir::Operation *entry = getGlobalValue(mangledName);
   if (entry) {
-    if (!isa<cir::FuncOp>(entry))
-      errorNYI(d->getSourceRange(), "getOrCreateCIRFunction: non-FuncOp");
+    assert(mlir::isa<cir::FuncOp>(entry));
 
     assert(!cir::MissingFeatures::weakRefReference());
 
@@ -1793,10 +1792,6 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
 
     // Fetch a generic symbol-defining operation and its uses.
     auto symbolOp = mlir::cast<mlir::SymbolOpInterface>(entry);
-
-    // TODO(cir): When can this symbol be something other than a function?
-    if (!isa<cir::FuncOp>(entry))
-      errorNYI(d->getSourceRange(), "getOrCreateCIRFunction: non-FuncOp");
 
     // This might be an implementation of a function without a prototype, in
     // which case, try to do special replacement of calls which match the new
@@ -1889,7 +1884,7 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
     assert(!cir::MissingFeatures::opFuncAstDeclAttr());
 
     if (funcDecl && !funcDecl->hasPrototype())
-      func.setNoProtoAttr(builder.getUnitAttr());
+      func.setNoProto(true);
 
     assert(func.isDeclaration() && "expected empty body");
 

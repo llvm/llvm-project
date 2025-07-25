@@ -1324,7 +1324,7 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
 
     mlir::Operation *fn = callee.getFunctionPointer();
     mlir::Value addr;
-    if (auto funcOp = llvm::dyn_cast<cir::FuncOp>(fn)) {
+    if (auto funcOp = mlir::dyn_cast<cir::FuncOp>(fn)) {
       addr = builder.create<cir::GetGlobalOp>(
           getLoc(e->getSourceRange()),
           cir::PointerType::get(funcOp.getFunctionType()), funcOp.getSymName());
@@ -1336,7 +1336,6 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
     callee.setFunctionPointer(fn);
   }
 
-  assert(!cir::MissingFeatures::opCallNoPrototypeFunc());
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
   assert(!cir::MissingFeatures::hip());
   assert(!cir::MissingFeatures::opCallMustTail());
