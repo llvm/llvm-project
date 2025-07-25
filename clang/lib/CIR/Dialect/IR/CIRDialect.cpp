@@ -17,6 +17,7 @@
 
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
+#include "mlir/Support/LLVM.h"
 
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
@@ -2228,6 +2229,126 @@ LogicalResult cir::ComplexImagPtrOp::verify() {
            << "cir.complex.imag_ptr result type does not match operand type";
   }
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Bit manipulation operations
+//===----------------------------------------------------------------------===//
+
+static OpFoldResult
+foldUnaryBitOp(mlir::Attribute inputAttr,
+               llvm::function_ref<llvm::APInt(const llvm::APInt &)> func,
+               bool poisonZero = false) {
+  auto input = mlir::dyn_cast_if_present<IntAttr>(inputAttr);
+  if (!input)
+    return nullptr;
+
+  llvm::APInt inputValue = input.getValue();
+  if (poisonZero && inputValue.isZero()) {
+    // TODO(cir): maybe we should return a poison value here?
+    assert(!MissingFeatures::poisonAttr());
+    return nullptr;
+  }
+
+  llvm::APInt resultValue = func(inputValue);
+  return IntAttr::get(input.getType(), resultValue);
+}
+
+OpFoldResult BitClrsbOp::fold(FoldAdaptor adaptor) {
+  return foldUnaryBitOp(adaptor.getInput(), [](const llvm::APInt &inputValue) {
+    unsigned resultValue =
+        inputValue.getBitWidth() - inputValue.getSignificantBits();
+    return llvm::APInt(inputValue.getBitWidth(), resultValue);
+  });
+}
+
+OpFoldResult BitClzOp::fold(FoldAdaptor adaptor) {
+  return foldUnaryBitOp(
+      adaptor.getInput(),
+      [](const llvm::APInt &inputValue) {
+        unsigned resultValue = inputValue.countLeadingZeros();
+        return llvm::APInt(inputValue.getBitWidth(), resultValue);
+      },
+      getPoisonZero());
+}
+
+OpFoldResult BitCtzOp::fold(FoldAdaptor adaptor) {
+  return foldUnaryBitOp(
+      adaptor.getInput(),
+      [](const llvm::APInt &inputValue) {
+        return llvm::APInt(inputValue.getBitWidth(),
+                           inputValue.countTrailingZeros());
+      },
+      getPoisonZero());
+}
+
+OpFoldResult BitParityOp::fold(FoldAdaptor adaptor) {
+  return foldUnaryBitOp(adaptor.getInput(), [](const llvm::APInt &inputValue) {
+    return llvm::APInt(inputValue.getBitWidth(), inputValue.popcount() % 2);
+  });
+}
+
+OpFoldResult BitPopcountOp::fold(FoldAdaptor adaptor) {
+  return foldUnaryBitOp(adaptor.getInput(), [](const llvm::APInt &inputValue) {
+    return llvm::APInt(inputValue.getBitWidth(), inputValue.popcount());
+  });
+}
+
+OpFoldResult BitReverseOp::fold(FoldAdaptor adaptor) {
+  return foldUnaryBitOp(adaptor.getInput(), [](const llvm::APInt &inputValue) {
+    return inputValue.reverseBits();
+  });
+}
+
+OpFoldResult ByteSwapOp::fold(FoldAdaptor adaptor) {
+  return foldUnaryBitOp(adaptor.getInput(), [](const llvm::APInt &inputValue) {
+    return inputValue.byteSwap();
+  });
+}
+
+OpFoldResult RotateOp::fold(FoldAdaptor adaptor) {
+  auto input = mlir::dyn_cast_if_present<IntAttr>(adaptor.getInput());
+  auto amount = mlir::dyn_cast_if_present<IntAttr>(adaptor.getAmount());
+  if (!input && !amount)
+    return nullptr;
+
+  // We could fold cir.rotate even if one of its two operands is not a constant:
+  //   - `cir.rotate left/right %0, 0` could be folded into just %0 even if %0
+  //     is not a constant.
+  //   - `cir.rotate left/right 0/0b111...111, %0` could be folded into 0 or
+  //     0b111...111 even if %0 is not a constant.
+
+  llvm::APInt inputValue;
+  if (input) {
+    inputValue = input.getValue();
+    if (inputValue.isZero() || inputValue.isAllOnes()) {
+      // An input value of all 0s or all 1s will not change after rotation
+      return input;
+    }
+  }
+
+  uint64_t amountValue;
+  if (amount) {
+    amountValue = amount.getValue().urem(getInput().getType().getWidth());
+    if (amountValue == 0) {
+      // A shift amount of 0 will not change the input value
+      return getInput();
+    }
+  }
+
+  if (!input || !amount)
+    return nullptr;
+
+  assert(inputValue.getBitWidth() == getInput().getType().getWidth() &&
+         "input value must have the same bit width as the input type");
+
+  llvm::APInt resultValue;
+  if (isRotateLeft())
+    resultValue = inputValue.rotl(amountValue);
+  else
+    resultValue = inputValue.rotr(amountValue);
+
+  return IntAttr::get(input.getContext(), input.getType(), resultValue);
 }
 
 //===----------------------------------------------------------------------===//
