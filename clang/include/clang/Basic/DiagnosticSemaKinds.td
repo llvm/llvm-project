@@ -13318,8 +13318,9 @@ def err_acc_reduction_num_gangs_conflict
             "appear on a '%2' construct "
             "with a '%3' clause%select{ with more than 1 argument|}0">;
 def err_acc_reduction_type
-    : Error<"OpenACC 'reduction' variable must be of scalar type, sub-array, or a "
-            "composite of scalar types;%select{| sub-array base}1 type is %0">;
+    : Error<"OpenACC 'reduction' variable must be of scalar type, aggregate, "
+            "sub-array, or a composite of scalar types;%select{| sub-array "
+            "base}1 type is %0">;
 def err_acc_reduction_composite_type
     : Error<"OpenACC 'reduction' variable must be a composite of scalar types; "
             "%1 %select{is not a class or struct|is incomplete|is not an "
