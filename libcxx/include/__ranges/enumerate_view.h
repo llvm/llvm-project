@@ -324,10 +324,10 @@ namespace __enumerate {
 
 struct __fn : __range_adaptor_closure<__fn> {
   template <class _Range>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range) const
-      noexcept(noexcept(/**/ enumerate_view(std::forward<_Range>(__range))))
-          -> decltype(/*--*/ enumerate_view(std::forward<_Range>(__range))) {
-    return /*-------------*/ enumerate_view(std::forward<_Range>(__range));
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  operator()(_Range&& __range) noexcept(noexcept(/**/ enumerate_view<views::all_t<_Range>>(__range)))
+      -> decltype(/*-------------------------------*/ enumerate_view<views::all_t<_Range>>(__range)) {
+    return /*--------------------------------------*/ enumerate_view<views::all_t<_Range>>(__range);
   }
 };
 
