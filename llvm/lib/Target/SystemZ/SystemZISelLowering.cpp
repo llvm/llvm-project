@@ -9233,39 +9233,54 @@ SystemZTargetLowering::combineLogicalOpCCMask(SDNode *N,
     int Op0CCMaskVal = Op0CCMask->getZExtValue();
     int Op1CCMaskVal = Op1CCMask->getZExtValue();
     if (Opcode == ISD::AND) {
-      if ((Op0CCMaskVal ^ Op0CCValidVal) & (Op1CCMaskVal ^ Op1CCValidVal))
+      // CC neither in Op0CCMaskVal nor in Op1CCMaskVal.
+      if ((Op0CCValidVal ^ (Op0CCMaskVal | Op1CCMaskVal)))
         return SDValue();
       CCMask = Op0CCMaskVal & Op1CCMaskVal;
       CCValid = Op0CCValidVal;
       CCReg = Op0CCReg;
       TrueVal = N0->getOperand(0);
-      FalseVal = DAG.getNode(ISD::AND, SDLoc(N0), MVT::i32,
+      TrueVal = DAG.getNode(Opcode, SDLoc(N0), MVT::i32,
+                            DAG.getTargetConstant(Op0TrueVal->getZExtValue(),
+                                                  SDLoc(N0), MVT::i32),
+                            DAG.getTargetConstant(Op1TrueVal->getZExtValue(),
+                                                  SDLoc(N0), MVT::i32));
+      FalseVal = DAG.getNode(Opcode, SDLoc(N0), MVT::i32,
                              DAG.getTargetConstant(Op0TrueVal->getZExtValue(),
                                                    SDLoc(N0), MVT::i32),
                              DAG.getTargetConstant(Op0FalseVal->getZExtValue(),
                                                    SDLoc(N0), MVT::i32));
     } else if (Opcode == ISD::OR) {
+      // CC in both Op0CCMaskVal and Op1CCMaskVal.
       if (Op0CCMaskVal & Op1CCMaskVal)
         return SDValue();
       CCMask = Op0CCMaskVal | Op1CCMaskVal;
       CCValid = Op0CCValidVal;
       CCReg = Op0CCReg;
-      TrueVal = DAG.getNode(ISD::OR, SDLoc(N0), MVT::i32,
+      TrueVal = DAG.getNode(Opcode, SDLoc(N0), MVT::i32,
                             DAG.getTargetConstant(Op0TrueVal->getZExtValue(),
                                                   SDLoc(N0), MVT::i32),
                             DAG.getTargetConstant(Op0FalseVal->getZExtValue(),
                                                   SDLoc(N0), MVT::i32));
-      FalseVal = N0->getOperand(1);
+      FalseVal = DAG.getNode(Opcode, SDLoc(N0), MVT::i32,
+                             DAG.getTargetConstant(Op0FalseVal->getZExtValue(),
+                                                   SDLoc(N0), MVT::i32),
+                             DAG.getTargetConstant(Op0FalseVal->getZExtValue(),
+                                                   SDLoc(N0), MVT::i32));
     } else if (Opcode == ISD::XOR) {
       CCMask = Op0CCMaskVal ^ Op1CCMaskVal;
       CCValid = Op0CCValidVal;
       CCReg = Op0CCReg;
-      TrueVal = DAG.getNode(ISD::XOR, SDLoc(N0), MVT::i32,
+      TrueVal = DAG.getNode(Opcode, SDLoc(N0), MVT::i32,
                             DAG.getTargetConstant(Op0TrueVal->getZExtValue(),
                                                   SDLoc(N0), MVT::i32),
                             DAG.getTargetConstant(Op0FalseVal->getZExtValue(),
                                                   SDLoc(N0), MVT::i32));
-      FalseVal = N0->getOperand(1);
+      FalseVal = DAG.getNode(Opcode, SDLoc(N0), MVT::i32,
+                             DAG.getTargetConstant(Op0FalseVal->getZExtValue(),
+                                                   SDLoc(N0), MVT::i32),
+                             DAG.getTargetConstant(Op0FalseVal->getZExtValue(),
+                                                   SDLoc(N0), MVT::i32));
     } else
       return SDValue();
   } else if (N0->getOpcode() == SystemZISD::SELECT_CCMASK) {
@@ -9326,12 +9341,12 @@ SystemZTargetLowering::combineLogicalOpCCMask(SDNode *N,
       FalseVal = DAG.getNode(Opcode, SDLoc(N0), MVT::i32, Op1,
                              DAG.getTargetConstant(Op0FalseVal->getZExtValue(),
                                                    SDLoc(N0), MVT::i32));
-    } else if (isOneBitSet(Mask ^ 0xf)) {
+    } else if (isOneBitSet(Mask ^ Op0CCValidVal)) {
       // Only one clear bit.
       // select_ccmask (Opcode (SRL IPM CC) (Op0TrueVal))
       // (Opcode (CCVal  Op0FalseVal)) CCValid/CCMask cc-value must have
       // in FalseVal.
-      int CCVal = log2CCMaskToCCVal(Mask ^ 0xf);
+      int CCVal = log2CCMaskToCCVal(Mask ^ Op0CCValidVal);
       TrueVal = DAG.getNode(Opcode, SDLoc(N0), MVT::i32, Op1,
                             DAG.getTargetConstant(Op0TrueVal->getZExtValue(),
                                                   SDLoc(N0), MVT::i32));
