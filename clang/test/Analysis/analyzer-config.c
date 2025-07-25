@@ -137,6 +137,8 @@
 // CHECK-NEXT: unix.StdCLibraryFunctions:DisplayLoadedSummaries = false
 // CHECK-NEXT: unix.StdCLibraryFunctions:ModelPOSIX = true
 // CHECK-NEXT: unix.Stream:Pedantic = false
+// CHECK-NEXT: unix.cstring.MissingTerminatingZero:IgnoreFunctionArgs = ""
+// CHECK-NEXT: unix.cstring.MissingTerminatingZero:OmitDefaultIgnoreFunctions = false
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: verbose-report-filename = false
 // CHECK-NEXT: widen-loops = false
