@@ -4,6 +4,7 @@ add_mlir_dialect_library(MLIRSCFTransforms
   ForallToFor.cpp
   ForallToParallel.cpp
   ForToWhile.cpp
+  IfConditionPropagation.cpp
   LoopCanonicalization.cpp
   LoopPipelining.cpp
   LoopRangeFolding.cpp

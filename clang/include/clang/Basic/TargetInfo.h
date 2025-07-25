@@ -1551,8 +1551,8 @@ public:
 
   // Return the target-specific priority for features/cpus/vendors so
   // that they can be properly sorted for checking.
-  virtual uint64_t getFMVPriority(ArrayRef<StringRef> Features) const {
-    return 0;
+  virtual llvm::APInt getFMVPriority(ArrayRef<StringRef> Features) const {
+    return llvm::APInt::getZero(32);
   }
 
   // Validate the contents of the __builtin_cpu_is(const char*)

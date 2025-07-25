@@ -19,6 +19,7 @@
 #include "SIModeRegisterDefaults.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -167,6 +168,9 @@ private:
   bool SelectGlobalSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
                          SDValue &VOffset, SDValue &Offset,
                          SDValue &CPol) const;
+  bool SelectGlobalSAddrCPol(SDNode *N, SDValue Addr, SDValue &SAddr,
+                             SDValue &VOffset, SDValue &Offset,
+                             SDValue &CPol) const;
   bool SelectGlobalSAddrGLC(SDNode *N, SDValue Addr, SDValue &SAddr,
                             SDValue &VOffset, SDValue &Offset,
                             SDValue &CPol) const;
@@ -175,7 +179,8 @@ private:
   bool checkFlatScratchSVSSwizzleBug(SDValue VAddr, SDValue SAddr,
                                      uint64_t ImmOffset) const;
   bool SelectScratchSVAddr(SDNode *N, SDValue Addr, SDValue &VAddr,
-                           SDValue &SAddr, SDValue &Offset) const;
+                           SDValue &SAddr, SDValue &Offset,
+                           SDValue &CPol) const;
 
   bool SelectSMRDOffset(SDNode *N, SDValue ByteOffsetNode, SDValue *SOffset,
                         SDValue *Offset, bool Imm32Only = false,
@@ -253,11 +258,15 @@ private:
   bool SelectVOP3OpSel(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
   bool SelectVOP3OpSelMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
-  bool SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
-                                 unsigned &Mods) const;
+  bool SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src, unsigned &Mods,
+                                 MVT VT) const;
   bool SelectVOP3PMadMixModsExt(SDValue In, SDValue &Src,
                                 SDValue &SrcMods) const;
   bool SelectVOP3PMadMixMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+  bool SelectVOP3PMadMixBF16ModsExt(SDValue In, SDValue &Src,
+                                    SDValue &SrcMods) const;
+  bool SelectVOP3PMadMixBF16Mods(SDValue In, SDValue &Src,
+                                 SDValue &SrcMods) const;
 
   bool SelectBITOP3(SDValue In, SDValue &Src0, SDValue &Src1, SDValue &Src2,
                    SDValue &Tbl) const;
