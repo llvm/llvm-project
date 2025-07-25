@@ -55,7 +55,7 @@ static MemRefType convertTensorToMemRef(RankedTensorType type) {
 /// Insert an allocation and deallocation for the given MemRefType.
 static Value insertAllocAndDealloc(MemRefType type, Location loc,
                                    PatternRewriter &rewriter) {
-  auto alloc = rewriter.create<memref::AllocOp>(loc, type);
+  auto alloc = memref::AllocOp::create(rewriter, loc, type);
 
   // Make sure to allocate at the beginning of the block.
   auto *parentBlock = alloc->getBlock();
@@ -63,7 +63,7 @@ static Value insertAllocAndDealloc(MemRefType type, Location loc,
 
   // Make sure to deallocate this alloc at the end of the block. This is fine
   // as toy functions have no control flow.
-  auto dealloc = rewriter.create<memref::DeallocOp>(loc, alloc);
+  auto dealloc = memref::DeallocOp::create(rewriter, loc, alloc);
   dealloc->moveBefore(&parentBlock->back());
   return alloc;
 }
@@ -99,8 +99,8 @@ static void lowerOpToLoops(Operation *op, ValueRange operands,
         // and the loop induction variables. This function will return the value
         // to store at the current index.
         Value valueToStore = processIteration(nestedBuilder, operands, ivs);
-        nestedBuilder.create<affine::AffineStoreOp>(loc, valueToStore, alloc,
-                                                    ivs);
+        affine::AffineStoreOp::create(nestedBuilder, loc, valueToStore, alloc,
+                                      ivs);
       });
 
   // Replace this operation with the generated alloc.
@@ -131,15 +131,15 @@ struct BinaryOpLowering : public ConversionPattern {
 
                      // Generate loads for the element of 'lhs' and 'rhs' at the
                      // inner loop.
-                     auto loadedLhs = builder.create<affine::AffineLoadOp>(
-                         loc, binaryAdaptor.getLhs(), loopIvs);
-                     auto loadedRhs = builder.create<affine::AffineLoadOp>(
-                         loc, binaryAdaptor.getRhs(), loopIvs);
+                     auto loadedLhs = affine::AffineLoadOp::create(
+                         builder, loc, binaryAdaptor.getLhs(), loopIvs);
+                     auto loadedRhs = affine::AffineLoadOp::create(
+                         builder, loc, binaryAdaptor.getRhs(), loopIvs);
 
                      // Create the binary operation performed on the loaded
                      // values.
-                     return builder.create<LoweredBinaryOp>(loc, loadedLhs,
-                                                            loadedRhs);
+                     return LoweredBinaryOp::create(builder, loc, loadedLhs,
+                                                    loadedRhs);
                    });
     return success();
   }
@@ -174,11 +174,11 @@ struct ConstantOpLowering : public OpRewritePattern<toy::ConstantOp> {
     if (!valueShape.empty()) {
       for (auto i : llvm::seq<int64_t>(0, *llvm::max_element(valueShape)))
         constantIndices.push_back(
-            rewriter.create<arith::ConstantIndexOp>(loc, i));
+            arith::ConstantIndexOp::create(rewriter, loc, i));
     } else {
       // This is the case of a tensor of rank 0.
       constantIndices.push_back(
-          rewriter.create<arith::ConstantIndexOp>(loc, 0));
+          arith::ConstantIndexOp::create(rewriter, loc, 0));
     }
 
     // The constant operation represents a multi-dimensional constant, so we
@@ -191,9 +191,9 @@ struct ConstantOpLowering : public OpRewritePattern<toy::ConstantOp> {
       // The last dimension is the base case of the recursion, at this point
       // we store the element at the given index.
       if (dimension == valueShape.size()) {
-        rewriter.create<affine::AffineStoreOp>(
-            loc, rewriter.create<arith::ConstantOp>(loc, *valueIt++), alloc,
-            llvm::ArrayRef(indices));
+        affine::AffineStoreOp::create(
+            rewriter, loc, arith::ConstantOp::create(rewriter, loc, *valueIt++),
+            alloc, llvm::ArrayRef(indices));
         return;
       }
 
@@ -238,8 +238,8 @@ struct FuncOpLowering : public OpConversionPattern<toy::FuncOp> {
     }
 
     // Create a new non-toy function, with the same region.
-    auto func = rewriter.create<mlir::func::FuncOp>(op.getLoc(), op.getName(),
-                                                    op.getFunctionType());
+    auto func = mlir::func::FuncOp::create(rewriter, op.getLoc(), op.getName(),
+                                           op.getFunctionType());
     rewriter.inlineRegionBefore(op.getRegion(), func.getBody(), func.end());
     rewriter.eraseOp(op);
     return success();
@@ -308,8 +308,8 @@ struct TransposeOpLowering : public ConversionPattern {
                      // Transpose the elements by generating a load from the
                      // reverse indices.
                      SmallVector<Value, 2> reverseIvs(llvm::reverse(loopIvs));
-                     return builder.create<affine::AffineLoadOp>(loc, input,
-                                                                 reverseIvs);
+                     return affine::AffineLoadOp::create(builder, loc, input,
+                                                         reverseIvs);
                    });
     return success();
   }

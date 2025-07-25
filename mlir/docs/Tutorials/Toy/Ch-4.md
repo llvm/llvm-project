@@ -300,7 +300,7 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
   Operation *materializeCallConversion(OpBuilder &builder, Value input,
                                        Type resultType,
                                        Location conversionLoc) const final {
-    return builder.create<CastOp>(conversionLoc, resultType, input);
+    return CastOp::create(builder, conversionLoc, resultType, input);
   }
 };
 ```
