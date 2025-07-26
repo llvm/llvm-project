@@ -17,6 +17,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
@@ -220,6 +221,20 @@ void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(MCStreamer &Streamer,
   }
 }
 
+static bool containsConstantPtrAuth(const Constant *C) {
+  if (isa<ConstantPtrAuth>(C))
+    return true;
+
+  if (isa<BlockAddress>(C) || isa<GlobalValue>(C))
+    return false;
+
+  for (const Value *Op : C->operands())
+    if (containsConstantPtrAuth(cast<Constant>(Op)))
+      return true;
+
+  return false;
+}
+
 /// getKindForGlobal - This is a top-level target-independent classifier for
 /// a global object.  Given a global variable and information from the TM, this
 /// function classifies the global in a target independent manner. This function
@@ -327,9 +342,10 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
       // mergable section, because the linker doesn't take relocations into
       // consideration when it tries to merge entries in the section.
       Reloc::Model ReloModel = TM.getRelocationModel();
-      if (ReloModel == Reloc::Static || ReloModel == Reloc::ROPI ||
-          ReloModel == Reloc::RWPI || ReloModel == Reloc::ROPI_RWPI ||
-          !C->needsDynamicRelocation())
+      if ((ReloModel == Reloc::Static || ReloModel == Reloc::ROPI ||
+           ReloModel == Reloc::RWPI || ReloModel == Reloc::ROPI_RWPI ||
+           !C->needsDynamicRelocation()) &&
+          !containsConstantPtrAuth(C))
         return SectionKind::getReadOnly();
 
       // Otherwise, the dynamic linker needs to fix it up, put it in the
