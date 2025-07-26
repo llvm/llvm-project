@@ -256,7 +256,7 @@ static bool isReInterleaveMask(ShuffleVectorInst *SVI, unsigned &Factor,
 static Value *getMaskOperand(IntrinsicInst *II) {
   switch (II->getIntrinsicID()) {
   default:
-    llvm_unreachable("Unexpected intrinsic");
+    return nullptr;
   case Intrinsic::vp_load:
     return II->getOperand(1);
   case Intrinsic::masked_load:
@@ -382,8 +382,11 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   if (LI) {
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved load: " << *Load << "\n");
   } else {
+    Value *MaskOperand = getMaskOperand(II);
+    if (!MaskOperand)
+      llvm_unreachable("unsupported intrinsic");
     // Check mask operand. Handle both all-true/false and interleaved mask.
-    Mask = getMask(getMaskOperand(II), Factor, VecTy);
+    Mask = getMask(MaskOperand, Factor, VecTy);
     if (!Mask)
       return false;
 
@@ -534,10 +537,12 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
   if (SI) {
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved store: " << *Store << "\n");
   } else {
+    Value *MaskOperand = getMaskOperand(II);
+    if (!MaskOperand)
+      llvm_unreachable("unsupported intrinsic");
     // Check mask operand. Handle both all-true/false and interleaved mask.
     unsigned LaneMaskLen = NumStoredElements / Factor;
-    Mask = getMask(getMaskOperand(II), Factor,
-                   ElementCount::getFixed(LaneMaskLen));
+    Mask = getMask(MaskOperand, Factor, ElementCount::getFixed(LaneMaskLen));
     if (!Mask)
       return false;
 
@@ -634,9 +639,12 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
                       << " and factor = " << Factor << "\n");
   } else {
     assert(II);
+    Value *MaskOperand = getMaskOperand(II);
+    if (!MaskOperand)
+      return false;
 
     // Check mask operand. Handle both all-true/false and interleaved mask.
-    Mask = getMask(getMaskOperand(II), Factor, getDeinterleavedVectorType(DI));
+    Mask = getMask(MaskOperand, Factor, getDeinterleavedVectorType(DI));
     if (!Mask)
       return false;
 
@@ -673,8 +681,11 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
 
   Value *Mask = nullptr;
   if (II) {
+    Value *MaskOperand = getMaskOperand(II);
+    if (!MaskOperand)
+      return false;
     // Check mask operand. Handle both all-true/false and interleaved mask.
-    Mask = getMask(getMaskOperand(II), Factor,
+    Mask = getMask(MaskOperand, Factor,
                    cast<VectorType>(InterleaveValues[0]->getType()));
     if (!Mask)
       return false;
