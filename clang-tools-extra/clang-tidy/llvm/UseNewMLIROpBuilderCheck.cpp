@@ -123,11 +123,10 @@ RewriteRuleWith<std::string> useNewMlirOpBuilderCheckRule() {
           callee(cxxMethodDecl(hasName("create"))))
           .bind("call");
   return applyFirst(
-      {// Attempt to rewrite with a concrete builder.
-       makeRule(cxxMemberCallExpr(unless(on(cxxTemporaryObjectExpr())), base),
+      //  Attempt rewrite given an lvalue builder, else just warn.
+      {makeRule(cxxMemberCallExpr(unless(on(cxxTemporaryObjectExpr())), base),
                 rewrite(node("call"), node("builder"), callArgs("call")),
                 message),
-       // Warn on calls on temporary objects only.
        makeRule(base, noopEdit(node("call")), message)});
 }
 } // namespace
