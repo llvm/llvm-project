@@ -660,6 +660,7 @@ namespace FunctionCast {
   typedef double (*DoubleFn)();
   typedef int (*IntFn)();
   int a[(int)DoubleFn(f)()]; // both-error {{variable length array}} \
+                             // expected-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}} \
                              // both-warning {{are a Clang extension}}
   int b[(int)IntFn(f)()];    // ok
 }
