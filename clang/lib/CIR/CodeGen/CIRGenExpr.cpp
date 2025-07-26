@@ -949,7 +949,6 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_Dynamic:
   case CK_ToUnion:
   case CK_BaseToDerived:
-  case CK_LValueBitCast:
   case CK_AddressSpaceConversion:
   case CK_ObjCObjectLValueCast:
   case CK_VectorSplat:
@@ -963,6 +962,18 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
                      e->getCastKindName());
 
     return {};
+  }
+
+  case CK_LValueBitCast: {
+    // This must be a reinterpret_cast (or c-style equivalent).
+    const auto *ce = cast<ExplicitCastExpr>(e);
+
+    cgm.emitExplicitCastExprType(ce, this);
+    LValue LV = emitLValue(e->getSubExpr());
+    Address V = LV.getAddress().withElementType(
+        builder, convertTypeForMem(ce->getTypeAsWritten()->getPointeeType()));
+
+    return makeAddrLValue(V, e->getType(), LV.getBaseInfo());
   }
 
   case CK_NoOp: {
