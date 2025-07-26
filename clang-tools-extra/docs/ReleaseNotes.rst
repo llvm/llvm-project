@@ -142,6 +142,10 @@ Changes in existing checks
   <clang-tidy/checks/portability/template-virtual-member-function>` check to
   avoid false positives on pure virtual member functions.
 
+- Improved :doc:`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` check to not run on
+  objective-c code.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
