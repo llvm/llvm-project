@@ -1649,20 +1649,13 @@ loop_exit:
   ret void
 }
 
-; Tests that failure because partial-sized lifetimes are counted as mod.
+; Tests that partial-sized lifetimes are not inhibiting the optimizer
 define void @partial_lifetime() {
 ; CHECK-LABEL: define void @partial_lifetime() {
-; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
-; CHECK-NEXT:    [[DEST:%.*]] = alloca [[STRUCT_FOO]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 12, ptr captures(none) [[SRC]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 3, ptr captures(none) [[DEST]])
-; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr captures(none) [[SRC]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DEST]], ptr align 4 [[SRC]], i64 12, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 3, ptr captures(none) [[SRC]])
+; CHECK-NEXT:    [[DEST:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
+; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[DEST]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr captures(none) [[DEST]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @use_nocapture(ptr captures(none) [[DEST]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 12, ptr captures(none) [[SRC]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 12, ptr captures(none) [[DEST]])
 ; CHECK-NEXT:    ret void
 ;
   %src = alloca %struct.Foo, align 4
