@@ -859,6 +859,11 @@ def CC_X86_32_C : CallingConv<[
   // The 'nest' parameter, if any, is passed in ECX.
   CCIfNest<CCAssignToReg<[ECX]>>,
 
+  // i128 and fp128 need to be passed on the stack with a higher alignment than
+  // their legal types. Handle this with a custom function.
+  CCIfType<[i32],
+           CCIfConsecutiveRegs<CCCustom<"CC_X86_32_I128_FP128">>>,
+
   // On swifttailcc pass swiftself in ECX.
   CCIfCC<"CallingConv::SwiftTail",
          CCIfSwiftSelf<CCIfType<[i32], CCAssignToReg<[ECX]>>>>,
