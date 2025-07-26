@@ -597,10 +597,22 @@ define i32 @select_andor32(i32 %v1, i32 %v2, i32 %v3) {
 }
 
 define i64 @select_noccmp1(i64 %v1, i64 %v2, i64 %v3, i64 %r) {
-; CHECK-LABEL: select_noccmp1:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov x0, x3
-; CHECK-NEXT:    ret
+; SDISEL-LABEL: select_noccmp1:
+; SDISEL:       ; %bb.0:
+; SDISEL-NEXT:    cmp x0, #0
+; SDISEL-NEXT:    ccmp x0, #13, #4, lt
+; SDISEL-NEXT:    cset w8, gt
+; SDISEL-NEXT:    cmp x2, #2
+; SDISEL-NEXT:    ccmp x2, #4, #4, lt
+; SDISEL-NEXT:    csinc w8, w8, wzr, le
+; SDISEL-NEXT:    cmp w8, #0
+; SDISEL-NEXT:    csel x0, xzr, x3, ne
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: select_noccmp1:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    mov x0, x3
+; GISEL-NEXT:    ret
   %c0 = icmp slt i64 %v1, 0
   %c1 = icmp sgt i64 %v1, 13
   %c2 = icmp slt i64 %v3, 2
