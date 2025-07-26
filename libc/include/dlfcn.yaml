@@ -29,6 +29,13 @@ macros:
     standards:
       - gnu
     macro_value: "0x01000"
+enums:
+  - name: RTLD_DL_SYMENT
+    value: 1
+  - name: RTLD_DL_LINKMAP
+    value: 2
+types:
+  - type_name: DL_info
 functions:
   - name: dlclose
     standards:
@@ -55,3 +62,20 @@ functions:
     arguments:
       - type: void *__restrict
       - type: const char *__restrict
+  - name: dladdr
+    standards:
+      - GNUExtensions
+    return_type: int
+    arguments:
+      - type: const void *
+      - type: DL_info *
+  - name: dladdr1
+    standards:
+      - GNUExtensions
+    return_type: int
+    arguments:
+      - type: const void *
+      - type: DL_info *
+      - type: void **
+      - type: int
+
