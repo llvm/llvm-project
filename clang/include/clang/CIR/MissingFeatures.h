@@ -287,7 +287,6 @@ struct MissingFeatures {
 
   // Future CIR attributes
   static bool optInfoAttr() { return false; }
-  static bool poisonAttr() { return false; }
 };
 
 } // namespace cir
