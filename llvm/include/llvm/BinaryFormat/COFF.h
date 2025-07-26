@@ -697,8 +697,10 @@ enum ExtendedDLLCharacteristics : unsigned {
   IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT = 0x0001,
   /// Image is CET compatible in strict mode
   IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT_STRICT_MODE = 0x0002,
-  /// Image is CET compatible in such a way that context IP validation is relaxed
-  IMAGE_DLL_CHARACTERISTICS_EX_CET_SET_CONTEXT_IP_VALIDATION_RELAXED_MODE = 0x0004,
+  /// Image is CET compatible in such a way that context IP validation is
+  /// relaxed
+  IMAGE_DLL_CHARACTERISTICS_EX_CET_SET_CONTEXT_IP_VALIDATION_RELAXED_MODE =
+      0x0004,
   /// Image is CET compatible in such a way that the use of
   /// dynamic APIs is restricted to processes only
   IMAGE_DLL_CHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PROC_ONLY = 0x0008,
