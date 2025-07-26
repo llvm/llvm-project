@@ -92,8 +92,6 @@ public:
   static bool isImplicitlyDiscardable(StringRef Name) {
     return Name.starts_with(".debug");
   }
-
-  static bool classof(const MCSection *S) { return S->getVariant() == SV_COFF; }
 };
 
 } // end namespace llvm
