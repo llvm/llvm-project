@@ -540,17 +540,6 @@ public:
   friend class MCFragment;
   static constexpr unsigned NonUniqueID = ~0U;
 
-  enum SectionVariant {
-    SV_COFF = 0,
-    SV_ELF,
-    SV_GOFF,
-    SV_MachO,
-    SV_Wasm,
-    SV_XCOFF,
-    SV_SPIRV,
-    SV_DXContainer,
-  };
-
   struct iterator {
     MCFragment *F = nullptr;
     iterator() = default;
@@ -606,10 +595,8 @@ private:
 protected:
   // TODO Make Name private when possible.
   StringRef Name;
-  SectionVariant Variant;
 
-  MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsBss,
-            MCSymbol *Begin);
+  MCSection(StringRef Name, bool IsText, bool IsBss, MCSymbol *Begin);
   // Protected non-virtual dtor prevents destroy through a base class pointer.
   ~MCSection() {}
 
@@ -619,8 +606,6 @@ public:
 
   StringRef getName() const { return Name; }
   bool isText() const { return IsText; }
-
-  SectionVariant getVariant() const { return Variant; }
 
   MCSymbol *getBeginSymbol() { return Begin; }
   const MCSymbol *getBeginSymbol() const {

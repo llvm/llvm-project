@@ -58,8 +58,8 @@ private:
                unsigned entrySize, const MCSymbolELF *group, bool IsComdat,
                unsigned UniqueID, MCSymbol *Begin,
                const MCSymbolELF *LinkedToSym)
-      : MCSection(SV_ELF, Name, flags & ELF::SHF_EXECINSTR,
-                  type == ELF::SHT_NOBITS, Begin),
+      : MCSection(Name, flags & ELF::SHF_EXECINSTR, type == ELF::SHT_NOBITS,
+                  Begin),
         Type(type), Flags(flags), UniqueID(UniqueID), EntrySize(entrySize),
         Group(group, IsComdat), LinkedToSym(LinkedToSym) {
     assert((!(Flags & ELF::SHF_GROUP) || Group.getPointer()) &&
