@@ -333,6 +333,8 @@ private:
   void reportCommon(SMLoc Loc,
                     std::function<void(SMDiagnostic &, const SourceMgr *)>);
 
+  MCFragment *allocInitialFragment(MCSection &Sec);
+
   MCSymbolTableEntry &getSymbolTableEntry(StringRef Name);
 
   MCSymbol *createSymbolImpl(const MCSymbolTableEntry *Name, bool IsTemporary);

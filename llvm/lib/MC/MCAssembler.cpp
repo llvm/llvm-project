@@ -106,6 +106,7 @@ void MCAssembler::reset() {
 bool MCAssembler::registerSection(MCSection &Section) {
   if (Section.isRegistered())
     return false;
+  assert(Section.curFragList()->Head && "allocInitialFragment not called");
   Sections.push_back(&Section);
   Section.setIsRegistered(true);
   return true;

@@ -36,20 +36,6 @@ XCOFFObjectWriter &MCXCOFFStreamer::getWriter() {
   return static_cast<XCOFFObjectWriter &>(getAssembler().getWriter());
 }
 
-void MCXCOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
-  MCObjectStreamer::changeSection(Section, Subsection);
-  auto *Sec = cast<MCSectionXCOFF>(Section);
-  // We might miss calculating the symbols difference as absolute value before
-  // adding fixups when symbol_A without the fragment set is the csect itself
-  // and symbol_B is in it.
-  // TODO: Currently we only set the fragment for XMC_PR csects and DWARF
-  // sections because we don't have other cases that hit this problem yet.
-  // if (IsDwarfSec || CsectProp->MappingClass == XCOFF::XMC_PR)
-  //   QualName->setFragment(F);
-  if (Sec->isDwarfSect() || Sec->getMappingClass() == XCOFF::XMC_PR)
-    Sec->getQualNameSymbol()->setFragment(CurFrag);
-}
-
 bool MCXCOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
                                           MCSymbolAttr Attribute) {
   auto *Symbol = cast<MCSymbolXCOFF>(Sym);
