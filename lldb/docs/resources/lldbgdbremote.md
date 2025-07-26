@@ -1998,6 +1998,19 @@ threads (live system debug) / cores (JTAG) in your program have
 stopped and allows LLDB to display and control your program
 correctly.
 
+## qWasmCallStack
+
+Get the Wasm callback for the given thread id. This returns a hex-encoding list
+of 64-bit addresses for the frame PCs. To match the Wasm specification, the
+addresses are encoded in little endian byte order.
+
+```
+send packet: $qWasmCallStack:202dbe040#08
+read packet: $9c01000000000040e501000000000040fe01000000000040#
+```
+
+**Priority to Implement:** Only required for WebAssembly support.
+
 ## qWatchpointSupportInfo
 
 Get the number of hardware watchpoints available on the remote target.
