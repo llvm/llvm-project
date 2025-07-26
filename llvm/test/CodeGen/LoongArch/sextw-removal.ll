@@ -326,11 +326,13 @@ declare i64 @llvm.ctpop.i64(i64)
 define void @test8(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-LABEL: test8:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 0 # 8-byte Folded Spill
+; CHECK-NEXT:    addi.d $sp, $sp, -32
+; CHECK-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $s0, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    sra.w $a0, $a0, $a1
-; CHECK-NEXT:    addi.w $fp, $zero, -256
+; CHECK-NEXT:    addi.d $fp, $zero, -256
+; CHECK-NEXT:    ori $s0, $zero, 1
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB7_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -338,20 +340,23 @@ define void @test8(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(foo)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    or $a0, $a0, $fp
-; CHECK-NEXT:    bnez $a0, .LBB7_1
+; CHECK-NEXT:    bnez $s0, .LBB7_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
-; CHECK-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ld.d $s0, $sp, 8 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
+; CHECK-NEXT:    addi.d $sp, $sp, 32
 ; CHECK-NEXT:    ret
 ;
 ; NORMV-LABEL: test8:
 ; NORMV:       # %bb.0: # %bb
-; NORMV-NEXT:    addi.d $sp, $sp, -16
-; NORMV-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; NORMV-NEXT:    st.d $fp, $sp, 0 # 8-byte Folded Spill
+; NORMV-NEXT:    addi.d $sp, $sp, -32
+; NORMV-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
+; NORMV-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
+; NORMV-NEXT:    st.d $s0, $sp, 8 # 8-byte Folded Spill
 ; NORMV-NEXT:    sra.w $a0, $a0, $a1
-; NORMV-NEXT:    addi.w $fp, $zero, -256
+; NORMV-NEXT:    addi.d $fp, $zero, -256
+; NORMV-NEXT:    ori $s0, $zero, 1
 ; NORMV-NEXT:    .p2align 4, , 16
 ; NORMV-NEXT:  .LBB7_1: # %bb2
 ; NORMV-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -359,11 +364,12 @@ define void @test8(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:    pcaddu18i $ra, %call36(foo)
 ; NORMV-NEXT:    jirl $ra, $ra, 0
 ; NORMV-NEXT:    or $a0, $a0, $fp
-; NORMV-NEXT:    bnez $a0, .LBB7_1
+; NORMV-NEXT:    bnez $s0, .LBB7_1
 ; NORMV-NEXT:  # %bb.2: # %bb7
-; NORMV-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
-; NORMV-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; NORMV-NEXT:    addi.d $sp, $sp, 16
+; NORMV-NEXT:    ld.d $s0, $sp, 8 # 8-byte Folded Reload
+; NORMV-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
+; NORMV-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
+; NORMV-NEXT:    addi.d $sp, $sp, 32
 ; NORMV-NEXT:    ret
 bb:
   %i = ashr i32 %arg, %arg1
