@@ -113,6 +113,9 @@ Improvements to Clang's diagnostics
   Added a new warning in this group for the case where the attribute is missing/implicit on
   an override of a virtual method.
 
+- Fixed a duplicate diagnostic when performing typo correction on function template
+  calls with explicit template arguments. Fixes #GH139226.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
