@@ -1065,9 +1065,9 @@ void MipsGotSection::build() {
       // for the TP-relative offset as we don't know how much other data will
       // be allocated before us in the static TLS block.
       if (s->isPreemptible || ctx.arg.shared)
-        ctx.mainPart->relaDyn->addReloc(
-            {ctx.target->tlsGotRel, this, offset,
-             DynamicReloc::AgainstSymbolWithTargetVA, *s, 0, R_ABS});
+        ctx.mainPart->relaDyn->addReloc({ctx.target->tlsGotRel, this, offset,
+                                         DynamicReloc::AgainstSymbol, *s, 0,
+                                         R_ABS});
     }
     for (std::pair<Symbol *, size_t> &p : got.dynTlsSymbols) {
       Symbol *s = p.first;
@@ -1122,8 +1122,8 @@ void MipsGotSection::build() {
     for (const std::pair<GotEntry, size_t> &p : got.local16) {
       uint64_t offset = p.second * ctx.arg.wordsize;
       ctx.mainPart->relaDyn->addReloc({ctx.target->relativeRel, this, offset,
-                                       DynamicReloc::AddendOnlyWithTargetVA,
-                                       *p.first.first, p.first.second, R_ABS});
+                                       DynamicReloc::AddendOnly, *p.first.first,
+                                       p.first.second, R_ABS});
     }
   }
 }
@@ -1648,13 +1648,7 @@ uint64_t DynamicReloc::getOffset() const {
 int64_t DynamicReloc::computeAddend(Ctx &ctx) const {
   switch (kind) {
   case AddendOnly:
-    assert(sym == nullptr);
-    return addend;
-  case AgainstSymbol:
-    assert(sym != nullptr);
-    return addend;
-  case AddendOnlyWithTargetVA:
-  case AgainstSymbolWithTargetVA: {
+  case AgainstSymbol: {
     uint64_t ca = inputSec->getRelocTargetVA(
         ctx, Relocation{expr, type, 0, addend, sym}, getOffset());
     return ctx.arg.is64 ? ca : SignExtend64<32>(ca);
@@ -1701,10 +1695,10 @@ void RelocationBaseSection::addAddendOnlyRelocIfNonPreemptible(
   // No need to write an addend to the section for preemptible symbols.
   if (sym.isPreemptible)
     addReloc({dynType, &isec, offsetInSec, DynamicReloc::AgainstSymbol, sym, 0,
-              R_ABS});
+              R_ADDEND});
   else
-    addReloc(DynamicReloc::AddendOnlyWithTargetVA, dynType, isec, offsetInSec,
-             sym, 0, R_ABS, addendRelType);
+    addReloc(DynamicReloc::AddendOnly, dynType, isec, offsetInSec, sym, 0,
+             R_ABS, addendRelType);
 }
 
 void RelocationBaseSection::mergeRels() {
