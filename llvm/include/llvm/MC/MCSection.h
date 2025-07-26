@@ -597,8 +597,6 @@ protected:
   StringRef Name;
 
   MCSection(StringRef Name, bool IsText, bool IsBss, MCSymbol *Begin);
-  // Protected non-virtual dtor prevents destroy through a base class pointer.
-  ~MCSection() {}
 
 public:
   MCSection(const MCSection &) = delete;
@@ -647,10 +645,6 @@ public:
 
   void dump(DenseMap<const MCFragment *, SmallVector<const MCSymbol *, 0>>
                 *FragToSyms = nullptr) const;
-
-  virtual void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
-                                    raw_ostream &OS,
-                                    uint32_t Subsection) const {}
 
   /// Check whether this section is "virtual", that is has no actual object
   /// file contents.
