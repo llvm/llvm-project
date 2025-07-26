@@ -146,6 +146,11 @@ static cl::opt<unsigned> IntAssociationUpperLimit(
         "Set upper limit for the number of transformations performed "
         "during a single round of hoisting the reassociated expressions."));
 
+static cl::opt<unsigned> BOAssociationUserLimit(
+    "licm-hoist-bo-association-user-limit", cl::init(2), cl::Hidden,
+    cl::desc("Limit the number of users of the variant operand when "
+             "reassociating a binary operator for hoisting."));
+
 // Experimental option to allow imprecision in LICM in pathological cases, in
 // exchange for faster compile. This is to be removed if MemorySSA starts to
 // address the same issue. LICM calls MemorySSAWalker's
@@ -2850,7 +2855,7 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   bool LVInRHS = L.isLoopInvariant(BO->getOperand(0));
   auto *BO0 = dyn_cast<BinaryOperator>(BO->getOperand(LVInRHS));
   if (!BO0 || BO0->getOpcode() != Opcode || !BO0->isAssociative() ||
-      BO0->hasNUsesOrMore(3))
+      BO0->hasNUsesOrMore(BOAssociationUserLimit + 1))
     return false;
 
   Value *LV = BO0->getOperand(0);
