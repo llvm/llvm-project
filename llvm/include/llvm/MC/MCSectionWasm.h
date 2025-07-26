@@ -89,7 +89,6 @@ public:
     assert(isWasmData());
     IsPassive = V;
   }
-  static bool classof(const MCSection *S) { return S->getVariant() == SV_Wasm; }
 };
 
 } // end namespace llvm
