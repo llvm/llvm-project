@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -30,6 +31,7 @@
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Argument.h"
@@ -51,6 +53,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -1110,22 +1113,205 @@ void ScopedAliasMetadataDeepCloner::remap(Function::iterator FStart,
   }
 }
 
+static void addAliasMetadata(CallBase *CB, Function const *CalledFunc,
+                             AAResults *CalleeAAR, DominatorTree &DT,
+                             ArrayRef<Argument const *> NoAliasArgs,
+                             DenseMap<Argument const *, MDNode *> &NewScopes,
+                             Instruction const *I, Instruction *NI) {
+  bool IsArgMemOnlyCall = false, IsFuncCall = false;
+  SmallVector<const Value *, 2> PtrArgs;
+
+  if (const LoadInst *LI = dyn_cast<LoadInst>(I))
+    PtrArgs.push_back(LI->getPointerOperand());
+  else if (const StoreInst *SI = dyn_cast<StoreInst>(I))
+    PtrArgs.push_back(SI->getPointerOperand());
+  else if (const VAArgInst *VAAI = dyn_cast<VAArgInst>(I))
+    PtrArgs.push_back(VAAI->getPointerOperand());
+  else if (const AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(I))
+    PtrArgs.push_back(CXI->getPointerOperand());
+  else if (const AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(I))
+    PtrArgs.push_back(RMWI->getPointerOperand());
+  else if (const auto *Call = dyn_cast<CallBase>(I)) {
+    // If we know that the call does not access memory, then we'll still
+    // know that about the inlined clone of this call site, and we don't
+    // need to add metadata.
+    if (Call->doesNotAccessMemory())
+      return;
+
+    IsFuncCall = true;
+    if (CalleeAAR) {
+      MemoryEffects ME = CalleeAAR->getMemoryEffects(Call);
+
+      // We'll retain this knowledge without additional metadata.
+      if (ME.onlyAccessesInaccessibleMem())
+        return;
+
+      if (ME.onlyAccessesArgPointees())
+        IsArgMemOnlyCall = true;
+    }
+
+    for (Value *Arg : Call->args()) {
+      // Only care about pointer arguments. If a noalias argument is
+      // accessed through a non-pointer argument, it must be captured
+      // first (e.g. via ptrtoint), and we protect against captures below.
+      if (!Arg->getType()->isPointerTy())
+        continue;
+
+      PtrArgs.push_back(Arg);
+    }
+  }
+
+  // If we found no pointers, then this instruction is not suitable for
+  // pairing with an instruction to receive aliasing metadata.
+  // However, if this is a call, this we might just alias with none of the
+  // noalias arguments.
+  if (PtrArgs.empty() && !IsFuncCall)
+    return;
+
+  // It is possible that there is only one underlying object, but you
+  // need to go through several PHIs to see it, and thus could be
+  // repeated in the Objects list.
+  SmallPtrSet<const Value *, 4> ObjSet;
+  SmallVector<Metadata *, 4> Scopes, NoAliases;
+
+  for (const Value *V : PtrArgs) {
+    SmallVector<const Value *, 4> Objects;
+    getUnderlyingObjects(V, Objects, /* LI = */ nullptr);
+
+    ObjSet.insert_range(Objects);
+  }
+
+  // Figure out if we're derived from anything that is not a noalias
+  // argument.
+  bool RequiresNoCaptureBefore = false, UsesAliasingPtr = false,
+       UsesUnknownObject = false;
+  for (const Value *V : ObjSet) {
+    // Is this value a constant that cannot be derived from any pointer
+    // value (we need to exclude constant expressions, for example, that
+    // are formed from arithmetic on global symbols).
+    bool IsNonPtrConst = isa<ConstantInt>(V) || isa<ConstantFP>(V) ||
+                         isa<ConstantPointerNull>(V) ||
+                         isa<ConstantDataVector>(V) || isa<UndefValue>(V);
+    if (IsNonPtrConst)
+      continue;
+
+    // If this is anything other than a noalias argument, then we cannot
+    // completely describe the aliasing properties using alias.scope
+    // metadata (and, thus, won't add any).
+    if (const Argument *A = dyn_cast<Argument>(V)) {
+      if (CB) {
+        if (!CB->paramHasAttr(A->getArgNo(), Attribute::NoAlias))
+          UsesAliasingPtr = true;
+      } else if (!A->hasAttribute(Attribute::NoAlias))
+        UsesAliasingPtr = true;
+    } else {
+      UsesAliasingPtr = true;
+    }
+
+    if (isEscapeSource(V)) {
+      // An escape source can only alias with a noalias argument if it has
+      // been captured beforehand.
+      RequiresNoCaptureBefore = true;
+    } else if (!isa<Argument>(V) && !isIdentifiedObject(V)) {
+      // If this is neither an escape source, nor some identified object
+      // (which cannot directly alias a noalias argument), nor some other
+      // argument (which, by definition, also cannot alias a noalias
+      // argument), conservatively do not make any assumptions.
+      UsesUnknownObject = true;
+    }
+  }
+
+  // Nothing we can do if the used underlying object cannot be reliably
+  // determined.
+  if (UsesUnknownObject)
+    return;
+
+  // A function call can always get captured noalias pointers (via other
+  // parameters, globals, etc.).
+  if (IsFuncCall && !IsArgMemOnlyCall)
+    RequiresNoCaptureBefore = true;
+
+  // First, we want to figure out all of the sets with which we definitely
+  // don't alias. Iterate over all noalias set, and add those for which:
+  //   1. The noalias argument is not in the set of objects from which we
+  //      definitely derive.
+  //   2. The noalias argument has not yet been captured.
+  // An arbitrary function that might load pointers could see captured
+  // noalias arguments via other noalias arguments or globals, and so we
+  // must always check for prior capture.
+  for (const Argument *A : NoAliasArgs) {
+    if (ObjSet.contains(A))
+      continue; // May be based on a noalias argument.
+
+    // It might be tempting to skip the PointerMayBeCapturedBefore check if
+    // A->hasNoCaptureAttr() is true, but this is incorrect because
+    // nocapture only guarantees that no copies outlive the function, not
+    // that the value cannot be locally captured.
+    if (!RequiresNoCaptureBefore ||
+        !capturesAnything(PointerMayBeCapturedBefore(
+            A, /*ReturnCaptures=*/false, I, &DT, /*IncludeI=*/false,
+            CaptureComponents::Provenance)))
+      NoAliases.push_back(NewScopes[A]);
+  }
+
+  if (!NoAliases.empty())
+    NI->setMetadata(
+        LLVMContext::MD_noalias,
+        MDNode::concatenate(NI->getMetadata(LLVMContext::MD_noalias),
+                            MDNode::get(CalledFunc->getContext(), NoAliases)));
+
+  // Next, we want to figure out all of the sets to which we might belong.
+  // We might belong to a set if the noalias argument is in the set of
+  // underlying objects. If there is some non-noalias argument in our list
+  // of underlying objects, then we cannot add a scope because the fact
+  // that some access does not alias with any set of our noalias arguments
+  // cannot itself guarantee that it does not alias with this access
+  // (because there is some pointer of unknown origin involved and the
+  // other access might also depend on this pointer). We also cannot add
+  // scopes to arbitrary functions unless we know they don't access any
+  // non-parameter pointer-values.
+  bool CanAddScopes = !UsesAliasingPtr;
+  if (CanAddScopes && IsFuncCall)
+    CanAddScopes = IsArgMemOnlyCall;
+
+  if (CanAddScopes)
+    for (const Argument *A : NoAliasArgs) {
+      if (ObjSet.count(A))
+        Scopes.push_back(NewScopes[A]);
+    }
+
+  if (!Scopes.empty())
+    NI->setMetadata(
+        LLVMContext::MD_alias_scope,
+        MDNode::concatenate(NI->getMetadata(LLVMContext::MD_alias_scope),
+                            MDNode::get(CalledFunc->getContext(), Scopes)));
+};
+
 /// If the inlined function has noalias arguments,
 /// then add new alias scopes for each noalias argument, tag the mapped noalias
 /// parameters with noalias metadata specifying the new scope, and tag all
 /// non-derived loads, stores and memory intrinsics with the new alias scopes.
-static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
-                                  const DataLayout &DL, AAResults *CalleeAAR,
-                                  ClonedCodeInfo &InlinedFunctionInfo) {
-  if (!EnableNoAliasConversion)
-    return;
-
-  const Function *CalledFunc = CB.getCalledFunction();
+static void addAliasScopeMetadataImpl(CallBase *CB, Function *F,
+                                      ValueToValueMapTy *VMap,
+                                      const DataLayout &DL,
+                                      AAResults *CalleeAAR,
+                                      ClonedCodeInfo *InlinedFunctionInfo,
+                                      bool UseNoAliasIntrinsic) {
+  assert(CB || F);
+  const Function *CalledFunc = CB ? CB->getCalledFunction() : F;
   SmallVector<const Argument *, 4> NoAliasArgs;
 
-  for (const Argument &Arg : CalledFunc->args())
-    if (CB.paramHasAttr(Arg.getArgNo(), Attribute::NoAlias) && !Arg.use_empty())
-      NoAliasArgs.push_back(&Arg);
+  if (CB) {
+    for (const Argument &Arg : CalledFunc->args())
+      if (CB->paramHasAttr(Arg.getArgNo(), Attribute::NoAlias) &&
+          !Arg.use_empty())
+        NoAliasArgs.push_back(&Arg);
+
+  } else {
+    for (const Argument &Arg : CalledFunc->args())
+      if (Arg.hasAttribute(Attribute::NoAlias) && !Arg.use_empty())
+        NoAliasArgs.push_back(&Arg);
+  }
 
   if (NoAliasArgs.empty())
     return;
@@ -1166,195 +1352,59 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
     NewScopes.insert(std::make_pair(A, NewScope));
 
     if (UseNoAliasIntrinsic) {
+      assert(CB);
       // Introduce a llvm.experimental.noalias.scope.decl for the noalias
       // argument.
       MDNode *AScopeList = MDNode::get(CalledFunc->getContext(), NewScope);
       auto *NoAliasDecl =
-          IRBuilder<>(&CB).CreateNoAliasScopeDeclaration(AScopeList);
+          IRBuilder<>(CB).CreateNoAliasScopeDeclaration(AScopeList);
       // Ignore the result for now. The result will be used when the
       // llvm.noalias intrinsic is introduced.
       (void)NoAliasDecl;
     }
   }
 
-  // Iterate over all new instructions in the map; for all memory-access
-  // instructions, add the alias scope metadata.
-  for (ValueToValueMapTy::iterator VMI = VMap.begin(), VMIE = VMap.end();
-       VMI != VMIE; ++VMI) {
-    if (const Instruction *I = dyn_cast<Instruction>(VMI->first)) {
-      if (!VMI->second)
+  if (VMap) {
+    assert(InlinedFunctionInfo);
+
+    for (ValueToValueMapTy::iterator VMI = VMap->begin(), VMIE = VMap->end();
+         VMI != VMIE; ++VMI) {
+      const Instruction *I = dyn_cast<Instruction>(VMI->first);
+      if (!I || !VMI->second)
         continue;
 
       Instruction *NI = dyn_cast<Instruction>(VMI->second);
-      if (!NI || InlinedFunctionInfo.isSimplified(I, NI))
+      if (!NI || InlinedFunctionInfo->isSimplified(I, NI))
         continue;
 
-      bool IsArgMemOnlyCall = false, IsFuncCall = false;
-      SmallVector<const Value *, 2> PtrArgs;
+      addAliasMetadata(CB, CalledFunc, CalleeAAR, DT, NoAliasArgs, NewScopes, I,
+                       NI);
+    }
 
-      if (const LoadInst *LI = dyn_cast<LoadInst>(I))
-        PtrArgs.push_back(LI->getPointerOperand());
-      else if (const StoreInst *SI = dyn_cast<StoreInst>(I))
-        PtrArgs.push_back(SI->getPointerOperand());
-      else if (const VAArgInst *VAAI = dyn_cast<VAArgInst>(I))
-        PtrArgs.push_back(VAAI->getPointerOperand());
-      else if (const AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(I))
-        PtrArgs.push_back(CXI->getPointerOperand());
-      else if (const AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(I))
-        PtrArgs.push_back(RMWI->getPointerOperand());
-      else if (const auto *Call = dyn_cast<CallBase>(I)) {
-        // If we know that the call does not access memory, then we'll still
-        // know that about the inlined clone of this call site, and we don't
-        // need to add metadata.
-        if (Call->doesNotAccessMemory())
-          continue;
-
-        IsFuncCall = true;
-        if (CalleeAAR) {
-          MemoryEffects ME = CalleeAAR->getMemoryEffects(Call);
-
-          // We'll retain this knowledge without additional metadata.
-          if (ME.onlyAccessesInaccessibleMem())
-            continue;
-
-          if (ME.onlyAccessesArgPointees())
-            IsArgMemOnlyCall = true;
-        }
-
-        for (Value *Arg : Call->args()) {
-          // Only care about pointer arguments. If a noalias argument is
-          // accessed through a non-pointer argument, it must be captured
-          // first (e.g. via ptrtoint), and we protect against captures below.
-          if (!Arg->getType()->isPointerTy())
-            continue;
-
-          PtrArgs.push_back(Arg);
-        }
-      }
-
-      // If we found no pointers, then this instruction is not suitable for
-      // pairing with an instruction to receive aliasing metadata.
-      // However, if this is a call, this we might just alias with none of the
-      // noalias arguments.
-      if (PtrArgs.empty() && !IsFuncCall)
-        continue;
-
-      // It is possible that there is only one underlying object, but you
-      // need to go through several PHIs to see it, and thus could be
-      // repeated in the Objects list.
-      SmallPtrSet<const Value *, 4> ObjSet;
-      SmallVector<Metadata *, 4> Scopes, NoAliases;
-
-      for (const Value *V : PtrArgs) {
-        SmallVector<const Value *, 4> Objects;
-        getUnderlyingObjects(V, Objects, /* LI = */ nullptr);
-
-        ObjSet.insert_range(Objects);
-      }
-
-      // Figure out if we're derived from anything that is not a noalias
-      // argument.
-      bool RequiresNoCaptureBefore = false, UsesAliasingPtr = false,
-           UsesUnknownObject = false;
-      for (const Value *V : ObjSet) {
-        // Is this value a constant that cannot be derived from any pointer
-        // value (we need to exclude constant expressions, for example, that
-        // are formed from arithmetic on global symbols).
-        bool IsNonPtrConst = isa<ConstantInt>(V) || isa<ConstantFP>(V) ||
-                             isa<ConstantPointerNull>(V) ||
-                             isa<ConstantDataVector>(V) || isa<UndefValue>(V);
-        if (IsNonPtrConst)
-          continue;
-
-        // If this is anything other than a noalias argument, then we cannot
-        // completely describe the aliasing properties using alias.scope
-        // metadata (and, thus, won't add any).
-        if (const Argument *A = dyn_cast<Argument>(V)) {
-          if (!CB.paramHasAttr(A->getArgNo(), Attribute::NoAlias))
-            UsesAliasingPtr = true;
-        } else {
-          UsesAliasingPtr = true;
-        }
-
-        if (isEscapeSource(V)) {
-          // An escape source can only alias with a noalias argument if it has
-          // been captured beforehand.
-          RequiresNoCaptureBefore = true;
-        } else if (!isa<Argument>(V) && !isIdentifiedObject(V)) {
-          // If this is neither an escape source, nor some identified object
-          // (which cannot directly alias a noalias argument), nor some other
-          // argument (which, by definition, also cannot alias a noalias
-          // argument), conservatively do not make any assumptions.
-          UsesUnknownObject = true;
-        }
-      }
-
-      // Nothing we can do if the used underlying object cannot be reliably
-      // determined.
-      if (UsesUnknownObject)
-        continue;
-
-      // A function call can always get captured noalias pointers (via other
-      // parameters, globals, etc.).
-      if (IsFuncCall && !IsArgMemOnlyCall)
-        RequiresNoCaptureBefore = true;
-
-      // First, we want to figure out all of the sets with which we definitely
-      // don't alias. Iterate over all noalias set, and add those for which:
-      //   1. The noalias argument is not in the set of objects from which we
-      //      definitely derive.
-      //   2. The noalias argument has not yet been captured.
-      // An arbitrary function that might load pointers could see captured
-      // noalias arguments via other noalias arguments or globals, and so we
-      // must always check for prior capture.
-      for (const Argument *A : NoAliasArgs) {
-        if (ObjSet.contains(A))
-          continue; // May be based on a noalias argument.
-
-        // It might be tempting to skip the PointerMayBeCapturedBefore check if
-        // A->hasNoCaptureAttr() is true, but this is incorrect because
-        // nocapture only guarantees that no copies outlive the function, not
-        // that the value cannot be locally captured.
-        if (!RequiresNoCaptureBefore ||
-            !capturesAnything(PointerMayBeCapturedBefore(
-                A, /*ReturnCaptures=*/false, I, &DT, /*IncludeI=*/false,
-                CaptureComponents::Provenance)))
-          NoAliases.push_back(NewScopes[A]);
-      }
-
-      if (!NoAliases.empty())
-        NI->setMetadata(LLVMContext::MD_noalias,
-                        MDNode::concatenate(
-                            NI->getMetadata(LLVMContext::MD_noalias),
-                            MDNode::get(CalledFunc->getContext(), NoAliases)));
-
-      // Next, we want to figure out all of the sets to which we might belong.
-      // We might belong to a set if the noalias argument is in the set of
-      // underlying objects. If there is some non-noalias argument in our list
-      // of underlying objects, then we cannot add a scope because the fact
-      // that some access does not alias with any set of our noalias arguments
-      // cannot itself guarantee that it does not alias with this access
-      // (because there is some pointer of unknown origin involved and the
-      // other access might also depend on this pointer). We also cannot add
-      // scopes to arbitrary functions unless we know they don't access any
-      // non-parameter pointer-values.
-      bool CanAddScopes = !UsesAliasingPtr;
-      if (CanAddScopes && IsFuncCall)
-        CanAddScopes = IsArgMemOnlyCall;
-
-      if (CanAddScopes)
-        for (const Argument *A : NoAliasArgs) {
-          if (ObjSet.count(A))
-            Scopes.push_back(NewScopes[A]);
-        }
-
-      if (!Scopes.empty())
-        NI->setMetadata(
-            LLVMContext::MD_alias_scope,
-            MDNode::concatenate(NI->getMetadata(LLVMContext::MD_alias_scope),
-                                MDNode::get(CalledFunc->getContext(), Scopes)));
+  } else {
+    for (auto It = inst_begin(F), End = inst_end(F); It != End; ++It) {
+      Instruction *I = &(*It);
+      addAliasMetadata(CB, CalledFunc, CalleeAAR, DT, NoAliasArgs, NewScopes, I,
+                       I);
     }
   }
+}
+
+void llvm::addAliasScopeMetadataForCalledFunction(
+    CallBase &CB, DataLayout const &DL, ValueToValueMapTy *VMap,
+    AAResults *CalleeAAR, ClonedCodeInfo *InlinedFunctionInfo,
+    bool UseNoAliasIntrinsic) {
+  addAliasScopeMetadataImpl(&CB, /*F=*/nullptr, VMap, DL, CalleeAAR,
+                            InlinedFunctionInfo, UseNoAliasIntrinsic);
+}
+
+void llvm::addAliasScopeMetadataForFunction(Function &F, DataLayout const &DL,
+                                            ValueToValueMapTy *VMap,
+                                            AAResults *CalleeAAR,
+                                            ClonedCodeInfo *InlinedFunctionInfo,
+                                            bool UseNoAliasIntrinsic) {
+  addAliasScopeMetadataImpl(/*CB=*/nullptr, &F, VMap, DL, CalleeAAR,
+                            InlinedFunctionInfo, UseNoAliasIntrinsic);
 }
 
 static bool MayContainThrowingOrExitingCallAfterCB(CallBase *Begin,
@@ -2794,7 +2844,9 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     SAMetadataCloner.remap(FirstNewBlock, Caller->end());
 
     // Add noalias metadata if necessary.
-    AddAliasScopeMetadata(CB, VMap, DL, CalleeAAR, InlinedFunctionInfo);
+    if (EnableNoAliasConversion)
+      addAliasScopeMetadataForCalledFunction(
+          CB, DL, &VMap, CalleeAAR, &InlinedFunctionInfo, UseNoAliasIntrinsic);
 
     // Clone return attributes on the callsite into the calls within the inlined
     // function which feed into its return value.
