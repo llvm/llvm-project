@@ -287,6 +287,12 @@ private:
   SITargetLowering TLInfo;
   SIFrameLowering FrameLowering;
 
+  /// Check whether there is a real dependency between the definition and the
+  /// use.  The definition might only affect a subregister that is not actually
+  /// used.
+  bool isRealSchedDependency(MachineInstr *DefI, int DefOpIdx,
+                             MachineInstr *UseI, int UseOpIdx) const;
+
 public:
   GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                const GCNTargetMachine &TM);
