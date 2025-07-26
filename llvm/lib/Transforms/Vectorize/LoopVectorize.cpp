@@ -8239,7 +8239,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
   VPRecipeBase *Recipe;
   Instruction *Instr = R->getUnderlyingInstr();
   SmallVector<VPValue *, 4> Operands(R->operands());
-  if (auto *PhiR = dyn_cast<VPWidenPHIRecipe>(R)) {
+  if (auto *PhiR = dyn_cast<VPPhi>(R)) {
     VPBasicBlock *Parent = PhiR->getParent();
     [[maybe_unused]] VPRegionBlock *LoopRegionOf =
         Parent->getEnclosingLoopRegion();
