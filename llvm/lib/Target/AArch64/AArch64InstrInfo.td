@@ -448,8 +448,13 @@ def SDTBinaryArithWithFlagsInOut : SDTypeProfile<2, 3,
                                              SDTCisVT<1, FlagsVT>,
                                              SDTCisVT<4, FlagsVT>]>;
 
+// Value type used for condition codes.
+// Should be kept in sync with its C++ counterpart.
+defvar CondCodeVT = i32;
+
 def SDT_AArch64Brcond  : SDTypeProfile<0, 3,
-                                     [SDTCisVT<0, OtherVT>, SDTCisVT<1, i32>,
+                                     [SDTCisVT<0, OtherVT>,
+                                      SDTCisVT<1, CondCodeVT>,
                                       SDTCisVT<2, FlagsVT>]>;
 def SDT_AArch64cbz : SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisVT<1, OtherVT>]>;
 def SDT_AArch64tbz : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>,
@@ -458,22 +463,22 @@ def SDT_AArch64tbz : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>,
 def SDT_AArch64CSel  : SDTypeProfile<1, 4,
                                    [SDTCisSameAs<0, 1>,
                                     SDTCisSameAs<0, 2>,
-                                    SDTCisInt<3>,
+                                    SDTCisVT<3, CondCodeVT>,
                                     SDTCisVT<4, FlagsVT>]>;
 def SDT_AArch64CCMP : SDTypeProfile<1, 5,
                                     [SDTCisVT<0, FlagsVT>,
                                      SDTCisInt<1>,
                                      SDTCisSameAs<1, 2>,
                                      SDTCisInt<3>,
-                                     SDTCisInt<4>,
-                                     SDTCisVT<5, i32>]>;
+                                     SDTCisVT<4, CondCodeVT>,
+                                     SDTCisVT<5, FlagsVT>]>;
 def SDT_AArch64FCCMP : SDTypeProfile<1, 5,
                                      [SDTCisVT<0, FlagsVT>,
                                       SDTCisFP<1>,
                                       SDTCisSameAs<1, 2>,
                                       SDTCisInt<3>,
-                                      SDTCisInt<4>,
-                                      SDTCisVT<5, i32>]>;
+                                      SDTCisVT<4, CondCodeVT>,
+                                      SDTCisVT<5, FlagsVT>]>;
 def SDT_AArch64FCmp  : SDTypeProfile<1, 2, [SDTCisVT<0, FlagsVT>,
                                             SDTCisFP<1>,
                                             SDTCisSameAs<2, 1>]>;
@@ -546,7 +551,8 @@ def SDT_AArch64TBL : SDTypeProfile<1, 2, [
 ]>;
 
 def SDT_AArch64cb : SDTypeProfile<0, 4,
-                                  [SDTCisVT<0, i32>, SDTCisInt<1>, SDTCisInt<2>,
+                                  [SDTCisVT<0, CondCodeVT>,
+                                   SDTCisInt<1>, SDTCisInt<2>,
                                    SDTCisVT<3, OtherVT>]>;
 
 // non-extending masked load fragment.
