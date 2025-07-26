@@ -4700,6 +4700,14 @@ let Predicates = [IsLE] in {
             (STRQui FPR128:$Rt, GPR64sp:$Rn, uimm12s16:$offset)>;
 }
 
+// truncstorei32 of f64 bitcasted to i64
+def : Pat<(truncstorei32 (i64 (bitconvert (f64 FPR64:$Rt))), (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset)),
+          (STRSui (EXTRACT_SUBREG FPR64:$Rt, ssub), GPR64sp:$Rn, uimm12s4:$offset)>;
+
+// truncstorei16 of f64 bitcasted to i64
+def : Pat<(truncstorei16 (i64 (bitconvert (f64 FPR64:$Rt))), (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset)),
+          (STRHui (f16 (EXTRACT_SUBREG FPR64:$Rt, hsub)), GPR64sp:$Rn, uimm12s2:$offset)>;     
+
 // truncstore i64
 def : Pat<(truncstorei32 GPR64:$Rt,
                          (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset)),
