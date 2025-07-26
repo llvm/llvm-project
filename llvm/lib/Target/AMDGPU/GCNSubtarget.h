@@ -1532,6 +1532,10 @@ public:
   // of sign-extending.
   bool hasGetPCZeroExtension() const { return GFX12Insts; }
 
+  bool hasCondSubInsts() const { return GFX12Insts; }
+
+  bool hasSubClampInsts() const { return hasGFX10_3Insts(); }
+
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
     return AMDGPU::IsaInfo::getSGPRAllocGranule(this);

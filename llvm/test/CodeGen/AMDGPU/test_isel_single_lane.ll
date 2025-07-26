@@ -10,19 +10,23 @@ define amdgpu_kernel void @test_isel_single_lane(ptr addrspace(1) %in, ptr addrs
 ; GCN-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_load_b32 s4, s[0:1], 0x58
+; GCN-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
-; GCN-NEXT:    global_atomic_cond_sub_u32 v1, v0, v1, s[0:1] offset:16 th:TH_ATOMIC_RETURN
+; GCN-NEXT:    v_mov_b32_e32 v2, s4
+; GCN-NEXT:    flat_atomic_cond_sub_u32 v0, v[0:1], v2 offset:16 th:TH_ATOMIC_RETURN
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    v_readfirstlane_b32 s0, v1
+; GCN-NEXT:    v_readfirstlane_b32 s0, v0
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_addk_co_i32 s0, 0xf4
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_lshl_b32 s1, s0, 4
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_mul_i32 s0, s0, s1
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_lshl_b32 s0, s0, 12
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_sub_co_i32 s0, s1, s0
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    v_mov_b32_e32 v1, s0
 ; GCN-NEXT:    global_store_b32 v0, v1, s[2:3]
 ; GCN-NEXT:    s_endpgm
