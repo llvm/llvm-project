@@ -57,12 +57,6 @@ def simm6nonzero : RISCVOp,
   }];
 }
 
-def immzero : RISCVOp,
-              ImmLeaf<XLenVT, [{return (Imm == 0);}]> {
-  let ParserMatchClass = ImmZeroAsmOperand;
-  let OperandType = "OPERAND_ZERO";
-}
-
 def CLUIImmAsmOperand : AsmOperandClass {
   let Name = "CLUIImm";
   let RenderMethod = "addImmOperands";
