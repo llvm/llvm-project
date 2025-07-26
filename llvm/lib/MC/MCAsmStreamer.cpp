@@ -532,8 +532,8 @@ void MCAsmStreamer::switchSection(MCSection *Section, uint32_t Subsection) {
     if (MCTargetStreamer *TS = getTargetStreamer()) {
       TS->changeSection(Cur.first, Section, Subsection, OS);
     } else {
-      Section->printSwitchToSection(*MAI, getContext().getTargetTriple(), OS,
-                                    Subsection);
+      MAI->printSwitchToSection(*Section, Subsection,
+                                getContext().getTargetTriple(), OS);
     }
   }
   MCStreamer::switchSection(Section, Subsection);
@@ -543,7 +543,7 @@ bool MCAsmStreamer::popSection() {
   if (!MCStreamer::popSection())
     return false;
   auto [Sec, Subsec] = getCurrentSection();
-  Sec->printSwitchToSection(*MAI, getContext().getTargetTriple(), OS, Subsec);
+  MAI->printSwitchToSection(*Sec, Subsec, getContext().getTargetTriple(), OS);
   return true;
 }
 
