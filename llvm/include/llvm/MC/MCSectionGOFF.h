@@ -123,8 +123,6 @@ public:
   bool requiresNonZeroLength() const { return RequiresNonZeroLength; }
 
   void setName(StringRef SectionName) { Name = SectionName; }
-
-  static bool classof(const MCSection *S) { return S->getVariant() == SV_GOFF; }
 };
 } // end namespace llvm
 
