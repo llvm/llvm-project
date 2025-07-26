@@ -423,6 +423,75 @@ public:
   }
 };
 
+// Given this snippet
+// ```
+//  %b = broadcast %arg0 : vector<2xf32> to vector<32x2xf32>
+//  %t = transpose %b, [1, 0] : vector<32x2xf32> to vector<2x32xf32>
+// ```
+// while we can't directly broadcast from vector<2xf32> to vector<2x32xf32>,
+// we can do something like this:
+// ```
+//  %cst = arith.constant dense<0.000000e+00> : vector<2x32xf32>
+//  %0 = vector.shuffle %arg0, %arg0 [0,0,...,0] : vector<2xf32>, vector<2xf32>
+//  %1 = vector.insert %0, %cst [0] : vector<32xf32> into vector<2x32xf32>
+//  %2 = vector.shuffle %arg0, %arg0 [1,1,...,1] : vector<2xf32>, vector<2xf32>
+//  %t = vector.insert %2, %1 [1] : vector<32xf32> into vector<2x32xf32>
+// ```
+// Where the shuffles are effectively 1-D broadcasts (splats), which are more
+// efficient than a single shuffle on a flatten 2-D vector.
+static LogicalResult
+lowerTranspose2DOfBroadcast1D(vector::TransposeOp transpose, int64_t srcDim0,
+                              int64_t srcDim1, PatternRewriter &rewriter) {
+  auto loc = transpose.getLoc();
+  auto broadcast = transpose.getVector().getDefiningOp<vector::BroadcastOp>();
+  if (!broadcast || !broadcast.getResult().hasOneUse())
+    return failure();
+
+  Value broadcastSrc = broadcast.getSource();
+  auto srcType = dyn_cast<VectorType>(broadcastSrc.getType());
+  if (!srcType)
+    return failure();
+  Type elementType = srcType.getElementType();
+  // Find the dimensions that are greater than 1.
+  SmallVector<int64_t> broadcastSrcDims;
+  for (int64_t size : srcType.getShape()) {
+    if (size > 1)
+      broadcastSrcDims.push_back(size);
+  }
+  if (broadcastSrcDims.size() != 1 || broadcastSrcDims[0] != srcDim1)
+    return failure();
+  // Normalize the broadcast source into an actual 1-D vector.
+  broadcastSrc =
+      rewriter
+          .create<vector::ShapeCastOp>(
+              loc, VectorType::get({broadcastSrcDims[0]}, elementType),
+              broadcastSrc)
+          .getResult();
+
+  // The normalized result type of the transpose.
+  auto normalizedResultType = VectorType::get({srcDim1, srcDim0}, elementType);
+  // The (normalized) 1-D type for the shuffles.
+  auto shuffleType = VectorType::get({srcDim0}, elementType);
+  SmallVector<int64_t> shuffleMask(srcDim0);
+
+  Value resultVec = rewriter.create<arith::ConstantOp>(
+      loc, rewriter.getZeroAttr(normalizedResultType));
+  // Generate 1-D shuffles.
+  for (int64_t idx = 0; idx < srcDim1; ++idx) {
+    std::fill(shuffleMask.begin(), shuffleMask.end(), idx);
+    auto shuffle = rewriter.create<vector::ShuffleOp>(
+        loc, shuffleType, broadcastSrc, broadcastSrc,
+        rewriter.getDenseI64ArrayAttr(shuffleMask));
+    resultVec = rewriter.create<vector::InsertOp>(loc, shuffle, resultVec,
+                                                  /*position=*/idx);
+  }
+
+  // Cast the result back to the original shape.
+  rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
+      transpose, transpose.getResultVectorType(), resultVec);
+  return success();
+}
+
 /// Rewrite a 2-D vector.transpose as a sequence of shuffle ops.
 /// If the strategy is Shuffle1D, it will be lowered to:
 ///   vector.shape_cast 2D -> 1D
@@ -459,6 +528,10 @@ public:
     VectorType srcType = op.getSourceVectorType();
     int64_t m = srcType.getDimSize(std::get<0>(srcGtOneDims.value()));
     int64_t n = srcType.getDimSize(std::get<1>(srcGtOneDims.value()));
+
+    if (vectorTransposeLowering == VectorTransposeLowering::Shuffle1D &&
+        succeeded(lowerTranspose2DOfBroadcast1D(op, m, n, rewriter)))
+      return success();
 
     // Reshape the n-D input vector with only two dimensions greater than one
     // to a 2-D vector.
