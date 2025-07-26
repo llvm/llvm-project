@@ -56,12 +56,11 @@ void MCTargetStreamer::finish() {}
 
 void MCTargetStreamer::emitConstantPools() {}
 
-void MCTargetStreamer::changeSection(const MCSection *CurSection,
-                                     MCSection *Section, uint32_t Subsection,
-                                     raw_ostream &OS) {
-  Section->printSwitchToSection(*Streamer.getContext().getAsmInfo(),
-                                Streamer.getContext().getTargetTriple(), OS,
-                                Subsection);
+void MCTargetStreamer::changeSection(const MCSection *, MCSection *Sec,
+                                     uint32_t Subsection, raw_ostream &OS) {
+  auto &MAI = *Streamer.getContext().getAsmInfo();
+  MAI.printSwitchToSection(*Sec, Subsection,
+                           Streamer.getContext().getTargetTriple(), OS);
 }
 
 void MCTargetStreamer::emitDwarfFileDirective(StringRef Directive) {

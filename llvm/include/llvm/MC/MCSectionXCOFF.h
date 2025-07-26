@@ -31,6 +31,7 @@ namespace llvm {
 //    implemented yet.
 class MCSectionXCOFF final : public MCSection {
   friend class MCContext;
+  friend class MCAsmInfoXCOFF;
 
   std::optional<XCOFF::CsectProperties> CsectProp;
   MCSymbolXCOFF *const QualName;
@@ -111,9 +112,6 @@ public:
   }
   MCSymbolXCOFF *getQualNameSymbol() const { return QualName; }
 
-  void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
-                            raw_ostream &OS,
-                            uint32_t Subsection) const override;
   StringRef getSymbolTableName() const { return SymbolTableName; }
   void setSymbolTableName(StringRef STN) { SymbolTableName = STN; }
   bool isMultiSymbolsAllowed() const { return MultiSymbolsAllowed; }

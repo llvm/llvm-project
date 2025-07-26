@@ -52,6 +52,7 @@ class MCSectionELF final : public MCSection {
 
 private:
   friend class MCContext;
+  friend class MCAsmInfoELF;
 
   // The storage of Name is owned by MCContext's ELFUniquingMap.
   MCSectionELF(StringRef Name, unsigned type, unsigned flags,
@@ -69,20 +70,12 @@ private:
   }
 
 public:
-  /// Decides whether a '.section' directive should be printed before the
-  /// section name
-  bool shouldOmitSectionDirective(StringRef Name, const MCAsmInfo &MAI) const;
-
   unsigned getType() const { return Type; }
   unsigned getFlags() const { return Flags; }
   unsigned getEntrySize() const { return EntrySize; }
   void setFlags(unsigned F) { Flags = F; }
   const MCSymbolELF *getGroup() const { return Group.getPointer(); }
   bool isComdat() const { return Group.getInt(); }
-
-  void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
-                            raw_ostream &OS,
-                            uint32_t Subsection) const override;
 
   bool isUnique() const { return UniqueID != NonUniqueID; }
   unsigned getUniqueID() const { return UniqueID; }
