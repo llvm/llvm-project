@@ -123,6 +123,7 @@ protected:
   bool HasSMemRealTime = false;
   bool HasIntClamp = false;
   bool HasFmaMixInsts = false;
+  bool HasFmaMixBF16Insts = false;
   bool HasMovrel = false;
   bool HasVGPRIndexMode = false;
   bool HasScalarDwordx3Loads = false;
@@ -244,7 +245,9 @@ protected:
   bool HasVMEMtoScalarWriteHazard = false;
   bool HasSMEMtoVectorWriteHazard = false;
   bool HasInstFwdPrefetchBug = false;
+  bool HasVmemPrefInsts = false;
   bool HasSafeSmemPrefetch = false;
+  bool HasSafeCUPrefetch = false;
   bool HasVcmpxExecWARHazard = false;
   bool HasLdsBranchVmemWARHazard = false;
   bool HasNSAtoVMEMBug = false;
@@ -461,6 +464,8 @@ public:
   bool hasFmaMixInsts() const {
     return HasFmaMixInsts;
   }
+
+  bool hasFmaMixBF16Insts() const { return HasFmaMixBF16Insts; }
 
   bool hasCARRY() const {
     return true;
@@ -987,7 +992,11 @@ public:
 
   bool hasPrefetch() const { return GFX12Insts; }
 
+  bool hasVmemPrefInsts() const { return HasVmemPrefInsts; }
+
   bool hasSafeSmemPrefetch() const { return HasSafeSmemPrefetch; }
+
+  bool hasSafeCUPrefetch() const { return HasSafeCUPrefetch; }
 
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }

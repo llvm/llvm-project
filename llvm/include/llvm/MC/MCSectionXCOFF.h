@@ -95,10 +95,6 @@ class MCSectionXCOFF final : public MCSection {
 public:
   ~MCSectionXCOFF();
 
-  static bool classof(const MCSection *S) {
-    return S->getVariant() == SV_XCOFF;
-  }
-
   XCOFF::StorageMappingClass getMappingClass() const {
     assert(isCsect() && "Only csect section has mapping class property!");
     return CsectProp->MappingClass;

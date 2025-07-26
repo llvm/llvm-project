@@ -3174,6 +3174,55 @@ bool VectorCombine::foldCastFromReductions(Instruction &I) {
   return true;
 }
 
+/// Returns true if this ShuffleVectorInst eventually feeds into a
+/// vector reduction intrinsic (e.g., vector_reduce_add) by only following
+/// chains of shuffles and binary operators (in any combination/order).
+/// The search does not go deeper than the given Depth.
+static bool feedsIntoVectorReduction(ShuffleVectorInst *SVI) {
+  constexpr unsigned MaxVisited = 32;
+  SmallPtrSet<Instruction *, 8> Visited;
+  SmallVector<Instruction *, 4> WorkList;
+  bool FoundReduction = false;
+
+  WorkList.push_back(SVI);
+  while (!WorkList.empty()) {
+    Instruction *I = WorkList.pop_back_val();
+    for (User *U : I->users()) {
+      auto *UI = cast<Instruction>(U);
+      if (!UI || !Visited.insert(UI).second)
+        continue;
+      if (Visited.size() > MaxVisited)
+        return false;
+      if (auto *II = dyn_cast<IntrinsicInst>(UI)) {
+        // More than one reduction reached
+        if (FoundReduction)
+          return false;
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::vector_reduce_add:
+        case Intrinsic::vector_reduce_mul:
+        case Intrinsic::vector_reduce_and:
+        case Intrinsic::vector_reduce_or:
+        case Intrinsic::vector_reduce_xor:
+        case Intrinsic::vector_reduce_smin:
+        case Intrinsic::vector_reduce_smax:
+        case Intrinsic::vector_reduce_umin:
+        case Intrinsic::vector_reduce_umax:
+          FoundReduction = true;
+          continue;
+        default:
+          return false;
+        }
+      }
+
+      if (!isa<BinaryOperator>(UI) && !isa<ShuffleVectorInst>(UI))
+        return false;
+
+      WorkList.emplace_back(UI);
+    }
+  }
+  return FoundReduction;
+}
+
 /// This method looks for groups of shuffles acting on binops, of the form:
 ///  %x = shuffle ...
 ///  %y = shuffle ...
@@ -3416,6 +3465,65 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
            TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, VT, VT, Mask, CostKind);
   };
 
+  unsigned ElementSize = VT->getElementType()->getPrimitiveSizeInBits();
+  unsigned MaxVectorSize =
+      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
+  unsigned MaxElementsInVector = MaxVectorSize / ElementSize;
+  // When there are multiple shufflevector operations on the same input,
+  // especially when the vector length is larger than the register size,
+  // identical shuffle patterns may occur across different groups of elements.
+  // To avoid overestimating the cost by counting these repeated shuffles more
+  // than once, we only account for unique shuffle patterns. This adjustment
+  // prevents inflated costs in the cost model for wide vectors split into
+  // several register-sized groups.
+  std::set<SmallVector<int, 4>> UniqueShuffles;
+  auto AddShuffleMaskAdjustedCost = [&](InstructionCost C, ArrayRef<int> Mask) {
+    // Compute the cost for performing the shuffle over the full vector.
+    auto ShuffleCost =
+        TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, VT, VT, Mask, CostKind);
+    unsigned NumFullVectors = Mask.size() / MaxElementsInVector;
+    if (NumFullVectors < 2)
+      return C + ShuffleCost;
+    SmallVector<int, 4> SubShuffle(MaxElementsInVector);
+    unsigned NumUniqueGroups = 0;
+    unsigned NumGroups = Mask.size() / MaxElementsInVector;
+    // For each group of MaxElementsInVector contiguous elements,
+    // collect their shuffle pattern and insert into the set of unique patterns.
+    for (unsigned I = 0; I < NumFullVectors; ++I) {
+      for (unsigned J = 0; J < MaxElementsInVector; ++J)
+        SubShuffle[J] = Mask[MaxElementsInVector * I + J];
+      if (UniqueShuffles.insert(SubShuffle).second)
+        NumUniqueGroups += 1;
+    }
+    return C + ShuffleCost * NumUniqueGroups / NumGroups;
+  };
+  auto AddShuffleAdjustedCost = [&](InstructionCost C, Instruction *I) {
+    auto *SV = dyn_cast<ShuffleVectorInst>(I);
+    if (!SV)
+      return C;
+    SmallVector<int, 16> Mask;
+    SV->getShuffleMask(Mask);
+    return AddShuffleMaskAdjustedCost(C, Mask);
+  };
+  // Check that input consists of ShuffleVectors applied to the same input
+  auto AllShufflesHaveSameOperands =
+      [](SmallPtrSetImpl<Instruction *> &InputShuffles) {
+        if (InputShuffles.size() < 2)
+          return false;
+        ShuffleVectorInst *FirstSV =
+            dyn_cast<ShuffleVectorInst>(*InputShuffles.begin());
+        if (!FirstSV)
+          return false;
+
+        Value *In0 = FirstSV->getOperand(0), *In1 = FirstSV->getOperand(1);
+        return std::all_of(
+            std::next(InputShuffles.begin()), InputShuffles.end(),
+            [&](Instruction *I) {
+              ShuffleVectorInst *SV = dyn_cast<ShuffleVectorInst>(I);
+              return SV && SV->getOperand(0) == In0 && SV->getOperand(1) == In1;
+            });
+      };
+
   // Get the costs of the shuffles + binops before and after with the new
   // shuffle masks.
   InstructionCost CostBefore =
@@ -3423,8 +3531,14 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
       TTI.getArithmeticInstrCost(Op1->getOpcode(), VT, CostKind);
   CostBefore += std::accumulate(Shuffles.begin(), Shuffles.end(),
                                 InstructionCost(0), AddShuffleCost);
-  CostBefore += std::accumulate(InputShuffles.begin(), InputShuffles.end(),
-                                InstructionCost(0), AddShuffleCost);
+  if (AllShufflesHaveSameOperands(InputShuffles)) {
+    UniqueShuffles.clear();
+    CostBefore += std::accumulate(InputShuffles.begin(), InputShuffles.end(),
+                                  InstructionCost(0), AddShuffleAdjustedCost);
+  } else {
+    CostBefore += std::accumulate(InputShuffles.begin(), InputShuffles.end(),
+                                  InstructionCost(0), AddShuffleCost);
+  }
 
   // The new binops will be unused for lanes past the used shuffle lengths.
   // These types attempt to get the correct cost for that from the target.
@@ -3435,8 +3549,9 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   InstructionCost CostAfter =
       TTI.getArithmeticInstrCost(Op0->getOpcode(), Op0SmallVT, CostKind) +
       TTI.getArithmeticInstrCost(Op1->getOpcode(), Op1SmallVT, CostKind);
+  UniqueShuffles.clear();
   CostAfter += std::accumulate(ReconstructMasks.begin(), ReconstructMasks.end(),
-                               InstructionCost(0), AddShuffleMaskCost);
+                               InstructionCost(0), AddShuffleMaskAdjustedCost);
   std::set<SmallVector<int>> OutputShuffleMasks({V1A, V1B, V2A, V2B});
   CostAfter +=
       std::accumulate(OutputShuffleMasks.begin(), OutputShuffleMasks.end(),
@@ -3445,7 +3560,8 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   LLVM_DEBUG(dbgs() << "Found a binop select shuffle pattern: " << I << "\n");
   LLVM_DEBUG(dbgs() << "  CostBefore: " << CostBefore
                     << " vs CostAfter: " << CostAfter << "\n");
-  if (CostBefore <= CostAfter)
+  if (CostBefore < CostAfter ||
+      (CostBefore == CostAfter && !feedsIntoVectorReduction(SVI)))
     return false;
 
   // The cost model has passed, create the new instructions.
