@@ -312,6 +312,17 @@ void CodeGenFunction::EmitValueTerminatedAssignmentCheck(
   EmitBoundsSafetyTrapCheck(Check, BNS_TRAP_TERMINATED_BY_TERM_ASSIGN);
 }
 
+
+static llvm::StringRef GetUBSanTrapForHandler(SanitizerHandler ID) {
+  switch (ID) {
+#define SANITIZER_CHECK(Enum, Name, Version, Msg)                              \
+  case SanitizerHandler::Enum:                                                 \
+    return Msg;
+    LIST_SANITIZER_CHECKS
+#undef SANITIZER_CHECK
+  }
+}
+
 /// CreateTempAlloca - This creates a alloca and inserts it into the entry
 /// block.
 RawAddress
@@ -4169,7 +4180,7 @@ struct SanitizerHandlerInfo {
 }
 
 const SanitizerHandlerInfo SanitizerHandlers[] = {
-#define SANITIZER_CHECK(Enum, Name, Version) {#Name, Version},
+#define SANITIZER_CHECK(Enum, Name, Version, Msg) {#Name, Version},
     LIST_SANITIZER_CHECKS
 #undef SANITIZER_CHECK
 };
@@ -4474,6 +4485,8 @@ void CodeGenFunction::EmitCfiCheckFail() {
   StartFunction(GlobalDecl(), CGM.getContext().VoidTy, F, FI, Args,
                 SourceLocation());
 
+  ApplyDebugLocation ADL = ApplyDebugLocation::CreateArtificial(*this);
+
   // This function is not affected by NoSanitizeList. This function does
   // not have a source location, but "src:*" would still apply. Revert any
   // changes to SanOpts made in StartFunction.
@@ -4564,7 +4577,7 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
                                     bool NoMerge,
                                     /*TO_UPSTREAM(BoundsSafety) ON*/
                                     StringRef Annotation,
-                                    StringRef TrapMessage) {
+                                    StringRef BoundsSafetyTrapMessage) {
                                     /*TO_UPSTREAM(BoundsSafety) OFF*/
   llvm::BasicBlock *Cont = createBasicBlock("cont");
 
@@ -4575,13 +4588,23 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
-  /*TO_UPSTREAM(BoundsSafety) ON*/
   llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
+
+  /*TO_UPSTREAM(BoundsSafety) ON*/
   if (CheckHandlerID == SanitizerHandler::BoundsSafety && getDebugInfo()) {
     TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
-        TrapLocation, GetBoundsSafetyTrapMessagePrefix(), TrapMessage);
+        TrapLocation, GetBoundsSafetyTrapMessagePrefix(), BoundsSafetyTrapMessage);
   }
   /*TO_UPSTREAM(BoundsSafety) OFF*/
+  else {
+    llvm::StringRef TrapMessage = GetUBSanTrapForHandler(CheckHandlerID);
+
+    if (getDebugInfo() && !TrapMessage.empty() &&
+        CGM.getCodeGenOpts().SanitizeDebugTrapReasons && TrapLocation) {
+      TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
+          TrapLocation, "Undefined Behavior Sanitizer", TrapMessage);
+    }
+  }
 
   NoMerge = NoMerge || !CGM.getCodeGenOpts().OptimizationLevel ||
             (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
