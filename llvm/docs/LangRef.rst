@@ -30481,6 +30481,38 @@ This intrinsic does nothing, but optimizers must consider it a use of its single
 operand and should try to preserve the intrinsic and its position in the
 function.
 
+.. _llvm_reloc_none:
+
+'``llvm.reloc.none``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.reloc.none(ptrty %ptr)
+
+Overview:
+"""""""""
+
+The ``llvm.reloc.none`` intrinsic emits a no-op relocation against a given
+operand symbol. This can bring the symbol
+definition into the link without emitting any code or data to the binary for
+that purpose.
+
+Arguments:
+""""""""""
+
+The ``llvm.reloc.none`` intrinsic takes the symbol as a metadata string
+argument.
+
+Semantics:
+""""""""""
+
+This intrinsic emits a no-op relocation for the symbol the location of the
+intrinsic call.
+
 
 Stack Map Intrinsics
 --------------------

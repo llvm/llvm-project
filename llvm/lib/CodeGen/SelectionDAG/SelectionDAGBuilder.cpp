@@ -7756,6 +7756,20 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
 
+  case Intrinsic::reloc_none: {
+    Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(0))->getMetadata();
+    StringRef SymbolName = cast<MDString>(MD)->getString();
+    auto *M = const_cast<Module *>(I.getModule());
+    auto *RelocSymbol = cast<GlobalVariable>(
+        M->getOrInsertGlobal(SymbolName, StructType::create(M->getContext())));
+    SDValue Ops[2];
+    Ops[0] = getRoot();
+    Ops[1] = DAG.getTargetGlobalAddress(
+        RelocSymbol, sdl, TLI.getPointerTy(DAG.getDataLayout()), 0);
+    DAG.setRoot(DAG.getNode(ISD::RELOC_NONE, sdl, MVT::Other, Ops));
+    return;
+  }
+
   case Intrinsic::eh_exceptionpointer:
   case Intrinsic::eh_exceptioncode: {
     // Get the exception pointer vreg, copy from it, and resize it to fit.
