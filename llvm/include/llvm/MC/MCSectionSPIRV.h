@@ -24,7 +24,7 @@ class MCSectionSPIRV final : public MCSection {
   friend class MCContext;
 
   MCSectionSPIRV()
-      : MCSection(SV_SPIRV, "", /*IsText=*/true, /*IsVirtual=*/false,
+      : MCSection("", /*IsText=*/true, /*IsVirtual=*/false,
                   /*Begin=*/nullptr) {}
   // TODO: Add StringRef Name to MCSectionSPIRV.
 
