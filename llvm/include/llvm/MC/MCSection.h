@@ -650,7 +650,7 @@ public:
 
   virtual void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                     raw_ostream &OS,
-                                    uint32_t Subsection) const = 0;
+                                    uint32_t Subsection) const {}
 
   /// Check whether this section is "virtual", that is has no actual object
   /// file contents.

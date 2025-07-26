@@ -25,10 +25,6 @@ class MCSectionDXContainer final : public MCSection {
 
   MCSectionDXContainer(StringRef Name, SectionKind K, MCSymbol *Begin)
       : MCSection(Name, K.isText(), /*IsVirtual=*/false, Begin) {}
-
-public:
-  void printSwitchToSection(const MCAsmInfo &, const Triple &, raw_ostream &,
-                            uint32_t) const override;
 };
 
 } // end namespace llvm
