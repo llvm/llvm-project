@@ -146,8 +146,8 @@ is allowed to be to any op implementing the interface.
 ```tablegen
 def ChangeCallTargetOp : ... {
     let arguments = (ins
-    // Allow the handle to be to concrete func.call ops as well as any op implementing
-    // the CallOpInterface.
+    // Allow the handle to be to concrete `func.call` ops as well as any op implementing
+    // the `CallOpInterface`.
     AnyTypeOf<[Transform_ConcreteOpType<"func.call">, CallOpInterfaceHandle]>:$call,
     StrAttr:$new_target); 
 }
