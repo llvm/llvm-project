@@ -24112,6 +24112,61 @@ static SDValue combineBoolVectorAndTruncateStore(SelectionDAG &DAG,
                       Store->getMemOperand());
 }
 
+// Combine store (fp_to_int X) with to use vector semantics around the
+// conversion when NEON is available.
+static SDValue combineStoreValueFPToInt(StoreSDNode *ST,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        SelectionDAG &DAG,
+                                        const AArch64Subtarget *Subtarget) {
+  // Limit to post-legalization in order to avoid peeling truncating stores.
+  if (DCI.isBeforeLegalize())
+    return {};
+  if (!Subtarget->isNeonAvailable())
+    return {};
+  // Source operand is already a vector.
+  SDValue Value = ST->getValue();
+  if (Value.getValueType().isVector())
+    return {};
+
+  // Look through potential assertions.
+  while (Value->isAssert())
+    Value = Value.getOperand(0);
+
+  if (Value.getOpcode() != ISD::FP_TO_SINT &&
+      Value.getOpcode() != ISD::FP_TO_UINT)
+    return {};
+  if (!Value->hasOneUse())
+    return {};
+
+  SDValue FPSrc = Value.getOperand(0);
+  EVT SrcVT = FPSrc.getValueType();
+  assert(!SrcVT.isVector());
+
+  // Create a 128-bit element vector to avoid widening. The floating point
+  // conversion is transformed into a single element conversion via a pattern.
+  unsigned NumElements = 128 / SrcVT.getFixedSizeInBits();
+  EVT VecSrcVT = EVT::getVectorVT(*DAG.getContext(), SrcVT, NumElements);
+  EVT VecDstVT = VecSrcVT.changeTypeToInteger();
+  SDLoc DL(ST);
+  SDValue VecFP = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecSrcVT, FPSrc);
+
+  SDValue VecConv = DAG.getNode(Value.getOpcode(), DL, VecDstVT, VecFP);
+
+  if (ST->getMemoryVT().getFixedSizeInBits() < SrcVT.getSizeInBits()) {
+    EVT NewVecDstVT = EVT::getVectorVT(
+        *DAG.getContext(), ST->getMemoryVT(),
+        VecDstVT.getFixedSizeInBits() / ST->getMemoryVT().getFixedSizeInBits());
+    VecConv = DAG.getNode(ISD::BITCAST, DL, NewVecDstVT, VecConv);
+  }
+
+  SDValue Zero = DAG.getVectorIdxConstant(0, DL);
+  SDValue Extracted = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
+                                  Value.getValueType(), VecConv, Zero);
+
+  DCI.CombineTo(ST->getValue().getNode(), Extracted);
+  return SDValue(ST, 0);
+}
+
 bool isHalvingTruncateOfLegalScalableType(EVT SrcVT, EVT DstVT) {
   return (SrcVT == MVT::nxv8i16 && DstVT == MVT::nxv8i8) ||
          (SrcVT == MVT::nxv4i32 && DstVT == MVT::nxv4i16) ||
@@ -24193,6 +24248,9 @@ static SDValue performSTORECombine(SDNode *N,
   EVT MemVT = ST->getMemoryVT();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc DL(ST);
+
+  if (SDValue Res = combineStoreValueFPToInt(ST, DCI, DAG, Subtarget))
+    return Res;
 
   auto hasValidElementTypeForFPTruncStore = [](EVT VT) {
     EVT EltVT = VT.getVectorElementType();
