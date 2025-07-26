@@ -2429,12 +2429,10 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
     OS << "  const FeatureBitset &Bits = STI.getFeatureBits();\n";
 
   std::string DecodeToMCInstDirectCall =
-      "decodeToMCInst" + Suffix.str() +
-      "(DecodeIdx, S, Insn, MI, Address, DisAsm, DecodeComplete)";
+      "decodeToMCInst" + Suffix.str() + "(DecodeIdx, S, Insn";
   StringRef DecodeToMCInstCall = DecodeToMCInstDirectCall;
   if (IsImplFunction)
-    DecodeToMCInstCall =
-        "decodeToMCInstPtr(DecodeIdx, S, MI, Address, DisAsm, DecodeComplete)";
+    DecodeToMCInstCall = "decodeToMCInstPtr(DecodeIdx, S";
 
   OS << R"(
   const uint8_t *Ptr = DecodeTable;
@@ -2558,7 +2556,7 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
   }
 
   OS << formatv(R"(
-      S = {};
+      S = {}, MI, Address, DisAsm, DecodeComplete);
       assert(DecodeComplete);
 
       LLVM_DEBUG(dbgs() << Loc << ": OPC_Decode: opcode " << Opc
@@ -2581,7 +2579,7 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
       MCInst TmpMI;
       TmpMI.setOpcode(Opc);
       bool DecodeComplete;
-      S = {};
+      S = {}, TmpMI, Address, DisAsm, DecodeComplete);
       LLVM_DEBUG(dbgs() << Loc << ": OPC_TryDecode: opcode " << Opc
                    << ", using decoder " << DecodeIdx << ": ");
 
