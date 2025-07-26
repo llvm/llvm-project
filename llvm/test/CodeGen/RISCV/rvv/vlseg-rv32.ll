@@ -182,8 +182,10 @@ entry:
 define <vscale x 1 x i8> @test_vlseg3_mask_nxv1i8_triscv.vector.tuple_nxv1i8_3t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv1i8_triscv.vector.tuple_nxv1i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 3
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; CHECK-NEXT:    vlseg3e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 1 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv1i8_3t.nxv1i1(target("riscv.vector.tuple", <vscale x 1 x i8>, 3) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -209,8 +211,10 @@ entry:
 define <vscale x 2 x i8> @test_vlseg3_mask_nxv2i8_triscv.vector.tuple_nxv2i8_3t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv2i8_triscv.vector.tuple_nxv2i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 3
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
-; CHECK-NEXT:    vlseg3e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv2i8_3t.nxv2i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -236,8 +240,10 @@ entry:
 define <vscale x 4 x i8> @test_vlseg3_mask_nxv4i8_triscv.vector.tuple_nxv4i8_3t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv4i8_triscv.vector.tuple_nxv4i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 3
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
-; CHECK-NEXT:    vlseg3e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv4i8_3t.nxv4i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -263,8 +269,10 @@ entry:
 define <vscale x 8 x i8> @test_vlseg3_mask_nxv8i8_triscv.vector.tuple_nxv8i8_3t(ptr %base, i32 %vl, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv8i8_triscv.vector.tuple_nxv8i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 3
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
-; CHECK-NEXT:    vlseg3e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv8i8_3t.nxv8i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) undef, ptr %base, <vscale x 8 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -290,8 +298,10 @@ entry:
 define <vscale x 16 x i8> @test_vlseg3_mask_nxv16i8_triscv.vector.tuple_nxv16i8_3t(ptr %base, i32 %vl, <vscale x 16 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv16i8_triscv.vector.tuple_nxv16i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 3
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; CHECK-NEXT:    vlseg3e8.v v6, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv16i8_3t.nxv16i1(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) undef, ptr %base, <vscale x 16 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -317,8 +327,10 @@ entry:
 define <vscale x 1 x i8> @test_vlseg4_mask_nxv1i8_triscv.vector.tuple_nxv1i8_4t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv1i8_triscv.vector.tuple_nxv1i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; CHECK-NEXT:    vlseg4e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 1 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv1i8_4t.nxv1i1(target("riscv.vector.tuple", <vscale x 1 x i8>, 4) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -344,8 +356,10 @@ entry:
 define <vscale x 2 x i8> @test_vlseg4_mask_nxv2i8_triscv.vector.tuple_nxv2i8_4t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv2i8_triscv.vector.tuple_nxv2i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
-; CHECK-NEXT:    vlseg4e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv2i8_4t.nxv2i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -371,8 +385,10 @@ entry:
 define <vscale x 4 x i8> @test_vlseg4_mask_nxv4i8_triscv.vector.tuple_nxv4i8_4t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv4i8_triscv.vector.tuple_nxv4i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
-; CHECK-NEXT:    vlseg4e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv4i8_4t.nxv4i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -398,8 +414,10 @@ entry:
 define <vscale x 8 x i8> @test_vlseg4_mask_nxv8i8_triscv.vector.tuple_nxv8i8_4t(ptr %base, i32 %vl, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv8i8_triscv.vector.tuple_nxv8i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
-; CHECK-NEXT:    vlseg4e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv8i8_4t.nxv8i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) undef, ptr %base, <vscale x 8 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -425,8 +443,10 @@ entry:
 define <vscale x 16 x i8> @test_vlseg4_mask_nxv16i8_triscv.vector.tuple_nxv16i8_4t(ptr %base, i32 %vl, <vscale x 16 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv16i8_triscv.vector.tuple_nxv16i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; CHECK-NEXT:    vlseg4e8.v v6, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv16i8_4t.nxv16i1(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) undef, ptr %base, <vscale x 16 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -452,8 +472,10 @@ entry:
 define <vscale x 1 x i8> @test_vlseg5_mask_nxv1i8_triscv.vector.tuple_nxv1i8_5t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg5_mask_nxv1i8_triscv.vector.tuple_nxv1i8_5t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 5
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; CHECK-NEXT:    vlseg5e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 1 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv1i8_5t.nxv1i1(target("riscv.vector.tuple", <vscale x 1 x i8>, 5) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -479,8 +501,10 @@ entry:
 define <vscale x 2 x i8> @test_vlseg5_mask_nxv2i8_triscv.vector.tuple_nxv2i8_5t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg5_mask_nxv2i8_triscv.vector.tuple_nxv2i8_5t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 5
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
-; CHECK-NEXT:    vlseg5e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv2i8_5t.nxv2i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -506,8 +530,10 @@ entry:
 define <vscale x 4 x i8> @test_vlseg5_mask_nxv4i8_triscv.vector.tuple_nxv4i8_5t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg5_mask_nxv4i8_triscv.vector.tuple_nxv4i8_5t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 5
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
-; CHECK-NEXT:    vlseg5e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv4i8_5t.nxv4i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -533,8 +559,10 @@ entry:
 define <vscale x 8 x i8> @test_vlseg5_mask_nxv8i8_triscv.vector.tuple_nxv8i8_5t(ptr %base, i32 %vl, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg5_mask_nxv8i8_triscv.vector.tuple_nxv8i8_5t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 5
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
-; CHECK-NEXT:    vlseg5e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv8i8_5t.nxv8i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) undef, ptr %base, <vscale x 8 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -560,8 +588,10 @@ entry:
 define <vscale x 1 x i8> @test_vlseg6_mask_nxv1i8_triscv.vector.tuple_nxv1i8_6t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg6_mask_nxv1i8_triscv.vector.tuple_nxv1i8_6t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 6
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; CHECK-NEXT:    vlseg6e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 1 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv1i8_6t.nxv1i1(target("riscv.vector.tuple", <vscale x 1 x i8>, 6) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -587,8 +617,10 @@ entry:
 define <vscale x 2 x i8> @test_vlseg6_mask_nxv2i8_triscv.vector.tuple_nxv2i8_6t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg6_mask_nxv2i8_triscv.vector.tuple_nxv2i8_6t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 6
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
-; CHECK-NEXT:    vlseg6e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv2i8_6t.nxv2i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -614,8 +646,10 @@ entry:
 define <vscale x 4 x i8> @test_vlseg6_mask_nxv4i8_triscv.vector.tuple_nxv4i8_6t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg6_mask_nxv4i8_triscv.vector.tuple_nxv4i8_6t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 6
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
-; CHECK-NEXT:    vlseg6e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv4i8_6t.nxv4i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -641,8 +675,10 @@ entry:
 define <vscale x 8 x i8> @test_vlseg6_mask_nxv8i8_triscv.vector.tuple_nxv8i8_6t(ptr %base, i32 %vl, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg6_mask_nxv8i8_triscv.vector.tuple_nxv8i8_6t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 6
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
-; CHECK-NEXT:    vlseg6e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv8i8_6t.nxv8i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) undef, ptr %base, <vscale x 8 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -668,8 +704,10 @@ entry:
 define <vscale x 1 x i8> @test_vlseg7_mask_nxv1i8_triscv.vector.tuple_nxv1i8_7t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg7_mask_nxv1i8_triscv.vector.tuple_nxv1i8_7t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 7
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; CHECK-NEXT:    vlseg7e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 1 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv1i8_7t.nxv1i1(target("riscv.vector.tuple", <vscale x 1 x i8>, 7) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -695,8 +733,10 @@ entry:
 define <vscale x 2 x i8> @test_vlseg7_mask_nxv2i8_triscv.vector.tuple_nxv2i8_7t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg7_mask_nxv2i8_triscv.vector.tuple_nxv2i8_7t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 7
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
-; CHECK-NEXT:    vlseg7e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv2i8_7t.nxv2i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -722,8 +762,10 @@ entry:
 define <vscale x 4 x i8> @test_vlseg7_mask_nxv4i8_triscv.vector.tuple_nxv4i8_7t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg7_mask_nxv4i8_triscv.vector.tuple_nxv4i8_7t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 7
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
-; CHECK-NEXT:    vlseg7e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv4i8_7t.nxv4i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -749,8 +791,10 @@ entry:
 define <vscale x 8 x i8> @test_vlseg7_mask_nxv8i8_triscv.vector.tuple_nxv8i8_7t(ptr %base, i32 %vl, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg7_mask_nxv8i8_triscv.vector.tuple_nxv8i8_7t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 7
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
-; CHECK-NEXT:    vlseg7e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv8i8_7t.nxv8i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) undef, ptr %base, <vscale x 8 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -776,8 +820,10 @@ entry:
 define <vscale x 1 x i8> @test_vlseg8_mask_nxv1i8_triscv.vector.tuple_nxv1i8_8t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg8_mask_nxv1i8_triscv.vector.tuple_nxv1i8_8t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; CHECK-NEXT:    vlseg8e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 1 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv1i8_8t.nxv1i1(target("riscv.vector.tuple", <vscale x 1 x i8>, 8) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -803,8 +849,10 @@ entry:
 define <vscale x 2 x i8> @test_vlseg8_mask_nxv2i8_triscv.vector.tuple_nxv2i8_8t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg8_mask_nxv2i8_triscv.vector.tuple_nxv2i8_8t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
-; CHECK-NEXT:    vlseg8e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv2i8_8t.nxv2i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -830,8 +878,10 @@ entry:
 define <vscale x 4 x i8> @test_vlseg8_mask_nxv4i8_triscv.vector.tuple_nxv4i8_8t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg8_mask_nxv4i8_triscv.vector.tuple_nxv4i8_8t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
-; CHECK-NEXT:    vlseg8e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv4i8_8t.nxv4i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -857,8 +907,10 @@ entry:
 define <vscale x 8 x i8> @test_vlseg8_mask_nxv8i8_triscv.vector.tuple_nxv8i8_8t(ptr %base, i32 %vl, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg8_mask_nxv8i8_triscv.vector.tuple_nxv8i8_8t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 1
+; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
-; CHECK-NEXT:    vlseg8e8.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv8i8_8t.nxv8i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) undef, ptr %base, <vscale x 8 x i1> %mask, i32 %vl, i32 1, i32 3)
@@ -1013,8 +1065,10 @@ entry:
 define <vscale x 1 x i16> @test_vlseg3_mask_nxv1i16_triscv.vector.tuple_nxv2i8_3t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv1i16_triscv.vector.tuple_nxv2i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 6
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg3e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv2i8_3t.nxv1i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -1039,8 +1093,10 @@ entry:
 define <vscale x 2 x i16> @test_vlseg3_mask_nxv2i16_triscv.vector.tuple_nxv4i8_3t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv2i16_triscv.vector.tuple_nxv4i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 6
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vlseg3e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv4i8_3t.nxv2i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -1065,8 +1121,10 @@ entry:
 define <vscale x 4 x i16> @test_vlseg3_mask_nxv4i16_triscv.vector.tuple_nxv8i8_3t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv4i16_triscv.vector.tuple_nxv8i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 6
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vlseg3e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv8i8_3t.nxv4i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -1091,8 +1149,10 @@ entry:
 define <vscale x 8 x i16> @test_vlseg3_mask_nxv8i16_triscv.vector.tuple_nxv16i8_3t(ptr %base, i32 %vl, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv8i16_triscv.vector.tuple_nxv16i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 6
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
-; CHECK-NEXT:    vlseg3e16.v v6, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv16i8_3t.nxv8i1(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) undef, ptr %base, <vscale x 8 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -1117,8 +1177,10 @@ entry:
 define <vscale x 1 x i16> @test_vlseg4_mask_nxv1i16_triscv.vector.tuple_nxv2i8_4t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv1i16_triscv.vector.tuple_nxv2i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg4e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv2i8_4t.nxv1i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -1143,8 +1205,10 @@ entry:
 define <vscale x 2 x i16> @test_vlseg4_mask_nxv2i16_triscv.vector.tuple_nxv4i8_4t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv2i16_triscv.vector.tuple_nxv4i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vlseg4e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv4i8_4t.nxv2i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -1169,8 +1233,10 @@ entry:
 define <vscale x 4 x i16> @test_vlseg4_mask_nxv4i16_triscv.vector.tuple_nxv8i8_4t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv4i16_triscv.vector.tuple_nxv8i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vlseg4e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv8i8_4t.nxv4i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -1195,8 +1261,10 @@ entry:
 define <vscale x 8 x i16> @test_vlseg4_mask_nxv8i16_triscv.vector.tuple_nxv16i8_4t(ptr %base, i32 %vl, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv8i16_triscv.vector.tuple_nxv16i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
-; CHECK-NEXT:    vlseg4e16.v v6, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv16i8_4t.nxv8i1(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) undef, ptr %base, <vscale x 8 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -1221,8 +1289,10 @@ entry:
 define <vscale x 1 x i16> @test_vlseg5_mask_nxv1i16_triscv.vector.tuple_nxv2i8_5t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg5_mask_nxv1i16_triscv.vector.tuple_nxv2i8_5t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 10
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg5e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv2i8_5t.nxv1i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -1247,8 +1317,10 @@ entry:
 define <vscale x 2 x i16> @test_vlseg5_mask_nxv2i16_triscv.vector.tuple_nxv4i8_5t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg5_mask_nxv2i16_triscv.vector.tuple_nxv4i8_5t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 10
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vlseg5e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv4i8_5t.nxv2i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -1273,8 +1345,10 @@ entry:
 define <vscale x 4 x i16> @test_vlseg5_mask_nxv4i16_triscv.vector.tuple_nxv8i8_5t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg5_mask_nxv4i16_triscv.vector.tuple_nxv8i8_5t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 10
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vlseg5e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv8i8_5t.nxv4i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -1299,8 +1373,10 @@ entry:
 define <vscale x 1 x i16> @test_vlseg6_mask_nxv1i16_triscv.vector.tuple_nxv2i8_6t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg6_mask_nxv1i16_triscv.vector.tuple_nxv2i8_6t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 12
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg6e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv2i8_6t.nxv1i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -1325,8 +1401,10 @@ entry:
 define <vscale x 2 x i16> @test_vlseg6_mask_nxv2i16_triscv.vector.tuple_nxv4i8_6t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg6_mask_nxv2i16_triscv.vector.tuple_nxv4i8_6t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 12
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vlseg6e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv4i8_6t.nxv2i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -1351,8 +1429,10 @@ entry:
 define <vscale x 4 x i16> @test_vlseg6_mask_nxv4i16_triscv.vector.tuple_nxv8i8_6t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg6_mask_nxv4i16_triscv.vector.tuple_nxv8i8_6t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 12
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vlseg6e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv8i8_6t.nxv4i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -1377,8 +1457,10 @@ entry:
 define <vscale x 1 x i16> @test_vlseg7_mask_nxv1i16_triscv.vector.tuple_nxv2i8_7t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg7_mask_nxv1i16_triscv.vector.tuple_nxv2i8_7t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 14
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg7e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv2i8_7t.nxv1i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -1403,8 +1485,10 @@ entry:
 define <vscale x 2 x i16> @test_vlseg7_mask_nxv2i16_triscv.vector.tuple_nxv4i8_7t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg7_mask_nxv2i16_triscv.vector.tuple_nxv4i8_7t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 14
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vlseg7e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv4i8_7t.nxv2i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -1429,8 +1513,10 @@ entry:
 define <vscale x 4 x i16> @test_vlseg7_mask_nxv4i16_triscv.vector.tuple_nxv8i8_7t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg7_mask_nxv4i16_triscv.vector.tuple_nxv8i8_7t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 14
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vlseg7e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv8i8_7t.nxv4i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -1455,8 +1541,10 @@ entry:
 define <vscale x 1 x i16> @test_vlseg8_mask_nxv1i16_triscv.vector.tuple_nxv2i8_8t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg8_mask_nxv1i16_triscv.vector.tuple_nxv2i8_8t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg8e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv2i8_8t.nxv1i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -1481,8 +1569,10 @@ entry:
 define <vscale x 2 x i16> @test_vlseg8_mask_nxv2i16_triscv.vector.tuple_nxv4i8_8t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg8_mask_nxv2i16_triscv.vector.tuple_nxv4i8_8t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vlseg8e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv4i8_8t.nxv2i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -1507,8 +1597,10 @@ entry:
 define <vscale x 4 x i16> @test_vlseg8_mask_nxv4i16_triscv.vector.tuple_nxv8i8_8t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg8_mask_nxv4i16_triscv.vector.tuple_nxv8i8_8t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vlseg8e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv8i8_8t.nxv4i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -1637,8 +1729,10 @@ entry:
 define <vscale x 1 x i32> @test_vlseg3_mask_nxv1i32_triscv.vector.tuple_nxv4i8_3t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv1i32_triscv.vector.tuple_nxv4i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 12
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; CHECK-NEXT:    vlseg3e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv4i8_3t.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -1663,8 +1757,10 @@ entry:
 define <vscale x 2 x i32> @test_vlseg3_mask_nxv2i32_triscv.vector.tuple_nxv8i8_3t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv2i32_triscv.vector.tuple_nxv8i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 12
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vlseg3e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv8i8_3t.nxv2i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -1689,8 +1785,10 @@ entry:
 define <vscale x 4 x i32> @test_vlseg3_mask_nxv4i32_triscv.vector.tuple_nxv16i8_3t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv4i32_triscv.vector.tuple_nxv16i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 12
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vlseg3e32.v v6, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv16i8_3t.nxv4i1(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -1715,8 +1813,10 @@ entry:
 define <vscale x 1 x i32> @test_vlseg4_mask_nxv1i32_triscv.vector.tuple_nxv4i8_4t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv1i32_triscv.vector.tuple_nxv4i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; CHECK-NEXT:    vlseg4e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv4i8_4t.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -1741,8 +1841,10 @@ entry:
 define <vscale x 2 x i32> @test_vlseg4_mask_nxv2i32_triscv.vector.tuple_nxv8i8_4t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv2i32_triscv.vector.tuple_nxv8i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vlseg4e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv8i8_4t.nxv2i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -1767,8 +1869,10 @@ entry:
 define <vscale x 4 x i32> @test_vlseg4_mask_nxv4i32_triscv.vector.tuple_nxv16i8_4t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv4i32_triscv.vector.tuple_nxv16i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vlseg4e32.v v6, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv16i8_4t.nxv4i1(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -1793,8 +1897,10 @@ entry:
 define <vscale x 1 x i32> @test_vlseg5_mask_nxv1i32_triscv.vector.tuple_nxv4i8_5t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg5_mask_nxv1i32_triscv.vector.tuple_nxv4i8_5t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 20
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; CHECK-NEXT:    vlseg5e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv4i8_5t.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -1819,8 +1925,10 @@ entry:
 define <vscale x 2 x i32> @test_vlseg5_mask_nxv2i32_triscv.vector.tuple_nxv8i8_5t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg5_mask_nxv2i32_triscv.vector.tuple_nxv8i8_5t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 20
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vlseg5e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv8i8_5t.nxv2i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -1845,8 +1953,10 @@ entry:
 define <vscale x 1 x i32> @test_vlseg6_mask_nxv1i32_triscv.vector.tuple_nxv4i8_6t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg6_mask_nxv1i32_triscv.vector.tuple_nxv4i8_6t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 24
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; CHECK-NEXT:    vlseg6e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv4i8_6t.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -1871,8 +1981,10 @@ entry:
 define <vscale x 2 x i32> @test_vlseg6_mask_nxv2i32_triscv.vector.tuple_nxv8i8_6t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg6_mask_nxv2i32_triscv.vector.tuple_nxv8i8_6t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 24
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vlseg6e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv8i8_6t.nxv2i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -1897,8 +2009,10 @@ entry:
 define <vscale x 1 x i32> @test_vlseg7_mask_nxv1i32_triscv.vector.tuple_nxv4i8_7t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg7_mask_nxv1i32_triscv.vector.tuple_nxv4i8_7t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 28
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; CHECK-NEXT:    vlseg7e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv4i8_7t.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -1923,8 +2037,10 @@ entry:
 define <vscale x 2 x i32> @test_vlseg7_mask_nxv2i32_triscv.vector.tuple_nxv8i8_7t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg7_mask_nxv2i32_triscv.vector.tuple_nxv8i8_7t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 28
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vlseg7e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv8i8_7t.nxv2i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -1949,8 +2065,10 @@ entry:
 define <vscale x 1 x i32> @test_vlseg8_mask_nxv1i32_triscv.vector.tuple_nxv4i8_8t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg8_mask_nxv1i32_triscv.vector.tuple_nxv4i8_8t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; CHECK-NEXT:    vlseg8e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv4i8_8t.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -1975,8 +2093,10 @@ entry:
 define <vscale x 2 x i32> @test_vlseg8_mask_nxv2i32_triscv.vector.tuple_nxv8i8_8t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg8_mask_nxv2i32_triscv.vector.tuple_nxv8i8_8t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vlseg8e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv8i8_8t.nxv2i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -2079,8 +2199,10 @@ entry:
 define <vscale x 1 x i64> @test_vlseg3_mask_nxv1i64_triscv.vector.tuple_nxv8i8_3t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv1i64_triscv.vector.tuple_nxv8i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    li a2, 24
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vlseg3e64.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse64.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv8i8_3t.nxv1i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 6)
@@ -2105,8 +2227,10 @@ entry:
 define <vscale x 2 x i64> @test_vlseg3_mask_nxv2i64_triscv.vector.tuple_nxv16i8_3t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv2i64_triscv.vector.tuple_nxv16i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    li a2, 24
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
-; CHECK-NEXT:    vlseg3e64.v v6, (a0), v0.t
+; CHECK-NEXT:    vlse64.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv16i8_3t.nxv2i1(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 6)
@@ -2131,8 +2255,10 @@ entry:
 define <vscale x 1 x i64> @test_vlseg4_mask_nxv1i64_triscv.vector.tuple_nxv8i8_4t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv1i64_triscv.vector.tuple_nxv8i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vlseg4e64.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse64.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv8i8_4t.nxv1i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 6)
@@ -2157,8 +2283,10 @@ entry:
 define <vscale x 2 x i64> @test_vlseg4_mask_nxv2i64_triscv.vector.tuple_nxv16i8_4t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv2i64_triscv.vector.tuple_nxv16i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
-; CHECK-NEXT:    vlseg4e64.v v6, (a0), v0.t
+; CHECK-NEXT:    vlse64.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv16i8_4t.nxv2i1(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 6)
@@ -2183,8 +2311,10 @@ entry:
 define <vscale x 1 x i64> @test_vlseg5_mask_nxv1i64_triscv.vector.tuple_nxv8i8_5t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg5_mask_nxv1i64_triscv.vector.tuple_nxv8i8_5t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    li a2, 40
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vlseg5e64.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse64.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv8i8_5t.nxv1i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 6)
@@ -2209,8 +2339,10 @@ entry:
 define <vscale x 1 x i64> @test_vlseg6_mask_nxv1i64_triscv.vector.tuple_nxv8i8_6t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg6_mask_nxv1i64_triscv.vector.tuple_nxv8i8_6t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    li a2, 48
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vlseg6e64.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse64.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv8i8_6t.nxv1i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 6)
@@ -2235,8 +2367,10 @@ entry:
 define <vscale x 1 x i64> @test_vlseg7_mask_nxv1i64_triscv.vector.tuple_nxv8i8_7t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg7_mask_nxv1i64_triscv.vector.tuple_nxv8i8_7t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    li a2, 56
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vlseg7e64.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse64.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv8i8_7t.nxv1i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 6)
@@ -2261,8 +2395,10 @@ entry:
 define <vscale x 1 x i64> @test_vlseg8_mask_nxv1i64_triscv.vector.tuple_nxv8i8_8t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg8_mask_nxv1i64_triscv.vector.tuple_nxv8i8_8t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    li a2, 64
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vlseg8e64.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse64.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv8i8_8t.nxv1i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 6)
@@ -2411,8 +2547,10 @@ entry:
 define <vscale x 1 x half> @test_vlseg3_mask_nxv1f16_triscv.vector.tuple_nxv2i8_3t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv1f16_triscv.vector.tuple_nxv2i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 6
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg3e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv2i8_3t.nxv1i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -2436,8 +2574,10 @@ entry:
 define <vscale x 2 x half> @test_vlseg3_mask_nxv2f16_triscv.vector.tuple_nxv4i8_3t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv2f16_triscv.vector.tuple_nxv4i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 6
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vlseg3e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv4i8_3t.nxv2i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -2461,8 +2601,10 @@ entry:
 define <vscale x 4 x half> @test_vlseg3_mask_nxv4f16_triscv.vector.tuple_nxv8i8_3t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv4f16_triscv.vector.tuple_nxv8i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 6
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vlseg3e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv8i8_3t.nxv4i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -2486,8 +2628,10 @@ entry:
 define <vscale x 8 x half> @test_vlseg3_mask_nxv8f16_triscv.vector.tuple_nxv16i8_3t(ptr %base, i32 %vl, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv8f16_triscv.vector.tuple_nxv16i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 6
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
-; CHECK-NEXT:    vlseg3e16.v v6, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv16i8_3t.nxv8i1(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) undef, ptr %base, <vscale x 8 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -2511,8 +2655,10 @@ entry:
 define <vscale x 1 x half> @test_vlseg4_mask_nxv1f16_triscv.vector.tuple_nxv2i8_4t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv1f16_triscv.vector.tuple_nxv2i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg4e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv2i8_4t.nxv1i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -2536,8 +2682,10 @@ entry:
 define <vscale x 2 x half> @test_vlseg4_mask_nxv2f16_triscv.vector.tuple_nxv4i8_4t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv2f16_triscv.vector.tuple_nxv4i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vlseg4e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv4i8_4t.nxv2i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -2561,8 +2709,10 @@ entry:
 define <vscale x 4 x half> @test_vlseg4_mask_nxv4f16_triscv.vector.tuple_nxv8i8_4t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv4f16_triscv.vector.tuple_nxv8i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vlseg4e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv8i8_4t.nxv4i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -2586,8 +2736,10 @@ entry:
 define <vscale x 8 x half> @test_vlseg4_mask_nxv8f16_triscv.vector.tuple_nxv16i8_4t(ptr %base, i32 %vl, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv8f16_triscv.vector.tuple_nxv16i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
-; CHECK-NEXT:    vlseg4e16.v v6, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv16i8_4t.nxv8i1(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) undef, ptr %base, <vscale x 8 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -2611,8 +2763,10 @@ entry:
 define <vscale x 1 x half> @test_vlseg5_mask_nxv1f16_triscv.vector.tuple_nxv2i8_5t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg5_mask_nxv1f16_triscv.vector.tuple_nxv2i8_5t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 10
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg5e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv2i8_5t.nxv1i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -2636,8 +2790,10 @@ entry:
 define <vscale x 2 x half> @test_vlseg5_mask_nxv2f16_triscv.vector.tuple_nxv4i8_5t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg5_mask_nxv2f16_triscv.vector.tuple_nxv4i8_5t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 10
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vlseg5e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv4i8_5t.nxv2i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -2661,8 +2817,10 @@ entry:
 define <vscale x 4 x half> @test_vlseg5_mask_nxv4f16_triscv.vector.tuple_nxv8i8_5t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg5_mask_nxv4f16_triscv.vector.tuple_nxv8i8_5t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 10
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vlseg5e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv8i8_5t.nxv4i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -2686,8 +2844,10 @@ entry:
 define <vscale x 1 x half> @test_vlseg6_mask_nxv1f16_triscv.vector.tuple_nxv2i8_6t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg6_mask_nxv1f16_triscv.vector.tuple_nxv2i8_6t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 12
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg6e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv2i8_6t.nxv1i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -2711,8 +2871,10 @@ entry:
 define <vscale x 2 x half> @test_vlseg6_mask_nxv2f16_triscv.vector.tuple_nxv4i8_6t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg6_mask_nxv2f16_triscv.vector.tuple_nxv4i8_6t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 12
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vlseg6e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv4i8_6t.nxv2i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -2736,8 +2898,10 @@ entry:
 define <vscale x 4 x half> @test_vlseg6_mask_nxv4f16_triscv.vector.tuple_nxv8i8_6t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg6_mask_nxv4f16_triscv.vector.tuple_nxv8i8_6t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 12
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vlseg6e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv8i8_6t.nxv4i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -2761,8 +2925,10 @@ entry:
 define <vscale x 1 x half> @test_vlseg7_mask_nxv1f16_triscv.vector.tuple_nxv2i8_7t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg7_mask_nxv1f16_triscv.vector.tuple_nxv2i8_7t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 14
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg7e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv2i8_7t.nxv1i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -2786,8 +2952,10 @@ entry:
 define <vscale x 2 x half> @test_vlseg7_mask_nxv2f16_triscv.vector.tuple_nxv4i8_7t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg7_mask_nxv2f16_triscv.vector.tuple_nxv4i8_7t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 14
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vlseg7e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv4i8_7t.nxv2i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -2811,8 +2979,10 @@ entry:
 define <vscale x 4 x half> @test_vlseg7_mask_nxv4f16_triscv.vector.tuple_nxv8i8_7t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg7_mask_nxv4f16_triscv.vector.tuple_nxv8i8_7t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 14
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vlseg7e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv8i8_7t.nxv4i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -2836,8 +3006,10 @@ entry:
 define <vscale x 1 x half> @test_vlseg8_mask_nxv1f16_triscv.vector.tuple_nxv2i8_8t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg8_mask_nxv1f16_triscv.vector.tuple_nxv2i8_8t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg8e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv2i8_8t.nxv1i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -2861,8 +3033,10 @@ entry:
 define <vscale x 2 x half> @test_vlseg8_mask_nxv2f16_triscv.vector.tuple_nxv4i8_8t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg8_mask_nxv2f16_triscv.vector.tuple_nxv4i8_8t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vlseg8e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv4i8_8t.nxv2i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -2886,8 +3060,10 @@ entry:
 define <vscale x 4 x half> @test_vlseg8_mask_nxv4f16_triscv.vector.tuple_nxv8i8_8t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg8_mask_nxv4f16_triscv.vector.tuple_nxv8i8_8t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vlseg8e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv8i8_8t.nxv4i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -3011,8 +3187,10 @@ entry:
 define <vscale x 1 x float> @test_vlseg3_mask_nxv1f32_triscv.vector.tuple_nxv4i8_3t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv1f32_triscv.vector.tuple_nxv4i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 12
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; CHECK-NEXT:    vlseg3e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv4i8_3t.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -3036,8 +3214,10 @@ entry:
 define <vscale x 2 x float> @test_vlseg3_mask_nxv2f32_triscv.vector.tuple_nxv8i8_3t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv2f32_triscv.vector.tuple_nxv8i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 12
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vlseg3e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv8i8_3t.nxv2i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -3061,8 +3241,10 @@ entry:
 define <vscale x 4 x float> @test_vlseg3_mask_nxv4f32_triscv.vector.tuple_nxv16i8_3t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv4f32_triscv.vector.tuple_nxv16i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 12
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vlseg3e32.v v6, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv16i8_3t.nxv4i1(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -3086,8 +3268,10 @@ entry:
 define <vscale x 1 x float> @test_vlseg4_mask_nxv1f32_triscv.vector.tuple_nxv4i8_4t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv1f32_triscv.vector.tuple_nxv4i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; CHECK-NEXT:    vlseg4e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv4i8_4t.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -3111,8 +3295,10 @@ entry:
 define <vscale x 2 x float> @test_vlseg4_mask_nxv2f32_triscv.vector.tuple_nxv8i8_4t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv2f32_triscv.vector.tuple_nxv8i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vlseg4e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv8i8_4t.nxv2i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -3136,8 +3322,10 @@ entry:
 define <vscale x 4 x float> @test_vlseg4_mask_nxv4f32_triscv.vector.tuple_nxv16i8_4t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv4f32_triscv.vector.tuple_nxv16i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vlseg4e32.v v6, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv16i8_4t.nxv4i1(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -3161,8 +3349,10 @@ entry:
 define <vscale x 1 x float> @test_vlseg5_mask_nxv1f32_triscv.vector.tuple_nxv4i8_5t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg5_mask_nxv1f32_triscv.vector.tuple_nxv4i8_5t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 20
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; CHECK-NEXT:    vlseg5e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv4i8_5t.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -3186,8 +3376,10 @@ entry:
 define <vscale x 2 x float> @test_vlseg5_mask_nxv2f32_triscv.vector.tuple_nxv8i8_5t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg5_mask_nxv2f32_triscv.vector.tuple_nxv8i8_5t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 20
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vlseg5e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv8i8_5t.nxv2i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -3211,8 +3403,10 @@ entry:
 define <vscale x 1 x float> @test_vlseg6_mask_nxv1f32_triscv.vector.tuple_nxv4i8_6t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg6_mask_nxv1f32_triscv.vector.tuple_nxv4i8_6t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 24
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; CHECK-NEXT:    vlseg6e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv4i8_6t.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -3236,8 +3430,10 @@ entry:
 define <vscale x 2 x float> @test_vlseg6_mask_nxv2f32_triscv.vector.tuple_nxv8i8_6t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg6_mask_nxv2f32_triscv.vector.tuple_nxv8i8_6t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 24
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vlseg6e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv8i8_6t.nxv2i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -3261,8 +3457,10 @@ entry:
 define <vscale x 1 x float> @test_vlseg7_mask_nxv1f32_triscv.vector.tuple_nxv4i8_7t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg7_mask_nxv1f32_triscv.vector.tuple_nxv4i8_7t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 28
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; CHECK-NEXT:    vlseg7e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv4i8_7t.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -3286,8 +3484,10 @@ entry:
 define <vscale x 2 x float> @test_vlseg7_mask_nxv2f32_triscv.vector.tuple_nxv8i8_7t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg7_mask_nxv2f32_triscv.vector.tuple_nxv8i8_7t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 28
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vlseg7e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv8i8_7t.nxv2i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -3311,8 +3511,10 @@ entry:
 define <vscale x 1 x float> @test_vlseg8_mask_nxv1f32_triscv.vector.tuple_nxv4i8_8t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg8_mask_nxv1f32_triscv.vector.tuple_nxv4i8_8t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
-; CHECK-NEXT:    vlseg8e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv4i8_8t.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -3336,8 +3538,10 @@ entry:
 define <vscale x 2 x float> @test_vlseg8_mask_nxv2f32_triscv.vector.tuple_nxv8i8_8t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg8_mask_nxv2f32_triscv.vector.tuple_nxv8i8_8t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vlseg8e32.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv8i8_8t.nxv2i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 5)
@@ -3436,8 +3640,10 @@ entry:
 define <vscale x 1 x double> @test_vlseg3_mask_nxv1f64_triscv.vector.tuple_nxv8i8_3t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv1f64_triscv.vector.tuple_nxv8i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    li a2, 24
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vlseg3e64.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse64.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv8i8_3t.nxv1i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 6)
@@ -3461,8 +3667,10 @@ entry:
 define <vscale x 2 x double> @test_vlseg3_mask_nxv2f64_triscv.vector.tuple_nxv16i8_3t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv2f64_triscv.vector.tuple_nxv16i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    li a2, 24
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
-; CHECK-NEXT:    vlseg3e64.v v6, (a0), v0.t
+; CHECK-NEXT:    vlse64.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv16i8_3t.nxv2i1(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 6)
@@ -3486,8 +3694,10 @@ entry:
 define <vscale x 1 x double> @test_vlseg4_mask_nxv1f64_triscv.vector.tuple_nxv8i8_4t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv1f64_triscv.vector.tuple_nxv8i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vlseg4e64.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse64.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv8i8_4t.nxv1i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 6)
@@ -3511,8 +3721,10 @@ entry:
 define <vscale x 2 x double> @test_vlseg4_mask_nxv2f64_triscv.vector.tuple_nxv16i8_4t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv2f64_triscv.vector.tuple_nxv16i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
-; CHECK-NEXT:    vlseg4e64.v v6, (a0), v0.t
+; CHECK-NEXT:    vlse64.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv16i8_4t.nxv2i1(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 6)
@@ -3536,8 +3748,10 @@ entry:
 define <vscale x 1 x double> @test_vlseg5_mask_nxv1f64_triscv.vector.tuple_nxv8i8_5t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg5_mask_nxv1f64_triscv.vector.tuple_nxv8i8_5t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    li a2, 40
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vlseg5e64.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse64.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv8i8_5t.nxv1i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 6)
@@ -3561,8 +3775,10 @@ entry:
 define <vscale x 1 x double> @test_vlseg6_mask_nxv1f64_triscv.vector.tuple_nxv8i8_6t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg6_mask_nxv1f64_triscv.vector.tuple_nxv8i8_6t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    li a2, 48
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vlseg6e64.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse64.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv8i8_6t.nxv1i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 6)
@@ -3586,8 +3802,10 @@ entry:
 define <vscale x 1 x double> @test_vlseg7_mask_nxv1f64_triscv.vector.tuple_nxv8i8_7t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg7_mask_nxv1f64_triscv.vector.tuple_nxv8i8_7t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    li a2, 56
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vlseg7e64.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse64.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv8i8_7t.nxv1i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 6)
@@ -3611,8 +3829,10 @@ entry:
 define <vscale x 1 x double> @test_vlseg8_mask_nxv1f64_triscv.vector.tuple_nxv8i8_8t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg8_mask_nxv1f64_triscv.vector.tuple_nxv8i8_8t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    li a2, 64
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vlseg8e64.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse64.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv8i8_8t.nxv1i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 6)
@@ -3761,8 +3981,10 @@ entry:
 define <vscale x 1 x bfloat> @test_vlseg3_mask_nxv1bf16_triscv.vector.tuple_nxv2i8_3t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv1bf16_triscv.vector.tuple_nxv2i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 6
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg3e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv2i8_3t.nxv1i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 3) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -3786,8 +4008,10 @@ entry:
 define <vscale x 2 x bfloat> @test_vlseg3_mask_nxv2bf16_triscv.vector.tuple_nxv4i8_3t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv2bf16_triscv.vector.tuple_nxv4i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 6
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vlseg3e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv4i8_3t.nxv2i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -3811,8 +4035,10 @@ entry:
 define <vscale x 4 x bfloat> @test_vlseg3_mask_nxv4bf16_triscv.vector.tuple_nxv8i8_3t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv4bf16_triscv.vector.tuple_nxv8i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 6
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vlseg3e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv8i8_3t.nxv4i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 3) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -3836,8 +4062,10 @@ entry:
 define <vscale x 8 x bfloat> @test_vlseg3_mask_nxv8bf16_triscv.vector.tuple_nxv16i8_3t(ptr %base, i32 %vl, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg3_mask_nxv8bf16_triscv.vector.tuple_nxv16i8_3t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 6
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
-; CHECK-NEXT:    vlseg3e16.v v6, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 16 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv16i8_3t.nxv8i1(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) undef, ptr %base, <vscale x 8 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -3861,8 +4089,10 @@ entry:
 define <vscale x 1 x bfloat> @test_vlseg4_mask_nxv1bf16_triscv.vector.tuple_nxv2i8_4t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv1bf16_triscv.vector.tuple_nxv2i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg4e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv2i8_4t.nxv1i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 4) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -3886,8 +4116,10 @@ entry:
 define <vscale x 2 x bfloat> @test_vlseg4_mask_nxv2bf16_triscv.vector.tuple_nxv4i8_4t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv2bf16_triscv.vector.tuple_nxv4i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vlseg4e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv4i8_4t.nxv2i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -3911,8 +4143,10 @@ entry:
 define <vscale x 4 x bfloat> @test_vlseg4_mask_nxv4bf16_triscv.vector.tuple_nxv8i8_4t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv4bf16_triscv.vector.tuple_nxv8i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vlseg4e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv8i8_4t.nxv4i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -3936,8 +4170,10 @@ entry:
 define <vscale x 8 x bfloat> @test_vlseg4_mask_nxv8bf16_triscv.vector.tuple_nxv16i8_4t(ptr %base, i32 %vl, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg4_mask_nxv8bf16_triscv.vector.tuple_nxv16i8_4t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
-; CHECK-NEXT:    vlseg4e16.v v6, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv16i8_4t.nxv8i1(target("riscv.vector.tuple", <vscale x 16 x i8>, 4) undef, ptr %base, <vscale x 8 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -3961,8 +4197,10 @@ entry:
 define <vscale x 1 x bfloat> @test_vlseg5_mask_nxv1bf16_triscv.vector.tuple_nxv2i8_5t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg5_mask_nxv1bf16_triscv.vector.tuple_nxv2i8_5t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 10
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg5e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv2i8_5t.nxv1i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 5) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -3986,8 +4224,10 @@ entry:
 define <vscale x 2 x bfloat> @test_vlseg5_mask_nxv2bf16_triscv.vector.tuple_nxv4i8_5t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg5_mask_nxv2bf16_triscv.vector.tuple_nxv4i8_5t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 10
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vlseg5e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv4i8_5t.nxv2i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -4011,8 +4251,10 @@ entry:
 define <vscale x 4 x bfloat> @test_vlseg5_mask_nxv4bf16_triscv.vector.tuple_nxv8i8_5t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg5_mask_nxv4bf16_triscv.vector.tuple_nxv8i8_5t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 10
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vlseg5e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv8i8_5t.nxv4i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 5) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -4036,8 +4278,10 @@ entry:
 define <vscale x 1 x bfloat> @test_vlseg6_mask_nxv1bf16_triscv.vector.tuple_nxv2i8_6t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg6_mask_nxv1bf16_triscv.vector.tuple_nxv2i8_6t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 12
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg6e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv2i8_6t.nxv1i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 6) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -4061,8 +4305,10 @@ entry:
 define <vscale x 2 x bfloat> @test_vlseg6_mask_nxv2bf16_triscv.vector.tuple_nxv4i8_6t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg6_mask_nxv2bf16_triscv.vector.tuple_nxv4i8_6t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 12
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vlseg6e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv4i8_6t.nxv2i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -4086,8 +4332,10 @@ entry:
 define <vscale x 4 x bfloat> @test_vlseg6_mask_nxv4bf16_triscv.vector.tuple_nxv8i8_6t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg6_mask_nxv4bf16_triscv.vector.tuple_nxv8i8_6t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 12
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vlseg6e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv8i8_6t.nxv4i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 6) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -4111,8 +4359,10 @@ entry:
 define <vscale x 1 x bfloat> @test_vlseg7_mask_nxv1bf16_triscv.vector.tuple_nxv2i8_7t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg7_mask_nxv1bf16_triscv.vector.tuple_nxv2i8_7t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 14
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg7e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv2i8_7t.nxv1i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 7) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -4136,8 +4386,10 @@ entry:
 define <vscale x 2 x bfloat> @test_vlseg7_mask_nxv2bf16_triscv.vector.tuple_nxv4i8_7t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg7_mask_nxv2bf16_triscv.vector.tuple_nxv4i8_7t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 14
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vlseg7e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv4i8_7t.nxv2i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -4161,8 +4413,10 @@ entry:
 define <vscale x 4 x bfloat> @test_vlseg7_mask_nxv4bf16_triscv.vector.tuple_nxv8i8_7t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg7_mask_nxv4bf16_triscv.vector.tuple_nxv8i8_7t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 14
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vlseg7e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv8i8_7t.nxv4i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 7) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -4186,8 +4440,10 @@ entry:
 define <vscale x 1 x bfloat> @test_vlseg8_mask_nxv1bf16_triscv.vector.tuple_nxv2i8_8t(ptr %base, i32 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg8_mask_nxv1bf16_triscv.vector.tuple_nxv2i8_8t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
-; CHECK-NEXT:    vlseg8e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 2 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv2i8_8t.nxv1i1(target("riscv.vector.tuple", <vscale x 2 x i8>, 8) undef, ptr %base, <vscale x 1 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -4211,8 +4467,10 @@ entry:
 define <vscale x 2 x bfloat> @test_vlseg8_mask_nxv2bf16_triscv.vector.tuple_nxv4i8_8t(ptr %base, i32 %vl, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg8_mask_nxv2bf16_triscv.vector.tuple_nxv4i8_8t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
-; CHECK-NEXT:    vlseg8e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv4i8_8t.nxv2i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) undef, ptr %base, <vscale x 2 x i1> %mask, i32 %vl, i32 1, i32 4)
@@ -4236,8 +4494,10 @@ entry:
 define <vscale x 4 x bfloat> @test_vlseg8_mask_nxv4bf16_triscv.vector.tuple_nxv8i8_8t(ptr %base, i32 %vl, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg8_mask_nxv4bf16_triscv.vector.tuple_nxv8i8_8t:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, 2
+; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vlseg8e16.v v7, (a0), v0.t
+; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("riscv.vector.tuple", <vscale x 8 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv8i8_8t.nxv4i1(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) undef, ptr %base, <vscale x 4 x i1> %mask, i32 %vl, i32 1, i32 4)
