@@ -74,9 +74,9 @@ public:
   /// name-lookup routines to specify which declarations should be included in
   /// the result set (when it returns true) and which declarations should be
   /// filtered out (returns false).
-  typedef bool (ResultBuilder::*LookupFilter)(const NamedDecl *) const;
+  using LookupFilter = bool (ResultBuilder::*)(const NamedDecl *) const;
 
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
 
 private:
   /// The actual results we have found.
@@ -87,13 +87,13 @@ private:
   /// the result set twice.
   llvm::SmallPtrSet<const Decl *, 16> AllDeclsFound;
 
-  typedef std::pair<const NamedDecl *, unsigned> DeclIndexPair;
+  using DeclIndexPair = std::pair<const NamedDecl *, unsigned>;
 
   /// An entry in the shadow map, which is optimized to store
   /// a single (declaration, index) mapping (the common case) but
   /// can also store a list of (declaration, index) mappings.
   class ShadowMapEntry {
-    typedef SmallVector<DeclIndexPair, 4> DeclIndexPairVector;
+    using DeclIndexPairVector = SmallVector<DeclIndexPair, 4>;
 
     /// Contains either the solitary NamedDecl * or a vector
     /// of (declaration, index) pairs.
@@ -153,7 +153,7 @@ private:
   /// A mapping from declaration names to the declarations that have
   /// this name within a particular scope and their index within the list of
   /// results.
-  typedef llvm::DenseMap<DeclarationName, ShadowMapEntry> ShadowMap;
+  using ShadowMap = llvm::DenseMap<DeclarationName, ShadowMapEntry>;
 
   /// The semantic analysis object for which results are being
   /// produced.
@@ -639,10 +639,10 @@ class ResultBuilder::ShadowMapEntry::iterator {
   unsigned SingleDeclIndex;
 
 public:
-  typedef DeclIndexPair value_type;
-  typedef value_type reference;
-  typedef std::ptrdiff_t difference_type;
-  typedef std::input_iterator_tag iterator_category;
+  using value_type = DeclIndexPair;
+  using reference = value_type;
+  using difference_type = std::ptrdiff_t;
+  using iterator_category = std::input_iterator_tag;
 
   class pointer {
     DeclIndexPair Value;
@@ -1788,7 +1788,7 @@ private:
 /// Add type specifiers for the current language as keyword results.
 static void AddTypeSpecifierResults(const LangOptions &LangOpts,
                                     ResultBuilder &Results) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   Results.AddResult(Result("short", CCP_Type));
   Results.AddResult(Result("long", CCP_Type));
   Results.AddResult(Result("signed", CCP_Type));
@@ -1873,7 +1873,7 @@ static void AddTypeSpecifierResults(const LangOptions &LangOpts,
 static void
 AddStorageSpecifiers(SemaCodeCompletion::ParserCompletionContext CCC,
                      const LangOptions &LangOpts, ResultBuilder &Results) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   // Note: we don't suggest either "auto" or "register", because both
   // are pointless as storage specifiers. Elsewhere, we suggest "auto"
   // in C++0x as a type specifier.
@@ -1902,7 +1902,7 @@ AddStorageSpecifiers(SemaCodeCompletion::ParserCompletionContext CCC,
 static void
 AddFunctionSpecifiers(SemaCodeCompletion::ParserCompletionContext CCC,
                       const LangOptions &LangOpts, ResultBuilder &Results) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   switch (CCC) {
   case SemaCodeCompletion::PCC_Class:
   case SemaCodeCompletion::PCC_MemberTemplate:
@@ -2148,7 +2148,7 @@ AddOrdinaryNameResults(SemaCodeCompletion::ParserCompletionContext CCC,
   CodeCompletionAllocator &Allocator = Results.getAllocator();
   CodeCompletionBuilder Builder(Allocator, Results.getCodeCompletionTUInfo());
 
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   switch (CCC) {
   case SemaCodeCompletion::PCC_Namespace:
     if (SemaRef.getLangOpts().CPlusPlus) {
@@ -4358,7 +4358,7 @@ CXCursorKind clang::getCursorKindForDecl(const Decl *D) {
 static void AddMacroResults(Preprocessor &PP, ResultBuilder &Results,
                             bool LoadExternal, bool IncludeUndefined,
                             bool TargetTypeIsPointer = false) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
 
   Results.EnterNewScope();
 
@@ -4383,7 +4383,7 @@ static void AddMacroResults(Preprocessor &PP, ResultBuilder &Results,
 
 static void AddPrettyFunctionResults(const LangOptions &LangOpts,
                                      ResultBuilder &Results) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
 
   Results.EnterNewScope();
 
@@ -4532,7 +4532,7 @@ static void MaybeAddOverrideCalls(Sema &S, DeclContext *InContext,
 
 void SemaCodeCompletion::CodeCompleteModuleImport(SourceLocation ImportLoc,
                                                   ModuleIdPath Path) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
                         CodeCompletionContext::CCC_Other);
@@ -4540,7 +4540,7 @@ void SemaCodeCompletion::CodeCompleteModuleImport(SourceLocation ImportLoc,
 
   CodeCompletionAllocator &Allocator = Results.getAllocator();
   CodeCompletionBuilder Builder(Allocator, Results.getCodeCompletionTUInfo());
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   if (Path.empty()) {
     // Enumerate all top-level modules.
     SmallVector<Module *, 8> Modules;
@@ -4675,7 +4675,7 @@ AddClassMessageCompletions(Sema &SemaRef, Scope *S, ParsedType Receiver,
 void SemaCodeCompletion::CodeCompleteDeclSpec(Scope *S, DeclSpec &DS,
                                               bool AllowNonIdentifiers,
                                               bool AllowNestedNameSpecifiers) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   ResultBuilder Results(
       SemaRef, CodeCompleter->getAllocator(),
       CodeCompleter->getCodeCompletionTUInfo(),
@@ -5098,7 +5098,7 @@ void SemaCodeCompletion::CodeCompletePostfixExpression(Scope *S, ExprResult E,
 
 /// The set of properties that have already been added, referenced by
 /// property name.
-typedef llvm::SmallPtrSet<const IdentifierInfo *, 16> AddedPropertiesSet;
+using AddedPropertiesSet = llvm::SmallPtrSet<const IdentifierInfo *, 16>;
 
 /// Retrieve the container definition, if any?
 static ObjCContainerDecl *getContainerDef(ObjCContainerDecl *Container) {
@@ -5163,7 +5163,7 @@ AddObjCProperties(const CodeCompletionContext &CCContext,
                   AddedPropertiesSet &AddedProperties, ResultBuilder &Results,
                   bool IsBaseExprStatement = false,
                   bool IsClassProperty = false, bool InOriginalClass = true) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
 
   // Retrieve the definition.
   Container = getContainerDef(Container);
@@ -6244,7 +6244,7 @@ static bool anyNullArguments(ArrayRef<Expr *> Args) {
   return false;
 }
 
-typedef CodeCompleteConsumer::OverloadCandidate ResultCandidate;
+using ResultCandidate = CodeCompleteConsumer::OverloadCandidate;
 
 static void mergeCandidatesWithResults(
     Sema &SemaRef, SmallVectorImpl<ResultCandidate> &Results,
@@ -7058,7 +7058,7 @@ void SemaCodeCompletion::CodeCompleteOperatorName(Scope *S) {
   if (!CodeCompleter)
     return;
 
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
                         CodeCompletionContext::CCC_Type,
@@ -7349,7 +7349,7 @@ void SemaCodeCompletion::CodeCompleteAfterFunctionEquals(Declarator &D) {
 
 static void AddObjCImplementationResults(const LangOptions &LangOpts,
                                          ResultBuilder &Results, bool NeedAt) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   // Since we have an implementation, we can end it.
   Results.AddResult(Result(OBJC_AT_KEYWORD_NAME(NeedAt, "end")));
 
@@ -7372,7 +7372,7 @@ static void AddObjCImplementationResults(const LangOptions &LangOpts,
 
 static void AddObjCInterfaceResults(const LangOptions &LangOpts,
                                     ResultBuilder &Results, bool NeedAt) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
 
   // Since we have an interface or protocol, we can end it.
   Results.AddResult(Result(OBJC_AT_KEYWORD_NAME(NeedAt, "end")));
@@ -7390,7 +7390,7 @@ static void AddObjCInterfaceResults(const LangOptions &LangOpts,
 }
 
 static void AddObjCTopLevelResults(ResultBuilder &Results, bool NeedAt) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   CodeCompletionBuilder Builder(Results.getAllocator(),
                                 Results.getCodeCompletionTUInfo());
 
@@ -7458,7 +7458,7 @@ void SemaCodeCompletion::CodeCompleteObjCAtDirective(Scope *S) {
 }
 
 static void AddObjCExpressionResults(ResultBuilder &Results, bool NeedAt) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   CodeCompletionBuilder Builder(Results.getAllocator(),
                                 Results.getCodeCompletionTUInfo());
 
@@ -7523,7 +7523,7 @@ static void AddObjCExpressionResults(ResultBuilder &Results, bool NeedAt) {
 }
 
 static void AddObjCStatementResults(ResultBuilder &Results, bool NeedAt) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   CodeCompletionBuilder Builder(Results.getAllocator(),
                                 Results.getCodeCompletionTUInfo());
 
@@ -7570,7 +7570,7 @@ static void AddObjCStatementResults(ResultBuilder &Results, bool NeedAt) {
 
 static void AddObjCVisibilityResults(const LangOptions &LangOpts,
                                      ResultBuilder &Results, bool NeedAt) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   Results.AddResult(Result(OBJC_AT_KEYWORD_NAME(NeedAt, "private")));
   Results.AddResult(Result(OBJC_AT_KEYWORD_NAME(NeedAt, "protected")));
   Results.AddResult(Result(OBJC_AT_KEYWORD_NAME(NeedAt, "public")));
@@ -7767,7 +7767,7 @@ static bool isAcceptableObjCMethod(ObjCMethodDecl *Method,
 
 /// A set of selectors, which is used to avoid introducing multiple
 /// completions with the same selector into the result set.
-typedef llvm::SmallPtrSet<Selector, 16> VisitedSelectorSet;
+using VisitedSelectorSet = llvm::SmallPtrSet<Selector, 16>;
 
 /// Add all of the Objective-C methods in the given Objective-C
 /// container to the set of results.
@@ -7796,7 +7796,7 @@ static void AddObjCMethods(ObjCContainerDecl *Container,
                            VisitedSelectorSet &Selectors, bool AllowSameLength,
                            ResultBuilder &Results, bool InOriginalClass = true,
                            bool IsRootClass = false) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   Container = getContainerDef(Container);
   ObjCInterfaceDecl *IFace = dyn_cast<ObjCInterfaceDecl>(Container);
   IsRootClass = IsRootClass || (IFace && !IFace->getSuperClass());
@@ -8205,7 +8205,7 @@ AddSuperSendCompletion(Sema &S, bool NeedSuperKeyword,
 }
 
 void SemaCodeCompletion::CodeCompleteObjCMessageReceiver(Scope *S) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   ResultBuilder Results(
       SemaRef, CodeCompleter->getAllocator(),
       CodeCompleter->getCodeCompletionTUInfo(),
@@ -8309,7 +8309,7 @@ void SemaCodeCompletion::CodeCompleteObjCSuperMessage(
 /// send, determine the preferred type (if any) for that argument expression.
 static QualType getPreferredArgumentTypeForMessageSend(ResultBuilder &Results,
                                                        unsigned NumSelIdents) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   ASTContext &Context = Results.getSema().Context;
 
   QualType PreferredType;
@@ -8344,7 +8344,7 @@ AddClassMessageCompletions(Sema &SemaRef, Scope *S, ParsedType Receiver,
                            ArrayRef<const IdentifierInfo *> SelIdents,
                            bool AtArgumentExpression, bool IsSuper,
                            ResultBuilder &Results) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   ObjCInterfaceDecl *CDecl = nullptr;
 
   // If the given name refers to an interface type, retrieve the
@@ -8453,7 +8453,7 @@ void SemaCodeCompletion::CodeCompleteObjCClassMessage(
 void SemaCodeCompletion::CodeCompleteObjCInstanceMessage(
     Scope *S, Expr *RecExpr, ArrayRef<const IdentifierInfo *> SelIdents,
     bool AtArgumentExpression, ObjCInterfaceDecl *Super) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   ASTContext &Context = getASTContext();
 
   // If necessary, apply function/array conversion to the receiver.
@@ -8690,7 +8690,7 @@ void SemaCodeCompletion::CodeCompleteObjCSelector(
 static void AddProtocolResults(DeclContext *Ctx, DeclContext *CurContext,
                                bool OnlyForwardDeclarations,
                                ResultBuilder &Results) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
 
   for (const auto *D : Ctx->decls()) {
     // Record any protocols we find.
@@ -8757,7 +8757,7 @@ static void AddInterfaceResults(DeclContext *Ctx, DeclContext *CurContext,
                                 bool OnlyForwardDeclarations,
                                 bool OnlyUnimplemented,
                                 ResultBuilder &Results) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
 
   for (const auto *D : Ctx->decls()) {
     // Record any interfaces we find.
@@ -8855,7 +8855,7 @@ void SemaCodeCompletion::CodeCompleteObjCImplementationDecl(Scope *S) {
 
 void SemaCodeCompletion::CodeCompleteObjCInterfaceCategory(
     Scope *S, IdentifierInfo *ClassName, SourceLocation ClassNameLoc) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
 
   ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
@@ -8890,7 +8890,7 @@ void SemaCodeCompletion::CodeCompleteObjCInterfaceCategory(
 
 void SemaCodeCompletion::CodeCompleteObjCImplementationCategory(
     Scope *S, IdentifierInfo *ClassName, SourceLocation ClassNameLoc) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
 
   // Find the corresponding interface. If we couldn't find the interface, the
   // program itself is ill-formed. However, we'll try to be helpful still by
@@ -8969,7 +8969,7 @@ void SemaCodeCompletion::CodeCompleteObjCPropertyDefinition(Scope *S) {
 
 void SemaCodeCompletion::CodeCompleteObjCPropertySynthesizeIvar(
     Scope *S, IdentifierInfo *PropertyName) {
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
                         CodeCompletionContext::CCC_Other);
@@ -9040,7 +9040,7 @@ void SemaCodeCompletion::CodeCompleteObjCPropertySynthesizeIvar(
     // Create ivar result _propName, that the user can use to synthesize
     // an ivar of the appropriate type.
     unsigned Priority = CCP_MemberDeclaration + 1;
-    typedef CodeCompletionResult Result;
+    using Result = CodeCompletionResult;
     CodeCompletionAllocator &Allocator = Results.getAllocator();
     CodeCompletionBuilder Builder(Allocator, Results.getCodeCompletionTUInfo(),
                                   Priority, CXAvailability_Available);
@@ -9062,9 +9062,8 @@ void SemaCodeCompletion::CodeCompleteObjCPropertySynthesizeIvar(
 
 // Mapping from selectors to the methods that implement that selector, along
 // with the "in original class" flag.
-typedef llvm::DenseMap<Selector,
-                       llvm::PointerIntPair<ObjCMethodDecl *, 1, bool>>
-    KnownMethodsMap;
+using KnownMethodsMap =
+    llvm::DenseMap<Selector, llvm::PointerIntPair<ObjCMethodDecl *, 1, bool>>;
 
 /// Find all of the methods that reside in the given container
 /// (and its superclasses, protocols, etc.) that meet the given
@@ -9195,7 +9194,7 @@ static void AddObjCKeyValueCompletions(ObjCPropertyDecl *Property,
   PrintingPolicy Policy = getCompletionPrintingPolicy(Results.getSema());
 
   // Builder that will create each code completion.
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   CodeCompletionAllocator &Allocator = Results.getAllocator();
   CodeCompletionBuilder Builder(Allocator, Results.getCodeCompletionTUInfo());
 
@@ -9839,7 +9838,7 @@ void SemaCodeCompletion::CodeCompleteObjCMethodDecl(
                            KnownMethods);
 
   // Add declarations or definitions for each of the known methods.
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
                         CodeCompletionContext::CCC_Other);
@@ -9991,7 +9990,7 @@ void SemaCodeCompletion::CodeCompleteObjCMethodDeclSelector(
   }
 
   // Build the set of methods we can see.
-  typedef CodeCompletionResult Result;
+  using Result = CodeCompletionResult;
   ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
                         CodeCompletionContext::CCC_Other);

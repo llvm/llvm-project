@@ -1551,7 +1551,7 @@ void SemaObjC::actOnObjCTypeArgsOrProtocolQualifiers(
   // Objective-C class names. The latter is technically ill-formed,
   // but is probably something like \c NSArray<NSView *> missing the
   // \c*.
-  typedef llvm::PointerUnion<TypeDecl *, ObjCInterfaceDecl *> TypeOrClassDecl;
+  using TypeOrClassDecl = llvm::PointerUnion<TypeDecl *, ObjCInterfaceDecl *>;
   SmallVector<TypeOrClassDecl, 4> typeDecls;
   unsigned numTypeDeclsResolved = 0;
   for (unsigned i = 0, n = identifiers.size(); i != n; ++i) {
@@ -2688,8 +2688,8 @@ void SemaObjC::WarnExactTypedMethods(ObjCMethodDecl *ImpMethodDecl,
 /// we used an immutable set to keep the table then it wouldn't add significant
 /// memory cost and it would be handy for lookups.
 
-typedef llvm::DenseSet<IdentifierInfo*> ProtocolNameSet;
-typedef std::unique_ptr<ProtocolNameSet> LazyProtocolNameSet;
+using ProtocolNameSet = llvm::DenseSet<IdentifierInfo *>;
+using LazyProtocolNameSet = std::unique_ptr<ProtocolNameSet>;
 
 static void findProtocolsWithExplicitImpls(const ObjCProtocolDecl *PDecl,
                                            ProtocolNameSet &PNS) {
@@ -4325,7 +4325,7 @@ public:
     }
   }
 
-  typedef decltype(Overridden)::iterator iterator;
+  using iterator = decltype(Overridden)::iterator;
   iterator begin() const { return Overridden.begin(); }
   iterator end() const { return Overridden.end(); }
 

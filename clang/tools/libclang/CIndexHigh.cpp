@@ -50,7 +50,7 @@ struct FindFileIdRefVisitData {
   int SelectorIdIdx;
   CXCursorAndRangeVisitor visitor;
 
-  typedef SmallVector<const Decl *, 8> TopMethodsTy;
+  using TopMethodsTy = SmallVector<const Decl *, 8>;
   TopMethodsTy TopMethods;
 
   FindFileIdRefVisitData(CXTranslationUnit TU, FileID FID,

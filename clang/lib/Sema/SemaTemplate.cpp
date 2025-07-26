@@ -4546,7 +4546,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   VarDecl *InstantiationPattern = Template->getTemplatedDecl();
   const TemplateArgumentList *PartialSpecArgs = nullptr;
   bool AmbiguousPartialSpec = false;
-  typedef PartialSpecMatchResult MatchResult;
+  using MatchResult = PartialSpecMatchResult;
   SmallVector<MatchResult, 4> Matched;
   SourceLocation PointOfInstantiation = TemplateNameLoc;
   TemplateSpecCandidateSet FailedCandidates(PointOfInstantiation,
@@ -6024,7 +6024,7 @@ namespace {
     Sema &S;
     SourceRange SR;
 
-    typedef TypeVisitor<UnnamedLocalNoLinkageFinder, bool> inherited;
+    using inherited = TypeVisitor<UnnamedLocalNoLinkageFinder, bool>;
 
   public:
     UnnamedLocalNoLinkageFinder(Sema &S, SourceRange SR) : S(S), SR(SR) { }
@@ -11207,7 +11207,7 @@ namespace {
     DeclarationName Entity;
 
   public:
-    typedef TreeTransform<CurrentInstantiationRebuilder> inherited;
+    using inherited = TreeTransform<CurrentInstantiationRebuilder>;
 
     CurrentInstantiationRebuilder(Sema &SemaRef,
                                   SourceLocation Loc,

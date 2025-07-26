@@ -99,10 +99,9 @@ private:
 
   /// MethodBaseOffsetPairTy - Uniquely identifies a member function
   /// in a base subobject.
-  typedef std::pair<const CXXMethodDecl *, CharUnits> MethodBaseOffsetPairTy;
+  using MethodBaseOffsetPairTy = std::pair<const CXXMethodDecl *, CharUnits>;
 
-  typedef llvm::DenseMap<MethodBaseOffsetPairTy,
-                         OverriderInfo> OverridersMapTy;
+  using OverridersMapTy = llvm::DenseMap<MethodBaseOffsetPairTy, OverriderInfo>;
 
   /// OverridersMap - The final overriders for all virtual member functions of
   /// all the base subobjects of the most derived class.
@@ -111,10 +110,10 @@ private:
   /// SubobjectsToOffsetsMapTy - A mapping from a base subobject (represented
   /// as a record decl and a subobject number) and its offsets in the most
   /// derived class as well as the layout class.
-  typedef llvm::DenseMap<std::pair<const CXXRecordDecl *, unsigned>,
-                         CharUnits> SubobjectOffsetMapTy;
+  using SubobjectOffsetMapTy =
+      llvm::DenseMap<std::pair<const CXXRecordDecl *, unsigned>, CharUnits>;
 
-  typedef llvm::DenseMap<const CXXRecordDecl *, unsigned> SubobjectCountMapTy;
+  using SubobjectCountMapTy = llvm::DenseMap<const CXXRecordDecl *, unsigned>;
 
   /// ComputeBaseOffsets - Compute the offsets for all base subobjects of the
   /// given base.
@@ -124,7 +123,7 @@ private:
                           SubobjectOffsetMapTy &SubobjectLayoutClassOffsets,
                           SubobjectCountMapTy &SubobjectCounts);
 
-  typedef llvm::SmallPtrSet<const CXXRecordDecl *, 4> VisitedVirtualBasesSetTy;
+  using VisitedVirtualBasesSetTy = llvm::SmallPtrSet<const CXXRecordDecl *, 4>;
 
   /// dump - dump the final overriders for a base subobject, and all its direct
   /// and indirect base subobjects.
@@ -442,7 +441,7 @@ void FinalOverriders::dump(raw_ostream &Out, BaseSubobject Base,
 /// VCallOffsetMap - Keeps track of vcall offsets when building a vtable.
 struct VCallOffsetMap {
 
-  typedef std::pair<const CXXMethodDecl *, CharUnits> MethodAndOffsetPairTy;
+  using MethodAndOffsetPairTy = std::pair<const CXXMethodDecl *, CharUnits>;
 
   /// Offsets - Keeps track of methods and their offsets.
   // FIXME: This should be a real map and not a vector.
@@ -532,8 +531,8 @@ CharUnits VCallOffsetMap::getVCallOffsetOffset(const CXXMethodDecl *MD) {
 /// VCallAndVBaseOffsetBuilder - Class for building vcall and vbase offsets.
 class VCallAndVBaseOffsetBuilder {
 public:
-  typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits>
-    VBaseOffsetOffsetsMapTy;
+  using VBaseOffsetOffsetsMapTy =
+      llvm::DenseMap<const CXXRecordDecl *, CharUnits>;
 
 private:
   const ItaniumVTableContext &VTables;
@@ -551,7 +550,7 @@ private:
   ASTContext &Context;
 
   /// Components - vcall and vbase offset components
-  typedef SmallVector<VTableComponent, 64> VTableComponentVectorTy;
+  using VTableComponentVectorTy = SmallVector<VTableComponent, 64>;
   VTableComponentVectorTy Components;
 
   /// VisitedVirtualBases - Visited virtual bases.
@@ -601,7 +600,7 @@ public:
   }
 
   /// Methods for iterating over the components.
-  typedef VTableComponentVectorTy::const_reverse_iterator const_iterator;
+  using const_iterator = VTableComponentVectorTy::const_reverse_iterator;
   const_iterator components_begin() const { return Components.rbegin(); }
   const_iterator components_end() const { return Components.rend(); }
 
@@ -785,15 +784,15 @@ class ItaniumVTableBuilder {
 public:
   /// PrimaryBasesSetVectorTy - A set vector of direct and indirect
   /// primary bases.
-  typedef llvm::SmallSetVector<const CXXRecordDecl *, 8>
-    PrimaryBasesSetVectorTy;
+  using PrimaryBasesSetVectorTy =
+      llvm::SmallSetVector<const CXXRecordDecl *, 8>;
 
-  typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits>
-    VBaseOffsetOffsetsMapTy;
+  using VBaseOffsetOffsetsMapTy =
+      llvm::DenseMap<const CXXRecordDecl *, CharUnits>;
 
-  typedef VTableLayout::AddressPointsMapTy AddressPointsMapTy;
+  using AddressPointsMapTy = VTableLayout::AddressPointsMapTy;
 
-  typedef llvm::DenseMap<GlobalDecl, int64_t> MethodVTableIndicesTy;
+  using MethodVTableIndicesTy = llvm::DenseMap<GlobalDecl, int64_t>;
 
 private:
   /// VTables - Global vtable information.
@@ -864,7 +863,7 @@ private:
     MethodInfo(MethodInfo const&) = default;
   };
 
-  typedef llvm::DenseMap<const CXXMethodDecl *, MethodInfo> MethodInfoMapTy;
+  using MethodInfoMapTy = llvm::DenseMap<const CXXMethodDecl *, MethodInfo>;
 
   /// MethodInfoMap - The information for all methods in the vtable we're
   /// currently building.
@@ -874,14 +873,14 @@ private:
   /// point) where the function pointer for a virtual function is stored.
   MethodVTableIndicesTy MethodVTableIndices;
 
-  typedef llvm::DenseMap<uint64_t, ThunkInfo> VTableThunksMapTy;
+  using VTableThunksMapTy = llvm::DenseMap<uint64_t, ThunkInfo>;
 
   /// VTableThunks - The thunks by vtable index in the vtable currently being
   /// built.
   VTableThunksMapTy VTableThunks;
 
-  typedef SmallVector<ThunkInfo, 1> ThunkInfoVectorTy;
-  typedef llvm::DenseMap<const CXXMethodDecl *, ThunkInfoVectorTy> ThunksMapTy;
+  using ThunkInfoVectorTy = SmallVector<ThunkInfo, 1>;
+  using ThunksMapTy = llvm::DenseMap<const CXXMethodDecl *, ThunkInfoVectorTy>;
 
   /// Thunks - A map that contains all the thunks needed for all methods in the
   /// most derived class for which the vtable is currently being built.
@@ -894,7 +893,7 @@ private:
   /// part of the vtable we're currently building.
   void ComputeThisAdjustments();
 
-  typedef llvm::SmallPtrSet<const CXXRecordDecl *, 4> VisitedVirtualBasesSetTy;
+  using VisitedVirtualBasesSetTy = llvm::SmallPtrSet<const CXXRecordDecl *, 4>;
 
   /// PrimaryVirtualBases - All known virtual bases who are a primary base of
   /// some other base.
@@ -1082,7 +1081,7 @@ void ItaniumVTableBuilder::AddThunk(const CXXMethodDecl *MD,
   ThunksVector.push_back(Thunk);
 }
 
-typedef llvm::SmallPtrSet<const CXXMethodDecl *, 8> OverriddenMethodsSetTy;
+using OverriddenMethodsSetTy = llvm::SmallPtrSet<const CXXMethodDecl *, 8>;
 
 /// Visit all the methods overridden by the given method recursively,
 /// in a depth-first pre-order. The Visitor's visitor method returns a bool
@@ -1444,7 +1443,7 @@ bool ItaniumVTableBuilder::IsOverriderUsed(
   return OverridesIndirectMethodInBases(Overrider, PrimaryBases);
 }
 
-typedef llvm::SmallSetVector<const CXXRecordDecl *, 8> BasesSetVectorTy;
+using BasesSetVectorTy = llvm::SmallSetVector<const CXXRecordDecl *, 8>;
 
 /// FindNearestOverriddenMethod - Given a method, returns the overridden method
 /// from the nearest base. Returns null if no method was found.
@@ -1518,7 +1517,7 @@ void ItaniumVTableBuilder::AddMethods(
       llvm_unreachable("Found a duplicate primary base!");
   }
 
-  typedef llvm::SmallVector<const CXXMethodDecl *, 8> NewVirtualFunctionsTy;
+  using NewVirtualFunctionsTy = llvm::SmallVector<const CXXMethodDecl *, 8>;
   NewVirtualFunctionsTy NewVirtualFunctions;
 
   llvm::SmallVector<const CXXMethodDecl*, 4> NewImplicitVirtualFunctions;
@@ -2512,11 +2511,11 @@ namespace {
 
 class VFTableBuilder {
 public:
-  typedef llvm::DenseMap<GlobalDecl, MethodVFTableLocation>
-    MethodVFTableLocationsTy;
+  using MethodVFTableLocationsTy =
+      llvm::DenseMap<GlobalDecl, MethodVFTableLocation>;
 
-  typedef llvm::iterator_range<MethodVFTableLocationsTy::const_iterator>
-    method_locations_range;
+  using method_locations_range =
+      llvm::iterator_range<MethodVFTableLocationsTy::const_iterator>;
 
 private:
   /// VTables - Global vtable information.
@@ -2573,20 +2572,20 @@ private:
           UsesExtraSlot(false) {}
   };
 
-  typedef llvm::DenseMap<const CXXMethodDecl *, MethodInfo> MethodInfoMapTy;
+  using MethodInfoMapTy = llvm::DenseMap<const CXXMethodDecl *, MethodInfo>;
 
   /// MethodInfoMap - The information for all methods in the vftable we're
   /// currently building.
   MethodInfoMapTy MethodInfoMap;
 
-  typedef llvm::DenseMap<uint64_t, ThunkInfo> VTableThunksMapTy;
+  using VTableThunksMapTy = llvm::DenseMap<uint64_t, ThunkInfo>;
 
   /// VTableThunks - The thunks by vftable index in the vftable currently being
   /// built.
   VTableThunksMapTy VTableThunks;
 
-  typedef SmallVector<ThunkInfo, 1> ThunkInfoVectorTy;
-  typedef llvm::DenseMap<const CXXMethodDecl *, ThunkInfoVectorTy> ThunksMapTy;
+  using ThunkInfoVectorTy = SmallVector<ThunkInfo, 1>;
+  using ThunksMapTy = llvm::DenseMap<const CXXMethodDecl *, ThunkInfoVectorTy>;
 
   /// Thunks - A map that contains all the thunks needed for all methods in the
   /// most derived class for which the vftable is currently being built.
@@ -3006,9 +3005,9 @@ static void GroupNewVirtualOverloads(
   //    (including overrides, non-virtual methods and any other named decl that
   //    might be nested within the class).
   // 2) In each group, new overloads appear in the reverse order of declaration.
-  typedef SmallVector<const CXXMethodDecl *, 1> MethodGroup;
+  using MethodGroup = SmallVector<const CXXMethodDecl *, 1>;
   SmallVector<MethodGroup, 10> Groups;
-  typedef llvm::DenseMap<DeclarationName, unsigned> VisitedGroupIndicesTy;
+  using VisitedGroupIndicesTy = llvm::DenseMap<DeclarationName, unsigned>;
   VisitedGroupIndicesTy VisitedGroupIndices;
   for (const auto *D : RD->decls()) {
     const auto *ND = dyn_cast<NamedDecl>(D);
@@ -3511,8 +3510,8 @@ static bool rebucketPaths(VPtrInfoVector &Paths) {
 MicrosoftVTableContext::~MicrosoftVTableContext() {}
 
 namespace {
-typedef llvm::SetVector<BaseSubobject, std::vector<BaseSubobject>,
-                        llvm::DenseSet<BaseSubobject>> FullPathTy;
+using FullPathTy = llvm::SetVector<BaseSubobject, std::vector<BaseSubobject>,
+                                   llvm::DenseSet<BaseSubobject>>;
 }
 
 // This recursive function finds all paths from a subobject centered at
@@ -3601,7 +3600,7 @@ static const FullPathTy *selectBestPath(ASTContext &Context,
     return &FullPaths.front();
 
   const FullPathTy *BestPath = nullptr;
-  typedef std::set<const CXXMethodDecl *> OverriderSetTy;
+  using OverriderSetTy = std::set<const CXXMethodDecl *>;
   OverriderSetTy LastOverrides;
   for (const FullPathTy &SpecificPath : FullPaths) {
     assert(!SpecificPath.empty());

@@ -1539,10 +1539,9 @@ namespace {
 /// Codegen lambda for appending distribute lower and upper bounds to outlined
 /// parallel function. This is necessary for combined constructs such as
 /// 'distribute parallel for'
-typedef llvm::function_ref<void(CodeGenFunction &,
-                                const OMPExecutableDirective &,
-                                llvm::SmallVectorImpl<llvm::Value *> &)>
-    CodeGenBoundParametersTy;
+using CodeGenBoundParametersTy =
+    llvm::function_ref<void(CodeGenFunction &, const OMPExecutableDirective &,
+                            llvm::SmallVectorImpl<llvm::Value *> &)>;
 } // anonymous namespace
 
 static void

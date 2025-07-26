@@ -1598,7 +1598,7 @@ unsigned long long clang_Cursor_getTemplateArgumentUnsignedValue(CXCursor C,
 // CXCursorSet.
 //===----------------------------------------------------------------------===//
 
-typedef llvm::DenseMap<CXCursor, unsigned> CXCursorSet_Impl;
+using CXCursorSet_Impl = llvm::DenseMap<CXCursor, unsigned>;
 
 static inline CXCursorSet packCXCursorSet(CXCursorSet_Impl *setImpl) {
   return (CXCursorSet)setImpl;
@@ -1688,7 +1688,7 @@ CXCompletionString clang_getCursorCompletionString(CXCursor cursor) {
 
 namespace {
 struct OverridenCursorsPool {
-  typedef SmallVector<CXCursor, 2> CursorVec;
+  using CursorVec = SmallVector<CXCursor, 2>;
   std::vector<CursorVec *> AllCursors;
   std::vector<CursorVec *> AvailableCursors;
 

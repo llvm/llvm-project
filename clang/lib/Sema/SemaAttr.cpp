@@ -1327,7 +1327,7 @@ void Sema::AddImplicitMSFunctionNoBuiltinAttr(FunctionDecl *FD) {
     FD->addAttr(NoBuiltinAttr::CreateImplicit(Context, V.data(), V.size()));
 }
 
-typedef std::vector<std::pair<unsigned, SourceLocation> > VisStack;
+using VisStack = std::vector<std::pair<unsigned, SourceLocation>>;
 enum : unsigned { NoVisibility = ~0U };
 
 void Sema::AddPushedVisibilityAttribute(Decl *D) {

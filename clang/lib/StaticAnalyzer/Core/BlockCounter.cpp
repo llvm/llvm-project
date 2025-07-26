@@ -44,7 +44,7 @@ public:
 
 }
 
-typedef llvm::ImmutableMap<CountKey, unsigned> CountMap;
+using CountMap = llvm::ImmutableMap<CountKey, unsigned>;
 
 static inline CountMap GetMap(void *D) {
   return CountMap(static_cast<CountMap::TreeTy*>(D));

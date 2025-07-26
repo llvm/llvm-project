@@ -53,8 +53,8 @@ struct BranchFixup {
 };
 
 template <class T> struct InvariantValue {
-  typedef T type;
-  typedef T saved_type;
+  using type = T;
+  using saved_type = T;
   static bool needsSaving(type value) { return false; }
   static saved_type save(CodeGenFunction &CGF, type value) { return value; }
   static type restore(CodeGenFunction &CGF, saved_type value) { return value; }
@@ -206,7 +206,7 @@ public:
   /// then restores them and performs the cleanup.
   template <class T, class... As>
   class ConditionalCleanup final : public Cleanup {
-    typedef std::tuple<typename DominatingValue<As>::saved_type...> SavedTuple;
+    using SavedTuple = std::tuple<typename DominatingValue<As>::saved_type...>;
     SavedTuple Saved;
 
     template <std::size_t... Is>

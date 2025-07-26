@@ -77,7 +77,7 @@ struct Param {
   StringRef Type;
 };
 
-typedef std::vector<Param> ParamsSeq;
+using ParamsSeq = std::vector<Param>;
 } // namespace
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(Param)
@@ -131,7 +131,7 @@ template <> struct MappingTraits<Param> {
 } // namespace llvm
 
 namespace {
-typedef std::vector<NullabilityKind> NullabilitySeq;
+using NullabilitySeq = std::vector<NullabilityKind>;
 
 struct AvailabilityItem {
   APIAvailability Mode = APIAvailability::Available;
@@ -165,7 +165,7 @@ struct Method {
   StringRef SwiftReturnOwnership;
 };
 
-typedef std::vector<Method> MethodsSeq;
+using MethodsSeq = std::vector<Method>;
 } // namespace
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(Method)
@@ -216,7 +216,7 @@ struct Property {
   StringRef Type;
 };
 
-typedef std::vector<Property> PropertiesSeq;
+using PropertiesSeq = std::vector<Property>;
 } // namespace
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(Property)
@@ -255,7 +255,7 @@ struct Class {
   PropertiesSeq Properties;
 };
 
-typedef std::vector<Class> ClassesSeq;
+using ClassesSeq = std::vector<Class>;
 } // namespace
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(Class)
@@ -297,7 +297,7 @@ struct Function {
   StringRef SwiftReturnOwnership;
 };
 
-typedef std::vector<Function> FunctionsSeq;
+using FunctionsSeq = std::vector<Function>;
 } // namespace
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(Function)
@@ -334,7 +334,7 @@ struct GlobalVariable {
   StringRef Type;
 };
 
-typedef std::vector<GlobalVariable> GlobalVariablesSeq;
+using GlobalVariablesSeq = std::vector<GlobalVariable>;
 } // namespace
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(GlobalVariable)
@@ -364,7 +364,7 @@ struct EnumConstant {
   StringRef SwiftName;
 };
 
-typedef std::vector<EnumConstant> EnumConstantsSeq;
+using EnumConstantsSeq = std::vector<EnumConstant>;
 } // namespace
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(EnumConstant)
@@ -424,7 +424,7 @@ struct Field {
   StringRef Type;
 };
 
-typedef std::vector<Field> FieldsSeq;
+using FieldsSeq = std::vector<Field>;
 } // namespace
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(Field)
@@ -448,7 +448,7 @@ template <> struct MappingTraits<Field> {
 
 namespace {
 struct Tag;
-typedef std::vector<Tag> TagsSeq;
+using TagsSeq = std::vector<Tag>;
 
 struct Tag {
   StringRef Name;
@@ -527,7 +527,7 @@ struct Typedef {
   std::optional<SwiftNewTypeKind> SwiftType;
 };
 
-typedef std::vector<Typedef> TypedefsSeq;
+using TypedefsSeq = std::vector<Typedef>;
 } // namespace
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(Typedef)
@@ -560,7 +560,7 @@ template <> struct MappingTraits<Typedef> {
 
 namespace {
 struct Namespace;
-typedef std::vector<Namespace> NamespacesSeq;
+using NamespacesSeq = std::vector<Namespace>;
 
 struct TopLevelItems {
   ClassesSeq Classes;
@@ -623,7 +623,7 @@ struct Versioned {
   TopLevelItems Items;
 };
 
-typedef std::vector<Versioned> VersionedSeq;
+using VersionedSeq = std::vector<Versioned>;
 } // namespace
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(Versioned)

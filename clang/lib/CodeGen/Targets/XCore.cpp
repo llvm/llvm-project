@@ -20,7 +20,7 @@ namespace {
 
 /// A SmallStringEnc instance is used to build up the TypeString by passing
 /// it by reference between functions that append to it.
-typedef llvm::SmallString<128> SmallStringEnc;
+using SmallStringEnc = llvm::SmallString<128>;
 
 /// TypeStringCache caches the meta encodings of Types.
 ///

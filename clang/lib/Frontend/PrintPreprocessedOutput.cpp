@@ -1034,7 +1034,7 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
   }
 }
 
-typedef std::pair<const IdentifierInfo *, MacroInfo *> id_macro_pair;
+using id_macro_pair = std::pair<const IdentifierInfo *, MacroInfo *>;
 static int MacroIDCompare(const id_macro_pair *LHS, const id_macro_pair *RHS) {
   return LHS->first->getName().compare(RHS->first->getName());
 }

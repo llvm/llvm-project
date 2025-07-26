@@ -3533,7 +3533,7 @@ namespace {
   /// A checker which white-lists certain expressions whose conversion
   /// to or from retainable type would otherwise be forbidden in ARC.
   class ARCCastChecker : public StmtVisitor<ARCCastChecker, ACCResult> {
-    typedef StmtVisitor<ARCCastChecker, ACCResult> super;
+    using super = StmtVisitor<ARCCastChecker, ACCResult>;
 
     ASTContext &Context;
     ARCConversionTypeClass SourceClass;

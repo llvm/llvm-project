@@ -3354,7 +3354,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
   {
     // Use 'char' for the isClassProperty bit as DenseSet requires space for
     // empty/tombstone keys in the data type (and bool is too small for that).
-    typedef std::pair<char, const IdentifierInfo *> IsClassAndIdent;
+    using IsClassAndIdent = std::pair<char, const IdentifierInfo *>;
     /// List of already emitted properties. Two distinct class and instance
     /// properties can share the same identifier (but not two instance
     /// properties or two class properties).

@@ -2845,7 +2845,7 @@ struct PrivateHelpersTy {
     return !OriginalRef && !PrivateCopy && !PrivateElemInit;
   }
 };
-typedef std::pair<CharUnits /*Align*/, PrivateHelpersTy> PrivateDataTy;
+using PrivateDataTy = std::pair<CharUnits /*Align*/, PrivateHelpersTy>;
 } // anonymous namespace
 
 static bool isAllocatableDecl(const VarDecl *VD) {

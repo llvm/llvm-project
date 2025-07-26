@@ -1240,7 +1240,7 @@ private:
   /// In case of equal penalties, we want to prefer states that were inserted
   /// first. During state generation we make sure that we insert states first
   /// that break the line as late as possible.
-  typedef std::pair<unsigned, unsigned> OrderedPenalty;
+  using OrderedPenalty = std::pair<unsigned, unsigned>;
 
   /// An edge in the solution space from \c Previous->State to \c State,
   /// inserting a newline dependent on the \c NewLine.
@@ -1254,12 +1254,11 @@ private:
 
   /// An item in the prioritized BFS search queue. The \c StateNode's
   /// \c State has the given \c OrderedPenalty.
-  typedef std::pair<OrderedPenalty, StateNode *> QueueItem;
+  using QueueItem = std::pair<OrderedPenalty, StateNode *>;
 
   /// The BFS queue type.
-  typedef std::priority_queue<QueueItem, SmallVector<QueueItem>,
-                              std::greater<QueueItem>>
-      QueueType;
+  using QueueType = std::priority_queue<QueueItem, SmallVector<QueueItem>,
+                                        std::greater<QueueItem>>;
 
   /// Analyze the entire solution space starting from \p InitialState.
   ///

@@ -6620,7 +6620,7 @@ static LValueOrRValue emitPseudoObjectExpr(CodeGenFunction &CGF,
 
       // If this is the result expression, we may need to evaluate
       // directly into the slot.
-      typedef CodeGenFunction::OpaqueValueMappingData OVMA;
+      using OVMA = CodeGenFunction::OpaqueValueMappingData;
       OVMA opaqueData;
       if (ov == resultExpr && ov->isPRValue() && !forLValue &&
           CodeGenFunction::hasAggregateEvaluationKind(ov->getType())) {

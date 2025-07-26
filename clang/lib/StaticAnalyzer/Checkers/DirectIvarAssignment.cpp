@@ -51,8 +51,8 @@ static bool DefaultMethodFilter(const ObjCMethodDecl *M) {
 class DirectIvarAssignment :
   public Checker<check::ASTDecl<ObjCImplementationDecl> > {
 
-  typedef llvm::DenseMap<const ObjCIvarDecl*,
-                         const ObjCPropertyDecl*> IvarToPropertyMapTy;
+  using IvarToPropertyMapTy =
+      llvm::DenseMap<const ObjCIvarDecl *, const ObjCPropertyDecl *>;
 
   /// A helper class, which walks the AST and locates all assignments to ivars
   /// in the given function.

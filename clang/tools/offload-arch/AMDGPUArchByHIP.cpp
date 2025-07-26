@@ -32,19 +32,19 @@
 
 using namespace llvm;
 
-typedef struct {
+using hipDeviceProp_t = struct {
   char padding[396];
   char gcnArchName[256];
   char padding2[1024];
-} hipDeviceProp_t;
+};
 
-typedef enum {
+using hipError_t = enum {
   hipSuccess = 0,
-} hipError_t;
+};
 
-typedef hipError_t (*hipGetDeviceCount_t)(int *);
-typedef hipError_t (*hipDeviceGet_t)(int *, int);
-typedef hipError_t (*hipGetDeviceProperties_t)(hipDeviceProp_t *, int);
+using hipGetDeviceCount_t = hipError_t (*)(int *);
+using hipDeviceGet_t = hipError_t (*)(int *, int);
+using hipGetDeviceProperties_t = hipError_t (*)(hipDeviceProp_t *, int);
 
 extern cl::opt<bool> Verbose;
 

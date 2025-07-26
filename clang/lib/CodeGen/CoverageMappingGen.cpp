@@ -269,8 +269,8 @@ public:
   /// It is produced by emitExpansionRegions() and is used in
   /// emitSourceRegions() to suppress producing code regions if
   /// the same area is covered by expansion regions.
-  typedef llvm::SmallSet<std::pair<SourceLocation, SourceLocation>, 8>
-      SourceRegionFilter;
+  using SourceRegionFilter =
+      llvm::SmallSet<std::pair<SourceLocation, SourceLocation>, 8>;
 
   CoverageMappingBuilder(CoverageMappingModuleGen &CVM, SourceManager &SM,
                          const LangOptions &LangOpts)

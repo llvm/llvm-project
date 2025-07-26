@@ -2659,7 +2659,7 @@ static void ExpandAnonymousFieldDesignator(Sema &SemaRef,
                                            DesignatedInitExpr *DIE,
                                            unsigned DesigIdx,
                                            IndirectFieldDecl *IndirectField) {
-  typedef DesignatedInitExpr::Designator Designator;
+  using Designator = DesignatedInitExpr::Designator;
 
   // Build the replacement designators.
   SmallVector<Designator, 4> Replacements;
@@ -3558,7 +3558,7 @@ ExprResult Sema::ActOnDesignatedInitializer(Designation &Desig,
                                             SourceLocation EqualOrColonLoc,
                                             bool GNUSyntax,
                                             ExprResult Init) {
-  typedef DesignatedInitExpr::Designator ASTDesignator;
+  using ASTDesignator = DesignatedInitExpr::Designator;
 
   bool Invalid = false;
   SmallVector<ASTDesignator, 32> Designators;

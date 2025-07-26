@@ -1435,9 +1435,9 @@ namespace {
   template<typename Traits>
   class CallDeleteDuringNew final : public EHScopeStack::Cleanup {
     /// Type used to hold llvm::Value*s.
-    typedef typename Traits::ValueTy ValueTy;
+    using ValueTy = typename Traits::ValueTy;
     /// Type used to hold RValues.
-    typedef typename Traits::RValueTy RValueTy;
+    using RValueTy = typename Traits::RValueTy;
     struct PlacementArg {
       RValueTy ArgValue;
       QualType ArgType;
@@ -1549,13 +1549,13 @@ static void EnterNewDeleteCleanup(CodeGenFunction &CGF, const CXXNewExpr *E,
   // dominate and we can do the easier (and more efficient) thing.
   if (!CGF.isInConditionalBranch()) {
     struct DirectCleanupTraits {
-      typedef llvm::Value *ValueTy;
-      typedef RValue RValueTy;
+      using ValueTy = llvm::Value *;
+      using RValueTy = RValue;
       static RValue get(CodeGenFunction &, ValueTy V) { return RValue::get(V); }
       static RValue get(CodeGenFunction &, RValueTy V) { return V; }
     };
 
-    typedef CallDeleteDuringNew<DirectCleanupTraits> DirectCleanup;
+    using DirectCleanup = CallDeleteDuringNew<DirectCleanupTraits>;
 
     DirectCleanup *Cleanup = CGF.EHStack.pushCleanupWithExtra<DirectCleanup>(
         EHCleanup, E->getNumPlacementArgs(), E->getOperatorDelete(),
@@ -1577,13 +1577,13 @@ static void EnterNewDeleteCleanup(CodeGenFunction &CGF, const CXXNewExpr *E,
   DominatingValue<RValue>::saved_type SavedTypeIdentity =
       DominatingValue<RValue>::save(CGF, TypeIdentity);
   struct ConditionalCleanupTraits {
-    typedef DominatingValue<RValue>::saved_type ValueTy;
-    typedef DominatingValue<RValue>::saved_type RValueTy;
+    using ValueTy = DominatingValue<RValue>::saved_type;
+    using RValueTy = DominatingValue<RValue>::saved_type;
     static RValue get(CodeGenFunction &CGF, ValueTy V) {
       return V.restore(CGF);
     }
   };
-  typedef CallDeleteDuringNew<ConditionalCleanupTraits> ConditionalCleanup;
+  using ConditionalCleanup = CallDeleteDuringNew<ConditionalCleanupTraits>;
 
   ConditionalCleanup *Cleanup =
       CGF.EHStack.pushCleanupWithExtra<ConditionalCleanup>(
