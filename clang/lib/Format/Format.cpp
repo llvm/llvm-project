@@ -2641,28 +2641,19 @@ private:
     int AlignmentDiff = 0;
     for (const AnnotatedLine *Line : Lines) {
       AlignmentDiff += countVariableAlignments(Line->Children);
-      for (FormatToken *Tok = Line->First; Tok && Tok->Next; Tok = Tok->Next) {
+      const auto *Prev = Line->getFirstNonComment();
+      if (!Prev)
+        break;
+      for (const auto *Tok = Prev->Next; Tok; Prev = Tok, Tok = Tok->Next) {
         if (Tok->isNot(TT_PointerOrReference))
           continue;
-        // Don't treat space in `void foo() &&` or `void() &&` as evidence.
-        if (const auto *Prev = Tok->getPreviousNonComment()) {
-          if (Prev->is(tok::r_paren) && Prev->MatchingParen) {
-            if (const auto *Func =
-                    Prev->MatchingParen->getPreviousNonComment()) {
-              if (Func->isOneOf(TT_FunctionDeclarationName, TT_StartOfName,
-                                TT_OverloadedOperator) ||
-                  Func->isTypeName(LangOpts)) {
-                continue;
-              }
-            }
-          }
-        }
-        bool SpaceBefore = Tok->hasWhitespaceBefore();
-        bool SpaceAfter = Tok->Next->hasWhitespaceBefore();
-        if (SpaceBefore && !SpaceAfter)
-          ++AlignmentDiff;
-        if (!SpaceBefore && SpaceAfter)
-          --AlignmentDiff;
+        const auto *Next = Tok->Next;
+        if (!Next)
+          break;
+        if (Prev->Tok.getIdentifierInfo())
+          AlignmentDiff += Tok->hasWhitespaceBefore() ? 1 : -1;
+        if (Next->Tok.getIdentifierInfo())
+          AlignmentDiff += Next->hasWhitespaceBefore() ? -1 : 1;
       }
     }
     return AlignmentDiff;
