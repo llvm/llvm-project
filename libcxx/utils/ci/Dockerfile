@@ -311,5 +311,18 @@ CMD /opt/android/container-setup.sh && buildkite-agent start
 #
 FROM builder-base AS actions-builder
 
-WORKDIR /home/runner
-USER runner
+ARG GITHUB_RUNNER_VERSION
+
+RUN useradd gha -u 1001 -m -s /bin/bash
+RUN adduser gha sudo
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+WORKDIR /home/gha
+USER gha
+
+ENV RUNNER_MANUALLY_TRAP_SIG=1
+ENV ACTIONS_RUNNER_PRINT_LOG_TO_STDOUT=1
+RUN mkdir actions-runner && \
+    cd actions-runner && \
+    curl -O -L https://github.com/actions/runner/releases/download/v$GITHUB_RUNNER_VERSION/actions-runner-linux-x64-$GITHUB_RUNNER_VERSION.tar.gz && \
+    tar xzf ./actions-runner-linux-x64-$GITHUB_RUNNER_VERSION.tar.gz && \
+    rm ./actions-runner-linux-x64-$GITHUB_RUNNER_VERSION.tar.gz
