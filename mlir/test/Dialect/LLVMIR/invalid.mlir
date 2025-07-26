@@ -1251,7 +1251,6 @@ llvm.func @wmmald_matrix(%arg0: !llvm.ptr<3>) {
 }
 
 // -----
-
 llvm.func @caller() {
   // expected-error @below {{expected function call to produce a value}}
   llvm.call @callee() : () -> ()
