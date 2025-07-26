@@ -35,7 +35,7 @@ c.addi16sp  t0, 16 # CHECK: :[[@LINE]]:13: error: register must be sp (x2)
 
 # Out of range immediates
 
-## uimmlog2xlennonzero
+## uimmlog2xlenn
 c.slli t0, 64 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [0, 31]
 c.srli a0, 32 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [0, 31]
 
