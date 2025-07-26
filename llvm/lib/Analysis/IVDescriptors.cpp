@@ -945,14 +945,33 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
     if (isIntMinMaxRecurrenceKind(Kind))
       return isMinMaxPattern(I, Kind, Prev);
     if (isFPMinMaxRecurrenceKind(Kind)) {
+      InstDesc Res = isMinMaxPattern(I, Kind, Prev);
+      if (!Res.isRecurrence())
+        return InstDesc(false, I);
       if (HasRequiredFMF())
-        return isMinMaxPattern(I, Kind, Prev);
+        return Res;
       auto *Cmp = dyn_cast<FCmpInst>(I);
       if ((Kind == RecurKind::FMax || Kind == RecurKind::OrderedFCmpSelect) &&
           (!Cmp || FCmpInst::isOrdered(Cmp->getPredicate())) &&
           isMinMaxPattern(I, Kind, Prev).isRecurrence())
         return InstDesc(I, RecurKind::OrderedFCmpSelect);
-    } else if (isFMulAddIntrinsic(I))
+
+      // We may be able to vectorize FMax/FMin reductions using maxnum/minnum
+      // intrinsics with extra checks ensuring the vector loop handles only
+      // non-NaN inputs.
+      if (match(I, m_Intrinsic<Intrinsic::maxnum>(m_Value(), m_Value()))) {
+        assert(Kind == RecurKind::FMax &&
+               "unexpected recurrence kind for maxnum");
+        return InstDesc(I, RecurKind::FMaxNum);
+      }
+      if (match(I, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value()))) {
+        assert(Kind == RecurKind::FMin &&
+               "unexpected recurrence kind for minnum");
+        return InstDesc(I, RecurKind::FMinNum);
+      }
+      return InstDesc(false, I);
+    }
+    if (isFMulAddIntrinsic(I))
       return InstDesc(Kind == RecurKind::FMulAdd, I,
                       I->hasAllowReassoc() ? nullptr : I);
     return InstDesc(false, I);

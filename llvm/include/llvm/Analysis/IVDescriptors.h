@@ -50,6 +50,8 @@ enum class RecurKind {
   OrderedFCmpSelect, ///< FP max implemented in terms of select(cmp()), but
                      /// without any fast-math flags. Users need to handle NaNs
                      /// and signed zeros when generating code.
+  FMinNum,  ///< FP min with llvm.minnum semantics including NaNs.
+  FMaxNum,  ///< FP max with llvm.maxnum semantics including NaNs.
   FMinimum, ///< FP min with llvm.minimum semantics
   FMaximum, ///< FP max with llvm.maximum semantics
   FMinimumNum, ///< FP min with llvm.minimumnum semantics
@@ -254,6 +256,7 @@ public:
   static bool isFPMinMaxRecurrenceKind(RecurKind Kind) {
     return Kind == RecurKind::FMin || Kind == RecurKind::FMax ||
            Kind == RecurKind::OrderedFCmpSelect ||
+           Kind == RecurKind::FMinNum || Kind == RecurKind::FMaxNum ||
            Kind == RecurKind::FMinimum || Kind == RecurKind::FMaximum ||
            Kind == RecurKind::FMinimumNum || Kind == RecurKind::FMaximumNum;
   }

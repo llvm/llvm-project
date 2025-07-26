@@ -983,7 +983,7 @@ llvm::Error DAP::Loop() {
 
           if (const protocol::Request *req =
                   std::get_if<protocol::Request>(&*next);
-              req && req->arguments == "disconnect")
+              req && req->command == "disconnect")
             disconnecting = true;
 
           const std::optional<CancelArguments> cancel_args =
