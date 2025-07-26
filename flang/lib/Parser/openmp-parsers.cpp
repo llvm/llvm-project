@@ -1222,11 +1222,14 @@ struct StrictlyStructuredBlockParser {
   using resultType = Block;
 
   std::optional<resultType> Parse(ParseState &state) const {
-    if (auto epc{Parser<ExecutionPartConstruct>{}.Parse(state)}) {
-      if (IsFortranBlockConstruct(*epc)) {
-        Block block;
-        block.emplace_back(std::move(*epc));
-        return std::move(block);
+    // Detect BLOCK construct without parsing the entire thing.
+    if (lookAhead(skipStuffBeforeStatement >> "BLOCK"_tok).Parse(state)) {
+      if (auto epc{Parser<ExecutionPartConstruct>{}.Parse(state)}) {
+        if (IsFortranBlockConstruct(*epc)) {
+          Block block;
+          block.emplace_back(std::move(*epc));
+          return std::move(block);
+        }
       }
     }
     return std::nullopt;
@@ -1237,6 +1240,10 @@ struct LooselyStructuredBlockParser {
   using resultType = Block;
 
   std::optional<resultType> Parse(ParseState &state) const {
+    // Detect BLOCK construct without parsing the entire thing.
+    if (lookAhead(skipStuffBeforeStatement >> "BLOCK"_tok).Parse(state)) {
+      return std::nullopt;
+    }
     Block body;
     if (auto epc{attempt(Parser<ExecutionPartConstruct>{}).Parse(state)}) {
       if (!IsFortranBlockConstruct(*epc)) {
@@ -1627,7 +1634,7 @@ static constexpr auto StandaloneDirectiveLookahead{//
     "TARGET UPDATE"_sptok || "TARGET_UPDATE"_sptok};
 
 // Directives enclosing structured-block
-TYPE_PARSER(!StandaloneDirectiveLookahead >=
+TYPE_PARSER((!StandaloneDirectiveLookahead) >=
     construct<OmpBlockDirective>(first(
         "MASKED" >> pure(llvm::omp::Directive::OMPD_masked),
         "MASTER" >> pure(llvm::omp::Directive::OMPD_master),

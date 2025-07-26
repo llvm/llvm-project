@@ -51,7 +51,11 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
   bool HasMutableGlobals = false;
   bool HasNontrappingFPToInt = false;
   bool HasReferenceTypes = false;
+<<<<<<< HEAD
   bool HasMemtag = false;
+=======
+  bool HasGC = false;
+>>>>>>> parent/main
   bool HasSignExt = false;
   bool HasTailCall = false;
   bool HasWideArithmetic = false;
@@ -109,6 +113,7 @@ public:
   bool hasNontrappingFPToInt() const { return HasNontrappingFPToInt; }
   bool hasReferenceTypes() const { return HasReferenceTypes; }
   bool hasMemtag() const { return HasMemtag; }
+  bool hasGC() const { return HasGC; }
   bool hasRelaxedSIMD() const { return SIMDLevel >= RelaxedSIMD; }
   bool hasSignExt() const { return HasSignExt; }
   bool hasSIMD128() const { return SIMDLevel >= SIMD128; }

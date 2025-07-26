@@ -268,6 +268,11 @@ def GPRNoX0 : GPRRegisterClass<(sub GPR, X0)> {
   let DiagnosticString = "register must be a GPR excluding zero (x0)";
 }
 
+def GPRNoX2 : GPRRegisterClass<(sub GPR, X2)> {
+  let DiagnosticType = "InvalidRegClassGPRNoX2";
+  let DiagnosticString = "register must be a GPR excluding sp (x2)";
+}
+
 def GPRNoX0X2 : GPRRegisterClass<(sub GPR, X0, X2)> {
   let DiagnosticType = "InvalidRegClassGPRNoX0X2";
   let DiagnosticString = "register must be a GPR excluding zero (x0) and sp (x2)";
