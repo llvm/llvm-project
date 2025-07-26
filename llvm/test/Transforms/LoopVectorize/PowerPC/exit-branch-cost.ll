@@ -153,10 +153,10 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[N_MOD_VF24:%.*]] = urem i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[N_VEC25:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF24]]
 ; CHECK-NEXT:    [[TMP56:%.*]] = getelementptr i8, ptr [[START]], i64 [[N_VEC25]]
+; CHECK-NEXT:    [[TMP57:%.*]] = insertelement <2 x i64> zeroinitializer, i64 [[BC_MERGE_RDX]], i32 0
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[VEC_EPILOG_RESUME_VAL]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i64> [[DOTSPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i64> [[DOTSPLAT]], <i64 0, i64 1>
-; CHECK-NEXT:    [[TMP57:%.*]] = insertelement <2 x i64> zeroinitializer, i64 [[BC_MERGE_RDX]], i32 0
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX38:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT32:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]

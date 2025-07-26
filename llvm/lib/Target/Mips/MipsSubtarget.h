@@ -43,7 +43,7 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
     Mips3, Mips4, Mips5, Mips64, Mips64r2, Mips64r3, Mips64r5, Mips64r6
   };
 
-  enum class CPU { P5600, I6400, I6500 };
+  enum class CPU { Others, P5600, I6400, I6500 };
 
   // Used to avoid printing dsp warnings multiple times.
   static bool DspWarningPrinted;
@@ -66,9 +66,8 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   // Mips architecture version
   MipsArchEnum MipsArchVersion;
 
-  // Processor implementation (unused but required to exist by
-  // tablegen-erated code).
-  CPU ProcImpl;
+  // Processor implementation
+  CPU ProcImpl = CPU::Others;
 
   // IsLittle - The target is Little Endian
   bool IsLittle;
@@ -356,7 +355,6 @@ public:
 
   bool os16() const { return Os16; }
 
-  bool isTargetNaCl() const { return TargetTriple.isOSNaCl(); }
   bool isTargetWindows() const { return TargetTriple.isOSWindows(); }
 
   bool isXRaySupported() const override { return true; }

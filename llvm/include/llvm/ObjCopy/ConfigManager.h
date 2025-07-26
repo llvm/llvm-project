@@ -14,13 +14,14 @@
 #include "llvm/ObjCopy/ELF/ELFConfig.h"
 #include "llvm/ObjCopy/MachO/MachOConfig.h"
 #include "llvm/ObjCopy/MultiFormatConfig.h"
-#include "llvm/ObjCopy/wasm/WasmConfig.h"
 #include "llvm/ObjCopy/XCOFF/XCOFFConfig.h"
+#include "llvm/ObjCopy/wasm/WasmConfig.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace objcopy {
 
-struct ConfigManager : public MultiFormatConfig {
+struct LLVM_ABI ConfigManager : public MultiFormatConfig {
   virtual ~ConfigManager() {}
 
   const CommonConfig &getCommonConfig() const override { return Common; }

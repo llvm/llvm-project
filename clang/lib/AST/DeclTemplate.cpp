@@ -33,7 +33,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
-#include <memory>
 #include <optional>
 #include <utility>
 
@@ -359,7 +358,6 @@ void RedeclarableTemplateDecl::loadLazySpecializationsImpl(
 
   ExternalSource->LoadExternalSpecializations(this->getCanonicalDecl(),
                                               OnlyPartial);
-  return;
 }
 
 bool RedeclarableTemplateDecl::loadLazySpecializationsImpl(
@@ -671,7 +669,7 @@ ClassTemplateDecl::getInjectedClassNameSpecialization() {
   CommonPtr->InjectedClassNameType =
       Context.getTemplateSpecializationType(Name,
                                             /*SpecifiedArgs=*/TemplateArgs,
-                                            /*CanonicalArgs=*/std::nullopt);
+                                            /*CanonicalArgs=*/{});
   return CommonPtr->InjectedClassNameType;
 }
 

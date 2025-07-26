@@ -13,10 +13,11 @@ body:             |
 
     ; CHECK-LABEL: name: s32
     ; CHECK: liveins: $w0
-    ; CHECK: %copy:gpr32 = COPY $w0
-    ; CHECK: %bitreverse:gpr32 = RBITWr %copy
-    ; CHECK: $w0 = COPY %bitreverse
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr32 = COPY $w0
+    ; CHECK-NEXT: %bitreverse:gpr32 = RBITWr %copy
+    ; CHECK-NEXT: $w0 = COPY %bitreverse
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %copy:gpr(s32) = COPY $w0
     %bitreverse:gpr(s32) = G_BITREVERSE %copy
     $w0 = COPY %bitreverse(s32)
@@ -34,10 +35,11 @@ body:             |
 
     ; CHECK-LABEL: name: s64
     ; CHECK: liveins: $x0
-    ; CHECK: %copy:gpr64 = COPY $x0
-    ; CHECK: %bitreverse:gpr64 = RBITXr %copy
-    ; CHECK: $x0 = COPY %bitreverse
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr64 = COPY $x0
+    ; CHECK-NEXT: %bitreverse:gpr64 = RBITXr %copy
+    ; CHECK-NEXT: $x0 = COPY %bitreverse
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %copy:gpr(s64) = COPY $x0
     %bitreverse:gpr(s64) = G_BITREVERSE %copy
     $x0 = COPY %bitreverse(s64)
@@ -55,10 +57,11 @@ body:             |
 
     ; CHECK-LABEL: name: v8s8_legal
     ; CHECK: liveins: $x0
-    ; CHECK: %vec:fpr64 = IMPLICIT_DEF
-    ; CHECK: %bitreverse:fpr64 = RBITv8i8 %vec
-    ; CHECK: $x0 = COPY %bitreverse
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %vec:fpr64 = IMPLICIT_DEF
+    ; CHECK-NEXT: %bitreverse:fpr64 = RBITv8i8 %vec
+    ; CHECK-NEXT: $x0 = COPY %bitreverse
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %vec:fpr(<8 x s8>) = G_IMPLICIT_DEF
     %bitreverse:fpr(<8 x s8>) = G_BITREVERSE %vec
     $x0 = COPY %bitreverse(<8 x s8>)
@@ -76,10 +79,11 @@ body:             |
 
     ; CHECK-LABEL: name: v16s8_legal
     ; CHECK: liveins: $q0
-    ; CHECK: %vec:fpr128 = IMPLICIT_DEF
-    ; CHECK: %bitreverse:fpr128 = RBITv16i8 %vec
-    ; CHECK: $q0 = COPY %bitreverse
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %vec:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: %bitreverse:fpr128 = RBITv16i8 %vec
+    ; CHECK-NEXT: $q0 = COPY %bitreverse
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %vec:fpr(<16 x s8>) = G_IMPLICIT_DEF
     %bitreverse:fpr(<16 x s8>) = G_BITREVERSE %vec
     $q0 = COPY %bitreverse(<16 x s8>)

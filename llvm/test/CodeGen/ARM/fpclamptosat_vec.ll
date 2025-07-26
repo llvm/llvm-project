@@ -174,7 +174,7 @@ define <2 x i32> @ustest_f64i32(<2 x double> %x) {
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    mvnne r2, #0
 ; CHECK-NEXT:    vmov.32 d18[0], r2
-; CHECK-NEXT:    vand q8, q8, q9
+; CHECK-NEXT:    vand q8, q9, q8
 ; CHECK-NEXT:    vmovn.i64 d0, q8
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    pop {r4, r5, r11, pc}
@@ -483,8 +483,8 @@ define <4 x i32> @ustest_f32i32(<4 x float> %x) {
 ; CHECK-NEXT:    vmov.32 d20[0], r7
 ; CHECK-NEXT:    mvnne r4, #0
 ; CHECK-NEXT:    vmov.32 d18[0], r4
-; CHECK-NEXT:    vand q10, q4, q10
-; CHECK-NEXT:    vand q8, q8, q9
+; CHECK-NEXT:    vand q10, q10, q4
+; CHECK-NEXT:    vand q8, q9, q8
 ; CHECK-NEXT:    vmovn.i64 d1, q10
 ; CHECK-NEXT:    vmovn.i64 d0, q8
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
@@ -995,8 +995,8 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) {
 ; CHECK-NEON-NEXT:    vmov.32 d20[0], r6
 ; CHECK-NEON-NEXT:    mvnne r7, #0
 ; CHECK-NEON-NEXT:    vmov.32 d18[0], r7
-; CHECK-NEON-NEXT:    vand q10, q4, q10
-; CHECK-NEON-NEXT:    vand q8, q8, q9
+; CHECK-NEON-NEXT:    vand q10, q10, q4
+; CHECK-NEON-NEXT:    vand q8, q9, q8
 ; CHECK-NEON-NEXT:    vmovn.i64 d1, q10
 ; CHECK-NEON-NEXT:    vmovn.i64 d0, q8
 ; CHECK-NEON-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
@@ -1097,8 +1097,8 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) {
 ; CHECK-FP16-NEXT:    vmov.32 d20[0], r7
 ; CHECK-FP16-NEXT:    mvnne r6, #0
 ; CHECK-FP16-NEXT:    vmov.32 d18[0], r6
-; CHECK-FP16-NEXT:    vand q10, q4, q10
-; CHECK-FP16-NEXT:    vand q8, q8, q9
+; CHECK-FP16-NEXT:    vand q10, q10, q4
+; CHECK-FP16-NEXT:    vand q8, q9, q8
 ; CHECK-FP16-NEXT:    vmovn.i64 d1, q10
 ; CHECK-FP16-NEXT:    vmovn.i64 d0, q8
 ; CHECK-FP16-NEXT:    vpop {d8, d9, d10, d11, d12, d13}

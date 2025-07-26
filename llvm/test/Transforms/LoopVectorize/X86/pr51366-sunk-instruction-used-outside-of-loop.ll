@@ -10,6 +10,8 @@ define ptr @test(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x ptr> [[TMP16]], ptr [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <2 x i64> [[VEC_IND]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i1> [[TMP3]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
@@ -37,7 +39,7 @@ define ptr @test(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label %vector.body
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label %exit, label %scalar.ph
+; CHECK-NEXT:    br label %exit
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[GEP_LCSSA:%.*]] = phi ptr [ %gep.src, %loop.latch ], [ [[TMP2]], %middle.block ]
 ; CHECK-NEXT:    ret ptr [[GEP_LCSSA]]

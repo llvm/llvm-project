@@ -311,8 +311,7 @@ public:
       return AnalyzerConfigCmdFlags;
     }();
 
-    return !std::binary_search(AnalyzerConfigCmdFlags.begin(),
-                               AnalyzerConfigCmdFlags.end(), Name);
+    return !llvm::binary_search(AnalyzerConfigCmdFlags, Name);
   }
 
   AnalyzerOptions()

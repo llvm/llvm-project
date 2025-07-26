@@ -77,8 +77,9 @@ export using ::E;
 
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
       llvm::vfs::createPhysicalFileSystem();
+  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(*VFS, new DiagnosticOptions());
+      CompilerInstance::createDiagnostics(*VFS, DiagOpts);
 
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;

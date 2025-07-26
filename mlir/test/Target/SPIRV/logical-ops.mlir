@@ -108,3 +108,26 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     spirv.Return
   }
 }
+
+// -----
+
+// Test select works with bf16 scalar and vectors.
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+  spirv.SpecConstant @condition_scalar = true
+  spirv.func @select_bf16() -> () "None" {
+    %0 = spirv.Constant 4.0 : bf16
+    %1 = spirv.Constant 5.0 : bf16
+    %2 = spirv.mlir.referenceof @condition_scalar : i1
+    // CHECK: spirv.Select {{.*}}, {{.*}}, {{.*}} : i1, bf16
+    %3 = spirv.Select %2, %0, %1 : i1, bf16
+    %4 = spirv.Constant dense<[2.0, 3.0, 4.0, 5.0]> : vector<4xbf16>
+    %5 = spirv.Constant dense<[6.0, 7.0, 8.0, 9.0]> : vector<4xbf16>
+    // CHECK: spirv.Select {{.*}}, {{.*}}, {{.*}} : i1, vector<4xbf16>
+    %6 = spirv.Select %2, %4, %5 : i1, vector<4xbf16>
+    %7 = spirv.Constant dense<[true, true, true, true]> : vector<4xi1>
+    // CHECK: spirv.Select {{.*}}, {{.*}}, {{.*}} : vector<4xi1>, vector<4xbf16>
+    %8 = spirv.Select %7, %4, %5 : vector<4xi1>, vector<4xbf16>
+    spirv.Return
+  }
+}

@@ -1507,7 +1507,9 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
 
   if (V->isNullValue())
     return ConstantAggregateZero::get(VTy);
-  else if (isa<UndefValue>(V))
+  if (isa<PoisonValue>(V))
+    return PoisonValue::get(VTy);
+  if (isa<UndefValue>(V))
     return UndefValue::get(VTy);
 
   Type *IdxTy = Type::getInt64Ty(VTy->getContext());
@@ -1709,6 +1711,8 @@ void ConstantVector::destroyConstantImpl() {
 
 Constant *Constant::getSplatValue(bool AllowPoison) const {
   assert(this->getType()->isVectorTy() && "Only valid for vectors!");
+  if (isa<PoisonValue>(this))
+    return PoisonValue::get(cast<VectorType>(getType())->getElementType());
   if (isa<ConstantAggregateZero>(this))
     return getNullValue(cast<VectorType>(getType())->getElementType());
   if (auto *CI = dyn_cast<ConstantInt>(this))
@@ -2876,9 +2880,7 @@ Constant *ConstantDataSequential::getImpl(StringRef Elements, Type *Ty) {
 
   // Do a lookup to see if we have already formed one of these.
   auto &Slot =
-      *Ty->getContext()
-           .pImpl->CDSConstants.insert(std::make_pair(Elements, nullptr))
-           .first;
+      *Ty->getContext().pImpl->CDSConstants.try_emplace(Elements).first;
 
   // The bucket can point to a linked list of different CDS's that have the same
   // body but different types.  For example, 0,0,0,1 could be a 4 element array

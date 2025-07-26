@@ -266,9 +266,9 @@ define void @test(ptr nocapture %asd, ptr nocapture %aud,
 ; UNROLL-NO-VF-NEXT:    [[TMP46:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
 ; UNROLL-NO-VF-NEXT:    br i1 [[TMP46]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; UNROLL-NO-VF:       middle.block:
-; UNROLL-NO-VF-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; UNROLL-NO-VF-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 128, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NO-VF:       for.cond.cleanup:
 ; UNROLL-NO-VF-NEXT:    ret void
@@ -472,9 +472,9 @@ define void @test_scalar2scalar(ptr nocapture %asd, ptr nocapture %bsd) {
 ; UNROLL-NO-VF-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
 ; UNROLL-NO-VF-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
 ; UNROLL-NO-VF:       middle.block:
-; UNROLL-NO-VF-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; UNROLL-NO-VF-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 128, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NO-VF:       for.cond.cleanup:
 ; UNROLL-NO-VF-NEXT:    ret void
@@ -668,9 +668,9 @@ define void @pr30172(ptr nocapture %asd, ptr nocapture %bsd) !dbg !5 {;
 ; UNROLL-NO-VF-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
 ; UNROLL-NO-VF-NEXT:    br i1 [[TMP34]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP36:![0-9]+]]
 ; UNROLL-NO-VF:       middle.block:
-; UNROLL-NO-VF-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; UNROLL-NO-VF-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
 ; UNROLL-NO-VF:       scalar.ph:
-; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 128, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; UNROLL-NO-VF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; UNROLL-NO-VF-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NO-VF:       for.cond.cleanup:
 ; UNROLL-NO-VF-NEXT:    ret void

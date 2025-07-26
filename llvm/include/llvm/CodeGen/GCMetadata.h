@@ -41,6 +41,7 @@
 #include "llvm/IR/GCStrategy.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -192,9 +193,7 @@ public:
     return Strategies.try_emplace(GCName);
   }
 
-  bool contains(StringRef GCName) const {
-    return Strategies.find(GCName) != Strategies.end();
-  }
+  bool contains(StringRef GCName) const { return Strategies.contains(GCName); }
 };
 
 /// An analysis pass which caches information about the entire Module.
@@ -202,7 +201,7 @@ public:
 class CollectorMetadataAnalysis
     : public AnalysisInfoMixin<CollectorMetadataAnalysis> {
   friend struct AnalysisInfoMixin<CollectorMetadataAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = GCStrategyMap;
@@ -214,7 +213,7 @@ public:
 /// This pass depends on `CollectorMetadataAnalysis`.
 class GCFunctionAnalysis : public AnalysisInfoMixin<GCFunctionAnalysis> {
   friend struct AnalysisInfoMixin<GCFunctionAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = GCFunctionInfo;

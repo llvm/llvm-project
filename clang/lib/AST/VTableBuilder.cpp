@@ -1595,8 +1595,8 @@ void ItaniumVTableBuilder::AddMethods(
       NewVirtualFunctions.push_back(MD);
   }
 
-  std::stable_sort(
-      NewImplicitVirtualFunctions.begin(), NewImplicitVirtualFunctions.end(),
+  llvm::stable_sort(
+      NewImplicitVirtualFunctions,
       [](const CXXMethodDecl *A, const CXXMethodDecl *B) {
         if (A == B)
           return false;

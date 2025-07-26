@@ -82,6 +82,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
@@ -505,13 +506,14 @@ class NewGVN {
   MemorySSAWalker *MSSAWalker = nullptr;
   AssumptionCache *AC = nullptr;
   const DataLayout &DL;
-  std::unique_ptr<PredicateInfo> PredInfo;
 
   // These are the only two things the create* functions should have
   // side-effects on due to allocating memory.
   mutable BumpPtrAllocator ExpressionAllocator;
   mutable ArrayRecycler<Value *> ArgRecycler;
   mutable TarjanSCC SCCFinder;
+
+  std::unique_ptr<PredicateInfo> PredInfo;
   const SimplifyQuery SQ;
 
   // Number of function arguments, used by ranking
@@ -673,7 +675,9 @@ public:
          TargetLibraryInfo *TLI, AliasAnalysis *AA, MemorySSA *MSSA,
          const DataLayout &DL)
       : F(F), DT(DT), TLI(TLI), AA(AA), MSSA(MSSA), AC(AC), DL(DL),
-        PredInfo(std::make_unique<PredicateInfo>(F, *DT, *AC)),
+        // Reuse ExpressionAllocator for PredicateInfo as well.
+        PredInfo(
+            std::make_unique<PredicateInfo>(F, *DT, *AC, ExpressionAllocator)),
         SQ(DL, TLI, DT, AC, /*CtxI=*/nullptr, /*UseInstrInfo=*/false,
            /*CanUseUndef=*/false) {}
 
@@ -1529,10 +1533,20 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
     }
   }
 
+  if (auto *II = dyn_cast<IntrinsicInst>(DepInst)) {
+    if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
+      auto *LifetimePtr = II->getOperand(1);
+      if (LoadPtr == lookupOperandLeader(LifetimePtr) ||
+          AA->isMustAlias(LoadPtr, LifetimePtr))
+        return createConstantExpression(UndefValue::get(LoadType));
+    }
+  }
+
   // All of the below are only true if the loaded pointer is produced
   // by the dependent instruction.
-  if (LoadPtr != lookupOperandLeader(DepInst) &&
-      DepInst->getType()->isPointerTy() && !AA->isMustAlias(LoadPtr, DepInst))
+  if (!DepInst->getType()->isPointerTy() ||
+      (LoadPtr != lookupOperandLeader(DepInst) &&
+       !AA->isMustAlias(LoadPtr, DepInst)))
     return nullptr;
   // If this load really doesn't depend on anything, then we must be loading an
   // undef value.  This can happen when loading for a fresh allocation with no
@@ -1540,12 +1554,6 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
   // that the result of the allocation is pointer equal to the load ptr.
   if (isa<AllocaInst>(DepInst)) {
     return createConstantExpression(UndefValue::get(LoadType));
-  }
-  // If this load occurs either right after a lifetime begin,
-  // then the loaded value is undefined.
-  else if (auto *II = dyn_cast<IntrinsicInst>(DepInst)) {
-    if (II->getIntrinsicID() == Intrinsic::lifetime_start)
-      return createConstantExpression(UndefValue::get(LoadType));
   } else if (auto *InitVal =
                  getInitialValueOfAllocation(DepInst, TLI, LoadType))
       return createConstantExpression(InitVal);
@@ -2380,7 +2388,7 @@ void NewGVN::performCongruenceFinding(Instruction *I, const Expression *E) {
     EClass = TOPClass;
   }
   if (!EClass) {
-    auto lookupResult = ExpressionToClass.insert({E, nullptr});
+    auto lookupResult = ExpressionToClass.try_emplace(E);
 
     // If it's not in the value table, create a new congruence class.
     if (lookupResult.second) {
@@ -3037,6 +3045,7 @@ std::pair<unsigned, unsigned> NewGVN::assignDFSNumbers(BasicBlock *B,
     if (isInstructionTriviallyDead(&I, TLI)) {
       InstrDFS[&I] = 0;
       LLVM_DEBUG(dbgs() << "Skipping trivially dead instruction " << I << "\n");
+      salvageDebugInfo(I);
       markInstructionForDeletion(&I);
       continue;
     }
@@ -4068,6 +4077,12 @@ bool NewGVN::eliminateInstructions(Function &F) {
                 // flags/metadata due to downstreams users of the leader.
                 if (!match(DefI, m_Intrinsic<Intrinsic::ssa_copy>()))
                   patchReplacementInstruction(DefI, DominatingLeader);
+
+                SmallVector<DbgVariableRecord *> DVRUsers;
+                findDbgUsers(DefI, DVRUsers);
+
+                for (auto *DVR : DVRUsers)
+                  DVR->replaceVariableLocationOp(DefI, DominatingLeader);
 
                 markInstructionForDeletion(DefI);
               }

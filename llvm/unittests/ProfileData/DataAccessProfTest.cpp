@@ -10,12 +10,11 @@
 #include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
-#include "gmock/gmock-more-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace llvm {
-namespace data_access_prof {
+namespace memprof {
 namespace {
 
 using ::llvm::StringRef;
@@ -93,10 +92,10 @@ TEST(MemProf, DataAccessProfile) {
 
     EXPECT_THAT(
         Data.getProfileRecord("foo.llvm.123"),
-        ValueIs(AllOf(
-            Field(&DataAccessProfRecord::SymHandle,
-                  testing::VariantWith<std::string>(testing::Eq("foo"))),
-            Field(&DataAccessProfRecord::Locations, testing::IsEmpty()))));
+        ValueIs(
+            AllOf(Field(&DataAccessProfRecord::SymHandle,
+                        testing::VariantWith<std::string>(testing::Eq("foo"))),
+                  Field(&DataAccessProfRecord::Locations, IsEmpty()))));
     EXPECT_THAT(
         Data.getProfileRecord("bar.__uniq.321"),
         ValueIs(AllOf(
@@ -131,7 +130,7 @@ TEST(MemProf, DataAccessProfile) {
         reinterpret_cast<const unsigned char *>(serializedData.data());
     ASSERT_THAT(llvm::to_vector(llvm::make_first_range(
                     deserializedData.getStrToIndexMapRef())),
-                testing::IsEmpty());
+                IsEmpty());
     EXPECT_FALSE(deserializedData.deserialize(p));
 
     EXPECT_THAT(
@@ -154,11 +153,10 @@ TEST(MemProf, DataAccessProfile) {
     EXPECT_THAT(
         Records,
         ElementsAre(
-            AllOf(
-                Field(&DataAccessProfRecordRef::SymbolID, 0),
-                Field(&DataAccessProfRecordRef::AccessCount, 100),
-                Field(&DataAccessProfRecordRef::IsStringLiteral, false),
-                Field(&DataAccessProfRecordRef::Locations, testing::IsEmpty())),
+            AllOf(Field(&DataAccessProfRecordRef::SymbolID, 0),
+                  Field(&DataAccessProfRecordRef::AccessCount, 100),
+                  Field(&DataAccessProfRecordRef::IsStringLiteral, false),
+                  Field(&DataAccessProfRecordRef::Locations, IsEmpty())),
             AllOf(Field(&DataAccessProfRecordRef::SymbolID, 2),
                   Field(&DataAccessProfRecordRef::AccessCount, 123),
                   Field(&DataAccessProfRecordRef::IsStringLiteral, false),
@@ -178,5 +176,5 @@ TEST(MemProf, DataAccessProfile) {
   }
 }
 } // namespace
-} // namespace data_access_prof
+} // namespace memprof
 } // namespace llvm
