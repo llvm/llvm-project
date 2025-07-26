@@ -393,6 +393,8 @@ void NVPTXPassConfig::addIRPasses() {
   // but EarlyCSE can do neither of them.
   if (getOptLevel() != CodeGenOptLevel::None) {
     addEarlyCSEOrGVNPass();
+    // Increase alignment for local arrays to improve vectorization.
+    addPass(createNVPTXIncreaseLocalAlignmentPass());
     if (!DisableLoadStoreVectorizer)
       addPass(createLoadStoreVectorizerPass());
     addPass(createSROAPass());

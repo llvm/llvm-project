@@ -135,7 +135,7 @@ define dso_local ptx_kernel void @escape_ptr(ptr nocapture noundef readnone %out
 ;
 ; PTX-LABEL: escape_ptr(
 ; PTX:       {
-; PTX-NEXT:    .local .align 4 .b8 __local_depot2[8];
+; PTX-NEXT:    .local .align 8 .b8 __local_depot2[8];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b32 %r<3>;
@@ -175,7 +175,7 @@ define dso_local ptx_kernel void @escape_ptr_gep(ptr nocapture noundef readnone 
 ;
 ; PTX-LABEL: escape_ptr_gep(
 ; PTX:       {
-; PTX-NEXT:    .local .align 4 .b8 __local_depot3[8];
+; PTX-NEXT:    .local .align 8 .b8 __local_depot3[8];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b32 %r<3>;
@@ -190,7 +190,7 @@ define dso_local ptx_kernel void @escape_ptr_gep(ptr nocapture noundef readnone 
 ; PTX-NEXT:    st.local.b32 [%rd2+4], %r1;
 ; PTX-NEXT:    ld.param.b32 %r2, [escape_ptr_gep_param_1];
 ; PTX-NEXT:    st.local.b32 [%rd2], %r2;
-; PTX-NEXT:    add.s64 %rd3, %rd1, 4;
+; PTX-NEXT:    or.b64 %rd3, %rd1, 4;
 ; PTX-NEXT:    { // callseq 1, 0
 ; PTX-NEXT:    .param .b64 param0;
 ; PTX-NEXT:    st.param.b64 [param0], %rd3;
@@ -216,7 +216,7 @@ define dso_local ptx_kernel void @escape_ptr_store(ptr nocapture noundef writeon
 ;
 ; PTX-LABEL: escape_ptr_store(
 ; PTX:       {
-; PTX-NEXT:    .local .align 4 .b8 __local_depot4[8];
+; PTX-NEXT:    .local .align 8 .b8 __local_depot4[8];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b32 %r<3>;
@@ -254,7 +254,7 @@ define dso_local ptx_kernel void @escape_ptr_gep_store(ptr nocapture noundef wri
 ;
 ; PTX-LABEL: escape_ptr_gep_store(
 ; PTX:       {
-; PTX-NEXT:    .local .align 4 .b8 __local_depot5[8];
+; PTX-NEXT:    .local .align 8 .b8 __local_depot5[8];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b32 %r<3>;
@@ -271,7 +271,7 @@ define dso_local ptx_kernel void @escape_ptr_gep_store(ptr nocapture noundef wri
 ; PTX-NEXT:    st.local.b32 [%rd4+4], %r1;
 ; PTX-NEXT:    ld.param.b32 %r2, [escape_ptr_gep_store_param_1];
 ; PTX-NEXT:    st.local.b32 [%rd4], %r2;
-; PTX-NEXT:    add.s64 %rd5, %rd3, 4;
+; PTX-NEXT:    or.b64 %rd5, %rd3, 4;
 ; PTX-NEXT:    st.global.b64 [%rd2], %rd5;
 ; PTX-NEXT:    ret;
 entry:
@@ -294,7 +294,7 @@ define dso_local ptx_kernel void @escape_ptrtoint(ptr nocapture noundef writeonl
 ;
 ; PTX-LABEL: escape_ptrtoint(
 ; PTX:       {
-; PTX-NEXT:    .local .align 4 .b8 __local_depot6[8];
+; PTX-NEXT:    .local .align 8 .b8 __local_depot6[8];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b32 %r<3>;
