@@ -421,9 +421,9 @@ define void @switch_all_to_default(ptr %start) {
 ; IC1-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; IC1-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IC1:       [[MIDDLE_BLOCK]]:
-; IC1-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; IC1-NEXT:    br label %[[EXIT:.*]]
 ; IC1:       [[SCALAR_PH]]:
-; IC1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 100, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; IC1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; IC1-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; IC1:       [[LOOP_HEADER]]:
 ; IC1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
@@ -457,9 +457,9 @@ define void @switch_all_to_default(ptr %start) {
 ; IC2-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; IC2-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IC2:       [[MIDDLE_BLOCK]]:
-; IC2-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; IC2-NEXT:    br label %[[EXIT:.*]]
 ; IC2:       [[SCALAR_PH]]:
-; IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 100, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; IC2-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; IC2:       [[LOOP_HEADER]]:
 ; IC2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]

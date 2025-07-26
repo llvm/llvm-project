@@ -30,11 +30,11 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; VF4IC4:       [[MIDDLE_SPLIT]]:
 ; VF4IC4-NEXT:    br i1 [[TMP3]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; VF4IC4:       [[MIDDLE_BLOCK]]:
-; VF4IC4-NEXT:    br i1 true, label %[[E2:.*]], label %[[SCALAR_PH]]
+; VF4IC4-NEXT:    br label %[[E2:.*]]
 ; VF4IC4:       [[VECTOR_EARLY_EXIT]]:
 ; VF4IC4-NEXT:    br label %[[E1:.*]]
 ; VF4IC4:       [[SCALAR_PH]]:
-; VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 128, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF4IC4-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; VF4IC4:       [[LOOP_HEADER]]:
 ; VF4IC4-NEXT:    [[IV:%.*]] = phi i64 [ [[INC:%.*]], %[[LOOP_LATCH:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
