@@ -1,0 +1,16 @@
+# To regenerate has-hotpatchcompatible.exe
+# $ echo int main() { return 0; } > has-hotpatchcompatible.c
+# $ cl has-hotpatchcompatible.c /link /hotpatchcompatible
+RUN: llvm-readobj --coff-debug-directory %p/Inputs/has-hotpatchcompatible.exe | FileCheck %s
+
+CHECK:  DebugEntry {
+CHECK:    Characteristics: 0x0
+CHECK:    Type: ExtendedDLLCharacteristics (0x14)
+CHECK:    ExtendedCharacteristics [ (0x80)
+CHECK:      IMAGE_DLL_CHARACTERISTICS_EX_HOTPATCH_COMPATIBLE (0x80)
+CHECK:    ]
+CHECK:    RawData (
+CHECK:      0000: 80000000                             |....|
+CHECK:    )
+CHECK:  }
+
