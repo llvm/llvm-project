@@ -210,8 +210,7 @@ entry:
   ; X64-LABEL: vmptr_thunk:
   ; X64:            movq (%rcx), %rax
   ; X64-NEXT:       movq 8(%rax), %rax
-  ; X64-NEXT:       movq __guard_dispatch_icall_fptr(%rip), %rdx
-  ; X64-NEXT:       rex64 jmpq *%rdx            # TAILCALL
+  ; X64-NEXT:       rex64 jmpq *__guard_dispatch_icall_fptr(%rip) # TAILCALL
   ; X64-NOT:   callq
 }
 
