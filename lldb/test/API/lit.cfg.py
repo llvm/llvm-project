@@ -349,6 +349,8 @@ if platform.system() == "Windows":
     for v in ["SystemDrive"]:
         if v in os.environ:
             config.environment[v] = os.environ[v]
+    # Always use the native PDB reader
+    config.environment["LLDB_USE_NATIVE_PDB_READER"] = "1"
 
 # Some steps required to initialize the tests dynamically link with python.dll
 # and need to know the location of the Python libraries. This ensures that we

@@ -4,6 +4,7 @@ Provides definitions for various lldb test categories
 
 # System modules
 import sys
+import os
 
 # Third-party modules
 
@@ -12,7 +13,13 @@ from lldbsuite.support import gmodules
 
 # Key: Category name
 # Value: should be used in lldbtest's debug-info replication
-debug_info_categories = {"dwarf": True, "dwo": True, "dsym": True, "gmodules": False}
+debug_info_categories = {
+    "dwarf": True,
+    "dwo": True,
+    "dsym": True,
+    "pdb": False,
+    "gmodules": False,
+}
 
 all_categories = {
     "basic_process": "Basic process execution sniff tests.",
@@ -34,6 +41,7 @@ all_categories = {
     "lldb-dap": "Tests for the Debug Adapter Protocol with lldb-dap",
     "llgs": "Tests for the gdb-server functionality of lldb-server",
     "msvcstl": "Test for MSVC STL data formatters",
+    "pdb": "Tests that can be run with PDB debug information",
     "pexpect": "Tests requiring the pexpect library to be available",
     "objc": "Tests related to the Objective-C programming language support",
     "pyapi": "Tests related to the Python API",
@@ -65,6 +73,13 @@ def is_supported_on_platform(category, platform, compiler_path):
         if platform not in ["darwin", "macosx", "ios", "watchos", "tvos", "bridgeos"]:
             return False
         return gmodules.is_compiler_clang_with_gmodules(compiler_path)
+    elif category == "pdb":
+        if platform == "windows":
+            assert (
+                os.environ.get("LLDB_USE_NATIVE_PDB_READER") == "1"
+            ), "Only the native PDB reader is supported"
+            return True
+        return False
     return True
 
 
