@@ -658,6 +658,11 @@ protected:
     return solver.getOrCreateState<StateT>(anchor);
   }
 
+  /// Add irrelevant program point.
+  void addIrrelevantPoint(ProgramPoint *point) {
+    irrelevantPoints.insert(point);
+  }
+
   /// Get a read-only analysis state for the given point and create a dependency
   /// on `dependent`. If the return state is updated elsewhere, this analysis is
   /// re-invoked on the dependent.
@@ -694,6 +699,9 @@ protected:
   /// When compiling with debugging, keep a name for the analyis.
   StringRef debugName;
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+
+  /// Program points shouldn't analyzed by this analysis.
+  DenseSet<ProgramPoint *> irrelevantPoints;
 
 private:
   /// The parent data-flow solver.
