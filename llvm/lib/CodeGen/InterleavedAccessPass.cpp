@@ -634,6 +634,9 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
                       << " and factor = " << Factor << "\n");
   } else {
     assert(II);
+    if (II->getIntrinsicID() != Intrinsic::masked_load &&
+        II->getIntrinsicID() != Intrinsic::vp_load)
+      return false;
 
     // Check mask operand. Handle both all-true/false and interleaved mask.
     Mask = getMask(getMaskOperand(II), Factor, getDeinterleavedVectorType(DI));
@@ -673,6 +676,9 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
 
   Value *Mask = nullptr;
   if (II) {
+    if (II->getIntrinsicID() != Intrinsic::masked_store &&
+        II->getIntrinsicID() != Intrinsic::vp_store)
+      return false;
     // Check mask operand. Handle both all-true/false and interleaved mask.
     Mask = getMask(getMaskOperand(II), Factor,
                    cast<VectorType>(InterleaveValues[0]->getType()));
