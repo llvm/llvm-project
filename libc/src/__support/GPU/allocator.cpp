@@ -142,10 +142,16 @@ static inline constexpr bool is_pow2(uint64_t x) {
   return x && (x & (x - 1)) == 0;
 }
 
-// Where this chunk size should start looking in the global array.
-static inline constexpr uint32_t start_index(uint32_t chunk_index) {
-  return (ARRAY_SIZE * impl::get_chunk_id(chunk_index)) /
-         impl::get_chunk_id(SLAB_SIZE / 2);
+// Where this chunk size should start looking in the global array. Small
+// allocations are much more likely than large ones, so we give them the most
+// space. We use a cubic easing function normalized on the possible chunks.
+static inline constexpr uint32_t start_index(uint32_t chunk_size) {
+  constexpr uint32_t max_chunk = impl::get_chunk_id(SLAB_SIZE / 2);
+  uint64_t norm =
+      (1 << 16) - (impl::get_chunk_id(chunk_size) << 16) / max_chunk;
+  uint64_t bias = (norm * norm * norm) >> 32;
+  uint64_t inv = (1 << 16) - bias;
+  return static_cast<uint32_t>(((ARRAY_SIZE - 1) * inv) >> 16);
 }
 
 } // namespace impl
@@ -487,9 +493,10 @@ static Slab *find_slab(uint32_t chunk_size) {
   uint32_t start = indices[chunk_id].load(cpp::MemoryOrder::RELAXED);
   uint64_t uniform = gpu::match_any(gpu::get_lane_mask(), chunk_size);
 
-  for (uint32_t offset = 0; offset < ARRAY_SIZE; ++offset) {
+  for (uint32_t offset = 0; offset <= ARRAY_SIZE; ++offset) {
     uint32_t index =
-        !offset ? start : (impl::start_index(chunk_size) + offset) % ARRAY_SIZE;
+        !offset ? start
+                : (impl::start_index(chunk_size) + offset - 1) % ARRAY_SIZE;
 
     if (slots[index].use_count() < Slab::available_chunks(chunk_size)) {
       uint64_t lane_mask = gpu::get_lane_mask();
