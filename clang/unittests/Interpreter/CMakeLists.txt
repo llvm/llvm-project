@@ -22,9 +22,16 @@ add_distinct_clang_unittest(ClangReplInterpreterTests
   Core
   MC
   OrcJIT
+  OrcShared
+  OrcTargetProcess
+  ExecutionEngine
+  RuntimeDyld
   Support
   TargetParser
+  Object
   )
+
+add_dependencies(ClangReplInterpreterTests llvm-jitlink-executor)
 
 # Exceptions on Windows are not yet supported.
 if(NOT WIN32)
