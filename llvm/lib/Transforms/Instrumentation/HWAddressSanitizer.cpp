@@ -363,10 +363,10 @@ private:
   void tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag, size_t Size);
   Value *tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong, Value *Tag);
   Value *untagPointer(IRBuilder<> &IRB, Value *PtrLong);
-  bool instrumentStack(memtag::StackInfo &Info, Value *StackTag, Value *UARTag,
+  void instrumentStack(memtag::StackInfo &Info, Value *StackTag, Value *UARTag,
                        const DominatorTree &DT, const PostDominatorTree &PDT,
                        const LoopInfo &LI);
-  bool instrumentLandingPads(SmallVectorImpl<Instruction *> &RetVec);
+  void instrumentLandingPads(SmallVectorImpl<Instruction *> &RetVec);
   Value *getNextTagWithCall(IRBuilder<> &IRB);
   Value *getStackBaseTag(IRBuilder<> &IRB);
   Value *getAllocaTag(IRBuilder<> &IRB, Value *StackTag, unsigned AllocaNo);
@@ -1418,7 +1418,7 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
   }
 }
 
-bool HWAddressSanitizer::instrumentLandingPads(
+void HWAddressSanitizer::instrumentLandingPads(
     SmallVectorImpl<Instruction *> &LandingPadVec) {
   for (auto *LP : LandingPadVec) {
     IRBuilder<> IRB(LP->getNextNode());
@@ -1427,10 +1427,9 @@ bool HWAddressSanitizer::instrumentLandingPads(
         {memtag::readRegister(
             IRB, (TargetTriple.getArch() == Triple::x86_64) ? "rsp" : "sp")});
   }
-  return true;
 }
 
-bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
+void HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
                                          Value *StackTag, Value *UARTag,
                                          const DominatorTree &DT,
                                          const PostDominatorTree &PDT,
@@ -1460,8 +1459,6 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     size_t Size = memtag::getAllocaSizeInBytes(*AI);
     size_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
 
-    Value *AICast = IRB.CreatePointerCast(AI, PtrTy);
-
     auto HandleLifetime = [&](IntrinsicInst *II) {
       // Set the lifetime intrinsic to cover the whole alloca. This reduces the
       // set of assumptions we need to make about the lifetime. Without this we
@@ -1474,14 +1471,13 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
       // one set of start / end in any execution (i.e. the ends are not
       // reachable from each other), so this will not cause any problems.
       II->setArgOperand(0, ConstantInt::get(Int64Ty, AlignedSize));
-      II->setArgOperand(1, AICast);
     };
     llvm::for_each(Info.LifetimeStart, HandleLifetime);
     llvm::for_each(Info.LifetimeEnd, HandleLifetime);
 
-    AI->replaceUsesWithIf(Replacement, [AICast, AILong](const Use &U) {
+    AI->replaceUsesWithIf(Replacement, [AILong](const Use &U) {
       auto *User = U.getUser();
-      return User != AILong && User != AICast && !isa<LifetimeIntrinsic>(User);
+      return User != AILong && !isa<LifetimeIntrinsic>(User);
     });
 
     memtag::annotateDebugRecords(Info, retagMask(N));
@@ -1500,7 +1496,6 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     // statement if return_twice functions are called.
     bool StandardLifetime =
         !SInfo.CallsReturnTwice &&
-        SInfo.UnrecognizedLifetimes.empty() &&
         memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, &DT,
                                    &LI, ClMaxLifetimes);
     if (DetectUseAfterScope && StandardLifetime) {
@@ -1525,9 +1520,6 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     }
     memtag::alignAndPadAlloca(Info, Mapping.getObjectAlignment());
   }
-  for (auto &I : SInfo.UnrecognizedLifetimes)
-    I->eraseFromParent();
-  return true;
 }
 
 static void emitRemark(const Function &F, OptimizationRemarkEmitter &ORE,

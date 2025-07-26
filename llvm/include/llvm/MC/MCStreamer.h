@@ -259,6 +259,8 @@ class LLVM_ABI MCStreamer {
   bool AllowAutoPadding = false;
 
 protected:
+  bool IsObj = false;
+
   // Symbol of the current epilog for which we are processing SEH directives.
   WinEH::FrameInfo::Epilog *CurrentWinEpilog = nullptr;
 
@@ -269,6 +271,8 @@ protected:
   /// This is called by popSection and switchSection, if the current
   /// section changes.
   virtual void changeSection(MCSection *, uint32_t);
+
+  void addFragment(MCFragment *F);
 
   virtual void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame);
   virtual void emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame);
@@ -308,6 +312,7 @@ public:
   virtual void reset();
 
   MCContext &getContext() const { return Context; }
+  bool isObj() const { return IsObj; }
 
   // MCObjectStreamer has an MCAssembler and allows more expression folding at
   // parse time.
@@ -425,11 +430,15 @@ public:
   }
 
   MCFragment *getCurrentFragment() const {
+    // Ensure consistency with the section stack.
     assert(!getCurrentSection().first ||
            CurFrag->getParent() == getCurrentSection().first);
+    // Ensure we eagerly allocate an empty fragment after adding fragment with a
+    // variable-size tail.
+    assert(!CurFrag || CurFrag->getKind() == MCFragment::FT_Data);
     return CurFrag;
   }
-
+  size_t getCurFragSize() const { return getCurrentFragment()->getFixedSize(); }
   /// Save the current and previous section on the section stack.
   void pushSection() {
     SectionStack.push_back(
@@ -450,7 +459,7 @@ public:
   bool switchSection(MCSection *Section, const MCExpr *);
 
   /// Similar to switchSection, but does not print the section directive.
-  virtual void switchSectionNoPrint(MCSection *Section);
+  void switchSectionNoPrint(MCSection *Section);
 
   /// Create the default sections and set the initial one.
   virtual void initSections(bool NoExecStack, const MCSubtargetInfo &STI);
@@ -977,7 +986,7 @@ public:
                                                const MCSymbol *Lo);
 
   virtual MCSymbol *getDwarfLineTableSymbol(unsigned CUID);
-  virtual void emitCFISections(bool EH, bool Debug);
+  virtual void emitCFISections(bool EH, bool Debug, bool SFrame);
   void emitCFIStartProc(bool IsSimple, SMLoc Loc = SMLoc());
   void emitCFIEndProc();
   virtual void emitCFIDefCfa(int64_t Register, int64_t Offset, SMLoc Loc = {});
