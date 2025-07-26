@@ -351,7 +351,7 @@ int main(int argc, const char **argv) {
                                  "%undo\tundo the previous input\n"
                                  "%quit\texit clang-repl\n";
   if (OptInputs.empty()) {
-    printf("%%help for list of clang-repl commands\n");
+    printf("type %%help to list clang-repl commands\n");
     llvm::LineEditor LE("clang-repl");
     std::string Input;
     LE.setListCompleter(ReplListCompleter(CB, *Interp));
