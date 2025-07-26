@@ -2054,14 +2054,14 @@ MCSection *TargetLoweringObjectFileCOFF::getStaticCtorSection(
     unsigned Priority, const MCSymbol *KeySym) const {
   return getCOFFStaticStructorSection(
       getContext(), getContext().getTargetTriple(), true, Priority, KeySym,
-      cast<MCSectionCOFF>(StaticCtorSection));
+      static_cast<MCSectionCOFF *>(StaticCtorSection));
 }
 
 MCSection *TargetLoweringObjectFileCOFF::getStaticDtorSection(
     unsigned Priority, const MCSymbol *KeySym) const {
   return getCOFFStaticStructorSection(
       getContext(), getContext().getTargetTriple(), false, Priority, KeySym,
-      cast<MCSectionCOFF>(StaticDtorSection));
+      static_cast<MCSectionCOFF *>(StaticDtorSection));
 }
 
 const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
