@@ -132,6 +132,8 @@ public:
     switch (Type) {
     case FILE_URI:
       return createFileURI(Str);
+  //    if (Expected<std::unique_ptr<OffloadBundleURI>> URIOrErr = createFileURI(Str))
+//	      return URIOrErr.takeError();
       break;
     case MEMORY_URI:
       return createMemoryURI(Str);
@@ -161,7 +163,7 @@ public:
     OffsetStr.getAsInteger(10, O);
     Str = Str.drop_front(OffsetStr.size());
 
-    if (Str.consume_front("&size="))
+    if (!Str.consume_front("&size="))
       return createStringError(object_error::parse_failed,
                                "Reading 'size' in URI");
 

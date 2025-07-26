@@ -229,7 +229,6 @@ Error object::extractOffloadBundleByURI(StringRef URIstr) {
       OffloadBundleURI::createOffloadBundleURI(URIstr, FILE_URI));
   if (!UriOrErr)
     return UriOrErr.takeError();
-
   OffloadBundleURI &Uri = **UriOrErr;
   std::string OutputFile = Uri.FileName.str();
   OutputFile +=
