@@ -25,6 +25,45 @@ define i8 @t0(i8 %x, i8 %y) {
   ret i8 %negbias
 }
 
+define i8 @t0_nsw(i8 %x, i8 %y) {
+; CHECK-LABEL: @t0_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub i8 0, [[TMP2]]
+; CHECK-NEXT:    ret i8 [[NEGBIAS]]
+;
+  %negy = sub nsw i8 0, %y
+  %unbiasedx = and i8 %negy, %x
+  %negbias = sub i8 %unbiasedx, %x
+  ret i8 %negbias
+}
+
+define i8 @t0_nsw_2(i8 %x, i8 %y) {
+; CHECK-LABEL: @t0_nsw_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub nsw i8 0, [[TMP2]]
+; CHECK-NEXT:    ret i8 [[NEGBIAS]]
+;
+  %negy = sub i8 0, %y
+  %unbiasedx = and i8 %negy, %x
+  %negbias = sub nsw i8 %unbiasedx, %x
+  ret i8 %negbias
+}
+
+define i8 @t0_nsw_3(i8 %x, i8 %y) {
+; CHECK-LABEL: @t0_nsw_3(
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub nsw i8 0, [[TMP2]]
+; CHECK-NEXT:    ret i8 [[NEGBIAS]]
+;
+  %negy = sub nsw i8 0, %y
+  %unbiasedx = and i8 %negy, %x
+  %negbias = sub nsw i8 %unbiasedx, %x
+  ret i8 %negbias
+}
+
 declare i8 @gen8()
 
 define i8 @t1_commutative(i8 %y) {
