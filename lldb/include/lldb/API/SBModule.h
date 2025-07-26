@@ -296,6 +296,9 @@ public:
   /// Remove any global modules which are no longer needed.
   static void GarbageCollectAllocatedModules();
 
+  /// Return the name of the module.
+  const char *GetName() const;
+
 private:
   friend class SBAddress;
   friend class SBFrame;
