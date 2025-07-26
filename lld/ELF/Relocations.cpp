@@ -887,7 +887,7 @@ static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
   gotPlt.addEntry(sym);
   rel.addReloc({type, &gotPlt, sym.getGotPltOffset(ctx),
                 sym.isPreemptible ? DynamicReloc::AgainstSymbol
-                                  : DynamicReloc::AddendOnlyWithTargetVA,
+                                  : DynamicReloc::AddendOnly,
                 sym, 0, R_ABS});
 }
 
@@ -927,8 +927,8 @@ static void addGotAuthEntry(Ctx &ctx, Symbol &sym) {
 
   // Signed GOT requires dynamic relocation.
   ctx.in.got->getPartition(ctx).relaDyn->addReloc(
-      {R_AARCH64_AUTH_RELATIVE, ctx.in.got.get(), off,
-       DynamicReloc::AddendOnlyWithTargetVA, sym, 0, R_ABS});
+      {R_AARCH64_AUTH_RELATIVE, ctx.in.got.get(), off, DynamicReloc::AddendOnly,
+       sym, 0, R_ABS});
 }
 
 static void addTpOffsetGotEntry(Ctx &ctx, Symbol &sym) {
@@ -1160,8 +1160,8 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
           part.relrAuthDyn->relocs.push_back({sec, sec->relocs().size() - 1});
         } else {
           part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset,
-                                  DynamicReloc::AddendOnlyWithTargetVA, sym,
-                                  addend, R_ABS});
+                                  DynamicReloc::AddendOnly, sym, addend,
+                                  R_ABS});
         }
         return;
       }
@@ -1948,13 +1948,12 @@ void elf::postScanRelocations(Ctx &ctx) {
 
   GotSection *got = ctx.in.got.get();
   if (ctx.needsTlsLd.load(std::memory_order_relaxed) && got->addTlsIndex()) {
-    static Undefined dummy(ctx.internalFile, "", STB_LOCAL, 0, 0);
     if (ctx.arg.shared)
       ctx.mainPart->relaDyn->addReloc(
           {ctx.target->tlsModuleIndexRel, got, got->getTlsIndexOff()});
     else
       got->addConstant({R_ADDEND, ctx.target->symbolicRel,
-                        got->getTlsIndexOff(), 1, &dummy});
+                        got->getTlsIndexOff(), 1, ctx.dummySym});
   }
 
   assert(ctx.symAux.size() == 1);
