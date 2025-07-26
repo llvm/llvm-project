@@ -247,7 +247,7 @@ func.func @indexed_consumer_reshape_producer_fusion(%arg0 : tensor<?x?x4x?xi32>,
 
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
 func.func @indexed_producer_reshape_consumer_fusion(%arg0 : tensor<?x?xi32>,
-                                         %arg1 : tensor<?x?xi32>, 
+                                         %arg1 : tensor<?x?xi32>,
                                          %sz0: index, %sz1: index) ->
                                          tensor<?x?x4x5xi32>
 {
@@ -515,7 +515,7 @@ func.func @fuse_dynamic_dims(%arg0: tensor<?x?xf32>) -> tensor<?xf32> {
 // -----
 
 func.func @reshape_as_consumer_permutation_with_multiple_results
-  (%a : tensor<?x?x?xf32>, %b : tensor<?x?xf32>, %sz0: index, 
+  (%a : tensor<?x?x?xf32>, %b : tensor<?x?xf32>, %sz0: index,
    %sz1: index, %sz2: index, %sz3: index, %sz4: index)
     -> (tensor<?x2x?x3x4x?xf32>, tensor<?x?x2x3x4x?xf32>) {
   %c:2 = linalg.generic {
@@ -893,3 +893,50 @@ func.func @move_operand_deps(%arg0 : tensor<?x128xf16>,
 //      CHECK:   %[[GENERIC:.+]] = linalg.generic
 // CHECK-SAME:       ins(%[[EXPANDED]] :
 //      CHECK:   return %[[GENERIC]]
+
+// -----
+
+func.func @fold_tensor_pad_with_expand(%arg0: tensor<512x256x256xf32>) -> tensor<32x16x258x258xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %0   = linalg.fill ins(%cst : f32) outs(%arg0 : tensor<512x256x256xf32>) -> tensor<512x256x256xf32>
+  %padded = tensor.pad %0 low[0, 1, 1] high[0, 1, 1] {
+    ^bb0(%i: index, %j: index, %k: index):
+      tensor.yield %cst : f32
+  } : tensor<512x256x256xf32> to tensor<512x258x258xf32>
+  %expanded = tensor.expand_shape %padded [[0, 1], [2], [3]] output_shape [32, 16, 258, 258] : tensor<512x258x258xf32> into tensor<32x16x258x258xf32>
+  return %expanded : tensor<32x16x258x258xf32>
+}
+//      CHECK: func @fold_tensor_pad_with_expand(
+// CHECK-SAME:     %[[ARG0:[^:]+]]: tensor<512x256x256xf32>
+//  CHECK-DAG:   %[[CST:.+]] = arith.constant 0.000000e+00 : f32
+//  CHECK-DAG:   %[[EXPANDED:.+]] = tensor.expand_shape %[[ARG0]]
+//      CHECK:   %[[FILLED:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[EXPANDED]] : tensor<32x16x256x256xf32>)
+//      CHECK:   %[[PADDED:.*]] = tensor.pad %[[FILLED]] low[0, 0, 1, 1] high[0, 0, 1, 1]
+//      CHECK:   ^bb0(%[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index, %[[ARG4:.*]]: index):
+//      CHECK:     tensor.yield %[[CST]] : f32
+//      CHECK:   } : tensor<32x16x256x256xf32> to tensor<32x16x258x258xf32>
+//      CHECK:   return %[[PADDED]] : tensor<32x16x258x258xf32>
+
+// -----
+
+func.func @fold_tensor_pad_with_expand_dynamic_pad_zero(%arg0: tensor<512x256x256xf32>) -> tensor<32x16x258x258xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0   = linalg.fill ins(%cst : f32) outs(%arg0 : tensor<512x256x256xf32>) -> tensor<512x256x256xf32>
+  %padded = tensor.pad %0 low[%c0, %c1, %c1] high[%c0, %c1, %c1] {
+    ^bb0(%i: index, %j: index, %k: index):
+      tensor.yield %cst : f32
+  } : tensor<512x256x256xf32> to tensor<512x258x258xf32>
+  %expanded = tensor.expand_shape %padded [[0, 1], [2], [3]] output_shape [32, 16, 258, 258] : tensor<512x258x258xf32> into tensor<32x16x258x258xf32>
+  return %expanded : tensor<32x16x258x258xf32>
+}
+//      CHECK: func @fold_tensor_pad_with_expand_dynamic_pad_zero(
+// CHECK-SAME:     %[[ARG0:[^:]+]]: tensor<512x256x256xf32>
+//      CHECK:   %[[CST:.+]] = arith.constant 0.000000e+00 : f32
+//      CHECK:   %[[EXPANDED:.+]] = tensor.expand_shape %[[ARG0]]
+//      CHECK:   %[[FILLED:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[EXPANDED]]
+//      CHECK:   %[[PADDED:.*]] = tensor.pad %[[FILLED]] low[0, 0, 1, 1] high[0, 0, 1, 1]
+//      CHECK:   ^bb0(
+//      CHECK:     tensor.yield %[[CST]] : f32
+//      CHECK:   return %[[PADDED]]
