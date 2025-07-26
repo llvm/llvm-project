@@ -526,17 +526,6 @@ Fortran::common::optional<DataEdit> IoStatementState::GetNextDataEdit(int n) {
       [&](auto &x) { return x.get().GetNextDataEdit(*this, n); }, u_);
 }
 
-const NonTbpDefinedIoTable *IoStatementState::nonTbpDefinedIoTable() const {
-  return common::visit(
-      [&](auto &x) { return x.get().nonTbpDefinedIoTable(); }, u_);
-}
-
-void IoStatementState::set_nonTbpDefinedIoTable(
-    const NonTbpDefinedIoTable *table) {
-  common::visit(
-      [&](auto &x) { return x.get().set_nonTbpDefinedIoTable(table); }, u_);
-}
-
 bool IoStatementState::Emit(
     const char *data, std::size_t bytes, std::size_t elementBytes) {
   return common::visit(
@@ -644,10 +633,10 @@ IoStatementState::FastAsciiField IoStatementState::GetUpcomingFastAsciiField() {
   if (!connection.isUTF8 && connection.internalIoCharKind <= 1) {
     const char *p{nullptr};
     if (std::size_t bytes{GetNextInputBytes(p)}) {
-      return FastAsciiField{connection, p, bytes};
+      return FastAsciiField(connection, p, bytes);
     }
   }
-  return FastAsciiField{connection};
+  return FastAsciiField(connection);
 }
 
 Fortran::common::optional<char32_t> IoStatementState::NextInField(
@@ -931,12 +920,9 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
       fastField.connection().positionInRecord = start;
     }
   }
-  if (!imaginaryPart_ && edit.descriptor == DataEdit::ListDirected && ch &&
-      *ch == '(') {
-    if (maxRepeat > 0) { // not being peeked at fram DefinedFormattedIo()
-      realPart_ = true;
-      fastField.connection().HandleRelativePosition(byteCount);
-    }
+  if (!imaginaryPart_ && ch && *ch == '(') {
+    realPart_ = true;
+    fastField.connection().HandleRelativePosition(byteCount);
     edit.descriptor = DataEdit::ListDirectedRealPart;
   }
   return edit;
@@ -966,24 +952,12 @@ bool ExternalUnformattedIoStatementState<DIR>::Receive(
 template <Direction DIR>
 ChildIoStatementState<DIR>::ChildIoStatementState(
     ChildIo &child, const char *sourceFile, int sourceLine)
-    : IoStatementBase{sourceFile, sourceLine}, child_{child},
-      mutableModes_{child.parent().mutableModes()} {}
+    : IoStatementBase{sourceFile, sourceLine}, child_{child} {}
 
 template <Direction DIR>
-const NonTbpDefinedIoTable *
-ChildIoStatementState<DIR>::nonTbpDefinedIoTable() const {
+MutableModes &ChildIoStatementState<DIR>::mutableModes() {
 #if !defined(RT_DEVICE_AVOID_RECURSION)
-  return child_.parent().nonTbpDefinedIoTable();
-#else
-  ReportUnsupportedChildIo();
-#endif
-}
-
-template <Direction DIR>
-void ChildIoStatementState<DIR>::set_nonTbpDefinedIoTable(
-    const NonTbpDefinedIoTable *table) {
-#if !defined(RT_DEVICE_AVOID_RECURSION)
-  child_.parent().set_nonTbpDefinedIoTable(table);
+  return child_.parent().mutableModes();
 #else
   ReportUnsupportedChildIo();
 #endif
@@ -1056,7 +1030,9 @@ ChildFormattedIoStatementState<DIR, CHAR>::ChildFormattedIoStatementState(
     ChildIo &child, const CHAR *format, std::size_t formatLength,
     const Descriptor *formatDescriptor, const char *sourceFile, int sourceLine)
     : ChildIoStatementState<DIR>{child, sourceFile, sourceLine},
-      format_{*this, format, formatLength, formatDescriptor} {}
+      mutableModes_{child.parent().mutableModes()}, format_{*this, format,
+                                                        formatLength,
+                                                        formatDescriptor} {}
 
 template <Direction DIR, typename CHAR>
 void ChildFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {
