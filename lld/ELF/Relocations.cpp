@@ -1948,13 +1948,12 @@ void elf::postScanRelocations(Ctx &ctx) {
 
   GotSection *got = ctx.in.got.get();
   if (ctx.needsTlsLd.load(std::memory_order_relaxed) && got->addTlsIndex()) {
-    static Undefined dummy(ctx.internalFile, "", STB_LOCAL, 0, 0);
     if (ctx.arg.shared)
       ctx.mainPart->relaDyn->addReloc(
           {ctx.target->tlsModuleIndexRel, got, got->getTlsIndexOff()});
     else
       got->addConstant({R_ADDEND, ctx.target->symbolicRel,
-                        got->getTlsIndexOff(), 1, &dummy});
+                        got->getTlsIndexOff(), 1, ctx.dummySym});
   }
 
   assert(ctx.symAux.size() == 1);
