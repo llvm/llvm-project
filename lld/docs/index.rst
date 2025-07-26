@@ -147,3 +147,4 @@ document soon.
    ELF/start-stop-gc
    ELF/warn_backrefs
    MachO/index
+   DTLTO

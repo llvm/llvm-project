@@ -777,10 +777,10 @@ class JSONCrashLogParser(CrashLogParser):
             if json_thread.get("triggered", False):
                 self.crashlog.crashed_thread_idx = idx
                 thread.crashed = True
-                if "threadState" in json_thread:
-                    thread.registers = self.parse_thread_registers(
-                        json_thread["threadState"]
-                    )
+            if "threadState" in json_thread:
+                thread.registers = self.parse_thread_registers(
+                    json_thread["threadState"]
+                )
             if "queue" in json_thread:
                 thread.queue = json_thread.get("queue")
             self.parse_frames(thread, json_thread.get("frames", []))

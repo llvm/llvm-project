@@ -313,7 +313,7 @@ define void @for_iv_trunc_optimized(ptr %dst) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[STEP_ADD]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i32> [[TMP3]], i32 3
-; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 337, [[MIDDLE_BLOCK]] ], [ 1, [[BB:%.*]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 1, [[BB]] ]
@@ -328,7 +328,7 @@ define void @for_iv_trunc_optimized(ptr %dst) {
 ; CHECK-NEXT:    store i32 [[FOR_2]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[IV]], 337
 ; CHECK-NEXT:    [[TRUNC]] = trunc i64 [[IV]] to i32
-; CHECK-NEXT:    br i1 [[ICMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[ICMP]], label [[LOOP]], label [[EXIT:%.*]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -393,12 +393,6 @@ define void @test_for_tried_to_force_scalar(ptr noalias %A, ptr noalias %B, ptr 
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <12 x float> [[WIDE_VEC]], <12 x float> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x float> [[STRIDED_VEC]], i32 3
 ; CHECK-NEXT:    store float [[TMP30]], ptr [[C:%.*]], align 4
-; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x ptr> [[TMP29]], i32 0
-; CHECK-NEXT:    [[TMP38:%.*]] = load float, ptr [[TMP31]], align 4
-; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <4 x ptr> [[TMP29]], i32 1
-; CHECK-NEXT:    [[TMP32:%.*]] = load float, ptr [[TMP33]], align 4
-; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <4 x ptr> [[TMP29]], i32 2
-; CHECK-NEXT:    [[TMP34:%.*]] = load float, ptr [[TMP35]], align 4
 ; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <4 x ptr> [[TMP29]], i32 3
 ; CHECK-NEXT:    [[TMP36:%.*]] = load float, ptr [[TMP37]], align 4
 ; CHECK-NEXT:    store float [[TMP36]], ptr [[B:%.*]], align 4

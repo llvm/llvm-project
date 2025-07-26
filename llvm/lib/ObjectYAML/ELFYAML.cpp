@@ -70,6 +70,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_PT>::enumeration(
   ECase(PT_GNU_STACK);
   ECase(PT_GNU_RELRO);
   ECase(PT_GNU_PROPERTY);
+  ECase(PT_GNU_SFRAME);
 #undef ECase
   IO.enumFallback<Hex32>(Value);
 }
@@ -720,10 +721,10 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
   ECase(SHT_LLVM_SYMPART);
   ECase(SHT_LLVM_PART_EHDR);
   ECase(SHT_LLVM_PART_PHDR);
-  ECase(SHT_LLVM_BB_ADDR_MAP_V0);
   ECase(SHT_LLVM_BB_ADDR_MAP);
   ECase(SHT_LLVM_OFFLOADING);
   ECase(SHT_LLVM_LTO);
+  ECase(SHT_GNU_SFRAME);
   ECase(SHT_GNU_ATTRIBUTES);
   ECase(SHT_GNU_HASH);
   ECase(SHT_GNU_verdef);
@@ -1883,6 +1884,7 @@ void MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry>::mapping(
   IO.mapRequired("AddressOffset", E.AddressOffset);
   IO.mapRequired("Size", E.Size);
   IO.mapRequired("Metadata", E.Metadata);
+  IO.mapOptional("CallsiteOffsets", E.CallsiteOffsets);
 }
 
 void MappingTraits<ELFYAML::PGOAnalysisMapEntry>::mapping(

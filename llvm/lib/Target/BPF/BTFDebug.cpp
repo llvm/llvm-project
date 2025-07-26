@@ -976,11 +976,24 @@ void BTFDebug::visitMapDefType(const DIType *Ty, uint32_t &TypeId) {
   if (Tag != dwarf::DW_TAG_structure_type || CTy->isForwardDecl())
     return;
 
-  // Visit all struct members to ensure pointee type is visited
+  // Visit all struct members to ensure their types are visited.
   const DINodeArray Elements = CTy->getElements();
   for (const auto *Element : Elements) {
     const auto *MemberType = cast<DIDerivedType>(Element);
-    visitTypeEntry(MemberType->getBaseType());
+    const DIType *MemberBaseType = MemberType->getBaseType();
+
+    // If the member is a composite type, that may indicate the currently
+    // visited composite type is a wrapper, and the member represents the
+    // actual map definition.
+    // In that case, visit the member with `visitMapDefType` instead of
+    // `visitTypeEntry`, treating it specifically as a map definition rather
+    // than as a regular composite type.
+    const auto *MemberCTy = dyn_cast<DICompositeType>(MemberBaseType);
+    if (MemberCTy) {
+      visitMapDefType(MemberBaseType, TypeId);
+    } else {
+      visitTypeEntry(MemberBaseType);
+    }
   }
 
   // Visit this type, struct or a const/typedef/volatile/restrict type
@@ -1242,10 +1255,8 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   FuncInfo.Label = FuncLabel;
   FuncInfo.TypeId = FuncTypeId;
   if (FuncLabel->isInSection()) {
-    MCSection &Section = FuncLabel->getSection();
-    const MCSectionELF *SectionELF = dyn_cast<MCSectionELF>(&Section);
-    assert(SectionELF && "Null section for Function Label");
-    SecNameOff = addString(SectionELF->getName());
+    auto &Sec = static_cast<const MCSectionELF &>(FuncLabel->getSection());
+    SecNameOff = addString(Sec.getName());
   } else {
     SecNameOff = addString(".text");
   }

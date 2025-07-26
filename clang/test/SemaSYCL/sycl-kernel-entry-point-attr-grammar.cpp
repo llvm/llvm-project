@@ -74,10 +74,10 @@ void test_ok13() {
 // Invalid declarations.
 ////////////////////////////////////////////////////////////////////////////////
 
-// expected-error@+1 {{'sycl_kernel_entry_point' attribute takes one argument}}
+// expected-error@+1 {{'clang::sycl_kernel_entry_point' attribute takes one argument}}
 [[clang::sycl_kernel_entry_point]] void bad1();
 
-// expected-error@+1 {{'sycl_kernel_entry_point' attribute takes one argument}}
+// expected-error@+1 {{'clang::sycl_kernel_entry_point' attribute takes one argument}}
 [[clang::sycl_kernel_entry_point()]] void bad2();
 
 struct B3;

@@ -46,7 +46,13 @@ llvm::Error SourceBreakpoint::SetBreakpoint(const protocol::Source &source) {
 
   if (source.sourceReference) {
     // Breakpoint set by assembly source.
-    lldb::SBAddress source_address(*source.sourceReference, m_dap.target);
+    std::optional<lldb::addr_t> raw_addr =
+        m_dap.GetSourceReferenceAddress(*source.sourceReference);
+    if (!raw_addr)
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Invalid sourceReference.");
+
+    lldb::SBAddress source_address(*raw_addr, m_dap.target);
     if (!source_address.IsValid())
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "Invalid sourceReference.");

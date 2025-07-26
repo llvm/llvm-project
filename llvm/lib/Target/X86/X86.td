@@ -811,6 +811,7 @@ include "X86SchedSkylakeClient.td"
 include "X86SchedSkylakeServer.td"
 include "X86SchedIceLake.td"
 include "X86SchedAlderlakeP.td"
+include "X86SchedLunarlakeP.td"
 include "X86SchedSapphireRapids.td"
 
 //===----------------------------------------------------------------------===//
@@ -1330,7 +1331,7 @@ def ProcessorFeatures {
   // Pantherlake
   list<SubtargetFeature> PTLAdditionalFeatures = [FeaturePREFETCHI];
   list<SubtargetFeature> PTLFeatures =
-    !listconcat(ARLSFeatures, PTLAdditionalFeatures);
+    !listremove(!listconcat(ARLSFeatures, PTLAdditionalFeatures), [FeatureWIDEKL]);
 
 
   // Clearwaterforest
@@ -1341,7 +1342,7 @@ def ProcessorFeatures {
                                                   FeatureSM4,
                                                   FeatureUSERMSR];
   list<SubtargetFeature> CWFFeatures =
-    !listconcat(SRFFeatures, CWFAdditionalFeatures);
+    !listremove(!listconcat(SRFFeatures, CWFAdditionalFeatures), [FeatureWIDEKL]);
 
   // Knights Landing
   list<SubtargetFeature> KNLFeatures = [FeatureX87,
@@ -1573,7 +1574,7 @@ def ProcessorFeatures {
                                                   FeatureVPCLMULQDQ];
   list<SubtargetFeature> ZN3AdditionalTuning = [TuningMacroFusion];
   list<SubtargetFeature> ZN3Tuning =
-    !listconcat(ZN2Tuning, ZN3AdditionalTuning);
+    !listremove(!listconcat(ZN2Tuning, ZN3AdditionalTuning), [TuningSlowSHLD]);
   list<SubtargetFeature> ZN3Features =
     !listconcat(ZN2Features, ZN3AdditionalFeatures);
 
@@ -1870,10 +1871,12 @@ def : ProcModel<"meteorlake", AlderlakePModel,
                 ProcessorFeatures.ADLFeatures, ProcessorFeatures.ADLTuning>;
 def : ProcModel<"arrowlake", AlderlakePModel,
                 ProcessorFeatures.ARLFeatures, ProcessorFeatures.ADLTuning>;
-foreach P = ["arrowlake-s", "arrowlake_s", "lunarlake"] in {
+foreach P = ["arrowlake-s", "arrowlake_s"] in {
 def : ProcModel<P, AlderlakePModel,
                 ProcessorFeatures.ARLSFeatures, ProcessorFeatures.ADLTuning>;
 }
+def : ProcModel<"lunarlake", LunarlakePModel, ProcessorFeatures.ARLSFeatures,
+                ProcessorFeatures.ADLTuning>;
 def : ProcModel<"pantherlake", AlderlakePModel,
                 ProcessorFeatures.PTLFeatures, ProcessorFeatures.ADLTuning>;
 def : ProcModel<"clearwaterforest", AlderlakePModel,

@@ -149,11 +149,10 @@ void HIPSPVToolChain::addClangTargetOptions(
     CC1Args.append(
         {"-fvisibility=hidden", "-fapply-global-visibility-to-externs"});
 
-  llvm::for_each(getDeviceLibs(DriverArgs),
-                 [&](const BitCodeLibraryInfo &BCFile) {
-                   CC1Args.append({"-mlink-builtin-bitcode",
-                                   DriverArgs.MakeArgString(BCFile.Path)});
-                 });
+  for (const BitCodeLibraryInfo &BCFile :
+       getDeviceLibs(DriverArgs, DeviceOffloadingKind))
+    CC1Args.append(
+        {"-mlink-builtin-bitcode", DriverArgs.MakeArgString(BCFile.Path)});
 }
 
 Tool *HIPSPVToolChain::buildLinker() const {
@@ -187,7 +186,8 @@ void HIPSPVToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
 
 void HIPSPVToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                         ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(options::OPT_nogpuinc))
+  if (!DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
+                          true))
     return;
 
   StringRef hipPath = DriverArgs.getLastArgValue(options::OPT_hip_path_EQ);
@@ -201,7 +201,9 @@ void HIPSPVToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
 }
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
-HIPSPVToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
+HIPSPVToolChain::getDeviceLibs(
+    const llvm::opt::ArgList &DriverArgs,
+    const Action::OffloadKind DeviceOffloadingKind) const {
   llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                           true))
@@ -227,7 +229,8 @@ HIPSPVToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
   // Maintain compatability with --hip-device-lib.
   auto BCLibArgs = DriverArgs.getAllArgValues(options::OPT_hip_device_lib_EQ);
   if (!BCLibArgs.empty()) {
-    llvm::for_each(BCLibArgs, [&](StringRef BCName) {
+    bool Found = false;
+    for (StringRef BCName : BCLibArgs) {
       StringRef FullName;
       for (std::string LibraryPath : LibraryPaths) {
         SmallString<128> Path(LibraryPath);
@@ -235,11 +238,13 @@ HIPSPVToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
         FullName = Path;
         if (llvm::sys::fs::exists(FullName)) {
           BCLibs.emplace_back(FullName.str());
-          return;
+          Found = true;
+          break;
         }
       }
-      getDriver().Diag(diag::err_drv_no_such_file) << BCName;
-    });
+      if (!Found)
+        getDriver().Diag(diag::err_drv_no_such_file) << BCName;
+    }
   } else {
     // Search device library named as 'hipspv-<triple>.bc'.
     auto TT = getTriple().normalize();

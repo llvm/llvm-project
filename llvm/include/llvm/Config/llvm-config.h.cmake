@@ -101,6 +101,9 @@
 /* Define if LLVM is using tflite */
 #cmakedefine LLVM_HAVE_TFLITE
 
+/* Define if we want to check profile consistency in lit tests */
+#cmakedefine LLVM_ENABLE_PROFCHECK
+
 /* Define to 1 if you have the <sysexits.h> header file. */
 #cmakedefine HAVE_SYSEXITS_H ${HAVE_SYSEXITS_H}
 
@@ -109,6 +112,12 @@
 
 /* Define if building LLVM with BUILD_SHARED_LIBS */
 #cmakedefine LLVM_BUILD_SHARED_LIBS
+
+/* Define if exporting LLVM public interface for shared library */
+#cmakedefine LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS
+
+/* Define if exporting LLVM-C public interface for shared library */
+#cmakedefine LLVM_ENABLE_LLVM_C_EXPORT_ANNOTATIONS
 
 /* Define if building LLVM with LLVM_FORCE_USE_OLD_TOOLCHAIN_LIBS */
 #cmakedefine LLVM_FORCE_USE_OLD_TOOLCHAIN ${LLVM_FORCE_USE_OLD_TOOLCHAIN}

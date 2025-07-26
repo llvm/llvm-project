@@ -29,7 +29,7 @@ program test
   character(4) long, longarr(1)
   character(4), allocatable :: longalloc
   character(4), pointer :: longptr
-  !WARNING: Actual argument variable length '2' is less than expected length '3'
+  !WARNING: Actual argument variable length '2' is less than expected length '3' [-Wshort-character-actual]
   call s1(short)
   !ERROR: Actual argument array has fewer characters (2) than dummy argument 'x=' array (3)
   call s2(shortarr)

@@ -128,6 +128,7 @@ td_library(
         "//mlir:OpBaseTdFiles",
         "//mlir:PtrTdFiles",
         "//mlir:SideEffectInterfacesTdFiles",
+        "//mlir:ValueBoundsOpInterfaceTdFiles",
     ],
 )
 
@@ -612,6 +613,7 @@ cc_library(
         "//mlir:AffineDialect",
         "//mlir:Analysis",
         "//mlir:ArithDialect",
+        "//mlir:DialectUtils",
         "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:InliningUtils",
@@ -901,8 +903,8 @@ cc_library(
 )
 
 cc_library(
-    name = "TestMesh",
-    srcs = glob(["lib/Dialect/Mesh/**/*.cpp"]),
+    name = "TestShard",
+    srcs = glob(["lib/Dialect/Shard/**/*.cpp"]),
     includes = ["lib/Dialect/Test"],
     deps = [
         ":TestDialect",
@@ -910,8 +912,8 @@ cc_library(
         "//mlir:DialectUtils",
         "//mlir:FuncDialect",
         "//mlir:IR",
-        "//mlir:MeshDialect",
-        "//mlir:MeshTransforms",
+        "//mlir:ShardDialect",
+        "//mlir:ShardTransforms",
         "//mlir:Pass",
         "//mlir:SPIRVDialect",
         "//mlir:Support",

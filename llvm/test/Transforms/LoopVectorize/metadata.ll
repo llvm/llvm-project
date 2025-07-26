@@ -147,9 +147,9 @@ define void @widen_call_range(ptr noalias %a, ptr readonly %b) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -188,9 +188,9 @@ define void @widen_call_range(ptr noalias %a, ptr readonly %b) {
 ; INTERLEAVE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; INTERLEAVE-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
-; INTERLEAVE-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; INTERLEAVE-NEXT:    br label %[[EXIT:.*]]
 ; INTERLEAVE:       [[SCALAR_PH]]:
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; INTERLEAVE-NEXT:    br label %[[LOOP:.*]]
 ; INTERLEAVE:       [[LOOP]]:
 ; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -243,9 +243,9 @@ define void @widen_call_fpmath(ptr noalias %a, ptr readonly %b) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -284,9 +284,9 @@ define void @widen_call_fpmath(ptr noalias %a, ptr readonly %b) {
 ; INTERLEAVE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; INTERLEAVE-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
-; INTERLEAVE-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; INTERLEAVE-NEXT:    br label %[[EXIT:.*]]
 ; INTERLEAVE:       [[SCALAR_PH]]:
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; INTERLEAVE-NEXT:    br label %[[LOOP:.*]]
 ; INTERLEAVE:       [[LOOP]]:
 ; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -339,9 +339,9 @@ define void @widen_intrinsic(ptr noalias %a, ptr readonly %b) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -380,9 +380,9 @@ define void @widen_intrinsic(ptr noalias %a, ptr readonly %b) {
 ; INTERLEAVE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; INTERLEAVE-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
-; INTERLEAVE-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; INTERLEAVE-NEXT:    br label %[[EXIT:.*]]
 ; INTERLEAVE:       [[SCALAR_PH]]:
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; INTERLEAVE-NEXT:    br label %[[LOOP:.*]]
 ; INTERLEAVE:       [[LOOP]]:
 ; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -435,9 +435,9 @@ define void @widen_intrinsic_fpmath(ptr noalias %a, ptr readonly %b) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -476,9 +476,9 @@ define void @widen_intrinsic_fpmath(ptr noalias %a, ptr readonly %b) {
 ; INTERLEAVE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; INTERLEAVE-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
-; INTERLEAVE-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; INTERLEAVE-NEXT:    br label %[[EXIT:.*]]
 ; INTERLEAVE:       [[SCALAR_PH]]:
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; INTERLEAVE-NEXT:    br label %[[LOOP:.*]]
 ; INTERLEAVE:       [[LOOP]]:
 ; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]

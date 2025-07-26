@@ -985,11 +985,16 @@ InstructionCost TargetTransformInfo::getAltInstrCost(
 }
 
 InstructionCost TargetTransformInfo::getShuffleCost(
-    ShuffleKind Kind, VectorType *Ty, ArrayRef<int> Mask,
+    ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy, ArrayRef<int> Mask,
     TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
     ArrayRef<const Value *> Args, const Instruction *CxtI) const {
-  InstructionCost Cost = TTIImpl->getShuffleCost(Kind, Ty, Mask, CostKind,
-                                                 Index, SubTp, Args, CxtI);
+  assert((Mask.empty() || DstTy->isScalableTy() ||
+          Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
+         "Expected the Mask to match the return size if given");
+  assert(SrcTy->getScalarType() == DstTy->getScalarType() &&
+         "Expected the same scalar types");
+  InstructionCost Cost = TTIImpl->getShuffleCost(
+      Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp, Args, CxtI);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -1289,8 +1294,9 @@ unsigned TargetTransformInfo::getAtomicMemIntrinsicMaxElementSize() const {
 }
 
 Value *TargetTransformInfo::getOrCreateResultFromMemIntrinsic(
-    IntrinsicInst *Inst, Type *ExpectedType) const {
-  return TTIImpl->getOrCreateResultFromMemIntrinsic(Inst, ExpectedType);
+    IntrinsicInst *Inst, Type *ExpectedType, bool CanCreate) const {
+  return TTIImpl->getOrCreateResultFromMemIntrinsic(Inst, ExpectedType,
+                                                    CanCreate);
 }
 
 Type *TargetTransformInfo::getMemcpyLoopLoweringType(
@@ -1417,7 +1423,7 @@ bool TargetTransformInfo::hasArmWideBranch(bool Thumb) const {
   return TTIImpl->hasArmWideBranch(Thumb);
 }
 
-uint64_t TargetTransformInfo::getFeatureMask(const Function &F) const {
+APInt TargetTransformInfo::getFeatureMask(const Function &F) const {
   return TTIImpl->getFeatureMask(F);
 }
 

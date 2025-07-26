@@ -119,7 +119,8 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   if (StartLoc.isMacroID() && IgnoreMacros)
     return;
 
-  static const char *UseUsingWarning = "use 'using' instead of 'typedef'";
+  static constexpr llvm::StringLiteral UseUsingWarning =
+      "use 'using' instead of 'typedef'";
 
   // Warn at StartLoc but do not fix if there is macro or array.
   if (MatchedDecl->getUnderlyingType()->isArrayType() || StartLoc.isMacroID()) {

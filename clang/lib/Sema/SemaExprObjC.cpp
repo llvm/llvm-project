@@ -74,8 +74,7 @@ ExprResult SemaObjC::ParseObjCStringLiteral(SourceLocation *AtLocs,
         CAT->getElementType(), llvm::APInt(32, StrBuf.size() + 1), nullptr,
         CAT->getSizeModifier(), CAT->getIndexTypeCVRQualifiers());
     S = StringLiteral::Create(Context, StrBuf, StringLiteralKind::Ordinary,
-                              /*Pascal=*/false, StrTy, &StrLocs[0],
-                              StrLocs.size());
+                              /*Pascal=*/false, StrTy, StrLocs);
   }
 
   return BuildObjCStringLiteral(AtLocs[0], S);

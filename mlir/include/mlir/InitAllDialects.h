@@ -46,6 +46,7 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
+#include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/AllInterfaces.h"
 #include "mlir/Dialect/Linalg/Transforms/RuntimeOpVerification.h"
@@ -59,7 +60,6 @@
 #include "mlir/Dialect/MemRef/Transforms/AllocationOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/BufferViewFlowOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/RuntimeOpVerification.h"
-#include "mlir/Dialect/Mesh/IR/MeshDialect.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -76,6 +76,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/Dialect/Shape/Transforms/BufferizableOpInterfaceImpl.h"
+#include "mlir/Dialect/Shard/IR/ShardDialect.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -130,7 +131,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   LLVM::LLVMDialect,
                   math::MathDialect,
                   memref::MemRefDialect,
-                  mesh::MeshDialect,
+                  shard::ShardDialect,
                   ml_program::MLProgramDialect,
                   mpi::MPIDialect,
                   nvgpu::NVGPUDialect,
@@ -152,7 +153,8 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   ub::UBDialect,
                   vector::VectorDialect,
                   x86vector::X86VectorDialect,
-                  xegpu::XeGPUDialect>();
+                  xegpu::XeGPUDialect,
+                  xevm::XeVMDialect>();
   // clang-format on
 
   // Register all external models.
