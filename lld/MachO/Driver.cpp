@@ -360,11 +360,12 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
       if (localIndex >= (int)deferred.size())
         break;
       const StringRef &buff = deferred[localIndex].buffer.getBuffer();
-      totalBytes += buff.size();
       if (buff.size() > largeArchive)
         continue;
-
+#ifndef NDEBUG
+      totalBytes += buff.size();
       included += 1;
+#endif
 
       // Reference all file's mmap'd pages to load them into memory.
       for (const char *page = buff.data(), *end = page + buff.size();
