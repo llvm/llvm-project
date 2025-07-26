@@ -8373,8 +8373,18 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
     LVer.prepareNoAliasMetadata();
   }
 
-  auto MaxVFTimes2 = MaxVF * 2;
+  // Create initial VPlan skeleton, having a basic block for the pre-header
+  // which contains SCEV expansions that need to happen before the CFG is
+  // modified; a basic block for the vector pre-header, followed by a region for
+  // the vector loop, followed by the middle basic block, connecting to the
+  // scalar preheader and exit blcoks.
   auto VPlan0 = VPlanTransforms::buildPlainCFG(OrigLoop, *LI);
+  VPlanTransforms::addInitialSkeleton(
+      *VPlan0, Legal->getWidestInductionType(),
+      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE,
+      OrigLoop);
+
+  auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
     if (auto Plan = tryToBuildVPlanWithVPRecipes(
@@ -8615,22 +8625,14 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // visit each basic block after having visited its predecessor basic blocks.
   // ---------------------------------------------------------------------------
 
-  // Create initial VPlan skeleton, having a basic block for the pre-header
-  // which contains SCEV expansions that need to happen before the CFG is
-  // modified; a basic block for the vector pre-header, followed by a region for
-  // the vector loop, followed by the middle basic block. The skeleton vector
-  // loop region contains a header and latch basic blocks.
-
   bool RequiresScalarEpilogueCheck =
       LoopVectorizationPlanner::getDecisionAndClampRange(
           [this](ElementCount VF) {
             return !CM.requiresScalarEpilogue(VF.isVector());
           },
           Range);
-  VPlanTransforms::prepareForVectorization(
-      *Plan, Legal->getWidestInductionType(), PSE, RequiresScalarEpilogueCheck,
-      CM.foldTailByMasking(), OrigLoop,
-      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()),
+  VPlanTransforms::handleEarlyExitsAndAddMiddleCheck(
+      *Plan, RequiresScalarEpilogueCheck, CM.foldTailByMasking(),
       Legal->hasUncountableEarlyExit(), Range);
   VPlanTransforms::createLoopRegions(*Plan);
   VPlanTransforms::createExtractsForLiveOuts(*Plan);
@@ -8918,10 +8920,13 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   assert(EnableVPlanNativePath && "VPlan-native path is not enabled.");
 
   auto Plan = VPlanTransforms::buildPlainCFG(OrigLoop, *LI);
-  VPlanTransforms::prepareForVectorization(
-      *Plan, Legal->getWidestInductionType(), PSE, true, false, OrigLoop,
-      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), false,
-      Range);
+
+  VPlanTransforms::addInitialSkeleton(
+      *Plan, Legal->getWidestInductionType(),
+      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE,
+      OrigLoop);
+  VPlanTransforms::handleEarlyExitsAndAddMiddleCheck(*Plan, true, false, false,
+                                                     Range);
   VPlanTransforms::createLoopRegions(*Plan);
 
   for (ElementCount VF : Range)

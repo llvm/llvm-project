@@ -459,10 +459,10 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                        LatchDL);
 }
 
-void VPlanTransforms::prepareForVectorization(
-    VPlan &Plan, Type *InductionTy, PredicatedScalarEvolution &PSE,
-    bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop,
-    DebugLoc IVDL, bool HasUncountableEarlyExit, VFRange &Range) {
+void VPlanTransforms::addInitialSkeleton(VPlan &Plan, Type *InductionTy,
+                                         DebugLoc IVDL,
+                                         PredicatedScalarEvolution &PSE,
+                                         Loop *TheLoop) {
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
 
@@ -488,34 +488,6 @@ void VPlanTransforms::prepareForVectorization(
 
   addCanonicalIVRecipes(Plan, HeaderVPBB, LatchVPBB, InductionTy, IVDL);
 
-  [[maybe_unused]] bool HandledUncountableEarlyExit = false;
-  // Disconnect all early exits from the loop leaving it with a single exit from
-  // the latch. Early exits that are countable are left for a scalar epilog. The
-  // condition of uncountable early exits (currently at most one is supported)
-  // is fused into the latch exit, and used to branch from middle block to the
-  // early exit destination.
-  for (VPIRBasicBlock *EB : Plan.getExitBlocks()) {
-    for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
-      if (Pred == MiddleVPBB)
-        continue;
-      if (HasUncountableEarlyExit) {
-        assert(!HandledUncountableEarlyExit &&
-               "can handle exactly one uncountable early exit");
-        handleUncountableEarlyExit(cast<VPBasicBlock>(Pred), EB, Plan,
-                                   HeaderVPBB, LatchVPBB, Range);
-        HandledUncountableEarlyExit = true;
-      } else {
-        for (VPRecipeBase &R : EB->phis())
-          cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
-      }
-      cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
-      VPBlockUtils::disconnectBlocks(Pred, EB);
-    }
-  }
-
-  assert((!HasUncountableEarlyExit || HandledUncountableEarlyExit) &&
-         "missed an uncountable exit that must be handled");
-
   // Create SCEV and VPValue for the trip count.
   // We use the symbolic max backedge-taken-count, which works also when
   // vectorizing loops with uncountable early exits.
@@ -539,15 +511,51 @@ void VPlanTransforms::prepareForVectorization(
   // check.
   VPBlockUtils::connectBlocks(Plan.getEntry(), ScalarPH);
   Plan.getEntry()->swapSuccessors();
+}
+
+void VPlanTransforms::handleEarlyExitsAndAddMiddleCheck(
+    VPlan &Plan, bool RequiresScalarEpilogueCheck, bool TailFolded,
+    bool HasUncountableEarlyExit, VFRange &Range) {
+  auto *MiddleVPBB = cast<VPBasicBlock>(
+      Plan.getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
+  VPBlockBase *HeaderVPB =
+      Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor();
+  auto *LatchVPBB = cast<VPBasicBlock>(HeaderVPB->getPredecessors()[1]);
+
+  // Disconnect all early exits from the loop leaving it with a single exit from
+  // the latch. Early exits that are countable are left for a scalar epilog. The
+  // condition of uncountable early exits (currently at most one is supported)
+  // is fused into the latch exit, and used to branch from middle block to the
+  // early exit destination.
+  [[maybe_unused]] bool HandledUncountableEarlyExit = false;
+  for (VPIRBasicBlock *EB : Plan.getExitBlocks()) {
+    for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
+      if (Pred == MiddleVPBB)
+        continue;
+      if (HasUncountableEarlyExit) {
+        assert(!HandledUncountableEarlyExit &&
+               "can handle exactly one uncountable early exit");
+        handleUncountableEarlyExit(cast<VPBasicBlock>(Pred), EB, Plan,
+                                   cast<VPBasicBlock>(HeaderVPB), LatchVPBB,
+                                   Range);
+        HandledUncountableEarlyExit = true;
+      } else {
+        for (VPRecipeBase &R : EB->phis())
+          cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
+      }
+      cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
+      VPBlockUtils::disconnectBlocks(Pred, EB);
+    }
+  }
+
+  assert((!HasUncountableEarlyExit || HandledUncountableEarlyExit) &&
+         "missed an uncountable exit that must be handled");
 
   // If MiddleVPBB has a single successor then the original loop does not exit
   // via the latch and the single successor must be the scalar preheader.
   // There's no need to add a runtime check to MiddleVPBB.
-  if (MiddleVPBB->getNumSuccessors() == 1) {
-    assert(MiddleVPBB->getSingleSuccessor() == ScalarPH &&
-           "must have ScalarPH as single successor");
+  if (MiddleVPBB->getNumSuccessors() == 1)
     return;
-  }
 
   assert(MiddleVPBB->getNumSuccessors() == 2 && "must have 2 successors");
 
