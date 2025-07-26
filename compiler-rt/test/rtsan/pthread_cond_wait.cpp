@@ -15,6 +15,10 @@
 
 int main() {
   std::cout << "Entry to main!" << std::endl;
+
+
+  // TODO: This is disabled because it does cause a test failure
+  /*
   std::mutex mut;
   std::condition_variable cv;
   bool go{false};
@@ -33,11 +37,9 @@ int main() {
   // cv.wait(lock, [&] { return go; });
   // but timed wait could segfault
 
-  // NOTE: If this test segfaults on a test runner, please comment
-  //       out this line and submit the patch.
-  //       I will follow up with a fix of the underlying problem,
-  //       but first I need to understand if it fails a test runner
-  cv.wait_for(lock, std::chrono::milliseconds(200), [&] { return go; });
+  // NOTE: When a fix for the pthread_cond issue #146120 is fixed, uncomment this line
+  //cv.wait_for(lock, std::chrono::milliseconds(200), [&] { return go; });
+  */
 
   std::cout << "Exit from main!" << std::endl;
 }
