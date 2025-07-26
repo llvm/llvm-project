@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NativeRegisterContextLinuxArm64Shared.h"
 #if defined(__arm64__) || defined(__aarch64__)
 
-#include "NativeRegisterContextLinux_arm.h"
 #include "NativeRegisterContextLinux_arm64.h"
+#include "NativeRegisterContextLinux_arm.h"
+#include "NativeRegisterContextLinux_arm64dbreg.h"
 
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
