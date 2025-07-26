@@ -90,6 +90,7 @@ class ValueEvolution {
   const bool ByteOrderSwapped;
   APInt GenPoly;
   StringRef ErrStr;
+  unsigned AtIter;
 
   // Compute the KnownBits of a BinaryOperator.
   KnownBits computeBinOp(const BinaryOperator *I);
@@ -198,35 +199,38 @@ KnownBits ValueEvolution::computeInstr(const Instruction *I) {
                         m_Instruction(FV)))) {
     Visited.insert(cast<Instruction>(I->getOperand(0)));
 
-    // We need to check LCR against [0, 2) in the little-endian case, because
-    // the RCR check is insufficient: it is simply [0, 1).
-    if (!ByteOrderSwapped) {
-      KnownBits KnownL = compute(L);
-      unsigned ICmpBW = KnownL.getBitWidth();
-      auto LCR = ConstantRange::fromKnownBits(KnownL, false);
-      auto CheckLCR = ConstantRange(APInt::getZero(ICmpBW), APInt(ICmpBW, 2));
-      if (LCR != CheckLCR) {
-        ErrStr = "Bad LHS of significant-bit-check";
-        return {BitWidth};
-      }
+    // Check that the predication is on (most|least) significant bit.
+    KnownBits KnownL = compute(L);
+    unsigned ICmpBW = KnownL.getBitWidth();
+    auto LCR = ConstantRange::fromKnownBits(KnownL, false);
+    // Check LCR against full-set, [0, -1), [0, -3), [0, -7), etc. depending on
+    // AtIter in the big-endian case, and against [0, 2) in the little-endian
+    // case.
+    auto CheckLCR = ConstantRange::getNonEmpty(
+        APInt::getZero(ICmpBW), ByteOrderSwapped
+                                    ? -APInt::getLowBitsSet(ICmpBW, AtIter)
+                                    : APInt(ICmpBW, 2));
+    if (LCR != CheckLCR) {
+      ErrStr = "Bad LHS of significant-bit-check";
+      return {BitWidth};
     }
 
-    // Check that the predication is on (most|least) significant bit.
     KnownBits KnownR = compute(R);
-    unsigned ICmpBW = KnownR.getBitWidth();
     auto RCR = ConstantRange::fromKnownBits(KnownR, false);
     auto AllowedR = ConstantRange::makeAllowedICmpRegion(Pred, RCR);
-    ConstantRange CheckRCR(APInt::getZero(ICmpBW),
-                           ByteOrderSwapped ? APInt::getSignedMinValue(ICmpBW)
-                                            : APInt(ICmpBW, 1));
+    // Check AllowedR against [0, smin) in the big-endian case, and against
+    // [0, 1) in the little-endian case.
+    ConstantRange CheckAllowedR(
+        APInt::getZero(ICmpBW),
+        ByteOrderSwapped ? APInt::getSignedMinValue(ICmpBW) : APInt(ICmpBW, 1));
 
     // We only compute KnownBits of either TV or FV, as the other value would
     // just be a bit-shift as checked by isBigEndianBitShift.
-    if (AllowedR == CheckRCR) {
+    if (AllowedR == CheckAllowedR) {
       Visited.insert(FV);
       return compute(TV);
     }
-    if (AllowedR.inverse() == CheckRCR) {
+    if (AllowedR.inverse() == CheckAllowedR) {
       Visited.insert(TV);
       return compute(FV);
     }
@@ -264,9 +268,11 @@ KnownBits ValueEvolution::compute(const Value *V) {
 }
 
 bool ValueEvolution::computeEvolutions(ArrayRef<PhiStepPair> PhiEvolutions) {
-  for (unsigned I = 0; I < TripCount; ++I)
+  for (unsigned I = 0; I < TripCount; ++I) {
+    AtIter = I;
     for (auto [Phi, Step] : PhiEvolutions)
       KnownPhis.emplace_or_assign(Phi, computeInstr(Step));
+  }
 
   return ErrStr.empty();
 }
