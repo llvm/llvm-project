@@ -1,4 +1,4 @@
-RUN: yaml2obj %p/Inputs/hascetret42.yaml -o %t.obj
+RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
 RUN: lld-link /out:%t.exe /entry:main /hotpatchcompatible %t.obj
 RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck %s
 
