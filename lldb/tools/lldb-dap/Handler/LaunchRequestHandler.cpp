@@ -48,6 +48,9 @@ Error LaunchRequestHandler::Run(const LaunchRequestArguments &arguments) const {
 
   dap.ConfigureSourceMaps();
 
+  // Configure network symbol settings based on user preferences and network detection
+  dap.ConfigureNetworkSymbolSettings();
+
   lldb::SBError error;
   lldb::SBTarget target = dap.CreateTarget(error);
   if (error.Fail())

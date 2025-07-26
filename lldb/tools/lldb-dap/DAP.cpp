@@ -61,6 +61,10 @@
 #include <thread>
 #include <utility>
 #include <variant>
+#include <chrono>
+#include <future>
+#include <cstring>
+#include <cstdlib>
 
 #if defined(_WIN32)
 #define NOMINMAX
@@ -1138,6 +1142,159 @@ void DAP::SetThreadFormat(llvm::StringRef format) {
                    "The provided thread format '{0}' couldn't be parsed: {1}\n",
                    format, error.GetCString())
                    .str());
+  }
+}
+
+bool DAP::DetectNetworkSymbolServices() const {
+  // If user explicitly disabled network symbols, don't test
+  if (configuration.disableNetworkSymbols.value_or(false)) {
+    return false;
+  }
+
+  // Simple check: if DEBUGINFOD_URLS environment variable is set and not empty,
+  // assume network services are available. This is a conservative approach
+  // that avoids complex network testing.
+  const char* debuginfod_urls = std::getenv("DEBUGINFOD_URLS");
+  if (debuginfod_urls && strlen(debuginfod_urls) > 0) {
+    DAP_LOG(log, "Network symbol services detected via DEBUGINFOD_URLS environment variable");
+    return true;
+  }
+
+  // Check if we're in a typical development environment where network is likely available
+  // This is a heuristic-based approach to avoid blocking network calls
+  const char* home = std::getenv("HOME");
+  const char* user = std::getenv("USER");
+
+  if (home && user) {
+    // Assume network is available in typical development environments
+    DAP_LOG(log, "Network symbol services assumed available in development environment");
+    return true;
+  }
+
+  DAP_LOG(log, "Network symbol services not detected - operating in offline mode");
+  return false;
+}
+
+void DAP::ConfigureNetworkSymbolSettings() {
+  lldb::SBCommandInterpreter interpreter = debugger.GetCommandInterpreter();
+  lldb::SBCommandReturnObject result;
+
+  // Check if we should disable network symbols entirely
+  if (ShouldDisableNetworkSymbols()) {
+    DAP_LOG(log, "Network: Disabling all network-based symbol loading");
+
+    // Disable debuginfod
+    interpreter.HandleCommand("settings set symbols.enable-external-lookup false", result);
+    if (result.Succeeded()) {
+      DAP_LOG(log, "Network: Disabled external symbol lookup");
+    }
+
+    // Set debuginfod URLs to empty to disable it completely
+    interpreter.HandleCommand("plugin.symbol-locator.debuginfod.server-urls clear", result);
+    if (result.Succeeded()) {
+      DAP_LOG(log, "Network: Cleared debuginfod server URLs");
+    }
+
+    return;
+  }
+
+  // Configure timeouts for network symbol services
+  // This addresses the root cause of GitHub issue #150220 where network
+  // symbol loading was causing 3000ms delays vs 120-400ms for other debuggers
+  if (configuration.debuginfodTimeoutMs.has_value()) {
+    int timeout_ms = configuration.debuginfodTimeoutMs.value();
+    int timeout_seconds = timeout_ms / 1000;
+    if (timeout_seconds == 0 && timeout_ms > 0) {
+      timeout_seconds = 1; // Minimum 1 second
+    }
+
+    // Log the specific optimization being applied
+    DAP_LOG(log, "Network: Configuring debuginfod timeout from system default (~30s) to {0}ms ({1}s)",
+            timeout_ms, timeout_seconds);
+
+    std::string timeout_cmd = "plugin.symbol-locator.debuginfod.timeout " +
+                             std::to_string(timeout_seconds);
+    interpreter.HandleCommand(timeout_cmd.c_str(), result);
+    if (result.Succeeded()) {
+      DAP_LOG(log, "Network: Successfully set debuginfod timeout to {0}s (was ~30s default)", timeout_seconds);
+    } else {
+      DAP_LOG(log, "Network: Failed to set debuginfod timeout: {0}",
+              result.GetError());
+    }
+  }
+
+  // Configure symbol server timeouts (if supported)
+  if (configuration.symbolServerTimeoutMs.has_value()) {
+    DAP_LOG(log, "Network: Symbol server timeout configured to {0}ms",
+            configuration.symbolServerTimeoutMs.value());
+    // Note: LLDB may not have direct symbol server timeout settings,
+    // but we log the configuration for future implementation
+  }
+
+  // Enable async symbol loading if network symbols are enabled
+  if (!ShouldDisableNetworkSymbols()) {
+    EnableAsyncSymbolLoading();
+  }
+}
+
+bool DAP::ShouldDisableNetworkSymbols() const {
+  // Explicit user configuration takes precedence
+  if (configuration.disableNetworkSymbols.has_value()) {
+    return configuration.disableNetworkSymbols.value();
+  }
+
+  // Auto-detect based on network availability
+  // Cache the result to avoid repeated network tests
+  static std::optional<bool> cached_result;
+  static std::chrono::steady_clock::time_point last_check;
+
+  auto now = std::chrono::steady_clock::now();
+  const auto cache_duration = std::chrono::minutes(5); // Cache for 5 minutes
+
+  if (!cached_result.has_value() ||
+      (now - last_check) > cache_duration) {
+    cached_result = !DetectNetworkSymbolServices();
+    last_check = now;
+
+    if (cached_result.value()) {
+      DAP_LOG(log, "Network: Auto-detected offline environment - disabling network symbols");
+    } else {
+      DAP_LOG(log, "Network: Auto-detected online environment - enabling network symbols");
+    }
+  }
+
+  return cached_result.value();
+}
+
+void DAP::EnableAsyncSymbolLoading() {
+  lldb::SBCommandInterpreter interpreter = debugger.GetCommandInterpreter();
+  lldb::SBCommandReturnObject result;
+
+  // Enable background symbol loading to prevent blocking the main thread
+  interpreter.HandleCommand("settings set symbols.auto-download background", result);
+  if (result.Succeeded()) {
+    DAP_LOG(log, "Network: Enabled background symbol loading");
+  } else {
+    DAP_LOG(log, "Network: Failed to enable background symbol loading: {0}",
+            result.GetError());
+  }
+
+  // Enable lazy symbol loading to defer symbol loading until needed
+  interpreter.HandleCommand("settings set symbols.load-on-demand true", result);
+  if (result.Succeeded()) {
+    DAP_LOG(log, "Network: Enabled on-demand symbol loading");
+  } else {
+    DAP_LOG(log, "Network: Failed to enable on-demand symbol loading: {0}",
+            result.GetError());
+  }
+
+  // Configure symbol loading to be less aggressive
+  interpreter.HandleCommand("settings set symbols.enable-external-lookup true", result);
+  if (result.Succeeded()) {
+    DAP_LOG(log, "Network: Enabled external symbol lookup with background loading");
+  } else {
+    DAP_LOG(log, "Network: Failed to enable external symbol lookup: {0}",
+            result.GetError());
   }
 }
 

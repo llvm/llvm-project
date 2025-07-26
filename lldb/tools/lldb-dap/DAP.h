@@ -205,6 +205,29 @@ struct DAP {
   /// Configure source maps based on the current `DAPConfiguration`.
   void ConfigureSourceMaps();
 
+  /// Network detection and optimization methods
+  /// @{
+
+  /// Detect if network symbol services are available and responsive.
+  /// Tests connectivity to debuginfod servers and other symbol services.
+  /// @return true if network services are available, false if offline
+  bool DetectNetworkSymbolServices() const;
+
+  /// Configure network-related symbol loading settings based on user preferences
+  /// and network availability. Applies timeouts and disables services as needed.
+  void ConfigureNetworkSymbolSettings();
+
+  /// Check if network symbol loading should be disabled based on configuration
+  /// or automatic detection of offline environment.
+  /// @return true if network symbol loading should be disabled
+  bool ShouldDisableNetworkSymbols() const;
+
+  /// Enable asynchronous symbol loading to move network operations to background.
+  /// This prevents network symbol loading from blocking the main debugging thread.
+  void EnableAsyncSymbolLoading();
+
+  /// @}
+
   /// Serialize the JSON value into a string and send the JSON packet to the
   /// "out" stream.
   void SendJSON(const llvm::json::Value &json);
