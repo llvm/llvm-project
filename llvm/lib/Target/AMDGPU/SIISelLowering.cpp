@@ -9399,8 +9399,10 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   }
 
   unsigned CPol = Op.getConstantOperandVal(ArgOffset + Intr->CachePolicyIndex);
-  if (BaseOpcode->Atomic)
-    CPol |= AMDGPU::CPol::GLC; // TODO no-return optimization
+  // Keep GLC only when the atomic's result is actually used.
+  if (BaseOpcode->Atomic && !Op.getValue(0).use_empty())
+    CPol |= AMDGPU::CPol::GLC;
+
   if (CPol & ~((IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12) |
                AMDGPU::CPol::VOLATILE))
     return Op;
