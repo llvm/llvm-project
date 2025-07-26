@@ -55,7 +55,7 @@ private:
   MCSectionCOFF(StringRef Name, unsigned Characteristics,
                 MCSymbol *COMDATSymbol, int Selection, unsigned UniqueID,
                 MCSymbol *Begin)
-      : MCSection(SV_COFF, Name, Characteristics & COFF::IMAGE_SCN_CNT_CODE,
+      : MCSection(Name, Characteristics & COFF::IMAGE_SCN_CNT_CODE,
                   Characteristics & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA,
                   Begin),
         Characteristics(Characteristics), COMDATSymbol(COMDATSymbol),
@@ -81,7 +81,6 @@ public:
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
                             uint32_t Subsection) const override;
-  bool useCodeAlign() const override;
 
   unsigned getOrAssignWinCFISectionID(unsigned *NextID) const {
     if (WinCFISectionID == ~0U)

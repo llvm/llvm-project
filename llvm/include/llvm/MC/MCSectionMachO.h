@@ -79,7 +79,6 @@ public:
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
                             uint32_t Subsection) const override;
-  bool useCodeAlign() const override;
 
   void allocAtoms();
   const MCSymbol *getAtom(size_t I) const;
@@ -87,10 +86,6 @@ public:
 
   unsigned getLayoutOrder() const { return LayoutOrder; }
   void setLayoutOrder(unsigned Value) { LayoutOrder = Value; }
-
-  static bool classof(const MCSection *S) {
-    return S->getVariant() == SV_MachO;
-  }
 };
 
 } // end namespace llvm

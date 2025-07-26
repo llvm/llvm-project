@@ -38,7 +38,7 @@ define i32 @reduction_sum_single(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP7]], [[TMP5]]
 ; CHECK-NEXT:    [[BIN_RDX7:%.*]] = add i32 [[TMP9]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX8:%.*]] = add i32 [[TMP11]], [[BIN_RDX7]]
-; CHECK-NEXT:    br i1 true, label [[DOT_CRIT_EDGE:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[DOT_CRIT_EDGE:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[DOTLR_PH:%.*]]
 ; CHECK:       .lr.ph:
@@ -118,7 +118,7 @@ define i64 @reduction_sum_chain(ptr noalias %p, ptr noalias %q) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i64 [[TMP19]], [[TMP17]]
 ; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add i64 [[TMP21]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX12:%.*]] = add i64 [[TMP23]], [[BIN_RDX11]]
-; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
