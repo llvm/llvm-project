@@ -6,8 +6,8 @@
 
 subroutine test_master()
   integer :: c = 1
-  !PARSE-TREE: OmpBeginBlockDirective
-  !PARSE-TREE-NEXT: OmpBlockDirective -> llvm::omp::Directive = master
+  !PARSE-TREE: OmpBeginDirective
+  !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = master
   !CHECK: !$omp master
   !$omp master 
   c = c + 1
@@ -40,8 +40,8 @@ end subroutine
 
 subroutine test_parallel_master
   integer :: c = 2
-  !PARSE-TREE: OmpBeginBlockDirective
-  !PARSE-TREE-NEXT: OmpBlockDirective -> llvm::omp::Directive = parallel master
+  !PARSE-TREE: OmpBeginDirective
+  !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = parallel master
   !CHECK: !$omp parallel master
   !$omp parallel master
   c = c + 2

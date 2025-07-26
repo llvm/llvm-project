@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FlangOmpReportVisitor.h"
+#include "flang/Parser/openmp-utils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 
@@ -118,60 +119,12 @@ std::string OpenMPCounterVisitor::getName(const OpenMPDeclarativeConstruct &c) {
       c.u);
 }
 std::string OpenMPCounterVisitor::getName(const OpenMPConstruct &c) {
-  return std::visit(
-      Fortran::common::visitors{
-          [&](const OpenMPStandaloneConstruct &c) -> std::string {
-            return common::visit(
-                common::visitors{
-                    [&](const OmpMetadirectiveDirective &d) {
-                      return normalize_construct_name(d.source.ToString());
-                    },
-                    [&](auto &&d) {
-                      const CharBlock &source{
-                          std::get<OmpDirectiveName>(d.v.t).source};
-                      return normalize_construct_name(source.ToString());
-                    },
-                },
-                c.u);
-          },
-          [&](const OpenMPExecutableAllocate &c) -> std::string {
-            const CharBlock &source{std::get<0>(c.t).source};
-            return normalize_construct_name(source.ToString());
-          },
-          [&](const OpenMPDeclarativeAllocate &c) -> std::string {
-            const CharBlock &source{std::get<0>(c.t).source};
-            return normalize_construct_name(source.ToString());
-          },
-          [&](const OpenMPAssumeConstruct &c) -> std::string {
-            const CharBlock &source{std::get<0>(c.t).source};
-            return normalize_construct_name(source.ToString());
-          },
-          [&](const OpenMPAllocatorsConstruct &c) -> std::string {
-            const CharBlock &source{std::get<0>(c.t).source};
-            return normalize_construct_name(source.ToString());
-          },
-          [&](const OpenMPAtomicConstruct &c) -> std::string {
-            auto &dirSpec = std::get<OmpDirectiveSpecification>(c.t);
-            auto &dirName = std::get<OmpDirectiveName>(dirSpec.t);
-            return normalize_construct_name(dirName.source.ToString());
-          },
-          [&](const OpenMPUtilityConstruct &c) -> std::string {
-            const CharBlock &source{c.source};
-            return normalize_construct_name(source.ToString());
-          },
-          [&](const OpenMPSectionConstruct &c) -> std::string {
-            return "section";
-          },
-          // OpenMPSectionsConstruct, OpenMPLoopConstruct,
-          // OpenMPBlockConstruct, OpenMPCriticalConstruct Get the source from
-          // the directive field of the begin directive or from the verbatim
-          // field of the begin directive in Critical
-          [&](const auto &c) -> std::string {
-            const CharBlock &source{std::get<0>(std::get<0>(c.t).t).source};
-            return normalize_construct_name(source.ToString());
-          },
-      },
-      c.u);
+  if (std::holds_alternative<OpenMPSectionConstruct>(c.u)) {
+    return "section";
+  } else {
+    return normalize_construct_name(
+        omp::GetOmpDirectiveName(c).source.ToString());
+  }
 }
 
 bool OpenMPCounterVisitor::Pre(const OpenMPDeclarativeConstruct &c) {
@@ -254,11 +207,6 @@ void OpenMPCounterVisitor::Post(const OmpMapType::Value &c) {
 void OpenMPCounterVisitor::Post(const OmpScheduleClause::Kind &c) {
   clauseDetails +=
       "type=" + std::string{OmpScheduleClause::EnumToString(c)} + ";";
-}
-void OpenMPCounterVisitor::Post(const OmpDirectiveNameModifier &c) {
-  clauseDetails += "name_modifier=" +
-      llvm::omp::getOpenMPDirectiveName(c.v, llvm::omp::FallbackVersion).str() +
-      ";";
 }
 void OpenMPCounterVisitor::Post(const OmpClause &c) {
   PostClauseCommon(normalize_clause_name(c.source.ToString()));
