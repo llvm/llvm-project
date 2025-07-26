@@ -2374,11 +2374,11 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     // Expand from smaller bitset type to larger bitset type.
     OS << formatv("  const {} Mask(maskTrailingOnes<uint64_t>(64));\n",
                   Type.getName());
-    OS << formatv("  {} InsnMaxWidth((Insn & Mask).to_ulong());\n",
+    OS << formatv("  {} InsnMaxWidth((Insn & Mask).to_uulong());\n",
                   MaxType.getName());
     for (unsigned I = 64; I < Type.Bitwidth; I += 64)
       OS << formatv(
-          "  InsnMaxWidth |= {0}(((Insn >> {1}) & Mask).to_ulong()) << {1};\n",
+          "  InsnMaxWidth |= {0}(((Insn >> {1}) & Mask).to_uulong()) << {1};\n",
           MaxType.getName(), I);
   }
 
