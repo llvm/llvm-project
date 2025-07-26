@@ -131,11 +131,6 @@ struct ConversionValueMapping {
   ///   value.
   ValueVector lookupOrDefault(Value from, TypeRange desiredTypes = {}) const;
 
-  /// Lookup the given value within the map, or return an empty vector if the
-  /// value is not mapped. If it is mapped, this follows the same behavior
-  /// as `lookupOrDefault`.
-  ValueVector lookupOrNull(Value from, TypeRange desiredTypes = {}) const;
-
   template <typename T>
   struct IsValueVector : std::is_same<std::decay_t<T>, ValueVector> {};
 
@@ -236,15 +231,6 @@ ConversionValueMapping::lookupOrDefault(Value from,
   // values.
   // Note: If `desiredTypes` is empty, this function always returns `current`.
   return !desiredValue.empty() ? std::move(desiredValue) : std::move(current);
-}
-
-ValueVector ConversionValueMapping::lookupOrNull(Value from,
-                                                 TypeRange desiredTypes) const {
-  ValueVector result = lookupOrDefault(from, desiredTypes);
-  if (result == ValueVector{from} ||
-      (!desiredTypes.empty() && TypeRange(ValueRange(result)) != desiredTypes))
-    return {};
-  return result;
 }
 
 //===----------------------------------------------------------------------===//
@@ -927,6 +913,23 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   /// Return "true" if the given operation was replaced or erased.
   bool wasOpReplaced(Operation *op) const;
 
+  /// Lookup the most recently mapped values with the desired types in the
+  /// mapping.
+  ///
+  /// Special cases:
+  /// - If the desired type range is empty, simply return the most recently
+  ///   mapped values.
+  /// - If there is no mapping to the desired types, also return the most
+  ///   recently mapped values.
+  /// - If there is no mapping for the given values at all, return the given
+  ///   value.
+  ValueVector lookupOrDefault(Value from, TypeRange desiredTypes = {}) const;
+
+  /// Lookup the given value within the map, or return an empty vector if the
+  /// value is not mapped. If it is mapped, this follows the same behavior
+  /// as `lookupOrDefault`.
+  ValueVector lookupOrNull(Value from, TypeRange desiredTypes = {}) const;
+
   //===--------------------------------------------------------------------===//
   // IR Rewrites / Type Conversion
   //===--------------------------------------------------------------------===//
@@ -1249,6 +1252,22 @@ void ConversionPatternRewriterImpl::applyRewrites() {
 // State Management
 //===----------------------------------------------------------------------===//
 
+ValueVector
+ConversionPatternRewriterImpl::lookupOrDefault(Value from,
+                                               TypeRange desiredTypes) const {
+  return mapping.lookupOrDefault(from, desiredTypes);
+}
+
+ValueVector
+ConversionPatternRewriterImpl::lookupOrNull(Value from,
+                                            TypeRange desiredTypes) const {
+  ValueVector result = lookupOrDefault(from, desiredTypes);
+  if (result == ValueVector{from} ||
+      (!desiredTypes.empty() && TypeRange(ValueRange(result)) != desiredTypes))
+    return {};
+  return result;
+}
+
 RewriterState ConversionPatternRewriterImpl::getCurrentState() {
   return RewriterState(rewrites.size(), ignoredOps.size(), replacedOps.size());
 }
@@ -1296,7 +1315,7 @@ LogicalResult ConversionPatternRewriterImpl::remapValues(
       // The current pattern does not have a type converter. I.e., it does not
       // distinguish between legal and illegal types. For each operand, simply
       // pass through the most recently mapped values.
-      remapped.push_back(mapping.lookupOrDefault(operand));
+      remapped.push_back(lookupOrDefault(operand));
       continue;
     }
 
@@ -1315,7 +1334,7 @@ LogicalResult ConversionPatternRewriterImpl::remapValues(
       continue;
     }
 
-    ValueVector repl = mapping.lookupOrDefault(operand, legalTypes);
+    ValueVector repl = lookupOrDefault(operand, legalTypes);
     if (!repl.empty() && TypeRange(ValueRange(repl)) == legalTypes) {
       // Mapped values have the correct type or there is an existing
       // materialization. Or the operand is not mapped at all and has the
@@ -1325,7 +1344,7 @@ LogicalResult ConversionPatternRewriterImpl::remapValues(
     }
 
     // Create a materialization for the most recently mapped values.
-    repl = mapping.lookupOrDefault(operand);
+    repl = lookupOrDefault(operand);
     ValueRange castValues = buildUnresolvedMaterialization(
         MaterializationKind::Target, computeInsertPoint(repl), operandLoc,
         /*valuesToMap=*/repl, /*inputs=*/repl, /*outputTypes=*/legalTypes,
@@ -1520,7 +1539,7 @@ Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
   // Try to find a replacement value with the same type in the conversion value
   // mapping. This includes cached materializations. We try to reuse those
   // instead of generating duplicate IR.
-  ValueVector repl = mapping.lookupOrNull(value, value.getType());
+  ValueVector repl = lookupOrNull(value, value.getType());
   if (!repl.empty())
     return repl.front();
 
@@ -1536,7 +1555,7 @@ Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
   // No replacement value was found. Get the latest replacement value
   // (regardless of the type) and build a source materialization to the
   // original type.
-  repl = mapping.lookupOrNull(value);
+  repl = lookupOrNull(value);
   if (repl.empty()) {
     // No replacement value is registered in the mapping. This means that the
     // value is dropped and no longer needed. (If the value were still needed,
