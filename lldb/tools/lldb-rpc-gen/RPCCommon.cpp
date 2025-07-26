@@ -194,7 +194,6 @@ std::string lldb_rpc_gen::GetMangledName(ASTContext &Context,
   return Mangled;
 }
 
-static auto CheckTypeForLLDBPrivate = [](const Type *Ty) {};
 bool lldb_rpc_gen::TypeIsFromLLDBPrivate(QualType T) {
   auto CheckTypeForLLDBPrivate = [](const Type *Ty) {
     if (!Ty)
@@ -307,20 +306,6 @@ bool lldb_rpc_gen::MethodIsDisallowed(ASTContext &Context,
     }
   }
   return isDisallowed;
-}
-
-bool lldb_rpc_gen::HasCallbackParameter(CXXMethodDecl *MDecl) {
-  bool HasCallbackParameter = false;
-  bool HasBatonParameter = false;
-  auto End = MDecl->parameters().end();
-  for (auto Iter = MDecl->parameters().begin(); Iter != End; Iter++) {
-    if ((*Iter)->getType()->isFunctionPointerType())
-      HasCallbackParameter = true;
-    else if ((*Iter)->getType()->isVoidPointerType())
-      HasBatonParameter = true;
-  }
-
-  return HasCallbackParameter && HasBatonParameter;
 }
 
 // NOTE: There's possibly a more clever way to do this, but we're keeping

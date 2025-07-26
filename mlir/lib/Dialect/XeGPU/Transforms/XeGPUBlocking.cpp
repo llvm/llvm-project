@@ -17,6 +17,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/DebugLog.h"
 
 namespace mlir {
 namespace xegpu {
@@ -26,8 +27,6 @@ namespace xegpu {
 } // namespace mlir
 
 #define DEBUG_TYPE "xegpu-blocking"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 using namespace mlir;
 
@@ -53,7 +52,7 @@ resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
   // We only interest in the case where all inputs and outputs have the
   // identical VectorTypes
   if (!hasIdenticalVectorTypes(inputs) || !hasIdenticalVectorTypes(outputs)) {
-    LDBG("skip unrealized conversion cast op not emulating pack/unpack.");
+    LDBG() << "skip unrealized conversion cast op not emulating pack/unpack.";
     return;
   }
 
@@ -149,7 +148,7 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
     if (auto type = dyn_cast<ShapedType>(value.getType()))
       return llvm::to_vector(type.getShape());
   }
-  LDBG("failed to getTileShape for: " << value);
+  LDBG() << "failed to getTileShape for: " << value;
   return std::nullopt;
 }
 
@@ -214,7 +213,7 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
         return layout && layout.isWgLayout();
       });
   if (hasWgLayoutOperands || hasWgLayoutResults) {
-    LDBG("skip unrolling for op with workgroup level layout: " << *op);
+    LDBG() << "skip unrolling for op with workgroup level layout: " << *op;
     return false;
   }
 

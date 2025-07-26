@@ -438,7 +438,7 @@ public:
     assert(!CurFrag || CurFrag->getKind() == MCFragment::FT_Data);
     return CurFrag;
   }
-  size_t getCurFragOffset() const { return getCurrentFragment()->Offset; }
+  size_t getCurFragSize() const { return getCurrentFragment()->getFixedSize(); }
   /// Save the current and previous section on the section stack.
   void pushSection() {
     SectionStack.push_back(
@@ -986,7 +986,7 @@ public:
                                                const MCSymbol *Lo);
 
   virtual MCSymbol *getDwarfLineTableSymbol(unsigned CUID);
-  virtual void emitCFISections(bool EH, bool Debug);
+  virtual void emitCFISections(bool EH, bool Debug, bool SFrame);
   void emitCFIStartProc(bool IsSimple, SMLoc Loc = SMLoc());
   void emitCFIEndProc();
   virtual void emitCFIDefCfa(int64_t Register, int64_t Offset, SMLoc Loc = {});
