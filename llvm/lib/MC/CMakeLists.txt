@@ -44,7 +44,6 @@ add_llvm_component_library(LLVMMC
   MCSchedule.cpp
   MCSection.cpp
   MCSectionCOFF.cpp
-  MCSectionDXContainer.cpp
   MCSectionELF.cpp
   MCSectionGOFF.cpp
   MCSectionMachO.cpp

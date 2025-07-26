@@ -18,8 +18,6 @@
 
 namespace llvm {
 
-class MCSymbol;
-
 class MCSectionSPIRV final : public MCSection {
   friend class MCContext;
 
@@ -27,12 +25,6 @@ class MCSectionSPIRV final : public MCSection {
       : MCSection("", /*IsText=*/true, /*IsVirtual=*/false,
                   /*Begin=*/nullptr) {}
   // TODO: Add StringRef Name to MCSectionSPIRV.
-
-public:
-  ~MCSectionSPIRV() = default;
-  void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
-                            raw_ostream &OS,
-                            uint32_t Subsection) const override {}
 };
 
 } // end namespace llvm
