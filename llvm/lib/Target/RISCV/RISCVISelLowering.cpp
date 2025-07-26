@@ -23440,8 +23440,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
 
     if (VT.isFixedLengthVector() && Subtarget.useRVVForFixedLengthVectors()) {
       MVT ContainerVT = getContainerForFixedLengthVector(VT);
-      // VT here is coerced to vector with i8 elements, so we need to check if
-      // this is a M1 register here instead of checking VMV0RegClass.
+      // VT here might be coerced to vector with i8 elements, so we need to
+      // check if this is a M1 register here instead of checking VMV0RegClass.
       if (TRI->isTypeLegalForClass(RISCV::VRRegClass, ContainerVT))
         return std::make_pair(0U, &RISCV::VMV0RegClass);
     }
@@ -24425,7 +24425,10 @@ SDValue RISCVTargetLowering::joinRegisterPartsIntoValue(
             EVT::getVectorVT(Context, ValueEltVT, Count, /*IsScalable=*/true);
         Val = DAG.getNode(ISD::BITCAST, DL, SameEltTypeVT, Val);
       }
-      Val = DAG.getExtractSubvector(DL, ValueVT, Val, 0);
+      if (ValueVT.isFixedLengthVector())
+        Val = convertFromScalableVector(ValueVT, Val, DAG, Subtarget);
+      else
+        Val = DAG.getExtractSubvector(DL, ValueVT, Val, 0);
       return Val;
     }
   }
