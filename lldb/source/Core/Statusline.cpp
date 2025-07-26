@@ -47,8 +47,8 @@ void Statusline::TerminalSizeChanged() {
 
   UpdateScrollWindow(ResizeStatusline);
 
-  // Draw the old statusline.
-  Redraw(/*update=*/false);
+  // Redraw the old statusline.
+  Redraw(nullptr, nullptr);
 }
 
 void Statusline::Enable() {
@@ -56,7 +56,8 @@ void Statusline::Enable() {
   UpdateScrollWindow(EnableStatusline);
 
   // Draw the statusline.
-  Redraw(/*update=*/true);
+  Debugger::SelectedContext ctx = m_debugger.GetSelectedContext();
+  Redraw(&ctx.exe_ctx, ctx.sym_ctx ? &ctx.sym_ctx.value() : nullptr);
 }
 
 void Statusline::Disable() {
@@ -68,8 +69,6 @@ void Statusline::Draw(std::string str) {
   lldb::LockableStreamFileSP stream_sp = m_debugger.GetOutputStreamSP();
   if (!stream_sp)
     return;
-
-  m_last_str = str;
 
   str = ansi::TrimAndPad(str, m_terminal_width);
 
@@ -127,34 +126,18 @@ void Statusline::UpdateScrollWindow(ScrollWindowMode mode) {
   m_debugger.RefreshIOHandler();
 }
 
-void Statusline::Redraw(bool update) {
-  if (!update) {
-    Draw(m_last_str);
-    return;
-  }
+void Statusline::Redraw(const ExecutionContext *exe_ctx,
+                        const SymbolContext *sym_ctx) {
+  if (exe_ctx)
+    m_exe_ctx = *exe_ctx;
 
-  ExecutionContext exe_ctx = m_debugger.GetSelectedExecutionContext();
-
-  // For colors and progress events, the format entity needs access to the
-  // debugger, which requires a target in the execution context.
-  if (!exe_ctx.HasTargetScope())
-    exe_ctx.SetTargetPtr(&m_debugger.GetSelectedOrDummyTarget());
-
-  SymbolContext symbol_ctx;
-  if (ProcessSP process_sp = exe_ctx.GetProcessSP()) {
-    // Check if the process is stopped, and if it is, make sure it remains
-    // stopped until we've computed the symbol context.
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&process_sp->GetRunLock())) {
-      if (auto frame_sp = exe_ctx.GetFrameSP())
-        symbol_ctx = frame_sp->GetSymbolContext(eSymbolContextEverything);
-    }
-  }
+  if (sym_ctx)
+    m_symbol_ctx = *sym_ctx;
 
   StreamString stream;
   FormatEntity::Entry format = m_debugger.GetStatuslineFormat();
-  FormatEntity::Format(format, stream, &symbol_ctx, &exe_ctx, nullptr, nullptr,
-                       false, false);
+  FormatEntity::Format(format, stream, &m_symbol_ctx, &m_exe_ctx, nullptr,
+                       nullptr, false, false);
 
   Draw(stream.GetString().str());
 }
