@@ -310,3 +310,43 @@ func.func @switch() {
 
   return 
 }
+
+func.func @while(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+  %3 = emitc.literal "3" : i32
+
+  emitc.while {
+    %r = emitc.expression : i1 {
+      %add = emitc.add %1, %2 : (i32, i32) -> i32
+      %cmp = emitc.cmp eq, %add, %3 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    emitc.yield %r : i1
+  } do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  }
+
+  return
+}
+
+func.func @do(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+  %3 = emitc.literal "3" : i32
+
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  } while {
+    %r = emitc.expression : i1 {
+      %add = emitc.add %1, %2 : (i32, i32) -> i32
+      %cmp = emitc.cmp eq, %add, %3 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+    
+    emitc.yield %r : i1
+  }
+
+  return
+}
