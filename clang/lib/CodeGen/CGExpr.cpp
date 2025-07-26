@@ -4965,6 +4965,7 @@ CodeGenFunction::EmitWidePtrArraySubscriptExpr(const ArraySubscriptExpr *E,
                                                bool Accessed) {
   const auto *PT = E->getBase()->getType()->getAs<PointerType>();
   assert(PT && !PT->hasRawPointerLayout());
+  (void)PT;
 
   LValueBaseInfo BaseInfo;
   TBAAAccessInfo TBAAInfo;

@@ -2841,6 +2841,7 @@ CodeGenFunction::BoundsSafetyOptRemarkScope::~BoundsSafetyOptRemarkScope() {
   BoundsSafetyOptRemarkScope *Current =
       CGF->BoundsSafetyOptRemarkScopes.pop_back_val();
   assert(Current == this);
+  (void)Current;
 }
 
 void CodeGenFunction::BoundsSafetyOptRemarkScope::Annotate(llvm::Instruction *I) {

@@ -3101,6 +3101,7 @@ public:
     const auto OperandTy = Operand->getType();
     assert(OperandTy->isPointerTypeWithBounds() ||
            IsReallySinglePtr(OperandTy));
+    (void)OperandTy;
 
     assert(Kind == UnsafeOpKind::Cast);
     const auto *CE = cast<CastExpr>(UnsafeOp);
@@ -3177,12 +3178,14 @@ public:
     const auto OperandTy = Operand->getType();
     assert(OperandTy->isPointerTypeWithBounds() ||
            IsReallySinglePtr(OperandTy));
+    (void)OperandTy;
 
     assert(Kind == UnsafeOpKind::Cast || Kind == UnsafeOpKind::CallArg ||
            Kind == UnsafeOpKind::Return || Kind == UnsafeOpKind::Assignment);
     const auto *CE = cast<CastExpr>(UnsafeOp);
 
     assert(CE->getType()->isCountAttributedType());
+    (void)CE;
 
     int OpSelect = UnsafeOpToSelectIndex(Kind);
     int WillTrapSelect = WillTrapKindSelectIndex(WillTrap);

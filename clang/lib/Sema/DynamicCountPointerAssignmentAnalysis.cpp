@@ -575,6 +575,7 @@ public:
       return ExprError();
     Expr *Count = CountR.get();
     assert(!Count->HasSideEffects(Ctx));
+    (void)Ctx;
 
     SourceLocation Loc = WrappedValue->getBeginLoc();
     // Later, we might be able to merge diagnostics to check if count is

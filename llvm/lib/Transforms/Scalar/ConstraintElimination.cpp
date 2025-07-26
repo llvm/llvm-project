@@ -559,6 +559,7 @@ decomposeGEP(GEPOperator &GEP, SmallVectorImpl<ConditionTy> &Preconditions,
       // Try to prove nuw from nusw and nneg.
       assert((SaveViaPrecondition || NW.hasNoUnsignedSignedWrap()) &&
              "Must have nusw flag");
+      (void)SaveViaPrecondition;
       if (!isKnownNonNegative(Index, State.DL))
         Preconditions.emplace_back(CmpInst::ICMP_SGE, Index,
                                    ConstantInt::get(Index->getType(), 0));

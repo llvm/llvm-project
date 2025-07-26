@@ -20273,6 +20273,7 @@ static void TryFixAssigningSingleOpaquePtrToImplicitIndexablePtr(
   const auto *DstPointerType = DstType->getAs<PointerType>();
   assert(DstPointerType->isIndexable() || DstPointerType->isBidiIndexable());
   assert(SrcType->isSinglePointerType());
+  (void)DstPointerType;
 
   // Check if source is a pointer to an opaque type.
   // Walk through `AttributedType` to get to the underlying `PointerType`.
