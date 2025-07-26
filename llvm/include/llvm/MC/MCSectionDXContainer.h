@@ -29,7 +29,6 @@ class MCSectionDXContainer final : public MCSection {
 public:
   void printSwitchToSection(const MCAsmInfo &, const Triple &, raw_ostream &,
                             uint32_t) const override;
-  bool useCodeAlign() const override { return false; }
 };
 
 } // end namespace llvm
