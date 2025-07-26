@@ -3853,8 +3853,8 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     if (Inst.getOperand(2).getImm() == 0)
       emitToStreamer(Out, MCInstBuilder(RISCV::C_NOP));
     else
-      emitToStreamer(Out, MCInstBuilder(RISCV::C_NOP_HINT)
-                              .addOperand(Inst.getOperand(2)));
+      emitToStreamer(
+          Out, MCInstBuilder(RISCV::C_NOP_HINT).addOperand(Inst.getOperand(2)));
     return false;
   }
   case RISCV::PseudoLLAImm:
