@@ -881,9 +881,11 @@ class FunctionTestBuilder:
         build_global_values_dictionary(
             self._global_var_dict, raw_tool_output, prefixes, self._ginfo
         )
+        processed_func_count = 0
         for m in function_re.finditer(raw_tool_output):
             if not m:
                 continue
+            processed_func_count += 1
             func = m.group("func")
             body = m.group("body")
             # func_name_separator is the string that is placed right after function name at the
@@ -1000,6 +1002,7 @@ class FunctionTestBuilder:
                         # preprocesser directives to exclude individual functions from some
                         # RUN lines.
                         self._func_dict[prefix][func] = None
+        return processed_func_count
 
     def processed_prefixes(self, prefixes):
         """
