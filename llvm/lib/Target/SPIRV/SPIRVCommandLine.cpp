@@ -12,7 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVCommandLine.h"
-#include "llvm/ADT/StringRef.h"
+#include "MCTargetDesc/SPIRVBaseInfo.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <map>
 
@@ -104,6 +105,26 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
         {"SPV_KHR_float_controls2",
          SPIRV::Extension::Extension::SPV_KHR_float_controls2}};
 
+/*
+
+TODO: std::set_union is not constexpr in c++17. I would still like a way to make
+sure the environment lists are added.
+
+// Check that every extension is in at least one of the two lists.
+constexpr bool AreAllExtensionsInAnEnvList() noexcept {
+      SPIRV::Extension::Extension ExtensionsInEnvList[100] = {};
+      constexpr auto* end = std::set_union(ValidVulkanExtensions.begin(),
+ValidVulkanExtensions.end(), ValidOpenCLExtensions.begin(),
+ValidOpenCLExtensions.end(), ExtensionsInEnvList); return
+(end-ExtensionsInEnvList) == SPIRVExtensionMap.size();
+}
+
+static_assert(
+    AreAllExtensionsInAnEnvList(),
+    "Not all extensions are in ValidVulkanExtensions or "
+    "ValidOpenCLExtensions");
+*/
+
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue,
                                   std::set<SPIRV::Extension::Extension> &Vals) {
@@ -168,4 +189,24 @@ StringRef SPIRVExtensionsParser::checkExtensions(
     AllowedExtensions.insert(It->second);
   }
   return StringRef();
+}
+
+std::set<SPIRV::Extension::Extension>
+SPIRVExtensionsParser::getValidExtensions(const Triple &TT) {
+  std::set<SPIRV::Extension::Extension> R;
+  SPIRV::Environment::Environment CurrentEnvironment =
+      SPIRV::Environment::Environment::EnvOpenCL;
+  if (TT.getOS() == Triple::Vulkan)
+    CurrentEnvironment = SPIRV::Environment::Environment::EnvVulkan;
+
+  for (const auto &[ExtensionName, ExtensionEnum] : SPIRVExtensionMap) {
+    EnvironmentList AllowedEnv = getSymbolicOperandAllowedEnvironments(
+        SPIRV::OperandCategory::OperandCategory::ExtensionOperand,
+        ExtensionEnum);
+
+    if (std::count(AllowedEnv.begin(), AllowedEnv.end(), CurrentEnvironment))
+      R.insert(ExtensionEnum);
+  }
+
+  return R;
 }
