@@ -253,7 +253,6 @@ private:
     auto *DefR = dyn_cast<RecipeTy>(R);
     // Check for recipes that do not have opcodes.
     if constexpr (std::is_same<RecipeTy, VPScalarIVStepsRecipe>::value ||
-                  std::is_same<RecipeTy, VPCanonicalIVPHIRecipe>::value ||
                   std::is_same<RecipeTy, VPWidenSelectRecipe>::value ||
                   std::is_same<RecipeTy, VPDerivedIVRecipe>::value ||
                   std::is_same<RecipeTy, VPWidenGEPRecipe>::value)
@@ -429,6 +428,12 @@ template <unsigned Opcode, typename Op0_t, typename Op1_t>
 inline AllBinaryRecipe_match<Op0_t, Op1_t, Opcode, true>
 m_c_Binary(const Op0_t &Op0, const Op1_t &Op1) {
   return AllBinaryRecipe_match<Op0_t, Op1_t, Opcode, true>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Add>
+m_Add(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::Add, Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>

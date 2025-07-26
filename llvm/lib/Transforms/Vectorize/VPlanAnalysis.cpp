@@ -24,11 +24,8 @@ using namespace llvm;
 VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan)
     : Ctx(Plan.getScalarHeader()->getIRBasicBlock()->getContext()) {
   if (auto LoopRegion = Plan.getVectorLoopRegion()) {
-    if (const auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(
-            &LoopRegion->getEntryBasicBlock()->front())) {
-      CanonicalIVTy = CanIV->getScalarType();
-      return;
-    }
+    CanonicalIVTy = LoopRegion->getCanonicalIV()->getScalarType();
+    return;
   }
 
   // If there's no canonical IV, retrieve the type from the trip count
@@ -268,16 +265,15 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
 
   Type *ResultTy =
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
-          .Case<VPActiveLaneMaskPHIRecipe, VPCanonicalIVPHIRecipe,
-                VPFirstOrderRecurrencePHIRecipe, VPReductionPHIRecipe,
-                VPWidenPointerInductionRecipe, VPEVLBasedIVPHIRecipe>(
-              [this](const auto *R) {
-                // Handle header phi recipes, except VPWidenIntOrFpInduction
-                // which needs special handling due it being possibly truncated.
-                // TODO: consider inferring/caching type of siblings, e.g.,
-                // backedge value, here and in cases below.
-                return inferScalarType(R->getStartValue());
-              })
+          .Case<VPActiveLaneMaskPHIRecipe, VPFirstOrderRecurrencePHIRecipe,
+                VPReductionPHIRecipe, VPWidenPointerInductionRecipe,
+                VPEVLBasedIVPHIRecipe>([this](const auto *R) {
+            // Handle header phi recipes, except VPWidenIntOrFpInduction
+            // which needs special handling due it being possibly truncated.
+            // TODO: consider inferring/caching type of siblings, e.g.,
+            // backedge value, here and in cases below.
+            return inferScalarType(R->getStartValue());
+          })
           .Case<VPWidenIntOrFpInductionRecipe, VPDerivedIVRecipe>(
               [](const auto *R) { return R->getScalarType(); })
           .Case<VPReductionRecipe, VPPredInstPHIRecipe, VPWidenPHIRecipe,
@@ -441,7 +437,11 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
   // first and last occurrences of each recipe.
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getVectorLoopRegion());
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+  for (VPBlockBase *VPB : RPOT) {
+    if (auto *R = dyn_cast<VPRegionBlock>(VPB)) {
+      continue;
+    }
+    auto *VPBB = cast<VPBasicBlock>(VPB);
     if (!VPBB->getParent())
       break;
     for (VPRecipeBase &R : *VPBB) {
@@ -551,8 +551,8 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
           continue;
 
         if (VFs[J].isScalar() ||
-            isa<VPCanonicalIVPHIRecipe, VPReplicateRecipe, VPDerivedIVRecipe,
-                VPScalarIVStepsRecipe>(R) ||
+            isa<VPReplicateRecipe, VPDerivedIVRecipe, VPScalarIVStepsRecipe>(
+                R) ||
             (isa<VPInstruction>(R) &&
              all_of(cast<VPSingleDefRecipe>(R)->users(),
                     [&](VPUser *U) {
@@ -621,6 +621,10 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
       Invariant[ClassID] += GetRegUsage(TypeInfo.inferScalarType(In), VF);
     }
 
+    unsigned ClassID = TTI.getRegisterClassForType(
+        false, TypeInfo.inferScalarType(Plan.getCanonicalIV()));
+    MaxUsages[Idx][ClassID] += 1;
+
     LLVM_DEBUG({
       dbgs() << "LV(REG): VF = " << VFs[Idx] << '\n';
       dbgs() << "LV(REG): Found max usage: " << MaxUsages[Idx].size()
@@ -638,7 +642,6 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
                << " registers\n";
       }
     });
-
     RU.LoopInvariantRegs = Invariant;
     RU.MaxLocalUsers = MaxUsages[Idx];
     RUs[Idx] = RU;

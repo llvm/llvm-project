@@ -136,9 +136,9 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
 ; PRED-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[TMP26]], i32 0
 ; PRED-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP23]], ptr [[TMP27]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
-; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP10]]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TMP15]])
 ; PRED-NEXT:    [[TMP28:%.*]] = xor <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], splat (i1 true)
+; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP10]]
 ; PRED-NEXT:    [[TMP29:%.*]] = extractelement <vscale x 16 x i1> [[TMP28]], i32 0
 ; PRED-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
@@ -306,10 +306,10 @@ define void @iv_trunc(i32 %x, ptr %dst, i64 %N) #0 {
 ; PRED-NEXT:    store i32 1, ptr [[TMP23]], align 4
 ; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; PRED:       [[PRED_STORE_CONTINUE2]]:
-; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64 [[INDEX]], i64 [[TMP15]])
 ; PRED-NEXT:    [[TMP24:%.*]] = xor <2 x i1> [[ACTIVE_LANE_MASK_NEXT]], splat (i1 true)
 ; PRED-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
+; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
 ; PRED-NEXT:    [[TMP25:%.*]] = extractelement <2 x i1> [[TMP24]], i32 0
 ; PRED-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
@@ -498,10 +498,10 @@ define void @trunc_ivs_and_store(i32 %x, ptr %dst, i64 %N) #0 {
 ; PRED-NEXT:    store i32 [[TMP34]], ptr [[TMP33]], align 4
 ; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE7]]
 ; PRED:       [[PRED_STORE_CONTINUE7]]:
-; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[INDEX]], i64 [[TMP16]])
 ; PRED-NEXT:    [[TMP35:%.*]] = xor <4 x i1> [[ACTIVE_LANE_MASK_NEXT]], splat (i1 true)
 ; PRED-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; PRED-NEXT:    [[TMP36:%.*]] = extractelement <4 x i1> [[TMP35]], i32 0
 ; PRED-NEXT:    br i1 [[TMP36]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
@@ -692,10 +692,10 @@ define void @ivs_trunc_and_ext(i32 %x, ptr %dst, i64 %N) #0 {
 ; PRED-NEXT:    store i32 [[TMP33]], ptr [[TMP32]], align 4
 ; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; PRED:       [[PRED_STORE_CONTINUE6]]:
-; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[INDEX]], i64 [[TMP15]])
 ; PRED-NEXT:    [[TMP34:%.*]] = xor <4 x i1> [[ACTIVE_LANE_MASK_NEXT]], splat (i1 true)
 ; PRED-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; PRED-NEXT:    [[TMP35:%.*]] = extractelement <4 x i1> [[TMP34]], i32 0
 ; PRED-NEXT:    br i1 [[TMP35]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
