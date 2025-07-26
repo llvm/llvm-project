@@ -17,6 +17,14 @@ add_llvm_tool(llvm-config
   DISABLE_LLVM_LINK_LLVM_DYLIB
   )
 
+# llvm-config version information
+set(LLVM_CONFIG_EXECUTABLE_VERSION
+    "${LLVM_VERSION_MAJOR}" CACHE STRING
+    "Major version number that will be appended to the llvm-config executable name")
+mark_as_advanced(LLVM_CONFIG_EXECUTABLE_VERSION)
+
+set_target_properties(llvm-config PROPERTIES VERSION ${LLVM_CONFIG_EXECUTABLE_VERSION})
+
 # Compute the substitution values for various items.
 get_property(SUPPORT_SYSTEM_LIBS TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS)
 get_property(WINDOWSMANIFEST_SYSTEM_LIBS TARGET LLVMWindowsManifest PROPERTY LLVM_SYSTEM_LIBS)
