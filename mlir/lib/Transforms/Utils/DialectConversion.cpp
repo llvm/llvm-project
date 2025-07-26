@@ -508,9 +508,11 @@ private:
 class MoveBlockRewrite : public BlockRewrite {
 public:
   MoveBlockRewrite(ConversionPatternRewriterImpl &rewriterImpl, Block *block,
-                   Region *region, Block *insertBeforeBlock)
-      : BlockRewrite(Kind::MoveBlock, rewriterImpl, block), region(region),
-        insertBeforeBlock(insertBeforeBlock) {}
+                   Region *previousRegion, Region::iterator previousIt)
+      : BlockRewrite(Kind::MoveBlock, rewriterImpl, block),
+        region(previousRegion),
+        insertBeforeBlock(previousIt == previousRegion->end() ? nullptr
+                                                              : &*previousIt) {}
 
   static bool classof(const IRRewrite *rewrite) {
     return rewrite->getKind() == Kind::MoveBlock;
@@ -617,9 +619,12 @@ protected:
 class MoveOperationRewrite : public OperationRewrite {
 public:
   MoveOperationRewrite(ConversionPatternRewriterImpl &rewriterImpl,
-                       Operation *op, Block *block, Operation *insertBeforeOp)
-      : OperationRewrite(Kind::MoveOperation, rewriterImpl, op), block(block),
-        insertBeforeOp(insertBeforeOp) {}
+                       Operation *op, OpBuilder::InsertPoint previous)
+      : OperationRewrite(Kind::MoveOperation, rewriterImpl, op),
+        block(previous.getBlock()),
+        insertBeforeOp(previous.getPoint() == previous.getBlock()->end()
+                           ? nullptr
+                           : &*previous.getPoint()) {}
 
   static bool classof(const IRRewrite *rewrite) {
     return rewrite->getKind() == Kind::MoveOperation;
@@ -1588,23 +1593,30 @@ Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
 
 void ConversionPatternRewriterImpl::notifyOperationInserted(
     Operation *op, OpBuilder::InsertPoint previous) {
+  // If no previous insertion point is provided, the op used to be detached.
+  bool wasDetached = !previous.isSet();
   LLVM_DEBUG({
-    logger.startLine() << "** Insert  : '" << op->getName() << "'(" << op
-                       << ")\n";
+    logger.startLine() << "** Insert  : '" << op->getName() << "' (" << op
+                       << ")";
+    if (wasDetached)
+      logger.getOStream() << " (was detached)";
+    logger.getOStream() << "\n";
   });
   assert(!wasOpReplaced(op->getParentOp()) &&
          "attempting to insert into a block within a replaced/erased op");
 
-  if (!previous.isSet()) {
-    // This is a newly created op.
+  if (wasDetached) {
+    // If the op was detached, it is most likely a newly created op.
+    // TODO: If the same op is inserted multiple times from a detached state,
+    // the rollback mechanism may erase the same op multiple times. This is a
+    // bug in the rollback-based dialect conversion driver.
     appendRewrite<CreateOperationRewrite>(op);
     patternNewOps.insert(op);
     return;
   }
-  Operation *prevOp = previous.getPoint() == previous.getBlock()->end()
-                          ? nullptr
-                          : &*previous.getPoint();
-  appendRewrite<MoveOperationRewrite>(op, previous.getBlock(), prevOp);
+
+  // The op was moved from one place to another.
+  appendRewrite<MoveOperationRewrite>(op, previous);
 }
 
 void ConversionPatternRewriterImpl::replaceOp(
@@ -1669,29 +1681,39 @@ void ConversionPatternRewriterImpl::eraseBlock(Block *block) {
 
 void ConversionPatternRewriterImpl::notifyBlockInserted(
     Block *block, Region *previous, Region::iterator previousIt) {
-  assert(!wasOpReplaced(block->getParentOp()) &&
-         "attempting to insert into a region within a replaced/erased op");
+  // If no previous insertion point is provided, the block used to be detached.
+  bool wasDetached = !previous;
+  Operation *newParentOp = block->getParentOp();
   LLVM_DEBUG(
       {
-        Operation *parent = block->getParentOp();
+        Operation *parent = newParentOp;
         if (parent) {
           logger.startLine() << "** Insert Block into : '" << parent->getName()
-                             << "'(" << parent << ")\n";
+                             << "' (" << parent << ")";
         } else {
           logger.startLine()
-              << "** Insert Block into detached Region (nullptr parent op)'\n";
+              << "** Insert Block into detached Region (nullptr parent op)";
         }
+        if (wasDetached)
+          logger.getOStream() << " (was detached)";
+        logger.getOStream() << "\n";
       });
+  assert(!wasOpReplaced(newParentOp) &&
+         "attempting to insert into a region within a replaced/erased op");
 
   patternInsertedBlocks.insert(block);
 
-  if (!previous) {
-    // This is a newly created block.
+  if (wasDetached) {
+    // If the block was detached, it is most likely a newly created block.
+    // TODO: If the same block is inserted multiple times from a detached state,
+    // the rollback mechanism may erase the same block multiple times. This is a
+    // bug in the rollback-based dialect conversion driver.
     appendRewrite<CreateBlockRewrite>(block);
     return;
   }
-  Block *prevBlock = previousIt == previous->end() ? nullptr : &*previousIt;
-  appendRewrite<MoveBlockRewrite>(block, previous, prevBlock);
+
+  // The block was moved from one place to another.
+  appendRewrite<MoveBlockRewrite>(block, previous, previousIt);
 }
 
 void ConversionPatternRewriterImpl::inlineBlockBefore(Block *source,
