@@ -2099,8 +2099,10 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   assert((!IsTexFail || DMaskLanes >= 1) && "should have legalized this");
 
   unsigned CPol = MI.getOperand(ArgOffset + Intr->CachePolicyIndex).getImm();
-  if (BaseOpcode->Atomic)
-    CPol |= AMDGPU::CPol::GLC; // TODO no-return optimization
+  // Keep GLC only when the atomic's result is actually used.
+  if (BaseOpcode->Atomic && VDataOut && !MRI->use_empty(VDataOut))
+    CPol |= AMDGPU::CPol::GLC;
+
   if (CPol & ~((IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12) |
                AMDGPU::CPol::VOLATILE))
     return false;
@@ -2190,7 +2192,11 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
       }
 
     } else {
-      MIB.addDef(VDataOut); // vdata output
+      // If VDataOut is unused, mark it as dead to avoid unnecessary VGPR usage.
+      if (BaseOpcode->Atomic && MRI->use_empty(VDataOut))
+        MIB.addDef(VDataOut, RegState::Dead);
+      else
+        MIB.addDef(VDataOut);
     }
   }
 
