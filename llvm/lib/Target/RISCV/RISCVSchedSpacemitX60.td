@@ -501,16 +501,27 @@ foreach mx = SchedMxListW in {
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  defm "" : LMULWriteResMX<"WriteVSALUV", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSALUX", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSALUI", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVAALUV", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVAALUX", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSMulV", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSMulX", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSShiftV", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSShiftX", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSShiftI", [SMX60_VIEU], mx, IsWorstCase>;
+  let Latency = Get458Latency<mx>.c, ReleaseAtCycles = [4] in {
+    defm "" : LMULWriteResMX<"WriteVSALUV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSALUX", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSALUI", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVAALUV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVAALUX", [SMX60_VIEU], mx, IsWorstCase>;
+  }
+
+  // Pattern of vsmul: e8/e16 = 4/4/5/8, e32 = 5,5,5,8, e64 = 7,8,16,32
+  // We use the worst-case until we can split the SEW.
+  // TODO: change WriteVSMulV/X to be defined with LMULSEWSchedWrites
+  let Latency = Get781632Latency<mx>.c, ReleaseAtCycles = [7] in {
+    defm "" : LMULWriteResMX<"WriteVSMulV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSMulX", [SMX60_VIEU], mx, IsWorstCase>;
+  }
+
+  let Latency = Get4816Latency<mx>.c, ReleaseAtCycles = [4] in {
+    defm "" : LMULWriteResMX<"WriteVSShiftV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSShiftX", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSShiftI", [SMX60_VIEU], mx, IsWorstCase>;
+  }
 }
 
 // 13. Vector Floating-Point Instructions
