@@ -1065,9 +1065,8 @@ void MipsGotSection::build() {
       // for the TP-relative offset as we don't know how much other data will
       // be allocated before us in the static TLS block.
       if (s->isPreemptible || ctx.arg.shared)
-        ctx.mainPart->relaDyn->addReloc(
-            {ctx.target->tlsGotRel, this, offset,
-             DynamicReloc::AgainstSymbolWithTargetVA, *s, 0, R_ABS});
+        ctx.mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
+            ctx.target->tlsGotRel, *this, offset, *s, ctx.target->symbolicRel);
     }
     for (std::pair<Symbol *, size_t> &p : got.dynTlsSymbols) {
       Symbol *s = p.first;
@@ -1160,6 +1159,7 @@ void MipsGotSection::writeTo(uint8_t *buf) {
   // if we had to do this.
   writeUint(ctx, buf + ctx.arg.wordsize,
             (uint64_t)1 << (ctx.arg.wordsize * 8 - 1));
+  ctx.target->relocateAlloc(*this, buf);
   for (const FileGot &g : gots) {
     auto write = [&](size_t i, const Symbol *s, int64_t a) {
       uint64_t va = a;
@@ -1189,9 +1189,10 @@ void MipsGotSection::writeTo(uint8_t *buf) {
         write(p.second, p.first, 0);
     for (const std::pair<Symbol *, size_t> &p : g.relocs)
       write(p.second, p.first, 0);
-    for (const std::pair<Symbol *, size_t> &p : g.tls)
-      write(p.second, p.first,
-            p.first->isPreemptible || ctx.arg.shared ? 0 : -0x7000);
+    for (const std::pair<Symbol *, size_t> &p : g.tls) {
+      if (!p.first->isPreemptible && !ctx.arg.shared)
+        write(p.second, p.first, -0x7000);
+    }
     for (const std::pair<Symbol *, size_t> &p : g.dynTlsSymbols) {
       if (p.first == nullptr && !ctx.arg.shared)
         write(p.second, nullptr, 1);
@@ -1653,8 +1654,7 @@ int64_t DynamicReloc::computeAddend(Ctx &ctx) const {
   case AgainstSymbol:
     assert(sym != nullptr);
     return addend;
-  case AddendOnlyWithTargetVA:
-  case AgainstSymbolWithTargetVA: {
+  case AddendOnlyWithTargetVA: {
     uint64_t ca = inputSec->getRelocTargetVA(
         ctx, Relocation{expr, type, 0, addend, sym}, getOffset());
     return ctx.arg.is64 ? ca : SignExtend64<32>(ca);
