@@ -65,3 +65,45 @@ generate = region_op(
     lambda result, dynamic_extents: GenerateOp(result, dynamic_extents),
     terminator=lambda args: YieldOp(args[0]),
 )
+
+
+def parallel_insert_slice(
+    source,
+    dest,
+    offsets=None,
+    sizes=None,
+    strides=None,
+    static_offsets=None,
+    static_sizes=None,
+    static_strides=None,
+):
+    S = ShapedType.get_dynamic_size()
+    if static_offsets is None:
+        assert offsets is not None
+        static_offsets = [S, S]
+    if static_sizes is None:
+        assert sizes is not None
+        static_sizes = [S, S]
+    if static_strides is None:
+        assert strides is not None
+        static_strides = [S, S]
+    if offsets is None:
+        assert static_offsets
+        offsets = []
+    if sizes is None:
+        assert static_sizes
+        sizes = []
+    if strides is None:
+        assert static_strides
+        strides = []
+
+    return ParallelInsertSliceOp(
+        source,
+        dest,
+        offsets,
+        sizes,
+        strides,
+        static_offsets,
+        static_sizes,
+        static_strides,
+    )
