@@ -10615,6 +10615,15 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
     return DAG.getVScale(DL, VT, C0 << C1);
   }
 
+  SDValue X;
+  APInt VS0;
+
+  // fold (shl (X * vscale(VS0)), C1) -> (X * vscale(VS0 << C1))
+  if (N1C && sd_match(N0, m_Mul(m_Value(X), m_VScale(m_ConstInt(VS0))))) {
+    SDValue VScale = DAG.getVScale(DL, VT, VS0 << N1C->getAPIntValue());
+    return DAG.getNode(ISD::MUL, DL, VT, X, VScale);
+  }
+
   // Fold (shl step_vector(C0), C1) to (step_vector(C0 << C1)).
   APInt ShlVal;
   if (N0.getOpcode() == ISD::STEP_VECTOR &&
