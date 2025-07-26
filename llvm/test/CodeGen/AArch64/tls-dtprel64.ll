@@ -1,14 +1,7 @@
-; RUN: llc -O0 -mtriple=aarch64-non-linux-gnu -filetype=obj < %s \
-; RUN:  | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -O0 -mtriple=aarch64-linux-gnu -filetype=obj < %s \
+; RUN: | llvm-objdump -r - | FileCheck %s
 
-; CHECK: .debug_info contents:
-; CHECK: DW_TAG_variable
-; CHECK:   DW_AT_name      ("var")
-; CHECK-NEXT:   DW_AT_type      (0x00000040 "int")
-; CHECK-NEXT:   DW_AT_external  (true)
-; CHECK-NEXT:   DW_AT_decl_file ("{{.*}}tls-at-location.c")
-; CHECK-NEXT:   DW_AT_decl_line (1)
-; CHECK-NEXT:   DW_AT_location  (DW_OP_const8u 0x0, DW_OP_GNU_push_tls_address)
+; CHECK: R_AARCH64_TLS_DTPREL64
 
 @var = thread_local global i32 0, align 4, !dbg !0
 
@@ -41,3 +34,4 @@ attributes #0 = { noinline nounwind optnone }
 !13 = !{!6}
 !14 = !DILocation(line: 4, column: 10, scope: !11)
 !15 = !DILocation(line: 4, column: 3, scope: !11)
+
