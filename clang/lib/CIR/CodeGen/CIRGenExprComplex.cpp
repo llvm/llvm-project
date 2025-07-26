@@ -91,6 +91,15 @@ public:
   }
 
   mlir::Value VisitUnaryDeref(const Expr *e);
+
+  mlir::Value VisitUnaryPlus(const UnaryOperator *e);
+
+  mlir::Value VisitPlus(const UnaryOperator *e, QualType promotionType);
+
+  mlir::Value VisitUnaryMinus(const UnaryOperator *e);
+
+  mlir::Value VisitMinus(const UnaryOperator *e, QualType promotionType);
+
   mlir::Value VisitUnaryNot(const UnaryOperator *e);
 
   struct BinOpInfo {
@@ -277,6 +286,50 @@ mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
   }
 
   llvm_unreachable("unknown cast resulting in complex value");
+}
+
+mlir::Value ComplexExprEmitter::VisitUnaryPlus(const UnaryOperator *e) {
+  QualType promotionTy = getPromotionType(e->getSubExpr()->getType());
+  mlir::Value result = VisitPlus(e, promotionTy);
+  if (!promotionTy.isNull()) {
+    cgf.cgm.errorNYI("ComplexExprEmitter::VisitUnaryPlus emitUnPromotedValue");
+    return {};
+  }
+  return result;
+}
+
+mlir::Value ComplexExprEmitter::VisitPlus(const UnaryOperator *e,
+                                          QualType promotionType) {
+  mlir::Value op;
+  if (!promotionType.isNull())
+    op = cgf.emitPromotedComplexExpr(e->getSubExpr(), promotionType);
+  else
+    op = Visit(e->getSubExpr());
+
+  return builder.createUnaryOp(cgf.getLoc(e->getExprLoc()),
+                               cir::UnaryOpKind::Plus, op);
+}
+
+mlir::Value ComplexExprEmitter::VisitUnaryMinus(const UnaryOperator *e) {
+  QualType promotionTy = getPromotionType(e->getSubExpr()->getType());
+  mlir::Value result = VisitMinus(e, promotionTy);
+  if (!promotionTy.isNull()) {
+    cgf.cgm.errorNYI("ComplexExprEmitter::VisitUnaryMinus emitUnPromotedValue");
+    return {};
+  }
+  return result;
+}
+
+mlir::Value ComplexExprEmitter::VisitMinus(const UnaryOperator *e,
+                                           QualType promotionType) {
+  mlir::Value op;
+  if (!promotionType.isNull())
+    op = cgf.emitPromotedComplexExpr(e->getSubExpr(), promotionType);
+  else
+    op = Visit(e->getSubExpr());
+
+  return builder.createUnaryOp(cgf.getLoc(e->getExprLoc()),
+                               cir::UnaryOpKind::Minus, op);
 }
 
 mlir::Value ComplexExprEmitter::emitConstant(
@@ -535,9 +588,15 @@ mlir::Value ComplexExprEmitter::emitPromoted(const Expr *e,
     default:
       break;
     }
-  } else if (isa<UnaryOperator>(e)) {
-    cgf.cgm.errorNYI("emitPromoted UnaryOperator");
-    return {};
+  } else if (const auto *unaryOp = dyn_cast<UnaryOperator>(e)) {
+    switch (unaryOp->getOpcode()) {
+    case UO_Minus:
+      return VisitMinus(unaryOp, promotionTy);
+    case UO_Plus:
+      return VisitPlus(unaryOp, promotionTy);
+    default:
+      break;
+    }
   }
 
   mlir::Value result = Visit(const_cast<Expr *>(e));
