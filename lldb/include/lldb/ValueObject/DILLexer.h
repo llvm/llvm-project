@@ -34,6 +34,7 @@ public:
     minus,
     numeric_constant,
     period,
+    plus,
     r_paren,
     r_square,
     star,

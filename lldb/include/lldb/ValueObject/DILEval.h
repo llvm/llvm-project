@@ -54,6 +54,17 @@ private:
   Visit(const ArraySubscriptNode *node) override;
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const BitFieldExtractionNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const ScalarLiteralNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP> Visit(const BinaryOpNode *node) override;
+
+  lldb::ValueObjectSP
+  ConvertValueObjectToTypeSystem(lldb::ValueObjectSP valobj,
+                                 lldb::TypeSystemSP type_system);
+
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryAddition(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                         uint32_t location, std::shared_ptr<StackFrame> ctx);
 
   // Used by the interpreter to create objects, perform casts, etc.
   lldb::TargetSP m_target;

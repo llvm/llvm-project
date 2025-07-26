@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/ValueObject/DILEval.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/ValueObject/DILAST.h"
@@ -400,6 +402,225 @@ Interpreter::Visit(const BitFieldExtractionNode *node) {
                                                 node->GetLocation());
   }
   return child_valobj_sp;
+}
+
+static CompilerType GetBasicTypeFromCU(std::shared_ptr<StackFrame> ctx,
+                                       lldb::BasicType basic_type) {
+  SymbolContext symbol_context =
+      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
+  auto language = symbol_context.comp_unit->GetLanguage();
+
+  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
+  auto type_system =
+      symbol_context.module_sp->GetTypeSystemForLanguage(language);
+
+  if (type_system)
+    if (auto compiler_type = type_system.get()->GetBasicTypeFromAST(basic_type))
+      return compiler_type;
+
+  CompilerType empty_type;
+  return empty_type;
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const ScalarLiteralNode *node) {
+  CompilerType result_type =
+      GetBasicTypeFromCU(m_exe_ctx_scope, node->GetType());
+  Scalar value = node->GetValue();
+
+  // Scalar later could be float or bool
+  if (result_type.IsInteger() || result_type.IsNullPtrType() ||
+      result_type.IsPointerType()) {
+    llvm::APInt val = value.GetAPSInt();
+    return ValueObject::CreateValueObjectFromAPInt(m_target, val, result_type,
+                                                   "result");
+  }
+
+  return lldb::ValueObjectSP();
+}
+
+static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
+                                 lldb::BasicType basic_type) {
+  if (type_system)
+    if (auto compiler_type = type_system.get()->GetBasicTypeFromAST(basic_type))
+      return compiler_type;
+
+  CompilerType empty_type;
+  return empty_type;
+}
+
+static CompilerType GetIntCompilerTypeForSize(uint32_t size, bool is_signed,
+                                              lldb::TypeSystemSP type_system,
+                                              std::shared_ptr<StackFrame> ctx) {
+  lldb::BasicType promote_types[] = {
+      lldb::eBasicTypeChar,     lldb::eBasicTypeUnsignedChar,
+      lldb::eBasicTypeShort,    lldb::eBasicTypeUnsignedShort,
+      lldb::eBasicTypeInt,      lldb::eBasicTypeUnsignedInt,
+      lldb::eBasicTypeLong,     lldb::eBasicTypeUnsignedLong,
+      lldb::eBasicTypeLongLong, lldb::eBasicTypeUnsignedLongLong,
+  };
+  for (auto &basic_type : promote_types) {
+    uint64_t byte_size = 0;
+    CompilerType type = GetBasicType(type_system, basic_type);
+    if (auto temp = type.GetByteSize(ctx.get()))
+      byte_size = *temp;
+    if (size < byte_size ||
+        (size == byte_size &&
+         is_signed == (bool)(type.GetTypeInfo() & lldb::eTypeIsSigned))) {
+      return type;
+    }
+  }
+
+  llvm_unreachable("size could not fit into long long");
+  return CompilerType();
+}
+
+static lldb::ValueObjectSP
+CreateValueObjectFromScalar(Scalar scalar, lldb::TargetSP target,
+                            lldb::TypeSystemSP type_system,
+                            std::shared_ptr<StackFrame> ctx) {
+  switch (scalar.GetType()) {
+  case Scalar::e_int: {
+    llvm::APSInt apsint = scalar.GetAPSInt();
+    auto ret_type = GetIntCompilerTypeForSize(
+        scalar.GetByteSize(), scalar.IsSigned(), type_system, ctx);
+    return ValueObject::CreateValueObjectFromAPInt(target, apsint, ret_type,
+                                                   "result");
+  }
+  case Scalar::e_float: {
+    llvm::APFloat apfloat = scalar.GetAPFloat();
+    auto ret_type =
+        scalar.GetByteSize() <= 4
+            ? type_system->GetBasicTypeFromAST(lldb::eBasicTypeFloat)
+            : type_system->GetBasicTypeFromAST(lldb::eBasicTypeDouble);
+    return ValueObject::CreateValueObjectFromAPFloat(target, apfloat, ret_type,
+                                                     "result");
+  }
+  default:
+    return lldb::ValueObjectSP();
+  }
+}
+
+static Scalar GetScalarFromValueObject(lldb::ValueObjectSP valobj,
+                                       std::shared_ptr<StackFrame> ctx) {
+  if (valobj->GetCompilerType().IsInteger()) {
+    llvm::Expected<llvm::APSInt> value = valobj->GetValueAsAPSInt();
+    if (value) {
+      auto type_size = valobj->GetCompilerType().GetBitSize(ctx.get());
+      if (type_size) {
+        llvm::APInt adjusted(*type_size, value->getExtValue(),
+                             value->isSigned());
+        return Scalar(adjusted);
+      }
+    }
+  } else {
+    llvm::Expected<llvm::APFloat> l_value = valobj->GetValueAsAPFloat();
+    if (l_value)
+      return Scalar(*l_value);
+  }
+  return Scalar();
+}
+
+static lldb::ValueObjectSP
+EvaluateArithmeticOp(lldb::TargetSP target, BinaryOpKind kind,
+                     lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                     std::shared_ptr<StackFrame> ctx) {
+  auto type_system = lhs->GetCompilerType().GetTypeSystem().GetSharedPointer();
+  Scalar l = GetScalarFromValueObject(lhs, ctx);
+  Scalar r = GetScalarFromValueObject(rhs, ctx);
+
+  if (!l.IsValid() || !r.IsValid())
+    return lldb::ValueObjectSP();
+
+  switch (kind) {
+  case BinaryOpKind::Add:
+    return CreateValueObjectFromScalar(l + r, target, type_system, ctx);
+
+  default:
+    assert(false && "invalid ast: invalid arithmetic operation");
+    return lldb::ValueObjectSP();
+  }
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateBinaryAddition(lldb::ValueObjectSP lhs,
+                                    lldb::ValueObjectSP rhs, uint32_t location,
+                                    std::shared_ptr<StackFrame> ctx) {
+  // Addition of two arithmetic types.
+  if (lhs->GetCompilerType().IsScalarType() &&
+      rhs->GetCompilerType().IsScalarType()) {
+    return EvaluateArithmeticOp(m_target, BinaryOpKind::Add, lhs, rhs, ctx);
+  }
+
+  // Removed pointer arithmetics
+  return llvm::make_error<DILDiagnosticError>(m_expr, "unimplemented",
+                                              location);
+}
+
+lldb::ValueObjectSP
+Interpreter::ConvertValueObjectToTypeSystem(lldb::ValueObjectSP valobj,
+                                            lldb::TypeSystemSP type_system) {
+  auto apsint = valobj->GetValueAsAPSInt();
+  if (apsint) {
+    llvm::APInt value = *apsint;
+    if (type_system) {
+      lldb::BasicType basic_type = valobj->GetCompilerType()
+                                       .GetCanonicalType()
+                                       .GetBasicTypeEnumeration();
+      if (auto compiler_type =
+              type_system.get()->GetBasicTypeFromAST(basic_type)) {
+        valobj->GetValue().SetCompilerType(compiler_type);
+        return ValueObject::CreateValueObjectFromAPInt(m_target, value,
+                                                       compiler_type, "result");
+      }
+    }
+  }
+
+  return lldb::ValueObjectSP();
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const BinaryOpNode *node) {
+  auto lhs_or_err = Evaluate(node->GetLHS());
+  if (!lhs_or_err)
+    return lhs_or_err;
+  lldb::ValueObjectSP lhs = *lhs_or_err;
+  auto rhs_or_err = Evaluate(node->GetRHS());
+  if (!rhs_or_err)
+    return rhs_or_err;
+  lldb::ValueObjectSP rhs = *rhs_or_err;
+
+  lldb::TypeSystemSP lhs_system =
+      lhs->GetCompilerType().GetTypeSystem().GetSharedPointer();
+  lldb::TypeSystemSP rhs_system =
+      rhs->GetCompilerType().GetTypeSystem().GetSharedPointer();
+
+  // Is this a correct way to check if type systems are the same?
+  if (lhs_system != rhs_system) {
+    // If one of the nodes is a scalar const, convert it to the
+    // type system of another one
+    if (node->GetLHS()->GetKind() == NodeKind::eScalarLiteralNode)
+      lhs = ConvertValueObjectToTypeSystem(lhs, rhs_system);
+    else if (node->GetRHS()->GetKind() == NodeKind::eScalarLiteralNode)
+      rhs = ConvertValueObjectToTypeSystem(rhs, lhs_system);
+    else
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, "incompatible type systems", node->GetLocation());
+  }
+
+  switch (node->GetKind()) {
+  case BinaryOpKind::Add:
+    return EvaluateBinaryAddition(lhs, rhs, node->GetLocation(),
+                                  m_exe_ctx_scope);
+
+    // Other ops
+
+  default:
+    break;
+  }
+
+  return llvm::make_error<DILDiagnosticError>(m_expr, "unimplemented",
+                                              node->GetLocation());
 }
 
 } // namespace lldb_private::dil
