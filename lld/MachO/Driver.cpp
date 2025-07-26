@@ -348,9 +348,10 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
   using namespace std::chrono;
   static const size_t pageSize = Process::getPageSizeEstimate();
   static const size_t largeArchive = 10 * 1024 * 1024;
-  static std::atomic_uint64_t totalBytes = 0;
-  std::atomic_int index = 0, included = 0;
+  std::atomic_int index = 0;
 #ifndef NDEBUG
+  std::atomic_int numDeferedFilesTouched = 0;
+  static std::atomic_uint64_t totalBytes = 0;
   auto t0 = high_resolution_clock::now();
 #endif
 
@@ -364,7 +365,7 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
         continue;
 #ifndef NDEBUG
       totalBytes += buff.size();
-      included += 1;
+      numDeferedFilesTouched += 1;
 #endif
 
       // Reference all file's mmap'd pages to load them into memory.
@@ -377,8 +378,9 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
 #ifndef NDEBUG
   auto dt = high_resolution_clock::now() - t0;
   if (Process::GetEnv("LLD_MULTI_THREAD_PAGE"))
-    std::cerr << "multiThreadedPageIn " << totalBytes << "/" << included << "/"
-              << deferred.size() << "/" << std::setprecision(4)
+    std::cerr << "multiThreadedPageIn " << totalBytes << "/"
+              << numDeferedFilesTouched << "/" << deferred.size() << "/"
+              << std::setprecision(4)
               << duration_cast<milliseconds>(dt).count() / 1000. << "\n";
 #endif
 }
