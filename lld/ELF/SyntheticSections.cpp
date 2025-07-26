@@ -1064,8 +1064,6 @@ void MipsGotSection::build() {
   // NB: GOT 'page address' entries have their VAs handled in writeTo as they
   // reference an OutputSection not a Symbol.
   for (FileGot &got : gots) {
-    static Undefined dummy(ctx.internalFile, "", STB_LOCAL, 0, 0);
-
     // Create relocations for TLS entries.
     for (std::pair<Symbol *, size_t> &p : got.tls) {
       Symbol *s = p.first;
@@ -1087,7 +1085,8 @@ void MipsGotSection::build() {
           ctx.mainPart->relaDyn->addReloc(
               {ctx.target->tlsModuleIndexRel, this, offset});
         else
-          addConstant({R_ADDEND, ctx.target->symbolicRel, offset, 1, &dummy});
+          addConstant(
+              {R_ADDEND, ctx.target->symbolicRel, offset, 1, ctx.dummySym});
       } else {
         // When building a shared library we still need a dynamic relocation
         // for the module index. Therefore only checking for
@@ -1129,7 +1128,7 @@ void MipsGotSection::build() {
         uint64_t offset = p.second * ctx.arg.wordsize;
         if (p.first.first == nullptr)
           addConstant({R_ADDEND, ctx.target->relativeRel, offset,
-                       p.first.second, &dummy});
+                       p.first.second, ctx.dummySym});
         else
           addConstant({R_ABS, ctx.target->relativeRel, offset, p.first.second,
                        p.first.first});
@@ -1167,7 +1166,7 @@ void MipsGotSection::build() {
       uint64_t offset = p.second * ctx.arg.wordsize;
       if (p.first.first == nullptr)
         addConstant({R_ADDEND, ctx.target->relativeRel, offset, p.first.second,
-                     &dummy});
+                     ctx.dummySym});
       else if (!ctx.arg.isPic)
         addConstant({R_ABS, ctx.target->relativeRel, offset, p.first.second,
                      p.first.first});
@@ -1665,13 +1664,10 @@ uint64_t DynamicReloc::getOffset() const {
 
 int64_t DynamicReloc::computeAddend(Ctx &ctx) const {
   switch (kind) {
+  case Computed:
+    llvm_unreachable("addend already computed");
   case AddendOnly:
-    assert(sym == nullptr);
-    return addend;
-  case AgainstSymbol:
-    assert(sym != nullptr);
-    return addend;
-  case AddendOnlyWithTargetVA: {
+  case AgainstSymbol: {
     uint64_t ca = inputSec->getRelocTargetVA(
         ctx, Relocation{expr, type, 0, addend, sym}, getOffset());
     return ctx.arg.is64 ? ca : SignExtend64<32>(ca);
@@ -1718,10 +1714,10 @@ void RelocationBaseSection::addAddendOnlyRelocIfNonPreemptible(
   // No need to write an addend to the section for preemptible symbols.
   if (sym.isPreemptible)
     addReloc({dynType, &isec, offsetInSec, DynamicReloc::AgainstSymbol, sym, 0,
-              R_ABS});
+              R_ADDEND});
   else
-    addReloc(DynamicReloc::AddendOnlyWithTargetVA, dynType, isec, offsetInSec,
-             sym, 0, R_ABS, addendRelType);
+    addReloc(DynamicReloc::AddendOnly, dynType, isec, offsetInSec, sym, 0,
+             R_ABS, addendRelType);
 }
 
 void RelocationBaseSection::mergeRels() {
@@ -1765,7 +1761,7 @@ void DynamicReloc::computeRaw(Ctx &ctx, SymbolTableBaseSection *symt) {
   r_offset = getOffset();
   r_sym = getSymIndex(symt);
   addend = computeAddend(ctx);
-  kind = AddendOnly; // Catch errors
+  kind = Computed; // Catch errors
 }
 
 void RelocationBaseSection::computeRels() {
