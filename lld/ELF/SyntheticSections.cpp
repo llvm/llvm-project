@@ -1647,6 +1647,8 @@ uint64_t DynamicReloc::getOffset() const {
 
 int64_t DynamicReloc::computeAddend(Ctx &ctx) const {
   switch (kind) {
+  case Computed:
+    llvm_unreachable("addend already computed");
   case AddendOnly:
   case AgainstSymbol: {
     uint64_t ca = inputSec->getRelocTargetVA(
@@ -1742,7 +1744,7 @@ void DynamicReloc::computeRaw(Ctx &ctx, SymbolTableBaseSection *symt) {
   r_offset = getOffset();
   r_sym = getSymIndex(symt);
   addend = computeAddend(ctx);
-  kind = AddendOnly; // Catch errors
+  kind = Computed; // Catch errors
 }
 
 void RelocationBaseSection::computeRels() {

@@ -419,6 +419,9 @@ private:
 class DynamicReloc {
 public:
   enum Kind {
+    /// The resulting dynamic relocation has already had its addend computed.
+    /// Calling computeAddend() is an error. Only for internal use.
+    Computed,
     /// The resulting dynamic relocation will not reference a symbol: #sym is
     /// only used to compute the addend with InputSection::getRelocTargetVA().
     /// Useful for various relative and TLS relocations (e.g. R_X86_64_TPOFF64).
@@ -454,7 +457,10 @@ public:
 
   uint64_t getOffset() const;
   uint32_t getSymIndex(SymbolTableBaseSection *symTab) const;
-  bool needsDynSymIndex() const { return kind == AgainstSymbol; }
+  bool needsDynSymIndex() const {
+    assert(kind != Computed && "cannot check kind after computeRaw");
+    return kind == AgainstSymbol;
+  }
 
   /// Computes the addend of the dynamic relocation. Note that this is not the
   /// same as the #addend member variable as it may also include the symbol
