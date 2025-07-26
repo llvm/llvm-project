@@ -703,6 +703,14 @@ protected:
   /// otherwise same as readStringFromTable, also return its hash value.
   ErrorOr<std::pair<SampleContext, uint64_t>> readSampleContextFromTable();
 
+  /// Read all virtual functions' vtable access counts for \p FProfile.
+  std::error_code readCallsiteVTableProf(FunctionSamples &FProfile);
+
+  /// Read bytes from the input buffer pointed by `Data` and decode them into
+  /// \p M. `Data` will be advanced to the end of the read bytes when this
+  /// function returns. Returns error if any.
+  std::error_code readVTableTypeCountMap(TypeCountMap &M);
+
   /// Points to the current location in the buffer.
   const uint8_t *Data = nullptr;
 
@@ -726,6 +734,10 @@ protected:
   /// hashes of non-CS contexts are already in the profile. Otherwise it points
   /// to the start of MD5SampleContextTable.
   const uint64_t *MD5SampleContextStart = nullptr;
+
+  /// If true, the profile has vtable profiles and reader should decode them
+  /// to parse profiles correctly.
+  bool ReadVTableProf = false;
 
 private:
   std::error_code readSummaryEntry(std::vector<ProfileSummaryEntry> &Entries);
