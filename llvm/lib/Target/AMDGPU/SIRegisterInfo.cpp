@@ -631,11 +631,15 @@ SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
   return std::pair(MaxNumVGPRs, MaxNumAGPRs);
 }
 
-BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
-  BitVector Reserved(getNumRegs());
-  Reserved.set(AMDGPU::MODE);
+BitVector SIRegisterInfo::getAlwaysReservedRegs() const {
+  static BitVector AlwaysReservedRegs;
+  // Already been calculated, so do not compute again.
+  if (AlwaysReservedRegs.size() == getNumRegs())
+    return AlwaysReservedRegs;
 
-  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  AlwaysReservedRegs = BitVector(getNumRegs());
+  auto &Reserved = AlwaysReservedRegs;
+  Reserved.set(AMDGPU::MODE);
 
   // Reserve special purpose registers.
   //
@@ -686,6 +690,12 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Reserve null register - it shall never be allocated
   reserveRegisterTuples(Reserved, AMDGPU::SGPR_NULL64);
 
+  return Reserved;
+}
+
+BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
+  BitVector Reserved = getAlwaysReservedRegs();
+
   // Reserve SGPRs.
   //
   unsigned MaxNumSGPRs = ST.getMaxNumSGPRs(MF);
@@ -701,6 +711,7 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     }
   }
 
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   Register ScratchRSrcReg = MFI->getScratchRSrcReg();
   if (ScratchRSrcReg != AMDGPU::NoRegister) {
     // Reserve 4 SGPRs for the scratch buffer resource descriptor in case we
