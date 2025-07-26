@@ -501,6 +501,9 @@ public:
   /// For example, "fooos1.2.3" would return "1.2.3".
   LLVM_ABI StringRef getEnvironmentVersionString() const;
 
+  /// getDefaultTextEncoding - Get the default encoding of the triple.
+  StringRef getDefaultTextEncoding() const;
+
   /// @}
   /// @name Convenience Predicates
   /// @{
