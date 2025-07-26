@@ -971,7 +971,7 @@ define i8 @same_exit_block_reverse_use_loaded_value() {
 ; VF4IC4-NEXT:    [[TMP48:%.*]] = extractelement <4 x i8> [[REVERSE7]], i64 [[TMP47]]
 ; VF4IC4-NEXT:    [[TMP49:%.*]] = icmp uge i64 [[TMP10]], 12
 ; VF4IC4-NEXT:    [[TMP50:%.*]] = select i1 [[TMP49]], i8 [[TMP48]], i8 [[TMP46]]
-; VF4IC4-NEXT:    br label [[LOOP_END]]
+; VF4IC4-NEXT:    br label [[LOOP_END:%.*]]
 ; VF4IC4:       scalar.ph:
 ; VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 15, [[MIDDLE_BLOCK]] ], [ 1023, [[ENTRY:%.*]] ]
 ; VF4IC4-NEXT:    br label [[LOOP:%.*]]
@@ -988,7 +988,7 @@ define i8 @same_exit_block_reverse_use_loaded_value() {
 ; VF4IC4-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 0
 ; VF4IC4-NEXT:    br i1 [[EXITCOND]], label [[LOOP_END]], label [[LOOP]], !llvm.loop [[LOOP19:![0-9]+]]
 ; VF4IC4:       loop.end:
-; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi i8 [ [[LD1]], [[LOOP]] ], [ -1, [[LOOP_INC]] ], [ -1, [[MIDDLE_BLOCK]] ], [ [[TMP50]], [[VECTOR_EARLY_EXIT]] ]
+; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi i8 [ [[LD1]], [[LOOP]] ], [ -1, [[LOOP_INC]] ], [ [[TMP50]], [[VECTOR_EARLY_EXIT]] ]
 ; VF4IC4-NEXT:    ret i8 [[RETVAL]]
 ;
 entry:
