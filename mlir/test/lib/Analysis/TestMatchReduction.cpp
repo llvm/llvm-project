@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 
@@ -69,7 +70,10 @@ struct TestMatchReductionPass
       if (args.size() < 2)
         return;
 
-      auto outputs = args.drop_front();
+      unsigned inputsNum = 1;
+      if (auto destOp = dyn_cast<DestinationStyleOpInterface>(op))
+        inputsNum = destOp.getNumDpsInputs();
+      auto outputs = args.drop_front(inputsNum);
       for (int i = 0, size = outputs.size(); i < size; ++i) {
         SmallVector<Operation *, 4> combinerOps;
         Value reducedValue = matchReduction(outputs, i, combinerOps);
