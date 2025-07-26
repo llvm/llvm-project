@@ -202,7 +202,17 @@ SourceRange InterpFrame::getCallRange() const {
       return NullRange;
     return S.EvalLocation;
   }
-  return S.getRange(Caller->Func, RetPC - sizeof(uintptr_t));
+
+  // Move up to the frame that has a valid location for the caller.
+  for (const InterpFrame *C = this; C; C = C->Caller) {
+    if (!C->RetPC)
+      continue;
+    SourceRange CallRange =
+        S.getRange(C->Caller->Func, C->RetPC - sizeof(uintptr_t));
+    if (CallRange.isValid())
+      return CallRange;
+  }
+  return S.EvalLocation;
 }
 
 const FunctionDecl *InterpFrame::getCallee() const {

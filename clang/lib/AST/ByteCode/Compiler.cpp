@@ -194,6 +194,31 @@ private:
   bool OldFlag;
 };
 
+/// When generating code for e.g. implicit field initializers in constructors,
+/// we don't have anything to point to in case the initializer causes an error.
+/// In that case, we need to disable location tracking for the initializer so
+/// we later point to the call range instead.
+template <class Emitter> class LocOverrideScope final {
+public:
+  LocOverrideScope(Compiler<Emitter> *Ctx, SourceInfo NewValue,
+                   bool Enabled = true)
+      : Ctx(Ctx), OldFlag(Ctx->LocOverride), Enabled(Enabled) {
+
+    if (Enabled)
+      Ctx->LocOverride = NewValue;
+  }
+
+  ~LocOverrideScope() {
+    if (Enabled)
+      Ctx->LocOverride = OldFlag;
+  }
+
+private:
+  Compiler<Emitter> *Ctx;
+  std::optional<SourceInfo> OldFlag;
+  bool Enabled;
+};
+
 } // namespace interp
 } // namespace clang
 
@@ -5985,6 +6010,8 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
   bool IsUnion = R->isUnion();
 
   if (IsUnion && Ctor->isCopyOrMoveConstructor()) {
+    LocOverrideScope<Emitter> LOS(this, SourceInfo{});
+
     if (R->getNumFields() == 0)
       return this->emitRetVoid(Ctor);
     // union copy and move ctors are special.
@@ -6011,6 +6038,11 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     if (const FieldDecl *Member = Init->getMember()) {
       const Record::Field *F = R->getField(Member);
 
+      LocOverrideScope<Emitter> LOS(this, SourceInfo{},
+                                    !Init->isWritten() &&
+                                        !Init->isInClassMemberInitializer() &&
+                                        (!isa<CXXConstructExpr>(InitExpr) ||
+                                         Member->isAnonymousStructOrUnion()));
       if (!emitFieldInitializer(F, F->Offset, InitExpr, IsUnion))
         return false;
     } else if (const Type *Base = Init->getBaseClass()) {
@@ -6039,6 +6071,10 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       if (!this->emitFinishInitPop(InitExpr))
         return false;
     } else if (const IndirectFieldDecl *IFD = Init->getIndirectMember()) {
+      LocOverrideScope<Emitter> LOS(this, SourceInfo{},
+                                    !Init->isWritten() &&
+                                        !Init->isInClassMemberInitializer() &&
+                                        !isa<CXXConstructExpr>(InitExpr));
 
       assert(IFD->getChainingSize() >= 2);
 
@@ -6117,6 +6153,8 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
 
   assert(R);
   if (!R->isUnion()) {
+
+    LocOverrideScope<Emitter> LOS(this, SourceInfo{});
     // First, destroy all fields.
     for (const Record::Field &Field : llvm::reverse(R->fields())) {
       const Descriptor *D = Field.Desc;
