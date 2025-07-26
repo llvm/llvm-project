@@ -1154,7 +1154,7 @@ void LoongArch::tlsdescToLe(uint8_t *loc, const Relocation &rel,
   }
 }
 
-// Try GOT indirection to PC relative optimization when relaxation is enabled.
+// Try GOT indirection to PC relative optimization.
 // From:
 //  * pcalau12i $a0, %got_pc_hi20(sym_got)
 //  * ld.w/d    $a0, $a0, %got_pc_lo12(sym_got)
@@ -1167,26 +1167,47 @@ void LoongArch::tlsdescToLe(uint8_t *loc, const Relocation &rel,
 // complexity.
 bool LoongArch::tryGotToPCRel(uint8_t *loc, const Relocation &rHi20,
                               const Relocation &rLo12, uint64_t secAddr) const {
-  if (!rHi20.sym->isDefined() || rHi20.sym->isPreemptible ||
-      rHi20.sym->isGnuIFunc() ||
-      (ctx.arg.isPic && !cast<Defined>(*rHi20.sym).section))
+  // Check if the relocations apply to consecutive instructions.
+  if (rHi20.offset + 4 != rLo12.offset)
     return false;
 
-  Symbol &sym = *rHi20.sym;
-  uint64_t symLocal = sym.getVA(ctx) + rHi20.addend;
-  // Check if the address difference is within +/-2GB range.
-  // For simplicity, the range mentioned here is an approximate estimate and is
-  // not fully equivalent to the entire region that PC-relative addressing can
-  // cover.
-  int64_t pageOffset =
-      getLoongArchPage(symLocal) - getLoongArchPage(secAddr + rHi20.offset);
-  if (!isInt<20>(pageOffset >> 12))
+  // Check if the relocations reference the same symbol and skip undefined,
+  // preemptible and STT_GNU_IFUNC symbols.
+  if (!rHi20.sym || rHi20.sym != rLo12.sym || !rHi20.sym->isDefined() ||
+      rHi20.sym->isPreemptible || rHi20.sym->isGnuIFunc())
+    return false;
+
+  // GOT references to absolute symbols can't be relaxed to use PCALAU12I/ADDI
+  // in position-independent code because these instructions produce a relative
+  // address.
+  if ((ctx.arg.isPic && !cast<Defined>(*rHi20.sym).section))
+    return false;
+
+  // Check if the addends of the both relocations are zero.
+  if (rHi20.addend != 0 || rLo12.addend != 0)
     return false;
 
   const uint32_t currInsn = read32le(loc);
   const uint32_t nextInsn = read32le(loc + 4);
+  const uint32_t ldOpcode = ctx.arg.is64 ? LD_D : LD_W;
+  // Check if the first instruction is PCALAU12I and the second instruction is
+  // LD.
+  if ((currInsn & 0xfe000000) != PCALAU12I ||
+      (nextInsn & 0xffc00000) != ldOpcode)
+    return false;
+
   // Check if use the same register.
   if (getD5(currInsn) != getJ5(nextInsn) || getJ5(nextInsn) != getD5(nextInsn))
+    return false;
+
+  Symbol &sym = *rHi20.sym;
+  uint64_t symLocal = sym.getVA(ctx);
+  const int64_t displace = symLocal - getLoongArchPage(secAddr + rHi20.offset);
+  // Check if the symbol address is in
+  // [(PC & ~0xfff) - 2GiB - 0x800, (PC & ~0xfff) + 2GiB - 0x800).
+  const int64_t underflow = -0x80000000LL - 0x800;
+  const int64_t overflow = 0x80000000LL - 0x800;
+  if (!(displace >= underflow && displace < overflow))
     return false;
 
   Relocation newRHi20 = {RE_LOONGARCH_PAGE_PC, R_LARCH_PCALA_HI20, rHi20.offset,
@@ -1222,6 +1243,30 @@ RelExpr LoongArch::adjustTlsExpr(RelType type, RelExpr expr) const {
   return expr;
 }
 
+static bool pairForGotRels(ArrayRef<Relocation> relocs) {
+  // Check if R_LARCH_GOT_PC_HI20 and R_LARCH_GOT_PC_LO12 always appear in
+  // pairs.
+  size_t i = 0;
+  const size_t size = relocs.size();
+  for (; i != size; ++i) {
+    if (relocs[i].type == R_LARCH_GOT_PC_HI20) {
+      if (i + 1 < size && relocs[i + 1].type == R_LARCH_GOT_PC_LO12) {
+        ++i;
+        continue;
+      }
+      if (relaxable(relocs, i) && i + 2 < size &&
+          relocs[i + 2].type == R_LARCH_GOT_PC_LO12) {
+        i += 2;
+        continue;
+      }
+      break;
+    } else if (relocs[i].type == R_LARCH_GOT_PC_LO12) {
+      break;
+    }
+  }
+  return i == size;
+}
+
 void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   const unsigned bits = ctx.arg.is64 ? 64 : 32;
   uint64_t secAddr = sec.getOutputSection()->addr;
@@ -1231,6 +1276,7 @@ void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     secAddr += ehIn->getParent()->outSecOff;
   bool isExtreme = false, isRelax = false;
   const MutableArrayRef<Relocation> relocs = sec.relocs();
+  const bool isPairForGotRels = pairForGotRels(relocs);
   for (size_t i = 0, size = relocs.size(); i != size; ++i) {
     Relocation &rel = relocs[i];
     uint8_t *loc = buf + rel.offset;
@@ -1315,19 +1361,21 @@ void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
       }
       continue;
     case RE_LOONGARCH_GOT_PAGE_PC:
-      // In LoongArch, we try GOT indirection to PC relative optimization only
-      // when relaxation is enabled. This approach avoids determining whether
-      // relocation types are paired and whether the destination register of
-      // pcalau12i is only used by the immediately following instruction.
-      // Moreover, if the original code sequence can be relaxed to a single
-      // instruction `pcaddi`, the first instruction will be removed and it will
-      // not reach here.
-      if (isPairRelaxable(relocs, i) && rel.type == R_LARCH_GOT_PC_HI20 &&
-          relocs[i + 2].type == R_LARCH_GOT_PC_LO12 &&
-          tryGotToPCRel(loc, rel, relocs[i + 2], secAddr)) {
-        i = i + 3; // skip relocations R_LARCH_RELAX, R_LARCH_GOT_PC_LO12,
-                   // R_LARCH_RELAX
-        continue;
+      // In LoongArch, we try GOT indirection to PC relative optimization in
+      // normal or medium code model, whether or not with R_LARCH_RELAX
+      // relocation. Moreover, if the original code sequence can be relaxed to a
+      // single instruction `pcaddi`, the first instruction will be removed and
+      // it will not reach here.
+      if (isPairForGotRels && rel.type == R_LARCH_GOT_PC_HI20) {
+        bool isRelax = relaxable(relocs, i);
+        const Relocation lo12Rel = isRelax ? relocs[i + 2] : relocs[i + 1];
+        if (lo12Rel.type == R_LARCH_GOT_PC_LO12 &&
+            tryGotToPCRel(loc, rel, lo12Rel, secAddr)) {
+          // isRelax: skip relocations R_LARCH_RELAX, R_LARCH_GOT_PC_LO12
+          // !isRelax: skip relocation R_LARCH_GOT_PC_LO12
+          i += isRelax ? 2 : 1;
+          continue;
+        }
       }
       break;
     default:
