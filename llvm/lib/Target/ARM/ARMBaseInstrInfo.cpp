@@ -3089,16 +3089,40 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
           break;
         case ARMCC::HS: // C
         case ARMCC::LO: // C
-        case ARMCC::VS: // V
-        case ARMCC::VC: // V
         case ARMCC::HI: // C Z
         case ARMCC::LS: // C Z
+          // The instruction uses the C bit which is not safe.
+          return false;
+        case ARMCC::VS: // V
+        case ARMCC::VC: // V
         case ARMCC::GE: // N V
         case ARMCC::LT: // N V
         case ARMCC::GT: // Z N V
         case ARMCC::LE: // Z N V
-          // The instruction uses the V bit or C bit which is not safe.
+        {
+          // We MAY be able to do this if signed overflow is
+          // poison.
+
+          if (I->getFlag(MachineInstr::NoSWrap)) {
+            // Only adds and subs can set the V bit.
+            unsigned Opc = I->getOpcode();
+            bool IsSub = Opc == ARM::SUBrr || Opc == ARM::t2SUBrr ||
+                         Opc == ARM::SUBri || Opc == ARM::t2SUBri ||
+                         Opc == ARM::tSUBrr || Opc == ARM::tSUBi3 ||
+                         Opc == ARM::tSUBi8;
+
+            bool IsAdd = Opc == ARM::ADDrr || Opc == ARM::t2ADDrr ||
+                         Opc == ARM::ADDri || Opc == ARM::t2ADDri ||
+                         Opc == ARM::tADDrr || Opc == ARM::tADDi3 ||
+                         Opc == ARM::tADDi8;
+
+            if (IsSub || IsAdd)
+              break;
+          }
+
+          // The instruction uses the V bit which is not safe.
           return false;
+        }
         }
       }
     }

@@ -1745,8 +1745,24 @@ static unsigned sForm(MachineInstr &Instr) {
     return AArch64::SBCSXr;
   case AArch64::ANDWri:
     return AArch64::ANDSWri;
+  case AArch64::ANDWrr:
+    return AArch64::ANDSWrr;
+  case AArch64::ANDWrs:
+    return AArch64::ANDSWrs;
+  case AArch64::BICWrr:
+    return AArch64::BICSWrr;
+  case AArch64::BICWrs:
+    return AArch64::BICSWrs;
   case AArch64::ANDXri:
     return AArch64::ANDSXri;
+  case AArch64::ANDXrr:
+    return AArch64::ANDSXrr;
+  case AArch64::ANDXrs:
+    return AArch64::ANDSXrs;
+  case AArch64::BICXrr:
+    return AArch64::BICSXrr;
+  case AArch64::BICXrs:
+    return AArch64::BICSXrs;
   }
 }
 
@@ -1884,6 +1900,24 @@ static bool isSUBSRegImm(unsigned Opcode) {
   return Opcode == AArch64::SUBSWri || Opcode == AArch64::SUBSXri;
 }
 
+static bool isANDSOpcode(MachineInstr &MI) {
+  switch (sForm(MI)) {
+  case AArch64::ANDSWri:
+  case AArch64::ANDSWrr:
+  case AArch64::ANDSWrs:
+  case AArch64::ANDSXri:
+  case AArch64::ANDSXrr:
+  case AArch64::ANDSXrs:
+  case AArch64::BICSWrr:
+  case AArch64::BICSWrs:
+  case AArch64::BICSXrr:
+  case AArch64::BICSXrs:
+    return true;
+  default:
+    return false;
+  }
+}
+
 /// Check if CmpInstr can be substituted by MI.
 ///
 /// CmpInstr can be substituted:
@@ -1892,11 +1926,11 @@ static bool isSUBSRegImm(unsigned Opcode) {
 /// - and, condition flags are not alive in successors of the CmpInstr parent
 /// - and, if MI opcode is the S form there must be no defs of flags between
 ///        MI and CmpInstr
-///        or if MI opcode is not the S form there must be neither defs of flags
-///        nor uses of flags between MI and CmpInstr.
+///        or if MI opcode is not the S form there must be neither defs of
+///        flags nor uses of flags between MI and CmpInstr.
 /// - and, if C/V flags are not used after CmpInstr
-///        or if N flag is used but MI produces poison value if signed overflow
-///        occurs.
+///        or if N flag is used but MI produces poison value if signed
+///        overflow occurs.
 static bool canInstrSubstituteCmpInstr(MachineInstr &MI, MachineInstr &CmpInstr,
                                        const TargetRegisterInfo &TRI) {
   // NOTE this assertion guarantees that MI.getOpcode() is add or subtraction
@@ -1912,7 +1946,17 @@ static bool canInstrSubstituteCmpInstr(MachineInstr &MI, MachineInstr &CmpInstr,
          "Caller guarantees that CmpInstr compares with constant 0");
 
   std::optional<UsedNZCV> NZVCUsed = examineCFlagsUse(MI, CmpInstr, TRI);
-  if (!NZVCUsed || NZVCUsed->C)
+  if (!NZVCUsed)
+    return false;
+
+  // CmpInstr is either 'ADDS %vreg, 0' or 'SUBS %vreg, 0', and MI is either
+  // '%vreg = add ...' or '%vreg = sub ...'.
+  // Condition flag C is used to indicate unsigned overflow.
+  // 1) MI and CmpInstr set N and C to the same value if Cmp is an adds
+  // 2) ADDS x, 0, always sets C to 0.
+  // In practice we should not really get here, as an unsigned comparison with
+  // 0 should have been optimized out anyway, but just in case.
+  if (NZVCUsed->C && !isADDSRegImm(CmpOpcode))
     return false;
 
   // CmpInstr is either 'ADDS %vreg, 0' or 'SUBS %vreg, 0', and MI is either
@@ -1921,7 +1965,8 @@ static bool canInstrSubstituteCmpInstr(MachineInstr &MI, MachineInstr &CmpInstr,
   // 1) MI and CmpInstr set N and V to the same value.
   // 2) If MI is add/sub with no-signed-wrap, it produces a poison value when
   //    signed overflow occurs, so CmpInstr could still be simplified away.
-  if (NZVCUsed->V && !MI.getFlag(MachineInstr::NoSWrap))
+  // 3) ANDS also always sets V to 0.
+  if (NZVCUsed->V && !MI.getFlag(MachineInstr::NoSWrap) && !isANDSOpcode(MI))
     return false;
 
   AccessKind AccessToCheck = AK_Write;
@@ -2099,8 +2144,7 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
   if (MI.getOpcode() == AArch64::CATCHRET) {
     // Skip to the first instruction before the epilog.
-    const TargetInstrInfo *TII =
-      MBB.getParent()->getSubtarget().getInstrInfo();
+    const TargetInstrInfo *TII = MBB.getParent()->getSubtarget().getInstrInfo();
     MachineBasicBlock *TargetMBB = MI.getOperand(0).getMBB();
     auto MBBI = MachineBasicBlock::iterator(MI);
     MachineBasicBlock::iterator FirstEpilogSEH = std::prev(MBBI);
@@ -2168,16 +2212,16 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           .addUse(Reg, RegState::Kill)
           .addImm(0);
     } else {
-      // Cases that are larger than +/- 4095 and not a multiple of 8, or larger
-      // than 23760.
-      // It might be nice to use AArch64::MOVi32imm here, which would get
-      // expanded in PreSched2 after PostRA, but our lone scratch Reg already
-      // contains the MRS result. findScratchNonCalleeSaveRegister() in
-      // AArch64FrameLowering might help us find such a scratch register
-      // though. If we failed to find a scratch register, we could emit a
-      // stream of add instructions to build up the immediate. Or, we could try
-      // to insert a AArch64::MOVi32imm before register allocation so that we
-      // didn't need to scavenge for a scratch register.
+      // Cases that are larger than +/- 4095 and not a multiple of 8, or
+      // larger than 23760. It might be nice to use AArch64::MOVi32imm here,
+      // which would get expanded in PreSched2 after PostRA, but our lone
+      // scratch Reg already contains the MRS result.
+      // findScratchNonCalleeSaveRegister() in AArch64FrameLowering might help
+      // us find such a scratch register though. If we failed to find a
+      // scratch register, we could emit a stream of add instructions to build
+      // up the immediate. Or, we could try to insert a AArch64::MOVi32imm
+      // before register allocation so that we didn't need to scavenge for a
+      // scratch register.
       report_fatal_error("Unable to encode Stack Protector Guard Offset");
     }
     MBB.erase(MI);
@@ -2437,31 +2481,56 @@ bool AArch64InstrInfo::hasUnscaledLdStOffset(unsigned Opc) {
 
 std::optional<unsigned> AArch64InstrInfo::getUnscaledLdSt(unsigned Opc) {
   switch (Opc) {
-  default: return {};
-  case AArch64::PRFMui: return AArch64::PRFUMi;
-  case AArch64::LDRXui: return AArch64::LDURXi;
-  case AArch64::LDRWui: return AArch64::LDURWi;
-  case AArch64::LDRBui: return AArch64::LDURBi;
-  case AArch64::LDRHui: return AArch64::LDURHi;
-  case AArch64::LDRSui: return AArch64::LDURSi;
-  case AArch64::LDRDui: return AArch64::LDURDi;
-  case AArch64::LDRQui: return AArch64::LDURQi;
-  case AArch64::LDRBBui: return AArch64::LDURBBi;
-  case AArch64::LDRHHui: return AArch64::LDURHHi;
-  case AArch64::LDRSBXui: return AArch64::LDURSBXi;
-  case AArch64::LDRSBWui: return AArch64::LDURSBWi;
-  case AArch64::LDRSHXui: return AArch64::LDURSHXi;
-  case AArch64::LDRSHWui: return AArch64::LDURSHWi;
-  case AArch64::LDRSWui: return AArch64::LDURSWi;
-  case AArch64::STRXui: return AArch64::STURXi;
-  case AArch64::STRWui: return AArch64::STURWi;
-  case AArch64::STRBui: return AArch64::STURBi;
-  case AArch64::STRHui: return AArch64::STURHi;
-  case AArch64::STRSui: return AArch64::STURSi;
-  case AArch64::STRDui: return AArch64::STURDi;
-  case AArch64::STRQui: return AArch64::STURQi;
-  case AArch64::STRBBui: return AArch64::STURBBi;
-  case AArch64::STRHHui: return AArch64::STURHHi;
+  default:
+    return {};
+  case AArch64::PRFMui:
+    return AArch64::PRFUMi;
+  case AArch64::LDRXui:
+    return AArch64::LDURXi;
+  case AArch64::LDRWui:
+    return AArch64::LDURWi;
+  case AArch64::LDRBui:
+    return AArch64::LDURBi;
+  case AArch64::LDRHui:
+    return AArch64::LDURHi;
+  case AArch64::LDRSui:
+    return AArch64::LDURSi;
+  case AArch64::LDRDui:
+    return AArch64::LDURDi;
+  case AArch64::LDRQui:
+    return AArch64::LDURQi;
+  case AArch64::LDRBBui:
+    return AArch64::LDURBBi;
+  case AArch64::LDRHHui:
+    return AArch64::LDURHHi;
+  case AArch64::LDRSBXui:
+    return AArch64::LDURSBXi;
+  case AArch64::LDRSBWui:
+    return AArch64::LDURSBWi;
+  case AArch64::LDRSHXui:
+    return AArch64::LDURSHXi;
+  case AArch64::LDRSHWui:
+    return AArch64::LDURSHWi;
+  case AArch64::LDRSWui:
+    return AArch64::LDURSWi;
+  case AArch64::STRXui:
+    return AArch64::STURXi;
+  case AArch64::STRWui:
+    return AArch64::STURWi;
+  case AArch64::STRBui:
+    return AArch64::STURBi;
+  case AArch64::STRHui:
+    return AArch64::STURHi;
+  case AArch64::STRSui:
+    return AArch64::STURSi;
+  case AArch64::STRDui:
+    return AArch64::STURDi;
+  case AArch64::STRQui:
+    return AArch64::STURQi;
+  case AArch64::STRBBui:
+    return AArch64::STURBBi;
+  case AArch64::STRHHui:
+    return AArch64::STURHHi;
   }
 }
 
@@ -2909,8 +2978,8 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
           MI.getOperand(IsPreLdSt ? 2 : 1).isFI()) &&
          "Expected a reg or frame index operand.");
 
-  // For Pre-indexed addressing quadword instructions, the third operand is the
-  // immediate value.
+  // For Pre-indexed addressing quadword instructions, the third operand is
+  // the immediate value.
   bool IsImmPreLdSt = IsPreLdSt && MI.getOperand(3).isImm();
 
   if (!MI.getOperand(2).isImm() && !IsImmPreLdSt)
@@ -2951,9 +3020,9 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
     return false;
 
   // Do not pair any callee-save store/reload instructions in the
-  // prologue/epilogue if the CFI information encoded the operations as separate
-  // instructions, as that will cause the size of the actual prologue to mismatch
-  // with the prologue size recorded in the Windows CFI.
+  // prologue/epilogue if the CFI information encoded the operations as
+  // separate instructions, as that will cause the size of the actual prologue
+  // to mismatch with the prologue size recorded in the Windows CFI.
   const MCAsmInfo *MAI = MI.getMF()->getTarget().getMCAsmInfo();
   bool NeedsWinCFI = MAI->usesWindowsCFI() &&
                      MI.getMF()->getFunction().needsUnwindTableEntry();
@@ -2961,7 +3030,8 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
                       MI.getFlag(MachineInstr::FrameDestroy)))
     return false;
 
-  // On some CPUs quad load/store pairs are slower than two single load/stores.
+  // On some CPUs quad load/store pairs are slower than two single
+  // load/stores.
   if (Subtarget.isPaired128Slow()) {
     switch (MI.getOpcode()) {
     default:
@@ -3138,8 +3208,8 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
       OffsetScale = 1;
 
     // If the address instructions is folded into the base register, then the
-    // addressing mode must not have a scale. Then we can swap the base and the
-    // scaled registers.
+    // addressing mode must not have a scale. Then we can swap the base and
+    // the scaled registers.
     if (MemI.getOperand(1).getReg() == Reg && OffsetScale != 1)
       return false;
 
@@ -3344,8 +3414,8 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
 }
 
 // Given an opcode for an instruction with a [Reg, #Imm] addressing mode,
-// return the opcode of an instruction performing the same operation, but using
-// the [Reg, Reg] addressing mode.
+// return the opcode of an instruction performing the same operation, but
+// using the [Reg, Reg] addressing mode.
 static unsigned regOffsetOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
@@ -3417,9 +3487,9 @@ static unsigned regOffsetOpcode(unsigned Opcode) {
   }
 }
 
-// Given an opcode for an instruction with a [Reg, #Imm] addressing mode, return
-// the opcode of an instruction performing the same operation, but using the
-// [Reg, #Imm] addressing mode with scaled offset.
+// Given an opcode for an instruction with a [Reg, #Imm] addressing mode,
+// return the opcode of an instruction performing the same operation, but
+// using the [Reg, #Imm] addressing mode with scaled offset.
 unsigned scaledOffsetOpcode(unsigned Opcode, unsigned &Scale) {
   switch (Opcode) {
   default:
@@ -3522,9 +3592,9 @@ unsigned scaledOffsetOpcode(unsigned Opcode, unsigned &Scale) {
   }
 }
 
-// Given an opcode for an instruction with a [Reg, #Imm] addressing mode, return
-// the opcode of an instruction performing the same operation, but using the
-// [Reg, #Imm] addressing mode with unscaled offset.
+// Given an opcode for an instruction with a [Reg, #Imm] addressing mode,
+// return the opcode of an instruction performing the same operation, but
+// using the [Reg, #Imm] addressing mode with unscaled offset.
 unsigned unscaledOffsetOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
@@ -3597,10 +3667,9 @@ unsigned unscaledOffsetOpcode(unsigned Opcode) {
   }
 }
 
-// Given the opcode of a memory load/store instruction, return the opcode of an
-// instruction performing the same operation, but using
-// the [Reg, Reg, {s,u}xtw #N] addressing mode with sign-/zero-extend of the
-// offset register.
+// Given the opcode of a memory load/store instruction, return the opcode of
+// an instruction performing the same operation, but using the [Reg, Reg,
+// {s,u}xtw #N] addressing mode with sign-/zero-extend of the offset register.
 static unsigned offsetExtendOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
@@ -3740,7 +3809,8 @@ MachineInstr *AArch64InstrInfo::emitLdStWithAddr(MachineInstr &MemI,
 
   if (AM.Form == ExtAddrMode::Formula::SExtScaledReg ||
       AM.Form == ExtAddrMode::Formula::ZExtScaledReg) {
-    // The new instruction will be in the form `ldr Rt, [Xn, Wm, {s,u}xtw #N]`.
+    // The new instruction will be in the form `ldr Rt, [Xn, Wm, {s,u}xtw
+    // #N]`.
     assert(AM.ScaledReg && !AM.Displacement &&
            "Address offset can be a register or an immediate, but not both");
     unsigned Opcode = offsetExtendOpcode(MemI.getOpcode());
@@ -4023,8 +4093,8 @@ bool AArch64InstrInfo::getMemOperandWithOffsetWidth(
     return false;
 
   // Compute the offset. Offset is calculated as the immediate operand
-  // multiplied by the scaling factor. Unscaled instructions have scaling factor
-  // set to 1. Postindex are a special case which have an offset of 0.
+  // multiplied by the scaling factor. Unscaled instructions have scaling
+  // factor set to 1. Postindex are a special case which have an offset of 0.
   if (isPostIndexLdStOpcode(LdSt.getOpcode())) {
     BaseOp = &LdSt.getOperand(2);
     Offset = 0;
@@ -4728,8 +4798,7 @@ bool AArch64InstrInfo::isHForm(const MachineInstr &MI) {
     if (Reg.isPhysical())
       return AArch64::FPR16RegClass.contains(Reg);
     const TargetRegisterClass *TRC = ::getRegClass(MI, Reg);
-    return TRC == &AArch64::FPR16RegClass ||
-           TRC == &AArch64::FPR16_loRegClass;
+    return TRC == &AArch64::FPR16RegClass || TRC == &AArch64::FPR16_loRegClass;
   };
   return llvm::any_of(MI.operands(), IsHFPR);
 }

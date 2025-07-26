@@ -110,7 +110,111 @@ define i32 @add_i32(i32 %0, i32 %1) {
   ret i32 %10
 }
 
+define i64 @and_i64(i64 %0, i64 %1) {
+; CHECK-LABEL: and_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ands x0, x1, x0
+; CHECK-NEXT:    b.le .LBB4_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    b _Z2f4l
+; CHECK-NEXT:  .LBB4_2:
+; CHECK-NEXT:    b _Z2f3l
+  %3 = and i64 %1, %0
+  %4 = icmp slt i64 %3, 1
+  br i1 %4, label %5, label %7
 
+5:
+  %6 = tail call i64 @_Z2f3l(i64 %3)
+  br label %9
+
+7:
+  %8 = tail call i64 @_Z2f4l(i64 %3)
+  br label %9
+
+9:
+  %10 = phi i64 [ %6, %5 ], [ %8, %7 ]
+  ret i64 %10
+}
+
+define i32 @and_i32(i32 %0, i32 %1) {
+; CHECK-LABEL: and_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ands w0, w1, w0
+; CHECK-NEXT:    b.le .LBB5_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    b _Z2f4l
+; CHECK-NEXT:  .LBB5_2:
+; CHECK-NEXT:    b _Z2f3l
+  %3 = and i32 %1, %0
+  %4 = icmp slt i32 %3, 1
+  br i1 %4, label %5, label %7
+
+5:
+  %6 = tail call i32 @_Z2f3l(i32 %3)
+  br label %9
+
+7:
+  %8 = tail call i32 @_Z2f4l(i32 %3)
+  br label %9
+
+9:
+  %10 = phi i32 [ %6, %5 ], [ %8, %7 ]
+  ret i32 %10
+}
+
+define i64 @and_i64_freeze(i64 %0, i64 %1) {
+; CHECK-LABEL: and_i64_freeze:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ands x0, x1, x0
+; CHECK-NEXT:    b.le .LBB6_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    b _Z2f4l
+; CHECK-NEXT:  .LBB6_2:
+; CHECK-NEXT:    b _Z2f3l
+  %3 = and i64 %1, %0
+  %freeze = freeze i64 %3
+  %4 = icmp slt i64 %3, 1
+  br i1 %4, label %5, label %7
+
+5:
+  %6 = tail call i64 @_Z2f3l(i64 %freeze)
+  br label %9
+
+7:
+  %8 = tail call i64 @_Z2f4l(i64 %freeze)
+  br label %9
+
+9:
+  %10 = phi i64 [ %6, %5 ], [ %8, %7 ]
+  ret i64 %10
+}
+
+define i32 @and_i32_freeze(i32 %0, i32 %1) {
+; CHECK-LABEL: and_i32_freeze:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ands w0, w1, w0
+; CHECK-NEXT:    b.le .LBB7_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    b _Z2f4l
+; CHECK-NEXT:  .LBB7_2:
+; CHECK-NEXT:    b _Z2f3l
+  %3 = and i32 %1, %0
+  %freeze = freeze i32 %3
+  %4 = icmp slt i32 %freeze, 1
+  br i1 %4, label %5, label %7
+
+5:
+  %6 = tail call i32 @_Z2f3l(i32 %freeze)
+  br label %9
+
+7:
+  %8 = tail call i32 @_Z2f4l(i32 %freeze)
+  br label %9
+
+9:
+  %10 = phi i32 [ %6, %5 ], [ %8, %7 ]
+  ret i32 %10
+}
 
 declare i32 @_Z2f1i(i32)
 declare i32 @_Z2f2i(i32)
