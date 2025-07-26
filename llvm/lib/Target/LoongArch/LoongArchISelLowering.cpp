@@ -2521,18 +2521,18 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
     assert(ResTy.isVector());
 
     SDValue Op0 = Node->getOperand(0);
-    SDValue Result = DAG.getUNDEF(ResTy);
+    SDValue Vector = DAG.getUNDEF(ResTy);
 
     if (!Op0.isUndef())
-      Result = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ResTy, Op0);
+      Vector = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ResTy, Op0);
     for (unsigned i = 1; i < NumElts; ++i) {
       SDValue Opi = Node->getOperand(i);
       if (Opi.isUndef())
         continue;
-      Result = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ResTy, Result, Opi,
+      Vector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ResTy, Vector, Opi,
                            DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
     }
-    return Result;
+    return Vector;
   }
 
   return SDValue();
