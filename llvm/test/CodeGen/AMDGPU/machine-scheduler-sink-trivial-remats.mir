@@ -2104,13 +2104,9 @@ body:             |
   ; GFX908-NEXT:   [[S_MOV_B32_58:%[0-9]+]]:sgpr_32 = S_MOV_B32 69
   ; GFX908-NEXT:   [[S_MOV_B32_59:%[0-9]+]]:sgpr_32 = S_MOV_B32 70
   ; GFX908-NEXT:   [[S_MOV_B32_60:%[0-9]+]]:sgpr_32 = S_MOV_B32 71
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_20:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 20, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   [[S_MOV_B32_61:%[0-9]+]]:sgpr_32 = S_MOV_B32 72
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_21:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 21, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   [[S_MOV_B32_62:%[0-9]+]]:sgpr_32 = S_MOV_B32 73
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_22:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 22, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   [[S_MOV_B32_63:%[0-9]+]]:sgpr_32 = S_MOV_B32 74
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_23:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
   ; GFX908-NEXT:   [[S_MOV_B32_64:%[0-9]+]]:sgpr_32 = S_MOV_B32 75
   ; GFX908-NEXT:   [[S_MOV_B32_65:%[0-9]+]]:sgpr_32 = S_MOV_B32 76
   ; GFX908-NEXT:   [[S_MOV_B32_66:%[0-9]+]]:sgpr_32 = S_MOV_B32 77
@@ -2120,7 +2116,11 @@ body:             |
   ; GFX908-NEXT:   [[S_MOV_B32_70:%[0-9]+]]:sgpr_32 = S_MOV_B32 81
   ; GFX908-NEXT:   [[S_MOV_B32_71:%[0-9]+]]:sgpr_32 = S_MOV_B32 82
   ; GFX908-NEXT:   [[S_MOV_B32_72:%[0-9]+]]:sgpr_32 = S_MOV_B32 83
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_20:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 20, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   [[S_MOV_B32_73:%[0-9]+]]:sgpr_32 = S_MOV_B32 84
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_21:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 21, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_22:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 22, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_23:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.1:
   ; GFX908-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)

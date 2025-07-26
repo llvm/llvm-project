@@ -368,64 +368,81 @@ static LaneBitmask findUseBetween(unsigned Reg, LaneBitmask LastUseMask,
 ////////////////////////////////////////////////////////////////////////////////
 // GCNRPTarget
 
-GCNRPTarget::GCNRPTarget(const MachineFunction &MF, const GCNRegPressure &RP,
-                         bool CombineVGPRSavings)
-    : RP(RP), CombineVGPRSavings(CombineVGPRSavings) {
+GCNRPTarget::GCNRPTarget(const MachineFunction &MF, const GCNRegPressure &RP)
+    : GCNRPTarget(RP, MF) {
   const Function &F = MF.getFunction();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  setRegLimits(ST.getMaxNumSGPRs(F), ST.getMaxNumVGPRs(F), MF);
+  setTarget(ST.getMaxNumSGPRs(F), ST.getMaxNumVGPRs(F));
 }
 
 GCNRPTarget::GCNRPTarget(unsigned NumSGPRs, unsigned NumVGPRs,
-                         const MachineFunction &MF, const GCNRegPressure &RP,
-                         bool CombineVGPRSavings)
-    : RP(RP), CombineVGPRSavings(CombineVGPRSavings) {
-  setRegLimits(NumSGPRs, NumVGPRs, MF);
+                         const MachineFunction &MF, const GCNRegPressure &RP)
+    : GCNRPTarget(RP, MF) {
+  setTarget(NumSGPRs, NumVGPRs);
 }
 
 GCNRPTarget::GCNRPTarget(unsigned Occupancy, const MachineFunction &MF,
-                         const GCNRegPressure &RP, bool CombineVGPRSavings)
-    : RP(RP), CombineVGPRSavings(CombineVGPRSavings) {
+                         const GCNRegPressure &RP)
+    : GCNRPTarget(RP, MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   unsigned DynamicVGPRBlockSize =
       MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
-  setRegLimits(ST.getMaxNumSGPRs(Occupancy, /*Addressable=*/false),
-               ST.getMaxNumVGPRs(Occupancy, DynamicVGPRBlockSize), MF);
+  setTarget(ST.getMaxNumSGPRs(Occupancy, /*Addressable=*/false),
+            ST.getMaxNumVGPRs(Occupancy, DynamicVGPRBlockSize));
 }
 
-void GCNRPTarget::setRegLimits(unsigned NumSGPRs, unsigned NumVGPRs,
-                               const MachineFunction &MF) {
+void GCNRPTarget::setTarget(unsigned NumSGPRs, unsigned NumVGPRs) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  unsigned DynamicVGPRBlockSize =
-      MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
   MaxSGPRs = std::min(ST.getAddressableNumSGPRs(), NumSGPRs);
   MaxVGPRs = std::min(ST.getAddressableNumArchVGPRs(), NumVGPRs);
-  MaxUnifiedVGPRs =
-      ST.hasGFX90AInsts()
-          ? std::min(ST.getAddressableNumVGPRs(DynamicVGPRBlockSize), NumVGPRs)
-          : 0;
+  if (UnifiedRF) {
+    unsigned DynamicVGPRBlockSize =
+        MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
+    MaxUnifiedVGPRs =
+        std::min(ST.getAddressableNumVGPRs(DynamicVGPRBlockSize), NumVGPRs);
+  } else {
+    MaxUnifiedVGPRs = 0;
+  }
 }
 
-bool GCNRPTarget::isSaveBeneficial(Register Reg,
-                                   const MachineRegisterInfo &MRI) const {
+bool GCNRPTarget::isSaveBeneficial(Register Reg) const {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterClass *RC = MRI.getRegClass(Reg);
   const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
   const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo *>(TRI);
 
   if (SRI->isSGPRClass(RC))
     return RP.getSGPRNum() > MaxSGPRs;
-  unsigned NumVGPRs =
-      SRI->isAGPRClass(RC) ? RP.getAGPRNum() : RP.getArchVGPRNum();
-  return isVGPRBankSaveBeneficial(NumVGPRs);
+  if (SRI->isAGPRClass(RC))
+    return isVGPRSaveBeneficial(RP.getAGPRNum(), RP.getArchVGPRNum());
+  return isVGPRSaveBeneficial(RP.getArchVGPRNum(), RP.getAGPRNum());
 }
 
 bool GCNRPTarget::satisfied() const {
-  if (RP.getSGPRNum() > MaxSGPRs)
+  if (RP.getSGPRNum() > MaxSGPRs || RP.getVGPRNum(false) > MaxVGPRs)
     return false;
-  if (RP.getVGPRNum(false) > MaxVGPRs &&
-      (!CombineVGPRSavings || !satisifiesVGPRBanksTarget()))
+  if (UnifiedRF && RP.getVGPRNum(true) > MaxVGPRs)
     return false;
-  return satisfiesUnifiedTarget();
+  return true;
+}
+
+bool GCNRPTarget::isVGPRSaveBeneficial(unsigned NumRegsInRC,
+                                       unsigned NumRegsInOtherRC) const {
+  // The addressable limit must always be respected.
+  if (NumRegsInRC > MaxVGPRs)
+    return true;
+  if (UnifiedRF) {
+    // Combined VGPR usage must be respected in unified RFs.
+    if (RP.getVGPRNum(true) > MaxUnifiedVGPRs)
+      return true;
+    // When the other VGPR RC is above its addressable limit and there is not
+    // enough space in this VGPR RC to fit all that excess through copies, we
+    // consider savings in this VGPR RC beneficial as well.
+    if (NumRegsInOtherRC > MaxVGPRs &&
+        2 * MaxVGPRs < NumRegsInRC + NumRegsInOtherRC)
+      return true;
+  }
+  return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
