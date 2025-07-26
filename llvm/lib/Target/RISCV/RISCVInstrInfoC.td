@@ -408,11 +408,13 @@ def C_ADDI : RVInst16CI<0b000, 0b01, (outs GPRNoX0:$rd_wb),
   let Constraints = "$rd = $rd_wb";
 }
 
-// Alternate syntax for c.nop. Converted to C_NOP by the assembler.
+// Alternate syntax for c.nop. Converted to C_NOP/C_NOP_HINT by the assembler.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in
-def PseudoC_ADDI_NOP : Pseudo<(outs GPRX0:$rd), (ins GPRX0:$rs1, immzero:$imm),
-                              [], "c.addi", "$rd, $imm">;
+def PseudoC_ADDI_NOP : Pseudo<(outs GPRX0:$rd), (ins GPRX0:$rs1, simm6:$imm),
+                              [], "c.addi", "$rd, $imm"> {
+  let Constraints = "$rs1 = $rd";
+}
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCall = 1,
     DecoderNamespace = "RV32Only", Defs = [X1],
@@ -649,11 +651,6 @@ def C_SRAI64_HINT : RVInst16CB<0b100, 0b01, (outs GPRC:$rd),
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions
 //===----------------------------------------------------------------------===//
-
-let Predicates = [HasStdExtZca] in {
-// Just a different syntax for the c.nop hint: c.addi x0, simm6 vs c.nop simm6.
-def : InstAlias<"c.addi x0, $imm", (C_NOP_HINT simm6nonzero:$imm), 0>;
-}
 
 let Predicates = [HasStdExtC, HasStdExtZihintntl] in {
 def : InstAlias<"c.ntl.p1", (C_ADD X0, X2)>;
