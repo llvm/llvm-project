@@ -278,6 +278,8 @@ private:
   llvm::DenseMap<lldb::user_id_t, std::shared_ptr<InlineSite>> m_inline_sites;
   llvm::DenseMap<llvm::codeview::TypeIndex, llvm::codeview::TypeIndex>
       m_parent_types;
+
+  lldb_private::UniqueCStringMap<uint32_t> m_type_base_names;
 };
 
 } // namespace npdb

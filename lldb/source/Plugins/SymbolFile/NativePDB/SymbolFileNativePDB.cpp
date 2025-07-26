@@ -1720,11 +1720,14 @@ void SymbolFileNativePDB::FindTypes(const lldb_private::TypeQuery &query,
 
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
-  std::vector<TypeIndex> matches =
-      m_index->tpi().findRecordsByName(query.GetTypeBasename().GetStringRef());
+  // We can't query for the full name because the type might reside
+  // in an anonymous namespace. Search for the basename in our map and check the
+  // matching types afterwards.
+  std::vector<uint32_t> matches;
+  m_type_base_names.GetValues(query.GetTypeBasename(), matches);
 
-  for (TypeIndex type_idx : matches) {
-    TypeSP type_sp = GetOrCreateType(type_idx);
+  for (uint32_t match_idx : matches) {
+    TypeSP type_sp = GetOrCreateType(TypeIndex(match_idx));
     if (!type_sp)
       continue;
 
@@ -2203,8 +2206,12 @@ void SymbolFileNativePDB::BuildParentMap() {
     RecordIndices &indices = record_indices[tag.asTag().getUniqueName()];
     if (tag.asTag().isForwardRef())
       indices.forward = *ti;
-    else
+    else {
       indices.full = *ti;
+
+      auto base_name = MSVCUndecoratedNameParser::DropScope(tag.name());
+      m_type_base_names.Append(ConstString(base_name), ti->getIndex());
+    }
 
     if (indices.full != TypeIndex::None() &&
         indices.forward != TypeIndex::None()) {
@@ -2291,6 +2298,8 @@ void SymbolFileNativePDB::BuildParentMap() {
     TypeIndex fwd = full_to_forward[full];
     m_parent_types[fwd] = m_parent_types[full];
   }
+
+  m_type_base_names.Sort();
 }
 
 std::optional<PdbCompilandSymId>
