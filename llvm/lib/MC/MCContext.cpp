@@ -782,8 +782,8 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
     if (Selection != COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE &&
         COMDATSymbol->isDefined() &&
         (!COMDATSymbol->isInSection() ||
-         cast<MCSectionCOFF>(COMDATSymbol->getSection()).getCOMDATSymbol() !=
-             COMDATSymbol))
+         static_cast<const MCSectionCOFF &>(COMDATSymbol->getSection())
+                 .getCOMDATSymbol() != COMDATSymbol))
       reportError(SMLoc(), "invalid symbol redefinition");
   }
 

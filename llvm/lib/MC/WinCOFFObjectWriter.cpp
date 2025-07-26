@@ -373,7 +373,7 @@ void WinCOFFWriter::defineSymbol(const MCSymbol &MCSym) {
   COFFSection *Sec = nullptr;
   MCSectionCOFF *MCSec = nullptr;
   if (Base && Base->getFragment()) {
-    MCSec = cast<MCSectionCOFF>(Base->getFragment()->getParent());
+    MCSec = static_cast<MCSectionCOFF *>(Base->getFragment()->getParent());
     Sec = SectionMap[MCSec];
   }
 
@@ -1057,7 +1057,8 @@ uint64_t WinCOFFWriter::writeObject() {
       continue;
     }
 
-    const auto *AssocMCSec = cast<MCSectionCOFF>(&AssocMCSym->getSection());
+    const auto *AssocMCSec =
+        static_cast<const MCSectionCOFF *>(&AssocMCSym->getSection());
     assert(SectionMap.count(AssocMCSec));
     COFFSection *AssocSec = SectionMap[AssocMCSec];
 
