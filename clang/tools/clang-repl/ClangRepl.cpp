@@ -185,7 +185,7 @@ struct ReplListCompleter {
   clang::Interpreter &MainInterp;
   ReplListCompleter(clang::IncrementalCompilerBuilder &CB,
                     clang::Interpreter &Interp)
-      : CB(CB), MainInterp(Interp){};
+      : CB(CB), MainInterp(Interp) {};
 
   std::vector<llvm::LineEditor::Completion> operator()(llvm::StringRef Buffer,
                                                        size_t Pos) const;
@@ -370,6 +370,8 @@ int main(int argc, const char **argv) {
       if (Input == R"(%undo)") {
         if (auto Err = Interp->Undo())
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
+      } else if (Input == R"(%help)") {
+        printf("clang-repl commands: { %%undo, %%quit }\n");
       } else if (Input.rfind("%lib ", 0) == 0) {
         if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5))
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
