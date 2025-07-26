@@ -45,6 +45,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MipsABIFlags.h"
+#include "llvm/Support/RISCVAttributes.h"
 
 #define CASE_AND_STREAM(s, def, width)                                         \
   case def:                                                                    \
@@ -1284,6 +1285,44 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
   return error;
 }
 
+void ObjectFileELF::ParseRISCVAttributes(DataExtractor &data, uint64_t length,
+                                         ArchSpec &arch_spec) {
+  lldb::offset_t Offset = 0;
+
+  uint8_t FormatVersion = data.GetU8(&Offset);
+  if (FormatVersion != llvm::ELFAttrs::Format_Version)
+    return;
+
+  Offset = Offset + sizeof(uint32_t); // Section Length
+  llvm::StringRef VendorName = data.GetCStr(&Offset);
+
+  if (VendorName != "riscv")
+    return;
+
+  llvm::StringRef attr = "";
+
+  while (Offset < length) {
+    uint8_t Tag = data.GetU8(&Offset);
+    uint32_t Size = data.GetU32(&Offset);
+
+    if (Tag != llvm::ELFAttrs::File || Size == 0)
+      continue;
+
+    while (Offset < length) {
+      uint64_t Tag = data.GetULEB128(&Offset);
+      if (Tag == llvm::RISCVAttrs::ARCH) {
+        attr = data.GetCStr(&Offset);
+        break;
+      } else {
+        data.GetULEB128(&Offset);
+      }
+    }
+  }
+  if (!attr.empty() && attr.contains("xqci")) {
+    arch_spec.SetAdditionalDisassemblyFeatureStr("+xqci,");
+  }
+}
+
 void ObjectFileELF::ParseARMAttributes(DataExtractor &data, uint64_t length,
                                        ArchSpec &arch_spec) {
   lldb::offset_t Offset = 0;
@@ -1569,6 +1608,16 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
           if (sheader.sh_type == SHT_ARM_ATTRIBUTES && section_size != 0 &&
               data.SetData(object_data, sheader.sh_offset, section_size) == section_size)
             ParseARMAttributes(data, section_size, arch_spec);
+        } else if (arch_spec.GetMachine() == llvm::Triple::riscv32 ||
+                   arch_spec.GetMachine() == llvm::Triple::riscv64) {
+          DataExtractor data;
+          if (sheader.sh_type == SHT_RISCV_ATTRIBUTES && section_size != 0 &&
+              (data.SetData(object_data, sheader.sh_offset, section_size) ==
+               section_size) &&
+              !arch_spec.GetAdditionalDisassemblyFeatureStr().contains(
+                  "xqci")) {
+            ParseRISCVAttributes(data, section_size, arch_spec);
+          }
         }
 
         if (name == g_sect_name_gnu_debuglink) {

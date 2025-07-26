@@ -537,6 +537,15 @@ public:
 
   void SetFlags(const std::string &elf_abi);
 
+  // Sets the target specific disassembly feature string
+  // for ELF disassembly.
+  void SetAdditionalDisassemblyFeatureStr(llvm::StringRef additional_features);
+
+  // Get the current target disassembly feature string.
+  llvm::StringRef GetAdditionalDisassemblyFeatureStr() const {
+    return llvm::StringRef(m_additional_disassembly_feature_str);
+  }
+
 protected:
   void UpdateCore();
 
@@ -547,6 +556,9 @@ protected:
   // Additional arch flags which we cannot get from triple and core For MIPS
   // these are application specific extensions like micromips, mips16 etc.
   uint32_t m_flags = 0;
+
+  // Holds the additional disassembly feature string.
+  std::string m_additional_disassembly_feature_str;
 
   // Called when m_def or m_entry are changed.  Fills in all remaining members
   // with default values.
