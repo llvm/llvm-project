@@ -105,6 +105,7 @@ define i16 @test_cttz_i16(i16 %a) nounwind {
 ;
 ; RV32ZBBXQCIBM-LABEL: test_cttz_i16:
 ; RV32ZBBXQCIBM:       # %bb.0:
+; RV32ZBBXQCIBM-NEXT:    not a0, a0
 ; RV32ZBBXQCIBM-NEXT:    qc.insbi a0, -1, 1, 16
 ; RV32ZBBXQCIBM-NEXT:    ctz a0, a0
 ; RV32ZBBXQCIBM-NEXT:    ret

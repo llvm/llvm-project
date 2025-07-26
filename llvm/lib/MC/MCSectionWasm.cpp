@@ -97,5 +97,3 @@ void MCSectionWasm::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   if (Subsection)
     OS << "\t.subsection\t" << Subsection << '\n';
 }
-
-bool MCSectionWasm::useCodeAlign() const { return false; }

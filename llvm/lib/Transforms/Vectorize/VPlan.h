@@ -597,6 +597,7 @@ class VPIRFlags {
   enum class OperationType : unsigned char {
     Cmp,
     OverflowingBinOp,
+    Trunc,
     DisjointOp,
     PossiblyExactOp,
     GEPOp,
@@ -611,6 +612,13 @@ public:
     char HasNSW : 1;
 
     WrapFlagsTy(bool HasNUW, bool HasNSW) : HasNUW(HasNUW), HasNSW(HasNSW) {}
+  };
+
+  struct TruncFlagsTy {
+    char HasNUW : 1;
+    char HasNSW : 1;
+
+    TruncFlagsTy(bool HasNUW, bool HasNSW) : HasNUW(HasNUW), HasNSW(HasNSW) {}
   };
 
   struct DisjointFlagsTy {
@@ -644,6 +652,7 @@ private:
   union {
     CmpInst::Predicate CmpPredicate;
     WrapFlagsTy WrapFlags;
+    TruncFlagsTy TruncFlags;
     DisjointFlagsTy DisjointFlags;
     ExactFlagsTy ExactFlags;
     GEPNoWrapFlags GEPFlags;
@@ -665,6 +674,9 @@ public:
     } else if (auto *Op = dyn_cast<OverflowingBinaryOperator>(&I)) {
       OpType = OperationType::OverflowingBinOp;
       WrapFlags = {Op->hasNoUnsignedWrap(), Op->hasNoSignedWrap()};
+    } else if (auto *Op = dyn_cast<TruncInst>(&I)) {
+      OpType = OperationType::Trunc;
+      TruncFlags = {Op->hasNoUnsignedWrap(), Op->hasNoSignedWrap()};
     } else if (auto *Op = dyn_cast<PossiblyExactOperator>(&I)) {
       OpType = OperationType::PossiblyExactOp;
       ExactFlags.IsExact = Op->isExact();
@@ -715,6 +727,10 @@ public:
       WrapFlags.HasNUW = false;
       WrapFlags.HasNSW = false;
       break;
+    case OperationType::Trunc:
+      TruncFlags.HasNUW = false;
+      TruncFlags.HasNSW = false;
+      break;
     case OperationType::DisjointOp:
       DisjointFlags.IsDisjoint = false;
       break;
@@ -743,6 +759,10 @@ public:
     case OperationType::OverflowingBinOp:
       I.setHasNoUnsignedWrap(WrapFlags.HasNUW);
       I.setHasNoSignedWrap(WrapFlags.HasNSW);
+      break;
+    case OperationType::Trunc:
+      I.setHasNoUnsignedWrap(TruncFlags.HasNUW);
+      I.setHasNoSignedWrap(TruncFlags.HasNSW);
       break;
     case OperationType::DisjointOp:
       cast<PossiblyDisjointInst>(&I)->setIsDisjoint(DisjointFlags.IsDisjoint);
@@ -800,15 +820,25 @@ public:
   }
 
   bool hasNoUnsignedWrap() const {
-    assert(OpType == OperationType::OverflowingBinOp &&
-           "recipe doesn't have a NUW flag");
-    return WrapFlags.HasNUW;
+    switch (OpType) {
+    case OperationType::OverflowingBinOp:
+      return WrapFlags.HasNUW;
+    case OperationType::Trunc:
+      return TruncFlags.HasNUW;
+    default:
+      llvm_unreachable("recipe doesn't have a NUW flag");
+    }
   }
 
   bool hasNoSignedWrap() const {
-    assert(OpType == OperationType::OverflowingBinOp &&
-           "recipe doesn't have a NSW flag");
-    return WrapFlags.HasNSW;
+    switch (OpType) {
+    case OperationType::OverflowingBinOp:
+      return WrapFlags.HasNSW;
+    case OperationType::Trunc:
+      return TruncFlags.HasNSW;
+    default:
+      llvm_unreachable("recipe doesn't have a NSW flag");
+    }
   }
 
   bool isDisjoint() const {
@@ -876,10 +906,10 @@ template <unsigned PartOpIdx> class LLVM_ABI_FOR_TEST VPUnrollPartAccessor {
 protected:
   /// Return the VPValue operand containing the unroll part or null if there is
   /// no such operand.
-  VPValue *getUnrollPartOperand(VPUser &U) const;
+  VPValue *getUnrollPartOperand(const VPUser &U) const;
 
   /// Return the unroll part.
-  unsigned getUnrollPart(VPUser &U) const;
+  unsigned getUnrollPart(const VPUser &U) const;
 };
 
 /// Helper to manage IR metadata for recipes. It filters out metadata that
@@ -1327,9 +1357,10 @@ class LLVM_ABI_FOR_TEST VPWidenRecipe : public VPRecipeWithIRFlags,
 
 public:
   VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                const VPIRFlags &Flags, DebugLoc DL)
+                const VPIRFlags &Flags, const VPIRMetadata &Metadata,
+                DebugLoc DL)
       : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, Flags, DL),
-        Opcode(Opcode) {}
+        VPIRMetadata(Metadata), Opcode(Opcode) {}
 
   VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands)
       : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, I), VPIRMetadata(I),
@@ -1338,8 +1369,9 @@ public:
   ~VPWidenRecipe() override = default;
 
   VPWidenRecipe *clone() override {
-    auto *R = new VPWidenRecipe(*getUnderlyingInstr(), operands());
-    R->transferFlags(*this);
+    auto *R =
+        new VPWidenRecipe(getOpcode(), operands(), *this, *this, getDebugLoc());
+    R->setUnderlyingValue(getUnderlyingValue());
     return R;
   }
 
@@ -1629,6 +1661,8 @@ struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+  unsigned getOpcode() const { return Instruction::Select; }
 
   VPValue *getCond() const {
     return getOperand(0);
@@ -2303,8 +2337,9 @@ public:
     return Idx == 0 ? getOperand(1) : getOperand(Idx * 2 + !isNormalized());
   }
 
-  /// Generate the phi/select nodes.
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("VPBlendRecipe should be expanded by simplifyBlends");
+  }
 
   /// Return the cost of this VPWidenMemoryRecipe.
   InstructionCost computeCost(ElementCount VF,
@@ -3451,7 +3486,7 @@ public:
 
   /// Return true if this VPScalarIVStepsRecipe corresponds to part 0. Note that
   /// this is only accurate after the VPlan has been unrolled.
-  bool isPart0() { return getUnrollPart(*this) == 0; }
+  bool isPart0() const { return getUnrollPart(*this) == 0; }
 
   VP_CLASSOF_IMPL(VPDef::VPScalarIVStepsSC)
 
@@ -4156,13 +4191,11 @@ public:
     return VPB;
   }
 
-  /// Create a new VPRegionBlock with \p Name and entry and exiting blocks set
-  /// to nullptr. If \p IsReplicator is true, the region is a replicate region.
-  /// The returned block is owned by the VPlan and deleted once the VPlan is
-  /// destroyed.
-  VPRegionBlock *createVPRegionBlock(const std::string &Name = "",
-                                     bool IsReplicator = false) {
-    auto *VPB = new VPRegionBlock(Name, IsReplicator);
+  /// Create a new loop VPRegionBlock with \p Name and entry and exiting blocks set
+  /// to nullptr. The returned block is owned by the VPlan and deleted once the
+  /// VPlan is destroyed.
+  VPRegionBlock *createVPRegionBlock(const std::string &Name = "") {
+    auto *VPB = new VPRegionBlock(Name);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }

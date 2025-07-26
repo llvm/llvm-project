@@ -175,10 +175,14 @@ multiclass VOP2Inst_e64<string opName,
     def _e64 : VOP3InstBase <opName, P, node, 1>,
                Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
 
-    let SubtargetPredicate = isGFX11Plus in {
-      if P.HasExtVOP3DPP then
-        def _e64_dpp  : VOP3_DPP_Pseudo <opName, P>;
-    } // End SubtargetPredicate = isGFX11Plus
+    if P.HasExtVOP3DPP then
+      def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
+        let SubtargetPredicate = isGFX11Plus;
+      }
+    else if P.HasExt64BitDPP then
+      def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
+        let OtherPredicates = [HasDPALU_DPP];
+      }
 }
 
 multiclass VOP2Inst_e64_VOPD<string opName,
@@ -921,6 +925,17 @@ let isAdd = 1 in {
   defm V_ADDC_U32 : VOP2bInst <"v_addc_u32", VOP2b_I32_I1_I32_I32_I1, null_frag, "v_addc_u32">;
 }
 
+let isReMaterializable = 1 in {
+let SubtargetPredicate = HasAddSubU64Insts, SchedRW = [Write64Bit] in {
+defm V_ADD_U64 : VOP2Inst <"v_add_nc_u64", VOP_I64_I64_I64_ARITH>;
+// We don't actually have something like V_SUBREV_U64 so V_SUB_U64 can't be treated as commutable.
+let isCommutable = 0 in
+defm V_SUB_U64 : VOP2Inst <"v_sub_nc_u64", VOP_I64_I64_I64_ARITH>;
+} // End SubtargetPredicate = HasAddSubU64Insts, SchedRW = [Write64Bit]
+let SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteDouble] in
+defm V_MUL_U64 : VOP2Inst <"v_mul_u64", VOP_I64_I64_I64, DivergentBinFrag<mul>>;
+} // End isReMaterializable = 1
+
 } // End isCommutable = 1
 
 // These are special and do not read the exec mask.
@@ -1492,7 +1507,9 @@ class Base_VOP2_DPP16<bits<6> op, VOP2_DPP_Pseudo ps,
     VOP2_DPP<op, ps, opName, p, 1> {
   let AssemblerPredicate = HasDPP16;
   let SubtargetPredicate = ps.SubtargetPredicate;
-  let OtherPredicates = ps.OtherPredicates;
+  let OtherPredicates = !listconcat(ps.OtherPredicates,
+      !if(p.HasExt64BitDPP, [HasDPALU_DPP], []),
+      !if(ps.Pfl.IsRealTrue16, [UseRealTrue16Insts], []));
 }
 
 class VOP2_DPP16<bits<6> op, VOP2_DPP_Pseudo ps, int subtarget,
@@ -1748,6 +1765,9 @@ multiclass VOP2_Real_FULL_with_name<GFXGen Gen, bits<6> op, string opName,
   VOP2_Realtriple_e64_with_name<Gen, op, opName, asmName>,
   VOP2_Real_NO_VOP3_with_name<Gen, op, opName, asmName>;
 
+multiclass VOP2_Real_NO_DPP<GFXGen Gen, bits<6> op> :
+  VOP2_Real_e32<Gen, op>, VOP2_Real_e64<Gen, op>;
+
 multiclass VOP2_Real_NO_DPP_with_name<GFXGen Gen, bits<6> op, string opName,
                                       string asmName> {
   defm NAME : VOP2_Real_e32_with_name<Gen, op, opName, asmName>,
@@ -1832,8 +1852,14 @@ let SubtargetPredicate = isGFX12Plus in {
     V_SUBBREV_U32_e32, V_SUBREV_CO_CI_U32_e32_gfx12, "v_subrev_co_ci_u32">;
 } // End SubtargetPredicate = isGFX12Plus
 
+let SubtargetPredicate = HasFmacF64Inst in
+defm V_FMAC_F64 : VOP2_Real_FULL<GFX12Gen, 0x17>;
+
 defm V_FMAMK_F64 : VOP2Only_Real_MADK64<GFX1250Gen, 0x23>;
 defm V_FMAAK_F64 : VOP2Only_Real_MADK64<GFX1250Gen, 0x24>;
+defm V_ADD_U64 : VOP2_Real_FULL<GFX1250Gen, 0x28>;
+defm V_SUB_U64 : VOP2_Real_FULL<GFX1250Gen, 0x29>;
+defm V_MUL_U64 : VOP2_Real_NO_DPP<GFX1250Gen, 0x2a>;
 
 //===----------------------------------------------------------------------===//
 // GFX11.

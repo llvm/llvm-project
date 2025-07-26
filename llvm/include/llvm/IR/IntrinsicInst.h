@@ -54,7 +54,7 @@ public:
 
   /// Return the intrinsic ID of this intrinsic.
   Intrinsic::ID getIntrinsicID() const {
-    return getCalledFunction()->getIntrinsicID();
+    return cast<Function>(getCalledOperand())->getIntrinsicID();
   }
 
   bool isAssociative() const {
@@ -131,9 +131,8 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const CallInst *I) {
-    if (const Function *CF = I->getCalledFunction())
-      return CF->isIntrinsic();
-    return false;
+    auto *F = dyn_cast_or_null<Function>(I->getCalledOperand());
+    return F && F->isIntrinsic();
   }
   static bool classof(const Value *V) {
     return isa<CallInst>(V) && classof(cast<CallInst>(V));

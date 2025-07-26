@@ -7,7 +7,7 @@ declare i32 @llvm.vscale.i32()
 ; by the other functions below. If we see the call to one of these functions
 ; being replaced by 'llvm.vscale()', then we know it has been inlined.
 
-define i32 @normal_callee() {
+define i32 @normal_callee() #0 {
 ; CHECK-LABEL: define i32 @normal_callee
 ; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -19,7 +19,7 @@ entry:
   ret i32 %res
 }
 
-define i32 @streaming_callee() "aarch64_pstate_sm_enabled" {
+define i32 @streaming_callee() #0 "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define i32 @streaming_callee
 ; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -31,7 +31,7 @@ entry:
   ret i32 %res
 }
 
-define i32 @locally_streaming_callee() "aarch64_pstate_sm_body" {
+define i32 @locally_streaming_callee() #0 "aarch64_pstate_sm_body" {
 ; CHECK-LABEL: define i32 @locally_streaming_callee
 ; CHECK-SAME: () #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -43,9 +43,9 @@ entry:
   ret i32 %res
 }
 
-define i32 @streaming_compatible_callee() "aarch64_pstate_sm_compatible" {
+define i32 @streaming_compatible_callee() #0 "aarch64_pstate_sm_compatible" {
 ; CHECK-LABEL: define i32 @streaming_compatible_callee
-; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -55,9 +55,9 @@ entry:
   ret i32 %res
 }
 
-define i32 @streaming_compatible_locally_streaming_callee() "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
+define i32 @streaming_compatible_locally_streaming_callee() #0 "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
 ; CHECK-LABEL: define i32 @streaming_compatible_locally_streaming_callee
-; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -84,9 +84,9 @@ entry:
 ; [ ] N  -> SC
 ; [ ] N  -> N + B
 ; [ ] N  -> SC + B
-define i32 @normal_caller_normal_callee_inline() {
+define i32 @normal_caller_normal_callee_inline() #0 {
 ; CHECK-LABEL: define i32 @normal_caller_normal_callee_inline
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    ret i32 [[RES_I]]
@@ -101,9 +101,9 @@ entry:
 ; [ ] N  -> SC
 ; [ ] N  -> N + B
 ; [ ] N  -> SC + B
-define i32 @normal_caller_streaming_callee_dont_inline() {
+define i32 @normal_caller_streaming_callee_dont_inline() #0 {
 ; CHECK-LABEL: define i32 @normal_caller_streaming_callee_dont_inline
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR6]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @streaming_callee()
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -118,9 +118,9 @@ entry:
 ; [x] N  -> SC
 ; [ ] N  -> N + B
 ; [ ] N  -> SC + B
-define i32 @normal_caller_streaming_compatible_callee_inline() {
+define i32 @normal_caller_streaming_compatible_callee_inline() #0  {
 ; CHECK-LABEL: define i32 @normal_caller_streaming_compatible_callee_inline
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR6]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    ret i32 [[RES_I]]
@@ -135,9 +135,9 @@ entry:
 ; [ ] N  -> SC
 ; [x] N  -> N + B
 ; [ ] N  -> SC + B
-define i32 @normal_caller_locally_streaming_callee_dont_inline() {
+define i32 @normal_caller_locally_streaming_callee_dont_inline() #0  {
 ; CHECK-LABEL: define i32 @normal_caller_locally_streaming_callee_dont_inline
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR6]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @locally_streaming_callee()
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -152,9 +152,9 @@ entry:
 ; [ ] N  -> SC
 ; [ ] N  -> N + B
 ; [x] N  -> SC + B
-define i32 @normal_caller_streaming_compatible_locally_streaming_callee_dont_inline() {
+define i32 @normal_caller_streaming_compatible_locally_streaming_callee_dont_inline() #0  {
 ; CHECK-LABEL: define i32 @normal_caller_streaming_compatible_locally_streaming_callee_dont_inline
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR6]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @streaming_compatible_locally_streaming_callee()
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -169,9 +169,9 @@ entry:
 ; [ ] S  -> SC
 ; [ ] S  -> N + B
 ; [ ] S  -> SC + B
-define i32 @streaming_caller_normal_callee_dont_inline() "aarch64_pstate_sm_enabled" {
+define i32 @streaming_caller_normal_callee_dont_inline() #0  "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define i32 @streaming_caller_normal_callee_dont_inline
-; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-SAME: () #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @normal_callee()
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -186,9 +186,9 @@ entry:
 ; [ ] S  -> SC
 ; [ ] S  -> N + B
 ; [ ] S  -> SC + B
-define i32 @streaming_caller_streaming_callee_inline() "aarch64_pstate_sm_enabled" {
+define i32 @streaming_caller_streaming_callee_inline() #0  "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define i32 @streaming_caller_streaming_callee_inline
-; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-SAME: () #[[ATTR7]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    ret i32 [[RES_I]]
@@ -203,9 +203,9 @@ entry:
 ; [x] S  -> SC
 ; [ ] S  -> N + B
 ; [ ] S  -> SC + B
-define i32 @streaming_caller_streaming_compatible_callee_inline() "aarch64_pstate_sm_enabled" {
+define i32 @streaming_caller_streaming_compatible_callee_inline() #0  "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define i32 @streaming_caller_streaming_compatible_callee_inline
-; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-SAME: () #[[ATTR7]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    ret i32 [[RES_I]]
@@ -220,9 +220,9 @@ entry:
 ; [ ] S  -> SC
 ; [x] S  -> N + B
 ; [ ] S  -> SC + B
-define i32 @streaming_caller_locally_streaming_callee_inline() "aarch64_pstate_sm_enabled" {
+define i32 @streaming_caller_locally_streaming_callee_inline() #0  "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define i32 @streaming_caller_locally_streaming_callee_inline
-; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-SAME: () #[[ATTR7]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    ret i32 [[RES_I]]
@@ -237,9 +237,9 @@ entry:
 ; [ ] S  -> SC
 ; [ ] S  -> N + B
 ; [x] S  -> SC + B
-define i32 @streaming_caller_streaming_compatible_locally_streaming_callee_inline() "aarch64_pstate_sm_enabled" {
+define i32 @streaming_caller_streaming_compatible_locally_streaming_callee_inline() #0  "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define i32 @streaming_caller_streaming_compatible_locally_streaming_callee_inline
-; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-SAME: () #[[ATTR7]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    ret i32 [[RES_I]]
@@ -254,9 +254,9 @@ entry:
 ; [ ] N + B -> SC
 ; [ ] N + B -> N + B
 ; [ ] N + B -> SC + B
-define i32 @locally_streaming_caller_normal_callee_dont_inline() "aarch64_pstate_sm_body" {
+define i32 @locally_streaming_caller_normal_callee_dont_inline() #0  "aarch64_pstate_sm_body" {
 ; CHECK-LABEL: define i32 @locally_streaming_caller_normal_callee_dont_inline
-; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-SAME: () #[[ATTR8:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @normal_callee()
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -271,9 +271,9 @@ entry:
 ; [ ] N + B -> SC
 ; [ ] N + B -> N + B
 ; [ ] N + B -> SC + B
-define i32 @locally_streaming_caller_streaming_callee_inline() "aarch64_pstate_sm_body" {
+define i32 @locally_streaming_caller_streaming_callee_inline() #0  "aarch64_pstate_sm_body" {
 ; CHECK-LABEL: define i32 @locally_streaming_caller_streaming_callee_inline
-; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-SAME: () #[[ATTR8]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    ret i32 [[RES_I]]
@@ -288,9 +288,9 @@ entry:
 ; [x] N + B -> SC
 ; [ ] N + B -> N + B
 ; [ ] N + B -> SC + B
-define i32 @locally_streaming_caller_streaming_compatible_callee_inline() "aarch64_pstate_sm_body" {
+define i32 @locally_streaming_caller_streaming_compatible_callee_inline() #0  "aarch64_pstate_sm_body" {
 ; CHECK-LABEL: define i32 @locally_streaming_caller_streaming_compatible_callee_inline
-; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-SAME: () #[[ATTR8]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    ret i32 [[RES_I]]
@@ -305,9 +305,9 @@ entry:
 ; [ ] N + B -> SC
 ; [x] N + B -> N + B
 ; [ ] N + B -> SC + B
-define i32 @locally_streaming_caller_locally_streaming_callee_inline() "aarch64_pstate_sm_body" {
+define i32 @locally_streaming_caller_locally_streaming_callee_inline() #0  "aarch64_pstate_sm_body" {
 ; CHECK-LABEL: define i32 @locally_streaming_caller_locally_streaming_callee_inline
-; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-SAME: () #[[ATTR8]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    ret i32 [[RES_I]]
@@ -322,9 +322,9 @@ entry:
 ; [ ] N + B -> SC
 ; [ ] N + B -> N + B
 ; [x] N + B -> SC + B
-define i32 @locally_streaming_caller_streaming_compatible_locally_streaming_callee_inline() "aarch64_pstate_sm_body" {
+define i32 @locally_streaming_caller_streaming_compatible_locally_streaming_callee_inline() #0  "aarch64_pstate_sm_body" {
 ; CHECK-LABEL: define i32 @locally_streaming_caller_streaming_compatible_locally_streaming_callee_inline
-; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-SAME: () #[[ATTR8]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    ret i32 [[RES_I]]
@@ -339,9 +339,9 @@ entry:
 ; [ ] SC -> SC
 ; [ ] SC -> N + B
 ; [ ] SC -> SC + B
-define i32 @streaming_compatible_caller_normal_callee_dont_inline() "aarch64_pstate_sm_compatible" {
+define i32 @streaming_compatible_caller_normal_callee_dont_inline() #0  "aarch64_pstate_sm_compatible" {
 ; CHECK-LABEL: define i32 @streaming_compatible_caller_normal_callee_dont_inline
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR9:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @normal_callee()
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -356,9 +356,9 @@ entry:
 ; [ ] SC -> SC
 ; [ ] SC -> N + B
 ; [ ] SC -> SC + B
-define i32 @streaming_compatible_caller_streaming_callee_dont_inline() "aarch64_pstate_sm_compatible" {
+define i32 @streaming_compatible_caller_streaming_callee_dont_inline() #0  "aarch64_pstate_sm_compatible" {
 ; CHECK-LABEL: define i32 @streaming_compatible_caller_streaming_callee_dont_inline
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR9]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @streaming_callee()
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -373,9 +373,9 @@ entry:
 ; [x] SC -> SC
 ; [ ] SC -> N + B
 ; [ ] SC -> SC + B
-define i32 @streaming_compatible_caller_streaming_compatible_callee_inline() "aarch64_pstate_sm_compatible" {
+define i32 @streaming_compatible_caller_streaming_compatible_callee_inline() #0  "aarch64_pstate_sm_compatible" {
 ; CHECK-LABEL: define i32 @streaming_compatible_caller_streaming_compatible_callee_inline
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR9]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    ret i32 [[RES_I]]
@@ -390,9 +390,9 @@ entry:
 ; [ ] SC -> SC
 ; [x] SC -> N + B
 ; [ ] SC -> SC + B
-define i32 @streaming_compatible_caller_locally_streaming_callee_dont_inline() "aarch64_pstate_sm_compatible" {
+define i32 @streaming_compatible_caller_locally_streaming_callee_dont_inline() #0  "aarch64_pstate_sm_compatible" {
 ; CHECK-LABEL: define i32 @streaming_compatible_caller_locally_streaming_callee_dont_inline
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR9]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @locally_streaming_callee()
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -407,9 +407,9 @@ entry:
 ; [ ] SC -> SC
 ; [ ] SC -> N + B
 ; [x] SC -> SC + B
-define i32 @streaming_compatible_caller_streaming_compatible_locally_streaming_callee_dont_inline() "aarch64_pstate_sm_compatible" {
+define i32 @streaming_compatible_caller_streaming_compatible_locally_streaming_callee_dont_inline() #0  "aarch64_pstate_sm_compatible" {
 ; CHECK-LABEL: define i32 @streaming_compatible_caller_streaming_compatible_locally_streaming_callee_dont_inline
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR9]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @streaming_compatible_locally_streaming_callee()
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -423,9 +423,9 @@ entry:
 ; [ ] SC + B -> SC
 ; [ ] SC + B -> N + B
 ; [ ] SC + B -> SC + B
-define i32 @streaming_compatible_locally_streaming_caller_normal_callee_dont_inline() "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
+define i32 @streaming_compatible_locally_streaming_caller_normal_callee_dont_inline() #0  "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
 ; CHECK-LABEL: define i32 @streaming_compatible_locally_streaming_caller_normal_callee_dont_inline
-; CHECK-SAME: () #[[ATTR4]] {
+; CHECK-SAME: () #[[ATTR10:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @normal_callee()
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -440,9 +440,9 @@ entry:
 ; [ ] SC + B -> SC
 ; [ ] SC + B -> N + B
 ; [ ] SC + B -> SC + B
-define i32 @streaming_compatible_locally_streaming_caller_streaming_callee_inline() "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
+define i32 @streaming_compatible_locally_streaming_caller_streaming_callee_inline() #0  "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
 ; CHECK-LABEL: define i32 @streaming_compatible_locally_streaming_caller_streaming_callee_inline
-; CHECK-SAME: () #[[ATTR4]] {
+; CHECK-SAME: () #[[ATTR10]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    ret i32 [[RES_I]]
@@ -457,9 +457,9 @@ entry:
 ; [x] SC + B -> SC
 ; [ ] SC + B -> N + B
 ; [ ] SC + B -> SC + B
-define i32 @streaming_compatible_locally_streaming_caller_streaming_compatible_callee_inline() "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
+define i32 @streaming_compatible_locally_streaming_caller_streaming_compatible_callee_inline() #0  "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
 ; CHECK-LABEL: define i32 @streaming_compatible_locally_streaming_caller_streaming_compatible_callee_inline
-; CHECK-SAME: () #[[ATTR4]] {
+; CHECK-SAME: () #[[ATTR10]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    ret i32 [[RES_I]]
@@ -474,9 +474,9 @@ entry:
 ; [ ] SC + B -> SC
 ; [x] SC + B -> N + B
 ; [ ] SC + B -> SC + B
-define i32 @streaming_compatible_locally_streaming_caller_locally_streaming_callee_inline() "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
+define i32 @streaming_compatible_locally_streaming_caller_locally_streaming_callee_inline() #0  "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
 ; CHECK-LABEL: define i32 @streaming_compatible_locally_streaming_caller_locally_streaming_callee_inline
-; CHECK-SAME: () #[[ATTR4]] {
+; CHECK-SAME: () #[[ATTR10]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    ret i32 [[RES_I]]
@@ -491,9 +491,9 @@ entry:
 ; [ ] SC + B -> SC
 ; [ ] SC + B -> N + B
 ; [x] SC + B -> SC + B
-define i32 @streaming_compatible_locally_streaming_caller_and_callee_inline() "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
+define i32 @streaming_compatible_locally_streaming_caller_and_callee_inline() #0  "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
 ; CHECK-LABEL: define i32 @streaming_compatible_locally_streaming_caller_and_callee_inline
-; CHECK-SAME: () #[[ATTR4]] {
+; CHECK-SAME: () #[[ATTR10]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    ret i32 [[RES_I]]
@@ -503,9 +503,9 @@ entry:
   ret i32 %res
 }
 
-define void @normal_callee_with_inlineasm() {
+define void @normal_callee_with_inlineasm() #0  {
 ; CHECK-LABEL: define void @normal_callee_with_inlineasm
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR6]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    ret void
@@ -515,9 +515,9 @@ entry:
   ret void
 }
 
-define void @streaming_caller_normal_callee_with_inlineasm_dont_inline() "aarch64_pstate_sm_enabled" {
+define void @streaming_caller_normal_callee_with_inlineasm_dont_inline() #0  "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define void @streaming_caller_normal_callee_with_inlineasm_dont_inline
-; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-SAME: () #[[ATTR7]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @normal_callee_with_inlineasm()
 ; CHECK-NEXT:    ret void
@@ -527,9 +527,9 @@ entry:
   ret void
 }
 
-define i64 @normal_callee_with_intrinsic_call() {
+define i64 @normal_callee_with_intrinsic_call() #0  {
 ; CHECK-LABEL: define i64 @normal_callee_with_intrinsic_call
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR6]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.aarch64.sve.cntb(i32 4)
 ; CHECK-NEXT:    ret i64 [[RES]]
@@ -539,9 +539,9 @@ entry:
   ret i64 %res
 }
 
-define i64 @streaming_caller_normal_callee_with_intrinsic_call_dont_inline() "aarch64_pstate_sm_enabled" {
+define i64 @streaming_caller_normal_callee_with_intrinsic_call_dont_inline() #0  "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define i64 @streaming_caller_normal_callee_with_intrinsic_call_dont_inline
-; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-SAME: () #[[ATTR7]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES:%.*]] = call i64 @normal_callee_with_intrinsic_call()
 ; CHECK-NEXT:    ret i64 [[RES]]
@@ -553,9 +553,9 @@ entry:
 
 declare i64 @llvm.aarch64.sve.cntb(i32)
 
-define i64 @normal_callee_call_sme_state() {
+define i64 @normal_callee_call_sme_state() #0  {
 ; CHECK-LABEL: define i64 @normal_callee_call_sme_state
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR6]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES:%.*]] = call { i64, i64 } @__arm_sme_state()
 ; CHECK-NEXT:    [[RES_0:%.*]] = extractvalue { i64, i64 } [[RES]], 0
@@ -569,9 +569,9 @@ entry:
 
 declare {i64, i64} @__arm_sme_state()
 
-define i64 @streaming_caller_normal_callee_call_sme_state_dont_inline() "aarch64_pstate_sm_enabled" {
+define i64 @streaming_caller_normal_callee_call_sme_state_dont_inline() #0  "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define i64 @streaming_caller_normal_callee_call_sme_state_dont_inline
-; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-SAME: () #[[ATTR7]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RES:%.*]] = call i64 @normal_callee_call_sme_state()
 ; CHECK-NEXT:    ret i64 [[RES]]
@@ -585,9 +585,9 @@ entry:
 
 declare void @streaming_body() "aarch64_pstate_sm_enabled"
 
-define void @streaming_caller_single_streaming_callee() "aarch64_pstate_sm_enabled" {
+define void @streaming_caller_single_streaming_callee() #0  "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define void @streaming_caller_single_streaming_callee
-; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-SAME: () #[[ATTR7]] {
 ; CHECK-NEXT:    call void @streaming_body()
 ; CHECK-NEXT:    ret void
 ;
@@ -595,9 +595,9 @@ define void @streaming_caller_single_streaming_callee() "aarch64_pstate_sm_enabl
   ret void
 }
 
-define void @streaming_caller_multiple_streaming_callees() "aarch64_pstate_sm_enabled" {
+define void @streaming_caller_multiple_streaming_callees() #0  "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define void @streaming_caller_multiple_streaming_callees
-; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-SAME: () #[[ATTR7]] {
 ; CHECK-NEXT:    call void @streaming_body()
 ; CHECK-NEXT:    call void @streaming_body()
 ; CHECK-NEXT:    ret void
@@ -608,9 +608,9 @@ define void @streaming_caller_multiple_streaming_callees() "aarch64_pstate_sm_en
 }
 
 ; Allow inlining, as inline it would not increase the number of streaming-mode changes.
-define void @streaming_caller_single_streaming_callee_inline() {
+define void @streaming_caller_single_streaming_callee_inline() #0  {
 ; CHECK-LABEL: define void @streaming_caller_single_streaming_callee_inline
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR6]] {
 ; CHECK-NEXT:    call void @streaming_body()
 ; CHECK-NEXT:    ret void
 ;
@@ -619,9 +619,9 @@ define void @streaming_caller_single_streaming_callee_inline() {
 }
 
 ; Prevent inlining, as inline it would lead to multiple streaming-mode changes.
-define void @streaming_caller_multiple_streaming_callees_dont_inline() {
+define void @streaming_caller_multiple_streaming_callees_dont_inline() #0  {
 ; CHECK-LABEL: define void @streaming_caller_multiple_streaming_callees_dont_inline
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR6]] {
 ; CHECK-NEXT:    call void @streaming_caller_multiple_streaming_callees()
 ; CHECK-NEXT:    ret void
 ;
@@ -631,9 +631,9 @@ define void @streaming_caller_multiple_streaming_callees_dont_inline() {
 
 declare void @streaming_compatible_body() "aarch64_pstate_sm_compatible"
 
-define void @streaming_caller_single_streaming_compatible_callee() "aarch64_pstate_sm_enabled" {
+define void @streaming_caller_single_streaming_compatible_callee() #0  "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define void @streaming_caller_single_streaming_compatible_callee
-; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-SAME: () #[[ATTR7]] {
 ; CHECK-NEXT:    call void @streaming_compatible_body()
 ; CHECK-NEXT:    ret void
 ;
@@ -641,9 +641,9 @@ define void @streaming_caller_single_streaming_compatible_callee() "aarch64_psta
   ret void
 }
 
-define void @streaming_caller_multiple_streaming_compatible_callees() "aarch64_pstate_sm_enabled" {
+define void @streaming_caller_multiple_streaming_compatible_callees() #0  "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define void @streaming_caller_multiple_streaming_compatible_callees
-; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-SAME: () #[[ATTR7]] {
 ; CHECK-NEXT:    call void @streaming_compatible_body()
 ; CHECK-NEXT:    call void @streaming_compatible_body()
 ; CHECK-NEXT:    ret void
@@ -654,9 +654,9 @@ define void @streaming_caller_multiple_streaming_compatible_callees() "aarch64_p
 }
 
 ; Allow inlining, as inline would remove a streaming-mode change.
-define void @streaming_caller_single_streaming_compatible_callee_inline() {
+define void @streaming_caller_single_streaming_compatible_callee_inline() #0  {
 ; CHECK-LABEL: define void @streaming_caller_single_streaming_compatible_callee_inline
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR6]] {
 ; CHECK-NEXT:    call void @streaming_compatible_body()
 ; CHECK-NEXT:    ret void
 ;
@@ -665,9 +665,9 @@ define void @streaming_caller_single_streaming_compatible_callee_inline() {
 }
 
 ; Allow inlining, as inline would remove several stremaing-mode changes.
-define void @streaming_caller_multiple_streaming_compatible_callees_inline() {
+define void @streaming_caller_multiple_streaming_compatible_callees_inline() #0  {
 ; CHECK-LABEL: define void @streaming_caller_multiple_streaming_compatible_callees_inline
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR6]] {
 ; CHECK-NEXT:    call void @streaming_compatible_body()
 ; CHECK-NEXT:    call void @streaming_compatible_body()
 ; CHECK-NEXT:    ret void
@@ -675,3 +675,5 @@ define void @streaming_caller_multiple_streaming_compatible_callees_inline() {
   call void @streaming_caller_multiple_streaming_compatible_callees()
   ret void
 }
+
+attributes #0 = { "target-features"="+sve,+sme" }

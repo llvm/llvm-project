@@ -16,15 +16,12 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenMPCommon.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
-#include "mlir/Transforms/RegionUtils.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -39,7 +36,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
-#include <any>
 #include <cstdint>
 #include <iterator>
 #include <numeric>
@@ -702,30 +698,6 @@ static void forwardArgs(LLVM::ModuleTranslation &moduleTranslation,
     moduleTranslation.mapValue(arg, moduleTranslation.lookupValue(var));
 }
 
-/// Helper function to map block arguments defined by ignored loop wrappers to
-/// LLVM values and prevent any uses of those from triggering null pointer
-/// dereferences.
-///
-/// This must be called after block arguments of parent wrappers have already
-/// been mapped to LLVM IR values.
-static LogicalResult
-convertIgnoredWrapper(omp::LoopWrapperInterface opInst,
-                      LLVM::ModuleTranslation &moduleTranslation) {
-  // Map block arguments directly to the LLVM value associated to the
-  // corresponding operand. This is semantically equivalent to this wrapper not
-  // being present.
-  return llvm::TypeSwitch<Operation *, LogicalResult>(opInst)
-      .Case([&](omp::SimdOp op) {
-        forwardArgs(moduleTranslation,
-                    cast<omp::BlockArgOpenMPOpInterface>(*op));
-        op.emitWarning() << "simd information on composite construct discarded";
-        return success();
-      })
-      .Default([&](Operation *op) {
-        return op->emitError() << "cannot ignore wrapper";
-      });
-}
-
 /// Converts an OpenMP 'masked' operation into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpMasked(Operation &opInst, llvm::IRBuilderBase &builder,
@@ -922,7 +894,7 @@ static LogicalResult inlineConvertOmpRegions(
 
   // Special case for single-block regions that don't create additional blocks:
   // insert operations without creating additional blocks.
-  if (llvm::hasSingleElement(region)) {
+  if (region.hasOneBlock()) {
     llvm::Instruction *potentialTerminator =
         builder.GetInsertBlock()->empty() ? nullptr
                                           : &builder.GetInsertBlock()->back();
@@ -2852,17 +2824,6 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   auto simdOp = cast<omp::SimdOp>(opInst);
 
-  // Ignore simd in composite constructs with unsupported clauses
-  // TODO: Replace this once simd + clause combinations are properly supported
-  if (simdOp.isComposite() &&
-      (simdOp.getReductionByref().has_value() || simdOp.getIfExpr())) {
-    if (failed(convertIgnoredWrapper(simdOp, moduleTranslation)))
-      return failure();
-
-    return inlineConvertOmpRegions(simdOp.getRegion(), "omp.simd.region",
-                                   builder, moduleTranslation);
-  }
-
   if (failed(checkImplementationStatus(opInst)))
     return failure();
 
@@ -3576,8 +3537,7 @@ getDeclareTargetRefPtrSuffix(LLVM::GlobalOp globalOp,
 }
 
 static bool isDeclareTargetLink(mlir::Value value) {
-  if (auto addressOfOp =
-          llvm::dyn_cast_if_present<LLVM::AddressOfOp>(value.getDefiningOp())) {
+  if (auto addressOfOp = value.getDefiningOp<LLVM::AddressOfOp>()) {
     auto modOp = addressOfOp->getParentOfType<mlir::ModuleOp>();
     Operation *gOp = modOp.lookupSymbol(addressOfOp.getGlobalName());
     if (auto declareTargetGlobal =
@@ -4537,8 +4497,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
               ifCond = moduleTranslation.lookupValue(ifVar);
 
             if (auto devId = dataOp.getDevice())
-              if (auto constOp =
-                      dyn_cast<LLVM::ConstantOp>(devId.getDefiningOp()))
+              if (auto constOp = devId.getDefiningOp<LLVM::ConstantOp>())
                 if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
                   deviceID = intAttr.getInt();
 
@@ -4555,8 +4514,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
               ifCond = moduleTranslation.lookupValue(ifVar);
 
             if (auto devId = enterDataOp.getDevice())
-              if (auto constOp =
-                      dyn_cast<LLVM::ConstantOp>(devId.getDefiningOp()))
+              if (auto constOp = devId.getDefiningOp<LLVM::ConstantOp>())
                 if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
                   deviceID = intAttr.getInt();
             RTLFn =
@@ -4575,8 +4533,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
               ifCond = moduleTranslation.lookupValue(ifVar);
 
             if (auto devId = exitDataOp.getDevice())
-              if (auto constOp =
-                      dyn_cast<LLVM::ConstantOp>(devId.getDefiningOp()))
+              if (auto constOp = devId.getDefiningOp<LLVM::ConstantOp>())
                 if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
                   deviceID = intAttr.getInt();
 
@@ -4595,8 +4552,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
               ifCond = moduleTranslation.lookupValue(ifVar);
 
             if (auto devId = updateDataOp.getDevice())
-              if (auto constOp =
-                      dyn_cast<LLVM::ConstantOp>(devId.getDefiningOp()))
+              if (auto constOp = devId.getDefiningOp<LLVM::ConstantOp>())
                 if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
                   deviceID = intAttr.getInt();
 
@@ -5237,8 +5193,7 @@ static std::optional<int64_t> extractConstInteger(Value value) {
   if (!value)
     return std::nullopt;
 
-  if (auto constOp =
-          dyn_cast_if_present<LLVM::ConstantOp>(value.getDefiningOp()))
+  if (auto constOp = value.getDefiningOp<LLVM::ConstantOp>())
     if (auto constAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
       return constAttr.getInt();
 
