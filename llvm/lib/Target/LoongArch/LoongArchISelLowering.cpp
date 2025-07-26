@@ -2385,19 +2385,9 @@ SDValue LoongArchTargetLowering::lowerBF16_TO_FP(SDValue Op,
   return Res;
 }
 
-static bool isConstantOrUndef(const SDValue Op) {
-  if (Op->isUndef())
-    return true;
-  if (isa<ConstantSDNode>(Op))
-    return true;
-  if (isa<ConstantFPSDNode>(Op))
-    return true;
-  return false;
-}
-
-static bool isConstantOrUndefBUILD_VECTOR(const BuildVectorSDNode *Op) {
+static bool isConstantBUILD_VECTOR(const BuildVectorSDNode *Op) {
   for (unsigned i = 0; i < Op->getNumOperands(); ++i)
-    if (isConstantOrUndef(Op->getOperand(i)))
+    if (isIntOrFPConstant(Op->getOperand(i)))
       return true;
   return false;
 }
@@ -2505,20 +2495,23 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
   if (DAG.isSplatValue(Op, /*AllowUndefs=*/false))
     return Op;
 
-  if (!isConstantOrUndefBUILD_VECTOR(Node)) {
+  if (!isConstantBUILD_VECTOR(Node)) {
     // Use INSERT_VECTOR_ELT operations rather than expand to stores.
     // The resulting code is the same length as the expansion, but it doesn't
     // use memory operations.
-    EVT ResTy = Node->getValueType(0);
-
     assert(ResTy.isVector());
 
     unsigned NumElts = ResTy.getVectorNumElements();
-    SDValue Vector =
-        DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ResTy, Node->getOperand(0));
+    SDValue Op0 = Node->getOperand(0);
+    SDValue Vector = DAG.getUNDEF(ResTy);
+
+    if (!Op0.isUndef())
+      Vector = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ResTy, Op0);
     for (unsigned i = 1; i < NumElts; ++i) {
-      Vector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ResTy, Vector,
-                           Node->getOperand(i),
+      SDValue Opi = Node->getOperand(i);
+      if (Opi.isUndef())
+        continue;
+      Vector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ResTy, Vector, Opi,
                            DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
     }
     return Vector;
