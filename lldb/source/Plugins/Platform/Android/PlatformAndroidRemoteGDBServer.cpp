@@ -32,12 +32,11 @@ static Status ForwardPortWithAdb(
     std::string &device_id) {
   Log *log = GetLog(LLDBLog::Platform);
 
-  AdbClient adb;
-  auto error = AdbClient::CreateByDeviceID(device_id, adb);
+  auto error = AdbClient::ResolveDeviceID(device_id, device_id);
   if (error.Fail())
     return error;
 
-  device_id = adb.GetDeviceID();
+  AdbClient adb(device_id);
   LLDB_LOGF(log, "Connected to Android device \"%s\"", device_id.c_str());
 
   if (remote_port != 0) {

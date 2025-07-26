@@ -14,6 +14,7 @@
 
 #include "Plugins/Platform/Linux/PlatformLinux.h"
 
+#include "AdbSyncService.h"
 #include "AdbClient.h"
 
 namespace lldb_private {
@@ -59,6 +60,9 @@ public:
 
   uint32_t GetDefaultMemoryCacheLineSize() override;
 
+  uint32_t FindProcesses(const ProcessInstanceInfoMatch &match_info,
+                         ProcessInstanceInfoList &process_infos) override;
+
 protected:
   const char *GetCacheHostname() override;
 
@@ -73,16 +77,18 @@ protected:
   GetLibdlFunctionDeclarations(lldb_private::Process *process) override;
 
   typedef std::unique_ptr<AdbClient> AdbClientUP;
-  virtual AdbClientUP GetAdbClient(Status &error);
-
-  virtual llvm::StringRef GetPropertyPackageName();
 
   std::string GetRunAs();
 
-private:
-  AdbClient::SyncService *GetSyncService(Status &error);
+public:
+  // Exposed for testing
+  virtual AdbClientUP GetAdbClient(Status &error);
+  virtual llvm::StringRef GetPropertyPackageName();
 
-  std::unique_ptr<AdbClient::SyncService> m_adb_sync_svc;
+protected:
+  virtual std::unique_ptr<AdbSyncService> GetSyncService(Status &error);
+
+private:
   std::string m_device_id;
   uint32_t m_sdk_version;
 };

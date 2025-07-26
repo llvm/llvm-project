@@ -10,6 +10,8 @@
 #define LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_ADBCLIENT_H
 
 #include "lldb/Utility/Status.h"
+#include "AdbClientUtils.h"
+#include "AdbSyncService.h"
 #include <chrono>
 #include <functional>
 #include <list>
@@ -32,50 +34,14 @@ public:
 
   using DeviceIDList = std::list<std::string>;
 
-  class SyncService {
-    friend class AdbClient;
-
-  public:
-    virtual ~SyncService();
-
-    virtual Status PullFile(const FileSpec &remote_file,
-                            const FileSpec &local_file);
-
-    Status PushFile(const FileSpec &local_file, const FileSpec &remote_file);
-
-    virtual Status Stat(const FileSpec &remote_file, uint32_t &mode,
-                        uint32_t &size, uint32_t &mtime);
-
-    bool IsConnected() const;
-
-  protected:
-    explicit SyncService(std::unique_ptr<Connection> &&conn);
-
-  private:
-    Status SendSyncRequest(const char *request_id, const uint32_t data_len,
-                           const void *data);
-
-    Status ReadSyncHeader(std::string &response_id, uint32_t &data_len);
-
-    Status PullFileChunk(std::vector<char> &buffer, bool &eof);
-
-    Status ReadAllBytes(void *buffer, size_t size);
-
-    Status internalPullFile(const FileSpec &remote_file,
-                            const FileSpec &local_file);
-
-    Status internalPushFile(const FileSpec &local_file,
-                            const FileSpec &remote_file);
-
-    Status internalStat(const FileSpec &remote_file, uint32_t &mode,
-                        uint32_t &size, uint32_t &mtime);
-
-    Status executeCommand(const std::function<Status()> &cmd);
-
-    std::unique_ptr<Connection> m_conn;
-  };
-
-  static Status CreateByDeviceID(const std::string &device_id, AdbClient &adb);
+  /// Resolves a device identifier to its canonical form.
+  ///
+  /// \param device_id the device identifier to resolve (may be empty).
+  /// \param [out] resolved_device_id filled with the canonical device ID.
+  ///
+  /// \returns Status object indicating success or failure. Returns error if
+  ///          the device ID cannot be resolved or is ambiguous.
+  static Status ResolveDeviceID(const std::string &device_id, std::string &resolved_device_id);
 
   AdbClient();
   explicit AdbClient(const std::string &device_id);
@@ -83,8 +49,6 @@ public:
   virtual ~AdbClient();
 
   const std::string &GetDeviceID() const;
-
-  Status GetDevices(DeviceIDList &device_list);
 
   Status SetPortForwarding(const uint16_t local_port,
                            const uint16_t remote_port);
@@ -102,36 +66,25 @@ public:
                              std::chrono::milliseconds timeout,
                              const FileSpec &output_file_spec);
 
-  virtual std::unique_ptr<SyncService> GetSyncService(Status &error);
-
-  Status SwitchDeviceTransport();
-
-private:
   Status Connect();
 
-  void SetDeviceID(const std::string &device_id);
-
-  Status SendMessage(const std::string &packet, const bool reconnect = true);
+private:
+  /// Retrieves a list of all connected Android devices.
+  ///
+  /// Queries the ADB server for all currently connected devices and populates
+  /// the provided list with their device IDs. Note that ADB closes the connection
+  /// after this operation, making this AdbClient instance invalid for further use.
+  ///
+  /// \param [out] device_list filled with device IDs of all connected devices.
+  Status GetDevices(DeviceIDList &device_list);
 
   Status SendDeviceMessage(const std::string &packet);
-
-  Status ReadMessage(std::vector<char> &message);
 
   Status ReadMessageStream(std::vector<char> &message,
                            std::chrono::milliseconds timeout);
 
-  Status GetResponseError(const char *response_id);
-
-  Status ReadResponseStatus();
-
-  Status Sync();
-
-  Status StartSync();
-
   Status internalShell(const char *command, std::chrono::milliseconds timeout,
                        std::vector<char> &output_buf);
-
-  Status ReadAllBytes(void *buffer, size_t size);
 
   std::string m_device_id;
   std::unique_ptr<Connection> m_conn;
