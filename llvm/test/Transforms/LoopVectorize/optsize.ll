@@ -628,7 +628,6 @@ define i32 @pr45526_pgso() !prof !14 {
 ; NPGSO-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
 ; NPGSO:       [[MIDDLE_BLOCK]]:
 ; NPGSO-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 3
-; NPGSO-NEXT:    br label %[[SCALAR_PH]]
 ; NPGSO:       [[SCALAR_PH]]:
 ; NPGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 508, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; NPGSO-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 5, %[[ENTRY]] ]

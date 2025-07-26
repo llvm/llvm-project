@@ -289,3 +289,126 @@ entry:
   %add = add i32 %shl, %rem
   ret i32 %add
 }
+
+define i32 @fold_add_udiv_urem_no_mul(i32 noundef %val) {
+; CHECK-LABEL: @fold_add_udiv_urem_no_mul(
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[VAL:%.*]], 10
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[DIV]], -9
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP1]], [[VAL]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %div = udiv i32 %val, 10
+  %rem = urem i32 %val, 10
+  %add = add i32 %div, %rem
+  ret i32 %add
+}
+
+define i32 @fold_add_udiv_urem_rem_mul(i32 noundef %val) {
+; CHECK-LABEL: @fold_add_udiv_urem_rem_mul(
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[VAL:%.*]], 10
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[VAL]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[DIV]], -29
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %div = udiv i32 %val, 10
+  %rem = urem i32 %val, 10
+  %mul = mul i32 %rem, 3
+  %add = add i32 %div, %mul
+  ret i32 %add
+}
+
+define i32 @fold_add_udiv_urem_pow2_no_mul(i32 noundef %arg) {
+; CHECK-LABEL: @fold_add_udiv_urem_pow2_no_mul(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[ARG:%.*]], 4
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ARG]], 15
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LSHR]], [[AND]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %lshr = lshr i32 %arg, 4
+  %and = and i32 %arg, 15
+  %add = add i32 %lshr, %and
+  ret i32 %add
+}
+
+define i32 @fold_add_udiv_urem_pow2_div_mul(i32 noundef %arg) {
+; CHECK-LABEL: @fold_add_udiv_urem_pow2_div_mul(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[ARG:%.*]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[LSHR]], -13
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP1]], [[ARG]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %lshr = lshr i32 %arg, 4
+  %mul = mul i32 %lshr, 3
+  %and = and i32 %arg, 15
+  %add = add i32 %mul, %and
+  ret i32 %add
+}
+
+define i32 @fold_add_sdiv_srem_no_mul(i32 noundef %val) {
+; CHECK-LABEL: @fold_add_sdiv_srem_no_mul(
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[VAL:%.*]], 10
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[DIV]], -9
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP1]], [[VAL]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %div = sdiv i32 %val, 10
+  %rem = srem i32 %val, 10
+  %add = add i32 %div, %rem
+  ret i32 %add
+}
+
+define i32 @fold_add_udiv_urem_pow2_rem_mul(i32 noundef %arg) {
+; CHECK-LABEL: @fold_add_udiv_urem_pow2_rem_mul(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[ARG:%.*]], 4
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ARG]], 15
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[AND]], 3
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LSHR]], [[MUL]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %lshr = lshr i32 %arg, 4
+  %and = and i32 %arg, 15
+  %mul = mul i32 %and, 3
+  %add = add i32 %lshr, %mul
+  ret i32 %add
+}
+
+define i32 @fold_add_udiv_urem_pow2_both_mul(i32 noundef %arg) {
+; CHECK-LABEL: @fold_add_udiv_urem_pow2_both_mul(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[ARG:%.*]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[ARG]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[LSHR]], -41
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %lshr = lshr i32 %arg, 4
+  %mul1 = mul i32 %lshr, 7
+  %and = and i32 %arg, 15
+  %mul2 = mul i32 %and, 3
+  %add = add i32 %mul1, %mul2
+  ret i32 %add
+}
+
+define i32 @fold_add_udiv_urem_by_two_no_mul(i32 noundef %arg) {
+; CHECK-LABEL: @fold_add_udiv_urem_by_two_no_mul(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[ARG:%.*]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[ARG]], [[LSHR]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %lshr = lshr i32 %arg, 1
+  %and = and i32 %arg, 1
+  %add = add i32 %lshr, %and
+  ret i32 %add
+}
+
+define i32 @fold_add_sdiv_srem_by_two_no_mul(i32 noundef %arg) {
+; CHECK-LABEL: @fold_add_sdiv_srem_by_two_no_mul(
+; CHECK-NEXT:    [[DIV_NEG:%.*]] = sdiv i32 [[ARG:%.*]], -2
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[DIV_NEG]], [[ARG]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %div = sdiv i32 %arg, 2
+  %rem = srem i32 %arg, 2
+  %add = add i32 %div, %rem
+  ret i32 %add
+}

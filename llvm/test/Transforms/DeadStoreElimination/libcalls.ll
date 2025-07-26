@@ -67,19 +67,6 @@ define void @test_strcat_with_lifetime(ptr %src) {
   ret void
 }
 
-define void @test_strcat_with_lifetime_nonlocal(ptr %dest, ptr %src) {
-; CHECK-LABEL: @test_strcat_with_lifetime_nonlocal(
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[DEST:%.*]])
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr @strcat(ptr [[DEST]], ptr [[SRC:%.*]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[DEST]])
-; CHECK-NEXT:    ret void
-;
-  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %dest)
-  %call = call ptr @strcat(ptr %dest, ptr %src)
-  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %dest)
-  ret void
-}
-
 declare ptr @strncat(ptr %dest, ptr %src, i64 %n) nounwind
 define void @test4(ptr %src) {
 ; CHECK-LABEL: @test4(

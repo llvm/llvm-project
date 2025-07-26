@@ -662,22 +662,22 @@ define double @test_chained_first_order_recurrence_sink_users_1(ptr %ptr) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 997, %[[MIDDLE_BLOCK]] ], [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[FOR_1:%.*]] = phi double [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[FOR_1_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[FOR_2:%.*]] = phi double [ [[SCALAR_RECUR_INIT3]], %[[SCALAR_PH]] ], [ [[FOR_1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[FOR_2_LCSSA:%.*]] = phi double [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[FOR_1_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[FOR_2:%.*]] = phi double [ [[SCALAR_RECUR_INIT3]], %[[SCALAR_PH]] ], [ [[FOR_2_LCSSA]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[ADD_1:%.*]] = fadd double 1.000000e+01, [[FOR_2]]
-; CHECK-NEXT:    [[ADD_2:%.*]] = fadd double [[ADD_1]], [[FOR_1]]
+; CHECK-NEXT:    [[FOR_1_LCSSA:%.*]] = fadd double 1.000000e+01, [[FOR_2]]
+; CHECK-NEXT:    [[RES:%.*]] = fadd double [[FOR_1_LCSSA]], [[FOR_2_LCSSA]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[GEP_PTR:%.*]] = getelementptr inbounds double, ptr [[PTR]], i64 [[IV]]
 ; CHECK-NEXT:    [[FOR_1_NEXT]] = load double, ptr [[GEP_PTR]], align 8
-; CHECK-NEXT:    store double [[ADD_2]], ptr [[GEP_PTR]], align 8
+; CHECK-NEXT:    store double [[RES]], ptr [[GEP_PTR]], align 8
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[FOR_1_LCSSA:%.*]] = phi double [ [[FOR_1]], %[[LOOP]] ]
-; CHECK-NEXT:    [[FOR_2_LCSSA:%.*]] = phi double [ [[FOR_2]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RES:%.*]] = fadd double [[FOR_1_LCSSA]], [[FOR_2_LCSSA]]
-; CHECK-NEXT:    ret double [[RES]]
+; CHECK-NEXT:    [[FOR_1_LCSSA1:%.*]] = phi double [ [[FOR_2_LCSSA]], %[[LOOP]] ]
+; CHECK-NEXT:    [[FOR_2_LCSSA1:%.*]] = phi double [ [[FOR_2]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RES1:%.*]] = fadd double [[FOR_1_LCSSA1]], [[FOR_2_LCSSA1]]
+; CHECK-NEXT:    ret double [[RES1]]
 ;
 entry:
   br label %loop
@@ -1018,7 +1018,7 @@ define double @test_resinking_required(ptr %p, ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI10:%.*]] = extractelement <4 x double> [[TMP4]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x double> [[TMP4]], i32 2
 ; CHECK-NEXT:    br label %[[END:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ]
@@ -1043,7 +1043,7 @@ define double @test_resinking_required(ptr %p, ptr noalias %a, ptr noalias %b) {
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    [[FOR_1_LCSSA:%.*]] = phi double [ [[FOR_1]], %[[LOOP]] ], [ [[TMP0]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[FOR_2_LCSSA:%.*]] = phi double [ [[FOR_2]], %[[LOOP]] ], [ [[TMP3]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[FOR_3_LCSSA:%.*]] = phi double [ [[FOR_3]], %[[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI10]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[FOR_3_LCSSA:%.*]] = phi double [ [[FOR_3]], %[[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[RES_1:%.*]] = fadd double [[FOR_1_LCSSA]], [[FOR_2_LCSSA]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = fadd double [[RES_1]], [[FOR_3_LCSSA]]
 ; CHECK-NEXT:    ret double [[RES_2]]

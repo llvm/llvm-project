@@ -13,7 +13,6 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSymbol.h"
@@ -82,8 +81,9 @@ void MCPseudoProbe::emit(MCObjectStreamer *MCOS,
     if (AddrDelta->evaluateAsAbsolute(Delta, MCOS->getAssemblerPtr())) {
       MCOS->emitSLEB128IntValue(Delta);
     } else {
-      MCOS->insert(MCOS->getContext().allocFragment<MCPseudoProbeAddrFragment>(
-          AddrDelta));
+      auto *F = MCOS->getCurrentFragment();
+      F->makeLEB(true, AddrDelta);
+      MCOS->newFragment();
     }
   } else {
     // Emit the GUID of the split function that the sentinel probe represents.

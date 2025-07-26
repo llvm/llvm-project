@@ -179,7 +179,9 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
       return MAI->printSpecifierExpr(OS, SE);
     // Used by dump features like -show-inst. Regular MCAsmStreamer output must
     // set MAI.
-    OS << "specifier(" << SE.getSpecifier() << ',' << *SE.getSubExpr() << ')';
+    OS << "specifier(" << SE.getSpecifier() << ',';
+    SE.getSubExpr()->print(OS, nullptr);
+    OS << ')';
     return;
   }
   }
@@ -189,7 +191,7 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCExpr::dump() const {
-  dbgs() << *this;
+  print(dbgs(), nullptr);
   dbgs() << '\n';
 }
 #endif
@@ -215,16 +217,16 @@ const MCConstantExpr *MCConstantExpr::create(int64_t Value, MCContext &Ctx,
 
 /* *** */
 
-MCSymbolRefExpr::MCSymbolRefExpr(const MCSymbol *Symbol, VariantKind Kind,
+MCSymbolRefExpr::MCSymbolRefExpr(const MCSymbol *Symbol, Spec specifier,
                                  const MCAsmInfo *MAI, SMLoc Loc)
-    : MCExpr(MCExpr::SymbolRef, Loc, Kind), Symbol(Symbol) {
+    : MCExpr(MCExpr::SymbolRef, Loc, specifier), Symbol(Symbol) {
   assert(Symbol);
 }
 
 const MCSymbolRefExpr *MCSymbolRefExpr::create(const MCSymbol *Sym,
-                                               VariantKind Kind,
+                                               uint16_t specifier,
                                                MCContext &Ctx, SMLoc Loc) {
-  return new (Ctx) MCSymbolRefExpr(Sym, Kind, Ctx.getAsmInfo(), Loc);
+  return new (Ctx) MCSymbolRefExpr(Sym, specifier, Ctx.getAsmInfo(), Loc);
 }
 
 /* *** */
@@ -322,7 +324,7 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
     // symbols is limited to specific cases where the fragments between two
     // symbols (including the fragments the symbols are defined in) are
     // fixed-size fragments so the difference can be calculated. For example,
-    // this is important when the Subtarget is changed and a new MCDataFragment
+    // this is important when the Subtarget is changed and a new MCFragment
     // is created in the case of foo: instr; .arch_extension ext; instr .if . -
     // foo.
     if (SA.isVariable() || SB.isVariable())
@@ -349,17 +351,17 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
     // instruction, the difference cannot be resolved as it may be changed by
     // the linker.
     bool BBeforeRelax = false, AAfterRelax = false;
-    for (auto FI = FB; FI; FI = FI->getNext()) {
-      auto DF = dyn_cast<MCDataFragment>(FI);
+    for (auto F = FB; F; F = F->getNext()) {
+      auto DF = F->getKind() == MCFragment::FT_Data ? F : nullptr;
       if (DF && DF->isLinkerRelaxable()) {
-        if (&*FI != FB || SBOffset != DF->getContents().size())
+        if (&*F != FB || SBOffset != DF->getContents().size())
           BBeforeRelax = true;
-        if (&*FI != FA || SAOffset == DF->getContents().size())
+        if (&*F != FA || SAOffset == DF->getContents().size())
           AAfterRelax = true;
         if (BBeforeRelax && AAfterRelax)
           return;
       }
-      if (&*FI == FA) {
+      if (&*F == FA) {
         // If FA and FB belong to the same subsection, the loop will find FA and
         // we can resolve the difference.
         Addend += Reverse ? -Displacement : Displacement;
@@ -368,21 +370,18 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
       }
 
       int64_t Num;
-      unsigned Count;
       if (DF) {
         Displacement += DF->getContents().size();
-      } else if (auto *RF = dyn_cast<MCRelaxableFragment>(FI);
-                 RF && Asm->hasFinalLayout()) {
+      } else if (F->getKind() == MCFragment::FT_Relaxable &&
+                 Asm->hasFinalLayout()) {
         // Before finishLayout, a relaxable fragment's size is indeterminate.
         // After layout, during relocation generation, it can be treated as a
         // data fragment.
-        Displacement += RF->getContents().size();
-      } else if (auto *AF = dyn_cast<MCAlignFragment>(FI);
-                 AF && Layout && AF->hasEmitNops() &&
-                 !Asm->getBackend().shouldInsertExtraNopBytesForCodeAlign(
-                     *AF, Count)) {
-        Displacement += Asm->computeFragmentSize(*AF);
-      } else if (auto *FF = dyn_cast<MCFillFragment>(FI);
+        Displacement += F->getSize();
+      } else if (F->getKind() == MCFragment::FT_Align && Layout &&
+                 F->isLinkerRelaxable()) {
+        Displacement += Asm->computeFragmentSize(*F);
+      } else if (auto *FF = dyn_cast<MCFillFragment>(F);
                  FF && FF->getNumValues().evaluateAsAbsolute(Num)) {
         Displacement += Num * FF->getValueSize();
       } else {

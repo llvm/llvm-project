@@ -628,6 +628,11 @@ int __kmp_basic_str_to_int(char const *str) {
   for (t = str; *t != '\0'; ++t) {
     if (*t < '0' || *t > '9')
       break;
+    // Cap parsing to create largest integer
+    if (result >= (INT_MAX - (*t - '0')) / 10) {
+      result = INT_MAX;
+      break;
+    }
     result = (result * 10) + (*t - '0');
   }
 
@@ -643,8 +648,19 @@ int __kmp_str_to_int(char const *str, char sentinel) {
   for (t = str; *t != '\0'; ++t) {
     if (*t < '0' || *t > '9')
       break;
+    // Cap parsing to create largest integer
+    if (result >= (INT_MAX - (*t - '0')) / 10) {
+      result = INT_MAX;
+      break;
+    }
     result = (result * 10) + (*t - '0');
   }
+
+  // Parse rest of large number by skipping the digits so t points to sentinel
+  if (result == INT_MAX)
+    for (t = str; *t != '\0'; ++t)
+      if (*t < '0' || *t > '9')
+        break;
 
   switch (*t) {
   case '\0': /* the current default for no suffix is bytes */
