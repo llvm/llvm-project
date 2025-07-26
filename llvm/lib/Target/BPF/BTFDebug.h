@@ -321,7 +321,7 @@ class BTFDebug : public DebugHandlerBase {
   /// @{
   void visitTypeEntry(const DIType *Ty);
   void visitTypeEntry(const DIType *Ty, uint32_t &TypeId, bool CheckPointer,
-                      bool SeenPointer);
+                      bool SeenPointer, bool NestedMap);
   void visitBasicType(const DIBasicType *BTy, uint32_t &TypeId);
   void visitSubroutineType(
       const DISubroutineType *STy, bool ForSubprog,
@@ -335,7 +335,7 @@ class BTFDebug : public DebugHandlerBase {
   void visitArrayType(const DICompositeType *ATy, uint32_t &TypeId);
   void visitEnumType(const DICompositeType *ETy, uint32_t &TypeId);
   void visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
-                        bool CheckPointer, bool SeenPointer);
+                        bool CheckPointer, bool SeenPointer, bool NestedMap);
   void visitMapDefType(const DIType *Ty, uint32_t &TypeId);
   /// @}
 
