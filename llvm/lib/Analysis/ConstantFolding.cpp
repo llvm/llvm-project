@@ -1656,6 +1656,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::aarch64_sve_convert_from_svbool:
   case Intrinsic::wasm_alltrue:
   case Intrinsic::wasm_anytrue:
+  case Intrinsic::wasm_dot:
   // WebAssembly float semantics are always known
   case Intrinsic::wasm_trunc_signed:
   case Intrinsic::wasm_trunc_unsigned:
@@ -3983,6 +3984,37 @@ static Constant *ConstantFoldFixedVectorCall(
       Result[2 * I] = Elt0;
       Result[2 * I + 1] = Elt1;
     }
+    return ConstantVector::get(Result);
+  }
+  case Intrinsic::wasm_dot: {
+    unsigned NumElements =
+        cast<FixedVectorType>(Operands[0]->getType())->getNumElements();
+
+    assert(NumElements == 8 && Result.size() == 4 &&
+           "wasm dot takes i16x8 and produces i32x4");
+    assert(Ty->isIntegerTy());
+    SmallVector<APInt, 8> MulVector;
+
+    for (unsigned I = 0; I < NumElements; ++I) {
+      ConstantInt *Elt0 =
+          cast<ConstantInt>(Operands[0]->getAggregateElement(I));
+      ConstantInt *Elt1 =
+          cast<ConstantInt>(Operands[1]->getAggregateElement(I));
+
+      // sext 32 first, according to specs
+      APInt IMul = Elt0->getValue().sext(32) * Elt1->getValue().sext(32);
+
+      // Multiplication can never be more than 32 bit.
+      // We can opt to not perform modulo of imul here.
+      MulVector.push_back(IMul);
+    }
+    for (unsigned I = 0; I < Result.size(); I++) {
+      // Addition can never be more than 32 bit.
+      // We can opt to not perform modulo of iadd here.
+      APInt IAdd = MulVector[I * 2] + MulVector[I * 2 + 1];
+      Result[I] = ConstantInt::get(Ty, IAdd);
+    }
+
     return ConstantVector::get(Result);
   }
   default:
