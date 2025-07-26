@@ -5,11 +5,9 @@
 define float @fmadds(float %a, float %b, float %c) nounwind {
 ; NO-UA2007-LABEL: fmadds:
 ; NO-UA2007:       ! %bb.0:
-; NO-UA2007-NEXT:    save %sp, -176, %sp
-; NO-UA2007-NEXT:    call fmaf
-; NO-UA2007-NEXT:    nop
-; NO-UA2007-NEXT:    ret
-; NO-UA2007-NEXT:    restore
+; NO-UA2007-NEXT:    fmuls %f1, %f3, %f0
+; NO-UA2007-NEXT:    retl
+; NO-UA2007-NEXT:    fadds %f0, %f5, %f0
 ;
 ; UA2007-LABEL: fmadds:
 ; UA2007:       ! %bb.0:
@@ -22,11 +20,9 @@ define float @fmadds(float %a, float %b, float %c) nounwind {
 define double @fmaddd(double %a, double %b, double %c) nounwind {
 ; NO-UA2007-LABEL: fmaddd:
 ; NO-UA2007:       ! %bb.0:
-; NO-UA2007-NEXT:    save %sp, -176, %sp
-; NO-UA2007-NEXT:    call fma
-; NO-UA2007-NEXT:    nop
-; NO-UA2007-NEXT:    ret
-; NO-UA2007-NEXT:    restore
+; NO-UA2007-NEXT:    fmuld %f0, %f2, %f0
+; NO-UA2007-NEXT:    retl
+; NO-UA2007-NEXT:    faddd %f0, %f4, %f0
 ;
 ; UA2007-LABEL: fmaddd:
 ; UA2007:       ! %bb.0:
@@ -39,11 +35,9 @@ define double @fmaddd(double %a, double %b, double %c) nounwind {
 define float @fmsubs(float %a, float %b, float %c) nounwind {
 ; NO-UA2007-LABEL: fmsubs:
 ; NO-UA2007:       ! %bb.0:
-; NO-UA2007-NEXT:    save %sp, -176, %sp
-; NO-UA2007-NEXT:    call fmaf
-; NO-UA2007-NEXT:    fnegs %f5, %f5
-; NO-UA2007-NEXT:    ret
-; NO-UA2007-NEXT:    restore
+; NO-UA2007-NEXT:    fmuls %f1, %f3, %f0
+; NO-UA2007-NEXT:    retl
+; NO-UA2007-NEXT:    fsubs %f0, %f5, %f0
 ;
 ; UA2007-LABEL: fmsubs:
 ; UA2007:       ! %bb.0:
@@ -57,11 +51,9 @@ define float @fmsubs(float %a, float %b, float %c) nounwind {
 define double @fmsubd(double %a, double %b, double %c) nounwind {
 ; NO-UA2007-LABEL: fmsubd:
 ; NO-UA2007:       ! %bb.0:
-; NO-UA2007-NEXT:    save %sp, -176, %sp
-; NO-UA2007-NEXT:    call fma
-; NO-UA2007-NEXT:    fnegd %f4, %f4
-; NO-UA2007-NEXT:    ret
-; NO-UA2007-NEXT:    restore
+; NO-UA2007-NEXT:    fmuld %f0, %f2, %f0
+; NO-UA2007-NEXT:    retl
+; NO-UA2007-NEXT:    fsubd %f0, %f4, %f0
 ;
 ; UA2007-LABEL: fmsubd:
 ; UA2007:       ! %bb.0:
@@ -75,12 +67,10 @@ define double @fmsubd(double %a, double %b, double %c) nounwind {
 define float @fnmadds(float %a, float %b, float %c) nounwind {
 ; NO-UA2007-LABEL: fnmadds:
 ; NO-UA2007:       ! %bb.0:
-; NO-UA2007-NEXT:    save %sp, -176, %sp
-; NO-UA2007-NEXT:    call fmaf
-; NO-UA2007-NEXT:    nop
+; NO-UA2007-NEXT:    fmuls %f1, %f3, %f0
+; NO-UA2007-NEXT:    fadds %f0, %f5, %f0
+; NO-UA2007-NEXT:    retl
 ; NO-UA2007-NEXT:    fnegs %f0, %f0
-; NO-UA2007-NEXT:    ret
-; NO-UA2007-NEXT:    restore
 ;
 ; UA2007-LABEL: fnmadds:
 ; UA2007:       ! %bb.0:
@@ -94,12 +84,10 @@ define float @fnmadds(float %a, float %b, float %c) nounwind {
 define double @fnmaddd(double %a, double %b, double %c) nounwind {
 ; NO-UA2007-LABEL: fnmaddd:
 ; NO-UA2007:       ! %bb.0:
-; NO-UA2007-NEXT:    save %sp, -176, %sp
-; NO-UA2007-NEXT:    call fma
-; NO-UA2007-NEXT:    nop
+; NO-UA2007-NEXT:    fmuld %f0, %f2, %f0
+; NO-UA2007-NEXT:    faddd %f0, %f4, %f0
+; NO-UA2007-NEXT:    retl
 ; NO-UA2007-NEXT:    fnegd %f0, %f0
-; NO-UA2007-NEXT:    ret
-; NO-UA2007-NEXT:    restore
 ;
 ; UA2007-LABEL: fnmaddd:
 ; UA2007:       ! %bb.0:
@@ -113,12 +101,10 @@ define double @fnmaddd(double %a, double %b, double %c) nounwind {
 define float @fnmsubs(float %a, float %b, float %c) nounwind {
 ; NO-UA2007-LABEL: fnmsubs:
 ; NO-UA2007:       ! %bb.0:
-; NO-UA2007-NEXT:    save %sp, -176, %sp
-; NO-UA2007-NEXT:    call fmaf
-; NO-UA2007-NEXT:    fnegs %f5, %f5
+; NO-UA2007-NEXT:    fmuls %f1, %f3, %f0
+; NO-UA2007-NEXT:    fsubs %f0, %f5, %f0
+; NO-UA2007-NEXT:    retl
 ; NO-UA2007-NEXT:    fnegs %f0, %f0
-; NO-UA2007-NEXT:    ret
-; NO-UA2007-NEXT:    restore
 ;
 ; UA2007-LABEL: fnmsubs:
 ; UA2007:       ! %bb.0:
@@ -133,12 +119,10 @@ define float @fnmsubs(float %a, float %b, float %c) nounwind {
 define double @fnmsubd(double %a, double %b, double %c) nounwind {
 ; NO-UA2007-LABEL: fnmsubd:
 ; NO-UA2007:       ! %bb.0:
-; NO-UA2007-NEXT:    save %sp, -176, %sp
-; NO-UA2007-NEXT:    call fma
-; NO-UA2007-NEXT:    fnegd %f4, %f4
+; NO-UA2007-NEXT:    fmuld %f0, %f2, %f0
+; NO-UA2007-NEXT:    fsubd %f0, %f4, %f0
+; NO-UA2007-NEXT:    retl
 ; NO-UA2007-NEXT:    fnegd %f0, %f0
-; NO-UA2007-NEXT:    ret
-; NO-UA2007-NEXT:    restore
 ;
 ; UA2007-LABEL: fnmsubd:
 ; UA2007:       ! %bb.0:
@@ -154,11 +138,9 @@ define double @fnmsubd(double %a, double %b, double %c) nounwind {
 define float @combine_madds(float %a, float %b, float %c) nounwind {
 ; NO-UA2007-LABEL: combine_madds:
 ; NO-UA2007:       ! %bb.0:
-; NO-UA2007-NEXT:    save %sp, -176, %sp
-; NO-UA2007-NEXT:    call fmaf
-; NO-UA2007-NEXT:    nop
-; NO-UA2007-NEXT:    ret
-; NO-UA2007-NEXT:    restore
+; NO-UA2007-NEXT:    fmuls %f1, %f3, %f0
+; NO-UA2007-NEXT:    retl
+; NO-UA2007-NEXT:    fadds %f0, %f5, %f0
 ;
 ; UA2007-LABEL: combine_madds:
 ; UA2007:       ! %bb.0:
@@ -172,11 +154,9 @@ define float @combine_madds(float %a, float %b, float %c) nounwind {
 define double @combine_maddd(double %a, double %b, double %c) nounwind {
 ; NO-UA2007-LABEL: combine_maddd:
 ; NO-UA2007:       ! %bb.0:
-; NO-UA2007-NEXT:    save %sp, -176, %sp
-; NO-UA2007-NEXT:    call fma
-; NO-UA2007-NEXT:    nop
-; NO-UA2007-NEXT:    ret
-; NO-UA2007-NEXT:    restore
+; NO-UA2007-NEXT:    fmuld %f0, %f2, %f0
+; NO-UA2007-NEXT:    retl
+; NO-UA2007-NEXT:    faddd %f0, %f4, %f0
 ;
 ; UA2007-LABEL: combine_maddd:
 ; UA2007:       ! %bb.0:
@@ -190,11 +170,9 @@ define double @combine_maddd(double %a, double %b, double %c) nounwind {
 define float @combine_msubs(float %a, float %b, float %c) nounwind {
 ; NO-UA2007-LABEL: combine_msubs:
 ; NO-UA2007:       ! %bb.0:
-; NO-UA2007-NEXT:    save %sp, -176, %sp
-; NO-UA2007-NEXT:    call fmaf
-; NO-UA2007-NEXT:    fnegs %f5, %f5
-; NO-UA2007-NEXT:    ret
-; NO-UA2007-NEXT:    restore
+; NO-UA2007-NEXT:    fmuls %f1, %f3, %f0
+; NO-UA2007-NEXT:    retl
+; NO-UA2007-NEXT:    fsubs %f0, %f5, %f0
 ;
 ; UA2007-LABEL: combine_msubs:
 ; UA2007:       ! %bb.0:
@@ -208,11 +186,9 @@ define float @combine_msubs(float %a, float %b, float %c) nounwind {
 define double @combine_msubd(double %a, double %b, double %c) nounwind {
 ; NO-UA2007-LABEL: combine_msubd:
 ; NO-UA2007:       ! %bb.0:
-; NO-UA2007-NEXT:    save %sp, -176, %sp
-; NO-UA2007-NEXT:    call fma
-; NO-UA2007-NEXT:    fnegd %f4, %f4
-; NO-UA2007-NEXT:    ret
-; NO-UA2007-NEXT:    restore
+; NO-UA2007-NEXT:    fmuld %f0, %f2, %f0
+; NO-UA2007-NEXT:    retl
+; NO-UA2007-NEXT:    fsubd %f0, %f4, %f0
 ;
 ; UA2007-LABEL: combine_msubd:
 ; UA2007:       ! %bb.0:
@@ -226,12 +202,10 @@ define double @combine_msubd(double %a, double %b, double %c) nounwind {
 define float @combine_nmadds(float %a, float %b, float %c) nounwind {
 ; NO-UA2007-LABEL: combine_nmadds:
 ; NO-UA2007:       ! %bb.0:
-; NO-UA2007-NEXT:    save %sp, -176, %sp
-; NO-UA2007-NEXT:    call fmaf
-; NO-UA2007-NEXT:    nop
+; NO-UA2007-NEXT:    fmuls %f1, %f3, %f0
+; NO-UA2007-NEXT:    fadds %f0, %f5, %f0
+; NO-UA2007-NEXT:    retl
 ; NO-UA2007-NEXT:    fnegs %f0, %f0
-; NO-UA2007-NEXT:    ret
-; NO-UA2007-NEXT:    restore
 ;
 ; UA2007-LABEL: combine_nmadds:
 ; UA2007:       ! %bb.0:
@@ -246,12 +220,10 @@ define float @combine_nmadds(float %a, float %b, float %c) nounwind {
 define double @combine_nmaddd(double %a, double %b, double %c) nounwind {
 ; NO-UA2007-LABEL: combine_nmaddd:
 ; NO-UA2007:       ! %bb.0:
-; NO-UA2007-NEXT:    save %sp, -176, %sp
-; NO-UA2007-NEXT:    call fma
-; NO-UA2007-NEXT:    nop
+; NO-UA2007-NEXT:    fmuld %f0, %f2, %f0
+; NO-UA2007-NEXT:    faddd %f0, %f4, %f0
+; NO-UA2007-NEXT:    retl
 ; NO-UA2007-NEXT:    fnegd %f0, %f0
-; NO-UA2007-NEXT:    ret
-; NO-UA2007-NEXT:    restore
 ;
 ; UA2007-LABEL: combine_nmaddd:
 ; UA2007:       ! %bb.0:
@@ -266,12 +238,10 @@ define double @combine_nmaddd(double %a, double %b, double %c) nounwind {
 define float @combine_nmsubs(float %a, float %b, float %c) nounwind {
 ; NO-UA2007-LABEL: combine_nmsubs:
 ; NO-UA2007:       ! %bb.0:
-; NO-UA2007-NEXT:    save %sp, -176, %sp
-; NO-UA2007-NEXT:    call fmaf
-; NO-UA2007-NEXT:    fnegs %f5, %f5
+; NO-UA2007-NEXT:    fmuls %f1, %f3, %f0
+; NO-UA2007-NEXT:    fsubs %f0, %f5, %f0
+; NO-UA2007-NEXT:    retl
 ; NO-UA2007-NEXT:    fnegs %f0, %f0
-; NO-UA2007-NEXT:    ret
-; NO-UA2007-NEXT:    restore
 ;
 ; UA2007-LABEL: combine_nmsubs:
 ; UA2007:       ! %bb.0:
@@ -286,12 +256,10 @@ define float @combine_nmsubs(float %a, float %b, float %c) nounwind {
 define double @combine_nmsubd(double %a, double %b, double %c) nounwind {
 ; NO-UA2007-LABEL: combine_nmsubd:
 ; NO-UA2007:       ! %bb.0:
-; NO-UA2007-NEXT:    save %sp, -176, %sp
-; NO-UA2007-NEXT:    call fma
-; NO-UA2007-NEXT:    fnegd %f4, %f4
+; NO-UA2007-NEXT:    fmuld %f0, %f2, %f0
+; NO-UA2007-NEXT:    fsubd %f0, %f4, %f0
+; NO-UA2007-NEXT:    retl
 ; NO-UA2007-NEXT:    fnegd %f0, %f0
-; NO-UA2007-NEXT:    ret
-; NO-UA2007-NEXT:    restore
 ;
 ; UA2007-LABEL: combine_nmsubd:
 ; UA2007:       ! %bb.0:

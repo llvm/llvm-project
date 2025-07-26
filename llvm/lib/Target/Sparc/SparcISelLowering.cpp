@@ -3574,11 +3574,7 @@ bool SparcTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
 
 bool SparcTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                                      EVT VT) const {
-  return !Subtarget->useSoftFloat();
-}
-
-bool SparcTargetLowering::enableAggressiveFMAFusion(EVT VT) const {
-  return !Subtarget->useSoftFloat();
+  return Subtarget->isUA2007() && !Subtarget->useSoftFloat();
 }
 
 // Override to disable global variable loading on Linux.

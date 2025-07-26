@@ -177,7 +177,7 @@ namespace llvm {
 
     bool isCheapToSpeculateCttz(Type *Ty) const override;
 
-    bool enableAggressiveFMAFusion(EVT VT) const override;
+    bool enableAggressiveFMAFusion(EVT VT) const override { return true; };
 
     bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                     EVT VT) const override;
