@@ -525,6 +525,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUAtomicOptimizerPass(*PR);
   initializeAMDGPULowerKernelArgumentsPass(*PR);
   initializeAMDGPUPromoteKernelArgumentsPass(*PR);
+  initializeAMDGPUSplitKernelArgumentsPass(*PR);
   initializeAMDGPULowerKernelAttributesPass(*PR);
   initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(*PR);
   initializeAMDGPUPostLegalizerCombinerPass(*PR);
@@ -905,6 +906,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
     if (Level != OptimizationLevel::O0) {
       if (!isLTOPreLink(Phase)) {
         AMDGPUAttributorOptions Opts;
+        MPM.addPass(AMDGPUSplitKernelArgumentsPass());
         MPM.addPass(AMDGPUAttributorPass(*this, Opts, Phase));
       }
     }
@@ -937,6 +939,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
             PM.addPass(InternalizePass(mustPreserveGV));
             PM.addPass(GlobalDCEPass());
           }
+          PM.addPass(AMDGPUSplitKernelArgumentsPass());
           if (EnableAMDGPUAttributor) {
             AMDGPUAttributorOptions Opt;
             if (HasClosedWorldAssumption)
@@ -1295,6 +1298,9 @@ void AMDGPUPassConfig::addIRPasses() {
   if (EnableLowerModuleLDS) {
     addPass(createAMDGPULowerModuleLDSLegacyPass(&TM));
   }
+
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(createAMDGPUSplitKernelArgumentsPass());
 
   // Run atomic optimizer before Atomic Expand
   if ((TM.getTargetTriple().isAMDGCN()) &&
