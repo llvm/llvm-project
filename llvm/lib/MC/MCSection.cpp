@@ -18,10 +18,9 @@
 
 using namespace llvm;
 
-MCSection::MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsBss,
-                     MCSymbol *Begin)
+MCSection::MCSection(StringRef Name, bool IsText, bool IsBss, MCSymbol *Begin)
     : Begin(Begin), HasInstructions(false), IsRegistered(false), IsText(IsText),
-      IsBss(IsBss), LinkerRelaxable(false), Name(Name), Variant(V) {
+      IsBss(IsBss), LinkerRelaxable(false), Name(Name) {
   DummyFragment.setParent(this);
 }
 

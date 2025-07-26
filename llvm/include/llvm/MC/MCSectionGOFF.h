@@ -56,24 +56,21 @@ class LLVM_ABI MCSectionGOFF final : public MCSection {
 
   MCSectionGOFF(StringRef Name, SectionKind K, bool IsVirtual,
                 GOFF::SDAttr SDAttributes, MCSectionGOFF *Parent)
-      : MCSection(SV_GOFF, Name, K.isText(), IsVirtual, nullptr),
-        Parent(Parent), SDAttributes(SDAttributes),
-        SymbolType(GOFF::ESD_ST_SectionDefinition), IsBSS(K.isBSS()),
-        RequiresNonZeroLength(0), Emitted(0) {}
+      : MCSection(Name, K.isText(), IsVirtual, nullptr), Parent(Parent),
+        SDAttributes(SDAttributes), SymbolType(GOFF::ESD_ST_SectionDefinition),
+        IsBSS(K.isBSS()), RequiresNonZeroLength(0), Emitted(0) {}
 
   MCSectionGOFF(StringRef Name, SectionKind K, bool IsVirtual,
                 GOFF::EDAttr EDAttributes, MCSectionGOFF *Parent)
-      : MCSection(SV_GOFF, Name, K.isText(), IsVirtual, nullptr),
-        Parent(Parent), EDAttributes(EDAttributes),
-        SymbolType(GOFF::ESD_ST_ElementDefinition), IsBSS(K.isBSS()),
-        RequiresNonZeroLength(0), Emitted(0) {}
+      : MCSection(Name, K.isText(), IsVirtual, nullptr), Parent(Parent),
+        EDAttributes(EDAttributes), SymbolType(GOFF::ESD_ST_ElementDefinition),
+        IsBSS(K.isBSS()), RequiresNonZeroLength(0), Emitted(0) {}
 
   MCSectionGOFF(StringRef Name, SectionKind K, bool IsVirtual,
                 GOFF::PRAttr PRAttributes, MCSectionGOFF *Parent)
-      : MCSection(SV_GOFF, Name, K.isText(), IsVirtual, nullptr),
-        Parent(Parent), PRAttributes(PRAttributes),
-        SymbolType(GOFF::ESD_ST_PartReference), IsBSS(K.isBSS()),
-        RequiresNonZeroLength(0), Emitted(0) {}
+      : MCSection(Name, K.isText(), IsVirtual, nullptr), Parent(Parent),
+        PRAttributes(PRAttributes), SymbolType(GOFF::ESD_ST_PartReference),
+        IsBSS(K.isBSS()), RequiresNonZeroLength(0), Emitted(0) {}
 
 public:
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
