@@ -3053,9 +3053,18 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
     assert(!Reverse &&
            "Inconsecutive memory access should not have the order.");
-    return Ctx.TTI.getAddressComputationCost(Ty) +
-           Ctx.TTI.getGatherScatterOpCost(Opcode, Ty, Ptr, IsMasked, Alignment,
-                                          Ctx.CostKind, &Ingredient);
+    InstructionCost Cost = 0;
+
+    // If the address value is uniform across all lane, then the address can be
+    // calculated with scalar type and broacast.
+    if (vputils::isSingleScalar(getAddr()))
+      Cost += Ctx.TTI.getAddressComputationCost(Ty->getScalarType());
+    else
+      Cost += Ctx.TTI.getAddressComputationCost(Ty);
+
+    return Cost + Ctx.TTI.getGatherScatterOpCost(Opcode, Ty, Ptr, IsMasked,
+                                                 Alignment, Ctx.CostKind,
+                                                 &Ingredient);
   }
 
   InstructionCost Cost = 0;

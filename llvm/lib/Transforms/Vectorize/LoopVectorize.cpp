@@ -6955,6 +6955,12 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
   auto Iter = vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
     for (VPRecipeBase &R : *VPBB) {
+      if (auto *MR = dyn_cast<VPWidenMemoryRecipe>(&R)) {
+        // The address computation cost can be query as scalar type if the
+        // address is uniform.
+        if (!MR->isConsecutive() && vputils::isSingleScalar(MR->getAddr()))
+          return true;
+      }
       if (auto *IR = dyn_cast<VPInterleaveRecipe>(&R)) {
         auto *IG = IR->getInterleaveGroup();
         unsigned NumMembers = IG->getNumMembers();
