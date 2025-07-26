@@ -534,7 +534,6 @@ static DecodeStatus decodeRTZArg(MCInst &Inst, uint32_t Imm, int64_t Address,
   return MCDisassembler::Success;
 }
 
-
 static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder);
