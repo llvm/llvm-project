@@ -189,7 +189,6 @@ public:
   MPFRNumber add(const MPFRNumber &b) const;
   MPFRNumber asin() const;
   MPFRNumber asinh() const;
-  MPFRNumber asinpi() const;
   MPFRNumber atan() const;
   MPFRNumber atan2(const MPFRNumber &b);
   MPFRNumber atanh() const;
