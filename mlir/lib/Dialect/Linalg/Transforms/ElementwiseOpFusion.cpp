@@ -1136,23 +1136,19 @@ struct FoldReshapeWithProducerPadOpByExpansion
     SmallVector<OpFoldResult> low = padOp.getMixedLowPad();
     SmallVector<OpFoldResult> high = padOp.getMixedHighPad();
 
-    for (auto [reInd, l, h] : llvm::zip_equal(reassociations, low, high)) {
-      if (reInd.size() > 1 &&
-          (!isConstantIntValue(l, 0) || !isConstantIntValue(h, 0)))
-        return rewriter.notifyMatchFailure(
-            expandOp, "fusion blocked by non-zero padding");
-    }
-
     SmallVector<OpFoldResult> newLow, newHigh;
     for (auto [idx, reInd] : llvm::enumerate(reassociations)) {
+      if (reInd.size() > 1 && (!isConstantIntValue(low[idx], 0) ||
+                               !isConstantIntValue(high[idx], 0)))
+        return rewriter.notifyMatchFailure(
+            expandOp, "fusion blocked by non-zero padding");
+
       newLow.append(reInd.size(), low[idx]);
       newHigh.append(reInd.size(), high[idx]);
     }
 
     Location loc = expandOp.getLoc();
-    ArrayRef<int64_t> finalShape = expandOp.getResultType().getShape();
     SmallVector<OpFoldResult> expandedShape = expandOp.getMixedOutputShape();
-
     for (auto [inDimIdx, reInd] : llvm::enumerate(reassociations)) {
       OpFoldResult l = low[inDimIdx];
       OpFoldResult h = high[inDimIdx];
@@ -1162,15 +1158,6 @@ struct FoldReshapeWithProducerPadOpByExpansion
         expandedShape[reInd[0]] =
             tensor::getMixedSize(rewriter, loc, padOp.getSource(), inDimIdx);
         ;
-      }
-    }
-
-    for (auto [outDimIdx, dimSize] : llvm::enumerate(finalShape)) {
-      if (dimSize == ShapedType::kDynamic &&
-          !isa<Value>(expandedShape[outDimIdx]) &&
-          !isa<Attribute>(expandedShape[outDimIdx])) {
-        expandedShape[outDimIdx] =
-            tensor::getMixedSize(rewriter, loc, expandOp.getSrc(), outDimIdx);
       }
     }
 
