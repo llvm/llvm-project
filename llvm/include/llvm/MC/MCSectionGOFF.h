@@ -77,8 +77,6 @@ public:
                             raw_ostream &OS,
                             uint32_t Subsection) const override;
 
-  bool useCodeAlign() const override { return false; }
-
   // Return the parent section.
   MCSectionGOFF *getParent() const { return Parent; }
 
