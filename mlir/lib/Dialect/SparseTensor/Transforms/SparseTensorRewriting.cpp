@@ -904,9 +904,8 @@ public:
         dstTp->withoutDimToLvl(),
         !srcTp->isAllOrdered() || !srcTp->isIdentity() || !dstTp->isIdentity());
     SmallVector<Value> dynSizes;
-    Value buffer = rewriter
-                       .create<AllocTensorOp>(loc, bufferTp, dynSizes, Value(),
-                                              nnz, Attribute())
+    Value buffer = AllocTensorOp::create(rewriter, loc, bufferTp, dynSizes,
+                                         Value(), nnz, Attribute())
                        .getResult();
 
     // Convert src coordinates to dst coordinates by first collapsing it to 1D
@@ -1013,9 +1012,8 @@ public:
         !srcTp.isAllOrdered() || !srcTp.isIdentity() || !dstTp.isIdentity());
 
     Value buffer =
-        rewriter
-            .create<AllocTensorOp>(loc, bufferTp, dstDynSizes, Value(),
-                                   /*sizeHint=*/nnz, Attribute())
+        AllocTensorOp::create(rewriter, loc, bufferTp, dstDynSizes, Value(),
+                              /*sizeHint=*/nnz, Attribute())
             .getResult();
 
     // Implement the sparse2sparse reshape as follows:

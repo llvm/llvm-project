@@ -688,8 +688,8 @@ FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
   if (failed(bufferType))
     return failure();
   ensureToBufferOpIsValid(value, *bufferType);
-  return rewriter
-      .create<bufferization::ToBufferOp>(value.getLoc(), *bufferType, value)
+  return bufferization::ToBufferOp::create(rewriter, value.getLoc(),
+                                           *bufferType, value)
       .getResult();
 }
 
@@ -772,9 +772,8 @@ FailureOr<Value> BufferizationOptions::createAlloc(OpBuilder &b, Location loc,
 
   // Default bufferallocation via AllocOp.
   if (bufferAlignment != 0)
-    return b
-        .create<memref::AllocOp>(loc, type, dynShape,
-                                 b.getI64IntegerAttr(bufferAlignment))
+    return memref::AllocOp::create(b, loc, type, dynShape,
+                                   b.getI64IntegerAttr(bufferAlignment))
         .getResult();
   return memref::AllocOp::create(b, loc, type, dynShape).getResult();
 }

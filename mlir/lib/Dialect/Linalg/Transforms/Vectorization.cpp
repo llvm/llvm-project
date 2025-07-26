@@ -2191,8 +2191,8 @@ vectorizeAsLinalgContraction(RewriterBase &rewriter, VectorizationState &state,
   }
 
   // Create contraction.
-  Operation *contractOp = rewriter.create<vector::ContractionOp>(
-      loc, /*lhs=*/vecOperands[0],
+  Operation *contractOp = vector::ContractionOp::create(
+      rewriter, loc, /*lhs=*/vecOperands[0],
       /*rhs=*/vecOperands[1], /*acc=*/vecOperands[2],
       linalgOp.getIndexingMaps(), rewriter.getArrayAttr(iterAttrs), *maybeKind);
   contractOp = state.maskOperation(rewriter, contractOp, linalgOp);
@@ -3714,8 +3714,8 @@ struct Conv1DGenerator
     }
     }
 
-    return rewriter
-        .create<vector::TransferWriteOp>(loc, res, resShaped, resPadding)
+    return vector::TransferWriteOp::create(rewriter, loc, res, resShaped,
+                                           resPadding)
         .getOperation();
   }
 

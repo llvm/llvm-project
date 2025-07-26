@@ -570,6 +570,8 @@ private:
   // At parse time, this holds the fragment list of the current subsection. At
   // layout time, this holds the concatenated fragment lists of all subsections.
   FragList *CurFragList;
+  // In many object file formats, this denotes the section symbol. In Mach-O,
+  // this denotes an optional temporary label at the section start.
   MCSymbol *Begin;
   MCSymbol *End = nullptr;
   /// The alignment requirement of this section.
