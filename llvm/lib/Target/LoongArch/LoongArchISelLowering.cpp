@@ -2503,7 +2503,8 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
     }
   }
 
-  if (IsConstant && UseSameConstant) {
+  // If the type of BUILD_VECTOR is v2f64, custom legalizing it has no benefits.
+  if (IsConstant && UseSameConstant && ResTy != MVT::v2f64) {
     SDValue Result = DAG.getSplatBuildVector(ResTy, DL, ConstantValue);
     for (unsigned i = 0; i < NumElts; ++i) {
       SDValue Opi = Node->getOperand(i);

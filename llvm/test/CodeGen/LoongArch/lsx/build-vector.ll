@@ -595,10 +595,9 @@ define void @buildvector_v2f64_with_constant(ptr %dst, double %a0) nounwind {
 ; CHECK-LABEL: buildvector_v2f64_with_constant:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
-; CHECK-NEXT:    lu52i.d $a1, $zero, 1024
-; CHECK-NEXT:    vreplgr2vr.d $vr1, $a1
-; CHECK-NEXT:    vextrins.d $vr1, $vr0, 0
-; CHECK-NEXT:    vst $vr1, $a0, 0
+; CHECK-NEXT:    vldi $vr1, -1024
+; CHECK-NEXT:    vpackev.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %ins0 = insertelement <2 x double> undef, double %a0, i32 0
