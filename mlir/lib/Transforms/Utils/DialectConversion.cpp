@@ -1996,6 +1996,7 @@ private:
   /// Legalize the resultant IR after successfully applying the given pattern.
   LogicalResult legalizePatternResult(Operation *op, const Pattern &pattern,
                                       ConversionPatternRewriter &rewriter,
+                                      const RewriterState &curState,
                                       const SetVector<Operation *> &newOps,
                                       const SetVector<Operation *> &modifiedOps,
                                       const SetVector<Block *> &insertedBlocks);
@@ -2241,6 +2242,32 @@ OperationLegalizer::legalizeWithPattern(Operation *op,
                                         ConversionPatternRewriter &rewriter) {
   auto &rewriterImpl = rewriter.getImpl();
 
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+  Operation *checkOp;
+  std::optional<OperationFingerPrint> topLevelFingerPrint;
+  if (!rewriterImpl.config.allowPatternRollback) {
+    // The op may be getting erased, so we have to check the parent op.
+    // (In rare cases, a pattern may even erase the parent op, which will cause
+    // a crash here. Expensive checks are "best effort".) Skip the check if the
+    // op does not have a parent op.
+    if ((checkOp = op->getParentOp())) {
+      if (!op->getContext()->isMultithreadingEnabled()) {
+        topLevelFingerPrint = OperationFingerPrint(checkOp);
+      } else {
+        // Another thread may be modifying a sibling operation. Therefore, the
+        // fingerprinting mechanism of the parent op works only in
+        // single-threaded mode.
+        LLVM_DEBUG({
+          rewriterImpl.logger.startLine()
+              << "WARNING: Multi-threadeding is enabled. Some dialect "
+                 "conversion expensive checks are skipped in multithreading "
+                 "mode!\n";
+        });
+      }
+    }
+  }
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+
   // Functor that returns if the given pattern may be applied.
   auto canApply = [&](const Pattern &pattern) {
     bool canApply = canApplyPattern(op, pattern, rewriter);
@@ -2253,6 +2280,17 @@ OperationLegalizer::legalizeWithPattern(Operation *op,
   RewriterState curState = rewriterImpl.getCurrentState();
   auto onFailure = [&](const Pattern &pattern) {
     assert(rewriterImpl.pendingRootUpdates.empty() && "dangling root updates");
+#if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+    if (!rewriterImpl.config.allowPatternRollback) {
+      // Returning "failure" after modifying IR is not allowed.
+      if (checkOp) {
+        OperationFingerPrint fingerPrintAfterPattern(checkOp);
+        if (fingerPrintAfterPattern != *topLevelFingerPrint)
+          llvm::report_fatal_error("pattern '" + pattern.getDebugName() +
+                                   "' returned failure but IR did change");
+      }
+    }
+#endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
     rewriterImpl.patternNewOps.clear();
     rewriterImpl.patternModifiedOps.clear();
     rewriterImpl.patternInsertedBlocks.clear();
@@ -2281,7 +2319,7 @@ OperationLegalizer::legalizeWithPattern(Operation *op,
         moveAndReset(rewriterImpl.patternModifiedOps);
     SetVector<Block *> insertedBlocks =
         moveAndReset(rewriterImpl.patternInsertedBlocks);
-    auto result = legalizePatternResult(op, pattern, rewriter, newOps,
+    auto result = legalizePatternResult(op, pattern, rewriter, curState, newOps,
                                         modifiedOps, insertedBlocks);
     appliedPatterns.erase(&pattern);
     if (failed(result)) {
@@ -2324,7 +2362,7 @@ bool OperationLegalizer::canApplyPattern(Operation *op, const Pattern &pattern,
 
 LogicalResult OperationLegalizer::legalizePatternResult(
     Operation *op, const Pattern &pattern, ConversionPatternRewriter &rewriter,
-    const SetVector<Operation *> &newOps,
+    const RewriterState &curState, const SetVector<Operation *> &newOps,
     const SetVector<Operation *> &modifiedOps,
     const SetVector<Block *> &insertedBlocks) {
   auto &impl = rewriter.getImpl();
@@ -2340,7 +2378,8 @@ LogicalResult OperationLegalizer::legalizePatternResult(
     return hasRewrite<ModifyOperationRewrite>(newRewrites, op);
   };
   if (!replacedRoot() && !updatedRootInPlace())
-    llvm::report_fatal_error("expected pattern to replace the root operation");
+    llvm::report_fatal_error(
+        "expected pattern to replace the root operation or modify it in place");
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
   // Legalize each of the actions registered during application.
