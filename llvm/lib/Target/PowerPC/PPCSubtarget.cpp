@@ -171,7 +171,7 @@ void PPCSubtarget::getCriticalPathRCs(RegClassVector &CriticalPathRCs) const {
 }
 
 void PPCSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                       unsigned NumRegionInstrs) const {
+                                       const SchedRegion &Region) const {
   // The GenericScheduler that we use defaults to scheduling bottom up only.
   // We want to schedule from both the top and the bottom and so we set
   // OnlyBottomUp to false.
