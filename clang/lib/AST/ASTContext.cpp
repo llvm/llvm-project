@@ -3202,6 +3202,15 @@ TypeSourceInfo *ASTContext::getTrivialTypeSourceInfo(QualType T,
   return DI;
 }
 
+CXXOperatorSourceInfo *
+ASTContext::getCXXOperatorSourceInfo(SourceRange R) const {
+  auto *TInfo = (CXXOperatorSourceInfo *)BumpAlloc.Allocate(
+      sizeof(CXXOperatorSourceInfo), 8);
+  TInfo->BeginOpNameLoc = R.getBegin();
+  TInfo->EndOpNameLoc = R.getEnd();
+  return TInfo;
+}
+
 const ASTRecordLayout &
 ASTContext::getASTObjCInterfaceLayout(const ObjCInterfaceDecl *D) const {
   return getObjCLayout(D);
@@ -7134,7 +7143,7 @@ ASTContext::getNameForTemplate(TemplateName Name,
       DName = DeclarationNames.getCXXOperatorName(TN.getOperator());
       // DNInfo work in progress: FIXME: source locations?
       DeclarationNameLoc DNLoc =
-          DeclarationNameLoc::makeCXXOperatorNameLoc(SourceRange());
+          DeclarationNameLoc::makeCXXOperatorNameLoc(nullptr);
       return DeclarationNameInfo(DName, NameLoc, DNLoc);
     }
   }

@@ -44,7 +44,7 @@ public:
     return m_Source->GetExternalDecl(ID);
   }
 
-  clang::Selector GetExternalSelector(uint32_t ID) override {
+  clang::Selector GetExternalSelector(uint64_t ID) override {
     return m_Source->GetExternalSelector(ID);
   }
 
@@ -339,7 +339,7 @@ public:
       Sources[i]->CompleteRedeclChain(D);
   }
 
-  clang::Selector GetExternalSelector(uint32_t ID) override {
+  clang::Selector GetExternalSelector(uint64_t ID) override {
     clang::Selector Sel;
     for (size_t i = 0; i < Sources.size(); ++i) {
       Sel = Sources[i]->GetExternalSelector(ID);
