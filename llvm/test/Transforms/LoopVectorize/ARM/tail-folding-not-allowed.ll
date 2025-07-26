@@ -32,7 +32,7 @@ define void @trunc_not_allowed_different_vec_elemns(ptr noalias nocapture %A, pt
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 428
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 false, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 428, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -53,7 +53,7 @@ define void @trunc_not_allowed_different_vec_elemns(ptr noalias nocapture %A, pt
 ; CHECK-NEXT:    store i16 [[CONV7]], ptr [[ARRAYIDX8]], align 2
 ; CHECK-NEXT:    [[ADD9]] = add nuw nsw i32 [[I_021]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[ADD9]], 431
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ;
 entry:
   br label %for.body
@@ -141,7 +141,7 @@ define void @narrowing_load_not_allowed(ptr noalias nocapture %A, ptr noalias no
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], 424
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 false, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 424, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -159,7 +159,7 @@ define void @narrowing_load_not_allowed(ptr noalias nocapture %A, ptr noalias no
 ; CHECK-NEXT:    store i8 [[ADD]], ptr [[ARRAYIDX5]], align 1
 ; CHECK-NEXT:    [[ADD6]] = add nuw nsw i32 [[I_012]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[ADD6]], 431
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ;
 entry:
   br label %for.body
@@ -209,7 +209,7 @@ define void @trunc_not_allowed(ptr noalias nocapture %A, ptr noalias nocapture r
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 428
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 false, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 428, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -227,7 +227,7 @@ define void @trunc_not_allowed(ptr noalias nocapture %A, ptr noalias nocapture r
 ; CHECK-NEXT:    [[ADD3]] = add nuw nsw i32 [[I_09]], 1
 ; CHECK-NEXT:    [[ADD_IV:%.*]] = trunc i32 [[ADD3]] to i16
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i16 [[ADD_IV]], 431
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ;
 entry:
   br label %for.body
@@ -280,7 +280,7 @@ define void @strides_different_direction(ptr noalias nocapture %A, ptr noalias n
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], 428
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 false, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 428, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -298,7 +298,7 @@ define void @strides_different_direction(ptr noalias nocapture %A, ptr noalias n
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ADD3]] = add nuw nsw i32 [[I_09]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[ADD3]], 431
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ;
 entry:
   br label %for.body
@@ -343,7 +343,7 @@ define void @too_many_loop_blocks(ptr noalias nocapture %A, ptr noalias nocaptur
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 428
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 false, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 428, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -362,7 +362,7 @@ define void @too_many_loop_blocks(ptr noalias nocapture %A, ptr noalias nocaptur
 ; CHECK:       loopincr:
 ; CHECK-NEXT:    [[ADD3]] = add nuw nsw i32 [[I_09]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[ADD3]], 431
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ;
 entry:
   br label %for.body
@@ -453,7 +453,7 @@ define void @fptrunc_not_allowed(ptr noalias nocapture %A, ptr noalias nocapture
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 428
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 false, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 428, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -474,7 +474,7 @@ define void @fptrunc_not_allowed(ptr noalias nocapture %A, ptr noalias nocapture
 ; CHECK-NEXT:    store half [[FACTOR]], ptr [[ARRAYIDX5]], align 2
 ; CHECK-NEXT:    [[ADD6]] = add nuw nsw i32 [[I_017]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[ADD6]], 431
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ;
 entry:
   br label %for.body

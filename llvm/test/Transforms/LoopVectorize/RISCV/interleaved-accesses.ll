@@ -78,9 +78,9 @@ define void @load_store_factor2_i32(ptr %p) {
 ; FIXED-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[EXIT:%.*]]
 ; FIXED:       scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
 ; FIXED:       loop:
 ; FIXED-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
@@ -252,9 +252,9 @@ define void @load_store_factor2_i64(ptr %p) {
 ; FIXED-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[EXIT:%.*]]
 ; FIXED:       scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
 ; FIXED:       loop:
 ; FIXED-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
@@ -437,9 +437,9 @@ define void @load_store_factor3_i32(ptr %p) {
 ; FIXED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[EXIT:%.*]]
 ; FIXED:       scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
 ; FIXED:       loop:
 ; FIXED-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
@@ -640,9 +640,9 @@ define void @load_store_factor3_i64(ptr %p) {
 ; FIXED-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[EXIT:%.*]]
 ; FIXED:       scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
 ; FIXED:       loop:
 ; FIXED-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
@@ -852,9 +852,9 @@ define void @load_store_factor4(ptr %p) {
 ; FIXED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[EXIT:%.*]]
 ; FIXED:       scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
 ; FIXED:       loop:
 ; FIXED-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
@@ -1090,9 +1090,9 @@ define void @load_store_factor5(ptr %p) {
 ; FIXED-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[EXIT:%.*]]
 ; FIXED:       scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
 ; FIXED:       loop:
 ; FIXED-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
@@ -1353,9 +1353,9 @@ define void @load_store_factor6(ptr %p) {
 ; FIXED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[EXIT:%.*]]
 ; FIXED:       scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
 ; FIXED:       loop:
 ; FIXED-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
@@ -1645,9 +1645,9 @@ define void @load_store_factor7(ptr %p) {
 ; FIXED-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[EXIT:%.*]]
 ; FIXED:       scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
 ; FIXED:       loop:
 ; FIXED-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
@@ -1963,9 +1963,9 @@ define void @load_store_factor8(ptr %p) {
 ; FIXED-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[EXIT:%.*]]
 ; FIXED:       scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
 ; FIXED:       loop:
 ; FIXED-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
@@ -2249,9 +2249,9 @@ define void @combine_load_factor2_i32(ptr noalias %p, ptr noalias %q) {
 ; FIXED-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[EXIT:%.*]]
 ; FIXED:       scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
 ; FIXED:       loop:
 ; FIXED-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
@@ -2429,9 +2429,9 @@ define void @combine_load_factor2_i64(ptr noalias %p, ptr noalias %q) {
 ; FIXED-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXED-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; FIXED:       middle.block:
-; FIXED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[EXIT:%.*]]
 ; FIXED:       scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[LOOP:%.*]]
 ; FIXED:       loop:
 ; FIXED-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]

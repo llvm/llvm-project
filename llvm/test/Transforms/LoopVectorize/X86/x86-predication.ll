@@ -138,10 +138,10 @@ define i32 @predicated_sdiv_masked_load(ptr %a, ptr %b, i32 %x, i1 %c) {
 ; SINK-GATHER-NEXT:    br i1 [[TMP48]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SINK-GATHER:       middle.block:
 ; SINK-GATHER-NEXT:    [[TMP49:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP47]])
-; SINK-GATHER-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; SINK-GATHER-NEXT:    br label [[FOR_END:%.*]]
 ; SINK-GATHER:       scalar.ph:
-; SINK-GATHER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 10000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; SINK-GATHER-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP49]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; SINK-GATHER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; SINK-GATHER-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; SINK-GATHER-NEXT:    br label [[FOR_BODY:%.*]]
 ; SINK-GATHER:       for.body:
 ; SINK-GATHER-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[FOR_INC:%.*]] ]
