@@ -14088,7 +14088,7 @@ void Sema::CheckCompletedExpr(Expr *E, SourceLocation CheckLoc,
     CheckUnsequencedOperations(E);
   if (!IsConstexpr && !E->isValueDependent())
     CheckForIntOverflow(E);
-  DiagnoseMisalignedMembers();
+  DiagnoseMisalignedMembers(E);
 }
 
 void Sema::CheckBitFieldInitialization(SourceLocation InitLoc,
@@ -15536,17 +15536,28 @@ void Sema::AddPotentialMisalignedMembers(Expr *E, RecordDecl *RD, ValueDecl *MD,
   MisalignedMembers.emplace_back(E, RD, MD, Alignment);
 }
 
-void Sema::DiagnoseMisalignedMembers() {
-  for (MisalignedMember &m : MisalignedMembers) {
-    const NamedDecl *ND = m.RD;
+void Sema::DiagnoseMisalignedMembers(const Expr *E) {
+  // Only emit diagnostics related to the current expression.
+  const auto *EmitFrom = MisalignedMembers.begin();
+  if (E->getSourceRange().isValid()) {
+    EmitFrom = MisalignedMembers.end();
+    for (const auto &m : llvm::reverse(MisalignedMembers)) {
+      if (m.E->getSourceRange().isValid() &&
+          !E->getSourceRange().fullyContains(m.E->getSourceRange()))
+        break;
+      EmitFrom = &m;
+    }
+  }
+  for (const auto *m = EmitFrom; m != MisalignedMembers.end(); ++m) {
+    const NamedDecl *ND = m->RD;
     if (ND->getName().empty()) {
-      if (const TypedefNameDecl *TD = m.RD->getTypedefNameForAnonDecl())
+      if (const TypedefNameDecl *TD = m->RD->getTypedefNameForAnonDecl())
         ND = TD;
     }
-    Diag(m.E->getBeginLoc(), diag::warn_taking_address_of_packed_member)
-        << m.MD << ND << m.E->getSourceRange();
+    Diag(m->E->getBeginLoc(), diag::warn_taking_address_of_packed_member)
+        << m->MD << ND << m->E->getSourceRange();
   }
-  MisalignedMembers.clear();
+  MisalignedMembers.erase(EmitFrom, MisalignedMembers.end());
 }
 
 void Sema::DiscardMisalignedMemberAddress(const Type *T, Expr *E) {
