@@ -570,6 +570,8 @@ private:
   // At parse time, this holds the fragment list of the current subsection. At
   // layout time, this holds the concatenated fragment lists of all subsections.
   FragList *CurFragList;
+  // In many object file formats, this denotes the section symbol. In Mach-O,
+  // this denotes an optional temporary label at the section start.
   MCSymbol *Begin;
   MCSymbol *End = nullptr;
   /// The alignment requirement of this section.
@@ -588,6 +590,8 @@ private:
   /// Whether the section contains linker-relaxable fragments. If true, the
   /// offset between two locations may not be fully resolved.
   bool LinkerRelaxable : 1;
+
+  MCFragment DummyFragment;
 
   // Mapping from subsection number to fragment list. At layout time, the
   // subsection 0 list is replaced with concatenated fragments from all
@@ -650,7 +654,7 @@ public:
   bool isLinkerRelaxable() const { return LinkerRelaxable; }
   void setLinkerRelaxable() { LinkerRelaxable = true; }
 
-  MCFragment &getDummyFragment() { return *Subsections[0].second.Head; }
+  MCFragment &getDummyFragment() { return DummyFragment; }
 
   FragList *curFragList() const { return CurFragList; }
   iterator begin() const { return iterator(CurFragList->Head); }
