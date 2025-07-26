@@ -27,8 +27,6 @@ namespace math {
 
 static constexpr double asin(double x) {
   using namespace asin_internal;
-  using Float128 = fputil::DyadicFloat<128>;
-  using DoubleDouble = fputil::DoubleDouble;
   using FPBits = fputil::FPBits<double>;
 
   FPBits xbits(x);
@@ -76,6 +74,9 @@ static constexpr double asin(double x) {
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     return x * asin_eval(x * x);
 #else
+    using Float128 = fputil::DyadicFloat<128>;
+    using DoubleDouble = fputil::DoubleDouble;
+
     unsigned idx = 0;
     DoubleDouble x_sq = fputil::exact_mult(x, x);
     double err = xbits.abs().get_val() * 0x1.0p-51;
