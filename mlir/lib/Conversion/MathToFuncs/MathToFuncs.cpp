@@ -698,7 +698,8 @@ static func::FuncOp createCtlzFunc(ModuleOp *module, Type elementType) {
   scf::IfOp ifOp =
       scf::IfOp::create(builder, elementType, inputEqZero,
                         /*addThenBlock=*/true, /*addElseBlock=*/true);
-  ifOp.getThenBodyBuilder().create<scf::YieldOp>(loc, bitWidthValue);
+  auto thenBuilder = ifOp.getThenBodyBuilder();
+  scf::YieldOp::create(thenBuilder, loc, bitWidthValue);
 
   auto elseBuilder =
       ImplicitLocOpBuilder::atBlockEnd(loc, &ifOp.getElseRegion().front());

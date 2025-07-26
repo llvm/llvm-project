@@ -5,7 +5,7 @@
 
 c.nop 0 # CHECK: :[[@LINE]]:7: error: immediate must be non-zero in the range [-32, 31]
 
-c.addi x0, 33 # CHECK: :[[@LINE]]:12: error: immediate must be non-zero in the range [-32, 31]
+c.addi x0, 33 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [-32, 31]
 
 c.li x0, 42 # CHECK: :[[@LINE]]:10: error: immediate must be an integer in the range [-32, 31]
 
@@ -15,7 +15,7 @@ c.mv x0, x0 # CHECK: :[[@LINE]]:10: error: register must be a GPR excluding zero
 
 c.add x0, x0 # CHECK: :[[@LINE]]:11: error: register must be a GPR excluding zero (x0)
 
-c.slli x0, 32 # CHECK-RV32: :[[@LINE]]:12: error: immediate must be zero
+c.slli x0, 32 # CHECK-RV32: :[[@LINE]]:12: error: immediate must be an integer in the range [0, 31]
 
 c.srli64 x30 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
 

@@ -372,9 +372,8 @@ SmallVector<Value> vector::getAsValues(OpBuilder &builder, Location loc,
   llvm::transform(foldResults, std::back_inserter(values),
                   [&](OpFoldResult foldResult) {
                     if (auto attr = dyn_cast<Attribute>(foldResult))
-                      return builder
-                          .create<arith::ConstantIndexOp>(
-                              loc, cast<IntegerAttr>(attr).getInt())
+                      return arith::ConstantIndexOp::create(
+                                 builder, loc, cast<IntegerAttr>(attr).getInt())
                           .getResult();
 
                     return cast<Value>(foldResult);

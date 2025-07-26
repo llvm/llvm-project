@@ -32,7 +32,6 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
@@ -792,9 +791,8 @@ struct FoldFillWithPad final : public OpRewritePattern<tensor::PadOp> {
         tensor::EmptyOp::create(rewriter, padOp.getLoc(), reifiedShape.front(),
                                 padOp.getResultType().getElementType());
     Value replacement =
-        rewriter
-            .create<FillOp>(fillOp.getLoc(), ValueRange{padValue},
-                            ValueRange{emptyTensor})
+        FillOp::create(rewriter, fillOp.getLoc(), ValueRange{padValue},
+                       ValueRange{emptyTensor})
             .getResult(0);
     if (replacement.getType() != padOp.getResultType()) {
       replacement = tensor::CastOp::create(rewriter, fillOp.getLoc(),
@@ -2155,9 +2153,8 @@ struct SwapTransposeWithBroadcast : OpRewritePattern<linalg::TransposeOp> {
 
     // Create broadcast(transpose(input)).
     Value transposeResult =
-        rewriter
-            .create<TransposeOp>(loc, broadcastOp.getInput(), transposeInit,
-                                 resultPerms)
+        TransposeOp::create(rewriter, loc, broadcastOp.getInput(),
+                            transposeInit, resultPerms)
             ->getResult(0);
     rewriter.replaceOpWithNewOp<BroadcastOp>(
         transposeOp, transposeResult, transposeOp.getInit(), resultDimensions);
@@ -4625,6 +4622,22 @@ static bool isInvalidPackingPosSpecification(ArrayRef<int64_t> dimsPos,
   });
 }
 
+/// Returns true if the dimension of `sourceShape` is smaller than the dimension
+/// of the `limitShape`.
+static bool areAllInBound(ArrayRef<int64_t> sourceShape,
+                          ArrayRef<int64_t> limitShape) {
+  assert(
+      sourceShape.size() == limitShape.size() &&
+      "expected source shape rank, and limit of the shape to have same rank");
+  return llvm::all_of(
+      llvm::zip(sourceShape, limitShape), [](std::tuple<int64_t, int64_t> it) {
+        int64_t sourceExtent = std::get<0>(it);
+        int64_t limit = std::get<1>(it);
+        return ShapedType::isDynamic(sourceExtent) ||
+               ShapedType::isDynamic(limit) || sourceExtent <= limit;
+      });
+}
+
 template <typename OpTy>
 static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
   static_assert(llvm::is_one_of<OpTy, PackOp, UnPackOp>::value,
@@ -4683,6 +4696,11 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
   // represents full tiles.
   RankedTensorType expectedPackedType = PackOp::inferPackedType(
       unpackedType, packOrUnPack.getStaticTiles(), innerDimsPos, outerDimPerm);
+  if (!areAllInBound(expectedPackedType.getShape(), packedType.getShape())) {
+    return op->emitError("the shape of output is not large enough to hold the "
+                         "packed data. Expected at least ")
+           << expectedPackedType << ", got " << packedType;
+  }
   if (!llvm::all_of(
           llvm::zip(packedType.getShape().take_back(mixedTiles.size()),
                     mixedTiles),
@@ -4698,12 +4716,6 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
           })) {
     return op->emitError("mismatch in inner tile sizes specified and shaped of "
                          "tiled dimension in the packed type");
-  }
-  if (failed(verifyCompatibleShape(expectedPackedType.getShape(),
-                                   packedType.getShape()))) {
-    return op->emitError("expected ")
-           << expectedPackedType << " for the packed domain value, got "
-           << packedType;
   }
   return success();
 }

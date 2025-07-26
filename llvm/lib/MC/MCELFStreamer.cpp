@@ -89,9 +89,7 @@ void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
     getWriter().markGnuAbi();
 
   MCObjectStreamer::changeSection(Section, Subsection);
-  auto *Sym = static_cast<MCSymbolELF *>(Section->getBeginSymbol());
-  Sym->setBinding(ELF::STB_LOCAL);
-  Sym->setType(ELF::STT_SECTION);
+  Asm.registerSymbol(*Section->getBeginSymbol());
 }
 
 void MCELFStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Target) {
