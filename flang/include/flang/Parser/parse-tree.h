@@ -4660,6 +4660,14 @@ struct OmpTaskReductionClause {
   std::tuple<MODIFIERS(), OmpObjectList> t;
 };
 
+// Ref: [6.0:442]
+// threadset-clause ->
+//     THREADSET(omp_pool|omp_team)
+struct OmpThreadsetClause {
+  ENUM_CLASS(ThreadsetPolicy, omp_pool, omp_team)
+  WRAPPER_CLASS_BOILERPLATE(OmpThreadsetClause, ThreadsetPolicy);
+};
+
 // Ref: [4.5:107-109], [5.0:176-180], [5.1:205-210], [5.2:167-168]
 //
 // to-clause (in DECLARE TARGET) ->

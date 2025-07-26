@@ -514,6 +514,7 @@ def OMPC_Threads : Clause<[Spelling<"threads">]> {
 }
 def OMPC_Threadset : Clause<"threadset"> {
   let clangClass = "OMPThreadsetClause";
+  let flangClass = "OmpThreadsetClause";
 }
 def OMPC_To : Clause<"to"> {
   let clangClass = "OMPToClause";

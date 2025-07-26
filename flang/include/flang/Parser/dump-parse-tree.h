@@ -669,6 +669,8 @@ public:
   NODE_ENUM(OmpTaskDependenceType, Value)
   NODE(parser, OmpTaskReductionClause)
   NODE(OmpTaskReductionClause, Modifier)
+  NODE(parser, OmpThreadsetClause)
+  NODE_ENUM(OmpThreadsetClause, ThreadsetPolicy)
   NODE(parser, OmpToClause)
   NODE(OmpToClause, Modifier)
   NODE(parser, OmpTraitProperty)
