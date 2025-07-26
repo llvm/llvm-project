@@ -107,14 +107,14 @@ body:             |
     ; CHECK: renamable $r12 = t2LDRi12 $r7, 16, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.2)
     ; CHECK: renamable $lr = t2LDRi12 $r7, 12, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.1)
     ; CHECK: renamable $r3 = t2LDRi12 $r7, 8, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.0)
-    ; CHECK: BUNDLE implicit-def $vpr, implicit-def dead $q0, implicit-def $d0, implicit-def $s0, implicit-def $s1, implicit-def $d1, implicit-def $s2, implicit-def $s3, implicit $q0, implicit $zr, implicit killed $r0, implicit killed $r3, implicit killed $r1, implicit killed $lr {
+    ; CHECK: BUNDLE implicit-def $vpr, implicit-def dead $q0, implicit $q0, implicit $zr, implicit killed $r0, implicit killed $r3, implicit killed $r1, implicit killed $lr {
     ; CHECK:   MVE_VPTv4f32r 1, renamable $q0, $zr, 10, implicit-def $vpr
     ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r0, 0, 1, internal renamable $vpr, $noreg :: (load (s128) from %ir.src, align 4)
     ; CHECK:   MVE_VSTRWU32 internal killed renamable $q0, killed renamable $r3, 0, 1, internal renamable $vpr, $noreg :: (store (s128) into %ir.dest, align 4)
     ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r1, 0, 1, internal renamable $vpr, $noreg :: (load (s128) from %ir.src2, align 4)
     ; CHECK:   MVE_VSTRWU32 internal killed renamable $q0, killed renamable $lr, 0, 1, internal renamable $vpr, $noreg :: (store (s128) into %ir.dest2, align 4)
     ; CHECK: }
-    ; CHECK: BUNDLE implicit-def $q0, implicit-def $d0, implicit-def $s0, implicit-def $s1, implicit-def $d1, implicit-def $s2, implicit-def $s3, implicit killed $vpr, implicit killed $r2, implicit killed $r12 {
+    ; CHECK: BUNDLE implicit-def $q0, implicit killed $vpr, implicit killed $r2, implicit killed $r12 {
     ; CHECK:   MVE_VPST 4, implicit $vpr
     ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r2, 0, 1, renamable $vpr, $noreg :: (load (s128) from %ir.src3, align 4)
     ; CHECK:   MVE_VSTRWU32 internal renamable $q0, killed renamable $r12, 0, 1, killed renamable $vpr, $noreg :: (store (s128) into %ir.dest3, align 4)
