@@ -59,9 +59,10 @@ body:      |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[DS_READ_B128_gfx9_:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[DEF2]], 0, 0, implicit $exec :: (load (s128) from %ir.in0, !alias.scope !0, addrspace 3)
   ; GCN-NEXT:   [[DS_READ_B128_gfx9_1:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[DEF3]], 0, 0, implicit $exec :: (load (s128) from %ir.in2, !alias.scope !0, addrspace 3)
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:areg_512_align2 = COPY [[DEF1]]
   ; GCN-NEXT:   [[DS_READ_B128_gfx9_2:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[DEF2]], 1040, 0, implicit $exec :: (load (s128) from %ir.in1, !alias.scope !0, addrspace 3)
   ; GCN-NEXT:   [[DS_READ_B128_gfx9_3:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[DEF3]], 2064, 0, implicit $exec :: (load (s128) from %ir.in3, !alias.scope !0, addrspace 3)
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:areg_512_align2 = COPY [[DEF1]]
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:areg_512_align2 = COPY [[DEF]]
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:areg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_e64 [[DS_READ_B128_gfx9_]].sub0_sub1, [[DS_READ_B128_gfx9_1]].sub0_sub1, [[COPY]], 0, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   [[DS_READ_B128_gfx9_4:%[0-9]+]]:av_128_align2 = DS_READ_B128_gfx9 [[DEF3]], 1024, 0, implicit $exec :: (load (s128) from %ir.in4, !alias.scope !0, addrspace 3)
   ; GCN-NEXT:   [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF19]], [[DEF33]], implicit $exec
@@ -74,7 +75,6 @@ body:      |
   ; GCN-NEXT:   DS_WRITE_B128_gfx9 [[DEF4]], [[DEF16]], 0, 0, implicit $exec :: (store (s128) into %ir.in6, !alias.scope !0, addrspace 3)
   ; GCN-NEXT:   [[DEF16:%[0-9]+]]:av_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN [[DEF6]], [[DEF7]], 0, 0, 0, 0, implicit $exec :: (load (s128) from %ir.in7, !alias.scope !0, addrspace 7)
   ; GCN-NEXT:   dead [[COPY:%[0-9]+]]:areg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_e64 [[DS_READ_B128_gfx9_2]].sub2_sub3, [[DS_READ_B128_gfx9_3]].sub2_sub3, [[COPY]], 0, 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:areg_512_align2 = COPY [[DEF]]
   ; GCN-NEXT:   undef [[DEF17:%[0-9]+]].sub2:vreg_128_align2 = V_PERM_B32_e64 [[DEF13]], [[DEF12]], [[DEF30]], implicit $exec
   ; GCN-NEXT:   [[DEF17:%[0-9]+]].sub3:vreg_128_align2 = V_PERM_B32_e64 [[DEF15]], [[DEF14]], [[DEF30]], implicit $exec
   ; GCN-NEXT:   [[DEF17:%[0-9]+]].sub0:vreg_128_align2 = V_PERM_B32_e64 [[DEF8]], [[DEF9]], [[DEF30]], implicit $exec
