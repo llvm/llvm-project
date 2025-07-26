@@ -101,6 +101,9 @@
 /* Define if LLVM is using tflite */
 #cmakedefine LLVM_HAVE_TFLITE
 
+/* Define if we want to check profile consistency in lit tests */
+#cmakedefine LLVM_ENABLE_PROFCHECK
+
 /* Define to 1 if you have the <sysexits.h> header file. */
 #cmakedefine HAVE_SYSEXITS_H ${HAVE_SYSEXITS_H}
 
