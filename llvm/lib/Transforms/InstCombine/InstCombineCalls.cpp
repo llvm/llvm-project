@@ -1532,6 +1532,41 @@ static Instruction *foldBitOrderCrossLogicOp(Value *V,
   return nullptr;
 }
 
+static Value *foldBinaryIntrinsicRecurrence(InstCombinerImpl &IC,
+                                            IntrinsicInst *II) {
+  PHINode *PN;
+  Value *Init, *OtherOp;
+
+  // A binary intrinsic recurrence with loop-invariant operands is equivalent to
+  // `call @llvm.binary.intrinsic(Init, OtherOp)`.
+  if (!matchSimpleBinaryIntrinsicRecurrence(II, PN, Init, OtherOp) ||
+      !IC.getDominatorTree().dominates(OtherOp, PN))
+    return nullptr;
+
+  auto IID = II->getIntrinsicID();
+  switch (IID) {
+  case Intrinsic::maxnum:
+  case Intrinsic::minnum:
+  case Intrinsic::maximum:
+  case Intrinsic::minimum:
+  case Intrinsic::maximumnum:
+  case Intrinsic::minimumnum:
+  case Intrinsic::smax:
+  case Intrinsic::smin:
+  case Intrinsic::umax:
+  case Intrinsic::umin:
+    break;
+  default:
+    return nullptr;
+  }
+
+  auto *InvariantBinaryInst =
+      IC.Builder.CreateBinaryIntrinsic(IID, Init, OtherOp);
+  if (isa<FPMathOperator>(InvariantBinaryInst))
+    cast<Instruction>(InvariantBinaryInst)->copyFastMathFlags(II);
+  return InvariantBinaryInst;
+}
+
 static Value *simplifyReductionOperand(Value *Arg, bool CanReorderLanes) {
   if (!CanReorderLanes)
     return nullptr;
@@ -3907,6 +3942,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
   if (Value *Reverse = foldReversedIntrinsicOperands(II))
     return replaceInstUsesWith(*II, Reverse);
+
+  // Attempt to simplify value-accumulating recurrences of kind:
+  //   %umax.acc = phi i8 [ %umax, %backedge ], [ %a, %entry ]
+  //   %umax = call i8 @llvm.umax.i8(i8 %umax.acc, i8 %b)
+  // And let the binary intrinsic be hoisted, when the operands are known to be
+  // loop-invariant.
+  if (Value *Res = foldBinaryIntrinsicRecurrence(*this, II))
+    return replaceInstUsesWith(*II, Res);
 
   // Some intrinsics (like experimental_gc_statepoint) can be used in invoke
   // context, so it is handled in visitCallBase and we should trigger it.
