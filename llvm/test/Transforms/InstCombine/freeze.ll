@@ -889,17 +889,17 @@ exit:                                             ; preds = %loop
 }
 
 ; The recurrence for the GEP offset can't produce poison so the freeze should
-; be pushed through to the ptr, but this is not currently supported.
+; be pushed through to the ptr.
 define void @fold_phi_gep_phi_offset(ptr %init, ptr %end, i64 noundef %n) {
 ; CHECK-LABEL: @fold_phi_gep_phi_offset(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INIT:%.*]] = freeze ptr [[INIT1:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT:%.*]], [[ENTRY:%.*]] ], [ [[I_NEXT_FR:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT]], [[ENTRY:%.*]] ], [ [[I_NEXT_FR:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[N:%.*]], [[ENTRY]] ], [ [[OFF_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFF_NEXT]] = shl i64 [[OFF]], 3
-; CHECK-NEXT:    [[I_NEXT:%.*]] = getelementptr i8, ptr [[I]], i64 [[OFF_NEXT]]
-; CHECK-NEXT:    [[I_NEXT_FR]] = freeze ptr [[I_NEXT]]
+; CHECK-NEXT:    [[I_NEXT_FR]] = getelementptr i8, ptr [[I]], i64 [[OFF_NEXT]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT_FR]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -921,18 +921,18 @@ exit:                                             ; preds = %loop
   ret void
 }
 
-; Offset is still guaranteed not to be poison, so the freeze could be moved
-; here if we strip inbounds from the GEP, but this is not currently supported.
+; Offset is still guaranteed not to be poison, so the freeze can be moved
+; here if we strip inbounds from the GEP.
 define void @fold_phi_gep_inbounds_phi_offset(ptr %init, ptr %end, i64 noundef %n) {
 ; CHECK-LABEL: @fold_phi_gep_inbounds_phi_offset(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INIT:%.*]] = freeze ptr [[INIT1:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT:%.*]], [[ENTRY:%.*]] ], [ [[I_NEXT_FR:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT]], [[ENTRY:%.*]] ], [ [[I_NEXT_FR:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[N:%.*]], [[ENTRY]] ], [ [[OFF_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFF_NEXT]] = shl i64 [[OFF]], 3
-; CHECK-NEXT:    [[I_NEXT:%.*]] = getelementptr inbounds i8, ptr [[I]], i64 [[OFF_NEXT]]
-; CHECK-NEXT:    [[I_NEXT_FR]] = freeze ptr [[I_NEXT]]
+; CHECK-NEXT:    [[I_NEXT_FR]] = getelementptr i8, ptr [[I]], i64 [[OFF_NEXT]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT_FR]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -994,7 +994,7 @@ define void @fold_phi_multiple_insts(i32 %init, i32 %n) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT_FR]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_SQ:%.*]] = mul i32 [[I]], [[I]]
-; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I_SQ]], 1
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I_SQ]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -1127,7 +1127,7 @@ define void @fold_phi_invoke_noundef_start_value(i32 %n) personality ptr undef {
 ; CHECK-NEXT:            to label [[LOOP:%.*]] unwind label [[UNWIND:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       unwind:

@@ -662,8 +662,7 @@ define dso_local void @select_invariant_outer_loop(i1 noundef zeroext %cond, i32
 ; CHECK-NEXT:    [[I_021_US:%.*]] = phi i32 [ [[INC9_US:%.*]], [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US:%.*]] ], [ 0, [[FOR_COND1_PREHEADER_US_PREHEADER]] ]
 ; CHECK-NEXT:    [[REM_US:%.*]] = and i32 [[I_021_US]], 1
 ; CHECK-NEXT:    [[CMP5_US:%.*]] = icmp eq i32 [[REM_US]], 0
-; CHECK-NEXT:    [[CMP5_US_FR:%.*]] = freeze i1 [[CMP5_US]]
-; CHECK-NEXT:    br i1 [[CMP5_US_FR]], label [[FOR_COND1_PREHEADER_US_SPLIT_US:%.*]], label [[FOR_COND1_PREHEADER_US_SPLIT:%.*]]
+; CHECK-NEXT:    br i1 [[CMP5_US]], label [[FOR_COND1_PREHEADER_US_SPLIT_US:%.*]], label [[FOR_COND1_PREHEADER_US_SPLIT:%.*]]
 ; CHECK:       for.cond1.preheader.us.split.us:
 ; CHECK-NEXT:    br label [[FOR_BODY4_US_US:%.*]]
 ; CHECK:       for.body4.us.us:
