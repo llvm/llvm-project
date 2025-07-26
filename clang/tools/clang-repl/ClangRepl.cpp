@@ -347,7 +347,11 @@ int main(int argc, const char **argv) {
     }
   }
 
+  const char *percent_commands = "%help\tlist clang-repl %commands\n"
+                                 "%undo\tundo the previous input\n"
+                                 "%quit\texit clang-repl\n";
   if (OptInputs.empty()) {
+    printf("%%help for list of clang-repl commands\n");
     llvm::LineEditor LE("clang-repl");
     std::string Input;
     LE.setListCompleter(ReplListCompleter(CB, *Interp));
@@ -371,7 +375,7 @@ int main(int argc, const char **argv) {
         if (auto Err = Interp->Undo())
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (Input == R"(%help)") {
-        printf("clang-repl commands: { %%undo, %%quit }\n");
+        printf("%s\n", percent_commands);
       } else if (Input.rfind("%lib ", 0) == 0) {
         if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5))
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
