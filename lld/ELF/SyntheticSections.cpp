@@ -781,6 +781,10 @@ MipsGotSection::MipsGotSection(Ctx &ctx)
     : SyntheticSection(ctx, ".got", SHT_PROGBITS,
                        SHF_ALLOC | SHF_WRITE | SHF_MIPS_GPREL, 16) {}
 
+void MipsGotSection::addConstant(const Relocation &r) {
+  relocations.push_back(r);
+}
+
 void MipsGotSection::addEntry(InputFile &file, Symbol &sym, int64_t addend,
                               RelExpr expr) {
   FileGot &g = getGot(file);
@@ -1055,75 +1059,122 @@ void MipsGotSection::build() {
     ctx.symAux.back().gotIdx = p.second;
   }
 
-  // Create dynamic relocations.
+  // Create relocations.
+  //
+  // NB: GOT 'page address' entries have their VAs handled in writeTo as they
+  // reference an OutputSection not a Symbol.
   for (FileGot &got : gots) {
-    // Create dynamic relocations for TLS entries.
+    static Undefined dummy(ctx.internalFile, "", STB_LOCAL, 0, 0);
+
+    // Create relocations for TLS entries.
     for (std::pair<Symbol *, size_t> &p : got.tls) {
       Symbol *s = p.first;
       uint64_t offset = p.second * ctx.arg.wordsize;
       // When building a shared library we still need a dynamic relocation
       // for the TP-relative offset as we don't know how much other data will
       // be allocated before us in the static TLS block.
-      if (s->isPreemptible || ctx.arg.shared)
-        ctx.mainPart->relaDyn->addReloc(
-            {ctx.target->tlsGotRel, this, offset,
-             DynamicReloc::AgainstSymbolWithTargetVA, *s, 0, R_ABS});
+      if (!s->isPreemptible && !ctx.arg.shared)
+        addConstant({R_TPREL, ctx.target->symbolicRel, offset, 0, s});
+      else
+        ctx.mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
+            ctx.target->tlsGotRel, *this, offset, *s, ctx.target->symbolicRel);
     }
     for (std::pair<Symbol *, size_t> &p : got.dynTlsSymbols) {
       Symbol *s = p.first;
       uint64_t offset = p.second * ctx.arg.wordsize;
       if (s == nullptr) {
-        if (!ctx.arg.shared)
-          continue;
-        ctx.mainPart->relaDyn->addReloc(
-            {ctx.target->tlsModuleIndexRel, this, offset});
+        if (ctx.arg.shared)
+          ctx.mainPart->relaDyn->addReloc(
+              {ctx.target->tlsModuleIndexRel, this, offset});
+        else
+          addConstant({R_ADDEND, ctx.target->symbolicRel, offset, 1, &dummy});
       } else {
         // When building a shared library we still need a dynamic relocation
         // for the module index. Therefore only checking for
         // S->isPreemptible is not sufficient (this happens e.g. for
         // thread-locals that have been marked as local through a linker script)
         if (!s->isPreemptible && !ctx.arg.shared)
-          continue;
-        ctx.mainPart->relaDyn->addSymbolReloc(ctx.target->tlsModuleIndexRel,
-                                              *this, offset, *s);
+          // Write one to the GOT slot.
+          addConstant({R_ADDEND, ctx.target->symbolicRel, offset, 1, s});
+        else
+          ctx.mainPart->relaDyn->addSymbolReloc(ctx.target->tlsModuleIndexRel,
+                                                *this, offset, *s);
+        offset += ctx.arg.wordsize;
         // However, we can skip writing the TLS offset reloc for non-preemptible
         // symbols since it is known even in shared libraries
-        if (!s->isPreemptible)
-          continue;
-        offset += ctx.arg.wordsize;
-        ctx.mainPart->relaDyn->addSymbolReloc(ctx.target->tlsOffsetRel, *this,
-                                              offset, *s);
+        if (s->isPreemptible)
+          ctx.mainPart->relaDyn->addSymbolReloc(ctx.target->tlsOffsetRel, *this,
+                                                offset, *s);
+        else
+          addConstant({R_ABS, ctx.target->tlsOffsetRel, offset, 0, s});
       }
     }
 
-    // Do not create dynamic relocations for non-TLS
-    // entries in the primary GOT.
-    if (&got == primGot)
-      continue;
+    // Primary GOT's local and global relocations are implicit; write out VA as
+    // a constant for both (note MIPS requires the VA be written even for the
+    // global entries).
+    if (&got == primGot) {
+      // Relocations for "global" entries.
+      for (const std::pair<Symbol *, size_t> &p : got.global) {
+        uint64_t offset = p.second * ctx.arg.wordsize;
+        addConstant({R_ABS, ctx.target->relativeRel, offset, 0, p.first});
+      }
+      for (const std::pair<Symbol *, size_t> &p : got.relocs) {
+        uint64_t offset = p.second * ctx.arg.wordsize;
+        addConstant({R_ABS, ctx.target->relativeRel, offset, 0, p.first});
+      }
 
-    // Dynamic relocations for "global" entries.
+      // Relocations for "local" entries
+      for (const std::pair<GotEntry, size_t> &p : got.local16) {
+        uint64_t offset = p.second * ctx.arg.wordsize;
+        if (p.first.first == nullptr)
+          addConstant({R_ADDEND, ctx.target->relativeRel, offset,
+                       p.first.second, &dummy});
+        else
+          addConstant({R_ABS, ctx.target->relativeRel, offset, p.first.second,
+                       p.first.first});
+      }
+
+      continue;
+    }
+
+    // Relocations for "global" entries.
     for (const std::pair<Symbol *, size_t> &p : got.global) {
       uint64_t offset = p.second * ctx.arg.wordsize;
       ctx.mainPart->relaDyn->addSymbolReloc(ctx.target->relativeRel, *this,
                                             offset, *p.first);
     }
-    if (!ctx.arg.isPic)
-      continue;
-    // Dynamic relocations for "local" entries in case of PIC.
-    for (const std::pair<const OutputSection *, FileGot::PageBlock> &l :
-         got.pagesMap) {
-      size_t pageCount = l.second.count;
-      for (size_t pi = 0; pi < pageCount; ++pi) {
-        uint64_t offset = (l.second.firstIndex + pi) * ctx.arg.wordsize;
-        ctx.mainPart->relaDyn->addReloc({ctx.target->relativeRel, this, offset,
-                                         l.first, int64_t(pi * 0x10000)});
+    // Relocation-only entries exist as dummy entries for dynamic symbols that
+    // aren't otherwise in the primary GOT, as the ABI requires an entry for
+    // each dynamic symbol. Secondary GOTs have no need for them.
+    assert(got.relocs.empty() &&
+           "Relocation-only entries should only be in the primary GOT");
+
+    // Relocations for "local" entries
+    if (ctx.arg.isPic) {
+      for (const std::pair<const OutputSection *, FileGot::PageBlock> &l :
+           got.pagesMap) {
+        size_t pageCount = l.second.count;
+        for (size_t pi = 0; pi < pageCount; ++pi) {
+          uint64_t offset = (l.second.firstIndex + pi) * ctx.arg.wordsize;
+          ctx.mainPart->relaDyn->addReloc({ctx.target->relativeRel, this,
+                                           offset, l.first,
+                                           int64_t(pi * 0x10000)});
+        }
       }
     }
     for (const std::pair<GotEntry, size_t> &p : got.local16) {
       uint64_t offset = p.second * ctx.arg.wordsize;
-      ctx.mainPart->relaDyn->addReloc({ctx.target->relativeRel, this, offset,
-                                       DynamicReloc::AddendOnlyWithTargetVA,
-                                       *p.first.first, p.first.second, R_ABS});
+      if (p.first.first == nullptr)
+        addConstant({R_ADDEND, ctx.target->relativeRel, offset, p.first.second,
+                     &dummy});
+      else if (!ctx.arg.isPic)
+        addConstant({R_ABS, ctx.target->relativeRel, offset, p.first.second,
+                     p.first.first});
+      else
+        ctx.mainPart->relaDyn->addRelativeReloc(
+            ctx.target->relativeRel, *this, offset, *p.first.first,
+            p.first.second, ctx.target->relativeRel, R_ABS);
     }
   }
 }
@@ -1160,49 +1211,16 @@ void MipsGotSection::writeTo(uint8_t *buf) {
   // if we had to do this.
   writeUint(ctx, buf + ctx.arg.wordsize,
             (uint64_t)1 << (ctx.arg.wordsize * 8 - 1));
+  ctx.target->relocateAlloc(*this, buf);
   for (const FileGot &g : gots) {
-    auto write = [&](size_t i, const Symbol *s, int64_t a) {
-      uint64_t va = a;
-      if (s)
-        va = s->getVA(ctx, a);
-      writeUint(ctx, buf + i * ctx.arg.wordsize, va);
-    };
     // Write 'page address' entries to the local part of the GOT.
     for (const std::pair<const OutputSection *, FileGot::PageBlock> &l :
          g.pagesMap) {
       size_t pageCount = l.second.count;
       uint64_t firstPageAddr = getMipsPageAddr(l.first->addr);
       for (size_t pi = 0; pi < pageCount; ++pi)
-        write(l.second.firstIndex + pi, nullptr, firstPageAddr + pi * 0x10000);
-    }
-    // Local, global, TLS, reloc-only  entries.
-    // If TLS entry has a corresponding dynamic relocations, leave it
-    // initialized by zero. Write down adjusted TLS symbol's values otherwise.
-    // To calculate the adjustments use offsets for thread-local storage.
-    // http://web.archive.org/web/20190324223224/https://www.linux-mips.org/wiki/NPTL
-    for (const std::pair<GotEntry, size_t> &p : g.local16)
-      write(p.second, p.first.first, p.first.second);
-    // Write VA to the primary GOT only. For secondary GOTs that
-    // will be done by REL32 dynamic relocations.
-    if (&g == &gots.front())
-      for (const std::pair<Symbol *, size_t> &p : g.global)
-        write(p.second, p.first, 0);
-    for (const std::pair<Symbol *, size_t> &p : g.relocs)
-      write(p.second, p.first, 0);
-    for (const std::pair<Symbol *, size_t> &p : g.tls)
-      write(p.second, p.first,
-            p.first->isPreemptible || ctx.arg.shared ? 0 : -0x7000);
-    for (const std::pair<Symbol *, size_t> &p : g.dynTlsSymbols) {
-      if (p.first == nullptr && !ctx.arg.shared)
-        write(p.second, nullptr, 1);
-      else if (p.first && !p.first->isPreemptible) {
-        // If we are emitting a shared library with relocations we mustn't write
-        // anything to the GOT here. When using Elf_Rel relocations the value
-        // one will be treated as an addend and will cause crashes at runtime
-        if (!ctx.arg.shared)
-          write(p.second, nullptr, 1);
-        write(p.second + 1, p.first, -0x8000);
-      }
+        writeUint(ctx, buf + (l.second.firstIndex + pi) * ctx.arg.wordsize,
+                  firstPageAddr + pi * 0x10000);
     }
   }
 }
@@ -1653,8 +1671,7 @@ int64_t DynamicReloc::computeAddend(Ctx &ctx) const {
   case AgainstSymbol:
     assert(sym != nullptr);
     return addend;
-  case AddendOnlyWithTargetVA:
-  case AgainstSymbolWithTargetVA: {
+  case AddendOnlyWithTargetVA: {
     uint64_t ca = inputSec->getRelocTargetVA(
         ctx, Relocation{expr, type, 0, addend, sym}, getOffset());
     return ctx.arg.is64 ? ca : SignExtend64<32>(ca);
