@@ -306,6 +306,11 @@ def StackAddrAsyncEscapeChecker : Checker<"StackAddressAsyncEscape">,
   Dependencies<[StackAddrEscapeBase]>,
   Documentation<HasDocumentation>;
 
+def StoreToImmutableChecker : Checker<"StoreToImmutable">,
+  HelpText<"Check for writes to immutable memory regions. "
+           "This implements part of SEI CERT Rule ENV30-C.">,
+  Documentation<HasDocumentation>;
+
 def PthreadLockBase : Checker<"PthreadLockBase">,
   HelpText<"Helper registering multiple checks.">,
   Documentation<NotDocumented>,
