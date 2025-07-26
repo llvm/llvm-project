@@ -167,7 +167,9 @@ private:
   MachineBasicBlock * EmitInstrWithCustomInserterMemcpy(MachineInstr &MI,
                                                         MachineBasicBlock *BB)
                                                         const;
-
+  MachineBasicBlock *
+  EmitInstrWithCustomInserterLDimm64(MachineInstr &MI,
+                                     MachineBasicBlock *BB) const;
 };
 }
 

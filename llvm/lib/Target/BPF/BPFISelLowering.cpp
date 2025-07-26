@@ -819,21 +819,10 @@ const char *BPFTargetLowering::getTargetNodeName(unsigned Opcode) const {
   return nullptr;
 }
 
-static SDValue getTargetNode(GlobalAddressSDNode *N, const SDLoc &DL, EVT Ty,
-                             SelectionDAG &DAG, unsigned Flags) {
-  return DAG.getTargetGlobalAddress(N->getGlobal(), DL, Ty, 0, Flags);
-}
-
 static SDValue getTargetNode(ConstantPoolSDNode *N, const SDLoc &DL, EVT Ty,
                              SelectionDAG &DAG, unsigned Flags) {
   return DAG.getTargetConstantPool(N->getConstVal(), Ty, N->getAlign(),
                                    N->getOffset(), Flags);
-}
-
-static SDValue getTargetNode(BlockAddressSDNode *N, const SDLoc &DL, EVT Ty,
-                             SelectionDAG &DAG, unsigned Flags) {
-  return DAG.getTargetBlockAddress(N->getBlockAddress(), Ty, N->getOffset(),
-                                   Flags);
 }
 
 static SDValue getTargetNode(JumpTableSDNode *N, const SDLoc &DL, EVT Ty,
@@ -857,7 +846,15 @@ SDValue BPFTargetLowering::LowerGlobalAddress(SDValue Op,
   if (N->getOffset() != 0)
     report_fatal_error("invalid offset for global address: " +
                        Twine(N->getOffset()));
-  return getAddr(N, DAG);
+
+  const GlobalValue *GVal = N->getGlobal();
+  SDLoc DL(Op);
+
+  // Wrap it in a TargetGlobalAddress
+  SDValue Addr = DAG.getTargetGlobalAddress(GVal, DL, MVT::i64);
+
+  // Emit pseudo instruction
+  return SDValue(DAG.getMachineNode(BPF::LDIMM64, DL, MVT::i64, Addr), 0);
 }
 
 SDValue BPFTargetLowering::LowerConstantPool(SDValue Op,
@@ -869,8 +866,14 @@ SDValue BPFTargetLowering::LowerConstantPool(SDValue Op,
 
 SDValue BPFTargetLowering::LowerBlockAddress(SDValue Op,
                                              SelectionDAG &DAG) const {
-  BlockAddressSDNode *N = cast<BlockAddressSDNode>(Op);
-  return getAddr(N, DAG);
+  const BlockAddress *BA = cast<BlockAddressSDNode>(Op)->getBlockAddress();
+  SDLoc DL(Op);
+
+  // Wrap it in a TargetBlockAddress
+  SDValue Addr = DAG.getTargetBlockAddress(BA, MVT::i64);
+
+  // Emit pseudo instruction
+  return SDValue(DAG.getMachineNode(BPF::LDIMM64, DL, MVT::i64, Addr), 0);
 }
 
 unsigned
@@ -936,6 +939,86 @@ BPFTargetLowering::EmitInstrWithCustomInserterMemcpy(MachineInstr &MI,
   return BB;
 }
 
+MachineBasicBlock *BPFTargetLowering::EmitInstrWithCustomInserterLDimm64(
+    MachineInstr &MI, MachineBasicBlock *BB) const {
+  MachineFunction *MF = BB->getParent();
+  const BPFInstrInfo *TII = MF->getSubtarget<BPFSubtarget>().getInstrInfo();
+  const TargetRegisterClass *RC = getRegClassFor(MVT::i64);
+  MachineRegisterInfo &RegInfo = MF->getRegInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
+  // Build address taken map for Global Varaibles and BlockAddresses
+  DenseMap<const BasicBlock *, MachineBasicBlock *> AddressTakenBBs;
+  for (MachineBasicBlock &MBB : *MF) {
+    if (const BasicBlock *BB = MBB.getBasicBlock())
+      if (BB->hasAddressTaken())
+        AddressTakenBBs[BB] = &MBB;
+  }
+
+  MachineOperand &MO = MI.getOperand(1);
+  assert(MO.isBlockAddress() || MO.isGlobal());
+
+  MCRegister ResultReg = MI.getOperand(0).getReg();
+  Register TmpReg = RegInfo.createVirtualRegister(RC);
+
+  std::vector<MachineBasicBlock *> Targets;
+  unsigned JTI;
+
+  if (MO.isBlockAddress()) {
+    auto *BA = MO.getBlockAddress();
+    MachineBasicBlock *TgtMBB = AddressTakenBBs[BA->getBasicBlock()];
+    assert(TgtMBB);
+
+    Targets.push_back(TgtMBB);
+    JTI = MF->getOrCreateJumpTableInfo(getJumpTableEncoding())
+              ->createJumpTableIndex(Targets);
+
+    BuildMI(*BB, MI, DL, TII->get(BPF::LD_imm64), TmpReg)
+        .addJumpTableIndex(JTI);
+    BuildMI(*BB, MI, DL, TII->get(BPF::LDD), ResultReg)
+        .addReg(TmpReg)
+        .addImm(0);
+    MI.eraseFromParent();
+    return BB;
+  }
+
+  // Helper: emit LD_imm64 with operand GlobalAddress or JumpTable
+  auto emitLDImm64 = [&](const GlobalValue *GV = nullptr, unsigned JTI = -1) {
+    auto MIB = BuildMI(*BB, MI, DL, TII->get(BPF::LD_imm64), ResultReg);
+    if (GV)
+      MIB.addGlobalAddress(GV);
+    else
+      MIB.addJumpTableIndex(JTI);
+    MI.eraseFromParent();
+    return BB;
+  };
+
+  // Must be a global at this point
+  const GlobalValue *GVal = MO.getGlobal();
+  const auto *GV = dyn_cast<GlobalVariable>(GVal);
+
+  if (!GV || GV->getLinkage() != GlobalValue::PrivateLinkage ||
+      !GV->isConstant() || !GV->hasInitializer())
+    return emitLDImm64(GVal);
+
+  const auto *CA = dyn_cast<ConstantArray>(GV->getInitializer());
+  if (!CA)
+    return emitLDImm64(GVal);
+
+  for (const Use &Op : CA->operands()) {
+    if (!isa<BlockAddress>(Op))
+      return emitLDImm64(GVal);
+    auto *BA = cast<BlockAddress>(Op);
+    MachineBasicBlock *TgtMBB = AddressTakenBBs[BA->getBasicBlock()];
+    assert(TgtMBB);
+    Targets.push_back(TgtMBB);
+  }
+
+  JTI = MF->getOrCreateJumpTableInfo(getJumpTableEncoding())
+            ->createJumpTableIndex(Targets);
+  return emitLDImm64(nullptr, JTI);
+}
+
 MachineBasicBlock *
 BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *BB) const {
@@ -948,6 +1031,7 @@ BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                        Opc == BPF::Select_32_64);
 
   bool isMemcpyOp = Opc == BPF::MEMCPY;
+  bool isLDimm64Op = Opc == BPF::LDIMM64;
 
 #ifndef NDEBUG
   bool isSelectRIOp = (Opc == BPF::Select_Ri ||
@@ -955,12 +1039,15 @@ BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                        Opc == BPF::Select_Ri_32 ||
                        Opc == BPF::Select_Ri_32_64);
 
-  if (!(isSelectRROp || isSelectRIOp || isMemcpyOp))
+  if (!(isSelectRROp || isSelectRIOp || isMemcpyOp || isLDimm64Op))
     report_fatal_error("unhandled instruction type: " + Twine(Opc));
 #endif
 
   if (isMemcpyOp)
     return EmitInstrWithCustomInserterMemcpy(MI, BB);
+
+  if (isLDimm64Op)
+    return EmitInstrWithCustomInserterLDimm64(MI, BB);
 
   bool is32BitCmp = (Opc == BPF::Select_32 ||
                      Opc == BPF::Select_32_64 ||

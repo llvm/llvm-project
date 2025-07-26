@@ -865,9 +865,7 @@ let usesCustomInserter = 1, isCodeGenOnly = 1 in {
 }
 
 // load 64-bit global addr into register
-def : Pat<(BPFWrapper tglobaladdr:$in), (LD_imm64 tglobaladdr:$in)>;
 def : Pat<(BPFWrapper tconstpool:$in), (LD_imm64 tconstpool:$in)>;
-def : Pat<(BPFWrapper tblockaddress:$in), (LD_imm64 tblockaddress:$in)>;
 def : Pat<(BPFWrapper tjumptable:$in), (LD_imm64 tjumptable:$in)>;
 
 // 0xffffFFFF doesn't fit into simm32, optimize common case
@@ -1387,4 +1385,9 @@ let usesCustomInserter = 1, isCodeGenOnly = 1 in {
       (ins GPR:$dst, GPR:$src, i64imm:$len, i64imm:$align, variable_ops),
       "#memcpy dst: $dst, src: $src, len: $len, align: $align",
       [(BPFmemcpy GPR:$dst, GPR:$src, imm:$len, imm:$align)]>;
+}
+
+// For GlobalValue and BlockAddress.
+let usesCustomInserter = 1, isCodeGenOnly = 1 in {
+  def LDIMM64 : Pseudo<(outs GPR:$dst), (ins i64imm:$addr), "", []>;
 }
