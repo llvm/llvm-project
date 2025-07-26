@@ -8,9 +8,17 @@
 #include "../Target.h"
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
+#include "llvm/Support/CommandLine.h"
 
 #if defined(__aarch64__) && defined(__linux__)
+#include <errno.h>
 #include <sys/prctl.h> // For PR_PAC_* constants
+#ifndef PR_PAC_SET_ENABLED_KEYS
+#define PR_PAC_SET_ENABLED_KEYS 60
+#endif
+#ifndef PR_PAC_GET_ENABLED_KEYS
+#define PR_PAC_GET_ENABLED_KEYS 61
+#endif
 #ifndef PR_PAC_APIAKEY
 #define PR_PAC_APIAKEY (1UL << 0)
 #endif
@@ -30,6 +38,62 @@
 
 namespace llvm {
 namespace exegesis {
+
+static cl::opt<bool> AArch64KeepPacKeys(
+    "aarch64-keep-pac-keys",
+    cl::desc("Disable PAC key control at runtime for benchmarking. Use this if "
+             "llvm-exegesis crashes or instruction timings are affected."),
+    cl::init(false));
+
+static bool isPointerAuth(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return false;
+
+  // FIXME: Pointer Authentication instructions.
+  // We would like to measure these instructions, but they can behave
+  // differently on different platforms, and maybe the snippets need to look
+  // different for these instructions,
+  // Platform-specific handling:  On Linux, owing to the fact that disabling
+  // keys can cause exegesis to crash, the user may pass
+  // --aarch64-keep-pac-keys in case we disable authentication to ensure
+  // forward progress. On non-Linux platforms, disable opcodes for now.
+  case AArch64::AUTIAZ:
+  case AArch64::AUTIBZ:
+  case AArch64::AUTIASP:
+  case AArch64::AUTIBSP:
+  case AArch64::AUTIASPPCi:
+  case AArch64::AUTIBSPPCi:
+  case AArch64::AUTIASPPCr:
+  case AArch64::AUTIBSPPCr:
+  case AArch64::AUTIA1716:
+  case AArch64::AUTIB1716:
+  case AArch64::AUTIA171615:
+  case AArch64::AUTIB171615:
+  case AArch64::AUTIA:
+  case AArch64::AUTIB:
+  case AArch64::AUTDA:
+  case AArch64::AUTDB:
+  case AArch64::AUTIZA:
+  case AArch64::AUTIZB:
+  case AArch64::AUTDZA:
+  case AArch64::AUTDZB:
+  case AArch64::LDRAAwriteback:
+  case AArch64::LDRABwriteback:
+    return true;
+  }
+}
+
+static bool isLoadTagMultiple(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return false;
+
+  // Load tag multiple instruction
+  case AArch64::LDGM:
+    return true;
+  }
+}
 
 static unsigned getLoadImmediateOpcode(unsigned RegBitWidth) {
   switch (RegBitWidth) {
@@ -149,6 +213,70 @@ private:
   void addTargetSpecificPasses(PassManagerBase &PM) const override {
     // Function return is a pseudo-instruction that needs to be expanded
     PM.add(createAArch64ExpandPseudoPass());
+  }
+
+#if defined(__aarch64__) && defined(__linux__)
+  // Converts variadic arguments to `long` and passes zeros for the unused
+  // arg2-arg5, as tested by the Linux kernel.
+  static long prctl_wrapper(int op, long arg2 = 0, long arg3 = 0) {
+    return prctl(op, arg2, arg3, /*arg4=*/0L, /*arg5=*/0L);
+  }
+#endif
+
+  const char *getIgnoredOpcodeReasonOrNull(const LLVMState &State,
+                                           unsigned Opcode) const override {
+    if (const char *Reason =
+            ExegesisTarget::getIgnoredOpcodeReasonOrNull(State, Opcode))
+      return Reason;
+
+    if (isPointerAuth(Opcode)) {
+#if defined(__aarch64__) && defined(__linux__)
+      // Only proceed with PAC key control if explicitly requested
+      if (!AArch64KeepPacKeys) {
+        // For some systems with existing PAC keys set, it is better to
+        // check the existing state of the key before setting it.
+        // If the CPU implements FEAT_FPAC,
+        // authentication instructions almost certainly crash when being
+        // benchmarked, so disable all the keys by default. On the other hand,
+        // disabling the keys at run-time can probably crash llvm-exegesis at
+        // some later point, depending on how it was built. For that reason, the
+        // user may pass --aarch64-keep-pac-keys in case
+        // llvm-exegesis crashes or instruction timings are affected.
+        // Hence the guard for switching.
+        errno = 0;
+        long PacKeys = prctl_wrapper(PR_PAC_GET_ENABLED_KEYS);
+        if (PacKeys < 0 && errno == EINVAL)
+          return nullptr;
+
+        // Disable all PAC keys. Note that while we expect the measurements to
+        // be the same with PAC keys disabled, they could potentially be lower
+        // since authentication checks are bypassed.
+        if (PacKeys != 0) {
+          // Operate on all keys.
+          const long KeysToControl =
+              PR_PAC_APIAKEY | PR_PAC_APIBKEY | PR_PAC_APDAKEY | PR_PAC_APDBKEY;
+          // PR_PAC_* prctl operations return EINVAL when Pointer Authentication
+          // is not available but no more errors are expected if we got here.
+          const long EnabledBitMask = 0;
+          if (prctl_wrapper(PR_PAC_SET_ENABLED_KEYS, KeysToControl,
+                            EnabledBitMask) < 0) {
+            return "Failed to disable PAC keys";
+          }
+          llvm::errs()
+              << "llvm-exegesis: PAC keys were disabled at runtime for "
+                 "benchmarking.\n";
+        }
+      }
+#else
+      // Silently return nullptr to ensure forward progress
+      return nullptr;
+#endif
+    }
+
+    if (isLoadTagMultiple(Opcode))
+      return "Unsupported opcode: load tag multiple";
+
+    return nullptr;
   }
 };
 
