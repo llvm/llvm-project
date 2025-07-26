@@ -589,8 +589,6 @@ private:
   /// offset between two locations may not be fully resolved.
   bool LinkerRelaxable : 1;
 
-  MCFragment DummyFragment;
-
   // Mapping from subsection number to fragment list. At layout time, the
   // subsection 0 list is replaced with concatenated fragments from all
   // subsections.
@@ -652,7 +650,7 @@ public:
   bool isLinkerRelaxable() const { return LinkerRelaxable; }
   void setLinkerRelaxable() { LinkerRelaxable = true; }
 
-  MCFragment &getDummyFragment() { return DummyFragment; }
+  MCFragment &getDummyFragment() { return *Subsections[0].second.Head; }
 
   FragList *curFragList() const { return CurFragList; }
   iterator begin() const { return iterator(CurFragList->Head); }

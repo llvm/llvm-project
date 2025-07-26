@@ -185,10 +185,10 @@ void MCObjectStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 
   getAssembler().registerSymbol(*Symbol);
 
-  // Set the fragment and offset. This function might be called by
-  // changeSection, when the section stack top hasn't been changed to the new
-  // section.
-  MCFragment *F = CurFrag;
+  // If there is a current fragment, mark the symbol as pointing into it.
+  // Otherwise queue the label and set its fragment pointer when we emit the
+  // next fragment.
+  MCFragment *F = getCurrentFragment();
   Symbol->setFragment(F);
   Symbol->setOffset(F->getContents().size());
 
@@ -247,15 +247,6 @@ void MCObjectStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   assert(Section && "Cannot switch to a null section!");
   getContext().clearDwarfLocSeen();
 
-  // Register the section and create an initial fragment for subsection 0
-  // if `Subsection` is non-zero.
-  bool NewSec = getAssembler().registerSection(*Section);
-  MCFragment *F0 = nullptr;
-  if (NewSec && Subsection) {
-    changeSection(Section, 0);
-    F0 = CurFrag;
-  }
-
   auto &Subsections = Section->Subsections;
   size_t I = 0, E = Subsections.size();
   while (I != E && Subsections[I].first < Subsection)
@@ -271,13 +262,7 @@ void MCObjectStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   Section->CurFragList = &Subsections[I].second;
   CurFrag = Section->CurFragList->Tail;
 
-  // Define the section symbol at subsection 0's initial fragment if required.
-  if (!NewSec)
-    return;
-  if (auto *Sym = Section->getBeginSymbol()) {
-    Sym->setFragment(Subsection ? F0 : CurFrag);
-    getAssembler().registerSymbol(*Sym);
-  }
+  getAssembler().registerSection(*Section);
 }
 
 void MCObjectStreamer::switchSectionNoPrint(MCSection *Section) {
