@@ -838,8 +838,8 @@ static MCSection *getWinCFISection(MCContext &Context, unsigned *NextWinCFIID,
   if (TextSec == Context.getObjectFileInfo()->getTextSection())
     return MainCFISec;
 
-  const auto *TextSecCOFF = cast<MCSectionCOFF>(TextSec);
-  auto *MainCFISecCOFF = cast<MCSectionCOFF>(MainCFISec);
+  const auto *TextSecCOFF = static_cast<const MCSectionCOFF *>(TextSec);
+  auto *MainCFISecCOFF = static_cast<MCSectionCOFF *>(MainCFISec);
   unsigned UniqueID = TextSecCOFF->getOrAssignWinCFISectionID(NextWinCFIID);
 
   // If this section is COMDAT, this unwind section should be COMDAT associative
