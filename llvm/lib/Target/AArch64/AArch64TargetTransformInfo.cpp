@@ -5092,6 +5092,7 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
     return false;
 
   switch (RdxDesc.getRecurrenceKind()) {
+  case RecurKind::Sub:
   case RecurKind::Add:
   case RecurKind::FAdd:
   case RecurKind::And:
