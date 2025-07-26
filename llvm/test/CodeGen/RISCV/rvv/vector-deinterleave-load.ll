@@ -634,3 +634,19 @@ define {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i
   %deinterleaved.results = call {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} @llvm.vector.deinterleave4.nxv32i8(<vscale x 32 x i8> %vec)
   ret {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} %deinterleaved.results
 }
+
+define { <8 x float>, <8 x float> } @deinterleave_unrelated(<16 x float> %arg) {
+; CHECK-LABEL: deinterleave_unrelated:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vfabs.v v12, v8
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vnsrl.wx v10, v12, a0
+; CHECK-NEXT:    vnsrl.wi v8, v12, 0
+; CHECK-NEXT:    ret
+entry:
+  %abs = call <16 x float> @llvm.fabs(<16 x float> %arg)
+  %res = call { <8 x float>, <8 x float> } @llvm.vector.deinterleave2.v16f32(<16 x float> %abs)
+  ret { <8 x float>, <8 x float> } %res
+}

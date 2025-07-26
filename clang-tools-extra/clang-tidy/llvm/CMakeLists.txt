@@ -29,4 +29,5 @@ clang_target_link_libraries(clangTidyLLVMModule
   clangBasic
   clangLex
   clangTooling
+  clangTransformer
   )

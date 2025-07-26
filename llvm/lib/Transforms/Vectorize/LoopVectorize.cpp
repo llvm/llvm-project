@@ -7279,6 +7279,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPBasicBlock *VectorPH = cast<VPBasicBlock>(BestVPlan.getVectorPreheader());
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
   VPlanTransforms::simplifyRecipes(BestVPlan, *Legal->getWidestInductionType());
+  VPlanTransforms::removeBranchOnConst(BestVPlan);
   VPlanTransforms::narrowInterleaveGroups(
       BestVPlan, BestVF,
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
@@ -10242,6 +10243,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
           L, PSE, LI, DT, TLI, TTI, AC, ORE, ElementCount::getFixed(1),
           ElementCount::getFixed(1), IC, &CM, BFI, PSI, Checks, BestPlan);
 
+      // TODO: Move to general VPlan pipeline once epilogue loops are also
+      // supported.
+      VPlanTransforms::runPass(VPlanTransforms::materializeVectorTripCount,
+                               BestPlan, VF.Width, IC, PSE);
+
       LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
 
       ORE->emit([&]() {
@@ -10309,6 +10315,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width,
                                VF.MinProfitableTripCount, IC, &CM, BFI, PSI,
                                Checks, BestPlan);
+        // TODO: Move to general VPlan pipeline once epilogue loops are also
+        // supported.
+        VPlanTransforms::runPass(VPlanTransforms::materializeVectorTripCount,
+                                 BestPlan, VF.Width, IC, PSE);
+
         LVP.executePlan(VF.Width, IC, BestPlan, LB, DT, false);
         ++LoopsVectorized;
 

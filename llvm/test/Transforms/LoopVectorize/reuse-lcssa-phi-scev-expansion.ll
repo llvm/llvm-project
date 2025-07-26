@@ -330,7 +330,7 @@ define void @expand_diff_neg_ptrtoint_expr(ptr %src, ptr %start) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], -2
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -1, %[[MIDDLE_BLOCK]] ], [ 1, %[[LOOP_3_PREHEADER]] ], [ 1, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi ptr [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[TMP1]], %[[LOOP_3_PREHEADER]] ], [ [[TMP1]], %[[VECTOR_MEMCHECK]] ]
@@ -345,7 +345,7 @@ define void @expand_diff_neg_ptrtoint_expr(ptr %src, ptr %start) {
 ; CHECK-NEXT:    store i64 [[L]], ptr [[PTR_IV_3]], align 8
 ; CHECK-NEXT:    [[IV_NEXT_2]] = add i64 [[IV_2]], 1
 ; CHECK-NEXT:    [[EC_3:%.*]] = icmp eq i64 [[IV_NEXT_2]], 0
-; CHECK-NEXT:    br i1 [[EC_3]], label %[[EXIT]], label %[[LOOP_3]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC_3]], label %[[EXIT:.*]], label %[[LOOP_3]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -430,7 +430,7 @@ define void @scev_exp_reuse_const_add(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 40
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 40, %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_2_PH]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi ptr [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[PTR_IV_1_NEXT_LCSSA]], %[[LOOP_2_PH]] ], [ [[PTR_IV_1_NEXT_LCSSA]], %[[VECTOR_MEMCHECK]] ]
@@ -444,7 +444,7 @@ define void @scev_exp_reuse_const_add(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    [[PTR_IV_2_NEXT]] = getelementptr i8, ptr [[PTR_IV_2]], i64 2
 ; CHECK-NEXT:    store i16 [[L]], ptr [[PTR_IV_2]], align 2
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_1]], 40
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_2]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_2]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
