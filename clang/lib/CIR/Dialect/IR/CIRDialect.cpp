@@ -1465,9 +1465,13 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   llvm::SMLoc loc = parser.getCurrentLocation();
   mlir::Builder &builder = parser.getBuilder();
 
+  mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
   mlir::StringAttr visibilityNameAttr = getGlobalVisibilityAttrName(state.name);
   mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
+
+  if (parser.parseOptionalKeyword(noProtoNameAttr).succeeded())
+    state.addAttribute(noProtoNameAttr, parser.getBuilder().getUnitAttr());
 
   // Default to external linkage if no keyword is provided.
   state.addAttribute(getLinkageAttrNameString(),
@@ -1573,6 +1577,9 @@ mlir::Region *cir::FuncOp::getCallableRegion() {
 }
 
 void cir::FuncOp::print(OpAsmPrinter &p) {
+  if (getNoProto())
+    p << " no_proto";
+
   if (getComdat())
     p << " comdat";
 
