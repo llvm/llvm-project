@@ -1216,7 +1216,14 @@ class TestConvertBlockArgs : public OpConversionPattern<ConvertBlockArgsOp> {
       if (op.getReplaceWithOperand()) {
         result.remapInput(it.index(), {adaptor.getVal(), adaptor.getVal()});
       } else if (op.getDuplicate()) {
-        result.addInputs(it.index(), {it.value(), it.value()});
+        auto intTy = dyn_cast<IntegerType>(it.value());
+        if (!intTy)
+          return failure();
+        auto intTyRepl1 =
+            IntegerType::get(intTy.getContext(), intTy.getWidth() + 1);
+        auto intTyRepl2 =
+            IntegerType::get(intTy.getContext(), intTy.getWidth() + 2);
+        result.addInputs(it.index(), {intTyRepl1, intTyRepl2});
       } else {
         // No action specified. Pattern does not apply.
         return failure();
@@ -1235,8 +1242,9 @@ class TestConvertBlockArgs : public OpConversionPattern<ConvertBlockArgsOp> {
 /// values of the single operand as test.valid operands.
 class TestRepetitive1ToNConsumer : public ConversionPattern {
 public:
-  TestRepetitive1ToNConsumer(MLIRContext *ctx)
-      : ConversionPattern("test.repetitive_1_to_n_consumer", 1, ctx) {}
+  TestRepetitive1ToNConsumer(MLIRContext *ctx, const TypeConverter &converter)
+      : ConversionPattern(converter, "test.repetitive_1_to_n_consumer", 1,
+                          ctx) {}
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
                   ConversionPatternRewriter &rewriter) const final {
@@ -1334,6 +1342,13 @@ struct TestTypeConverter : public TypeConverter {
       return success();
     }
 
+    // Convert I91 to I92, I93.
+    if (t.isInteger(91)) {
+      results.push_back(IntegerType::get(t.getContext(), 92));
+      results.push_back(IntegerType::get(t.getContext(), 93));
+      return success();
+    }
+
     // Split F32 into F16,F16.
     if (t.isF32()) {
       results.assign(2, Float16Type::get(t.getContext()));
@@ -1394,12 +1409,11 @@ struct TestLegalizePatternDriver
              TestUpdateConsumerType, TestNonRootReplacement,
              TestBoundedRecursiveRewrite, TestNestedOpCreationUndoRewrite,
              TestReplaceEraseOp, TestCreateUnregisteredOp, TestUndoMoveOpBefore,
-             TestUndoPropertiesModification, TestEraseOp,
-             TestRepetitive1ToNConsumer>(&getContext());
+             TestUndoPropertiesModification, TestEraseOp>(&getContext());
     patterns.add<TestDropOpSignatureConversion, TestDropAndReplaceInvalidOp,
                  TestPassthroughInvalidOp, TestMultiple1ToNReplacement,
-                 TestBlockArgReplace, TestSplitReturnType>(&getContext(),
-                                                           converter);
+                 TestBlockArgReplace, TestSplitReturnType,
+                 TestRepetitive1ToNConsumer>(&getContext(), converter);
     patterns.add<TestConvertBlockArgs>(converter, &getContext());
     mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(patterns,
                                                               converter);

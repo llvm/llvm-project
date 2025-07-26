@@ -371,13 +371,13 @@ func.func @circular_mapping() {
 
 // CHECK-LABEL: func @test_duplicate_block_arg()
 //       CHECK:   test.convert_block_args  is_legal duplicate {
-//       CHECK:   ^{{.*}}(%[[arg0:.*]]: i64, %[[arg1:.*]]: i64):
+//       CHECK:   ^{{.*}}(%[[arg0:.*]]: i92, %[[arg1:.*]]: i93):
 //       CHECK:     "test.valid"(%[[arg0]], %[[arg1]])
 //       CHECK:   }
 func.func @test_duplicate_block_arg() {
   test.convert_block_args duplicate {
-  ^bb0(%arg0: i64):
-    "test.repetitive_1_to_n_consumer"(%arg0) : (i64) -> ()
+  ^bb0(%arg0: i91):
+    "test.repetitive_1_to_n_consumer"(%arg0) : (i91) -> ()
   } : () -> ()
   "test.return"() : () -> ()
 }
