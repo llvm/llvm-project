@@ -87,10 +87,6 @@ public:
 
   unsigned getLayoutOrder() const { return LayoutOrder; }
   void setLayoutOrder(unsigned Value) { LayoutOrder = Value; }
-
-  static bool classof(const MCSection *S) {
-    return S->getVariant() == SV_MachO;
-  }
 };
 
 } // end namespace llvm
