@@ -157,14 +157,14 @@ private:
 
 public:
   Type()
-      : Kind(Void), Immediate(false), Constant(false),
-        Pointer(false), ScalarForMangling(false), NoManglingQ(false),
-        Bitwidth(0), ElementBitwidth(0), NumVectors(0) {}
+      : Kind(Void), Immediate(false), Constant(false), Pointer(false),
+        ScalarForMangling(false), NoManglingQ(false), Bitwidth(0),
+        ElementBitwidth(0), NumVectors(0) {}
 
   Type(TypeSpec TS, StringRef CharMods)
-      : TS(std::move(TS)), Kind(Void), Immediate(false),
-        Constant(false), Pointer(false), ScalarForMangling(false),
-        NoManglingQ(false), Bitwidth(0), ElementBitwidth(0), NumVectors(0) {
+      : TS(std::move(TS)), Kind(Void), Immediate(false), Constant(false),
+        Pointer(false), ScalarForMangling(false), NoManglingQ(false),
+        Bitwidth(0), ElementBitwidth(0), NumVectors(0) {
     applyModifiers(CharMods);
   }
 
@@ -361,7 +361,7 @@ class Intrinsic {
     if (BigEndianSafe)
       return true;
 
-    for (const auto &T : Types){
+    for (const auto &T : Types) {
       if (T.isVector() && T.getNumElements() > 1)
         return false;
     }
@@ -393,9 +393,9 @@ public:
     }
 
     for (const auto &Type : Types) {
-      // If this builtin takes an immediate argument, we need to #define it rather
-      // than use a standard declaration, so that SemaChecking can range check
-      // the immediate passed by the user.
+      // If this builtin takes an immediate argument, we need to #define it
+      // rather than use a standard declaration, so that SemaChecking can range
+      // check the immediate passed by the user.
 
       // Pointer arguments need to use macros to avoid hiding aligned attributes
       // from the pointer type.
@@ -527,8 +527,8 @@ private:
 
   void emitBodyAsBuiltinCall();
 
-  void generateImpl(bool ReverseArguments,
-                    StringRef NamePrefix, StringRef CallPrefix);
+  void generateImpl(bool ReverseArguments, StringRef NamePrefix,
+                    StringRef CallPrefix);
   void emitReturn();
   void emitBody(StringRef CallPrefix);
   void emitShadowedArgs();
@@ -546,9 +546,8 @@ private:
     StringRef CallPrefix;
 
   public:
-    DagEmitter(Intrinsic &Intr, StringRef CallPrefix) :
-      Intr(Intr), CallPrefix(CallPrefix) {
-    }
+    DagEmitter(Intrinsic &Intr, StringRef CallPrefix)
+        : Intr(Intr), CallPrefix(CallPrefix) {}
     std::pair<Type, std::string> emitDagArg(const Init *Arg,
                                             std::string ArgName);
     std::pair<Type, std::string> emitDagSaveTemp(const DagInit *DI);
@@ -691,12 +690,23 @@ std::string Type::builtin_str() const {
     return S;
   } else if (isInteger())
     switch (ElementBitwidth) {
-    case 8: S += "c"; break;
-    case 16: S += "s"; break;
-    case 32: S += "i"; break;
-    case 64: S += "Wi"; break;
-    case 128: S += "LLLi"; break;
-    default: llvm_unreachable("Unhandled case!");
+    case 8:
+      S += "c";
+      break;
+    case 16:
+      S += "s";
+      break;
+    case 32:
+      S += "i";
+      break;
+    case 64:
+      S += "Wi";
+      break;
+    case 128:
+      S += "LLLi";
+      break;
+    default:
+      llvm_unreachable("Unhandled case!");
     }
   else if (isBFloat16()) {
     assert(ElementBitwidth == 16 && "BFloat16 can only be 16 bits");
@@ -708,13 +718,21 @@ std::string Type::builtin_str() const {
     S += "UWi";
   } else
     switch (ElementBitwidth) {
-    case 16: S += "h"; break;
-    case 32: S += "f"; break;
-    case 64: S += "d"; break;
-    default: llvm_unreachable("Unhandled case!");
+    case 16:
+      S += "h";
+      break;
+    case 32:
+      S += "f";
+      break;
+    case 64:
+      S += "d";
+      break;
+    default:
+      llvm_unreachable("Unhandled case!");
     }
 
-  // FIXME: NECESSARY???????????????????????????????????????????????????????????????????????
+  // FIXME:
+  // NECESSARY???????????????????????????????????????????????????????????????????????
   if (isChar() && !isPointer() && isSigned())
     // Make chars explicitly signed.
     S = "S" + S;
@@ -740,12 +758,23 @@ std::string Type::builtin_str() const {
 unsigned Type::getNeonEnum() const {
   unsigned Addend;
   switch (ElementBitwidth) {
-  case 8: Addend = 0; break;
-  case 16: Addend = 1; break;
-  case 32: Addend = 2; break;
-  case 64: Addend = 3; break;
-  case 128: Addend = 4; break;
-  default: llvm_unreachable("Unhandled element bitwidth!");
+  case 8:
+    Addend = 0;
+    break;
+  case 16:
+    Addend = 1;
+    break;
+  case 32:
+    Addend = 2;
+    break;
+  case 64:
+    Addend = 3;
+    break;
+  case 128:
+    Addend = 4;
+    break;
+  default:
+    llvm_unreachable("Unhandled element bitwidth!");
   }
 
   unsigned Base = (unsigned)NeonTypeFlags::Int8 + Addend;
@@ -1156,11 +1185,20 @@ std::string Intrinsic::mangleName(std::string Name, ClassKind LocalCK) const {
   char Suffix = '\0';
   if (BaseType.isScalarForMangling()) {
     switch (BaseType.getElementSizeInBits()) {
-    case 8: Suffix = 'b'; break;
-    case 16: Suffix = 'h'; break;
-    case 32: Suffix = 's'; break;
-    case 64: Suffix = 'd'; break;
-    default: llvm_unreachable("Bad suffix!");
+    case 8:
+      Suffix = 'b';
+      break;
+    case 16:
+      Suffix = 'h';
+      break;
+    case 32:
+      Suffix = 's';
+      break;
+    case 64:
+      Suffix = 'd';
+      break;
+    default:
+      llvm_unreachable("Bad suffix!");
     }
   }
   if (Suffix != '\0') {
@@ -1259,9 +1297,9 @@ void Intrinsic::emitReverseVariable(Variable &Dest, Variable &Src) {
     emitNewLine();
 
     for (unsigned K = 0; K < Dest.getType().getNumVectors(); ++K) {
-      OS << "  " << Dest.getName() << ".val[" << K << "] = "
-         << "__builtin_shufflevector(" << Src.getName() << ".val[" << K << "], "
-         << Src.getName() << ".val[" << K << "], __lane_reverse_"
+      OS << "  " << Dest.getName() << ".val[" << K
+         << "] = " << "__builtin_shufflevector(" << Src.getName() << ".val["
+         << K << "], " << Src.getName() << ".val[" << K << "], __lane_reverse_"
          << Dest.getType().getSizeInBits() << "_"
          << Dest.getType().getElementSizeInBits() << ");";
       emitNewLine();
@@ -1401,14 +1439,12 @@ void Intrinsic::emitBodyAsBuiltinCall() {
       if (LocalCK == ClassB || (T.isHalf() && !T.isScalarForMangling())) {
         CastToType.makeInteger(8, true);
         Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
-      } else if (LocalCK == ClassI) {
-        if (CastToType.isInteger()) {
-          CastToType.makeSigned();
-          Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
-        }
+      } else if (LocalCK == ClassI &&
+                 (CastToType.isInteger() || CastToType.isPoly())) {
+        CastToType.makeSigned();
+        Arg = "__builtin_bit_cast(" + CastToType.str() + ", " + Arg + ")";
       }
     }
-
     S += Arg + ", ";
   }
 
@@ -1826,12 +1862,15 @@ Intrinsic::DagEmitter::emitDagNameReplace(const DagInit *DI) {
   std::string S = Intr.Name;
 
   assert_with_loc(DI->getNumArgs() == 2, "name_replace requires 2 arguments!");
-  std::string ToReplace = cast<StringInit>(DI->getArg(0))->getAsUnquotedString();
-  std::string ReplaceWith = cast<StringInit>(DI->getArg(1))->getAsUnquotedString();
+  std::string ToReplace =
+      cast<StringInit>(DI->getArg(0))->getAsUnquotedString();
+  std::string ReplaceWith =
+      cast<StringInit>(DI->getArg(1))->getAsUnquotedString();
 
   size_t Idx = S.find(ToReplace);
 
-  assert_with_loc(Idx != std::string::npos, "name should contain '" + ToReplace + "'!");
+  assert_with_loc(Idx != std::string::npos,
+                  "name should contain '" + ToReplace + "'!");
   S.replace(Idx, ToReplace.size(), ReplaceWith);
 
   return std::make_pair(Type::getVoid(), S);
@@ -1896,8 +1935,8 @@ std::string Intrinsic::generate() {
   return OS.str();
 }
 
-void Intrinsic::generateImpl(bool ReverseArguments,
-                             StringRef NamePrefix, StringRef CallPrefix) {
+void Intrinsic::generateImpl(bool ReverseArguments, StringRef NamePrefix,
+                             StringRef CallPrefix) {
   CurrentRecord = R;
 
   // If we call a macro, our local variables may be corrupted due to
@@ -2011,11 +2050,12 @@ void NeonEmitter::createIntrinsic(const Record *R,
   std::string Proto = std::string(R->getValueAsString("Prototype"));
   std::string Types = std::string(R->getValueAsString("Types"));
   const Record *OperationRec = R->getValueAsDef("Operation");
-  bool BigEndianSafe  = R->getValueAsBit("BigEndianSafe");
+  bool BigEndianSafe = R->getValueAsBit("BigEndianSafe");
   std::string ArchGuard = std::string(R->getValueAsString("ArchGuard"));
   std::string TargetGuard = std::string(R->getValueAsString("TargetGuard"));
   bool IsUnavailable = OperationRec->getValueAsBit("Unavailable");
-  std::string CartesianProductWith = std::string(R->getValueAsString("CartesianProductWith"));
+  std::string CartesianProductWith =
+      std::string(R->getValueAsString("CartesianProductWith"));
 
   // Set the global current record. This allows assert_with_loc to produce
   // decent location information even when highly nested.
@@ -2031,7 +2071,8 @@ void NeonEmitter::createIntrinsic(const Record *R,
 
   std::vector<std::pair<TypeSpec, TypeSpec>> NewTypeSpecs;
   if (!CartesianProductWith.empty()) {
-    std::vector<TypeSpec> ProductTypeSpecs = TypeSpec::fromTypeSpecs(CartesianProductWith);
+    std::vector<TypeSpec> ProductTypeSpecs =
+        TypeSpec::fromTypeSpecs(CartesianProductWith);
     for (auto TS : TypeSpecs) {
       Type DefaultT(TS, ".");
       for (auto SrcTS : ProductTypeSpecs) {
@@ -2301,7 +2342,7 @@ void NeonEmitter::runHeader(raw_ostream &OS) {
   genIntrinsicRangeCheckCode(OS, Defs);
 }
 
-static void emitNeonTypeDefs(const std::string& types, raw_ostream &OS) {
+static void emitNeonTypeDefs(const std::string &types, raw_ostream &OS) {
   std::string TypedefTypes(types);
   std::vector<TypeSpec> TDTypeVec = TypeSpec::fromTypeSpecs(TypedefTypes);
 
@@ -2355,7 +2396,7 @@ static void emitNeonTypeDefs(const std::string& types, raw_ostream &OS) {
         InIfdef = true;
       }
 
-      const char Mods[] = { static_cast<char>('2' + (NumMembers - 2)), 0};
+      const char Mods[] = {static_cast<char>('2' + (NumMembers - 2)), 0};
       Type VT(TS, Mods);
       OS << "typedef struct " << VT.str() << " {\n";
       OS << "  " << T.str() << " val";
@@ -2490,7 +2531,8 @@ void NeonEmitter::run(raw_ostream &OS) {
     MadeProgress = false;
 
     for (SmallVector<Intrinsic *, 128>::iterator I = Defs.begin();
-         I != Defs.end(); /*No step*/) {
+         I != Defs.end();
+         /*No step*/) {
       bool DependenciesSatisfied = true;
       for (auto *II : (*I)->getDependencies()) {
         if (is_contained(Defs, II))
@@ -2538,13 +2580,13 @@ void NeonEmitter::runFP16(raw_ostream &OS) {
         " * Permission is hereby granted, free of charge, to any person "
         "obtaining a copy\n"
         " * of this software and associated documentation files (the "
-				"\"Software\"), to deal\n"
+        "\"Software\"), to deal\n"
         " * in the Software without restriction, including without limitation "
-				"the rights\n"
+        "the rights\n"
         " * to use, copy, modify, merge, publish, distribute, sublicense, "
-				"and/or sell\n"
+        "and/or sell\n"
         " * copies of the Software, and to permit persons to whom the Software "
-				"is\n"
+        "is\n"
         " * furnished to do so, subject to the following conditions:\n"
         " *\n"
         " * The above copyright notice and this permission notice shall be "
@@ -2597,7 +2639,8 @@ void NeonEmitter::runFP16(raw_ostream &OS) {
     MadeProgress = false;
 
     for (SmallVector<Intrinsic *, 128>::iterator I = Defs.begin();
-         I != Defs.end(); /*No step*/) {
+         I != Defs.end();
+         /*No step*/) {
       bool DependenciesSatisfied = true;
       for (auto *II : (*I)->getDependencies()) {
         if (is_contained(Defs, II))
@@ -2760,7 +2803,8 @@ void NeonEmitter::runBF16(raw_ostream &OS) {
     MadeProgress = false;
 
     for (SmallVector<Intrinsic *, 128>::iterator I = Defs.begin();
-         I != Defs.end(); /*No step*/) {
+         I != Defs.end();
+         /*No step*/) {
       bool DependenciesSatisfied = true;
       for (auto *II : (*I)->getDependencies()) {
         if (is_contained(Defs, II))
