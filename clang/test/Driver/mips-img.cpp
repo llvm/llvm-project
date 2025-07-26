@@ -2,6 +2,7 @@
 //
 // = Big-endian, mips32r6
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-img-linux-gnu -mips32r6 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_img_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-32R6 %s
@@ -29,6 +30,7 @@
 //
 // = Little-endian, mips32r6
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-img-linux-gnu -mips32r6 -EL -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_img_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LE-32R6 %s
@@ -56,6 +58,7 @@
 //
 // = Big-endian, mips64r6, N32
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-img-linux-gnu -mips64r6 -mabi=n32 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_img_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-64R6-N32 %s
@@ -83,6 +86,7 @@
 //
 // = Little-endian, mips64r6, N32
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-img-linux-gnu -mips64r6 -EL -mabi=n32 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_img_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LE-64R6-N32 %s
@@ -110,6 +114,7 @@
 //
 // = Big-endian, mips64r6, N64
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-img-linux-gnu -mips64r6 -mabi=64 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_img_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-64R6-N64 %s
@@ -137,6 +142,7 @@
 //
 // = Little-endian, mips64r6, N64
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-img-linux-gnu -mips64r6 -EL -mabi=64 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_img_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LE-64R6-N64 %s

@@ -46,6 +46,7 @@
 // C-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/crtend.o"
 
 // RUN: env "PATH=" %clangxx -### %s -fuse-ld= \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --target=riscv64-unknown-elf -stdlib=libstdc++ --rtlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree \
 // RUN:   --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf 2>&1 \
@@ -62,6 +63,7 @@
 // CXX-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/crtend.o"
 
 // RUN: env "PATH=" %clangxx -### %s -fuse-ld= \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --target=riscv64-unknown-elf -stdlib=libstdc++ --rtlib=platform \
 // RUN:   --sysroot= \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree 2>&1 \
@@ -156,6 +158,7 @@
 // C-RV64-RTLIB-COMPILERRT-LP64: "{{.*}}clang_rt.crtend.o"
 
 // RUN: %clang -### %s --target=riscv64 \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree --sysroot= \
 // RUN:   -resource-dir=%s/Inputs/resource_dir 2>&1 \
 // RUN:   | FileCheck -check-prefix=RESOURCE-INC %s
@@ -163,6 +166,7 @@
 // RESOURCE-INC: "-internal-isystem" "{{.*}}/basic_riscv64_tree/{{.*}}riscv64-unknown-linux-gnu/include"
 
 // RUN: %clang -### %s --target=riscv64 \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree --sysroot= \
 // RUN:   -resource-dir=%s/Inputs/resource_dir -nobuiltininc 2>&1 \
 // RUN:   | FileCheck -check-prefix=NO-RESOURCE-INC %s

@@ -4,6 +4,7 @@
 // Test a simulated installation of libc++ on Linux, both through sysroot and
 // the installation path of Clang.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
@@ -18,6 +19,7 @@
 
 // Test include paths when the sysroot path ends with `/`.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
@@ -31,6 +33,7 @@
 // CHECK-BASIC-LIBCXX-SYSROOT-SLASH-SAME: "-internal-isystem" "[[SYSROOT]]usr/local/include"
 
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_libcxx_tree/usr/bin \
@@ -44,6 +47,7 @@
 // CHECK-BASIC-LIBCXX-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 //
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
@@ -56,6 +60,7 @@
 // CHECK-BASIC-LIBCXXV2-SYSROOT: "-internal-isystem" "[[SYSROOT]][[SEP]]usr[[SEP]]include[[SEP]]c++[[SEP]]v2"
 // CHECK-BASIC-LIBCXXV2-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_libcxxv2_tree/usr/bin \
@@ -70,6 +75,7 @@
 
 // Test Linux with libstdc++ when the sysroot path ends with `/`.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libstdc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
@@ -82,6 +88,7 @@
 
 // Test Linux with both libc++ and libstdc++ installed.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
@@ -97,6 +104,7 @@
 // Test Gentoo's weirdness both before and after they changed it in their GCC
 // 4.6.4 release.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.6.2_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-6-2 %s
@@ -111,6 +119,7 @@
 // CHECK-GENTOO-4-6-2: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-GENTOO-4-6-2: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.6.4_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-6-4 %s
@@ -125,6 +134,7 @@
 // CHECK-GENTOO-4-6-4: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-GENTOO-4-6-4: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.9.3_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-9-3 %s
@@ -149,6 +159,7 @@
 //
 // Test that gcc-config support does not break multilib.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-unknown-linux-gnux32 -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_multi_version_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-9-3-X32 %s
@@ -164,6 +175,7 @@
 // CHECK-GENTOO-4-9-3-X32: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 //
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=i386-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_multi_version_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-9-3-32 %s
@@ -183,6 +195,7 @@
 // Then should pick the multilibs from version 4.9.x specified in
 // /etc/env.d/gcc/x86_64-pc-linux-gnu-4.9.3.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.9.x_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-9-X %s
@@ -199,6 +212,7 @@
 // CHECK-GENTOO-4-9-X: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 //
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-unknown-linux-gnux32 -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.9.x_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-9-X-X32 %s
@@ -214,6 +228,7 @@
 // CHECK-GENTOO-4-9-X-X32: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 //
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=i386-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.9.x_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-9-X-32 %s
@@ -230,12 +245,14 @@
 //
 // Check header search on Debian loong64
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=loongarch64-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/debian_loong64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LOONG64-GNU %s
 //
 // Check that "-gnuf64" is seen as "-gnu" for loong64.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=loongarch64-unknown-linux-gnuf64 -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/debian_loong64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LOONG64-GNU %s
@@ -254,6 +271,7 @@
 //
 // Check header search on Debian 6 / MIPS64
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-unknown-linux-gnuabi64 -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/debian_6_mips64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64-GNUABI %s
@@ -271,6 +289,7 @@
 //
 // Check header search on Debian 6 / MIPS64
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-unknown-linux-gnuabi64 -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/debian_6_mips64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-GNUABI %s
@@ -289,6 +308,7 @@
 
 // Check header search on OpenEmbedded ARM.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=arm-oe-linux-gnueabi -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/openembedded_arm_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-OE-ARM %s
@@ -300,6 +320,7 @@
 
 // Check header search on OpenEmbedded AArch64.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=aarch64-oe-linux -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/openembedded_aarch64_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-OE-AARCH64 %s
@@ -311,6 +332,7 @@
 
 // Check header search with Cray's gcc package.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=x86_64-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/cray_suse_gcc_tree \
 // RUN:     --gcc-toolchain="%S/Inputs/cray_suse_gcc_tree/opt/gcc/8.2.0/snos" \

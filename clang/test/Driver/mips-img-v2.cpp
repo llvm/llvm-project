@@ -2,6 +2,7 @@
 
 // -EB -mips32r6 -mhard-float -mabi=32
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -30,6 +31,7 @@
 
 // -EB -mips64r6 -mhard-float -mabi=n32
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -58,6 +60,7 @@
 
 // -EB -mips64r6 -mhard-float -mabi=64
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips64-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -86,6 +89,7 @@
 
 // -EL -mips32r6 -mhard-float -mabi=32
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -114,6 +118,7 @@
 
 // -EL -mips64r6 -mhard-float -mabi=n32
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -142,6 +147,7 @@
 
 // -EL -mips64r6 -mhard-float -mabi=64
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips64-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -170,6 +176,7 @@
 
 // -EB -mips32r6 -msoft-float
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -198,6 +205,7 @@
 
 // -EL -mips32r6 -msoft-float
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -226,6 +234,7 @@
 
 // -EB -mips32r6 -mhard-float -mmicromips
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -254,6 +263,7 @@
 
 // -EB -mips32r6 -msoft-float -mmicromips
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -282,6 +292,7 @@
 
 // -EL -mips32r6 -mhard-float -mmicromips
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
@@ -310,6 +321,7 @@
 
 // -EL -mips32r6 -msoft-float -mmicromips
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
 // RUN:        -stdlib=libstdc++ \
