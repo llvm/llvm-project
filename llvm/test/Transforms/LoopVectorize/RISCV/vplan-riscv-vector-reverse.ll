@@ -34,11 +34,13 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:     CLONE ir<[[IDX_PROM:%.+]]> = zext ir<[[IDX]]>
 ; CHECK-NEXT:     CLONE ir<[[ARRAY_IDX_B:%.+]]> = getelementptr inbounds ir<[[B:%.+]]>, ir<[[IDX_PROM]]>
 ; CHECK-NEXT:     vp<[[VEC_END_PTR_B:%.+]]> = vector-end-pointer inbounds ir<[[ARRAY_IDX_B]]>, vp<[[VF]]>
-; CHECK-NEXT:     WIDEN ir<[[VAL_B:%.+]]> = load vp<[[VEC_END_PTR_B]]>
-; CHECK-NEXT:     WIDEN ir<[[ADD_RESULT:%.+]]> = add ir<[[VAL_B]]>, ir<1>
+; CHECK-NEXT:     WIDEN ir<[[LOAD_B:%.+]]> = load vp<[[VEC_END_PTR_B]]>
+; CHECK-NEXT:     EMIT vp<[[VAL_B:%.+]]> = reverse ir<[[LOAD_B]]>
+; CHECK-NEXT:     WIDEN ir<[[ADD_RESULT:%.+]]> = add vp<[[VAL_B]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<[[ARRAY_IDX_A:%.+]]> = getelementptr inbounds ir<[[A:%.+]]>, ir<[[IDX_PROM]]>
 ; CHECK-NEXT:     vp<[[VEC_END_PTR_A:%.+]]> = vector-end-pointer inbounds ir<[[ARRAY_IDX_A]]>, vp<[[VF]]>
-; CHECK-NEXT:     WIDEN store vp<[[VEC_END_PTR_A]]>, ir<[[ADD_RESULT]]>
+; CHECK-NEXT:     EMIT vp<[[STORE_VAL:%.+]]> = reverse ir<[[ADD_RESULT]]>
+; CHECK-NEXT:     WIDEN store vp<[[VEC_END_PTR_A]]>, vp<[[STORE_VAL]]>
 ; CHECK-NEXT:     EMIT vp<[[INDEX_NEXT]]> = add nuw vp<[[INDUCTION]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[INDEX_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors

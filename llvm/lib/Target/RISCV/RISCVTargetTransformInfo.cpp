@@ -1489,6 +1489,12 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                           cast<VectorType>(ICA.getArgTypes()[0]), {}, CostKind,
                           0, cast<VectorType>(ICA.getReturnType()));
   }
+  case Intrinsic::experimental_vp_reverse: {
+    return getShuffleCost(TTI::SK_Reverse,
+                          cast<VectorType>(ICA.getReturnType()),
+                          cast<VectorType>(ICA.getArgTypes()[0]), {}, CostKind,
+                          0, cast<VectorType>(ICA.getReturnType()));
+  }
   case Intrinsic::fptoui_sat:
   case Intrinsic::fptosi_sat: {
     InstructionCost Cost = 0;
@@ -1520,11 +1526,10 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
-    if (auto LT = getTypeLegalizationCost(RetTy);
-        LT.second.isVector()) {
+    if (auto LT = getTypeLegalizationCost(RetTy); LT.second.isVector()) {
       MVT EltTy = LT.second.getVectorElementType();
-      if (const auto *Entry = CostTableLookup(VectorIntrinsicCostTable,
-                                              ICA.getID(), EltTy))
+      if (const auto *Entry =
+              CostTableLookup(VectorIntrinsicCostTable, ICA.getID(), EltTy))
         return LT.first * Entry->Cost;
     }
   }
