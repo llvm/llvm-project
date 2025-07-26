@@ -35,8 +35,7 @@ class VPlan;
 /// 1. Region/Block verification: Check the Region/Block verification
 /// invariants for every region in the H-CFG.
 /// 2. all phi-like recipes must be at the beginning of a block, with no other
-/// recipes in between. Note that currently there is still an exception for
-/// VPBlendRecipes.
+/// recipes in between.
 LLVM_ABI_FOR_TEST bool verifyVPlanIsValid(const VPlan &Plan,
                                           bool VerifyLate = false);
 

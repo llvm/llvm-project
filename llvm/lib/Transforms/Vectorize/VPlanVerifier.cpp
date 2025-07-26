@@ -119,7 +119,7 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
   }
 
   while (RecipeI != End) {
-    if (RecipeI->isPhi() && !isa<VPBlendRecipe>(&*RecipeI)) {
+    if (RecipeI->isPhi()) {
       errs() << "Found phi-like recipe after non-phi recipe";
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
