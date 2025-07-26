@@ -80,6 +80,8 @@ protected:
 
   lldb_private::SymbolContext *get() const;
 
+  friend class lldb_private::ScriptInterpreter;
+
 private:
   std::unique_ptr<lldb_private::SymbolContext> m_opaque_up;
 };

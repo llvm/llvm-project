@@ -19,6 +19,7 @@
 #include "ScriptedPlatformPythonInterface.h"
 #include "ScriptedProcessPythonInterface.h"
 #include "ScriptedStopHookPythonInterface.h"
+#include "ScriptedBreakpointPythonInterface.h"
 #include "ScriptedThreadPlanPythonInterface.h"
 
 namespace lldb_private {
