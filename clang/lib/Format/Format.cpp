@@ -2639,23 +2639,42 @@ private:
 
   int countVariableAlignments(const SmallVectorImpl<AnnotatedLine *> &Lines) {
     int AlignmentDiff = 0;
+
     for (const AnnotatedLine *Line : Lines) {
       AlignmentDiff += countVariableAlignments(Line->Children);
-      const auto *Prev = Line->getFirstNonComment();
-      if (!Prev)
-        break;
-      for (const auto *Tok = Prev->Next; Tok; Prev = Tok, Tok = Tok->Next) {
+
+      for (const auto *Tok = Line->getFirstNonComment(); Tok; Tok = Tok->Next) {
         if (Tok->isNot(TT_PointerOrReference))
           continue;
+
+        const auto *Prev = Tok->Previous;
+        const bool PrecededByName = Prev && Prev->Tok.getIdentifierInfo();
+        const bool SpaceBefore = Tok->hasWhitespaceBefore();
+
+        // e.g. `int **`, `int*&`, etc.
+        while (Tok->Next && Tok->Next->is(TT_PointerOrReference))
+          Tok = Tok->Next;
+
         const auto *Next = Tok->Next;
-        if (!Next)
-          break;
-        if (Prev->Tok.getIdentifierInfo())
-          AlignmentDiff += Tok->hasWhitespaceBefore() ? 1 : -1;
-        if (Next->Tok.getIdentifierInfo())
-          AlignmentDiff += Next->hasWhitespaceBefore() ? -1 : 1;
+        const bool FollowedByName = Next && Next->Tok.getIdentifierInfo();
+        const bool SpaceAfter = Next && Next->hasWhitespaceBefore();
+
+        if ((!PrecededByName && !FollowedByName) ||
+            // e.g. `int * i` or `int*i`
+            (PrecededByName && FollowedByName && SpaceBefore == SpaceAfter)) {
+          continue;
+        }
+
+        if ((PrecededByName && SpaceBefore) ||
+            (FollowedByName && !SpaceAfter)) {
+          ++AlignmentDiff;
+        } else if ((PrecededByName && !SpaceBefore) ||
+                   (FollowedByName && SpaceAfter)) {
+          --AlignmentDiff;
+        }
       }
     }
+
     return AlignmentDiff;
   }
 
