@@ -638,25 +638,44 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
 
   }];
 
-  let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
+  let arguments = (ins XeGPU_TensorDescOrMemRef: $source,
+                       Optional<XeGPU_OffsetType>: $offsets,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
+    Type getSourceType() {
+      return getSource().getType();
+    }
+
+    Value getTensorDesc() {
+       return getSource();
+    }
+
     xegpu::TensorDescType getTensorDescType() {
-      return getTensorDesc().getType();
+      return dyn_cast<xegpu::TensorDescType>(getSourceType());
     }
   }];
 
-  let assemblyFormat = "$TensorDesc prop-dict attr-dict `:` qualified(type($TensorDesc))";
+  let assemblyFormat = [{
+    $source 
+    (`[` $offsets^ `]`)?
+    prop-dict
+    attr-dict `:` type(operands) 
+  }];
+    
+  let builders = [
+    OpBuilder<(ins "Value": $source,
+                    "xegpu::CachePolicyAttr": $l1_hint, 
+                    "xegpu::CachePolicyAttr": $l2_hint, 
+                    "xegpu::CachePolicyAttr": $l3_hint)>
+  ];
 
   let hasVerifier = 1;
 }
 
-def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
-  AllElementTypesMatch<["value", "TensorDesc"]>, MemoryEffects<[MemRead]>
-  ]> {
+def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>]> {
   let summary = "load a set of scattered data points from memory.";
 
   let description = [{ It (aka. load) load data per each work-item. The output
@@ -698,16 +717,27 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
 
   }];
 
-  let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
+  let arguments = (ins XeGPU_TensorDescOrMemRef: $source,
+                       Optional<XeGPU_OffsetType>: $offsets,
                        XeGPU_MaskType: $mask,
+                       OptionalAttr<I64Attr>: $chunk_size,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
                        OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
   let results = (outs XeGPU_ValueType: $value);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
+
+    Type getSourceType() {
+      return getSource().getType();
+    }
+
+    Value getTensorDesc() {
+       return getSource();
+    }
+
     xegpu::TensorDescType getTensorDescType() {
-      return getTensorDesc().getType();
+       return dyn_cast<xegpu::TensorDescType>(getSourceType());
     }
 
     mlir::Type getElementType() {
@@ -725,15 +755,24 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
 
   }];
 
-  let assemblyFormat = [{$TensorDesc `,` $mask prop-dict attr-dict
-      `:` qualified(type($TensorDesc)) `,` type($mask) `->` type($value)}];
+  let assemblyFormat = [{
+    $source
+    (`[` $offsets^ `]`)? `,`
+    $mask prop-dict 
+    attr-dict `:` type(operands) `->` type($value)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Type": $value, "Value": $source, "Value": $mask,
+                    "xegpu::CachePolicyAttr": $l1_hint, 
+                    "xegpu::CachePolicyAttr": $l2_hint, 
+                    "xegpu::CachePolicyAttr": $l3_hint)>
+   ];
 
   let hasVerifier = 1;
 }
 
-def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
-  AllElementTypesMatch<["value", "TensorDesc"]>, MemoryEffects<[MemWrite]>
-  ]> {
+def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>]> {
   let summary = "store data to scattered memory locations.";
   let description = [{ It (aka. store) stores data to scattered memory locations. The value is
   typically a 1D vector. But when the chunk size of the TensorDesc is larger than 1, it will be
@@ -772,15 +811,25 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
 
   let arguments = (ins
     XeGPU_ValueType: $value,
-    XeGPU_TensorDesc: $TensorDesc,
+    XeGPU_TensorDescOrMemRef: $dest,
+    Optional<XeGPU_OffsetType>: $offsets,
     XeGPU_MaskType: $mask,
+    OptionalAttr<I64Attr>: $chunk_size,
     OptionalAttr<XeGPU_CacheHintAttr>: $l1_hint,
     OptionalAttr<XeGPU_CacheHintAttr>: $l2_hint,
     OptionalAttr<XeGPU_CacheHintAttr>: $l3_hint);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
+    Type getDestType() {
+      return getDest().getType();
+    }
+
+    Value getTensorDesc() {
+       return getDest();
+    }
+
     xegpu::TensorDescType getTensorDescType() {
-      return getTensorDesc().getType();
+      return dyn_cast<xegpu::TensorDescType>(getDestType());
     }
 
     VectorType getValueType() {
@@ -792,8 +841,21 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
     }
   }];
 
-  let assemblyFormat = [{$value `,` $TensorDesc `,` $mask prop-dict attr-dict
-            `:` type($value) `,` qualified(type($TensorDesc)) `,` type($mask)}];
+  let assemblyFormat = [{
+    $value `,`
+    $dest
+    (`[` $offsets^ `]`)? `,`
+    $mask 
+    prop-dict 
+    attr-dict `:`  type(operands)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value": $value, "Value": $dest, "Value": $mask,
+                    "xegpu::CachePolicyAttr": $l1_hint, 
+                    "xegpu::CachePolicyAttr": $l2_hint, 
+                    "xegpu::CachePolicyAttr": $l3_hint)>
+   ];
 
   let hasVerifier = 1;
 }
