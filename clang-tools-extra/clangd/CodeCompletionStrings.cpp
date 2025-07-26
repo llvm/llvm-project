@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeCompletionStrings.h"
+#include "Config.h"
 #include "clang-c/Index.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RawCommentList.h"
@@ -100,7 +101,19 @@ std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
     // the comments for namespaces.
     return "";
   }
-  const RawComment *RC = getCompletionComment(Ctx, &Decl);
+
+  const RawComment *RC = nullptr;
+  const Config &Cfg = Config::current();
+
+  if (Cfg.Documentation.CommentFormat == Config::CommentFormatPolicy::Doxygen &&
+      isa<ParmVarDecl>(Decl)) {
+    // Parameters are documented in the function comment.
+    if (const auto *FD = dyn_cast<FunctionDecl>(Decl.getDeclContext()))
+      RC = getCompletionComment(Ctx, FD);
+  } else {
+    RC = getCompletionComment(Ctx, &Decl);
+  }
+
   if (!RC)
     return "";
   // Sanity check that the comment does not come from the PCH. We choose to not
