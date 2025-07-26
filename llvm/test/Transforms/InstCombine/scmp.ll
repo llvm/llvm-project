@@ -436,6 +436,197 @@ define <3 x i2> @scmp_unary_shuffle_ops(<3 x i8> %x, <3 x i8> %y) {
   ret <3 x i2> %r
 }
 
+define i32 @scmp_ashr(i32 %a) {
+; CHECK-LABEL: define i32 @scmp_ashr(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[A]], i32 0)
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+  %a.lobit = ashr i32 %a, 31
+  %cmp.inv = icmp slt i32 %a, 1
+  %retval.0 = select i1 %cmp.inv, i32 %a.lobit, i32 1
+  ret i32 %retval.0
+}
+
+define i32 @scmp_sgt_slt(i32 %a) {
+; CHECK-LABEL: define i32 @scmp_sgt_slt(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[A]], i32 0)
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+  %cmp = icmp sgt i32 %a, 0
+  %cmp1 = icmp slt i32 %a, 0
+  %. = select i1 %cmp1, i32 -1, i32 0
+  %retval.0 = select i1 %cmp, i32 1, i32 %.
+  ret i32 %retval.0
+}
+
+define i32 @scmp_zero_slt(i32 %a) {
+; CHECK-LABEL: define i32 @scmp_zero_slt(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[A]], i32 0)
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+  %cmp = icmp eq i32 %a, 0
+  %cmp1.inv = icmp slt i32 %a, 1
+  %. = select i1 %cmp1.inv, i32 -1, i32 1
+  %retval.0 = select i1 %cmp, i32 0, i32 %.
+  ret i32 %retval.0
+}
+
+define i32 @scmp_zero_sgt(i32 %a) {
+; CHECK-LABEL: define i32 @scmp_zero_sgt(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[A]], i32 0)
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+  %cmp = icmp eq i32 %a, 0
+  %cmp1.inv = icmp sgt i32 %a, -1
+  %. = select i1 %cmp1.inv, i32 1, i32 -1
+  %retval.0 = select i1 %cmp, i32 0, i32 %.
+  ret i32 %retval.0
+}
+
+
+define i32 @scmp_zero_sgt_1(i32 %a) {
+; CHECK-LABEL: define i32 @scmp_zero_sgt_1(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[COND2:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[A]], i32 0)
+; CHECK-NEXT:    ret i32 [[COND2]]
+;
+  %cmp = icmp eq i32 %a, 0
+  %cmp1 = icmp sgt i32 %a, -1
+  %cond = select i1 %cmp1, i32 1, i32 -1
+  %cond2 = select i1 %cmp, i32 0, i32 %cond
+  ret i32 %cond2
+}
+
+define i32 @scmp_zero_slt_1(i32 %a) {
+; CHECK-LABEL: define i32 @scmp_zero_slt_1(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[COND2:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[A]], i32 0)
+; CHECK-NEXT:    ret i32 [[COND2]]
+;
+  %cmp = icmp eq i32 %a, 0
+  %cmp1 = icmp slt i32 %a, 1
+  %cond = select i1 %cmp1, i32 -1, i32 1
+  %cond2 = select i1 %cmp, i32 0, i32 %cond
+  ret i32 %cond2
+}
+
+define i32 @scmp_zero_slt_neg(i32 %a) {
+; CHECK-LABEL: define i32 @scmp_zero_slt_neg(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A]], -1
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP1]], i32 -1, i32 1
+; CHECK-NEXT:    [[COND2:%.*]] = select i1 [[CMP]], i32 0, i32 [[COND]]
+; CHECK-NEXT:    ret i32 [[COND2]]
+;
+  %cmp = icmp eq i32 %a, 0
+  %cmp1 = icmp slt i32 %a, -1
+  %cond = select i1 %cmp1, i32 -1, i32 1
+  %cond2 = select i1 %cmp, i32 0, i32 %cond
+  ret i32 %cond2
+}
+
+define i32 @scmp_zero_sgt_neg(i32 %a) {
+; CHECK-LABEL: define i32 @scmp_zero_sgt_neg(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], 1
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP1]], i32 1, i32 -1
+; CHECK-NEXT:    [[COND2:%.*]] = select i1 [[CMP]], i32 0, i32 [[COND]]
+; CHECK-NEXT:    ret i32 [[COND2]]
+;
+  %cmp = icmp eq i32 %a, 0
+  %cmp1 = icmp sgt i32 %a, 1
+  %cond = select i1 %cmp1, i32 1, i32 -1
+  %cond2 = select i1 %cmp, i32 0, i32 %cond
+  ret i32 %cond2
+}
+
+define i32 @ucmp_ugt_ult_neg(i32 %a) {
+; CHECK-LABEL: define i32 @ucmp_ugt_ult_neg(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ne i32 [[A]], 0
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = zext i1 [[CMP_NOT]] to i32
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+  %cmp = icmp ugt i32 %a, 0
+  %cmp1 = icmp ult i32 %a, 0
+  %. = select i1 %cmp1, i32 -1, i32 0
+  %retval.0 = select i1 %cmp, i32 1, i32 %.
+  ret i32 %retval.0
+}
+
+define i32 @ucmp_zero_ult_neg(i32 %a) {
+; CHECK-LABEL: define i32 @ucmp_zero_ult_neg(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A]], 0
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+  %cmp = icmp eq i32 %a, 0
+  %cmp1.inv = icmp ult i32 %a, 1
+  %. = select i1 %cmp1.inv, i32 -1, i32 1
+  %retval.0 = select i1 %cmp, i32 0, i32 %.
+  ret i32 %retval.0
+}
+
+define i32 @ucmp_zero_ugt_neg(i32 %a) {
+; CHECK-LABEL: define i32 @ucmp_zero_ugt_neg(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A]], 0
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = sext i1 [[CMP]] to i32
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+  %cmp = icmp eq i32 %a, 0
+  %cmp1.inv = icmp ugt i32 %a, -1
+  %. = select i1 %cmp1.inv, i32 1, i32 -1
+  %retval.0 = select i1 %cmp, i32 0, i32 %.
+  ret i32 %retval.0
+}
+
+define i32 @scmp_sgt_slt_ab(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @scmp_sgt_slt_ab(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+  %cmp = icmp sgt i32 %a, %b
+  %cmp1 = icmp slt i32 %a, %b
+  %. = select i1 %cmp1, i32 -1, i32 0
+  %retval.0 = select i1 %cmp, i32 1, i32 %.
+  ret i32 %retval.0
+}
+
+define i32 @scmp_zero_slt_ab(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @scmp_zero_slt_ab(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+  %cmp = icmp eq i32 %a, %b
+  %cmp1.inv = icmp slt i32 %a, %b
+  %. = select i1 %cmp1.inv, i32 -1, i32 1
+  %retval.0 = select i1 %cmp, i32 0, i32 %.
+  ret i32 %retval.0
+}
+
+define i32 @scmp_zero_sgt_ab(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @scmp_zero_sgt_ab(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = call i32 @llvm.scmp.i32.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+  %cmp = icmp eq i32 %a, %b
+  %cmp1.inv = icmp sgt i32 %a, %b
+  %. = select i1 %cmp1.inv, i32 1, i32 -1
+  %retval.0 = select i1 %cmp, i32 0, i32 %.
+  ret i32 %retval.0
+}
+
 ; Negative test: true value of outer select is not zero
 define i8 @scmp_from_select_eq_and_gt_neg1(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i8 @scmp_from_select_eq_and_gt_neg1(
