@@ -749,7 +749,7 @@ public:
 
   /// Return true if the heuristic to prefer icmp eq zero should be used in code
   /// gen prepare.
-  virtual bool preferZeroCompareBranch() const { return false; }
+  virtual bool preferZeroCompareBranch(BranchInst *) const { return false; }
 
   /// Return true if it is cheaper to split the store of a merged int val
   /// from a pair of smaller values into multiple stores.
