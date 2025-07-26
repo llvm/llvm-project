@@ -266,6 +266,10 @@ private:
   /// selection construct and the merge block of another.
   LogicalResult splitConditionalBlocks();
 
+  /// Detect unstructured early exits from loops and replaces those arbitrary
+  /// branches with `spirv.mlir.break` statements.
+  LogicalResult handleEarlyExits();
+
   //===--------------------------------------------------------------------===//
   // Type
   //===--------------------------------------------------------------------===//
