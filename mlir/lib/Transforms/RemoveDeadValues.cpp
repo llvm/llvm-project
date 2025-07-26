@@ -60,7 +60,6 @@
 #include <vector>
 
 #define DEBUG_TYPE "remove-dead-values"
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 
 namespace mlir {
 #define GEN_PASS_DEF_REMOVEDEADVALUES
