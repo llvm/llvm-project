@@ -9985,9 +9985,12 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   // FIXME: We cannot do this whenever the target has a hasAndNot, or any other
   // instruction where the backend will prefer that. Currently, this is only
   // really a problem for ARM and AArch64, which will have the same rules for
-  // when it has And Not for, in specifically AArch64's case, also xor-not and
+  // when it has And Not-Or, in specifically AArch64's case, also xor-not and
   // or-not Otherwise we end up with an infinite loop.
-  if (N0.getOpcode() == ISD::SUB && isAllOnesConstant(N1) && N0.hasOneUse()) {
+  // This is very conservative, and prevents this from being done at all on ARM
+  // and AArch64 and possibly others, but without this check, they will go in an
+  // infinite loop.
+  if (N0.getOpcode() == ISD::SUB && isAllOnesConstant(N1)) {
     SDValue N00 = N0.getOperand(0), N01 = N0.getOperand(1);
     if (isa<ConstantSDNode>(N00) || (N00.hasOneUse() && !TLI.hasAndNot(N01))) {
       SDValue NotY =
