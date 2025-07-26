@@ -744,7 +744,7 @@ Error LTO::add(std::unique_ptr<InputFile> Input,
 
   const SymbolResolution *ResI = Res.begin();
   for (unsigned I = 0; I != Input->Mods.size(); ++I)
-    if (Error Err = addModule(*Input, I, ResI, Res.end()))
+    if (Error Err = addModule(*Input, I, ResI, Res))
       return Err;
 
   assert(ResI == Res.end());
@@ -753,7 +753,7 @@ Error LTO::add(std::unique_ptr<InputFile> Input,
 
 Error LTO::addModule(InputFile &Input, unsigned ModI,
                      const SymbolResolution *&ResI,
-                     const SymbolResolution *ResE) {
+                     ArrayRef<SymbolResolution> Res) {
   Expected<BitcodeLTOInfo> LTOInfo = Input.Mods[ModI].getLTOInfo();
   if (!LTOInfo)
     return LTOInfo.takeError();
@@ -782,16 +782,16 @@ Error LTO::addModule(InputFile &Input, unsigned ModI,
   bool IsThinLTO = LTOInfo->IsThinLTO && (LTOMode != LTOK_UnifiedRegular);
 
   auto ModSyms = Input.module_symbols(ModI);
-  addModuleToGlobalRes(ModSyms, {ResI, ResE},
+  addModuleToGlobalRes(ModSyms, {ResI, Res.end()},
                        IsThinLTO ? ThinLTO.ModuleMap.size() + 1 : 0,
                        LTOInfo->HasSummary);
 
   if (IsThinLTO)
-    return addThinLTO(BM, ModSyms, ResI, ResE);
+    return addThinLTO(BM, ModSyms, ResI, Res.end());
 
   RegularLTO.EmptyCombinedModule = false;
   Expected<RegularLTOState::AddedModule> ModOrErr =
-      addRegularLTO(BM, ModSyms, ResI, ResE);
+      addRegularLTO(Input, BM, ModSyms, ResI, Res);
   if (!ModOrErr)
     return ModOrErr.takeError();
 
@@ -839,10 +839,9 @@ handleNonPrevailingComdat(GlobalValue &GV,
 // Add a regular LTO object to the link.
 // The resulting module needs to be linked into the combined LTO module with
 // linkRegularLTO.
-Expected<LTO::RegularLTOState::AddedModule>
-LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
-                   const SymbolResolution *&ResI,
-                   const SymbolResolution *ResE) {
+Expected<LTO::RegularLTOState::AddedModule> LTO::addRegularLTO(
+    InputFile &Input, BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
+    const SymbolResolution *&ResI, ArrayRef<SymbolResolution> Res) {
   RegularLTOState::AddedModule Mod;
   Expected<std::unique_ptr<Module>> MOrErr =
       BM.getLazyModule(RegularLTO.Ctx, /*ShouldLazyLoadMetadata*/ true,
@@ -855,13 +854,34 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
   if (Error Err = M.materializeMetadata())
     return std::move(Err);
 
-  // If cfi.functions is present and we are in regular LTO mode, LowerTypeTests
-  // will rename local functions in the merged module as "<function name>.1".
-  // This causes linking errors, since other parts of the module expect the
-  // original function name.
-  if (LTOMode == LTOK_UnifiedRegular)
+  if (LTOMode == LTOK_UnifiedRegular) {
+    // cfi.functions metadata is intended to be used with ThinLTO and may
+    // trigger invalid IR transformations if they are present when doing regular
+    // LTO, so delete it.
     if (NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions"))
       M.eraseNamedMetadata(CfiFunctionsMD);
+  } else if (NamedMDNode *AliasesMD = M.getNamedMetadata("aliases")) {
+    // Delete aliases entries for non-prevailing symbols on the ThinLTO side of
+    // this input file.
+    std::set<StringRef> Prevailing;
+    for (auto P : zip(Input.symbols(), Res))
+      if (std::get<1>(P).Prevailing && !std::get<0>(P).getIRName().empty())
+        Prevailing.insert(std::get<0>(P).getIRName());
+    std::vector<MDNode *> AliasGroups;
+    for (MDNode *AliasGroup : AliasesMD->operands()) {
+      std::vector<Metadata *> Aliases;
+      for (Metadata *Alias : AliasGroup->operands()) {
+        if (isa<MDString>(Alias) &&
+            Prevailing.count(cast<MDString>(Alias)->getString()))
+          Aliases.push_back(Alias);
+      }
+      if (Aliases.size() > 1)
+        AliasGroups.push_back(MDTuple::get(RegularLTO.Ctx, Aliases));
+    }
+    AliasesMD->clearOperands();
+    for (MDNode *G : AliasGroups)
+      AliasesMD->addOperand(G);
+  }
 
   UpgradeDebugInfo(M);
 
@@ -899,7 +919,7 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
   std::set<const Comdat *> NonPrevailingComdats;
   SmallSet<StringRef, 2> NonPrevailingAsmSymbols;
   for (const InputFile::Symbol &Sym : Syms) {
-    assert(ResI != ResE);
+    assert(ResI != Res.end());
     SymbolResolution Res = *ResI++;
 
     assert(MsymI != MsymE);

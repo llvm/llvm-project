@@ -541,20 +541,21 @@ private:
   void addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
                             ArrayRef<SymbolResolution> Res, unsigned Partition,
                             bool InSummary);
-
-  // These functions take a range of symbol resolutions [ResI, ResE) and consume
-  // the resolutions used by a single input module by incrementing ResI. After
-  // these functions return, [ResI, ResE) will refer to the resolution range for
-  // the remaining modules in the InputFile.
   Error addModule(InputFile &Input, unsigned ModI,
-                  const SymbolResolution *&ResI, const SymbolResolution *ResE);
+                  const SymbolResolution *&ResI,
+                  ArrayRef<SymbolResolution> Res);
 
   Expected<RegularLTOState::AddedModule>
-  addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
-                const SymbolResolution *&ResI, const SymbolResolution *ResE);
+  addRegularLTO(InputFile &Input, BitcodeModule BM,
+                ArrayRef<InputFile::Symbol> Syms, const SymbolResolution *&ResI,
+                ArrayRef<SymbolResolution> Res);
   Error linkRegularLTO(RegularLTOState::AddedModule Mod,
                        bool LivenessFromIndex);
 
+  // This function takes a range of symbol resolutions [ResI, ResE) and consume
+  // the resolutions used by a single input module by incrementing ResI. After
+  // these functions return, [ResI, ResE) will refer to the resolution range for
+  // the remaining modules in the InputFile.
   Error addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
                    const SymbolResolution *&ResI, const SymbolResolution *ResE);
 
