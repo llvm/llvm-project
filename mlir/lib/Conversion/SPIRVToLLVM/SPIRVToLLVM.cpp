@@ -1493,11 +1493,11 @@ public:
     Value extended;
     if (op2TypeWidth < dstTypeWidth) {
       if (isUnsignedIntegerOrVector(op2Type)) {
-        extended = rewriter.template create<LLVM::ZExtOp>(
-            loc, dstType, adaptor.getOperand2());
+        extended =
+            LLVM::ZExtOp::create(rewriter, loc, dstType, adaptor.getOperand2());
       } else {
-        extended = rewriter.template create<LLVM::SExtOp>(
-            loc, dstType, adaptor.getOperand2());
+        extended =
+            LLVM::SExtOp::create(rewriter, loc, dstType, adaptor.getOperand2());
       }
     } else if (op2TypeWidth == dstTypeWidth) {
       extended = adaptor.getOperand2();
@@ -1505,8 +1505,8 @@ public:
       return failure();
     }
 
-    Value result = rewriter.template create<LLVMOp>(
-        loc, dstType, adaptor.getOperand1(), extended);
+    Value result =
+        LLVMOp::create(rewriter, loc, dstType, adaptor.getOperand1(), extended);
     rewriter.replaceOp(op, result);
     return success();
   }

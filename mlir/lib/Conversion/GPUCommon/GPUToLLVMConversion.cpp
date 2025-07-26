@@ -579,8 +579,8 @@ LLVM::CallOp FunctionCallBuilder::create(Location loc, OpBuilder &builder,
   auto function = [&] {
     if (auto function = module.lookupSymbol<LLVM::LLVMFuncOp>(functionName))
       return function;
-    return OpBuilder::atBlockEnd(module.getBody())
-        .create<LLVM::LLVMFuncOp>(loc, functionName, functionType);
+    auto builder = OpBuilder::atBlockEnd(module.getBody());
+    return LLVM::LLVMFuncOp::create(builder, loc, functionName, functionType);
   }();
   return LLVM::CallOp::create(builder, loc, function, arguments);
 }

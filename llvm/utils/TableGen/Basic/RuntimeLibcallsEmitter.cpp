@@ -242,11 +242,10 @@ public:
     SmallVector<const Record *, 1024> AllRuntimeLibcallImpls(
         AllRuntimeLibcallImplsRaw);
 
-    // Sort by libcall impl name, not the enum name. This keeps the order
-    // suitable for using the name table for libcall recognition binary search.
-    llvm::sort(AllRuntimeLibcallImpls, [](const Record *A, const Record *B) {
-      return A->getValueAsString("LibCallFuncName") <
-             B->getValueAsString("LibCallFuncName");
+    // Sort by libcall impl name and secondarily by the enum name.
+    sort(AllRuntimeLibcallImpls, [](const Record *A, const Record *B) {
+      return std::pair(A->getValueAsString("LibCallFuncName"), A->getName()) <
+             std::pair(B->getValueAsString("LibCallFuncName"), B->getName());
     });
 
     RuntimeLibcallImplDefList.reserve(AllRuntimeLibcallImpls.size());

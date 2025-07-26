@@ -497,10 +497,10 @@ getBbArgReplacements(RewriterBase &rewriter, Block::BlockArgListType bbArgs,
     size_t idx = it.index();
     Value val = it.value();
     if (tensorIndices.contains(idx)) {
-      result.push_back(rewriter
-                           .create<bufferization::ToTensorOp>(
-                               val.getLoc(), oldBbArgs[idx].getType(), val)
-                           .getResult());
+      result.push_back(
+          bufferization::ToTensorOp::create(rewriter, val.getLoc(),
+                                            oldBbArgs[idx].getType(), val)
+              .getResult());
     } else {
       result.push_back(val);
     }

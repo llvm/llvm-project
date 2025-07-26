@@ -805,7 +805,7 @@ Status PlatformDarwinKernel::GetSharedModuleKernel(
     if (FileSystem::Instance().Exists(possible_kernel)) {
       ModuleSpec kern_spec(possible_kernel);
       kern_spec.GetUUID() = module_spec.GetUUID();
-      module_sp.reset(new Module(kern_spec));
+      module_sp = std::make_shared<Module>(kern_spec);
       if (module_sp && module_sp->GetObjectFile() &&
           module_sp->MatchesModuleSpec(kern_spec)) {
         // The dSYM is next to the binary (that's the only
@@ -835,7 +835,7 @@ Status PlatformDarwinKernel::GetSharedModuleKernel(
       kern_spec.GetUUID() = module_spec.GetUUID();
       kern_spec.GetSymbolFileSpec() = possible_kernel_dsym;
 
-      module_sp.reset(new Module(kern_spec));
+      module_sp = std::make_shared<Module>(kern_spec);
       if (module_sp && module_sp->GetObjectFile() &&
           module_sp->MatchesModuleSpec(kern_spec)) {
         if (did_create_ptr)

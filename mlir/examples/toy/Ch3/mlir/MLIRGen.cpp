@@ -121,8 +121,8 @@ private:
     llvm::SmallVector<mlir::Type, 4> argTypes(proto.getArgs().size(),
                                               getType(VarType{}));
     auto funcType = builder.getFunctionType(argTypes, /*results=*/{});
-    return builder.create<mlir::toy::FuncOp>(location, proto.getName(),
-                                             funcType);
+    return mlir::toy::FuncOp::create(builder, location, proto.getName(),
+                                     funcType);
   }
 
   /// Emit a new function and add it to the MLIR module.
@@ -166,7 +166,7 @@ private:
     if (!entryBlock.empty())
       returnOp = dyn_cast<ReturnOp>(entryBlock.back());
     if (!returnOp) {
-      builder.create<ReturnOp>(loc(funcAST.getProto()->loc()));
+      ReturnOp::create(builder, loc(funcAST.getProto()->loc()));
     } else if (returnOp.hasOperand()) {
       // Otherwise, if this return operation has an operand then add a result to
       // the function.
@@ -202,9 +202,9 @@ private:
     // support '+' and '*'.
     switch (binop.getOp()) {
     case '+':
-      return builder.create<AddOp>(location, lhs, rhs);
+      return AddOp::create(builder, location, lhs, rhs);
     case '*':
-      return builder.create<MulOp>(location, lhs, rhs);
+      return MulOp::create(builder, location, lhs, rhs);
     }
 
     emitError(location, "invalid binary operator '") << binop.getOp() << "'";
@@ -235,8 +235,8 @@ private:
     }
 
     // Otherwise, this return operation has zero operands.
-    builder.create<ReturnOp>(location,
-                             expr ? ArrayRef(expr) : ArrayRef<mlir::Value>());
+    ReturnOp::create(builder, location,
+                     expr ? ArrayRef(expr) : ArrayRef<mlir::Value>());
     return mlir::success();
   }
 
@@ -280,7 +280,7 @@ private:
 
     // Build the MLIR op `toy.constant`. This invokes the `ConstantOp::build`
     // method.
-    return builder.create<ConstantOp>(loc(lit.loc()), type, dataAttribute);
+    return ConstantOp::create(builder, loc(lit.loc()), type, dataAttribute);
   }
 
   /// Recursive helper function to accumulate the data that compose an array
@@ -325,13 +325,13 @@ private:
                             "does not accept multiple arguments");
         return nullptr;
       }
-      return builder.create<TransposeOp>(location, operands[0]);
+      return TransposeOp::create(builder, location, operands[0]);
     }
 
     // Otherwise this is a call to a user-defined function. Calls to
     // user-defined functions are mapped to a custom call that takes the callee
     // name as an attribute.
-    return builder.create<GenericCallOp>(location, callee, operands);
+    return GenericCallOp::create(builder, location, callee, operands);
   }
 
   /// Emit a print expression. It emits specific operations for two builtins:
@@ -341,13 +341,13 @@ private:
     if (!arg)
       return mlir::failure();
 
-    builder.create<PrintOp>(loc(call.loc()), arg);
+    PrintOp::create(builder, loc(call.loc()), arg);
     return mlir::success();
   }
 
   /// Emit a constant for a single number (FIXME: semantic? broadcast?)
   mlir::Value mlirGen(NumberExprAST &num) {
-    return builder.create<ConstantOp>(loc(num.loc()), num.getValue());
+    return ConstantOp::create(builder, loc(num.loc()), num.getValue());
   }
 
   /// Dispatch codegen for the right expression subclass using RTTI.
@@ -391,8 +391,8 @@ private:
     // with specific shape, we emit a "reshape" operation. It will get
     // optimized out later as needed.
     if (!vardecl.getType().shape.empty()) {
-      value = builder.create<ReshapeOp>(loc(vardecl.loc()),
-                                        getType(vardecl.getType()), value);
+      value = ReshapeOp::create(builder, loc(vardecl.loc()),
+                                getType(vardecl.getType()), value);
     }
 
     // Register the value in the symbol table.

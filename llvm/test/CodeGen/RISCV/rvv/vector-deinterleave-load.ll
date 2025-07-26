@@ -372,7 +372,7 @@ define { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @vector_deint
 ; CHECK-LABEL: vector_deinterleave_load_factor3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vlseg3e8.v v6, (a0)
+; CHECK-NEXT:    vlseg3e8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 24 x i8>, ptr %p
   %d0 = call {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} @llvm.vector.deinterleave3(<vscale x 24 x i8> %vec)
@@ -380,8 +380,8 @@ define { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @vector_deint
   %t1 = extractvalue {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} %d0, 1
   %t2 = extractvalue {<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>} %d0, 2
   %res0 = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison, <vscale x 8 x i8> %t0, 0
-  %res1 = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %res0, <vscale x 8 x i8> %t1, 0
-  %res2 = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %res1, <vscale x 8 x i8> %t2, 0
+  %res1 = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %res0, <vscale x 8 x i8> %t1, 1
+  %res2 = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %res1, <vscale x 8 x i8> %t2, 2
   ret { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %res2
 }
 

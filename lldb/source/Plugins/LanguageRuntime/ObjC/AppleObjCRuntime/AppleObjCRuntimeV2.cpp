@@ -3462,7 +3462,7 @@ public:
         *exception, eValueTypeVariableArgument);
     exception = exception->GetDynamicValue(eDynamicDontRunTarget);
 
-    m_arguments = ValueObjectListSP(new ValueObjectList());
+    m_arguments = std::make_shared<ValueObjectList>();
     m_arguments->Append(exception);
 
     m_stop_desc = "hit Objective-C exception";

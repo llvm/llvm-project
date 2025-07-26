@@ -19,12 +19,10 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "scf-loop-pipelining"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 using namespace mlir;
 using namespace mlir::scf;
@@ -100,7 +98,7 @@ public:
 
 bool LoopPipelinerInternal::initializeLoopInfo(
     ForOp op, const PipeliningOption &options) {
-  LDBG("Start initializeLoopInfo");
+  LDBG() << "Start initializeLoopInfo";
   forOp = op;
   ub = forOp.getUpperBound();
   lb = forOp.getLowerBound();
@@ -109,7 +107,7 @@ bool LoopPipelinerInternal::initializeLoopInfo(
   std::vector<std::pair<Operation *, unsigned>> schedule;
   options.getScheduleFn(forOp, schedule);
   if (schedule.empty()) {
-    LDBG("--empty schedule -> BAIL");
+    LDBG() << "--empty schedule -> BAIL";
     return false;
   }
 
@@ -126,7 +124,7 @@ bool LoopPipelinerInternal::initializeLoopInfo(
   auto stepCst = getConstantIntValue(step);
   if (!upperBoundCst || !lowerBoundCst || !stepCst) {
     if (!options.supportDynamicLoops) {
-      LDBG("--dynamic loop not supported -> BAIL");
+      LDBG() << "--dynamic loop not supported -> BAIL";
       return false;
     }
   } else {
@@ -134,21 +132,21 @@ bool LoopPipelinerInternal::initializeLoopInfo(
     int64_t lbImm = lowerBoundCst.value();
     int64_t stepImm = stepCst.value();
     if (stepImm <= 0) {
-      LDBG("--invalid loop step -> BAIL");
+      LDBG() << "--invalid loop step -> BAIL";
       return false;
     }
     int64_t numIteration = llvm::divideCeilSigned(ubImm - lbImm, stepImm);
     if (numIteration >= maxStage) {
       dynamicLoop = false;
     } else if (!options.supportDynamicLoops) {
-      LDBG("--fewer loop iterations than pipeline stages -> BAIL");
+      LDBG() << "--fewer loop iterations than pipeline stages -> BAIL";
       return false;
     }
   }
   peelEpilogue = options.peelEpilogue;
   predicateFn = options.predicateFn;
   if ((!peelEpilogue || dynamicLoop) && predicateFn == nullptr) {
-    LDBG("--no epilogue or predicate set -> BAIL");
+    LDBG() << "--no epilogue or predicate set -> BAIL";
     return false;
   }
 
@@ -156,13 +154,13 @@ bool LoopPipelinerInternal::initializeLoopInfo(
   for (Operation &op : forOp.getBody()->without_terminator()) {
     if (!stages.contains(&op)) {
       op.emitOpError("not assigned a pipeline stage");
-      LDBG("--op not assigned a pipeline stage: " << op << " -> BAIL");
+      LDBG() << "--op not assigned a pipeline stage: " << op << " -> BAIL";
       return false;
     }
   }
 
   if (!verifySchedule()) {
-    LDBG("--invalid schedule: " << op << " -> BAIL");
+    LDBG() << "--invalid schedule: " << op << " -> BAIL";
     return false;
   }
 
@@ -173,15 +171,16 @@ bool LoopPipelinerInternal::initializeLoopInfo(
     (void)stageNum;
     if (op == forOp.getBody()->getTerminator()) {
       op->emitError("terminator should not be assigned a stage");
-      LDBG("--terminator should not be assigned stage: " << *op << " -> BAIL");
+      LDBG() << "--terminator should not be assigned stage: " << *op
+             << " -> BAIL";
       return false;
     }
     if (op->getBlock() != forOp.getBody()) {
       op->emitOpError("the owning Block of all operations assigned a stage "
                       "should be the loop body block");
-      LDBG("--the owning Block of all operations assigned a stage "
-           "should be the loop body block: "
-           << *op << " -> BAIL");
+      LDBG() << "--the owning Block of all operations assigned a stage "
+                "should be the loop body block: "
+             << *op << " -> BAIL";
       return false;
     }
   }
@@ -196,8 +195,8 @@ bool LoopPipelinerInternal::initializeLoopInfo(
                      return !def ||
                             (!stages.contains(def) && forOp->isAncestor(def));
                    })) {
-    LDBG("--only support loop carried dependency with a distance of 1 or "
-         "defined outside of the loop -> BAIL");
+    LDBG() << "--only support loop carried dependency with a distance of 1 or "
+              "defined outside of the loop -> BAIL";
     return false;
   }
   annotateFn = options.annotateFn;

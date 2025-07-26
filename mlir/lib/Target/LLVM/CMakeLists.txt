@@ -8,6 +8,7 @@ add_mlir_library(MLIRTargetLLVM
   intrinsics_gen
 
   LINK_COMPONENTS
+  BitWriter
   Core
   IPO
   IRReader

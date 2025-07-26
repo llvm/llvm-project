@@ -831,7 +831,7 @@ struct FormatStyle {
     /// Never merge functions into a single line.
     SFS_None,
     /// Only merge functions defined inside a class. Same as ``inline``,
-    /// except it does not implies ``empty``: i.e. top level empty functions
+    /// except it does not imply ``empty``: i.e. top level empty functions
     /// are not merged either.
     /// \code
     ///   class Foo {

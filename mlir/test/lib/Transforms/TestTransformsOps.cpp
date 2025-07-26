@@ -74,8 +74,8 @@ transform::TestMakeComposedFoldedAffineApply::applyToOne(
   if (auto v = dyn_cast<Value>(ofr)) {
     result = v;
   } else {
-    result = rewriter.create<arith::ConstantIndexOp>(
-        loc, getConstantIntValue(ofr).value());
+    result = arith::ConstantIndexOp::create(rewriter, loc,
+                                            getConstantIntValue(ofr).value());
   }
   results.push_back(result.getDefiningOp());
   rewriter.replaceOp(affineApplyOp, result);

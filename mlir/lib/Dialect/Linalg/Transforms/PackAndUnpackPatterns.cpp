@@ -81,9 +81,8 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
                ArrayRef<ReassociationIndices> reassociation) const {
     if (operand.getType() == newOperandType)
       return operand;
-    return rewriter
-        .create<tensor::ExpandShapeOp>(loc, newOperandType, operand,
-                                       reassociation)
+    return tensor::ExpandShapeOp::create(rewriter, loc, newOperandType, operand,
+                                         reassociation)
         .getResult();
   }
 

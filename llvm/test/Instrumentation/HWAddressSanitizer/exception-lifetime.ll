@@ -22,7 +22,7 @@ define void @test() sanitize_hwaddress personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 48
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = ashr i64 [[TMP2]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.read_register.i64(metadata [[META1:![0-9]+]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.read_register.i64(metadata [[META2:![0-9]+]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 44
@@ -56,7 +56,7 @@ define void @test() sanitize_hwaddress personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP25]]
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP26]], i8 [[TMP22]], i64 1, i1 false)
 ; CHECK-NEXT:    invoke void @mayFail(ptr [[X_HWASAN]])
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    [[TMP27:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; CHECK-NEXT:    [[TMP28:%.*]] = ptrtoint ptr [[X]] to i64
@@ -68,14 +68,12 @@ define void @test() sanitize_hwaddress personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    ret void
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[TMP32:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
-; CHECK-NEXT:    [[TMP33:%.*]] = call i64 @llvm.read_register.i64(metadata [[META2:![0-9]+]])
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    [[TMP33:%.*]] = call i64 @llvm.read_register.i64(metadata [[META3:![0-9]+]])
 ; CHECK-NEXT:    call void @__hwasan_handle_vfork(i64 [[TMP33]])
 ; CHECK-NEXT:    [[TMP34:%.*]] = extractvalue { ptr, i32 } [[TMP32]], 0
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess(ptr [[TMP16]], ptr [[EXN_SLOT]], i32 19)
 ; CHECK-NEXT:    store ptr [[TMP34]], ptr [[EXN_SLOT]], align 8
 ; CHECK-NEXT:    [[TMP35:%.*]] = extractvalue { ptr, i32 } [[TMP32]], 1
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess(ptr [[TMP16]], ptr [[EHSELECTOR_SLOT]], i32 18)
 ; CHECK-NEXT:    store i32 [[TMP35]], ptr [[EHSELECTOR_SLOT]], align 4
 ; CHECK-NEXT:    call void @onExcept(ptr [[X_HWASAN]])
 ; CHECK-NEXT:    [[TMP36:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
@@ -87,9 +85,7 @@ define void @test() sanitize_hwaddress personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr [[X]])
 ; CHECK-NEXT:    br label [[EH_RESUME:%.*]]
 ; CHECK:       eh.resume:
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess(ptr [[TMP16]], ptr [[EXN_SLOT]], i32 3)
 ; CHECK-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess(ptr [[TMP16]], ptr [[EHSELECTOR_SLOT]], i32 2)
 ; CHECK-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
 ; CHECK-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0
 ; CHECK-NEXT:    [[LPAD_VAL1:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
@@ -99,12 +95,12 @@ entry:
   %x = alloca i32, align 8
   %exn.slot = alloca ptr, align 8
   %ehselector.slot = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 8, ptr %x)
+  call void @llvm.lifetime.start.p0(i64 4, ptr %x)
   invoke void @mayFail(ptr %x) to label %invoke.cont unwind label %lpad
 
 invoke.cont:                                      ; preds = %entry
 
-  call void @llvm.lifetime.end.p0(i64 8, ptr %x)
+  call void @llvm.lifetime.end.p0(i64 4, ptr %x)
   ret void
 
 lpad:                                             ; preds = %entry
@@ -116,7 +112,7 @@ lpad:                                             ; preds = %entry
   %2 = extractvalue { ptr, i32 } %0, 1
   store i32 %2, ptr %ehselector.slot, align 4
   call void @onExcept(ptr %x) #18
-  call void @llvm.lifetime.end.p0(i64 8, ptr %x)
+  call void @llvm.lifetime.end.p0(i64 4, ptr %x)
   br label %eh.resume
 
 eh.resume:                                        ; preds = %lpad

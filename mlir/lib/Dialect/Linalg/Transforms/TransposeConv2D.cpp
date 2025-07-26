@@ -70,9 +70,8 @@ FailureOr<Operation *> transposeConv2DHelper(RewriterBase &rewriter,
     input = tensor::EmptyOp::create(rewriter, loc, newFilterShape, elementTy)
                 .getResult();
   } else {
-    input = rewriter
-                .create<memref::AllocOp>(
-                    loc, MemRefType::get(newFilterShape, elementTy))
+    input = memref::AllocOp::create(rewriter, loc,
+                                    MemRefType::get(newFilterShape, elementTy))
                 .getResult();
   }
 

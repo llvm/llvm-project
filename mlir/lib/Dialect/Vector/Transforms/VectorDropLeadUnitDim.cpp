@@ -466,9 +466,9 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
     newOp = mlir::vector::maskOperation(rewriter, newOp, newMask);
   }
 
-  return rewriter
-      .create<vector::BroadcastOp>(loc, contractOp->getResultTypes()[0],
-                                   newOp->getResults()[0])
+  return vector::BroadcastOp::create(rewriter, loc,
+                                     contractOp->getResultTypes()[0],
+                                     newOp->getResults()[0])
       .getResult();
 }
 

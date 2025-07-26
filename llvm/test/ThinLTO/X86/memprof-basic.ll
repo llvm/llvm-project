@@ -52,6 +52,7 @@
 ; RUN:	cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
 ;; We should have cloned bar, baz, and foo, for the cold memory allocation.
 ; RUN:	cat %t.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
+; RUN:	cat %t.ccg.clonefuncassign.dot | FileCheck %s --check-prefix=DOTFUNCASSIGN
 
 ; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --check-prefix=IR
 
@@ -370,6 +371,10 @@ attributes #0 = { noinline optnone }
 ; DOTCLONED: 	Node[[BAR2]] [shape=record,tooltip="N[[BAR2]] ContextIds: 2",fillcolor="cyan",color="blue",style="filled,bold,dashed",label="{OrigId: Alloc0\n_Z3barv -\> alloc}"];
 ; DOTCLONED: }
 
+;; Here we are just ensuring that the post-function assign dot graph includes
+;; clone information for both the caller and callee in the node labels.
+; DOTFUNCASSIGN: _Z3bazv.memprof.1 -\> _Z3barv.memprof.1
+; DOTFUNCASSIGN: _Z3barv.memprof.1 -\> alloc
 
 ; DISTRIB: ^[[BAZ:[0-9]+]] = gv: (guid: 1807954217441101578, {{.*}} callsites: ((callee: ^[[BAR:[0-9]+]], clones: (0, 1)
 ; DISTRIB: ^[[FOO:[0-9]+]] = gv: (guid: 8107868197919466657, {{.*}} callsites: ((callee: ^[[BAZ]], clones: (0, 1)

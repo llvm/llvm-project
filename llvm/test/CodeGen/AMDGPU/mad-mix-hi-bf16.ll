@@ -121,18 +121,7 @@ define <2 x bfloat> @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_undeflo_clamp_postcvt
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_fma_mixlo_bf16 v0, v0, v1, v2 op_sel_hi:[1,1,1]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX1250-NEXT:    v_max_num_f32_e32 v0, 0, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_min_num_f32_e32 v0, 1.0, v0
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX1250-NEXT:    v_fma_mixhi_bf16 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %src0.ext = fpext bfloat %src0 to float
   %src1.ext = fpext bfloat %src1 to float
@@ -150,20 +139,10 @@ define <2 x bfloat> @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_undeflo_clamp_postcvt
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_fma_mixlo_bf16 v1, v0, v1, v2 op_sel_hi:[1,1,1]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v1
-; GFX1250-NEXT:    v_max_num_f32_e32 v0, 0, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_min_num_f32_e32 v0, 1.0, v0
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX1250-NEXT:    v_fma_mixlo_bf16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
+; GFX1250-NEXT:    v_fma_mixhi_bf16 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    global_store_b16 v[0:1], v1, off scope:SCOPE_SYS
+; GFX1250-NEXT:    global_store_b16 v[0:1], v3, off scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %src0.ext = fpext bfloat %src0 to float

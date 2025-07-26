@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ACOSHF_H
-#define LLVM_LIBC_SRC___SUPPORT_MATH_ACOSHF_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ACOSHF16_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_ACOSHF16_H
 
 #include "include/llvm-libc-macros/float16-macros.h"
 
@@ -120,4 +120,4 @@ static constexpr float16 acoshf16(float16 x) {
 
 #endif // LIBC_TYPES_HAS_FLOAT16
 
-#endif // LLVM_LIBC_SRC___SUPPORT_MATH_ACOSHF_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_ACOSHF16_H

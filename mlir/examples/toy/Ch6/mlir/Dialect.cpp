@@ -91,7 +91,7 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
   Operation *materializeCallConversion(OpBuilder &builder, Value input,
                                        Type resultType,
                                        Location conversionLoc) const final {
-    return builder.create<CastOp>(conversionLoc, resultType, input);
+    return CastOp::create(builder, conversionLoc, resultType, input);
   }
 };
 
@@ -206,7 +206,8 @@ void ConstantOp::print(mlir::OpAsmPrinter &printer) {
 llvm::LogicalResult ConstantOp::verify() {
   // If the return type of the constant is not an unranked tensor, the shape
   // must match the shape of the attribute holding the data.
-  auto resultType = llvm::dyn_cast<mlir::RankedTensorType>(getResult().getType());
+  auto resultType =
+      llvm::dyn_cast<mlir::RankedTensorType>(getResult().getType());
   if (!resultType)
     return success();
 
@@ -395,7 +396,8 @@ llvm::LogicalResult ReturnOp::verify() {
   auto resultType = results.front();
 
   // Check that the result type of the function matches the operand type.
-  if (inputType == resultType || llvm::isa<mlir::UnrankedTensorType>(inputType) ||
+  if (inputType == resultType ||
+      llvm::isa<mlir::UnrankedTensorType>(inputType) ||
       llvm::isa<mlir::UnrankedTensorType>(resultType))
     return mlir::success();
 

@@ -145,8 +145,8 @@ protected:
       return rewriter.createOrFold<arm_neon::UsmmlaOp>(loc, acc.getType(), acc,
                                                        lhs, rhs);
     case MMLA::Bfloat:
-      return rewriter.create<arm_neon::BfmmlaOp>(loc, acc.getType(), acc, lhs,
-                                                 rhs);
+      return arm_neon::BfmmlaOp::create(rewriter, loc, acc.getType(), acc, lhs,
+                                        rhs);
     case MMLA::Nop:
       llvm_unreachable("Uninitialized operation type");
     }
@@ -226,8 +226,9 @@ public:
 
     // Initial accumulator for the final result. This is the un-tiled result if
     // tiling is done.
-    Value result = rewriter.create<arith::ConstantOp>(
-        loc, op.getResultType(), rewriter.getZeroAttr(op.getResultType()));
+    Value result =
+        arith::ConstantOp::create(rewriter, loc, op.getResultType(),
+                                  rewriter.getZeroAttr(op.getResultType()));
 
     SmallVector<int64_t, 3> loopOrder = {0, 1};
     if (iterationBounds.size() == 3)
@@ -263,8 +264,9 @@ public:
       if (dimM == 1) {
         auto expandRowVector = [&](Value tiledOperand,
                                    VectorType expandedTypeType) {
-          auto emptyOperand = rewriter.create<arith::ConstantOp>(
-              loc, expandedTypeType, rewriter.getZeroAttr(expandedTypeType));
+          auto emptyOperand =
+              arith::ConstantOp::create(rewriter, loc, expandedTypeType,
+                                        rewriter.getZeroAttr(expandedTypeType));
           SmallVector<int64_t> offsets(
               cast<ShapedType>(emptyOperand.getType()).getRank(), 0);
           SmallVector<int64_t> strides(
@@ -280,8 +282,8 @@ public:
       // using the instruction for unsigned by signed multiplication with
       // reversed operands.
       if (swapOperands)
-        tiledAcc = rewriter.create<vector::TransposeOp>(
-            loc, tiledAcc, ArrayRef<int64_t>({1, 0}));
+        tiledAcc = vector::TransposeOp::create(rewriter, loc, tiledAcc,
+                                               ArrayRef<int64_t>({1, 0}));
 
       // Collapse tiled operands to 1D vectors required by the ArmNeon ops
       auto collapsedLhs = rewriter.createOrFold<vector::ShapeCastOp>(
@@ -309,8 +311,8 @@ public:
       // Because of the reversed operands the result is obtained transposed.
       // Transpose it back,
       if (swapOperands)
-        tiledRes = rewriter.create<vector::TransposeOp>(
-            loc, tiledRes, ArrayRef<int64_t>({1, 0}));
+        tiledRes = vector::TransposeOp::create(rewriter, loc, tiledRes,
+                                               ArrayRef<int64_t>({1, 0}));
 
       // With vecmat, only one row of tiled ACC can be inserted into the final
       // result

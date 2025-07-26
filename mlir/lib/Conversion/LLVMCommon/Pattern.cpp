@@ -272,14 +272,13 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
 
     // Allocate memory, copy, and free the source if necessary.
     Value memory =
-        toDynamic
-            ? builder
-                  .create<LLVM::CallOp>(loc, mallocFunc.value(), allocationSize)
-                  .getResult()
-            : LLVM::AllocaOp::create(builder, loc, getPtrType(),
-                                     IntegerType::get(getContext(), 8),
-                                     allocationSize,
-                                     /*alignment=*/0);
+        toDynamic ? LLVM::CallOp::create(builder, loc, mallocFunc.value(),
+                                         allocationSize)
+                        .getResult()
+                  : LLVM::AllocaOp::create(builder, loc, getPtrType(),
+                                           IntegerType::get(getContext(), 8),
+                                           allocationSize,
+                                           /*alignment=*/0);
     Value source = desc.memRefDescPtr(builder, loc);
     LLVM::MemcpyOp::create(builder, loc, memory, source, allocationSize, false);
     if (!toDynamic)

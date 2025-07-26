@@ -451,10 +451,9 @@ struct WarpOpTransferWrite : public WarpDistributionPattern {
     }
     SmallVector<Value> delinearized;
     if (map.getNumResults() > 1) {
-      delinearized = rewriter
-                         .create<mlir::affine::AffineDelinearizeIndexOp>(
-                             newWarpOp.getLoc(), newWarpOp.getLaneid(),
-                             delinearizedIdSizes)
+      delinearized = mlir::affine::AffineDelinearizeIndexOp::create(
+                         rewriter, newWarpOp.getLoc(), newWarpOp.getLaneid(),
+                         delinearizedIdSizes)
                          .getResults();
     } else {
       // If there is only one map result, we can elide the delinearization
@@ -1538,19 +1537,18 @@ struct WarpOpInsertScalar : public WarpDistributionPattern {
         arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
                               newWarpOp.getLaneid(), insertingLane);
     Value newResult =
-        rewriter
-            .create<scf::IfOp>(
-                loc, isInsertingLane,
-                /*thenBuilder=*/
-                [&](OpBuilder &builder, Location loc) {
-                  Value newInsert = vector::InsertOp::create(
-                      builder, loc, newSource, distributedVec, newPos);
-                  scf::YieldOp::create(builder, loc, newInsert);
-                },
-                /*elseBuilder=*/
-                [&](OpBuilder &builder, Location loc) {
-                  scf::YieldOp::create(builder, loc, distributedVec);
-                })
+        scf::IfOp::create(
+            rewriter, loc, isInsertingLane,
+            /*thenBuilder=*/
+            [&](OpBuilder &builder, Location loc) {
+              Value newInsert = vector::InsertOp::create(
+                  builder, loc, newSource, distributedVec, newPos);
+              scf::YieldOp::create(builder, loc, newInsert);
+            },
+            /*elseBuilder=*/
+            [&](OpBuilder &builder, Location loc) {
+              scf::YieldOp::create(builder, loc, distributedVec);
+            })
             .getResult(0);
     rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber), newResult);
     return success();
@@ -1661,10 +1659,9 @@ struct WarpOpInsert : public WarpDistributionPattern {
       auto nonInsertingBuilder = [&](OpBuilder &builder, Location loc) {
         scf::YieldOp::create(builder, loc, distributedDest);
       };
-      newResult = rewriter
-                      .create<scf::IfOp>(loc, isInsertingLane,
-                                         /*thenBuilder=*/insertingBuilder,
-                                         /*elseBuilder=*/nonInsertingBuilder)
+      newResult = scf::IfOp::create(rewriter, loc, isInsertingLane,
+                                    /*thenBuilder=*/insertingBuilder,
+                                    /*elseBuilder=*/nonInsertingBuilder)
                       .getResult(0);
     }
 

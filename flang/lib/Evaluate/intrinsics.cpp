@@ -3077,10 +3077,11 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
     ActualArguments &arguments, FoldingContext &context) const {
   characteristics::Procedure::Attrs attrs;
   attrs.set(characteristics::Procedure::Attr::Subroutine);
-  static const char *const keywords[]{"cptr", "fptr", "shape", nullptr};
+  static const char *const keywords[]{
+      "cptr", "fptr", "shape", "lower", nullptr};
   characteristics::DummyArguments dummies;
-  if (CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1)) {
-    CHECK(arguments.size() == 3);
+  if (CheckAndRearrangeArguments(arguments, context.messages(), keywords, 2)) {
+    CHECK(arguments.size() == 4);
     if (const auto *expr{arguments[0].value().UnwrapExpr()}) {
       // General semantic checks will catch an actual argument that's not
       // scalar.
@@ -3173,11 +3174,30 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
           }
         }
       }
+      if (arguments[3] && fptrRank == 0) {
+        context.messages().Say(arguments[3]->sourceLocation(),
+            "LOWER= argument to C_F_POINTER() may not appear when FPTR= is scalar"_err_en_US);
+      } else if (arguments[3]) {
+        if (const auto *argExpr{arguments[3].value().UnwrapExpr()}) {
+          if (argExpr->Rank() > 1) {
+            context.messages().Say(arguments[3]->sourceLocation(),
+                "LOWER= argument to C_F_POINTER() must be a rank-one array."_err_en_US);
+          } else if (argExpr->Rank() == 1) {
+            if (auto constShape{GetConstantShape(context, *argExpr)}) {
+              if (constShape->At(ConstantSubscripts{1}).ToInt64() != fptrRank) {
+                context.messages().Say(arguments[3]->sourceLocation(),
+                    "LOWER= argument to C_F_POINTER() must have size equal to the rank of FPTR="_err_en_US);
+              }
+            }
+          }
+        }
+      }
     }
   }
   if (dummies.size() == 2) {
+    // Handle SHAPE
     DynamicType shapeType{TypeCategory::Integer, defaults_.sizeIntegerKind()};
-    if (arguments[2]) {
+    if (arguments.size() >= 3 && arguments[2]) {
       if (auto type{arguments[2]->GetType()}) {
         if (type->category() == TypeCategory::Integer) {
           shapeType = *type;
@@ -3189,6 +3209,22 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
     shape.intent = common::Intent::In;
     shape.attrs.set(characteristics::DummyDataObject::Attr::Optional);
     dummies.emplace_back("shape"s, std::move(shape));
+
+    // Handle LOWER
+    DynamicType lowerType{TypeCategory::Integer, defaults_.sizeIntegerKind()};
+    if (arguments.size() >= 4 && arguments[3]) {
+      if (auto type{arguments[3]->GetType()}) {
+        if (type->category() == TypeCategory::Integer) {
+          lowerType = *type;
+        }
+      }
+    }
+    characteristics::DummyDataObject lower{
+        characteristics::TypeAndShape{lowerType, 1}};
+    lower.intent = common::Intent::In;
+    lower.attrs.set(characteristics::DummyDataObject::Attr::Optional);
+    dummies.emplace_back("lower"s, std::move(lower));
+
     return SpecificCall{
         SpecificIntrinsic{"__builtin_c_f_pointer"s,
             characteristics::Procedure{std::move(dummies), attrs}},
