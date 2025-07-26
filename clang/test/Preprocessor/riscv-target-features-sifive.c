@@ -1,3 +1,19 @@
+// RUN: %clang --target=riscv32-unknown-linux-gnu -march=rv32i -E -dM %s \
+// RUN:   -o - | FileCheck %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu -march=rv64i -E -dM %s \
+// RUN:   -o - | FileCheck %s
+
+// CHECK-NOT: __riscv_xsfmm128t {{.*$}}
+// CHECK-NOT: __riscv_xsfmm16t {{.*$}}
+// CHECK-NOT: __riscv_xsfmm32a8i {{.*$}}
+// CHECK-NOT: __riscv_xsfmm32a8f {{.*$}}
+// CHECK-NOT: __riscv_xsfmm32a16f {{.*$}}
+// CHECK-NOT: __riscv_xsfmm32a32f {{.*$}}
+// CHECK-NOT: __riscv_xsfmm32a32t {{.*$}}
+// CHECK-NOT: __riscv_xsfmm64a64f {{.*$}}
+// CHECK-NOT: __riscv_xsfmm64t {{.*$}}
+// CHECK-NOT: __riscv_xsfmmbase {{.*$}}
+
 // RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32i_zve32x_xsfmm128t -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-XSFMM128T %s
