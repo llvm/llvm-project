@@ -9,7 +9,7 @@
 // RUN:     bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityTreshold: 0 \
 // RUN:  }}' -- -Wno-strict-prototypes
 //
-// RUN: %check_clang_tidy -std=c23 %s bugprone-easily-swappable-parameters %t \
+// RUN: %check_clang_tidy -std=c23-or-later %s bugprone-easily-swappable-parameters %t \
 // RUN:   -config='{CheckOptions: { \
 // RUN:     bugprone-easily-swappable-parameters.MinimumLength: 2, \
 // RUN:     bugprone-easily-swappable-parameters.IgnoredParameterNames: "", \
