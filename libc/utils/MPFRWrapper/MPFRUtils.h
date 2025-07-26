@@ -32,6 +32,7 @@ enum class Operation : int {
   Asinh,
   Atan,
   Atanh,
+  Atanpi,
   Cbrt,
   Ceil,
   Cos,
