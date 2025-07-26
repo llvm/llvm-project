@@ -333,16 +333,8 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   if (isa<SCEVCouldNotCompute>(MaxBECount))
     return false;
 
-  if (isa<SCEVCouldNotCompute>(BECount)) {
-    // TODO: Support symbolic max backedge taken counts for loops without
-    // computable backedge taken counts.
-    MaxBECount =
-        Predicates
-            ? SE.getPredicatedConstantMaxBackedgeTakenCount(L, *Predicates)
-            : SE.getConstantMaxBackedgeTakenCount(L);
-  }
   const auto &[AccessStart, AccessEnd] = getStartAndEndForAccess(
-      L, PtrScev, LI->getType(), BECount, MaxBECount, &SE, nullptr);
+      L, PtrScev, LI->getType(), BECount, MaxBECount, &SE, nullptr, &DT, AC);
   if (isa<SCEVCouldNotCompute>(AccessStart) ||
       isa<SCEVCouldNotCompute>(AccessEnd))
     return false;
