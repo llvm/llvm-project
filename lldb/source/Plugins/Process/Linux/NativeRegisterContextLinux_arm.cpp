@@ -23,13 +23,19 @@
 #include <elf.h>
 #include <sys/uio.h>
 
+#if defined(__arm64__) || defined(__aarch64__)
+#include "NativeRegisterContextLinux_arm64dbreg.h"
+#include "lldb/Host/linux/Ptrace.h"
+#include <asm/ptrace.h>
+#endif
+
 #define REG_CONTEXT_SIZE (GetGPRSize() + sizeof(m_fpr))
 
 #ifndef PTRACE_GETVFPREGS
 #define PTRACE_GETVFPREGS 27
 #define PTRACE_SETVFPREGS 28
 #endif
-#ifndef PTRACE_GETHBPREGS
+#if defined(__arm__) && !defined(PTRACE_GETHBPREGS)
 #define PTRACE_GETHBPREGS 29
 #define PTRACE_SETHBPREGS 30
 #endif
@@ -723,6 +729,7 @@ Status NativeRegisterContextLinux_arm::ReadHardwareDebugInfo() {
     return Status();
   }
 
+#ifdef __arm__
   unsigned int cap_val;
 
   error = NativeProcessLinux::PtraceWrapper(PTRACE_GETHBPREGS, m_thread.GetID(),
@@ -737,12 +744,17 @@ Status NativeRegisterContextLinux_arm::ReadHardwareDebugInfo() {
   m_refresh_hwdebug_info = false;
 
   return error;
+#else  // __aarch64__
+  return arm64::ReadHardwareDebugInfo(m_thread.GetID(), m_max_hwp_supported,
+                                      m_max_hbp_supported);
+#endif // __arm__
 }
 
-Status NativeRegisterContextLinux_arm::WriteHardwareDebugRegs(int hwbType,
+Status NativeRegisterContextLinux_arm::WriteHardwareDebugRegs(DREGType hwbType,
                                                               int hwb_index) {
   Status error;
 
+#ifdef __arm__
   lldb::addr_t *addr_buf;
   uint32_t *ctrl_buf;
 
@@ -781,6 +793,13 @@ Status NativeRegisterContextLinux_arm::WriteHardwareDebugRegs(int hwbType,
   }
 
   return error;
+#else  // __aarch64__
+  uint32_t max_supported =
+      (hwbType == eDREGTypeWATCH) ? m_max_hwp_supported : m_max_hbp_supported;
+  auto &regs = (hwbType == eDREGTypeWATCH) ? m_hwp_regs : m_hbr_regs;
+  return arm64::WriteHardwareDebugRegs(hwbType, m_thread.GetID(), max_supported,
+                                       regs);
+#endif // __arm__
 }
 
 uint32_t NativeRegisterContextLinux_arm::CalculateFprOffset(
