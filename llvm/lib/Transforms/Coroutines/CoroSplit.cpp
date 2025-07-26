@@ -376,7 +376,16 @@ static void replaceUnwindCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
   // If coro.end has an associated bundle, add cleanupret instruction.
   if (auto Bundle = End->getOperandBundle(LLVMContext::OB_funclet)) {
     auto *FromPad = cast<CleanupPadInst>(Bundle->Inputs[0]);
-    auto *CleanupRet = Builder.CreateCleanupRet(FromPad, nullptr);
+
+    // If the terminator is an invoke, 
+    // set the cleanupret unwind destination the same as the other edges, to
+    // avoid validation errors
+    BasicBlock *UBB = nullptr;
+    if (auto II = dyn_cast<InvokeInst>(FromPad->getParent()->getTerminator())) {
+      UBB = II->getUnwindDest();
+    }
+
+    auto *CleanupRet = Builder.CreateCleanupRet(FromPad, UBB);
     End->getParent()->splitBasicBlock(End);
     CleanupRet->getParent()->getTerminator()->eraseFromParent();
   }
