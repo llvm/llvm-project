@@ -95,8 +95,8 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT:  __lshrdi3 = 4, // __lshrdi3
 // CHECK-NEXT:  bzero = 5, // bzero
 // CHECK-NEXT:  calloc = 6, // calloc
-// CHECK-NEXT:  sqrtl_f80 = 7, // sqrtl
-// CHECK-NEXT:  sqrtl_f128 = 8, // sqrtl
+// CHECK-NEXT:  sqrtl_f128 = 7, // sqrtl
+// CHECK-NEXT:  sqrtl_f80 = 8, // sqrtl
 // CHECK-NEXT:  NumLibcallImpls = 9
 // CHECK-NEXT: };
 // CHECK-NEXT: } // End namespace RTLIB
@@ -157,8 +157,8 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT: RTLIB::SRL_I64, // RTLIB::__lshrdi3
 // CHECK-NEXT: RTLIB::BZERO, // RTLIB::bzero
 // CHECK-NEXT: RTLIB::CALLOC, // RTLIB::calloc
-// CHECK-NEXT: RTLIB::SQRT_F80, // RTLIB::sqrtl_f80
 // CHECK-NEXT: RTLIB::SQRT_F128, // RTLIB::sqrtl_f128
+// CHECK-NEXT: RTLIB::SQRT_F80, // RTLIB::sqrtl_f80
 // CHECK-NEXT: };
 
 
