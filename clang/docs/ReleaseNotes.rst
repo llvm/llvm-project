@@ -113,6 +113,11 @@ Improvements to Clang's diagnostics
   Added a new warning in this group for the case where the attribute is missing/implicit on
   an override of a virtual method.
 
+- Added the ``-Wvla-potential-size-confusion`` diagnostic, which is grouped
+  under ``-Wvla`` to diagnose when a variably-modified type in a function
+  parameter list is using a variable from an outer scope as opposed to a
+  variable declared later in the parameter list.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
