@@ -2449,6 +2449,9 @@ CoverageMappingModuleGen::CoverageMappingModuleGen(
     : CGM(CGM), SourceInfo(SourceInfo) {}
 
 std::string CoverageMappingModuleGen::getCurrentDirname() {
+  if (CGM.getCodeGenOpts().NoCompilationDir)
+    return {};
+
   if (!CGM.getCodeGenOpts().CoverageCompilationDir.empty())
     return CGM.getCodeGenOpts().CoverageCompilationDir;
 

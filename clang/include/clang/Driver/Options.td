@@ -1725,6 +1725,11 @@ def fcoverage_compilation_dir_EQ : Joined<["-"], "fcoverage-compilation-dir=">,
 def ffile_compilation_dir_EQ : Joined<["-"], "ffile-compilation-dir=">, Group<f_Group>,
     Visibility<[ClangOption, CLOption, DXCOption]>,
     HelpText<"The compilation directory to embed in the debug info and coverage mapping.">;
+def fno_compilation_dir: Flag<["-"], "fno-compilation-dir">,
+    Visibility<[ClangOption, CC1Option]>,
+    Group<f_Group>,
+    HelpText<"Ignore compilation directories">,
+    MarshallingInfoFlag<CodeGenOpts<"NoCompilationDir">>;
 defm debug_info_for_profiling : BoolFOption<"debug-info-for-profiling",
   CodeGenOpts<"DebugInfoForProfiling">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
